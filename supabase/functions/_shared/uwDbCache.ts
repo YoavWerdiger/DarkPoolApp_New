@@ -19,6 +19,12 @@ export interface CongressTradeRow {
   transaction_date: string;
   txn_label: string | null;
   source: string;
+  /** Quiver ExcessReturn — % מול S&P 500 מיום העסקה. null = לא זמין. */
+  excess_return_pct: number | null;
+  /** Quiver PriceChange — % שינוי מחיר מיום העסקה. null = לא זמין. */
+  price_change_pct: number | null;
+  /** Quiver SPYChange — % שינוי S&P 500 מיום העסקה. null = לא זמין. */
+  spy_change_pct: number | null;
 }
 
 export function createServiceSupabase(): SupabaseClient {
@@ -47,7 +53,7 @@ export interface InsiderBuyDbRow {
 
 const BIOGUIDE_RE = /^[A-Z]\d{6}$/;
 const CONGRESS_SELECT =
-  'external_id, politician_id, politician_name, politician_image_url, ticker, company_name, transaction_type, shares, price, amount_label, filed_at, transaction_date, txn_label, source';
+  'external_id, politician_id, politician_name, politician_image_url, ticker, company_name, transaction_type, shares, price, amount_label, filed_at, transaction_date, txn_label, source, excess_return_pct, price_change_pct, spy_change_pct';
 
 function mapCongressRows(data: unknown[] | null): CongressTradeRow[] {
   return (data ?? []).map(mapCongressDbRow);
@@ -113,9 +119,7 @@ export async function loadCongressTradesFromDb(
 ): Promise<CongressTradeRow[]> {
   const { data, error } = await supabase
     .from('dark_pool_congress_trades')
-    .select(
-      'external_id, politician_id, politician_name, politician_image_url, ticker, company_name, transaction_type, shares, price, amount_label, filed_at, transaction_date, txn_label, source'
-    )
+    .select(CONGRESS_SELECT)
     .order('filed_at', { ascending: false })
     .limit(limit);
 
@@ -143,6 +147,9 @@ export async function upsertCongressTradesToDb(
     transaction_date: r.transaction_date,
     txn_label: r.txn_label,
     source: r.source,
+    excess_return_pct: r.excess_return_pct,
+    price_change_pct: r.price_change_pct,
+    spy_change_pct: r.spy_change_pct,
     synced_at: new Date().toISOString(),
   }));
 
@@ -295,5 +302,14 @@ function mapCongressDbRow(row: Record<string, unknown>): CongressTradeRow {
     transaction_date: String(row.transaction_date ?? '').slice(0, 10),
     txn_label: row.txn_label ? String(row.txn_label) : null,
     source: String(row.source ?? 'unusualwhales'),
+    excess_return_pct: numOrNull(row.excess_return_pct),
+    price_change_pct: numOrNull(row.price_change_pct),
+    spy_change_pct: numOrNull(row.spy_change_pct),
   };
+}
+
+function numOrNull(raw: unknown): number | null {
+  if (raw == null) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
 }

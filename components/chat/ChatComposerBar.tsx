@@ -4,6 +4,7 @@ import {
   TextInput,
   Pressable,
   StyleSheet,
+  ScrollView,
   type StyleProp,
   type ViewStyle,
   type TextStyle,
@@ -73,6 +74,16 @@ export default function ChatComposerBar({
   const styles = useMemo(() => createStyles(tokens), [tokens]);
 
   return (
+    <ScrollView
+      keyboardShouldPersistTaps="always"
+      keyboardDismissMode="none"
+      scrollEnabled={false}
+      bounces={false}
+      nestedScrollEnabled={false}
+      showsVerticalScrollIndicator={false}
+      style={styles.scrollHost}
+      contentContainerStyle={styles.scrollContent}
+    >
     <View style={[styles.container, containerStyle]}>
       <UICard
         variant="glass"
@@ -120,11 +131,19 @@ export default function ChatComposerBar({
         </Pressable>
       )}
     </View>
+    </ScrollView>
   );
 }
 
 const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
   StyleSheet.create({
+    scrollHost: {
+      width: '100%',
+      flexGrow: 0,
+    },
+    scrollContent: {
+      flexGrow: 1,
+    },
     container: {
       flexDirection: 'row',
       alignItems: 'center',

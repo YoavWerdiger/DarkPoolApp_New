@@ -163,9 +163,16 @@ export default memo(ChatListRow, (prev, next) => {
       a.is_edited !== b.is_edited ||
       a.is_deleted !== b.is_deleted ||
       a.is_sending !== b.is_sending ||
+      a.is_uploading !== b.is_uploading ||
       a.send_error !== b.send_error ||
       a.read_by_count !== b.read_by_count ||
       a.reactions_count !== b.reactions_count ||
+      a.media_url !== b.media_url ||
+      a.media_thumbnail_url !== b.media_thumbnail_url ||
+      a.local_media_uri !== b.local_media_uri ||
+      a.upload_progress !== b.upload_progress ||
+      a.sender?.display_name !== b.sender?.display_name ||
+      a.sender?.profile_picture !== b.sender?.profile_picture ||
       JSON.stringify(a.reactions) !== JSON.stringify(b.reactions)
     ) {
       return false;

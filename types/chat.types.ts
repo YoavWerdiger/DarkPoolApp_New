@@ -17,6 +17,8 @@ export enum ChatMessageType {
   MEDIA_GROUP = 'media_group', // Multiple media items in one message
   /** יומן מסחר — תוכן JSON: { "trade": { ... } } */
   TRADE = 'trade',
+  /** Multiverse — תוכן JSON: { attachment: ShareableAttachment, caption? } */
+  ENTITY = 'entity',
 }
 
 /**
@@ -33,6 +35,7 @@ export const CHAT_MESSAGE_TYPES_ALLOWED_IN_DB: readonly ChatMessageType[] = [
   ChatMessageType.POLL,
   ChatMessageType.MEDIA_GROUP,
   ChatMessageType.TRADE,
+  ChatMessageType.ENTITY,
 ] as const;
 
 export function isChatMessageTypeAllowedInDb(t: string): t is ChatMessageType {
@@ -219,6 +222,8 @@ export interface ChatMessage {
 
   // תיוג
   mentioned_users: string[];
+  /** { userId, displayName } — לתצוגה / ניווט לפרופיל (בנוסף ל-mentioned_users) */
+  mentions?: Array<{ userId: string; displayName: string }>;
 
   // סטטוס
   is_edited: boolean;
@@ -254,6 +259,10 @@ export interface ChatMessage {
   is_read_by_me?: boolean;
   is_sending?: boolean; // לאופטימיסטי UI
   send_error?: string; // אם נכשל
+  /** מזהה לקוח יציב — מפתח רשימה + התאמת realtime להודעת שרת */
+  client_message_id?: string;
+  /** id אופטימיסטי מקורי (temp-*) — נשמר אחרי המיזוג */
+  local_id?: string;
   
   // Optimistic media upload
   local_media_uri?: string;
@@ -434,6 +443,8 @@ export interface SendChatMessageInput {
   media_urls?: MediaGroupItem[]; // For MEDIA_GROUP messages
   reply_to_message_id?: string;
   mentioned_users?: string[];
+  /** CommunityMention[] — נשמר ב-chat_messages.mentions */
+  mentions?: Array<{ userId: string; displayName: string }>;
   is_silent?: boolean;
   /** לעדכון הודעה אופטימיסטית קיימת (מדיה) – מונע flicker בעת מעבר upload→send */
   existing_optimistic_id?: string;
@@ -447,6 +458,7 @@ export interface EditChatMessageInput {
   message_id: string;
   content: string;
   mentioned_users?: string[];
+  mentions?: Array<{ userId: string; displayName: string }>;
 }
 
 export interface DeleteChatMessageInput {

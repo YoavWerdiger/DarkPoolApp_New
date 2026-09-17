@@ -6,14 +6,51 @@
 
 ---
 
-## Quiver Quantitative (קונגרס — ברירת מחדל)
+## Quiver Quantitative (קונגרס — ברירת מחדל / Trader)
 
 ```bash
+# אל תדביקו מפתח בצ'אט — רק ב-Supabase secrets:
 npx supabase secrets set QUIVER_API_KEY=<מפתח>
 npx supabase secrets set CONGRESS_TRADES_PROVIDER=quiverquant
 ```
 
-Endpoints: `/beta/live/congresstrading`, `/beta/bulk/congress/politicians`
+### Cheat sheet — endpoint → תפקיד → שימוש אצלנו
+
+| Endpoint | תפקיד | סטטוס |
+|----------|--------|--------|
+| `GET /beta/bulk/congress/politicians` | מטא־דאטה (BioGuideID, Name, Party, Chamber, TradeCount, LastTraded) | **טוב** — cache יומי `quiver_congress_politicians` + דירוג TradeCount |
+| `GET /beta/bulk/congresstrading?bioguide_id=` | היסטוריית עסקאות מלאה לפוליטיקאי | **טוב** — מקור ראשי ל־deep history של מאוצרים (`bulkMaxPages` עד 20) |
+| `GET /beta/live/congresstrading` | פיד עסקאות אחרונות | **טוב** — `sync-congress-trades` + `uw-explore` |
+| `GET /beta/live/congress_stock_holdings?bioguide_id=` | אחזקות מוערכות לפרופיל | **טוב** — cache יומי לכל המאוצרים (מיזוג עם cache קיים) |
+| `GET /beta/live/insiders` | רכישות בכירים | **טוב** — `sync-insider-buys` |
+| `GET /beta/live/sec13f?owner=` | אחזקות 13F לפי קרן | **טוב** — `sync-fund-13f` (curated owners) |
+| `GET /beta/live/sec13fchanges` | שינויי 13F | **טוב** — עם `owner=` לקרנות מאוצרות |
+| `GET /beta/bulk/trumpstocktrades` | עסקאות טראמפ (Filed/Traded/Amount/ExcessReturn) | **טוב** — executive curated (`888dc73f-…`), לא STOCK Act / לא BioGuide |
+| `GET /beta/live/offexchange` | Dark pool יומי (DPI) | **טוב** — כש־`DARK_POOL_PROVIDER=quiverquant` |
+| `GET /beta/historical/offexchange/{ticker}` | היסטוריית off-exchange | **בשימוש** — העשרת טיקרים ב־sync-darkpool |
+| `GET /beta/historical/congresstrading/{ticker}` | היסטוריה לפי טיקר | **אופציונלי** — `enrich_tickers:true` (טיקרים מ־bulk) |
+| `GET /beta/historical/housetrading/{ticker}` | House לפי טיקר | **אופציונלי** — רק עם `include_chambers:true` |
+| `GET /beta/historical/senatetrading/{ticker}` | Senate לפי טיקר | **אופציונלי** — רק עם `include_chambers:true` |
+
+כלל ברזל לפרופיל מאוצר:
+1. מטא־דאטה ← `politicians` (cache) — **לא חל על טראמפ**
+2. היסטוריית עסקאות ← `bulk/congresstrading?bioguide_id=` — **טראמפ:** `bulk/trumpstocktrades`
+3. אחזקות ← `congress_stock_holdings?bioguide_id=` — אין holdings endpoint ייעודי לטראמפ
+4. historical לפי טיקר ← רק העשרה, לא תחליף ל־bulk
+
+בפרופיל: רשימת «עסקאות אחרונות» מציגה **Filed** (תאריך דיווח), כמו בדוקס Quiver; שחזור תיק משתמש ב־**Traded**.
+
+Cron: `sync-congress-trades` (~*/20m) מושך live קונגרס + (ב־deep) **קודם** trumpstocktrades ואז bulk לפי BioGuide.
+`sync-quiver-congress-cache` יומי = politicians/holdings בלבד — **לא** מחליף trumpstocktrades.
+
+פריסה אחרי שינוי Quiver:
+
+```bash
+npx supabase functions deploy sync-quiver-congress-cache sync-congress-trades uw-explore uw-investor-profile --no-verify-jwt
+```
+
+UI: שורת «עדכון נתונים» + קישור attribution «Data provided by the Quiver API»
+בפיד קונגרס / בית / גילוי / פרופיל (`QuiverAttribution`) — כולל תדירות סנכרון ומקור.
 
 ---
 
@@ -81,10 +118,16 @@ curl -X POST "https://wpmrtczbfcijoocguime.supabase.co/functions/v1/uw-explore" 
 
 ## 2. Cron
 
-| Job | תדירות | פונקציה |
-|-----|---------|---------|
-| `sync-insider-buys-hourly` | שעה | Form4 + UW → insider buys |
-| `sync-darkpool-5m` | 5 דק׳ | UW → `dark_pool_trades` |
+מקור אמת מלא (כולל Quiver): [`DARK_POOL_DATA_SYNC.md`](./DARK_POOL_DATA_SYNC.md).
+
+| Job | תדירות (UTC) | פונקציה |
+|-----|--------------|---------|
+| `sync-congress-trades-20m` | כל 20 דק׳ | Quiver → `dark_pool_congress_trades` |
+| `sync-insider-buys-market-hours` | `13/17/21` ימי מסחר | Quiver + Form4/SEC → insider buys |
+| `sync-insider-buys-weekend` | `16` UTC סופ״ש | catch-up |
+| `sync-quiver-congress-cache-daily` | `06:15` | politicians + holdings |
+| `sync-fund-13f-daily` | `06:00` | 13F קרנות |
+| `sync-darkpool-5m` | כל 5 דק׳ | ספק → `dark_pool_trades` (כשמופעל) |
 
 ---
 

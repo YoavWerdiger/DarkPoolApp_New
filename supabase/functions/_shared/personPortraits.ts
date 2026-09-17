@@ -41,31 +41,47 @@ const WIKI = 'https://upload.wikimedia.org/wikipedia/commons';
 const KNOWN_BY_ID: Record<string, string> = {
   G000583: `${CONGRESS_PHOTO}/G000583.jpg`,
   P000197: `${CONGRESS_PHOTO}/P000197.jpg`,
+  C001114: `${CONGRESS_PHOTO}/C001114.jpg`,
+  M000355: `${CONGRESS_PHOTO}/M000355.jpg`,
+  C001098: `${CONGRESS_PHOTO}/C001098.jpg`,
+  M001218: `${CONGRESS_PHOTO}/M001218.jpg`,
+  B001236: `${CONGRESS_PHOTO}/B001236.jpg`,
+  M001217: `${CONGRESS_PHOTO}/M001217.jpg`,
+  S000168: `${CONGRESS_PHOTO}/S000168.jpg`,
+  T000278: `${CONGRESS_PHOTO}/T000278.jpg`,
+  G000596: `${CONGRESS_PHOTO}/G000596.jpg`,
+  K000389: `${CONGRESS_PHOTO}/K000389.jpg`,
+  M001157: `${CONGRESS_PHOTO}/M001157.jpg`,
+  W000802: `${CONGRESS_PHOTO}/W000802.jpg`,
+  D000032: `${CONGRESS_PHOTO}/D000032.jpg`,
+  M001190: `${CONGRESS_PHOTO}/M001190.jpg`,
   '888dc73f-f1eb-485a-a241-80657aaaaff9': `${WIKI}/5/56/Donald_Trump_official_portrait.jpg`,
   '1067983': `${WIKI}/5/51/Warren_Buffett_KU_Visit.jpg`,
   '1697748': `${WIKI}/4/44/Cathie_Wood_ARK_Invest_Photo.jpg`,
   '1336528': `${WIKI}/d/d8/Bill_Ackman_%2826410186110%29_%28cropped%29.jpg`,
-  'TSLA:Musk': `${WIKI}/3/34/Elon_Musk_Royal_Society_%28crop2%29.jpg`,
-  'AAPL:Cook': `${WIKI}/f/f7/Tim_Cook_March_2026_%28cropped_2%29.jpg`,
-  'MSFT:Nadella': `${WIKI}/4/4a/Satya_Nadella_%28cropped%29.jpg`,
-  'NVDA:Huang': `${WIKI}/c/c4/Jensen_Huang_%28cropped%29.jpg`,
-  'META:Zuckerberg': `${WIKI}/1/18/Mark_Zuckerberg_F8_2019_Keynote_%2832830578717%29_%28cropped%29.jpg`,
-  'ORCL:Ellison': `${WIKI}/0/0e/Larry_Ellison_picture_%28cropped%29.png`,
 };
 
 const KNOWN_BY_NAME: Record<string, string> = {
-  'elon musk': KNOWN_BY_ID['TSLA:Musk'],
-  'tim cook': KNOWN_BY_ID['AAPL:Cook'],
-  'cook tim': KNOWN_BY_ID['AAPL:Cook'],
-  'satya nadella': KNOWN_BY_ID['MSFT:Nadella'],
-  'jensen huang': KNOWN_BY_ID['NVDA:Huang'],
-  'huang jensen': KNOWN_BY_ID['NVDA:Huang'],
-  'mark zuckerberg': KNOWN_BY_ID['META:Zuckerberg'],
-  'larry ellison': KNOWN_BY_ID['ORCL:Ellison'],
   'warren buffett': KNOWN_BY_ID['1067983'],
   'cathie wood': KNOWN_BY_ID['1697748'],
   'bill ackman': KNOWN_BY_ID['1336528'],
   'nancy pelosi': KNOWN_BY_ID.P000197,
+  'john curtis': KNOWN_BY_ID.C001114,
+  'mitch mcconnell': KNOWN_BY_ID.M000355,
+  'josh gottheimer': KNOWN_BY_ID.G000583,
+  'ted cruz': KNOWN_BY_ID.C001098,
+  'rich mccormick': KNOWN_BY_ID.M001218,
+  'john boozman': KNOWN_BY_ID.B001236,
+  'jared moskowitz': KNOWN_BY_ID.M001217,
+  'maria elvira salazar': KNOWN_BY_ID.S000168,
+  'tommy tuberville': KNOWN_BY_ID.T000278,
+  'marjorie taylor greene': KNOWN_BY_ID.G000596,
+  'ro khanna': KNOWN_BY_ID.K000389,
+  'michael mccaul': KNOWN_BY_ID.M001157,
+  'michael t. mccaul': KNOWN_BY_ID.M001157,
+  'sheldon whitehouse': KNOWN_BY_ID.W000802,
+  'byron donalds': KNOWN_BY_ID.D000032,
+  'markwayne mullin': KNOWN_BY_ID.M001190,
   'donald trump': KNOWN_BY_ID['888dc73f-f1eb-485a-a241-80657aaaaff9'],
   'donald j trump': KNOWN_BY_ID['888dc73f-f1eb-485a-a241-80657aaaaff9'],
 };
@@ -123,26 +139,6 @@ export function knownPortraitUrl(
   if (nameKey && KNOWN_BY_NAME[nameKey]) return KNOWN_BY_NAME[nameKey];
 
   if (id && nameKey) {
-    const idUpper = id.toUpperCase();
-    if (idUpper.includes('MUSK') || nameKey.includes('musk')) {
-      return KNOWN_BY_NAME['elon musk'];
-    }
-    if (idUpper.includes('COOK') || nameKey.includes('cook')) {
-      return KNOWN_BY_NAME['tim cook'];
-    }
-    if (
-      nameKey.includes('jensen huang') ||
-      nameKey.includes('huang jensen') ||
-      (idUpper.includes('NVDA') && idUpper.includes('HUANG'))
-    ) {
-      return KNOWN_BY_NAME['jensen huang'];
-    }
-    if (nameKey.includes('nadella') || (idUpper.includes('MSFT') && idUpper.includes('NADELLA'))) {
-      return KNOWN_BY_NAME['satya nadella'];
-    }
-    if (nameKey.includes('ellison') || (idUpper.includes('ORCL') && idUpper.includes('ELLISON'))) {
-      return KNOWN_BY_NAME['larry ellison'];
-    }
     if (nameKey.includes('ackman') || id === '1336528') {
       return KNOWN_BY_NAME['bill ackman'];
     }

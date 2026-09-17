@@ -348,7 +348,7 @@ export default function EditProfileScreen({ navigation }: any) {
             padding="md"
             style={{
               borderRadius: DesignTokens.borderRadius.xl,
-              borderWidth: 1,
+              borderWidth: 0,
               borderColor: DesignTokens.colors.border.main,
             }}
           >
@@ -522,7 +522,7 @@ export default function EditProfileScreen({ navigation }: any) {
                 width: 300,
                 maxWidth: '85%',
                 borderRadius: DesignTokens.borderRadius.xl,
-                borderWidth: 1,
+                borderWidth: 0,
                 borderColor: DesignTokens.colors.border.main,
                 alignSelf: 'center',
               }}
@@ -698,7 +698,7 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   input: {
-    borderWidth: 1,
+    borderWidth: 0,
     paddingHorizontal: 14,
     paddingVertical: 13,
     fontSize: 16,
@@ -707,7 +707,7 @@ const styles = StyleSheet.create({
     minHeight: 50,
   },
   selectRow: {
-    borderWidth: 1,
+    borderWidth: 0,
     paddingHorizontal: 14,
     minHeight: 50,
     flexDirection: 'row',
@@ -721,7 +721,7 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   readonlyBox: {
-    borderWidth: 1,
+    borderWidth: 0,
     paddingHorizontal: 14,
     minHeight: 50,
     justifyContent: 'center',
@@ -756,7 +756,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
   modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.62)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -774,7 +774,7 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 14,
     paddingHorizontal: 14,
-    borderWidth: 1,
+    borderWidth: 0,
     marginBottom: 8,
     minHeight: 50,
   },

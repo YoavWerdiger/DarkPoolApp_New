@@ -84,7 +84,7 @@ export default function SelectBrokerAccountScreen() {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        root: { flex: 1, backgroundColor: '#0A0E0A' },
+        root: { flex: 1, backgroundColor: '#111111' },
         scroll: { flex: 1, backgroundColor: 'transparent' },
         scrollContent: { padding: 16, paddingBottom: 80 },
         sectionHint: {

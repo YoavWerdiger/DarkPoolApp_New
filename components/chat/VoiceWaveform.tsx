@@ -12,7 +12,6 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import { useDesignTokens } from '../ui/DesignTokens';
-import { shapeWaveformLevel } from '../../utils/waveformSamples';
 
 interface VoiceWaveformProps {
   isRecording: boolean;
@@ -26,7 +25,7 @@ const BAR_W = 2.5;
 const BAR_GAP = 1.5;
 const STRIDE = BAR_W + BAR_GAP;
 /** כמה ברים חדשים בשנייה — קובע גם את מהירות ה-translate */
-const BARS_PER_SEC = 16;
+const BARS_PER_SEC = 20;
 const SCROLL_SPEED_PX_S = STRIDE * BARS_PER_SEC; // = מסונכרן במדויק
 const EXTRA_BARS = 8;
 
@@ -93,8 +92,8 @@ export default function VoiceWaveform({ isRecording, audioLevelRef }: VoiceWavef
 
     let raf = 0;
     const pump = () => {
-      // אותו shapeWaveformLevel כמו בבועה
-      inputSV.value = shapeWaveformLevel(audioLevelRef?.current ?? 0);
+      // רמה חיה ישירות מה-metering — בלי floor של בועת ההשמעה
+      inputSV.value = audioLevelRef?.current ?? 0;
       raf = requestAnimationFrame(pump);
     };
     raf = requestAnimationFrame(pump);
@@ -121,12 +120,14 @@ export default function VoiceWaveform({ isRecording, audioLevelRef }: VoiceWavef
     const dt = Math.min(1 / 30, (frame.timeSincePreviousFrame ?? 16) / 1000);
     const n = barCountSV.value;
 
-    // 1) עוצמה חיה — מעקב מהיר אחרי שינויים (יותר volatile, פחות "שטוח גבוה")
+    // 1) WhatsApp VU: קפיצה מיידית על דיבור, נפילה מהירה בשקט — בלי latch לשיא
     const target = inputSV.value;
-    if (target <= 0) {
-      liveSV.value = liveSV.value < 0.025 ? 0 : liveSV.value * 0.5;
+    if (target > liveSV.value) {
+      liveSV.value = target;
+    } else if (target < 0.025) {
+      liveSV.value = liveSV.value < 0.02 ? 0 : liveSV.value * 0.38;
     } else {
-      liveSV.value = liveSV.value * 0.28 + target * 0.72;
+      liveSV.value = liveSV.value * 0.22 + target * 0.78;
     }
 
     // 2) תמיד מעדכנים את הבר האחרון באותו פריים — אין "בר חי" נפרד שיוצא מסנכרון

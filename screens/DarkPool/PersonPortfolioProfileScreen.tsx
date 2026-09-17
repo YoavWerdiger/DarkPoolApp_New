@@ -5,7 +5,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -19,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenChrome } from '../../components/ui/ScreenChrome';
 import UICard from '../../components/ui/UICard';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { ProfileSkeleton, ChartSkeleton, ListItemSkeleton } from '../../components/ui/SkeletonLoader';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 import { useDarkPoolInvestorProfile } from '../../hooks/useDarkPoolInvestorProfile';
 import { useFundProfile } from '../../hooks/useFundProfile';
@@ -34,8 +35,10 @@ import {
 import {
   appendLivePortfolioPoint,
   pickDefaultChartPeriod,
+  prepareReconstructedChartSeries,
   type ChartPoint,
 } from './utils/profileChartSeries';
+import { hebrewText } from './utils/bidi';
 import {
   HoldingsPieSection,
   HoldingTickerDot,
@@ -51,8 +54,16 @@ import {
 import { useFollowedInvestors } from '../../hooks/useFollowedInvestors';
 import { NotificationService } from '../../services/notificationService';
 import { useAppDialog } from '../../components/ui/AppDialogProvider';
+import ShareDestinationSheet from '../../components/share/ShareDestinationSheet';
+import { buildPersonAttachment } from '../../types/shareableEntity';
+import type { ShareableAttachment } from '../../types/shareableEntity';
+import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 
 export type PersonKind = 'politician' | 'insider' | 'fund_manager';
+
+/** גודל זהה לאווטאר ולכפתור הפעמון בכרטיס זהות — עיגול אמיתי */
+const IDENTITY_CIRCLE_SIZE = 48;
+const IDENTITY_CIRCLE_RADIUS = IDENTITY_CIRCLE_SIZE / 2;
 
 interface Props {
   id: string;
@@ -61,7 +72,6 @@ interface Props {
   nameHint?: string;
   imageHint?: string | null;
   onBack: () => void;
-  onTickerPress: (ticker: string) => void;
 }
 
 type HoldingRow = {
@@ -97,13 +107,13 @@ type TradeRow = {
 };
 
 function kindLabel(kind: PersonKind): string {
-  if (kind === 'politician') return 'פוליטיקאי';
+  if (kind === 'politician') return 'לוויתן';
   if (kind === 'fund_manager') return 'מנהל קרן';
   return 'בכיר';
 }
 
 function kindDefaultSubtitle(kind: PersonKind): string {
-  if (kind === 'politician') return 'דיווחי קונגרס';
+  if (kind === 'politician') return 'לוויתן';
   if (kind === 'fund_manager') return 'אחזקות רבעוניות';
   return 'עסקאות מדווחות';
 }
@@ -116,17 +126,23 @@ function formatHoldingDateHe(iso: string | null | undefined): string | null {
   return `${day}/${m}/${y}`;
 }
 
-/** אומדן תאריך הוספה מעסקאות אחרונות — עד שה־edge מחזיר first_added_date מלא */
+/** אומדן תאריך הוספה מעסקאות אחרונות — לפי Traded (לא Filed) */
 function earliestBuyDateFromRecent(
   ticker: string,
-  recent: Array<{ ticker: string; txn_label: string; date: string | null }>
+  recent: Array<{
+    ticker: string;
+    txn_label: string;
+    date: string | null;
+    traded_date?: string | null;
+  }>
 ): string | null {
   const sym = ticker.toUpperCase();
   let best: string | null = null;
   for (const t of recent) {
-    if (t.ticker.toUpperCase() !== sym || !t.date) continue;
+    if (t.ticker.toUpperCase() !== sym) continue;
     if (isSellTxnLabel(t.txn_label)) continue;
-    const d = t.date.slice(0, 10);
+    const d = (t.traded_date || t.date || '').slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) continue;
     if (!best || d < best) best = d;
   }
   return best;
@@ -134,6 +150,8 @@ function earliestBuyDateFromRecent(
 
 /** מסיר מקורות טכניים (UW / Form 4 וכו') מתת־כותרת שחוזרת מהשרת */
 function sanitizePublicSubtitle(raw: string, kind: PersonKind): string {
+  if (kind === 'politician') return 'לוויתן';
+
   const cleaned = raw
     .replace(/\bUnusual\s*Whales\b/gi, '')
     .replace(/\bUW\b/g, '')
@@ -145,7 +163,15 @@ function sanitizePublicSubtitle(raw: string, kind: PersonKind): string {
     .replace(/\s{2,}/g, ' ')
     .replace(/^[·\s]+|[·\s]+$/g, '')
     .trim();
-  return cleaned || kindDefaultSubtitle(kind);
+  if (!cleaned) return kindDefaultSubtitle(kind);
+
+  const parts = cleaned
+    .split(/\s*·\s*/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  // בכיר / מנהל קרן: שורת תפקיד קצרה אחת
+  return parts[0] || kindDefaultSubtitle(kind);
 }
 
 export function PersonPortfolioProfileScreen({
@@ -155,7 +181,6 @@ export function PersonPortfolioProfileScreen({
   nameHint,
   imageHint,
   onBack,
-  onTickerPress,
 }: Props) {
   const tokens = useDesignTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
@@ -186,6 +211,8 @@ export function PersonPortfolioProfileScreen({
   const [optimisticFollowing, setOptimisticFollowing] = useState<boolean | null>(null);
   const togglingRef = useRef(false);
   const [period, setPeriod] = useState<PerformancePeriod>('3M');
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareAttachment, setShareAttachment] = useState<ShareableAttachment | null>(null);
 
   const listFollowing = useMemo(
     () => followedList.some((x) => x.id === id && x.kind === kind),
@@ -281,7 +308,7 @@ export function PersonPortfolioProfileScreen({
     }
   }, [isFollowing, id, kind, displayName, imageUrl, ticker, showDialog]);
 
-  const { portfolioValue, fullChartSeries, holdings, trades, disclaimer } =
+  const { portfolioValue, fullChartSeries, holdings, trades } =
     useMemo(() => {
       if (kind === 'fund_manager') {
         const p = fund.profile;
@@ -318,25 +345,70 @@ export function PersonPortfolioProfileScreen({
           fullChartSeries: series,
           holdings: holdingRows,
           trades: [] as TradeRow[],
-          disclaimer:
-            'מבוסס על דיווחי 13F ציבוריים — לא תיק בזמן אמת. «מחיר כניסה» = מחיר שוק בתאריך הופעה ראשונה בדוח; תשואה מול מחיר שוק נוכחי.',
         };
       }
 
       const p = investor.profile;
       const m = p?.metrics ?? null;
-      // מחיר ממוצע (Form4 עם מחיר) / מחיר כניסה (Yahoo@first_added) + תשואה.
-      const series = appendLivePortfolioPoint(
-        (m?.series ?? []).map((pt) => ({ date: pt.date, value: pt.value })),
-        m?.portfolio_value
-      );
+      // דילול + נטרול הפקדות — בלי appendLive ששובר את העקומה
+      const rawSeries: ChartPoint[] = (m?.series ?? []).map((pt) => ({
+        date: pt.date,
+        value: pt.value,
+        ...(pt.external_flow != null && pt.external_flow !== 0
+          ? { external_flow: pt.external_flow }
+          : {}),
+      }));
+      const series = prepareReconstructedChartSeries(rawSeries, {
+        tradeCount: m?.trade_count ?? p?.recent_trades?.length ?? 0,
+        chartReliable: m?.chart_reliable,
+      });
 
       const holdingsByTicker = new Map(
         (p?.holdings ?? []).map((h) => [h.ticker.toUpperCase(), h])
       );
 
       let holdingRows: HoldingRow[] = [];
-      if (m?.holdings?.length) {
+      // Quiver snapshot עדיף על holdings משוחזרים מטווחי STOCK Act
+      if (
+        p?.holdings_source === 'quiver_estimate' &&
+        (p?.holdings?.length ?? 0) > 0
+      ) {
+        holdingRows = (p.holdings ?? []).slice(0, 16).map((h) => {
+          const firstAdded =
+            h.first_added_date?.slice(0, 10) ||
+            earliestBuyDateFromRecent(h.ticker, p?.recent_trades ?? []) ||
+            null;
+          const reported =
+            !firstAdded ? h.last_trade_date?.slice(0, 10) || null : null;
+          const dateShown = firstAdded || reported;
+          const entry =
+            h.entry_price != null &&
+            Number.isFinite(h.entry_price) &&
+            h.entry_price > 0
+              ? h.entry_price
+              : null;
+          return {
+            ticker: h.ticker,
+            title: h.ticker,
+            meta: formatHoldingsListMeta({
+              amountLabel: h.amount_label,
+              tradeCount: h.trade_count,
+              fromTradesOnly: false,
+            }),
+            allocation_pct: h.allocation_pct,
+            trade_count: h.trade_count,
+            market_value:
+              h.mid_usd_k != null && h.mid_usd_k > 0
+                ? h.mid_usd_k * 1000
+                : undefined,
+            return_pct: null,
+            avg_price: null,
+            entry_price: entry,
+            first_added_date: dateShown,
+            dateLabel: firstAdded ? 'added' : reported ? 'reported' : null,
+          };
+        });
+      } else if (m?.holdings?.length) {
         holdingRows = m.holdings.slice(0, 16).map((h) => {
           const fromList = holdingsByTicker.get(h.ticker.toUpperCase());
           const firstAdded =
@@ -353,10 +425,11 @@ export function PersonPortfolioProfileScreen({
             h.entry_price > 0
               ? h.entry_price
               : null;
+          // תשואה רק עם basis אמין — לא NVDA +1300% מ־Yahoo על qty מוערך
           const hasReturn =
+            reliable &&
             h.return_pct != null &&
-            Number.isFinite(h.return_pct) &&
-            (reliable || entryFromMarket != null);
+            Number.isFinite(h.return_pct);
           return {
             ticker: h.ticker,
             title: h.ticker,
@@ -430,10 +503,6 @@ export function PersonPortfolioProfileScreen({
         fullChartSeries: series,
         holdings: holdingRows,
         trades: tradeRows,
-        disclaimer:
-          kind === 'politician'
-            ? 'גרף שווי = אלגוריתם שחזור מטווחי $ (STOCK Act) + מחירי שוק. «מחיר כניסה» = מחיר שוק בתאריך הדיווח/קנייה הראשון; תשואה מול מחיר נוכחי. כמות מניות רק כשמדווחת.'
-            : 'הערכה על בסיס דיווחים ציבוריים + מחירי שוק — לא תיק רשמי. מחיר ממוצע מ־Form 4 כשיש מחיר מדווח; אחרת מחיר כניסה לפי מחיר שוק בתאריך הראשון.',
       };
     }, [kind, fund.profile, investor.profile]);
 
@@ -458,14 +527,6 @@ export function PersonPortfolioProfileScreen({
   );
   const pieColors = useHoldingsPieColors(pieHoldings);
 
-  const openTicker = useCallback(
-    (sym: string) => {
-      void HapticFeedback.impactLight();
-      onTickerPress(sym);
-    },
-    [onTickerPress]
-  );
-
   if (loading) {
     return (
       <ScreenChrome rtl>
@@ -476,23 +537,57 @@ export function PersonPortfolioProfileScreen({
             title={kindLabel(kind)}
             onBack={onBack}
           />
-          <View style={styles.center}>
-            <ActivityIndicator color={tokens.colors.primary.main} />
-            <Text style={styles.loadingHint}>טוען שווי תיק…</Text>
-          </View>
+          <ScrollView contentContainerStyle={styles.scroll}>
+            <ProfileSkeleton delay={0} />
+            <View style={{ marginTop: 24 }}>
+              <ChartSkeleton delay={200} height={280} />
+            </View>
+            <View style={{ marginTop: 24, gap: 12 }}>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <ListItemSkeleton key={i} delay={400 + i * 70} showAvatar={false} />
+              ))}
+            </View>
+          </ScrollView>
         </SafeAreaView>
       </ScreenChrome>
     );
   }
 
   return (
-    <ScreenChrome rtl withBrandWatermark>
+    <ScreenChrome rtl>
       <StatusBar style="light" />
       <SafeAreaView style={styles.safe} edges={['top']}>
         <ChatSubScreenHeader
           inRtlTree
           title={kindLabel(kind)}
           onBack={onBack}
+          rightSlot={
+            <DayNavBlurButton
+              onPress={() => {
+                void HapticFeedback.selection();
+                const top = holdings[0];
+                setShareAttachment(
+                  buildPersonAttachment({
+                    id,
+                    kind,
+                    name: displayName,
+                    subtitle,
+                    imageUrl,
+                    ticker: ticker ?? null,
+                    portfolioValue,
+                    topHolding: top?.ticker ?? null,
+                    topHoldingValue: top?.value_usd ?? top?.market_value ?? null,
+                  })
+                );
+                setShareOpen(true);
+              }}
+              size={DRAWER_MENU_BUTTON_SIZE}
+              glassIntensity="subtle"
+              accessibilityLabel="שתף פרופיל"
+            >
+              <Ionicons name="share-outline" size={22} color={tokens.colors.text.primary} />
+            </DayNavBlurButton>
+          }
         />
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -521,16 +616,20 @@ export function PersonPortfolioProfileScreen({
                 ticker={ticker}
                 kind={kind}
                 personId={id}
-                size={48}
+                size={IDENTITY_CIRCLE_SIZE}
               />
               <View style={styles.identityText}>
-                <Text style={styles.name} numberOfLines={1}>
+                <Text style={[styles.name, styles.rtlRightText]} numberOfLines={1}>
                   {displayName}
                 </Text>
-                <Text style={styles.sub} numberOfLines={1}>
+                <Text style={[styles.sub, styles.rtlRightText]} numberOfLines={1}>
                   {subtitle}
                 </Text>
               </View>
+              {/*
+                עיגול אמיתי: הסגנון הוויזואלי על View פנימי (לא על Pressable).
+                Pressable לבד לא תמיד חותך background/ripple ל-borderRadius (במיוחד Android).
+              */}
               <Pressable
                 onPress={() => {
                   void HapticFeedback.selection();
@@ -544,12 +643,25 @@ export function PersonPortfolioProfileScreen({
                     ? 'כבה התראות על עסקאות ודיווחים'
                     : 'קבל התראות על עסקאות ודיווחים'
                 }
+                android_ripple={
+                  Platform.OS === 'android'
+                    ? {
+                        color: 'rgba(255,255,255,0.14)',
+                        borderless: false,
+                        radius: IDENTITY_CIRCLE_RADIUS,
+                      }
+                    : undefined
+                }
                 style={({ pressed }) => [
+                  styles.alertBtnHit,
                   pressed && { opacity: 0.85 },
                   followBusy && { opacity: 0.5 },
                 ]}
               >
-                <View style={[styles.alertBtn, isFollowing && styles.alertBtnOn]}>
+                <View
+                  collapsable={false}
+                  style={[styles.alertBtn, isFollowing && styles.alertBtnOn]}
+                >
                   {followBusy ? (
                     <ActivityIndicator size="small" color={tokens.colors.primary.main} />
                   ) : (
@@ -578,20 +690,21 @@ export function PersonPortfolioProfileScreen({
                 selectedPeriod={period}
                 onPeriodChange={setPeriod}
                 showHeader
+                headerTitle="שווי תיק"
+                headerTitleAlign="right"
                 formatValue={(v) => formatUsdCompact(v)}
+                showPointMarkers={kind !== 'fund_manager'}
               />
             ) : (
-              <Text style={styles.muted}>
+              <Text style={[styles.muted, styles.rtlRightText]}>
                 {kind === 'fund_manager'
                   ? 'עדיין אין מספיק דיווחים לבניית גרף שווי.'
                   : portfolioValue == null && !error
                     ? 'אין מספיק דיווחים לבניית שווי מוערך'
-                    : 'עדיין אין מספיק דיווחים לבניית גרף שווי מוערך.'}
+                    : 'אין מספיק דיווחים אמינים לגרף ביצועים מוערך.'}
               </Text>
             )}
           </UICard>
-
-          <Text style={styles.disclaimer}>{disclaimer}</Text>
 
           {/* אחזקות — עוגה כמו ביומן מסחר */}
           {pieHoldings.length > 0 ? (
@@ -606,7 +719,7 @@ export function PersonPortfolioProfileScreen({
 
           {holdings.length > 0 ? (
             <>
-              <Text style={styles.sectionTitle}>אחזקות מובילות</Text>
+              <Text style={[styles.sectionTitle, styles.rtlRightText]}>אחזקות מובילות</Text>
               <UICard
                 variant="glass"
                 glassIntensity="light"
@@ -630,13 +743,7 @@ export function PersonPortfolioProfileScreen({
                     hasReturn || !!avgStr || !!entryStr || !!dateStr;
                   return (
                     <React.Fragment key={h.ticker}>
-                      <Pressable
-                        onPress={() => openTicker(h.ticker)}
-                        style={({ pressed }) => [
-                          styles.listRowPress,
-                          pressed && { opacity: 0.9 },
-                        ]}
-                      >
+                      <View style={styles.listRowPress}>
                         <View style={styles.listRow}>
                           <TickerLogo symbol={h.ticker} size={36} borderRadius={18} />
                           <View style={styles.rowText}>
@@ -684,15 +791,9 @@ export function PersonPortfolioProfileScreen({
                                 </Text>
                               ) : null}
                             </View>
-                          ) : (
-                            <Ionicons
-                              name="chevron-back"
-                              size={14}
-                              color={tokens.colors.text.tertiary}
-                            />
-                          )}
+                          ) : null}
                         </View>
-                      </Pressable>
+                      </View>
                       {index < holdings.length - 1 ? (
                         <View style={styles.listRowDivider} />
                       ) : null}
@@ -706,9 +807,9 @@ export function PersonPortfolioProfileScreen({
           {/* עסקאות */}
           {trades.length > 0 ? (
             <>
-              <Text style={[styles.sectionTitle, { marginTop: 8 }]}>עסקאות אחרונות</Text>
-              <Text style={styles.sectionHint}>
-                קנייה/מכירה = סוג העסקה המדווחת, לא פוזיציית שורט
+              <Text style={[styles.sectionTitle, styles.rtlRightText, { marginTop: 8 }]}>עסקאות אחרונות</Text>
+              <Text style={[styles.sectionHint, styles.rtlRightText]}>
+                תאריך = דיווח (Filed). קנייה/מכירה = סוג העסקה המדווחת, לא פוזיציית שורט
               </Text>
               <UICard
                 variant="glass"
@@ -724,13 +825,7 @@ export function PersonPortfolioProfileScreen({
                     : tokens.colors.primary.main;
                   return (
                     <React.Fragment key={t.key}>
-                      <Pressable
-                        onPress={() => openTicker(t.ticker)}
-                        style={({ pressed }) => [
-                          styles.listRowPress,
-                          pressed && { opacity: 0.9 },
-                        ]}
-                      >
+                      <View style={styles.listRowPress}>
                         <View style={styles.listRow}>
                           <TickerLogo symbol={t.ticker} size={36} borderRadius={18} />
                           <View style={styles.rowText}>
@@ -754,7 +849,7 @@ export function PersonPortfolioProfileScreen({
                             ) : null}
                           </View>
                         </View>
-                      </Pressable>
+                      </View>
                       {index < trades.length - 1 ? (
                         <View style={styles.listRowDivider} />
                       ) : null}
@@ -766,6 +861,14 @@ export function PersonPortfolioProfileScreen({
           ) : null}
         </ScrollView>
       </SafeAreaView>
+      <ShareDestinationSheet
+        visible={shareOpen && !!shareAttachment}
+        attachment={shareAttachment}
+        onClose={() => {
+          setShareOpen(false);
+          setShareAttachment(null);
+        }}
+      />
     </ScreenChrome>
   );
 }
@@ -809,6 +912,10 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontSize: 13,
       color: tokens.colors.text.tertiary,
     },
+    rtlRightText: {
+      textAlign: 'right',
+      writingDirection: 'rtl',
+    },
     errCard: {
       marginBottom: 12,
       borderColor: tokens.colors.border.danger,
@@ -817,7 +924,8 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       color: tokens.colors.text.danger,
       fontSize: 14,
       fontWeight: '700',
-      textAlign: 'left',
+      alignSelf: 'stretch',
+      ...hebrewText,
     },
     identityCard: {
       marginBottom: 14,
@@ -833,55 +941,62 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       flex: 1,
       minWidth: 0,
       gap: 2,
+      alignItems: 'flex-end',
     },
-    // אותו pill כמו periodBtn בגרף — rgba מפורש כדי שייראה מעל identity glass
+    // Hit target עגול — חייב overflow כדי לחתוך ripple ב-Android
+    alertBtnHit: {
+      width: IDENTITY_CIRCLE_SIZE,
+      height: IDENTITY_CIRCLE_SIZE,
+      borderRadius: IDENTITY_CIRCLE_RADIUS,
+      overflow: 'hidden',
+      flexShrink: 0,
+    },
+    // עיגול ויזואלי זהה לאווטאר: size קבוע + radius=size/2 + overflow
     alertBtn: {
-      width: 40,
-      height: 40,
-      minWidth: 40,
-      minHeight: 40,
-      borderRadius: 999,
+      width: IDENTITY_CIRCLE_SIZE,
+      height: IDENTITY_CIRCLE_SIZE,
+      borderRadius: IDENTITY_CIRCLE_RADIUS,
       overflow: 'hidden',
       alignItems: 'center',
       justifyContent: 'center',
-      flexShrink: 0,
-      backgroundColor: 'rgba(255,255,255,0.08)',
-      borderWidth: StyleSheet.hairlineWidth * 2,
-      borderColor: 'rgba(255,255,255,0.12)',
+      backgroundColor: 'rgba(255,255,255,0.06)',
+      borderWidth: 1.5,
+      borderColor: tokens.colors.primary.main,
     },
     alertBtnOn: {
       backgroundColor: `${tokens.colors.primary.main}22`,
-      borderColor: `${tokens.colors.primary.main}66`,
+      borderColor: tokens.colors.primary.main,
     },
     name: {
       fontSize: 18,
       fontWeight: '800',
       color: tokens.colors.text.primary,
-      textAlign: 'left',
+      alignSelf: 'stretch',
+      textAlign: 'right',
+      writingDirection: 'rtl',
+      ...hebrewText,
     },
     sub: {
       fontSize: 13,
       color: tokens.colors.text.secondary,
-      textAlign: 'left',
+      alignSelf: 'stretch',
+      textAlign: 'right',
+      writingDirection: 'rtl',
+      ...hebrewText,
     },
     chartCard: {
       marginBottom: 8,
       borderRadius: tokens.borderRadius['2xl'],
       overflow: 'hidden',
     },
-    disclaimer: {
-      fontSize: 11,
-      lineHeight: 16,
-      color: tokens.colors.text.tertiary,
-      textAlign: 'left',
-      marginBottom: 16,
-      paddingHorizontal: 2,
-    },
     sectionTitle: {
       fontSize: 16,
       fontWeight: '800',
       color: tokens.colors.text.primary,
-      textAlign: 'left',
+      alignSelf: 'stretch',
+      textAlign: 'right',
+      writingDirection: 'rtl',
+      ...hebrewText,
       marginBottom: 10,
       marginTop: 4,
     },
@@ -889,7 +1004,8 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontSize: 11,
       lineHeight: 15,
       color: tokens.colors.text.tertiary,
-      textAlign: 'left',
+      alignSelf: 'stretch',
+      ...hebrewText,
       marginTop: -6,
       marginBottom: 10,
       paddingHorizontal: 2,
@@ -963,15 +1079,16 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       textAlign: 'right',
       writingDirection: 'rtl',
     },
-    tradeRight: { alignItems: 'flex-start', flexShrink: 0 },
+    tradeRight: { alignItems: 'flex-end', flexShrink: 0 },
     tradeDate: {
       fontSize: 11,
       lineHeight: 14,
       color: tokens.colors.text.tertiary,
-      textAlign: 'left',
+      textAlign: 'right',
+      writingDirection: 'rtl',
     },
     holdingRight: {
-      alignItems: 'flex-start',
+      alignItems: 'flex-end',
       flexShrink: 0,
       minWidth: 72,
       gap: 2,
@@ -979,7 +1096,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     holdingReturn: {
       fontSize: 13,
       fontWeight: '800',
-      textAlign: 'left',
+      textAlign: 'right',
       writingDirection: 'ltr',
     },
     holdingAvg: {
@@ -987,8 +1104,8 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       lineHeight: 14,
       fontWeight: '600',
       color: tokens.colors.text.secondary,
-      textAlign: 'left',
-      writingDirection: 'ltr',
+      textAlign: 'right',
+      writingDirection: 'rtl',
     },
     /** מחיר קומפקטי ($1.1K) כיחידת LTR — מונע מ־K/M/B להידבק לעברית */
     holdingAvgPrice: {
@@ -998,14 +1115,16 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontSize: 11,
       lineHeight: 14,
       color: tokens.colors.text.tertiary,
-      textAlign: 'left',
+      textAlign: 'right',
+      writingDirection: 'rtl',
     },
     muted: {
       marginTop: 8,
       fontSize: 13,
       lineHeight: 20,
       color: tokens.colors.text.tertiary,
-      textAlign: 'left',
+      textAlign: 'right',
+      writingDirection: 'rtl',
     },
   });
 }

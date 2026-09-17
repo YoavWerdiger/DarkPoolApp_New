@@ -22,6 +22,8 @@ import { ChatScreenShell, ChatSubScreenHeader } from '../../components/chat/Chat
 import ChatMessage from '../../components/chat/ChatMessage';
 import { useAuth } from '../../context/AuthContext';
 import { chatMessageService } from '../../services/chat';
+import { warmChatGroupOnPress } from '../../services/appPrefetch';
+import { lockAndroidChatSoftInput } from '../../components/chat/androidChatKeyboard';
 import { ChatStarredMessage, ChatMessage as ChatMessageType } from '../../types/chat.types';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { logger } from '../../utils/logger';
@@ -133,9 +135,11 @@ export default function ChatGroupStarredMessagesScreen() {
   const handleOpenMessage = useCallback(
     (messageId: string) => {
       void HapticFeedback.selection();
+      lockAndroidChatSoftInput();
+      if (user?.id) warmChatGroupOnPress(user.id, groupId);
       (navigation as any).navigate('ChatGroup', { groupId, scrollToMessageId: messageId });
     },
-    [navigation, groupId],
+    [navigation, groupId, user?.id],
   );
 
   const handleUnstar = useCallback(

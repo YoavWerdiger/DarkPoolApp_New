@@ -1,5 +1,6 @@
 /**
  * פורמט ערכים ליומן כלכלי — שמור בסנכרון עם utils/economicNumberFormat.ts
+ * לא מוסיפים '%' בעצמנו; הסנכרון שומר מספר נקי ומתעלם מ-actual_t של Benzinga.
  */
 
 function splitNumericPrefix(raw: string): { sign: string; intFrac: string; suffix: string } | null {

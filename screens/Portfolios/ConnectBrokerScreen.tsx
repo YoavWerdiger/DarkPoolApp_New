@@ -106,7 +106,7 @@ export default function ConnectBrokerScreen() {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        root: { flex: 1, backgroundColor: '#0A0E0A' },
+        root: { flex: 1, backgroundColor: '#111111' },
         scroll: { flex: 1, backgroundColor: 'transparent' },
         scrollContent: {
           paddingHorizontal: 16,

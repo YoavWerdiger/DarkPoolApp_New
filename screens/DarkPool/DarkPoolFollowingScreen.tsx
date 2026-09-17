@@ -4,7 +4,6 @@
 
 import React, { useCallback, useMemo } from 'react';
 import {
-  ActivityIndicator,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -21,6 +20,7 @@ import { ScreenChrome } from '../../components/ui/ScreenChrome';
 import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHeader';
 import UIButton from '../../components/ui/UIButton';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { ListItemSkeleton, CardSkeleton } from '../../components/ui/SkeletonLoader';
 import { useDarkPoolTabBarHeight } from '../../hooks/useDarkPoolTabBarHeight';
 import {
   dispatchOpenMainDrawer,
@@ -28,6 +28,7 @@ import {
 } from '../../navigation/mainDrawerNav';
 import { HapticFeedback, triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
 import { useFollowedInvestors } from '../../hooks/useFollowedInvestors';
+import { darkPoolTextRtl } from './darkPoolLayout';
 import { unfollowInvestor, type FollowedInvestor } from '../../services/darkpool/darkPoolFollowService';
 import { useDarkPoolStackNav } from './hooks/useDarkPoolStackNav';
 import type { DarkPoolTabParamList } from '../../navigation/DarkPoolTabs';
@@ -84,13 +85,6 @@ export default function DarkPoolFollowingScreen() {
     [stackNav]
   );
 
-  const goToTicker = useCallback(
-    (ticker: string) => {
-      stackNav.navigate('DarkPoolTicker', { ticker, tab: 'insider' });
-    },
-    [stackNav]
-  );
-
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -139,7 +133,8 @@ export default function DarkPoolFollowingScreen() {
           fontWeight: '800',
           color: tokens.colors.text.primary,
           marginBottom: tokens.spacing.sm,
-          textAlign: 'left',
+          alignSelf: 'stretch',
+          ...darkPoolTextRtl,
         },
       }),
     [tokens, bottomPad]
@@ -151,8 +146,10 @@ export default function DarkPoolFollowingScreen() {
         <StatusBar style="light" />
         <SafeAreaView style={{ flex: 1 }} edges={['top']}>
           <MainDrawerScreenHeader inRtlTree title="מעקב" onMenuPress={openDrawer} />
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <ActivityIndicator color={tokens.colors.primary.main} />
+          <View style={styles.scroll}>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <ListItemSkeleton key={i} delay={i * 70} showAvatar />
+            ))}
           </View>
         </SafeAreaView>
       </ScreenChrome>
@@ -160,7 +157,7 @@ export default function DarkPoolFollowingScreen() {
   }
 
   return (
-    <ScreenChrome rtl withBrandWatermark>
+    <ScreenChrome rtl>
       <StatusBar style="light" />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <MainDrawerScreenHeader
@@ -196,7 +193,11 @@ export default function DarkPoolFollowingScreen() {
 
               <Text style={styles.activityTitle}>פעילות אחרונה</Text>
               {activityFeed.loading ? (
-                <ActivityIndicator color={tokens.colors.primary.main} />
+                <View style={{ marginTop: 12 }}>
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <CardSkeleton key={i} delay={i * 70} />
+                  ))}
+                </View>
               ) : activityFeed.items.length === 0 ? (
                 <Text style={styles.emptyText}>אין עסקאות חדשות מהמעקב.</Text>
               ) : (
@@ -205,7 +206,6 @@ export default function DarkPoolFollowingScreen() {
                     key={item.id}
                     item={item}
                     onPersonPress={() => openActivityPerson(item)}
-                    onTickerPress={goToTicker}
                   />
                 ))
               )}

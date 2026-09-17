@@ -19,6 +19,11 @@ export interface UICardProps {
   showGlassBorder?: boolean;
   /** השבתת רטט בלחיצה (ברירת מחדל: רטט קל פעיל אם יש onPress) */
   haptic?: boolean;
+  /**
+   * מדלג על BlurView ומשתמש ברקע מוצק כמו ב־Android.
+   * נחוץ ל־react-native-view-shot / ייצוא PNG — BlurView לא נלכד נכון.
+   */
+  disableBlur?: boolean;
 }
 
 const UICard: React.FC<UICardProps> = ({
@@ -31,8 +36,9 @@ const UICard: React.FC<UICardProps> = ({
   contentContainerStyle,
   pressable = false,
   accessibilityLabel,
-  showGlassBorder = true,
+  showGlassBorder: _showGlassBorder = true,
   haptic = true,
+  disableBlur = false,
 }) => {
   const tokens = useDesignTokens();
   const { colors, spacing, borderRadius, shadows, glassmorphism, layout } = tokens;
@@ -47,11 +53,14 @@ const UICard: React.FC<UICardProps> = ({
       case 'elevated':
         return {
           backgroundColor: colors.background.cardSolid,
-          ...shadows.card,
+          borderWidth: 0,
+          ...shadows.none,
         };
       case 'surface':
         return {
           backgroundColor: colors.background.secondary,
+          borderWidth: 0,
+          ...shadows.none,
         };
       case 'outlined':
         return {
@@ -69,7 +78,8 @@ const UICard: React.FC<UICardProps> = ({
       case 'blur':
         return {
           backgroundColor: 'transparent',
-          ...shadows.sm,
+          borderWidth: 0,
+          ...shadows.none,
         };
       case 'inputGlass':
         return {
@@ -81,7 +91,8 @@ const UICard: React.FC<UICardProps> = ({
       default:
         return {
           backgroundColor: colors.background.secondary,
-          ...shadows.xs,
+          borderWidth: 0,
+          ...shadows.none,
         };
     }
   };
@@ -129,8 +140,6 @@ const UICard: React.FC<UICardProps> = ({
   const glassOverlay = isInputGlass
     ? inputOverlayColor
     : glassmorphism.cardBackground[themeMode][glassIntensity];
-  const glassBorder = glassmorphism.border[themeMode][glassIntensity];
-  const glassTopHighlight = glassmorphism.topHighlight[themeMode][glassIntensity];
   const blurIntensityValue = isInputGlass
     ? inputSurface.blurIntensity
     : glassmorphism.blurIntensity[glassIntensity];
@@ -155,14 +164,16 @@ const UICard: React.FC<UICardProps> = ({
     <>
       {usesGlassLayers ? (
         <>
-          {Platform.OS === 'ios' ? (
+          {Platform.OS === 'ios' && !disableBlur ? (
             <BlurView
               intensity={blurIntensityValue}
               tint={blurTint}
               style={[StyleSheet.absoluteFill, { borderRadius: clipCornerRadius, overflow: 'hidden' }]}
             />
           ) : (
-            // Android: solid/dark backdrop (no BlurView) so overlay still reads as frosted glass.
+            // Android / disableBlur: solid backdrop (no BlurView) so overlay still reads as frosted glass.
+            // baseFill מכויל כך ש-baseFill + glassOverlay = אותו גוון כרטיס כמו ב-iOS.
+            // disableBlur נדרש ל־view-shot — BlurView לא נלכד ב־PNG.
             <View
               style={[
                 StyleSheet.absoluteFill,
@@ -171,9 +182,7 @@ const UICard: React.FC<UICardProps> = ({
                   overflow: 'hidden',
                   backgroundColor: isInputGlass
                     ? inputSurface.androidFallback
-                    : isDarkMode
-                      ? colors.background.cardSolid
-                      : colors.background.secondary,
+                    : glassmorphism.baseFill[themeMode],
                 },
               ]}
             />
@@ -188,19 +197,6 @@ const UICard: React.FC<UICardProps> = ({
               },
             ]}
           />
-          {showGlassBorder && !isInputGlass ? (
-            <View
-              style={[
-                StyleSheet.absoluteFill,
-                {
-                  borderWidth: StyleSheet.hairlineWidth * 2,
-                  borderColor: glassBorder,
-                  borderTopColor: glassTopHighlight,
-                  borderRadius: clipCornerRadius,
-                },
-              ]}
-            />
-          ) : null}
         </>
       ) : null}
       <View
@@ -247,4 +243,5 @@ const UICard: React.FC<UICardProps> = ({
   );
 };
 
+export { UICard };
 export default UICard;

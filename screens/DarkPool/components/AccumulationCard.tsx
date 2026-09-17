@@ -10,6 +10,7 @@ import { HapticFeedback } from '../../../utils/hapticFeedback';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
 import type { TopAccumulationRow } from '../../../types/darkpool.types';
 import { formatPercent, formatUsdCompact } from '../utils/darkPoolFormat';
+import { darkPoolTextRtl } from '../darkPoolLayout';
 
 interface AccumulationCardProps {
   row: TopAccumulationRow;
@@ -74,8 +75,8 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     card: {
       borderRadius: tokens.borderRadius.xl,
-      borderWidth: 1,
-      borderColor: tokens.colors.border.subtle,
+      borderWidth: 0,
+      backgroundColor: tokens.colors.background.cardSolid,
     },
     rtl: { direction: 'rtl' },
     top: {
@@ -94,14 +95,13 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontSize: 11,
       fontWeight: '600',
       color: tokens.colors.text.tertiary,
-      textAlign: 'left',
-      writingDirection: 'rtl',
+      ...darkPoolTextRtl,
     },
     value: {
       marginTop: 2,
       fontSize: 20,
       fontWeight: '800',
-      textAlign: 'left',
+      textAlign: 'right',
       writingDirection: 'ltr',
     },
     statsRow: {
@@ -110,12 +110,12 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       alignItems: 'center',
       gap: 10,
     },
-    stat: { flex: 1, alignItems: 'flex-start' },
+    stat: { flex: 1, alignItems: 'stretch' },
     statLabel: {
       fontSize: 10,
       fontWeight: '600',
       color: tokens.colors.text.tertiary,
-      writingDirection: 'rtl',
+      ...darkPoolTextRtl,
     },
     statValue: {
       marginTop: 2,

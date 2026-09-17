@@ -63,6 +63,11 @@ export interface PortfolioHoldingMetric {
 export interface ValuePoint {
   date: string;
   value: number;
+  /**
+   * קנייה (+) / מכירה (−) ביום — ל־TWR.
+   * בלי זה first→last סופר הכנסת הון כ«תשואה» (מאות/אלפי %).
+   */
+  external_flow?: number;
 }
 
 export interface CongressPortfolioMetrics {
@@ -71,6 +76,10 @@ export interface CongressPortfolioMetrics {
   total_return_usd: number;
   total_return_pct: number;
   series: ValuePoint[];
+  /**
+   * false כשאין מספיק דיווחים / טווח קצר מדי — ה-UI צריך להסתיר או לפשט את הגרף.
+   */
+  chart_reliable?: boolean;
   holdings: PortfolioHoldingMetric[];
   period_returns: Record<string, number | null>;
   win_rate: number | null;
@@ -100,16 +109,118 @@ export interface CongressPortfolioMetrics {
   };
 }
 
+/**
+ * Quiver לעיתים שומר רק את רצפת טווח STOCK Act כמספר בודד (1001.0, 15001.0…).
+ * לפרש כ־$ מדויק = תיק זעיר מול פיד עשיר; ממפים לאמצע הטווח הרשמי.
+ */
+const STOCK_ACT_FLOOR_MID: Record<number, number> = {
+  1001: 8_000, // $1,001–$15,000
+  15001: 32_500, // $15,001–$50,000
+  50001: 75_000, // $50,001–$100,000
+  100001: 175_000, // $100,001–$250,000
+  250001: 375_000, // $250,001–$500,000
+  500001: 750_000, // $500,001–$1,000,000
+  1000001: 3_000_000, // $1,000,001–$5,000,000
+  5000001: 12_500_000, // $5,000,001–$25,000,000
+  25000001: 37_500_000, // $25,000,001–$50,000,000
+  50000001: 75_000_000, // Over $50,000,000 (open-ended → conservative mid)
+};
+
+/** סף — מעל זה תשואת תקופה נחשבת לא אמינה לתצוגה (הון חדש / שחזור שבור) */
+export const MAX_DISPLAYABLE_PERIOD_RETURN_PCT = 250;
+
 export function parseCongressAmount(raw?: string | null): number {
   if (!raw) return 0;
   // «1500 shares» בלי $ — לא טווח STOCK Act; אל תפרש כ־USD
   if (/share/i.test(raw) && !/\$|usd|dollar/i.test(raw)) return 0;
   const nums =
-    raw.match(/[\d,]+/g)?.map((s) => parseInt(s.replace(/,/g, ''), 10)).filter((n) => n > 0) ??
+    raw.match(/[\d,]+(?:\.\d+)?/g)?.map((s) => Math.round(parseFloat(s.replace(/,/g, '')))).filter((n) => n > 0) ??
     [];
   if (!nums.length) return 0;
-  if (nums.length === 1) return nums[0];
+  if (nums.length === 1) {
+    const n = nums[0];
+    if (STOCK_ACT_FLOOR_MID[n] != null) return STOCK_ACT_FLOOR_MID[n];
+    return n;
+  }
   return Math.round((nums[0] + nums[nums.length - 1]) / 2);
+}
+
+/**
+ * דילול סדרה יומית צפופה → נקודות מסחר + דגימה לפי maxGapDays.
+ * מונע עקומת «שוק רציף» מזויפת מדיווחי STOCK Act דלילים.
+ */
+export function sparsifyValueSeries(
+  series: ValuePoint[],
+  maxGapDays = 7
+): ValuePoint[] {
+  if (series.length <= 3) return series;
+  const sorted = [...series].sort((a, b) => a.date.localeCompare(b.date));
+  const out: ValuePoint[] = [];
+  let lastKept: string | null = null;
+  for (let i = 0; i < sorted.length; i++) {
+    const p = sorted[i];
+    const isEdge = i === 0 || i === sorted.length - 1;
+    const hasFlow = (p.external_flow ?? 0) !== 0;
+    const gapDays =
+      lastKept != null
+        ? (Date.parse(p.date) - Date.parse(lastKept)) / 86400000
+        : Infinity;
+    if (isEdge || hasFlow || gapDays >= maxGapDays) {
+      out.push({ ...p });
+      lastKept = p.date;
+    }
+  }
+  return out;
+}
+
+/** האם שחזור הגרף אמין מספיק לתצוגה (לא hockey-stick מ־2 דיווחים) */
+export function isChartSeriesReliable(
+  series: ValuePoint[],
+  tradeCount: number
+): boolean {
+  if (tradeCount < 3) return false;
+  if (series.length < 2) return false;
+  const sorted = [...series].sort((a, b) => a.date.localeCompare(b.date));
+  const spanDays =
+    (Date.parse(sorted[sorted.length - 1].date) - Date.parse(sorted[0].date)) /
+    86400000;
+  if (!(spanDays >= 21)) return false;
+  const vals = sorted.map((p) => p.value).filter((v) => v > 0);
+  if (vals.length < 2) return false;
+  return true;
+}
+
+/** TWR על סדרה עם external_flow — לא מבלבל הכנסת הון עם תשואה */
+export function twrPeriodReturnPct(series: ValuePoint[]): number | null {
+  if (series.length < 2) return null;
+  const hasFlow = series.some((p) => (p.external_flow ?? 0) !== 0);
+  if (hasFlow) {
+    let cumulative = 1;
+    for (let i = 1; i < series.length; i++) {
+      const prev = series[i - 1].value;
+      const curr = series[i].value;
+      const flow = series[i].external_flow ?? 0;
+      const denom = prev + flow;
+      if (denom > 1e-9 && curr >= 0) cumulative *= curr / denom;
+    }
+    const pct = (cumulative - 1) * 100;
+    if (!Number.isFinite(pct)) return null;
+    if (Math.abs(pct) > MAX_DISPLAYABLE_PERIOD_RETURN_PCT) return null;
+    return Math.round(pct * 100) / 100;
+  }
+  const first = series[0].value;
+  const last = series[series.length - 1].value;
+  if (!(first > 0)) return null;
+  const pct = ((last - first) / first) * 100;
+  if (!Number.isFinite(pct)) return null;
+  if (Math.abs(pct) > MAX_DISPLAYABLE_PERIOD_RETURN_PCT) return null;
+  return Math.round(pct * 100) / 100;
+}
+
+export function sanitizePeriodReturnPct(pct: number | null | undefined): number | null {
+  if (pct == null || !Number.isFinite(pct)) return null;
+  if (Math.abs(pct) > MAX_DISPLAYABLE_PERIOD_RETURN_PCT) return null;
+  return Math.round(pct * 100) / 100;
 }
 
 export function parseTxnSide(txn?: string): 'buy' | 'sell' | null {
@@ -418,17 +529,23 @@ function buildDailySeries(
   const series: ValuePoint[] = [];
 
   for (const day of dates) {
+    let dayFlow = 0;
     while (txIdx < sortedTxs.length && sortedTxs[txIdx].date.slice(0, 10) <= day) {
       const t = sortedTxs[txIdx];
       const cur = positions.get(t.ticker) ?? { qty: 0, cost: 0 };
       if (t.side === 'buy') {
         cur.qty += t.qty;
         cur.cost += t.amountUsd;
+        // הכנסת הון לתיק — לא תשואה
+        dayFlow += t.amountUsd;
       } else if (cur.qty > 0) {
         const sellQty = Math.min(cur.qty, t.qty);
         const avg = cur.cost / cur.qty;
+        const sellNotional = sellQty * t.price;
         cur.qty -= sellQty;
         cur.cost -= avg * sellQty;
+        // יציאת הון — מונע «תשואה שלילית» מלאכותית ממכירה
+        dayFlow -= sellNotional > 0 ? sellNotional : avg * sellQty;
         if (cur.qty < 1e-8) {
           cur.qty = 0;
           cur.cost = 0;
@@ -446,7 +563,13 @@ function buildDailySeries(
       const px = filledPrices.get(sym)?.get(day);
       if (px != null && px > 0) value += p.qty * px;
     }
-    if (hasPosition && value > 0) series.push({ date: day, value });
+    if (hasPosition && value > 0) {
+      series.push({
+        date: day,
+        value,
+        ...(dayFlow !== 0 ? { external_flow: dayFlow } : {}),
+      });
+    }
   }
   return series;
 }
@@ -457,18 +580,18 @@ function periodReturn(series: ValuePoint[], days: number): number | null {
   const cutoff = new Date(last.date);
   cutoff.setDate(cutoff.getDate() - days);
   const cutoffIso = cutoff.toISOString().slice(0, 10);
-  const start = series.find((p) => p.date >= cutoffIso);
-  if (!start || start.value <= 0) return null;
-  return ((last.value - start.value) / start.value) * 100;
+  const startIdx = series.findIndex((p) => p.date >= cutoffIso);
+  if (startIdx < 0) return null;
+  return twrPeriodReturnPct(series.slice(startIdx));
 }
 
 function ytdReturn(series: ValuePoint[]): number | null {
   if (series.length < 2) return null;
   const last = series[series.length - 1];
   const yearStart = `${last.date.slice(0, 4)}-01-01`;
-  const start = series.find((p) => p.date >= yearStart);
-  if (!start || start.value <= 0) return null;
-  return ((last.value - start.value) / start.value) * 100;
+  const startIdx = series.findIndex((p) => p.date >= yearStart);
+  if (startIdx < 0) return null;
+  return twrPeriodReturnPct(series.slice(startIdx));
 }
 
 function computeWinRate(txs: NormalizedCongressTx[]): number | null {
@@ -626,7 +749,10 @@ export function buildCongressPortfolioMetrics(
   pricesByTicker: Map<string, Map<string, number>>,
   rawTrades: CongressTradeInput[] = []
 ): CongressPortfolioMetrics {
-  const series = buildDailySeries(txs, pricesByTicker);
+  // סדרה יומית מלאה ל־TWR / סיכון; לגרף — דילול כנה (שבועי + ימי מסחר)
+  const fullSeries = buildDailySeries(txs, pricesByTicker);
+  const series = sparsifyValueSeries(fullSeries, 7);
+  const chartReliable = isChartSeriesReliable(series, txs.length);
   const positions = replayPositions(txs);
 
   const holdings: PortfolioHoldingMetric[] = [];
@@ -658,11 +784,11 @@ export function buildCongressPortfolioMetrics(
       returnPct = Math.round(((marketValue - p.cost) / p.cost) * 10000) / 100;
     } else if (p.first_added_date) {
       // STOCK Act / טווח $ — מחיר כניסה = מחיר שוק בתאריך הקנייה הראשון
+      // בלי return_pct: עליית מחיר מניה ≠ תשואת פוזיציה כש־qty מוערך מטווח
       const atEntry = priceOnOrBefore(priceMap ?? new Map(), p.first_added_date);
       if (atEntry != null && atEntry > 0) {
         entryPrice = atEntry;
-        returnPct =
-          Math.round(((currentPrice - atEntry) / atEntry) * 10000) / 100;
+        returnPct = null;
       }
     }
 
@@ -688,16 +814,15 @@ export function buildCongressPortfolioMetrics(
   }
 
   const totalReturnUsd = totalValue - totalCost;
-  const totalReturnPct = totalCost > 0 ? (totalReturnUsd / totalCost) * 100 : 0;
+  // cost-basis על mid-range — עדיין הערכה; מסתירים אם מופרך (>250%)
+  const rawTotalReturnPct = totalCost > 0 ? (totalReturnUsd / totalCost) * 100 : 0;
+  const totalReturnPct = sanitizePeriodReturnPct(rawTotalReturnPct) ?? 0;
 
-  const firstSeries = series[0]?.value ?? 0;
-  const allReturn =
-    series.length >= 2 && firstSeries > 0
-      ? ((series[series.length - 1].value - firstSeries) / firstSeries) * 100
-      : totalReturnPct;
+  // ALL = TWR על סדרה מלאה (לא first→last — שסופר הון חדש כתשואה → אלפי %)
+  const allReturn = twrPeriodReturnPct(fullSeries);
 
   const winRate = computeWinRate(txs);
-  const risk = computeSeriesRisk(series);
+  const risk = computeSeriesRisk(fullSeries);
   const concentration = computeConcentration(holdings);
   const score = computeProfileScore({
     totalReturnPct,
@@ -711,18 +836,19 @@ export function buildCongressPortfolioMetrics(
     portfolio_value: Math.round(totalValue * 100) / 100,
     total_cost: Math.round(totalCost * 100) / 100,
     total_return_usd: Math.round(totalReturnUsd * 100) / 100,
-    total_return_pct: Math.round(totalReturnPct * 100) / 100,
+    total_return_pct: totalReturnPct,
     series,
+    chart_reliable: chartReliable,
     holdings,
     period_returns: {
-      '1D': periodReturn(series, 1),
-      '1W': periodReturn(series, 7),
-      '1M': periodReturn(series, 30),
-      '3M': periodReturn(series, 90),
-      YTD: ytdReturn(series),
-      '1Y': periodReturn(series, 365),
-      '5Y': periodReturn(series, 365 * 5),
-      ALL: Math.round(allReturn * 100) / 100,
+      '1D': periodReturn(fullSeries, 1),
+      '1W': periodReturn(fullSeries, 7),
+      '1M': periodReturn(fullSeries, 30),
+      '3M': periodReturn(fullSeries, 90),
+      YTD: ytdReturn(fullSeries),
+      '1Y': periodReturn(fullSeries, 365),
+      '5Y': periodReturn(fullSeries, 365 * 5),
+      ALL: allReturn,
     },
     win_rate: winRate,
     avg_delay_days: computeAvgDelay(rawTrades),

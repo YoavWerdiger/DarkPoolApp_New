@@ -72,7 +72,7 @@ export const CourseComingSoonScreen: React.FC = () => {
   };
 
   return (
-    <ScreenChrome withBrandWatermark>
+    <ScreenChrome>
       <StatusBar style="light" />
       <RNSafeAreaView style={styles.flex} edges={['top']}>
         <AcademySubScreenBar onBackPress={handleBack} title={title} />
@@ -168,7 +168,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       borderColor: tokens.colors.border.primary,
     },
     coverImg: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       width: '100%',
       height: '100%',
     },

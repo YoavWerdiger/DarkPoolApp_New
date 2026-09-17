@@ -499,7 +499,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       borderColor: tokens.colors.border.subtle,
     },
     avatarBusy: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       borderRadius: 28,
       backgroundColor: 'rgba(0,0,0,0.45)',
       justifyContent: 'center',

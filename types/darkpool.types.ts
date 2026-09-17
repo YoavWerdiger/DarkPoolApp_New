@@ -38,7 +38,7 @@ export interface NormalizedDarkPoolTrade {
   provider: DarkPoolProvider;
 }
 
-export type DarkPoolProvider = 'polygon' | 'unusualwhales' | 'intrinio' | 'mock';
+export type DarkPoolProvider = 'polygon' | 'unusualwhales' | 'intrinio' | 'quiverquant' | 'mock';
 
 /** קלט לקריאה לספק. */
 export interface DarkPoolProviderQuery {
@@ -236,6 +236,15 @@ export const DARK_POOL_VENDOR_LIVE_APIS = !DARK_POOL_SEC_PRODUCTION;
 
 /** העשרת פיד במחיר שוטף + «מאז העסקה» — כבוי = כרטיסים קומpact */
 export const DARK_POOL_FEED_ENRICH_QUOTES = false;
+
+/** גודל פיד בית/Feed + prefetch — חייב להיות זהה ל-queryKey של React Query */
+export const DARK_POOL_FEED_LIMIT = 80;
+
+/**
+ * staleTime לפיד עסקאות. Congress cron every ~20 min / בכירים 3× ביום מסחר —
+ * אין טעם לרפרש DB כל 2 דק׳ בלי נתונים חדשים.
+ */
+export const DARK_POOL_FEED_STALE_MS = 10 * 60 * 1000;
 
 /**
  * פיד LATEST TRADES: true = רק UW; false = DB (Form 4 / EDGAR).

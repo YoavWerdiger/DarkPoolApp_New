@@ -1,6 +1,7 @@
 -- ============================================================================
 -- 043_sync_congress_explore_cron.sql
--- סנכרון UW → DB כל 20/30 דקות (לא בכל כניסה למסך).
+-- סנכרון → DB כל 20/30 דקות (לא בכל כניסה למסך).
+-- אין webhook מ-Quiver — pull בלבד. ראו docs/DARK_POOL_DATA_SYNC.md
 -- ============================================================================
 
 CREATE EXTENSION IF NOT EXISTS pg_cron WITH SCHEMA extensions;

@@ -28,6 +28,7 @@ import {
 } from '../utils/format';
 import { TickerLogo } from '../components/TickerLogo';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
+import { darkPoolTextRtl } from '../../DarkPool/darkPoolLayout';
 
 interface Props {
   portfolio: Portfolio;
@@ -85,8 +86,11 @@ export default function HoldingsTab({ portfolio, holdings }: Props) {
   const styles = useMemo(
     () =>
       StyleSheet.create({
+        root: {
+          direction: 'rtl',
+        },
         modeRow: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           gap: 6,
           marginBottom: 12,
           flexWrap: 'wrap',
@@ -95,7 +99,7 @@ export default function HoldingsTab({ portfolio, holdings }: Props) {
           paddingVertical: 8,
           paddingHorizontal: 12,
           borderRadius: 14,
-          borderWidth: 1,
+          borderWidth: 0,
           borderColor: tokens.colors.border.subtle,
         },
         modeChipActive: {
@@ -105,32 +109,34 @@ export default function HoldingsTab({ portfolio, holdings }: Props) {
         modeChipText: {
           fontSize: 12,
           color: tokens.colors.text.secondary,
+          ...darkPoolTextRtl,
         },
         modeChipTextActive: {
           color: tokens.colors.primary.main,
           fontWeight: '700',
         },
         controlsRow: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
           marginBottom: 10,
         },
         controlBtn: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'center',
           gap: 5,
           paddingVertical: 6,
           paddingHorizontal: 10,
           borderRadius: 14,
-          backgroundColor: 'rgba(255,255,255,0.05)',
-          borderWidth: 1,
+          backgroundColor: '#262626',
+          borderWidth: 0,
           borderColor: tokens.colors.border.subtle,
         },
         controlBtnText: {
           fontSize: 12,
           color: tokens.colors.text.primary,
           fontWeight: '500',
+          ...darkPoolTextRtl,
         },
         groupHeader: {
           fontSize: 12,
@@ -139,22 +145,25 @@ export default function HoldingsTab({ portfolio, holdings }: Props) {
           marginTop: 12,
           marginBottom: 6,
           paddingHorizontal: 4,
-          textAlign: 'right',
+          alignSelf: 'stretch',
+          ...darkPoolTextRtl,
         },
         tableHeader: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'center',
           paddingVertical: 8,
           paddingHorizontal: 8,
           gap: 8,
         },
         tableHeaderText: {
+          width: '100%',
           fontSize: 10,
           fontWeight: '700',
           color: tokens.colors.text.tertiary,
+          ...darkPoolTextRtl,
         },
         row: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'center',
           paddingVertical: 12,
           paddingHorizontal: 8,
@@ -164,7 +173,7 @@ export default function HoldingsTab({ portfolio, holdings }: Props) {
         },
         symbolCol: {
           width: 96,
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'center',
           gap: 8,
         },
@@ -175,33 +184,39 @@ export default function HoldingsTab({ portfolio, holdings }: Props) {
           fontSize: 13,
           fontWeight: '700',
           color: tokens.colors.text.primary,
+          writingDirection: 'ltr',
           textAlign: 'right',
         },
         symbolMeta: {
           fontSize: 10,
           color: tokens.colors.text.tertiary,
-          textAlign: 'right',
+          ...darkPoolTextRtl,
           marginTop: 2,
         },
         cellWrap: {
           flex: 1,
-          alignItems: 'center',
+          alignItems: 'flex-start',
         },
         cellPrimary: {
           fontSize: 12,
           fontWeight: '600',
           color: tokens.colors.text.primary,
-          textAlign: 'center',
+          textAlign: 'right',
+          writingDirection: 'ltr',
+          width: '100%',
         },
         cellSecondary: {
           fontSize: 10,
           color: tokens.colors.text.tertiary,
           marginTop: 2,
-          textAlign: 'center',
+          textAlign: 'right',
+          writingDirection: 'ltr',
+          width: '100%',
         },
         emptyState: {
           alignItems: 'center',
           paddingVertical: 50,
+          direction: 'rtl',
         },
         emptyTitle: {
           fontSize: 16,
@@ -209,11 +224,14 @@ export default function HoldingsTab({ portfolio, holdings }: Props) {
           color: tokens.colors.text.primary,
           marginTop: 12,
           marginBottom: 4,
+          ...darkPoolTextRtl,
+          textAlign: 'center',
         },
         emptyText: {
           fontSize: 13,
           color: tokens.colors.text.tertiary,
           textAlign: 'center',
+          writingDirection: 'rtl',
           paddingHorizontal: 20,
           lineHeight: 18,
         },
@@ -221,6 +239,7 @@ export default function HoldingsTab({ portfolio, holdings }: Props) {
           fontSize: 11,
           color: tokens.colors.text.tertiary,
           textAlign: 'center',
+          writingDirection: 'rtl',
           marginTop: 6,
         },
       }),
@@ -244,7 +263,7 @@ export default function HoldingsTab({ portfolio, holdings }: Props) {
   }
 
   return (
-    <View>
+    <View style={styles.root}>
       {/* Mode selector */}
       <ScrollView
         horizontal

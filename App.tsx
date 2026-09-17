@@ -39,6 +39,8 @@ import {
   buildNotificationNavigateArgs,
   resolveNotificationNavTarget,
 } from './lib/notificationRouting';
+import { warmChatGroupOnPress } from './services/appPrefetch';
+import { lockAndroidChatSoftInput } from './components/chat/androidChatKeyboard';
 
 // מסכים לא-פעילים (כל ה-stacks ב-Drawer נשארים טעונים) מוקפאים ולא מתרנדרים ברקע —
 // משחרר את ה-JS thread ומשפר משמעותית את חלקות הניווט והאינטראקציות.
@@ -219,6 +221,10 @@ function AppContent() {
       const data =
         raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : null;
       const target = resolveNotificationNavTarget(data);
+      if (target.kind === 'chat' && user.id && target.groupId) {
+        lockAndroidChatSoftInput();
+        warmChatGroupOnPress(user.id, target.groupId);
+      }
       const args = buildNotificationNavigateArgs(target);
 
       const attempt = (triesLeft: number) => {
@@ -279,7 +285,7 @@ function AppContent() {
   // מסך טעינה מינימלי בלבד בזמן טעינת ה-Auth (בלי splash \"מלאכותי\" ובלי תמונת רקע מרשת)
   if (isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#0A0E0A', justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ flex: 1, backgroundColor: APP_SYSTEM_BACKGROUND, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#00C805" />
       </View>
     );
@@ -288,7 +294,7 @@ function AppContent() {
   // לא מציגים את ה-Main לפני שידוע אם נדרשת ביומטריה — מונע תחושת "זריקה" לשכבת הנעילה
   if (user && registrationDone && !biometricChecked) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#0A0E0A', justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ flex: 1, backgroundColor: APP_SYSTEM_BACKGROUND, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#00C805" />
       </View>
     );
@@ -333,12 +339,12 @@ function AppContent() {
       </NavigationContainer>
 
       {biometricLocked && registrationDone && (
-        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#0A0E0A', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }]}>
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: APP_SYSTEM_BACKGROUND, justifyContent: 'center', alignItems: 'center', zIndex: 9999 }]}>
           <LinearGradient
-            colors={['#0A0E0A', '#0F1A0F', '#0F1A0F', '#0A0E0A']}
+            colors={['#111111', '#1A1A1A', '#1A1A1A', '#111111']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFillObject}
+            style={StyleSheet.absoluteFill}
           />
           <View style={{ alignItems: 'center', gap: 24 }}>
             <View style={{

@@ -102,10 +102,9 @@ export const useMentions = (text: string) => {
       // בדיקה אם יש רווח או שורה חדשה
       const hasDelimiter = spaceIndex !== -1 || newlineIndex !== -1;
       
-      // Only show mention picker if there's no delimiter after @ and we're still typing
-      // גם כשיש רק @ בלי תווים אחריו - נציג את הפיקר
+      // Inline picker disabled — ChatInput opens MentionPickerSheet on `@`
       if (!hasDelimiter) {
-        setShowMentionPicker(true);
+        setShowMentionPicker(false);
         setMentionSearchQuery(afterAt);
         return;
       }

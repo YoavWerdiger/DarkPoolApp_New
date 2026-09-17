@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import type { ExploreKindFilter } from '../utils/exploreGrid';
+import { hebrewText, toDataIsland } from '../utils/bidi';
 
 const OPTIONS: { id: ExploreKindFilter; label: string }[] = [
   { id: 'all', label: 'כולם' },
@@ -39,6 +40,7 @@ export function ExploreKindFilterBar({ value, onChange, counts }: Props) {
           backgroundColor: 'rgba(0, 230, 118, 0.12)',
         },
         chipText: {
+          ...hebrewText,
           fontSize: 14,
           fontWeight: '700',
           color: tokens.colors.text.secondary,
@@ -61,7 +63,7 @@ export function ExploreKindFilterBar({ value, onChange, counts }: Props) {
         const count = counts?.[opt.id];
         const label =
           count != null && count > 0 && opt.id !== 'all'
-            ? `${opt.label} (${count})`
+            ? `${opt.label} (${toDataIsland(count)})`
             : opt.label;
         return (
           <Pressable

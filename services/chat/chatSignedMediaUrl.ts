@@ -13,6 +13,7 @@ import {
   downloadMediaToCache,
   isCacheableMediaPath,
 } from '../../lib/mediaFileCache';
+import { prefetchAudioUris } from '../../lib/expoAvSafe';
 
 const BUCKET = 'chat-media';
 const TAG = 'ChatSignedMedia';
@@ -275,7 +276,7 @@ async function prefetchImageUris(urls: string[]): Promise<void> {
     await Promise.all(
       batch.map((uri) =>
         Promise.all([
-          ExpoImage.prefetch(uri).catch(() => {}),
+          ExpoImage.prefetch(uri, { cachePolicy: 'memory-disk' }).catch(() => {}),
           RNImage.prefetch(uri).catch(() => {}),
         ]),
       ),
@@ -322,7 +323,22 @@ export async function prefetchChatMediaForMessages(messages: ChatMessage[]): Pro
   await prefetchImageUris(thumbs);
   await prefetchImageUris(full);
 
+  prefetchAudioUris(audioUrisFromMessages(messages));
+
   await prefetchCacheableMediaFiles(refs);
+}
+
+function audioUrisFromMessages(messages: ChatMessage[]): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const msg of messages) {
+    if (msg.message_type !== ChatMessageType.AUDIO) continue;
+    const uri = cachedDisplayUri(msg.media_url);
+    if (!uri || seen.has(uri)) continue;
+    seen.add(uri);
+    out.push(uri);
+  }
+  return out;
 }
 
 const MEDIA_FILE_PREFETCH_CONCURRENCY = 4;

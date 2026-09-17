@@ -28,6 +28,8 @@ export interface PortfolioHoldingMetric {
 export interface PortfolioValuePoint {
   date: string;
   value: number;
+  /** קנייה (+) / מכירה (−) — ל־TWR בגרף */
+  external_flow?: number;
 }
 
 export interface ReconstructedPortfolioMetrics {
@@ -36,6 +38,8 @@ export interface ReconstructedPortfolioMetrics {
   total_return_usd: number;
   total_return_pct: number;
   series: PortfolioValuePoint[];
+  /** false כששחזור הגרף לא אמין — להסתיר/לפשט ב-UI */
+  chart_reliable?: boolean;
   holdings: PortfolioHoldingMetric[];
   period_returns: Record<string, number | null>;
   win_rate: number | null;

@@ -18,6 +18,7 @@ import {
 import { fearAndGreedService } from './fearAndGreedService';
 import { LearningService } from './learningService';
 import { chatGroupService, chatMessageService } from './chat';
+import { prefetchChatMediaForMessages } from './chat/chatSignedMediaUrl';
 import { loadExplore } from '../hooks/useDarkPoolExplore';
 import { loadCongress } from '../hooks/useCongressFeed';
 import { loadInsider } from '../hooks/useDarkPoolInsiderFeed';
@@ -27,9 +28,13 @@ import type { ChatGroup, ChatMessage } from '../types/chat.types';
 import type { CourseListResponse } from '../types/learning';
 import { Image as ExpoImage } from 'expo-image';
 import { ACADEMY_COURSES_STALE_MS } from '../hooks/useLearning';
-
-/** תואם DarkPoolHomeScreen — כדי שהמסך יקרא מאותו cache */
-const INSIDERS_HOME_FEED_LIMIT = 80;
+import { allKnownPortraitUrls } from '../screens/DarkPool/utils/knownInvestorPortraits';
+import { portraitDisplayUrl } from '../screens/DarkPool/utils/investorPlaceholder';
+import { CURATED_EXPLORE_PROFILES } from '../screens/DarkPool/utils/curatedExploreProfiles';
+import {
+  DARK_POOL_FEED_LIMIT,
+  DARK_POOL_FEED_STALE_MS,
+} from '../types/darkpool.types';
 
 /** מספר הקבוצות שעבורן נמשוך הודעות מראש (unread קודם, אז פעילות) */
 const PREFETCH_MESSAGES_GROUP_LIMIT = 12;
@@ -41,6 +46,8 @@ const PREFETCH_CONCURRENCY = 3;
 const PREFETCH_DEBOUNCE_MS = 220;
 /** דילוג על קבוצה שחוממה לאחרונה (resume / stampede) */
 const PREFETCH_FRESH_MS = 2 * 60 * 1000;
+/** הודעות אחרונות (newest-first) שאת המדיה שלהן מחממים ב-pressIn / prefetch */
+const PREFETCH_MEDIA_MESSAGE_LIMIT = 40;
 /** מניעת warm כפול מ-bootstrap + AppState + loadGroups */
 const WARM_DEBOUNCE_MS = 30 * 1000;
 
@@ -95,6 +102,14 @@ type PrefetchGroup = Pick<
   'id' | 'unread_count' | 'last_read_message_id' | 'last_message_at'
 >;
 
+function warmGroupMedia(messages: ChatMessage[]): void {
+  if (!messages.length) return;
+  const recent = messages.slice(0, PREFETCH_MEDIA_MESSAGE_LIMIT);
+  void prefetchChatMediaForMessages(recent).catch((error) => {
+    logger.warn('appPrefetch', 'prefetch chat media failed', error);
+  });
+}
+
 async function prefetchOneGroup(userId: string, group: PrefetchGroup): Promise<void> {
   const groupId = group.id;
   const existing = readGroupMessagesCache(groupId);
@@ -103,6 +118,7 @@ async function prefetchOneGroup(userId: string, group: PrefetchGroup): Promise<v
   const newest = getNewestPersistedCursor(existing);
   const lastReadInCache = messageIdInCache(existing, lastReadId);
 
+  try {
   // Cache טרי מאוד — מדלגים (מונע thrash)
   const state = queryClient.getQueryState(appQueryKeys.chatMessages(groupId));
   if (
@@ -190,6 +206,9 @@ async function prefetchOneGroup(userId: string, group: PrefetchGroup): Promise<v
       mergeChatMessages(data.messages, existing),
       userId,
     );
+  }
+  } finally {
+    warmGroupMedia(readGroupMessagesCache(groupId));
   }
 }
 
@@ -286,6 +305,8 @@ export function schedulePrefetchChatMessages(
  */
 export function warmChatGroupOnPress(userId: string, groupId: string): void {
   if (!userId || !groupId) return;
+  const cached = readGroupMessagesCache(groupId);
+  if (cached.length) warmGroupMedia(cached);
   const groups =
     queryClient.getQueryData<PrefetchGroup[]>(appQueryKeys.chatGroups(userId)) ?? [];
   const hit = groups.find((g) => g.id === groupId);
@@ -302,6 +323,24 @@ export function warmChatGroupOnPress(userId: string, groupId: string): void {
 /**
  * מחמם cover images של קורסי האקדמיה לדיסק — כדי שהבאנרים יופיעו מיד במסך.
  */
+/** מחמם cache דיוקנאות מאוצרים — מקביל, לא חוסם warm */
+export async function prefetchDarkPoolPortraits(): Promise<void> {
+  try {
+    const curated = CURATED_EXPLORE_PROFILES.map(
+      (p) => portraitDisplayUrl(p.image_url, 320) ?? p.image_url
+    ).filter((u): u is string => !!u?.trim());
+    const known = allKnownPortraitUrls()
+      .map((u) => portraitDisplayUrl(u, 320) ?? u)
+      .filter(Boolean);
+    const urls = Array.from(new Set([...curated, ...known]));
+    if (urls.length) {
+      await ExpoImage.prefetch(urls, { cachePolicy: 'memory-disk' });
+    }
+  } catch (error) {
+    logger.warn('appPrefetch', 'prefetch dark pool portraits failed', error);
+  }
+}
+
 export async function prefetchAcademyCovers(
   courses?: { cover_url?: string | null }[]
 ): Promise<void> {
@@ -378,15 +417,25 @@ export async function warmAppCache(
         staleTime: 5 * 60 * 1000,
       }),
       queryClient.prefetchQuery({
-        queryKey: appQueryKeys.congressFeed(INSIDERS_HOME_FEED_LIMIT),
-        queryFn: () => loadCongress(INSIDERS_HOME_FEED_LIMIT, false),
-        staleTime: 2 * 60 * 1000,
+        queryKey: appQueryKeys.congressFeed(DARK_POOL_FEED_LIMIT),
+        queryFn: () =>
+          loadCongress(DARK_POOL_FEED_LIMIT, false, {
+            deferQuotes: true,
+            queryKey: appQueryKeys.congressFeed(DARK_POOL_FEED_LIMIT),
+          }),
+        staleTime: DARK_POOL_FEED_STALE_MS,
       }),
       queryClient.prefetchQuery({
-        queryKey: appQueryKeys.insiderFeed('all', true, INSIDERS_HOME_FEED_LIMIT),
-        queryFn: () => loadInsider('all', INSIDERS_HOME_FEED_LIMIT, true, false),
-        staleTime: 2 * 60 * 1000,
+        queryKey: appQueryKeys.insiderFeed('all', true, DARK_POOL_FEED_LIMIT),
+        queryFn: () =>
+          loadInsider('all', DARK_POOL_FEED_LIMIT, true, false, {
+            deferQuotes: true,
+            queryKey: appQueryKeys.insiderFeed('all', true, DARK_POOL_FEED_LIMIT),
+          }),
+        staleTime: DARK_POOL_FEED_STALE_MS,
       }),
+      // תמונות אנשים — מקביל לפידי העסקאות, לא אחריהם
+      prefetchDarkPoolPortraits(),
     ];
 
     if (opts?.force) {

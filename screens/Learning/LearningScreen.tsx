@@ -17,7 +17,6 @@ import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../../components/ui/DayNa
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { Ionicons } from '@expo/vector-icons';
 import { XCircle, CheckCircle2, ArrowRight, RefreshCw, ChevronLeft, ChevronRight, Edit3, ChevronUp, ChevronDown, Save, Type, ImageIcon, Palette, PlusCircle, Star, Clock, TrendingUp, Video as VideoIcon } from 'lucide-react-native';
-import { Video, ResizeMode } from 'expo-av';
 import { WebView } from 'react-native-webview';
 import YoutubePlayer from 'react-native-youtube-iframe';
 import { learningProgressService } from '../../services/learningProgressService';
@@ -1486,7 +1485,7 @@ function LearningScreen() {
     };
 
     return (
-      <ScreenChrome withBrandWatermark>
+      <ScreenChrome>
         <StatusBar style="light" />
         <RNSafeAreaView style={styles.safeAreaContent} edges={['top']}>
         <AcademySubScreenBar
@@ -2018,7 +2017,7 @@ function LearningScreen() {
   const courseHeroHeight = Math.round(academyCardWidth(screenWidth) * 0.58);
 
   return (
-    <ScreenChrome withBrandWatermark>
+    <ScreenChrome>
       <StatusBar style="light" />
       <RNSafeAreaView style={styles.safeAreaContent} edges={['top']}>
         <AcademySubScreenBar
@@ -2658,7 +2657,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     paddingHorizontal: tokens.spacing.xs,
   },
   simpleNotesTitleOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 80,

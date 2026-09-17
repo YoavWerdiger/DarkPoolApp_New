@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
-import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import UICard from '../../../components/ui/UICard';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { TickerLogo } from '../../Portfolios/components/TickerLogo';
 import { useUwTickerInsights } from '../../../hooks/useUwTickerInsights';
 import { formatUsdCompact } from '../utils/darkPoolFormat';
 import { DarkPoolSectionHeader } from './DarkPoolSectionHeader';
@@ -130,13 +130,7 @@ export function UwTickerInsightsSection({ ticker }: Props) {
                 i === data.insider_live.length - 1 && styles.listRowLast,
               ]}
             >
-              {row.logo_url ? (
-                <Image source={{ uri: row.logo_url }} style={styles.avatar} />
-              ) : (
-                <View style={[styles.avatar, styles.avatarFb]}>
-                  <Ionicons name="person" size={14} color={tokens.colors.text.tertiary} />
-                </View>
-              )}
+              <TickerLogo symbol={ticker} size={38} borderRadius={19} />
               <View style={styles.insiderText}>
                 <Text style={styles.rowTitle}>{row.owner_name}</Text>
                 <Text style={styles.rowHint}>
@@ -299,12 +293,6 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       paddingVertical: 10,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: tokens.colors.border.subtle,
-    },
-    avatar: { width: 38, height: 38, borderRadius: 19 },
-    avatarFb: {
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: 'rgba(255,255,255,0.08)',
     },
     insiderText: { flex: 1, alignItems: 'flex-start', minWidth: 0 },
     rowTitle: {

@@ -115,7 +115,7 @@ export default function DarkPoolOverviewScreen() {
   }
 
   return (
-    <ScreenChrome withBrandWatermark>
+    <ScreenChrome>
       <StatusBar style="light" />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <MainDrawerScreenHeader

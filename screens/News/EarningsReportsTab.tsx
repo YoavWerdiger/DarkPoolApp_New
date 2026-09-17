@@ -1531,8 +1531,8 @@ const EarningsDetailSheet: React.FC<EarningsDetailSheetProps> = ({ visible, repo
       }
     }
     
-    // #0A0E0A בפורמט rgba — TradingView לא מקבל hex, רק rgba
-    const SHEET_BG = 'rgba(10, 14, 10, 1)';
+    // #111111 בפורמט rgba — TradingView לא מקבל hex, רק rgba
+    const SHEET_BG = 'rgba(17, 17, 17, 1)';
     const GRID_COLOR = 'rgba(255, 255, 255, 0.06)';
 
     const config = {
@@ -1583,7 +1583,7 @@ const EarningsDetailSheet: React.FC<EarningsDetailSheetProps> = ({ visible, repo
       padding: 0;
       height: 100%;
       width: 100%;
-      background-color: #0A0E0A;
+      background-color: #111111;
       overflow: hidden;
       -webkit-overflow-scrolling: touch;
     }
@@ -1603,7 +1603,7 @@ const EarningsDetailSheet: React.FC<EarningsDetailSheetProps> = ({ visible, repo
       width: 100% !important;
       height: 100% !important;
       border: none !important;
-      background: #0A0E0A !important;
+      background: #111111 !important;
     }
     .tradingview-widget-copyright {
       display: none !important;
@@ -2101,7 +2101,7 @@ function createEarningsDetailSheetStyles(tokens: ReturnType<typeof useDesignToke
     },
     chartWebView: {
       flex: 1,
-      backgroundColor: '#0A0E0A',
+      backgroundColor: '#111111',
     },
     sectionCard: {
       borderRadius: 24,

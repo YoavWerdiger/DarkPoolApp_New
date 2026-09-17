@@ -126,7 +126,14 @@ export function useChatDraft(groupId: string | undefined) {
   }, [flush]);
 
   const setDraftText = useCallback(
-    (text: string) => {
+    (textOrUpdater: string | ((prev: string) => string)) => {
+      // Callers sometimes pass a React setState updater. AsyncStorage only
+      // accepts strings — never persist a function (native TurboModule abort).
+      const resolved =
+        typeof textOrUpdater === 'function'
+          ? textOrUpdater(latestTextRef.current)
+          : textOrUpdater;
+      const text = typeof resolved === 'string' ? resolved : String(resolved ?? '');
       setDraft(text);
       latestTextRef.current = text;
       debouncedGroupRef.current = groupId;

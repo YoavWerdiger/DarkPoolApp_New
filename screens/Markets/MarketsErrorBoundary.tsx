@@ -39,7 +39,7 @@ export function MarketsErrorBoundary({ children }: Props) {
   const tokens = useDesignTokens();
   const getStyles = () => ({
     container: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       padding: tokens.spacing.lg,
       justifyContent: 'center',
       alignItems: 'center',

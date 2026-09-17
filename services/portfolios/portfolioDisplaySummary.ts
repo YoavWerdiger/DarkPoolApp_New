@@ -20,14 +20,24 @@ export async function loadPortfolioDisplaySummary(
 
   const s = await loadPortfolioSummary(portfolio.id, portfolio.currency);
   const availableCash = Number(portfolio.available_cash ?? 0);
-  if (availableCash > 0 && availableCash !== s.cash) {
+  const baseValue = Number(s.value);
+  const baseCash = Number(s.cash);
+  const baseTotal = Number(s.total_value);
+  if (availableCash > 0 && availableCash !== baseCash) {
+    const total = availableCash + (Number.isFinite(baseValue) ? baseValue : 0);
     return {
       ...s,
       cash: availableCash,
-      total_value: availableCash + s.value,
+      total_value: Number.isFinite(total) ? total : 0,
     };
   }
-  return s;
+  return {
+    ...s,
+    total_value: Number.isFinite(baseTotal)
+      ? baseTotal
+      : (Number.isFinite(baseCash) ? baseCash : 0) +
+        (Number.isFinite(baseValue) ? baseValue : 0),
+  };
 }
 
 async function loadColmexPortfolioSummary(
@@ -116,7 +126,8 @@ async function loadColmexPortfolioSummary(
     closedTrades.length > 0
       ? (wins.length / closedTrades.length) * 100
       : null;
-  const contributed = equity - totalGain;
+  const safeEquity = Number.isFinite(equity) ? equity : 0;
+  const contributed = safeEquity - totalGain;
   const totalGainPct =
     contributed > 0 ? (totalGain / contributed) * 100 : 0;
 
@@ -124,17 +135,18 @@ async function loadColmexPortfolioSummary(
   let dailyGain = hasDayChangeBasis
     ? dailyGainFromQuotes
     : Number(brokerSummary?.realized_pnl_today ?? 0);
-  const yesterdayValue = equity - dailyGain;
+  if (!Number.isFinite(dailyGain)) dailyGain = 0;
+  const yesterdayValue = safeEquity - dailyGain;
   const dailyGainPct =
     yesterdayValue > 0 ? (dailyGain / yesterdayValue) * 100 : 0;
 
   return {
     portfolio_id: portfolio.id,
     currency: portfolio.currency,
-    cash: funds,
+    cash: Number.isFinite(funds) ? funds : 0,
     invested: openNotional,
-    value: Math.max(0, equity - funds),
-    total_value: equity,
+    value: Math.max(0, safeEquity - (Number.isFinite(funds) ? funds : 0)),
+    total_value: safeEquity,
     unrealized_gain: unrealized,
     realized_gain: realizedPnl,
     total_gain: totalGain,

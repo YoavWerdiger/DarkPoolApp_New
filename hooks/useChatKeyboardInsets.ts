@@ -11,19 +11,29 @@ import { Keyboard } from 'react-native';
  *
  * גובה/translate לקומפוזר ולרשימה ממשיכים להגיע מ-useGenericKeyboardHandler
  * (UI thread) — כאן רק flag ל-FAB ו-callback אחרי שהאנימציה הסתיימה.
+ *
+ * trackVisibility=false: רק callback, בלי setState — כדי שמסך הצ'אט לא
+ * ירנדר מחדש את ה-FlatList בכל פתיחה/סגירה של מקלדת.
  */
-export function useChatKeyboardInsets(onKeyboardShow?: () => void) {
-  const [keyboardShown, setKeyboardShown] = useState(Keyboard.isVisible());
+export function useChatKeyboardInsets(
+  onKeyboardShow?: () => void,
+  trackVisibility = true,
+) {
+  const [keyboardShown, setKeyboardShown] = useState(() =>
+    trackVisibility ? Keyboard.isVisible() : false,
+  );
   const onShowRef = useRef(onKeyboardShow);
   onShowRef.current = onKeyboardShow;
+  const trackRef = useRef(trackVisibility);
+  trackRef.current = trackVisibility;
 
   useEffect(() => {
     const showSub = Keyboard.addListener('keyboardDidShow', () => {
-      setKeyboardShown(true);
+      if (trackRef.current) setKeyboardShown(true);
       onShowRef.current?.();
     });
     const hideSub = Keyboard.addListener('keyboardDidHide', () => {
-      setKeyboardShown(false);
+      if (trackRef.current) setKeyboardShown(false);
     });
     return () => {
       showSub.remove();

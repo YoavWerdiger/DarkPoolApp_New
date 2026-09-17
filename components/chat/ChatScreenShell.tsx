@@ -20,9 +20,8 @@ type ChatScreenShellProps = {
 };
 
 export function ChatScreenShell({ children }: ChatScreenShellProps) {
-  const tokens = useDesignTokens();
   return (
-    <View style={[styles.root, { backgroundColor: tokens.colors.background.primary }]}>
+    <View style={styles.root}>
       <ChatSessionBackdrop />
       {children}
     </View>
@@ -59,9 +58,12 @@ export function ChatSubScreenHeader({
   inRtlTree = false,
 }: ChatSubScreenHeaderProps) {
   const tokens = useDesignTokens();
+  const titleAlign = inRtlTree ? 'right' : 'center';
+  const subtitleAlign = inRtlTree ? 'right' : 'center';
   const row = inRtlTree ? styles.subHeaderRowInRtlTree : styles.subHeaderRowApp;
   const backEdge = inRtlTree ? styles.sideBackInRtlTree : styles.sideBackApp;
   const endEdge = inRtlTree ? styles.sideEndInRtlTree : styles.sideEndApp;
+  const titleBlockAlign = inRtlTree ? styles.titleBlockRtl : styles.titleBlockCentered;
 
   return (
     <View style={[styles.subHeaderRoot, style]}>
@@ -76,13 +78,19 @@ export function ChatSubScreenHeader({
             <Ionicons name={backIcon} size={24} color={tokens.colors.text.primary} />
           </DayNavBlurButton>
         </View>
-        <View style={styles.titleBlock}>
-          <Text style={[styles.titleText, { color: tokens.colors.text.primary }]} numberOfLines={1}>
+        <View style={[styles.titleBlock, titleBlockAlign]}>
+          <Text
+            style={[styles.titleText, { color: tokens.colors.text.primary, textAlign: titleAlign }]}
+            numberOfLines={1}
+          >
             {title}
           </Text>
           {subtitle ? (
             <Text
-              style={[styles.subtitleText, { color: tokens.colors.text.secondary }]}
+              style={[
+                styles.subtitleText,
+                { color: tokens.colors.text.secondary, textAlign: subtitleAlign },
+              ]}
               numberOfLines={2}
             >
               {subtitle}
@@ -100,6 +108,7 @@ export function ChatSubScreenHeader({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+    backgroundColor: '#111111',
   },
   subHeaderRoot: {
     width: '100%',
@@ -138,10 +147,16 @@ const styles = StyleSheet.create({
   },
   titleBlock: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: 'stretch',
     justifyContent: 'center',
     minHeight: 48,
     paddingHorizontal: 4,
+  },
+  titleBlockCentered: {
+    alignItems: 'center',
+  },
+  titleBlockRtl: {
+    alignItems: 'stretch',
   },
   titleText: {
     fontSize: MAIN_SCREEN_HEADER_TITLE_SIZE,

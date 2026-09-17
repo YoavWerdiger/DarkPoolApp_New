@@ -32,6 +32,11 @@ import {
 } from './tradeJournalConstants';
 import { brandfetchTickerLogoUri } from '../../utils/brandfetch';
 import { getTradingViewTradeChartHTML } from '../Markets/embeds/tradingViewEmbeds';
+import ShareDestinationSheet from '../../components/share/ShareDestinationSheet';
+import ExportTradeImage from '../../components/Journal/ExportTradeImage';
+import TradeShareButton from '../../components/Journal/TradeShareButton';
+import { buildTradeAttachment } from '../../types/shareableEntity';
+import type { ShareableAttachment } from '../../types/shareableEntity';
 
 type Nav = NativeStackNavigationProp<JournalStackParamList, 'TradeDetail'>;
 type Route = RouteProp<JournalStackParamList, 'TradeDetail'>;
@@ -196,6 +201,9 @@ export default function TradeDetailScreen() {
 
   const [trade, setTrade] = useState<Trade | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareAttachment, setShareAttachment] = useState<ShareableAttachment | null>(null);
+  const [showExportImage, setShowExportImage] = useState(false);
 
   const load = useCallback(async () => {
     const { data, error } = await supabase
@@ -227,6 +235,13 @@ export default function TradeDetailScreen() {
     ]);
   }, [trade, navigation]);
 
+  const openShare = useCallback(() => {
+    if (!trade) return;
+    void HapticFeedback.impactLight();
+    setShareAttachment(buildTradeAttachment(trade));
+    setShowShareModal(true);
+  }, [trade]);
+
   const details = useMemo(() => {
     if (!trade) return null;
     return parseJournalDetails(trade.journal_details);
@@ -250,7 +265,7 @@ export default function TradeDetailScreen() {
       <View
         style={{
           flex: 1,
-          backgroundColor: '#0A0E0A',
+          backgroundColor: '#111111',
           alignItems: 'center',
           justifyContent: 'center',
         }}
@@ -284,7 +299,7 @@ export default function TradeDetailScreen() {
   const hasRiskData = trade.stop_loss || trade.target_price || riskReward != null;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#0A0E0A' }}>
+    <View style={{ flex: 1, backgroundColor: '#111111' }}>
       <ChatSessionBackdrop />
       <StatusBar style="light" />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
@@ -369,23 +384,30 @@ export default function TradeDetailScreen() {
               </View>
             ) : null}
           </View>
-          <TouchableOpacity
-            onPress={() => {
-              void HapticFeedback.warning();
-              handleDelete();
-            }}
-            hitSlop={10}
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 18,
-              backgroundColor: 'rgba(255,60,60,0.10)',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Ionicons name="trash-outline" size={18} color={tokens.colors.text.danger} />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
+            <TradeShareButton
+              onPress={openShare}
+              size={36}
+              accessibilityLabel="שתף טרייד"
+            />
+            <TouchableOpacity
+              onPress={() => {
+                void HapticFeedback.warning();
+                handleDelete();
+              }}
+              hitSlop={10}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: 'rgba(255,60,60,0.10)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Ionicons name="trash-outline" size={18} color={tokens.colors.text.danger} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <ScrollView
@@ -752,6 +774,26 @@ export default function TradeDetailScreen() {
           </View>
         </ScrollView>
       </SafeAreaView>
+
+      <ShareDestinationSheet
+        visible={showShareModal && !!shareAttachment}
+        attachment={shareAttachment}
+        onClose={() => {
+          setShowShareModal(false);
+          setShareAttachment(null);
+        }}
+        onShareAsImage={() => {
+          setShowShareModal(false);
+          setShareAttachment(null);
+          setShowExportImage(true);
+        }}
+      />
+
+      <ExportTradeImage
+        trade={trade}
+        visible={showExportImage}
+        onClose={() => setShowExportImage(false)}
+      />
     </View>
   );
 }

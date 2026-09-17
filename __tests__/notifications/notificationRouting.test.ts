@@ -135,4 +135,19 @@ describe('notificationRouting', () => {
       },
     });
   });
+
+  it('routes community_mention to Tweets with highlightPostId', () => {
+    const target = resolveNotificationNavTarget({
+      type: 'community_mention',
+      post_id: 'post-9',
+    });
+    expect(target).toEqual({ kind: 'tweets', postId: 'post-9' });
+    expect(buildNotificationNavigateArgs(target)).toEqual({
+      name: 'Main',
+      params: {
+        screen: 'Tweets',
+        params: { highlightPostId: 'post-9' },
+      },
+    });
+  });
 });

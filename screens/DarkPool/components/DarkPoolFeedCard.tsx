@@ -3,7 +3,7 @@
  * הריפוד על שכבת התוכן (לא על ה-outer), כדי שה-Blur יעטוף גם את התמונה עד שולי הכרטיס.
  */
 
-import React, { memo } from 'react';
+import React from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import UICard from '../../../components/ui/UICard';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
@@ -19,7 +19,7 @@ interface Props {
   haptic?: boolean;
 }
 
-export const DarkPoolFeedCard = memo(function DarkPoolFeedCard({
+export function DarkPoolFeedCard({
   children,
   onPress,
   accent = false,
@@ -38,17 +38,20 @@ export const DarkPoolFeedCard = memo(function DarkPoolFeedCard({
         onPress={onPress}
         accessibilityLabel={accessibilityLabel}
         haptic={haptic}
-        showGlassBorder={!accent}
+        showGlassBorder={false}
         style={[
           {
-            borderRadius: 36,
-            borderWidth: 1,
+            borderRadius: tokens.borderRadius['2xl'],
+            borderWidth: StyleSheet.hairlineWidth,
             borderColor: accent
-              ? `${tokens.colors.primary.main}44`
+              ? `${tokens.colors.primary.main}40`
               : tokens.colors.border.subtle,
             overflow: 'hidden',
+            backgroundColor: accent
+              ? `${tokens.colors.primary.main}14`
+              : 'transparent',
+            ...tokens.shadows.sm,
           },
-          accent ? { borderWidth: 1.5 } : null,
           style,
         ]}
       >
@@ -56,7 +59,7 @@ export const DarkPoolFeedCard = memo(function DarkPoolFeedCard({
       </UICard>
     </View>
   );
-});
+}
 
 const styles = StyleSheet.create({
   slot: {

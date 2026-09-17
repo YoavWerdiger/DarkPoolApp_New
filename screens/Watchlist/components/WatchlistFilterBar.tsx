@@ -39,8 +39,8 @@ export function WatchlistFilterBar({ mode, onChange }: Props) {
           paddingHorizontal: 10,
           paddingVertical: 5,
           borderRadius: 8,
-          backgroundColor: 'rgba(255,255,255,0.04)',
-          borderWidth: 1,
+          backgroundColor: '#262626',
+          borderWidth: 0,
           borderColor: tokens.colors.border.subtle,
         },
         chipActive: {

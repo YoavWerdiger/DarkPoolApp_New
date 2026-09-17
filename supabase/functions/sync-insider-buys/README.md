@@ -1,21 +1,25 @@
-# sync-insider-buys — רכישות בכירים (sec-api + Form4API + Unusual Whales)
+# sync-insider-buys — רכישות בכירים (Quiver + Form4API + EDGAR + UW אופציונלי)
 
 מקורות ל-`dark_pool_insider_buys`:
 
 
 | מקור               | מה נשמר                                                 | Secrets                  |
 | ------------------ | ------------------------------------------------------- | ------------------------ |
+| **Quiver**         | `/beta/live/insiders` — רכישות P (מקור ראשי מומלץ)     | `QUIVER_API_KEY`         |
 | **sec-api.io**     | רכישות P (Form 4)                                       | `SEC_API_KEY`            |
 | **Form4API**       | רכישות **P + מכירות S**, returns, 10b5, cluster signals | `FORM4_API_KEY`          |
+| **EDGAR**          | Form 4 ישיר (חינם)                                      | —                        |
 | **Unusual Whales** | פיד P + תמונות בכירים                                   | `UNUSUAL_WHALES_API_KEY` |
 
 
-Client משותף: `_shared/form4api.ts` — transactions, insiders, companies, filings, signals (402 = graceful skip).
+Client משותף: `_shared/quiverQuant.ts` + `_shared/form4api.ts`.
 
-## Secrets (פרודקשן — תקציב Form4 << 500/יום)
+## Secrets (פרודקשן)
 
 ```bash
-npx supabase secrets set INSIDER_SYNC_SOURCES=edgar,form4api
+npx supabase secrets set INSIDER_SYNC_SOURCES=quiverquant,edgar,form4api
+npx supabase secrets set QUIVER_API_KEY=<מפתח>   # אל תדביקו בצ'אט
+npx supabase secrets set QUIVER_INSIDER_PAGE_SIZE=500
 
 npx supabase secrets set FORM4_API_KEY=<מפתח>
 npx supabase secrets set FORM4_PROVIDER=form4api
@@ -25,7 +29,6 @@ npx supabase secrets set FORM4_MAX_PAGES=5
 npx supabase secrets set FORM4_EXCLUDE_10B5=true
 # Backfill עמוק — ידני/שבועי בלבד (לא ב-cron):
 # FORM4_LOOKBACK_HOURS=2160 FORM4_MAX_PAGES=12
-# פרופיל: PROFILE_RECENT_TRADES_LIMIT=50 | PORTFOLIO_SNAPSHOT_FRESH_HOURS=24
 ```
 
 ## Cron (אחרי מיגרציית snapshots)
@@ -43,30 +46,23 @@ npx supabase secrets set FORM4_EXCLUDE_10B5=true
 
 ```bash
 npx supabase functions deploy sync-insider-buys --no-verify-jwt
-npx supabase functions deploy materialize-darkpool-portfolios --no-verify-jwt
-npx supabase functions deploy uw-investor-profile --no-verify-jwt
-npx supabase functions deploy uw-fund-profile --no-verify-jwt
 ```
 
 ## בדיקה ידנית
 
 ```bash
+# Probe Quiver (סטטיסטיקות בלבד — בלי upsert)
 curl -X POST "https://<PROJECT_REF>.supabase.co/functions/v1/sync-insider-buys" \
-  -H "Authorization: Bearer <SERVICE_ROLE_KEY>"
-
-curl -X POST "https://<PROJECT_REF>.supabase.co/functions/v1/materialize-darkpool-portfolios" \
   -H "Authorization: Bearer <SERVICE_ROLE_KEY>" \
   -H "Content-Type: application/json" \
-  -d '{"mode":"full"}'
+  -d '{"probe":"quiver","page_size":50}'
+
+curl -X POST "https://<PROJECT_REF>.supabase.co/functions/v1/sync-insider-buys" \
+  -H "Authorization: Bearer <SERVICE_ROLE_KEY>"
 ```
 
 ## ארכיטקטורת פרופיל
 
-- **Form4** רק ב-cron → `dark_pool_insider_buys`
+- **Quiver / Form4** רק ב-cron → `dark_pool_insider_buys`
 - **Yahoo + שחזור גרף/תשואות** ב-`materialize-darkpool-portfolios` → `dark_pool_person_portfolio_snapshots`
 - **פתיחת פרופיל** = קריאת snapshot (+ עסקאות אחרונות מ-DB). אין Form4 חי.
-
-דיוק:
-- קונגרס: אין מניות מזויפות; entry = Yahoo@first_added
-- Form4: cost/qty כש-`basis_reliable`
-- 13F: Yahoo@first_added

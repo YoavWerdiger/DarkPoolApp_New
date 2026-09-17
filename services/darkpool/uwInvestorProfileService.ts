@@ -18,6 +18,8 @@ export interface InvestorHolding {
   txn_mix: string;
   allocation_pct?: number;
   amount_label?: string | null;
+  /** אמצע/שווי מוערך באלפי $ (Quiver holdings) */
+  mid_usd_k?: number;
   /** מחיר כניסה מוצר (Form4 / Yahoo ב־first_added) */
   entry_price?: number | null;
   return_pct?: number | null;
@@ -37,7 +39,10 @@ export interface InvestorRecentTrade {
   ticker: string;
   txn_label: string;
   amount_label: string | null;
+  /** Filed — תצוגה */
   date: string | null;
+  /** Traded — אומדן כניסה */
+  traded_date?: string | null;
 }
 
 export interface InvestorProfile {
@@ -53,12 +58,13 @@ export interface InvestorProfile {
     last_active_days: number | null;
   };
   holdings: InvestorHolding[];
-  holdings_source?: 'snapshot' | 'trades';
+  holdings_source?: 'snapshot' | 'trades' | 'quiver_estimate';
   portfolio_snapshot?: PortfolioSnapshot | null;
   recent_trades: InvestorRecentTrade[];
   sparkline_values: number[];
   metrics?: ReconstructedPortfolioMetrics | null;
   portfolio_source?: PortfolioSource;
+  data_vendor?: 'quiverquant' | 'unusualwhales' | 'public_filings';
   fetched_at: string;
 }
 

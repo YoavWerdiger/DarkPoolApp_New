@@ -92,6 +92,36 @@ export const ECONOMIC_EVENT_TRANSLATIONS: { [key: string]: string } = {
   'Weekly Economic Index': 'מדד כלכלי שבועי',
 };
 
+/** תקופת השוואה מהכותרת (MoM/YoY/QoQ) — המספר הוא שינוי, לא רמת מדד מוחלטת */
+const PERIOD_TOKEN_RE = /\((MoM|YoY|QoQ|Y\/Y|M\/M|Q\/Q)\)/i;
+const PERIOD_HEBREW: Record<string, string> = {
+  mom: '(חודשי)',
+  'm/m': '(חודשי)',
+  yoy: '(שנתי)',
+  'y/y': '(שנתי)',
+  qoq: '(רבעוני)',
+  'q/q': '(רבעוני)',
+};
+
+function extractComparisonPeriod(eventName: string): { base: string; periodHe: string } {
+  const match = eventName.match(PERIOD_TOKEN_RE);
+  if (!match || match.index == null) {
+    return { base: eventName.trim(), periodHe: '' };
+  }
+  const key = match[1].toLowerCase();
+  const periodHe = PERIOD_HEBREW[key] || `(${match[1]})`;
+  const base = `${eventName.slice(0, match.index)} ${eventName.slice(match.index + match[0].length)}`
+    .replace(/\s+/g, ' ')
+    .trim();
+  return { base, periodHe };
+}
+
+function withComparisonPeriod(translated: string, periodHe: string): string {
+  if (!periodHe) return translated;
+  if (translated.includes(periodHe)) return translated;
+  return `${translated} ${periodHe}`;
+}
+
 export function translateEconomicEventNameSmart(eventName: string): string {
   if (!eventName || eventName.trim() === '') {
     return eventName;
@@ -102,8 +132,9 @@ export function translateEconomicEventNameSmart(eventName: string): string {
     return exactMatch;
   }
 
-  const eventNameLower = eventName.toLowerCase();
-  let bestMatch: { key: string; translation: string; length: number } | null = null;
+  const { base, periodHe } = extractComparisonPeriod(eventName);
+  const eventNameLower = base.toLowerCase();
+  let bestMatch: { translation: string; length: number } | null = null;
 
   for (const [english, hebrew] of Object.entries(ECONOMIC_EVENT_TRANSLATIONS)) {
     const englishLower = english.toLowerCase();
@@ -111,14 +142,14 @@ export function translateEconomicEventNameSmart(eventName: string): string {
     if (eventNameLower.includes(englishLower) || englishLower.includes(eventNameLower)) {
       const matchLength = Math.min(englishLower.length, eventNameLower.length);
       if (!bestMatch || matchLength > bestMatch.length) {
-        bestMatch = { key: english, translation: hebrew, length: matchLength };
+        bestMatch = { translation: hebrew, length: matchLength };
       }
     }
   }
 
   if (bestMatch) {
-    return bestMatch.translation;
+    return withComparisonPeriod(bestMatch.translation, periodHe);
   }
 
-  return eventName;
+  return withComparisonPeriod(base || eventName, periodHe);
 }

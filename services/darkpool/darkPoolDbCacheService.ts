@@ -9,18 +9,27 @@ import type { PoliticianMetricsPayload } from './uwPoliticianMetricsService';
 
 const EXPLORE_KEY = 'explore_v1';
 
-export async function listCongressTradesFromDb(limit = 50): Promise<CongressFeedTrade[]> {
-  const { data, error } = await supabase
-    .from('dark_pool_congress_trades')
-    .select(
-      'external_id, politician_id, politician_name, politician_image_url, ticker, company_name, transaction_type, shares, price, amount_label, filed_at, transaction_date, txn_label, source'
-    )
-    .order('filed_at', { ascending: false })
-    .limit(limit);
+const CONGRESS_BASE_COLUMNS =
+  'external_id, politician_id, politician_name, politician_image_url, ticker, company_name, transaction_type, shares, price, amount_label, filed_at, transaction_date, txn_label, source';
 
-  if (error) throw error;
+/** עמודות התשואה של Quiver — נוספו ב-20260917210000_congress_trade_quiver_returns. */
+const CONGRESS_RETURN_COLUMNS = 'excess_return_pct, price_change_pct, spy_change_pct';
 
-  return (data ?? []).map((row) => ({
+const CONGRESS_SELECT = `${CONGRESS_BASE_COLUMNS}, ${CONGRESS_RETURN_COLUMNS}`;
+
+/** PostgREST מחזיר 42703 כשעמודה לא קיימת — כלומר המיגרציה עוד לא הורצה. */
+function isMissingColumnError(error: { code?: string } | null): boolean {
+  return error?.code === '42703';
+}
+
+function numOrNull(raw: unknown): number | null {
+  if (raw == null) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+function mapCongressRow(row: Record<string, unknown>): CongressFeedTrade {
+  return {
     id: String(row.external_id),
     politician_id: String(row.politician_id),
     politician_name: String(row.politician_name),
@@ -43,7 +52,65 @@ export async function listCongressTradesFromDb(limit = 50): Promise<CongressFeed
     source: (row.source === 'quiverquant' ? 'quiverquant' : 'unusualwhales') as
       | 'quiverquant'
       | 'unusualwhales',
-  }));
+    excess_return_pct: numOrNull(row.excess_return_pct),
+    price_change_pct: numOrNull(row.price_change_pct),
+    spy_change_pct: numOrNull(row.spy_change_pct),
+  };
+}
+
+export async function listCongressTradesFromDb(limit = 50): Promise<CongressFeedTrade[]> {
+  const { data, error } = await supabase
+    .from('dark_pool_congress_trades')
+    .select(CONGRESS_SELECT)
+    .order('filed_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    if (!isMissingColumnError(error)) throw error;
+    const legacy = await supabase
+      .from('dark_pool_congress_trades')
+      .select(CONGRESS_BASE_COLUMNS)
+      .order('filed_at', { ascending: false })
+      .limit(limit);
+    if (legacy.error) throw legacy.error;
+    return (legacy.data ?? []).map(mapCongressRow);
+  }
+
+  return (data ?? []).map(mapCongressRow);
+}
+
+/**
+ * "פעילות אחרונה" במסך פרטי עסקה — כל העסקאות של אותו אדם באותו טיקר.
+ * נתון שכבר קיים ב-DB; אין קריאת API חדשה.
+ */
+export async function listCongressTradesForPersonTicker(
+  politicianId: string,
+  ticker: string,
+  limit = 12
+): Promise<CongressFeedTrade[]> {
+  const pid = politicianId.trim();
+  const sym = ticker.trim().toUpperCase();
+  if (!pid || !sym) return [];
+
+  const run = (columns: string) =>
+    supabase
+      .from('dark_pool_congress_trades')
+      .select(columns)
+      .eq('politician_id', pid)
+      .eq('ticker', sym)
+      .order('transaction_date', { ascending: false })
+      .limit(limit);
+
+  const { data, error } = await run(CONGRESS_SELECT);
+  if (error) {
+    if (!isMissingColumnError(error)) throw error;
+    const legacy = await run(CONGRESS_BASE_COLUMNS);
+    if (legacy.error) throw legacy.error;
+    return (legacy.data ?? []).map((row) =>
+      mapCongressRow(row as unknown as Record<string, unknown>)
+    );
+  }
+  return (data ?? []).map((row) => mapCongressRow(row as unknown as Record<string, unknown>));
 }
 
 export async function fetchExploreSnapshotFromDb(): Promise<UwExplorePayload | null> {

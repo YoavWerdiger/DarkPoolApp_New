@@ -94,6 +94,8 @@ export default function AddTransactionScreen() {
   const [availableCash, setAvailableCash] = useState<number | null>(null);
   const [leverage, setLeverage] = useState('1');
   const [pointValue, setPointValue] = useState('');
+  const [stopLoss, setStopLoss] = useState('');
+  const [targetPrice, setTargetPrice] = useState('');
 
   // טען נתונים אם זה ריידיט
   useEffect(() => {
@@ -146,6 +148,8 @@ export default function AddTransactionScreen() {
         setCommission(String(trade.commission ?? 0));
         setLeverage(String(trade.leverage ?? 1));
         if (trade.point_value) setPointValue(String(trade.point_value));
+        setStopLoss(trade.stop_loss != null ? String(trade.stop_loss) : '');
+        setTargetPrice(trade.target_price != null ? String(trade.target_price) : '');
         setTradeDate(new Date(trade.entry_date));
         setNotes(trade.notes ?? '');
         setCurrency(trade.currency);
@@ -200,6 +204,16 @@ export default function AddTransactionScreen() {
         const commNum = parseFloat(commission) || 0;
         const leverageNum = parseFloat(leverage) || 1;
         const pvNum = parseFloat(pointValue) || null;
+        const stopLossNum = stopLoss.trim() ? parseFloat(stopLoss) : null;
+        const targetPriceNum = targetPrice.trim() ? parseFloat(targetPrice) : null;
+        if (stopLossNum != null && (isNaN(stopLossNum) || stopLossNum < 0)) {
+          Alert.alert('סטופ לא תקין', 'הכנס מחיר סטופ תקין, או השאר ריק.');
+          return;
+        }
+        if (targetPriceNum != null && (isNaN(targetPriceNum) || targetPriceNum < 0)) {
+          Alert.alert('יעד לא תקין', 'הכנס מחיר יעד תקין, או השאר ריק.');
+          return;
+        }
 
         if (!symbol) {
           Alert.alert('שדה חסר', 'יש לבחור סימבול לנכס.');
@@ -234,6 +248,8 @@ export default function AddTransactionScreen() {
             point_value: pvNum,
             commission: commNum,
             notes: notes.trim() || null,
+            stop_loss: stopLossNum,
+            target_price: targetPriceNum,
           });
         } else if (transactionId) {
           // מצב עריכה — עדכן ב-portfolio_transactions (backward compat)
@@ -265,6 +281,8 @@ export default function AddTransactionScreen() {
             point_value: pvNum,
             commission: commNum,
             notes: notes.trim() || null,
+            stop_loss: stopLossNum,
+            target_price: targetPriceNum,
           });
         }
       } else if (mode === 'cash') {
@@ -321,7 +339,7 @@ export default function AddTransactionScreen() {
     }
   }, [
     mode, side, direction, cashSide, symbol, assetType, quantity, price, commission,
-    leverage, pointValue, amount, tradeDate, notes, currency, portfolioId,
+    leverage, pointValue, stopLoss, targetPrice, amount, tradeDate, notes, currency, portfolioId,
     transactionId, editTradeId, navigation,
   ]);
 
@@ -351,18 +369,18 @@ export default function AddTransactionScreen() {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        root: { flex: 1, backgroundColor: '#0A0E0A' },
+        root: { flex: 1, backgroundColor: '#111111', direction: 'rtl' },
         scroll: { flex: 1, backgroundColor: 'transparent' },
-        scrollContent: { padding: 16, paddingBottom: 100 },
+        scrollContent: { padding: 16, paddingBottom: 40 },
         modeRow: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           gap: 8,
           marginBottom: 18,
         },
         modeChip: {
           flex: 1,
           paddingVertical: 12,
-          borderRadius: 26,
+          borderRadius: 14,
           alignItems: 'center',
           borderWidth: 1.5,
           borderColor: tokens.colors.border.subtle,
@@ -375,26 +393,24 @@ export default function AddTransactionScreen() {
           fontSize: 13,
           fontWeight: '700',
           color: tokens.colors.text.secondary,
+          writingDirection: 'rtl',
+          textAlign: 'center',
         },
         modeChipTextActive: {
           color: tokens.colors.primary.main,
         },
-        section: { marginBottom: 16 },
-        labelHint: {
-          fontSize: 11,
-          fontWeight: '500',
-          color: tokens.colors.text.tertiary,
-        },
+        section: { marginBottom: 18 },
         label: {
           fontSize: 13,
           fontWeight: '600',
-          color: tokens.colors.text.tertiary,
+          color: tokens.colors.text.secondary,
           marginBottom: 8,
           textAlign: 'right',
+          writingDirection: 'rtl',
         },
         input: {
           backgroundColor: 'rgba(255,255,255,0.05)',
-          borderRadius: 28,
+          borderRadius: 14,
           paddingHorizontal: 16,
           paddingVertical: 14,
           fontSize: 15,
@@ -404,17 +420,17 @@ export default function AddTransactionScreen() {
           textAlign: 'right',
           writingDirection: 'rtl',
         },
-        /** שדה מרובה שורות — פחות עיגול מלא כדי שלא ייראה כקפסולה */
         inputMultiline: {
-          borderRadius: 22,
+          borderRadius: 14,
           paddingVertical: 12,
+          minHeight: 88,
         },
         symbolPicker: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'center',
           gap: 10,
           backgroundColor: 'rgba(255,255,255,0.05)',
-          borderRadius: 28,
+          borderRadius: 14,
           paddingHorizontal: 16,
           paddingVertical: 14,
           borderWidth: 1,
@@ -425,48 +441,81 @@ export default function AddTransactionScreen() {
           fontSize: 15,
           fontWeight: '600',
           color: tokens.colors.text.primary,
-          textAlign: 'right',
+          writingDirection: 'ltr',
+          textAlign: 'left',
         },
         symbolPlaceholder: {
           flex: 1,
           fontSize: 15,
           color: tokens.colors.text.tertiary,
           textAlign: 'right',
+          writingDirection: 'rtl',
         },
         sideRow: {
-          flexDirection: 'row-reverse',
-          gap: 8,
+          flexDirection: 'row',
+          gap: 10,
         },
         sideBtn: {
           flex: 1,
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           gap: 6,
-          paddingVertical: 12,
-          borderRadius: 26,
+          paddingVertical: 14,
+          borderRadius: 14,
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderWidth: 1.5,
+          borderColor: tokens.colors.border.subtle,
+          backgroundColor: 'transparent',
+        },
+        sideBtnText: {
+          fontSize: 15,
+          fontWeight: '800',
+          letterSpacing: 0.3,
+        },
+        assetTypeRow: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: 8,
+        },
+        assetTypeChip: {
+          paddingHorizontal: 14,
+          paddingVertical: 10,
+          borderRadius: 12,
           alignItems: 'center',
           justifyContent: 'center',
           borderWidth: 1.5,
           borderColor: tokens.colors.border.subtle,
         },
-        sideBtnText: {
-          fontSize: 14,
-          fontWeight: '700',
-        },
         twoCol: {
-          flexDirection: 'row-reverse',
-          gap: 8,
+          flexDirection: 'row',
+          gap: 10,
         },
         col: { flex: 1 },
+        advancedBlock: {
+          marginTop: 4,
+          marginBottom: 4,
+          paddingTop: 4,
+          gap: 0,
+        },
+        advancedTitle: {
+          fontSize: 12,
+          fontWeight: '700',
+          color: tokens.colors.text.tertiary,
+          textAlign: 'right',
+          writingDirection: 'rtl',
+          marginBottom: 12,
+          letterSpacing: 0.2,
+        },
         validationCard: {
-          borderRadius: 16,
+          borderRadius: 14,
           paddingHorizontal: 16,
           paddingVertical: 12,
-          marginBottom: 16,
+          marginBottom: 18,
           borderWidth: 1,
           gap: 8,
         },
         validationRow: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
         },
@@ -487,7 +536,7 @@ export default function AddTransactionScreen() {
           backgroundColor: tokens.colors.border.subtle,
         },
         validationWarningRow: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'center',
           gap: 6,
           paddingTop: 4,
@@ -499,17 +548,17 @@ export default function AddTransactionScreen() {
           flex: 1,
         },
         dateRow: {
-          flexDirection: 'row-reverse',
-          gap: 8,
+          flexDirection: 'row',
+          gap: 10,
         },
         datePill: {
           flex: 1,
           flexDirection: 'row',
           alignItems: 'center',
-          justifyContent: 'center',
+          justifyContent: 'flex-start',
           gap: 8,
           backgroundColor: 'rgba(255,255,255,0.05)',
-          borderRadius: 28,
+          borderRadius: 14,
           paddingHorizontal: 14,
           paddingVertical: 14,
           borderWidth: 1,
@@ -519,7 +568,8 @@ export default function AddTransactionScreen() {
           fontSize: 14,
           fontWeight: '600',
           color: tokens.colors.text.primary,
-          textAlign: 'center',
+          textAlign: 'right',
+          flex: 1,
         },
         pickerModalOverlay: {
           flex: 1,
@@ -544,7 +594,7 @@ export default function AddTransactionScreen() {
         pickerDoneBtn: {
           marginTop: 12,
           backgroundColor: tokens.colors.primary.main,
-          borderRadius: 28,
+          borderRadius: 14,
           paddingVertical: 14,
           alignItems: 'center',
         },
@@ -553,15 +603,36 @@ export default function AddTransactionScreen() {
           fontWeight: '700',
           color: tokens.colors.text.inverse,
         },
+        footerRow: {
+          flexDirection: 'row',
+          gap: 10,
+          marginTop: 8,
+          marginBottom: 8,
+        },
+        cancelBtn: {
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingVertical: 16,
+          borderRadius: 14,
+          borderWidth: 1.5,
+          borderColor: tokens.colors.border.subtle,
+          backgroundColor: 'transparent',
+        },
+        cancelBtnText: {
+          fontSize: 15,
+          fontWeight: '700',
+          color: tokens.colors.text.secondary,
+        },
         submit: {
-          flexDirection: 'row-reverse',
+          flex: 1.4,
+          flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
           gap: 8,
           backgroundColor: tokens.colors.primary.main,
           paddingVertical: 16,
-          borderRadius: 32,
-          marginTop: 12,
+          borderRadius: 14,
         },
         submitText: {
           fontSize: 16,
@@ -578,7 +649,12 @@ export default function AddTransactionScreen() {
       <StatusBar style="light" />
       <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
         <PortfolioScreenHeader
-          title={isEdit ? 'עריכת עסקה' : 'עסקה חדשה'}
+          title={isEdit ? 'עריכת עסקה' : 'פוזיציה חדשה'}
+          subtitle={
+            isEdit
+              ? 'עדכון פרטי הפוזיציה'
+              : 'הזן את פרטי הפוזיציה החדשה'
+          }
           onBack={() => navigation.goBack()}
         />
         <KeyboardAvoidingView
@@ -591,37 +667,105 @@ export default function AddTransactionScreen() {
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
+            showsVerticalScrollIndicator={false}
           >
             {/* Mode tabs */}
-            <View style={styles.modeRow}>
-              {(['asset', 'cash', 'dividend'] as Mode[]).map((m) => (
-                <TouchableOpacity
-                  key={m}
-                  onPress={() => {
-                    if (mode !== m) void HapticFeedback.selection();
-                    setMode(m);
-                  }}
-                  style={[styles.modeChip, mode === m && styles.modeChipActive]}
-                  activeOpacity={0.85}
-                  disabled={isEdit}
-                >
-                  <Text
-                    style={[
-                      styles.modeChipText,
-                      mode === m && styles.modeChipTextActive,
-                    ]}
+            {!isEdit ? (
+              <View style={styles.modeRow}>
+                {(['asset', 'cash', 'dividend'] as Mode[]).map((m) => (
+                  <TouchableOpacity
+                    key={m}
+                    onPress={() => {
+                      if (mode !== m) void HapticFeedback.selection();
+                      setMode(m);
+                    }}
+                    style={[styles.modeChip, mode === m && styles.modeChipActive]}
+                    activeOpacity={0.85}
                   >
-                    {m === 'asset' ? 'נכס / מניה' : m === 'cash' ? 'מזומן' : 'דיבידנד'}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+                    <Text
+                      style={[
+                        styles.modeChipText,
+                        mode === m && styles.modeChipTextActive,
+                      ]}
+                    >
+                      {m === 'asset' ? 'פוזיציה' : m === 'cash' ? 'מזומן' : 'דיבידנד'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : null}
 
-            {/* Asset mode */}
+            {/* Asset mode — hierarchy inspired by clear journal-style entry */}
             {mode === 'asset' && (
               <>
                 <View style={styles.section}>
-                  <Text style={styles.label}>כיוון פוזיציה</Text>
+                  <Text style={styles.label}>סוג נכס</Text>
+                  <View style={styles.assetTypeRow}>
+                    {(['stock', 'etf', 'crypto', 'forex', 'futures', 'fund'] as AssetType[]).map((t) => (
+                      <TouchableOpacity
+                        key={t}
+                        activeOpacity={1}
+                        style={[
+                          styles.assetTypeChip,
+                          assetType === t && {
+                            borderColor: tokens.colors.primary.main,
+                            backgroundColor: 'rgba(0,200,5,0.10)',
+                          },
+                        ]}
+                        onPress={() => {
+                          if (assetType !== t) void HapticFeedback.selection();
+                          setAssetType(t);
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.sideBtnText,
+                            { fontSize: 13 },
+                            {
+                              color:
+                                assetType === t
+                                  ? tokens.colors.primary.main
+                                  : tokens.colors.text.secondary,
+                            },
+                          ]}
+                        >
+                          {ASSET_TYPE_LABELS[t]}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                <View style={styles.section}>
+                  <Text style={styles.label}>סימבול</Text>
+                  <TouchableOpacity
+                    style={styles.symbolPicker}
+                    onPress={() => {
+                      void HapticFeedback.impactLight();
+                      setSearchOpen(true);
+                    }}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons
+                      name="search"
+                      size={18}
+                      color={tokens.colors.text.tertiary}
+                    />
+                    {symbol ? (
+                      <Text style={styles.symbolText}>{symbol}</Text>
+                    ) : (
+                      <Text style={styles.symbolPlaceholder}>לדוגמה: AAPL</Text>
+                    )}
+                    <Ionicons
+                      name="chevron-back"
+                      size={18}
+                      color={tokens.colors.text.tertiary}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.section}>
+                  <Text style={styles.label}>סוג עסקה</Text>
                   <View style={styles.sideRow}>
                     <TouchableOpacity
                       activeOpacity={1}
@@ -634,7 +778,7 @@ export default function AddTransactionScreen() {
                               : tokens.colors.border.subtle,
                           backgroundColor:
                             direction === 'long'
-                              ? 'rgba(0, 200, 5, 0.10)'
+                              ? 'rgba(0, 200, 5, 0.12)'
                               : 'transparent',
                         },
                       ]}
@@ -655,7 +799,7 @@ export default function AddTransactionScreen() {
                           },
                         ]}
                       >
-                        לונג
+                        LONG
                       </Text>
                       <Ionicons
                         name="trending-up"
@@ -678,7 +822,7 @@ export default function AddTransactionScreen() {
                               : tokens.colors.border.subtle,
                           backgroundColor:
                             direction === 'short'
-                              ? 'rgba(255, 68, 68, 0.10)'
+                              ? 'rgba(255, 68, 68, 0.12)'
                               : 'transparent',
                         },
                       ]}
@@ -699,7 +843,7 @@ export default function AddTransactionScreen() {
                           },
                         ]}
                       >
-                        שורט
+                        SHORT
                       </Text>
                       <Ionicons
                         name="trending-down"
@@ -715,130 +859,53 @@ export default function AddTransactionScreen() {
                 </View>
 
                 <View style={styles.section}>
-                  <Text style={styles.label}>סימבול</Text>
-                  <TouchableOpacity
-                    style={styles.symbolPicker}
-                    onPress={() => {
-                      void HapticFeedback.impactLight();
-                      setSearchOpen(true);
-                    }}
-                    activeOpacity={0.85}
-                  >
-                    <Ionicons
-                      name="search"
-                      size={18}
-                      color={tokens.colors.text.tertiary}
-                    />
-                    {symbol ? (
-                      <Text style={styles.symbolText}>{symbol}</Text>
-                    ) : (
-                      <Text style={styles.symbolPlaceholder}>בחר/י סימבול…</Text>
-                    )}
-                    <Ionicons
-                      name="chevron-back"
-                      size={18}
-                      color={tokens.colors.text.tertiary}
-                    />
-                  </TouchableOpacity>
+                  <Text style={styles.label}>{assetType === 'futures' ? 'מספר חוזים' : 'כמות'}</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={quantity}
+                    onChangeText={setQuantity}
+                    keyboardType="decimal-pad"
+                    placeholder={assetType === 'futures' ? '1' : '10'}
+                    placeholderTextColor={tokens.colors.text.tertiary}
+                  />
                 </View>
 
                 <View style={styles.section}>
-                  <Text style={styles.label}>סוג נכס</Text>
-                  <View style={[styles.sideRow, { flexWrap: 'wrap', gap: 6 }]}>
-                    {(['stock', 'etf', 'crypto', 'forex', 'futures', 'fund'] as AssetType[]).map((t) => (
-                      <TouchableOpacity
-                        key={t}
-                        activeOpacity={1}
-                        style={[
-                          styles.sideBtn,
-                          { flex: 0, paddingHorizontal: 14, paddingVertical: 10 },
-                          assetType === t && {
-                            borderColor: tokens.colors.primary.main,
-                            backgroundColor: 'rgba(0,200,5,0.10)',
-                          },
-                        ]}
-                        onPress={() => {
-                          if (assetType !== t) void HapticFeedback.selection();
-                          setAssetType(t);
-                        }}
-                      >
-                        <Text
-                          style={[
-                            styles.sideBtnText,
-                            { fontSize: 12 },
-                            { color: assetType === t ? tokens.colors.primary.main : tokens.colors.text.secondary },
-                          ]}
-                        >
-                          {ASSET_TYPE_LABELS[t]}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
+                  <Text style={styles.label}>מחיר כניסה</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={price}
+                    onChangeText={setPrice}
+                    keyboardType="decimal-pad"
+                    placeholder="150.00"
+                    placeholderTextColor={tokens.colors.text.tertiary}
+                  />
                 </View>
 
                 <View style={styles.twoCol}>
                   <View style={[styles.section, styles.col]}>
-                    <Text style={styles.label}>{assetType === 'futures' ? 'חוזים' : 'כמות'}</Text>
+                    <Text style={styles.label}>סטופ (אופציונלי)</Text>
                     <TextInput
                       style={styles.input}
-                      value={quantity}
-                      onChangeText={setQuantity}
+                      value={stopLoss}
+                      onChangeText={setStopLoss}
                       keyboardType="decimal-pad"
-                      placeholder="0"
+                      placeholder="145.00"
                       placeholderTextColor={tokens.colors.text.tertiary}
                     />
                   </View>
                   <View style={[styles.section, styles.col]}>
-                    <Text style={styles.label}>מחיר ליחידה</Text>
+                    <Text style={styles.label}>יעד (אופציונלי)</Text>
                     <TextInput
                       style={styles.input}
-                      value={price}
-                      onChangeText={setPrice}
+                      value={targetPrice}
+                      onChangeText={setTargetPrice}
                       keyboardType="decimal-pad"
-                      placeholder="0.00"
+                      placeholder="165.00"
                       placeholderTextColor={tokens.colors.text.tertiary}
                     />
                   </View>
                 </View>
-
-                <View style={styles.twoCol}>
-                  <View style={[styles.section, styles.col]}>
-                    <Text style={styles.label}>עמלה</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={commission}
-                      onChangeText={setCommission}
-                      keyboardType="decimal-pad"
-                      placeholder="0.00"
-                      placeholderTextColor={tokens.colors.text.tertiary}
-                    />
-                  </View>
-                  <View style={[styles.section, styles.col]}>
-                    <Text style={styles.label}>מינוף (Leverage)</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={leverage}
-                      onChangeText={setLeverage}
-                      keyboardType="decimal-pad"
-                      placeholder="1"
-                      placeholderTextColor={tokens.colors.text.tertiary}
-                    />
-                  </View>
-                </View>
-
-                {assetType === 'futures' ? (
-                  <View style={styles.section}>
-                    <Text style={styles.label}>ערך לנקודה (Point Value)</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={pointValue}
-                      onChangeText={setPointValue}
-                      keyboardType="decimal-pad"
-                      placeholder="לדוגמה: 50 ל-ES, 20 ל-NQ"
-                      placeholderTextColor={tokens.colors.text.tertiary}
-                    />
-                  </View>
-                ) : null}
               </>
             )}
 
@@ -997,9 +1064,10 @@ export default function AddTransactionScreen() {
 
             {/* Common: Date + Time */}
             <View style={styles.section}>
-              <Text style={styles.label}>תאריך ושעה</Text>
+              <Text style={styles.label}>
+                {mode === 'asset' ? 'תאריך ושעת כניסה' : 'תאריך ושעה'}
+              </Text>
               <View style={styles.dateRow}>
-                {/* Date picker */}
                 <TouchableOpacity
                   style={styles.datePill}
                   activeOpacity={0.8}
@@ -1014,9 +1082,8 @@ export default function AddTransactionScreen() {
                   </Text>
                 </TouchableOpacity>
 
-                {/* Time picker */}
                 <TouchableOpacity
-                  style={[styles.datePill, { flex: 0.7 }]}
+                  style={styles.datePill}
                   activeOpacity={0.8}
                   onPress={() => {
                     void HapticFeedback.impactLight();
@@ -1123,38 +1190,94 @@ export default function AddTransactionScreen() {
               ) : null}
             </View>
 
+            {mode === 'asset' ? (
+              <View style={styles.advancedBlock}>
+                <Text style={styles.advancedTitle}>פרטים נוספים</Text>
+                <View style={styles.twoCol}>
+                  <View style={[styles.section, styles.col]}>
+                    <Text style={styles.label}>עמלה (אופציונלי)</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={commission}
+                      onChangeText={setCommission}
+                      keyboardType="decimal-pad"
+                      placeholder="0.00"
+                      placeholderTextColor={tokens.colors.text.tertiary}
+                    />
+                  </View>
+                  <View style={[styles.section, styles.col]}>
+                    <Text style={styles.label}>מינוף</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={leverage}
+                      onChangeText={setLeverage}
+                      keyboardType="decimal-pad"
+                      placeholder="1"
+                      placeholderTextColor={tokens.colors.text.tertiary}
+                    />
+                  </View>
+                </View>
+                {assetType === 'futures' ? (
+                  <View style={styles.section}>
+                    <Text style={styles.label}>ערך לנקודה</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={pointValue}
+                      onChangeText={setPointValue}
+                      keyboardType="decimal-pad"
+                      placeholder="לדוגמה: 50 ל-ES, 20 ל-NQ"
+                      placeholderTextColor={tokens.colors.text.tertiary}
+                    />
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
+
             {/* Notes */}
             <View style={styles.section}>
-              <Text style={styles.label}>הערות (עד 128 תווים)</Text>
+              <Text style={styles.label}>הערות (אופציונלי)</Text>
               <TextInput
                 style={[
                   styles.input,
                   styles.inputMultiline,
-                  { minHeight: 70, textAlignVertical: 'top' },
+                  { textAlignVertical: 'top' },
                 ]}
                 value={notes}
                 onChangeText={setNotes}
-                placeholder="(אופציונלי)"
+                placeholder="הוסף הערות על העסקה…"
                 placeholderTextColor={tokens.colors.text.tertiary}
                 multiline
                 maxLength={128}
               />
             </View>
 
-            <TouchableOpacity
-              style={[styles.submit, submitting && { opacity: 0.6 }]}
-              onPress={() => {
-                void HapticFeedback.medium();
-                void handleSubmit();
-              }}
-              disabled={submitting}
-              activeOpacity={0.88}
-            >
-              <Ionicons name="checkmark" size={22} color={tokens.colors.text.inverse} />
-              <Text style={styles.submitText}>
-                {submitting ? 'שומר…' : isEdit ? 'עדכן עסקה' : 'הוסף עסקה'}
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.footerRow}>
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={() => {
+                  void HapticFeedback.impactLight();
+                  navigation.goBack();
+                }}
+                activeOpacity={0.85}
+                disabled={submitting}
+              >
+                <Text style={styles.cancelBtnText}>ביטול</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.submit, submitting && { opacity: 0.6 }]}
+                onPress={() => {
+                  void HapticFeedback.medium();
+                  void handleSubmit();
+                }}
+                disabled={submitting}
+                activeOpacity={0.88}
+              >
+                <Ionicons name="checkmark" size={20} color={tokens.colors.text.inverse} />
+                <Text style={styles.submitText}>
+                  {submitting ? 'שומר…' : isEdit ? 'עדכן עסקה' : 'הוסף עסקה'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>

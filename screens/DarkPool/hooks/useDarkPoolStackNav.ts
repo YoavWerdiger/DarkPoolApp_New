@@ -7,6 +7,7 @@ const STACK_ROUTE_NAMES = new Set([
   'DarkPoolPeople',
   'DarkPoolTicker',
   'DarkPoolInvestor',
+  'DarkPoolTradeDetail',
 ]);
 
 type NavLike = {

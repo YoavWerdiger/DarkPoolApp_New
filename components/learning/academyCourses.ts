@@ -35,12 +35,14 @@ export function isDavidTrainingCourse(course: Pick<CourseWithProgress, 'id' | 't
 }
 
 /** כותרת משנה לתצוגה בכרטיס/Coming Soon */
-export const WHALES_COURSE_SUBTITLE = 'מסחר יומי במניות ובאופציות';
+export const WHALES_COURSE_SUBTITLE = 'מ-0 לסוחר עצמאי בשוק ההון';
+export const ORACLE_COURSE_SUBTITLE = 'קורס מסחר מתקדם באופציות';
 
 export function getAcademyCourseSubtitle(
   course: Pick<CourseWithProgress, 'id' | 'slug' | 'title' | 'subtitle'>
 ): string {
   if (isWhalesCourse(course)) return WHALES_COURSE_SUBTITLE;
+  if (isOracleCourse(course)) return ORACLE_COURSE_SUBTITLE;
   return (course.subtitle || '').trim();
 }
 
@@ -52,10 +54,10 @@ export function getAcademyCourseAudience(
     return 'לכל מי שרוצה להתחיל לסחור או להשקיע בשוק ההון, גם ללא ניסיון קודם.';
   }
   if (isOracleCourse(course)) {
-    return 'לסוחרים שמכירים את יסודות השוק ורוצים ללמוד מסחר סווינג באופציות.';
+    return 'לסוחרים שכבר מכירים את יסודות השוק ורוצים להתמקצע במסחר באופציות ובאסטרטגיות מתקדמות.';
   }
   if (isWhalesCourse(course)) {
-    return 'לסוחרים שרוצים להתמחות במסחר יומי ולזהות תנועות כסף חכם בשוק.';
+    return 'למתחילים ולסוחרים שרוצים ללמוד מהיסודות ועד ניתוח טכני מתקדם, מסחר סווינג ומסחר יומי במניות.';
   }
   const desc = (course.description || '').trim();
   const match = desc.match(/למי הקורס מתאים\?\s*\n([^\n]+)/);
@@ -93,14 +95,46 @@ export function getCourseDurationMinutes(course: {
   return 0;
 }
 
-/** רוחב אחיד לתג העליון — חינמי (טקסט) ופרמיום (כתר) */
+/** רוחב אחיד לתג העליון */
 export const ACADEMY_BADGE_MIN_WIDTH = 108;
 
-/** סדר מסלול הלמידה באקדמיה: יסודות → אורקל → לוויתנים */
+const ADVANCED_COURSE_BADGE_COLOR = '#6366F1';
+
+/** תווית תג על כרטיס הקורס */
+export function getAcademyCourseBadgeLabel(
+  course: Pick<CourseWithProgress, 'id' | 'slug' | 'title' | 'access'> & { price?: number }
+): string {
+  if (isDavidTrainingCourse(course)) return 'בסיסי';
+  if (isWhalesCourse(course)) return 'קורס מלא';
+  if (isOracleCourse(course)) return 'קורס מתקדם';
+  if (getAcademyCourseTier(course) === 'premium') return 'קורס מלא';
+  return 'חינמי';
+}
+
+/** צבע תג — בלי כתום «פרמיום» */
+export function getAcademyCourseBadgeColor(
+  course: Pick<CourseWithProgress, 'id' | 'slug' | 'title' | 'access'> & { price?: number },
+  primaryMain: string
+): string {
+  if (isOracleCourse(course)) return ADVANCED_COURSE_BADGE_COLOR;
+  if (isWhalesCourse(course) || getAcademyCourseTier(course) === 'premium') return primaryMain;
+  return primaryMain;
+}
+
+/** צבע הדגשה (מטא / CTA) לפי סוג הקורס */
+export function getAcademyCourseAccentColor(
+  course: Pick<CourseWithProgress, 'id' | 'slug' | 'title' | 'access'> & { price?: number },
+  primaryMain: string
+): string {
+  if (isOracleCourse(course)) return ADVANCED_COURSE_BADGE_COLOR;
+  return primaryMain;
+}
+
+/** סדר מסלול הלמידה באקדמיה: יסודות → לוויתנים → אורקל */
 const ACADEMY_COURSE_ORDER: string[] = [
   DAVID_TRAINING_COURSE_ID,
-  ORACLE_COURSE_ID,
   ...WHALES_COURSE_IDS,
+  ORACLE_COURSE_ID,
 ];
 
 export function sortAcademyCourses<T extends { id: string }>(courses: T[]): T[] {

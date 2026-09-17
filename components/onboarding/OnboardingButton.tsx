@@ -1,153 +1,240 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import {
+  Pressable,
   Text,
-  View,
-  TouchableOpacity,
   ActivityIndicator,
   ViewStyle,
-  Animated,
-  Easing,
+  TextStyle,
+  Platform,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { DesignTokens } from '../ui/DesignTokens';
+import { Ionicons } from '@expo/vector-icons';
+import { useDesignTokens } from '../ui/DesignTokens';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 
-interface OnboardingButtonProps {
+export type OnboardingButtonVariant = 'primary' | 'secondary' | 'ghost';
+export type OnboardingButtonSize = 'md' | 'lg';
+
+export interface OnboardingButtonProps {
   title: string;
-  onPress: () => void;
-  loading?: boolean;
+  variant?: OnboardingButtonVariant;
+  size?: OnboardingButtonSize;
+  icon?: keyof typeof Ionicons.glyphMap;
+  iconPosition?: 'left' | 'right';
   disabled?: boolean;
-  variant?: 'primary' | 'secondary';
+  loading?: boolean;
+  fullWidth?: boolean;
+  onPress?: () => void;
   style?: ViewStyle;
-  icon?: React.ReactNode;
+  textStyle?: TextStyle;
+  haptic?: boolean;
 }
 
+/**
+ * OnboardingButton - כפתור בסגנון DarkPool
+ * 
+ * עיצוב עם:
+ * - Primary: ירוק DarkPool (#00C805) עם טקסט שחור
+ * - Secondary: glass effect עם טקסט לבן
+ * - Ghost: שקוף עם טקסט ירוק
+ * - Border radius pill מלא
+ * - גבוה וברור
+ */
 const OnboardingButton: React.FC<OnboardingButtonProps> = ({
   title,
-  onPress,
-  loading = false,
-  disabled = false,
   variant = 'primary',
-  style,
+  size = 'lg',
   icon,
+  iconPosition = 'left',
+  disabled = false,
+  loading = false,
+  fullWidth = true,
+  onPress,
+  style,
+  textStyle,
+  haptic = true,
 }) => {
-  const scale = useRef(new Animated.Value(1)).current;
-  const isDisabled = loading || disabled;
+  const tokens = useDesignTokens();
 
-  const runPress = () => {
-    if (isDisabled) return;
-    void HapticFeedback.impactLight();
-    onPress();
+  const getVariantStyles = (): { container: ViewStyle; text: TextStyle } => {
+    switch (variant) {
+      case 'primary':
+        return {
+          container: {
+            backgroundColor: disabled
+              ? tokens.colors.text.disabled
+              : tokens.colors.primary.main,
+            borderRadius: tokens.borderRadius.button,
+            ...tokens.shadows.green,
+          },
+          text: {
+            color: disabled
+              ? tokens.colors.text.muted
+              : tokens.colors.text.inverse,
+            fontWeight: tokens.typography.button.weight,
+            fontSize: tokens.typography.button.size,
+          },
+        };
+      case 'secondary':
+        return {
+          container: {
+            backgroundColor: disabled
+              ? 'rgba(255, 255, 255, 0.04)'
+              : 'rgba(255, 255, 255, 0.14)',
+            borderWidth: 1,
+            borderColor: disabled
+              ? 'rgba(255, 255, 255, 0.08)'
+              : 'rgba(255, 255, 255, 0.22)',
+            borderRadius: tokens.borderRadius.button,
+          },
+          text: {
+            color: disabled
+              ? tokens.colors.text.disabled
+              : tokens.colors.text.primary,
+            fontWeight: tokens.typography.button.weight,
+            fontSize: tokens.typography.button.size,
+          },
+        };
+      case 'ghost':
+        return {
+          container: {
+            backgroundColor: 'transparent',
+          },
+          text: {
+            color: disabled
+              ? tokens.colors.text.disabled
+              : tokens.colors.primary.main,
+            fontWeight: '600',
+            fontSize: tokens.typography.body.size,
+          },
+        };
+      default:
+        return {
+          container: {
+            backgroundColor: tokens.colors.primary.main,
+            borderRadius: tokens.borderRadius.button,
+          },
+          text: {
+            color: tokens.colors.text.inverse,
+            fontWeight: tokens.typography.button.weight,
+            fontSize: tokens.typography.button.size,
+          },
+        };
+    }
   };
 
-  const pressIn = () => {
-    Animated.timing(scale, {
-      toValue: 0.98,
-      duration: 90,
-      easing: Easing.out(Easing.quad),
-      useNativeDriver: true,
-    }).start();
+  const getSizeStyles = (): { container: ViewStyle; icon: number } => {
+    switch (size) {
+      case 'md':
+        return {
+          container: {
+            paddingHorizontal: tokens.spacing.xl,
+            minHeight: 48,
+            paddingVertical: tokens.spacing.md,
+          },
+          icon: 20,
+        };
+      case 'lg':
+      default:
+        return {
+          container: {
+            paddingHorizontal: tokens.spacing.xl,
+            minHeight: 56,
+            paddingVertical: tokens.spacing.lg,
+          },
+          icon: 22,
+        };
+    }
   };
 
-  const pressOut = () => {
-    Animated.timing(scale, {
-      toValue: 1,
-      duration: 140,
-      easing: Easing.out(Easing.quad),
-      useNativeDriver: true,
-    }).start();
+  const variantStyles = getVariantStyles();
+  const sizeStyles = getSizeStyles();
+
+  const containerStyle: ViewStyle = {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...sizeStyles.container,
+    ...variantStyles.container,
+    ...(fullWidth && { width: '100%' }),
+    ...style,
   };
 
-  if (variant === 'primary') {
-    return (
-      <Animated.View style={[{ transform: [{ scale }] }, style]}>
-        <LinearGradient
-          colors={isDisabled ? ['#2A2A2A', '#2A2A2A'] : ['#00C805', '#00A004', '#008F03']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={{
-            borderRadius: DesignTokens.borderRadius.full,
-            overflow: 'hidden',
-            shadowColor: isDisabled ? 'transparent' : DesignTokens.colors.primary.main,
-            shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: isDisabled ? 0 : 0.28,
-            shadowRadius: 12,
-            elevation: isDisabled ? 0 : 6,
-          }}
-        >
-          <TouchableOpacity
-            onPress={runPress}
-            onPressIn={pressIn}
-            onPressOut={pressOut}
-            disabled={isDisabled}
-            activeOpacity={1}
-            style={{
-              paddingVertical: 16,
-              alignItems: 'center',
-              justifyContent: 'center',
-              opacity: isDisabled ? 0.55 : 1,
-            }}
-          >
-            {loading ? (
-              <ActivityIndicator color="#000" size="small" />
-            ) : (
-              <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
-                {icon}
-                <Text
-                  style={{
-                    color: isDisabled ? 'rgba(255,255,255,0.3)' : '#000',
-                    fontSize: 16,
-                    fontWeight: '700',
-                    letterSpacing: 0.2,
-                  }}
-                >
-                  {title}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </LinearGradient>
-      </Animated.View>
+  const textStyleCombined: TextStyle = {
+    ...variantStyles.text,
+    fontFamily: Platform.select({
+      ios: 'System',
+      android: 'Roboto',
+      default: 'System',
+    }),
+    textAlign: 'center',
+    ...textStyle,
+  };
+
+  const iconColor = variantStyles.text.color;
+
+  const handlePress = () => {
+    if (disabled || loading) return;
+    if (haptic) {
+      void HapticFeedback.impactLight();
+    }
+    onPress?.();
+  };
+
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <ActivityIndicator
+          color={iconColor}
+          size={size === 'lg' ? 'large' : 'small'}
+        />
+      );
+    }
+
+    const textElement = <Text style={textStyleCombined}>{title}</Text>;
+
+    const iconElement = icon && (
+      <Ionicons
+        name={icon}
+        size={sizeStyles.icon}
+        color={iconColor}
+        style={{
+          marginRight: iconPosition === 'left' ? tokens.spacing.sm : 0,
+          marginLeft: iconPosition === 'right' ? tokens.spacing.sm : 0,
+        }}
+      />
     );
-  }
+
+    if (iconPosition === 'right') {
+      return (
+        <>
+          {textElement}
+          {iconElement}
+        </>
+      );
+    }
+
+    return (
+      <>
+        {iconElement}
+        {textElement}
+      </>
+    );
+  };
 
   return (
-    <Animated.View style={[{ transform: [{ scale }] }, style]}>
-      <TouchableOpacity
-        onPress={runPress}
-        onPressIn={pressIn}
-        onPressOut={pressOut}
-        disabled={isDisabled}
-        activeOpacity={1}
-        style={{
-          borderRadius: DesignTokens.borderRadius.full,
-          paddingVertical: 15,
-          alignItems: 'center',
-          justifyContent: 'center',
-          opacity: isDisabled ? 0.4 : 1,
-          borderWidth: 1,
-          borderColor: 'rgba(255,255,255,0.1)',
-          backgroundColor: 'rgba(255,255,255,0.04)',
-        }}
-      >
-        {loading ? (
-          <ActivityIndicator color={DesignTokens.colors.text.secondary} size="small" />
-        ) : (
-          <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
-            {icon}
-            <Text
-              style={{
-                color: 'rgba(255,255,255,0.55)',
-                fontSize: 15,
-                fontWeight: '600',
-              }}
-            >
-              {title}
-            </Text>
-          </View>
-        )}
-      </TouchableOpacity>
-    </Animated.View>
+    <Pressable
+      style={({ pressed }) => [
+        containerStyle,
+        pressed && !disabled && !loading && {
+          opacity: 0.88,
+          transform: [{ scale: 0.98 }],
+        },
+      ]}
+      onPress={handlePress}
+      disabled={disabled || loading}
+    >
+      {renderContent()}
+    </Pressable>
   );
 };
 

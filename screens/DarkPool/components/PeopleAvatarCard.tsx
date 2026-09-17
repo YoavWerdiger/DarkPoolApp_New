@@ -2,7 +2,7 @@
  * כרטיס אדם בפס הבית — אווטאר עגול + שם (נראה כמו אדם, לא כרטיס מניה).
  */
 
-import React, { useMemo } from 'react';
+import React, { memo, useMemo } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -16,6 +16,7 @@ import { HapticFeedback } from '../../../utils/hapticFeedback';
 import type { ExplorePerson } from '../../../services/darkpool/uwExploreService';
 import { formatInsiderDisplayName } from '../utils/investorPlaceholder';
 import { InvestorPortrait } from './InvestorPortrait';
+import { dataText, hebrewText, rowMixed } from '../utils/bidi';
 
 interface Props {
   person: ExplorePerson;
@@ -26,12 +27,16 @@ interface Props {
 function kindLabel(person: ExplorePerson): string {
   const fromSub = person.subtitle?.split('·')[0]?.trim();
   if (fromSub) return fromSub;
-  if (person.kind === 'politician') return 'קונגרס';
-  if (person.kind === 'fund_manager') return 'קרן';
-  return person.ticker?.toUpperCase() || 'בכיר';
+  if (person.kind === 'politician') return 'לוויתן קונגרס';
+  if (person.kind === 'fund_manager') return 'לוויתן מוסדי';
+  return person.ticker?.toUpperCase() || 'לוויתן שוק';
 }
 
-export function PeopleAvatarCard({ person, onPress, style }: Props) {
+export const PeopleAvatarCard = memo(function PeopleAvatarCard({
+  person,
+  onPress,
+  style,
+}: Props) {
   const tokens = useDesignTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
   const displayName =
@@ -41,7 +46,15 @@ export function PeopleAvatarCard({ person, onPress, style }: Props) {
 
   const content = (
     <View style={[styles.wrap, style]}>
-      <View style={styles.avatarRing}>
+      <View style={styles.identity}>
+        <View style={styles.textCol}>
+          <Text style={styles.name} numberOfLines={1}>
+            {displayName}
+          </Text>
+          <Text style={styles.meta} numberOfLines={1}>
+            {kindLabel(person)}
+          </Text>
+        </View>
         <InvestorPortrait
           name={displayName}
           imageUrl={person.image_url}
@@ -49,15 +62,15 @@ export function PeopleAvatarCard({ person, onPress, style }: Props) {
           kind={person.kind}
           personId={person.id}
           layout="circle"
-          size={72}
+          size={48}
+          priority="high"
         />
       </View>
-      <Text style={styles.name} numberOfLines={2}>
-        {displayName}
-      </Text>
-      <Text style={styles.meta} numberOfLines={1}>
-        {kindLabel(person)}
-      </Text>
+      {!!person.ticker?.trim() ? (
+        <Text style={styles.tickerText} numberOfLines={1}>
+          {person.ticker.toUpperCase()}
+        </Text>
+      ) : null}
     </View>
   );
 
@@ -73,35 +86,49 @@ export function PeopleAvatarCard({ person, onPress, style }: Props) {
       {content}
     </Pressable>
   );
-}
+});
 
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     wrap: {
-      width: 88,
-      alignItems: 'center',
+      width: '100%',
+      borderRadius: 16,
+      borderWidth: 0,
+      backgroundColor: tokens.colors.background.cardSolid,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
       gap: 6,
     },
-    avatarRing: {
-      padding: 2,
-      borderRadius: 40,
-      borderWidth: 1.5,
-      borderColor: `${tokens.colors.primary.main}55`,
-      backgroundColor: 'rgba(255,255,255,0.04)',
+    identity: {
+      ...rowMixed,
+      justifyContent: 'space-between',
+      gap: 8,
+    },
+    textCol: {
+      flex: 1,
+      minWidth: 0,
+      alignItems: 'flex-end',
     },
     name: {
-      fontSize: 12,
+      ...hebrewText,
+      fontSize: 13,
       fontWeight: '700',
       color: tokens.colors.text.primary,
-      textAlign: 'center',
-      lineHeight: 15,
-      minHeight: 30,
+      lineHeight: 17,
     },
     meta: {
+      ...hebrewText,
       fontSize: 11,
-      fontWeight: '600',
-      color: tokens.colors.text.tertiary,
-      textAlign: 'center',
+      fontWeight: '500',
+      color: tokens.colors.text.secondary,
+    },
+    tickerText: {
+      ...dataText,
+      fontSize: 11,
+      fontWeight: '700',
+      color: tokens.colors.primary.main,
+      letterSpacing: 0.4,
+      alignSelf: 'flex-end',
     },
   });
 }

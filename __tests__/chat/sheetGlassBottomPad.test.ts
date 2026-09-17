@@ -3,6 +3,7 @@ import {
   SHEET_ANDROID_MIN_BOTTOM_INSET,
   SHEET_ANDROID_BOTTOM_EXTRA,
   SHEET_IOS_BOTTOM_EXTRA,
+  SHEET_GLASS_BASE,
   SHEET_GLASS_FLOOR,
   SHEET_GLASS_INTENSITY,
   SHEET_GLASS_OVERLAY,
@@ -12,18 +13,70 @@ import {
   sheetSystemBarFillHeight,
   sheetActionColors,
 } from '../../components/ui/BottomSheet/sheetGlass';
+import { DesignTokens } from '../../components/ui/DesignTokens';
+
+/** α של צבע rgba/rgb — 1 כשאין ערוץ אלפא. */
+function alphaOf(color: string): number {
+  const match = /^rgba?\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*(?:,\s*([\d.]+)\s*)?\)$/.exec(color);
+  if (!match) return 1;
+  return match[1] === undefined ? 1 : Number(match[1]);
+}
+
+/** מתחת לזה ה-BlurView כבר לא נקרא כזכוכית אלא כרעש עדין. */
+const MIN_READABLE_BLUR_INTENSITY = 24;
+/** מעל זה ה-overlay חונק את הטשטוש גם אם טכנית הוא שקוף־למחצה. */
+const MAX_GLASS_OVERLAY_ALPHA = 0.3;
 
 describe('sheet glass surface tokens', () => {
   it('keeps chrome surface color as opaque hex (system bar / brand fill)', () => {
     expect(SHEET_GLASS_FLOOR).toMatch(/^#[0-9A-Fa-f]{6}$/);
   });
 
-  it('uses UICard-like dark glass (thin material + light white overlay)', () => {
-    expect(SHEET_GLASS_OVERLAY).toBe('rgba(255, 255, 255, 0.05)');
-    expect(SHEET_GLASS_FLOOR).toBe('#242625');
-    expect(SHEET_GLASS_FLOOR).not.toBe('#141F14');
-    expect(SHEET_GLASS_INTENSITY).toBe(48);
+  it('keeps the no-blur base opaque so Android stays readable', () => {
+    expect(SHEET_GLASS_BASE).toMatch(/^#[0-9A-Fa-f]{6}$/);
+  });
+
+  it('keeps the overlay translucent so the BlurView underneath stays visible', () => {
+    // הרגרסיה שהטסט הזה מונע: overlay אטום (למשל '#262626') נצבע מעל ה-BlurView,
+    // הטשטוש נעלם וכל המשטחים נראים שטוחים.
+    expect(SHEET_GLASS_OVERLAY).toMatch(/^rgba\(/);
+    const alpha = alphaOf(SHEET_GLASS_OVERLAY);
+    expect(alpha).toBeGreaterThan(0);
+    expect(alpha).toBeLessThanOrEqual(MAX_GLASS_OVERLAY_ALPHA);
+  });
+
+  it('keeps blur intensity high enough to read as glass', () => {
+    expect(SHEET_GLASS_INTENSITY).toBeGreaterThanOrEqual(MIN_READABLE_BLUR_INTENSITY);
     expect(SHEET_GLASS_TINT).toBe('systemThinMaterialDark');
+  });
+
+  it('does not fall back to the old hardcoded green surface', () => {
+    expect(SHEET_GLASS_FLOOR).not.toBe('#141F14');
+  });
+});
+
+describe('shared glass tokens (UICard + every glass surface)', () => {
+  const intensities = ['subtle', 'light', 'medium', 'strong'] as const;
+
+  it('keeps every dark card overlay translucent', () => {
+    for (const intensity of intensities) {
+      const overlay = DesignTokens.glassmorphism.cardBackground.dark[intensity];
+      expect(overlay).toMatch(/^rgba\(/);
+      expect(alphaOf(overlay)).toBeLessThanOrEqual(MAX_GLASS_OVERLAY_ALPHA);
+    }
+  });
+
+  it('keeps every blur intensity readable as glass', () => {
+    for (const intensity of intensities) {
+      expect(DesignTokens.glassmorphism.blurIntensity[intensity]).toBeGreaterThanOrEqual(
+        MIN_READABLE_BLUR_INTENSITY,
+      );
+    }
+  });
+
+  it('keeps the android/no-blur base opaque so glass never becomes see-through', () => {
+    expect(DesignTokens.glassmorphism.baseFill.dark).toMatch(/^#[0-9A-Fa-f]{6}$/);
+    expect(DesignTokens.glassmorphism.baseFill.light).toMatch(/^#[0-9A-Fa-f]{6}$/);
   });
 });
 

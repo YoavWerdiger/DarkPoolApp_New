@@ -16,6 +16,7 @@ import {
   type CongressTradeInput,
 } from '../_shared/congressPortfolio.ts';
 import {
+  CURATED_ID_SET,
   CURATED_MATERIALIZE_TARGETS,
   ensureYahooPriceMaps,
   metricsToSnapshotFields,
@@ -267,9 +268,14 @@ serve(async (req) => {
   }
 });
 
+/**
+ * יעדי materialize = רשימה מאוצרת בלבד.
+ * פיד העסקאות נשאר גלובלי; לא materialize כל מי שמופיע בפיד.
+ * body.ids עדיין מאפשר override ידני (debug / backfill).
+ */
 async function resolveTargets(
   supabase: ReturnType<typeof createServiceSupabase>,
-  mode: string
+  _mode: string
 ): Promise<Target[]> {
   const byKey = new Map<string, Target>();
   const add = (t: Target) => {
@@ -277,90 +283,29 @@ async function resolveTargets(
     byKey.set(`${t.kind}:${t.id}`, t);
   };
 
-  // תמיד curated
   for (const c of CURATED_MATERIALIZE_TARGETS) add(c);
 
-  // featured מ-DB
+  // featured מ-DB — רק אם ברשימה המאוצרת (טיקר/מטא מעודכן)
   const { data: featured } = await supabase
     .from('dark_pool_featured_profiles')
     .select('person_id, kind, ticker')
     .order('sort_order', { ascending: true })
     .limit(80);
   for (const f of featured ?? []) {
+    const id = String(f.person_id ?? '').trim();
+    if (!CURATED_ID_SET.has(id)) continue;
     const kind = String(f.kind ?? '') as SnapshotKind;
     if (kind !== 'politician' && kind !== 'insider' && kind !== 'fund_manager') {
       continue;
     }
     add({
-      id: String(f.person_id),
+      id,
       kind,
       ticker: f.ticker ? String(f.ticker) : undefined,
     });
   }
 
-  if (mode === 'hot' || mode === 'full') {
-    // followed — unique
-    const { data: followed } = await supabase
-      .from('dark_pool_followed_investors')
-      .select('person_id, kind, ticker')
-      .limit(500);
-    for (const f of followed ?? []) {
-      const kind = String(f.kind ?? '') as SnapshotKind;
-      if (kind !== 'politician' && kind !== 'insider' && kind !== 'fund_manager') {
-        continue;
-      }
-      add({
-        id: String(f.person_id),
-        kind,
-        ticker: f.ticker ? String(f.ticker) : undefined,
-      });
-    }
-
-    // recent feed activity — congress + insider
-    const since = new Date(Date.now() - 14 * 86400000).toISOString();
-    const { data: recentPol } = await supabase
-      .from('dark_pool_congress_trades')
-      .select('politician_id')
-      .gte('filed_at', since)
-      .order('filed_at', { ascending: false })
-      .limit(120);
-    for (const r of recentPol ?? []) {
-      add({ id: String(r.politician_id), kind: 'politician' });
-    }
-
-    const { data: recentIns } = await supabase
-      .from('dark_pool_insider_buys')
-      .select('ticker, insider_name')
-      .gte('filed_at', since)
-      .order('filed_at', { ascending: false })
-      .limit(80);
-    for (const r of recentIns ?? []) {
-      const ticker = String(r.ticker ?? '').toUpperCase();
-      const name = String(r.insider_name ?? '').trim();
-      if (!ticker || !name) continue;
-      // person key כמו בפרופיל: TICKER:Last First → נשמור Last כפי שב-DB
-      const parts = name.split(/\s+/).filter(Boolean);
-      const keyName =
-        parts.length >= 2
-          ? `${parts[parts.length - 1]} ${parts.slice(0, -1).join(' ')}`
-          : name;
-      add({ id: `${ticker}:${keyName}`, kind: 'insider', ticker });
-    }
-  }
-
-  if (mode === 'full') {
-    const { data: funds } = await supabase
-      .from('dark_pool_fund_managers')
-      .select('cik')
-      .order('last_value_usd', { ascending: false })
-      .limit(40);
-    for (const f of funds ?? []) add({ id: String(f.cik), kind: 'fund_manager' });
-  }
-
-  // hot: הגבלת גודל
-  const all = Array.from(byKey.values());
-  if (mode === 'hot') return all.slice(0, 60);
-  return all.slice(0, 200);
+  return Array.from(byKey.values());
 }
 
 async function materializeFund(

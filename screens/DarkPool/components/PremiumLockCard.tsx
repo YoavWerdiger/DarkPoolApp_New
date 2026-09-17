@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import UICard from '../../../components/ui/UICard';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
+import { darkPoolTextRtl } from '../darkPoolLayout';
 
 interface PremiumLockCardProps {
   onPress?: () => void;
@@ -35,8 +36,8 @@ export function PremiumLockCard({ onPress, variant = 'feed' }: PremiumLockCardPr
         padding="md"
         style={{
           borderRadius: tokens.borderRadius.xl,
-          borderWidth: 1.5,
-          borderColor: tokens.colors.border.accent,
+          borderWidth: 0,
+          backgroundColor: tokens.colors.background.cardSolid,
         }}
       >
         <View style={styles.row}>
@@ -45,7 +46,6 @@ export function PremiumLockCard({ onPress, variant = 'feed' }: PremiumLockCardPr
               styles.iconWrap,
               {
                 backgroundColor: tokens.colors.primary.dim,
-                borderColor: tokens.colors.border.accent,
               },
             ]}
           >
@@ -95,22 +95,20 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    borderWidth: 1,
+    borderWidth: 0,
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
     fontSize: 16,
     fontWeight: '800',
-    textAlign: 'left',
-    writingDirection: 'rtl',
+    ...darkPoolTextRtl,
   },
   subtitle: {
     marginTop: 4,
     fontSize: 13,
     lineHeight: 18,
-    textAlign: 'left',
-    writingDirection: 'rtl',
+    ...darkPoolTextRtl,
   },
   cta: {
     alignSelf: 'flex-start',
@@ -125,5 +123,6 @@ const styles = StyleSheet.create({
   ctaText: {
     fontSize: 13,
     fontWeight: '800',
+    ...darkPoolTextRtl,
   },
 });

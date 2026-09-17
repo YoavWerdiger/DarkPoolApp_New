@@ -777,7 +777,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
   StyleSheet.create({
     screenRoot: {
       flex: 1,
-      backgroundColor: '#0A0E0A',
+      backgroundColor: '#111111',
     },
     flex1: { flex: 1 },
     safe: { flex: 1, backgroundColor: 'transparent' },

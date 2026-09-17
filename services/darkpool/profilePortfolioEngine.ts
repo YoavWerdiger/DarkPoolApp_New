@@ -199,17 +199,21 @@ export function buildProfileValueSeries(
   const series: PortfolioValuePoint[] = [];
 
   for (const day of dates) {
+    let dayFlow = 0;
     while (txIdx < sorted.length && sorted[txIdx].date.slice(0, 10) <= day) {
       const t = sorted[txIdx];
       const cur = positions.get(t.ticker) ?? { qty: 0, cost: 0 };
       if (t.side === 'buy') {
         cur.qty += t.qty;
         cur.cost += t.amountUsd;
+        dayFlow += t.amountUsd;
       } else if (cur.qty > 0) {
         const sellQty = Math.min(cur.qty, t.qty);
         const avg = cur.cost / cur.qty;
+        const sellNotional = sellQty * t.price;
         cur.qty -= sellQty;
         cur.cost -= avg * sellQty;
+        dayFlow -= sellNotional > 0 ? sellNotional : avg * sellQty;
         if (cur.qty < 1e-8) {
           cur.qty = 0;
           cur.cost = 0;
@@ -227,9 +231,85 @@ export function buildProfileValueSeries(
       const px = filledPrices.get(sym)?.get(day);
       if (px != null && px > 0) value += p.qty * px;
     }
-    if (hasPosition && value > 0) series.push({ date: day, value });
+    if (hasPosition && value > 0) {
+      series.push({
+        date: day,
+        value,
+        ...(dayFlow !== 0 ? { external_flow: dayFlow } : {}),
+      });
+    }
   }
   return series;
+}
+
+/**
+ * דילול סדרה יומית — ימי מסחר + דגימה שבועית (מונע עקומה צפופה מזויפת).
+ */
+export function sparsifyProfileValueSeries(
+  series: PortfolioValuePoint[],
+  maxGapDays = 7
+): PortfolioValuePoint[] {
+  if (series.length <= 3) return series;
+  const sorted = [...series].sort((a, b) => a.date.localeCompare(b.date));
+  const out: PortfolioValuePoint[] = [];
+  let lastKept: string | null = null;
+  for (let i = 0; i < sorted.length; i++) {
+    const p = sorted[i];
+    const isEdge = i === 0 || i === sorted.length - 1;
+    const hasFlow = (p.external_flow ?? 0) !== 0;
+    const gapDays =
+      lastKept != null
+        ? (Date.parse(p.date) - Date.parse(lastKept)) / 86400000
+        : Infinity;
+    if (isEdge || hasFlow || gapDays >= maxGapDays) {
+      out.push({ ...p });
+      lastKept = p.date;
+    }
+  }
+  return out;
+}
+
+export function isProfileChartReliable(
+  series: PortfolioValuePoint[],
+  tradeCount: number
+): boolean {
+  if (tradeCount < 3) return false;
+  if (series.length < 2) return false;
+  const sorted = [...series].sort((a, b) => a.date.localeCompare(b.date));
+  const spanDays =
+    (Date.parse(sorted[sorted.length - 1].date) - Date.parse(sorted[0].date)) /
+    86400000;
+  return spanDays >= 21;
+}
+
+const MAX_DISPLAYABLE_PERIOD_RETURN_PCT = 250;
+
+function twrPeriodReturnPct(series: PortfolioValuePoint[]): number | null {
+  if (series.length < 2) return null;
+  const hasFlow = series.some((p) => (p.external_flow ?? 0) !== 0);
+  if (hasFlow) {
+    let cumulative = 1;
+    for (let i = 1; i < series.length; i++) {
+      const prev = series[i - 1].value;
+      const curr = series[i].value;
+      const flow = series[i].external_flow ?? 0;
+      const denom = prev + flow;
+      if (denom > 1e-9 && curr >= 0) cumulative *= curr / denom;
+    }
+    const pct = (cumulative - 1) * 100;
+    if (!Number.isFinite(pct) || Math.abs(pct) > MAX_DISPLAYABLE_PERIOD_RETURN_PCT) {
+      return null;
+    }
+    return round2(pct);
+  }
+  const first = series[0].value;
+  const last = series[series.length - 1].value;
+  if (!(first > 0)) return null;
+  const pct = ((last - first) / first) * 100;
+  if (!Number.isFinite(pct) || Math.abs(pct) > MAX_DISPLAYABLE_PERIOD_RETURN_PCT) {
+    return null;
+  }
+  return round2(pct);
 }
 
 function periodReturnPct(series: PortfolioValuePoint[], days: number): number | null {
@@ -238,18 +318,18 @@ function periodReturnPct(series: PortfolioValuePoint[], days: number): number | 
   const cutoff = new Date(last.date);
   cutoff.setDate(cutoff.getDate() - days);
   const cutoffIso = cutoff.toISOString().slice(0, 10);
-  const start = series.find((p) => p.date >= cutoffIso);
-  if (!start || start.value <= 0) return null;
-  return round2(((last.value - start.value) / start.value) * 100);
+  const startIdx = series.findIndex((p) => p.date >= cutoffIso);
+  if (startIdx < 0) return null;
+  return twrPeriodReturnPct(series.slice(startIdx));
 }
 
 function ytdReturnPct(series: PortfolioValuePoint[]): number | null {
   if (series.length < 2) return null;
   const last = series[series.length - 1];
   const yearStart = `${last.date.slice(0, 4)}-01-01`;
-  const start = series.find((p) => p.date >= yearStart);
-  if (!start || start.value <= 0) return null;
-  return round2(((last.value - start.value) / start.value) * 100);
+  const startIdx = series.findIndex((p) => p.date >= yearStart);
+  if (startIdx < 0) return null;
+  return twrPeriodReturnPct(series.slice(startIdx));
 }
 
 /** שלב 4 — holdings snapshot */
@@ -286,10 +366,11 @@ export function buildProfileHoldings(
       entryPrice = p.cost / p.qty;
       returnPct = round2(((marketValue - p.cost) / p.cost) * 100);
     } else if (firstAdded) {
+      // STOCK Act — מחיר כניסה לתצוגה; בלי return_pct מטעה
       const atEntry = priceOnOrBefore(priceMap ?? new Map(), firstAdded);
       if (atEntry != null && atEntry > 0) {
         entryPrice = atEntry;
-        returnPct = round2(((currentPrice - atEntry) / atEntry) * 100);
+        returnPct = 0;
       }
     }
 
@@ -440,7 +521,9 @@ export function buildProfilePortfolioMetrics(
   const { trades, pricesByTicker, winRate, avgDelayDays, riskFreeRate = DEFAULT_RF } =
     input;
 
-  const series = buildProfileValueSeries(trades, pricesByTicker);
+  const fullSeries = buildProfileValueSeries(trades, pricesByTicker);
+  const series = sparsifyProfileValueSeries(fullSeries, 7);
+  const chartReliable = isProfileChartReliable(series, trades.length);
   const positions = replayProfilePositions(trades);
   const holdings = buildProfileHoldings(positions, pricesByTicker);
 
@@ -452,14 +535,15 @@ export function buildProfilePortfolioMetrics(
   }
 
   const totalReturnUsd = totalValue - totalCost;
-  const totalReturnPct = totalCost > 0 ? (totalReturnUsd / totalCost) * 100 : 0;
-  const firstSeries = series[0]?.value ?? 0;
-  const allReturn =
-    series.length >= 2 && firstSeries > 0
-      ? ((series[series.length - 1].value - firstSeries) / firstSeries) * 100
-      : totalReturnPct;
+  const rawTotalReturnPct = totalCost > 0 ? (totalReturnUsd / totalCost) * 100 : 0;
+  const totalReturnPct =
+    Number.isFinite(rawTotalReturnPct) &&
+    Math.abs(rawTotalReturnPct) <= MAX_DISPLAYABLE_PERIOD_RETURN_PCT
+      ? rawTotalReturnPct
+      : 0;
+  const allReturn = twrPeriodReturnPct(fullSeries);
 
-  const risk = computeProfileRiskMetrics(series, riskFreeRate);
+  const risk = computeProfileRiskMetrics(fullSeries, riskFreeRate);
   const concentration = computeHoldingsConcentration(holdings);
   const score = computeProfileScore({
     totalReturnPct,
@@ -475,16 +559,17 @@ export function buildProfilePortfolioMetrics(
     total_return_usd: round2(totalReturnUsd),
     total_return_pct: round2(totalReturnPct),
     series,
+    chart_reliable: chartReliable,
     holdings,
     period_returns: {
-      '1D': periodReturnPct(series, 1),
-      '1W': periodReturnPct(series, 7),
-      '1M': periodReturnPct(series, 30),
-      '3M': periodReturnPct(series, 90),
-      YTD: ytdReturnPct(series),
-      '1Y': periodReturnPct(series, 365),
-      '5Y': periodReturnPct(series, 365 * 5),
-      ALL: round2(allReturn),
+      '1D': periodReturnPct(fullSeries, 1),
+      '1W': periodReturnPct(fullSeries, 7),
+      '1M': periodReturnPct(fullSeries, 30),
+      '3M': periodReturnPct(fullSeries, 90),
+      YTD: ytdReturnPct(fullSeries),
+      '1Y': periodReturnPct(fullSeries, 365),
+      '5Y': periodReturnPct(fullSeries, 365 * 5),
+      ALL: allReturn,
     },
     win_rate: winRate ?? null,
     avg_delay_days: avgDelayDays ?? null,

@@ -25,7 +25,7 @@ export default function MarketsScreen() {
   }, [navigation]);
 
   return (
-    <ScreenChrome withBrandWatermark>
+    <ScreenChrome>
       <StatusBar style="light" />
       <RNSafeAreaView style={styles.safe} edges={['top']}>
         <MainDrawerScreenHeader title="שווקים" onMenuPress={openMainDrawer} />

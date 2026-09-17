@@ -108,7 +108,7 @@ function useSheetStyles() {
       StyleSheet.create({
         flex: { flex: 1, justifyContent: 'flex-end' },
         backdrop: {
-          ...StyleSheet.absoluteFillObject,
+          ...StyleSheet.absoluteFill,
           backgroundColor: tokens.colors.background.overlayHeavy,
         },
         sheetWrap: {
@@ -146,12 +146,12 @@ function useSheetStyles() {
           ...tokens.rtlText,
         },
         input: {
-          backgroundColor: 'rgba(255,255,255,0.06)',
+          backgroundColor: '#262626',
           borderRadius: tokens.borderRadius.xl,
           paddingHorizontal: 14,
           paddingVertical: 13,
           color: tokens.colors.text.primary,
-          borderWidth: 1,
+          borderWidth: 0,
           borderColor: tokens.colors.border.subtle,
           fontSize: 15,
           ...tokens.rtlText,
@@ -172,8 +172,8 @@ function useSheetStyles() {
           backgroundColor: tokens.colors.primary.main,
         },
         btnGhost: {
-          backgroundColor: 'rgba(255,255,255,0.06)',
-          borderWidth: 1,
+          backgroundColor: '#262626',
+          borderWidth: 0,
           borderColor: tokens.colors.border.subtle,
         },
         btnPrimaryText: {

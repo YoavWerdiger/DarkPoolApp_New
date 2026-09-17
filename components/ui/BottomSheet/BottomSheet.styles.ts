@@ -2,7 +2,7 @@ import { StyleSheet, Dimensions, Platform } from 'react-native';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-/** כרום נקי: רדיוס רך, מסגרת עדינה, צל קל — בלי שכבות זכוכית+צל כבדים. */
+/** כרום זכוכית: רדיוס רך, שפה עליונה מוארת וצל קל — כדי שהשיט "יצוף" מעל התוכן. */
 const sheetChrome = {
   borderTopLeftRadius: 20,
   borderTopRightRadius: 20,
@@ -44,7 +44,7 @@ export const createStyles = (backdropColor: string) => StyleSheet.create({
     zIndex: 0,
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: backdropColor,
     zIndex: 1,
   },

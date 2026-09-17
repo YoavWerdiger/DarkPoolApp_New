@@ -15,6 +15,12 @@ export interface CongressFeedTrade {
   transaction_date: string;
   txn_label: string;
   source: 'quiverquant' | 'unusualwhales';
+  /** Quiver ExcessReturn — % מול S&P 500 מיום העסקה. null = לא זמין. */
+  excess_return_pct: number | null;
+  /** Quiver PriceChange — % שינוי מחיר מיום העסקה. null = לא זמין. */
+  price_change_pct: number | null;
+  /** Quiver SPYChange — % שינוי S&P 500 מיום העסקה. null = לא זמין. */
+  spy_change_pct: number | null;
 }
 
 export interface UwCongressFeedPayload {
@@ -45,7 +51,12 @@ export async function fetchUwCongressFeed(
   if (!data || !('trades' in data)) throw new Error('uw-congress-feed: empty');
 
   const payload: UwCongressFeedPayload = {
-    trades: data.trades ?? [],
+    trades: (data.trades ?? []).map((t) => ({
+      ...t,
+      excess_return_pct: numOrNull(t.excess_return_pct),
+      price_change_pct: numOrNull(t.price_change_pct),
+      spy_change_pct: numOrNull(t.spy_change_pct),
+    })),
     fetched_at: data.fetched_at ?? new Date().toISOString(),
     source: data.source ?? 'quiverquant',
     warning: data.warning,
@@ -56,4 +67,11 @@ export async function fetchUwCongressFeed(
 
 export function clearUwCongressFeedCache() {
   cache = null;
+}
+
+/** null כשהשדה חסר/לא מספרי — אין להחליף ב-0. */
+function numOrNull(raw: unknown): number | null {
+  if (raw == null) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
 }

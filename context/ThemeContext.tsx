@@ -67,14 +67,14 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     : `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/backgrounds/2.png`;
 
   const theme = {
-    background: isDarkMode ? '#0A0E0A' : '#F5F5F7',
-    cardBackground: isDarkMode ? '#141F14' : '#FFFFFF',
+    background: isDarkMode ? '#111111' : '#F5F5F7',
+    cardBackground: isDarkMode ? '#262626' : '#FFFFFF',
     textPrimary: isDarkMode ? '#FFFFFF' : '#000000',
     textSecondary: isDarkMode ? 'rgba(255,255,255,0.70)' : 'rgba(0,0,0,0.65)',
     textTertiary: isDarkMode ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)',
     border: isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.10)',
     headerBorder: isDarkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)',
-    switchTrackOff: isDarkMode ? '#142014' : '#E5E5E7',
+    switchTrackOff: isDarkMode ? '#252525' : '#E5E5E7',
     switchThumbOff: isDarkMode ? '#FFFFFF' : '#FFFFFF'
   };
 

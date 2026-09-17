@@ -11,13 +11,18 @@ import {
 } from './waveformSamples';
 import { logger } from './logger';
 
-/** dBFS → 0–1 גולמי. העיצוב לתצוגה רק ב־shapeWaveformLevel. */
+/**
+ * dBFS → 0–1 גולמי (בלי latch).
+ * expo-av: iOS averagePower, Android peak (getMaxAmplitude).
+ * טווח רחב מספיק כדי שדיבור שקט יזיז ברים, ודיבור חזק יקפוץ גבוה.
+ */
 export function meteringDbToLevel(db: number): number {
   if (!Number.isFinite(db) || db <= -80) return 0;
-  const MIN_DB = -48;
-  const MAX_DB = -3;
-  const clamped = Math.max(MIN_DB, Math.min(MAX_DB, db));
-  return (clamped - MIN_DB) / (MAX_DB - MIN_DB);
+  const MIN_DB = -52;
+  const MAX_DB = -6;
+  const t = Math.max(0, Math.min(1, (db - MIN_DB) / (MAX_DB - MIN_DB)));
+  // מעט מרחיב שקט — בלי לדחוס את הפיקים החזקים לשטוח
+  return Math.pow(t, 0.72);
 }
 
 /**

@@ -17,6 +17,8 @@ import {
   type UwPolitician,
 } from '../_shared/unusualWhales.ts';
 import {
+  QUIVER_POLITICIANS_CACHE_KEY,
+  QUIVER_POLITICIANS_FRESH_MS,
   fetchQuiverCongressPoliticians,
   fetchQuiverLiveCongressTrades,
   getCongressTradesProvider,
@@ -25,6 +27,7 @@ import {
   resolveQuiverApiKey,
   type QuiverCongressTrade,
   type QuiverPolitician,
+  type QuiverPoliticiansCachePayload,
 } from '../_shared/quiverQuant.ts';
 import { metricsFromCongressTrades } from '../_shared/congressPortfolio.ts';
 import {
@@ -152,6 +155,47 @@ serve(async (req) => {
   }
 });
 
+async function loadPoliticiansPreferCache(
+  supabase: ReturnType<typeof createServiceSupabase>,
+  quiverKey: string
+): Promise<QuiverPolitician[]> {
+  const fresh = await loadSnapshot<QuiverPoliticiansCachePayload>(
+    supabase,
+    QUIVER_POLITICIANS_CACHE_KEY,
+    QUIVER_POLITICIANS_FRESH_MS
+  ).catch(() => null);
+  if (fresh?.payload?.politicians?.length) return fresh.payload.politicians;
+
+  const stale = await loadSnapshotStale<QuiverPoliticiansCachePayload>(
+    supabase,
+    QUIVER_POLITICIANS_CACHE_KEY
+  ).catch(() => null);
+  if (stale?.payload?.politicians?.length) {
+    // רענון ברקע לא חוסם — explore משתמש ב-stale; cron יומי ימלא מחדש
+    return stale.payload.politicians;
+  }
+
+  // bootstrap חד-פעמי אם אין cache בכלל
+  try {
+    const rows = await fetchQuiverCongressPoliticians(quiverKey, {
+      pageSize: 50,
+      maxPages: 4,
+      includeCandidates: false,
+    });
+    if (rows.length) {
+      await saveSnapshot(supabase, QUIVER_POLITICIANS_CACHE_KEY, {
+        politicians: rows,
+        synced_at: new Date().toISOString(),
+        count: rows.length,
+      } satisfies QuiverPoliticiansCachePayload);
+    }
+    return rows;
+  } catch (e) {
+    console.warn('uw-explore quiver politicians bootstrap', e);
+    return [];
+  }
+}
+
 async function buildExploreFromQuiver(
   quiverKey: string,
   uwKey: string
@@ -160,10 +204,7 @@ async function buildExploreFromQuiver(
   const supabase = createServiceClient();
 
   const [politicianRows, tradeRows] = await Promise.all([
-    fetchQuiverCongressPoliticians(quiverKey, { pageSize: 50, maxPages: 3 }).catch((e) => {
-      console.warn('uw-explore quiver politicians', e);
-      return [] as QuiverPolitician[];
-    }),
+    loadPoliticiansPreferCache(supabase, quiverKey),
     fetchQuiverLiveCongressTrades(quiverKey).catch((e) => {
       console.warn('uw-explore quiver trades', e);
       return [] as QuiverCongressTrade[];

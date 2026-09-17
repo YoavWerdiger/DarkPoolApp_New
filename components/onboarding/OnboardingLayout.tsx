@@ -2,13 +2,11 @@ import React, { useCallback, useEffect } from 'react';
 import {
   View,
   Text,
-  Dimensions,
   KeyboardAvoidingView,
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
   ScrollView,
-  ImageBackground,
   Pressable,
   BackHandler,
 } from 'react-native';
@@ -19,9 +17,6 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { DesignTokens } from '../ui/DesignTokens';
 import { DayNavBlurButton, HEADER_BACK_BTN_SIZE } from '../ui/DayNavBlurButton';
 import { useRegistrationExitOptional } from '../../hooks/useExitRegistration';
-
-const { width, height } = Dimensions.get('window');
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 
 export type OnboardingDensity = 'focused' | 'compact';
 
@@ -148,7 +143,7 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
         contentContainerStyle: {
           flexGrow: 1,
           justifyContent: 'flex-start' as const,
-          paddingBottom: footer ? 16 : 48,
+          paddingBottom: footer ? 8 : 36,
         },
         keyboardShouldPersistTaps: 'handled' as const,
       }
@@ -161,7 +156,7 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
         style={{ flex: 1 }}
       >
         <LinearGradient
-          colors={['#0A0E0A', '#0F1A0F', '#142014', '#0A0E0A']}
+          colors={['#111111', '#111111', '#161616', '#111111']}
           start={{ x: 0.1, y: 0 }}
           end={{ x: 0.9, y: 1 }}
           style={{ flex: 1 }}
@@ -172,25 +167,6 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
             end={{ x: 0, y: 1 }}
             style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
           />
-
-          <View
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              justifyContent: 'center',
-              alignItems: 'center',
-              opacity: 0.22,
-            }}
-          >
-            <ImageBackground
-              source={{ uri: `${SUPABASE_URL}/storage/v1/object/public/backgrounds/transback.png` }}
-              style={{ width: width * 1.6, height: height * 1.6 }}
-              imageStyle={{ resizeMode: 'contain' }}
-            />
-          </View>
 
           <SafeAreaView style={{ flex: 1 }}>
             {hasTopBar ? (
@@ -250,7 +226,7 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
                   style={{
                     paddingHorizontal: 24,
                     paddingTop: hasTopBar ? (isFocused ? 20 : 14) : isFocused ? 28 : 20,
-                    paddingBottom: 24,
+                    paddingBottom: footer ? 12 : 24,
                     flex: scrollable ? undefined : 1,
                   }}
                 >
@@ -327,8 +303,8 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
               <View
                 style={{
                   paddingHorizontal: 24,
-                  paddingTop: 8,
-                  paddingBottom: Platform.OS === 'ios' ? 8 : 16,
+                  paddingTop: 4,
+                  paddingBottom: Platform.OS === 'ios' ? 4 : 10,
                 }}
               >
                 {footer}

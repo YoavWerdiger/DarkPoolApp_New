@@ -4,7 +4,7 @@ import * as NavigationBar from 'expo-navigation-bar';
 import * as SystemUI from 'expo-system-ui';
 
 /** רקע מסך כהה מותגי — חייב להתאים ל־DesignTokens.colors.background.primary */
-export const APP_SYSTEM_BACKGROUND = '#0A0E0A';
+export const APP_SYSTEM_BACKGROUND = '#111111';
 
 /**
  * תצורת StatusBar + NavigationBar + רקע שורש לאנדרואיד edge-to-edge.

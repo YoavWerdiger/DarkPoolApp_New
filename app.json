@@ -4,24 +4,13 @@
     "slug": "DarkPool",
     "scheme": "com.darkpool.app",
     "version": "1.0.1",
+    "sdkVersion": "57.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0A0E0A",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#000000"
-    },
     "androidStatusBar": {
-      "barStyle": "light-content",
-      "backgroundColor": "#00000000",
-      "translucent": true
-    },
-    "androidNavigationBar": {
-      "barStyle": "light-content",
-      "backgroundColor": "#00000000"
+      "barStyle": "light-content"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -36,7 +25,6 @@
         "monochromeImage": "./assets/icon.png",
         "backgroundColor": "#000000"
       },
-      "edgeToEdgeEnabled": true,
       "softwareKeyboardLayoutMode": "resize",
       "package": "com.darkpool.app",
       "googleServicesFile": "./google-services.json"
@@ -69,17 +57,36 @@
           "microphonePermission": "נדרשת גישה למיקרופון להקלטת וידאו"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "@react-native-community/datetimepicker",
+      "@sentry/react-native",
+      "expo-image",
+      "expo-sharing",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#000000",
+          "image": "./assets/splash-icon.png",
+          "resizeMode": "contain",
+          "imageWidth": 200
+        }
+      ],
+      "expo-status-bar",
+      "expo-web-browser",
+      [
+        "expo-navigation-bar",
+        {
+          "style": "dark"
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "נדרשת גישה למיקרופון להקלטת הודעות קוליות",
+          "recordAudioAndroid": true
+        }
+      ]
     ],
-    "notification": {
-      "icon": "./assets/noti.png",
-      "color": "#000000",
-      "androidMode": "default",
-      "androidCollapsedTitle": "DarkPool",
-      "iosDisplayInForeground": true,
-      "androidDisplayInForeground": true
-    },
-    "bundler": "metro",
     "owner": "darkpoolapp"
   },
   "locales": {

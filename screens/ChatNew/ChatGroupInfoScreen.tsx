@@ -33,6 +33,7 @@ import { ChatScreenShell, ChatSubScreenHeader } from '../../components/chat/Chat
 import { chatGroupService } from '../../services/chat';
 import { getChatMediaDisplayUri } from '../../services/chat/chatSignedMediaUrl';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { openUserProfile } from '../../lib/openUserProfile';
 import { chatRtlRoot, chatRtlRow, chatRtlText } from '../../components/chat/chatDesignTokens';
 import {
   formatUserPresenceLabel,
@@ -242,7 +243,7 @@ export default function ChatGroupInfoScreen() {
     if (!isAdmin) return;
 
     const options: any[] = [
-      { text: 'הצג פרופיל', onPress: () => { (navigation as any).navigate('Profile', { screen: 'ProfileMain', params: { userId: member.user_id } }); } },
+      { text: 'הצג פרופיל', onPress: () => { openUserProfile(member.user_id, { currentUserId: user?.id }); } },
     ];
 
     if (member.role === 'member') {

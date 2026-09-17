@@ -25,7 +25,7 @@ import { useDesignTokens } from '../ui/DesignTokens';
 import { useAuth } from '../../context/AuthContext';
 import { useChatActions } from '../../context/ChatContext';
 import { PollService } from '../../services/pollService';
-import { makeLocalId } from '../../services/chat/chatOfflineQueue';
+import { makeClientMessageId, makeLocalId } from '../../services/chat/chatOfflineQueue';
 import { ChatMessage, ChatMessageType } from '../../types/chat.types';
 
 interface PollCreationBottomSheetProps {
@@ -169,6 +169,7 @@ export default function PollCreationBottomSheet({
     setIsCreating(true);
 
     const tempId = makeLocalId();
+    const clientMessageId = makeClientMessageId();
     const now = new Date().toISOString();
     const stubOptions = trimmedOptions.map((text, index) => ({
       id: `temp_opt_${Date.now()}_${index}`,
@@ -177,6 +178,8 @@ export default function PollCreationBottomSheet({
 
     const optimisticMessage: ChatMessage = {
       id: tempId,
+      local_id: tempId,
+      client_message_id: clientMessageId,
       group_id: chatId,
       sender_id: user.id,
       content: trimmedQuestion,

@@ -1,6 +1,6 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Dimensions, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, ImageBackground, Linking } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, Dimensions, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, Linking } from 'react-native';
 import { useRegistration } from '../../context/RegistrationContext';
 import { useAuth } from '../../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,7 +9,6 @@ import { paymentService, SUBSCRIPTION_PLANS } from '../../services/paymentServic
 import { DesignTokens } from '../../components/ui/DesignTokens';
 import { ScreenChrome } from '../../components/ui/ScreenChrome';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
-import { SUPABASE_URL } from '../../config/publicEnv';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 
 const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
@@ -140,30 +139,6 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
             end={{ x: 1, y: 1 }}
             style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
           />
-
-          {/* Transparent Background Image - Center */}
-          <View style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            justifyContent: 'center',
-            alignItems: 'center',
-            opacity: 0.15
-          }}>
-            <ImageBackground
-              source={{ uri: `${SUPABASE_URL}/storage/v1/object/public/backgrounds/transback.png` }}
-              style={{
-                width: width,
-                height: height
-              }}
-              imageStyle={{
-                opacity: 0.3,
-                resizeMode: 'contain'
-              }}
-            />
-          </View>
 
           <RNSafeAreaView style={{ flex: 1 }} edges={['bottom']}>
           <View

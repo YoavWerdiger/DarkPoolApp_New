@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { brandfetchTickerLogoUri } from '../../../utils/brandfetch';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 
@@ -11,7 +12,10 @@ interface Props {
 
 /**
  * לוגו טיקר דרך Brandfetch CDN.
- * ממלא את העיגול במלואו (cover + overflow hidden).
+ * ExpoImage + memory-disk — חשוב לגלילת פיד Dark Pool.
+ *
+ * ייצוא כ־function (לא memo object) — Fast Refresh / Hermes
+ * נופלים על "Component is not a function (it is Object)" כשמשנים function↔memo ב־HMR.
  */
 export function TickerLogo({ symbol, size = 36, borderRadius }: Props) {
   const tokens = useDesignTokens();
@@ -78,15 +82,20 @@ export function TickerLogo({ symbol, size = 36, borderRadius }: Props) {
         backgroundColor: '#FFFFFF',
       }}
     >
-      <Image
+      <ExpoImage
         source={{ uri }}
         onError={() => setErrored(true)}
         style={{ width: size, height: size }}
-        resizeMode="cover"
+        contentFit="cover"
+        cachePolicy="memory-disk"
+        recyclingKey={`${symbol.toUpperCase()}-icon-light`}
+        transition={80}
       />
     </View>
   );
 }
+
+export default TickerLogo;
 
 const styles = StyleSheet.create({
   fallback: {

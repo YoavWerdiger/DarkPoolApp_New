@@ -2,6 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import UserProfileScreen from '../screens/Profile/UserProfileScreen';
+import PublicUserProfileScreen from '../screens/Profile/PublicUserProfileScreen';
 import EditProfileScreen from '../screens/Profile/EditProfileScreen';
 import NotificationsScreen from '../screens/Profile/NotificationsScreen';
 import SettingsScreen from '../screens/Profile/SettingsScreen';
@@ -16,11 +17,11 @@ import CreditCardCheckoutScreen from '../screens/Payment/CreditCardCheckoutScree
 import SubscriptionWelcomeScreen from '../screens/Profile/SubscriptionWelcomeScreen';
 import { ChatSessionBackdrop } from '../components/chat/ChatSessionBackdrop';
 
-/** אותו רקע כמו מערכת הצ'אט — גרדיאנט + שור ודוב */
+/** אותו רקע כמו מערכת הצ'אט — שחור + שור ודוב */
 function withProfileChatShell<P extends object>(ScreenComponent: React.ComponentType<P>): React.FC<P> {
   return function WrappedScreen(props: P) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#0A0E0A' }}>
+      <View style={{ flex: 1, backgroundColor: '#111111' }}>
         <ChatSessionBackdrop />
         <ScreenComponent {...props} />
       </View>
@@ -29,6 +30,7 @@ function withProfileChatShell<P extends object>(ScreenComponent: React.Component
 }
 
 const ProfileMainScreen = withProfileChatShell(UserProfileScreen);
+const PublicUserProfileWithShell = withProfileChatShell(PublicUserProfileScreen);
 const EditProfileWithShell = withProfileChatShell(EditProfileScreen);
 const NotificationsWithShell = withProfileChatShell(NotificationsScreen);
 const SettingsWithShell = withProfileChatShell(SettingsScreen);
@@ -48,13 +50,14 @@ export default function ProfileStack() {
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: '#0A0E0A' },
+        contentStyle: { backgroundColor: '#111111' },
         animation: 'fade',
         gestureEnabled: true,
         animationDuration: 200,
       }}
     >
       <Stack.Screen name="ProfileMain" component={ProfileMainScreen} />
+      <Stack.Screen name="PublicUserProfile" component={PublicUserProfileWithShell} />
       <Stack.Screen name="EditProfile" component={EditProfileWithShell} />
       <Stack.Screen name="Notifications" component={NotificationsWithShell} />
       <Stack.Screen name="Settings" component={SettingsWithShell} />

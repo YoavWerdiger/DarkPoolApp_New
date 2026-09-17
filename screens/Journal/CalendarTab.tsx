@@ -238,12 +238,12 @@ export default function CalendarTab() {
           cellSize,
           styles.calendarDayClip,
           accent === 'profit' && {
-            borderWidth: 1,
-            borderColor: `${DesignTokens.colors.success.main}B3`,
+            borderWidth: 0,
+            backgroundColor: `${DesignTokens.colors.success.main}22`,
           },
           accent === 'loss' && {
-            borderWidth: 1,
-            borderColor: `${DesignTokens.colors.text.danger}B3`,
+            borderWidth: 0,
+            backgroundColor: `${DesignTokens.colors.text.danger}22`,
           },
         ]}
       >
@@ -251,7 +251,7 @@ export default function CalendarTab() {
           <View
             pointerEvents="none"
             style={[
-              StyleSheet.absoluteFillObject,
+              StyleSheet.absoluteFill,
               {
                 borderRadius: DesignTokens.borderRadius.lg,
                 backgroundColor: `${DesignTokens.colors.success.main}${CALENDAR_CELL_TINT_ALPHA}`,
@@ -263,7 +263,7 @@ export default function CalendarTab() {
           <View
             pointerEvents="none"
             style={[
-              StyleSheet.absoluteFillObject,
+              StyleSheet.absoluteFill,
               {
                 borderRadius: DesignTokens.borderRadius.lg,
                 backgroundColor: `${DesignTokens.colors.text.danger}${CALENDAR_CELL_TINT_ALPHA}`,

@@ -21,7 +21,7 @@ import { useDesignTokens } from '../ui/DesignTokens';
 import { ChatMessage as ChatMessageType, ChatMessageType as MessageType } from '../../types/chat.types';
 import { format } from 'date-fns';
 import { Ionicons } from '@expo/vector-icons';
-import { Audio } from 'expo-av';
+import { Audio, isExpoAvAvailable } from '../../lib/expoAvSafe';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -42,6 +42,10 @@ import {
 import { downloadMediaToCache } from '../../lib/mediaFileCache';
 import TradeMessage from './TradeMessage';
 import PollMessage from './PollMessage';
+import EntityEmbedCard from '../share/EntityEmbedCard';
+import { parseEntityAttachmentFromContent } from '../../types/shareableEntity';
+import type { CommunityMention } from '../../types/tweets.types';
+import { openUserProfile } from '../../lib/openUserProfile';
 import LinkPreview, { extractFirstUrl } from './LinkPreview';
 import MessageReactions from './MessageReactions';
 import { useAuth } from '../../context/AuthContext';
@@ -50,12 +54,95 @@ import {
   claimVoicePlayback,
   releaseVoicePlayback,
 } from '../../utils/voicePlaybackController';
+import { HapticFeedback } from '../../utils/hapticFeedback';
+import { isUsableChatDisplayName } from '../../lib/chatMessageIdentity';
 
 type ResolvedMessageMedia = {
   main: string | null;
   thumb: string | null;
   audio: string | null;
   doc: string | null;
+};
+
+function normalizeMentionTag(displayName: string): string {
+  return displayName.replace(/\s+/g, '').toLowerCase();
+}
+
+function resolveMentionUserId(
+  rawTag: string,
+  mentions?: CommunityMention[] | null
+): string | null {
+  if (!mentions?.length) return null;
+  const needle = rawTag.replace(/^@/, '').toLowerCase();
+  const hit = mentions.find(
+    (m) => normalizeMentionTag(m.displayName) === needle
+  );
+  return hit?.userId ?? null;
+}
+
+function openMentionProfile(userId: string, currentUserId?: string | null) {
+  openUserProfile(userId, { currentUserId });
+}
+
+// פונקציה לרנדור טקסט עם תיוגים (@mentions)
+const renderTextWithMentions = (
+  text: string,
+  baseStyle: any,
+  mentionStyle: any,
+  mentions?: CommunityMention[] | null,
+  currentUserId?: string | null
+): React.ReactNode[] => {
+  if (!text) return [];
+
+  // חיפוש של @שם משתמש בטקסט
+  const mentionRegex = /@[\u0590-\u05FFa-zA-Z0-9_]+/g;
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match;
+  let keyIndex = 0;
+
+  while ((match = mentionRegex.exec(text)) !== null) {
+    // טקסט לפני ה-mention
+    if (match.index > lastIndex) {
+      parts.push(
+        <Text key={`text-${keyIndex++}`} style={baseStyle}>
+          {text.slice(lastIndex, match.index)}
+        </Text>
+      );
+    }
+
+    const tag = match[0];
+    const userId = resolveMentionUserId(tag, mentions);
+    // ה-mention עצמו
+    parts.push(
+      <Text
+        key={`mention-${keyIndex++}`}
+        style={[baseStyle, mentionStyle]}
+        onPress={userId ? () => openMentionProfile(userId, currentUserId) : undefined}
+        suppressHighlighting={!userId}
+      >
+        {tag}
+      </Text>
+    );
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  // טקסט אחרי ה-mention האחרון
+  if (lastIndex < text.length) {
+    parts.push(
+      <Text key={`text-${keyIndex++}`} style={baseStyle}>
+        {text.slice(lastIndex)}
+      </Text>
+    );
+  }
+
+  // אם אין mentions - החזר טקסט רגיל
+  if (parts.length === 0) {
+    return [<Text key="full-text" style={baseStyle}>{text}</Text>];
+  }
+
+  return parts;
 };
 
 function buildInitialResolvedMedia(message: ChatMessageType): ResolvedMessageMedia {
@@ -116,58 +203,6 @@ export const CHAT_BUBBLE_MARGIN = 2;
 /** מרווח מול older כשמחליפים שולח (marginTop ב-inverted) */
 export const CHAT_SENDER_CHANGE_MARGIN = 12;
 
-// פונקציה לרנדור טקסט עם תיוגים (@mentions)
-const renderTextWithMentions = (
-  text: string,
-  baseStyle: any,
-  mentionStyle: any
-): React.ReactNode[] => {
-  if (!text) return [];
-
-  // חיפוש של @שם משתמש בטקסט
-  const mentionRegex = /@[\u0590-\u05FFa-zA-Z0-9_]+/g;
-  const parts: React.ReactNode[] = [];
-  let lastIndex = 0;
-  let match;
-  let keyIndex = 0;
-
-  while ((match = mentionRegex.exec(text)) !== null) {
-    // טקסט לפני ה-mention
-    if (match.index > lastIndex) {
-      parts.push(
-        <Text key={`text-${keyIndex++}`} style={baseStyle}>
-          {text.slice(lastIndex, match.index)}
-        </Text>
-      );
-    }
-
-    // ה-mention עצמו
-    parts.push(
-      <Text key={`mention-${keyIndex++}`} style={[baseStyle, mentionStyle]}>
-        {match[0]}
-      </Text>
-    );
-
-    lastIndex = match.index + match[0].length;
-  }
-
-  // טקסט אחרי ה-mention האחרון
-  if (lastIndex < text.length) {
-    parts.push(
-      <Text key={`text-${keyIndex++}`} style={baseStyle}>
-        {text.slice(lastIndex)}
-      </Text>
-    );
-  }
-
-  // אם אין mentions - החזר טקסט רגיל
-  if (parts.length === 0) {
-    return [<Text key="full-text" style={baseStyle}>{text}</Text>];
-  }
-
-  return parts;
-};
-
 // פונקציה לזיהוי כיוון טקסט (RTL/LTR)
 const detectTextDirection = (text: string): 'right' | 'left' | 'auto' => {
   if (!text) return 'auto';
@@ -225,24 +260,6 @@ const REPLY_SWIPE_THRESHOLD = 44;
 /** חזרה רכה אחרי שחרור — ease-out ארוך במקום spring קשיח */
 const REPLY_SWIPE_RESET_MS = 360;
 
-function MessageStatusIcon({
-  isMe,
-  isSending,
-  hasError,
-  styles,
-  tertiaryColor,
-}: {
-  isMe: boolean;
-  isSending: boolean;
-  hasError: boolean;
-  styles: any;
-  tertiaryColor: string;
-}) {
-  if (!isMe || hasError || !isSending) return null;
-
-  return <ActivityIndicator size={10} color={tertiaryColor} style={styles.statusIcon} />;
-}
-
 function ChatMessage({
   message,
   isMe,
@@ -262,6 +279,7 @@ function ChatMessage({
   boldText = false,
 }: ChatMessageProps) {
   const DesignTokens = useDesignTokens();
+  const { user } = useAuth();
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   const [showMediaViewer, setShowMediaViewer] = useState(false);
 
@@ -645,7 +663,20 @@ function ChatMessage({
   }
 
   const timeText = format(new Date(message.created_at), 'HH:mm');
-  const isSending = !!message.is_sending;
+
+  const handleProfileOpen = useCallback(() => {
+    if (!isMe && message.sender_id) {
+      openUserProfile(message.sender_id, { currentUserId: user?.id });
+    }
+  }, [isMe, message.sender_id, user?.id]);
+
+  const handleAvatarPress = useCallback(() => {
+    if (onAvatarPress) {
+      onAvatarPress();
+      return;
+    }
+    handleProfileOpen();
+  }, [handleProfileOpen, onAvatarPress]);
   // הודעות שלי – תמיד opacity 1 (מונע היעלמות כשמחליפים מ-temp ל-real)
   // בלי scale/zoom בכניסה — קפיצה לריפליי מרנדרת בועות מחדש והזום נראה מיותר
   const effectiveOpacity = isMe ? 1 : fadeAnim;
@@ -664,7 +695,13 @@ function ChatMessage({
       />
       {/* Avatar */}
       {!isMe && (showAvatar ? (
-        <TouchableOpacity onPress={onAvatarPress} style={styles.avatarContainer}>
+        <TouchableOpacity
+          onPress={handleAvatarPress}
+          disabled={!onAvatarPress && !message.sender_id}
+          style={styles.avatarContainer}
+          accessibilityRole="button"
+          accessibilityLabel={`פרופיל של ${message.sender?.display_name || 'משתמש'}`}
+        >
           {message.sender?.profile_picture ? (
             <Image source={{ uri: message.sender.profile_picture }} style={styles.avatar} />
           ) : (
@@ -726,9 +763,11 @@ function ChatMessage({
             >
               <View key={`reply-bar-${message.id}`} style={styles.replyBar} />
               <View key={`reply-content-${message.id}`} style={styles.replyContent}>
+                {isUsableChatDisplayName(message.reply_to.sender_name) ? (
                 <Text key={`reply-name-${message.id}`} style={[styles.replyName, { textAlign: 'right' }]}>
-                  {String(message.reply_to.sender_name || 'משתמש')}
+                  {message.reply_to.sender_name}
                 </Text>
+                ) : null}
                 <Text key={`reply-text-${message.id}`} style={[styles.replyText, { textAlign: 'right' }]} numberOfLines={1}>
                   {getChatMessagePreview(message.reply_to.message_type, message.reply_to.content)}
                 </Text>
@@ -745,8 +784,15 @@ function ChatMessage({
             accessibilityHint="לחיצה ארוכה לתפריט; החלקה אופקית לתשובה"
             style={message.reply_to ? styles.bubbleBodyTouchable : undefined}
           >
-          {/* Sender Name - בתוך הבועה – צבע ייחודי לכל משתמש */}
-          {!isMe && showSenderName && (
+          {/* Sender Name - בתוך הבועה – רק כשיש שם אמיתי, בלי placeholder */}
+          {!isMe && showSenderName && isUsableChatDisplayName(message.sender?.display_name) && (
+            <TouchableOpacity
+              onPress={handleProfileOpen}
+              disabled={!message.sender_id}
+              activeOpacity={0.75}
+              accessibilityRole="button"
+              accessibilityLabel={`פרופיל של ${message.sender?.display_name}`}
+            >
             <Text style={[
               styles.senderNameInside,
               { color: senderColor },
@@ -756,8 +802,9 @@ function ChatMessage({
                message.message_type === MessageType.MEDIA_GROUP)
                 && { paddingHorizontal: 8, paddingTop: 4, paddingBottom: 6 },
             ]}>
-              {message.sender?.display_name || 'משתמש'}
+              {message.sender!.display_name}
             </Text>
+            </TouchableOpacity>
           )}
 
           {/* Forwarded Tag */}
@@ -791,6 +838,63 @@ function ChatMessage({
               return <TradeMessage trade={t} isMe={isMe} embeddedInBubble />;
             })()}
 
+          {message.message_type === MessageType.ENTITY &&
+            (() => {
+              const att = parseEntityAttachmentFromContent(message.content);
+              if (!att) {
+                return (
+                  <Text
+                    style={[
+                      styles.messageText,
+                      isMe ? styles.myMessageText : styles.theirMessageText,
+                      { textAlign: 'right' },
+                    ]}
+                  >
+                    שיתוף · לא ניתן לטעון פרטים
+                  </Text>
+                );
+              }
+              let caption: string | undefined;
+              try {
+                const parsed = JSON.parse((message.content || '').trim()) as {
+                  caption?: string;
+                };
+                caption = parsed.caption?.trim() || undefined;
+              } catch {
+                caption = undefined;
+              }
+              return (
+                <View style={{ marginTop: 2, minWidth: 220, gap: 8 }}>
+                  {caption ? (
+                    <Text
+                      style={[
+                        styles.messageText,
+                        isMe ? styles.myMessageText : styles.theirMessageText,
+                        { textAlign: 'right' },
+                      ]}
+                    >
+                      {renderTextWithMentions(
+                        caption,
+                        [
+                          styles.messageText,
+                          isMe ? styles.myMessageText : styles.theirMessageText,
+                        ],
+                        {
+                          color: isMe
+                            ? DesignTokens.colors.bubbleMeText
+                            : DesignTokens.colors.primary.main,
+                          fontWeight: '700' as const,
+                        },
+                        message.mentions as CommunityMention[] | undefined,
+                        user?.id
+                      )}
+                    </Text>
+                  ) : null}
+                  <EntityEmbedCard attachment={att} compact />
+                </View>
+              );
+            })()}
+
           {renderMediaContent(
             message,
             resolvedMedia,
@@ -808,7 +912,7 @@ function ChatMessage({
             }
           },
             message.message_type === MessageType.AUDIO
-              ? { sentTimeText: timeText, isEdited: !!message.is_edited, isSending }
+              ? { sentTimeText: timeText, isEdited: !!message.is_edited }
               : undefined,
             /* No time overlay — timestamp always in footer below the bubble */
             undefined,
@@ -821,6 +925,7 @@ function ChatMessage({
           {/* Text Content */}
           {message.content &&
             message.message_type !== MessageType.TRADE &&
+            message.message_type !== MessageType.ENTITY &&
             message.message_type !== MessageType.POLL && (() => {
             if (message.message_type === MessageType.AUDIO) return null;
 
@@ -847,7 +952,13 @@ function ChatMessage({
             return (
               <>
                 <Text style={textStyle}>
-                  {renderTextWithMentions(displayContent, textStyle, mentionStyle)}
+                  {renderTextWithMentions(
+                    displayContent,
+                    textStyle,
+                    mentionStyle,
+                    message.mentions as CommunityMention[] | undefined,
+                    user?.id
+                  )}
                 </Text>
                 {linkUrl && !message.is_sending && (
                   <LinkPreview url={linkUrl} isMe={isMe} />
@@ -894,17 +1005,14 @@ function ChatMessage({
                     <Text style={[styles.timeText, isMe ? styles.myTimeText : styles.theirTimeText, styles.editedText]}>נערך · </Text>
                   )}
                   <Text style={[styles.timeText, isMe ? styles.myTimeText : styles.theirTimeText]}>{timeText}</Text>
-                  <MessageStatusIcon
-                    isMe={isMe}
-                    isSending={isSending}
-                    hasError={!!message.send_error}
-                    styles={styles}
-                    tertiaryColor={
-                      isMe
-                        ? DesignTokens.colors.bubbleMeMetaText
-                        : DesignTokens.colors.text.tertiary
-                    }
-                  />
+                  {isMe ? (
+                    <Ionicons
+                      name="checkmark"
+                      size={12}
+                      color={DesignTokens.colors.bubbleMeMetaText}
+                      style={styles.sentTick}
+                    />
+                  ) : null}
                 </View>
               </View>
             )}
@@ -946,7 +1054,7 @@ function ChatMessage({
 // Helper Functions
 // ============================================
 
-type AudioBubbleMeta = { sentTimeText: string; isEdited: boolean; isSending: boolean };
+type AudioBubbleMeta = { sentTimeText: string; isEdited: boolean };
 
 function renderMediaContent(
   message: ChatMessageType,
@@ -1117,7 +1225,6 @@ function renderMediaContent(
           tokens={tokens}
           sentTimeText={audioMeta?.sentTimeText ?? ''}
           isEdited={audioMeta?.isEdited ?? false}
-          isSending={isMe && (audioMeta?.isSending ?? false)}
           onStatusPress={onStatusPress}
         />
       );
@@ -1449,7 +1556,6 @@ interface AudioPlayerProps {
   tokens: ReturnType<typeof useDesignTokens>;
   sentTimeText: string;
   isEdited: boolean;
-  isSending: boolean;
   onStatusPress?: () => void;
 }
 
@@ -1462,7 +1568,6 @@ function AudioPlayer({
   tokens,
   sentTimeText,
   isEdited,
-  isSending,
   onStatusPress,
 }: AudioPlayerProps) {
   const soundRef = useRef<Audio.Sound | null>(null);
@@ -1761,6 +1866,10 @@ function AudioPlayer({
   );
 
   const togglePlayPause = async () => {
+    if (!isExpoAvAvailable) {
+      logger.warn('ChatMessage', 'Voice playback skipped — expo-av native module missing');
+      return;
+    }
     if (Platform.OS !== 'web') {
       try {
         Haptics.selectionAsync();
@@ -1974,20 +2083,19 @@ function AudioPlayer({
           </Text>
         </View>
         <View style={styles.audioMetadataRight}>
-          <MessageStatusIcon
-            isMe={isMe}
-            isSending={isSending}
-            hasError={!!message.send_error}
-            styles={styles}
-            tertiaryColor={
-              isMe ? tokens.colors.bubbleMeMetaText : tokens.colors.text.tertiary
-            }
-          />
           {!!sentTimeText && (
             <Text style={[styles.timeText, isMe ? styles.myTimeText : styles.theirTimeText, styles.audioSentTimeText]}>
               {sentTimeText}
             </Text>
           )}
+          {isMe && !message.send_error ? (
+            <Ionicons
+              name="checkmark"
+              size={12}
+              color={isMe ? tokens.colors.bubbleMeMetaText : tokens.colors.text.tertiary}
+              style={styles.sentTick}
+            />
+          ) : null}
         </View>
       </View>
     </View>
@@ -2028,6 +2136,7 @@ export default memo(ChatMessage, (prevProps, nextProps) => {
     a.read_by_count === b.read_by_count &&
     a.is_starred_by_me === b.is_starred_by_me &&
     a.mentioned_users === b.mentioned_users &&
+    a.mentions === b.mentions &&
     a.reply_to === b.reply_to &&
     prevProps.isMe === nextProps.isMe &&
     prevProps.showAvatar === nextProps.showAvatar &&
@@ -2057,7 +2166,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
     justifyContent: 'flex-start',
   },
   highlightOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: tokens.colors.primary.subtle,
     borderRadius: tokens.borderRadius.md,
   },
@@ -2323,11 +2432,11 @@ const createStyles = (tokens: any) => StyleSheet.create({
     writingDirection: 'ltr',
   },
   videoOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0, 0, 0, 0.12)',
   },
   playButtonContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -2623,9 +2732,9 @@ const createStyles = (tokens: any) => StyleSheet.create({
     flexShrink: 0,
     marginLeft: 'auto',
   },
-  statusIcon: {
-    marginLeft: 2,
-    opacity: 0.8,
+  sentTick: {
+    opacity: 0.75,
+    marginTop: 1,
   },
   starredFooterIcon: {
     opacity: 0.85,

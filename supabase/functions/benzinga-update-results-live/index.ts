@@ -282,7 +282,7 @@ serve(async (req) => {
       }
     };
 
-    // פונקציה לניקוי ערכים
+    // מספר נקי בלבד — לא מצמידים actual_t (למשל "%") מהספק
     const cleanValue = (value: string | null | undefined): string | null => {
       if (!value || value === '' || value === '0' || value === '0.0' || value === '0.00' || value === '0.000' || value === '0.0000') {
         return null;

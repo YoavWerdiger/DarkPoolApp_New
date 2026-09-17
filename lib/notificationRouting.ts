@@ -41,6 +41,10 @@ export type NotificationNavTarget =
       price?: number;
     }
   | {
+      kind: 'tweets';
+      postId?: string;
+    }
+  | {
       kind: 'main';
     };
 
@@ -138,6 +142,13 @@ export function resolveNotificationNavTarget(
     };
   }
 
+  if (type === 'community_mention' || type === 'community_post') {
+    return {
+      kind: 'tweets',
+      postId: asString(data.post_id) ?? asString(data.postId),
+    };
+  }
+
   return { kind: 'main' };
 }
 
@@ -232,6 +243,14 @@ export function buildNotificationNavigateArgs(
               ...(target.price != null ? { initialEntryPrice: target.price } : {}),
             },
           },
+        },
+      };
+    case 'tweets':
+      return {
+        name: 'Main',
+        params: {
+          screen: 'Tweets',
+          ...(target.postId ? { params: { highlightPostId: target.postId } } : {}),
         },
       };
     case 'main':

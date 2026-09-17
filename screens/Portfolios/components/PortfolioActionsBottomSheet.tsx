@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   Alert,
   ScrollView,
-  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -68,7 +67,6 @@ function PortfolioActionsSheetBody({
 }: BodyProps) {
   const tokens = useDesignTokens();
   const animatedClose = useBottomSheetClose();
-  const [shareBusy, setShareBusy] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [renameBusy, setRenameBusy] = useState(false);
@@ -205,9 +203,10 @@ function PortfolioActionsSheetBody({
         scrollContent: {
           padding: 16,
           paddingBottom: 80,
+          direction: 'rtl',
         },
         actionBtn: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'center',
           gap: 12,
           paddingVertical: 14,
@@ -224,6 +223,7 @@ function PortfolioActionsSheetBody({
           fontWeight: '700',
           color: actionColors.secondary.color,
           textAlign: 'right',
+          writingDirection: 'rtl',
         },
         actionBtnDanger: {
           borderColor: actionColors.destructive.borderColor,
@@ -236,11 +236,12 @@ function PortfolioActionsSheetBody({
           fontSize: 14,
           color: tokens.colors.text.secondary,
           textAlign: 'right',
+          writingDirection: 'rtl',
           lineHeight: 21,
           marginBottom: 16,
         },
         actionsRow: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           gap: 10,
         },
         pill: {
@@ -248,7 +249,7 @@ function PortfolioActionsSheetBody({
           paddingVertical: 14,
           borderRadius: 32,
           alignItems: 'center',
-          borderWidth: 1.5,
+          borderWidth: 0,
         },
         pillCancel: {
           borderColor: actionColors.cancel.borderColor,
@@ -262,23 +263,25 @@ function PortfolioActionsSheetBody({
           fontSize: 15,
           fontWeight: '800',
           color: actionColors.cancel.color,
+          writingDirection: 'rtl',
         },
         pillTextDanger: {
           fontSize: 15,
           fontWeight: '800',
           color: actionColors.destructive.color,
+          writingDirection: 'rtl',
         },
         shareBlock: {
           marginBottom: 16,
           paddingVertical: 12,
           paddingHorizontal: 14,
           borderRadius: 20,
-          borderWidth: 1,
+          borderWidth: 0,
           borderColor: tokens.colors.border.subtle,
           backgroundColor: actionColors.secondary.backgroundColor,
         },
         shareRow: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: 12,
@@ -288,16 +291,18 @@ function PortfolioActionsSheetBody({
           fontWeight: '700',
           color: tokens.colors.text.primary,
           textAlign: 'right',
+          writingDirection: 'rtl',
         },
         shareHint: {
           fontSize: 11,
           color: tokens.colors.text.tertiary,
           textAlign: 'right',
+          writingDirection: 'rtl',
           marginTop: 4,
           lineHeight: 16,
         },
         brokerRow: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'center',
           gap: 12,
         },
@@ -312,7 +317,7 @@ function PortfolioActionsSheetBody({
         },
         brokerLogo: { width: 36, height: 36 },
         renameRow: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'center',
           gap: 10,
           marginTop: 10,
@@ -322,7 +327,7 @@ function PortfolioActionsSheetBody({
           paddingVertical: 10,
           paddingHorizontal: 14,
           borderRadius: 20,
-          borderWidth: 1.5,
+          borderWidth: 0,
           borderColor: tokens.colors.border.subtle,
           backgroundColor: actionColors.secondary.backgroundColor,
           color: tokens.colors.text.primary,
@@ -338,7 +343,7 @@ function PortfolioActionsSheetBody({
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: actionColors.primary.backgroundColor,
-          borderWidth: 1.5,
+          borderWidth: 0,
           borderColor: actionColors.primary.borderColor,
         },
       }),
@@ -367,22 +372,6 @@ function PortfolioActionsSheetBody({
       setRenameBusy(false);
     }
   }, [nameDraft, portfolio.name, portfolioId, onPortfolioUpdated]);
-
-  const onTogglePublic = useCallback(
-    async (next: boolean) => {
-      try {
-        setShareBusy(true);
-        await updatePortfolio(portfolioId, { is_public: next });
-        onPortfolioUpdated?.();
-      } catch (e) {
-        console.error('update portfolio public:', e);
-        Alert.alert('שגיאה', 'לא הצלחנו לעדכן את הגדרת השיתוף.');
-      } finally {
-        setShareBusy(false);
-      }
-    },
-    [portfolioId, onPortfolioUpdated]
-  );
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -436,7 +425,7 @@ function PortfolioActionsSheetBody({
           <View style={styles.shareBlock}>
             <Text style={styles.shareTitle}>שם התיק</Text>
             <Text style={styles.shareHint}>
-              השם שיוצג לך ולמשתמשים אחרים אם התיק משותף עם הקהילה.
+              השם שיוצג ברשימת התיקים שלך.
             </Text>
             <View style={styles.renameRow}>
               <TextInput
@@ -471,31 +460,6 @@ function PortfolioActionsSheetBody({
           </View>
         ) : (
           <>
-            <View style={styles.shareBlock}>
-              <View style={styles.shareRow}>
-                <Switch
-                  value={portfolio.is_public === true}
-                  onValueChange={(v) => void onTogglePublic(v)}
-                  disabled={shareBusy || deleting}
-                  trackColor={{
-                    false: 'rgba(255,255,255,0.2)',
-                    true: `${tokens.colors.primary.main}88`,
-                  }}
-                  thumbColor={
-                    portfolio.is_public === true
-                      ? tokens.colors.primary.main
-                      : tokens.colors.text.tertiary
-                  }
-                />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.shareTitle}>שיתוף עם הקהילה</Text>
-                  <Text style={styles.shareHint}>
-                    כשפעיל — משתמשים מאומתים אחרים רואים את התיק בלשונית «מהקהילה» (צפייה
-                    בלבד, בלי עריכה).
-                  </Text>
-                </View>
-              </View>
-            </View>
             <TouchableOpacity
               style={styles.actionBtn}
               onPress={() => {

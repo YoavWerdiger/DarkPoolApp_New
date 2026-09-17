@@ -19,14 +19,14 @@ import {
   academyCardWidth,
 } from './academyCardLayout';
 import {
+  getAcademyCourseAccentColor,
   getAcademyCourseAudience,
+  getAcademyCourseBadgeColor,
+  getAcademyCourseBadgeLabel,
   getAcademyCourseSubtitle,
   getAcademyCourseTier,
   isComingSoonCourse,
-  isDavidTrainingCourse,
 } from './academyCourses';
-
-const PREMIUM_GOLD = '#F59E0B';
 
 /** @deprecated השתמשו ב־academyCardWidth — נשמר לתאימות */
 export const CARD_WIDTH = academyCardWidth(Dimensions.get('window').width);
@@ -80,10 +80,17 @@ export const CourseCard: React.FC<CourseCardProps> = ({
 
   const tier = getAcademyCourseTier(course as CourseWithProgress & { price?: number });
   const isPremium = tier === 'premium';
-  const freeBadgeLabel = isDavidTrainingCourse(course) ? 'בסיסי' : 'חינמי';
+  const badgeLabel = getAcademyCourseBadgeLabel(course as CourseWithProgress & { price?: number });
+  const badgeColor = getAcademyCourseBadgeColor(
+    course as CourseWithProgress & { price?: number },
+    T.colors.primary.main
+  );
   const subtitle = getAcademyCourseSubtitle(course);
   const audience = getAcademyCourseAudience(course);
-  const accent = isPremium ? PREMIUM_GOLD : T.colors.primary.main;
+  const accent = getAcademyCourseAccentColor(
+    course as CourseWithProgress & { price?: number },
+    T.colors.primary.main
+  );
 
   const ctaLabel = comingSoon
     ? 'פרטים נוספים'
@@ -132,15 +139,8 @@ export const CourseCard: React.FC<CourseCardProps> = ({
           />
 
           {!hideBadges ? (
-            <View
-              style={[
-                styles.tierBadge,
-                { backgroundColor: isPremium ? PREMIUM_GOLD : T.colors.primary.main },
-              ]}
-            >
-              <Text style={styles.tierBadgeText}>
-                {isPremium ? 'פרמיום' : freeBadgeLabel}
-              </Text>
+            <View style={[styles.tierBadge, { backgroundColor: badgeColor }]}>
+              <Text style={styles.tierBadgeText}>{badgeLabel}</Text>
             </View>
           ) : null}
 
@@ -258,9 +258,10 @@ const createStyles = (
       position: 'absolute',
       top: 12,
       right: 12,
-      height: 28,
+      minHeight: 28,
       borderRadius: 14,
       paddingHorizontal: 12,
+      paddingVertical: 4,
       alignItems: 'center',
       justifyContent: 'center',
     },

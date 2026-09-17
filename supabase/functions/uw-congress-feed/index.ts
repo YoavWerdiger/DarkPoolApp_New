@@ -32,6 +32,10 @@ interface FeedTrade {
   transaction_date: string;
   txn_label: string;
   source: 'quiverquant' | 'unusualwhales';
+  /** Quiver — אחוזים מיום העסקה. null = לא זמין (לא 0). */
+  excess_return_pct: number | null;
+  price_change_pct: number | null;
+  spy_change_pct: number | null;
 }
 
 serve(async (req) => {
@@ -121,6 +125,9 @@ function toFeedTrade(r: CongressTradeRow): FeedTrade {
     transaction_date: r.transaction_date,
     txn_label: r.txn_label ?? (r.transaction_type === 'sell' ? 'מכירה' : 'רכישה'),
     source: r.source === 'quiverquant' ? 'quiverquant' : 'unusualwhales',
+    excess_return_pct: r.excess_return_pct,
+    price_change_pct: r.price_change_pct,
+    spy_change_pct: r.spy_change_pct,
   };
 }
 

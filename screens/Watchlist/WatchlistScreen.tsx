@@ -5,7 +5,6 @@ import {
   StyleSheet,
   FlatList,
   RefreshControl,
-  ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
@@ -16,6 +15,7 @@ import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHead
 import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import UICard from '../../components/ui/UICard';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { ListItemSkeleton } from '../../components/ui/SkeletonLoader';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { dispatchOpenMainDrawer, type DrawerParentNavigation } from '../../navigation/mainDrawerNav';
 import { triggerDrawerMenuHaptic, HapticFeedback } from '../../utils/hapticFeedback';
@@ -404,7 +404,7 @@ export default function WatchlistScreen() {
   );
 
   return (
-    <ScreenChrome withBrandWatermark>
+    <ScreenChrome>
       <StatusBar style="light" />
       <RNSafeAreaView style={styles.safe} edges={['top']}>
         <MainDrawerScreenHeader
@@ -429,9 +429,10 @@ export default function WatchlistScreen() {
         <View style={[styles.body, { marginBottom: Math.max(0, mainTabsHeight - 12) }]}>
           <MarketsErrorBoundary>
             {isLoading && rows.length === 0 ? (
-              <View style={styles.center}>
-                <ActivityIndicator color={tokens.colors.primary.main} />
-                <Text style={styles.centerText}>טוען רשימה…</Text>
+              <View style={[styles.container, { paddingTop: 12 }]}>
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <ListItemSkeleton key={i} delay={i * 50} showAvatar={false} />
+                ))}
               </View>
             ) : (
               <>

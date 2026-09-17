@@ -1,5 +1,5 @@
 /**
- * כרטיס פיד בכיר — אווטאר + לוגו מניה + פעולה ברורה.
+ * כרטיס פיד בכיר — לוגו מניה + פעולה ברורה.
  */
 
 import React, { memo } from 'react';
@@ -16,7 +16,7 @@ export const InsiderTradeCard = memo(function InsiderTradeCard({
   item,
   onPersonPress,
 }: InsiderTradeCardProps) {
-  const { trade, sinceTradePct } = item;
+  const { trade, quote, sinceTradePct } = item;
   const displayName = trade.insider_name?.trim() || 'בכיר';
   const personId = `${trade.ticker}:${displayName}`;
   const value =
@@ -34,11 +34,14 @@ export const InsiderTradeCard = memo(function InsiderTradeCard({
       sharesLabel={sharesLabel}
       amountLabel={amountLabel}
       filedAt={trade.filed_at}
-      sinceTradePct={sinceTradePct}
-      personImageUrl={trade.insider_logo_url}
-      personId={personId}
+      transactionDate={trade.transaction_date}
+      portraitUrl={trade.insider_logo_url}
+      changeSinceTradePct={sinceTradePct != null ? sinceTradePct * 100 : null}
+      currentPrice={quote?.price ?? null}
       personKind="insider"
-      onPress={onPersonPress ? () => onPersonPress(personId, displayName) : undefined}
+      onPersonPress={
+        onPersonPress ? () => onPersonPress(personId, displayName) : undefined
+      }
     />
   );
 });

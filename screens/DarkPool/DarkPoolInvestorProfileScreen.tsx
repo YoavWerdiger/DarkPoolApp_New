@@ -24,12 +24,6 @@ export default function DarkPoolInvestorProfileScreen() {
       nameHint={nameHint}
       imageHint={imageHint}
       onBack={() => stackNav.goBack()}
-      onTickerPress={(t) =>
-        stackNav.navigate('DarkPoolTicker', {
-          ticker: t,
-          tab: kind === 'insider' ? 'insider' : undefined,
-        })
-      }
     />
   );
 }

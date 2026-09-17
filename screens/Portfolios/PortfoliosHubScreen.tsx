@@ -1,36 +1,28 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useCallback, useMemo } from 'react';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import { ScreenChrome } from '../../components/ui/ScreenChrome';
 import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHeader';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import PortfoliosTab from './PortfoliosTab';
-import CommunityPortfoliosTab from './CommunityPortfoliosTab';
 import { dispatchOpenMainDrawer, type DrawerParentNavigation } from '../../navigation/mainDrawerNav';
 import { HapticFeedback, triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
 import type { PortfoliosStackParamList } from '../../navigation/PortfoliosStack';
-import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
-import { MarketsEmbedSwitcher } from '../Markets/components/MarketsEmbedSwitcher';
-import type { SegmentedOption } from '../Markets/components/MarketsSegmentedControl';
-
-type HubTab = 'mine' | 'community';
-
-const HUB_SEGMENTS: SegmentedOption<HubTab>[] = [
-  { id: 'mine', label: 'התיקים שלי' },
-  { id: 'community', label: 'מהקהילה' },
-];
 
 type Nav = NativeStackNavigationProp<PortfoliosStackParamList, 'PortfoliosHub'>;
 
+/**
+ * יומן מסחר — רק התיקים האישיים.
+ * מימין: תפריט מגירה · משמאל: כפתור ירוק + לתיק חדש.
+ */
 export default function PortfoliosHubScreen() {
-  const tokens = useDesignTokens();
   const navigation = useNavigation<Nav>();
-  const mainTabsHeight = useMainTabsHeight();
-  const [activeTab, setActiveTab] = useState<HubTab>('mine');
+  const tokens = useDesignTokens();
 
   const openMainDrawer = useCallback(() => {
     void triggerDrawerMenuHaptic();
@@ -41,78 +33,51 @@ export default function PortfoliosHubScreen() {
     }
   }, [navigation]);
 
+  const handleCreate = useCallback(() => {
+    void HapticFeedback.medium();
+    navigation.navigate('CreatePortfolio');
+  }, [navigation]);
+
   const styles = useMemo(
     () =>
       StyleSheet.create({
         safeArea: { flex: 1, backgroundColor: 'transparent' },
-        tabBarWrap: {
-          paddingHorizontal: tokens.layout.screenPadding,
-        },
-        tabContent: { flex: 1, minHeight: 0 },
-        fabWrap: {
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: 0,
-          alignItems: 'center',
-          paddingBottom: mainTabsHeight + 8,
-          zIndex: 40,
-        },
-        fabBtn: {
-          flexDirection: 'row-reverse',
-          alignItems: 'center',
-          gap: 8,
-          paddingHorizontal: 22,
-          paddingVertical: 14,
-          borderRadius: 28,
+        content: { flex: 1, minHeight: 0 },
+        createBtn: {
+          width: DRAWER_MENU_BUTTON_SIZE,
+          height: DRAWER_MENU_BUTTON_SIZE,
+          borderRadius: DRAWER_MENU_BUTTON_SIZE / 2,
           backgroundColor: tokens.colors.primary.main,
-          ...tokens.shadows.md,
-        },
-        fabBtnText: {
-          fontSize: 16,
-          fontWeight: '700',
-          color: tokens.colors.text.inverse,
+          alignItems: 'center',
+          justifyContent: 'center',
         },
       }),
-    [tokens, mainTabsHeight]
+    [tokens]
   );
 
   return (
-    <ScreenChrome withBrandWatermark>
+    <ScreenChrome>
       <StatusBar style="light" />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <MainDrawerScreenHeader title="יומן מסחר" onMenuPress={openMainDrawer} />
-
-        <View style={styles.tabBarWrap}>
-          <MarketsEmbedSwitcher
-            options={HUB_SEGMENTS}
-            value={activeTab}
-            onChange={setActiveTab}
-            accessibilityGroupLabel="יומן מסחר"
-          />
-        </View>
-
-        <View style={styles.tabContent}>
-          {activeTab === 'mine' ? <PortfoliosTab /> : <CommunityPortfoliosTab />}
-        </View>
-
-        {activeTab === 'mine' ? (
-          <View style={styles.fabWrap} pointerEvents="box-none">
+        <MainDrawerScreenHeader
+          title="יומן מסחר"
+          onMenuPress={openMainDrawer}
+          rightAccessory={
             <TouchableOpacity
-              style={styles.fabBtn}
-              onPress={() => {
-                void HapticFeedback.medium();
-                navigation.navigate('CreatePortfolio');
-              }}
+              style={styles.createBtn}
+              onPress={handleCreate}
               activeOpacity={0.88}
               accessibilityRole="button"
               accessibilityLabel="תיק חדש"
             >
               <Ionicons name="add" size={26} color={tokens.colors.text.inverse} />
-              <Text style={styles.fabBtnText}>תיק חדש</Text>
             </TouchableOpacity>
-          </View>
-        ) : null}
+          }
+        />
+
+        <View style={styles.content}>
+          <PortfoliosTab />
+        </View>
       </SafeAreaView>
     </ScreenChrome>
   );

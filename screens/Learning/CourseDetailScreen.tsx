@@ -100,7 +100,7 @@ export const CourseDetailScreen: React.FC = () => {
 
   if (isLoading) {
     return (
-      <ScreenChrome withBrandWatermark>
+      <ScreenChrome>
         <StatusBar style="light" />
         <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
           <View style={styles.loadingContainer}>
@@ -114,7 +114,7 @@ export const CourseDetailScreen: React.FC = () => {
 
   if (error || !course) {
     return (
-      <ScreenChrome withBrandWatermark>
+      <ScreenChrome>
         <StatusBar style="light" />
         <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
           <View style={styles.errorContainer}>
@@ -133,7 +133,7 @@ export const CourseDetailScreen: React.FC = () => {
   const frameTier = getAcademyCourseTier(course) === 'premium' ? 'premium' : 'free';
 
   return (
-    <ScreenChrome withBrandWatermark>
+    <ScreenChrome>
       <StatusBar style="light" />
       <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
         <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>

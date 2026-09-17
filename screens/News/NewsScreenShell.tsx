@@ -33,7 +33,7 @@ export function NewsScreenShell({ title, children, headerRight }: Props) {
   }, [navigation]);
 
   return (
-    <ScreenChrome withBrandWatermark>
+    <ScreenChrome>
       <StatusBar style="light" />
       <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
         <MainDrawerScreenHeader title={title} onMenuPress={openMainDrawer} rightAccessory={headerRight} />

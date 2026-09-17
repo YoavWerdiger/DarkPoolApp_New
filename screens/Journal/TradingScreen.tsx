@@ -90,7 +90,7 @@ export default function TradingScreen() {
   );
 
   return (
-    <ScreenChrome withBrandWatermark>
+    <ScreenChrome>
       <StatusBar style="light" />
       <RNSafeAreaView style={styles.safeAreaContainer} edges={['top']}>
         <MainDrawerScreenHeader title="יומן מסחר" onMenuPress={openMainDrawer} />

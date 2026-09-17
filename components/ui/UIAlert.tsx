@@ -230,12 +230,12 @@ const UIAlert: React.FC<UIAlertProps> = ({
     >
       <View style={{ flex: 1 }}>
         <Pressable
-          style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.background.overlayHeavy }]}
+          style={[StyleSheet.absoluteFill, { backgroundColor: colors.background.overlayHeavy }]}
           onPress={closeOnBackdropPress ? onClose : undefined}
         />
         <View
           style={[
-            StyleSheet.absoluteFillObject,
+            StyleSheet.absoluteFill,
             { justifyContent: 'center', alignItems: 'center', padding: spacing.lg },
           ]}
           pointerEvents="box-none"

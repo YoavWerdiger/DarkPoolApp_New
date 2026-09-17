@@ -106,7 +106,7 @@ function WatchlistRowInner({ row, index, onPress, onDrag, isActive }: Props) {
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: tokens.colors.primary.main,
-          borderWidth: 1.5,
+          borderWidth: 0,
           borderColor: '#0A0E0A',
           zIndex: 2,
         },

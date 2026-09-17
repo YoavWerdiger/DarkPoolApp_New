@@ -1,10 +1,11 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { View, Text, TextInput, FlatList, RefreshControl, ActivityIndicator, Pressable, TouchableOpacity, Image, Linking, Modal, Share, ScrollView, Animated, Dimensions, StyleSheet, Platform } from 'react-native';
+import { View, Text, TextInput, FlatList, RefreshControl, Pressable, TouchableOpacity, Image, Linking, Modal, Share, ScrollView, Animated, Dimensions, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 // import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { CardSkeleton } from '../../components/ui/SkeletonLoader';
 import BottomSheet, {
   useBottomSheetClose,
   BOTTOM_SHEET_EDGE_HANDLE_HEIGHT,
@@ -23,6 +24,8 @@ import { LikedArticlesService } from '../../services/likedArticlesService';
 import { queryClient } from '../../lib/queryClient';
 import { appQueryKeys } from '../../lib/appQueryKeys';
 import UICard from '../../components/ui/UICard';
+import ShareDestinationSheet from '../../components/share/ShareDestinationSheet';
+import { buildNewsAttachment } from '../../types/shareableEntity';
 
 const BREAKING_NEWS_QUERY_KEY = appQueryKeys.newsList('breaking');
 /** כמות כתבות שנשמרת ל-cache/דיסק (עמוד ראשון) */
@@ -72,393 +75,18 @@ interface ShareModalProps {
   visible: boolean;
 }
 
+/** Multiverse — שיתוף חדשה לציוץ / chat_messages (entity), לא legacy messages */
 const ShareModal: React.FC<ShareModalProps> = ({ article, onClose, visible }) => {
-  const DesignTokens = useDesignTokens();
-  const sheetPad = DesignTokens.layout?.screenPadding ?? 20;
-  const [chatGroups, setChatGroups] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  // טעינת קבוצות הצ'אט כשהבוטום שיט נפתח
-  useEffect(() => {
-    if (visible && article) {
-      loadChatGroups();
-    } else {
-      // איפוס כשסוגרים
-      setChatGroups([]);
-      setLoading(false);
-    }
-  }, [visible, article]);
-
-  const loadChatGroups = async () => {
-    setLoading(true);
-    try {
-      // קבלת המשתמש הנוכחי
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
-      if (!user) {
-        legacyAlert('שגיאה', 'משתמש לא מחובר');
-        return;
-      }
-
-      // קבלת קבוצות הצ'אט של המשתמש
-      const { data: memberRows, error: memberError } = await supabase
-        .from('channel_members')
-        .select('channel_id')
-        .eq('user_id', user.id);
-
-      if (memberError) {
-        legacyAlert('שגיאה', `לא ניתן לטעון קבוצות: ${memberError.message}`);
-        return;
-      }
-
-      const channelIds = memberRows?.map(row => row.channel_id) || [];
-
-      if (channelIds.length > 0) {
-        const { data: channels, error: channelsError } = await supabase
-          .from('channels')
-          .select('id, name, image_url')
-          .in('id', channelIds)
-          .order('name');
-
-        if (channelsError) {
-          legacyAlert('שגיאה', `לא ניתן לטעון פרטי קבוצות: ${channelsError.message}`);
-          return;
-        }
-
-        setChatGroups(channels || []);
-      } else {
-        // נסיון חלופי - לטעון את כל הערוצים הפומביים
-        const { data: publicChannels, error: publicError } = await supabase
-          .from('channels')
-          .select('id, name, image_url')
-          .eq('is_private', false)
-          .order('name')
-          .limit(10);
-
-        if (!publicError && publicChannels && publicChannels.length > 0) {
-          setChatGroups(publicChannels);
-        } else {
-          setChatGroups([]);
-        }
-      }
-    } catch (error) {
-      legacyAlert('שגיאה', 'שגיאה בטעינת קבוצות');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const shareToGroup = async (groupId: string, groupName: string) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        legacyAlert('שגיאה', 'משתמש לא מחובר');
-        return;
-      }
-
-      // יצירת אובייקט החדשה המלא
-      const newsData = {
-        id: article?.id,
-        title: article?.title,
-        summary: article?.summary,
-        content: article?.content,
-        source: article?.source,
-        source_url: article?.source_url,
-        author: article?.author,
-        image_url: article?.image_url,
-        published_at: article?.published_at,
-        category: article?.category,
-        tags: article?.tags,
-        reading_time: article?.reading_time || 1,
-        view_count: article?.view_count || 0
-      };
-
-      // שליחת הודעת חדשות מיוחדת לקבוצה
-      const { data, error } = await supabase
-        .from('messages')
-        .insert({
-          channel_id: groupId,
-          sender_id: user.id,
-          content: article?.title || 'חדשה',
-          type: 'news',
-          news_data: newsData
-        });
-
-      if (error) {
-        legacyAlert('שגיאה', 'לא ניתן לשתף לקבוצה');
-        return;
-      }
-
-      legacyAlert('הצלחה', `החדשה שותפה לקבוצה "${groupName}"`);
-      onClose();
-    } catch (error) {
-      legacyAlert('שגיאה', 'לא ניתן לשתף לקבוצה');
-    }
-  };
-
-  // Early return - אבל רק אחרי כל ה-hooks
-  if (!article || !visible) {
-    return null;
-  }
-
+  const attachment = React.useMemo(
+    () => (article ? buildNewsAttachment(article) : null),
+    [article]
+  );
   return (
-    <BottomSheet
-      isOpen={visible}
+    <ShareDestinationSheet
+      visible={visible && !!attachment}
+      attachment={attachment}
       onClose={onClose}
-      snapPoints={[0.5, 0.9]}
-      enablePanDownToClose={true}
-      showHandle
-      useGlassBackground
-      showBrandBackground={false}
-    >
-      <View style={{ paddingHorizontal: sheetPad, paddingTop: 8, paddingBottom: 40 }}>
-          <ScrollView contentContainerStyle={{ paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
-        {/* כותרת - SwiftUI style */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
-          <Text 
-            style={{ fontSize: 28, fontWeight: '700', color: DesignTokens.colors.text.primary, textAlign: 'right', letterSpacing: -0.5 }}
-          >
-            שתף לקבוצה
-          </Text>
-          <TouchableOpacity 
-            onPress={onClose}
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 16,
-              backgroundColor: 'rgba(255,255,255,0.1)',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-            <Ionicons 
-              name="close" 
-              size={20} 
-              color={DesignTokens.colors.text.primary} 
-            />
-          </TouchableOpacity>
-        </View>
-
-        {/* תצוגה מקדימה — כרטיס blur כמו יומן כלכלי */}
-        <UICard
-          variant="blur"
-          padding="none"
-          style={{
-            borderRadius: DesignTokens.borderRadius['2xl'],
-            overflow: 'hidden',
-            marginBottom: DesignTokens.spacing.xl,
-          }}
-        >
-          {article.image_url && (
-            <Image
-              source={{ uri: article.image_url }}
-              style={{
-                width: '100%',
-                height: 180,
-              }}
-              resizeMode="cover"
-            />
-          )}
-          {article.image_url ? <View style={{ height: 1, backgroundColor: SHEET_DIVIDER }} /> : null}
-          <View style={{ paddingHorizontal: DesignTokens.spacing.lg, paddingVertical: DesignTokens.spacing.md }}>
-            <Text 
-              style={{ 
-                fontSize: 20, 
-                fontWeight: '600', 
-                color: DesignTokens.colors.text.primary, 
-                textAlign: 'right',
-                marginBottom: 8,
-                lineHeight: 26,
-                letterSpacing: -0.3
-              }}
-              numberOfLines={3}
-            >
-              {article.label || article.title}
-            </Text>
-            <Text 
-              style={{ 
-                fontSize: 15, 
-                color: 'rgba(255,255,255,0.6)', 
-                textAlign: 'right',
-                marginBottom: 12,
-                lineHeight: 22
-              }}
-              numberOfLines={3}
-            >
-              {article.label ? article.title : article.summary}
-            </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' }}>
-              <Text 
-                style={{ 
-                  fontSize: 13, 
-                  color: 'rgba(255,255,255,0.5)', 
-                  textAlign: 'right',
-                  fontWeight: '500'
-                }}
-              >
-                {article.source}
-              </Text>
-            </View>
-          </View>
-        </UICard>
-
-        {/* רשימת קבוצות - SwiftUI style */}
-        {loading ? (
-          <View style={{ alignItems: 'center', paddingVertical: 60 }}>
-            <ActivityIndicator size="large" color="rgba(255,255,255,0.6)" />
-            <Text 
-              style={{ fontSize: 15, color: 'rgba(255,255,255,0.5)', marginTop: 20, fontWeight: '500' }}
-            >
-              טוען קבוצות...
-            </Text>
-          </View>
-        ) : chatGroups.length > 0 ? (
-          <View>
-            <Text 
-              style={{ 
-                fontSize: 22, 
-                fontWeight: '600', 
-                color: DesignTokens.colors.text.primary, 
-                textAlign: 'right',
-                marginBottom: 20,
-                letterSpacing: -0.3
-              }}
-            >
-              בחר קבוצה
-            </Text>
-            {chatGroups.map((group) => (
-              <TouchableOpacity
-                key={group.id}
-                activeOpacity={0.88}
-                onPress={() => shareToGroup(group.id, group.name)}
-              >
-                <UICard
-                  variant="blur"
-                  padding="md"
-                  style={{
-                    borderRadius: DesignTokens.borderRadius.xl,
-                    marginBottom: DesignTokens.spacing.sm,
-                  }}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <View style={{ flex: 1, marginRight: 16 }}>
-                      <Text 
-                        style={{ 
-                          fontSize: 17, 
-                          fontWeight: '600', 
-                          color: DesignTokens.colors.text.primary, 
-                          textAlign: 'right',
-                          marginBottom: 4,
-                          letterSpacing: -0.2
-                        }}
-                      >
-                        {group.name}
-                      </Text>
-                      <Text 
-                        style={{ 
-                          fontSize: 14, 
-                          color: 'rgba(255,255,255,0.5)', 
-                          textAlign: 'right' 
-                        }}
-                      >
-                        קבוצת צ'אט
-                      </Text>
-                    </View>
-                    <View 
-                      style={{
-                        width: 50,
-                        height: 50,
-                        borderRadius: 25,
-                        backgroundColor: 'rgba(255,255,255,0.1)',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        overflow: 'hidden'
-                      }}
-                    >
-                      {group.image_url ? (
-                        <Image 
-                          source={{ uri: group.image_url }}
-                          style={{ width: 50, height: 50 }}
-                          resizeMode="cover"
-                        />
-                      ) : (
-                        <Ionicons 
-                          name="people" 
-                          size={24} 
-                          color="rgba(255,255,255,0.6)" 
-                        />
-                      )}
-                    </View>
-                  </View>
-                </UICard>
-              </TouchableOpacity>
-            ))}
-          </View>
-        ) : (
-          <View style={{ alignItems: 'center', paddingVertical: 60 }}>
-            <View style={{
-              width: 64,
-              height: 64,
-              borderRadius: 32,
-              backgroundColor: 'rgba(255,255,255,0.1)',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: 24
-            }}>
-              <Ionicons 
-                name="chatbubbles-outline" 
-                size={32} 
-                color="rgba(255,255,255,0.5)" 
-              />
-            </View>
-            <Text 
-              style={{ 
-                fontSize: 20, 
-                fontWeight: '600', 
-                color: DesignTokens.colors.text.primary, 
-                marginBottom: 8,
-                letterSpacing: -0.3
-              }}
-            >
-              אין קבוצות זמינות
-            </Text>
-            <Text 
-              style={{ 
-                fontSize: 15, 
-                color: 'rgba(255,255,255,0.5)', 
-                textAlign: 'center',
-                marginBottom: 32,
-                lineHeight: 22,
-                paddingHorizontal: 20
-              }}
-            >
-              הצטרף לקבוצות כדי לשתף חדשות
-            </Text>
-            <TouchableOpacity
-              style={{
-                width: '100%',
-                paddingVertical: 16,
-                borderRadius: 12,
-                backgroundColor: DesignTokens.colors.primary.main,
-                alignItems: 'center'
-              }}
-              onPress={loadChatGroups}
-            >
-              <Text 
-                style={{ 
-                  fontSize: 17, 
-                  fontWeight: '600', 
-                  color: DesignTokens.colors.background.primary 
-                }}
-              >
-                נסה שוב
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-          </ScrollView>
-        </View>
-    </BottomSheet>
+    />
   );
 };
 
@@ -506,13 +134,8 @@ const SheetCloseButton: React.FC<{
         height: 36,
         borderRadius: 18,
         overflow: 'hidden',
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: isDark ? 'rgba(255, 255, 255, 0.22)' : 'rgba(255, 255, 255, 0.18)',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: isDark ? 0.25 : 0.2,
-        shadowRadius: isDark ? 6 : 5,
-        elevation: isDark ? 5 : 4,
+        borderWidth: 0,
+        backgroundColor: isDark ? '#262626' : 'rgba(255,255,255,0.85)',
       }}
     >
       <BlurView
@@ -744,13 +367,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
             paddingHorizontal: 16,
             borderRadius: 24,
             backgroundColor: isLiked ? 'rgba(255, 59, 92, 0.22)' : DesignTokens.colors.background.card,
-            borderWidth: 1,
-            borderColor: isLiked ? 'rgba(255, 59, 92, 0.55)' : 'rgba(255, 255, 255, 0.14)',
-            shadowColor: isLiked ? '#FF3B5C' : 'transparent',
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: isLiked ? 0.15 : 0,
-            shadowRadius: 2,
-            elevation: isLiked ? 2 : 0,
+            borderWidth: 0,
           }}
           onPress={() => {
             if (!article?.id) return;
@@ -801,8 +418,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
             paddingHorizontal: 16,
             borderRadius: 24,
             backgroundColor: DesignTokens.colors.background.card,
-            borderWidth: 1,
-            borderColor: 'rgba(255, 255, 255, 0.14)',
+            borderWidth: 0,
           }}
           onPress={() => onShare(article)}
           activeOpacity={0.7}
@@ -1773,14 +1389,10 @@ export default function BreakingNewsTab({
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 32 }}>
-        <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-        <Text 
-          className="mt-4 text-base"
-          style={{ color: DesignTokens.colors.text.secondary }}
-        >
-          טוען חדשות...
-        </Text>
+      <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 12 }}>
+        {Array.from({ length: 5 }).map((_, i) => (
+          <CardSkeleton key={i} delay={i * 70} />
+        ))}
       </View>
     );
   }

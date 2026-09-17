@@ -17,6 +17,9 @@ export const appQueryKeys = {
   featuredProfiles: ['uw', 'featured'] as const,
   darkPoolFeed: (isPremium: boolean) => ['darkpool', 'feed', isPremium] as const,
   congressFeed: (limit: number) => ['darkpool', 'congress', limit] as const,
+  /** "פעילות אחרונה" במסך פרטי עסקה — אותו אדם, אותו טיקר */
+  congressPersonTickerTrades: (politicianId: string, ticker: string) =>
+    ['darkpool', 'congress', 'person-ticker', politicianId, ticker] as const,
   insiderFeed: (tab: string, isPremium: boolean, limit?: number) =>
     ['darkpool', 'insider', tab, isPremium, limit ?? null] as const,
   followingFeed: ['darkpool', 'following'] as const,
@@ -31,9 +34,14 @@ export const appQueryKeys = {
   darkPoolTicker: (ticker: string, isPremium: boolean) =>
     ['darkpool', 'ticker', ticker, isPremium] as const,
 
-  // News
+  // News / community
   newsList: (filtersKey: string) => ['news', 'list', filtersKey] as const,
   earningsList: (paramsKey: string) => ['news', 'earnings', paramsKey] as const,
+  /** פיד ציוצי קהילה (מיקרו-בלוג פנימי) — mode: for_you | following */
+  tweetsList: (mode: 'for_you' | 'following' = 'for_you') =>
+    ['community', 'posts', mode] as const,
+  /** @deprecated העדף tweetsList() — נשמר לתאימות cache ישן */
+  communityPostsList: ['community', 'posts'] as const,
 
   // User entitlements (cache בזיכרון בלבד — לא נשמר לדיסק כדי לא להציג הרשאה ישנה)
   userSubscription: (userId: string) => ['user', 'subscription', userId] as const,

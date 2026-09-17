@@ -25,7 +25,11 @@ export interface PortfolioSnapshotRow {
   computed_at: string;
 }
 
-/** פרופילים מאוצרים — bootstrap + materialize full */
+/**
+ * פרופילים מאוצרים — materialize תיק מתוזמן בלבד (לא פיד).
+ * חייב להישאר מסונכרן עם screens/DarkPool/utils/curatedExploreProfiles.ts
+ * ו־CURATED_CONGRESS_BIOGUIDES / CURATED_EXECUTIVE_UW_IDS ב־quiverQuant.ts
+ */
 export const CURATED_MATERIALIZE_TARGETS: Array<{
   id: string;
   kind: SnapshotKind;
@@ -33,19 +37,21 @@ export const CURATED_MATERIALIZE_TARGETS: Array<{
 }> = [
   { id: '888dc73f-f1eb-485a-a241-80657aaaaff9', kind: 'politician' },
   { id: 'P000197', kind: 'politician' },
-  { id: 'S000148', kind: 'politician' },
-  { id: 'M000355', kind: 'politician' },
-  { id: 'R000595', kind: 'politician' },
-  { id: 'C001098', kind: 'politician' },
-  { id: 'O000172', kind: 'politician' },
-  { id: 'P000603', kind: 'politician' },
   { id: 'C001114', kind: 'politician' },
-  { id: 'TSLA:Musk', kind: 'insider', ticker: 'TSLA' },
-  { id: 'AAPL:Cook', kind: 'insider', ticker: 'AAPL' },
-  { id: 'MSFT:Nadella', kind: 'insider', ticker: 'MSFT' },
-  { id: 'NVDA:Huang', kind: 'insider', ticker: 'NVDA' },
-  { id: 'META:Zuckerberg', kind: 'insider', ticker: 'META' },
-  { id: 'ORCL:Ellison', kind: 'insider', ticker: 'ORCL' },
+  { id: 'M000355', kind: 'politician' },
+  { id: 'G000583', kind: 'politician' },
+  { id: 'C001098', kind: 'politician' },
+  { id: 'M001218', kind: 'politician' },
+  { id: 'B001236', kind: 'politician' },
+  { id: 'M001217', kind: 'politician' },
+  { id: 'S000168', kind: 'politician' },
+  { id: 'T000278', kind: 'politician' },
+  { id: 'G000596', kind: 'politician' },
+  { id: 'K000389', kind: 'politician' },
+  { id: 'M001157', kind: 'politician' },
+  { id: 'W000802', kind: 'politician' },
+  { id: 'D000032', kind: 'politician' },
+  { id: 'M001190', kind: 'politician' },
   { id: '1067983', kind: 'fund_manager' },
   { id: '1697748', kind: 'fund_manager' },
   { id: '1336528', kind: 'fund_manager' },

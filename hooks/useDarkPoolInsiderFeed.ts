@@ -2,7 +2,7 @@
  * useDarkPoolInsiderFeed.ts
  * -----------------------------------------------------------------------------
  * הוק לפיד "LATEST TRADES" של ה-Dark Pool — מציג רכישות בכירים אחרונות
- * מ-`dark_pool_insider_buys` (סנכרון `sync-insider-buys`, מקור עיקרי Unusual Whales).
+ * מ-`dark_pool_insider_buys` (סנכרון `sync-insider-buys`, מקור ראשי Quiver `/beta/live/insiders`).
  *
  * לכל עסקה מצרפים quote נוכחי (Finnhub/Yahoo דרך `portfolioPriceFeed`) כדי
  * להציג "Since trade +X%" כמו במסך InsiderWave.
@@ -19,6 +19,7 @@
 import { useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { appQueryKeys } from '../lib/appQueryKeys';
+import { queryClient } from '../lib/queryClient';
 import {
   listRecentInsiderTrades,
   listWatchlist,
@@ -33,6 +34,8 @@ import {
   DARK_POOL_INSIDER_UW_ONLY,
   DARK_POOL_PREMIUM_GATING_ENABLED,
   DARK_POOL_FEED_ENRICH_QUOTES,
+  DARK_POOL_FEED_STALE_MS,
+  DARK_POOL_SEC_PRODUCTION,
 } from '../types/darkpool.types';
 import { triggerInsiderSync } from '../services/darkpool/uwSignalsService';
 import { fetchUwLiveInsiderFeed } from '../services/darkpool/uwInsiderFeedService';
@@ -51,11 +54,29 @@ export interface UseDarkPoolInsiderFeedOptions {
 
 const QUOTE_ENRICH_TIMEOUT_MS = 6_000;
 
+async function enrichInsiderQuotes(
+  trades: Awaited<ReturnType<typeof listRecentInsiderTrades>>
+): Promise<InsiderTradeFeedItem[]> {
+  const symbols = DARK_POOL_FEED_ENRICH_QUOTES
+    ? Array.from(new Set(trades.map((t) => t.ticker)))
+    : [];
+  const quotes = symbols.length
+    ? await Promise.race([
+        getQuotes(symbols),
+        new Promise<Map<string, PriceQuote>>((resolve) =>
+          setTimeout(() => resolve(new Map()), QUOTE_ENRICH_TIMEOUT_MS)
+        ),
+      ])
+    : new Map<string, PriceQuote>();
+  return trades.map((trade) => buildFeedItem(trade, quotes));
+}
+
 export async function loadInsider(
   tab: DarkPoolFeedTab,
   limit: number | undefined,
   isPremium: boolean,
-  refresh: boolean
+  refresh: boolean,
+  opts?: { deferQuotes?: boolean; queryKey?: readonly unknown[] }
 ): Promise<InsiderTradeFeedItem[]> {
   let watchedTickers: string[] | undefined;
   if (tab === 'watchlist') {
@@ -78,19 +99,22 @@ export async function loadInsider(
     }
   }
 
-  const symbols = DARK_POOL_FEED_ENRICH_QUOTES
-    ? Array.from(new Set(trades.map((t) => t.ticker)))
-    : [];
-  const quotes = symbols.length
-    ? await Promise.race([
-        getQuotes(symbols),
-        new Promise<Map<string, PriceQuote>>((resolve) =>
-          setTimeout(() => resolve(new Map()), QUOTE_ENRICH_TIMEOUT_MS)
-        ),
-      ])
-    : new Map<string, PriceQuote>();
+  const deferQuotes = opts?.deferQuotes !== false && DARK_POOL_FEED_ENRICH_QUOTES;
+  if (!deferQuotes) {
+    return enrichInsiderQuotes(trades);
+  }
 
-  return trades.map((trade) => buildFeedItem(trade, quotes));
+  // First paint: DB rows מיד; quotes ברקע (לא חוסם את הפיד)
+  const bare = trades.map((trade) => buildFeedItem(trade, new Map()));
+  const key = opts?.queryKey;
+  if (key && trades.length > 0) {
+    void enrichInsiderQuotes(trades)
+      .then((enriched) => {
+        queryClient.setQueryData(key, enriched);
+      })
+      .catch(() => undefined);
+  }
+  return bare;
 }
 
 export function useDarkPoolInsiderFeed({
@@ -102,24 +126,32 @@ export function useDarkPoolInsiderFeed({
   // כש-Premium gating כבוי — כולם מקבלים גישה מלאה (ללא השהייה / מגבלת כמות).
   const isPremium = DARK_POOL_PREMIUM_GATING_ENABLED ? subscriptionIsPremium : true;
   const forceRef = useRef(false);
+  const queryKey = appQueryKeys.insiderFeed(tab, isPremium, limit);
 
   const query = useQuery<InsiderTradeFeedItem[]>({
-    queryKey: appQueryKeys.insiderFeed(tab, isPremium, limit),
+    queryKey,
     queryFn: () => {
       const refresh = forceRef.current;
       forceRef.current = false;
-      return loadInsider(tab, limit, isPremium, refresh);
+      return loadInsider(tab, limit, isPremium, refresh, {
+        deferQuotes: true,
+        queryKey,
+      });
     },
     enabled,
-    staleTime: 2 * 60 * 1000,
+    staleTime: DARK_POOL_FEED_STALE_MS,
   });
 
   const refetch = useCallback(async () => {
     forceRef.current = true;
-    try {
-      await triggerInsiderSync();
-    } catch (e) {
-      console.warn('insider sync on refresh', e);
+    // SEC production: pull-to-refresh = DB only; Quiver/Form4 sync is pg_cron.
+    // Docs: docs/DARK_POOL_DATA_SYNC.md
+    if (!DARK_POOL_SEC_PRODUCTION) {
+      try {
+        await triggerInsiderSync();
+      } catch (e) {
+        console.warn('insider sync on refresh', e);
+      }
     }
     await query.refetch();
   }, [query]);

@@ -7,7 +7,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { logger } from '../../utils/logger';
 import { View, Text, Modal, Pressable, StyleSheet, Dimensions, ActivityIndicator, Share as RNShare, Platform, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Video, ResizeMode } from 'expo-av';
+import { Video, ResizeMode } from '../../lib/expoAvSafe';
 import { Ionicons } from '@expo/vector-icons';
 import { X, Share, Forward, Copy, Download, Reply } from 'lucide-react-native';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -335,7 +335,7 @@ export default function MediaViewer({
                   <Animated.View style={styles.fullImage} collapsable={false}>
                     <Animated.Image
                       source={{ uri: displayUri }}
-                      style={[StyleSheet.absoluteFillObject, imageAnimatedStyle]}
+                      style={[StyleSheet.absoluteFill, imageAnimatedStyle]}
                       resizeMode="contain"
                       onLoadStart={() => { setIsLoading(true); setLoadError(false); }}
                       onLoadEnd={() => setIsLoading(false)}
@@ -467,7 +467,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
   },
   mediaContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -480,7 +480,7 @@ const styles = StyleSheet.create({
     height: SCREEN_HEIGHT,
   },
   loadingContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 5,

@@ -1,5 +1,6 @@
 import React, { useEffect, useCallback, useMemo, useRef, useState, Fragment, createContext, useContext } from 'react';
 import { View, Pressable, Dimensions, Modal, StyleSheet, Platform, Keyboard } from 'react-native';
+import { restoreAndroidSoftInputIfUnlocked } from '../../chat/androidChatKeyboard';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -17,7 +18,6 @@ import {
   KeyboardController,
 } from 'react-native-keyboard-controller';
 import { useDesignTokens } from '../DesignTokens';
-import { BrandTransbackWatermark } from '../BrandTransbackWatermark';
 import { ScreenGradientBackground } from '../../VideoBackground';
 import { BottomSheetProps } from './BottomSheet.types';
 import { createStyles } from './BottomSheet.styles';
@@ -71,8 +71,8 @@ const BottomSheetImpl: React.FC<BottomSheetProps> = ({
   edgeToEdge = false,
   dragAreaHeight,
   showBrandBackground = false,
-  showBrandWatermark,
-  brandWatermarkScale = 1,
+  showBrandWatermark: _showBrandWatermark,
+  brandWatermarkScale: _brandWatermarkScale = 1,
   topCornerRadius,
   fitContent = false,
   contentPaddingBottom: contentPaddingBottomOverride,
@@ -83,7 +83,6 @@ const BottomSheetImpl: React.FC<BottomSheetProps> = ({
 }) => {
   const tokens = useDesignTokens();
   const insets = useSafeAreaInsets();
-  const showWatermark = showBrandWatermark ?? showBrandBackground;
   const dragStripPaddingV = showHandle ? 12 : 8;
   const dragStripMinHeight = showHandle ? 44 : 28;
   /** באנדרואיד לפעמים insets.bottom=0 למרות סרגל ניווט/מחוות — מגנים על ריפוד תחתון */
@@ -128,6 +127,8 @@ const BottomSheetImpl: React.FC<BottomSheetProps> = ({
   }, [isClosing]);
 
   const finishClose = useCallback(() => {
+    // מסמנים סגור לפני onClose — מונע אנימציית-סגירה כפולה כש-isOpen הופך false
+    wasOpenRef.current = false;
     resetClosingState();
     onClose?.();
   }, [onClose, resetClosingState]);
@@ -239,18 +240,33 @@ const BottomSheetImpl: React.FC<BottomSheetProps> = ({
         translateY.value = withTiming(snapValues[0], SHEET_OPEN_TIMING);
       }
     } else if (!isOpen) {
-      wasOpenRef.current = false;
-      isClosingRef.current = false;
-      isClosing.value = 0;
-      fitContentOpenDoneRef.current = true;
-      translateY.value = closedTranslateY;
-      keyboardShift.value = 0;
-      if (fitContent) {
-        fitContentHeight.value = visibleHeightPx;
+      // Parent העביר isOpen=false בלי animateClose — מנגנים סגירה (ה-wrapper משאיר mount ל-SHEET_CLOSE_MS).
+      // לא קוראים ל-onClose שוב: ההורה כבר סגר.
+      if (wasOpenRef.current && !isClosingRef.current) {
+        wasOpenRef.current = false;
+        isClosingRef.current = true;
+        isClosing.value = 1;
+        keyboardShift.value = 0;
+        const targetY = closedTranslateYRef.current;
+        translateY.value = withTiming(targetY, SHEET_CLOSE_TIMING, (finished) => {
+          'worklet';
+          runOnJS(resetClosingState)();
+        });
+      } else if (!isClosingRef.current) {
+        wasOpenRef.current = false;
+        isClosing.value = 0;
+        fitContentOpenDoneRef.current = true;
+        translateY.value = closedTranslateY;
+        keyboardShift.value = 0;
+        if (fitContent) {
+          fitContentHeight.value = visibleHeightPx;
+        }
+      } else {
+        wasOpenRef.current = false;
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, snapValues, closedTranslateY, fitContent, visibleHeightPx, onFitContentOpenComplete]);
+  }, [isOpen, snapValues, closedTranslateY, fitContent, visibleHeightPx, onFitContentOpenComplete, resetClosingState]);
 
   // כשהמקלדת עולה/יורדת — מזזים את השיט מעלה/מטה בהתאם.
   // באנדרואיד: ADJUST_NOTHING בזמן שהשיט פתוח — אחרת adjustResize מה-Manifest
@@ -284,11 +300,7 @@ const BottomSheetImpl: React.FC<BottomSheetProps> = ({
       hide.remove();
       keyboardShift.value = 0;
       if (Platform.OS === 'android') {
-        try {
-          KeyboardController.setDefaultMode();
-        } catch {
-          // non-critical
-        }
+        restoreAndroidSoftInputIfUnlocked();
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -488,7 +500,7 @@ const BottomSheetImpl: React.FC<BottomSheetProps> = ({
   // הפעלת שכבת הזכוכית רק כשהמשטח באמת גלוי (מונע BlurView שקוף בפתיחה ראשונה)
   useEffect(() => {
     if (!isOpen) {
-      setGlassSurfaceActive(false);
+      // לא מכבים כאן — נשאר פעיל בזמן אנימציית סגירה; unmount מנקה
       return;
     }
     if (useModal) {
@@ -515,8 +527,8 @@ const BottomSheetImpl: React.FC<BottomSheetProps> = ({
   }, []);
 
   /**
-   * רקע השיט: זכוכית כמו UICard (SHEET_GLASS_*) → ScreenGradientBackground /
-   * BrandTransbackWatermark כשמותג פעיל — בלי מילוי בועת other כהה.
+   * רקע השיט: זכוכית כמו UICard (SHEET_GLASS_*) → ScreenGradientBackground
+   * כשמותג פעיל — בלי מילוי בועת other כהה.
    */
   const content = (
     <BottomSheetCloseContext.Provider value={handleCloseWithAnimation}>
@@ -563,20 +575,7 @@ const BottomSheetImpl: React.FC<BottomSheetProps> = ({
             <View
               style={[StyleSheet.absoluteFill, { backgroundColor: SHEET_SURFACE_COLOR }]}
             />
-            <ScreenGradientBackground style={StyleSheet.absoluteFillObject} />
-            {showWatermark ? (
-              <BrandTransbackWatermark
-                layout="sheetBottom"
-                scale={brandWatermarkScale}
-                sheetVisibleHeightPx={
-                  fitContent
-                    ? visibleHeightPx
-                    : snapValues.length > 0
-                      ? SCREEN_HEIGHT - snapValues[0]
-                      : visibleHeightPx
-                }
-              />
-            ) : null}
+            <ScreenGradientBackground style={StyleSheet.absoluteFill} />
           </View>
         ) : (
           <View
@@ -653,9 +652,11 @@ const BottomSheetImpl: React.FC<BottomSheetProps> = ({
     );
   }
 
+  // visible תמיד true כל עוד ה-Impl ממונט — ה-wrapper מנהל mount/unmount.
+  // קשירה ל-isOpen הסתירה את Modal מיד וביטלה את אנימציית הסגירה.
   return (
     <Modal
-      visible={isOpen}
+      visible
       transparent
       animationType="none"
       statusBarTranslucent

@@ -1,8 +1,8 @@
 # sync-darkpool — Dark Pool Intelligence Pipeline
 
-ה-Edge Function הזה רץ כל 30 שניות וסונכרן הדפסות Dark Pool מהספק הפעיל אל
-טבלת `dark_pool_trades`, מעדכן `dark_pool_daily_aggregates` ומריץ את מנוע
-ה-Signals (`dark_pool_signals`).
+ה-Edge Function הזה מסונכרן (בדרך כלל כל **5 דקות** דרך `pg_cron` job `sync-darkpool-5m`)
+הדפסות Dark Pool מהספק הפעיל אל טבלת `dark_pool_trades`, מעדכן
+`dark_pool_daily_aggregates` ומריץ את מנוע ה-Signals (`dark_pool_signals`).
 
 ## Secrets נדרשים (אחד מהם חובה)
 
@@ -30,15 +30,14 @@ npx supabase functions deploy sync-insider-buys --no-verify-jwt
 
 ## תזמון (Cron)
 
-הרצה כל 30 שניות (Supabase UI → Functions → Schedule):
+**מקור אמת:** מיגרציות `pg_cron` (לא הטבלה הישנה למטה). ראו גם `docs/DARK_POOL_DATA_SYNC.md`.
 
-| Function           | Cron expression       | Frequency          |
-| ------------------ | --------------------- | ------------------ |
-| `sync-darkpool`    | `*/30 * * * * *`*     | כל 30 שניות        |
-| `dark-pool-alerts` | `* * * * *`           | כל דקה             |
-| `sync-insider-buys`| `0 */6 * * *`         | כל 6 שעות          |
+| Function / Job              | Cron (UTC)           | Frequency                         |
+| --------------------------- | -------------------- | --------------------------------- |
+| `sync-darkpool-5m`          | `*/5 * * * *`        | כל 5 דקות (`037_uw_darkpool_cron.sql`) |
+| `sync-insider-buys-*`       | `13/17/21` + סופ״ש   | ראו `20260823230000_...`          |
 
-\* Supabase מקבלים גם cron syntax עם seconds. ב-Dashboard בחרו "Every 30 seconds".
+הערות ישנות על «כל 30 שניות» / «כל 6 שעות» — מיושנות; אל תסתמכו עליהן.
 
 ## טבלאות שהפונקציות נוגעות בהן
 

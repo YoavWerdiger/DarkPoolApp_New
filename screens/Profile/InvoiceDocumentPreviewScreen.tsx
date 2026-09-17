@@ -208,7 +208,7 @@ export default function InvoiceDocumentPreviewScreen({ navigation, route }: any)
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#0A0E0A',
+    backgroundColor: '#111111',
   },
   meta: {
     textAlign: 'center',
@@ -223,19 +223,18 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginHorizontal: 12,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: '#111611',
+    borderWidth: 0,
+    backgroundColor: '#262626',
   },
   webView: {
     flex: 1,
-    backgroundColor: '#111611',
+    backgroundColor: '#262626',
   },
   loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(10,14,10,0.55)',
+    backgroundColor: 'rgba(17,17,17,0.55)',
   },
   center: {
     flex: 1,

@@ -28,6 +28,7 @@ import {
 } from '../utils/format';
 import { TickerLogo } from '../components/TickerLogo';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
+import { darkPoolTextRtl } from '../../DarkPool/darkPoolLayout';
 
 interface Props {
   portfolio: Portfolio;
@@ -147,26 +148,33 @@ export default function TransactionsTab({
   const styles = useMemo(
     () =>
       StyleSheet.create({
+        root: {
+          direction: 'rtl',
+        },
         empty: {
           alignItems: 'center',
           paddingVertical: 50,
+          direction: 'rtl',
         },
         emptyTitle: {
           fontSize: 16,
           fontWeight: '700',
           color: tokens.colors.text.primary,
           marginTop: 12,
+          ...darkPoolTextRtl,
+          textAlign: 'center',
         },
         emptyText: {
           fontSize: 13,
           color: tokens.colors.text.tertiary,
           textAlign: 'center',
+          writingDirection: 'rtl',
           paddingHorizontal: 30,
           marginTop: 4,
           lineHeight: 18,
         },
         emptyBtn: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'center',
           gap: 6,
           paddingVertical: 12,
@@ -179,9 +187,10 @@ export default function TransactionsTab({
           fontSize: 14,
           fontWeight: '700',
           color: tokens.colors.text.inverse,
+          ...darkPoolTextRtl,
         },
         row: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'center',
           paddingVertical: 10,
           paddingHorizontal: 14,
@@ -207,27 +216,31 @@ export default function TransactionsTab({
           fontWeight: '700',
           color: tokens.colors.text.primary,
           lineHeight: 18,
-          textAlign: 'right',
+          width: '100%',
+          ...darkPoolTextRtl,
         },
         rowSub: {
           fontSize: 11,
           color: tokens.colors.text.tertiary,
           marginTop: 2,
           lineHeight: 14,
-          textAlign: 'right',
+          width: '100%',
+          ...darkPoolTextRtl,
         },
         rowAmount: {
           fontSize: 13,
           fontWeight: '700',
           lineHeight: 16,
-          textAlign: 'left',
+          textAlign: 'right',
+          writingDirection: 'ltr',
         },
         rowDate: {
           fontSize: 11,
           color: tokens.colors.text.tertiary,
           marginTop: 2,
           lineHeight: 14,
-          textAlign: 'left',
+          textAlign: 'right',
+          writingDirection: 'ltr',
         },
       }),
     [tokens]
@@ -273,15 +286,17 @@ export default function TransactionsTab({
   }
 
   return (
-    <View>
+    <View style={styles.root}>
       {sectionTitle ? (
         <Text style={{
           fontSize: 14,
           fontWeight: '700',
           color: tokens.colors.text.secondary,
-          textAlign: 'right',
           marginBottom: 12,
           paddingHorizontal: 4,
+          alignSelf: 'stretch',
+          width: '100%',
+          ...darkPoolTextRtl,
         }}>
           {sectionTitle}
         </Text>

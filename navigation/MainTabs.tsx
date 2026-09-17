@@ -13,11 +13,12 @@ import {
 import { createDrawerNavigator, DrawerContentComponentProps } from '@react-navigation/drawer';
 import { CommonActions } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import NewsScreen from '../screens/News';
 import NewsEconomicCalendarScreen from '../screens/News/NewsEconomicCalendarScreen';
 import NewsEarningsScreen from '../screens/News/NewsEarningsScreen';
 import LikedArticlesScreen from '../screens/News/LikedArticlesScreen';
+import TweetsScreen from '../screens/Tweets/TweetsScreen';
 import JournalStack from './JournalStack';
 import PortfoliosStack from './PortfoliosStack';
 import DarkPoolStack from './DarkPoolStack';
@@ -33,12 +34,10 @@ import {
 } from './mainDrawerNav';
 import { useAuth } from '../context/AuthContext';
 import { HapticFeedback } from '../utils/hapticFeedback';
-import { DesignTokens } from '../components/ui/DesignTokens';
-
 const Drawer = createDrawerNavigator();
 
-/** תואם DesignTokens.colors.background.primary / lib/androidSystemUI */
-const SCREEN_BG = DesignTokens.colors.background.primary;
+/** קנבס מסך — Soft UI #111111 */
+const SCREEN_BG = '#111111';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const DRAWER_WIDTH = Math.min(300, Math.round(SCREEN_W * 0.82));
@@ -48,7 +47,7 @@ const DRAWER_PAD_INNER = 15;
 /** צד המסגרת / לוגו / אווטאר — מעט פחות כדי לאזן את ההזחה ימינה */
 const DRAWER_PAD_OUTER = 17;
 
-type DrawerIconFamily = 'ion' | 'mci';
+type DrawerIconFamily = 'ion' | 'mci' | 'feather';
 
 /** סדר מלמעלה למטה לפי חשיבות (מגירה) */
 const DRAWER_ITEMS: Array<{
@@ -58,6 +57,7 @@ const DRAWER_ITEMS: Array<{
     | 'Portfolios'
     | 'DarkPool'
     | 'News'
+    | 'Tweets'
     | 'Watchlist'
     | 'NewsEarnings'
     | 'NewsCalendar'
@@ -71,6 +71,7 @@ const DRAWER_ITEMS: Array<{
   { name: 'Portfolios', title: 'יומן מסחר', icon: 'book-outline' },
   { name: 'DarkPool', title: 'אינסיידרים', icon: 'eye-outline' },
   { name: 'News', title: 'חדשות', icon: 'newspaper-outline' },
+  { name: 'Tweets', title: 'ציוצים', icon: 'twitter', iconFamily: 'feather' },
   { name: 'Watchlist', title: 'רשימת מעקב', icon: 'list-outline' },
   { name: 'NewsEarnings', title: 'דיווחי רווח', icon: 'notifications-outline' },
   { name: 'NewsCalendar', title: 'יומן כלכלי', icon: 'calendar-outline' },
@@ -201,6 +202,12 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
                   size={24}
                   color={focused ? ACCENT : LABEL}
                 />
+              ) : item.iconFamily === 'feather' ? (
+                <Feather
+                  name={item.icon as React.ComponentProps<typeof Feather>['name']}
+                  size={22}
+                  color={focused ? ACCENT : LABEL}
+                />
               ) : (
                 <Ionicons
                   name={item.icon as React.ComponentProps<typeof Ionicons>['name']}
@@ -261,7 +268,7 @@ const drawerStyles = StyleSheet.create({
   /** ריווח אופקי מוגדר ב־CustomDrawerContent (אסימטרי + safe area) */
   root: {
     flex: 1,
-    backgroundColor: '#0F1A0F',
+    backgroundColor: '#262626',
   },
   brandHeader: {
     alignItems: 'center',
@@ -377,7 +384,7 @@ export default function MainTabs() {
           overlayColor: 'rgba(0,0,0,0.55)',
           drawerStyle: {
             width: DRAWER_WIDTH,
-            backgroundColor: '#0F1A0F',
+            backgroundColor: '#262626',
           },
           sceneStyle: { backgroundColor: SCREEN_BG },
           // enableFreeze(true) ב-App — משאירים הקפאה ב-blur כדי שמסכי Drawer כבדים
@@ -403,6 +410,7 @@ export default function MainTabs() {
           options={{ title: 'אינסיידרים' }}
         />
         <Drawer.Screen name="News" component={NewsScreen} options={{ title: 'חדשות' }} />
+        <Drawer.Screen name="Tweets" component={TweetsScreen} options={{ title: 'ציוצים' }} />
         <Drawer.Screen
           name="Watchlist"
           component={WatchlistScreen}

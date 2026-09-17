@@ -339,7 +339,8 @@ serve(async (req) => {
       // המרת שעה לשעון ישראל ופורמט HH:MM
       const israelTime = convertToIsraelTime(event.time || '', event.date);
 
-      // פונקציה לניקוי ערכים - הסרת אפסים מיותרים
+      // מספר נקי בלבד — לא מצמידים actual_t/prior_t/consensus_t (למשל "%").
+      // ל-CPI MoM/YoY המספר הוא שינוי (לא רמת מדד); תצוגה ללא "%" לפי בחירת מוצר.
       const cleanValue = (value: string | null | undefined): string | null => {
         if (!value || value === '' || value === '0' || value === '0.0' || value === '0.00' || value === '0.000' || value === '0.0000') {
           return null;

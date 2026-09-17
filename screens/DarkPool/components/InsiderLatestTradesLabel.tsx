@@ -5,6 +5,7 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { darkPoolTextRtl } from '../darkPoolLayout';
 
 interface Props {
   count?: number;
@@ -39,8 +40,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontWeight: '800',
       letterSpacing: 0.4,
       color: tokens.colors.text.tertiary,
-      textAlign: 'left',
-      writingDirection: 'rtl',
+      ...darkPoolTextRtl,
     },
     count: {
       fontSize: 11,

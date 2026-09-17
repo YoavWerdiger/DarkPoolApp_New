@@ -17,7 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useLockParentDrawerWhileFocused } from '../../hooks/useLockParentDrawerWhileFocused';
 import { Ionicons } from '@expo/vector-icons';
-import { Video, ResizeMode } from 'expo-av';
+import { Video, ResizeMode } from '../../lib/expoAvSafe';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { getChatMediaDisplayUri } from '../../services/chat/chatSignedMediaUrl';
 import { chatMessageService } from '../../services/chat';

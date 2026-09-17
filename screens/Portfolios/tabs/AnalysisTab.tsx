@@ -10,6 +10,7 @@ import {
 } from '../../../services/portfolios/portfolioAnalysis';
 import { formatPercent, formatNumber, gainColor } from '../utils/format';
 import { PERFORMANCE_PERIODS } from '../portfolioConstants';
+import { darkPoolTextRtl } from '../../DarkPool/darkPoolLayout';
 
 interface Props {
   portfolio: Portfolio;
@@ -42,18 +43,24 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
   const styles = useMemo(
     () =>
       StyleSheet.create({
+        root: {
+          direction: 'rtl',
+        },
         section: {
           marginBottom: 16,
+          direction: 'rtl',
         },
         sectionTitle: {
           fontSize: 14,
           fontWeight: '700',
           color: tokens.colors.text.primary,
           marginBottom: 12,
-          textAlign: 'right',
+          alignSelf: 'stretch',
+          width: '100%',
+          ...darkPoolTextRtl,
         },
         riskGrid: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           flexWrap: 'wrap',
           gap: 8,
         },
@@ -62,99 +69,114 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
           padding: 12,
           backgroundColor: 'rgba(255,255,255,0.03)',
           borderRadius: 12,
-          borderWidth: 1,
+          borderWidth: 0,
           borderColor: tokens.colors.border.subtle,
+          alignItems: 'stretch',
         },
         riskLabel: {
+          width: '100%',
           fontSize: 11,
           color: tokens.colors.text.tertiary,
           marginBottom: 4,
-          textAlign: 'right',
+          ...darkPoolTextRtl,
         },
         riskValue: {
+          width: '100%',
           fontSize: 18,
           fontWeight: '800',
           color: tokens.colors.text.primary,
           textAlign: 'right',
+          writingDirection: 'ltr',
         },
         riskHint: {
+          width: '100%',
           fontSize: 10,
           color: tokens.colors.text.tertiary,
           marginTop: 4,
-          textAlign: 'right',
           lineHeight: 14,
+          ...darkPoolTextRtl,
         },
         perfRow: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'center',
           paddingVertical: 10,
           paddingHorizontal: 4,
           gap: 8,
           borderTopWidth: 1,
           borderTopColor: tokens.colors.border.subtle,
+          width: '100%',
         },
         perfLabel: {
           flex: 1,
           fontSize: 13,
           color: tokens.colors.text.primary,
-          textAlign: 'right',
+          ...darkPoolTextRtl,
         },
         perfValue: {
           width: 90,
           fontSize: 13,
           fontWeight: '700',
-          textAlign: 'left',
+          textAlign: 'right',
+          writingDirection: 'ltr',
         },
         perfBenchmark: {
           width: 90,
           fontSize: 12,
-          textAlign: 'left',
+          textAlign: 'right',
+          writingDirection: 'ltr',
           color: tokens.colors.text.tertiary,
         },
         perfHeader: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'center',
           paddingVertical: 8,
           paddingHorizontal: 4,
           gap: 8,
+          width: '100%',
         },
         perfHeaderText: {
           fontSize: 11,
           fontWeight: '700',
           color: tokens.colors.text.tertiary,
+          ...darkPoolTextRtl,
         },
         emptyText: {
+          width: '100%',
+          alignSelf: 'stretch',
           fontSize: 13,
           color: tokens.colors.text.tertiary,
-          textAlign: 'center',
+          ...darkPoolTextRtl,
           paddingVertical: 30,
         },
         holdingRow: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'center',
           paddingVertical: 8,
           gap: 8,
           borderTopWidth: 1,
           borderTopColor: tokens.colors.border.subtle,
+          width: '100%',
         },
         holdingSymbol: {
           width: 70,
           fontSize: 13,
           fontWeight: '700',
           color: tokens.colors.text.primary,
+          writingDirection: 'ltr',
           textAlign: 'right',
         },
         holdingValue: {
           flex: 1,
           fontSize: 12,
           color: tokens.colors.text.secondary,
-          textAlign: 'right',
+          ...darkPoolTextRtl,
         },
         holdingPct: {
           width: 80,
           fontSize: 13,
           fontWeight: '700',
-          textAlign: 'left',
+          textAlign: 'right',
+          writingDirection: 'ltr',
         },
       }),
     [tokens]
@@ -187,7 +209,7 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
     .sort((a, b) => b.total_gain_pct - a.total_gain_pct);
 
   return (
-    <View>
+    <View style={styles.root}>
       {/* Risk metrics */}
       <UICard variant="glass" glassIntensity="light" padding="md" style={styles.section}>
         <Text style={styles.sectionTitle}>מטריקות סיכון</Text>
@@ -258,8 +280,8 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
           <Text style={[styles.perfLabel, { fontSize: 11, color: tokens.colors.text.tertiary }]}>
             תקופה
           </Text>
-          <Text style={[styles.perfHeaderText, { width: 90, textAlign: 'left' }]}>תיק</Text>
-          <Text style={[styles.perfHeaderText, { width: 90, textAlign: 'left' }]}>
+          <Text style={[styles.perfHeaderText, { width: 90, textAlign: 'right' }]}>תיק</Text>
+          <Text style={[styles.perfHeaderText, { width: 90, textAlign: 'right', writingDirection: 'ltr' }]}>
             {portfolio.benchmark_symbol}
           </Text>
         </View>
@@ -327,7 +349,7 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
         padding="md"
         style={[styles.section, { borderColor: 'rgba(59, 130, 246, 0.25)' }]}
       >
-        <View style={{ flexDirection: 'row-reverse', gap: 8, alignItems: 'flex-start' }}>
+        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
           <Ionicons name="information-circle" size={18} color={tokens.colors.text.info} />
           <Text style={{ flex: 1, fontSize: 12, color: tokens.colors.text.secondary, lineHeight: 18, textAlign: 'right', writingDirection: 'rtl' }}>
             המטריקות מחושבות מבוססות תזרים השווי היומי של התיק שלך, מתוך מחירי close

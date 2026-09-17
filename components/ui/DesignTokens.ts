@@ -25,42 +25,43 @@ const darkColors = {
     light: '#60A5FA',
   },
 
+  // Soft UI / dark soft: screen #111111 · cards #262626
   background: {
-    primary: '#0A0E0A',
-    secondary: '#0F1A0F',
-    tertiary: '#142014',
-    elevated: '#1A2B1A',
-    elevated2: '#1A2B1A',
-    card: 'rgba(255, 255, 255, 0.05)',
-    cardHover: 'rgba(255, 255, 255, 0.08)',
-    cardSolid: '#141F14',
-    surface: 'rgba(255, 255, 255, 0.03)',
-    input: 'rgba(255, 255, 255, 0.06)',
-    header: 'rgba(15, 26, 15, 0.85)',
-    tabBar: 'rgba(10, 14, 10, 0.95)',
+    primary: '#111111',
+    secondary: '#262626',
+    tertiary: '#2E2E2E',
+    elevated: '#262626',
+    elevated2: '#2E2E2E',
+    card: '#262626',
+    cardHover: '#2E2E2E',
+    cardSolid: '#262626',
+    surface: '#262626',
+    input: '#2E2E2E',
+    header: 'rgba(17, 17, 17, 0.92)',
+    tabBar: 'rgba(17, 17, 17, 0.96)',
     tabActive: '#00C805',
-    sheet: '#121E12',
+    sheet: '#262626',
     overlay: 'rgba(0, 0, 0, 0.60)',
     overlayHeavy: 'rgba(0, 0, 0, 0.85)',
   },
 
   /**
    * בועות צ'אט — אטימות מלאה (α=1) עם **מראה כמו** ה־rgba הישן
-   * (ריקוד אלפא על גבי רקע #0A0E0A — כמו ChatSessionBackdrop).
+   * (ריקוד אלפא על גבי רקע #111111 — כמו ChatSessionBackdrop).
    */
   bubbleMe: '#134D37',
-  bubbleOther: '#242625',
+  bubbleOther: '#262626',
   /** טקסט על בועת "שלי" — ניגודיות מלאה (לא text.inverse שכהה) */
   bubbleMeText: '#FFFFFF',
   bubbleMeMetaText: 'rgba(255, 255, 255, 0.65)',
 
   text: {
     primary: '#FFFFFF',
-    secondary: 'rgba(255, 255, 255, 0.70)',
-    tertiary: 'rgba(255, 255, 255, 0.45)',
+    secondary: 'rgba(255, 255, 255, 0.78)',
+    tertiary: 'rgba(255, 255, 255, 0.52)',
     muted: 'rgba(255, 255, 255, 0.30)',
     disabled: 'rgba(255, 255, 255, 0.30)',
-    inverse: '#0A0E0A',
+    inverse: '#111111',
     accent: '#00C805',
     danger: '#FF4444',
     success: '#00C805',
@@ -86,25 +87,26 @@ const darkColors = {
   },
 
   glass: {
+    /** שקוף־למחצה בכוונה: מעל מסך #111111 זה נקרא #262626 של Figma, אבל מעביר blur. */
     card: {
-      bg: 'rgba(255, 255, 255, 0.05)',
+      bg: 'rgba(255, 255, 255, 0.09)',
       border: 'rgba(255, 255, 255, 0.08)',
     },
     cardElevated: {
       bg: 'rgba(255, 255, 255, 0.14)',
-      border: 'rgba(255, 255, 255, 0.22)',
+      border: 'rgba(255, 255, 255, 0.18)',
     },
     sheet: {
-      bg: 'rgba(18, 30, 18, 0.97)',
+      bg: 'rgba(38, 38, 38, 0.92)',
       border: 'rgba(255, 255, 255, 0.08)',
     },
     header: {
-      bg: 'rgba(15, 26, 15, 0.85)',
-      border: 'rgba(255, 255, 255, 0.06)',
+      bg: 'rgba(17, 17, 17, 0.92)',
+      border: 'rgba(255, 255, 255, 0)',
     },
     tabBar: {
-      bg: 'rgba(10, 14, 10, 0.95)',
-      border: 'rgba(255, 255, 255, 0.06)',
+      bg: 'rgba(17, 17, 17, 0.96)',
+      border: 'rgba(255, 255, 255, 0)',
     },
   },
 };
@@ -405,12 +407,13 @@ const staticTokens = {
       shadowRadius: 24,
       elevation: 12,
     },
+    /** Soft UI trial: כרטיסים שטוחים — בלי צל */
     card: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.15,
-      shadowRadius: 8,
-      elevation: 3,
+      shadowColor: 'transparent',
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0,
+      shadowRadius: 0,
+      elevation: 0,
     },
     green: {
       shadowColor: '#00C805',
@@ -489,10 +492,10 @@ const staticTokens = {
     primary: ['#00C805', '#00A004'],
     primaryVertical: ['#00C805', '#00A004'],
     primaryHorizontal: ['#00C805', '#00A004'],
-    dark: ['#0A0E0A', '#0F1A0F'],
+    dark: ['#111111', '#1A1A1A'],
     overlay: ['rgba(0,0,0,0)', 'rgba(0,0,0,0.75)'],
     card: ['rgba(0, 200, 5, 0.06)', 'rgba(0, 200, 5, 0.02)'],
-    screen: ['#000000', '#0A0E0A', '#0F1A0F', '#142014', '#0A0E0A', '#000000'],
+    screen: ['#111111', '#111111', '#161616', '#111111', '#111111', '#111111'],
     screenStart: { x: 0.5, y: 0 },
     screenEnd: { x: 0.5, y: 1 },
   },
@@ -514,6 +517,10 @@ const staticTokens = {
   },
 
   glassmorphism: {
+    /**
+     * עוצמת BlurView. חייב להישאר גבוה מספיק כדי שהטשטוש ייקרא כזכוכית —
+     * מתחת ל־24 ה־BlurView כמעט בלתי נראה מאחורי ה־overlay.
+     */
     blurIntensity: {
       subtle: 32,
       light: 48,
@@ -525,12 +532,17 @@ const staticTokens = {
       light: 'systemChromeMaterialLight' as const,
       default: 'systemChromeMaterialDark' as const,
     },
+    /**
+     * Tint מעל ה־BlurView — חייב להיות שקוף־למחצה, אחרת הוא צובע מעל הטשטוש
+     * וההשטחה הורגת את הזכוכית. הערכים מכוילים לפלטת Figma: לבן ב־α מעל מסך
+     * #111111 נותן את גוון הכרטיס המבוקש (light 0.09 ≈ #262626, medium ≈ #303030).
+     */
     cardBackground: {
       dark: {
-        subtle: 'rgba(255, 255, 255, 0.03)',
-        light: 'rgba(255, 255, 255, 0.05)',
-        medium: 'rgba(255, 255, 255, 0.08)',
-        strong: 'rgba(255, 255, 255, 0.12)',
+        subtle: 'rgba(255, 255, 255, 0.05)',
+        light: 'rgba(255, 255, 255, 0.09)',
+        medium: 'rgba(255, 255, 255, 0.13)',
+        strong: 'rgba(255, 255, 255, 0.16)',
       },
       light: {
         subtle: 'rgba(255, 255, 255, 0.40)',
@@ -538,6 +550,15 @@ const staticTokens = {
         medium: 'rgba(255, 255, 255, 0.70)',
         strong: 'rgba(255, 255, 255, 0.85)',
       },
+    },
+    /**
+     * מילוי אטום שנצבע *מתחת* ל-cardBackground כשאין BlurView אמיתי
+     * (Android, או disableBlur ל-view-shot). מכויל כך ש-baseFill + overlay
+     * נותן את אותו גוון כמו ה-blur ב-iOS — ולכן אנדרואיד נשאר קריא ולא כהה מדי.
+     */
+    baseFill: {
+      dark: '#111111',
+      light: '#FFFFFF',
     },
     border: {
       dark: {
@@ -592,8 +613,8 @@ const staticTokens = {
     borderColor: 'rgba(255, 255, 255, 0.22)',
     /** BlurView intensity — עדין כדי לא לפגוע בקריאות / ביצועים */
     blurIntensity: 26,
-    /** רקע Android כשאין blur אמיתי */
-    androidFallback: 'rgba(14, 22, 16, 0.82)',
+    /** רקע Android כשאין blur אמיתי — אטום, + ה-overlay שמעליו מגיע ל-#2E2E2E */
+    androidFallback: '#111111',
   },
 
   /**
@@ -602,41 +623,38 @@ const staticTokens = {
    */
   cashAppStyle: {
     colors: {
-      // Primary - לבן לכפתורים ראשיים
-      buttonPrimary: '#FFFFFF',
-      buttonPrimaryText: '#000000',
+      // Primary - שחור לכפתורים ראשיים (כמו Cash App)
+      buttonPrimary: '#000000',
+      buttonPrimaryText: '#FFFFFF',
       
-      // Secondary - אפור כהה לכפתורים משניים
-      buttonSecondary: '#434343',
-      buttonSecondaryText: '#FFFFFF',
+      // Secondary - אפור בהיר לכפתורים משניים
+      buttonSecondary: '#F5F5F5',
+      buttonSecondaryText: '#000000',
       
       // Disabled
-      buttonDisabled: '#666565',
-      buttonDisabledText: '#AFAFAF',
+      buttonDisabled: '#E0E0E0',
+      buttonDisabledText: '#999999',
       
-      // Backgrounds - Dark Mode (#242424)
-      screen: '#242424',
-      card: '#2C2C2C',
-      input: '#434343',
+      // Backgrounds - נקיים ופשוטים
+      screen: '#FFFFFF',
+      card: '#FAFAFA',
+      input: '#F8F8F8',
       
-      // Text - Dark Mode
-      headline: '#FFFFFF',
-      body: '#AFAFAF',
-      secondary: '#898989',
-      placeholder: '#666565',
+      // Text
+      headline: '#000000',
+      body: '#666666',
+      secondary: '#999999',
+      placeholder: '#BBBBBB',
       
-      // Borders - Dark Mode
-      input: '#666565',
-      inputFocus: '#0ab010', // DarkPool Green
-      subtle: '#434343',
+      // Borders
+      input: '#E0E0E0',
+      inputFocus: '#00C805', // DarkPool Green
+      subtle: '#F0F0F0',
       
       // States
       error: '#FF4444',
-      success: '#0ab010',
+      success: '#00C805',
       warning: '#FFB800',
-      
-      // Primary Brand
-      primary: '#0ab010', // DarkPool Green
     },
     
     typography: {

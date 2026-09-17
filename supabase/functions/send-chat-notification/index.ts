@@ -41,6 +41,58 @@ interface ChatNotificationPayload {
   content: string;
   message_type: string;
   media_url?: string;
+  /** uuid[] — when present, these members get mention push (even if group muted) */
+  mentioned_users?: string[] | null;
+}
+
+/** Readable push body — never dump raw entity/trade JSON to the lock screen */
+function previewChatContent(messageType: string | undefined, content: string | undefined): string {
+  const trimmed = (content ?? '').trim();
+
+  const fromJsonEntity = (): string | null => {
+    if (!trimmed.startsWith('{')) return null;
+    try {
+      const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+      const attachment = parsed.attachment as { preview?: { title?: string } } | undefined;
+      const title = attachment?.preview?.title;
+      if (typeof title === 'string' && title.trim()) return `📎 ${title.trim()}`;
+      const trade = parsed.trade as { symbol?: string } | undefined;
+      if (typeof trade?.symbol === 'string' && trade.symbol.trim()) {
+        return `טרייד · ${trade.symbol.trim()}`;
+      }
+      if (parsed.caption && typeof parsed.caption === 'string' && parsed.caption.trim()) {
+        return parsed.caption.trim();
+      }
+    } catch {
+      /* ignore */
+    }
+    return null;
+  };
+
+  switch (messageType) {
+    case 'image':
+      return '📷 תמונה';
+    case 'video':
+      return '🎥 סרטון';
+    case 'audio':
+      return '🎤 הודעה קולית';
+    case 'document':
+      return '📎 מסמך';
+    case 'poll':
+      return '📊 סקר';
+    case 'entity': {
+      return fromJsonEntity() ?? '📎 שיתוף';
+    }
+    case 'trade': {
+      return fromJsonEntity() ?? 'טרייד';
+    }
+    default: {
+      const entity = fromJsonEntity();
+      if (entity) return entity;
+      if (!trimmed) return 'הודעה';
+      return trimmed.length > 100 ? `${trimmed.substring(0, 100)}...` : trimmed;
+    }
+  }
 }
 
 serve(async (req) => {
@@ -58,8 +110,22 @@ serve(async (req) => {
 
     const payload: ChatNotificationPayload = await req.json();
     const { message_id, group_id, sender_id, content, message_type, media_url } = payload;
+    const mentionedUserIds = Array.from(
+      new Set(
+        (Array.isArray(payload.mentioned_users) ? payload.mentioned_users : [])
+          .map((id) => String(id || '').trim())
+          .filter((id) => id.length > 0 && id !== sender_id),
+      ),
+    );
+    const mentionedSet = new Set(mentionedUserIds);
 
-    console.log('📨 Chat notification request:', { message_id, group_id, sender_id, message_type });
+    console.log('📨 Chat notification request:', {
+      message_id,
+      group_id,
+      sender_id,
+      message_type,
+      mentioned_count: mentionedUserIds.length,
+    });
 
     if (!group_id || !sender_id) {
       return new Response(
@@ -150,30 +216,41 @@ serve(async (req) => {
       member.is_muted === true ||
       member.notifications_enabled === false;
 
-    // נמענים זכאים: לא השולח, לא צופה פעיל, לא השתיקו את הקבוצה, ולא כיבו התראות
+    const memberIds = new Set(membersData.map((m) => m.user_id));
+
+    // נמענים זכאים: לא השולח, לא צופה פעיל;
+    // מושתקים — רק אם תייגו אותם (@mention עדיין מקבל push).
     const eligibleUserIds = membersData
-      .filter(
-        (member) =>
-          member.user_id !== sender_id &&
-          !activelyViewing.has(member.user_id) &&
-          !isMemberMuted(member),
-      )
+      .filter((member) => {
+        if (member.user_id === sender_id) return false;
+        if (activelyViewing.has(member.user_id)) return false;
+        if (isMemberMuted(member) && !mentionedSet.has(member.user_id)) return false;
+        return true;
+      })
       .map((member) => member.user_id);
 
-    // משתמשים שאסור שהמכשיר שלהם יקבל את ההתראה — שולח + מושתקים/מכובים + צופים פעילים.
+    // משתמשים שאסור שהמכשיר שלהם יקבל את ההתראה — שולח + מושתקים (שלא תויגו) + צופים פעילים.
     const excludedUserIds = Array.from(
       new Set(
         membersData
-          .filter(
-            (member) =>
-              member.user_id === sender_id ||
-              isMemberMuted(member) ||
-              activelyViewing.has(member.user_id),
-          )
+          .filter((member) => {
+            if (member.user_id === sender_id) return true;
+            if (activelyViewing.has(member.user_id)) return true;
+            if (isMemberMuted(member) && !mentionedSet.has(member.user_id)) return true;
+            return false;
+          })
           .map((member) => member.user_id)
           .concat(sender_id),
       ),
     );
+
+    // תיוגים של מי שלא חבר בקבוצה — מתעלמים (אין הרשאת צפייה בהודעה)
+    const mentionedInGroup = mentionedUserIds.filter((id) => memberIds.has(id));
+    if (mentionedInGroup.length !== mentionedUserIds.length) {
+      console.log(
+        `ℹ️ Dropped ${mentionedUserIds.length - mentionedInGroup.length} mentions outside group`,
+      );
+    }
 
     if (eligibleUserIds.length === 0) {
       console.log('ℹ️ All members have muted or disabled notifications');
@@ -274,77 +351,61 @@ serve(async (req) => {
 
     // 5. הכנת תוכן ההתראה:
     //    תמונה = קבוצה | כותרת = שם הצ'אט | כותרת משנה = שם השולח: | גוף = תוכן ההודעה
-
-    // תוכן ההודעה לפי סוג
-    let messagePreview: string;
-    switch (message_type) {
-      case 'image':
-        messagePreview = '📷 תמונה';
-        break;
-      case 'video':
-        messagePreview = '🎥 סרטון';
-        break;
-      case 'audio':
-        messagePreview = '🎤 הודעה קולית';
-        break;
-      case 'document':
-        messagePreview = '📎 מסמך';
-        break;
-      case 'poll':
-        messagePreview = '📊 סקר';
-        break;
-      default:
-        // קיצור התוכן ל-100 תווים
-        messagePreview = content && content.length > 100 
-          ? content.substring(0, 100) + '...' 
-          : content || '';
-    }
-
+    const messagePreview = previewChatContent(message_type, content);
     const notificationSubtitle = `${senderName}:`;
+    const mentionBody =
+      messagePreview && messagePreview !== 'הודעה'
+        ? `הזכיר אותך: ${messagePreview}`
+        : 'הזכיר אותך';
 
     // תמונת ההתראה: תמונת הצ'אט/קבוצה. גיבוי לתמונת השולח אם אין לקבוצה
     const groupAvatarUrl = await ensureNotificationImageUrl(supabase, groupData.avatar_url);
     const senderAvatarUrl = await ensureNotificationImageUrl(supabase, senderData.profile_picture);
     const notificationImageUrl = groupAvatarUrl || senderAvatarUrl;
 
-    // 6. יצירת הודעות push לכל הטוקנים
-    const messages = deviceTokens.map((token) => ({
-      to: token.expo_push_token,
-      sound: 'default',
-      title: groupData.name,
-      subtitle: notificationSubtitle,
-      body: messagePreview,
-      data: {
-        type: 'chat_message',
-        group_id: group_id,
-        group_name: groupData.name,
-        group_avatar: groupData.avatar_url,
-        message_id: message_id,
-        sender_id: sender_id,
-        sender_name: senderName,
-        sender_avatar: senderData.profile_picture,
-        message_type: message_type,
-        content_preview: messagePreview,
-      },
-      priority: 'high',
-      channelId: 'chat-messages',
-      categoryId: 'chat_message',
-      icon: 'ic_notification',
-      ...(notificationImageUrl ? { richContent: { image: notificationImageUrl } } : {}),
-      _displayInForeground: true,
-      badge: 1,
-      android: {
-        channelId: 'chat-messages',
-        priority: 'high',
-        collapseKey: `chat-${group_id}`,
-        ...(notificationImageUrl ? { imageUrl: notificationImageUrl } : {}),
-      },
-      ios: {
+    // 6. יצירת הודעות push לכל הטוקנים (תיוג → טקסט ייעודי)
+    const messages = deviceTokens.map((token) => {
+      const isMention = mentionedSet.has(token.user_id);
+      const body = isMention ? mentionBody : messagePreview;
+      return {
+        to: token.expo_push_token,
         sound: 'default',
-        threadId: `chat-${group_id}`,
-        ...(notificationImageUrl ? { attachments: [{ url: notificationImageUrl }] } : {}),
-      },
-    }));
+        title: groupData.name,
+        subtitle: notificationSubtitle,
+        body,
+        data: {
+          type: 'chat_message',
+          group_id: group_id,
+          group_name: groupData.name,
+          group_avatar: groupData.avatar_url,
+          message_id: message_id,
+          sender_id: sender_id,
+          sender_name: senderName,
+          sender_avatar: senderData.profile_picture,
+          message_type: message_type,
+          content_preview: body,
+          is_mention: isMention,
+        },
+        priority: 'high',
+        channelId: 'chat-messages',
+        categoryId: isMention ? 'chat_mention' : 'chat_message',
+        icon: 'ic_notification',
+        ...(notificationImageUrl ? { richContent: { image: notificationImageUrl } } : {}),
+        _displayInForeground: true,
+        badge: 1,
+        android: {
+          channelId: 'chat-messages',
+          priority: 'high',
+          collapseKey: `chat-${group_id}`,
+          ...(notificationImageUrl ? { imageUrl: notificationImageUrl } : {}),
+        },
+        ios: {
+          sound: 'default',
+          threadId: `chat-${group_id}`,
+          ...(notificationImageUrl ? { attachments: [{ url: notificationImageUrl }] } : {}),
+        },
+      };
+    });
 
     // 7. שליחת התראות דרך Expo Push API
     console.log(`📤 Sending ${messages.length} push notifications...`);

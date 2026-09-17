@@ -19,26 +19,38 @@ import {
   detectSignals,
   fetchFromIntrinio,
   fetchFromPolygon,
+  fetchFromQuiverOffexchange,
   fetchFromUnusualWhales,
   type DetectedSignal,
   type InsiderBuy,
   type NormalizedTrade,
   type ProviderFetch,
 } from '../_shared/darkpool.ts';
+import { resolveQuiverApiKey } from '../_shared/quiverQuant.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-function pickProvider(): 'polygon' | 'unusualwhales' | 'intrinio' {
-  const raw = (Deno.env.get('DARK_POOL_PROVIDER') || 'polygon').toLowerCase();
-  if (raw === 'unusualwhales' || raw === 'intrinio') return raw;
-  return 'polygon';
+function pickProvider(): 'polygon' | 'unusualwhales' | 'intrinio' | 'quiverquant' {
+  const raw = (Deno.env.get('DARK_POOL_PROVIDER') || 'quiverquant').toLowerCase();
+  if (raw === 'unusualwhales' || raw === 'intrinio' || raw === 'polygon') return raw;
+  return 'quiverquant';
 }
 
-async function fetchTrades(sinceIso: string): Promise<ProviderFetch> {
+async function fetchTrades(
+  sinceIso: string,
+  opts: { historicalTickers?: string[] } = {}
+): Promise<ProviderFetch> {
   const p = pickProvider();
+  if (p === 'quiverquant') {
+    const key = resolveQuiverApiKey();
+    if (!key) throw new Error('QUIVER_API_KEY missing');
+    return fetchFromQuiverOffexchange(key, sinceIso, {
+      historicalTickers: opts.historicalTickers ?? [],
+    });
+  }
   if (p === 'polygon') {
     const key = Deno.env.get('POLYGON_API_KEY') || '';
     if (!key) throw new Error('POLYGON_API_KEY missing');
@@ -58,10 +70,19 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   let resetLookbackHours = 0;
+  let historicalTickers: string[] = [];
   try {
     const body = await req.json();
     if (body?.reset === true) resetLookbackHours = Number(body.lookback_hours) || 168;
     else if (body?.lookback_hours) resetLookbackHours = Number(body.lookback_hours);
+    if (body?.historical === true) {
+      historicalTickers = DEFAULT_UNIVERSE.slice(0, 12);
+    } else if (Array.isArray(body?.tickers) && body.tickers.length) {
+      historicalTickers = body.tickers
+        .map((t: unknown) => String(t).trim().toUpperCase())
+        .filter(Boolean)
+        .slice(0, 20);
+    }
   } catch {
     /* cron / empty body */
   }
@@ -83,7 +104,8 @@ serve(async (req) => {
       .select('last_ts, last_cursor')
       .eq('provider', provider)
       .maybeSingle();
-    const defaultLookback = 60 * 60 * 1000; // 1h
+    const defaultLookback =
+      provider === 'quiverquant' ? 14 * 24 * 60 * 60 * 1000 : 60 * 60 * 1000; // Quiver=יומי
     const sinceIso =
       resetLookbackHours > 0
         ? new Date(Date.now() - resetLookbackHours * 60 * 60 * 1000).toISOString()
@@ -92,7 +114,7 @@ serve(async (req) => {
           : new Date(Date.now() - defaultLookback).toISOString();
 
     // 2. fetch
-    const fetched = await fetchTrades(sinceIso);
+    const fetched = await fetchTrades(sinceIso, { historicalTickers });
     const rows = fetched.trades;
     if (!rows.length) {
       await supabase.from('dark_pool_provider_state').upsert({
@@ -118,12 +140,14 @@ serve(async (req) => {
       tickersAffected.map((t) => recomputeDailyAggregate(supabase, t))
     );
 
-    // 5. signal engine
+    // 5. signal engine — מדלגים ל-Quiver offexchange (אגרגט יומי, לא prints)
     const allSignals: DetectedSignal[] = [];
-    for (const ticker of tickersAffected) {
-      const tickerTrades = rows.filter((r) => r.ticker === ticker);
-      const signals = await runEngineForTicker(supabase, ticker, tickerTrades);
-      if (signals.length) allSignals.push(...signals);
+    if (provider !== 'quiverquant') {
+      for (const ticker of tickersAffected) {
+        const tickerTrades = rows.filter((r) => r.ticker === ticker);
+        const signals = await runEngineForTicker(supabase, ticker, tickerTrades);
+        if (signals.length) allSignals.push(...signals);
+      }
     }
 
     // 6. persist signals

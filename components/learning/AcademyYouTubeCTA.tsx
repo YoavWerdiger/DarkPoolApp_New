@@ -125,29 +125,19 @@ const createStyles = (T: ReturnType<typeof useDesignTokens>) =>
       overflow: 'hidden',
       borderRadius: ACADEMY_CARD_RADIUS,
       borderWidth: 0,
-      ...Platform.select({
-        ios: {
-          shadowColor: '#000',
-          shadowOpacity: 0.28,
-          shadowOffset: { width: 0, height: 8 },
-          shadowRadius: 16,
-        },
-        android: {
-          elevation: 6,
-        },
-      }),
+      backgroundColor: T.colors.background.cardSolid,
     },
     glassOverlay: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: 'rgba(12, 18, 14, 0.72)',
+      ...StyleSheet.absoluteFill,
+      backgroundColor: 'rgba(17, 17, 17, 0.55)',
     },
     glassTopHighlight: {
       position: 'absolute',
       top: 0,
       left: 0,
       right: 0,
-      height: 1,
-      backgroundColor: 'rgba(255,255,255,0.16)',
+      height: 0,
+      backgroundColor: 'transparent',
     },
     content: {
       flexDirection: 'row-reverse',
@@ -185,7 +175,7 @@ const createStyles = (T: ReturnType<typeof useDesignTokens>) =>
       overflow: 'hidden',
       borderWidth: 2,
       borderColor: 'rgba(255,255,255,0.22)',
-      backgroundColor: '#0A0E0A',
+      backgroundColor: '#111111',
     },
     avatarImg: {
       width: '100%',
@@ -202,7 +192,7 @@ const createStyles = (T: ReturnType<typeof useDesignTokens>) =>
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: 2,
-      borderColor: '#0A0E0A',
+      borderColor: '#111111',
       ...Platform.select({
         ios: {
           shadowColor: '#000',

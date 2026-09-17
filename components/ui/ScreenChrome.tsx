@@ -1,32 +1,29 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { ScreenGradientBackground } from '../VideoBackground';
-import { useDesignTokens } from './DesignTokens';
-import { BrandTransbackWatermark } from './BrandTransbackWatermark';
 
 type Props = {
   children: React.ReactNode;
-  /** שכבת שור־ודוב (transback) כמו ברשימת צ׳אטים — מעל הגרדיאנט */
+  /**
+   * @deprecated הוסר — שור־ודוב כבר לא ברקע מסכים. נשאר ל-API תאימות.
+   */
   withBrandWatermark?: boolean;
   /** מודול Dark Pool — האפל רץ ב-LTR; מכריח RTL על תוכן המסך */
   rtl?: boolean;
 };
 
 /**
- * מעטפת מסך — רקע primary + גרדיאנט ירוק־שחור; אופציונלית שכבת transback כמו צ׳אטים.
+ * מעטפת מסך — גרדיאנט מלא (~70% שחור), כמו מסך הצ׳אט.
  */
-export function ScreenChrome({ children, withBrandWatermark, rtl }: Props) {
-  const tokens = useDesignTokens();
+export function ScreenChrome({ children, rtl }: Props) {
   return (
     <View
       style={[
         styles.root,
-        { backgroundColor: tokens.colors.background.primary },
         rtl ? styles.rtlRoot : null,
       ]}
     >
-      <ScreenGradientBackground style={StyleSheet.absoluteFillObject} />
-      {withBrandWatermark ? <BrandTransbackWatermark /> : null}
+      <ScreenGradientBackground style={StyleSheet.absoluteFill} />
       {children}
     </View>
   );
@@ -35,6 +32,7 @@ export function ScreenChrome({ children, withBrandWatermark, rtl }: Props) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+    backgroundColor: '#111111',
   },
   rtlRoot: {
     direction: 'rtl',

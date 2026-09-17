@@ -71,13 +71,14 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
         outer: {
           flex: 1,
           backgroundColor: tokens.colors.background.primary,
+          direction: 'rtl',
         },
         safe: {
           flex: 1,
           backgroundColor: 'transparent',
         },
         header: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'center',
           paddingHorizontal: tokens.layout.screenPadding,
           paddingVertical: 12,
@@ -89,7 +90,7 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
           overflow: 'hidden',
         },
         searchInner: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'center',
           paddingHorizontal: 14,
           paddingVertical: 12,
@@ -128,7 +129,7 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
           marginBottom: 8,
         },
         rowInner: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'center',
           paddingVertical: 12,
           paddingHorizontal: 14,
@@ -140,14 +141,15 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
         textBlock: {
           flex: 1,
           minWidth: 0,
-          alignItems: 'flex-end',
+          alignItems: 'flex-start',
           gap: 2,
         },
         symbolText: {
           fontSize: 16,
           fontWeight: '800',
           color: tokens.colors.text.primary,
-          textAlign: 'right',
+          writingDirection: 'ltr',
+          textAlign: 'left',
         },
         descriptionText: {
           fontSize: 12,
@@ -161,7 +163,7 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
           paddingHorizontal: 10,
           borderRadius: tokens.borderRadius.full,
           backgroundColor: tokens.colors.primary.dim,
-          borderWidth: 1,
+          borderWidth: 0,
           borderColor: tokens.colors.border.accent,
         },
         typeChipText: {
@@ -181,7 +183,7 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
           borderRadius: 28,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: 'rgba(255,255,255,0.04)',
+          backgroundColor: '#262626',
           marginBottom: 4,
         },
         emptyText: {

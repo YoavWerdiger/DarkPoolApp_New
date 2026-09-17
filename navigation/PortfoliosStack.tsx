@@ -34,7 +34,7 @@ export default function PortfoliosStack() {
       initialRouteName="PortfoliosHub"
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: '#0A0E0A' },
+        contentStyle: { backgroundColor: '#111111' },
       }}
     >
       <Stack.Screen name="PortfoliosHub" component={PortfoliosHubScreen} />

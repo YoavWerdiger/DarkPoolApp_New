@@ -3,8 +3,8 @@ import { DesignTokens } from '../DesignTokens';
 
 /**
  * טוקני זכוכית אחידים לכל BottomSheet / ChatBottomSheet.
- * משטח = זכוכית כהה frosted כמו UICard (Blur + overlay לבן עדין) —
- * לא מילוי charcoal אטום, לא cardSolid ירוק (#141F14).
+ * משטח = זכוכית כהה frosted כמו UICard (Blur + overlay לבן שקוף־למחצה)
+ * בגוון הפלטה החדשה (#262626) — לא מילוי אטום שחונק את ה-BlurView.
  */
 /** Dim מאחורי השיט — חזק מספיק שתוכן האפליקציה יישב ברור "מתחת". */
 export const SHEET_BACKDROP_OPACITY = 0.58;
@@ -13,14 +13,21 @@ export const SHEET_BACKDROP_OPACITY = 0.58;
 export const SHEET_GLASS_INTENSITY = DesignTokens.glassmorphism.blurIntensity.light;
 
 /**
- * Tint מעל BlurView — כמו UICard dark + light (לבן עדין, לא צבע כהה אטום).
+ * Tint מעל BlurView — כמו UICard dark + light (לבן שקוף־למחצה).
+ * חייב להישאר rgba: ערך אטום מסתיר את ה-BlurView והשיט נראה שטוח.
  */
 export const SHEET_GLASS_OVERLAY = DesignTokens.glassmorphism.cardBackground.dark.light;
 
 /**
- * רצפת Android / system bar — charcoal ניטרלי.
+ * מילוי אטום מתחת ל-overlay כשאין BlurView (Android / לפני mount).
+ * base + overlay מגיע ל-SHEET_GLASS_FLOOR, כך שאנדרואיד תואם ל-iOS.
  */
-export const SHEET_GLASS_FLOOR = DesignTokens.colors.bubbleOther;
+export const SHEET_GLASS_BASE = DesignTokens.glassmorphism.baseFill.dark;
+
+/**
+ * גוון המשטח הסופי — לרצועת system bar ולשיטים בלי זכוכית. חייב להיות אטום.
+ */
+export const SHEET_GLASS_FLOOR = DesignTokens.colors.background.cardSolid;
 
 /**
  * BlurView tint כהה דק (iOS). Android לא משתמש ב-BlurView כאן.

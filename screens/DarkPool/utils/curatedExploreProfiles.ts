@@ -1,6 +1,22 @@
 /**
- * רשימה סטטית מאוצרת — רק אנשים מוכרים עם תמונות מאומתות (קונגרס / Wikimedia).
- * הגריד בגילוי מציג רק פרופילים מרשימה זו (+ מומלצים מ-DB שמופיעים ברשימה).
+ * ═══════════════════════════════════════════════════════════════════════════
+ * מקור אמת יחיד — רשימת אנשים מאוצרת (Dark Pool People / Explore / Profiles)
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * מודל המוצר:
+ *   • אנשים / פרופילים: רק הרשימה הסטטית הזו → כרטיסי Explore, פס Home,
+ *     טיפול פרופיל עמוק, דיוקנאות, materialize תיק מתוזמן, deep history.
+ *   • פיד עסקאות: endpoints גלובליים (Quiver/Form4/EDGAR) — כל העסקאות,
+ *     לא מסונן לרשימה המאוצרת. לחיצה על אדם בפיד עדיין פותחת פרופיל.
+ *
+ * אל תבלבלו בין "מי מוצג כאנשים" לבין "אילו עסקאות מופיעות בפיד".
+ *
+ * מקבילים ב-edge (חייבים להישאר מסונכרנים ידנית עם ה-ids כאן):
+ *   • supabase/functions/_shared/darkpoolPortfolioSnapshots.ts → CURATED_MATERIALIZE_TARGETS
+ *   • supabase/functions/_shared/quiverQuant.ts → CURATED_CONGRESS_BIOGUIDES + CURATED_EXECUTIVE_UW_IDS
+ *
+ * תמונות: congress (BioGuide) או Wikimedia מלא. תצוגה דרך portraitDisplayUrl
+ * (snap לרוחבי thumb חוקיים של Wikimedia — אחרת 400).
  */
 
 import type { ExplorePerson } from '../../../services/darkpool/uwExploreService';
@@ -8,11 +24,11 @@ import type { ExplorePerson } from '../../../services/darkpool/uwExploreService'
 const CONGRESS = 'https://unitedstates.github.io/images/congress/225x275';
 const WIKI = 'https://upload.wikimedia.org/wikipedia/commons';
 
-/** פרופילים מובילים — סדר תצוגה קבוע */
+/** פרופילים מובילים — סדר תצוגה קבוע (activity_score יורד) */
 export const CURATED_EXPLORE_PROFILES: ExplorePerson[] = [
-  // פוליטיקאים — תמונות רשמיות מ-congress.gov
+  // ── פוליטיקאים / executive — Quiver BioGuide או trumpstocktrades ──
   {
-    // UW UUID — נשיא (executive), לא BioGuide של קונגרס; עסקאות ב־dark_pool_congress_trades
+    // מזהה פנימי (executive) — עסקאות Quiver trumpstocktrades
     id: '888dc73f-f1eb-485a-a241-80657aaaaff9',
     name: 'Donald Trump',
     subtitle: 'נשיא · רפובליקני',
@@ -29,10 +45,10 @@ export const CURATED_EXPLORE_PROFILES: ExplorePerson[] = [
     activity_score: 100,
   },
   {
-    id: 'S000148',
-    name: 'Chuck Schumer',
-    subtitle: 'Senate · דמוקרט',
-    image_url: `${CONGRESS}/S000148.jpg`,
+    id: 'C001114',
+    name: 'John Curtis',
+    subtitle: 'Senate · רפובליקני',
+    image_url: `${CONGRESS}/C001114.jpg`,
     kind: 'politician',
     activity_score: 99,
   },
@@ -45,10 +61,10 @@ export const CURATED_EXPLORE_PROFILES: ExplorePerson[] = [
     activity_score: 98,
   },
   {
-    id: 'R000595',
-    name: 'Marco Rubio',
-    subtitle: 'Senate · רפובליקני',
-    image_url: `${CONGRESS}/R000595.jpg`,
+    id: 'G000583',
+    name: 'Josh Gottheimer',
+    subtitle: 'בית הנציגים · דמוקרט',
+    image_url: `${CONGRESS}/G000583.jpg`,
     kind: 'politician',
     activity_score: 97,
   },
@@ -61,85 +77,94 @@ export const CURATED_EXPLORE_PROFILES: ExplorePerson[] = [
     activity_score: 96,
   },
   {
-    id: 'O000172',
-    name: 'Alexandria Ocasio-Cortez',
-    subtitle: 'בית הנציגים · דמוקרטית',
-    image_url: `${CONGRESS}/O000172.jpg`,
+    id: 'M001218',
+    name: 'Rich McCormick',
+    subtitle: 'בית הנציגים · רפובליקני',
+    image_url: `${CONGRESS}/M001218.jpg`,
     kind: 'politician',
     activity_score: 95,
   },
   {
-    id: 'P000603',
-    name: 'Rand Paul',
+    id: 'B001236',
+    name: 'John Boozman',
     subtitle: 'Senate · רפובליקני',
-    image_url: `${CONGRESS}/P000603.jpg`,
+    image_url: `${CONGRESS}/B001236.jpg`,
     kind: 'politician',
     activity_score: 94,
   },
   {
-    id: 'C001114',
-    name: 'Dan Crenshaw',
-    subtitle: 'בית הנציגים · רפובליקני',
-    image_url: `${CONGRESS}/C001114.jpg`,
+    id: 'M001217',
+    name: 'Jared Moskowitz',
+    subtitle: 'בית הנציגים · דמוקרט',
+    image_url: `${CONGRESS}/M001217.jpg`,
     kind: 'politician',
     activity_score: 93,
   },
-  // מנכ"לים ובכירים — Wikimedia
   {
-    id: 'TSLA:Musk',
-    name: 'Elon Musk',
-    subtitle: 'CEO · Tesla',
-    image_url: `${WIKI}/3/34/Elon_Musk_Royal_Society_%28crop2%29.jpg`,
-    kind: 'insider',
-    ticker: 'TSLA',
-    activity_score: 100,
+    id: 'S000168',
+    name: 'Maria Elvira Salazar',
+    subtitle: 'בית הנציגים · רפובליקנית',
+    image_url: `${CONGRESS}/S000168.jpg`,
+    kind: 'politician',
+    activity_score: 92,
   },
   {
-    id: 'AAPL:Cook',
-    name: 'Tim Cook',
-    subtitle: 'CEO · Apple',
-    image_url: `${WIKI}/f/f7/Tim_Cook_March_2026_%28cropped_2%29.jpg`,
-    kind: 'insider',
-    ticker: 'AAPL',
-    activity_score: 99,
+    id: 'T000278',
+    name: 'Tommy Tuberville',
+    subtitle: 'Senate · רפובליקני',
+    image_url: `${CONGRESS}/T000278.jpg`,
+    kind: 'politician',
+    activity_score: 91,
   },
   {
-    id: 'MSFT:Nadella',
-    name: 'Satya Nadella',
-    subtitle: 'CEO · Microsoft',
-    image_url: `${WIKI}/4/4a/Satya_Nadella_%28cropped%29.jpg`,
-    kind: 'insider',
-    ticker: 'MSFT',
-    activity_score: 98,
+    id: 'G000596',
+    name: 'Marjorie Taylor Greene',
+    subtitle: 'בית הנציגים · רפובליקנית',
+    image_url: `${CONGRESS}/G000596.jpg`,
+    kind: 'politician',
+    activity_score: 90,
   },
   {
-    id: 'NVDA:Huang',
-    name: 'Jensen Huang',
-    subtitle: 'CEO · NVIDIA',
-    image_url: `${WIKI}/c/c4/Jensen_Huang_%28cropped%29.jpg`,
-    kind: 'insider',
-    ticker: 'NVDA',
-    activity_score: 97,
+    id: 'K000389',
+    name: 'Ro Khanna',
+    subtitle: 'בית הנציגים · דמוקרט',
+    image_url: `${CONGRESS}/K000389.jpg`,
+    kind: 'politician',
+    activity_score: 89,
   },
   {
-    id: 'META:Zuckerberg',
-    name: 'Mark Zuckerberg',
-    subtitle: 'CEO · Meta',
-    image_url: `${WIKI}/1/18/Mark_Zuckerberg_F8_2019_Keynote_%2832830578717%29_%28cropped%29.jpg`,
-    kind: 'insider',
-    ticker: 'META',
-    activity_score: 96,
+    id: 'M001157',
+    name: 'Michael McCaul',
+    subtitle: 'בית הנציגים · רפובליקני',
+    image_url: `${CONGRESS}/M001157.jpg`,
+    kind: 'politician',
+    activity_score: 88,
   },
   {
-    id: 'ORCL:Ellison',
-    name: 'Larry Ellison',
-    subtitle: 'Chairman · Oracle',
-    image_url: `${WIKI}/0/0e/Larry_Ellison_picture_%28cropped%29.png`,
-    kind: 'insider',
-    ticker: 'ORCL',
-    activity_score: 95,
+    id: 'W000802',
+    name: 'Sheldon Whitehouse',
+    subtitle: 'Senate · דמוקרט',
+    image_url: `${CONGRESS}/W000802.jpg`,
+    kind: 'politician',
+    activity_score: 87,
   },
-  // מנהלי קרנות — 13F
+  {
+    id: 'D000032',
+    name: 'Byron Donalds',
+    subtitle: 'בית הנציגים · רפובליקני',
+    image_url: `${CONGRESS}/D000032.jpg`,
+    kind: 'politician',
+    activity_score: 86,
+  },
+  {
+    id: 'M001190',
+    name: 'Markwayne Mullin',
+    subtitle: 'Senate · רפובליקני',
+    image_url: `${CONGRESS}/M001190.jpg`,
+    kind: 'politician',
+    activity_score: 85,
+  },
+  // ── מנהלי קרנות — 13F (snapshot; רענון via sync-fund-13f / sec-api) ──
   {
     id: '1067983',
     name: 'Warren Buffett',

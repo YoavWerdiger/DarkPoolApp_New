@@ -16,7 +16,7 @@
 // ---------------------------------------------------------------------------
 
 export type DarkPoolSide = 'buy' | 'sell' | 'unknown';
-export type DarkPoolProviderName = 'polygon' | 'unusualwhales' | 'intrinio' | 'mock';
+export type DarkPoolProviderName = 'polygon' | 'unusualwhales' | 'intrinio' | 'quiverquant' | 'mock';
 export type DarkPoolSignalType =
   | 'UNUSUAL_VOLUME'
   | 'SWEEP'
@@ -540,6 +540,114 @@ export async function fetchFromUnusualWhales(
     });
   }
   return { trades: out, lastTimestamp };
+}
+
+/**
+ * Quiver off-exchange — יומי OTC_Short/OTC_Total/DPI (לא prints בודדים כמו UW).
+ * ממלא dark_pool_trades אחרי מחיקת UW: size=OTC_Total, volume=OTC_Short, premium≈intensity.
+ */
+export async function fetchFromQuiverOffexchange(
+  apiKey: string,
+  sinceIso: string,
+  opts: { historicalTickers?: string[]; maxLiveRows?: number } = {}
+): Promise<ProviderFetch> {
+  const { fetchQuiverLiveOffexchange, fetchQuiverHistoricalOffexchange } = await import(
+    './quiverQuant.ts'
+  );
+  const sinceDay = sinceIso.slice(0, 10);
+  const rawRows: Array<Record<string, unknown>> = [];
+
+  try {
+    const live = await fetchQuiverLiveOffexchange(apiKey);
+    rawRows.push(...(live as unknown as Array<Record<string, unknown>>));
+    console.log('quiver live offexchange rows', live.length);
+  } catch (e) {
+    console.warn('quiver live offexchange', (e as Error).message);
+  }
+
+  const histTickers = (opts.historicalTickers ?? []).slice(0, 8);
+  for (const t of histTickers) {
+    try {
+      const hist = await fetchQuiverHistoricalOffexchange(apiKey, t);
+      // רק ~60 יום אחרונים למניעת OOM
+      rawRows.push(
+        ...(hist as unknown as Array<Record<string, unknown>>).slice(-60)
+      );
+      await new Promise((r) => setTimeout(r, 80));
+    } catch (e) {
+      console.warn(`quiver hist offexchange ${t}`, (e as Error).message);
+    }
+  }
+
+  const maxLive = Math.min(2000, Math.max(50, opts.maxLiveRows ?? 800));
+  const normalized = rawRows
+    .map((r) => normalizeOffExchangeRow(r))
+    .filter((r): r is NonNullable<typeof r> => r != null)
+    .filter((r) => !sinceDay || r.day >= sinceDay || histTickers.length > 0)
+    .sort((a, b) => b.otcTotal - a.otcTotal)
+    .slice(0, maxLive);
+
+  const out: NormalizedTrade[] = [];
+  let latest = 0;
+  const seen = new Set<string>();
+  for (const r of normalized) {
+    const ext = `quiver:offex:${r.ticker}:${r.day}`;
+    if (seen.has(ext)) continue;
+    seen.add(ext);
+    const ts = Date.parse(`${r.day}T20:00:00.000Z`);
+    if (!Number.isFinite(ts)) continue;
+    if (ts > latest) latest = ts;
+    const intensity = Number.isFinite(r.dpi)
+      ? Math.max(0, Math.min(1, r.dpi))
+      : r.otcTotal > 0
+        ? r.otcShort / r.otcTotal
+        : 0;
+    const premium = Math.round(r.otcTotal * (0.35 + intensity * 0.65));
+    out.push({
+      externalId: ext,
+      ticker: r.ticker,
+      companyName: null,
+      timestamp: ts,
+      price: Number.isFinite(r.dpi) ? Math.round(r.dpi * 10000) / 10000 : 0,
+      size: Math.round(r.otcTotal),
+      premium,
+      volume: Math.round(r.otcShort),
+      side: intensity >= 0.5 ? 'sell' : intensity > 0 ? 'buy' : 'unknown',
+      exchange: 'QUIVER_OTC',
+      marketCap: null,
+      provider: 'quiverquant',
+    });
+  }
+  console.log('quiver offexchange normalized', out.length);
+  return { trades: out, lastTimestamp: latest || null };
+}
+
+function normalizeOffExchangeRow(r: Record<string, unknown>): {
+  ticker: string;
+  day: string;
+  otcShort: number;
+  otcTotal: number;
+  dpi: number;
+} | null {
+  const ticker = String(r.Ticker ?? r.ticker ?? '')
+    .trim()
+    .toUpperCase();
+  const dayRaw = String(r.Date ?? r.date ?? r.Day ?? '').slice(0, 10);
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(dayRaw)
+    ? dayRaw
+    : new Date().toISOString().slice(0, 10);
+  if (!ticker || ticker.length > 6) return null;
+  const otcTotal = Number(r.OTC_Total ?? r.otc_total ?? r.OTCTotal ?? 0) || 0;
+  const otcShort = Number(r.OTC_Short ?? r.otc_short ?? r.OTCShort ?? 0) || 0;
+  const dpi = Number(r.DPI ?? r.dpi);
+  if (otcTotal <= 0 && otcShort <= 0) return null;
+  return {
+    ticker,
+    day,
+    otcShort,
+    otcTotal: otcTotal || otcShort,
+    dpi: Number.isFinite(dpi) ? dpi : NaN,
+  };
 }
 
 export async function fetchFromIntrinio(

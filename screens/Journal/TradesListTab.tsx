@@ -1,13 +1,17 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, StyleSheet, TextInput, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, StyleSheet, TextInput, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { CardSkeleton } from '../../components/ui/SkeletonLoader';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabase';
-import ShareTradeModal from './ShareTradeModal';
+import ShareDestinationSheet from '../../components/share/ShareDestinationSheet';
+import ExportTradeImage from '../../components/Journal/ExportTradeImage';
+import { buildTradeAttachment } from '../../types/shareableEntity';
+import type { ShareableAttachment } from '../../types/shareableEntity';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import type { Trade } from './tradeTypes';
@@ -42,7 +46,9 @@ export default function TradesListTab() {
     () => !queryClient.getQueryData<Trade[]>(appQueryKeys.trades(user?.id ?? 'anon'))
   );
   const [showShareModal, setShowShareModal] = useState(false);
-  const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
+  const [shareAttachment, setShareAttachment] = useState<ShareableAttachment | null>(null);
+  const [shareTrade, setShareTrade] = useState<Trade | null>(null);
+  const [showExportImage, setShowExportImage] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterId>('all');
   const styles = useMemo(() => createStyles(DesignTokens, mainTabsHeight), [DesignTokens, mainTabsHeight]);
@@ -125,7 +131,8 @@ export default function TradesListTab() {
   };
 
   const openShareForTrade = useCallback((item: Trade) => {
-    setSelectedTrade(item);
+    setShareTrade(item);
+    setShareAttachment(buildTradeAttachment(item));
     setShowShareModal(true);
   }, []);
 
@@ -200,8 +207,9 @@ export default function TradesListTab() {
   if (loading) {
     return (
       <View style={[styles.loadingContainer, styles.rtlRoot]}>
-        <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-        <Text style={styles.loadingText}>טוען טריידים...</Text>
+        {Array.from({ length: 4 }).map((_, i) => (
+          <CardSkeleton key={i} delay={i * 70} />
+        ))}
       </View>
     );
   }
@@ -281,9 +289,8 @@ export default function TradesListTab() {
                 paddingHorizontal: 14,
                 paddingVertical: 7,
                 borderRadius: 20,
-                borderWidth: 1,
-                borderColor: active ? DesignTokens.colors.primary.main : DesignTokens.colors.border.subtle,
-                backgroundColor: active ? 'rgba(0,200,5,0.12)' : 'rgba(255,255,255,0.04)',
+                borderWidth: 0,
+                backgroundColor: active ? 'rgba(0,200,5,0.12)' : DesignTokens.colors.background.cardSolid,
               }}
             >
               <Text style={{ fontSize: 12, fontWeight: '700', color: active ? DesignTokens.colors.primary.main : DesignTokens.colors.text.secondary }}>
@@ -374,13 +381,26 @@ export default function TradesListTab() {
         </View>
       )}
 
-      {/* Share Trade Modal */}
-      <ShareTradeModal
-        trade={selectedTrade}
-        visible={showShareModal}
+      <ShareDestinationSheet
+        visible={showShareModal && !!shareAttachment}
+        attachment={shareAttachment}
         onClose={() => {
           setShowShareModal(false);
-          setSelectedTrade(null);
+          setShareAttachment(null);
+        }}
+        onShareAsImage={() => {
+          setShowShareModal(false);
+          setShareAttachment(null);
+          setShowExportImage(true);
+        }}
+      />
+
+      <ExportTradeImage
+        trade={shareTrade}
+        visible={showExportImage && !!shareTrade}
+        onClose={() => {
+          setShowExportImage(false);
+          setShareTrade(null);
         }}
       />
 
@@ -422,8 +442,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
     paddingLeft: 10,
     borderRadius: tokens.borderRadius['3xl'],
     backgroundColor: tokens.colors.glass.card.bg,
-    borderWidth: 1,
-    borderColor: tokens.colors.glass.card.border,
+    borderWidth: 0,
+    borderColor: 'transparent',
     gap: 4,
   },
   searchLeadingIcon: {

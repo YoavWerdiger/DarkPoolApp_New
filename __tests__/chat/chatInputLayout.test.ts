@@ -7,7 +7,9 @@ import {
   CHAT_COMPOSER_KEYBOARD_GAP,
   CHAT_KEYBOARD_LTR_STYLE,
 } from '../../components/chat/chatInputLayout';
+import { lockAndroidChatSoftInput, releaseAndroidChatSoftInput, restoreAndroidSoftInputIfUnlocked } from '../../components/chat/androidChatKeyboard';
 import { Platform } from 'react-native';
+import { AndroidSoftInputModes, KeyboardController } from 'react-native-keyboard-controller';
 
 describe('chatComposerSafeBottomInset', () => {
   const originalOS = Platform.OS;
@@ -78,5 +80,62 @@ describe('chatComposerStickyOffset', () => {
 describe('CHAT_KEYBOARD_LTR_STYLE', () => {
   it('is an explicit ltr direction (never isRTL)', () => {
     expect(CHAT_KEYBOARD_LTR_STYLE).toEqual({ direction: 'ltr' });
+  });
+});
+
+describe('lockAndroidChatSoftInput', () => {
+  const originalOS = Platform.OS;
+
+  afterEach(() => {
+    Object.defineProperty(Platform, 'OS', { value: 'android' });
+    releaseAndroidChatSoftInput();
+    Object.defineProperty(Platform, 'OS', { value: originalOS });
+    jest.restoreAllMocks();
+  });
+
+  it('is a no-op on iOS', () => {
+    Object.defineProperty(Platform, 'OS', { value: 'ios' });
+    const spy = jest.spyOn(KeyboardController, 'setInputMode').mockImplementation(() => {});
+    lockAndroidChatSoftInput();
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('locks ADJUST_NOTHING on Android', () => {
+    Object.defineProperty(Platform, 'OS', { value: 'android' });
+    const spy = jest.spyOn(KeyboardController, 'setInputMode').mockImplementation(() => {});
+    lockAndroidChatSoftInput();
+    expect(spy).toHaveBeenCalledWith(AndroidSoftInputModes.SOFT_INPUT_ADJUST_NOTHING);
+  });
+});
+
+describe('restoreAndroidSoftInputIfUnlocked', () => {
+  const originalOS = Platform.OS;
+
+  afterEach(() => {
+    Object.defineProperty(Platform, 'OS', { value: 'android' });
+    releaseAndroidChatSoftInput();
+    Object.defineProperty(Platform, 'OS', { value: originalOS });
+    jest.restoreAllMocks();
+  });
+
+  it('re-asserts ADJUST_NOTHING while chat is locked', () => {
+    Object.defineProperty(Platform, 'OS', { value: 'android' });
+    const modeSpy = jest.spyOn(KeyboardController, 'setInputMode').mockImplementation(() => {});
+    const defaultSpy = jest.spyOn(KeyboardController, 'setDefaultMode').mockImplementation(() => {});
+    lockAndroidChatSoftInput();
+    modeSpy.mockClear();
+    restoreAndroidSoftInputIfUnlocked();
+    expect(modeSpy).toHaveBeenCalledWith(AndroidSoftInputModes.SOFT_INPUT_ADJUST_NOTHING);
+    expect(defaultSpy).not.toHaveBeenCalled();
+  });
+
+  it('restores default mode after release', () => {
+    Object.defineProperty(Platform, 'OS', { value: 'android' });
+    const defaultSpy = jest.spyOn(KeyboardController, 'setDefaultMode').mockImplementation(() => {});
+    lockAndroidChatSoftInput();
+    releaseAndroidChatSoftInput();
+    defaultSpy.mockClear();
+    restoreAndroidSoftInputIfUnlocked();
+    expect(defaultSpy).toHaveBeenCalled();
   });
 });

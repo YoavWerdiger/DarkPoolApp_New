@@ -3,23 +3,18 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { appQueryKeys } from '../lib/appQueryKeys';
 
-/** Roles שנחשבים אדמין לצורך פעולות ניהול (כמו יצירת חדשות). */
-const ADMIN_ROLES = new Set(['admin', 'super_admin']);
-
 export interface IsAdminInfo {
   isAdmin: boolean;
   isLoading: boolean;
 }
 
 async function fetchIsAdmin(): Promise<boolean> {
-  // subscription_role לא קריא ל-`authenticated` על public.users; הפרופיל
-  // של המשתמש עצמו מגיע מ-RPC שנעול על auth.uid().
-  const { data: rows, error } = await supabase.rpc('get_my_profile');
-  const data = Array.isArray(rows) ? rows[0] : rows;
-
-  if (error || !data) return false;
-  const role = String(data.subscription_role || '').toLowerCase();
-  return ADMIN_ROLES.has(role);
+  // subscription_role לא קריא ל-authenticated על public.users (column privilege).
+  // get_my_profile מחזיר SETOF users ולכן PostgREST מסתיר את העמודה מהלקוח.
+  // is_app_admin הוא אותו תנאי ש-RLS משתמש בו.
+  const { data, error } = await supabase.rpc('is_app_admin');
+  if (error) return false;
+  return !!data;
 }
 
 /**

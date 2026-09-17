@@ -1,6 +1,6 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Dimensions, Keyboard, Image, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, ActivityIndicator, Pressable, ScrollView, ImageBackground, Animated, Easing } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Dimensions, Keyboard, Image, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, ActivityIndicator, Pressable, ScrollView, Animated, Easing } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
@@ -11,10 +11,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { ScreenGradientBackground } from '../../components/VideoBackground';
-import { SUPABASE_URL } from '../../config/publicEnv';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 const WELCOME_LOGO_URI = 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/app-media/image%20(3).png';
 
 // ─── Reusable input ────────────────────────────────────────────────────────
@@ -221,24 +220,6 @@ export default function LoginScreen({ navigation }: any) {
       >
         <View style={{ flex: 1, backgroundColor: colors.background.primary }}>
           <ScreenGradientBackground />
-          <View
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              justifyContent: 'center',
-              alignItems: 'center',
-              opacity: 0.12,
-            }}
-          >
-            <ImageBackground
-              source={{ uri: `${SUPABASE_URL}/storage/v1/object/public/backgrounds/transback.png` }}
-              style={{ width: width * 1.45, height: height * 1.45 }}
-              imageStyle={{ resizeMode: 'contain' }}
-            />
-          </View>
 
           <SafeAreaView style={{ flex: 1 }}>
             <ScrollView

@@ -1,21 +1,37 @@
 /**
- * כרטיס עסקה בפיד — קומפקטי:
- * [אווטאר] שם                         זמן
- *           קנייה · NVDA · $1,001–$15,000
+ * שורת עסקה בפיד — שלוש שכבות בעלות רוחב יציב:
+ *
+ *   [דיוקן]  שם האדם                                    ← יעד הקשה: פרופיל האדם
+ *            נחשף לפני 22 שעות · בוצע לפני 4 שבועות      ← עיכוב הדיווח
+ *   קנה את $NVDA · בשווי: $15K–$50K                      ← עד 2 שורות, ellipsis
+ *   ┌ [לוגו] $NVDA · $231.40 ······· מאז העסקה +24.1% ┐  ← פס מידע, לא לחיץ
+ *
+ * הקשה על הכרטיס פותחת את פרטי העסקה; הקשה על הדיוקן/השם פותחת את הפרופיל.
+ * פס הטיקר אינפורמטיבי בלבד — אין ניווט לתיק המניה (הוסר בכוונה).
  */
 
-import React, { memo, useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useMemo } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
 import { DarkPoolFeedCard } from './DarkPoolFeedCard';
-import { InvestorPortrait } from './InvestorPortrait';
-import { formatRelativeTime } from '../utils/darkPoolFormat';
+import { InsiderAvatar } from './InsiderAvatar';
+import { darkPoolTextRtl } from '../darkPoolLayout';
 import { formatInsiderDisplayName } from '../utils/investorPlaceholder';
-import { getFeedTradeSide, getFeedTradeVerb } from '../utils/feedTradeDisplay';
+import { toDataIsland } from '../utils/bidi';
+import {
+  buildDualDateLine,
+  formatReturnPct,
+  returnTone,
+} from '../utils/congressTradeDisplay';
+import {
+  formatFeedTickerDisplay,
+  getFeedTradeSide,
+  getFeedTradeVerb,
+} from '../utils/feedTradeDisplay';
 
-/** Left-to-right mark — שומר טיקר/$ בלי ערבוב RTL */
-const LRM = '\u200E';
+/** רוחב קבוע לעמודת התשואה — שם עברי ארוך לא יכול לדחוף אותה החוצה. */
+const RETURN_COL_WIDTH = 86;
 
 interface Props {
   ticker: string;
@@ -24,24 +40,34 @@ interface Props {
   sharesLabel?: string | null;
   amountLabel?: string | null;
   filedAt: string;
-  sinceTradePct?: number | null;
-  onPress?: () => void;
-  personImageUrl?: string | null;
-  personId?: string;
+  /** תאריך ביצוע — מפעיל את שורת התאריך הכפול */
+  transactionDate?: string | null;
+  /** שינוי מחיר מאז יום העסקה, באחוזים. null = לא מוצג (לעולם לא 0 מזויף). */
+  changeSinceTradePct?: number | null;
+  /** מחיר מניה נוכחי מה-quote; null = הפס מציג רק את הטיקר */
+  currentPrice?: number | null;
+  portraitUrl?: string | null;
+  /** פרופיל האדם */
+  onPersonPress?: () => void;
+  /** פרטי העסקה — יעד ההקשה הראשי של הכרטיס */
+  onCardPress?: () => void;
   personKind?: 'politician' | 'insider';
 }
 
-export const DarkPoolTradeFeedCard = memo(function DarkPoolTradeFeedCard({
+/** function (לא memo) — יציב ל־Fast Refresh אחרי החלפת לוגו/ExpoImage */
+export function DarkPoolTradeFeedCard({
   ticker,
   personName,
   transactionType,
   sharesLabel,
   amountLabel,
   filedAt,
-  sinceTradePct,
-  onPress,
-  personImageUrl,
-  personId,
+  transactionDate,
+  changeSinceTradePct,
+  currentPrice,
+  portraitUrl,
+  onPersonPress,
+  onCardPress,
   personKind = 'insider',
 }: Props) {
   const tokens = useDesignTokens();
@@ -52,162 +78,225 @@ export const DarkPoolTradeFeedCard = memo(function DarkPoolTradeFeedCard({
   const displayName =
     personKind === 'insider' ? formatInsiderDisplayName(personName) : personName;
   const sideColor = isBuy ? tokens.colors.primary.main : tokens.colors.text.danger;
-  const tickerSym = ticker.toUpperCase();
+  const tickerSym = formatFeedTickerDisplay(ticker);
+  const kindLabel = personKind === 'politician' ? 'קונגרס' : 'בכיר';
 
-  const sincePctText =
-    sinceTradePct == null
-      ? null
-      : `${sinceTradePct >= 0 ? '+' : ''}${(sinceTradePct * 100).toFixed(1)}%`;
+  const dates = useMemo(
+    () => buildDualDateLine({ filedAt, transactionDate }),
+    [filedAt, transactionDate]
+  );
+
+  const changeText = formatReturnPct(changeSinceTradePct);
+  const tone = returnTone(changeSinceTradePct);
+  const changeColor =
+    tone === 'positive'
+      ? tokens.colors.primary.main
+      : tone === 'negative'
+        ? tokens.colors.text.danger
+        : tokens.colors.text.secondary;
+
+  const priceText =
+    currentPrice != null && Number.isFinite(currentPrice) && currentPrice > 0
+      ? `$${currentPrice.toFixed(2)}`
+      : null;
+
+  const detailParts = [sharesLabel, amountLabel, kindLabel].filter(Boolean) as string[];
+  const showStrip = Boolean(priceText || changeText);
 
   const a11y = [
     displayName,
+    dates.text,
     verb,
-    sharesLabel,
     tickerSym,
+    sharesLabel,
     amountLabel,
-    sincePctText,
-    formatRelativeTime(filedAt),
+    kindLabel,
+    changeText ? `מאז העסקה ${changeText}` : null,
   ]
     .filter(Boolean)
     .join(', ');
 
   return (
-    <DarkPoolFeedCard onPress={onPress} accessibilityLabel={a11y}>
-      <View style={styles.row}>
-        <View style={styles.avatarCol}>
-          <InvestorPortrait
-            name={displayName}
-            imageUrl={personImageUrl}
-            kind={personKind}
-            personId={personId}
-            ticker={ticker}
-            layout="circle"
-            size={40}
-          />
-          <View style={styles.tickerBadge}>
-            <TickerLogo symbol={ticker} size={18} borderRadius={9} />
-          </View>
-        </View>
-
-        <View style={styles.main}>
-          <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
-            {displayName}
-          </Text>
-          <Text style={styles.sub} numberOfLines={1} ellipsizeMode="tail">
-            <Text style={{ color: sideColor, fontWeight: '800' }}>{verb}</Text>
-            {sharesLabel ? (
-              <Text style={styles.muted}>{` · ${sharesLabel}`}</Text>
-            ) : null}
-            <Text style={styles.muted}>{' · '}</Text>
-            <Text style={styles.ticker}>
-              {LRM}
-              {tickerSym}
+    <DarkPoolFeedCard onPress={onCardPress ?? onPersonPress} accessibilityLabel={a11y}>
+      <View style={styles.personRow}>
+        <Pressable
+          onPress={onPersonPress}
+          disabled={!onPersonPress}
+          accessibilityRole={onPersonPress ? 'button' : undefined}
+          accessibilityLabel={onPersonPress ? `פרופיל ${displayName}` : undefined}
+          hitSlop={6}
+          style={styles.personTarget}
+        >
+          <InsiderAvatar name={displayName} logoUrl={portraitUrl} size={40} />
+          <View style={styles.personText}>
+            <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
+              {displayName}
             </Text>
-            {amountLabel ? (
-              <Text style={styles.muted}>
-                {' · '}
-                {LRM}
-                {amountLabel}
+            {dates.text ? (
+              <Text style={styles.dates} numberOfLines={1} ellipsizeMode="tail">
+                {dates.text}
               </Text>
             ) : null}
-          </Text>
-        </View>
-
-        <View style={styles.meta}>
-          {sincePctText ? (
-            <Text
-              style={[
-                styles.since,
-                {
-                  color:
-                    sinceTradePct! >= 0
-                      ? tokens.colors.primary.main
-                      : tokens.colors.text.danger,
-                },
-              ]}
-              numberOfLines={1}
-            >
-              {sincePctText}
-            </Text>
-          ) : null}
-          <Text style={styles.time} numberOfLines={1}>
-            {formatRelativeTime(filedAt)}
-          </Text>
-        </View>
+          </View>
+        </Pressable>
       </View>
+
+      <Text style={styles.action} numberOfLines={2} ellipsizeMode="tail">
+        <Text style={{ color: sideColor, fontWeight: '800' }}>{verb} את </Text>
+        <Text style={styles.ticker}>{toDataIsland(tickerSym)}</Text>
+        {detailParts.length > 0 ? (
+          <Text style={styles.actionMeta}>
+            {` · ${detailParts
+              .map((part) => (/\$|\d/.test(part) ? toDataIsland(part) : part))
+              .join(' · ')}`}
+          </Text>
+        ) : null}
+      </Text>
+
+      {showStrip ? (
+        <View style={styles.strip} accessibilityRole="summary">
+          <View style={styles.stripStart}>
+            <TickerLogo symbol={ticker} size={18} borderRadius={9} />
+            <Text style={styles.stripTicker} numberOfLines={1}>
+              {toDataIsland(tickerSym)}
+            </Text>
+            {priceText ? (
+              <Text style={styles.stripPrice} numberOfLines={1}>
+                {toDataIsland(priceText)}
+              </Text>
+            ) : null}
+          </View>
+          {changeText ? (
+            <View style={styles.stripEnd}>
+              <Text style={styles.stripLabel} numberOfLines={1}>
+                מאז העסקה
+              </Text>
+              <Text
+                style={[styles.stripChange, { color: changeColor }]}
+                numberOfLines={1}
+              >
+                {toDataIsland(changeText)}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
     </DarkPoolFeedCard>
   );
-});
+}
 
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
-    row: {
+    personRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      width: '100%',
+    },
+    personTarget: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 10,
-    },
-    avatarCol: {
-      width: 40,
-      height: 40,
-      position: 'relative',
-      flexShrink: 0,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    tickerBadge: {
-      position: 'absolute',
-      bottom: -2,
-      end: -2,
-      borderRadius: 10,
-      borderWidth: 2,
-      borderColor: tokens.colors.background.primary,
-      backgroundColor: '#FFFFFF',
-      overflow: 'hidden',
-    },
-    main: {
       flex: 1,
+      flexBasis: 0,
       minWidth: 0,
-      gap: 2,
+    },
+    personText: {
+      flex: 1,
+      flexBasis: 0,
+      minWidth: 0,
+      gap: 1,
     },
     name: {
-      fontSize: 14,
-      fontWeight: '700',
+      ...darkPoolTextRtl,
+      fontSize: tokens.typography.subhead.size,
+      lineHeight: 20,
+      fontWeight: tokens.typography.fontWeight.bold,
       color: tokens.colors.text.primary,
-      textAlign: 'left',
     },
-    sub: {
-      fontSize: 12,
-      fontWeight: '500',
-      color: tokens.colors.text.secondary,
-      textAlign: 'left',
+    dates: {
+      ...darkPoolTextRtl,
+      fontSize: tokens.typography.caption2.size,
+      lineHeight: 15,
+      fontWeight: tokens.typography.fontWeight.medium,
+      color: tokens.colors.text.tertiary,
+    },
+    action: {
+      ...darkPoolTextRtl,
+      marginTop: 8,
+      fontSize: tokens.typography.subhead.size,
+      lineHeight: 20,
+      fontWeight: tokens.typography.fontWeight.bold,
+      color: tokens.colors.text.primary,
     },
     ticker: {
-      fontWeight: '800',
+      fontWeight: tokens.typography.fontWeight.extrabold,
       color: tokens.colors.text.primary,
       letterSpacing: 0.2,
     },
-    muted: {
-      color: tokens.colors.text.tertiary,
-      fontWeight: '500',
+    actionMeta: {
+      fontSize: tokens.typography.caption.size,
+      fontWeight: tokens.typography.fontWeight.medium,
+      color: tokens.colors.text.secondary,
     },
-    meta: {
+    strip: {
+      marginTop: 8,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 8,
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      borderRadius: tokens.borderRadius.lg,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: tokens.colors.border.subtle,
+      backgroundColor: tokens.colors.glass.card.bg,
+    },
+    stripStart: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      flex: 1,
+      flexBasis: 0,
+      minWidth: 0,
+    },
+    stripTicker: {
+      fontSize: tokens.typography.caption.size,
+      fontWeight: tokens.typography.fontWeight.extrabold,
+      color: tokens.colors.text.primary,
+      writingDirection: 'ltr',
+      letterSpacing: 0.2,
+    },
+    stripPrice: {
+      fontSize: tokens.typography.caption.size,
+      fontWeight: tokens.typography.fontWeight.medium,
+      color: tokens.colors.text.secondary,
+      fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
+    },
+    stripEnd: {
       alignItems: 'flex-end',
       justifyContent: 'center',
-      gap: 2,
+      width: RETURN_COL_WIDTH,
+      minWidth: RETURN_COL_WIDTH,
+      maxWidth: RETURN_COL_WIDTH,
+      flexGrow: 0,
       flexShrink: 0,
-      maxWidth: 88,
     },
-    since: {
-      fontSize: 13,
-      fontWeight: '800',
-      fontVariant: ['tabular-nums'],
-      textAlign: 'right',
-    },
-    time: {
-      fontSize: 11,
-      fontWeight: '500',
+    stripLabel: {
+      fontSize: tokens.typography.caption2.size,
+      lineHeight: 13,
+      fontWeight: tokens.typography.fontWeight.medium,
       color: tokens.colors.text.tertiary,
       textAlign: 'right',
+      writingDirection: 'rtl',
+    },
+    stripChange: {
+      fontSize: tokens.typography.footnote.size,
+      lineHeight: 17,
+      fontWeight: tokens.typography.fontWeight.extrabold,
+      fontVariant: ['tabular-nums'],
+      textAlign: 'right',
+      writingDirection: 'ltr',
     },
   });
 }

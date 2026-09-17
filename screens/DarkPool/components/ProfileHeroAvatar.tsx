@@ -1,10 +1,14 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import { Image, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import React, { memo, useCallback, useMemo, useState } from 'react';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
-import { portraitPhotoCandidates } from '../utils/investorPlaceholder';
+import {
+  portraitDisplayUrl,
+  portraitPhotoCandidates,
+} from '../utils/investorPlaceholder';
 
 interface Props {
   name: string;
@@ -19,15 +23,11 @@ interface Props {
   style?: StyleProp<ViewStyle>;
 }
 
-function circle(n: number) {
-  return { width: n, height: n, borderRadius: n / 2 };
-}
-
 /**
- * אווטאר גיבור לפרופיל — תמונה אמיתית, לוגו טיקר לבכירים, אייקון לקרנות.
- * לא משתמש ב-transback חתוך (נראה שבור באווטאר עגול).
+ * אווטאר גיבור לפרופיל — עיגול אמיתי (גודל קבוע + borderRadius=size/2).
+ * שכבה חיצונית = טבעת ירוקה; שכבה פנימית = clip לתמונה (overflow + borderRadius על Image).
  */
-export function ProfileHeroAvatar({
+function ProfileHeroAvatarInner({
   name,
   imageUrl,
   imageHint,
@@ -54,7 +54,10 @@ export function ProfileHeroAvatar({
     [imageUrl, imageHint, kind, personId, bioguideId, name, failed]
   );
 
-  const activeUri = candidates[0] ?? null;
+  const rawUri = candidates[0] ?? null;
+  const activeUri = rawUri
+    ? portraitDisplayUrl(rawUri, Math.max(256, size * 3)) ?? rawUri
+    : null;
 
   const onPhotoError = useCallback((uri: string) => {
     setFailed((prev) => {
@@ -65,45 +68,82 @@ export function ProfileHeroAvatar({
     });
   }, []);
 
-  /** טבעת דקה מאוד — בלי “מסגרת עבה” */
+  /** טבעת דקה — הגודל החיצוני קבוע; הפנים נחתכים בעיגול נפרד */
   const RING = 1.5;
-  const INNER = Math.max(1, size - RING * 2);
+  const OUTER = size;
+  const INNER = Math.max(1, OUTER - RING * 2);
+  const outerR = OUTER / 2;
+  const innerR = INNER / 2;
 
   const ringStyle = useMemo(
     () => [
-      circle(size),
-      styles.ring,
       {
+        width: OUTER,
+        height: OUTER,
+        borderRadius: outerR,
         borderWidth: RING,
         borderColor: tokens.colors.primary.main,
+        backgroundColor: '#0f160f',
+        alignItems: 'center' as const,
+        justifyContent: 'center' as const,
       },
       style,
     ],
-    [size, style, tokens.colors.primary.main]
+    [OUTER, outerR, style, tokens.colors.primary.main]
+  );
+
+  const clipStyle = useMemo(
+    () => ({
+      width: INNER,
+      height: INNER,
+      borderRadius: innerR,
+      overflow: 'hidden' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      backgroundColor: '#0a0e0a',
+    }),
+    [INNER, innerR]
+  );
+
+  const imageStyle = useMemo(
+    () => ({
+      width: INNER,
+      height: INNER,
+      borderRadius: innerR,
+    }),
+    [INNER, innerR]
   );
 
   if (activeUri) {
     return (
       <View style={ringStyle}>
-        <Image
-          source={{ uri: activeUri }}
-          style={circle(INNER)}
-          resizeMode="cover"
-          onError={() => onPhotoError(activeUri)}
-          accessibilityLabel={name}
-        />
+        <View style={clipStyle} collapsable={false}>
+          <Image
+            source={{ uri: activeUri }}
+            style={imageStyle}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            recyclingKey={personId || name || activeUri}
+            priority="high"
+            transition={0}
+            onError={() => onPhotoError(rawUri!)}
+            accessibilityLabel={name}
+          />
+        </View>
       </View>
     );
   }
 
   if (kind === 'insider' && ticker) {
     return (
-      <View style={[ringStyle, styles.logoWrap]}>
-        <TickerLogo
-          symbol={ticker}
-          size={Math.round(INNER * 0.72)}
-          borderRadius={Math.round(INNER * 0.16)}
-        />
+      <View style={ringStyle}>
+        <View style={clipStyle} collapsable={false}>
+          <TickerLogo
+            symbol={ticker}
+            size={Math.round(INNER * 0.72)}
+            borderRadius={Math.round(INNER * 0.16)}
+          />
+        </View>
       </View>
     );
   }
@@ -117,32 +157,25 @@ export function ProfileHeroAvatar({
 
   return (
     <View style={ringStyle}>
-      <LinearGradient
-        colors={['#1a261a', '#0f160f', '#0a0e0a']}
-        style={[circle(INNER), styles.iconBg]}
-      >
-        <Ionicons
-          name={iconName}
-          size={Math.round(INNER * 0.38)}
-          color="rgba(255,255,255,0.55)"
-        />
-      </LinearGradient>
+      <View style={clipStyle} collapsable={false}>
+        <LinearGradient
+          colors={['#1a261a', '#0f160f', '#0a0e0a']}
+          style={[imageStyle, styles.iconBg]}
+        >
+          <Ionicons
+            name={iconName}
+            size={Math.round(INNER * 0.38)}
+            color="rgba(255,255,255,0.55)"
+          />
+        </LinearGradient>
+      </View>
     </View>
   );
 }
 
+export const ProfileHeroAvatar = memo(ProfileHeroAvatarInner);
+
 const styles = StyleSheet.create({
-  ring: {
-    overflow: 'hidden',
-    backgroundColor: '#0f160f',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#0a0e0a',
-  },
   iconBg: {
     alignItems: 'center',
     justifyContent: 'center',

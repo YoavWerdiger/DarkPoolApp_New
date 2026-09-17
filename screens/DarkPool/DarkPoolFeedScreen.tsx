@@ -2,14 +2,14 @@
  * פיד ראשי — קונגרס + בכירי חברות (Insider Wave style).
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
+  FlatList,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   View,
+  type ListRenderItem,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,6 +17,7 @@ import { ScreenChrome } from '../../components/ui/ScreenChrome';
 import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHeader';
 import UICard from '../../components/ui/UICard';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { TradeCardSkeleton } from '../../components/ui/SkeletonLoader';
 import { useDarkPoolTabBarHeight } from '../../hooks/useDarkPoolTabBarHeight';
 import {
   dispatchOpenMainDrawer,
@@ -30,12 +31,21 @@ import { DarkPoolTabToggle } from './components/DarkPoolTabToggle';
 import { useCongressFeed } from '../../hooks/useCongressFeed';
 import { useDarkPoolInsiderFeed } from '../../hooks/useDarkPoolInsiderFeed';
 import type { DarkPoolFeedTab } from '../../hooks/useDarkPoolInsiderFeed';
-import { DARK_POOL_SEC_PRODUCTION } from '../../types/darkpool.types';
+import {
+  DARK_POOL_SEC_PRODUCTION,
+  DARK_POOL_FEED_LIMIT,
+} from '../../types/darkpool.types';
+import { prefetchTickerLogos } from '../../utils/prefetchTickerLogos';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { DarkPoolTabParamList } from '../../navigation/DarkPoolTabs';
+import type { CongressTradeFeedItem } from './utils/congressFeedCalc';
+import type { InsiderTradeFeedItem } from './utils/insiderFeedCalc';
+import { hebrewText, toDataIsland } from './utils/bidi';
 
-const FEED_LIMIT = 50;
+type FeedRow =
+  | { kind: 'congress'; key: string; item: CongressTradeFeedItem }
+  | { kind: 'insider'; key: string; item: InsiderTradeFeedItem };
 
 export default function DarkPoolFeedScreen() {
   const tokens = useDesignTokens();
@@ -46,15 +56,25 @@ export default function DarkPoolFeedScreen() {
     DARK_POOL_SEC_PRODUCTION ? 'all' : 'congress'
   );
 
-  const congress = useCongressFeed(FEED_LIMIT, segment === 'congress');
+  const congress = useCongressFeed(DARK_POOL_FEED_LIMIT, segment === 'congress');
   const insiders = useDarkPoolInsiderFeed({
     tab: 'all',
-    limit: FEED_LIMIT,
+    limit: DARK_POOL_FEED_LIMIT,
     enabled: segment === 'all',
   });
 
   const active = segment === 'congress' ? congress : insiders;
-  const loading = active.loading && (segment === 'congress' ? congress.trades.length === 0 : insiders.trades.length === 0);
+  const loading =
+    active.loading &&
+    (segment === 'congress' ? congress.trades.length === 0 : insiders.trades.length === 0);
+
+  useEffect(() => {
+    const tickers =
+      segment === 'congress'
+        ? congress.trades.map((t) => t.trade.ticker)
+        : insiders.trades.map((t) => t.trade.ticker);
+    prefetchTickerLogos(tickers);
+  }, [segment, congress.trades, insiders.trades]);
 
   const openDrawer = useCallback(() => {
     void triggerDrawerMenuHaptic();
@@ -64,13 +84,6 @@ export default function DarkPoolFeedScreen() {
       /* noop */
     }
   }, [navigation]);
-
-  const goToTicker = useCallback(
-    (ticker: string) => {
-      navigation.navigate('DarkPoolTicker', { ticker, tab: 'insider' });
-    },
-    [navigation]
-  );
 
   const openPolitician = useCallback(
     (politicianId: string, name?: string, image?: string | null) => {
@@ -96,6 +109,13 @@ export default function DarkPoolFeedScreen() {
     [navigation]
   );
 
+  const openTradeDetail = useCallback(
+    (trade: CongressTradeFeedItem['trade']) => {
+      navigation.navigate('DarkPoolTradeDetail', { trade });
+    },
+    [navigation]
+  );
+
   const goToExplore = useCallback(() => {
     tabNav.navigate('DarkPoolExplore');
   }, [tabNav]);
@@ -111,7 +131,102 @@ export default function DarkPoolFeedScreen() {
   const styles = useMemo(() => createStyles(tokens, bottomPad), [tokens, bottomPad]);
 
   const subtitle =
-    segment === 'congress' ? 'עסקאות חברי קונגרס' : 'רכישות בכירי חברות · Form 4';
+    segment === 'congress'
+      ? `עסקאות קונגרס · ${toDataIsland('Quiver')} · כל ${toDataIsland('~20m')}`
+      : `בכירים · ${toDataIsland('Quiver + Form 4')} · ${toDataIsland('3x')} ביום מסחר`;
+
+  const rows = useMemo((): FeedRow[] => {
+    if (segment === 'congress') {
+      return congress.trades.map((item, index) => ({
+        kind: 'congress' as const,
+        key: `${item.trade.id}:${item.trade.filed_at}:${index}`,
+        item,
+      }));
+    }
+    return insiders.trades.map((item) => ({
+      kind: 'insider' as const,
+      key: `${item.trade.source}-${item.trade.id}`,
+      item,
+    }));
+  }, [segment, congress.trades, insiders.trades]);
+
+  const renderItem: ListRenderItem<FeedRow> = useCallback(
+    ({ item: row }) =>
+      row.kind === 'congress' ? (
+        <CongressTradeCard
+          item={row.item}
+          onPersonPress={(pid) => {
+            const t = row.item.trade;
+            openPolitician(pid, t.politician_name, t.politician_image_url);
+          }}
+          onDetailPress={() => openTradeDetail(row.item.trade)}
+        />
+      ) : (
+        <InsiderTradeCard
+          item={row.item}
+          onPersonPress={(personId, name) =>
+            openInsider(personId, name, row.item.trade.ticker)
+          }
+        />
+      ),
+    [openPolitician, openInsider, openTradeDetail]
+  );
+
+  const listHeader = useMemo(
+    () => (
+      <View style={styles.listHeader}>
+        <DarkPoolTabToggle
+          value={segment}
+          onChange={setSegment}
+          hideWatchlist
+          hideFollowing
+        />
+        {active.error ? (
+          <UICard variant="glass" glassIntensity="light" padding="md" style={styles.errorCard}>
+            <Text style={styles.errorText}>{active.error}</Text>
+            <Text style={styles.errorHint}>משוך למטה לרענון.</Text>
+          </UICard>
+        ) : null}
+      </View>
+    ),
+    [segment, active.error, styles]
+  );
+
+  const listEmpty = useMemo(() => {
+    if (loading) return null;
+    if (segment === 'congress') {
+      return (
+        <UICard variant="glass" glassIntensity="light" padding="lg" style={styles.emptyCard}>
+          <Text style={styles.emptyTitle}>אין עסקאות קונגרס</Text>
+          <Text style={styles.emptyBody}>
+            עדיין לא הגיעו דיווחי STOCK Act. משוך למטה לרענון — הנתונים מ־Quiver, מסונכרנים לשרת כל ~20 ד׳ (לא webhook חי).
+          </Text>
+          <Text style={styles.emptyLink} onPress={goToExplore}>
+            חפש לוויתנים
+          </Text>
+        </UICard>
+      );
+    }
+    return (
+      <UICard variant="glass" glassIntensity="light" padding="lg" style={styles.emptyCard}>
+        <Text style={styles.emptyTitle}>אין רכישות בכירים</Text>
+        <Text style={styles.emptyBody}>
+          אין עדיין רכישות בכירים. משוך למטה לרענון — הנתונים מ־Quiver (+ Form 4 / SEC), מסונכרנים כמה פעמים ביום מסחר.
+        </Text>
+      </UICard>
+    );
+  }, [loading, segment, styles, goToExplore]);
+
+  const loadingSkeleton = useMemo(() => {
+    if (!loading) return null;
+    return (
+      <View style={styles.scrollContent}>
+        {Array.from({ length: 6 }).map((_, i) => (
+          <TradeCardSkeleton key={i} delay={i * 70} />
+        ))}
+      </View>
+    );
+  }, [loading, styles]);
 
   if (loading) {
     return (
@@ -124,17 +239,14 @@ export default function DarkPoolFeedScreen() {
             subtitle={subtitle}
             onMenuPress={openDrawer}
           />
-          <View style={styles.center}>
-            <ActivityIndicator color={tokens.colors.primary.main} />
-            <Text style={styles.loadingHint}>טוען עסקאות…</Text>
-          </View>
+          {loadingSkeleton}
         </SafeAreaView>
       </ScreenChrome>
     );
   }
 
   return (
-    <ScreenChrome rtl withBrandWatermark>
+    <ScreenChrome rtl>
       <StatusBar style="light" />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <MainDrawerScreenHeader
@@ -143,8 +255,19 @@ export default function DarkPoolFeedScreen() {
           subtitle={subtitle}
           onMenuPress={openDrawer}
         />
-        <ScrollView
+        <FlatList
+          data={rows}
+          keyExtractor={(row) => row.key}
+          renderItem={renderItem}
+          ListHeaderComponent={listHeader}
+          ListEmptyComponent={listEmpty}
           contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          initialNumToRender={10}
+          maxToRenderPerBatch={8}
+          windowSize={7}
+          updateCellsBatchingPeriod={40}
+          removeClippedSubviews
           refreshControl={
             <RefreshControl
               refreshing={active.refreshing}
@@ -152,64 +275,7 @@ export default function DarkPoolFeedScreen() {
               tintColor={tokens.colors.primary.main}
             />
           }
-          showsVerticalScrollIndicator={false}
-        >
-          <DarkPoolTabToggle
-            value={segment}
-            onChange={setSegment}
-            hideWatchlist
-            hideFollowing
-          />
-
-          {active.error ? (
-            <UICard variant="outlined" padding="md" style={styles.errorCard}>
-              <Text style={styles.errorText}>{active.error}</Text>
-              <Text style={styles.errorHint}>משוך למטה לרענון.</Text>
-            </UICard>
-          ) : null}
-
-          {segment === 'congress' ? (
-            congress.trades.length === 0 ? (
-              <UICard variant="outlined" padding="lg" style={styles.emptyCard}>
-                <Text style={styles.emptyTitle}>אין עסקאות קונגרס</Text>
-                <Text style={styles.emptyBody}>
-                  עדיין לא הגיעו דיווחי STOCK Act. משוך למטה לרענון — הנתונים מגיעים מדיווחים ציבוריים בלבד.
-                </Text>
-                <Text style={styles.emptyLink} onPress={goToExplore}>
-                  חפש אנשים ←
-                </Text>
-              </UICard>
-            ) : (
-              congress.trades.map((item, index) => (
-                <CongressTradeCard
-                  key={`${item.trade.id}:${item.trade.filed_at}:${index}`}
-                  item={item}
-                  onPersonPress={(pid) => {
-                    const t = item.trade;
-                    openPolitician(pid, t.politician_name, t.politician_image_url);
-                  }}
-                />
-              ))
-            )
-          ) : insiders.trades.length === 0 ? (
-            <UICard variant="outlined" padding="lg" style={styles.emptyCard}>
-              <Text style={styles.emptyTitle}>אין רכישות בכירים</Text>
-              <Text style={styles.emptyBody}>
-                אין עדיין רכישות Form 4. משוך למטה לרענון — הנתונים נטענים מ-SEC / Form4API.
-              </Text>
-            </UICard>
-          ) : (
-            insiders.trades.map((item) => (
-              <InsiderTradeCard
-                key={`${item.trade.source}-${item.trade.id}`}
-                item={item}
-                onPersonPress={(personId, name) =>
-                  openInsider(personId, name, item.trade.ticker)
-                }
-              />
-            ))
-          )}
-        </ScrollView>
+        />
       </SafeAreaView>
     </ScreenChrome>
   );
@@ -221,61 +287,64 @@ function createStyles(
 ) {
   return StyleSheet.create({
     scrollContent: {
-      direction: 'rtl',
       paddingHorizontal: tokens.layout.screenPadding,
       paddingBottom: bottomPadding + 32,
       paddingTop: 4,
+      direction: 'rtl',
     },
-    center: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 12,
-    },
-    loadingHint: {
-      fontSize: 13,
-      color: tokens.colors.text.tertiary,
+    listHeader: {
+      direction: 'rtl',
     },
     errorCard: {
       marginBottom: tokens.spacing.md,
       borderColor: tokens.colors.border.danger,
     },
     errorText: {
+      ...hebrewText,
       color: tokens.colors.text.danger,
-      fontSize: 14,
-      fontWeight: '700',
-      textAlign: 'left',
+      fontSize: tokens.typography.subhead.size,
+      lineHeight: tokens.typography.subhead.lineHeight,
+      fontWeight: tokens.typography.fontWeight.bold,
+      letterSpacing: tokens.typography.letterSpacing.normal,
     },
     errorHint: {
+      ...hebrewText,
       marginTop: 8,
-      fontSize: 12,
+      fontSize: tokens.typography.footnote.size,
+      lineHeight: tokens.typography.footnote.lineHeight,
+      fontWeight: tokens.typography.footnote.weight,
+      letterSpacing: tokens.typography.footnote.letterSpacing,
       color: tokens.colors.text.tertiary,
-      textAlign: 'left',
-      lineHeight: 18,
     },
     emptyCard: {
       marginTop: tokens.spacing.sm,
-      alignItems: 'flex-start',
+      alignItems: 'flex-end',
     },
     emptyTitle: {
-      fontSize: 16,
-      fontWeight: '800',
+      ...hebrewText,
+      fontSize: tokens.typography.titleXs.size,
+      lineHeight: tokens.typography.titleXs.lineHeight,
+      fontWeight: tokens.typography.fontWeight.bold,
+      letterSpacing: tokens.typography.letterSpacing.normal,
       color: tokens.colors.text.primary,
-      textAlign: 'left',
     },
     emptyBody: {
+      ...hebrewText,
       marginTop: 8,
-      fontSize: 14,
+      fontSize: tokens.typography.subhead.size,
+      lineHeight: tokens.typography.subhead.lineHeight,
+      fontWeight: tokens.typography.subhead.weight,
+      letterSpacing: tokens.typography.letterSpacing.normal,
       color: tokens.colors.text.secondary,
-      textAlign: 'left',
-      lineHeight: 20,
     },
     emptyLink: {
+      ...hebrewText,
       marginTop: 14,
-      fontSize: 14,
-      fontWeight: '700',
+      fontSize: tokens.typography.subhead.size,
+      lineHeight: tokens.typography.subhead.lineHeight,
+      fontWeight: tokens.typography.fontWeight.bold,
+      letterSpacing: tokens.typography.letterSpacing.normal,
       color: tokens.colors.primary.main,
-      textAlign: 'left',
     },
   });
 }

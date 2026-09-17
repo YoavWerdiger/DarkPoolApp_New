@@ -201,12 +201,12 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "black",
   },
   sheetContainer: {
     width: "100%",
-    backgroundColor: "#1a1a1a",
+    backgroundColor: '#262626',
     paddingBottom: 30,
     paddingTop: 15,
     minHeight: SCREEN_HEIGHT * 0.3,

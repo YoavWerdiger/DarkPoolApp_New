@@ -95,6 +95,46 @@ describe('mergeChatMessages', () => {
     expect(out[0].sender?.profile_picture).toBe('https://example.com/b.jpg');
   });
 
+  it('collapses optimistic and server copies that share client_message_id', () => {
+    const optimistic = base({
+      id: 'temp-1',
+      local_id: 'temp-1',
+      client_message_id: 'cid-1',
+      is_sending: true,
+      sender: { id: 'u1', display_name: 'אני' },
+    });
+    const server = base({
+      id: '11111111-1111-4111-8111-111111111111',
+      client_message_id: 'cid-1',
+      content: 'orig',
+    });
+    const out = mergeChatMessages([optimistic], [server]);
+    expect(out).toHaveLength(1);
+    expect(out[0].id).toBe(server.id);
+    expect(out[0].client_message_id).toBe('cid-1');
+    expect(out[0].local_id).toBe('temp-1');
+  });
+
+  it('collapses optimistic and server copies that share client_message_id', () => {
+    const optimistic = base({
+      id: 'temp-1',
+      local_id: 'temp-1',
+      client_message_id: 'cid-1',
+      is_sending: true,
+      sender: { id: 'u1', display_name: 'אני' },
+    });
+    const server = base({
+      id: '11111111-1111-4111-8111-111111111111',
+      client_message_id: 'cid-1',
+      content: 'orig',
+    });
+    const out = mergeChatMessages([optimistic], [server]);
+    expect(out).toHaveLength(1);
+    expect(out[0].id).toBe(server.id);
+    expect(out[0].client_message_id).toBe('cid-1');
+    expect(out[0].local_id).toBe('temp-1');
+  });
+
   it('preserves reactions when lean copy has none', () => {
     const withReactions = base({
       reactions: [

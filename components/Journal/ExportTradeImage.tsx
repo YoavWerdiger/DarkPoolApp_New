@@ -4,36 +4,160 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ActivityIndicator,
   ScrollView,
   Dimensions,
   InteractionManager,
   Platform,
-  ImageBackground,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
+import QRCode from 'react-native-qrcode-svg';
 import { useDesignTokens } from '../ui/DesignTokens';
-import type { Trade } from '../../screens/Journal/TradesListTab';
+import type { Trade as JournalTrade } from '../../screens/Journal/tradeTypes';
+import type { Trade as PortfolioTrade } from '../../screens/Portfolios/portfolioTypes';
 import { Ionicons } from '@expo/vector-icons';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';
 import { useBottomSheetClose } from '../ui/BottomSheet/BottomSheet';
+import {
+  SHEET_BACKDROP_OPACITY,
+  SHEET_GLASS_INTENSITY,
+  SHEET_GLASS_OVERLAY,
+  sheetContentBottomPadding,
+} from '../ui/BottomSheet/sheetGlass';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
+import UICard from '../ui/UICard';
+import { BrandTransbackWatermark } from '../ui/BrandTransbackWatermark';
 import { brandfetchTickerLogoUri } from '../../utils/brandfetch';
 import { ScreenGradientBackground } from '../VideoBackground';
-import { SUPABASE_URL } from '../../config/publicEnv';
+import { HapticFeedback } from '../../utils/hapticFeedback';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { APP_LINKS } from '../../utils/appMeta';
+
+/** נתונים מינימליים לכרטיס שיתוף ויזואלי */
+export type ExportableTrade = {
+  id: string;
+  symbol: string;
+  direction: 'long' | 'short';
+  entry_price: number;
+  /** סגור: מחיר יציאה. פתוח: מחיר נוכחי (mark). */
+  exit_price: number;
+  quantity: number;
+  entry_date: string;
+  /** סגור: תאריך יציאה. פתוח: מחרוזת ריקה. */
+  exit_date: string;
+  pnl: number;
+  return_percentage?: number | null;
+  /** ברירת מחדל CLOSED — יומן / היסטוריה */
+  status?: 'OPEN' | 'CLOSED';
+};
 
 interface ExportTradeImageProps {
-  trade: Trade;
+  trade: ExportableTrade | JournalTrade | null;
   visible: boolean;
   onClose: () => void;
 }
 
-const TRANSBACK_URI = `${SUPABASE_URL}/storage/v1/object/public/backgrounds/transback.png`;
+/** משפט שיווקי קצר ליד ה־QR — מקצועי, לא זול */
+const SHARE_CTA_LINE = 'הצטרף לקהילת הסוחרים של DarkPool';
+const SHARE_CTA_SUB = 'סרוק להורדת האפליקציה';
 
-function getReturnPercentage(trade: Trade): number {
+/** לוגו שור־ודוב / קהילת DarkPool — מעל כרטיסיית הזכוכית */
+const BRAND_LOGO = require('../../assets/darkpool-drawer-logo.png');
+
+export function journalTradeToExportable(trade: JournalTrade): ExportableTrade {
+  return {
+    id: trade.id,
+    symbol: trade.symbol,
+    direction: trade.direction,
+    entry_price: trade.entry_price,
+    exit_price: trade.exit_price,
+    quantity: trade.quantity,
+    entry_date: trade.entry_date,
+    exit_date: trade.exit_date,
+    pnl: trade.pnl,
+    return_percentage: trade.return_percentage,
+    status: 'CLOSED',
+  };
+}
+
+/**
+ * ממפה טרייד תיק לכרטיס שיתוף.
+ * CLOSED: דורש יציאה. OPEN: דורש currentPrice לחישוב unrealized.
+ */
+export function portfolioTradeToExportable(
+  trade: PortfolioTrade,
+  opts?: { currentPrice?: number | null }
+): ExportableTrade | null {
+  if (trade.status === 'OPEN') {
+    const mark = opts?.currentPrice;
+    if (mark == null || !(mark > 0)) return null;
+    const isLong = trade.direction === 'long';
+    const lev = trade.leverage || 1;
+    const pnl = isLong
+      ? (mark - trade.entry_price) * trade.quantity * lev
+      : (trade.entry_price - mark) * trade.quantity * lev;
+    let return_percentage: number | null = null;
+    if (trade.entry_price > 0) {
+      const raw = isLong
+        ? ((mark - trade.entry_price) / trade.entry_price) * 100
+        : ((trade.entry_price - mark) / trade.entry_price) * 100;
+      return_percentage = raw * lev;
+    }
+    return {
+      id: trade.id,
+      symbol: trade.symbol,
+      direction: trade.direction,
+      entry_price: trade.entry_price,
+      exit_price: mark,
+      quantity: trade.quantity,
+      entry_date: trade.entry_date,
+      exit_date: '',
+      pnl,
+      return_percentage,
+      status: 'OPEN',
+    };
+  }
+
+  if (trade.exit_price == null || !trade.exit_date) {
+    return null;
+  }
+  const pnl = trade.profit_loss ?? 0;
+  let return_percentage: number | null = null;
+  if (trade.entry_price > 0) {
+    const raw =
+      trade.direction === 'long'
+        ? ((trade.exit_price - trade.entry_price) / trade.entry_price) * 100
+        : ((trade.entry_price - trade.exit_price) / trade.entry_price) * 100;
+    return_percentage = raw * (trade.leverage || 1);
+  }
+  return {
+    id: trade.id,
+    symbol: trade.symbol,
+    direction: trade.direction,
+    entry_price: trade.entry_price,
+    exit_price: trade.exit_price,
+    quantity: trade.quantity,
+    entry_date: trade.entry_date,
+    exit_date: trade.exit_date,
+    pnl,
+    return_percentage,
+    status: 'CLOSED',
+  };
+}
+
+function normalizeExportable(trade: ExportableTrade | JournalTrade): ExportableTrade {
+  if ('status' in trade && (trade.status === 'OPEN' || trade.status === 'CLOSED')) {
+    return trade as ExportableTrade;
+  }
+  if ('pnl' in trade && typeof (trade as JournalTrade).exit_price === 'number') {
+    return journalTradeToExportable(trade as JournalTrade);
+  }
+  return { ...(trade as ExportableTrade), status: 'CLOSED' };
+}
+
+function getReturnPercentage(trade: ExportableTrade): number {
   if (trade.return_percentage !== undefined && trade.return_percentage !== null) {
     return trade.return_percentage;
   }
@@ -48,36 +172,35 @@ function getReturnPercentage(trade: Trade): number {
 
 export default function ExportTradeImage({ trade, visible, onClose }: ExportTradeImageProps) {
   const DesignTokens = useDesignTokens();
+  const insets = useSafeAreaInsets();
   const animatedClose = useBottomSheetClose();
   const viewShotRef = useRef<View>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [layoutReady, setLayoutReady] = useState(false);
+  /** גבולות כרטיס הזכוכית בפועל — למרכוז watermark (לא גובה כל כרטיס השיתוף) */
+  const [glassFrame, setGlassFrame] = useState<{ w: number; h: number } | null>(null);
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
+  /** Footer מנהל את ה-safe-area — BottomSheet עם contentPaddingBottom={0} */
+  const footerPadBottom = useMemo(
+    () => sheetContentBottomPadding(insets.bottom),
+    [insets.bottom]
+  );
 
-  const cardW = Math.min(360, Dimensions.get('window').width - 48);
-  const transH = 520;
+  const cardW = Math.min(340, Dimensions.get('window').width - 48);
+  /** יחס ~4:5 — נוח לפיד אינסטגרם ולסטוריז */
+  const cardH = Math.round(cardW * 1.25);
+
+  const normalized = useMemo(
+    () => (trade ? normalizeExportable(trade) : null),
+    [trade]
+  );
 
   useEffect(() => {
     if (visible) {
       setLayoutReady(false);
+      setGlassFrame(null);
     }
-  }, [visible, trade?.id]);
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('he-IL', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-  };
-
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    const hour = String(date.getHours()).padStart(2, '0');
-    const minute = String(date.getMinutes()).padStart(2, '0');
-    return `${hour}:${minute}`;
-  };
+  }, [visible, normalized?.id]);
 
   const formatCurrencyPlain = (value: number) =>
     Math.abs(value).toLocaleString('en-US', {
@@ -86,16 +209,19 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
     });
 
   const snapshot = useMemo(() => {
-    if (!trade) return null;
-    const isProfit = trade.pnl >= 0;
-    const ret = getReturnPercentage(trade);
+    if (!normalized) return null;
+    const isOpen = normalized.status === 'OPEN';
+    const isProfit = normalized.pnl >= 0;
+    const ret = getReturnPercentage(normalized);
     const dirColor =
-      trade.direction === 'long' ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger;
+      normalized.direction === 'long'
+        ? DesignTokens.colors.primary.main
+        : DesignTokens.colors.text.danger;
     const pnlColor = isProfit ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger;
     const retColor = ret >= 0 ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger;
-    const logoUri = brandfetchTickerLogoUri(trade.symbol);
-    return { isProfit, ret, dirColor, pnlColor, retColor, logoUri };
-  }, [trade, DesignTokens]);
+    const logoUri = brandfetchTickerLogoUri(normalized.symbol);
+    return { isOpen, isProfit, ret, dirColor, pnlColor, retColor, logoUri };
+  }, [normalized, DesignTokens]);
 
   const handleExport = useCallback(async () => {
     if (!viewShotRef.current || !layoutReady) {
@@ -105,6 +231,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
 
     try {
       setIsExporting(true);
+      void HapticFeedback.impactLight();
       await new Promise<void>((resolve) => {
         InteractionManager.runAfterInteractions(() => {
           requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
@@ -125,6 +252,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
           dialogTitle: 'שתף טרייד',
           UTI: 'public.png',
         });
+        void HapticFeedback.success();
       } else {
         legacyAlert('שגיאה', 'שיתוף לא זמין במכשיר זה');
       }
@@ -136,11 +264,11 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
     }
   }, [layoutReady]);
 
-  if (!trade || !visible || !snapshot) {
+  if (!normalized || !visible || !snapshot) {
     return null;
   }
 
-  const { isProfit, ret, dirColor, pnlColor, retColor, logoUri } = snapshot;
+  const { isOpen, isProfit, ret, dirColor, pnlColor, retColor, logoUri } = snapshot;
   const handleHeaderClose = () => {
     (animatedClose ?? onClose)();
   };
@@ -149,24 +277,36 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
     <BottomSheet
       isOpen={visible}
       onClose={onClose}
-      snapPoints={[0.9]}
-      enablePanDownToClose
+      snapPoints={[0.92]}
+      fitContent
+      edgeToEdge
       showHandle
+      enablePanDownToClose
+      useModal
+      topCornerRadius={28}
       useGlassBackground
+      glassIntensity={SHEET_GLASS_INTENSITY}
+      glassOverlayColor={SHEET_GLASS_OVERLAY}
+      backdropOpacity={SHEET_BACKDROP_OPACITY}
       showBrandBackground={false}
+      showBrandWatermark={false}
+      contentPaddingBottom={0}
     >
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>יצוא טרייד לתמונה</Text>
           <DayNavBlurButton
             onPress={handleHeaderClose}
             size={DAY_NAV_BUTTON_SIZE}
             glassIntensity="subtle"
-            style={styles.closeButton}
+            style={styles.headerIconButton}
             accessibilityLabel="חזרה"
           >
             <Ionicons name="chevron-forward" size={22} color={DesignTokens.colors.text.primary} />
           </DayNavBlurButton>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>שתף תמונה</Text>
+          </View>
+          <View style={styles.headerSideSpacer} />
         </View>
 
         <ScrollView
@@ -174,384 +314,450 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
           contentContainerStyle={styles.previewContent}
           showsVerticalScrollIndicator={false}
         >
-          <View
-            key={trade.id}
-            ref={viewShotRef}
-            collapsable={false}
-            style={[styles.shotWrap, { width: cardW }]}
-            onLayout={() => setLayoutReady(true)}
-          >
-            <View style={[styles.cardRoot, { width: cardW }]}>
-              <ScreenGradientBackground style={StyleSheet.absoluteFillObject} />
-              <View
-                pointerEvents="none"
-                style={[StyleSheet.absoluteFillObject, styles.transbackWrap]}
-              >
-                <ImageBackground
-                  source={{ uri: TRANSBACK_URI }}
-                  style={{ width: cardW * 1.9, height: transH }}
-                  imageStyle={{ resizeMode: 'cover', opacity: 0.95 }}
-                />
-              </View>
-              <View style={styles.cardDim} />
+          <View style={styles.previewShadow}>
+            <View
+              key={normalized.id}
+              ref={viewShotRef}
+              collapsable={false}
+              style={[styles.shotWrap, { width: cardW }]}
+              onLayout={() => setLayoutReady(true)}
+            >
+              <View style={[styles.cardRoot, { width: cardW, minHeight: cardH }]}>
+                <ScreenGradientBackground style={StyleSheet.absoluteFill} />
 
-              <View style={[styles.cardContent, { direction: 'rtl' }]}>
-                <View style={styles.brandRow}>
-                  <Text style={[styles.brandTitle, { color: DesignTokens.colors.primary.main }]}>
-                    DarkPool
-                  </Text>
-                  <View style={[styles.brandLine, { backgroundColor: DesignTokens.colors.primary.main }]} />
-                  <Text style={[styles.brandSub, { color: DesignTokens.colors.text.tertiary }]}>
-                    יומן מסחר
-                  </Text>
-                </View>
+                <View style={[styles.cardContent, { minHeight: cardH - 8 }]}>
+                  {/* לוגו DarkPool / שור־ודוב — מעל הזכוכית, ממורכז */}
+                  <Image
+                    source={BRAND_LOGO}
+                    style={styles.brandLogoAbove}
+                    contentFit="contain"
+                    transition={0}
+                    accessibilityLabel="קהילת הסוחרים DarkPool"
+                  />
 
-                <View style={styles.symbolRow}>
-                  {logoUri ? (
-                    <View style={styles.logoRing}>
-                      <Image
-                        source={{ uri: logoUri }}
-                        style={styles.logoImg}
-                        contentFit="cover"
-                        transition={120}
-                      />
+                  {/* זכוכית סטנדרטית — disableBlur כדי ש־view-shot ילכוד נכון */}
+                  <UICard
+                    variant="blur"
+                    padding="none"
+                    disableBlur
+                    style={styles.pnlHeroCard}
+                    contentContainerStyle={styles.pnlHero}
+                  >
+                    {/* Watermark לפי גבולות הזכוכית בפועל — לא cardH של כל כרטיס השיתוף */}
+                    <View
+                      pointerEvents="none"
+                      style={StyleSheet.absoluteFill}
+                      onLayout={(e) => {
+                        const { width, height } = e.nativeEvent.layout;
+                        if (!(width > 0 && height > 0)) return;
+                        setGlassFrame((prev) =>
+                          prev &&
+                          Math.abs(prev.w - width) < 0.5 &&
+                          Math.abs(prev.h - height) < 0.5
+                            ? prev
+                            : { w: width, h: height }
+                        );
+                      }}
+                    >
+                      {glassFrame ? (
+                        <BrandTransbackWatermark
+                          frameWidth={glassFrame.w}
+                          frameHeight={glassFrame.h}
+                        />
+                      ) : null}
                     </View>
-                  ) : (
-                    <View style={[styles.logoRing, styles.logoFallback]}>
-                      <Text style={[styles.logoFallbackText, { color: DesignTokens.colors.text.secondary }]}>
-                        {trade.symbol.trim().slice(0, 4).toUpperCase()}
+
+                    {/* ממורכז: לוגו חברה → טיקר → LONG/SHORT → רווח/הפסד → תשואה */}
+                    <View style={styles.symbolBlock}>
+                      {logoUri ? (
+                        <View style={styles.logoRing}>
+                          <Image
+                            source={{ uri: logoUri }}
+                            style={styles.logoImg}
+                            contentFit="cover"
+                            transition={120}
+                          />
+                        </View>
+                      ) : (
+                        <View style={[styles.logoRing, styles.logoFallback]}>
+                          <Text
+                            style={[
+                              styles.logoFallbackText,
+                              { color: DesignTokens.colors.text.secondary },
+                            ]}
+                          >
+                            {normalized.symbol.trim().slice(0, 4).toUpperCase()}
+                          </Text>
+                        </View>
+                      )}
+                      <Text
+                        style={[styles.symbolBig, { color: DesignTokens.colors.text.primary }]}
+                        numberOfLines={1}
+                      >
+                        {normalized.symbol}
                       </Text>
+                      <View style={styles.dirPillRow}>
+                        <View style={[styles.dirPill, { backgroundColor: `${dirColor}28` }]}>
+                          <Text style={[styles.dirPillText, { color: dirColor }]}>
+                            {normalized.direction === 'long' ? 'LONG' : 'SHORT'}
+                          </Text>
+                        </View>
+                        {isOpen ? (
+                          <View
+                            style={[styles.dirPill, { backgroundColor: 'rgba(255,255,255,0.10)' }]}
+                          >
+                            <Text
+                              style={[
+                                styles.dirPillText,
+                                { color: DesignTokens.colors.text.secondary },
+                              ]}
+                            >
+                              OPEN
+                            </Text>
+                          </View>
+                        ) : null}
+                      </View>
                     </View>
-                  )}
-                  <View style={styles.symbolTextCol}>
-                    <Text style={[styles.symbolBig, { color: DesignTokens.colors.text.primary }]}>
-                      {trade.symbol}
+
+                    <Text style={styles.pnlHeroLabel}>רווח/הפסד:</Text>
+                    <Text style={[styles.pnlHeroValue, { color: pnlColor }]}>
+                      {isProfit ? '+' : '−'}${formatCurrencyPlain(normalized.pnl)}
                     </Text>
-                    <View style={[styles.dirPill, { backgroundColor: `${dirColor}30` }]}>
-                      <Text style={[styles.dirPillText, { color: dirColor }]}>
-                        {trade.direction === 'long' ? 'LONG' : 'SHORT'}
+                    <View style={[styles.retChip, { backgroundColor: `${retColor}22` }]}>
+                      <Text style={[styles.retChipText, { color: retColor }]}>
+                        {ret >= 0 ? '+' : ''}
+                        {ret.toFixed(2)}%
                       </Text>
+                    </View>
+                  </UICard>
+
+                  <View style={styles.spacer} />
+
+                  {/* Footer: טקסט שיווקי + QR */}
+                  <View style={styles.ctaBar}>
+                    <View style={styles.ctaTextCol}>
+                      <Text style={styles.ctaHeadline} numberOfLines={2}>
+                        {SHARE_CTA_LINE}
+                      </Text>
+                      <Text style={styles.ctaSub}>{SHARE_CTA_SUB}</Text>
+                    </View>
+                    <View style={styles.qrWrap}>
+                      <QRCode
+                        value={APP_LINKS.appDownload}
+                        size={64}
+                        backgroundColor="#FFFFFF"
+                        color="#0A0E0A"
+                        ecl="M"
+                      />
                     </View>
                   </View>
                 </View>
-
-                <View style={styles.divider} />
-
-                <DetailLine
-                  label="כניסה"
-                  value={`$${formatCurrencyPlain(trade.entry_price)}`}
-                  valueColor={DesignTokens.colors.primary.main}
-                />
-                <DetailLine
-                  label="יציאה"
-                  value={`$${formatCurrencyPlain(trade.exit_price)}`}
-                  valueColor={DesignTokens.colors.primary.main}
-                />
-                <DetailLine
-                  label="כמות"
-                  value={String(trade.quantity)}
-                  valueColor={DesignTokens.colors.text.primary}
-                />
-                <DetailLine
-                  label="תאריך יציאה"
-                  value={`${formatDate(trade.exit_date)} · ${formatTime(trade.exit_date)}`}
-                  valueColor={DesignTokens.colors.text.primary}
-                />
-
-                <View style={[styles.pnlBlock, { borderTopColor: DesignTokens.colors.border.primary }]}>
-                  <Text style={[styles.pnlLabel, { color: DesignTokens.colors.text.secondary }]}>
-                    {isProfit ? 'רווח נטו' : 'הפסד נטו'}
-                  </Text>
-                  <Text style={[styles.pnlValue, { color: pnlColor }]}>
-                    {isProfit ? '+' : '−'}${formatCurrencyPlain(trade.pnl)}
-                  </Text>
-                </View>
-
-                <View style={styles.retBlock}>
-                  <Text style={[styles.retLabel, { color: DesignTokens.colors.text.secondary }]}>תשואה</Text>
-                  <Text style={[styles.retValue, { color: retColor }]}>
-                    {ret >= 0 ? '+' : ''}
-                    {ret.toFixed(2)}%
-                  </Text>
-                </View>
-
-                <Text style={[styles.footerNote, { color: DesignTokens.colors.text.muted }]}>
-                  DarkPool · שיתוף מהאפליקציה
-                </Text>
               </View>
             </View>
           </View>
         </ScrollView>
 
-        <View style={styles.footer}>
-          <TouchableOpacity
-            style={[styles.exportButton, isExporting && styles.exportButtonDisabled]}
-            onPress={handleExport}
-            disabled={isExporting || !layoutReady}
+        <View style={[styles.footer, { paddingBottom: footerPadBottom }]}>
+          <UICard
+            variant="blur"
+            glassIntensity="medium"
+            padding="none"
+            onPress={isExporting || !layoutReady ? undefined : handleExport}
+            style={[
+              styles.exportButton,
+              (isExporting || !layoutReady) && styles.exportButtonDisabled,
+            ]}
+            contentContainerStyle={styles.exportButtonContent}
+            accessibilityLabel="שתף תמונה"
           >
             {isExporting ? (
               <>
-                <ActivityIndicator size="small" color={DesignTokens.colors.text.inverse} />
+                <ActivityIndicator size="small" color={DesignTokens.colors.primary.main} />
                 <Text style={styles.exportButtonText}>מייצא...</Text>
               </>
             ) : (
               <>
-                <Ionicons name="share-outline" size={20} color={DesignTokens.colors.text.inverse} />
-                <Text style={styles.exportButtonText}>ייצא ושיתוף</Text>
+                <Ionicons name="share-outline" size={20} color={DesignTokens.colors.primary.main} />
+                <Text style={styles.exportButtonText}>שתף תמונה</Text>
               </>
             )}
-          </TouchableOpacity>
+          </UICard>
         </View>
       </View>
     </BottomSheet>
   );
 }
 
-function DetailLine({
-  label,
-  value,
-  valueColor,
-}: {
-  label: string;
-  value: string;
-  valueColor: string;
-}) {
-  return (
-    <View style={detailStyles.row}>
-      <Text style={detailStyles.label}>{label}</Text>
-      <Text style={[detailStyles.value, { color: valueColor }]}>{value}</Text>
-    </View>
-  );
-}
-
-const detailStyles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    direction: 'rtl',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-    paddingBottom: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
-    width: '100%',
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.62)',
-    textAlign: 'right',
-    flexShrink: 0,
-  },
-  value: {
-    fontSize: 15,
-    fontWeight: '800',
-    textAlign: 'left',
-    writingDirection: 'ltr',
-    flex: 1,
-  },
-});
-
 const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: tokens.colors.background.secondary,
+      minHeight: 0,
+      direction: 'rtl',
+      backgroundColor: 'transparent',
     },
     header: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
       alignItems: 'center',
-      padding: tokens.spacing.lg,
-      borderBottomWidth: 1,
-      borderBottomColor: tokens.colors.border.primary,
+      paddingHorizontal: 16,
+      paddingBottom: 12,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: 'rgba(255,255,255,0.12)',
+      gap: 10,
+    },
+    headerIconButton: {
+      alignSelf: 'center',
+    },
+    headerCenter: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerSideSpacer: {
+      width: DAY_NAV_BUTTON_SIZE,
+      height: DAY_NAV_BUTTON_SIZE,
     },
     headerTitle: {
-      fontSize: tokens.typography.fontSize.xl,
-      fontWeight: tokens.typography.fontWeight.bold as any,
+      fontSize: 20,
+      fontWeight: '800',
+      letterSpacing: -0.35,
       color: tokens.colors.text.primary,
-      textAlign: 'right',
-    },
-    closeButton: {
-      alignSelf: 'center',
+      textAlign: 'center',
+      writingDirection: 'rtl',
+      width: '100%',
     },
     previewContainer: {
       flex: 1,
+      minHeight: 0,
+      backgroundColor: 'transparent',
     },
     previewContent: {
       padding: tokens.spacing.lg,
       alignItems: 'center',
       paddingBottom: tokens.spacing.xl,
     },
+    /** צל חיצוני בלבד — לא נכנס ל־capture (מחוץ ל־viewShotRef) */
+    previewShadow: {
+      borderRadius: 24,
+      ...Platform.select({
+        ios: {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 12 },
+          shadowOpacity: 0.35,
+          shadowRadius: 24,
+        },
+        android: { elevation: 10 },
+        default: {},
+      }),
+    },
     shotWrap: {
       alignSelf: 'center',
       backgroundColor: '#0A0E0A',
+      borderRadius: 24,
+      overflow: 'hidden',
     },
     cardRoot: {
-      borderRadius: 22,
+      borderRadius: 24,
       overflow: 'hidden',
-      minHeight: 440,
       backgroundColor: '#0A0E0A',
     },
-    transbackWrap: {
-      justifyContent: 'center',
-      alignItems: 'center',
-      opacity: 0.22,
-    },
-    cardDim: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: 'rgba(0, 8, 4, 0.35)',
-    },
     cardContent: {
-      padding: 22,
+      paddingTop: 5,
+      paddingHorizontal: 16,
+      paddingBottom: 10,
       zIndex: 2,
       position: 'relative',
-    },
-    brandRow: {
+      justifyContent: 'flex-start',
       alignItems: 'center',
-      marginBottom: 18,
+      gap: 6,
+      overflow: 'visible',
     },
-    brandTitle: {
-      fontSize: 26,
-      fontWeight: '800',
-      letterSpacing: 1.2,
-      textAlign: 'center',
+    /** גדול במכוון — מרווח שלילי קל בלבד; לא לכסות את תוכן הזכוכית */
+    brandLogoAbove: {
+      width: 168,
+      height: 168,
+      marginBottom: -44,
+      alignSelf: 'center',
+      opacity: 0.96,
+      zIndex: 3,
     },
-    brandLine: {
-      width: 48,
-      height: 3,
-      borderRadius: 2,
-      marginVertical: 8,
-    },
-    brandSub: {
-      fontSize: 13,
-      fontWeight: '600',
-      textAlign: 'center',
-    },
-    symbolRow: {
-      flexDirection: 'row',
-      direction: 'rtl',
-      justifyContent: 'space-between',
+    symbolBlock: {
       alignItems: 'center',
       width: '100%',
-      marginBottom: 6,
+      marginBottom: 8,
+      gap: 7,
+    },
+    dirPillRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexWrap: 'wrap',
+      gap: 8,
     },
     logoRing: {
-      width: 56,
-      height: 56,
-      borderRadius: 28,
+      width: 58,
+      height: 58,
+      borderRadius: 29,
       overflow: 'hidden',
       backgroundColor: 'rgba(255,255,255,0.08)',
       alignItems: 'center',
       justifyContent: 'center',
+      flexShrink: 0,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: 'rgba(255,255,255,0.14)',
     },
     logoImg: {
-      width: 56,
-      height: 56,
+      width: 58,
+      height: 58,
     },
-    logoFallback: {
-      borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.12)',
-    },
+    logoFallback: {},
     logoFallbackText: {
-      fontSize: 13,
+      fontSize: 14,
       fontWeight: '800',
-    },
-    symbolTextCol: {
-      flex: 1,
-      minWidth: 0,
-      alignItems: 'flex-end',
-      gap: 8,
     },
     symbolBig: {
-      fontSize: 28,
+      flexShrink: 1,
+      fontSize: 24,
       fontWeight: '800',
-      textAlign: 'right',
+      textAlign: 'center',
+      letterSpacing: -0.5,
     },
     dirPill: {
-      paddingHorizontal: 14,
-      paddingVertical: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 4,
       borderRadius: 999,
+      flexShrink: 0,
     },
     dirPillText: {
-      fontSize: 12,
+      fontSize: 11,
       fontWeight: '800',
       letterSpacing: 0.8,
     },
-    divider: {
-      height: 10,
+    /** UICard מספק את הזכוכית — מרווח עליון מול הלוגו, תחתון מול פס ה־QR */
+    pnlHeroCard: {
+      width: '100%',
+      alignSelf: 'stretch',
+      overflow: 'hidden',
+      marginTop: 2,
+      marginBottom: 6,
     },
-    pnlBlock: {
-      marginTop: 14,
+    pnlHero: {
+      alignItems: 'center',
       paddingTop: 14,
-      borderTopWidth: 1,
-      flexDirection: 'row',
-      direction: 'rtl',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      width: '100%',
+      paddingBottom: 12,
+      paddingHorizontal: 16,
+      gap: 0,
+      overflow: 'hidden',
+      position: 'relative',
     },
-    pnlLabel: {
-      fontSize: 14,
+    pnlHeroLabel: {
+      fontSize: 13,
       fontWeight: '700',
-      textAlign: 'right',
-      flexShrink: 0,
-    },
-    pnlValue: {
-      fontSize: 30,
-      fontWeight: '800',
-      letterSpacing: -0.5,
-      textAlign: 'left',
-      writingDirection: 'ltr',
-      flex: 1,
-    },
-    retBlock: {
-      marginTop: 14,
-      flexDirection: 'row',
-      direction: 'rtl',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      width: '100%',
-    },
-    retLabel: {
-      fontSize: 15,
-      fontWeight: '700',
-      textAlign: 'right',
-      flexShrink: 0,
-    },
-    retValue: {
-      fontSize: 22,
-      fontWeight: '800',
-      textAlign: 'left',
-      writingDirection: 'ltr',
-      flex: 1,
-    },
-    footerNote: {
-      marginTop: 18,
+      letterSpacing: 0.2,
+      marginTop: 2,
+      marginBottom: 5,
       textAlign: 'center',
+      writingDirection: 'rtl',
+      color: 'rgba(255,255,255,0.58)',
+    },
+    pnlHeroValue: {
+      fontSize: 36,
+      fontWeight: '800',
+      letterSpacing: -0.8,
+      writingDirection: 'ltr',
+      textAlign: 'center',
+      fontVariant: ['tabular-nums'],
+    },
+    retChip: {
+      marginTop: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 5,
+      borderRadius: 999,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: 'rgba(255,255,255,0.12)',
+    },
+    retChipText: {
+      fontSize: 14,
+      fontWeight: '800',
+      letterSpacing: 0.2,
+      writingDirection: 'ltr',
+      textAlign: 'center',
+      fontVariant: ['tabular-nums'],
+    },
+    spacer: {
+      flexGrow: 1,
+      minHeight: 4,
+    },
+    /** row + RTL parent: טקסט מימין, QR משמאל (הפוך מ־row-reverse הקודם) */
+    ctaBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      alignSelf: 'center',
+      gap: 12,
+      maxWidth: '100%',
+      paddingTop: 8,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: 'rgba(255,255,255,0.12)',
+    },
+    qrWrap: {
+      padding: 5,
+      borderRadius: 10,
+      backgroundColor: '#FFFFFF',
+      flexShrink: 0,
+    },
+    ctaTextCol: {
+      flexShrink: 1,
+      minWidth: 0,
+      maxWidth: 210,
+      alignItems: 'flex-start',
+      gap: 3,
+    },
+    ctaHeadline: {
+      fontSize: 13,
+      fontWeight: '800',
+      lineHeight: 18,
+      color: 'rgba(255,255,255,0.92)',
+      textAlign: 'left',
+      writingDirection: 'rtl',
+      width: '100%',
+    },
+    ctaSub: {
       fontSize: 11,
       fontWeight: '600',
+      color: 'rgba(255,255,255,0.50)',
+      textAlign: 'left',
+      writingDirection: 'rtl',
+      width: '100%',
     },
     footer: {
-      padding: tokens.spacing.lg,
-      borderTopWidth: 1,
-      borderTopColor: tokens.colors.border.primary,
+      flexShrink: 0,
+      paddingHorizontal: 16,
+      paddingTop: 14,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: 'rgba(255,255,255,0.12)',
+      backgroundColor: 'transparent',
     },
     exportButton: {
-      flexDirection: 'row',
-      backgroundColor: tokens.colors.primary.main,
-      borderRadius: tokens.borderRadius.md,
-      padding: tokens.spacing.md,
+      borderRadius: 999,
+      minHeight: 52,
+      overflow: 'hidden',
+    },
+    exportButtonContent: {
+      flexDirection: 'row-reverse',
       alignItems: 'center',
       justifyContent: 'center',
       gap: tokens.spacing.sm,
+      minHeight: 52,
+      paddingVertical: 14,
+      paddingHorizontal: tokens.spacing.lg,
     },
     exportButtonDisabled: {
-      opacity: 0.6,
+      opacity: 0.55,
     },
     exportButtonText: {
       fontSize: tokens.typography.fontSize.base,
       fontWeight: tokens.typography.fontWeight.bold as any,
-      color: tokens.colors.text.inverse,
+      color: tokens.colors.primary.main,
     },
   });

@@ -6,17 +6,15 @@ import { CourseComingSoonScreen } from '../screens/Learning/CourseComingSoonScre
 import { CoursePreviewScreen } from '../screens/Learning/CoursePreviewScreen';
 import { MyNotesScreen } from '../screens/Learning/MyNotesScreen';
 import { LessonPlayerScreen } from '../screens/Learning/LessonPlayerScreen';
-import { withVideoBackground } from '../components/VideoBackground';
 
-/** CoursesScreen — ScreenChrome + שכבת transback (שור ודוב) פנימית */
+/** מסכי אקדמיה — ScreenChrome (שחור + גרדיאנט). LessonPlayer עם רקע נייטרלי משלו. */
 const CoursesScreenPlain = CoursesScreen;
-const LearningWithVideo = withVideoBackground(LearningScreen);
-const CourseDetailWithVideo = withVideoBackground(CourseDetailScreen);
+const LearningWithVideo = LearningScreen;
+const CourseDetailWithVideo = CourseDetailScreen;
 const CourseComingSoonPlain = CourseComingSoonScreen;
-const CoursePreviewWithVideo = withVideoBackground(CoursePreviewScreen);
-/** מסך שיעור: בלי withVideoBackground — רקע ירוק־שחור מאחורי blur גרם לכתם ירוק; המסך מגדיר רקע נייטרלי משלו */
+const CoursePreviewWithVideo = CoursePreviewScreen;
 const LessonPlayerPlain = LessonPlayerScreen;
-const MyNotesWithVideo = withVideoBackground(MyNotesScreen);
+const MyNotesWithVideo = MyNotesScreen;
 
 export type LearningStackParamList = {
   CoursesScreen: undefined;
@@ -41,7 +39,7 @@ export default function LearningStack() {
       initialRouteName="CoursesScreen"
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: '#0A0E0A' },
+        contentStyle: { backgroundColor: '#111111' },
         animation: 'fade',
         gestureEnabled: true,
         animationDuration: 200,

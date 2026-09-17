@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   videoOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   remainingOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   uploadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0, 0, 0, 0.4)',
     alignItems: 'center',
     justifyContent: 'center',

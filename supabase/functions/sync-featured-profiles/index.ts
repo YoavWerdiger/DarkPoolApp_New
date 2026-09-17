@@ -18,30 +18,41 @@ const WIKI = 'https://upload.wikimedia.org/wikipedia/commons';
 const KNOWN_BY_ID: Record<string, string> = {
   G000583: 'https://unitedstates.github.io/images/congress/225x275/G000583.jpg',
   P000197: 'https://unitedstates.github.io/images/congress/225x275/P000197.jpg',
+  C001114: 'https://unitedstates.github.io/images/congress/225x275/C001114.jpg',
+  M000355: 'https://unitedstates.github.io/images/congress/225x275/M000355.jpg',
+  C001098: 'https://unitedstates.github.io/images/congress/225x275/C001098.jpg',
+  M001218: 'https://unitedstates.github.io/images/congress/225x275/M001218.jpg',
+  B001236: 'https://unitedstates.github.io/images/congress/225x275/B001236.jpg',
+  M001217: 'https://unitedstates.github.io/images/congress/225x275/M001217.jpg',
+  S000168: 'https://unitedstates.github.io/images/congress/225x275/S000168.jpg',
+  T000278: 'https://unitedstates.github.io/images/congress/225x275/T000278.jpg',
+  G000596: 'https://unitedstates.github.io/images/congress/225x275/G000596.jpg',
+  K000389: 'https://unitedstates.github.io/images/congress/225x275/K000389.jpg',
+  M001157: 'https://unitedstates.github.io/images/congress/225x275/M001157.jpg',
+  W000802: 'https://unitedstates.github.io/images/congress/225x275/W000802.jpg',
+  D000032: 'https://unitedstates.github.io/images/congress/225x275/D000032.jpg',
+  M001190: 'https://unitedstates.github.io/images/congress/225x275/M001190.jpg',
+  '888dc73f-f1eb-485a-a241-80657aaaaff9': `${WIKI}/5/56/Donald_Trump_official_portrait.jpg`,
   '1067983': `${WIKI}/5/51/Warren_Buffett_KU_Visit.jpg`,
   '1697748': `${WIKI}/4/44/Cathie_Wood_ARK_Invest_Photo.jpg`,
   '1336528': `${WIKI}/d/d8/Bill_Ackman_%2826410186110%29_%28cropped%29.jpg`,
-  'TSLA:Musk': `${WIKI}/3/34/Elon_Musk_Royal_Society_%28crop2%29.jpg`,
-  'AAPL:Cook': `${WIKI}/f/f7/Tim_Cook_March_2026_%28cropped_2%29.jpg`,
-  'MSFT:Nadella': `${WIKI}/4/4a/Satya_Nadella_%28cropped%29.jpg`,
-  'NVDA:Huang': `${WIKI}/c/c4/Jensen_Huang_%28cropped%29.jpg`,
-  'META:Zuckerberg': `${WIKI}/1/18/Mark_Zuckerberg_F8_2019_Keynote_%2832830578717%29_%28cropped%29.jpg`,
-  'ORCL:Ellison': `${WIKI}/0/0e/Larry_Ellison_picture_%28cropped%29.png`,
 };
 
 const KNOWN_BY_NAME: Record<string, string> = {
-  'elon musk': KNOWN_BY_ID['TSLA:Musk'],
-  'tim cook': KNOWN_BY_ID['AAPL:Cook'],
-  'cook tim': KNOWN_BY_ID['AAPL:Cook'],
-  'satya nadella': KNOWN_BY_ID['MSFT:Nadella'],
-  'jensen huang': KNOWN_BY_ID['NVDA:Huang'],
-  'huang jensen': KNOWN_BY_ID['NVDA:Huang'],
-  'mark zuckerberg': KNOWN_BY_ID['META:Zuckerberg'],
-  'larry ellison': KNOWN_BY_ID['ORCL:Ellison'],
   'warren buffett': KNOWN_BY_ID['1067983'],
   'cathie wood': KNOWN_BY_ID['1697748'],
   'bill ackman': KNOWN_BY_ID['1336528'],
   'nancy pelosi': KNOWN_BY_ID.P000197,
+  'josh gottheimer': KNOWN_BY_ID.G000583,
+  'tommy tuberville': KNOWN_BY_ID.T000278,
+  'marjorie taylor greene': KNOWN_BY_ID.G000596,
+  'ro khanna': KNOWN_BY_ID.K000389,
+  'michael mccaul': KNOWN_BY_ID.M001157,
+  'sheldon whitehouse': KNOWN_BY_ID.W000802,
+  'byron donalds': KNOWN_BY_ID.D000032,
+  'markwayne mullin': KNOWN_BY_ID.M001190,
+  'donald trump': KNOWN_BY_ID['888dc73f-f1eb-485a-a241-80657aaaaff9'],
+  'donald j trump': KNOWN_BY_ID['888dc73f-f1eb-485a-a241-80657aaaaff9'],
 };
 
 serve(async (req) => {
@@ -323,17 +334,6 @@ function knownPortrait(name: string, personId?: string): string | null {
   if (id && KNOWN_BY_ID[id]) return KNOWN_BY_ID[id];
   const key = name.trim().toLowerCase();
   if (KNOWN_BY_NAME[key]) return KNOWN_BY_NAME[key];
-  if (id?.toUpperCase().includes('MUSK')) return KNOWN_BY_NAME['elon musk'];
-  if (id?.toUpperCase().includes('COOK') || key.includes('cook')) {
-    return KNOWN_BY_NAME['tim cook'];
-  }
-  if (
-    key.includes('jensen huang') ||
-    key.includes('huang jensen') ||
-    (id?.toUpperCase().includes('NVDA') && id.toUpperCase().includes('HUANG'))
-  ) {
-    return KNOWN_BY_NAME['jensen huang'];
-  }
   return null;
 }
 

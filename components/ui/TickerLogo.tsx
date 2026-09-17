@@ -1,6 +1,6 @@
-import React, { memo, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text } from 'react-native';
-import { Image } from 'expo-image';
+import { Image as ExpoImage } from 'expo-image';
 import { useDesignTokens } from './DesignTokens';
 import { brandfetchTickerLogoUri } from '../../utils/brandfetch';
 
@@ -10,11 +10,8 @@ type TickerLogoProps = {
   borderRadius?: number;
 };
 
-export const TickerLogo = memo(function TickerLogo({
-  symbol,
-  size,
-  borderRadius,
-}: TickerLogoProps) {
+/** function export (לא memo) — יציב ל־Fast Refresh / Hermes */
+export function TickerLogo({ symbol, size, borderRadius }: TickerLogoProps) {
   const tokens = useDesignTokens();
   const [failed, setFailed] = useState(false);
   const uri = !failed ? brandfetchTickerLogoUri(symbol) : null;
@@ -34,7 +31,7 @@ export const TickerLogo = memo(function TickerLogo({
       }}
     >
       {uri ? (
-        <Image
+        <ExpoImage
           source={{ uri }}
           style={{ width: size, height: size }}
           contentFit="cover"
@@ -57,6 +54,6 @@ export const TickerLogo = memo(function TickerLogo({
       )}
     </View>
   );
-});
+}
 
 export default TickerLogo;

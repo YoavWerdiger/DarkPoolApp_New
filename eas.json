@@ -13,7 +13,7 @@
     },
     "production": {
       "autoIncrement": true,
-      "node": "20.18.1",
+      "node": "22.13.1",
       "resourceClass": "large",
       "env": {
         "NODE_OPTIONS": "--max-old-space-size=16384",

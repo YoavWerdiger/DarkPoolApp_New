@@ -130,7 +130,9 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, inRtlTree: boo
     },
     appHeader: {
       alignItems: 'center',
-      paddingVertical: 14,
+      // SafeArea כבר דואג למרווח מה-notch; שומרים רק מרווח פנימי עדין לשורת ההדר.
+      paddingTop: 6,
+      paddingBottom: 10,
       gap: 8,
     },
     /** תפריט — מרווח נפרד מקצה המסך */
@@ -152,7 +154,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, inRtlTree: boo
     },
     titleBlock: {
       flex: 1,
-      alignItems: 'center',
+      alignItems: 'stretch',
       justifyContent: 'center',
       paddingHorizontal: 4,
       minHeight: 48,
@@ -163,11 +165,12 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, inRtlTree: boo
       color: tokens.colors.text.primary,
       letterSpacing: -0.35,
       lineHeight: MAIN_SCREEN_HEADER_TITLE_LINE_HEIGHT,
-      textAlign: 'center',
+      textAlign: inRtlTree ? 'right' : 'center',
+      writingDirection: 'rtl',
     },
     /** מתחת לשורת הכותרת — לא בתוך titleBlock (מונע הזזת כותרת/כפתורים למעלה) */
     subtitleRow: {
-      alignItems: 'center',
+      alignItems: inRtlTree ? 'flex-end' : 'center',
       justifyContent: 'center',
       paddingHorizontal: MAIN_SCREEN_HEADER_HP,
       marginTop: -4,
@@ -177,7 +180,8 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, inRtlTree: boo
       fontSize: 13,
       fontWeight: '500' as const,
       color: tokens.colors.text.secondary,
-      textAlign: 'center',
+      textAlign: inRtlTree ? 'right' : 'center',
+      writingDirection: 'rtl',
       lineHeight: 17,
     },
     sectionPicker: {

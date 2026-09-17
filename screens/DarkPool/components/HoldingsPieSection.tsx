@@ -9,6 +9,7 @@ import {
   sliceColorByTicker,
   type HoldingAllocationInput,
 } from '../utils/holdingsAllocation';
+import { darkPoolTextRtl } from '../darkPoolLayout';
 
 interface Props {
   title?: string;
@@ -106,9 +107,11 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontSize: 15,
       fontWeight: '800',
       color: tokens.colors.text.primary,
-      textAlign: 'left',
-      marginBottom: 12,
+      alignSelf: 'stretch',
+      textAlign: 'right',
       writingDirection: 'rtl',
+      ...darkPoolTextRtl,
+      marginBottom: 12,
     },
     donutWrap: {
       flexDirection: 'row-reverse',
@@ -134,7 +137,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontSize: 12,
       fontWeight: '600',
       color: tokens.colors.text.primary,
-      textAlign: 'left',
+      ...darkPoolTextRtl,
     },
     legendPct: {
       fontSize: 12,

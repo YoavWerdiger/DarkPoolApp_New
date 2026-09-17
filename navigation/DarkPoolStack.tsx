@@ -11,6 +11,8 @@ import DarkPoolHomeScreen from '../screens/DarkPool/DarkPoolHomeScreen';
 import DarkPoolExploreScreen from '../screens/DarkPool/DarkPoolExploreScreen';
 import DarkPoolTickerScreen from '../screens/DarkPool/DarkPoolTickerScreen';
 import DarkPoolInvestorProfileScreen from '../screens/DarkPool/DarkPoolInvestorProfileScreen';
+import DarkPoolTradeDetailScreen from '../screens/DarkPool/DarkPoolTradeDetailScreen';
+import type { CongressFeedTrade } from '../services/darkpool/uwCongressFeedService';
 
 export type DarkPoolStackParamList = {
   DarkPoolHome: undefined;
@@ -23,6 +25,7 @@ export type DarkPoolStackParamList = {
     nameHint?: string;
     imageHint?: string | null;
   };
+  DarkPoolTradeDetail: { trade: CongressFeedTrade };
 };
 
 const Stack = createNativeStackNavigator<DarkPoolStackParamList>();
@@ -34,7 +37,7 @@ export default function DarkPoolStack() {
         initialRouteName="DarkPoolHome"
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: '#0A0E0A', direction: 'rtl' },
+          contentStyle: { backgroundColor: '#111111', direction: 'rtl' },
         }}
       >
         <Stack.Screen name="DarkPoolHome" component={DarkPoolHomeScreen} />
@@ -51,6 +54,11 @@ export default function DarkPoolStack() {
         <Stack.Screen
           name="DarkPoolInvestor"
           component={DarkPoolInvestorProfileScreen}
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="DarkPoolTradeDetail"
+          component={DarkPoolTradeDetailScreen}
           options={{ animation: 'slide_from_right' }}
         />
       </Stack.Navigator>

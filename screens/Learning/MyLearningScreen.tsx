@@ -177,7 +177,7 @@ export const MyLearningScreen: React.FC = () => {
 
   if (error) {
     return (
-      <ScreenChrome withBrandWatermark>
+      <ScreenChrome>
         <StatusBar style="light" />
         <RNSafeAreaView style={styles.safeAreaContainer} edges={['top']}>
           <View style={styles.errorContainer}>
@@ -196,7 +196,7 @@ export const MyLearningScreen: React.FC = () => {
   }
 
   return (
-    <ScreenChrome withBrandWatermark>
+    <ScreenChrome>
       <StatusBar style="light" />
       <RNSafeAreaView style={styles.safeAreaContainer} edges={['top']}>
         <AcademyScreenHeader onMenuPress={openMainDrawer} title="הלמידה שלי" />

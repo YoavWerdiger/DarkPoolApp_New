@@ -2,7 +2,7 @@
 // Chat Groups List Screen - Modern Design (Exact Copy)
 // ============================================
 
-import React, { useMemo, useEffect, useState, useCallback, useRef } from 'react';
+import React, { useMemo, useEffect, useLayoutEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   FlatList,
@@ -14,7 +14,6 @@ import {
   ActivityIndicator,
   Image,
   TextInput,
-  Keyboard,
   ScrollView,
   Animated,
 } from 'react-native';
@@ -22,7 +21,6 @@ import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHeader';
-import { ScreenGradientBackground } from '../../components/VideoBackground';
 import { useAuth } from '../../context/AuthContext';
 import { useChat } from '../../context/ChatContext';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -48,8 +46,10 @@ import { getUsersWithStories, StoryWithUser } from '../../services/storiesServic
 import { queryClient } from '../../lib/queryClient';
 import { appQueryKeys } from '../../lib/appQueryKeys';
 import { schedulePrefetchChatMessages, warmChatGroupOnPress } from '../../services/appPrefetch';
+import { lockAndroidChatSoftInput } from '../../components/chat/androidChatKeyboard';
 import { logger } from '../../utils/logger';
 import { getChatMessagePreview } from '../../utils/chatMessagePreview';
+import { isUsableChatDisplayName } from '../../lib/chatMessageIdentity';
 import { isAnnouncementGroup } from '../../utils/isAnnouncementGroup';
 import { legacyAlert } from '../../utils/appDialog';
 import { HapticFeedback, triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
@@ -94,6 +94,28 @@ interface GroupWithMembership extends Omit<ChatGroup, 'my_role'> {
     created_at: string;
     message_type?: string;
   } | null;
+}
+
+function contextGroupsToListRows(groups: ChatGroup[]): GroupWithMembership[] {
+  return groups.map((cg) => {
+    const hasPreview =
+      cg.last_message_preview != null && String(cg.last_message_preview).length > 0;
+    const hasActivity = Boolean(cg.last_message_at);
+    return {
+      ...cg,
+      is_member: true,
+      my_role: cg.my_role,
+      last_message:
+        hasPreview || hasActivity
+          ? {
+              content: hasPreview ? String(cg.last_message_preview) : '',
+              sender_name: cg.last_message_sender_name || '',
+              created_at: cg.last_message_at || '',
+              message_type: cg.last_message_type,
+            }
+          : undefined,
+    };
+  });
 }
 
 // מיפוי fallback לתמונות קבוצות — מסונכרן עם chat_groups.avatar_url
@@ -253,7 +275,11 @@ export default function ChatGroupsListScreen() {
     }, [navigation])
   );
 
-  const [allGroups, setAllGroups] = useState<GroupWithMembership[]>([]);
+  const [allGroups, setAllGroups] = useState<GroupWithMembership[]>(() => {
+    if (!user?.id) return [];
+    const cached = queryClient.getQueryData<ChatGroup[]>(appQueryKeys.chatGroups(user.id));
+    return cached?.length ? contextGroupsToListRows(cached) : [];
+  });
   const [isLoading, setIsLoading] = useState(false);
   const imageErrorsRef = useRef<Set<string>>(new Set());
   const searchInputRef = useRef<TextInput>(null);
@@ -286,7 +312,10 @@ export default function ChatGroupsListScreen() {
     if (!user) return;
     if (isLoadingRef.current) return;
     isLoadingRef.current = true;
-    setIsLoading(true);
+    const hasLocalRows =
+      allGroups.length > 0 ||
+      Boolean(user?.id && queryClient.getQueryData(appQueryKeys.chatGroups(user.id)));
+    if (!hasLocalRows) setIsLoading(true);
     try {
       const { data: groups, error: groupsError } = await supabase
         .from('chat_groups')
@@ -381,7 +410,9 @@ export default function ChatGroupsListScreen() {
           user_ids: senderIds,
         });
         for (const row of (nameRows || []) as Array<{ id: string; display_name: string }>) {
-          if (row?.id) senderNameById[row.id] = row.display_name || 'משתמש';
+          if (row?.id && isUsableChatDisplayName(row.display_name)) {
+            senderNameById[row.id] = row.display_name;
+          }
         }
       }
 
@@ -395,7 +426,7 @@ export default function ChatGroupsListScreen() {
         if (lastMessage?.sender_id && senderNameById[lastMessage.sender_id]) {
           return senderNameById[lastMessage.sender_id];
         }
-        return 'משתמש';
+        return '';
       };
 
       const groupsWithLastMessage = realGroups.map((g) => {
@@ -477,17 +508,36 @@ export default function ChatGroupsListScreen() {
   // M8: removed useFocusEffect – realtime updates from contextGroups replace manual re-fetch on focus
 
   // M8: contextGroups is the single source of truth for live data; merge all fields on change
+  useLayoutEffect(() => {
+    if (allGroups.length > 0) return;
+    const source =
+      contextGroups?.length
+        ? contextGroups
+        : user?.id
+          ? queryClient.getQueryData<ChatGroup[]>(appQueryKeys.chatGroups(user.id))
+          : undefined;
+    if (source?.length) {
+      setAllGroups(contextGroupsToListRows(source));
+    }
+  }, [allGroups.length, contextGroups, user?.id]);
+
   useEffect(() => {
     if (!contextGroups || contextGroups.length === 0) return;
 
     setAllGroups(prev => {
+      if (prev.length === 0) {
+        return contextGroupsToListRows(contextGroups);
+      }
       let changed = false;
       const next = prev.map(group => {
         const cg = contextGroups.find(c => c.id === group.id);
         if (!cg) return group;
 
-        const nextSenderName =
-          cg.last_message_sender_name || group.last_message?.sender_name || 'משתמש';
+        const nextSenderName = isUsableChatDisplayName(cg.last_message_sender_name)
+          ? String(cg.last_message_sender_name)
+          : group.last_message_at !== cg.last_message_at
+            ? ''
+            : group.last_message?.sender_name || '';
         const nextType = cg.last_message_type ?? group.last_message?.message_type;
         const hasChange =
           group.unread_count !== (cg.unread_count || 0) ||
@@ -710,11 +760,16 @@ export default function ChatGroupsListScreen() {
       // סגור את ה-BottomSheet ונווט לקבוצה
       setJoinGroupSheet({ visible: false, group: null });
       setIsJoining(false);
-      await loadGroups();
-
+      setAllGroups((prev) =>
+        prev.map((g) =>
+          g.id === group.id ? { ...g, is_member: true, my_role: 'member' } : g,
+        ),
+      );
       void HapticFeedback.impactLight();
-      // נווט לקבוצה אחרי הצטרפות
+      lockAndroidChatSoftInput();
+      if (user?.id) warmChatGroupOnPress(user.id, group.id);
       (navigation as any).navigate('ChatGroup', { groupId: group.id });
+      void loadGroups();
     } catch (error: any) {
       setIsJoining(false);
       legacyAlert('שגיאה', error?.message || 'שגיאה לא צפויה');
@@ -728,9 +783,10 @@ export default function ChatGroupsListScreen() {
       setJoinGroupSheet({ visible: true, group });
       return;
     }
-    Keyboard.dismiss();
+    // אל תסגור מקלדת לפני navigate — באנדרואיד Keyboard.dismiss + adjustResize
+    // דוחים את first paint של ה-thread ב-300–400ms. ADJUST_NOTHING כבר ננעל ב-onPressIn.
     void HapticFeedback.impactLight();
-    // חימום מיידי בלחיצה — לפני/במהלך transition של הניווט
+    lockAndroidChatSoftInput();
     if (user?.id) {
       warmChatGroupOnPress(user.id, group.id);
     }
@@ -750,13 +806,15 @@ export default function ChatGroupsListScreen() {
 
   const handleMessageResultPress = useCallback((result: ChatSearchResult) => {
     setSearchSheetVisible(false);
-    Keyboard.dismiss();
     void HapticFeedback.impactLight();
+    const gid = result.group?.id;
+    lockAndroidChatSoftInput();
+    if (user?.id && gid) warmChatGroupOnPress(user.id, gid);
     (navigation as any).navigate('ChatGroup', {
-      groupId: result.group?.id,
+      groupId: gid,
       scrollToMessageId: result.message?.id,
     });
-  }, [navigation]);
+  }, [navigation, user?.id]);
 
   useEffect(() => {
     if (!searchSheetVisible) return;
@@ -894,7 +952,18 @@ export default function ChatGroupsListScreen() {
           ? 'אין הודעות עדיין'
           : `${group.members_count || 0} חברים`;
       return (
-        <TouchableOpacity style={styles.searchRowItem} activeOpacity={0.6} onPress={() => handleGroupPress(group)}>
+        <TouchableOpacity
+          style={styles.searchRowItem}
+          activeOpacity={0.6}
+          delayPressIn={0}
+          onPress={() => handleGroupPress(group)}
+          onPressIn={() => {
+            if (user?.id && group.is_member) {
+              lockAndroidChatSoftInput();
+              warmChatGroupOnPress(user.id, group.id);
+            }
+          }}
+        >
           {imageUrl && !hasImageError ? (
             <Image source={{ uri: imageUrl }} style={styles.searchRowAvatar} resizeMode="cover" />
           ) : (
@@ -929,7 +998,19 @@ export default function ChatGroupsListScreen() {
         : msg?.content || '');
     const timeLabel = msg?.created_at ? formatRelativeTime(msg.created_at) : '';
     return (
-      <TouchableOpacity style={styles.searchRowItem} activeOpacity={0.6} onPress={() => handleMessageResultPress(item.result)}>
+      <TouchableOpacity
+        style={styles.searchRowItem}
+        activeOpacity={0.6}
+        delayPressIn={0}
+        onPress={() => handleMessageResultPress(item.result)}
+        onPressIn={() => {
+          const gid = item.result.group?.id;
+          if (user?.id && gid) {
+            lockAndroidChatSoftInput();
+            warmChatGroupOnPress(user.id, gid);
+          }
+        }}
+      >
         {groupImage ? (
           <Image source={{ uri: groupImage }} style={styles.searchRowAvatar} resizeMode="cover" />
         ) : (
@@ -949,7 +1030,7 @@ export default function ChatGroupsListScreen() {
         </View>
       </TouchableOpacity>
     );
-  }, [handleGroupPress, handleMessageResultPress, tokens, styles]);
+  }, [handleGroupPress, handleMessageResultPress, tokens, styles, user?.id]);
 
   const renderMyGroup = useCallback(
     (item: GroupWithMembership, isLastAnnouncement: boolean, isLastInSection: boolean) => {
@@ -960,12 +1041,17 @@ export default function ChatGroupsListScreen() {
       const imageUrl = item.avatar_url || getImageByGroupName(item.name) || null;
       const hasImageError = imageUrl ? imageErrorsRef.current.has(imageUrl) : false;
 
+      const previewBody =
+        item.last_message_preview ||
+        (item.last_message
+          ? getChatMessagePreview(item.last_message.message_type, item.last_message.content)
+          : '');
+      const senderLabel =
+        item.last_message_sender_name || item.last_message?.sender_name || '';
       const lastMsgPreview = item.last_message
-        ? `${item.last_message.sender_name}: ${
-            // content כבר preview מהמיזוג עם context; message_type לרענון אייקון בלבד
-            item.last_message_preview ||
-            getChatMessagePreview(item.last_message.message_type, item.last_message.content)
-          }`
+        ? isUsableChatDisplayName(senderLabel)
+          ? `${senderLabel}: ${previewBody}`
+          : previewBody || 'אין הודעות עדיין'
         : 'אין הודעות עדיין';
 
       const timeLabel = item.last_message_at
@@ -979,6 +1065,13 @@ export default function ChatGroupsListScreen() {
           <TouchableOpacity
             style={styles.chatRow}
             onPress={() => handleGroupPress(item)}
+            onPressIn={() => {
+              if (user?.id && item.is_member) {
+                lockAndroidChatSoftInput();
+                warmChatGroupOnPress(user.id, item.id);
+              }
+            }}
+            delayPressIn={0}
             activeOpacity={0.6}
           >
             <View style={styles.avatarWrap}>
@@ -1054,7 +1147,7 @@ export default function ChatGroupsListScreen() {
         </View>
       );
     },
-    [styles, tokens, handleGroupPress, imageErrorCount]
+    [styles, tokens, handleGroupPress, imageErrorCount, user?.id]
   );
 
   const renderJoinableGroup = useCallback(
@@ -1098,7 +1191,7 @@ export default function ChatGroupsListScreen() {
                 </Text>
               </View>
               <Text style={styles.joinableSubtitle} numberOfLines={1}>
-                לחץ להצטרפות
+                הקש להצטרפות
               </Text>
             </View>
 
@@ -1181,9 +1274,8 @@ export default function ChatGroupsListScreen() {
   );
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: '#111111' }}>
       <MainDrawerRegistration />
-      <ScreenGradientBackground style={StyleSheet.absoluteFillObject} />
       <RNSafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <View style={styles.container}>
           <MainDrawerScreenHeader
@@ -1407,7 +1499,7 @@ export default function ChatGroupsListScreen() {
             <TextInput
               ref={searchInputRef}
               style={styles.searchPillInput}
-              placeholder="חיפוש צ׳אטים והודעות..."
+              placeholder="חיפוש בצ׳אטים ובהודעות"
               placeholderTextColor={tokens.colors.text.tertiary}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -1556,7 +1648,10 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     backgroundColor: tokens.colors.border.divider,
   },
   statusLabel: {
-    fontSize: 11,
+    fontSize: tokens.typography.caption2.size,
+    lineHeight: tokens.typography.caption2.lineHeight,
+    fontWeight: tokens.typography.caption2.weight,
+    letterSpacing: tokens.typography.caption2.letterSpacing,
     color: tokens.colors.text.secondary,
     maxWidth: 68,
     textAlign: 'center',
@@ -1652,14 +1747,19 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     minWidth: 0,
   },
   searchRowTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: tokens.typography.titleXs.size,
+    lineHeight: tokens.typography.titleXs.lineHeight,
+    fontWeight: tokens.typography.titleXs.weight,
+    letterSpacing: tokens.typography.letterSpacing.normal,
     color: tokens.colors.text.primary,
     textAlign: 'right',
     writingDirection: 'rtl',
   },
   searchRowSubtitle: {
-    fontSize: 13,
+    fontSize: tokens.typography.footnote.size,
+    lineHeight: tokens.typography.footnote.lineHeight,
+    fontWeight: tokens.typography.footnote.weight,
+    letterSpacing: tokens.typography.footnote.letterSpacing,
     color: tokens.colors.text.secondary,
     textAlign: 'right',
     writingDirection: 'rtl',
@@ -1694,13 +1794,15 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     backgroundColor: 'rgba(0, 200, 5, 0.12)',
   },
   filterPillText: {
-    fontSize: 13,
-    fontWeight: '500',
+    fontSize: tokens.typography.footnote.size,
+    lineHeight: tokens.typography.footnote.lineHeight,
+    fontWeight: tokens.typography.footnote.weight,
+    letterSpacing: tokens.typography.letterSpacing.normal,
     color: tokens.colors.text.secondary,
   },
   filterPillTextActive: {
     color: tokens.colors.primary.main,
-    fontWeight: '600',
+    fontWeight: tokens.typography.subhead.weight,
   },
   filterBadge: {
     backgroundColor: tokens.colors.primary.main,
@@ -1748,8 +1850,10 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     marginBottom: 4,
   },
   chatName: {
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: tokens.typography.titleXs.size,
+    lineHeight: tokens.typography.titleXs.lineHeight,
+    fontWeight: tokens.typography.titleXs.weight,
+    letterSpacing: tokens.typography.letterSpacing.normal,
     color: tokens.colors.text.primary,
     flex: 1,
     textAlign: 'right',
@@ -1767,7 +1871,10 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     alignItems: 'center',
   },
   chatPreview: {
-    fontSize: 14,
+    fontSize: tokens.typography.subhead.size,
+    lineHeight: tokens.typography.subhead.lineHeight,
+    fontWeight: tokens.typography.subhead.weight,
+    letterSpacing: tokens.typography.letterSpacing.normal,
     color: tokens.colors.text.tertiary,
     flex: 1,
     textAlign: 'right',
@@ -1821,8 +1928,10 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     paddingBottom: 6,
   },
   sectionHeaderText: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: tokens.typography.caption.size,
+    lineHeight: tokens.typography.caption.lineHeight,
+    fontWeight: tokens.typography.caption.weight,
+    letterSpacing: tokens.typography.letterSpacing.normal,
     color: 'rgba(255, 255, 255, 0.84)',
     textAlign: 'right',
     writingDirection: 'rtl',

@@ -1,7 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { memo, useMemo, useState } from 'react';
 import {
-  Image,
-  ImageBackground,
   StyleSheet,
   Text,
   View,
@@ -9,10 +7,11 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import {
-  INVESTOR_PORTRAIT_PLACEHOLDER_URI,
+  portraitDisplayUrl,
   portraitPhotoCandidates,
 } from '../utils/investorPlaceholder';
 
@@ -47,13 +46,15 @@ interface Props {
   style?: StyleProp<ViewStyle>;
   imageStyle?: StyleProp<ImageStyle>;
   children?: React.ReactNode;
+  /** עדיפות לטעינה — visible / high לרשימות על המסך */
+  priority?: 'low' | 'normal' | 'high';
 }
 
 function circleStyle(n: number) {
   return { width: n, height: n, borderRadius: n / 2 };
 }
 
-export function InvestorPortraitFallback({
+function InvestorPortraitFallbackInner({
   name,
   imageUrl,
   ticker,
@@ -64,6 +65,7 @@ export function InvestorPortraitFallback({
   style,
   imageStyle,
   children,
+  priority = 'normal',
 }: Props) {
   const tokens = useDesignTokens();
   const [failed, setFailed] = useState<Set<string>>(() => new Set());
@@ -79,9 +81,12 @@ export function InvestorPortraitFallback({
     [imageUrl, kind, personId, name, failed]
   );
 
-  const uri = candidates[0] ?? null;
+  const rawUri = candidates[0] ?? null;
+  const thumbEdge = layout === 'circle' ? Math.max(128, size * 3) : 480;
+  const uri = rawUri ? portraitDisplayUrl(rawUri, thumbEdge) ?? rawUri : null;
   const initials = initialsFromName(name);
   const monoBg = monogramColor(personId || name || ticker || 'x');
+  const recyclingKey = personId || name || uri || 'portrait';
 
   if (layout === 'circle') {
     if (!uri) {
@@ -114,10 +119,15 @@ export function InvestorPortraitFallback({
         <Image
           source={{ uri }}
           style={[circleStyle(size), imageStyle]}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          recyclingKey={recyclingKey}
+          priority={priority}
+          transition={0}
           onError={() =>
             setFailed((prev) => {
               const next = new Set(prev);
-              next.add(uri);
+              next.add(rawUri!);
               return next;
             })
           }
@@ -132,7 +142,7 @@ export function InvestorPortraitFallback({
       <View style={[styles.cardBg, style]}>
         <LinearGradient
           colors={[monoBg, '#0a0e0a']}
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
         />
         <View style={styles.cardMonoCenter}>
           <View
@@ -150,25 +160,30 @@ export function InvestorPortraitFallback({
   }
 
   return (
-    <ImageBackground
-      source={{ uri }}
-      style={[styles.cardBg, style]}
-      imageStyle={[styles.cardImage, imageStyle]}
-      onError={() =>
-        setFailed((prev) => {
-          const next = new Set(prev);
-          next.add(uri);
-          return next;
-        })
-      }
-      accessibilityLabel={name}
-    >
+    <View style={[styles.cardBg, style]}>
+      <Image
+        source={{ uri }}
+        style={[StyleSheet.absoluteFill, styles.cardImage, imageStyle]}
+        contentFit="cover"
+        cachePolicy="memory-disk"
+        recyclingKey={recyclingKey}
+        priority={priority}
+        transition={0}
+        onError={() =>
+          setFailed((prev) => {
+            const next = new Set(prev);
+            next.add(rawUri!);
+            return next;
+          })
+        }
+        accessibilityLabel={name}
+      />
       {children}
-    </ImageBackground>
+    </View>
   );
 }
 
-export function InvestorPortrait({
+function InvestorPortraitInner({
   name,
   imageUrl,
   ticker,
@@ -179,6 +194,7 @@ export function InvestorPortrait({
   style,
   imageStyle,
   children,
+  priority = 'normal',
 }: Props) {
   const [failed, setFailed] = useState<Set<string>>(() => new Set());
 
@@ -193,7 +209,10 @@ export function InvestorPortrait({
     [imageUrl, kind, personId, name, failed]
   );
 
-  const uri = candidates[0] ?? null;
+  const rawUri = candidates[0] ?? null;
+  const thumbEdge = layout === 'circle' ? Math.max(128, size * 3) : 480;
+  const uri = rawUri ? portraitDisplayUrl(rawUri, thumbEdge) ?? rawUri : null;
+  const recyclingKey = personId || name || uri || 'portrait';
 
   if (uri) {
     if (layout === 'circle') {
@@ -202,10 +221,15 @@ export function InvestorPortrait({
           <Image
             source={{ uri }}
             style={[circleStyle(size), imageStyle]}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            recyclingKey={recyclingKey}
+            priority={priority}
+            transition={0}
             onError={() =>
               setFailed((prev) => {
                 const next = new Set(prev);
-                next.add(uri);
+                next.add(rawUri!);
                 return next;
               })
             }
@@ -215,26 +239,31 @@ export function InvestorPortrait({
       );
     }
     return (
-      <ImageBackground
-        source={{ uri }}
-        style={[styles.cardBg, style]}
-        imageStyle={[styles.cardImageFull, imageStyle]}
-        onError={() =>
-          setFailed((prev) => {
-            const next = new Set(prev);
-            next.add(uri);
-            return next;
-          })
-        }
-        accessibilityLabel={name}
-      >
+      <View style={[styles.cardBg, style]}>
+        <Image
+          source={{ uri }}
+          style={[StyleSheet.absoluteFill, styles.cardImageFull, imageStyle]}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          recyclingKey={recyclingKey}
+          priority={priority}
+          transition={0}
+          onError={() =>
+            setFailed((prev) => {
+              const next = new Set(prev);
+              next.add(rawUri!);
+              return next;
+            })
+          }
+          accessibilityLabel={name}
+        />
         {children}
-      </ImageBackground>
+      </View>
     );
   }
 
   return (
-    <InvestorPortraitFallback
+    <InvestorPortraitFallbackInner
       name={name}
       imageUrl={imageUrl}
       ticker={ticker}
@@ -244,25 +273,27 @@ export function InvestorPortrait({
       size={size}
       style={style}
       imageStyle={imageStyle}
+      priority={priority}
     >
       {children}
-    </InvestorPortraitFallback>
+    </InvestorPortraitFallbackInner>
   );
 }
+
+export const InvestorPortraitFallback = memo(InvestorPortraitFallbackInner);
+export const InvestorPortrait = memo(InvestorPortraitInner);
 
 const styles = StyleSheet.create({
   cardBg: {
     flex: 1,
     justifyContent: 'flex-end',
     backgroundColor: '#0f160f',
+    overflow: 'hidden',
   },
   cardImage: {
-    resizeMode: 'cover',
     opacity: 0.55,
   },
-  cardImageFull: {
-    resizeMode: 'cover',
-  },
+  cardImageFull: {},
   ring: {
     overflow: 'hidden',
     borderWidth: 1,
@@ -278,7 +309,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   cardMonoCenter: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     paddingBottom: 28,
@@ -298,4 +329,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export { INVESTOR_PORTRAIT_PLACEHOLDER_URI };
+export { INVESTOR_PORTRAIT_PLACEHOLDER_URI } from '../utils/investorPlaceholder';

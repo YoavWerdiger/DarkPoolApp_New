@@ -15,20 +15,41 @@ import {
   type UwCongressTrade,
 } from './unusualWhales.ts';
 import {
+  DEFAULT_HISTORY_TICKERS,
   fetchQuiverLiveCongressTrades,
   fetchQuiverTradesForBioguides,
+  fetchQuiverTrumpStockTrades,
   getCongressTradesProvider,
   isQuiverEquityTrade,
+  normalizeQuiverIsoDate,
   parseQuiverTxnSide,
   resolveCongressApiKey,
+  resolveQuiverApiKey,
   CURATED_CONGRESS_BIOGUIDES,
   CURATED_EXECUTIVE_UW_IDS,
+  TRUMP_DARKPOOL_PERSON_ID,
   type CongressTradesProvider,
   type QuiverCongressTrade,
+  type QuiverTrumpStockTrade,
 } from './quiverQuant.ts';
 import type { CongressTradeRow } from './uwDbCache.ts';
 
+/**
+ * Quiver מחזיר את שדות התשואה כ-number, ולעיתים כ-string ("224.73%").
+ * מחזיר אחוזים (24.11 = +24.11%). null = אין נתון — לעולם לא 0.
+ */
+function parseQuiverReturnPct(raw: unknown): number | null {
+  if (raw == null) return null;
+  if (typeof raw === 'number') return Number.isFinite(raw) ? raw : null;
+  const s = String(raw).trim().replace(/%/g, '').replace(/,/g, '');
+  if (!s) return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
 const CONGRESS_PHOTO = 'https://unitedstates.github.io/images/congress/225x275';
+const TRUMP_PHOTO =
+  'https://upload.wikimedia.org/wikipedia/commons/5/56/Donald_Trump_official_portrait.jpg';
 const BIOGUIDE_RE = /^[A-Z]\d{6}$/;
 
 export async function buildCongressTradeRows(
@@ -58,14 +79,35 @@ export async function buildCongressTradeRows(
  */
 export async function buildCuratedCongressHistoryRows(
   apiKey?: string,
-  bioguides: string[] = CURATED_CONGRESS_BIOGUIDES
+  bioguides: string[] = CURATED_CONGRESS_BIOGUIDES,
+  opts: {
+    tickers?: string[];
+    /** אופציונלי — historical לפי טיקרים אחרי bulk (ברירת מחדל כבוי) */
+    enrichTickers?: boolean;
+    includeChambers?: boolean;
+    bulkMaxPages?: number;
+    maxTickers?: number;
+    rowLimit?: number;
+  } = {}
 ): Promise<CongressTradeRow[]> {
   const quiverKey = apiKey?.trim() || resolveCongressApiKey('quiverquant');
   if (quiverKey) {
     try {
-      const raw = await fetchQuiverTradesForBioguides(quiverKey, bioguides);
+      const raw = await fetchQuiverTradesForBioguides(
+        quiverKey,
+        bioguides,
+        opts.tickers ?? DEFAULT_HISTORY_TICKERS,
+        {
+          // מקור ראשי: bulk/congresstrading?bioguide_id= (עמוק)
+          enrichTickers: opts.enrichTickers === true,
+          includeChambers: opts.includeChambers === true,
+          bulkMaxPages: opts.bulkMaxPages ?? 20,
+          maxTickers: opts.maxTickers ?? 12,
+          filterToBioguides: true,
+        }
+      );
       if (raw.length) {
-        return quiverTradesToRows(raw, { limit: 2000 });
+        return quiverTradesToRows(raw, { limit: opts.rowLimit ?? 8000 });
       }
     } catch (e) {
       console.warn('curated quiver history', e);
@@ -91,16 +133,45 @@ export async function buildCuratedCongressHistoryRows(
 }
 
 /**
- * היסטוריה לפרופילים מאוצרים לפי UUID של UW (executive — Trump וכו׳).
- * לא BioGuide; Quiver לא מכסה אותם.
+ * היסטוריה לפרופילים מאוצרים שאינם BioGuide (executive — Trump).
+ * Quiver Trader: /beta/bulk/trumpstocktrades; גיבוי UW politician-portfolios.
  */
 export async function buildCuratedExecutiveTradeRows(
   apiKey?: string,
   uwIds: string[] = CURATED_EXECUTIVE_UW_IDS
 ): Promise<CongressTradeRow[]> {
-  const uwKey =
-    apiKey?.trim() || Deno.env.get('UNUSUAL_WHALES_API_KEY')?.trim() || '';
-  if (!uwKey || !uwIds.length) return [];
+  const wantTrump = uwIds.some(
+    (id) => String(id).trim() === TRUMP_DARKPOOL_PERSON_ID
+  );
+  const out: CongressTradeRow[] = [];
+  const seen = new Set<string>();
+
+  if (wantTrump) {
+    // רק מפתח Quiver אמיתי — לא לבלבל עם UW key שנשלח כ־apiKey
+    const quiverKey = resolveQuiverApiKey();
+    if (quiverKey) {
+      try {
+        const trumpRows = await fetchQuiverTrumpStockTrades(quiverKey, {
+          pageSize: 200,
+          maxPages: 12,
+        });
+        for (const t of trumpRows) {
+          const row = trumpTradeToCongressRow(t);
+          if (!row || seen.has(row.external_id)) continue;
+          seen.add(row.external_id);
+          out.push(row);
+        }
+      } catch (e) {
+        console.warn('curated quiver trump trades:', (e as Error).message);
+      }
+    }
+  }
+
+  if (out.length) return out;
+
+  // גיבוי UW בלבד — לעולם לא לשלוח QUIVER_API_KEY ל־Unusual Whales
+  const uwKey = Deno.env.get('UNUSUAL_WHALES_API_KEY')?.trim() || '';
+  if (!uwKey || !uwIds.length) return out;
 
   const trades: UwCongressTrade[] = [];
   for (const id of uwIds) {
@@ -118,11 +189,9 @@ export async function buildCuratedExecutiveTradeRows(
       console.warn(`curated executive trades ${pid}:`, (e as Error).message);
     }
   }
-  if (!trades.length) return [];
+  if (!trades.length) return out;
 
   const emptyBio = new Map<string, string>();
-  const out: CongressTradeRow[] = [];
-  const seen = new Set<string>();
   for (const t of trades) {
     const row = uwToCongressRow(t, emptyBio);
     if (!row || seen.has(row.external_id)) continue;
@@ -130,6 +199,40 @@ export async function buildCuratedExecutiveTradeRows(
     out.push(row);
   }
   return out;
+}
+
+function trumpTradeToCongressRow(t: QuiverTrumpStockTrade): CongressTradeRow | null {
+  const ticker = String(t.Ticker ?? '').toUpperCase().trim();
+  const side = parseQuiverTxnSide(t.Transaction);
+  if (!ticker || !side) return null;
+  // Quiver docs: Traded = יום העסקה, Filed = יום הדיווח (מה שמוצג כ־«אחרון»)
+  const txDate = normalizeQuiverIsoDate(t.Traded);
+  const filed = normalizeQuiverIsoDate(t.Filed) || txDate;
+  const day = txDate || filed;
+  if (!day || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
+  const amount_label = t.Amount?.trim() || null;
+  const txnSlug = String(t.Transaction ?? side).replace(/\s+/g, '_').slice(0, 40);
+  // נשמר פורמט id קיים (בלי Amount) כדי לא לשכפל שורות מול סנכרונים ישנים
+  return {
+    external_id: `quiver:trump:${ticker}:${day}:${side}:${txnSlug}`,
+    politician_id: TRUMP_DARKPOOL_PERSON_ID,
+    politician_name: 'Donald Trump',
+    politician_image_url: TRUMP_PHOTO,
+    ticker,
+    company_name: t.Company?.trim() || null,
+    transaction_type: side,
+    shares: null,
+    price: null,
+    amount_label,
+    filed_at: `${(filed || day)}T12:00:00Z`,
+    transaction_date: day,
+    txn_label: side === 'sell' ? 'מכירה' : 'רכישה',
+    source: 'quiverquant',
+    // trumpstocktrades מחזיר ExcessReturn בלבד — PriceChange/SPYChange לא בסכימה
+    excess_return_pct: parseQuiverReturnPct(t.ExcessReturn),
+    price_change_pct: null,
+    spy_change_pct: null,
+  };
 }
 
 async function buildFromQuiver(apiKey: string, limit: number): Promise<CongressTradeRow[]> {
@@ -179,6 +282,8 @@ function quiverToCongressRow(t: QuiverCongressTrade): CongressTradeRow | null {
 
   const txDate = String(t.TransactionDate ?? '').slice(0, 10);
   const filed = String(t.ReportDate ?? t.last_modified ?? txDate).slice(0, 10);
+  const day = (txDate || filed).slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
   const amount_label = t.Range?.trim() || null;
   // Quiver/STOCK Act — טווח $ בלבד; לא לזייף shares/price כאילו מדווחים
 
@@ -187,7 +292,7 @@ function quiverToCongressRow(t: QuiverCongressTrade): CongressTradeRow | null {
     : null;
   const txn_label = side === 'sell' ? 'מכירה' : 'רכישה';
   const txnSlug = String(t.Transaction ?? side).replace(/\s+/g, '_').slice(0, 40);
-  const external_id = `quiver:${politician_id}:${ticker}:${txDate}:${side}:${txnSlug}`;
+  const external_id = `quiver:${politician_id}:${ticker}:${day}:${side}:${txnSlug}`;
 
   return {
     external_id,
@@ -200,10 +305,14 @@ function quiverToCongressRow(t: QuiverCongressTrade): CongressTradeRow | null {
     shares: null,
     price: null,
     amount_label,
-    filed_at: filed ? `${filed}T12:00:00Z` : new Date().toISOString(),
-    transaction_date: txDate || filed,
+    filed_at: `${(filed || day)}T12:00:00Z`,
+    transaction_date: day,
     txn_label,
     source: 'quiverquant',
+    // חוזרים בכל קריאת congresstrading — אפס קריאות API נוספות
+    excess_return_pct: parseQuiverReturnPct(t.ExcessReturn),
+    price_change_pct: parseQuiverReturnPct(t.PriceChange),
+    spy_change_pct: parseQuiverReturnPct(t.SPYChange),
   };
 }
 
@@ -292,6 +401,10 @@ function uwToCongressRow(
     transaction_date: txDate || filed,
     txn_label,
     source: 'unusualwhales',
+    // UW לא מחזיר את שדות התשואה של Quiver
+    excess_return_pct: null,
+    price_change_pct: null,
+    spy_change_pct: null,
   };
 }
 

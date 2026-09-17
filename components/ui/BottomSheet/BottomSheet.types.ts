@@ -16,15 +16,19 @@ export interface BottomSheetProps {
   edgeToEdge?: boolean;
   /** גובה אזור הגסטרה הצף במצב edgeToEdge (בpx). מאפשר להגדיל את אזור הגרירה (למשל מעל תמונה שלמה). */
   dragAreaHeight?: number;
-  /** גרדיאנט מסך + שור־דוב. ברירת מחדל: false (הכרום הגלובלי הוא זכוכית). */
+  /** גרדיאנט מסך מותגי. ברירת מחדל: false (הכרום הגלובלי הוא זכוכית). */
   showBrandBackground?: boolean;
-  /** שכבת שור־דוב בלבד — false = גרדיאנט בלי watermark. ברירת מחדל: כמו showBrandBackground */
+  /**
+   * @deprecated הוסר — שור־דוב כבר לא ברקע. נשאר ל-API תאימות.
+   */
   showBrandWatermark?: boolean;
   /** פינות עליונות של לוח השיט (ברירת מחדל מ־styles). למשל 28 כמו מודאל טופס */
   topCornerRadius?: number;
   /** כש־true: התוכן לא נמתח לגובה מלא — השיט מעוגן לתחתית בגובה snapPoints[0] */
   fitContent?: boolean;
-  /** מכפיל גודל שור־דוב בשכבת sheetBottom (1 = רגיל) */
+  /**
+   * @deprecated הוסר — שור־דוב כבר לא ברקע. נשאר ל-API תאימות.
+   */
   brandWatermarkScale?: number;
   /** דריסת ריפוד תחתון לתוכן השיט (למשל 0 כשה-footer מטפל ב-safe area בעצמו) */
   contentPaddingBottom?: number;

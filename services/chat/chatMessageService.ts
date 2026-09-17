@@ -104,6 +104,26 @@ export async function sendChatMessage(
       } catch {
         return { data: null, error: { code: 'INVALID_TRADE_JSON', message: 'פורמט טרייד לא תקין' } };
       }
+    } else if (input.message_type === ChatMessageType.ENTITY) {
+      const raw = input.content?.trim();
+      if (!raw) {
+        return { data: null, error: { code: 'EMPTY_ENTITY', message: 'ישות ריקה' } };
+      }
+      try {
+        const parsed = JSON.parse(raw) as { attachment?: unknown };
+        const att = parsed.attachment ?? parsed;
+        if (
+          !att ||
+          typeof att !== 'object' ||
+          (att as { v?: unknown }).v !== 1 ||
+          !(att as { ref?: { type?: unknown; id?: unknown } }).ref?.type ||
+          !(att as { ref?: { id?: unknown } }).ref?.id
+        ) {
+          return { data: null, error: { code: 'INVALID_ENTITY', message: 'נתוני ישות לא תקינים' } };
+        }
+      } catch {
+        return { data: null, error: { code: 'INVALID_ENTITY_JSON', message: 'פורמט ישות לא תקין' } };
+      }
     } else if (input.message_type === 'text' && input.content) {
       const contentValidation = validateMessageContent(input.content);
       if (!contentValidation.valid) {
@@ -246,9 +266,7 @@ export async function sendChatMessage(
           contentToStore = JSON.stringify(mediaGroupContent);
         }
         
-        const { data: insertData, error: insertError } = await supabase
-          .from('chat_messages')
-          .insert({
+        const insertRow: Record<string, unknown> = {
             group_id: input.group_id,
             sender_id: userId,
             content: contentToStore,
@@ -264,18 +282,17 @@ export async function sendChatMessage(
             media_file_name: input.media_file_name,
             reply_to_message_id: input.reply_to_message_id,
             mentioned_users: input.mentioned_users || [],
+            mentions: Array.isArray(input.mentions) ? input.mentions : [],
             is_silent: input.is_silent || false,
-            // Note: metadata column needs to be added to Supabase first
-            // metadata: input.metadata || null,
-            // M7: let the DB set created_at via DEFAULT now() so server clock is authoritative
-            //
-            // NOTE: input.client_message_id is intentionally NOT forwarded to
-            // the insert yet. It travels with retries inside the client
-            // offline queue (chatOfflineQueue.ts) so the UI can match the
-            // server's eventual response back to the placeholder bubble.
-            // Persistent server-side dedupe requires migration 018 +
-            // refactoring to an idempotent upsert; tracked in DELIVERY_PLAN.
-          })
+        };
+        if (input.client_message_id) {
+          insertRow.client_message_id = input.client_message_id;
+        }
+
+        const runInsert = (row: Record<string, unknown>) =>
+          supabase
+          .from('chat_messages')
+          .insert(row)
           .select(`
             *,
             sender:users!chat_messages_sender_id_fkey (
@@ -286,6 +303,20 @@ export async function sendChatMessage(
             )
           `)
           .single();
+
+        let { data: insertData, error: insertError } = await runInsert(insertRow);
+        const missingClientIdColumn =
+          insertError &&
+          input.client_message_id &&
+          (insertError.code === 'PGRST204' ||
+            insertError.code === '42703' ||
+            String(insertError.message || '').includes('client_message_id'));
+        if (missingClientIdColumn) {
+          const { client_message_id: _omit, ...withoutClientId } = insertRow;
+          const retried = await runInsert(withoutClientId);
+          insertData = retried.data;
+          insertError = retried.error;
+        }
 
         if (insertError) {
           throw insertError;
@@ -298,6 +329,9 @@ export async function sendChatMessage(
       });
 
       messageData = result as ChatMessage;
+      if (messageData && input.client_message_id && !messageData.client_message_id) {
+        messageData.client_message_id = input.client_message_id;
+      }
       
       // Ensure sender data is properly formatted (handle array case from Supabase)
       if (messageData.sender && Array.isArray(messageData.sender)) {
@@ -676,6 +710,9 @@ export async function editChatMessage(
     };
     if (input.mentioned_users !== undefined) {
       updatePayload.mentioned_users = input.mentioned_users;
+    }
+    if (input.mentions !== undefined) {
+      updatePayload.mentions = Array.isArray(input.mentions) ? input.mentions : [];
     }
 
     const { data, error } = await supabase

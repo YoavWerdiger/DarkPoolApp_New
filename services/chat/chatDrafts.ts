@@ -39,6 +39,15 @@ export async function loadDraft(groupId: string): Promise<string> {
 export async function saveDraft(groupId: string, text: string): Promise<void> {
   if (!groupId) return;
   try {
+    // AsyncStorage.setItem requires a string. A function (e.g. leaked React
+    // setState updater) triggers a Metro WARN and can native-abort Expo Go.
+    if (typeof text !== 'string') {
+      logger.error(TAG, 'saveDraft rejected non-string', {
+        groupId,
+        typeofText: typeof text,
+      });
+      return;
+    }
     if (!text || text.length === 0) {
       await AsyncStorage.removeItem(key(groupId));
       return;

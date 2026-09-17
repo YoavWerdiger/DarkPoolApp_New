@@ -142,21 +142,15 @@ export default function MessageContextMenu({
         <MenuOptions
           customStyles={{
             optionsContainer: {
-              backgroundColor: '#1a1a1a', // רקע כהה
+              backgroundColor: '#262626',
               borderRadius: 12,
               paddingVertical: 8,
-              shadowColor: '#000',
-              shadowOffset: {
-                width: 0,
-                height: 4,
-              },
-              shadowOpacity: 0.3,
-              shadowRadius: 8,
-              elevation: 8,
+              shadowColor: 'transparent',
+              shadowOpacity: 0,
+              elevation: 0,
               minWidth: 200,
               maxWidth: 250,
-              borderWidth: 1,
-              borderColor: '#333333',
+              borderWidth: 0,
             },
           }}
         >

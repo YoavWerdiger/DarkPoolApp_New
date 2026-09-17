@@ -16,6 +16,7 @@ import type { Trade } from '../portfolioTypes';
 import { toLocalDateKey } from '../../../utils/dateKeys';
 import { formatCurrency } from '../utils/format';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
+import { darkPoolTextRtl } from '../../DarkPool/darkPoolLayout';
 
 interface Props {
   portfolioId: string;
@@ -146,26 +147,30 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        root: { flex: 1, paddingTop: 4 },
+        root: { flex: 1, paddingTop: 4, direction: 'rtl' },
         loading: { paddingVertical: 60, alignItems: 'center' },
         empty: {
           alignItems: 'center',
           paddingVertical: 60,
           gap: 8,
+          direction: 'rtl',
         },
         emptyTitle: {
           fontSize: 16,
           fontWeight: '700',
           color: tokens.colors.text.primary,
+          ...darkPoolTextRtl,
+          textAlign: 'center',
         },
         emptyText: {
           fontSize: 13,
           color: tokens.colors.text.tertiary,
           textAlign: 'center',
+          writingDirection: 'rtl',
           paddingHorizontal: 30,
         },
         navRow: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
           marginBottom: 10,
@@ -176,12 +181,14 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
           borderRadius: 17,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: 'rgba(255,255,255,0.06)',
+          backgroundColor: '#262626',
         },
         monthTitle: {
           fontSize: 16,
           fontWeight: '800',
           color: tokens.colors.text.primary,
+          ...darkPoolTextRtl,
+          textAlign: 'center',
         },
         mainCard: {
           borderRadius: 20,
@@ -197,7 +204,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
           marginVertical: 12,
         },
         summaryRow: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           gap: 6,
         },
         summaryCell: {
@@ -209,12 +216,15 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
           fontSize: 10,
           fontWeight: '600',
           color: tokens.colors.text.tertiary,
+          ...darkPoolTextRtl,
+          textAlign: 'center',
         },
         summaryValue: {
           fontSize: 13,
           fontWeight: '800',
           color: tokens.colors.text.primary,
           writingDirection: 'ltr',
+          textAlign: 'center',
         },
         dayHeaderRow: {
           flexDirection: 'row',
@@ -228,6 +238,8 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
           fontSize: 10,
           fontWeight: '700',
           color: tokens.colors.text.tertiary,
+          writingDirection: 'rtl',
+          textAlign: 'center',
         },
         gridRow: {
           flexDirection: 'row',
@@ -243,7 +255,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
           backgroundColor: 'transparent',
         },
         cellDefault: {
-          backgroundColor: 'rgba(255,255,255,0.04)',
+          backgroundColor: '#262626',
         },
         cellSelected: {
           borderWidth: 2,
@@ -253,36 +265,44 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
           fontSize: 11,
           fontWeight: '700',
           color: tokens.colors.text.primary,
+          writingDirection: 'ltr',
+          textAlign: 'center',
         },
         cellPnl: {
           fontSize: 8,
           fontWeight: '800',
           marginTop: 1,
           writingDirection: 'ltr',
+          textAlign: 'center',
         },
         selectedHeader: {
           marginTop: 18,
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'baseline',
-          justifyContent: 'space-between',
+          justifyContent: 'flex-start',
+          gap: 10,
+          width: '100%',
         },
         selectedTitle: {
           fontSize: 15,
           fontWeight: '800',
           color: tokens.colors.text.primary,
+          ...darkPoolTextRtl,
         },
         selectedSub: {
           fontSize: 12,
           fontWeight: '600',
           writingDirection: 'ltr',
+          textAlign: 'right',
         },
         tradeRow: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'center',
+          justifyContent: 'flex-start',
           paddingVertical: 10,
           paddingHorizontal: 14,
           borderRadius: 14,
-          backgroundColor: 'rgba(255,255,255,0.04)',
+          backgroundColor: '#262626',
           marginTop: 8,
           gap: 10,
         },
@@ -291,22 +311,26 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
           fontWeight: '800',
           color: tokens.colors.text.primary,
           flex: 1,
+          writingDirection: 'ltr',
           textAlign: 'right',
         },
         tradeDirPill: {
           paddingHorizontal: 7,
           paddingVertical: 2,
           borderRadius: 8,
-          borderWidth: 1,
+          borderWidth: 0,
         },
         tradeDirText: {
           fontSize: 10,
           fontWeight: '700',
+          ...darkPoolTextRtl,
+          textAlign: 'center',
         },
         tradePnl: {
           fontSize: 13,
           fontWeight: '800',
           writingDirection: 'ltr',
+          textAlign: 'right',
         },
       }),
     [tokens]
@@ -433,7 +457,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
                   styles.dayHeaderCell,
                   {
                     width: gridLayout.dayWidth,
-                    marginLeft: i === 0 ? 0 : gridLayout.cellGap,
+                    marginStart: i === 0 ? 0 : gridLayout.cellGap,
                   },
                 ]}
               >
@@ -457,7 +481,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
                         styles.cellEmpty,
                         {
                           width: gridLayout.dayWidth,
-                          marginLeft: colIdx === 0 ? 0 : gridLayout.cellGap,
+                          marginStart: colIdx === 0 ? 0 : gridLayout.cellGap,
                         },
                       ]}
                     />
@@ -486,7 +510,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
                       styles.cell,
                       {
                         width: gridLayout.dayWidth,
-                        marginLeft: colIdx === 0 ? 0 : gridLayout.cellGap,
+                        marginStart: colIdx === 0 ? 0 : gridLayout.cellGap,
                         backgroundColor: bg,
                       },
                       isSelected && styles.cellSelected,

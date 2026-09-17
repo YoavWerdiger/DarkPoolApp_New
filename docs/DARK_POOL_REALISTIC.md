@@ -2,31 +2,43 @@
 
 מוצר: **עסקאות + פעילות + תשואה מוערכת** — לא «תיק אמיתי» מ-UW/Quiver Enterprise.
 
+> **עדכון נתונים / למה לא realtime:** מסמך מפורט — [`DARK_POOL_DATA_SYNC.md`](./DARK_POOL_DATA_SYNC.md)
+> (pull מול webhook, טבלת cron, משיכה למטה = DB בלבד, השהיית STOCK Act).
+
 ## ארכיטקטורה
 
 ```
-Cron / Refresh
-  sync-congress-trades  → dark_pool_congress_trades
-  sync-insider-buys     → dark_pool_insider_buys
+Cron / Refresh (אין webhooks מ-Quiver)
+  sync-congress-trades (~*/20m)     → dark_pool_congress_trades  (Quiver live)
+  sync-insider-buys (3× יום מסחר)   → dark_pool_insider_buys     (Quiver + Form4/SEC)
+  sync-quiver-congress-cache (יומי) → politicians + holdings cache
+  sync-fund-13f (יומי)              → אחזקות קרנות מאוצרות
+  sync-darkpool (*/5m)              → עסקאות dark pool (כשמופעל)
 
 App
   פיד קונגרס     ← dark_pool_congress_trades
-  פיד בכירים     ← dark_pool_insider_buys (sec-api + UW)
-  פרופיל פוליטיקאי ← uw-politician-metrics (שחזור מ-DB + Yahoo)
-  פרופיל בכיר    ← uw-investor-profile (DB sec-api, גיבוי UW)
-  גילוי          ← uw-explore (פעילות / עוקבים — לא net worth)
+  פיד בכירים     ← dark_pool_insider_buys
+  פרופיל פוליטיקאי ← snapshots + Quiver holdings cache
+  פרופיל בכיר    ← snapshots מ-DB
+  גילוי          ← uw-explore / DB
+  pull-to-refresh ← קריאה מחדש מה-DB (לא מפעיל Quiver sync ב־SEC production)
 ```
 
 ## Secrets (Supabase)
 
 ```bash
-# קונגרס — UW Basic מספיק ל-recent-trades
-CONGRESS_TRADES_PROVIDER=unusualwhales
+# קונגרס — Quiver Trader (מומלץ)
+npx supabase secrets set QUIVER_API_KEY=<מפתח>   # אל תדביקו בצ'אט
+npx supabase secrets set CONGRESS_TRADES_PROVIDER=quiverquant
+
+# גיבוי / darkpool / insiders photos (אופציונלי)
 UNUSUAL_WHALES_API_KEY=...
 
-# בכירים
-INSIDER_SYNC_SOURCES=secapi,unusualwhales
+# בכירים — Quiver live/insiders כמקור ראשי (+ EDGAR/Form4 גיבוי)
+INSIDER_SYNC_SOURCES=quiverquant,edgar,form4api
+QUIVER_API_KEY=...   # אל תדביקו בצ'אט
 SEC_API_KEY=...
+FORM4_API_KEY=...
 
 # מחירים (כבר קיים)
 FINNHUB_API_KEY=...
@@ -35,17 +47,22 @@ FINNHUB_API_KEY=...
 ## Deploy Edge Functions
 
 ```bash
-npx supabase functions deploy sync-congress-trades sync-insider-buys \
-  uw-politician-metrics uw-investor-profile uw-explore uw-congress-feed \
+npx supabase functions deploy sync-congress-trades sync-quiver-congress-cache \
+  sync-insider-buys uw-politician-metrics uw-investor-profile uw-explore uw-congress-feed \
   --no-verify-jwt --project-ref wpmrtczbfcijoocguime
 ```
 
-## Cron (Supabase Dashboard → Integrations → Cron)
+## Cron (pg_cron — מקור אמת במיגרציות)
 
-| Job | Schedule | Invoke |
-|-----|----------|--------|
-| קונגרס | `0 */2 * * *` | POST `/functions/v1/sync-congress-trades` |
-| בכירים | `0 */6 * * *` | POST `/functions/v1/sync-insider-buys` |
+פירוט מלא + הסבר «למה לא realtime»: [`DARK_POOL_DATA_SYNC.md`](./DARK_POOL_DATA_SYNC.md).
+
+| Job | Schedule (UTC) | Invoke |
+|-----|----------------|--------|
+| קונגרס | `*/20 * * * *` | `sync-congress-trades` (Quiver live) |
+| בכירים | `0 13,17,21 * * 1-5` + `0 16 * * 0,6` | `sync-insider-buys` |
+| Quiver politicians/holdings | `15 6 * * *` | `sync-quiver-congress-cache` |
+| 13F קרנות | `0 6 * * *` | `sync-fund-13f` |
+| Dark pool | `*/5 * * * *` | `sync-darkpool` (כש־provider מוגדר) |
 
 Header: `Authorization: Bearer <SERVICE_ROLE_KEY>`
 
@@ -65,11 +82,14 @@ curl -X POST "https://wpmrtczbfcijoocguime.supabase.co/functions/v1/sync-insider
 
 | מסך | מה מציג |
 |-----|---------|
-| **פיד → קונגרס** | עסקאות STIR |
-| **פיד → בכירים** | Form 4 (sec-api) |
-| **גילוי** | מי לעקוב — עסקאות / עוקבים |
-| **פרופיל פוליטיקאי** | תשואה מוערכת + טיקרים פעילים + timeline |
+| **בית / פיד → קונגרס** | עסקאות STOCK Act מ־Quiver (~כל 20 ד׳) + טראמפ מ־`trumpstocktrades` |
+| **בית / פיד → בכירים** | רכישות מ־Quiver + Form 4 (3× ביום מסחר) |
+| **גילוי** | אנשים — מטא־דאטה/אחזקות cache יומי |
+| **פרופיל פוליטיקאי** | תשואה מוערכת + אחזקות Quiver (לא net worth) |
 | **פרופיל בכיר** | היסטוריית רכישות מ-DB |
+
+ב־UI: שורת «עדכון נתונים» (`QuiverAttribution`) מסבירה תדירות + מקור — לא realtime.
+ראו גם [`DARK_POOL_DATA_SYNC.md`](./DARK_POOL_DATA_SYNC.md).
 
 ## לפני App Store
 

@@ -2,6 +2,7 @@ import { queryClient } from './queryClient';
 import { appQueryKeys } from './appQueryKeys';
 import { scheduleChatMessagesPersist } from './chatMessagePersist';
 import type { ChatMessage } from '../types/chat.types';
+import { collapseMessagesByClientIdentity } from './chatMessageIdentity';
 
 /**
  * Per-group message cache (React Query memory + disk persist).
@@ -75,7 +76,7 @@ export function mergeChatMessages(...batches: Array<ChatMessage[] | undefined | 
       }
     }
   }
-  return sortMessagesNewestFirst(Array.from(byId.values()));
+  return collapseMessagesByClientIdentity(sortMessagesNewestFirst(Array.from(byId.values())));
 }
 
 function hasUsableSender(sender: ChatMessage['sender'] | undefined): boolean {

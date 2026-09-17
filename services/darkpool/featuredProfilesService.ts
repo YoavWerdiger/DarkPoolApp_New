@@ -1,16 +1,12 @@
 import { supabase } from '../../lib/supabase';
 import type { ExplorePerson } from './uwExploreService';
-import { fetchUwExplore } from './uwExploreService';
 import { knownPortraitForInvestor } from '../../screens/DarkPool/utils/knownInvestorPortraits';
 import {
   CURATED_EXPLORE_PROFILES,
   isCuratedExploreId,
   isTrustedPortraitUrl,
 } from '../../screens/DarkPool/utils/curatedExploreProfiles';
-import {
-  buildExploreProfileGrid,
-  collectExploreSources,
-} from '../../screens/DarkPool/utils/exploreGrid';
+import { buildExploreProfileGrid } from '../../screens/DarkPool/utils/exploreGrid';
 
 export interface FeaturedProfile {
   id: string;
@@ -70,9 +66,14 @@ export function featuredToExplorePerson(row: FeaturedProfile): ExplorePerson {
 }
 
 /**
- * גריד גילוי — רק פרופילים מאוצרים (רשימה סטטית + מומלצים מ-DB שברשימה).
- * לא מושך את כל dark_pool_person_portraits (מניעת תמונות Wikipedia שגויות).
+ * גריד גילוי — רק פרופילים מאוצרים (CURATED_EXPLORE_PROFILES + מומלצים מ-DB שברשימה).
+ * פיד העסקאות נשאר גלובלי בנפרד — לא מערבבים כאן.
  */
+/** סטטי מיידי — בלי רשת; ל-placeholderData / first paint */
+export function getCuratedExploreSync(): ExplorePerson[] {
+  return CURATED_EXPLORE_PROFILES.map((p) => ({ ...p }));
+}
+
 export async function fetchCuratedExploreGrid(): Promise<ExplorePerson[]> {
   const byId = new Map<string, ExplorePerson>();
   for (const p of CURATED_EXPLORE_PROFILES) {
@@ -103,19 +104,22 @@ export async function fetchCuratedExploreGrid(): Promise<ExplorePerson[]> {
 }
 
 /**
- * פס אנשים / גילוי — מאוצרים + כל מה ש־uw-explore מחזיר (קונגרס + בכירים).
+ * פס אנשים / גילוי — רק פרופילים מאוצרים עם נתונים אמיתיים (Quiver / 13F).
+ * לא מושך uw-explore / Form4 אקראיים (SPVs וכו׳).
  */
+export function getExplorePeopleMergedSync(opts?: {
+  requirePhoto?: boolean;
+}): ExplorePerson[] {
+  return buildExploreProfileGrid(getCuratedExploreSync(), {
+    requirePhoto: opts?.requirePhoto,
+  });
+}
+
 export async function fetchExplorePeopleMerged(opts?: {
   requirePhoto?: boolean;
 }): Promise<ExplorePerson[]> {
   const curated = await fetchCuratedExploreGrid();
-  let explore: Awaited<ReturnType<typeof fetchUwExplore>> | null = null;
-  try {
-    explore = await fetchUwExplore();
-  } catch {
-    /* curated fallback */
-  }
-  return buildExploreProfileGrid(collectExploreSources(explore, curated), {
+  return buildExploreProfileGrid(curated, {
     requirePhoto: opts?.requirePhoto,
   });
 }

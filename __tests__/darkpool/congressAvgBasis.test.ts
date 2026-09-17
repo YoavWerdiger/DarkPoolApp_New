@@ -25,7 +25,7 @@ describe('congress avg basis reliability', () => {
     expect(avg).not.toBeCloseTo(yahooPx, 0);
   });
 
-  it('basis_reliable: show avg from cost/qty; range uses market-at-first-added instead', () => {
+  it('basis_reliable: show avg from cost/qty; range uses market-at-first-added without fake return %', () => {
     const cost = 750_000;
     const qty = 750_000 / 1770;
     const basisReliable = false;
@@ -33,28 +33,31 @@ describe('congress avg basis reliability', () => {
       basisReliable && cost > 0 && qty > 0 ? cost / qty : null;
     expect(avgFromCost).toBeNull();
 
-    // מוצר: מחיר כניסה = Yahoo בתאריך הקנייה הראשון (לא cost/qty מעגלי)
+    // מוצר: מחיר כניסה = Yahoo בתאריך הקנייה הראשון; בלי return_pct על qty מוערך
     const firstAddedPx = 150;
-    const currentPx = 165;
     const entryPrice = firstAddedPx;
-    const returnPct = ((currentPx - entryPrice) / entryPrice) * 100;
+    const returnPct = basisReliable ? 10 : null;
     expect(entryPrice).toBe(150);
-    expect(returnPct).toBeCloseTo(10);
+    expect(returnPct).toBeNull();
   });
 
-  it('chart series: range-only portfolios still get reconstructed series (algorithm OK)', () => {
-    // UI מציג גרף כשיש series.length >= 2 — גם כש־basis_reliable=false
+  it('chart series: unreliable reconstruction is hidden; reliable still shows', () => {
     const series = [
       { date: '2024-01-01', value: 100_000 },
       { date: '2024-06-01', value: 120_000 },
     ];
     const basisReliable = false;
-    const showChart = series.length >= 2;
+    // גרף: gated על אמינות שחזור (מס׳ עסקאות + טווח), לא על basis_reliable של אחזקה
+    const tradeCount = 8;
+    const spanDays = 152;
+    const showChart = series.length >= 2 && tradeCount >= 3 && spanDays >= 21;
     const showAvgFromCost = basisReliable;
     const showEntryFromMarket = !basisReliable;
+    const showHoldingReturn = basisReliable;
     expect(showChart).toBe(true);
     expect(showAvgFromCost).toBe(false);
     expect(showEntryFromMarket).toBe(true);
+    expect(showHoldingReturn).toBe(false);
   });
 
   it('Form4 prefers disclosed avg over yahoo-at-date when both exist', () => {

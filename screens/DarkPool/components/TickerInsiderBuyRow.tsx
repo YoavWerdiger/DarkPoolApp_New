@@ -1,11 +1,20 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import UICard from '../../../components/ui/UICard';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
-import { InsiderAvatar } from './InsiderAvatar';
+import { TickerLogo } from '../../Portfolios/components/TickerLogo';
+import { darkPoolTextRtl } from '../darkPoolLayout';
 import { formatRelativeTime, formatUsdCompact } from '../utils/darkPoolFormat';
+import { formatInsiderDisplayName } from '../utils/investorPlaceholder';
+import {
+  formatFeedTickerDisplay,
+  getFeedTradeSide,
+  getFeedTradeVerb,
+} from '../utils/feedTradeDisplay';
 import type { InsiderBuyRow } from '../../../types/darkpool.types';
+
+/** Left-to-right mark — שומר טיקר/$ בלי ערבוב RTL */
+const LRM = '\u200E';
 
 interface Props {
   item: InsiderBuyRow;
@@ -14,59 +23,34 @@ interface Props {
 export function TickerInsiderBuyRow({ item }: Props) {
   const tokens = useDesignTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
-  const isBuy = item.transaction_type === 'P';
-  const txnLabel = isBuy ? 'רכישה' : item.transaction_type === 'S' ? 'מכירה' : 'עסקה';
+  const side = getFeedTradeSide(item.transaction_type);
+  const isBuy = side === 'buy';
+  const verb = getFeedTradeVerb(side);
+  const sideColor = isBuy ? tokens.colors.primary.main : tokens.colors.text.danger;
+  const displayName = formatInsiderDisplayName(item.insider_name?.trim() || 'בכיר');
+  const tickerSym = formatFeedTickerDisplay(item.ticker);
 
   return (
     <UICard variant="glass" glassIntensity="light" padding="md" style={styles.card}>
       <View style={styles.row}>
-        <InsiderAvatar
-          name={item.insider_name}
-          logoUrl={item.insider_logo_url}
-          size={40}
-        />
+        <TickerLogo symbol={item.ticker} size={40} borderRadius={20} />
         <View style={styles.main}>
-          <Text style={styles.name} numberOfLines={1}>
-            {item.insider_name?.trim() || 'בכיר'}
+          <Text style={styles.primary} numberOfLines={1}>
+            <Text style={styles.name}>{displayName}</Text>
+            <Text style={{ color: sideColor, fontWeight: '800' }}>{` ${verb} `}</Text>
+            <Text style={styles.ticker}>
+              {LRM}
+              {tickerSym}
+            </Text>
           </Text>
           {item.insider_role?.trim() ? (
             <Text style={styles.role} numberOfLines={1}>
               {item.insider_role.trim()}
             </Text>
           ) : null}
-          <View style={styles.metaRow}>
-            <View
-              style={[
-                styles.txnBadge,
-                {
-                  backgroundColor: isBuy
-                    ? tokens.colors.primary.dim
-                    : 'rgba(239,68,68,0.12)',
-                },
-              ]}
-            >
-              <Ionicons
-                name={isBuy ? 'arrow-up' : 'arrow-down'}
-                size={11}
-                color={isBuy ? tokens.colors.primary.main : tokens.colors.text.danger}
-              />
-              <Text
-                style={[
-                  styles.txnBadgeText,
-                  {
-                    color: isBuy
-                      ? tokens.colors.primary.main
-                      : tokens.colors.text.danger,
-                  },
-                ]}
-              >
-                {txnLabel}
-              </Text>
-            </View>
-            <Text style={styles.date}>
-              {formatRelativeTime(item.transaction_date || item.filed_at)}
-            </Text>
-          </View>
+          <Text style={styles.date}>
+            {formatRelativeTime(item.transaction_date || item.filed_at)}
+          </Text>
         </View>
         <View style={styles.valueCol}>
           <Text style={styles.value}>{formatUsdCompact(item.value)}</Text>
@@ -99,46 +83,34 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       minWidth: 0,
       alignItems: 'flex-start',
     },
-    name: {
+    primary: {
+      ...darkPoolTextRtl,
       fontSize: 15,
       fontWeight: '700',
       color: tokens.colors.text.primary,
-      textAlign: 'left',
-      writingDirection: 'rtl',
+    },
+    name: {
+      fontWeight: '700',
+      color: tokens.colors.text.primary,
+    },
+    ticker: {
+      fontWeight: '800',
+      color: tokens.colors.text.primary,
+      letterSpacing: 0.2,
     },
     role: {
       marginTop: 2,
       fontSize: 12,
       fontWeight: '500',
       color: tokens.colors.text.tertiary,
-      textAlign: 'left',
-      writingDirection: 'rtl',
-    },
-    metaRow: {
-      marginTop: 8,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      flexWrap: 'wrap',
-    },
-    txnBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 999,
-    },
-    txnBadgeText: {
-      fontSize: 11,
-      fontWeight: '700',
-      writingDirection: 'rtl',
+      ...darkPoolTextRtl,
     },
     date: {
+      marginTop: 4,
       fontSize: 12,
       fontWeight: '500',
       color: tokens.colors.text.tertiary,
-      writingDirection: 'rtl',
+      ...darkPoolTextRtl,
     },
     valueCol: {
       alignItems: 'flex-end',
@@ -155,7 +127,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontSize: 11,
       fontWeight: '500',
       color: tokens.colors.text.tertiary,
-      writingDirection: 'rtl',
+      ...darkPoolTextRtl,
     },
   });
 }

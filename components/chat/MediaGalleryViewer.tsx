@@ -18,7 +18,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Video, ResizeMode } from 'expo-av';
+import { Video, ResizeMode } from '../../lib/expoAvSafe';
 import { Ionicons } from '@expo/vector-icons';
 import { X, Share, Copy, Download } from 'lucide-react-native';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -112,7 +112,7 @@ function GalleryImageItem({
           <Animated.View style={styles.fullMedia} collapsable={false}>
             <Animated.Image
               source={{ uri: url }}
-              style={[StyleSheet.absoluteFillObject, animatedStyle]}
+              style={[StyleSheet.absoluteFill, animatedStyle]}
               resizeMode="contain"
               onLoadStart={() => {
                 setIsLoading(true);
@@ -627,7 +627,7 @@ const styles = StyleSheet.create({
     height: SCREEN_HEIGHT,
   },
   loadingContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 5,

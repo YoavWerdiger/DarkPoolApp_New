@@ -81,20 +81,22 @@ export function PortfolioScreenHeader({
 
 const styles = StyleSheet.create({
   row: {
-    flexDirection: 'row-reverse',
+    // עץ RTL של מסך התיק — row (לא row-reverse)
+    flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 14,
     gap: 8,
+    direction: 'rtl',
   },
   sideBack: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: MAIN_SCREEN_HEADER_HP,
+    marginStart: MAIN_SCREEN_HEADER_HP,
   },
   sideEnd: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: MAIN_SCREEN_HEADER_HP,
+    marginEnd: MAIN_SCREEN_HEADER_HP,
   },
   sideSpacer: {
     width: DRAWER_MENU_BUTTON_SIZE,
@@ -120,6 +122,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.35,
     lineHeight: MAIN_SCREEN_HEADER_TITLE_LINE_HEIGHT,
     textAlign: 'center',
+    writingDirection: 'rtl',
   },
   subtitle: {
     fontSize: 13,
@@ -127,5 +130,6 @@ const styles = StyleSheet.create({
     marginTop: 3,
     textAlign: 'center',
     lineHeight: 17,
+    writingDirection: 'rtl',
   },
 });

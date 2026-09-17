@@ -21,5 +21,5 @@ export const darkPoolRow: ViewStyle = {
 /** טקסט עברי בתוך עץ RTL */
 export const darkPoolTextRtl = {
   writingDirection: 'rtl' as const,
-  textAlign: 'left' as const,
+  textAlign: 'right' as const,
 };

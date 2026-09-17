@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import type { ExplorePerson } from '../../../services/darkpool/uwExploreService';
 import { TrendingInvestorCard } from './TrendingInvestorCard';
+import { darkPoolTextRtl } from '../darkPoolLayout';
 
 interface Props {
   title: string;
@@ -30,15 +31,16 @@ export function ExploreTrendingSection({
           fontSize: 18,
           fontWeight: '800',
           color: tokens.colors.text.primary,
-          textAlign: 'left',
-          writingDirection: 'rtl',
+          alignSelf: 'stretch',
+          ...darkPoolTextRtl,
         },
         subtitle: {
           marginTop: 4,
           marginBottom: tokens.spacing.sm,
           fontSize: 12,
           color: tokens.colors.text.tertiary,
-          textAlign: 'left',
+          alignSelf: 'stretch',
+          ...darkPoolTextRtl,
         },
       }),
     [tokens]

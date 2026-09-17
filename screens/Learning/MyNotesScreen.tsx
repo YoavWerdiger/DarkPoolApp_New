@@ -179,7 +179,7 @@ export const MyNotesScreen: React.FC = () => {
 
   if (isLoading) {
     return (
-      <ScreenChrome withBrandWatermark>
+      <ScreenChrome>
         <StatusBar style="light" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
@@ -190,7 +190,7 @@ export const MyNotesScreen: React.FC = () => {
   }
 
   return (
-    <ScreenChrome withBrandWatermark>
+    <ScreenChrome>
       <StatusBar style="light" />
       <SafeAreaView edges={['top']} style={styles.safeAreaContainer}>
         <AcademySubScreenBar

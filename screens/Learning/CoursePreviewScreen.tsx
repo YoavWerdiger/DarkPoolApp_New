@@ -92,7 +92,7 @@ export const CoursePreviewScreen: React.FC = () => {
   };
 
   return (
-    <ScreenChrome withBrandWatermark>
+    <ScreenChrome>
       <StatusBar style="light" />
       <RNSafeAreaView style={styles.safeAreaContainer} edges={['top']}>
         <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>

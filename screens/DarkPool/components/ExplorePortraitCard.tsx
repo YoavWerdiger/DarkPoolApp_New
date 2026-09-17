@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { memo, useMemo } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -13,6 +13,7 @@ import { HapticFeedback } from '../../../utils/hapticFeedback';
 import type { ExplorePerson } from '../../../services/darkpool/uwExploreService';
 import { formatInsiderDisplayName } from '../utils/investorPlaceholder';
 import { InvestorPortrait } from './InvestorPortrait';
+import { hebrewText, toDataIsland } from '../utils/bidi';
 
 interface Props {
   person: ExplorePerson;
@@ -21,7 +22,7 @@ interface Props {
   style?: StyleProp<ViewStyle>;
 }
 
-export function ExplorePortraitCard({
+export const ExplorePortraitCard = memo(function ExplorePortraitCard({
   person,
   variant = 'compact',
   onPress,
@@ -40,6 +41,15 @@ export function ExplorePortraitCard({
     person.kind === 'insider'
       ? formatInsiderDisplayName(person.name)
       : person.name;
+  const subtitleLabel = person.subtitle?.trim()
+    ? person.subtitle
+    : person.kind === 'politician'
+      ? 'קונגרס'
+      : person.kind === 'fund_manager'
+        ? 'מנהל קרן'
+        : person.ticker
+          ? toDataIsland(person.ticker.toUpperCase())
+          : 'בכיר';
 
   const content = (
     <View
@@ -57,6 +67,7 @@ export function ExplorePortraitCard({
         personId={person.id}
         layout="card"
         style={styles.bg}
+        priority="high"
       >
         <LinearGradient
           colors={['transparent', 'rgba(0,0,0,0.55)', 'rgba(0,0,0,0.92)']}
@@ -66,13 +77,7 @@ export function ExplorePortraitCard({
             {displayName}
           </Text>
           <Text style={styles.subtitle} numberOfLines={1}>
-            {person.subtitle?.trim()
-              ? person.subtitle
-              : person.kind === 'politician'
-                ? 'קונגרס'
-                : person.kind === 'fund_manager'
-                  ? 'מנהל קרן'
-                  : person.ticker || 'בכיר'}
+            {subtitleLabel}
           </Text>
         </LinearGradient>
       </InvestorPortrait>
@@ -91,19 +96,23 @@ export function ExplorePortraitCard({
       {content}
     </Pressable>
   );
-}
+});
 
 function createStyles(
   tokens: ReturnType<typeof useDesignTokens>,
   variant: 'large' | 'compact' | 'grid'
 ) {
+  const nameSize = 
+    variant === 'grid' ? tokens.typography.subhead.size : 
+    variant === 'large' ? tokens.typography.callout.size : 
+    tokens.typography.footnote.size;
+    
   return StyleSheet.create({
     card: {
       borderRadius: tokens.borderRadius['2xl'],
       overflow: 'hidden',
-      backgroundColor: 'rgba(255,255,255,0.06)',
-      borderWidth: 1,
-      borderColor: tokens.colors.border.subtle,
+      backgroundColor: tokens.colors.background.cardSolid,
+      borderWidth: 0,
     },
     gridCard: {
       aspectRatio: 0.72,
@@ -114,34 +123,34 @@ function createStyles(
       justifyContent: 'flex-end',
     },
     footer: {
-      paddingHorizontal: 10,
-      paddingVertical: 12,
+      paddingHorizontal: tokens.spacing.sm + 2,
+      paddingVertical: tokens.spacing.md,
       paddingTop: 36,
     },
     name: {
-      fontSize: variant === 'grid' ? 14 : variant === 'large' ? 15 : 13,
-      fontWeight: '800',
+      ...hebrewText,
+      fontSize: nameSize,
+      fontWeight: tokens.typography.fontWeight.extrabold,
       color: '#fff',
-      textAlign: 'left',
-      writingDirection: 'rtl',
     },
     subtitle: {
+      ...hebrewText,
       marginTop: 4,
-      fontSize: 11,
-      fontWeight: '600',
+      fontSize: tokens.typography.caption2.size,
+      fontWeight: tokens.typography.fontWeight.semibold,
       color: 'rgba(255,255,255,0.75)',
-      textAlign: 'left',
     },
     metric: {
       marginTop: 4,
-      fontSize: 11,
-      fontWeight: '600',
+      fontSize: tokens.typography.caption2.size,
+      fontWeight: tokens.typography.fontWeight.semibold,
       color: 'rgba(255,255,255,0.7)',
-      textAlign: 'left',
+      textAlign: 'right',
+      writingDirection: 'rtl',
     },
     metricVal: {
       color: tokens.colors.primary.main,
-      fontWeight: '800',
+      fontWeight: tokens.typography.fontWeight.extrabold,
     },
   });
 }

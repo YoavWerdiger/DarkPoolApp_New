@@ -12,7 +12,7 @@ import AdminPaymentsScreen from '../screens/Admin/AdminPaymentsScreen';
 function withAdminShell<P extends object>(ScreenComponent: React.ComponentType<P>): React.FC<P> {
   return function Wrapped(props: P) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#0A0E0A' }}>
+      <View style={{ flex: 1, backgroundColor: '#111111' }}>
         <ChatSessionBackdrop />
         <ScreenComponent {...props} />
       </View>
@@ -27,7 +27,7 @@ export default function AdminStack() {
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: '#0A0E0A' },
+        contentStyle: { backgroundColor: '#111111' },
         animation: 'fade',
         gestureEnabled: true,
       }}

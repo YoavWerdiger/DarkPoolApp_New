@@ -65,6 +65,15 @@ import {
   readGroupMessagesCache,
   writeGroupMessagesCache,
 } from '../lib/chatMessageCache';
+import {
+  chatMessageListKey,
+  dedupeOwnOutboundCopies,
+  findMatchingOptimisticIndex,
+  morphOptimisticIntoServer,
+  seedReplyFromThread,
+  seedSenderFromThread,
+  isUsableChatDisplayName,
+} from '../lib/chatMessageIdentity';
 import { persistQueryCache } from '../lib/queryPersist';
 import { schedulePrefetchChatMessages } from '../services/appPrefetch';
 import * as Haptics from 'expo-haptics';
@@ -83,7 +92,7 @@ function warmChatMediaCache(messages: ChatMessage[]): void {
 function asServerMessage(
   message: ChatMessage,
   extras?: Partial<ChatMessage>,
-  preserve?: Pick<ChatMessage, 'reactions' | 'reactions_count' | 'reply_to'>,
+  preserve?: Pick<ChatMessage, 'reactions' | 'reactions_count' | 'reply_to' | 'client_message_id' | 'local_id' | 'sender'>,
 ): ChatMessage {
   return {
     ...message,
@@ -92,8 +101,13 @@ function asServerMessage(
     reactions: extras?.reactions ?? preserve?.reactions ?? message.reactions,
     reactions_count:
       extras?.reactions_count ?? preserve?.reactions_count ?? message.reactions_count,
+    client_message_id:
+      extras?.client_message_id ?? message.client_message_id ?? preserve?.client_message_id,
+    local_id: extras?.local_id ?? message.local_id ?? preserve?.local_id,
+    sender: extras?.sender ?? (message.sender?.display_name ? message.sender : preserve?.sender) ?? message.sender,
     is_sending: false,
     is_uploading: false,
+    send_error: undefined,
     local_media_uri: undefined,
     upload_progress: undefined,
   };
@@ -253,6 +267,31 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   // L4: outbound queue is persisted to AsyncStorage (chatOfflineQueue).
   // A single in-flight guard prevents two flushers running concurrently.
   const isFlushing = useRef(false);
+  /** הודעות יוצאות שעדיין ממתינות ל-ack — שורדות יציאה/כניסה לקבוצה. */
+  const pendingOutboundRef = useRef<Map<string, ChatMessage[]>>(new Map());
+
+  const rememberPendingOutbound = useCallback((groupId: string, message: ChatMessage) => {
+    if (!groupId || !message?.id) return;
+    const prev = pendingOutboundRef.current.get(groupId) ?? [];
+    pendingOutboundRef.current.set(
+      groupId,
+      [message, ...prev.filter((m) => m.id !== message.id && m.local_id !== message.local_id)],
+    );
+  }, []);
+
+  const dropPendingOutbound = useCallback((groupId: string, message: ChatMessage) => {
+    const prev = pendingOutboundRef.current.get(groupId);
+    if (!prev?.length) return;
+    const next = prev.filter(
+      (m) =>
+        m.id !== message.id &&
+        m.local_id !== message.local_id &&
+        m.local_id !== message.id &&
+        !(m.client_message_id && m.client_message_id === message.client_message_id),
+    );
+    if (next.length) pendingOutboundRef.current.set(groupId, next);
+    else pendingOutboundRef.current.delete(groupId);
+  }, []);
 
   // Typing indicators: client-side staleness guard. Realtime DELETE events can
   // be dropped (reconnects, backgrounding), which would otherwise leave a
@@ -441,6 +480,49 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     userRef.current = user;
   }, [user]);
 
+  /** עדכון מיידי של פרביו/unread ברשימת הקבוצות + queryClient. */
+  const applyGroupLastMessage = useCallback((
+    groupId: string,
+    patch: {
+      created_at: string;
+      preview: string;
+      senderName: string;
+      messageType?: string;
+      incrementUnread?: boolean;
+      bumpCount?: boolean;
+    },
+  ) => {
+    setGroups((prev) => {
+      let changed = false;
+      const next = prev.map((g) => {
+        if (g.id !== groupId) return g;
+        changed = true;
+        return {
+          ...g,
+          last_message_at: patch.created_at,
+          last_message_preview: patch.preview,
+          last_message_sender_name: isUsableChatDisplayName(patch.senderName)
+            ? patch.senderName.trim()
+            : '',
+          last_message_type: patch.messageType,
+          messages_count:
+            patch.bumpCount === false
+              ? g.messages_count
+              : (g.messages_count || 0) + 1,
+          ...(patch.incrementUnread
+            ? { unread_count: (g.unread_count || 0) + 1 }
+            : {}),
+        };
+      });
+      if (!changed) return prev;
+      const uid = userRef.current?.id;
+      if (uid) {
+        queryClient.setQueryData(appQueryKeys.chatGroups(uid), next);
+      }
+      return next;
+    });
+  }, []);
+
   // Typing
   const setTyping = useCallback(async (groupId: string, isTyping: boolean) => {
     if (!user) return;
@@ -533,7 +615,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           message_type: replyToMessage.message_type,
           media_url: replyToMessage.media_url,
           sender_id: replyToMessage.sender_id,
-          sender_name: sender?.display_name || 'משתמש',
+          sender_name: isUsableChatDisplayName(sender?.display_name)
+            ? String(sender?.display_name)
+            : '',
         };
         replyToCacheRef.current.set(replyToMessageId, result);
         if (replyToCacheRef.current.size > 500) {
@@ -548,93 +632,103 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     return undefined;
   }, []);
 
-  /** מוסיף הודעה חדשה ל-thread הפעיל (realtime קבוצה + גיבוי membership). */
+  const applyIncomingToThread = useCallback((incoming: ChatMessage, meId: string) => {
+    if (processedMessageIds.current.has(incoming.id)) {
+      setMessages((prev) =>
+        prev.map((m) => (m.id === incoming.id ? asServerMessage(m, incoming) : m)),
+      );
+      return;
+    }
+
+    if (incoming.sender_id === meId) {
+      processedMessageIds.current.add(incoming.id);
+      if (incoming.group_id) dropPendingOutbound(incoming.group_id, incoming);
+      setMessages((prev) => {
+        const optimisticIndex = findMatchingOptimisticIndex(prev, incoming, meId);
+
+        if (optimisticIndex !== -1) {
+          const optimisticMsg = prev[optimisticIndex];
+          const finalMessage = morphOptimisticIntoServer(
+            optimisticMsg,
+            asServerMessage(incoming, {
+              reply_to: optimisticMsg.reply_to || incoming.reply_to,
+              client_message_id:
+                optimisticMsg.client_message_id || incoming.client_message_id,
+              local_id: optimisticMsg.local_id || optimisticMsg.id,
+              sender: chatRealtimeService.hasUsableSender(incoming.sender)
+                ? incoming.sender
+                : optimisticMsg.sender,
+            }),
+          );
+          processedMessageIds.current.add(chatMessageListKey(finalMessage));
+          return dedupeOwnOutboundCopies(
+            prev.map((m, idx) => (idx === optimisticIndex ? finalMessage : m)),
+          );
+        }
+
+        const existingIndex = prev.findIndex((m) => m.id === incoming.id);
+        if (existingIndex !== -1) {
+          return prev.map((m, idx) =>
+            idx === existingIndex ? asServerMessage(m, incoming) : m,
+          );
+        }
+        return dedupeOwnOutboundCopies([asServerMessage(incoming), ...prev]);
+      });
+      return;
+    }
+
+    processedMessageIds.current.add(incoming.id);
+    setMessages((prev) => {
+      const existingIndex = prev.findIndex((m) => m.id === incoming.id);
+      if (existingIndex !== -1) {
+        return prev.map((m, idx) => (idx === existingIndex ? incoming : m));
+      }
+      return [incoming, ...prev];
+    });
+    Haptics.selectionAsync().catch(() => {});
+  }, [dropPendingOutbound]);
+
+  /** מוסיף הודעה חדשה ל-thread הפעיל — ציור מיידי, העשרה ברקע. */
   const ingestIncomingInsert = useCallback(async (rawMessage: ChatMessage) => {
     const me = userRef.current;
     if (!me || rawMessage.group_id !== currentGroupId.current) return;
     if (rawMessage.is_silent || rawMessage.is_system_message) return;
 
-    let enrichedMessage = rawMessage;
-    if (enrichedMessage.reply_to_message_id && !enrichedMessage.reply_to) {
-      const replyTo = await fetchReplyToData(enrichedMessage.reply_to_message_id);
-      if (replyTo) {
-        enrichedMessage = { ...enrichedMessage, reply_to: replyTo };
-      }
-    }
-    enrichedMessage = await chatRealtimeService.enrichChatMessageSender(enrichedMessage);
-
-    if (processedMessageIds.current.has(enrichedMessage.id)) {
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === enrichedMessage.id ? asServerMessage(m, enrichedMessage) : m
-        )
-      );
-      return;
+    const peeked = chatRealtimeService.peekCachedSender(rawMessage.sender_id);
+    let instant = seedReplyFromThread(
+      seedSenderFromThread(rawMessage, messagesRef.current),
+      messagesRef.current,
+    );
+    if (!chatRealtimeService.hasUsableSender(instant.sender) && peeked) {
+      instant = { ...instant, sender: peeked };
     }
 
-    if (enrichedMessage.sender_id === me.id) {
-      processedMessageIds.current.add(enrichedMessage.id);
-      setMessages((prev) => {
-        const optimisticIndex = prev.findIndex((m) => {
-          if (!m.id.startsWith('temp-') || m.sender_id !== me.id) return false;
-          if (enrichedMessage.reply_to_message_id && m.reply_to_message_id) {
-            return (
-              m.reply_to_message_id === enrichedMessage.reply_to_message_id &&
-              Math.abs(
-                new Date(m.created_at).getTime() -
-                  new Date(enrichedMessage.created_at).getTime()
-              ) < 10000
-            );
-          }
-          return (
-            m.message_type === enrichedMessage.message_type &&
-            m.content === enrichedMessage.content &&
-            Math.abs(
-              new Date(m.created_at).getTime() -
-                new Date(enrichedMessage.created_at).getTime()
-            ) < 10000
-          );
-        });
+    applyIncomingToThread(instant, me.id);
 
-        if (optimisticIndex !== -1) {
-          const optimisticMsg = prev[optimisticIndex];
-          const finalMessage = asServerMessage(
-            enrichedMessage,
-            { reply_to: optimisticMsg.reply_to || enrichedMessage.reply_to },
-            {
-              reactions: optimisticMsg.reactions,
-              reactions_count: optimisticMsg.reactions_count,
-              reply_to: optimisticMsg.reply_to,
-            },
-          );
-          return prev.map((m, idx) => (idx === optimisticIndex ? finalMessage : m));
-        }
-
-        const existingIndex = prev.findIndex((m) => m.id === enrichedMessage.id);
-        if (existingIndex !== -1) {
-          return prev.map((m, idx) =>
-            idx === existingIndex ? asServerMessage(m, enrichedMessage) : m
-          );
-        }
-        return [asServerMessage(enrichedMessage), ...prev];
-      });
-    } else {
-      processedMessageIds.current.add(enrichedMessage.id);
-      setMessages((prev) => {
-        const existingIndex = prev.findIndex((m) => m.id === enrichedMessage.id);
-        if (existingIndex !== -1) {
-          return prev.map((m, idx) => (idx === existingIndex ? enrichedMessage : m));
-        }
-        return [enrichedMessage, ...prev];
-      });
-      Haptics.selectionAsync().catch(() => {});
+    if (currentGroupId.current === instant.group_id) {
+      markAsRead(instant.group_id, [instant.id]);
     }
+    warmChatMediaCache([instant]);
 
-    if (currentGroupId.current === enrichedMessage.group_id) {
-      markAsRead(enrichedMessage.group_id, [enrichedMessage.id]);
+    const needsReply = Boolean(instant.reply_to_message_id && !instant.reply_to);
+    const needsSender = Boolean(
+      instant.sender_id && !chatRealtimeService.hasUsableSender(instant.sender),
+    );
+    if (!needsReply && !needsSender) return;
+
+    let enriched = instant;
+    if (needsReply && instant.reply_to_message_id) {
+      const replyTo = await fetchReplyToData(instant.reply_to_message_id);
+      if (replyTo) enriched = { ...enriched, reply_to: replyTo };
     }
-    warmChatMediaCache([enrichedMessage]);
-  }, [fetchReplyToData, markAsRead]);
+    if (needsSender) {
+      enriched = await chatRealtimeService.enrichChatMessageSender(enriched);
+    }
+    if (currentGroupId.current !== enriched.group_id) return;
+    setMessages((prev) =>
+      prev.map((m) => (m.id === enriched.id ? asServerMessage(m, enriched) : m)),
+    );
+  }, [applyIncomingToThread, fetchReplyToData, markAsRead]);
 
   const ingestIncomingInsertRef = useRef(ingestIncomingInsert);
   useEffect(() => {
@@ -726,7 +820,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               m.sender_id === user.id &&
               (m.is_sending || m.is_uploading)
           )
-        : [];
+        : (pendingOutboundRef.current.get(groupId) ?? []);
 
     currentGroupId.current = groupId;
     startGroupViewing(groupId);
@@ -760,13 +854,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       const cachedMessages = queryClient.getQueryData<ChatMessage[]>(
         appQueryKeys.chatMessages(groupId),
       );
-      if (cachedMessages?.length) {
-        setMessages(cachedMessages);
-        messagesOffset.current = cachedMessages.length;
+      const pendingOutbound = pendingOutboundRef.current.get(groupId) ?? [];
+      if (cachedMessages?.length || pendingOutbound.length) {
+        const seeded = mergeChatMessages(pendingOutbound, cachedMessages);
+        setMessages(seeded);
+        messagesOffset.current = seeded.length;
         hasMoreMessages.current = true;
         setIsLoadingMessages(false);
-        warmChatMediaCache(cachedMessages);
-        hydrateMissingSenders(groupId, version, cachedMessages);
+        warmChatMediaCache(seeded);
+        hydrateMissingSenders(groupId, version, seeded);
       } else {
         setIsLoadingMessages(true);
         if (!isSameGroup) {
@@ -784,12 +880,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             cur.length > 0 &&
             cur.some((m) => m.group_id === groupId && !m.id.startsWith('temp-'));
           if (alreadyForGroup) return;
-          setMessages(diskMessages);
-          messagesOffset.current = diskMessages.length;
+          const pending = pendingOutboundRef.current.get(groupId) ?? [];
+          const seededDisk = mergeChatMessages(pending, diskMessages);
+          setMessages(seededDisk);
+          messagesOffset.current = seededDisk.length;
           hasMoreMessages.current = true;
           setIsLoadingMessages(false);
-          warmChatMediaCache(diskMessages);
-          hydrateMissingSenders(groupId, version, diskMessages);
+          warmChatMediaCache(seededDisk);
+          hydrateMissingSenders(groupId, version, seededDisk);
         });
       }
       clearTypingIndicators();
@@ -1219,9 +1317,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
             setMessages((prev) =>
               prev.map((m) => {
-                if (m.id !== enrichedMessage.id) return m;
+                if (m.id !== enrichedMessage.id && m.client_message_id !== enrichedMessage.client_message_id) {
+                  return m;
+                }
+                if (m.id !== enrichedMessage.id && !enrichedMessage.client_message_id) return m;
                 return {
                   ...enrichedMessage,
+                  id: m.id.startsWith('temp-') ? enrichedMessage.id : m.id,
+                  client_message_id: m.client_message_id || enrichedMessage.client_message_id,
+                  local_id: m.local_id || enrichedMessage.local_id,
                   reactions: m.reactions,
                   reactions_count:
                     enrichedMessage.reactions_count ?? m.reactions_count,
@@ -1546,8 +1650,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const sendMessage = useCallback(async (input: SendChatMessageInput) => {
     if (!user) return { success: false, error: 'לא מחובר' };
 
-    setIsSendingMessage(true);
-
     let replyToData: ChatMessage['reply_to'] | undefined;
     if (input.reply_to_message_id) {
       const originalMessage = messagesRef.current.find(m => m.id === input.reply_to_message_id);
@@ -1558,19 +1660,44 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           message_type: originalMessage.message_type,
           media_url: originalMessage.media_url,
           sender_id: originalMessage.sender_id,
-          sender_name: originalMessage.sender?.display_name || 'משתמש',
+          sender_name: isUsableChatDisplayName(originalMessage.sender?.display_name)
+            ? String(originalMessage.sender?.display_name)
+            : '',
         };
       } else {
-        replyToData = await fetchReplyToData(input.reply_to_message_id);
+        replyToData = {
+          message_id: input.reply_to_message_id,
+          content: '',
+          message_type: ChatMessageType.TEXT,
+          sender_id: '',
+          sender_name: '',
+        };
+        void fetchReplyToData(input.reply_to_message_id).then((real) => {
+          if (!real) return;
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.reply_to_message_id === input.reply_to_message_id && !m.reply_to?.content
+                ? { ...m, reply_to: real }
+                : m,
+            ),
+          );
+        });
       }
     }
 
     // הודעה אופטימיסטית – או חדשה או עדכון לקיימת (מדיה - כבר נוספה ב-ChatInput)
+    const existingOptimistic = input.existing_optimistic_id
+      ? messagesRef.current.find((m) => m.id === input.existing_optimistic_id)
+      : undefined;
     const tempId = input.existing_optimistic_id ?? makeLocalId();
     // Stable client-generated id. Travels with every retry so the server (once
     // the chat_messages.client_message_id unique index ships) can dedupe.
     const clientMessageId =
-      (input as SendChatMessageInput & { client_message_id?: string }).client_message_id ??
+      input.client_message_id ??
+      existingOptimistic?.client_message_id ??
+      (typeof input.metadata?.client_message_id === 'string'
+        ? input.metadata.client_message_id
+        : undefined) ??
       makeClientMessageId();
     const enrichedInput: SendChatMessageInput & { client_message_id: string } = {
       ...input,
@@ -1578,6 +1705,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     };
     const optimisticMessage: ChatMessage = {
       id: tempId,
+      local_id: existingOptimistic?.local_id ?? tempId,
+      client_message_id: clientMessageId,
       group_id: input.group_id,
       sender_id: user.id,
       content: input.content || '',
@@ -1593,6 +1722,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       reply_to: replyToData,
       is_forwarded: false,
       mentioned_users: input.mentioned_users || [],
+      mentions: Array.isArray(input.mentions) ? input.mentions : [],
       is_edited: false,
       is_deleted: false,
       deleted_for_everyone: false,
@@ -1640,6 +1770,19 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     } else {
       setMessages(prev => [optimisticMessage, ...prev]);
     }
+    rememberPendingOutbound(input.group_id, optimisticMessage);
+
+    if (!input.is_silent) {
+      applyGroupLastMessage(input.group_id, {
+        created_at: optimisticMessage.created_at,
+        preview: getChatMessagePreview(optimisticMessage.message_type, optimisticMessage.content),
+        senderName:
+          user?.display_name ||
+          (user as { full_name?: string } | null)?.full_name ||
+          'אני',
+        messageType: optimisticMessage.message_type,
+      });
+    }
 
     try {
       const { data, error } = await chatMessageService.sendChatMessage(enrichedInput, user.id);
@@ -1663,37 +1806,56 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           metadata: Object.keys(mergedMetadata).length > 0 ? mergedMetadata : data.metadata,
           // content מהשרת כבר כולל waveform; אם ריק — שמור אופטימיסטי
           content: data.content || prior?.content || input.content || '',
+          client_message_id: clientMessageId,
+          local_id: prior?.local_id ?? tempId,
+          sender: chatRealtimeService.hasUsableSender(data.sender)
+            ? data.sender
+            : prior?.sender ?? optimisticMessage.sender,
         });
 
-        // החלף את האופטימיסטי בהודעה האמיתית
+        // החלף את האופטימיסטי בהודעה האמיתית — אותה שורה, אותו מפתח רשימה
         setMessages(prev => {
-          const realAlready = prev.findIndex(m => m.id === data.id);
-          if (realAlready !== -1) {
-            // realtime הספיק – עדכן in-place והסר אופטימיסטי
-            return prev
-              .filter(m => m.id !== tempId)
-              .map(m => m.id === data.id ? finalMessage : m);
+          const matchIndex = findMatchingOptimisticIndex(
+            prev,
+            { ...finalMessage, local_id: tempId, client_message_id: clientMessageId },
+            user.id,
+          );
+          const idx =
+            matchIndex !== -1
+              ? matchIndex
+              : prev.findIndex((m) => m.id === tempId || m.local_id === tempId);
+
+          if (idx !== -1) {
+            return dedupeOwnOutboundCopies(
+              prev.map((m, i) =>
+                i === idx ? morphOptimisticIntoServer(m, finalMessage) : m,
+              ),
+            );
           }
-          // החלפה רגילה של אופטימיסטי
-          return prev.map(m => m.id === tempId ? finalMessage : m);
+
+          const realAlready = prev.findIndex((m) => m.id === data.id);
+          if (realAlready !== -1) {
+            return dedupeOwnOutboundCopies(
+              prev
+                .filter((m) => m.id !== tempId && m.local_id !== tempId)
+                .map((m) => (m.id === data.id ? morphOptimisticIntoServer(m, finalMessage) : m)),
+            );
+          }
+          return dedupeOwnOutboundCopies([finalMessage, ...prev]);
         });
 
-        setGroups(prev => prev.map(g =>
-          g.id === input.group_id
-            ? {
-              ...g,
-              last_message_at: data.created_at,
-              last_message_preview: getChatMessagePreview(data.message_type, data.content),
-              last_message_sender_name:
-                data.sender?.display_name ||
-                user?.display_name ||
-                user?.full_name ||
-                'משתמש',
-              last_message_type: data.message_type,
-              messages_count: g.messages_count + 1,
-            }
-            : g
-        ));
+        applyGroupLastMessage(input.group_id, {
+          created_at: data.created_at,
+          preview: getChatMessagePreview(data.message_type, data.content),
+          senderName:
+            data.sender?.display_name ||
+            user?.display_name ||
+            (user as { full_name?: string } | null)?.full_name ||
+            'אני',
+          messageType: data.message_type,
+          bumpCount: false,
+        });
+        dropPendingOutbound(input.group_id, finalMessage);
 
         return { success: true };
       } else {
@@ -1728,10 +1890,17 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         ));
         return { success: false, error: errMsg || 'שגיאה בשליחת הודעה' };
       }
-    } finally {
-      setIsSendingMessage(false);
+    } catch (e) {
+      const errMsg = e instanceof Error ? e.message : 'שגיאה בשליחת הודעה';
+      logger.error('ChatContext', `Error sending message: ${errMsg}`);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === tempId ? { ...m, is_sending: false, send_error: errMsg } : m,
+        ),
+      );
+      return { success: false, error: errMsg };
     }
-  }, [user, isConnected]);
+  }, [applyGroupLastMessage, dropPendingOutbound, fetchReplyToData, rememberPendingOutbound, user, isConnected]);
 
   // ============================================
   // Edit message
@@ -2009,12 +2178,21 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                   processedMessageIds.current.add(data.id);
                   if (data.group_id === currentGroupId.current) {
                     setMessages(prev => {
-                      const tempIdx = prev.findIndex(m => m.id === next.local_id);
+                      const incoming = {
+                        ...data,
+                        local_id: next.local_id,
+                        client_message_id: next.client_message_id,
+                      };
+                      const tempIdx = findMatchingOptimisticIndex(prev, incoming, next.sender_id);
                       if (tempIdx !== -1) {
-                        return prev.map((m, idx) => (idx === tempIdx ? { ...data } : m));
+                        return dedupeOwnOutboundCopies(
+                          prev.map((m, idx) =>
+                            idx === tempIdx ? morphOptimisticIntoServer(m, incoming) : m,
+                          ),
+                        );
                       }
                       if (prev.some(m => m.id === data.id)) return prev;
-                      return [{ ...data }, ...prev];
+                      return dedupeOwnOutboundCopies([incoming, ...prev]);
                     });
                   }
                 } else {
@@ -2088,53 +2266,44 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       if (!viewingThisGroup) {
         sessionReadConfirmedRef.current.delete(groupId);
       }
-      // postgres_changes לא כולל join ל-users — משיגים שם שולח לפרביו ברשימה
-      void (async () => {
-        let senderName =
-          message.sender?.display_name ||
-          (message.sender as { full_name?: string } | undefined)?.full_name ||
-          '';
-        if (!senderName && message.sender_id) {
-          const enriched = await chatRealtimeService.enrichChatMessageSender(message);
-          senderName = enriched.sender?.display_name || '';
-          if (!senderName) {
-            const { data: nameRows } = await supabase.rpc('get_user_display_names', {
-              user_ids: [message.sender_id],
-            });
-            senderName =
-              (nameRows as Array<{ display_name: string }> | null)?.[0]?.display_name || '';
-          }
-        }
-        const preview = getChatMessagePreview(message.message_type, message.content);
-        setGroups((prev) => {
-          const next = prev.map((g) => {
-            if (g.id !== groupId) return g;
-            const stillViewing = viewingGroupRef.current === groupId;
-            return {
-              ...g,
-              last_message_at: message.created_at,
-              last_message_preview: preview,
-              last_message_sender_name: senderName || 'משתמש',
-              last_message_type: message.message_type,
-              // אופטימי: אם עדיין אין membership UPDATE — השורה עולה עם badge
-              ...(stillViewing
-                ? {}
-                : { unread_count: (g.unread_count || 0) + 1 }),
-            };
-          });
-          if (user?.id) {
-            queryClient.setQueryData(appQueryKeys.chatGroups(user.id), next);
-          }
-          return next;
-        });
-      })();
-      // קאש per-group: גם כשהצ'אט לא פתוח — הודעת realtime נכנסת לקאש (עם sender)
+
+      const peeked = chatRealtimeService.peekCachedSender(message.sender_id);
+      const instantSenderName =
+        message.sender?.display_name ||
+        (message.sender as { full_name?: string } | undefined)?.full_name ||
+        peeked?.display_name ||
+        '';
+      const preview = getChatMessagePreview(message.message_type, message.content);
+      const isOwn = message.sender_id === user.id;
+      applyGroupLastMessage(groupId, {
+        created_at: message.created_at,
+        preview,
+        senderName: instantSenderName,
+        messageType: message.message_type,
+        incrementUnread: !viewingThisGroup && !isOwn,
+        bumpCount: !isOwn,
+      });
+
+      const cacheNow = peeked
+        ? { ...message, sender: message.sender ?? peeked }
+        : message;
       if (!viewingThisGroup) {
-        void chatRealtimeService.enrichChatMessageSender(message).then((enriched) => {
-          appendMessageToGroupCache(groupId, enriched, user.id);
-        });
+        appendMessageToGroupCache(groupId, cacheNow, user.id);
+        if (!chatRealtimeService.hasUsableSender(cacheNow.sender)) {
+          void chatRealtimeService.enrichChatMessageSender(message).then((enriched) => {
+            appendMessageToGroupCache(groupId, enriched, user.id);
+            if (enriched.sender?.display_name) {
+              applyGroupLastMessage(groupId, {
+                created_at: enriched.created_at,
+                preview,
+                senderName: enriched.sender.display_name,
+                messageType: enriched.message_type,
+                bumpCount: false,
+              });
+            }
+          });
+        }
       }
-      // רק כשבאמת צופים במסך הצ'אט — לא כש־currentGroupId נשאר sticky אחרי יציאה
       if (viewingThisGroup) {
         void ingestIncomingInsertRef.current(message);
       }
@@ -2309,8 +2478,25 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   // ============================================
 
   const addOptimisticMediaMessage = useCallback((message: ChatMessage) => {
-    setMessages(prev => [message, ...prev]);
-  }, []);
+    const stamped: ChatMessage = {
+      ...message,
+      local_id: message.local_id ?? message.id,
+      client_message_id: message.client_message_id ?? makeClientMessageId(),
+    };
+    setMessages(prev => [stamped, ...prev]);
+    if (stamped.group_id) rememberPendingOutbound(stamped.group_id, stamped);
+    if (!stamped.is_silent && stamped.group_id) {
+      applyGroupLastMessage(stamped.group_id, {
+        created_at: stamped.created_at,
+        preview: getChatMessagePreview(stamped.message_type, stamped.content),
+        senderName:
+          stamped.sender?.display_name ||
+          userRef.current?.display_name ||
+          'אני',
+        messageType: stamped.message_type,
+      });
+    }
+  }, [applyGroupLastMessage, rememberPendingOutbound]);
 
   const updateOptimisticMessage = useCallback((tempId: string, updates: Partial<ChatMessage>) => {
     setMessages(prev => prev.map(m => 
@@ -2435,6 +2621,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         reply_to_message_id: failed.reply_to_message_id,
         metadata,
         existing_optimistic_id: tempId,
+        client_message_id: failed.client_message_id,
       });
 
       if (!result.success && !(result as { queued?: boolean }).queued) {

@@ -7,6 +7,7 @@ import type {
   PortfolioSummary,
   PortfolioHolding,
   DistributionGroupBy,
+  PerformancePeriod,
   Trade,
 } from '../portfolioTypes';
 import {
@@ -15,6 +16,7 @@ import {
 } from '../../../services/portfolios/portfolioAggregator';
 import { toLocalDateKey } from '../../../utils/dateKeys';
 import { DistributionDonut } from '../components/DistributionDonut';
+import { PortfolioValueChart } from '../components/PortfolioValueChart';
 import { formatCurrency, formatPercent, gainColor } from '../utils/format';
 import {
   getValueHistory,
@@ -27,8 +29,10 @@ import {
 import type { PortfolioAnalyticsResult } from '../../../services/portfolios';
 import { loadTrades } from '../../../services/portfolios/portfolioTradeDerive';
 import UICard from '../../../components/ui/UICard';
+import { TickerLogo } from '../components/TickerLogo';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 import { darkPoolTextRtl } from '../../DarkPool/darkPoolLayout';
+import { filterChartSeriesByPeriod } from '../../DarkPool/utils/profileChartSeries';
 
 interface Props {
   portfolio: Portfolio;
@@ -70,8 +74,12 @@ export default function OverviewTab({
 }: Props) {
   const tokens = useDesignTokens();
   const [groupBy, setGroupBy] = useState<DistributionGroupBy>('symbol');
-  /** סדרת שווי לחישוב מדדי ביצוע (ללא גרף במסך זה) */
-  const [valueSeries, setValueSeries] = useState<{ date: string; value: number; external_flow: number }[]>([]);
+  const [period, setPeriod] = useState<PerformancePeriod>('3M');
+  /** סדרת שווי לגרף + מדדי ביצוע */
+  const [chartSeries, setChartSeries] = useState<
+    { date: string; value: number; external_flow: number }[]
+  >([]);
+  const [chartLoading, setChartLoading] = useState(true);
   const [tradeStats, setTradeStats] = useState<TradeStats>({
     totalPnl: 0,
     winRate: null,
@@ -86,6 +94,7 @@ export default function OverviewTab({
 
   useEffect(() => {
     let cancel = false;
+    setChartLoading(true);
     if (chartRefreshKey) {
       clearHistoricalSeriesCache(portfolio.id);
     }
@@ -96,19 +105,19 @@ export default function OverviewTab({
         const snapshots = await buildHistoricalPortfolioSeriesFromSnapshots(portfolio.id, rangeDays);
         if (cancel) return;
         if (snapshots.length >= 1) {
-          setValueSeries(snapshots);
+          setChartSeries(snapshots);
           return;
         }
         // Fallback ליומנים ידניים בלבד — Colmex נשען על snapshots/trades אחרי sync
         if (portfolio.source === 'colmex_pro') {
-          setValueSeries([]);
+          setChartSeries([]);
           return;
         }
         const series = await buildHistoricalPortfolioSeries(portfolio.id, 365);
-        if (!cancel) setValueSeries(series);
+        if (!cancel) setChartSeries(series);
       } catch {
         if (cancel || portfolio.source === 'colmex_pro') {
-          if (!cancel) setValueSeries([]);
+          if (!cancel) setChartSeries([]);
           return;
         }
         try {
@@ -116,10 +125,12 @@ export default function OverviewTab({
           const series = hist.length >= 2
             ? hist.map((p) => ({ date: p.date, value: p.total_value, external_flow: 0 }))
             : [];
-          if (!cancel) setValueSeries(series);
+          if (!cancel) setChartSeries(series);
         } catch {
-          if (!cancel) setValueSeries([]);
+          if (!cancel) setChartSeries([]);
         }
+      } finally {
+        if (!cancel) setChartLoading(false);
       }
     };
     void load();
@@ -355,9 +366,9 @@ export default function OverviewTab({
     portfolio.available_cash,
   ]);
 
-  // אחיד לכל סוגי התיקים: overlay של נקודת היום + fallback ל-2 נקודות (למדדים)
+  // אחיד לכל סוגי התיקים: overlay של נקודת היום + fallback ל-2 נקודות (לגרף + מדדים)
   const filteredSeries = useMemo(() => {
-    let base = valueSeries;
+    let base = chartSeries;
     if (base.length === 0 && livePortfolioValue != null && livePortfolioValue > 0) {
       const todayStr = toLocalDateKey(new Date());
       base = [{ date: todayStr, value: livePortfolioValue, external_flow: 0 }];
@@ -375,7 +386,7 @@ export default function OverviewTab({
         ];
       }
     }
-    // מדדים דורשים ≥2 נקודות — שכפל ליום קודם אם יש רק אחת
+    // גרף/מדדים דורשים ≥2 נקודות — שכפל ליום קודם אם יש רק אחת
     if (base.length === 1) {
       const only = base[0];
       const d = new Date(`${only.date}T12:00:00`);
@@ -387,39 +398,46 @@ export default function OverviewTab({
       ];
     }
     return base;
-  }, [valueSeries, livePortfolioValue]);
+  }, [chartSeries, livePortfolioValue]);
 
+  // מדדים על אותה תקופה כמו הגרף — עקביות TWR / vol / DD
   const analytics = useMemo((): PortfolioAnalyticsResult | null => {
-    if (filteredSeries.length < 2) return null;
-    return computePortfolioAnalytics(filteredSeries);
-  }, [filteredSeries]);
+    const periodSeries = filterChartSeriesByPeriod(filteredSeries, period);
+    if (periodSeries.length < 2) return null;
+    return computePortfolioAnalytics(periodSeries);
+  }, [filteredSeries, period]);
 
   const styles = useMemo(
     () =>
       StyleSheet.create({
+        /** עץ RTL מקומי — App הוא LTR; כאן row (לא row-reverse) כדי לא להפוך פעמיים */
         root: {
           direction: 'rtl',
         },
         section: {
           marginBottom: 16,
           overflow: 'hidden',
+          direction: 'rtl',
         },
         sectionTitle: {
-          fontSize: 15,
+          width: '100%',
+          alignSelf: 'stretch',
+          fontSize: 17,
           fontWeight: '700',
+          letterSpacing: -0.2,
+          lineHeight: 22,
           color: tokens.colors.text.primary,
-          ...darkPoolTextRtl,
           marginBottom: 12,
+          ...darkPoolTextRtl,
         },
         tipsBanner: {
-          // עץ RTL — row (לא row-reverse)
           flexDirection: 'row',
           alignItems: 'center',
           gap: 10,
           padding: 12,
           backgroundColor: 'rgba(255, 184, 0, 0.10)',
           borderColor: 'rgba(255, 184, 0, 0.30)',
-          borderWidth: 1,
+          borderWidth: 0,
           borderRadius: 14,
           marginBottom: 16,
         },
@@ -433,16 +451,18 @@ export default function OverviewTab({
         groupChips: {
           flexDirection: 'row',
           flexWrap: 'wrap',
+          justifyContent: 'flex-start',
           gap: 6,
           marginBottom: 14,
+          width: '100%',
         },
         groupChip: {
           paddingVertical: 7,
           paddingHorizontal: 12,
           borderRadius: 999,
-          borderWidth: 1,
+          borderWidth: StyleSheet.hairlineWidth,
           borderColor: tokens.colors.border.subtle,
-          backgroundColor: 'rgba(255,255,255,0.04)',
+          backgroundColor: 'rgba(255,255,255,0.06)',
         },
         groupChipActive: {
           borderColor: `${tokens.colors.primary.main}66`,
@@ -452,6 +472,7 @@ export default function OverviewTab({
           fontSize: 12,
           color: tokens.colors.text.secondary,
           fontWeight: '600',
+          ...darkPoolTextRtl,
         },
         groupChipTextActive: {
           color: tokens.colors.primary.main,
@@ -487,10 +508,14 @@ export default function OverviewTab({
           fontSize: 12,
           fontWeight: '700',
           color: tokens.colors.text.secondary,
+          writingDirection: 'ltr',
+          textAlign: 'right',
         },
         totalRow: {
           flexDirection: 'row',
-          justifyContent: 'space-between',
+          justifyContent: 'flex-start',
+          alignItems: 'center',
+          gap: 10,
           marginTop: 12,
           paddingHorizontal: 4,
         },
@@ -503,14 +528,21 @@ export default function OverviewTab({
           fontSize: 15,
           fontWeight: '700',
           color: tokens.colors.text.primary,
+          writingDirection: 'ltr',
+          textAlign: 'right',
         },
         moversWrap: {
           gap: 14,
+          width: '100%',
         },
         moverGroup: {
           gap: 4,
+          width: '100%',
+          alignItems: 'stretch',
         },
         moverGroupHeaderText: {
+          width: '100%',
+          alignSelf: 'stretch',
           fontSize: 12,
           fontWeight: '700',
           ...darkPoolTextRtl,
@@ -519,55 +551,66 @@ export default function OverviewTab({
         moverRow: {
           flexDirection: 'row',
           alignItems: 'center',
+          justifyContent: 'flex-start',
           paddingVertical: 9,
           paddingHorizontal: 10,
           gap: 8,
           borderRadius: 12,
-          backgroundColor: 'rgba(255,255,255,0.04)',
+          backgroundColor: 'rgba(255,255,255,0.05)',
           borderWidth: StyleSheet.hairlineWidth,
           borderColor: 'rgba(255,255,255,0.08)',
           marginBottom: 6,
+          width: '100%',
+        },
+        moverSymbolBlock: {
+          flex: 1,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'flex-start',
+          gap: 10,
+          minWidth: 0,
         },
         moverSymbol: {
           flex: 1,
           fontSize: 13,
           fontWeight: '700',
           color: tokens.colors.text.primary,
-          ...darkPoolTextRtl,
+          writingDirection: 'ltr',
+          textAlign: 'right',
         },
         moverValues: {
-          alignItems: 'flex-start',
+          alignItems: 'stretch',
           gap: 2,
+          maxWidth: '58%',
         },
-        moverPct: {
-          fontSize: 13,
+        moverPrimaryLine: {
+          width: '100%',
+          fontSize: 12,
           fontWeight: '700',
           writingDirection: 'ltr',
-          textAlign: 'left',
-        },
-        moverDollar: {
-          fontSize: 12,
-          fontWeight: '600',
-          writingDirection: 'ltr',
-          textAlign: 'left',
+          textAlign: 'right',
         },
         moverStockPct: {
+          width: '100%',
           fontSize: 10,
           fontWeight: '500',
-          writingDirection: 'ltr',
-          textAlign: 'left',
+          ...darkPoolTextRtl,
           opacity: 0.75,
         },
         emptyText: {
+          width: '100%',
+          alignSelf: 'stretch',
           fontSize: 13,
           color: tokens.colors.text.tertiary,
-          textAlign: 'center',
+          ...darkPoolTextRtl,
           paddingVertical: 24,
         },
         emptyTextSmall: {
+          width: '100%',
+          alignSelf: 'stretch',
           fontSize: 12,
           color: tokens.colors.text.tertiary,
-          textAlign: 'center',
+          ...darkPoolTextRtl,
           paddingVertical: 10,
         },
         cashGrid: {
@@ -580,22 +623,44 @@ export default function OverviewTab({
           flexGrow: 1,
           padding: 12,
           borderRadius: 14,
-          backgroundColor: 'rgba(255,255,255,0.04)',
+          backgroundColor: 'rgba(255,255,255,0.05)',
           borderWidth: StyleSheet.hairlineWidth,
           borderColor: 'rgba(255,255,255,0.08)',
           gap: 6,
+          alignItems: 'stretch',
         },
         cashCellLabel: {
+          width: '100%',
           fontSize: 11,
           fontWeight: '600',
           color: tokens.colors.text.tertiary,
           ...darkPoolTextRtl,
         },
         cashCellValue: {
+          width: '100%',
           fontSize: 15,
           fontWeight: '700',
-          ...darkPoolTextRtl,
           writingDirection: 'ltr',
+          textAlign: 'right',
+        },
+        analyticsGroup: {
+          gap: 8,
+          marginBottom: 14,
+          width: '100%',
+          alignItems: 'stretch',
+        },
+        analyticsGroupLast: {
+          marginBottom: 0,
+        },
+        analyticsGroupLabel: {
+          width: '100%',
+          alignSelf: 'stretch',
+          fontSize: 11,
+          fontWeight: '700',
+          color: tokens.colors.text.tertiary,
+          ...darkPoolTextRtl,
+          letterSpacing: 0.2,
+          marginBottom: 2,
         },
         analyticsGrid: {
           flexDirection: 'row',
@@ -603,26 +668,44 @@ export default function OverviewTab({
           gap: 10,
         },
         analyticsCell: {
-          width: '48%',
+          width: '47%',
           flexGrow: 1,
-          padding: 12,
+          flexBasis: '47%',
+          minHeight: 72,
+          paddingVertical: 12,
+          paddingHorizontal: 12,
           borderRadius: 14,
-          backgroundColor: 'rgba(255,255,255,0.04)',
+          backgroundColor: 'rgba(255,255,255,0.05)',
           borderWidth: StyleSheet.hairlineWidth,
           borderColor: 'rgba(255,255,255,0.08)',
-          gap: 4,
+          justifyContent: 'center',
+          alignItems: 'stretch',
+          gap: 6,
+        },
+        analyticsCellPrimary: {
+          backgroundColor: 'rgba(255,255,255,0.07)',
+          borderColor: 'rgba(255,255,255,0.12)',
         },
         analyticsCellLabel: {
-          fontSize: 10,
+          width: '100%',
+          fontSize: 11,
           fontWeight: '600',
           color: tokens.colors.text.tertiary,
           ...darkPoolTextRtl,
         },
         analyticsCellValue: {
-          fontSize: 16,
+          width: '100%',
+          fontSize: 17,
           fontWeight: '800',
-          ...darkPoolTextRtl,
           writingDirection: 'ltr',
+          textAlign: 'right',
+        },
+        analyticsCellHint: {
+          width: '100%',
+          fontSize: 9,
+          color: tokens.colors.text.tertiary,
+          ...darkPoolTextRtl,
+          marginTop: 0,
         },
       }),
     [tokens]
@@ -641,152 +724,32 @@ export default function OverviewTab({
         </View>
       ) : null}
 
-      {/* Analytics metrics */}
-      {(analytics != null || tradeStats.count > 0) && (
-        <UICard variant="glass" glassIntensity="light" padding="md" style={styles.section}>
-          <Text style={styles.sectionTitle}>מדדי ביצוע</Text>
-          <View style={styles.analyticsGrid}>
-            {/* TWR — תשואה מנורמלת שמבודדת הפקדות/משיכות */}
-            <AnalyticsCell
-              label="תשואה נטו (TWR)"
-              value={
-                analytics?.twrReturn != null
-                  ? formatPercent(analytics.twrReturn * 100)
-                  : analytics?.totalReturn != null
-                  ? formatPercent(analytics.totalReturn * 100)
-                  : '—'
-              }
-              valueColor={
-                (analytics?.twrReturn ?? analytics?.totalReturn) == null
-                  ? tokens.colors.text.secondary
-                  : (analytics?.twrReturn ?? analytics?.totalReturn ?? 0) >= 0
-                  ? tokens.colors.primary.main
-                  : tokens.colors.text.danger
-              }
-              hint={analytics?.twrReturn != null ? 'מנורמל להפקדות' : undefined}
-              styles={styles}
-            />
-            <AnalyticsCell
-              label="תנודתיות שנתית"
-              value={analytics?.volatility != null ? formatPercent(analytics.volatility * 100, 1) : '—'}
-              valueColor={tokens.colors.text.primary}
-              styles={styles}
-            />
-            <AnalyticsCell
-              label="Sharpe Ratio"
-              value={analytics?.sharpe != null ? analytics.sharpe.toFixed(2) : '—'}
-              valueColor={
-                analytics?.sharpe == null
-                  ? tokens.colors.text.secondary
-                  : analytics.sharpe >= 1
-                  ? tokens.colors.primary.main
-                  : analytics.sharpe >= 0
-                  ? tokens.colors.text.primary
-                  : tokens.colors.text.danger
-              }
-              styles={styles}
-            />
-            <AnalyticsCell
-              label="Max Drawdown"
-              value={analytics?.maxDrawdown != null ? formatPercent(analytics.maxDrawdown * 100, 1) : '—'}
-              valueColor={
-                analytics?.maxDrawdown == null
-                  ? tokens.colors.text.secondary
-                  : analytics.maxDrawdown > 0.2
-                  ? tokens.colors.text.danger
-                  : tokens.colors.text.primary
-              }
-              styles={styles}
-            />
-            {/* P&L מסחרי בלבד (ללא דיבידנדים) */}
-            <AnalyticsCell
-              label="P&L מסחרי"
-              value={
-                tradeStats.count > 0
-                  ? `${tradeStats.totalPnl >= 0 ? '+' : ''}${formatCurrency(tradeStats.totalPnl, portfolio.currency)}`
-                  : '—'
-              }
-              valueColor={
-                tradeStats.count === 0
-                  ? tokens.colors.text.secondary
-                  : tradeStats.totalPnl > 0
-                  ? tokens.colors.primary.main
-                  : tradeStats.totalPnl < 0
-                  ? tokens.colors.text.danger
-                  : tokens.colors.text.secondary
-              }
-              hint="trades בלבד"
-              styles={styles}
-            />
-            {/* P&L נטו = מסחרי + דיבידנדים − עמלות */}
-            <AnalyticsCell
-              label="P&L נטו (כולל דיב׳)"
-              value={(() => {
-                const netPnl =
-                  tradeStats.totalPnl +
-                  (summary?.total_dividends ?? 0) -
-                  (summary?.total_fees ?? 0);
-                return tradeStats.count > 0 || (summary?.total_dividends ?? 0) > 0
-                  ? `${netPnl >= 0 ? '+' : ''}${formatCurrency(netPnl, portfolio.currency)}`
-                  : '—';
-              })()}
-              valueColor={(() => {
-                const netPnl =
-                  tradeStats.totalPnl +
-                  (summary?.total_dividends ?? 0) -
-                  (summary?.total_fees ?? 0);
-                return netPnl > 0
-                  ? tokens.colors.primary.main
-                  : netPnl < 0
-                  ? tokens.colors.text.danger
-                  : tokens.colors.text.secondary;
-              })()}
-              hint="+דיבידנדים −עמלות"
-              styles={styles}
-            />
-            <AnalyticsCell
-              label="Win Rate"
-              value={tradeStats.winRate != null ? `${tradeStats.winRate.toFixed(0)}%` : '—'}
-              valueColor={
-                tradeStats.winRate == null
-                  ? tokens.colors.text.secondary
-                  : tradeStats.winRate >= 50
-                  ? tokens.colors.primary.main
-                  : tokens.colors.text.primary
-              }
-              styles={styles}
-            />
-            <AnalyticsCell
-              label="ממוצע רווח"
-              value={
-                tradeStats.avgWin != null
-                  ? `+${formatCurrency(tradeStats.avgWin, portfolio.currency)}`
-                  : '—'
-              }
-              valueColor={
-                tradeStats.avgWin != null
-                  ? tokens.colors.primary.main
-                  : tokens.colors.text.secondary
-              }
-              styles={styles}
-            />
-            <AnalyticsCell
-              label="ממוצע הפסד"
-              value={
-                tradeStats.avgLoss != null
-                  ? formatCurrency(tradeStats.avgLoss, portfolio.currency)
-                  : '—'
-              }
-              valueColor={
-                tradeStats.avgLoss != null
-                  ? tokens.colors.text.danger
-                  : tokens.colors.text.secondary
-              }
-              styles={styles}
-            />
-          </View>
-        </UICard>
-      )}
+      {/* Performance chart — Cash App topology בתוך הגרף (label→amount→delta), בלי כותרת כפולה */}
+      <UICard variant="glass" glassIntensity="light" padding="md" style={styles.section}>
+        {chartLoading ? (
+          <>
+            <Text style={styles.sectionTitle}>שווי תיק לאורך זמן</Text>
+            <Text style={styles.emptyText}>טוען נתונים…</Text>
+          </>
+        ) : filteredSeries.length === 0 ? (
+          <>
+            <Text style={styles.sectionTitle}>שווי תיק לאורך זמן</Text>
+            <Text style={styles.emptyText}>
+              {isColmex
+                ? 'אין נקודת שווי עדיין — משוך לסנכרון מהברוקר'
+                : 'אין נתונים היסטוריים עדיין — סגור פוזיציה ראשונה או הוסף הפקדה'}
+            </Text>
+          </>
+        ) : (
+          <PortfolioValueChart
+            series={filteredSeries}
+            currency={portfolio.currency}
+            selectedPeriod={period}
+            onPeriodChange={setPeriod}
+            headerTitle="שווי תיק לאורך זמן"
+          />
+        )}
+      </UICard>
 
       {/* Distribution */}
       <UICard variant="glass" glassIntensity="light" padding="md" style={styles.section}>
@@ -857,6 +820,191 @@ export default function OverviewTab({
           </>
         )}
       </UICard>
+
+      {/* Analytics metrics — עיקריים לפי חשיבות, ואז משניים */}
+      {(analytics != null || tradeStats.count > 0) && (
+        <UICard variant="glass" glassIntensity="light" padding="md" style={styles.section}>
+          <Text style={styles.sectionTitle}>מדדי ביצוע</Text>
+
+          <View style={styles.analyticsGroup}>
+            <Text style={styles.analyticsGroupLabel}>עיקריים</Text>
+            <View style={styles.analyticsGrid}>
+              <AnalyticsCell
+                label="כמות עסקאות"
+                value={tradeStats.count > 0 ? String(tradeStats.count) : '—'}
+                valueColor={
+                  tradeStats.count > 0
+                    ? tokens.colors.text.primary
+                    : tokens.colors.text.secondary
+                }
+                primary
+                styles={styles}
+              />
+              <AnalyticsCell
+                label="Win Rate"
+                value={
+                  tradeStats.winRate != null
+                    ? `${tradeStats.winRate.toFixed(0)}%`
+                    : '—'
+                }
+                valueColor={
+                  tradeStats.winRate == null
+                    ? tokens.colors.text.secondary
+                    : tradeStats.winRate >= 50
+                    ? tokens.colors.primary.main
+                    : tokens.colors.text.primary
+                }
+                primary
+                styles={styles}
+              />
+              <AnalyticsCell
+                label="ממוצע רווח"
+                value={
+                  tradeStats.avgWin != null
+                    ? `+${formatCurrency(tradeStats.avgWin, portfolio.currency)}`
+                    : '—'
+                }
+                valueColor={
+                  tradeStats.avgWin != null
+                    ? tokens.colors.primary.main
+                    : tokens.colors.text.secondary
+                }
+                primary
+                styles={styles}
+              />
+              <AnalyticsCell
+                label="ממוצע הפסד"
+                value={
+                  tradeStats.avgLoss != null
+                    ? formatCurrency(tradeStats.avgLoss, portfolio.currency)
+                    : '—'
+                }
+                valueColor={
+                  tradeStats.avgLoss != null
+                    ? tokens.colors.text.danger
+                    : tokens.colors.text.secondary
+                }
+                primary
+                styles={styles}
+              />
+              {/* TWR — אותו חישוב; תווית ברורה יותר */}
+              <AnalyticsCell
+                label="תשואה (TWR)"
+                value={
+                  analytics?.twrReturn != null
+                    ? formatPercent(analytics.twrReturn * 100)
+                    : analytics?.totalReturn != null
+                    ? formatPercent(analytics.totalReturn * 100)
+                    : '—'
+                }
+                valueColor={
+                  (analytics?.twrReturn ?? analytics?.totalReturn) == null
+                    ? tokens.colors.text.secondary
+                    : (analytics?.twrReturn ?? analytics?.totalReturn ?? 0) >= 0
+                    ? tokens.colors.primary.main
+                    : tokens.colors.text.danger
+                }
+                hint={analytics?.twrReturn != null ? 'מנורמל להפקדות' : undefined}
+                primary
+                styles={styles}
+              />
+              {/* P&L מסחרי בלבד (ללא דיבידנדים) */}
+              <AnalyticsCell
+                label="P&L מסחרי"
+                value={
+                  tradeStats.count > 0
+                    ? `${tradeStats.totalPnl >= 0 ? '+' : ''}${formatCurrency(tradeStats.totalPnl, portfolio.currency)}`
+                    : '—'
+                }
+                valueColor={
+                  tradeStats.count === 0
+                    ? tokens.colors.text.secondary
+                    : tradeStats.totalPnl > 0
+                    ? tokens.colors.primary.main
+                    : tradeStats.totalPnl < 0
+                    ? tokens.colors.text.danger
+                    : tokens.colors.text.secondary
+                }
+                hint="trades בלבד"
+                primary
+                styles={styles}
+              />
+            </View>
+          </View>
+
+          <View style={[styles.analyticsGroup, styles.analyticsGroupLast]}>
+            <Text style={styles.analyticsGroupLabel}>נוספים</Text>
+            <View style={styles.analyticsGrid}>
+              <AnalyticsCell
+                label="תנודתיות שנתית"
+                value={
+                  analytics?.volatility != null
+                    ? formatPercent(analytics.volatility * 100, 1)
+                    : '—'
+                }
+                valueColor={tokens.colors.text.primary}
+                styles={styles}
+              />
+              <AnalyticsCell
+                label="Sharpe Ratio"
+                value={analytics?.sharpe != null ? analytics.sharpe.toFixed(2) : '—'}
+                valueColor={
+                  analytics?.sharpe == null
+                    ? tokens.colors.text.secondary
+                    : analytics.sharpe >= 1
+                    ? tokens.colors.primary.main
+                    : analytics.sharpe >= 0
+                    ? tokens.colors.text.primary
+                    : tokens.colors.text.danger
+                }
+                styles={styles}
+              />
+              <AnalyticsCell
+                label="Max Drawdown"
+                value={
+                  analytics?.maxDrawdown != null
+                    ? formatPercent(analytics.maxDrawdown * 100, 1)
+                    : '—'
+                }
+                valueColor={
+                  analytics?.maxDrawdown == null
+                    ? tokens.colors.text.secondary
+                    : analytics.maxDrawdown > 0.2
+                    ? tokens.colors.text.danger
+                    : tokens.colors.text.primary
+                }
+                styles={styles}
+              />
+              {/* P&L נטו = מסחרי + דיבידנדים − עמלות */}
+              <AnalyticsCell
+                label="P&L נטו (כולל דיב׳)"
+                value={(() => {
+                  const netPnl =
+                    tradeStats.totalPnl +
+                    (summary?.total_dividends ?? 0) -
+                    (summary?.total_fees ?? 0);
+                  return tradeStats.count > 0 || (summary?.total_dividends ?? 0) > 0
+                    ? `${netPnl >= 0 ? '+' : ''}${formatCurrency(netPnl, portfolio.currency)}`
+                    : '—';
+                })()}
+                valueColor={(() => {
+                  const netPnl =
+                    tradeStats.totalPnl +
+                    (summary?.total_dividends ?? 0) -
+                    (summary?.total_fees ?? 0);
+                  return netPnl > 0
+                    ? tokens.colors.primary.main
+                    : netPnl < 0
+                    ? tokens.colors.text.danger
+                    : tokens.colors.text.secondary;
+                })()}
+                hint="+דיבידנדים −עמלות"
+                styles={styles}
+              />
+            </View>
+          </View>
+        </UICard>
+      )}
 
       {/* Daily gainers/losers — השפעה על התיק (לא % המניה) */}
       <UICard variant="glass" glassIntensity="light" padding="md" style={styles.section}>
@@ -966,15 +1114,15 @@ interface MoverImpactRowProps {
   tokens: ReturnType<typeof useDesignTokens>;
   styles: {
     moverRow: any;
+    moverSymbolBlock: any;
     moverSymbol: any;
     moverValues: any;
-    moverPct: any;
-    moverDollar: any;
+    moverPrimaryLine: any;
     moverStockPct: any;
   };
 }
 
-/** שורת נכס: השפעה על התיק (בולט) + שינוי $ + % מניה במשני */
+/** שורת נכס: לוגו + סימול · %השפעה · $שינוי, מתחת תשואה מכניסה */
 function MoverImpactRow({
   holding,
   portfolioValue,
@@ -992,17 +1140,24 @@ function MoverImpactRow({
   );
   return (
     <View style={styles.moverRow}>
-      <Text style={styles.moverSymbol}>{holding.symbol}</Text>
+      <View style={styles.moverSymbolBlock}>
+        <TickerLogo symbol={holding.symbol} size={38} />
+        <Text style={styles.moverSymbol} numberOfLines={1}>
+          {holding.symbol}
+        </Text>
+      </View>
       <View style={styles.moverValues}>
-        <Text style={[styles.moverPct, { color }]}>
-          {formatPercent(impactPct)}
+        <Text
+          style={[styles.moverPrimaryLine, { color }]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.8}
+        >
+          {formatPercent(impactPct)} · {formatCurrency(holding.daily_gain, currency)}
         </Text>
-        <Text style={[styles.moverDollar, { color }]}>
-          {formatCurrency(holding.daily_gain, currency)}
-        </Text>
-        {holding.daily_gain_pct !== 0 || holding.previous_close != null ? (
+        {holding.avg_price > 0 ? (
           <Text style={[styles.moverStockPct, { color: tokens.colors.text.tertiary }]}>
-            מניה {formatPercent(holding.daily_gain_pct)}
+            תשואה מכניסה {formatPercent(holding.unrealized_gain_pct)}
           </Text>
         ) : null}
       </View>
@@ -1040,17 +1195,29 @@ interface AnalyticsCellProps {
   valueColor: string;
   /** רמז קצר מתחת לערך (אופציונלי) */
   hint?: string;
+  /** הדגשה קלה לקבוצת העיקריים */
+  primary?: boolean;
   styles: {
     analyticsCell: any;
+    analyticsCellPrimary?: any;
     analyticsCellLabel: any;
     analyticsCellValue: any;
     analyticsCellHint?: any;
   };
 }
 
-function AnalyticsCell({ label, value, valueColor, hint, styles }: AnalyticsCellProps) {
+function AnalyticsCell({
+  label,
+  value,
+  valueColor,
+  hint,
+  primary,
+  styles,
+}: AnalyticsCellProps) {
   return (
-    <View style={styles.analyticsCell}>
+    <View
+      style={[styles.analyticsCell, primary ? styles.analyticsCellPrimary : null]}
+    >
       <Text style={styles.analyticsCellLabel} numberOfLines={1}>
         {label}
       </Text>
@@ -1063,13 +1230,7 @@ function AnalyticsCell({ label, value, valueColor, hint, styles }: AnalyticsCell
         {value}
       </Text>
       {hint != null ? (
-        <Text
-          style={[
-            styles.analyticsCellHint ?? {},
-            { fontSize: 9, color: '#666', ...darkPoolTextRtl, marginTop: 2 },
-          ]}
-          numberOfLines={1}
-        >
+        <Text style={styles.analyticsCellHint} numberOfLines={1}>
           {hint}
         </Text>
       ) : null}

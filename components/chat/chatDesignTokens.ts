@@ -29,7 +29,7 @@ export const chatPalette = {
 
 /** גרדיאנט מסך כמו VideoBackground / gradients.screen */
 export const chatScreenGradientColors = [...DesignTokens.gradients.screen] as readonly string[];
-export const chatScreenGradientLocations = [0, 0.22, 0.42, 0.55, 0.78, 1] as const;
+export const chatScreenGradientLocations = [0, 0.16, 0.36, 0.50, 0.74, 1] as const;
 export const chatScreenGradientStart = DesignTokens.gradients.screenStart;
 export const chatScreenGradientEnd = DesignTokens.gradients.screenEnd;
 

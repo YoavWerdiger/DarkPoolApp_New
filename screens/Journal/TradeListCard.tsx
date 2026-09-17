@@ -6,6 +6,7 @@ import UICard from '../../components/ui/UICard';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { brandfetchTickerLogoUri } from '../../utils/brandfetch';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import TradeShareButton from '../../components/Journal/TradeShareButton';
 import type { Trade } from './tradeTypes';
 
 function SymbolLogo({
@@ -82,7 +83,7 @@ const TradeListCardInner = memo(function TradeListCardInner({
   const DesignTokens = useDesignTokens();
 
   const isProfit = item.pnl >= 0;
-  const directionText = item.direction === 'long' ? 'Long' : 'Short';
+  const directionText = item.direction === 'long' ? 'לונג' : 'שורט';
   const directionColor =
     item.direction === 'long' ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger;
 
@@ -110,21 +111,26 @@ const TradeListCardInner = memo(function TradeListCardInner({
             <Text style={styles.tradeSymbol} numberOfLines={1}>
               {item.symbol}
             </Text>
-            <View style={[styles.directionBadge, { backgroundColor: `${directionColor}20` }]}>
-              <Text style={[styles.directionText, { color: directionColor }]}>{directionText}</Text>
+            <View
+              style={[
+                styles.directionBadge,
+                {
+                  backgroundColor: `${directionColor}20`,
+                  borderColor: `${directionColor}66`,
+                },
+              ]}
+            >
+              <Text style={[styles.directionText, { color: directionColor }]}>
+                {directionText}
+              </Text>
             </View>
           </View>
           <View style={styles.headerActions}>
-            <TouchableOpacity
-              onPress={() => {
-                void HapticFeedback.impactLight();
-                onShare(item);
-              }}
-              style={styles.iconBtn}
-              hitSlop={8}
-            >
-              <Ionicons name="share-outline" size={17} color={DesignTokens.colors.primary.main} />
-            </TouchableOpacity>
+            <TradeShareButton
+              onPress={() => onShare(item)}
+              size={28}
+              accessibilityLabel="שתף טרייד"
+            />
             <TouchableOpacity
               onPress={() => {
                 void HapticFeedback.warning();
@@ -132,6 +138,8 @@ const TradeListCardInner = memo(function TradeListCardInner({
               }}
               style={styles.iconBtn}
               hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="מחק טרייד"
             >
               <Ionicons name="trash-outline" size={17} color={DesignTokens.colors.text.danger} />
             </TouchableOpacity>
@@ -158,7 +166,7 @@ const TradeListCardInner = memo(function TradeListCardInner({
             </Text>
           </View>
           <View style={styles.metricCell}>
-            <Text style={styles.metricLabel}>יציאה (תאריך)</Text>
+            <Text style={styles.metricLabel}>תאריך יציאה</Text>
             <Text style={styles.metricValuePlain} numberOfLines={1}>
               {formatDate(item.exit_date)}
             </Text>
@@ -199,10 +207,10 @@ export function createTradeCardStyles(tokens: ReturnType<typeof useDesignTokens>
     tradeCard: {
       marginBottom: tokens.spacing.xs,
       borderRadius: tokens.borderRadius.xl,
-      borderWidth: 1,
-      borderColor: `${tokens.colors.primary.main}22`,
+      borderWidth: 0,
       overflow: 'hidden',
-      ...tokens.shadows.sm,
+      backgroundColor: tokens.colors.background.cardSolid,
+      ...tokens.shadows.none,
     },
     rtlWrap: {
       direction: 'rtl',
@@ -227,7 +235,7 @@ export function createTradeCardStyles(tokens: ReturnType<typeof useDesignTokens>
       flexGrow: 0,
       flexShrink: 1,
       minWidth: 0,
-      maxWidth: '58%',
+      maxWidth: '70%',
       zIndex: 2,
     },
     tradeSymbol: {
@@ -242,13 +250,14 @@ export function createTradeCardStyles(tokens: ReturnType<typeof useDesignTokens>
     directionBadge: {
       flexShrink: 0,
       alignSelf: 'center',
-      paddingHorizontal: tokens.spacing.sm,
-      paddingVertical: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
       borderRadius: 999,
+      borderWidth: 1,
     },
     directionText: {
       fontSize: 10,
-      fontWeight: '800' as any,
+      fontWeight: '700' as any,
       textAlign: 'center',
     },
     /** שמאל (ב־RTL): שיתוף + מחיקה — נשארים בקצה הנגדי */

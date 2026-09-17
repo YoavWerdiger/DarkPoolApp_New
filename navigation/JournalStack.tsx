@@ -23,7 +23,7 @@ export default function JournalStack() {
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: '#0A0E0A' },
+        contentStyle: { backgroundColor: '#111111' },
       }}
     >
       <Stack.Screen name="JournalMain" component={TradingScreen} />

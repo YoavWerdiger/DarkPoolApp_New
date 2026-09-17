@@ -28,6 +28,10 @@ interface MediaPickerSheetProps {
   onDocument: () => void;
   onAudio?: () => void;
   onPoll?: () => void;
+  /** Multiverse — צרף ישות (פרופיל / טרייד / חדשה) */
+  onEntity?: () => void;
+  /** תיוג חבר קהילה (@) */
+  onMention?: () => void;
 }
 
 const SHEET_BORDER = 'rgba(255, 255, 255, 0.10)';
@@ -60,6 +64,8 @@ export default function MediaPickerSheet({
   onDocument,
   onAudio,
   onPoll,
+  onEntity,
+  onMention,
 }: MediaPickerSheetProps) {
   const tokens = useDesignTokens();
   const insets = useSafeAreaInsets();
@@ -80,6 +86,12 @@ export default function MediaPickerSheet({
         { id: 'gallery', icon: 'images', label: 'תמונה', color: '#AF52DE', action: onGallery },
         { id: 'video', icon: 'videocam', label: 'סרטון', color: '#FF2D55', action: onVideo },
         { id: 'document', icon: 'document-text', label: 'מסמך', color: '#34C759', action: onDocument },
+        ...(onEntity
+          ? [{ id: 'entity', icon: 'link', label: 'שיתוף', color: '#0A84FF', action: onEntity }]
+          : []),
+        ...(onMention
+          ? [{ id: 'mention', icon: 'at', label: 'תיוג', color: '#30D158', action: onMention }]
+          : []),
         ...(onAudio
           ? [{ id: 'audio', icon: 'mic', label: 'אודיו', color: '#5856D6', action: onAudio }]
           : []),
@@ -87,7 +99,7 @@ export default function MediaPickerSheet({
           ? [{ id: 'poll', icon: 'poll-image', label: 'סקר', color: '#FF9500', action: onPoll }]
           : []),
       ].slice(0, GRID_COLS * GRID_ROWS),
-    [onAudio, onCamera, onDocument, onGallery, onPoll, onVideo],
+    [onAudio, onCamera, onDocument, onEntity, onGallery, onMention, onPoll, onVideo],
   );
 
   const rows = useMemo(() => chunkOptions(options, GRID_COLS), [options]);

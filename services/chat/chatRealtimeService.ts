@@ -262,6 +262,18 @@ export function hasUsableSender(sender: unknown): boolean {
   return Boolean(normalizeChatSender(sender)?.display_name);
 }
 
+/** קריאה סינכרונית לקאש שולחים — ציור מיידי בלי RPC. */
+export function peekCachedSender(userId: string | null | undefined): ChatSenderProfile | null {
+  if (!userId) return null;
+  const cached = userCache.get(userId);
+  if (!cached || cached.expiresAt <= Date.now()) return null;
+  return {
+    id: cached.data.id,
+    display_name: cached.data.display_name,
+    profile_picture: cached.data.profile_picture,
+  };
+}
+
 function rememberUserProfile(profile: ChatSenderProfile): void {
   userCache.set(profile.id, {
     data: {
@@ -1301,6 +1313,7 @@ export const chatRealtimeService = {
   enrichChatMessagesSenders,
   normalizeChatSender,
   hasUsableSender,
+  peekCachedSender,
   unsubscribeFromGroup,
   unsubscribeAll,
   setTypingStatus,

@@ -80,13 +80,13 @@ export const LessonRow: React.FC<LessonRowProps> = ({
     lessonThumbnail: {
       position: 'relative',
       height: 132,
-      backgroundColor: '#000000',
+      backgroundColor: '#111111',
       overflow: 'hidden',
     },
     thumbnailImage: {
       width: '100%',
       height: '100%',
-      backgroundColor: '#000000',
+      backgroundColor: '#111111',
     },
     thumbnailPlaceholder: {
       justifyContent: 'center',

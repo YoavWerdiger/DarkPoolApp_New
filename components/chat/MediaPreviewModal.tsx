@@ -6,8 +6,7 @@ import { Image as ExpoImage } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { X, Trash2, ChevronLeft, ChevronRight, Play, Pause } from 'lucide-react-native';
-import { Video, ResizeMode } from 'expo-av';
-import { Audio } from 'expo-av';
+import { Audio, Video, ResizeMode } from '../../lib/expoAvSafe';
 import { MediaFile } from '../../services/mediaService';
 import { logger } from '../../utils/logger';
 import { BlurView } from 'expo-blur';
@@ -496,7 +495,7 @@ export default function MediaPreviewModal({
         return (
           <GestureDetector gesture={zoomGesture}>
             <Animated.View style={styles.fullMedia} collapsable={false}>
-              <Animated.View style={[StyleSheet.absoluteFillObject, animatedImageStyle]}>
+              <Animated.View style={[StyleSheet.absoluteFill, animatedImageStyle]}>
                 {/* שכבת thumb מיידית (כמו poster של וידאו) — בלי לחכות ל-decode מלא */}
                 {currentMedia.thumbnail_url ? (
                   <ExpoImage
@@ -685,7 +684,7 @@ export default function MediaPreviewModal({
                 style={[styles.composerDockBlur, animatedComposerBlurStyle]}
                 pointerEvents="none"
               >
-                <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFillObject} />
+                <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
               </Animated.View>
               <Animated.View style={[styles.composerDockContent, animatedComposerSurfaceStyle]}>
                 <ChatComposerBar
@@ -780,7 +779,7 @@ export default function MediaPreviewModal({
                   style={[styles.composerDockBlur, animatedComposerBlurStyle]}
                   pointerEvents="none"
                 >
-                  <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFillObject} />
+                  <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
                 </Animated.View>
                 <Animated.View style={[styles.videoControlsContent, animatedComposerSurfaceStyle]}>
                   <View style={styles.videoControlsRow}>
@@ -817,7 +816,7 @@ const styles = StyleSheet.create({
   },
   /** מדיה מלאה מאחורי הפסים — contain + letterbox כמו MediaViewer */
   mediaContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#000',
@@ -827,11 +826,11 @@ const styles = StyleSheet.create({
     height: screenHeight,
   },
   fullMediaInner: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   /** שכבת full מעל thumb — אחרי שה-decode הסתיים מכסה את ה-poster */
   fullMediaOnTop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   /** פס עליון — blur/glass כמו MediaViewer */
   topGlassBar: {
@@ -936,7 +935,7 @@ const styles = StyleSheet.create({
     opacity: 0,
   },
   loadingContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 5,
@@ -948,7 +947,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   composerDockBlur: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   composerDockContent: {
     paddingHorizontal: 16,
@@ -1098,7 +1097,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   thumbnailVideoOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0, 0, 0, 0.4)',
     alignItems: 'center',
     justifyContent: 'center',

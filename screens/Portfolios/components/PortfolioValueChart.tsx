@@ -19,7 +19,6 @@ import {
   filterChartSeriesByPeriod,
   isChartPeriodAvailable,
 } from '../../DarkPool/utils/profileChartSeries';
-
 interface ChartPoint {
   date: string;
   value: number;
@@ -38,7 +37,22 @@ interface Props {
   onToggleBenchmark?: (show: boolean) => void;
   /** כותרת + תשואת תקופה מעל הגרף */
   showHeader?: boolean;
+  /**
+   * כותרת קומפקטית: כותרת + תשואת תקופה בלבד (בלי סכום גדול).
+   * בגרירה מציג תאריך + שווי נקודה.
+   */
+  compactHeader?: boolean;
+  /** כותרת מעל השווי — ברירת מחדל «שווי תיק» */
+  headerTitle?: string;
+  /** יישור כותרת מעל השווי */
+  headerTitleAlign?: 'left' | 'center' | 'right';
   formatValue?: (value: number, currency: string) => string;
+  /** נקודות דיסקרטיות על הקו — לסדרות דלילות (דיווחים) במקום עקומה «רציפה» */
+  showPointMarkers?: boolean;
+  /** תוויות תאריך בציר X */
+  showXAxisLabels?: boolean;
+  /** סרגל אינטרוולים בתחתית */
+  showIntervalSelector?: boolean;
 }
 
 const PERIODS: PerformancePeriod[] = ['1W', '1M', '3M', 'YTD', '1Y', '5Y', 'All'];
@@ -143,13 +157,25 @@ export function PortfolioValueChart({
   onPeriodChange,
   showBenchmark = false,
   showHeader = true,
+  compactHeader = false,
+  headerTitle = 'שווי תיק',
+  headerTitleAlign = 'right',
   formatValue = defaultFormatValue,
+  showPointMarkers = false,
+  showXAxisLabels = true,
+  showIntervalSelector = true,
 }: Props) {
   const tokens = useDesignTokens();
   const [containerW, setContainerW] = useState(0);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const width = containerW > 0 ? containerW : 300;
-  const padding = { left: 12, right: 12, top: 16, bottom: 34 };
+  /** מרווח פנימי לקו/מילוי + תוויות X — בלי חיתוך בתחתית */
+  const padding = {
+    left: 10,
+    right: 10,
+    top: 12,
+    bottom: showXAxisLabels ? 26 : 10,
+  };
 
   const filteredSeries = useMemo(
     () => filterChartSeriesByPeriod(series, selectedPeriod),
@@ -201,7 +227,7 @@ export function PortfolioValueChart({
     const padY =
       maxY - minY < Math.max(Math.abs(maxY), 1) * 0.002
         ? Math.max(Math.abs(maxY), 1) * 0.05
-        : (maxY - minY) * 0.1 || 1;
+        : (maxY - minY) * 0.14 || 1;
     minY -= padY;
     maxY += padY;
     const minX = xs[0];
@@ -415,44 +441,125 @@ export function PortfolioValueChart({
       style={styles.wrap}
       onLayout={(e) => {
         const w = Math.floor(e.nativeEvent.layout.width);
-        if (w > 0) setContainerW(w);
+        if (w > 0 && w !== containerW) setContainerW(w);
       }}
     >
       {showHeader && filteredSeries.length >= 1 ? (
-        <View style={styles.header}>
-          <Text
+        compactHeader ? (
+          <View style={styles.compactHeader}>
+            {/* LTR מפורש + סדר ילדים: תשואה משמאל, כותרת פיזית מימין */}
+            {scrubDateLabel && activePoint ? (
+              <Text
+                style={[styles.compactScrub, { color: tokens.colors.text.secondary }]}
+                numberOfLines={1}
+              >
+                {formatValue(activePoint.value, currency)}
+                {'  '}
+                {scrubDateLabel}
+              </Text>
+            ) : periodReturn != null ? (
+              <Text
+                style={[styles.compactReturn, { color: returnColor }]}
+                numberOfLines={1}
+              >
+                {periodReturn >= 0 ? '+' : '−'}
+                {Math.abs(periodReturn).toFixed(2)}%
+              </Text>
+            ) : (
+              <View style={styles.compactSpacer} />
+            )}
+            <Text
+              style={[
+                styles.compactTitle,
+                {
+                  color: tokens.colors.text.primary,
+                },
+              ]}
+              numberOfLines={1}
+            >
+              {headerTitle}
+            </Text>
+          </View>
+        ) : (
+          <View
             style={[
-              styles.headerTitle,
-              {
-                color: tokens.colors.text.primary,
-                fontSize: tokens.typography.subhead.size,
-                fontWeight: '700',
-                letterSpacing: tokens.typography.subhead.letterSpacing,
-                lineHeight: tokens.typography.subhead.lineHeight,
-              },
+              styles.header,
+              headerTitleAlign === 'left'
+                ? styles.headerAlignLeft
+                : headerTitleAlign === 'center'
+                  ? styles.headerAlignCenter
+                  : styles.headerAlignRight,
             ]}
           >
-            שווי תיק
-          </Text>
-          <Text style={[styles.headerValue, { color: tokens.colors.text.primary }]}>
-            {formatValue(headerValue, currency)}
-          </Text>
-          {scrubDateLabel ? (
-            <Text style={[styles.headerRange, { color: tokens.colors.text.secondary }]}>
-              {scrubDateLabel}
+            {/* Cash App Savings topology: muted label → hero amount → delta.
+                direction:'ltr' + alignItems flex-end/start = קצה פיזי — לא textAlign בלבד. */}
+            <Text
+              style={[
+                styles.headerTitle,
+                { color: tokens.colors.text.tertiary },
+                headerTitleAlign === 'center'
+                  ? styles.headerTextCenter
+                  : headerTitleAlign === 'left'
+                    ? styles.headerTextLeft
+                    : styles.headerTextRight,
+              ]}
+            >
+              {headerTitle}
             </Text>
-          ) : periodReturn != null ? (
-            <Text style={[styles.headerReturn, { color: returnColor }]}>
-              {periodReturn >= 0 ? '▲' : '▼'} {Math.abs(periodReturn).toFixed(2)}%
-              {' · '}
-              {selectedPeriod === 'All' ? 'ALL' : selectedPeriod}
+            <Text
+              style={[
+                styles.headerValue,
+                { color: tokens.colors.text.primary },
+                headerTitleAlign === 'center'
+                  ? styles.headerTextCenter
+                  : headerTitleAlign === 'left'
+                    ? styles.headerTextLeft
+                    : styles.headerTextRight,
+              ]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.55}
+            >
+              {formatValue(headerValue, currency)}
             </Text>
-          ) : null}
-        </View>
+            {scrubDateLabel ? (
+              <Text
+                style={[
+                  styles.headerRange,
+                  { color: tokens.colors.text.secondary },
+                  headerTitleAlign === 'center'
+                    ? styles.headerTextCenter
+                    : headerTitleAlign === 'left'
+                      ? styles.headerTextLeft
+                      : styles.headerTextRight,
+                ]}
+              >
+                {scrubDateLabel}
+              </Text>
+            ) : periodReturn != null ? (
+              <Text
+                style={[
+                  styles.headerReturn,
+                  { color: returnColor },
+                  headerTitleAlign === 'center'
+                    ? styles.headerTextCenter
+                    : headerTitleAlign === 'left'
+                      ? styles.headerTextLeft
+                      : styles.headerTextRight,
+                ]}
+              >
+                {periodReturn >= 0 ? '▲' : '▼'} {Math.abs(periodReturn).toFixed(2)}%
+                {' · '}
+                {selectedPeriod === 'All' ? 'ALL' : selectedPeriod}
+              </Text>
+            ) : null}
+          </View>
+        )
       ) : null}
 
       <GestureDetector gesture={chartGesture}>
-        <View style={{ width, height }} collapsable={false}>
+        <View style={[styles.chartArea, { height }]} collapsable={false}>
+          {width > 0 ? (
           <Svg width={width} height={height}>
             <Defs>
               <LinearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
@@ -499,6 +606,22 @@ export function PortfolioValueChart({
               />
             ) : null}
 
+            {showPointMarkers &&
+            plotted.length >= 2 &&
+            plotted.length <= 48 &&
+            !activePoint
+              ? plotted.map((pt, i) => (
+                  <Circle
+                    key={`${pt.date}-${i}`}
+                    cx={pt.x}
+                    cy={pt.y}
+                    r={i === 0 || i === plotted.length - 1 ? 3.5 : 2.5}
+                    fill={lineColor}
+                    opacity={0.85}
+                  />
+                ))
+              : null}
+
             {/* ציר X — קו בסיס */}
             <Line
               x1={padding.left}
@@ -525,38 +648,40 @@ export function PortfolioValueChart({
                   cy={activePoint.y}
                   r={5}
                   fill={lineColor}
-                  stroke="#0A0E0A"
+                  stroke="#111111"
                   strokeWidth={2}
                 />
               </>
             ) : null}
           </Svg>
+          ) : null}
 
-          {/* תוויות תאריך על ציר X */}
-          <Animated.View
-            style={[styles.xAxis, { top: plotBottom + 4, height: 22 }, axisAnimStyle]}
-            pointerEvents="none"
-          >
-            {xTicks.map((t) => (
-              <Text
-                key={`${t.date}-${t.x}`}
-                style={[
-                  styles.xTick,
-                  {
-                    color: tokens.colors.text.tertiary,
-                    left: Math.max(0, Math.min(width - 56, t.x - 28)),
-                  },
-                ]}
-                numberOfLines={1}
-              >
-                {formatAxisDate(t.date)}
-              </Text>
-            ))}
-          </Animated.View>
+          {showXAxisLabels ? (
+            <Animated.View
+              style={[styles.xAxis, { top: plotBottom + 4, height: 22 }, axisAnimStyle]}
+              pointerEvents="none"
+            >
+              {xTicks.map((t) => (
+                <Text
+                  key={`${t.date}-${t.x}`}
+                  style={[
+                    styles.xTick,
+                    {
+                      color: tokens.colors.text.tertiary,
+                      left: Math.max(0, Math.min(Math.max(width - 56, 0), t.x - 28)),
+                    },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {formatAxisDate(t.date)}
+                </Text>
+              ))}
+            </Animated.View>
+          ) : null}
         </View>
       </GestureDetector>
 
-      {onPeriodChange ? (
+      {onPeriodChange && showIntervalSelector ? (
         <View style={styles.periodsRow}>
           {PERIODS.map((p) => {
             const isActive = selectedPeriod === p;
@@ -609,35 +734,107 @@ export function PortfolioValueChart({
 
 const styles = StyleSheet.create({
   wrap: {
-    paddingHorizontal: 12,
+    alignSelf: 'stretch',
+    width: '100%',
+    direction: 'rtl',
   },
+  chartArea: {
+    width: '100%',
+    overflow: 'visible',
+  },
+  /** כותרת סקשן — לייאוט פיזי (direction LTR מקומי) כדי שלא יישבר בתוך עץ RTL */
   header: {
-    marginBottom: 8,
+    marginBottom: 12,
+    width: '100%',
+    alignSelf: 'stretch',
+    direction: 'ltr',
+  },
+  /** קצה ימין פיזי של הכרטיס */
+  headerAlignRight: {
+    alignItems: 'flex-end',
+  },
+  headerAlignLeft: {
     alignItems: 'flex-start',
   },
-  headerTitle: {
-    marginBottom: 4,
-    textAlign: 'left',
+  headerAlignCenter: {
+    alignItems: 'center',
   },
-  headerValue: {
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: -0.4,
+  compactHeader: {
+    marginBottom: 8,
+    paddingHorizontal: 2,
+    width: '100%',
+    flexDirection: 'row',
+    direction: 'ltr',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  compactTitle: {
+    flexShrink: 1,
+    flexGrow: 0,
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  compactReturn: {
+    flexShrink: 0,
+    fontSize: 14,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+    writingDirection: 'ltr',
+    textAlign: 'left',
+    letterSpacing: 0.2,
+  },
+  compactScrub: {
+    flexShrink: 1,
+    fontSize: 12,
+    fontWeight: '600',
     writingDirection: 'ltr',
     textAlign: 'left',
   },
+  compactSpacer: {
+    flexGrow: 1,
+  },
+  headerTitle: {
+    marginBottom: 4,
+    maxWidth: '100%',
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.15,
+    lineHeight: 18,
+    writingDirection: 'rtl',
+  },
+  headerValue: {
+    maxWidth: '100%',
+    fontSize: 36,
+    fontWeight: '800',
+    letterSpacing: -1.1,
+    lineHeight: 42,
+    writingDirection: 'ltr',
+  },
   headerReturn: {
+    maxWidth: '100%',
     marginTop: 6,
     fontSize: 15,
     fontWeight: '700',
     writingDirection: 'ltr',
-    textAlign: 'left',
   },
   headerRange: {
+    maxWidth: '100%',
     marginTop: 4,
-    fontSize: 12,
+    fontSize: 13,
+    fontWeight: '500',
     writingDirection: 'ltr',
+  },
+  headerTextRight: {
+    textAlign: 'right',
+  },
+  headerTextLeft: {
     textAlign: 'left',
+  },
+  headerTextCenter: {
+    textAlign: 'center',
   },
   xAxis: {
     position: 'absolute',
@@ -652,11 +849,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   periodsRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     flexWrap: 'nowrap',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 12,
+    paddingTop: 10,
     gap: 4,
   },
   periodBtn: {

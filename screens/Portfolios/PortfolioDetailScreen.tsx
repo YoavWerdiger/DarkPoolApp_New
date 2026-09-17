@@ -31,7 +31,6 @@ import {
   getPortfolio,
   loadPortfolioHoldings,
   loadPortfolioDisplaySummary,
-  updatePortfolio,
 } from '../../services/portfolios';
 import type {
   Portfolio,
@@ -50,6 +49,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useColmexSync } from '../../hooks/useColmexSync';
 import { DayNavBlurButton, HEADER_BACK_BTN_SIZE } from '../../components/ui/DayNavBlurButton';
 import UICard from '../../components/ui/UICard';
+import { darkPoolRtlRoot, darkPoolTextRtl } from '../DarkPool/darkPoolLayout';
 
 type Nav = NativeStackNavigationProp<PortfoliosStackParamList, 'PortfolioDetail'>;
 type Route = RouteProp<PortfoliosStackParamList, 'PortfolioDetail'>;
@@ -183,53 +183,6 @@ export default function PortfolioDetailScreen() {
     navigation.navigate('ImportTransactions', { portfolioId });
   }, [navigation, portfolioId]);
 
-  const handleShare = useCallback(() => {
-    if (!portfolio) return;
-    const isPublic = portfolio.is_public === true;
-    if (isPublic) {
-      Alert.alert(
-        'הפסקת שיתוף',
-        `התיק "${portfolio.name}" משותף כעת עם הקהילה. האם להסיר אותו?`,
-        [
-          { text: 'ביטול', style: 'cancel' },
-          {
-            text: 'הסר שיתוף',
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                await updatePortfolio(portfolio.id, { is_public: false });
-                await load();
-              } catch (e) {
-                console.error('toggle public:', e);
-                Alert.alert('שגיאה', 'לא הצלחנו לעדכן את הגדרת השיתוף.');
-              }
-            },
-          },
-        ]
-      );
-      return;
-    }
-    Alert.alert(
-      'שיתוף עם הקהילה',
-      `לשתף את "${portfolio.name}" עם הקהילה? משתמשים מאומתים אחרים יראו את התיק בלשונית «מהקהילה» (צפייה בלבד).`,
-      [
-        { text: 'ביטול', style: 'cancel' },
-        {
-          text: 'שתף',
-          onPress: async () => {
-            try {
-              await updatePortfolio(portfolio.id, { is_public: true });
-              await load();
-            } catch (e) {
-              console.error('toggle public:', e);
-              Alert.alert('שגיאה', 'לא הצלחנו לעדכן את הגדרת השיתוף.');
-            }
-          },
-        },
-      ]
-    );
-  }, [portfolio, load]);
-
   const openPortfolioActions = useCallback(() => {
     setPortfolioActionsOpen(true);
   }, []);
@@ -237,7 +190,7 @@ export default function PortfolioDetailScreen() {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        root: { flex: 1, backgroundColor: '#0A0E0A' },
+        root: { ...darkPoolRtlRoot, backgroundColor: '#111111' },
         loading: {
           flex: 1,
           alignItems: 'center',
@@ -248,7 +201,8 @@ export default function PortfolioDetailScreen() {
           marginBottom: 2,
         },
         tabsScrollContent: {
-          flexDirection: 'row-reverse',
+          // עץ RTL — row (לא row-reverse)
+          flexDirection: 'row',
           paddingHorizontal: 16,
           gap: 8,
         },
@@ -280,7 +234,7 @@ export default function PortfolioDetailScreen() {
           pointerEvents: 'box-none',
         },
         fabBtn: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'center',
           gap: 8,
           paddingHorizontal: 22,
@@ -293,6 +247,7 @@ export default function PortfolioDetailScreen() {
           fontSize: 16,
           fontWeight: '700',
           color: tokens.colors.text.inverse,
+          ...darkPoolTextRtl,
         },
       }),
     [tokens, mainTabsHeight]
@@ -401,7 +356,7 @@ export default function PortfolioDetailScreen() {
             })}
           </ScrollView>
 
-          <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: canAddTransaction ? mainTabsHeight + 90 : 60 }}>
+          <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: canAddTransaction ? mainTabsHeight + 90 : 60, direction: 'rtl' }}>
             {activeTab === 'overview' && portfolio && (
               <OverviewTab
                 portfolio={portfolio}

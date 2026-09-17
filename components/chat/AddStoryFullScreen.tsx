@@ -5,8 +5,8 @@ import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Modal, Pre
 import { Image as ExpoImage } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
-import * as MediaLibrary from 'expo-media-library';
-import { Video, ResizeMode } from 'expo-av';
+import * as MediaLibrary from 'expo-media-library/legacy';
+import { Video, ResizeMode } from '../../lib/expoAvSafe';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CameraView, useCameraPermissions, CameraType } from 'expo-camera';
@@ -16,7 +16,6 @@ import Reanimated, {
   withSpring,
   withTiming,
   interpolate,
-  Extrapolation,
   cancelAnimation,
   runOnJS,
 } from 'react-native-reanimated';
@@ -86,19 +85,33 @@ function pickWideAngleLens(lenses: string[]): string | undefined {
   return scored[0]?.name;
 }
 
+/** Prefer ~1080p–1440p — largest (4K) sizes lag preview + shutter on expo-camera. */
 function pickBestPictureSize(sizes: string[]): string | undefined {
+  const TARGET = 1920 * 1080;
+  const MAX_EDGE = 1920;
   let best: string | undefined;
-  let bestPixels = 0;
+  let bestScore = Number.POSITIVE_INFINITY;
+  let fallback: string | undefined;
+  let fallbackPixels = 0;
+
   for (const size of sizes) {
     const [w, h] = size.split('x').map(Number);
     if (!w || !h) continue;
+    const edge = Math.max(w, h);
     const pixels = w * h;
-    if (pixels > bestPixels) {
-      bestPixels = pixels;
+    if (pixels > fallbackPixels && edge <= 2560) {
+      fallbackPixels = pixels;
+      fallback = size;
+    }
+    if (edge > 2560) continue;
+    const oversizePenalty = edge > MAX_EDGE ? (edge - MAX_EDGE) * 400 : 0;
+    const score = Math.abs(pixels - TARGET) + oversizePenalty;
+    if (score < bestScore) {
+      bestScore = score;
       best = size;
     }
   }
-  return best;
+  return best ?? fallback;
 }
 
 const POPULAR_EMOJIS = [
@@ -479,12 +492,12 @@ function TextEditorOverlay({
 
 const editorStyles = StyleSheet.create({
   root: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 30,
     backgroundColor: 'rgba(0,0,0,0.75)',
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   topBar: {
     flexDirection: 'row',
@@ -617,12 +630,12 @@ function EmojiPickerOverlay({
 
 const emojiStyles = StyleSheet.create({
   root: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 40,
     justifyContent: 'flex-end',
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
   sheet: {
@@ -738,11 +751,11 @@ function DrawingCanvas({
 
   return (
     <View
-      style={StyleSheet.absoluteFillObject}
+      style={StyleSheet.absoluteFill}
       pointerEvents={enabled ? 'auto' : 'none'}
       {...(enabled ? panResponder.panHandlers : {})}
     >
-      <Svg style={StyleSheet.absoluteFillObject} pointerEvents="none">
+      <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
         {paths.map((p) => (
           <Path
             key={p.id}
@@ -981,13 +994,14 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
   }, []);
 
   /*
-   * Mode-switch swipe — horizontal only.
-   * activeOffsetX / failOffsetY keep taps from being swallowed on Android.
+   * Mode-switch swipe — horizontal only, 1 finger.
+   * Stricter offsets so light vertical pulls don't steal / fight dismiss.
    * Attached ONLY to the camera/text background strip; chrome controls are siblings.
    */
   const swipeGesture = Gesture.Pan()
-    .activeOffsetX([-20, 20])
-    .failOffsetY([-12, 12])
+    .maxPointers(1)
+    .activeOffsetX([-28, 28])
+    .failOffsetY([-18, 18])
     .onStart(() => {
       'worklet';
       dragStartIndex.value = modeIndex.value;
@@ -1021,10 +1035,12 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
     transform: [{ translateX: -modeIndex.value * SW }],
   }));
 
-  /* ── Swipe-down-to-close gesture (Instagram/WhatsApp-like) ── */
+  /* ── Swipe-down-to-close (tight Instagram/WhatsApp-like thresholds) ── */
   const dismissY = useSharedValue(0);
-  const DISMISS_THRESHOLD = SH * 0.2;
-  const DISMISS_VELOCITY = 900;
+  /** Need a clear intentional drag — low values made light pulls "escape". */
+  const DISMISS_ACTIVE_Y = 64;
+  const DISMISS_THRESHOLD = Math.min(SH * 0.32, 260);
+  const DISMISS_VELOCITY = 1600;
 
   const triggerCloseHaptic = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -1038,23 +1054,25 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
     onClose();
   }, [onClose]);
 
-  // Disable dismiss while: uploading, drawing, recording, capturing, dragging overlays, or modals
+  // Disable dismiss while: uploading, drawing, recording, capturing, dragging overlays, gallery, or modals
   const dismissDisabled =
     phase === 'uploading' ||
     drawMode ||
     isRecording ||
     isCapturing ||
+    galleryExpanded ||
     !!draggingOverlayId ||
     showTextEditor ||
     showEmojiPicker;
 
   /*
-   * Swipe-down dismiss — vertical only, fails on horizontal drag.
+   * Swipe-down dismiss — 1 finger, vertical-only, fails fast on horizontal.
    * Must NOT wrap shutter / gallery / mode pills (Android Pan steals their touches).
    */
   const dismissGesture = Gesture.Pan()
-    .activeOffsetY([28, 9999])
-    .failOffsetX([-24, 24])
+    .maxPointers(1)
+    .activeOffsetY([DISMISS_ACTIVE_Y, 9999])
+    .failOffsetX([-16, 16])
     .enabled(!dismissDisabled)
     .onStart(() => {
       'worklet';
@@ -1062,25 +1080,34 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
     })
     .onUpdate((e) => {
       'worklet';
-      dismissY.value = e.translationY > 0
-        ? e.translationY
-        : e.translationY * 0.15;
+      // Rubber-band until past threshold so accidental drags barely move the UI
+      if (e.translationY <= 0) {
+        dismissY.value = e.translationY * 0.1;
+        return;
+      }
+      const drag = e.translationY;
+      dismissY.value =
+        drag < DISMISS_THRESHOLD
+          ? drag * 0.42
+          : DISMISS_THRESHOLD * 0.42 + (drag - DISMISS_THRESHOLD) * 0.92;
     })
     .onEnd((e) => {
       'worklet';
-      const dist = dismissY.value;
-      const shouldClose = dist > DISMISS_THRESHOLD || e.velocityY > DISMISS_VELOCITY;
+      // Decide on raw finger travel/velocity, not the dampened visual offset
+      const shouldClose =
+        e.translationY > DISMISS_THRESHOLD || e.velocityY > DISMISS_VELOCITY;
       if (shouldClose) {
         runOnJS(handleDismissClose)();
       } else {
-        dismissY.value = withSpring(0, { damping: 22, stiffness: 220, mass: 0.6 });
+        dismissY.value = withSpring(0, { damping: 24, stiffness: 260, mass: 0.55 });
       }
       runOnJS(logPanEvent)('dismiss', 'end');
     });
 
-  /* Pinch-to-zoom on camera preview only (Simultaneous with offset-gated Pans). */
+  /* Pinch-to-zoom — throttle React zoom prop; per-frame setState freezes CameraView. */
   const zoomSV = useSharedValue(0);
   const pinchStartZoom = useSharedValue(0);
+  const zoomCommitAt = useSharedValue(0);
   useEffect(() => {
     zoomSV.value = cameraZoom;
   }, [cameraZoom]);
@@ -1094,35 +1121,43 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
     .onBegin(() => {
       'worklet';
       pinchStartZoom.value = zoomSV.value;
+      zoomCommitAt.value = 0;
       runOnJS(logPanEvent)('pinch', 'begin');
     })
     .onUpdate((e) => {
       'worklet';
       const next = Math.min(1, Math.max(0, pinchStartZoom.value + (e.scale - 1) * 0.55));
       zoomSV.value = next;
-      runOnJS(applyCameraZoom)(next);
+      const now = Date.now();
+      if (now - zoomCommitAt.value >= 50) {
+        zoomCommitAt.value = now;
+        runOnJS(applyCameraZoom)(next);
+      }
     })
     .onEnd(() => {
       'worklet';
+      runOnJS(applyCameraZoom)(zoomSV.value);
       runOnJS(logPanEvent)('pinch', 'end');
     });
 
-  /** Background-only composition: never wraps interactive chrome. */
+  /*
+   * Pinch runs Simultaneous with axis-gated pans (maxPointers(1) on pans).
+   * Race(dismiss, swipe) so vertical vs horizontal don't both win.
+   * Avoid Exclusive(pinch, …) — it can delay 1-finger pans waiting for a 2nd finger.
+   */
   const captureBackgroundGestures = Gesture.Simultaneous(
-    dismissGesture,
-    swipeGesture,
     pinchGesture,
+    Gesture.Race(dismissGesture, swipeGesture),
   );
 
   /** Preview-phase dismiss only (no mode swipe / pinch). */
   const previewDismissGesture = dismissGesture;
 
+  // Translate only — opacity on a live CameraView is a major compositing jank source
   const dismissAnimStyle = useAnimatedStyle(() => {
     'worklet';
-    const clamped = Math.max(0, dismissY.value);
     return {
-      transform: [{ translateY: clamped }],
-      opacity: interpolate(clamped, [0, SH * 0.55], [1, 0.5], Extrapolation.CLAMP),
+      transform: [{ translateY: Math.max(0, dismissY.value) }],
     };
   });
 
@@ -1240,7 +1275,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
       if (typeof cam.getAvailablePictureSizesAsync === 'function') {
         const sizes = await cam.getAvailablePictureSizesAsync();
         const best = pickBestPictureSize(sizes);
-        if (best) setPictureSize(best);
+        if (best) setPictureSize((prev) => (prev === best ? prev : best));
       }
     } catch (err) {
       logger.warn('AddStoryFullScreen', 'Camera configure failed', err);
@@ -1269,7 +1304,8 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
       // `shutterSound` is iOS-only in expo-camera; passing it on Android does
       // nothing but keeping it iOS-scoped avoids any device-specific rejection.
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 1,
+        // 0.82 is visually fine for stories and much faster than quality:1 / 4K buffers
+        quality: 0.82,
         ...(Platform.OS === 'ios' ? { shutterSound: true } : {}),
       });
       logger.debug('AddStoryFullScreen', `takePictureAsync end: uri=${photo?.uri ?? 'null'}`);
@@ -1595,26 +1631,30 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
         {/* ── Panel 0: Camera preview + background gestures ── */}
         <View style={s.modePanel} collapsable={false}>
           <GestureDetector gesture={captureBackgroundGestures}>
-            <View style={StyleSheet.absoluteFillObject} collapsable={false}>
+            <View style={StyleSheet.absoluteFill} collapsable={false}>
               {permission?.granted ? (
                 <CameraView
                   ref={cameraRef}
-                  style={StyleSheet.absoluteFillObject}
+                  style={StyleSheet.absoluteFill}
                   facing={facing}
-                  mode={isRecording ? 'video' : 'picture'}
+                  // Always video mode: flipping picture↔video on long-press remounts
+                  // the session and makes recording feel delayed / preview stutter.
+                  // takePictureAsync still works in video mode on expo-camera 17.
+                  mode="video"
                   flash={flash ? 'on' : 'off'}
                   zoom={cameraZoom}
                   videoQuality="1080p"
+                  animateShutter={false}
                   {...(pictureSize ? { pictureSize } : {})}
                   {...(selectedLens ? { selectedLens } : {})}
                   onCameraReady={configureCamera}
                   onAvailableLensesChanged={({ lenses }) => {
                     const wide = pickWideAngleLens(lenses);
-                    if (wide && wide !== selectedLens) setSelectedLens(wide);
+                    if (wide) setSelectedLens((prev) => (prev === wide ? prev : wide));
                   }}
                 />
               ) : (
-                <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' }]}>
+                <View style={[StyleSheet.absoluteFill, { backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' }]}>
                   <Ionicons name="camera-outline" size={64} color="rgba(255,255,255,0.2)" />
                 </View>
               )}
@@ -1852,16 +1892,16 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
       <GestureDetector gesture={previewDismissGesture}>
         <View
           ref={captureAreaRef}
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
           collapsable={false}
         >
-          <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+          <View style={StyleSheet.absoluteFill} pointerEvents="none">
             {mediaType === 'image' ? (
-              <Image source={{ uri: mediaUri! }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+              <Image source={{ uri: mediaUri! }} style={StyleSheet.absoluteFill} resizeMode="cover" />
             ) : (
               <Video
                 source={{ uri: mediaUri! }}
-                style={StyleSheet.absoluteFillObject}
+                style={StyleSheet.absoluteFill}
                 useNativeControls={false}
                 resizeMode={ResizeMode.CONTAIN}
                 shouldPlay
@@ -2576,7 +2616,7 @@ const s = StyleSheet.create({
 
   /* ---- Upload overlay ---- */
   uploadOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.85)',
     justifyContent: 'center',
     alignItems: 'center',

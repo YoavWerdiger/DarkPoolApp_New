@@ -4,9 +4,9 @@ import { MAIN_SCREEN_HEADER_HP } from '../ui/MainDrawerScreenHeader';
 /** padding אופקי משותף לכל כרטיסיות האקדמיה */
 export const ACADEMY_CARD_HP = MAIN_SCREEN_HEADER_HP;
 
-/** רדיוס ועובי מסגרת אחידים — קורס + יוטיוב + דפים פנימיים */
+/** רדיוס אחיד — Soft UI: בלי מסגרת על כרטיסי אקדמיה */
 export const ACADEMY_CARD_RADIUS = 24;
-export const ACADEMY_CARD_BORDER_WIDTH = 2.5;
+export const ACADEMY_CARD_BORDER_WIDTH = 0;
 
 export type AcademyFrameTier = 'free' | 'premium' | 'youtube' | 'neutral';
 

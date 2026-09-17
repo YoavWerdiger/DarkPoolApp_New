@@ -1,0 +1,92 @@
+import React, { useCallback } from 'react';
+import { Image, Pressable, Text, View, type ViewStyle } from 'react-native';
+import { useDesignTokens } from '../ui/DesignTokens';
+import { useAuth } from '../../context/AuthContext';
+import { openUserProfile } from '../../lib/openUserProfile';
+
+type Props = {
+  userId?: string;
+  name: string;
+  uri: string | null;
+  size?: number;
+  onPress?: () => void;
+  disabled?: boolean;
+  style?: ViewStyle;
+  accessibilityLabel?: string;
+};
+
+export default function UserAvatarButton({
+  userId,
+  name,
+  uri,
+  size = 42,
+  onPress,
+  disabled = false,
+  style,
+  accessibilityLabel,
+}: Props) {
+  const tokens = useDesignTokens();
+  const { user } = useAuth();
+  const initial = (name.trim()[0] || '?').toUpperCase();
+
+  const handlePress = useCallback(() => {
+    if (onPress) {
+      onPress();
+      return;
+    }
+    if (userId) {
+      openUserProfile(userId, { currentUserId: user?.id });
+    }
+  }, [onPress, user?.id, userId]);
+
+  const canPress = !disabled && (!!onPress || !!userId);
+
+  const avatar = uri ? (
+    <Image
+      source={{ uri }}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor: tokens.colors.background.tertiary,
+      }}
+    />
+  ) : (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor: tokens.colors.primary.dim,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <Text
+        style={{
+          color: tokens.colors.primary.main,
+          fontWeight: '700',
+          fontSize: size * 0.38,
+        }}
+      >
+        {initial}
+      </Text>
+    </View>
+  );
+
+  if (!canPress) {
+    return <View style={style}>{avatar}</View>;
+  }
+
+  return (
+    <Pressable
+      onPress={handlePress}
+      hitSlop={6}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? `פרופיל של ${name}`}
+      style={({ pressed }) => [style, pressed ? { opacity: 0.85 } : undefined]}
+    >
+      {avatar}
+    </Pressable>
+  );
+}

@@ -14,6 +14,7 @@ import { HapticFeedback } from '../../../utils/hapticFeedback';
 import type { ExplorePerson } from '../../../services/darkpool/uwExploreService';
 import { valuesToSparklinePoints } from '../utils/sparkline';
 import { InvestorPortrait } from './InvestorPortrait';
+import { darkPoolTextRtl } from '../darkPoolLayout';
 
 interface Props {
   person: ExplorePerson;
@@ -116,8 +117,8 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     card: {
       borderRadius: tokens.borderRadius['2xl'],
-      borderWidth: 1,
-      borderColor: tokens.colors.border.subtle,
+      borderWidth: 0,
+      backgroundColor: tokens.colors.background.cardSolid,
       marginBottom: tokens.spacing.sm,
     },
     row: {
@@ -130,25 +131,25 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     textCol: {
       flex: 1,
-      alignItems: 'flex-start',
+      alignItems: 'stretch',
     },
     name: {
       fontSize: 16,
       fontWeight: '800',
       color: tokens.colors.text.primary,
-      textAlign: 'left',
+      ...darkPoolTextRtl,
     },
     subtitle: {
       marginTop: 2,
       fontSize: 12,
       color: tokens.colors.text.tertiary,
-      textAlign: 'left',
+      ...darkPoolTextRtl,
     },
     metric: {
       marginTop: 4,
       fontSize: 12,
       color: tokens.colors.text.secondary,
-      textAlign: 'left',
+      ...darkPoolTextRtl,
     },
     metricVal: {
       fontWeight: '800',

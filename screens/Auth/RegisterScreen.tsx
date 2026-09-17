@@ -1,6 +1,6 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform, Dimensions, TouchableWithoutFeedback, Keyboard, ImageBackground } from 'react-native';
+import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform, Dimensions, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { User, Mail, Lock } from 'lucide-react-native';
@@ -9,7 +9,6 @@ import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { AuthService } from '../../services/authService';
 import { DesignTokens } from '../../components/ui/DesignTokens';
-import { SUPABASE_URL } from '../../config/publicEnv';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 
 export default function RegisterScreen({ navigation }: any) {
@@ -154,30 +153,6 @@ export default function RegisterScreen({ navigation }: any) {
             end={{ x: 1, y: 1 }}
             style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
           />
-
-          {/* Transparent Background Image - Center */}
-          <View style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            justifyContent: 'center',
-            alignItems: 'center',
-            opacity: 0.22
-          }}>
-            <ImageBackground
-              source={{ uri: `${SUPABASE_URL}/storage/v1/object/public/backgrounds/transback.png` }}
-              resizeMode="contain"
-              style={{
-                width: width,
-                height: height,
-              }}
-              imageStyle={{
-                opacity: 0.35
-              }}
-            />
-          </View>
 
           <RNSafeAreaView style={{ flex: 1 }} edges={['bottom']}>
           <View

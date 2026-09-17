@@ -974,7 +974,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   modalRoot: {
-    backgroundColor: '#0A0E0A',
+    backgroundColor: '#111111',
   },
   modalScroll: {
     padding: DesignTokens.spacing.md,

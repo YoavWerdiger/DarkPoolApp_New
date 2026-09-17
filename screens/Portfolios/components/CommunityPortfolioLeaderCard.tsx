@@ -98,7 +98,7 @@ export function CommunityPortfolioLeaderCard({
         padding="md"
         style={{
           borderRadius: tokens.borderRadius.xl,
-          borderWidth: 1,
+          borderWidth: 0,
           borderColor: tokens.colors.border.subtle,
         }}
       >

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { LayoutChangeEvent, Platform, StyleSheet, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 import {
-  SHEET_GLASS_FLOOR,
+  SHEET_GLASS_BASE,
   SHEET_GLASS_INTENSITY,
   SHEET_GLASS_OVERLAY,
   SHEET_GLASS_TINT,
@@ -52,7 +52,7 @@ export function SheetGlassBackground({
         <View
           style={[
             StyleSheet.absoluteFill,
-            { backgroundColor: SHEET_GLASS_FLOOR },
+            { backgroundColor: SHEET_GLASS_BASE },
           ]}
         />
       ) : null}

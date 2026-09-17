@@ -19,9 +19,16 @@ export function getFeedTradeSide(transactionType: string): FeedTradeSide {
   return 'buy';
 }
 
-/** תווית קצרה לצ׳יפ */
+/** פועל עבר קצר לשורת כותרת — "{שם} קנה את $NVDA" */
 export function getFeedTradeVerb(side: FeedTradeSide): string {
-  return side === 'sell' ? 'מכירה' : 'קנייה';
+  return side === 'sell' ? 'מכר' : 'קנה';
+}
+
+/** תצוגת טיקר ב־UI בלבד — "$AAPL" בלי כפל `$`. */
+export function formatFeedTickerDisplay(ticker: string): string {
+  const t = ticker.trim().toUpperCase();
+  if (!t) return '';
+  return t.startsWith('$') ? t : `$${t}`;
 }
 
 /** משפט פעולה מלא — נגיש יותר */
@@ -29,8 +36,8 @@ export function getFeedTradeActionSentence(
   side: FeedTradeSide,
   ticker: string
 ): string {
-  const t = ticker.toUpperCase();
-  return side === 'sell' ? `מכירה של ${t}` : `קנייה של ${t}`;
+  const t = formatFeedTickerDisplay(ticker);
+  return side === 'sell' ? `מכר את ${t}` : `קנה את ${t}`;
 }
 
 export function formatFeedUsd(amount: number): string {
@@ -58,6 +65,17 @@ export function formatFeedDisclosureRange(raw: string | null | undefined): strin
   return cleaned.startsWith('$') ? cleaned : `$${cleaned}`;
 }
 
+/** מוסיף "בשווי:" לפני סכום — בלי כפל אם כבר קיים. */
+export function withFeedValueLabel(amount: string | null | undefined): string | null {
+  if (!amount?.trim()) return null;
+  const trimmed = amount.trim();
+  if (/^בשווי\s*:?\s*/u.test(trimmed)) {
+    const rest = trimmed.replace(/^בשווי\s*:?\s*/u, '').trim();
+    return rest ? `בשווי: ${rest}` : null;
+  }
+  return `בשווי: ${trimmed}`;
+}
+
 export type FeedTradeDetailParts = {
   sharesLabel: string | null;
   amountLabel: string | null;
@@ -82,7 +100,7 @@ export function getFeedTradeDetailParts(input: {
     amountLabel = formatFeedDisclosureRange(input.amountLabel);
   }
 
-  return { sharesLabel, amountLabel };
+  return { sharesLabel, amountLabel: withFeedValueLabel(amountLabel) };
 }
 
 export function formatFeedTradeDetail(input: {

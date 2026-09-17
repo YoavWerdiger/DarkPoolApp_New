@@ -60,6 +60,20 @@ export function getChatMessagePreview(
       return 'סקר';
     case ChatMessageType.TRADE:
       return 'טרייד';
+    case ChatMessageType.ENTITY: {
+      if (trimmed.startsWith('{')) {
+        try {
+          const parsed = JSON.parse(trimmed) as {
+            attachment?: { preview?: { title?: string } };
+          };
+          const title = parsed.attachment?.preview?.title;
+          if (title) return `📎 ${title}`;
+        } catch {
+          /* ignore */
+        }
+      }
+      return '📎 שיתוף';
+    }
     case ChatMessageType.MEDIA_GROUP:
       return 'אלבום';
   }

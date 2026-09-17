@@ -1,12 +1,11 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
-  FlatList,
   RefreshControl,
-  ActivityIndicator,
+  ScrollView,
   Alert,
   TextInput,
   Dimensions,
@@ -16,7 +15,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import UICard from '../../components/ui/UICard';
+import { CardSkeleton } from '../../components/ui/SkeletonLoader';
 import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
 import type { PortfoliosStackParamList } from '../../navigation/PortfoliosStack';
 import {
@@ -25,7 +24,7 @@ import {
   deletePortfolio,
 } from '../../services/portfolios';
 import type { Portfolio, PortfolioSummary } from './portfolioTypes';
-import { PortfolioCard } from './components/PortfolioCard';
+import { JournalPreviewSheet } from './components/JournalPreviewSheet';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { queryClient } from '../../lib/queryClient';
@@ -57,7 +56,7 @@ interface PortfolioWithSummary {
 }
 
 /**
- * רשימת התיקים האישיים — בתוך PortfoliosHub (מגירה → תיקי השקעות).
+ * תיקים אישיים ביומן מסחר — חיפוש מעל, פריביו שיט (~80%) עם גרף ו-CTA.
  */
 export default function PortfoliosTab() {
   const tokens = useDesignTokens();
@@ -75,6 +74,9 @@ export default function PortfoliosTab() {
   const [sortMode, setSortMode] = useState<SortMode>('default');
   const [sortSheetOpen, setSortSheetOpen] = useState(false);
   const [sortSheetHeight, setSortSheetHeight] = useState(0);
+  const [selectedPortfolioId, setSelectedPortfolioId] = useState<string | null>(
+    null
+  );
 
   const sortSnapPoints = useMemo<[number]>(() => {
     const screenH = Dimensions.get('window').height;
@@ -120,6 +122,20 @@ export default function PortfoliosTab() {
     }
     return filtered;
   }, [items, searchQuery, sortMode]);
+
+  // שמירת בחירה תקינה מול הרשימה המסוננת / אחרי מחיקה
+  useEffect(() => {
+    if (filteredItems.length === 0) {
+      setSelectedPortfolioId(null);
+      return;
+    }
+    const stillVisible = filteredItems.some(
+      (it) => it.portfolio.id === selectedPortfolioId
+    );
+    if (!stillVisible) {
+      setSelectedPortfolioId(filteredItems[0].portfolio.id);
+    }
+  }, [filteredItems, selectedPortfolioId]);
 
   const load = useCallback(async () => {
     try {
@@ -237,18 +253,17 @@ export default function PortfoliosTab() {
           fontWeight: '700',
           color: tokens.colors.text.inverse,
         },
-        list: {
-          paddingHorizontal: tokens.layout.screenPadding,
-          paddingTop: 4,
-          paddingBottom: mainTabsHeight + 88,
+        previewArea: {
+          flex: 1,
+          minHeight: 0,
         },
         searchHeader: {
-          paddingHorizontal: tokens.layout.screenPadding,
-          paddingTop: 18,
-          paddingBottom: 10,
+          paddingHorizontal: 20,
+          paddingTop: 12,
+          paddingBottom: 14,
           flexDirection: 'row',
           alignItems: 'center',
-          gap: 8,
+          gap: 10,
           direction: 'ltr',
         },
         sortBtnWrap: {
@@ -258,6 +273,7 @@ export default function PortfoliosTab() {
           height: 44,
           borderRadius: 22,
           overflow: 'hidden',
+          backgroundColor: '#262626',
         },
         sortBtnInner: {
           width: '100%',
@@ -287,8 +303,6 @@ export default function PortfoliosTab() {
         },
         sortRowActive: {
           backgroundColor: `${tokens.colors.primary.main}1A`,
-          borderWidth: 1,
-          borderColor: `${tokens.colors.primary.main}55`,
         },
         sortRowText: {
           flex: 1,
@@ -304,11 +318,14 @@ export default function PortfoliosTab() {
         searchCardWrap: {
           flex: 1,
           minWidth: 0,
+          backgroundColor: '#262626',
+          borderRadius: 22,
+          overflow: 'hidden',
         },
         searchInner: {
           flexDirection: 'row-reverse',
           alignItems: 'center',
-          paddingHorizontal: 12,
+          paddingHorizontal: 14,
           minHeight: 44,
         },
         searchTextInput: {
@@ -316,6 +333,7 @@ export default function PortfoliosTab() {
           marginHorizontal: 8,
           color: tokens.colors.text.primary,
           fontSize: 15,
+          fontWeight: '500',
           textAlign: 'right',
           writingDirection: 'rtl',
           paddingVertical: 6,
@@ -349,66 +367,52 @@ export default function PortfoliosTab() {
           accessibilityLabel="מיון תיקים"
           style={styles.sortBtnWrap}
         >
-          <UICard
-            variant="blur"
-            glassIntensity="subtle"
-            padding="none"
-            style={{ borderRadius: 22, overflow: 'hidden', flex: 1 }}
-          >
-            <View style={styles.sortBtnInner}>
-              <Ionicons
-                name="filter"
-                size={20}
-                color={
-                  sortMode === 'default'
-                    ? tokens.colors.text.secondary
-                    : tokens.colors.primary.main
-                }
-              />
-            </View>
-          </UICard>
+          <View style={styles.sortBtnInner}>
+            <Ionicons
+              name="filter"
+              size={20}
+              color={
+                sortMode === 'default'
+                  ? tokens.colors.text.secondary
+                  : tokens.colors.primary.main
+              }
+            />
+          </View>
         </TouchableOpacity>
 
         <View style={styles.searchCardWrap}>
-          <UICard
-            variant="blur"
-            glassIntensity="subtle"
-            padding="none"
-            style={{ borderRadius: 22, overflow: 'hidden' }}
-          >
-            <View style={styles.searchInner}>
-              {hasQuery ? (
-                <TouchableOpacity
-                  onPress={() => {
-                    void HapticFeedback.selection();
-                    setSearchQuery('');
-                  }}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Ionicons
-                    name="close-circle"
-                    size={20}
-                    color={tokens.colors.text.tertiary}
-                  />
-                </TouchableOpacity>
-              ) : (
-                <View style={{ width: 20 }} />
-              )}
-              <TextInput
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                placeholder="חיפוש תיק..."
-                placeholderTextColor={tokens.colors.text.tertiary}
-                style={styles.searchTextInput}
-                returnKeyType="search"
-              />
-              <Ionicons
-                name="search"
-                size={18}
-                color={tokens.colors.text.tertiary}
-              />
-            </View>
-          </UICard>
+          <View style={styles.searchInner}>
+            {hasQuery ? (
+              <TouchableOpacity
+                onPress={() => {
+                  void HapticFeedback.selection();
+                  setSearchQuery('');
+                }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons
+                  name="close-circle"
+                  size={20}
+                  color={tokens.colors.text.tertiary}
+                />
+              </TouchableOpacity>
+            ) : (
+              <View style={{ width: 20 }} />
+            )}
+            <TextInput
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="חיפוש תיק..."
+              placeholderTextColor={tokens.colors.text.tertiary}
+              style={styles.searchTextInput}
+              returnKeyType="search"
+            />
+            <Ionicons
+              name="search"
+              size={18}
+              color={tokens.colors.text.tertiary}
+            />
+          </View>
         </View>
       </View>
     );
@@ -416,8 +420,10 @@ export default function PortfoliosTab() {
 
   if (loading) {
     return (
-      <View style={[styles.root, { alignItems: 'center', justifyContent: 'center' }]}>
-        <ActivityIndicator color={tokens.colors.primary.main} />
+      <View style={[styles.root, { paddingHorizontal: 20, paddingTop: 12 }]}>
+        {Array.from({ length: 3 }).map((_, i) => (
+          <CardSkeleton key={i} delay={i * 70} />
+        ))}
       </View>
     );
   }
@@ -452,42 +458,40 @@ export default function PortfoliosTab() {
   return (
     <View style={styles.root}>
       {renderSearchHeader()}
-      <FlatList
-        data={filteredItems}
-        keyExtractor={(item) => item.portfolio.id}
-        renderItem={({ item }) => (
-          <PortfolioCard
-            portfolio={item.portfolio}
-            summary={item.summary}
-            onPress={() => handleOpen(item.portfolio.id)}
-            onLongPress={() => handleDelete(item.portfolio)}
+
+      {filteredItems.length === 0 && searchQuery.trim().length > 0 ? (
+        <ScrollView
+          contentContainerStyle={styles.emptyResults}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={tokens.colors.primary.main}
+            />
+          }
+          keyboardShouldPersistTaps="handled"
+        >
+          <Ionicons
+            name="search-outline"
+            size={36}
+            color={tokens.colors.text.tertiary}
           />
-        )}
-        contentContainerStyle={styles.list}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={tokens.colors.primary.main}
+          <Text style={styles.emptyResultsText}>
+            לא נמצאו תיקים בשם "{searchQuery.trim()}"
+          </Text>
+        </ScrollView>
+      ) : (
+        <View style={styles.previewArea}>
+          <JournalPreviewSheet
+            items={filteredItems}
+            selectedId={selectedPortfolioId}
+            onSelect={setSelectedPortfolioId}
+            onOpenMore={handleOpen}
+            onLongPressPortfolio={handleDelete}
+            bottomInset={mainTabsHeight + 16}
           />
-        }
-        ListEmptyComponent={
-          searchQuery.trim().length > 0 ? (
-            <View style={styles.emptyResults}>
-              <Ionicons
-                name="search-outline"
-                size={36}
-                color={tokens.colors.text.tertiary}
-              />
-              <Text style={styles.emptyResultsText}>
-                לא נמצאו תיקים בשם "{searchQuery.trim()}"
-              </Text>
-            </View>
-          ) : null
-        }
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      />
+        </View>
+      )}
 
       <BottomSheet
         isOpen={sortSheetOpen}

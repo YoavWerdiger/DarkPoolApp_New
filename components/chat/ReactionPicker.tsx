@@ -179,7 +179,7 @@ export default function ReactionPicker({
         <SectionList
           sections={sections}
           keyExtractor={(item, index) => resolveRowId(item, index)}
-          stickySectionHeadersEnabled
+          stickySectionHeadersEnabled={false}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           style={{ maxHeight: listMaxHeight }}
@@ -252,7 +252,8 @@ const styles = StyleSheet.create({
   },
   searchField: {
     ...chatRtlRow,
-    direction: 'rtl',
+    direction: 'ltr',
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     backgroundColor: chatPalette.glass,
@@ -278,13 +279,17 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 8,
     backgroundColor: 'transparent',
+    width: '100%',
+    alignSelf: 'stretch',
+    alignItems: 'flex-end',
   },
   sectionTitle: {
     writingDirection: 'rtl',
     textAlign: 'right',
+    alignSelf: 'flex-end',
     fontSize: 13,
     fontWeight: '700',
-    letterSpacing: 0.2,
+    lineHeight: 18,
   },
   grid: {
     flexDirection: 'row',

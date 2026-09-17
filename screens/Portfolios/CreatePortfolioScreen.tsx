@@ -59,7 +59,6 @@ export default function CreatePortfolioScreen() {
   const [benchmark, setBenchmark] = useState(DEFAULT_BENCHMARK);
   const [riskFree, setRiskFree] = useState(String(DEFAULT_RISK_FREE_RATE));
   const [autoSplits, setAutoSplits] = useState(true);
-  const [isPublic, setIsPublic] = useState(false);
   const [description, setDescription] = useState('');
   const [initialCash, setInitialCash] = useState('');
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -130,7 +129,7 @@ export default function CreatePortfolioScreen() {
         benchmark_symbol: benchmark,
         auto_adjust_splits: autoSplits,
         description: description.trim() || null,
-        is_public: isPublic,
+        is_public: false,
         ...(initialCashNum > 0 ? { available_cash: initialCashNum } : {}),
       });
       void HapticFeedback.success();
@@ -153,7 +152,6 @@ export default function CreatePortfolioScreen() {
     autoSplits,
     description,
     initialCash,
-    isPublic,
     mode,
     navigation,
   ]);
@@ -161,7 +159,7 @@ export default function CreatePortfolioScreen() {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        root: { flex: 1, backgroundColor: '#0A0E0A' },
+        root: { flex: 1, backgroundColor: '#111111' },
         scroll: { flex: 1, backgroundColor: 'transparent' },
         scrollContent: {
           paddingHorizontal: 16,
@@ -421,21 +419,6 @@ export default function CreatePortfolioScreen() {
                       );
                     })}
                   </View>
-                </View>
-
-                {/* נראות */}
-                <View style={styles.section}>
-                  <SectionHeader title="נראות" />
-                  <SwitchRow
-                    title="תיק ציבורי"
-                    hint={
-                      isPublic
-                        ? 'משתמשים אחרים בקהילה יוכלו לצפות בתיק בקריאה בלבד'
-                        : 'רק את/ה רואה את התיק. אפשר לשנות בכל עת מהגדרות התיק.'
-                    }
-                    value={isPublic}
-                    onChange={setIsPublic}
-                  />
                 </View>
 
                 {/* הגדרות מתקדמות */}

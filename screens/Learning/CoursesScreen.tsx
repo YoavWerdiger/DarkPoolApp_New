@@ -223,7 +223,7 @@ export const CoursesScreen: React.FC = () => {
 
   if (error) {
     return (
-      <ScreenChrome withBrandWatermark>
+      <ScreenChrome>
         <StatusBar style="light" />
         <RNSafeAreaView style={styles.flex} edges={['top']}>
           <View style={styles.errorInner}>
@@ -252,7 +252,7 @@ export const CoursesScreen: React.FC = () => {
   }
 
   return (
-    <ScreenChrome withBrandWatermark>
+    <ScreenChrome>
       <StatusBar style="light" />
       <RNSafeAreaView style={styles.flex} edges={['top']}>
         <ScrollView
@@ -371,7 +371,7 @@ export const CoursesScreen: React.FC = () => {
 
               {premiumCourses.length > 0 ? (
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>קורסי פרמיום</Text>
+                  <Text style={styles.sectionTitle}>קורסים מלאים</Text>
                   {renderHorizontalRow(premiumCourses)}
                 </View>
               ) : null}

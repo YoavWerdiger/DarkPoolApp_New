@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ImageIcon, PlayCircle, Play, Pause, FileText } from 'lucide-react-native';
 import { useDesignTokens } from '../ui/DesignTokens';
 // import { MediaFile } from '../../services/mediaService';
-import { Audio } from 'expo-av';
+import { Audio } from '../../lib/expoAvSafe';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import { LinearGradient } from 'expo-linear-gradient';
 import { logger } from '../../utils/logger';

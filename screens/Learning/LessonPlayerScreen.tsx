@@ -2,7 +2,7 @@ import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Pressable, ActivityIndicator, Dimensions, TextInput } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { Video, ResizeMode } from 'expo-av';
+import { Video, ResizeMode } from '../../lib/expoAvSafe';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -638,7 +638,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   /** פאנל נייטרלי — לא blur ולא ירוק ממותג; רקע אחיד מתחת */
   lessonPanel: {
-    backgroundColor: '#141414',
+    backgroundColor: '#111111',
     borderWidth: StyleSheet.hairlineWidth * 2,
     borderColor: 'rgba(255, 255, 255, 0.08)',
   },

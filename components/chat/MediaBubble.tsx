@@ -2,9 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, Pressable, Image, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ImageIcon, Play, FileText, Download } from 'lucide-react-native';
-import { Video, ResizeMode } from 'expo-av';
 import { logger } from '../../utils/logger';
-import { Audio } from 'expo-av';
+import { Audio } from '../../lib/expoAvSafe';
 import MediaViewer from './MediaViewer';
 import { useDesignTokens } from '../ui/DesignTokens';
 

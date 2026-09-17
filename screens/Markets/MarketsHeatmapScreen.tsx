@@ -25,7 +25,7 @@ export default function MarketsHeatmapScreen() {
   }, [navigation]);
 
   return (
-    <ScreenChrome withBrandWatermark>
+    <ScreenChrome>
       <StatusBar style="light" />
       <RNSafeAreaView style={styles.safe} edges={['top']}>
         <MainDrawerScreenHeader title="מפת חום" onMenuPress={openMainDrawer} />

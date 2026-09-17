@@ -6,8 +6,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
 import {
-  AndroidSoftInputModes,
-  KeyboardController,
   KeyboardStickyView,
   useGenericKeyboardHandler,
 } from 'react-native-keyboard-controller';
@@ -17,6 +15,7 @@ import {
   chatComposerKeyboardTranslate,
   chatComposerStickyOffset,
 } from './chatInputLayout';
+import { lockAndroidChatSoftInput, restoreAndroidSoftInputIfUnlocked } from './androidChatKeyboard';
 
 type ChatComposerDockProps = ViewProps & {
   children: React.ReactNode;
@@ -123,9 +122,11 @@ function AndroidComposerDock({
 
   useFocusEffect(
     useCallback(() => {
-      KeyboardController.setInputMode(AndroidSoftInputModes.SOFT_INPUT_ADJUST_NOTHING);
+      lockAndroidChatSoftInput();
       return () => {
-        KeyboardController.setDefaultMode();
+        // אל תקרא setDefaultMode כאן — מעבר thread→list היה דורס ADJUST_NOTHING
+        // וגורם ל-adjustResize + סגירת מקלדת להילחם אחד בשני.
+        restoreAndroidSoftInputIfUnlocked();
       };
     }, []),
   );

@@ -12,13 +12,14 @@ import UICard from '../../../components/ui/UICard';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { loadTrades } from '../../../services/portfolios/portfolioTradeDerive';
 import type { Trade, PortfolioHolding } from '../portfolioTypes';
-import {
-  formatCurrency,
-  formatPercent,
-  formatNumber,
-} from '../utils/format';
-import { TickerLogo } from '../components/TickerLogo';
+import { formatCurrency } from '../utils/format';
+import PortfolioTradesTable from '../components/PortfolioTradesTable';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
+import ExportTradeImage, {
+  portfolioTradeToExportable,
+  type ExportableTrade,
+} from '../../../components/Journal/ExportTradeImage';
+import { darkPoolTextRtl } from '../../DarkPool/darkPoolLayout';
 
 interface Props {
   portfolioId: string;
@@ -27,153 +28,19 @@ interface Props {
   refreshKey?: number;
 }
 
-function formatQty(qty: number): string {
-  return Number.isInteger(qty) ? String(qty) : formatNumber(qty, 4);
-}
-
-function ClosedTradeCard({
-  trade: t,
-  styles,
-}: {
-  trade: Trade;
-  styles: ReturnType<typeof createCardStyles>;
-}) {
-  const tokens = useDesignTokens();
-  const isLong = t.direction === 'long';
-  const pnl = t.profit_loss ?? 0;
-  const pnlPositive = pnl > 0;
-  const pnlNegative = pnl < 0;
-  const pnlColor = pnlPositive
-    ? tokens.colors.primary.main
-    : pnlNegative
-      ? tokens.colors.text.danger
-      : tokens.colors.text.secondary;
-
-  const exitStr =
-    t.exit_price != null
-      ? formatCurrency(t.exit_price, t.currency, 2)
-      : '—';
-  const entryStr = formatCurrency(t.entry_price, t.currency, 2);
-  let subtitle = `${formatQty(t.quantity)} × ${entryStr} → ${exitStr}`;
-  if (t.commission > 0) {
-    subtitle += ` · עמלות ${formatCurrency(t.commission, t.currency, 2)}`;
-  }
-
-  // אחוז P&L
-  const pnlPct =
-    t.exit_price != null && t.entry_price > 0
-      ? isLong
-        ? ((t.exit_price - t.entry_price) / t.entry_price) * 100 * t.leverage
-        : ((t.entry_price - t.exit_price) / t.entry_price) * 100 * t.leverage
-      : null;
-
-  return (
-    <UICard
-      variant="glass"
-      glassIntensity="light"
-      padding="none"
-      style={styles.cardWrap}
-    >
-      <View style={styles.row}>
-        <TickerLogo symbol={t.symbol} size={36} />
-        <View style={styles.rowMain}>
-          <Text style={styles.rowTitle} numberOfLines={1}>
-            {t.symbol}
-            <Text style={styles.rowTitleMuted}>
-              {' · '}
-              {isLong ? 'לונג' : 'שורט'}
-            </Text>
-          </Text>
-          <Text style={styles.rowSub} numberOfLines={1}>
-            {subtitle}
-          </Text>
-        </View>
-        <View style={styles.rowSide}>
-          <Text style={[styles.rowAmount, { color: pnlColor }]}>
-            {pnlPositive ? '+' : pnlNegative ? '−' : ''}
-            {formatCurrency(Math.abs(pnl), t.currency)}
-          </Text>
-          {pnlPct != null ? (
-            <Text style={[styles.rowPct, { color: pnlColor }]}>
-              {formatPercent(pnlPct)}
-            </Text>
-          ) : null}
-        </View>
-      </View>
-    </UICard>
-  );
-}
-
-function createCardStyles(tokens: ReturnType<typeof useDesignTokens>) {
-  return StyleSheet.create({
-    cardWrap: {
-      borderRadius: 28,
-      marginBottom: 8,
-      overflow: 'hidden',
-    },
-    row: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      minHeight: 64,
-      paddingVertical: 12,
-      paddingHorizontal: 14,
-      gap: 12,
-    },
-    rowMain: {
-      flex: 1,
-      justifyContent: 'center',
-      minWidth: 0,
-    },
-    rowTitle: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: tokens.colors.text.primary,
-      textAlign: 'right',
-      lineHeight: 18,
-    },
-    rowTitleMuted: {
-      fontWeight: '600',
-      color: tokens.colors.text.tertiary,
-    },
-    rowSub: {
-      fontSize: 11,
-      color: tokens.colors.text.tertiary,
-      marginTop: 2,
-      lineHeight: 14,
-      textAlign: 'right',
-      writingDirection: 'ltr',
-    },
-    rowSide: {
-      justifyContent: 'center',
-      alignItems: 'flex-start',
-      flexShrink: 0,
-    },
-    rowAmount: {
-      fontSize: 13,
-      fontWeight: '700',
-      lineHeight: 16,
-      textAlign: 'left',
-      writingDirection: 'ltr',
-    },
-    rowPct: {
-      fontSize: 11,
-      fontWeight: '600',
-      marginTop: 2,
-      lineHeight: 14,
-      textAlign: 'left',
-      writingDirection: 'ltr',
-    },
-  });
-}
-
-
 /** טאב היסטוריה — טריידים סגורים, חיפוש לפי סימבול. */
 export default function HistoryTab({ portfolioId, refreshKey }: Props) {
   const tokens = useDesignTokens();
-  const cardStyles = useMemo(() => createCardStyles(tokens), [tokens]);
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [exportTrade, setExportTrade] = useState<ExportableTrade | null>(null);
+
+  const openShareImage = useCallback((trade: Trade) => {
+    const mapped = portfolioTradeToExportable(trade);
+    if (!mapped) return;
+    setExportTrade(mapped);
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -195,7 +62,6 @@ export default function HistoryTab({ portfolioId, refreshKey }: Props) {
     void load();
   }, [load]);
 
-  // רענון כשהמסך האב מעדכן נתונים (למשל אחרי סגירת פוזיציה)
   const refreshKeyRef = useRef(false);
   useEffect(() => {
     if (!refreshKeyRef.current) {
@@ -219,27 +85,60 @@ export default function HistoryTab({ portfolioId, refreshKey }: Props) {
   const layoutStyles = useMemo(
     () =>
       StyleSheet.create({
+        root: {
+          direction: 'rtl',
+        },
         loading: { paddingVertical: 60, alignItems: 'center' },
         empty: {
           alignItems: 'center',
           paddingVertical: 60,
           gap: 8,
+          direction: 'rtl',
         },
         emptyTitle: {
           fontSize: 16,
           fontWeight: '700',
           color: tokens.colors.text.primary,
+          ...darkPoolTextRtl,
+          textAlign: 'center',
         },
         emptyText: {
           fontSize: 13,
           color: tokens.colors.text.tertiary,
           textAlign: 'center',
+          writingDirection: 'rtl',
           paddingHorizontal: 30,
         },
-        searchRow: { marginBottom: 8 },
+        summaryCard: {
+          borderRadius: 20,
+          marginBottom: 12,
+          overflow: 'hidden',
+        },
+        summaryInner: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'flex-start',
+          gap: 10,
+          paddingHorizontal: 16,
+          paddingVertical: 14,
+          width: '100%',
+        },
+        summaryLabel: {
+          fontSize: 13,
+          fontWeight: '600',
+          color: tokens.colors.text.tertiary,
+          ...darkPoolTextRtl,
+        },
+        summaryValue: {
+          fontSize: 16,
+          fontWeight: '800',
+          writingDirection: 'ltr',
+          textAlign: 'right',
+        },
+        searchRow: { marginBottom: 10 },
         searchCardWrap: { borderRadius: 20, overflow: 'hidden' },
         searchInner: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'center',
           paddingHorizontal: 12,
           minHeight: 40,
@@ -257,11 +156,13 @@ export default function HistoryTab({ portfolioId, refreshKey }: Props) {
           alignItems: 'center',
           paddingTop: 28,
           paddingHorizontal: 20,
+          direction: 'rtl',
         },
         emptyResultsText: {
           fontSize: 13,
           color: tokens.colors.text.tertiary,
           textAlign: 'center',
+          writingDirection: 'rtl',
           marginTop: 8,
         },
       }),
@@ -297,24 +198,30 @@ export default function HistoryTab({ portfolioId, refreshKey }: Props) {
   const pnlNegative = totalPnl < 0;
 
   return (
-    <View>
-      {/* סיכום P&L כולל */}
+    <View style={layoutStyles.root}>
       {trades.length > 0 && (
-        <UICard variant="glass" glassIntensity="light" padding="none" style={{ borderRadius: 20, marginBottom: 12, overflow: 'hidden' }}>
-          <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14 }}>
-            <Text style={{ fontSize: 13, fontWeight: '600', color: tokens.colors.text.tertiary, textAlign: 'right' }}>
+        <UICard
+          variant="glass"
+          glassIntensity="light"
+          padding="none"
+          style={layoutStyles.summaryCard}
+        >
+          <View style={layoutStyles.summaryInner}>
+            <Text style={layoutStyles.summaryLabel}>
               סך P&L ממומש ({trades.length} עסקאות)
             </Text>
-            <Text style={{
-              fontSize: 16,
-              fontWeight: '800',
-              writingDirection: 'ltr',
-              color: pnlPositive
-                ? tokens.colors.primary.main
-                : pnlNegative
-                  ? tokens.colors.text.danger
-                  : tokens.colors.text.secondary,
-            }}>
+            <Text
+              style={[
+                layoutStyles.summaryValue,
+                {
+                  color: pnlPositive
+                    ? tokens.colors.primary.main
+                    : pnlNegative
+                      ? tokens.colors.text.danger
+                      : tokens.colors.text.secondary,
+                },
+              ]}
+            >
               {pnlPositive ? '+' : pnlNegative ? '−' : ''}
               {formatCurrency(Math.abs(totalPnl), 'USD')}
             </Text>
@@ -330,6 +237,21 @@ export default function HistoryTab({ portfolioId, refreshKey }: Props) {
           style={layoutStyles.searchCardWrap}
         >
           <View style={layoutStyles.searchInner}>
+            <Ionicons
+              name="search"
+              size={18}
+              color={tokens.colors.text.tertiary}
+            />
+            <TextInput
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="חיפוש לפי סימבול..."
+              placeholderTextColor={tokens.colors.text.tertiary}
+              style={layoutStyles.searchTextInput}
+              returnKeyType="search"
+              autoCapitalize="characters"
+              autoCorrect={false}
+            />
             {hasQuery ? (
               <TouchableOpacity
                 onPress={() => {
@@ -347,21 +269,6 @@ export default function HistoryTab({ portfolioId, refreshKey }: Props) {
             ) : (
               <View style={{ width: 20 }} />
             )}
-            <TextInput
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder="חיפוש לפי סימבול..."
-              placeholderTextColor={tokens.colors.text.tertiary}
-              style={layoutStyles.searchTextInput}
-              returnKeyType="search"
-              autoCapitalize="characters"
-              autoCorrect={false}
-            />
-            <Ionicons
-              name="search"
-              size={18}
-              color={tokens.colors.text.tertiary}
-            />
           </View>
         </UICard>
       </View>
@@ -378,10 +285,18 @@ export default function HistoryTab({ portfolioId, refreshKey }: Props) {
           </Text>
         </View>
       ) : (
-        filteredTrades.map((t) => (
-          <ClosedTradeCard key={t.id} trade={t} styles={cardStyles} />
-        ))
+        <PortfolioTradesTable
+          mode="closed"
+          trades={filteredTrades}
+          onShare={openShareImage}
+        />
       )}
+
+      <ExportTradeImage
+        trade={exportTrade}
+        visible={!!exportTrade}
+        onClose={() => setExportTrade(null)}
+      />
     </View>
   );
 }

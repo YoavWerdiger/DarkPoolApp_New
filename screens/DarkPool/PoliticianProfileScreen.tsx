@@ -11,7 +11,6 @@ interface Props {
   nameHint?: string;
   imageHint?: string | null;
   onBack: () => void;
-  onTickerPress: (ticker: string) => void;
 }
 
 export function PoliticianProfileScreen({
@@ -19,7 +18,6 @@ export function PoliticianProfileScreen({
   nameHint,
   imageHint,
   onBack,
-  onTickerPress,
 }: Props) {
   return (
     <PersonPortfolioProfileScreen
@@ -28,7 +26,6 @@ export function PoliticianProfileScreen({
       nameHint={nameHint}
       imageHint={imageHint}
       onBack={onBack}
-      onTickerPress={onTickerPress}
     />
   );
 }

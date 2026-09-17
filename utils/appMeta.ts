@@ -12,6 +12,8 @@ export function getAppVersionLabel(): string {
 
 export const APP_LINKS = {
   website: 'https://darkpool.site',
+  /** לינק אוניברסלי ל־QR / שיתוף — אתר שמפנה להורדה / הצטרפות */
+  appDownload: 'https://darkpool.site',
   privacy: 'https://darkpool.site/privacy',
   terms: 'https://darkpool.site/terms',
   supportEmail: 'support@darkpool.co.il',

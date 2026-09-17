@@ -4,16 +4,18 @@
 //   edgar           – SEC EDGAR Form 4 ישיר (חינם, ציבורי)
 //   form4api        – Form4API (FORM4_API_KEY — backend parser, לא redistribution)
 //   secapi          – sec-api.io (דורש רישיון commercial ל-app)
+//   quiverquant     – Quiver /beta/live/insiders (QUIVER_API_KEY)
 //   unusualwhales   – UW (לא ל-production app בלי redistribution license)
 //
 // Secrets:
-//   INSIDER_SYNC_SOURCES=edgar,form4api
+//   INSIDER_SYNC_SOURCES=quiverquant,edgar,form4api  (ברירת מחדל — Quiver ראשי)
 //   SEC_API_KEY
 //   FORM4_API_KEY, FORM4_PROVIDER, FORM4_LOOKBACK_HOURS (default 48)
+//   QUIVER_API_KEY
+//   QUIVER_INSIDER_PAGE_SIZE (default 500) — soft cap ל-/beta/live/insiders
 //   FORM4_MAX_PAGES (default 5) — תקציב יומי << 500 עם cron 3–4×/יום
 //   Deep backfill: ידני בלבד עם FORM4_LOOKBACK_HOURS=2160/4320 + FORM4_MAX_PAGES גבוה
 //   UNUSUAL_WHALES_API_KEY, UW_CLIENT_API_ID=100001
-//   QUIVER_API_KEY (קונגרס — sync-congress-trades / uw-explore)
 //   CONGRESS_TRADES_PROVIDER=quiverquant|unusualwhales
 // ----------------------------------------------------------------------------
 
@@ -34,6 +36,11 @@ import {
   fetchForm4Signals,
   type NormalizedForm4Trade,
 } from '../_shared/form4api.ts';
+import {
+  fetchQuiverLiveInsiders,
+  resolveQuiverApiKey,
+  type QuiverInsiderRow,
+} from '../_shared/quiverQuant.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -80,10 +87,24 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   let debugTicker: string | null = null;
+  let probeQuiver: { pageSize?: number } | null = null;
   if (req.method === 'POST') {
     try {
-      const body = (await req.json()) as { debug?: boolean; ticker?: string };
+      const body = (await req.json()) as {
+        debug?: boolean;
+        ticker?: string;
+        probe?: string;
+        page_size?: number;
+      };
       if (body?.debug) debugTicker = (body.ticker || 'AAPL').toUpperCase();
+      if (body?.probe === 'quiver') {
+        probeQuiver = {
+          pageSize:
+            typeof body.page_size === 'number' && body.page_size > 0
+              ? body.page_size
+              : 50,
+        };
+      }
     } catch {
       // empty body is fine
     }
@@ -96,7 +117,7 @@ serve(async (req) => {
   );
 
   const sources = parseInsiderSources(
-    Deno.env.get('INSIDER_SYNC_SOURCES') || 'edgar,form4api'
+    Deno.env.get('INSIDER_SYNC_SOURCES') || 'quiverquant,edgar,form4api'
   );
   const secApiKey = Deno.env.get('SEC_API_KEY') || '';
   const apiKey = Deno.env.get('FORM4_API_KEY') || '';
@@ -104,6 +125,66 @@ serve(async (req) => {
   // ברירת מחדל 48 שעות — מספיק לכיסוי בין ריצות cron (3–4×/יום בשעות מסחר)
   const lookbackHrs = Number(Deno.env.get('FORM4_LOOKBACK_HOURS') || '48');
   const uwKey = Deno.env.get('UNUSUAL_WHALES_API_KEY') || '';
+  const quiverKey = resolveQuiverApiKey();
+  const quiverPageSize = Math.min(
+    Math.max(Number(Deno.env.get('QUIVER_INSIDER_PAGE_SIZE') || '500') || 500, 50),
+    1000
+  );
+
+  if (probeQuiver) {
+    if (!quiverKey) {
+      return new Response(JSON.stringify({ error: 'QUIVER_API_KEY missing' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    try {
+      const pageSize = probeQuiver.pageSize ?? 50;
+      const raw = await fetchQuiverLiveInsiders(quiverKey, {
+        pageSize,
+        maxRows: pageSize,
+      });
+      const dates = raw
+        .map((r) => String(r.TransactionDate ?? r.fileDate ?? r.Date ?? '').slice(0, 10))
+        .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d))
+        .sort();
+      const codes = new Map<string, number>();
+      for (const r of raw) {
+        const c = String(r.TransactionCode ?? '?').toUpperCase() || '?';
+        codes.set(c, (codes.get(c) || 0) + 1);
+      }
+      const sample = raw.slice(0, 3).map((r) => ({
+        Ticker: r.Ticker ?? null,
+        Name: r.Name ?? null,
+        TransactionCode: r.TransactionCode ?? null,
+        AcquiredDisposedCode: r.AcquiredDisposedCode ?? null,
+        Shares: r.Shares ?? null,
+        PricePerShare: r.PricePerShare ?? null,
+        SharesOwnedFollowing: r.SharesOwnedFollowing ?? null,
+        fileDate: r.fileDate ?? null,
+        TransactionDate: r.TransactionDate ?? null,
+        Date: r.Date ?? null,
+        officerTitle: r.officerTitle ?? r.Title ?? null,
+        hasAccession: !!r.AccessionNumber,
+        fieldKeys: Object.keys(r as object).sort(),
+      }));
+      return jsonOk({
+        probe: 'quiver',
+        endpoint: '/beta/live/insiders',
+        requested_page_size: pageSize,
+        count: raw.length,
+        date_min: dates[0] ?? null,
+        date_max: dates[dates.length - 1] ?? null,
+        transaction_codes: Object.fromEntries(codes),
+        sample,
+      });
+    } catch (e) {
+      return new Response(
+        JSON.stringify({ error: (e as Error).message ?? 'quiver probe failed' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+  }
 
   if (sources.has('secapi') && !secApiKey) {
     return new Response(JSON.stringify({ error: 'SEC_API_KEY missing (required when secapi in INSIDER_SYNC_SOURCES)' }), {
@@ -113,6 +194,12 @@ serve(async (req) => {
   }
   if (sources.has('form4api') && !apiKey) {
     return new Response(JSON.stringify({ error: 'FORM4_API_KEY missing (required when form4api in INSIDER_SYNC_SOURCES)' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+  if (sources.has('quiverquant') && !quiverKey) {
+    return new Response(JSON.stringify({ error: 'QUIVER_API_KEY missing (required when quiverquant in INSIDER_SYNC_SOURCES)' }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -128,6 +215,7 @@ serve(async (req) => {
     !sources.has('secapi') &&
     !sources.has('form4api') &&
     !sources.has('edgar') &&
+    !sources.has('quiverquant') &&
     !sources.has('unusualwhales')
   ) {
     return new Response(JSON.stringify({ error: 'INSIDER_SYNC_SOURCES empty' }), {
@@ -191,7 +279,7 @@ serve(async (req) => {
         ? await loadSp500CompanyNames(supabase)
         : new Map<string, string>();
 
-    const [secRows, form4Rows, edgarRows, uwRows] = await Promise.all([
+    const [secRows, form4Rows, edgarRows, quiverRows, uwRows] = await Promise.all([
       sources.has('secapi') && secApiKey
         ? fetchSecApiInsiderPurchases(secApiKey, since)
             .then((r) => r.map((row) => withDefaultEnrichment({ ...row, source: 'secapi' })))
@@ -203,7 +291,9 @@ serve(async (req) => {
       sources.has('form4api') && apiKey
         ? provider === 'form4api'
           ? fetchFromForm4Api(apiKey, since)
-          : fetchInsiderBuys(provider, apiKey, since)
+          : provider === 'quiverquant'
+            ? fetchFromQuiver(quiverKey || apiKey, since)
+            : fetchInsiderBuys(provider, apiKey, since)
         : Promise.resolve([] as NormalizedInsiderBuy[]),
       sources.has('edgar')
         ? fetchEdgarForm4InsiderTrades(since, { maxFilings: 120 })
@@ -213,12 +303,18 @@ serve(async (req) => {
               return [] as NormalizedInsiderBuy[];
             })
         : Promise.resolve([] as NormalizedInsiderBuy[]),
+      sources.has('quiverquant') && quiverKey
+        ? fetchFromQuiver(quiverKey, since, quiverPageSize).catch((e) => {
+            console.warn('sync-insider-buys quiver skipped', e);
+            return [] as NormalizedInsiderBuy[];
+          })
+        : Promise.resolve([] as NormalizedInsiderBuy[]),
       sources.has('unusualwhales') && uwKey
         ? fetchInsiderBuysFromUw(uwKey, since, sp500Names)
         : Promise.resolve([] as NormalizedInsiderBuy[]),
     ]);
 
-    rows.push(...secRows, ...form4Rows, ...edgarRows, ...uwRows);
+    rows.push(...secRows, ...form4Rows, ...edgarRows, ...quiverRows, ...uwRows);
     const deduped = dedupeInsiderRows(rows);
 
     if (!deduped.length) {
@@ -236,6 +332,7 @@ serve(async (req) => {
         from_secapi: 0,
         from_form4: 0,
         from_edgar: 0,
+        from_quiver: 0,
         from_uw: 0,
         avatars_enriched: avatarsOnly,
         signals_synced: signalsSynced,
@@ -264,6 +361,7 @@ serve(async (req) => {
     const fromSecApi = deduped.filter((r) => r.source === 'secapi').length;
     const fromForm4 = deduped.filter((r) => r.source === 'form4api').length;
     const fromEdgar = deduped.filter((r) => r.source === 'edgar').length;
+    const fromQuiver = deduped.filter((r) => r.source === 'quiverquant').length;
     const fromUw = deduped.filter((r) => r.source === 'unusualwhales').length;
 
     return jsonOk({
@@ -272,6 +370,7 @@ serve(async (req) => {
       from_secapi: fromSecApi,
       from_form4: fromForm4,
       from_edgar: fromEdgar,
+      from_quiver: fromQuiver,
       from_uw: fromUw,
       avatars_enriched: avatarsEnriched,
       signals_synced: signalsSynced,
@@ -527,54 +626,77 @@ function mapUwInsiderTransaction(
   });
 }
 
-async function fetchFromQuiver(apiKey: string, sinceIso: string): Promise<NormalizedInsiderBuy[]> {
-  const url = `https://api.quiverquant.com/beta/live/insiders?date_from=${sinceIso.slice(0, 10)}`;
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${apiKey}`, Accept: 'application/json' },
+async function fetchFromQuiver(
+  apiKey: string,
+  sinceIso: string,
+  pageSize = 500
+): Promise<NormalizedInsiderBuy[]> {
+  const sinceDate = sinceIso.slice(0, 10);
+  const raw = await fetchQuiverLiveInsiders(apiKey, {
+    dateFrom: sinceDate,
+    pageSize,
+    maxRows: pageSize,
   });
-  if (!res.ok) throw new Error(`quiverquant ${res.status}`);
-  const json = await res.json() as Array<{
-    Ticker: string;
-    Name?: string;
-    Title?: string;
-    TransactionDate?: string;
-    Shares?: number;
-    PricePerShare?: number;
-    TransactionCode?: string;
-    AccessionNumber?: string;
-  }>;
   const out: NormalizedInsiderBuy[] = [];
-  for (const r of json) {
-    if (!r.Ticker || !r.TransactionDate) continue;
-    const code = (r.TransactionCode || 'P').toUpperCase();
-    if (code !== 'P') continue;
-    const shares = Number(r.Shares) || 0;
-    const price = Number(r.PricePerShare) || 0;
-    out.push(
-      withDefaultEnrichment({
-        external_id: r.AccessionNumber
-          ? `quiver:${r.AccessionNumber}`
-          : `quiver:${r.Ticker}:${r.TransactionDate}`,
-        ticker: r.Ticker.toUpperCase(),
-        company_name: null,
-        insider_cik: null,
-        insider_name: r.Name ?? null,
-        insider_role: r.Title ?? null,
-        transaction_type: code,
-        shares,
-        price,
-        value: shares * price,
-        filed_at: new Date().toISOString(),
-        transaction_date: r.TransactionDate.slice(0, 10),
-        source: 'quiverquant',
-        sector: null,
-        is_sp500: null,
-        marketcap: null,
-        next_earnings_date: null,
-      })
-    );
+  for (const r of raw) {
+    const mapped = mapQuiverInsider(r, sinceDate);
+    if (mapped) out.push(mapped);
   }
   return out;
+}
+
+function mapQuiverInsider(
+  r: QuiverInsiderRow,
+  sinceDate?: string
+): NormalizedInsiderBuy | null {
+  const ticker = String(r.Ticker ?? '')
+    .trim()
+    .toUpperCase();
+  const txDate = String(r.TransactionDate ?? r.Date ?? '').slice(0, 10);
+  if (!ticker || !/^\d{4}-\d{2}-\d{2}$/.test(txDate)) return null;
+  if (sinceDate && txDate < sinceDate) return null;
+
+  const code = String(r.TransactionCode || '').toUpperCase();
+  const acquired = String(r.AcquiredDisposedCode ?? '').toUpperCase();
+  // פיד רכישות: P (purchase). מדלגים על מכירות ו-disposed.
+  if (code === 'S' || acquired === 'D') return null;
+  if (code && code !== 'P') return null;
+  if (!code && acquired && acquired !== 'A') return null;
+
+  const shares = Math.abs(Number(r.Shares) || 0);
+  if (shares <= 0) return null;
+  const price = Number(r.PricePerShare) || 0;
+  const filed = String(r.fileDate ?? r.Date ?? txDate).slice(0, 10);
+  const ownedAfter = Number(r.SharesOwnedFollowing);
+  const name = String(r.Name || '').trim();
+  return {
+    external_id: r.AccessionNumber
+      ? `quiver:${r.AccessionNumber}:${ticker}:${txDate}:${shares}`
+      : `quiver:${ticker}:${txDate}:${name.replace(/\s+/g, '_')}:${shares}:${price}`,
+    ticker,
+    company_name: null,
+    insider_cik: null,
+    insider_name: name || null,
+    insider_role: r.officerTitle ?? r.Title ?? null,
+    transaction_type: 'P',
+    shares,
+    price,
+    value: Math.round(shares * price * 100) / 100,
+    filed_at: filed ? `${filed.slice(0, 10)}T12:00:00Z` : new Date().toISOString(),
+    transaction_date: txDate,
+    source: 'quiverquant',
+    sector: null,
+    is_sp500: null,
+    marketcap: null,
+    next_earnings_date: null,
+    is_10b5_plan: null,
+    shares_owned_after: Number.isFinite(ownedAfter) ? ownedAfter : null,
+    return_1d: null,
+    return_1w: null,
+    return_1m: null,
+    return_3m: null,
+    return_6m: null,
+  };
 }
 
 // ---------------------------------------------------------------------------

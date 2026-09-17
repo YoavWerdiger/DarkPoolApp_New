@@ -28,6 +28,7 @@ import {
 } from '../../services/portfolios/portfolioImport';
 import { bulkCreateTransactions } from '../../services/portfolios';
 import { TRANSACTION_LABELS } from './portfolioConstants';
+import { darkPoolTextRtl } from '../DarkPool/darkPoolLayout';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 
 type Nav = NativeStackNavigationProp<PortfoliosStackParamList, 'ImportTransactions'>;
@@ -96,7 +97,7 @@ export default function ImportTransactionsScreen() {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        root: { flex: 1, backgroundColor: '#0A0E0A' },
+        root: { flex: 1, backgroundColor: '#111111', direction: 'rtl' },
         scroll: { flex: 1, backgroundColor: 'transparent' },
         scrollContent: { padding: 16, paddingBottom: 80 },
         section: {
@@ -112,14 +113,15 @@ export default function ImportTransactionsScreen() {
           fontWeight: '700',
           color: tokens.colors.text.primary,
           marginBottom: 8,
-          textAlign: 'right',
+          alignSelf: 'stretch',
+          ...darkPoolTextRtl,
         },
         sectionText: {
           fontSize: 13,
           color: tokens.colors.text.secondary,
           lineHeight: 19,
-          textAlign: 'right',
-          writingDirection: 'rtl',
+          alignSelf: 'stretch',
+          ...darkPoolTextRtl,
         },
         codeBox: {
           backgroundColor: 'rgba(0, 0, 0, 0.30)',
@@ -133,9 +135,11 @@ export default function ImportTransactionsScreen() {
           fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
           fontSize: 11,
           color: tokens.colors.text.secondary,
+          writingDirection: 'ltr',
+          textAlign: 'left',
         },
         pickBtn: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
           gap: 8,
@@ -148,9 +152,10 @@ export default function ImportTransactionsScreen() {
           fontSize: 15,
           fontWeight: '700',
           color: tokens.colors.text.inverse,
+          ...darkPoolTextRtl,
         },
         previewSummary: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           gap: 12,
           marginBottom: 12,
         },
@@ -164,14 +169,17 @@ export default function ImportTransactionsScreen() {
         summaryNumber: {
           fontSize: 22,
           fontWeight: '800',
+          writingDirection: 'ltr',
         },
         summaryLabel: {
           fontSize: 11,
           color: tokens.colors.text.tertiary,
           marginTop: 4,
+          ...darkPoolTextRtl,
+          textAlign: 'center',
         },
         previewRow: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'center',
           paddingVertical: 8,
           gap: 8,
@@ -183,19 +191,21 @@ export default function ImportTransactionsScreen() {
           fontSize: 12,
           fontWeight: '700',
           color: tokens.colors.text.primary,
-          textAlign: 'right',
+          writingDirection: 'ltr',
+          textAlign: 'left',
         },
         previewType: {
           width: 70,
           fontSize: 11,
           color: tokens.colors.text.secondary,
-          textAlign: 'right',
+          ...darkPoolTextRtl,
         },
         previewAmount: {
           flex: 1,
           fontSize: 12,
           color: tokens.colors.text.primary,
           textAlign: 'left',
+          writingDirection: 'ltr',
         },
         invalidRow: {
           padding: 8,
@@ -208,10 +218,10 @@ export default function ImportTransactionsScreen() {
         invalidText: {
           fontSize: 12,
           color: tokens.colors.text.danger,
-          textAlign: 'right',
+          ...darkPoolTextRtl,
         },
         importBtn: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
           gap: 8,
@@ -224,9 +234,10 @@ export default function ImportTransactionsScreen() {
           fontSize: 16,
           fontWeight: '700',
           color: tokens.colors.text.inverse,
+          ...darkPoolTextRtl,
         },
         fileNameRow: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'center',
           gap: 8,
           padding: 12,
@@ -241,7 +252,8 @@ export default function ImportTransactionsScreen() {
           fontSize: 13,
           color: tokens.colors.primary.main,
           fontWeight: '600',
-          textAlign: 'right',
+          writingDirection: 'ltr',
+          textAlign: 'left',
         },
       }),
     [tokens]

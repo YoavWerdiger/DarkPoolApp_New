@@ -1,44 +1,51 @@
 /**
- * כרטיס פיד קונגרס — אווטאר + לוגו מניה + פעולה ברורה.
+ * כרטיס פיד קונגרס.
+ *
+ * דיווח STOCK Act מכיל טווח סכום בלבד — לא מניות, לא מחיר, לא שווי מדויק.
+ * לכן מוצג טווח הדיווח, ו"מאז העסקה" מגיע מ-`PriceChange` של Quiver
+ * (נשמר ב-`price_change_pct`) ולא משחזור מקומי.
  */
 
 import React, { memo } from 'react';
-import { getFeedTradeDetailParts } from '../utils/feedTradeDisplay';
+import { withFeedValueLabel } from '../utils/feedTradeDisplay';
+import { formatDisclosedAmountRangeCompact } from '../utils/congressTradeDisplay';
 import { type CongressTradeFeedItem } from '../utils/congressFeedCalc';
 import { DarkPoolTradeFeedCard } from './DarkPoolTradeFeedCard';
 
 interface Props {
   item: CongressTradeFeedItem;
   onPersonPress?: (politicianId: string) => void;
+  onDetailPress?: () => void;
 }
 
 export const CongressTradeCard = memo(function CongressTradeCard({
   item,
   onPersonPress,
+  onDetailPress,
 }: Props) {
-  const { trade, sinceTradePct } = item;
-  const { sharesLabel, amountLabel } = getFeedTradeDetailParts({
-    shares: trade.shares,
-    amountLabel: trade.amount_label,
-  });
+  const { trade, quote } = item;
+  const amountLabel = withFeedValueLabel(
+    formatDisclosedAmountRangeCompact(trade.amount_label)
+  );
 
   return (
     <DarkPoolTradeFeedCard
       ticker={trade.ticker}
       personName={trade.politician_name}
+      portraitUrl={trade.politician_image_url}
       transactionType={trade.transaction_type}
-      sharesLabel={sharesLabel}
       amountLabel={amountLabel}
       filedAt={trade.filed_at}
-      sinceTradePct={sinceTradePct}
-      personImageUrl={trade.politician_image_url}
-      personId={trade.politician_id}
+      transactionDate={trade.transaction_date}
+      changeSinceTradePct={trade.price_change_pct}
+      currentPrice={quote?.price ?? null}
       personKind="politician"
-      onPress={
+      onPersonPress={
         onPersonPress && trade.politician_id
           ? () => onPersonPress(trade.politician_id)
           : undefined
       }
+      onCardPress={onDetailPress}
     />
   );
 });

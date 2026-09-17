@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Video, ResizeMode } from 'expo-av';
+import { Video, ResizeMode } from '../../lib/expoAvSafe';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import Svg, { Path } from 'react-native-svg';
@@ -384,11 +384,11 @@ function ViewersSheet({
 
 const sheetStyles = StyleSheet.create({
   root: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 50,
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: '#000',
   },
   sheet: {
@@ -402,7 +402,7 @@ const sheetStyles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.15)',
   },
   sheetTint: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(10,14,10,0.82)',
   },
   grabberWrap: {
@@ -1462,7 +1462,7 @@ export default function StoryViewer({
   const renderActiveOverlays = () => (
     <>
       {isLoading && !currentStory && !holdMedia && (
-        <View style={[styles.center, StyleSheet.absoluteFillObject]} pointerEvents="none">
+        <View style={[styles.center, StyleSheet.absoluteFill]} pointerEvents="none">
           <ActivityIndicator size="large" color={chatPalette.primary} />
         </View>
       )}
@@ -1472,7 +1472,7 @@ export default function StoryViewer({
         </View>
       )}
       {mediaError && (
-        <View style={[styles.center, StyleSheet.absoluteFillObject]} pointerEvents="none">
+        <View style={[styles.center, StyleSheet.absoluteFill]} pointerEvents="none">
           <Ionicons name="cloud-offline-outline" size={48} color="rgba(255,255,255,0.4)" />
           <Text style={{ color: 'rgba(255,255,255,0.5)', marginTop: 8, fontSize: 14 }}>
             שגיאה בטעינת המדיה
@@ -1502,7 +1502,7 @@ export default function StoryViewer({
             <>
               {drawingsArr.length > 0 && (
                 <Svg
-                  style={StyleSheet.absoluteFillObject}
+                  style={StyleSheet.absoluteFill}
                   pointerEvents="none"
                   viewBox={`0 0 ${authoredW} ${authoredH}`}
                   preserveAspectRatio="none"
@@ -1897,7 +1897,7 @@ const reactStyles = StyleSheet.create({
     overflow: 'hidden',
   },
   barSheen: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderRadius: 32,
   },
   btn: {
@@ -1937,14 +1937,14 @@ const reactStyles = StyleSheet.create({
 
 const dialogStyles = StyleSheet.create({
   root: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 100,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 32,
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.72)',
   },
   card: {
@@ -2034,7 +2034,7 @@ const styles = StyleSheet.create({
     direction: 'ltr',
   },
   blackBackdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: '#000',
   },
   pager: {
@@ -2054,7 +2054,7 @@ const styles = StyleSheet.create({
   },
   /** Classic Instagram zones (restored from git): left 2/3 = next, right 1/3 = prev. */
   touchZone: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     flexDirection: 'row',
     direction: 'ltr',
     zIndex: 5,
@@ -2066,7 +2066,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   pageFill: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: '#000',
   },
   center: {
@@ -2075,12 +2075,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   fullMedia: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     width: SCREEN_WIDTH,
     height: SCREEN_HEIGHT,
   },
   textBg: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 32,
@@ -2096,7 +2096,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 4,
   },
   mediaSpinner: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: 'center',
     alignItems: 'center',
   },

@@ -30,7 +30,7 @@ export function ExplorePeopleGrid({
     () =>
       StyleSheet.create({
         grid: {
-          flexDirection: 'row',
+          flexDirection: 'row-reverse',
           flexWrap: 'wrap',
           gap: 10,
           direction: 'rtl',

@@ -200,6 +200,8 @@ export function portfolioDetailTabLabelStyle(textSecondary: string): TextStyle {
     fontSize: 13,
     fontWeight: '600',
     color: textSecondary,
+    writingDirection: 'rtl',
+    textAlign: 'right',
   };
 }
 

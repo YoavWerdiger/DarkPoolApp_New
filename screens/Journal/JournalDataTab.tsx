@@ -459,7 +459,7 @@ const journalTabStyles = StyleSheet.create({
   segmentShell: {
     width: '100%',
     borderRadius: 999,
-    borderWidth: 1,
+    borderWidth: 0,
     overflow: 'hidden',
     marginBottom: 12,
   },
@@ -483,9 +483,9 @@ const journalTabStyles = StyleSheet.create({
     paddingHorizontal: 10,
     alignItems: 'center',
     borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#262626',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   kpiTitle: {
     fontSize: 13,
@@ -526,7 +526,7 @@ const journalTabStyles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 12,
-    borderWidth: 1,
+    borderWidth: 0,
   },
   journalCoverageWrap: {
     alignItems: 'center',
@@ -558,7 +558,7 @@ const journalTabStyles = StyleSheet.create({
     minWidth: '28%',
     maxWidth: '100%',
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 0,
     paddingVertical: 12,
     paddingHorizontal: 8,
     alignItems: 'center',
@@ -584,7 +584,7 @@ const journalTabStyles = StyleSheet.create({
   journalMoodCell: {
     width: '48%',
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 0,
     paddingVertical: 12,
     paddingHorizontal: 10,
     gap: 8,
@@ -629,7 +629,7 @@ const journalTabStyles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 12,
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 0,
     gap: 10,
   },
   journalMistakeList: {
@@ -802,10 +802,11 @@ export default function JournalDataTab() {
       maxWidth: 440,
       alignSelf: 'center' as const,
       marginBottom: DesignTokens.spacing.md,
-      borderWidth: 1 as const,
-      borderColor: `${DesignTokens.colors.primary.main}24`,
+      borderWidth: 0 as const,
+      borderColor: 'transparent',
       borderRadius: DesignTokens.borderRadius['2xl'],
       overflow: 'hidden' as const,
+      backgroundColor: DesignTokens.colors.background.cardSolid,
     }),
     [DesignTokens]
   );

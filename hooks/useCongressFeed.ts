@@ -1,6 +1,7 @@
 import { useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { appQueryKeys } from '../lib/appQueryKeys';
+import { queryClient } from '../lib/queryClient';
 import {
   listCongressTradesFromDb,
   triggerCongressSync,
@@ -12,7 +13,11 @@ import {
   buildCongressFeedItem,
   type CongressTradeFeedItem,
 } from '../screens/DarkPool/utils/congressFeedCalc';
-import { DARK_POOL_SEC_PRODUCTION, DARK_POOL_FEED_ENRICH_QUOTES } from '../types/darkpool.types';
+import {
+  DARK_POOL_SEC_PRODUCTION,
+  DARK_POOL_FEED_ENRICH_QUOTES,
+  DARK_POOL_FEED_STALE_MS,
+} from '../types/darkpool.types';
 
 export type { CongressTradeFeedItem };
 
@@ -36,7 +41,20 @@ async function enrichWithQuotes(
   return rows.map((trade) => buildCongressFeedItem(trade, quotes));
 }
 
-export async function loadCongress(limit: number, refresh: boolean): Promise<CongressTradeFeedItem[]> {
+function dedupeFeed(enriched: CongressTradeFeedItem[]): CongressTradeFeedItem[] {
+  const seen = new Set<string>();
+  return enriched.filter((item) => {
+    if (seen.has(item.trade.id)) return false;
+    seen.add(item.trade.id);
+    return true;
+  });
+}
+
+export async function loadCongress(
+  limit: number,
+  refresh: boolean,
+  opts?: { deferQuotes?: boolean; queryKey?: readonly unknown[] }
+): Promise<CongressTradeFeedItem[]> {
   if (refresh && !DARK_POOL_SEC_PRODUCTION) {
     await triggerCongressSync().catch(() => fetchUwCongressFeed(limit, true));
   }
@@ -47,26 +65,36 @@ export async function loadCongress(limit: number, refresh: boolean): Promise<Con
     rows = await listCongressTradesFromDb(limit);
   }
 
-  const enriched = await enrichWithQuotes(rows);
-  const seen = new Set<string>();
-  return enriched.filter((item) => {
-    if (seen.has(item.trade.id)) return false;
-    seen.add(item.trade.id);
-    return true;
-  });
+  const deferQuotes = opts?.deferQuotes !== false && DARK_POOL_FEED_ENRICH_QUOTES;
+  if (!deferQuotes) {
+    return dedupeFeed(await enrichWithQuotes(rows));
+  }
+
+  const bare = dedupeFeed(rows.map((trade) => buildCongressFeedItem(trade, new Map())));
+  const key = opts?.queryKey;
+  if (key && rows.length > 0) {
+    void enrichWithQuotes(rows)
+      .then((enriched) => {
+        queryClient.setQueryData(key, dedupeFeed(enriched));
+      })
+      .catch(() => undefined);
+  }
+  return bare;
 }
 
 export function useCongressFeed(limit = 40, enabled = true) {
   const forceRef = useRef(false);
+  const queryKey = appQueryKeys.congressFeed(limit);
+
   const query = useQuery<CongressTradeFeedItem[]>({
-    queryKey: appQueryKeys.congressFeed(limit),
+    queryKey,
     queryFn: () => {
       const refresh = forceRef.current;
       forceRef.current = false;
-      return loadCongress(limit, refresh);
+      return loadCongress(limit, refresh, { deferQuotes: true, queryKey });
     },
     enabled,
-    staleTime: 2 * 60 * 1000,
+    staleTime: DARK_POOL_FEED_STALE_MS,
   });
 
   const refetch = useCallback(async () => {

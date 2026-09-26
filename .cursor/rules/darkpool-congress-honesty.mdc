@@ -1,0 +1,29 @@
+---
+description: Congress Dark Pool — only real STOCK Act / Quiver fields; never reconstruct shares or portfolio value
+globs: screens/DarkPool/**/*.{ts,tsx},services/darkpool/**/*.ts,supabase/functions/**/*congress*,supabase/functions/**/*quiver*,docs/INSIDERWAVE*.md
+alwaysApply: true
+---
+
+# Dark Pool Congress — נתוני אמת בלבד
+
+Do NOT calculate portfolio values, share amounts, or expectancy from raw congress trade events.
+Congress trades only contain amount ranges.
+Always fetch current holdings from the bioguide holdings source using `bioguide_id`.
+Use `PriceChange` and `ExcessReturn` from DB/Quiver for performance metrics.
+
+## Source of truth (this repo)
+
+- Trades: `dark_pool_congress_trades` — `amount_label` (range), `filed_at`, `transaction_date`, `price_change_pct`, `excess_return_pct`, `spy_change_pct`.
+- Holdings: cache `dark_pool_uw_snapshots` / `quiver_congress_holdings` → `by_bioguide[BioGuideID]` fields `CurrentHolding`, `Allocation`, `Ticker`. Not a table named `congress_stock_holdings`.
+- Follows: `dark_pool_followed_investors` (+ local AsyncStorage). COUNT only — no "$ copied".
+- Avg Delay = mean days `filed_at − transaction_date`. Honest. Win Rate from round-trips / Expectancy = forbidden.
+
+```ts
+// ❌ BAD — invented shares from a STOCK Act range
+const qty = midpoint(amount_label) / yahooPrice;
+
+// ✅ GOOD — range as disclosed; performance from Quiver columns
+formatDisclosedAmountRange(trade.amount_label);
+trade.price_change_pct; // PriceChange
+trade.excess_return_pct; // ExcessReturn vs S&P
+```

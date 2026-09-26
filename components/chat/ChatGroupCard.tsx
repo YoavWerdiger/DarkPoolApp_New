@@ -121,7 +121,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
     flexDirection: 'row',
     paddingVertical: tokens.spacing.base ?? 16,
     paddingHorizontal: tokens.spacing.lg ?? 20,
-    backgroundColor: tokens.colors.background.primary,
+    backgroundColor: tokens.colors.glass.card.bg,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: tokens.colors.border.divider,
     alignItems: 'center',

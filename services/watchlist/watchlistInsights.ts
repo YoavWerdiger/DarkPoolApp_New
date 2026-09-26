@@ -5,6 +5,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabase';
 import { NotificationService } from '../notificationService';
+import {
+  loadNotificationPrefs,
+  shouldDeliverNotification,
+} from '../../lib/notificationPrefs';
 import type { StockWatchlistItem, WatchlistAlertKind, WatchlistRowData } from './watchlistTypes';
 import {
   legacyFirst,
@@ -313,6 +317,9 @@ export async function dispatchWatchlistAlerts(fires: AlertFire[]): Promise<void>
   const userRes = await supabase.auth.getUser();
   const userId = userRes.data?.user?.id;
   if (!userId) return;
+
+  const prefs = await loadNotificationPrefs(userId);
+  if (!shouldDeliverNotification(prefs, 'watchlist_alert')) return;
 
   for (const fire of fires) {
     const key = await alertDedupeKey(fire);

@@ -60,7 +60,6 @@ const RegistrationNameScreen = ({ navigation }: { navigation: any }) => {
     >
       <CashAppInput
         label="שם מלא"
-        leftIcon="person-outline"
         placeholder="הכנס את שמך המלא"
         value={name}
         onChangeText={setName}

@@ -10,7 +10,10 @@ import { Ionicons } from '@expo/vector-icons';
 import UICard from '../../../components/ui/UICard';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
-import { darkPoolTextRtl } from '../darkPoolLayout';
+import {
+  DARK_POOL_TYPE,
+  darkPoolPhysicalRightText,
+} from '../darkPoolLayout';
 
 interface PremiumLockCardProps {
   onPress?: () => void;
@@ -37,7 +40,7 @@ export function PremiumLockCard({ onPress, variant = 'feed' }: PremiumLockCardPr
         style={{
           borderRadius: tokens.borderRadius.xl,
           borderWidth: 0,
-          backgroundColor: tokens.colors.background.cardSolid,
+          backgroundColor: 'transparent',
         }}
       >
         <View style={styles.row}>
@@ -87,6 +90,7 @@ export function PremiumLockCard({ onPress, variant = 'feed' }: PremiumLockCardPr
 
 const styles = StyleSheet.create({
   row: {
+    direction: 'rtl',
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
@@ -100,15 +104,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
-    fontSize: 16,
+    fontSize: DARK_POOL_TYPE.sectionTitle.fontSize,
+    lineHeight: DARK_POOL_TYPE.sectionTitle.lineHeight,
     fontWeight: '800',
-    ...darkPoolTextRtl,
+    ...darkPoolPhysicalRightText,
   },
   subtitle: {
     marginTop: 4,
-    fontSize: 13,
-    lineHeight: 18,
-    ...darkPoolTextRtl,
+    fontSize: DARK_POOL_TYPE.sectionSubtitle.fontSize,
+    lineHeight: DARK_POOL_TYPE.sectionSubtitle.lineHeight,
+    ...darkPoolPhysicalRightText,
   },
   cta: {
     alignSelf: 'flex-start',
@@ -121,8 +126,8 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   ctaText: {
-    fontSize: 13,
+    fontSize: DARK_POOL_TYPE.sectionSubtitle.fontSize,
     fontWeight: '800',
-    ...darkPoolTextRtl,
+    ...darkPoolPhysicalRightText,
   },
 });

@@ -24,6 +24,7 @@ import {
   type ShareableAttachment,
 } from '../../types/shareableEntity';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { appPhysicalRightText, appSheetButtonLabelStyle } from '../ui/appType';
 import { legacyAlert } from '../../utils/appDialog';
 import { rootNavigationRef } from '../../navigation/rootNavigationRef';
 
@@ -375,10 +376,9 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     actionText: {
       flex: 1,
-      fontSize: 16,
-      fontWeight: '700',
+      ...appSheetButtonLabelStyle,
+      ...appPhysicalRightText,
       textAlign: 'right',
-      writingDirection: 'rtl',
     },
     center: {
       flex: 1,

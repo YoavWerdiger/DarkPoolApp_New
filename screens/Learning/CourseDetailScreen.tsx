@@ -1,9 +1,13 @@
 import { legacyAlert } from '../../utils/appDialog';
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { View, Text, ScrollView, StyleSheet, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useCourse, useEnrollInCourse, useCourseProgress } from '../../hooks/useLearning';
+import {
+  scheduleAfterNavigationTransition,
+  useAllowAfterNavigationTransition,
+} from '../../hooks/afterNavigationTransition';
 import { AcademySubScreenBar, ModuleSection, LessonRow } from '../../components/learning';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { LessonWithProgress } from '../../types/learning';
@@ -11,6 +15,7 @@ import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import UICard from '../../components/ui/UICard';
 import { ScreenChrome } from '../../components/ui';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
+import { isLessonLockedForUser } from '../../components/learning/academyCourses';
 import {
   ACADEMY_CARD_HP,
   academyCardFrameStyle,
@@ -27,16 +32,26 @@ export const CourseDetailScreen: React.FC = () => {
   const mainTabsHeight = useMainTabsHeight();
   
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
+  const allowHeavy = useAllowAfterNavigationTransition();
+  const skipFirstFocusRefetch = useRef(true);
   
-  const { data: course, isLoading, error, refetch } = useCourse(courseId);
-  const { data: progressData, refetch: refetchProgress } = useCourseProgress(courseId);
+  const { data: course, isLoading, error, refetch } = useCourse(courseId, { enabled: allowHeavy });
+  const { data: progressData, refetch: refetchProgress } = useCourseProgress(courseId, {
+    enabled: allowHeavy,
+  });
   
-  // טעינה מחדש של הנתונים כשהמשתמש חוזר למסך (למשל אחרי שצפה בסרטון)
+  // חזרה לשיעור: refetch אחרי ה-pop. בפתיחה הראשונה ה-query כבר רץ אחרי allowHeavy.
   useFocusEffect(
     useCallback(() => {
-      refetch();
-      refetchProgress();
-    }, [refetch, refetchProgress])
+      return scheduleAfterNavigationTransition(navigation, () => {
+        if (skipFirstFocusRefetch.current) {
+          skipFirstFocusRefetch.current = false;
+          return;
+        }
+        void refetch();
+        void refetchProgress();
+      });
+    }, [navigation, refetch, refetchProgress])
   );
   const progressPercentage = progressData?.progressPercentage || 0;
   const lastLessonId = progressData?.lastLessonId || null;
@@ -98,7 +113,7 @@ export const CourseDetailScreen: React.FC = () => {
     }
   }, [lastLessonId, navigation, courseId]);
 
-  if (isLoading) {
+  if ((isLoading || !allowHeavy) && !course) {
     return (
       <ScreenChrome>
         <StatusBar style="light" />
@@ -295,6 +310,7 @@ export const CourseDetailScreen: React.FC = () => {
                   onLessonPress={handleLessonPress}
                   enrollment={course.enrollment}
                   courseId={courseId}
+                  course={course}
                   lessonStartIndex={lessonStartIndex}
                 />
               );
@@ -312,7 +328,7 @@ export const CourseDetailScreen: React.FC = () => {
                 lesson={lesson}
                 onPress={handleLessonPress}
                 enrollment={course.enrollment}
-                isLocked={!course.enrollment && !lesson.is_preview}
+                isLocked={isLessonLockedForUser({ lesson, enrollment: course.enrollment, course })}
                 courseId={courseId}
                 index={index}
               />

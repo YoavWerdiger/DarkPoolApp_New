@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
   },
   sheetContainer: {
     width: "100%",
-    backgroundColor: '#262626',
+    backgroundColor: "rgba(38, 38, 38, 0.72)",
     paddingBottom: 30,
     paddingTop: 15,
     minHeight: SCREEN_HEIGHT * 0.3,

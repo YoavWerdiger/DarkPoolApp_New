@@ -7,7 +7,6 @@ import TestRegistrationScreen from '../screens/Auth/TestRegistrationScreen';
 import ForgotPasswordScreen from '../screens/Auth/ForgotPasswordScreen';
 import ForgotPasswordOtpScreen from '../screens/Auth/ForgotPasswordOtpScreen';
 import ForgotPasswordNewScreen from '../screens/Auth/ForgotPasswordNewScreen';
-import { useDesignTokens } from '../components/ui/DesignTokens';
 import { useAuth } from '../context/AuthContext';
 
 const Stack = createNativeStackNavigator();
@@ -62,7 +61,6 @@ function LoginWithRecoveryRedirect(props: any) {
 }
 
 export default function AuthStack() {
-  const DesignTokens = useDesignTokens();
   const { passwordRecoveryMode } = useAuth();
 
   return (
@@ -76,7 +74,7 @@ export default function AuthStack() {
         gestureEnabled: true,
         animationDuration: 250,
         contentStyle: {
-          backgroundColor: DesignTokens.colors.background.primary,
+          backgroundColor: 'transparent',
         },
       }}
     >

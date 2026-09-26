@@ -59,14 +59,13 @@ const UIButton: React.FC<UIButtonProps> = ({
       case 'secondary':
         return {
           container: {
-            backgroundColor: colors.glass?.card?.bg ?? 'rgba(255,255,255,0.05)',
-            borderWidth: 1,
-            borderColor: colors.glass?.card?.border ?? 'rgba(255,255,255,0.10)',
+            backgroundColor: colors.background.navChrome,
+            borderWidth: 0,
             borderRadius: borderRadius.md,
           },
           text: {
             color: colors.text.primary,
-            fontWeight: typography.fontWeight.semibold,
+            fontWeight: typography.button.weight,
           },
         };
       case 'danger':
@@ -107,9 +106,8 @@ const UIButton: React.FC<UIButtonProps> = ({
       case 'hairline':
         return {
           container: {
-            backgroundColor: 'transparent',
-            borderWidth: 1,
-            borderColor: colors.border.hover,
+            backgroundColor: colors.background.navChrome,
+            borderWidth: 0,
             borderRadius: borderRadius.md,
           },
           text: {
@@ -138,8 +136,8 @@ const UIButton: React.FC<UIButtonProps> = ({
         return {
           container: {
             paddingHorizontal: spacing.lg,
-            paddingVertical: spacing.sm,
             minHeight: 40,
+            paddingVertical: 0,
           },
           text: { fontSize: typography.caption.size },
           icon: 16,
@@ -148,18 +146,18 @@ const UIButton: React.FC<UIButtonProps> = ({
         return {
           container: {
             paddingHorizontal: spacing['2xl'],
-            paddingVertical: spacing.lg,
             minHeight: 56,
+            paddingVertical: 0,
           },
-          text: { fontSize: typography.body.size },
+          text: { fontSize: typography.button.size, fontWeight: typography.button.weight },
           icon: 24,
         };
       default:
         return {
           container: {
             paddingHorizontal: spacing.xl,
-            paddingVertical: spacing.md,
             minHeight: 52,
+            paddingVertical: 0,
           },
           text: { fontSize: typography.button.size },
           icon: 20,
@@ -170,18 +168,21 @@ const UIButton: React.FC<UIButtonProps> = ({
   const variantStyles = getVariantStyles();
   const sizeStyles = getSizeStyles();
 
-  const containerStyle: ViewStyle = {
+  const faceStyle: ViewStyle = {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
     ...sizeStyles.container,
     ...variantStyles.container,
-    ...(fullWidth && { width: '100%' }),
-    ...(disabled && {
-      opacity: 0.5,
-    }),
+    ...(fullWidth && { width: '100%', alignSelf: 'stretch' as const }),
+    ...(disabled && { opacity: 0.5 }),
     ...style,
   };
+
+  const pressableStyle: ViewStyle = fullWidth
+    ? { width: '100%', alignSelf: 'stretch' as const }
+    : {};
 
   const textStyleCombined: TextStyle = {
     ...sizeStyles.text,
@@ -252,16 +253,18 @@ const UIButton: React.FC<UIButtonProps> = ({
   return (
     <Pressable
       style={({ pressed }) => [
-        containerStyle,
-        pressed && {
-          opacity: 0.92,
-          transform: [{ scale: 0.985 }],
-        },
+        pressableStyle,
+        pressed &&
+          !disabled &&
+          !loading && {
+            opacity: 0.92,
+            transform: [{ scale: 0.985 }],
+          },
       ]}
       onPress={disabled || loading ? undefined : handlePress}
       disabled={disabled || loading}
     >
-      {renderContent()}
+      <View style={faceStyle}>{renderContent()}</View>
     </Pressable>
   );
 };

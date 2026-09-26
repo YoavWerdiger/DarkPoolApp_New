@@ -11,12 +11,16 @@ import { logger } from '../utils/logger';
 const isExpoGo = Constants.appOwnership === 'expo';
 const appEnvironment = isExpoGo ? 'expo-go' : 'production';
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  loadNotificationPrefs,
+  shouldDeliverNotification,
+} from '../lib/notificationPrefs';
 
 Notifications.setNotificationHandler({
   handleNotification: async (notification) => {
     const data = notification.request.content.data as {
       type?: string;
+      kind?: string;
       sender_id?: string;
     } | undefined;
 
@@ -37,13 +41,26 @@ Notifications.setNotificationHandler({
     }
 
     let shouldPlaySound = true;
+    let shouldShow = true;
     try {
-      const saved = await AsyncStorage.getItem('notificationSettings');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.sound === false) shouldPlaySound = false;
+      const prefs = await loadNotificationPrefs();
+      const source = data?.type ?? data?.kind ?? '';
+      if (source && !shouldDeliverNotification(prefs, source)) {
+        shouldShow = false;
+      } else if (!prefs.notifications) {
+        shouldShow = false;
       }
+      if (prefs.sound === false) shouldPlaySound = false;
     } catch {}
+    if (!shouldShow) {
+      return {
+        shouldShowAlert: false,
+        shouldPlaySound: false,
+        shouldSetBadge: false,
+        shouldShowBanner: false,
+        shouldShowList: false,
+      };
+    }
     return {
       shouldShowAlert: true,
       shouldPlaySound,

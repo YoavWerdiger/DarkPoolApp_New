@@ -5,13 +5,11 @@ import {
   Image,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   Alert,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -20,7 +18,18 @@ import { useDesignTokens } from '../../components/ui/DesignTokens';
 import UICard from '../../components/ui/UICard';
 import { ChatSessionBackdrop } from '../../components/chat/ChatSessionBackdrop';
 import { PortfolioScreenHeader } from './components/PortfolioScreenHeader';
-import { SectionHeader, TextField } from './components/PortfolioFormFields';
+import {
+  FormLabelLink,
+  SectionHeader,
+  TextField,
+} from './components/PortfolioFormFields';
+import { PortfolioFormFooter } from './components/PortfolioFormFooter';
+import {
+  journalCardBodyStyle,
+  journalCardSubtitleStyle,
+  JOURNAL_LAYOUT,
+  PORTFOLIO_FORM,
+} from './portfolioLayout';
 import { connectColmex, BrokerEdgeError } from '../../services/brokers';
 import type { BrokerAuthFailure, BrokerEnvironment } from '../../services/brokers';
 import type { PortfoliosStackParamList } from '../../navigation/PortfoliosStack';
@@ -88,8 +97,6 @@ function describeColmexAuthFailure(
 export default function ConnectBrokerScreen() {
   const tokens = useDesignTokens();
   const navigation = useNavigation<Nav>();
-  const insets = useSafeAreaInsets();
-
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -106,14 +113,14 @@ export default function ConnectBrokerScreen() {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        root: { flex: 1, backgroundColor: '#111111' },
+        root: { flex: 1, backgroundColor: 'transparent' },
         scroll: { flex: 1, backgroundColor: 'transparent' },
         scrollContent: {
-          paddingHorizontal: 16,
+          paddingHorizontal: PORTFOLIO_FORM.screenPadH,
           paddingTop: 4,
           paddingBottom: 28,
         },
-        section: { marginBottom: 26 },
+        section: { marginBottom: PORTFOLIO_FORM.sectionGap },
         heroRow: {
           flexDirection: 'row-reverse',
           alignItems: 'center',
@@ -130,77 +137,23 @@ export default function ConnectBrokerScreen() {
         },
         heroLogo: { width: 44, height: 44 },
         heroBody: {
-          fontSize: 13,
+          ...journalCardBodyStyle,
           color: tokens.colors.text.secondary,
-          textAlign: 'right',
-          writingDirection: 'rtl',
-          lineHeight: 20,
-        },
-        eyeBtn: { padding: 6 },
-        privacyBlock: {
-          padding: 14,
-          borderRadius: tokens.borderRadius.xl,
-          borderWidth: StyleSheet.hairlineWidth * 2,
-          borderColor: tokens.colors.glass.card.border,
-          backgroundColor: tokens.colors.background.surface,
-          overflow: 'hidden',
         },
         privacyTitleRow: {
           flexDirection: 'row-reverse',
           alignItems: 'center',
           gap: 6,
-          marginBottom: 6,
+          marginBottom: JOURNAL_LAYOUT.cardTitleToSubtitleGap,
         },
         privacyTitle: {
-          fontSize: 12,
+          ...journalCardSubtitleStyle,
           fontWeight: '700',
           color: tokens.colors.text.secondary,
-          textAlign: 'right',
-          writingDirection: 'rtl',
         },
         privacyText: {
-          fontSize: 11,
-          color: tokens.colors.text.tertiary,
-          textAlign: 'right',
-          writingDirection: 'rtl',
-          lineHeight: 16,
-        },
-        footer: {
-          paddingHorizontal: 16,
-          paddingTop: 12,
-          borderTopWidth: StyleSheet.hairlineWidth,
-          borderTopColor: tokens.colors.border.divider,
-          backgroundColor: 'rgba(10, 14, 10, 0.92)',
-        },
-        submit: {
-          flexDirection: 'row-reverse',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 8,
-          backgroundColor: tokens.colors.primary.main,
-          paddingVertical: 16,
-          borderRadius: tokens.borderRadius.full,
-          ...tokens.shadows.md,
-        },
-        submitDisabled: {
-          backgroundColor: tokens.colors.background.elevated,
-          shadowOpacity: 0,
-          elevation: 0,
-        },
-        submitText: {
-          fontSize: 16,
-          fontWeight: '700',
-          color: tokens.colors.text.inverse,
-          textAlign: 'center',
-          writingDirection: 'rtl',
-        },
-        submitTextDisabled: { color: tokens.colors.text.disabled },
-        footerNote: {
-          fontSize: 11,
-          color: tokens.colors.text.tertiary,
-          textAlign: 'center',
-          writingDirection: 'rtl',
-          marginTop: 8,
+          ...journalCardSubtitleStyle,
+          color: tokens.colors.text.muted,
         },
       }),
     [tokens]
@@ -275,17 +228,14 @@ export default function ConnectBrokerScreen() {
           >
             <View style={styles.section}>
               <UICard
-                variant="glass"
-                glassIntensity="light"
-                padding="none"
-                showGlassBorder={false}
+                variant="soft"
+                padding="md"
+                disableBlur
                 style={{
-                  borderRadius: tokens.borderRadius['2xl'],
-                  borderWidth: 1.5,
-                  borderColor: tokens.colors.border.accent,
+                  borderWidth: 1,
+                  borderColor: `${tokens.colors.primary.main}33`,
                   backgroundColor: tokens.colors.primary.subtle,
                 }}
-                contentContainerStyle={{ padding: 16 }}
               >
                 <View style={styles.heroRow}>
                   <View style={styles.heroIcon}>
@@ -341,27 +291,21 @@ export default function ConnectBrokerScreen() {
                   if (canSubmit) void handleConnect();
                 }}
                 spacing={0}
-                accessory={
-                  <TouchableOpacity
+                labelAccessory={
+                  <FormLabelLink
                     onPress={() => {
                       void HapticFeedback.selection();
                       setShowPassword((s) => !s);
                     }}
-                    style={styles.eyeBtn}
-                    activeOpacity={0.7}
                     accessibilityLabel={showPassword ? 'הסתר סיסמה' : 'הצג סיסמה'}
                   >
-                    <Ionicons
-                      name={showPassword ? 'eye-off' : 'eye'}
-                      size={20}
-                      color={tokens.colors.text.tertiary}
-                    />
-                  </TouchableOpacity>
+                    {showPassword ? 'הסתר' : 'הצג'}
+                  </FormLabelLink>
                 }
               />
             </View>
 
-            <View style={styles.privacyBlock}>
+            <UICard variant="soft" padding="md" disableBlur>
               <View style={styles.privacyTitleRow}>
                 <Ionicons
                   name="shield-checkmark"
@@ -375,38 +319,17 @@ export default function ConnectBrokerScreen() {
                 ואינם נשמרים על המכשיר. אנחנו מבקשים גישת קריאה בלבד לצורך הצגת התיק,
                 וניתן לנתק את החיבור בכל עת מהגדרות התיק.
               </Text>
-            </View>
+            </UICard>
           </ScrollView>
 
-          <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 14) }]}>
-            <TouchableOpacity
-              style={[styles.submit, dimmed && styles.submitDisabled]}
-              onPress={() => {
-                void HapticFeedback.medium();
-                void handleConnect();
-              }}
-              disabled={!canSubmit}
-              activeOpacity={0.85}
-            >
-              {submitting ? (
-                <ActivityIndicator color={tokens.colors.text.inverse} />
-              ) : (
-                <Ionicons
-                  name="link"
-                  size={20}
-                  color={dimmed ? tokens.colors.text.disabled : tokens.colors.text.inverse}
-                />
-              )}
-              <Text style={[styles.submitText, dimmed && styles.submitTextDisabled]}>
-                {submitting ? 'מתחבר…' : 'התחבר ל-Colmex Pro'}
-              </Text>
-            </TouchableOpacity>
-            {dimmed ? (
-              <Text style={styles.footerNote}>
-                {usernameError ?? passwordError}
-              </Text>
-            ) : null}
-          </View>
+          <PortfolioFormFooter
+            title={submitting ? 'מתחבר…' : 'התחבר ל-Colmex Pro'}
+            icon="link"
+            disabled={!canSubmit}
+            loading={submitting}
+            onPress={() => void handleConnect()}
+            note={dimmed ? usernameError ?? passwordError : null}
+          />
         </KeyboardAvoidingView>
       </SafeAreaView>
     </View>

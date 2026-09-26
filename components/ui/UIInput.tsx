@@ -64,19 +64,16 @@ const UIInput: React.FC<UIInputProps> = ({
     }
   };
 
-  const getBorderColor = () => {
-    if (error) return colors.danger.main;
-    if (isFocused) return colors.border.accent;
-    return colors.border.default;
-  };
-
   const sizeStyles = getSizeStyles();
 
   const fieldStyle: ViewStyle = {
     borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: getBorderColor(),
-    backgroundColor: colors.background.input,
+    borderWidth: 0,
+    backgroundColor: error
+      ? 'rgba(248, 113, 113, 0.1)'
+      : isFocused
+        ? colors.background.tertiary
+        : colors.background.input,
     ...sizeStyles.container,
     flexDirection: 'row',
     alignItems: 'center',
@@ -110,10 +107,10 @@ const UIInput: React.FC<UIInputProps> = ({
     writingDirection: 'rtl',
   };
 
-  const iconColor = error 
-    ? colors.danger.main 
-    : isFocused 
-      ? colors.primary.main 
+  const iconColor = error
+    ? colors.danger.main
+    : isFocused
+      ? colors.text.primary
       : colors.text.tertiary;
 
   return (

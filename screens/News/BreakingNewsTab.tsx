@@ -135,7 +135,7 @@ const SheetCloseButton: React.FC<{
         borderRadius: 18,
         overflow: 'hidden',
         borderWidth: 0,
-        backgroundColor: isDark ? '#262626' : 'rgba(255,255,255,0.85)',
+        backgroundColor: isDark ? 'transparent' : 'rgba(255,255,255,0.85)',
       }}
     >
       <BlurView
@@ -548,6 +548,7 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
       <UICard
         variant="blur"
         padding="none"
+        disableBlur
         style={{
           borderRadius: cardRadius,
           overflow: 'hidden',
@@ -1314,7 +1315,7 @@ export default function BreakingNewsTab({
             glassIntensity="subtle"
             padding="none"
             style={{
-              borderRadius: 18,
+              borderRadius: DesignTokens.borderRadius.search,
               overflow: 'hidden',
             }}
           >

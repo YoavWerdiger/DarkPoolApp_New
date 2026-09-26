@@ -18,17 +18,26 @@ import { BlurView } from 'expo-blur';
 import { chatPalette } from '../../components/chat/chatDesignTokens';
 import { ChatScreenShell } from '../../components/chat/ChatScreenShell';
 import UICard from '../../components/ui/UICard';
+import { CHROME_UICARD, chromeSurfaceCardStyle } from '../../components/ui/chromeControl';
+import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
 import { MAIN_SCREEN_HEADER_HP } from '../../components/ui/MainDrawerScreenHeader';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 
 import { useChat, useChatActions } from '../../context/ChatContext';
 import { useAuth } from '../../context/AuthContext';
-import { queryClient } from '../../lib/queryClient';
-import { appQueryKeys } from '../../lib/appQueryKeys';
 import { readGroupMessagesCache } from '../../lib/chatMessageCache';
 import { chatMessageListKey } from '../../lib/chatMessageIdentity';
+import {
+  buildPrimedGroup,
+  chatOpenHintFromParams,
+  filterThreadForOpenGroup,
+  hasWarmChatMessages,
+  readCachedChatGroup,
+  subscribeGroupMessagesCache,
+} from '../../lib/chatOpenPrime';
 import { CommonActions, useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useLockParentDrawerWhileFocused } from '../../hooks/useLockParentDrawerWhileFocused';
+import { scheduleAfterNavigationTransition } from '../../hooks/afterNavigationTransition';
 import ChatInput from '../../components/chat/ChatInput';
 
 import ReactionPicker from '../../components/chat/ReactionPicker';
@@ -89,8 +98,32 @@ export default function ChatGroupScreen() {
   const styles = useMemo(() => createChatGroupStyles(DesignTokens), [DesignTokens]);
   const navigation = useNavigation();
   const route = useRoute();
-  const { groupId = '', scrollToMessageId } = (route.params || {}) as { groupId: string; scrollToMessageId?: string };
-  const warmOnMount = groupId ? readGroupMessagesCache(groupId).length > 0 : false;
+  const {
+    groupId = '',
+    scrollToMessageId,
+    groupName,
+    avatarUrl,
+    unreadCount,
+    lastReadMessageId,
+  } = (route.params || {}) as {
+    groupId: string;
+    scrollToMessageId?: string;
+    groupName?: string;
+    avatarUrl?: string;
+    unreadCount?: number;
+    lastReadMessageId?: string | null;
+  };
+  const routeHint = useMemo(
+    () =>
+      chatOpenHintFromParams({
+        groupName,
+        avatarUrl,
+        unreadCount,
+        lastReadMessageId,
+      }),
+    [groupName, avatarUrl, unreadCount, lastReadMessageId],
+  );
+  const warmOnMount = hasWarmChatMessages(groupId);
   const { user } = useAuth();
   const { isAdmin: isAppAdmin } = useIsAdmin();
   const insets = useSafeAreaInsets();
@@ -147,7 +180,7 @@ export default function ChatGroupScreen() {
   const readConfirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoScrollRafRef = useRef<number | null>(null);
 
-  const { selectGroup, refreshCurrentGroupDetails, confirmChatReadAtBottom, leaveChatScreen } = useChatActions();
+  const { selectGroup, primeGroupForOpen, refreshCurrentGroupDetails, confirmChatReadAtBottom, leaveChatScreen } = useChatActions();
 
   const {
     currentGroup,
@@ -172,38 +205,30 @@ export default function ChatGroupScreen() {
 
   /**
    * זריעה סינכרונית מ-queryClient לפני ש-selectGroup מעדכן state.
-   * בלי זה: frame ראשון עם groupId חדש רואה messages של הקבוצה הקודמת / ריק
-   * → skeleton + opacity:0 (רגרסיית iOS אחרי שערי reveal).
+   * cacheEpoch מתעדכן כש-prefetch/disk כותבים באמצע ה-slide.
    */
+  const [cacheEpoch, setCacheEpoch] = useState(0);
   const cachedSeedMessages = useMemo(() => {
     if (!groupId) return [] as ChatMessageType[];
     return readGroupMessagesCache(groupId);
-    // נקרא מחדש כש-context messages משתנים (אחרי merge רשת/realtime)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- groupId + messages length/id tip
-  }, [groupId, messages.length, messages[0]?.id, messages[messages.length - 1]?.id]);
+  }, [groupId, cacheEpoch, messages.length, messages[0]?.id, messages[messages.length - 1]?.id]);
 
-  const contextMessagesForGroup = useMemo(() => {
-    if (!messages.length) return null;
-    if (currentGroup?.id === groupId) return messages;
-    if (messages.some((m) => m.group_id === groupId)) return messages;
-    return null;
-  }, [messages, currentGroup?.id, groupId]);
+  const contextMessagesForGroup = useMemo(
+    () => filterThreadForOpenGroup(messages, groupId),
+    [messages, groupId],
+  );
 
   /** יש data מקומי לקבוצה הזו — כניסה בסגנון WhatsApp בלי סקלטון.
    * לא תלוי ב-isLoadingMessages: רענון רשת ברקע לא צריך להסתיר הודעות cache. */
   const displayMessages = contextMessagesForGroup ?? cachedSeedMessages;
   const hasLocalMessagesForGroup = displayMessages.length > 0;
 
-  /** כותרת מיידית מ־cache הרשימה גם לפני ש־selectGroup מעדכן currentGroup */
+  /** כותרת מיידית משורת הרשימה / cache — לא נופלים לשם של קבוצה אחרת */
   const shellGroup = useMemo(() => {
     if (currentGroup?.id === groupId) return currentGroup;
-    if (!user?.id) return currentGroup;
-    const cachedGroups = queryClient.getQueryData<{ id: string }[]>(
-      appQueryKeys.chatGroups(user.id),
-    );
-    const hit = cachedGroups?.find((g) => g.id === groupId);
-    return (hit as typeof currentGroup) ?? currentGroup ?? ({ id: groupId, name: '' } as typeof currentGroup);
-  }, [currentGroup, groupId, user?.id]);
+    const cached = readCachedChatGroup(user?.id, groupId);
+    return buildPrimedGroup(groupId, cached, routeHint);
+  }, [currentGroup, groupId, user?.id, routeHint]);
 
   const initialUnreadInfoRef = useRef(initialUnreadInfo);
   /** Snapshot so divider can fade after initialUnreadInfo is cleared */
@@ -1173,10 +1198,10 @@ export default function ChatGroupScreen() {
     const isNewGroup = prevGroupIdRef.current !== groupId;
     prevGroupIdRef.current = groupId;
 
-    // Instant paint: seed opacity BEFORE selectGroup state lands.
-    // Cache hit TTI = this layout pass (1 frame). Unread scroll deferred.
+    // Instant paint: seed opacity + context BEFORE network/transition.
     lockAndroidChatSoftInput();
-    const warmHit = readGroupMessagesCache(groupId).length > 0;
+    primeGroupForOpen(groupId, routeHint);
+    const warmHit = hasWarmChatMessages(groupId);
     if (isNewGroup) {
       if (warmHit) {
         messagesRevealedRef.current = true;
@@ -1190,8 +1215,6 @@ export default function ChatGroupScreen() {
         listOpacity.setValue(0);
       }
     }
-
-    void selectGroup(groupId);
 
     if (!isNewGroup) return;
 
@@ -1231,8 +1254,27 @@ export default function ChatGroupScreen() {
       endReachedReadyRef.current = true;
     }, 800);
     return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- cache seed + prime; selectGroup מיד אחרי mount
+  }, [groupId, listOpacity, routeHint]);
+
+  // prefetch / disk hydrate באמצע ה-slide → מציירים בלי לחכות ל-selectGroup
+  useEffect(() => {
+    if (!groupId) return;
+    return subscribeGroupMessagesCache(groupId, (next) => {
+      setCacheEpoch((n) => n + 1);
+      if (next.length > 0) {
+        primeGroupForOpen(groupId, routeHint);
+      }
+    });
+  }, [groupId, routeHint, primeGroupForOpen]);
+
+  // קאש + כותרת כבר נצבעו. selectGroup (רשת/realtime) מתחיל מיד — לא אחרי 420ms.
+  // extras כבדים (מדיה) רצים אחרי ה-fetch, לא ב-first paint.
+  useEffect(() => {
+    if (!groupId) return;
+    void selectGroup(groupId);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- selectGroup יציב; thrash guard ב-ChatContext
-  }, [groupId, listOpacity]);
+  }, [groupId]);
 
   // Cache hit (כולל unread) → opacity 1 מיד. גלילה למפריד אחרי first paint.
   // Cold בלבד: skeleton + InteractionManager קצר.
@@ -1342,15 +1384,21 @@ export default function ChatGroupScreen() {
     useCallback(() => {
       if (!groupId || !user) return;
       const focusedGroupId = groupId;
+      let stopAfter: (() => void) | undefined;
       if (isFirstFocusRef.current) {
         isFirstFocusRef.current = false;
-        // useLayoutEffect כבר קרא ל-selectGroup בכניסה הראשונה
+        // כניסה ראשונה: selectGroup רץ מיד ב-mount, לא כאן
       } else if (messagesRef.current.length > 0) {
-        void refreshCurrentGroupDetails();
+        stopAfter = scheduleAfterNavigationTransition(navigation, () => {
+          void refreshCurrentGroupDetails();
+        });
       } else {
-        void selectGroup(groupId);
+        stopAfter = scheduleAfterNavigationTransition(navigation, () => {
+          void selectGroup(groupId);
+        });
       }
       return () => {
+        stopAfter?.();
         // חשוב: groupId מה-closure — לא currentGroupId (שכבר יכול להיות קבוצה אחרת)
         void confirmReadRef.current(focusedGroupId);
         // מפסיק chat_active_viewers — אחרת השרת מדלג על unread אחרי חזרה לרשימה
@@ -1358,7 +1406,7 @@ export default function ChatGroupScreen() {
       };
       // selectGroup/refresh יציבים מ-useChatActions — לא להכניס ל-deps
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [groupId, user?.id]),
+    }, [groupId, user?.id, navigation]),
   );
 
   useEffect(() => {
@@ -1715,19 +1763,15 @@ export default function ChatGroupScreen() {
       onPress: () => void;
       flip?: boolean;
     }) => (
-      <UICard
-        variant="glass"
-        glassIntensity="light"
-        padding="none"
+      <DayNavBlurButton
         onPress={opts.onPress}
+        size={CHAT_GROUP_HEADER_HEIGHT}
         accessibilityLabel={opts.label}
-        style={styles.headerSideGlass}
-        contentContainerStyle={styles.headerSideGlassInner}
       >
         <View style={opts.flip ? styles.headerBackIconFlip : undefined}>
           <Ionicons name={opts.icon} size={20} color={DesignTokens.colors.text.primary} />
         </View>
-      </UICard>
+      </DayNavBlurButton>
     );
 
     const typingNames = typingUsers.map(
@@ -1768,10 +1812,8 @@ export default function ChatGroupScreen() {
           })}
         </View>
       <UICard
-        variant="glass"
-        glassIntensity="light"
-        padding="none"
-        style={styles.headerGlassOuter}
+        {...CHROME_UICARD}
+        style={[styles.headerGlassOuter, chromeSurfaceCardStyle(DesignTokens)]}
           contentContainerStyle={[
             styles.headerBarInner,
             typingLabel ? styles.headerBarInnerTyping : null,
@@ -1916,7 +1958,7 @@ export default function ChatGroupScreen() {
 
   const renderFooter = () => {
     // ב-inverted, Footer משנה את offset — רק בטעינה ראשונה (לא loadMore)
-    if (isLoadingMessages && messages.length === 0) {
+    if (isLoadingMessages && displayMessages.length === 0) {
       return (
         <View style={styles.loadingFooter}>
           <ActivityIndicator color={DesignTokens.colors.primary.main} />
@@ -2179,21 +2221,17 @@ export default function ChatGroupScreen() {
           ]}
         >
           <View style={styles.scrollFabClip}>
-            <UICard
-              variant="glass"
-              glassIntensity="light"
-              padding="none"
+            <DayNavBlurButton
               onPress={() => scrollToBottom(true)}
               accessibilityLabel="גלול להודעות האחרונות"
-              style={styles.scrollFabCircle}
-              contentContainerStyle={styles.scrollFabInner}
+              size={32}
             >
               <Ionicons
                 name="chevron-down"
                 size={16}
                 color={DesignTokens.colors.text.primary}
               />
-            </UICard>
+            </DayNavBlurButton>
           </View>
           {(initialUnreadInfo?.count ?? 0) > 0 && (
             <View style={styles.scrollBadge} pointerEvents="none">
@@ -2608,7 +2646,7 @@ const createChatGroupStyles = (tokens: any) => StyleSheet.create({
   },
   screenRoot: {
     flex: 1,
-    backgroundColor: '#111111',
+    backgroundColor: 'transparent',
   },
   messagesKeyboardAvoid: {
     flex: 1,

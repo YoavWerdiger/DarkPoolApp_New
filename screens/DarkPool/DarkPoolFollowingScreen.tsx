@@ -19,22 +19,29 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { ScreenChrome } from '../../components/ui/ScreenChrome';
 import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHeader';
 import UIButton from '../../components/ui/UIButton';
+import UICard from '../../components/ui/UICard';
+import { CHROME_UICARD, chromeSurfaceCardStyle } from '../../components/ui/chromeControl';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { ListItemSkeleton, CardSkeleton } from '../../components/ui/SkeletonLoader';
 import { useDarkPoolTabBarHeight } from '../../hooks/useDarkPoolTabBarHeight';
+import { prefetchPersonPortfolio } from '../../services/darkpool/prefetchPersonPortfolio';
 import {
   dispatchOpenMainDrawer,
   type DrawerParentNavigation,
 } from '../../navigation/mainDrawerNav';
 import { HapticFeedback, triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
 import { useFollowedInvestors } from '../../hooks/useFollowedInvestors';
-import { darkPoolTextRtl } from './darkPoolLayout';
+import { darkPoolRtlContent, darkPoolPhysicalRightText, darkPoolSectionTitleStyle, darkPoolTransparentFill, DARK_POOL_TYPE } from './darkPoolLayout';
 import { unfollowInvestor, type FollowedInvestor } from '../../services/darkpool/darkPoolFollowService';
 import { useDarkPoolStackNav } from './hooks/useDarkPoolStackNav';
 import type { DarkPoolTabParamList } from '../../navigation/DarkPoolTabs';
 import { useDarkPoolFollowingFeed } from '../../hooks/useDarkPoolFollowingFeed';
 import { InvestorPortrait } from './components/InvestorPortrait';
 import { ActivityFeedCard } from './components/ActivityFeedCard';
+import {
+  followingActivityToTradeDetail,
+  hasTradeDetailPayload,
+} from './utils/tradeDetailParams';
 
 export default function DarkPoolFollowingScreen() {
   const tokens = useDesignTokens();
@@ -57,6 +64,12 @@ export default function DarkPoolFollowingScreen() {
   const openProfile = useCallback(
     (person: FollowedInvestor) => {
       void HapticFeedback.selection();
+      prefetchPersonPortfolio({
+        id: person.id,
+        kind: person.kind,
+        ticker: person.ticker,
+        nameHint: person.name,
+      });
       stackNav.navigate('DarkPoolInvestor', {
         id: person.id,
         kind: person.kind,
@@ -74,6 +87,12 @@ export default function DarkPoolFollowingScreen() {
 
   const openActivityPerson = useCallback(
     (item: { person_id: string; person_kind: 'politician' | 'insider'; person_name: string; person_image_url: string | null; ticker: string }) => {
+      prefetchPersonPortfolio({
+        id: item.person_id,
+        kind: item.person_kind,
+        nameHint: item.person_name,
+        ticker: item.person_kind === 'insider' ? item.ticker : undefined,
+      });
       stackNav.navigate('DarkPoolInvestor', {
         id: item.person_id,
         kind: item.person_kind,
@@ -85,13 +104,23 @@ export default function DarkPoolFollowingScreen() {
     [stackNav]
   );
 
+  const openActivityDetail = useCallback(
+    (item: Parameters<typeof followingActivityToTradeDetail>[0]) => {
+      const params = followingActivityToTradeDetail(item);
+      if (!hasTradeDetailPayload(params)) return;
+      void HapticFeedback.selection();
+      stackNav.navigate('DarkPoolTradeDetail', params);
+    },
+    [stackNav]
+  );
+
   const styles = useMemo(
     () =>
       StyleSheet.create({
         scroll: {
           direction: 'rtl',
           paddingBottom: bottomPad,
-          paddingHorizontal: tokens.layout.screenPadding,
+          paddingHorizontal: tokens.layout?.screenPadding ?? 20,
         },
         empty: {
           alignItems: 'center',
@@ -99,29 +128,43 @@ export default function DarkPoolFollowingScreen() {
           gap: 12,
         },
         emptyText: {
-          fontSize: 14,
+          ...darkPoolPhysicalRightText,
+          fontSize: DARK_POOL_TYPE.body.fontSize,
+          lineHeight: DARK_POOL_TYPE.body.lineHeight,
           color: tokens.colors.text.tertiary,
           textAlign: 'center',
-          lineHeight: 22,
+        },
+        followCard: {
+          marginBottom: 8,
+          borderRadius: tokens.borderRadius['2xl'],
+          overflow: 'hidden',
+          ...chromeSurfaceCardStyle(tokens),
+          ...tokens.shadows.none,
         },
         row: {
+          direction: 'rtl',
           flexDirection: 'row',
           alignItems: 'center',
           gap: 12,
-          paddingVertical: 14,
-          borderBottomWidth: 1,
-          borderBottomColor: tokens.colors.border.subtle,
+          paddingVertical: 12,
+          paddingHorizontal: 12,
         },
         avatar: {},
-        textCol: { flex: 1, alignItems: 'flex-start' },
+        textCol: { flex: 1, minWidth: 0, alignItems: 'stretch' },
         name: {
-          fontSize: 16,
+          ...darkPoolPhysicalRightText,
+          width: '100%',
+          fontSize: DARK_POOL_TYPE.body.fontSize,
+          lineHeight: 20,
           fontWeight: '800',
           color: tokens.colors.text.primary,
         },
         sub: {
+          ...darkPoolPhysicalRightText,
+          width: '100%',
           marginTop: 2,
-          fontSize: 12,
+          fontSize: DARK_POOL_TYPE.sectionSubtitle.fontSize,
+          lineHeight: DARK_POOL_TYPE.sectionSubtitle.lineHeight,
           color: tokens.colors.text.tertiary,
         },
         actions: {
@@ -129,12 +172,9 @@ export default function DarkPoolFollowingScreen() {
           marginBottom: tokens.spacing.lg,
         },
         activityTitle: {
-          fontSize: 18,
-          fontWeight: '800',
+          ...darkPoolSectionTitleStyle,
           color: tokens.colors.text.primary,
-          marginBottom: tokens.spacing.sm,
-          alignSelf: 'stretch',
-          ...darkPoolTextRtl,
+          marginBottom: 4,
         },
       }),
     [tokens, bottomPad]
@@ -144,11 +184,13 @@ export default function DarkPoolFollowingScreen() {
     return (
       <ScreenChrome rtl>
         <StatusBar style="light" />
-        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        <SafeAreaView style={[darkPoolTransparentFill, darkPoolRtlContent]} edges={['top']}>
           <MainDrawerScreenHeader inRtlTree title="מעקב" onMenuPress={openDrawer} />
           <View style={styles.scroll}>
-            {Array.from({ length: 6 }).map((_, i) => (
-              <ListItemSkeleton key={i} delay={i * 70} showAvatar />
+            {Array.from({ length: 3 }).map((_, i) => (
+              <UICard key={i} {...CHROME_UICARD} style={styles.followCard}>
+                <ListItemSkeleton showAvatar />
+              </UICard>
             ))}
           </View>
         </SafeAreaView>
@@ -159,7 +201,7 @@ export default function DarkPoolFollowingScreen() {
   return (
     <ScreenChrome rtl>
       <StatusBar style="light" />
-      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+      <SafeAreaView style={[darkPoolTransparentFill, darkPoolRtlContent]} edges={['top']}>
         <MainDrawerScreenHeader
           inRtlTree
           title="מעקב"
@@ -167,6 +209,7 @@ export default function DarkPoolFollowingScreen() {
           onMenuPress={openDrawer}
         />
         <ScrollView
+          style={darkPoolTransparentFill}
           contentContainerStyle={styles.scroll}
           refreshControl={
             <RefreshControl
@@ -201,13 +244,16 @@ export default function DarkPoolFollowingScreen() {
               ) : activityFeed.items.length === 0 ? (
                 <Text style={styles.emptyText}>אין עסקאות חדשות מהמעקב.</Text>
               ) : (
-                activityFeed.items.map((item) => (
-                  <ActivityFeedCard
-                    key={item.id}
-                    item={item}
-                    onPersonPress={() => openActivityPerson(item)}
-                  />
-                ))
+                <View>
+                  {activityFeed.items.map((item) => (
+                    <ActivityFeedCard
+                      key={item.id}
+                      item={item}
+                      onPersonPress={() => openActivityPerson(item)}
+                      onDetailPress={() => openActivityDetail(item)}
+                    />
+                  ))}
+                </View>
               )}
             </>
           ) : (
@@ -215,9 +261,9 @@ export default function DarkPoolFollowingScreen() {
               <Ionicons name="people-outline" size={40} color={tokens.colors.text.tertiary} />
               <Text style={styles.emptyText}>
                 עדיין לא עוקב אחרי אף משקיע.{'\n'}
-                גלה פוליטיקאים ובכירים בטאב גילוי ולחץ «עקוב».
+                גלה פוליטיקאים ובכירים בטאב חקור ולחץ «עקוב».
               </Text>
-              <UIButton title="לאנשים" variant="primary" onPress={goExplore} />
+              <UIButton title="לחקור" variant="primary" onPress={goExplore} />
             </View>
           )}
         </ScrollView>
@@ -234,6 +280,7 @@ function FollowedRow({
 }: {
   person: FollowedInvestor;
   styles: {
+    followCard: object;
     row: object;
     avatar: object;
     textCol: object;
@@ -243,6 +290,7 @@ function FollowedRow({
   onPress: () => void;
   onUnfollow: () => void;
 }) {
+  const tokens = useDesignTokens();
   const kindLabel =
     person.kind === 'politician'
       ? 'פוליטיקאי'
@@ -251,36 +299,38 @@ function FollowedRow({
         : 'בכיר';
 
   return (
-    <Pressable onPress={onPress} style={styles.row}>
-      <InvestorPortrait
-        name={person.name}
-        imageUrl={person.image_url}
-        ticker={person.ticker}
-        kind={person.kind}
-        personId={person.id}
-        layout="circle"
-        size={52}
-        style={styles.avatar}
-      />
-      <View style={styles.textCol}>
-        <Text style={styles.name} numberOfLines={1}>
-          {person.name}
-        </Text>
-        <Text style={styles.sub} numberOfLines={1}>
-          {kindLabel}
-          {person.ticker ? ` · ${person.ticker}` : ''}
-        </Text>
-      </View>
-      <Pressable
-        onPress={(e) => {
-          e.stopPropagation?.();
-          onUnfollow();
-        }}
-        hitSlop={10}
-      >
-        <Ionicons name="close-circle" size={22} color="rgba(255,255,255,0.35)" />
+    <UICard {...CHROME_UICARD} style={styles.followCard}>
+      <Pressable onPress={onPress} style={styles.row}>
+        <InvestorPortrait
+          name={person.name}
+          imageUrl={person.image_url}
+          ticker={person.ticker}
+          kind={person.kind}
+          personId={person.id}
+          layout="circle"
+          size={52}
+          style={styles.avatar}
+        />
+        <View style={styles.textCol}>
+          <Text style={styles.name} numberOfLines={1}>
+            {person.name}
+          </Text>
+          <Text style={styles.sub} numberOfLines={1}>
+            {kindLabel}
+            {person.ticker ? ` · ${person.ticker}` : ''}
+          </Text>
+        </View>
+        <Pressable
+          onPress={(e) => {
+            e.stopPropagation?.();
+            onUnfollow();
+          }}
+          hitSlop={10}
+        >
+          <Ionicons name="close-circle" size={22} color={tokens.colors.text.tertiary} />
+        </Pressable>
+        <Ionicons name="chevron-back" size={18} color={tokens.colors.text.tertiary} />
       </Pressable>
-      <Ionicons name="chevron-back" size={18} color="rgba(255,255,255,0.25)" />
-    </Pressable>
+    </UICard>
   );
 }

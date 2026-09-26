@@ -7,6 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLesson, useSaveProgress, useGetSignedUrl } from '../../hooks/useLearning';
+import { useAllowAfterNavigationTransition } from '../../hooks/afterNavigationTransition';
 import { LessonWithProgress, BlockType } from '../../types/learning';
 import { ChevronLeft, ChevronRight, Play, Pause, ChevronDown, Edit3, ArrowRight } from 'lucide-react-native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
@@ -54,11 +55,13 @@ export const LessonPlayerScreen: React.FC = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [resumePosition, setResumePosition] = useState<number | null>(null);
   const videoRef = useRef<Video>(null);
+  const allowHeavy = useAllowAfterNavigationTransition();
 
-  const { data: lesson, isLoading, error } = useLesson(lessonId);
+  const { data: lesson, isLoading, error } = useLesson(lessonId, { enabled: allowHeavy });
 
-  // Load existing notes + resume position on mount
+  // Load existing notes + resume position after the slide
   useEffect(() => {
+    if (!allowHeavy) return;
     if (!user?.id || !lessonId) return;
     const cid = courseId || (lesson as any)?.course_id;
     if (cid) {
@@ -74,7 +77,7 @@ export const LessonPlayerScreen: React.FC = () => {
         }
       })
       .catch(() => {});
-  }, [user?.id, lessonId, courseId, lesson]);
+  }, [allowHeavy, user?.id, lessonId, courseId, lesson]);
 
   // Seek to resume position after video loads
   useEffect(() => {
@@ -157,12 +160,13 @@ export const LessonPlayerScreen: React.FC = () => {
 
   const currentBlock = lesson?.blocks?.[currentBlockIndex];
 
-  // Load signed URL for video blocks
+  // Load signed URL for video blocks — only after the incoming slide
   useEffect(() => {
+    if (!allowHeavy) return;
     if (currentBlock?.type === 'video' && currentBlock.video_key) {
       loadSignedUrl(currentBlock.video_key);
     }
-  }, [currentBlock]);
+  }, [allowHeavy, currentBlock]);
 
   const loadSignedUrl = useCallback(async (videoKey: string) => {
     setIsLoadingVideo(true);
@@ -233,7 +237,7 @@ export const LessonPlayerScreen: React.FC = () => {
       );
     }
 
-    if (isLoadingVideo) {
+    if (!allowHeavy || isLoadingVideo) {
       return (
         <View style={styles.blockLoadingContainer}>
           <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
@@ -402,7 +406,7 @@ export const LessonPlayerScreen: React.FC = () => {
     }
   };
 
-  if (isLoading) {
+  if ((isLoading || !allowHeavy) && !lesson) {
     return (
       <LinearGradient
         colors={[...LESSON_BG_GRADIENT]}

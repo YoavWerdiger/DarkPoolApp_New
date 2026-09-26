@@ -70,7 +70,7 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
       StyleSheet.create({
         outer: {
           flex: 1,
-          backgroundColor: tokens.colors.background.primary,
+          backgroundColor: 'transparent',
           direction: 'rtl',
         },
         safe: {
@@ -86,7 +86,7 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
         },
         searchCard: {
           flex: 1,
-          borderRadius: tokens.borderRadius['2xl'],
+          borderRadius: tokens.borderRadius.search,
           overflow: 'hidden',
         },
         searchInner: {
@@ -183,7 +183,7 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
           borderRadius: 28,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: '#262626',
+          backgroundColor: tokens.colors.glass.card.bg,
           marginBottom: 4,
         },
         emptyText: {
@@ -210,7 +210,7 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
       presentationStyle="pageSheet"
     >
       <View style={styles.outer}>
-        <ChatSessionBackdrop />
+        <ChatSessionBackdrop local />
         <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
           <View style={styles.header}>
             <DayNavBlurButton

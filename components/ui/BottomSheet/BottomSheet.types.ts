@@ -4,6 +4,13 @@ export interface BottomSheetProps {
   isOpen: boolean;
   onClose: () => void;
   snapPoints?: number[]; // e.g. [0.25, 0.5, 0.9] - יחס לגובה המסך
+  /**
+   * אינדקס בפתיחה לפי סדר `snapPoints` שסופק (לא אחרי מיון).
+   * בלי זה נפתחים בסנאפ הגבוה ביותר — תאימות לשיטים הקיימים.
+   */
+  openSnapIndex?: number;
+  /** סנאפ נשלט אחרי פתיחה (למשל הרחבת גלריה בלי לסגור את השיט). */
+  snapIndex?: number;
   children?: ReactNode;
   showHandle?: boolean;
   /** צבע מילוי ל-handle (אופציונלי). ברירת מחדל: זכוכית שקופה מהסגנון הגלובלי. */

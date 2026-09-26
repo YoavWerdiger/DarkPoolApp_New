@@ -4,9 +4,10 @@ import { knownPortraitForInvestor } from './knownInvestorPortraits';
 /** תמונת ברירת מחדל — שור/דוב (transback) מה-storage של האפליקציה. */
 export const INVESTOR_PORTRAIT_PLACEHOLDER_URI = `${SUPABASE_URL}/storage/v1/object/public/backgrounds/transback.png`;
 
-const CONGRESS_PHOTO_BASE = 'https://unitedstates.github.io/images/congress/225x275';
+const CONGRESS_PHOTO_HOST = 'https://unitedstates.github.io/images/congress';
 const BIOGUIDE_RE = /^[A-Z]\d{6}$/;
-const CONGRESS_URL_RE = /\/225x275\/([A-Z]\d{6})\.jpg/i;
+const CONGRESS_URL_RE = /\/(?:225x275|450x550)\/([A-Z]\d{6})\.jpg/i;
+export type CongressPhotoSize = '225x275' | '450x550';
 /** Wikimedia commons ישיר: /wikipedia/commons/{a}/{ab}/File.jpg */
 const WIKI_COMMONS_PATH_RE =
   /^(https?:\/\/upload\.wikimedia\.org\/wikipedia\/commons)\/([0-9a-f])\/([0-9a-f]{2})\/([^/?#]+)$/i;
@@ -53,26 +54,65 @@ export function portraitDisplayUrl(
   return `${base}/thumb/${a}/${ab}/${file}/${edge}px-${file}`;
 }
 
-/** SEC Form 4 ALL CAPS: "MUSK ELON" → "Elon Musk". לא הופך שמות שכבר בפורמט First Last. */
-export function formatInsiderDisplayName(raw: string): string {
-  const trimmed = raw.trim();
-  const parts = trimmed.split(/\s+/).filter(Boolean);
-  if (parts.length <= 1) return trimmed;
-  const secLike = parts.every((p) => p === p.toUpperCase() && /[A-Z]/.test(p));
-  if (!secLike) return trimmed;
-  const last = parts[0];
-  const given = parts.slice(1);
-  const titleCase = (s: string) =>
-    s.length <= 1
-      ? s.toUpperCase()
-      : `${s.charAt(0).toUpperCase()}${s.slice(1).toLowerCase()}`;
-  return `${given.map(titleCase).join(' ')} ${titleCase(last)}`.trim();
+const ENTITY_NAME_RE =
+  /\b(INC|LLC|LP|L\.P\.|LTD|CORP|CO\.|TRUST|FUND|MANAGEMENT|PARTNERS|CAPITAL|VENTURES|HOLDINGS)\b/i;
+
+function titleCaseNameToken(s: string): string {
+  const core = s.replace(/\.$/, '');
+  if (core.length <= 1) return core.toUpperCase();
+  return `${core.charAt(0).toUpperCase()}${core.slice(1).toLowerCase()}`;
 }
 
-export function congressPhotoUrl(bioguideId: string | null | undefined): string | null {
+function isNameInitial(s: string): boolean {
+  return /^[A-Za-z]\.?$/.test(s);
+}
+
+function formatInitial(s: string): string {
+  return `${s.replace(/\.$/, '').toUpperCase()}.`;
+}
+
+/**
+ * SEC / UW: "MUSK ELON", "Bucella Michael C." → "Elon Musk", "Michael C. Bucella".
+ * לא הופך First Last שכבר נכון, ולא שמות חברה.
+ */
+export function formatInsiderDisplayName(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed || ENTITY_NAME_RE.test(trimmed)) return trimmed;
+  const parts = trimmed.split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) return trimmed;
+
+  const allCaps = parts.every(
+    (p) => p.replace(/\./g, '') === p.replace(/\./g, '').toUpperCase() && /[A-Za-z]/.test(p)
+  );
+  const caseToken = (s: string) => (allCaps ? titleCaseNameToken(s) : s.replace(/\.$/, ''));
+
+  // First M. Last — כבר בסדר הקריאה הנכון
+  if (parts.length >= 3 && isNameInitial(parts[1])) {
+    const given = caseToken(parts[0]);
+    const last = parts.slice(2).map(caseToken).join(' ');
+    return `${given} ${formatInitial(parts[1])} ${last}`.trim();
+  }
+
+  // Last First M. — פורמט Form 4
+  if (parts.length >= 3 && isNameInitial(parts[parts.length - 1])) {
+    const last = caseToken(parts[0]);
+    const given = parts.slice(1, -1).map(caseToken).join(' ');
+    return `${given} ${formatInitial(parts[parts.length - 1])} ${last}`.trim();
+  }
+
+  if (!allCaps) return trimmed;
+  const last = parts[0];
+  const given = parts.slice(1);
+  return `${given.map(titleCaseNameToken).join(' ')} ${titleCaseNameToken(last)}`.trim();
+}
+
+export function congressPhotoUrl(
+  bioguideId: string | null | undefined,
+  size: CongressPhotoSize = '225x275'
+): string | null {
   const id = bioguideId?.trim().toUpperCase();
   if (!id || !BIOGUIDE_RE.test(id)) return null;
-  return `${CONGRESS_PHOTO_BASE}/${id}.jpg`;
+  return `${CONGRESS_PHOTO_HOST}/${size}/${id}.jpg`;
 }
 
 export function extractBioguideFromCongressUrl(url: string | null | undefined): string | null {
@@ -106,6 +146,8 @@ export function portraitPhotoCandidates(opts: {
   personId?: string;
   bioguideId?: string | null;
   name?: string | null;
+  /** דיוקן full-bleed — 450x550 לפני 225x275 */
+  photoSize?: CongressPhotoSize;
 }): string[] {
   const out: string[] = [];
   const add = (url?: string | null) => {
@@ -117,13 +159,23 @@ export function portraitPhotoCandidates(opts: {
     if (t && looksLikePersonPhoto(t)) add(t);
   };
 
+  if (opts.kind === 'politician' && opts.photoSize === '450x550') {
+    add(congressPhotoUrl(opts.bioguideId, '450x550'));
+    add(congressPhotoUrl(opts.personId, '450x550'));
+  }
+
   add(knownPortraitForInvestor({ personId: opts.personId, name: opts.name }));
 
   if (opts.kind === 'politician') {
-    add(congressPhotoUrl(opts.bioguideId));
-    add(congressPhotoUrl(opts.personId));
-    add(congressPhotoUrl(extractBioguideFromCongressUrl(opts.imageUrl)));
-    add(congressPhotoUrl(extractBioguideFromCongressUrl(opts.imageHint)));
+    const size = opts.photoSize ?? '225x275';
+    add(congressPhotoUrl(opts.bioguideId, size));
+    add(congressPhotoUrl(opts.personId, size));
+    add(congressPhotoUrl(extractBioguideFromCongressUrl(opts.imageUrl), size));
+    add(congressPhotoUrl(extractBioguideFromCongressUrl(opts.imageHint), size));
+    if (size !== '225x275') {
+      add(congressPhotoUrl(opts.bioguideId));
+      add(congressPhotoUrl(opts.personId));
+    }
   }
 
   addPersonPhoto(opts.imageUrl);

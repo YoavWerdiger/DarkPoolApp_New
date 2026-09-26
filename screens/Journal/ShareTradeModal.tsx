@@ -10,6 +10,14 @@ import { getChatGroups } from '../../services/chat/chatGroupService';
 import { sendChatMessage } from '../../services/chat/chatMessageService';
 import { ChatMessageType } from '../../types/chat.types';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import {
+  JOURNAL_TYPE,
+  journalBodyTextStyle,
+  journalPhysicalRightText,
+  journalRow,
+  journalRtlContent,
+  journalSectionTitleStyle,
+} from './journalLayout';
 
 interface ShareTradeModalProps {
   trade: Trade | null;
@@ -221,6 +229,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     container: {
       flex: 1,
       backgroundColor: 'transparent',
+      ...journalRtlContent,
     },
     header: {
       flexDirection: 'row',
@@ -231,11 +240,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       borderBottomColor: tokens.colors.border.primary,
     },
     title: {
-      fontSize: tokens.typography.fontSize.xl,
-      fontWeight: tokens.typography.fontWeight.bold,
+      ...journalSectionTitleStyle,
       color: tokens.colors.text.primary,
-      textAlign: 'right',
-      writingDirection: 'rtl',
     },
     closeButton: {
       padding: tokens.spacing.xs,
@@ -255,10 +261,11 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       marginBottom: tokens.spacing.sm,
     },
     tradeSymbol: {
-      fontSize: tokens.typography.fontSize.xl,
-      fontWeight: tokens.typography.fontWeight.bold,
+      fontSize: JOURNAL_TYPE.sectionTitle.fontSize,
+      fontWeight: '700',
+      lineHeight: JOURNAL_TYPE.sectionTitle.lineHeight,
       color: tokens.colors.text.primary,
-      textAlign: 'right',
+      ...journalPhysicalRightText,
     },
     directionBadge: {
       paddingHorizontal: tokens.spacing.sm,
@@ -266,8 +273,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       borderRadius: tokens.borderRadius.sm,
     },
     directionText: {
-      fontSize: tokens.typography.fontSize.xs,
+      fontSize: JOURNAL_TYPE.caption2.fontSize,
       fontWeight: tokens.typography.fontWeight.bold,
+      lineHeight: JOURNAL_TYPE.caption2.lineHeight,
     },
     tradePnl: {
       fontSize: tokens.typography.fontSize.base,
@@ -282,8 +290,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       gap: tokens.spacing.md,
     },
     loadingText: {
-      fontSize: tokens.typography.fontSize.base,
+      ...journalBodyTextStyle,
       color: tokens.colors.text.secondary,
+      textAlign: 'center',
     },
     emptyContainer: {
       flex: 1,
@@ -293,13 +302,12 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       gap: tokens.spacing.md,
     },
     emptyText: {
-      fontSize: tokens.typography.fontSize.lg,
-      fontWeight: tokens.typography.fontWeight.bold,
+      ...journalSectionTitleStyle,
       color: tokens.colors.text.primary,
       textAlign: 'center',
     },
     emptySubtext: {
-      fontSize: tokens.typography.fontSize.base,
+      ...journalBodyTextStyle,
       color: tokens.colors.text.secondary,
       textAlign: 'center',
     },
@@ -308,7 +316,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       paddingBottom: tokens.spacing['3xl'],
     },
     groupItem: {
-      flexDirection: 'row-reverse',
+      ...journalRow,
       alignItems: 'center',
       padding: tokens.spacing.md,
       backgroundColor: tokens.colors.background.input,
@@ -333,10 +341,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     groupName: {
       flex: 1,
-      fontSize: tokens.typography.fontSize.base,
+      ...journalBodyTextStyle,
       fontWeight: tokens.typography.fontWeight.medium,
       color: tokens.colors.text.primary,
-      textAlign: 'right',
-      writingDirection: 'rtl',
     },
   });

@@ -2,13 +2,17 @@ import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import type { ExplorePerson } from '../../../services/darkpool/uwExploreService';
+import {
+  darkPoolSectionSubtitleStyle,
+  darkPoolSectionTitleStyle,
+} from '../darkPoolLayout';
+import { EXPLORE_RAIL_GAP } from '../utils/exploreGrid';
 import { ExplorePortraitCard } from './ExplorePortraitCard';
 
 interface Props {
   title: string;
   subtitle?: string;
   people: ExplorePerson[];
-  variant?: 'large' | 'compact';
   onPersonPress?: (person: ExplorePerson) => void;
 }
 
@@ -16,7 +20,6 @@ export function ExploreSection({
   title,
   subtitle,
   people,
-  variant = 'compact',
   onPersonPress,
 }: Props) {
   const tokens = useDesignTokens();
@@ -39,7 +42,6 @@ export function ExploreSection({
           <ExplorePortraitCard
             key={p.id}
             person={p}
-            variant={variant}
             onPress={onPersonPress ? () => onPersonPress(p) : undefined}
           />
         ))}
@@ -51,32 +53,30 @@ export function ExploreSection({
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     wrap: {
-      marginBottom: tokens.spacing.lg,
+      marginBottom: tokens.layout.sectionGap,
       direction: 'rtl',
     },
     header: {
+      direction: 'rtl',
       paddingHorizontal: tokens.layout.screenPadding,
-      marginBottom: tokens.spacing.sm,
-      alignItems: 'flex-start',
+      marginBottom: tokens.layout.sectionHeaderToContent,
+      alignSelf: 'stretch',
+      alignItems: 'stretch',
     },
     title: {
-      fontSize: 20,
-      fontWeight: '800',
+      ...darkPoolSectionTitleStyle,
       color: tokens.colors.text.primary,
-      textAlign: 'left',
-      writingDirection: 'rtl',
     },
     subtitle: {
-      marginTop: 4,
-      fontSize: 13,
-      color: tokens.colors.text.tertiary,
-      textAlign: 'left',
-      writingDirection: 'rtl',
+      ...darkPoolSectionSubtitleStyle,
+      color: tokens.colors.text.secondary,
     },
     row: {
+      direction: 'rtl',
       flexDirection: 'row',
+      justifyContent: 'flex-start',
       paddingHorizontal: tokens.layout.screenPadding,
-      gap: 12,
+      gap: EXPLORE_RAIL_GAP,
       paddingBottom: 4,
     },
   });

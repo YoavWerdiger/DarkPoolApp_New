@@ -3,6 +3,10 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { sanitizeExploreWarnings } from '../utils/exploreWarnings';
+import {
+  DARK_POOL_TYPE,
+  darkPoolPhysicalRightText,
+} from '../darkPoolLayout';
 
 interface Props {
   warnings?: string[];
@@ -33,6 +37,7 @@ export function UwRateLimitBanner({ warnings }: Props) {
 
 const styles = StyleSheet.create({
   wrap: {
+    direction: 'rtl',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -43,10 +48,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   text: {
+    ...darkPoolPhysicalRightText,
     flex: 1,
-    fontSize: 12,
+    fontSize: DARK_POOL_TYPE.caption.fontSize,
     lineHeight: 18,
-    textAlign: 'left',
-    writingDirection: 'rtl',
   },
 });

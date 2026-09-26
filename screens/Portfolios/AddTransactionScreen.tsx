@@ -19,6 +19,17 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import {
+  formFieldInputStyle,
+  formFieldLabelStyle,
+  formFieldShellStyle,
+} from '../../components/ui/formControl';
+import {
+  JOURNAL_LAYOUT,
+  journalCardSubtitleStyle,
+  journalSectionTitleStyle,
+  PORTFOLIO_FORM,
+} from './portfolioLayout';
 import type { PortfoliosStackParamList } from '../../navigation/PortfoliosStack';
 import { ChatSessionBackdrop } from '../../components/chat/ChatSessionBackdrop';
 import { PortfolioScreenHeader } from './components/PortfolioScreenHeader';
@@ -369,56 +380,48 @@ export default function AddTransactionScreen() {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        root: { flex: 1, backgroundColor: '#111111', direction: 'rtl' },
+        root: { flex: 1, backgroundColor: 'transparent', direction: 'rtl' },
         scroll: { flex: 1, backgroundColor: 'transparent' },
-        scrollContent: { padding: 16, paddingBottom: 40 },
+        scrollContent: {
+          paddingHorizontal: PORTFOLIO_FORM.screenPadH,
+          paddingTop: 4,
+          paddingBottom: 40,
+        },
         modeRow: {
           flexDirection: 'row',
-          gap: 8,
-          marginBottom: 18,
+          gap: JOURNAL_LAYOUT.stackGapSmall,
+          marginBottom: PORTFOLIO_FORM.sectionGap,
         },
         modeChip: {
           flex: 1,
           paddingVertical: 12,
-          borderRadius: 14,
+          borderRadius: tokens.borderRadius.full,
           alignItems: 'center',
-          borderWidth: 1.5,
-          borderColor: tokens.colors.border.subtle,
+          borderWidth: 0,
+          backgroundColor: tokens.colors.background.input,
         },
         modeChipActive: {
-          borderColor: tokens.colors.primary.main,
-          backgroundColor: 'rgba(0, 200, 5, 0.10)',
+          backgroundColor: tokens.colors.primary.subtle,
+          borderWidth: 1,
+          borderColor: `${tokens.colors.primary.main}44`,
         },
         modeChipText: {
-          fontSize: 13,
+          ...journalCardSubtitleStyle,
           fontWeight: '700',
-          color: tokens.colors.text.secondary,
-          writingDirection: 'rtl',
           textAlign: 'center',
         },
         modeChipTextActive: {
           color: tokens.colors.primary.main,
         },
-        section: { marginBottom: 18 },
-        label: {
-          fontSize: 13,
-          fontWeight: '600',
-          color: tokens.colors.text.secondary,
-          marginBottom: 8,
-          textAlign: 'right',
-          writingDirection: 'rtl',
-        },
+        section: { marginBottom: PORTFOLIO_FORM.sectionGap },
+        label: formFieldLabelStyle({ tokens, focused: false, error: false }),
         input: {
-          backgroundColor: 'rgba(255,255,255,0.05)',
-          borderRadius: 14,
+          ...formFieldShellStyle({ tokens, focused: false, multiline: false }),
+          ...formFieldInputStyle(),
+          borderRadius: tokens.borderRadius.full,
           paddingHorizontal: 16,
           paddingVertical: 14,
-          fontSize: 15,
-          color: tokens.colors.text.primary,
-          borderWidth: 1,
-          borderColor: tokens.colors.border.subtle,
-          textAlign: 'right',
-          writingDirection: 'rtl',
+          minHeight: 52,
         },
         inputMultiline: {
           borderRadius: 14,
@@ -429,12 +432,11 @@ export default function AddTransactionScreen() {
           flexDirection: 'row',
           alignItems: 'center',
           gap: 10,
-          backgroundColor: 'rgba(255,255,255,0.05)',
-          borderRadius: 14,
+          ...formFieldShellStyle({ tokens, focused: false, multiline: false }),
+          borderRadius: tokens.borderRadius.full,
           paddingHorizontal: 16,
           paddingVertical: 14,
-          borderWidth: 1,
-          borderColor: tokens.colors.border.subtle,
+          minHeight: 52,
         },
         symbolText: {
           flex: 1,
@@ -460,12 +462,11 @@ export default function AddTransactionScreen() {
           flexDirection: 'row',
           gap: 6,
           paddingVertical: 14,
-          borderRadius: 14,
+          borderRadius: tokens.borderRadius.full,
           alignItems: 'center',
           justifyContent: 'center',
-          borderWidth: 1.5,
-          borderColor: tokens.colors.border.subtle,
-          backgroundColor: 'transparent',
+          borderWidth: 0,
+          backgroundColor: tokens.colors.background.input,
         },
         sideBtnText: {
           fontSize: 15,
@@ -480,11 +481,11 @@ export default function AddTransactionScreen() {
         assetTypeChip: {
           paddingHorizontal: 14,
           paddingVertical: 10,
-          borderRadius: 12,
+          borderRadius: tokens.borderRadius.full,
           alignItems: 'center',
           justifyContent: 'center',
-          borderWidth: 1.5,
-          borderColor: tokens.colors.border.subtle,
+          borderWidth: 0,
+          backgroundColor: tokens.colors.background.input,
         },
         twoCol: {
           flexDirection: 'row',
@@ -498,13 +499,12 @@ export default function AddTransactionScreen() {
           gap: 0,
         },
         advancedTitle: {
-          fontSize: 12,
+          ...journalSectionTitleStyle,
+          fontSize: journalCardSubtitleStyle.fontSize,
+          lineHeight: journalCardSubtitleStyle.lineHeight,
           fontWeight: '700',
           color: tokens.colors.text.tertiary,
-          textAlign: 'right',
-          writingDirection: 'rtl',
-          marginBottom: 12,
-          letterSpacing: 0.2,
+          marginBottom: JOURNAL_LAYOUT.stackGapSmall,
         },
         validationCard: {
           borderRadius: 14,
@@ -557,12 +557,10 @@ export default function AddTransactionScreen() {
           alignItems: 'center',
           justifyContent: 'flex-start',
           gap: 8,
-          backgroundColor: 'rgba(255,255,255,0.05)',
-          borderRadius: 14,
+          ...formFieldShellStyle({ tokens, focused: false, multiline: false }),
+          borderRadius: tokens.borderRadius.full,
           paddingHorizontal: 14,
           paddingVertical: 14,
-          borderWidth: 1,
-          borderColor: tokens.colors.border.subtle,
         },
         datePillText: {
           fontSize: 14,

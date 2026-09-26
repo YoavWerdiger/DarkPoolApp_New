@@ -1,16 +1,22 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
-import { LessonWithProgress, Enrollment, BlockType } from '../../types/learning';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import { LessonWithProgress, Enrollment } from '../../types/learning';
 import { useDesignTokens } from '../ui/DesignTokens';
 import UICard from '../ui/UICard';
-import { CheckCircle2 } from 'lucide-react-native';
 import { mediaService } from '../../services/mediaService';
-import { useTheme } from '../../context/ThemeContext';
 import { HapticFeedback } from '../../utils/hapticFeedback';
-import { academyCardFrameStyle } from './academyCardLayout';
+import { ACADEMY_CARD_RADIUS } from './academyCardLayout';
+import { APP_LAYOUT } from '../ui/appLayout';
+import {
+  appCardBodyStyle,
+  appCardTitleStyle,
+} from '../ui/appType';
 
 interface LessonRowProps {
-  lesson: LessonWithProgress;
+  lesson: LessonWithProgress & { completed?: boolean; thumbnail?: string | null };
   onPress: (lesson: LessonWithProgress) => void;
   enrollment?: Enrollment;
   isLocked?: boolean;
@@ -24,240 +30,283 @@ export const LessonRow: React.FC<LessonRowProps> = ({
   enrollment,
   isLocked = false,
   courseId,
-  index = 0
+  index = 0,
 }) => {
-  const DesignTokens = useDesignTokens();
-  const { isDarkMode } = useTheme();
-  const isEnrolled = !!enrollment;
-  const hasAccess = isEnrolled || lesson.is_preview;
-  const isLockedForUser = isLocked || (!hasAccess);
-  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const T = useDesignTokens();
+  const styles = useMemo(() => createStyles(T), [T]);
+
+  /** נעילה רק כשההורה מבקש (CourseDetail) — לא לפי enrollment פנימי. */
+  const isLockedForUser = isLocked;
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(lesson.thumbnail ?? null);
   const [mediaDuration, setMediaDuration] = useState<string | null>(null);
 
   useEffect(() => {
+    if (lesson.thumbnail) {
+      setThumbnailUrl(lesson.thumbnail);
+      return;
+    }
     const loadMedia = async () => {
       if (!courseId) return;
       try {
         const media = await mediaService.getLessonMedia(courseId, lesson.id);
-        if (media) {
-          // Thumbnail
-          if (media.thumbnail_url) {
-            setThumbnailUrl(media.thumbnail_url);
-          } else if (media.youtube_id) {
-            setThumbnailUrl(`https://img.youtube.com/vi/${media.youtube_id}/maxresdefault.jpg`);
-          } else if (media.vimeo_id) {
-            setThumbnailUrl(`https://vumbnail.com/${media.vimeo_id}.jpg`);
-          }
-          // Duration fallback from media record
-          if (media.duration_minutes && media.duration_minutes > 0) {
-            const m = media.duration_minutes;
-            const h = Math.floor(m / 60);
-            const mins = m % 60;
-            setMediaDuration(h > 0 ? `${h}:${mins.toString().padStart(2,'0')}:00` : `${mins}:00`);
-          }
+        if (!media) return;
+        if (media.thumbnail_url) {
+          setThumbnailUrl(media.thumbnail_url);
+        } else if (media.youtube_id) {
+          setThumbnailUrl(`https://img.youtube.com/vi/${media.youtube_id}/mqdefault.jpg`);
+        } else if (media.vimeo_id) {
+          setThumbnailUrl(`https://vumbnail.com/${media.vimeo_id}.jpg`);
+        }
+        if (media.duration_minutes && media.duration_minutes > 0) {
+          const m = media.duration_minutes;
+          const h = Math.floor(m / 60);
+          const mins = m % 60;
+          setMediaDuration(h > 0 ? `${h}:${mins.toString().padStart(2, '0')}:00` : `${mins}:00`);
         }
       } catch {
+        /* noop */
       }
     };
-    loadMedia();
-  }, [courseId, lesson.id]);
+    void loadMedia();
+  }, [courseId, lesson.id, lesson.thumbnail]);
 
-  // lesson.duration comes from learningService (duration_minutes → MM:SS).
-  // If it's '00:00' or missing, use media duration fetched directly.
-  const lessonDur = (lesson as any).duration;
-  const displayDuration = (lessonDur && lessonDur !== '00:00') ? lessonDur : (mediaDuration || '00:00');
-  
-  const isCompleted = lesson.progress?.status === 'completed';
+  const lessonDur = (lesson as { duration?: string }).duration;
+  const displayDuration =
+    lessonDur && lessonDur !== '00:00' ? lessonDur : mediaDuration || null;
 
-  const styles = React.useMemo(() => StyleSheet.create({
-    container: {
-      marginBottom: DesignTokens.spacing.lg,
-      overflow: 'hidden',
-    },
-    lockedContainer: {
-      opacity: 0.6,
-    },
-    lessonThumbnail: {
-      position: 'relative',
-      height: 132,
-      backgroundColor: '#111111',
-      overflow: 'hidden',
-    },
-    thumbnailImage: {
-      width: '100%',
-      height: '100%',
-      backgroundColor: '#111111',
-    },
-    thumbnailPlaceholder: {
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    thumbnailPlaceholderText: {
-      color: DesignTokens.colors.text.primary,
-      fontSize: 24,
-    },
-    lessonNumberOnThumb: {
-      position: 'absolute',
-      top: DesignTokens.spacing.md,
-      left: DesignTokens.spacing.md,
-      zIndex: 2,
-      minWidth: 30,
-      height: 28,
-      paddingHorizontal: DesignTokens.spacing.sm,
-      borderRadius: 14,
-      backgroundColor: DesignTokens.colors.primary.main,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.35)',
-      ...DesignTokens.shadows.xs,
-    },
-    lessonNumberOnThumbText: {
-      color: DesignTokens.colors.text.inverse,
-      fontWeight: '800',
-      fontSize: 14,
-      lineHeight: 17,
-    },
-    durationBadge: {
-      position: 'absolute',
-      bottom: DesignTokens.spacing.md,
-      right: DesignTokens.spacing.md,
-      paddingHorizontal: DesignTokens.spacing.sm,
-      paddingVertical: DesignTokens.spacing.xs,
-      borderRadius: DesignTokens.borderRadius.sm,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.2,
-      shadowRadius: 2,
-      elevation: 2,
-    },
-    durationText: {
-      fontSize: 12,
-      fontWeight: '600',
-    },
-    completedBadge: {
-      position: 'absolute',
-      top: DesignTokens.spacing.md,
-      right: DesignTokens.spacing.md,
-      borderRadius: DesignTokens.borderRadius.md,
-      padding: DesignTokens.spacing.xs,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.2,
-      shadowRadius: 2,
-      elevation: 2,
-    },
-    lessonContent: {
-      paddingHorizontal: DesignTokens.spacing.lg,
-      paddingTop: DesignTokens.spacing.lg,
-      paddingBottom: DesignTokens.spacing.lg,
-      width: '100%',
-    },
-    lessonCardTextCol: {
-      width: '100%',
-      alignItems: 'stretch',
-    },
-    lessonCardTitle: {
-      fontSize: DesignTokens.typography.titleXs.size,
-      fontWeight: '600',
-      color: DesignTokens.colors.text.primary,
-      textAlign: 'right',
-      letterSpacing: 0.15,
-      lineHeight: Math.round(DesignTokens.typography.titleXs.size * 1.35),
-      writingDirection: 'rtl',
-    },
-    lockedText: {
-      color: DesignTokens.colors.text.tertiary,
-    },
-    lessonDescription: {
-      marginTop: DesignTokens.spacing.xs,
-      fontSize: DesignTokens.typography.bodySmall.size,
-      color: DesignTokens.colors.text.secondary,
-      lineHeight: Math.round(DesignTokens.typography.bodySmall.size * 1.45),
-      textAlign: 'right',
-      writingDirection: 'rtl',
-    },
-  }), [DesignTokens]);
+  const isCompleted =
+    lesson.completed === true || lesson.progress?.status === 'completed';
+
+  const description = lesson.description?.trim() || null;
 
   return (
-    <TouchableOpacity
-      style={isLockedForUser ? styles.lockedContainer : undefined}
-      onPress={() => {
-        if (isLockedForUser) return;
-        void HapticFeedback.impactLight();
-        onPress(lesson);
-      }}
-      activeOpacity={isLockedForUser ? 1 : 0.8}
-      disabled={isLockedForUser}
-    >
-      <UICard
-        variant="blur"
-        padding="none"
-        showGlassBorder={false}
-        style={[styles.container, academyCardFrameStyle('neutral')]}
+    <UICard variant="soft" disableBlur padding="none" style={styles.card}>
+      <TouchableOpacity
+        style={styles.touchable}
+        activeOpacity={isLockedForUser ? 1 : 0.88}
+        disabled={isLockedForUser}
+        onPress={() => {
+          void HapticFeedback.impactLight();
+          onPress(lesson);
+        }}
+        accessibilityRole="button"
+        accessibilityLabel={`שיעור ${index + 1}: ${lesson.title}`}
       >
-      {/* Thumbnail */}
-      <View style={styles.lessonThumbnail}>
-        {thumbnailUrl ? (
-          <Image 
-            source={{ uri: thumbnailUrl }} 
-            style={styles.thumbnailImage}
-            resizeMode="cover"
-            onError={() => {
-              setThumbnailUrl(null);
-            }}
+        <View style={styles.thumbWrap}>
+          {thumbnailUrl ? (
+            <Image
+              source={{ uri: thumbnailUrl }}
+              style={styles.thumbImg}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              recyclingKey={lesson.id}
+              transition={120}
+            />
+          ) : (
+            <View style={styles.thumbPlaceholder}>
+              <Ionicons name="play-circle-outline" size={40} color={T.colors.text.tertiary} />
+            </View>
+          )}
+
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.65)']}
+            locations={[0.35, 1]}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
           />
-        ) : (
-          <View style={[styles.thumbnailImage, styles.thumbnailPlaceholder]}>
-            <Text style={styles.thumbnailPlaceholderText}>🎥</Text>
+
+          <View style={styles.indexPill}>
+            <Text style={styles.indexPillText}>{index + 1}</Text>
           </View>
-        )}
-        <View style={styles.lessonNumberOnThumb} accessibilityLabel={`שיעור ${index + 1}`}>
-          <Text style={styles.lessonNumberOnThumbText}>{index + 1}</Text>
-        </View>
-        <View style={[
-          styles.durationBadge,
-          {
-            backgroundColor: isDarkMode ? 'rgba(0, 0, 0, 0.7)' : '#FFFFFF',
-          }
-        ]}>
-          <Text style={[
-            styles.durationText,
-            {
-              color: isDarkMode ? '#FFFFFF' : '#000000',
-            }
-          ]}>{displayDuration}</Text>
-        </View>
-        {isCompleted && (
-          <View style={[
-            styles.completedBadge,
-            {
-              backgroundColor: isDarkMode ? 'rgba(0, 0, 0, 0.7)' : '#FFFFFF',
-            }
-          ]}>
-            <CheckCircle2 size={24} color="#00C805" strokeWidth={2} />
-          </View>
-        )}
-      </View>
-      
-      {/* Content */}
-      <View style={styles.lessonContent}>
-        <View style={styles.lessonCardTextCol}>
-          <Text
-            style={[styles.lessonCardTitle, isLockedForUser && styles.lockedText]}
-            numberOfLines={2}
-          >
-            {lesson.title}
-          </Text>
-          {lesson.description ? (
-            <Text style={styles.lessonDescription} numberOfLines={2}>
-              {lesson.description}
-            </Text>
+
+          {displayDuration ? (
+            <View style={styles.durationPill}>
+              <Ionicons name="time-outline" size={12} color="#fff" />
+              <Text style={styles.durationText}>{displayDuration}</Text>
+            </View>
           ) : null}
+
+          {isCompleted ? (
+            <View style={styles.donePill}>
+              <Ionicons name="checkmark-circle" size={18} color={T.colors.primary.main} />
+            </View>
+          ) : isLockedForUser ? (
+            <View style={styles.lockOverlay}>
+              <View style={styles.lockCircle}>
+                <Ionicons name="lock-closed" size={18} color="#fff" />
+              </View>
+            </View>
+          ) : (
+            <View style={styles.playOverlay} pointerEvents="none">
+              <View style={styles.playCircle}>
+                <Ionicons name="play" size={18} color="#fff" style={styles.playIcon} />
+              </View>
+            </View>
+          )}
         </View>
-      </View>
-      </UICard>
-    </TouchableOpacity>
+
+        <View style={styles.body}>
+          <View style={styles.titleBlock}>
+            <Text
+              style={[
+                appCardTitleStyle,
+                styles.title,
+                isLockedForUser && styles.titleLocked,
+              ]}
+              numberOfLines={2}
+            >
+              {lesson.title}
+            </Text>
+
+            {description ? (
+              <Text
+                style={[
+                  appCardBodyStyle,
+                  styles.description,
+                  isLockedForUser && styles.descriptionLocked,
+                ]}
+                numberOfLines={3}
+              >
+                {description}
+              </Text>
+            ) : null}
+          </View>
+        </View>
+      </TouchableOpacity>
+    </UICard>
   );
 };
 
+const THUMB_HEIGHT = 136;
+
+function createStyles(T: ReturnType<typeof useDesignTokens>) {
+  return StyleSheet.create({
+    card: {
+      borderRadius: ACADEMY_CARD_RADIUS,
+      overflow: 'hidden',
+      marginBottom: T.spacing.md,
+      direction: 'ltr',
+    },
+    touchable: {
+      width: '100%',
+    },
+    thumbWrap: {
+      width: '100%',
+      height: THUMB_HEIGHT,
+      backgroundColor: 'rgba(255,255,255,0.04)',
+      overflow: 'hidden',
+      position: 'relative',
+    },
+    thumbImg: {
+      width: '100%',
+      height: '100%',
+    },
+    thumbPlaceholder: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    indexPill: {
+      position: 'absolute',
+      top: 10,
+      right: 10,
+      minWidth: 28,
+      height: 28,
+      borderRadius: 14,
+      paddingHorizontal: 8,
+      backgroundColor: T.colors.primary.main,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    indexPillText: {
+      fontSize: 13,
+      fontWeight: '800',
+      color: '#fff',
+      lineHeight: 16,
+    },
+    durationPill: {
+      position: 'absolute',
+      bottom: 10,
+      left: 10,
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 999,
+      backgroundColor: 'rgba(0,0,0,0.55)',
+    },
+    durationText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: '#fff',
+    },
+    donePill: {
+      position: 'absolute',
+      top: 10,
+      left: 10,
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: 'rgba(0,0,0,0.55)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    playOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    playCircle: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: 'rgba(0,0,0,0.45)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.25)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    playIcon: {
+      marginLeft: 2,
+    },
+    lockOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'rgba(0,0,0,0.35)',
+    },
+    lockCircle: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: 'rgba(0,0,0,0.55)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    body: {
+      paddingHorizontal: 18,
+      paddingTop: 14,
+      paddingBottom: 16,
+      alignItems: 'stretch',
+      width: '100%',
+    },
+    titleBlock: {
+      width: '100%',
+      alignItems: 'stretch',
+    },
+    title: {
+      color: T.colors.text.primary,
+    },
+    titleLocked: {
+      color: T.colors.text.tertiary,
+    },
+    description: {
+      marginTop: APP_LAYOUT.cardTitleToBodyGap,
+      color: T.colors.text.secondary,
+    },
+    descriptionLocked: {
+      color: T.colors.text.tertiary,
+    },
+  });
+}

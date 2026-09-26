@@ -1,6 +1,10 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { useDesignTokens } from '../../../components/ui/DesignTokens';
+import {
+  DARK_POOL_TYPE,
+  darkPoolPhysicalRightText,
+} from '../darkPoolLayout';
 
 export function DarkPoolMetricsGrid({
   children,
@@ -41,6 +45,7 @@ export function DarkPoolMetricCell({
 function createMetricStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     grid: {
+      direction: 'rtl',
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 8,
@@ -52,21 +57,21 @@ function createMetricStyles(tokens: ReturnType<typeof useDesignTokens>) {
     cell: {
       minWidth: '30%',
       flexGrow: 1,
-      alignItems: 'flex-start',
+      alignItems: 'stretch',
     },
     label: {
-      fontSize: 11,
+      ...darkPoolPhysicalRightText,
+      fontSize: DARK_POOL_TYPE.caption2.fontSize,
       fontWeight: '600',
       color: tokens.colors.text.tertiary,
-      writingDirection: 'rtl',
     },
     value: {
       marginTop: 3,
-      fontSize: 15,
+      fontSize: DARK_POOL_TYPE.body.fontSize,
       fontWeight: '800',
       color: tokens.colors.text.primary,
       writingDirection: 'ltr',
-      textAlign: 'left',
+      textAlign: 'right',
     },
   });
 }
@@ -74,6 +79,7 @@ function createMetricStyles(tokens: ReturnType<typeof useDesignTokens>) {
 export function darkPoolHeaderStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     header: {
+      direction: 'rtl',
       flexDirection: 'row',
       alignItems: 'center',
       gap: 10,
@@ -82,7 +88,7 @@ export function darkPoolHeaderStyles(tokens: ReturnType<typeof useDesignTokens>)
     headerMain: {
       flex: 1,
       minWidth: 0,
-      alignItems: 'flex-start',
+      alignItems: 'stretch',
     },
     titleRow: {
       flexDirection: 'row',
@@ -91,19 +97,18 @@ export function darkPoolHeaderStyles(tokens: ReturnType<typeof useDesignTokens>)
       flexWrap: 'wrap',
     },
     ticker: {
-      fontSize: 17,
-      fontWeight: '900',
+      fontSize: DARK_POOL_TYPE.body.fontSize,
+      fontWeight: '800',
       color: tokens.colors.text.primary,
       letterSpacing: -0.4,
       writingDirection: 'ltr',
     },
     subtitle: {
+      ...darkPoolPhysicalRightText,
       marginTop: 2,
-      fontSize: 12,
-      fontWeight: '500',
+      fontSize: DARK_POOL_TYPE.caption.fontSize,
+      fontWeight: DARK_POOL_TYPE.caption.fontWeight,
       color: tokens.colors.text.tertiary,
-      writingDirection: 'rtl',
-      textAlign: 'left',
     },
     badge: {
       paddingHorizontal: 8,
@@ -128,18 +133,17 @@ export function darkPoolHeaderStyles(tokens: ReturnType<typeof useDesignTokens>)
       writingDirection: 'ltr',
     },
     scoreLbl: {
-      fontSize: 10,
+      fontSize: DARK_POOL_TYPE.caption2.fontSize,
       fontWeight: '600',
       color: tokens.colors.text.tertiary,
       writingDirection: 'rtl',
     },
     reason: {
+      ...darkPoolPhysicalRightText,
       marginTop: 8,
-      fontSize: 13,
+      fontSize: DARK_POOL_TYPE.sectionSubtitle.fontSize,
       lineHeight: 19,
       color: tokens.colors.text.secondary,
-      writingDirection: 'rtl',
-      textAlign: 'left',
     },
   });
 }

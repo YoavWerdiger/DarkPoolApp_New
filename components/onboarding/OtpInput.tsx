@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { View, TextInput, StyleSheet, Pressable } from 'react-native';
-import { DesignTokens } from '../ui/DesignTokens';
+import { DesignTokens, useDesignTokens } from '../ui/DesignTokens';
 
 interface OtpInputProps {
   /** Current OTP value (6 digits string) */
@@ -23,6 +23,7 @@ const OtpInput: React.FC<OtpInputProps> = ({
   autoFocus = false,
   error = false,
 }) => {
+  const tokens = useDesignTokens();
   const inputRefs = useRef<Array<TextInput | null>>([null, null, null, null, null, null]);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(autoFocus ? 0 : null);
 
@@ -82,9 +83,6 @@ const OtpInput: React.FC<OtpInputProps> = ({
     }
   };
 
-  const borderColor = error ? '#F85149' : 'rgba(255,255,255,0.12)';
-  const focusedBorderColor = error ? '#F85149' : DesignTokens.colors.primary.main;
-
   return (
     <View style={styles.container}>
       {digits.map((digit, index) => {
@@ -96,12 +94,11 @@ const OtpInput: React.FC<OtpInputProps> = ({
             style={[
               styles.box,
               {
-                borderColor: isFocused ? focusedBorderColor : borderColor,
-                backgroundColor: isFocused
-                  ? error
-                    ? 'rgba(248,81,73,0.08)'
-                    : 'rgba(0,200,5,0.08)'
-                  : DesignTokens.colors.background.input,
+                backgroundColor: error
+                  ? 'rgba(248, 113, 113, 0.1)'
+                  : isFocused
+                    ? tokens.colors.background.tertiary
+                    : tokens.colors.background.input,
               },
             ]}
           >
@@ -139,8 +136,7 @@ const styles = StyleSheet.create({
   box: {
     width: 48,
     height: 56,
-    borderRadius: DesignTokens.borderRadius.md,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: DesignTokens.borderRadius.full,
     justifyContent: 'center',
     alignItems: 'center',
   },

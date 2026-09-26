@@ -1,7 +1,7 @@
 /**
  * עטיפה אחידה לכל bottom sheets בצ'אט — רקע זכוכית, backdrop, כותרות ורשימות.
  */
-import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import React, { useMemo, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -25,16 +25,26 @@ import {
   SHEET_OPEN_TIMING,
   SHEET_CLOSE_TIMING,
   SHEET_SNAP_SPRING,
+  FIT_CONTENT_SNAP_EXTRA_PX,
+  resolveFitContentSnapPoint,
 } from '../ui/BottomSheet/sheetMotion';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
+import { CHROME_UICARD, chromeSurfaceCardStyle } from '../ui/chromeControl';
+import UICard from '../ui/UICard';
 import {
   sheetActionColors,
   SHEET_BACKDROP_OPACITY,
   SHEET_GLASS_INTENSITY,
   SHEET_GLASS_OVERLAY,
 } from '../ui/BottomSheet/sheetGlass';
-import { chatPalette, chatRtlRow, chatRtlText } from './chatDesignTokens';
+import { chatPalette, chatRtlRow } from './chatDesignTokens';
+import {
+  APP_TYPE,
+  appPhysicalRightText,
+  appSectionTitleStyle,
+  appSheetButtonLabelStyle,
+} from '../ui/appType';
 
 /** ירושה מ־sheetGlass — שיטי צ׳אט לא דורסים את ההפרדה הגלובלית. */
 export const CHAT_SHEET_BACKDROP_OPACITY = SHEET_BACKDROP_OPACITY;
@@ -57,27 +67,29 @@ export function useChatFitContentSnap(
   initialEstimate = 0.45,
   maxSnap = 0.92,
   minSnap = 0.12,
-  resetKey?: string | number | boolean | null,
+  _resetKey?: string | number | boolean | null,
 ) {
   const [contentHeight, setContentHeight] = useState<number | null>(null);
-
-  useEffect(() => {
-    setContentHeight(null);
-  }, [resetKey]);
+  const lastHeightRef = useRef<number | null>(null);
 
   const onContentLayout = useCallback((e: LayoutChangeEvent) => {
     const height = e.nativeEvent.layout.height;
     if (height > 0) {
+      lastHeightRef.current = height;
       setContentHeight((prev) => (prev === height ? prev : height));
     }
   }, []);
 
   const snapPoint = useMemo(() => {
-    if (contentHeight != null && contentHeight > 0) {
-      const totalPx = contentHeight + BOTTOM_SHEET_EDGE_HANDLE_HEIGHT + 4;
-      return Math.min(maxSnap, Math.max(minSnap, totalPx / SCREEN_HEIGHT));
-    }
-    return initialEstimate;
+    return resolveFitContentSnapPoint({
+      contentHeight: contentHeight ?? lastHeightRef.current,
+      screenHeight: SCREEN_HEIGHT,
+      handlePx: BOTTOM_SHEET_EDGE_HANDLE_HEIGHT,
+      extraPx: FIT_CONTENT_SNAP_EXTRA_PX,
+      initialEstimate,
+      maxSnap,
+      minSnap,
+    });
   }, [contentHeight, initialEstimate, maxSnap, minSnap]);
 
   return { snapPoint, onContentLayout, contentHeight };
@@ -99,6 +111,9 @@ type ChatBottomSheetProps = {
   visible: boolean;
   onClose: () => void;
   snapPoints?: number[];
+  openSnapIndex?: number;
+  snapIndex?: number;
+  onSnapPointChange?: (index: number) => void;
   fitContent?: boolean;
   edgeToEdge?: boolean;
   brandWatermarkScale?: number;
@@ -130,13 +145,16 @@ export function ChatBottomSheet({
   visible,
   onClose,
   snapPoints = [0.5],
+  openSnapIndex,
+  snapIndex,
+  onSnapPointChange,
   fitContent,
   edgeToEdge = true,
   brandWatermarkScale = CHAT_SHEET_WATERMARK_SCALE,
   showBrandBackground = false,
   showBrandWatermark,
   contentPaddingBottom,
-  useGlassBackground = true,
+  useGlassBackground = false,
   glassIntensity = CHAT_SHEET_GLASS_INTENSITY,
   glassOverlayColor = CHAT_SHEET_GLASS_OVERLAY,
   backdropOpacity = CHAT_SHEET_BACKDROP_OPACITY,
@@ -150,6 +168,9 @@ export function ChatBottomSheet({
       isOpen={visible}
       onClose={onClose}
       snapPoints={snapPoints}
+      openSnapIndex={openSnapIndex}
+      snapIndex={snapIndex}
+      onSnapPointChange={onSnapPointChange}
       showHandle={showHandle}
       handleColor={handleColor}
       enablePanDownToClose
@@ -265,7 +286,11 @@ export function ChatSheetSearchBar({
 
   return (
     <View style={sheet.searchRow}>
-      <View style={sheet.searchField}>
+      <UICard
+        {...CHROME_UICARD}
+        style={[sheet.searchField, chromeSurfaceCardStyle(tokens)]}
+        contentContainerStyle={sheet.searchFieldInner}
+      >
         <Ionicons name="search" size={18} color={tokens.colors.text.secondary} />
         <TextInput
           ref={inputRef}
@@ -285,7 +310,7 @@ export function ChatSheetSearchBar({
             <Ionicons name="close-circle" size={18} color={tokens.colors.text.tertiary} />
           </Pressable>
         ) : null}
-      </View>
+      </UICard>
       <Pressable
         onPress={onSearchPress ?? onSubmit}
         disabled={!canSearch || loading}
@@ -430,22 +455,23 @@ export function useChatSheetStyles() {
         },
         searchField: {
           flex: 1,
+          borderRadius: 14,
+          minHeight: 46,
+        },
+        searchFieldInner: {
           ...chatRtlRow,
           direction: 'rtl',
           alignItems: 'center',
           gap: 8,
-          backgroundColor: chatPalette.glass,
-          borderWidth: 1,
-          borderColor: chatPalette.glassBorder,
-          borderRadius: 14,
           paddingHorizontal: 12,
           minHeight: 46,
         },
         searchInput: {
           flex: 1,
-          ...chatRtlText,
+          ...appPhysicalRightText,
           color: tokens.colors.text.primary,
-          fontSize: 16,
+          fontSize: APP_TYPE.body.fontSize,
+          lineHeight: APP_TYPE.body.lineHeight,
           paddingVertical: Platform.OS === 'ios' ? 10 : 8,
         },
         searchAction: {
@@ -474,19 +500,21 @@ export function useChatSheetStyles() {
           marginBottom: 4,
         },
         resultSender: {
-          ...chatRtlText,
-          fontSize: 14,
+          ...appPhysicalRightText,
+          fontSize: APP_TYPE.body.fontSize,
           fontWeight: '600',
+          lineHeight: APP_TYPE.body.lineHeight,
           color: tokens.colors.text.primary,
         },
         resultDate: {
-          fontSize: 12,
+          fontSize: APP_TYPE.caption.fontSize,
+          lineHeight: APP_TYPE.caption.lineHeight,
           color: tokens.colors.text.tertiary,
         },
         resultBody: {
-          ...chatRtlText,
-          fontSize: 15,
-          lineHeight: 21,
+          ...appPhysicalRightText,
+          fontSize: APP_TYPE.body.fontSize,
+          lineHeight: APP_TYPE.body.lineHeight,
           color: tokens.colors.text.secondary,
         },
         resultHighlight: {
@@ -504,16 +532,13 @@ export function useChatSheetStyles() {
           borderRadius: 0,
         },
         titleText: {
-          ...chatRtlText,
+          ...appSectionTitleStyle,
           color: tokens.colors.text.primary,
-          fontSize: 17,
-          fontWeight: '600',
+          textAlign: 'center',
         },
         headerTitlePlain: {
-          ...chatRtlText,
+          ...appSectionTitleStyle,
           color: tokens.colors.text.primary,
-          fontSize: 17,
-          fontWeight: '600',
           textAlign: 'center',
         },
         cancelButton: {
@@ -526,9 +551,8 @@ export function useChatSheetStyles() {
           alignItems: 'center',
         },
         cancelButtonText: {
-          ...chatRtlText,
+          ...appSheetButtonLabelStyle,
           color: actionColors.cancel.color,
-          fontSize: 16,
           fontWeight: '500',
         },
         tabsScroll: {
@@ -571,8 +595,9 @@ export function useChatSheetStyles() {
           fontSize: 16,
         },
         tabText: {
-          fontSize: 14,
-          ...chatRtlText,
+          fontSize: APP_TYPE.sectionSubtitle.fontSize,
+          lineHeight: APP_TYPE.sectionSubtitle.lineHeight,
+          ...appPhysicalRightText,
         },
         tabTextActive: {
           fontWeight: '700',
@@ -619,21 +644,24 @@ export function useChatSheetStyles() {
         },
         userName: {
           color: tokens.colors.text.primary,
-          fontSize: 15,
+          fontSize: APP_TYPE.body.fontSize,
           fontWeight: '600',
-          ...chatRtlText,
+          lineHeight: APP_TYPE.body.lineHeight,
+          ...appPhysicalRightText,
         },
         userSubtitle: {
           color: tokens.colors.text.secondary,
-          fontSize: 13,
+          fontSize: APP_TYPE.sectionSubtitle.fontSize,
+          lineHeight: APP_TYPE.sectionSubtitle.lineHeight,
           marginTop: 2,
-          ...chatRtlText,
+          ...appPhysicalRightText,
         },
         userMeta: {
           color: tokens.colors.text.tertiary,
-          fontSize: 12,
+          fontSize: APP_TYPE.caption.fontSize,
+          lineHeight: APP_TYPE.caption.lineHeight,
           marginTop: 2,
-          ...chatRtlText,
+          ...appPhysicalRightText,
         },
         userTrailing: {
           flexShrink: 0,
@@ -644,16 +672,15 @@ export function useChatSheetStyles() {
           gap: 8,
         },
         emptyTitle: {
-          ...chatRtlText,
+          ...appSectionTitleStyle,
           color: tokens.colors.text.secondary,
-          fontSize: 16,
-          fontWeight: '600',
           textAlign: 'center',
         },
         emptySubtitle: {
-          ...chatRtlText,
+          ...appPhysicalRightText,
           color: tokens.colors.text.tertiary,
-          fontSize: 14,
+          fontSize: APP_TYPE.sectionSubtitle.fontSize,
+          lineHeight: APP_TYPE.sectionSubtitle.lineHeight,
           textAlign: 'center',
         },
         loadingBox: {
@@ -663,8 +690,9 @@ export function useChatSheetStyles() {
         loadingText: {
           color: tokens.colors.text.secondary,
           marginTop: 12,
-          fontSize: 15,
-          ...chatRtlText,
+          fontSize: APP_TYPE.body.fontSize,
+          lineHeight: APP_TYPE.body.lineHeight,
+          ...appPhysicalRightText,
         },
         emojiGrid: {
           paddingHorizontal: 4,

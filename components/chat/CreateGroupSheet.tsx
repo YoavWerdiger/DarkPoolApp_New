@@ -17,12 +17,16 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { GlassChip } from '../ui/GlassChip';
+import UICard from '../ui/UICard';
+import { CHROME_UICARD, chromeSurfaceCardStyle } from '../ui/chromeControl';
 import { createChatGroup } from '../../services/chat/chatGroupService';
 import { useAuth } from '../../context/AuthContext';
 import { legacyAlert } from '../../utils/appDialog';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { ChatBottomSheet, ChatSheetContent } from './ChatBottomSheet';
 import { chatPalette } from './chatDesignTokens';
+import { APP_TYPE, appSectionTitleStyle, appSheetButtonLabelStyle } from '../ui/appType';
 
 interface CreateGroupSheetProps {
   visible: boolean;
@@ -96,27 +100,22 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
           <Text style={[styles.headerTitle, { color: DesignTokens.colors.text.primary }]}>
             קבוצה חדשה
           </Text>
-          <TouchableOpacity
-            onPress={handleCreate}
-            disabled={!canCreate || isLoading}
-            style={[
-              styles.createBtn,
-              {
-                backgroundColor: canCreate
-                  ? DesignTokens.colors.primary.main
-                  : DesignTokens.colors.background.tertiary,
-              },
-            ]}
-            activeOpacity={0.8}
+          <GlassChip
+            selected={canCreate}
+            disableBlur
+            onPress={canCreate && !isLoading ? handleCreate : undefined}
+            style={styles.createBtn}
+            contentContainerStyle={styles.createBtnContent}
+            accessibilityLabel="צור קבוצה"
           >
             {isLoading ? (
-              <ActivityIndicator size={14} color="#fff" />
+              <ActivityIndicator size={14} color={DesignTokens.colors.primary.main} />
             ) : (
-              <Text style={[styles.createBtnText, { color: canCreate ? '#fff' : DesignTokens.colors.text.tertiary }]}>
+              <Text style={[styles.createBtnText, { color: canCreate ? DesignTokens.colors.primary.main : DesignTokens.colors.text.tertiary }]}>
                 צור
               </Text>
             )}
-          </TouchableOpacity>
+          </GlassChip>
         </View>
 
         <ScrollView
@@ -125,49 +124,44 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
           contentContainerStyle={styles.content}
         >
           <Text style={[styles.fieldLabel, { color: DesignTokens.colors.text.secondary }]}>שם הקבוצה *</Text>
-          <TextInput
-            value={name}
-            onChangeText={setName}
-            placeholder="שם הקבוצה..."
-            placeholderTextColor={DesignTokens.colors.text.tertiary}
-            style={[
-              styles.input,
-              {
-                color: DesignTokens.colors.text.primary,
-                backgroundColor: chatPalette.glass,
-                borderColor: chatPalette.glassBorder,
-              },
-            ]}
-            autoFocus
-            textAlign="right"
-            maxLength={80}
-            returnKeyType="next"
-          />
+          <UICard
+            {...CHROME_UICARD}
+            style={[styles.inputCard, chromeSurfaceCardStyle(DesignTokens)]}
+          >
+            <TextInput
+              value={name}
+              onChangeText={setName}
+              placeholder="שם הקבוצה..."
+              placeholderTextColor={DesignTokens.colors.text.tertiary}
+              style={[styles.input, { color: DesignTokens.colors.text.primary }]}
+              autoFocus
+              textAlign="right"
+              maxLength={80}
+              returnKeyType="next"
+            />
+          </UICard>
           <Text style={[styles.charCount, { color: DesignTokens.colors.text.tertiary }]}>
             {name.length}/80
           </Text>
 
           <Text style={[styles.fieldLabel, { color: DesignTokens.colors.text.secondary }]}>תיאור (אופציונלי)</Text>
-          <TextInput
-            value={description}
-            onChangeText={setDescription}
-            placeholder="תיאור הקבוצה..."
-            placeholderTextColor={DesignTokens.colors.text.tertiary}
-            style={[
-              styles.input,
-              styles.textArea,
-              {
-                color: DesignTokens.colors.text.primary,
-                backgroundColor: chatPalette.glass,
-                borderColor: chatPalette.glassBorder,
-              },
-            ]}
-            textAlign="right"
-            multiline
-            numberOfLines={3}
-            maxLength={500}
-            textAlignVertical="top"
-          />
+          <UICard
+            {...CHROME_UICARD}
+            style={[styles.inputCard, chromeSurfaceCardStyle(DesignTokens)]}
+          >
+            <TextInput
+              value={description}
+              onChangeText={setDescription}
+              placeholder="תיאור הקבוצה..."
+              placeholderTextColor={DesignTokens.colors.text.tertiary}
+              style={[styles.input, styles.textArea, { color: DesignTokens.colors.text.primary }]}
+              textAlign="right"
+              multiline
+              numberOfLines={3}
+              maxLength={500}
+              textAlignVertical="top"
+            />
+          </UICard>
 
           <Text style={[styles.sectionTitle, { color: DesignTokens.colors.text.secondary }]}>הגדרות</Text>
 
@@ -222,20 +216,25 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   headerTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    ...appSectionTitleStyle,
     textAlign: 'center',
   },
   createBtn: {
+    minWidth: 50,
+    minHeight: 32,
+    borderRadius: 20,
+  },
+  createBtnContent: {
+    minHeight: 32,
     paddingHorizontal: 14,
     paddingVertical: 7,
-    borderRadius: 20,
-    minWidth: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
+  },
+  inputCard: {
+    borderRadius: 12,
+    overflow: 'hidden',
   },
   createBtnText: {
-    fontSize: 14,
+    ...appSheetButtonLabelStyle,
     fontWeight: '600',
   },
   content: {
@@ -253,8 +252,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   input: {
-    borderRadius: 12,
-    borderWidth: 1,
     paddingHorizontal: 14,
     paddingVertical: 10,
     fontSize: 15,

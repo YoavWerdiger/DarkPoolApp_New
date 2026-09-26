@@ -16,6 +16,10 @@ import {
   type CongressTradeInput,
 } from '../_shared/congressPortfolio.ts';
 import {
+  metricsFromTrumpCongressInputs,
+  TRUMP_DARKPOOL_PERSON_ID,
+} from '../_shared/trumpPortfolio.ts';
+import {
   CURATED_ID_SET,
   CURATED_MATERIALIZE_TARGETS,
   ensureYahooPriceMaps,
@@ -43,6 +47,8 @@ serve(async (req) => {
     mode?: string;
     ids?: Array<{ id: string; kind: string; ticker?: string }>;
     force_refresh_prices?: boolean;
+    max_targets?: number;
+    target_offset?: number;
   } = {};
   try {
     if (req.method === 'POST') body = await req.json();
@@ -67,7 +73,7 @@ serve(async (req) => {
               ticker: x.ticker,
             }))
             .filter((t) => t.id)
-        : await resolveTargets(supabase, mode);
+        : await resolveTargets(supabase, mode, body);
 
     if (!targets.length) {
       return json({ ok: true, mode, targets: 0, materialized: 0 });
@@ -112,7 +118,8 @@ serve(async (req) => {
         const rows = await loadInsiderBuysFromDb(supabase, {
           ticker: ticker || undefined,
           insiderName: nameKey,
-          limit: 200,
+          personId: t.id,
+          limit: 400,
         }).catch(() => []);
         const inputs = dedupeInputs(
           rows.map((r) =>
@@ -150,10 +157,22 @@ serve(async (req) => {
       }
     }
 
+    const yahooConcurrency = Math.min(
+      4,
+      Math.max(2, Number(Deno.env.get('MATERIALIZE_YAHOO_CONCURRENCY') || '3'))
+    );
+    let yahooTickers = Array.from(tickerHints);
+    const yahooCap = Math.min(
+      120,
+      Math.max(20, Number(Deno.env.get('MATERIALIZE_MAX_YAHOO_TICKERS') || '56'))
+    );
+    if (mode === 'hot' && yahooTickers.length > yahooCap) {
+      yahooTickers = yahooTickers.slice(0, yahooCap);
+    }
     const pricesByTicker = await ensureYahooPriceMaps(
       supabase,
-      Array.from(tickerHints),
-      { forceRefresh: !!body.force_refresh_prices, concurrency: 6 }
+      yahooTickers,
+      { forceRefresh: !!body.force_refresh_prices, concurrency: yahooConcurrency }
     );
 
     let ok = 0;
@@ -176,10 +195,13 @@ serve(async (req) => {
             ok++;
             continue;
           }
-          const metrics = await metricsFromCongressTrades(inputs, {
-            maxTickers: 40,
-            pricesByTicker,
-          });
+          const isTrump = t.id === TRUMP_DARKPOOL_PERSON_ID;
+          const metrics = isTrump
+            ? metricsFromTrumpCongressInputs(inputs, pricesByTicker)
+            : await metricsFromCongressTrades(inputs, {
+                maxTickers: 40,
+                pricesByTicker,
+              });
           const fields = metrics
             ? metricsToSnapshotFields(metrics)
             : {
@@ -194,10 +216,10 @@ serve(async (req) => {
             person_id: t.id,
             kind: 'politician',
             ...fields,
-            profile_meta: { trade_count: inputs.length },
+            profile_meta: { trade_count: inputs.length, engine: isTrump ? 'trump' : 'congress' },
             source_meta: {
               mode,
-              accuracy: 'congress_yahoo_first_added',
+              accuracy: isTrump ? 'trump_notional_mtm' : 'congress_yahoo_first_added',
               yahoo_tickers: Array.from(pricesByTicker.keys()).length,
             },
           });
@@ -275,7 +297,8 @@ serve(async (req) => {
  */
 async function resolveTargets(
   supabase: ReturnType<typeof createServiceSupabase>,
-  _mode: string
+  mode: string,
+  body: { max_targets?: number; target_offset?: number } = {}
 ): Promise<Target[]> {
   const byKey = new Map<string, Target>();
   const add = (t: Target) => {
@@ -305,7 +328,18 @@ async function resolveTargets(
     });
   }
 
-  return Array.from(byKey.values());
+  const all = Array.from(byKey.values());
+  const hotCap = Math.min(
+    20,
+    Math.max(1, Number(Deno.env.get('MATERIALIZE_HOT_MAX_TARGETS') || '6'))
+  );
+  if (String(mode).toLowerCase() !== 'hot') return all;
+  const offset = Math.max(0, Number(body.target_offset) || 0);
+  const max =
+    body.max_targets != null && Number.isFinite(body.max_targets)
+      ? Math.max(1, Number(body.max_targets))
+      : hotCap;
+  return all.slice(offset, offset + max);
 }
 
 async function materializeFund(

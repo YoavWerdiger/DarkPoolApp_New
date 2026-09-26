@@ -1,6 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
 import {
-  Dimensions,
   FlatList,
   Pressable,
   StyleSheet,
@@ -10,10 +9,16 @@ import {
 } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import type { ExplorePerson } from '../../../services/darkpool/uwExploreService';
+import {
+  DARK_POOL_TYPE,
+  darkPoolPhysicalRightText,
+} from '../darkPoolLayout';
+import {
+  EXPLORE_GRID_COLS,
+  EXPLORE_GRID_GAP,
+  EXPLORE_PROFILE_CARD,
+} from '../utils/exploreGrid';
 import { ExplorePortraitCard } from './ExplorePortraitCard';
-
-const COLS = 2;
-const ROW_GAP = 10;
 
 interface Props {
   people: ExplorePerson[];
@@ -37,36 +42,36 @@ export function ExploreProfileGrid({
   emptyMessage = 'אין פרופילים עם תמונה. משוך למטה לרענון.',
 }: Props) {
   const tokens = useDesignTokens();
-  const { cardWidth, gap } = useMemo(() => {
-    const pad = tokens.layout.screenPadding;
-    const g = ROW_GAP;
-    const w = Dimensions.get('window').width;
-    const cw = (w - pad * 2 - g) / COLS;
-    return { cardWidth: cw, gap: g };
-  }, [tokens.layout.screenPadding]);
+  const cardWidth = EXPLORE_PROFILE_CARD.width;
+  const gap = EXPLORE_GRID_GAP;
 
   const styles = useMemo(
     () =>
       StyleSheet.create({
         list: {
+          direction: 'rtl',
           paddingHorizontal: tokens.layout.screenPadding,
           paddingBottom: contentPaddingBottom,
         },
         row: {
+          direction: 'rtl',
           flexDirection: 'row',
+          justifyContent: 'flex-start',
           gap,
           marginBottom: gap,
         },
         empty: {
+          direction: 'rtl',
           paddingVertical: 48,
-          paddingHorizontal: tokens.layout.screenPadding,
-          alignItems: 'center',
+          alignSelf: 'stretch',
+          alignItems: 'stretch',
         },
         emptyText: {
-          fontSize: 14,
+          ...darkPoolPhysicalRightText,
+          width: '100%',
+          fontSize: DARK_POOL_TYPE.body.fontSize,
+          lineHeight: DARK_POOL_TYPE.body.lineHeight,
           color: tokens.colors.text.tertiary,
-          textAlign: 'center',
-          lineHeight: 22,
         },
       }),
     [tokens, gap, contentPaddingBottom]
@@ -80,7 +85,7 @@ export function ExploreProfileGrid({
           { width: cardWidth, opacity: pressed ? 0.92 : 1 },
         ]}
       >
-        <ExplorePortraitCard person={item} variant="grid" />
+        <ExplorePortraitCard person={item} />
       </Pressable>
     ),
     [cardWidth, onPersonPress]
@@ -90,8 +95,9 @@ export function ExploreProfileGrid({
     <FlatList
       data={people}
       keyExtractor={(item) => item.id}
-      numColumns={COLS}
+      numColumns={EXPLORE_GRID_COLS}
       showsVerticalScrollIndicator={false}
+      style={{ flex: 1, backgroundColor: 'transparent' }}
       contentContainerStyle={styles.list}
       columnWrapperStyle={styles.row}
       ListHeaderComponent={ListHeaderComponent}
@@ -99,16 +105,18 @@ export function ExploreProfileGrid({
       refreshing={refreshing}
       onRefresh={onRefresh}
       ListEmptyComponent={
-        <View style={styles.empty}>
-          <Text style={styles.emptyText}>{emptyMessage}</Text>
-        </View>
+        emptyMessage ? (
+          <View style={styles.empty}>
+            <Text style={styles.emptyText}>{emptyMessage}</Text>
+          </View>
+        ) : null
       }
       renderItem={renderItem}
       initialNumToRender={6}
       maxToRenderPerBatch={4}
       windowSize={5}
       updateCellsBatchingPeriod={40}
-      removeClippedSubviews
+      removeClippedSubviews={false}
     />
   );
 }

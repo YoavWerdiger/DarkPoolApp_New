@@ -18,7 +18,10 @@ import {
 } from '../utils/format';
 import { TickerLogo } from './TickerLogo';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
-import { darkPoolTextRtl } from '../../DarkPool/darkPoolLayout';
+import { journalPhysicalRightText } from '../../Journal/journalLayout';
+import {
+  APP_TYPE,
+} from '../../../components/ui/appType';
 
 type Mode = 'open' | 'closed';
 
@@ -497,20 +500,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerText: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: APP_TYPE.caption2.fontSize,
+    fontWeight: APP_TYPE.caption2.fontWeight,
+    lineHeight: APP_TYPE.caption2.lineHeight,
     letterSpacing: 0.2,
-    ...darkPoolTextRtl,
+    ...journalPhysicalRightText,
   },
   cellText: {
-    fontSize: 13,
+    fontSize: APP_TYPE.sectionSubtitle.fontSize,
     fontWeight: '600',
+    lineHeight: APP_TYPE.sectionSubtitle.lineHeight,
     writingDirection: 'ltr',
     textAlign: 'right',
   },
   pnlPct: {
-    fontSize: 10,
+    fontSize: APP_TYPE.caption2.fontSize,
     fontWeight: '600',
+    lineHeight: APP_TYPE.caption2.lineHeight,
     marginTop: 1,
     writingDirection: 'ltr',
     textAlign: 'right',
@@ -538,8 +544,9 @@ const styles = StyleSheet.create({
     borderWidth: 0,
   },
   typePillText: {
-    fontSize: 10,
+    fontSize: APP_TYPE.caption2.fontSize,
     fontWeight: '800',
+    lineHeight: APP_TYPE.caption2.lineHeight,
     letterSpacing: 0.3,
   },
   actionsCell: {

@@ -8,11 +8,19 @@ import {
   Platform,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
-import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { useDesignTokens, DesignTokens } from '../../../components/ui/DesignTokens';
+import {
+  CARD_GLASS_ANDROID_BLUR_METHOD,
+  CARD_GLASS_ANDROID_BLUR_REDUCTION,
+} from '../../../components/ui/cardGlass';
+import { SheetGlassBackground } from '../../../components/ui/BottomSheet/SheetGlassBackground';
+import {
+  SHEET_GLASS_INTENSITY,
+  SHEET_GLASS_OVERLAY,
+} from '../../../components/ui/BottomSheet/sheetGlass';
 import { PortfolioValueChart } from './PortfolioValueChart';
 import type { Portfolio, PortfolioSummary, PerformancePeriod } from '../portfolioTypes';
 import {
@@ -28,6 +36,12 @@ import {
   getValueHistory,
 } from '../../../services/portfolios';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
+import {
+  JOURNAL_TYPE,
+  journalBodyTextStyle,
+  journalCaption2Style,
+  journalSectionSubtitleStyle,
+} from '../../Journal/journalLayout';
 
 export interface JournalPreviewItem {
   portfolio: Portfolio;
@@ -44,15 +58,13 @@ interface Props {
   bottomInset?: number;
 }
 
-const SHEET_RADIUS = 36;
-const CARD_RADIUS = 18;
-const SHEET_BG = '#262626';
-const INNER_BG = '#333333';
-const PILL_BG = '#3A3A3A';
+const SHEET_RADIUS = 28;
+const WELL_RADIUS = 16;
 
 /**
- * פריביו יומן — Soft UI כהה:
- * hero סכום, KPIs קומפקטיים, גרף גדול, blur CTA בתחתית. בלי handle/gesture לסגירה.
+ * פריביו תיק ביומן — טופולוגיית זכוכית:
+ * Aurora (ScreenChrome) → שיט BlurView שקוף → wells rgba → CTA ירוק.
+ * זהות · hero · KPI · גרף · פתח תיק. Swipe בין תיקים. בלי נקודות pager.
  */
 export function JournalPreviewSheet({
   items,
@@ -63,12 +75,12 @@ export function JournalPreviewSheet({
   bottomInset = 0,
 }: Props) {
   const tokens = useDesignTokens();
+  const gm = DesignTokens.glassmorphism;
   const previewPeriod: PerformancePeriod = '3M';
   const [chartSeries, setChartSeries] = useState<
     { date: string; value: number; external_flow: number }[]
   >([]);
   const [chartLoading, setChartLoading] = useState(false);
-  /** גובה plot דינמי לפי שטח פנוי בכרטיס (בלי חיתוך header/periods) */
   const [plotHeight, setPlotHeight] = useState(200);
 
   const selected = useMemo(() => {
@@ -82,7 +94,6 @@ export function JournalPreviewSheet({
   const summary = selected?.summary ?? null;
   const hasMultiple = items.length > 1;
 
-  /** שווי להצגה — total_value עם fallbacks (cash+value / נקודת גרף אחרונה) */
   const heroValue = useMemo(() => {
     const asFinite = (c: unknown): number | null => {
       const n = typeof c === 'number' ? c : Number(c);
@@ -100,7 +111,6 @@ export function JournalPreviewSheet({
         ? asFinite(chartSeries[chartSeries.length - 1]?.value)
         : null;
 
-    // אם total_value חסר/NaN אבל יש חלקים או גרף — לא מציגים "—"
     if (fromTotal != null && (fromTotal > 0 || fromChart == null)) {
       return fromTotal;
     }
@@ -192,6 +202,7 @@ export function JournalPreviewSheet({
     negative,
     neutral
   );
+  const dailyPositive = (summary?.daily_gain_pct ?? 0) >= 0;
 
   const handleOpenMore = useCallback(() => {
     if (!portfolio) return;
@@ -221,7 +232,6 @@ export function JournalPreviewSheet({
     selectByOffset(1);
   }, [selectByOffset]);
 
-  /** החלקה אופקית בין תיקים — על hero/KPI (הגרף נשאר ל-scrub) */
   const swipePortfolios = useMemo(() => {
     if (!hasMultiple) return Gesture.Pan().enabled(false);
     return Gesture.Pan()
@@ -237,269 +247,343 @@ export function JournalPreviewSheet({
       });
   }, [hasMultiple, selectByOffset]);
 
-  /** footer: CTA צמוד ל-safe area — מעט נמוך יותר (~8px) */
   const ctaPadBottom = Math.max(4, bottomInset - 18);
-  const ctaBlock = 50;
-  const chartCtaGap = 8;
+  const ctaBlock = 52;
+  const chartCtaGap = 10;
   const footerReserve = chartCtaGap + ctaBlock + ctaPadBottom;
+
+  const glassWellBg = gm.cardBackground.dark.subtle;
+  const glassWellBorder = gm.border.dark.subtle;
+  const glassChipBg = gm.cardBackground.dark.light;
+  const glassChipBorder = gm.border.dark.light;
+
+  const androidBlurProps =
+    Platform.OS === 'android'
+      ? {
+          blurMethod: CARD_GLASS_ANDROID_BLUR_METHOD,
+          blurReductionFactor: CARD_GLASS_ANDROID_BLUR_REDUCTION,
+        }
+      : undefined;
 
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        wrap: {
+        /** קנבס שקוף — האורורה מ-ScreenChrome נראית מאחור */
+        canvas: {
           flex: 1,
-          justifyContent: 'flex-end',
           minHeight: 0,
+          backgroundColor: 'transparent',
+          paddingHorizontal: tokens.spacing.md,
+          paddingBottom: 0,
         },
-        sheet: {
+        /** שיט זכוכית — Blur + overlay, לא #262626 אטום */
+        panel: {
           flex: 1,
-          width: '100%',
-          marginTop: 28,
-          backgroundColor: SHEET_BG,
-          borderTopLeftRadius: SHEET_RADIUS,
-          borderTopRightRadius: SHEET_RADIUS,
+          minHeight: 0,
+          borderRadius: SHEET_RADIUS,
           overflow: 'hidden',
+          borderWidth: 1,
+          borderColor: glassWellBorder,
+          borderTopColor: gm.topHighlight.dark.light,
+          backgroundColor: 'transparent',
         },
         body: {
           flex: 1,
           minHeight: 0,
-          paddingHorizontal: 22,
-          paddingTop: 22,
+          zIndex: 1,
+          paddingHorizontal: tokens.spacing.lg,
+          paddingTop: tokens.spacing.lg,
           paddingBottom: footerReserve,
         },
-        swipeArea: {
+        swipeColumn: {
           flex: 1,
           minHeight: 0,
-          direction: 'ltr',
         },
-        portfolioHint: {
-          flexShrink: 0,
-          width: '100%',
-          fontSize: 13,
-          fontWeight: '500',
-          color: tokens.colors.text.tertiary,
-          textAlign: 'right',
-          writingDirection: 'rtl',
-          marginBottom: 4,
-        },
-        /** Cash App hero — דומיננטי, צמוד לימין, לא נמעך ע״י flex של הגרף */
-        valueAmount: {
-          flexShrink: 0,
-          width: '100%',
-          alignSelf: 'stretch',
-          minHeight: 50,
-          fontSize: 44,
-          fontWeight: '800',
-          color: tokens.colors.text.primary,
-          textAlign: 'right',
-          letterSpacing: -1.4,
-          lineHeight: 50,
-          marginBottom: 6,
-          writingDirection: 'ltr',
-        },
-        metaLine: {
-          flexShrink: 0,
-          width: '100%',
-          fontSize: 13,
-          fontWeight: '500',
-          color: tokens.colors.text.tertiary,
-          textAlign: 'right',
-          writingDirection: 'rtl',
-          marginBottom: 14,
-          lineHeight: 18,
-        },
-        metaGain: {
-          fontWeight: '600',
-        },
-        pillsRow: {
+        identity: {
           flexShrink: 0,
           flexDirection: 'row',
-          gap: 10,
-          marginBottom: 14,
-        },
-        pill: {
-          flex: 1,
-          height: 44,
-          borderRadius: 9999,
-          backgroundColor: PILL_BG,
           alignItems: 'center',
           justifyContent: 'center',
-          flexDirection: 'row',
-          gap: 6,
+          gap: tokens.spacing.sm,
+          marginBottom: tokens.spacing.md,
+          minHeight: 36,
         },
-        pillText: {
-          fontSize: 14,
+        nameChip: {
+          maxWidth: '78%',
+          paddingHorizontal: 14,
+          paddingVertical: 8,
+          borderRadius: tokens.borderRadius.button,
+          backgroundColor: glassChipBg,
+          borderWidth: 1,
+          borderColor: glassChipBorder,
+          overflow: 'hidden',
+        },
+        nameText: {
+          ...journalBodyTextStyle,
           fontWeight: '700',
           color: tokens.colors.text.primary,
-          textAlign: 'right',
+          textAlign: 'center',
           writingDirection: 'rtl',
         },
-        /** שורת KPI קומפקטית */
-        kpiRow: {
+        switchBtn: {
+          width: 36,
+          height: 36,
+          borderRadius: 18,
+          backgroundColor: glassChipBg,
+          borderWidth: 1,
+          borderColor: glassChipBorder,
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+        },
+        hero: {
+          flexShrink: 0,
+          alignItems: 'center',
+          marginBottom: tokens.spacing.md,
+        },
+        heroLabel: {
+          ...journalCaption2Style,
+          fontWeight: '600',
+          color: tokens.colors.text.tertiary,
+          textAlign: 'center',
+          writingDirection: 'rtl',
+          marginBottom: 4,
+          letterSpacing: 0.2,
+        },
+        heroValue: {
+          width: '100%',
+          fontSize: 40,
+          fontWeight: '800',
+          color: tokens.colors.text.primary,
+          textAlign: 'center',
+          letterSpacing: -1.1,
+          lineHeight: 46,
+          writingDirection: 'ltr',
+        },
+        dailyChip: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 6,
+          marginTop: tokens.spacing.sm,
+          paddingHorizontal: 12,
+          paddingVertical: 7,
+          borderRadius: tokens.borderRadius.button,
+          backgroundColor: glassChipBg,
+          borderWidth: 1,
+          borderColor: glassChipBorder,
+        },
+        dailyPct: {
+          fontSize: 13,
+          fontWeight: '700',
+          writingDirection: 'ltr',
+        },
+        dailyMeta: {
+          fontSize: 12,
+          fontWeight: '600',
+          color: tokens.colors.text.tertiary,
+          writingDirection: 'rtl',
+        },
+        updated: {
+          ...journalSectionSubtitleStyle,
+          marginTop: tokens.spacing.sm,
+          marginBottom: 0,
+          fontWeight: '500',
+          color: tokens.colors.text.muted,
+          textAlign: 'center',
+        },
+        kpiBand: {
           flexShrink: 0,
           flexDirection: 'row',
-          backgroundColor: INNER_BG,
-          borderRadius: CARD_RADIUS,
-          paddingVertical: 12,
-          paddingHorizontal: 8,
-          marginBottom: 14,
+          backgroundColor: glassWellBg,
+          borderRadius: WELL_RADIUS,
+          borderWidth: 1,
+          borderColor: glassWellBorder,
+          paddingVertical: tokens.spacing.md,
+          paddingHorizontal: tokens.spacing.xs,
+          marginBottom: tokens.spacing.md,
+          overflow: 'hidden',
         },
         kpiCell: {
           flex: 1,
           alignItems: 'center',
-          gap: 3,
-          paddingHorizontal: 6,
+          gap: 4,
+          paddingHorizontal: 4,
         },
-        kpiDivider: {
-          width: 2,
-          backgroundColor: 'rgba(255,255,255,0.28)',
+        kpiGap: {
+          width: StyleSheet.hairlineWidth,
+          backgroundColor: glassWellBorder,
           alignSelf: 'stretch',
           marginVertical: 4,
-          borderRadius: 1,
         },
         kpiLabel: {
           width: '100%',
-          fontSize: 11,
-          fontWeight: '500',
+          ...journalCaption2Style,
+          fontWeight: '600',
           color: tokens.colors.text.tertiary,
           textAlign: 'center',
           writingDirection: 'rtl',
         },
         kpiValue: {
           width: '100%',
-          fontSize: 15,
+          fontSize: JOURNAL_TYPE.body.fontSize,
           fontWeight: '700',
+          lineHeight: JOURNAL_TYPE.body.lineHeight,
           textAlign: 'center',
           writingDirection: 'ltr',
         },
-        chartCard: {
+        chartWell: {
           flex: 1,
           minHeight: 0,
-          backgroundColor: INNER_BG,
-          borderRadius: CARD_RADIUS,
-          paddingTop: 10,
-          paddingHorizontal: 12,
+          backgroundColor: glassWellBg,
+          borderRadius: WELL_RADIUS,
+          borderWidth: 1,
+          borderColor: glassWellBorder,
+          paddingTop: 8,
+          paddingHorizontal: tokens.spacing.sm,
           paddingBottom: 4,
-          marginBottom: 0,
-          overflow: 'visible',
+          overflow: 'hidden',
         },
         chartEmpty: {
           flex: 1,
-          minHeight: 140,
+          minHeight: 120,
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 8,
-          paddingHorizontal: 16,
+          gap: tokens.spacing.sm,
+          paddingHorizontal: tokens.spacing.base,
         },
         chartEmptyText: {
-          fontSize: 13,
+          ...journalSectionSubtitleStyle,
+          marginTop: 0,
           fontWeight: '500',
           color: tokens.colors.text.tertiary,
-          textAlign: 'right',
-          writingDirection: 'rtl',
           width: '100%',
+          textAlign: 'center',
         },
-        blurCta: {
+        footer: {
           position: 'absolute',
           left: 0,
           right: 0,
           bottom: 0,
           height: footerReserve,
           justifyContent: 'flex-end',
-          alignItems: 'center',
+          alignItems: 'stretch',
+          paddingHorizontal: tokens.spacing.lg,
           paddingBottom: ctaPadBottom,
           zIndex: 4,
+          overflow: 'hidden',
         },
-        blurFill: {
+        footerBlur: {
           ...StyleSheet.absoluteFillObject,
         },
+        footerTint: {
+          ...StyleSheet.absoluteFillObject,
+          backgroundColor: SHEET_GLASS_OVERLAY,
+        },
         ctaBtn: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 8,
-          minWidth: 220,
-          paddingHorizontal: 28,
-          paddingVertical: 15,
-          borderRadius: 9999,
+          gap: tokens.spacing.sm,
+          height: ctaBlock - 2,
+          borderRadius: tokens.borderRadius.button,
           backgroundColor: tokens.colors.primary.main,
-          overflow: 'hidden',
-          zIndex: 2,
-          ...Platform.select({
-            ios: {
-              shadowColor: tokens.colors.primary.main,
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.35,
-              shadowRadius: 10,
-            },
-            android: { elevation: 4 },
-            default: {},
-          }),
+          zIndex: 1,
         },
         ctaText: {
-          fontSize: 16,
+          fontSize: JOURNAL_TYPE.body.fontSize,
           fontWeight: '700',
-          color: '#0A0A0A',
+          lineHeight: JOURNAL_TYPE.body.lineHeight,
+          color: tokens.colors.text.inverse,
           textAlign: 'center',
           writingDirection: 'rtl',
         },
       }),
-    [tokens, ctaPadBottom, footerReserve]
+    [
+      tokens,
+      gm,
+      glassWellBg,
+      glassWellBorder,
+      glassChipBg,
+      glassChipBorder,
+      ctaPadBottom,
+      footerReserve,
+      ctaBlock,
+    ]
   );
 
   if (!portfolio) {
-    return <View style={styles.wrap} />;
+    return <View style={styles.canvas} />;
   }
 
-  const dailyPctLabel = summary
-    ? formatPercent(summary.daily_gain_pct)
-    : null;
+  const dailyPctLabel = summary ? formatPercent(summary.daily_gain_pct) : null;
+
+  const onLongPress =
+    onLongPressPortfolio != null
+      ? () => {
+          void HapticFeedback.medium();
+          onLongPressPortfolio(portfolio);
+        }
+      : undefined;
 
   return (
-    <View style={styles.wrap} pointerEvents="box-none">
-      <View style={styles.sheet}>
+    <View style={styles.canvas} pointerEvents="box-none">
+      <View style={styles.panel}>
+        <SheetGlassBackground
+          active
+          intensity={SHEET_GLASS_INTENSITY}
+          overlayColor={SHEET_GLASS_OVERLAY}
+        />
+
         <View style={styles.body}>
           <GestureDetector gesture={swipePortfolios}>
-            <View style={styles.swipeArea}>
-              {hasMultiple ? (
+            <View style={styles.swipeColumn}>
+              <View style={styles.identity}>
                 <TouchableOpacity
-                  onPress={cyclePortfolio}
-                  onLongPress={
-                    onLongPressPortfolio
-                      ? () => {
-                          void HapticFeedback.medium();
-                          onLongPressPortfolio(portfolio);
-                        }
-                      : undefined
-                  }
+                  style={styles.nameChip}
+                  onPress={hasMultiple ? cyclePortfolio : handleOpenMore}
+                  onLongPress={onLongPress}
                   delayLongPress={450}
-                  activeOpacity={0.75}
+                  activeOpacity={0.8}
                   accessibilityRole="button"
-                  accessibilityLabel={`תיק: ${portfolio.name}. החלק להחלפת תיק`}
+                  accessibilityLabel={
+                    hasMultiple
+                      ? `תיק: ${portfolio.name}. החלק או לחץ להחלפה`
+                      : `תיק: ${portfolio.name}`
+                  }
                 >
-                  <Text style={styles.portfolioHint} numberOfLines={1}>
+                  <Text style={styles.nameText} numberOfLines={1}>
                     {portfolio.name}
                   </Text>
                 </TouchableOpacity>
-              ) : null}
+                {hasMultiple ? (
+                  <TouchableOpacity
+                    style={styles.switchBtn}
+                    onPress={cyclePortfolio}
+                    activeOpacity={0.8}
+                    accessibilityRole="button"
+                    accessibilityLabel="החלף תיק"
+                  >
+                    <Ionicons
+                      name="swap-horizontal"
+                      size={18}
+                      color={tokens.colors.text.primary}
+                    />
+                  </TouchableOpacity>
+                ) : null}
+              </View>
 
               <TouchableOpacity
+                style={styles.hero}
                 onPress={handleOpenMore}
-                onLongPress={
-                  onLongPressPortfolio
-                    ? () => {
-                        void HapticFeedback.medium();
-                        onLongPressPortfolio(portfolio);
-                      }
-                    : undefined
-                }
+                onLongPress={onLongPress}
                 delayLongPress={450}
-                activeOpacity={0.85}
+                activeOpacity={0.88}
                 accessibilityRole="button"
                 accessibilityLabel="פתח תיק"
               >
+                <Text style={styles.heroLabel}>שווי תיק</Text>
                 <Text
-                  style={styles.valueAmount}
+                  style={styles.heroValue}
                   numberOfLines={1}
                   adjustsFontSizeToFit
                   minimumFontScale={0.45}
@@ -508,73 +592,39 @@ export function JournalPreviewSheet({
                     ? formatCurrency(heroValue, heroCurrency)
                     : '—'}
                 </Text>
+                {dailyPctLabel ? (
+                  <View style={styles.dailyChip}>
+                    <Ionicons
+                      name={dailyPositive ? 'trending-up' : 'trending-down'}
+                      size={14}
+                      color={dailyColor}
+                    />
+                    <Text style={[styles.dailyPct, { color: dailyColor }]}>
+                      {dailyPctLabel}
+                    </Text>
+                    <Text style={styles.dailyMeta}>היום</Text>
+                  </View>
+                ) : null}
+                <Text style={styles.updated}>
+                  עודכן {formatRelative(portfolio.updated_at)}
+                </Text>
               </TouchableOpacity>
 
-              <Text style={styles.metaLine}>
-                עודכן {formatRelative(portfolio.updated_at)}
-                {dailyPctLabel ? (
-                  <>
-                    {'  ·  '}
-                    <Text style={[styles.metaGain, { color: dailyColor }]}>
-                      {dailyPctLabel} היום
-                    </Text>
-                  </>
-                ) : null}
-              </Text>
-
-              <View style={styles.pillsRow}>
-                <TouchableOpacity
-                  style={styles.pill}
-                  onPress={handleOpenMore}
-                  activeOpacity={0.88}
-                  accessibilityRole="button"
-                  accessibilityLabel="פתח תיק"
-                >
-                  <Text style={styles.pillText}>פתח תיק</Text>
-                </TouchableOpacity>
-                {hasMultiple ? (
-                  <TouchableOpacity
-                    style={styles.pill}
-                    onPress={cyclePortfolio}
-                    activeOpacity={0.88}
-                    accessibilityRole="button"
-                    accessibilityLabel="החלף תיק"
-                  >
-                    <Ionicons
-                      name="swap-horizontal"
-                      size={17}
-                      color={tokens.colors.text.primary}
-                    />
-                    <Text style={styles.pillText}>החלף תיק</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity
-                    style={styles.pill}
-                    onPress={handleOpenMore}
-                    activeOpacity={0.88}
-                    accessibilityRole="button"
-                    accessibilityLabel="עוד נתונים"
-                  >
-                    <Text style={styles.pillText}>עוד נתונים</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-
-              <View style={styles.kpiRow}>
+              <View style={styles.kpiBand}>
                 <View style={styles.kpiCell}>
                   <Text style={styles.kpiLabel}>יומי</Text>
                   <Text style={[styles.kpiValue, { color: dailyColor }]}>
                     {summary ? formatPercent(summary.daily_gain_pct) : '—'}
                   </Text>
                 </View>
-                <View style={styles.kpiDivider} />
+                <View style={styles.kpiGap} />
                 <View style={styles.kpiCell}>
                   <Text style={styles.kpiLabel}>רווח</Text>
                   <Text style={[styles.kpiValue, { color: totalColor }]}>
                     {summary ? formatPercent(summary.total_gain_pct) : '—'}
                   </Text>
                 </View>
-                <View style={styles.kpiDivider} />
+                <View style={styles.kpiGap} />
                 <View style={styles.kpiCell}>
                   <Text style={styles.kpiLabel}>הצלחה</Text>
                   <Text style={[styles.kpiValue, { color: winRateC }]}>
@@ -586,12 +636,13 @@ export function JournalPreviewSheet({
               </View>
 
               <View
-                style={styles.chartCard}
+                style={styles.chartWell}
                 onLayout={(e) => {
                   const h = e.nativeEvent.layout.height;
-                  // מצב preview נקי: רק קנבס גרף בלי כותרת/אינטרוולים
-                  const next = Math.max(140, Math.floor(h - 10));
-                  setPlotHeight((prev) => (Math.abs(prev - next) > 2 ? next : prev));
+                  const next = Math.max(140, Math.floor(h - 8));
+                  setPlotHeight((prev) =>
+                    Math.abs(prev - next) > 2 ? next : prev
+                  );
                 }}
               >
                 {chartLoading ? (
@@ -625,27 +676,27 @@ export function JournalPreviewSheet({
           </GestureDetector>
         </View>
 
-        <View style={styles.blurCta} pointerEvents="box-none">
-          {Platform.OS === 'ios' ? (
-            <BlurView intensity={40} tint="dark" style={styles.blurFill} />
-          ) : (
-            <BlurView intensity={28} tint="dark" style={styles.blurFill} />
-          )}
-          <LinearGradient
-            colors={['rgba(38,38,38,0)', 'rgba(38,38,38,0.45)', SHEET_BG]}
-            locations={[0, 0.35, 1]}
-            style={styles.blurFill}
-            pointerEvents="none"
+        <View style={styles.footer} pointerEvents="box-none">
+          <BlurView
+            intensity={gm.blurIntensity.medium}
+            tint="systemThinMaterialDark"
+            {...androidBlurProps}
+            style={styles.footerBlur}
           />
+          <View style={styles.footerTint} pointerEvents="none" />
           <TouchableOpacity
             style={styles.ctaBtn}
             onPress={handleOpenMore}
             activeOpacity={0.88}
             accessibilityRole="button"
-            accessibilityLabel="לחץ לפתיחת תיק"
+            accessibilityLabel="פתח תיק"
           >
-            <Text style={styles.ctaText}>לחץ לפתיחת תיק</Text>
-            <Ionicons name="arrow-back" size={16} color="#0A0A0A" />
+            <Text style={styles.ctaText}>פתח תיק</Text>
+            <Ionicons
+              name="arrow-back"
+              size={16}
+              color={tokens.colors.text.inverse}
+            />
           </TouchableOpacity>
         </View>
       </View>

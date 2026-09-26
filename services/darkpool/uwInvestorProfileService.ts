@@ -1,3 +1,4 @@
+import { PROFILE_QUERY_STALE_MS } from '../../lib/profileQueryCache';
 import { supabase } from '../../lib/supabase';
 import type {
   PortfolioSource,
@@ -69,8 +70,9 @@ export interface InvestorProfile {
 }
 
 let cache = new Map<string, { at: number; data: InvestorProfile }>();
+
 /** מיושר ל-staleTime של useDarkPoolInvestorProfile — שרת ממומש (snapshot) */
-const CACHE_MS = 20 * 60 * 1000;
+const CACHE_MS = PROFILE_QUERY_STALE_MS;
 
 function cacheKey(id: string, kind: string, ticker?: string) {
   return `${kind}:${id}:${ticker ?? ''}`;

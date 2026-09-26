@@ -31,8 +31,23 @@ import { loadTrades } from '../../../services/portfolios/portfolioTradeDerive';
 import UICard from '../../../components/ui/UICard';
 import { TickerLogo } from '../components/TickerLogo';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
-import { darkPoolTextRtl } from '../../DarkPool/darkPoolLayout';
+import {
+  JOURNAL_LAYOUT,
+  JOURNAL_TYPE,
+  journalCardMetricLabelStyle,
+  journalCardMetricValueSecondaryStyle,
+  journalCardTitleStyle,
+  journalPhysicalRightText,
+  journalSectionTitleStyle,
+} from '../../Journal/journalLayout';
 import { filterChartSeriesByPeriod } from '../../DarkPool/utils/profileChartSeries';
+import {
+  moverImpactReturnLine,
+  moverImpactRow,
+  moverImpactTextCol,
+  moverImpactTicker,
+  moverImpactValueLine,
+} from '../utils/moverImpactAlign';
 
 interface Props {
   portfolio: Portfolio;
@@ -415,20 +430,14 @@ export default function OverviewTab({
           direction: 'rtl',
         },
         section: {
-          marginBottom: 16,
+          marginBottom: JOURNAL_LAYOUT.cardStackGap,
           overflow: 'hidden',
           direction: 'rtl',
         },
         sectionTitle: {
-          width: '100%',
-          alignSelf: 'stretch',
-          fontSize: 17,
-          fontWeight: '700',
-          letterSpacing: -0.2,
-          lineHeight: 22,
+          ...journalCardTitleStyle,
           color: tokens.colors.text.primary,
-          marginBottom: 12,
-          ...darkPoolTextRtl,
+          marginBottom: JOURNAL_LAYOUT.cardTitleToBodyGap,
         },
         tipsBanner: {
           flexDirection: 'row',
@@ -446,7 +455,7 @@ export default function OverviewTab({
           fontSize: 13,
           color: tokens.colors.text.warning,
           lineHeight: 18,
-          ...darkPoolTextRtl,
+          ...journalPhysicalRightText,
         },
         groupChips: {
           flexDirection: 'row',
@@ -472,7 +481,7 @@ export default function OverviewTab({
           fontSize: 12,
           color: tokens.colors.text.secondary,
           fontWeight: '600',
-          ...darkPoolTextRtl,
+          ...journalPhysicalRightText,
         },
         groupChipTextActive: {
           color: tokens.colors.primary.main,
@@ -501,7 +510,7 @@ export default function OverviewTab({
           flex: 1,
           fontSize: 12,
           color: tokens.colors.text.primary,
-          ...darkPoolTextRtl,
+          ...journalPhysicalRightText,
           fontWeight: '600',
         },
         legendPct: {
@@ -522,7 +531,7 @@ export default function OverviewTab({
         totalLabel: {
           fontSize: 13,
           color: tokens.colors.text.tertiary,
-          ...darkPoolTextRtl,
+          ...journalPhysicalRightText,
         },
         totalValue: {
           fontSize: 15,
@@ -545,56 +554,40 @@ export default function OverviewTab({
           alignSelf: 'stretch',
           fontSize: 12,
           fontWeight: '700',
-          ...darkPoolTextRtl,
+          ...journalPhysicalRightText,
           marginBottom: 8,
         },
         moverRow: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'flex-start',
+          ...moverImpactRow,
           paddingVertical: 9,
           paddingHorizontal: 10,
-          gap: 8,
+          gap: 10,
           borderRadius: 12,
-          backgroundColor: 'rgba(255,255,255,0.05)',
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: 'rgba(255,255,255,0.08)',
+          backgroundColor: tokens.colors.background.tertiary,
+          borderWidth: 0,
           marginBottom: 6,
           width: '100%',
         },
-        moverSymbolBlock: {
-          flex: 1,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'flex-start',
-          gap: 10,
-          minWidth: 0,
+        moverTextCol: {
+          ...moverImpactTextCol,
+          gap: 2,
         },
         moverSymbol: {
-          flex: 1,
+          ...moverImpactTicker,
           fontSize: 13,
           fontWeight: '700',
           color: tokens.colors.text.primary,
-          writingDirection: 'ltr',
-          textAlign: 'right',
-        },
-        moverValues: {
-          alignItems: 'stretch',
-          gap: 2,
-          maxWidth: '58%',
         },
         moverPrimaryLine: {
-          width: '100%',
+          ...moverImpactValueLine,
           fontSize: 12,
           fontWeight: '700',
-          writingDirection: 'ltr',
-          textAlign: 'right',
         },
         moverStockPct: {
-          width: '100%',
-          fontSize: 10,
-          fontWeight: '500',
-          ...darkPoolTextRtl,
+          ...moverImpactReturnLine,
+          fontSize: JOURNAL_TYPE.caption2.fontSize,
+          fontWeight: JOURNAL_TYPE.caption2.fontWeight,
+          lineHeight: JOURNAL_TYPE.caption2.lineHeight,
           opacity: 0.75,
         },
         emptyText: {
@@ -602,7 +595,7 @@ export default function OverviewTab({
           alignSelf: 'stretch',
           fontSize: 13,
           color: tokens.colors.text.tertiary,
-          ...darkPoolTextRtl,
+          ...journalPhysicalRightText,
           paddingVertical: 24,
         },
         emptyTextSmall: {
@@ -610,7 +603,7 @@ export default function OverviewTab({
           alignSelf: 'stretch',
           fontSize: 12,
           color: tokens.colors.text.tertiary,
-          ...darkPoolTextRtl,
+          ...journalPhysicalRightText,
           paddingVertical: 10,
         },
         cashGrid: {
@@ -623,25 +616,20 @@ export default function OverviewTab({
           flexGrow: 1,
           padding: 12,
           borderRadius: 14,
-          backgroundColor: 'rgba(255,255,255,0.05)',
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: 'rgba(255,255,255,0.08)',
-          gap: 6,
-          alignItems: 'stretch',
+          backgroundColor: tokens.colors.background.tertiary,
+          borderWidth: 0,
+          gap: JOURNAL_LAYOUT.cardMetricLabelToValueGap,
+          alignItems: 'center',
         },
         cashCellLabel: {
-          width: '100%',
-          fontSize: 11,
-          fontWeight: '600',
-          color: tokens.colors.text.tertiary,
-          ...darkPoolTextRtl,
+          maxWidth: '100%',
+          ...journalCardMetricLabelStyle,
+          color: tokens.colors.text.secondary,
         },
         cashCellValue: {
-          width: '100%',
-          fontSize: 15,
-          fontWeight: '700',
-          writingDirection: 'ltr',
-          textAlign: 'right',
+          maxWidth: '100%',
+          ...journalCardMetricValueSecondaryStyle,
+          color: tokens.colors.text.primary,
         },
         analyticsGroup: {
           gap: 8,
@@ -655,12 +643,10 @@ export default function OverviewTab({
         analyticsGroupLabel: {
           width: '100%',
           alignSelf: 'stretch',
-          fontSize: 11,
-          fontWeight: '700',
-          color: tokens.colors.text.tertiary,
-          ...darkPoolTextRtl,
-          letterSpacing: 0.2,
-          marginBottom: 2,
+          ...journalCardMetricLabelStyle,
+          color: tokens.colors.text.secondary,
+          textAlign: 'right',
+          marginBottom: 4,
         },
         analyticsGrid: {
           flexDirection: 'row',
@@ -671,40 +657,37 @@ export default function OverviewTab({
           width: '47%',
           flexGrow: 1,
           flexBasis: '47%',
-          minHeight: 72,
+          minHeight: 76,
           paddingVertical: 12,
-          paddingHorizontal: 12,
+          paddingHorizontal: 10,
           borderRadius: 14,
-          backgroundColor: 'rgba(255,255,255,0.05)',
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: 'rgba(255,255,255,0.08)',
+          backgroundColor: tokens.colors.background.tertiary,
+          borderWidth: 0,
           justifyContent: 'center',
-          alignItems: 'stretch',
-          gap: 6,
+          alignItems: 'center',
+          gap: JOURNAL_LAYOUT.cardMetricLabelToValueGap,
         },
         analyticsCellPrimary: {
-          backgroundColor: 'rgba(255,255,255,0.07)',
-          borderColor: 'rgba(255,255,255,0.12)',
+          backgroundColor: tokens.colors.background.elevated2,
         },
         analyticsCellLabel: {
-          width: '100%',
-          fontSize: 11,
-          fontWeight: '600',
-          color: tokens.colors.text.tertiary,
-          ...darkPoolTextRtl,
+          maxWidth: '100%',
+          ...journalCardMetricLabelStyle,
+          color: tokens.colors.text.secondary,
         },
         analyticsCellValue: {
-          width: '100%',
-          fontSize: 17,
-          fontWeight: '800',
-          writingDirection: 'ltr',
-          textAlign: 'right',
+          alignSelf: 'stretch',
+          maxWidth: '100%',
+          ...journalCardMetricValueSecondaryStyle,
         },
         analyticsCellHint: {
-          width: '100%',
-          fontSize: 9,
+          maxWidth: '100%',
+          fontSize: JOURNAL_TYPE.caption2.fontSize,
+          fontWeight: JOURNAL_TYPE.caption2.fontWeight,
+          lineHeight: JOURNAL_TYPE.caption2.lineHeight,
           color: tokens.colors.text.tertiary,
-          ...darkPoolTextRtl,
+          writingDirection: 'rtl',
+          textAlign: 'right',
           marginTop: 0,
         },
       }),
@@ -724,35 +707,30 @@ export default function OverviewTab({
         </View>
       ) : null}
 
-      {/* Performance chart — Cash App topology בתוך הגרף (label→amount→delta), בלי כותרת כפולה */}
-      <UICard variant="glass" glassIntensity="light" padding="md" style={styles.section}>
+      {/* Performance chart — כותרת סקשן זהה בטעינה/טעון; בגרף רק amount→delta */}
+      <UICard variant="soft" padding="md" style={styles.section}>
+        <Text style={styles.sectionTitle}>שווי תיק לאורך זמן</Text>
         {chartLoading ? (
-          <>
-            <Text style={styles.sectionTitle}>שווי תיק לאורך זמן</Text>
-            <Text style={styles.emptyText}>טוען נתונים…</Text>
-          </>
+          <Text style={styles.emptyText}>טוען נתונים…</Text>
         ) : filteredSeries.length === 0 ? (
-          <>
-            <Text style={styles.sectionTitle}>שווי תיק לאורך זמן</Text>
-            <Text style={styles.emptyText}>
-              {isColmex
-                ? 'אין נקודת שווי עדיין — משוך לסנכרון מהברוקר'
-                : 'אין נתונים היסטוריים עדיין — סגור פוזיציה ראשונה או הוסף הפקדה'}
-            </Text>
-          </>
+          <Text style={styles.emptyText}>
+            {isColmex
+              ? 'אין נקודת שווי עדיין — משוך לסנכרון מהברוקר'
+              : 'אין נתונים היסטוריים עדיין — סגור פוזיציה ראשונה או הוסף הפקדה'}
+          </Text>
         ) : (
           <PortfolioValueChart
             series={filteredSeries}
             currency={portfolio.currency}
             selectedPeriod={period}
             onPeriodChange={setPeriod}
-            headerTitle="שווי תיק לאורך זמן"
+            headerTitle=""
           />
         )}
       </UICard>
 
       {/* Distribution */}
-      <UICard variant="glass" glassIntensity="light" padding="md" style={styles.section}>
+      <UICard variant="soft" padding="md" style={styles.section}>
         <Text style={styles.sectionTitle}>חלוקת נכסים</Text>
         <View style={styles.groupChips}>
           {GROUP_BY_OPTIONS.map((opt) => (
@@ -823,7 +801,7 @@ export default function OverviewTab({
 
       {/* Analytics metrics — עיקריים לפי חשיבות, ואז משניים */}
       {(analytics != null || tradeStats.count > 0) && (
-        <UICard variant="glass" glassIntensity="light" padding="md" style={styles.section}>
+        <UICard variant="soft" padding="md" style={styles.section}>
           <Text style={styles.sectionTitle}>מדדי ביצוע</Text>
 
           <View style={styles.analyticsGroup}>
@@ -1007,7 +985,7 @@ export default function OverviewTab({
       )}
 
       {/* Daily gainers/losers — השפעה על התיק (לא % המניה) */}
-      <UICard variant="glass" glassIntensity="light" padding="md" style={styles.section}>
+      <UICard variant="soft" padding="md" style={styles.section}>
         <Text style={styles.sectionTitle}>השפעה על התיק היום</Text>
         {(isColmex ? openTradeHoldings.length === 0 : holdings.length === 0) ? (
           <Text style={styles.emptyText}>
@@ -1072,7 +1050,7 @@ export default function OverviewTab({
       </UICard>
 
       {/* Cash flow summary */}
-      <UICard variant="glass" glassIntensity="light" padding="md" style={styles.section}>
+      <UICard variant="soft" padding="md" style={styles.section}>
         <Text style={styles.sectionTitle}>תזרים מזומנים</Text>
         <View style={styles.cashGrid}>
           <CashFlowCard
@@ -1114,15 +1092,14 @@ interface MoverImpactRowProps {
   tokens: ReturnType<typeof useDesignTokens>;
   styles: {
     moverRow: any;
-    moverSymbolBlock: any;
+    moverTextCol: any;
     moverSymbol: any;
-    moverValues: any;
     moverPrimaryLine: any;
     moverStockPct: any;
   };
 }
 
-/** שורת נכס: לוגו + סימול · %השפעה · $שינוי, מתחת תשואה מכניסה */
+/** שורת נכס: לוגו בימין, ואז טיקר / מחיר / תשואה על אותו קצה ימני. */
 function MoverImpactRow({
   holding,
   portfolioValue,
@@ -1140,13 +1117,11 @@ function MoverImpactRow({
   );
   return (
     <View style={styles.moverRow}>
-      <View style={styles.moverSymbolBlock}>
-        <TickerLogo symbol={holding.symbol} size={38} />
+      <TickerLogo symbol={holding.symbol} size={38} />
+      <View style={styles.moverTextCol}>
         <Text style={styles.moverSymbol} numberOfLines={1}>
           {holding.symbol}
         </Text>
-      </View>
-      <View style={styles.moverValues}>
         <Text
           style={[styles.moverPrimaryLine, { color }]}
           numberOfLines={1}

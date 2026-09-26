@@ -2,11 +2,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, Image, ActivityIndicator, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { GlassChip } from '../ui/GlassChip';
 import { useBottomSheetClose } from '../ui/BottomSheet/BottomSheet';
 import { ChatBottomSheet } from './ChatBottomSheet';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
 import { PollService, PollOption } from '../../services/pollService';
 import { logger } from '../../utils/logger';
+import { APP_TYPE, appPhysicalRightText, appSectionTitleStyle } from '../ui/appType';
 
 interface PollVotesBottomSheetProps {
   visible: boolean;
@@ -119,9 +121,14 @@ export default function PollVotesBottomSheet({
                         {option.text}
                       </Text>
                       {votesCount > 0 && (
-                        <View style={styles.optionBadge}>
+                        <GlassChip
+                          selected
+                          disableBlur
+                          style={styles.optionBadge}
+                          contentContainerStyle={styles.optionBadgeContent}
+                        >
                           <Text style={styles.optionBadgeText}>{votesCount}</Text>
-                        </View>
+                        </GlassChip>
                       )}
                     </View>
 
@@ -188,10 +195,8 @@ const createStyles = (tokens: any) => {
       width: 36,
     },
     title: {
-      fontSize: 18,
-      fontWeight: '800',
+      ...appSectionTitleStyle,
       color: tokens.colors.text.primary,
-      textAlign: 'right',
     },
     questionContainer: {
       paddingHorizontal: tokens.spacing.md,
@@ -200,11 +205,11 @@ const createStyles = (tokens: any) => {
       borderBottomColor: borderColor,
     },
     question: {
-      fontSize: 16,
+      fontSize: APP_TYPE.body.fontSize,
       fontWeight: '700',
       color: tokens.colors.text.primary,
-      textAlign: 'right',
-      lineHeight: 22,
+      ...appPhysicalRightText,
+      lineHeight: APP_TYPE.body.lineHeight,
     },
     loadingContainer: {
       flex: 1,
@@ -256,18 +261,19 @@ const createStyles = (tokens: any) => {
       textAlign: 'right',
     },
     optionBadge: {
-      backgroundColor: tokens.colors.primary.main,
+      minWidth: 32,
+      minHeight: 0,
       borderRadius: tokens.borderRadius.full,
+    },
+    optionBadgeContent: {
+      minHeight: 0,
       paddingHorizontal: 10,
       paddingVertical: 4,
-      minWidth: 32,
-      alignItems: 'center',
-      justifyContent: 'center',
     },
     optionBadgeText: {
       fontSize: tokens.typography.fontSize.sm,
       fontWeight: tokens.typography.fontWeight.black,
-      color: tokens.colors.text.inverse,
+      color: tokens.colors.primary.main,
     },
     noVotersText: {
       fontSize: tokens.typography.fontSize.sm,

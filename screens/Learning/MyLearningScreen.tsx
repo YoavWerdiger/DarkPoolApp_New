@@ -14,6 +14,7 @@ import { StatusBar } from 'expo-status-bar';
 import { ScreenChrome } from '../../components/ui';
 import { useNavigation } from '@react-navigation/native';
 import { useMyEnrollments } from '../../hooks/useLearning';
+import { useAllowAfterNavigationTransition } from '../../hooks/afterNavigationTransition';
 import { AcademyScreenHeader, CourseCard } from '../../components/learning';
 import { ACADEMY_CARD_HP, academyCardFrameStyle } from '../../components/learning/academyCardLayout';
 import {
@@ -34,7 +35,10 @@ export const MyLearningScreen: React.FC = () => {
   const DesignTokens = useDesignTokens();
   const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   const mainTabsHeight = useMainTabsHeight();
-  const { data: enrollments, isLoading, error, refetch } = useMyEnrollments();
+  const allowHeavy = useAllowAfterNavigationTransition();
+  const { data: enrollments, isLoading, error, refetch } = useMyEnrollments({
+    enabled: allowHeavy,
+  });
   const [refreshing, setRefreshing] = React.useState(false);
 
   const openMainDrawer = useCallback(() => {
@@ -218,7 +222,7 @@ export const MyLearningScreen: React.FC = () => {
               tintColor={DesignTokens.colors.primary.main}
             />
           }
-          ListEmptyComponent={!isLoading ? renderEmptyState : null}
+          ListEmptyComponent={!isLoading && allowHeavy ? renderEmptyState : null}
           showsVerticalScrollIndicator={false}
           />
         </View>

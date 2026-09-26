@@ -2,12 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
-import {
-  MAIN_SCREEN_HEADER_HP,
-  MAIN_SCREEN_HEADER_TITLE_LINE_HEIGHT,
-  MAIN_SCREEN_HEADER_TITLE_SIZE,
-  MAIN_SCREEN_HEADER_TITLE_WEIGHT,
-} from '../../../components/ui/MainDrawerScreenHeader';
+import { MAIN_SCREEN_HEADER_HP } from '../../../components/ui/MainDrawerScreenHeader';
+import { appScreenSubtitleStyle, appScreenTitleStyle } from '../../../components/ui/appType';
 import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../../components/ui/DayNavBlurButton';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 
@@ -44,7 +40,7 @@ export function PortfolioScreenHeader({
               onBack();
             }}
             size={DRAWER_MENU_BUTTON_SIZE}
-            glassIntensity="subtle"
+            glassIntensity="light"
             accessibilityLabel="חזרה"
           >
             <Ionicons
@@ -59,14 +55,14 @@ export function PortfolioScreenHeader({
       </View>
       <View style={styles.center} pointerEvents="box-none">
         <Text
-          style={[styles.title, { color: tokens.colors.text.primary }]}
+          style={[styles.title, appScreenTitleStyle, { color: tokens.colors.text.primary }]}
           numberOfLines={1}
         >
           {title}
         </Text>
         {subtitle ? (
           <Text
-            style={[styles.subtitle, { color: tokens.colors.text.tertiary }]}
+            style={[styles.subtitle, appScreenSubtitleStyle, { color: tokens.colors.text.tertiary }]}
             numberOfLines={1}
           >
             {subtitle}
@@ -116,20 +112,10 @@ const styles = StyleSheet.create({
     minHeight: 48,
     paddingHorizontal: 4,
   },
-  title: {
-    fontSize: MAIN_SCREEN_HEADER_TITLE_SIZE,
-    fontWeight: MAIN_SCREEN_HEADER_TITLE_WEIGHT,
-    letterSpacing: -0.35,
-    lineHeight: MAIN_SCREEN_HEADER_TITLE_LINE_HEIGHT,
-    textAlign: 'center',
-    writingDirection: 'rtl',
-  },
+  title: {},
   subtitle: {
     fontSize: 13,
     fontWeight: '500',
-    marginTop: 3,
-    textAlign: 'center',
     lineHeight: 17,
-    writingDirection: 'rtl',
   },
 });

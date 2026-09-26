@@ -5,7 +5,13 @@ import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Modal, Pre
 import { Image as ExpoImage } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
-import * as MediaLibrary from 'expo-media-library/legacy';
+import {
+  peekMediaRecents,
+  prefetchMediaRecents,
+  requestMediaLibraryRead,
+  resolveMediaRecentLocalUri,
+  type MediaRecentAsset,
+} from '../../lib/mediaRecentsCache';
 import { Video, ResizeMode } from '../../lib/expoAvSafe';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -951,7 +957,9 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
   const [isUploading, setIsUploading] = useState(false);
   const [textContent, setTextContent] = useState('');
   const [textBgIndex, setTextBgIndex] = useState(0);
-  const [recentPhotos, setRecentPhotos] = useState<MediaLibrary.Asset[]>([]);
+  const [recentPhotos, setRecentPhotos] = useState<MediaRecentAsset[]>(
+    () => peekMediaRecents('all')?.assets ?? [],
+  );
   const [galleryExpanded, setGalleryExpanded] = useState(false);
 
   const textInputRef = useRef<TextInput>(null);
@@ -1231,24 +1239,19 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
   }, [galleryExpanded]);
 
   const loadRecentPhotos = async () => {
+    const cached = peekMediaRecents('all');
+    if (cached) setRecentPhotos(cached.assets);
     try {
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== 'granted') return;
-      const media = await MediaLibrary.getAssetsAsync({
-        first: 30,
-        sortBy: [MediaLibrary.SortBy.creationTime],
-        mediaType: [MediaLibrary.MediaType.photo, MediaLibrary.MediaType.video],
-      });
-      setRecentPhotos(media.assets);
+      const page = await prefetchMediaRecents('all');
+      if (page) setRecentPhotos(page.assets);
     } catch (error) {
       logger.error('AddStoryFullScreen', 'Failed to load recent photos', error);
     }
   };
 
-  const selectRecentPhoto = async (asset: MediaLibrary.Asset) => {
+  const selectRecentPhoto = async (asset: MediaRecentAsset) => {
     try {
-      const info = await MediaLibrary.getAssetInfoAsync(asset);
-      const uri = info.localUri;
+      const uri = await resolveMediaRecentLocalUri(asset.id, asset.uri);
       if (!uri || uri.startsWith('ph://')) {
         openGallery();
         return;
@@ -1407,12 +1410,15 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
     );
     if (galleryExpanded) {
       setGalleryExpanded(false);
-    } else if (recentPhotos.length > 0) {
-      setGalleryExpanded(true);
     } else {
-      openGallery();
+      setGalleryExpanded(true);
+      if (recentPhotos.length === 0) {
+        void requestMediaLibraryRead().then((ok) => {
+          if (ok) void loadRecentPhotos();
+        });
+      }
     }
-  }, [galleryExpanded, recentPhotos.length, openGallery]);
+  }, [galleryExpanded, recentPhotos.length]);
 
   const handleCapturePress = useCallback(() => {
     logger.debug('AddStoryFullScreen', `capture press / shutter tap (platform=${Platform.OS})`);

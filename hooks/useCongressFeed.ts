@@ -7,12 +7,16 @@ import {
   triggerCongressSync,
 } from '../services/darkpool/darkPoolDbCacheService';
 import { fetchUwCongressFeed } from '../services/darkpool/uwCongressFeedService';
-import { getQuotes } from '../services/portfolios/portfolioPriceFeed';
-import type { PriceQuote } from '../screens/Portfolios/portfolioTypes';
 import {
   buildCongressFeedItem,
   type CongressTradeFeedItem,
 } from '../screens/DarkPool/utils/congressFeedCalc';
+import { seedFeedQuoteMap } from '../screens/DarkPool/utils/feedQuoteCache';
+import { fetchAndCacheFeedQuotes } from '../screens/DarkPool/utils/feedQuotes';
+import {
+  congressFeedDailyBarRequest,
+  fetchDailyBarsForTickers,
+} from '../screens/DarkPool/utils/congressTradeOpens';
 import {
   DARK_POOL_SEC_PRODUCTION,
   DARK_POOL_FEED_ENRICH_QUOTES,
@@ -21,24 +25,35 @@ import {
 
 export type { CongressTradeFeedItem };
 
-const QUOTE_TIMEOUT_MS = 5_000;
+function congressQuoteSeed(
+  queryKey?: readonly unknown[]
+): ReturnType<typeof seedFeedQuoteMap> {
+  const previous = queryKey
+    ? queryClient.getQueryData<CongressTradeFeedItem[]>(queryKey)
+    : undefined;
+  return seedFeedQuoteMap({ previousItems: previous ?? [] });
+}
 
 async function enrichWithQuotes(
-  rows: Awaited<ReturnType<typeof listCongressTradesFromDb>>
+  rows: Awaited<ReturnType<typeof listCongressTradesFromDb>>,
+  queryKey?: readonly unknown[]
 ): Promise<CongressTradeFeedItem[]> {
-  const symbols = DARK_POOL_FEED_ENRICH_QUOTES
-    ? Array.from(new Set(rows.map((t) => t.ticker)))
-    : [];
-  const quotes =
-    symbols.length > 0
-      ? await Promise.race([
-          getQuotes(symbols),
-          new Promise<Map<string, PriceQuote>>((resolve) =>
-            setTimeout(() => resolve(new Map()), QUOTE_TIMEOUT_MS)
-          ),
-        ])
-      : new Map<string, PriceQuote>();
-  return rows.map((trade) => buildCongressFeedItem(trade, quotes));
+  const seeded = congressQuoteSeed(queryKey);
+  if (!DARK_POOL_FEED_ENRICH_QUOTES) {
+    return rows.map((trade) => buildCongressFeedItem(trade, seeded));
+  }
+  const quotes = await fetchAndCacheFeedQuotes(
+    rows.map((t) => t.ticker),
+    seeded
+  );
+  const barReq = congressFeedDailyBarRequest(rows);
+  const dailyBars =
+    barReq.tickers.length > 0
+      ? await fetchDailyBarsForTickers(barReq.tickers, barReq.range).catch(
+          () => new Map()
+        )
+      : undefined;
+  return rows.map((trade) => buildCongressFeedItem(trade, quotes, dailyBars));
 }
 
 function dedupeFeed(enriched: CongressTradeFeedItem[]): CongressTradeFeedItem[] {
@@ -66,20 +81,22 @@ export async function loadCongress(
   }
 
   const deferQuotes = opts?.deferQuotes !== false && DARK_POOL_FEED_ENRICH_QUOTES;
+  const key = opts?.queryKey;
   if (!deferQuotes) {
-    return dedupeFeed(await enrichWithQuotes(rows));
+    return dedupeFeed(await enrichWithQuotes(rows, key));
   }
 
-  const bare = dedupeFeed(rows.map((trade) => buildCongressFeedItem(trade, new Map())));
-  const key = opts?.queryKey;
+  const firstPaint = dedupeFeed(
+    rows.map((trade) => buildCongressFeedItem(trade, congressQuoteSeed(key)))
+  );
   if (key && rows.length > 0) {
-    void enrichWithQuotes(rows)
+    void enrichWithQuotes(rows, key)
       .then((enriched) => {
         queryClient.setQueryData(key, dedupeFeed(enriched));
       })
       .catch(() => undefined);
   }
-  return bare;
+  return firstPaint;
 }
 
 export function useCongressFeed(limit = 40, enabled = true) {
@@ -95,7 +112,7 @@ export function useCongressFeed(limit = 40, enabled = true) {
     },
     enabled,
     staleTime: DARK_POOL_FEED_STALE_MS,
-    placeholderData: [],
+    placeholderData: (previous) => previous ?? [],
   });
 
   const refetch = useCallback(async () => {

@@ -149,7 +149,7 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
                 borderRadius: AVATAR / 2,
                 borderWidth: 2,
                 borderColor: image
-                  ? tokens.cashAppStyle.colors.inputFocus
+                  ? tokens.colors.border.strong
                   : 'rgba(0,0,0,0.1)',
                 backgroundColor: '#FFFFFF',
                 alignItems: 'center',

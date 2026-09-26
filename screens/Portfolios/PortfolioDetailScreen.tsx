@@ -48,8 +48,11 @@ import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { useAuth } from '../../context/AuthContext';
 import { useColmexSync } from '../../hooks/useColmexSync';
 import { DayNavBlurButton, HEADER_BACK_BTN_SIZE } from '../../components/ui/DayNavBlurButton';
-import UICard from '../../components/ui/UICard';
-import { darkPoolRtlRoot, darkPoolTextRtl } from '../DarkPool/darkPoolLayout';
+import { DayDividerPill } from '../../components/ui/DayDividerPill';
+import {
+  journalPhysicalRightText,
+  journalRtlRoot,
+} from '../Journal/journalLayout';
 
 type Nav = NativeStackNavigationProp<PortfoliosStackParamList, 'PortfolioDetail'>;
 type Route = RouteProp<PortfoliosStackParamList, 'PortfolioDetail'>;
@@ -190,7 +193,7 @@ export default function PortfolioDetailScreen() {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        root: { ...darkPoolRtlRoot, backgroundColor: '#111111' },
+        root: { ...journalRtlRoot, backgroundColor: 'transparent' },
         loading: {
           flex: 1,
           alignItems: 'center',
@@ -214,10 +217,7 @@ export default function PortfolioDetailScreen() {
           paddingHorizontal: 16,
           paddingVertical: 7,
         },
-        tabBtnActive: {
-          borderWidth: 1,
-          borderColor: `${tokens.colors.primary.main}55`,
-        },
+        tabBtnActive: {},
         tabText: portfolioDetailTabLabelStyle(tokens.colors.text.secondary),
         tabTextActive: {
           color: tokens.colors.primary.main,
@@ -247,7 +247,7 @@ export default function PortfolioDetailScreen() {
           fontSize: 16,
           fontWeight: '700',
           color: tokens.colors.text.inverse,
-          ...darkPoolTextRtl,
+          ...journalPhysicalRightText,
         },
       }),
     [tokens, mainTabsHeight]
@@ -287,7 +287,7 @@ export default function PortfolioDetailScreen() {
                   openPortfolioActions();
                 }}
                 size={HEADER_BACK_BTN_SIZE}
-                glassIntensity="subtle"
+                glassIntensity="light"
                 accessibilityLabel="פעולות תיק"
               >
                 <Ionicons
@@ -329,29 +329,24 @@ export default function PortfolioDetailScreen() {
             {PORTFOLIO_DETAIL_TABS.map((tab) => {
               const active = tab.id === activeTab;
               return (
-                <UICard
+                <DayDividerPill
                   key={tab.id}
-                  variant="glass"
-                  glassIntensity="subtle"
-                  padding="none"
+                  selected={active}
                   haptic={false}
-                  showGlassBorder={!active}
                   onPress={() => {
                     if (!active) void HapticFeedback.selection();
                     setActiveTab(tab.id);
                   }}
-                  style={[
-                    styles.tabBtn,
-                    active && styles.tabBtnActive,
-                  ]}
+                  style={styles.tabBtn}
                   contentContainerStyle={styles.tabBtnInner}
+                  accessibilityLabel={tab.label}
                 >
                   <Text
                     style={[styles.tabText, active && styles.tabTextActive]}
                   >
                     {tab.label}
                   </Text>
-                </UICard>
+                </DayDividerPill>
               );
             })}
           </ScrollView>

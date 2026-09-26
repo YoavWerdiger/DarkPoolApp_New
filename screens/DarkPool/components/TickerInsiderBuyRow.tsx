@@ -3,9 +3,13 @@ import { StyleSheet, Text, View } from 'react-native';
 import UICard from '../../../components/ui/UICard';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
-import { darkPoolTextRtl } from '../darkPoolLayout';
+import {
+  DARK_POOL_TYPE,
+  darkPoolPhysicalRightText,
+} from '../darkPoolLayout';
 import { formatRelativeTime, formatUsdCompact } from '../utils/darkPoolFormat';
 import { formatInsiderDisplayName } from '../utils/investorPlaceholder';
+import { toDataIsland } from '../utils/bidi';
 import {
   formatFeedTickerDisplay,
   getFeedTradeSide,
@@ -13,14 +17,12 @@ import {
 } from '../utils/feedTradeDisplay';
 import type { InsiderBuyRow } from '../../../types/darkpool.types';
 
-/** Left-to-right mark — שומר טיקר/$ בלי ערבוב RTL */
-const LRM = '\u200E';
-
 interface Props {
   item: InsiderBuyRow;
+  onPress?: () => void;
 }
 
-export function TickerInsiderBuyRow({ item }: Props) {
+export function TickerInsiderBuyRow({ item, onPress }: Props) {
   const tokens = useDesignTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
   const side = getFeedTradeSide(item.transaction_type);
@@ -31,17 +33,22 @@ export function TickerInsiderBuyRow({ item }: Props) {
   const tickerSym = formatFeedTickerDisplay(item.ticker);
 
   return (
-    <UICard variant="glass" glassIntensity="light" padding="md" style={styles.card}>
+    <UICard
+      variant="glass"
+      glassIntensity="light"
+      padding="md"
+      disableBlur
+      style={styles.card}
+      onPress={onPress}
+      accessibilityLabel={`${displayName} ${verb} ${tickerSym}`}
+    >
       <View style={styles.row}>
         <TickerLogo symbol={item.ticker} size={40} borderRadius={20} />
         <View style={styles.main}>
           <Text style={styles.primary} numberOfLines={1}>
             <Text style={styles.name}>{displayName}</Text>
             <Text style={{ color: sideColor, fontWeight: '800' }}>{` ${verb} `}</Text>
-            <Text style={styles.ticker}>
-              {LRM}
-              {tickerSym}
-            </Text>
+            <Text style={styles.ticker}>{toDataIsland(tickerSym)}</Text>
           </Text>
           {item.insider_role?.trim() ? (
             <Text style={styles.role} numberOfLines={1}>
@@ -70,10 +77,10 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     card: {
       marginBottom: 8,
       borderRadius: tokens.borderRadius.lg,
-      borderWidth: 1,
-      borderColor: tokens.colors.border.subtle,
+      backgroundColor: 'transparent',
     },
     row: {
+      direction: 'rtl',
       flexDirection: 'row',
       alignItems: 'flex-start',
       gap: 12,
@@ -81,16 +88,16 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     main: {
       flex: 1,
       minWidth: 0,
-      alignItems: 'flex-start',
+      alignItems: 'stretch',
     },
     primary: {
-      ...darkPoolTextRtl,
-      fontSize: 15,
-      fontWeight: '700',
+      ...darkPoolPhysicalRightText,
+      fontSize: DARK_POOL_TYPE.body.fontSize,
+      fontWeight: '800',
       color: tokens.colors.text.primary,
     },
     name: {
-      fontWeight: '700',
+      fontWeight: '800',
       color: tokens.colors.text.primary,
     },
     ticker: {
@@ -100,34 +107,35 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     role: {
       marginTop: 2,
-      fontSize: 12,
-      fontWeight: '500',
+      fontSize: DARK_POOL_TYPE.caption.fontSize,
+      fontWeight: DARK_POOL_TYPE.caption.fontWeight,
       color: tokens.colors.text.tertiary,
-      ...darkPoolTextRtl,
+      ...darkPoolPhysicalRightText,
     },
     date: {
       marginTop: 4,
-      fontSize: 12,
-      fontWeight: '500',
+      fontSize: DARK_POOL_TYPE.caption.fontSize,
+      fontWeight: DARK_POOL_TYPE.caption.fontWeight,
       color: tokens.colors.text.tertiary,
-      ...darkPoolTextRtl,
+      ...darkPoolPhysicalRightText,
     },
     valueCol: {
-      alignItems: 'flex-end',
+      alignItems: 'stretch',
       minWidth: 72,
     },
     value: {
-      fontSize: 15,
+      fontSize: DARK_POOL_TYPE.body.fontSize,
       fontWeight: '800',
       color: tokens.colors.text.primary,
       writingDirection: 'ltr',
+      textAlign: 'right',
     },
     shares: {
       marginTop: 3,
-      fontSize: 11,
-      fontWeight: '500',
+      fontSize: DARK_POOL_TYPE.caption2.fontSize,
+      fontWeight: DARK_POOL_TYPE.caption.fontWeight,
       color: tokens.colors.text.tertiary,
-      ...darkPoolTextRtl,
+      ...darkPoolPhysicalRightText,
     },
   });
 }

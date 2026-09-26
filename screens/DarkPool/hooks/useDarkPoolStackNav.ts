@@ -4,7 +4,6 @@ import type { DarkPoolStackParamList } from '../../../navigation/DarkPoolStack';
 
 const STACK_ROUTE_NAMES = new Set([
   'DarkPoolHome',
-  'DarkPoolPeople',
   'DarkPoolTicker',
   'DarkPoolInvestor',
   'DarkPoolTradeDetail',

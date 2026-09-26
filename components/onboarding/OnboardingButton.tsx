@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
+import UICard from '../ui/UICard';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 
 export type OnboardingButtonVariant = 'primary' | 'secondary' | 'ghost';
@@ -31,13 +32,12 @@ export interface OnboardingButtonProps {
 
 /**
  * OnboardingButton - כפתור בסגנון DarkPool
- * 
+ *
  * עיצוב עם:
- * - Primary: ירוק DarkPool (#00C805) עם טקסט שחור
- * - Secondary: glass effect עם טקסט לבן
+ * - Primary: גלולת זכוכית (UICard glass + blur), גם במצב disabled — מעומעם
+ * - Secondary: מילוי שקוף עם מסגרת
  * - Ghost: שקוף עם טקסט ירוק
  * - Border radius pill מלא
- * - גבוה וברור
  */
 const OnboardingButton: React.FC<OnboardingButtonProps> = ({
   title,
@@ -60,16 +60,13 @@ const OnboardingButton: React.FC<OnboardingButtonProps> = ({
       case 'primary':
         return {
           container: {
-            backgroundColor: disabled
-              ? tokens.colors.text.disabled
-              : tokens.colors.primary.main,
+            backgroundColor: 'transparent',
             borderRadius: tokens.borderRadius.button,
-            ...tokens.shadows.green,
           },
           text: {
             color: disabled
-              ? tokens.colors.text.muted
-              : tokens.colors.text.inverse,
+              ? tokens.colors.text.tertiary
+              : tokens.colors.text.primary,
             fontWeight: tokens.typography.button.weight,
             fontSize: tokens.typography.button.size,
           },
@@ -78,12 +75,9 @@ const OnboardingButton: React.FC<OnboardingButtonProps> = ({
         return {
           container: {
             backgroundColor: disabled
-              ? 'rgba(255, 255, 255, 0.04)'
-              : 'rgba(255, 255, 255, 0.14)',
-            borderWidth: 1,
-            borderColor: disabled
-              ? 'rgba(255, 255, 255, 0.08)'
-              : 'rgba(255, 255, 255, 0.22)',
+              ? tokens.colors.background.tertiary
+              : tokens.colors.background.navChrome,
+            borderWidth: 0,
             borderRadius: tokens.borderRadius.button,
           },
           text: {
@@ -129,7 +123,7 @@ const OnboardingButton: React.FC<OnboardingButtonProps> = ({
           container: {
             paddingHorizontal: tokens.spacing.xl,
             minHeight: 48,
-            paddingVertical: tokens.spacing.md,
+            paddingVertical: 0,
           },
           icon: 20,
         };
@@ -139,7 +133,7 @@ const OnboardingButton: React.FC<OnboardingButtonProps> = ({
           container: {
             paddingHorizontal: tokens.spacing.xl,
             minHeight: 56,
-            paddingVertical: tokens.spacing.lg,
+            paddingVertical: 0,
           },
           icon: 22,
         };
@@ -220,6 +214,49 @@ const OnboardingButton: React.FC<OnboardingButtonProps> = ({
       </>
     );
   };
+
+  if (variant === 'primary') {
+    const minHeight = size === 'lg' ? 56 : 48;
+    return (
+      <Pressable
+        accessibilityRole="button"
+        style={({ pressed }) => [
+          {
+            borderRadius: tokens.borderRadius.button,
+            ...(fullWidth ? { width: '100%' as const } : null),
+            opacity: disabled && !loading ? 0.88 : pressed && !loading ? 0.9 : 1,
+            transform:
+              pressed && !disabled && !loading ? [{ scale: 0.98 }] : undefined,
+          },
+          style,
+        ]}
+        onPress={handlePress}
+        disabled={disabled || loading}
+      >
+        <UICard
+          variant="glass"
+          enableBlur
+          glassIntensity={disabled ? 'subtle' : 'light'}
+          padding="none"
+          haptic={false}
+          style={{
+            borderRadius: tokens.borderRadius.button,
+            width: fullWidth ? '100%' : undefined,
+            alignSelf: fullWidth ? 'stretch' : 'flex-start',
+          }}
+          contentContainerStyle={{
+            minHeight,
+            paddingHorizontal: tokens.spacing.xl,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {renderContent()}
+        </UICard>
+      </Pressable>
+    );
+  }
 
   return (
     <Pressable

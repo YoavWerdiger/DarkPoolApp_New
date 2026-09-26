@@ -1,7 +1,7 @@
 import type { AuthChangeEvent, User as SupabaseAuthUser } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
-import { openAuthSessionAsync, WebBrowserAuthSessionResult } from 'expo-web-browser';
+import { openAuthSessionAsync, type WebBrowserAuthSessionResult } from '../lib/expoWebBrowserSafe';
 import { makeRedirectUri } from 'expo-auth-session';
 import * as Linking from 'expo-linking';
 import { logger } from '../utils/logger';

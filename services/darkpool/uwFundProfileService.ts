@@ -1,3 +1,4 @@
+import { PROFILE_QUERY_STALE_MS } from '../../lib/profileQueryCache';
 import { supabase } from '../../lib/supabase';
 
 export interface FundHolding {
@@ -39,7 +40,7 @@ export interface FundProfile {
 }
 
 let cache = new Map<string, { at: number; data: FundProfile }>();
-const CACHE_MS = 20 * 60 * 1000;
+const CACHE_MS = PROFILE_QUERY_STALE_MS;
 
 export async function fetchFundProfile(cik: string, force = false): Promise<FundProfile> {
   const id = cik.trim();
@@ -57,4 +58,34 @@ export async function fetchFundProfile(cik: string, force = false): Promise<Fund
 
   cache.set(id, { at: Date.now(), data });
   return data;
+}
+
+export interface FundFilingHistoryRow {
+  filing_date: string;
+  ticker: string;
+  shares: number | null;
+  value_usd: number | null;
+}
+
+/** היסטוריית 13F גולמית — RLS ציבורי. בלי midpoint ובלי שחזור STOCK Act. */
+export async function fetchFundHoldingsHistory(
+  cik: string
+): Promise<FundFilingHistoryRow[]> {
+  const id = cik.trim();
+  if (!id) return [];
+  const { data, error } = await supabase
+    .from('dark_pool_fund_holdings')
+    .select('filing_date, ticker, shares, value_usd')
+    .eq('fund_cik', id)
+    .order('filing_date', { ascending: true })
+    .limit(5000);
+  if (error) throw error;
+  return (data ?? []).map((row) => ({
+    filing_date: String(row.filing_date ?? '').slice(0, 10),
+    ticker: String(row.ticker ?? '')
+      .toUpperCase()
+      .trim(),
+    shares: row.shares != null ? Number(row.shares) : null,
+    value_usd: row.value_usd != null ? Number(row.value_usd) : null,
+  }));
 }

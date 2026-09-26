@@ -8,6 +8,8 @@ import {
   SHEET_GLASS_INTENSITY,
   SHEET_GLASS_OVERLAY,
   SHEET_GLASS_TINT,
+  latchSheetGlass,
+  canLatchSheetGlass,
   sheetContentBottomPadding,
   sheetSafeBottomInset,
   sheetSystemBarFillHeight,
@@ -27,22 +29,35 @@ const MIN_READABLE_BLUR_INTENSITY = 24;
 /** מעל זה ה-overlay חונק את הטשטוש גם אם טכנית הוא שקוף־למחצה. */
 const MAX_GLASS_OVERLAY_ALPHA = 0.3;
 
+describe('sheet glass stays opaque during motion', () => {
+  it('latches blur once shown — drag/close must not unmount the glass', () => {
+    expect(latchSheetGlass(false, false)).toBe(false);
+    expect(latchSheetGlass(false, true)).toBe(true);
+    expect(latchSheetGlass(true, false)).toBe(true);
+    expect(latchSheetGlass(true, true)).toBe(true);
+  });
+
+  it('does not mount blur until layout and open-defer are done', () => {
+    expect(canLatchSheetGlass(false, true, false, false)).toBe(false);
+    expect(canLatchSheetGlass(false, true, true, false)).toBe(false);
+    expect(canLatchSheetGlass(false, true, true, true)).toBe(true);
+    expect(canLatchSheetGlass(true, true, true, false)).toBe(true);
+  });
+});
+
 describe('sheet glass surface tokens', () => {
   it('keeps chrome surface color as opaque hex (system bar / brand fill)', () => {
     expect(SHEET_GLASS_FLOOR).toMatch(/^#[0-9A-Fa-f]{6}$/);
   });
 
-  it('keeps the no-blur base opaque so Android stays readable', () => {
+  it('uses soft surface hex for no-blur sheet base (not legacy #262626)', () => {
     expect(SHEET_GLASS_BASE).toMatch(/^#[0-9A-Fa-f]{6}$/);
+    expect(SHEET_GLASS_BASE).toBe(DesignTokens.colors.background.secondary);
   });
 
-  it('keeps the overlay translucent so the BlurView underneath stays visible', () => {
-    // הרגרסיה שהטסט הזה מונע: overlay אטום (למשל '#262626') נצבע מעל ה-BlurView,
-    // הטשטוש נעלם וכל המשטחים נראים שטוחים.
-    expect(SHEET_GLASS_OVERLAY).toMatch(/^rgba\(/);
-    const alpha = alphaOf(SHEET_GLASS_OVERLAY);
-    expect(alpha).toBeGreaterThan(0);
-    expect(alpha).toBeLessThanOrEqual(MAX_GLASS_OVERLAY_ALPHA);
+  it('uses opaque soft surface for sheet overlay (no white rgba wash)', () => {
+    expect(SHEET_GLASS_OVERLAY).toMatch(/^#[0-9A-Fa-f]{6}$/);
+    expect(SHEET_GLASS_OVERLAY).toBe(DesignTokens.colors.background.secondary);
   });
 
   it('keeps blur intensity high enough to read as glass', () => {
@@ -58,11 +73,10 @@ describe('sheet glass surface tokens', () => {
 describe('shared glass tokens (UICard + every glass surface)', () => {
   const intensities = ['subtle', 'light', 'medium', 'strong'] as const;
 
-  it('keeps every dark card overlay translucent', () => {
+  it('keeps every dark card surface opaque hex', () => {
     for (const intensity of intensities) {
       const overlay = DesignTokens.glassmorphism.cardBackground.dark[intensity];
-      expect(overlay).toMatch(/^rgba\(/);
-      expect(alphaOf(overlay)).toBeLessThanOrEqual(MAX_GLASS_OVERLAY_ALPHA);
+      expect(overlay).toMatch(/^#[0-9A-Fa-f]{6}$/);
     }
   });
 
@@ -74,9 +88,20 @@ describe('shared glass tokens (UICard + every glass surface)', () => {
     }
   });
 
-  it('keeps the android/no-blur base opaque so glass never becomes see-through', () => {
+  it('keeps dark baseFill opaque soft surface; light theme stays translucent', () => {
     expect(DesignTokens.glassmorphism.baseFill.dark).toMatch(/^#[0-9A-Fa-f]{6}$/);
-    expect(DesignTokens.glassmorphism.baseFill.light).toMatch(/^#[0-9A-Fa-f]{6}$/);
+    expect(DesignTokens.glassmorphism.baseFill.light).toMatch(/^rgba\(/);
+    expect(alphaOf(DesignTokens.glassmorphism.baseFill.light)).toBeLessThan(0.88);
+  });
+
+  it('keeps dark borders barely visible (Soft UI restraint)', () => {
+    for (const intensity of intensities) {
+      const border = DesignTokens.glassmorphism.border.dark[intensity];
+      expect(border).toMatch(/^rgba\(255,\s*255,\s*255/);
+      const alpha = alphaOf(border);
+      expect(alpha).toBeGreaterThanOrEqual(0.04);
+      expect(alpha).toBeLessThanOrEqual(0.10);
+    }
   });
 });
 
@@ -148,9 +173,9 @@ describe('sheetActionColors', () => {
           primary: '#FFFFFF',
           secondary: 'rgba(255,255,255,0.7)',
           inverse: '#0A0E0A',
-          danger: '#FF4444',
+          danger: '#F87171',
         },
-        danger: { main: '#FF4444' },
+        danger: { main: '#F87171' },
         glass: { card: { bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.08)' } },
         border: { primary: 'rgba(255,255,255,0.08)', subtle: 'rgba(255,255,255,0.04)' },
       },

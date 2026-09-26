@@ -123,7 +123,6 @@ const RegistrationPasswordScreen = ({ navigation }: { navigation: any }) => {
       <View style={{ gap: tokens.spacing.lg }}>
         <CashAppInput
           label="סיסמה"
-          leftIcon="lock-closed-outline"
           placeholder="לפחות 6 תווים"
           value={password}
           onChangeText={(t) => {
@@ -137,7 +136,6 @@ const RegistrationPasswordScreen = ({ navigation }: { navigation: any }) => {
         />
         <CashAppInput
           label="אימות סיסמה"
-          leftIcon="lock-closed-outline"
           placeholder="הכנס שוב את הסיסמה"
           value={confirmPassword}
           onChangeText={setConfirmPassword}

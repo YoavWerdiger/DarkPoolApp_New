@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useLockParentDrawerWhileFocused } from '../../hooks/useLockParentDrawerWhileFocused';
+import { useAfterNavigationTransition } from '../../hooks/afterNavigationTransition';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import UICard from '../../components/ui/UICard';
@@ -25,6 +26,12 @@ import { getGroupMediaGallery } from '../../services/chat/chatMediaService';
 import { getChatMediaDisplayUri } from '../../services/chat/chatSignedMediaUrl';
 import { chatRtlRoot, chatRtlRow, chatRtlText } from '../../components/chat/chatDesignTokens';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import {
+  settingsRowType,
+  settingsMetaType,
+  settingsCaptionType,
+} from '../../components/profile/settingsType';
+import { isolateNumericRuns } from '../DarkPool/utils/bidi';
 import { logger } from '../../utils/logger';
 
 type MediaFilter = 'all' | 'image' | 'video';
@@ -139,7 +146,7 @@ export default function GroupMediaGalleryScreen() {
     [groupId, filter, mapRows]
   );
 
-  useEffect(() => {
+  useAfterNavigationTransition(() => {
     setOpenedInitial(false);
     void loadPage(0, false);
   }, [loadPage]);
@@ -306,7 +313,7 @@ export default function GroupMediaGalleryScreen() {
                   {renderFilterChip('video', 'סרטונים')}
                 </View>
                 {items.length > 0 && !loading ? (
-                  <Text style={styles.toolbarCount}>{items.length}</Text>
+                  <Text style={styles.toolbarCount}>{isolateNumericRuns(String(items.length))}</Text>
                 ) : null}
               </View>
               <View style={styles.sectionBody}>{renderGalleryBody()}</View>
@@ -376,9 +383,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     filterChipText: {
       ...chatRtlText,
+      ...settingsCaptionType,
       color: tokens.colors.text.secondary,
-      fontSize: tokens.typography.bodySmall.size,
-      fontWeight: '500',
     },
     filterChipTextActive: {
       color: tokens.colors.primary.main,
@@ -386,8 +392,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     toolbarCount: {
       ...chatRtlText,
-      fontSize: tokens.typography.bodySmall.size,
-      fontWeight: tokens.typography.fontWeight.semibold as '600',
+      ...settingsCaptionType,
       color: tokens.colors.text.tertiary,
     },
     sectionBody: {
@@ -406,17 +411,16 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     emptyTitle: {
       ...chatRtlText,
+      ...settingsRowType,
       marginTop: 12,
       color: tokens.colors.text.primary,
-      fontSize: 16,
-      fontWeight: '600',
       textAlign: 'center',
     },
     emptyText: {
       ...chatRtlText,
+      ...settingsMetaType,
       marginTop: 8,
       color: tokens.colors.text.secondary,
-      fontSize: 14,
       textAlign: 'center',
     },
     gridList: {

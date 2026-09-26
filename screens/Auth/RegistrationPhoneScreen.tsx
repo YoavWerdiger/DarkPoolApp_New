@@ -144,7 +144,6 @@ const RegistrationPhoneScreen = ({ navigation }: { navigation: any }) => {
 
       <CashAppInput
         label="מספר טלפון"
-        leftIcon="call-outline"
         placeholder="054-000-0000"
         autoFormat="phone"
         value={phone}

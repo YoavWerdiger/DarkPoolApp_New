@@ -2,6 +2,12 @@ import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import {
+  APP_TYPE,
+  appPhysicalRightText,
+  appSectionTitleStyle,
+  appSheetButtonLabelStyle,
+} from '../../../components/ui/appType';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
 import { SUGGESTED_WATCHLIST_SYMBOLS } from '../../../services/watchlist/watchlistTypes';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
@@ -38,15 +44,14 @@ export function WatchlistEmpty({ onAddPress, onSuggest }: Props) {
         },
         title: {
           color: tokens.colors.text.primary,
-          fontSize: 17,
-          fontWeight: '800',
+          ...appSectionTitleStyle,
           textAlign: 'center',
-          writingDirection: 'rtl',
         },
         subtitle: {
           color: tokens.colors.text.tertiary,
-          fontSize: 13,
-          lineHeight: 19,
+          fontSize: APP_TYPE.sectionSubtitle.fontSize,
+          lineHeight: APP_TYPE.sectionSubtitle.lineHeight,
+          fontWeight: APP_TYPE.sectionSubtitle.fontWeight,
           textAlign: 'center',
           writingDirection: 'rtl',
         },
@@ -62,7 +67,7 @@ export function WatchlistEmpty({ onAddPress, onSuggest }: Props) {
         },
         ctaText: {
           color: tokens.colors.text.inverse,
-          fontSize: 14,
+          ...appSheetButtonLabelStyle,
           fontWeight: '800',
         },
         suggestHeader: {
@@ -72,10 +77,10 @@ export function WatchlistEmpty({ onAddPress, onSuggest }: Props) {
         },
         suggestLabel: {
           color: tokens.colors.text.tertiary,
-          fontSize: 12,
+          fontSize: APP_TYPE.caption.fontSize,
           fontWeight: '700',
-          textAlign: 'right',
-          writingDirection: 'rtl',
+          lineHeight: APP_TYPE.caption.lineHeight,
+          ...appPhysicalRightText,
         },
         suggestRow: {
           flexDirection: 'row-reverse',
@@ -93,15 +98,16 @@ export function WatchlistEmpty({ onAddPress, onSuggest }: Props) {
         },
         suggestSymbol: {
           color: tokens.colors.text.primary,
-          fontSize: 14,
+          fontSize: APP_TYPE.body.fontSize,
           fontWeight: '700',
+          lineHeight: APP_TYPE.body.lineHeight,
           textAlign: 'right',
         },
         suggestName: {
           color: tokens.colors.text.tertiary,
-          fontSize: 11,
-          textAlign: 'right',
-          writingDirection: 'rtl',
+          fontSize: APP_TYPE.caption2.fontSize,
+          lineHeight: APP_TYPE.caption2.lineHeight,
+          ...appPhysicalRightText,
         },
         addHint: {
           color: tokens.colors.primary.main,

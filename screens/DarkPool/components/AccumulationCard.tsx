@@ -10,7 +10,7 @@ import { HapticFeedback } from '../../../utils/hapticFeedback';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
 import type { TopAccumulationRow } from '../../../types/darkpool.types';
 import { formatPercent, formatUsdCompact } from '../utils/darkPoolFormat';
-import { darkPoolTextRtl } from '../darkPoolLayout';
+import { darkPoolPhysicalRightText } from '../darkPoolLayout';
 
 interface AccumulationCardProps {
   row: TopAccumulationRow;
@@ -42,6 +42,7 @@ export function AccumulationCard({ row, onPress }: AccumulationCardProps) {
         variant="glass"
         glassIntensity="light"
         padding="sm"
+        disableBlur
         style={styles.card}
       >
         <View style={styles.rtl}>
@@ -76,7 +77,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     card: {
       borderRadius: tokens.borderRadius.xl,
       borderWidth: 0,
-      backgroundColor: tokens.colors.background.cardSolid,
+      backgroundColor: 'transparent',
     },
     rtl: { direction: 'rtl' },
     top: {
@@ -95,7 +96,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontSize: 11,
       fontWeight: '600',
       color: tokens.colors.text.tertiary,
-      ...darkPoolTextRtl,
+      ...darkPoolPhysicalRightText,
     },
     value: {
       marginTop: 2,
@@ -115,7 +116,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontSize: 10,
       fontWeight: '600',
       color: tokens.colors.text.tertiary,
-      ...darkPoolTextRtl,
+      ...darkPoolPhysicalRightText,
     },
     statValue: {
       marginTop: 2,

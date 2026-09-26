@@ -1,5 +1,4 @@
 import React, { useCallback } from 'react';
-import { Platform } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import ChatGroupsListScreen from '../screens/ChatNew/ChatGroupsListScreen';
@@ -15,73 +14,67 @@ import {
   lockAndroidChatSoftInput,
   releaseAndroidChatSoftInput,
 } from '../components/chat/androidChatKeyboard';
+import {
+  CHAT_STACK_ANIMATION,
+  chatStackScreenListeners,
+  createChatStackScreenOptions,
+} from './chatStackTransition';
 
 const Stack = createNativeStackNavigator();
 
-/** Android native-stack slide יקר יותר — fade קצר כדי שה-cache ייצבע בלי 180–300ms המתנה. iOS נשאר slide. */
-const THREAD_TRANSITION =
-  Platform.OS === 'android'
-    ? { animation: 'fade' as const, animationDuration: 90 }
-    : { animation: 'slide_from_right' as const, animationDuration: 180 };
-
 function ChatStackNavigator() {
   return (
-    <Stack.Navigator 
-      screenOptions={{ 
-        headerShown: false,
-        contentStyle: {
-          backgroundColor: '#111111',
-        },
-        animation: 'fade',
-        gestureEnabled: true,
-        animationDuration: Platform.OS === 'android' ? 90 : 200,
-      }}
+    <Stack.Navigator
+      screenOptions={createChatStackScreenOptions()}
+      screenListeners={chatStackScreenListeners}
     >
-      <Stack.Screen 
-        name="ChatGroupsList" 
+      <Stack.Screen
+        name="ChatGroupsList"
         component={ChatGroupsListScreen}
-        options={{ freezeOnBlur: Platform.OS === 'ios' }}
       />
-      <Stack.Screen 
-        name="ChatGroup" 
+      <Stack.Screen
+        name="ChatGroup"
         component={ChatGroupScreen}
         options={{
           presentation: 'card',
-          ...THREAD_TRANSITION,
-          freezeOnBlur: false,
+          animation: CHAT_STACK_ANIMATION,
         }}
       />
-      <Stack.Screen 
-        name="ChatGroupInfo" 
+      <Stack.Screen
+        name="ChatGroupInfo"
         component={ChatGroupInfoScreen}
+        options={{ animation: CHAT_STACK_ANIMATION }}
       />
       <Stack.Screen
         name="ChatGroupSettings"
         component={ChatGroupSettingsScreen}
         options={{
           presentation: 'card',
-          animation: 'slide_from_right',
+          animation: CHAT_STACK_ANIMATION,
         }}
       />
-      <Stack.Screen 
-        name="SavedMedia" 
+      <Stack.Screen
+        name="SavedMedia"
         component={SavedMediaScreen}
+        options={{ animation: CHAT_STACK_ANIMATION }}
       />
       <Stack.Screen
         name="GroupMediaGallery"
         component={GroupMediaGalleryScreen}
         options={{
           presentation: 'card',
-          animation: 'slide_from_right',
+          animation: CHAT_STACK_ANIMATION,
         }}
       />
-      <Stack.Screen 
-        name="PrivacySupport" 
+      <Stack.Screen
+        name="PrivacySupport"
         component={PrivacySupportScreen}
+        options={{ animation: CHAT_STACK_ANIMATION }}
       />
       <Stack.Screen
         name="ChatGroupStarredMessages"
         component={ChatGroupStarredMessagesScreen}
+        options={{ animation: CHAT_STACK_ANIMATION }}
       />
     </Stack.Navigator>
   );

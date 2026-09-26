@@ -31,6 +31,12 @@ import { useAuth } from '../../context/AuthContext';
 import { newsService } from '../../services/newsService';
 import { mediaService } from '../../services/mediaService';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import {
+  APP_TYPE,
+  appPhysicalRightText,
+  appSectionTitleStyle,
+  appSheetButtonLabelStyle,
+} from '../../components/ui/appType';
 
 interface CreateNewsSheetProps {
   visible: boolean;
@@ -42,11 +48,8 @@ const DEFAULT_SOURCE = 'DarkPool';
 const SHEET_BORDER = 'rgba(255, 255, 255, 0.10)';
 const SHEET_WATERMARK_SCALE = 0.65;
 
-/** טקסט עברי בתוך עץ RTL */
-const rtlText = {
-  writingDirection: 'rtl' as const,
-  textAlign: 'left' as const,
-};
+/** טקסט עברי בתוך עץ RTL — תיבת LTR + יישור ימין פיזי */
+const rtlText = appPhysicalRightText;
 
 export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateNewsSheetProps) {
   const DesignTokens = useDesignTokens();
@@ -508,7 +511,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       backgroundColor: 'rgba(255,255,255,0.08)',
     },
     headerPublishBtnText: {
-      fontSize: 15,
+      ...appSheetButtonLabelStyle,
       fontWeight: '800',
       color: '#fff',
     },
@@ -516,14 +519,15 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       color: tokens.colors.text.tertiary,
     },
     headerTitle: {
-      fontSize: 18,
-      fontWeight: '800',
-      letterSpacing: -0.3,
+      ...appSectionTitleStyle,
+      textAlign: 'right',
+      letterSpacing: 0,
     },
     headerSubtitle: {
       marginTop: 2,
-      fontSize: 12,
+      fontSize: APP_TYPE.sectionSubtitle.fontSize,
       fontWeight: '500',
+      lineHeight: APP_TYPE.sectionSubtitle.lineHeight,
     },
     scroll: {
       flex: 1,
@@ -556,8 +560,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       width: '100%',
     },
     titleInput: {
-      fontSize: 17,
+      fontSize: APP_TYPE.body.fontSize,
       fontWeight: '600',
+      lineHeight: APP_TYPE.body.lineHeight,
     },
     textAreaInner: {
       minHeight: 160,

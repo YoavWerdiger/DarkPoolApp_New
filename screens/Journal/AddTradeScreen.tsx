@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import UICard from '../../components/ui/UICard';
+import { DayDividerPill } from '../../components/ui/DayDividerPill';
 import { ChatSessionBackdrop } from '../../components/chat/ChatSessionBackdrop';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabase';
@@ -32,6 +33,16 @@ import {
   type TradeTimeframe,
   type MoodId,
 } from './tradeJournalConstants';
+import {
+  JOURNAL_TYPE,
+  journalBodyTextStyle,
+  journalCaption2Style,
+  journalCaptionStyle,
+  journalPhysicalRightText,
+  journalRow,
+  journalRtlContent,
+  journalSectionSubtitleStyle,
+} from './journalLayout';
 
 const STEPS = ['פרטי עסקה', 'מחירים וכמות', 'תאריכים ושעות', 'יומן מסחר'] as const;
 
@@ -558,26 +569,13 @@ export default function AddTradeScreen() {
                   {TIMEFRAME_OPTIONS.map((opt) => {
                     const selected = timeframe === opt.id;
                     return (
-                      <TouchableOpacity
+                      <DayDividerPill
                         key={opt.id}
-                        onPress={() => {
-                          void HapticFeedback.selection();
-                          setTimeframe(selected ? null : opt.id);
-                        }}
-                        activeOpacity={0.85}
+                        selected={selected}
+                        onPress={() => setTimeframe(selected ? null : opt.id)}
                       >
-                        <UICard
-                          variant="inputGlass"
-                          padding="sm"
-                          style={[styles.chipCard, selected && styles.chipCardSelected]}
-                        >
-                          <Text
-                            style={[styles.chipText, selected && { color: DesignTokens.colors.primary.main }]}
-                          >
-                            {opt.label}
-                          </Text>
-                        </UICard>
-                      </TouchableOpacity>
+                        {opt.label}
+                      </DayDividerPill>
                     );
                   })}
                 </View>
@@ -587,26 +585,13 @@ export default function AddTradeScreen() {
                   {MOOD_OPTIONS.map((opt) => {
                     const selected = moodBefore === opt.id;
                     return (
-                      <TouchableOpacity
+                      <DayDividerPill
                         key={`b-${opt.id}`}
-                        onPress={() => {
-                          void HapticFeedback.selection();
-                          setMoodBefore(selected ? null : opt.id);
-                        }}
-                        activeOpacity={0.85}
+                        selected={selected}
+                        onPress={() => setMoodBefore(selected ? null : opt.id)}
                       >
-                        <UICard
-                          variant="inputGlass"
-                          padding="sm"
-                          style={[styles.chipCard, selected && styles.chipCardSelected]}
-                        >
-                          <Text
-                            style={[styles.chipText, selected && { color: DesignTokens.colors.primary.main }]}
-                          >
-                            {opt.label}
-                          </Text>
-                        </UICard>
-                      </TouchableOpacity>
+                        {opt.label}
+                      </DayDividerPill>
                     );
                   })}
                 </View>
@@ -616,26 +601,13 @@ export default function AddTradeScreen() {
                   {MOOD_OPTIONS.map((opt) => {
                     const selected = moodAfter === opt.id;
                     return (
-                      <TouchableOpacity
+                      <DayDividerPill
                         key={`a-${opt.id}`}
-                        onPress={() => {
-                          void HapticFeedback.selection();
-                          setMoodAfter(selected ? null : opt.id);
-                        }}
-                        activeOpacity={0.85}
+                        selected={selected}
+                        onPress={() => setMoodAfter(selected ? null : opt.id)}
                       >
-                        <UICard
-                          variant="inputGlass"
-                          padding="sm"
-                          style={[styles.chipCard, selected && styles.chipCardSelected]}
-                        >
-                          <Text
-                            style={[styles.chipText, selected && { color: DesignTokens.colors.primary.main }]}
-                          >
-                            {opt.label}
-                          </Text>
-                        </UICard>
-                      </TouchableOpacity>
+                        {opt.label}
+                      </DayDividerPill>
                     );
                   })}
                 </View>
@@ -651,26 +623,14 @@ export default function AddTradeScreen() {
                   ).map((opt) => {
                     const selected = followedPlan === opt.v;
                     return (
-                      <TouchableOpacity
+                      <DayDividerPill
                         key={String(opt.v)}
-                        onPress={() => {
-                          if (followedPlan !== opt.v) void HapticFeedback.selection();
-                          setFollowedPlan(opt.v);
-                        }}
-                        activeOpacity={0.85}
+                        selected={selected}
+                        haptic={followedPlan !== opt.v}
+                        onPress={() => setFollowedPlan(opt.v)}
                       >
-                        <UICard
-                          variant="inputGlass"
-                          padding="sm"
-                          style={[styles.chipCard, selected && styles.chipCardSelected]}
-                        >
-                          <Text
-                            style={[styles.chipText, selected && { color: DesignTokens.colors.primary.main }]}
-                          >
-                            {opt.label}
-                          </Text>
-                        </UICard>
-                      </TouchableOpacity>
+                        {opt.label}
+                      </DayDividerPill>
                     );
                   })}
                 </View>
@@ -777,27 +737,23 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
   StyleSheet.create({
     screenRoot: {
       flex: 1,
-      backgroundColor: '#111111',
+      backgroundColor: 'transparent',
+      ...journalRtlContent,
     },
     flex1: { flex: 1 },
     safe: { flex: 1, backgroundColor: 'transparent' },
     stepIntro: {
-      fontSize: tokens.typography.fontSize.sm,
+      ...journalBodyTextStyle,
       color: tokens.colors.text.secondary,
-      textAlign: 'right',
-      writingDirection: 'rtl',
-      lineHeight: 20,
       marginBottom: tokens.spacing.md,
     },
     envHint: {
-      fontSize: 11,
+      ...journalCaption2Style,
       color: tokens.colors.text.tertiary,
-      textAlign: 'right',
-      writingDirection: 'rtl',
       marginBottom: tokens.spacing.sm,
     },
     symbolRow: {
-      flexDirection: 'row-reverse',
+      ...journalRow,
       alignItems: 'flex-start',
       gap: tokens.spacing.md,
       marginBottom: tokens.spacing.md,
@@ -828,7 +784,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       minWidth: 0,
     },
     topBar: {
-      flexDirection: 'row-reverse',
+      ...journalRow,
       alignItems: 'center',
       paddingHorizontal: tokens.layout.screenPadding,
       paddingVertical: 12,
@@ -844,14 +800,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     topBarSpacer: { width: 44 },
     topTitle: {
       flex: 1,
-      fontSize: tokens.typography.title2.size,
-      lineHeight: tokens.typography.title2.lineHeight,
-      fontWeight: tokens.typography.title2.weight as '700',
+      fontSize: 24,
+      lineHeight: 30,
+      fontWeight: '800',
       color: tokens.colors.text.primary,
       textAlign: 'center',
     },
     stepDots: {
-      flexDirection: 'row-reverse',
+      ...journalRow,
       justifyContent: 'center',
       alignItems: 'flex-start',
       gap: 12,
@@ -879,8 +835,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       opacity: 0.45,
     },
     stepLabel: {
-      fontSize: tokens.typography.caption.size,
-      lineHeight: tokens.typography.caption.lineHeight,
+      ...journalCaptionStyle,
       color: tokens.colors.text.tertiary,
       textAlign: 'center',
     },
@@ -898,12 +853,10 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       marginBottom: tokens.spacing.md,
     },
     label: {
-      fontSize: tokens.typography.fontSize.sm,
-      fontWeight: tokens.typography.fontWeight.medium,
+      ...journalSectionSubtitleStyle,
+      marginTop: 0,
       color: tokens.colors.text.secondary,
       marginBottom: tokens.spacing.xs,
-      textAlign: 'right',
-      writingDirection: 'rtl',
     },
     inputGlassShell: {
       borderRadius: tokens.borderRadius['3xl'],
@@ -922,7 +875,10 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       backgroundColor: 'transparent',
       borderWidth: 0,
       paddingVertical: tokens.spacing.sm,
-      fontSize: tokens.typography.fontSize.base,
+      ...journalPhysicalRightText,
+      fontSize: JOURNAL_TYPE.body.fontSize,
+      fontWeight: JOURNAL_TYPE.body.fontWeight,
+      lineHeight: JOURNAL_TYPE.body.lineHeight,
       color: tokens.colors.text.primary,
       width: '100%',
     },
@@ -931,7 +887,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       textAlignVertical: 'top',
     },
     directionButtons: {
-      flexDirection: 'row-reverse',
+      ...journalRow,
       gap: tokens.spacing.sm,
     },
     directionGlass: {
@@ -953,33 +909,21 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       justifyContent: 'center',
     },
     directionButtonText: {
-      fontSize: tokens.typography.fontSize.base,
+      fontSize: JOURNAL_TYPE.body.fontSize,
       fontWeight: tokens.typography.fontWeight.bold,
+      lineHeight: JOURNAL_TYPE.body.lineHeight,
     },
     chipRow: {
-      flexDirection: 'row-reverse',
+      ...journalRow,
       flexWrap: 'wrap',
       gap: tokens.spacing.sm,
       marginBottom: tokens.spacing.md,
     },
     chipWrap: {
-      flexDirection: 'row-reverse',
+      ...journalRow,
       flexWrap: 'wrap',
       gap: tokens.spacing.sm,
       marginBottom: tokens.spacing.md,
-    },
-    chipCard: {
-      borderRadius: tokens.borderRadius.full,
-      overflow: 'hidden',
-    },
-    chipCardSelected: {
-      backgroundColor: `${tokens.colors.primary.main}20`,
-      borderColor: tokens.colors.primary.main,
-    },
-    chipText: {
-      fontSize: tokens.typography.fontSize.sm,
-      color: tokens.colors.text.secondary,
-      textAlign: 'center',
     },
     labelSpaced: {
       marginTop: tokens.spacing.sm,
@@ -998,7 +942,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       backgroundColor: tokens.colors.selection.subtle,
     },
     mistakeRowInner: {
-      flexDirection: 'row-reverse',
+      ...journalRow,
       alignItems: 'center',
       gap: tokens.spacing.sm,
     },
@@ -1017,10 +961,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     mistakeLabel: {
       flex: 1,
-      fontSize: tokens.typography.fontSize.sm,
+      ...journalBodyTextStyle,
       color: tokens.colors.text.primary,
-      textAlign: 'right',
-      writingDirection: 'rtl',
     },
     footer: {
       paddingHorizontal: tokens.layout.screenPadding,
@@ -1038,8 +980,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     primaryBtnDisabled: { opacity: 0.55 },
     primaryBtnText: {
-      fontSize: tokens.typography.fontSize.base,
+      fontSize: JOURNAL_TYPE.body.fontSize,
       fontWeight: tokens.typography.fontWeight.bold,
+      lineHeight: JOURNAL_TYPE.body.lineHeight,
       color: tokens.colors.text.inverse,
     },
   });

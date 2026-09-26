@@ -16,19 +16,66 @@ export const appQueryKeys = {
   uwSignals: ['uw', 'signals'] as const,
   featuredProfiles: ['uw', 'featured'] as const,
   darkPoolFeed: (isPremium: boolean) => ['darkpool', 'feed', isPremium] as const,
+  /**
+   * ציטוטי מחיר חי לפיד — cache נפרד מהשורות.
+   * First paint קורא מכאן כדי שלא ייעלם «מחיר חי» כשהפיד חוזר בלי quotes.
+   * Prefix `darkpool/feed` נשמר לדיסק ב-queryPersist.
+   */
+  feedQuotes: ['darkpool', 'feed', 'quotes'] as const,
+  /** in-flight בלבד — לא תחת prefix שנשמר, כדי שלא יישאר pulse אחרי cold start */
+  feedQuotesPending: ['darkpool', 'quotes', 'pending'] as const,
   congressFeed: (limit: number) => ['darkpool', 'congress', limit] as const,
   /** "פעילות אחרונה" במסך פרטי עסקה — אותו אדם, אותו טיקר */
   congressPersonTickerTrades: (politicianId: string, ticker: string) =>
     ['darkpool', 'congress', 'person-ticker', politicianId, ticker] as const,
+  /** "פעילות אחרונה" במסך פרטי עסקת בכיר — אותו שם Form 4, אותו טיקר */
+  insiderPersonTickerTrades: (insiderName: string, ticker: string) =>
+    ['darkpool', 'insider', 'person-ticker', insiderName, ticker] as const,
   insiderFeed: (tab: string, isPremium: boolean, limit?: number) =>
     ['darkpool', 'insider', tab, isPremium, limit ?? null] as const,
   followingFeed: ['darkpool', 'following'] as const,
   followedInvestors: ['darkpool', 'followed'] as const,
+  exploreFollowCounts: ['darkpool', 'explore', 'follow-counts'] as const,
+  exploreExcessLeaders: ['darkpool', 'explore', 'excess-leaders'] as const,
+  exploreRecentlyActive: ['darkpool', 'explore', 'recently-active'] as const,
+  exploreDiscoveryExtras: ['darkpool', 'explore', 'discovery-extras'] as const,
+  congressPersonStats: (politicianId: string) =>
+    ['darkpool', 'congress', 'person-stats', politicianId] as const,
+  congressHoldingsByBioguide: (bioguideId: string) =>
+    ['darkpool', 'congress', 'holdings', bioguideId] as const,
+  congressHoldingsByTicker: (ticker: string) =>
+    ['darkpool', 'congress', 'holdings-by-ticker', ticker] as const,
+  congressTradesByTicker: (ticker: string) =>
+    ['darkpool', 'congress', 'ticker-trades', ticker] as const,
+  /** פתיחה יומית ליום ביצוע — «מאז העסקה» כשאין PriceChange */
+  congressTradeOpen: (ticker: string, transactionDate: string) =>
+    ['darkpool', 'congress', 'trade-open', ticker, transactionDate] as const,
+  congressTickerDailyBars: (ticker: string) =>
+    ['darkpool', 'congress', 'daily-bars', ticker] as const,
+  tickerInsiderBuys: (ticker: string) =>
+    ['darkpool', 'ticker', ticker, 'insider-buys'] as const,
+  tickerQuote: (ticker: string) => ['darkpool', 'ticker', ticker, 'quote'] as const,
+  tickerHistory: (ticker: string, range = '10y', interval = '1d') =>
+    ['darkpool', 'ticker', ticker, 'history', range, interval] as const,
+  congressPersonTrades: (politicianId: string) =>
+    ['darkpool', 'congress', 'person-trades', politicianId] as const,
+  congressBasketPrices: (bioguideId: string, tickersKey: string) =>
+    ['darkpool', 'congress', 'basket-prices', bioguideId, tickersKey] as const,
+  trumpNotionalPrices: (tickersKey: string) =>
+    ['darkpool', 'trump', 'notional-prices', tickersKey] as const,
+  insiderForm4Prices: (insiderName: string, tickersKey: string) =>
+    ['darkpool', 'insider', 'form4-prices', insiderName, tickersKey] as const,
+  insiderPersonTrades: (insiderName: string) =>
+    ['darkpool', 'insider', 'person-trades', insiderName] as const,
 
   // DarkPool / UW — per-entity (cache בזיכרון בלבד, לא נשמר לדיסק)
   investorProfile: (id: string, kind: string, ticker?: string) =>
     ['uw', 'investorProfile', id, kind, ticker ?? null] as const,
   fundProfile: (cik: string) => ['uw', 'fundProfile', cik] as const,
+  fundHoldingsHistory: (cik: string) =>
+    ['uw', 'fundHoldingsHistory', cik] as const,
+  fund13fPrices: (cik: string, tickersKey: string) =>
+    ['uw', 'fund13fPrices', cik, tickersKey] as const,
   politicianMetrics: (id: string) => ['uw', 'politicianMetrics', id] as const,
   tickerInsights: (ticker: string) => ['uw', 'tickerInsights', ticker] as const,
   darkPoolTicker: (ticker: string, isPremium: boolean) =>

@@ -43,7 +43,7 @@ export function MarketsErrorBoundary({ children }: Props) {
       padding: tokens.spacing.lg,
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: tokens.colors.background.primary,
+      backgroundColor: tokens.colors.background.screen,
     },
     title: {
       fontSize: tokens.typography.titleSmall.size,

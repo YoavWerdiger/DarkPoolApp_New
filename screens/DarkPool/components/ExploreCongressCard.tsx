@@ -8,6 +8,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import UICard from '../../../components/ui/UICard';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
 import type { CongressTradeCard } from '../../../services/darkpool/uwExploreService';
 
@@ -23,7 +24,13 @@ export function ExploreCongressCard({ trade, onPress, style }: Props) {
   const tickerSym = trade.ticker.toUpperCase();
 
   const body = (
-    <View style={[styles.card, style]}>
+    <UICard
+      variant="glass"
+      glassIntensity="light"
+      padding="none"
+      disableBlur
+      style={[styles.card, style]}
+    >
       <View style={styles.top}>
         <TickerLogo symbol={trade.ticker} size={44} borderRadius={22} />
         <View style={styles.topText}>
@@ -44,7 +51,7 @@ export function ExploreCongressCard({ trade, onPress, style }: Props) {
           {trade.issuer || trade.filed_label}
         </Text>
       </View>
-    </View>
+    </UICard>
   );
 
   if (!onPress) return body;
@@ -60,9 +67,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     card: {
       width: 200,
       borderRadius: tokens.borderRadius['2xl'],
-      borderWidth: 0,
-      backgroundColor: tokens.colors.background.cardSolid,
-      overflow: 'hidden',
+      backgroundColor: 'transparent',
     },
     top: {
       flexDirection: 'row-reverse',
@@ -87,8 +92,9 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     tickerRow: {
       paddingHorizontal: 12,
       paddingVertical: 10,
-      borderTopWidth: 0,
-      backgroundColor: tokens.colors.background.tertiary,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: tokens.colors.border.subtle,
+      backgroundColor: 'rgba(255,255,255,0.04)',
       alignItems: 'flex-end',
       gap: 2,
     },

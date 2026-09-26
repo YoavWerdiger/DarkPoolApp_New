@@ -14,6 +14,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { useCourses, useEnrollInCourse } from '../../hooks/useLearning';
+import { useAllowAfterNavigationTransition } from '../../hooks/afterNavigationTransition';
 import {
   AcademyScreenHeader,
   CourseCard,
@@ -66,15 +67,18 @@ export const CoursesScreen: React.FC = () => {
   const { data: coursesData, isPending, error, refetch } = useCourses();
   const courses = coursesData?.courses ?? [];
   const showInitialLoader = isPending && courses.length === 0;
+  const allowHeavy = useAllowAfterNavigationTransition();
 
-  // חימום באנרים ברגע שיש נתונים (גם מ-cache)
+  // חימום באנרים ברגע שיש נתונים (גם מ-cache) — אחרי סיום מעבר
   useEffect(() => {
+    if (!allowHeavy) return;
     if (courses.length === 0) return;
     void prefetchAcademyCovers(courses);
-  }, [courses]);
+  }, [allowHeavy, courses]);
 
   // Seed רק אם חסרים קורסי ליבה ברשימה — בלי getCourseById כפול על כל mount
   useEffect(() => {
+    if (!allowHeavy) return;
     if (isPending && courses.length === 0) return;
     let isMounted = true;
     const ids = new Set(courses.map((c) => c.id));
@@ -113,7 +117,7 @@ export const CoursesScreen: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [courses, isPending, refetch]);
+  }, [allowHeavy, courses, isPending, refetch]);
 
   const enrollMutation = useEnrollInCourse();
 
@@ -267,17 +271,7 @@ export const CoursesScreen: React.FC = () => {
             />
           }
         >
-          <AcademyScreenHeader
-            onMenuPress={openMainDrawer}
-            title="האקדמיה"
-            subtitle={
-              showInitialLoader
-                ? 'קורסים והכשרות למסחר'
-                : orderedCourses.length > 0
-                  ? `${orderedCourses.length} קורסים · הכשרות למסחר`
-                  : 'קורסים והכשרות למסחר'
-            }
-          />
+          <AcademyScreenHeader onMenuPress={openMainDrawer} title="האקדמיה" />
 
           {!showInitialLoader ? (
             <View style={styles.toolbar}>
@@ -296,13 +290,7 @@ export const CoursesScreen: React.FC = () => {
               </DayNavBlurButton>
 
               <View style={styles.searchWrap}>
-                <UICard
-                  variant="blur"
-                  glassIntensity="subtle"
-                  padding="none"
-                  showGlassBorder={false}
-                  style={styles.searchCard}
-                >
+                <UICard variant="soft" padding="none" style={[styles.searchCard, styles.searchCardFill]}>
                   <View style={styles.searchInner}>
                     {isSearching ? (
                       <TouchableOpacity
@@ -409,6 +397,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     searchCard: {
       borderRadius: tokens.borderRadius.full,
       overflow: 'hidden',
+    },
+    searchCardFill: {
+      backgroundColor: tokens.colors.background.navChrome,
     },
     searchInner: {
       flexDirection: 'row-reverse',

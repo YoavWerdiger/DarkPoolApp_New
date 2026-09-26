@@ -1,24 +1,36 @@
 /**
- * שדות טופס משותפים למסכי Portfolios (יצירת תיק, חיבור ברוקר).
- * RTL, glass כהה, מסגרת ירוקה ב-focus, שגיאות inline מתחת לשדה.
+ * שדות טופס משותפים — Portfolios (יצירת תיק, ברוקר, עסקאות).
+ * formControl.ts · APP_TYPE · בלי מסגרת ירוקה / בלי אייקונים בתוך השדה.
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TextInput,
-  TouchableOpacity,
+  Pressable,
   type KeyboardTypeOptions,
   type ReturnKeyTypeOptions,
   type TextInputProps,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import UICard from '../../../components/ui/UICard';
+import {
+  formFieldInputStyle,
+  formFieldLabelStyle,
+  formFieldShellStyle,
+} from '../../../components/ui/formControl';
+import { APP_LAYOUT } from '../../../components/ui/appLayout';
+import {
+  journalCardSubtitleStyle,
+  journalCardTitleStyle,
+  journalSectionSubtitleStyle,
+  journalSectionTitleStyle,
+} from '../../Journal/journalLayout';
+import { portfolioFormHelperStyle } from '../portfolioFormLayout';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
-
-/* -------------------------------------------------------------------------- */
 
 interface SectionHeaderProps {
   title: string;
@@ -28,29 +40,16 @@ interface SectionHeaderProps {
 export function SectionHeader({ title, caption }: SectionHeaderProps) {
   const tokens = useDesignTokens();
   return (
-    <View style={{ marginBottom: 12 }}>
-      <Text
-        style={{
-          fontSize: 13,
-          fontWeight: '700',
-          letterSpacing: 0.3,
-          color: tokens.colors.text.tertiary,
-          textAlign: 'right',
-          writingDirection: 'rtl',
-        }}
-      >
+    <View style={styles.sectionHeader}>
+      <Text style={[journalSectionTitleStyle, { color: tokens.colors.text.primary }]}>
         {title}
       </Text>
       {caption ? (
         <Text
-          style={{
-            fontSize: 12,
-            color: tokens.colors.text.muted,
-            marginTop: 3,
-            lineHeight: 17,
-            textAlign: 'right',
-            writingDirection: 'rtl',
-          }}
+          style={[
+            journalSectionSubtitleStyle,
+            { color: tokens.colors.text.secondary, marginTop: APP_LAYOUT.titleSubtitleGap },
+          ]}
         >
           {caption}
         </Text>
@@ -59,61 +58,30 @@ export function SectionHeader({ title, caption }: SectionHeaderProps) {
   );
 }
 
-/* -------------------------------------------------------------------------- */
-
 interface FieldLabelProps {
   label: string;
-  hint?: string;
   optional?: boolean;
+  labelAccessory?: React.ReactNode;
 }
 
-export function FieldLabel({ label, hint, optional }: FieldLabelProps) {
+export function FieldLabel({ label, optional, labelAccessory }: FieldLabelProps) {
   const tokens = useDesignTokens();
   return (
-    <View style={{ marginBottom: 8 }}>
-      <View style={{ flexDirection: 'row-reverse', alignItems: 'baseline', gap: 6 }}>
-        <Text
-          style={{
-            fontSize: 14,
-            fontWeight: '600',
-            color: tokens.colors.text.primary,
-            textAlign: 'right',
-            writingDirection: 'rtl',
-          }}
-        >
+    <View style={styles.labelRow}>
+      <View style={styles.labelMain}>
+        <Text style={formFieldLabelStyle({ tokens, focused: false, error: false })}>
           {label}
         </Text>
         {optional ? (
-          <Text
-            style={{
-              fontSize: 11,
-              color: tokens.colors.text.muted,
-              writingDirection: 'rtl',
-            }}
-          >
+          <Text style={[journalCardSubtitleStyle, { color: tokens.colors.text.muted }]}>
             אופציונלי
           </Text>
         ) : null}
       </View>
-      {hint ? (
-        <Text
-          style={{
-            fontSize: 11,
-            color: tokens.colors.text.tertiary,
-            marginTop: 3,
-            lineHeight: 16,
-            textAlign: 'right',
-            writingDirection: 'rtl',
-          }}
-        >
-          {hint}
-        </Text>
-      ) : null}
+      {labelAccessory}
     </View>
   );
 }
-
-/* -------------------------------------------------------------------------- */
 
 interface FieldMessageProps {
   hint?: string;
@@ -124,25 +92,9 @@ function FieldMessage({ hint, error }: FieldMessageProps) {
   const tokens = useDesignTokens();
   if (error) {
     return (
-      <View
-        style={{
-          flexDirection: 'row-reverse',
-          alignItems: 'center',
-          gap: 5,
-          marginTop: 6,
-          marginRight: 6,
-        }}
-      >
+      <View style={styles.errorRow}>
         <Ionicons name="alert-circle" size={13} color={tokens.colors.text.danger} />
-        <Text
-          style={{
-            flex: 1,
-            fontSize: 11,
-            color: tokens.colors.text.danger,
-            textAlign: 'right',
-            writingDirection: 'rtl',
-          }}
-        >
+        <Text style={[portfolioFormHelperStyle, { color: tokens.colors.text.danger, flex: 1 }]}>
           {error}
         </Text>
       </View>
@@ -150,23 +102,11 @@ function FieldMessage({ hint, error }: FieldMessageProps) {
   }
   if (!hint) return null;
   return (
-    <Text
-      style={{
-        fontSize: 11,
-        color: tokens.colors.text.tertiary,
-        lineHeight: 16,
-        marginTop: 6,
-        marginRight: 6,
-        textAlign: 'right',
-        writingDirection: 'rtl',
-      }}
-    >
+    <Text style={[portfolioFormHelperStyle, { color: tokens.colors.text.muted }]}>
       {hint}
     </Text>
   );
 }
-
-/* -------------------------------------------------------------------------- */
 
 export interface TextFieldProps {
   label: string;
@@ -186,13 +126,11 @@ export interface TextFieldProps {
   autoCorrect?: boolean;
   returnKeyType?: ReturnKeyTypeOptions;
   onSubmitEditing?: () => void;
-  /** ערך מספרי — יישור LTR, סימן המטבע מוצג בקצה שמאל */
   numeric?: boolean;
-  /** סימן מטבע / יחידה שמוצמד לשדה */
   prefix?: string;
-  /** אלמנט בקצה השדה (למשל כפתור הצגת סיסמה) */
+  /** @deprecated — השתמש ב-labelAccessory (הצג/הסתר ליד התווית) */
   accessory?: React.ReactNode;
-  /** מרווח תחתון — 0 כשהשדה אחרון בקבוצה */
+  labelAccessory?: React.ReactNode;
   spacing?: number;
 }
 
@@ -217,49 +155,41 @@ export function TextField({
   numeric,
   prefix,
   accessory,
-  spacing = 18,
+  labelAccessory,
+  spacing,
 }: TextFieldProps) {
   const tokens = useDesignTokens();
   const [focused, setFocused] = useState(false);
+  const shellRadius = multiline ? tokens.borderRadius.xl : tokens.borderRadius.full;
 
-  const borderColor = error
-    ? tokens.colors.text.danger
-    : focused
-    ? tokens.colors.primary.main
-    : tokens.colors.glass.card.border;
+  const shell = useMemo(
+    () => [
+      formFieldShellStyle({ tokens, focused, error: Boolean(error), multiline }),
+      styles.shell,
+      {
+        borderRadius: shellRadius,
+        paddingHorizontal: 16,
+        minHeight: multiline ? 104 : 52,
+        opacity: editable ? 1 : 0.6,
+      },
+    ],
+    [tokens, focused, error, multiline, shellRadius, editable]
+  );
 
   return (
-    <View style={{ marginBottom: spacing }}>
-      <FieldLabel label={label} optional={optional} />
-      <View
-        style={{
-          flexDirection: 'row-reverse',
-          alignItems: multiline ? 'flex-start' : 'center',
-          gap: 8,
-          paddingHorizontal: 16,
-          paddingVertical: multiline ? 14 : 4,
-          minHeight: multiline ? 104 : 52,
-          borderRadius: multiline ? tokens.borderRadius['2xl'] : tokens.borderRadius.full,
-          borderWidth: error || focused ? 1.5 : StyleSheet.hairlineWidth * 2,
-          borderColor,
-          backgroundColor: error
-            ? 'rgba(255, 68, 68, 0.06)'
-            : tokens.colors.background.input,
-          opacity: editable ? 1 : 0.6,
-          overflow: 'hidden',
-        }}
-      >
+    <View style={{ marginBottom: spacing ?? APP_LAYOUT.componentGap }}>
+      <FieldLabel
+        label={label}
+        optional={optional}
+        labelAccessory={labelAccessory ?? accessory}
+      />
+      <View style={shell}>
         <TextInput
-          style={{
-            flex: 1,
-            fontSize: 15,
-            color: tokens.colors.text.primary,
-            paddingVertical: multiline ? 0 : 12,
-            minHeight: multiline ? 76 : undefined,
-            textAlign: numeric ? 'left' : 'right',
-            writingDirection: numeric ? 'ltr' : 'rtl',
-            textAlignVertical: multiline ? 'top' : 'center',
-          }}
+          style={[
+            formFieldInputStyle(),
+            multiline && styles.inputMultiline,
+            numeric && styles.inputNumeric,
+          ]}
           value={value}
           onChangeText={onChangeText}
           onFocus={() => setFocused(true)}
@@ -281,23 +211,22 @@ export function TextField({
         />
         {prefix ? (
           <Text
-            style={{
-              fontSize: 15,
-              fontWeight: '700',
-              color: value ? tokens.colors.text.secondary : tokens.colors.text.muted,
-            }}
+            style={[
+              formFieldInputStyle(),
+              {
+                fontWeight: '700',
+                color: value ? tokens.colors.text.secondary : tokens.colors.text.muted,
+              },
+            ]}
           >
             {prefix}
           </Text>
         ) : null}
-        {accessory}
       </View>
       <FieldMessage hint={hint} error={error} />
     </View>
   );
 }
-
-/* -------------------------------------------------------------------------- */
 
 interface SwitchRowProps {
   title: string;
@@ -310,72 +239,144 @@ interface SwitchRowProps {
 export function SwitchRow({ title, hint, value, onChange, spacing = 0 }: SwitchRowProps) {
   const tokens = useDesignTokens();
   return (
-    <TouchableOpacity
-      style={{
-        flexDirection: 'row-reverse',
-        alignItems: 'center',
-        gap: 12,
-        paddingVertical: 14,
-        paddingHorizontal: 16,
-        marginBottom: spacing,
-        borderRadius: tokens.borderRadius['2xl'],
-        borderWidth: value ? 1.5 : StyleSheet.hairlineWidth * 2,
-        borderColor: value ? tokens.colors.border.accent : tokens.colors.glass.card.border,
-        backgroundColor: value
-          ? tokens.colors.primary.subtle
-          : tokens.colors.background.surface,
-        overflow: 'hidden',
-      }}
+    <UICard
+      variant="soft"
+      padding="none"
       onPress={() => {
         void HapticFeedback.selection();
         onChange(!value);
       }}
-      activeOpacity={0.75}
       accessibilityRole="switch"
       accessibilityState={{ checked: value }}
+      style={[
+        styles.switchCard,
+        value && {
+          borderWidth: 1,
+          borderColor: `${tokens.colors.primary.main}44`,
+          backgroundColor: tokens.colors.primary.subtle,
+        },
+        spacing ? { marginBottom: spacing } : null,
+      ]}
+      contentContainerStyle={styles.switchInner}
     >
-      <View style={{ flex: 1 }}>
-        <Text
-          style={{
-            fontSize: 14,
-            fontWeight: '600',
-            color: tokens.colors.text.primary,
-            textAlign: 'right',
-            writingDirection: 'rtl',
-          }}
-        >
+      <View style={styles.switchTextCol}>
+        <Text style={[journalCardTitleStyle, { color: tokens.colors.text.primary }]}>
           {title}
         </Text>
         {hint ? (
           <Text
-            style={{
-              fontSize: 11,
-              color: tokens.colors.text.tertiary,
-              marginTop: 3,
-              lineHeight: 16,
-              textAlign: 'right',
-              writingDirection: 'rtl',
-            }}
+            style={[
+              journalCardSubtitleStyle,
+              {
+                color: tokens.colors.text.secondary,
+                marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
+              },
+            ]}
           >
             {hint}
           </Text>
         ) : null}
       </View>
       <View
-        style={{
-          width: 46,
-          height: 28,
-          borderRadius: 14,
-          padding: 3,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: value ? 'flex-end' : 'flex-start',
-          backgroundColor: value ? tokens.colors.primary.main : tokens.colors.border.strong,
-          overflow: 'hidden',
-        }}
+        style={[
+          styles.switchTrack,
+          {
+            backgroundColor: value ? tokens.colors.primary.main : tokens.colors.border.strong,
+            justifyContent: value ? 'flex-end' : 'flex-start',
+          },
+        ]}
       >
-        <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#FFFFFF' }} />
+        <View style={styles.switchThumb} />
       </View>
-    </TouchableOpacity>
+    </UICard>
+  );
+}
+
+const styles = StyleSheet.create({
+  sectionHeader: {
+    marginBottom: APP_LAYOUT.sectionHeaderToContent,
+    alignSelf: 'stretch',
+  },
+  labelRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    gap: 8,
+  },
+  labelMain: {
+    flexDirection: 'row-reverse',
+    alignItems: 'baseline',
+    gap: 6,
+    flex: 1,
+  },
+  shell: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 8,
+    overflow: 'hidden',
+  },
+  inputMultiline: {
+    minHeight: 76,
+    textAlignVertical: 'top',
+    paddingVertical: 4,
+  },
+  inputNumeric: {
+    textAlign: 'left',
+    writingDirection: 'ltr',
+  },
+  errorRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 8,
+  },
+  switchCard: {
+    marginBottom: APP_LAYOUT.stackGapSmall,
+  },
+  switchInner: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  switchTextCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  switchTrack: {
+    width: 46,
+    height: 28,
+    borderRadius: 14,
+    padding: 3,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  switchThumb: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#FFFFFF',
+  },
+});
+
+/** קישור טקסט ליד תווית (הצג/הסתר סיסמה) */
+export function FormLabelLink({
+  children,
+  onPress,
+  accessibilityLabel,
+}: {
+  children: string;
+  onPress: () => void;
+  accessibilityLabel?: string;
+}) {
+  const tokens = useDesignTokens();
+  return (
+    <Pressable onPress={onPress} hitSlop={8} accessibilityRole="button" accessibilityLabel={accessibilityLabel}>
+      <Text style={[journalCardSubtitleStyle, { color: tokens.colors.text.secondary }]}>
+        {children}
+      </Text>
+    </Pressable>
   );
 }

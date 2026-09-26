@@ -13,7 +13,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
-import * as WebBrowser from 'expo-web-browser';
+import { openBrowserAsync } from '../../lib/expoWebBrowserSafe';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { HapticFeedback } from '../../utils/hapticFeedback';
@@ -128,7 +128,7 @@ export default function LinkPreview({ url, isMe }: LinkPreviewProps) {
 
   const handlePress = () => {
     void HapticFeedback.impactLight();
-    WebBrowser.openBrowserAsync(url).catch(() => {});
+    openBrowserAsync(url).catch(() => {});
   };
 
   const accentColor = isMe

@@ -13,6 +13,9 @@ const cors = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+/** Quiver holdings ריק — לא ממלאים featured / swap אוטומטי */
+const CONGRESS_TRADES_ONLY_BIOGUIDES = new Set(['K000389', 'M001157']);
+
 const WIKI = 'https://upload.wikimedia.org/wikipedia/commons';
 
 const KNOWN_BY_ID: Record<string, string> = {
@@ -27,8 +30,6 @@ const KNOWN_BY_ID: Record<string, string> = {
   S000168: 'https://unitedstates.github.io/images/congress/225x275/S000168.jpg',
   T000278: 'https://unitedstates.github.io/images/congress/225x275/T000278.jpg',
   G000596: 'https://unitedstates.github.io/images/congress/225x275/G000596.jpg',
-  K000389: 'https://unitedstates.github.io/images/congress/225x275/K000389.jpg',
-  M001157: 'https://unitedstates.github.io/images/congress/225x275/M001157.jpg',
   W000802: 'https://unitedstates.github.io/images/congress/225x275/W000802.jpg',
   D000032: 'https://unitedstates.github.io/images/congress/225x275/D000032.jpg',
   M001190: 'https://unitedstates.github.io/images/congress/225x275/M001190.jpg',
@@ -46,8 +47,6 @@ const KNOWN_BY_NAME: Record<string, string> = {
   'josh gottheimer': KNOWN_BY_ID.G000583,
   'tommy tuberville': KNOWN_BY_ID.T000278,
   'marjorie taylor greene': KNOWN_BY_ID.G000596,
-  'ro khanna': KNOWN_BY_ID.K000389,
-  'michael mccaul': KNOWN_BY_ID.M001157,
   'sheldon whitehouse': KNOWN_BY_ID.W000802,
   'byron donalds': KNOWN_BY_ID.D000032,
   'markwayne mullin': KNOWN_BY_ID.M001190,
@@ -262,7 +261,7 @@ async function topPoliticianFromDb(
   >();
   for (const row of data) {
     const id = String(row.politician_id ?? '');
-    if (!id) continue;
+    if (!id || CONGRESS_TRADES_ONLY_BIOGUIDES.has(id)) continue;
     const cur = counts.get(id);
     if (cur) cur.c += 1;
     else {
@@ -316,7 +315,7 @@ async function resolvePoliticianId(
   const byId = new Map<string, number>();
   for (const row of data) {
     const id = String(row.politician_id ?? '');
-    if (!id) continue;
+    if (!id || CONGRESS_TRADES_ONLY_BIOGUIDES.has(id)) continue;
     byId.set(id, (byId.get(id) ?? 0) + 1);
   }
 

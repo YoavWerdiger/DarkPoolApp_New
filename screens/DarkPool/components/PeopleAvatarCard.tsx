@@ -12,11 +12,13 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import UICard from '../../../components/ui/UICard';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 import type { ExplorePerson } from '../../../services/darkpool/uwExploreService';
 import { formatInsiderDisplayName } from '../utils/investorPlaceholder';
 import { InvestorPortrait } from './InvestorPortrait';
-import { dataText, hebrewText, rowMixed } from '../utils/bidi';
+import { dataText, rowMixed } from '../utils/bidi';
+import { darkPoolPhysicalRightText } from '../darkPoolLayout';
 
 interface Props {
   person: ExplorePerson;
@@ -45,33 +47,35 @@ export const PeopleAvatarCard = memo(function PeopleAvatarCard({
       : person.name;
 
   const content = (
-    <View style={[styles.wrap, style]}>
-      <View style={styles.identity}>
-        <View style={styles.textCol}>
-          <Text style={styles.name} numberOfLines={1}>
-            {displayName}
-          </Text>
-          <Text style={styles.meta} numberOfLines={1}>
-            {kindLabel(person)}
-          </Text>
+    <UICard variant="glass" glassIntensity="light" padding="none" disableBlur style={[styles.wrap, style]}>
+      <View style={styles.inner}>
+        <View style={styles.identity}>
+          <View style={styles.textCol}>
+            <Text style={styles.name} numberOfLines={1}>
+              {displayName}
+            </Text>
+            <Text style={styles.meta} numberOfLines={1}>
+              {kindLabel(person)}
+            </Text>
+          </View>
+          <InvestorPortrait
+            name={displayName}
+            imageUrl={person.image_url}
+            ticker={person.ticker}
+            kind={person.kind}
+            personId={person.id}
+            layout="circle"
+            size={48}
+            priority="high"
+          />
         </View>
-        <InvestorPortrait
-          name={displayName}
-          imageUrl={person.image_url}
-          ticker={person.ticker}
-          kind={person.kind}
-          personId={person.id}
-          layout="circle"
-          size={48}
-          priority="high"
-        />
+        {!!person.ticker?.trim() ? (
+          <Text style={styles.tickerText} numberOfLines={1}>
+            {person.ticker.toUpperCase()}
+          </Text>
+        ) : null}
       </View>
-      {!!person.ticker?.trim() ? (
-        <Text style={styles.tickerText} numberOfLines={1}>
-          {person.ticker.toUpperCase()}
-        </Text>
-      ) : null}
-    </View>
+    </UICard>
   );
 
   if (!onPress) return content;
@@ -93,8 +97,9 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     wrap: {
       width: '100%',
       borderRadius: 16,
-      borderWidth: 0,
-      backgroundColor: tokens.colors.background.cardSolid,
+      backgroundColor: 'transparent',
+    },
+    inner: {
       paddingVertical: 10,
       paddingHorizontal: 12,
       gap: 6,
@@ -107,17 +112,17 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     textCol: {
       flex: 1,
       minWidth: 0,
-      alignItems: 'flex-end',
+      alignItems: 'stretch',
     },
     name: {
-      ...hebrewText,
+      ...darkPoolPhysicalRightText,
       fontSize: 13,
       fontWeight: '700',
       color: tokens.colors.text.primary,
       lineHeight: 17,
     },
     meta: {
-      ...hebrewText,
+      ...darkPoolPhysicalRightText,
       fontSize: 11,
       fontWeight: '500',
       color: tokens.colors.text.secondary,

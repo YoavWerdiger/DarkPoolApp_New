@@ -82,7 +82,7 @@ function InvestorPortraitFallbackInner({
   );
 
   const rawUri = candidates[0] ?? null;
-  const thumbEdge = layout === 'circle' ? Math.max(128, size * 3) : 480;
+  const thumbEdge = layout === 'circle' ? Math.max(128, size * 3) : 720;
   const uri = rawUri ? portraitDisplayUrl(rawUri, thumbEdge) ?? rawUri : null;
   const initials = initialsFromName(name);
   const monoBg = monogramColor(personId || name || ticker || 'x');
@@ -210,7 +210,7 @@ function InvestorPortraitInner({
   );
 
   const rawUri = candidates[0] ?? null;
-  const thumbEdge = layout === 'circle' ? Math.max(128, size * 3) : 480;
+  const thumbEdge = layout === 'circle' ? Math.max(128, size * 3) : 720;
   const uri = rawUri ? portraitDisplayUrl(rawUri, thumbEdge) ?? rawUri : null;
   const recyclingKey = personId || name || uri || 'portrait';
 

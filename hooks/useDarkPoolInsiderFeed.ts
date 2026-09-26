@@ -24,12 +24,12 @@ import {
   listRecentInsiderTrades,
   listWatchlist,
 } from '../services/darkpool/darkPoolService';
-import { getQuotes } from '../services/portfolios/portfolioPriceFeed';
-import type { PriceQuote } from '../screens/Portfolios/portfolioTypes';
 import {
   buildFeedItem,
   type InsiderTradeFeedItem,
 } from '../screens/DarkPool/utils/insiderFeedCalc';
+import { seedFeedQuoteMap } from '../screens/DarkPool/utils/feedQuoteCache';
+import { fetchAndCacheFeedQuotes } from '../screens/DarkPool/utils/feedQuotes';
 import {
   DARK_POOL_INSIDER_UW_ONLY,
   DARK_POOL_PREMIUM_GATING_ENABLED,
@@ -52,22 +52,27 @@ export interface UseDarkPoolInsiderFeedOptions {
   enabled?: boolean;
 }
 
-const QUOTE_ENRICH_TIMEOUT_MS = 6_000;
+function insiderQuoteSeed(
+  queryKey?: readonly unknown[]
+): ReturnType<typeof seedFeedQuoteMap> {
+  const previous = queryKey
+    ? queryClient.getQueryData<InsiderTradeFeedItem[]>(queryKey)
+    : undefined;
+  return seedFeedQuoteMap({ previousItems: previous ?? [] });
+}
 
 async function enrichInsiderQuotes(
-  trades: Awaited<ReturnType<typeof listRecentInsiderTrades>>
+  trades: Awaited<ReturnType<typeof listRecentInsiderTrades>>,
+  queryKey?: readonly unknown[]
 ): Promise<InsiderTradeFeedItem[]> {
-  const symbols = DARK_POOL_FEED_ENRICH_QUOTES
-    ? Array.from(new Set(trades.map((t) => t.ticker)))
-    : [];
-  const quotes = symbols.length
-    ? await Promise.race([
-        getQuotes(symbols),
-        new Promise<Map<string, PriceQuote>>((resolve) =>
-          setTimeout(() => resolve(new Map()), QUOTE_ENRICH_TIMEOUT_MS)
-        ),
-      ])
-    : new Map<string, PriceQuote>();
+  const seeded = insiderQuoteSeed(queryKey);
+  if (!DARK_POOL_FEED_ENRICH_QUOTES) {
+    return trades.map((trade) => buildFeedItem(trade, seeded));
+  }
+  const quotes = await fetchAndCacheFeedQuotes(
+    trades.map((t) => t.ticker),
+    seeded
+  );
   return trades.map((trade) => buildFeedItem(trade, quotes));
 }
 
@@ -100,21 +105,23 @@ export async function loadInsider(
   }
 
   const deferQuotes = opts?.deferQuotes !== false && DARK_POOL_FEED_ENRICH_QUOTES;
+  const key = opts?.queryKey;
   if (!deferQuotes) {
-    return enrichInsiderQuotes(trades);
+    return enrichInsiderQuotes(trades, key);
   }
 
-  // First paint: DB rows מיד; quotes ברקע (לא חוסם את הפיד)
-  const bare = trades.map((trade) => buildFeedItem(trade, new Map()));
-  const key = opts?.queryKey;
+  // First paint: DB + quotes מהקאש; fetch חי ברקע בלי לקרוס את השורות
+  const firstPaint = trades.map((trade) =>
+    buildFeedItem(trade, insiderQuoteSeed(key))
+  );
   if (key && trades.length > 0) {
-    void enrichInsiderQuotes(trades)
+    void enrichInsiderQuotes(trades, key)
       .then((enriched) => {
         queryClient.setQueryData(key, enriched);
       })
       .catch(() => undefined);
   }
-  return bare;
+  return firstPaint;
 }
 
 export function useDarkPoolInsiderFeed({
@@ -140,7 +147,7 @@ export function useDarkPoolInsiderFeed({
     },
     enabled,
     staleTime: DARK_POOL_FEED_STALE_MS,
-    placeholderData: [],
+    placeholderData: (previous) => previous ?? [],
   });
 
   const refetch = useCallback(async () => {

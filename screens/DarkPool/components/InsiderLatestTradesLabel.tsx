@@ -5,7 +5,10 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
-import { darkPoolTextRtl } from '../darkPoolLayout';
+import {
+  DARK_POOL_TYPE,
+  darkPoolSectionTitleStyle,
+} from '../darkPoolLayout';
 
 interface Props {
   count?: number;
@@ -29,6 +32,7 @@ export function InsiderLatestTradesLabel({ count, title = 'עסקאות אחרו
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     wrap: {
+      direction: 'rtl',
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -36,14 +40,12 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       marginTop: tokens.spacing.xs,
     },
     label: {
-      fontSize: 11,
-      fontWeight: '800',
-      letterSpacing: 0.4,
+      ...darkPoolSectionTitleStyle,
       color: tokens.colors.text.tertiary,
-      ...darkPoolTextRtl,
+      letterSpacing: 0.4,
     },
     count: {
-      fontSize: 11,
+      fontSize: DARK_POOL_TYPE.caption2.fontSize,
       fontWeight: '700',
       color: tokens.colors.text.tertiary,
       writingDirection: 'ltr',

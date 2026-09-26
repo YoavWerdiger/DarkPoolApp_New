@@ -112,29 +112,30 @@ const RegistrationAgeInputScreen = ({ navigation }: Props) => {
       <View style={styles.container}>
         <View
           style={{
-            backgroundColor: tokens.cashAppStyle.colors.input,
-            borderRadius: tokens.cashAppStyle.borderRadius.input,
+            backgroundColor: tokens.colors.background.input,
+            borderRadius: tokens.borderRadius.full,
             borderWidth: 1,
-            borderColor: tokens.cashAppStyle.colors.input,
-            padding: 24,
+            borderColor: error ? '#F85149' : tokens.colors.border.strong,
+            paddingHorizontal: 36,
+            paddingVertical: 12,
             alignItems: 'center',
-            minWidth: 200,
+            minWidth: 180,
           }}
         >
           <TextInput
             style={[
               styles.input,
-              { color: tokens.cashAppStyle.colors.headline }
+              { color: tokens.colors.text.primary }
             ]}
             value={value}
             onChangeText={handleChangeText}
             keyboardType="number-pad"
             placeholder="28"
-            placeholderTextColor={tokens.cashAppStyle.colors.placeholder}
+            placeholderTextColor={tokens.colors.text.muted}
             maxLength={3}
             autoFocus
             textAlign="center"
-            selectionColor={tokens.cashAppStyle.colors.inputFocus}
+            selectionColor={tokens.colors.primary.main}
           />
         </View>
       </View>

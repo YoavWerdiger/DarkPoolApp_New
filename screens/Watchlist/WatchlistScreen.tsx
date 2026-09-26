@@ -5,6 +5,7 @@ import {
   StyleSheet,
   FlatList,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
@@ -15,7 +16,9 @@ import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHead
 import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import UICard from '../../components/ui/UICard';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import { ListItemSkeleton } from '../../components/ui/SkeletonLoader';
+import { APP_TYPE } from '../../components/ui/appType';
+import { WatchlistRow } from './components/WatchlistRow';
+import { WatchlistRowSkeleton } from './components/WatchlistRowSkeleton';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { dispatchOpenMainDrawer, type DrawerParentNavigation } from '../../navigation/mainDrawerNav';
 import { triggerDrawerMenuHaptic, HapticFeedback } from '../../utils/hapticFeedback';
@@ -24,7 +27,6 @@ import { useWatchlist } from '../../hooks/useWatchlist';
 import { SymbolSearchModal } from '../Portfolios/components/SymbolSearchModal';
 import type { SymbolSearchResult } from '../../services/portfolios/portfolioPriceFeed';
 import type { WatchlistRowData } from '../../services/watchlist/watchlistTypes';
-import { WatchlistRow } from './components/WatchlistRow';
 import { WatchlistColumnHeader } from './components/WatchlistColumnHeader';
 import { WatchlistEmpty } from './components/WatchlistEmpty';
 import { WatchlistListNameSheet } from './components/WatchlistFormSheet';
@@ -371,6 +373,7 @@ export default function WatchlistScreen() {
           width: '100%',
           alignSelf: 'stretch',
         },
+        skeletonList: { width: '100%', paddingTop: 4 },
         listWrap: { flex: 1, minHeight: 0, width: '100%' },
         list: { flex: 1 },
         listContent: { flexGrow: 1, paddingBottom: 8 },
@@ -383,7 +386,8 @@ export default function WatchlistScreen() {
         },
         centerText: {
           color: tokens.colors.text.tertiary,
-          fontSize: 13,
+          fontSize: APP_TYPE.sectionSubtitle.fontSize,
+          lineHeight: APP_TYPE.sectionSubtitle.lineHeight,
         },
         updatingRow: {
           flexDirection: 'row-reverse',
@@ -396,8 +400,9 @@ export default function WatchlistScreen() {
         },
         updatingText: {
           color: tokens.colors.primary.main,
-          fontSize: 11,
+          fontSize: APP_TYPE.caption2.fontSize,
           fontWeight: '700',
+          lineHeight: APP_TYPE.caption2.lineHeight,
         },
       }),
     [tokens, hp]
@@ -429,11 +434,19 @@ export default function WatchlistScreen() {
         <View style={[styles.body, { marginBottom: Math.max(0, mainTabsHeight - 12) }]}>
           <MarketsErrorBoundary>
             {isLoading && rows.length === 0 ? (
-              <View style={[styles.container, { paddingTop: 12 }]}>
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <ListItemSkeleton key={i} delay={i * 50} showAvatar={false} />
-                ))}
-              </View>
+              <UICard
+                variant="glass"
+                glassIntensity="light"
+                padding="none"
+                style={styles.panel}
+                contentContainerStyle={styles.panelInner}
+              >
+                <View style={styles.skeletonList}>
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <WatchlistRowSkeleton key={i} delay={i * 50} index={i} />
+                  ))}
+                </View>
+              </UICard>
             ) : (
               <>
                 <UICard

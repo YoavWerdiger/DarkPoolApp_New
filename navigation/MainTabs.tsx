@@ -10,10 +10,12 @@ import {
   InteractionManager,
   Platform,
 } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { createDrawerNavigator, DrawerContentComponentProps } from '@react-navigation/drawer';
 import { CommonActions } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { SUPABASE_URL } from '../config/publicEnv';
 import NewsScreen from '../screens/News';
 import NewsEconomicCalendarScreen from '../screens/News/NewsEconomicCalendarScreen';
 import NewsEarningsScreen from '../screens/News/NewsEarningsScreen';
@@ -27,6 +29,7 @@ import MarketsHeatmapScreen from '../screens/Markets/MarketsHeatmapScreen';
 import ChatStack from './ChatStack';
 import LearningStack from './LearningStack';
 import {
+  MAIN_DRAWER_GLASS,
   MAIN_DRAWER_NAVIGATOR_ID,
   getMainDrawerPosition,
   registerMainDrawerNavigation,
@@ -34,10 +37,11 @@ import {
 } from './mainDrawerNav';
 import { useAuth } from '../context/AuthContext';
 import { HapticFeedback } from '../utils/hapticFeedback';
+
 const Drawer = createDrawerNavigator();
 
-/** קנבס מסך — Soft UI #111111 */
-const SCREEN_BG = '#111111';
+/** קנבס מגירה — שקוף כדי שהאורורה בשורש תיראה */
+const SCREEN_BG = 'transparent';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const DRAWER_WIDTH = Math.min(300, Math.round(SCREEN_W * 0.82));
@@ -46,6 +50,16 @@ const DRAWER_WIDTH = Math.min(300, Math.round(SCREEN_W * 0.82));
 const DRAWER_PAD_INNER = 15;
 /** צד המסגרת / לוגו / אווטאר — מעט פחות כדי לאזן את ההזחה ימינה */
 const DRAWER_PAD_OUTER = 17;
+
+/**
+ * לוגו תפריט — אותו קובץ כמו `app-media/IMG_3289.PNG` (PNG שקוף).
+ * הקובץ בסטורג׳ ריבועי עם ריפוד גדול; העותק המקומי חתוך לתוכן
+ * כדי ש־contain ב־100%×96 יישאר באותו טביעת רגל כמו הלוגו הישן.
+ */
+const DRAWER_MENU_LOGO_URI = `${SUPABASE_URL}/storage/v1/object/public/app-media/IMG_3289.PNG`;
+const DRAWER_MENU_LOGO = require('../assets/IMG_3289.png');
+/** גובה מקורי של לוגו המגירה — לא להקטין (הריבוע המרוחק נראה כתמונה ממוזערת). */
+const DRAWER_MENU_LOGO_HEIGHT = 96;
 
 type DrawerIconFamily = 'ion' | 'mci' | 'feather';
 
@@ -164,16 +178,19 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
         rootHorizontal,
         {
           paddingTop: insets.top + 8,
+          paddingBottom: insets.bottom + 8,
           /** רק iOS: רוחב מלא + minWidth — כמו פרודקשן, בלי לשנות drawerType */
           ...(isIos && { width: '100%', minWidth: 0 }),
         },
       ]}
     >
       <View style={drawerStyles.brandHeader}>
-        <Image
-          source={require('../assets/darkpool-drawer-logo.png')}
+        <ExpoImage
+          source={DRAWER_MENU_LOGO}
+          recyclingKey={DRAWER_MENU_LOGO_URI}
           style={drawerStyles.brandLogo}
-          resizeMode="contain"
+          contentFit="contain"
+          transition={0}
           accessibilityLabel="DarkPool"
         />
       </View>
@@ -231,7 +248,7 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
       </ScrollView>
       <TouchableOpacity
         activeOpacity={0.85}
-        style={[drawerStyles.profileFooter, { paddingBottom: insets.bottom + 8 }]}
+        style={drawerStyles.profileFooter}
         onPress={() => {
           void HapticFeedback.selection();
           navigation.closeDrawer();
@@ -268,17 +285,20 @@ const drawerStyles = StyleSheet.create({
   /** ריווח אופקי מוגדר ב־CustomDrawerContent (אסימטרי + safe area) */
   root: {
     flex: 1,
-    backgroundColor: '#262626',
+    backgroundColor: MAIN_DRAWER_GLASS.panelBackground,
   },
   brandHeader: {
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
-    paddingTop: 4,
+    paddingTop: 12,
+    paddingHorizontal: 8,
+    backgroundColor: 'transparent',
   },
   brandLogo: {
     width: '100%',
-    height: 96,
+    height: DRAWER_MENU_LOGO_HEIGHT,
+    backgroundColor: 'transparent',
   },
   scroll: { flex: 1 },
   row: {
@@ -309,6 +329,7 @@ const drawerStyles = StyleSheet.create({
     marginTop: 12,
     marginHorizontal: 10,
     paddingTop: 12,
+    paddingBottom: 14,
     borderTopWidth: 1.5,
     borderTopColor: 'rgba(255,255,255,0.20)',
     alignSelf: 'stretch',
@@ -384,7 +405,7 @@ export default function MainTabs() {
           overlayColor: 'rgba(0,0,0,0.55)',
           drawerStyle: {
             width: DRAWER_WIDTH,
-            backgroundColor: '#262626',
+            backgroundColor: MAIN_DRAWER_GLASS.panelBackground,
           },
           sceneStyle: { backgroundColor: SCREEN_BG },
           // enableFreeze(true) ב-App — משאירים הקפאה ב-blur כדי שמסכי Drawer כבדים

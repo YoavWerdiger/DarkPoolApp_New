@@ -193,7 +193,6 @@ const RegistrationEmailScreen = ({ navigation }: { navigation: any }) => {
 
       <CashAppInput
         label="כתובת אימייל"
-        leftIcon="mail-outline"
         placeholder="you@example.com"
         value={email}
         onChangeText={(t) => {

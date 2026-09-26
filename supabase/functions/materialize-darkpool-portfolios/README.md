@@ -7,14 +7,16 @@ Precompute Dark Pool portfolio charts + holdings entry/return into
 
 | Body | Behavior |
 |------|----------|
-| `{"mode":"hot"}` | curated + featured + followed + recent feed (~60) |
-| `{"mode":"full"}` | hot + more funds (~200) |
+| `{"mode":"hot"}` | curated מאוצרים — עד `MATERIALIZE_HOT_MAX_TARGETS` (ברירת מחדל 8) |
+| `{"mode":"hot","target_offset":8}` | המשך הרשימה (batch B) |
+| `{"mode":"full"}` | כל יעדי materialize (יומי — זהיר עם Yahoo) |
 | `{"ids":[{"id":"P000197","kind":"politician"}]}` | explicit list |
 
 ## Cron
 
-- Hot: `15 14-21 * * 1-5` (UTC, US market hours)
-- Full: `30 2 * * *`
+- Hot batch A (`target_offset=0`): `15 14-21 * * 1-5` (UTC)
+- Hot batch B (`target_offset=8`): `45 14-21 * * 1-5` (UTC)
+- Full: `30 2 * * *` (`mode=full`, offset 0)
 
 ## Manual curated bootstrap
 

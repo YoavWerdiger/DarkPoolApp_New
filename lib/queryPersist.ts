@@ -10,11 +10,12 @@ import { logger } from '../utils/logger';
 const KEY_PREFIX = '@app_query_cache_v2:';
 const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 /** דילוג על payloads ענקיים — לא שווה לשמור ולהאט את ה-IO */
-const MAX_ENTRY_BYTES = 512 * 1024;
+/** פרופיל + סדרת snapshot — לעיתים גדול מ-512KB */
+const MAX_ENTRY_BYTES = 896 * 1024;
 
 /**
  * רק query keys שמתחילים באחד מה-prefixes האלה נשמרים לדיסק.
- * (chat messages מטופלים בנפרד ב-chatMessagePersist; per-entity profiles לא נשמרים בכוונה)
+ * (chat messages מטופלים בנפרד ב-chatMessagePersist)
  */
 const PERSIST_PREFIXES: readonly (readonly unknown[])[] = [
   ['market', 'fearGreed'],
@@ -30,6 +31,13 @@ const PERSIST_PREFIXES: readonly (readonly unknown[])[] = [
   ['darkpool', 'insider'],
   ['darkpool', 'following'],
   ['darkpool', 'followed'],
+  ['uw', 'investorProfile'],
+  ['uw', 'fundProfile'],
+  ['uw', 'fundHoldingsHistory'],
+  ['uw', 'fund13fPrices'],
+  ['darkpool', 'congress', 'basket-prices'],
+  ['darkpool', 'trump', 'notional-prices'],
+  ['darkpool', 'insider', 'form4-prices'],
   ['news', 'list'],
   ['news', 'earnings'],
   ['portfolios', 'list'],

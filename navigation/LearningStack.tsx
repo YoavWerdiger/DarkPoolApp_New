@@ -5,7 +5,12 @@ import { CourseDetailScreen } from '../screens/Learning/CourseDetailScreen';
 import { CourseComingSoonScreen } from '../screens/Learning/CourseComingSoonScreen';
 import { CoursePreviewScreen } from '../screens/Learning/CoursePreviewScreen';
 import { MyNotesScreen } from '../screens/Learning/MyNotesScreen';
+import { MyLearningScreen } from '../screens/Learning/MyLearningScreen';
 import { LessonPlayerScreen } from '../screens/Learning/LessonPlayerScreen';
+import {
+  createLearningStackScreenOptions,
+  learningStackScreenListeners,
+} from './chatStackTransition';
 
 /** מסכי אקדמיה — ScreenChrome (שחור + גרדיאנט). LessonPlayer עם רקע נייטרלי משלו. */
 const CoursesScreenPlain = CoursesScreen;
@@ -15,6 +20,7 @@ const CourseComingSoonPlain = CourseComingSoonScreen;
 const CoursePreviewWithVideo = CoursePreviewScreen;
 const LessonPlayerPlain = LessonPlayerScreen;
 const MyNotesWithVideo = MyNotesScreen;
+const MyLearningPlain = MyLearningScreen;
 
 export type LearningStackParamList = {
   CoursesScreen: undefined;
@@ -29,6 +35,7 @@ export type LearningStackParamList = {
   CoursePreviewScreen: { youtubeLinks?: string[] };
   LessonPlayerScreen: { lessonId: string; initialBlockIndex?: number };
   MyNotesScreen: undefined;
+  MyLearningScreen: undefined;
 };
 
 const Stack = createNativeStackNavigator<LearningStackParamList>();
@@ -37,18 +44,18 @@ export default function LearningStack() {
   return (
     <Stack.Navigator
       initialRouteName="CoursesScreen"
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: '#111111' },
-        animation: 'fade',
-        gestureEnabled: true,
-        animationDuration: 200,
-      }}
+      screenOptions={createLearningStackScreenOptions()}
+      screenListeners={learningStackScreenListeners}
     >
       <Stack.Screen
         name="CoursesScreen"
         component={CoursesScreenPlain}
         options={{ title: 'קורסים' }}
+      />
+      <Stack.Screen
+        name="MyLearningScreen"
+        component={MyLearningPlain}
+        options={{ title: 'הקורסים שלי' }}
       />
       <Stack.Screen 
         name="LearningScreen" 
@@ -83,4 +90,3 @@ export default function LearningStack() {
     </Stack.Navigator>
   );
 }
-

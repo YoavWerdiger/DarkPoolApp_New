@@ -12,6 +12,15 @@ Daily Quiver cache for congress **politicians** + **stock holdings**
 Then holdings: `GET /beta/live/congress_stock_holdings?bioguide_id=…`
 → fields `CurrentHolding` (USD) + `Allocation` (%) — no share counts invented.
 
+Ticker page: `{"ticker":"NVDA","politicians":false}` →
+`GET /beta/live/congress_stock_holdings?ticker=NVDA` merged into `by_bioguide`
+and stamped on `tickers_synced.NVDA`.
+
+Person profile: `{"bioguides":["P000197"],"politicians":false}` →
+`GET /beta/live/congress_stock_holdings?bioguide_id=P000197` replaces that
+person's full list and stamps `bioguides_synced.P000197`. A ticker merge never
+stamps a bioguide (one stock ≠ a portfolio).
+
 Payload extras: `top_by_trade_count` (Top 25 by TradeCount) + `curated_bioguides`.
 Holdings merge with prior cache so a partial run does not wipe other BioGuides.
 
@@ -51,4 +60,10 @@ curl -X POST "https://<PROJECT_REF>.supabase.co/functions/v1/sync-quiver-congres
   -H "Authorization: Bearer <SERVICE_ROLE_KEY>" \
   -H "Content-Type: application/json" \
   -d '{"bioguides":["P000197"]}'
+
+# ticker holders (DarkPoolTickerScreen)
+curl -X POST "https://<PROJECT_REF>.supabase.co/functions/v1/sync-quiver-congress-cache" \
+  -H "Authorization: Bearer <SERVICE_ROLE_KEY>" \
+  -H "Content-Type: application/json" \
+  -d '{"ticker":"NVDA","politicians":false}'
 ```

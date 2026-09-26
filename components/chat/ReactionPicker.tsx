@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
     backgroundColor: chatPalette.glass,
     borderWidth: 1,
     borderColor: chatPalette.glassBorder,
-    borderRadius: 999,
+    borderRadius: 9999,
     paddingHorizontal: 14,
     minHeight: 44,
   },

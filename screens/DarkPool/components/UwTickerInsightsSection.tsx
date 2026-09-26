@@ -5,6 +5,10 @@ import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
 import { useUwTickerInsights } from '../../../hooks/useUwTickerInsights';
 import { formatUsdCompact } from '../utils/darkPoolFormat';
+import {
+  DARK_POOL_TYPE,
+  darkPoolPhysicalRightText,
+} from '../darkPoolLayout';
 import { DarkPoolSectionHeader } from './DarkPoolSectionHeader';
 import { UwRateLimitBanner } from './UwRateLimitBanner';
 
@@ -202,24 +206,24 @@ function formatCompactNum(v: number): string {
 
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
-    wrap: { gap: 12 },
+    wrap: { gap: 12, direction: 'rtl' },
     loader: {
       alignItems: 'center',
       paddingVertical: 24,
       gap: 8,
     },
     loaderText: {
-      fontSize: 13,
+      ...darkPoolPhysicalRightText,
+      fontSize: DARK_POOL_TYPE.sectionSubtitle.fontSize,
       fontWeight: '500',
       color: tokens.colors.text.tertiary,
-      writingDirection: 'rtl',
     },
     summaryCard: {
       borderRadius: tokens.borderRadius.xl,
-      borderWidth: 1,
-      borderColor: tokens.colors.border.subtle,
+      backgroundColor: 'transparent',
     },
     summaryGrid: {
+      direction: 'rtl',
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 8,
@@ -229,64 +233,60 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       flexBasis: '45%',
       minWidth: 120,
       paddingVertical: 8,
-      alignItems: 'flex-start',
+      alignItems: 'stretch',
     },
     summaryLabel: {
-      fontSize: 11,
+      ...darkPoolPhysicalRightText,
+      fontSize: DARK_POOL_TYPE.caption2.fontSize,
       fontWeight: '600',
       color: tokens.colors.text.tertiary,
-      writingDirection: 'rtl',
-      textAlign: 'left',
     },
     summaryValue: {
       marginTop: 4,
-      fontSize: 18,
+      fontSize: DARK_POOL_TYPE.sectionTitle.fontSize,
       fontWeight: '800',
       letterSpacing: -0.3,
       writingDirection: 'ltr',
-      textAlign: 'left',
+      textAlign: 'right',
     },
     summaryHint: {
+      ...darkPoolPhysicalRightText,
       marginTop: 3,
-      fontSize: 11,
+      fontSize: DARK_POOL_TYPE.caption2.fontSize,
       fontWeight: '500',
       color: tokens.colors.text.tertiary,
-      writingDirection: 'rtl',
-      textAlign: 'left',
       lineHeight: 15,
     },
     card: {
       borderRadius: tokens.borderRadius.xl,
-      borderWidth: 1,
-      borderColor: tokens.colors.border.subtle,
+      backgroundColor: 'transparent',
     },
     metricValue: {
-      fontSize: 16,
+      ...darkPoolPhysicalRightText,
+      fontSize: DARK_POOL_TYPE.body.fontSize,
       fontWeight: '700',
       color: tokens.colors.text.primary,
-      textAlign: 'left',
-      writingDirection: 'rtl',
       lineHeight: 22,
     },
     metricHint: {
+      ...darkPoolPhysicalRightText,
       marginTop: 4,
-      fontSize: 12,
+      fontSize: DARK_POOL_TYPE.caption.fontSize,
       fontWeight: '500',
       color: tokens.colors.text.tertiary,
-      textAlign: 'left',
-      writingDirection: 'rtl',
     },
     listRow: {
       paddingVertical: 10,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: tokens.colors.border.subtle,
-      alignItems: 'flex-start',
+      alignItems: 'stretch',
     },
     listRowLast: {
       borderBottomWidth: 0,
       paddingBottom: 0,
     },
     insiderRow: {
+      direction: 'rtl',
       flexDirection: 'row',
       alignItems: 'center',
       gap: 10,
@@ -294,37 +294,34 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: tokens.colors.border.subtle,
     },
-    insiderText: { flex: 1, alignItems: 'flex-start', minWidth: 0 },
+    insiderText: { flex: 1, alignItems: 'stretch', minWidth: 0 },
     rowTitle: {
-      fontSize: 14,
+      ...darkPoolPhysicalRightText,
+      fontSize: DARK_POOL_TYPE.body.fontSize,
       fontWeight: '700',
       color: tokens.colors.text.primary,
-      textAlign: 'left',
-      writingDirection: 'rtl',
       lineHeight: 20,
     },
     rowHint: {
+      ...darkPoolPhysicalRightText,
       marginTop: 3,
-      fontSize: 12,
+      fontSize: DARK_POOL_TYPE.caption.fontSize,
       fontWeight: '500',
       color: tokens.colors.text.tertiary,
-      textAlign: 'left',
-      writingDirection: 'rtl',
       lineHeight: 17,
     },
     newsRow: {
       paddingVertical: 10,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: tokens.colors.border.subtle,
-      alignItems: 'flex-start',
+      alignItems: 'stretch',
     },
     newsTitle: {
-      fontSize: 14,
+      ...darkPoolPhysicalRightText,
+      fontSize: DARK_POOL_TYPE.body.fontSize,
       fontWeight: '600',
       color: tokens.colors.text.primary,
-      textAlign: 'left',
       lineHeight: 21,
-      writingDirection: 'rtl',
     },
   });
 }

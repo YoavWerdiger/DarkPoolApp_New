@@ -2,9 +2,10 @@ import { Platform } from 'react-native';
 import { setStatusBarStyle } from 'expo-status-bar';
 import * as NavigationBar from 'expo-navigation-bar';
 import * as SystemUI from 'expo-system-ui';
+import { SoftUI } from '../components/ui/softUiPalette';
 
-/** רקע מסך כהה מותגי — חייב להתאים ל־DesignTokens.colors.background.primary */
-export const APP_SYSTEM_BACKGROUND = '#111111';
+/** קנבס שורש — Soft UI warm charcoal (docs/DARKPOOL_DESIGN_DIRECTION.md). */
+export const APP_SYSTEM_BACKGROUND = SoftUI.canvas;
 
 /**
  * תצורת StatusBar + NavigationBar + רקע שורש לאנדרואיד edge-to-edge.

@@ -314,7 +314,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       marginBottom: 12,
       paddingHorizontal: 12,
       minHeight: 46,
-      borderRadius: 14,
+      borderRadius: 9999,
       backgroundColor: 'rgba(255,255,255,0.06)',
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: DIVIDER,

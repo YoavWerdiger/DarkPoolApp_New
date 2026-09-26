@@ -43,7 +43,12 @@ import { formatCurrency, formatPercent } from '../utils/format';
 import { TickerLogo } from '../components/TickerLogo';
 import PortfolioTradesTable from '../components/PortfolioTradesTable';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
-import { darkPoolTextRtl } from '../../DarkPool/darkPoolLayout';
+import {
+  JOURNAL_TYPE,
+  journalPhysicalRightText,
+  journalSectionSubtitleStyle,
+  journalSectionTitleStyle,
+} from '../../Journal/journalLayout';
 
 interface Props {
   portfolioId: string;
@@ -286,16 +291,13 @@ export default function OpenTradesTab({
           direction: 'rtl',
         },
         emptyTitle: {
-          fontSize: 16,
-          fontWeight: '700',
+          ...journalSectionTitleStyle,
           color: tokens.colors.text.primary,
-          ...darkPoolTextRtl,
         },
         emptyText: {
-          fontSize: 13,
+          ...journalSectionSubtitleStyle,
           color: tokens.colors.text.tertiary,
           textAlign: 'center',
-          writingDirection: 'rtl',
           paddingHorizontal: 30,
         },
         dirPill: {
@@ -306,8 +308,9 @@ export default function OpenTradesTab({
           flexShrink: 0,
         },
         dirPillText: {
-          fontSize: 10,
+          fontSize: JOURNAL_TYPE.caption2.fontSize,
           fontWeight: '700',
+          lineHeight: JOURNAL_TYPE.caption2.lineHeight,
           letterSpacing: 0.2,
           textAlign: 'center',
         },
@@ -333,16 +336,13 @@ export default function OpenTradesTab({
           flexWrap: 'wrap',
         },
         sheetTitle: {
-          fontSize: 20,
-          fontWeight: '800',
+          ...journalSectionTitleStyle,
           color: tokens.colors.text.primary,
-          ...darkPoolTextRtl,
         },
         sheetSub: {
-          fontSize: 12,
-          color: tokens.colors.text.tertiary,
+          ...journalSectionSubtitleStyle,
           marginTop: 2,
-          ...darkPoolTextRtl,
+          color: tokens.colors.text.tertiary,
         },
         sheetInputBlock: {
           gap: 6,
@@ -351,13 +351,13 @@ export default function OpenTradesTab({
           fontSize: 13,
           fontWeight: '600',
           color: tokens.colors.text.tertiary,
-          ...darkPoolTextRtl,
+          ...journalPhysicalRightText,
         },
         sheetInputWrap: {
           flexDirection: 'row',
           alignItems: 'center',
           gap: 8,
-          backgroundColor: '#262626',
+          backgroundColor: tokens.colors.glass.card.bg,
           borderRadius: 14,
           borderWidth: 0,
           borderColor: tokens.colors.border.subtle,
@@ -386,18 +386,20 @@ export default function OpenTradesTab({
           justifyContent: 'space-between',
           paddingHorizontal: 14,
           paddingVertical: 10,
-          backgroundColor: '#262626',
+          backgroundColor: tokens.colors.glass.card.bg,
           borderRadius: 12,
         },
         pnlPreviewLabel: {
-          fontSize: 12,
+          fontSize: JOURNAL_TYPE.caption.fontSize,
           fontWeight: '600',
+          lineHeight: JOURNAL_TYPE.caption.lineHeight,
           color: tokens.colors.text.tertiary,
-          ...darkPoolTextRtl,
+          ...journalPhysicalRightText,
         },
         pnlPreviewValue: {
-          fontSize: 14,
+          fontSize: JOURNAL_TYPE.body.fontSize,
           fontWeight: '800',
+          lineHeight: JOURNAL_TYPE.body.lineHeight,
           writingDirection: 'ltr',
           textAlign: 'right',
         },
@@ -423,9 +425,10 @@ export default function OpenTradesTab({
           backgroundColor: 'rgba(255,255,255,0.08)',
         },
         sheetBtnText: {
-          fontSize: 15,
+          fontSize: JOURNAL_TYPE.body.fontSize,
           fontWeight: '800',
-          ...darkPoolTextRtl,
+          lineHeight: JOURNAL_TYPE.body.lineHeight,
+          ...journalPhysicalRightText,
         },
         dateRow: {
           flexDirection: 'row',
@@ -437,7 +440,7 @@ export default function OpenTradesTab({
           alignItems: 'center',
           justifyContent: 'center',
           gap: 8,
-          backgroundColor: '#262626',
+          backgroundColor: tokens.colors.glass.card.bg,
           borderRadius: 28,
           paddingHorizontal: 14,
           paddingVertical: 14,
@@ -445,8 +448,9 @@ export default function OpenTradesTab({
           borderColor: tokens.colors.border.subtle,
         },
         datePillText: {
-          fontSize: 14,
+          fontSize: JOURNAL_TYPE.body.fontSize,
           fontWeight: '600',
+          lineHeight: JOURNAL_TYPE.body.lineHeight,
           color: tokens.colors.text.primary,
           textAlign: 'center',
           writingDirection: 'ltr',
@@ -471,12 +475,10 @@ export default function OpenTradesTab({
           direction: 'rtl',
         },
         exitPickerTitle: {
-          fontSize: 16,
-          fontWeight: '700',
+          ...journalSectionTitleStyle,
           color: tokens.colors.text.primary,
           textAlign: 'center',
           marginBottom: 8,
-          ...darkPoolTextRtl,
         },
         exitPickerDoneBtn: {
           marginTop: 12,
@@ -486,10 +488,11 @@ export default function OpenTradesTab({
           alignItems: 'center',
         },
         exitPickerDoneBtnText: {
-          fontSize: 15,
+          fontSize: JOURNAL_TYPE.body.fontSize,
           fontWeight: '700',
+          lineHeight: JOURNAL_TYPE.body.lineHeight,
           color: tokens.colors.text.inverse,
-          ...darkPoolTextRtl,
+          textAlign: 'center',
         },
       }),
     [tokens]

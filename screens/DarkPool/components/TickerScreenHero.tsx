@@ -3,6 +3,11 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
 import { formatUsdCompact } from '../utils/darkPoolFormat';
+import {
+  DARK_POOL_TYPE,
+  darkPoolPhysicalLeftText,
+  darkPoolPhysicalRightText,
+} from '../darkPoolLayout';
 
 export interface TickerHeroStat {
   label: string;
@@ -77,8 +82,10 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     wrap: {
       marginBottom: tokens.spacing.lg,
       gap: 14,
+      direction: 'ltr',
     },
     identityRow: {
+      direction: 'ltr',
       flexDirection: 'row',
       alignItems: 'center',
       gap: 14,
@@ -89,31 +96,31 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       minWidth: 0,
     },
     ticker: {
-      fontSize: 28,
+      fontSize: DARK_POOL_TYPE.sectionTitle.fontSize,
+      lineHeight: DARK_POOL_TYPE.sectionTitle.lineHeight,
       fontWeight: '800',
-      letterSpacing: -0.8,
+      letterSpacing: -0.4,
       color: tokens.colors.text.primary,
       writingDirection: 'ltr',
       textAlign: 'left',
     },
     meta: {
+      ...darkPoolPhysicalLeftText,
       marginTop: 4,
-      fontSize: 14,
-      fontWeight: '500',
-      lineHeight: 20,
+      fontSize: DARK_POOL_TYPE.sectionSubtitle.fontSize,
+      fontWeight: DARK_POOL_TYPE.caption.fontWeight,
+      lineHeight: DARK_POOL_TYPE.sectionSubtitle.lineHeight,
       color: tokens.colors.text.secondary,
-      writingDirection: 'rtl',
-      textAlign: 'left',
     },
     premiumHint: {
+      ...darkPoolPhysicalRightText,
       marginTop: 6,
-      fontSize: 12,
+      fontSize: DARK_POOL_TYPE.caption.fontSize,
       fontWeight: '600',
       color: tokens.colors.text.tertiary,
-      writingDirection: 'rtl',
-      textAlign: 'left',
     },
     statsRow: {
+      direction: 'rtl',
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 8,
@@ -128,22 +135,21 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       borderWidth: 1,
       borderColor: tokens.colors.border.subtle,
       backgroundColor: 'rgba(255,255,255,0.03)',
-      alignItems: 'flex-start',
+      alignItems: 'stretch',
     },
     statLabel: {
-      fontSize: 11,
+      ...darkPoolPhysicalRightText,
+      fontSize: DARK_POOL_TYPE.caption2.fontSize,
       fontWeight: '600',
       color: tokens.colors.text.tertiary,
-      writingDirection: 'rtl',
-      textAlign: 'left',
       marginBottom: 4,
     },
     statValue: {
-      fontSize: 15,
+      fontSize: DARK_POOL_TYPE.body.fontSize,
       fontWeight: '800',
       color: tokens.colors.text.primary,
       writingDirection: 'ltr',
-      textAlign: 'left',
+      textAlign: 'right',
     },
   });
 }

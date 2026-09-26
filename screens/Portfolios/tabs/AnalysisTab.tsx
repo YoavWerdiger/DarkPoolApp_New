@@ -10,7 +10,11 @@ import {
 } from '../../../services/portfolios/portfolioAnalysis';
 import { formatPercent, formatNumber, gainColor } from '../utils/format';
 import { PERFORMANCE_PERIODS } from '../portfolioConstants';
-import { darkPoolTextRtl } from '../../DarkPool/darkPoolLayout';
+import {
+  JOURNAL_TYPE,
+  journalPhysicalRightText,
+  journalSectionTitleStyle,
+} from '../../Journal/journalLayout';
 
 interface Props {
   portfolio: Portfolio;
@@ -51,13 +55,9 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
           direction: 'rtl',
         },
         sectionTitle: {
-          fontSize: 14,
-          fontWeight: '700',
+          ...journalSectionTitleStyle,
           color: tokens.colors.text.primary,
           marginBottom: 12,
-          alignSelf: 'stretch',
-          width: '100%',
-          ...darkPoolTextRtl,
         },
         riskGrid: {
           flexDirection: 'row',
@@ -71,30 +71,39 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
           borderRadius: 12,
           borderWidth: 0,
           borderColor: tokens.colors.border.subtle,
-          alignItems: 'stretch',
+          // LTR מקומי — flex-end דוחף תווית/ערך/רמז לימין הפיזי
+          direction: 'ltr',
+          alignItems: 'flex-end',
         },
         riskLabel: {
-          width: '100%',
-          fontSize: 11,
+          maxWidth: '100%',
+          fontSize: JOURNAL_TYPE.caption2.fontSize,
+          fontWeight: JOURNAL_TYPE.caption2.fontWeight,
+          lineHeight: JOURNAL_TYPE.caption2.lineHeight,
           color: tokens.colors.text.tertiary,
           marginBottom: 4,
-          ...darkPoolTextRtl,
+          writingDirection: 'rtl',
+          textAlign: 'right',
         },
         riskValue: {
-          width: '100%',
-          fontSize: 18,
+          alignSelf: 'stretch',
+          maxWidth: '100%',
+          fontSize: JOURNAL_TYPE.body.fontSize,
           fontWeight: '800',
+          lineHeight: JOURNAL_TYPE.body.lineHeight,
           color: tokens.colors.text.primary,
           textAlign: 'right',
           writingDirection: 'ltr',
         },
         riskHint: {
-          width: '100%',
-          fontSize: 10,
+          maxWidth: '100%',
+          fontSize: JOURNAL_TYPE.caption2.fontSize,
+          fontWeight: JOURNAL_TYPE.caption2.fontWeight,
+          lineHeight: JOURNAL_TYPE.caption2.lineHeight,
           color: tokens.colors.text.tertiary,
           marginTop: 4,
-          lineHeight: 14,
-          ...darkPoolTextRtl,
+          writingDirection: 'rtl',
+          textAlign: 'right',
         },
         perfRow: {
           flexDirection: 'row',
@@ -110,18 +119,20 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
           flex: 1,
           fontSize: 13,
           color: tokens.colors.text.primary,
-          ...darkPoolTextRtl,
+          ...journalPhysicalRightText,
         },
         perfValue: {
           width: 90,
           fontSize: 13,
           fontWeight: '700',
+          direction: 'ltr',
           textAlign: 'right',
           writingDirection: 'ltr',
         },
         perfBenchmark: {
           width: 90,
           fontSize: 12,
+          direction: 'ltr',
           textAlign: 'right',
           writingDirection: 'ltr',
           color: tokens.colors.text.tertiary,
@@ -138,14 +149,14 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
           fontSize: 11,
           fontWeight: '700',
           color: tokens.colors.text.tertiary,
-          ...darkPoolTextRtl,
+          ...journalPhysicalRightText,
         },
         emptyText: {
           width: '100%',
           alignSelf: 'stretch',
           fontSize: 13,
           color: tokens.colors.text.tertiary,
-          ...darkPoolTextRtl,
+          ...journalPhysicalRightText,
           paddingVertical: 30,
         },
         holdingRow: {
@@ -169,7 +180,7 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
           flex: 1,
           fontSize: 12,
           color: tokens.colors.text.secondary,
-          ...darkPoolTextRtl,
+          ...journalPhysicalRightText,
         },
         holdingPct: {
           width: 80,

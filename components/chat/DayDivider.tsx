@@ -1,15 +1,22 @@
 import React, { memo, useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { useDesignTokens } from '../ui/DesignTokens';
-import UICard from '../ui/UICard';
+import { DayDividerPill } from '../ui/DayDividerPill';
+
+export {
+  DayDividerPill,
+  DAY_DIVIDER_CARD,
+  DAY_DIVIDER_SELECTED_INTENSITY,
+} from '../ui/DayDividerPill';
+export type { DayDividerPillProps } from '../ui/DayDividerPill';
 
 interface DayDividerProps {
   date: Date;
 }
 
 const DayDivider: React.FC<DayDividerProps> = memo(({ date }) => {
-  const DesignTokens = useDesignTokens();
-  const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
+  const tokens = useDesignTokens();
+  const styles = useMemo(() => createStyles(tokens), [tokens]);
   const getDayText = (date: Date): string => {
     // קבלת התאריך הנוכחי
     const now = new Date();
@@ -51,41 +58,21 @@ const DayDivider: React.FC<DayDividerProps> = memo(({ date }) => {
 
   return (
     <View style={styles.container}>
-      <UICard
-        variant="glass"
-        glassIntensity="subtle"
-        padding="none"
-        style={styles.divider}
-        contentContainerStyle={styles.dividerInner}
-      >
-        <Text style={styles.text}>{getDayText(date)}</Text>
-      </UICard>
+      <DayDividerPill style={styles.dateMinWidth}>{getDayText(date)}</DayDividerPill>
     </View>
   );
 });
 
-const createStyles = (tokens: any) => StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    marginVertical: tokens.spacing.lg,
-    paddingHorizontal: tokens.spacing.lg,
-  },
-  divider: {
-    borderRadius: tokens.borderRadius.xl,
-    minWidth: 112,
-    overflow: 'hidden',
-  },
-  dividerInner: {
-    paddingHorizontal: tokens.spacing.xl,
-    paddingVertical: tokens.spacing.sm + 2,
-    alignItems: 'center',
-  },
-  text: {
-    color: tokens.colors.text.secondary,
-    fontSize: tokens.typography.fontSize.sm,
-    fontWeight: tokens.typography.fontWeight.medium as any,
-    textAlign: 'center',
-  },
-});
+const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
+  StyleSheet.create({
+    container: {
+      alignItems: 'center',
+      marginVertical: tokens.spacing.lg,
+      paddingHorizontal: tokens.spacing.lg,
+    },
+    dateMinWidth: {
+      minWidth: 112,
+    },
+  });
 
 export default DayDivider;

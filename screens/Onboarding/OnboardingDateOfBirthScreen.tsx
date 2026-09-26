@@ -299,6 +299,7 @@ const styles = StyleSheet.create({
   },
   inputCard: {
     minHeight: 56,
+    borderRadius: 9999,
   },
   inputWrapper: {
     flexDirection: 'row-reverse',

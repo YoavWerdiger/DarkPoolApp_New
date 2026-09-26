@@ -3,15 +3,72 @@
  * משמש להצגת מבנה התוכן במהלך טעינה במקום spinners
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { View, Animated, StyleSheet, ViewStyle } from 'react-native';
 import { useDesignTokens } from './DesignTokens';
+import UICard from './UICard';
+
+/**
+ * Yoga בשורש LTR (App.tsx) גם כש-forceRTL פעיל.
+ * הסקלטונים האלה חייבים `row` כמו הכרטיס האמיתי — לא row-reverse
+ * (ListItemSkeleton של רשימת מניות נשאר נפרד).
+ */
+export const EARNINGS_REPORT_SKELETON_LAYOUT = {
+  rowDirection: 'row' as const,
+  accentBar: 'left' as const,
+  logoOnStart: true,
+  revenueBeforeEps: true,
+};
+
+export const ECONOMIC_EVENT_SKELETON_LAYOUT = {
+  rowDirection: 'row' as const,
+  accentBar: 'right' as const,
+  titleBeforeTimeBadge: true,
+  metricsRowDirection: 'row' as const,
+};
+
+/** לולאה אחת לכל המסך — לא N שימרים עם delay מדורג. */
+const SHARED_PULSE = new Animated.Value(0.3);
+let sharedPulseLoop: Animated.CompositeAnimation | null = null;
+let sharedPulseRetain = 0;
+
+function retainSharedSkeletonPulse(): Animated.Value {
+  if (sharedPulseRetain === 0) {
+    sharedPulseLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(SHARED_PULSE, {
+          toValue: 0.65,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+        Animated.timing(SHARED_PULSE, {
+          toValue: 0.3,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    sharedPulseLoop.start();
+  }
+  sharedPulseRetain += 1;
+  return SHARED_PULSE;
+}
+
+function releaseSharedSkeletonPulse(): void {
+  sharedPulseRetain = Math.max(0, sharedPulseRetain - 1);
+  if (sharedPulseRetain === 0) {
+    sharedPulseLoop?.stop();
+    sharedPulseLoop = null;
+    SHARED_PULSE.setValue(0.3);
+  }
+}
 
 interface SkeletonBoxProps {
   width?: number | string;
   height?: number;
   borderRadius?: number;
   style?: ViewStyle;
+  /** נשמר לתאימות API — לא מדורג יותר (גורם לעשרות לולאות מקבילות). */
   delay?: number;
 }
 
@@ -23,33 +80,13 @@ export const SkeletonBox: React.FC<SkeletonBoxProps> = ({
   height = 20,
   borderRadius = 8,
   style,
-  delay = 0,
 }) => {
-  const tokens = useDesignTokens();
-  const opacity = useRef(new Animated.Value(0.3)).current;
-
   useEffect(() => {
-    const anim = Animated.loop(
-      Animated.sequence([
-        Animated.timing(opacity, {
-          toValue: 0.65,
-          duration: 750,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacity, {
-          toValue: 0.3,
-          duration: 750,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-
-    const timer = setTimeout(() => anim.start(), delay);
+    retainSharedSkeletonPulse();
     return () => {
-      clearTimeout(timer);
-      anim.stop();
+      releaseSharedSkeletonPulse();
     };
-  }, [opacity, delay]);
+  }, []);
 
   return (
     <Animated.View
@@ -59,7 +96,7 @@ export const SkeletonBox: React.FC<SkeletonBoxProps> = ({
           height,
           borderRadius,
           backgroundColor: 'rgba(255, 255, 255, 0.12)',
-          opacity,
+          opacity: SHARED_PULSE,
         },
         style,
       ]}
@@ -78,12 +115,21 @@ export const CardSkeleton: React.FC<CardSkeletonProps> = ({ delay = 0 }) => {
   const tokens = useDesignTokens();
 
   return (
+    <UICard
+      variant="glass"
+      glassIntensity="light"
+      padding="none"
+      disableBlur
+      style={{
+        borderRadius: tokens.borderRadius['2xl'],
+        backgroundColor: 'transparent',
+        marginBottom: 8,
+        ...tokens.shadows.none,
+      }}
+    >
     <View
       style={{
-        backgroundColor: tokens.colors.background.card,
-        borderRadius: tokens.borderRadius.lg,
         padding: tokens.spacing.base,
-        marginBottom: tokens.spacing.md,
         gap: tokens.spacing.md,
         direction: 'rtl',
       }}
@@ -110,7 +156,30 @@ export const CardSkeleton: React.FC<CardSkeletonProps> = ({ delay = 0 }) => {
         <SkeletonBox width={80} height={12} delay={delay + 350} />
       </View>
     </View>
+    </UICard>
   );
+};
+
+/**
+ * שורת רשימה בעברית: אווטאר מימין, קווי טקסט לידו (יישור ימין), מספר משמאל.
+ *
+ * עץ Dark Pool הוא RTL (`direction: 'rtl'` + `row`, לא `row-reverse`).
+ * `rtl` + `row-reverse` = היפוך כפול (אווטאר משמאל). `flex-end` בעץ RTL
+ * דוחף את קווי הטקסט לשמאל — לכן `flex-start` (= ימין פיזי ב-RTL).
+ */
+export const listItemSkeletonRowStyle: ViewStyle = {
+  flexDirection: 'row',
+  alignItems: 'center',
+  paddingHorizontal: 16,
+  paddingVertical: 10,
+  gap: 12,
+  direction: 'rtl',
+};
+
+export const listItemSkeletonTextStyle: ViewStyle = {
+  flex: 1,
+  gap: 8,
+  alignItems: 'flex-start',
 };
 
 /**
@@ -126,18 +195,9 @@ export const ListItemSkeleton: React.FC<ListItemSkeletonProps> = ({
   showAvatar = true,
 }) => {
   return (
-    <View
-      style={{
-        flexDirection: 'row-reverse',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        gap: 12,
-        direction: 'rtl',
-      }}
-    >
+    <View style={listItemSkeletonRowStyle}>
       {showAvatar && <SkeletonBox width={50} height={50} borderRadius={25} delay={delay} />}
-      <View style={{ flex: 1, gap: 8, alignItems: 'flex-end' }}>
+      <View style={listItemSkeletonTextStyle}>
         <SkeletonBox width="60%" height={13} delay={delay + 50} />
         <SkeletonBox width="80%" height={11} delay={delay + 100} />
       </View>
@@ -288,12 +348,21 @@ export const TradeCardSkeleton: React.FC<CardSkeletonProps> = ({ delay = 0 }) =>
   const tokens = useDesignTokens();
 
   return (
+    <UICard
+      variant="glass"
+      glassIntensity="light"
+      padding="none"
+      disableBlur
+      style={{
+        borderRadius: tokens.borderRadius['2xl'],
+        backgroundColor: 'transparent',
+        marginBottom: 8,
+        ...tokens.shadows.none,
+      }}
+    >
     <View
       style={{
-        backgroundColor: tokens.colors.background.card,
-        borderRadius: tokens.borderRadius.lg,
         padding: tokens.spacing.base,
-        marginBottom: tokens.spacing.md,
         gap: tokens.spacing.sm,
         direction: 'rtl',
       }}
@@ -322,6 +391,7 @@ export const TradeCardSkeleton: React.FC<CardSkeletonProps> = ({ delay = 0 }) =>
         <SkeletonBox width="75%" height={12} delay={delay + 350} />
       </View>
     </View>
+    </UICard>
   );
 };
 
@@ -462,3 +532,216 @@ export const TextSkeleton: React.FC<TextSkeletonProps> = ({ lines = 3, delay = 0
     </View>
   );
 };
+
+/**
+ * Skeleton לכרטיס דיווח רווח — לוגו/טיקר בתחילת ה-row (שמאל פיזי),
+ * badge בצד השני, Revenue ואז EPS. פס צבע משמאל. לא row-reverse.
+ */
+export const EarningsReportSkeleton: React.FC<CardSkeletonProps> = ({ delay = 0 }) => {
+  const tokens = useDesignTokens();
+  const screenPad = tokens.layout?.screenPadding ?? 20;
+  const cardRadius = tokens.borderRadius['2xl'];
+  const cardPad = tokens.layout?.cardPadding ?? tokens.spacing.xl;
+
+  return (
+    <View style={{ marginHorizontal: screenPad, marginBottom: 12 }}>
+      <View
+        style={{
+          flexDirection: EARNINGS_REPORT_SKELETON_LAYOUT.rowDirection,
+          alignItems: 'flex-start',
+          overflow: 'hidden',
+          borderRadius: cardRadius,
+          padding: cardPad,
+          backgroundColor: 'rgba(255, 255, 255, 0.06)',
+        }}
+      >
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: 10,
+            bottom: 10,
+            width: 3,
+            borderRadius: 3,
+            backgroundColor: 'rgba(255, 255, 255, 0.16)',
+          }}
+        />
+
+        <View style={{ flex: 1, alignItems: 'flex-start', paddingLeft: 15 }}>
+          <View
+            style={{
+              flexDirection: EARNINGS_REPORT_SKELETON_LAYOUT.rowDirection,
+              alignItems: 'flex-start',
+              justifyContent: 'space-between',
+              width: '100%',
+              marginBottom: 8,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: EARNINGS_REPORT_SKELETON_LAYOUT.rowDirection,
+                alignItems: 'flex-start',
+                flex: 1,
+                marginRight: 8,
+              }}
+            >
+              <View style={{ marginRight: 12 }}>
+                <SkeletonBox width={40} height={40} borderRadius={20} delay={delay} />
+              </View>
+              <View style={{ flex: 1, justifyContent: 'flex-start', gap: 6 }}>
+                <SkeletonBox width={64} height={15} delay={delay + 50} />
+                <SkeletonBox width={120} height={11} delay={delay + 100} />
+              </View>
+            </View>
+            <SkeletonBox width={88} height={22} borderRadius={999} delay={delay + 80} />
+          </View>
+
+          <View style={{ marginTop: 12, width: '100%' }}>
+            <View
+              style={{
+                height: 1,
+                backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                marginBottom: 12,
+              }}
+            />
+            <View
+              style={{
+                flexDirection: EARNINGS_REPORT_SKELETON_LAYOUT.rowDirection,
+                alignItems: 'center',
+                width: '100%',
+                justifyContent: 'space-between',
+              }}
+            >
+              <View style={{ flex: 1, alignItems: 'center', paddingRight: 8, gap: 8 }}>
+                <SkeletonBox width={72} height={12} delay={delay + 150} />
+                <SkeletonBox width={56} height={16} delay={delay + 180} />
+              </View>
+              <View
+                style={{
+                  width: 1,
+                  height: 35,
+                  backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                  marginHorizontal: 8,
+                }}
+              />
+              <View style={{ flex: 1, alignItems: 'center', paddingLeft: 8, gap: 8 }}>
+                <SkeletonBox width={64} height={12} delay={delay + 150} />
+                <SkeletonBox width={48} height={16} delay={delay + 180} />
+              </View>
+            </View>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+};
+
+/**
+ * Skeleton לאירוע ביומן כלכלי — כותרת ואז שעת דיווח, פס חשיבות מימין (flex sibling),
+ * שלוש מטריקות (תוצאה / תחזית / קודם). לא row-reverse.
+ */
+export const EconomicEventSkeleton: React.FC<CardSkeletonProps> = ({ delay = 0 }) => {
+  const tokens = useDesignTokens();
+  const screenPad = tokens.layout?.screenPadding ?? 20;
+  const cardRadius = tokens.borderRadius['2xl'];
+  const cardPad = tokens.layout?.cardPadding ?? tokens.spacing.xl;
+
+  return (
+    <View style={{ marginHorizontal: screenPad, marginBottom: 12 }}>
+      <View
+        style={{
+          overflow: 'hidden',
+          borderRadius: cardRadius,
+          backgroundColor: 'rgba(255, 255, 255, 0.06)',
+        }}
+      >
+        <View style={{ flexDirection: ECONOMIC_EVENT_SKELETON_LAYOUT.rowDirection, alignItems: 'stretch' }}>
+          <View
+            style={{
+              flex: 1,
+              alignItems: 'flex-end',
+              paddingVertical: cardPad,
+              paddingLeft: cardPad,
+              paddingRight: cardPad,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: ECONOMIC_EVENT_SKELETON_LAYOUT.rowDirection,
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%',
+              }}
+            >
+              <View style={{ flex: 1, marginRight: 10, alignItems: 'flex-end' }}>
+                <SkeletonBox width="78%" height={15} delay={delay} />
+              </View>
+              <SkeletonBox width={52} height={24} borderRadius={999} delay={delay + 40} />
+            </View>
+
+            <View style={{ marginTop: 10, width: '100%' }}>
+              <View
+                style={{
+                  height: StyleSheet.hairlineWidth,
+                  backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                  marginBottom: 10,
+                }}
+              />
+              <View
+                style={{
+                  flexDirection: ECONOMIC_EVENT_SKELETON_LAYOUT.metricsRowDirection,
+                  alignItems: 'flex-start',
+                  width: '100%',
+                }}
+              >
+                {[0, 1, 2].map((i) => (
+                  <React.Fragment key={i}>
+                    {i > 0 ? (
+                      <View
+                        style={{
+                          width: StyleSheet.hairlineWidth,
+                          height: 34,
+                          backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                          marginHorizontal: 8,
+                        }}
+                      />
+                    ) : null}
+                    <View style={{ flex: 1, alignItems: 'center', gap: 6 }}>
+                      <SkeletonBox width={36} height={11} delay={delay + 80 + i * 30} />
+                      <SkeletonBox width={48} height={15} delay={delay + 110 + i * 30} />
+                    </View>
+                  </React.Fragment>
+                ))}
+              </View>
+            </View>
+          </View>
+
+          <View
+            style={{
+              width: 3,
+              alignSelf: 'stretch',
+              backgroundColor: 'rgba(255, 255, 255, 0.16)',
+            }}
+          />
+        </View>
+      </View>
+    </View>
+  );
+};
+
+export const EarningsReportsListSkeleton: React.FC<{ count?: number }> = ({ count = 5 }) => (
+  <View>
+    {Array.from({ length: count }).map((_, i) => (
+      <EarningsReportSkeleton key={i} delay={i * 70} />
+    ))}
+  </View>
+);
+
+export const EconomicCalendarListSkeleton: React.FC<{ count?: number }> = ({ count = 6 }) => (
+  <View>
+    {Array.from({ length: count }).map((_, i) => (
+      <EconomicEventSkeleton key={i} delay={i * 70} />
+    ))}
+  </View>
+);

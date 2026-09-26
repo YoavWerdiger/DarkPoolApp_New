@@ -1,12 +1,30 @@
 /**
- * מעטפת כרטיס פיד — UICard glass.
- * הריפוד על שכבת התוכן (לא על ה-outer), כדי שה-Blur יעטוף גם את התמונה עד שולי הכרטיס.
+ * מעטפת כרטיס פיד — UICard glass + מסגרת חיצונית (כמו פרטי עסקה).
  */
 
 import React from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import UICard from '../../../components/ui/UICard';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import {
+  FEED_CARD_STACK_GAP,
+  FEED_RHYTHM,
+  TRADE_HERO_UICARD,
+  tradeHeroGlassFrameStyle,
+  tradeHeroInnerCardStyle,
+} from './darkPoolFeedCardStyles';
+
+const feedPadStyles = StyleSheet.create({
+  feedCardStack: {
+    paddingBottom: FEED_CARD_STACK_GAP,
+  },
+  feedCardPad: {
+    direction: 'rtl',
+    alignSelf: 'stretch',
+    paddingHorizontal: FEED_RHYTHM.cardPadH,
+    paddingVertical: FEED_RHYTHM.cardPadV,
+  },
+});
 
 interface Props {
   children: React.ReactNode;
@@ -15,7 +33,6 @@ interface Props {
   accent?: boolean;
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
-  /** רטט בלחיצה — ברירת מחדל: selection עדין */
   haptic?: boolean;
 }
 
@@ -28,46 +45,27 @@ export function DarkPoolFeedCard({
   haptic = true,
 }: Props) {
   const tokens = useDesignTokens();
+  const frameStyle = tradeHeroGlassFrameStyle(tokens, { accent });
 
   return (
-    <View style={styles.slot}>
-      <UICard
-        variant="glass"
-        glassIntensity="medium"
-        padding="none"
-        onPress={onPress}
-        accessibilityLabel={accessibilityLabel}
-        haptic={haptic}
-        showGlassBorder={false}
-        style={[
-          {
-            borderRadius: tokens.borderRadius['2xl'],
-            borderWidth: StyleSheet.hairlineWidth,
-            borderColor: accent
-              ? `${tokens.colors.primary.main}40`
-              : tokens.colors.border.subtle,
-            overflow: 'hidden',
-            backgroundColor: accent
-              ? `${tokens.colors.primary.main}14`
-              : 'transparent',
-            ...tokens.shadows.sm,
-          },
-          style,
-        ]}
-      >
-        <View style={styles.inner}>{children}</View>
-      </UICard>
+    <View style={feedPadStyles.feedCardStack}>
+      <View style={frameStyle}>
+        <UICard
+          variant={TRADE_HERO_UICARD.variant}
+          glassIntensity={TRADE_HERO_UICARD.glassIntensity}
+          padding={TRADE_HERO_UICARD.padding}
+          disableBlur={TRADE_HERO_UICARD.disableBlur}
+          enableBlur={TRADE_HERO_UICARD.enableBlur}
+          showGlassBorder={TRADE_HERO_UICARD.showGlassBorder}
+          onPress={onPress}
+          accessibilityLabel={accessibilityLabel}
+          haptic={haptic}
+          contentContainerStyle={feedPadStyles.feedCardPad}
+          style={[tradeHeroInnerCardStyle(tokens), style]}
+        >
+          {children}
+        </UICard>
+      </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  slot: {
-    marginBottom: 8,
-  },
-  inner: {
-    direction: 'rtl',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-});

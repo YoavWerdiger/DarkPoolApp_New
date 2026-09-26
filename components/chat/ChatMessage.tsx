@@ -30,7 +30,7 @@ import MediaGridBubble from './MediaGridBubble';
 import VoiceWaveformWithProgress from './VoiceWaveformWithProgress';
 import { extractWaveformData, WAVEFORM_STORE_BARS } from '../../utils/waveformSamples';
 import { resolveMessageWaveform } from '../../utils/audioWaveformPeaks';
-import * as WebBrowser from 'expo-web-browser';
+import { openBrowserAsync } from '../../lib/expoWebBrowserSafe';
 import { logger } from '../../utils/logger';
 import { getChatMessagePreview } from '../../utils/chatMessagePreview';
 import {
@@ -600,7 +600,7 @@ function ChatMessage({
     try {
       const supported = await Linking.canOpenURL(docUri);
       if (supported) {
-        await WebBrowser.openBrowserAsync(docUri);
+        await openBrowserAsync(docUri);
       } else {
         await Linking.openURL(docUri);
       }

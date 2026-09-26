@@ -323,7 +323,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
               onLayout={() => setLayoutReady(true)}
             >
               <View style={[styles.cardRoot, { width: cardW, minHeight: cardH }]}>
-                <ScreenGradientBackground style={StyleSheet.absoluteFill} />
+                <ScreenGradientBackground style={StyleSheet.absoluteFill} animated={false} />
 
                 <View style={[styles.cardContent, { minHeight: cardH - 8 }]}>
                   {/* לוגו DarkPool / שור־ודוב — מעל הזכוכית, ממורכז */}

@@ -1,8 +1,9 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { View, Text, FlatList, RefreshControl, ActivityIndicator, Pressable, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, FlatList, RefreshControl, Pressable, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { EconomicCalendarListSkeleton } from '../../components/ui/SkeletonLoader';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { EconomicEvent } from '../../services/economicCalendarService';
 type EconEvent = EconomicEvent;
@@ -14,6 +15,11 @@ import { translateEconomicEventNameSmart } from '../../utils/economicEventTransl
 import UICard from '../../components/ui/UICard';
 import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
 import { formatEconomicDisplayValue, parseEconomicNumber } from '../../utils/economicNumberFormat';
+import {
+  APP_TYPE,
+  appPhysicalRightText,
+  appSheetButtonLabelStyle,
+} from '../../components/ui/appType';
 import {
   isTaxonomyFlaggedEvent,
   matchEconomicFlagTier,
@@ -85,98 +91,206 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
   };
 
   const screenPad = DesignTokens.layout?.screenPadding ?? 20;
+  const cardRadius = DesignTokens.borderRadius['2xl'];
+  const cardPad = DesignTokens.layout?.cardPadding ?? DesignTokens.spacing.xl;
+  const accentW = 3;
   return (
-    <Pressable onPress={() => onPress(event)} style={{ marginHorizontal: screenPad, marginBottom: 10 }}>
-      <UICard variant="blur" padding="sm" style={{ flexDirection: 'row', alignItems: 'flex-start', overflow: 'hidden', paddingVertical: 12, paddingHorizontal: 14 }}>
-      {/* פס חשיבות דק מיושר לימין, מעוגל בפינות - מתאים לגובה הכרטיסיה */}
-      <View
+    <Pressable onPress={() => onPress(event)} style={{ marginHorizontal: screenPad, marginBottom: 12 }}>
+      <UICard
+        variant="blur"
+        padding="none"
+        disableBlur
         style={{
-          position: 'absolute',
-          right: 0,
-          top: 0,
-          bottom: 0,
-          width: 3,
-          backgroundColor: importanceColor,
-          borderTopRightRadius: 12,
-          borderBottomRightRadius: 12,
+          overflow: 'hidden',
+          borderRadius: cardRadius,
         }}
-      />
-
-      {/* תוכן מימין */}
-      <View style={{ flex: 1, alignItems: 'flex-end', marginRight: 10 }}>
-        {/* שורה עליונה - זמן וכותרת (RTL: זמן משמאל, כותרת מימין) */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-          <Text
+      >
+        {/*
+          פס חשיבות כ־flex sibling (לא absolute) — כמו דיווחי רווח:
+          לא חופף טקסט, פינות מעוגלות נחתכות ע״י overflow של הכרטיס.
+          LTR Yoga: תוכן ואז פס → פס פיזי מימין.
+        */}
+        <View style={{ flexDirection: 'row', alignItems: 'stretch' }}>
+          <View
             style={{
-              fontSize: 15,
-              fontWeight: '700',
-              color: DesignTokens.colors.text.primary,
-              textAlign: 'right',
-              writingDirection: 'rtl',
-              lineHeight: 21,
               flex: 1,
-              marginRight: 10,
+              alignItems: 'flex-end',
+              paddingVertical: cardPad,
+              paddingLeft: cardPad,
+              paddingRight: cardPad,
             }}
-            numberOfLines={2}
           >
-            {cleanTitle}
-          </Text>
-          <View style={{
-            backgroundColor: (DesignTokens.colors.primary as any).dim || 'rgba(0, 210, 106, 0.12)',
-            paddingHorizontal: 10,
-            paddingVertical: 4,
-            borderRadius: 12,
-            flexShrink: 0,
-          }}>
-            <Text style={{
-              fontSize: 13,
-              lineHeight: 16,
-              color: DesignTokens.colors.primary.main,
-              fontWeight: '600',
-              textAlign: 'center',
-              fontVariant: ['tabular-nums'],
-            }}>
-              {event.time}
-            </Text>
-          </View>
-        </View>
+            {/* שורה עליונה - זמן וכותרת (RTL: זמן משמאל, כותרת מימין) */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+              <Text
+                style={{
+                  fontSize: APP_TYPE.body.fontSize,
+                  fontWeight: '700',
+                  color: DesignTokens.colors.text.primary,
+                  ...appPhysicalRightText,
+                  lineHeight: APP_TYPE.body.lineHeight,
+                  flex: 1,
+                  marginRight: 10,
+                }}
+                numberOfLines={2}
+              >
+                {cleanTitle}
+              </Text>
+              <View
+                style={{
+                  backgroundColor: (DesignTokens.colors.primary as any).dim || 'rgba(0, 210, 106, 0.12)',
+                  paddingHorizontal: 10,
+                  paddingVertical: 4,
+                  borderRadius: DesignTokens.borderRadius.full,
+                  flexShrink: 0,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 13,
+                    lineHeight: 16,
+                    color: DesignTokens.colors.primary.main,
+                    fontWeight: '600',
+                    textAlign: 'center',
+                    fontVariant: ['tabular-nums'],
+                  }}
+                >
+                  {event.time}
+                </Text>
+              </View>
+            </View>
 
-      {/* בלוק ערכים ויזואלי – ללא מסגרות, עם פסי הפרדה */}
-      {/* מציגים רק אם יש תוצאה/תחזית/קודם - אחרת רק שעה ושם האירוע */}
-      {(event.actual || event.forecast || event.previous) && (
-        <View style={{ marginTop: 10 }}>
-          {/* פס הפרדה אופקי עליון */}
-          <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255, 255, 255, 0.12)', marginBottom: 10 }} />
+            {/* בלוק ערכים ויזואלי – ללא מסגרות, עם פסי הפרדה */}
+            {(event.actual || event.forecast || event.previous) && (
+              <View style={{ marginTop: 10, width: '100%' }}>
+                <View
+                  style={{
+                    height: StyleSheet.hairlineWidth,
+                    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                    marginBottom: 10,
+                  }}
+                />
 
-          <View style={{ flexDirection: 'row', alignItems: 'flex-start', width: '100%' }}>
-            {event.actual && (
-              <View style={{ flex: 1, alignItems: 'center' }}>
-                <Text style={{ fontSize: 11, lineHeight: 14, color: DesignTokens.colors.text.tertiary, marginBottom: 3, fontWeight: '500', textAlign: 'center' }}>תוצאה</Text>
-                <Text style={{ fontSize: 15, lineHeight: 20, fontWeight: '700', color: getActualColor(), textAlign: 'center', fontVariant: ['tabular-nums'] }}>{formatEconomicDisplayValue(event.actual)}</Text>
-              </View>
-            )}
-              {event.actual && (event.forecast || event.previous) && (
-              <View style={{ width: StyleSheet.hairlineWidth, height: 34, backgroundColor: 'rgba(255, 255, 255, 0.12)', marginHorizontal: 8, alignSelf: 'flex-start', marginTop: 0 }} />
-            )}
-            {event.forecast && (
-              <View style={{ flex: 1, alignItems: 'center' }}>
-                <Text style={{ fontSize: 11, lineHeight: 14, color: DesignTokens.colors.text.tertiary, marginBottom: 3, fontWeight: '500', textAlign: 'center' }}>תחזית</Text>
-                <Text style={{ fontSize: 15, lineHeight: 20, fontWeight: '700', color: DesignTokens.colors.text.primary, textAlign: 'center', fontVariant: ['tabular-nums'] }}>{formatEconomicDisplayValue(event.forecast)}</Text>
-              </View>
-            )}
-            {event.forecast && event.previous && (
-              <View style={{ width: StyleSheet.hairlineWidth, height: 34, backgroundColor: 'rgba(255, 255, 255, 0.12)', marginHorizontal: 8, alignSelf: 'flex-start', marginTop: 0 }} />
-            )}
-            {event.previous && (
-              <View style={{ flex: 1, alignItems: 'center' }}>
-                <Text style={{ fontSize: 11, lineHeight: 14, color: DesignTokens.colors.text.tertiary, marginBottom: 3, fontWeight: '500', textAlign: 'center' }}>קודם</Text>
-                <Text style={{ fontSize: 15, lineHeight: 20, fontWeight: '700', color: DesignTokens.colors.text.secondary, textAlign: 'center', fontVariant: ['tabular-nums'] }}>{formatEconomicDisplayValue(event.previous)}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', width: '100%' }}>
+                  {event.actual && (
+                    <View style={{ flex: 1, alignItems: 'center' }}>
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          lineHeight: 14,
+                          color: DesignTokens.colors.text.tertiary,
+                          marginBottom: 3,
+                          fontWeight: '500',
+                          textAlign: 'center',
+                        }}
+                      >
+                        תוצאה
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 15,
+                          lineHeight: 20,
+                          fontWeight: '700',
+                          color: getActualColor(),
+                          textAlign: 'center',
+                          fontVariant: ['tabular-nums'],
+                        }}
+                      >
+                        {formatEconomicDisplayValue(event.actual, event.title)}
+                      </Text>
+                    </View>
+                  )}
+                  {event.actual && (event.forecast || event.previous) && (
+                    <View
+                      style={{
+                        width: StyleSheet.hairlineWidth,
+                        height: 34,
+                        backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                        marginHorizontal: 8,
+                        alignSelf: 'flex-start',
+                      }}
+                    />
+                  )}
+                  {event.forecast && (
+                    <View style={{ flex: 1, alignItems: 'center' }}>
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          lineHeight: 14,
+                          color: DesignTokens.colors.text.tertiary,
+                          marginBottom: 3,
+                          fontWeight: '500',
+                          textAlign: 'center',
+                        }}
+                      >
+                        תחזית
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 15,
+                          lineHeight: 20,
+                          fontWeight: '700',
+                          color: DesignTokens.colors.text.primary,
+                          textAlign: 'center',
+                          fontVariant: ['tabular-nums'],
+                        }}
+                      >
+                        {formatEconomicDisplayValue(event.forecast, event.title)}
+                      </Text>
+                    </View>
+                  )}
+                  {event.forecast && event.previous && (
+                    <View
+                      style={{
+                        width: StyleSheet.hairlineWidth,
+                        height: 34,
+                        backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                        marginHorizontal: 8,
+                        alignSelf: 'flex-start',
+                      }}
+                    />
+                  )}
+                  {event.previous && (
+                    <View style={{ flex: 1, alignItems: 'center' }}>
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          lineHeight: 14,
+                          color: DesignTokens.colors.text.tertiary,
+                          marginBottom: 3,
+                          fontWeight: '500',
+                          textAlign: 'center',
+                        }}
+                      >
+                        קודם
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 15,
+                          lineHeight: 20,
+                          fontWeight: '700',
+                          color: DesignTokens.colors.text.secondary,
+                          textAlign: 'center',
+                          fontVariant: ['tabular-nums'],
+                        }}
+                      >
+                        {formatEconomicDisplayValue(event.previous, event.title)}
+                      </Text>
+                    </View>
+                  )}
+                </View>
               </View>
             )}
           </View>
+
+          <View
+            style={{
+              width: accentW,
+              alignSelf: 'stretch',
+              backgroundColor: importanceColor,
+            }}
+          />
         </View>
-      )}
-      </View>
       </UICard>
     </Pressable>
   );
@@ -255,8 +369,7 @@ export default function EconomicCalendarTab() {
           ...DesignTokens.shadows.md,
         },
         btnText: {
-          fontSize: 16,
-          fontWeight: '700',
+          ...appSheetButtonLabelStyle,
           color: DesignTokens.colors.text.inverse,
         },
       }),
@@ -585,9 +698,9 @@ export default function EconomicCalendarTab() {
     
     if (event.forecast || event.actual || event.previous) {
       message += 'נתונים:\n';
-      if (event.forecast) message += `תחזית: ${formatEconomicDisplayValue(event.forecast)}\n`;
-      if (event.actual) message += `תוצאה: ${formatEconomicDisplayValue(event.actual)}\n`;
-      if (event.previous) message += `ערך קודם: ${formatEconomicDisplayValue(event.previous)}\n`;
+      if (event.forecast) message += `תחזית: ${formatEconomicDisplayValue(event.forecast, event.title)}\n`;
+      if (event.actual) message += `תוצאה: ${formatEconomicDisplayValue(event.actual, event.title)}\n`;
+      if (event.previous) message += `ערך קודם: ${formatEconomicDisplayValue(event.previous, event.title)}\n`;
       message += '\n';
     }
     
@@ -636,9 +749,9 @@ export default function EconomicCalendarTab() {
           <View style={{ alignItems: 'center', flex: 1, paddingHorizontal: 10 }}>
             <Text
               style={{
-                fontSize: 16,
+                fontSize: APP_TYPE.body.fontSize,
                 fontWeight: '600',
-                lineHeight: 21,
+                lineHeight: APP_TYPE.body.lineHeight,
                 color: DesignTokens.colors.text.primary,
                 textAlign: 'center',
               }}
@@ -712,8 +825,9 @@ export default function EconomicCalendarTab() {
         </View>
         <Text 
           style={{ 
-            fontSize: 22, 
-            fontWeight: '700', 
+            fontSize: APP_TYPE.sectionTitle.fontSize, 
+            fontWeight: APP_TYPE.sectionTitle.fontWeight,
+            lineHeight: APP_TYPE.sectionTitle.lineHeight,
             marginBottom: 12, 
             textAlign: 'center',
             color: DesignTokens.colors.text.primary 
@@ -723,11 +837,11 @@ export default function EconomicCalendarTab() {
         </Text>
         <Text 
           style={{ 
-            fontSize: 15, 
+            fontSize: APP_TYPE.body.fontSize, 
             marginBottom: 8, 
             textAlign: 'center',
             color: DesignTokens.colors.text.secondary,
-            lineHeight: 20
+            lineHeight: APP_TYPE.body.lineHeight
           }}
         >
           {isToday 
@@ -739,20 +853,13 @@ export default function EconomicCalendarTab() {
   );
   };
 
-  if (loading) {
+  if (loading && events.length === 0) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32 }}>
-        <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-        <Text 
-          style={{ 
-            marginTop: 20, 
-            fontSize: 16,
-            fontWeight: '600',
-            color: DesignTokens.colors.text.secondary 
-          }}
-        >
-          טוען יומן כלכלי...
-        </Text>
+      <View style={{ flex: 1 }}>
+        {renderDateNavigator()}
+        <View style={{ flex: 1, paddingTop: 6 }}>
+          <EconomicCalendarListSkeleton />
+        </View>
       </View>
     );
   }

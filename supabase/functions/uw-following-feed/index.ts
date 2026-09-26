@@ -37,6 +37,10 @@ interface ActivityItem {
   amount_label: string | null;
   activity_date: string | null;
   filed_label: string | null;
+  filed_at: string | null;
+  transaction_date: string | null;
+  price_change_pct: number | null;
+  trade_price: number | null;
 }
 
 serve(async (req) => {
@@ -94,7 +98,9 @@ serve(async (req) => {
       const meta = byPol.get(pid);
       const ticker = String(t.ticker ?? '').toUpperCase();
       if (!ticker) continue;
-      const date = String(t.transaction_date ?? t.filed_at_date ?? '').slice(0, 10);
+      const filedAt = String(t.filed_at_date ?? '').slice(0, 10) || null;
+      const tradedAt = String(t.transaction_date ?? '').slice(0, 10) || null;
+      const date = tradedAt || filedAt;
       items.push({
         id: `c:${pid}:${ticker}:${date}:${t.txn_type ?? ''}`,
         source: 'congress',
@@ -108,6 +114,10 @@ serve(async (req) => {
         amount_label: t.amounts?.trim() || null,
         activity_date: date || null,
         filed_label: daysLabel(t.filed_at_date ?? t.transaction_date),
+        filed_at: filedAt,
+        transaction_date: tradedAt,
+        price_change_pct: null,
+        trade_price: null,
       });
     }
 
@@ -128,7 +138,14 @@ serve(async (req) => {
       const ref = byInsider.get(keyId) ?? insiderRefs.find((r) => matchInsiderRef(r.id, r, ticker, owner));
       if (!ref) continue;
 
-      const date = String(t.transaction_date ?? t.filing_date ?? '').slice(0, 10);
+      const tradedAt = String(t.transaction_date ?? '').slice(0, 10) || null;
+      const filedAt = String(t.filing_date ?? '').slice(0, 10) || null;
+      const date = tradedAt || filedAt;
+      const rawPrice = t.price ?? t.stock_price;
+      const tradePrice =
+        rawPrice != null && Number.isFinite(Number(rawPrice)) && Number(rawPrice) > 0
+          ? Number(rawPrice)
+          : null;
       items.push({
         id: `i:${t.id ?? keyId}:${date}`,
         source: 'insider',
@@ -142,6 +159,10 @@ serve(async (req) => {
         amount_label: t.amount != null ? `${t.amount} מניות` : null,
         activity_date: date || null,
         filed_label: daysLabel(t.transaction_date ?? t.filing_date),
+        filed_at: filedAt,
+        transaction_date: tradedAt,
+        price_change_pct: null,
+        trade_price: tradePrice,
       });
     }
 

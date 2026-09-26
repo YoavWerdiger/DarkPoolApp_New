@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   Dimensions,
   KeyboardAvoidingView,
-  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -13,8 +12,12 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import MediaPickerSheet from '../../components/chat/MediaPickerSheet';
+import {
+  resolvePickedMedia,
+  scheduleMediaRecentsPrefetch,
+} from '../../lib/mediaRecentsCache';
 import UICard from '../../components/ui/UICard';
 import BottomSheet, {
   useBottomSheetClose,
@@ -142,6 +145,7 @@ function CreateCommunityPostSheetBody({
   const [mentions, setMentions] = useState<CommunityMention[]>([]);
   const [entityPickerOpen, setEntityPickerOpen] = useState(false);
   const [mentionPickerOpen, setMentionPickerOpen] = useState(false);
+  const [galleryOpen, setGalleryOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -159,6 +163,7 @@ function CreateCommunityPostSheetBody({
       setMentions([]);
       setEntityPickerOpen(false);
       setMentionPickerOpen(false);
+      setGalleryOpen(false);
       setBusy(false);
       setUploadingImage(false);
       setError(null);
@@ -167,6 +172,8 @@ function CreateCommunityPostSheetBody({
     if (initialAttachment) {
       setAttachments([initialAttachment]);
     }
+    const recents = scheduleMediaRecentsPrefetch('photo');
+    return () => recents.cancel();
   }, [visible, initialAttachment]);
 
   const canSubmit =
@@ -186,34 +193,9 @@ function CreateCommunityPostSheetBody({
     requestClose();
   }, [busy, requestClose]);
 
-  const pickImage = useCallback(async () => {
-    try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      const allowed = permission.granted || permission.accessPrivileges === 'limited';
-      if (!allowed) {
-        if (!permission.canAskAgain) {
-          setError('הרשאת הגישה לתמונות נדחתה. נפתח את ההגדרות…');
-          await Linking.openSettings().catch(() => {});
-        } else {
-          setError('נדרשת הרשאה לגישה לתמונות. אשר ונסה שוב.');
-        }
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        quality: 0.85,
-        allowsEditing: false,
-      });
-      if (!result.canceled && result.assets[0]?.uri) {
-        setImageUri(result.assets[0].uri);
-        setError(null);
-        void HapticFeedback.selection();
-      }
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'שגיאה לא ידועה';
-      setError(`שגיאה בבחירת תמונה: ${msg}`);
-    }
+  const pickImage = useCallback(() => {
+    setError(null);
+    setGalleryOpen(true);
   }, []);
 
   const removeImage = useCallback(() => {
@@ -601,6 +583,22 @@ function CreateCommunityPostSheetBody({
         onSelect={addMention}
         excludeUserIds={mentions.map((m) => m.userId)}
       />
+      <MediaPickerSheet
+        visible={galleryOpen}
+        onClose={() => setGalleryOpen(false)}
+        kind="photo"
+        allowsMultiple={false}
+        onPickedMedia={(items) => {
+          const first = items[0];
+          if (!first) return;
+          setImageUri(first.thumbnailUri || first.uri);
+          setError(null);
+          void HapticFeedback.selection();
+          void resolvePickedMedia([first]).then((resolved) => {
+            if (resolved[0]?.uri) setImageUri(resolved[0].uri);
+          });
+        }}
+      />
     </>
   );
 }
@@ -750,7 +748,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       borderRadius: r.full,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#262626',
+      backgroundColor: tokens.colors.glass.card.bg,
     },
     attachBtnActive: {
       backgroundColor: tokens.colors.primary.dim,

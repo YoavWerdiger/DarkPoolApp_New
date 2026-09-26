@@ -1,5 +1,8 @@
 # מדריך מערכת העיצוב – UICard, DesignTokens ורקעים
 
+> **כיוון עיצוב עדכני (Source of Truth):** [DARKPOOL_DESIGN_DIRECTION.md](./DARKPOOL_DESIGN_DIRECTION.md) — Soft UI, `#141313`, פחות glass/blur. המסמך הזה מתאר את **המימוש הנוכחי** בקוד עד למיגרציה.  
+> **טופולוגיית טקסט, כרטיסים ורישום:** [TYPOGRAPHY_AND_FORM_TOPOLOGY.md](./TYPOGRAPHY_AND_FORM_TOPOLOGY.md)
+
 ## המבנה הנוכחי
 
 ### 1. DesignTokens (`components/ui/DesignTokens.ts`)

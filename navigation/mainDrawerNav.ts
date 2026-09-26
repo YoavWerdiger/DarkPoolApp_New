@@ -9,6 +9,11 @@ export function getMainDrawerPosition(): 'left' | 'right' {
 /** חייב להתאים ל־`id` על ה־Drawer ב־MainTabs */
 export const MAIN_DRAWER_NAVIGATOR_ID = 'MainDrawer' as const;
 
+/** רקע מגירה — שקוף (אורורה בשורש), בלי כרטיס UICard / Soft UI אטום. */
+export const MAIN_DRAWER_GLASS = {
+  panelBackground: 'transparent' as const,
+};
+
 /** מינימום לניווט מקונן (RootParamList / Composite וכו') */
 export type DrawerParentNavigation = {
   getParent: (id?: string) => DrawerParentNavigation | undefined;

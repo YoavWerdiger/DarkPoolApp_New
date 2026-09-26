@@ -17,6 +17,7 @@ import {
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { brandfetchTickerLogoUri } from '../../utils/brandfetch';
 import { TickerLogo } from '../ui/TickerLogo';
+import { PortfolioSharePreview } from './PortfolioSharePreview';
 
 type Props = {
   attachment: ShareableAttachment;
@@ -46,8 +47,14 @@ function pickMetrics(
   const metrics = attachment.preview.metrics;
   if (!metrics) return [];
 
+  const hasHoldingsChart =
+    attachment.ref.type === 'person_profile' &&
+    (attachment.preview.holdingsChart?.length ?? 0) >= 2;
+
   const preferredByType: Record<string, string[]> = {
-    person_profile: ['portfolio_value', 'top_holding', 'top_holding_value'],
+    person_profile: hasHoldingsChart
+      ? ['top_holding', 'top_holding_value']
+      : ['portfolio_value', 'top_holding', 'top_holding_value'],
     journal_trade: [
       'side',
       'pnl',
@@ -254,6 +261,13 @@ export default function EntityEmbedCard({ attachment, onPress, compact }: Props)
       : 'פרטים'
     : null;
 
+  const portfolioShareValue =
+    isPerson && preview.metrics?.portfolio_value != null
+      ? String(preview.metrics.portfolio_value)
+      : null;
+  const personInitial =
+    (preview.title ?? '').trim()[0]?.toUpperCase() || '?';
+
   return (
     <TouchableOpacity
       activeOpacity={0.88}
@@ -336,6 +350,16 @@ export default function EntityEmbedCard({ attachment, onPress, compact }: Props)
           <Text style={styles.snippet} numberOfLines={isCompact ? 2 : 3}>
             {preview.snippet}
           </Text>
+        ) : null}
+
+        {isPerson ? (
+          <PortfolioSharePreview
+            compact={isCompact}
+            portfolioValueLabel={portfolioShareValue}
+            holdingsChart={preview.holdingsChart}
+            avatarUrl={preview.imageUrl}
+            userInitial={personInitial}
+          />
         ) : null}
 
         {metrics.length > 0 ? (

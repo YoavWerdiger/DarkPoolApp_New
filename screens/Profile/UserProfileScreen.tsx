@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   StyleSheet,
-  Switch,
 } from 'react-native';
 import { User } from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
@@ -16,7 +15,6 @@ import { useAuth } from '../../context/AuthContext';
 import { useRegistration } from '../../context/RegistrationContext';
 import { useSubscription } from '../../hooks/useSubscription';
 import { useIsAdmin } from '../../hooks/useIsAdmin';
-import { useTheme } from '../../context/ThemeContext';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import UICard from '../../components/ui/UICard';
@@ -43,7 +41,6 @@ export default function UserProfileScreen({ navigation }: any) {
   const { resetData: resetRegistrationData } = useRegistration();
   const { planName, isLoading: subscriptionLoading } = useSubscription();
   const { isAdmin } = useIsAdmin();
-  const { theme } = useTheme();
   const DesignTokens = useDesignTokens();
 
   const openMainDrawer = useCallback(() => {
@@ -56,14 +53,10 @@ export default function UserProfileScreen({ navigation }: any) {
   }, [navigation]);
 
   const [profileData, setProfileData] = useState<any>(null);
-  const [systemNotifs, setSystemNotifs] = useState(true);
-  const [contentNotifs, setContentNotifs] = useState(true);
-  const [notifLoading, setNotifLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
       void loadProfileData();
-      void loadNotificationToggles();
     }
   }, [user]);
 
@@ -77,69 +70,6 @@ export default function UserProfileScreen({ navigation }: any) {
       if (data) setProfileData(data);
     } catch {
       /* noop */
-    }
-  };
-
-  const loadNotificationToggles = async () => {
-    if (!user) {
-      setNotifLoading(false);
-      return;
-    }
-    try {
-      const { data } = await supabase
-        .from('user_notification_settings')
-        .select('notifications_enabled, news_notifications, message_notifications')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (data) {
-        setSystemNotifs(data.notifications_enabled ?? true);
-        setContentNotifs(
-          (data.news_notifications ?? true) || (data.message_notifications ?? true),
-        );
-      }
-    } finally {
-      setNotifLoading(false);
-    }
-  };
-
-  const upsertNotifPatch = async (patch: Record<string, boolean>) => {
-    if (!user) return;
-    const { error } = await supabase.from('user_notification_settings').upsert(
-      {
-        user_id: user.id,
-        ...patch,
-      },
-      { onConflict: 'user_id' },
-    );
-    if (error) {
-      legacyAlert('שגיאה', 'לא הצלחנו לשמור את הגדרת ההתראות');
-      throw error;
-    }
-  };
-
-  const toggleSystemNotifs = async (value: boolean) => {
-    void HapticFeedback.selection();
-    const prev = systemNotifs;
-    setSystemNotifs(value);
-    try {
-      await upsertNotifPatch({ notifications_enabled: value });
-    } catch {
-      setSystemNotifs(prev);
-    }
-  };
-
-  const toggleContentNotifs = async (value: boolean) => {
-    void HapticFeedback.selection();
-    const prev = contentNotifs;
-    setContentNotifs(value);
-    try {
-      await upsertNotifPatch({
-        news_notifications: value,
-        message_notifications: value,
-      });
-    } catch {
-      setContentNotifs(prev);
     }
   };
 
@@ -419,41 +349,9 @@ export default function UserProfileScreen({ navigation }: any) {
 
             <SettingsSectionTitle title="התראות" />
             <SettingsGlassCard>
-              <ToggleRow
-                title="התראות מערכת"
-                subtitle="התראות כלליות של האפליקציה"
-                value={systemNotifs}
-                disabled={notifLoading}
-                onToggle={toggleSystemNotifs}
-                theme={theme}
-                tokens={DesignTokens}
-              />
-              <View
-                style={{
-                  height: StyleSheet.hairlineWidth,
-                  backgroundColor: DesignTokens.colors.border.divider,
-                  marginHorizontal: DesignTokens.spacing.base,
-                }}
-              />
-              <ToggleRow
-                title="התראות תוכן"
-                subtitle="חדשות והודעות צ׳אט"
-                value={contentNotifs}
-                disabled={notifLoading}
-                onToggle={toggleContentNotifs}
-                theme={theme}
-                tokens={DesignTokens}
-              />
-              <View
-                style={{
-                  height: StyleSheet.hairlineWidth,
-                  backgroundColor: DesignTokens.colors.border.divider,
-                  marginHorizontal: DesignTokens.spacing.base,
-                }}
-              />
               <ProfileMenuRow
-                title="עוד הגדרות התראות"
-                subtitle="צלילים, רעידות ופירוט"
+                title="הגדרות התראות"
+                subtitle="צ'אט, קהילה, דארק פול, רשימה וחדשות"
                 onPress={() => {
                   void HapticFeedback.impactLight();
                   navigation.navigate('Notifications');
@@ -599,70 +497,6 @@ export default function UserProfileScreen({ navigation }: any) {
           </View>
         </ScrollView>
       </RNSafeAreaView>
-    </View>
-  );
-}
-
-function ToggleRow({
-  title,
-  subtitle,
-  value,
-  disabled,
-  onToggle,
-  theme,
-  tokens,
-}: {
-  title: string;
-  subtitle: string;
-  value: boolean;
-  disabled?: boolean;
-  onToggle: (v: boolean) => void;
-  theme: any;
-  tokens: any;
-}) {
-  return (
-    <View
-      style={{
-        // עץ האפליקציה LTR — switch ראשון = שמאל ויזואלי (כמו בצילום RTL הרצוי)
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: tokens.spacing.md,
-        paddingHorizontal: tokens.spacing.base,
-      }}
-    >
-      <Switch
-        value={value}
-        disabled={disabled}
-        onValueChange={onToggle}
-        trackColor={{ false: theme.switchTrackOff, true: tokens.colors.primary.main }}
-        thumbColor={value ? tokens.colors.text.primary : theme.switchThumbOff}
-        ios_backgroundColor={theme.switchTrackOff}
-        style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
-      />
-      <View style={{ flex: 1, marginLeft: tokens.spacing.sm }}>
-        <Text
-          style={{
-            fontSize: tokens.typography.body.size,
-            fontWeight: '600',
-            color: tokens.colors.text.primary,
-            textAlign: 'right',
-            writingDirection: 'rtl',
-          }}
-        >
-          {title}
-        </Text>
-        <Text
-          style={{
-            fontSize: tokens.typography.bodySmall.size,
-            color: tokens.colors.text.tertiary,
-            textAlign: 'right',
-            writingDirection: 'rtl',
-            marginTop: 2,
-          }}
-        >
-          {subtitle}
-        </Text>
-      </View>
     </View>
   );
 }

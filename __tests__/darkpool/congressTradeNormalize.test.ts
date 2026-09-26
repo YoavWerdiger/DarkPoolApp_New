@@ -166,6 +166,44 @@ describe('normalizeCongressTrade — Quiver shapes', () => {
   });
 });
 
+/**
+ * שדות התשואה של Quiver — משקף parseQuiverReturnPct ב-congressFeedBuild (edge).
+ * הם חוזרים בכל קריאת congresstrading ונשמרים מעתה ב-3 עמודות חדשות.
+ */
+describe('parseQuiverReturnPct — ExcessReturn / PriceChange / SPYChange', () => {
+  function parseQuiverReturnPct(raw: unknown): number | null {
+    if (raw == null) return null;
+    if (typeof raw === 'number') return Number.isFinite(raw) ? raw : null;
+    const s = String(raw).trim().replace(/%/g, '').replace(/,/g, '');
+    if (!s) return null;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  it('שומר מספרים כפי שהדוקס מתעדים (אחוזים)', () => {
+    expect(parseQuiverReturnPct(24.11)).toBe(24.11);
+    expect(parseQuiverReturnPct(-5.69)).toBe(-5.69);
+  });
+
+  it('סובל גם את פורמט ה-string שנצפה ב-trumpstocktrades ("224.73%")', () => {
+    expect(parseQuiverReturnPct('224.73%')).toBe(224.73);
+    expect(parseQuiverReturnPct('1,024.5')).toBe(1024.5);
+  });
+
+  it('חוסר נתון נשאר null — לעולם לא 0', () => {
+    expect(parseQuiverReturnPct(null)).toBeNull();
+    expect(parseQuiverReturnPct(undefined)).toBeNull();
+    expect(parseQuiverReturnPct('')).toBeNull();
+    expect(parseQuiverReturnPct('n/a')).toBeNull();
+    expect(parseQuiverReturnPct(Number.NaN)).toBeNull();
+  });
+
+  it('0 אמיתי נשמר כ-0 ולא מתבלבל עם "חסר"', () => {
+    expect(parseQuiverReturnPct(0)).toBe(0);
+    expect(parseQuiverReturnPct('0%')).toBe(0);
+  });
+});
+
 describe('formatQuiverDateParam — פרמטרי תאריך של Quiver (YYYYMMDD)', () => {
   function normalizeQuiverIsoDate(raw?: string | null): string | null {
     if (raw == null) return null;

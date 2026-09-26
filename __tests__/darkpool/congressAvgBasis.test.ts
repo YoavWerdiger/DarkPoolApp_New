@@ -84,12 +84,15 @@ describe('congress avg basis reliability', () => {
     expect(returnPct).toBeCloseTo((55 - 48) / 48 * 100);
   });
 
-  it('fund managers align to yahoo-at-first-added like politicians', () => {
+  it('fund managers use 13F value/shares mark, not yahoo-at-first-added', () => {
+    const valueUsd = 1_000_000;
+    const shares = 10_000;
     const firstAddedPx = 120;
     const currentPx = 150;
-    const entry = firstAddedPx; // לא value/shares
+    const entry = valueUsd / shares;
     const returnPct = ((currentPx - entry) / entry) * 100;
-    expect(entry).toBe(120);
-    expect(returnPct).toBeCloseTo(25);
+    expect(entry).toBe(100);
+    expect(entry).not.toBe(firstAddedPx);
+    expect(returnPct).toBeCloseTo(50);
   });
 });

@@ -21,13 +21,13 @@ import {
 } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { ChatComposerDock, ChatKeyboardFollow } from '../../components/chat/ChatComposerDock';
+import { ChatComposerDock } from '../../components/chat/ChatComposerDock';
+import { restoreAndroidSoftInputIfUnlocked } from '../../components/chat/androidChatKeyboard';
 import {
   CHAT_COMPOSER_KEYBOARD_GAP,
-  CHAT_KEYBOARD_LTR_STYLE,
-  chatComposerKeyboardTranslate,
   chatComposerSafeBottomInset,
 } from '../../components/chat/chatInputLayout';
+import { repliesSheetKeyboardShrink } from './repliesSheetKeyboard';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import UICard from '../../components/ui/UICard';
 import BottomSheet, {
@@ -280,27 +280,23 @@ function PostRepliesSheetBody({
       }
     }
     return () => {
-      if (Platform.OS === 'android') {
-        try {
-          KeyboardController.setDefaultMode();
-        } catch {
-          // non-critical
-        }
-      }
+      restoreAndroidSoftInputIfUnlocked();
     };
   }, [visible]);
 
+  // כווץ את עמוד התגובות — לא translateY. תרגום הרשימה (ChatKeyboardFollow)
+  // דחף את הציוץ המקורי ואת הבועות מחוץ לשיט.
   const composerInsetSV = useSharedValue(composerPaddingBottom);
   useEffect(() => {
     composerInsetSV.value = composerPaddingBottom;
   }, [composerPaddingBottom, composerInsetSV]);
 
-  const listFollowY = useSharedValue(0);
+  const listShrinkH = useSharedValue(0);
   useGenericKeyboardHandler(
     {
       onMove: (event) => {
         'worklet';
-        listFollowY.value = chatComposerKeyboardTranslate(
+        listShrinkH.value = repliesSheetKeyboardShrink(
           event.height,
           composerInsetSV.value,
           CHAT_COMPOSER_KEYBOARD_GAP,
@@ -308,7 +304,7 @@ function PostRepliesSheetBody({
       },
       onEnd: (event) => {
         'worklet';
-        listFollowY.value = chatComposerKeyboardTranslate(
+        listShrinkH.value = repliesSheetKeyboardShrink(
           event.height,
           composerInsetSV.value,
           CHAT_COMPOSER_KEYBOARD_GAP,
@@ -317,8 +313,8 @@ function PostRepliesSheetBody({
     },
     [],
   );
-  const listFollowStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: listFollowY.value }],
+  const listShrinkStyle = useAnimatedStyle(() => ({
+    paddingBottom: listShrinkH.value,
   }));
 
   const repliesList =
@@ -407,7 +403,7 @@ function PostRepliesSheetBody({
 
   return (
       <View style={styles.sheetRoot}>
-      <View style={styles.container}>
+      <Animated.View style={[styles.container, listShrinkStyle]}>
         <View style={styles.header}>
           <DayNavBlurButton
             onPress={handleClose}
@@ -439,7 +435,7 @@ function PostRepliesSheetBody({
             style={[
               styles.parentCard,
               {
-                backgroundColor: '#262626',
+                backgroundColor: tokens.colors.glass.card.bg,
                 borderColor: DIVIDER,
               },
             ]}
@@ -538,24 +534,7 @@ function PostRepliesSheetBody({
         ) : null}
 
         <View style={styles.listWrap}>
-          <ChatKeyboardFollow
-            bottomInset={composerPaddingBottom}
-            style={styles.listFollow}
-          >
-            {Platform.OS === 'android' ? (
-              <Animated.View
-                style={[
-                  styles.listFollow,
-                  CHAT_KEYBOARD_LTR_STYLE,
-                  listFollowStyle,
-                ]}
-              >
-                {repliesList}
-              </Animated.View>
-            ) : (
-              repliesList
-            )}
-          </ChatKeyboardFollow>
+          {repliesList}
         </View>
 
         {error ? (
@@ -586,7 +565,7 @@ function PostRepliesSheetBody({
             ) : null}
           </View>
         ) : null}
-      </View>
+      </Animated.View>
 
       <ChatComposerDock bottomInset={composerPaddingBottom}>
         <View
@@ -658,10 +637,12 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     sheetRoot: {
       flex: 1,
       minHeight: 0,
+      overflow: 'hidden',
     },
     container: {
       flex: 1,
       minHeight: 0,
+      overflow: 'hidden',
     },
     header: {
       flexDirection: 'row-reverse',
@@ -764,10 +745,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     listWrap: {
       flex: 1,
       minHeight: 0,
-    },
-    listFollow: {
-      flex: 1,
-      minHeight: 0,
+      overflow: 'hidden',
     },
     list: {
       flex: 1,

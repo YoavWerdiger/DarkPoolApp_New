@@ -22,6 +22,7 @@ import {
   useChatFitContentSnap,
 } from './ChatBottomSheet';
 import { chatPalette } from './chatDesignTokens';
+import { GlassChip } from '../ui/GlassChip';
 import {
   SHEET_GLASS_INTENSITY,
   SHEET_GLASS_OVERLAY,
@@ -134,22 +135,24 @@ export default function MessageActionSheet({
     return (
       <View style={styles.reactionsRow}>
         {displayReactions.map((reaction, index) => (
-          <Pressable
+          <GlassChip
             key={index}
+            disableBlur
             onPress={onReactionDetails}
             style={styles.reactionChip}
+            contentContainerStyle={styles.reactionChipContent}
           >
             <Text style={styles.reactionEmoji}>{reaction.emoji}</Text>
             {reaction.count > 1 && (
               <Text style={styles.reactionCount}>{reaction.count}</Text>
             )}
-          </Pressable>
+          </GlassChip>
         ))}
 
         {remainingCount > 0 && (
-          <View style={styles.reactionChip}>
+          <GlassChip disableBlur style={styles.reactionChip} contentContainerStyle={styles.reactionChipContent}>
             <Text style={styles.reactionCount}>+{remainingCount}</Text>
-          </View>
+          </GlassChip>
         )}
       </View>
     );
@@ -316,8 +319,9 @@ const styles = StyleSheet.create({
   previewBody: {
     color: chatPalette.text,
     fontSize: 15,
-    lineHeight: 21,
+    lineHeight: 22,
     textAlign: 'right',
+    writingDirection: 'rtl',
   },
   previewMeta: {
     flex: 1,
@@ -342,14 +346,13 @@ const styles = StyleSheet.create({
   reactionChip: {
     minWidth: 40,
     minHeight: 36,
+    borderRadius: 999,
+  },
+  reactionChipContent: {
+    minHeight: 36,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: chatPalette.glassBorderStrong,
-    backgroundColor: chatPalette.glass,
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: 'column',
   },
   reactionEmoji: {
     fontSize: 16,

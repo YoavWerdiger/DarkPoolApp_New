@@ -17,6 +17,13 @@ import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { useAuth } from '../../context/AuthContext';
 import { deleteOwnAccount } from '../../services/supportService';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import {
+  settingsHebrewText,
+  settingsRowType,
+  settingsBodyType,
+  settingsMetaType,
+  settingsButtonLabelStyle,
+} from '../../components/profile/settingsType';
 
 export default function DeleteAccountScreen({ navigation }: any) {
   const tokens = useDesignTokens();
@@ -67,7 +74,8 @@ export default function DeleteAccountScreen({ navigation }: any) {
     paddingHorizontal: 14,
     paddingVertical: 12,
     color: tokens.colors.text.primary,
-    textAlign: 'right' as const,
+    ...settingsHebrewText,
+    ...settingsBodyType,
     marginBottom: 12,
   };
 
@@ -82,10 +90,9 @@ export default function DeleteAccountScreen({ navigation }: any) {
           <UICard variant="glass" glassIntensity="light" padding="md">
             <Text
               style={{
+                ...settingsHebrewText,
+                ...settingsRowType,
                 color: tokens.colors.danger.main,
-                textAlign: 'right',
-                fontWeight: '800',
-                fontSize: 16,
                 marginBottom: 8,
               }}
             >
@@ -93,9 +100,9 @@ export default function DeleteAccountScreen({ navigation }: any) {
             </Text>
             <Text
               style={{
+                ...settingsHebrewText,
+                ...settingsBodyType,
                 color: tokens.colors.text.secondary,
-                textAlign: 'right',
-                lineHeight: 22,
                 marginBottom: 16,
               }}
             >
@@ -104,10 +111,10 @@ export default function DeleteAccountScreen({ navigation }: any) {
 
             <Text
               style={{
+                ...settingsHebrewText,
+                ...settingsMetaType,
                 color: tokens.colors.text.tertiary,
-                textAlign: 'right',
                 marginBottom: 6,
-                fontSize: 13,
               }}
             >
               הקלידו מחק לאישור
@@ -123,10 +130,10 @@ export default function DeleteAccountScreen({ navigation }: any) {
 
             <Text
               style={{
+                ...settingsHebrewText,
+                ...settingsMetaType,
                 color: tokens.colors.text.tertiary,
-                textAlign: 'right',
                 marginBottom: 6,
-                fontSize: 13,
               }}
             >
               סיסמה (מומלץ)
@@ -157,7 +164,7 @@ export default function DeleteAccountScreen({ navigation }: any) {
               {saving ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>
+                <Text style={{ ...settingsButtonLabelStyle, color: '#fff' }}>
                   מחק את החשבון
                 </Text>
               )}

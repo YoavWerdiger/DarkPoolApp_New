@@ -14,7 +14,7 @@ import { HapticFeedback } from '../../../utils/hapticFeedback';
 import type { ExplorePerson } from '../../../services/darkpool/uwExploreService';
 import { valuesToSparklinePoints } from '../utils/sparkline';
 import { InvestorPortrait } from './InvestorPortrait';
-import { darkPoolTextRtl } from '../darkPoolLayout';
+import { darkPoolPhysicalRightText } from '../darkPoolLayout';
 
 interface Props {
   person: ExplorePerson;
@@ -57,6 +57,7 @@ export function TrendingInvestorCard({ person, onPress }: Props) {
         variant="glass"
         glassIntensity="light"
         padding="md"
+        disableBlur
         style={styles.card}
       >
         <View style={styles.row}>
@@ -118,10 +119,11 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     card: {
       borderRadius: tokens.borderRadius['2xl'],
       borderWidth: 0,
-      backgroundColor: tokens.colors.background.cardSolid,
+      backgroundColor: 'transparent',
       marginBottom: tokens.spacing.sm,
     },
     row: {
+      direction: 'rtl',
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,
@@ -137,19 +139,19 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontSize: 16,
       fontWeight: '800',
       color: tokens.colors.text.primary,
-      ...darkPoolTextRtl,
+      ...darkPoolPhysicalRightText,
     },
     subtitle: {
       marginTop: 2,
       fontSize: 12,
       color: tokens.colors.text.tertiary,
-      ...darkPoolTextRtl,
+      ...darkPoolPhysicalRightText,
     },
     metric: {
       marginTop: 4,
       fontSize: 12,
       color: tokens.colors.text.secondary,
-      ...darkPoolTextRtl,
+      ...darkPoolPhysicalRightText,
     },
     metricVal: {
       fontWeight: '800',

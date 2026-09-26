@@ -1,18 +1,16 @@
 import React, { useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
+import { DayDividerPill } from '../../../components/ui/DayDividerPill';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
-import type { ExploreKindFilter } from '../utils/exploreGrid';
-import { hebrewText, toDataIsland } from '../utils/bidi';
-
-const OPTIONS: { id: ExploreKindFilter; label: string }[] = [
-  { id: 'all', label: 'כולם' },
-  { id: 'politician', label: 'פוליטיקאים' },
-  { id: 'insider', label: 'בכירים' },
-];
+import {
+  EXPLORE_KIND_CHIPS,
+  type ExploreKindFilter,
+} from '../utils/exploreGrid';
+import { toDataIsland } from '../utils/bidi';
 
 interface Props {
-  value: ExploreKindFilter;
-  onChange: (v: ExploreKindFilter) => void;
+  value: ExploreKindFilter | null;
+  onChange: (v: ExploreKindFilter | null) => void;
   counts?: Partial<Record<ExploreKindFilter, number>>;
 }
 
@@ -22,31 +20,11 @@ export function ExploreKindFilterBar({ value, onChange, counts }: Props) {
     () =>
       StyleSheet.create({
         row: {
+          direction: 'rtl',
           flexDirection: 'row',
+          alignItems: 'center',
           gap: 8,
-          paddingHorizontal: tokens.layout.screenPadding,
           marginBottom: tokens.spacing.md,
-        },
-        chip: {
-          paddingHorizontal: 16,
-          paddingVertical: 10,
-          borderRadius: 999,
-          borderWidth: 1,
-          borderColor: tokens.colors.border.subtle,
-          backgroundColor: 'rgba(255,255,255,0.04)',
-        },
-        chipActive: {
-          borderColor: tokens.colors.primary.main,
-          backgroundColor: 'rgba(0, 230, 118, 0.12)',
-        },
-        chipText: {
-          ...hebrewText,
-          fontSize: 14,
-          fontWeight: '700',
-          color: tokens.colors.text.secondary,
-        },
-        chipTextActive: {
-          color: tokens.colors.primary.main,
         },
       }),
     [tokens]
@@ -58,21 +36,22 @@ export function ExploreKindFilterBar({ value, onChange, counts }: Props) {
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.row}
     >
-      {OPTIONS.map((opt) => {
+      {EXPLORE_KIND_CHIPS.map((opt) => {
         const active = value === opt.id;
         const count = counts?.[opt.id];
         const label =
-          count != null && count > 0 && opt.id !== 'all'
+          count != null && count > 0
             ? `${opt.label} (${toDataIsland(count)})`
             : opt.label;
         return (
-          <Pressable
+          <DayDividerPill
             key={opt.id}
-            onPress={() => onChange(opt.id)}
-            style={[styles.chip, active && styles.chipActive]}
+            selected={active}
+            onPress={() => onChange(active ? null : opt.id)}
+            accessibilityLabel={opt.label}
           >
-            <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
-          </Pressable>
+            {label}
+          </DayDividerPill>
         );
       })}
     </ScrollView>

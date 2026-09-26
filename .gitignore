@@ -75,3 +75,6 @@ packages/DarkPoolChatSwift/.build/
 
 # Cursor agent transcripts/tooling (per-machine)
 /.cursor/projects/
+
+# Project MCP config may contain API tokens
+.cursor/mcp.json

@@ -13,11 +13,13 @@ import PortfoliosTab from './PortfoliosTab';
 import { dispatchOpenMainDrawer, type DrawerParentNavigation } from '../../navigation/mainDrawerNav';
 import { HapticFeedback, triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
 import type { PortfoliosStackParamList } from '../../navigation/PortfoliosStack';
+import { journalRtlRoot } from '../Journal/journalLayout';
 
 type Nav = NativeStackNavigationProp<PortfoliosStackParamList, 'PortfoliosHub'>;
 
 /**
  * יומן מסחר — רק התיקים האישיים.
+ * טופולוגיית זכוכית: ScreenChrome (אורורה) → כותרת → רשימת כרטיסי תיקים.
  * מימין: תפריט מגירה · משמאל: כפתור ירוק + לתיק חדש.
  */
 export default function PortfoliosHubScreen() {
@@ -41,8 +43,8 @@ export default function PortfoliosHubScreen() {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        safeArea: { flex: 1, backgroundColor: 'transparent' },
-        content: { flex: 1, minHeight: 0 },
+        safeArea: { ...journalRtlRoot, backgroundColor: 'transparent' },
+        content: { flex: 1, minHeight: 0, backgroundColor: 'transparent' },
         createBtn: {
           width: DRAWER_MENU_BUTTON_SIZE,
           height: DRAWER_MENU_BUTTON_SIZE,
@@ -62,6 +64,7 @@ export default function PortfoliosHubScreen() {
         <MainDrawerScreenHeader
           title="יומן מסחר"
           onMenuPress={openMainDrawer}
+          inRtlTree
           rightAccessory={
             <TouchableOpacity
               style={styles.createBtn}

@@ -36,6 +36,13 @@ export interface ShareableEntityRef {
  * trade:  side, pnl, size, entry, exit, return_pct
  * news:   (נדיר) — עדיף snippet
  */
+/** פלח לדונאט בתצוגת שיתוף (person_profile) */
+export interface SharePreviewHoldingSlice {
+  ticker: string;
+  pct: number;
+  color: string;
+}
+
 export interface ShareableEntityPreview {
   title: string;
   subtitle?: string;
@@ -45,6 +52,8 @@ export interface ShareableEntityPreview {
   metrics?: Record<string, string | number>;
   /** תקציר חדשות / טקסט תומך — מוצג בכרטיס בלי ניווט */
   snippet?: string;
+  /** פילוח אחזקות לתצוגה משותפת — מינימום 2 פלחים ב-UI */
+  holdingsChart?: SharePreviewHoldingSlice[];
 }
 
 export interface ShareableAttachment {
@@ -157,6 +166,8 @@ export function buildPersonAttachment(input: {
   topHolding?: string | null;
   /** שווי אחזקה מובילה */
   topHoldingValue?: number | null;
+  /** פילוח לדונאט בכרטיס השיתוף */
+  holdingsChart?: SharePreviewHoldingSlice[] | null;
 }): ShareableAttachment {
   const metrics: Record<string, string | number> = {};
   if (
@@ -180,6 +191,10 @@ export function buildPersonAttachment(input: {
 
   const role = (input.subtitle ?? '').toString().trim() || undefined;
   const name = (input.name ?? '').toString().trim() || 'פרופיל';
+  const chart =
+    input.holdingsChart?.filter(
+      (s) => s.ticker?.trim() && Number.isFinite(s.pct) && s.pct > 0 && s.color
+    ) ?? [];
 
   return {
     v: 1,
@@ -198,6 +213,7 @@ export function buildPersonAttachment(input: {
       imageUrl: input.imageUrl ?? null,
       badge: kindBadge(input.kind),
       ...(Object.keys(metrics).length ? { metrics } : {}),
+      ...(chart.length >= 2 ? { holdingsChart: chart.slice(0, 8) } : {}),
     },
     sharedAt: new Date().toISOString(),
   };

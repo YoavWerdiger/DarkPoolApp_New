@@ -641,7 +641,7 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
           variant="blur"
           glassIntensity="subtle"
           padding="none"
-          style={{ borderRadius: DesignTokens.borderRadius['3xl'], overflow: 'hidden' }}
+          style={{ borderRadius: DesignTokens.borderRadius.search, overflow: 'hidden' }}
         >
           <View
             style={{

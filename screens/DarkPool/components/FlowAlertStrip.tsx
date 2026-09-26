@@ -33,7 +33,7 @@ export function FlowAlertStrip({ alerts, onTickerPress }: Props) {
               onTickerPress?.(a.ticker);
             }}
           >
-            <UICard variant="glass" glassIntensity="light" padding="sm" style={styles.chip}>
+            <UICard variant="glass" glassIntensity="light" padding="sm" disableBlur style={styles.chip}>
               <View style={styles.chipTop}>
                 <TickerLogo symbol={a.ticker} size={28} borderRadius={8} />
                 <Text style={styles.ticker}>{a.ticker}</Text>
@@ -77,8 +77,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     chip: {
       width: 128,
       borderRadius: tokens.borderRadius.xl,
-      borderWidth: 1,
-      borderColor: tokens.colors.border.subtle,
+      backgroundColor: 'transparent',
     },
     chipTop: {
       flexDirection: 'row',

@@ -18,10 +18,18 @@ import { sheetContentBottomPadding } from '../../../components/ui/BottomSheet/sh
 import UICard from '../../../components/ui/UICard';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import {
+  APP_TYPE,
+  appCardMetricValueSecondaryStyle,
+  appPhysicalRightText,
+  appSectionTitleStyle,
+  appSheetButtonLabelStyle,
+} from '../../../components/ui/appType';
+import {
   DayNavBlurButton,
   DAY_NAV_BUTTON_SIZE,
 } from '../../../components/ui/DayNavBlurButton';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
+import { ensureNotificationCategoryOn } from '../../../lib/notificationPrefs';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
 import { MarketsTradingView } from '../../Markets/components/MarketsTradingView';
 import { getTradingViewSymbolChartHTML } from '../../Markets/embeds/tradingViewEmbeds';
@@ -257,6 +265,7 @@ function Body({
 
   const enableAlerts = useCallback(() => {
     setAlertsOn(true);
+    void ensureNotificationCategoryOn('watchlistNotifications');
   }, []);
 
   const saveAll = useCallback(async () => {
@@ -553,6 +562,7 @@ function Body({
               onValueChange={(v) => {
                 void HapticFeedback.selection();
                 setAlertsOn(v);
+                if (v) void ensureNotificationCategoryOn('watchlistNotifications');
               }}
               trackColor={{
                 false: 'rgba(255,255,255,0.12)',
@@ -1018,7 +1028,6 @@ function Body({
 
 function useStyles() {
   const tokens = useDesignTokens();
-  const { rtlText } = tokens;
 
   return useMemo(
     () =>
@@ -1044,14 +1053,14 @@ function useStyles() {
         identityText: { flex: 1, minWidth: 0, gap: 2 },
         symbol: {
           color: tokens.colors.text.primary,
-          fontSize: 17,
-          fontWeight: '700',
-          ...rtlText,
+          ...appSectionTitleStyle,
         },
         company: {
           color: tokens.colors.text.tertiary,
-          fontSize: 12,
-          ...rtlText,
+          fontSize: APP_TYPE.caption.fontSize,
+          fontWeight: APP_TYPE.caption.fontWeight,
+          lineHeight: APP_TYPE.caption.lineHeight,
+          ...appPhysicalRightText,
         },
         pctBadge: {
           paddingHorizontal: 10,
@@ -1078,11 +1087,10 @@ function useStyles() {
           gap: 8,
         },
         lastPrice: {
+          ...appCardMetricValueSecondaryStyle,
           color: tokens.colors.text.primary,
-          fontSize: 28,
-          fontWeight: '700',
           fontVariant: ['tabular-nums'],
-          writingDirection: 'ltr',
+          textAlign: 'right',
         },
         dayChange: {
           fontSize: 15,
@@ -1092,9 +1100,10 @@ function useStyles() {
         },
         vsHint: {
           color: tokens.colors.text.tertiary,
-          fontSize: 12,
+          fontSize: APP_TYPE.caption.fontSize,
           fontWeight: '500',
-          ...rtlText,
+          lineHeight: APP_TYPE.caption.lineHeight,
+          ...appPhysicalRightText,
         },
         eventRow: {
           flexDirection: 'row-reverse',
@@ -1127,9 +1136,7 @@ function useStyles() {
         },
         journalCtaTitle: {
           color: tokens.colors.text.primary,
-          fontSize: 15,
-          fontWeight: '700',
-          textAlign: 'center',
+          ...appSheetButtonLabelStyle,
           width: '100%',
         },
         chartCard: {
@@ -1145,10 +1152,11 @@ function useStyles() {
         card: { borderRadius: 20, overflow: 'hidden' },
         sectionTitle: {
           color: tokens.colors.text.secondary,
-          fontSize: 12,
+          ...appSectionTitleStyle,
+          fontSize: APP_TYPE.sectionSubtitle.fontSize,
           fontWeight: '600',
+          lineHeight: APP_TYPE.sectionSubtitle.lineHeight,
           marginBottom: 4,
-          ...rtlText,
         },
         metaRow: {
           flexDirection: 'row-reverse',
@@ -1163,14 +1171,16 @@ function useStyles() {
         },
         metaLabel: {
           color: tokens.colors.text.tertiary,
-          fontSize: 13,
+          fontSize: APP_TYPE.sectionSubtitle.fontSize,
           fontWeight: '500',
-          ...rtlText,
+          lineHeight: APP_TYPE.sectionSubtitle.lineHeight,
+          ...appPhysicalRightText,
         },
         metaValue: {
           color: tokens.colors.text.primary,
-          fontSize: 14,
+          fontSize: APP_TYPE.body.fontSize,
           fontWeight: '600',
+          lineHeight: APP_TYPE.body.lineHeight,
           fontVariant: ['tabular-nums'],
           writingDirection: 'ltr',
         },
@@ -1183,9 +1193,10 @@ function useStyles() {
         field: { flex: 1, gap: 6 },
         fieldLabel: {
           color: tokens.colors.text.tertiary,
-          fontSize: 11,
+          fontSize: APP_TYPE.caption2.fontSize,
           fontWeight: '600',
-          ...rtlText,
+          lineHeight: APP_TYPE.caption2.lineHeight,
+          ...appPhysicalRightText,
         },
         fieldInput: {
           backgroundColor: 'rgba(255,255,255,0.04)',
@@ -1225,9 +1236,10 @@ function useStyles() {
         presetLabel: {
           marginTop: 10,
           color: tokens.colors.text.tertiary,
-          fontSize: 11,
+          fontSize: APP_TYPE.caption2.fontSize,
           fontWeight: '600',
-          ...rtlText,
+          lineHeight: APP_TYPE.caption2.lineHeight,
+          ...appPhysicalRightText,
         },
         presetGrid: {
           marginTop: 8,
@@ -1265,10 +1277,10 @@ function useStyles() {
           color: tokens.colors.text.primary,
           borderWidth: StyleSheet.hairlineWidth,
           borderColor: DIVIDER,
-          fontSize: 15,
-          lineHeight: 22,
+          fontSize: APP_TYPE.body.fontSize,
+          lineHeight: APP_TYPE.body.lineHeight,
           minHeight: 84,
-          ...rtlText,
+          ...appPhysicalRightText,
         },
         footer: {
           paddingHorizontal: 16,
@@ -1292,9 +1304,7 @@ function useStyles() {
         saveBtnDisabled: { opacity: 0.55 },
         saveBtnText: {
           color: tokens.colors.text.primary,
-          fontSize: 15,
-          fontWeight: '700',
-          textAlign: 'center',
+          ...appSheetButtonLabelStyle,
           width: '100%',
         },
         removeBtn: {
@@ -1307,11 +1317,10 @@ function useStyles() {
         removeBtnPressed: { opacity: 0.65 },
         removeText: {
           color: '#FF5C5C',
-          fontSize: 14,
+          ...appSheetButtonLabelStyle,
           fontWeight: '600',
-          textAlign: 'center',
         },
       }),
-    [tokens, rtlText]
+    [tokens]
   );
 }

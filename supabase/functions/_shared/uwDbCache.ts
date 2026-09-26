@@ -3,6 +3,11 @@
  */
 
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.94.1';
+import {
+  curatedInsiderMatchesRow,
+  getCuratedInsiderByPersonId,
+  tickersForCuratedInsider,
+} from './curatedInsiderProfiles.ts';
 
 export interface CongressTradeRow {
   external_id: string;
@@ -248,15 +253,43 @@ export function congressDbRowToUwTrade(row: CongressTradeRow): {
 
 export async function loadInsiderBuysFromDb(
   supabase: SupabaseClient,
-  opts: { ticker?: string; insiderName?: string; limit?: number }
+  opts: {
+    ticker?: string;
+    insiderName?: string;
+    personId?: string;
+    limit?: number;
+  }
 ): Promise<InsiderBuyDbRow[]> {
+  const limit = Math.min(400, Math.max(10, opts.limit ?? 80));
+
+  const curated = opts.personId
+    ? getCuratedInsiderByPersonId(opts.personId)
+    : null;
+
+  if (curated) {
+    const tickers = tickersForCuratedInsider(curated);
+    let q = supabase
+      .from('dark_pool_insider_buys')
+      .select(
+        'external_id, ticker, company_name, insider_cik, insider_name, insider_role, insider_logo_url, transaction_type, shares, price, value, filed_at, transaction_date, source'
+      )
+      .in('ticker', tickers)
+      .order('filed_at', { ascending: false })
+      .limit(limit);
+    const { data, error } = await q;
+    if (error) throw error;
+    return ((data ?? []) as InsiderBuyDbRow[]).filter((r) =>
+      curatedInsiderMatchesRow(curated, r)
+    );
+  }
+
   let q = supabase
     .from('dark_pool_insider_buys')
     .select(
       'external_id, ticker, company_name, insider_cik, insider_name, insider_role, insider_logo_url, transaction_type, shares, price, value, filed_at, transaction_date, source'
     )
     .order('filed_at', { ascending: false })
-    .limit(Math.min(200, Math.max(10, opts.limit ?? 80)));
+    .limit(limit);
 
   if (opts.ticker) q = q.eq('ticker', opts.ticker.toUpperCase());
   const { data, error } = await q;

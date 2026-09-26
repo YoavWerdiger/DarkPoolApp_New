@@ -17,7 +17,8 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.darkpool.app"
+      "bundleIdentifier": "com.darkpool.app",
+      "deploymentTarget": "16.4"
     },
     "android": {
       "adaptiveIcon": {

@@ -29,6 +29,8 @@ interface IPO {
 }
 
 const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
+  const DesignTokens = useDesignTokens();
+
   const getDealTypeColor = (type: string) => {
     switch (type.toLowerCase()) {
       case 'priced': return DesignTokens.colors.success.main;
@@ -48,8 +50,6 @@ const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
       default: return type;
     }
   };
-
-  const DesignTokens = useDesignTokens();
 
   const formatDate = (dateStr: string | null): string => {
     if (!dateStr) return 'לא ידוע';
@@ -244,7 +244,7 @@ export default function IPOsTab() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: DesignTokens.colors.background.primary }}>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent' }}>
         <ActivityIndicator size="large" color={DesignTokens.colors.success.main} />
         <Text style={{ fontSize: 14, color: DesignTokens.colors.text.secondary, marginTop: 16 }}>
           טוען הנפקות...
@@ -254,7 +254,7 @@ export default function IPOsTab() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}>
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <FlatList
         data={ipos}
         keyExtractor={(item) => item.id}

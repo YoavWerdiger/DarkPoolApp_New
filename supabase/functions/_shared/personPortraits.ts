@@ -3,6 +3,7 @@
  */
 
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.94.1';
+import { CURATED_CEO_PORTRAIT_BY_PERSON_ID } from './executivePortraitUrls.ts';
 
 export type PortraitKind = 'politician' | 'insider' | 'fund_manager';
 export type PortraitSource = 'congress' | 'wikipedia' | 'known' | 'manual' | 'none';
@@ -39,6 +40,7 @@ const BIOGUIDE_RE = /^[A-Z]\d{6}$/;
 const WIKI = 'https://upload.wikimedia.org/wikipedia/commons';
 
 const KNOWN_BY_ID: Record<string, string> = {
+  ...CURATED_CEO_PORTRAIT_BY_PERSON_ID,
   G000583: `${CONGRESS_PHOTO}/G000583.jpg`,
   P000197: `${CONGRESS_PHOTO}/P000197.jpg`,
   C001114: `${CONGRESS_PHOTO}/C001114.jpg`,
@@ -84,6 +86,16 @@ const KNOWN_BY_NAME: Record<string, string> = {
   'markwayne mullin': KNOWN_BY_ID.M001190,
   'donald trump': KNOWN_BY_ID['888dc73f-f1eb-485a-a241-80657aaaaff9'],
   'donald j trump': KNOWN_BY_ID['888dc73f-f1eb-485a-a241-80657aaaaff9'],
+  'jensen huang': KNOWN_BY_ID['NVDA:Jensen Huang'],
+  'tim cook': KNOWN_BY_ID['AAPL:Tim Cook'],
+  'mark zuckerberg': KNOWN_BY_ID['META:Mark Zuckerberg'],
+  'satya nadella': KNOWN_BY_ID['MSFT:Satya Nadella'],
+  'sundar pichai': KNOWN_BY_ID['GOOGL:Sundar Pichai'],
+  'elon musk': KNOWN_BY_ID['TSLA:Elon Musk'],
+  'jamie dimon': KNOWN_BY_ID['JPM:Jamie Dimon'],
+  'lisa su': KNOWN_BY_ID['AMD:Lisa Su'],
+  'andy jassy': KNOWN_BY_ID['AMZN:Andy Jassy'],
+  'alex karp': KNOWN_BY_ID['PLTR:Alex Karp'],
 };
 
 const WIKI_DELAY_MS = 320;

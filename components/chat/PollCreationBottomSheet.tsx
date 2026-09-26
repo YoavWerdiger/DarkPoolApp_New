@@ -16,6 +16,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import UICard from '../ui/UICard';
+import { CHROME_UICARD, chromeSurfaceCardStyle } from '../ui/chromeControl';
+import { GlassChip } from '../ui/GlassChip';
 import { Trash2 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomSheetClose } from '../ui/BottomSheet/BottomSheet';
@@ -27,6 +29,7 @@ import { useChatActions } from '../../context/ChatContext';
 import { PollService } from '../../services/pollService';
 import { makeClientMessageId, makeLocalId } from '../../services/chat/chatOfflineQueue';
 import { ChatMessage, ChatMessageType } from '../../types/chat.types';
+import { APP_TYPE, appPhysicalRightText, appSectionTitleStyle } from '../ui/appType';
 
 interface PollCreationBottomSheetProps {
   visible: boolean;
@@ -290,7 +293,11 @@ export default function PollCreationBottomSheet({
         >
           <Pressable onPress={dismissKeyboard} style={{ gap: 12 }}>
             {/* Question card */}
-            <UICard variant="blur" padding="none" contentContainerStyle={glassCardStyles.inner}>
+            <UICard
+              {...CHROME_UICARD}
+              style={chromeSurfaceCardStyle(tokens, glassCardStyles.shell)}
+              contentContainerStyle={glassCardStyles.inner}
+            >
               <View style={styles.cardHeaderRow}>
                 {/* row-reverse: child ראשון = ימין */}
                 <Text style={styles.cardTitle}>שאלה</Text>
@@ -313,7 +320,11 @@ export default function PollCreationBottomSheet({
             </UICard>
 
             {/* Options card */}
-            <UICard variant="blur" padding="none" contentContainerStyle={glassCardStyles.inner}>
+            <UICard
+              {...CHROME_UICARD}
+              style={chromeSurfaceCardStyle(tokens, glassCardStyles.shell)}
+              contentContainerStyle={glassCardStyles.inner}
+            >
               <View style={styles.cardHeaderRow}>
                 <Text style={styles.cardTitle}>אפשרויות</Text>
                 <Text style={styles.counter}>{options.length}/{MAX_OPTIONS}</Text>
@@ -326,9 +337,13 @@ export default function PollCreationBottomSheet({
                   return (
                     <View key={`poll-option-${index}`} style={styles.optionRow}>
                       {/* row-reverse: first child = rightmost */}
-                      <View style={styles.optionIndexPill}>
+                      <GlassChip
+                        disableBlur
+                        style={styles.optionIndexPill}
+                        contentContainerStyle={styles.optionIndexPillContent}
+                      >
                         <Text style={styles.optionIndexText}>{index + 1}</Text>
-                      </View>
+                      </GlassChip>
 
                       <TextInput
                         value={option}
@@ -401,7 +416,11 @@ export default function PollCreationBottomSheet({
             </UICard>
 
             {/* Settings card */}
-            <UICard variant="blur" padding="none" contentContainerStyle={glassCardStyles.inner}>
+            <UICard
+              {...CHROME_UICARD}
+              style={chromeSurfaceCardStyle(tokens, glassCardStyles.shell)}
+              contentContainerStyle={glassCardStyles.inner}
+            >
               <Text style={[styles.cardTitle, styles.cardTitleBlock]}>הגדרות</Text>
 
               <View style={styles.segmented}>
@@ -492,6 +511,10 @@ export default function PollCreationBottomSheet({
 }
 
 const glassCardStyles = StyleSheet.create({
+  shell: {
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
   inner: {
     padding: 16,
     gap: 10,
@@ -526,17 +549,16 @@ const createStyles = (tokens: any) => {
       alignItems: 'flex-end',
     },
     title: {
-      fontSize: 18,
-      fontWeight: '800',
+      ...appSectionTitleStyle,
       color: tokens.colors.text.primary,
-      textAlign: 'right',
     },
     subtitle: {
       marginTop: 2,
-      fontSize: 12,
+      fontSize: APP_TYPE.sectionSubtitle.fontSize,
       fontWeight: '500',
+      lineHeight: APP_TYPE.sectionSubtitle.lineHeight,
       color: tokens.colors.text.secondary,
-      textAlign: 'right',
+      ...appPhysicalRightText,
     },
     headerTextButton: {
       minWidth: 44,
@@ -614,11 +636,16 @@ const createStyles = (tokens: any) => {
     optionIndexPill: {
       width: 26,
       height: 26,
+      minHeight: 26,
       borderRadius: 13,
-      backgroundColor: 'rgba(255,255,255,0.08)',
-      alignItems: 'center',
-      justifyContent: 'center',
       flexShrink: 0,
+    },
+    optionIndexPillContent: {
+      width: 26,
+      height: 26,
+      minHeight: 26,
+      paddingHorizontal: 0,
+      paddingVertical: 0,
     },
     optionIndexText: {
       fontSize: 11,

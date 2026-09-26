@@ -1,5 +1,5 @@
 /**
- * כותרת section במסך Dark Pool — RTL, כמו שאר האפליקציה.
+ * כותרת section במסך Dark Pool — אותה סקאלה ויישור פיזי כמו בגילוי.
  */
 
 import React from 'react';
@@ -7,10 +7,18 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
+import {
+  DARK_POOL_TYPE,
+  darkPoolPhysicalRightText,
+  darkPoolSectionSubtitleStyle,
+  darkPoolSectionTitleStyle,
+} from '../darkPoolLayout';
 
 interface SectionHeaderProps {
   title: string;
-  subtitle?: string;
+  /** מחרוזת עברית טהורה, או ילדי Text מעורבים (שם LTR + טיקר מבודד). לא LRI על המשפט. */
+  subtitle?: React.ReactNode;
+  subtitleA11y?: string;
   actionLabel?: string;
   onActionPress?: () => void;
   icon?: React.ComponentProps<typeof Ionicons>['name'];
@@ -19,6 +27,7 @@ interface SectionHeaderProps {
 export function DarkPoolSectionHeader({
   title,
   subtitle,
+  subtitleA11y,
   actionLabel,
   onActionPress,
   icon,
@@ -29,14 +38,17 @@ export function DarkPoolSectionHeader({
       <View style={styles.textCol}>
         <View style={styles.titleRow}>
           {icon ? (
-            <Ionicons name={icon} size={18} color={tokens.colors.primary.main} />
+            <Ionicons name={icon} size={18} color={tokens.colors.text.secondary} />
           ) : null}
           <Text style={[styles.title, { color: tokens.colors.text.primary }]}>
             {title}
           </Text>
         </View>
         {subtitle ? (
-          <Text style={[styles.subtitle, { color: tokens.colors.text.tertiary }]}>
+          <Text
+            style={[styles.subtitle, { color: tokens.colors.text.secondary }]}
+            accessibilityLabel={subtitleA11y}
+          >
             {subtitle}
           </Text>
         ) : null}
@@ -54,10 +66,10 @@ export function DarkPoolSectionHeader({
           hitSlop={12}
           style={styles.action}
         >
-          <Text style={[styles.actionLabel, { color: tokens.colors.primary.main }]}>
+          <Text style={[styles.actionLabel, { color: tokens.colors.text.secondary }]}>
             {actionLabel}
           </Text>
-          <Ionicons name="chevron-back" size={14} color={tokens.colors.primary.main} />
+          <Ionicons name="chevron-back" size={14} color={tokens.colors.text.muted} />
         </Pressable>
       ) : null}
     </View>
@@ -66,15 +78,19 @@ export function DarkPoolSectionHeader({
 
 const styles = StyleSheet.create({
   wrap: {
+    direction: 'rtl',
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: 10,
-    gap: 8,
+    marginBottom: 16,
+    gap: 12,
+    width: '100%',
+    alignSelf: 'stretch',
   },
   textCol: {
     flex: 1,
-    alignItems: 'flex-start',
+    minWidth: 0,
+    alignItems: 'stretch',
   },
   titleRow: {
     flexDirection: 'row',
@@ -82,18 +98,12 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '800',
-    letterSpacing: -0.3,
-    textAlign: 'left',
-    writingDirection: 'rtl',
+    ...darkPoolSectionTitleStyle,
+    flex: 1,
+    minWidth: 0,
   },
   subtitle: {
-    fontSize: 12,
-    marginTop: 4,
-    textAlign: 'left',
-    writingDirection: 'rtl',
-    lineHeight: 17,
+    ...darkPoolSectionSubtitleStyle,
   },
   action: {
     flexDirection: 'row',
@@ -102,8 +112,8 @@ const styles = StyleSheet.create({
     paddingTop: 2,
   },
   actionLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    writingDirection: 'rtl',
+    ...darkPoolPhysicalRightText,
+    fontSize: DARK_POOL_TYPE.footnote.fontSize,
+    fontWeight: '600',
   },
 });

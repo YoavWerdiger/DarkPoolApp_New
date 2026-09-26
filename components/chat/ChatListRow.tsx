@@ -4,6 +4,7 @@ import ChatMessage from './ChatMessage';
 import UnreadDivider from './UnreadDivider';
 import { useDesignTokens } from '../ui/DesignTokens';
 import UICard from '../ui/UICard';
+import { CHROME_UICARD, chromeSurfaceCardStyle } from '../ui/chromeControl';
 import type { ChatMessage as ChatMessageType } from '../../types/chat.types';
 
 const DateDivider = memo(function DateDivider({ label }: { label: string }) {
@@ -30,10 +31,8 @@ const DateDivider = memo(function DateDivider({ label }: { label: string }) {
     <View style={styles.wrap}>
       <View style={styles.line} />
       <UICard
-        variant="glass"
-        glassIntensity="subtle"
-        padding="none"
-        style={styles.badge}
+        {...CHROME_UICARD}
+        style={[styles.badge, chromeSurfaceCardStyle(tokens)]}
         contentContainerStyle={styles.badgeInner}
       >
         <Text style={styles.text}>{label}</Text>

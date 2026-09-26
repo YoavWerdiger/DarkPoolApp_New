@@ -25,7 +25,7 @@ import { ChatMessage } from '../../types/chat.types';
 import { getChatMessagePreview } from '../../utils/chatMessagePreview';
 import { format, isToday, isYesterday } from 'date-fns';
 import { he } from 'date-fns/locale';
-import { chatRtlText } from './chatDesignTokens';
+import { APP_TYPE, appPhysicalRightText, appSectionTitleStyle } from '../ui/appType';
 
 interface ChatSearchBottomSheetProps {
   visible: boolean;
@@ -314,25 +314,23 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       height: DAY_NAV_BUTTON_SIZE,
     },
     headerTitle: {
-      ...chatRtlText,
-      fontSize: 20,
-      fontWeight: '800',
-      letterSpacing: -0.35,
+      ...appSectionTitleStyle,
       textAlign: 'center',
       width: '100%',
     },
     headerSubtitle: {
-      ...chatRtlText,
+      ...appPhysicalRightText,
       marginTop: 4,
-      fontSize: 13,
+      fontSize: APP_TYPE.sectionSubtitle.fontSize,
       fontWeight: '500',
+      lineHeight: APP_TYPE.sectionSubtitle.lineHeight,
       textAlign: 'center',
       width: '100%',
     },
     searchShell: {
       marginTop: 14,
       marginBottom: 12,
-      borderRadius: 999,
+      borderRadius: tokens.borderRadius.search,
       overflow: 'hidden',
       paddingHorizontal: 14,
       paddingVertical: 4,
@@ -346,8 +344,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     searchInput: {
       flex: 1,
-      ...chatRtlText,
-      fontSize: 16,
+      ...appPhysicalRightText,
+      fontSize: APP_TYPE.body.fontSize,
+      lineHeight: APP_TYPE.body.lineHeight,
       paddingVertical: Platform.OS === 'ios' ? 10 : 8,
       backgroundColor: 'transparent',
     },

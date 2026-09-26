@@ -5,6 +5,8 @@ export {
   BOTTOM_SHEET_EDGE_HANDLE_HEIGHT,
 } from './BottomSheet';
 export {
+  latchSheetGlass,
+  canLatchSheetGlass,
   SHEET_BACKDROP_OPACITY,
   SHEET_GLASS_BASE,
   SHEET_GLASS_FLOOR,
@@ -27,6 +29,7 @@ export {
   SHEET_MOTION_MS,
   SHEET_OPEN_MS,
   SHEET_CLOSE_MS,
+  SHEET_BLUR_DEFER_MS,
   SHEET_OPEN_TIMING,
   SHEET_CLOSE_TIMING,
   SHEET_SNAP_SPRING,
@@ -35,4 +38,9 @@ export {
   FIT_CONTENT_HEIGHT_TIMING,
   SHEET_EASE_OUT,
   SHEET_EASE_IN,
+  SHEET_EASE_OUT_BEZIER,
+  SHEET_EASE_IN_BEZIER,
+  resolveSheetVisibleHeightPx,
+  resolveFitContentHeightForFrame,
+  resolveFitContentSnapPoint,
 } from './sheetMotion';

@@ -26,6 +26,14 @@ import {
 } from '../../services/appSettings';
 import { getAppVersionLabel } from '../../utils/appMeta';
 import { SettingsSectionTitle } from '../../components/profile/ProfileSettingsUI';
+import {
+  settingsHebrewText,
+  settingsRowType,
+  settingsMetaType,
+  settingsBodyType,
+  settingsCaptionType,
+} from '../../components/profile/settingsType';
+import { isolateNumericRuns } from '../DarkPool/utils/bidi';
 
 interface SettingItem {
   id: string;
@@ -221,12 +229,11 @@ export default function SettingsScreen({ navigation }: any) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent' }}>
         <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-        <Text style={{ 
-          color: DesignTokens.colors.text.secondary, 
-          fontSize: DesignTokens.typography.body.size,
-          fontWeight: DesignTokens.typography.body.weight as any,
-          lineHeight: DesignTokens.typography.body.lineHeight,
-          marginTop: DesignTokens.spacing.lg 
+        <Text style={{
+          ...settingsHebrewText,
+          ...settingsBodyType,
+          color: DesignTokens.colors.text.secondary,
+          marginTop: DesignTokens.spacing.lg,
         }}>טוען...</Text>
       </View>
     );
@@ -299,21 +306,17 @@ export default function SettingsScreen({ navigation }: any) {
 
                     <View style={{ flex: 1, marginStart: DesignTokens.spacing.md }}>
                       <Text style={{
-                        fontSize: DesignTokens.typography.body.size,
-                        fontWeight: DesignTokens.typography.fontWeight.semibold as any,
-                        lineHeight: DesignTokens.typography.body.lineHeight,
+                        ...settingsHebrewText,
+                        ...settingsRowType,
                         color: 'danger' in item && item.danger ? DesignTokens.colors.danger.main : DesignTokens.colors.text.primary,
                         marginBottom: DesignTokens.spacing.xs / 2,
-                        textAlign: 'right'
                       }}>
                         {item.title}
                       </Text>
                       <Text style={{
-                        fontSize: DesignTokens.typography.bodySmall.size,
-                        fontWeight: DesignTokens.typography.bodySmall.weight as any,
-                        lineHeight: DesignTokens.typography.bodySmall.lineHeight,
+                        ...settingsHebrewText,
+                        ...settingsMetaType,
                         color: DesignTokens.colors.text.tertiary,
-                        textAlign: 'right'
                       }}>
                         {item.subtitle}
                       </Text>
@@ -340,12 +343,11 @@ export default function SettingsScreen({ navigation }: any) {
               marginTop: DesignTokens.spacing.md,
               marginBottom: DesignTokens.spacing.lg
             }}>
-              <Text style={{ 
-                color: DesignTokens.colors.text.tertiary, 
-                fontSize: DesignTokens.typography.caption.size,
-                fontWeight: DesignTokens.typography.caption.weight as any,
+              <Text style={{
+                ...settingsCaptionType,
+                color: DesignTokens.colors.text.tertiary,
               }}>
-                DarkPool App · גרסה {getAppVersionLabel()}
+                {isolateNumericRuns(`DarkPool App · גרסה ${getAppVersionLabel()}`)}
               </Text>
             </View>
           </View>

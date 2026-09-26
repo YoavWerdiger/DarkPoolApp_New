@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { GlassChip } from '../../../components/ui/GlassChip';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 
 export type SegmentedOption<T extends string = string> = {
@@ -55,30 +56,25 @@ export function MarketsSegmentedControl<T extends string>({
             style={{
               flex: 1,
               minWidth: 0,
-              height: 40,
-              borderRadius: tokens.borderRadius['3xl'],
-              backgroundColor: 'transparent',
-              alignItems: 'center',
-              justifyContent: 'center',
               marginHorizontal: tokens.spacing.xs / 2,
-              position: 'relative',
             }}
           >
-            {isActive && (
-              <View
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  borderRadius: tokens.borderRadius['3xl'],
-                  backgroundColor: `${tokens.colors.primary.main}18`,
-                  borderWidth: 1,
-                  borderColor: `${tokens.colors.primary.main}44`,
-                }}
-              />
-            )}
+            <GlassChip
+              selected={isActive}
+              disableBlur
+              style={{
+                flex: 1,
+                minWidth: 0,
+                minHeight: 40,
+                height: 40,
+                borderRadius: tokens.borderRadius['3xl'],
+              }}
+              contentContainerStyle={{
+                minHeight: 40,
+                height: 40,
+                paddingHorizontal: 2,
+              }}
+            >
             {opt.icon ? (
               <View
                 style={{
@@ -126,6 +122,7 @@ export function MarketsSegmentedControl<T extends string>({
                 {opt.label}
               </Text>
             )}
+            </GlassChip>
           </TouchableOpacity>
         );
       })}

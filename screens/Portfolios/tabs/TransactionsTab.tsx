@@ -28,7 +28,11 @@ import {
 } from '../utils/format';
 import { TickerLogo } from '../components/TickerLogo';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
-import { darkPoolTextRtl } from '../../DarkPool/darkPoolLayout';
+import {
+  journalBodyTextStyle,
+  journalPhysicalRightText,
+  journalSectionTitleStyle,
+} from '../../Journal/journalLayout';
 
 interface Props {
   portfolio: Portfolio;
@@ -157,21 +161,17 @@ export default function TransactionsTab({
           direction: 'rtl',
         },
         emptyTitle: {
-          fontSize: 16,
-          fontWeight: '700',
+          ...journalSectionTitleStyle,
           color: tokens.colors.text.primary,
           marginTop: 12,
-          ...darkPoolTextRtl,
           textAlign: 'center',
         },
         emptyText: {
-          fontSize: 13,
+          ...journalBodyTextStyle,
           color: tokens.colors.text.tertiary,
           textAlign: 'center',
-          writingDirection: 'rtl',
           paddingHorizontal: 30,
           marginTop: 4,
-          lineHeight: 18,
         },
         emptyBtn: {
           flexDirection: 'row',
@@ -187,7 +187,7 @@ export default function TransactionsTab({
           fontSize: 14,
           fontWeight: '700',
           color: tokens.colors.text.inverse,
-          ...darkPoolTextRtl,
+          ...journalPhysicalRightText,
         },
         row: {
           flexDirection: 'row',
@@ -217,7 +217,7 @@ export default function TransactionsTab({
           color: tokens.colors.text.primary,
           lineHeight: 18,
           width: '100%',
-          ...darkPoolTextRtl,
+          ...journalPhysicalRightText,
         },
         rowSub: {
           fontSize: 11,
@@ -225,7 +225,7 @@ export default function TransactionsTab({
           marginTop: 2,
           lineHeight: 14,
           width: '100%',
-          ...darkPoolTextRtl,
+          ...journalPhysicalRightText,
         },
         rowAmount: {
           fontSize: 13,
@@ -289,14 +289,10 @@ export default function TransactionsTab({
     <View style={styles.root}>
       {sectionTitle ? (
         <Text style={{
-          fontSize: 14,
-          fontWeight: '700',
+          ...journalSectionTitleStyle,
           color: tokens.colors.text.secondary,
           marginBottom: 12,
           paddingHorizontal: 4,
-          alignSelf: 'stretch',
-          width: '100%',
-          ...darkPoolTextRtl,
         }}>
           {sectionTitle}
         </Text>

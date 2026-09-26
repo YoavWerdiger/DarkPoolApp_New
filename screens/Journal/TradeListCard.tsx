@@ -8,6 +8,7 @@ import { brandfetchTickerLogoUri } from '../../utils/brandfetch';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import TradeShareButton from '../../components/Journal/TradeShareButton';
 import type { Trade } from './tradeTypes';
+import { JOURNAL_TYPE, journalPhysicalRightText } from './journalLayout';
 
 function SymbolLogo({
   symbol,
@@ -98,7 +99,7 @@ const TradeListCardInner = memo(function TradeListCardInner({
   }
 
   return (
-    <UICard variant="glass" glassIntensity="light" padding="sm" style={styles.tradeCard}>
+    <UICard variant="glass" glassIntensity="light" padding="sm" disableBlur style={styles.tradeCard}>
       <View style={styles.rtlWrap}>
         <View style={styles.tradeHeader}>
           <View style={styles.tradeHeaderMain}>
@@ -209,7 +210,7 @@ export function createTradeCardStyles(tokens: ReturnType<typeof useDesignTokens>
       borderRadius: tokens.borderRadius.xl,
       borderWidth: 0,
       overflow: 'hidden',
-      backgroundColor: tokens.colors.background.cardSolid,
+      backgroundColor: 'transparent',
       ...tokens.shadows.none,
     },
     rtlWrap: {
@@ -242,10 +243,11 @@ export function createTradeCardStyles(tokens: ReturnType<typeof useDesignTokens>
       flexGrow: 0,
       flexShrink: 1,
       minWidth: 0,
-      fontSize: tokens.typography.fontSize.lg,
-      fontWeight: '800' as any,
+      fontSize: JOURNAL_TYPE.sectionTitle.fontSize,
+      fontWeight: JOURNAL_TYPE.sectionTitle.fontWeight,
+      lineHeight: JOURNAL_TYPE.sectionTitle.lineHeight,
       color: tokens.colors.text.primary,
-      textAlign: 'right',
+      ...journalPhysicalRightText,
     },
     directionBadge: {
       flexShrink: 0,
@@ -256,8 +258,9 @@ export function createTradeCardStyles(tokens: ReturnType<typeof useDesignTokens>
       borderWidth: 1,
     },
     directionText: {
-      fontSize: 10,
+      fontSize: JOURNAL_TYPE.caption2.fontSize,
       fontWeight: '700' as any,
+      lineHeight: JOURNAL_TYPE.caption2.lineHeight,
       textAlign: 'center',
     },
     /** שמאל (ב־RTL): שיתוף + מחיקה — נשארים בקצה הנגדי */
@@ -291,22 +294,25 @@ export function createTradeCardStyles(tokens: ReturnType<typeof useDesignTokens>
       alignItems: 'center',
     },
     metricLabel: {
-      fontSize: 10,
-      fontWeight: '600' as any,
+      fontSize: JOURNAL_TYPE.caption2.fontSize,
+      fontWeight: JOURNAL_TYPE.caption2.fontWeight,
+      lineHeight: JOURNAL_TYPE.caption2.lineHeight,
       color: tokens.colors.text.tertiary,
       textAlign: 'center',
       marginBottom: 3,
     },
     metricValueMoney: {
-      fontSize: 14,
+      fontSize: JOURNAL_TYPE.body.fontSize,
       fontWeight: '800' as any,
+      lineHeight: JOURNAL_TYPE.body.lineHeight,
       color: tokens.colors.primary.main,
       textAlign: 'center',
       writingDirection: 'ltr',
     },
     metricValuePlain: {
-      fontSize: 13,
+      fontSize: JOURNAL_TYPE.sectionSubtitle.fontSize,
       fontWeight: '700' as any,
+      lineHeight: JOURNAL_TYPE.sectionSubtitle.lineHeight,
       color: tokens.colors.text.primary,
       textAlign: 'center',
       writingDirection: 'ltr',
@@ -335,8 +341,9 @@ export function createTradeCardStyles(tokens: ReturnType<typeof useDesignTokens>
       marginVertical: 6,
     },
     pnlBandLabel: {
-      fontSize: 10,
-      fontWeight: '600' as any,
+      fontSize: JOURNAL_TYPE.caption2.fontSize,
+      fontWeight: JOURNAL_TYPE.caption2.fontWeight,
+      lineHeight: JOURNAL_TYPE.caption2.lineHeight,
       color: tokens.colors.text.tertiary,
       textAlign: 'center',
       marginBottom: 2,

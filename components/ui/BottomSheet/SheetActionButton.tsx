@@ -10,6 +10,7 @@ import {
 import { useDesignTokens } from '../DesignTokens';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 import { sheetActionColors, type SheetActionVariant } from './sheetGlass';
+import { appSheetButtonLabelStyle } from '../appType';
 
 export type SheetActionButtonProps = {
   label: string;
@@ -70,7 +71,7 @@ export function SheetActionButton({
           color={colors.color}
         />
       ) : (
-        <Text style={[styles.label, { color: colors.color }, textStyle]}>{label}</Text>
+        <Text style={[styles.label, appSheetButtonLabelStyle, { color: colors.color }, textStyle]}>{label}</Text>
       )}
     </Pressable>
   );
@@ -86,9 +87,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '700',
-    textAlign: 'center',
+    ...appSheetButtonLabelStyle,
   },
 });
 

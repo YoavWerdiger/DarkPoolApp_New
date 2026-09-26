@@ -1,12 +1,45 @@
 /**
- * @deprecated — הטאבים הוסרו. הבית הוא DarkPoolHomeScreen ב-DarkPoolStack.
- * נשאר רק כדי שלא יישברו ייבואים ישנים.
+ * טאבים פנימיים של Dark Pool: פיד · חקור · מעקב.
+ * יושבים תחת route `DarkPoolHome` ב-Stack — MainTabs לא משתנה.
  */
 
+import React from 'react';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { DarkPoolBottomTabBar } from '../screens/DarkPool/components/DarkPoolBottomTabBar';
+import DarkPoolHomeScreen from '../screens/DarkPool/DarkPoolHomeScreen';
+import DarkPoolExploreScreen from '../screens/DarkPool/DarkPoolExploreScreen';
+import DarkPoolFollowingScreen from '../screens/DarkPool/DarkPoolFollowingScreen';
+
 export type DarkPoolTabParamList = {
+  DarkPoolFeed: undefined;
   DarkPoolExplore: undefined;
   DarkPoolFollowing: undefined;
-  DarkPoolFeed: undefined;
 };
 
-export { default } from '../screens/DarkPool/DarkPoolHomeScreen';
+const Tab = createBottomTabNavigator<DarkPoolTabParamList>();
+
+export default function DarkPoolTabs() {
+  return (
+    <Tab.Navigator
+      initialRouteName="DarkPoolExplore"
+      tabBar={(props) => <DarkPoolBottomTabBar {...props} />}
+      screenOptions={{
+        headerShown: false,
+        freezeOnBlur: true,
+        lazy: true,
+        tabBarHideOnKeyboard: true,
+        sceneStyle: { backgroundColor: 'transparent' },
+        tabBarStyle: {
+          position: 'absolute',
+          backgroundColor: 'transparent',
+          borderTopWidth: 0,
+          elevation: 0,
+        },
+      }}
+    >
+      <Tab.Screen name="DarkPoolFeed" component={DarkPoolHomeScreen} />
+      <Tab.Screen name="DarkPoolExplore" component={DarkPoolExploreScreen} />
+      <Tab.Screen name="DarkPoolFollowing" component={DarkPoolFollowingScreen} />
+    </Tab.Navigator>
+  );
+}

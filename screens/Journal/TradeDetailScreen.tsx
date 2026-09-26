@@ -22,6 +22,16 @@ import UICard from '../../components/ui/UICard';
 import { ChatSessionBackdrop } from '../../components/chat/ChatSessionBackdrop';
 import { supabase } from '../../services/supabase';
 import type { JournalStackParamList } from '../../navigation/JournalStack';
+import {
+  JOURNAL_TYPE,
+  journalBodyTextStyle,
+  journalCaption2Style,
+  journalCaptionStyle,
+  journalPhysicalRightText,
+  journalRow,
+  journalRtlContent,
+  journalSectionTitleStyle,
+} from './journalLayout';
 import type { Trade } from './tradeTypes';
 import {
   parseJournalDetails,
@@ -75,7 +85,7 @@ function InfoRow({
   return (
     <View
       style={{
-        flexDirection: 'row-reverse',
+        ...journalRow,
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingVertical: 10,
@@ -85,18 +95,17 @@ function InfoRow({
     >
       <Text
         style={{
-          fontSize: 13,
+          ...journalCaptionStyle,
           color: tokens.colors.text.secondary,
-          textAlign: 'right',
-          writingDirection: 'rtl',
         }}
       >
         {label}
       </Text>
       <Text
         style={{
-          fontSize: 14,
+          fontSize: JOURNAL_TYPE.body.fontSize,
           fontWeight: '700',
+          lineHeight: JOURNAL_TYPE.body.lineHeight,
           color: valueColor ?? tokens.colors.text.primary,
           textAlign: 'left',
           writingDirection: 'ltr',
@@ -128,7 +137,7 @@ function SectionCard({
     >
       <View
         style={{
-          flexDirection: 'row-reverse',
+          ...journalRow,
           alignItems: 'center',
           gap: 6,
           marginBottom: 12,
@@ -139,13 +148,9 @@ function SectionCard({
         ) : null}
         <Text
           style={{
-            fontSize: 13,
-            fontWeight: '700',
+            ...journalSectionTitleStyle,
             color: tokens.colors.text.secondary,
-            textAlign: 'right',
-            writingDirection: 'rtl',
-            textTransform: 'uppercase',
-            letterSpacing: 0.5,
+            flex: 1,
           }}
         >
           {title}
@@ -265,7 +270,7 @@ export default function TradeDetailScreen() {
       <View
         style={{
           flex: 1,
-          backgroundColor: '#111111',
+          backgroundColor: 'transparent',
           alignItems: 'center',
           justifyContent: 'center',
         }}
@@ -299,14 +304,14 @@ export default function TradeDetailScreen() {
   const hasRiskData = trade.stop_loss || trade.target_price || riskReward != null;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#111111' }}>
+    <View style={{ flex: 1, backgroundColor: 'transparent', ...journalRtlContent }}>
       <ChatSessionBackdrop />
       <StatusBar style="light" />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         {/* Header */}
         <View
           style={{
-            flexDirection: 'row-reverse',
+            ...journalRow,
             alignItems: 'center',
             paddingHorizontal: 16,
             paddingVertical: 10,
@@ -333,7 +338,7 @@ export default function TradeDetailScreen() {
           <View
             style={{
               flex: 1,
-              flexDirection: 'row-reverse',
+              ...journalRow,
               alignItems: 'center',
               gap: 8,
             }}
@@ -357,7 +362,7 @@ export default function TradeDetailScreen() {
                 backgroundColor: `${directionColor}22`,
               }}
             >
-              <Text style={{ fontSize: 11, fontWeight: '800', color: directionColor }}>
+              <Text style={{ fontSize: JOURNAL_TYPE.caption2.fontSize, fontWeight: '800', lineHeight: JOURNAL_TYPE.caption2.lineHeight, color: directionColor }}>
                 {trade.direction === 'long' ? 'Long' : 'Short'}
               </Text>
             </View>
@@ -373,8 +378,9 @@ export default function TradeDetailScreen() {
               >
                 <Text
                   style={{
-                    fontSize: 10,
+                    fontSize: JOURNAL_TYPE.caption2.fontSize,
                     fontWeight: '600',
+                    lineHeight: JOURNAL_TYPE.caption2.lineHeight,
                     color: tokens.colors.text.tertiary,
                   }}
                   numberOfLines={1}
@@ -384,7 +390,7 @@ export default function TradeDetailScreen() {
               </View>
             ) : null}
           </View>
-          <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
+          <View style={{ ...journalRow, alignItems: 'center', gap: 8 }}>
             <TradeShareButton
               onPress={openShare}
               size={36}
@@ -449,7 +455,7 @@ export default function TradeDetailScreen() {
             >
               <View
                 style={{
-                  flexDirection: 'row-reverse',
+                  ...journalRow,
                   justifyContent: 'space-between',
                   alignItems: 'center',
                 }}
@@ -457,8 +463,7 @@ export default function TradeDetailScreen() {
                 <View>
                   <Text
                     style={{
-                      fontSize: 11,
-                      fontWeight: '600',
+                      ...journalCaption2Style,
                       color: tokens.colors.text.tertiary,
                       marginBottom: 4,
                     }}
@@ -507,9 +512,8 @@ export default function TradeDetailScreen() {
                   </View>
                   <Text
                     style={{
-                      fontSize: 12,
+                      ...journalCaptionStyle,
                       color: tokens.colors.text.tertiary,
-                      textAlign: 'right',
                     }}
                   >
                     {formatTradeDurationHebrew(trade.entry_date, trade.exit_date)}
@@ -579,7 +583,7 @@ export default function TradeDetailScreen() {
               {(trade.tags?.length ?? 0) > 0 ? (
                 <View
                   style={{
-                    flexDirection: 'row-reverse',
+                    ...journalRow,
                     flexWrap: 'wrap',
                     gap: 6,
                     paddingTop: 10,
@@ -667,10 +671,8 @@ export default function TradeDetailScreen() {
                   >
                     <Text
                       style={{
-                        fontSize: 11,
-                        fontWeight: '600',
+                        ...journalCaption2Style,
                         color: tokens.colors.text.tertiary,
-                        textAlign: 'right',
                         marginBottom: 4,
                       }}
                     >
@@ -678,11 +680,8 @@ export default function TradeDetailScreen() {
                     </Text>
                     <Text
                       style={{
-                        fontSize: 13,
+                        ...journalBodyTextStyle,
                         color: tokens.colors.text.primary,
-                        textAlign: 'right',
-                        writingDirection: 'rtl',
-                        lineHeight: 18,
                       }}
                     >
                       {details.entry_reason}
@@ -693,10 +692,8 @@ export default function TradeDetailScreen() {
                   <View style={{ paddingVertical: 10 }}>
                     <Text
                       style={{
-                        fontSize: 11,
-                        fontWeight: '600',
+                        ...journalCaption2Style,
                         color: tokens.colors.text.tertiary,
-                        textAlign: 'right',
                         marginBottom: 4,
                       }}
                     >
@@ -704,11 +701,8 @@ export default function TradeDetailScreen() {
                     </Text>
                     <Text
                       style={{
-                        fontSize: 13,
+                        ...journalBodyTextStyle,
                         color: tokens.colors.text.primary,
-                        textAlign: 'right',
-                        writingDirection: 'rtl',
-                        lineHeight: 18,
                       }}
                     >
                       {details.exit_reason}
@@ -726,7 +720,7 @@ export default function TradeDetailScreen() {
                 tokens={tokens}
               >
                 <View
-                  style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 8 }}
+                  style={{ ...journalRow, flexWrap: 'wrap', gap: 8 }}
                 >
                   {mistakeLabels.map((label) => (
                     <View
@@ -740,11 +734,9 @@ export default function TradeDetailScreen() {
                     >
                       <Text
                         style={{
-                          fontSize: 12,
+                          ...journalCaptionStyle,
                           fontWeight: '600',
                           color: tokens.colors.text.danger,
-                          textAlign: 'right',
-                          writingDirection: 'rtl',
                         }}
                       >
                         {label}
@@ -760,11 +752,8 @@ export default function TradeDetailScreen() {
               <SectionCard title="הערות" icon="document-text-outline" tokens={tokens}>
                 <Text
                   style={{
-                    fontSize: 14,
+                    ...journalBodyTextStyle,
                     color: tokens.colors.text.primary,
-                    textAlign: 'right',
-                    writingDirection: 'rtl',
-                    lineHeight: 22,
                   }}
                 >
                   {trade.notes}

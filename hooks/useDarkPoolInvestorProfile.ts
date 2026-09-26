@@ -1,6 +1,7 @@
 import { useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { appQueryKeys } from '../lib/appQueryKeys';
+import { PROFILE_QUERY_GC_MS, PROFILE_QUERY_STALE_MS } from '../lib/profileQueryCache';
 import {
   fetchInvestorProfile,
   type InvestorProfile,
@@ -20,9 +21,9 @@ export function useDarkPoolInvestorProfile(
       return fetchInvestorProfile(id, kind, ticker, force);
     },
     enabled: !!id,
-    // שרת ממומש (snapshot) — cache לקוח ארוך יותר
-    staleTime: 20 * 60 * 1000,
-    refetchOnMount: true,
+    staleTime: PROFILE_QUERY_STALE_MS,
+    gcTime: PROFILE_QUERY_GC_MS,
+    refetchOnMount: false,
   });
 
   const refetch = useCallback(async () => {
@@ -32,7 +33,7 @@ export function useDarkPoolInvestorProfile(
 
   return {
     profile: query.data ?? null,
-    loading: query.isLoading,
+    loading: query.isLoading && query.data == null,
     refreshing: query.isRefetching,
     error: query.error ? (query.error as Error).message : null,
     refetch,

@@ -1,22 +1,34 @@
-import type { PriceQuote } from '../../Portfolios/portfolioTypes';
+import type { HistoricalPricePoint, PriceQuote } from '../../Portfolios/portfolioTypes';
 import type { CongressFeedTrade } from '../../../services/darkpool/uwCongressFeedService';
-import { calcSinceTradePct } from './insiderFeedCalc';
+import {
+  pickDailyOpenOnDate,
+  resolveCongressSinceTradePct,
+} from './congressSinceTrade';
+
+export { resolveCongressSinceTradePct } from './congressSinceTrade';
 
 export interface CongressTradeFeedItem {
   trade: CongressFeedTrade;
   quote: PriceQuote | null;
+  /** % טיקר מאז יום העסקה — פתיחת יום הביצוע מול חי (PriceChange רק fallback). */
   sinceTradePct: number | null;
 }
 
 export function buildCongressFeedItem(
   trade: CongressFeedTrade,
-  quotes: Map<string, PriceQuote>
+  quotes: Map<string, PriceQuote>,
+  dailyBars?: Map<string, HistoricalPricePoint[]>
 ): CongressTradeFeedItem {
   const quote = quotes.get(trade.ticker.toUpperCase()) ?? null;
+  const bars = dailyBars?.get(trade.ticker.toUpperCase());
   return {
     trade,
     quote,
-    sinceTradePct: calcSinceTradePct(trade.price, quote?.price ?? null),
+    sinceTradePct: resolveCongressSinceTradePct({
+      vendorPriceChangePct: trade.price_change_pct,
+      openOnTransactionDate: pickDailyOpenOnDate(bars, trade.transaction_date),
+      currentPrice: quote?.price ?? null,
+    }),
   };
 }
 

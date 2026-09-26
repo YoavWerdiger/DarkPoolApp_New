@@ -10,6 +10,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import {
+  applyQuiverPoliticianImages,
   buildCongressTradeRows,
   buildCuratedCongressHistoryRows,
   buildCuratedExecutiveTradeRows,
@@ -172,6 +173,18 @@ serve(async (req) => {
     }
 
     const supabase = createServiceSupabase();
+    let politicians: QuiverPoliticiansCachePayload['politicians'] = [];
+    try {
+      const polSnap = await loadSnapshot<QuiverPoliticiansCachePayload>(
+        supabase,
+        QUIVER_POLITICIANS_CACHE_KEY,
+        48 * 60 * 60 * 1000
+      );
+      politicians = polSnap?.payload?.politicians ?? [];
+    } catch (e) {
+      console.warn('sync-congress-trades politician images', e);
+    }
+    rows = applyQuiverPoliticianImages(rows, politicians);
     const upserted = await upsertCongressTradesToDb(supabase, rows);
     curatedUpserted = curatedFetched ? upserted : 0;
     await supabase.from('dark_pool_uw_snapshots').upsert(

@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   Alert,
   ActivityIndicator,
 } from 'react-native';
@@ -14,8 +13,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import UICard from '../../components/ui/UICard';
 import { ChatSessionBackdrop } from '../../components/chat/ChatSessionBackdrop';
+import { PortfolioFormFooter } from './components/PortfolioFormFooter';
 import { PortfolioScreenHeader } from './components/PortfolioScreenHeader';
+import {
+  JOURNAL_LAYOUT,
+  journalCardBodyStyle,
+  journalCardSubtitleStyle,
+  journalCardTitleStyle,
+  journalPhysicalRightText,
+  PORTFOLIO_FORM,
+} from './portfolioLayout';
 import {
   listBrokerAccounts,
   linkBrokerAccountToPortfolio,
@@ -84,42 +93,34 @@ export default function SelectBrokerAccountScreen() {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        root: { flex: 1, backgroundColor: '#111111' },
+        root: { flex: 1, backgroundColor: 'transparent' },
         scroll: { flex: 1, backgroundColor: 'transparent' },
-        scrollContent: { padding: 16, paddingBottom: 80 },
-        sectionHint: {
-          fontSize: 12,
-          color: tokens.colors.text.tertiary,
-          textAlign: 'right',
-          writingDirection: 'rtl',
-          marginBottom: 14,
-          lineHeight: 18,
+        scrollContent: {
+          paddingHorizontal: PORTFOLIO_FORM.screenPadH,
+          paddingTop: 4,
+          paddingBottom: 80,
         },
-        emptyCard: {
-          padding: 24,
-          backgroundColor: 'rgba(255,255,255,0.04)',
-          borderRadius: 24,
-          borderWidth: 1.5,
-          borderColor: tokens.colors.border.subtle,
+        sectionHint: {
+          ...journalCardBodyStyle,
+          color: tokens.colors.text.secondary,
+          marginBottom: JOURNAL_LAYOUT.sectionHeaderToContent,
+        },
+        emptyInner: {
           alignItems: 'center',
+          paddingVertical: 8,
         },
         emptyText: {
-          fontSize: 13,
+          ...journalCardBodyStyle,
           color: tokens.colors.text.secondary,
           textAlign: 'center',
-          writingDirection: 'rtl',
           marginTop: 10,
-          lineHeight: 19,
         },
-        accountCard: {
-          padding: 16,
-          borderRadius: 24,
-          borderWidth: 1.5,
-          marginBottom: 12,
-          overflow: 'hidden',
+        accountInner: {
           flexDirection: 'row-reverse',
           alignItems: 'center',
           gap: 12,
+          paddingVertical: 14,
+          paddingHorizontal: 16,
         },
         accountIcon: {
           width: 44,
@@ -130,18 +131,13 @@ export default function SelectBrokerAccountScreen() {
         },
         accountInfo: { flex: 1 },
         accountName: {
-          fontSize: 15,
-          fontWeight: '800',
+          ...journalCardTitleStyle,
           color: tokens.colors.text.primary,
-          textAlign: 'right',
-          writingDirection: 'rtl',
         },
         accountMeta: {
-          fontSize: 12,
-          color: tokens.colors.text.tertiary,
-          textAlign: 'right',
-          writingDirection: 'rtl',
-          marginTop: 2,
+          ...journalCardSubtitleStyle,
+          color: tokens.colors.text.secondary,
+          marginTop: JOURNAL_LAYOUT.cardTitleToSubtitleGap,
         },
         accountChips: {
           flexDirection: 'row-reverse',
@@ -155,6 +151,7 @@ export default function SelectBrokerAccountScreen() {
           backgroundColor: 'rgba(255,255,255,0.07)',
         },
         chipText: {
+          ...journalPhysicalRightText,
           fontSize: 10,
           color: tokens.colors.text.secondary,
           fontWeight: '600',
@@ -170,25 +167,6 @@ export default function SelectBrokerAccountScreen() {
           color: tokens.colors.primary.main,
           fontWeight: '700',
         },
-        submitArea: {
-          paddingTop: 8,
-          paddingBottom: 0,
-        },
-        submit: {
-          flexDirection: 'row-reverse',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 8,
-          backgroundColor: tokens.colors.primary.main,
-          paddingVertical: 16,
-          borderRadius: 32,
-          ...tokens.shadows.md,
-        },
-        submitText: {
-          fontSize: 16,
-          fontWeight: '700',
-          color: tokens.colors.text.inverse,
-        },
       }),
     [tokens]
   );
@@ -197,26 +175,28 @@ export default function SelectBrokerAccountScreen() {
     const active = selectedId === acc.id;
     const alreadyLinked = !!acc.portfolio_id;
     return (
-      <TouchableOpacity
+      <UICard
         key={acc.id}
-        activeOpacity={alreadyLinked ? 1 : 0.85}
-        disabled={alreadyLinked || linkingId !== null}
-        onPress={() => {
-          if (selectedId !== acc.id) void HapticFeedback.selection();
-          setSelectedId(acc.id);
-        }}
+        variant="soft"
+        padding="none"
+        disableBlur
+        onPress={
+          alreadyLinked || linkingId !== null
+            ? undefined
+            : () => {
+                if (selectedId !== acc.id) void HapticFeedback.selection();
+                setSelectedId(acc.id);
+              }
+        }
         style={[
-          styles.accountCard,
-          {
-            borderColor: active
-              ? tokens.colors.primary.main
-              : tokens.colors.border.subtle,
-            backgroundColor: active
-              ? 'rgba(0, 200, 5, 0.08)'
-              : 'rgba(255,255,255,0.04)',
-            opacity: alreadyLinked ? 0.55 : 1,
+          { marginBottom: JOURNAL_LAYOUT.cardStackGap, opacity: alreadyLinked ? 0.55 : 1 },
+          active && {
+            borderWidth: 1,
+            borderColor: `${tokens.colors.primary.main}44`,
+            backgroundColor: tokens.colors.primary.subtle,
           },
         ]}
+        contentContainerStyle={styles.accountInner}
       >
         <View
           style={[
@@ -224,7 +204,7 @@ export default function SelectBrokerAccountScreen() {
             {
               backgroundColor: active
                 ? 'rgba(0, 200, 5, 0.20)'
-                : 'rgba(255,255,255,0.07)',
+                : tokens.colors.background.tertiary,
             },
           ]}
         >
@@ -264,7 +244,7 @@ export default function SelectBrokerAccountScreen() {
             color={active ? tokens.colors.primary.main : tokens.colors.text.tertiary}
           />
         ) : null}
-      </TouchableOpacity>
+      </UICard>
     );
   };
 
@@ -292,40 +272,29 @@ export default function SelectBrokerAccountScreen() {
               <ActivityIndicator color={tokens.colors.primary.main} />
             </View>
           ) : accounts.length === 0 ? (
-            <View style={styles.emptyCard}>
+            <UICard variant="soft" padding="md" disableBlur contentContainerStyle={styles.emptyInner}>
               <Ionicons name="alert-circle" size={32} color={tokens.colors.text.tertiary} />
               <Text style={styles.emptyText}>
                 לא נמצאו חשבונות trading פעילים בחשבון Colmex Pro שלך.
               </Text>
-            </View>
+            </UICard>
           ) : (
             accounts.map(renderAccountCard)
           )}
 
-          {selectedId && !accounts.find((a) => a.id === selectedId)?.portfolio_id ? (
-            <View style={styles.submitArea}>
-              <TouchableOpacity
-                style={[styles.submit, linkingId !== null && { opacity: 0.7 }]}
-                onPress={() => {
-                  void HapticFeedback.medium();
-                  const acc = accounts.find((a) => a.id === selectedId);
-                  if (acc) void handleLink(acc);
-                }}
-                disabled={linkingId !== null}
-                activeOpacity={0.88}
-              >
-                {linkingId !== null ? (
-                  <ActivityIndicator color={tokens.colors.text.inverse} />
-                ) : (
-                  <Ionicons name="checkmark" size={22} color={tokens.colors.text.inverse} />
-                )}
-                <Text style={styles.submitText}>
-                  {linkingId !== null ? 'יוצר תיק…' : 'צור תיק מסונכרן'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          ) : null}
         </ScrollView>
+        {selectedId && !accounts.find((a) => a.id === selectedId)?.portfolio_id ? (
+          <PortfolioFormFooter
+            title={linkingId !== null ? 'יוצר תיק…' : 'צור תיק מסונכרן'}
+            icon="checkmark"
+            loading={linkingId !== null}
+            disabled={linkingId !== null}
+            onPress={() => {
+              const acc = accounts.find((a) => a.id === selectedId);
+              if (acc) void handleLink(acc);
+            }}
+          />
+        ) : null}
       </SafeAreaView>
     </View>
   );

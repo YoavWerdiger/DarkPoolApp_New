@@ -30,6 +30,12 @@ import type { Portfolio, PortfolioSummary } from './portfolioTypes';
 import { CommunityPortfolioLeaderCard } from './components/CommunityPortfolioLeaderCard';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import {
+  JOURNAL_LAYOUT,
+  journalBodyTextStyle,
+  journalRow,
+  journalSectionTitleStyle,
+} from '../Journal/journalLayout';
 
 type Nav = NativeStackNavigationProp<PortfoliosStackParamList, 'PortfoliosHub'>;
 
@@ -215,12 +221,12 @@ export default function CommunityPortfoliosTab() {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        root: { flex: 1 },
+        root: { flex: 1, direction: 'rtl' },
         list: {
           paddingHorizontal: pad,
           paddingTop: 4,
           paddingBottom: mainTabsHeight + 28,
-          gap: 14,
+          gap: JOURNAL_LAYOUT.cardStackGap,
         },
         empty: {
           flex: 1,
@@ -230,17 +236,15 @@ export default function CommunityPortfoliosTab() {
           paddingBottom: mainTabsHeight + 40,
         },
         emptyTitle: {
-          fontSize: 17,
-          fontWeight: '700',
+          ...journalSectionTitleStyle,
           color: tokens.colors.text.primary,
           textAlign: 'center',
         },
         emptySub: {
-          marginTop: 8,
-          fontSize: 14,
-          color: tokens.colors.text.tertiary,
+          marginTop: JOURNAL_LAYOUT.titleSubtitleGap,
+          ...journalBodyTextStyle,
+          color: tokens.colors.text.secondary,
           textAlign: 'center',
-          lineHeight: 20,
         },
         searchHeader: {
           paddingHorizontal: pad,
@@ -290,14 +294,12 @@ export default function CommunityPortfoliosTab() {
           paddingBottom: 24,
         },
         sortSheetTitle: {
-          fontSize: 18,
-          fontWeight: '700',
+          ...journalSectionTitleStyle,
           color: tokens.colors.text.primary,
-          textAlign: 'right',
-          marginBottom: 12,
+          marginBottom: JOURNAL_LAYOUT.cardTitleToBodyGap,
         },
         sortRow: {
-          flexDirection: 'row-reverse',
+          ...journalRow,
           alignItems: 'center',
           paddingVertical: 14,
           paddingHorizontal: 14,
@@ -311,10 +313,9 @@ export default function CommunityPortfoliosTab() {
         },
         sortRowText: {
           flex: 1,
-          fontSize: 15,
+          ...journalBodyTextStyle,
           fontWeight: '600',
           color: tokens.colors.text.primary,
-          textAlign: 'right',
         },
         sortRowTextActive: {
           color: tokens.colors.primary.main,
@@ -374,7 +375,7 @@ export default function CommunityPortfoliosTab() {
             variant="blur"
             glassIntensity="subtle"
             padding="none"
-            style={{ borderRadius: 22, overflow: 'hidden' }}
+            style={{ borderRadius: tokens.borderRadius.search, overflow: 'hidden' }}
           >
             <View style={styles.searchInner}>
               {hasQuery ? (

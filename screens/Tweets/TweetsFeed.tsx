@@ -20,7 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { legacyAlert } from '../../utils/appDialog';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import UICard from '../../components/ui/UICard';
-import { CardSkeleton } from '../../components/ui/SkeletonLoader';
+import { TweetCardSkeleton } from './TweetCardSkeleton';
 import { useAuth } from '../../context/AuthContext';
 import {
   deleteCommunityPost,
@@ -42,14 +42,12 @@ import { openUserProfile } from '../../lib/openUserProfile';
 import FollowUserButton from '../../components/profile/FollowUserButton';
 import UserAvatarButton from '../../components/profile/UserAvatarButton';
 import UserNameButton from '../../components/profile/UserNameButton';
-import { MarketsEmbedSwitcher } from '../Markets/components/MarketsEmbedSwitcher';
-import type { SegmentedOption } from '../Markets/components/MarketsSegmentedControl';
 import CommunityPostImage from './CommunityPostImage';
 
 const PAGE_SIZE = 30;
 const DIVIDER = 'rgba(255, 255, 255, 0.12)';
 
-const FEED_TABS: SegmentedOption<CommunityFeedMode>[] = [
+const FEED_TABS: { id: CommunityFeedMode; label: string }[] = [
   { id: 'for_you', label: 'בשבילך' },
   { id: 'following', label: 'עוקבים' },
 ];
@@ -106,6 +104,7 @@ function PostCard({
       <UICard
         variant="blur"
         padding="none"
+        disableBlur
         style={{
           borderRadius: tokens.borderRadius['2xl'],
           overflow: 'hidden',
@@ -312,7 +311,7 @@ function PostCard({
               paddingHorizontal: 12,
               height: 36,
               borderRadius: tokens.borderRadius.button,
-              backgroundColor: '#262626',
+              backgroundColor: tokens.colors.glass.card.bg,
             }}
             accessibilityLabel="תגובות"
           >
@@ -342,7 +341,7 @@ function PostCard({
               borderRadius: tokens.borderRadius.full,
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: '#262626',
+              backgroundColor: tokens.colors.glass.card.bg,
             }}
             accessibilityLabel="שתף"
           >
@@ -370,19 +369,60 @@ function FeedTabToggle({
 
   return (
     <View
+      accessibilityRole="tablist"
       style={{
+        flexDirection: 'row-reverse',
         paddingHorizontal: pad,
-        paddingTop: tokens.spacing.xs,
         paddingBottom: tokens.spacing.md,
         backgroundColor: 'transparent',
       }}
     >
-      <MarketsEmbedSwitcher
-        options={FEED_TABS}
-        value={value}
-        onChange={onChange}
-        accessibilityGroupLabel="פיד ציוצים"
-      />
+      {FEED_TABS.map((tab) => {
+        const active = value === tab.id;
+        return (
+          <TouchableOpacity
+            key={tab.id}
+            onPress={() => {
+              if (!active) void HapticFeedback.selection();
+              onChange(tab.id);
+            }}
+            activeOpacity={0.7}
+            accessibilityRole="tab"
+            accessibilityLabel={`פיד ציוצים: ${tab.label}`}
+            accessibilityState={{ selected: active }}
+            style={{
+              flex: 1,
+              alignItems: 'center',
+              paddingTop: tokens.spacing.sm,
+              backgroundColor: 'transparent',
+            }}
+          >
+            <Text
+              style={{
+                fontSize: tokens.typography.body.size,
+                fontWeight: active
+                  ? (tokens.typography.fontWeight.bold as '700')
+                  : (tokens.typography.fontWeight.medium as '500'),
+                color: active
+                  ? tokens.colors.text.primary
+                  : tokens.colors.text.secondary,
+                backgroundColor: 'transparent',
+              }}
+            >
+              {tab.label}
+            </Text>
+            <View
+              style={{
+                marginTop: 8,
+                height: 2,
+                alignSelf: 'stretch',
+                marginHorizontal: 12,
+                backgroundColor: active ? tokens.colors.text.primary : 'transparent',
+              }}
+            />
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }
@@ -649,9 +689,9 @@ export default function TweetsFeed({ handleRef }: TweetsFeedProps) {
     return (
       <View style={{ flex: 1 }}>
         <FeedTabToggle value={feedMode} onChange={handleFeedModeChange} />
-        <View style={{ paddingHorizontal: 20, paddingTop: 12 }}>
+        <View>
           {Array.from({ length: 5 }).map((_, i) => (
-            <CardSkeleton key={i} delay={i * 70} />
+            <TweetCardSkeleton key={i} delay={i * 70} />
           ))}
         </View>
       </View>
@@ -726,8 +766,8 @@ export default function TweetsFeed({ handleRef }: TweetsFeedProps) {
           }
           ListFooterComponent={
             loadingMore ? (
-              <View style={{ paddingVertical: 20, paddingHorizontal: 20 }}>
-                <CardSkeleton delay={0} />
+              <View style={{ paddingVertical: 20 }}>
+                <TweetCardSkeleton delay={0} />
               </View>
             ) : (
               <View style={{ height: 24 }} />

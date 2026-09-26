@@ -228,7 +228,7 @@ export default function SplitsTab() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: DesignTokens.colors.background.primary }}>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent' }}>
         <ActivityIndicator size="large" color="DesignTokens.colors.success.main" />
         <Text style={{ fontSize: 14, color: DesignTokens.colors.text.secondary, marginTop: 16 }}>
           טוען פיצולים...
@@ -238,7 +238,7 @@ export default function SplitsTab() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}>
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <FlatList
         data={splits}
         keyExtractor={(item) => item.id}

@@ -2,15 +2,17 @@ import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from './DesignTokens';
+import { APP_LAYOUT } from './appLayout';
+import { appScreenTitleStyle, appScreenSubtitleStyle, APP_TYPE } from './appType';
 import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from './DayNavBlurButton';
 
 /** כמו מסך שווקים (בית) / רשימת צ׳אטים — מרווח אופקי לכותרת ול־section */
-export const MAIN_SCREEN_HEADER_HP = 20;
+export const MAIN_SCREEN_HEADER_HP = APP_LAYOUT.screenPaddingHorizontal;
 
-/** טיפוגרפיית כותרת שורש — גודל/משקל לפני האיחוד (לא title2 הצר) */
-export const MAIN_SCREEN_HEADER_TITLE_SIZE = 24;
-export const MAIN_SCREEN_HEADER_TITLE_WEIGHT = '800' as const;
-export const MAIN_SCREEN_HEADER_TITLE_LINE_HEIGHT = 30;
+/** @deprecated — השתמש ב-APP_TYPE.screenTitle / appScreenTitleStyle */
+export const MAIN_SCREEN_HEADER_TITLE_SIZE = APP_TYPE.screenTitle.fontSize;
+export const MAIN_SCREEN_HEADER_TITLE_WEIGHT = APP_TYPE.screenTitle.fontWeight;
+export const MAIN_SCREEN_HEADER_TITLE_LINE_HEIGHT = APP_TYPE.screenTitle.lineHeight;
 
 export type MainDrawerScreenHeaderProps = {
   title: string;
@@ -30,13 +32,15 @@ export type MainDrawerScreenHeaderProps = {
   rightAccessory?: React.ReactNode;
   /**
    * מסך בתוך עץ `direction: 'rtl'` (למשל Dark Pool) — האפל ב-LTR גלובלי,
-   * אז הכותרת משתמשת ב-row במקום row-reverse.
+   * אז שורת הכפתורים משתמשת ב-row במקום row-reverse.
+   * כותרת המסך תמיד ממורכזת — inRtlTree לא משנה textAlign.
    */
   inRtlTree?: boolean;
 };
 
 /**
  * שורת תפריט + כותרת ממורכזת כמו מסכי שורש (שווקים, חדשות, צ׳אטים).
+ * כותרת (וכותרת משנה בכרום ההדר) = center. טקסט גוף במסך = hebrewText.
  */
 export function MainDrawerScreenHeader({
   title,
@@ -54,31 +58,27 @@ export function MainDrawerScreenHeader({
   const styles = useMemo(() => createStyles(tokens, inRtlTree), [tokens, inRtlTree]);
   const row = inRtlTree ? styles.rowLtrInRtlTree : styles.rowAppLtr;
 
-  const subtitleEl = subtitle ? (
+  const subtitleNode = subtitle ? (
     onSubtitlePress ? (
       <Pressable
         onPress={onSubtitlePress}
         hitSlop={8}
         accessibilityRole="button"
         accessibilityLabel={subtitle}
-        style={styles.subtitleRow}
       >
         <Text style={styles.appHeaderSubtitle} numberOfLines={2}>
           {subtitle}
         </Text>
       </Pressable>
     ) : (
-      <View style={styles.subtitleRow}>
-        <Text style={styles.appHeaderSubtitle} numberOfLines={2}>
-          {subtitle}
-        </Text>
-      </View>
+      <Text style={styles.appHeaderSubtitle} numberOfLines={2}>
+        {subtitle}
+      </Text>
     )
   ) : null;
 
   return (
     <View style={style}>
-      {/* שורת כותרת בלבד — אותו גובה כמו חדשות/קהילה גם כשיש subtitle מתחת */}
       <View style={[styles.appHeader, row]}>
         <View style={styles.appHeaderActionsMenu}>
           <DayNavBlurButton
@@ -100,12 +100,12 @@ export function MainDrawerScreenHeader({
               {title}
             </Text>
           )}
+          {subtitleNode}
         </View>
         <View style={styles.appHeaderActionsEnd} pointerEvents="box-none">
           {rightAccessory ?? <View style={styles.headerActionSpacer} />}
         </View>
       </View>
-      {subtitleEl}
       {section != null ? (
         <View style={[styles.sectionPicker, sectionContainerStyle]}>{section}</View>
       ) : null}
@@ -130,10 +130,9 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, inRtlTree: boo
     },
     appHeader: {
       alignItems: 'center',
-      // SafeArea כבר דואג למרווח מה-notch; שומרים רק מרווח פנימי עדין לשורת ההדר.
-      paddingTop: 6,
-      paddingBottom: 10,
-      gap: 8,
+      paddingTop: 8,
+      paddingBottom: 12,
+      gap: APP_LAYOUT.stackGapSmall,
     },
     /** תפריט — מרווח נפרד מקצה המסך */
     appHeaderActionsMenu: {
@@ -157,37 +156,21 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, inRtlTree: boo
       alignItems: 'stretch',
       justifyContent: 'center',
       paddingHorizontal: 4,
-      minHeight: 48,
+      minHeight: 44,
     },
     appHeaderTitle: {
-      fontSize: MAIN_SCREEN_HEADER_TITLE_SIZE,
-      fontWeight: MAIN_SCREEN_HEADER_TITLE_WEIGHT,
+      ...appScreenTitleStyle,
       color: tokens.colors.text.primary,
-      letterSpacing: -0.35,
-      lineHeight: MAIN_SCREEN_HEADER_TITLE_LINE_HEIGHT,
-      textAlign: inRtlTree ? 'right' : 'center',
-      writingDirection: 'rtl',
-    },
-    /** מתחת לשורת הכותרת — לא בתוך titleBlock (מונע הזזת כותרת/כפתורים למעלה) */
-    subtitleRow: {
-      alignItems: inRtlTree ? 'flex-end' : 'center',
-      justifyContent: 'center',
-      paddingHorizontal: MAIN_SCREEN_HEADER_HP,
-      marginTop: -4,
-      paddingBottom: 12,
+      width: '100%',
     },
     appHeaderSubtitle: {
-      fontSize: 13,
-      fontWeight: '500' as const,
+      ...appScreenSubtitleStyle,
       color: tokens.colors.text.secondary,
-      textAlign: inRtlTree ? 'right' : 'center',
-      writingDirection: 'rtl',
-      lineHeight: 17,
     },
     sectionPicker: {
       paddingHorizontal: MAIN_SCREEN_HEADER_HP,
-      paddingTop: 8,
-      paddingBottom: 10,
+      paddingTop: APP_LAYOUT.stackGapTight,
+      paddingBottom: APP_LAYOUT.componentGap,
     },
   });
 }

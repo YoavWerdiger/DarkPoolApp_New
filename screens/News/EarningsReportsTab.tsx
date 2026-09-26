@@ -1,12 +1,13 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { View, Text, FlatList, RefreshControl, ActivityIndicator, Pressable, TouchableOpacity, ScrollView, Dimensions, Animated, StyleSheet, Platform } from 'react-native';
+import { View, Text, FlatList, RefreshControl, Pressable, TouchableOpacity, ScrollView, Dimensions, Animated, StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import { Clock, Sun, Moon, ChevronUp } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { EarningsReportsListSkeleton } from '../../components/ui/SkeletonLoader';
 import EarningsService, { EarningsReport } from '../../services/earningsService';
 import { supabase } from '../../lib/supabase';
 import { queryClient } from '../../lib/queryClient';
@@ -19,6 +20,11 @@ import UICard from '../../components/ui/UICard';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import { TickerLogo } from '../../components/ui/TickerLogo';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import {
+  APP_TYPE,
+  appPhysicalRightText,
+  appSectionTitleStyle,
+} from '../../components/ui/appType';
 import EarningsWeeklyView, { WeekDay, getSymbolDisplay as getWeeklySymbolDisplay } from './EarningsWeeklyView';
 
 export type EarningsViewMode = 'daily' | 'weekly';
@@ -132,6 +138,10 @@ const EarningsReportCard: React.FC<{
 
   const screenPad = DesignTokens.layout?.screenPadding ?? 20;
   const cardRadius = DesignTokens.borderRadius['2xl'];
+  /** פס surprise — inset אנכי כדי שלא ייחתך ע״י corner radius / overflow של מעטפת הכרטיס */
+  const accentWidth = 3;
+  const accentInsetY = 10;
+  const accentGap = 12;
   const companyLabel = (report.company_name || report.asset_name || '').trim();
   // חשוב: לא `{value && <View/>}` כש-value יכול להיות 0 — ב-RN זה מרנדר "0" כטקסט חשוף.
   const hasEpsBlock =
@@ -145,27 +155,31 @@ const EarningsReportCard: React.FC<{
       <UICard
         variant="blur"
         padding="lg"
+        disableBlur
         style={{
-          flexDirection: 'row',
-          alignItems: 'flex-start',
-          overflow: 'hidden',
           borderRadius: cardRadius,
         }}
+        contentContainerStyle={{
+          // מעטפת UICard גוזרת עם borderRadius מלא — חוסם clipping של לוגו/פס
+          overflow: 'visible',
+        }}
       >
-        {/* פס צבע משמאל */}
+        {/* פס צבע משמאל (surprise) — inset, לא flush לקצה המעוגל */}
         <View
+          pointerEvents="none"
           style={{
             position: 'absolute',
             left: 0,
-            top: 0,
-            bottom: 0,
-            width: 3,
+            top: accentInsetY,
+            bottom: accentInsetY,
+            width: accentWidth,
+            borderRadius: accentWidth,
             backgroundColor: getSurpriseColor(report.percent),
           }}
         />
 
-        {/* תוכן משמאל */}
-        <View style={{ flex: 1, alignItems: 'flex-start', marginLeft: 16 }}>
+        {/* תוכן — ריווח ברור מהפס כדי שהלוגו לא ייחתך / יידבק */}
+        <View style={{ flex: 1, alignItems: 'flex-start', paddingLeft: accentWidth + accentGap }}>
         {/* שורה עליונה - לוגו + טיקר + badge לפני/אחרי מסחר */}
         <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', width: '100%', marginBottom: 8 }}>
           {/* לוגו + טיקר + שם חברה */}
@@ -175,10 +189,10 @@ const EarningsReportCard: React.FC<{
             </View>
             <View style={{ flex: 1, justifyContent: 'flex-start' }}>
               <Text style={{ 
-                fontSize: 16, 
+                fontSize: APP_TYPE.body.fontSize, 
                 fontWeight: '700', 
+                lineHeight: APP_TYPE.body.lineHeight,
                 color: DesignTokens.colors.text.primary,
-                lineHeight: 20
               }}>
                 {getSymbolDisplay(report.code)}
               </Text>
@@ -187,10 +201,10 @@ const EarningsReportCard: React.FC<{
                   numberOfLines={1}
                   ellipsizeMode="tail"
                   style={{ 
-                    fontSize: 11, 
+                    fontSize: APP_TYPE.caption2.fontSize, 
                     fontWeight: '500', 
                     color: DesignTokens.colors.text.secondary,
-                    lineHeight: 14,
+                    lineHeight: APP_TYPE.caption2.lineHeight,
                     marginTop: 1
                   }}>
                   {companyLabel}
@@ -266,7 +280,7 @@ const EarningsReportCard: React.FC<{
                       
                       return (
                         <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' }}>
-                          <Text style={{ fontSize: 9, color: DesignTokens.colors.text.tertiary, marginRight: 4, lineHeight: 20 }}>
+                          <Text style={{ fontSize: APP_TYPE.caption2.fontSize, color: DesignTokens.colors.text.tertiary, marginRight: 4, lineHeight: APP_TYPE.caption2.lineHeight }}>
                             (תוצאה)
                           </Text>
                           {surprisePercent !== null && surprisePercent !== undefined ? (
@@ -274,7 +288,7 @@ const EarningsReportCard: React.FC<{
                               {surprisePercent > 0 ? '+' : ''}{surprisePercent.toFixed(1)}%
                             </Text>
                           ) : null}
-                          <Text style={{ fontSize: 16, fontWeight: '700', color: getSurpriseColor(surprisePercent ?? null), textAlign: 'center', lineHeight: 20 }}>
+                          <Text style={{ fontSize: APP_TYPE.body.fontSize, fontWeight: '700', color: getSurpriseColor(surprisePercent ?? null), textAlign: 'center', lineHeight: APP_TYPE.body.lineHeight }}>
                             {formatRevenue(report.revenue_actual)}
                           </Text>
                         </View>
@@ -282,10 +296,10 @@ const EarningsReportCard: React.FC<{
                     })()
                   ) : (report.revenue_estimate || report.revenue_estimate_avg) ? (
                     <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' }}>
-                      <Text style={{ fontSize: 9, color: DesignTokens.colors.text.tertiary, marginRight: 4, lineHeight: 20 }}>
+                      <Text style={{ fontSize: APP_TYPE.caption2.fontSize, color: DesignTokens.colors.text.tertiary, marginRight: 4, lineHeight: APP_TYPE.caption2.lineHeight }}>
                         (תחזית)
                       </Text>
-                      <Text style={{ fontSize: 16, fontWeight: '700', color: DesignTokens.colors.text.primary, textAlign: 'center', lineHeight: 20 }}>
+                      <Text style={{ fontSize: APP_TYPE.body.fontSize, fontWeight: '700', color: DesignTokens.colors.text.primary, textAlign: 'center', lineHeight: APP_TYPE.body.lineHeight }}>
                         {formatRevenue(report.revenue_estimate || report.revenue_estimate_avg || 0)}
                       </Text>
                     </View>
@@ -326,7 +340,7 @@ const EarningsReportCard: React.FC<{
                       
                       return (
                         <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' }}>
-                          <Text style={{ fontSize: 9, color: DesignTokens.colors.text.tertiary, marginRight: 4, lineHeight: 20 }}>
+                          <Text style={{ fontSize: APP_TYPE.caption2.fontSize, color: DesignTokens.colors.text.tertiary, marginRight: 4, lineHeight: APP_TYPE.caption2.lineHeight }}>
                             (תוצאה)
                           </Text>
                           {surprisePercent !== null ? (
@@ -334,7 +348,7 @@ const EarningsReportCard: React.FC<{
                               {surprisePercent > 0 ? '+' : ''}{surprisePercent.toFixed(1)}%
                             </Text>
                           ) : null}
-                          <Text style={{ fontSize: 16, fontWeight: '700', color: getSurpriseColor(surprisePercent), textAlign: 'center', lineHeight: 20 }}>
+                          <Text style={{ fontSize: APP_TYPE.body.fontSize, fontWeight: '700', color: getSurpriseColor(surprisePercent), textAlign: 'center', lineHeight: APP_TYPE.body.lineHeight }}>
                             ${report.actual.toFixed(2)}
                           </Text>
                         </View>
@@ -342,10 +356,10 @@ const EarningsReportCard: React.FC<{
                     })()
                   ) : (report.estimate || report.eps_estimate) ? (
                     <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' }}>
-                      <Text style={{ fontSize: 9, color: DesignTokens.colors.text.tertiary, marginRight: 4, lineHeight: 20 }}>
+                      <Text style={{ fontSize: APP_TYPE.caption2.fontSize, color: DesignTokens.colors.text.tertiary, marginRight: 4, lineHeight: APP_TYPE.caption2.lineHeight }}>
                         (תחזית)
                       </Text>
-                      <Text style={{ fontSize: 16, fontWeight: '700', color: DesignTokens.colors.text.primary, textAlign: 'center', lineHeight: 20 }}>
+                      <Text style={{ fontSize: APP_TYPE.body.fontSize, fontWeight: '700', color: DesignTokens.colors.text.primary, textAlign: 'center', lineHeight: APP_TYPE.body.lineHeight }}>
                         ${typeof report.estimate === 'number' ? report.estimate.toFixed(2) :
                           typeof report.eps_estimate === 'number' ? report.eps_estimate.toFixed(2) :
                           typeof report.eps_estimate === 'string' ? parseFloat(report.eps_estimate).toFixed(2) : '0.00'}
@@ -625,8 +639,9 @@ export default function EarningsReportsTab({
           ...DesignTokens.shadows.md,
         },
         btnText: {
-          fontSize: 16,
+          fontSize: APP_TYPE.body.fontSize,
           fontWeight: '700',
+          lineHeight: APP_TYPE.body.lineHeight,
           color: DesignTokens.colors.text.inverse,
         },
       }),
@@ -1098,9 +1113,9 @@ export default function EarningsReportsTab({
           <View style={{ alignItems: 'center', flex: 1, paddingHorizontal: 10 }}>
             <Text
               style={{
-                fontSize: 16,
+                fontSize: APP_TYPE.body.fontSize,
                 fontWeight: '600',
-                lineHeight: 21,
+                lineHeight: APP_TYPE.body.lineHeight,
                 color: DesignTokens.colors.text.primary,
                 textAlign: 'center',
               }}
@@ -1222,22 +1237,23 @@ export default function EarningsReportsTab({
         </View>
         <Text 
           style={{ 
-            fontSize: 22, 
-            fontWeight: '700', 
+            fontSize: APP_TYPE.sectionTitle.fontSize, 
+            fontWeight: APP_TYPE.sectionTitle.fontWeight, 
+            lineHeight: APP_TYPE.sectionTitle.lineHeight,
             marginBottom: 12, 
             textAlign: 'center',
-            color: DesignTokens.colors.text.primary 
+            color: DesignTokens.colors.text.primary, 
           }}
         >
           {isToday ? 'אין דיווחי תוצאות היום' : `אין דיווחי תוצאות ל-${dateStr}`}
         </Text>
         <Text 
           style={{ 
-            fontSize: 15, 
+            fontSize: APP_TYPE.body.fontSize, 
+            lineHeight: APP_TYPE.body.lineHeight,
             marginBottom: 8, 
             textAlign: 'center',
             color: DesignTokens.colors.text.secondary,
-            lineHeight: 20
           }}
         >
           {isToday 
@@ -1283,17 +1299,15 @@ export default function EarningsReportsTab({
     );
   };
 
-  if (loading) {
+  const hasCachedReports = Object.keys(reportsByDate).length > 0;
+  if (loading && !hasCachedReports) {
     return (
-      <View className="flex-1 justify-center items-center">
-                <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-                <Text 
-          className="mt-4 text-lg"
-                  style={{ color: DesignTokens.colors.text.secondary }}
-                >
-                  טוען דיווחי תוצאות...
-                </Text>
-              </View>
+      <View style={{ flex: 1 }}>
+        {viewMode === 'daily' ? renderDateNavigator() : null}
+        <View style={{ flex: 1, paddingTop: LIST_CONTENT_PADDING_TOP }}>
+          <EarningsReportsListSkeleton />
+        </View>
+      </View>
     );
   }
 
@@ -1824,7 +1838,12 @@ const EarningsDetailSheet: React.FC<EarningsDetailSheetProps> = ({ visible, repo
           </UICard>
 
           {(hasEpsEstimate || hasEpsActual) ? (
-            <UICard variant="blur" padding="md" style={sheetStyles.sectionCard}>
+            <UICard
+              variant="blur"
+              padding="none"
+              style={sheetStyles.sectionCard}
+              contentContainerStyle={sheetStyles.sectionCardContent}
+            >
               <Text style={[sheetStyles.sectionTitle, { color: DesignTokens.colors.text.secondary }]}>
                 רווחיות למניה (EPS)
               </Text>
@@ -1868,7 +1887,12 @@ const EarningsDetailSheet: React.FC<EarningsDetailSheetProps> = ({ visible, repo
           ) : null}
 
           {(hasRevenueEstimate || hasRevenueActual) ? (
-            <UICard variant="blur" padding="md" style={sheetStyles.sectionCard}>
+            <UICard
+              variant="blur"
+              padding="none"
+              style={sheetStyles.sectionCard}
+              contentContainerStyle={sheetStyles.sectionCardContent}
+            >
               <Text style={[sheetStyles.sectionTitle, { color: DesignTokens.colors.text.secondary }]}>
                 הכנסות (Revenue)
               </Text>
@@ -1911,7 +1935,12 @@ const EarningsDetailSheet: React.FC<EarningsDetailSheetProps> = ({ visible, repo
             </UICard>
           ) : null}
 
-          <UICard variant="blur" padding="md" style={sheetStyles.sectionCard}>
+          <UICard
+            variant="blur"
+            padding="none"
+            style={sheetStyles.sectionCard}
+            contentContainerStyle={sheetStyles.sectionCardContent}
+          >
             <SheetMetaRow
               label="תאריך דיווח"
               value={new Date(report.report_date).toLocaleDateString('he-IL')}
@@ -1970,10 +1999,7 @@ const EarningsDetailSheet: React.FC<EarningsDetailSheetProps> = ({ visible, repo
   );
 };
 
-const rtlSheetText = {
-  writingDirection: 'rtl' as const,
-  textAlign: 'left' as const,
-};
+const rtlSheetText = appPhysicalRightText;
 
 function MetricColumn({
   label,
@@ -2062,9 +2088,7 @@ function createEarningsDetailSheetStyles(tokens: ReturnType<typeof useDesignToke
       alignItems: 'flex-start',
     },
     ticker: {
-      fontSize: 18,
-      fontWeight: '800',
-      ...rtlSheetText,
+      ...appSectionTitleStyle,
     },
     companyName: {
       marginTop: 2,
@@ -2105,13 +2129,19 @@ function createEarningsDetailSheetStyles(tokens: ReturnType<typeof useDesignToke
     },
     sectionCard: {
       borderRadius: 24,
-      overflow: 'hidden',
+    },
+    /**
+     * Padding על שכבת התוכן (לא על המעטפת) + overflow visible —
+     * UICard גוזר עם overflow:hidden + borderRadius מלא וחותך ערכי metric גדולים ב־RTL.
+     */
+    sectionCardContent: {
+      overflow: 'visible',
+      paddingHorizontal: tokens.spacing.base,
+      paddingVertical: tokens.spacing.base,
     },
     sectionTitle: {
-      fontSize: 13,
-      fontWeight: '700',
-      marginBottom: 12,
-      ...rtlSheetText,
+      ...appSectionTitleStyle,
+      marginBottom: tokens.spacing.md,
     },
     metricRow: {
       flexDirection: 'row',
@@ -2119,8 +2149,10 @@ function createEarningsDetailSheetStyles(tokens: ReturnType<typeof useDesignToke
     },
     metricCol: {
       flex: 1,
+      minWidth: 0,
       alignItems: 'flex-start',
-      gap: 4,
+      gap: tokens.spacing.xs,
+      paddingStart: tokens.spacing.xs,
     },
     metricLabel: {
       fontSize: 11,
@@ -2130,28 +2162,32 @@ function createEarningsDetailSheetStyles(tokens: ReturnType<typeof useDesignToke
     metricValueRow: {
       flexDirection: 'row',
       alignItems: 'baseline',
-      gap: 6,
+      gap: tokens.spacing.sm,
       flexWrap: 'wrap',
+      maxWidth: '100%',
     },
     metricValue: {
-      fontSize: 22,
-      fontWeight: '800',
+      fontSize: APP_TYPE.sectionTitle.fontSize,
+      fontWeight: APP_TYPE.sectionTitle.fontWeight,
+      lineHeight: APP_TYPE.sectionTitle.lineHeight,
+      flexShrink: 1,
     },
     metricSubValue: {
       fontSize: 12,
       fontWeight: '700',
+      flexShrink: 1,
     },
     metricDivider: {
       width: StyleSheet.hairlineWidth,
       backgroundColor: SHEET_BORDER,
-      marginHorizontal: 10,
+      marginHorizontal: tokens.spacing.md,
     },
     metaRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingVertical: 8,
-      gap: 12,
+      paddingVertical: tokens.spacing.sm,
+      gap: tokens.spacing.md,
     },
     metaRowBorder: {
       borderBottomWidth: StyleSheet.hairlineWidth,
@@ -2166,6 +2202,7 @@ function createEarningsDetailSheetStyles(tokens: ReturnType<typeof useDesignToke
       fontSize: 13,
       fontWeight: '700',
       flex: 1,
+      minWidth: 0,
     },
   });
 }

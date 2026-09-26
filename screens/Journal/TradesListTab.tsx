@@ -18,8 +18,18 @@ import type { Trade } from './tradeTypes';
 import { TradeListCard, createTradeCardStyles } from './TradeListCard';
 import type { JournalStackParamList } from '../../navigation/JournalStack';
 import UICard from '../../components/ui/UICard';
+import { DayDividerPill } from '../../components/ui/DayDividerPill';
 import { queryClient } from '../../lib/queryClient';
 import { appQueryKeys } from '../../lib/appQueryKeys';
+import {
+  JOURNAL_TYPE,
+  journalBodyTextStyle,
+  journalCaption2Style,
+  journalPhysicalRightText,
+  journalRow,
+  journalRtlContent,
+  journalSectionTitleStyle,
+} from './journalLayout';
 
 export type { Trade } from './tradeTypes';
 
@@ -230,38 +240,38 @@ export default function TradesListTab() {
           padding="md"
           style={{ borderRadius: 16, marginBottom: 12 }}
         >
-          <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between' }}>
+          <View style={{ ...journalRow, justifyContent: 'space-between' }}>
             <View style={{ alignItems: 'center' }}>
-              <Text style={{ fontSize: 11, color: DesignTokens.colors.text.tertiary, marginBottom: 3 }}>
+              <Text style={{ ...journalCaption2Style, color: DesignTokens.colors.text.tertiary, marginBottom: 3, textAlign: 'center' }}>
                 P&L כולל
               </Text>
-              <Text style={{ fontSize: 20, fontWeight: '800', color: pnlColor }}>
+              <Text style={{ fontSize: JOURNAL_TYPE.sectionTitle.fontSize, fontWeight: JOURNAL_TYPE.sectionTitle.fontWeight, lineHeight: JOURNAL_TYPE.sectionTitle.lineHeight, color: pnlColor }}>
                 {summary.totalPnl >= 0 ? '+' : '-'}$
                 {Math.abs(summary.totalPnl).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
               </Text>
             </View>
             <View style={{ alignItems: 'center' }}>
-              <Text style={{ fontSize: 11, color: DesignTokens.colors.text.tertiary, marginBottom: 3 }}>
+              <Text style={{ ...journalCaption2Style, color: DesignTokens.colors.text.tertiary, marginBottom: 3, textAlign: 'center' }}>
                 Win Rate
               </Text>
-              <Text style={{ fontSize: 20, fontWeight: '800', color: summary.winRate >= 50 ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger }}>
+              <Text style={{ fontSize: JOURNAL_TYPE.sectionTitle.fontSize, fontWeight: JOURNAL_TYPE.sectionTitle.fontWeight, lineHeight: JOURNAL_TYPE.sectionTitle.lineHeight, color: summary.winRate >= 50 ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger }}>
                 {summary.winRate.toFixed(0)}%
               </Text>
             </View>
             <View style={{ alignItems: 'center' }}>
-              <Text style={{ fontSize: 11, color: DesignTokens.colors.text.tertiary, marginBottom: 3 }}>
+              <Text style={{ ...journalCaption2Style, color: DesignTokens.colors.text.tertiary, marginBottom: 3, textAlign: 'center' }}>
                 טריידים
               </Text>
-              <Text style={{ fontSize: 20, fontWeight: '800', color: DesignTokens.colors.text.primary }}>
+              <Text style={{ fontSize: JOURNAL_TYPE.sectionTitle.fontSize, fontWeight: JOURNAL_TYPE.sectionTitle.fontWeight, lineHeight: JOURNAL_TYPE.sectionTitle.lineHeight, color: DesignTokens.colors.text.primary }}>
                 {summary.totalTrades}
               </Text>
             </View>
             {summary.profitFactor != null ? (
               <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontSize: 11, color: DesignTokens.colors.text.tertiary, marginBottom: 3 }}>
+                <Text style={{ ...journalCaption2Style, color: DesignTokens.colors.text.tertiary, marginBottom: 3, textAlign: 'center' }}>
                   Profit F.
                 </Text>
-                <Text style={{ fontSize: 20, fontWeight: '800', color: summary.profitFactor >= 1 ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger }}>
+                <Text style={{ fontSize: JOURNAL_TYPE.sectionTitle.fontSize, fontWeight: JOURNAL_TYPE.sectionTitle.fontWeight, lineHeight: JOURNAL_TYPE.sectionTitle.lineHeight, color: summary.profitFactor >= 1 ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger }}>
                   {summary.profitFactor.toFixed(1)}
                 </Text>
               </View>
@@ -274,29 +284,20 @@ export default function TradesListTab() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ flexDirection: 'row-reverse', gap: 8, paddingBottom: 10 }}
+        contentContainerStyle={{ ...journalRow, gap: 8, paddingBottom: 10 }}
       >
         {allFilters.map((f) => {
           const active = activeFilter === f.id;
           return (
-            <TouchableOpacity
+            <DayDividerPill
               key={f.id}
-              onPress={() => {
-                if (!active) void HapticFeedback.selection();
-                setActiveFilter(f.id);
-              }}
-              style={{
-                paddingHorizontal: 14,
-                paddingVertical: 7,
-                borderRadius: 20,
-                borderWidth: 0,
-                backgroundColor: active ? 'rgba(0,200,5,0.12)' : DesignTokens.colors.background.cardSolid,
-              }}
+              selected={active}
+              onPress={() => setActiveFilter(f.id)}
+              haptic={!active}
+              accessibilityLabel={f.label}
             >
-              <Text style={{ fontSize: 12, fontWeight: '700', color: active ? DesignTokens.colors.primary.main : DesignTokens.colors.text.secondary }}>
-                {f.label}
-              </Text>
-            </TouchableOpacity>
+              {f.label}
+            </DayDividerPill>
           );
         })}
       </ScrollView>
@@ -306,7 +307,12 @@ export default function TradesListTab() {
   return (
     <View style={[styles.container, styles.rtlRoot]}>
       <View style={styles.searchSection}>
-        <View style={styles.searchPill} accessibilityRole="search">
+        <View accessibilityRole="search">
+        <DayDividerPill
+          style={styles.searchPill}
+          contentContainerStyle={styles.searchPillContent}
+          accessibilityLabel="חיפוש רשימת טריידים לפי סמל"
+        >
           <View style={styles.searchLeadingIcon} pointerEvents="none" accessibilityElementsHidden>
             <Ionicons
               name="search"
@@ -345,6 +351,7 @@ export default function TradesListTab() {
               />
             </TouchableOpacity>
           ) : null}
+        </DayDividerPill>
         </View>
       </View>
 
@@ -414,7 +421,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
     position: 'relative',
   },
   rtlRoot: {
-    direction: 'rtl',
+    ...journalRtlContent,
   },
   loadingContainer: {
     flex: 1,
@@ -434,16 +441,17 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
     marginBottom: tokens.spacing.md,
   },
   searchPill: {
-    flexDirection: 'row-reverse',
+    width: '100%',
+    minHeight: 50,
+    borderRadius: tokens.borderRadius['3xl'],
+  },
+  searchPillContent: {
+    ...journalRow,
     alignItems: 'center',
     minHeight: 50,
     paddingVertical: 4,
     paddingHorizontal: 4,
     paddingLeft: 10,
-    borderRadius: tokens.borderRadius['3xl'],
-    backgroundColor: tokens.colors.glass.card.bg,
-    borderWidth: 0,
-    borderColor: 'transparent',
     gap: 4,
   },
   searchLeadingIcon: {
@@ -452,10 +460,11 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
   searchInput: {
     flex: 1,
     minWidth: 0,
-    fontSize: tokens.typography.bodySmall.size,
-    lineHeight: tokens.typography.bodySmall.lineHeight,
+    ...journalPhysicalRightText,
+    fontSize: JOURNAL_TYPE.body.fontSize,
+    fontWeight: JOURNAL_TYPE.body.fontWeight,
+    lineHeight: JOURNAL_TYPE.body.lineHeight,
     color: tokens.colors.text.primary,
-    textAlign: 'right',
     paddingVertical: 10,
     paddingHorizontal: 4,
   },
@@ -484,16 +493,12 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
     gap: tokens.spacing.md,
   },
   emptyText: {
-    fontSize: tokens.typography.displayXs.size,
-    fontWeight: tokens.typography.displayXs.weight as any,
-    letterSpacing: tokens.typography.displayXs.letterSpacing,
+    ...journalSectionTitleStyle,
     color: tokens.colors.text.primary,
     textAlign: 'center',
   },
   emptySubtext: {
-    fontSize: tokens.typography.body.size,
-    fontWeight: tokens.typography.body.weight as any,
-    lineHeight: tokens.typography.body.lineHeight,
+    ...journalBodyTextStyle,
     color: tokens.colors.text.secondary,
     textAlign: 'center',
   },

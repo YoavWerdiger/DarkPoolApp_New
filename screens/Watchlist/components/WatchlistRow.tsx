@@ -2,6 +2,7 @@ import React, { memo, useCallback, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { APP_TYPE, appPhysicalRightText } from '../../../components/ui/appType';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
 import type { WatchlistRowData } from '../../../services/watchlist/watchlistTypes';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
@@ -118,17 +119,18 @@ function WatchlistRowInner({ row, index, onPress, onDrag, isActive }: Props) {
         },
         symbol: {
           color: tokens.colors.text.primary,
-          fontSize: 14,
+          fontSize: APP_TYPE.body.fontSize,
           fontWeight: '700',
+          lineHeight: APP_TYPE.body.lineHeight,
           letterSpacing: 0.15,
           textAlign: 'right',
         },
         company: {
           color: tokens.colors.text.tertiary,
-          fontSize: 11,
+          fontSize: APP_TYPE.caption2.fontSize,
           fontWeight: '500',
-          textAlign: 'right',
-          writingDirection: 'rtl',
+          lineHeight: APP_TYPE.caption2.lineHeight,
+          ...appPhysicalRightText,
         },
         cellHit: {
           width: '100%',
@@ -137,15 +139,17 @@ function WatchlistRowInner({ row, index, onPress, onDrag, isActive }: Props) {
           minHeight: 32,
         },
         num: {
-          fontSize: 13,
+          fontSize: APP_TYPE.cardBody.fontSize,
           fontWeight: '600',
+          lineHeight: APP_TYPE.cardBody.lineHeight,
           fontVariant: ['tabular-nums'],
           textAlign: 'right',
           color: tokens.colors.text.primary,
         },
         chg: {
-          fontSize: 12,
+          fontSize: APP_TYPE.caption.fontSize,
           fontWeight: '600',
+          lineHeight: APP_TYPE.caption.lineHeight,
           fontVariant: ['tabular-nums'],
           textAlign: 'right',
         },

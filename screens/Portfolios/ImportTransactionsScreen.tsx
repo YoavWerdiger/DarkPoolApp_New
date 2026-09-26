@@ -18,6 +18,7 @@ import type { RouteProp } from '@react-navigation/native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import UICard from '../../components/ui/UICard';
 import type { PortfoliosStackParamList } from '../../navigation/PortfoliosStack';
 import { ChatSessionBackdrop } from '../../components/chat/ChatSessionBackdrop';
 import { PortfolioScreenHeader } from './components/PortfolioScreenHeader';
@@ -28,7 +29,13 @@ import {
 } from '../../services/portfolios/portfolioImport';
 import { bulkCreateTransactions } from '../../services/portfolios';
 import { TRANSACTION_LABELS } from './portfolioConstants';
-import { darkPoolTextRtl } from '../DarkPool/darkPoolLayout';
+import {
+  JOURNAL_LAYOUT,
+  journalCardBodyStyle,
+  journalCardTitleStyle,
+  journalPhysicalRightText,
+} from '../Journal/journalLayout';
+import { PORTFOLIO_FORM } from './portfolioLayout';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 
 type Nav = NativeStackNavigationProp<PortfoliosStackParamList, 'ImportTransactions'>;
@@ -97,31 +104,29 @@ export default function ImportTransactionsScreen() {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        root: { flex: 1, backgroundColor: '#111111', direction: 'rtl' },
+        root: { flex: 1, backgroundColor: 'transparent', direction: 'rtl' },
         scroll: { flex: 1, backgroundColor: 'transparent' },
-        scrollContent: { padding: 16, paddingBottom: 80 },
+        scrollContent: {
+          paddingHorizontal: PORTFOLIO_FORM.screenPadH,
+          paddingTop: 4,
+          paddingBottom: 80,
+        },
         section: {
-          backgroundColor: 'rgba(255,255,255,0.04)',
-          borderRadius: 22,
-          padding: 16,
-          marginBottom: 16,
-          borderWidth: 1,
-          borderColor: tokens.colors.border.subtle,
+          marginBottom: JOURNAL_LAYOUT.cardStackGap,
+        },
+        sectionCard: {
+          padding: JOURNAL_LAYOUT.cardPadding,
         },
         sectionTitle: {
-          fontSize: 14,
-          fontWeight: '700',
+          ...journalCardTitleStyle,
           color: tokens.colors.text.primary,
-          marginBottom: 8,
+          marginBottom: JOURNAL_LAYOUT.cardTitleToBodyGap,
           alignSelf: 'stretch',
-          ...darkPoolTextRtl,
         },
         sectionText: {
-          fontSize: 13,
+          ...journalCardBodyStyle,
           color: tokens.colors.text.secondary,
-          lineHeight: 19,
           alignSelf: 'stretch',
-          ...darkPoolTextRtl,
         },
         codeBox: {
           backgroundColor: 'rgba(0, 0, 0, 0.30)',
@@ -152,7 +157,7 @@ export default function ImportTransactionsScreen() {
           fontSize: 15,
           fontWeight: '700',
           color: tokens.colors.text.inverse,
-          ...darkPoolTextRtl,
+          ...journalPhysicalRightText,
         },
         previewSummary: {
           flexDirection: 'row',
@@ -175,7 +180,7 @@ export default function ImportTransactionsScreen() {
           fontSize: 11,
           color: tokens.colors.text.tertiary,
           marginTop: 4,
-          ...darkPoolTextRtl,
+          ...journalPhysicalRightText,
           textAlign: 'center',
         },
         previewRow: {
@@ -198,7 +203,7 @@ export default function ImportTransactionsScreen() {
           width: 70,
           fontSize: 11,
           color: tokens.colors.text.secondary,
-          ...darkPoolTextRtl,
+          ...journalPhysicalRightText,
         },
         previewAmount: {
           flex: 1,
@@ -218,7 +223,7 @@ export default function ImportTransactionsScreen() {
         invalidText: {
           fontSize: 12,
           color: tokens.colors.text.danger,
-          ...darkPoolTextRtl,
+          ...journalPhysicalRightText,
         },
         importBtn: {
           flexDirection: 'row',
@@ -234,7 +239,7 @@ export default function ImportTransactionsScreen() {
           fontSize: 16,
           fontWeight: '700',
           color: tokens.colors.text.inverse,
-          ...darkPoolTextRtl,
+          ...journalPhysicalRightText,
         },
         fileNameRow: {
           flexDirection: 'row',
@@ -271,6 +276,7 @@ export default function ImportTransactionsScreen() {
         <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
           {/* Instructions */}
           <View style={styles.section}>
+            <UICard variant="soft" padding="none" disableBlur contentContainerStyle={styles.sectionCard}>
             <Text style={styles.sectionTitle}>מה אפשר להעלות?</Text>
             <Text style={styles.sectionText}>
               קובץ CSV עם כותרות. הסוגים הנתמכים:{' '}
@@ -317,11 +323,13 @@ export default function ImportTransactionsScreen() {
                 </Text>
               </View>
             ) : null}
+            </UICard>
           </View>
 
           {/* Preview */}
           {parseResult ? (
             <View style={styles.section}>
+              <UICard variant="soft" padding="none" disableBlur contentContainerStyle={styles.sectionCard}>
               <Text style={styles.sectionTitle}>תצוגה מקדימה</Text>
               <View style={styles.previewSummary}>
                 <View
@@ -461,6 +469,7 @@ export default function ImportTransactionsScreen() {
                     : `ייבא ${parseResult.validRows.length} טרנזקציות`}
                 </Text>
               </TouchableOpacity>
+              </UICard>
             </View>
           ) : null}
         </ScrollView>

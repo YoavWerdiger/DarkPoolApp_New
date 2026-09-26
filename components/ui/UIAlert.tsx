@@ -181,12 +181,12 @@ const UIAlert: React.FC<UIAlertProps> = ({
           borderColor: actionColors.cancel.borderColor,
         };
       default:
-        // Primary brand — לא מילוי לבן כפוי על רקע כהה
+        // אישור — כפתור לבן על דיאלוג כהה (לא inverse/שחור)
         return {
           ...baseStyle,
-          backgroundColor: actionColors.primary.backgroundColor,
-          borderWidth: actionColors.primary.borderWidth,
-          borderColor: actionColors.primary.borderColor,
+          backgroundColor: '#FFFFFF',
+          borderWidth: 0,
+          borderColor: '#FFFFFF',
         };
     }
   };
@@ -209,7 +209,7 @@ const UIAlert: React.FC<UIAlertProps> = ({
         };
       default:
         return {
-          color: actionColors.primary.color,
+          color: colors.text.inverse,
           fontWeight: typography.fontWeight.semibold,
           textAlign: 'center',
           fontSize: typography.fontSize.base,

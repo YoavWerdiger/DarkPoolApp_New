@@ -9,12 +9,19 @@ import { View, TextInput, TouchableOpacity, Pressable, Text, StyleSheet, Alert, 
 import { chatInputBottomPadding, CHAT_COMPOSER_NATIVE_ID } from './chatInputLayout';
 import { useDesignTokens } from '../ui/DesignTokens';
 import UICard from '../ui/UICard';
+import { CHROME_UICARD, chromeSurfaceCardStyle } from '../ui/chromeControl';
 import * as ImagePicker from 'expo-image-picker';
 import { Image as ExpoImage } from 'expo-image';
 import MediaPickerSheet from './MediaPickerSheet';
+import { ChatAttachCameraSheet } from './ChatAttachCameraSheet';
 import ChatComposerBar from './ChatComposerBar';
 import { runAfterSheetDismiss } from './mediaPickerLaunch';
 import PollCreationBottomSheet from './PollCreationBottomSheet';
+import {
+  resolvePickedMedia,
+  scheduleMediaRecentsPrefetch,
+  type PickedRecentMedia,
+} from '../../lib/mediaRecentsCache';
 
 // ImagePicker media types - using new array format for Expo SDK 52+
 import * as DocumentPicker from 'expo-document-picker';
@@ -281,6 +288,7 @@ function ChatInputImpl({
   const [showMediaPreview, setShowMediaPreview] = useState(false);
   const [selectedMedia, setSelectedMedia] = useState<MediaFile[]>([]);
   const [mediaPickerVisible, setMediaPickerVisible] = useState(false);
+  const [attachCameraOpen, setAttachCameraOpen] = useState(false);
   const [pollCreationVisible, setPollCreationVisible] = useState(false);
   const [entityPickerVisible, setEntityPickerVisible] = useState(false);
   const [pendingEntity, setPendingEntity] = useState<ShareableAttachment | null>(null);
@@ -373,14 +381,13 @@ function ChatInputImpl({
     };
   }, [stopTyping]);
 
-  // הרשאות גלריה/מצלמה מראש – הפicker נפתח מיד בלחיצה
+  // prefetch recents ב-idle — פתיחת הצירוף היא cache-hit, בלי דיאלוג הרשאה
   useEffect(() => {
-    ImagePicker.getMediaLibraryPermissionsAsync().then(({ status }) => {
-      if (status !== 'granted') ImagePicker.requestMediaLibraryPermissionsAsync().catch((error) => { logger.error('ChatInput', 'Media library permission request error', error); });
-    });
+    const recents = scheduleMediaRecentsPrefetch('all');
     ImagePicker.getCameraPermissionsAsync().then(({ status }) => {
       if (status !== 'granted') ImagePicker.requestCameraPermissionsAsync().catch((error) => { logger.error('ChatInput', 'Camera permission request error', error); });
     });
+    return () => recents.cancel();
   }, []);
 
   // ============================================
@@ -914,6 +921,49 @@ function ChatInputImpl({
     })();
   };
 
+  const applyPickedMedia = useCallback((items: PickedRecentMedia[]) => {
+    if (items.length === 0) return;
+    const mediaFiles: MediaFile[] = items.map((item, index) => ({
+      id: item.id || `${Date.now()}_${index}`,
+      uri: item.uri,
+      type: item.type,
+      name: item.name,
+      width: item.width,
+      height: item.height,
+      duration: item.duration,
+      thumbnail_url: item.thumbnailUri,
+    }));
+    setSelectedMedia(mediaFiles);
+    setShowMediaPreview(true);
+    warmImageCache(mediaFiles.map((file) => file.thumbnail_url || file.uri));
+    attachLocalImageThumbs(mediaFiles, setSelectedMedia);
+    attachLocalVideoThumbs(mediaFiles, setSelectedMedia);
+    void resolvePickedMedia(items).then((resolved) => {
+      setSelectedMedia((prev) =>
+        prev.map((file) => {
+          const next = resolved.find((item) => item.id === file.id);
+          return next ? { ...file, uri: next.uri } : file;
+        }),
+      );
+    });
+  }, []);
+
+  const onAttachCameraCapture = useCallback(
+    (result: { uri: string; width?: number; height?: number }) => {
+      const picked: PickedRecentMedia = {
+        id: `camera-${Date.now()}`,
+        uri: result.uri,
+        thumbnailUri: result.uri,
+        type: 'image',
+        name: `photo_${Date.now()}.jpg`,
+        width: result.width,
+        height: result.height,
+      };
+      applyPickedMedia([picked]);
+    },
+    [applyPickedMedia],
+  );
+
   // ============================================
   // Pick Image
   // ============================================
@@ -964,52 +1014,6 @@ function ChatInputImpl({
       }
     } catch (error) {
       Alert.alert('שגיאה', 'לא הצלחנו לבחור תמונה');
-    }
-  };
-
-  // ============================================
-  // Take Photo
-  // ============================================
-
-  const handleTakePhoto = async () => {
-    try {
-      // Check permission status first (fast) - only request if not determined
-      const { status: currentStatus } = await ImagePicker.getCameraPermissionsAsync();
-
-      if (currentStatus !== 'granted') {
-        const { status } = await ImagePicker.requestCameraPermissionsAsync();
-        if (status !== 'granted') {
-          Alert.alert('הרשאה נדרשת', 'אנא אפשר גישה למצלמה');
-          return;
-        }
-      }
-
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ['images'],
-        allowsEditing: false,
-        quality: 0.8,
-        exif: false,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        const asset = result.assets[0];
-        const mediaFile: MediaFile = {
-          id: Date.now().toString(),
-          uri: asset.uri,
-          type: 'image',
-          name: asset.fileName || 'photo.jpg',
-          size: asset.fileSize,
-          width: asset.width,
-          height: asset.height,
-        };
-        // ⚡ פריוויו מיידי
-        setSelectedMedia([mediaFile]);
-        setShowMediaPreview(true);
-        warmImageCache([mediaFile.uri]);
-        attachLocalImageThumbs([mediaFile], setSelectedMedia);
-      }
-    } catch (error) {
-      Alert.alert('שגיאה', 'לא הצלחנו לצלם תמונה');
     }
   };
 
@@ -2050,6 +2054,7 @@ function ChatInputImpl({
       }),
     ]).start();
     setMediaPickerVisible(true);
+    void scheduleMediaRecentsPrefetch('all');
   };
 
   // ============================================
@@ -2123,10 +2128,8 @@ function ChatInputImpl({
       <View style={styles.container}>
         {/* הקלטה / פריוויו — פעולה ראשית מחוץ לגלולה (✓ לעצירה, מטוס לשליחה) */}
         <UICard
-          variant="glass"
-          glassIntensity="light"
-          padding="none"
-          style={styles.inputCardOuter}
+          {...CHROME_UICARD}
+          style={[styles.inputCardOuter, chromeSurfaceCardStyle(DesignTokens)]}
           contentContainerStyle={styles.inputCardContent}
         >
           {isVoiceCapturing ? (
@@ -2496,13 +2499,18 @@ function ChatInputImpl({
       <MediaPickerSheet
         visible={mediaPickerVisible}
         onClose={() => setMediaPickerVisible(false)}
-        onCamera={handleTakePhoto}
-        onGallery={handlePickImage}
-        onVideo={handlePickVideo}
+        onBuiltinCamera={() => setAttachCameraOpen(true)}
         onDocument={handlePickDocument}
         onAudio={isExpoAvAvailable ? handleStartAudioRecording : undefined}
         onPoll={handleCreatePoll}
         onEntity={handleOpenEntityPicker}
+        onPickedMedia={applyPickedMedia}
+      />
+
+      <ChatAttachCameraSheet
+        visible={attachCameraOpen}
+        onClose={() => setAttachCameraOpen(false)}
+        onCapture={onAttachCameraCapture}
       />
 
       <EntityAttachPickerSheet
@@ -2640,7 +2648,7 @@ const createStyles = (tokens: any, paddingBottom: number) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: tokens.colors.background.navChrome,
   },
   textInput: {
     flex: 1,

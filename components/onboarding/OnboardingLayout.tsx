@@ -15,6 +15,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { DesignTokens } from '../ui/DesignTokens';
+import { APP_LAYOUT } from '../ui/appLayout';
+import {
+  appFlowSubtitleStyle,
+  appFlowTitleCompactStyle,
+  appFlowTitleStyle,
+} from '../ui/appType';
 import { DayNavBlurButton, HEADER_BACK_BTN_SIZE } from '../ui/DayNavBlurButton';
 import { useRegistrationExitOptional } from '../../hooks/useExitRegistration';
 
@@ -155,16 +161,12 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <LinearGradient
-          colors={['#111111', '#111111', '#161616', '#111111']}
-          start={{ x: 0.1, y: 0 }}
-          end={{ x: 0.9, y: 1 }}
-          style={{ flex: 1 }}
-        >
+        <View style={{ flex: 1, backgroundColor: 'transparent' }}>
           <LinearGradient
-            colors={['rgba(0,0,0,0.5)', 'transparent', 'rgba(0,0,0,0.35)']}
+            colors={['rgba(0,0,0,0.28)', 'transparent', 'rgba(0,0,0,0.22)']}
             start={{ x: 1, y: 0 }}
             end={{ x: 0, y: 1 }}
+            pointerEvents="none"
             style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
           />
 
@@ -233,40 +235,22 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
                   {hasHeader ? (
                     <View
                       style={{
-                        marginBottom: isFocused ? 36 : 24,
+                        marginBottom: APP_LAYOUT.sectionHeaderToContent,
                         width: '100%',
                         alignItems: 'stretch',
                       }}
                     >
                       {title ? (
-                        <Text
-                          style={{
-                            fontSize: isFocused ? 32 : 26,
-                            fontWeight: '700',
-                            color: '#FFFFFF',
-                            marginBottom: subtitle || exitHint ? (isFocused ? 12 : 8) : 0,
-                            letterSpacing: 0,
-                            textAlign: 'right',
-                            lineHeight: isFocused ? 40 : 34,
-                            writingDirection: 'rtl',
-                            alignSelf: 'stretch',
-                          }}
-                        >
+                        <Text style={isFocused ? appFlowTitleStyle : appFlowTitleCompactStyle}>
                           {title}
                         </Text>
                       ) : null}
                       {subtitle ? (
                         <Text
-                          style={{
-                            fontSize: isFocused ? 15 : 14,
-                            color: 'rgba(255,255,255,0.48)',
-                            fontWeight: '400',
-                            textAlign: 'right',
-                            lineHeight: isFocused ? 22 : 21,
-                            writingDirection: 'rtl',
-                            alignSelf: 'stretch',
-                            marginBottom: exitHint ? 10 : 0,
-                          }}
+                          style={[
+                            appFlowSubtitleStyle,
+                            exitHint ? { marginBottom: 10 } : null,
+                          ]}
                         >
                           {subtitle}
                         </Text>
@@ -311,7 +295,7 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
               </View>
             ) : null}
           </SafeAreaView>
-        </LinearGradient>
+        </View>
       </KeyboardAvoidingView>
     </TouchableWithoutFeedback>
   );

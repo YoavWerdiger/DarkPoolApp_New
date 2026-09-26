@@ -39,7 +39,7 @@ export function WatchlistFilterBar({ mode, onChange }: Props) {
           paddingHorizontal: 10,
           paddingVertical: 5,
           borderRadius: 8,
-          backgroundColor: '#262626',
+          backgroundColor: tokens.colors.glass.card.bg,
           borderWidth: 0,
           borderColor: tokens.colors.border.subtle,
         },

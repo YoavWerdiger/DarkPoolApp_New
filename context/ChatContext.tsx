@@ -29,6 +29,7 @@ import {
   prefetchChatMediaForMessages,
 } from '../services/chat';
 import { stopRateLimitCleanup } from '../services/chat/chatValidation';
+import { hydrateGroupMute, hydrateGroupMutes } from '../lib/notificationGroupMute';
 import {
   enqueue as enqueueOffline,
   remove as removeOffline,
@@ -49,6 +50,12 @@ import { supabase } from '../services/supabase';
 import { queryClient } from '../lib/queryClient';
 import { appQueryKeys } from '../lib/appQueryKeys';
 import { readCachedMessagesForGroup } from '../lib/chatMessagePersist';
+import {
+  buildPrimedGroup,
+  readCachedChatGroup,
+  seedMessagesForOpen,
+  type ChatOpenHint,
+} from '../lib/chatOpenPrime';
 import {
   CHAT_AROUND_AFTER,
   CHAT_AROUND_BEFORE,
@@ -147,6 +154,11 @@ interface ChatContextType {
   // Group Actions
   loadGroups: () => Promise<void>;
   selectGroup: (groupId: string) => Promise<void>;
+  /**
+   * זריעה סינכרונית לפני navigate / first paint.
+   * לא fetch, לא realtime, לא מוחק thread עד שיש קאש לקבוצה החדשה.
+   */
+  primeGroupForOpen: (groupId: string, hint?: ChatOpenHint) => void;
   /** רענון פרטי הקבוצה והחברים מהמסד (בלי לטעון מחדש הודעות) */
   refreshCurrentGroupDetails: () => Promise<void>;
   createGroup: (input: CreateChatGroupInput) => Promise<{ success: boolean; groupId?: string; error?: string }>;
@@ -196,6 +208,7 @@ type ChatActionsType = Pick<
   ChatContextType,
   | 'loadGroups'
   | 'selectGroup'
+  | 'primeGroupForOpen'
   | 'refreshCurrentGroupDetails'
   | 'createGroup'
   | 'updateGroup'
@@ -546,6 +559,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const cached = queryClient.getQueryData<ChatGroup[]>(cacheKey);
     if (cached?.length) {
       setGroups(cached);
+      hydrateGroupMutes(cached.map((g) => ({ id: g.id, muted: !!g.is_muted })));
       setIsLoadingGroups(false);
     } else {
       setIsLoadingGroups(true);
@@ -563,6 +577,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         staleTime: 0,
       });
       setGroups(data);
+      hydrateGroupMutes(
+        data.map((g) => ({ id: g.id, muted: !!g.is_muted })),
+        { overwrite: true },
+      );
       void persistQueryCache(userId);
       // עדיפות unread בלבד — warmAppCache כבר מריץ warm מלא; התור ממזג אם שניהם רצים
       const unreadIds = data
@@ -770,6 +788,53 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   // Select group
   // ============================================
 
+  const primeGroupForOpen = useCallback((groupId: string, hint?: ChatOpenHint) => {
+    if (!user || !groupId) return;
+
+    const cachedGroup = readCachedChatGroup(user.id, groupId);
+    setCurrentGroup((prev) => {
+      if (prev?.id === groupId && (prev.members?.length ?? 0) > 0) return prev;
+      const next = buildPrimedGroup(groupId, cachedGroup, hint);
+      if (prev?.id === groupId && prev.name === next.name && prev.avatar_url === next.avatar_url) {
+        return prev;
+      }
+      return next;
+    });
+
+    const unreadCount = cachedGroup?.unread_count ?? hint?.unread_count;
+    const lastReadId =
+      cachedGroup?.last_read_message_id ?? hint?.last_read_message_id ?? null;
+    if (unreadCount != null || lastReadId || cachedGroup) {
+      setInitialUnreadInfo({
+        count: unreadCount || 0,
+        lastReadMessageId: lastReadId,
+      });
+    }
+
+    const pending = pendingOutboundRef.current.get(groupId) ?? [];
+    const existingForGroup =
+      messagesRef.current.length > 0 &&
+      (currentGroupId.current === groupId ||
+        messagesRef.current.some((m) => m.group_id === groupId))
+        ? messagesRef.current
+        : [];
+    const seeded = seedMessagesForOpen(groupId, pending, existingForGroup);
+    if (!seeded.length) return;
+
+    const sameTip =
+      existingForGroup.length === seeded.length &&
+      existingForGroup[0]?.id === seeded[0]?.id &&
+      existingForGroup[existingForGroup.length - 1]?.id ===
+        seeded[seeded.length - 1]?.id;
+    if (!sameTip) {
+      messagesRef.current = seeded;
+      setMessages(seeded);
+      messagesOffset.current = seeded.length;
+      hasMoreMessages.current = true;
+    }
+    setIsLoadingMessages(false);
+  }, [user]);
+
   const selectGroup = useCallback(async (groupId: string) => {
     if (!user) return;
 
@@ -829,66 +894,25 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       sessionReadConfirmedRef.current.delete(groupId);
     }
 
-    // אופטימי: זריעת currentGroup מיידית מה-cache של רשימת הקבוצות.
-    // מונע את ה-skeleton המלא ("מסך תקוע") ומציג כותרת/שם הקבוצה מיד בכניסה,
-    // בזמן שפרטי הקבוצה המלאים וההודעות נטענים ברקע.
-    if (!isSameGroup) {
-      const cachedGroups = queryClient.getQueryData<ChatGroup[]>(
-        appQueryKeys.chatGroups(user.id),
-      );
-      const cachedGroup = cachedGroups?.find((g) => g.id === groupId);
-      if (cachedGroup) {
-        setCurrentGroup({
-          ...cachedGroup,
-          members: [],
-          is_admin: String(cachedGroup.my_role) === 'admin',
-          last_read_message_id: cachedGroup.last_read_message_id ?? null,
-        });
-      }
-    }
+    // Paint first: cache / list hint already in queryClient. No wipe, no media.
+    primeGroupForOpen(groupId);
 
     if (!keepVisibleThread) {
-      // אופטימי: זריעת הודעות מיידית מה-cache (stale-while-revalidate).
-      // Memory hit → setState סינכרוני לפני כל await (TTI = 1 frame עם ChatGroupScreen seed).
-      // Disk miss בזיכרון → לא חוסמים רשת: hydrate/disk רצים במקביל ל-fetch.
-      const cachedMessages = queryClient.getQueryData<ChatMessage[]>(
-        appQueryKeys.chatMessages(groupId),
-      );
-      const pendingOutbound = pendingOutboundRef.current.get(groupId) ?? [];
-      if (cachedMessages?.length || pendingOutbound.length) {
-        const seeded = mergeChatMessages(pendingOutbound, cachedMessages);
-        setMessages(seeded);
-        messagesOffset.current = seeded.length;
-        hasMoreMessages.current = true;
-        setIsLoadingMessages(false);
-        warmChatMediaCache(seeded);
-        hydrateMissingSenders(groupId, version, seeded);
-      } else {
+      const seededForGroup =
+        messagesRef.current.length > 0 &&
+        messagesRef.current.some((m) => m.group_id === groupId);
+      if (!seededForGroup) {
         setIsLoadingMessages(true);
-        if (!isSameGroup) {
-          // לא להציג thread של קבוצה אחרת; מסך יציג skeleton עד disk/network
-          setMessages([]);
-        }
-        messagesOffset.current = isSameGroup ? messagesRef.current.length : 0;
+        messagesOffset.current = 0;
         hasMoreMessages.current = true;
-        // Disk/hydrate במקביל — לא await לפני fetch (רגרסיית iOS: serial await על open path)
+        // Disk במקביל לרשת — לא מוחקים thread ישן עד שיש קאש לקבוצה החדשה
         void readCachedMessagesForGroup(user.id, groupId).then((diskMessages) => {
           if (selectVersion.current !== version) return;
           if (!diskMessages?.length) return;
-          const cur = messagesRef.current;
-          const alreadyForGroup =
-            cur.length > 0 &&
-            cur.some((m) => m.group_id === groupId && !m.id.startsWith('temp-'));
-          if (alreadyForGroup) return;
-          const pending = pendingOutboundRef.current.get(groupId) ?? [];
-          const seededDisk = mergeChatMessages(pending, diskMessages);
-          setMessages(seededDisk);
-          messagesOffset.current = seededDisk.length;
-          hasMoreMessages.current = true;
-          setIsLoadingMessages(false);
-          warmChatMediaCache(seededDisk);
-          hydrateMissingSenders(groupId, version, seededDisk);
+          primeGroupForOpen(groupId);
         });
+      } else {
+        setIsLoadingMessages(false);
       }
       clearTypingIndicators();
     }
@@ -1435,7 +1459,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       }
       setIsLoadingMessages(false);
     }
-  }, [user?.id, startGroupViewing, stopGroupViewing, hydrateMissingSenders]);
+  }, [user?.id, startGroupViewing, stopGroupViewing, hydrateMissingSenders, primeGroupForOpen]);
 
   const refreshCurrentGroupDetails = useCallback(async () => {
     if (!user || !currentGroupId.current) return;
@@ -1447,6 +1471,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
     if (!data || currentGroupId.current !== gid) return;
     setCurrentGroup(data);
+    hydrateGroupMute(gid, !!data.is_muted, { overwrite: true });
     setGroups((prev) =>
       prev.map((g) =>
         g.id === gid
@@ -2652,6 +2677,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     initialUnreadInfo,
     loadGroups,
     selectGroup,
+    primeGroupForOpen,
     refreshCurrentGroupDetails,
     createGroup,
     updateGroup,
@@ -2681,7 +2707,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     groups, currentGroup, messages, typingUsers,
     isLoadingGroups, isLoadingMessages, isSendingMessage,
     initialUnreadInfo, isConnected, realtimeConnectionState, totalUnreadCount,
-    loadGroups, selectGroup, refreshCurrentGroupDetails, createGroup, updateGroup, leaveGroup,
+    loadGroups, selectGroup, primeGroupForOpen, refreshCurrentGroupDetails, createGroup, updateGroup, leaveGroup,
     sendMessage, loadMoreMessages, loadMessagesAround, editMessage,
     deleteMessage, forwardMessage, addReaction, removeReaction,
     starMessage, unstarMessage, setTyping, markAsRead, confirmChatReadAtBottom,
@@ -2693,6 +2719,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   actionsRef.current = {
     loadGroups,
     selectGroup,
+    primeGroupForOpen,
     refreshCurrentGroupDetails,
     createGroup,
     updateGroup,
@@ -2720,6 +2747,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const stableActions = useMemo<ChatActionsType>(() => ({
     loadGroups: (...args) => actionsRef.current.loadGroups(...args),
     selectGroup: (...args) => actionsRef.current.selectGroup(...args),
+    primeGroupForOpen: (...args) => actionsRef.current.primeGroupForOpen(...args),
     refreshCurrentGroupDetails: (...args) => actionsRef.current.refreshCurrentGroupDetails(...args),
     createGroup: (...args) => actionsRef.current.createGroup(...args),
     updateGroup: (...args) => actionsRef.current.updateGroup(...args),

@@ -2,7 +2,7 @@
 // Chat Group Starred Messages Screen
 // ============================================
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useLockParentDrawerWhileFocused } from '../../hooks/useLockParentDrawerWhileFocused';
+import { useAfterNavigationTransition } from '../../hooks/afterNavigationTransition';
 import { Ionicons } from '@expo/vector-icons';
 import { format, isSameDay, isToday, isYesterday } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -21,6 +22,7 @@ import UICard from '../../components/ui/UICard';
 import { ChatScreenShell, ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 import ChatMessage from '../../components/chat/ChatMessage';
 import { useAuth } from '../../context/AuthContext';
+import { useChatActions } from '../../context/ChatContext';
 import { chatMessageService } from '../../services/chat';
 import { warmChatGroupOnPress } from '../../services/appPrefetch';
 import { lockAndroidChatSoftInput } from '../../components/chat/androidChatKeyboard';
@@ -29,6 +31,11 @@ import { HapticFeedback } from '../../utils/hapticFeedback';
 import { logger } from '../../utils/logger';
 import { chatRtlText } from '../../components/chat/chatDesignTokens';
 import { legacyAlert } from '../../utils/appDialog';
+import {
+  settingsRowType,
+  settingsMetaType,
+  settingsCaptionType,
+} from '../../components/profile/settingsType';
 
 function DateDivider({ label }: { label: string }) {
   const tokens = useDesignTokens();
@@ -46,7 +53,7 @@ function DateDivider({ label }: { label: string }) {
           paddingHorizontal: 14,
           paddingVertical: 5,
         },
-        text: { color: tokens.colors.text.secondary, fontSize: 12 },
+        text: { ...chatRtlText, ...settingsCaptionType, color: tokens.colors.text.secondary },
       }),
     [tokens],
   );
@@ -74,6 +81,7 @@ export default function ChatGroupStarredMessagesScreen() {
   const route = useRoute();
   const navigation = useNavigation();
   const { user } = useAuth();
+  const { primeGroupForOpen } = useChatActions();
   useLockParentDrawerWhileFocused();
 
   const { groupId } = route.params as { groupId: string };
@@ -109,7 +117,7 @@ export default function ChatGroupStarredMessagesScreen() {
     }
   }, [user?.id, groupId]);
 
-  useEffect(() => {
+  useAfterNavigationTransition(() => {
     void loadStarred();
   }, [loadStarred]);
 
@@ -136,10 +144,11 @@ export default function ChatGroupStarredMessagesScreen() {
     (messageId: string) => {
       void HapticFeedback.selection();
       lockAndroidChatSoftInput();
+      primeGroupForOpen(groupId);
       if (user?.id) warmChatGroupOnPress(user.id, groupId);
       (navigation as any).navigate('ChatGroup', { groupId, scrollToMessageId: messageId });
     },
-    [navigation, groupId, user?.id],
+    [navigation, groupId, user?.id, primeGroupForOpen],
   );
 
   const handleUnstar = useCallback(
@@ -282,22 +291,21 @@ const createStyles = (tokens: any) =>
       paddingHorizontal: 24,
     },
     loadingText: {
+      ...chatRtlText,
+      ...settingsMetaType,
       marginTop: 8,
       color: tokens.colors.text.secondary,
-      fontSize: 14,
-      ...chatRtlText,
     },
     emptyTitle: {
+      ...chatRtlText,
+      ...settingsRowType,
       marginTop: 12,
       color: tokens.colors.text.primary,
-      fontSize: 16,
-      fontWeight: '600',
-      ...chatRtlText,
     },
     emptySubtitle: {
+      ...chatRtlText,
+      ...settingsMetaType,
       marginTop: 6,
       color: tokens.colors.text.secondary,
-      fontSize: 13,
-      ...chatRtlText,
     },
   });

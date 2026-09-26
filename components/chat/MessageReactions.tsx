@@ -2,6 +2,7 @@ import React, { useMemo, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { GlassChip } from '../ui/GlassChip';
 import type { ChatReactionGroup } from '../../types/chat.types';
 
 /** רווח בין בועת ההודעה לשורת הריאקציה */
@@ -21,9 +22,7 @@ function MessageReactions({ reactions, onReactionDetails, isMe = false }: Messag
   const prevSignature = useRef('');
   const isFirstRender = useRef(true);
 
-  const bubbleBg = isMe ? tokens.colors.bubbleMe : tokens.colors.bubbleOther;
   const countColor = isMe ? tokens.colors.bubbleMeMetaText : tokens.colors.text.secondary;
-  const borderColor = isMe ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.08)';
 
   const signature = useMemo(
     () =>
@@ -65,6 +64,10 @@ function MessageReactions({ reactions, onReactionDetails, isMe = false }: Messag
           alignSelf: 'flex-start',
         },
         pill: {
+          minHeight: 22,
+          borderRadius: 11,
+        },
+        pillContent: {
           flexDirection: 'row',
           direction: 'ltr',
           alignItems: 'center',
@@ -72,13 +75,7 @@ function MessageReactions({ reactions, onReactionDetails, isMe = false }: Messag
           minHeight: 22,
           paddingHorizontal: 6,
           paddingVertical: 2,
-          borderRadius: 11,
-          borderWidth: StyleSheet.hairlineWidth,
           gap: 1,
-        },
-        pillMine: {
-          borderWidth: 1,
-          borderColor: isMe ? 'rgba(255,255,255,0.28)' : tokens.colors.primary.main + '55',
         },
         chip: {
           flexDirection: 'row',
@@ -122,17 +119,13 @@ function MessageReactions({ reactions, onReactionDetails, isMe = false }: Messag
       hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
       style={[styles.row, isMe ? styles.rowMe : styles.rowOther]}
     >
-      <Animated.View
-        style={[
-          styles.pill,
-          {
-            backgroundColor: bubbleBg,
-            borderColor,
-            transform: [{ scale: scaleAnim }],
-          },
-          hasMyReaction && styles.pillMine,
-        ]}
-      >
+      <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+        <GlassChip
+          selected={hasMyReaction}
+          disableBlur
+          style={styles.pill}
+          contentContainerStyle={styles.pillContent}
+        >
         {displayReactions.map((reaction) => (
           <View key={reaction.emoji} style={styles.chip}>
             <Text style={styles.emoji} allowFontScaling={false}>
@@ -150,6 +143,7 @@ function MessageReactions({ reactions, onReactionDetails, isMe = false }: Messag
             +{extraTypes}
           </Text>
         ) : null}
+        </GlassChip>
       </Animated.View>
     </TouchableOpacity>
   );

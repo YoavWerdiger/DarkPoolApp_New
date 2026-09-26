@@ -13,8 +13,18 @@ import { useDesignTokens } from '../ui/DesignTokens';
 import { useTheme } from '../../context/ThemeContext';
 import UICard from '../ui/UICard';
 import { getAppVersionLabel } from '../../utils/appMeta';
+import { isolateNumericRuns } from '../../screens/DarkPool/utils/bidi';
+import { APP_LAYOUT, UI_CARD_RADIUS } from '../ui/appLayout';
+import { appBodyTextStyle, appCardTitleStyle, appCaptionStyle } from '../ui/appType';
+import {
+  settingsHebrewText,
+  settingsHeroType,
+  settingsRowType,
+  settingsMetaType,
+  settingsCaptionType,
+} from './settingsType';
 
-export const PROFILE_SCREEN_HP = 16;
+export const PROFILE_SCREEN_HP = APP_LAYOUT.screenPaddingHorizontal;
 
 export function ProfileScreenBody({
   children,
@@ -28,8 +38,8 @@ export function ProfileScreenBody({
     <View
       style={[
         {
-          paddingHorizontal: tokens.spacing.base,
-          paddingTop: tokens.spacing.md,
+          paddingHorizontal: tokens.layout.screenPadding,
+          paddingTop: tokens.layout.componentGap,
         },
         style,
       ]}
@@ -52,12 +62,36 @@ export function SettingsSectionTitle({
     <Text
       style={[
         {
-          fontSize: 15,
-          fontWeight: '700',
+          ...settingsHebrewText,
+          ...settingsRowType,
           color: tokens.colors.text.primary,
-          marginBottom: tokens.spacing.sm,
-          textAlign: 'right',
-          writingDirection: 'rtl',
+          marginBottom: tokens.layout.stackGapTight,
+        },
+        style,
+      ]}
+    >
+      {title}
+    </Text>
+  );
+}
+
+/** כותרת סקשן מחוץ לכרטיס — APP_TYPE.sectionTitle */
+export function SettingsOutsideTitle({
+  title,
+  style,
+}: {
+  title: string;
+  style?: TextStyle;
+}) {
+  const tokens = useDesignTokens();
+  return (
+    <Text
+      style={[
+        {
+          ...settingsHebrewText,
+          ...settingsHeroType,
+          color: tokens.colors.text.primary,
+          marginBottom: tokens.layout.sectionHeaderToContent,
         },
         style,
       ]}
@@ -77,10 +111,12 @@ export function SettingsGlassCard({
   const tokens = useDesignTokens();
   return (
     <UICard
-      variant="glass"
-      glassIntensity="light"
+      variant="soft"
       padding="none"
-      style={[{ borderRadius: tokens.borderRadius.lg, marginBottom: tokens.spacing.lg }, style]}
+      style={[
+        { borderRadius: UI_CARD_RADIUS, marginBottom: tokens.layout.sectionGap },
+        style,
+      ]}
     >
       {children}
     </UICard>
@@ -94,6 +130,7 @@ type SettingsSwitchRowProps = {
   onValueChange: (value: boolean) => void;
   showDivider?: boolean;
   danger?: boolean;
+  disabled?: boolean;
 };
 
 export function SettingsSwitchRow({
@@ -103,6 +140,7 @@ export function SettingsSwitchRow({
   onValueChange,
   showDivider = true,
   danger,
+  disabled,
 }: SettingsSwitchRowProps) {
   const tokens = useDesignTokens();
   const { theme } = useTheme();
@@ -110,9 +148,10 @@ export function SettingsSwitchRow({
 
   return (
     <View>
-      <View style={s.row}>
+      <View style={[s.row, disabled && { opacity: 0.45 }]}>
         <Switch
           value={value}
+          disabled={disabled}
           onValueChange={onValueChange}
           trackColor={{ false: theme.switchTrackOff, true: tokens.colors.primary.main }}
           thumbColor={value ? tokens.colors.text.primary : theme.switchThumbOff}
@@ -199,7 +238,9 @@ export function SettingsVersionFooter() {
   const tokens = useDesignTokens();
   return (
     <View style={{ alignItems: 'center', marginTop: tokens.spacing.md, marginBottom: tokens.spacing.lg }}>
-      <Text style={styles(tokens).versionText}>DarkPool · גרסה {getAppVersionLabel()}</Text>
+      <Text style={styles(tokens).versionText}>
+        {isolateNumericRuns(`DarkPool · גרסה ${getAppVersionLabel()}`)}
+      </Text>
     </View>
   );
 }
@@ -210,14 +251,14 @@ function styles(tokens: ReturnType<typeof useDesignTokens>) {
     row: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: tokens.spacing.md,
-      paddingHorizontal: tokens.spacing.base,
+      paddingVertical: 14,
+      paddingHorizontal: tokens.layout.cardPadding,
     },
     menuRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: tokens.spacing.md,
-      paddingHorizontal: tokens.spacing.base,
+      paddingVertical: 14,
+      paddingHorizontal: tokens.layout.cardPadding,
     },
     textCol: {
       flex: 1,
@@ -229,34 +270,33 @@ function styles(tokens: ReturnType<typeof useDesignTokens>) {
       gap: tokens.spacing.micro,
     },
     title: {
-      fontSize: tokens.typography.body.size,
-      fontWeight: tokens.typography.fontWeight.semibold as '600',
-      lineHeight: tokens.typography.body.lineHeight,
+      ...settingsHebrewText,
+      ...appCardTitleStyle,
       color: tokens.colors.text.primary,
-      textAlign: 'right',
-      writingDirection: 'rtl',
     },
     subtitle: {
-      fontSize: tokens.typography.bodySmall.size,
-      lineHeight: tokens.typography.bodySmall.lineHeight,
-      color: tokens.colors.text.tertiary,
-      textAlign: 'right',
-      writingDirection: 'rtl',
-      marginTop: 2,
+      ...settingsHebrewText,
+      ...appBodyTextStyle,
+      fontSize: settingsMetaType.fontSize,
+      lineHeight: settingsMetaType.lineHeight,
+      fontWeight: settingsMetaType.fontWeight,
+      color: tokens.colors.text.secondary,
+      marginTop: 4,
     },
     divider: {
       height: StyleSheet.hairlineWidth,
       backgroundColor: tokens.colors.border.divider,
-      marginHorizontal: tokens.spacing.base,
+      marginHorizontal: tokens.layout.cardPadding,
     },
     menuDivider: {
-      height: 1,
+      height: StyleSheet.hairlineWidth,
       backgroundColor: tokens.colors.border.divider,
-      marginHorizontal: tokens.spacing.base,
+      marginHorizontal: tokens.layout.cardPadding,
     },
     versionText: {
-      color: tokens.colors.text.tertiary,
-      fontSize: tokens.typography.caption.size,
+      ...settingsHebrewText,
+      ...appCaptionStyle,
+      color: tokens.colors.text.muted,
     },
   });
 }

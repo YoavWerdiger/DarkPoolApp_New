@@ -620,7 +620,7 @@ function computeWinRate(txs: NormalizedCongressTx[]): number | null {
   return Math.round((wins / sells.length) * 1000) / 10;
 }
 
-function computeAvgDelay(trades: CongressTradeInput[]): number | null {
+export function computeAvgDelay(trades: CongressTradeInput[]): number | null {
   const delays: number[] = [];
   for (const t of trades) {
     const tx = String(t.transaction_date ?? '').slice(0, 10);
@@ -884,9 +884,17 @@ export function mapInsiderTradeToCongressInput(t: {
           ? `${Math.round(shares)} shares`
           : undefined;
 
+  // Form 4: P/A/M add, S/F/G/D subtract. לא ממפים F/G לקנייה.
+  const isSell =
+    code === 'S' ||
+    code === 'F' ||
+    code === 'G' ||
+    code === 'D' ||
+    code.includes('SELL');
+
   return {
     ticker: t.ticker,
-    txn_type: code === 'S' || code.includes('SELL') ? 'sell' : 'buy',
+    txn_type: isSell ? 'sell' : 'buy',
     amounts: amountLabel,
     transaction_date: String(
       t.transaction_date ?? t.filed_at ?? t.filing_date ?? ''

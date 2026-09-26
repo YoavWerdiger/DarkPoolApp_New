@@ -7,6 +7,15 @@ import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 import type { Portfolio, PortfolioSummary } from '../portfolioTypes';
 import { formatCurrency, formatPercent, gainColor } from '../utils/format';
+import {
+  journalCardMetricValueSecondaryStyle,
+  journalCardMetricValueStyle,
+  journalCardSubtitleStyle,
+  journalCardTitleStyle,
+  journalCaptionStyle,
+  journalRow,
+  journalRtlContent,
+} from '../../Journal/journalLayout';
 
 /** נקודות SVG לפי סדר ערכי שווי (יומי) — ללא mock */
 function valuesToPolyline(values: number[], w: number, h: number): string {
@@ -92,68 +101,54 @@ export function CommunityPortfolioLeaderCard({
       accessibilityLabel={`תיק ${portfolio.name} של ${ownerLabel}`}
       style={({ pressed }) => [{ opacity: pressed ? 0.88 : 1 }]}
     >
-      <UICard
-        variant="glass"
-        glassIntensity="light"
-        padding="md"
-        style={{
-          borderRadius: tokens.borderRadius.xl,
-          borderWidth: 0,
-          borderColor: tokens.colors.border.subtle,
-        }}
-      >
-        <View style={styles.topRow}>
-          <View style={styles.titleBlock}>
-            <Text style={[styles.title, { color: tokens.colors.text.primary }]} numberOfLines={2}>
-              {portfolio.name}
-            </Text>
-            <Text
-              style={[styles.owner, { color: tokens.colors.text.tertiary }]}
-              numberOfLines={1}
-            >
-              תיק של {ownerLabel}
-            </Text>
-          </View>
-          <Ionicons name="chevron-back" size={18} color={tokens.colors.text.tertiary} />
-        </View>
-
-        <View style={styles.chartBox} onLayout={onChartLayout}>
-          {chartW > 4 && polyPoints ? (
-            <Svg width={chartW} height={chartH}>
-              <Polyline
-                points={polyPoints}
-                fill="none"
-                stroke={lineStroke}
-                strokeWidth={2}
-                strokeLinejoin="round"
-                strokeLinecap="round"
-                opacity={0.85}
-              />
-            </Svg>
-          ) : (
-            <View style={{ height: chartH, justifyContent: 'center' }}>
+      <UICard variant="soft" padding="md" style={{ borderRadius: tokens.borderRadius.xl }}>
+        <View style={styles.cardInner}>
+          <View style={styles.topRow}>
+            <View style={styles.titleBlock}>
+              <Text style={[styles.title, { color: tokens.colors.text.primary }]} numberOfLines={2}>
+                {portfolio.name}
+              </Text>
               <Text
-                style={{
-                  fontSize: 12,
-                  fontWeight: '600',
-                  color: tokens.colors.text.tertiary,
-                  textAlign: 'center',
-                }}
+                style={[styles.owner, { color: tokens.colors.text.tertiary }]}
+                numberOfLines={1}
               >
-                אין עדיין היסטוריית שווי
+                תיק של {ownerLabel}
               </Text>
             </View>
-          )}
-        </View>
-        {sparklineSource === 'transactions' && (
-          <Text style={[styles.chartLabel, { color: tokens.colors.text.tertiary }]}>
-            גרף מחושב ממסחר · כולל מחירי שוק
-          </Text>
-        )}
+            <Ionicons name="chevron-back" size={18} color={tokens.colors.text.tertiary} />
+          </View>
 
-        <View style={styles.bottomRow}>
-          <Text style={[styles.roi, { color: roiColor }]}>{roiText}</Text>
-          <Text style={[styles.value, { color: tokens.colors.text.tertiary }]}>{valueText}</Text>
+          <View style={styles.chartBox} onLayout={onChartLayout}>
+            {chartW > 4 && polyPoints ? (
+              <Svg width={chartW} height={chartH}>
+                <Polyline
+                  points={polyPoints}
+                  fill="none"
+                  stroke={lineStroke}
+                  strokeWidth={2}
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                  opacity={0.85}
+                />
+              </Svg>
+            ) : (
+              <View style={{ height: chartH, justifyContent: 'center' }}>
+                <Text style={[styles.chartEmpty, { color: tokens.colors.text.tertiary }]}>
+                  אין עדיין היסטוריית שווי
+                </Text>
+              </View>
+            )}
+          </View>
+          {sparklineSource === 'transactions' && (
+            <Text style={[styles.chartLabel, { color: tokens.colors.text.tertiary }]}>
+              גרף מחושב ממסחר · כולל מחירי שוק
+            </Text>
+          )}
+
+          <View style={styles.bottomRow}>
+            <Text style={[styles.value, { color: tokens.colors.text.primary }]}>{valueText}</Text>
+            <Text style={[styles.roi, { color: roiColor }]}>{roiText}</Text>
+          </View>
         </View>
       </UICard>
     </Pressable>
@@ -161,8 +156,11 @@ export function CommunityPortfolioLeaderCard({
 }
 
 const styles = StyleSheet.create({
+  cardInner: {
+    ...journalRtlContent,
+  },
   topRow: {
-    flexDirection: 'row-reverse',
+    ...journalRow,
     alignItems: 'flex-start',
     gap: 8,
     marginBottom: 10,
@@ -170,21 +168,19 @@ const styles = StyleSheet.create({
   titleBlock: {
     flex: 1,
     minWidth: 0,
+    alignItems: 'stretch',
   },
   title: {
-    fontSize: 17,
-    fontWeight: '800',
-    textAlign: 'right',
-    writingDirection: 'rtl',
-    lineHeight: 22,
-    letterSpacing: -0.2,
+    ...journalCardTitleStyle,
+    width: '100%',
   },
   owner: {
-    marginTop: 4,
-    fontSize: 13,
-    fontWeight: '600',
-    textAlign: 'right',
-    writingDirection: 'rtl',
+    ...journalCardSubtitleStyle,
+    width: '100%',
+  },
+  chartEmpty: {
+    ...journalCaptionStyle,
+    textAlign: 'center',
   },
   chartBox: {
     width: '100%',
@@ -194,27 +190,30 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   chartLabel: {
-    fontSize: 11,
-    fontWeight: '500',
-    textAlign: 'right',
-    writingDirection: 'rtl',
+    ...journalCaptionStyle,
+    width: '100%',
     marginBottom: 10,
   },
   bottomRow: {
-    flexDirection: 'row-reverse',
+    ...journalRow,
+    width: '100%',
     alignItems: 'baseline',
     justifyContent: 'space-between',
     gap: 12,
   },
-  roi: {
-    fontSize: 20,
-    fontWeight: '800',
-    letterSpacing: -0.4,
+  /** שווי — היררכיה ראשית (ימין ב-RTL row) */
+  value: {
+    ...journalCardMetricValueStyle,
+    flexShrink: 1,
+    minWidth: 0,
+    direction: 'ltr',
+    textAlign: 'right',
     writingDirection: 'ltr',
   },
-  value: {
-    fontSize: 13,
-    fontWeight: '600',
+  roi: {
+    ...journalCardMetricValueSecondaryStyle,
+    flexShrink: 0,
     writingDirection: 'ltr',
+    textAlign: 'left',
   },
 });

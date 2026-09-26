@@ -13,35 +13,33 @@ import { HapticFeedback } from '../../../utils/hapticFeedback';
 import type { ExplorePerson } from '../../../services/darkpool/uwExploreService';
 import { formatInsiderDisplayName } from '../utils/investorPlaceholder';
 import { InvestorPortrait } from './InvestorPortrait';
-import { hebrewText, toDataIsland } from '../utils/bidi';
+import { isolateData, toDataIsland } from '../utils/bidi';
+import { darkPoolPhysicalRightText } from '../darkPoolLayout';
+import {
+  isNegativeReturnMetric,
+  isReturnMetric,
+} from '../utils/exploreDisplay';
+import { EXPLORE_PROFILE_CARD } from '../utils/exploreGrid';
 
 interface Props {
   person: ExplorePerson;
-  variant?: 'large' | 'compact' | 'grid';
   onPress?: () => void;
   style?: StyleProp<ViewStyle>;
 }
 
 export const ExplorePortraitCard = memo(function ExplorePortraitCard({
   person,
-  variant = 'compact',
   onPress,
   style,
 }: Props) {
   const tokens = useDesignTokens();
-  const styles = useMemo(
-    () => createStyles(tokens, variant),
-    [tokens, variant]
-  );
-
-  const isGrid = variant === 'grid';
-  const w = isGrid ? undefined : variant === 'large' ? 168 : 132;
-  const h = isGrid ? undefined : variant === 'large' ? 220 : 176;
+  const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const { width: cardW, height: cardH } = EXPLORE_PROFILE_CARD;
   const displayName =
     person.kind === 'insider'
       ? formatInsiderDisplayName(person.name)
       : person.name;
-  const subtitleLabel = person.subtitle?.trim()
+  const kindFallback = person.subtitle?.trim()
     ? person.subtitle
     : person.kind === 'politician'
       ? 'קונגרס'
@@ -51,13 +49,19 @@ export const ExplorePortraitCard = memo(function ExplorePortraitCard({
           ? toDataIsland(person.ticker.toUpperCase())
           : 'בכיר';
 
+  const metric = person.metric?.trim() || undefined;
+  const pct = isReturnMetric(metric);
+  const metricColor = !metric
+    ? undefined
+    : pct
+      ? isNegativeReturnMetric(metric)
+        ? tokens.colors.text.danger
+        : tokens.colors.primary.main
+      : 'rgba(255,255,255,0.78)';
+
   const content = (
     <View
-      style={[
-        styles.card,
-        isGrid ? styles.gridCard : { width: w, height: h },
-        style,
-      ]}
+      style={[styles.card, { width: cardW, height: cardH }, style]}
     >
       <InvestorPortrait
         name={displayName}
@@ -70,15 +74,24 @@ export const ExplorePortraitCard = memo(function ExplorePortraitCard({
         priority="high"
       >
         <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.55)', 'rgba(0,0,0,0.92)']}
+          colors={['transparent', 'rgba(0,0,0,0.22)', 'rgba(0,0,0,0.88)']}
+          locations={[0, 0.52, 1]}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
           style={styles.footer}
         >
           <Text style={styles.name} numberOfLines={2}>
             {displayName}
           </Text>
-          <Text style={styles.subtitle} numberOfLines={1}>
-            {subtitleLabel}
-          </Text>
+          {metric ? (
+            <Text style={[styles.metric, { color: metricColor }]} numberOfLines={1}>
+              {pct ? isolateData(metric) : metric}
+            </Text>
+          ) : (
+            <Text style={styles.subtitle} numberOfLines={1}>
+              {kindFallback}
+            </Text>
+          )}
         </LinearGradient>
       </InvestorPortrait>
     </View>
@@ -98,59 +111,49 @@ export const ExplorePortraitCard = memo(function ExplorePortraitCard({
   );
 });
 
-function createStyles(
-  tokens: ReturnType<typeof useDesignTokens>,
-  variant: 'large' | 'compact' | 'grid'
-) {
-  const nameSize = 
-    variant === 'grid' ? tokens.typography.subhead.size : 
-    variant === 'large' ? tokens.typography.callout.size : 
-    tokens.typography.footnote.size;
-    
+function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
+  const nameSize = 12;
+
   return StyleSheet.create({
     card: {
-      borderRadius: tokens.borderRadius['2xl'],
+      borderRadius: tokens.borderRadius.xl,
       overflow: 'hidden',
-      backgroundColor: tokens.colors.background.cardSolid,
+      backgroundColor: 'transparent',
       borderWidth: 0,
-    },
-    gridCard: {
-      aspectRatio: 0.72,
-      width: '100%',
     },
     bg: {
       flex: 1,
       justifyContent: 'flex-end',
     },
     footer: {
-      paddingHorizontal: tokens.spacing.sm + 2,
-      paddingVertical: tokens.spacing.md,
+      direction: 'ltr',
+      alignItems: 'flex-end',
+      paddingHorizontal: 10,
+      paddingBottom: 8,
       paddingTop: 36,
     },
     name: {
-      ...hebrewText,
+      ...darkPoolPhysicalRightText,
+      width: '100%',
       fontSize: nameSize,
+      lineHeight: nameSize + 3,
       fontWeight: tokens.typography.fontWeight.extrabold,
       color: '#fff',
     },
     subtitle: {
-      ...hebrewText,
-      marginTop: 4,
+      ...darkPoolPhysicalRightText,
+      width: '100%',
+      marginTop: 2,
       fontSize: tokens.typography.caption2.size,
       fontWeight: tokens.typography.fontWeight.semibold,
-      color: 'rgba(255,255,255,0.75)',
+      color: 'rgba(255,255,255,0.72)',
     },
     metric: {
-      marginTop: 4,
-      fontSize: tokens.typography.caption2.size,
-      fontWeight: tokens.typography.fontWeight.semibold,
-      color: 'rgba(255,255,255,0.7)',
-      textAlign: 'right',
-      writingDirection: 'rtl',
-    },
-    metricVal: {
-      color: tokens.colors.primary.main,
-      fontWeight: tokens.typography.fontWeight.extrabold,
+      ...darkPoolPhysicalRightText,
+      width: '100%',
+      marginTop: 2,
+      fontSize: 12,
+      fontWeight: tokens.typography.fontWeight.bold,
     },
   });
 }

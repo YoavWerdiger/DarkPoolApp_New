@@ -14,6 +14,14 @@ export interface FollowingActivityItem {
   amount_label: string | null;
   activity_date: string | null;
   filed_label: string | null;
+  /** ISO יום דיווח — לפיד «נחשף». */
+  filed_at?: string | null;
+  /** ISO יום ביצוע — לפיד «בוצע». */
+  transaction_date?: string | null;
+  /** Quiver PriceChange לקונגרס, אם הגיע. */
+  price_change_pct?: number | null;
+  /** מחיר Form 4 אמיתי — לחישוב מאז העסקה. */
+  trade_price?: number | null;
 }
 
 export interface FollowingFeedPayload {

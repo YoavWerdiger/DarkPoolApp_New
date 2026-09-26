@@ -2,12 +2,40 @@ import React from 'react';
 import { View, Pressable, ViewStyle, StyleSheet, Platform, StyleProp } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useDesignTokens, DesignTokens as StaticDesignTokens } from './DesignTokens';
-import { useTheme } from '../../context/ThemeContext';
+import {
+  CARD_GLASS_ANDROID_BLUR_METHOD,
+  CARD_GLASS_ANDROID_BLUR_REDUCTION,
+  cardGlassBlurTint,
+  darkCardSurface,
+  resolveUiCardBlur,
+  outerStyleBlocksGlassBorder,
+  stripConflictingOuterStyleForGlassBorder,
+  uiCardOuterOverflow,
+  type UiCardVariant,
+} from './cardGlass';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { UI_CARD_RADIUS } from './appLayout';
+
+/** מילוי אטום על מעטפת זכוכית חוסם את ה-Blur ואת האורורה מאחור. */
+function isOpaqueFill(color: unknown): boolean {
+  if (typeof color !== 'string') return false;
+  const c = color.trim().toLowerCase();
+  if (!c || c === 'transparent') return false;
+  if (c.startsWith('#')) {
+    if (c.length === 4 || c.length === 7) return true;
+    if (c.length === 5) return c[4] === 'f';
+    if (c.length === 9) return c.slice(7) === 'ff';
+    return true;
+  }
+  if (/^rgb\(/i.test(c)) return true;
+  const m = c.match(/^rgba\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*,\s*([\d.]+)\s*\)$/i);
+  if (m) return Number(m[1]) >= 0.88;
+  return false;
+}
 
 export interface UICardProps {
   children: React.ReactNode;
-  variant?: 'default' | 'elevated' | 'outlined' | 'accent' | 'glass' | 'blur' | 'inputGlass' | 'surface';
+  variant?: UiCardVariant;
   glassIntensity?: 'subtle' | 'light' | 'medium' | 'strong';
   padding?: 'none' | 'sm' | 'md' | 'lg';
   onPress?: () => void;
@@ -20,15 +48,20 @@ export interface UICardProps {
   /** השבתת רטט בלחיצה (ברירת מחדל: רטט קל פעיל אם יש onPress) */
   haptic?: boolean;
   /**
-   * מדלג על BlurView ומשתמש ברקע מוצק כמו ב־Android.
-   * נחוץ ל־react-native-view-shot / ייצוא PNG — BlurView לא נלכד נכון.
+   * מדלג על BlurView — חובה בשורות רשימה (פיד, גילוי, יומן) וב־view-shot.
+   * בלי blur נשארים translucent + tint + highlight (אותו מראה iOS/Android).
    */
   disableBlur?: boolean;
+  /**
+   * BlurView מלא (כרום / כרטיס בודד / שיט).
+   * ברירת מחדל: דולק ל־elevated / blur / surface / inputGlass; כבוי ל־glass.
+   */
+  enableBlur?: boolean;
 }
 
 const UICard: React.FC<UICardProps> = ({
   children,
-  variant = 'elevated',
+  variant = 'soft',
   glassIntensity = 'light',
   padding = 'md',
   onPress,
@@ -36,23 +69,35 @@ const UICard: React.FC<UICardProps> = ({
   contentContainerStyle,
   pressable = false,
   accessibilityLabel,
-  showGlassBorder: _showGlassBorder = true,
+  showGlassBorder = false,
   haptic = true,
   disableBlur = false,
+  enableBlur,
 }) => {
   const tokens = useDesignTokens();
-  const { colors, spacing, borderRadius, shadows, glassmorphism, layout } = tokens;
-  let isDarkMode = true;
-  try {
-    const theme = useTheme();
-    isDarkMode = theme.isDarkMode;
-  } catch {}
+  const { colors, spacing, shadows, glassmorphism, layout } = tokens;
+  const isDarkMode = colors.background.primary !== '#F5F5F7';
+  const themeMode = isDarkMode ? 'dark' : 'light';
+  /** glass/blur/default → soft כמו כרטיסי אקדמיה (אטום, בלי stroke). */
+  const resolvedVariant: UiCardVariant =
+    variant === 'glass' || variant === 'default' || variant === 'blur' ? 'soft' : variant;
+  const useNativeBlur = resolveUiCardBlur({
+    variant: resolvedVariant,
+    enableBlur,
+    disableBlur,
+  });
 
   const getVariantStyle = (): ViewStyle => {
-    switch (variant) {
-      case 'elevated':
+    switch (resolvedVariant) {
+      case 'soft':
         return {
           backgroundColor: colors.background.cardSolid,
+          borderWidth: 0,
+          ...shadows.none,
+        };
+      case 'elevated':
+        return {
+          backgroundColor: colors.background.elevated2,
           borderWidth: 0,
           ...shadows.none,
         };
@@ -74,13 +119,6 @@ const UICard: React.FC<UICardProps> = ({
           borderWidth: 1.5,
           borderColor: colors.primary.main,
         };
-      case 'glass':
-      case 'blur':
-        return {
-          backgroundColor: 'transparent',
-          borderWidth: 0,
-          ...shadows.none,
-        };
       case 'inputGlass':
         return {
           backgroundColor: 'transparent',
@@ -88,9 +126,24 @@ const UICard: React.FC<UICardProps> = ({
           borderColor: StaticDesignTokens.onboardingInputSurface.borderColor,
           ...shadows.none,
         };
+      case 'glass':
+      case 'blur':
+      case 'default':
+        if (isDarkMode && !useNativeBlur) {
+          return {
+            backgroundColor: darkCardSurface(glassIntensity),
+            borderWidth: 0,
+            ...shadows.none,
+          };
+        }
+        return {
+          backgroundColor: 'transparent',
+          borderWidth: 0,
+          ...shadows.none,
+        };
       default:
         return {
-          backgroundColor: colors.background.secondary,
+          backgroundColor: 'transparent',
           borderWidth: 0,
           ...shadows.none,
         };
@@ -102,57 +155,83 @@ const UICard: React.FC<UICardProps> = ({
       case 'none':
         return {};
       case 'sm':
-        return { padding: spacing.sm };
+        return { padding: spacing.md };
       case 'lg':
         return { padding: layout?.cardPadding ?? spacing.xl };
       default:
-        return { padding: layout?.cardPadding ?? spacing.lg };
+        return { padding: layout?.cardPadding ?? 20 };
     }
   };
 
   const flatOuterStyle = StyleSheet.flatten(style) as ViewStyle | undefined;
-  const isInputGlass = variant === 'inputGlass';
+  const isInputGlass = resolvedVariant === 'inputGlass';
+  const legacyGlassVariant =
+    resolvedVariant === 'glass' ||
+    resolvedVariant === 'blur' ||
+    resolvedVariant === 'default';
+  const usesGlassLayers =
+    isInputGlass || (!isDarkMode && legacyGlassVariant) || (isDarkMode && useNativeBlur);
   const inputSurface = StaticDesignTokens.onboardingInputSurface;
   /** ל־inputGlass: רקע עובר לשכבת overlay כדי ש־BlurView יעבוד מאחוריו */
   const inputOverlayColor =
     (isInputGlass ? (flatOuterStyle?.backgroundColor as string | undefined) : undefined) ??
     inputSurface.backgroundColor;
   const outerStyleForBase =
-    isInputGlass && flatOuterStyle
+    usesGlassLayers && flatOuterStyle && (isInputGlass || isOpaqueFill(flatOuterStyle.backgroundColor))
       ? (() => {
           const { backgroundColor: _bg, ...rest } = flatOuterStyle;
           return rest;
         })()
       : flatOuterStyle;
 
+  const applyGlassBorder =
+    usesGlassLayers &&
+    showGlassBorder &&
+    !isInputGlass &&
+    !outerStyleBlocksGlassBorder(flatOuterStyle ?? {});
+
+  const glassBorderStyle: ViewStyle = applyGlassBorder
+    ? {
+        borderWidth: 1,
+        borderColor: glassmorphism.border[themeMode][glassIntensity],
+        borderTopColor: glassmorphism.topHighlight[themeMode][glassIntensity],
+      }
+    : {};
+
+  const clippedOuterStyle = stripConflictingOuterStyleForGlassBorder(
+    outerStyleForBase,
+    applyGlassBorder
+  );
+
   const baseStyle: ViewStyle = {
-    borderRadius: borderRadius.lg,
-    overflow: 'hidden',
+    borderRadius: UI_CARD_RADIUS,
     ...getVariantStyle(),
+    ...glassBorderStyle,
     ...getPaddingStyle(),
-    ...outerStyleForBase,
+    ...clippedOuterStyle,
+    overflow: uiCardOuterOverflow(applyGlassBorder),
   };
 
   /** רדיוס לשכבות blur/מילוי — חייב להתאים ל־outer כדי שהעיגול ייראה מלא (לא "ריבוע עם blur"). */
-  const clipCornerRadius = flatOuterStyle?.borderRadius ?? borderRadius.lg;
+  const clipCornerRadius = flatOuterStyle?.borderRadius ?? UI_CARD_RADIUS;
 
-  const themeMode = isDarkMode ? 'dark' : 'light';
   const glassOverlay = isInputGlass
     ? inputOverlayColor
-    : glassmorphism.cardBackground[themeMode][glassIntensity];
+    : isDarkMode
+      ? darkCardSurface(glassIntensity)
+      : glassmorphism.cardBackground[themeMode][glassIntensity];
   const blurIntensityValue = isInputGlass
     ? inputSurface.blurIntensity
     : glassmorphism.blurIntensity[glassIntensity];
-  const blurTint =
-    Platform.OS === 'ios'
-      ? isDarkMode
-        ? ('systemThinMaterialDark' as const)
-        : ('systemThinMaterialLight' as const)
-      : isDarkMode
-        ? ('dark' as const)
-        : ('light' as const);
-
-  const usesGlassLayers = variant === 'glass' || variant === 'blur' || isInputGlass;
+  const blurTint = cardGlassBlurTint(isDarkMode);
+  const skipGlassOverlay = isDarkMode && !isInputGlass;
+  const androidBlurProps =
+    Platform.OS === 'android'
+      ? {
+          blurMethod: CARD_GLASS_ANDROID_BLUR_METHOD,
+          blurReductionFactor: CARD_GLASS_ANDROID_BLUR_REDUCTION,
+        }
+      : undefined;
 
   const flatContentStyle = StyleSheet.flatten(contentContainerStyle) as ViewStyle | undefined;
   const contentFillsParent =
@@ -164,16 +243,14 @@ const UICard: React.FC<UICardProps> = ({
     <>
       {usesGlassLayers ? (
         <>
-          {Platform.OS === 'ios' && !disableBlur ? (
+          {useNativeBlur ? (
             <BlurView
               intensity={blurIntensityValue}
               tint={blurTint}
+              {...androidBlurProps}
               style={[StyleSheet.absoluteFill, { borderRadius: clipCornerRadius, overflow: 'hidden' }]}
             />
           ) : (
-            // Android / disableBlur: solid backdrop (no BlurView) so overlay still reads as frosted glass.
-            // baseFill מכויל כך ש-baseFill + glassOverlay = אותו גוון כרטיס כמו ב-iOS.
-            // disableBlur נדרש ל־view-shot — BlurView לא נלכד ב־PNG.
             <View
               style={[
                 StyleSheet.absoluteFill,
@@ -182,26 +259,37 @@ const UICard: React.FC<UICardProps> = ({
                   overflow: 'hidden',
                   backgroundColor: isInputGlass
                     ? inputSurface.androidFallback
-                    : glassmorphism.baseFill[themeMode],
+                    : isDarkMode
+                      ? darkCardSurface(glassIntensity)
+                      : glassmorphism.baseFill[themeMode],
                 },
               ]}
             />
           )}
-          <View
-            style={[
-              StyleSheet.absoluteFill,
-              {
-                borderRadius: clipCornerRadius,
-                overflow: 'hidden',
-                backgroundColor: glassOverlay,
-              },
-            ]}
-          />
+          {!skipGlassOverlay ? (
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                {
+                  borderRadius: clipCornerRadius,
+                  overflow: 'hidden',
+                  backgroundColor: glassOverlay,
+                },
+              ]}
+            />
+          ) : null}
         </>
       ) : null}
       <View
         style={[
-          { position: 'relative', zIndex: 1 },
+          usesGlassLayers
+            ? {
+                position: 'relative',
+                zIndex: 1,
+                overflow: 'hidden',
+                borderRadius: clipCornerRadius,
+              }
+            : { position: 'relative', zIndex: 1 },
           // רשימות בגובה מלא בתוך glass — למנוע קריסה ל-0
           contentFillsParent
             ? { alignSelf: 'stretch', minHeight: 0, height: '100%' }
@@ -243,5 +331,5 @@ const UICard: React.FC<UICardProps> = ({
   );
 };
 
-export { UICard };
+export { UICard, resolveUiCardBlur };
 export default UICard;

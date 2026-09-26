@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { Text, StyleSheet } from 'react-native';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { GlassChip } from '../ui/GlassChip';
 import { chatPalette } from './chatDesignTokens';
 
 interface ReactionBarProps {
@@ -22,7 +23,7 @@ const HIT_SLOP = { top: 6, bottom: 6, left: 4, right: 4 };
  */
 export default function ReactionBar({ onReaction, currentReaction, onOpenPicker }: ReactionBarProps) {
   return (
-    <View style={styles.pill}>
+    <GlassChip disableBlur style={styles.pill} contentContainerStyle={styles.pillContent}>
       {EMOJIS.map(emoji => {
         const isSelected = currentReaction === emoji;
         return (
@@ -58,21 +59,22 @@ export default function ReactionBar({ onReaction, currentReaction, onOpenPicker 
           <Ionicons name="add" size={20} color={chatPalette.textSecondary} />
         </TouchableOpacity>
       ) : null}
-    </View>
+    </GlassChip>
   );
 }
 
 const styles = StyleSheet.create({
   pill: {
-    flexDirection: 'row',
     borderRadius: 22,
+    minHeight: 0,
+    overflow: 'hidden',
+  },
+  pillContent: {
+    flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 8,
     paddingVertical: 6,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.10)',
-    overflow: 'hidden',
+    minHeight: 0,
     gap: 2,
   },
   emojiBtn: {

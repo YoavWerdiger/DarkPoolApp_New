@@ -47,14 +47,22 @@ export const CURATED_MATERIALIZE_TARGETS: Array<{
   { id: 'S000168', kind: 'politician' },
   { id: 'T000278', kind: 'politician' },
   { id: 'G000596', kind: 'politician' },
-  { id: 'K000389', kind: 'politician' },
-  { id: 'M001157', kind: 'politician' },
   { id: 'W000802', kind: 'politician' },
   { id: 'D000032', kind: 'politician' },
   { id: 'M001190', kind: 'politician' },
   { id: '1067983', kind: 'fund_manager' },
   { id: '1697748', kind: 'fund_manager' },
   { id: '1336528', kind: 'fund_manager' },
+  { id: 'NVDA:Jensen Huang', kind: 'insider', ticker: 'NVDA' },
+  { id: 'AAPL:Tim Cook', kind: 'insider', ticker: 'AAPL' },
+  { id: 'META:Mark Zuckerberg', kind: 'insider', ticker: 'META' },
+  { id: 'MSFT:Satya Nadella', kind: 'insider', ticker: 'MSFT' },
+  { id: 'GOOGL:Sundar Pichai', kind: 'insider', ticker: 'GOOGL' },
+  { id: 'TSLA:Elon Musk', kind: 'insider', ticker: 'TSLA' },
+  { id: 'JPM:Jamie Dimon', kind: 'insider', ticker: 'JPM' },
+  { id: 'AMD:Lisa Su', kind: 'insider', ticker: 'AMD' },
+  { id: 'AMZN:Andy Jassy', kind: 'insider', ticker: 'AMZN' },
+  { id: 'PLTR:Alex Karp', kind: 'insider', ticker: 'PLTR' },
 ];
 
 export const CURATED_ID_SET = new Set(
@@ -228,7 +236,7 @@ export async function ensureYahooPriceMaps(
   }
 
   const missing = unique.filter((t) => !out.has(t) || out.get(t)!.size === 0);
-  const concurrency = Math.min(8, Math.max(2, opts.concurrency ?? 6));
+  const concurrency = Math.min(6, Math.max(2, opts.concurrency ?? 4));
   const fetched = new Map<string, Map<string, number>>();
 
   for (let i = 0; i < missing.length; i += concurrency) {

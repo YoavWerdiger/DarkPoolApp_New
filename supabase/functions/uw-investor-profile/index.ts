@@ -10,11 +10,15 @@ import {
 } from '../_shared/unusualWhales.ts';
 import {
   CURATED_EXECUTIVE_UW_IDS,
+} from '../_shared/quiverQuant.ts';
+import { getCuratedInsiderByPersonId } from '../_shared/curatedInsiderProfiles.ts';
+import {
   QUIVER_HOLDINGS_CACHE_KEY,
-  QUIVER_HOLDINGS_FRESH_MS,
   QUIVER_POLITICIANS_CACHE_KEY,
   QUIVER_POLITICIANS_FRESH_MS,
   fetchQuiverCongressStockHoldings,
+  isQuiverSyncStampFresh,
+  looksLikeCompleteBioguideHoldings,
   parseQuiverAllocationPct,
   parseQuiverUsd,
   resolveQuiverApiKey,
@@ -39,6 +43,10 @@ import {
   type CongressPortfolioMetrics,
   type CongressTradeInput,
 } from '../_shared/congressPortfolio.ts';
+import {
+  metricsFromTrumpCongressInputs,
+  TRUMP_DARKPOOL_PERSON_ID,
+} from '../_shared/trumpPortfolio.ts';
 import { isSecProductionMode } from '../_shared/darkPoolMode.ts';
 import {
   congressPhotoUrl,
@@ -254,18 +262,24 @@ async function buildPoliticianProfile(
           )
         ).slice(0, 40);
         const prices = await ensureYahooPriceMaps(supabase, tickers);
-        metrics = await metricsFromCongressTrades(mine, {
-          maxTickers: 40,
-          pricesByTicker: prices,
-        });
+        const isTrump = politicianId === TRUMP_DARKPOOL_PERSON_ID;
+        metrics = isTrump
+          ? metricsFromTrumpCongressInputs(mine, prices)
+          : await metricsFromCongressTrades(mine, {
+              maxTickers: 40,
+              pricesByTicker: prices,
+            });
         if (metrics) {
           const fields = metricsToSnapshotFields(metrics);
           await upsertPortfolioSnapshot(supabase, {
             person_id: politicianId,
             kind: 'politician',
             ...fields,
-            profile_meta: { name, bootstrap: true },
-            source_meta: { accuracy: 'congress_yahoo_first_added', path: 'profile_bootstrap' },
+            profile_meta: { name, bootstrap: true, engine: isTrump ? 'trump' : 'congress' },
+            source_meta: {
+              accuracy: isTrump ? 'trump_notional_mtm' : 'congress_yahoo_first_added',
+              path: 'profile_bootstrap',
+            },
           });
           snapshot_computed_at = new Date().toISOString();
           portfolio_source = 'reconstructed';
@@ -287,11 +301,7 @@ async function buildPoliticianProfile(
   const quiverHoldings = await loadQuiverHoldingsForPolitician(
     supabase,
     quiverKey,
-    /^[A-Z]\d{6}$/.test(bg) ? bg : politicianId,
-    {
-      // מאוצרים: רענון חי אם ה-cache לא fresh (לא מחכים ל-cron)
-      preferLiveIfStale: CURATED_ID_SET.has(politicianId) || CURATED_ID_SET.has(bg),
-    }
+    /^[A-Z]\d{6}$/.test(bg) ? bg : politicianId
   ).catch(() => [] as QuiverCongressStockHolding[]);
   const quiverHoldingRows = quiverHoldingsToRows(quiverHoldings);
 
@@ -321,12 +331,12 @@ async function buildPoliticianProfile(
   let holdings: HoldingRow[];
   let holdings_source: ProfilePayload['holdings_source'];
   if (preferQuiverHoldings) {
-    holdings = quiverHoldingRows.slice(0, 24);
-    holdings_source = 'quiver_estimate';
-    const quiverTotal = holdings.reduce(
+    const quiverTotal = quiverHoldingRows.reduce(
       (s, h) => s + (h.mid_usd_k != null && h.mid_usd_k > 0 ? h.mid_usd_k * 1000 : 0),
       0
     );
+    holdings = quiverHoldingRows.slice(0, 24);
+    holdings_source = 'quiver_estimate';
     if (metrics && quiverTotal > 0) {
       // שווי כותרת = סכום Quiver holdings; גרף השחזור נגמר בערך אחר (mid STOCK Act).
       // מסתירים את הסדרה כדי לא להציג עקומה שלא תואמת את השווי / את רשימת האחזקות.
@@ -409,7 +419,8 @@ async function buildInsiderProfile(
   const dbRows = await loadInsiderBuysFromDb(supabase, {
     ticker,
     insiderName: nameKey,
-    limit: 200,
+    personId: personKey,
+    limit: 400,
   }).catch(() => []);
 
   const dbTxs = dbRows.map(insiderDbToUwTx);
@@ -438,9 +449,11 @@ async function buildInsiderProfile(
     match?.name ||
     formatInsiderName(nameKey) ||
     'בכיר';
+  const curatedPin = getCuratedInsiderByPersonId(personKey);
   const portraitCache = await loadPortraitFromDb(supabase, personKey).catch(() => null);
   const image_url =
     portraitCache ??
+    curatedPin?.imageUrl ??
     (dbRows[0]?.insider_logo_url?.trim() ||
       knownPortraitUrl(personKey, name) ||
       (match ? resolveUwLogoUrl(match) : null) ||
@@ -906,58 +919,47 @@ async function loadQuiverPoliticianMeta(
 async function loadQuiverHoldingsForPolitician(
   supabase: ReturnType<typeof createServiceSupabase>,
   quiverKey: string,
-  bioguideId: string,
-  opts: { preferLiveIfStale?: boolean } = {}
+  bioguideId: string
 ): Promise<QuiverCongressStockHolding[]> {
   const bg = bioguideId.trim().toUpperCase();
   if (!/^[A-Z]\d{6}$/.test(bg)) return [];
-
-  const fresh = await loadSnapshot<QuiverHoldingsCachePayload>(
-    supabase,
-    QUIVER_HOLDINGS_CACHE_KEY,
-    QUIVER_HOLDINGS_FRESH_MS
-  ).catch(() => null);
-  if (fresh?.payload?.by_bioguide?.[bg]?.length) {
-    return fresh.payload.by_bioguide[bg];
-  }
 
   const stale = await loadSnapshotStale<QuiverHoldingsCachePayload>(
     supabase,
     QUIVER_HOLDINGS_CACHE_KEY
   ).catch(() => null);
+  const prev = stale?.payload ?? null;
+  const existing = Array.isArray(prev?.by_bioguide?.[bg]) ? prev!.by_bioguide[bg] : [];
+  const stamped = isQuiverSyncStampFresh(prev?.bioguides_synced?.[bg]);
+  if (stamped) return existing;
+  // ספר מלא בלי חותמת — לא שורת טיקר ממיזוג, ולא נופלים לשחזור STOCK Act.
+  if (looksLikeCompleteBioguideHoldings(existing)) return existing;
 
-  // מאוצרים: אם אין cache fresh — משיכה חיה מ־/beta/live/congress_stock_holdings
-  const shouldLive =
-    !!quiverKey &&
-    (opts.preferLiveIfStale || !stale?.payload?.by_bioguide?.[bg]?.length);
-
-  if (shouldLive && quiverKey) {
+  // בלי חותמת bioguide — לא סומכים על שורת טיקר בודדת ממיזוג ?ticker=
+  if (quiverKey) {
     try {
       const rows = await fetchQuiverCongressStockHoldings(quiverKey, {
         bioguideId: bg,
       });
+      const now = new Date().toISOString();
       const next: QuiverHoldingsCachePayload = {
         by_bioguide: {
-          ...(stale?.payload?.by_bioguide ?? {}),
+          ...(prev?.by_bioguide ?? {}),
           [bg]: rows,
         },
-        synced_at: new Date().toISOString(),
+        synced_at: now,
+        tickers_synced: prev?.tickers_synced,
+        bioguides_synced: { ...(prev?.bioguides_synced ?? {}), [bg]: now },
       };
       await saveSnapshot(supabase, QUIVER_HOLDINGS_CACHE_KEY, next);
       return rows;
     } catch (e) {
       console.warn('quiver holdings profile bootstrap', bg, e);
-      if (stale?.payload?.by_bioguide?.[bg]?.length) {
-        return stale.payload.by_bioguide[bg];
-      }
-      return [];
+      return looksLikeCompleteBioguideHoldings(existing) ? existing : [];
     }
   }
 
-  if (stale?.payload?.by_bioguide?.[bg]?.length) {
-    return stale.payload.by_bioguide[bg];
-  }
-  return [];
+  return looksLikeCompleteBioguideHoldings(existing) ? existing : [];
 }
 
 /**
@@ -968,7 +970,7 @@ function quiverHoldingsToRows(rows: QuiverCongressStockHolding[]): HoldingRow[] 
   const out: HoldingRow[] = [];
   for (const h of rows) {
     const ticker = String(h.Ticker ?? '').toUpperCase().trim();
-    if (!ticker || ticker.length > 6) continue;
+    if (!ticker || ticker.length > 10) continue;
     const usd = parseQuiverUsd(h.CurrentHolding);
     const alloc = parseQuiverAllocationPct(h.Allocation);
     const usdLabel = usd != null ? formatPortfolioUsd(usd) : null;

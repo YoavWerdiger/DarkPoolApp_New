@@ -228,7 +228,7 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
     >
       <View style={styles.centered}>
         <Animated.View style={[styles.halo, { transform: [{ scale: badgeScale }] }]}>
-          <View style={[styles.ring, { backgroundColor: tokens.cashAppStyle.colors.inputFocus }]}>
+          <View style={[styles.ring, { backgroundColor: tokens.colors.background.tertiary }]}>
             <View
               style={[
                 styles.badge,

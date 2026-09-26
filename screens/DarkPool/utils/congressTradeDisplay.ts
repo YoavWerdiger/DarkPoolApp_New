@@ -33,11 +33,13 @@ function parseDayOrIso(raw: string | null | undefined): number | null {
 
 /**
  * "לפני 22 שעות" / "לפני 4 שבועות" — עברית עם צורת זוגי.
+ * compact=true → "לפני 22 ש׳" / "לפני 4 שב׳" כדי ששתי הצלעות ייכנסו בשורת הפיד.
  * מחזיר null כשהתאריך לא ניתן לפענוח (ולא "לפני 0").
  */
 export function formatHebrewAgo(
   raw: string | null | undefined,
-  now: number = Date.now()
+  now: number = Date.now(),
+  opts?: { compact?: boolean }
 ): string | null {
   const ts = parseDayOrIso(raw);
   if (ts == null) return null;
@@ -47,18 +49,53 @@ export function formatHebrewAgo(
   if (diff < MINUTE_MS) return 'הרגע';
 
   const minutes = Math.floor(diff / MINUTE_MS);
-  if (minutes < 60) return plural(minutes, 'לפני דקה', 'לפני שתי דקות', 'דקות');
+  if (minutes < 60) {
+    return opts?.compact
+      ? compactAgo(minutes, 'ד׳', 'לפני דקה')
+      : plural(minutes, 'לפני דקה', 'לפני שתי דקות', 'דקות');
+  }
 
   const hours = Math.floor(diff / HOUR_MS);
-  if (hours < 24) return plural(hours, 'לפני שעה', 'לפני שעתיים', 'שעות');
+  if (hours < 24) {
+    return opts?.compact
+      ? compactAgo(hours, 'ש׳', 'לפני שעה')
+      : plural(hours, 'לפני שעה', 'לפני שעתיים', 'שעות');
+  }
 
   const days = Math.floor(diff / DAY_MS);
-  if (days < 7) return plural(days, 'אתמול', 'לפני יומיים', 'ימים');
-  if (days < 30) return plural(Math.floor(days / 7), 'לפני שבוע', 'לפני שבועיים', 'שבועות');
-  if (days < 365) {
-    return plural(Math.floor(days / 30), 'לפני חודש', 'לפני חודשיים', 'חודשים');
+  if (days < 7) {
+    return opts?.compact
+      ? compactAgo(days, 'י׳', 'אתמול', 'לפני יומיים')
+      : plural(days, 'אתמול', 'לפני יומיים', 'ימים');
   }
-  return plural(Math.floor(days / 365), 'לפני שנה', 'לפני שנתיים', 'שנים');
+  if (days < 30) {
+    const weeks = Math.floor(days / 7);
+    return opts?.compact
+      ? compactAgo(weeks, 'שב׳', 'לפני שבוע', 'לפני שבועיים')
+      : plural(weeks, 'לפני שבוע', 'לפני שבועיים', 'שבועות');
+  }
+  if (days < 365) {
+    const months = Math.floor(days / 30);
+    return opts?.compact
+      ? compactAgo(months, 'ח׳', 'לפני חודש', 'לפני חודשיים')
+      : plural(months, 'לפני חודש', 'לפני חודשיים', 'חודשים');
+  }
+  const years = Math.floor(days / 365);
+  return opts?.compact
+    ? compactAgo(years, 'שנ׳', 'לפני שנה', 'לפני שנתיים')
+    : plural(years, 'לפני שנה', 'לפני שנתיים', 'שנים');
+}
+
+function compactAgo(
+  n: number,
+  unit: string,
+  one: string,
+  two?: string
+): string {
+  if (n <= 1) return one;
+  if (n === 2 && two) return two;
+  // רווח בין המספר ליחידה — בלי זה 20ש׳ נדבק וה-bidi מערבב אותיות.
+  return `לפני ${n} ${unit}`;
 }
 
 function plural(n: number, one: string, two: string, many: string): string {
@@ -85,16 +122,86 @@ export function buildDualDateLine(input: {
   filedAt: string | null | undefined;
   transactionDate: string | null | undefined;
   now?: number;
+  /** שורת פיד קצרה — שתי הצלעות נשארות גלויות. */
+  compact?: boolean;
 }): DualDateLine {
   const now = input.now ?? Date.now();
-  const disclosedAgo = formatHebrewAgo(input.filedAt, now);
-  const tradedAgo = formatHebrewAgo(input.transactionDate, now);
+  const agoOpts = input.compact ? { compact: true } : undefined;
+  const disclosedAgo = formatHebrewAgo(input.filedAt, now, agoOpts);
+  const tradedAgo = formatHebrewAgo(input.transactionDate, now, agoOpts);
+
+  const filedDay = isoDayKey(input.filedAt);
+  const tradedDay = isoDayKey(input.transactionDate);
+  const sameDay =
+    Boolean(filedDay && tradedDay && filedDay === tradedDay) &&
+    Boolean(disclosedAgo);
+
+  if (sameDay) {
+    const line = `בוצע ודווח ${disclosedAgo}`;
+    return { disclosed: line, traded: null, text: line };
+  }
 
   const disclosed = disclosedAgo ? `נחשף ${disclosedAgo}` : null;
   const traded = tradedAgo ? `בוצע ${tradedAgo}` : null;
   const parts = [disclosed, traded].filter(Boolean) as string[];
 
   return { disclosed, traded, text: parts.length ? parts.join(' · ') : null };
+}
+
+/**
+ * שורת תאריכים לכרטיס פיד: ISO כפול מנצח; אם יש רק צלע אחת משלימים מתווית מוכנה.
+ * לא מוותרים על «נחשף» או «בוצע» כשהנתון קיים.
+ */
+export function resolveFeedDatesLine(input: {
+  filedAt?: string | null;
+  transactionDate?: string | null;
+  datesText?: string | null;
+  now?: number;
+}): string | null {
+  const dual = buildDualDateLine({
+    filedAt: input.filedAt,
+    transactionDate: input.transactionDate,
+    now: input.now,
+    compact: true,
+  });
+  const fallback = input.datesText?.trim() || null;
+  if (dual.disclosed && dual.traded) return dual.text;
+  if (fallback && /נחשף/.test(fallback) && /בוצע/.test(fallback)) return fallback;
+  if (!dual.disclosed && dual.traded && fallback && /נחשף/.test(fallback)) {
+    return `${fallback} · ${dual.traded}`;
+  }
+  if (dual.disclosed && !dual.traded && fallback && /בוצע/.test(fallback)) {
+    return `${dual.disclosed} · ${fallback}`;
+  }
+  return dual.text || fallback;
+}
+
+function isoDayKey(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const s = String(raw).trim();
+  if (!s) return null;
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  const ts = parseDayOrIso(s);
+  if (ts == null) return null;
+  return new Date(ts).toISOString().slice(0, 10);
+}
+
+/** קונגרס: קנה/מכר מ-transaction_type. אף פעם לא «רכישה בשוק». */
+export function formatCongressTxnLabel(transactionType: string): string {
+  const t = transactionType.trim().toLowerCase();
+  if (
+    t === 's' ||
+    t === 'sell' ||
+    t === 'sale' ||
+    t === 'sold' ||
+    t.includes('sell') ||
+    t.includes('sale') ||
+    t.includes('מכר') ||
+    t.includes('מכיר')
+  ) {
+    return 'מכירה';
+  }
+  return 'רכישה';
 }
 
 /** תאריך הדיווח פחות תאריך העסקה, בימים. null = חסר תאריך. */
@@ -129,6 +236,38 @@ export function formatTradeDate(raw: string | null | undefined): string | null {
   const m = day.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) return null;
   return `${m[3]}.${m[2]}.${m[1]}`;
+}
+
+const HEBREW_MONTHS = [
+  'בינואר',
+  'בפברואר',
+  'במרץ',
+  'באפריל',
+  'במאי',
+  'ביוני',
+  'ביולי',
+  'באוגוסט',
+  'בספטמבר',
+  'באוקטובר',
+  'בנובמבר',
+  'בדצמבר',
+] as const;
+
+/**
+ * "8 בספטמבר" — כמו InsiderWave "Sep 8". בלי שנה (הטבלה שומרת את היום המלא).
+ * בלי אפס מוביל. null כשהתאריך לא YYYY-MM-DD.
+ */
+export function formatHebrewMonthDay(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const day = String(raw).slice(0, 10);
+  const m = day.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  const monthIdx = Number(m[2]) - 1;
+  const d = Number(m[3]);
+  if (!Number.isFinite(d) || d < 1 || d > 31) return null;
+  const month = HEBREW_MONTHS[monthIdx];
+  if (!month) return null;
+  return `${d} ${month}`;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -235,17 +374,17 @@ export function formatDisclosedAmountRangeCompact(
 }
 
 /* -------------------------------------------------------------------------- */
-/* תשואה מאז העסקה — מ-Quiver, לא משוחזרת אצלנו                               */
+/* תשואה מאז העסקה — % טיקר (Quiver PriceChange או פתיחה מול חי)              */
 /* -------------------------------------------------------------------------- */
 
 /**
- * Quiver מחזיר אחוזים (24.11 = +24.11%).
- * 0 הוא ערך לגיטימי; רק null/NaN נחשבים "אין נתון".
+ * Quiver מחזיר אחוזים (24.11 = +24.11%). Form 4 מחושב מול מחיר חי.
+ * 0 הוא ערך לגיטימי; רק null/NaN נחשבים "אין נתון". שני ספרות כמו InsiderWave.
  */
 export function formatReturnPct(pct: number | null | undefined): string | null {
   if (pct == null || !Number.isFinite(pct)) return null;
   const sign = pct > 0 ? '+' : '';
-  return `${sign}${pct.toFixed(1)}%`;
+  return `${sign}${pct.toFixed(2)}%`;
 }
 
 export type ReturnTone = 'positive' | 'negative' | 'neutral';

@@ -4,6 +4,7 @@ import { Image } from 'expo-image';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import {
   INVESTOR_PORTRAIT_PLACEHOLDER_URI,
+  looksLikePersonPhoto,
   portraitDisplayUrl,
 } from '../utils/investorPlaceholder';
 
@@ -22,7 +23,8 @@ export const InsiderAvatar = memo(function InsiderAvatar({
   const [failed, setFailed] = useState(false);
   const radius = size / 2;
   const label = name?.trim() || 'משקיע';
-  const raw = logoUrl && !failed ? logoUrl : INVESTOR_PORTRAIT_PLACEHOLDER_URI;
+  const face = logoUrl && looksLikePersonPhoto(logoUrl) ? logoUrl : null;
+  const raw = face && !failed ? face : INVESTOR_PORTRAIT_PLACEHOLDER_URI;
   const uri = portraitDisplayUrl(raw, Math.max(96, size * 3)) ?? raw;
 
   return (
@@ -43,11 +45,11 @@ export const InsiderAvatar = memo(function InsiderAvatar({
           width: size,
           height: size,
           borderRadius: radius,
-          opacity: logoUrl && !failed ? 1 : 0.72,
+          opacity: face && !failed ? 1 : 0.72,
         }}
         contentFit="cover"
         cachePolicy="memory-disk"
-        recyclingKey={logoUrl || name || 'insider-avatar'}
+        recyclingKey={face || name || 'insider-avatar'}
         transition={0}
         onError={() => setFailed(true)}
         accessibilityLabel={label}

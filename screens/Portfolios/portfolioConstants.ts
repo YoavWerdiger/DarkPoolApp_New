@@ -202,11 +202,13 @@ export function portfolioDetailTabLabelStyle(textSecondary: string): TextStyle {
     color: textSecondary,
     writingDirection: 'rtl',
     textAlign: 'right',
+    direction: 'ltr',
   };
 }
 
 /** מספר ימים שמייצגים תקופה (לחישוב Performance) */
 export const PERIOD_TO_DAYS: Record<PerformancePeriod, number | null> = {
+  '1D': 1,
   '1W': 7,
   '1M': 30,
   '3M': 91,

@@ -30,22 +30,22 @@ export function useCourses(params?: CourseListParams) {
 }
 
 // Hook לקבלת קורס ספציפי
-export function useCourse(courseId: string) {
+export function useCourse(courseId: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: learningKeys.course(courseId),
     queryFn: () => LearningService.fetchCourse(courseId),
-    enabled: !!courseId,
+    enabled: !!courseId && (options?.enabled ?? true),
     staleTime: ACADEMY_COURSE_DETAIL_STALE_MS,
     placeholderData: (previous) => previous,
   });
 }
 
 // Hook לקבלת שיעור ספציפי
-export function useLesson(lessonId: string) {
+export function useLesson(lessonId: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: learningKeys.lesson(lessonId),
     queryFn: () => LearningService.fetchLesson(lessonId),
-    enabled: !!lessonId,
+    enabled: !!lessonId && (options?.enabled ?? true),
     staleTime: ACADEMY_COURSE_DETAIL_STALE_MS,
     placeholderData: (previous) => previous,
   });
@@ -66,7 +66,7 @@ export function useEnrollInCourse() {
 }
 
 // Hook לקבלת התקדמות קורס
-export function useCourseProgress(courseId: string) {
+export function useCourseProgress(courseId: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: learningKeys.progress(courseId),
     queryFn: async () => {
@@ -92,17 +92,18 @@ export function useCourseProgress(courseId: string) {
         lastLessonId: lastLesson?.id || null
       };
     },
-    enabled: !!courseId,
+    enabled: !!courseId && (options?.enabled ?? true),
     staleTime: 1 * 60 * 1000, // 1 דקה
   });
 }
 
 // Hook לקבלת הקורסים שלי
-export function useMyEnrollments() {
+export function useMyEnrollments(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: learningKeys.enrollments(),
     queryFn: () => LearningService.getMyEnrollments(),
     staleTime: 5 * 60 * 1000,
+    enabled: options?.enabled ?? true,
   });
 }
 

@@ -8,6 +8,7 @@ import {
   ChatSheetContent,
   useChatFitContentSnap,
 } from './ChatBottomSheet';
+import { APP_TYPE, appSectionTitleStyle } from '../ui/appType';
 
 interface GroupInfo {
   id: string;
@@ -70,20 +71,21 @@ export default function JoinGroupBottomSheet({
       alignItems: 'center',
     },
     groupName: {
-      fontSize: 22,
-      fontWeight: '700',
+      ...appSectionTitleStyle,
       color: DesignTokens.colors.text.primary,
       textAlign: 'center',
       marginBottom: DesignTokens.spacing.xs,
     },
     membersCount: {
-      fontSize: 15,
+      fontSize: APP_TYPE.body.fontSize,
+      lineHeight: APP_TYPE.body.lineHeight,
       color: DesignTokens.colors.text.secondary,
       textAlign: 'center',
       marginBottom: DesignTokens.spacing.sm,
     },
     description: {
-      fontSize: 15,
+      fontSize: APP_TYPE.body.fontSize,
+      lineHeight: APP_TYPE.body.lineHeight,
       color: DesignTokens.colors.text.secondary,
       textAlign: 'center',
       marginBottom: DesignTokens.spacing.lg,

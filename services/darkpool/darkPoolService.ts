@@ -15,6 +15,11 @@
  */
 
 import { supabase } from '../../lib/supabase';
+import {
+  curatedInsiderMatchesRow,
+  getCuratedInsiderByPersonId,
+  tickersForCuratedInsider,
+} from '../../screens/DarkPool/utils/curatedInsiderPins';
 import type {
   DarkPoolDailyAggregateRow,
   DarkPoolFeedItem,
@@ -221,6 +226,70 @@ export async function getTickerInsiderBuys(
     .eq('ticker', ticker.toUpperCase())
     .gte('transaction_date', since.toISOString().slice(0, 10))
     .order('transaction_date', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as InsiderBuyRow[];
+}
+
+/**
+ * "פעילות אחרונה" במסך פרטי עסקת בכיר — אותו אדם, אותו טיקר.
+ *
+ * אין ב-Quiver מזהה אדם (`docs/ROSTER_EXECUTIVES.md` §1.5: אין person CIK),
+ * ולכן ההתאמה היא על `insider_name` כפי שנשמר בשורה עצמה. זו התאמה על אותו
+ * string שהגיע מאותו ספק, ולא ניסיון לזהות אדם בין מקורות.
+ */
+export async function listInsiderTradesForPersonTicker(
+  insiderName: string,
+  ticker: string,
+  limit = 20
+): Promise<InsiderBuyRow[]> {
+  const name = insiderName?.trim();
+  const sym = ticker?.trim().toUpperCase();
+  if (!name || !sym) return [];
+  const { data, error } = await supabase
+    .from('dark_pool_insider_buys')
+    .select('*')
+    .eq('ticker', sym)
+    .eq('insider_name', name)
+    .order('transaction_date', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as InsiderBuyRow[];
+}
+
+/**
+ * כל דיווחי Form 4 של אותו אדם (כל הטיקרים) — לשחזור פוזיציה מדויקת.
+ * בלי סינון ל-P בלבד; P/S/A/M/F/G נדרשים לריצת הכמות.
+ */
+export async function listInsiderTradesForPerson(
+  insiderName: string,
+  limit = 400,
+  personId?: string
+): Promise<InsiderBuyRow[]> {
+  const name = insiderName?.trim();
+  if (!name && !personId) return [];
+
+
+  const curated = personId ? getCuratedInsiderByPersonId(personId) : null;
+  if (curated) {
+    const { data, error } = await supabase
+      .from('dark_pool_insider_buys')
+      .select('*')
+      .in('ticker', tickersForCuratedInsider(curated))
+      .order('transaction_date', { ascending: true })
+      .limit(Math.min(500, limit));
+    if (error) throw error;
+    return ((data ?? []) as InsiderBuyRow[]).filter((r) =>
+      curatedInsiderMatchesRow(curated, r)
+    );
+  }
+
+  if (!name) return [];
+  const { data, error } = await supabase
+    .from('dark_pool_insider_buys')
+    .select('*')
+    .eq('insider_name', name)
+    .order('transaction_date', { ascending: true })
+    .limit(limit);
   if (error) throw error;
   return (data ?? []) as InsiderBuyRow[];
 }

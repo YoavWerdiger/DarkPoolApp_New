@@ -9,12 +9,13 @@ import {
 } from 'react-native';
 import Svg, { Line, Rect, Polyline, Circle } from 'react-native-svg';
 import { useFocusEffect } from '@react-navigation/native';
-import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { DesignTokens, useDesignTokens } from '../../components/ui/DesignTokens';
 import { useAuth } from '../../context/AuthContext';
 import { queryClient } from '../../lib/queryClient';
 import { appQueryKeys } from '../../lib/appQueryKeys';
 import { supabase } from '../../services/supabase';
 import UICard from '../../components/ui/UICard';
+import { DayDividerPill } from '../../components/ui/DayDividerPill';
 import type { Trade } from './tradeTypes';
 import {
   parseJournalDetails,
@@ -26,6 +27,22 @@ import {
 } from './tradeJournalConstants';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { MarketsSegmentedControl } from '../Markets/components/MarketsSegmentedControl';
+import {
+  JOURNAL_LAYOUT,
+  JOURNAL_TYPE,
+  journalBodyTextStyle,
+  journalCaption2Style,
+  journalCaptionStyle,
+  journalCardBodyStyle,
+  journalCardMetricLabelStyle,
+  journalCardMetricValueSecondaryStyle,
+  journalCardTitleStyle,
+  journalPhysicalRightText,
+  journalRow,
+  journalRtlContent,
+  journalSectionSubtitleStyle,
+  journalSectionTitleStyle,
+} from './journalLayout';
 
 type PnlBar = { key: string; label: string; pnl: number };
 
@@ -408,6 +425,7 @@ function buildJournalInsights(trades: Trade[]): JournalInsights {
 const journalTabStyles = StyleSheet.create({
   scroll: {
     flex: 1,
+    ...journalRtlContent,
   },
   scrollContent: {
     paddingHorizontal: 16,
@@ -424,7 +442,7 @@ const journalTabStyles = StyleSheet.create({
     minHeight: 200,
   },
   loadingText: {
-    fontSize: 14,
+    ...journalBodyTextStyle,
     textAlign: 'center',
   },
   empty: {
@@ -435,22 +453,24 @@ const journalTabStyles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    ...journalSectionTitleStyle,
     textAlign: 'center',
   },
   emptyHint: {
-    fontSize: 14,
+    ...journalBodyTextStyle,
     textAlign: 'center',
-    lineHeight: 20,
+  },
+  cardHeader: {
+    ...journalCardTitleStyle,
+    marginBottom: JOURNAL_LAYOUT.cardTitleToBodyGap,
+    textAlign: 'right',
   },
   sectionTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    textAlign: 'right',
-    writingDirection: 'rtl',
+    ...journalSectionTitleStyle,
     marginBottom: 12,
     width: '100%',
+    maxWidth: 440,
+    alignSelf: 'center',
   },
   chartCenter: {
     width: '100%',
@@ -469,7 +489,7 @@ const journalTabStyles = StyleSheet.create({
     alignItems: 'center',
   },
   kpiRow: {
-    flexDirection: 'row-reverse',
+    ...journalRow,
     justifyContent: 'center',
     alignItems: 'flex-start',
     flexWrap: 'wrap',
@@ -483,28 +503,38 @@ const journalTabStyles = StyleSheet.create({
     paddingHorizontal: 10,
     alignItems: 'center',
     borderRadius: 14,
-    backgroundColor: '#262626',
+    backgroundColor: DesignTokens.colors.glass.card.bg,
     borderWidth: 0,
     borderColor: 'transparent',
   },
-  kpiTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: 8,
+  kpiHeroRow: {
+    ...journalRow,
+    width: '100%',
+    alignItems: 'stretch',
   },
-  kpiValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    textAlign: 'center',
-    letterSpacing: -0.3,
-    writingDirection: 'ltr',
+  kpiHeroCol: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    gap: JOURNAL_LAYOUT.cardMetricLabelToValueGap,
+  },
+  kpiHeroDivider: {
+    width: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    marginVertical: 10,
+  },
+  kpiMetricLabel: {
+    ...journalCardMetricLabelStyle,
+  },
+  kpiMetricValueHero: {
+    ...journalCardMetricValueSecondaryStyle,
+  },
+  kpiMetricValue: {
+    ...journalCardMetricValueSecondaryStyle,
   },
   journalHint: {
-    fontSize: 14,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-    lineHeight: 21,
+    ...journalBodyTextStyle,
   },
   journalInsightSection: {
     width: '100%',
@@ -514,12 +544,10 @@ const journalTabStyles = StyleSheet.create({
     gap: 16,
   },
   journalInsightSectionTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    textAlign: 'right',
-    writingDirection: 'rtl',
+    ...journalSectionSubtitleStyle,
+    marginTop: 0,
     marginBottom: 8,
-    letterSpacing: 0.2,
+    fontWeight: '700',
   },
   journalInsightSurface: {
     width: '100%',
@@ -534,19 +562,16 @@ const journalTabStyles = StyleSheet.create({
     gap: 6,
   },
   journalCoveragePct: {
-    fontSize: 40,
-    fontWeight: '800',
-    letterSpacing: -1,
+    ...journalCardMetricValueSecondaryStyle,
     writingDirection: 'ltr',
   },
   journalCoverageSub: {
-    fontSize: 14,
+    ...journalBodyTextStyle,
     textAlign: 'center',
-    lineHeight: 20,
     paddingHorizontal: 8,
   },
   journalPillRow: {
-    flexDirection: 'row-reverse',
+    ...journalRow,
     flexWrap: 'wrap',
     width: '100%',
     gap: 8,
@@ -558,24 +583,27 @@ const journalTabStyles = StyleSheet.create({
     minWidth: '28%',
     maxWidth: '100%',
     borderRadius: 14,
-    borderWidth: 0,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+    minHeight: 0,
+  },
+  journalMiniPillContent: {
+    flexDirection: 'column',
     alignItems: 'center',
     gap: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    minHeight: 0,
   },
   journalMiniPillLabel: {
-    fontSize: 12,
+    ...journalCaptionStyle,
     fontWeight: '600',
     textAlign: 'center',
   },
   journalMiniPillValue: {
-    fontSize: 22,
-    fontWeight: '800',
+    ...journalCardMetricValueSecondaryStyle,
     writingDirection: 'ltr',
   },
   journalMoodGrid: {
-    flexDirection: 'row-reverse',
+    ...journalRow,
     flexWrap: 'wrap',
     width: '100%',
     gap: 10,
@@ -584,19 +612,21 @@ const journalTabStyles = StyleSheet.create({
   journalMoodCell: {
     width: '48%',
     borderRadius: 14,
-    borderWidth: 0,
+    minHeight: 0,
+  },
+  journalMoodCellInner: {
     paddingVertical: 12,
     paddingHorizontal: 10,
     gap: 8,
   },
   journalMoodCellTitle: {
-    fontSize: 14,
+    ...journalPhysicalRightText,
+    fontSize: JOURNAL_TYPE.body.fontSize,
     fontWeight: '700',
-    textAlign: 'right',
-    writingDirection: 'rtl',
+    lineHeight: JOURNAL_TYPE.body.lineHeight,
   },
   journalMoodCellMeta: {
-    flexDirection: 'row-reverse',
+    ...journalRow,
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
@@ -604,25 +634,26 @@ const journalTabStyles = StyleSheet.create({
   },
   journalMoodCountBadge: {
     minWidth: 36,
+    minHeight: 0,
+    borderRadius: 999,
+  },
+  journalMoodCountBadgeContent: {
+    minHeight: 0,
     paddingVertical: 4,
     paddingHorizontal: 10,
-    borderRadius: 999,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   journalMoodCountText: {
-    fontSize: 14,
+    fontSize: JOURNAL_TYPE.body.fontSize,
     fontWeight: '800',
     writingDirection: 'ltr',
   },
   journalMoodAvg: {
-    fontSize: 12,
+    ...journalCaptionStyle,
     fontWeight: '600',
-    textAlign: 'right',
     writingDirection: 'ltr',
   },
   journalMistakeCard: {
-    flexDirection: 'row-reverse',
+    ...journalRow,
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
@@ -638,19 +669,66 @@ const journalTabStyles = StyleSheet.create({
   },
   journalMistakeLabel: {
     flex: 1,
-    fontSize: 14,
+    ...journalPhysicalRightText,
+    fontSize: JOURNAL_TYPE.body.fontSize,
     fontWeight: '600',
-    textAlign: 'right',
-    writingDirection: 'rtl',
+    lineHeight: JOURNAL_TYPE.body.lineHeight,
   },
   journalMistakeCount: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: JOURNAL_TYPE.cardTitle.fontSize,
+    fontWeight: JOURNAL_TYPE.cardTitle.fontWeight,
+    lineHeight: JOURNAL_TYPE.cardTitle.lineHeight,
     writingDirection: 'ltr',
     minWidth: 36,
     textAlign: 'center',
   },
 });
+
+function JournalHeroKpis({
+  totalPnlStr,
+  totalPnlColor,
+  winRateStr,
+  winRateColor,
+}: {
+  totalPnlStr: string;
+  totalPnlColor: string;
+  winRateStr: string;
+  winRateColor: string;
+}) {
+  return (
+    <UICard
+      variant="soft"
+      padding="md"
+      style={{ width: '100%', maxWidth: 440, alignSelf: 'center', marginBottom: 10 }}
+    >
+      <View style={journalTabStyles.kpiHeroRow}>
+        <View style={journalTabStyles.kpiHeroCol}>
+          <Text style={journalTabStyles.kpiMetricLabel}>P&L כולל</Text>
+          <Text
+            style={[journalTabStyles.kpiMetricValueHero, { color: totalPnlColor }]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.65}
+          >
+            {totalPnlStr}
+          </Text>
+        </View>
+        <View style={journalTabStyles.kpiHeroDivider} />
+        <View style={journalTabStyles.kpiHeroCol}>
+          <Text style={journalTabStyles.kpiMetricLabel}>Win Rate</Text>
+          <Text
+            style={[journalTabStyles.kpiMetricValueHero, { color: winRateColor }]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.65}
+          >
+            {winRateStr}
+          </Text>
+        </View>
+      </View>
+    </UICard>
+  );
+}
 
 function KpiBlock({
   title,
@@ -665,15 +743,18 @@ function KpiBlock({
 }) {
   return (
     <UICard
-      variant="glass"
-      glassIntensity="light"
+      variant="soft"
       padding="sm"
-      style={{ flex: 1, minWidth: 120, borderRadius: 14 }}
-      contentContainerStyle={{ alignItems: 'center', gap: 4 }}
+      style={{ flex: 1, minWidth: 100, borderRadius: 14 }}
+      contentContainerStyle={{
+        alignItems: 'center',
+        gap: JOURNAL_LAYOUT.cardMetricLabelToValueGap,
+        paddingVertical: 4,
+      }}
     >
-      <Text style={[journalTabStyles.kpiTitle, { color: 'rgba(255,255,255,0.55)' }]}>{title}</Text>
+      <Text style={journalTabStyles.kpiMetricLabel}>{title}</Text>
       <Text
-        style={[journalTabStyles.kpiValue, { color: valueColor }]}
+        style={[journalTabStyles.kpiMetricValue, { color: valueColor }]}
         numberOfLines={1}
         adjustsFontSizeToFit
         minimumFontScale={0.7}
@@ -681,7 +762,7 @@ function KpiBlock({
         {value}
       </Text>
       {sub ? (
-        <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textAlign: 'center' }}>
+        <Text style={{ ...journalCaption2Style, color: DesignTokens.colors.text.tertiary, textAlign: 'center' }}>
           {sub}
         </Text>
       ) : null}
@@ -698,12 +779,13 @@ function InsightCard({
 }) {
   return (
     <UICard
-      variant="glass"
-      glassIntensity="light"
+      variant="soft"
       padding="md"
       style={{ borderRadius: 16, marginBottom: 14, width: '100%', maxWidth: 440, alignSelf: 'center' }}
     >
-      <Text style={journalTabStyles.sectionTitle}>{title}</Text>
+      <Text style={[journalTabStyles.cardHeader, { color: DesignTokens.colors.text.primary }]}>
+        {title}
+      </Text>
       {children}
     </UICard>
   );
@@ -714,62 +796,64 @@ function JournalMiniPill({
   value,
   labelColor,
   valueColor,
-  borderColor,
-  backgroundColor,
 }: {
   label: string;
   value: string;
   labelColor: string;
   valueColor: string;
-  borderColor: string;
-  backgroundColor: string;
 }) {
   return (
-    <View style={[journalTabStyles.journalMiniPill, { borderColor, backgroundColor }]}>
+    <DayDividerPill
+      style={journalTabStyles.journalMiniPill}
+      contentContainerStyle={journalTabStyles.journalMiniPillContent}
+    >
       <Text style={[journalTabStyles.journalMiniPillLabel, { color: labelColor }]}>{label}</Text>
       <Text style={[journalTabStyles.journalMiniPillValue, { color: valueColor }]}>{value}</Text>
-    </View>
+    </DayDividerPill>
   );
 }
 
 function JournalMoodInsightCard({
   item,
   formatUsd,
-  cardBg,
-  cardBorder,
   titleColor,
-  badgeBg,
   badgeTextColor,
   avgPosColor,
   avgNegColor,
 }: {
   item: MoodStat;
   formatUsd: (n: number) => string;
-  cardBg: string;
-  cardBorder: string;
   titleColor: string;
-  badgeBg: string;
   badgeTextColor: string;
   avgPosColor: string;
   avgNegColor: string;
 }) {
   const avgColor = item.avgPnl >= 0 ? avgPosColor : avgNegColor;
   return (
-    <View style={[journalTabStyles.journalMoodCell, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+    <UICard
+      variant="soft"
+      padding="none"
+      disableBlur
+      style={journalTabStyles.journalMoodCell}
+      contentContainerStyle={journalTabStyles.journalMoodCellInner}
+    >
       <Text style={[journalTabStyles.journalMoodCellTitle, { color: titleColor }]} numberOfLines={2}>
         {item.label}
       </Text>
       <View style={journalTabStyles.journalMoodCellMeta}>
-        <View style={[journalTabStyles.journalMoodCountBadge, { backgroundColor: badgeBg }]}>
+        <DayDividerPill
+          style={journalTabStyles.journalMoodCountBadge}
+          contentContainerStyle={journalTabStyles.journalMoodCountBadgeContent}
+        >
           <Text style={[journalTabStyles.journalMoodCountText, { color: badgeTextColor }]}>
             {item.count}
           </Text>
-        </View>
+        </DayDividerPill>
         <Text style={[journalTabStyles.journalMoodAvg, { color: avgColor }]} numberOfLines={1}>
           {`ממוצע $${formatUsd(item.avgPnl)}`}
         </Text>
       </View>
-    </View>
+    </UICard>
   );
 }
 
@@ -806,7 +890,7 @@ export default function JournalDataTab() {
       borderColor: 'transparent',
       borderRadius: DesignTokens.borderRadius['2xl'],
       overflow: 'hidden' as const,
-      backgroundColor: DesignTokens.colors.background.cardSolid,
+      backgroundColor: 'transparent',
     }),
     [DesignTokens]
   );
@@ -925,8 +1009,7 @@ export default function JournalDataTab() {
     return (
       <View style={journalTabStyles.loadingWrap}>
         <UICard
-          variant="glass"
-          glassIntensity="light"
+          variant="soft"
           padding="lg"
           style={sectionCardStyle}
           contentContainerStyle={{ alignItems: 'center', gap: 12 }}
@@ -949,7 +1032,7 @@ export default function JournalDataTab() {
       bounces
     >
       {trades.length === 0 ? (
-        <UICard variant="glass" glassIntensity="light" padding="md" style={sectionCardStyle}>
+        <UICard variant="soft" padding="md" style={sectionCardStyle}>
           <View style={journalTabStyles.empty}>
             <Text style={[journalTabStyles.emptyTitle, { color: DesignTokens.colors.text.primary }]}>
               אין עדיין טריידים
@@ -962,8 +1045,8 @@ export default function JournalDataTab() {
       ) : (
         <>
           {/* P&L Line Chart */}
-          <UICard variant="glass" glassIntensity="light" padding="md" style={sectionCardStyle}>
-            <Text style={[journalTabStyles.sectionTitle, { color: DesignTokens.colors.text.primary }]}>
+          <UICard variant="soft" padding="md" style={sectionCardStyle}>
+            <Text style={[journalTabStyles.cardHeader, { color: DesignTokens.colors.text.primary }]}>
               P&L צבורי
             </Text>
             <View style={journalTabStyles.chartCenter}>
@@ -984,12 +1067,18 @@ export default function JournalDataTab() {
           {/* KPIs — row 1 */}
           {kpis ? (
             <>
-              <View style={{ flexDirection: 'row-reverse', gap: 10, width: '100%', maxWidth: 440, alignSelf: 'center', marginBottom: 10 }}>
-                <KpiBlock title="P&L כולל" value={kpis.totalPnlStr} valueColor={kpis.totalPnlColor} />
-                <KpiBlock title="Win Rate" value={kpis.winRateStr} valueColor={kpis.winRateStr >= '50%' ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger} />
+              <JournalHeroKpis
+                totalPnlStr={kpis.totalPnlStr}
+                totalPnlColor={kpis.totalPnlColor}
+                winRateStr={kpis.winRateStr}
+                winRateColor={
+                  kpis.winRateStr >= '50%'
+                    ? DesignTokens.colors.primary.main
+                    : DesignTokens.colors.text.danger
+                }
+              />
+              <View style={{ ...journalRow, gap: 10, width: '100%', maxWidth: 440, alignSelf: 'center', marginBottom: 14 }}>
                 <KpiBlock title="טריידים" value={kpis.countStr} valueColor={DesignTokens.colors.text.primary} />
-              </View>
-              <View style={{ flexDirection: 'row-reverse', gap: 10, width: '100%', maxWidth: 440, alignSelf: 'center', marginBottom: 14 }}>
                 <KpiBlock title="Avg Win" value={kpis.avgWinStr} valueColor={DesignTokens.colors.primary.main} />
                 <KpiBlock title="Avg Loss" value={kpis.avgLossStr} valueColor={DesignTokens.colors.text.danger} />
                 {kpis.profitFactor != null ? (
@@ -1000,7 +1089,7 @@ export default function JournalDataTab() {
                   />
                 ) : null}
               </View>
-              <View style={{ flexDirection: 'row-reverse', gap: 10, width: '100%', maxWidth: 440, alignSelf: 'center', marginBottom: 14 }}>
+              <View style={{ ...journalRow, gap: 10, width: '100%', maxWidth: 440, alignSelf: 'center', marginBottom: 14 }}>
                 <KpiBlock title="הטרייד הטוב ביותר" value={kpis.bestStr} valueColor={DesignTokens.colors.primary.main} />
                 <KpiBlock title="הטרייד הגרוע ביותר" value={kpis.worstStr} valueColor={DesignTokens.colors.text.danger} />
               </View>
@@ -1008,25 +1097,17 @@ export default function JournalDataTab() {
           ) : null}
 
           {/* Bar Chart */}
-          <UICard variant="glass" glassIntensity="light" padding="md" style={sectionCardStyle}>
-            <Text style={[journalTabStyles.sectionTitle, { color: DesignTokens.colors.text.primary }]}>
+          <UICard variant="soft" padding="md" style={sectionCardStyle}>
+            <Text style={[journalTabStyles.cardHeader, { color: DesignTokens.colors.text.primary }]}>
               חלוקת P&L לפי טווחי זמן
             </Text>
-            <View
-              style={[
-                journalTabStyles.segmentShell,
-                {
-                  borderColor: DesignTokens.colors.glass.card.border,
-                  backgroundColor: DesignTokens.colors.glass.card.bg,
-                },
-              ]}
-            >
+            <View style={journalTabStyles.segmentShell}>
               <MarketsSegmentedControl
                 options={CHART_SEGMENTS}
                 value={chartMode}
                 onChange={setChartMode}
                 accessibilityGroupLabel="יחידת זמן לחלוקה"
-                containerDirection="row-reverse"
+                containerDirection="row"
                 segmentAccessibilityRole="button"
               />
             </View>
@@ -1043,8 +1124,8 @@ export default function JournalDataTab() {
 
           {/* Strategy Performance */}
           {strategyStats.length > 1 || (strategyStats.length === 1 && strategyStats[0].name !== '—') ? (
-            <UICard variant="glass" glassIntensity="light" padding="md" style={sectionCardStyle}>
-              <Text style={[journalTabStyles.sectionTitle, { color: DesignTokens.colors.text.primary }]}>
+            <UICard variant="soft" padding="md" style={sectionCardStyle}>
+              <Text style={[journalTabStyles.cardHeader, { color: DesignTokens.colors.text.primary }]}>
                 ביצועים לפי אסטרטגיה
               </Text>
               {strategyStats.map((s) => {
@@ -1053,7 +1134,7 @@ export default function JournalDataTab() {
                   <View
                     key={s.name}
                     style={{
-                      flexDirection: 'row-reverse',
+                      ...journalRow,
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       paddingVertical: 10,
@@ -1062,10 +1143,10 @@ export default function JournalDataTab() {
                     }}
                   >
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 14, fontWeight: '700', color: DesignTokens.colors.text.primary, textAlign: 'right' }}>
+                      <Text style={{ ...journalPhysicalRightText, fontSize: JOURNAL_TYPE.body.fontSize, fontWeight: '700', lineHeight: JOURNAL_TYPE.body.lineHeight, color: DesignTokens.colors.text.primary }}>
                         {s.name}
                       </Text>
-                      <Text style={{ fontSize: 11, color: DesignTokens.colors.text.tertiary, textAlign: 'right', marginTop: 2 }}>
+                      <Text style={{ ...journalCaption2Style, color: DesignTokens.colors.text.tertiary, marginTop: 2 }}>
                         {s.total} טריידים · Win {s.winRate}%
                       </Text>
                     </View>
@@ -1080,12 +1161,12 @@ export default function JournalDataTab() {
 
           {/* Journal Insights */}
           {journalInsights ? (
-            <UICard variant="glass" glassIntensity="light" padding="md" style={sectionCardStyle}>
-              <Text style={[journalTabStyles.sectionTitle, { color: DesignTokens.colors.text.primary }]}>
+            <UICard variant="soft" padding="md" style={sectionCardStyle}>
+              <Text style={[journalTabStyles.cardHeader, { color: DesignTokens.colors.text.primary }]}>
                 תובנות יומן
               </Text>
               {journalInsights.withDetails === 0 ? (
-                <Text style={[journalTabStyles.journalHint, { color: DesignTokens.colors.text.tertiary }]}>
+                <Text style={[journalCardBodyStyle, { color: DesignTokens.colors.text.tertiary }]}>
                   עדיין אין שדות יומן. בעת שמירת טרייד, ניתן למלא מצב רוח, מסגרת זמן, עמידה בתוכנית וטעויות.
                 </Text>
               ) : (
@@ -1112,10 +1193,7 @@ export default function JournalDataTab() {
                             key={`mb-${m.id}`}
                             item={m}
                             formatUsd={formatUsd}
-                            cardBg="rgba(255,255,255,0.04)"
-                            cardBorder="rgba(255,255,255,0.08)"
                             titleColor={DesignTokens.colors.text.primary}
-                            badgeBg="rgba(255,255,255,0.12)"
                             badgeTextColor={DesignTokens.colors.text.primary}
                             avgPosColor={DesignTokens.colors.primary.main}
                             avgNegColor={DesignTokens.colors.text.danger}
@@ -1137,10 +1215,7 @@ export default function JournalDataTab() {
                             key={`ma-${m.id}`}
                             item={m}
                             formatUsd={formatUsd}
-                            cardBg="rgba(255,255,255,0.04)"
-                            cardBorder="rgba(255,255,255,0.08)"
                             titleColor={DesignTokens.colors.text.primary}
-                            badgeBg="rgba(255,255,255,0.12)"
                             badgeTextColor={DesignTokens.colors.text.primary}
                             avgPosColor={DesignTokens.colors.primary.main}
                             avgNegColor={DesignTokens.colors.text.danger}
@@ -1156,9 +1231,9 @@ export default function JournalDataTab() {
                       עמידה בתוכנית
                     </Text>
                     <View style={journalTabStyles.journalPillRow}>
-                      <JournalMiniPill label="כן" value={String(journalInsights.plan.yes)} labelColor={DesignTokens.colors.text.tertiary} valueColor={DesignTokens.colors.primary.main} borderColor="rgba(255,255,255,0.1)" backgroundColor="rgba(255,255,255,0.05)" />
-                      <JournalMiniPill label="לא" value={String(journalInsights.plan.no)} labelColor={DesignTokens.colors.text.tertiary} valueColor={DesignTokens.colors.text.danger} borderColor="rgba(255,255,255,0.1)" backgroundColor="rgba(255,255,255,0.05)" />
-                      <JournalMiniPill label="לא צוין" value={String(journalInsights.plan.unknown)} labelColor={DesignTokens.colors.text.tertiary} valueColor={DesignTokens.colors.text.secondary} borderColor="rgba(255,255,255,0.1)" backgroundColor="rgba(255,255,255,0.05)" />
+                      <JournalMiniPill label="כן" value={String(journalInsights.plan.yes)} labelColor={DesignTokens.colors.text.tertiary} valueColor={DesignTokens.colors.primary.main} />
+                      <JournalMiniPill label="לא" value={String(journalInsights.plan.no)} labelColor={DesignTokens.colors.text.tertiary} valueColor={DesignTokens.colors.text.danger} />
+                      <JournalMiniPill label="לא צוין" value={String(journalInsights.plan.unknown)} labelColor={DesignTokens.colors.text.tertiary} valueColor={DesignTokens.colors.text.secondary} />
                     </View>
                   </View>
 
@@ -1176,8 +1251,6 @@ export default function JournalDataTab() {
                             value={String(tf.count)}
                             labelColor={DesignTokens.colors.text.tertiary}
                             valueColor={tf.count > 0 ? DesignTokens.colors.text.primary : DesignTokens.colors.text.tertiary}
-                            borderColor="rgba(255,255,255,0.1)"
-                            backgroundColor="rgba(255,255,255,0.05)"
                           />
                         ))}
                       </View>

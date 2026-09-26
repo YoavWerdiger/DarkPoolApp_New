@@ -330,7 +330,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     searchShell: {
       marginTop: 14,
       marginBottom: 10,
-      borderRadius: 999,
+      borderRadius: tokens.borderRadius.search,
       overflow: 'hidden',
       paddingHorizontal: 14,
       paddingVertical: 4,

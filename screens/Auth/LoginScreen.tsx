@@ -10,8 +10,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { chromeSurfaceCardStyle } from '../../components/ui/chromeControl';
 import { ScreenGradientBackground } from '../../components/VideoBackground';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import {
+  formFieldInputStyle,
+  formFieldLabelStyle,
+  formFieldShellStyle,
+} from '../../components/ui/formControl';
 
 const { width } = Dimensions.get('window');
 const WELCOME_LOGO_URI = 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/app-media/image%20(3).png';
@@ -25,7 +31,8 @@ interface FieldProps {
   secureTextEntry?: boolean;
   keyboardType?: any;
   autoCapitalize?: any;
-  rightEl?: React.ReactNode;
+  /** קישור טקסט ליד התווית (למשל הצג/הסתר סיסמה) — לא בתוך תיבת הקלט */
+  labelAccessory?: React.ReactNode;
   tokens: ReturnType<typeof useDesignTokens>;
 }
 
@@ -37,49 +44,38 @@ const Field: React.FC<FieldProps> = ({
   secureTextEntry,
   keyboardType,
   autoCapitalize = 'none',
-  rightEl,
+  labelAccessory,
   tokens,
 }) => {
   const [focused, setFocused] = useState(false);
   const { colors } = tokens;
   return (
     <View style={{ marginBottom: 16 }}>
-      <Text
-        style={{
-          color: colors.text.secondary,
-          fontSize: 13,
-          fontWeight: '500',
-          marginBottom: 8,
-          textAlign: 'right',
-          letterSpacing: 0.2,
-        }}
-      >
-        {label}
-      </Text>
       <View
         style={{
-          backgroundColor: colors.glass.cardElevated.bg,
-          borderRadius: 26,
-          borderWidth: 1.5,
-          borderColor: focused
-            ? colors.primary.main
-            : colors.glass.cardElevated.border,
-          paddingHorizontal: 16,
           flexDirection: 'row',
           alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 8,
         }}
       >
-        {rightEl}
+        <Text style={formFieldLabelStyle({ tokens, focused, error: false })}>{label}</Text>
+        {labelAccessory}
+      </View>
+      <View
+        style={[
+          {
+            borderRadius: 26,
+            paddingHorizontal: 16,
+            flexDirection: 'row',
+            alignItems: 'center',
+            minHeight: 56,
+          },
+          formFieldShellStyle({ tokens, focused, error: false }),
+        ]}
+      >
         <TextInput
-          style={{
-            flex: 1,
-            color: colors.text.primary,
-            paddingHorizontal: 0,
-            paddingVertical: 15,
-            fontSize: 16,
-            fontWeight: '400',
-            textAlign: 'right',
-          }}
+          style={[formFieldInputStyle(), { paddingVertical: 15 }]}
           placeholder={placeholder}
           placeholderTextColor={colors.text.disabled}
           value={value}
@@ -218,7 +214,7 @@ export default function LoginScreen({ navigation }: any) {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <View style={{ flex: 1, backgroundColor: colors.background.primary }}>
+        <View style={{ flex: 1, backgroundColor: 'transparent' }}>
           <ScreenGradientBackground />
 
           <SafeAreaView style={{ flex: 1 }}>
@@ -273,25 +269,33 @@ export default function LoginScreen({ navigation }: any) {
                       </TouchableOpacity>
                     </LinearGradient>
 
-                    <TouchableOpacity
+                    <Pressable
                       onPress={() => {
                         void HapticFeedback.impactLight();
                         setShowForm(true);
                       }}
-                      activeOpacity={0.85}
-                      style={{
-                        borderRadius: 28,
-                        borderWidth: 1.5,
-                        borderColor: colors.glass.cardElevated.border,
-                        backgroundColor: colors.glass.cardElevated.bg,
-                        paddingVertical: 16,
-                        alignItems: 'center',
-                      }}
+                      style={({ pressed }) => [
+                        chromeSurfaceCardStyle(tokens, {
+                          borderRadius: 28,
+                          width: '100%',
+                          minHeight: 56,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }),
+                        pressed && { opacity: 0.88, transform: [{ scale: 0.985 }] },
+                      ]}
                     >
-                      <Text style={{ color: colors.text.primary, fontSize: 16, fontWeight: '700' }}>
+                      <Text
+                        style={{
+                          color: colors.text.primary,
+                          fontSize: 17,
+                          fontWeight: '800',
+                          textAlign: 'center',
+                        }}
+                      >
                         יש לי כבר חשבון
                       </Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   </View>
                 </>
               ) : (
@@ -337,19 +341,23 @@ export default function LoginScreen({ navigation }: any) {
                   placeholder="הכנס את הסיסמה"
                   secureTextEntry={!showPassword}
                   tokens={tokens}
-                  rightEl={
+                  labelAccessory={
                     <Pressable
                       onPress={() => {
                         void HapticFeedback.selection();
                         setShowPassword(!showPassword);
                       }}
-                      style={{ padding: 6 }}
+                      hitSlop={8}
                     >
-                      <Ionicons
-                        name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                        size={19}
-                        color={colors.text.tertiary}
-                      />
+                      <Text
+                        style={{
+                          color: colors.text.secondary,
+                          fontSize: 13,
+                          fontWeight: '600',
+                        }}
+                      >
+                        {showPassword ? 'הסתר' : 'הצג'}
+                      </Text>
                     </Pressable>
                   }
                 />

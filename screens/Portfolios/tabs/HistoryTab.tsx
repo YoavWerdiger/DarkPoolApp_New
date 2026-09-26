@@ -19,7 +19,12 @@ import ExportTradeImage, {
   portfolioTradeToExportable,
   type ExportableTrade,
 } from '../../../components/Journal/ExportTradeImage';
-import { darkPoolTextRtl } from '../../DarkPool/darkPoolLayout';
+import {
+  journalBodyTextStyle,
+  journalPhysicalRightText,
+  journalSectionSubtitleStyle,
+  journalSectionTitleStyle,
+} from '../../Journal/journalLayout';
 
 interface Props {
   portfolioId: string;
@@ -96,17 +101,14 @@ export default function HistoryTab({ portfolioId, refreshKey }: Props) {
           direction: 'rtl',
         },
         emptyTitle: {
-          fontSize: 16,
-          fontWeight: '700',
+          ...journalSectionTitleStyle,
           color: tokens.colors.text.primary,
-          ...darkPoolTextRtl,
           textAlign: 'center',
         },
         emptyText: {
-          fontSize: 13,
+          ...journalSectionSubtitleStyle,
           color: tokens.colors.text.tertiary,
           textAlign: 'center',
-          writingDirection: 'rtl',
           paddingHorizontal: 30,
         },
         summaryCard: {
@@ -127,16 +129,17 @@ export default function HistoryTab({ portfolioId, refreshKey }: Props) {
           fontSize: 13,
           fontWeight: '600',
           color: tokens.colors.text.tertiary,
-          ...darkPoolTextRtl,
+          ...journalPhysicalRightText,
         },
         summaryValue: {
-          fontSize: 16,
+          fontSize: 15,
           fontWeight: '800',
+          lineHeight: 22,
           writingDirection: 'ltr',
           textAlign: 'right',
         },
         searchRow: { marginBottom: 10 },
-        searchCardWrap: { borderRadius: 20, overflow: 'hidden' },
+        searchCardWrap: { borderRadius: tokens.borderRadius.search, overflow: 'hidden' },
         searchInner: {
           flexDirection: 'row',
           alignItems: 'center',
@@ -147,9 +150,10 @@ export default function HistoryTab({ portfolioId, refreshKey }: Props) {
           flex: 1,
           marginHorizontal: 8,
           color: tokens.colors.text.primary,
-          fontSize: 14,
-          textAlign: 'right',
-          writingDirection: 'rtl',
+          ...journalPhysicalRightText,
+          fontSize: 15,
+          fontWeight: '400',
+          lineHeight: 22,
           paddingVertical: 4,
         },
         emptyResults: {
@@ -159,10 +163,9 @@ export default function HistoryTab({ portfolioId, refreshKey }: Props) {
           direction: 'rtl',
         },
         emptyResultsText: {
-          fontSize: 13,
+          ...journalSectionSubtitleStyle,
           color: tokens.colors.text.tertiary,
           textAlign: 'center',
-          writingDirection: 'rtl',
           marginTop: 8,
         },
       }),

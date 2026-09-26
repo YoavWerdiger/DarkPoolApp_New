@@ -472,7 +472,7 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
         variant="inputGlass"
         padding="none"
         style={{
-          borderRadius: tokens.borderRadius.xl,
+          borderRadius: tokens.borderRadius.search,
           marginBottom: tokens.spacing.md,
           borderWidth: 1,
           borderColor: chatPalette.glassBorder,
@@ -974,7 +974,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   modalRoot: {
-    backgroundColor: '#111111',
+    backgroundColor: 'transparent',
   },
   modalScroll: {
     padding: DesignTokens.spacing.md,

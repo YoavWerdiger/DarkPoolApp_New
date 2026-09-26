@@ -3,6 +3,7 @@ import { View, Text, ActivityIndicator, type TextStyle, type ViewStyle } from 'r
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { APP_TYPE, appSectionTitleStyle } from '../../components/ui/appType';
 import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import BreakingNewsTab from './BreakingNewsTab';
 import { NewsScreenShell } from './NewsScreenShell';
@@ -137,7 +138,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     loadingText: {
       marginTop: tokens.spacing.md,
-      fontSize: tokens.typography.body.size,
+      fontSize: APP_TYPE.body.fontSize,
+      lineHeight: APP_TYPE.body.lineHeight,
       color: tokens.colors.text.secondary,
     },
     errorBoundary: {
@@ -146,18 +148,18 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
         justifyContent: 'center',
         alignItems: 'center',
         padding: tokens.spacing.xl,
-        backgroundColor: tokens.colors.background.primary,
+        backgroundColor: tokens.colors.background.screen,
       },
       title: {
         color: tokens.colors.text.primary,
-        fontSize: tokens.typography.titleSmall.size,
-        fontWeight: tokens.typography.fontWeight.semibold as any,
-        marginBottom: tokens.spacing.sm,
+        ...appSectionTitleStyle,
         textAlign: 'center',
+        marginBottom: tokens.spacing.sm,
       },
       message: {
         color: tokens.colors.text.secondary,
-        fontSize: tokens.typography.bodySmall.size,
+        fontSize: APP_TYPE.body.fontSize,
+        lineHeight: APP_TYPE.body.lineHeight,
         textAlign: 'center',
       },
     },

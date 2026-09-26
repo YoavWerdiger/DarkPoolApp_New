@@ -10,14 +10,17 @@ import {
   DARK_POOL_UNAVAILABLE,
   buildDualDateLine,
   disclosureDelayDays,
+  formatCongressTxnLabel,
   formatDisclosedAmountRange,
   formatDisclosedAmountRangeCompact,
   formatDisclosureDelay,
   formatHebrewAgo,
+  formatHebrewMonthDay,
   formatReturnPct,
   formatTradeDate,
   orUnavailable,
   parseDisclosedAmountRange,
+  resolveFeedDatesLine,
   returnTone,
 } from '../../screens/DarkPool/utils/congressTradeDisplay';
 
@@ -45,6 +48,13 @@ describe('formatHebrewAgo', () => {
     expect(formatHebrewAgo(null, NOW)).toBeNull();
     expect(formatHebrewAgo('', NOW)).toBeNull();
     expect(formatHebrewAgo('not-a-date', NOW)).toBeNull();
+  });
+
+  it('compacts units so both feed dates fit on one line', () => {
+    expect(formatHebrewAgo('2026-08-22T12:00:00Z', NOW, { compact: true })).toBe(
+      'לפני 22 ש׳'
+    );
+    expect(formatHebrewAgo('2026-07-25', NOW, { compact: true })).toBe('לפני 4 שב׳');
   });
 });
 
@@ -75,6 +85,74 @@ describe('buildDualDateLine', () => {
     expect(
       buildDualDateLine({ filedAt: null, transactionDate: undefined, now: NOW }).text
     ).toBeNull();
+  });
+
+  it('collapses to one line when filed and traded are the same calendar day', () => {
+    const line = buildDualDateLine({
+      filedAt: '2026-07-25',
+      transactionDate: '2026-07-25',
+      now: NOW,
+    });
+    expect(line.traded).toBeNull();
+    expect(line.text).toBe('בוצע ודווח לפני 4 שבועות');
+    expect(line.text).not.toMatch(/נחשף/);
+  });
+
+  it('keeps compact dual dates on one feed line', () => {
+    const line = buildDualDateLine({
+      filedAt: '2026-08-22T12:00:00Z',
+      transactionDate: '2026-07-25',
+      now: NOW,
+      compact: true,
+    });
+    expect(line.disclosed).toBe('נחשף לפני 22 ש׳');
+    expect(line.traded).toBe('בוצע לפני 4 שב׳');
+    expect(line.text).toBe('נחשף לפני 22 ש׳ · בוצע לפני 4 שב׳');
+  });
+});
+
+describe('resolveFeedDatesLine', () => {
+  it('prefers ISO dual dates over a single-side filed_label', () => {
+    expect(
+      resolveFeedDatesLine({
+        filedAt: '2026-08-22T12:00:00Z',
+        transactionDate: '2026-07-25',
+        datesText: 'נחשף לפני 12 ימים',
+        now: NOW,
+      })
+    ).toBe('נחשף לפני 22 ש׳ · בוצע לפני 4 שב׳');
+  });
+
+  it('keeps both sides when only the trade ISO and a disclosed label exist', () => {
+    expect(
+      resolveFeedDatesLine({
+        filedAt: null,
+        transactionDate: '2026-07-25',
+        datesText: 'נחשף לפני 12 ימים',
+        now: NOW,
+      })
+    ).toBe('נחשף לפני 12 ימים · בוצע לפני 4 שב׳');
+  });
+
+  it('falls back to datesText when no ISO dates parse', () => {
+    expect(
+      resolveFeedDatesLine({
+        filedAt: null,
+        transactionDate: null,
+        datesText: 'נחשף לפני 12 ימים',
+        now: NOW,
+      })
+    ).toBe('נחשף לפני 12 ימים');
+  });
+});
+
+describe('formatCongressTxnLabel', () => {
+  it('is buy/sell from the transaction type — never open-market wording', () => {
+    expect(formatCongressTxnLabel('buy')).toBe('רכישה');
+    expect(formatCongressTxnLabel('sell')).toBe('מכירה');
+    expect(formatCongressTxnLabel('Purchase')).toBe('רכישה');
+    expect(formatCongressTxnLabel('Purchase')).not.toMatch(/שוק/);
+    expect(formatCongressTxnLabel('open market purchase')).not.toMatch(/שוק/);
   });
 });
 
@@ -167,13 +245,14 @@ describe('formatDisclosedAmountRangeCompact', () => {
 });
 
 describe('formatReturnPct', () => {
-  it('signs positive values and keeps one decimal', () => {
-    expect(formatReturnPct(24.11)).toBe('+24.1%');
-    expect(formatReturnPct(-3.2)).toBe('-3.2%');
+  it('signs positive values and keeps two decimals like InsiderWave', () => {
+    expect(formatReturnPct(24.11)).toBe('+24.11%');
+    expect(formatReturnPct(-3.2)).toBe('-3.20%');
+    expect(formatReturnPct(0.63)).toBe('+0.63%');
   });
 
   it('treats 0 as a real value but null as missing', () => {
-    expect(formatReturnPct(0)).toBe('0.0%');
+    expect(formatReturnPct(0)).toBe('0.00%');
     expect(formatReturnPct(null)).toBeNull();
     expect(formatReturnPct(undefined)).toBeNull();
     expect(formatReturnPct(Number.NaN)).toBeNull();
@@ -196,6 +275,13 @@ describe('formatTradeDate', () => {
   it('returns null for missing input', () => {
     expect(formatTradeDate(null)).toBeNull();
     expect(formatTradeDate('nope')).toBeNull();
+  });
+});
+
+describe('formatHebrewMonthDay', () => {
+  it('renders InsiderWave-style day + Hebrew month', () => {
+    expect(formatHebrewMonthDay('2026-09-08')).toBe('8 בספטמבר');
+    expect(formatHebrewMonthDay('2026-07-25')).toBe('25 ביולי');
   });
 });
 

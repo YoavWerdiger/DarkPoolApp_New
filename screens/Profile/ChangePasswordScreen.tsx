@@ -20,6 +20,13 @@ import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import {
+  settingsHebrewText,
+  settingsBodyType,
+  settingsMetaType,
+  settingsCaptionType,
+  settingsButtonLabelStyle,
+} from '../../components/profile/settingsType';
 
 type PasswordFieldProps = {
   label: string;
@@ -354,11 +361,10 @@ export default function ChangePasswordScreen({ navigation }: any) {
               >
                 <Text
                   style={{
-                    color: tokens.colors.danger.main,
-                    textAlign: 'right',
-                    fontSize: 13,
+                    ...settingsHebrewText,
+                    ...settingsMetaType,
                     fontWeight: '600',
-                    lineHeight: 18,
+                    color: tokens.colors.danger.main,
                   }}
                 >
                   {formError}
@@ -435,20 +441,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   intro: {
-    fontSize: 14,
-    fontWeight: '500',
-    lineHeight: 20,
-    textAlign: 'right',
+    ...settingsHebrewText,
+    ...settingsMetaType,
     marginBottom: 14,
   },
   fieldBlock: {
     marginBottom: 16,
   },
   fieldLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-    textAlign: 'right',
+    ...settingsHebrewText,
+    ...settingsCaptionType,
     marginBottom: 8,
   },
   inputShell: {
@@ -459,10 +461,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   input: {
+    ...settingsHebrewText,
+    ...settingsBodyType,
     flex: 1,
-    fontSize: 16,
-    fontWeight: '400',
-    textAlign: 'right',
     paddingVertical: 13,
     paddingHorizontal: 0,
     minHeight: 48,
@@ -486,14 +487,12 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   strengthLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    textAlign: 'right',
+    ...settingsHebrewText,
+    ...settingsCaptionType,
   },
   inlineHint: {
-    fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'right',
+    ...settingsHebrewText,
+    ...settingsCaptionType,
     marginTop: -8,
     marginBottom: 12,
   },
@@ -528,8 +527,6 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   submitText: {
-    fontSize: 17,
-    fontWeight: '700',
-    letterSpacing: -0.2,
+    ...settingsButtonLabelStyle,
   },
 });

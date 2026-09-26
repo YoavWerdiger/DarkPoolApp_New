@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import UICard from '../ui/UICard';
+import { CHROME_UICARD, chromeSurfaceCardStyle } from '../ui/chromeControl';
 import { useDesignTokens } from '../ui/DesignTokens';
 
 /**
@@ -86,10 +87,8 @@ export default function ChatComposerBar({
     >
     <View style={[styles.container, containerStyle]}>
       <UICard
-        variant="glass"
-        glassIntensity="light"
-        padding="none"
-        style={styles.pillOuter}
+        {...CHROME_UICARD}
+        style={[styles.pillOuter, chromeSurfaceCardStyle(tokens)]}
         contentContainerStyle={styles.pillContent}
       >
         {leading}

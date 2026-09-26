@@ -24,6 +24,7 @@ import {
   toggleWatchlistAlerts,
 } from '../services/darkpool/darkPoolService';
 import { supabase } from '../services/supabase';
+import { ensureNotificationCategoryOn } from '../lib/notificationPrefs';
 import type {
   DarkPoolDailyAggregateRow,
   DarkPoolSignalRow,
@@ -96,6 +97,9 @@ export function useDarkPoolTicker(ticker: string | undefined) {
   const setAlerts = useCallback(
     async (on: boolean) => {
       if (!ticker || !isWatching) return;
+      if (on) {
+        await ensureNotificationCategoryOn('darkPoolTickerAlerts');
+      }
       await toggleWatchlistAlerts(ticker, on);
       setAlertsOn(on);
     },

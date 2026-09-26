@@ -33,7 +33,7 @@ const LikedArticleCard: React.FC<LikedArticleCardProps> = ({ article, onPress, o
       style={{ marginBottom: 12 }}
       accessibilityRole="button"
     >
-      <UICard variant="blur" padding="none" style={{ borderRadius: cardRadius, overflow: 'hidden' }}>
+      <UICard variant="blur" padding="none" disableBlur style={{ borderRadius: cardRadius, overflow: 'hidden' }}>
         <View style={{ height: thumbnailHeight, width: '100%', position: 'relative' }}>
           {hasImage ? (
             <>

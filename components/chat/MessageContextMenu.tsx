@@ -142,7 +142,7 @@ export default function MessageContextMenu({
         <MenuOptions
           customStyles={{
             optionsContainer: {
-              backgroundColor: '#262626',
+              backgroundColor: 'rgba(38, 38, 38, 0.82)',
               borderRadius: 12,
               paddingVertical: 8,
               shadowColor: 'transparent',

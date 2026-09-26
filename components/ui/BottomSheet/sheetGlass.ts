@@ -3,9 +3,30 @@ import { DesignTokens } from '../DesignTokens';
 
 /**
  * טוקני זכוכית אחידים לכל BottomSheet / ChatBottomSheet.
- * משטח = זכוכית כהה frosted כמו UICard (Blur + overlay לבן שקוף־למחצה)
- * בגוון הפלטה החדשה (#262626) — לא מילוי אטום שחונק את ה-BlurView.
+ * משטח = SwiftUI thin material: Blur + overlay לבן דק + highlight.
+ * אותה שפה ב-iOS וב-Android — לא מילוי אטום (#262626) שחונק את ה-BlurView.
  */
+/**
+ * הזכוכית נשארת דולקת אחרי mount ראשון — גם ב-drag וגם בסגירה.
+ * רק ה-backdrop (החושך מאחור) זז עם progress; גוף השיט לא עושה fade.
+ */
+export function latchSheetGlass(alreadyShown: boolean, canMount: boolean): boolean {
+  return alreadyShown || canMount;
+}
+
+/**
+ * Blur עולה רק אחרי layout + סיום ה־defer של הפתיחה.
+ * alreadyShown נשאר דולק — אין כיבוי באמצע drag/סגירה.
+ */
+export function canLatchSheetGlass(
+  alreadyShown: boolean,
+  active: boolean,
+  hasLayout: boolean,
+  deferDone: boolean,
+): boolean {
+  return latchSheetGlass(alreadyShown, active && hasLayout && deferDone);
+}
+
 /** Dim מאחורי השיט — חזק מספיק שתוכן האפליקציה יישב ברור "מתחת". */
 export const SHEET_BACKDROP_OPACITY = 0.58;
 
@@ -19,8 +40,8 @@ export const SHEET_GLASS_INTENSITY = DesignTokens.glassmorphism.blurIntensity.li
 export const SHEET_GLASS_OVERLAY = DesignTokens.glassmorphism.cardBackground.dark.light;
 
 /**
- * מילוי אטום מתחת ל-overlay כשאין BlurView (Android / לפני mount).
- * base + overlay מגיע ל-SHEET_GLASS_FLOOR, כך שאנדרואיד תואם ל-iOS.
+ * רצפה שקופה־למחצה מתחת ל-overlay כשאין BlurView (לפני mount / Android ישן).
+ * לא #262626 — האורורה נשארת גלויה מאחורי ה-tint.
  */
 export const SHEET_GLASS_BASE = DesignTokens.glassmorphism.baseFill.dark;
 
@@ -30,7 +51,7 @@ export const SHEET_GLASS_BASE = DesignTokens.glassmorphism.baseFill.dark;
 export const SHEET_GLASS_FLOOR = DesignTokens.colors.background.cardSolid;
 
 /**
- * BlurView tint כהה דק (iOS). Android לא משתמש ב-BlurView כאן.
+ * BlurView tint כהה דק — אותו tint ב-iOS וב-Android.
  */
 export const SHEET_GLASS_TINT = 'systemThinMaterialDark' as const;
 
@@ -98,7 +119,7 @@ export function sheetActionColors(tokens: {
   SheetActionVariant,
   { backgroundColor: string; borderColor: string; color: string; borderWidth: number }
 > {
-  const dangerBg = tokens.colors.danger?.main ?? '#FF4444';
+  const dangerBg = tokens.colors.danger?.main ?? '#F87171';
   const glassBg = tokens.colors.glass?.card?.bg ?? 'rgba(255,255,255,0.06)';
   const glassBorder = tokens.colors.glass?.card?.border ?? tokens.colors.border.primary;
 

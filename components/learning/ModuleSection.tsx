@@ -5,6 +5,10 @@ import { useDesignTokens } from '../ui/DesignTokens';
 import UICard from '../ui/UICard';
 import { LessonRow } from './LessonRow';
 import { academyCardFrameStyle } from './academyCardLayout';
+import { APP_LAYOUT } from '../ui/appLayout';
+import { appCardSubtitleStyle, appCardTitleStyle } from '../ui/appType';
+import { isLessonLockedForUser } from './academyCourses';
+import type { CourseWithProgress } from '../../types/learning';
 
 interface ModuleSectionProps {
   module: ModuleWithLessons;
@@ -14,6 +18,7 @@ interface ModuleSectionProps {
   enrollment?: Enrollment;
   courseId?: string;
   lessonStartIndex?: number;
+  course?: Pick<CourseWithProgress, 'id' | 'title' | 'access'> | null;
 }
 
 export const ModuleSection: React.FC<ModuleSectionProps> = ({
@@ -23,10 +28,10 @@ export const ModuleSection: React.FC<ModuleSectionProps> = ({
   onLessonPress,
   enrollment,
   courseId,
-  lessonStartIndex = 0
+  lessonStartIndex = 0,
+  course,
 }) => {
   const DesignTokens = useDesignTokens();
-  const isEnrolled = !!enrollment;
   const totalLessons = module.lessons?.length || 0;
   const completedLessons = module.lessons?.filter(lesson => 
     lesson.progress?.status === 'completed'
@@ -47,27 +52,18 @@ export const ModuleSection: React.FC<ModuleSectionProps> = ({
     headerLeft: {
       flex: 1,
       marginLeft: DesignTokens.spacing.md,
-      gap: DesignTokens.spacing.sm,
+      gap: APP_LAYOUT.cardTitleToBodyGap,
     },
     headerRight: {
       alignItems: 'center',
       minWidth: 60,
     },
     title: {
-      fontSize: 18,
-      fontWeight: '700',
+      ...appCardTitleStyle,
       color: DesignTokens.colors.text.primary,
-      textAlign: 'right',
-      letterSpacing: 0.3,
-      lineHeight: Math.round(18 * DesignTokens.typography.lineHeight.normal),
-      writingDirection: 'rtl',
     },
     description: {
-      fontSize: DesignTokens.typography.fontSize.sm,
-      color: DesignTokens.colors.text.secondary,
-      textAlign: 'right',
-      lineHeight: Math.round(DesignTokens.typography.fontSize.sm * DesignTokens.typography.lineHeight.normal),
-      writingDirection: 'rtl',
+      ...appCardSubtitleStyle,
     },
     lessonCount: {
       fontSize: DesignTokens.typography.fontSize.xs,
@@ -128,12 +124,14 @@ export const ModuleSection: React.FC<ModuleSectionProps> = ({
       >
         <View style={styles.headerContent}>
           <View style={styles.headerLeft}>
-            <Text style={styles.title}>{module.title}</Text>
-            {module.description && (
-              <Text style={styles.description} numberOfLines={2}>
-                {module.description}
-              </Text>
-            )}
+            <View style={{ width: '100%' }}>
+              <Text style={styles.title}>{module.title}</Text>
+              {module.description ? (
+                <Text style={styles.description} numberOfLines={2}>
+                  {module.description}
+                </Text>
+              ) : null}
+            </View>
             <Text style={styles.lessonCount}>
               {totalLessons} שיעורים • {completedLessons} הושלמו
             </Text>
@@ -171,7 +169,7 @@ export const ModuleSection: React.FC<ModuleSectionProps> = ({
               lesson={lesson}
               onPress={onLessonPress}
               enrollment={enrollment}
-              isLocked={!isEnrolled && !lesson.is_preview}
+              isLocked={isLessonLockedForUser({ lesson, enrollment, course })}
               courseId={courseId}
               index={lessonStartIndex + index}
             />

@@ -1,7 +1,7 @@
 import { queryClient } from '../lib/queryClient';
 import { appQueryKeys } from '../lib/appQueryKeys';
 import { persistQueryCache } from '../lib/queryPersist';
-import { scheduleChatMessagesPersist } from '../lib/chatMessagePersist';
+import { readCachedMessagesForGroup, scheduleChatMessagesPersist } from '../lib/chatMessagePersist';
 import {
   CHAT_AROUND_AFTER,
   CHAT_AROUND_BEFORE,
@@ -23,6 +23,7 @@ import { loadExplore } from '../hooks/useDarkPoolExplore';
 import { loadCongress } from '../hooks/useCongressFeed';
 import { loadInsider } from '../hooks/useDarkPoolInsiderFeed';
 import { fetchExplorePeopleMerged } from './darkpool/featuredProfilesService';
+import { prefetchCuratedPersonPortfolios } from './darkpool/prefetchPersonPortfolio';
 import { logger } from '../utils/logger';
 import type { ChatGroup, ChatMessage } from '../types/chat.types';
 import type { CourseListResponse } from '../types/learning';
@@ -112,7 +113,11 @@ function warmGroupMedia(messages: ChatMessage[]): void {
 
 async function prefetchOneGroup(userId: string, group: PrefetchGroup): Promise<void> {
   const groupId = group.id;
-  const existing = readGroupMessagesCache(groupId);
+  let existing = readGroupMessagesCache(groupId);
+  if (!existing.length) {
+    const disk = await readCachedMessagesForGroup(userId, groupId);
+    if (disk?.length) existing = disk;
+  }
   const unread = group.unread_count || 0;
   const lastReadId = group.last_read_message_id ?? null;
   const newest = getNewestPersistedCursor(existing);
@@ -303,10 +308,25 @@ export function schedulePrefetchChatMessages(
  * חימום מיידי לקבוצה אחת (למשל בלחיצה ברשימה) — לא מחכה ל-pool הכללי.
  * קריטי ל-WhatsApp-feel: cache מוכן לפני סיום transition של הניווט.
  */
+/** Disk → memory בלבד. לשורות גלויות ברשימה, בלי רשת. */
+export function warmChatGroupFromDisk(userId: string, groupId: string): void {
+  if (!userId || !groupId) return;
+  if (readGroupMessagesCache(groupId).length) return;
+  void readCachedMessagesForGroup(userId, groupId).catch((error) => {
+    logger.warn('appPrefetch', `disk warm ${groupId} failed`, error);
+  });
+}
+
 export function warmChatGroupOnPress(userId: string, groupId: string): void {
   if (!userId || !groupId) return;
   const cached = readGroupMessagesCache(groupId);
-  if (cached.length) warmGroupMedia(cached);
+  if (cached.length) {
+    warmGroupMedia(cached);
+  } else {
+    void readCachedMessagesForGroup(userId, groupId).then((disk) => {
+      if (disk?.length) warmGroupMedia(disk);
+    });
+  }
   const groups =
     queryClient.getQueryData<PrefetchGroup[]>(appQueryKeys.chatGroups(userId)) ?? [];
   const hit = groups.find((g) => g.id === groupId);
@@ -437,6 +457,7 @@ export async function warmAppCache(
       // תמונות אנשים — מקביל לפידי העסקאות, לא אחריהם
       prefetchDarkPoolPortraits(),
     ];
+    prefetchCuratedPersonPortfolios(10);
 
     if (opts?.force) {
       await Promise.allSettled(

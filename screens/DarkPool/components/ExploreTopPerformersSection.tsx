@@ -1,13 +1,22 @@
+/**
+ * מעטפת בורר תקופות — לא מחוברת למסך גילוי.
+ * `people.returns[period]` הוא תשואת תיק משוחזרת (InsiderWave ALL +3051%) ואסור להציג.
+ */
+
 import React, { useMemo, useState } from 'react';
 import {
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { DayDividerPill } from '../../../components/ui/DayDividerPill';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import type { ExplorePerson } from '../../../services/darkpool/uwExploreService';
+import {
+  darkPoolSectionSubtitleStyle,
+  darkPoolSectionTitleStyle,
+} from '../darkPoolLayout';
 import { ExplorePortraitCard } from './ExplorePortraitCard';
 
 export type ExplorePerformancePeriod =
@@ -77,15 +86,9 @@ export function ExploreTopPerformersSection({
         {PERIODS.map((p) => {
           const active = p === period;
           return (
-            <Pressable
-              key={p}
-              onPress={() => setPeriod(p)}
-              style={[styles.periodPill, active && styles.periodPillActive]}
-            >
-              <Text style={[styles.periodText, active && styles.periodTextActive]}>
-                {p}
-              </Text>
-            </Pressable>
+            <DayDividerPill key={p} selected={active} onPress={() => setPeriod(p)}>
+              {p}
+            </DayDividerPill>
           );
         })}
       </ScrollView>
@@ -111,7 +114,6 @@ export function ExploreTopPerformersSection({
                 metric,
                 metric_label: ret != null ? period : person.metric_label,
               }}
-              variant="compact"
               onPress={() => onPersonPress(person)}
             />
           );
@@ -128,44 +130,25 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       direction: 'rtl',
     },
     header: {
+      direction: 'rtl',
       paddingHorizontal: tokens.layout.screenPadding,
       marginBottom: tokens.spacing.sm,
-      alignItems: 'flex-start',
+      alignSelf: 'stretch',
+      alignItems: 'stretch',
     },
     title: {
-      fontSize: 20,
-      fontWeight: '800',
+      ...darkPoolSectionTitleStyle,
       color: tokens.colors.text.primary,
-      textAlign: 'left',
     },
     subtitle: {
-      marginTop: 4,
-      fontSize: 13,
+      ...darkPoolSectionSubtitleStyle,
       color: tokens.colors.text.tertiary,
-      textAlign: 'left',
     },
     periodRow: {
       flexDirection: 'row',
       paddingHorizontal: tokens.layout.screenPadding,
-      gap: 6,
+      gap: 8,
       marginBottom: tokens.spacing.sm,
-    },
-    periodPill: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 999,
-      backgroundColor: 'rgba(255,255,255,0.06)',
-    },
-    periodPillActive: {
-      backgroundColor: tokens.colors.text.primary,
-    },
-    periodText: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: tokens.colors.text.tertiary,
-    },
-    periodTextActive: {
-      color: tokens.colors.background.primary,
     },
     cardRow: {
       flexDirection: 'row',

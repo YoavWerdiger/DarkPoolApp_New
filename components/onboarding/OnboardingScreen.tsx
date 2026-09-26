@@ -71,7 +71,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
 
   const containerStyle: ViewStyle = {
     flex: 1,
-    backgroundColor: tokens.colors.background.primary,
+    backgroundColor: 'transparent',
     ...style,
   };
 

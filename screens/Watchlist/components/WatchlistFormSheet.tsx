@@ -13,6 +13,12 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import UICard from '../../../components/ui/UICard';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import {
+  APP_TYPE,
+  appPhysicalRightText,
+  appSheetButtonLabelStyle,
+  appSheetTitleStyle,
+} from '../../../components/ui/appType';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 
 type ListSheetProps = {
@@ -134,27 +140,27 @@ function useSheetStyles() {
         },
         title: {
           color: tokens.colors.text.primary,
-          fontSize: 18,
-          fontWeight: '800',
-          ...tokens.rtlText,
+          ...appSheetTitleStyle,
           marginBottom: 4,
         },
         label: {
           color: tokens.colors.text.tertiary,
-          fontSize: 12,
+          fontSize: APP_TYPE.sectionSubtitle.fontSize,
           fontWeight: '600',
-          ...tokens.rtlText,
+          lineHeight: APP_TYPE.sectionSubtitle.lineHeight,
+          ...appPhysicalRightText,
         },
         input: {
-          backgroundColor: '#262626',
+          backgroundColor: tokens.colors.glass.card.bg,
           borderRadius: tokens.borderRadius.xl,
           paddingHorizontal: 14,
           paddingVertical: 13,
           color: tokens.colors.text.primary,
           borderWidth: 0,
           borderColor: tokens.colors.border.subtle,
-          fontSize: 15,
-          ...tokens.rtlText,
+          fontSize: APP_TYPE.body.fontSize,
+          lineHeight: APP_TYPE.body.lineHeight,
+          ...appPhysicalRightText,
         },
         actions: {
           flexDirection: 'row-reverse',
@@ -172,18 +178,18 @@ function useSheetStyles() {
           backgroundColor: tokens.colors.primary.main,
         },
         btnGhost: {
-          backgroundColor: '#262626',
+          backgroundColor: tokens.colors.glass.card.bg,
           borderWidth: 0,
           borderColor: tokens.colors.border.subtle,
         },
         btnPrimaryText: {
           color: tokens.colors.text.inverse,
-          fontSize: 15,
+          ...appSheetButtonLabelStyle,
           fontWeight: '800',
         },
         btnGhostText: {
           color: tokens.colors.text.secondary,
-          fontSize: 15,
+          ...appSheetButtonLabelStyle,
           fontWeight: '600',
         },
       }),

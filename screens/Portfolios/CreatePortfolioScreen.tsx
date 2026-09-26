@@ -5,14 +5,12 @@ import {
   Image,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   Alert,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
   type ImageSourcePropType,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -28,6 +26,15 @@ import {
   SwitchRow,
   TextField,
 } from './components/PortfolioFormFields';
+import { PortfolioFormFooter } from './components/PortfolioFormFooter';
+import { GlassChip } from '../../components/ui/GlassChip';
+import {
+  JOURNAL_LAYOUT,
+  journalCardBodyStyle,
+  journalCardSubtitleStyle,
+  journalCardTitleStyle,
+  PORTFOLIO_FORM,
+} from './portfolioLayout';
 import {
   BENCHMARK_PRESETS,
   DEFAULT_BENCHMARK,
@@ -51,8 +58,6 @@ const BROKER_BENEFITS = [
 export default function CreatePortfolioScreen() {
   const tokens = useDesignTokens();
   const navigation = useNavigation<Nav>();
-  const insets = useSafeAreaInsets();
-
   const [mode, setMode] = useState<CreateMode>('manual');
   const [name, setName] = useState('');
   const [currency, setCurrency] = useState<string>(DEFAULT_CURRENCY);
@@ -159,143 +164,53 @@ export default function CreatePortfolioScreen() {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        root: { flex: 1, backgroundColor: '#111111' },
+        root: { flex: 1, backgroundColor: 'transparent' },
         scroll: { flex: 1, backgroundColor: 'transparent' },
         scrollContent: {
-          paddingHorizontal: 16,
+          paddingHorizontal: PORTFOLIO_FORM.screenPadH,
           paddingTop: 4,
           paddingBottom: 28,
         },
-        section: { marginBottom: 26 },
-        modeCards: { gap: 12 },
+        section: { marginBottom: PORTFOLIO_FORM.sectionGap },
+        modeCards: { gap: JOURNAL_LAYOUT.cardStackGap },
         chipsRow: {
           flexDirection: 'row-reverse',
           flexWrap: 'wrap',
-          gap: 8,
-        },
-        chip: {
-          paddingVertical: 9,
-          paddingHorizontal: 14,
-          borderRadius: tokens.borderRadius.full,
-          borderWidth: StyleSheet.hairlineWidth * 2,
-          borderColor: tokens.colors.glass.card.border,
-          backgroundColor: tokens.colors.background.card,
-          overflow: 'hidden',
-        },
-        chipActive: {
-          borderColor: tokens.colors.primary.main,
-          backgroundColor: tokens.colors.primary.dim,
+          gap: JOURNAL_LAYOUT.stackGapSmall,
         },
         chipText: {
-          fontSize: 13,
+          ...journalCardSubtitleStyle,
           fontWeight: '600',
-          color: tokens.colors.text.secondary,
           textAlign: 'center',
-          writingDirection: 'rtl',
         },
         chipTextActive: { color: tokens.colors.primary.main },
-        advancedToggle: {
-          flexDirection: 'row-reverse',
-          alignItems: 'center',
-          gap: 10,
-          paddingVertical: 14,
-          paddingHorizontal: 16,
-          borderRadius: tokens.borderRadius['2xl'],
-          borderWidth: StyleSheet.hairlineWidth * 2,
-          borderColor: tokens.colors.glass.card.border,
-          backgroundColor: tokens.colors.background.surface,
-          overflow: 'hidden',
-        },
-        advancedTitle: {
-          fontSize: 14,
-          fontWeight: '700',
-          color: tokens.colors.text.primary,
-          textAlign: 'right',
-          writingDirection: 'rtl',
-        },
-        advancedCaption: {
-          fontSize: 11,
-          color: tokens.colors.text.tertiary,
-          marginTop: 2,
-          textAlign: 'right',
-          writingDirection: 'rtl',
-        },
-        advancedBody: { marginTop: 16 },
-        benchmarkRow: {
+        advancedBody: { marginTop: JOURNAL_LAYOUT.sectionHeaderToContent },
+        benchmarkRowInner: {
           flexDirection: 'row-reverse',
           alignItems: 'center',
           gap: 12,
           paddingVertical: 12,
           paddingHorizontal: 14,
-          borderRadius: tokens.borderRadius.xl,
-          borderWidth: StyleSheet.hairlineWidth * 2,
-          marginBottom: 8,
-          overflow: 'hidden',
         },
         benchmarkLabel: {
-          fontSize: 14,
-          fontWeight: '600',
+          ...journalCardTitleStyle,
           color: tokens.colors.text.primary,
-          textAlign: 'right',
-          writingDirection: 'rtl',
         },
         benchmarkDesc: {
-          fontSize: 11,
-          color: tokens.colors.text.tertiary,
-          marginTop: 2,
-          textAlign: 'right',
-          writingDirection: 'rtl',
+          ...journalCardSubtitleStyle,
+          color: tokens.colors.text.secondary,
+          marginTop: JOURNAL_LAYOUT.cardTitleToSubtitleGap,
         },
         brokerInfoRow: {
           flexDirection: 'row-reverse',
-          alignItems: 'center',
+          alignItems: 'flex-start',
           gap: 10,
-          marginBottom: 10,
+          marginBottom: JOURNAL_LAYOUT.stackGapSmall,
         },
         brokerInfoText: {
+          ...journalCardBodyStyle,
           flex: 1,
-          fontSize: 13,
           color: tokens.colors.text.secondary,
-          textAlign: 'right',
-          writingDirection: 'rtl',
-          lineHeight: 19,
-        },
-        footer: {
-          paddingHorizontal: 16,
-          paddingTop: 12,
-          borderTopWidth: StyleSheet.hairlineWidth,
-          borderTopColor: tokens.colors.border.divider,
-          backgroundColor: 'rgba(10, 14, 10, 0.92)',
-        },
-        submit: {
-          flexDirection: 'row-reverse',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 8,
-          backgroundColor: tokens.colors.primary.main,
-          paddingVertical: 16,
-          borderRadius: tokens.borderRadius.full,
-          ...tokens.shadows.md,
-        },
-        submitDisabled: {
-          backgroundColor: tokens.colors.background.elevated,
-          shadowOpacity: 0,
-          elevation: 0,
-        },
-        submitText: {
-          fontSize: 16,
-          fontWeight: '700',
-          color: tokens.colors.text.inverse,
-          textAlign: 'center',
-          writingDirection: 'rtl',
-        },
-        submitTextDisabled: { color: tokens.colors.text.disabled },
-        footerNote: {
-          fontSize: 11,
-          color: tokens.colors.text.tertiary,
-          textAlign: 'center',
-          writingDirection: 'rtl',
-          marginTop: 8,
         },
       }),
     [tokens]
@@ -347,11 +262,9 @@ export default function CreatePortfolioScreen() {
               <View style={styles.section}>
                 <SectionHeader title="מה קורה בחיבור?" />
                 <UICard
-                  variant="glass"
-                  glassIntensity="subtle"
-                  padding="none"
-                  style={{ borderRadius: tokens.borderRadius['2xl'] }}
-                  contentContainerStyle={{ padding: 16 }}
+                  variant="soft"
+                  padding="md"
+                  disableBlur
                 >
                   {BROKER_BENEFITS.map((line) => (
                     <View key={line} style={styles.brokerInfoRow}>
@@ -403,19 +316,20 @@ export default function CreatePortfolioScreen() {
                     {SUPPORTED_CURRENCIES.map((c) => {
                       const active = currency === c.code;
                       return (
-                        <TouchableOpacity
+                        <GlassChip
                           key={c.code}
-                          style={[styles.chip, active && styles.chipActive]}
+                          selected={active}
                           onPress={() => {
                             if (!active) void HapticFeedback.selection();
                             setCurrency(c.code);
                           }}
-                          activeOpacity={0.75}
+                          accessibilityLabel={`מטבע ${c.label}`}
+                          contentContainerStyle={{ paddingHorizontal: 14, paddingVertical: 8 }}
                         >
                           <Text style={[styles.chipText, active && styles.chipTextActive]}>
                             {c.symbol} {c.label}
                           </Text>
-                        </TouchableOpacity>
+                        </GlassChip>
                       );
                     })}
                   </View>
@@ -423,15 +337,23 @@ export default function CreatePortfolioScreen() {
 
                 {/* הגדרות מתקדמות */}
                 <View style={styles.section}>
-                  <TouchableOpacity
-                    style={styles.advancedToggle}
+                  <UICard
+                    variant="soft"
+                    padding="none"
+                    disableBlur
                     onPress={() => {
                       void HapticFeedback.selection();
                       setAdvancedOpen((v) => !v);
                     }}
-                    activeOpacity={0.75}
                     accessibilityRole="button"
                     accessibilityState={{ expanded: advancedOpen }}
+                    contentContainerStyle={{
+                      flexDirection: 'row-reverse',
+                      alignItems: 'center',
+                      gap: 10,
+                      paddingVertical: 14,
+                      paddingHorizontal: 16,
+                    }}
                   >
                     <Ionicons
                       name="options-outline"
@@ -439,8 +361,18 @@ export default function CreatePortfolioScreen() {
                       color={tokens.colors.text.secondary}
                     />
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.advancedTitle}>הגדרות מתקדמות</Text>
-                      <Text style={styles.advancedCaption}>
+                      <Text style={[journalCardTitleStyle, { color: tokens.colors.text.primary }]}>
+                        הגדרות מתקדמות
+                      </Text>
+                      <Text
+                        style={[
+                          journalCardSubtitleStyle,
+                          {
+                            color: tokens.colors.text.secondary,
+                            marginTop: JOURNAL_LAYOUT.cardTitleToSubtitleGap,
+                          },
+                        ]}
+                      >
                         מדד השוואה, ריבית חסרת סיכון, פיצולים, ייבוא ותיאור
                       </Text>
                     </View>
@@ -449,7 +381,7 @@ export default function CreatePortfolioScreen() {
                       size={18}
                       color={tokens.colors.text.tertiary}
                     />
-                  </TouchableOpacity>
+                  </UICard>
 
                   {advancedOpen ? (
                     <View style={styles.advancedBody}>
@@ -460,24 +392,24 @@ export default function CreatePortfolioScreen() {
                       {BENCHMARK_PRESETS.map((b) => {
                         const active = benchmark === b.symbol;
                         return (
-                          <TouchableOpacity
+                          <UICard
                             key={b.symbol}
-                            style={[
-                              styles.benchmarkRow,
-                              {
-                                borderColor: active
-                                  ? tokens.colors.primary.main
-                                  : tokens.colors.glass.card.border,
-                                backgroundColor: active
-                                  ? tokens.colors.primary.subtle
-                                  : tokens.colors.background.surface,
-                              },
-                            ]}
+                            variant="soft"
+                            padding="none"
+                            disableBlur
                             onPress={() => {
                               if (!active) void HapticFeedback.selection();
                               setBenchmark(b.symbol);
                             }}
-                            activeOpacity={0.75}
+                            style={[
+                              { marginBottom: JOURNAL_LAYOUT.stackGapSmall },
+                              active && {
+                                borderWidth: 1,
+                                borderColor: `${tokens.colors.primary.main}44`,
+                                backgroundColor: tokens.colors.primary.subtle,
+                              },
+                            ]}
+                            contentContainerStyle={styles.benchmarkRowInner}
                           >
                             <View style={{ flex: 1 }}>
                               <Text style={styles.benchmarkLabel}>{b.label}</Text>
@@ -490,7 +422,7 @@ export default function CreatePortfolioScreen() {
                                 active ? tokens.colors.primary.main : tokens.colors.text.muted
                               }
                             />
-                          </TouchableOpacity>
+                          </UICard>
                         );
                       })}
 
@@ -542,37 +474,20 @@ export default function CreatePortfolioScreen() {
             )}
           </ScrollView>
 
-          <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 14) }]}>
-            <TouchableOpacity
-              style={[styles.submit, dimmed && styles.submitDisabled]}
-              onPress={() => {
-                void HapticFeedback.medium();
-                void handleSubmit();
-              }}
-              disabled={!canSubmit}
-              activeOpacity={0.85}
-            >
-              {submitting ? (
-                <ActivityIndicator color={tokens.colors.text.inverse} />
-              ) : (
-                <Ionicons
-                  name={isBrokerMode ? 'link' : 'checkmark'}
-                  size={20}
-                  color={dimmed ? tokens.colors.text.disabled : tokens.colors.text.inverse}
-                />
-              )}
-              <Text style={[styles.submitText, dimmed && styles.submitTextDisabled]}>
-                {submitting
-                  ? 'יוצר תיק…'
-                  : isBrokerMode
+          <PortfolioFormFooter
+            title={
+              submitting
+                ? 'יוצר תיק…'
+                : isBrokerMode
                   ? 'המשך לחיבור Colmex Pro'
-                  : 'צור תיק'}
-              </Text>
-            </TouchableOpacity>
-            {!isBrokerMode && blockingError && !submitting ? (
-              <Text style={styles.footerNote}>{blockingError}</Text>
-            ) : null}
-          </View>
+                  : 'צור תיק'
+            }
+            icon={isBrokerMode ? 'link' : 'checkmark'}
+            disabled={!canSubmit}
+            loading={submitting}
+            onPress={() => void handleSubmit()}
+            note={!isBrokerMode && blockingError && !submitting ? blockingError : null}
+          />
         </KeyboardAvoidingView>
       </SafeAreaView>
     </View>
@@ -595,24 +510,25 @@ function ModeCard({ active, icon, title, description, onPress, logo }: ModeCardP
   const tokens = useDesignTokens();
   return (
     <UICard
-      variant="glass"
-      glassIntensity={active ? 'light' : 'subtle'}
+      variant="soft"
       padding="none"
+      disableBlur
       onPress={onPress}
-      showGlassBorder={!active}
       accessibilityLabel={title}
-      style={{
-        borderRadius: tokens.borderRadius['3xl'],
-        overflow: 'hidden',
-        borderWidth: active ? 1.5 : 0,
-        borderColor: active ? tokens.colors.primary.main : 'transparent',
-        backgroundColor: active ? tokens.colors.primary.dim : 'transparent',
-      }}
+      style={
+        active
+          ? {
+              borderWidth: 1,
+              borderColor: `${tokens.colors.primary.main}44`,
+              backgroundColor: tokens.colors.primary.subtle,
+            }
+          : undefined
+      }
       contentContainerStyle={{
         flexDirection: 'row-reverse',
         alignItems: 'center',
         gap: 12,
-        padding: 16,
+        padding: JOURNAL_LAYOUT.cardPadding,
       }}
     >
       <View
@@ -642,25 +558,21 @@ function ModeCard({ active, icon, title, description, onPress, logo }: ModeCardP
       </View>
       <View style={{ flex: 1 }}>
         <Text
-          style={{
-            fontSize: 15,
-            fontWeight: '700',
-            color: active ? tokens.colors.primary.main : tokens.colors.text.primary,
-            textAlign: 'right',
-            writingDirection: 'rtl',
-          }}
+          style={[
+            journalCardTitleStyle,
+            { color: active ? tokens.colors.primary.main : tokens.colors.text.primary },
+          ]}
         >
           {title}
         </Text>
         <Text
-          style={{
-            fontSize: 12,
-            color: tokens.colors.text.tertiary,
-            marginTop: 3,
-            lineHeight: 17,
-            textAlign: 'right',
-            writingDirection: 'rtl',
-          }}
+          style={[
+            journalCardSubtitleStyle,
+            {
+              color: tokens.colors.text.secondary,
+              marginTop: JOURNAL_LAYOUT.cardTitleToSubtitleGap,
+            },
+          ]}
         >
           {description}
         </Text>

@@ -3,6 +3,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
+import { formatEconomicDisplayValue } from '../_shared/economicNumberFormat.ts'
 
 const FINNHUB_API_KEY = Deno.env.get('FINNHUB_API_KEY') ?? ''
 const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1'
@@ -252,7 +253,8 @@ serve(async (req) => {
         
         const existingEvent = existingEvents[0]
         const oldActual = existingEvent.actual || ''
-        const newActual = event.actual?.toString() || ''
+        // מספר נקי בלי '%' / unit מהספק
+        const newActual = (event.actual?.toString() || '').replace(/[%٪]/g, '').trim()
         
         // בדיקה אם הערך כבר מעודכן
         if (oldActual === newActual && oldActual !== '') {
@@ -299,11 +301,12 @@ serve(async (req) => {
                 .select('token')
               
               if (!tokensError && tokens && tokens.length > 0) {
+                const displayActual = formatEconomicDisplayValue(newActual, event.event)
                 const pushMessages = tokens.map(t => ({
                   to: t.token,
                   sound: 'default',
                   title: '📊 תוצאה כלכלית חדשה',
-                  body: `${event.event}: ${newActual}${event.unit ? ' ' + event.unit : ''}`,
+                  body: `${event.event}: ${displayActual}`,
                   data: {
                     type: 'economic_result',
                     eventId: existingEvent.id

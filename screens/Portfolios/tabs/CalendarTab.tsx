@@ -16,7 +16,11 @@ import type { Trade } from '../portfolioTypes';
 import { toLocalDateKey } from '../../../utils/dateKeys';
 import { formatCurrency } from '../utils/format';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
-import { darkPoolTextRtl } from '../../DarkPool/darkPoolLayout';
+import {
+  journalPhysicalRightText,
+  journalSectionSubtitleStyle,
+  journalSectionTitleStyle,
+} from '../../Journal/journalLayout';
 
 interface Props {
   portfolioId: string;
@@ -156,24 +160,24 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
           direction: 'rtl',
         },
         emptyTitle: {
-          fontSize: 16,
-          fontWeight: '700',
+          ...journalSectionTitleStyle,
           color: tokens.colors.text.primary,
-          ...darkPoolTextRtl,
           textAlign: 'center',
         },
         emptyText: {
-          fontSize: 13,
+          ...journalSectionSubtitleStyle,
           color: tokens.colors.text.tertiary,
           textAlign: 'center',
-          writingDirection: 'rtl',
           paddingHorizontal: 30,
         },
         navRow: {
           flexDirection: 'row',
+          /** כמו Journal: ב־rtlRoot בלי LTR הכפתורים מתהפכים / אחד נחתך */
+          direction: 'ltr',
           alignItems: 'center',
           justifyContent: 'space-between',
           marginBottom: 10,
+          gap: 8,
         },
         navBtn: {
           width: 34,
@@ -181,14 +185,18 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
           borderRadius: 17,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: '#262626',
+          backgroundColor: tokens.colors.glass.card.bg,
+          flexShrink: 0,
         },
         monthTitle: {
-          fontSize: 16,
-          fontWeight: '800',
+          flex: 1,
+          minWidth: 0,
+          fontSize: journalSectionTitleStyle.fontSize,
+          fontWeight: journalSectionTitleStyle.fontWeight,
+          lineHeight: journalSectionTitleStyle.lineHeight,
           color: tokens.colors.text.primary,
-          ...darkPoolTextRtl,
           textAlign: 'center',
+          writingDirection: 'rtl',
         },
         mainCard: {
           borderRadius: 20,
@@ -213,10 +221,11 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
           gap: 3,
         },
         summaryLabel: {
-          fontSize: 10,
+          fontSize: 11,
           fontWeight: '600',
+          lineHeight: 14,
           color: tokens.colors.text.tertiary,
-          ...darkPoolTextRtl,
+          ...journalPhysicalRightText,
           textAlign: 'center',
         },
         summaryValue: {
@@ -235,8 +244,9 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
           justifyContent: 'center',
         },
         dayHeaderText: {
-          fontSize: 10,
+          fontSize: 11,
           fontWeight: '700',
+          lineHeight: 14,
           color: tokens.colors.text.tertiary,
           writingDirection: 'rtl',
           textAlign: 'center',
@@ -255,7 +265,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
           backgroundColor: 'transparent',
         },
         cellDefault: {
-          backgroundColor: '#262626',
+          backgroundColor: tokens.colors.glass.card.bg,
         },
         cellSelected: {
           borderWidth: 2,
@@ -284,10 +294,8 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
           width: '100%',
         },
         selectedTitle: {
-          fontSize: 15,
-          fontWeight: '800',
+          ...journalSectionTitleStyle,
           color: tokens.colors.text.primary,
-          ...darkPoolTextRtl,
         },
         selectedSub: {
           fontSize: 12,
@@ -302,7 +310,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
           paddingVertical: 10,
           paddingHorizontal: 14,
           borderRadius: 14,
-          backgroundColor: '#262626',
+          backgroundColor: tokens.colors.glass.card.bg,
           marginTop: 8,
           gap: 10,
         },
@@ -323,7 +331,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
         tradeDirText: {
           fontSize: 10,
           fontWeight: '700',
-          ...darkPoolTextRtl,
+          ...journalPhysicalRightText,
           textAlign: 'center',
         },
         tradePnl: {
@@ -384,23 +392,27 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
                 void HapticFeedback.impactLight();
                 goPrev();
               }}
+              accessibilityLabel="חודש קודם"
             >
               <Ionicons
-                name="chevron-forward"
+                name="chevron-back"
                 size={20}
                 color={tokens.colors.text.primary}
               />
             </TouchableOpacity>
-            <Text style={styles.monthTitle}>{monthName}</Text>
+            <Text style={styles.monthTitle} numberOfLines={1}>
+              {monthName}
+            </Text>
             <TouchableOpacity
               style={styles.navBtn}
               onPress={() => {
                 void HapticFeedback.impactLight();
                 goNext();
               }}
+              accessibilityLabel="חודש הבא"
             >
               <Ionicons
-                name="chevron-back"
+                name="chevron-forward"
                 size={20}
                 color={tokens.colors.text.primary}
               />

@@ -58,6 +58,7 @@ const DividendCard: React.FC<{ dividend: Dividend }> = ({ dividend }) => {
     <UICard
       variant="blur"
       padding="md"
+      disableBlur
       style={{
         marginHorizontal: 16,
         marginBottom: 10,
@@ -187,7 +188,7 @@ export default function DividendsTab() {
       style={{ 
         paddingHorizontal: 16, 
         paddingVertical: 10,
-        backgroundColor: DesignTokens.colors.background.primary,
+        backgroundColor: 'transparent',
         flexDirection: 'row',
         alignItems: 'center'
       }}

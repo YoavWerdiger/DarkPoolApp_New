@@ -1,6 +1,8 @@
 import { DISTRIBUTION_PALETTE } from '../../Portfolios/portfolioConstants';
 import type { DistributionSlice } from '../../Portfolios/portfolioTypes';
 
+export type HoldingWeightStyle = 'congress' | 'form4' | 'filing';
+
 export interface HoldingAllocationInput {
   ticker: string;
   allocation_pct?: number | null;

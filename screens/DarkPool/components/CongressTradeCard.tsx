@@ -2,13 +2,11 @@
  * כרטיס פיד קונגרס.
  *
  * דיווח STOCK Act מכיל טווח סכום בלבד — לא מניות, לא מחיר, לא שווי מדויק.
- * לכן מוצג טווח הדיווח, ו"מאז העסקה" מגיע מ-`PriceChange` של Quiver
- * (נשמר ב-`price_change_pct`) ולא משחזור מקומי.
+ * «מאז העסקה» — שינוי מחיר הטיקר מפתיחת יום הביצוע מול חי (לא טווח STOCK Act).
  */
 
 import React, { memo } from 'react';
-import { withFeedValueLabel } from '../utils/feedTradeDisplay';
-import { formatDisclosedAmountRangeCompact } from '../utils/congressTradeDisplay';
+import { formatDisclosedAmountRange } from '../utils/congressTradeDisplay';
 import { type CongressTradeFeedItem } from '../utils/congressFeedCalc';
 import { DarkPoolTradeFeedCard } from './DarkPoolTradeFeedCard';
 
@@ -23,10 +21,8 @@ export const CongressTradeCard = memo(function CongressTradeCard({
   onPersonPress,
   onDetailPress,
 }: Props) {
-  const { trade, quote } = item;
-  const amountLabel = withFeedValueLabel(
-    formatDisclosedAmountRangeCompact(trade.amount_label)
-  );
+  const { trade, quote, sinceTradePct } = item;
+  const amountLabel = formatDisclosedAmountRange(trade.amount_label);
 
   return (
     <DarkPoolTradeFeedCard
@@ -35,9 +31,8 @@ export const CongressTradeCard = memo(function CongressTradeCard({
       portraitUrl={trade.politician_image_url}
       transactionType={trade.transaction_type}
       amountLabel={amountLabel}
-      filedAt={trade.filed_at}
       transactionDate={trade.transaction_date}
-      changeSinceTradePct={trade.price_change_pct}
+      changeSinceTradePct={sinceTradePct}
       currentPrice={quote?.price ?? null}
       personKind="politician"
       onPersonPress={

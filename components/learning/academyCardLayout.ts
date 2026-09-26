@@ -1,11 +1,12 @@
 import type { ViewStyle } from 'react-native';
+import { UI_CARD_RADIUS } from '../ui/appLayout';
 import { MAIN_SCREEN_HEADER_HP } from '../ui/MainDrawerScreenHeader';
 
 /** padding אופקי משותף לכל כרטיסיות האקדמיה */
 export const ACADEMY_CARD_HP = MAIN_SCREEN_HEADER_HP;
 
 /** רדיוס אחיד — Soft UI: בלי מסגרת על כרטיסי אקדמיה */
-export const ACADEMY_CARD_RADIUS = 24;
+export const ACADEMY_CARD_RADIUS = UI_CARD_RADIUS;
 export const ACADEMY_CARD_BORDER_WIDTH = 0;
 
 export type AcademyFrameTier = 'free' | 'premium' | 'youtube' | 'neutral';

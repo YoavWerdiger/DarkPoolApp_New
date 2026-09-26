@@ -13,7 +13,12 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDesignTokens } from './DesignTokens';
-import { SHEET_OPEN_MS, SHEET_CLOSE_MS } from './BottomSheet/sheetMotion';
+import {
+  SHEET_OPEN_MS,
+  SHEET_CLOSE_MS,
+  SHEET_EASE_OUT_BEZIER,
+  SHEET_EASE_IN_BEZIER,
+} from './BottomSheet/sheetMotion';
 import {
   SHEET_BACKDROP_OPACITY,
   SHEET_GLASS_FLOOR,
@@ -42,9 +47,19 @@ export interface UIBottomSheetProps {
 }
 
 const screenHeight = Dimensions.get('window').height;
-/** RN Animated — זהה ל־sheetMotion (open≈close, בלי bounce) */
-const SHEET_EASE_OUT_RN = Easing.bezier(0.25, 0.1, 0.25, 1);
-const SHEET_EASE_IN_RN = Easing.bezier(0.32, 0, 0.67, 0);
+/** RN Animated — אותה עקומה כמו sheetMotion (Reanimated) */
+const SHEET_EASE_OUT_RN = Easing.bezier(
+  SHEET_EASE_OUT_BEZIER.x1,
+  SHEET_EASE_OUT_BEZIER.y1,
+  SHEET_EASE_OUT_BEZIER.x2,
+  SHEET_EASE_OUT_BEZIER.y2,
+);
+const SHEET_EASE_IN_RN = Easing.bezier(
+  SHEET_EASE_IN_BEZIER.x1,
+  SHEET_EASE_IN_BEZIER.y1,
+  SHEET_EASE_IN_BEZIER.x2,
+  SHEET_EASE_IN_BEZIER.y2,
+);
 
 const styles = StyleSheet.create({
   modalRoot: {
@@ -79,7 +94,7 @@ const UIBottomSheet: React.FC<UIBottomSheetProps> = ({
   sheetStyle,
   closeOnBackdropPress = true,
   maxHeight = '80%',
-  useGlassBackground = true,
+  useGlassBackground = false,
 }) => {
   const tokens = useDesignTokens();
   const insets = useSafeAreaInsets();
@@ -96,7 +111,7 @@ const UIBottomSheet: React.FC<UIBottomSheetProps> = ({
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: Math.round(SHEET_OPEN_MS * 0.7),
+          duration: SHEET_OPEN_MS,
           useNativeDriver: true,
           easing: SHEET_EASE_OUT_RN,
         }),

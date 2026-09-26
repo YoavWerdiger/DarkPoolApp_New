@@ -172,7 +172,51 @@ export interface InsiderBuyRow {
   marketcap?: number | null;
   next_earnings_date?: string | null;
   created_at: string;
+  /** Form4API / EDGAR — פוזיציה אחרי העסקה. אופציונלי; לא בכל מקור. */
+  shares_owned_after?: number | null;
+  /** true רק כשהשורה היא חוזה אופציה / נגזר, לא מניות רגילות. */
+  is_option?: boolean | null;
+  security_title?: string | null;
 }
+
+/**
+ * עסקת קונגרס בתצוגה — STOCK Act.
+ * אין strike / expiration / exact_shares. `shares`/`price` ב-DB הם null בנתיב Quiver.
+ * ביצועים רק מ-`PriceChange` / `ExcessReturn` שנשמרו (`price_change_pct` / `excess_return_pct`).
+ */
+export interface CongressTradeHonestyFields {
+  /** `amount_label` — טווח מדווח, לא סכום מדויק */
+  amountRange: string | null;
+  priceChange?: number | null;
+  excessReturn?: number | null;
+}
+
+/**
+ * אחזקה נוכחית מ-Quiver `congress_stock_holdings` (אצלנו: cache
+ * `dark_pool_uw_snapshots.quiver_congress_holdings.by_bioguide`).
+ * אין `amount_usd` / `company_name` ב-payload — `CurrentHolding` + `Allocation` + `Ticker`.
+ * `Name` הוא שם הפוליטיקאי, לא שם החברה.
+ */
+export interface ActualCongressHolding {
+  bioguideId: string;
+  ticker: string;
+  companyName: string | null;
+  currentValueUSD: number | null;
+  portfolioPercent: number | null;
+  /** as-of של הסנאפשוט (synced_at / updated_at) — לא תאריך עסקה STOCK Act. */
+  asOfDate?: string | null;
+  /** רק אם Quiver שלח — ב-payload החי אין Shares / AvgCost. */
+  vendorShares?: number | null;
+  vendorAvgCost?: number | null;
+  vendorPriceChangePct?: number | null;
+}
+
+/**
+ * Dual-Engine holdings — קונגרס (Quiver baseline) מול Form 4 (מניות × מחיר).
+ * המימוש והפורמטרים: `screens/DarkPool/utils/investorHoldings.ts`.
+ * אין `src/types/portfolio.ts` באפליקציית Expo הזו.
+ */
+export type DualEngineHoldingKind = 'INSIDER_FORM_4' | 'CONGRESS_BASELINE';
 
 // ---------------------------------------------------------------------------
 // Aggregations consumed by UI
@@ -234,8 +278,8 @@ export const DARK_POOL_DARK_POOL_ENABLED = !DARK_POOL_SEC_PRODUCTION;
 /** קריאות live ל-UW/Quiver מה-client (explore, profile, ticker insights) */
 export const DARK_POOL_VENDOR_LIVE_APIS = !DARK_POOL_SEC_PRODUCTION;
 
-/** העשרת פיד במחיר שוטף + «מאז העסקה» — כבוי = כרטיסים קומpact */
-export const DARK_POOL_FEED_ENRICH_QUOTES = false;
+/** העשרת פיד במחיר שוטף (Finnhub/Yahoo כמו מסך הטיקר) + «מאז העסקה» ל-Form 4 */
+export const DARK_POOL_FEED_ENRICH_QUOTES = true;
 
 /** גודל פיד בית/Feed + prefetch — חייב להיות זהה ל-queryKey של React Query */
 export const DARK_POOL_FEED_LIMIT = 80;

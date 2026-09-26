@@ -4,6 +4,14 @@
  * פורמטרים משותפים לקומפוננטות ה-Dark Pool.
  */
 
+import {
+  formatSignedUsdRaw,
+  formatUsdRaw,
+  formatUsdRawOrDash,
+} from './usdRawFormat';
+
+export { formatSignedUsdRaw, formatUsdRaw, formatUsdRawOrDash };
+
 /** עטיפת LTR isolate — שומרת `$1.1K` אטומי ליד עברית (בידי RTL) */
 export function ltrEmbed(s: string): string {
   return `\u2066${s}\u2069`;
@@ -38,7 +46,7 @@ export function formatHoldingsValueMeta(
 ): string {
   const valueLabel =
     valueUsd != null && Number.isFinite(valueUsd)
-      ? `שווי אחזקה: ${ltrEmbed(formatUsdCompact(valueUsd))}`
+      ? `שווי אחזקה: ${ltrEmbed(formatUsdRawOrDash(valueUsd))}`
       : null;
   const sharesLabel = formatSharesCompact(shares);
   if (valueLabel && sharesLabel) {
@@ -70,8 +78,8 @@ export function avgEntryPriceFromCost(
 }
 
 /**
- * מחיר כניסה מוצר מ־13F (fallback לקוח בלבד): value_usd / shares.
- * השרת מעדיף Yahoo ב־first_added_date — כמו פוליטיקאים.
+ * מחיר mark מ־13F: value_usd / shares בדיווח.
+ * זה mark רבעוני כנה, לא PTR ולא Yahoo ב־first_added.
  */
 export function impliedFilingPriceFrom13f(
   valueUsd: number | null | undefined,

@@ -1,5 +1,5 @@
 /**
- * סרגל תחתון — פיד | אנשים | מעקב
+ * סרגל תחתון — פיד | חקור | מעקב
  */
 
 import React, { useMemo } from 'react';
@@ -26,7 +26,7 @@ const TAB_META: Record<
     iconActive: 'newspaper',
   },
   DarkPoolExplore: {
-    label: 'אנשים',
+    label: 'חקור',
     icon: 'search-outline',
     iconActive: 'search',
   },
@@ -45,6 +45,7 @@ export function DarkPoolBottomTabBar({ state, navigation }: BottomTabBarProps) {
   return (
     <View style={styles.outer} pointerEvents="box-none">
       <View style={styles.pill}>
+        <View style={styles.pillInner}>
         {state.routes.map((route, index) => {
           const focused = state.index === index;
           const meta = TAB_META[route.name as TabRoute];
@@ -76,6 +77,7 @@ export function DarkPoolBottomTabBar({ state, navigation }: BottomTabBarProps) {
             </Pressable>
           );
         })}
+        </View>
       </View>
     </View>
   );
@@ -88,30 +90,35 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, safeBottom: nu
       left: 0,
       right: 0,
       bottom: 0,
+      paddingTop: 10,
       paddingBottom: Math.max(safeBottom, 8),
       paddingHorizontal: tokens.layout.screenPadding,
       alignItems: 'center',
+      backgroundColor: 'transparent',
     },
     pill: {
+      width: '100%',
+      maxWidth: 420,
+      height: DARK_POOL_TAB_BAR_HEIGHT,
+      borderRadius: tokens.borderRadius.full,
+      backgroundColor: tokens.colors.background.navChrome,
+      borderWidth: 0,
+      overflow: 'hidden',
+    },
+    pillInner: {
       direction: 'rtl',
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-around',
-      width: '100%',
-      maxWidth: 420,
       height: DARK_POOL_TAB_BAR_HEIGHT,
-      borderRadius: 28,
-      backgroundColor: 'rgba(22, 26, 22, 0.96)',
-      borderWidth: 1,
-      borderColor: tokens.colors.border.subtle,
-      paddingHorizontal: 6,
+      paddingHorizontal: 8,
     },
     tab: {
       flex: 1,
       alignItems: 'center',
       justifyContent: 'center',
       paddingVertical: 6,
-      borderRadius: 22,
+      borderRadius: tokens.borderRadius.full,
       gap: 2,
     },
     tabFocused: {

@@ -52,5 +52,8 @@ describe('portraitDisplayUrl / Wikimedia thumb snap', () => {
     const congress =
       'https://unitedstates.github.io/images/congress/225x275/P000197.jpg';
     expect(portraitDisplayUrl(congress, 320)).toBe(congress);
+    const hero =
+      'https://unitedstates.github.io/images/congress/450x550/D000032.jpg';
+    expect(portraitDisplayUrl(hero, 960)).toBe(hero);
   });
 });

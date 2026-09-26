@@ -21,7 +21,7 @@ import { ChatSessionBackdrop } from '../components/chat/ChatSessionBackdrop';
 function withProfileChatShell<P extends object>(ScreenComponent: React.ComponentType<P>): React.FC<P> {
   return function WrappedScreen(props: P) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#111111' }}>
+      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
         <ChatSessionBackdrop />
         <ScreenComponent {...props} />
       </View>
@@ -50,7 +50,7 @@ export default function ProfileStack() {
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: '#111111' },
+        contentStyle: { backgroundColor: 'transparent' },
         animation: 'fade',
         gestureEnabled: true,
         animationDuration: 200,

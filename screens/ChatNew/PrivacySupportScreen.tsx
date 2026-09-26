@@ -12,6 +12,11 @@ import { Ionicons } from '@expo/vector-icons';
 import UICard from '../../components/ui/UICard';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { ChatScreenShell, ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
+import {
+  settingsHebrewText,
+  settingsRowType,
+  settingsCaptionType,
+} from '../../components/profile/settingsType';
 
 export default function PrivacySupportScreen() {
   const navigation = useNavigation();
@@ -132,7 +137,7 @@ export default function PrivacySupportScreen() {
             <View style={styles.separator} />
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>אייקונים</Text>
-              <Text style={[styles.infoValue, { fontSize: DesignTokens.typography.fontSize.xs }]}>
+              <Text style={[styles.infoValue, settingsCaptionType]}>
                 <Text>Icons by </Text>
                 <Text 
                   style={{ color: DesignTokens.colors.primary.main }}
@@ -163,11 +168,10 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
     paddingBottom: DesignTokens.spacing['3xl'],
   },
   sectionTitle: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    fontWeight: DesignTokens.typography.fontWeight.medium as any,
+    ...settingsHebrewText,
+    ...settingsRowType,
     color: DesignTokens.colors.text.secondary,
     marginBottom: DesignTokens.spacing.md,
-    textAlign: 'right',
   },
   optionRow: {
     flexDirection: 'row',
@@ -181,7 +185,8 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
     gap: DesignTokens.spacing.md,
   },
   optionText: {
-    fontSize: DesignTokens.typography.fontSize.base,
+    ...settingsHebrewText,
+    ...settingsRowType,
     color: DesignTokens.colors.text.primary,
   },
   separator: {
@@ -196,11 +201,12 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
     paddingVertical: DesignTokens.spacing.sm,
   },
   infoLabel: {
-    fontSize: DesignTokens.typography.fontSize.sm,
+    ...settingsHebrewText,
+    ...settingsCaptionType,
     color: DesignTokens.colors.text.secondary,
   },
   infoValue: {
-    fontSize: DesignTokens.typography.fontSize.sm,
+    ...settingsCaptionType,
     color: DesignTokens.colors.text.primary,
   },
 });

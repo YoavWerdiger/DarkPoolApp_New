@@ -19,7 +19,6 @@ import {
 import RegistrationTrackScreen from '../screens/Auth/RegistrationTrackScreen';
 import RegistrationSummaryScreen from '../screens/Auth/RegistrationSummaryScreen';
 import CreditCardCheckoutScreen from '../screens/Payment/CreditCardCheckoutScreen';
-import { useDesignTokens } from '../components/ui/DesignTokens';
 import { useRegistration } from '../context/RegistrationContext';
 import { useAuth } from '../context/AuthContext';
 import { isRegistrationComplete } from '../services/authService';
@@ -28,7 +27,6 @@ import { RegistrationExitProvider } from '../hooks/useExitRegistration';
 const Stack = createNativeStackNavigator();
 
 const OnboardingNavigator = () => {
-  const DesignTokens = useDesignTokens();
   const { data, setData } = useRegistration();
   const { user } = useAuth();
   const hydratedRef = useRef(false);
@@ -120,7 +118,7 @@ const OnboardingNavigator = () => {
           gestureEnabled: true,
           animationDuration: 400,
           contentStyle: {
-            backgroundColor: DesignTokens.colors.background.primary,
+            backgroundColor: 'transparent',
           },
         }}
         initialRouteName={initialRoute}

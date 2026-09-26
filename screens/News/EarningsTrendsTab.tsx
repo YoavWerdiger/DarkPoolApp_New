@@ -245,7 +245,7 @@ export default function EarningsTrendsTab() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: DesignTokens.colors.background.primary }}>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent' }}>
         <ActivityIndicator size="large" color="DesignTokens.colors.success.main" />
         <Text style={{ fontSize: 14, color: DesignTokens.colors.text.secondary, marginTop: 16 }}>
           טוען תחזיות...
@@ -255,7 +255,7 @@ export default function EarningsTrendsTab() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}>
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <FlatList
         data={trends}
         keyExtractor={(item) => item.id}

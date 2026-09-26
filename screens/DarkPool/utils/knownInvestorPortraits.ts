@@ -3,10 +3,13 @@
  * Wikimedia / congress (יציב יחסית לגילוי).
  */
 
+import { CURATED_CEO_PORTRAIT_BY_PERSON_ID } from './executivePortraitUrls';
+
 const WIKI = 'https://upload.wikimedia.org/wikipedia/commons';
 const CONGRESS = 'https://unitedstates.github.io/images/congress/225x275';
 
 export const KNOWN_INVESTOR_PORTRAIT_BY_ID: Record<string, string> = {
+  ...CURATED_CEO_PORTRAIT_BY_PERSON_ID,
   P000197: `${CONGRESS}/P000197.jpg`,
   C001114: `${CONGRESS}/C001114.jpg`,
   M000355: `${CONGRESS}/M000355.jpg`,
@@ -52,6 +55,16 @@ export const KNOWN_INVESTOR_PORTRAIT_BY_NAME: Record<string, string> = {
   'markwayne mullin': KNOWN_INVESTOR_PORTRAIT_BY_ID.M001190,
   'donald trump': KNOWN_INVESTOR_PORTRAIT_BY_ID['888dc73f-f1eb-485a-a241-80657aaaaff9'],
   'donald j trump': KNOWN_INVESTOR_PORTRAIT_BY_ID['888dc73f-f1eb-485a-a241-80657aaaaff9'],
+  'jensen huang': KNOWN_INVESTOR_PORTRAIT_BY_ID['NVDA:Jensen Huang'],
+  'tim cook': KNOWN_INVESTOR_PORTRAIT_BY_ID['AAPL:Tim Cook'],
+  'mark zuckerberg': KNOWN_INVESTOR_PORTRAIT_BY_ID['META:Mark Zuckerberg'],
+  'satya nadella': KNOWN_INVESTOR_PORTRAIT_BY_ID['MSFT:Satya Nadella'],
+  'sundar pichai': KNOWN_INVESTOR_PORTRAIT_BY_ID['GOOGL:Sundar Pichai'],
+  'elon musk': KNOWN_INVESTOR_PORTRAIT_BY_ID['TSLA:Elon Musk'],
+  'jamie dimon': KNOWN_INVESTOR_PORTRAIT_BY_ID['JPM:Jamie Dimon'],
+  'lisa su': KNOWN_INVESTOR_PORTRAIT_BY_ID['AMD:Lisa Su'],
+  'andy jassy': KNOWN_INVESTOR_PORTRAIT_BY_ID['AMZN:Andy Jassy'],
+  'alex karp': KNOWN_INVESTOR_PORTRAIT_BY_ID['PLTR:Alex Karp'],
 };
 
 /** person_id → URL */

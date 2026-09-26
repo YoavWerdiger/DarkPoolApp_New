@@ -3,7 +3,7 @@
 // ============================================
 
 import { legacyAlert } from '../../utils/appDialog';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { chatPalette } from './chatDesignTokens';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -12,6 +12,12 @@ import { useAuth } from '../../context/AuthContext';
 import { uploadStoryImage, createStory } from '../../services/storiesService';
 import { logger } from '../../utils/logger';
 import { ChatBottomSheet, ChatSheetContent } from './ChatBottomSheet';
+import { appSheetButtonLabelStyle } from '../ui/appType';
+import MediaPickerSheet from './MediaPickerSheet';
+import {
+  resolvePickedMedia,
+  scheduleMediaRecentsPrefetch,
+} from '../../lib/mediaRecentsCache';
 
 interface AddStoryBottomSheetProps {
   visible: boolean;
@@ -22,42 +28,40 @@ interface AddStoryBottomSheetProps {
 export default function AddStoryBottomSheet({ visible, onClose, onAdded }: AddStoryBottomSheetProps) {
   const { user } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
+  const [galleryOpen, setGalleryOpen] = useState(false);
 
-  const handlePickImage = async () => {
+  useEffect(() => {
+    if (!visible) {
+      setGalleryOpen(false);
+      return;
+    }
+    const recents = scheduleMediaRecentsPrefetch('photo');
+    return () => recents.cancel();
+  }, [visible]);
+
+  const uploadPickedUri = async (uri: string) => {
     if (!user?.id) return;
-
+    setIsUploading(true);
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        legacyAlert('אישור נדרש', 'אנא אשר גישה לגלריה');
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [9, 16],
-        quality: 0.8,
-      });
-
-      if (result.canceled || !result.assets[0]) return;
-
-      setIsUploading(true);
-      const { url, error } = await uploadStoryImage(result.assets[0].uri, user.id);
+      const { url, error } = await uploadStoryImage(uri, user.id);
       if (error || !url) {
         legacyAlert('שגיאה', error || 'לא הצלחנו להעלות את התמונה');
         return;
       }
-
       await createStory(user.id, { media_type: 'image', media_url: url });
       onAdded();
       onClose();
     } catch (e) {
-      logger.error('AddStoryBottomSheet', 'handlePickImage failed', e);
+      logger.error('AddStoryBottomSheet', 'uploadPickedUri failed', e);
       legacyAlert('שגיאה', 'משהו השתבש');
     } finally {
       setIsUploading(false);
     }
+  };
+
+  const handlePickImage = () => {
+    if (!user?.id) return;
+    setGalleryOpen(true);
   };
 
   const handleTakePhoto = async () => {
@@ -98,6 +102,7 @@ export default function AddStoryBottomSheet({ visible, onClose, onAdded }: AddSt
   };
 
   return (
+    <>
     <ChatBottomSheet
       visible={visible}
       onClose={onClose}
@@ -126,6 +131,23 @@ export default function AddStoryBottomSheet({ visible, onClose, onAdded }: AddSt
         </View>
       </ChatSheetContent>
     </ChatBottomSheet>
+    <MediaPickerSheet
+      visible={galleryOpen}
+      onClose={() => setGalleryOpen(false)}
+      kind="photo"
+      allowsMultiple={false}
+      cameraLaunch="system"
+      onCamera={handleTakePhoto}
+      onPickedMedia={(items) => {
+        const first = items[0];
+        if (!first) return;
+        void (async () => {
+          const [resolved] = await resolvePickedMedia([first]);
+          await uploadPickedUri(resolved?.uri || first.uri);
+        })();
+      }}
+    />
+    </>
   );
 }
 
@@ -145,8 +167,9 @@ const styles = StyleSheet.create({
   },
   optionText: {
     color: '#fff',
-    fontSize: 16,
+    ...appSheetButtonLabelStyle,
     marginRight: 12,
+    textAlign: 'right',
   },
   uploading: {
     alignItems: 'center',

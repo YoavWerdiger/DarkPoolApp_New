@@ -1,11 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
+  FlatList,
   RefreshControl,
-  ScrollView,
   Alert,
   TextInput,
   Dimensions,
@@ -24,11 +24,19 @@ import {
   deletePortfolio,
 } from '../../services/portfolios';
 import type { Portfolio, PortfolioSummary } from './portfolioTypes';
-import { JournalPreviewSheet } from './components/JournalPreviewSheet';
+import { PortfolioCard } from './components/PortfolioCard';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { queryClient } from '../../lib/queryClient';
 import { appQueryKeys } from '../../lib/appQueryKeys';
+import {
+  JOURNAL_TYPE,
+  journalBodyTextStyle,
+  journalPhysicalRightText,
+  journalRow,
+  journalRtlContent,
+  journalSectionTitleStyle,
+} from '../Journal/journalLayout';
 
 type SortMode = 'default' | 'value_desc' | 'return_desc' | 'name_asc';
 
@@ -56,7 +64,7 @@ interface PortfolioWithSummary {
 }
 
 /**
- * תיקים אישיים ביומן מסחר — חיפוש מעל, פריביו שיט (~80%) עם גרף ו-CTA.
+ * תיקים אישיים ביומן מסחר — חיפוש/מיון זכוכית מעל, רשימת כרטיסים.
  */
 export default function PortfoliosTab() {
   const tokens = useDesignTokens();
@@ -74,9 +82,6 @@ export default function PortfoliosTab() {
   const [sortMode, setSortMode] = useState<SortMode>('default');
   const [sortSheetOpen, setSortSheetOpen] = useState(false);
   const [sortSheetHeight, setSortSheetHeight] = useState(0);
-  const [selectedPortfolioId, setSelectedPortfolioId] = useState<string | null>(
-    null
-  );
 
   const sortSnapPoints = useMemo<[number]>(() => {
     const screenH = Dimensions.get('window').height;
@@ -122,20 +127,6 @@ export default function PortfoliosTab() {
     }
     return filtered;
   }, [items, searchQuery, sortMode]);
-
-  // שמירת בחירה תקינה מול הרשימה המסוננת / אחרי מחיקה
-  useEffect(() => {
-    if (filteredItems.length === 0) {
-      setSelectedPortfolioId(null);
-      return;
-    }
-    const stillVisible = filteredItems.some(
-      (it) => it.portfolio.id === selectedPortfolioId
-    );
-    if (!stillVisible) {
-      setSelectedPortfolioId(filteredItems[0].portfolio.id);
-    }
-  }, [filteredItems, selectedPortfolioId]);
 
   const load = useCallback(async () => {
     try {
@@ -205,10 +196,17 @@ export default function PortfoliosTab() {
     [load]
   );
 
+  const glassBg = tokens.colors.glass.card.bg;
+  const glassBorder = tokens.colors.glass.card.border;
+
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        root: { flex: 1 },
+        root: {
+          flex: 1,
+          ...journalRtlContent,
+          backgroundColor: 'transparent',
+        },
         emptyWrap: {
           flex: 1,
           alignItems: 'center',
@@ -221,26 +219,26 @@ export default function PortfoliosTab() {
           height: 84,
           borderRadius: 42,
           backgroundColor: 'rgba(0, 200, 5, 0.10)',
+          borderWidth: 1,
+          borderColor: glassBorder,
           alignItems: 'center',
           justifyContent: 'center',
           marginBottom: 18,
         },
         emptyTitle: {
-          fontSize: 20,
-          fontWeight: '700',
+          ...journalSectionTitleStyle,
           color: tokens.colors.text.primary,
           textAlign: 'center',
           marginBottom: 8,
         },
         emptyText: {
-          fontSize: 14,
+          ...journalBodyTextStyle,
           color: tokens.colors.text.secondary,
           textAlign: 'center',
-          lineHeight: 20,
           marginBottom: 24,
         },
         emptyBtn: {
-          flexDirection: 'row-reverse',
+          ...journalRow,
           alignItems: 'center',
           gap: 8,
           paddingHorizontal: 22,
@@ -249,22 +247,25 @@ export default function PortfoliosTab() {
           backgroundColor: tokens.colors.primary.main,
         },
         emptyBtnText: {
-          fontSize: 16,
+          fontSize: JOURNAL_TYPE.body.fontSize,
           fontWeight: '700',
+          lineHeight: JOURNAL_TYPE.body.lineHeight,
           color: tokens.colors.text.inverse,
         },
-        previewArea: {
-          flex: 1,
-          minHeight: 0,
+        list: {
+          paddingHorizontal: tokens.layout.screenPadding,
+          paddingTop: 4,
+          paddingBottom: mainTabsHeight + 88,
         },
         searchHeader: {
-          paddingHorizontal: 20,
-          paddingTop: 12,
-          paddingBottom: 14,
+          paddingHorizontal: tokens.layout.screenPadding,
+          paddingTop: tokens.spacing.sm,
+          paddingBottom: tokens.spacing.sm,
           flexDirection: 'row',
           alignItems: 'center',
           gap: 10,
           direction: 'ltr',
+          backgroundColor: 'transparent',
         },
         sortBtnWrap: {
           flexShrink: 0,
@@ -273,7 +274,8 @@ export default function PortfoliosTab() {
           height: 44,
           borderRadius: 22,
           overflow: 'hidden',
-          backgroundColor: '#262626',
+          backgroundColor: tokens.colors.background.navChrome,
+          borderWidth: 0,
         },
         sortBtnInner: {
           width: '100%',
@@ -282,34 +284,32 @@ export default function PortfoliosTab() {
           justifyContent: 'center',
         },
         sortSheet: {
-          paddingHorizontal: 20,
-          paddingTop: 8,
-          paddingBottom: 24,
+          paddingHorizontal: tokens.layout.screenPadding,
+          paddingTop: tokens.spacing.sm,
+          paddingBottom: tokens.spacing.xl,
+          direction: 'rtl',
         },
         sortSheetTitle: {
-          fontSize: 18,
-          fontWeight: '700',
+          ...journalSectionTitleStyle,
           color: tokens.colors.text.primary,
-          textAlign: 'right',
-          marginBottom: 12,
+          marginBottom: tokens.spacing.md,
         },
         sortRow: {
-          flexDirection: 'row-reverse',
+          ...journalRow,
           alignItems: 'center',
           paddingVertical: 14,
           paddingHorizontal: 14,
-          borderRadius: 14,
-          gap: 12,
+          borderRadius: tokens.borderRadius.md,
+          gap: tokens.spacing.md,
         },
         sortRowActive: {
           backgroundColor: `${tokens.colors.primary.main}1A`,
         },
         sortRowText: {
           flex: 1,
-          fontSize: 15,
+          ...journalBodyTextStyle,
           fontWeight: '600',
           color: tokens.colors.text.primary,
-          textAlign: 'right',
         },
         sortRowTextActive: {
           color: tokens.colors.primary.main,
@@ -318,9 +318,10 @@ export default function PortfoliosTab() {
         searchCardWrap: {
           flex: 1,
           minWidth: 0,
-          backgroundColor: '#262626',
-          borderRadius: 22,
+          backgroundColor: tokens.colors.background.input,
+          borderRadius: tokens.borderRadius.search,
           overflow: 'hidden',
+          borderWidth: 0,
         },
         searchInner: {
           flexDirection: 'row-reverse',
@@ -332,10 +333,10 @@ export default function PortfoliosTab() {
           flex: 1,
           marginHorizontal: 8,
           color: tokens.colors.text.primary,
-          fontSize: 15,
+          ...journalPhysicalRightText,
+          fontSize: JOURNAL_TYPE.body.fontSize,
           fontWeight: '500',
-          textAlign: 'right',
-          writingDirection: 'rtl',
+          lineHeight: JOURNAL_TYPE.body.lineHeight,
           paddingVertical: 6,
         },
         emptyResults: {
@@ -344,13 +345,13 @@ export default function PortfoliosTab() {
           paddingHorizontal: tokens.layout.screenPadding,
         },
         emptyResultsText: {
-          fontSize: 14,
+          ...journalBodyTextStyle,
           color: tokens.colors.text.tertiary,
           textAlign: 'center',
           marginTop: 12,
         },
       }),
-    [tokens, mainTabsHeight]
+    [tokens, mainTabsHeight, glassBg, glassBorder]
   );
 
   const renderSearchHeader = useCallback(() => {
@@ -458,40 +459,42 @@ export default function PortfoliosTab() {
   return (
     <View style={styles.root}>
       {renderSearchHeader()}
-
-      {filteredItems.length === 0 && searchQuery.trim().length > 0 ? (
-        <ScrollView
-          contentContainerStyle={styles.emptyResults}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={tokens.colors.primary.main}
-            />
-          }
-          keyboardShouldPersistTaps="handled"
-        >
-          <Ionicons
-            name="search-outline"
-            size={36}
-            color={tokens.colors.text.tertiary}
+      <FlatList
+        data={filteredItems}
+        keyExtractor={(item) => item.portfolio.id}
+        renderItem={({ item }) => (
+          <PortfolioCard
+            portfolio={item.portfolio}
+            summary={item.summary}
+            onPress={() => handleOpen(item.portfolio.id)}
+            onLongPress={() => handleDelete(item.portfolio)}
           />
-          <Text style={styles.emptyResultsText}>
-            לא נמצאו תיקים בשם "{searchQuery.trim()}"
-          </Text>
-        </ScrollView>
-      ) : (
-        <View style={styles.previewArea}>
-          <JournalPreviewSheet
-            items={filteredItems}
-            selectedId={selectedPortfolioId}
-            onSelect={setSelectedPortfolioId}
-            onOpenMore={handleOpen}
-            onLongPressPortfolio={handleDelete}
-            bottomInset={mainTabsHeight + 16}
+        )}
+        contentContainerStyle={styles.list}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={tokens.colors.primary.main}
           />
-        </View>
-      )}
+        }
+        ListEmptyComponent={
+          searchQuery.trim().length > 0 ? (
+            <View style={styles.emptyResults}>
+              <Ionicons
+                name="search-outline"
+                size={36}
+                color={tokens.colors.text.tertiary}
+              />
+              <Text style={styles.emptyResultsText}>
+                לא נמצאו תיקים בשם "{searchQuery.trim()}"
+              </Text>
+            </View>
+          ) : null
+        }
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      />
 
       <BottomSheet
         isOpen={sortSheetOpen}

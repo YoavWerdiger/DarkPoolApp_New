@@ -41,6 +41,7 @@ import {
   resolveQuiverApiKey,
   type QuiverInsiderRow,
 } from '../_shared/quiverQuant.ts';
+import { syncCuratedInsiderForm4Backfill } from '../_shared/curatedInsiderSync.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -88,6 +89,7 @@ serve(async (req) => {
 
   let debugTicker: string | null = null;
   let probeQuiver: { pageSize?: number } | null = null;
+  let curatedOnly = false;
   if (req.method === 'POST') {
     try {
       const body = (await req.json()) as {
@@ -95,7 +97,9 @@ serve(async (req) => {
         ticker?: string;
         probe?: string;
         page_size?: number;
+        curated_only?: boolean;
       };
+      if (body?.curated_only) curatedOnly = true;
       if (body?.debug) debugTicker = (body.ticker || 'AAPL').toUpperCase();
       if (body?.probe === 'quiver') {
         probeQuiver = {
@@ -130,6 +134,31 @@ serve(async (req) => {
     Math.max(Number(Deno.env.get('QUIVER_INSIDER_PAGE_SIZE') || '500') || 500, 50),
     1000
   );
+
+  if (curatedOnly) {
+    if (!apiKey && !quiverKey) {
+      return new Response(
+        JSON.stringify({
+          error: 'curated_only requires FORM4_API_KEY and/or QUIVER_API_KEY in project secrets',
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    try {
+      const curatedBackfill = await syncCuratedInsiderForm4Backfill(supabase, {
+        form4ApiKey: apiKey || undefined,
+        quiverKey: quiverKey || undefined,
+        historyYears: 5,
+        maxPages: 25,
+      });
+      return jsonOk({ ok: true, curated_only: true, curated_backfill: curatedBackfill });
+    } catch (e) {
+      return new Response(JSON.stringify({ error: (e as Error).message }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+  }
 
   if (probeQuiver) {
     if (!quiverKey) {
@@ -271,6 +300,19 @@ serve(async (req) => {
   }
 
   try {
+    let curatedBackfill = { rows: 0, portraits: 0, errors: [] as string[] };
+    if ((sources.has('form4api') && apiKey) || (sources.has('quiverquant') && quiverKey)) {
+      curatedBackfill = await syncCuratedInsiderForm4Backfill(supabase, {
+        form4ApiKey: sources.has('form4api') ? apiKey : undefined,
+        quiverKey: sources.has('quiverquant') ? quiverKey : undefined,
+        historyYears: 5,
+        maxPages: 22,
+      }).catch((e) => {
+        console.warn('curated insider backfill', e);
+        return { rows: 0, portraits: 0, errors: [(e as Error).message] };
+      });
+    }
+
     const since = new Date(Date.now() - lookbackHrs * 60 * 60 * 1000).toISOString();
     const rows: NormalizedInsiderBuy[] = [];
 
@@ -336,6 +378,7 @@ serve(async (req) => {
         from_uw: 0,
         avatars_enriched: avatarsOnly,
         signals_synced: signalsSynced,
+        curated_backfill: curatedBackfill,
         sources: Array.from(sources),
       });
     }
@@ -374,6 +417,7 @@ serve(async (req) => {
       from_uw: fromUw,
       avatars_enriched: avatarsEnriched,
       signals_synced: signalsSynced,
+      curated_backfill: curatedBackfill,
       sources: Array.from(sources),
     });
   } catch (e) {

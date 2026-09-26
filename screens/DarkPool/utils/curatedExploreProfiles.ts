@@ -20,6 +20,7 @@
  */
 
 import type { ExplorePerson } from '../../../services/darkpool/uwExploreService';
+import { curatedCeoPortraitUrl } from './executivePortraitUrls';
 
 const CONGRESS = 'https://unitedstates.github.io/images/congress/225x275';
 const WIKI = 'https://upload.wikimedia.org/wikipedia/commons';
@@ -125,22 +126,6 @@ export const CURATED_EXPLORE_PROFILES: ExplorePerson[] = [
     activity_score: 90,
   },
   {
-    id: 'K000389',
-    name: 'Ro Khanna',
-    subtitle: 'בית הנציגים · דמוקרט',
-    image_url: `${CONGRESS}/K000389.jpg`,
-    kind: 'politician',
-    activity_score: 89,
-  },
-  {
-    id: 'M001157',
-    name: 'Michael McCaul',
-    subtitle: 'בית הנציגים · רפובליקני',
-    image_url: `${CONGRESS}/M001157.jpg`,
-    kind: 'politician',
-    activity_score: 88,
-  },
-  {
     id: 'W000802',
     name: 'Sheldon Whitehouse',
     subtitle: 'Senate · דמוקרט',
@@ -191,10 +176,56 @@ export const CURATED_EXPLORE_PROFILES: ExplorePerson[] = [
   },
 ];
 
-const CURATED_ID_SET = new Set(CURATED_EXPLORE_PROFILES.map((p) => p.id));
+function ceoExplore(
+  id: string,
+  name: string,
+  subtitle: string,
+  ticker: string,
+  activity_score: number
+): ExplorePerson {
+  return {
+    id,
+    name,
+    subtitle,
+    image_url: curatedCeoPortraitUrl(id) ?? undefined,
+    kind: 'insider',
+    ticker,
+    activity_score,
+  };
+}
+
+/** מנכ"לים / בכירים — Form 4; person_id כמו בפיד (TICKER:שם תצוגה). */
+export const CURATED_INSIDER_PROFILES: ExplorePerson[] = [
+  ceoExplore('NVDA:Jensen Huang', 'Jensen Huang', 'CEO · NVIDIA', 'NVDA', 100),
+  ceoExplore('AAPL:Tim Cook', 'Tim Cook', 'CEO · Apple', 'AAPL', 99),
+  ceoExplore('META:Mark Zuckerberg', 'Mark Zuckerberg', 'CEO · Meta', 'META', 98),
+  ceoExplore('MSFT:Satya Nadella', 'Satya Nadella', 'CEO · Microsoft', 'MSFT', 97),
+  ceoExplore('GOOGL:Sundar Pichai', 'Sundar Pichai', 'CEO · Alphabet', 'GOOGL', 96),
+  ceoExplore('TSLA:Elon Musk', 'Elon Musk', 'CEO · Tesla', 'TSLA', 95),
+  ceoExplore('JPM:Jamie Dimon', 'Jamie Dimon', 'CEO · JPMorgan', 'JPM', 94),
+  ceoExplore('AMD:Lisa Su', 'Lisa Su', 'CEO · AMD', 'AMD', 93),
+  ceoExplore('AMZN:Andy Jassy', 'Andy Jassy', 'CEO · Amazon', 'AMZN', 92),
+  ceoExplore('PLTR:Alex Karp', 'Alex Karp', 'CEO · Palantir', 'PLTR', 91),
+];
+
+/** רשימה מאוחדת לגילוי / חיפוש / People. */
+export const ALL_CURATED_EXPLORE_PROFILES: ExplorePerson[] = [
+  ...CURATED_EXPLORE_PROFILES,
+  ...CURATED_INSIDER_PROFILES,
+];
+
+const CURATED_ID_SET = new Set(ALL_CURATED_EXPLORE_PROFILES.map((p) => p.id));
 
 export function isCuratedExploreId(personId: string): boolean {
   return CURATED_ID_SET.has(personId.trim());
+}
+
+export function filterCuratedExplorePeople(people: ExplorePerson[]): ExplorePerson[] {
+  return people.filter((p) => isCuratedExploreId(p.id));
+}
+
+export function listCuratedInsiderExplorePeople(): ExplorePerson[] {
+  return CURATED_INSIDER_PROFILES.map((p) => ({ ...p }));
 }
 
 /** תמונה מותרת — רק מקורות מאומתים, לא Wikipedia אקראי */

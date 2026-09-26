@@ -139,15 +139,19 @@ export interface PriceQuote {
   day_low?: number | null;
   /** ווליום יומי (מניות) — אם זמין */
   volume?: number | null;
+  /** שווי שוק בדולרים — אם הספק החזיר (Yahoo meta). לא מחושב אצלנו. */
+  market_cap?: number | null;
   currency: string;
   as_of: string;
   source: string;
 }
 
-/** מחיר היסטורי (close יומי) */
+/** מחיר היסטורי (close יומי; open אופציונלי ל«מאז העסקה» של קונגרס) */
 export interface HistoricalPricePoint {
   date: string;
   close: number;
+  /** פתיחה יומית מ-Yahoo quote.open — לא משוחזרת ממחיר close. */
+  open?: number | null;
 }
 
 /** Holding מחושב – שורה בטבלת Holdings */
@@ -330,7 +334,7 @@ export type HoldingsGroupBy = 'none' | 'currency' | 'asset_type' | 'sector' | 'e
 export type HoldingsSummaryMode = 'min' | 'max' | 'avg' | 'median';
 
 /** סוגי תקופות לטאב Performance */
-export type PerformancePeriod = '1W' | '1M' | '3M' | 'YTD' | '1Y' | '5Y' | 'All';
+export type PerformancePeriod = '1D' | '1W' | '1M' | '3M' | 'YTD' | '1Y' | '5Y' | 'All';
 
 /* ============================================================================
  * Trade model (migration 20260723) — trades עם OPEN/CLOSED

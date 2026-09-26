@@ -93,7 +93,6 @@ const ForgotPasswordScreen = ({ navigation, route }: { navigation: any; route?: 
       >
         <OnboardingInput
           label="אימייל"
-          icon="mail-outline"
           placeholder="name@example.com"
           value={email}
           onChangeText={(t) => {

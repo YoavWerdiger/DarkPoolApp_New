@@ -65,7 +65,7 @@ const OnboardingStack: React.FC = () => {
           gestureDirection: 'horizontal',
           animation: 'slide_from_right',
           contentStyle: {
-            backgroundColor: '#FFFFFF',
+            backgroundColor: 'transparent',
           },
         }}
       >

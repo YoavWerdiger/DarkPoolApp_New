@@ -61,6 +61,17 @@ serve(async (req) => {
 
     const watcherIds = Array.from(new Set(watchers.map((w) => w.user_id)));
 
+    const { data: notifPrefs } = await supabase
+      .from('user_notification_settings')
+      .select('user_id, notifications_enabled, dark_pool_ticker_alerts')
+      .in('user_id', watcherIds);
+    const blockedUsers = new Set<string>();
+    for (const row of notifPrefs ?? []) {
+      if (row.notifications_enabled === false || row.dark_pool_ticker_alerts === false) {
+        blockedUsers.add(row.user_id);
+      }
+    }
+
     // 4. Filter only premium users.
     const { data: subs } = await supabase
       .from('user_subscriptions')
@@ -84,6 +95,7 @@ serve(async (req) => {
       for (const w of watchers) {
         if (w.ticker !== sig.ticker) continue;
         if (!premiumUserIds.has(w.user_id)) continue;
+        if (blockedUsers.has(w.user_id)) continue;
         fanout.push({ user_id: w.user_id, signal: sig });
       }
     }

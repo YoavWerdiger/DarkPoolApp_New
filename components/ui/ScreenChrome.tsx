@@ -13,18 +13,17 @@ type Props = {
 };
 
 /**
- * מעטפת מסך — גרדיאנט מלא (~70% שחור), כמו מסך הצ׳אט.
+ * מעטפת מסך שקופה מעל האורורה בשורש.
+ * `ScreenGradientBackground` לא מצייר שכבה שנייה כשהשורש כבר מארח AuroraHost.
+ * `rtl` מכריח direction על שכבת התוכן (לא על שורש האפליקציה).
+ * טקסט גוף צריך darkPoolPhysicalRightText — Yoga ממפה textAlign:'right'
+ * ל-trailing (שמאל) כשההורה RTL.
  */
 export function ScreenChrome({ children, rtl }: Props) {
   return (
-    <View
-      style={[
-        styles.root,
-        rtl ? styles.rtlRoot : null,
-      ]}
-    >
+    <View style={styles.root}>
       <ScreenGradientBackground style={StyleSheet.absoluteFill} />
-      {children}
+      <View style={[styles.content, rtl ? styles.rtlContent : null]}>{children}</View>
     </View>
   );
 }
@@ -32,9 +31,12 @@ export function ScreenChrome({ children, rtl }: Props) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#111111',
+    backgroundColor: 'transparent',
   },
-  rtlRoot: {
+  content: {
+    flex: 1,
+  },
+  rtlContent: {
     direction: 'rtl',
   },
 });

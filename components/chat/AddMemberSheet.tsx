@@ -17,11 +17,15 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { GlassChip } from '../ui/GlassChip';
+import UICard from '../ui/UICard';
+import { CHROME_UICARD, chromeSurfaceCardStyle } from '../ui/chromeControl';
 import { searchUsers } from '../../services/chat/chatSearchService';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { isUserPresenceOnline } from '../../utils/userPresence';
 import { ChatBottomSheet, ChatSheetContent } from './ChatBottomSheet';
-import { chatPalette, chatRtlRow, chatRtlText } from './chatDesignTokens';
+import { chatRtlRow } from './chatDesignTokens';
+import { APP_TYPE, appPhysicalRightText, appSectionTitleStyle } from '../ui/appType';
 
 interface User {
   id: string;
@@ -118,18 +122,20 @@ export default function AddMemberSheet({
         <Text style={[styles.userName, { color: tokens.colors.text.primary }]} numberOfLines={1}>
           {name}
         </Text>
-        <TouchableOpacity
-          onPress={() => handleAdd(item)}
-          disabled={isAdding}
-          style={[styles.addBtn, { backgroundColor: tokens.colors.primary.main }]}
-          activeOpacity={0.75}
+        <GlassChip
+          selected
+          disableBlur
+          onPress={isAdding ? undefined : () => handleAdd(item)}
+          style={styles.addBtn}
+          contentContainerStyle={styles.addBtnContent}
+          accessibilityLabel={`הוסף ${name}`}
         >
           {isAdding ? (
-            <ActivityIndicator size={14} color="#fff" />
+            <ActivityIndicator size={14} color={tokens.colors.primary.main} />
           ) : (
-            <Ionicons name="add" size={18} color="#fff" />
+            <Ionicons name="add" size={18} color={tokens.colors.primary.main} />
           )}
-        </TouchableOpacity>
+        </GlassChip>
       </View>
     );
   };
@@ -151,7 +157,11 @@ export default function AddMemberSheet({
           <View style={{ width: 22 }} />
         </View>
 
-        <View style={styles.searchContainer}>
+        <UICard
+          {...CHROME_UICARD}
+          style={[styles.searchContainer, chromeSurfaceCardStyle(tokens)]}
+          contentContainerStyle={styles.searchContainerInner}
+        >
           <Ionicons name="search" size={16} color={tokens.colors.text.tertiary} />
           <TextInput
             value={query}
@@ -173,7 +183,7 @@ export default function AddMemberSheet({
               <Ionicons name="close-circle" size={16} color={tokens.colors.text.tertiary} />
             </TouchableOpacity>
           )}
-        </View>
+        </UICard>
 
         {isSearching ? (
           <ActivityIndicator size="large" color={tokens.colors.primary.main} style={{ marginTop: 32 }} />
@@ -211,28 +221,26 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   headerTitle: {
-    ...chatRtlText,
-    fontSize: 16,
-    fontWeight: '700',
+    ...appSectionTitleStyle,
     textAlign: 'center',
   },
   searchContainer: {
+    marginBottom: 8,
+    borderRadius: 14,
+  },
+  searchContainerInner: {
     ...chatRtlRow,
     direction: 'rtl',
     alignItems: 'center',
-    marginBottom: 8,
     paddingHorizontal: 12,
     paddingVertical: 9,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: chatPalette.glassBorder,
-    backgroundColor: chatPalette.glass,
     gap: 8,
   },
   searchInput: {
     flex: 1,
-    fontSize: 15,
-    ...chatRtlText,
+    fontSize: APP_TYPE.body.fontSize,
+    lineHeight: APP_TYPE.body.lineHeight,
+    ...appPhysicalRightText,
     padding: 0,
   },
   userRow: {
@@ -271,17 +279,24 @@ const styles = StyleSheet.create({
   },
   userName: {
     flex: 1,
-    fontSize: 15,
+    fontSize: APP_TYPE.body.fontSize,
     fontWeight: '500',
-    ...chatRtlText,
+    lineHeight: APP_TYPE.body.lineHeight,
+    ...appPhysicalRightText,
   },
   addBtn: {
     width: 32,
     height: 32,
+    minHeight: 32,
     borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
     flexShrink: 0,
+  },
+  addBtnContent: {
+    width: 32,
+    height: 32,
+    minHeight: 32,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
   },
   emptyState: {
     flex: 1,
@@ -291,7 +306,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: APP_TYPE.sectionSubtitle.fontSize,
+    lineHeight: APP_TYPE.sectionSubtitle.lineHeight,
     textAlign: 'center',
   },
 });

@@ -64,29 +64,6 @@ export default function DarkPoolOverviewScreen() {
           gap: tokens.spacing.sm,
           marginTop: tokens.spacing.md,
         },
-        stat: {
-          width: '48%',
-          flexGrow: 1,
-          borderRadius: tokens.borderRadius.lg,
-          borderWidth: 1,
-          borderColor: tokens.colors.border.subtle,
-          padding: tokens.spacing.md,
-          alignItems: 'flex-end',
-        },
-        statValue: {
-          fontSize: 26,
-          fontWeight: '900',
-          color: tokens.colors.text.primary,
-          writingDirection: 'ltr',
-        },
-        statLabel: {
-          marginTop: 4,
-          fontSize: 12,
-          fontWeight: '600',
-          color: tokens.colors.text.tertiary,
-          textAlign: 'right',
-          writingDirection: 'rtl',
-        },
         hint: {
           marginTop: tokens.spacing.lg,
           fontSize: 13,
@@ -104,7 +81,7 @@ export default function DarkPoolOverviewScreen() {
     return (
       <ScreenChrome>
         <StatusBar style="light" />
-        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
           <MainDrawerScreenHeader title="סקירה" onMenuPress={openDrawer} />
           <View style={styles.center}>
             <ActivityIndicator color={tokens.colors.primary.main} />
@@ -117,7 +94,7 @@ export default function DarkPoolOverviewScreen() {
   return (
     <ScreenChrome>
       <StatusBar style="light" />
-      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
         <MainDrawerScreenHeader
           title="סקירה"
           subtitle="מצב פיד רכישות בכירים"
@@ -140,7 +117,7 @@ export default function DarkPoolOverviewScreen() {
             <StatCard label="מ-UW" value={String(stats.uw)} />
             <StatCard label="עם תמונת בכיר" value={String(stats.withPhoto)} />
           </View>
-          <UICard variant="outlined" padding="md">
+          <UICard variant="glass" padding="md">
             <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
               <Ionicons name="sync-outline" size={18} color={tokens.colors.primary.main} />
               <Text style={styles.hint}>
@@ -160,38 +137,39 @@ export default function DarkPoolOverviewScreen() {
 function StatCard({ label, value }: { label: string; value: string }) {
   const tokens = useDesignTokens();
   return (
-    <View
+    <UICard
+      variant="glass"
+      glassIntensity="light"
+      padding="md"
       style={{
         width: '48%',
         flexGrow: 1,
         borderRadius: tokens.borderRadius.lg,
-        borderWidth: 1,
-        borderColor: tokens.colors.border.subtle,
-        backgroundColor: 'rgba(255,255,255,0.03)',
-        padding: tokens.spacing.md,
-        alignItems: 'flex-end',
+        backgroundColor: 'transparent',
       }}
     >
-      <Text
-        style={{
-          fontSize: 26,
-          fontWeight: '900',
-          color: tokens.colors.text.primary,
-        }}
-      >
-        {value}
-      </Text>
-      <Text
-        style={{
-          marginTop: 4,
-          fontSize: 12,
-          fontWeight: '600',
-          color: tokens.colors.text.tertiary,
-          textAlign: 'right',
-        }}
-      >
-        {label}
-      </Text>
-    </View>
+      <View style={{ alignItems: 'flex-end' }}>
+        <Text
+          style={{
+            fontSize: 26,
+            fontWeight: '900',
+            color: tokens.colors.text.primary,
+          }}
+        >
+          {value}
+        </Text>
+        <Text
+          style={{
+            marginTop: 4,
+            fontSize: 12,
+            fontWeight: '600',
+            color: tokens.colors.text.tertiary,
+            textAlign: 'right',
+          }}
+        >
+          {label}
+        </Text>
+      </View>
+    </UICard>
   );
 }

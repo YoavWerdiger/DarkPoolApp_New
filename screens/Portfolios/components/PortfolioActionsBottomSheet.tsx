@@ -19,6 +19,11 @@ import BottomSheet, {
 } from '../../../components/ui/BottomSheet/BottomSheet';
 import { sheetActionColors } from '../../../components/ui/BottomSheet/sheetGlass';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import {
+  APP_TYPE,
+  appPhysicalRightText,
+  appSheetButtonLabelStyle,
+} from '../../../components/ui/appType';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 import { PortfolioScreenHeader } from './PortfolioScreenHeader';
 import type { PortfoliosStackParamList } from '../../../navigation/PortfoliosStack';
@@ -219,11 +224,10 @@ function PortfolioActionsSheetBody({
         },
         actionBtnText: {
           flex: 1,
-          fontSize: 15,
-          fontWeight: '700',
+          ...appSheetButtonLabelStyle,
           color: actionColors.secondary.color,
+          ...appPhysicalRightText,
           textAlign: 'right',
-          writingDirection: 'rtl',
         },
         actionBtnDanger: {
           borderColor: actionColors.destructive.borderColor,
@@ -233,11 +237,11 @@ function PortfolioActionsSheetBody({
           color: actionColors.destructive.color,
         },
         confirmText: {
-          fontSize: 14,
+          fontSize: APP_TYPE.body.fontSize,
+          fontWeight: APP_TYPE.body.fontWeight,
+          lineHeight: APP_TYPE.body.lineHeight,
           color: tokens.colors.text.secondary,
-          textAlign: 'right',
-          writingDirection: 'rtl',
-          lineHeight: 21,
+          ...appPhysicalRightText,
           marginBottom: 16,
         },
         actionsRow: {
@@ -260,16 +264,14 @@ function PortfolioActionsSheetBody({
           backgroundColor: actionColors.destructive.backgroundColor,
         },
         pillTextCancel: {
-          fontSize: 15,
+          ...appSheetButtonLabelStyle,
           fontWeight: '800',
           color: actionColors.cancel.color,
-          writingDirection: 'rtl',
         },
         pillTextDanger: {
-          fontSize: 15,
+          ...appSheetButtonLabelStyle,
           fontWeight: '800',
           color: actionColors.destructive.color,
-          writingDirection: 'rtl',
         },
         shareBlock: {
           marginBottom: 16,
@@ -287,19 +289,19 @@ function PortfolioActionsSheetBody({
           gap: 12,
         },
         shareTitle: {
-          fontSize: 15,
+          fontSize: APP_TYPE.body.fontSize,
           fontWeight: '700',
+          lineHeight: APP_TYPE.body.lineHeight,
           color: tokens.colors.text.primary,
-          textAlign: 'right',
-          writingDirection: 'rtl',
+          ...appPhysicalRightText,
         },
         shareHint: {
-          fontSize: 11,
+          fontSize: APP_TYPE.caption2.fontSize,
+          fontWeight: APP_TYPE.caption2.fontWeight,
+          lineHeight: APP_TYPE.caption2.lineHeight,
           color: tokens.colors.text.tertiary,
-          textAlign: 'right',
-          writingDirection: 'rtl',
+          ...appPhysicalRightText,
           marginTop: 4,
-          lineHeight: 16,
         },
         brokerRow: {
           flexDirection: 'row',
@@ -331,10 +333,10 @@ function PortfolioActionsSheetBody({
           borderColor: tokens.colors.border.subtle,
           backgroundColor: actionColors.secondary.backgroundColor,
           color: tokens.colors.text.primary,
-          fontSize: 14,
+          fontSize: APP_TYPE.body.fontSize,
           fontWeight: '600',
-          textAlign: 'right',
-          writingDirection: 'rtl',
+          lineHeight: APP_TYPE.body.lineHeight,
+          ...appPhysicalRightText,
         },
         renameCheckBtn: {
           width: 40,

@@ -1,11 +1,11 @@
 import 'react-native-get-random-values'; // Must be first for WebCrypto support (PKCE OAuth)
 import 'react-native-url-polyfill/auto';
 import 'react-native-gesture-handler';
-import * as WebBrowser from 'expo-web-browser';
+import { maybeCompleteAuthSession } from './lib/expoWebBrowserSafe';
 import { registerRootComponent } from 'expo';
 
 // OAuth (Google וכו'): נדרש לסגירת סשן דפדפן אחרי redirect (במיוחד web; לא מזיק ב-native)
-WebBrowser.maybeCompleteAuthSession();
+maybeCompleteAuthSession();
 import { I18nManager } from 'react-native';
 
 try {

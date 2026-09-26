@@ -10,7 +10,7 @@ import AdminStack from './navigation/AdminStack';
 import { View, ActivityIndicator, Text, StyleSheet, AppState, TouchableOpacity, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
-import { AnimatedBackground } from './components/VideoBackground';
+import { AuroraHost } from './components/VideoBackground';
 import "./global.css";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
@@ -59,8 +59,8 @@ const AppNavigationTheme: NavTheme = {
     primary: '#00C805',
     background: APP_SYSTEM_BACKGROUND,
     card: APP_SYSTEM_BACKGROUND,
-    border: 'rgba(255,255,255,0.08)',
-    text: '#FFFFFF',
+    border: 'rgba(255,255,255,0.06)',
+    text: '#F4F1ED',
     notification: '#00C805',
   },
 };
@@ -307,7 +307,7 @@ function AppContent() {
         statusBarTranslucent={Platform.OS === 'android'}
         navigationBarTranslucent={Platform.OS === 'android'}
       >
-      <AnimatedBackground />
+      <AuroraHost>
       {/* edge-to-edge: רק style — backgroundColor/translucent נדחים באנדרואיד 15+ */}
       <StatusBar style="light" />
       {/* חייב להתאים ל־direction של ה־View המעטף — אחרת useLocale (rtl) לא תואם ל־Yoga (ltr) ו־react-native-drawer-layout מחשב translateX שגוי (רצועת מגירה בפרודקשן). */}
@@ -380,6 +380,7 @@ function AppContent() {
           </View>
         </View>
       )}
+      </AuroraHost>
       </KeyboardProvider>
     </View>
   );

@@ -2,8 +2,7 @@ import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform, Dimensions, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
-import { Ionicons } from '@expo/vector-icons';
-import { User, Mail, Lock } from 'lucide-react-native';
+import { formFieldInputStyle } from '../../components/ui/formControl';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
@@ -202,40 +201,29 @@ export default function RegisterScreen({ navigation }: any) {
 
             {/* Form Section */}
             <View style={{ gap: 20 }}>
-              {/* Full Name Input */}
               <View>
-                <Text style={{ 
-                  color: DesignTokens.colors.text.primary, 
-                  fontSize: 14, 
-                  fontWeight: '600', 
-                  marginBottom: 8,
-                  letterSpacing: 0.4,
-                  textTransform: 'uppercase',
-                  textAlign: 'right'
-                }}>
+                <Text
+                  style={{
+                    color: DesignTokens.colors.text.tertiary,
+                    fontSize: 12,
+                    fontWeight: '600',
+                    marginBottom: 8,
+                    textAlign: 'right',
+                  }}
+                >
                   שם מלא
                 </Text>
-                <View style={{
-                  backgroundColor: DesignTokens.colors.background.secondary,
-                  borderRadius: 14,
-                  borderWidth: 1.5,
-                  borderColor: DesignTokens.colors.border.main,
-                  paddingHorizontal: 16,
-                  paddingVertical: 4,
-                  flexDirection: 'row',
-                  alignItems: 'center'
-                }}>
-                  <User size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
+                <View
+                  style={{
+                    backgroundColor: DesignTokens.colors.background.input,
+                    borderRadius: 28,
+                    paddingHorizontal: 16,
+                    minHeight: 56,
+                    justifyContent: 'center',
+                  }}
+                >
                   <TextInput
-                    style={{
-                      flex: 1,
-                      color: DesignTokens.colors.text.primary,
-                      paddingHorizontal: 12,
-                      paddingVertical: 16,
-                      fontSize: 16,
-                      fontWeight: '500',
-                      textAlign: 'right'
-                    }}
+                    style={[formFieldInputStyle(), { paddingVertical: 15 }]}
                     placeholder="הכנס את שמך המלא"
                     placeholderTextColor={DesignTokens.colors.text.tertiary}
                     value={fullName}
@@ -246,40 +234,29 @@ export default function RegisterScreen({ navigation }: any) {
                 </View>
               </View>
 
-              {/* Email Input */}
               <View>
-                <Text style={{ 
-                  color: DesignTokens.colors.text.primary, 
-                  fontSize: 14, 
-                  fontWeight: '600', 
-                  marginBottom: 8,
-                  letterSpacing: 0.4,
-                  textTransform: 'uppercase',
-                  textAlign: 'right'
-                }}>
+                <Text
+                  style={{
+                    color: DesignTokens.colors.text.tertiary,
+                    fontSize: 12,
+                    fontWeight: '600',
+                    marginBottom: 8,
+                    textAlign: 'right',
+                  }}
+                >
                   כתובת אימייל
                 </Text>
-                <View style={{
-                  backgroundColor: DesignTokens.colors.background.secondary,
-                  borderRadius: 14,
-                  borderWidth: 1.5,
-                  borderColor: DesignTokens.colors.border.main,
-                  paddingHorizontal: 16,
-                  paddingVertical: 4,
-                  flexDirection: 'row',
-                  alignItems: 'center'
-                }}>
-                  <Mail size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
+                <View
+                  style={{
+                    backgroundColor: DesignTokens.colors.background.input,
+                    borderRadius: 28,
+                    paddingHorizontal: 16,
+                    minHeight: 56,
+                    justifyContent: 'center',
+                  }}
+                >
                   <TextInput
-                    style={{
-                      flex: 1,
-                      color: DesignTokens.colors.text.primary,
-                      paddingHorizontal: 12,
-                      paddingVertical: 16,
-                      fontSize: 16,
-                      fontWeight: '500',
-                      textAlign: 'right'
-                    }}
+                    style={[formFieldInputStyle(), { paddingVertical: 15 }]}
                     placeholder="הכנס את כתובת האימייל"
                     placeholderTextColor={DesignTokens.colors.text.tertiary}
                     value={email}
@@ -291,40 +268,54 @@ export default function RegisterScreen({ navigation }: any) {
                 </View>
               </View>
 
-              {/* Password Input */}
               <View>
-                <Text style={{ 
-                  color: DesignTokens.colors.text.primary, 
-                  fontSize: 14, 
-                  fontWeight: '600', 
-                  marginBottom: 8,
-                  letterSpacing: 0.4,
-                  textTransform: 'uppercase',
-                  textAlign: 'right'
-                }}>
-                  סיסמה
-                </Text>
-                <View style={{
-                  backgroundColor: DesignTokens.colors.background.secondary,
-                  borderRadius: 14,
-                  borderWidth: 1.5,
-                  borderColor: DesignTokens.colors.border.main,
-                  paddingHorizontal: 16,
-                  paddingVertical: 4,
-                  flexDirection: 'row',
-                  alignItems: 'center'
-                }}>
-                  <Lock size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
-                  <TextInput
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: 8,
+                  }}
+                >
+                  <Text
                     style={{
-                      flex: 1,
-                      color: DesignTokens.colors.text.primary,
-                      paddingHorizontal: 12,
-                      paddingVertical: 16,
-                      fontSize: 16,
-                      fontWeight: '500',
-                      textAlign: 'right'
+                      color: DesignTokens.colors.text.tertiary,
+                      fontSize: 12,
+                      fontWeight: '600',
+                      textAlign: 'right',
                     }}
+                  >
+                    סיסמה
+                  </Text>
+                  <Pressable
+                    onPress={() => {
+                      void HapticFeedback.selection();
+                      setShowPassword(!showPassword);
+                    }}
+                    hitSlop={8}
+                  >
+                    <Text
+                      style={{
+                        color: DesignTokens.colors.text.secondary,
+                        fontSize: 13,
+                        fontWeight: '600',
+                      }}
+                    >
+                      {showPassword ? 'הסתר' : 'הצג'}
+                    </Text>
+                  </Pressable>
+                </View>
+                <View
+                  style={{
+                    backgroundColor: DesignTokens.colors.background.input,
+                    borderRadius: 28,
+                    paddingHorizontal: 16,
+                    minHeight: 56,
+                    justifyContent: 'center',
+                  }}
+                >
+                  <TextInput
+                    style={[formFieldInputStyle(), { paddingVertical: 15 }]}
                     placeholder="הכנס סיסמה (לפחות 6 תווים)"
                     placeholderTextColor={DesignTokens.colors.text.tertiary}
                     value={password}
@@ -332,56 +323,57 @@ export default function RegisterScreen({ navigation }: any) {
                     secureTextEntry={!showPassword}
                     autoCapitalize="none"
                   />
-                  <Pressable 
-                    onPress={() => {
-                      void HapticFeedback.selection();
-                      setShowPassword(!showPassword);
-                    }}
-                    style={{ padding: 6 }}
-                  >
-                    <Ionicons 
-                      name={showPassword ? "eye-off-outline" : "eye-outline"} 
-                      size={20} 
-                      color={DesignTokens.colors.text.tertiary} 
-                    />
-                  </Pressable>
                 </View>
               </View>
 
-              {/* Confirm Password Input */}
               <View>
-                <Text style={{ 
-                  color: DesignTokens.colors.text.primary, 
-                  fontSize: 14, 
-                  fontWeight: '600', 
-                  marginBottom: 8,
-                  letterSpacing: 0.4,
-                  textTransform: 'uppercase',
-                  textAlign: 'right'
-                }}>
-                  אימות סיסמה
-                </Text>
-                <View style={{
-                  backgroundColor: DesignTokens.colors.background.secondary,
-                  borderRadius: 14,
-                  borderWidth: 1.5,
-                  borderColor: DesignTokens.colors.border.main,
-                  paddingHorizontal: 16,
-                  paddingVertical: 4,
-                  flexDirection: 'row',
-                  alignItems: 'center'
-                }}>
-                  <Lock size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
-                  <TextInput
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: 8,
+                  }}
+                >
+                  <Text
                     style={{
-                      flex: 1,
-                      color: DesignTokens.colors.text.primary,
-                      paddingHorizontal: 12,
-                      paddingVertical: 16,
-                      fontSize: 16,
-                      fontWeight: '500',
-                      textAlign: 'right'
+                      color: DesignTokens.colors.text.tertiary,
+                      fontSize: 12,
+                      fontWeight: '600',
+                      textAlign: 'right',
                     }}
+                  >
+                    אימות סיסמה
+                  </Text>
+                  <Pressable
+                    onPress={() => {
+                      void HapticFeedback.selection();
+                      setShowConfirmPassword(!showConfirmPassword);
+                    }}
+                    hitSlop={8}
+                  >
+                    <Text
+                      style={{
+                        color: DesignTokens.colors.text.secondary,
+                        fontSize: 13,
+                        fontWeight: '600',
+                      }}
+                    >
+                      {showConfirmPassword ? 'הסתר' : 'הצג'}
+                    </Text>
+                  </Pressable>
+                </View>
+                <View
+                  style={{
+                    backgroundColor: DesignTokens.colors.background.input,
+                    borderRadius: 28,
+                    paddingHorizontal: 16,
+                    minHeight: 56,
+                    justifyContent: 'center',
+                  }}
+                >
+                  <TextInput
+                    style={[formFieldInputStyle(), { paddingVertical: 15 }]}
                     placeholder="הכנס שוב את הסיסמה"
                     placeholderTextColor={DesignTokens.colors.text.tertiary}
                     value={confirmPassword}
@@ -389,19 +381,6 @@ export default function RegisterScreen({ navigation }: any) {
                     secureTextEntry={!showConfirmPassword}
                     autoCapitalize="none"
                   />
-                  <Pressable 
-                    onPress={() => {
-                      void HapticFeedback.selection();
-                      setShowConfirmPassword(!showConfirmPassword);
-                    }}
-                    style={{ padding: 6 }}
-                  >
-                    <Ionicons 
-                      name={showConfirmPassword ? "eye-off-outline" : "eye-outline"} 
-                      size={20} 
-                      color={DesignTokens.colors.text.tertiary} 
-                    />
-                  </Pressable>
                 </View>
               </View>
 

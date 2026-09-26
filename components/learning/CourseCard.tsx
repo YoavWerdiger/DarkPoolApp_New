@@ -18,6 +18,8 @@ import {
   ACADEMY_CARD_RADIUS,
   academyCardWidth,
 } from './academyCardLayout';
+import { APP_LAYOUT } from '../ui/appLayout';
+import { appCardSubtitleStyle, appCardTitleStyle } from '../ui/appType';
 import {
   getAcademyCourseAccentColor,
   getAcademyCourseAudience,
@@ -109,12 +111,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
       }}
       activeOpacity={0.88}
     >
-      <UICard
-        variant="blur"
-        padding="none"
-        showGlassBorder={false}
-        style={styles.card}
-      >
+      <UICard variant="soft" padding="none" style={styles.card}>
         <View style={styles.cover}>
           {course.cover_url ? (
             <Image
@@ -152,14 +149,16 @@ export const CourseCard: React.FC<CourseCardProps> = ({
         </View>
 
         <View style={styles.body}>
-          <Text style={styles.title} numberOfLines={2}>
-            {course.title}
-          </Text>
-          {subtitle ? (
-            <Text style={styles.subtitle} numberOfLines={2}>
-              {subtitle}
+          <View style={styles.titleBlock}>
+            <Text style={styles.title} numberOfLines={2}>
+              {course.title}
             </Text>
-          ) : null}
+            {subtitle ? (
+              <Text style={styles.subtitle} numberOfLines={2}>
+                {subtitle}
+              </Text>
+            ) : null}
+          </View>
 
           {audience ? (
             <View style={styles.audienceBlock}>
@@ -289,36 +288,29 @@ const createStyles = (
       color: '#fff',
     },
     body: {
-      paddingHorizontal: 16,
-      paddingTop: 14,
-      paddingBottom: 16,
-      gap: 8,
+      paddingHorizontal: 18,
+      paddingTop: 16,
+      paddingBottom: 18,
+      gap: APP_LAYOUT.cardTitleToBodyGap,
       direction: 'ltr',
       alignItems: 'stretch',
       width: '100%',
     },
-    title: {
-      fontSize: 20,
-      fontWeight: '800',
-      color: T.colors.text.primary,
-      textAlign: 'right',
-      writingDirection: 'rtl',
+    titleBlock: {
       width: '100%',
-      lineHeight: 26,
+      alignItems: 'stretch',
+    },
+    title: {
+      ...appCardTitleStyle,
+      color: T.colors.text.primary,
     },
     subtitle: {
-      fontSize: 14,
-      fontWeight: '500',
-      color: T.colors.text.secondary,
-      textAlign: 'right',
-      writingDirection: 'rtl',
-      width: '100%',
-      lineHeight: 20,
+      ...appCardSubtitleStyle,
     },
     audienceBlock: {
-      marginTop: 4,
-      gap: 4,
-      paddingTop: 10,
+      marginTop: 2,
+      gap: 6,
+      paddingTop: 12,
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: 'rgba(255,255,255,0.1)',
       width: '100%',
@@ -332,20 +324,20 @@ const createStyles = (
       width: '100%',
     },
     audienceText: {
-      fontSize: 13,
+      fontSize: 15,
       fontWeight: '500',
       color: T.colors.text.secondary,
       textAlign: 'right',
       writingDirection: 'rtl',
-      lineHeight: 19,
-      minHeight: 57,
+      lineHeight: 21,
+      minHeight: 63,
       width: '100%',
     },
     metaRow: {
       flexDirection: 'row-reverse',
       flexWrap: 'wrap',
       gap: 12,
-      marginTop: 2,
+      marginTop: 4,
       width: '100%',
       justifyContent: 'flex-start',
     },
@@ -376,7 +368,7 @@ const createStyles = (
       alignSelf: 'flex-end',
     },
     cta: {
-      marginTop: 6,
+      marginTop: 8,
       minHeight: 44,
       borderRadius: 999,
       paddingHorizontal: 18,

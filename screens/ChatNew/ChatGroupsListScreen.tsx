@@ -22,7 +22,7 @@ import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHeader';
 import { useAuth } from '../../context/AuthContext';
-import { useChat } from '../../context/ChatContext';
+import { useChat, useChatActions } from '../../context/ChatContext';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import {
   dispatchOpenMainDrawer,
@@ -45,7 +45,8 @@ import StoryAvatarRing from '../../components/chat/StoryAvatarRing';
 import { getUsersWithStories, StoryWithUser } from '../../services/storiesService';
 import { queryClient } from '../../lib/queryClient';
 import { appQueryKeys } from '../../lib/appQueryKeys';
-import { schedulePrefetchChatMessages, warmChatGroupOnPress } from '../../services/appPrefetch';
+import { schedulePrefetchChatMessages, warmChatGroupFromDisk, warmChatGroupOnPress } from '../../services/appPrefetch';
+import { chatGroupOpenParams, type ChatOpenHint } from '../../lib/chatOpenPrime';
 import { lockAndroidChatSoftInput } from '../../components/chat/androidChatKeyboard';
 import { logger } from '../../utils/logger';
 import { getChatMessagePreview } from '../../utils/chatMessagePreview';
@@ -53,6 +54,7 @@ import { isUsableChatDisplayName } from '../../lib/chatMessageIdentity';
 import { isAnnouncementGroup } from '../../utils/isAnnouncementGroup';
 import { legacyAlert } from '../../utils/appDialog';
 import { HapticFeedback, triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
+import { ChatSessionBackdrop } from '../../components/chat/ChatSessionBackdrop';
 
 // Skeleton row for groups list
 const SkeletonGroupRow = React.memo(({ delay }: { delay: number }) => {
@@ -246,6 +248,7 @@ export default function ChatGroupsListScreen() {
   const navigation = useNavigation();
   const { user } = useAuth();
   const { groups: contextGroups } = useChat();
+  const { primeGroupForOpen } = useChatActions();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
 
   const openMainDrawer = useCallback(() => {
@@ -766,15 +769,27 @@ export default function ChatGroupsListScreen() {
         ),
       );
       void HapticFeedback.impactLight();
-      lockAndroidChatSoftInput();
-      if (user?.id) warmChatGroupOnPress(user.id, group.id);
-      (navigation as any).navigate('ChatGroup', { groupId: group.id });
+      prepareChatOpen(group);
+      (navigation as any).navigate('ChatGroup', chatGroupOpenParams(group));
       void loadGroups();
     } catch (error: any) {
       setIsJoining(false);
       legacyAlert('שגיאה', error?.message || 'שגיאה לא צפויה');
     }
   };
+
+  const prepareChatOpen = useCallback((group: Pick<GroupWithMembership, 'id' | 'name' | 'avatar_url' | 'unread_count' | 'last_read_message_id' | 'my_role'>) => {
+    lockAndroidChatSoftInput();
+    const hint: ChatOpenHint = {
+      name: group.name,
+      avatar_url: group.avatar_url,
+      unread_count: group.unread_count,
+      last_read_message_id: group.last_read_message_id,
+      my_role: group.my_role,
+    };
+    primeGroupForOpen(group.id, hint);
+    if (user?.id) warmChatGroupOnPress(user.id, group.id);
+  }, [primeGroupForOpen, user?.id]);
 
   const handleGroupPress = useCallback((group: GroupWithMembership) => {
     setSearchSheetVisible(false);
@@ -786,12 +801,9 @@ export default function ChatGroupsListScreen() {
     // אל תסגור מקלדת לפני navigate — באנדרואיד Keyboard.dismiss + adjustResize
     // דוחים את first paint של ה-thread ב-300–400ms. ADJUST_NOTHING כבר ננעל ב-onPressIn.
     void HapticFeedback.impactLight();
-    lockAndroidChatSoftInput();
-    if (user?.id) {
-      warmChatGroupOnPress(user.id, group.id);
-    }
-    (navigation as any).navigate('ChatGroup', { groupId: group.id });
-  }, [navigation, user?.id]);
+    prepareChatOpen(group);
+    (navigation as any).navigate('ChatGroup', chatGroupOpenParams(group));
+  }, [prepareChatOpen, navigation]);
 
   const openJoinSheet = useCallback((group: GroupWithMembership) => {
     void HapticFeedback.selection();
@@ -807,14 +819,12 @@ export default function ChatGroupsListScreen() {
   const handleMessageResultPress = useCallback((result: ChatSearchResult) => {
     setSearchSheetVisible(false);
     void HapticFeedback.impactLight();
-    const gid = result.group?.id;
-    lockAndroidChatSoftInput();
-    if (user?.id && gid) warmChatGroupOnPress(user.id, gid);
-    (navigation as any).navigate('ChatGroup', {
-      groupId: gid,
+    const group = result.group;
+    if (group?.id) prepareChatOpen(group);
+    (navigation as any).navigate('ChatGroup', chatGroupOpenParams(group ?? { id: '' }, {
       scrollToMessageId: result.message?.id,
-    });
-  }, [navigation, user?.id]);
+    }));
+  }, [prepareChatOpen, navigation]);
 
   useEffect(() => {
     if (!searchSheetVisible) return;
@@ -958,10 +968,7 @@ export default function ChatGroupsListScreen() {
           delayPressIn={0}
           onPress={() => handleGroupPress(group)}
           onPressIn={() => {
-            if (user?.id && group.is_member) {
-              lockAndroidChatSoftInput();
-              warmChatGroupOnPress(user.id, group.id);
-            }
+            if (group.is_member) prepareChatOpen(group);
           }}
         >
           {imageUrl && !hasImageError ? (
@@ -1004,11 +1011,8 @@ export default function ChatGroupsListScreen() {
         delayPressIn={0}
         onPress={() => handleMessageResultPress(item.result)}
         onPressIn={() => {
-          const gid = item.result.group?.id;
-          if (user?.id && gid) {
-            lockAndroidChatSoftInput();
-            warmChatGroupOnPress(user.id, gid);
-          }
+          const g = item.result.group;
+          if (g?.id) prepareChatOpen(g);
         }}
       >
         {groupImage ? (
@@ -1030,7 +1034,7 @@ export default function ChatGroupsListScreen() {
         </View>
       </TouchableOpacity>
     );
-  }, [handleGroupPress, handleMessageResultPress, tokens, styles, user?.id]);
+  }, [handleGroupPress, handleMessageResultPress, prepareChatOpen, tokens, styles]);
 
   const renderMyGroup = useCallback(
     (item: GroupWithMembership, isLastAnnouncement: boolean, isLastInSection: boolean) => {
@@ -1066,10 +1070,7 @@ export default function ChatGroupsListScreen() {
             style={styles.chatRow}
             onPress={() => handleGroupPress(item)}
             onPressIn={() => {
-              if (user?.id && item.is_member) {
-                lockAndroidChatSoftInput();
-                warmChatGroupOnPress(user.id, item.id);
-              }
+              if (item.is_member) prepareChatOpen(item);
             }}
             delayPressIn={0}
             activeOpacity={0.6}
@@ -1147,7 +1148,7 @@ export default function ChatGroupsListScreen() {
         </View>
       );
     },
-    [styles, tokens, handleGroupPress, imageErrorCount, user?.id]
+    [styles, tokens, handleGroupPress, prepareChatOpen, imageErrorCount]
   );
 
   const renderJoinableGroup = useCallback(
@@ -1240,11 +1241,29 @@ export default function ChatGroupsListScreen() {
     [renderMyGroup, renderJoinableGroup, renderSectionHeader]
   );
 
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 55 }).current;
+  const userIdRef = useRef(user?.id);
+  userIdRef.current = user?.id;
+  const onViewableItemsChanged = useRef(
+    ({ viewableItems }: { viewableItems: Array<{ item?: ListRow }> }) => {
+      const uid = userIdRef.current;
+      if (!uid) return;
+      for (const token of viewableItems) {
+        const row = token.item;
+        if (row?.type === 'my-group' && row.group?.id) {
+          warmChatGroupFromDisk(uid, row.group.id);
+        }
+      }
+    },
+  ).current;
+
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
       {isLoading ? (
         <View style={{ width: '100%' }}>
-          {[0,1,2,3,4,5,6,7].map(i => <SkeletonGroupRow key={i} delay={i * 70} />)}
+          {[0, 1, 2, 3].map((i) => (
+            <SkeletonGroupRow key={i} delay={0} />
+          ))}
         </View>
       ) : searchQuery ? (
         <>
@@ -1274,7 +1293,8 @@ export default function ChatGroupsListScreen() {
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#111111' }}>
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+      <ChatSessionBackdrop />
       <MainDrawerRegistration />
       <RNSafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <View style={styles.container}>
@@ -1461,6 +1481,8 @@ export default function ChatGroupsListScreen() {
               maxToRenderPerBatch={10}
               windowSize={7}
               removeClippedSubviews={true}
+              viewabilityConfig={viewabilityConfig}
+              onViewableItemsChanged={onViewableItemsChanged}
             />
           </View>
           </View>
@@ -1676,7 +1698,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     flexDirection: 'row-reverse',
     alignItems: 'center',
     backgroundColor: tokens.colors.border.primary,
-    borderRadius: 22,
+    borderRadius: tokens.borderRadius.search,
     paddingHorizontal: 16,
     height: 42,
     gap: 10,
@@ -1696,7 +1718,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     backgroundColor: chatPalette.glass,
     borderWidth: 1,
     borderColor: chatPalette.glassBorder,
-    borderRadius: 999,
+    borderRadius: tokens.borderRadius.search,
     paddingHorizontal: 18,
     height: 46,
     marginBottom: 14,

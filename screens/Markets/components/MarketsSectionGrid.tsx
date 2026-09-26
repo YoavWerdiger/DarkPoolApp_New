@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import UICard from '../../../components/ui/UICard';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { MARKETS_TYPE } from '../marketsLayout';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 
 export type SectionItem = {
@@ -136,8 +137,8 @@ const styles = StyleSheet.create({
     borderRadius: 18,
   },
   label: {
-    fontSize: 14,
+    fontSize: MARKETS_TYPE.cardSubtitle.fontSize,
+    lineHeight: MARKETS_TYPE.cardSubtitle.lineHeight,
     textAlign: 'center',
-    lineHeight: 18,
   },
 });

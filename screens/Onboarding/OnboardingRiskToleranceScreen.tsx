@@ -44,7 +44,7 @@ const RISK_OPTIONS: RiskOption[] = [
     emoji: '🔴',
     title: 'אגרסיבי',
     description: 'סיכון גבוה, פוטנציאל גבוה',
-    color: '#FF4444',
+    color: '#F87171',
   },
 ];
 

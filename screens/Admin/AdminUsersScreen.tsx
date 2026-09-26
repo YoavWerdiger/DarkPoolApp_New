@@ -270,7 +270,7 @@ export default function AdminUsersScreen({ navigation }: any) {
           variant="inputGlass"
           padding="none"
           style={{
-            borderRadius: tokens.borderRadius.xl,
+            borderRadius: tokens.borderRadius.search,
             marginBottom: tokens.spacing.md,
             borderWidth: 1,
             borderColor: chatPalette.glassBorder,

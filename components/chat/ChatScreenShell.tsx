@@ -6,12 +6,8 @@ import React from 'react';
 import { View, Text, StyleSheet, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
-import {
-  MAIN_SCREEN_HEADER_HP,
-  MAIN_SCREEN_HEADER_TITLE_LINE_HEIGHT,
-  MAIN_SCREEN_HEADER_TITLE_SIZE,
-  MAIN_SCREEN_HEADER_TITLE_WEIGHT,
-} from '../ui/MainDrawerScreenHeader';
+import { appScreenSubtitleStyle, appScreenTitleStyle } from '../ui/appType';
+import { MAIN_SCREEN_HEADER_HP } from '../ui/MainDrawerScreenHeader';
 import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../ui/DayNavBlurButton';
 import { ChatSessionBackdrop } from './ChatSessionBackdrop';
 
@@ -40,6 +36,7 @@ type ChatSubScreenHeaderProps = {
   /**
    * מסך בתוך עץ `direction: 'rtl'` (למשל Dark Pool) —
    * משתמש ב-row במקום row-reverse כמו MainDrawerScreenHeader.
+   * כותרת המסך תמיד ממורכזת — inRtlTree לא משנה textAlign.
    */
   inRtlTree?: boolean;
 };
@@ -47,6 +44,7 @@ type ChatSubScreenHeaderProps = {
 /**
  * כותרת משנה (פרופיל / צ'אט / תשלום / Dark Pool) — אותו פריסת קצה
  * כמו `MainDrawerScreenHeader` (margin על הכפתור, לא padding+slot 72).
+ * כותרת + כותרת משנה בכרום = center.
  */
 export function ChatSubScreenHeader({
   title,
@@ -58,12 +56,9 @@ export function ChatSubScreenHeader({
   inRtlTree = false,
 }: ChatSubScreenHeaderProps) {
   const tokens = useDesignTokens();
-  const titleAlign = inRtlTree ? 'right' : 'center';
-  const subtitleAlign = inRtlTree ? 'right' : 'center';
   const row = inRtlTree ? styles.subHeaderRowInRtlTree : styles.subHeaderRowApp;
   const backEdge = inRtlTree ? styles.sideBackInRtlTree : styles.sideBackApp;
   const endEdge = inRtlTree ? styles.sideEndInRtlTree : styles.sideEndApp;
-  const titleBlockAlign = inRtlTree ? styles.titleBlockRtl : styles.titleBlockCentered;
 
   return (
     <View style={[styles.subHeaderRoot, style]}>
@@ -78,19 +73,16 @@ export function ChatSubScreenHeader({
             <Ionicons name={backIcon} size={24} color={tokens.colors.text.primary} />
           </DayNavBlurButton>
         </View>
-        <View style={[styles.titleBlock, titleBlockAlign]}>
+        <View style={styles.titleBlock}>
           <Text
-            style={[styles.titleText, { color: tokens.colors.text.primary, textAlign: titleAlign }]}
+            style={[styles.titleText, appScreenTitleStyle, { color: tokens.colors.text.primary }]}
             numberOfLines={1}
           >
             {title}
           </Text>
           {subtitle ? (
             <Text
-              style={[
-                styles.subtitleText,
-                { color: tokens.colors.text.secondary, textAlign: subtitleAlign },
-              ]}
+              style={[styles.subtitleText, appScreenSubtitleStyle, { color: tokens.colors.text.secondary }]}
               numberOfLines={2}
             >
               {subtitle}
@@ -108,7 +100,7 @@ export function ChatSubScreenHeader({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#111111',
+    backgroundColor: 'transparent',
   },
   subHeaderRoot: {
     width: '100%',
@@ -152,26 +144,12 @@ const styles = StyleSheet.create({
     minHeight: 48,
     paddingHorizontal: 4,
   },
-  titleBlockCentered: {
-    alignItems: 'center',
-  },
-  titleBlockRtl: {
-    alignItems: 'stretch',
-  },
   titleText: {
-    fontSize: MAIN_SCREEN_HEADER_TITLE_SIZE,
-    fontWeight: MAIN_SCREEN_HEADER_TITLE_WEIGHT,
-    letterSpacing: -0.35,
-    lineHeight: MAIN_SCREEN_HEADER_TITLE_LINE_HEIGHT,
-    textAlign: 'center',
-    writingDirection: 'rtl',
+    width: '100%',
   },
   subtitleText: {
-    marginTop: 3,
     fontSize: 13,
     fontWeight: '500',
-    textAlign: 'center',
     lineHeight: 17,
-    writingDirection: 'rtl',
   },
 });

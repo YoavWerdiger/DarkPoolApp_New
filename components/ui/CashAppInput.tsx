@@ -1,13 +1,9 @@
 import React from 'react';
-import { Ionicons } from '@expo/vector-icons';
 import OnboardingInput from '../onboarding/OnboardingInput';
 
-type IconName = keyof typeof Ionicons.glyphMap;
 type AutoFormatMode = 'phone' | 'none';
 
-export interface CashAppInputProps
-  extends Omit<React.ComponentProps<typeof OnboardingInput>, 'icon'> {
-  leftIcon?: IconName;
+export interface CashAppInputProps extends React.ComponentProps<typeof OnboardingInput> {
   autoFormat?: AutoFormatMode;
 }
 
@@ -19,7 +15,6 @@ const formatIsraeliPhone = (value: string): string => {
 };
 
 const CashAppInput: React.FC<CashAppInputProps> = ({
-  leftIcon,
   autoFormat = 'none',
   value,
   onChangeText,
@@ -31,7 +26,6 @@ const CashAppInput: React.FC<CashAppInputProps> = ({
   return (
     <OnboardingInput
       {...rest}
-      icon={leftIcon}
       value={displayValue}
       onChangeText={(text) => {
         if (autoFormat === 'phone') {

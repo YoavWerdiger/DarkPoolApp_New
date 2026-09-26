@@ -1,15 +1,16 @@
 import React, { useMemo } from 'react';
-import { Dimensions, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import type { ExplorePerson } from '../../../services/darkpool/uwExploreService';
+import { darkPoolPhysicalRightText } from '../darkPoolLayout';
+import { EXPLORE_GRID_GAP, EXPLORE_PROFILE_CARD } from '../utils/exploreGrid';
 import { ExplorePortraitCard } from './ExplorePortraitCard';
-
-const COLS = 2;
 
 interface Props {
   people: ExplorePerson[];
   onPersonPress: (person: ExplorePerson) => void;
   emptyMessage?: string;
+  padded?: boolean;
 }
 
 /** גריד 2 עמודות — ScrollView ב-parent (יציב ב-RTL) */
@@ -17,40 +18,39 @@ export function ExplorePeopleGrid({
   people,
   onPersonPress,
   emptyMessage = 'אין פרופילים להצגה',
+  padded = true,
 }: Props) {
   const tokens = useDesignTokens();
-  const cardWidth = useMemo(() => {
-    const pad = tokens.layout.screenPadding;
-    const gap = 10;
-    const w = Dimensions.get('window').width;
-    return (w - pad * 2 - gap) / COLS;
-  }, [tokens.layout.screenPadding]);
+  const cardWidth = EXPLORE_PROFILE_CARD.width;
 
   const styles = useMemo(
     () =>
       StyleSheet.create({
         grid: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           flexWrap: 'wrap',
-          gap: 10,
+          gap: EXPLORE_GRID_GAP,
           direction: 'rtl',
-          paddingHorizontal: tokens.layout.screenPadding,
+          paddingHorizontal: padded ? tokens.layout.screenPadding : 0,
         },
         cell: {
           width: cardWidth,
         },
         empty: {
+          direction: 'rtl',
           paddingVertical: 40,
-          paddingHorizontal: tokens.layout.screenPadding,
+          paddingHorizontal: padded ? tokens.layout.screenPadding : 0,
+          alignItems: 'stretch',
         },
         emptyText: {
-          fontSize: 14,
+          ...darkPoolPhysicalRightText,
+          width: '100%',
+          fontSize: 15,
           color: tokens.colors.text.tertiary,
-          textAlign: 'center',
           lineHeight: 22,
         },
       }),
-    [tokens, cardWidth]
+    [tokens, cardWidth, padded]
   );
 
   if (!people.length) {
@@ -67,7 +67,6 @@ export function ExplorePeopleGrid({
         <View key={person.id} style={styles.cell}>
           <ExplorePortraitCard
             person={person}
-            variant="grid"
             onPress={() => onPersonPress(person)}
           />
         </View>

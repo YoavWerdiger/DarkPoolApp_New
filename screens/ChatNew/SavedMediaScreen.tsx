@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useLockParentDrawerWhileFocused } from '../../hooks/useLockParentDrawerWhileFocused';
+import { scheduleAfterNavigationTransition } from '../../hooks/afterNavigationTransition';
 import { Ionicons } from '@expo/vector-icons';
 import { Video, ResizeMode } from '../../lib/expoAvSafe';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
@@ -24,6 +25,7 @@ import { chatMessageService } from '../../services/chat';
 import { useAuth } from '../../context/AuthContext';
 import { ChatScreenShell, ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 import { logger } from '../../utils/logger';
+import { settingsRowType, settingsMetaType } from '../../components/profile/settingsType';
 
 interface SavedMediaItem {
   id: string;
@@ -60,56 +62,59 @@ export default function SavedMediaScreen() {
   useEffect(() => {
     let cancelled = false;
 
-    (async () => {
-      if (!user?.id) {
-        setSavedMedia([]);
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-      try {
-        const { data, error } = await chatMessageService.getStarredMessages(user.id, groupId, {
-          limit: 100,
-        });
-
-        if (cancelled) return;
-
-        if (error || !data) {
+    const stop = scheduleAfterNavigationTransition(navigation, () => {
+      void (async () => {
+        if (!user?.id) {
           setSavedMedia([]);
+          setLoading(false);
           return;
         }
 
-        const items: SavedMediaItem[] = data
-          .map((row: any) => row.message)
-          .filter(
-            (msg: any) =>
-              msg &&
-              msg.media_url &&
-              (msg.message_type === 'image' || msg.message_type === 'video')
-          )
-          .map((msg: any) => ({
-            id: msg.id,
-            url: msg.media_url,
-            thumbnail: msg.media_thumbnail_url || msg.media_url,
-            type: msg.message_type,
-            senderName: msg.sender?.display_name || 'משתמש',
-            createdAt: msg.created_at,
-          }));
+        setLoading(true);
+        try {
+          const { data, error } = await chatMessageService.getStarredMessages(user.id, groupId, {
+            limit: 100,
+          });
 
-        setSavedMedia(items);
-      } catch (error) {
-        logger.error('SavedMediaScreen', 'Failed to load starred media', error);
-        if (!cancelled) setSavedMedia([]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
+          if (cancelled) return;
+
+          if (error || !data) {
+            setSavedMedia([]);
+            return;
+          }
+
+          const items: SavedMediaItem[] = data
+            .map((row: any) => row.message)
+            .filter(
+              (msg: any) =>
+                msg &&
+                msg.media_url &&
+                (msg.message_type === 'image' || msg.message_type === 'video')
+            )
+            .map((msg: any) => ({
+              id: msg.id,
+              url: msg.media_url,
+              thumbnail: msg.media_thumbnail_url || msg.media_url,
+              type: msg.message_type,
+              senderName: msg.sender?.display_name || 'משתמש',
+              createdAt: msg.created_at,
+            }));
+
+          setSavedMedia(items);
+        } catch (error) {
+          logger.error('SavedMediaScreen', 'Failed to load starred media', error);
+          if (!cancelled) setSavedMedia([]);
+        } finally {
+          if (!cancelled) setLoading(false);
+        }
+      })();
+    });
 
     return () => {
       cancelled = true;
+      stop();
     };
-  }, [user?.id, groupId]);
+  }, [user?.id, groupId, navigation]);
 
   const [signedThumbs, setSignedThumbs] = useState<Record<string, string>>({});
   useEffect(() => {
@@ -210,15 +215,14 @@ const createStyles = (tokens: any) =>
       paddingHorizontal: 24,
     },
     emptyTitle: {
+      ...settingsRowType,
       marginTop: 12,
       color: tokens.colors.text.primary,
-      fontSize: 16,
-      fontWeight: '600',
     },
     emptyText: {
+      ...settingsMetaType,
       marginTop: 8,
       color: tokens.colors.text.secondary,
-      fontSize: 14,
       textAlign: 'center',
     },
     gridContainer: { padding: 4 },

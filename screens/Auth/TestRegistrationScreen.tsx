@@ -41,7 +41,7 @@ const TestRegistrationScreen = () => {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#111', padding: 24, justifyContent: 'center' }}>
+    <View style={{ flex: 1, backgroundColor: 'transparent', padding: 24, justifyContent: 'center' }}>
       <Text style={{ color: '#fff', fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginBottom: 32 }}>
         בדיקת פונקציות הרשמה
       </Text>

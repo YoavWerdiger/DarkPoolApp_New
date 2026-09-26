@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenChrome } from '../../components/ui/ScreenChrome';
+import { DayDividerPill } from '../../components/ui/DayDividerPill';
 import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHeader';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { MarketsEmbedSwitcher } from '../Markets/components/MarketsEmbedSwitcher';
@@ -13,9 +14,14 @@ import TradesListTab from './TradesListTab';
 import CalendarTab from './CalendarTab';
 import JournalDataTab from './JournalDataTab';
 import { dispatchOpenMainDrawer, type DrawerParentNavigation } from '../../navigation/mainDrawerNav';
-import { triggerDrawerMenuHaptic, HapticFeedback } from '../../utils/hapticFeedback';
+import { triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
 import type { JournalStackParamList } from '../../navigation/JournalStack';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
+import {
+  JOURNAL_TYPE,
+  journalRtlRoot,
+  journalRow,
+} from './journalLayout';
 
 type JournalTab = 'trades' | 'calendar' | 'performance';
 
@@ -71,19 +77,22 @@ export default function TradingScreen() {
           zIndex: 40,
         },
         fabBtn: {
-          flexDirection: 'row-reverse',
+          borderRadius: 28,
+          minHeight: 52,
+        },
+        fabBtnContent: {
+          ...journalRow,
           alignItems: 'center',
           gap: 8,
           paddingHorizontal: 22,
-          paddingVertical: 14,
-          borderRadius: 28,
-          backgroundColor: DesignTokens.colors.primary.main,
-          ...DesignTokens.shadows.md,
+          paddingVertical: 12,
+          minHeight: 52,
         },
         fabBtnText: {
-          fontSize: 16,
+          fontSize: JOURNAL_TYPE.body.fontSize,
           fontWeight: '700',
-          color: DesignTokens.colors.text.inverse,
+          lineHeight: JOURNAL_TYPE.body.lineHeight,
+          color: DesignTokens.colors.primary.main,
         },
       }),
     [DesignTokens, mainTabsHeight]
@@ -92,8 +101,12 @@ export default function TradingScreen() {
   return (
     <ScreenChrome>
       <StatusBar style="light" />
-      <RNSafeAreaView style={styles.safeAreaContainer} edges={['top']}>
-        <MainDrawerScreenHeader title="יומן מסחר" onMenuPress={openMainDrawer} />
+      <RNSafeAreaView style={[styles.safeAreaContainer, journalRtlRoot]} edges={['top']}>
+        <MainDrawerScreenHeader
+          title="יומן מסחר"
+          onMenuPress={openMainDrawer}
+          inRtlTree
+        />
 
         <View style={styles.tabBarWrap} accessibilityRole="tablist">
           <MarketsEmbedSwitcher
@@ -112,19 +125,16 @@ export default function TradingScreen() {
 
         {showAddTradeFab ? (
           <View style={styles.fabWrap} pointerEvents="box-none">
-            <TouchableOpacity
+            <DayDividerPill
+              selected
               style={styles.fabBtn}
-              onPress={() => {
-                void HapticFeedback.medium();
-                navigation.navigate('AddTrade');
-              }}
-              activeOpacity={0.88}
-              accessibilityRole="button"
+              contentContainerStyle={styles.fabBtnContent}
+              onPress={() => navigation.navigate('AddTrade')}
               accessibilityLabel="הוסף טרייד"
             >
-              <Ionicons name="add" size={26} color={DesignTokens.colors.text.inverse} />
+              <Ionicons name="add" size={26} color={DesignTokens.colors.primary.main} />
               <Text style={styles.fabBtnText}>הוסף טרייד</Text>
-            </TouchableOpacity>
+            </DayDividerPill>
           </View>
         ) : null}
       </RNSafeAreaView>

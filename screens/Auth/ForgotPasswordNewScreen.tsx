@@ -190,7 +190,6 @@ const ForgotPasswordNewScreen = ({ navigation, route }: { navigation: any; route
       >
         <OnboardingInput
           label="סיסמה חדשה"
-          icon="lock-closed-outline"
           placeholder="לפחות 6 תווים"
           value={password}
           onChangeText={(t) => {
@@ -203,7 +202,6 @@ const ForgotPasswordNewScreen = ({ navigation, route }: { navigation: any; route
         />
         <OnboardingInput
           label="אימות סיסמה"
-          icon="lock-closed-outline"
           placeholder="הכנס שוב את הסיסמה"
           value={confirmPassword}
           onChangeText={setConfirmPassword}

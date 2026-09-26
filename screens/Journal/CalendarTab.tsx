@@ -17,6 +17,16 @@ import UICard from '../../components/ui/UICard';
 import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
 import type { Trade } from './tradeTypes';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
+import {
+  JOURNAL_TYPE,
+  journalBodyTextStyle,
+  journalCaption2Style,
+  journalCaptionStyle,
+  journalRow,
+  journalRtlContent,
+  journalSectionSubtitleStyle,
+  journalSectionTitleStyle,
+} from './journalLayout';
 
 interface DailyPnl {
   date: string;
@@ -42,14 +52,6 @@ export default function CalendarTab() {
     const dayWidth = Math.max(0, (inner - cellGap * 6) / 7);
     return { horizontalPad, inner, cellGap, dayWidth };
   }, [DesignTokens, windowWidth]);
-
-  const glassDayBase = React.useMemo(
-    () => ({
-      ...DesignTokens.getGlassCardStyle('light'),
-      borderRadius: DesignTokens.borderRadius.lg,
-    }),
-    [DesignTokens]
-  );
 
   const styles = React.useMemo(
     () => createStyles(DesignTokens, mainTabsHeight, gridLayout),
@@ -231,21 +233,17 @@ export default function CalendarTab() {
     const cellSize = { width: gridLayout.dayWidth, marginRight: hGap, marginBottom: vGap };
 
     const cellShell = (children: React.ReactNode, accent?: 'profit' | 'loss' | null) => (
-      <View
+      <UICard
+        variant="glass"
+        glassIntensity="light"
+        padding="none"
+        disableBlur
         style={[
           styles.calendarDay,
-          glassDayBase,
           cellSize,
-          styles.calendarDayClip,
-          accent === 'profit' && {
-            borderWidth: 0,
-            backgroundColor: `${DesignTokens.colors.success.main}22`,
-          },
-          accent === 'loss' && {
-            borderWidth: 0,
-            backgroundColor: `${DesignTokens.colors.text.danger}22`,
-          },
+          { borderRadius: DesignTokens.borderRadius.lg },
         ]}
+        contentContainerStyle={styles.calendarDayInner}
       >
         {accent === 'profit' && (
           <View
@@ -272,7 +270,7 @@ export default function CalendarTab() {
           />
         )}
         {children}
-      </View>
+      </UICard>
     );
 
     if (!item) {
@@ -451,36 +449,36 @@ export default function CalendarTab() {
         {monthStats ? (
           <View style={{ paddingHorizontal: DesignTokens.layout?.screenPadding ?? 20, paddingBottom: 8 }}>
             <UICard variant="glass" glassIntensity="light" padding="md" style={{ borderRadius: 16, marginBottom: 8 }}>
-              <Text style={{ fontSize: 13, fontWeight: '700', color: DesignTokens.colors.text.secondary, textAlign: 'right', marginBottom: 12, letterSpacing: 0.3 }}>
+              <Text style={{ ...journalSectionSubtitleStyle, color: DesignTokens.colors.text.secondary, textAlign: 'right', marginBottom: 12 }}>
                 סטטיסטיקות חודש
               </Text>
-              <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between' }}>
+              <View style={{ ...journalRow, justifyContent: 'space-between' }}>
                 <View style={{ alignItems: 'center', flex: 1 }}>
-                  <Text style={{ fontSize: 10, color: DesignTokens.colors.text.tertiary, marginBottom: 4 }}>טריידים</Text>
-                  <Text style={{ fontSize: 20, fontWeight: '800', color: DesignTokens.colors.text.primary }}>{monthStats.tradeCount}</Text>
+                  <Text style={{ ...journalCaption2Style, color: DesignTokens.colors.text.tertiary, marginBottom: 4, textAlign: 'center' }}>טריידים</Text>
+                  <Text style={{ fontSize: JOURNAL_TYPE.sectionTitle.fontSize, fontWeight: JOURNAL_TYPE.sectionTitle.fontWeight, lineHeight: JOURNAL_TYPE.sectionTitle.lineHeight, color: DesignTokens.colors.text.primary }}>{monthStats.tradeCount}</Text>
                 </View>
                 <View style={{ alignItems: 'center', flex: 1 }}>
-                  <Text style={{ fontSize: 10, color: DesignTokens.colors.text.tertiary, marginBottom: 4 }}>ימי רווח</Text>
-                  <Text style={{ fontSize: 20, fontWeight: '800', color: DesignTokens.colors.primary.main }}>{monthStats.winDays}</Text>
+                  <Text style={{ ...journalCaption2Style, color: DesignTokens.colors.text.tertiary, marginBottom: 4, textAlign: 'center' }}>ימי רווח</Text>
+                  <Text style={{ fontSize: JOURNAL_TYPE.sectionTitle.fontSize, fontWeight: JOURNAL_TYPE.sectionTitle.fontWeight, lineHeight: JOURNAL_TYPE.sectionTitle.lineHeight, color: DesignTokens.colors.primary.main }}>{monthStats.winDays}</Text>
                 </View>
                 <View style={{ alignItems: 'center', flex: 1 }}>
-                  <Text style={{ fontSize: 10, color: DesignTokens.colors.text.tertiary, marginBottom: 4 }}>ימי הפסד</Text>
-                  <Text style={{ fontSize: 20, fontWeight: '800', color: DesignTokens.colors.text.danger }}>{monthStats.lossDays}</Text>
+                  <Text style={{ ...journalCaption2Style, color: DesignTokens.colors.text.tertiary, marginBottom: 4, textAlign: 'center' }}>ימי הפסד</Text>
+                  <Text style={{ fontSize: JOURNAL_TYPE.sectionTitle.fontSize, fontWeight: JOURNAL_TYPE.sectionTitle.fontWeight, lineHeight: JOURNAL_TYPE.sectionTitle.lineHeight, color: DesignTokens.colors.text.danger }}>{monthStats.lossDays}</Text>
                 </View>
               </View>
               <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: DesignTokens.colors.border.subtle, marginVertical: 10 }} />
-              <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between' }}>
+              <View style={{ ...journalRow, justifyContent: 'space-between' }}>
                 <View style={{ alignItems: 'center', flex: 1 }}>
-                  <Text style={{ fontSize: 10, color: DesignTokens.colors.text.tertiary, marginBottom: 4 }}>יום הטוב</Text>
-                  <Text style={{ fontSize: 14, fontWeight: '800', color: DesignTokens.colors.primary.main, writingDirection: 'ltr' }}>{formatCurrency(monthStats.best)}</Text>
+                  <Text style={{ ...journalCaption2Style, color: DesignTokens.colors.text.tertiary, marginBottom: 4, textAlign: 'center' }}>יום הטוב</Text>
+                  <Text style={{ fontSize: JOURNAL_TYPE.body.fontSize, fontWeight: '800', lineHeight: JOURNAL_TYPE.body.lineHeight, color: DesignTokens.colors.primary.main, writingDirection: 'ltr' }}>{formatCurrency(monthStats.best)}</Text>
                 </View>
                 <View style={{ alignItems: 'center', flex: 1 }}>
-                  <Text style={{ fontSize: 10, color: DesignTokens.colors.text.tertiary, marginBottom: 4 }}>יום הגרוע</Text>
-                  <Text style={{ fontSize: 14, fontWeight: '800', color: DesignTokens.colors.text.danger, writingDirection: 'ltr' }}>{formatCurrency(monthStats.worst)}</Text>
+                  <Text style={{ ...journalCaption2Style, color: DesignTokens.colors.text.tertiary, marginBottom: 4, textAlign: 'center' }}>יום הגרוע</Text>
+                  <Text style={{ fontSize: JOURNAL_TYPE.body.fontSize, fontWeight: '800', lineHeight: JOURNAL_TYPE.body.lineHeight, color: DesignTokens.colors.text.danger, writingDirection: 'ltr' }}>{formatCurrency(monthStats.worst)}</Text>
                 </View>
                 <View style={{ alignItems: 'center', flex: 1 }}>
-                  <Text style={{ fontSize: 10, color: DesignTokens.colors.text.tertiary, marginBottom: 4 }}>סה"כ חודש</Text>
-                  <Text style={{ fontSize: 14, fontWeight: '800', color: isMonthProfit ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger, writingDirection: 'ltr' }}>
+                  <Text style={{ ...journalCaption2Style, color: DesignTokens.colors.text.tertiary, marginBottom: 4, textAlign: 'center' }}>סה"כ חודש</Text>
+                  <Text style={{ fontSize: JOURNAL_TYPE.body.fontSize, fontWeight: '800', lineHeight: JOURNAL_TYPE.body.lineHeight, color: isMonthProfit ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger, writingDirection: 'ltr' }}>
                     {isMonthProfit ? '+' : ''}{formatCurrency(monthTotal)}
                   </Text>
                 </View>
@@ -503,7 +501,7 @@ const createStyles = (
     position: 'relative',
   },
   rtlRoot: {
-    direction: 'rtl',
+    ...journalRtlContent,
   },
   outer: {
     flex: 1,
@@ -520,10 +518,9 @@ const createStyles = (
     gap: 16,
   },
   loadingText: {
-    fontSize: tokens.typography.body.size,
-    fontWeight: tokens.typography.body.weight as any,
-    lineHeight: tokens.typography.body.lineHeight,
+    ...journalBodyTextStyle,
     color: tokens.colors.text.secondary,
+    textAlign: 'center',
   },
   /** כמו EarningsReportsTab — כרטיס blur + padding 12 */
   monthNavCard: {
@@ -547,17 +544,18 @@ const createStyles = (
     paddingHorizontal: 8,
   },
   monthName: {
-    fontSize: 16,
+    fontSize: JOURNAL_TYPE.sectionTitle.fontSize,
     fontWeight: '600' as any,
-    lineHeight: 21,
+    lineHeight: JOURNAL_TYPE.sectionTitle.lineHeight,
     color: tokens.colors.text.primary,
     textAlign: 'center',
     writingDirection: 'rtl' as any,
   },
   /** שורה משנית — כמו תג "היום" בדיווח רווח */
   monthTotalCaption: {
-    fontSize: 12,
+    fontSize: JOURNAL_TYPE.caption.fontSize,
     fontWeight: '700' as any,
+    lineHeight: JOURNAL_TYPE.caption.lineHeight,
     marginTop: 1,
     textAlign: 'center',
     writingDirection: 'rtl' as any,
@@ -582,24 +580,25 @@ const createStyles = (
     paddingVertical: 2,
   },
   weekDayText: {
-    fontSize: tokens.typography.footnote.size,
-    lineHeight: tokens.typography.footnote.lineHeight,
-    fontWeight: tokens.typography.fontWeight.semibold as any,
+    fontSize: JOURNAL_TYPE.caption.fontSize,
+    lineHeight: JOURNAL_TYPE.caption.lineHeight,
+    fontWeight: '600' as any,
     color: tokens.colors.text.secondary,
     textAlign: 'center',
   },
   calendarGrid: {
     paddingBottom: 0,
   },
-  /** מבנה — רקע/מסגרת מ־getGlassCardStyle + glassDayBase */
   calendarDay: {
     aspectRatio: 1,
+    overflow: 'hidden',
+  },
+  calendarDayInner: {
+    flex: 1,
+    height: '100%',
     padding: 2,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  calendarDayClip: {
-    overflow: 'hidden',
   },
   dayName: {
     fontSize: tokens.typography.fontSize.xs,
@@ -623,11 +622,11 @@ const createStyles = (
     alignSelf: 'stretch',
   },
   pnlText: {
-    fontSize: 11,
+    fontSize: JOURNAL_TYPE.caption2.fontSize,
     maxWidth: '100%',
     fontWeight: '800' as any,
     textAlign: 'center',
-    lineHeight: 13,
+    lineHeight: JOURNAL_TYPE.caption2.lineHeight,
   },
   pnlTextProfit: {
     color: tokens.colors.success.main,
@@ -643,13 +642,12 @@ const createStyles = (
     gap: tokens.spacing.md,
   },
   emptyText: {
-    fontSize: tokens.typography.fontSize.lg,
-    fontWeight: tokens.typography.fontWeight.bold as any,
+    ...journalSectionTitleStyle,
     color: tokens.colors.text.primary,
     textAlign: 'center',
   },
   legend: {
-    flexDirection: 'row-reverse',
+    ...journalRow,
     justifyContent: 'center',
     alignItems: 'center',
     gap: tokens.spacing.md,
@@ -662,7 +660,7 @@ const createStyles = (
     maxWidth: '100%',
   },
   legendItem: {
-    flexDirection: 'row-reverse',
+    ...journalRow,
     alignItems: 'center',
     gap: tokens.spacing.xs,
   },
@@ -674,7 +672,7 @@ const createStyles = (
     borderColor: tokens.colors.border.primary,
   },
   legendText: {
-    fontSize: tokens.typography.fontSize.sm,
+    ...journalCaptionStyle,
     color: tokens.colors.text.secondary,
   },
 });

@@ -4,6 +4,8 @@ import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
 import type { FollowingActivityItem } from '../../../services/darkpool/uwFollowingFeedService';
 import { DarkPoolFeedCard } from './DarkPoolFeedCard';
+import { APP_LAYOUT } from '../../../components/ui/appLayout';
+import { FEED_CARD_TYPE } from './darkPoolFeedCardStyles';
 import { darkPoolTextRtl } from '../darkPoolLayout';
 import { formatInsiderDisplayName } from '../utils/investorPlaceholder';
 import {
@@ -20,7 +22,10 @@ const LRM = '\u200E';
 interface Props {
   item: FollowingActivityItem;
   onPersonPress?: () => void;
+  /** פרטי עסקה — יעד ההקשה הראשי כשקיים. */
+  onDetailPress?: () => void;
   showDivider?: boolean;
+  currentPrice?: number | null;
 }
 
 function formatActivityAmountLabel(raw: string | null | undefined): string | null {
@@ -34,6 +39,7 @@ function formatActivityAmountLabel(raw: string | null | undefined): string | nul
 export function ActivityFeedCard({
   item,
   onPersonPress,
+  onDetailPress,
 }: Props) {
   const tokens = useDesignTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
@@ -63,7 +69,7 @@ export function ActivityFeedCard({
     .join(', ');
 
   return (
-    <DarkPoolFeedCard onPress={onPersonPress} accessibilityLabel={a11y}>
+    <DarkPoolFeedCard onPress={onDetailPress ?? onPersonPress} accessibilityLabel={a11y}>
       <View style={styles.row}>
         <View style={styles.tickerCol}>
           <TickerLogo symbol={item.ticker} size={40} borderRadius={20} />
@@ -116,28 +122,32 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     main: {
       flex: 1,
       minWidth: 0,
-      gap: 2,
+      gap: APP_LAYOUT.cardTitleToSubtitleGap,
     },
     primary: {
       ...darkPoolTextRtl,
-      fontSize: tokens.typography.subhead.size,
-      fontWeight: tokens.typography.fontWeight.bold,
+      fontSize: FEED_CARD_TYPE.action.fontSize,
+      lineHeight: FEED_CARD_TYPE.action.lineHeight,
+      fontWeight: FEED_CARD_TYPE.action.fontWeight,
       color: tokens.colors.text.primary,
     },
     name: {
-      fontWeight: tokens.typography.fontWeight.bold,
+      fontSize: FEED_CARD_TYPE.name.fontSize,
+      lineHeight: FEED_CARD_TYPE.name.lineHeight,
+      fontWeight: FEED_CARD_TYPE.name.fontWeight,
       color: tokens.colors.text.primary,
     },
     sub: {
       ...darkPoolTextRtl,
-      fontSize: tokens.typography.caption.size,
-      fontWeight: tokens.typography.fontWeight.medium,
+      fontSize: FEED_CARD_TYPE.dates.fontSize,
+      lineHeight: FEED_CARD_TYPE.dates.lineHeight,
+      fontWeight: FEED_CARD_TYPE.dates.fontWeight,
       color: tokens.colors.text.secondary,
     },
     ticker: {
-      fontWeight: tokens.typography.fontWeight.extrabold,
+      fontWeight: '700',
       color: tokens.colors.text.primary,
-      letterSpacing: 0.2,
+      letterSpacing: 0,
     },
     muted: {
       color: tokens.colors.text.tertiary,

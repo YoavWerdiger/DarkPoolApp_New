@@ -1,7 +1,12 @@
 // uw-congress-feed — קריאה מהירה מ-DB; sync דרך sync-congress-trades
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { buildCongressTradeRows, resolveCongressApiKey, getCongressTradesProvider } from '../_shared/congressFeedBuild.ts';
+import {
+  applyQuiverPoliticianImages,
+  buildCongressTradeRows,
+  resolveCongressApiKey,
+  getCongressTradesProvider,
+} from '../_shared/congressFeedBuild.ts';
 import {
   createServiceSupabase,
   loadCongressTradesFromDb,
@@ -9,6 +14,10 @@ import {
   upsertCongressTradesToDb,
   type CongressTradeRow,
 } from '../_shared/uwDbCache.ts';
+import {
+  QUIVER_POLITICIANS_CACHE_KEY,
+  type QuiverPoliticiansCachePayload,
+} from '../_shared/quiverQuant.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -71,7 +80,15 @@ serve(async (req) => {
         try {
           const built = await buildCongressTradeRows(key, Math.max(limit, 50));
           if (built.length) {
-            await upsertCongressTradesToDb(supabase, built);
+            const polSnap = await loadSnapshotStale<QuiverPoliticiansCachePayload>(
+              supabase,
+              QUIVER_POLITICIANS_CACHE_KEY
+            ).catch(() => null);
+            const stamped = applyQuiverPoliticianImages(
+              built,
+              polSnap?.payload?.politicians ?? []
+            );
+            await upsertCongressTradesToDb(supabase, stamped);
             await supabase.from('dark_pool_uw_snapshots').upsert(
               {
                 cache_key: 'congress_trades_meta',

@@ -1,0 +1,46 @@
+---
+description: Typography and form topology — one APP_TYPE scale across all product modules
+globs: screens/**/*.{ts,tsx},components/**/*.{ts,tsx},docs/TYPOGRAPHY*.md
+alwaysApply: false
+---
+
+# טיפוגרפיה וטפסים — כל המערכות
+
+מקור אמת: `components/ui/appType.ts`, `appLayout.ts`, `formControl.ts`, `productTopology.ts`.  
+מסמך: `docs/TYPOGRAPHY_AND_FORM_TOPOLOGY.md`.
+
+## ייבוא לפי מודול (לא fontSize מקומי)
+
+| מערכת | קובץ layout |
+|--------|-------------|
+| יומן מסחר | `screens/Journal/journalLayout.ts` |
+| תיקים | `screens/Portfolios/portfolioLayout.ts` + `portfolioFormLayout.ts` |
+| Dark Pool / פיד | `screens/DarkPool/darkPoolLayout.ts` + `darkPoolFeedCardStyles.ts` |
+| אקדמיה | `components/learning/academyLayout.ts` |
+| צ'אט | `components/chat/chatLayout.ts` (+ `chatInputLayout.ts` לגיאומטריה) |
+| שווקים / מדדים | `screens/Markets/marketsLayout.ts` |
+| הגדרות / פרופיל / קבוצה | `components/profile/settingsType.ts` |
+| Auth / onboarding | `appType` + `OnboardingLayout` + `formControl` |
+
+כל `*_TYPE` חייב להיות **אותו** `APP_TYPE` (re-export).
+
+## כרטיס (UICard soft)
+
+- כותרת: `cardTitle` 17/700
+- משנה: `cardSubtitle` 13, **+2px**
+- גוף / רשימה / גרף: **+12px** (`cardTitleToBodyGap`)
+- KPI: `cardMetricLabel` 12 → `cardMetricValue` 28
+
+## שדות
+
+- `formFieldShellStyle` — **ללא border**; פוקוס = `background.tertiary`, לא ירוק
+- תווית: `formFieldLabelStyle` / `appFormFieldHelperStyle` מתחת לשדה
+- CTA ירוק: `UIButton` primary / `OnboardingButton` primary בלבד
+
+## אסור
+
+- ❌ `fontSize` חד-פעמי במסך (הרחיבו `APP_TYPE` אם חסר tier)
+- ❌ `borderColor: primary` על TextInput
+- ❌ אייקונים **בתוך** תיבת קלט (Auth)
+
+בדיקות: `__tests__/ui/productTopology.test.ts`, `appType.test.ts`, `journalTypography.test.ts`, `portfolioFormFields.test.ts`, `lessonCardTypography.test.ts`.

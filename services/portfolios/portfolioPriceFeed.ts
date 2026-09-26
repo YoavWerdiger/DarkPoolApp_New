@@ -105,6 +105,7 @@ function _parseFinnhubResponse(symbol: string, data: FinnhubQuoteResponse): Pric
     day_high: _finiteOrNull(data.h),
     day_low: _finiteOrNull(data.l),
     volume: null,
+    market_cap: null,
     currency: 'USD',
     as_of: new Date(data.t ? data.t * 1000 : Date.now()).toISOString(),
     source: 'finnhub',
@@ -157,6 +158,7 @@ async function fetchYahooQuote(symbol: string): Promise<PriceQuote | null> {
       day_high: _finiteOrNull(meta.regularMarketDayHigh),
       day_low: _finiteOrNull(meta.regularMarketDayLow),
       volume: _volumeOrNull(meta.regularMarketVolume),
+      market_cap: _finiteOrNull(meta.marketCap),
       currency: meta.currency || 'USD',
       as_of: new Date(meta.regularMarketTime * 1000 || Date.now()).toISOString(),
       source: 'yahoo',
@@ -248,6 +250,7 @@ export async function getQuote(symbol: string): Promise<PriceQuote | null> {
       open: finnhub.open ?? yahoo.open ?? null,
       day_high: finnhub.day_high ?? yahoo.day_high ?? null,
       day_low: finnhub.day_low ?? yahoo.day_low ?? null,
+      market_cap: yahoo.market_cap ?? finnhub.market_cap ?? null,
     };
   } else {
     fresh = finnhub || yahoo;
@@ -290,6 +293,7 @@ interface YahooChartResponse {
       indicators: {
         quote: Array<{
           close: (number | null)[];
+          open?: (number | null)[];
           high?: (number | null)[];
           low?: (number | null)[];
         }>;
@@ -418,19 +422,35 @@ export async function getSymbolsRangeStats(
   return out;
 }
 
+export type YahooHistoryRange =
+  | '1d'
+  | '5d'
+  | '1mo'
+  | '3mo'
+  | '6mo'
+  | '1y'
+  | '5y'
+  | '10y'
+  | 'ytd'
+  | 'max';
+export type YahooHistoryInterval = '5m' | '15m' | '1h' | '1d' | '1wk';
+
 /**
- * מחזיר רשימת מחירי close יומיים לסימבול בטווח תאריכים.
- * משתמש ב-Yahoo Finance (חינמי, ללא API key).
+ * מחזיר רשימת מחירי close לסימבול.
+ * Yahoo `range=max&interval=1d` יורד בשקט ל-1mo/3mo — לא להשתמש לגרף סשנים.
+ * 1M / 3M / 1Y / 5Y / 10y חייבים interval=1d. 1D אינטריידיי = 5m.
  *
  * @param symbol - לדוגמה 'AAPL', 'BTC-USD', 'TA35.TA'
- * @param range - לדוגמה '1mo', '3mo', '6mo', '1y', '5y', 'max'
+ * @param range - לדוגמה '1mo', '3mo', '1y', '5y', '10y'
  */
 export async function getHistoricalPrices(
   symbol: string,
-  range: '1mo' | '3mo' | '6mo' | '1y' | '5y' | 'max' = '1y'
+  range: YahooHistoryRange = '1y',
+  opts?: { interval?: YahooHistoryInterval }
 ): Promise<HistoricalPricePoint[]> {
   const sym = symbol.toUpperCase();
-  const cacheKey = `${sym}_${range}_raw`;
+  const interval = opts?.interval ?? '1d';
+  const cacheKey = `${sym}_${range}_${interval}_raw`;
   const now = Date.now();
   const cached = memHistoryCache.get(cacheKey);
   if (cached && now - cached.fetchedAt < HISTORICAL_CACHE_TTL_MS) {
@@ -440,7 +460,7 @@ export async function getHistoricalPrices(
   try {
     const url = `${YAHOO_BASE}/${encodeURIComponent(
       toYahooSymbol(sym)
-    )}?range=${range}&interval=1d`;
+    )}?range=${range}&interval=${interval}`;
     const res = await fetch(url);
     if (!res.ok) return [];
     const data = (await res.json()) as YahooChartResponse;
@@ -450,15 +470,21 @@ export async function getHistoricalPrices(
     // חשוב: raw close בלבד — לא adjclose.
     // מחירי כניסה ב-trades הם unadjusted; adjclose (אחרי reverse-split ב-UVIX וכו')
     // יוצר ספייקים מזויפים ב-unrealized ההיסטורי של הגרף.
-    const closes = result.indicators.quote[0].close;
+    const quote = result.indicators.quote[0];
+    const closes = quote.close;
+    const opens = quote.open ?? [];
+    const keepTime = interval !== '1d' && interval !== '1wk';
 
     const points: HistoricalPricePoint[] = [];
     for (let i = 0; i < result.timestamp.length; i++) {
       const close = closes[i];
       if (close == null) continue;
       const date = new Date(result.timestamp[i] * 1000);
-      const isoDate = date.toISOString().slice(0, 10);
-      points.push({ date: isoDate, close });
+      const isoDate = keepTime ? date.toISOString() : date.toISOString().slice(0, 10);
+      const openRaw = opens[i];
+      const open =
+        openRaw != null && Number.isFinite(openRaw) && openRaw > 0 ? openRaw : null;
+      points.push({ date: isoDate, close, open });
     }
 
     memHistoryCache.set(cacheKey, { points, fetchedAt: now });

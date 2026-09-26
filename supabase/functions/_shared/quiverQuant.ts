@@ -260,6 +260,40 @@ export interface QuiverPoliticiansCachePayload {
 export interface QuiverHoldingsCachePayload {
   by_bioguide: Record<string, QuiverCongressStockHolding[]>;
   synced_at: string;
+  /** Last successful GET /beta/live/congress_stock_holdings?ticker= per symbol. */
+  tickers_synced?: Record<string, string>;
+  /** Last successful GET /beta/live/congress_stock_holdings?bioguide_id= per person. */
+  bioguides_synced?: Record<string, string>;
+}
+
+/**
+ * מיזוג `?ticker=` משאיר לרוב שורה אחת. 2+ טיקרים = ספר `?bioguide_id=`
+ * גם בלי חותמת `bioguides_synced`.
+ */
+export function looksLikeCompleteBioguideHoldings(
+  rows: Array<{ Ticker?: string } | null | undefined> | null | undefined
+): boolean {
+  if (!Array.isArray(rows) || rows.length < 2) return false;
+  const tickers = new Set<string>();
+  for (const row of rows) {
+    const ticker = String(row?.Ticker ?? '')
+      .replace(/^\$/, '')
+      .trim()
+      .toUpperCase();
+    if (ticker) tickers.add(ticker);
+  }
+  return tickers.size >= 2;
+}
+
+/** חותמת יומית לטיקר / BioGuide — לא `synced_at` הגלובלי של כל הקובץ. */
+export function isQuiverSyncStampFresh(
+  raw: string | null | undefined,
+  nowMs = Date.now(),
+  freshMs = QUIVER_HOLDINGS_FRESH_MS
+): boolean {
+  if (!raw) return false;
+  const ts = Date.parse(raw);
+  return Number.isFinite(ts) && nowMs - ts >= 0 && nowMs - ts < freshMs;
 }
 
 function quiverHeaders(apiKey: string): Record<string, string> {
@@ -580,6 +614,59 @@ export async function fetchQuiverCongressStockHoldings(
   return unwrapQuiverList<QuiverCongressStockHolding>(json);
 }
 
+function normalizeHoldingTicker(raw: unknown): string {
+  return String(raw ?? '')
+    .replace(/^\$/, '')
+    .trim()
+    .toUpperCase();
+}
+
+function normalizeHoldingBioguide(raw: unknown): string | null {
+  const id = String(raw ?? '')
+    .trim()
+    .toUpperCase();
+  return /^[A-Z]\d{6}$/.test(id) ? id : null;
+}
+
+/**
+ * ממזג `congress_stock_holdings?ticker=` לתוך `by_bioguide`.
+ * מחליף את שורת הטיקר; מסיר אחזקה ישנה שלא חזרה מ-Quiver.
+ */
+export function mergeTickerHoldingsIntoByBioguide(
+  byBioguide: Record<string, QuiverCongressStockHolding[]>,
+  ticker: string,
+  rows: QuiverCongressStockHolding[]
+): Record<string, QuiverCongressStockHolding[]> {
+  const want = normalizeHoldingTicker(ticker);
+  const next: Record<string, QuiverCongressStockHolding[]> = { ...byBioguide };
+  if (!want) return next;
+
+  const seen = new Set<string>();
+  for (const row of rows) {
+    const bg = normalizeHoldingBioguide(row.BioGuideID);
+    if (!bg || normalizeHoldingTicker(row.Ticker) !== want) continue;
+    seen.add(bg);
+    const existing = [...(next[bg] ?? [])];
+    const idx = existing.findIndex((item) => normalizeHoldingTicker(item.Ticker) === want);
+    const merged: QuiverCongressStockHolding = {
+      ...row,
+      BioGuideID: bg,
+      Ticker: want,
+    };
+    if (idx >= 0) existing[idx] = merged;
+    else existing.push(merged);
+    next[bg] = existing;
+  }
+
+  for (const [bg, holdings] of Object.entries(next)) {
+    if (seen.has(bg) || !Array.isArray(holdings)) continue;
+    const filtered = holdings.filter((item) => normalizeHoldingTicker(item.Ticker) !== want);
+    if (filtered.length !== holdings.length) next[bg] = filtered;
+  }
+
+  return next;
+}
+
 /**
  * תאריך Quiver → YYYY-MM-DD (Filed / Traded / ReportDate).
  * תומך ב־ISO וב־MM/DD/YYYY מהדוקס.
@@ -807,6 +894,8 @@ export async function fetchQuiverLiveInsiders(
     maxRows?: number;
     /** תקרת ימי `uploaded` לסריקה כשמועבר dateFrom (ברירת מחדל 7) */
     maxUploadedDays?: number;
+    /** סינון Quiver לפי ticker (Form 4 per company) */
+    ticker?: string;
   } = {}
 ): Promise<QuiverInsiderRow[]> {
   const pageSize =
@@ -823,11 +912,14 @@ export async function fetchQuiverLiveInsiders(
   const cap = (rows: QuiverInsiderRow[]) =>
     rows.length > maxRows ? rows.slice(0, maxRows) : rows;
 
+  const tickerParam = opts.ticker?.trim().toUpperCase();
+
   const fetchDay = async (uploaded?: string): Promise<QuiverInsiderRow[]> => {
     const json = await quiverGetJson<unknown>(apiKey, '/beta/live/insiders', {
       uploaded,
       page_size: pageSize,
       page,
+      ...(tickerParam ? { ticker: tickerParam } : {}),
     });
     return unwrapQuiverList<QuiverInsiderRow>(json);
   };
@@ -1110,8 +1202,7 @@ export const CURATED_CONGRESS_BIOGUIDES = [
   'S000168', // Maria Elvira Salazar
   'T000278', // Tommy Tuberville
   'G000596', // Marjorie Taylor Greene
-  'K000389', // Ro Khanna
-  'M001157', // Michael McCaul
+  // K000389 / M001157 — Quiver holdings ריק; עדיין בפיד הגלובלי, לא ב-cache אחזקות
   'W000802', // Sheldon Whitehouse
   'D000032', // Byron Donalds
   'M001190', // Markwayne Mullin

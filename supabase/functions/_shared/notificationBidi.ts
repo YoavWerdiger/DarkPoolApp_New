@@ -128,8 +128,14 @@ export function buildEconomicPushContent(data: {
 
   const actualRaw = stripPushBidiMarkers(data.actual)
   const forecastRaw = stripPushBidiMarkers(data.forecast)
-  const actual = formatEconomicDisplayValue(actualRaw) || actualRaw
-  const forecast = formatEconomicDisplayValue(forecastRaw) || forecastRaw || '—'
+  // לפי כותרת הדוח: שיעורים/ריבית עם '%', CPI וכד' בלי
+  const actual =
+    formatEconomicDisplayValue(actualRaw, rawTitle) ||
+    actualRaw.replace(/[%٪]/g, '').trim()
+  const forecast =
+    formatEconomicDisplayValue(forecastRaw, rawTitle) ||
+    forecastRaw.replace(/[%٪]/g, '').trim() ||
+    '—'
 
   const resultLine = buildEconomicResultBody(actual, forecast)
   const body = formatPushMultiline(resultLine)

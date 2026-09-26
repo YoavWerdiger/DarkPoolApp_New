@@ -1,5 +1,5 @@
 import { legacyAlert } from '../../utils/appDialog';
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { useAfterNavigationTransition } from '../../hooks/afterNavigationTransition';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { learningProgressService } from '../../services/learningProgressService';
@@ -66,7 +67,7 @@ export const MyNotesScreen: React.FC = () => {
     }
   }, [user?.id]);
 
-  useEffect(() => {
+  useAfterNavigationTransition(() => {
     void loadNotes();
   }, [loadNotes]);
 

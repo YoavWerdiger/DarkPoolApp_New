@@ -20,30 +20,37 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import { scheduleAfterNavigationTransition } from '../../hooks/afterNavigationTransition';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useChat } from '../../context/ChatContext';
-import { useAuth } from '../../context/AuthContext';
 import { useLockParentDrawerWhileFocused } from '../../hooks/useLockParentDrawerWhileFocused';
 import UICard from '../../components/ui/UICard';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { ChatScreenShell, ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
-import { chatGroupService } from '../../services/chat';
 import { mediaService } from '../../services/mediaService';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { chatRtlRoot, chatRtlRow, chatRtlText } from '../../components/chat/chatDesignTokens';
+import {
+  settingsRowType,
+  settingsBodyType,
+  settingsMetaType,
+} from '../../components/profile/settingsType';
+import { useGroupNotificationMute } from '../../hooks/useGroupNotificationMute';
 
 export default function ChatGroupSettingsScreen() {
   const navigation = useNavigation();
   const route = useRoute();
-  const { user } = useAuth();
   const DesignTokens = useDesignTokens();
   useLockParentDrawerWhileFocused();
 
   const { groupId } = route.params as { groupId: string };
   const { currentGroup, updateGroup, refreshCurrentGroupDetails } = useChat();
 
-  const [isMuted, setIsMuted] = useState(currentGroup?.is_muted || false);
+  const { muted: isMuted, toggleMuted } = useGroupNotificationMute(
+    groupId,
+    !!currentGroup?.is_muted,
+  );
   const [isPublic, setIsPublic] = useState(currentGroup?.settings?.is_public !== false);
   const [isAnnouncement, setIsAnnouncement] = useState(
     !!(currentGroup?.settings?.is_announcement || currentGroup?.settings?.onlyAdminsCanSend)
@@ -61,17 +68,18 @@ export default function ChatGroupSettingsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      void refreshCurrentGroupDetails();
-    }, [refreshCurrentGroupDetails])
+      return scheduleAfterNavigationTransition(navigation, () => {
+        void refreshCurrentGroupDetails();
+      });
+    }, [navigation, refreshCurrentGroupDetails])
   );
 
   useEffect(() => {
-    setIsMuted(currentGroup?.is_muted || false);
     setIsPublic(currentGroup?.settings?.is_public !== false);
     setIsAnnouncement(
       !!(currentGroup?.settings?.is_announcement || currentGroup?.settings?.onlyAdminsCanSend)
     );
-  }, [currentGroup?.is_muted, currentGroup?.settings]);
+  }, [currentGroup?.settings]);
 
   const showPrompt = (
     title: string,
@@ -104,11 +112,8 @@ export default function ChatGroupSettingsScreen() {
   };
 
   const handleToggleMute = async (value: boolean) => {
-    setIsMuted(value);
-    if (!user?.id) return;
-    const { success } = await chatGroupService.toggleGroupMute(groupId, user.id, value);
+    const { success } = await toggleMuted(value);
     if (!success) {
-      setIsMuted(!value);
       legacyAlert('שגיאה', 'לא ניתן לשנות את הגדרות ההשתקה');
       return;
     }
@@ -236,7 +241,7 @@ export default function ChatGroupSettingsScreen() {
           >
             <View style={styles.sectionBlock}>
               {renderSectionCaption('התראות')}
-              <UICard variant="glass" glassIntensity="light" padding="none" style={styles.sectionCard}>
+              <UICard variant="soft" padding="none" style={styles.sectionCard}>
                 <View style={styles.settingRow}>
                   {renderSettingIcon('notifications-outline')}
                   <Text style={styles.settingTextGrow}>השתק התראות</Text>
@@ -256,7 +261,7 @@ export default function ChatGroupSettingsScreen() {
             {isAdmin ? (
               <View style={styles.sectionBlock}>
                 {renderSectionCaption('תמונה ופרטים')}
-                <UICard variant="glass" glassIntensity="light" padding="none" style={styles.sectionCard}>
+                <UICard variant="soft" padding="none" style={styles.sectionCard}>
                   <TouchableOpacity
                     style={styles.photoRow}
                     onPress={() => {
@@ -319,7 +324,7 @@ export default function ChatGroupSettingsScreen() {
             {isAdmin ? (
               <View style={styles.sectionBlock}>
                 {renderSectionCaption('פרטיות')}
-                <UICard variant="glass" glassIntensity="light" padding="none" style={styles.sectionCard}>
+                <UICard variant="soft" padding="none" style={styles.sectionCard}>
                   <View style={styles.settingRow}>
                     {renderSettingIcon(isPublic ? 'globe-outline' : 'lock-closed-outline')}
                     <View style={styles.settingTextWrap}>
@@ -367,7 +372,7 @@ export default function ChatGroupSettingsScreen() {
 
             <View style={styles.sectionBlock}>
               {renderSectionCaption('עזרה')}
-              <UICard variant="glass" glassIntensity="light" padding="none" style={styles.sectionCard}>
+              <UICard variant="soft" padding="none" style={styles.sectionCard}>
                 <TouchableOpacity
                   style={styles.settingRow}
                   onPress={() => {
@@ -444,7 +449,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       marginBottom: tokens.spacing.lg,
     },
     sectionCard: {
-      borderRadius: tokens.borderRadius.lg,
+      borderRadius: tokens.borderRadius.xl,
+      backgroundColor: tokens.colors.background.cardSolid,
     },
     sectionCaptionWrap: {
       alignSelf: 'stretch',
@@ -452,13 +458,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     sectionCaption: {
       ...chatRtlText,
-      fontSize: tokens.typography.caption.size,
-      fontWeight: tokens.typography.fontWeight.bold as '700',
-      lineHeight: tokens.typography.caption.lineHeight,
+      ...settingsRowType,
       color: tokens.colors.text.tertiary,
       marginBottom: tokens.spacing.sm,
-      textTransform: 'uppercase',
-      letterSpacing: tokens.typography.letterSpacing.wide,
     },
     settingRow: {
       ...chatRtlRow,
@@ -525,23 +527,18 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     settingText: {
       ...chatRtlText,
-      fontSize: tokens.typography.body.size,
-      fontWeight: tokens.typography.fontWeight.semibold as '600',
-      lineHeight: tokens.typography.body.lineHeight,
+      ...settingsRowType,
       color: tokens.colors.text.primary,
     },
     settingTextGrow: {
       ...chatRtlText,
+      ...settingsRowType,
       flex: 1,
-      fontSize: tokens.typography.body.size,
-      fontWeight: tokens.typography.fontWeight.semibold as '600',
-      lineHeight: tokens.typography.body.lineHeight,
       color: tokens.colors.text.primary,
     },
     settingHint: {
       ...chatRtlText,
-      fontSize: tokens.typography.footnote.size,
-      lineHeight: tokens.typography.footnote.lineHeight,
+      ...settingsMetaType,
       color: tokens.colors.text.tertiary,
     },
     separator: {
@@ -551,8 +548,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     errorText: {
       ...chatRtlText,
-      fontSize: tokens.typography.body.size,
-      lineHeight: tokens.typography.body.lineHeight,
+      ...settingsBodyType,
       color: tokens.colors.text.secondary,
       textAlign: 'center',
     },
@@ -564,7 +560,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     promptContainer: {
       width: '85%',
-      backgroundColor: tokens.colors.background.cardSolid,
+      backgroundColor: tokens.colors.glass.card.bg,
       borderRadius: tokens.borderRadius.lg,
       padding: tokens.spacing.xl,
       borderWidth: StyleSheet.hairlineWidth,
@@ -573,20 +569,17 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     promptTitle: {
       ...chatRtlText,
-      fontSize: tokens.typography.subtitle.size,
-      fontWeight: tokens.typography.subtitle.weight as '600',
-      lineHeight: tokens.typography.subtitle.lineHeight,
+      ...settingsRowType,
       color: tokens.colors.text.primary,
       marginBottom: tokens.spacing.base,
     },
     promptInput: {
       ...chatRtlText,
+      ...settingsBodyType,
       backgroundColor: tokens.colors.background.input,
       borderRadius: tokens.borderRadius.md,
       padding: tokens.spacing.md,
       color: tokens.colors.text.primary,
-      fontSize: tokens.typography.body.size,
-      lineHeight: tokens.typography.body.lineHeight,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: tokens.colors.border.subtle,
     },
@@ -607,16 +600,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     promptBtnCancel: {
       ...chatRtlText,
+      ...settingsBodyType,
       color: tokens.colors.text.secondary,
-      fontSize: tokens.typography.callout.size,
-      fontWeight: tokens.typography.fontWeight.medium as '500',
     },
     promptBtnConfirmBg: {
-      backgroundColor: tokens.colors.primary.main,
+      backgroundColor: '#FFFFFF',
     },
     promptBtnConfirm: {
+      ...settingsRowType,
       color: tokens.colors.text.inverse,
-      fontSize: tokens.typography.callout.size,
-      fontWeight: tokens.typography.fontWeight.semibold as any,
     },
   });

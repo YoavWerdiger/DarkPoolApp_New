@@ -28,7 +28,14 @@ import {
 } from '../utils/format';
 import { TickerLogo } from '../components/TickerLogo';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
-import { darkPoolTextRtl } from '../../DarkPool/darkPoolLayout';
+import {
+  JOURNAL_LAYOUT,
+  journalBodyTextStyle,
+  journalCardMetricLabelStyle,
+  journalCardTitleStyle,
+  journalCaption2Style,
+  journalPhysicalRightText,
+} from '../../Journal/journalLayout';
 
 interface Props {
   portfolio: Portfolio;
@@ -109,7 +116,7 @@ export default function HoldingsTab({ portfolio, holdings }: Props) {
         modeChipText: {
           fontSize: 12,
           color: tokens.colors.text.secondary,
-          ...darkPoolTextRtl,
+          ...journalPhysicalRightText,
         },
         modeChipTextActive: {
           color: tokens.colors.primary.main,
@@ -128,7 +135,7 @@ export default function HoldingsTab({ portfolio, holdings }: Props) {
           paddingVertical: 6,
           paddingHorizontal: 10,
           borderRadius: 14,
-          backgroundColor: '#262626',
+          backgroundColor: tokens.colors.glass.card.bg,
           borderWidth: 0,
           borderColor: tokens.colors.border.subtle,
         },
@@ -136,17 +143,15 @@ export default function HoldingsTab({ portfolio, holdings }: Props) {
           fontSize: 12,
           color: tokens.colors.text.primary,
           fontWeight: '500',
-          ...darkPoolTextRtl,
+          ...journalPhysicalRightText,
         },
         groupHeader: {
-          fontSize: 12,
-          fontWeight: '700',
-          color: tokens.colors.text.tertiary,
-          marginTop: 12,
-          marginBottom: 6,
+          ...journalCardTitleStyle,
+          color: tokens.colors.text.primary,
+          marginTop: JOURNAL_LAYOUT.cardStackGap,
+          marginBottom: JOURNAL_LAYOUT.cardTitleToBodyGap,
           paddingHorizontal: 4,
           alignSelf: 'stretch',
-          ...darkPoolTextRtl,
         },
         tableHeader: {
           flexDirection: 'row',
@@ -157,10 +162,8 @@ export default function HoldingsTab({ portfolio, holdings }: Props) {
         },
         tableHeaderText: {
           width: '100%',
-          fontSize: 10,
-          fontWeight: '700',
-          color: tokens.colors.text.tertiary,
-          ...darkPoolTextRtl,
+          ...journalCardMetricLabelStyle,
+          color: tokens.colors.text.secondary,
         },
         row: {
           flexDirection: 'row',
@@ -190,7 +193,7 @@ export default function HoldingsTab({ portfolio, holdings }: Props) {
         symbolMeta: {
           fontSize: 10,
           color: tokens.colors.text.tertiary,
-          ...darkPoolTextRtl,
+          ...journalPhysicalRightText,
           marginTop: 2,
         },
         cellWrap: {
@@ -219,27 +222,22 @@ export default function HoldingsTab({ portfolio, holdings }: Props) {
           direction: 'rtl',
         },
         emptyTitle: {
-          fontSize: 16,
-          fontWeight: '700',
+          ...journalCardTitleStyle,
           color: tokens.colors.text.primary,
           marginTop: 12,
-          marginBottom: 4,
-          ...darkPoolTextRtl,
+          marginBottom: JOURNAL_LAYOUT.cardTitleToSubtitleGap,
           textAlign: 'center',
         },
         emptyText: {
-          fontSize: 13,
-          color: tokens.colors.text.tertiary,
+          ...journalBodyTextStyle,
+          color: tokens.colors.text.secondary,
           textAlign: 'center',
-          writingDirection: 'rtl',
           paddingHorizontal: 20,
-          lineHeight: 18,
         },
         scrollHint: {
-          fontSize: 11,
+          ...journalCaption2Style,
           color: tokens.colors.text.tertiary,
           textAlign: 'center',
-          writingDirection: 'rtl',
           marginTop: 6,
         },
       }),
@@ -346,10 +344,9 @@ export default function HoldingsTab({ portfolio, holdings }: Props) {
                 <Text style={styles.groupHeader}>{group.label}</Text>
               )}
               <UICard
-                variant="glass"
-                glassIntensity="light"
+                variant="soft"
                 padding="none"
-                style={{ marginBottom: 12, borderRadius: 14, overflow: 'hidden' }}
+                style={{ marginBottom: JOURNAL_LAYOUT.cardStackGap, borderRadius: 14, overflow: 'hidden' }}
               >
                 <HoldingsTableHeader viewMode={viewMode} styles={styles} />
                 {group.items.map((h) => (

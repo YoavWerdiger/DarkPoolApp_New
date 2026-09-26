@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { MARKETS_TYPE } from '../marketsLayout';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 
 export type UnderlineTabOption<T extends string = string> = {
@@ -97,7 +98,8 @@ const styles = StyleSheet.create({
     position: 'relative' as any,
   },
   tabText: {
-    fontSize: 15,
+    fontSize: MARKETS_TYPE.sectionSubtitle.fontSize,
+    lineHeight: MARKETS_TYPE.sectionSubtitle.lineHeight,
     fontWeight: '700' as any,
     letterSpacing: 0.2,
   },

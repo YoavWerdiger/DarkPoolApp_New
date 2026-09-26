@@ -196,7 +196,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                     setSelectedPlan(plan.id);
                   }}
                   style={{
-                    backgroundColor: selectedPlan === plan.id ? DesignTokens.colors.primary.dim : DesignTokens.colors.background.cardSolid,
+                    backgroundColor: selectedPlan === plan.id ? DesignTokens.colors.primary.dim : DesignTokens.colors.glass.card.bg,
                     borderRadius: 16,
                     padding: 20,
                     position: 'relative'
@@ -377,7 +377,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                     handleSkipPayment();
                   }}
                   style={{
-                    backgroundColor: DesignTokens.colors.background.cardSolid,
+                    backgroundColor: DesignTokens.colors.glass.card.bg,
                     borderRadius: 14,
                     paddingVertical: 16,
                     alignItems: 'center',

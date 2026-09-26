@@ -1,4 +1,4 @@
-import type { CourseWithProgress } from '../../types/learning';
+import type { CourseWithProgress, Enrollment, Lesson } from '../../types/learning';
 
 export const DAVID_TRAINING_COURSE_ID = 'david-training-course';
 export const ORACLE_COURSE_ID = 'oracle-course';
@@ -32,6 +32,21 @@ export function isDavidTrainingCourse(course: Pick<CourseWithProgress, 'id' | 't
     course.title === 'יסודות המסחר' ||
     course.title === 'הכשרה של דוד אריאל'
   );
+}
+
+/** שיעור נעול רק בקורסים בתשלום/הרשמה — לא בחינם (יסודות המסחר). */
+export function isLessonLockedForUser(opts: {
+  lesson: Pick<Lesson, 'is_preview'>;
+  enrollment?: Enrollment | null;
+  course?: Pick<CourseWithProgress, 'id' | 'title' | 'access'> | null;
+}): boolean {
+  const course = opts.course;
+  if (course && (isDavidTrainingCourse(course) || course.access === 'free')) {
+    return false;
+  }
+  if (opts.enrollment) return false;
+  if (opts.lesson.is_preview) return false;
+  return true;
 }
 
 /** כותרת משנה לתצוגה בכרטיס/Coming Soon */

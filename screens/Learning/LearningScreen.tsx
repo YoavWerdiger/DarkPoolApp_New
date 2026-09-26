@@ -1,15 +1,16 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Animated, Dimensions, Platform, TextInput, TouchableWithoutFeedback, Keyboard, Modal, Linking, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Animated, Dimensions, Platform, TextInput, TouchableWithoutFeedback, Keyboard, Modal, Linking, ActivityIndicator, useWindowDimensions } from 'react-native';
 // import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import * as ImagePicker from 'expo-image-picker';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenChrome } from '../../components/ui';
-import { AcademySubScreenBar } from '../../components/learning';
+import { AcademySubScreenBar, CourseListHero, LessonRow } from '../../components/learning';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ACADEMY_CARD_HP, ACADEMY_CARD_RADIUS, academyCardWidth } from '../../components/learning/academyCardLayout';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import { useAllowAfterNavigationTransition } from '../../hooks/afterNavigationTransition';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import UICard from '../../components/ui/UICard';
@@ -161,6 +162,8 @@ function LearningScreen() {
   const navigation = useNavigation();
   const mainTabsHeight = useMainTabsHeight();
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
+  const courseHeroHeight = Math.round(windowHeight * 0.42);
   const { courseId: routeCourseId, lessonId: routeLessonId } = route.params as { courseId?: string; lessonId?: string } || {};
   const { user } = useAuth();
   const DesignTokens = useDesignTokens();
@@ -210,6 +213,7 @@ function LearningScreen() {
   const [animatedValues, setAnimatedValues] = useState<Animated.Value[]>([]);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [isYouTubePlayerReady, setIsYouTubePlayerReady] = useState(false);
+  const allowHeavy = useAllowAfterNavigationTransition();
   const durationUpdatedRef = useRef<Set<string>>(new Set()); // מעקב אחרי שיעורים שכבר עדכנו את ה-duration
   const durationCheckInProgressRef = useRef<Set<string>>(new Set()); // מעקב אחרי שיעורים שבתהליך בדיקה
   const lastProgressSaveTimeRef = useRef<number>(0); // מעקב אחרי הזמן האחרון שעודכן במסד נתונים
@@ -343,10 +347,11 @@ function LearningScreen() {
     };
   }, [selectedLesson?.id, isYouTubePlayerReady]);
 
-  // טעינת נתונים מהמסד
+  // טעינת נתונים מהמסד — אחרי סיום ה-slide, כדי לא לחנוק את המעבר
   useEffect(() => {
+    if (!allowHeavy) return;
     loadCourseData();
-  }, [user, routeCourseId]);
+  }, [allowHeavy, user, routeCourseId]);
 
   // פתיחת שיעור ספציפי אם יש lessonId
   useEffect(() => {
@@ -1141,79 +1146,21 @@ function LearningScreen() {
 
   const renderLessonCard = (lesson: any, index: number) => {
     const animatedValue = animatedValues[index] || new Animated.Value(1);
-    // משתמשים ב-duration ב-key כדי ש-React יעדכן את הקומפוננטה כשהערך משתנה
     const lessonKey = `${lesson.id}_${lesson.duration || '00:00'}`;
     return (
-    <Animated.View
-      key={lessonKey}
-      style={[
-        { marginBottom: DesignTokens.spacing.lg, transform: [{ scale: animatedValue }] }
-      ]}
-    >
-      <UICard variant="blur" padding="none" style={styles.lessonGlassCard}>
-      <TouchableOpacity
-        style={styles.lessonTouchable}
-        onPress={() => handleLessonPress(lesson, index)}
-        activeOpacity={0.8}
+      <Animated.View
+        key={lessonKey}
+        style={{ transform: [{ scale: animatedValue }] }}
       >
-        <View style={styles.lessonThumbnail}>
-          {lesson.thumbnail ? (
-          <Image 
-            source={{ uri: lesson.thumbnail }} 
-            style={styles.thumbnailImage}
-            resizeMode="cover"
-              onError={() => {}}
-              onLoad={() => {}}
-          />
-          ) : (
-            <View style={[styles.thumbnailImage, { backgroundColor: DesignTokens.colors.background.secondary, justifyContent: 'center', alignItems: 'center' }]}>
-              <Text style={{ color: DesignTokens.colors.text.primary, fontSize: DesignTokens.typography.fontSize['2xl'] }}>🎥</Text>
-            </View>
-          )}
-          <View style={styles.lessonNumberOnThumb} accessibilityLabel={`שיעור ${index + 1}`}>
-            <Text style={styles.lessonNumberOnThumbText}>{index + 1}</Text>
-          </View>
-          <View style={[
-            styles.durationBadge,
-            {
-              backgroundColor: isDarkMode ? DesignTokens.colors.overlay : DesignTokens.colors.background.secondary,
-            }
-          ]}>
-            <Text style={[
-              styles.durationText,
-              {
-                color: DesignTokens.colors.text.primary,
-              }
-            ]}>{lesson.duration || '00:00'}</Text>
-          </View>
-          {lesson.completed && (
-            <View style={[
-              styles.completedBadge,
-              {
-                backgroundColor: isDarkMode ? DesignTokens.colors.overlay : DesignTokens.colors.background.secondary,
-              }
-            ]}>
-              <CheckCircle2 size={24} color={DesignTokens.colors.primary.main} strokeWidth={2} />
-            </View>
-          )}
-        </View>
-        
-        <View style={styles.lessonContent}>
-          <View style={styles.lessonCardTextCol}>
-            <Text style={styles.lessonCardTitle} numberOfLines={2}>
-              {lesson.title}
-            </Text>
-            {lesson.description ? (
-              <Text style={styles.lessonDescription} numberOfLines={3}>
-                {lesson.description}
-              </Text>
-            ) : null}
-          </View>
-        </View>
-      </TouchableOpacity>
-      </UICard>
-    </Animated.View>
-  );
+        <LessonRow
+          lesson={lesson}
+          onPress={() => handleLessonPress(lesson, index)}
+          courseId={courseData?.id ?? routeCourseId}
+          index={index}
+          enrollment={courseData?.enrollment}
+        />
+      </Animated.View>
+    );
   };
 
   const renderChapterBlock = (
@@ -1515,7 +1462,18 @@ function LearningScreen() {
             {/* וידאו — בתוך כרטיסיית זכוכית */}
             <UICard variant="blur" padding="none" style={styles.lessonVideoCard}>
               <View style={[styles.videoContainer, { height: lessonPlayerVideoHeight }]}>
-            {videoType === 'youtube' && videoId ? (
+            {!allowHeavy ? (
+              <View style={styles.videoPlayerPlaceholder}>
+                {selectedLesson.thumbnail ? (
+                  <Image
+                    source={{ uri: selectedLesson.thumbnail }}
+                    style={StyleSheet.absoluteFillObject}
+                    resizeMode="cover"
+                  />
+                ) : null}
+                <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
+              </View>
+            ) : videoType === 'youtube' && videoId ? (
               <YoutubePlayer
                 ref={youtubePlayerRef}
                 height={lessonPlayerVideoHeight}
@@ -2000,7 +1958,17 @@ function LearningScreen() {
   const displayInstructorName = courseData?.instructor_name || courseData?.owner?.display_name;
 
   if (!courseData) {
-    return null;
+    return (
+      <ScreenChrome>
+        <StatusBar style="light" />
+        <RNSafeAreaView style={styles.safeAreaContent} edges={['top']}>
+          <AcademySubScreenBar onBackPress={handleBackToAcademy} title="קורס" />
+          <View style={styles.courseLoadingWrap}>
+            <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
+          </View>
+        </RNSafeAreaView>
+      </ScreenChrome>
+    );
   }
 
   const lessonsList = Array.isArray(lessonsData) ? lessonsData : [];
@@ -2014,24 +1982,19 @@ function LearningScreen() {
     totalLessonsCount === 0
       ? 'אין שיעורים בקורס'
       : `${completedLessonsCount}/${totalLessonsCount} הושלמו`;
-  const courseHeroHeight = Math.round(academyCardWidth(screenWidth) * 0.58);
+  const courseHeroSubtitle =
+    displayInstructorName && totalLessonsCount > 0
+      ? `${displayInstructorName} · ${totalLessonsCount} שיעורים`
+      : displayInstructorName
+        ? displayInstructorName
+        : totalLessonsCount > 0
+          ? `${totalLessonsCount} שיעורים`
+          : undefined;
 
   return (
     <ScreenChrome>
       <StatusBar style="light" />
-      <RNSafeAreaView style={styles.safeAreaContent} edges={['top']}>
-        <AcademySubScreenBar
-          onBackPress={handleBackToAcademy}
-          title={displayTitle ?? 'קורס'}
-          subtitle={
-            displayInstructorName
-              ? `${displayInstructorName}${totalLessonsCount > 0 ? ` · ${totalLessonsCount} שיעורים` : ''}`
-              : totalLessonsCount > 0
-                ? `${totalLessonsCount} שיעורים`
-                : undefined
-          }
-        />
-
+      <RNSafeAreaView style={styles.safeAreaContent} edges={[]}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[
@@ -2039,66 +2002,19 @@ function LearningScreen() {
             { paddingBottom: Math.max(mainTabsHeight, DesignTokens.spacing['5xl']) },
           ]}
         >
+          <CourseListHero
+            coverUrl={displayCoverUrl}
+            title={displayTitle ?? 'קורס'}
+            subtitle={courseHeroSubtitle}
+            height={courseHeroHeight}
+            topInset={insets.top}
+            onBack={handleBackToAcademy}
+            progressLabel={courseProgressLabel}
+            progressPct={courseProgressPct}
+            progressLoading={lessonsProgressLoading}
+          />
+
           <View style={styles.courseListBody}>
-            {/* באנר בכרטיס — תמונה + גרדיאנט שחור + שם */}
-            <UICard variant="blur" padding="none" style={styles.lessonGlassCard}>
-              <View style={[styles.courseHeroCover, { height: courseHeroHeight }]}>
-                {displayCoverUrl ? (
-                  <Image
-                    source={{ uri: displayCoverUrl }}
-                    style={styles.courseHeroImage}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <View style={[styles.courseHeroImage, styles.courseCoverPlaceholder]}>
-                    <Text style={styles.courseCoverPlaceholderIcon}>📚</Text>
-                  </View>
-                )}
-                <LinearGradient
-                  colors={[
-                    'rgba(0,0,0,0)',
-                    'rgba(0,0,0,0.45)',
-                    'rgba(0,0,0,0.88)',
-                  ]}
-                  locations={[0, 0.42, 1]}
-                  style={styles.courseHeroGradient}
-                  pointerEvents="none"
-                />
-                <View style={styles.courseHeroText}>
-                  <Text style={styles.courseHeroTitle} numberOfLines={3}>
-                    {displayTitle}
-                  </Text>
-
-                  <View style={styles.courseHeroProgress}>
-                    {lessonsProgressLoading ? (
-                      <View style={styles.progressBar}>
-                        <View style={[styles.progressFill, { width: '0%' }]} />
-                      </View>
-                    ) : (
-                      <>
-                        <View style={styles.progressTimeRow}>
-                          <Text style={styles.progressText}>{courseProgressLabel}</Text>
-                          <Text style={styles.progressPercentageText}>{courseProgressPct}%</Text>
-                        </View>
-                        <View style={styles.progressBar}>
-                          <View
-                            style={[
-                              styles.progressFill,
-                              {
-                                width: `${courseProgressPct}%`,
-                                minWidth: courseProgressPct > 0 ? 4 : 0,
-                              },
-                            ]}
-                          />
-                        </View>
-                      </>
-                    )}
-                  </View>
-                </View>
-              </View>
-            </UICard>
-
-            {/* רשימת שיעורים */}
             <View style={styles.lessonsSection}>
               <Text style={styles.courseListSectionTitle}>שיעורי הקורס</Text>
 
@@ -2119,11 +2035,11 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     backgroundColor: tokens.colors.background.primary,
   },
   courseListScroll: {
-    paddingTop: tokens.spacing.sm,
+    flexGrow: 1,
   },
   courseListBody: {
     paddingHorizontal: ACADEMY_CARD_HP,
-    paddingTop: tokens.spacing.sm,
+    paddingTop: tokens.spacing.lg,
   },
   courseHeroCover: {
     width: '100%',
@@ -2207,6 +2123,11 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   safeAreaContent: {
     flex: 1,
+  },
+  courseLoadingWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   // New Lesson Header Styles - Glassmorphism שקוף
   newLessonHeader: {
@@ -2301,6 +2222,12 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     height: '100%',
     backgroundColor: '#000',
     overflow: 'hidden',
+  },
+  videoPlayerPlaceholder: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#000',
   },
   videoPlayer: {
     width: '100%',

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import Svg, { Path, Defs, LinearGradient, Stop, Line, Circle } from 'react-native-svg';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -11,14 +11,32 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { DayDividerPill } from '../../../components/ui/DayDividerPill';
+import {
+  ChangeDot,
+  SignedChange,
+  changeToneColor,
+  changeToneFromSigned,
+  formatSignedChangePct,
+} from '../../../components/ui/ChangeDot';
 import type { PerformancePeriod } from '../portfolioTypes';
+import {
+  JOURNAL_TYPE,
+  journalCardMetricValueStyle,
+  journalPhysicalRightText,
+} from '../../Journal/journalLayout';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 import {
   computeChartPeriodReturn,
   downsampleChartSeries,
   filterChartSeriesByPeriod,
   isChartPeriodAvailable,
+  sampleChartSeriesForPeriod,
 } from '../../DarkPool/utils/profileChartSeries';
+import {
+  portfolioAmountDisplayColor,
+  resolvePortfolioChartHeaderValue,
+} from '../utils/chartDisplay';
 interface ChartPoint {
   date: string;
   value: number;
@@ -53,6 +71,10 @@ interface Props {
   showXAxisLabels?: boolean;
   /** סרגל אינטרוולים בתחתית */
   showIntervalSelector?: boolean;
+  /** תקופות מוצגות — ברירת מחדל כל הסקאלה */
+  periods?: PerformancePeriod[];
+  /** נקודת גרירה — null בשחרור (חזרה לחי). */
+  onScrubPoint?: (point: { date: string; value: number } | null) => void;
 }
 
 const PERIODS: PerformancePeriod[] = ['1W', '1M', '3M', 'YTD', '1Y', '5Y', 'All'];
@@ -162,12 +184,16 @@ export function PortfolioValueChart({
   headerTitleAlign = 'right',
   formatValue = defaultFormatValue,
   showPointMarkers = false,
-  showXAxisLabels = true,
+  showXAxisLabels = false,
   showIntervalSelector = true,
+  periods,
+  onScrubPoint,
 }: Props) {
   const tokens = useDesignTokens();
   const [containerW, setContainerW] = useState(0);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const onScrubPointRef = useRef(onScrubPoint);
+  onScrubPointRef.current = onScrubPoint;
   const width = containerW > 0 ? containerW : 300;
   /** מרווח פנימי לקו/מילוי + תוויות X — בלי חיתוך בתחתית */
   const padding = {
@@ -183,8 +209,8 @@ export function PortfolioValueChart({
   );
 
   const displaySeries = useMemo(
-    () => downsampleChartSeries(filteredSeries),
-    [filteredSeries]
+    () => sampleChartSeriesForPeriod(filteredSeries, selectedPeriod),
+    [filteredSeries, selectedPeriod]
   );
 
   const periodReturn = useMemo(
@@ -197,11 +223,37 @@ export function PortfolioValueChart({
   }, [selectedPeriod, series]);
 
   const { ranges, benchmarkPath, plotted, xTicks } = useMemo(() => {
-    if (displaySeries.length < 2) {
+    const innerWidth = width - padding.left - padding.right;
+    const innerHeight = height - padding.top - padding.bottom;
+
+    if (displaySeries.length === 0) {
       return {
         ranges: { minY: 0, maxY: 1, firstValue: 0, lastValue: 0 },
         benchmarkPath: '',
         plotted: [] as PlottedPoint[],
+        xTicks: [] as PlottedPoint[],
+      };
+    }
+
+    if (displaySeries.length === 1) {
+      const v = displaySeries[0].value;
+      const pad = Math.max(Math.abs(v), 1) * 0.08;
+      const minY = v - pad;
+      const maxY = v + pad;
+      const yScale = (y: number) =>
+        padding.top + (1 - (y - minY) / (maxY - minY || 1)) * innerHeight;
+      const x = padding.left + innerWidth / 2;
+      const y = yScale(v);
+      const pt: PlottedPoint = {
+        x,
+        y,
+        date: displaySeries[0].date,
+        value: v,
+      };
+      return {
+        ranges: { minY, maxY, firstValue: v, lastValue: v },
+        benchmarkPath: '',
+        plotted: [pt],
         xTicks: [] as PlottedPoint[],
       };
     }
@@ -216,7 +268,7 @@ export function PortfolioValueChart({
       const portfolioStart = displaySeries[0].value;
       const benchStart = benchFiltered[0]?.value;
       if (benchStart && benchStart > 0) {
-        const scaled = downsampleChartSeries(benchFiltered).map(
+        const scaled = sampleChartSeriesForPeriod(benchFiltered, selectedPeriod).map(
           (p) => (p.value / benchStart) * portfolioStart
         );
         minY = Math.min(minY, ...scaled);
@@ -232,9 +284,6 @@ export function PortfolioValueChart({
     maxY += padY;
     const minX = xs[0];
     const maxX = Math.max(xs[xs.length - 1], Date.now());
-
-    const innerWidth = width - padding.left - padding.right;
-    const innerHeight = height - padding.top - padding.bottom;
 
     const xScale = (x: number) =>
       padding.left + ((x - minX) / (maxX - minX || 1)) * innerWidth;
@@ -389,16 +438,21 @@ export function PortfolioValueChart({
     (touchX: number) => {
       const next = indexFromX(touchX);
       if (next == null) return;
+      const point = plotted[next];
       setActiveIndex((prev) => {
         if (prev !== next) void HapticFeedback.selection();
         return next;
       });
+      onScrubPointRef.current?.(
+        point ? { date: point.date, value: point.value } : null
+      );
     },
-    [indexFromX]
+    [indexFromX, plotted]
   );
 
   const clearActive = useCallback(() => {
     setActiveIndex(null);
+    onScrubPointRef.current?.(null);
   }, []);
 
   const chartGesture = useMemo(
@@ -423,17 +477,25 @@ export function PortfolioValueChart({
 
   const activePoint =
     activeIndex != null && plotted[activeIndex] ? plotted[activeIndex] : null;
-  const headerValue = activePoint?.value ?? ranges.lastValue ?? filteredSeries[filteredSeries.length - 1]?.value ?? 0;
+  const seriesLastValue =
+    filteredSeries.length > 0 ? filteredSeries[filteredSeries.length - 1].value : 0;
+  const headerValue = resolvePortfolioChartHeaderValue({
+    activeValue: activePoint?.value,
+    plottedCount: plotted.length,
+    rangesLast: ranges.lastValue,
+    seriesLast: seriesLastValue,
+  });
   const scrubDateLabel = activePoint ? formatScrubDate(activePoint.date) : null;
 
-  const change = ranges.lastValue - ranges.firstValue;
+  const change =
+    plotted.length >= 2 ? ranges.lastValue - ranges.firstValue : 0;
   const isUp = change >= 0;
   const lineColor = isUp ? tokens.colors.primary.main : tokens.colors.text.danger;
+  const headerAmountColor = (amount: number) =>
+    portfolioAmountDisplayColor(amount, tokens.colors.text.primary, tokens.colors.text.danger);
   const benchmarkColor = tokens.colors.text.tertiary;
-  const returnColor =
-    periodReturn != null && periodReturn >= 0
-      ? tokens.colors.primary.main
-      : tokens.colors.text.danger;
+  const periodTone = changeToneFromSigned(periodReturn);
+  const returnColor = changeToneColor(periodTone, tokens);
   const plotBottom = height - padding.bottom;
 
   return (
@@ -450,7 +512,10 @@ export function PortfolioValueChart({
             {/* LTR מפורש + סדר ילדים: תשואה משמאל, כותרת פיזית מימין */}
             {scrubDateLabel && activePoint ? (
               <Text
-                style={[styles.compactScrub, { color: tokens.colors.text.secondary }]}
+                style={[
+                  styles.compactScrub,
+                  { color: headerAmountColor(activePoint.value) },
+                ]}
                 numberOfLines={1}
               >
                 {formatValue(activePoint.value, currency)}
@@ -458,27 +523,33 @@ export function PortfolioValueChart({
                 {scrubDateLabel}
               </Text>
             ) : periodReturn != null ? (
+              <View style={styles.compactReturnRow}>
+                <ChangeDot tone={periodTone} />
+                <Text
+                  style={[styles.compactReturn, { color: returnColor }]}
+                  numberOfLines={1}
+                >
+                  {formatSignedChangePct(periodReturn)}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.compactSpacer} />
+            )}
+            {headerTitle ? (
               <Text
-                style={[styles.compactReturn, { color: returnColor }]}
+                style={[
+                  styles.compactTitle,
+                  {
+                    color: tokens.colors.text.primary,
+                  },
+                ]}
                 numberOfLines={1}
               >
-                {periodReturn >= 0 ? '+' : '−'}
-                {Math.abs(periodReturn).toFixed(2)}%
+                {headerTitle}
               </Text>
             ) : (
               <View style={styles.compactSpacer} />
             )}
-            <Text
-              style={[
-                styles.compactTitle,
-                {
-                  color: tokens.colors.text.primary,
-                },
-              ]}
-              numberOfLines={1}
-            >
-              {headerTitle}
-            </Text>
           </View>
         ) : (
           <View
@@ -491,25 +562,27 @@ export function PortfolioValueChart({
                   : styles.headerAlignRight,
             ]}
           >
-            {/* Cash App Savings topology: muted label → hero amount → delta.
-                direction:'ltr' + alignItems flex-end/start = קצה פיזי — לא textAlign בלבד. */}
-            <Text
-              style={[
-                styles.headerTitle,
-                { color: tokens.colors.text.tertiary },
-                headerTitleAlign === 'center'
-                  ? styles.headerTextCenter
-                  : headerTitleAlign === 'left'
-                    ? styles.headerTextLeft
-                    : styles.headerTextRight,
-              ]}
-            >
-              {headerTitle}
-            </Text>
+            {/* Cash App: amount → delta. כותרת סקשן נשארת ב-Overview (טופולוגיית טעינה).
+                direction:'ltr' + width:100% + textAlign = קצה פיזי יציב גם אחרי mounts. */}
+            {headerTitle ? (
+              <Text
+                style={[
+                  styles.headerTitle,
+                  { color: tokens.colors.text.primary },
+                  headerTitleAlign === 'center'
+                    ? styles.headerTextCenter
+                    : headerTitleAlign === 'left'
+                      ? styles.headerTextLeft
+                      : styles.headerTextRight,
+                ]}
+              >
+                {headerTitle}
+              </Text>
+            ) : null}
             <Text
               style={[
                 styles.headerValue,
-                { color: tokens.colors.text.primary },
+                { color: headerAmountColor(headerValue) },
                 headerTitleAlign === 'center'
                   ? styles.headerTextCenter
                   : headerTitleAlign === 'left'
@@ -537,8 +610,17 @@ export function PortfolioValueChart({
                 {scrubDateLabel}
               </Text>
             ) : periodReturn != null ? (
-              <Text
+              <SignedChange
+                tone={periodTone}
                 style={[
+                  styles.headerReturnRow,
+                  headerTitleAlign === 'center'
+                    ? styles.headerReturnJustifyCenter
+                    : headerTitleAlign === 'left'
+                      ? styles.headerReturnJustifyLeft
+                      : styles.headerReturnJustifyRight,
+                ]}
+                textStyle={[
                   styles.headerReturn,
                   { color: returnColor },
                   headerTitleAlign === 'center'
@@ -548,10 +630,10 @@ export function PortfolioValueChart({
                       : styles.headerTextRight,
                 ]}
               >
-                {periodReturn >= 0 ? '▲' : '▼'} {Math.abs(periodReturn).toFixed(2)}%
-                {' · '}
-                {selectedPeriod === 'All' ? 'ALL' : selectedPeriod}
-              </Text>
+                {`${formatSignedChangePct(periodReturn)} · ${
+                  selectedPeriod === 'All' ? 'ALL' : selectedPeriod
+                }`}
+              </SignedChange>
             ) : null}
           </View>
         )
@@ -594,6 +676,14 @@ export function PortfolioValueChart({
                 fill="none"
                 strokeLinejoin="round"
                 strokeLinecap="round"
+              />
+            ) : plotted.length === 1 ? (
+              <Circle
+                cx={plotted[0].x}
+                cy={plotted[0].y}
+                r={4}
+                fill={lineColor}
+                opacity={0.9}
               />
             ) : null}
             {benchmarkPath ? (
@@ -682,51 +772,30 @@ export function PortfolioValueChart({
       </GestureDetector>
 
       {onPeriodChange && showIntervalSelector ? (
-        <View style={styles.periodsRow}>
-          {PERIODS.map((p) => {
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.periodsRow}
+        >
+          {(periods?.length ? periods : PERIODS).map((p) => {
             const isActive = selectedPeriod === p;
             const available = isChartPeriodAvailable(series, p);
             return (
-              <TouchableOpacity
+              <DayDividerPill
                 key={p}
+                selected={isActive}
                 disabled={!available}
                 onPress={() => {
                   if (!isActive && available) void HapticFeedback.selection();
                   if (available) onPeriodChange(p);
                 }}
-                activeOpacity={0.7}
-                hitSlop={6}
-                accessibilityRole="button"
-                accessibilityState={{ selected: isActive, disabled: !available }}
-                style={[
-                  styles.periodBtn,
-                  isActive && {
-                    backgroundColor: `${tokens.colors.primary.main}22`,
-                    borderColor: `${tokens.colors.primary.main}66`,
-                  },
-                  !available && styles.periodBtnDisabled,
-                ]}
+                accessibilityLabel={`טווח ${p}`}
               >
-                <Text
-                  style={[
-                    styles.periodChipText,
-                    {
-                      color: !available
-                        ? tokens.colors.text.tertiary
-                        : isActive
-                          ? tokens.colors.primary.main
-                          : tokens.colors.text.secondary,
-                      fontWeight: isActive ? '700' : '600',
-                      opacity: available ? 1 : 0.45,
-                    },
-                  ]}
-                >
-                  {p}
-                </Text>
-              </TouchableOpacity>
+                {p}
+              </DayDividerPill>
             );
           })}
-        </View>
+        </ScrollView>
       ) : null}
     </View>
   );
@@ -777,6 +846,13 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     writingDirection: 'rtl',
   },
+  compactReturnRow: {
+    flexShrink: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    direction: 'ltr',
+  },
   compactReturn: {
     flexShrink: 0,
     fontSize: 14,
@@ -796,32 +872,50 @@ const styles = StyleSheet.create({
   compactSpacer: {
     flexGrow: 1,
   },
+  /** כותרת כמו sectionTitle בטעינה — physical-right + 20/800 */
   headerTitle: {
-    marginBottom: 4,
-    maxWidth: '100%',
-    fontSize: 13,
-    fontWeight: '600',
+    ...journalPhysicalRightText,
+    alignSelf: 'stretch',
+    width: '100%',
+    marginBottom: 8,
+    fontSize: JOURNAL_TYPE.sectionTitle.fontSize,
+    fontWeight: JOURNAL_TYPE.sectionTitle.fontWeight,
+    lineHeight: JOURNAL_TYPE.sectionTitle.lineHeight,
     letterSpacing: 0.15,
-    lineHeight: 18,
-    writingDirection: 'rtl',
   },
   headerValue: {
+    alignSelf: 'stretch',
+    width: '100%',
     maxWidth: '100%',
-    fontSize: 36,
-    fontWeight: '800',
-    letterSpacing: -1.1,
-    lineHeight: 42,
+    direction: 'ltr',
+    ...journalCardMetricValueStyle,
     writingDirection: 'ltr',
   },
-  headerReturn: {
+  headerReturnRow: {
+    alignSelf: 'stretch',
+    width: '100%',
     maxWidth: '100%',
     marginTop: 6,
+  },
+  headerReturnJustifyRight: {
+    justifyContent: 'flex-end',
+  },
+  headerReturnJustifyLeft: {
+    justifyContent: 'flex-start',
+  },
+  headerReturnJustifyCenter: {
+    justifyContent: 'center',
+  },
+  headerReturn: {
     fontSize: 15,
     fontWeight: '700',
     writingDirection: 'ltr',
   },
   headerRange: {
+    alignSelf: 'stretch',
+    width: '100%',
     maxWidth: '100%',
+    direction: 'ltr',
     marginTop: 4,
     fontSize: 13,
     fontWeight: '500',
@@ -849,33 +943,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   periodsRow: {
+    direction: 'rtl',
     flexDirection: 'row',
     flexWrap: 'nowrap',
-    justifyContent: 'space-between',
     alignItems: 'center',
     paddingTop: 10,
-    gap: 4,
-  },
-  periodBtn: {
-    flexGrow: 1,
-    flexShrink: 1,
-    minWidth: 0,
-    minHeight: 30,
-    paddingHorizontal: 6,
-    paddingVertical: 5,
-    borderRadius: 999,
-    borderWidth: StyleSheet.hairlineWidth * 2,
-    borderColor: 'rgba(255,255,255,0.12)',
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  periodBtnDisabled: {
-    opacity: 0.5,
-  },
-  periodChipText: {
-    fontSize: 11,
-    textAlign: 'center',
-    letterSpacing: 0.15,
+    gap: 8,
   },
 });

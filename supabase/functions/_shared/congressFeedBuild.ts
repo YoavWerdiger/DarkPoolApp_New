@@ -30,6 +30,7 @@ import {
   TRUMP_DARKPOOL_PERSON_ID,
   type CongressTradesProvider,
   type QuiverCongressTrade,
+  type QuiverPolitician,
   type QuiverTrumpStockTrade,
 } from './quiverQuant.ts';
 import type { CongressTradeRow } from './uwDbCache.ts';
@@ -406,6 +407,54 @@ function uwToCongressRow(
     price_change_pct: null,
     spy_change_pct: null,
   };
+}
+
+/**
+ * ב-INSERT: מעדיפים Quiver ImageURL מה-cache היומי על ניחוש unitedstates.github.io.
+ * לא דורסים פורטרט ידני/ויקי. לא כותבים לוגו טיקר כפנים.
+ */
+export function applyQuiverPoliticianImages(
+  rows: CongressTradeRow[],
+  politicians: QuiverPolitician[] | null | undefined
+): CongressTradeRow[] {
+  if (!rows.length || !politicians?.length) return rows;
+
+  const byBg = new Map<string, string>();
+  for (const p of politicians) {
+    const bg = String(p.BioGuideID ?? '')
+      .trim()
+      .toUpperCase();
+    const url = p.ImageURL?.trim();
+    if (bg && url && looksLikePersonPhotoUrl(url)) byBg.set(bg, url);
+  }
+  if (!byBg.size) return rows;
+
+  return rows.map((row) => {
+    const quiver = byBg.get(String(row.politician_id ?? '').trim().toUpperCase());
+    if (!quiver) return row;
+    const current = row.politician_image_url?.trim() || null;
+    if (current && !isGuessedCongressPhoto(current) && looksLikePersonPhotoUrl(current)) {
+      return row;
+    }
+    if (current === quiver) return row;
+    return { ...row, politician_image_url: quiver };
+  });
+}
+
+function looksLikePersonPhotoUrl(url: string): boolean {
+  const u = url.toLowerCase();
+  if (u.includes('transback.png')) return false;
+  if (u.includes('brandfetch') || u.includes('/logo') || u.includes('clearbit')) {
+    return false;
+  }
+  if (u.includes('uwassets') && (u.includes('/tickers') || u.includes('/logos'))) {
+    return false;
+  }
+  return true;
+}
+
+function isGuessedCongressPhoto(url: string): boolean {
+  return url.includes('unitedstates.github.io/images/congress');
 }
 
 export { getCongressTradesProvider, resolveCongressApiKey, type CongressTradesProvider };

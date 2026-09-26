@@ -149,3 +149,54 @@ export async function syncFollowedFromCloud(): Promise<FollowedInvestor[]> {
   notifyFollowChanged(merged);
   return merged;
 }
+
+export interface FollowCountRow {
+  person: FollowedInvestor;
+  follower_count: number;
+}
+
+type FollowCountRpcRow = {
+  person_id?: string | null;
+  kind?: string | null;
+  follower_count?: number | string | null;
+  name?: string | null;
+  image_url?: string | null;
+  ticker?: string | null;
+};
+
+/**
+ * COUNT גלובלי מ-`dark_pool_followed_investors` דרך RPC.
+ * אין "$ copied". בלי RPC (RLS מסתיר שורות של אחרים) מחזירים [] —
+ * המסך מציג דיוקנאות בלי שורת כסף, לא ממציא דירוג.
+ */
+export async function countFollowedInvestors(): Promise<FollowCountRow[]> {
+  const { data, error } = await supabase.rpc('dark_pool_investor_follow_counts');
+  if (error || !Array.isArray(data)) {
+    if (error) {
+      console.warn('countFollowedInvestors', error.message);
+    }
+    return [];
+  }
+
+  return (data as FollowCountRpcRow[])
+    .map((row) => {
+      const id = String(row.person_id ?? '').trim();
+      const kind = row.kind as InvestorKind | undefined;
+      const follower_count = Number(row.follower_count);
+      if (!id || !kind || !Number.isFinite(follower_count) || follower_count <= 0) {
+        return null;
+      }
+      return {
+        person: {
+          id,
+          kind,
+          name: String(row.name ?? ''),
+          image_url: row.image_url ?? null,
+          ticker: row.ticker ?? undefined,
+        },
+        follower_count: Math.floor(follower_count),
+      };
+    })
+    .filter((row): row is FollowCountRow => row != null)
+    .sort((a, b) => b.follower_count - a.follower_count);
+}

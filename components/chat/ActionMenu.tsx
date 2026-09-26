@@ -9,6 +9,7 @@ import { BlurView } from 'expo-blur';
 import { Plus, Copy, Share, Star, Flag, Trash2, Edit, Reply, Forward, Info, Pin } from 'lucide-react-native';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { GlassChip } from '../ui/GlassChip';
 import { chatPalette } from './chatDesignTokens';
 import {
   ChatBottomSheet,
@@ -125,15 +126,11 @@ export default function ActionMenu({
         ) : null}
 
         <View style={styles.reactionRow}>
-          <BlurView
-            intensity={SHEET_GLASS_INTENSITY}
-            tint="dark"
+          <GlassChip
+            disableBlur
             style={styles.reactionPill}
+            contentContainerStyle={styles.reactionPillContent}
           >
-            <View
-              pointerEvents="none"
-              style={[StyleSheet.absoluteFill, styles.reactionPillOverlay]}
-            />
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -163,7 +160,7 @@ export default function ActionMenu({
                 </Pressable>
               ) : null}
             </ScrollView>
-          </BlurView>
+          </GlassChip>
         </View>
 
         <BlurView
@@ -229,15 +226,14 @@ const styles = StyleSheet.create({
   },
   reactionPill: {
     borderRadius: 999,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.16)',
-    borderTopColor: 'rgba(255,255,255,0.22)',
     overflow: 'hidden',
     maxWidth: '100%',
+    minHeight: 0,
   },
-  reactionPillOverlay: {
-    backgroundColor: SHEET_GLASS_OVERLAY,
-    borderRadius: 999,
+  reactionPillContent: {
+    minHeight: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
   },
   reactionScroll: {
     alignItems: 'center',

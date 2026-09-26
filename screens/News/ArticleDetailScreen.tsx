@@ -77,7 +77,7 @@ export default function ArticleDetailScreen() {
   return (
     <View 
       className="flex-1"
-      style={{ backgroundColor: DesignTokens.colors.background.primary }}
+      style={{ backgroundColor: 'transparent' }}
     >
       <StatusBar style="light" />
       

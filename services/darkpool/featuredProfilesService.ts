@@ -2,6 +2,7 @@ import { supabase } from '../../lib/supabase';
 import type { ExplorePerson } from './uwExploreService';
 import { knownPortraitForInvestor } from '../../screens/DarkPool/utils/knownInvestorPortraits';
 import {
+  ALL_CURATED_EXPLORE_PROFILES,
   CURATED_EXPLORE_PROFILES,
   isCuratedExploreId,
   isTrustedPortraitUrl,
@@ -71,12 +72,12 @@ export function featuredToExplorePerson(row: FeaturedProfile): ExplorePerson {
  */
 /** סטטי מיידי — בלי רשת; ל-placeholderData / first paint */
 export function getCuratedExploreSync(): ExplorePerson[] {
-  return CURATED_EXPLORE_PROFILES.map((p) => ({ ...p }));
+  return ALL_CURATED_EXPLORE_PROFILES.map((p) => ({ ...p }));
 }
 
 export async function fetchCuratedExploreGrid(): Promise<ExplorePerson[]> {
   const byId = new Map<string, ExplorePerson>();
-  for (const p of CURATED_EXPLORE_PROFILES) {
+  for (const p of ALL_CURATED_EXPLORE_PROFILES) {
     byId.set(p.id, { ...p });
   }
 

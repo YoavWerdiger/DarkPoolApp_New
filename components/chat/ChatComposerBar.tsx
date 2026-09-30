@@ -46,6 +46,8 @@ export interface ChatComposerBarProps {
   overlay?: React.ReactNode;
   containerStyle?: StyleProp<ViewStyle>;
   inputStyle?: StyleProp<TextStyle>;
+  /** דריסת מילוי/מסגרת הגלולה — למשל שדה על כרטיס בפריוויו */
+  pillStyle?: StyleProp<ViewStyle>;
 }
 
 export default function ChatComposerBar({
@@ -70,6 +72,7 @@ export default function ChatComposerBar({
   overlay,
   containerStyle,
   inputStyle,
+  pillStyle,
 }: ChatComposerBarProps) {
   const tokens = useDesignTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
@@ -88,7 +91,7 @@ export default function ChatComposerBar({
     <View style={[styles.container, containerStyle]}>
       <UICard
         {...CHROME_UICARD}
-        style={[styles.pillOuter, chromeSurfaceCardStyle(tokens)]}
+        style={[styles.pillOuter, chromeSurfaceCardStyle(tokens), pillStyle]}
         contentContainerStyle={styles.pillContent}
       >
         {leading}

@@ -8,6 +8,7 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import UICard from '../../../components/ui/UICard';
 import { HelpSheet } from '../../../components/ui/HelpSheet';
+import { APP_TYPE } from '../../../components/ui/appType';
 import {
   DARK_POOL_TYPE,
   darkPoolPhysicalRightText,
@@ -58,7 +59,7 @@ export function StockActEstimateNote({ variant = 'card' }: Props) {
 
   return (
     <>
-      <UICard variant="glass" glassIntensity="light" padding="md" style={styles.card}>
+      <UICard variant="soft" glassIntensity="light" padding="md" style={styles.card}>
         <Text style={styles.title}>{STOCK_ACT_ESTIMATE_TITLE}</Text>
         <Pressable
           onPress={() => setHelpOpen(true)}
@@ -84,9 +85,9 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     title: {
       ...darkPoolPhysicalRightText,
-      fontSize: DARK_POOL_TYPE.body.fontSize,
-      lineHeight: 20,
-      fontWeight: '800',
+      fontSize: APP_TYPE.cardTitle.fontSize,
+      lineHeight: APP_TYPE.cardTitle.lineHeight,
+      fontWeight: APP_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
     },
     linkHit: {
@@ -97,8 +98,9 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       ...darkPoolPhysicalRightText,
       marginTop: 6,
       fontSize: DARK_POOL_TYPE.caption.fontSize,
-      fontWeight: '700',
-      color: tokens.colors.primary.main,
+      lineHeight: DARK_POOL_TYPE.caption.lineHeight,
+      fontWeight: DARK_POOL_TYPE.caption.fontWeight,
+      color: tokens.colors.text.secondary,
     },
   });
 }

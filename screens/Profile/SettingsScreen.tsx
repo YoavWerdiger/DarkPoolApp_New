@@ -9,13 +9,22 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from 'react-native';
-import { ChevronLeft } from 'lucide-react-native';
+import {
+  ChevronLeft,
+  Languages,
+  CreditCard,
+  ScanFace,
+  Eraser,
+  Info,
+  Moon,
+  type LucideIcon,
+} from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
-import UICard from '../../components/ui/UICard';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
+import { APP_LAYOUT } from '../../components/ui/appLayout';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import {
@@ -25,11 +34,13 @@ import {
   type AppLanguage,
 } from '../../services/appSettings';
 import { getAppVersionLabel } from '../../utils/appMeta';
-import { SettingsSectionTitle } from '../../components/profile/ProfileSettingsUI';
+import {
+  SettingsGlassCard,
+  SettingsSectionTitle,
+} from '../../components/profile/ProfileSettingsUI';
 import {
   settingsHebrewText,
   settingsRowType,
-  settingsMetaType,
   settingsBodyType,
   settingsCaptionType,
 } from '../../components/profile/settingsType';
@@ -38,7 +49,7 @@ import { isolateNumericRuns } from '../DarkPool/utils/bidi';
 interface SettingItem {
   id: string;
   title: string;
-  subtitle: string;
+  icon: LucideIcon;
   type: 'switch' | 'action';
   value?: boolean;
   onToggle?: (value: boolean) => void;
@@ -48,7 +59,7 @@ interface SettingItem {
 
 export default function SettingsScreen({ navigation }: any) {
   const { user } = useAuth();
-  const { theme } = useTheme();
+  const { theme, isDarkMode, toggleTheme } = useTheme();
   const DesignTokens = useDesignTokens();
   const [biometricAuth, setBiometricAuth] = useState(false);
   const [language, setLanguage] = useState<AppLanguage>('he');
@@ -162,12 +173,29 @@ export default function SettingsScreen({ navigation }: any) {
 
   const settingSections = [
     {
+      title: 'מראה',
+      items: [
+        {
+          id: 'darkMode',
+          title: 'מצב כהה',
+          icon: Moon,
+          type: 'switch' as const,
+          value: isDarkMode,
+          onToggle: (value: boolean) => {
+            if (value === isDarkMode) return;
+            void HapticFeedback.selection();
+            void toggleTheme();
+          },
+        },
+      ],
+    },
+    {
       title: 'שפה',
       items: [
         {
           id: 'language',
           title: 'שפת ממשק',
-          subtitle: language === 'he' ? 'עברית (מועדף)' : 'English (preferred)',
+          icon: Languages,
           type: 'action' as const,
           onPress: () => void cycleLanguage(),
         },
@@ -179,7 +207,7 @@ export default function SettingsScreen({ navigation }: any) {
         {
           id: 'billing',
           title: 'מנוי, תשלומים וחשבוניות',
-          subtitle: 'סטטוס מנוי והורדת חשבוניות',
+          icon: CreditCard,
           type: 'action' as const,
           onPress: () => {
             void HapticFeedback.impactLight();
@@ -194,7 +222,7 @@ export default function SettingsScreen({ navigation }: any) {
         {
           id: 'biometricAuth',
           title: 'אימות ביומטרי',
-          subtitle: 'השתמש ב-Face ID / Touch ID',
+          icon: ScanFace,
           type: 'switch' as const,
           value: biometricAuth,
           onToggle: handleBiometricAuth
@@ -207,7 +235,7 @@ export default function SettingsScreen({ navigation }: any) {
         {
           id: 'clearCache',
           title: 'נקה מטמון',
-          subtitle: 'מחק נתונים זמניים',
+          icon: Eraser,
           type: 'action' as const,
           onPress: handleClearCache,
           danger: true
@@ -215,7 +243,7 @@ export default function SettingsScreen({ navigation }: any) {
         {
           id: 'about',
           title: 'אודות האפליקציה',
-          subtitle: 'מידע וגרסה',
+          icon: Info,
           type: 'action' as const,
           onPress: () => {
             legacyAlert('אודות', `DarkPool App\nגרסה ${getAppVersionLabel()}\n\n© ${new Date().getFullYear()} DarkPool`);
@@ -227,21 +255,16 @@ export default function SettingsScreen({ navigation }: any) {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent' }}>
+      <View style={[styles.loading, { backgroundColor: DesignTokens.colors.background.primary }]}>
         <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-        <Text style={{
-          ...settingsHebrewText,
-          ...settingsBodyType,
-          color: DesignTokens.colors.text.secondary,
-          marginTop: DesignTokens.spacing.lg,
-        }}>טוען...</Text>
+        <Text style={[styles.loadingText, { color: DesignTokens.colors.text.secondary }]}>טוען...</Text>
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-      <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top', 'bottom']}>
+    <View style={[styles.root, { backgroundColor: DesignTokens.colors.background.primary }]}>
+      <RNSafeAreaView style={styles.root} edges={['top', 'bottom']}>
         <ChatSubScreenHeader
           title="הגדרות"
           onBack={() => {
@@ -250,110 +273,138 @@ export default function SettingsScreen({ navigation }: any) {
           }}
         />
 
-        <View style={{ flex: 1 }}>
-          <ScrollView 
-            style={{ flex: 1 }}
-            showsVerticalScrollIndicator={false}
-          >
-          <View
-            style={{
-              paddingHorizontal: DesignTokens.spacing.base,
-              paddingTop: DesignTokens.spacing.md,
-            }}
-          >
+        <ScrollView style={styles.root} showsVerticalScrollIndicator={false}>
+          <View style={styles.scroll}>
             {settingSections.map((section) => (
-              <View key={section.title} style={{ marginBottom: DesignTokens.spacing.lg }}>
+              <View key={section.title}>
                 <SettingsSectionTitle title={section.title} />
+                <SettingsGlassCard>
+                  {section.items.map((item, itemIndex) => {
+                    const ItemIcon = item.icon;
+                    const danger = 'danger' in item && item.danger;
+                    const iconColor = danger
+                      ? DesignTokens.colors.danger.main
+                      : DesignTokens.colors.text.primary;
 
-                <UICard
-                  variant="glass"
-                  glassIntensity="light"
-                  padding="none"
-                  style={{ borderRadius: DesignTokens.borderRadius.lg }}
-                >
-                {section.items.map((item, itemIndex) => (
-                  <View key={item.id}>
-                    <TouchableOpacity
-                      onPress={
-                        item.type === 'action'
-                          ? () => {
-                              void HapticFeedback.impactLight();
-                              item.onPress?.();
-                            }
-                          : undefined
-                      }
-                      disabled={item.type === 'switch'}
-                      activeOpacity={item.type === 'action' ? 0.7 : 1}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        paddingVertical: DesignTokens.spacing.md,
-                        paddingHorizontal: DesignTokens.spacing.base,
-                      }}
-                    >
-                    {item.type === 'switch' && item.onToggle ? (
-                      <Switch
-                        value={item.value}
-                        onValueChange={item.onToggle}
-                        trackColor={{ false: theme.switchTrackOff, true: DesignTokens.colors.primary.main }}
-                        thumbColor={item.value ? DesignTokens.colors.text.primary : theme.switchThumbOff}
-                        ios_backgroundColor={theme.switchTrackOff}
-                        style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
-                      />
-                    ) : (
-                      <ChevronLeft size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
-                    )}
+                    return (
+                      <View key={item.id}>
+                        <TouchableOpacity
+                          onPress={
+                            item.type === 'action'
+                              ? () => {
+                                  void HapticFeedback.impactLight();
+                                  item.onPress?.();
+                                }
+                              : undefined
+                          }
+                          disabled={item.type === 'switch'}
+                          activeOpacity={item.type === 'action' ? 0.7 : 1}
+                          style={styles.row}
+                        >
+                          {item.type === 'switch' && item.onToggle ? (
+                            <Switch
+                              value={item.value}
+                              onValueChange={item.onToggle}
+                              trackColor={{ false: theme.switchTrackOff, true: DesignTokens.colors.primary.main }}
+                              thumbColor={item.value ? DesignTokens.colors.text.primary : theme.switchThumbOff}
+                              ios_backgroundColor={theme.switchTrackOff}
+                              style={{ transform: [{ scaleX: 0.82 }, { scaleY: 0.82 }] }}
+                            />
+                          ) : (
+                            <ChevronLeft size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
+                          )}
 
-                    <View style={{ flex: 1, marginStart: DesignTokens.spacing.md }}>
-                      <Text style={{
-                        ...settingsHebrewText,
-                        ...settingsRowType,
-                        color: 'danger' in item && item.danger ? DesignTokens.colors.danger.main : DesignTokens.colors.text.primary,
-                        marginBottom: DesignTokens.spacing.xs / 2,
-                      }}>
-                        {item.title}
-                      </Text>
-                      <Text style={{
-                        ...settingsHebrewText,
-                        ...settingsMetaType,
-                        color: DesignTokens.colors.text.tertiary,
-                      }}>
-                        {item.subtitle}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                  {itemIndex < section.items.length - 1 && (
-                    <View
-                      style={{
-                        height: StyleSheet.hairlineWidth,
-                        backgroundColor: DesignTokens.colors.border.divider,
-                        marginHorizontal: DesignTokens.spacing.base,
-                      }}
-                    />
-                  )}
-                </View>
-                ))}
-                </UICard>
+                          <View style={styles.textCol}>
+                            <Text
+                              style={[
+                                styles.title,
+                                {
+                                  color: danger
+                                    ? DesignTokens.colors.danger.main
+                                    : DesignTokens.colors.text.primary,
+                                },
+                              ]}
+                            >
+                              {item.title}
+                            </Text>
+                          </View>
+                          <View style={styles.leadingIcon}>
+                            <ItemIcon size={20} color={iconColor} strokeWidth={2} />
+                          </View>
+                        </TouchableOpacity>
+                        {itemIndex < section.items.length - 1 ? (
+                          <View
+                            style={[
+                              styles.divider,
+                              { backgroundColor: DesignTokens.colors.border.divider },
+                            ]}
+                          />
+                        ) : null}
+                      </View>
+                    );
+                  })}
+                </SettingsGlassCard>
               </View>
             ))}
 
-            {/* App Version */}
-            <View style={{ 
-              alignItems: 'center', 
-              marginTop: DesignTokens.spacing.md,
-              marginBottom: DesignTokens.spacing.lg
-            }}>
-              <Text style={{
-                ...settingsCaptionType,
-                color: DesignTokens.colors.text.tertiary,
-              }}>
+            <View style={styles.versionWrap}>
+              <Text style={[styles.version, { color: DesignTokens.colors.text.muted }]}>
                 {isolateNumericRuns(`DarkPool App · גרסה ${getAppVersionLabel()}`)}
               </Text>
             </View>
           </View>
-          </ScrollView>
-        </View>
+        </ScrollView>
       </RNSafeAreaView>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+  loading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    ...settingsHebrewText,
+    ...settingsBodyType,
+    marginTop: APP_LAYOUT.componentGap,
+  },
+  scroll: {
+    paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+    paddingTop: APP_LAYOUT.sectionHeaderToContent - 4,
+    paddingBottom: 48,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 15,
+    paddingHorizontal: APP_LAYOUT.cardPadding,
+  },
+  textCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  leadingIcon: {
+    marginLeft: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  title: {
+    ...settingsHebrewText,
+    ...settingsRowType,
+  },
+  divider: {
+    height: 1,
+    marginHorizontal: APP_LAYOUT.cardPadding,
+  },
+  versionWrap: {
+    alignItems: 'center',
+    marginTop: APP_LAYOUT.cardStackGap,
+    marginBottom: APP_LAYOUT.componentGap,
+  },
+  version: {
+    ...settingsCaptionType,
+  },
+});

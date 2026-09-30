@@ -29,6 +29,8 @@ import { Image as ExpoImage } from 'expo-image';
 import { getChatMediaDisplayUri } from '../../services/chat/chatSignedMediaUrl';
 import { chatPalette as COLORS } from './chatDesignTokens';
 import { useMediaZoomGestures } from './useMediaZoomGestures';
+import { useDesignTokens } from '../ui/DesignTokens';
+import { DayNavBlurButton } from '../ui/DayNavBlurButton';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -55,6 +57,7 @@ export default function MediaViewer({
   onReply,
   onForward,
 }: MediaViewerProps) {
+  const tokens = useDesignTokens();
   const insets = useSafeAreaInsets();
   const [displayUri, setDisplayUri] = useState(mediaUrl);
   const [isLoading, setIsLoading] = useState(true);
@@ -395,9 +398,9 @@ export default function MediaViewer({
         <View style={styles.topBar}>
             <BlurView intensity={80} tint="dark" style={styles.topBlur}>
               <View style={[styles.topContent, { paddingTop: insets.top + 8 }]}>
-                <Pressable onPress={onClose} style={styles.closeButton}>
-                  <X size={24} color={COLORS.text} strokeWidth={2} />
-                </Pressable>
+                <DayNavBlurButton onPress={onClose} size={44} accessibilityLabel="סגור">
+                  <X size={24} color={tokens.colors.text.primary} strokeWidth={2} />
+                </DayNavBlurButton>
                 <View style={styles.topSpacer} />
               </View>
             </BlurView>
@@ -526,14 +529,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     paddingBottom: 12,
     paddingHorizontal: 16,
-  },
-  closeButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   topSpacer: {
     flex: 1,

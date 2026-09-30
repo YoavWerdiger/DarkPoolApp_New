@@ -1,20 +1,24 @@
 import { legacyAlert } from '../../utils/appDialog';
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import {
   View,
   Text,
-  ScrollView,
-  TouchableOpacity,
-  KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
   TextInput,
   StyleSheet,
   Pressable,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import {
+  AndroidSoftInputModes,
+  KeyboardAwareScrollView,
+  KeyboardController,
+  KeyboardStickyView,
+} from 'react-native-keyboard-controller';
 import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
-import { ChevronDown, Check } from 'lucide-react-native';
+import { Camera, UserRound } from 'lucide-react-native';
+import Svg, { Circle, Path } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,27 +26,65 @@ import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { mediaService } from '../../services/mediaService';
-import { DesignTokens as StaticTokens, useDesignTokens } from '../../components/ui/DesignTokens';
-import UICard from '../../components/ui/UICard';
-import OnboardingButton from '../../components/onboarding/OnboardingButton';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
+import UIButton from '../../components/ui/UIButton';
+import { APP_LAYOUT } from '../../components/ui/appLayout';
+import { APP_TYPE, appFormFieldHelperStyle } from '../../components/ui/appType';
+import {
+  formFieldInputStyle,
+  formFieldLabelStyle,
+  formFieldShellStyle,
+} from '../../components/ui/formControl';
+import { settingsButtonLabelStyle, settingsMetaType } from '../../components/profile/settingsType';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
+import { restoreAndroidSoftInputIfUnlocked } from '../../components/chat/androidChatKeyboard';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 
 type Gender = 'male' | 'female' | '';
+
+function GenderGlyph({ name, color }: { name: 'male' | 'female'; color: string }) {
+  if (name === 'male') {
+    return (
+      <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+        <Circle cx="10" cy="14.5" r="5" stroke={color} strokeWidth={2} />
+        <Path
+          d="M13.6 10.9 L19 5.5 M19 5.5 H14.2 M19 5.5 V10.3"
+          stroke={color}
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </Svg>
+    );
+  }
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+      <Circle cx="12" cy="8.5" r="5" stroke={color} strokeWidth={2} />
+      <Path
+        d="M12 13.5 V20 M8.75 16.75 H15.25"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
 type FocusedField = 'displayName' | 'phone' | null;
 
 const PREVIEW_SIZE = 280;
+const AVATAR = 120;
+const CAMERA_BADGE = 36;
+/** גובה כפתור השמירה (52) + הריווח מעליו ומתחתיו, כדי שהשדה הפעיל לא יישב מתחתיו. */
+const PROFILE_SAVE_KEYBOARD_CLEARANCE = APP_LAYOUT.cardStackGap + 52 + APP_LAYOUT.cardStackGap;
 
 export default function EditProfileScreen({ navigation }: any) {
   const { user, updateProfile } = useAuth();
-  const DesignTokens = useDesignTokens();
+  const tokens = useDesignTokens();
   const insets = useSafeAreaInsets();
-  const surface = StaticTokens.onboardingInputSurface;
 
   const [displayName, setDisplayName] = useState('');
   const [phone, setPhone] = useState('');
   const [gender, setGender] = useState<Gender>('');
-  const [showGenderPicker, setShowGenderPicker] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -55,7 +97,6 @@ export default function EditProfileScreen({ navigation }: any) {
 
   useEffect(() => {
     ImagePicker.requestMediaLibraryPermissionsAsync().catch(() => {});
-    ImagePicker.requestCameraPermissionsAsync().catch(() => {});
   }, []);
 
   const loadUserData = async () => {
@@ -122,28 +163,6 @@ export default function EditProfileScreen({ navigation }: any) {
     }
   };
 
-  const handleImageFromCamera = async () => {
-    try {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        legacyAlert('אין הרשאה', 'יש לאפשר גישה למצלמה');
-        return;
-      }
-
-      const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets?.[0]) {
-        await processAndSetImage(result.assets[0].uri);
-      }
-    } catch {
-      legacyAlert('שגיאה', 'שגיאה בצילום תמונה');
-    }
-  };
-
   const handleSave = async () => {
     if (!displayName.trim()) {
       legacyAlert('שגיאה', 'נא להזין שם תצוגה');
@@ -197,14 +216,11 @@ export default function EditProfileScreen({ navigation }: any) {
     }
   };
 
-  const fieldBorder = (field: FocusedField) =>
-    focusedField === field
-      ? DesignTokens.colors.primary.main
-      : DesignTokens.colors.border.divider;
+  const screenStyle = [styles.root, { backgroundColor: tokens.colors.background.primary }];
 
   if (isLoading) {
     return (
-      <RNSafeAreaView style={styles.root} edges={['top', 'bottom']}>
+      <RNSafeAreaView style={screenStyle} edges={['top', 'bottom']}>
         <ChatSubScreenHeader
           title="עריכת פרופיל"
           onBack={() => {
@@ -213,14 +229,12 @@ export default function EditProfileScreen({ navigation }: any) {
           }}
         />
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
+          <ActivityIndicator size="large" color={tokens.colors.text.secondary} />
           <Text
             style={[
+              settingsMetaType,
               styles.loadingText,
-              {
-                color: DesignTokens.colors.text.secondary,
-                marginTop: DesignTokens.spacing.md,
-              },
+              { color: tokens.colors.text.secondary },
             ]}
           >
             טוען פרופיל...
@@ -230,8 +244,10 @@ export default function EditProfileScreen({ navigation }: any) {
     );
   }
 
+  const fieldText = [formFieldInputStyle(), { color: tokens.colors.text.primary }];
+
   return (
-    <RNSafeAreaView style={styles.root} edges={['top']}>
+    <RNSafeAreaView style={screenStyle} edges={['top']}>
       <ChatSubScreenHeader
         title="עריכת פרופיל"
         onBack={() => {
@@ -240,44 +256,29 @@ export default function EditProfileScreen({ navigation }: any) {
         }}
       />
 
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-      >
-        <ScrollView
+      <View style={styles.flex}>
+        <KeyboardAwareScrollView
           style={styles.flex}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{
-            paddingHorizontal: DesignTokens.spacing.base,
-            paddingTop: DesignTokens.spacing.sm,
-            paddingBottom: DesignTokens.spacing.xl,
-          }}
+          bottomOffset={PROFILE_SAVE_KEYBOARD_CLEARANCE}
+          contentContainerStyle={styles.scrollContent}
         >
-          {/* Avatar — אותו דפוס כמו RegistrationProfileImageScreen */}
-          <UICard
-            variant="glass"
-            glassIntensity="medium"
-            padding="none"
-            style={{
-              borderRadius: DesignTokens.borderRadius['2xl'],
-              width: '100%',
-              marginBottom: DesignTokens.spacing.base,
-            }}
-          >
-            <View style={styles.avatarCardInner}>
+          <View style={styles.avatarBlock}>
+            <Pressable
+              onPress={() => {
+                if (isProcessingImage) return;
+                void HapticFeedback.impactLight();
+                void handleImageFromGallery();
+              }}
+              style={styles.avatarWrap}
+              accessibilityRole="button"
+              accessibilityLabel="בחירת תמונה מהגלריה"
+            >
               <View
                 style={[
-                  styles.avatarRing,
-                  {
-                    borderColor: profileImage
-                      ? DesignTokens.colors.primary.main
-                      : 'rgba(255,255,255,0.15)',
-                    backgroundColor: surface.backgroundColor,
-                    shadowColor: DesignTokens.colors.primary.main,
-                    shadowOpacity: profileImage ? 0.4 : 0,
-                  },
+                  styles.avatar,
+                  { backgroundColor: tokens.colors.background.tertiary },
                 ]}
               >
                 {profileImage ? (
@@ -289,350 +290,236 @@ export default function EditProfileScreen({ navigation }: any) {
                     transition={150}
                   />
                 ) : isProcessingImage ? (
-                  <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
+                  <ActivityIndicator size="small" color={tokens.colors.text.secondary} />
                 ) : (
-                  <Ionicons name="person-outline" size={72} color="rgba(255,255,255,0.3)" />
+                  <UserRound size={44} color={tokens.colors.text.primary} strokeWidth={1.75} />
                 )}
               </View>
+              <View
+                style={[
+                  styles.cameraBadge,
+                  {
+                    backgroundColor: tokens.colors.background.cardSolid,
+                    borderColor: tokens.colors.background.primary,
+                  },
+                ]}
+              >
+                <Camera size={18} color={tokens.colors.text.primary} strokeWidth={2} />
+              </View>
+            </Pressable>
+            {isProcessingImage ? (
+              <Text style={[settingsMetaType, styles.processingText, { color: tokens.colors.text.secondary }]}>
+                מעבד תמונה...
+              </Text>
+            ) : null}
+          </View>
 
-              {isProcessingImage ? (
-                <Text style={styles.avatarStatusPrimary}>מעבד תמונה...</Text>
-              ) : (
-                <>
-                  <Text style={styles.avatarStatusPrimary}>
-                    {profileImage ? 'תמונת הפרופיל שלך' : 'עדכון תמונת פרופיל'}
-                  </Text>
-                  <Text style={styles.avatarStatusSecondary}>
-                    {profileImage
-                      ? 'אפשר להחליף עם מצלמה או גלריה'
-                      : 'בחר תמונה שמייצגת אותך בצ׳אטים'}
-                  </Text>
-                </>
-              )}
-
-              {!isProcessingImage && (
-                <View style={styles.photoActionsRow}>
-                  <View style={styles.photoActionFlex}>
-                    <OnboardingButton
-                      title="מצלמה"
-                      onPress={() => {
-                        void handleImageFromCamera();
-                      }}
-                      variant="secondary"
-                      icon={
-                        <Ionicons name="camera" size={20} color="rgba(255,255,255,0.55)" />
-                      }
-                    />
-                  </View>
-                  <View style={styles.photoActionFlex}>
-                    <OnboardingButton
-                      title="גלריה"
-                      onPress={() => {
-                        void handleImageFromGallery();
-                      }}
-                      variant="secondary"
-                      icon={
-                        <Ionicons name="images" size={20} color="rgba(255,255,255,0.55)" />
-                      }
-                    />
-                  </View>
-                </View>
-              )}
-            </View>
-          </UICard>
-
-          {/* Form — single glass card */}
-          <UICard
-            variant="glass"
-            glassIntensity="light"
-            padding="md"
-            style={{
-              borderRadius: DesignTokens.borderRadius.xl,
-              borderWidth: 0,
-              borderColor: DesignTokens.colors.border.main,
-            }}
-          >
-            <FieldLabel tokens={DesignTokens}>שם תצוגה</FieldLabel>
+          <ProfileEditField label="שם תצוגה" focused={focusedField === 'displayName'}>
             <TextInput
               value={displayName}
               onChangeText={setDisplayName}
               placeholder="הזן שם תצוגה"
-              placeholderTextColor={DesignTokens.colors.text.muted}
+              placeholderTextColor={tokens.colors.text.muted}
               onFocus={() => setFocusedField('displayName')}
               onBlur={() => setFocusedField(null)}
-              style={[
-                styles.input,
-                {
-                  backgroundColor: DesignTokens.colors.background.input,
-                  borderColor: fieldBorder('displayName'),
-                  color: DesignTokens.colors.text.primary,
-                  borderRadius: DesignTokens.borderRadius.md,
-                },
-              ]}
+              style={fieldText}
             />
+          </ProfileEditField>
 
-            <FieldLabel tokens={DesignTokens}>טלפון</FieldLabel>
+          <ProfileEditField label="טלפון" focused={focusedField === 'phone'}>
             <TextInput
               value={phone}
               onChangeText={setPhone}
               placeholder="הזן מספר טלפון"
-              placeholderTextColor={DesignTokens.colors.text.muted}
+              placeholderTextColor={tokens.colors.text.muted}
               keyboardType="phone-pad"
               onFocus={() => setFocusedField('phone')}
               onBlur={() => setFocusedField(null)}
-              style={[
-                styles.input,
-                {
-                  backgroundColor: DesignTokens.colors.background.input,
-                  borderColor: fieldBorder('phone'),
-                  color: DesignTokens.colors.text.primary,
-                  borderRadius: DesignTokens.borderRadius.md,
-                },
-              ]}
+              style={fieldText}
             />
+          </ProfileEditField>
 
-            <FieldLabel tokens={DesignTokens}>מין</FieldLabel>
-            <TouchableOpacity
-              onPress={() => {
-                void HapticFeedback.impactLight();
-                setShowGenderPicker(true);
-              }}
-              activeOpacity={0.7}
-              style={[
-                styles.selectRow,
-                {
-                  backgroundColor: DesignTokens.colors.background.input,
-                  borderColor: DesignTokens.colors.border.divider,
-                  borderRadius: DesignTokens.borderRadius.md,
-                },
-              ]}
-            >
-              <ChevronDown size={18} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
-              <Text
-                style={[
-                  styles.selectText,
-                  {
-                    color: gender
-                      ? DesignTokens.colors.text.primary
-                      : DesignTokens.colors.text.muted,
-                  },
-                ]}
-              >
-                {gender === 'male' ? 'זכר' : gender === 'female' ? 'נקבה' : 'בחר מין'}
-              </Text>
-            </TouchableOpacity>
-
-            <FieldLabel tokens={DesignTokens}>אימייל</FieldLabel>
-            <View
-              style={[
-                styles.readonlyBox,
-                {
-                  backgroundColor: 'rgba(255,255,255,0.03)',
-                  borderColor: DesignTokens.colors.border.subtle,
-                  borderRadius: DesignTokens.borderRadius.md,
-                },
-              ]}
-            >
-              <Text
-                style={[styles.readonlyText, { color: DesignTokens.colors.text.secondary }]}
-                numberOfLines={1}
-              >
-                {user?.email || '—'}
-              </Text>
-            </View>
+          <View style={styles.fieldBlock}>
             <Text
               style={[
-                styles.helperText,
-                { color: DesignTokens.colors.text.muted },
+                formFieldLabelStyle({ tokens, focused: false, error: false }),
+                styles.fieldLabel,
+                { color: tokens.colors.text.secondary },
               ]}
             >
-              לא ניתן לשנות את כתובת האימייל
+              מגדר
             </Text>
-          </UICard>
-        </ScrollView>
-
-        {/* Sticky save CTA */}
-        <View
-          style={[
-            styles.saveBar,
-            {
-              paddingHorizontal: DesignTokens.spacing.base,
-              paddingTop: DesignTokens.spacing.sm,
-              paddingBottom: Math.max(insets.bottom, 12),
-              borderTopColor: DesignTokens.colors.border.subtle,
-              backgroundColor: 'rgba(10, 14, 10, 0.92)',
-            },
-          ]}
-        >
-          <TouchableOpacity
-            onPress={() => {
-              void HapticFeedback.medium();
-              void handleSave();
-            }}
-            disabled={isSaving}
-            activeOpacity={0.85}
-            style={[
-              styles.saveButton,
-              {
-                backgroundColor: DesignTokens.colors.primary.main,
-                borderRadius: 999,
-                opacity: isSaving ? 0.65 : 1,
-                ...DesignTokens.shadows.greenGlow,
-              },
-            ]}
-          >
-            {isSaving ? (
-              <View style={styles.saveBusy}>
-                <ActivityIndicator size="small" color={DesignTokens.colors.text.inverse} />
-                <Text
-                  style={[
-                    styles.saveButtonText,
-                    { color: DesignTokens.colors.text.inverse },
-                  ]}
-                >
-                  שומר...
-                </Text>
-              </View>
-            ) : (
-              <Text
-                style={[
-                  styles.saveButtonText,
-                  { color: DesignTokens.colors.text.inverse },
-                ]}
-              >
-                שמור שינויים
-              </Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
-
-      {/* Gender picker */}
-      {showGenderPicker && (
-        <Pressable
-          style={styles.modalBackdrop}
-          onPress={() => setShowGenderPicker(false)}
-        >
-          <Pressable onPress={(e) => e.stopPropagation()}>
-            <UICard
-              variant="glass"
-              glassIntensity="medium"
-              padding="lg"
-              style={{
-                width: 300,
-                maxWidth: '85%',
-                borderRadius: DesignTokens.borderRadius.xl,
-                borderWidth: 0,
-                borderColor: DesignTokens.colors.border.main,
-                alignSelf: 'center',
-              }}
-            >
-              <Text
-                style={[
-                  styles.modalTitle,
-                  { color: DesignTokens.colors.text.primary },
-                ]}
-              >
-                בחר מין
-              </Text>
-
+            <View style={styles.genderRow}>
               {([
-                { value: 'male' as const, label: 'זכר' },
-                { value: 'female' as const, label: 'נקבה' },
+                { value: 'male' as const, label: 'זכר', icon: 'male' as const },
+                { value: 'female' as const, label: 'נקבה', icon: 'female' as const },
               ]).map((opt) => {
                 const selected = gender === opt.value;
+                const foreground = selected
+                  ? tokens.colors.text.inverse
+                  : tokens.colors.text.primary;
                 return (
-                  <TouchableOpacity
+                  <View
                     key={opt.value}
-                    onPress={() => {
-                      if (!selected) void HapticFeedback.selection();
-                      setGender(opt.value);
-                      setShowGenderPicker(false);
-                    }}
-                    activeOpacity={0.75}
                     style={[
-                      styles.genderOption,
+                      styles.genderSlot,
                       {
                         backgroundColor: selected
-                          ? DesignTokens.colors.primary.dim
-                          : DesignTokens.colors.background.input,
-                        borderColor: selected
-                          ? DesignTokens.colors.primary.main
-                          : DesignTokens.colors.border.divider,
-                        borderRadius: DesignTokens.borderRadius.md,
+                          ? tokens.colors.text.primary
+                          : tokens.colors.background.cardSolid,
+                        borderRadius: tokens.borderRadius.full,
                       },
                     ]}
                   >
-                    {selected ? (
-                      <Check size={18} color={DesignTokens.colors.primary.main} strokeWidth={2.5} />
-                    ) : (
-                      <View style={styles.genderCheckSpacer} />
-                    )}
-                    <Text
-                      style={[
-                        styles.genderOptionText,
-                        { color: DesignTokens.colors.text.primary },
-                      ]}
+                    <Pressable
+                      onPress={() => {
+                        if (!selected) void HapticFeedback.selection();
+                        setGender(opt.value);
+                      }}
+                      style={({ pressed }) => [{ width: '100%', opacity: pressed ? 0.85 : 1 }]}
                     >
-                      {opt.label}
-                    </Text>
-                  </TouchableOpacity>
+                      <View style={styles.genderButton}>
+                      <View style={styles.genderContent}>
+                        <View style={styles.genderIcon}>
+                          <GenderGlyph name={opt.icon} color={foreground} />
+                        </View>
+                        <Text
+                          numberOfLines={1}
+                          style={[
+                            settingsButtonLabelStyle,
+                            styles.genderLabel,
+                            { color: foreground },
+                          ]}
+                        >
+                          {opt.label}
+                        </Text>
+                      </View>
+                      </View>
+                    </Pressable>
+                  </View>
                 );
               })}
+            </View>
+          </View>
 
-              <TouchableOpacity
-                onPress={() => {
-                  void HapticFeedback.selection();
-                  setShowGenderPicker(false);
-                }}
-                activeOpacity={0.7}
-                style={styles.cancelBtn}
-              >
-                <Text
-                  style={[
-                    styles.cancelText,
-                    { color: DesignTokens.colors.text.secondary },
-                  ]}
-                >
-                  ביטול
-                </Text>
-              </TouchableOpacity>
-            </UICard>
-          </Pressable>
-        </Pressable>
-      )}
+          <ProfileEditField label="אימייל" helper="לא ניתן לשנות את כתובת האימייל" isLast>
+            <Text
+              style={[formFieldInputStyle(), { color: tokens.colors.text.secondary }]}
+              numberOfLines={1}
+            >
+              {user?.email || '—'}
+            </Text>
+          </ProfileEditField>
+        </KeyboardAwareScrollView>
+
+        <KeyboardStickyView
+          collapsable={false}
+          offset={{
+            closed: 0,
+            opened: Math.max(insets.bottom - APP_LAYOUT.cardStackGap, 0),
+          }}
+          style={[
+            styles.saveBar,
+            {
+              direction: 'ltr',
+              backgroundColor: tokens.colors.background.primary,
+              paddingBottom: Math.max(insets.bottom, APP_LAYOUT.cardStackGap),
+            },
+          ]}
+        >
+          <UIButton
+            title="שמור שינויים"
+            variant="primary"
+            fullWidth
+            loading={isSaving}
+            disabled={isSaving}
+            style={{ backgroundColor: tokens.colors.text.primary }}
+            textStyle={{ color: tokens.colors.text.inverse }}
+            onPress={() => {
+              void handleSave();
+            }}
+          />
+        </KeyboardStickyView>
+        <AndroidProfileKeyboardMode />
+      </View>
     </RNSafeAreaView>
   );
 }
 
-function FieldLabel({
-  children,
-  tokens,
-}: {
-  children: string;
-  tokens: ReturnType<typeof useDesignTokens>;
-}) {
-  return (
-    <Text
-      style={[
-        styles.fieldLabel,
-        {
-          color: tokens.colors.text.tertiary,
-          marginBottom: tokens.spacing.xs + 2,
-        },
-      ]}
-    >
-      {children}
-    </Text>
+function AndroidProfileKeyboardMode() {
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS !== 'android') return undefined;
+      try {
+        KeyboardController.setInputMode(AndroidSoftInputModes.SOFT_INPUT_ADJUST_NOTHING);
+      } catch {
+        /* אין מודול נייטיב בטסטים */
+      }
+      return () => {
+        restoreAndroidSoftInputIfUnlocked();
+      };
+    }, []),
   );
+  return null;
 }
 
-const AVATAR = 160;
+function ProfileEditField({
+  label,
+  focused = false,
+  helper,
+  isLast = false,
+  onPress,
+  children,
+}: {
+  label: string;
+  focused?: boolean;
+  helper?: string;
+  isLast?: boolean;
+  onPress?: () => void;
+  children: React.ReactNode;
+}) {
+  const tokens = useDesignTokens();
+  const shellStyle = [
+    styles.shell,
+    formFieldShellStyle({ tokens, focused, error: false }),
+    {
+      borderRadius: tokens.borderRadius.full,
+      backgroundColor: focused
+        ? tokens.colors.background.tertiary
+        : tokens.colors.background.cardSolid,
+    },
+  ];
+
+  return (
+    <View style={[styles.fieldBlock, isLast ? styles.fieldBlockLast : null]}>
+      <Text
+        style={[
+          formFieldLabelStyle({ tokens, focused, error: false }),
+          styles.fieldLabel,
+          { color: tokens.colors.text.secondary },
+        ]}
+      >
+        {label}
+      </Text>
+      {onPress ? (
+        <Pressable onPress={onPress} style={shellStyle}>
+          {children}
+        </Pressable>
+      ) : (
+        <View style={shellStyle}>{children}</View>
+      )}
+      {helper ? (
+        <Text style={[appFormFieldHelperStyle, styles.fieldHelper, { color: tokens.colors.text.muted }]}>
+          {helper}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: 'transparent',
   },
   flex: {
     flex: 1,
@@ -643,158 +530,121 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    fontSize: 15,
-    fontWeight: '500',
+    textAlign: 'center',
+    marginTop: APP_LAYOUT.cardStackGap,
   },
-  avatarCardInner: {
+  scrollContent: {
+    paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+    paddingTop: APP_LAYOUT.sectionHeaderToContent,
+    paddingBottom: APP_LAYOUT.componentGap,
+  },
+  avatarBlock: {
     alignItems: 'center',
-    paddingVertical: 28,
-    paddingHorizontal: 24,
+    marginBottom: APP_LAYOUT.componentGap,
   },
-  avatarRing: {
+  avatarWrap: {
+    width: AVATAR,
+    height: AVATAR,
+    direction: 'ltr',
+  },
+  avatar: {
     width: AVATAR,
     height: AVATAR,
     borderRadius: AVATAR / 2,
-    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-    shadowOffset: { width: 0, height: 0 },
-    shadowRadius: 12,
-    marginBottom: 20,
   },
   avatarImage: {
     width: AVATAR,
     height: AVATAR,
     borderRadius: AVATAR / 2,
   },
-  avatarStatusPrimary: {
-    color: 'rgba(255,255,255,0.85)',
-    fontSize: 15,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: 6,
-  },
-  avatarStatusSecondary: {
-    color: 'rgba(255,255,255,0.45)',
-    fontSize: 13,
-    textAlign: 'center',
-    lineHeight: 18,
-    marginBottom: 20,
-    paddingHorizontal: 12,
-  },
-  photoActionsRow: {
-    flexDirection: 'row-reverse',
-    gap: 12,
-    width: '100%',
-  },
-  photoActionFlex: {
-    flex: 1,
-  },
-  fieldLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-    textAlign: 'right',
-  },
-  input: {
-    borderWidth: 0,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-    fontSize: 16,
-    textAlign: 'right',
-    marginBottom: 16,
-    minHeight: 50,
-  },
-  selectRow: {
-    borderWidth: 0,
-    paddingHorizontal: 14,
-    minHeight: 50,
-    flexDirection: 'row',
+  cameraBadge: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    width: CAMERA_BADGE,
+    height: CAMERA_BADGE,
+    borderRadius: CAMERA_BADGE / 2,
+    borderWidth: 2,
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  selectText: {
-    flex: 1,
-    fontSize: 16,
-    textAlign: 'right',
-  },
-  readonlyBox: {
-    borderWidth: 0,
-    paddingHorizontal: 14,
-    minHeight: 50,
     justifyContent: 'center',
   },
-  readonlyText: {
-    fontSize: 15,
-    textAlign: 'right',
+  processingText: {
+    textAlign: 'center',
+    marginTop: APP_LAYOUT.cardStackGap,
   },
-  helperText: {
-    fontSize: 11,
-    textAlign: 'right',
-    marginTop: 6,
+  genderRow: {
+    flexDirection: 'row',
+    alignSelf: 'stretch',
+    alignItems: 'stretch',
+    gap: APP_LAYOUT.cardStackGap,
   },
-  saveBar: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  saveButton: {
+  genderSlot: {
+    flex: 1,
+    minWidth: 0,
     minHeight: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
+    overflow: 'hidden',
   },
-  saveBusy: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  saveButtonText: {
-    fontSize: 17,
-    fontWeight: '700',
-    letterSpacing: -0.2,
-  },
-  modalBackdrop: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.62)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    textAlign: 'right',
-    marginBottom: 16,
-  },
-  genderOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    borderWidth: 0,
-    marginBottom: 8,
-    minHeight: 50,
-  },
-  genderOptionText: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'right',
-  },
-  genderCheckSpacer: {
-    width: 18,
-    height: 18,
-  },
-  cancelBtn: {
-    marginTop: 6,
+  genderButton: {
+    width: '100%',
+    minHeight: 52,
     paddingVertical: 12,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  cancelText: {
-    fontSize: 15,
-    fontWeight: '600',
+  genderContent: {
+    alignSelf: 'center',
+    direction: 'ltr',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  genderIcon: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  genderLabel: {
+    flexGrow: 0,
+    flexShrink: 0,
+    textAlign: 'center',
+  },
+  fieldBlock: {
+    alignSelf: 'stretch',
+    width: '100%',
+    alignItems: 'stretch',
+    marginBottom: APP_LAYOUT.componentGap,
+  },
+  fieldBlockLast: {
+    marginBottom: 0,
+  },
+  fieldLabel: {
+    alignSelf: 'stretch',
+    width: '100%',
+    textAlign: 'right',
+    marginBottom: 8,
+    fontSize: APP_TYPE.groupLabel.fontSize,
+    fontWeight: APP_TYPE.groupLabel.fontWeight,
+    lineHeight: APP_TYPE.groupLabel.lineHeight,
+  },
+  fieldHelper: {
+    alignSelf: 'stretch',
+    width: '100%',
+    textAlign: 'right',
+  },
+  shell: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: APP_LAYOUT.cardPadding,
+    minHeight: 52,
+    gap: APP_LAYOUT.cardStackGap,
+  },
+  saveBar: {
+    paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+    paddingTop: APP_LAYOUT.cardStackGap,
   },
 });

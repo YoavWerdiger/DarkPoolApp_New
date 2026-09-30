@@ -1,3 +1,5 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { Platform } from 'react-native';
 import {
   SHEET_ANDROID_MIN_BOTTOM_INSET,
@@ -7,7 +9,7 @@ import {
   SHEET_GLASS_FLOOR,
   SHEET_GLASS_INTENSITY,
   SHEET_GLASS_OVERLAY,
-  SHEET_GLASS_TINT,
+  SHEET_HANDLE_FILL,
   latchSheetGlass,
   canLatchSheetGlass,
   sheetContentBottomPadding,
@@ -46,6 +48,20 @@ describe('sheet glass stays opaque during motion', () => {
 });
 
 describe('sheet glass surface tokens', () => {
+  it('uses solid light-gray grabber fill with no hairline border on shared styles', () => {
+    expect(SHEET_HANDLE_FILL).toMatch(/^#[0-9A-Fa-f]{6}$/);
+    expect(SHEET_HANDLE_FILL).toBe('#8E8E93');
+    expect(SHEET_HANDLE_FILL).toBe(DesignTokens.colors.text.secondary);
+    const stylesSrc = readFileSync(
+      join(__dirname, '../../components/ui/BottomSheet/BottomSheet.styles.ts'),
+      'utf8',
+    );
+    const handleBlock = stylesSrc.match(/handle:\s*\{[\s\S]*?\n  \},/)?.[0] ?? '';
+    expect(handleBlock).toContain('SHEET_HANDLE_FILL');
+    expect(handleBlock).not.toMatch(/borderWidth/);
+    expect(handleBlock).not.toMatch(/borderColor/);
+  });
+
   it('keeps chrome surface color as opaque hex (system bar / brand fill)', () => {
     expect(SHEET_GLASS_FLOOR).toMatch(/^#[0-9A-Fa-f]{6}$/);
   });
@@ -62,7 +78,29 @@ describe('sheet glass surface tokens', () => {
 
   it('keeps blur intensity high enough to read as glass', () => {
     expect(SHEET_GLASS_INTENSITY).toBeGreaterThanOrEqual(MIN_READABLE_BLUR_INTENSITY);
-    expect(SHEET_GLASS_TINT).toBe('systemThinMaterialDark');
+  });
+
+  it('tints sheet blur and paints the body from the active theme', () => {
+    const glassSrc = readFileSync(
+      join(__dirname, '../../components/ui/BottomSheet/SheetGlassBackground.tsx'),
+      'utf8',
+    );
+    const sheetSrc = readFileSync(
+      join(__dirname, '../../components/ui/BottomSheet/BottomSheet.tsx'),
+      'utf8',
+    );
+    const uiSrc = readFileSync(
+      join(__dirname, '../../components/ui/UIBottomSheet.tsx'),
+      'utf8',
+    );
+    expect(glassSrc).toContain('cardGlassBlurTint(isDark)');
+    expect(glassSrc).not.toMatch(/tint=["']dark["']/);
+    expect(glassSrc).toContain('background.cardSolid');
+    expect(sheetSrc).toContain('tokens.colors.text.secondary');
+    expect(sheetSrc).toContain('tokens.colors.background.cardSolid');
+    expect(sheetSrc).toContain('tokens.colors.border.divider');
+    expect(uiSrc).toContain('tokens.colors.text.secondary');
+    expect(uiSrc).toContain('tokens.colors.background.cardSolid');
   });
 
   it('does not fall back to the old hardcoded green surface', () => {
@@ -173,9 +211,9 @@ describe('sheetActionColors', () => {
           primary: '#FFFFFF',
           secondary: 'rgba(255,255,255,0.7)',
           inverse: '#0A0E0A',
-          danger: '#F87171',
+          danger: '#EF4444',
         },
-        danger: { main: '#F87171' },
+        danger: { main: '#EF4444' },
         glass: { card: { bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.08)' } },
         border: { primary: 'rgba(255,255,255,0.08)', subtle: 'rgba(255,255,255,0.04)' },
       },
@@ -185,5 +223,22 @@ describe('sheetActionColors', () => {
     expect(colors.secondary.backgroundColor.toLowerCase()).not.toBe('#ffffff');
     expect(colors.cancel.backgroundColor).toBe('transparent');
     expect(colors.destructive.backgroundColor.toLowerCase()).not.toBe('#ffffff');
+  });
+
+  it('uses the screen canvas for secondary actions so they contrast with a card sheet', () => {
+    const colors = sheetActionColors({
+      colors: {
+        primary: { main: '#00C805' },
+        background: { primary: '#F4F2F1' },
+        text: {
+          primary: '#1E1A24',
+          secondary: 'rgba(0,0,0,0.65)',
+          inverse: '#FFFFFF',
+          danger: '#EF4444',
+        },
+        border: { primary: 'rgba(0,0,0,0.10)', subtle: 'rgba(0,0,0,0.04)' },
+      },
+    });
+    expect(colors.secondary.backgroundColor).toBe('#F4F2F1');
   });
 });

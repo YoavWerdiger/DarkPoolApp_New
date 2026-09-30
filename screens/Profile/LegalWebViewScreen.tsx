@@ -15,15 +15,18 @@ export default function LegalWebViewScreen({ navigation, route }: any) {
   const title = kind === 'terms' ? 'תנאי שימוש' : 'מדיניות פרטיות';
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top', 'bottom']}>
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: tokens.colors.background.primary }}
+      edges={['top', 'bottom']}
+    >
       <ChatSubScreenHeader title={title} onBack={() => navigation.goBack()} />
       <View style={{ flex: 1 }}>
         <WebView
           source={{ uri: url }}
-          style={{ flex: 1, backgroundColor: '#111111' }}
+          style={{ flex: 1, backgroundColor: tokens.colors.background.primary }}
           startInLoadingState
           renderLoading={() => (
-            <View style={styles.loading}>
+            <View style={[styles.loading, { backgroundColor: tokens.colors.background.primary }]}>
               <ActivityIndicator color={tokens.colors.primary.main} />
             </View>
           )}
@@ -38,6 +41,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#111111',
+    backgroundColor: 'transparent',
   },
 });

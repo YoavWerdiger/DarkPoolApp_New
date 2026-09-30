@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import UICard from '../../../components/ui/UICard';
 import { SignedChange } from '../../../components/ui/ChangeDot';
+import { APP_LAYOUT, UI_CARD_RADIUS } from '../../../components/ui/appLayout';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { DistributionDonut } from '../../Portfolios/components/DistributionDonut';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
@@ -66,7 +67,7 @@ export function HoldingsPieSection({
 
   return (
     <UICard
-      variant="glass"
+      variant="soft"
       padding="md"
       style={styles.card}
       contentContainerStyle={styles.cardContent}
@@ -154,7 +155,9 @@ export function HoldingsListRow({
 
   return (
     <View style={styles.holdingRow}>
-      <TickerLogo symbol={ticker} size={36} borderRadius={18} />
+      <View style={styles.leadingIcon}>
+        <TickerLogo symbol={ticker} size={36} borderRadius={18} />
+      </View>
       <View style={styles.holdingTickerCol}>
         <View style={styles.tickerLine}>
           <Text style={styles.ticker} numberOfLines={1}>
@@ -219,7 +222,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     card: {
       marginBottom: 12,
-      borderRadius: tokens.borderRadius['3xl'],
+      borderRadius: UI_CARD_RADIUS,
     },
     /** UICard שכבת תוכן עם overflow:hidden חותכת שורת מקרא תחתונה (אחר) ליד מסגרת הזכוכית */
     cardContent: {
@@ -239,7 +242,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     honestyTag: {
       fontSize: DARK_POOL_TYPE.caption2.fontSize,
-      fontWeight: '800',
+      fontWeight: DARK_POOL_TYPE.caption2.fontWeight,
       color: tokens.colors.text.tertiary,
       ...darkPoolPhysicalRightText,
     },
@@ -272,14 +275,14 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       flex: 1,
       fontSize: DARK_POOL_TYPE.caption.fontSize,
       lineHeight: DARK_POOL_TYPE.caption.lineHeight,
-      fontWeight: '600',
+      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
       ...darkPoolPhysicalRightText,
     },
     legendPct: {
       fontSize: DARK_POOL_TYPE.caption.fontSize,
       lineHeight: DARK_POOL_TYPE.caption.lineHeight,
-      fontWeight: '700',
+      fontWeight: DARK_POOL_TYPE.sectionTitle.fontWeight,
       color: tokens.colors.text.secondary,
       writingDirection: 'ltr',
     },
@@ -294,10 +297,12 @@ function createRowStyles(tokens: ReturnType<typeof useDesignTokens>) {
       alignItems: 'center',
       alignSelf: 'stretch',
       width: '100%',
-      columnGap: 12,
-      paddingVertical: 12,
-      paddingHorizontal: 14,
+      paddingVertical: 15,
+      paddingHorizontal: APP_LAYOUT.cardPadding,
       minHeight: 56,
+    },
+    leadingIcon: {
+      marginLeft: 12,
     },
     holdingTickerCol: {
       flexGrow: 1,
@@ -318,10 +323,10 @@ function createRowStyles(tokens: ReturnType<typeof useDesignTokens>) {
       direction: 'ltr',
       textAlign: 'right',
       writingDirection: 'ltr',
-      fontSize: 14,
-      fontWeight: '700',
+      fontSize: DARK_POOL_TYPE.cardTitle.fontSize,
+      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
-      lineHeight: 18,
+      lineHeight: DARK_POOL_TYPE.cardTitle.lineHeight,
       flexShrink: 1,
     },
     allocation: {
@@ -331,7 +336,7 @@ function createRowStyles(tokens: ReturnType<typeof useDesignTokens>) {
       marginTop: 3,
       fontSize: DARK_POOL_TYPE.caption2.fontSize,
       lineHeight: DARK_POOL_TYPE.caption2.lineHeight,
-      fontWeight: '600',
+      fontWeight: DARK_POOL_TYPE.caption2.fontWeight,
       color: tokens.colors.text.tertiary,
     },
     holdingValueCol: {
@@ -345,10 +350,10 @@ function createRowStyles(tokens: ReturnType<typeof useDesignTokens>) {
       direction: 'ltr',
       textAlign: 'right',
       writingDirection: 'ltr',
-      fontSize: 15,
-      fontWeight: '700',
+      fontSize: DARK_POOL_TYPE.cardBody.fontSize,
+      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
-      lineHeight: 20,
+      lineHeight: DARK_POOL_TYPE.cardBody.lineHeight,
     },
     holdingReturnRow: {
       alignSelf: 'stretch',
@@ -360,7 +365,7 @@ function createRowStyles(tokens: ReturnType<typeof useDesignTokens>) {
       writingDirection: 'ltr',
       fontSize: DARK_POOL_TYPE.caption2.fontSize,
       lineHeight: DARK_POOL_TYPE.caption2.lineHeight,
-      fontWeight: '700',
+      fontWeight: DARK_POOL_TYPE.sectionTitle.fontWeight,
     },
   });
 }

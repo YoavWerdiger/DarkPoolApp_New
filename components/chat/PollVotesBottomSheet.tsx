@@ -124,7 +124,7 @@ export default function PollVotesBottomSheet({
                         <GlassChip
                           selected
                           disableBlur
-                          style={styles.optionBadge}
+                          style={[styles.optionBadge, { backgroundColor: DesignTokens.colors.background.primary }]}
                           contentContainerStyle={styles.optionBadgeContent}
                         >
                           <Text style={styles.optionBadgeText}>{votesCount}</Text>
@@ -166,9 +166,8 @@ export default function PollVotesBottomSheet({
 }
 
 const createStyles = (tokens: any) => {
-  const borderColor = tokens.colors.border?.primary || tokens.colors.border?.main || 'rgba(255,255,255,0.12)';
-  /** שקוף-זכוכית — לא elevated אטום שחוסם את BlurView של השיט */
-  const cardBg = 'rgba(255,255,255,0.06)';
+  const borderColor = tokens.colors.border.divider;
+  const cardBg = tokens.colors.background.primary;
 
   return StyleSheet.create({
     container: {

@@ -11,6 +11,8 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import { UI_CARD_RADIUS } from '../../../components/ui/appLayout';
+import { APP_TYPE } from '../../../components/ui/appType';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import UICard from '../../../components/ui/UICard';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
@@ -47,7 +49,7 @@ export const PeopleAvatarCard = memo(function PeopleAvatarCard({
       : person.name;
 
   const content = (
-    <UICard variant="glass" glassIntensity="light" padding="none" disableBlur style={[styles.wrap, style]}>
+    <UICard variant="soft" glassIntensity="light" padding="none" disableBlur style={[styles.wrap, style]}>
       <View style={styles.inner}>
         <View style={styles.identity}>
           <View style={styles.textCol}>
@@ -96,7 +98,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     wrap: {
       width: '100%',
-      borderRadius: 16,
+      borderRadius: UI_CARD_RADIUS,
       backgroundColor: 'transparent',
     },
     inner: {
@@ -116,22 +118,24 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     name: {
       ...darkPoolPhysicalRightText,
-      fontSize: 13,
-      fontWeight: '700',
+      fontSize: APP_TYPE.cardSubtitle.fontSize,
+      fontWeight: APP_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
-      lineHeight: 17,
+      lineHeight: APP_TYPE.cardSubtitle.lineHeight,
     },
     meta: {
       ...darkPoolPhysicalRightText,
-      fontSize: 11,
-      fontWeight: '500',
+      fontSize: APP_TYPE.caption2.fontSize,
+      lineHeight: APP_TYPE.caption2.lineHeight,
+      fontWeight: APP_TYPE.caption2.fontWeight,
       color: tokens.colors.text.secondary,
     },
     tickerText: {
       ...dataText,
-      fontSize: 11,
-      fontWeight: '700',
-      color: tokens.colors.primary.main,
+      fontSize: APP_TYPE.caption2.fontSize,
+      lineHeight: APP_TYPE.caption2.lineHeight,
+      fontWeight: APP_TYPE.caption2.fontWeight,
+      color: tokens.colors.text.secondary,
       letterSpacing: 0.4,
       alignSelf: 'flex-end',
     },

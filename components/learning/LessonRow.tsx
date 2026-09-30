@@ -12,8 +12,10 @@ import { ACADEMY_CARD_RADIUS } from './academyCardLayout';
 import { APP_LAYOUT } from '../ui/appLayout';
 import {
   appCardBodyStyle,
+  appCardSubtitleStyle,
   appCardTitleStyle,
 } from '../ui/appType';
+import { ACADEMY_TYPE } from './academyLayout';
 
 interface LessonRowProps {
   lesson: LessonWithProgress & { completed?: boolean; thumbnail?: string | null };
@@ -115,10 +117,6 @@ export const LessonRow: React.FC<LessonRowProps> = ({
             pointerEvents="none"
           />
 
-          <View style={styles.indexPill}>
-            <Text style={styles.indexPillText}>{index + 1}</Text>
-          </View>
-
           {displayDuration ? (
             <View style={styles.durationPill}>
               <Ionicons name="time-outline" size={12} color="#fff" />
@@ -147,6 +145,7 @@ export const LessonRow: React.FC<LessonRowProps> = ({
 
         <View style={styles.body}>
           <View style={styles.titleBlock}>
+            <Text style={styles.indexLabel}>שיעור {index + 1}</Text>
             <Text
               style={[
                 appCardTitleStyle,
@@ -184,7 +183,7 @@ function createStyles(T: ReturnType<typeof useDesignTokens>) {
     card: {
       borderRadius: ACADEMY_CARD_RADIUS,
       overflow: 'hidden',
-      marginBottom: T.spacing.md,
+      marginBottom: APP_LAYOUT.cardStackGap,
       direction: 'ltr',
     },
     touchable: {
@@ -206,24 +205,6 @@ function createStyles(T: ReturnType<typeof useDesignTokens>) {
       alignItems: 'center',
       justifyContent: 'center',
     },
-    indexPill: {
-      position: 'absolute',
-      top: 10,
-      right: 10,
-      minWidth: 28,
-      height: 28,
-      borderRadius: 14,
-      paddingHorizontal: 8,
-      backgroundColor: T.colors.primary.main,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    indexPillText: {
-      fontSize: 13,
-      fontWeight: '800',
-      color: '#fff',
-      lineHeight: 16,
-    },
     durationPill: {
       position: 'absolute',
       bottom: 10,
@@ -237,8 +218,7 @@ function createStyles(T: ReturnType<typeof useDesignTokens>) {
       backgroundColor: 'rgba(0,0,0,0.55)',
     },
     durationText: {
-      fontSize: 11,
-      fontWeight: '600',
+      ...ACADEMY_TYPE.cardSubtitle,
       color: '#fff',
     },
     donePill: {
@@ -285,9 +265,9 @@ function createStyles(T: ReturnType<typeof useDesignTokens>) {
       justifyContent: 'center',
     },
     body: {
-      paddingHorizontal: 18,
-      paddingTop: 14,
-      paddingBottom: 16,
+      paddingHorizontal: APP_LAYOUT.cardPadding,
+      paddingTop: APP_LAYOUT.cardPadding,
+      paddingBottom: APP_LAYOUT.cardPadding,
       alignItems: 'stretch',
       width: '100%',
     },
@@ -295,14 +275,20 @@ function createStyles(T: ReturnType<typeof useDesignTokens>) {
       width: '100%',
       alignItems: 'stretch',
     },
+    indexLabel: {
+      ...appCardSubtitleStyle,
+      marginTop: 0,
+      color: T.colors.text.secondary,
+    },
     title: {
+      marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
       color: T.colors.text.primary,
     },
     titleLocked: {
       color: T.colors.text.tertiary,
     },
     description: {
-      marginTop: APP_LAYOUT.cardTitleToBodyGap,
+      marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
       color: T.colors.text.secondary,
     },
     descriptionLocked: {

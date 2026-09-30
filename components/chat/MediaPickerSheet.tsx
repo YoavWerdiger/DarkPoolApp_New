@@ -39,7 +39,6 @@ import {
   type MediaAttachPermission,
 } from '../../lib/mediaAttachSheet';
 import { DayNavBlurButton } from '../ui/DayNavBlurButton';
-import { chromeSurfaceCardStyle } from '../ui/chromeControl';
 import { ChatAttachCameraSheet } from './ChatAttachCameraSheet';
 import {
   filterRecentsByKind,
@@ -452,11 +451,11 @@ export default function MediaPickerSheet({
     <View style={styles.peekActions}>
       <View style={styles.primaryRow}>
         <TouchableOpacity
-          style={[styles.primaryTile, chromeSurfaceCardStyle(tokens), styles.primaryTileGallery]}
+          style={styles.primaryTile}
           onPress={expandGallery}
           activeOpacity={0.82}
           accessibilityRole="button"
-          accessibilityLabel="גלריה — תמונות וסרטונים"
+          accessibilityLabel="גלריה"
         >
           <View style={styles.primaryIconWrap}>
             <Ionicons name="images" size={26} color={tokens.colors.text.primary} />
@@ -465,18 +464,15 @@ export default function MediaPickerSheet({
             <Text style={styles.primaryTitle} numberOfLines={1}>
               גלריה
             </Text>
-            <Text style={styles.primaryHint} numberOfLines={1}>
-              תמונות וסרטונים
-            </Text>
           </View>
         </TouchableOpacity>
         {showCameraButton ? (
           <TouchableOpacity
-            style={[styles.primaryTile, chromeSurfaceCardStyle(tokens)]}
+            style={styles.primaryTile}
             onPress={openCamera}
             activeOpacity={0.82}
             accessibilityRole="button"
-            accessibilityLabel="מצלמה — צילום מיידי"
+            accessibilityLabel="מצלמה"
           >
             <View style={styles.primaryIconWrap}>
               <Ionicons name="camera" size={26} color={tokens.colors.text.primary} />
@@ -485,9 +481,6 @@ export default function MediaPickerSheet({
               <Text style={styles.primaryTitle} numberOfLines={1}>
                 מצלמה
               </Text>
-              <Text style={styles.primaryHint} numberOfLines={1}>
-                צילום מהיר
-              </Text>
             </View>
           </TouchableOpacity>
         ) : null}
@@ -495,7 +488,6 @@ export default function MediaPickerSheet({
 
       {secondaryActions.length > 0 ? (
         <View style={styles.secondaryBlock}>
-          <Text style={styles.secondaryHeading}>כלים נוספים</Text>
           <View style={styles.secondaryRow}>
           {secondaryActions.map((action) => (
             <TouchableOpacity
@@ -506,7 +498,7 @@ export default function MediaPickerSheet({
               accessibilityRole="button"
               accessibilityLabel={action.label}
             >
-              <View style={[styles.actionCircle, chromeSurfaceCardStyle(tokens)]}>
+              <View style={styles.actionCircle}>
                 {action.icon === 'poll-image' ? (
                   <Image
                     source={require('../../assets/icons/ico-40-poll-2.png')}
@@ -566,7 +558,7 @@ export default function MediaPickerSheet({
                 </Text>
                 <TouchableOpacity
                   onPress={requestPermission}
-                  style={[styles.permissionBtn, chromeSurfaceCardStyle(tokens)]}
+                  style={styles.permissionBtn}
                   accessibilityRole="button"
                   accessibilityLabel={MEDIA_ATTACH_PERMISSION_CTA}
                 >
@@ -696,7 +688,7 @@ const createStyles = (
     thumb: {
       width: '100%',
       height: '100%',
-      backgroundColor: 'rgba(255,255,255,0.06)',
+      backgroundColor: tokens.colors.background.primary,
     },
     videoBadge: {
       position: 'absolute',
@@ -740,7 +732,7 @@ const createStyles = (
       gap: MEDIA_ATTACH_GRID_GAP,
     },
     skeletonCell: {
-      backgroundColor: 'rgba(255,255,255,0.06)',
+      backgroundColor: tokens.colors.background.primary,
     },
     emptyWrap: {
       flexGrow: 1,
@@ -779,6 +771,8 @@ const createStyles = (
       borderRadius: 18,
       paddingHorizontal: 18,
       paddingVertical: 10,
+      backgroundColor: tokens.colors.background.primary,
+      borderWidth: 0,
     },
     permissionBtnLabel: {
       color: tokens.colors.text.primary,
@@ -829,8 +823,7 @@ const createStyles = (
       flexDirection: 'row',
       alignItems: 'center',
       gap: 10,
-    },
-    primaryTileGallery: {
+      backgroundColor: tokens.colors.background.primary,
       borderWidth: 0,
     },
     primaryIconWrap: {
@@ -854,24 +847,8 @@ const createStyles = (
       width: '100%',
       textAlign: 'right',
     },
-    primaryHint: {
-      ...appPhysicalRightText,
-      fontSize: 11,
-      fontWeight: '500',
-      color: tokens.colors.text.tertiary,
-      width: '100%',
-      textAlign: 'right',
-    },
     secondaryBlock: {
       gap: 10,
-    },
-    secondaryHeading: {
-      ...appPhysicalRightText,
-      fontSize: APP_TYPE.sectionSubtitle.fontSize,
-      fontWeight: '700',
-      color: tokens.colors.text.secondary,
-      paddingHorizontal: 4,
-      textAlign: 'right',
     },
     secondaryRow: {
       ...MEDIA_ATTACH_GRID_ROW,
@@ -907,6 +884,8 @@ const createStyles = (
       borderRadius: 26,
       alignItems: 'center',
       justifyContent: 'center',
+      backgroundColor: tokens.colors.background.primary,
+      borderWidth: 0,
     },
     actionLabel: {
       ...appPhysicalRightText,

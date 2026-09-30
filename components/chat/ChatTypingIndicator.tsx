@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useMemo } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { LIGHT_CANVAS } from '../ui/designTokensStatic';
 import { ChatTypingIndicator as TypingUser } from '../../types/chat.types';
 
 interface ChatTypingIndicatorProps {
@@ -90,7 +91,9 @@ function ChatTypingIndicator({ typingUsers }: ChatTypingIndicatorProps) {
   );
 }
 
-const createStyles = (tokens: any) => StyleSheet.create({
+const createStyles = (tokens: any) => {
+  const isDarkMode = tokens.colors.background.primary !== LIGHT_CANVAS;
+  return StyleSheet.create({
   container: {
     paddingHorizontal: tokens.spacing.md,
     paddingBottom: tokens.spacing.xs,
@@ -98,17 +101,17 @@ const createStyles = (tokens: any) => StyleSheet.create({
   bubble: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    backgroundColor: tokens.colors.background.secondary,
+    backgroundColor: tokens.colors.bubbleOther,
     borderRadius: tokens.borderRadius.lg,
     paddingHorizontal: tokens.spacing.md,
     paddingVertical: tokens.spacing.sm + 1,
     alignSelf: 'flex-end',
     gap: tokens.spacing.sm,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.12,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowColor: isDarkMode ? '#000' : 'transparent',
+    shadowOffset: isDarkMode ? { width: 0, height: 1 } : { width: 0, height: 0 },
+    shadowOpacity: isDarkMode ? 0.12 : 0,
+    shadowRadius: isDarkMode ? 3 : 0,
+    elevation: isDarkMode ? 2 : 0,
   },
   text: {
     fontSize: tokens.typography.bodySmall.size,
@@ -124,8 +127,9 @@ const createStyles = (tokens: any) => StyleSheet.create({
     width: 5,
     height: 5,
     borderRadius: 3,
-    backgroundColor: tokens.colors.text.tertiary,
+    backgroundColor: tokens.colors.text.secondary,
   },
-});
+  });
+};
 
 export default ChatTypingIndicator;

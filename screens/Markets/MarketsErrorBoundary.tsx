@@ -1,6 +1,7 @@
 import React, { Component, type ErrorInfo, type ReactNode } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { MARKETS_LAYOUT, MARKETS_TYPE } from './marketsLayout';
 
 type Props = { children: ReactNode };
 
@@ -40,22 +41,26 @@ export function MarketsErrorBoundary({ children }: Props) {
   const getStyles = () => ({
     container: {
       ...StyleSheet.absoluteFill,
-      padding: tokens.spacing.lg,
+      padding: MARKETS_LAYOUT.screenPaddingHorizontal,
       justifyContent: 'center',
       alignItems: 'center',
       backgroundColor: tokens.colors.background.screen,
     },
     title: {
-      fontSize: tokens.typography.titleSmall.size,
-      fontWeight: tokens.typography.fontWeight.bold as '700',
+      fontSize: MARKETS_TYPE.sectionTitle.fontSize,
+      fontWeight: MARKETS_TYPE.sectionTitle.fontWeight,
+      lineHeight: MARKETS_TYPE.sectionTitle.lineHeight,
+      letterSpacing: MARKETS_TYPE.sectionTitle.letterSpacing,
       color: tokens.colors.text.primary,
-      textAlign: 'center',
-      marginBottom: tokens.spacing.sm,
+      textAlign: 'center' as const,
+      marginBottom: MARKETS_LAYOUT.cardTitleToBodyGap,
     },
     body: {
-      fontSize: tokens.typography.bodySmall.size,
+      fontSize: MARKETS_TYPE.body.fontSize,
+      fontWeight: MARKETS_TYPE.body.fontWeight,
+      lineHeight: MARKETS_TYPE.body.lineHeight,
       color: tokens.colors.text.secondary,
-      textAlign: 'center',
+      textAlign: 'center' as const,
     },
   });
 

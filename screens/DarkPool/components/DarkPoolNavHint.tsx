@@ -7,6 +7,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import UICard from '../../../components/ui/UICard';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { APP_LAYOUT, UI_CARD_RADIUS } from '../../../components/ui/appLayout';
 import {
   DARK_POOL_TYPE,
   darkPoolPhysicalRightText,
@@ -29,9 +30,11 @@ export function DarkPoolNavHint({ variant = 'feed' }: Props) {
       : ['חפשו או בחרו משקיע → עקבו → הפעילות תופיע ב«מעקב»'];
 
   return (
-    <UICard variant="glass" glassIntensity="subtle" padding="none" style={styles.wrap}>
+    <UICard variant="soft" glassIntensity="subtle" padding="none" style={styles.wrap}>
       <View style={styles.inner}>
-        <Ionicons name="information-circle-outline" size={18} color={tokens.colors.text.tertiary} />
+        <View style={styles.leadingIcon}>
+          <Ionicons name="information-circle-outline" size={18} color={tokens.colors.text.primary} />
+        </View>
         <View style={styles.textCol}>
           {lines.map((line) => (
             <Text key={line} style={styles.line}>
@@ -49,7 +52,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     wrap: {
       marginHorizontal: tokens.layout.screenPadding,
       marginBottom: tokens.spacing.md,
-      borderRadius: tokens.borderRadius.lg,
+      borderRadius: UI_CARD_RADIUS,
       overflow: 'hidden',
       backgroundColor: 'transparent',
     },
@@ -57,16 +60,17 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       direction: 'rtl',
       flexDirection: 'row',
       alignItems: 'flex-start',
-      gap: 10,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
+      paddingHorizontal: APP_LAYOUT.cardPadding,
+      paddingVertical: 15,
     },
+    leadingIcon: { marginLeft: 12 },
     textCol: { flex: 1, gap: 2, alignItems: 'stretch' },
     line: {
       ...darkPoolPhysicalRightText,
       width: '100%',
       fontSize: DARK_POOL_TYPE.caption.fontSize,
-      lineHeight: 18,
+      lineHeight: DARK_POOL_TYPE.caption.lineHeight,
+      fontWeight: DARK_POOL_TYPE.caption.fontWeight,
       color: tokens.colors.text.tertiary,
     },
   });

@@ -20,7 +20,9 @@ import ExportTradeImage, {
   type ExportableTrade,
 } from '../../../components/Journal/ExportTradeImage';
 import {
+  JOURNAL_LAYOUT,
   journalBodyTextStyle,
+  journalCardMetricValueSecondaryStyle,
   journalPhysicalRightText,
   journalSectionSubtitleStyle,
   journalSectionTitleStyle,
@@ -112,8 +114,7 @@ export default function HistoryTab({ portfolioId, refreshKey }: Props) {
           paddingHorizontal: 30,
         },
         summaryCard: {
-          borderRadius: 20,
-          marginBottom: 12,
+          marginBottom: JOURNAL_LAYOUT.cardStackGap,
           overflow: 'hidden',
         },
         summaryInner: {
@@ -132,10 +133,7 @@ export default function HistoryTab({ portfolioId, refreshKey }: Props) {
           ...journalPhysicalRightText,
         },
         summaryValue: {
-          fontSize: 15,
-          fontWeight: '800',
-          lineHeight: 22,
-          writingDirection: 'ltr',
+          ...journalCardMetricValueSecondaryStyle,
           textAlign: 'right',
         },
         searchRow: { marginBottom: 10 },
@@ -204,7 +202,7 @@ export default function HistoryTab({ portfolioId, refreshKey }: Props) {
     <View style={layoutStyles.root}>
       {trades.length > 0 && (
         <UICard
-          variant="glass"
+          variant="soft"
           glassIntensity="light"
           padding="none"
           style={layoutStyles.summaryCard}
@@ -234,7 +232,7 @@ export default function HistoryTab({ portfolioId, refreshKey }: Props) {
 
       <View style={layoutStyles.searchRow}>
         <UICard
-          variant="glass"
+          variant="soft"
           glassIntensity="light"
           padding="none"
           style={layoutStyles.searchCardWrap}

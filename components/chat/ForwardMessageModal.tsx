@@ -38,7 +38,6 @@ import {
 import { chatRtlRow, chatRtlText } from './chatDesignTokens';
 import { chatComposerSafeBottomInset } from './chatInputLayout';
 
-const SHEET_BORDER = 'rgba(255, 255, 255, 0.10)';
 /** snap יחיד — קונטיינר השיט בגובה מסך מלא; חייבים לפצות על החלק מתחת ל-viewport. */
 const FORWARD_SHEET_SNAP = 0.9;
 const FORWARD_SHEET_OFFSCREEN_BELOW = Math.ceil(
@@ -306,7 +305,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       alignItems: 'center',
       paddingBottom: 12,
       borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: SHEET_BORDER,
+      borderBottomColor: tokens.colors.border.divider,
       gap: 10,
     },
     headerCenter: {
@@ -386,7 +385,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       width: 48,
       height: 48,
       borderRadius: 24,
-      backgroundColor: tokens.colors.background.secondary,
+      backgroundColor: tokens.colors.background.primary,
       justifyContent: 'center',
       alignItems: 'center',
       flexShrink: 0,
@@ -407,8 +406,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       height: 24,
       borderRadius: 12,
       borderWidth: 1.5,
-      borderColor: 'rgba(255,255,255,0.28)',
-      backgroundColor: 'rgba(255,255,255,0.04)',
+      borderColor: tokens.colors.border.divider,
+      backgroundColor: tokens.colors.background.primary,
       justifyContent: 'center',
       alignItems: 'center',
       flexShrink: 0,
@@ -421,7 +420,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       flexShrink: 0,
       paddingTop: 12,
       borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: SHEET_BORDER,
+      borderTopColor: tokens.colors.border.divider,
     },
     forwardButton: {
       height: 50,
@@ -431,7 +430,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       backgroundColor: tokens.colors.primary.main,
     },
     forwardButtonDisabled: {
-      backgroundColor: 'rgba(255,255,255,0.08)',
+      backgroundColor: tokens.colors.background.primary,
       opacity: 1,
     },
     forwardButtonText: {

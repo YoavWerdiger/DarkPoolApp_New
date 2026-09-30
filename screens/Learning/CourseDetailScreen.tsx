@@ -1,7 +1,6 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useCallback, useRef } from 'react';
-import { View, Text, ScrollView, StyleSheet, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
+import { View, Text, ScrollView, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useCourse, useEnrollInCourse, useCourseProgress } from '../../hooks/useLearning';
 import {
@@ -13,6 +12,14 @@ import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { LessonWithProgress } from '../../types/learning';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import UICard from '../../components/ui/UICard';
+import UIButton from '../../components/ui/UIButton';
+import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
+import {
+  ACADEMY_TYPE,
+  academyCardSubtitleStyle,
+  academyCardTitleStyle,
+  academySectionTitleStyle,
+} from '../../components/learning/academyLayout';
 import { ScreenChrome } from '../../components/ui';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { isLessonLockedForUser } from '../../components/learning/academyCourses';
@@ -116,7 +123,6 @@ export const CourseDetailScreen: React.FC = () => {
   if ((isLoading || !allowHeavy) && !course) {
     return (
       <ScreenChrome>
-        <StatusBar style="light" />
         <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
@@ -130,7 +136,6 @@ export const CourseDetailScreen: React.FC = () => {
   if (error || !course) {
     return (
       <ScreenChrome>
-        <StatusBar style="light" />
         <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
           <View style={styles.errorContainer}>
             <Text style={styles.errorIcon}>⚠️</Text>
@@ -149,7 +154,6 @@ export const CourseDetailScreen: React.FC = () => {
 
   return (
     <ScreenChrome>
-      <StatusBar style="light" />
       <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
         <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
           <ScrollView 
@@ -177,9 +181,8 @@ export const CourseDetailScreen: React.FC = () => {
 
         {/* Content */}
           <UICard
-            variant="blur"
+            variant="soft"
             padding="lg"
-            showGlassBorder={false}
             style={[styles.infoCard, academyCardFrameStyle(frameTier)]}
           >
             <View style={styles.courseInfoStack}>
@@ -259,34 +262,29 @@ export const CourseDetailScreen: React.FC = () => {
           </UICard>
 
           {/* Action Button */}
-          <View style={{ marginBottom: DesignTokens.spacing.lg }}>
+          <View style={{ marginBottom: APP_LAYOUT.sectionHeaderToContent }}>
             {isEnrolled ? (
-              <TouchableOpacity
-                style={styles.continueButton}
+              <UIButton
+                title={lastLessonId ? 'המשך למידה' : 'התחל'}
+                variant="primary"
+                fullWidth
                 onPress={handleContinueLearning}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.continueButtonText}>
-                  {lastLessonId ? 'המשך למידה ←' : 'התחל ←'}
-                </Text>
-              </TouchableOpacity>
+              />
             ) : (
-              <TouchableOpacity
-                style={styles.enrollButton}
-                onPress={handleEnroll}
+              <UIButton
+                title={
+                  course.access === 'free'
+                    ? 'הירשם בחינם'
+                    : course.access === 'registration'
+                      ? 'הירשם לקורס'
+                      : 'קנה קורס'
+                }
+                variant="primary"
+                fullWidth
+                loading={enrollMutation.isPending}
                 disabled={enrollMutation.isPending}
-                activeOpacity={0.8}
-              >
-                {enrollMutation.isPending ? (
-                  <ActivityIndicator color={DesignTokens.colors.text.primary} size="small" />
-                ) : (
-                  <Text style={styles.enrollButtonText}>
-                    {course.access === 'free' ? 'הירשם בחינם' : 
-                     course.access === 'registration' ? 'הירשם לקורס' : 
-                     'קנה קורס'}
-                  </Text>
-                )}
-              </TouchableOpacity>
+                onPress={handleEnroll}
+              />
             )}
           </View>
 
@@ -357,7 +355,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   loadingText: {
     marginTop: tokens.spacing.md,
-    fontSize: tokens.typography.fontSize.base,
+    ...ACADEMY_TYPE.body,
     color: tokens.colors.text.secondary,
   },
   errorContainer: {
@@ -371,24 +369,25 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     marginBottom: tokens.spacing.lg,
   },
   errorTitle: {
-    fontSize: tokens.typography.fontSize.lg,
-    fontWeight: tokens.typography.fontWeight.semibold as any,
+    ...ACADEMY_TYPE.cardTitle,
     color: tokens.colors.text.primary,
-    marginBottom: tokens.spacing.sm,
+    marginBottom: APP_LAYOUT.cardTitleToSubtitleGap,
     textAlign: 'center',
   },
   errorMessage: {
-    fontSize: tokens.typography.fontSize.sm,
+    ...ACADEMY_TYPE.body,
     color: tokens.colors.text.secondary,
     textAlign: 'center',
   },
   coverContainer: {
     height: 200,
-    marginBottom: tokens.spacing.lg,
+    marginBottom: APP_LAYOUT.cardStackGap,
     overflow: 'hidden',
+    borderRadius: UI_CARD_RADIUS,
   },
   infoCard: {
-    marginBottom: tokens.spacing.lg,
+    marginBottom: APP_LAYOUT.cardStackGap,
+    borderRadius: UI_CARD_RADIUS,
   },
   coverImage: {
     width: '100%',
@@ -410,24 +409,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   titleBlock: {
     width: '100%',
-    gap: tokens.spacing.xs,
     alignItems: 'stretch',
   },
   title: {
-    fontSize: tokens.typography.fontSize['2xl'],
-    fontWeight: tokens.typography.fontWeight.bold as any,
+    ...academyCardTitleStyle,
     color: tokens.colors.text.primary,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-    lineHeight: Math.round(tokens.typography.fontSize['2xl'] * 1.22),
   },
   subtitle: {
-    fontSize: tokens.typography.fontSize.base,
-    fontWeight: '500' as any,
-    color: tokens.colors.text.secondary,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-    lineHeight: Math.round(tokens.typography.fontSize.base * 1.45),
+    ...academyCardSubtitleStyle,
   },
   instructorContainer: {
     flexDirection: 'row-reverse',
@@ -440,7 +429,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: tokens.spacing.md,
+    marginLeft: 12,
   },
   avatarImage: {
     width: '100%',
@@ -448,28 +437,22 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     borderRadius: tokens.borderRadius.full,
   } as any,
   avatarPlaceholder: {
-    fontSize: tokens.typography.fontSize.lg,
-    fontWeight: tokens.typography.fontWeight.bold as any,
+    ...ACADEMY_TYPE.cardTitle,
     color: tokens.colors.text.primary,
+    textAlign: 'center',
   },
   instructorInfo: {
     flex: 1,
   },
   instructorName: {
-    fontSize: tokens.typography.fontSize.base,
-    fontWeight: tokens.typography.fontWeight.semibold as any,
+    ...ACADEMY_TYPE.cardTitle,
     color: tokens.colors.text.primary,
     textAlign: 'right',
     writingDirection: 'rtl',
-    lineHeight: Math.round(tokens.typography.fontSize.base * 1.35),
-    marginBottom: tokens.spacing.micro,
   },
   instructorBio: {
-    fontSize: tokens.typography.fontSize.sm,
-    color: tokens.colors.text.secondary,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-    lineHeight: Math.round(tokens.typography.fontSize.sm * 1.45),
+    ...academyCardSubtitleStyle,
+    marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
   },
   progressContainer: {
     width: '100%',
@@ -481,17 +464,13 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     marginBottom: tokens.spacing.sm,
   },
   progressTitle: {
-    fontSize: tokens.typography.fontSize.base,
-    fontWeight: tokens.typography.fontWeight.semibold as any,
+    ...ACADEMY_TYPE.cardTitle,
     color: tokens.colors.text.primary,
     textAlign: 'right',
-    lineHeight: Math.round(tokens.typography.fontSize.base * 1.3),
   },
   progressPercentage: {
-    fontSize: tokens.typography.fontSize.base,
-    fontWeight: tokens.typography.fontWeight.bold as any,
-    color: tokens.colors.primary.main,
-    lineHeight: Math.round(tokens.typography.fontSize.base * 1.3),
+    ...ACADEMY_TYPE.cardTitle,
+    color: tokens.colors.text.primary,
   },
   progressBar: {
     height: 8,
@@ -509,17 +488,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     gap: tokens.spacing.sm,
   },
   descriptionTitle: {
-    fontSize: tokens.typography.fontSize.sm,
-    fontWeight: tokens.typography.fontWeight.semibold as any,
-    color: tokens.colors.text.primary,
+    ...ACADEMY_TYPE.cardMetricLabel,
+    color: tokens.colors.text.secondary,
     textAlign: 'right',
     writingDirection: 'rtl',
-    lineHeight: Math.round(tokens.typography.fontSize.sm * 1.35),
   },
   description: {
-    fontSize: tokens.typography.fontSize.sm,
+    ...ACADEMY_TYPE.cardBody,
     color: tokens.colors.text.secondary,
-    lineHeight: Math.round(tokens.typography.fontSize.sm * 1.52),
     textAlign: 'right',
     writingDirection: 'rtl',
   },
@@ -528,12 +504,10 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     gap: tokens.spacing.sm,
   },
   tagsTitle: {
-    fontSize: tokens.typography.fontSize.sm,
-    fontWeight: tokens.typography.fontWeight.semibold as any,
-    color: tokens.colors.text.primary,
+    ...ACADEMY_TYPE.cardMetricLabel,
+    color: tokens.colors.text.secondary,
     textAlign: 'right',
     writingDirection: 'rtl',
-    lineHeight: Math.round(tokens.typography.fontSize.sm * 1.35),
   },
   tagsRow: {
     flexDirection: 'row-reverse',
@@ -541,52 +515,19 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     gap: tokens.spacing.xs,
   },
   tag: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: tokens.colors.background.navChrome,
     paddingHorizontal: tokens.spacing.sm,
     paddingVertical: tokens.spacing.xs,
     borderRadius: tokens.borderRadius.sm,
   },
   tagText: {
-    fontSize: tokens.typography.fontSize.sm,
-    color: tokens.colors.text.primary,
-    lineHeight: Math.round(tokens.typography.fontSize.sm * 1.3),
-  },
-  enrollButton: {
-    backgroundColor: tokens.colors.primary.main,
-    paddingVertical: tokens.spacing.md,
-    paddingHorizontal: tokens.spacing.lg,
-    borderRadius: tokens.borderRadius.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 50,
-    ...tokens.shadows.md,
-  },
-  enrollButtonText: {
-    fontSize: tokens.typography.fontSize.base,
-    fontWeight: tokens.typography.fontWeight.semibold as any,
-    color: tokens.colors.text.primary,
-  },
-  continueButton: {
-    backgroundColor: tokens.colors.primary.main,
-    paddingVertical: tokens.spacing.md,
-    paddingHorizontal: tokens.spacing.lg,
-    borderRadius: tokens.borderRadius.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 50,
-    ...tokens.shadows.md,
-  },
-  continueButtonText: {
-    fontSize: tokens.typography.fontSize.lg,
-    fontWeight: tokens.typography.fontWeight.semibold as any,
+    ...ACADEMY_TYPE.caption,
     color: tokens.colors.text.primary,
   },
   modulesTitle: {
-    fontSize: tokens.typography.fontSize.lg,
-    fontWeight: tokens.typography.fontWeight.semibold as any,
+    ...academySectionTitleStyle,
     color: tokens.colors.text.primary,
-    marginBottom: tokens.spacing.lg,
-    textAlign: 'right',
+    marginBottom: APP_LAYOUT.sectionHeaderToContent,
   },
 });
 

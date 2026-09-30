@@ -39,6 +39,8 @@ import {
 import { logger } from '../../utils/logger';
 import { getChatMediaDisplayUri } from '../../services/chat/chatSignedMediaUrl';
 import { chatPalette as COLORS } from './chatDesignTokens';
+import { useDesignTokens } from '../ui/DesignTokens';
+import { DayNavBlurButton } from '../ui/DayNavBlurButton';
 import { useMediaZoomGestures } from './useMediaZoomGestures';
 
 export interface MediaGalleryItem {
@@ -137,6 +139,7 @@ export default function MediaGalleryViewer({
   mediaItems,
   initialIndex = 0,
 }: MediaGalleryViewerProps) {
+  const tokens = useDesignTokens();
   const insets = useSafeAreaInsets();
   const flatListRef = useRef<FlatList>(null);
   const videoRef = useRef<Video>(null);
@@ -548,9 +551,9 @@ export default function MediaGalleryViewer({
         <View style={styles.topBar}>
           <BlurView intensity={80} tint="dark" style={styles.topBlur}>
             <View style={[styles.topContent, { paddingTop: insets.top + 8 }]}>
-              <Pressable onPress={onClose} style={styles.closeButton}>
-                <X size={24} color={COLORS.text} strokeWidth={2} />
-              </Pressable>
+              <DayNavBlurButton onPress={onClose} size={44} accessibilityLabel="סגור">
+                <X size={24} color={tokens.colors.text.primary} strokeWidth={2} />
+              </DayNavBlurButton>
               {mediaItems.length > 1 ? (
                 <View style={styles.counter}>
                   <Text style={styles.counterText}>
@@ -673,14 +676,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     paddingBottom: 12,
     paddingHorizontal: 16,
-  },
-  closeButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   topSpacer: {
     flex: 1,

@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { AccessLevel } from '../../types/learning';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { ACADEMY_TYPE } from './academyLayout';
 
 interface AccessBadgeProps {
   access: AccessLevel;
@@ -18,8 +19,7 @@ export const AccessBadge: React.FC<AccessBadgeProps> = ({ access }) => {
       ...DesignTokens.shadows.sm,
     },
     badgeText: {
-      fontSize: DesignTokens.typography.fontSize.xs,
-      fontWeight: DesignTokens.typography.fontWeight.semibold as any,
+      ...ACADEMY_TYPE.caption,
       textAlign: 'center',
     },
   }), [DesignTokens]);

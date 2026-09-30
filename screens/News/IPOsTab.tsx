@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 import { Rocket, Calendar, DollarSign } from 'lucide-react-native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
+import { APP_TYPE } from '../../components/ui/appType';
 import { supabase } from '../../lib/supabase';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 
@@ -70,13 +72,12 @@ const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
   return (
     <Pressable
       style={{
-        marginHorizontal: 16,
-        marginBottom: 12,
-        borderRadius: 18,
-        paddingVertical: 14,
-        paddingHorizontal: 16,
-        backgroundColor: DesignTokens.colors.background.secondary,
-        borderColor: 'rgba(255,255,255,0.06)'
+        marginHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+        marginBottom: APP_LAYOUT.cardStackGap,
+        borderRadius: UI_CARD_RADIUS,
+        paddingVertical: 15,
+        paddingHorizontal: APP_LAYOUT.cardPadding,
+        backgroundColor: DesignTokens.colors.background.cardSolid,
       }}
     >
       {/* Header - Company Name & Status */}
@@ -84,8 +85,7 @@ const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
         <View style={{ flex: 1 }}>
           <Text
             style={{
-              fontSize: 18,
-              fontWeight: '700',
+              ...APP_TYPE.cardTitle,
               color: DesignTokens.colors.text.primary,
               textAlign: 'right'
             }}
@@ -93,14 +93,14 @@ const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
           >
             {ipo.name || ipo.code}
           </Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-            <Text style={{ fontSize: 12, color: DesignTokens.colors.text.tertiary }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: APP_LAYOUT.cardTitleToSubtitleGap }}>
+            <Text style={{ ...APP_TYPE.caption, color: DesignTokens.colors.text.tertiary }}>
               {ipo.code}
             </Text>
             {ipo.exchange && (
               <>
-                <Text style={{ fontSize: 12, color: DesignTokens.colors.text.tertiary, marginHorizontal: 6 }}>•</Text>
-                <Text style={{ fontSize: 12, color: DesignTokens.colors.text.tertiary }}>
+                <Text style={{ ...APP_TYPE.caption, color: DesignTokens.colors.text.tertiary, marginHorizontal: 6 }}>•</Text>
+                <Text style={{ ...APP_TYPE.caption, color: DesignTokens.colors.text.tertiary }}>
                   {ipo.exchange}
                 </Text>
               </>
@@ -117,7 +117,7 @@ const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
             marginLeft: 8
           }}
         >
-          <Text style={{ fontSize: 12, color: getDealTypeColor(ipo.deal_type), fontWeight: '700' }}>
+          <Text style={{ ...APP_TYPE.caption, color: getDealTypeColor(ipo.deal_type) }}>
             {getDealTypeLabel(ipo.deal_type)}
           </Text>
         </View>
@@ -126,11 +126,11 @@ const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
       {/* Date Info */}
       {ipo.start_date && (
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12, backgroundColor: 'rgba(59, 130, 246, 0.1)' }}>
-          <Calendar size={14} color="#3B82F6" strokeWidth={2} style={{ marginLeft: 8 }} />
-          <Text style={{ fontSize: 13, color: DesignTokens.colors.text.primary, fontWeight: '600' }}>
+          <Calendar size={14} color="#3B82F6" strokeWidth={2} style={{ marginLeft: APP_LAYOUT.cardTitleToBodyGap }} />
+          <Text style={{ ...APP_TYPE.cardSubtitle, color: DesignTokens.colors.text.primary }}>
             תאריך מסחר ראשון:
           </Text>
-          <Text style={{ fontSize: 13, color: '#3B82F6', fontWeight: '700', marginRight: 6 }}>
+          <Text style={{ ...APP_TYPE.cardSubtitle, color: '#3B82F6', marginLeft: 6 }}>
             {formatDate(ipo.start_date)}
           </Text>
         </View>
@@ -142,15 +142,15 @@ const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
           {hasPricing && (
             <View style={{ flex: 1 }}>
               <DollarSign size={16} color={DesignTokens.colors.text.tertiary} strokeWidth={2} style={{ marginBottom: 4, alignSelf: 'flex-end' }} />
-              <Text style={{ fontSize: 11, color: DesignTokens.colors.text.tertiary, marginBottom: 4, textAlign: 'right' }}>
+              <Text style={{ ...APP_TYPE.caption2, color: DesignTokens.colors.text.tertiary, marginBottom: APP_LAYOUT.cardMetricLabelToValueGap, textAlign: 'right' }}>
                 {ipo.offer_price > 0 ? 'מחיר הצעה' : 'טווח מחירים'}
               </Text>
               {ipo.offer_price > 0 ? (
-                <Text style={{ fontSize: 17, fontWeight: '700', color: DesignTokens.colors.success.main, textAlign: 'right' }}>
+                <Text style={{ ...APP_TYPE.cardTitle, color: DesignTokens.colors.success.main, textAlign: 'right' }}>
                   ${ipo.offer_price.toFixed(2)}
                 </Text>
               ) : (
-                <Text style={{ fontSize: 15, fontWeight: '700', color: DesignTokens.colors.text.primary, textAlign: 'right' }}>
+                <Text style={{ ...APP_TYPE.body, color: DesignTokens.colors.text.primary, textAlign: 'right' }}>
                   ${ipo.price_from.toFixed(2)} - ${ipo.price_to.toFixed(2)}
                 </Text>
               )}
@@ -159,10 +159,10 @@ const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
 
           {ipo.shares > 0 && (
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 11, color: DesignTokens.colors.text.tertiary, marginBottom: 4, textAlign: 'right' }}>
+              <Text style={{ ...APP_TYPE.caption2, color: DesignTokens.colors.text.tertiary, marginBottom: APP_LAYOUT.cardMetricLabelToValueGap, textAlign: 'right' }}>
                 מניות
               </Text>
-              <Text style={{ fontSize: 17, fontWeight: '700', color: DesignTokens.colors.text.primary, textAlign: 'right' }}>
+              <Text style={{ ...APP_TYPE.cardTitle, color: DesignTokens.colors.text.primary, textAlign: 'right' }}>
                 {formatShares(ipo.shares)}
               </Text>
             </View>
@@ -172,14 +172,14 @@ const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
 
       {/* Filing Dates */}
       {(ipo.filing_date || ipo.amended_date) && (
-        <View style={{ flexDirection: 'row', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' }}>
+        <View style={{ flexDirection: 'row', marginTop: APP_LAYOUT.cardTitleToBodyGap, paddingTop: APP_LAYOUT.cardTitleToBodyGap, borderTopWidth: 1, borderTopColor: DesignTokens.colors.border.divider }}>
           {ipo.filing_date && (
-            <Text style={{ fontSize: 11, color: DesignTokens.colors.text.tertiary, marginLeft: 12 }}>
+            <Text style={{ ...APP_TYPE.caption2, color: DesignTokens.colors.text.tertiary, marginLeft: APP_LAYOUT.cardTitleToBodyGap }}>
               הוגש: {formatDate(ipo.filing_date)}
             </Text>
           )}
           {ipo.amended_date && (
-            <Text style={{ fontSize: 11, color: DesignTokens.colors.text.tertiary }}>
+            <Text style={{ ...APP_TYPE.caption2, color: DesignTokens.colors.text.tertiary }}>
               עודכן: {formatDate(ipo.amended_date)}
             </Text>
           )}
@@ -233,10 +233,10 @@ export default function IPOsTab() {
   const renderEmptyState = () => (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 40 }}>
       <Rocket size={64} color={DesignTokens.colors.text.tertiary} strokeWidth={1.5} />
-      <Text style={{ fontSize: 16, color: DesignTokens.colors.text.secondary, marginTop: 16, textAlign: 'center' }}>
+      <Text style={{ ...APP_TYPE.body, color: DesignTokens.colors.text.secondary, marginTop: APP_LAYOUT.componentGap, textAlign: 'center' }}>
         אין הנפקות זמינות כרגע
       </Text>
-      <Text style={{ fontSize: 14, color: DesignTokens.colors.text.tertiary, marginTop: 8, textAlign: 'center', paddingHorizontal: 40 }}>
+      <Text style={{ ...APP_TYPE.cardSubtitle, color: DesignTokens.colors.text.tertiary, marginTop: APP_LAYOUT.groupLabelToContent, textAlign: 'center', paddingHorizontal: 40 }}>
         נתוני הנפקות יעודכנו בקרוב
       </Text>
     </View>
@@ -246,7 +246,7 @@ export default function IPOsTab() {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent' }}>
         <ActivityIndicator size="large" color={DesignTokens.colors.success.main} />
-        <Text style={{ fontSize: 14, color: DesignTokens.colors.text.secondary, marginTop: 16 }}>
+        <Text style={{ ...APP_TYPE.body, color: DesignTokens.colors.text.secondary, marginTop: APP_LAYOUT.componentGap }}>
           טוען הנפקות...
         </Text>
       </View>

@@ -18,6 +18,7 @@ import {
   DarkGreenAuroraBackground,
 } from './DarkGreenAuroraBackground';
 import { SoftUI } from './DesignTokens';
+import { useTheme } from '../../context/ThemeContext';
 import { FRAG, VERT } from './auroraShader';
 import {
   AURORA_FRAME_MS,
@@ -351,13 +352,15 @@ export const GradientBackground = memo(function GradientBackground({
   );
 });
 
-/** שכבת קנבס אחת לשורש — SoftUI.canvas (ללא WebGL / aurora כברירת מחדל). */
+/** שכבת קנבס אחת לשורש — כהה SoftUI.canvas, בהיר theme.background. */
 export function AuroraHost({ children }: { children: React.ReactNode }) {
+  const { isDarkMode, theme } = useTheme();
+  const canvas = isDarkMode ? SoftUI.canvas : theme.background;
   return (
-    <View style={styles.host} pointerEvents="box-none">
+    <View style={[styles.host, { backgroundColor: canvas }]} pointerEvents="box-none">
       <View
         pointerEvents="none"
-        style={[StyleSheet.absoluteFill, styles.canvasHost]}
+        style={[StyleSheet.absoluteFill, styles.canvasHost, { backgroundColor: canvas }]}
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
       />

@@ -32,8 +32,8 @@ import {
   JOURNAL_LAYOUT,
   journalBodyTextStyle,
   journalCardMetricLabelStyle,
+  journalCardSubtitleStyle,
   journalCardTitleStyle,
-  journalCaption2Style,
   journalPhysicalRightText,
 } from '../../Journal/journalLayout';
 
@@ -110,13 +110,14 @@ export default function HoldingsTab({ portfolio, holdings }: Props) {
           borderColor: tokens.colors.border.subtle,
         },
         modeChipActive: {
-          borderColor: tokens.colors.primary.main,
-          backgroundColor: 'rgba(0, 200, 5, 0.10)',
+          borderWidth: 0,
+          backgroundColor: tokens.colors.background.tertiary,
         },
         modeChipText: {
-          fontSize: 12,
+          ...journalCardSubtitleStyle,
+          width: undefined,
+          marginTop: 0,
           color: tokens.colors.text.secondary,
-          ...journalPhysicalRightText,
         },
         modeChipTextActive: {
           color: tokens.colors.primary.main,
@@ -135,15 +136,15 @@ export default function HoldingsTab({ portfolio, holdings }: Props) {
           paddingVertical: 6,
           paddingHorizontal: 10,
           borderRadius: 14,
-          backgroundColor: tokens.colors.glass.card.bg,
+          backgroundColor: tokens.colors.background.tertiary,
           borderWidth: 0,
           borderColor: tokens.colors.border.subtle,
         },
         controlBtnText: {
-          fontSize: 12,
+          ...journalCardSubtitleStyle,
+          width: undefined,
+          marginTop: 0,
           color: tokens.colors.text.primary,
-          fontWeight: '500',
-          ...journalPhysicalRightText,
         },
         groupHeader: {
           ...journalCardTitleStyle,
@@ -184,16 +185,16 @@ export default function HoldingsTab({ portfolio, holdings }: Props) {
           flex: 1,
         },
         symbolText: {
-          fontSize: 13,
-          fontWeight: '700',
+          ...journalCardTitleStyle,
+          width: undefined,
           color: tokens.colors.text.primary,
           writingDirection: 'ltr',
           textAlign: 'right',
         },
         symbolMeta: {
-          fontSize: 10,
+          ...journalCardSubtitleStyle,
+          width: undefined,
           color: tokens.colors.text.tertiary,
-          ...journalPhysicalRightText,
           marginTop: 2,
         },
         cellWrap: {
@@ -201,15 +202,15 @@ export default function HoldingsTab({ portfolio, holdings }: Props) {
           alignItems: 'flex-start',
         },
         cellPrimary: {
-          fontSize: 12,
-          fontWeight: '600',
+          ...journalBodyTextStyle,
           color: tokens.colors.text.primary,
           textAlign: 'right',
           writingDirection: 'ltr',
           width: '100%',
         },
         cellSecondary: {
-          fontSize: 10,
+          ...journalCardSubtitleStyle,
+          width: undefined,
           color: tokens.colors.text.tertiary,
           marginTop: 2,
           textAlign: 'right',
@@ -235,10 +236,11 @@ export default function HoldingsTab({ portfolio, holdings }: Props) {
           paddingHorizontal: 20,
         },
         scrollHint: {
-          ...journalCaption2Style,
+          ...journalCardSubtitleStyle,
+          width: undefined,
+          marginTop: 6,
           color: tokens.colors.text.tertiary,
           textAlign: 'center',
-          marginTop: 6,
         },
       }),
     [tokens]
@@ -346,7 +348,7 @@ export default function HoldingsTab({ portfolio, holdings }: Props) {
               <UICard
                 variant="soft"
                 padding="none"
-                style={{ marginBottom: JOURNAL_LAYOUT.cardStackGap, borderRadius: 14, overflow: 'hidden' }}
+                style={{ marginBottom: JOURNAL_LAYOUT.cardStackGap, overflow: 'hidden' }}
               >
                 <HoldingsTableHeader viewMode={viewMode} styles={styles} />
                 {group.items.map((h) => (

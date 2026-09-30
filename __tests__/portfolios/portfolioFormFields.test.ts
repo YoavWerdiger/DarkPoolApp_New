@@ -23,7 +23,7 @@ describe('portfolio form topology', () => {
     expect(PORTFOLIO_FORM.screenPadH).toBe(PRODUCT_TOPOLOGY.screenPaddingHorizontal);
     expect(PORTFOLIO_FORM.fieldSpacing).toBe(PRODUCT_TOPOLOGY.cardStackGap);
     expect(PORTFOLIO_FORM.screenPadH).toBe(APP_LAYOUT.screenPaddingHorizontal);
-    expect(PORTFOLIO_FORM.fieldSpacing).toBe(16);
+    expect(PORTFOLIO_FORM.fieldSpacing).toBe(12);
   });
 
   it('PortfolioFormFields uses formControl and journal section titles', () => {
@@ -31,7 +31,8 @@ describe('portfolio form topology', () => {
     expect(fieldsSrc).toMatch(/formFieldLabelStyle/);
     expect(fieldsSrc).toMatch(/journalSectionTitleStyle/);
     expect(fieldsSrc).not.toMatch(/borderColor: tokens\.colors\.primary\.main/);
-    expect(fieldsSrc).toMatch(/FormLabelLink/);
+    expect(fieldsSrc).toMatch(/PasswordVisibilityToggle/);
+    expect(fieldsSrc).toMatch(/passwordShell/);
   });
 
   it('create and connect screens use PortfolioFormFooter and PORTFOLIO_FORM', () => {
@@ -39,8 +40,9 @@ describe('portfolio form topology', () => {
     expect(createSrc).toMatch(/PORTFOLIO_FORM/);
     expect(createSrc).toMatch(/variant="soft"/);
     expect(connectSrc).toMatch(/PortfolioFormFooter/);
-    expect(connectSrc).toMatch(/labelAccessory/);
-    expect(connectSrc).toMatch(/FormLabelLink/);
+    expect(connectSrc).toMatch(/secureTextEntry/);
+    expect(connectSrc).not.toMatch(/FormLabelLink/);
+    expect(connectSrc).not.toMatch(/labelAccessory/);
   });
 
   it('broker select, add transaction, and import use shared form padding', () => {

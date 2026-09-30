@@ -1,7 +1,6 @@
 import React, { ReactNode, useCallback } from 'react';
 import { View } from 'react-native';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
 import { ScreenChrome } from '../../components/ui/ScreenChrome';
 import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHeader';
@@ -34,7 +33,6 @@ export function NewsScreenShell({ title, children, headerRight }: Props) {
 
   return (
     <ScreenChrome>
-      <StatusBar style="light" />
       <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
         <MainDrawerScreenHeader title={title} onMenuPress={openMainDrawer} rightAccessory={headerRight} />
         <View

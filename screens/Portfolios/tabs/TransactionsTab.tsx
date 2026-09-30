@@ -339,7 +339,7 @@ export default function TransactionsTab({
         return (
           <UICard
             key={tx.id}
-            variant="glass"
+            variant="soft"
             glassIntensity="light"
             padding="none"
             style={{ borderRadius: 16, marginBottom: 8, overflow: 'hidden' }}

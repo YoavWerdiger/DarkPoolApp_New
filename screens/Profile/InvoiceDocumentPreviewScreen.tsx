@@ -13,8 +13,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { ExternalLink, Share2 } from 'lucide-react-native';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
-import { chatPalette } from '../../components/chat/chatDesignTokens';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { APP_TYPE } from '../../components/ui/appType';
+import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
+import { settingsButtonLabelStyle, settingsHebrewText } from '../../components/profile/settingsType';
 import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { cardcomDocumentTypeLabelHe } from '../../utils/cardcomDocumentLabels';
@@ -76,14 +78,19 @@ export default function InvoiceDocumentPreviewScreen({ navigation, route }: any)
 
   if (!url.startsWith('http')) {
     return (
-      <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
+      <SafeAreaView
+        style={[styles.root, { backgroundColor: tokens.colors.background.primary }]}
+        edges={['top', 'bottom']}
+      >
         <ChatSubScreenHeader title={title} onBack={() => navigation.goBack()} />
         <View style={styles.center}>
           <Text style={[styles.errorTitle, { color: tokens.colors.text.primary }]}>
             קישור המסמך אינו תקין
           </Text>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.secondaryBtn}>
-            <Text style={{ color: tokens.colors.primary.main, fontWeight: '700' }}>חזרה</Text>
+            <Text style={[settingsHebrewText, settingsButtonLabelStyle, { color: tokens.colors.text.primary }]}>
+              חזרה
+            </Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -91,7 +98,10 @@ export default function InvoiceDocumentPreviewScreen({ navigation, route }: any)
   }
 
   return (
-    <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
+    <SafeAreaView
+      style={[styles.root, { backgroundColor: tokens.colors.background.primary }]}
+      edges={['top', 'bottom']}
+    >
       <ChatSubScreenHeader
         title={title}
         onBack={() => {
@@ -117,7 +127,7 @@ export default function InvoiceDocumentPreviewScreen({ navigation, route }: any)
         </Text>
       ) : null}
 
-      <View style={styles.webWrap}>
+      <View style={[styles.webWrap, { backgroundColor: tokens.colors.background.cardSolid }]}>
         {failed ? (
           <View style={styles.center}>
             <Text style={[styles.errorTitle, { color: tokens.colors.text.primary }]}>
@@ -143,7 +153,7 @@ export default function InvoiceDocumentPreviewScreen({ navigation, route }: any)
         ) : (
           <WebView
             source={{ uri: sourceUri }}
-            style={styles.webView}
+            style={[styles.webView, { backgroundColor: tokens.colors.background.cardSolid }]}
             startInLoadingState
             onLoadStart={() => {
               setLoading(true);
@@ -179,8 +189,8 @@ export default function InvoiceDocumentPreviewScreen({ navigation, route }: any)
         style={[
           styles.footer,
           {
-            borderTopColor: chatPalette.glassBorder,
-            backgroundColor: 'rgba(10,14,10,0.92)',
+            borderTopColor: tokens.colors.border.divider,
+            backgroundColor: tokens.colors.background.primary,
           },
         ]}
       >
@@ -190,13 +200,12 @@ export default function InvoiceDocumentPreviewScreen({ navigation, route }: any)
           style={[
             styles.footerBtn,
             {
-              borderColor: chatPalette.glassBorder,
-              backgroundColor: `${tokens.colors.primary.main}14`,
+              backgroundColor: tokens.colors.background.navChrome,
             },
           ]}
         >
-          <ExternalLink size={16} color={tokens.colors.primary.main} strokeWidth={2.4} />
-          <Text style={{ color: tokens.colors.primary.main, fontWeight: '700', fontSize: 14 }}>
+          <ExternalLink size={16} color={tokens.colors.text.primary} strokeWidth={2.4} />
+          <Text style={[settingsHebrewText, settingsButtonLabelStyle, { color: tokens.colors.text.primary }]}>
             פתח בדפדפן
           </Text>
         </TouchableOpacity>
@@ -208,33 +217,28 @@ export default function InvoiceDocumentPreviewScreen({ navigation, route }: any)
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#111111',
   },
   meta: {
+    ...settingsHebrewText,
+    ...APP_TYPE.caption,
     textAlign: 'center',
-    writingDirection: 'rtl',
-    fontSize: 12,
-    fontWeight: '600',
     marginBottom: 6,
-    paddingHorizontal: 16,
+    paddingHorizontal: APP_LAYOUT.cardPadding,
   },
   webWrap: {
     flex: 1,
     overflow: 'hidden',
-    marginHorizontal: 12,
-    borderRadius: 16,
+    marginHorizontal: APP_LAYOUT.cardStackGap,
+    borderRadius: UI_CARD_RADIUS,
     borderWidth: 0,
-    backgroundColor: '#262626',
   },
   webView: {
     flex: 1,
-    backgroundColor: '#262626',
   },
   loadingOverlay: {
-    ...StyleSheet.absoluteFill,
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(17,17,17,0.55)',
   },
   center: {
     flex: 1,
@@ -244,17 +248,15 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   errorTitle: {
-    fontSize: 16,
-    fontWeight: '800',
+    ...settingsHebrewText,
+    ...APP_TYPE.body,
+    fontWeight: '700',
     textAlign: 'center',
-    writingDirection: 'rtl',
   },
   errorBody: {
-    fontSize: 13,
-    fontWeight: '500',
+    ...settingsHebrewText,
+    ...APP_TYPE.footnote,
     textAlign: 'center',
-    writingDirection: 'rtl',
-    lineHeight: 18,
     marginBottom: 6,
   },
   primaryBtn: {
@@ -267,8 +269,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   primaryBtnText: {
-    fontWeight: '800',
-    fontSize: 14,
+    ...settingsButtonLabelStyle,
   },
   secondaryBtn: {
     marginTop: 12,
@@ -287,7 +288,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     paddingVertical: 12,
-    borderRadius: 14,
-    borderWidth: 1,
+    borderRadius: UI_CARD_RADIUS,
+    borderWidth: 0,
   },
 });

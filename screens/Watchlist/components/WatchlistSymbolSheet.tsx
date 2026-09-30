@@ -7,7 +7,6 @@ import {
   ScrollView,
   Pressable,
   Switch,
-  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,14 +15,26 @@ import BottomSheet, {
 } from '../../../components/ui/BottomSheet/BottomSheet';
 import { sheetContentBottomPadding } from '../../../components/ui/BottomSheet/sheetGlass';
 import UICard from '../../../components/ui/UICard';
+import UIButton from '../../../components/ui/UIButton';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { APP_LAYOUT, UI_CARD_RADIUS } from '../../../components/ui/appLayout';
 import {
-  APP_TYPE,
+  appBodyTextStyle,
+  appCaption2Style,
+  appCaptionStyle,
+  appCardBodyStyle,
   appCardMetricValueSecondaryStyle,
-  appPhysicalRightText,
-  appSectionTitleStyle,
+  appCardSubtitleStyle,
+  appCardTitleStyle,
+  appGroupLabelStyle,
   appSheetButtonLabelStyle,
+  appSheetTitleStyle,
 } from '../../../components/ui/appType';
+import {
+  formFieldInputStyle,
+  formFieldLabelStyle,
+  formFieldShellStyle,
+} from '../../../components/ui/formControl';
 import {
   DayNavBlurButton,
   DAY_NAV_BUTTON_SIZE,
@@ -64,7 +75,6 @@ type Props = {
 };
 
 const CHART_HEIGHT = 280;
-const DIVIDER = 'rgba(255, 255, 255, 0.08)';
 /**
  * שיט גבוה (גרף + התראות מרובות).
  * fitContent + snapPoints = מעוגן לתחתית בגובה ה-snap (בלי אזור off-screen
@@ -127,7 +137,7 @@ export function WatchlistSymbolSheet({
       useModal
       showBrandBackground={false}
       useGlassBackground
-      topCornerRadius={28}
+      topCornerRadius={UI_CARD_RADIUS}
       avoidKeyboard
       contentPaddingBottom={0}
     >
@@ -256,7 +266,7 @@ function Body({
     ? tokens.colors.primary.dim
     : down
       ? 'rgba(255, 68, 68, 0.14)'
-      : 'rgba(255,255,255,0.06)';
+      : tokens.colors.selection.subtle;
 
   const handleClose = useCallback(() => {
     if (animatedClose) animatedClose();
@@ -424,7 +434,9 @@ function Body({
         </DayNavBlurButton>
 
         <View style={styles.identity}>
-          <TickerLogo symbol={symbol} size={40} />
+          <View style={styles.headerLogo}>
+            <TickerLogo symbol={symbol} size={40} />
+          </View>
           <View style={styles.identityText}>
             <Text style={styles.symbol}>{symbol}</Text>
             {company ? (
@@ -475,28 +487,21 @@ function Body({
           </View>
         ) : null}
 
-        <UICard
-          variant="blur"
-          glassIntensity="subtle"
-          padding="none"
-          style={styles.journalCta}
-          contentContainerStyle={styles.journalCtaInner}
+        <UIButton
+          title="פתח ביומן"
+          variant="secondary"
+          fullWidth
           onPress={() => {
-            void HapticFeedback.selection();
             onAddToJournal({
               symbol,
               entryPrice: row.price ?? row.item.entry_price,
               notes: notes || row.item.notes,
             });
           }}
-          accessibilityLabel={`פתח עסקה ביומן עבור ${symbol}`}
-        >
-          <Text style={styles.journalCtaTitle}>פתח ביומן</Text>
-        </UICard>
+        />
 
         <UICard
-          variant="blur"
-          glassIntensity="subtle"
+          variant="soft"
           padding="none"
           style={styles.chartCard}
           contentContainerStyle={styles.chartInner}
@@ -510,7 +515,7 @@ function Body({
           />
         </UICard>
 
-        <UICard variant="blur" glassIntensity="subtle" padding="md" style={styles.card}>
+        <UICard variant="soft" padding="md" style={styles.card}>
           <Text style={styles.sectionTitle}>נתוני היום</Text>
           {dayRows.map((item, index) => (
             <View
@@ -526,7 +531,7 @@ function Body({
           ))}
         </UICard>
 
-        <UICard variant="blur" glassIntensity="subtle" padding="md" style={styles.card}>
+        <UICard variant="soft" padding="md" style={styles.card}>
           <Text style={styles.sectionTitle}>ייחוס ויעד</Text>
           <View style={styles.fieldRow}>
             <View style={styles.field}>
@@ -554,9 +559,9 @@ function Body({
           </View>
         </UICard>
 
-        <UICard variant="blur" glassIntensity="subtle" padding="md" style={styles.card}>
+        <UICard variant="soft" padding="md" style={styles.card}>
           <View style={styles.alertHeader}>
-            <Text style={styles.sectionTitle}>התראות</Text>
+            <Text style={styles.alertTitle}>התראות</Text>
             <Switch
               value={alertsOn}
               onValueChange={(v) => {
@@ -565,7 +570,7 @@ function Body({
                 if (v) void ensureNotificationCategoryOn('watchlistNotifications');
               }}
               trackColor={{
-                false: 'rgba(255,255,255,0.12)',
+                false: tokens.colors.background.tertiary,
                 true: tokens.colors.primary.dim,
               }}
               thumbColor={
@@ -574,7 +579,7 @@ function Body({
             />
           </View>
 
-          <Text style={styles.presetLabel}>תבניות</Text>
+          <Text style={[styles.presetLabel, styles.presetLabelFirst]}>תבניות</Text>
           <View style={styles.presetGrid}>
             {presets.map((p) => (
               <Pressable
@@ -589,7 +594,7 @@ function Body({
             ))}
           </View>
 
-          <Text style={[styles.presetLabel, { marginTop: 14 }]}>
+          <Text style={styles.presetLabel}>
             רווח מהכניסה +% · אפשר כמה
           </Text>
           <View style={styles.presetGrid}>
@@ -663,7 +668,7 @@ function Body({
             </Pressable>
           </View>
 
-          <Text style={[styles.presetLabel, { marginTop: 14 }]}>
+          <Text style={styles.presetLabel}>
             הפסד מהכניסה −% · אפשר כמה
           </Text>
           <View style={styles.presetGrid}>
@@ -737,7 +742,7 @@ function Body({
             </Pressable>
           </View>
 
-          <Text style={[styles.presetLabel, { marginTop: 14 }]}>
+          <Text style={styles.presetLabel}>
             מעל מחיר · אפשר כמה
           </Text>
           <View style={styles.presetGrid}>
@@ -816,7 +821,7 @@ function Body({
             </Pressable>
           </View>
 
-          <Text style={[styles.presetLabel, { marginTop: 14 }]}>
+          <Text style={styles.presetLabel}>
             מתחת למחיר · אפשר כמה
           </Text>
           <View style={styles.presetGrid}>
@@ -895,7 +900,7 @@ function Body({
             </Pressable>
           </View>
 
-          <Text style={[styles.presetLabel, { marginTop: 14 }]}>
+          <Text style={styles.presetLabel}>
             שינוי יומי |%| · אפשר כמה
           </Text>
           <View style={styles.presetGrid}>
@@ -970,7 +975,7 @@ function Body({
           </View>
         </UICard>
 
-        <UICard variant="blur" glassIntensity="subtle" padding="md" style={styles.card}>
+        <UICard variant="soft" padding="md" style={styles.card}>
           <Text style={styles.sectionTitle}>הערה</Text>
           <TextInput
             style={styles.input}
@@ -985,27 +990,16 @@ function Body({
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: footerPadBottom }]}>
-        <UICard
-          variant="blur"
-          glassIntensity="subtle"
-          padding="none"
-          style={[styles.saveBtn, savingMeta && styles.saveBtnDisabled]}
-          contentContainerStyle={styles.saveBtnInner}
-          onPress={
-            savingMeta
-              ? undefined
-              : () => {
-                  void saveAll();
-                }
-          }
-          accessibilityLabel="שמור שינויים"
-        >
-          {savingMeta ? (
-            <ActivityIndicator color={tokens.colors.text.primary} />
-          ) : (
-            <Text style={styles.saveBtnText}>שמור שינויים</Text>
-          )}
-        </UICard>
+        <UIButton
+          title="שמור שינויים"
+          variant="primary"
+          fullWidth
+          loading={savingMeta}
+          disabled={savingMeta}
+          onPress={() => {
+            void saveAll();
+          }}
+        />
 
         <Pressable
           onPress={() => {
@@ -1036,31 +1030,34 @@ function useStyles() {
         header: {
           flexDirection: 'row-reverse',
           alignItems: 'center',
-          paddingHorizontal: 16,
+          paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
           paddingTop: 2,
           paddingBottom: 12,
           gap: 12,
-          borderBottomWidth: StyleSheet.hairlineWidth,
-          borderBottomColor: DIVIDER,
+          borderBottomWidth: 1,
+          borderBottomColor: tokens.colors.border.divider,
         },
         identity: {
           flex: 1,
           flexDirection: 'row-reverse',
           alignItems: 'center',
-          gap: 10,
           minWidth: 0,
         },
-        identityText: { flex: 1, minWidth: 0, gap: 2 },
+        headerLogo: {
+          marginLeft: 12,
+        },
+        identityText: { flex: 1, minWidth: 0 },
         symbol: {
+          ...appSheetTitleStyle,
+          width: undefined,
+          alignSelf: 'flex-end',
           color: tokens.colors.text.primary,
-          ...appSectionTitleStyle,
         },
         company: {
-          color: tokens.colors.text.tertiary,
-          fontSize: APP_TYPE.caption.fontSize,
-          fontWeight: APP_TYPE.caption.fontWeight,
-          lineHeight: APP_TYPE.caption.lineHeight,
-          ...appPhysicalRightText,
+          ...appCardSubtitleStyle,
+          width: undefined,
+          alignSelf: 'flex-end',
+          color: tokens.colors.text.secondary,
         },
         pctBadge: {
           paddingHorizontal: 10,
@@ -1068,17 +1065,18 @@ function useStyles() {
           borderRadius: 8,
         },
         pctBadgeText: {
-          fontSize: 13,
-          fontWeight: '700',
+          ...appCaptionStyle,
+          width: undefined,
           fontVariant: ['tabular-nums'],
           writingDirection: 'ltr',
+          textAlign: 'left',
         },
         scroll: { flex: 1, minHeight: 0 },
         scrollContent: {
-          paddingHorizontal: 16,
+          paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
           paddingTop: 14,
-          paddingBottom: 16,
-          gap: 12,
+          paddingBottom: APP_LAYOUT.cardPadding,
+          gap: APP_LAYOUT.cardStackGap,
         },
         quoteStrip: {
           flexDirection: 'row-reverse',
@@ -1093,17 +1091,16 @@ function useStyles() {
           textAlign: 'right',
         },
         dayChange: {
-          fontSize: 15,
-          fontWeight: '600',
+          ...appCardBodyStyle,
+          width: undefined,
           fontVariant: ['tabular-nums'],
           writingDirection: 'ltr',
+          textAlign: 'left',
         },
         vsHint: {
-          color: tokens.colors.text.tertiary,
-          fontSize: APP_TYPE.caption.fontSize,
-          fontWeight: '500',
-          lineHeight: APP_TYPE.caption.lineHeight,
-          ...appPhysicalRightText,
+          ...appCaptionStyle,
+          width: undefined,
+          color: tokens.colors.text.secondary,
         },
         eventRow: {
           flexDirection: 'row-reverse',
@@ -1111,36 +1108,17 @@ function useStyles() {
           gap: 6,
         },
         eventChip: {
-          color: tokens.colors.primary.main,
-          backgroundColor: tokens.colors.primary.dim,
-          fontSize: 11,
-          fontWeight: '700',
+          ...appCaption2Style,
+          width: undefined,
+          color: tokens.colors.text.primary,
+          backgroundColor: tokens.colors.background.primary,
           paddingHorizontal: 8,
           paddingVertical: 4,
           borderRadius: 6,
           overflow: 'hidden',
         },
-        journalCta: {
-          width: '100%',
-          marginBottom: 12,
-          borderRadius: 999,
-          overflow: 'hidden',
-          minHeight: 48,
-        },
-        journalCtaInner: {
-          minHeight: 48,
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingHorizontal: 20,
-          paddingVertical: 12,
-        },
-        journalCtaTitle: {
-          color: tokens.colors.text.primary,
-          ...appSheetButtonLabelStyle,
-          width: '100%',
-        },
         chartCard: {
-          borderRadius: 20,
+          borderRadius: UI_CARD_RADIUS,
           overflow: 'hidden',
           height: CHART_HEIGHT,
         },
@@ -1149,163 +1127,126 @@ function useStyles() {
           backgroundColor: 'transparent',
           borderRadius: 0,
         },
-        card: { borderRadius: 20, overflow: 'hidden' },
+        card: { borderRadius: UI_CARD_RADIUS, overflow: 'hidden' },
         sectionTitle: {
-          color: tokens.colors.text.secondary,
-          ...appSectionTitleStyle,
-          fontSize: APP_TYPE.sectionSubtitle.fontSize,
-          fontWeight: '600',
-          lineHeight: APP_TYPE.sectionSubtitle.lineHeight,
-          marginBottom: 4,
+          ...appCardTitleStyle,
+          color: tokens.colors.text.primary,
+          marginBottom: APP_LAYOUT.cardTitleToBodyGap,
         },
         metaRow: {
           flexDirection: 'row-reverse',
           alignItems: 'center',
           justifyContent: 'space-between',
-          paddingVertical: 11,
-          gap: 16,
+          paddingVertical: 15,
         },
         metaRowBorder: {
-          borderBottomWidth: StyleSheet.hairlineWidth,
-          borderBottomColor: DIVIDER,
+          borderBottomWidth: 1,
+          borderBottomColor: tokens.colors.border.divider,
         },
         metaLabel: {
-          color: tokens.colors.text.tertiary,
-          fontSize: APP_TYPE.sectionSubtitle.fontSize,
-          fontWeight: '500',
-          lineHeight: APP_TYPE.sectionSubtitle.lineHeight,
-          ...appPhysicalRightText,
+          ...appCardSubtitleStyle,
+          width: undefined,
+          alignSelf: 'flex-end',
+          marginTop: 0,
+          color: tokens.colors.text.secondary,
         },
         metaValue: {
+          ...appBodyTextStyle,
           color: tokens.colors.text.primary,
-          fontSize: APP_TYPE.body.fontSize,
-          fontWeight: '600',
-          lineHeight: APP_TYPE.body.lineHeight,
           fontVariant: ['tabular-nums'],
           writingDirection: 'ltr',
+          textAlign: 'left',
         },
         fieldRow: {
           flexDirection: 'row-reverse',
-          gap: 10,
-          marginTop: 8,
+          gap: APP_LAYOUT.stackGapSmall,
+          marginTop: APP_LAYOUT.groupLabelToContent,
           alignItems: 'flex-end',
         },
-        field: { flex: 1, gap: 6 },
-        fieldLabel: {
-          color: tokens.colors.text.tertiary,
-          fontSize: APP_TYPE.caption2.fontSize,
-          fontWeight: '600',
-          lineHeight: APP_TYPE.caption2.lineHeight,
-          ...appPhysicalRightText,
-        },
+        field: { flex: 1 },
+        fieldLabel: formFieldLabelStyle({ tokens, focused: false }),
         fieldInput: {
-          backgroundColor: 'rgba(255,255,255,0.04)',
-          borderRadius: 12,
-          paddingHorizontal: 12,
-          paddingVertical: 10,
+          ...formFieldShellStyle({ tokens, focused: false }),
+          ...formFieldInputStyle(),
+          borderRadius: tokens.borderRadius.md,
+          minHeight: 48,
+          paddingHorizontal: APP_LAYOUT.cardPadding,
           color: tokens.colors.text.primary,
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: DIVIDER,
-          fontSize: 15,
           fontVariant: ['tabular-nums'],
           textAlign: 'left',
           writingDirection: 'ltr',
         },
         addChipBtn: {
-          minHeight: 42,
+          minHeight: 48,
           paddingHorizontal: 14,
-          borderRadius: 12,
+          borderRadius: tokens.borderRadius.md,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: tokens.colors.primary.dim,
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: tokens.colors.border.accent,
-          marginBottom: 1,
+          backgroundColor: tokens.colors.background.primary,
+          borderWidth: 0,
         },
         addChipBtnText: {
-          color: tokens.colors.primary.main,
-          fontSize: 13,
-          fontWeight: '700',
+          ...appCaptionStyle,
+          width: undefined,
+          color: tokens.colors.text.primary,
         },
         alertHeader: {
           flexDirection: 'row-reverse',
           alignItems: 'center',
           justifyContent: 'space-between',
-          marginBottom: 4,
+          marginBottom: APP_LAYOUT.cardTitleToBodyGap,
+        },
+        alertTitle: {
+          ...appCardTitleStyle,
+          width: undefined,
+          flex: 1,
+          color: tokens.colors.text.primary,
         },
         presetLabel: {
-          marginTop: 10,
-          color: tokens.colors.text.tertiary,
-          fontSize: APP_TYPE.caption2.fontSize,
-          fontWeight: '600',
-          lineHeight: APP_TYPE.caption2.lineHeight,
-          ...appPhysicalRightText,
+          ...appGroupLabelStyle,
+          color: tokens.colors.text.secondary,
+          marginTop: APP_LAYOUT.cardTitleToBodyGap,
+        },
+        presetLabelFirst: {
+          marginTop: 0,
         },
         presetGrid: {
-          marginTop: 8,
           flexDirection: 'row-reverse',
           flexWrap: 'wrap',
-          gap: 8,
+          gap: APP_LAYOUT.groupLabelToContent,
         },
         presetBtn: {
           paddingHorizontal: 10,
           paddingVertical: 7,
           borderRadius: 10,
-          backgroundColor: 'rgba(255,255,255,0.04)',
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: DIVIDER,
+          backgroundColor: tokens.colors.background.primary,
+          borderWidth: 0,
         },
         presetBtnOn: {
           backgroundColor: tokens.colors.primary.dim,
-          borderColor: tokens.colors.border.accent,
         },
         presetText: {
+          ...appCaptionStyle,
+          width: undefined,
           color: tokens.colors.text.secondary,
-          fontSize: 12,
-          fontWeight: '600',
         },
         presetTextOn: {
           color: tokens.colors.primary.main,
-          fontWeight: '700',
         },
         input: {
-          marginTop: 8,
-          backgroundColor: 'rgba(255,255,255,0.04)',
-          borderRadius: 14,
-          paddingHorizontal: 14,
-          paddingVertical: 12,
-          color: tokens.colors.text.primary,
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: DIVIDER,
-          fontSize: APP_TYPE.body.fontSize,
-          lineHeight: APP_TYPE.body.lineHeight,
+          ...formFieldShellStyle({ tokens, focused: false, multiline: true }),
+          ...formFieldInputStyle(),
+          marginTop: APP_LAYOUT.groupLabelToContent,
+          borderRadius: tokens.borderRadius.md,
+          paddingHorizontal: APP_LAYOUT.cardPadding,
           minHeight: 84,
-          ...appPhysicalRightText,
+          color: tokens.colors.text.primary,
         },
         footer: {
-          paddingHorizontal: 16,
-          paddingTop: 12,
-          gap: 10,
+          paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+          paddingTop: APP_LAYOUT.cardTitleToBodyGap,
+          gap: APP_LAYOUT.stackGapSmall,
           backgroundColor: 'transparent',
-        },
-        saveBtn: {
-          width: '100%',
-          borderRadius: 999,
-          overflow: 'hidden',
-          minHeight: 48,
-        },
-        saveBtnInner: {
-          minHeight: 48,
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingHorizontal: 20,
-          paddingVertical: 12,
-        },
-        saveBtnDisabled: { opacity: 0.55 },
-        saveBtnText: {
-          color: tokens.colors.text.primary,
-          ...appSheetButtonLabelStyle,
-          width: '100%',
         },
         removeBtn: {
           width: '100%',
@@ -1316,9 +1257,8 @@ function useStyles() {
         },
         removeBtnPressed: { opacity: 0.65 },
         removeText: {
-          color: '#FF5C5C',
           ...appSheetButtonLabelStyle,
-          fontWeight: '600',
+          color: tokens.colors.danger.main,
         },
       }),
     [tokens]

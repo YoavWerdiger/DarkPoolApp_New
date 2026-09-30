@@ -47,13 +47,13 @@ const UIButton: React.FC<UIButtonProps> = ({
       case 'primary':
         return {
           container: {
-            backgroundColor: colors.primary.main,
-            borderRadius: borderRadius.md,
+            backgroundColor: colors.primary.lightCta,
+            borderRadius: borderRadius.full,
             ...shadows.green,
           },
           text: {
             color: colors.text.inverse,
-            fontWeight: typography.button.weight,
+            fontWeight: typography.fontWeight.semibold,
           },
         };
       case 'secondary':
@@ -178,6 +178,7 @@ const UIButton: React.FC<UIButtonProps> = ({
     ...(fullWidth && { width: '100%', alignSelf: 'stretch' as const }),
     ...(disabled && { opacity: 0.5 }),
     ...style,
+    ...(variant === 'primary' ? { borderRadius: borderRadius.full } : null),
   };
 
   const pressableStyle: ViewStyle = fullWidth

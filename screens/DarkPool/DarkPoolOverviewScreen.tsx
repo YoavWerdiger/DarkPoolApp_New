@@ -11,11 +11,11 @@ import {
   Text,
   View,
 } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenChrome } from '../../components/ui/ScreenChrome';
 import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHeader';
+import { UI_CARD_RADIUS } from '../../components/ui/appLayout';
 import UICard from '../../components/ui/UICard';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { useDarkPoolTabBarHeight } from '../../hooks/useDarkPoolTabBarHeight';
@@ -27,6 +27,7 @@ import { triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
 import { useNavigation } from '@react-navigation/native';
 import { useDarkPoolInsiderFeed } from '../../hooks/useDarkPoolInsiderFeed';
 import { DARK_POOL_FORM4_ONLY } from '../../types/darkpool.types';
+import { DARK_POOL_TYPE, darkPoolPhysicalRightText } from './darkPoolLayout';
 
 export default function DarkPoolOverviewScreen() {
   const tokens = useDesignTokens();
@@ -65,12 +66,13 @@ export default function DarkPoolOverviewScreen() {
           marginTop: tokens.spacing.md,
         },
         hint: {
+          ...darkPoolPhysicalRightText,
           marginTop: tokens.spacing.lg,
-          fontSize: 13,
-          lineHeight: 20,
+          fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
+          lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
+          fontWeight: DARK_POOL_TYPE.cardSubtitle.fontWeight,
           color: tokens.colors.text.secondary,
-          textAlign: 'right',
-          writingDirection: 'rtl',
+          flex: 1,
         },
         center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
       }),
@@ -80,7 +82,6 @@ export default function DarkPoolOverviewScreen() {
   if (loading && !trades.length) {
     return (
       <ScreenChrome>
-        <StatusBar style="light" />
         <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
           <MainDrawerScreenHeader title="סקירה" onMenuPress={openDrawer} />
           <View style={styles.center}>
@@ -93,7 +94,6 @@ export default function DarkPoolOverviewScreen() {
 
   return (
     <ScreenChrome>
-      <StatusBar style="light" />
       <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
         <MainDrawerScreenHeader
           title="סקירה"
@@ -117,7 +117,7 @@ export default function DarkPoolOverviewScreen() {
             <StatCard label="מ-UW" value={String(stats.uw)} />
             <StatCard label="עם תמונת בכיר" value={String(stats.withPhoto)} />
           </View>
-          <UICard variant="glass" padding="md">
+          <UICard variant="soft" padding="md">
             <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
               <Ionicons name="sync-outline" size={18} color={tokens.colors.primary.main} />
               <Text style={styles.hint}>
@@ -138,21 +138,22 @@ function StatCard({ label, value }: { label: string; value: string }) {
   const tokens = useDesignTokens();
   return (
     <UICard
-      variant="glass"
+      variant="soft"
       glassIntensity="light"
       padding="md"
       style={{
         width: '48%',
         flexGrow: 1,
-        borderRadius: tokens.borderRadius.lg,
+        borderRadius: UI_CARD_RADIUS,
         backgroundColor: 'transparent',
       }}
     >
       <View style={{ alignItems: 'flex-end' }}>
         <Text
           style={{
-            fontSize: 26,
-            fontWeight: '900',
+            fontSize: DARK_POOL_TYPE.cardMetricValue.fontSize,
+            lineHeight: DARK_POOL_TYPE.cardMetricValue.lineHeight,
+            fontWeight: DARK_POOL_TYPE.cardMetricValue.fontWeight,
             color: tokens.colors.text.primary,
           }}
         >
@@ -161,8 +162,9 @@ function StatCard({ label, value }: { label: string; value: string }) {
         <Text
           style={{
             marginTop: 4,
-            fontSize: 12,
-            fontWeight: '600',
+            fontSize: DARK_POOL_TYPE.cardMetricLabel.fontSize,
+            lineHeight: DARK_POOL_TYPE.cardMetricLabel.lineHeight,
+            fontWeight: DARK_POOL_TYPE.cardMetricLabel.fontWeight,
             color: tokens.colors.text.tertiary,
             textAlign: 'right',
           }}

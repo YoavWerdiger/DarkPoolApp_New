@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useDesignTokens } from './DesignTokens';
+import { LIGHT_CANVAS } from './designTokensStatic';
 import {
   navGlassAndroidBlurProps,
   navGlassBaseFill,
@@ -49,7 +50,7 @@ export function NavGlassSurface({
   haptic = true,
 }: NavGlassSurfaceProps) {
   const tokens = useDesignTokens();
-  const isDarkMode = tokens.colors.background.primary !== '#F5F5F7';
+  const isDarkMode = tokens.colors.background.primary !== LIGHT_CANVAS;
   const flat = StyleSheet.flatten(style) as ViewStyle | undefined;
   const radius = (flat?.borderRadius as number | undefined) ?? tokens.borderRadius.full;
 

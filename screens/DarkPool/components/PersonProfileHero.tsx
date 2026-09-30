@@ -15,6 +15,7 @@ import {
   DRAWER_MENU_BUTTON_SIZE,
 } from '../../../components/ui/DayNavBlurButton';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { APP_TYPE } from '../../../components/ui/appType';
 import { ltrNameText } from '../utils/bidi';
 import { portraitDisplayUrl } from '../utils/investorPlaceholder';
 
@@ -279,9 +280,10 @@ const styles = StyleSheet.create({
   },
   name: {
     ...ltrNameText,
-    fontSize: 32,
-    lineHeight: 38,
-    fontWeight: '800',
+    fontSize: APP_TYPE.pageTitle.fontSize,
+    lineHeight: APP_TYPE.pageTitle.lineHeight,
+    fontWeight: APP_TYPE.pageTitle.fontWeight,
+    letterSpacing: APP_TYPE.pageTitle.letterSpacing,
     color: '#FFFFFF',
     alignSelf: 'stretch',
   },

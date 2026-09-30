@@ -5,6 +5,7 @@ import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
 import { useUwTickerInsights } from '../../../hooks/useUwTickerInsights';
 import { formatUsdCompact } from '../utils/darkPoolFormat';
+import { APP_LAYOUT } from '../../../components/ui/appLayout';
 import {
   DARK_POOL_TYPE,
   darkPoolPhysicalRightText,
@@ -58,7 +59,7 @@ export function UwTickerInsightsSection({ ticker }: Props) {
       <UwRateLimitBanner warnings={data.warnings} />
 
       {(data.insider_sentiment || data.cluster_signal) && (
-        <UICard variant="glass" glassIntensity="light" padding="md" style={styles.summaryCard}>
+        <UICard variant="soft" glassIntensity="light" padding="md" style={styles.summaryCard}>
           <DarkPoolSectionHeader title="סיכום פעילות" icon="pulse-outline" />
           <View style={styles.summaryGrid}>
             {data.insider_sentiment ? (
@@ -97,7 +98,7 @@ export function UwTickerInsightsSection({ ticker }: Props) {
       )}
 
       {data.gex ? (
-        <UICard variant="glass" glassIntensity="light" padding="md" style={styles.card}>
+        <UICard variant="soft" glassIntensity="light" padding="md" style={styles.card}>
           <DarkPoolSectionHeader title="מדד GEX" subtitle="חשיפת גמא בסpot" icon="analytics-outline" />
           <Text style={styles.metricValue}>{data.gex.label}</Text>
           <Text style={styles.metricHint}>
@@ -107,7 +108,7 @@ export function UwTickerInsightsSection({ ticker }: Props) {
       ) : null}
 
       {data.flow_alerts.length > 0 ? (
-        <UICard variant="glass" glassIntensity="light" padding="md" style={styles.card}>
+        <UICard variant="soft" glassIntensity="light" padding="md" style={styles.card}>
           <DarkPoolSectionHeader title="זרימת אופציות" icon="flash-outline" />
           {data.flow_alerts.map((f, i) => (
             <View
@@ -124,7 +125,7 @@ export function UwTickerInsightsSection({ ticker }: Props) {
       ) : null}
 
       {data.insider_live.length > 0 ? (
-        <UICard variant="glass" glassIntensity="light" padding="md" style={styles.card}>
+        <UICard variant="soft" glassIntensity="light" padding="md" style={styles.card}>
           <DarkPoolSectionHeader title="עסקאות בכירים" icon="people-outline" />
           {data.insider_live.map((row, i) => (
             <View
@@ -134,7 +135,9 @@ export function UwTickerInsightsSection({ ticker }: Props) {
                 i === data.insider_live.length - 1 && styles.listRowLast,
               ]}
             >
-              <TickerLogo symbol={ticker} size={38} borderRadius={19} />
+              <View style={styles.leadingIcon}>
+                <TickerLogo symbol={ticker} size={38} borderRadius={19} />
+              </View>
               <View style={styles.insiderText}>
                 <Text style={styles.rowTitle}>{row.owner_name}</Text>
                 <Text style={styles.rowHint}>
@@ -147,7 +150,7 @@ export function UwTickerInsightsSection({ ticker }: Props) {
       ) : null}
 
       {data.news.length > 0 ? (
-        <UICard variant="glass" glassIntensity="light" padding="md" style={styles.card}>
+        <UICard variant="soft" glassIntensity="light" padding="md" style={styles.card}>
           <DarkPoolSectionHeader title="חדשות" icon="newspaper-outline" />
           {data.news.map((n, i) => (
             <View
@@ -214,8 +217,9 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     loaderText: {
       ...darkPoolPhysicalRightText,
-      fontSize: DARK_POOL_TYPE.sectionSubtitle.fontSize,
-      fontWeight: '500',
+      fontSize: DARK_POOL_TYPE.groupLabel.fontSize,
+      lineHeight: DARK_POOL_TYPE.groupLabel.lineHeight,
+      fontWeight: DARK_POOL_TYPE.groupLabel.fontWeight,
       color: tokens.colors.text.tertiary,
     },
     summaryCard: {
@@ -237,15 +241,17 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     summaryLabel: {
       ...darkPoolPhysicalRightText,
-      fontSize: DARK_POOL_TYPE.caption2.fontSize,
-      fontWeight: '600',
+      fontSize: DARK_POOL_TYPE.cardMetricLabel.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardMetricLabel.lineHeight,
+      fontWeight: DARK_POOL_TYPE.cardMetricLabel.fontWeight,
       color: tokens.colors.text.tertiary,
     },
     summaryValue: {
       marginTop: 4,
-      fontSize: DARK_POOL_TYPE.sectionTitle.fontSize,
-      fontWeight: '800',
-      letterSpacing: -0.3,
+      fontSize: DARK_POOL_TYPE.cardMetricValueSecondary.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardMetricValueSecondary.lineHeight,
+      fontWeight: DARK_POOL_TYPE.cardMetricValueSecondary.fontWeight,
+      letterSpacing: DARK_POOL_TYPE.cardMetricValueSecondary.letterSpacing,
       writingDirection: 'ltr',
       textAlign: 'right',
     },
@@ -253,9 +259,9 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       ...darkPoolPhysicalRightText,
       marginTop: 3,
       fontSize: DARK_POOL_TYPE.caption2.fontSize,
-      fontWeight: '500',
+      lineHeight: DARK_POOL_TYPE.caption2.lineHeight,
+      fontWeight: DARK_POOL_TYPE.caption2.fontWeight,
       color: tokens.colors.text.tertiary,
-      lineHeight: 15,
     },
     card: {
       borderRadius: tokens.borderRadius.xl,
@@ -263,22 +269,23 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     metricValue: {
       ...darkPoolPhysicalRightText,
-      fontSize: DARK_POOL_TYPE.body.fontSize,
-      fontWeight: '700',
+      fontSize: DARK_POOL_TYPE.cardMetricValueSecondary.fontSize,
+      fontWeight: DARK_POOL_TYPE.cardMetricValueSecondary.fontWeight,
       color: tokens.colors.text.primary,
-      lineHeight: 22,
+      lineHeight: DARK_POOL_TYPE.cardMetricValueSecondary.lineHeight,
     },
     metricHint: {
       ...darkPoolPhysicalRightText,
       marginTop: 4,
       fontSize: DARK_POOL_TYPE.caption.fontSize,
-      fontWeight: '500',
+      lineHeight: DARK_POOL_TYPE.caption.lineHeight,
+      fontWeight: DARK_POOL_TYPE.caption.fontWeight,
       color: tokens.colors.text.tertiary,
     },
     listRow: {
-      paddingVertical: 10,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: tokens.colors.border.subtle,
+      paddingVertical: 15,
+      borderBottomWidth: 1,
+      borderBottomColor: tokens.colors.border.divider,
       alignItems: 'stretch',
     },
     listRowLast: {
@@ -289,39 +296,39 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       direction: 'rtl',
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 10,
-      paddingVertical: 10,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: tokens.colors.border.subtle,
+      paddingVertical: 15,
+      borderBottomWidth: 1,
+      borderBottomColor: tokens.colors.border.divider,
     },
+    leadingIcon: { marginLeft: 12 },
     insiderText: { flex: 1, alignItems: 'stretch', minWidth: 0 },
     rowTitle: {
       ...darkPoolPhysicalRightText,
-      fontSize: DARK_POOL_TYPE.body.fontSize,
-      fontWeight: '700',
+      fontSize: DARK_POOL_TYPE.cardTitle.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardTitle.lineHeight,
+      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
-      lineHeight: 20,
     },
     rowHint: {
       ...darkPoolPhysicalRightText,
-      marginTop: 3,
-      fontSize: DARK_POOL_TYPE.caption.fontSize,
-      fontWeight: '500',
+      marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
+      fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
+      fontWeight: DARK_POOL_TYPE.cardSubtitle.fontWeight,
       color: tokens.colors.text.tertiary,
-      lineHeight: 17,
     },
     newsRow: {
-      paddingVertical: 10,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: tokens.colors.border.subtle,
+      paddingVertical: 15,
+      borderBottomWidth: 1,
+      borderBottomColor: tokens.colors.border.divider,
       alignItems: 'stretch',
     },
     newsTitle: {
       ...darkPoolPhysicalRightText,
-      fontSize: DARK_POOL_TYPE.body.fontSize,
-      fontWeight: '600',
+      fontSize: DARK_POOL_TYPE.cardTitle.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardTitle.lineHeight,
+      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
-      lineHeight: 21,
     },
   });
 }

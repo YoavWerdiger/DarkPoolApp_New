@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -26,6 +25,9 @@ import {
 } from '../../components/ui/formControl';
 import {
   JOURNAL_LAYOUT,
+  JOURNAL_TYPE,
+  journalBodyTextStyle,
+  journalCardBodyStyle,
   journalCardSubtitleStyle,
   journalSectionTitleStyle,
   PORTFOLIO_FORM,
@@ -401,9 +403,8 @@ export default function AddTransactionScreen() {
           backgroundColor: tokens.colors.background.input,
         },
         modeChipActive: {
-          backgroundColor: tokens.colors.primary.subtle,
-          borderWidth: 1,
-          borderColor: `${tokens.colors.primary.main}44`,
+          backgroundColor: tokens.colors.background.tertiary,
+          borderWidth: 0,
         },
         modeChipText: {
           ...journalCardSubtitleStyle,
@@ -448,10 +449,8 @@ export default function AddTransactionScreen() {
         },
         symbolPlaceholder: {
           flex: 1,
-          fontSize: 15,
+          ...journalCardBodyStyle,
           color: tokens.colors.text.tertiary,
-          textAlign: 'right',
-          writingDirection: 'rtl',
         },
         sideRow: {
           flexDirection: 'row',
@@ -469,8 +468,9 @@ export default function AddTransactionScreen() {
           backgroundColor: tokens.colors.background.input,
         },
         sideBtnText: {
-          fontSize: 15,
-          fontWeight: '800',
+          fontSize: JOURNAL_TYPE.cardBody.fontSize,
+          fontWeight: JOURNAL_TYPE.cardTitle.fontWeight,
+          lineHeight: JOURNAL_TYPE.cardBody.lineHeight,
           letterSpacing: 0.3,
         },
         assetTypeRow: {
@@ -520,10 +520,9 @@ export default function AddTransactionScreen() {
           justifyContent: 'space-between',
         },
         validationLabel: {
-          fontSize: 13,
-          fontWeight: '500',
+          ...journalCardSubtitleStyle,
+          width: undefined,
           color: tokens.colors.text.secondary,
-          textAlign: 'right',
         },
         validationValue: {
           fontSize: 13,
@@ -532,8 +531,8 @@ export default function AddTransactionScreen() {
           fontVariant: ['tabular-nums'],
         },
         validationDivider: {
-          height: StyleSheet.hairlineWidth,
-          backgroundColor: tokens.colors.border.subtle,
+          height: 1,
+          backgroundColor: tokens.colors.border.divider,
         },
         validationWarningRow: {
           flexDirection: 'row',
@@ -563,11 +562,10 @@ export default function AddTransactionScreen() {
           paddingVertical: 14,
         },
         datePillText: {
-          fontSize: 14,
-          fontWeight: '600',
+          ...journalBodyTextStyle,
           color: tokens.colors.text.primary,
-          textAlign: 'right',
           flex: 1,
+          width: undefined,
         },
         pickerModalOverlay: {
           flex: 1,
@@ -575,7 +573,7 @@ export default function AddTransactionScreen() {
           justifyContent: 'flex-end',
         },
         pickerModalSheet: {
-          backgroundColor: '#1A201A',
+          backgroundColor: tokens.colors.background.cardSolid,
           borderTopLeftRadius: 24,
           borderTopRightRadius: 24,
           paddingTop: 16,
@@ -644,7 +642,6 @@ export default function AddTransactionScreen() {
   return (
     <View style={styles.root}>
       <ChatSessionBackdrop />
-      <StatusBar style="light" />
       <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
         <PortfolioScreenHeader
           title={isEdit ? 'עריכת עסקה' : 'פוזיציה חדשה'}
@@ -706,8 +703,7 @@ export default function AddTransactionScreen() {
                         style={[
                           styles.assetTypeChip,
                           assetType === t && {
-                            borderColor: tokens.colors.primary.main,
-                            backgroundColor: 'rgba(0,200,5,0.10)',
+                            backgroundColor: tokens.colors.background.tertiary,
                           },
                         ]}
                         onPress={() => {

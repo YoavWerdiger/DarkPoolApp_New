@@ -10,7 +10,6 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -273,7 +272,6 @@ export default function PortfolioDetailScreen() {
   return (
     <View style={styles.root}>
       <ChatSessionBackdrop />
-      <StatusBar style="light" />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <PortfolioScreenHeader
           title={portfolio?.name ?? ''}

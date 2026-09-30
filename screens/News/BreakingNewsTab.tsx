@@ -2,7 +2,7 @@ import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { View, Text, TextInput, FlatList, RefreshControl, Pressable, TouchableOpacity, Image, Linking, Modal, Share, ScrollView, Animated, Dimensions, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
+import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
 // import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { CardSkeleton } from '../../components/ui/SkeletonLoader';
@@ -24,6 +24,8 @@ import { LikedArticlesService } from '../../services/likedArticlesService';
 import { queryClient } from '../../lib/queryClient';
 import { appQueryKeys } from '../../lib/appQueryKeys';
 import UICard from '../../components/ui/UICard';
+import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
+import { APP_TYPE, appSheetButtonLabelStyle } from '../../components/ui/appType';
 import ShareDestinationSheet from '../../components/share/ShareDestinationSheet';
 import { buildNewsAttachment } from '../../types/shareableEntity';
 
@@ -35,11 +37,10 @@ import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 // Fear & Greed מוצג בטאב "עיקרי מדדים" בלבד
 
-const SHEET_DIVIDER = 'rgba(255, 255, 255, 0.12)';
 const NEWS_DETAIL_IMAGE_HEIGHT = 240;
 const NEWS_DETAIL_MAX_SNAP = 0.68;
 const NEWS_DETAIL_BODY_MAX_LINES = 6;
-const NEWS_DETAIL_BODY_LINE_PX = 23;
+const NEWS_DETAIL_BODY_LINE_PX = APP_TYPE.body.lineHeight;
 const NEWS_DETAIL_BODY_MAX_PX = NEWS_DETAIL_BODY_MAX_LINES * NEWS_DETAIL_BODY_LINE_PX;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -104,56 +105,23 @@ interface NewsDetailModalProps {
   onPrevious?: () => void;
 }
 
-/** כפתור סגירה זכוכיתי שמשתמש באנימציית הסגירה של ה-BottomSheet (דרך ה-context),
- *  עם fallback ל-onClose רגיל אם הוא לא בתוך BottomSheet. */
+/** כפתור סגירה בצבע הכרטיס, עם אנימציית הסגירה של ה-BottomSheet. */
 const SheetCloseButton: React.FC<{
   fallback: () => void;
-  tint: 'dark' | 'light';
-  iconColor: string;
-}> = ({ fallback, tint, iconColor }) => {
+}> = ({ fallback }) => {
+  const tokens = useDesignTokens();
   const animatedClose = useBottomSheetClose();
   const handleClose = useCallback(() => {
     if (animatedClose) animatedClose();
     else fallback();
   }, [animatedClose, fallback]);
 
-  const isDark = tint === 'dark';
   return (
-    <TouchableOpacity
-      onPress={handleClose}
-      activeOpacity={0.85}
-      accessibilityRole="button"
-      accessibilityLabel="סגור"
-      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      style={{
-        position: 'absolute',
-        top: 14,
-        right: 14,
-        zIndex: 100,
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        overflow: 'hidden',
-        borderWidth: 0,
-        backgroundColor: isDark ? 'transparent' : 'rgba(255,255,255,0.85)',
-      }}
-    >
-      <BlurView
-        intensity={isDark ? 40 : 30}
-        tint={isDark ? 'dark' : 'default'}
-        style={StyleSheet.absoluteFill}
-      />
-      <View
-        pointerEvents="none"
-        style={[
-          StyleSheet.absoluteFill,
-          { backgroundColor: isDark ? 'rgba(0, 0, 0, 0.18)' : 'rgba(255, 255, 255, 0.06)' },
-        ]}
-      />
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <Ionicons name="chevron-down" size={20} color={iconColor} />
-      </View>
-    </TouchableOpacity>
+    <View style={{ position: 'absolute', top: 14, right: 14, zIndex: 100 }}>
+      <DayNavBlurButton onPress={handleClose} size={36} accessibilityLabel="סגור">
+        <Ionicons name="chevron-down" size={20} color={tokens.colors.text.primary} />
+      </DayNavBlurButton>
+    </View>
   );
 };
 
@@ -170,7 +138,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
   onPrevious
 }) => {
   const DesignTokens = useDesignTokens();
-  const detailPad = DesignTokens.layout?.screenPadding ?? 20;
+  const detailPad = APP_LAYOUT.screenPaddingHorizontal;
   const insets = useSafeAreaInsets();
   const [likeCount, setLikeCount] = useState<number>(0);
   
@@ -254,11 +222,9 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
           if (h > 0) setTitleBlockH((prev) => (prev === h ? prev : h));
         }}
         style={{
-          fontSize: 20,
-          fontWeight: '700',
+          ...APP_TYPE.sectionTitle,
           color: DesignTokens.colors.text.primary,
-          lineHeight: 28,
-          marginBottom: 10,
+          marginBottom: APP_LAYOUT.sectionHeaderToContent,
           alignSelf: 'stretch',
           ...newsDetailParagraphText,
         }}
@@ -277,9 +243,8 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
       >
         <Text
           style={{
-            fontSize: 12,
+            ...APP_TYPE.caption,
             color: DesignTokens.colors.text.secondary,
-            fontWeight: '500',
             ...newsDetailMetaText,
           }}
           numberOfLines={1}
@@ -288,7 +253,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
         </Text>
         <Text
           style={{
-            fontSize: 12,
+            ...APP_TYPE.caption,
             color: DesignTokens.colors.text.tertiary,
             marginHorizontal: 6,
           }}
@@ -297,7 +262,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
         </Text>
         <Text
           style={{
-            fontSize: 12,
+            ...APP_TYPE.caption,
             color: DesignTokens.colors.text.tertiary,
             ...newsDetailMetaText,
           }}
@@ -319,8 +284,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
               if (h > 0) setBodyNaturalH((prev) => (prev === h ? prev : h));
             }}
             style={{
-              fontSize: 15,
-              lineHeight: NEWS_DETAIL_BODY_LINE_PX,
+              ...APP_TYPE.body,
               color: DesignTokens.colors.text.secondary,
               alignSelf: 'stretch',
               ...newsDetailParagraphText,
@@ -336,8 +300,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
             if (h > 0) setBodyNaturalH((prev) => (prev === h ? prev : h));
           }}
           style={{
-            fontSize: 15,
-            lineHeight: NEWS_DETAIL_BODY_LINE_PX,
+            ...APP_TYPE.body,
             color: DesignTokens.colors.text.secondary,
             marginBottom: 20,
             alignSelf: 'stretch',
@@ -366,7 +329,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
             paddingVertical: 12,
             paddingHorizontal: 16,
             borderRadius: 24,
-            backgroundColor: isLiked ? 'rgba(255, 59, 92, 0.22)' : DesignTokens.colors.background.card,
+            backgroundColor: isLiked ? 'rgba(255, 59, 92, 0.22)' : DesignTokens.colors.background.primary,
             borderWidth: 0,
           }}
           onPress={() => {
@@ -385,8 +348,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
           />
           <Text
             style={{
-              fontSize: 14,
-              fontWeight: '600',
+              ...appSheetButtonLabelStyle,
               color: isLiked ? DesignTokens.colors.text.primary : DesignTokens.colors.text.secondary,
               ...newsDetailRtlText,
             }}
@@ -396,8 +358,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
           {likeCount > 0 ? (
             <Text
               style={{
-                fontSize: 12,
-                fontWeight: '600',
+                ...APP_TYPE.caption,
                 color: DesignTokens.colors.text.tertiary,
                 ...newsDetailRtlText,
               }}
@@ -417,7 +378,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
             paddingVertical: 12,
             paddingHorizontal: 16,
             borderRadius: 24,
-            backgroundColor: DesignTokens.colors.background.card,
+            backgroundColor: DesignTokens.colors.background.primary,
             borderWidth: 0,
           }}
           onPress={() => onShare(article)}
@@ -430,8 +391,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
           />
           <Text
             style={{
-              fontSize: 14,
-              fontWeight: '600',
+              ...appSheetButtonLabelStyle,
               color: DesignTokens.colors.text.secondary,
               ...newsDetailRtlText,
             }}
@@ -498,14 +458,10 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
                 }}
               />
             </View>
-            <SheetCloseButton fallback={onClose} tint="dark" iconColor="#FFFFFF" />
+            <SheetCloseButton fallback={onClose} />
           </View>
         ) : (
-          <SheetCloseButton
-            fallback={onClose}
-            tint="light"
-            iconColor={DesignTokens.colors.text.primary}
-          />
+          <SheetCloseButton fallback={onClose} />
         )}
 
         {articleBody}
@@ -533,8 +489,8 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
   const hasImage = !!article.image_url;
   // Square thumbnail on the right side — compact, doesn't dominate the card.
   const THUMB_SIZE = 92;
-  const screenPad = DesignTokens.layout?.screenPadding ?? 20;
-  const cardRadius = DesignTokens.borderRadius['2xl'];
+  const screenPad = APP_LAYOUT.screenPaddingHorizontal;
+  const cardRadius = UI_CARD_RADIUS;
 
   const headline = article.label || article.title;
   const summary = article.summary;
@@ -542,7 +498,7 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
   return (
     <Pressable
       onPress={() => onPress(article)}
-      style={{ marginHorizontal: screenPad, marginBottom: 12 }}
+      style={{ marginHorizontal: screenPad, marginBottom: APP_LAYOUT.cardStackGap }}
       accessibilityRole="button"
     >
       <UICard
@@ -559,8 +515,8 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
           style={{
             flexDirection: 'row-reverse',
             alignItems: 'stretch',
-            padding: DesignTokens.spacing.md,
-            gap: DesignTokens.spacing.md,
+            padding: APP_LAYOUT.cardPadding,
+            gap: APP_LAYOUT.cardTitleToBodyGap,
           }}
         >
           {/* Square thumbnail */}
@@ -602,11 +558,9 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
           <View style={{ flex: 1, minHeight: THUMB_SIZE }}>
             <Text
               style={{
-                fontSize: 16,
-                fontWeight: '700',
+                ...APP_TYPE.cardTitle,
                 color: DesignTokens.colors.text.primary,
                 textAlign: 'right',
-                lineHeight: 22,
                 writingDirection: 'rtl',
               }}
               numberOfLines={summary ? 2 : 3}
@@ -617,12 +571,11 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
             {summary ? (
               <Text
                 style={{
-                  fontSize: 13,
+                  ...APP_TYPE.cardSubtitle,
                   color: DesignTokens.colors.text.secondary,
                   textAlign: 'right',
-                  lineHeight: 19,
                   writingDirection: 'rtl',
-                  marginTop: 2,
+                  marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
                 }}
                 numberOfLines={2}
               >
@@ -642,7 +595,7 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
                   borderRadius: 8,
                 }}
               >
-                <Text style={{ fontSize: 11, fontWeight: '600', color: categoryColor }}>
+                <Text style={{ ...APP_TYPE.cardSubtitle, color: categoryColor }}>
                   {article.category}
                 </Text>
               </View>
@@ -650,13 +603,13 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
           </View>
         </View>
 
-        <View style={{ height: 1, backgroundColor: SHEET_DIVIDER }} />
+        <View style={{ height: 1, backgroundColor: DesignTokens.colors.border.divider }} />
 
         {/* Footer — actions on the left, source + time on the right */}
         <View
           style={{
-            paddingHorizontal: DesignTokens.spacing.lg,
-            paddingVertical: DesignTokens.spacing.sm,
+            paddingHorizontal: APP_LAYOUT.cardPadding,
+            paddingVertical: APP_LAYOUT.stackGapSmall,
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -671,7 +624,7 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
                 borderRadius: 16,
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: isLiked ? 'rgba(255, 59, 92, 0.15)' : 'rgba(255,255,255,0.06)',
+                backgroundColor: isLiked ? 'rgba(255, 59, 92, 0.15)' : DesignTokens.colors.background.primary,
               }}
               onPress={(e) => {
                 e?.stopPropagation?.();
@@ -692,7 +645,7 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
                 borderRadius: 16,
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: 'rgba(255,255,255,0.06)',
+                backgroundColor: DesignTokens.colors.background.primary,
               }}
               onPress={(e) => {
                 e?.stopPropagation?.();
@@ -713,8 +666,7 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
           >
             <Text
               style={{
-                fontSize: 12,
-                fontWeight: '500',
+                ...APP_TYPE.cardSubtitle,
                 color: DesignTokens.colors.text.secondary,
                 writingDirection: 'rtl',
               }}
@@ -724,7 +676,7 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
             </Text>
             <Text
               style={{
-                fontSize: 12,
+                ...APP_TYPE.cardSubtitle,
                 color: DesignTokens.colors.text.tertiary,
                 marginHorizontal: 6,
               }}
@@ -733,7 +685,7 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
             </Text>
             <Text
               style={{
-                fontSize: 12,
+                ...APP_TYPE.cardSubtitle,
                 color: DesignTokens.colors.text.tertiary,
                 writingDirection: 'rtl',
               }}
@@ -1262,7 +1214,7 @@ export default function BreakingNewsTab({
     setShareArticle(null);
   }, []);
 
-  const screenPad = DesignTokens.layout?.screenPadding ?? 20;
+  const screenPad = APP_LAYOUT.screenPaddingHorizontal;
 
   /** חיפוש מימין, לב משמאל — כיוון LTR לשורה בלבד כדי שלא ייעלם הלב ב־RTL */
   const renderSearchHeader = useCallback(() => {
@@ -1305,7 +1257,7 @@ export default function BreakingNewsTab({
               alignItems: 'center',
             }}
           >
-            <Ionicons name="heart-outline" size={22} color="#FFFFFF" />
+            <Ionicons name="heart-outline" size={22} color={DesignTokens.colors.text.primary} />
           </UICard>
         </TouchableOpacity>
 
@@ -1336,7 +1288,7 @@ export default function BreakingNewsTab({
                   flex: 1,
                   marginHorizontal: 8,
                   color: DesignTokens.colors.text.primary,
-                  fontSize: 15,
+                  ...APP_TYPE.body,
                   textAlign: 'right',
                   writingDirection: 'rtl',
                   paddingVertical: 6,
@@ -1373,14 +1325,22 @@ export default function BreakingNewsTab({
           color={DesignTokens.colors.text.tertiary}
         />
         <Text
-          className="text-lg font-semibold mt-4 text-center"
-          style={{ color: DesignTokens.colors.text.primary }}
+          style={{
+            ...APP_TYPE.sectionTitle,
+            color: DesignTokens.colors.text.primary,
+            textAlign: 'center',
+            marginTop: APP_LAYOUT.componentGap,
+          }}
         >
           {hasSearch ? 'אין תוצאות לחיפוש' : 'אין חדשות כרגע'}
         </Text>
         <Text
-          className="text-sm mt-2 text-center"
-          style={{ color: DesignTokens.colors.text.secondary }}
+          style={{
+            ...APP_TYPE.cardSubtitle,
+            color: DesignTokens.colors.text.secondary,
+            textAlign: 'center',
+            marginTop: APP_LAYOUT.groupLabelToContent,
+          }}
         >
           {hasSearch ? 'נסה ניסוח אחר או נקה את החיפוש' : 'משיכה למטה לרענון — החדשות יופיעו כאן'}
         </Text>
@@ -1390,7 +1350,7 @@ export default function BreakingNewsTab({
 
   if (loading && articles.length === 0) {
     return (
-      <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 12 }}>
+      <View style={{ flex: 1, paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal, paddingTop: APP_LAYOUT.sectionHeaderToContent }}>
         {Array.from({ length: 5 }).map((_, i) => (
           <CardSkeleton key={i} delay={i * 70} />
         ))}

@@ -1,12 +1,19 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, TextInput, Modal } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { courseService } from '../../services/courseService';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import UICard from '../../components/ui/UICard';
+import UIButton from '../../components/ui/UIButton';
+import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
+import {
+  ACADEMY_TYPE,
+  academyCardSubtitleStyle,
+  academyCardTitleStyle,
+  academySectionTitleStyle,
+} from '../../components/learning/academyLayout';
 import { ScreenChrome } from '../../components/ui';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { AcademySubScreenBar } from '../../components/learning';
@@ -93,7 +100,6 @@ export const CoursePreviewScreen: React.FC = () => {
 
   return (
     <ScreenChrome>
-      <StatusBar style="light" />
       <RNSafeAreaView style={styles.safeAreaContainer} edges={['top']}>
         <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
           <ScrollView 
@@ -108,10 +114,9 @@ export const CoursePreviewScreen: React.FC = () => {
 
           {/* Course Info */}
           <UICard
-            variant="blur"
+            variant="soft"
             padding="lg"
-            showGlassBorder={false}
-            style={[styles.cardSpacing, academyCardFrameStyle('free')]}
+            style={[styles.cardSpacing, academyCardFrameStyle('neutral')]}
           >
           <Text style={styles.courseTitle}>{preview.course.title}</Text>
           <Text style={styles.courseSubtitle}>{preview.course.subtitle}</Text>
@@ -152,9 +157,8 @@ export const CoursePreviewScreen: React.FC = () => {
             {preview.lessons.map((lesson, index) => (
               <UICard
                 key={lesson.id}
-                variant="blur"
+                variant="soft"
                 padding="md"
-                showGlassBorder={false}
                 style={[styles.lessonCard, academyCardFrameStyle('neutral')]}
               >
               <View style={styles.lessonHeader}>
@@ -195,21 +199,18 @@ export const CoursePreviewScreen: React.FC = () => {
           </View>
 
           {/* Create Button */}
-          <TouchableOpacity
-            style={[styles.createButton, isCreating && styles.createButtonDisabled]}
-            onPress={handleCreateCourse}
+          <UIButton
+            title={isCreating ? 'יוצר קורס...' : 'צור קורס במסד הנתונים'}
+            variant="primary"
+            fullWidth
+            loading={isCreating}
             disabled={isCreating}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.createButtonText}>
-              {isCreating ? 'יוצר קורס...' : '✅ צור קורס במסד הנתונים'}
-            </Text>
-          </TouchableOpacity>
+            onPress={handleCreateCourse}
+          />
 
           <UICard
-            variant="blur"
+            variant="soft"
             padding="md"
-            showGlassBorder={false}
             style={[styles.footerCard, academyCardFrameStyle('neutral')]}
           >
             <Text style={styles.footerText}>
@@ -246,18 +247,12 @@ export const CoursePreviewScreen: React.FC = () => {
               multiline={false}
             />
             <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={handleCancelEdit}
-              >
-                <Text style={styles.modalButtonText}>ביטול</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.saveButton]}
-                onPress={handleSaveLink}
-              >
-                <Text style={styles.modalButtonText}>שמור</Text>
-              </TouchableOpacity>
+              <View style={{ flex: 1 }}>
+                <UIButton title="ביטול" variant="secondary" fullWidth onPress={handleCancelEdit} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <UIButton title="שמור" variant="primary" fullWidth onPress={handleSaveLink} />
+              </View>
             </View>
           </View>
         </View>
@@ -286,30 +281,27 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       marginBottom: tokens.spacing.lg,
     },
     lessonCard: {
-      marginBottom: tokens.spacing.md,
+      marginBottom: APP_LAYOUT.cardStackGap,
+      borderRadius: UI_CARD_RADIUS,
     },
     footerCard: {
       marginTop: tokens.spacing.lg,
     },
     courseTitle: {
-      fontSize: tokens.typography.fontSize.xl,
-      fontWeight: tokens.typography.fontWeight.bold,
+      ...academyCardTitleStyle,
       color: tokens.colors.text.primary,
-      marginBottom: tokens.spacing.sm,
-      textAlign: 'right',
+      marginBottom: APP_LAYOUT.cardTitleToSubtitleGap,
     },
     courseSubtitle: {
-      fontSize: tokens.typography.fontSize.base,
-      color: tokens.colors.text.secondary,
-      marginBottom: tokens.spacing.sm,
-      textAlign: 'right',
+      ...academyCardSubtitleStyle,
+      marginBottom: APP_LAYOUT.cardTitleToBodyGap,
     },
     courseDescription: {
-      fontSize: tokens.typography.fontSize.sm,
+      ...ACADEMY_TYPE.cardBody,
       color: tokens.colors.text.tertiary,
-      marginBottom: tokens.spacing.md,
+      marginBottom: APP_LAYOUT.cardTitleToBodyGap,
       textAlign: 'right',
-      lineHeight: 20,
+      writingDirection: 'rtl',
     },
     courseMeta: {
       flexDirection: 'row',
@@ -323,12 +315,11 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       gap: tokens.spacing.xs,
     },
     metaLabel: {
-      fontSize: tokens.typography.fontSize.sm,
+      ...ACADEMY_TYPE.caption,
       color: tokens.colors.text.secondary,
     },
     metaValue: {
-      fontSize: tokens.typography.fontSize.sm,
-      fontWeight: tokens.typography.fontWeight.semibold as any,
+      ...ACADEMY_TYPE.caption,
       color: tokens.colors.text.primary,
     },
     warningBox: {
@@ -338,19 +329,18 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       marginTop: tokens.spacing.md,
     },
     warningText: {
-      fontSize: tokens.typography.fontSize.sm,
+      ...ACADEMY_TYPE.body,
       color: tokens.colors.danger.main,
       textAlign: 'right',
+      writingDirection: 'rtl',
     },
     lessonsSection: {
       marginTop: tokens.spacing.lg,
     },
     sectionTitle: {
-      fontSize: tokens.typography.fontSize.lg,
-      fontWeight: tokens.typography.fontWeight.bold as any,
+      ...academySectionTitleStyle,
       color: tokens.colors.text.primary,
-      marginBottom: tokens.spacing.md,
-      textAlign: 'right',
+      marginBottom: APP_LAYOUT.sectionHeaderToContent,
     },
     lessonHeader: {
       flexDirection: 'row',
@@ -358,10 +348,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       marginBottom: tokens.spacing.sm,
     },
     lessonNumber: {
-      fontSize: tokens.typography.fontSize.lg,
-      fontWeight: tokens.typography.fontWeight.bold as any,
-      color: tokens.colors.primary.main,
-      marginLeft: tokens.spacing.md,
+      ...ACADEMY_TYPE.cardTitle,
+      color: tokens.colors.text.primary,
+      marginLeft: 12,
       minWidth: 30,
       textAlign: 'right',
     },
@@ -369,16 +358,13 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       flex: 1,
     },
     lessonTitle: {
-      fontSize: tokens.typography.fontSize.base,
-      fontWeight: tokens.typography.fontWeight.medium as any,
+      ...academyCardTitleStyle,
       color: tokens.colors.text.primary,
-      marginBottom: tokens.spacing.xs,
-      textAlign: 'right',
+      marginBottom: APP_LAYOUT.cardTitleToSubtitleGap,
     },
     lessonDuration: {
-      fontSize: tokens.typography.fontSize.sm,
-      color: tokens.colors.text.secondary,
-      textAlign: 'right',
+      ...academyCardSubtitleStyle,
+      marginTop: 0,
     },
     linkActions: {
       flexDirection: 'row',
@@ -387,34 +373,30 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     youtubeButton: {
       flex: 1,
-      backgroundColor: tokens.colors.primary.main,
+      backgroundColor: tokens.colors.background.navChrome,
       borderRadius: tokens.borderRadius.md,
       padding: tokens.spacing.sm,
     },
     openButton: {
-      backgroundColor: tokens.colors.primary.main,
+      backgroundColor: tokens.colors.background.navChrome,
     },
     editButton: {
-      backgroundColor: tokens.colors.background.tertiary || tokens.colors.background.secondary,
+      backgroundColor: tokens.colors.background.navChrome,
     },
     youtubeButtonText: {
-      fontSize: tokens.typography.fontSize.sm,
-      fontWeight: tokens.typography.fontWeight.medium,
+      ...ACADEMY_TYPE.caption,
       color: tokens.colors.text.primary,
       textAlign: 'center',
     },
     addLinkButton: {
-      backgroundColor: tokens.colors.background.tertiary || tokens.colors.background.secondary,
+      backgroundColor: tokens.colors.background.navChrome,
       borderRadius: tokens.borderRadius.md,
       padding: tokens.spacing.sm,
       marginTop: tokens.spacing.sm,
-      borderWidth: tokens.layout?.borderWidth?.thin || 1,
-      borderColor: tokens.colors.border.primary,
-      borderStyle: 'dashed',
+      borderWidth: 0,
     },
     addLinkText: {
-      fontSize: tokens.typography.fontSize.sm,
-      fontWeight: tokens.typography.fontWeight.medium,
+      ...ACADEMY_TYPE.caption,
       color: tokens.colors.text.secondary,
       textAlign: 'center',
     },
@@ -427,30 +409,15 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       borderColor: tokens.colors.border.primary,
     },
     noLinkText: {
-      fontSize: tokens.typography.fontSize.sm,
+      ...ACADEMY_TYPE.caption,
       color: tokens.colors.text.secondary,
       textAlign: 'center',
     },
-    createButton: {
-      backgroundColor: tokens.colors.primary.main,
-      borderRadius: tokens.borderRadius.lg,
-      padding: tokens.spacing.lg,
-      marginTop: tokens.spacing.xl,
-      alignItems: 'center',
-    },
-    createButtonDisabled: {
-      opacity: 0.6,
-    },
-    createButtonText: {
-      fontSize: tokens.typography.fontSize.lg,
-      fontWeight: tokens.typography.fontWeight.bold as any,
-      color: tokens.colors.text.inverse,
-    },
     footerText: {
-      fontSize: tokens.typography.fontSize.sm,
+      ...ACADEMY_TYPE.cardBody,
       color: tokens.colors.text.secondary,
       textAlign: 'right',
-      lineHeight: 18,
+      writingDirection: 'rtl',
     },
     modalOverlay: {
       flex: 1,
@@ -460,31 +427,28 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       padding: tokens.spacing.lg,
     },
     modalContent: {
-      backgroundColor: tokens.colors.background.secondary,
-      borderRadius: tokens.borderRadius.lg,
-      padding: tokens.spacing.lg,
+      backgroundColor: tokens.colors.background.cardSolid,
+      borderRadius: UI_CARD_RADIUS,
+      padding: APP_LAYOUT.cardPadding,
       width: '100%',
       maxWidth: 500,
-      borderWidth: tokens.layout?.borderWidth?.thin || 1,
-      borderColor: tokens.colors.border.primary,
+      borderWidth: 0,
     },
     modalTitle: {
-      fontSize: tokens.typography.fontSize.lg,
-      fontWeight: tokens.typography.fontWeight.bold,
+      ...academyCardTitleStyle,
       color: tokens.colors.text.primary,
-      marginBottom: tokens.spacing.md,
-      textAlign: 'right',
+      marginBottom: APP_LAYOUT.cardTitleToBodyGap,
     },
     linkInput: {
-      backgroundColor: tokens.colors.background.primary,
+      backgroundColor: tokens.colors.background.input,
       borderRadius: tokens.borderRadius.md,
-      padding: tokens.spacing.md,
-      fontSize: tokens.typography.fontSize.base,
+      padding: APP_LAYOUT.cardPadding,
+      ...ACADEMY_TYPE.body,
       color: tokens.colors.text.primary,
-      marginBottom: tokens.spacing.lg,
-      borderWidth: tokens.layout?.borderWidth?.thin || 1,
-      borderColor: tokens.colors.border.primary,
+      marginBottom: APP_LAYOUT.cardTitleToBodyGap,
+      borderWidth: 0,
       textAlign: 'right',
+      writingDirection: 'rtl',
     },
     modalButtons: {
       flexDirection: 'row',
@@ -497,16 +461,16 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       alignItems: 'center',
     },
     cancelButton: {
-      backgroundColor: 'rgba(255, 255, 255, 0.05)',
-      borderWidth: 1,
-      borderColor: 'rgba(255, 255, 255, 0.1)',
+      backgroundColor: tokens.colors.background.navChrome,
+      borderWidth: 0,
     },
     saveButton: {
-      backgroundColor: tokens.colors.primary.main,
+      backgroundColor: tokens.colors.primary.lightCta,
+      borderRadius: tokens.borderRadius.full,
     },
     modalButtonText: {
-      fontSize: tokens.typography.fontSize.base,
-      fontWeight: tokens.typography.fontWeight.semibold as any,
+      ...ACADEMY_TYPE.body,
+      fontWeight: ACADEMY_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
     },
   });

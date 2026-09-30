@@ -38,7 +38,7 @@ import {
   SHEET_GLASS_INTENSITY,
   SHEET_GLASS_OVERLAY,
 } from '../ui/BottomSheet/sheetGlass';
-import { chatPalette, chatRtlRow } from './chatDesignTokens';
+import { chatRtlRow } from './chatDesignTokens';
 import {
   APP_TYPE,
   appPhysicalRightText,
@@ -138,6 +138,11 @@ type ChatBottomSheetProps = {
   handleColor?: string;
   /** הזזת השיט כשהמקלדת עולה (מועבר ל-BottomSheet). */
   avoidKeyboard?: boolean;
+  /**
+   * ברירת מחדל: true. false מצייר את השיט בתוך ההורה (מודאל שכבר פתוח,
+   * למשל פריוויו מדיה לפני שליחה) בלי Modal מקונן.
+   */
+  useModal?: boolean;
   children: React.ReactNode;
 };
 
@@ -161,6 +166,7 @@ export function ChatBottomSheet({
   showHandle = true,
   handleColor,
   avoidKeyboard,
+  useModal = true,
   children,
 }: ChatBottomSheetProps) {
   return (
@@ -174,7 +180,7 @@ export function ChatBottomSheet({
       showHandle={showHandle}
       handleColor={handleColor}
       enablePanDownToClose
-      useModal
+      useModal={useModal}
       backdropOpacity={backdropOpacity}
       showBrandBackground={showBrandBackground}
       showBrandWatermark={showBrandWatermark}
@@ -286,11 +292,15 @@ export function ChatSheetSearchBar({
 
   return (
     <View style={sheet.searchRow}>
-      <UICard
-        {...CHROME_UICARD}
-        style={[sheet.searchField, chromeSurfaceCardStyle(tokens)]}
-        contentContainerStyle={sheet.searchFieldInner}
-      >
+        <UICard
+          {...CHROME_UICARD}
+          style={[
+            sheet.searchField,
+            chromeSurfaceCardStyle(tokens),
+            { backgroundColor: tokens.colors.background.primary },
+          ]}
+          contentContainerStyle={sheet.searchFieldInner}
+        >
         <Ionicons name="search" size={18} color={tokens.colors.text.secondary} />
         <TextInput
           ref={inputRef}
@@ -490,7 +500,7 @@ export function useChatSheetStyles() {
           paddingVertical: 14,
           paddingHorizontal: tokens.spacing.sm,
           borderBottomWidth: StyleSheet.hairlineWidth,
-          borderBottomColor: chatPalette.glassBorder,
+          borderBottomColor: tokens.colors.border.divider,
         },
         resultHeader: {
           ...chatRtlRow,
@@ -567,10 +577,10 @@ export function useChatSheetStyles() {
         tabsContainer: {
           flexDirection: 'row-reverse',
           direction: 'rtl',
-          backgroundColor: chatPalette.glass,
+          backgroundColor: tokens.colors.background.primary,
           borderRadius: 30,
           borderWidth: StyleSheet.hairlineWidth,
-          borderColor: chatPalette.glassBorder,
+          borderColor: tokens.colors.border.divider,
           padding: 4,
           gap: 4,
           alignItems: 'center',

@@ -10,7 +10,6 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CommonActions } from '@react-navigation/native';
@@ -265,12 +264,10 @@ function PortfolioActionsSheetBody({
         },
         pillTextCancel: {
           ...appSheetButtonLabelStyle,
-          fontWeight: '800',
           color: actionColors.cancel.color,
         },
         pillTextDanger: {
           ...appSheetButtonLabelStyle,
-          fontWeight: '800',
           color: actionColors.destructive.color,
         },
         shareBlock: {
@@ -377,7 +374,6 @@ function PortfolioActionsSheetBody({
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <StatusBar style="light" />
       <PortfolioScreenHeader
         title={sheetTitle}
         subtitle={sheetSubtitle}

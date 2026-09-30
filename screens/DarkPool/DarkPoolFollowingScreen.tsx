@@ -11,7 +11,6 @@ import {
   Text,
   View,
 } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -20,7 +19,8 @@ import { ScreenChrome } from '../../components/ui/ScreenChrome';
 import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHeader';
 import UIButton from '../../components/ui/UIButton';
 import UICard from '../../components/ui/UICard';
-import { CHROME_UICARD, chromeSurfaceCardStyle } from '../../components/ui/chromeControl';
+import { CHROME_UICARD } from '../../components/ui/chromeControl';
+import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { ListItemSkeleton, CardSkeleton } from '../../components/ui/SkeletonLoader';
 import { useDarkPoolTabBarHeight } from '../../hooks/useDarkPoolTabBarHeight';
@@ -136,35 +136,38 @@ export default function DarkPoolFollowingScreen() {
         },
         followCard: {
           marginBottom: 8,
-          borderRadius: tokens.borderRadius['2xl'],
+          borderRadius: UI_CARD_RADIUS,
           overflow: 'hidden',
-          ...chromeSurfaceCardStyle(tokens),
+          backgroundColor: tokens.colors.background.cardSolid,
+          borderWidth: 0,
           ...tokens.shadows.none,
         },
         row: {
           direction: 'rtl',
           flexDirection: 'row',
           alignItems: 'center',
-          gap: 12,
-          paddingVertical: 12,
-          paddingHorizontal: 12,
+          paddingVertical: 15,
+          paddingHorizontal: APP_LAYOUT.cardPadding,
         },
-        avatar: {},
+        avatar: {
+          marginLeft: 12,
+        },
         textCol: { flex: 1, minWidth: 0, alignItems: 'stretch' },
         name: {
           ...darkPoolPhysicalRightText,
           width: '100%',
-          fontSize: DARK_POOL_TYPE.body.fontSize,
-          lineHeight: 20,
-          fontWeight: '800',
+          fontSize: DARK_POOL_TYPE.cardTitle.fontSize,
+          lineHeight: DARK_POOL_TYPE.cardTitle.lineHeight,
+          fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
           color: tokens.colors.text.primary,
         },
         sub: {
           ...darkPoolPhysicalRightText,
           width: '100%',
-          marginTop: 2,
-          fontSize: DARK_POOL_TYPE.sectionSubtitle.fontSize,
-          lineHeight: DARK_POOL_TYPE.sectionSubtitle.lineHeight,
+          marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
+          fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
+          lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
+          fontWeight: DARK_POOL_TYPE.cardSubtitle.fontWeight,
           color: tokens.colors.text.tertiary,
         },
         actions: {
@@ -183,7 +186,6 @@ export default function DarkPoolFollowingScreen() {
   if (loading && list.length === 0) {
     return (
       <ScreenChrome rtl>
-        <StatusBar style="light" />
         <SafeAreaView style={[darkPoolTransparentFill, darkPoolRtlContent]} edges={['top']}>
           <MainDrawerScreenHeader inRtlTree title="מעקב" onMenuPress={openDrawer} />
           <View style={styles.scroll}>
@@ -200,7 +202,6 @@ export default function DarkPoolFollowingScreen() {
 
   return (
     <ScreenChrome rtl>
-      <StatusBar style="light" />
       <SafeAreaView style={[darkPoolTransparentFill, darkPoolRtlContent]} edges={['top']}>
         <MainDrawerScreenHeader
           inRtlTree

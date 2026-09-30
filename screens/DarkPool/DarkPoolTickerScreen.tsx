@@ -13,7 +13,6 @@ import {
   Text,
   View,
 } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -364,7 +363,6 @@ export default function DarkPoolTickerScreen() {
 
   return (
     <ScreenChrome rtl>
-      <StatusBar style="light" />
       <SafeAreaView style={[darkPoolTransparentFill, darkPoolRtlContent]} edges={['top']}>
         <View style={styles.topBar}>
           <DayNavBlurButton
@@ -502,7 +500,9 @@ export default function DarkPoolTickerScreen() {
                         color: active
                           ? tokens.colors.text.primary
                           : tokens.colors.text.secondary,
-                        fontWeight: active ? '700' : '500',
+                        fontWeight: active
+                          ? DARK_POOL_TYPE.sectionTitle.fontWeight
+                          : DARK_POOL_TYPE.groupLabel.fontWeight,
                       },
                     ]}
                   >
@@ -526,7 +526,7 @@ export default function DarkPoolTickerScreen() {
                   <ActivityIndicator color={tokens.colors.primary.main} />
                 </View>
               ) : holdersQuery.isError ? (
-                <UICard variant="glass" glassIntensity="light" padding="md">
+                <UICard variant="soft" glassIntensity="light" padding="md">
                   <Text style={styles.emptyTitle}>{holdersError.title}</Text>
                   <Text style={styles.emptyBody}>{holdersError.body}</Text>
                 </UICard>
@@ -537,7 +537,7 @@ export default function DarkPoolTickerScreen() {
                   return (
                     <UICard
                       key={holder.bioguideId}
-                      variant="glass"
+                      variant="soft"
                       glassIntensity="light"
                       padding="none"
                       disableBlur
@@ -580,7 +580,7 @@ export default function DarkPoolTickerScreen() {
                   );
                 })
               ) : (
-                <UICard variant="glass" glassIntensity="light" padding="md">
+                <UICard variant="soft" glassIntensity="light" padding="md">
                   <Text style={styles.emptyTitle}>{holdersEmpty.title}</Text>
                   <Text style={styles.emptyBody}>{holdersEmpty.body}</Text>
                 </UICard>
@@ -624,7 +624,7 @@ export default function DarkPoolTickerScreen() {
               )}
             </View>
           ) : (
-            <UICard variant="glass" glassIntensity="light" padding="md">
+            <UICard variant="soft" glassIntensity="light" padding="md">
               <Text style={styles.emptyTitle}>{feedEmpty.title}</Text>
               <Text style={styles.emptyBody}>{feedEmpty.body}</Text>
             </UICard>
@@ -665,18 +665,18 @@ function createStyles(
     identityTicker: {
       fontSize: DARK_POOL_TYPE.sectionTitle.fontSize,
       lineHeight: DARK_POOL_TYPE.sectionTitle.lineHeight,
-      fontWeight: '800',
-      letterSpacing: -0.4,
+      fontWeight: DARK_POOL_TYPE.sectionTitle.fontWeight,
+      letterSpacing: DARK_POOL_TYPE.sectionTitle.letterSpacing,
       color: tokens.colors.text.primary,
       writingDirection: 'ltr',
       textAlign: 'left',
     },
     companyName: {
       ...darkPoolPhysicalLeftText,
-      marginTop: 3,
-      fontSize: DARK_POOL_TYPE.body.fontSize,
-      lineHeight: DARK_POOL_TYPE.body.lineHeight,
-      fontWeight: '500',
+      marginTop: 2,
+      fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
+      fontWeight: DARK_POOL_TYPE.cardSubtitle.fontWeight,
       color: tokens.colors.text.secondary,
     },
     heroBlock: {
@@ -697,7 +697,7 @@ function createStyles(
       ...darkPoolPhysicalRightText,
       fontSize: 44,
       lineHeight: 50,
-      fontWeight: '800',
+      fontWeight: DARK_POOL_TYPE.cardMetricValue.fontWeight,
       letterSpacing: -1,
       color: tokens.colors.text.primary,
       writingDirection: 'ltr',
@@ -710,7 +710,7 @@ function createStyles(
       ...darkPoolPhysicalRightText,
       fontSize: DARK_POOL_TYPE.body.fontSize,
       lineHeight: DARK_POOL_TYPE.body.lineHeight,
-      fontWeight: '600',
+      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       writingDirection: 'ltr',
     },
     scrubDate: {
@@ -809,9 +809,9 @@ function createStyles(
     },
     holderName: {
       ...ltrNameText,
-      fontSize: DARK_POOL_TYPE.body.fontSize,
-      lineHeight: DARK_POOL_TYPE.body.lineHeight,
-      fontWeight: '600',
+      fontSize: DARK_POOL_TYPE.cardTitle.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardTitle.lineHeight,
+      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
     },
     holderSubtitle: {
@@ -827,9 +827,9 @@ function createStyles(
     },
     holderMetric: {
       ...darkPoolPhysicalLeftText,
-      fontSize: DARK_POOL_TYPE.body.fontSize,
-      lineHeight: DARK_POOL_TYPE.body.lineHeight,
-      fontWeight: '700',
+      fontSize: DARK_POOL_TYPE.cardBody.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardBody.lineHeight,
+      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
     },
     holderShares: {
@@ -845,9 +845,9 @@ function createStyles(
     },
     emptyTitle: {
       ...darkPoolPhysicalRightText,
-      fontSize: DARK_POOL_TYPE.body.fontSize,
-      lineHeight: DARK_POOL_TYPE.body.lineHeight,
-      fontWeight: '700',
+      fontSize: DARK_POOL_TYPE.cardTitle.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardTitle.lineHeight,
+      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
       marginBottom: 6,
     },

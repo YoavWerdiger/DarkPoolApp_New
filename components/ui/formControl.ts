@@ -26,7 +26,7 @@ export function formFieldShellStyle(input: {
 }): ViewStyle {
   const { tokens, focused, error, multiline } = input;
   const bg = error
-    ? 'rgba(248, 113, 113, 0.1)'
+    ? 'rgba(239, 68, 68, 0.1)'
     : focused
       ? tokens.colors.background.tertiary
       : tokens.colors.background.input;

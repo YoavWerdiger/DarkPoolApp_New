@@ -2,6 +2,7 @@ import React from 'react';
 import { View, ScrollView, StyleSheet } from 'react-native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import FearAndGreedMiniCard from '../../components/News/FearAndGreedMiniCard';
+import { MARKETS_LAYOUT } from './marketsLayout';
 import { MarketsIndicesCard } from './tabs/MarketsIndicesTab';
 import { MarketsTopMoversCard } from './components/MarketsTopMoversCard';
 
@@ -11,21 +12,20 @@ import { MarketsTopMoversCard } from './components/MarketsTopMoversCard';
  */
 export function MarketsHomeOverview() {
   const tokens = useDesignTokens();
-  const hp = tokens.layout.screenPadding;
 
   return (
     <View style={styles.flex}>
       <ScrollView
         style={styles.flex}
         contentContainerStyle={{
-          paddingHorizontal: hp,
-          paddingTop: tokens.spacing.sm,
+          paddingHorizontal: MARKETS_LAYOUT.screenPaddingHorizontal,
+          paddingTop: MARKETS_LAYOUT.sectionHeaderToContent,
           paddingBottom: tokens.spacing['2xl'],
         }}
         showsVerticalScrollIndicator={false}
       >
         {/* Fear & Greed — מינימליסטי, בראש העמוד */}
-        <View style={{ marginBottom: tokens.spacing.md }}>
+        <View style={{ marginBottom: MARKETS_LAYOUT.cardStackGap }}>
           <FearAndGreedMiniCard />
         </View>
 

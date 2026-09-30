@@ -25,6 +25,8 @@ interface Props {
   changeTone?: ChangeTone;
   loading?: boolean;
   missingText?: string | null;
+  /** `nestedCard` = UICard פנימי (פרטי עסקה). `plain` = שורה בתוך כרטיס הפיד בלבד. */
+  shell?: 'nestedCard' | 'plain';
 }
 
 export function DarkPoolNestedQuoteCard({
@@ -35,6 +37,7 @@ export function DarkPoolNestedQuoteCard({
   changeTone,
   loading = false,
   missingText = null,
+  shell = 'nestedCard',
 }: Props) {
   const tokens = useDesignTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
@@ -44,6 +47,54 @@ export function DarkPoolNestedQuoteCard({
   const priceDisplay = priceText ?? missingText ?? FEED_QUOTE_PLACEHOLDER;
   const changeDisplay = changeText ?? FEED_QUOTE_PLACEHOLDER;
   const placeholderOpacity = loading && (!priceKnown || !changeKnown) ? 0.55 : 1;
+
+  const body = (
+    <View
+      style={[styles.nested, shell === 'plain' && styles.nestedPlain]}
+      pointerEvents="none"
+      accessibilityRole="summary"
+    >
+      <View style={styles.nestedTicker}>
+        <View style={styles.nestedLogo}>
+          <TickerLogo symbol={ticker} size={NESTED_LOGO} borderRadius={NESTED_LOGO / 2} />
+        </View>
+        <Text style={styles.nestedTickerText} numberOfLines={1}>
+          {toDataIsland(tickerBare)}
+        </Text>
+      </View>
+      <View style={styles.nestedPrice}>
+        <Text style={styles.nestedPriceLabel}>מחיר חי</Text>
+        <Text
+          style={[
+            priceKnown ? styles.nestedPriceValue : styles.nestedPriceMissing,
+            { opacity: priceKnown ? 1 : placeholderOpacity },
+          ]}
+          numberOfLines={1}
+        >
+          {toDataIsland(priceDisplay)}
+        </Text>
+        <View style={styles.nestedSinceRow}>
+          {changeKnown && changeTone ? <ChangeDot tone={changeTone} /> : null}
+          <Text
+            style={[
+              styles.nestedSinceValue,
+              {
+                color: changeKnown ? changeColor : tokens.colors.text.tertiary,
+                opacity: changeKnown ? 1 : placeholderOpacity,
+              },
+            ]}
+          >
+            {toDataIsland(changeDisplay)}
+          </Text>
+          <Text style={styles.nestedSinceLabel}>מאז העסקה</Text>
+        </View>
+      </View>
+    </View>
+  );
+
+  if (shell === 'plain') {
+    return body;
+  }
 
   return (
     <UICard
@@ -55,47 +106,7 @@ export function DarkPoolNestedQuoteCard({
         backgroundColor: tokens.colors.background.tertiary,
       }}
     >
-      <View style={styles.nested} pointerEvents="none" accessibilityRole="summary">
-        <View style={styles.nestedTicker}>
-          <View style={styles.nestedLogo}>
-            <TickerLogo
-              symbol={ticker}
-              size={NESTED_LOGO}
-              borderRadius={NESTED_LOGO / 2}
-            />
-          </View>
-          <Text style={styles.nestedTickerText} numberOfLines={1}>
-            {toDataIsland(tickerBare)}
-          </Text>
-        </View>
-        <View style={styles.nestedPrice}>
-          <Text style={styles.nestedPriceLabel}>מחיר חי</Text>
-          <Text
-            style={[
-              priceKnown ? styles.nestedPriceValue : styles.nestedPriceMissing,
-              { opacity: priceKnown ? 1 : placeholderOpacity },
-            ]}
-            numberOfLines={1}
-          >
-            {toDataIsland(priceDisplay)}
-          </Text>
-          <View style={styles.nestedSinceRow}>
-            {changeKnown && changeTone ? <ChangeDot tone={changeTone} /> : null}
-            <Text
-              style={[
-                styles.nestedSinceValue,
-                {
-                  color: changeKnown ? changeColor : tokens.colors.text.tertiary,
-                  opacity: changeKnown ? 1 : placeholderOpacity,
-                },
-              ]}
-            >
-              {toDataIsland(changeDisplay)}
-            </Text>
-            <Text style={styles.nestedSinceLabel}>מאז העסקה</Text>
-          </View>
-        </View>
-      </View>
+      {body}
     </UICard>
   );
 }
@@ -111,6 +122,11 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       paddingVertical: 12,
       paddingHorizontal: 12,
       backgroundColor: 'transparent',
+    },
+    nestedPlain: {
+      paddingHorizontal: 0,
+      paddingBottom: 0,
+      paddingTop: 4,
     },
     nestedTicker: {
       flexDirection: 'row',

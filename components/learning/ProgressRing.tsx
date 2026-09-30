@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { ACADEMY_TYPE } from './academyLayout';
 
 interface ProgressRingProps {
   progress: number; // 0-100
@@ -92,7 +93,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   label: {
-    fontWeight: '700',
+    fontWeight: ACADEMY_TYPE.caption.fontWeight,
     textAlign: 'center',
   },
 });

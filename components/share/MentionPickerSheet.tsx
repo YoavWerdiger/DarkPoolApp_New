@@ -34,8 +34,6 @@ type UserRow = {
   profile_picture: string | null;
 };
 
-const DIVIDER = 'rgba(255, 255, 255, 0.12)';
-const SHEET_BORDER = DIVIDER;
 let lastMentionSuggestions: UserRow[] = [];
 
 function displayNameOf(u: UserRow): string {
@@ -281,7 +279,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       paddingHorizontal: 16,
       paddingBottom: 12,
       borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: SHEET_BORDER,
+      borderBottomColor: tokens.colors.border.divider,
       gap: 10,
       flexShrink: 0,
     },
@@ -315,9 +313,9 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       paddingHorizontal: 12,
       minHeight: 46,
       borderRadius: 9999,
-      backgroundColor: 'rgba(255,255,255,0.06)',
+      backgroundColor: tokens.colors.background.primary,
       borderWidth: StyleSheet.hairlineWidth,
-      borderColor: DIVIDER,
+      borderColor: tokens.colors.border.divider,
     },
     searchInput: {
       flex: 1,
@@ -349,7 +347,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       gap: 12,
       paddingVertical: 12,
       borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: DIVIDER,
+      borderBottomColor: tokens.colors.border.divider,
     },
     avatar: {
       width: 44,

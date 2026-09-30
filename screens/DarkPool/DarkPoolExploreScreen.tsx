@@ -11,7 +11,6 @@ import {
   Text,
   View,
 } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image as ExpoImage } from 'expo-image';
 import { useQuery } from '@tanstack/react-query';
@@ -47,7 +46,12 @@ import {
   withResolvedPhoto,
 } from './utils/exploreGrid';
 import { portraitDisplayUrl } from './utils/investorPlaceholder';
-import { darkPoolPhysicalRightText, darkPoolRtlContent, darkPoolTransparentFill } from './darkPoolLayout';
+import {
+  DARK_POOL_TYPE,
+  darkPoolPhysicalRightText,
+  darkPoolRtlContent,
+  darkPoolTransparentFill,
+} from './darkPoolLayout';
 import { formatHebrewAgo } from './utils/congressTradeDisplay';
 import {
   formatFollowerCountHe,
@@ -357,7 +361,6 @@ export default function DarkPoolExploreScreen() {
   );
 
   const styles = useMemo(() => createStyles(tokens, bottomPad), [tokens, bottomPad]);
-  const hasFollowCounts = mostFollowed.some((p) => (p.followers_count ?? 0) > 0);
   const refreshing =
     gridQuery.isRefetching ||
     extrasQuery.isRefetching ||
@@ -379,7 +382,6 @@ export default function DarkPoolExploreScreen() {
 
   return (
     <ScreenChrome rtl>
-      <StatusBar style="light" />
       <SafeAreaView style={[darkPoolTransparentFill, darkPoolRtlContent]} edges={['top']}>
         <MainDrawerScreenHeader
           inRtlTree
@@ -409,7 +411,6 @@ export default function DarkPoolExploreScreen() {
 
           <ExploreDiscoverySections
             mostFollowed={mostFollowed}
-            hasFollowCounts={hasFollowCounts}
             fundBooks={fundBooks}
             recentlyActive={recentlyActive}
             newProfiles={newProfiles}
@@ -443,10 +444,9 @@ function createStyles(
     errorText: {
       ...darkPoolPhysicalRightText,
       color: tokens.colors.text.danger,
-      fontSize: tokens.typography.footnote.size,
-      lineHeight: tokens.typography.footnote.lineHeight,
-      fontWeight: tokens.typography.footnote.weight,
-      letterSpacing: tokens.typography.footnote.letterSpacing,
+      fontSize: DARK_POOL_TYPE.footnote.fontSize,
+      lineHeight: DARK_POOL_TYPE.footnote.lineHeight,
+      fontWeight: DARK_POOL_TYPE.footnote.fontWeight,
     },
     errCard: { marginBottom: 12 },
   });

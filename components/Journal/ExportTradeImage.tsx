@@ -15,6 +15,7 @@ import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import QRCode from 'react-native-qrcode-svg';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { APP_TYPE } from '../ui/appType';
 import type { Trade as JournalTrade } from '../../screens/Journal/tradeTypes';
 import type { Trade as PortfolioTrade } from '../../screens/Portfolios/portfolioTypes';
 import { Ionicons } from '@expo/vector-icons';
@@ -518,10 +519,12 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       height: DAY_NAV_BUTTON_SIZE,
     },
     headerTitle: {
-      fontSize: 20,
-      fontWeight: '800',
-      letterSpacing: -0.35,
+      fontSize: APP_TYPE.sectionTitle.fontSize,
+      fontWeight: APP_TYPE.sectionTitle.fontWeight,
+      lineHeight: APP_TYPE.sectionTitle.lineHeight,
+      letterSpacing: APP_TYPE.sectionTitle.letterSpacing,
       color: tokens.colors.text.primary,
+      direction: 'ltr',
       textAlign: 'center',
       writingDirection: 'rtl',
       width: '100%',
@@ -613,12 +616,12 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     logoFallback: {},
     logoFallbackText: {
       fontSize: 14,
-      fontWeight: '800',
+      fontWeight: '700',
     },
     symbolBig: {
       flexShrink: 1,
       fontSize: 24,
-      fontWeight: '800',
+      fontWeight: '700',
       textAlign: 'center',
       letterSpacing: -0.5,
     },
@@ -630,7 +633,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     dirPillText: {
       fontSize: 11,
-      fontWeight: '800',
+      fontWeight: '700',
       letterSpacing: 0.8,
     },
     /** UICard מספק את הזכוכית — מרווח עליון מול הלוגו, תחתון מול פס ה־QR */
@@ -662,7 +665,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     pnlHeroValue: {
       fontSize: 36,
-      fontWeight: '800',
+      fontWeight: '700',
       letterSpacing: -0.8,
       writingDirection: 'ltr',
       textAlign: 'center',
@@ -678,7 +681,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     retChipText: {
       fontSize: 14,
-      fontWeight: '800',
+      fontWeight: '700',
       letterSpacing: 0.2,
       writingDirection: 'ltr',
       textAlign: 'center',
@@ -715,7 +718,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     ctaHeadline: {
       fontSize: 13,
-      fontWeight: '800',
+      fontWeight: '700',
       lineHeight: 18,
       color: 'rgba(255,255,255,0.92)',
       textAlign: 'left',

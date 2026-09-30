@@ -51,8 +51,6 @@ type ListItem = {
   attachment: ShareableAttachment;
 };
 
-const DIVIDER = 'rgba(255, 255, 255, 0.12)';
-const SHEET_BORDER = DIVIDER;
 
 export default function EntityAttachPickerSheet({
   visible,
@@ -325,7 +323,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       paddingHorizontal: 16,
       paddingBottom: 12,
       borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: SHEET_BORDER,
+      borderBottomColor: tokens.colors.border.divider,
       gap: 10,
       flexShrink: 0,
     },
@@ -378,7 +376,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       gap: 12,
       paddingVertical: 12,
       borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: DIVIDER,
+      borderBottomColor: tokens.colors.border.divider,
     },
     avatar: {
       width: 44,
@@ -389,7 +387,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       borderRadius: 12,
       overflow: 'hidden',
       borderWidth: StyleSheet.hairlineWidth,
-      borderColor: 'rgba(255,255,255,0.2)',
+      borderColor: tokens.colors.border.divider,
       backgroundColor: '#FFFFFF',
     },
     rowText: {

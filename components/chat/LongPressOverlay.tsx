@@ -12,7 +12,7 @@ import {
 } from './ChatBottomSheet';
 import { SHEET_CLOSE_MS } from '../ui/BottomSheet';
 import { useDesignTokens } from '../ui/DesignTokens';
-import { chatPalette } from './chatDesignTokens';
+import { LIGHT_CANVAS } from '../ui/designTokensStatic';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import TradeMessage from './TradeMessage';
@@ -205,7 +205,9 @@ export default function LongPressOverlay({
 
     const isMe = displayMessage.isMe;
     const p = messagePreviewStyles;
-    const mediaIconColor = isMe ? 'rgba(255,255,255,0.75)' : DesignTokens.colors.text.secondary;
+    const mediaIconColor = isMe
+      ? DesignTokens.colors.bubbleMeText
+      : DesignTokens.colors.text.secondary;
 
     return (
       <View style={[p.previewWrap, isMe ? p.previewWrapMe : p.previewWrapOther]}>
@@ -310,7 +312,9 @@ const styles = StyleSheet.create({
   },
 });
 
-const createMessagePreviewStyles = (tokens: any) => StyleSheet.create({
+const createMessagePreviewStyles = (tokens: any) => {
+  const isDarkMode = tokens.colors.background.primary !== LIGHT_CANVAS;
+  return StyleSheet.create({
   previewWrap: {
     paddingTop: tokens.spacing.sm,
     paddingBottom: tokens.spacing.base,
@@ -352,11 +356,11 @@ const createMessagePreviewStyles = (tokens: any) => StyleSheet.create({
     paddingTop: 4,
     paddingBottom: 5,
     paddingHorizontal: 9,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.16,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowColor: isDarkMode ? '#000' : 'transparent',
+    shadowOffset: isDarkMode ? { width: 0, height: 1 } : { width: 0, height: 0 },
+    shadowOpacity: isDarkMode ? 0.16 : 0,
+    shadowRadius: isDarkMode ? 3 : 0,
+    elevation: isDarkMode ? 2 : 0,
   },
   myBubble: {
     backgroundColor: tokens.colors.bubbleMe,
@@ -366,9 +370,9 @@ const createMessagePreviewStyles = (tokens: any) => StyleSheet.create({
     borderBottomLeftRadius: 16,
   },
   theirBubble: {
-    backgroundColor: '#2C2F2C',
+    backgroundColor: tokens.colors.bubbleOther,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: chatPalette.glassBorderStrong,
+    borderColor: tokens.colors.border.primary,
     borderBottomLeftRadius: 4,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
@@ -399,7 +403,7 @@ const createMessagePreviewStyles = (tokens: any) => StyleSheet.create({
     color: tokens.colors.text.secondary,
   },
   myMediaText: {
-    color: 'rgba(255,255,255,0.75)',
+    color: tokens.colors.bubbleMeText,
   },
   msgText: {
     fontSize: 16,
@@ -408,7 +412,7 @@ const createMessagePreviewStyles = (tokens: any) => StyleSheet.create({
     marginTop: 0,
   },
   myText: {
-    color: '#FFFFFF',
+    color: tokens.colors.bubbleMeText,
   },
   theirText: {
     color: tokens.colors.text.primary,
@@ -419,7 +423,7 @@ const createMessagePreviewStyles = (tokens: any) => StyleSheet.create({
     marginTop: 3,
   },
   myTime: {
-    color: 'rgba(255,255,255,0.5)',
+    color: tokens.colors.bubbleMeMetaText,
   },
   theirTime: {
     color: tokens.colors.text.tertiary,
@@ -428,4 +432,5 @@ const createMessagePreviewStyles = (tokens: any) => StyleSheet.create({
     paddingHorizontal: 9,
     paddingBottom: 2,
   },
-});
+  });
+};

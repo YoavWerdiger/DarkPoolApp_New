@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react'
 import { View, Text, FlatList, StyleSheet, Animated, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { APP_TYPE } from '../ui/appType';
 import UICard from '../ui/UICard';
 
 const AUTO_SCROLL_MS = 3500;
@@ -280,18 +281,20 @@ const createStyles = (
       maxWidth: '100%',
     },
     statTitle: {
-      fontSize: tokens.typography.fontSize.sm,
+      fontSize: APP_TYPE.cardMetricLabel.fontSize,
+      fontWeight: APP_TYPE.cardMetricLabel.fontWeight,
+      lineHeight: APP_TYPE.cardMetricLabel.lineHeight,
       color: tokens.colors.text.secondary,
       textAlign: 'center',
-      fontWeight: tokens.typography.fontWeight.medium as any,
-      lineHeight: 18,
     },
     statValue: {
-      fontSize: 26,
-      fontWeight: tokens.typography.fontWeight.bold as any,
+      fontSize: APP_TYPE.cardMetricValueSecondary.fontSize,
+      fontWeight: APP_TYPE.cardMetricValueSecondary.fontWeight,
+      lineHeight: APP_TYPE.cardMetricValueSecondary.lineHeight,
+      letterSpacing: APP_TYPE.cardMetricValueSecondary.letterSpacing,
       color: tokens.colors.text.primary,
       textAlign: 'center',
-      letterSpacing: -0.5,
+      writingDirection: 'ltr',
     },
     statValueNegative: {
       color: tokens.colors.text.danger,

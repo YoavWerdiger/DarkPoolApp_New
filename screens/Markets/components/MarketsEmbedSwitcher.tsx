@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import UICard from '../../../components/ui/UICard';
-import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { UI_CARD_RADIUS } from '../marketsLayout';
 import {
   MarketsSegmentedControl,
   type SegmentedOption,
@@ -24,14 +24,12 @@ export function MarketsEmbedSwitcher<T extends string>({
   onChange,
   accessibilityGroupLabel,
 }: Props<T>) {
-  const tokens = useDesignTokens();
-
   return (
     <UICard
-      variant="glass"
+      variant="soft"
       glassIntensity="light"
       padding="none"
-      style={[styles.shell, { borderRadius: tokens.borderRadius['2xl'] }]}
+      style={[styles.shell, { borderRadius: UI_CARD_RADIUS }]}
     >
       <MarketsSegmentedControl
         options={options}

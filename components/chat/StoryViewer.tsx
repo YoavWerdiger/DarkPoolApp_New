@@ -185,9 +185,9 @@ function ProgressBarFill({ index, progress }: { index: number; progress: SharedV
 
 const barStyles = StyleSheet.create({
   track: {
-    height: 3,
+    height: 3.5,
     backgroundColor: 'rgba(255,255,255,0.35)',
-    borderRadius: 1.5,
+    borderRadius: 2,
     overflow: 'hidden',
   },
   fill: {
@@ -522,6 +522,9 @@ export default function StoryViewer({
   const [viewersSheetOpen, setViewersSheetOpen] = useState(false);
 
   const progress = useSharedValue(0);
+  const present = useSharedValue(0);
+  const dismissY = useSharedValue(0);
+  const closingRef = useRef(false);
   const startTimeRef = useRef(0);
   const remainingRef = useRef(STORY_DURATION);
   const goNextRef = useRef<() => void>(() => {});
@@ -1119,8 +1122,16 @@ export default function StoryViewer({
     if (!visible) {
       cancelAnimation(progress);
       progressStartedFor.current = null;
+      present.value = 0;
+      dismissY.value = 0;
+      closingRef.current = false;
+      return;
     }
-  }, [visible, progress]);
+    closingRef.current = false;
+    dismissY.value = 0;
+    present.value = 0;
+    present.value = withTiming(1, { duration: 260, easing: Easing.out(Easing.cubic) });
+  }, [visible, progress, present, dismissY]);
 
   const handlePauseStart = useCallback(() => {
     setIsPaused(true);
@@ -1145,6 +1156,32 @@ export default function StoryViewer({
     handlePauseStartRef.current = handlePauseStart;
     handlePauseEndRef.current = handlePauseEnd;
   }, [handlePauseStart, handlePauseEnd]);
+
+  const finishClose = useCallback(() => {
+    closingRef.current = false;
+    onCloseRef.current();
+  }, []);
+
+  const requestClose = useCallback(() => {
+    if (closingRef.current) return;
+    closingRef.current = true;
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    cancelAnimation(progress);
+    present.value = withTiming(0, { duration: 180, easing: Easing.in(Easing.cubic) });
+    dismissY.value = withTiming(28, { duration: 180 }, (finished) => {
+      'worklet';
+      if (finished) runOnJS(finishClose)();
+    });
+  }, [present, dismissY, progress, finishClose]);
+
+  const stageAnim = useAnimatedStyle(() => ({
+    flex: 1,
+    opacity: present.value,
+    transform: [
+      { translateY: dismissY.value },
+      { scale: 0.96 + present.value * 0.04 },
+    ],
+  }));
 
   const [confirmDelete, setConfirmDelete] = useState<{ visible: boolean; error?: string }>({
     visible: false,
@@ -1598,11 +1635,13 @@ export default function StoryViewer({
 
         <View style={styles.header} pointerEvents="box-none">
           <TouchableOpacity
-            onPress={onClose}
+            onPress={requestClose}
             style={styles.closeBtn}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel="סגור סטטוס"
           >
-            <Ionicons name="close" size={28} color="#fff" />
+            <Ionicons name="close" size={22} color="#fff" />
           </TouchableOpacity>
 
           <View style={styles.headerInfo} pointerEvents="none">
@@ -1724,7 +1763,7 @@ export default function StoryViewer({
             <TouchableWithoutFeedback
               onPress={() => goNextRef.current()}
               onLongPress={handlePauseStart}
-              delayLongPress={350}
+              delayLongPress={160}
               onPressOut={() => { if (isPaused) handlePauseEnd(); }}
             >
               <View style={styles.touchLeft} collapsable={false} />
@@ -1732,7 +1771,7 @@ export default function StoryViewer({
             <TouchableWithoutFeedback
               onPress={() => goPrevRef.current()}
               onLongPress={handlePauseStart}
-              delayLongPress={350}
+              delayLongPress={160}
               onPressOut={() => { if (isPaused) handlePauseEnd(); }}
             >
               <View style={styles.touchRight} collapsable={false} />
@@ -1744,9 +1783,10 @@ export default function StoryViewer({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="none" statusBarTranslucent onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="none" statusBarTranslucent onRequestClose={requestClose}>
       <StatusBar hidden />
       <GestureHandlerRootView style={styles.container}>
+        <Reanimated.View style={stageAnim}>
         {showPager ? (
           <View style={styles.stageRoot}>
             <View style={styles.blackBackdrop} pointerEvents="none" />
@@ -1799,11 +1839,12 @@ export default function StoryViewer({
             />
           </View>
         ) : (
-          <TouchableOpacity style={[styles.center, styles.stageRoot]} onPress={onClose} activeOpacity={0.9}>
+          <TouchableOpacity style={[styles.center, styles.stageRoot]} onPress={requestClose} activeOpacity={0.9}>
             <Ionicons name="images-outline" size={48} color="rgba(255,255,255,0.3)" />
             <Text style={styles.emptyText}>אין סטטוסים</Text>
           </TouchableOpacity>
         )}
+        </Reanimated.View>
 
         {/* ===== Viewers + reactions sheet (own story only) ===== */}
         {viewersSheetOpen && (
@@ -1907,9 +1948,9 @@ const reactStyles = StyleSheet.create({
     paddingVertical: 4,
   },
   btnInner: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -2153,7 +2194,12 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   closeBtn: {
-    padding: 6,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.38)',
   },
 
   bottomGradient: {
@@ -2174,7 +2220,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
+    minHeight: 44,
+    paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 22,
     backgroundColor: 'rgba(255,255,255,0.12)',

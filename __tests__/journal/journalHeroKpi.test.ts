@@ -12,7 +12,7 @@ describe('Journal hero KPI layout', () => {
     expect(journalSrc).toContain('kpiHeroCol');
     expect(journalSrc).toContain('kpiMetricValueHero');
     expect(journalSrc).toMatch(
-      /kpiMetricValueHero:\s*\{[\s\S]*journalCardMetricValueSecondaryStyle/,
+      /kpiMetricValueHero:\s*\{[\s\S]*journalCardTitleStyle/,
     );
     expect(journalSrc).not.toMatch(
       /JournalHeroKpis[\s\S]*KpiBlock title="P&L כולל"/,

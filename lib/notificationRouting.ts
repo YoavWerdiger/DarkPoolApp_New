@@ -113,6 +113,7 @@ export function resolveNotificationNavTarget(
 
   if (
     type === 'dark_pool_person_trade' ||
+    type === 'dark_pool_feed_trade' ||
     type === 'dark_pool_fund_13f' ||
     type === 'dark_pool_follow'
   ) {

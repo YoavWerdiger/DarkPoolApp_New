@@ -15,6 +15,7 @@ import { queryClient } from '../../lib/queryClient';
 import { appQueryKeys } from '../../lib/appQueryKeys';
 import { supabase } from '../../services/supabase';
 import UICard from '../../components/ui/UICard';
+import { UI_CARD_RADIUS } from '../../components/ui/appLayout';
 import { DayDividerPill } from '../../components/ui/DayDividerPill';
 import type { Trade } from './tradeTypes';
 import {
@@ -36,11 +37,10 @@ import {
   journalCardBodyStyle,
   journalCardMetricLabelStyle,
   journalCardMetricValueSecondaryStyle,
+  journalCardSubtitleStyle,
   journalCardTitleStyle,
-  journalPhysicalRightText,
   journalRow,
   journalRtlContent,
-  journalSectionSubtitleStyle,
   journalSectionTitleStyle,
 } from './journalLayout';
 
@@ -234,8 +234,8 @@ const CumulativePnlLineChart = memo(function CumulativePnlLineChart({
           width: chartW,
         }}
       >
-        <Text style={{ fontSize: 11, color: colors.label }}>${formatMoneyAxis(minV)}</Text>
-        <Text style={{ fontSize: 11, color: colors.label }}>${formatMoneyAxis(maxV)}</Text>
+        <Text style={{ fontSize: JOURNAL_TYPE.caption2.fontSize, fontWeight: JOURNAL_TYPE.caption2.fontWeight, lineHeight: JOURNAL_TYPE.caption2.lineHeight, color: colors.label }}>${formatMoneyAxis(minV)}</Text>
+        <Text style={{ fontSize: JOURNAL_TYPE.caption2.fontSize, fontWeight: JOURNAL_TYPE.caption2.fontWeight, lineHeight: JOURNAL_TYPE.caption2.lineHeight, color: colors.label }}>${formatMoneyAxis(maxV)}</Text>
       </View>
     </View>
   );
@@ -428,7 +428,7 @@ const journalTabStyles = StyleSheet.create({
     ...journalRtlContent,
   },
   scrollContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: JOURNAL_LAYOUT.screenPaddingHorizontal,
     paddingTop: 10,
     paddingBottom: 8,
     alignItems: 'center',
@@ -500,10 +500,9 @@ const journalTabStyles = StyleSheet.create({
     maxWidth: '48%',
     flexGrow: 1,
     paddingVertical: 12,
-    paddingHorizontal: 10,
+    paddingHorizontal: JOURNAL_LAYOUT.cardPadding,
     alignItems: 'center',
-    borderRadius: 14,
-    backgroundColor: DesignTokens.colors.glass.card.bg,
+    borderRadius: UI_CARD_RADIUS,
     borderWidth: 0,
     borderColor: 'transparent',
   },
@@ -520,14 +519,15 @@ const journalTabStyles = StyleSheet.create({
     gap: JOURNAL_LAYOUT.cardMetricLabelToValueGap,
   },
   kpiHeroDivider: {
-    width: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    width: 1,
     marginVertical: 10,
   },
   kpiMetricLabel: {
     ...journalCardMetricLabelStyle,
+    color: DesignTokens.colors.text.secondary,
   },
   kpiMetricValueHero: {
+    ...journalCardTitleStyle,
     ...journalCardMetricValueSecondaryStyle,
   },
   kpiMetricValue: {
@@ -544,14 +544,12 @@ const journalTabStyles = StyleSheet.create({
     gap: 16,
   },
   journalInsightSectionTitle: {
-    ...journalSectionSubtitleStyle,
-    marginTop: 0,
-    marginBottom: 8,
-    fontWeight: '700',
+    ...journalCardTitleStyle,
+    marginBottom: JOURNAL_LAYOUT.groupLabelToContent,
   },
   journalInsightSurface: {
     width: '100%',
-    borderRadius: 16,
+    borderRadius: 24,
     paddingVertical: 14,
     paddingHorizontal: 12,
     borderWidth: 0,
@@ -563,7 +561,6 @@ const journalTabStyles = StyleSheet.create({
   },
   journalCoveragePct: {
     ...journalCardMetricValueSecondaryStyle,
-    writingDirection: 'ltr',
   },
   journalCoverageSub: {
     ...journalBodyTextStyle,
@@ -600,7 +597,6 @@ const journalTabStyles = StyleSheet.create({
   },
   journalMiniPillValue: {
     ...journalCardMetricValueSecondaryStyle,
-    writingDirection: 'ltr',
   },
   journalMoodGrid: {
     ...journalRow,
@@ -620,10 +616,7 @@ const journalTabStyles = StyleSheet.create({
     gap: 8,
   },
   journalMoodCellTitle: {
-    ...journalPhysicalRightText,
-    fontSize: JOURNAL_TYPE.body.fontSize,
-    fontWeight: '700',
-    lineHeight: JOURNAL_TYPE.body.lineHeight,
+    ...journalCardTitleStyle,
   },
   journalMoodCellMeta: {
     ...journalRow,
@@ -644,7 +637,8 @@ const journalTabStyles = StyleSheet.create({
   },
   journalMoodCountText: {
     fontSize: JOURNAL_TYPE.body.fontSize,
-    fontWeight: '800',
+    fontWeight: JOURNAL_TYPE.cardMetricValue.fontWeight,
+    lineHeight: JOURNAL_TYPE.body.lineHeight,
     writingDirection: 'ltr',
   },
   journalMoodAvg: {
@@ -669,10 +663,8 @@ const journalTabStyles = StyleSheet.create({
   },
   journalMistakeLabel: {
     flex: 1,
-    ...journalPhysicalRightText,
-    fontSize: JOURNAL_TYPE.body.fontSize,
-    fontWeight: '600',
-    lineHeight: JOURNAL_TYPE.body.lineHeight,
+    ...journalCardTitleStyle,
+    width: undefined,
   },
   journalMistakeCount: {
     fontSize: JOURNAL_TYPE.cardTitle.fontSize,
@@ -695,6 +687,7 @@ function JournalHeroKpis({
   winRateStr: string;
   winRateColor: string;
 }) {
+  const tokens = useDesignTokens();
   return (
     <UICard
       variant="soft"
@@ -713,7 +706,7 @@ function JournalHeroKpis({
             {totalPnlStr}
           </Text>
         </View>
-        <View style={journalTabStyles.kpiHeroDivider} />
+        <View style={[journalTabStyles.kpiHeroDivider, { backgroundColor: tokens.colors.border.divider }]} />
         <View style={journalTabStyles.kpiHeroCol}>
           <Text style={journalTabStyles.kpiMetricLabel}>Win Rate</Text>
           <Text
@@ -745,7 +738,7 @@ function KpiBlock({
     <UICard
       variant="soft"
       padding="sm"
-      style={{ flex: 1, minWidth: 100, borderRadius: 14 }}
+      style={{ flex: 1, minWidth: 100, borderRadius: UI_CARD_RADIUS }}
       contentContainerStyle={{
         alignItems: 'center',
         gap: JOURNAL_LAYOUT.cardMetricLabelToValueGap,
@@ -781,7 +774,7 @@ function InsightCard({
     <UICard
       variant="soft"
       padding="md"
-      style={{ borderRadius: 16, marginBottom: 14, width: '100%', maxWidth: 440, alignSelf: 'center' }}
+      style={{ marginBottom: 14, width: '100%', maxWidth: 440, alignSelf: 'center' }}
     >
       <Text style={[journalTabStyles.cardHeader, { color: DesignTokens.colors.text.primary }]}>
         {title}
@@ -888,9 +881,8 @@ export default function JournalDataTab() {
       marginBottom: DesignTokens.spacing.md,
       borderWidth: 0 as const,
       borderColor: 'transparent',
-      borderRadius: DesignTokens.borderRadius['2xl'],
+      borderRadius: UI_CARD_RADIUS,
       overflow: 'hidden' as const,
-      backgroundColor: 'transparent',
     }),
     [DesignTokens]
   );
@@ -1128,8 +1120,9 @@ export default function JournalDataTab() {
               <Text style={[journalTabStyles.cardHeader, { color: DesignTokens.colors.text.primary }]}>
                 ביצועים לפי אסטרטגיה
               </Text>
-              {strategyStats.map((s) => {
+              {strategyStats.map((s, index) => {
                 const pnlColor = s.pnl >= 0 ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger;
+                const last = index === strategyStats.length - 1;
                 return (
                   <View
                     key={s.name}
@@ -1137,20 +1130,36 @@ export default function JournalDataTab() {
                       ...journalRow,
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      paddingVertical: 10,
-                      borderBottomWidth: StyleSheet.hairlineWidth,
-                      borderBottomColor: DesignTokens.colors.border.subtle,
+                      paddingVertical: 15,
+                      paddingHorizontal: JOURNAL_LAYOUT.cardPadding,
+                      borderBottomWidth: last ? 0 : 1,
+                      borderBottomColor: DesignTokens.colors.border.divider,
                     }}
                   >
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ ...journalPhysicalRightText, fontSize: JOURNAL_TYPE.body.fontSize, fontWeight: '700', lineHeight: JOURNAL_TYPE.body.lineHeight, color: DesignTokens.colors.text.primary }}>
+                    <View style={{ flex: 1, minWidth: 0, direction: 'ltr', alignItems: 'stretch' }}>
+                      <Text
+                        style={[
+                          journalCardTitleStyle,
+                          { color: DesignTokens.colors.text.primary },
+                          !/[\u0590-\u05FF]/.test(s.name) ? { writingDirection: 'ltr' as const } : null,
+                        ]}
+                        numberOfLines={1}
+                      >
                         {s.name}
                       </Text>
-                      <Text style={{ ...journalCaption2Style, color: DesignTokens.colors.text.tertiary, marginTop: 2 }}>
+                      <Text
+                        style={[journalCardSubtitleStyle, { color: DesignTokens.colors.text.secondary }]}
+                        numberOfLines={1}
+                      >
                         {s.total} טריידים · Win {s.winRate}%
                       </Text>
                     </View>
-                    <Text style={{ fontSize: 16, fontWeight: '800', color: pnlColor, writingDirection: 'ltr' }}>
+                    <Text
+                      style={[
+                        journalBodyTextStyle,
+                        { color: pnlColor, writingDirection: 'ltr', textAlign: 'left', flexShrink: 0 },
+                      ]}
+                    >
                       {s.pnl >= 0 ? '+' : '-'}${Math.abs(s.pnl).toFixed(0)}
                     </Text>
                   </View>

@@ -3,12 +3,18 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import UICard from '../../components/ui/UICard';
+import { UI_CARD_RADIUS } from '../../components/ui/appLayout';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { brandfetchTickerLogoUri } from '../../utils/brandfetch';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import TradeShareButton from '../../components/Journal/TradeShareButton';
 import type { Trade } from './tradeTypes';
-import { JOURNAL_TYPE, journalPhysicalRightText } from './journalLayout';
+import {
+  JOURNAL_LAYOUT,
+  JOURNAL_TYPE,
+  journalCardMetricLabelStyle,
+  journalCardMetricValueSecondaryStyle,
+} from './journalLayout';
 
 function SymbolLogo({
   symbol,
@@ -49,8 +55,9 @@ function SymbolLogo({
       ) : (
         <Text
           style={{
-            fontSize: Math.max(10, size * 0.28),
-            fontWeight: '700',
+            fontSize: JOURNAL_TYPE.caption2.fontSize,
+            fontWeight: JOURNAL_TYPE.caption2.fontWeight,
+            lineHeight: JOURNAL_TYPE.caption2.lineHeight,
             color: fallbackColor,
           }}
           numberOfLines={1}
@@ -99,7 +106,7 @@ const TradeListCardInner = memo(function TradeListCardInner({
   }
 
   return (
-    <UICard variant="glass" glassIntensity="light" padding="sm" disableBlur style={styles.tradeCard}>
+    <UICard variant="soft" padding="md" disableBlur style={styles.tradeCard}>
       <View style={styles.rtlWrap}>
         <View style={styles.tradeHeader}>
           <View style={styles.tradeHeaderMain}>
@@ -149,25 +156,25 @@ const TradeListCardInner = memo(function TradeListCardInner({
 
         <View style={styles.metricsGrid}>
           <View style={styles.metricCell}>
-            <Text style={styles.metricLabel}>כניסה</Text>
+            <Text style={styles.metricLabel} numberOfLines={1}>כניסה</Text>
             <Text style={styles.metricValueMoney} numberOfLines={1}>
               ${formatUsd(item.entry_price)}
             </Text>
           </View>
           <View style={styles.metricCell}>
-            <Text style={styles.metricLabel}>יציאה</Text>
+            <Text style={styles.metricLabel} numberOfLines={1}>יציאה</Text>
             <Text style={styles.metricValueMoney} numberOfLines={1}>
               ${formatUsd(item.exit_price)}
             </Text>
           </View>
           <View style={styles.metricCell}>
-            <Text style={styles.metricLabel}>כמות</Text>
+            <Text style={styles.metricLabel} numberOfLines={1}>כמות</Text>
             <Text style={styles.metricValuePlain} numberOfLines={1}>
               {item.quantity}
             </Text>
           </View>
           <View style={styles.metricCell}>
-            <Text style={styles.metricLabel}>תאריך יציאה</Text>
+            <Text style={styles.metricLabel} numberOfLines={1}>תאריך יציאה</Text>
             <Text style={styles.metricValuePlain} numberOfLines={1}>
               {formatDate(item.exit_date)}
             </Text>
@@ -176,7 +183,9 @@ const TradeListCardInner = memo(function TradeListCardInner({
 
         <View style={styles.pnlBand}>
           <View style={styles.pnlBandCell}>
-            <Text style={styles.pnlBandLabel}>{isProfit ? 'רווח נטו' : 'הפסד נטו'}</Text>
+            <Text style={styles.pnlBandLabel} numberOfLines={1}>
+              {isProfit ? 'רווח נטו' : 'הפסד נטו'}
+            </Text>
             <Text
               style={[styles.pnlBandValue, isProfit ? styles.pnlProfit : styles.pnlLoss]}
               numberOfLines={1}
@@ -186,7 +195,7 @@ const TradeListCardInner = memo(function TradeListCardInner({
           </View>
           <View style={styles.pnlBandDivider} />
           <View style={styles.pnlBandCell}>
-            <Text style={styles.pnlBandLabel}>תשואה</Text>
+            <Text style={styles.pnlBandLabel} numberOfLines={1}>תשואה</Text>
             <Text
               style={[styles.pnlBandValue, returnPct >= 0 ? styles.pnlProfit : styles.pnlLoss]}
               numberOfLines={1}
@@ -206,11 +215,11 @@ export const TradeListCard = TradeListCardInner;
 export function createTradeCardStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     tradeCard: {
-      marginBottom: tokens.spacing.xs,
-      borderRadius: tokens.borderRadius.xl,
+      marginBottom: JOURNAL_LAYOUT.cardStackGap,
+      borderRadius: UI_CARD_RADIUS,
       borderWidth: 0,
       overflow: 'hidden',
-      backgroundColor: 'transparent',
+      backgroundColor: tokens.colors.background.cardSolid,
       ...tokens.shadows.none,
     },
     rtlWrap: {
@@ -221,7 +230,7 @@ export function createTradeCardStyles(tokens: ReturnType<typeof useDesignTokens>
       alignItems: 'center',
       justifyContent: 'space-between',
       width: '100%',
-      marginBottom: 8,
+      marginBottom: JOURNAL_LAYOUT.cardTitleToBodyGap,
       /** ב־RTL: ריווח מהקצה שבו התמונה (ה־start של השורה) */
       paddingStart: tokens.spacing.sm,
       paddingEnd: tokens.spacing.xs,
@@ -243,11 +252,15 @@ export function createTradeCardStyles(tokens: ReturnType<typeof useDesignTokens>
       flexGrow: 0,
       flexShrink: 1,
       minWidth: 0,
-      fontSize: JOURNAL_TYPE.sectionTitle.fontSize,
-      fontWeight: JOURNAL_TYPE.sectionTitle.fontWeight,
-      lineHeight: JOURNAL_TYPE.sectionTitle.lineHeight,
+      fontSize: JOURNAL_TYPE.cardTitle.fontSize,
+      fontWeight: JOURNAL_TYPE.cardTitle.fontWeight,
+      lineHeight: JOURNAL_TYPE.cardTitle.lineHeight,
+      letterSpacing: JOURNAL_TYPE.cardTitle.letterSpacing,
       color: tokens.colors.text.primary,
-      ...journalPhysicalRightText,
+      direction: 'ltr',
+      writingDirection: 'ltr',
+      textAlign: 'right',
+      includeFontPadding: false,
     },
     directionBadge: {
       flexShrink: 0,
@@ -258,10 +271,12 @@ export function createTradeCardStyles(tokens: ReturnType<typeof useDesignTokens>
       borderWidth: 1,
     },
     directionText: {
-      fontSize: JOURNAL_TYPE.caption2.fontSize,
-      fontWeight: '700' as any,
-      lineHeight: JOURNAL_TYPE.caption2.lineHeight,
+      fontSize: JOURNAL_TYPE.cardSubtitle.fontSize,
+      fontWeight: JOURNAL_TYPE.cardSubtitle.fontWeight,
+      lineHeight: JOURNAL_TYPE.cardSubtitle.lineHeight,
       textAlign: 'center',
+      writingDirection: 'rtl',
+      includeFontPadding: false,
     },
     /** שמאל (ב־RTL): שיתוף + מחיקה — נשארים בקצה הנגדי */
     headerActions: {
@@ -280,51 +295,47 @@ export function createTradeCardStyles(tokens: ReturnType<typeof useDesignTokens>
       flexDirection: 'row',
       flexWrap: 'wrap',
       justifyContent: 'center',
-      gap: 10,
-      marginTop: 6,
+      gap: JOURNAL_LAYOUT.cardStackGap,
       width: '100%',
     },
     metricCell: {
       flexBasis: '44%',
-      flexGrow: 0,
-      minWidth: 120,
+      flexGrow: 1,
+      flexShrink: 1,
+      minWidth: 0,
       maxWidth: '48%',
-      paddingVertical: 4,
-      paddingHorizontal: 6,
       alignItems: 'center',
+      justifyContent: 'flex-start',
     },
     metricLabel: {
-      fontSize: JOURNAL_TYPE.caption2.fontSize,
-      fontWeight: JOURNAL_TYPE.caption2.fontWeight,
-      lineHeight: JOURNAL_TYPE.caption2.lineHeight,
-      color: tokens.colors.text.tertiary,
+      ...journalCardMetricLabelStyle,
+      width: '100%',
       textAlign: 'center',
-      marginBottom: 3,
+      color: tokens.colors.text.secondary,
+      includeFontPadding: false,
     },
     metricValueMoney: {
-      fontSize: JOURNAL_TYPE.body.fontSize,
-      fontWeight: '800' as any,
-      lineHeight: JOURNAL_TYPE.body.lineHeight,
+      ...journalCardMetricValueSecondaryStyle,
+      marginTop: JOURNAL_LAYOUT.cardMetricLabelToValueGap,
       color: tokens.colors.primary.main,
-      textAlign: 'center',
-      writingDirection: 'ltr',
+      includeFontPadding: false,
+      fontVariant: ['tabular-nums'],
     },
     metricValuePlain: {
-      fontSize: JOURNAL_TYPE.sectionSubtitle.fontSize,
-      fontWeight: '700' as any,
-      lineHeight: JOURNAL_TYPE.sectionSubtitle.lineHeight,
+      ...journalCardMetricValueSecondaryStyle,
+      marginTop: JOURNAL_LAYOUT.cardMetricLabelToValueGap,
       color: tokens.colors.text.primary,
-      textAlign: 'center',
-      writingDirection: 'ltr',
+      includeFontPadding: false,
+      fontVariant: ['tabular-nums'],
     },
     pnlBand: {
       flexDirection: 'row',
-      alignItems: 'stretch',
+      alignItems: 'flex-start',
       justifyContent: 'center',
-      marginTop: 10,
-      paddingTop: 10,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: tokens.colors.border.primary,
+      marginTop: JOURNAL_LAYOUT.cardTitleToBodyGap,
+      paddingTop: JOURNAL_LAYOUT.cardTitleToBodyGap,
+      borderTopWidth: 1,
+      borderTopColor: tokens.colors.border.divider,
       width: '100%',
     },
     pnlBandCell: {
@@ -336,23 +347,22 @@ export function createTradeCardStyles(tokens: ReturnType<typeof useDesignTokens>
       minWidth: 0,
     },
     pnlBandDivider: {
-      width: StyleSheet.hairlineWidth,
-      backgroundColor: tokens.colors.border.primary,
+      width: 1,
+      backgroundColor: tokens.colors.border.divider,
       marginVertical: 6,
     },
     pnlBandLabel: {
-      fontSize: JOURNAL_TYPE.caption2.fontSize,
-      fontWeight: JOURNAL_TYPE.caption2.fontWeight,
-      lineHeight: JOURNAL_TYPE.caption2.lineHeight,
-      color: tokens.colors.text.tertiary,
+      ...journalCardMetricLabelStyle,
+      width: '100%',
       textAlign: 'center',
-      marginBottom: 2,
+      color: tokens.colors.text.secondary,
+      includeFontPadding: false,
     },
     pnlBandValue: {
-      fontSize: 17,
-      fontWeight: '800' as any,
-      textAlign: 'center',
-      writingDirection: 'ltr',
+      ...journalCardMetricValueSecondaryStyle,
+      marginTop: JOURNAL_LAYOUT.cardMetricLabelToValueGap,
+      includeFontPadding: false,
+      fontVariant: ['tabular-nums'],
     },
     pnlProfit: { color: tokens.colors.primary.main },
     pnlLoss: { color: tokens.colors.text.danger },

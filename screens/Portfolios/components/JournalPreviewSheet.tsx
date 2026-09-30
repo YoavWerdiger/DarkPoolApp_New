@@ -11,15 +11,16 @@ import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
-import { useDesignTokens, DesignTokens } from '../../../components/ui/DesignTokens';
+import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { LIGHT_CANVAS } from '../../../components/ui/designTokensStatic';
 import {
   CARD_GLASS_ANDROID_BLUR_METHOD,
   CARD_GLASS_ANDROID_BLUR_REDUCTION,
+  cardGlassBlurTint,
 } from '../../../components/ui/cardGlass';
 import { SheetGlassBackground } from '../../../components/ui/BottomSheet/SheetGlassBackground';
 import {
   SHEET_GLASS_INTENSITY,
-  SHEET_GLASS_OVERLAY,
 } from '../../../components/ui/BottomSheet/sheetGlass';
 import { PortfolioValueChart } from './PortfolioValueChart';
 import type { Portfolio, PortfolioSummary, PerformancePeriod } from '../portfolioTypes';
@@ -40,6 +41,7 @@ import {
   JOURNAL_TYPE,
   journalBodyTextStyle,
   journalCaption2Style,
+  journalCardMetricValueStyle,
   journalSectionSubtitleStyle,
 } from '../../Journal/journalLayout';
 
@@ -75,7 +77,7 @@ export function JournalPreviewSheet({
   bottomInset = 0,
 }: Props) {
   const tokens = useDesignTokens();
-  const gm = DesignTokens.glassmorphism;
+  const isDark = tokens.colors.background.primary !== LIGHT_CANVAS;
   const previewPeriod: PerformancePeriod = '3M';
   const [chartSeries, setChartSeries] = useState<
     { date: string; value: number; external_flow: number }[]
@@ -252,10 +254,10 @@ export function JournalPreviewSheet({
   const chartCtaGap = 10;
   const footerReserve = chartCtaGap + ctaBlock + ctaPadBottom;
 
-  const glassWellBg = gm.cardBackground.dark.subtle;
-  const glassWellBorder = gm.border.dark.subtle;
-  const glassChipBg = gm.cardBackground.dark.light;
-  const glassChipBorder = gm.border.dark.light;
+  const glassWellBg = tokens.colors.background.primary;
+  const glassWellBorder = tokens.colors.border.divider;
+  const glassChipBg = tokens.colors.background.primary;
+  const glassChipBorder = tokens.colors.border.divider;
 
   const androidBlurProps =
     Platform.OS === 'android'
@@ -284,7 +286,7 @@ export function JournalPreviewSheet({
           overflow: 'hidden',
           borderWidth: 1,
           borderColor: glassWellBorder,
-          borderTopColor: gm.topHighlight.dark.light,
+          borderTopColor: tokens.colors.border.divider,
           backgroundColor: 'transparent',
         },
         body: {
@@ -352,13 +354,8 @@ export function JournalPreviewSheet({
         },
         heroValue: {
           width: '100%',
-          fontSize: 40,
-          fontWeight: '800',
+          ...journalCardMetricValueStyle,
           color: tokens.colors.text.primary,
-          textAlign: 'center',
-          letterSpacing: -1.1,
-          lineHeight: 46,
-          writingDirection: 'ltr',
         },
         dailyChip: {
           flexDirection: 'row',
@@ -477,7 +474,7 @@ export function JournalPreviewSheet({
         },
         footerTint: {
           ...StyleSheet.absoluteFillObject,
-          backgroundColor: SHEET_GLASS_OVERLAY,
+          backgroundColor: tokens.colors.background.cardSolid,
         },
         ctaBtn: {
           flexDirection: 'row',
@@ -500,7 +497,6 @@ export function JournalPreviewSheet({
       }),
     [
       tokens,
-      gm,
       glassWellBg,
       glassWellBorder,
       glassChipBg,
@@ -531,7 +527,7 @@ export function JournalPreviewSheet({
         <SheetGlassBackground
           active
           intensity={SHEET_GLASS_INTENSITY}
-          overlayColor={SHEET_GLASS_OVERLAY}
+          overlayColor={tokens.colors.background.cardSolid}
         />
 
         <View style={styles.body}>
@@ -678,8 +674,8 @@ export function JournalPreviewSheet({
 
         <View style={styles.footer} pointerEvents="box-none">
           <BlurView
-            intensity={gm.blurIntensity.medium}
-            tint="systemThinMaterialDark"
+            intensity={SHEET_GLASS_INTENSITY}
+            tint={cardGlassBlurTint(isDark)}
             {...androidBlurProps}
             style={styles.footerBlur}
           />

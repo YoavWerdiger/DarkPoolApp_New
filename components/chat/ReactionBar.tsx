@@ -4,7 +4,7 @@ import { TouchableOpacity } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { GlassChip } from '../ui/GlassChip';
-import { chatPalette } from './chatDesignTokens';
+import { useDesignTokens } from '../ui/DesignTokens';
 
 interface ReactionBarProps {
   onReaction: (emoji: string) => void;
@@ -22,8 +22,13 @@ const HIT_SLOP = { top: 6, bottom: 6, left: 4, right: 4 };
  * TouchableOpacity מ-RNGH נשאר כדי לעבוד עם Pan של BottomSheet.
  */
 export default function ReactionBar({ onReaction, currentReaction, onOpenPicker }: ReactionBarProps) {
+  const tokens = useDesignTokens();
   return (
-    <GlassChip disableBlur style={styles.pill} contentContainerStyle={styles.pillContent}>
+    <GlassChip
+      disableBlur
+      style={[styles.pill, { backgroundColor: tokens.colors.background.tertiary }]}
+      contentContainerStyle={styles.pillContent}
+    >
       {EMOJIS.map(emoji => {
         const isSelected = currentReaction === emoji;
         return (
@@ -35,7 +40,10 @@ export default function ReactionBar({ onReaction, currentReaction, onOpenPicker 
               void HapticFeedback.selection();
               onReaction(emoji);
             }}
-            style={[styles.emojiBtn, isSelected && styles.emojiBtnSelected]}
+            style={[
+              styles.emojiBtn,
+              isSelected && { backgroundColor: tokens.colors.primary.dim },
+            ]}
             accessibilityLabel={`React ${emoji}`}
             accessibilityState={{ selected: isSelected }}
           >
@@ -52,11 +60,15 @@ export default function ReactionBar({ onReaction, currentReaction, onOpenPicker 
             void HapticFeedback.selection();
             onOpenPicker();
           }}
-          style={[styles.emojiBtn, styles.plusBtn]}
+          style={[
+            styles.emojiBtn,
+            styles.plusBtn,
+            { backgroundColor: tokens.colors.background.cardSolid },
+          ]}
           accessibilityLabel="עוד אימוג'ים"
           accessibilityRole="button"
         >
-          <Ionicons name="add" size={20} color={chatPalette.textSecondary} />
+          <Ionicons name="add" size={20} color={tokens.colors.text.secondary} />
         </TouchableOpacity>
       ) : null}
     </GlassChip>
@@ -84,12 +96,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 20,
   },
-  emojiBtnSelected: {
-    backgroundColor: 'rgba(0,200,5,0.18)',
-  },
   plusBtn: {
     marginLeft: 4,
-    backgroundColor: 'rgba(255,255,255,0.05)',
   },
   emoji: {
     fontSize: 24,

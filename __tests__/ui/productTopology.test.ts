@@ -42,7 +42,7 @@ describe('product topology registry', () => {
     expect(PRODUCT_TOPOLOGY.type).toBe(APP_TYPE);
     expect(PRODUCT_TOPOLOGY.layout).toBe(APP_LAYOUT);
     expect(PRODUCT_TOPOLOGY.cardTitleToSubtitleGap).toBe(2);
-    expect(PRODUCT_TOPOLOGY.cardStackGap).toBe(16);
+    expect(PRODUCT_TOPOLOGY.cardStackGap).toBe(12);
     expect(PRODUCT_TOPOLOGY.screenPaddingHorizontal).toBe(20);
   });
 });

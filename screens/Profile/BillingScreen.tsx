@@ -8,46 +8,58 @@ import {
   ActivityIndicator,
   RefreshControl,
   StyleSheet,
-  type TextStyle,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  ArrowLeftRight,
+  BadgeCheck,
+  Ban,
+  Calendar,
+  ChevronLeft,
+  CreditCard,
+  Layers,
+  Receipt,
+  RefreshCw,
+  type LucideIcon,
+} from 'lucide-react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
-import { chatPalette } from '../../components/chat/chatDesignTokens';
-import UICard from '../../components/ui/UICard';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { APP_LAYOUT } from '../../components/ui/appLayout';
 import { useAuth } from '../../context/AuthContext';
 import { useSubscription } from '../../hooks/useSubscription';
 import {
   paymentService,
   isSubscriptionCheckoutEnabled,
   type PaymentHistoryItem,
-  SUBSCRIPTION_PLANS,
 } from '../../services/paymentService';
 import { HapticFeedback } from '../../utils/hapticFeedback';
-import { SettingsSectionTitle } from '../../components/profile/ProfileSettingsUI';
 import {
-  cardcomDocumentTypeLabelHe,
-  paymentStatusLabelHe,
-} from '../../utils/cardcomDocumentLabels';
+  SettingsGlassCard,
+  SettingsSectionTitle,
+} from '../../components/profile/ProfileSettingsUI';
 import {
+  settingsBodyType,
+  settingsHebrewText,
+  settingsMetaType,
+  settingsRowSubtitleStyle,
+  settingsRowType,
+} from '../../components/profile/settingsType';
+import { cardcomDocumentTypeLabelHe } from '../../utils/cardcomDocumentLabels';
+import {
+  formatBillingDateHe,
   formatPaymentMethodLabel,
   formatPlanPriceHe,
   isInactiveSubscriptionStatus,
   isPaidSubscriptionActive,
   resolveNextBilling,
   subscriptionStatusLabelHe,
+  type NextBillingInfo,
 } from '../../utils/billingDisplay';
 import { appQueryKeys } from '../../lib/appQueryKeys';
 
-const rtlText: TextStyle = {
-  textAlign: 'right',
-  writingDirection: 'rtl',
-};
-
 export default function BillingScreen({ navigation }: any) {
   const tokens = useDesignTokens();
-  const ty = tokens.typography;
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const {
@@ -100,12 +112,21 @@ export default function BillingScreen({ navigation }: any) {
     hasToken: hasPaymentToken,
   });
 
-  const sectionTitleStyle: TextStyle = {
-    fontSize: ty.titleXs.size,
-    fontWeight: ty.fontWeight.bold as TextStyle['fontWeight'],
-    letterSpacing: ty.titleXs.letterSpacing,
-    lineHeight: ty.titleXs.lineHeight,
+  const planValue = planTrackLabel(planId, planName, showSubscriptionCard);
+  const goToPlans = () => {
+    void HapticFeedback.medium();
+    navigation.navigate('SubscriptionPlans');
   };
+  const planActionLabel = isPaidActive
+    ? 'שנה מסלול'
+    : isInactivePaid
+      ? 'חידוש מנוי'
+      : 'שדרג מסלול';
+  const planNote = !showSubscriptionCard
+    ? 'יש לך גישה לתכנים הציבוריים. שדרוג פותח קהילה, חדשות בזמן אמת, רשימות מעקב והלווייתנים.'
+    : isInactivePaid && checkoutReady
+      ? 'תשלום מאובטח להסרת ההגבלה'
+      : null;
 
   const onRefresh = useCallback(async () => {
     if (!userId) return;
@@ -186,11 +207,6 @@ export default function BillingScreen({ navigation }: any) {
     }
   };
 
-  const goToPlans = () => {
-    void HapticFeedback.medium();
-    navigation.navigate('SubscriptionPlans');
-  };
-
   const onCancelSubscription = async () => {
     void HapticFeedback.selection();
     const ok = await showAppConfirm(
@@ -218,9 +234,29 @@ export default function BillingScreen({ navigation }: any) {
     }
   };
 
+  const detailRows = buildDetailRows({
+    showSubscriptionCard,
+    statusLabel,
+    priceLabel,
+    planId,
+    isPaidActive,
+    autoRenew,
+    nextBilling,
+    expiresAt,
+    isInactivePaid,
+    paymentMethodLabel,
+    warningColor: tokens.colors.warning.main,
+    dangerColor: tokens.colors.text.danger,
+    onCancel: () => void onCancelSubscription(),
+    cancelling,
+  });
+
   if (subLoading || (historyQuery.isLoading && !historyQuery.data)) {
     return (
-      <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
+      <SafeAreaView
+        style={[styles.root, { backgroundColor: tokens.colors.background.primary }]}
+        edges={['top', 'bottom']}
+      >
         <ChatSubScreenHeader
           title="מנוי וחיובים"
           onBack={() => {
@@ -236,7 +272,10 @@ export default function BillingScreen({ navigation }: any) {
   }
 
   return (
-    <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
+    <SafeAreaView
+      style={[styles.root, { backgroundColor: tokens.colors.background.primary }]}
+      edges={['top', 'bottom']}
+    >
       <ChatSubScreenHeader
         title="מנוי וחיובים"
         onBack={() => {
@@ -246,11 +285,7 @@ export default function BillingScreen({ navigation }: any) {
       />
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingHorizontal: tokens.spacing.base,
-          paddingTop: tokens.spacing.md,
-          paddingBottom: 48,
-        }}
+        contentContainerStyle={styles.scroll}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -259,610 +294,321 @@ export default function BillingScreen({ navigation }: any) {
           />
         }
       >
-        {!checkoutReady ? (
-          <UICard
-            variant="glass"
-            glassIntensity="light"
-            padding="none"
-            style={[
-              styles.bannerCard,
-              {
-                borderColor: `${tokens.colors.warning.main}44`,
-                backgroundColor: `${tokens.colors.warning.main}12`,
-                marginBottom: tokens.spacing.md,
-                borderRadius: tokens.borderRadius.lg,
-              },
-            ]}
-          >
-            <Text
-              style={{
-                color: tokens.colors.warning.main,
-                ...rtlText,
-                fontSize: ty.footnote.size,
-                fontWeight: ty.fontWeight.semibold as TextStyle['fontWeight'],
-                lineHeight: ty.footnote.lineHeight,
-                letterSpacing: ty.footnote.letterSpacing,
-              }}
-            >
-              תשלום בקרוב — סליקת Cardcom עדיין לא מחוברת.
-            </Text>
-          </UICard>
-        ) : null}
-
-        {showSubscriptionCard ? (
-          <>
-            <SettingsSectionTitle title="המנוי שלך" style={sectionTitleStyle} />
-            <GlassSection style={{ marginBottom: tokens.spacing.lg }}>
-              <InfoRow
-                label="מסלול"
-                value={planName ?? planId ?? 'מנוי'}
-                emphasize
-              />
-              <RowDivider color={tokens.colors.border.divider} />
-              <InfoRow label="סטטוס" value={statusLabel} />
-              {priceLabel ? (
-                <>
-                  <RowDivider color={tokens.colors.border.divider} />
-                  <InfoRow label="מחיר" value={priceLabel} />
-                </>
-              ) : null}
-              {isPaidActive && autoRenew != null ? (
-                <>
-                  <RowDivider color={tokens.colors.border.divider} />
-                  <InfoRow
-                    label="חידוש אוטומטי"
-                    value={autoRenew ? 'פעיל' : 'כבוי'}
-                  />
-                </>
-              ) : null}
-            </GlassSection>
-
-            <SettingsSectionTitle title="החיוב הבא" style={sectionTitleStyle} />
-            <GlassSection style={{ marginBottom: tokens.spacing.lg }}>
-              {nextBilling ? (
-                <View style={styles.blockPad}>
-                  <Text
-                    style={{
-                      color: nextBilling.hasDate
-                        ? tokens.colors.text.primary
-                        : isInactivePaid
-                          ? tokens.colors.warning.main
-                          : tokens.colors.text.secondary,
-                      fontSize: ty.body.size,
-                      fontWeight: ty.fontWeight.semibold as TextStyle['fontWeight'],
-                      letterSpacing: ty.body.letterSpacing,
-                      lineHeight: ty.body.lineHeight,
-                      ...rtlText,
-                    }}
-                  >
-                    {nextBilling.primary}
-                  </Text>
-                  {nextBilling.secondary ? (
-                    <Text
-                      style={{
-                        color: isInactivePaid
-                          ? tokens.colors.text.secondary
-                          : tokens.colors.text.tertiary,
-                        fontSize: ty.footnote.size,
-                        fontWeight: ty.fontWeight.medium as TextStyle['fontWeight'],
-                        letterSpacing: ty.footnote.letterSpacing,
-                        lineHeight: ty.footnote.lineHeight,
-                        ...rtlText,
-                        marginTop: tokens.spacing.xs,
-                      }}
-                    >
-                      {nextBilling.secondary}
-                    </Text>
-                  ) : null}
+        <SettingsSectionTitle
+          title="המסלול"
+          style={{ color: tokens.colors.text.secondary }}
+        />
+        <SettingsGlassCard>
+          <View style={styles.planCard}>
+            {!checkoutReady ? (
+              <Text style={[styles.banner, { color: tokens.colors.warning.main }]}>
+                תשלום בקרוב — סליקת Cardcom עדיין לא מחוברת.
+              </Text>
+            ) : null}
+            <View style={styles.planTitleRow}>
+              {showSubscriptionCard && priceLabel ? (
+                <Text
+                  style={[styles.planPrice, { color: tokens.colors.text.secondary }]}
+                  numberOfLines={1}
+                >
+                  {priceLabel}
+                </Text>
+              ) : (
+                <View style={styles.planPriceSpacer} />
+              )}
+              <View style={styles.planNameGroup}>
+                <Text
+                  style={[styles.planName, { color: tokens.colors.text.primary }]}
+                  numberOfLines={1}
+                >
+                  {planValue}
+                </Text>
+                <View style={styles.leadingIcon}>
+                  <Layers size={20} color={tokens.colors.text.primary} strokeWidth={2} />
                 </View>
-              ) : null}
-            </GlassSection>
-
-            {isPaidActive ? (
-              <>
-                <SettingsSectionTitle title="אמצעי תשלום" style={sectionTitleStyle} />
-                <GlassSection style={{ marginBottom: tokens.spacing.lg }}>
-                  <View style={styles.blockPad}>
-                    <Text
-                      style={{
-                        color: tokens.colors.text.primary,
-                        fontSize: ty.body.size,
-                        fontWeight: ty.fontWeight.semibold as TextStyle['fontWeight'],
-                        letterSpacing: ty.body.letterSpacing,
-                        lineHeight: ty.body.lineHeight,
-                        ...rtlText,
-                      }}
-                    >
-                      {paymentMethodLabel}
-                    </Text>
-                    <Text
-                      style={{
-                        color: tokens.colors.text.tertiary,
-                        fontSize: ty.footnote.size,
-                        fontWeight: ty.fontWeight.medium as TextStyle['fontWeight'],
-                        letterSpacing: ty.footnote.letterSpacing,
-                        lineHeight: ty.footnote.lineHeight,
-                        ...rtlText,
-                        marginTop: tokens.spacing.xs,
-                      }}
-                    >
-                      עדכון אמצעי תשלום — בקרוב
-                    </Text>
-                  </View>
-                </GlassSection>
-              </>
-            ) : (
-              <TouchableOpacity
-                onPress={goToPlans}
-                activeOpacity={0.85}
-                style={{
-                  backgroundColor: tokens.colors.primary.main,
-                  borderRadius: tokens.borderRadius.full,
-                  paddingVertical: tokens.spacing.md,
-                  paddingHorizontal: tokens.spacing.base,
-                  marginBottom: tokens.spacing.lg,
-                  alignItems: 'center',
-                }}
-              >
-                <Text
-                  style={{
-                    color: '#000',
-                    fontSize: ty.callout.size,
-                    fontWeight: ty.fontWeight.bold as TextStyle['fontWeight'],
-                    letterSpacing: ty.callout.letterSpacing,
-                    lineHeight: ty.callout.lineHeight,
-                    textAlign: 'center',
-                    writingDirection: 'rtl',
-                  }}
-                >
-                  חידוש מנוי
-                </Text>
-                <Text
-                  style={{
-                    color: 'rgba(0,0,0,0.55)',
-                    fontSize: ty.caption.size,
-                    fontWeight: ty.caption.weight,
-                    letterSpacing: ty.caption.letterSpacing,
-                    lineHeight: ty.caption.lineHeight,
-                    marginTop: 2,
-                    textAlign: 'center',
-                    writingDirection: 'rtl',
-                  }}
-                >
-                  {checkoutReady
-                    ? 'תשלום מאובטח להסרת ההגבלה'
-                    : 'צפייה במסלולים — תשלום בקרוב'}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </>
-        ) : (
-          <>
-            <SettingsSectionTitle title="המנוי שלך" style={sectionTitleStyle} />
-            <GlassSection style={{ marginBottom: tokens.spacing.lg }}>
-              <View style={styles.blockPad}>
-                <Text
-                  style={{
-                    color: tokens.colors.text.primary,
-                    fontSize: ty.body.size,
-                    fontWeight: ty.fontWeight.semibold as TextStyle['fontWeight'],
-                    letterSpacing: ty.body.letterSpacing,
-                    lineHeight: ty.body.lineHeight,
-                    ...rtlText,
-                  }}
-                >
-                  מסלול חינמי
-                </Text>
-                <Text
-                  style={{
-                    color: tokens.colors.text.secondary,
-                    fontSize: ty.footnote.size,
-                    fontWeight: ty.fontWeight.medium as TextStyle['fontWeight'],
-                    letterSpacing: ty.footnote.letterSpacing,
-                    lineHeight: ty.footnote.lineHeight,
-                    ...rtlText,
-                    marginTop: tokens.spacing.sm,
-                  }}
-                >
-                  יש לך גישה לתכנים הציבוריים. שדרוג פותח קהילה, חדשות בזמן אמת,
-                  רשימות מעקב והלווייתנים.
-                </Text>
               </View>
-            </GlassSection>
-
-            <TouchableOpacity
-              onPress={goToPlans}
-              activeOpacity={0.85}
-              style={{
-                backgroundColor: tokens.colors.primary.main,
-                borderRadius: tokens.borderRadius.full,
-                paddingVertical: tokens.spacing.md,
-                paddingHorizontal: tokens.spacing.base,
-                marginBottom: tokens.spacing.lg,
-                alignItems: 'center',
-              }}
-            >
-              <Text
-                style={{
-                  color: '#000',
-                  fontSize: ty.callout.size,
-                  fontWeight: ty.fontWeight.bold as TextStyle['fontWeight'],
-                  letterSpacing: ty.callout.letterSpacing,
-                  lineHeight: ty.callout.lineHeight,
-                  textAlign: 'center',
-                  writingDirection: 'rtl',
-                }}
-              >
-                שדרג מסלול
+            </View>
+            {planNote ? (
+              <Text style={[styles.planNote, { color: tokens.colors.text.secondary }]}>
+                {planNote}
               </Text>
-              <Text
-                style={{
-                  color: 'rgba(0,0,0,0.55)',
-                  fontSize: ty.caption.size,
-                  fontWeight: ty.caption.weight,
-                  letterSpacing: ty.caption.letterSpacing,
-                  lineHeight: ty.caption.lineHeight,
-                  marginTop: 2,
-                  textAlign: 'center',
-                  writingDirection: 'rtl',
-                }}
-              >
-                {checkoutReady
-                  ? 'בחירת מסלול ותשלום מאובטח'
-                  : 'צפייה במסלולים — תשלום בקרוב'}
-              </Text>
-            </TouchableOpacity>
-          </>
-        )}
+            ) : null}
+          </View>
+          {detailRows.map((row, index) => (
+            <View key={row.key}>
+              <View style={[styles.divider, { backgroundColor: tokens.colors.border.divider }]} />
+              <FactLine
+                icon={row.icon}
+                label={row.label}
+                value={row.value ?? ''}
+                valueColor={row.valueColor}
+              />
+            </View>
+          ))}
+        </SettingsGlassCard>
 
-        <SettingsSectionTitle title="חשבוניות ותשלומים" style={sectionTitleStyle} />
-        <GlassSection style={{ marginBottom: tokens.spacing.lg }}>
+        <SettingsSectionTitle
+          title="פעולות"
+          style={{ color: tokens.colors.text.secondary }}
+        />
+        <SettingsGlassCard>
+          <BillingLine icon={ArrowLeftRight} label={planActionLabel} onPress={goToPlans} />
+          {isPaidActive ? (
+            <View>
+              <View style={[styles.divider, { backgroundColor: tokens.colors.border.divider }]} />
+              <BillingLine
+                icon={Ban}
+                label="ביטול המנוי"
+                labelColor={tokens.colors.text.danger}
+                onPress={() => void onCancelSubscription()}
+                busy={cancelling}
+              />
+            </View>
+          ) : null}
+        </SettingsGlassCard>
+
+        <SettingsSectionTitle
+          title="חשבוניות"
+          style={{ color: tokens.colors.text.secondary }}
+        />
+        <SettingsGlassCard>
           {history.length === 0 ? (
-            <View style={styles.blockPad}>
-              <Text
-                style={{
-                  color: tokens.colors.text.primary,
-                  ...rtlText,
-                  fontSize: ty.callout.size,
-                  fontWeight: ty.fontWeight.semibold as TextStyle['fontWeight'],
-                  lineHeight: ty.callout.lineHeight,
-                }}
-              >
+            <View style={styles.emptyBlock}>
+              <Text style={[styles.fieldLabel, { color: tokens.colors.text.primary }]}>
                 אין תשלומים עדיין
               </Text>
-              <Text
-                style={{
-                  color: tokens.colors.text.tertiary,
-                  ...rtlText,
-                  fontSize: ty.footnote.size,
-                  fontWeight: ty.fontWeight.medium as TextStyle['fontWeight'],
-                  letterSpacing: ty.footnote.letterSpacing,
-                  lineHeight: ty.footnote.lineHeight,
-                  marginTop: tokens.spacing.xs,
-                }}
-              >
-                לאחר רכישת מנוי מוצלחת יופיעו כאן תאריך, סכום, סטטוס ומספר מסמך.
+              <Text style={[styles.fieldNote, { color: tokens.colors.text.secondary }]}>
+                אחרי רכישה יופיעו כאן התאריך והסכום.
               </Text>
             </View>
           ) : (
-            history.map((tx, idx) => {
-              const docType = tx.document_type || tx.cardcom_document_type;
+            history.map((tx, index) => {
               const docNumber = tx.document_number ?? tx.cardcom_document_number;
               const docUrl = (tx.document_url || tx.cardcom_document_url || '').trim();
-              const typeLabel = cardcomDocumentTypeLabelHe(docType);
               const hasOpenable = Boolean(docUrl) || docNumber != null;
-              const busy = openingId === tx.id;
-              const planLabel =
-                (tx.plan_id &&
-                  SUBSCRIPTION_PLANS[tx.plan_id as keyof typeof SUBSCRIPTION_PLANS]
-                    ?.name) ||
-                tx.plan_id ||
-                null;
 
               return (
-                <View
-                  key={tx.id}
-                  style={{
-                    paddingHorizontal: tokens.spacing.base,
-                    paddingVertical: tokens.spacing.md,
-                    borderBottomWidth:
-                      idx < history.length - 1 ? StyleSheet.hairlineWidth : 0,
-                    borderBottomColor: tokens.colors.border.divider,
-                  }}
-                >
-                  <View
-                    style={{
-                      flexDirection: 'row-reverse',
-                      justifyContent: 'space-between',
-                      alignItems: 'flex-start',
-                      gap: 12,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: tokens.colors.text.primary,
-                        fontWeight: ty.fontWeight.semibold as TextStyle['fontWeight'],
-                        fontSize: ty.body.size,
-                        lineHeight: ty.body.lineHeight,
-                        ...rtlText,
-                        flexShrink: 0,
-                      }}
-                    >
-                      ₪{tx.amount ?? '—'}
-                    </Text>
-                    <Text
-                      style={{
-                        color: tokens.colors.text.secondary,
-                        fontWeight: ty.fontWeight.medium as TextStyle['fontWeight'],
-                        fontSize: ty.footnote.size,
-                        lineHeight: ty.footnote.lineHeight,
-                        ...rtlText,
-                        flex: 1,
-                      }}
-                    >
-                      {paymentStatusLabelHe(tx.status)}
-                    </Text>
-                  </View>
-                  <Text
-                    style={{
-                      color: tokens.colors.text.tertiary,
-                      ...rtlText,
-                      fontSize: ty.footnote.size,
-                      fontWeight: ty.fontWeight.medium as TextStyle['fontWeight'],
-                      letterSpacing: ty.footnote.letterSpacing,
-                      lineHeight: ty.footnote.lineHeight,
-                      marginTop: tokens.spacing.xs,
-                    }}
-                  >
-                    {tx.created_at
-                      ? new Date(tx.created_at).toLocaleDateString('he-IL')
-                      : '—'}
-                    {planLabel ? ` · ${planLabel}` : ''}
-                  </Text>
-                  {docNumber != null || typeLabel ? (
-                    <Text
-                      style={{
-                        color: tokens.colors.text.secondary,
-                        ...rtlText,
-                        fontSize: ty.footnote.size,
-                        fontWeight: ty.fontWeight.medium as TextStyle['fontWeight'],
-                        letterSpacing: ty.footnote.letterSpacing,
-                        lineHeight: ty.footnote.lineHeight,
-                        marginTop: tokens.spacing.xs,
-                      }}
-                    >
-                      {typeLabel || 'מסמך'}
-                      {docNumber != null ? ` · מס׳ ${docNumber}` : ''}
-                    </Text>
-                  ) : (
-                    <Text
-                      style={{
-                        color: tokens.colors.text.muted,
-                        ...rtlText,
-                        fontSize: ty.footnote.size,
-                        fontWeight: ty.fontWeight.medium as TextStyle['fontWeight'],
-                        marginTop: tokens.spacing.xs,
-                      }}
-                    >
-                      מסמך בהכנה
-                    </Text>
-                  )}
-                  {hasOpenable ? (
-                    <TouchableOpacity
-                      onPress={() => void openInvoice(tx)}
-                      disabled={busy}
-                      activeOpacity={0.75}
-                      style={{
-                        marginTop: tokens.spacing.sm,
-                        alignSelf: 'flex-end',
-                        paddingVertical: 6,
-                        paddingHorizontal: 12,
-                        borderRadius: tokens.borderRadius.full,
-                        borderWidth: 1,
-                        borderColor: chatPalette.glassBorder,
-                        backgroundColor: `${tokens.colors.primary.main}14`,
-                        opacity: busy ? 0.6 : 1,
-                      }}
-                    >
-                      {busy ? (
-                        <ActivityIndicator
-                          size="small"
-                          color={tokens.colors.primary.main}
-                        />
-                      ) : (
-                        <Text
-                          style={{
-                            color: tokens.colors.primary.main,
-                            fontWeight: ty.buttonSmall.weight,
-                            fontSize: ty.buttonSmall.size,
-                            letterSpacing: ty.buttonSmall.letterSpacing,
-                            lineHeight: ty.buttonSmall.lineHeight,
-                            writingDirection: 'rtl',
-                            textAlign: 'center',
-                          }}
-                        >
-                          {docUrl ? 'הצג קבלה' : 'פרטי מסמך'}
-                        </Text>
-                      )}
-                    </TouchableOpacity>
+                <View key={tx.id}>
+                  <BillingLine
+                    icon={Receipt}
+                    label={
+                      tx.created_at
+                        ? new Date(tx.created_at).toLocaleDateString('he-IL')
+                        : '—'
+                    }
+                    note={tx.amount != null ? `₪${tx.amount}` : undefined}
+                    busy={openingId === tx.id}
+                    onPress={hasOpenable ? () => void openInvoice(tx) : undefined}
+                  />
+                  {index < history.length - 1 ? (
+                    <View
+                      style={[styles.divider, { backgroundColor: tokens.colors.border.divider }]}
+                    />
                   ) : null}
                 </View>
               );
             })
           )}
-        </GlassSection>
-
-        {isPaidActive ? (
-          <>
-            <TouchableOpacity
-              onPress={goToPlans}
-              activeOpacity={0.85}
-              style={{
-                borderRadius: tokens.borderRadius.full,
-                paddingVertical: tokens.spacing.md,
-                paddingHorizontal: tokens.spacing.base,
-                marginBottom: tokens.spacing.md,
-                alignItems: 'center',
-                borderWidth: 1,
-                borderColor: chatPalette.glassBorder,
-                backgroundColor: `${tokens.colors.primary.main}12`,
-              }}
-            >
-              <Text
-                style={{
-                  color: tokens.colors.primary.main,
-                  fontSize: ty.callout.size,
-                  fontWeight: ty.fontWeight.bold as TextStyle['fontWeight'],
-                  lineHeight: ty.callout.lineHeight,
-                  textAlign: 'center',
-                  writingDirection: 'rtl',
-                }}
-              >
-                שנה / שדרג מסלול
-              </Text>
-              <Text
-                style={{
-                  color: tokens.colors.text.tertiary,
-                  fontSize: ty.caption.size,
-                  fontWeight: ty.caption.weight,
-                  letterSpacing: ty.caption.letterSpacing,
-                  lineHeight: ty.caption.lineHeight,
-                  marginTop: 2,
-                  textAlign: 'center',
-                  writingDirection: 'rtl',
-                }}
-              >
-                {checkoutReady
-                  ? 'מעבר לבחירת מסלולים'
-                  : 'צפייה במסלולים — תשלום בקרוב'}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => void onCancelSubscription()}
-              disabled={cancelling}
-              activeOpacity={0.75}
-              style={{
-                borderRadius: tokens.borderRadius.full,
-                paddingVertical: tokens.spacing.md,
-                paddingHorizontal: tokens.spacing.base,
-                alignItems: 'center',
-                opacity: cancelling ? 0.55 : 1,
-              }}
-            >
-              {cancelling ? (
-                <ActivityIndicator color={tokens.colors.text.danger} />
-              ) : (
-                <Text
-                  style={{
-                    color: tokens.colors.text.danger,
-                    fontSize: ty.callout.size,
-                    fontWeight: ty.fontWeight.semibold as TextStyle['fontWeight'],
-                    lineHeight: ty.callout.lineHeight,
-                    textAlign: 'center',
-                    writingDirection: 'rtl',
-                  }}
-                >
-                  ביטול המנוי
-                </Text>
-              )}
-            </TouchableOpacity>
-          </>
-        ) : null}
+        </SettingsGlassCard>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function GlassSection({
-  children,
-  style,
-}: {
-  children: React.ReactNode;
-  style?: object;
-}) {
-  const tokens = useDesignTokens();
-  return (
-    <UICard
-      variant="glass"
-      glassIntensity="light"
-      padding="none"
-      style={[
-        {
-          borderRadius: tokens.borderRadius.lg,
-          borderWidth: 1,
-          borderColor: chatPalette.glassBorder,
-          overflow: 'hidden',
-        },
-        style,
-      ]}
-    >
-      {children}
-    </UICard>
-  );
+type DetailRow = {
+  key: string;
+  icon: LucideIcon;
+  label: string;
+  value?: string;
+  note?: string | null;
+  valueColor?: string;
+  labelColor?: string;
+  onPress?: () => void;
+  busy?: boolean;
+};
+
+function planTrackLabel(
+  planId: string | null | undefined,
+  planName: string | null | undefined,
+  paid: boolean,
+): string {
+  if (!paid || !planId || planId === 'free') return 'מסלול חינמי';
+  if (planId === 'monthly') return 'מסלול חודשי';
+  if (planId === 'quarterly') return 'מסלול רבעוני';
+  if (planId === 'yearly') return 'מסלול שנתי';
+  const name = (planName ?? '').trim();
+  if (!name) return 'מסלול';
+  return name.startsWith('מסלול') ? name : `מסלול ${name}`;
 }
 
-function InfoRow({
+function buildDetailRows(opts: {
+  showSubscriptionCard: boolean;
+  statusLabel: string;
+  priceLabel: string | null;
+  planId: string | null;
+  isPaidActive: boolean;
+  autoRenew: boolean | null;
+  nextBilling: NextBillingInfo | null;
+  expiresAt: string | null;
+  isInactivePaid: boolean;
+  paymentMethodLabel: string;
+  warningColor: string;
+  dangerColor: string;
+  onCancel: () => void;
+  cancelling: boolean;
+}): DetailRow[] {
+  if (!opts.showSubscriptionCard) return [];
+
+  const rows: DetailRow[] = [
+    { key: 'status', icon: BadgeCheck, label: 'סטטוס', value: opts.statusLabel },
+  ];
+
+  if (opts.isPaidActive && opts.autoRenew != null) {
+    rows.push({
+      key: 'renew',
+      icon: RefreshCw,
+      label: 'חידוש אוטומטי',
+      value: opts.autoRenew ? 'פעיל' : 'כבוי',
+    });
+  }
+
+  if (opts.nextBilling) {
+    const charge = nextChargeRow(opts.nextBilling, opts.expiresAt);
+    rows.push({
+      key: 'next',
+      icon: Calendar,
+      label: charge.label,
+      value: charge.value,
+      note: opts.nextBilling.secondary,
+      valueColor:
+        !opts.nextBilling.hasDate && opts.isInactivePaid ? opts.warningColor : undefined,
+    });
+  }
+
+  if (opts.isPaidActive) {
+    rows.push({
+      key: 'method',
+      icon: CreditCard,
+      label: 'אמצעי תשלום',
+      value: opts.paymentMethodLabel,
+    });
+  }
+
+  return rows;
+}
+
+function nextChargeRow(
+  next: NextBillingInfo,
+  expiresAt: string | null | undefined,
+): { label: string; value: string } {
+  const dateLabel = formatBillingDateHe(expiresAt);
+  if (dateLabel && next.primary.includes(dateLabel)) {
+    return {
+      label: next.primary.includes('בתוקף') ? 'בתוקף עד' : 'החיוב הבא',
+      value: dateLabel,
+    };
+  }
+  if (next.primary === 'אין חיוב הבא') {
+    return { label: 'החיוב הבא', value: 'אין' };
+  }
+  return { label: 'החיוב הבא', value: next.primary };
+}
+
+function FactLine({
+  icon: Icon,
   label,
   value,
-  emphasize,
+  valueColor,
 }: {
+  icon: LucideIcon;
   label: string;
   value: string;
-  emphasize?: boolean;
+  valueColor?: string;
 }) {
   const tokens = useDesignTokens();
-  const ty = tokens.typography;
   return (
-    <View style={styles.infoRow}>
-      {/*
-        App.tsx: direction 'ltr' — למרות forceRTL, 'row' שם ילד ראשון בשמאל.
-        לכן row-reverse: תווית (ראשונה) בימין, ערך בשמאל.
-      */}
+    <View style={styles.factRow}>
       <Text
-        style={{
-          color: tokens.colors.text.tertiary,
-          fontWeight: ty.fontWeight.medium as TextStyle['fontWeight'],
-          fontSize: ty.footnote.size,
-          letterSpacing: ty.footnote.letterSpacing,
-          lineHeight: ty.footnote.lineHeight,
-          textAlign: 'right',
-          writingDirection: 'rtl',
-          flexShrink: 0,
-        }}
-      >
-        {label}
-      </Text>
-      <Text
-        style={{
-          color: tokens.colors.text.primary,
-          fontWeight: (emphasize
-            ? ty.fontWeight.semibold
-            : ty.fontWeight.medium) as TextStyle['fontWeight'],
-          fontSize: emphasize ? ty.body.size : ty.callout.size,
-          letterSpacing: emphasize ? ty.body.letterSpacing : ty.callout.letterSpacing,
-          lineHeight: emphasize ? ty.body.lineHeight : ty.callout.lineHeight,
-          textAlign: 'left',
-          writingDirection: 'rtl',
-          flex: 1,
-        }}
+        style={[styles.factValue, { color: valueColor ?? tokens.colors.text.primary }]}
+        numberOfLines={1}
       >
         {value}
       </Text>
+      <View style={styles.factLabelGroup}>
+        <Text style={[styles.factLabel, { color: tokens.colors.text.secondary }]} numberOfLines={1}>
+          {label}
+        </Text>
+        <View style={styles.leadingIcon}>
+          <Icon size={20} color={tokens.colors.text.primary} strokeWidth={2} />
+        </View>
+      </View>
     </View>
   );
 }
 
-function RowDivider({ color }: { color: string }) {
-  return (
-    <View
-      style={{
-        height: StyleSheet.hairlineWidth,
-        backgroundColor: color,
-        marginHorizontal: 16,
-      }}
-    />
+function BillingLine({
+  icon: Icon,
+  label,
+  value,
+  note,
+  valueColor,
+  labelColor,
+  onPress,
+  busy,
+}: Omit<DetailRow, 'key' | 'icon'> & { icon?: LucideIcon }) {
+  const tokens = useDesignTokens();
+  const detail = [value, note].filter(Boolean).join(' · ');
+  const iconColor = labelColor ?? tokens.colors.text.primary;
+  const body = (
+    <>
+      {onPress ? (
+        busy ? (
+          <ActivityIndicator size="small" color={tokens.colors.text.tertiary} />
+        ) : (
+          <ChevronLeft size={20} color={tokens.colors.text.tertiary} strokeWidth={2} />
+        )
+      ) : null}
+      <View style={styles.labelCol}>
+        <Text
+          style={[styles.fieldLabel, { color: labelColor ?? tokens.colors.text.primary }]}
+          numberOfLines={1}
+        >
+          {label}
+        </Text>
+        {detail ? (
+          <Text
+            style={[
+              styles.fieldNote,
+              { color: valueColor ?? tokens.colors.text.secondary },
+            ]}
+            numberOfLines={2}
+          >
+            {detail}
+          </Text>
+        ) : null}
+      </View>
+      {Icon ? (
+        <View style={styles.leadingIcon}>
+          <Icon size={20} color={iconColor} strokeWidth={2} />
+        </View>
+      ) : null}
+    </>
   );
+
+  if (onPress) {
+    return (
+      <TouchableOpacity
+        onPress={onPress}
+        activeOpacity={0.7}
+        disabled={busy}
+        style={styles.line}
+      >
+        {body}
+      </TouchableOpacity>
+    );
+  }
+
+  return <View style={styles.line}>{body}</View>;
 }
 
 const styles = StyleSheet.create({
@@ -872,21 +618,107 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  bannerCard: {
-    paddingHorizontal: 16,
+  scroll: {
+    paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+    paddingTop: APP_LAYOUT.sectionHeaderToContent,
+    paddingBottom: 48,
+  },
+  planCard: {
+    paddingHorizontal: APP_LAYOUT.cardPadding,
     paddingVertical: 12,
   },
-  blockPad: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+  banner: {
+    ...settingsHebrewText,
+    ...settingsBodyType,
+    marginBottom: APP_LAYOUT.cardStackGap,
   },
-  infoRow: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    // App direction LTR: row-reverse → תווית (ילד 1) בימין, ערך (ילד 2) בשמאל
-    flexDirection: 'row-reverse',
+  planTitleRow: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: APP_LAYOUT.cardStackGap,
+  },
+  planNameGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  planName: {
+    ...settingsHebrewText,
+    fontSize: settingsRowType.fontSize,
+    fontWeight: settingsRowType.fontWeight,
+    lineHeight: settingsRowType.lineHeight,
+    flexShrink: 1,
+  },
+  planPrice: {
+    ...settingsHebrewText,
+    ...settingsBodyType,
+    flexShrink: 1,
+    textAlign: 'left',
+  },
+  planPriceSpacer: {
+    flex: 1,
+  },
+  planNote: {
+    ...settingsHebrewText,
+    ...settingsBodyType,
+    marginTop: APP_LAYOUT.groupLabelToContent,
+  },
+  factRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: APP_LAYOUT.cardPadding,
+    paddingVertical: 12,
+    gap: APP_LAYOUT.cardStackGap,
+  },
+  factLabelGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  factLabel: {
+    ...settingsHebrewText,
+    ...settingsMetaType,
+    flexShrink: 0,
+  },
+  factValue: {
+    ...settingsHebrewText,
+    ...settingsBodyType,
+    flexShrink: 1,
+    textAlign: 'left',
+  },
+  fieldLabel: {
+    ...settingsHebrewText,
+    ...settingsRowType,
+  },
+  fieldNote: {
+    ...settingsHebrewText,
+    ...settingsRowSubtitleStyle,
+  },
+  line: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: APP_LAYOUT.cardPadding,
+    paddingVertical: 12,
+  },
+  labelCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  leadingIcon: {
+    marginLeft: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  divider: {
+    height: 1,
+    marginHorizontal: APP_LAYOUT.cardPadding,
+  },
+  emptyBlock: {
+    paddingHorizontal: APP_LAYOUT.cardPadding,
+    paddingVertical: 12,
   },
 });

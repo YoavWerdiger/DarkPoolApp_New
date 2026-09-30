@@ -38,7 +38,9 @@ export function DarkPoolSectionHeader({
       <View style={styles.textCol}>
         <View style={styles.titleRow}>
           {icon ? (
-            <Ionicons name={icon} size={18} color={tokens.colors.text.secondary} />
+            <View style={styles.leadingIcon}>
+              <Ionicons name={icon} size={18} color={tokens.colors.text.primary} />
+            </View>
           ) : null}
           <Text style={[styles.title, { color: tokens.colors.text.primary }]}>
             {title}
@@ -95,7 +97,9 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+  },
+  leadingIcon: {
+    marginLeft: 12,
   },
   title: {
     ...darkPoolSectionTitleStyle,
@@ -114,6 +118,7 @@ const styles = StyleSheet.create({
   actionLabel: {
     ...darkPoolPhysicalRightText,
     fontSize: DARK_POOL_TYPE.footnote.fontSize,
-    fontWeight: '600',
+    lineHeight: DARK_POOL_TYPE.footnote.lineHeight,
+    fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
   },
 });

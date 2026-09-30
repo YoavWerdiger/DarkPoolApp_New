@@ -7,6 +7,7 @@ import {
 import {
   claimEarningsNotificationSlot,
   deriveEarningsDateTimeIso,
+  earningsUserAcceptsTicker,
   fetchEarningsNotificationUsers,
   normalizeEarningsTicker,
 } from '../_shared/earnings-utils.ts'
@@ -167,6 +168,10 @@ serve(async (req) => {
       let processedUsers = 0
 
       for (const user of usersWithNotifications) {
+        if (!earningsUserAcceptsTicker(user, ticker)) {
+          processedUsers++
+          continue
+        }
         const claimed = await claimEarningsNotificationSlot(supabase, {
           userId: user.user_id,
           ticker,

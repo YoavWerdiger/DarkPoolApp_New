@@ -22,13 +22,20 @@ import {
   REACTION_EMOJI_CATEGORIES,
   emojiSearchHaystack,
 } from './reactionEmojiData';
-import { chatPalette, chatRtlRow, chatRtlText } from './chatDesignTokens';
+import { chatRtlRow, chatRtlText } from './chatDesignTokens';
 
 interface ReactionPickerProps {
   visible: boolean;
   onClose: () => void;
   onReaction: (emoji: string) => void;
   messageReactions?: Array<{ emoji: string; reacted_by_me: boolean }>;
+  /** כותרת השיט. ברירת מחדל: בחירת ריאקציה. */
+  title?: string;
+  /**
+   * בתוך מודאל שכבר פתוח (פריוויו לפני שליחה) — בלי Modal נוסף,
+   * כדי שהבורר יישב מעל התמונה והכיתוב.
+   */
+  embedded?: boolean;
 }
 
 /** פריט SectionList — תמיד אובייקט עם מערך אימוג'ים (לא string[] גולמי). */
@@ -69,6 +76,8 @@ export default function ReactionPicker({
   onClose,
   onReaction,
   messageReactions = [],
+  title = 'בחר ריאקציה',
+  embedded = false,
 }: ReactionPickerProps) {
   const sheet = useChatSheetStyles();
   const tokens = useDesignTokens();
@@ -141,16 +150,26 @@ export default function ReactionPicker({
       fitContent={false}
       showBrandWatermark={false}
       contentPaddingBottom={0}
-      avoidKeyboard
+      avoidKeyboard={!embedded}
+      useModal={!embedded}
     >
       <View style={[styles.root, { paddingBottom: bottomPad, direction: 'rtl' }]}>
         <View style={sheet.header}>
           <Text style={[sheet.headerTitlePlain, styles.sheetTitle]}>
-            בחר ריאקציה
+            {title}
           </Text>
         </View>
 
-        <View style={[styles.searchField, styles.searchFieldGap]}>
+        <View
+          style={[
+            styles.searchField,
+            styles.searchFieldGap,
+            {
+              backgroundColor: tokens.colors.background.primary,
+              borderColor: tokens.colors.border.divider,
+            },
+          ]}
+        >
           <Ionicons name="search" size={18} color={tokens.colors.text.secondary} />
           <TextInput
             value={query}
@@ -185,7 +204,7 @@ export default function ReactionPicker({
           style={{ maxHeight: listMaxHeight }}
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>לא נמצאו אימוג'ים</Text>
+            <Text style={[styles.emptyText, { color: tokens.colors.text.tertiary }]}>לא נמצאו אימוג'ים</Text>
           }
           renderSectionHeader={({ section }) => (
             <View style={styles.sectionHeader}>
@@ -256,9 +275,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: chatPalette.glass,
     borderWidth: 1,
-    borderColor: chatPalette.glassBorder,
     borderRadius: 9999,
     paddingHorizontal: 14,
     minHeight: 44,
@@ -309,7 +326,6 @@ const styles = StyleSheet.create({
   emptyText: {
     ...chatRtlText,
     textAlign: 'center',
-    color: chatPalette.textTertiary,
     paddingVertical: 28,
     fontSize: 15,
   },

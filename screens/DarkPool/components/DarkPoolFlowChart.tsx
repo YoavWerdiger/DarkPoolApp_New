@@ -9,6 +9,7 @@ import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { G, Line, Rect, Text as SvgText } from 'react-native-svg';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { DARK_POOL_TYPE } from '../darkPoolLayout';
 import type { DarkPoolDailyAggregateRow } from '../../../types/darkpool.types';
 import { formatUsdCompact } from '../utils/darkPoolFormat';
 
@@ -32,7 +33,9 @@ export function DarkPoolFlowChart({ data, height = 200 }: FlowChartProps) {
         emptyText: {
           textAlign: 'center',
           color: tokens.colors.text.tertiary,
-          fontSize: 12,
+          fontSize: DARK_POOL_TYPE.caption.fontSize,
+          lineHeight: DARK_POOL_TYPE.caption.lineHeight,
+          fontWeight: DARK_POOL_TYPE.caption.fontWeight,
           paddingVertical: 24,
         },
       }),

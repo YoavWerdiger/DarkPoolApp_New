@@ -21,14 +21,8 @@ import {
   ChatSheetTitle,
   useChatFitContentSnap,
 } from './ChatBottomSheet';
-import { chatPalette } from './chatDesignTokens';
 import { GlassChip } from '../ui/GlassChip';
-import {
-  SHEET_GLASS_INTENSITY,
-  SHEET_GLASS_OVERLAY,
-  sheetContentBottomPadding,
-} from '../ui/BottomSheet/sheetGlass';
-import { BlurView } from 'expo-blur';
+import { sheetContentBottomPadding } from '../ui/BottomSheet/sheetGlass';
 
 interface MessageActionSheetProps {
   visible: boolean;
@@ -91,7 +85,7 @@ export default function MessageActionSheet({
   const renderMessageContent = () => {
     if (message.type === 'image' || message.type === 'video') {
       return (
-        <View style={styles.mediaThumb}>
+        <View style={[styles.mediaThumb, { backgroundColor: DesignTokens.colors.background.cardSolid }]}>
           <Ionicons
             name={message.type === 'image' ? 'image' : 'videocam'}
             size={24}
@@ -103,7 +97,7 @@ export default function MessageActionSheet({
 
     if (message.type === 'audio' || message.type === 'voice') {
       return (
-        <View style={styles.mediaThumb}>
+        <View style={[styles.mediaThumb, { backgroundColor: DesignTokens.colors.background.cardSolid }]}>
           <Mic size={24} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
         </View>
       );
@@ -111,7 +105,7 @@ export default function MessageActionSheet({
 
     if (message.type === 'file' || message.type === 'document') {
       return (
-        <View style={styles.mediaThumb}>
+        <View style={[styles.mediaThumb, { backgroundColor: DesignTokens.colors.background.cardSolid }]}>
           <FileText size={24} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
         </View>
       );
@@ -119,7 +113,7 @@ export default function MessageActionSheet({
 
     return (
       <View style={styles.textPreview}>
-        <Text style={styles.previewBody} numberOfLines={3}>
+        <Text style={[styles.previewBody, { color: DesignTokens.colors.text.primary }]} numberOfLines={3}>
           {message.content}
         </Text>
       </View>
@@ -139,19 +133,23 @@ export default function MessageActionSheet({
             key={index}
             disableBlur
             onPress={onReactionDetails}
-            style={styles.reactionChip}
+            style={[styles.reactionChip, { backgroundColor: DesignTokens.colors.background.primary }]}
             contentContainerStyle={styles.reactionChipContent}
           >
             <Text style={styles.reactionEmoji}>{reaction.emoji}</Text>
             {reaction.count > 1 && (
-              <Text style={styles.reactionCount}>{reaction.count}</Text>
+              <Text style={[styles.reactionCount, { color: DesignTokens.colors.text.secondary }]}>{reaction.count}</Text>
             )}
           </GlassChip>
         ))}
 
         {remainingCount > 0 && (
-          <GlassChip disableBlur style={styles.reactionChip} contentContainerStyle={styles.reactionChipContent}>
-            <Text style={styles.reactionCount}>+{remainingCount}</Text>
+          <GlassChip
+            disableBlur
+            style={[styles.reactionChip, { backgroundColor: DesignTokens.colors.background.primary }]}
+            contentContainerStyle={styles.reactionChipContent}
+          >
+            <Text style={[styles.reactionCount, { color: DesignTokens.colors.text.secondary }]}>+{remainingCount}</Text>
           </GlassChip>
         )}
       </View>
@@ -236,22 +234,23 @@ export default function MessageActionSheet({
       >
         <ChatSheetTitle title="פעולות הודעה" />
 
-        <BlurView
-          intensity={SHEET_GLASS_INTENSITY}
-          tint="dark"
-          style={styles.previewCard}
+        <View
+          style={[
+            styles.previewCard,
+            {
+              backgroundColor: DesignTokens.colors.background.tertiary,
+              borderColor: DesignTokens.colors.border.divider,
+              borderTopColor: DesignTokens.colors.border.divider,
+            },
+          ]}
         >
-          <View
-            pointerEvents="none"
-            style={[StyleSheet.absoluteFill, { backgroundColor: SHEET_GLASS_OVERLAY }]}
-          />
           <View style={styles.previewRow}>
             {renderMessageContent()}
             <View style={styles.previewMeta}>
-              <Text style={styles.previewName}>
+              <Text style={[styles.previewName, { color: DesignTokens.colors.text.secondary }]}>
                 {message.sender?.full_name || 'משתמש'}
               </Text>
-              <Text style={styles.previewTime}>
+              <Text style={[styles.previewTime, { color: DesignTokens.colors.text.tertiary }]}>
                 {new Date(message.created_at).toLocaleTimeString('he-IL', {
                   hour: '2-digit',
                   minute: '2-digit',
@@ -259,7 +258,7 @@ export default function MessageActionSheet({
               </Text>
             </View>
           </View>
-        </BlurView>
+        </View>
 
         {renderReactions()}
 
@@ -270,20 +269,32 @@ export default function MessageActionSheet({
               onPress={() => handleAction(action.onPress)}
               style={({ pressed }) => [
                 styles.actionTile,
-                pressed && styles.actionTilePressed,
+                {
+                  backgroundColor: pressed
+                    ? DesignTokens.colors.background.tertiary
+                    : DesignTokens.colors.background.primary,
+                  borderColor: DesignTokens.colors.border.divider,
+                },
               ]}
             >
               {action.icon}
-              <Text style={styles.actionLabel}>{action.label}</Text>
+              <Text style={[styles.actionLabel, { color: DesignTokens.colors.text.primary }]}>{action.label}</Text>
             </Pressable>
           ))}
         </View>
 
         <Pressable
           onPress={onClose}
-          style={({ pressed }) => [styles.cancelBtn, pressed && { opacity: 0.75 }]}
+          style={({ pressed }) => [
+            styles.cancelBtn,
+            {
+              backgroundColor: DesignTokens.colors.background.primary,
+              borderColor: DesignTokens.colors.border.divider,
+            },
+            pressed && { opacity: 0.75 },
+          ]}
         >
-          <Text style={styles.cancelText}>ביטול</Text>
+          <Text style={[styles.cancelText, { color: DesignTokens.colors.text.primary }]}>ביטול</Text>
         </Pressable>
       </ChatSheetContent>
     </ChatBottomSheet>
@@ -294,8 +305,6 @@ const styles = StyleSheet.create({
   previewCard: {
     borderRadius: 20,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.16)',
-    borderTopColor: 'rgba(255,255,255,0.22)',
     overflow: 'hidden',
     padding: 14,
     marginBottom: 12,
@@ -309,7 +318,6 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 12,
-    backgroundColor: chatPalette.glassStrong,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -317,7 +325,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   previewBody: {
-    color: chatPalette.text,
     fontSize: 15,
     lineHeight: 22,
     textAlign: 'right',
@@ -328,12 +335,10 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   previewName: {
-    color: chatPalette.textSecondary,
     fontSize: 13,
     marginBottom: 2,
   },
   previewTime: {
-    color: chatPalette.textTertiary,
     fontSize: 11,
   },
   reactionsRow: {
@@ -359,7 +364,6 @@ const styles = StyleSheet.create({
   },
   reactionCount: {
     fontSize: 11,
-    color: chatPalette.textSecondary,
     fontWeight: '500',
     marginTop: 2,
   },
@@ -375,19 +379,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: chatPalette.glass,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: chatPalette.glassBorder,
     gap: 6,
-  },
-  actionTilePressed: {
-    backgroundColor: chatPalette.glassStrong,
-    opacity: 0.9,
   },
   actionLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: chatPalette.text,
     textAlign: 'center',
   },
   cancelBtn: {
@@ -395,12 +392,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 14,
     alignItems: 'center',
-    backgroundColor: chatPalette.glass,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: chatPalette.glassBorder,
   },
   cancelText: {
-    color: chatPalette.text,
     fontSize: 16,
     fontWeight: '600',
   },

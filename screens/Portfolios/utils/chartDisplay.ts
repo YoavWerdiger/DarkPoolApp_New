@@ -1,6 +1,6 @@
 import { SoftUI } from '../../../components/ui/softUiPalette';
 
-/** Red 400 — שלילי בכותרת גרף / KPI (עקבי עם SoftUI.negative) */
+/** Tailwind red-500 — שלילי בכותרת גרף / KPI (עקבי עם SoftUI.negative) */
 export const PORTFOLIO_NEGATIVE_AMOUNT_COLOR = SoftUI.negative;
 
 /**

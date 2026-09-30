@@ -3,7 +3,6 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Animated, Dimensions, Platform, TextInput, TouchableWithoutFeedback, Keyboard, Modal, Linking, ActivityIndicator, useWindowDimensions } from 'react-native';
 // import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import * as ImagePicker from 'expo-image-picker';
-import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenChrome } from '../../components/ui';
 import { AcademySubScreenBar, CourseListHero, LessonRow } from '../../components/learning';
@@ -14,6 +13,12 @@ import { useAllowAfterNavigationTransition } from '../../hooks/afterNavigationTr
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import UICard from '../../components/ui/UICard';
+import UIButton from '../../components/ui/UIButton';
+import { APP_LAYOUT } from '../../components/ui/appLayout';
+import {
+  ACADEMY_TYPE,
+  academySectionTitleStyle,
+} from '../../components/learning/academyLayout';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,8 +34,6 @@ import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
 import { sheetContentBottomPadding } from '../../components/ui/BottomSheet/sheetGlass';
 
 const { width: screenWidth } = Dimensions.get('window');
-
-const NOTES_SHEET_BORDER = 'rgba(255, 255, 255, 0.10)';
 
 /** טקסט עברי בתוך עץ RTL */
 const rtlText = {
@@ -1177,13 +1180,13 @@ function LearningScreen() {
           <View
             style={[
               styles.chapterHeaderBadge,
-              { backgroundColor: DesignTokens.colors.primary.dim },
+              { backgroundColor: DesignTokens.colors.background.navChrome },
             ]}
           >
             <Text
               style={[
                 styles.chapterHeaderBadgeText,
-                { color: DesignTokens.colors.primary.main },
+                { color: DesignTokens.colors.text.secondary },
               ]}
             >
               חלק {chapterNum}
@@ -1433,7 +1436,6 @@ function LearningScreen() {
 
     return (
       <ScreenChrome>
-        <StatusBar style="light" />
         <RNSafeAreaView style={styles.safeAreaContent} edges={['top']}>
         <AcademySubScreenBar
           onBackPress={async () => {
@@ -1621,11 +1623,9 @@ function LearningScreen() {
             </UICard>
 
             {/* פרטי שיעור + פרוגרס */}
-            <UICard variant="blur" padding="md" style={styles.lessonGlassCard}>
+            <UICard variant="soft" padding="md" style={styles.lessonGlassCard}>
               <Text style={styles.lessonPlayerIndex}>שיעור {lessonNumberLabel}</Text>
-              <Text style={styles.lessonCardTitle} numberOfLines={3}>
-                {selectedLesson.title}
-              </Text>
+              <Text style={styles.lessonPlayerTitle}>{selectedLesson.title}</Text>
               {lessonDescriptionDisplay ? (
                 <Text style={styles.lessonDescription} numberOfLines={4}>
                   {lessonDescriptionDisplay}
@@ -1664,8 +1664,7 @@ function LearningScreen() {
 
             {/* ניווט שיעורים — כמו יומן כלכלי / מעבר ימים */}
             <UICard
-              variant="blur"
-              glassIntensity="subtle"
+              variant="soft"
               padding="sm"
               style={styles.lessonNavShell}
             >
@@ -1673,6 +1672,7 @@ function LearningScreen() {
                 <DayNavBlurButton
                   onPress={goToNextLesson}
                   disabled={!canGoNext}
+                  glass
                   glassIntensity="subtle"
                 >
                   <Ionicons
@@ -1696,6 +1696,7 @@ function LearningScreen() {
                 <DayNavBlurButton
                   onPress={goToPrevLesson}
                   disabled={!canGoPrev}
+                  glass
                   glassIntensity="subtle"
                 >
                   <Ionicons
@@ -1708,7 +1709,7 @@ function LearningScreen() {
             </UICard>
 
             {/* הערות אישיות — שורת הגדרות סטנדרטית */}
-            <UICard variant="blur" padding="none" style={styles.lessonGlassCard}>
+            <UICard variant="soft" padding="none" style={styles.lessonGlassCard}>
               <TouchableOpacity
                 onPress={() => {
                   void HapticFeedback.impactLight();
@@ -1729,7 +1730,7 @@ function LearningScreen() {
                   </Text>
                 </View>
                 <View style={styles.notesSettingsIcon}>
-                  <Edit3 size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} />
+                  <Edit3 size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
                 </View>
               </TouchableOpacity>
             </UICard>
@@ -1791,7 +1792,7 @@ function LearningScreen() {
                 <Text
                   style={[
                     styles.notesSheetHeaderTextBtnLabel,
-                    (!userNotes.length || isSaving) && styles.notesSheetHeaderTextBtnLabelDisabled,
+                    { color: (!userNotes.length || isSaving) ? DesignTokens.colors.text.tertiary : DesignTokens.colors.text.primary },
                   ]}
                 >
                   נקה
@@ -1831,10 +1832,14 @@ function LearningScreen() {
             </ScrollView>
 
             <View style={[styles.notesSheetFooter, { paddingBottom: notesSheetBottomPad }]}>
-              <TouchableOpacity
+              <UIButton
+                title="שמור הערות"
+                variant="primary"
+                fullWidth
+                loading={isSaving}
+                disabled={isSaving || !selectedLesson}
                 onPress={async () => {
                   if (selectedLesson && !isSaving) {
-                    void HapticFeedback.medium();
                     try {
                       setIsSaving(true);
                       await saveUserNotes(selectedLesson.id, userNotes);
@@ -1847,21 +1852,7 @@ function LearningScreen() {
                     }
                   }
                 }}
-                disabled={isSaving}
-                activeOpacity={0.85}
-                style={[styles.notesSheetSavePrimary, isSaving && styles.notesSheetSavePrimaryDisabled]}
-                accessibilityRole="button"
-                accessibilityLabel="שמור הערות"
-              >
-                {isSaving ? (
-                  <View style={styles.notesSheetSavePrimaryContent}>
-                    <ActivityIndicator size="small" color={DesignTokens.colors.text.inverse} />
-                    <Text style={styles.notesSheetSavePrimaryText}>שומר…</Text>
-                  </View>
-                ) : (
-                  <Text style={styles.notesSheetSavePrimaryText}>שמור הערות</Text>
-                )}
-              </TouchableOpacity>
+              />
             </View>
           </View>
         </BottomSheet>
@@ -1960,7 +1951,6 @@ function LearningScreen() {
   if (!courseData) {
     return (
       <ScreenChrome>
-        <StatusBar style="light" />
         <RNSafeAreaView style={styles.safeAreaContent} edges={['top']}>
           <AcademySubScreenBar onBackPress={handleBackToAcademy} title="קורס" />
           <View style={styles.courseLoadingWrap}>
@@ -1993,7 +1983,6 @@ function LearningScreen() {
 
   return (
     <ScreenChrome>
-      <StatusBar style="light" />
       <RNSafeAreaView style={styles.safeAreaContent} edges={[]}>
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -2099,13 +2088,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     fontSize: 48,
   },
   courseListSectionTitle: {
-    fontSize: tokens.typography.title2.size,
-    fontWeight: '800' as const,
-    letterSpacing: tokens.typography.title2.letterSpacing,
+    ...academySectionTitleStyle,
     color: tokens.colors.text.primary,
-    textAlign: 'right',
-    marginBottom: tokens.spacing.lg,
-    writingDirection: 'rtl',
+    marginBottom: APP_LAYOUT.sectionHeaderToContent,
   },
   // Background Gradient
   backgroundGradient: {
@@ -2210,11 +2195,17 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     position: 'relative',
   },
   lessonPlayerIndex: {
-    fontSize: tokens.typography.fontSize.sm,
-    fontWeight: '700' as const,
-    color: tokens.colors.primary.main,
+    ...ACADEMY_TYPE.cardSubtitle,
+    color: tokens.colors.text.secondary,
     textAlign: 'right',
-    marginBottom: tokens.spacing.xs,
+    marginBottom: 0,
+    writingDirection: 'rtl',
+  },
+  lessonPlayerTitle: {
+    ...ACADEMY_TYPE.cardTitle,
+    marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
+    color: tokens.colors.text.primary,
+    textAlign: 'right',
     writingDirection: 'rtl',
   },
   videoContainer: {
@@ -2244,10 +2235,10 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   lessonPlayerProgressBlock: {
     width: '100%',
-    marginTop: tokens.spacing.md,
-    paddingTop: tokens.spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth * 2,
-    borderTopColor: 'rgba(255,255,255,0.1)',
+    marginTop: APP_LAYOUT.cardTitleToBodyGap,
+    paddingTop: APP_LAYOUT.cardTitleToBodyGap,
+    borderTopWidth: 1,
+    borderTopColor: tokens.colors.border.divider,
     gap: tokens.spacing.sm,
   },
   lessonPlayerProgressBlockCompact: {
@@ -2272,45 +2263,37 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     paddingHorizontal: 10,
   },
   lessonNavCenterTitle: {
-    fontSize: tokens.typography.fontSize.base,
-    fontWeight: '600' as const,
-    lineHeight: 21,
+    ...ACADEMY_TYPE.cardTitle,
     color: tokens.colors.text.primary,
     textAlign: 'center',
     writingDirection: 'rtl',
   },
   lessonNavCenterSub: {
-    marginTop: 2,
-    fontSize: 11,
-    fontWeight: '600' as const,
-    color: tokens.colors.primary.main,
+    marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
+    ...ACADEMY_TYPE.caption,
+    color: tokens.colors.text.secondary,
     textAlign: 'center',
     writingDirection: 'rtl',
   },
   notesSettingsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: tokens.spacing.md,
-    paddingHorizontal: tokens.spacing.base,
+    paddingVertical: 15,
+    paddingHorizontal: APP_LAYOUT.cardPadding,
   },
   notesSettingsTextCol: {
     flex: 1,
-    marginHorizontal: tokens.spacing.md,
   },
   notesSettingsTitle: {
-    fontSize: tokens.typography.body.size,
-    fontWeight: tokens.typography.fontWeight.semibold as any,
-    lineHeight: tokens.typography.body.lineHeight,
+    ...ACADEMY_TYPE.cardTitle,
     color: tokens.colors.text.primary,
-    marginBottom: tokens.spacing.xs / 2,
     textAlign: 'right',
     writingDirection: 'rtl',
   },
   notesSettingsSubtitle: {
-    fontSize: tokens.typography.bodySmall.size,
-    fontWeight: tokens.typography.bodySmall.weight as any,
-    lineHeight: tokens.typography.bodySmall.lineHeight,
-    color: tokens.colors.text.tertiary,
+    marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
+    ...ACADEMY_TYPE.footnote,
+    color: tokens.colors.text.secondary,
     textAlign: 'right',
     writingDirection: 'rtl',
   },
@@ -2318,9 +2301,10 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     width: 36,
     height: 36,
     borderRadius: tokens.borderRadius.sm,
-    backgroundColor: `${tokens.colors.primary.main}1A`,
+    backgroundColor: tokens.colors.background.navChrome,
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: 12,
   },
   
   // Lesson Info Card - Glassmorphism
@@ -2631,8 +2615,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     alignItems: 'center',
     paddingHorizontal: tokens.spacing.lg,
     paddingBottom: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: NOTES_SHEET_BORDER,
+    borderBottomWidth: 1,
+    borderBottomColor: tokens.colors.border.divider,
     gap: 10,
   },
   notesSheetHeaderIcon: {
@@ -2643,14 +2627,11 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     alignItems: 'flex-start',
   },
   notesSheetHeaderTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    letterSpacing: -0.3,
+    ...ACADEMY_TYPE.cardTitle,
   },
   notesSheetHeaderSubtitle: {
-    marginTop: 2,
-    fontSize: 12,
-    fontWeight: '500',
+    marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
+    ...ACADEMY_TYPE.caption,
   },
   notesSheetHeaderTextBtn: {
     minWidth: DAY_NAV_BUTTON_SIZE,
@@ -2659,9 +2640,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     justifyContent: 'center',
   },
   notesSheetHeaderTextBtnLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: tokens.colors.primary.main,
+    ...ACADEMY_TYPE.caption,
+    color: tokens.colors.text.primary,
   },
   notesSheetHeaderTextBtnLabelDisabled: {
     color: tokens.colors.text.tertiary,
@@ -2685,24 +2665,21 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   notesSheetInput: {
     backgroundColor: 'transparent',
     borderWidth: 0,
-    fontSize: 15,
-    lineHeight: tokens.typography.body.lineHeight,
+    ...ACADEMY_TYPE.body,
     textAlignVertical: 'top',
     minHeight: 220,
     width: '100%',
     paddingVertical: 4,
   },
   notesSheetHint: {
-    fontSize: 12,
-    fontWeight: '500',
-    lineHeight: 18,
+    ...ACADEMY_TYPE.caption,
   },
   notesSheetFooter: {
-    paddingHorizontal: tokens.spacing.lg,
-    paddingTop: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: NOTES_SHEET_BORDER,
-    backgroundColor: tokens.colors.background.secondary,
+    paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+    paddingTop: APP_LAYOUT.cardStackGap,
+    borderTopWidth: 1,
+    borderTopColor: tokens.colors.border.divider,
+    backgroundColor: tokens.colors.background.primary,
   },
   notesSheetSavePrimary: {
     height: 50,
@@ -3126,9 +3103,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   lessonProgressInfo: {
     marginTop: 0,
     width: '100%',
-    paddingTop: tokens.spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth * 2,
-    borderTopColor: 'rgba(255,255,255,0.1)',
+    paddingTop: APP_LAYOUT.cardTitleToBodyGap,
+    borderTopWidth: 1,
+    borderTopColor: tokens.colors.border.divider,
   },
   lessonProgressInfoNoDescription: {
     paddingTop: 0,
@@ -3141,14 +3118,12 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     marginBottom: tokens.spacing.sm,
   },
   progressTimeText: {
-    fontSize: tokens.typography.bodySmall.size,
+    ...ACADEMY_TYPE.caption,
     color: tokens.colors.text.secondary,
-    fontWeight: tokens.typography.fontWeight.medium as any,
   },
   progressPercentageText: {
-    fontSize: tokens.typography.bodySmall.size,
-    color: tokens.colors.primary.main,
-    fontWeight: tokens.typography.titleXs.weight as any,
+    ...ACADEMY_TYPE.caption,
+    color: tokens.colors.text.primary,
   },
   progressBarContainer: {
     height: 6,
@@ -3156,8 +3131,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     borderRadius: 3,
     overflow: 'hidden',
     marginBottom: tokens.spacing.sm,
-    borderWidth: 1,
-    borderColor: `${tokens.colors.border.primary}99`,
+    borderWidth: 0,
   },
   progressBarFill: {
     height: '100%',
@@ -3170,9 +3144,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     gap: 6,
   },
   completedText: {
-    fontSize: tokens.typography.bodySmall.size,
+    ...ACADEMY_TYPE.caption,
     color: tokens.colors.success.main,
-    fontWeight: tokens.typography.fontWeight.medium as any,
   },
   
   // Course Header - שקוף עם הגרדיאנט מאחורה
@@ -3334,17 +3307,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: tokens.spacing.md,
-    marginBottom: tokens.spacing.md,
+    gap: APP_LAYOUT.cardStackGap,
+    marginBottom: APP_LAYOUT.groupLabelToContent,
   },
   chapterHeaderTitle: {
     flex: 1,
-    fontSize: tokens.typography.subtitle.size,
-    fontWeight: '800' as const,
-    letterSpacing: -0.2,
-    color: tokens.colors.text.primary,
+    ...ACADEMY_TYPE.groupLabel,
+    color: tokens.colors.text.secondary,
     textAlign: 'right',
-    lineHeight: tokens.typography.subtitle.lineHeight,
     writingDirection: 'rtl',
   },
   chapterHeaderBadge: {
@@ -3356,8 +3326,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     justifyContent: 'center',
   },
   chapterHeaderBadgeText: {
-    fontSize: tokens.typography.fontSize.sm,
-    fontWeight: '800' as const,
+    ...ACADEMY_TYPE.caption,
   },
   progressContainer: {
     alignItems: 'stretch',
@@ -3490,10 +3459,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     flex: 1,
   },
   lessonDescription: {
-    marginTop: tokens.spacing.xs,
-    fontSize: tokens.typography.bodySmall.size,
+    marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
+    ...ACADEMY_TYPE.cardBody,
     color: tokens.colors.text.secondary,
-    lineHeight: Math.round(tokens.typography.bodySmall.size * 1.45),
     textAlign: 'right',
     writingDirection: 'rtl',
   },

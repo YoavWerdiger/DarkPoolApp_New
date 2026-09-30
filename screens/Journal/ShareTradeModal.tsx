@@ -11,13 +11,16 @@ import { sendChatMessage } from '../../services/chat/chatMessageService';
 import { ChatMessageType } from '../../types/chat.types';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import {
+  JOURNAL_LAYOUT,
   JOURNAL_TYPE,
   journalBodyTextStyle,
+  journalCardTitleStyle,
   journalPhysicalRightText,
   journalRow,
   journalRtlContent,
   journalSectionTitleStyle,
 } from './journalLayout';
+import { UI_CARD_RADIUS } from '../../components/ui/appLayout';
 
 interface ShareTradeModalProps {
   trade: Trade | null;
@@ -209,7 +212,7 @@ export default function ShareTradeModal({ trade, visible, onClose }: ShareTradeM
                   <Image source={{ uri: item.avatar_url }} style={styles.groupAvatar} />
                 ) : (
                   <View style={styles.groupAvatarPlaceholder}>
-                    <Ionicons name="people" size={24} color={DesignTokens.colors.text.secondary} />
+                    <Ionicons name="people" size={24} color={DesignTokens.colors.text.primary} />
                   </View>
                 )}
                 <Text style={styles.groupName}>{item.name}</Text>
@@ -235,9 +238,10 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      padding: tokens.spacing.lg,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: tokens.colors.border.primary,
+      paddingVertical: 15,
+      paddingHorizontal: tokens.layout.screenPadding,
+      borderBottomWidth: 1,
+      borderBottomColor: tokens.colors.border.divider,
     },
     title: {
       ...journalSectionTitleStyle,
@@ -247,12 +251,12 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       padding: tokens.spacing.xs,
     },
     tradePreview: {
-      backgroundColor: tokens.colors.background.input,
-      margin: tokens.spacing.lg,
-      padding: tokens.spacing.md,
-      borderRadius: tokens.borderRadius.lg,
-      borderWidth: 1,
-      borderColor: `${tokens.colors.primary.main}22`,
+      backgroundColor: tokens.colors.background.cardSolid,
+      marginHorizontal: tokens.layout.screenPadding,
+      marginVertical: JOURNAL_LAYOUT.cardStackGap,
+      padding: JOURNAL_LAYOUT.cardPadding,
+      borderRadius: UI_CARD_RADIUS,
+      borderWidth: 0,
     },
     tradePreviewHeader: {
       flexDirection: 'row',
@@ -261,11 +265,10 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       marginBottom: tokens.spacing.sm,
     },
     tradeSymbol: {
-      fontSize: JOURNAL_TYPE.sectionTitle.fontSize,
-      fontWeight: '700',
-      lineHeight: JOURNAL_TYPE.sectionTitle.lineHeight,
+      ...journalCardTitleStyle,
+      flex: 1,
+      width: undefined,
       color: tokens.colors.text.primary,
-      ...journalPhysicalRightText,
     },
     directionBadge: {
       paddingHorizontal: tokens.spacing.sm,
@@ -278,10 +281,11 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       lineHeight: JOURNAL_TYPE.caption2.lineHeight,
     },
     tradePnl: {
-      fontSize: tokens.typography.fontSize.base,
-      fontWeight: tokens.typography.fontWeight.bold,
+      ...journalPhysicalRightText,
+      fontSize: JOURNAL_TYPE.body.fontSize,
+      fontWeight: JOURNAL_TYPE.body.fontWeight,
+      lineHeight: JOURNAL_TYPE.body.lineHeight,
       color: tokens.colors.primary.main,
-      textAlign: 'right',
     },
     loadingContainer: {
       flex: 1,
@@ -318,24 +322,25 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     groupItem: {
       ...journalRow,
       alignItems: 'center',
-      padding: tokens.spacing.md,
-      backgroundColor: tokens.colors.background.input,
-      borderRadius: tokens.borderRadius.lg,
-      marginBottom: tokens.spacing.sm,
-      gap: tokens.spacing.md,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: tokens.colors.border.primary,
+      paddingVertical: 15,
+      paddingHorizontal: JOURNAL_LAYOUT.cardPadding,
+      backgroundColor: tokens.colors.background.cardSolid,
+      borderRadius: UI_CARD_RADIUS,
+      marginBottom: JOURNAL_LAYOUT.cardStackGap,
+      borderWidth: 0,
     },
     groupAvatar: {
       width: 48,
       height: 48,
       borderRadius: 24,
+      marginLeft: 12,
     },
     groupAvatarPlaceholder: {
       width: 48,
       height: 48,
       borderRadius: 24,
-      backgroundColor: tokens.colors.background.secondary,
+      marginLeft: 12,
+      backgroundColor: tokens.colors.background.tertiary,
       justifyContent: 'center',
       alignItems: 'center',
     },

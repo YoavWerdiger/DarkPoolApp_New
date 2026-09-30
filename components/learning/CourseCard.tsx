@@ -12,6 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { CourseWithProgress } from '../../types/learning';
 import UICard from '../ui/UICard';
+import UIButton from '../ui/UIButton';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import {
@@ -19,12 +20,19 @@ import {
   academyCardWidth,
 } from './academyCardLayout';
 import { APP_LAYOUT } from '../ui/appLayout';
-import { appCardSubtitleStyle, appCardTitleStyle } from '../ui/appType';
+import {
+  appCardBodyStyle,
+  appCardSubtitleStyle,
+  appCardTitleStyle,
+  appGroupLabelStyle,
+} from '../ui/appType';
+import { ACADEMY_TYPE } from './academyLayout';
 import {
   getAcademyCourseAccentColor,
   getAcademyCourseAudience,
   getAcademyCourseBadgeColor,
   getAcademyCourseBadgeLabel,
+  getAcademyCourseBadgeTextColor,
   getAcademyCourseSubtitle,
   getAcademyCourseTier,
   isComingSoonCourse,
@@ -83,6 +91,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   const tier = getAcademyCourseTier(course as CourseWithProgress & { price?: number });
   const isPremium = tier === 'premium';
   const badgeLabel = getAcademyCourseBadgeLabel(course as CourseWithProgress & { price?: number });
+  const badgeTextColor = getAcademyCourseBadgeTextColor(course);
   const badgeColor = getAcademyCourseBadgeColor(
     course as CourseWithProgress & { price?: number },
     T.colors.primary.main
@@ -137,7 +146,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
 
           {!hideBadges ? (
             <View style={[styles.tierBadge, { backgroundColor: badgeColor }]}>
-              <Text style={styles.tierBadgeText}>{badgeLabel}</Text>
+              <Text style={[styles.tierBadgeText, { color: badgeTextColor }]}>{badgeLabel}</Text>
             </View>
           ) : null}
 
@@ -160,35 +169,12 @@ export const CourseCard: React.FC<CourseCardProps> = ({
             ) : null}
           </View>
 
-          {audience ? (
+          {!comingSoon && audience ? (
             <View style={styles.audienceBlock}>
               <Text style={styles.audienceLabel}>למי הקורס מתאים</Text>
-              <Text style={styles.audienceText} numberOfLines={3}>
-                {audience}
-              </Text>
+              <Text style={styles.audienceText}>{audience}</Text>
             </View>
           ) : null}
-
-          <View style={styles.metaRow}>
-            <View style={styles.metaItem}>
-              <Ionicons name="play-circle-outline" size={15} color={accent} />
-              <Text style={styles.metaText}>
-                {comingSoon
-                  ? 'בקרוב'
-                  : totalLessons > 0
-                    ? `${totalLessons} שיעורים`
-                    : 'בקרוב'}
-              </Text>
-            </View>
-            {course.instructor_name ? (
-              <View style={styles.metaItem}>
-                <Ionicons name="person-outline" size={15} color={accent} />
-                <Text style={styles.metaText} numberOfLines={1}>
-                  {course.instructor_name}
-                </Text>
-              </View>
-            ) : null}
-          </View>
 
           {isEnrolled && totalLessons > 0 ? (
             <View style={styles.progressTrack}>
@@ -204,8 +190,8 @@ export const CourseCard: React.FC<CourseCardProps> = ({
             </View>
           ) : null}
 
-          <View style={[styles.cta, { backgroundColor: accent }]}>
-            <Text style={styles.ctaText}>{ctaLabel}</Text>
+          <View pointerEvents="none" style={styles.ctaSlot}>
+            <UIButton title={ctaLabel} variant="primary" fullWidth haptic={false} />
           </View>
         </View>
       </UICard>
@@ -265,10 +251,8 @@ const createStyles = (
       justifyContent: 'center',
     },
     tierBadgeText: {
-      fontSize: 12,
-      fontWeight: '700',
+      ...ACADEMY_TYPE.caption,
       color: '#fff',
-      lineHeight: 14,
       writingDirection: 'rtl',
     },
     progressChip: {
@@ -283,14 +267,13 @@ const createStyles = (
       justifyContent: 'center',
     },
     progressChipText: {
-      fontSize: 12,
-      fontWeight: '700',
+      ...ACADEMY_TYPE.caption,
       color: '#fff',
     },
     body: {
-      paddingHorizontal: 18,
-      paddingTop: 16,
-      paddingBottom: 18,
+      paddingHorizontal: APP_LAYOUT.cardPadding,
+      paddingTop: APP_LAYOUT.cardPadding,
+      paddingBottom: APP_LAYOUT.cardPadding,
       gap: APP_LAYOUT.cardTitleToBodyGap,
       direction: 'ltr',
       alignItems: 'stretch',
@@ -308,51 +291,18 @@ const createStyles = (
       ...appCardSubtitleStyle,
     },
     audienceBlock: {
-      marginTop: 2,
-      gap: 6,
-      paddingTop: 12,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: 'rgba(255,255,255,0.1)',
       width: '100%',
+      alignItems: 'stretch',
+      gap: APP_LAYOUT.groupLabelToContent,
     },
     audienceLabel: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: T.colors.text.tertiary,
-      textAlign: 'right',
-      writingDirection: 'rtl',
-      width: '100%',
+      ...appGroupLabelStyle,
+      marginBottom: 0,
+      color: T.colors.text.secondary,
     },
     audienceText: {
-      fontSize: 15,
-      fontWeight: '500',
+      ...appCardBodyStyle,
       color: T.colors.text.secondary,
-      textAlign: 'right',
-      writingDirection: 'rtl',
-      lineHeight: 21,
-      minHeight: 63,
-      width: '100%',
-    },
-    metaRow: {
-      flexDirection: 'row-reverse',
-      flexWrap: 'wrap',
-      gap: 12,
-      marginTop: 4,
-      width: '100%',
-      justifyContent: 'flex-start',
-    },
-    metaItem: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      gap: 4,
-      maxWidth: '100%',
-    },
-    metaText: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: T.colors.text.secondary,
-      writingDirection: 'rtl',
-      textAlign: 'right',
     },
     progressTrack: {
       height: 4,
@@ -367,20 +317,8 @@ const createStyles = (
       borderRadius: 2,
       alignSelf: 'flex-end',
     },
-    cta: {
-      marginTop: 8,
-      minHeight: 44,
-      borderRadius: 999,
-      paddingHorizontal: 18,
-      alignItems: 'center',
-      justifyContent: 'center',
+    ctaSlot: {
+      marginTop: APP_LAYOUT.stackGapSmall,
       width: '100%',
-    },
-    ctaText: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: '#fff',
-      writingDirection: 'rtl',
-      textAlign: 'center',
     },
   });

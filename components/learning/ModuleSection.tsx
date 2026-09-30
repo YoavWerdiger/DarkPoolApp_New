@@ -7,6 +7,7 @@ import { LessonRow } from './LessonRow';
 import { academyCardFrameStyle } from './academyCardLayout';
 import { APP_LAYOUT } from '../ui/appLayout';
 import { appCardSubtitleStyle, appCardTitleStyle } from '../ui/appType';
+import { ACADEMY_TYPE } from './academyLayout';
 import { isLessonLockedForUser } from './academyCourses';
 import type { CourseWithProgress } from '../../types/learning';
 
@@ -39,11 +40,12 @@ export const ModuleSection: React.FC<ModuleSectionProps> = ({
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
-      marginBottom: DesignTokens.spacing.lg,
+      marginBottom: APP_LAYOUT.cardStackGap,
       overflow: 'hidden',
     },
     header: {
-      padding: DesignTokens.spacing.lg,
+      paddingHorizontal: APP_LAYOUT.cardPadding,
+      paddingVertical: 15,
     },
     headerContent: {
       flexDirection: 'row-reverse',
@@ -66,7 +68,7 @@ export const ModuleSection: React.FC<ModuleSectionProps> = ({
       ...appCardSubtitleStyle,
     },
     lessonCount: {
-      fontSize: DesignTokens.typography.fontSize.xs,
+      ...ACADEMY_TYPE.cardSubtitle,
       color: DesignTokens.colors.text.tertiary,
       textAlign: 'right',
       writingDirection: 'rtl',
@@ -89,12 +91,11 @@ export const ModuleSection: React.FC<ModuleSectionProps> = ({
       borderRadius: DesignTokens.borderRadius.sm,
     },
     progressText: {
-      fontSize: DesignTokens.typography.fontSize.xs,
-      color: DesignTokens.colors.primary.main,
-      fontWeight: DesignTokens.typography.fontWeight.medium as any,
+      ...ACADEMY_TYPE.cardSubtitle,
+      color: DesignTokens.colors.text.secondary,
     },
     expandIcon: {
-      fontSize: DesignTokens.typography.fontSize.sm,
+      ...ACADEMY_TYPE.caption,
       color: DesignTokens.colors.text.secondary,
       transform: [{ rotate: '0deg' }],
     },
@@ -103,18 +104,17 @@ export const ModuleSection: React.FC<ModuleSectionProps> = ({
     },
     lessonsContainer: {
       borderTopWidth: 1,
-      borderTopColor: 'rgba(255,255,255,0.08)',
-      paddingHorizontal: DesignTokens.spacing.lg,
-      paddingTop: DesignTokens.spacing.sm,
-      paddingBottom: DesignTokens.spacing.lg,
+      borderTopColor: DesignTokens.colors.border.divider,
+      paddingHorizontal: APP_LAYOUT.cardPadding,
+      paddingTop: APP_LAYOUT.stackGapSmall,
+      paddingBottom: APP_LAYOUT.cardPadding,
     },
   }), [DesignTokens]);
 
   return (
     <UICard
-      variant="blur"
+      variant="soft"
       padding="none"
-      showGlassBorder={false}
       style={[styles.container, academyCardFrameStyle('neutral')]}
     >
       <TouchableOpacity
@@ -138,7 +138,7 @@ export const ModuleSection: React.FC<ModuleSectionProps> = ({
           </View>
           
           <View style={styles.headerRight}>
-            {isEnrolled && totalLessons > 0 && (
+            {enrollment && totalLessons > 0 && (
               <View style={styles.progressContainer}>
                 <View style={styles.progressBar}>
                   <View 

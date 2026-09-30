@@ -13,7 +13,7 @@ describe('Journal typography matches shared APP_TYPE scale', () => {
   it('locks section / subtitle / body / caption numbers', () => {
     expect(JOURNAL_TYPE.sectionTitle).toEqual({
       fontSize: 22,
-      fontWeight: '800',
+      fontWeight: '700',
       lineHeight: 28,
       letterSpacing: -0.42,
     });
@@ -36,7 +36,7 @@ describe('Journal typography matches shared APP_TYPE scale', () => {
     expect(journalPhysicalRightText.textAlign).toBe('right');
     expect(journalPhysicalRightText.writingDirection).toBe('rtl');
     expect(journalSectionTitleStyle.fontSize).toBe(22);
-    expect(journalSectionTitleStyle.fontWeight).toBe('800');
+    expect(journalSectionTitleStyle.fontWeight).toBe('700');
     expect(journalSectionSubtitleStyle.fontSize).toBe(15);
     expect(journalBodyTextStyle.fontSize).toBe(16);
     expect(journalBodyTextStyle.lineHeight).toBe(24);

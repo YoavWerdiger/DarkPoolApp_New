@@ -101,6 +101,7 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
           fontSize: 15,
           fontWeight: '500',
           color: tokens.colors.text.primary,
+          direction: 'ltr',
           textAlign: 'right',
           writingDirection: 'rtl',
           padding: 0,
@@ -111,6 +112,7 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
           color: tokens.colors.text.tertiary,
           fontSize: 12,
           fontWeight: '500',
+          direction: 'ltr',
           textAlign: 'right',
           writingDirection: 'rtl',
         },
@@ -124,15 +126,14 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
           paddingBottom: 32,
         },
         rowCard: {
-          borderRadius: tokens.borderRadius['2xl'],
           overflow: 'hidden',
-          marginBottom: 8,
+          marginBottom: 12,
         },
         rowInner: {
           flexDirection: 'row',
           alignItems: 'center',
-          paddingVertical: 12,
-          paddingHorizontal: 14,
+          paddingVertical: 15,
+          paddingHorizontal: 16,
           gap: 12,
         },
         rowPressed: {
@@ -146,7 +147,7 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
         },
         symbolText: {
           fontSize: 16,
-          fontWeight: '800',
+          fontWeight: '700',
           color: tokens.colors.text.primary,
           writingDirection: 'ltr',
           textAlign: 'left',
@@ -155,6 +156,7 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
           fontSize: 12,
           fontWeight: '500',
           color: tokens.colors.text.tertiary,
+          direction: 'ltr',
           textAlign: 'right',
           writingDirection: 'rtl',
         },
@@ -183,7 +185,7 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
           borderRadius: 28,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: tokens.colors.glass.card.bg,
+          backgroundColor: tokens.colors.background.tertiary,
           marginBottom: 4,
         },
         emptyText: {
@@ -226,7 +228,7 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
             </DayNavBlurButton>
 
             <UICard
-              variant="glass"
+              variant="soft"
               glassIntensity="light"
               padding="none"
               style={styles.searchCard}
@@ -305,7 +307,7 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
                 style={({ pressed }) => [pressed && styles.rowPressed]}
               >
                 <UICard
-                  variant="glass"
+                  variant="soft"
                   glassIntensity="light"
                   padding="none"
                   style={styles.rowCard}

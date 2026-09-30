@@ -5,6 +5,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../lib/supabase';
 import { NotificationService } from '../notificationService';
+import { watchlistUserWantsSymbol } from '../../lib/notificationAlertScope';
 import {
   loadNotificationPrefs,
   shouldDeliverNotification,
@@ -321,7 +322,14 @@ export async function dispatchWatchlistAlerts(fires: AlertFire[]): Promise<void>
   const prefs = await loadNotificationPrefs(userId);
   if (!shouldDeliverNotification(prefs, 'watchlist_alert')) return;
 
-  for (const fire of fires) {
+  let pending = fires;
+  if (prefs.watchlistAlertScope === 'selected' && prefs.watchlistAlertSymbols != null) {
+    pending = fires.filter((fire) =>
+      watchlistUserWantsSymbol('selected', prefs.watchlistAlertSymbols, fire.symbol),
+    );
+  }
+
+  for (const fire of pending) {
     const key = await alertDedupeKey(fire);
     const seen = await AsyncStorage.getItem(key);
     if (seen) continue;

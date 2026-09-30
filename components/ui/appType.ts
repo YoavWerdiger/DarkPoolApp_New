@@ -7,7 +7,7 @@ import { SoftUI } from './softUiPalette';
  * docs/DARKPOOL_DESIGN_DIRECTION.md §11–12, §42–46.
  *
  * שלוש רמות צבע (מיושמות בקומפוננטות דרך tokens / SoftUI):
- * primary #F4F1ED · secondary #AAA5A0 · muted #716D69
+ * primary #FFFFFF · secondary #8E8E93 · muted #636366
  *
  * כותרת כרום מסך = screenTitle (ממורכז, MainDrawerScreenHeader).
  * Yoga בשורש LTR — בתוך עץ rtl: row, לא row-reverse.
@@ -58,6 +58,13 @@ export const APP_TYPE = {
     lineHeight: 28,
     letterSpacing: -0.42,
   },
+  /** כותרת מערכת מתחת לכפתור התפריט — כמו «פרופיל», ימין */
+  pageTitle: {
+    fontSize: 32,
+    fontWeight: '700' as const,
+    lineHeight: 38,
+    letterSpacing: -0.42,
+  },
   /** כותרת מסך בזרימת רישום / onboarding (מסך מלא, ימין) */
   flowTitle: {
     fontSize: 28,
@@ -71,12 +78,18 @@ export const APP_TYPE = {
     lineHeight: 28,
     letterSpacing: -0.42,
   },
-  /** כותרת סקשן — bold צמוד (לא black 900), hierarchy מעל cardTitle */
+  /** כותרת תוכן מחוץ לכרטיס — לבנה, Bold (לא 800) */
   sectionTitle: {
     fontSize: 22,
-    fontWeight: '800' as const,
+    fontWeight: '700' as const,
     lineHeight: 28,
     letterSpacing: -0.42,
+  },
+  /** תווית קבוצה מחוץ לכרטיס — אפורה, קטנה משורת הכרטיס, Medium */
+  groupLabel: {
+    fontSize: 15,
+    fontWeight: '500' as const,
+    lineHeight: 20,
   },
   sectionSubtitle: {
     fontSize: 15,
@@ -90,7 +103,7 @@ export const APP_TYPE = {
   },
   cardTitle: {
     fontSize: 17,
-    fontWeight: '700' as const,
+    fontWeight: '600' as const,
     lineHeight: 22,
     letterSpacing: -0.2,
   },
@@ -98,7 +111,7 @@ export const APP_TYPE = {
   cardSubtitle: {
     fontSize: 13,
     lineHeight: 18,
-    fontWeight: '500' as const,
+    fontWeight: '400' as const,
   },
   /** תווית KPI / מדד בכרטיס */
   cardMetricLabel: {
@@ -153,12 +166,32 @@ export const appScreenTitleStyle: TextStyle = {
   color: SoftUI.textPrimary,
 };
 
+/** כותרת מערכת גדולה, ימין פיזי גם בתוך עץ rtl (יומן / אינסיידרים). */
+export const appPageTitleStyle: TextStyle = {
+  ...appPhysicalRightText,
+  width: '100%',
+  alignSelf: 'stretch',
+  fontSize: APP_TYPE.pageTitle.fontSize,
+  fontWeight: APP_TYPE.pageTitle.fontWeight,
+  lineHeight: APP_TYPE.pageTitle.lineHeight,
+  letterSpacing: APP_TYPE.pageTitle.letterSpacing,
+};
+
 export const appSectionTitleStyle: TextStyle = {
   ...appSectionTitle,
   fontSize: APP_TYPE.sectionTitle.fontSize,
   fontWeight: APP_TYPE.sectionTitle.fontWeight,
   lineHeight: APP_TYPE.sectionTitle.lineHeight,
   letterSpacing: APP_TYPE.sectionTitle.letterSpacing,
+};
+
+export const appGroupLabelStyle: TextStyle = {
+  ...appSectionTitle,
+  fontSize: APP_TYPE.groupLabel.fontSize,
+  fontWeight: APP_TYPE.groupLabel.fontWeight,
+  lineHeight: APP_TYPE.groupLabel.lineHeight,
+  color: SoftUI.textSecondary,
+  marginBottom: APP_LAYOUT.groupLabelToContent,
 };
 
 export const appSectionSubtitleStyle: TextStyle = {

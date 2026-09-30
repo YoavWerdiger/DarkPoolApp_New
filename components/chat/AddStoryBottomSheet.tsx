@@ -4,13 +4,13 @@
 
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useEffect, useState } from 'react';
-import { chatPalette } from './chatDesignTokens';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { uploadStoryImage, createStory } from '../../services/storiesService';
 import { logger } from '../../utils/logger';
+import { useDesignTokens } from '../ui/DesignTokens';
 import { ChatBottomSheet, ChatSheetContent } from './ChatBottomSheet';
 import { appSheetButtonLabelStyle } from '../ui/appType';
 import MediaPickerSheet from './MediaPickerSheet';
@@ -26,6 +26,7 @@ interface AddStoryBottomSheetProps {
 }
 
 export default function AddStoryBottomSheet({ visible, onClose, onAdded }: AddStoryBottomSheetProps) {
+  const tokens = useDesignTokens();
   const { user } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
@@ -113,18 +114,24 @@ export default function AddStoryBottomSheet({ visible, onClose, onAdded }: AddSt
         <View style={styles.content}>
           {isUploading ? (
             <View style={styles.uploading}>
-              <ActivityIndicator size="large" color={chatPalette.primary} />
-              <Text style={styles.uploadingText}>מעלה...</Text>
+              <ActivityIndicator size="large" color={tokens.colors.primary.main} />
+              <Text style={[styles.uploadingText, { color: tokens.colors.text.secondary }]}>מעלה...</Text>
             </View>
           ) : (
             <>
-              <TouchableOpacity style={styles.option} onPress={handleTakePhoto}>
-                <Ionicons name="camera" size={28} color={chatPalette.primary} />
-                <Text style={styles.optionText}>צלם תמונה</Text>
+              <TouchableOpacity
+                style={[styles.option, { backgroundColor: tokens.colors.background.primary }]}
+                onPress={handleTakePhoto}
+              >
+                <Ionicons name="camera" size={28} color={tokens.colors.primary.main} />
+                <Text style={[styles.optionText, { color: tokens.colors.text.primary }]}>צלם תמונה</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.option} onPress={handlePickImage}>
-                <Ionicons name="images" size={28} color={chatPalette.primary} />
-                <Text style={styles.optionText}>בחר מהגלריה</Text>
+              <TouchableOpacity
+                style={[styles.option, { backgroundColor: tokens.colors.background.primary }]}
+                onPress={handlePickImage}
+              >
+                <Ionicons name="images" size={28} color={tokens.colors.primary.main} />
+                <Text style={[styles.optionText, { color: tokens.colors.text.primary }]}>בחר מהגלריה</Text>
               </TouchableOpacity>
             </>
           )}
@@ -161,12 +168,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 16,
     paddingHorizontal: 20,
-    backgroundColor: 'rgba(255,255,255,0.06)',
     borderRadius: 12,
     marginBottom: 12,
   },
   optionText: {
-    color: '#fff',
     ...appSheetButtonLabelStyle,
     marginRight: 12,
     textAlign: 'right',
@@ -176,7 +181,6 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   uploadingText: {
-    color: 'rgba(255,255,255,0.7)',
     marginTop: 12,
   },
 });

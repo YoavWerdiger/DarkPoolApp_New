@@ -37,7 +37,6 @@ import { Search } from 'lucide-react-native';
 import JoinGroupBottomSheet from '../../components/chat/JoinGroupBottomSheet';
 import CreateGroupSheet from '../../components/chat/CreateGroupSheet';
 import { ChatBottomSheet, ChatSheetEmptyState, ChatSheetLoading } from '../../components/chat/ChatBottomSheet';
-import { chatPalette } from '../../components/chat/chatDesignTokens';
 import { ChatSearchResult } from '../../types/chat.types';
 import StoryViewer from '../../components/chat/StoryViewer';
 import AddStoryFullScreen from '../../components/chat/AddStoryFullScreen';
@@ -55,6 +54,9 @@ import { isAnnouncementGroup } from '../../utils/isAnnouncementGroup';
 import { legacyAlert } from '../../utils/appDialog';
 import { HapticFeedback, triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
 import { ChatSessionBackdrop } from '../../components/chat/ChatSessionBackdrop';
+import { CHAT_LAYOUT, chatSectionTitleStyle } from '../../components/chat/chatLayout';
+import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
+import { APP_TYPE } from '../../components/ui/appType';
 
 // Skeleton row for groups list
 const SkeletonGroupRow = React.memo(({ delay }: { delay: number }) => {
@@ -70,7 +72,7 @@ const SkeletonGroupRow = React.memo(({ delay }: { delay: number }) => {
     return () => { clearTimeout(t); anim.stop(); };
   }, []);
   return (
-    <Animated.View style={{ flexDirection: 'row-reverse', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, opacity }}>
+    <Animated.View style={{ flexDirection: 'row-reverse', alignItems: 'center', paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal, paddingVertical: 15, opacity }}>
       <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: 'rgba(255,255,255,0.12)', marginLeft: 12 }} />
       <View style={{ flex: 1, gap: 8, alignItems: 'flex-end' }}>
         <View style={{ height: 13, width: '60%', backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 6 }} />
@@ -982,7 +984,6 @@ export default function ChatGroupsListScreen() {
             <Text
               style={[
                 styles.searchRowTitle,
-                isAnnouncementGroup(group.name, group.id) && styles.chatNameBold,
               ]}
               numberOfLines={1}
             >
@@ -1027,8 +1028,8 @@ export default function ChatGroupsListScreen() {
             <Text style={styles.searchRowTitle} numberOfLines={1}>{groupName}</Text>
             {timeLabel ? <Text style={styles.searchRowTime}>{timeLabel}</Text> : null}
           </View>
-          <Text style={styles.searchRowSubtitle} numberOfLines={2}>
-            <Text style={{ color: tokens.colors.text.primary, fontWeight: '600' }}>{senderName}: </Text>
+            <Text style={styles.searchRowSubtitle} numberOfLines={2}>
+            <Text style={styles.searchSenderName}>{senderName}: </Text>
             {preview}
           </Text>
         </View>
@@ -1041,7 +1042,6 @@ export default function ChatGroupsListScreen() {
       const iconName = GROUP_ICONS[item.name] || 'chatbubbles';
       const hasUnread = (item.unread_count || 0) > 0;
       const hasMentions = (item.mentioned_count || 0) > 0;
-      const isAnnouncement = isAnnouncementGroup(item.name, item.id);
       const imageUrl = item.avatar_url || getImageByGroupName(item.name) || null;
       const hasImageError = imageUrl ? imageErrorsRef.current.has(imageUrl) : false;
 
@@ -1098,7 +1098,7 @@ export default function ChatGroupsListScreen() {
             <View style={styles.chatBody}>
               <View style={styles.chatRow1}>
                 <Text
-                  style={[styles.chatName, (isAnnouncement || hasUnread) && styles.chatNameBold]}
+                  style={styles.chatName}
                   numberOfLines={1}
                 >
                   {item.name}
@@ -1301,14 +1301,6 @@ export default function ChatGroupsListScreen() {
           <MainDrawerScreenHeader
             title="קהילה"
             onMenuPress={openMainDrawer}
-            centerAccessory={
-              <Image
-                source={require('../../assets/darkpool-community-logo.png')}
-                style={styles.appHeaderLogo}
-                resizeMode="contain"
-                accessibilityLabel="קהילת DarkPool"
-              />
-            }
             rightAccessory={
               <View style={styles.headerEndActions}>
                 {isGlobalAdmin ? (
@@ -1332,7 +1324,7 @@ export default function ChatGroupsListScreen() {
                   <Search
                     size={20}
                     strokeWidth={2}
-                    color={searchSheetVisible ? tokens.colors.primary.main : tokens.colors.text.primary}
+                    color={tokens.colors.text.primary}
                   />
                 </DayNavBlurButton>
               </View>
@@ -1342,20 +1334,26 @@ export default function ChatGroupsListScreen() {
           {/* שורת סטטוסים */}
           <View style={styles.statusRow}>
             <Pressable
-              style={styles.statusCircle}
-              onPress={() => setAddStorySheetVisible(true)}
+              style={({ pressed }) => [
+                styles.statusCircle,
+                pressed && { opacity: 0.72, transform: [{ scale: 0.94 }] },
+              ]}
+              onPress={() => {
+                void HapticFeedback.selection();
+                setAddStorySheetVisible(true);
+              }}
               accessibilityRole="button"
               accessibilityLabel="הוסף סטטוס"
             >
               <View style={styles.statusAddOuter}>
                 <View style={styles.statusCircleInner}>
-                  <Ionicons name="add" size={24} color={tokens.colors.primary.main} />
+                  <Ionicons name="add" size={24} color={tokens.colors.text.primary} />
                 </View>
                 <View style={styles.statusAddBadge}>
-                  <Ionicons name="add" size={11} color="#fff" />
+                  <Ionicons name="add" size={11} color={tokens.colors.text.inverse} />
                 </View>
               </View>
-              <Text style={[styles.statusLabel, { color: tokens.colors.primary.main }]}>הוסף</Text>
+              <Text style={[styles.statusLabel, { color: tokens.colors.text.primary }]}>הוסף</Text>
             </Pressable>
             <ScrollView
               ref={storiesScrollRef}
@@ -1374,14 +1372,19 @@ export default function ChatGroupsListScreen() {
               const isOwn = s.user_id === user?.id;
               const count = Math.max(1, s.story_count || 1);
               return (
-                <TouchableOpacity
+                <Pressable
                   key={s.user_id}
-                  style={styles.statusCircle}
+                  style={({ pressed }) => [
+                    styles.statusCircle,
+                    pressed && { opacity: 0.72, transform: [{ scale: 0.94 }] },
+                  ]}
                   onPress={() => {
+                    void HapticFeedback.selection();
                     setStoryViewerInitialIndex(idx);
                     setStoryViewerVisible(true);
                   }}
-                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel={isOwn ? 'הסטטוס שלי' : displayName}
                 >
                   <StoryAvatarRing
                     size={68}
@@ -1404,10 +1407,10 @@ export default function ChatGroupsListScreen() {
                       </View>
                     )}
                   </StoryAvatarRing>
-                  <Text style={[styles.statusLabel, isOwn && { color: tokens.colors.primary.main }]} numberOfLines={1}>
+                  <Text style={[styles.statusLabel, isOwn && { color: tokens.colors.text.primary }]} numberOfLines={1}>
                     {isOwn ? 'שלי' : displayName}
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
               );
             })}
             </ScrollView>
@@ -1580,17 +1583,12 @@ export default function ChatGroupsListScreen() {
 // Styles – Instagram DM inspired design
 // ============================================
 
-const HP = 20; // horizontal padding constant
+const HP = APP_LAYOUT.screenPaddingHorizontal;
 
 const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: 'transparent' },
   container: { flex: 1, backgroundColor: 'transparent' },
 
-  /* ── Header (לוגו בתוך MainDrawerScreenHeader) ── */
-  appHeaderLogo: {
-    height: 32,
-    width: '100%',
-  },
   headerEndActions: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
@@ -1605,10 +1603,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   /* ── Raised list card ── */
   listCard: {
     flex: 1,
-    // Keep rounded top corners without brightening the screen gradient.
     backgroundColor: 'transparent',
-    borderTopLeftRadius: 26,
-    borderTopRightRadius: 26,
+    borderTopLeftRadius: UI_CARD_RADIUS,
+    borderTopRightRadius: UI_CARD_RADIUS,
     marginTop: 6,
     overflow: 'hidden',
   },
@@ -1643,7 +1640,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     height: 66,
     borderRadius: 33,
     borderWidth: 1.5,
-    borderColor: tokens.colors.primary.glow,
+    borderColor: tokens.colors.border.divider,
     borderStyle: 'dashed',
     justifyContent: 'center',
     alignItems: 'center',
@@ -1670,10 +1667,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     backgroundColor: tokens.colors.border.divider,
   },
   statusLabel: {
-    fontSize: tokens.typography.caption2.size,
-    lineHeight: tokens.typography.caption2.lineHeight,
-    fontWeight: tokens.typography.caption2.weight,
-    letterSpacing: tokens.typography.caption2.letterSpacing,
+    ...APP_TYPE.caption2,
     color: tokens.colors.text.secondary,
     maxWidth: 68,
     textAlign: 'center',
@@ -1705,9 +1699,10 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   searchInput: {
     flex: 1,
-    fontSize: 15,
+    ...APP_TYPE.body,
     color: tokens.colors.text.primary,
     textAlign: 'right',
+    writingDirection: 'rtl',
     paddingVertical: 0,
   },
   /* ── Search Sheet ── */
@@ -1715,9 +1710,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: chatPalette.glass,
-    borderWidth: 1,
-    borderColor: chatPalette.glassBorder,
+    backgroundColor: tokens.colors.background.input,
+    borderWidth: 0,
     borderRadius: tokens.borderRadius.search,
     paddingHorizontal: 18,
     height: 46,
@@ -1725,32 +1719,31 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   searchPillInput: {
     flex: 1,
-    fontSize: 15,
+    ...APP_TYPE.body,
     color: tokens.colors.text.primary,
     textAlign: 'right',
+    writingDirection: 'rtl',
     paddingVertical: 0,
   },
   searchSectionHeader: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: tokens.colors.text.tertiary,
+    ...APP_TYPE.groupLabel,
+    color: tokens.colors.text.secondary,
     textAlign: 'right',
     writingDirection: 'rtl',
     marginTop: 6,
-    marginBottom: 4,
+    marginBottom: APP_LAYOUT.groupLabelToContent,
   },
   searchNoResults: {
-    fontSize: 14,
+    ...APP_TYPE.cardBody,
     color: tokens.colors.text.tertiary,
     textAlign: 'center',
-    paddingVertical: 16,
+    paddingVertical: APP_LAYOUT.cardPadding,
     writingDirection: 'rtl',
   },
   searchRowItem: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 10,
+    paddingVertical: 15,
   },
   searchRowAvatar: {
     width: 48,
@@ -1758,6 +1751,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     borderRadius: 24,
     overflow: 'hidden',
     backgroundColor: tokens.colors.background.tertiary,
+    marginLeft: 12,
   },
   searchRowAvatarPlaceholder: {
     backgroundColor: tokens.colors.background.tertiary,
@@ -1769,23 +1763,22 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     minWidth: 0,
   },
   searchRowTitle: {
-    fontSize: tokens.typography.titleXs.size,
-    lineHeight: tokens.typography.titleXs.lineHeight,
-    fontWeight: tokens.typography.titleXs.weight,
-    letterSpacing: tokens.typography.letterSpacing.normal,
+    ...APP_TYPE.cardTitle,
     color: tokens.colors.text.primary,
     textAlign: 'right',
     writingDirection: 'rtl',
   },
   searchRowSubtitle: {
-    fontSize: tokens.typography.footnote.size,
-    lineHeight: tokens.typography.footnote.lineHeight,
-    fontWeight: tokens.typography.footnote.weight,
-    letterSpacing: tokens.typography.footnote.letterSpacing,
+    ...APP_TYPE.cardSubtitle,
     color: tokens.colors.text.secondary,
     textAlign: 'right',
     writingDirection: 'rtl',
-    marginTop: 2,
+    marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
+  },
+  searchSenderName: {
+    ...APP_TYPE.cardSubtitle,
+    fontWeight: APP_TYPE.cardTitle.fontWeight,
+    color: tokens.colors.text.primary,
   },
   searchRowMsgHead: {
     flexDirection: 'row-reverse',
@@ -1794,7 +1787,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     gap: 8,
   },
   searchRowTime: {
-    fontSize: 11,
+    ...APP_TYPE.caption2,
     color: tokens.colors.text.tertiary,
   },
   filterRow: {
@@ -1816,15 +1809,11 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     backgroundColor: 'rgba(0, 200, 5, 0.12)',
   },
   filterPillText: {
-    fontSize: tokens.typography.footnote.size,
-    lineHeight: tokens.typography.footnote.lineHeight,
-    fontWeight: tokens.typography.footnote.weight,
-    letterSpacing: tokens.typography.letterSpacing.normal,
+    ...APP_TYPE.caption,
     color: tokens.colors.text.secondary,
   },
   filterPillTextActive: {
     color: tokens.colors.primary.main,
-    fontWeight: tokens.typography.subhead.weight,
   },
   filterBadge: {
     backgroundColor: tokens.colors.primary.main,
@@ -1835,20 +1824,21 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     alignItems: 'center',
     paddingHorizontal: 5,
   },
-  filterBadgeText: { fontSize: 10, fontWeight: '700', color: tokens.colors.text.inverse },
+  filterBadgeText: {
+    ...APP_TYPE.caption2,
+    color: tokens.colors.text.inverse,
+  },
 
   /* ── Chat row ── */
   chatRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 8,
     paddingHorizontal: HP,
-    marginHorizontal: 8,
-    borderRadius: 16,
   },
   avatarWrap: {
     position: 'relative',
-    marginLeft: 14,
+    marginLeft: 12,
     width: 56,
     height: 56,
     borderRadius: 28,
@@ -1869,41 +1859,35 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: APP_LAYOUT.cardTitleToSubtitleGap,
   },
   chatName: {
-    fontSize: tokens.typography.titleXs.size,
-    lineHeight: tokens.typography.titleXs.lineHeight,
-    fontWeight: tokens.typography.titleXs.weight,
-    letterSpacing: tokens.typography.letterSpacing.normal,
+    ...APP_TYPE.cardTitle,
     color: tokens.colors.text.primary,
     flex: 1,
     textAlign: 'right',
+    writingDirection: 'rtl',
   },
-  chatNameBold: { fontWeight: '700' },
   chatTime: {
-    fontSize: 12,
+    ...APP_TYPE.caption,
     color: tokens.colors.text.tertiary,
     marginRight: 10,
   },
-  chatTimeUnread: { color: tokens.colors.primary.main },
+  chatTimeUnread: { color: tokens.colors.text.primary },
   chatRow2: {
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   chatPreview: {
-    fontSize: tokens.typography.subhead.size,
-    lineHeight: tokens.typography.subhead.lineHeight,
-    fontWeight: tokens.typography.subhead.weight,
-    letterSpacing: tokens.typography.letterSpacing.normal,
+    ...APP_TYPE.cardSubtitle,
     color: tokens.colors.text.tertiary,
     flex: 1,
     textAlign: 'right',
+    writingDirection: 'rtl',
   },
   chatPreviewUnread: {
     color: tokens.colors.text.secondary,
-    fontWeight: '500',
   },
   badge: {
     backgroundColor: tokens.colors.primary.main,
@@ -1915,7 +1899,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     paddingHorizontal: 7,
     marginRight: 10,
   },
-  badgeText: { fontSize: 12, fontWeight: '700', color: tokens.colors.text.inverse },
+  badgeText: { ...APP_TYPE.caption, color: tokens.colors.text.inverse },
   mentionBadge: {
     width: 22,
     height: 22,
@@ -1926,8 +1910,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     marginRight: 10,
   },
   mentionBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
+    ...APP_TYPE.caption,
     color: tokens.colors.text.primary,
   },
   rowSeparator: {
@@ -1936,31 +1919,25 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     marginHorizontal: HP,
   },
   sectionDivider: {
-    height: 2,
-    backgroundColor: tokens.colors.border.primary,
+    height: 1,
+    backgroundColor: tokens.colors.border.divider,
     marginHorizontal: HP,
     marginTop: 6,
     marginBottom: 2,
   },
 
-  /* ── Section headers — טקסט פשוט (בלי glass pill) ── */
+  /* ── Section headers — כותרת סקשן (sectionTitle), מתחת לכותרת המסך ── */
   sectionHeaderRow: {
     paddingHorizontal: HP,
-    paddingTop: 14,
-    paddingBottom: 6,
+    paddingTop: 16,
+    paddingBottom: CHAT_LAYOUT.sectionHeaderToContent,
   },
   sectionHeaderText: {
-    fontSize: tokens.typography.caption.size,
-    lineHeight: tokens.typography.caption.lineHeight,
-    fontWeight: tokens.typography.caption.weight,
-    letterSpacing: tokens.typography.letterSpacing.normal,
-    color: 'rgba(255, 255, 255, 0.84)',
-    textAlign: 'right',
-    writingDirection: 'rtl',
+    ...chatSectionTitleStyle,
+    color: tokens.colors.text.primary,
   },
   sectionHeaderDot: {
-    color: 'rgba(255, 255, 255, 0.84)',
-    fontWeight: '600',
+    color: tokens.colors.text.primary,
   },
 
   /* ── Joinable group row ── */
@@ -1971,12 +1948,11 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     opacity: 0.85,
   },
   joinableSubtitle: {
-    fontSize: 13,
+    ...APP_TYPE.cardSubtitle,
     color: tokens.colors.text.tertiary,
     textAlign: 'right',
     writingDirection: 'rtl',
-    marginTop: 2,
-    lineHeight: 18,
+    marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
   },
   joinablePill: {
     alignItems: 'center',
@@ -1990,8 +1966,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     alignSelf: 'center',
   },
   joinablePillText: {
-    fontSize: 13,
-    fontWeight: '700',
+    ...APP_TYPE.caption,
     color: tokens.colors.primary.main,
   },
 
@@ -2004,17 +1979,18 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     paddingVertical: 60,
   },
   emptyTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+    ...APP_TYPE.cardTitle,
     color: tokens.colors.text.primary,
-    marginTop: 16,
+    marginTop: APP_LAYOUT.cardPadding,
     textAlign: 'center',
+    writingDirection: 'rtl',
   },
   emptyText: {
-    fontSize: 15,
+    ...APP_TYPE.cardBody,
     color: tokens.colors.text.secondary,
-    marginTop: 8,
+    marginTop: APP_LAYOUT.stackGapSmall,
     textAlign: 'center',
+    writingDirection: 'rtl',
   },
 
   /* ── Offline banner ── */
@@ -2028,5 +2004,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     marginVertical: 4,
     borderRadius: 10,
   },
-  offlineBannerText: { color: '#fff', fontSize: 13, fontWeight: '600' },
+  offlineBannerText: {
+    ...APP_TYPE.footnote,
+    color: tokens.colors.text.primary,
+  },
 });

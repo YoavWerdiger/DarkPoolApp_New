@@ -29,10 +29,16 @@ describe('shared APP_TYPE scale (Blink / Soft UI)', () => {
     expect(APP_TYPE.flowTitleCompact.fontSize).toBe(24);
     expect(APP_TYPE.sectionTitle).toEqual({
       fontSize: 22,
-      fontWeight: '800',
+      fontWeight: '700',
       lineHeight: 28,
       letterSpacing: -0.42,
     });
+    expect(APP_TYPE.groupLabel).toEqual({
+      fontSize: 15,
+      fontWeight: '500',
+      lineHeight: 20,
+    });
+    expect(APP_TYPE.cardSubtitle.fontWeight).toBe('400');
     expect(APP_TYPE.sectionSubtitle).toEqual({
       fontSize: 15,
       lineHeight: 22,
@@ -45,7 +51,7 @@ describe('shared APP_TYPE scale (Blink / Soft UI)', () => {
     });
     expect(APP_TYPE.cardTitle).toEqual({
       fontSize: 17,
-      fontWeight: '700',
+      fontWeight: '600',
       lineHeight: 22,
       letterSpacing: -0.2,
     });
@@ -64,7 +70,7 @@ describe('shared APP_TYPE scale (Blink / Soft UI)', () => {
     expect(appPhysicalLeftText.textAlign).toBe('left');
     expect(appScreenTitleStyle.fontSize).toBe(24);
     expect(appSectionTitleStyle.fontSize).toBe(22);
-    expect(appSectionTitleStyle.fontWeight).toBe('800');
+    expect(appSectionTitleStyle.fontWeight).toBe('700');
     expect(appSectionSubtitleStyle.fontSize).toBe(15);
     expect(appSectionSubtitleStyle.marginTop).toBe(APP_LAYOUT.titleSubtitleGap);
     expect(appScreenSubtitleStyle.marginTop).toBe(APP_LAYOUT.titleSubtitleGap);
@@ -76,7 +82,7 @@ describe('shared APP_TYPE scale (Blink / Soft UI)', () => {
 
   it('keeps sheet title/button on the same scale', () => {
     expect(appSheetTitleStyle.fontSize).toBe(22);
-    expect(appSheetTitleStyle.fontWeight).toBe('800');
+    expect(appSheetTitleStyle.fontWeight).toBe('700');
     expect(appSheetButtonLabelStyle.fontSize).toBe(16);
     expect(appSheetButtonLabelStyle.textAlign).toBe('center');
   });

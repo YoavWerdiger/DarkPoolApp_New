@@ -46,7 +46,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     count: {
       fontSize: DARK_POOL_TYPE.caption2.fontSize,
-      fontWeight: '700',
+      fontWeight: DARK_POOL_TYPE.sectionTitle.fontWeight,
       color: tokens.colors.text.tertiary,
       writingDirection: 'ltr',
     },

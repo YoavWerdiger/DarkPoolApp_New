@@ -8,11 +8,43 @@
 
 ## 1. עקרונות
 
-1. **סקאלה אחת** — אותם מספרים ביומן, Dark Pool, תיקים, רישום ו-settings (`APP_TYPE`).
+1. **סקאלה אחת** — אותם מספרים ביומן, Dark Pool, תיקים, רישום ו-settings (`APP_TYPE`). Heebo דרך `installAppFont`. בלי `fontSize` מקומי ובלי משקל 800.
 2. **שלוש רמות צבע טקסט** — `textPrimary` / `textSecondary` / `textMuted` (`SoftUI`).
 3. **כותרת + תת-כותרת צמודות** — מרווח **2px** (`APP_LAYOUT.titleSubtitleGap` / `cardTitleToSubtitleGap`).
-4. **ירוק = פעולה (CTA)** — לא מסגרת/רקע של שדה קלט בפוקוס.
+4. **ירוק = accent** — `#00C805` למותג ולהצלחה. CTA ראשי בכהה הוא גלולה לבנה עם טקסט `#1A1918`. לא מסגרת שדה, לא פוקוס, לא טבעת אווטאר.
 5. **RTL** — `appPhysicalRightText` (direction `ltr` + `textAlign: 'right'`) בתוך עץ `direction: 'rtl'`.
+6. **טוקנים, לא hex במסך** — `useDesignTokens()` כדי שמצב בהיר יעקוב. מעבר ערכת נושא הוא crossfade ב-`ThemeContext` (blend), בלי כיסוי אטום.
+
+---
+
+## 1.1 משטחים — כרום מול תוכן
+
+מקור: `softUiPalette.ts`, `designTokensStatic.ts` (`background.cardSolid` / `navChrome` / `border.divider`).
+
+| | כהה | בהיר |
+|--|------|------|
+| קנבס | `#000000` | `#F4F2F1` |
+| כרטיס תוכן (`UICard` `soft` / `cardSolid`) | `#1C1C1E` | `#FFFFFF` |
+| טקסט ראשי | `#FFFFFF` | `#1E1A24` |
+| טקסט משני / מושתק | `#8E8E93` / `#636366` | דרך טוקני `text` |
+| מפריד | `rgba(255,255,255,0.13)` | `rgba(0,0,0,0.10)` |
+| סכנה | `#EF4444` | אותו אדום |
+
+**כרום מול תוכן**
+
+- **תוכן** = כרטיס `soft` / `cardSolid` (`#1C1C1E` בכהה). אף פעם לא `#2C2C2E` כמילוי כרטיס.
+- **כרום** = `surface2` `#2C2C2E` (`background.navChrome` / `background.tertiary`): ניווט, שדה מקונן, כפתור משני, בחירה שלישית. לא כרטיס תוכן.
+- **דיאלוג** `UIAlert`: `cardSolid`, רדיוס `UI_CARD_RADIUS` (24), בלי זכוכית.
+- **מפריד** 1px דרך `tokens.colors.border.divider`. בלי hex לבן קשיח, בלי `hairlineWidth` בשורות הגדרות. אין מפריד אחרי השורה האחרונה.
+- רדיוס מעטפת: `UI_CARD_RADIUS` = **24**.
+
+**שורת תפריט (הגדרות)**
+
+- `paddingVertical` **15**, ריפוד אופקי `cardPadding` (16).
+- אייקון מוביל → כותרת: **12** (`leadingIcon` `marginLeft: 12`, בלי `gap` נוסף על אותה שורה).
+- אייקון מוביל: `text.primary`. סכנה נשארת `#EF4444`. שברון: `text.tertiary`.
+- שורות תפריט פרופיל **בלי** תת-כותרת. מתגי התראות **שומרים** תת-כותרת ב-`cardTitleToSubtitleGap` (2px).
+- תווית קבוצה (אישי, התראות, חיובים) **מחוץ** לכרטיס, מיושרת ל-inset של 20px (`groupLabel` 15/500, אפור, `groupLabelToContent` 8).
 
 ---
 
@@ -23,10 +55,11 @@
 | `screenTitle` | 24 | 700 | 28 | כותרת מסך ממורכזת (MainDrawer, Chat) |
 | `flowTitle` | 28 | 700 | 34 | כותרת מסך **רישום / onboarding** (focused) |
 | `flowTitleCompact` | 24 | 700 | 28 | כותרת רישום במסכים צפופים |
-| `sectionTitle` | 22 | 800 | 28 | כותרת סקשן **מחוץ** לכרטיס |
-| `sectionSubtitle` | 15 | 400 | 22 | תת-כותרת (אפור `#AAA5A0`) |
-| `cardTitle` | 17 | 700 | 22 | כותרת **בתוך** UICard |
-| `cardSubtitle` | 13 | 500 | 18 | משנה מתחת לכותרת כרטיס |
+| `sectionTitle` | 22 | 700 | 28 | כותרת **תוכן** מחוץ לכרטיס (לבן, Heebo Bold) |
+| `groupLabel` | 15 | 500 | 20 | תווית **קבוצה** מחוץ לכרטיס (אפור `#8E8E93`, 8px עד הכרטיס) |
+| `sectionSubtitle` | 15 | 400 | 22 | תת-כותרת (אפור `#8E8E93`) |
+| `cardTitle` | 17 | 600 | 22 | כותרת **בתוך** UICard (Heebo SemiBold) |
+| `cardSubtitle` | 13 | 400 | 18 | משנה מתחת לכותרת כרטיס |
 | `cardBody` | 15 | 400 | 22 | פסקה / הסבר בכרטיס |
 | `body` | 16 | 400 | 24 | טקסט כללי, **תוכן שדה קלט** |
 | `cardMetricLabel` | 12 | 600 | 16 | תווית KPI / תווית שדה |
@@ -56,21 +89,26 @@
 | `cardTitleToSubtitleGap` | 2 | כותרת כרטיס ↔ משנה |
 | `cardTitleToBodyGap` | 12 | כותרת כרטיס ↔ גרף / רשימה |
 | `cardMetricLabelToValueGap` | 4 | תווית KPI ↔ ערך |
-| `sectionHeaderToContent` | 16 | בלוק כותרת רישום ↔ שדות |
+| `sectionHeaderToContent` | 12 | בלוק כותרת ↔ התוכן שמתחתיה |
+| `groupLabelToContent` | 8 | תווית קבוצה אפורה ↔ כרטיס |
 | `sectionGap` | 40 | בין סקשנים במסך |
-| `cardStackGap` | 16 | בין כרטיסים |
+| `screenPaddingHorizontal` | 20 | inset מסך (גם תוויות קבוצה) |
+| `cardPadding` | 16 | ריפוד פנימי בכרטיס |
+| `cardStackGap` | 12 | בין כרטיסים |
 
 ---
 
 ## 4. כרטיסים (UICard `soft`)
 
 ```
-┌─ cardTitle (17 / 700 / primary) ─────────────┐
-│ cardSubtitle (13 / 500 / secondary)  +2px   │  ← אופציונלי
+┌─ cardTitle (17 / 600 / primary) ─────────────┐
+│ cardSubtitle (13 / 400 / secondary)  +2px   │  ← אופציונלי
 │                    +12px                     │
 │ cardBody / chart / KPI grid                  │
 └──────────────────────────────────────────────┘
 ```
+
+מילוי: `cardSolid` (`#1C1C1E` כהה / `#FFFFFF` בהיר). רדיוס 24. בלי stroke.
 
 **מימוש:** `JournalDataTab`, `PortfolioCard`, `OverviewTab`, `WatchlistRow` — פירוט ביררכיה בסקשן 4.5.
 
@@ -129,9 +167,11 @@ cardTitle (17) + cardSubtitle (13)
 
 ### Watchlist — מחיר בשורה
 
-- מחיר / מספר עיקרי: **`APP_TYPE.cardBody`** (15, weight 600) — `WatchlistRow` `num`.
-- סימבול: **`body`** (16, 700).
-- שינוי יומי: **`caption`** (12).
+השורה יושבת על סקאלת הכרטיס, לא על caption.
+
+- סימבול: **`cardTitle`** (17 / 600).
+- מחיר: **`body`** (16 / 400).
+- חברה, שינוי יומי, אחוז, ווליום, כותרת עמודה: **`cardSubtitle`** (13 / 400).
 
 ### Styles מוכנים (KPI)
 
@@ -175,24 +215,24 @@ cardTitle (17) + cardSubtitle (13)
 - **`OnboardingInput`** / **`CashAppInput`** → **`formControl.ts`**
 - **מסגרת:** **ללא border** — רק `background.input` / `background.tertiary` בפוקוס
 - **פוקוס:** רקע `background.tertiary` — **בלי** ירוק ובלי `borderColor`
-- **שגיאה:** רקע `#F87171` שקוף (~10%) + טקסט `danger`
+- **שגיאה:** רקע `#EF4444` שקוף (~10%) + טקסט `danger`
 - **OTP:** `OtpInput` — אותה לוגיקת רקע (ללא מסגרת)
-- **אייקונים:** **לא** בתוך תיבת הקלט (mail/lock/person). הצג/הסתר סיסמה — קישור טקסט ליד התווית
+- **אייקונים:** **לא** בתוך תיבת הקלט (mail/lock/person). הצג/הסתר סיסמה — אייקון עין בצד שמאל בתוך מעטפת השדה
 
 ### מה לא לעשות
 
 - ❌ `borderWidth` / `borderColor` על shell שדה (מלבד מקרים חריגים מחוץ ל-Auth)
 - ❌ `borderColor: primary.main` על TextInput / shell
 - ❌ רקע ירוק שקוף בפוקוס
-- ❌ אייקוני Ionicons/Lucide **בתוך** שדה הקלט
-- ✅ ירוק רק ב-`UIButton` / `OnboardingButton` **primary**, progress bar, success states מכוונים
+- ❌ אייקוני Ionicons/Lucide **בתוך** שדה הקלט (מלבד עין הצג/הסתר סיסמה)
+- ✅ ירוק `#00C805` נשאר accent / success. CTA ראשי (`UIButton` primary) בכהה הוא לבן, לא ירוק
 - ✅ כפתור משני (למשל «יש לי כבר חשבון» במסך Welcome) — **`UIButton variant="secondary"`** (`navChrome`, טקסט primary)
 
 ### כפתורים גלובליים (Auth / רישום)
 
 | variant | רקע | טקסט | דוגמה |
 |---------|-----|------|--------|
-| `primary` | `#00C805` | inverse | «המשך», «התחבר» |
+| `primary` | בהיר `#010000` (`primary.lightCta`), כהה `#FFFFFF` — pill (`borderRadius.full`), תווית 600 | inverse (לבן בבהיר, `#1A1918` בכהה) | «המשך», «שמור» |
 | `secondary` / `hairline` | `navChrome` (`surface2`) | primary | «יש לי כבר חשבון» |
 | `ghost` | שקוף | primary (לא לקישורי טקסט ירוקים) | שימוש מצומצם |
 
@@ -242,10 +282,10 @@ Onboarding (`screens/Onboarding/*`) — אותה מעטפת אם משתמשים 
 | **אקדמיה** | `academyLayout.ts` · `ACADEMY_TYPE` | MainDrawer / stack | section 22 | `CourseCard` · `LessonRow` · `appCard*` | — |
 | **צ'אט** | `chatLayout.ts` · `CHAT_TYPE` | `ChatSubScreenHeader` / מגירה | section / sheet | בועות (נפרד) · הגדרות קבוצה → `settingsType` | — |
 | **שווקים / מדדים** | `marketsLayout.ts` · `MARKETS_TYPE` | MainDrawer | section 22 | כרטיסי movers / grid | — |
-| **הגדרות / פרופיל** | `settingsType.ts` · `SETTINGS_TYPE` | ממורכז / stack | hero 22 · row 17 | `ProfileMenuRow` | — |
+| **הגדרות / פרופיל** | `settingsType.ts` · `SETTINGS_TYPE` | ממורכז / stack | hero 22 · row 17 | `ProfileMenuRow` | `EditProfileScreen` · `formControl` (בלי מסגרת, בלי טבעת ירוקה) |
 | **Auth / onboarding** | `APP_TYPE` ישירות | `appFlowTitle*` | — | `UICard` / glass | `OnboardingInput` · `UIInput` · `OtpInput` |
 
-**מרווחים אחידים:** `APP_LAYOUT.screenPaddingHorizontal` (20), `cardStackGap` (16), `cardTitleToSubtitleGap` (2), `cardTitleToBodyGap` (12).
+**מרווחים אחידים:** `APP_LAYOUT.screenPaddingHorizontal` (20), `cardStackGap` (12), `cardTitleToSubtitleGap` (2), `cardTitleToBodyGap` (12).
 
 ---
 
@@ -296,4 +336,4 @@ Onboarding (`screens/Onboarding/*`) — אותה מעטפת אם משתמשים 
 
 ---
 
-*עודכן עם Soft UI — canvas `#0E0D0D`, כרטיסים `UICard variant="soft"`.*
+*עודכן לטופולוגיית התוכן: קנבס `#000000`, כרטיס `#1C1C1E`, רדיוס 24, ריפוד 16, רווח בין כרטיסים 12. הניווט לא השתנה. מצב בהיר: קנבס `#F4F2F1`, כרטיס `#FFFFFF`.*

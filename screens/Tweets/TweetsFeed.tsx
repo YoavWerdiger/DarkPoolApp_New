@@ -280,7 +280,7 @@ function PostCard({
               borderRadius: tokens.borderRadius.button,
               backgroundColor: post.likedByMe
                 ? 'rgba(255, 59, 92, 0.15)'
-                : 'rgba(255,255,255,0.06)',
+                : tokens.colors.background.primary,
             }}
             accessibilityLabel={post.likedByMe ? 'הסר לייק' : 'לייק'}
           >
@@ -311,7 +311,7 @@ function PostCard({
               paddingHorizontal: 12,
               height: 36,
               borderRadius: tokens.borderRadius.button,
-              backgroundColor: tokens.colors.glass.card.bg,
+              backgroundColor: tokens.colors.background.primary,
             }}
             accessibilityLabel="תגובות"
           >
@@ -341,7 +341,7 @@ function PostCard({
               borderRadius: tokens.borderRadius.full,
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: tokens.colors.glass.card.bg,
+              backgroundColor: tokens.colors.background.primary,
             }}
             accessibilityLabel="שתף"
           >

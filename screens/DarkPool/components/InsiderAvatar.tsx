@@ -35,7 +35,8 @@ export const InsiderAvatar = memo(function InsiderAvatar({
           width: size,
           height: size,
           borderRadius: radius,
-          borderColor: tokens.colors.border.subtle,
+          borderColor: tokens.colors.border.divider,
+          backgroundColor: tokens.colors.background.cardSolid,
         },
       ]}
     >
@@ -61,7 +62,7 @@ export const InsiderAvatar = memo(function InsiderAvatar({
 const styles = StyleSheet.create({
   ring: {
     overflow: 'hidden',
-    backgroundColor: '#0f160f',
+    backgroundColor: 'transparent',
     borderWidth: 1,
   },
 });

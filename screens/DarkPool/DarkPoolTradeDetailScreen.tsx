@@ -22,7 +22,6 @@ import {
   Text,
   View,
 } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -239,7 +238,6 @@ export default function DarkPoolTradeDetailScreen() {
   if (!hasTradeDetailPayload(params) || !trade) {
     return (
       <ScreenChrome rtl>
-        <StatusBar style="light" />
         <SafeAreaView style={[darkPoolTransparentFill, darkPoolRtlContent]} edges={['top']}>
           <View style={styles.topBar}>
             <DayNavBlurButton
@@ -321,7 +319,6 @@ export default function DarkPoolTradeDetailScreen() {
 
   return (
     <ScreenChrome rtl>
-      <StatusBar style="light" />
       <SafeAreaView style={[darkPoolTransparentFill, darkPoolRtlContent]} edges={['top']}>
         <View style={styles.topBar}>
           <DayNavBlurButton
@@ -443,7 +440,7 @@ export default function DarkPoolTradeDetailScreen() {
 
           <View style={styles.section}>
             <DarkPoolSectionHeader title="פרטי העסקה" />
-            <UICard variant="glass" glassIntensity="light" padding="md">
+            <UICard variant="soft" glassIntensity="light" padding="md">
               {buildTradeDetailFieldRows({
                 isCongress,
                 tickerSym,
@@ -473,7 +470,7 @@ export default function DarkPoolTradeDetailScreen() {
                 title="תשואה מאז העסקה"
                 subtitle="שינוי מחיר המניה מפתיחת יום העסקה מול חי — לא רווח/הפסד של הפוזיציה"
               />
-              <UICard variant="glass" glassIntensity="light" padding="md">
+              <UICard variant="soft" glassIntensity="light" padding="md">
                 <ReturnRow
                   label="מחיר המניה"
                   pct={sinceTradePct ?? congressTrade.price_change_pct}
@@ -507,7 +504,7 @@ export default function DarkPoolTradeDetailScreen() {
                   <ActivityIndicator color={tokens.colors.primary.main} />
                 </View>
               ) : (
-                <UICard variant="glass" glassIntensity="light" padding="md">
+                <UICard variant="soft" glassIntensity="light" padding="md">
                   {otherCongressTrades.map((t, i) => (
                     <CongressHistoryRow
                       key={t.id}
@@ -772,9 +769,9 @@ function rowStyles(tokens: ReturnType<typeof useDesignTokens>) {
       alignItems: 'center',
       justifyContent: 'space-between',
       gap: 12,
-      paddingVertical: 14,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: tokens.colors.border.subtle,
+      paddingVertical: 15,
+      borderBottomWidth: 1,
+      borderBottomColor: tokens.colors.border.divider,
     },
     rowLast: { borderBottomWidth: 0, paddingBottom: 0 },
     label: {
@@ -788,7 +785,7 @@ function rowStyles(tokens: ReturnType<typeof useDesignTokens>) {
     value: {
       fontSize: FEED_CARD_TYPE.action.fontSize,
       lineHeight: FEED_CARD_TYPE.action.lineHeight,
-      fontWeight: '700',
+      fontWeight: DARK_POOL_TYPE.sectionTitle.fontWeight,
       color: tokens.colors.text.primary,
       flexShrink: 1,
       minWidth: 0,
@@ -815,7 +812,7 @@ function rowStyles(tokens: ReturnType<typeof useDesignTokens>) {
       ...darkPoolPhysicalRightText,
       fontSize: DARK_POOL_TYPE.footnote.fontSize,
       lineHeight: 17,
-      fontWeight: tokens.typography.fontWeight.extrabold,
+      fontWeight: DARK_POOL_TYPE.sectionTitle.fontWeight,
       fontVariant: ['tabular-nums'],
       writingDirection: 'ltr',
     },
@@ -837,7 +834,8 @@ function rowStyles(tokens: ReturnType<typeof useDesignTokens>) {
     historyVerb: {
       ...darkPoolPhysicalRightText,
       fontSize: DARK_POOL_TYPE.footnote.fontSize,
-      fontWeight: '700',
+      lineHeight: DARK_POOL_TYPE.footnote.lineHeight,
+      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       flexShrink: 1,
       minWidth: 0,
     },
@@ -852,7 +850,8 @@ function rowStyles(tokens: ReturnType<typeof useDesignTokens>) {
     historyAmount: {
       ...darkPoolPhysicalRightText,
       fontSize: DARK_POOL_TYPE.caption.fontSize,
-      fontWeight: '700',
+      lineHeight: DARK_POOL_TYPE.caption.lineHeight,
+      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.secondary,
       flexShrink: 0,
     },
@@ -921,8 +920,9 @@ function createStyles(
     },
     priceTexts: { gap: 1, minWidth: 0, flexShrink: 1 },
     priceTicker: {
-      fontSize: DARK_POOL_TYPE.footnote.fontSize,
-      fontWeight: '800',
+      fontSize: DARK_POOL_TYPE.cardTitle.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardTitle.lineHeight,
+      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
       writingDirection: 'ltr',
       letterSpacing: 0.2,
@@ -942,8 +942,9 @@ function createStyles(
     },
     priceValue: {
       ...darkPoolPhysicalRightText,
-      fontSize: DARK_POOL_TYPE.body.fontSize,
-      fontWeight: '800',
+      fontSize: DARK_POOL_TYPE.cardBody.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardBody.lineHeight,
+      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
       fontVariant: ['tabular-nums'],
     },

@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -191,9 +190,8 @@ export default function SelectBrokerAccountScreen() {
         style={[
           { marginBottom: JOURNAL_LAYOUT.cardStackGap, opacity: alreadyLinked ? 0.55 : 1 },
           active && {
-            borderWidth: 1,
-            borderColor: `${tokens.colors.primary.main}44`,
-            backgroundColor: tokens.colors.primary.subtle,
+            borderWidth: 0,
+            backgroundColor: tokens.colors.background.tertiary,
           },
         ]}
         contentContainerStyle={styles.accountInner}
@@ -251,7 +249,6 @@ export default function SelectBrokerAccountScreen() {
   return (
     <View style={styles.root}>
       <ChatSessionBackdrop />
-      <StatusBar style="light" />
       <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
         <PortfolioScreenHeader
           title="בחירת חשבון Colmex"

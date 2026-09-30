@@ -8,6 +8,7 @@ import {
   type HeatmapKind,
 } from '../embeds/tradingViewEmbeds';
 import { MarketsTradingView } from '../components/MarketsTradingView';
+import { MARKETS_LAYOUT, MARKETS_TYPE, UI_CARD_RADIUS } from '../marketsLayout';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 
 const HEATMAP_TABS: { id: HeatmapKind; label: string }[] = [
@@ -24,7 +25,7 @@ function HeatmapTabToggle({
   onChange: (tab: HeatmapKind) => void;
 }) {
   const tokens = useDesignTokens();
-  const pad = tokens.layout?.screenPadding ?? 20;
+  const pad = MARKETS_LAYOUT.screenPaddingHorizontal;
 
   return (
     <View
@@ -58,10 +59,11 @@ function HeatmapTabToggle({
           >
             <Text
               style={{
-                fontSize: tokens.typography.body.size,
+                fontSize: MARKETS_TYPE.body.fontSize,
+                lineHeight: MARKETS_TYPE.body.lineHeight,
                 fontWeight: active
-                  ? (tokens.typography.fontWeight.bold as '700')
-                  : (tokens.typography.fontWeight.medium as '500'),
+                  ? MARKETS_TYPE.sectionTitle.fontWeight
+                  : MARKETS_TYPE.groupLabel.fontWeight,
                 color: active
                   ? tokens.colors.text.primary
                   : tokens.colors.text.secondary,
@@ -92,7 +94,7 @@ export function MarketsHeatmapsTab() {
 
   const heatmapHtml = useMemo(() => getTradingViewHeatmapHTML(heatmapType), [heatmapType]);
 
-  const hp = tokens.layout.screenPadding;
+  const hp = MARKETS_LAYOUT.screenPaddingHorizontal;
 
   return (
     <View style={{ flex: 1, minHeight: 0 }}>
@@ -104,12 +106,17 @@ export function MarketsHeatmapsTab() {
 
       <View style={{ flex: 1, minHeight: 0, paddingHorizontal: hp }}>
         <UICard
-          variant="blur"
+          variant="soft"
           padding="none"
-          style={{ flex: 1, ...tokens.shadows.lg, minHeight: 0 }}
+          style={{
+            flex: 1,
+            minHeight: 0,
+            borderRadius: UI_CARD_RADIUS,
+            backgroundColor: tokens.colors.background.cardSolid,
+          }}
           contentContainerStyle={{ flex: 1, minHeight: 0 }}
         >
-          <View style={{ flex: 1, borderRadius: tokens.borderRadius.lg, overflow: 'hidden', minHeight: 0 }}>
+          <View style={{ flex: 1, borderRadius: UI_CARD_RADIUS, overflow: 'hidden', minHeight: 0 }}>
             <MarketsTradingView
               html={heatmapHtml}
               instanceKey={`heatmap-${heatmapType}`}

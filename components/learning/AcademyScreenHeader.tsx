@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { MainDrawerScreenHeader } from '../ui/MainDrawerScreenHeader';
 import { ChatSubScreenHeader } from '../chat/ChatScreenShell';
+import { APP_LAYOUT } from '../ui/appLayout';
+import { ACADEMY_TYPE, academyCaptionStyle } from './academyLayout';
 
 export type AcademyScreenHeaderProps = {
   onMenuPress: () => void;
@@ -44,8 +46,8 @@ export function AcademyScreenHeader({
       <View style={styles.sectionRow}>
         <Text style={[styles.sectionTitle, { color: tokens.colors.text.primary }]}>{sectionTitle}</Text>
         {countDisplay !== null ? (
-          <View style={[styles.countBadge, { backgroundColor: tokens.colors.primary.dim }]}>
-            <Text style={[styles.countBadgeText, { color: tokens.colors.primary.main }]}>{countDisplay}</Text>
+          <View style={[styles.countBadge, { backgroundColor: tokens.colors.background.navChrome }]}>
+            <Text style={[styles.countBadgeText, { color: tokens.colors.text.primary }]}>{countDisplay}</Text>
           </View>
         ) : null}
       </View>
@@ -71,10 +73,11 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       justifyContent: 'space-between',
     },
     sectionTitle: {
-      fontSize: tokens.typography.fontSize.lg,
-      fontWeight: '800' as const,
+      flex: 1,
+      ...ACADEMY_TYPE.sectionTitle,
+      color: tokens.colors.text.primary,
       textAlign: 'right',
-      lineHeight: Math.round(tokens.typography.fontSize.lg * 1.25),
+      writingDirection: 'rtl',
     },
     countBadge: {
       minWidth: 32,
@@ -83,10 +86,13 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       borderRadius: tokens.borderRadius.full,
       alignItems: 'center',
       justifyContent: 'center',
+      marginRight: APP_LAYOUT.stackGapSmall,
     },
     countBadgeText: {
-      fontSize: tokens.typography.fontSize.sm,
-      fontWeight: '800' as const,
+      ...academyCaptionStyle,
+      textAlign: 'center',
+      width: undefined,
+      alignSelf: 'center',
     },
   });
 }

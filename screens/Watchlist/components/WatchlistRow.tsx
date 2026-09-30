@@ -2,7 +2,11 @@ import React, { memo, useCallback, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
-import { APP_TYPE, appPhysicalRightText } from '../../../components/ui/appType';
+import {
+  appBodyTextStyle,
+  appCardSubtitleStyle,
+  appCardTitleStyle,
+} from '../../../components/ui/appType';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
 import type { WatchlistRowData } from '../../../services/watchlist/watchlistTypes';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
@@ -77,24 +81,24 @@ function WatchlistRowInner({ row, index, onPress, onDrag, isActive }: Props) {
           ...quoteRow,
           paddingVertical: 8,
           minHeight: 48,
-          borderBottomWidth: StyleSheet.hairlineWidth,
+          borderBottomWidth: 1,
           borderBottomColor: tokens.colors.border.divider,
         },
         rowActive: {
-          backgroundColor: 'rgba(0,200,5,0.08)',
+          backgroundColor: tokens.colors.selection.subtle,
           borderRadius: 10,
         },
         rowAlt: { backgroundColor: 'rgba(255,255,255,0.015)' },
         identity: {
           flexDirection: 'row-reverse',
           alignItems: 'center',
-          gap: 8,
           minWidth: 0,
           flex: 1,
         },
         logoWrap: {
           width: 30,
           height: 30,
+          marginLeft: 12,
           position: 'relative',
         },
         alertBadge: {
@@ -107,30 +111,26 @@ function WatchlistRowInner({ row, index, onPress, onDrag, isActive }: Props) {
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: tokens.colors.primary.main,
-          borderWidth: 0,
-          borderColor: '#0A0E0A',
           zIndex: 2,
         },
         textBlock: {
           flexShrink: 1,
           minWidth: 0,
-          gap: 1,
           alignItems: 'flex-end',
         },
         symbol: {
+          ...appCardTitleStyle,
+          width: undefined,
+          alignSelf: 'flex-end',
           color: tokens.colors.text.primary,
-          fontSize: APP_TYPE.body.fontSize,
-          fontWeight: '700',
-          lineHeight: APP_TYPE.body.lineHeight,
           letterSpacing: 0.15,
-          textAlign: 'right',
         },
         company: {
-          color: tokens.colors.text.tertiary,
-          fontSize: APP_TYPE.caption2.fontSize,
-          fontWeight: '500',
-          lineHeight: APP_TYPE.caption2.lineHeight,
-          ...appPhysicalRightText,
+          ...appCardSubtitleStyle,
+          width: undefined,
+          alignSelf: 'flex-end',
+          marginTop: 0,
+          color: tokens.colors.text.secondary,
         },
         cellHit: {
           width: '100%',
@@ -139,31 +139,30 @@ function WatchlistRowInner({ row, index, onPress, onDrag, isActive }: Props) {
           minHeight: 32,
         },
         num: {
-          fontSize: APP_TYPE.cardBody.fontSize,
-          fontWeight: '600',
-          lineHeight: APP_TYPE.cardBody.lineHeight,
+          ...appBodyTextStyle,
           fontVariant: ['tabular-nums'],
-          textAlign: 'right',
           color: tokens.colors.text.primary,
         },
         chg: {
-          fontSize: APP_TYPE.caption.fontSize,
-          fontWeight: '600',
-          lineHeight: APP_TYPE.caption.lineHeight,
+          ...appCardSubtitleStyle,
+          width: undefined,
+          alignSelf: 'flex-end',
+          marginTop: 0,
           fontVariant: ['tabular-nums'],
-          textAlign: 'right',
         },
         pct: {
-          fontSize: 12,
-          fontWeight: '700',
+          ...appCardSubtitleStyle,
+          width: undefined,
+          alignSelf: 'flex-end',
+          marginTop: 0,
           fontVariant: ['tabular-nums'],
-          textAlign: 'right',
         },
         vol: {
-          fontSize: 11,
-          fontWeight: '600',
+          ...appCardSubtitleStyle,
+          width: undefined,
+          alignSelf: 'flex-end',
+          marginTop: 0,
           fontVariant: ['tabular-nums'],
-          textAlign: 'right',
           color: tokens.colors.text.secondary,
         },
         dragHit: {

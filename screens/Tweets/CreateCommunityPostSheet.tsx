@@ -45,7 +45,6 @@ type Props = {
 const MAX_LEN = 2000;
 const MAX_ATTACHMENTS = 5;
 const MAX_MENTIONS = 10;
-const SHEET_BORDER = 'rgba(255, 255, 255, 0.12)';
 
 function mentionTagOf(displayName: string): string {
   return `@${displayName.replace(/\s+/g, '')}`;
@@ -618,7 +617,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       paddingHorizontal: 16,
       paddingBottom: 12,
       borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: SHEET_BORDER,
+      borderBottomColor: tokens.colors.border.divider,
       gap: 10,
     },
     headerSide: {
@@ -653,7 +652,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       backgroundColor: tokens.colors.primary.main,
     },
     headerPublishBtnDisabled: {
-      backgroundColor: 'rgba(255,255,255,0.08)',
+      backgroundColor: tokens.colors.background.primary,
     },
     headerPublishBtnText: {
       fontSize: 15,
@@ -734,7 +733,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       alignItems: 'center',
       justifyContent: 'space-between',
       borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: SHEET_BORDER,
+      borderTopColor: tokens.colors.border.divider,
       paddingTop: 10,
     },
     counter: {
@@ -748,7 +747,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       borderRadius: r.full,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: tokens.colors.glass.card.bg,
+      backgroundColor: tokens.colors.background.primary,
     },
     attachBtnActive: {
       backgroundColor: tokens.colors.primary.dim,
@@ -776,7 +775,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: StyleSheet.hairlineWidth,
-      borderColor: 'rgba(255,255,255,0.25)',
+      borderColor: tokens.colors.border.divider,
     },
   });
 }

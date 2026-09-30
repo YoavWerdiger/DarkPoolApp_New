@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Image } from 'react-native';
 import { MessageSnapshot } from '../../types/MessageSnapshot';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { LIGHT_CANVAS } from '../ui/designTokensStatic';
 
 interface MessagePreviewProps {
   message: MessageSnapshot;
@@ -9,6 +10,8 @@ interface MessagePreviewProps {
 
 export default function MessagePreview({ message }: MessagePreviewProps) {
   const DesignTokens = useDesignTokens();
+
+  const isDarkMode = DesignTokens.colors.background.primary !== LIGHT_CANVAS;
 
   return (
     <View style={{
@@ -18,14 +21,11 @@ export default function MessagePreview({ message }: MessagePreviewProps) {
       maxWidth: 280,
       minWidth: 60,
       backgroundColor: message.isMe ? DesignTokens.colors.bubbleMe : DesignTokens.colors.bubbleOther,
-      shadowColor: message.isMe ? DesignTokens.colors.bubbleMe : '#000',
-      shadowOffset: {
-        width: 0,
-        height: 2,
-      },
-      shadowOpacity: message.isMe ? 0.3 : 0.1,
-      shadowRadius: 4,
-      elevation: 3,
+      shadowColor: isDarkMode ? (message.isMe ? DesignTokens.colors.bubbleMe : '#000') : 'transparent',
+      shadowOffset: isDarkMode ? { width: 0, height: 2 } : { width: 0, height: 0 },
+      shadowOpacity: isDarkMode ? (message.isMe ? 0.3 : 0.1) : 0,
+      shadowRadius: isDarkMode ? 4 : 0,
+      elevation: isDarkMode ? 3 : 0,
       alignSelf: message.isMe ? 'flex-end' : 'flex-start',
       borderWidth: message.isMe ? 0 : 0.5,
       borderColor: message.isMe ? 'transparent' : DesignTokens.colors.border.primary

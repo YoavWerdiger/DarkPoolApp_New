@@ -6,6 +6,7 @@ import {
 } from '../_shared/notificationBidi.ts'
 import {
   claimEarningsNotificationSlot,
+  earningsUserAcceptsTicker,
   fetchEarningsNotificationUsers,
   normalizeEarningsTicker,
 } from '../_shared/earnings-utils.ts'
@@ -217,6 +218,10 @@ serve(async (req) => {
 
       // יצירת התראה לכל משתמש
       for (const user of usersWithNotifications) {
+        if (!earningsUserAcceptsTicker(user, ticker)) {
+          processedUsers++
+          continue
+        }
         // זיכרון עמיד: (user, ticker, date, results_available) — גם אם report.id התחלף
         const claimed = await claimEarningsNotificationSlot(supabase, {
           userId: user.user_id,

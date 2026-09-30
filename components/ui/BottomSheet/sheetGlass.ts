@@ -50,6 +50,13 @@ export const SHEET_GLASS_BASE = DesignTokens.glassmorphism.baseFill.dark;
  */
 export const SHEET_GLASS_FLOOR = DesignTokens.colors.background.cardSolid;
 
+/** פס גרירה — capsule אטום, ללא מסגרת זכוכית. */
+export const SHEET_HANDLE_WIDTH = 36;
+export const SHEET_HANDLE_HEIGHT = 5;
+export const SHEET_HANDLE_BORDER_RADIUS = SHEET_HANDLE_HEIGHT / 2;
+/** מילוי solid — אפור בהיר (secondary / SoftUI.textSecondary), משותף לכל השיטים. */
+export const SHEET_HANDLE_FILL = DesignTokens.colors.text.secondary;
+
 /**
  * BlurView tint כהה דק — אותו tint ב-iOS וב-Android.
  */
@@ -110,6 +117,8 @@ export type SheetActionVariant = 'primary' | 'secondary' | 'destructive' | 'canc
 export function sheetActionColors(tokens: {
   colors: {
     primary: { main: string };
+    /** קנבס המסך — כפתור משני על כרטיס השיט (cardSolid) צריך ניגוד. */
+    background?: { primary?: string };
     text: { primary: string; secondary: string; inverse: string; danger: string };
     danger?: { main: string };
     glass?: { card?: { bg?: string; border?: string } };
@@ -119,9 +128,10 @@ export function sheetActionColors(tokens: {
   SheetActionVariant,
   { backgroundColor: string; borderColor: string; color: string; borderWidth: number }
 > {
-  const dangerBg = tokens.colors.danger?.main ?? '#F87171';
+  const dangerBg = tokens.colors.danger?.main ?? '#EF4444';
   const glassBg = tokens.colors.glass?.card?.bg ?? 'rgba(255,255,255,0.06)';
   const glassBorder = tokens.colors.glass?.card?.border ?? tokens.colors.border.primary;
+  const onCardFill = tokens.colors.background?.primary ?? glassBg;
 
   return {
     primary: {
@@ -131,7 +141,7 @@ export function sheetActionColors(tokens: {
       borderWidth: 0,
     },
     secondary: {
-      backgroundColor: glassBg,
+      backgroundColor: onCardFill,
       borderColor: glassBorder,
       color: tokens.colors.text.primary,
       borderWidth: 1,

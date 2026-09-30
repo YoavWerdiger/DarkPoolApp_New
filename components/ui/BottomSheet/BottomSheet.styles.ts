@@ -1,4 +1,10 @@
 import { StyleSheet, Dimensions, Platform } from 'react-native';
+import {
+  SHEET_HANDLE_BORDER_RADIUS,
+  SHEET_HANDLE_FILL,
+  SHEET_HANDLE_HEIGHT,
+  SHEET_HANDLE_WIDTH,
+} from './sheetGlass';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -67,17 +73,15 @@ export const createStyles = (backdropColor: string) => StyleSheet.create({
     width: '100%',
     ...sheetChrome,
   },
-  /** פס גרירה — זכוכית שקופה (fill + border) כמו glass.cardElevated, לא פס אטום/אפור. */
+  /** פס גרירה — capsule אפור בהיר אטום, בלי outline. */
   handle: {
-    width: 36,
-    height: 5,
-    borderRadius: 2.5,
+    width: SHEET_HANDLE_WIDTH,
+    height: SHEET_HANDLE_HEIGHT,
+    borderRadius: SHEET_HANDLE_BORDER_RADIUS,
     alignSelf: 'center',
     marginTop: 4,
     marginBottom: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.14)',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255, 255, 255, 0.22)',
+    backgroundColor: SHEET_HANDLE_FILL,
   },
   content: {
     flex: 1,

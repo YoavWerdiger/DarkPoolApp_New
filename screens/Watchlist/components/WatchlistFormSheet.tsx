@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
   StyleSheet,
   Modal,
   KeyboardAvoidingView,
@@ -12,14 +11,15 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import UICard from '../../../components/ui/UICard';
+import UIButton from '../../../components/ui/UIButton';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { APP_LAYOUT, UI_CARD_RADIUS } from '../../../components/ui/appLayout';
+import { appSheetTitleStyle } from '../../../components/ui/appType';
 import {
-  APP_TYPE,
-  appPhysicalRightText,
-  appSheetButtonLabelStyle,
-  appSheetTitleStyle,
-} from '../../../components/ui/appType';
-import { HapticFeedback } from '../../../utils/hapticFeedback';
+  formFieldInputStyle,
+  formFieldLabelStyle,
+  formFieldShellStyle,
+} from '../../../components/ui/formControl';
 
 type ListSheetProps = {
   visible: boolean;
@@ -55,12 +55,7 @@ export function WatchlistListNameSheet({
       >
         <Pressable style={styles.backdrop} onPress={onClose} />
         <View style={[styles.sheetWrap, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-          <UICard
-            variant="glass"
-            glassIntensity="medium"
-            padding="none"
-            style={styles.card}
-          >
+          <UICard variant="soft" padding="none" style={styles.card}>
             <View style={styles.body}>
               <View style={styles.handle} />
               <Text style={styles.title}>
@@ -78,26 +73,22 @@ export function WatchlistListNameSheet({
                 onSubmitEditing={onSubmit}
               />
               <View style={styles.actions}>
-                <TouchableOpacity
-                  style={[styles.btn, styles.btnPrimary]}
-                  onPress={() => {
-                    void HapticFeedback.selection();
-                    onSubmit();
-                  }}
-                >
-                  <Text style={styles.btnPrimaryText}>
-                    {mode === 'rename' ? 'שמור' : 'צור רשימה'}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.btn, styles.btnGhost]}
-                  onPress={() => {
-                    void HapticFeedback.selection();
-                    onClose();
-                  }}
-                >
-                  <Text style={styles.btnGhostText}>ביטול</Text>
-                </TouchableOpacity>
+                <View style={styles.actionSlot}>
+                  <UIButton
+                    title={mode === 'rename' ? 'שמור' : 'צור רשימה'}
+                    variant="primary"
+                    fullWidth
+                    onPress={onSubmit}
+                  />
+                </View>
+                <View style={styles.actionSlot}>
+                  <UIButton
+                    title="ביטול"
+                    variant="secondary"
+                    fullWidth
+                    onPress={onClose}
+                  />
+                </View>
               </View>
             </View>
           </UICard>
@@ -118,79 +109,46 @@ function useSheetStyles() {
           backgroundColor: tokens.colors.background.overlayHeavy,
         },
         sheetWrap: {
-          paddingHorizontal: 16,
+          paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
         },
         card: {
-          borderRadius: tokens.borderRadius['2xl'],
+          borderRadius: UI_CARD_RADIUS,
           overflow: 'hidden',
         },
         body: {
-          paddingHorizontal: 20,
+          paddingHorizontal: APP_LAYOUT.cardPadding,
           paddingTop: 10,
-          paddingBottom: 16,
-          gap: 10,
+          paddingBottom: APP_LAYOUT.cardPadding,
         },
         handle: {
           alignSelf: 'center',
           width: 36,
           height: 4,
           borderRadius: 2,
-          backgroundColor: 'rgba(255,255,255,0.18)',
-          marginBottom: 8,
+          backgroundColor: tokens.colors.border.divider,
+          marginBottom: APP_LAYOUT.groupLabelToContent,
         },
         title: {
-          color: tokens.colors.text.primary,
           ...appSheetTitleStyle,
-          marginBottom: 4,
-        },
-        label: {
-          color: tokens.colors.text.tertiary,
-          fontSize: APP_TYPE.sectionSubtitle.fontSize,
-          fontWeight: '600',
-          lineHeight: APP_TYPE.sectionSubtitle.lineHeight,
-          ...appPhysicalRightText,
-        },
-        input: {
-          backgroundColor: tokens.colors.glass.card.bg,
-          borderRadius: tokens.borderRadius.xl,
-          paddingHorizontal: 14,
-          paddingVertical: 13,
           color: tokens.colors.text.primary,
-          borderWidth: 0,
-          borderColor: tokens.colors.border.subtle,
-          fontSize: APP_TYPE.body.fontSize,
-          lineHeight: APP_TYPE.body.lineHeight,
-          ...appPhysicalRightText,
+          marginBottom: APP_LAYOUT.sectionHeaderToContent,
+        },
+        label: formFieldLabelStyle({ tokens, focused: false }),
+        input: {
+          ...formFieldShellStyle({ tokens, focused: false }),
+          ...formFieldInputStyle(),
+          borderRadius: tokens.borderRadius.md,
+          minHeight: 48,
+          paddingHorizontal: APP_LAYOUT.cardPadding,
+          color: tokens.colors.text.primary,
         },
         actions: {
           flexDirection: 'row-reverse',
-          gap: 8,
-          marginTop: 4,
+          gap: APP_LAYOUT.groupLabelToContent,
+          marginTop: APP_LAYOUT.stackGapSmall,
         },
-        btn: {
+        actionSlot: {
           flex: 1,
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingVertical: 13,
-          borderRadius: tokens.borderRadius.button,
-        },
-        btnPrimary: {
-          backgroundColor: tokens.colors.primary.main,
-        },
-        btnGhost: {
-          backgroundColor: tokens.colors.glass.card.bg,
-          borderWidth: 0,
-          borderColor: tokens.colors.border.subtle,
-        },
-        btnPrimaryText: {
-          color: tokens.colors.text.inverse,
-          ...appSheetButtonLabelStyle,
-          fontWeight: '800',
-        },
-        btnGhostText: {
-          color: tokens.colors.text.secondary,
-          ...appSheetButtonLabelStyle,
-          fontWeight: '600',
         },
       }),
     [tokens]

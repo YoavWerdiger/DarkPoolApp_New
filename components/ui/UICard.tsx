@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Pressable, ViewStyle, StyleSheet, Platform, StyleProp } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useDesignTokens, DesignTokens as StaticDesignTokens } from './DesignTokens';
+import { LIGHT_CANVAS } from './designTokensStatic';
 import {
   CARD_GLASS_ANDROID_BLUR_METHOD,
   CARD_GLASS_ANDROID_BLUR_REDUCTION,
@@ -76,7 +77,7 @@ const UICard: React.FC<UICardProps> = ({
 }) => {
   const tokens = useDesignTokens();
   const { colors, spacing, shadows, glassmorphism, layout } = tokens;
-  const isDarkMode = colors.background.primary !== '#F5F5F7';
+  const isDarkMode = colors.background.primary !== LIGHT_CANVAS;
   const themeMode = isDarkMode ? 'dark' : 'light';
   /** glass/blur/default → soft כמו כרטיסי אקדמיה (אטום, בלי stroke). */
   const resolvedVariant: UiCardVariant =

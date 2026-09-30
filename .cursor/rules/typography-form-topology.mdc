@@ -24,23 +24,44 @@ alwaysApply: false
 
 כל `*_TYPE` חייב להיות **אותו** `APP_TYPE` (re-export).
 
+## משטחים (כרום מול תוכן)
+
+- כהה: קנבס `#000000`, כרטיס `cardSolid` `#1C1C1E`, טקסט `#FFFFFF` / `#8E8E93` / `#636366`, סכנה `#EF4444`.
+- בהיר: קנבס `#F4F2F1`, כרטיס `#FFFFFF`, טקסט `#1E1A24`, מפריד `rgba(0,0,0,0.10)`.
+- `#2C2C2E` (`surface2` / `navChrome` / `tertiary`) = כרום, שדה מקונן, כפתור משני — **לא** מילוי כרטיס תוכן.
+- רדיוס כרטיס `UI_CARD_RADIUS` 24. מפריד 1px: `tokens.colors.border.divider` (כהה `rgba(255,255,255,0.13)`). בלי hex לבן קשיח.
+- `UIAlert`: `cardSolid` + רדיוס 24, בלי זכוכית.
+- מעבר ערכת נושא: crossfade קיים ב-`ThemeContext`. לא להחליף בכיסוי אטום.
+
 ## כרטיס (UICard soft)
 
-- כותרת: `cardTitle` 17/700
-- משנה: `cardSubtitle` 13, **+2px**
+- כותרת: `cardTitle` 17/600
+- משנה: `cardSubtitle` 13/400, **+2px**
 - גוף / רשימה / גרף: **+12px** (`cardTitleToBodyGap`)
-- KPI: `cardMetricLabel` 12 → `cardMetricValue` 28
+- KPI: `cardMetricLabel` 12 → `cardMetricValue` 28 (משני 20)
+- מרווחים: מסך 20, ריפוד כרטיס 16, בין כרטיסים 12, כותרת→תוכן 12, תווית קבוצה→כרטיס 8
+
+## שורות הגדרות
+
+- תווית קבוצה מחוץ לכרטיס (`groupLabel` 15/500), מיושרת ל-20px.
+- שורת תפריט: `paddingVertical` 15. אייקון→כותרת 12 (`leadingIcon` `marginLeft: 12`, בלי gap נוסף).
+- אייקון מוביל `text.primary` (סכנה נשארת אדומה). שברון `tertiary`. בלי תת-כותרת בשורות תפריט פרופיל.
+- מתגי התראות שומרים תת-כותרת ב-2px. בלי מפריד אחרי השורה האחרונה.
 
 ## שדות
 
 - `formFieldShellStyle` — **ללא border**; פוקוס = `background.tertiary`, לא ירוק
 - תווית: `formFieldLabelStyle` / `appFormFieldHelperStyle` מתחת לשדה
-- CTA ירוק: `UIButton` primary / `OnboardingButton` primary בלבד
+- CTA ראשי: `UIButton` variant `primary` בלבד — בהיר `primary.lightCta` `#010000` וטקסט לבן, כהה מילוי `#FFFFFF` וטקסט `text.inverse` `#1A1918`; תווית semibold 600 (Heebo). שניהם pill (`borderRadius.full`). ירוק `#00C805` הוא accent, לא מילוי ה-CTA הכהה. משני נשאר `navChrome` ולא גלולה שחורה
+- עריכת פרופיל: אותם שדות על קנבס, אווטאר בלי טבעת ירוקה, בלי `fontSize` מקומי
+- הצג/הסתר סיסמה: אייקון עין (Eye כשמוסתר, EyeOff כשגלוי) בצד שמאל בתוך מעטפת השדה
 
 ## אסור
 
-- ❌ `fontSize` חד-פעמי במסך (הרחיבו `APP_TYPE` אם חסר tier)
+- ❌ `fontSize` חד-פעמי במסך (הרחיבו `APP_TYPE` אם חסר tier). בלי משקל 800
+- ❌ `#2C2C2E` או `#111111` כמילוי כרטיס / קנבס במסך — טוקנים
 - ❌ `borderColor: primary` על TextInput
 - ❌ אייקונים **בתוך** תיבת קלט (Auth)
+- ❌ `variant="glass"` על כרטיס תוכן — `soft`
 
 בדיקות: `__tests__/ui/productTopology.test.ts`, `appType.test.ts`, `journalTypography.test.ts`, `portfolioFormFields.test.ts`, `lessonCardTypography.test.ts`.

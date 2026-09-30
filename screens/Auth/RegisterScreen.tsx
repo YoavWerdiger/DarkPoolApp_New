@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform, Dimensions, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { formFieldInputStyle } from '../../components/ui/formControl';
+import { PasswordVisibilityToggle } from '../../components/ui/PasswordVisibilityToggle';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
@@ -269,51 +270,31 @@ export default function RegisterScreen({ navigation }: any) {
               </View>
 
               <View>
-                <View
+                <Text
                   style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
+                    color: DesignTokens.colors.text.tertiary,
+                    fontSize: 12,
+                    fontWeight: '600',
+                    textAlign: 'right',
                     marginBottom: 8,
                   }}
                 >
-                  <Text
-                    style={{
-                      color: DesignTokens.colors.text.tertiary,
-                      fontSize: 12,
-                      fontWeight: '600',
-                      textAlign: 'right',
-                    }}
-                  >
-                    סיסמה
-                  </Text>
-                  <Pressable
-                    onPress={() => {
-                      void HapticFeedback.selection();
-                      setShowPassword(!showPassword);
-                    }}
-                    hitSlop={8}
-                  >
-                    <Text
-                      style={{
-                        color: DesignTokens.colors.text.secondary,
-                        fontSize: 13,
-                        fontWeight: '600',
-                      }}
-                    >
-                      {showPassword ? 'הסתר' : 'הצג'}
-                    </Text>
-                  </Pressable>
-                </View>
+                  סיסמה
+                </Text>
                 <View
                   style={{
                     backgroundColor: DesignTokens.colors.background.input,
                     borderRadius: 28,
                     paddingHorizontal: 16,
                     minHeight: 56,
-                    justifyContent: 'center',
+                    flexDirection: 'row',
+                    alignItems: 'center',
                   }}
                 >
+                  <PasswordVisibilityToggle
+                    visible={showPassword}
+                    onToggle={() => setShowPassword((v) => !v)}
+                  />
                   <TextInput
                     style={[formFieldInputStyle(), { paddingVertical: 15 }]}
                     placeholder="הכנס סיסמה (לפחות 6 תווים)"
@@ -327,51 +308,31 @@ export default function RegisterScreen({ navigation }: any) {
               </View>
 
               <View>
-                <View
+                <Text
                   style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
+                    color: DesignTokens.colors.text.tertiary,
+                    fontSize: 12,
+                    fontWeight: '600',
+                    textAlign: 'right',
                     marginBottom: 8,
                   }}
                 >
-                  <Text
-                    style={{
-                      color: DesignTokens.colors.text.tertiary,
-                      fontSize: 12,
-                      fontWeight: '600',
-                      textAlign: 'right',
-                    }}
-                  >
-                    אימות סיסמה
-                  </Text>
-                  <Pressable
-                    onPress={() => {
-                      void HapticFeedback.selection();
-                      setShowConfirmPassword(!showConfirmPassword);
-                    }}
-                    hitSlop={8}
-                  >
-                    <Text
-                      style={{
-                        color: DesignTokens.colors.text.secondary,
-                        fontSize: 13,
-                        fontWeight: '600',
-                      }}
-                    >
-                      {showConfirmPassword ? 'הסתר' : 'הצג'}
-                    </Text>
-                  </Pressable>
-                </View>
+                  אימות סיסמה
+                </Text>
                 <View
                   style={{
                     backgroundColor: DesignTokens.colors.background.input,
                     borderRadius: 28,
                     paddingHorizontal: 16,
                     minHeight: 56,
-                    justifyContent: 'center',
+                    flexDirection: 'row',
+                    alignItems: 'center',
                   }}
                 >
+                  <PasswordVisibilityToggle
+                    visible={showConfirmPassword}
+                    onToggle={() => setShowConfirmPassword((v) => !v)}
+                  />
                   <TextInput
                     style={[formFieldInputStyle(), { paddingVertical: 15 }]}
                     placeholder="הכנס שוב את הסיסמה"

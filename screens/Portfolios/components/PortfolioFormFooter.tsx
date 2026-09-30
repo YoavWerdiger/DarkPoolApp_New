@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: PORTFOLIO_FORM.screenPadH,
     paddingTop: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopWidth: 1,
     gap: 8,
   },
   note: {

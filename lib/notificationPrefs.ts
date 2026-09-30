@@ -5,6 +5,12 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  asIndicatorKeys,
+  asSymbolList,
+  resolveAlertScope,
+  type NotificationAlertScope,
+} from './notificationAlertScope';
 import { supabase } from './supabase';
 
 export const NOTIFICATION_SETTINGS_STORAGE_KEY = 'notificationSettings';
@@ -17,6 +23,7 @@ export const KNOWN_NOTIFICATION_SOURCES = [
   'dark_pool_person_trade',
   'dark_pool_fund_13f',
   'dark_pool_follow',
+  'dark_pool_feed_trade',
   'dark_pool_signal',
   'watchlist_alert',
   'news',
@@ -35,6 +42,7 @@ export const NOTIFICATION_PREF_KEYS = [
   'messageNotifications',
   'communityNotifications',
   'darkPoolNotifications',
+  'insiderFeedAlerts',
   'darkPoolTickerAlerts',
   'watchlistNotifications',
   'newsNotifications',
@@ -49,6 +57,7 @@ export const NOTIFICATION_CATEGORY_KEYS = [
   'messageNotifications',
   'communityNotifications',
   'darkPoolNotifications',
+  'insiderFeedAlerts',
   'darkPoolTickerAlerts',
   'watchlistNotifications',
   'newsNotifications',
@@ -58,9 +67,18 @@ export const NOTIFICATION_CATEGORY_KEYS = [
 
 export type NotificationCategoryKey = (typeof NOTIFICATION_CATEGORY_KEYS)[number];
 
+export type { NotificationAlertScope };
+
 export type NotificationPrefs = Record<NotificationPrefKey, boolean> & {
   newsSound: string;
   recordingSound: string;
+  earningsAlertScope: NotificationAlertScope;
+  earningsAlertSymbols: string[];
+  watchlistAlertScope: NotificationAlertScope;
+  /** null = כל טיקרי המעקב דלוקים. מערך = המתגים שהמשתמש סימן. */
+  watchlistAlertSymbols: string[] | null;
+  economicAlertScope: NotificationAlertScope;
+  economicAlertIndicators: string[];
 };
 
 export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
@@ -70,6 +88,7 @@ export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
   messageNotifications: true,
   communityNotifications: true,
   darkPoolNotifications: true,
+  insiderFeedAlerts: false,
   darkPoolTickerAlerts: true,
   watchlistNotifications: true,
   newsNotifications: true,
@@ -77,6 +96,12 @@ export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
   economicCalendarNotifications: true,
   newsSound: 'default',
   recordingSound: 'default',
+  earningsAlertScope: 'all',
+  earningsAlertSymbols: [],
+  watchlistAlertScope: 'all',
+  watchlistAlertSymbols: null,
+  economicAlertScope: 'all',
+  economicAlertIndicators: [],
 };
 
 export const PREF_TO_DB_COLUMN: Record<NotificationPrefKey, string> = {
@@ -86,6 +111,7 @@ export const PREF_TO_DB_COLUMN: Record<NotificationPrefKey, string> = {
   messageNotifications: 'message_notifications',
   communityNotifications: 'community_notifications',
   darkPoolNotifications: 'dark_pool_notifications',
+  insiderFeedAlerts: 'insider_feed_alerts',
   darkPoolTickerAlerts: 'dark_pool_ticker_alerts',
   watchlistNotifications: 'watchlist_notifications',
   newsNotifications: 'news_notifications',
@@ -100,6 +126,7 @@ const SOURCE_TO_PREF: Record<string, NotificationCategoryKey> = {
   dark_pool_person_trade: 'darkPoolNotifications',
   dark_pool_fund_13f: 'darkPoolNotifications',
   dark_pool_follow: 'darkPoolNotifications',
+  dark_pool_feed_trade: 'insiderFeedAlerts',
   dark_pool_signal: 'darkPoolTickerAlerts',
   watchlist_alert: 'watchlistNotifications',
   news: 'newsNotifications',
@@ -147,6 +174,10 @@ export function parseNotificationPrefs(raw: unknown): NotificationPrefs {
       src.darkPoolNotifications,
       DEFAULT_NOTIFICATION_PREFS.darkPoolNotifications,
     ),
+    insiderFeedAlerts: asBool(
+      src.insiderFeedAlerts,
+      DEFAULT_NOTIFICATION_PREFS.insiderFeedAlerts,
+    ),
     darkPoolTickerAlerts: asBool(
       src.darkPoolTickerAlerts,
       DEFAULT_NOTIFICATION_PREFS.darkPoolTickerAlerts,
@@ -166,6 +197,25 @@ export function parseNotificationPrefs(raw: unknown): NotificationPrefs {
     ),
     newsSound: asSound(src.newsSound, DEFAULT_NOTIFICATION_PREFS.newsSound),
     recordingSound: asSound(src.recordingSound, DEFAULT_NOTIFICATION_PREFS.recordingSound),
+    earningsAlertScope: resolveAlertScope(
+      src.earningsAlertScope,
+      asBool(src.earningsNotifications, DEFAULT_NOTIFICATION_PREFS.earningsNotifications),
+    ),
+    earningsAlertSymbols: asSymbolList(src.earningsAlertSymbols),
+    watchlistAlertScope: resolveAlertScope(
+      src.watchlistAlertScope,
+      asBool(src.watchlistNotifications, DEFAULT_NOTIFICATION_PREFS.watchlistNotifications),
+    ),
+    watchlistAlertSymbols:
+      src.watchlistAlertSymbols == null ? null : asSymbolList(src.watchlistAlertSymbols),
+    economicAlertScope: resolveAlertScope(
+      src.economicAlertScope,
+      asBool(
+        src.economicCalendarNotifications,
+        DEFAULT_NOTIFICATION_PREFS.economicCalendarNotifications,
+      ),
+    ),
+    economicAlertIndicators: asIndicatorKeys(src.economicAlertIndicators),
   };
 }
 
@@ -178,6 +228,7 @@ export function prefsFromDbRow(row: Record<string, unknown> | null | undefined):
     messageNotifications: row.message_notifications,
     communityNotifications: row.community_notifications,
     darkPoolNotifications: row.dark_pool_notifications,
+    insiderFeedAlerts: row.insider_feed_alerts,
     darkPoolTickerAlerts: row.dark_pool_ticker_alerts,
     watchlistNotifications: row.watchlist_notifications,
     newsNotifications: row.news_notifications,
@@ -185,9 +236,20 @@ export function prefsFromDbRow(row: Record<string, unknown> | null | undefined):
     economicCalendarNotifications: row.economic_calendar_notifications,
     newsSound: row.news_sound,
     recordingSound: row.recording_sound,
+    earningsAlertScope: row.earnings_alert_scope,
+    earningsAlertSymbols: row.earnings_alert_symbols,
+    watchlistAlertScope: row.watchlist_alert_scope,
+    watchlistAlertSymbols: row.watchlist_alert_symbols,
+    economicAlertScope: row.economic_alert_scope,
+    economicAlertIndicators: row.economic_alert_indicators,
   });
 }
 
+/**
+ * `news_sound` בטבלה הוא boolean, ו-`recording_sound` לא קיימת.
+ * שליחת מחרוזת צליל או עמודה חסרה מפילה את כל ה-upsert, והבחירות נעלמות בטעינה מחדש.
+ * צליל החדשות נשאר בעמודה הבוליאנית; שם הצליל נשמר רק מקומית.
+ */
 export function prefsToDbRow(
   prefs: NotificationPrefs,
   userId: string,
@@ -200,14 +262,95 @@ export function prefsToDbRow(
     message_notifications: prefs.messageNotifications,
     community_notifications: prefs.communityNotifications,
     dark_pool_notifications: prefs.darkPoolNotifications,
+    insider_feed_alerts: prefs.insiderFeedAlerts,
     dark_pool_ticker_alerts: prefs.darkPoolTickerAlerts,
     watchlist_notifications: prefs.watchlistNotifications,
     news_notifications: prefs.newsNotifications,
     earnings_notifications: prefs.earningsNotifications,
     economic_calendar_notifications: prefs.economicCalendarNotifications,
-    news_sound: prefs.newsSound,
-    recording_sound: prefs.recordingSound,
+    earnings_alert_scope: prefs.earningsAlertScope,
+    earnings_alert_symbols: prefs.earningsAlertSymbols,
+    watchlist_alert_scope: prefs.watchlistAlertScope,
+    watchlist_alert_symbols: prefs.watchlistAlertSymbols,
+    economic_alert_scope: prefs.economicAlertScope,
+    economic_alert_indicators: prefs.economicAlertIndicators,
   };
+}
+
+function listColumnEmpty(value: unknown): boolean {
+  return value == null || (Array.isArray(value) && value.length === 0);
+}
+
+/** עמודה חסרה, NULL, או עדיין ברירת המחדל של המיגרציה — הבחירה לא נכתבה לשרת. */
+function alertScopeUnpersisted(
+  row: Record<string, unknown>,
+  scopeKey: string,
+  listKey: string | null,
+  categoryOn: boolean,
+): boolean {
+  if (!Object.prototype.hasOwnProperty.call(row, scopeKey) || row[scopeKey] == null) {
+    return true;
+  }
+  const list = listKey == null ? null : row[listKey];
+  if (!listColumnEmpty(list)) return false;
+  return categoryOn ? row[scopeKey] === 'all' : row[scopeKey] === 'selected';
+}
+
+/**
+ * כשהשרת לא קיבל את הבחירה (עמודה חסרה, או upsert שנכשל והשאיר «הכול»),
+ * נשארים עם מה שנשמר במכשיר.
+ */
+export function mergeUnpersistedAlertChoices(
+  fromDb: NotificationPrefs,
+  local: NotificationPrefs,
+  row: Record<string, unknown>,
+): NotificationPrefs {
+  const next = { ...fromDb };
+  if (row.recording_sound == null) {
+    next.recordingSound = local.recordingSound;
+  }
+  if (
+    alertScopeUnpersisted(
+      row,
+      'earnings_alert_scope',
+      'earnings_alert_symbols',
+      next.earningsNotifications,
+    )
+  ) {
+    next.earningsAlertScope = local.earningsAlertScope;
+    next.earningsAlertSymbols = local.earningsAlertSymbols;
+  }
+  if (
+    alertScopeUnpersisted(row, 'watchlist_alert_scope', 'watchlist_alert_symbols', next.watchlistNotifications)
+  ) {
+    next.watchlistAlertScope = local.watchlistAlertScope;
+  }
+  if (listColumnEmpty(row.watchlist_alert_symbols) && local.watchlistAlertSymbols != null) {
+    next.watchlistAlertSymbols = local.watchlistAlertSymbols;
+  }
+  if (
+    alertScopeUnpersisted(
+      row,
+      'economic_alert_scope',
+      'economic_alert_indicators',
+      next.economicCalendarNotifications,
+    )
+  ) {
+    next.economicAlertScope = local.economicAlertScope;
+    next.economicAlertIndicators = local.economicAlertIndicators;
+  }
+  return next;
+}
+
+function alertChoicesDiffer(a: NotificationPrefs, b: NotificationPrefs): boolean {
+  return (
+    a.earningsAlertScope !== b.earningsAlertScope ||
+    a.watchlistAlertScope !== b.watchlistAlertScope ||
+    a.economicAlertScope !== b.economicAlertScope ||
+    JSON.stringify(a.earningsAlertSymbols) !== JSON.stringify(b.earningsAlertSymbols) ||
+    JSON.stringify(a.watchlistAlertSymbols) !== JSON.stringify(b.watchlistAlertSymbols) ||
+    JSON.stringify(a.economicAlertIndicators) !== JSON.stringify(b.economicAlertIndicators)
+  );
 }
 
 /** מאסטר כבוי → כל קטגוריית שליחה כבויה בפועל. צליל/רטט נשארים העדפת מכשיר. */
@@ -236,6 +379,7 @@ export function applyPrefToggle(
 }
 
 let cachedPrefs: NotificationPrefs | null = null;
+let prefsRevision = 0;
 const listeners = new Set<(prefs: NotificationPrefs) => void>();
 
 export function getCachedNotificationPrefs(): NotificationPrefs | null {
@@ -258,6 +402,7 @@ function emitPrefs(prefs: NotificationPrefs) {
 
 export function resetNotificationPrefsCache() {
   cachedPrefs = null;
+  prefsRevision = 0;
 }
 
 async function writeLocal(prefs: NotificationPrefs): Promise<void> {
@@ -286,6 +431,8 @@ async function writeDb(userId: string, prefs: NotificationPrefs): Promise<void> 
 
 export async function loadNotificationPrefs(userId?: string | null): Promise<NotificationPrefs> {
   const uid = await resolveUserId(userId);
+  const revisionAtStart = prefsRevision;
+  const stale = () => prefsRevision !== revisionAtStart && cachedPrefs != null;
   try {
     if (uid) {
       const { data, error } = await supabase
@@ -293,16 +440,39 @@ export async function loadNotificationPrefs(userId?: string | null): Promise<Not
         .select('*')
         .eq('user_id', uid)
         .maybeSingle();
+      if (stale()) return { ...cachedPrefs! };
       if (data && !error) {
-        const prefs = prefsFromDbRow(data as Record<string, unknown>);
+        const row = data as Record<string, unknown>;
+        let prefs = prefsFromDbRow(row);
+        const saved = await AsyncStorage.getItem(NOTIFICATION_SETTINGS_STORAGE_KEY);
+        if (stale()) return { ...cachedPrefs! };
+        if (saved) {
+          const local = parseNotificationPrefs(JSON.parse(saved));
+          prefs = mergeUnpersistedAlertChoices(prefs, local, row);
+        }
+        if (stale()) return { ...cachedPrefs! };
+        const shouldWriteBack = alertChoicesDiffer(prefs, prefsFromDbRow(row));
         await writeLocal(prefs);
+        if (stale()) {
+          await writeLocal(cachedPrefs!);
+          return { ...cachedPrefs! };
+        }
         emitPrefs(prefs);
+        if (shouldWriteBack) {
+          try {
+            await writeDb(uid, prefs);
+          } catch {
+            /* columns still missing — local already has the choice */
+          }
+        }
         return prefs;
       }
     }
     const saved = await AsyncStorage.getItem(NOTIFICATION_SETTINGS_STORAGE_KEY);
+    if (stale()) return { ...cachedPrefs! };
     if (saved) {
       const prefs = parseNotificationPrefs(JSON.parse(saved));
+      if (stale()) return { ...cachedPrefs! };
       emitPrefs(prefs);
       if (uid) {
         try {
@@ -314,8 +484,9 @@ export async function loadNotificationPrefs(userId?: string | null): Promise<Not
       return prefs;
     }
   } catch {
-    /* fall through to defaults */
+    if (cachedPrefs) return { ...cachedPrefs };
   }
+  if (cachedPrefs && prefsRevision !== revisionAtStart) return { ...cachedPrefs };
   const prefs = { ...DEFAULT_NOTIFICATION_PREFS };
   emitPrefs(prefs);
   return prefs;
@@ -325,6 +496,7 @@ export async function saveNotificationPrefs(
   prefs: NotificationPrefs,
   userId?: string | null,
 ): Promise<void> {
+  prefsRevision += 1;
   emitPrefs(prefs);
   await writeLocal(prefs);
   const uid = await resolveUserId(userId);
@@ -335,6 +507,28 @@ export async function saveNotificationPrefs(
       /* local cache already updated */
     }
   }
+}
+
+export type NotificationScopePatch = Partial<
+  Pick<
+    NotificationPrefs,
+    | 'earningsAlertScope'
+    | 'earningsAlertSymbols'
+    | 'watchlistAlertScope'
+    | 'watchlistAlertSymbols'
+    | 'economicAlertScope'
+    | 'economicAlertIndicators'
+  >
+>;
+
+export async function patchNotificationPrefs(
+  patch: NotificationScopePatch,
+  userId?: string | null,
+): Promise<NotificationPrefs> {
+  const current = cachedPrefs ?? (await loadNotificationPrefs(userId));
+  const next = { ...current, ...patch };
+  await saveNotificationPrefs(next, userId);
+  return next;
 }
 
 export async function updateNotificationPref(

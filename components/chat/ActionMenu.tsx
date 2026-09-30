@@ -5,21 +5,15 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BlurView } from 'expo-blur';
 import { Plus, Copy, Share, Star, Flag, Trash2, Edit, Reply, Forward, Info, Pin } from 'lucide-react-native';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { GlassChip } from '../ui/GlassChip';
-import { chatPalette } from './chatDesignTokens';
 import {
   ChatBottomSheet,
   ChatSheetContent,
   useChatFitContentSnap,
 } from './ChatBottomSheet';
-import {
-  SHEET_GLASS_INTENSITY,
-  SHEET_GLASS_OVERLAY,
-} from '../ui/BottomSheet/sheetGlass';
 
 type ActionItem = {
   key: string;
@@ -128,7 +122,7 @@ export default function ActionMenu({
         <View style={styles.reactionRow}>
           <GlassChip
             disableBlur
-            style={styles.reactionPill}
+            style={[styles.reactionPill, { backgroundColor: DesignTokens.colors.background.primary }]}
             contentContainerStyle={styles.reactionPillContent}
           >
             <ScrollView
@@ -142,7 +136,10 @@ export default function ActionMenu({
                   onPress={() => handleReactionPress(emoji)}
                   style={({ pressed }) => [
                     styles.emojiBtn,
-                    (pressed || selectedReaction === emoji) && styles.emojiBtnActive,
+                    (pressed || selectedReaction === emoji) && {
+                      backgroundColor: DesignTokens.colors.background.tertiary,
+                      transform: [{ scale: 0.92 }],
+                    },
                   ]}
                 >
                   <Text style={styles.emoji}>{emoji}</Text>
@@ -154,7 +151,10 @@ export default function ActionMenu({
                     void HapticFeedback.selection();
                     onOpenPicker();
                   }}
-                  style={({ pressed }) => [styles.emojiBtn, pressed && styles.emojiBtnActive]}
+                  style={({ pressed }) => [
+                    styles.emojiBtn,
+                    pressed && { backgroundColor: DesignTokens.colors.background.tertiary },
+                  ]}
                 >
                   <Plus size={22} color={DesignTokens.colors.text.primary} strokeWidth={2} />
                 </Pressable>
@@ -163,15 +163,16 @@ export default function ActionMenu({
           </GlassChip>
         </View>
 
-        <BlurView
-          intensity={SHEET_GLASS_INTENSITY}
-          tint="dark"
-          style={styles.actionsList}
+        <View
+          style={[
+            styles.actionsList,
+            {
+              backgroundColor: DesignTokens.colors.background.tertiary,
+              borderColor: DesignTokens.colors.border.divider,
+              borderTopColor: DesignTokens.colors.border.divider,
+            },
+          ]}
         >
-          <View
-            pointerEvents="none"
-            style={[StyleSheet.absoluteFill, styles.actionsListOverlay]}
-          />
           {items.map((item, i) => (
             <Pressable
               key={item.key}
@@ -182,8 +183,11 @@ export default function ActionMenu({
               }}
               style={({ pressed }) => [
                 styles.actionRow,
-                i < items.length - 1 && styles.actionRowBorder,
-                pressed && styles.actionRowPressed,
+                i < items.length - 1 && {
+                  borderBottomWidth: StyleSheet.hairlineWidth,
+                  borderBottomColor: DesignTokens.colors.border.divider,
+                },
+                pressed && { backgroundColor: DesignTokens.colors.background.cardSolid },
               ]}
             >
               {item.icon ? (
@@ -203,7 +207,7 @@ export default function ActionMenu({
               </Text>
             </Pressable>
           ))}
-        </BlurView>
+        </View>
       </ChatSheetContent>
     </ChatBottomSheet>
   );
@@ -248,23 +252,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 22,
   },
-  emojiBtnActive: {
-    backgroundColor: chatPalette.glassStrong,
-    transform: [{ scale: 0.92 }],
-  },
   emoji: {
     fontSize: 24,
   },
   actionsList: {
     borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.16)',
-    borderTopColor: 'rgba(255,255,255,0.22)',
     overflow: 'hidden',
     paddingTop: 4,
-  },
-  actionsListOverlay: {
-    backgroundColor: SHEET_GLASS_OVERLAY,
   },
   actionRow: {
     flexDirection: 'row',
@@ -272,13 +267,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
     minHeight: 44,
-  },
-  actionRowBorder: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: chatPalette.glassBorder,
-  },
-  actionRowPressed: {
-    backgroundColor: chatPalette.glassStrong,
   },
   actionIcon: {
     marginRight: 10,

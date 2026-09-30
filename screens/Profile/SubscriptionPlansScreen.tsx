@@ -6,6 +6,8 @@ import PlanPicker, { getSelectablePlans } from '../../components/subscription/Pl
 import { isSubscriptionCheckoutEnabled } from '../../services/paymentService';
 import { useSubscription } from '../../hooks/useSubscription';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { settingsButtonLabelStyle, settingsHebrewText } from '../../components/profile/settingsType';
+import { APP_LAYOUT } from '../../components/ui/appLayout';
 import { legacyAlert } from '../../utils/appDialog';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 
@@ -63,7 +65,10 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
   };
 
   return (
-    <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
+    <SafeAreaView
+      style={[styles.root, { backgroundColor: tokens.colors.background.primary }]}
+      edges={['top', 'bottom']}
+    >
       <ChatSubScreenHeader
         title="שדרוג מסלול"
         onBack={() => {
@@ -104,12 +109,11 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
           style={styles.billingLink}
         >
           <Text
-            style={{
-              color: tokens.colors.primary.main,
-              fontWeight: '700',
-              fontSize: 14,
-              textAlign: 'center',
-            }}
+            style={[
+              settingsHebrewText,
+              settingsButtonLabelStyle,
+              { color: tokens.colors.text.primary },
+            ]}
           >
             היסטוריית תשלומים וחשבוניות
           </Text>
@@ -123,8 +127,8 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   body: { flex: 1 },
   bodyContent: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+    paddingTop: APP_LAYOUT.sectionHeaderToContent,
     paddingBottom: 28,
     flexGrow: 1,
   },

@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
 import { formatUsdCompact } from '../utils/darkPoolFormat';
+import { UI_CARD_RADIUS } from '../../../components/ui/appLayout';
 import {
   DARK_POOL_TYPE,
   darkPoolPhysicalLeftText,
@@ -98,25 +99,25 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     ticker: {
       fontSize: DARK_POOL_TYPE.sectionTitle.fontSize,
       lineHeight: DARK_POOL_TYPE.sectionTitle.lineHeight,
-      fontWeight: '800',
-      letterSpacing: -0.4,
+      fontWeight: DARK_POOL_TYPE.sectionTitle.fontWeight,
+      letterSpacing: DARK_POOL_TYPE.sectionTitle.letterSpacing,
       color: tokens.colors.text.primary,
       writingDirection: 'ltr',
       textAlign: 'left',
     },
     meta: {
       ...darkPoolPhysicalLeftText,
-      marginTop: 4,
-      fontSize: DARK_POOL_TYPE.sectionSubtitle.fontSize,
-      fontWeight: DARK_POOL_TYPE.caption.fontWeight,
-      lineHeight: DARK_POOL_TYPE.sectionSubtitle.lineHeight,
+      marginTop: 2,
+      fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
+      fontWeight: DARK_POOL_TYPE.cardSubtitle.fontWeight,
+      lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
       color: tokens.colors.text.secondary,
     },
     premiumHint: {
       ...darkPoolPhysicalRightText,
       marginTop: 6,
       fontSize: DARK_POOL_TYPE.caption.fontSize,
-      fontWeight: '600',
+      fontWeight: DARK_POOL_TYPE.caption.fontWeight,
       color: tokens.colors.text.tertiary,
     },
     statsRow: {
@@ -131,22 +132,22 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       minWidth: 96,
       paddingVertical: 10,
       paddingHorizontal: 12,
-      borderRadius: tokens.borderRadius.lg,
-      borderWidth: 1,
-      borderColor: tokens.colors.border.subtle,
-      backgroundColor: 'rgba(255,255,255,0.03)',
+      borderRadius: UI_CARD_RADIUS,
+      borderWidth: 0,
+      backgroundColor: tokens.colors.background.cardSolid,
       alignItems: 'stretch',
     },
     statLabel: {
       ...darkPoolPhysicalRightText,
       fontSize: DARK_POOL_TYPE.caption2.fontSize,
-      fontWeight: '600',
+      fontWeight: DARK_POOL_TYPE.cardMetricLabel.fontWeight,
       color: tokens.colors.text.tertiary,
       marginBottom: 4,
     },
     statValue: {
-      fontSize: DARK_POOL_TYPE.body.fontSize,
-      fontWeight: '800',
+      fontSize: DARK_POOL_TYPE.cardMetricValueSecondary.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardMetricValueSecondary.lineHeight,
+      fontWeight: DARK_POOL_TYPE.cardMetricValueSecondary.fontWeight,
       color: tokens.colors.text.primary,
       writingDirection: 'ltr',
       textAlign: 'right',

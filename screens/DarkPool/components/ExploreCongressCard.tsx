@@ -7,6 +7,8 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import { UI_CARD_RADIUS } from '../../../components/ui/appLayout';
+import { APP_TYPE } from '../../../components/ui/appType';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import UICard from '../../../components/ui/UICard';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
@@ -25,7 +27,7 @@ export function ExploreCongressCard({ trade, onPress, style }: Props) {
 
   const body = (
     <UICard
-      variant="glass"
+      variant="soft"
       glassIntensity="light"
       padding="none"
       disableBlur
@@ -66,7 +68,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     card: {
       width: 200,
-      borderRadius: tokens.borderRadius['2xl'],
+      borderRadius: UI_CARD_RADIUS,
       backgroundColor: 'transparent',
     },
     top: {
@@ -77,36 +79,41 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     topText: { flex: 1, alignItems: 'flex-end' },
     name: {
-      fontSize: 14,
-      fontWeight: '800',
+      fontSize: APP_TYPE.cardTitle.fontSize,
+      lineHeight: APP_TYPE.cardTitle.lineHeight,
+      fontWeight: APP_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
       textAlign: 'right',
     },
     meta: {
       marginTop: 2,
-      fontSize: 11,
-      fontWeight: '600',
+      fontSize: APP_TYPE.caption2.fontSize,
+      lineHeight: APP_TYPE.caption2.lineHeight,
+      fontWeight: APP_TYPE.caption2.fontWeight,
       color: tokens.colors.text.tertiary,
       textAlign: 'right',
     },
     tickerRow: {
       paddingHorizontal: 12,
       paddingVertical: 10,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: tokens.colors.border.subtle,
-      backgroundColor: 'rgba(255,255,255,0.04)',
+      borderTopWidth: 1,
+      borderTopColor: tokens.colors.border.divider,
+      backgroundColor: tokens.colors.background.tertiary,
       alignItems: 'flex-end',
       gap: 2,
     },
     ticker: {
-      fontSize: 15,
-      fontWeight: '800',
+      fontSize: APP_TYPE.cardBody.fontSize,
+      lineHeight: APP_TYPE.cardBody.lineHeight,
+      fontWeight: APP_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
       writingDirection: 'ltr',
       textAlign: 'right',
     },
     issuer: {
-      fontSize: 11,
+      fontSize: APP_TYPE.caption2.fontSize,
+      lineHeight: APP_TYPE.caption2.lineHeight,
+      fontWeight: APP_TYPE.caption2.fontWeight,
       color: tokens.colors.text.tertiary,
       textAlign: 'right',
     },

@@ -307,6 +307,9 @@ function ChatInputImpl({
   // מדידת משך אמיתית מבוססת timestamp (לא תלויה בדיוק ה-interval)
   const recordingStartRef = useRef(0);
   const recordingAccumMsRef = useRef(0);
+  /** false בהשהיה — טיק מאוחר של האינטרוול לא מקדם את השעון */
+  const recordingClockActiveRef = useRef(false);
+  const recordingClockGenRef = useRef(0);
   const previewPositionInterval = useRef<NodeJS.Timeout | null>(null);
   const recordingDotOpacity = useRef(new Animated.Value(1)).current;
   const timelineProgress = useSharedValue(0);
@@ -1151,7 +1154,13 @@ function ChatInputImpl({
    * בלי smoothing משותף — כדי שהברים יקפצו ויפלו עם הקול (לא נתקעים בשיא).
    */
   const handleRecordingStatus = useCallback((status: Audio.RecordingStatus) => {
-    if (!status.isRecording) return;
+    if (!status.isRecording || !recordingClockActiveRef.current) return;
+    if (typeof status.durationMillis === 'number' && status.durationMillis >= 0) {
+      // משך הדיבור מהרקורדר — לא כולל השהיה
+      recordingAccumMsRef.current = status.durationMillis;
+      recordingStartRef.current = Date.now();
+      publishRecordingSeconds(status.durationMillis);
+    }
     const metering = status.metering;
     if (typeof metering !== 'number') return;
 
@@ -1168,6 +1177,44 @@ function ChatInputImpl({
       waveformIntervalRef.current = null;
     }
   }, []);
+
+  const clearRecordingClock = useCallback(() => {
+    recordingClockActiveRef.current = false;
+    recordingClockGenRef.current += 1;
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+  }, []);
+
+  const publishRecordingSeconds = useCallback((elapsedMs: number) => {
+    const seconds = Math.floor(Math.max(0, elapsedMs) / 1000);
+    const progress = Math.min(seconds / MAX_RECORDING_DURATION, 1);
+    timelineProgress.value = progress;
+    setRecordingDuration((prev) => (prev === seconds ? prev : seconds));
+  }, [timelineProgress]);
+
+  /** שעון רק בזמן הקלטה פעילה. בהשהיה לא רץ. */
+  const startRecordingClock = useCallback(() => {
+    clearRecordingClock();
+    const gen = recordingClockGenRef.current;
+    recordingClockActiveRef.current = true;
+    recordingStartRef.current = Date.now();
+    recordingTimerRef.current = setInterval(() => {
+      if (gen !== recordingClockGenRef.current || !recordingClockActiveRef.current) return;
+      const elapsedMs = recordingAccumMsRef.current + (Date.now() - recordingStartRef.current);
+      publishRecordingSeconds(elapsedMs);
+    }, 250);
+  }, [clearRecordingClock, publishRecordingSeconds]);
+
+  /** עוצר מיד, לפני await — הזמן שנצבר לא כולל את ההשהיה */
+  const freezeRecordingClock = useCallback(() => {
+    if (recordingClockActiveRef.current) {
+      recordingAccumMsRef.current += Date.now() - recordingStartRef.current;
+    }
+    clearRecordingClock();
+    publishRecordingSeconds(recordingAccumMsRef.current);
+  }, [clearRecordingClock, publishRecordingSeconds]);
 
   const startRecording = async (opts?: { openInLockedMode?: boolean }) => {
     if (!isExpoAvAvailable) {
@@ -1234,7 +1281,6 @@ function ChatInputImpl({
       setWaveformSamples([]);
       audioLevelRef.current = 0;
       waveformSamplesRef.current = [];
-      recordingStartRef.current = Date.now();
       recordingAccumMsRef.current = 0;
       timelineProgress.value = 0;
 
@@ -1261,17 +1307,12 @@ function ChatInputImpl({
         isLockedRef.current = true;
       }
 
-      recordingTimerRef.current = setInterval(() => {
-        const elapsedMs = recordingAccumMsRef.current + (Date.now() - recordingStartRef.current);
-        const seconds = Math.floor(elapsedMs / 1000);
-        const progress = Math.min(seconds / MAX_RECORDING_DURATION, 1);
-        timelineProgress.value = progress;
-        setRecordingDuration(seconds);
-      }, 250);
+      startRecordingClock();
 
       isStartingRecordingRef.current = false;
     } catch (error) {
       Alert.alert('שגיאה', 'לא הצלחנו להתחיל הקלטה');
+      clearRecordingClock();
       isStartingRecordingRef.current = false;
 
       // נקה את recordingRef אם יש
@@ -1288,22 +1329,15 @@ function ChatInputImpl({
 
   // השהיית הקלטה (pause) - ממשיך מאיפה שעצרנו
   const pauseRecording = async () => {
+    if (!recordingRef.current) {
+      return;
+    }
+
+    // לפני await — טיק שרץ בזמן ההשהיה לא ימשיך את השעון
+    freezeRecordingClock();
+
     try {
-      if (!recordingRef.current) {
-        return;
-      }
-
-      // Pause the recording
       await recordingRef.current.pauseAsync();
-
-      // צבירת הזמן שחלף עד עכשיו
-      recordingAccumMsRef.current += Date.now() - recordingStartRef.current;
-
-      // Stop timer
-      if (recordingTimerRef.current) {
-        clearInterval(recordingTimerRef.current);
-        recordingTimerRef.current = null;
-      }
 
       clearWaveformPolling();
       recordingRef.current?.setOnRecordingStatusUpdate(null);
@@ -1320,6 +1354,24 @@ function ChatInputImpl({
       recordingDotOpacity.setValue(1);
     } catch (error) {
       logger.error('ChatInput', 'Recording error', error);
+      let stillRecording = false;
+      try {
+        const status = await recordingRef.current?.getStatusAsync();
+        stillRecording = !!status?.isRecording;
+      } catch {
+        stillRecording = false;
+      }
+      if (stillRecording) {
+        startRecordingClock();
+        return;
+      }
+      setIsRecording(false);
+      setIsPaused(true);
+      clearWaveformPolling();
+      recordingRef.current?.setOnRecordingStatusUpdate(null);
+      pulseAnimationRef.current?.stop();
+      pulseAnimationRef.current = null;
+      recordingDotOpacity.setValue(1);
     }
   };
 
@@ -1356,15 +1408,8 @@ function ChatInputImpl({
       pulseAnimationRef.current = pulseAnim;
       pulseAnim.start();
 
-      // המשך מדידת הזמן מהנקודה שעצרנו
-      recordingStartRef.current = Date.now();
-      recordingTimerRef.current = setInterval(() => {
-        const elapsedMs = recordingAccumMsRef.current + (Date.now() - recordingStartRef.current);
-        const seconds = Math.floor(elapsedMs / 1000);
-        const progress = Math.min(seconds / MAX_RECORDING_DURATION, 1);
-        timelineProgress.value = progress;
-        setRecordingDuration(seconds);
-      }, 250);
+      // המשך מדידת הזמן מהנקודה שעצרנו — בלי הזמן של ההשהיה
+      startRecordingClock();
 
       recordingRef.current.setOnRecordingStatusUpdate(handleRecordingStatus);
       recordingRef.current.setProgressUpdateInterval(32);
@@ -1389,10 +1434,7 @@ function ChatInputImpl({
         return;
       }
 
-      if (recordingTimerRef.current) {
-        clearInterval(recordingTimerRef.current);
-        recordingTimerRef.current = null;
-      }
+      freezeRecordingClock();
 
       clearWaveformPolling();
       recordingRef.current.setOnRecordingStatusUpdate(null);
@@ -1403,11 +1445,12 @@ function ChatInputImpl({
       const uri = stopped?.uri ?? recordingRef.current.getURI?.() ?? null;
       recordingRef.current = null;
 
-      // משך סופי מדויק — מעדיף את durationMillis האמיתי של ההקלטה
-      const totalMs = typeof status.durationMillis === 'number'
-        ? status.durationMillis
-        : recordingAccumMsRef.current + (Date.now() - recordingStartRef.current);
-      setRecordingDuration(Math.max(0, Math.floor(totalMs / 1000)));
+      // זמן דיבור בלבד. durationMillis אחרי השהיה לפעמים כולל את ההפסקה.
+      const speechMs = recordingAccumMsRef.current;
+      const nativeMs = typeof status.durationMillis === 'number' ? status.durationMillis : speechMs;
+      const totalMs = speechMs > 0 ? Math.min(speechMs, nativeMs > 0 ? nativeMs : speechMs) : nativeMs;
+      publishRecordingSeconds(totalMs);
+      recordingAccumMsRef.current = totalMs;
 
       setIsRecording(false);
       setIsPaused(true);
@@ -1507,6 +1550,14 @@ function ChatInputImpl({
     if (!recordedAudioUri) return;
 
     try {
+      try {
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: false,
+          playsInSilentModeIOS: true,
+        });
+      } catch {
+        /* עדיין מנסים לנגן */
+      }
       claimVoicePlayback(PREVIEW_PLAYER_ID, () => stopPreviewExternallyRef.current());
 
       if (soundRef.current) {
@@ -1578,9 +1629,6 @@ function ChatInputImpl({
         if (st.isPlaying) {
           setIsPlayingPreview(true);
           previewPlayingSV.value = 1;
-        } else {
-          setIsPlayingPreview(false);
-          previewPlayingSV.value = 0;
         }
       });
     } catch (error) {
@@ -1820,6 +1868,8 @@ function ChatInputImpl({
   };
 
   const cancelRecording = () => {
+    clearRecordingClock();
+    recordingAccumMsRef.current = 0;
     clearWaveformPolling();
     pulseAnimationRef.current?.stop();
     pulseAnimationRef.current = null;
@@ -2079,8 +2129,10 @@ function ChatInputImpl({
         soundRef.current.unloadAsync().catch((error) => { logger.error('ChatInput', 'Playback error', error); });
         soundRef.current = null;
       }
+      recordingClockActiveRef.current = false;
       if (recordingTimerRef.current) {
         clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
       }
       if (waveformIntervalRef.current) {
         clearInterval(waveformIntervalRef.current);
@@ -2239,10 +2291,10 @@ function ChatInputImpl({
                     onScrubStart={onPreviewScrubStart}
                     onScrubUpdate={onPreviewScrubUpdate}
                     onScrubEnd={onPreviewScrubEnd}
-                    thumbColor="rgba(255, 255, 255, 0.92)"
-                    activeColor="rgba(255, 255, 255, 0.72)"
-                    inactiveColor="rgba(255, 255, 255, 0.28)"
-                    nearActiveColor="rgba(255, 255, 255, 0.5)"
+                    thumbColor={isDarkMode ? 'rgba(255, 255, 255, 0.92)' : DesignTokens.colors.text.primary}
+                    activeColor={isDarkMode ? 'rgba(255, 255, 255, 0.72)' : DesignTokens.colors.text.primary}
+                    inactiveColor={isDarkMode ? 'rgba(255, 255, 255, 0.28)' : 'rgba(30, 26, 36, 0.9)'}
+                    nearActiveColor={isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(30, 26, 36, 0.72)'}
                   />
                 </View>
                 <View style={styles.timerContainer}>
@@ -2250,7 +2302,7 @@ function ChatInputImpl({
                     {formatRecordingTime(
                       isPlayingPreview && previewDuration > 0
                         ? Math.max(0, Math.floor(previewPosition / 1000))
-                        : recordingDuration,
+                        : Math.max(0, Math.floor((previewDuration || recordingDuration * 1000) / 1000)),
                     )}
                   </Text>
                 </View>

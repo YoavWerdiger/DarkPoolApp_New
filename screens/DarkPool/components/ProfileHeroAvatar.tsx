@@ -82,14 +82,14 @@ function ProfileHeroAvatarInner({
         height: OUTER,
         borderRadius: outerR,
         borderWidth: RING,
-        borderColor: tokens.colors.primary.main,
-        backgroundColor: '#0f160f',
+        borderColor: tokens.colors.border.divider,
+        backgroundColor: tokens.colors.background.cardSolid,
         alignItems: 'center' as const,
         justifyContent: 'center' as const,
       },
       style,
     ],
-    [OUTER, outerR, style, tokens.colors.primary.main]
+    [OUTER, outerR, style, tokens.colors.background.cardSolid, tokens.colors.border.divider]
   );
 
   const clipStyle = useMemo(
@@ -100,9 +100,9 @@ function ProfileHeroAvatarInner({
       overflow: 'hidden' as const,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
-      backgroundColor: '#0a0e0a',
+      backgroundColor: tokens.colors.background.navChrome,
     }),
-    [INNER, innerR]
+    [INNER, innerR, tokens.colors.background.navChrome]
   );
 
   const imageStyle = useMemo(
@@ -159,7 +159,11 @@ function ProfileHeroAvatarInner({
     <View style={ringStyle}>
       <View style={clipStyle} collapsable={false}>
         <LinearGradient
-          colors={['#1a261a', '#0f160f', '#0a0e0a']}
+          colors={[
+            tokens.colors.background.navChrome,
+            tokens.colors.background.cardSolid,
+            tokens.colors.background.primary,
+          ]}
           style={[imageStyle, styles.iconBg]}
         >
           <Ionicons

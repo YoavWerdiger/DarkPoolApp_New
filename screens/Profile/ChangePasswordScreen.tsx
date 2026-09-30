@@ -5,27 +5,30 @@ import {
   Text,
   ScrollView,
   TextInput,
-  TouchableOpacity,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
-  Pressable,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Eye, EyeOff, ShieldCheck } from 'lucide-react-native';
+import { ShieldCheck } from 'lucide-react-native';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
-import UICard from '../../components/ui/UICard';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { APP_LAYOUT } from '../../components/ui/appLayout';
+import { APP_TYPE } from '../../components/ui/appType';
+import {
+  formFieldInputStyle,
+  formFieldLabelStyle,
+  formFieldShellStyle,
+} from '../../components/ui/formControl';
+import { PasswordVisibilityToggle } from '../../components/ui/PasswordVisibilityToggle';
+import UIButton from '../../components/ui/UIButton';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import {
   settingsHebrewText,
-  settingsBodyType,
   settingsMetaType,
   settingsCaptionType,
-  settingsButtonLabelStyle,
 } from '../../components/profile/settingsType';
 
 type PasswordFieldProps = {
@@ -52,43 +55,31 @@ function PasswordField({
   editable = true,
 }: PasswordFieldProps) {
   const [focused, setFocused] = useState(false);
-  const borderColor = error
-    ? tokens.colors.border.danger
-    : focused
-      ? tokens.colors.primary.main
-      : tokens.colors.border.divider;
 
   return (
     <View style={styles.fieldBlock}>
-      <Text style={[styles.fieldLabel, { color: tokens.colors.text.tertiary }]}>
+      <Text
+        style={[
+          formFieldLabelStyle({ tokens, focused, error }),
+          styles.fieldLabel,
+          !error && { color: tokens.colors.text.secondary },
+        ]}
+      >
         {label}
       </Text>
       <View
         style={[
           styles.inputShell,
+          formFieldShellStyle({ tokens, focused, error }),
           {
-            backgroundColor: tokens.colors.background.input,
-            borderColor,
-            borderRadius: tokens.borderRadius.md,
+            borderRadius: tokens.borderRadius.full,
+            backgroundColor: focused
+              ? tokens.colors.background.tertiary
+              : tokens.colors.background.cardSolid,
           },
         ]}
       >
-        <Pressable
-          onPress={() => {
-            void HapticFeedback.selection();
-            onToggleVisible();
-          }}
-          hitSlop={10}
-          style={styles.eyeBtn}
-          accessibilityRole="button"
-          accessibilityLabel={visible ? 'הסתר סיסמה' : 'הצג סיסמה'}
-        >
-          {visible ? (
-            <EyeOff size={20} color={tokens.colors.text.tertiary} strokeWidth={2} />
-          ) : (
-            <Eye size={20} color={tokens.colors.text.tertiary} strokeWidth={2} />
-          )}
-        </Pressable>
+        <PasswordVisibilityToggle visible={visible} onToggle={onToggleVisible} />
         <TextInput
           value={value}
           onChangeText={onChangeText}
@@ -101,7 +92,7 @@ function PasswordField({
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           textContentType="password"
-          style={[styles.input, { color: tokens.colors.text.primary }]}
+          style={[formFieldInputStyle(), { color: tokens.colors.text.primary }]}
         />
       </View>
     </View>
@@ -215,7 +206,10 @@ export default function ChangePasswordScreen({ navigation }: any) {
   };
 
   return (
-    <SafeAreaView style={styles.root} edges={['top']}>
+    <SafeAreaView
+      style={[styles.root, { backgroundColor: tokens.colors.background.primary }]}
+      edges={['top']}
+    >
       <ChatSubScreenHeader
         title="שינוי סיסמה"
         onBack={() => {
@@ -234,30 +228,16 @@ export default function ChangePasswordScreen({ navigation }: any) {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{
-            paddingHorizontal: tokens.spacing.base,
-            paddingTop: tokens.spacing.sm,
-            paddingBottom: tokens.spacing.xl,
+            paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+            paddingTop: APP_LAYOUT.sectionHeaderToContent,
+            paddingBottom: APP_LAYOUT.componentGap,
           }}
         >
-          <Text
-            style={[
-              styles.intro,
-              { color: tokens.colors.text.secondary },
-            ]}
-          >
+          <Text style={[styles.intro, { color: tokens.colors.text.secondary }]}>
             נאמת את הסיסמה הנוכחית ואז נשמור סיסמה חדשה.
           </Text>
 
-          <UICard
-            variant="glass"
-            glassIntensity="light"
-            padding="md"
-            style={{
-              borderRadius: tokens.borderRadius.xl,
-              borderWidth: 1,
-              borderColor: tokens.colors.border.main,
-            }}
-          >
+          <View>
             <PasswordField
               label="סיסמה נוכחית"
               value={currentPassword}
@@ -298,7 +278,7 @@ export default function ChangePasswordScreen({ navigation }: any) {
                           backgroundColor:
                             i < strength
                               ? strengthColor
-                              : 'rgba(255,255,255,0.08)',
+                              : tokens.colors.background.tertiary,
                         },
                       ]}
                     />
@@ -353,79 +333,44 @@ export default function ChangePasswordScreen({ navigation }: any) {
               <View
                 style={[
                   styles.errorBanner,
-                  {
-                    backgroundColor: `${tokens.colors.danger.main}18`,
-                    borderColor: tokens.colors.border.danger,
-                  },
+                  { backgroundColor: 'rgba(239, 68, 68, 0.1)' },
                 ]}
               >
                 <Text
-                  style={{
-                    ...settingsHebrewText,
-                    ...settingsMetaType,
-                    fontWeight: '600',
-                    color: tokens.colors.danger.main,
-                  }}
+                  style={[
+                    styles.inlineHint,
+                    { color: tokens.colors.danger.main, marginTop: 0, marginBottom: 0 },
+                  ]}
                 >
                   {formError}
                 </Text>
               </View>
             ) : null}
-          </UICard>
+          </View>
         </ScrollView>
 
         <View
           style={[
             styles.saveBar,
             {
-              paddingHorizontal: tokens.spacing.base,
-              paddingTop: tokens.spacing.sm,
-              paddingBottom: Math.max(insets.bottom, 12),
-              borderTopColor: tokens.colors.border.subtle,
-              backgroundColor: 'rgba(10, 14, 10, 0.92)',
+              paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+              paddingTop: APP_LAYOUT.cardStackGap,
+              paddingBottom: Math.max(insets.bottom, APP_LAYOUT.cardStackGap),
+              backgroundColor: tokens.colors.background.primary,
             },
           ]}
         >
-          <TouchableOpacity
-            disabled={!canSubmit}
+          <UIButton
+            title={saving ? 'מעדכן...' : 'עדכן סיסמה'}
+            variant="primary"
+            fullWidth
+            loading={saving}
+            disabled={!canSubmit || saving}
             onPress={() => {
               void HapticFeedback.medium();
               void handleSave();
             }}
-            activeOpacity={0.85}
-            style={[
-              styles.submitBtn,
-              {
-                backgroundColor: tokens.colors.primary.main,
-                borderRadius: 999,
-                opacity: canSubmit ? 1 : 0.45,
-                ...tokens.shadows.greenGlow,
-              },
-            ]}
-          >
-            {saving ? (
-              <View style={styles.saveBusy}>
-                <ActivityIndicator size="small" color={tokens.colors.text.inverse} />
-                <Text
-                  style={[
-                    styles.submitText,
-                    { color: tokens.colors.text.inverse },
-                  ]}
-                >
-                  מעדכן...
-                </Text>
-              </View>
-            ) : (
-              <Text
-                style={[
-                  styles.submitText,
-                  { color: tokens.colors.text.inverse },
-                ]}
-              >
-                עדכן סיסמה
-              </Text>
-            )}
-          </TouchableOpacity>
+          />
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -443,90 +388,67 @@ const styles = StyleSheet.create({
   intro: {
     ...settingsHebrewText,
     ...settingsMetaType,
-    marginBottom: 14,
+    width: '100%',
+    textAlign: 'right',
+    marginBottom: APP_LAYOUT.componentGap,
   },
   fieldBlock: {
-    marginBottom: 16,
+    marginBottom: APP_LAYOUT.componentGap,
   },
   fieldLabel: {
-    ...settingsHebrewText,
-    ...settingsCaptionType,
-    marginBottom: 8,
+    alignSelf: 'stretch',
+    width: '100%',
+    textAlign: 'right',
+    marginBottom: APP_LAYOUT.groupLabelToContent,
+    fontSize: APP_TYPE.groupLabel.fontSize,
+    fontWeight: APP_TYPE.groupLabel.fontWeight,
+    lineHeight: APP_TYPE.groupLabel.lineHeight,
   },
   inputShell: {
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    minHeight: 50,
+    paddingHorizontal: APP_LAYOUT.cardPadding,
+    minHeight: 52,
     flexDirection: 'row',
     alignItems: 'center',
   },
-  input: {
-    ...settingsHebrewText,
-    ...settingsBodyType,
-    flex: 1,
-    paddingVertical: 13,
-    paddingHorizontal: 0,
-    minHeight: 48,
-  },
-  eyeBtn: {
-    padding: 4,
-    marginLeft: 4,
-  },
   strengthBlock: {
-    marginTop: -8,
-    marginBottom: 16,
+    marginBottom: APP_LAYOUT.componentGap,
   },
   strengthBars: {
     flexDirection: 'row',
-    gap: 6,
-    marginBottom: 6,
+    gap: APP_LAYOUT.stackGapSmall,
+    marginBottom: APP_LAYOUT.stackGapSmall,
   },
   strengthBar: {
     flex: 1,
     height: 4,
-    borderRadius: 999,
+    borderRadius: 2,
   },
   strengthLabel: {
     ...settingsHebrewText,
     ...settingsCaptionType,
+    width: '100%',
+    textAlign: 'right',
   },
   inlineHint: {
     ...settingsHebrewText,
     ...settingsCaptionType,
-    marginTop: -8,
-    marginBottom: 12,
+    width: '100%',
+    textAlign: 'right',
+    marginTop: APP_LAYOUT.stackGapSmall,
+    marginBottom: APP_LAYOUT.cardStackGap,
   },
   matchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    gap: 6,
-    marginTop: -8,
-    marginBottom: 12,
+    gap: APP_LAYOUT.stackGapSmall,
+    marginTop: APP_LAYOUT.stackGapSmall,
+    marginBottom: APP_LAYOUT.cardStackGap,
   },
   errorBanner: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 4,
+    borderRadius: APP_LAYOUT.cardStackGap,
+    paddingHorizontal: APP_LAYOUT.cardPadding,
+    paddingVertical: APP_LAYOUT.stackGapSmall,
   },
-  saveBar: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  submitBtn: {
-    minHeight: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-  },
-  saveBusy: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  submitText: {
-    ...settingsButtonLabelStyle,
-  },
+  saveBar: {},
 });

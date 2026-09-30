@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import UICard from '../../../components/ui/UICard';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
+import { UI_CARD_RADIUS } from '../../../components/ui/appLayout';
 import {
   DARK_POOL_TYPE,
   darkPoolPhysicalRightText,
@@ -34,7 +35,7 @@ export function TickerInsiderBuyRow({ item, onPress }: Props) {
 
   return (
     <UICard
-      variant="glass"
+      variant="soft"
       glassIntensity="light"
       padding="md"
       disableBlur
@@ -47,7 +48,7 @@ export function TickerInsiderBuyRow({ item, onPress }: Props) {
         <View style={styles.main}>
           <Text style={styles.primary} numberOfLines={1}>
             <Text style={styles.name}>{displayName}</Text>
-            <Text style={{ color: sideColor, fontWeight: '800' }}>{` ${verb} `}</Text>
+            <Text style={{ color: sideColor, fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight }}>{` ${verb} `}</Text>
             <Text style={styles.ticker}>{toDataIsland(tickerSym)}</Text>
           </Text>
           {item.insider_role?.trim() ? (
@@ -76,7 +77,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     card: {
       marginBottom: 8,
-      borderRadius: tokens.borderRadius.lg,
+      borderRadius: UI_CARD_RADIUS,
       backgroundColor: 'transparent',
     },
     row: {
@@ -93,15 +94,15 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     primary: {
       ...darkPoolPhysicalRightText,
       fontSize: DARK_POOL_TYPE.body.fontSize,
-      fontWeight: '800',
+      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
     },
     name: {
-      fontWeight: '800',
+      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
     },
     ticker: {
-      fontWeight: '800',
+      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
       letterSpacing: 0.2,
     },
@@ -125,7 +126,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     value: {
       fontSize: DARK_POOL_TYPE.body.fontSize,
-      fontWeight: '800',
+      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
       writingDirection: 'ltr',
       textAlign: 'right',

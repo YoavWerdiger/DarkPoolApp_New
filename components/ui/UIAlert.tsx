@@ -13,8 +13,9 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from './DesignTokens';
 import { HapticFeedback } from '../../utils/hapticFeedback';
-import { sheetActionColors } from './BottomSheet/sheetGlass';
 import { applyAppSystemUI } from '../../lib/androidSystemUI';
+import { APP_TYPE, appPhysicalRightText, appSheetButtonLabelStyle } from './appType';
+import { APP_LAYOUT, UI_CARD_RADIUS } from './appLayout';
 
 export type UIAlertType = 'info' | 'success' | 'warning' | 'error';
 
@@ -36,6 +37,13 @@ export interface UIAlertProps {
   closeOnBackdropPress?: boolean;
 }
 
+const HEBREW_COPY = /[\u0590-\u05FF]/;
+
+function dialogCopyAlign(text?: string): TextStyle {
+  if (text && HEBREW_COPY.test(text)) return appPhysicalRightText;
+  return { textAlign: 'center', writingDirection: 'auto' };
+}
+
 const UIAlert: React.FC<UIAlertProps> = ({
   visible,
   title,
@@ -47,7 +55,7 @@ const UIAlert: React.FC<UIAlertProps> = ({
   closeOnBackdropPress = false,
 }) => {
   const DesignTokens = useDesignTokens();
-  const { colors, typography, spacing, borderRadius } = DesignTokens;
+  const { colors, spacing, borderRadius } = DesignTokens;
   
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
@@ -89,7 +97,6 @@ const UIAlert: React.FC<UIAlertProps> = ({
   };
 
   const typeConfig = getTypeConfig();
-  const actionColors = sheetActionColors(DesignTokens);
 
   const handleButtonPress = (button: UIAlertButton) => {
     if (button.style === 'destructive') {
@@ -109,37 +116,31 @@ const UIAlert: React.FC<UIAlertProps> = ({
 
   const rtlCard: ViewStyle = I18nManager.isRTL ? { direction: 'rtl' } : {};
 
-  const glass = DesignTokens.getGlassCardStyle('medium');
   const containerStyle: ViewStyle = {
-    ...glass,
-    padding: spacing.xl,
+    backgroundColor: colors.background.cardSolid,
+    borderRadius: UI_CARD_RADIUS,
+    borderWidth: 0,
+    padding: APP_LAYOUT.cardPadding,
     width: '100%',
     maxWidth: 340,
     overflow: 'hidden',
-    backgroundColor: colors.bubbleOther,
-    borderWidth: 0,
     ...rtlCard,
   };
 
   const titleStyle: TextStyle = {
-    fontSize: typography.title2.size,
-    fontWeight: typography.title2.weight as TextStyle['fontWeight'],
-    letterSpacing: typography.title2.letterSpacing,
-    lineHeight: typography.title2.lineHeight,
+    ...APP_TYPE.cardTitle,
     color: colors.text.primary,
-    textAlign: 'center',
-    writingDirection: 'rtl',
-    marginBottom: message ? spacing.md : 0,
+    width: '100%',
+    marginBottom: message ? APP_LAYOUT.cardTitleToBodyGap : 0,
+    ...dialogCopyAlign(title),
   };
 
   const messageStyle: TextStyle = {
-    fontSize: typography.body.size,
-    fontWeight: typography.body.weight as TextStyle['fontWeight'],
+    ...APP_TYPE.body,
     color: colors.text.secondary,
-    textAlign: 'center',
-    writingDirection: 'rtl',
-    lineHeight: typography.body.lineHeight,
+    width: '100%',
     marginBottom: spacing.lg,
+    ...dialogCopyAlign(message),
   };
 
   const twoCol = buttons.length === 2;
@@ -157,7 +158,7 @@ const UIAlert: React.FC<UIAlertProps> = ({
       minHeight: 48,
       paddingVertical: spacing.sm,
       paddingHorizontal: spacing.base,
-      borderRadius: borderRadius.full,
+      borderRadius: borderRadius.button,
       marginBottom: buttons.length > 2 && index < buttons.length - 1 ? spacing.sm : 0,
       alignItems: 'center',
       justifyContent: 'center',
@@ -169,51 +170,33 @@ const UIAlert: React.FC<UIAlertProps> = ({
       case 'destructive':
         return {
           ...baseStyle,
-          backgroundColor: actionColors.destructive.backgroundColor,
-          borderWidth: actionColors.destructive.borderWidth,
-          borderColor: actionColors.destructive.borderColor,
+          backgroundColor: colors.danger.main,
+          borderWidth: 0,
         };
       case 'cancel':
         return {
           ...baseStyle,
-          backgroundColor: actionColors.cancel.backgroundColor,
-          borderWidth: actionColors.cancel.borderWidth,
-          borderColor: actionColors.cancel.borderColor,
+          backgroundColor: 'transparent',
+          borderWidth: 0,
         };
       default:
-        // אישור — כפתור לבן על דיאלוג כהה (לא inverse/שחור)
         return {
           ...baseStyle,
-          backgroundColor: '#FFFFFF',
+          backgroundColor: colors.primary.main,
           borderWidth: 0,
-          borderColor: '#FFFFFF',
         };
     }
   };
 
   const getButtonTextStyle = (button: UIAlertButton): TextStyle => {
+    const label: TextStyle = { ...appSheetButtonLabelStyle };
     switch (button.style) {
       case 'destructive':
-        return {
-          color: actionColors.destructive.color,
-          fontWeight: typography.fontWeight.semibold,
-          textAlign: 'center',
-          fontSize: typography.fontSize.base,
-        };
+        return { ...label, color: '#FFFFFF' };
       case 'cancel':
-        return {
-          color: actionColors.cancel.color,
-          fontWeight: typography.fontWeight.medium,
-          textAlign: 'center',
-          fontSize: typography.fontSize.base,
-        };
+        return { ...label, color: colors.text.secondary };
       default:
-        return {
-          color: colors.text.inverse,
-          fontWeight: typography.fontWeight.semibold,
-          textAlign: 'center',
-          fontSize: typography.fontSize.base,
-        };
+        return { ...label, color: colors.text.inverse };
     }
   };
 

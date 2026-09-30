@@ -1,6 +1,5 @@
 import React, { useCallback } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { ScreenChrome } from '../../components/ui/ScreenChrome';
@@ -26,7 +25,6 @@ export default function MarketsScreen() {
 
   return (
     <ScreenChrome>
-      <StatusBar style="light" />
       <RNSafeAreaView style={styles.safe} edges={['top']}>
         <MainDrawerScreenHeader title="שווקים" onMenuPress={openMainDrawer} />
         <View style={[styles.body, { marginBottom: Math.max(0, mainTabsHeight - 12) }]}>

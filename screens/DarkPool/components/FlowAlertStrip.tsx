@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import UICard from '../../../components/ui/UICard';
+import { UI_CARD_RADIUS } from '../../../components/ui/appLayout';
+import { APP_TYPE } from '../../../components/ui/appType';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
@@ -33,7 +35,7 @@ export function FlowAlertStrip({ alerts, onTickerPress }: Props) {
               onTickerPress?.(a.ticker);
             }}
           >
-            <UICard variant="glass" glassIntensity="light" padding="sm" disableBlur style={styles.chip}>
+            <UICard variant="soft" glassIntensity="light" padding="sm" disableBlur style={styles.chip}>
               <View style={styles.chipTop}>
                 <TickerLogo symbol={a.ticker} size={28} borderRadius={8} />
                 <Text style={styles.ticker}>{a.ticker}</Text>
@@ -62,9 +64,10 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     wrap: { marginBottom: tokens.spacing.lg },
     title: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: tokens.colors.text.tertiary,
+      fontSize: APP_TYPE.groupLabel.fontSize,
+      lineHeight: APP_TYPE.groupLabel.lineHeight,
+      fontWeight: APP_TYPE.groupLabel.fontWeight,
+      color: tokens.colors.text.secondary,
       textAlign: 'left',
       marginBottom: 8,
       writingDirection: 'rtl',
@@ -76,7 +79,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     chip: {
       width: 128,
-      borderRadius: tokens.borderRadius.xl,
+      borderRadius: UI_CARD_RADIUS,
       backgroundColor: 'transparent',
     },
     chipTop: {
@@ -86,29 +89,33 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       marginBottom: 4,
     },
     ticker: {
-      fontSize: 15,
-      fontWeight: '900',
+      fontSize: APP_TYPE.cardTitle.fontSize,
+      lineHeight: APP_TYPE.cardTitle.lineHeight,
+      fontWeight: APP_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
       writingDirection: 'ltr',
     },
     type: {
-      fontSize: 11,
-      fontWeight: '800',
+      fontSize: APP_TYPE.caption2.fontSize,
+      lineHeight: APP_TYPE.caption2.lineHeight,
+      fontWeight: APP_TYPE.caption2.fontWeight,
       writingDirection: 'rtl',
     },
     call: { color: tokens.colors.primary.main },
     put: { color: tokens.colors.text.danger },
     prem: {
       marginTop: 4,
-      fontSize: 14,
-      fontWeight: '800',
+      fontSize: APP_TYPE.cardBody.fontSize,
+      lineHeight: APP_TYPE.cardBody.lineHeight,
+      fontWeight: APP_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
       writingDirection: 'ltr',
     },
     rule: {
       marginTop: 4,
-      fontSize: 10,
-      lineHeight: 14,
+      fontSize: APP_TYPE.caption2.fontSize,
+      lineHeight: APP_TYPE.caption2.lineHeight,
+      fontWeight: APP_TYPE.caption2.fontWeight,
       color: tokens.colors.text.tertiary,
       textAlign: 'left',
       writingDirection: 'rtl',

@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { appCardSubtitleStyle } from '../../../components/ui/appType';
 import type { WatchlistFilterMode } from '../../../services/watchlist/watchlistTypes';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 import { ROW_PAD_H } from '../watchlistTheme';
@@ -25,7 +26,7 @@ export function WatchlistFilterBar({ mode, onChange }: Props) {
     () =>
       StyleSheet.create({
         wrap: {
-          borderBottomWidth: StyleSheet.hairlineWidth,
+          borderBottomWidth: 1,
           borderBottomColor: tokens.colors.border.divider,
         },
         scroll: {
@@ -39,22 +40,20 @@ export function WatchlistFilterBar({ mode, onChange }: Props) {
           paddingHorizontal: 10,
           paddingVertical: 5,
           borderRadius: 8,
-          backgroundColor: tokens.colors.glass.card.bg,
+          backgroundColor: tokens.colors.background.navChrome,
           borderWidth: 0,
-          borderColor: tokens.colors.border.subtle,
         },
         chipActive: {
           backgroundColor: tokens.colors.primary.dim,
-          borderColor: tokens.colors.border.accent,
         },
         text: {
-          color: tokens.colors.text.tertiary,
-          fontSize: 11,
-          fontWeight: '600',
+          ...appCardSubtitleStyle,
+          width: undefined,
+          marginTop: 0,
+          color: tokens.colors.text.secondary,
         },
         textActive: {
           color: tokens.colors.primary.main,
-          fontWeight: '700',
         },
       }),
     [tokens]

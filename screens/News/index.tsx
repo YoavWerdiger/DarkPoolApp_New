@@ -3,7 +3,8 @@ import { View, Text, ActivityIndicator, type TextStyle, type ViewStyle } from 'r
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import { APP_TYPE, appSectionTitleStyle } from '../../components/ui/appType';
+import { APP_LAYOUT } from '../../components/ui/appLayout';
+import { appSectionTitleStyle } from '../../components/ui/appType';
 import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import BreakingNewsTab from './BreakingNewsTab';
 import { NewsScreenShell } from './NewsScreenShell';
@@ -137,9 +138,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       alignItems: 'center',
     },
     loadingText: {
-      marginTop: tokens.spacing.md,
-      fontSize: APP_TYPE.body.fontSize,
-      lineHeight: APP_TYPE.body.lineHeight,
+      marginTop: APP_LAYOUT.componentGap,
+      ...APP_TYPE.body,
       color: tokens.colors.text.secondary,
     },
     errorBoundary: {
@@ -158,8 +158,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       },
       message: {
         color: tokens.colors.text.secondary,
-        fontSize: APP_TYPE.body.fontSize,
-        lineHeight: APP_TYPE.body.lineHeight,
+        ...APP_TYPE.body,
         textAlign: 'center',
       },
     },

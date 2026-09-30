@@ -116,7 +116,7 @@ export function DistributionDonut({
                   height: avatarContainerSize,
                   borderRadius: avatarContainerSize / 2,
                   borderWidth,
-                  borderColor: tokens.colors.primary.main,
+                  borderColor: tokens.colors.border.divider,
                 },
               ]}
             >
@@ -143,8 +143,8 @@ export function DistributionDonut({
                   height: avatarContainerSize,
                   borderRadius: avatarContainerSize / 2,
                   borderWidth,
-                  borderColor: tokens.colors.primary.main,
-                  backgroundColor: `${tokens.colors.primary.main}22`,
+                  borderColor: tokens.colors.border.divider,
+                  backgroundColor: tokens.colors.background.tertiary,
                 },
               ]}
             >

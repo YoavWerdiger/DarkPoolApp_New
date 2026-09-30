@@ -21,9 +21,10 @@ import {
 } from './BottomSheet/sheetMotion';
 import {
   SHEET_BACKDROP_OPACITY,
-  SHEET_GLASS_FLOOR,
   SHEET_GLASS_INTENSITY,
-  SHEET_GLASS_OVERLAY,
+  SHEET_HANDLE_BORDER_RADIUS,
+  SHEET_HANDLE_HEIGHT,
+  SHEET_HANDLE_WIDTH,
   sheetContentBottomPadding,
   sheetSystemBarFillHeight,
 } from './BottomSheet/sheetGlass';
@@ -74,12 +75,9 @@ const styles = StyleSheet.create({
     zIndex: 0,
   },
   handle: {
-    width: 36,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: 'rgba(255, 255, 255, 0.14)',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255, 255, 255, 0.22)',
+    width: SHEET_HANDLE_WIDTH,
+    height: SHEET_HANDLE_HEIGHT,
+    borderRadius: SHEET_HANDLE_BORDER_RADIUS,
   },
 });
 
@@ -188,8 +186,7 @@ const UIBottomSheet: React.FC<UIBottomSheetProps> = ({
 
   const bottomPad = sheetContentBottomPadding(insets.bottom);
   const systemBarFillHeight = sheetSystemBarFillHeight(insets.bottom);
-  const sheetSurface =
-    tokens.colors.background.sheet ?? tokens.colors.background.secondary ?? SHEET_GLASS_FLOOR;
+  const sheetSurface = tokens.colors.background.cardSolid;
 
   return (
     <Modal
@@ -209,7 +206,7 @@ const UIBottomSheet: React.FC<UIBottomSheetProps> = ({
           pointerEvents="none"
           style={[
             styles.systemBarFill,
-            { height: systemBarFillHeight, backgroundColor: SHEET_GLASS_FLOOR },
+            { height: systemBarFillHeight, backgroundColor: tokens.colors.background.cardSolid },
           ]}
         />
         {/* Backdrop */}
@@ -250,8 +247,8 @@ const UIBottomSheet: React.FC<UIBottomSheetProps> = ({
               borderTopLeftRadius: 20,
               borderTopRightRadius: 20,
               borderWidth: StyleSheet.hairlineWidth,
-              borderColor: 'rgba(255,255,255,0.08)',
-              borderTopColor: 'rgba(255,255,255,0.12)',
+              borderColor: tokens.colors.border.divider,
+              borderTopColor: tokens.colors.border.divider,
               borderBottomWidth: 0,
               minHeight: 200,
               maxHeight: maxHeightValue,
@@ -272,7 +269,7 @@ const UIBottomSheet: React.FC<UIBottomSheetProps> = ({
             <SheetGlassBackground
               active={glassActive}
               intensity={SHEET_GLASS_INTENSITY}
-              overlayColor={SHEET_GLASS_OVERLAY}
+              overlayColor={tokens.colors.background.cardSolid}
             />
           ) : null}
 
@@ -281,7 +278,9 @@ const UIBottomSheet: React.FC<UIBottomSheetProps> = ({
               style={{ alignItems: 'center', paddingTop: 10, paddingBottom: 6, zIndex: 2 }}
               {...(dragToClose ? panResponder.panHandlers : {})}
             >
-              <View style={styles.handle} />
+              <View
+                style={[styles.handle, { backgroundColor: tokens.colors.text.secondary }]}
+              />
             </View>
           )}
 

@@ -1,7 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -59,7 +58,6 @@ export default function PortfoliosHubScreen() {
 
   return (
     <ScreenChrome>
-      <StatusBar style="light" />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <MainDrawerScreenHeader
           title="יומן מסחר"

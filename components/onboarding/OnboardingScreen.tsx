@@ -6,12 +6,12 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ViewStyle,
   TextStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { DayNavBlurButton } from '../ui/DayNavBlurButton';
 import { ScreenGradientBackground } from '../VideoBackground';
 import OnboardingProgressIndicator from './OnboardingProgressIndicator';
 
@@ -117,15 +117,6 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
     paddingTop: tokens.spacing.md,
   };
 
-  const iconButtonStyle: ViewStyle = {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-  };
-
   return (
     <View style={containerStyle}>
       <ScreenGradientBackground />
@@ -141,19 +132,17 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
             {/* Left side - Back button */}
             <View style={{ width: 44 }}>
               {showBack && onBack && (
-                <Pressable
+                <DayNavBlurButton
                   onPress={onBack}
-                  style={({ pressed }) => [
-                    iconButtonStyle,
-                    pressed && { opacity: 0.6 },
-                  ]}
+                  size={44}
+                  accessibilityLabel="חזרה"
                 >
                   <Ionicons
                     name="chevron-forward"
                     size={28}
                     color={tokens.colors.text.primary}
                   />
-                </Pressable>
+                </DayNavBlurButton>
               )}
             </View>
 
@@ -171,19 +160,17 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
             {/* Right side - Close button */}
             <View style={{ width: 44 }}>
               {showClose && onClose && (
-                <Pressable
+                <DayNavBlurButton
                   onPress={onClose}
-                  style={({ pressed }) => [
-                    iconButtonStyle,
-                    pressed && { opacity: 0.6 },
-                  ]}
+                  size={44}
+                  accessibilityLabel="סגור"
                 >
                   <Ionicons
                     name="close"
                     size={28}
                     color={tokens.colors.text.primary}
                   />
-                </Pressable>
+                </DayNavBlurButton>
               )}
             </View>
           </View>

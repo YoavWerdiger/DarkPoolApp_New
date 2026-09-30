@@ -1,15 +1,14 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { DarkTheme, NavigationContainer, Theme as NavTheme } from '@react-navigation/native';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { DarkTheme, DefaultTheme, NavigationContainer, Theme as NavTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { ThemeProvider } from './context/ThemeContext';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 import AuthStack from './navigation/AuthStack';
 import MainTabs from './navigation/MainTabs';
 import ProfileStack from './navigation/ProfileStack';
 import AdminStack from './navigation/AdminStack';
 import { View, ActivityIndicator, Text, StyleSheet, AppState, TouchableOpacity, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { LinearGradient } from 'expo-linear-gradient';
 import { AuroraHost } from './components/VideoBackground';
 import "./global.css";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -35,13 +34,14 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { enableScreens, enableFreeze } from 'react-native-screens';
 import { isRegistrationComplete } from './services/authService';
 import { APP_SYSTEM_BACKGROUND, applyAppSystemUI } from './lib/androidSystemUI';
+import { installAppFont } from './components/ui/appFont';
+import { useLoadAppFonts } from './components/ui/useLoadAppFonts';
 import {
   buildNotificationNavigateArgs,
   resolveNotificationNavTarget,
 } from './lib/notificationRouting';
 import { warmChatGroupOnPress } from './services/appPrefetch';
 import { lockAndroidChatSoftInput } from './components/chat/androidChatKeyboard';
-
 // מסכים לא-פעילים (כל ה-stacks ב-Drawer נשארים טעונים) מוקפאים ולא מתרנדרים ברקע —
 // משחרר את ה-JS thread ומשפר משמעותית את חלקות הניווט והאינטראקציות.
 enableScreens(true);
@@ -60,13 +60,36 @@ const AppNavigationTheme: NavTheme = {
     background: APP_SYSTEM_BACKGROUND,
     card: APP_SYSTEM_BACKGROUND,
     border: 'rgba(255,255,255,0.06)',
-    text: '#F4F1ED',
+    text: '#FFFFFF',
     notification: '#00C805',
   },
 };
 
 function AppContent() {
   const { user, isLoading, passwordRecoveryMode, signOut } = useAuth();
+  const { isDarkMode, theme: appTheme } = useTheme();
+  const canvas = isDarkMode ? APP_SYSTEM_BACKGROUND : appTheme.background;
+  const navigationTheme = useMemo<NavTheme>(() => {
+    if (isDarkMode) return AppNavigationTheme;
+    return {
+      ...DefaultTheme,
+      colors: {
+        ...DefaultTheme.colors,
+        primary: '#00C805',
+        background: appTheme.background,
+        card: appTheme.cardBackground,
+        text: appTheme.textPrimary,
+        border: appTheme.border,
+        notification: '#00C805',
+      },
+    };
+  }, [
+    appTheme.background,
+    appTheme.border,
+    appTheme.cardBackground,
+    appTheme.textPrimary,
+    isDarkMode,
+  ]);
   const { data: registrationData } = useRegistration();
   const [biometricLocked, setBiometricLocked] = useState(false);
   const [biometricChecked, setBiometricChecked] = useState(false);
@@ -178,18 +201,19 @@ function AppContent() {
   }, []);
 
   useEffect(() => {
-    void applyAppSystemUI().catch((error) => {
+    const mode = isDarkMode ? 'dark' : 'light';
+    void applyAppSystemUI(mode).catch((error) => {
       logger.warn('App', 'Failed to configure Android system UI', error);
     });
 
     // Modals / sheets / keyboard can leave system bars in a bad state — re-apply on resume.
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
-        void applyAppSystemUI();
+        void applyAppSystemUI(mode);
       }
     });
     return () => sub.remove();
-  }, []);
+  }, [isDarkMode]);
 
   // אתחול עדכונים מתוזמנים
   useEffect(() => {
@@ -285,7 +309,7 @@ function AppContent() {
   // מסך טעינה מינימלי בלבד בזמן טעינת ה-Auth (בלי splash \"מלאכותי\" ובלי תמונת רקע מרשת)
   if (isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: APP_SYSTEM_BACKGROUND, justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ flex: 1, backgroundColor: canvas, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#00C805" />
       </View>
     );
@@ -294,14 +318,14 @@ function AppContent() {
   // לא מציגים את ה-Main לפני שידוע אם נדרשת ביומטריה — מונע תחושת "זריקה" לשכבת הנעילה
   if (user && registrationDone && !biometricChecked) {
     return (
-      <View style={{ flex: 1, backgroundColor: APP_SYSTEM_BACKGROUND, justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ flex: 1, backgroundColor: canvas, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#00C805" />
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, direction: 'ltr', backgroundColor: APP_SYSTEM_BACKGROUND }}>
+    <View style={{ flex: 1, direction: 'ltr', backgroundColor: canvas }}>
       {/* KeyboardProvider בתוך עץ LTR — ה-dummy translateX של הספרייה לא מתהפך מ-forceRTL כמו מחוץ למעטפת (פרודקשן ≠ Expo Go). */}
       <KeyboardProvider
         statusBarTranslucent={Platform.OS === 'android'}
@@ -309,9 +333,9 @@ function AppContent() {
       >
       <AuroraHost>
       {/* edge-to-edge: רק style — backgroundColor/translucent נדחים באנדרואיד 15+ */}
-      <StatusBar style="light" />
+      <StatusBar style={isDarkMode ? 'light' : 'dark'} />
       {/* חייב להתאים ל־direction של ה־View המעטף — אחרת useLocale (rtl) לא תואם ל־Yoga (ltr) ו־react-native-drawer-layout מחשב translateX שגוי (רצועת מגירה בפרודקשן). */}
-      <NavigationContainer ref={rootNavigationRef} direction="ltr" theme={AppNavigationTheme}>
+      <NavigationContainer ref={rootNavigationRef} direction="ltr" theme={navigationTheme}>
         <Stack.Navigator screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: 'transparent' },
@@ -339,13 +363,7 @@ function AppContent() {
       </NavigationContainer>
 
       {biometricLocked && registrationDone && (
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: APP_SYSTEM_BACKGROUND, justifyContent: 'center', alignItems: 'center', zIndex: 9999 }]}>
-          <LinearGradient
-            colors={['#111111', '#1A1A1A', '#1A1A1A', '#111111']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: canvas, justifyContent: 'center', alignItems: 'center', zIndex: 9999 }]}>
           <View style={{ alignItems: 'center', gap: 24 }}>
             <View style={{
               width: 80,
@@ -357,10 +375,10 @@ function AppContent() {
             }}>
               <Fingerprint size={40} color="#00C805" strokeWidth={2} />
             </View>
-            <Text style={{ color: '#fff', fontSize: 22, fontWeight: '700', textAlign: 'center' }}>
+            <Text style={{ color: appTheme.textPrimary, fontSize: 22, fontWeight: '700', textAlign: 'center' }}>
               האפליקציה נעולה
             </Text>
-            <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 15, textAlign: 'center', paddingHorizontal: 40 }}>
+            <Text style={{ color: appTheme.textSecondary, fontSize: 15, textAlign: 'center', paddingHorizontal: 40 }}>
               אמת את זהותך באמצעות Face ID / Touch ID כדי להמשיך
             </Text>
             <TouchableOpacity
@@ -387,6 +405,15 @@ function AppContent() {
 }
 
 export default function App() {
+  const fontsLoaded = useLoadAppFonts();
+  if (fontsLoaded) installAppFont();
+
+  if (!fontsLoaded) {
+    return (
+      <GestureHandlerRootView style={{ flex: 1, backgroundColor: APP_SYSTEM_BACKGROUND }} />
+    );
+  }
+
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: APP_SYSTEM_BACKGROUND }}>
       <SafeAreaProvider>

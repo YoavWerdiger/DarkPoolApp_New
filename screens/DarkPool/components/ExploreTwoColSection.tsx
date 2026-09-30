@@ -2,10 +2,7 @@ import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import type { ExplorePerson } from '../../../services/darkpool/uwExploreService';
-import {
-  darkPoolSectionSubtitleStyle,
-  darkPoolSectionTitleStyle,
-} from '../darkPoolLayout';
+import { darkPoolSectionTitleStyle } from '../darkPoolLayout';
 import {
   EXPLORE_GRID_GAP,
   EXPLORE_GRID_ROWS,
@@ -16,7 +13,6 @@ import { ExplorePortraitCard } from './ExplorePortraitCard';
 
 interface Props {
   title: string;
-  subtitle?: string;
   people: ExplorePerson[];
   onPersonPress: (person: ExplorePerson) => void;
 }
@@ -24,7 +20,6 @@ interface Props {
 /** שני טורי דיוקן בגודל EXPLORE_PROFILE_CARD — גלילה אופקית לעוד אנשים. */
 export function ExploreTwoColSection({
   title,
-  subtitle,
   people,
   onPersonPress,
 }: Props) {
@@ -42,7 +37,6 @@ export function ExploreTwoColSection({
     <View style={styles.wrap}>
       <View style={styles.header}>
         <Text style={styles.title}>{title}</Text>
-        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
       <ScrollView
         horizontal
@@ -89,10 +83,6 @@ function createStyles(
     title: {
       ...darkPoolSectionTitleStyle,
       color: tokens.colors.text.primary,
-    },
-    subtitle: {
-      ...darkPoolSectionSubtitleStyle,
-      color: tokens.colors.text.tertiary,
     },
     cardRow: {
       direction: 'rtl',

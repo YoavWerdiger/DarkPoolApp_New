@@ -9,7 +9,6 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAfterNavigationTransition } from '../../hooks/afterNavigationTransition';
@@ -25,6 +24,12 @@ import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
 import * as Clipboard from 'expo-clipboard';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { ACADEMY_CARD_HP, ACADEMY_CARD_RADIUS } from '../../components/learning/academyCardLayout';
+import {
+  ACADEMY_TYPE,
+  academyCardSubtitleStyle,
+  academyCardTitleStyle,
+} from '../../components/learning/academyLayout';
+import { APP_LAYOUT } from '../../components/ui/appLayout';
 
 interface NoteWithDetails {
   id?: string;
@@ -134,6 +139,7 @@ export const MyNotesScreen: React.FC = () => {
 
               <DayNavBlurButton
                 size={36}
+                glass
                 glassIntensity="subtle"
                 accessibilityLabel="העתק הערה"
                 onPress={() => void handleCopyNote(item)}
@@ -181,7 +187,6 @@ export const MyNotesScreen: React.FC = () => {
   if (isLoading) {
     return (
       <ScreenChrome>
-        <StatusBar style="light" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
           <Text style={styles.loadingText}>טוען הערות...</Text>
@@ -192,7 +197,6 @@ export const MyNotesScreen: React.FC = () => {
 
   return (
     <ScreenChrome>
-      <StatusBar style="light" />
       <SafeAreaView edges={['top']} style={styles.safeAreaContainer}>
         <AcademySubScreenBar
           onBackPress={() => navigation.goBack()}
@@ -237,7 +241,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     loadingText: {
       marginTop: tokens.spacing.md,
-      fontSize: tokens.typography.fontSize.base,
+      ...ACADEMY_TYPE.body,
       color: tokens.colors.text.secondary,
     },
     listContainer: {
@@ -247,7 +251,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       flexGrow: 1,
     },
     noteWrap: {
-      marginBottom: tokens.spacing.md,
+      marginBottom: APP_LAYOUT.cardStackGap,
     },
     noteCard: {
       borderRadius: ACADEMY_CARD_RADIUS,
@@ -271,33 +275,22 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       flexShrink: 0,
     },
     noteCourseTitle: {
-      fontSize: 15,
-      fontWeight: '700',
+      ...academyCardTitleStyle,
       color: tokens.colors.text.primary,
-      textAlign: 'right',
-      writingDirection: 'rtl',
-      width: '100%',
     },
     noteLessonTitle: {
-      fontSize: 13,
-      fontWeight: '500',
-      color: tokens.colors.text.secondary,
-      textAlign: 'right',
-      writingDirection: 'rtl',
-      width: '100%',
+      ...academyCardSubtitleStyle,
+      marginTop: 0,
     },
     noteContent: {
-      fontSize: 14,
-      fontWeight: '500',
+      ...ACADEMY_TYPE.cardBody,
       color: tokens.colors.text.secondary,
       textAlign: 'right',
       writingDirection: 'rtl',
-      lineHeight: 21,
     },
     noteDate: {
-      marginTop: tokens.spacing.sm,
-      fontSize: 12,
-      fontWeight: '500',
+      marginTop: APP_LAYOUT.stackGapSmall,
+      ...ACADEMY_TYPE.caption,
       color: tokens.colors.text.tertiary,
       textAlign: 'right',
       writingDirection: 'rtl',
@@ -312,23 +305,21 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       height: 88,
       borderRadius: 44,
       borderWidth: 1,
-      borderColor: tokens.colors.border.primary,
+      borderColor: tokens.colors.border.divider,
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: tokens.spacing.lg,
       backgroundColor: 'rgba(255,255,255,0.04)',
     },
     emptyTitle: {
-      fontSize: tokens.typography.fontSize.lg,
-      fontWeight: '700',
+      ...ACADEMY_TYPE.cardTitle,
       color: tokens.colors.text.primary,
-      marginBottom: tokens.spacing.sm,
+      marginBottom: APP_LAYOUT.cardTitleToSubtitleGap,
       textAlign: 'center',
     },
     emptySubtitle: {
-      fontSize: tokens.typography.fontSize.base,
+      ...ACADEMY_TYPE.body,
       color: tokens.colors.text.secondary,
       textAlign: 'center',
-      lineHeight: 22,
     },
   });

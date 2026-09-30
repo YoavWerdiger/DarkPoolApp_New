@@ -4,7 +4,7 @@
  *   UICard חיצוני (זכוכית)
  *     דיוקן + שם + רמז תפקיד + משפט (פועל צבעוני / rest מעומעם) + meta
  *
- * בלי קן טיקר/מחיר — זה נשאר בכרטיס הראשי של פרטי העסקה.
+ * טיקר/מחיר — שורה plain בתוך אותו UICard (בלי כרטיס פנימי).
  * הקשה על הכרטיס = פרטי עסקה. הקשה על דיוקן/שם = פרופיל.
  * לא מניות מומצאות מטווח STOCK Act.
  */
@@ -14,13 +14,6 @@ import { Pressable, Text, View } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { InsiderAvatar } from './InsiderAvatar';
 import { DarkPoolFeedCard } from './DarkPoolFeedCard';
-import { DarkPoolNestedQuoteCard } from './DarkPoolNestedQuoteCard';
-import {
-  DARK_POOL_UNAVAILABLE,
-  formatReturnPct,
-  returnTone,
-} from '../utils/congressTradeDisplay';
-import { formatFeedLivePriceText } from '../utils/feedQuoteSlots';
 import {
   createTradeHeroCardStyles,
   FEED_AVATAR_SIZE,
@@ -64,13 +57,10 @@ export function DarkPoolTradeFeedCard({
   amountLabel,
   price,
   transactionDate,
-  changeSinceTradePct,
-  currentPrice,
   portraitUrl,
   personId,
   onPersonPress,
   onCardPress,
-  onTickerPress,
   personKind = 'insider',
   personHint: personHintProp,
 }: Props) {
@@ -112,17 +102,6 @@ export function DarkPoolTradeFeedCard({
   const a11y = [displayName, personHint, summary.sentence]
     .filter(Boolean)
     .join(', ');
-
-  const priceText = formatFeedLivePriceText(currentPrice);
-  const sinceTradeText = formatReturnPct(changeSinceTradePct);
-  const sinceTradeTone = returnTone(changeSinceTradePct);
-  const sinceTradeColor =
-    sinceTradeTone === 'positive'
-      ? tokens.colors.primary.main
-      : sinceTradeTone === 'negative'
-        ? tokens.colors.text.danger
-        : tokens.colors.text.secondary;
-  const openTicker = onTickerPress ?? onCardPress;
 
   return (
     <DarkPoolFeedCard
@@ -184,22 +163,6 @@ export function DarkPoolTradeFeedCard({
             ) : null}
           </View>
         </View>
-
-        <Pressable
-          onPress={openTicker}
-          disabled={!openTicker}
-          accessibilityRole={openTicker ? 'button' : undefined}
-          accessibilityLabel={openTicker ? `עמוד המניה ${ticker}` : undefined}
-        >
-          <DarkPoolNestedQuoteCard
-            ticker={ticker}
-            priceText={priceText}
-            changeText={sinceTradeText}
-            changeColor={sinceTradeColor}
-            changeTone={sinceTradeText ? sinceTradeTone : undefined}
-            missingText={!priceText ? DARK_POOL_UNAVAILABLE : null}
-          />
-        </Pressable>
       </View>
     </DarkPoolFeedCard>
   );

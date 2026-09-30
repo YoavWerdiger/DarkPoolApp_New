@@ -12,10 +12,12 @@ const courseCardSrc = readFileSync(
 );
 
 describe('academy lesson card typography', () => {
-  it('LessonRow uses card title/body tokens and title-to-body gap', () => {
+  it('LessonRow uses card title/body tokens and a 2px subtitle under the name', () => {
     expect(lessonRowSrc).toContain('appCardTitleStyle');
     expect(lessonRowSrc).toContain('appCardBodyStyle');
-    expect(lessonRowSrc).toContain('cardTitleToBodyGap');
+    expect(lessonRowSrc).not.toContain('cardTitleToBodyGap');
+    expect(lessonRowSrc).toContain('cardTitleToSubtitleGap');
+    expect(lessonRowSrc).toContain('שיעור {index + 1}');
     expect(lessonRowSrc).not.toContain('marginTop: T.spacing.xs');
   });
 

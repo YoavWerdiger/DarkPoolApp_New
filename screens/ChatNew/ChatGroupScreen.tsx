@@ -14,14 +14,13 @@ import { useChatKeyboardInsets } from '../../hooks/useChatKeyboardInsets';
 import Reanimated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useGenericKeyboardHandler } from 'react-native-keyboard-controller';
 
-import { BlurView } from 'expo-blur';
-import { chatPalette } from '../../components/chat/chatDesignTokens';
 import { ChatScreenShell } from '../../components/chat/ChatScreenShell';
 import UICard from '../../components/ui/UICard';
 import { CHROME_UICARD, chromeSurfaceCardStyle } from '../../components/ui/chromeControl';
 import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
 import { MAIN_SCREEN_HEADER_HP } from '../../components/ui/MainDrawerScreenHeader';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { LIGHT_CANVAS } from '../../components/ui/designTokensStatic';
 
 import { useChat, useChatActions } from '../../context/ChatContext';
 import { useAuth } from '../../context/AuthContext';
@@ -2225,6 +2224,7 @@ export default function ChatGroupScreen() {
               onPress={() => scrollToBottom(true)}
               accessibilityLabel="גלול להודעות האחרונות"
               size={32}
+              glass
             >
               <Ionicons
                 name="chevron-down"
@@ -2518,18 +2518,13 @@ const TypingIndicatorBubble = React.memo(({
           );
         })}
       </View>
-      <BlurView
-        intensity={Platform.OS === 'ios' ? 50 : 25}
-        tint="dark"
-        style={styles.typingBubble}
-      >
-        <View style={[StyleSheet.absoluteFill, styles.typingBubbleOverlay]} />
+      <View style={styles.typingBubble}>
         <View style={styles.typingDots}>
           <FadingDot delay={0} dotStyle={styles.typingDot} />
           <FadingDot delay={200} dotStyle={styles.typingDot} />
           <FadingDot delay={400} dotStyle={styles.typingDot} />
         </View>
-      </BlurView>
+      </View>
     </RNAnimated.View>
   );
 });
@@ -2542,7 +2537,9 @@ const HP = 20;
 /** גובה אחיד לכפתורי צד ולכרטיס שם הקבוצה */
 const CHAT_GROUP_HEADER_HEIGHT = 44;
 
-const createChatGroupStyles = (tokens: any) => StyleSheet.create({
+const createChatGroupStyles = (tokens: any) => {
+  const isDarkMode = tokens.colors.background.primary !== LIGHT_CANVAS;
+  return StyleSheet.create({
   /* ── Header — כרטיסי זכוכית אחידים (כפתורים + קבוצה) ── */
   headerOuterRow: {
     flexDirection: 'row-reverse',
@@ -2688,10 +2685,10 @@ const createChatGroupStyles = (tokens: any) => StyleSheet.create({
   dateDividerLine: {
     flex: 1,
     height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: tokens.colors.border.divider,
   },
   dateDividerBadge: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: tokens.colors.background.tertiary,
     paddingHorizontal: 14,
     paddingVertical: 5,
     borderRadius: 14,
@@ -2759,29 +2756,23 @@ const createChatGroupStyles = (tokens: any) => StyleSheet.create({
     borderWidth: 1.75,
     borderColor: tokens.colors.background.primary,
   },
-  // Glass bubble (same recipe as ReactionBar / chat glass cards): BlurView +
-  // translucent overlay + hairline border. Shape matches an incoming
-  // ("theirBubble") bubble: notch at the bottom-leading corner.
+  // Solid incoming bubble (bubbleOther). Notch at the bottom-leading corner.
   typingBubble: {
     paddingHorizontal: 12,
     paddingVertical: 11,
     minHeight: 30,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: tokens.colors.bubbleOther,
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
     borderBottomRightRadius: 12,
     borderBottomLeftRadius: 2,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: chatPalette.glassBorderStrong,
-    overflow: 'hidden',
-  },
-  typingBubbleOverlay: {
-    backgroundColor: chatPalette.glass,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-    borderBottomRightRadius: 12,
-    borderBottomLeftRadius: 2,
+    shadowColor: isDarkMode ? '#000' : 'transparent',
+    shadowOffset: isDarkMode ? { width: 0, height: 1 } : { width: 0, height: 0 },
+    shadowOpacity: isDarkMode ? 0.14 : 0,
+    shadowRadius: isDarkMode ? 3 : 0,
+    elevation: isDarkMode ? 2 : 0,
   },
   typingDots: {
     flexDirection: 'row',
@@ -2791,7 +2782,7 @@ const createChatGroupStyles = (tokens: any) => StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: tokens.colors.text.tertiary,
+    backgroundColor: tokens.colors.text.secondary,
   },
 
   /* ── Input area ── */
@@ -2903,3 +2894,4 @@ const createChatGroupStyles = (tokens: any) => StyleSheet.create({
     textAlign: 'center',
   },
 });
+};

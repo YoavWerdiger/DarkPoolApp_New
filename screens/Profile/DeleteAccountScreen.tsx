@@ -1,36 +1,42 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState } from 'react';
 import {
-  View,
   Text,
   ScrollView,
   TextInput,
-  TouchableOpacity,
-  ActivityIndicator,
+  View,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
-import UICard from '../../components/ui/UICard';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { useAuth } from '../../context/AuthContext';
 import { deleteOwnAccount } from '../../services/supportService';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { SettingsGlassCard } from '../../components/profile/ProfileSettingsUI';
 import {
   settingsHebrewText,
   settingsRowType,
   settingsBodyType,
-  settingsMetaType,
-  settingsButtonLabelStyle,
 } from '../../components/profile/settingsType';
+import { APP_LAYOUT } from '../../components/ui/appLayout';
+import {
+  formFieldInputStyle,
+  formFieldLabelStyle,
+  formFieldShellStyle,
+} from '../../components/ui/formControl';
+import UIButton from '../../components/ui/UIButton';
+import { PasswordVisibilityToggle } from '../../components/ui/PasswordVisibilityToggle';
 
 export default function DeleteAccountScreen({ navigation }: any) {
   const tokens = useDesignTokens();
   const { signOut } = useAuth();
   const [confirm, setConfirm] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [focused, setFocused] = useState<'confirm' | 'password' | null>(null);
 
   const handleDelete = () => {
     if (confirm.trim() !== 'מחק') {
@@ -66,34 +72,42 @@ export default function DeleteAccountScreen({ navigation }: any) {
     );
   };
 
-  const inputStyle = {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1,
-    borderColor: tokens.colors.border.divider,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    color: tokens.colors.text.primary,
-    ...settingsHebrewText,
-    ...settingsBodyType,
-    marginBottom: 12,
-  };
+  const shell = (field: 'confirm' | 'password') => [
+    {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      borderRadius: tokens.borderRadius.full,
+      paddingHorizontal: APP_LAYOUT.cardPadding,
+      minHeight: 52,
+      marginBottom: APP_LAYOUT.componentGap,
+    },
+    formFieldShellStyle({ tokens, focused: focused === field, error: false }),
+  ];
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: tokens.colors.background.primary }}
+      edges={['top', 'bottom']}
+    >
       <ChatSubScreenHeader title="מחיקת חשבון" onBack={() => navigation.goBack()} />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView contentContainerStyle={{ padding: tokens.spacing.base }}>
-          <UICard variant="glass" glassIntensity="light" padding="md">
+        <ScrollView
+          contentContainerStyle={{
+            paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+            paddingTop: APP_LAYOUT.sectionHeaderToContent,
+            paddingBottom: 48,
+          }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <SettingsGlassCard style={{ padding: APP_LAYOUT.cardPadding }}>
             <Text
               style={{
                 ...settingsHebrewText,
                 ...settingsRowType,
                 color: tokens.colors.danger.main,
-                marginBottom: 8,
               }}
             >
               פעולה בלתי הפיכה
@@ -103,73 +117,61 @@ export default function DeleteAccountScreen({ navigation }: any) {
                 ...settingsHebrewText,
                 ...settingsBodyType,
                 color: tokens.colors.text.secondary,
-                marginBottom: 16,
+                marginTop: APP_LAYOUT.titleSubtitleGap,
+                marginBottom: APP_LAYOUT.cardTitleToBodyGap,
               }}
             >
               למחיקת החשבון הקלידו את המילה מחק בשדה למטה. מומלץ גם לאמת עם הסיסמה.
             </Text>
 
-            <Text
-              style={{
-                ...settingsHebrewText,
-                ...settingsMetaType,
-                color: tokens.colors.text.tertiary,
-                marginBottom: 6,
-              }}
-            >
+            <Text style={formFieldLabelStyle({ tokens, focused: focused === 'confirm' })}>
               הקלידו מחק לאישור
             </Text>
-            <TextInput
-              value={confirm}
-              onChangeText={setConfirm}
-              autoCapitalize="none"
-              style={inputStyle}
-              placeholder="מחק"
-              placeholderTextColor={tokens.colors.text.tertiary}
-            />
+            <View style={shell('confirm')}>
+              <TextInput
+                value={confirm}
+                onChangeText={setConfirm}
+                autoCapitalize="none"
+                onFocus={() => setFocused('confirm')}
+                onBlur={() => setFocused(null)}
+                style={[formFieldInputStyle(), { color: tokens.colors.text.primary }]}
+                placeholder="מחק"
+                placeholderTextColor={tokens.colors.text.muted}
+              />
+            </View>
 
-            <Text
-              style={{
-                ...settingsHebrewText,
-                ...settingsMetaType,
-                color: tokens.colors.text.tertiary,
-                marginBottom: 6,
-              }}
-            >
+            <Text style={formFieldLabelStyle({ tokens, focused: focused === 'password' })}>
               סיסמה (מומלץ)
             </Text>
-            <TextInput
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCapitalize="none"
-              style={inputStyle}
-              placeholderTextColor={tokens.colors.text.tertiary}
-            />
+            <View style={[shell('password'), { marginBottom: APP_LAYOUT.cardStackGap }]}>
+              <PasswordVisibilityToggle
+                visible={showPassword}
+                onToggle={() => setShowPassword((v) => !v)}
+              />
+              <TextInput
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                onFocus={() => setFocused('password')}
+                onBlur={() => setFocused(null)}
+                style={[formFieldInputStyle(), { color: tokens.colors.text.primary }]}
+                placeholderTextColor={tokens.colors.text.muted}
+              />
+            </View>
 
-            <TouchableOpacity
+            <UIButton
+              title="מחק את החשבון"
+              variant="danger"
+              fullWidth
+              loading={saving}
               disabled={saving}
               onPress={() => {
                 void HapticFeedback.warning();
                 handleDelete();
               }}
-              style={{
-                backgroundColor: tokens.colors.danger.main,
-                borderRadius: 12,
-                paddingVertical: 14,
-                alignItems: 'center',
-                opacity: saving ? 0.6 : 1,
-              }}
-            >
-              {saving ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={{ ...settingsButtonLabelStyle, color: '#fff' }}>
-                  מחק את החשבון
-                </Text>
-              )}
-            </TouchableOpacity>
-          </UICard>
+            />
+          </SettingsGlassCard>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

@@ -10,7 +10,6 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -19,7 +18,6 @@ import UICard from '../../components/ui/UICard';
 import { ChatSessionBackdrop } from '../../components/chat/ChatSessionBackdrop';
 import { PortfolioScreenHeader } from './components/PortfolioScreenHeader';
 import {
-  FormLabelLink,
   SectionHeader,
   TextField,
 } from './components/PortfolioFormFields';
@@ -33,7 +31,6 @@ import {
 import { connectColmex, BrokerEdgeError } from '../../services/brokers';
 import type { BrokerAuthFailure, BrokerEnvironment } from '../../services/brokers';
 import type { PortfoliosStackParamList } from '../../navigation/PortfoliosStack';
-import { HapticFeedback } from '../../utils/hapticFeedback';
 
 type Nav = NativeStackNavigationProp<PortfoliosStackParamList, 'ConnectBroker'>;
 
@@ -99,7 +96,6 @@ export default function ConnectBrokerScreen() {
   const navigation = useNavigation<Nav>();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [touchedUsername, setTouchedUsername] = useState(false);
   const [touchedPassword, setTouchedPassword] = useState(false);
   const [environment] = useState<BrokerEnvironment>('prod');
@@ -212,7 +208,6 @@ export default function ConnectBrokerScreen() {
   return (
     <View style={styles.root}>
       <ChatSessionBackdrop />
-      <StatusBar style="light" />
       <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
         <PortfolioScreenHeader title="חיבור Colmex Pro" onBack={() => navigation.goBack()} />
         <KeyboardAvoidingView
@@ -232,9 +227,7 @@ export default function ConnectBrokerScreen() {
                 padding="md"
                 disableBlur
                 style={{
-                  borderWidth: 1,
-                  borderColor: `${tokens.colors.primary.main}33`,
-                  backgroundColor: tokens.colors.primary.subtle,
+                  borderWidth: 0,
                 }}
               >
                 <View style={styles.heroRow}>
@@ -282,7 +275,7 @@ export default function ConnectBrokerScreen() {
                 placeholder="••••••••"
                 hint="הסיסמה לפלטפורמת המסחר של Colmex"
                 error={touchedPassword ? passwordError : null}
-                secureTextEntry={!showPassword}
+                secureTextEntry
                 autoCapitalize="none"
                 autoCorrect={false}
                 editable={!submitting}
@@ -291,17 +284,6 @@ export default function ConnectBrokerScreen() {
                   if (canSubmit) void handleConnect();
                 }}
                 spacing={0}
-                labelAccessory={
-                  <FormLabelLink
-                    onPress={() => {
-                      void HapticFeedback.selection();
-                      setShowPassword((s) => !s);
-                    }}
-                    accessibilityLabel={showPassword ? 'הסתר סיסמה' : 'הצג סיסמה'}
-                  >
-                    {showPassword ? 'הסתר' : 'הצג'}
-                  </FormLabelLink>
-                }
               />
             </View>
 

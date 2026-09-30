@@ -10,7 +10,6 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -18,19 +17,24 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { WebView } from 'react-native-webview';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
 import UICard from '../../components/ui/UICard';
+import { UI_CARD_RADIUS } from '../../components/ui/appLayout';
 import { ChatSessionBackdrop } from '../../components/chat/ChatSessionBackdrop';
 import { supabase } from '../../services/supabase';
 import type { JournalStackParamList } from '../../navigation/JournalStack';
 import {
+  JOURNAL_LAYOUT,
   JOURNAL_TYPE,
   journalBodyTextStyle,
   journalCaption2Style,
   journalCaptionStyle,
+  journalCardMetricValueSecondaryStyle,
+  journalCardMetricValueStyle,
+  journalCardTitleStyle,
   journalPhysicalRightText,
   journalRow,
   journalRtlContent,
-  journalSectionTitleStyle,
 } from './journalLayout';
 import type { Trade } from './tradeTypes';
 import {
@@ -88,9 +92,10 @@ function InfoRow({
         ...journalRow,
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingVertical: 10,
-        borderBottomWidth: last ? 0 : StyleSheet.hairlineWidth,
-        borderBottomColor: tokens.colors.border.subtle,
+        paddingVertical: 15,
+        paddingHorizontal: JOURNAL_LAYOUT.cardPadding,
+        borderBottomWidth: last ? 0 : 1,
+        borderBottomColor: tokens.colors.border.divider,
       }}
     >
       <Text
@@ -103,12 +108,11 @@ function InfoRow({
       </Text>
       <Text
         style={{
-          fontSize: JOURNAL_TYPE.body.fontSize,
-          fontWeight: '700',
-          lineHeight: JOURNAL_TYPE.body.lineHeight,
+          ...journalBodyTextStyle,
           color: valueColor ?? tokens.colors.text.primary,
           textAlign: 'left',
           writingDirection: 'ltr',
+          direction: 'ltr',
         }}
       >
         {value}
@@ -130,27 +134,29 @@ function SectionCard({
 }) {
   return (
     <UICard
-      variant="glass"
+      variant="soft"
       glassIntensity="light"
       padding="md"
-      style={{ borderRadius: 16, marginBottom: 14 }}
+      style={{ marginBottom: 14 }}
     >
       <View
         style={{
           ...journalRow,
           alignItems: 'center',
-          gap: 6,
-          marginBottom: 12,
+          marginBottom: JOURNAL_LAYOUT.cardTitleToBodyGap,
         }}
       >
         {icon ? (
-          <Ionicons name={icon as any} size={15} color={tokens.colors.text.tertiary} />
+          <View style={{ marginLeft: 12 }}>
+            <Ionicons name={icon as any} size={20} color={tokens.colors.text.primary} />
+          </View>
         ) : null}
         <Text
           style={{
-            ...journalSectionTitleStyle,
-            color: tokens.colors.text.secondary,
+            ...journalCardTitleStyle,
+            color: tokens.colors.text.primary,
             flex: 1,
+            width: undefined,
           }}
         >
           {title}
@@ -306,35 +312,24 @@ export default function TradeDetailScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: 'transparent', ...journalRtlContent }}>
       <ChatSessionBackdrop />
-      <StatusBar style="light" />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         {/* Header */}
         <View
           style={{
             ...journalRow,
             alignItems: 'center',
-            paddingHorizontal: 16,
+            paddingHorizontal: tokens.layout.screenPadding,
             paddingVertical: 10,
             gap: 10,
           }}
         >
-          <TouchableOpacity
-            onPress={() => {
-              void HapticFeedback.impactLight();
-              navigation.goBack();
-            }}
-            hitSlop={10}
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 18,
-              backgroundColor: 'rgba(255,255,255,0.07)',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
+          <DayNavBlurButton
+            onPress={() => navigation.goBack()}
+            size={36}
+            accessibilityLabel="חזרה"
           >
             <Ionicons name="chevron-forward" size={20} color={tokens.colors.text.primary} />
-          </TouchableOpacity>
+          </DayNavBlurButton>
           <View
             style={{
               flex: 1,
@@ -346,10 +341,10 @@ export default function TradeDetailScreen() {
             <SymbolLogo symbol={trade.symbol} size={34} />
             <Text
               style={{
-                fontSize: 20,
-                fontWeight: '800',
+                ...journalCardTitleStyle,
                 color: tokens.colors.text.primary,
-                letterSpacing: -0.4,
+                flexShrink: 1,
+                width: undefined,
               }}
             >
               {trade.symbol}
@@ -362,7 +357,7 @@ export default function TradeDetailScreen() {
                 backgroundColor: `${directionColor}22`,
               }}
             >
-              <Text style={{ fontSize: JOURNAL_TYPE.caption2.fontSize, fontWeight: '800', lineHeight: JOURNAL_TYPE.caption2.lineHeight, color: directionColor }}>
+              <Text style={{ fontSize: JOURNAL_TYPE.caption2.fontSize, fontWeight: JOURNAL_TYPE.caption2.fontWeight, lineHeight: JOURNAL_TYPE.caption2.lineHeight, color: directionColor }}>
                 {trade.direction === 'long' ? 'Long' : 'Short'}
               </Text>
             </View>
@@ -424,10 +419,16 @@ export default function TradeDetailScreen() {
           {/* TradingView Chart */}
           {chartHtml ? (
             <UICard
-              variant="glass"
+              variant="soft"
               glassIntensity="light"
               padding="none"
-              style={{ borderRadius: 0, marginBottom: 2, overflow: 'hidden', height: 260 }}
+              style={{
+                borderRadius: UI_CARD_RADIUS,
+                marginHorizontal: tokens.layout.screenPadding,
+                marginBottom: JOURNAL_LAYOUT.cardStackGap,
+                overflow: 'hidden',
+                height: 260,
+              }}
             >
               <WebView
                 key={`chart-${trade.id}`}
@@ -445,13 +446,13 @@ export default function TradeDetailScreen() {
             </UICard>
           ) : null}
 
-          <View style={{ paddingHorizontal: 16 }}>
+          <View style={{ paddingHorizontal: tokens.layout.screenPadding }}>
             {/* P&L Hero */}
             <UICard
-              variant="glass"
+              variant="soft"
               glassIntensity="light"
               padding="md"
-              style={{ borderRadius: 16, marginBottom: 14, marginTop: 14 }}
+              style={{ marginBottom: 14, marginTop: 14 }}
             >
               <View
                 style={{
@@ -472,10 +473,9 @@ export default function TradeDetailScreen() {
                   </Text>
                   <Text
                     style={{
-                      fontSize: 32,
-                      fontWeight: '800',
+                      ...journalCardMetricValueStyle,
                       color: pnlColor,
-                      letterSpacing: -1,
+                      textAlign: 'right',
                     }}
                   >
                     {isProfit ? '+' : '-'}
@@ -483,10 +483,10 @@ export default function TradeDetailScreen() {
                   </Text>
                   <Text
                     style={{
-                      fontSize: 16,
-                      fontWeight: '700',
+                      ...journalCardMetricValueSecondaryStyle,
                       color: pnlColor,
-                      marginTop: 2,
+                      textAlign: 'right',
+                      marginTop: JOURNAL_LAYOUT.cardMetricLabelToValueGap,
                     }}
                   >
                     {returnPct >= 0 ? '+' : ''}
@@ -505,7 +505,12 @@ export default function TradeDetailScreen() {
                     }}
                   >
                     <Text
-                      style={{ fontSize: 14, fontWeight: '800', color: pnlColor }}
+                      style={{
+                        fontSize: JOURNAL_TYPE.caption.fontSize,
+                        fontWeight: JOURNAL_TYPE.caption.fontWeight,
+                        lineHeight: JOURNAL_TYPE.caption.lineHeight,
+                        color: pnlColor,
+                      }}
                     >
                       {isProfit ? '✓ Win' : '✗ Loss'}
                     </Text>
@@ -662,11 +667,10 @@ export default function TradeDetailScreen() {
                 {details.entry_reason ? (
                   <View
                     style={{
-                      paddingVertical: 10,
-                      borderBottomWidth: details.exit_reason
-                        ? StyleSheet.hairlineWidth
-                        : 0,
-                      borderBottomColor: tokens.colors.border.subtle,
+                      paddingVertical: 15,
+                      paddingHorizontal: JOURNAL_LAYOUT.cardPadding,
+                      borderBottomWidth: details.exit_reason ? 1 : 0,
+                      borderBottomColor: tokens.colors.border.divider,
                     }}
                   >
                     <Text

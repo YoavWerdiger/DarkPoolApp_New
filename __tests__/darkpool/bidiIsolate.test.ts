@@ -278,7 +278,7 @@ describe('insider feed Hebrew — no direction:ltr on Text', () => {
       /nestedPrice: \{\s*direction: 'ltr',\s*alignItems: 'flex-end',\s*flexShrink: 1/
     );
     expect(cardSrc).not.toMatch(/maxWidth: '58%'/);
-    expect(feedCardSrc).toMatch(/DarkPoolNestedQuoteCard/);
+    expect(feedCardSrc).not.toMatch(/DarkPoolNestedQuoteCard/);
     expect(nestSrc).toMatch(/styles\.nestedTicker/);
     expect(nestSrc).toMatch(/styles\.nestedPrice/);
     expect(nestSrc).toMatch(/מאז העסקה/);

@@ -11,7 +11,6 @@ import {
   type ImageSourcePropType,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -219,7 +218,6 @@ export default function CreatePortfolioScreen() {
   return (
     <View style={styles.root}>
       <ChatSessionBackdrop />
-      <StatusBar style="light" />
       <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
         <PortfolioScreenHeader title="תיק חדש" onBack={() => navigation.goBack()} />
         <KeyboardAvoidingView
@@ -404,9 +402,8 @@ export default function CreatePortfolioScreen() {
                             style={[
                               { marginBottom: JOURNAL_LAYOUT.stackGapSmall },
                               active && {
-                                borderWidth: 1,
-                                borderColor: `${tokens.colors.primary.main}44`,
-                                backgroundColor: tokens.colors.primary.subtle,
+                                borderWidth: 0,
+                                backgroundColor: tokens.colors.background.tertiary,
                               },
                             ]}
                             contentContainerStyle={styles.benchmarkRowInner}
@@ -518,9 +515,8 @@ function ModeCard({ active, icon, title, description, onPress, logo }: ModeCardP
       style={
         active
           ? {
-              borderWidth: 1,
-              borderColor: `${tokens.colors.primary.main}44`,
-              backgroundColor: tokens.colors.primary.subtle,
+              borderWidth: 0,
+              backgroundColor: tokens.colors.background.tertiary,
             }
           : undefined
       }

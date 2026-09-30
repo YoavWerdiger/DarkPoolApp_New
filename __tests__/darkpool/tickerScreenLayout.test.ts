@@ -59,7 +59,7 @@ describe('DarkPoolTickerScreen topology', () => {
   it('renders each holder with the same UICard glass chrome as feed/journal', () => {
     expect(screenSrc).toMatch(/import UICard from '..\/..\/components\/ui\/UICard'/);
     expect(screenSrc).toMatch(
-      /holders\.map\([\s\S]*?<UICard[\s\S]*?variant="glass"[\s\S]*?glassIntensity="light"[\s\S]*?padding="none"[\s\S]*?disableBlur[\s\S]*?InvestorPortrait/
+      /holders\.map\([\s\S]*?<UICard[\s\S]*?variant="soft"[\s\S]*?glassIntensity="light"[\s\S]*?padding="none"[\s\S]*?disableBlur[\s\S]*?InvestorPortrait/
     );
     expect(screenSrc).not.toMatch(/showGlassBorder=\{false\}/);
     expect(screenSrc).not.toMatch(/holders\.map\([\s\S]*?enableBlur/);

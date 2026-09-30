@@ -9,6 +9,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import UICard from '../../../components/ui/UICard';
+import { UI_CARD_RADIUS } from '../../../components/ui/appLayout';
 import type { Trade } from '../portfolioTypes';
 import {
   formatCurrency,
@@ -204,14 +205,13 @@ export default function PortfolioTradesTable({
 
   return (
     <UICard
-      variant="glass"
+      variant="soft"
       glassIntensity="light"
       padding="none"
       style={[
         styles.card,
         {
-          borderColor: `${tokens.colors.primary.main}18`,
-          borderRadius: tokens.borderRadius.xl,
+          borderRadius: UI_CARD_RADIUS,
         },
       ]}
     >
@@ -226,7 +226,7 @@ export default function PortfolioTradesTable({
           <View
             style={[
               styles.headerRow,
-              { borderBottomColor: 'rgba(255,255,255,0.08)' },
+              { borderBottomColor: tokens.colors.border.divider },
             ]}
           >
             {headerCell('סימבול', COL.symbol)}
@@ -486,7 +486,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 10,
     paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: 1,
   },
   dataRow: {
     flexDirection: 'row',
@@ -528,9 +528,11 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
   },
   symbolText: {
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: APP_TYPE.cardSubtitle.fontSize,
+    fontWeight: APP_TYPE.cardTitle.fontWeight,
+    lineHeight: APP_TYPE.cardSubtitle.lineHeight,
     flexShrink: 1,
+    direction: 'ltr',
     writingDirection: 'ltr',
     textAlign: 'right',
   },
@@ -545,7 +547,7 @@ const styles = StyleSheet.create({
   },
   typePillText: {
     fontSize: APP_TYPE.caption2.fontSize,
-    fontWeight: '800',
+    fontWeight: APP_TYPE.caption2.fontWeight,
     lineHeight: APP_TYPE.caption2.lineHeight,
     letterSpacing: 0.3,
   },

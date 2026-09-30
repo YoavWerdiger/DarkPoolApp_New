@@ -31,6 +31,7 @@ export default function TradeShareButton({
     <DayNavBlurButton
       onPress={onPress}
       size={size}
+      glass
       glassIntensity={glassIntensity}
       accessibilityLabel={accessibilityLabel}
       style={style}

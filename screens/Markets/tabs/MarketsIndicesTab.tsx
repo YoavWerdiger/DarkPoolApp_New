@@ -3,6 +3,7 @@ import { View, Text, useWindowDimensions } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import UICard from '../../../components/ui/UICard';
 import { getTradingViewMarketOverviewHTML } from '../embeds/tradingViewEmbeds';
+import { MARKETS_LAYOUT, marketsCardTitleStyle, UI_CARD_RADIUS } from '../marketsLayout';
 import { MarketsTradingView } from '../components/MarketsTradingView';
 
 /** כרטיס מדדים — כותרת קומפקטית, הווידג'ט ברוחב מלא של הכרטיס (ללא «מסגרת» פנימית סביב TradingView) */
@@ -21,30 +22,26 @@ export function MarketsIndicesCard() {
     () => ({
       card: {
         marginTop: 0,
-        marginBottom: tokens.spacing.lg,
-        borderRadius: tokens.borderRadius.lg,
+        marginBottom: MARKETS_LAYOUT.cardStackGap,
+        borderRadius: UI_CARD_RADIUS,
         overflow: 'hidden' as const,
+        backgroundColor: tokens.colors.background.cardSolid,
       },
       title: {
-        fontSize: tokens.typography.titleSmall.size,
-        fontWeight: tokens.typography.fontWeight.bold as '700',
+        ...marketsCardTitleStyle,
         color: tokens.colors.text.primary,
-        textAlign: 'center' as const,
-        writingDirection: 'rtl' as const,
-        width: '100%' as const,
       },
       titlePad: {
-        paddingHorizontal: tokens.spacing.md,
-        paddingTop: tokens.spacing.md,
-        paddingBottom: tokens.spacing.sm,
-        alignItems: 'center' as const,
+        paddingHorizontal: MARKETS_LAYOUT.cardPadding,
+        paddingTop: MARKETS_LAYOUT.cardPadding,
+        paddingBottom: MARKETS_LAYOUT.cardTitleToBodyGap,
       },
     }),
     [tokens]
   );
 
   return (
-    <UICard variant="blur" padding="none" style={{ ...styles.card, ...tokens.shadows.lg }}>
+    <UICard variant="soft" padding="none" style={styles.card}>
       <View style={styles.titlePad}>
         <Text style={styles.title}>מדדים וחוזים עתידיים</Text>
       </View>

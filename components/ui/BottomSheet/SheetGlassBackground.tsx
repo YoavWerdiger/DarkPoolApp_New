@@ -1,16 +1,17 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { LayoutChangeEvent, Platform, StyleSheet, View } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { useDesignTokens } from '../DesignTokens';
+import { LIGHT_CANVAS } from '../designTokensStatic';
 import {
   CARD_GLASS_ANDROID_BLUR_METHOD,
   CARD_GLASS_ANDROID_BLUR_REDUCTION,
+  cardGlassBlurTint,
 } from '../cardGlass';
 import {
   canLatchSheetGlass,
-  SHEET_GLASS_BASE,
   SHEET_GLASS_INTENSITY,
   SHEET_GLASS_OVERLAY,
-  SHEET_GLASS_TINT,
 } from './sheetGlass';
 
 type SheetGlassBackgroundProps = {
@@ -39,6 +40,10 @@ export function SheetGlassBackground({
   overlayColor = SHEET_GLASS_OVERLAY,
   deferMs = 0,
 }: SheetGlassBackgroundProps) {
+  const tokens = useDesignTokens();
+  const isDark = tokens.colors.background.primary !== LIGHT_CANVAS;
+  const sheetFill = tokens.colors.background.cardSolid;
+  const resolvedOverlay = overlayColor === SHEET_GLASS_OVERLAY ? sheetFill : overlayColor;
   const [hasLayout, setHasLayout] = useState(false);
   const [blurLatched, setBlurLatched] = useState(false);
   const [deferDone, setDeferDone] = useState(deferMs <= 0);
@@ -84,7 +89,7 @@ export function SheetGlassBackground({
         <View
           style={[
             StyleSheet.absoluteFill,
-            { backgroundColor: SHEET_GLASS_BASE },
+            { backgroundColor: sheetFill },
           ]}
         />
       ) : null}
@@ -92,7 +97,7 @@ export function SheetGlassBackground({
       {blurMounted ? (
         <BlurView
           intensity={intensity}
-          tint={SHEET_GLASS_TINT}
+          tint={cardGlassBlurTint(isDark)}
           {...androidBlurProps}
           style={StyleSheet.absoluteFill}
         />
@@ -101,7 +106,7 @@ export function SheetGlassBackground({
       <View
         style={[
           StyleSheet.absoluteFill,
-          { backgroundColor: overlayColor },
+          { backgroundColor: resolvedOverlay },
         ]}
       />
     </View>

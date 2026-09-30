@@ -29,13 +29,14 @@ import MarketsHeatmapScreen from '../screens/Markets/MarketsHeatmapScreen';
 import ChatStack from './ChatStack';
 import LearningStack from './LearningStack';
 import {
-  MAIN_DRAWER_GLASS,
   MAIN_DRAWER_NAVIGATOR_ID,
   getMainDrawerPosition,
   registerMainDrawerNavigation,
   type DrawerParentNavigation,
 } from './mainDrawerNav';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import { useDesignTokens } from '../components/ui/DesignTokens';
 import { HapticFeedback } from '../utils/hapticFeedback';
 
 const Drawer = createDrawerNavigator();
@@ -58,8 +59,22 @@ const DRAWER_PAD_OUTER = 17;
  */
 const DRAWER_MENU_LOGO_URI = `${SUPABASE_URL}/storage/v1/object/public/app-media/IMG_3289.PNG`;
 const DRAWER_MENU_LOGO = require('../assets/IMG_3289.png');
+/** לוגו תפריט במצב בהיר — אותו סלוט כמו IMG_3289. */
+const DRAWER_MENU_LOGO_LIGHT_URI = `${SUPABASE_URL}/storage/v1/object/public/app-media/branding/IMG_9432.png`;
 /** גובה מקורי של לוגו המגירה — לא להקטין (הריבוע המרוחק נראה כתמונה ממוזערת). */
 const DRAWER_MENU_LOGO_HEIGHT = 96;
+/**
+ * IMG_9432.png הוא פלטה 6250×6250. הסימן (שור עד הוורדמארק) יושב ב־
+ * y=1885..4133 (גובה 2249). מגדילים את הפלטה כך שהסימן עצמו יהיה בגובה 96,
+ * וחותכים את הריפוד השחור בלי להגדיל את כותרת התפריט.
+ */
+const LIGHT_LOGO_PLATE = 6250;
+const LIGHT_LOGO_MARK_TOP = 1885;
+const LIGHT_LOGO_MARK_HEIGHT = 2249;
+const LIGHT_LOGO_RENDERED =
+  (DRAWER_MENU_LOGO_HEIGHT * LIGHT_LOGO_PLATE) / LIGHT_LOGO_MARK_HEIGHT;
+const LIGHT_LOGO_TOP =
+  -(LIGHT_LOGO_MARK_TOP * DRAWER_MENU_LOGO_HEIGHT) / LIGHT_LOGO_MARK_HEIGHT;
 
 type DrawerIconFamily = 'ion' | 'mci' | 'feather';
 
@@ -93,8 +108,6 @@ const DRAWER_ITEMS: Array<{
 ];
 
 const ACCENT = '#00C805';
-/** טאבים לא פעילים — לבן מלא (ברירת מחדל) */
-const LABEL = '#FFFFFF';
 
 /** מגירה → מסכי Stack מקוננים — ניווט מפורש למסך הבית של כל Stack (מונע מסך ריק / state תקוע). */
 function navigateDrawerItem(
@@ -140,6 +153,12 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
   const insets = useSafeAreaInsets();
   const { navigation, state } = props;
   const { user } = useAuth();
+  const { isDarkMode } = useTheme();
+  const tokens = useDesignTokens();
+  const drawerStyles = useMemo(
+    () => createDrawerStyles(tokens),
+    [tokens],
+  );
 
   useEffect(() => {
     registerMainDrawerNavigation(navigation as unknown as DrawerParentNavigation);
@@ -185,14 +204,27 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
       ]}
     >
       <View style={drawerStyles.brandHeader}>
-        <ExpoImage
-          source={DRAWER_MENU_LOGO}
-          recyclingKey={DRAWER_MENU_LOGO_URI}
-          style={drawerStyles.brandLogo}
-          contentFit="contain"
-          transition={0}
-          accessibilityLabel="DarkPool"
-        />
+        {isDarkMode ? (
+          <ExpoImage
+            source={DRAWER_MENU_LOGO}
+            recyclingKey={DRAWER_MENU_LOGO_URI}
+            style={drawerStyles.brandLogo}
+            contentFit="contain"
+            transition={0}
+            accessibilityLabel="DarkPool"
+          />
+        ) : (
+          <View style={drawerStyles.brandLogoClip}>
+            <ExpoImage
+              source={{ uri: DRAWER_MENU_LOGO_LIGHT_URI }}
+              recyclingKey={DRAWER_MENU_LOGO_LIGHT_URI}
+              style={drawerStyles.brandLogoLight}
+              contentFit="fill"
+              transition={0}
+              accessibilityLabel="DarkPool"
+            />
+          </View>
+        )}
       </View>
       <ScrollView style={drawerStyles.scroll} showsVerticalScrollIndicator={false}>
         {DRAWER_ITEMS.map((item) => {
@@ -217,19 +249,19 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
                 <MaterialCommunityIcons
                   name={item.icon as React.ComponentProps<typeof MaterialCommunityIcons>['name']}
                   size={24}
-                  color={focused ? ACCENT : LABEL}
+                  color={focused ? ACCENT : tokens.colors.text.primary}
                 />
               ) : item.iconFamily === 'feather' ? (
                 <Feather
                   name={item.icon as React.ComponentProps<typeof Feather>['name']}
                   size={22}
-                  color={focused ? ACCENT : LABEL}
+                  color={focused ? ACCENT : tokens.colors.text.primary}
                 />
               ) : (
                 <Ionicons
                   name={item.icon as React.ComponentProps<typeof Ionicons>['name']}
                   size={24}
-                  color={focused ? ACCENT : LABEL}
+                  color={focused ? ACCENT : tokens.colors.text.primary}
                 />
               )}
               <Text style={[drawerStyles.label, focused && drawerStyles.labelActive]}>{item.title}</Text>
@@ -268,7 +300,7 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
             </View>
           ) : (
             <View style={drawerStyles.profileAvatarPlaceholder}>
-              <Ionicons name="person" size={18} color="#FFFFFF" />
+              <Ionicons name="person" size={18} color={tokens.colors.text.primary} />
             </View>
           )}
           <View style={drawerStyles.profileFooterInfo}>
@@ -281,11 +313,12 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
   );
 }
 
-const drawerStyles = StyleSheet.create({
+function createDrawerStyles(tokens: ReturnType<typeof useDesignTokens>) {
+  return StyleSheet.create({
   /** ריווח אופקי מוגדר ב־CustomDrawerContent (אסימטרי + safe area) */
   root: {
     flex: 1,
-    backgroundColor: MAIN_DRAWER_GLASS.panelBackground,
+    backgroundColor: tokens.colors.background.cardSolid,
   },
   brandHeader: {
     alignItems: 'center',
@@ -299,6 +332,21 @@ const drawerStyles = StyleSheet.create({
     width: '100%',
     height: DRAWER_MENU_LOGO_HEIGHT,
     backgroundColor: 'transparent',
+  },
+  /** אותה תיבה של 96 — הריפוד השחור נחתך, הכותרת לא גדלה */
+  brandLogoClip: {
+    width: '100%',
+    height: DRAWER_MENU_LOGO_HEIGHT,
+    overflow: 'hidden',
+    backgroundColor: 'transparent',
+  },
+  brandLogoLight: {
+    position: 'absolute',
+    width: LIGHT_LOGO_RENDERED,
+    height: LIGHT_LOGO_RENDERED,
+    top: LIGHT_LOGO_TOP,
+    left: '50%',
+    marginLeft: -LIGHT_LOGO_RENDERED / 2,
   },
   scroll: { flex: 1 },
   row: {
@@ -317,7 +365,7 @@ const drawerStyles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontWeight: '500',
-    color: LABEL,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
     writingDirection: 'rtl',
   },
@@ -331,7 +379,7 @@ const drawerStyles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 14,
     borderTopWidth: 1.5,
-    borderTopColor: 'rgba(255,255,255,0.20)',
+    borderTopColor: tokens.colors.border.divider,
     alignSelf: 'stretch',
   },
   /** צמוד לימין הפיזי (עץ LTR) — אווטאר ימין, טקסט משמאלו */
@@ -347,7 +395,7 @@ const drawerStyles = StyleSheet.create({
     maxWidth: '80%',
   },
   profileFooterName: {
-    color: '#FFFFFF',
+    color: tokens.colors.text.primary,
     fontSize: 17,
     fontWeight: '600',
     textAlign: 'right',
@@ -355,7 +403,7 @@ const drawerStyles = StyleSheet.create({
   },
   profileFooterMeta: {
     marginTop: 3,
-    color: 'rgba(255,255,255,0.48)',
+    color: tokens.colors.text.secondary,
     fontSize: 13,
     textAlign: 'right',
     writingDirection: 'rtl',
@@ -365,7 +413,7 @@ const drawerStyles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: tokens.colors.background.tertiary,
   },
   profileAvatarImage: {
     width: '100%',
@@ -377,17 +425,20 @@ const drawerStyles = StyleSheet.create({
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: tokens.colors.background.tertiary,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.16)',
+    borderColor: tokens.colors.border.divider,
   },
-});
+  });
+}
 
 /**
  * ניווט ראשי: Drawer (החלקה מהקצה) במקום Bottom Tabs — מסך מלא בלי סרגל תחתון.
  */
 export default function MainTabs() {
   const drawerPosition = getMainDrawerPosition();
+  const tokens = useDesignTokens();
+  const drawerFill = tokens.colors.background.cardSolid;
 
   return (
     <View style={{ flex: 1, backgroundColor: SCREEN_BG }}>
@@ -405,7 +456,7 @@ export default function MainTabs() {
           overlayColor: 'rgba(0,0,0,0.55)',
           drawerStyle: {
             width: DRAWER_WIDTH,
-            backgroundColor: MAIN_DRAWER_GLASS.panelBackground,
+            backgroundColor: drawerFill,
           },
           sceneStyle: { backgroundColor: SCREEN_BG },
           // enableFreeze(true) ב-App — משאירים הקפאה ב-blur כדי שמסכי Drawer כבדים

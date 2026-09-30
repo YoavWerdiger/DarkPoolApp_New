@@ -78,7 +78,7 @@ export function ActivityFeedCard({
         <View style={styles.main}>
           <Text style={styles.primary} numberOfLines={1} ellipsizeMode="tail">
             <Text style={styles.name}>{displayName}</Text>
-            <Text style={{ color: sideColor, fontWeight: '800' }}>{` ${verb} `}</Text>
+            <Text style={{ color: sideColor, fontWeight: FEED_CARD_TYPE.action.fontWeight }}>{` ${verb} `}</Text>
             <Text style={styles.ticker}>
               {LRM}
               {tickerSym}
@@ -145,13 +145,13 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       color: tokens.colors.text.secondary,
     },
     ticker: {
-      fontWeight: '700',
+      fontWeight: FEED_CARD_TYPE.name.fontWeight,
       color: tokens.colors.text.primary,
       letterSpacing: 0,
     },
     muted: {
       color: tokens.colors.text.tertiary,
-      fontWeight: tokens.typography.fontWeight.medium,
+      fontWeight: FEED_CARD_TYPE.dates.fontWeight,
     },
     meta: {
       alignItems: 'flex-end',
@@ -160,8 +160,9 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       maxWidth: 88,
     },
     time: {
-      fontSize: tokens.typography.caption2.size,
-      fontWeight: tokens.typography.fontWeight.medium,
+      fontSize: FEED_CARD_TYPE.nestedLabel.fontSize,
+      lineHeight: FEED_CARD_TYPE.nestedLabel.lineHeight,
+      fontWeight: FEED_CARD_TYPE.dates.fontWeight,
       color: tokens.colors.text.tertiary,
       textAlign: 'right',
     },

@@ -1,5 +1,6 @@
 import { StyleSheet, type ViewStyle } from 'react-native';
 import type { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { UI_CARD_RADIUS } from '../../../components/ui/appLayout';
 import { APP_TYPE } from '../../../components/ui/appType';
 import { darkPoolPhysicalRightText } from '../darkPoolLayout';
 import { ltrNameText } from '../utils/bidi';
@@ -13,12 +14,12 @@ export const FEED_NESTED_LOGO = 40;
 export const FEED_NESTED_LOGO_RADIUS = FEED_NESTED_LOGO / 2;
 /** רדיוס קן פנימי — lg, כמו כרטיס-בתוך-כרטיס ביומן / פרטי עסקה. */
 export const FEED_NESTED_RADIUS = 16;
-/** רדיוס כרטיס חיצוני — זהה לאקדמיה / UICard. */
-export const FEED_OUTER_RADIUS = 24;
+/** רדיוס כרטיס חיצוני — UI_CARD_RADIUS. */
+export const FEED_OUTER_RADIUS = UI_CARD_RADIUS;
 /** רווח אנכי בין כרטיסי פיד (לא padding פנימי ולא gutter צד). */
-export const FEED_CARD_STACK_GAP = 16;
-/** ריפוד פנימי של כרטיס הפיד — APP_LAYOUT.cardPadding (20) */
-export const FEED_CARD_INNER_PAD = 20;
+export const FEED_CARD_STACK_GAP = 12;
+/** ריפוד פנימי של כרטיס הפיד — APP_LAYOUT.cardPadding (16) */
+export const FEED_CARD_INNER_PAD = 16;
 /** Gutter אופקי של רשימת «עסקאות אחרונות». */
 export const FEED_LIST_GUTTER = 20;
 /** כותרת סקשן → שורת צ'יפי סינון. */
@@ -49,15 +50,14 @@ export function tradeHeroGlassFrameStyle(
 ): ViewStyle {
   if (opts?.accent) {
     return {
-      borderRadius: tokens.borderRadius.xl,
-      borderWidth: 1,
-      borderColor: `${tokens.colors.primary.main}40`,
+      borderRadius: UI_CARD_RADIUS,
+      borderWidth: 0,
       overflow: 'hidden',
-      backgroundColor: `${tokens.colors.primary.main}14`,
+      backgroundColor: 'transparent',
     };
   }
   return {
-    borderRadius: tokens.borderRadius.xl,
+    borderRadius: UI_CARD_RADIUS,
     borderWidth: 0,
     overflow: 'hidden',
     backgroundColor: 'transparent',
@@ -66,9 +66,9 @@ export function tradeHeroGlassFrameStyle(
 
 export function tradeHeroInnerCardStyle(tokens: DarkPoolFeedCardTokens): ViewStyle {
   return {
-    borderRadius: tokens.borderRadius.xl,
+    borderRadius: UI_CARD_RADIUS,
     borderWidth: 0,
-    backgroundColor: 'transparent',
+    backgroundColor: tokens.colors.background.cardSolid,
     ...tokens.shadows.none,
   };
 }
@@ -90,13 +90,13 @@ export const FEED_RHYTHM = {
  * כותרות סקשן מחוץ לכרטיס לא כאן.
  */
 export const FEED_CARD_TYPE = {
-  name: APP_TYPE.cardTitle,
-  action: { ...APP_TYPE.cardSubtitle, fontWeight: '600' as const },
-  dates: APP_TYPE.caption,
-  nestedTicker: { ...APP_TYPE.cardSubtitle, fontWeight: '600' as const },
-  nestedPrice: { ...APP_TYPE.cardBody, fontWeight: '600' as const },
-  nestedLabel: APP_TYPE.caption2,
-  nestedSince: { ...APP_TYPE.caption2, fontWeight: '700' as const },
+  name: { ...APP_TYPE.cardTitle },
+  action: { ...APP_TYPE.cardSubtitle, fontWeight: APP_TYPE.cardTitle.fontWeight },
+  dates: APP_TYPE.cardSubtitle,
+  nestedTicker: { ...APP_TYPE.cardSubtitle, fontWeight: APP_TYPE.cardTitle.fontWeight },
+  nestedPrice: { ...APP_TYPE.body },
+  nestedLabel: APP_TYPE.cardSubtitle,
+  nestedSince: { ...APP_TYPE.cardSubtitle, fontWeight: APP_TYPE.cardTitle.fontWeight },
 } as const;
 
 /**
@@ -106,8 +106,8 @@ export const FEED_CARD_TYPE = {
 export function createTradeHeroCardStyles(tokens: DarkPoolFeedCardTokens) {
   return StyleSheet.create({
     heroCard: {
-      borderRadius: tokens.borderRadius.xl,
-      backgroundColor: 'transparent',
+      borderRadius: UI_CARD_RADIUS,
+      backgroundColor: tokens.colors.background.cardSolid,
       ...tokens.shadows.none,
     },
     heroBody: {
@@ -152,7 +152,7 @@ export function createTradeHeroCardStyles(tokens: DarkPoolFeedCardTokens) {
       ...ltrNameText,
       fontSize: FEED_CARD_TYPE.action.fontSize,
       lineHeight: FEED_CARD_TYPE.action.lineHeight,
-      fontWeight: '500',
+      fontWeight: APP_TYPE.groupLabel.fontWeight,
       color: tokens.colors.text.secondary,
     },
     action: {
@@ -170,13 +170,13 @@ export function createTradeHeroCardStyles(tokens: DarkPoolFeedCardTokens) {
     actionVerb: {
       fontSize: FEED_CARD_TYPE.action.fontSize,
       lineHeight: FEED_CARD_TYPE.action.lineHeight,
-      fontWeight: '700',
+      fontWeight: APP_TYPE.sectionTitle.fontWeight,
     },
     actionRest: {
       fontSize: FEED_CARD_TYPE.action.fontSize,
       lineHeight: FEED_CARD_TYPE.action.lineHeight,
       color: tokens.colors.text.secondary,
-      fontWeight: '500',
+      fontWeight: APP_TYPE.groupLabel.fontWeight,
     },
     actionMeta: {
       ...darkPoolPhysicalRightText,

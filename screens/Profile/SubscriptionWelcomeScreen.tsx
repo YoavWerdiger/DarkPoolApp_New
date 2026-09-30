@@ -3,8 +3,10 @@ import { View, Text, StyleSheet, Animated, Easing, BackHandler } from 'react-nat
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
-import { DesignTokens } from '../../components/ui/DesignTokens';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
 import UICard from '../../components/ui/UICard';
+import { appFlowSubtitleStyle, appFlowTitleCompactStyle } from '../../components/ui/appType';
+import { UI_CARD_RADIUS } from '../../components/ui/appLayout';
 import OnboardingLayout from '../../components/onboarding/OnboardingLayout';
 import OnboardingButton from '../../components/onboarding/OnboardingButton';
 import { SUBSCRIPTION_PLANS } from '../../services/paymentService';
@@ -41,6 +43,7 @@ export default function SubscriptionWelcomeScreen({
   route,
 }: SubscriptionWelcomeScreenProps) {
   const queryClient = useQueryClient();
+  const tokens = useDesignTokens();
   const { user } = useAuth();
   const planId = route.params?.planId;
   const planName = resolvePlanName(planId, route.params?.planName);
@@ -106,27 +109,34 @@ export default function SubscriptionWelcomeScreen({
       }
     >
       <View style={styles.centered}>
-        <Animated.View style={[styles.halo, { transform: [{ scale: badgeScale }] }]}>
-          <View style={styles.ring}>
+        <Animated.View
+          style={[
+            styles.halo,
+            {
+              backgroundColor: tokens.colors.background.tertiary,
+              transform: [{ scale: badgeScale }],
+            },
+          ]}
+        >
+          <View style={[styles.ring, { backgroundColor: tokens.colors.background.navChrome }]}>
             <UICard
-              variant="glass"
-              glassIntensity="medium"
+              variant="soft"
               padding="none"
-              style={styles.badge}
+              style={[styles.badge, { backgroundColor: tokens.colors.background.cardSolid }]}
               contentContainerStyle={styles.badgeContent}
             >
               <Ionicons
                 name="checkmark"
                 size={52}
-                color={DesignTokens.colors.primary.main}
+                color={tokens.colors.primary.main}
               />
             </UICard>
           </View>
         </Animated.View>
 
         <Animated.View style={{ opacity: contentOpacity }}>
-          <Text style={styles.title}>{`ברוך הבא למסלול ${planName}!`}</Text>
-          <Text style={styles.subtitle}>
+          <Text style={[styles.title, { color: tokens.colors.text.primary }]}>{`ברוך הבא למסלול ${planName}!`}</Text>
+          <Text style={[styles.subtitle, { color: tokens.colors.text.secondary }]}>
             המנוי שלך פעיל — אפשר להתחיל להשתמש בכל התכונות.
           </Text>
         </Animated.View>
@@ -148,25 +158,22 @@ const styles = StyleSheet.create({
   halo: {
     width: HALO_SIZE,
     height: HALO_SIZE,
-    borderRadius: DesignTokens.borderRadius.full,
-    backgroundColor: DesignTokens.colors.primary.subtle,
+    borderRadius: HALO_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: DesignTokens.spacing['2xl'],
-    ...DesignTokens.shadows.greenGlow,
+    marginBottom: 28,
   },
   ring: {
     width: RING_SIZE,
     height: RING_SIZE,
-    borderRadius: DesignTokens.borderRadius.full,
-    backgroundColor: DesignTokens.colors.primary.dim,
+    borderRadius: RING_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
   badge: {
     width: BADGE_SIZE,
     height: BADGE_SIZE,
-    borderRadius: DesignTokens.borderRadius.full,
+    borderRadius: UI_CARD_RADIUS,
   },
   badgeContent: {
     width: '100%',
@@ -175,21 +182,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
-    fontSize: DesignTokens.typography.heroTitle.size,
-    lineHeight: DesignTokens.typography.heroTitle.lineHeight,
-    fontWeight: DesignTokens.typography.heroTitle.weight,
-    color: DesignTokens.colors.text.primary,
+    ...appFlowTitleCompactStyle,
     textAlign: 'center',
-    writingDirection: 'rtl',
-    marginBottom: DesignTokens.spacing.md,
-    paddingHorizontal: DesignTokens.spacing.md,
+    marginBottom: 12,
+    paddingHorizontal: 16,
   },
   subtitle: {
-    fontSize: DesignTokens.typography.callout.size,
-    lineHeight: DesignTokens.typography.callout.lineHeight,
-    color: DesignTokens.colors.text.tertiary,
+    ...appFlowSubtitleStyle,
     textAlign: 'center',
-    writingDirection: 'rtl',
-    paddingHorizontal: DesignTokens.spacing.lg,
+    paddingHorizontal: 20,
   },
 });

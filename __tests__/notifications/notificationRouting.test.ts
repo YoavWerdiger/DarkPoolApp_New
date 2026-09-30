@@ -105,6 +105,21 @@ describe('notificationRouting', () => {
     });
   });
 
+  it('routes a feed trade to the same person profile', () => {
+    const target = resolveNotificationNavTarget({
+      type: 'dark_pool_feed_trade',
+      person_id: 'P000197',
+      person_kind: 'politician',
+      person_name: 'Nancy Pelosi',
+      ticker: 'NVDA',
+      transaction_type: 'buy',
+    });
+    expect(target.kind).toBe('dark_pool_person');
+    if (target.kind === 'dark_pool_person') {
+      expect(target.personId).toBe('P000197');
+    }
+  });
+
   it('routes dark_pool_fund_13f to fund_manager profile', () => {
     const target = resolveNotificationNavTarget({
       type: 'dark_pool_fund_13f',

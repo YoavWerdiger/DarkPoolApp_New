@@ -28,14 +28,14 @@ const homeSrc = readFileSync(
 
 describe('feed card stack gap', () => {
   it('uses consumer card stack gap (APP_LAYOUT.cardStackGap)', () => {
-    expect(FEED_CARD_STACK_GAP).toBe(16);
-    expect(stylesSrc).toMatch(/export const FEED_CARD_STACK_GAP = 16/);
+    expect(FEED_CARD_STACK_GAP).toBe(12);
+    expect(stylesSrc).toMatch(/export const FEED_CARD_STACK_GAP = 12/);
   });
 
-  it('uses 20pt heroBody pad shared with trade-detail (UICard padding none)', () => {
-    expect(FEED_CARD_INNER_PAD).toBe(20);
-    expect(FEED_RHYTHM.cardPadH).toBe(20);
-    expect(FEED_RHYTHM.cardPadV).toBe(20);
+  it('uses 16pt heroBody pad shared with trade-detail (UICard padding none)', () => {
+    expect(FEED_CARD_INNER_PAD).toBe(16);
+    expect(FEED_RHYTHM.cardPadH).toBe(16);
+    expect(FEED_RHYTHM.cardPadV).toBe(16);
     expect(tradeCardSrc).toMatch(/<DarkPoolFeedCard/);
     expect(feedCardSrc).toMatch(/TRADE_HERO_UICARD\.padding/);
     expect(feedCardSrc).toMatch(/paddingVertical: FEED_RHYTHM\.cardPadV/);

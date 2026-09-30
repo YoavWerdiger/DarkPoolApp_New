@@ -10,6 +10,8 @@ import { HapticFeedback } from '../../../utils/hapticFeedback';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
 import type { TopAccumulationRow } from '../../../types/darkpool.types';
 import { formatPercent, formatUsdCompact } from '../utils/darkPoolFormat';
+import { UI_CARD_RADIUS } from '../../../components/ui/appLayout';
+import { APP_TYPE } from '../../../components/ui/appType';
 import { darkPoolPhysicalRightText } from '../darkPoolLayout';
 
 interface AccumulationCardProps {
@@ -39,7 +41,7 @@ export function AccumulationCard({ row, onPress }: AccumulationCardProps) {
       accessibilityRole="button"
     >
       <UICard
-        variant="glass"
+        variant="soft"
         glassIntensity="light"
         padding="sm"
         disableBlur
@@ -75,7 +77,7 @@ export function AccumulationCard({ row, onPress }: AccumulationCardProps) {
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     card: {
-      borderRadius: tokens.borderRadius.xl,
+      borderRadius: UI_CARD_RADIUS,
       borderWidth: 0,
       backgroundColor: 'transparent',
     },
@@ -87,21 +89,24 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       marginBottom: 6,
     },
     ticker: {
-      fontSize: 16,
-      fontWeight: '900',
+      fontSize: APP_TYPE.cardTitle.fontSize,
+      lineHeight: APP_TYPE.cardTitle.lineHeight,
+      fontWeight: APP_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
       writingDirection: 'ltr',
     },
     label: {
-      fontSize: 11,
-      fontWeight: '600',
+      fontSize: APP_TYPE.caption2.fontSize,
+      lineHeight: APP_TYPE.caption2.lineHeight,
+      fontWeight: APP_TYPE.caption2.fontWeight,
       color: tokens.colors.text.tertiary,
       ...darkPoolPhysicalRightText,
     },
     value: {
       marginTop: 2,
-      fontSize: 20,
-      fontWeight: '800',
+      fontSize: APP_TYPE.cardMetricValueSecondary.fontSize,
+      lineHeight: APP_TYPE.cardMetricValueSecondary.lineHeight,
+      fontWeight: APP_TYPE.cardMetricValueSecondary.fontWeight,
       textAlign: 'right',
       writingDirection: 'ltr',
     },
@@ -113,22 +118,24 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     stat: { flex: 1, alignItems: 'stretch' },
     statLabel: {
-      fontSize: 10,
-      fontWeight: '600',
+      fontSize: APP_TYPE.caption2.fontSize,
+      lineHeight: APP_TYPE.caption2.lineHeight,
+      fontWeight: APP_TYPE.caption2.fontWeight,
       color: tokens.colors.text.tertiary,
       ...darkPoolPhysicalRightText,
     },
     statValue: {
       marginTop: 2,
-      fontSize: 13,
-      fontWeight: '800',
+      fontSize: APP_TYPE.cardSubtitle.fontSize,
+      lineHeight: APP_TYPE.cardSubtitle.lineHeight,
+      fontWeight: APP_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
       writingDirection: 'ltr',
     },
     divider: {
-      width: StyleSheet.hairlineWidth,
+      width: 1,
       alignSelf: 'stretch',
-      backgroundColor: tokens.colors.border.subtle,
+      backgroundColor: tokens.colors.border.divider,
     },
   });
 }

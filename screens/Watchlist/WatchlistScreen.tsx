@@ -7,7 +7,6 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { CommonActions, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,7 +15,8 @@ import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHead
 import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import UICard from '../../components/ui/UICard';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import { APP_TYPE } from '../../components/ui/appType';
+import { UI_CARD_RADIUS, APP_LAYOUT } from '../../components/ui/appLayout';
+import { appCaption2Style, appSectionSubtitleStyle } from '../../components/ui/appType';
 import { WatchlistRow } from './components/WatchlistRow';
 import { WatchlistRowSkeleton } from './components/WatchlistRowSkeleton';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
@@ -345,7 +345,7 @@ export default function WatchlistScreen() {
     });
   }, [activeWatchlistId, openListActions, setActiveWatchlistId, watchlists]);
 
-  const hp = tokens.layout.screenPadding;
+  const hp = APP_LAYOUT.screenPaddingHorizontal;
   const subtitle =
     rows.length > 0
       ? `${activeList?.name ?? 'הרשימה שלי'} · ${rows.length}`
@@ -364,7 +364,7 @@ export default function WatchlistScreen() {
         panel: {
           flex: 1,
           minHeight: 0,
-          borderRadius: tokens.borderRadius['2xl'],
+          borderRadius: UI_CARD_RADIUS,
           overflow: 'hidden',
         },
         panelInner: {
@@ -385,9 +385,10 @@ export default function WatchlistScreen() {
           gap: 10,
         },
         centerText: {
+          ...appSectionSubtitleStyle,
           color: tokens.colors.text.tertiary,
-          fontSize: APP_TYPE.sectionSubtitle.fontSize,
-          lineHeight: APP_TYPE.sectionSubtitle.lineHeight,
+          textAlign: 'center',
+          marginTop: 0,
         },
         updatingRow: {
           flexDirection: 'row-reverse',
@@ -395,14 +396,12 @@ export default function WatchlistScreen() {
           justifyContent: 'center',
           gap: 6,
           paddingVertical: 6,
-          borderBottomWidth: StyleSheet.hairlineWidth,
+          borderBottomWidth: 1,
           borderBottomColor: tokens.colors.border.divider,
         },
         updatingText: {
-          color: tokens.colors.primary.main,
-          fontSize: APP_TYPE.caption2.fontSize,
-          fontWeight: '700',
-          lineHeight: APP_TYPE.caption2.lineHeight,
+          ...appCaption2Style,
+          color: tokens.colors.text.secondary,
         },
       }),
     [tokens, hp]
@@ -410,7 +409,6 @@ export default function WatchlistScreen() {
 
   return (
     <ScreenChrome>
-      <StatusBar style="light" />
       <RNSafeAreaView style={styles.safe} edges={['top']}>
         <MainDrawerScreenHeader
           title="רשימת מעקב"
@@ -435,8 +433,7 @@ export default function WatchlistScreen() {
           <MarketsErrorBoundary>
             {isLoading && rows.length === 0 ? (
               <UICard
-                variant="glass"
-                glassIntensity="light"
+                variant="soft"
                 padding="none"
                 style={styles.panel}
                 contentContainerStyle={styles.panelInner}
@@ -450,8 +447,7 @@ export default function WatchlistScreen() {
             ) : (
               <>
                 <UICard
-                  variant="glass"
-                  glassIntensity="light"
+                  variant="soft"
                   padding="none"
                   style={styles.panel}
                   contentContainerStyle={styles.panelInner}

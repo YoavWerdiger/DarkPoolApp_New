@@ -5,24 +5,27 @@ import {
   Text,
   ScrollView,
   TextInput,
-  TouchableOpacity,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
-import UICard from '../../components/ui/UICard';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { useAuth } from '../../context/AuthContext';
 import { createSupportTicket } from '../../services/supportService';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { SettingsGlassCard } from '../../components/profile/ProfileSettingsUI';
 import {
   settingsHebrewText,
   settingsBodyType,
-  settingsMetaType,
-  settingsButtonLabelStyle,
 } from '../../components/profile/settingsType';
+import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
+import {
+  formFieldInputStyle,
+  formFieldLabelStyle,
+  formFieldShellStyle,
+} from '../../components/ui/formControl';
+import UIButton from '../../components/ui/UIButton';
 
 export default function ContactSupportScreen({ navigation }: any) {
   const tokens = useDesignTokens();
@@ -30,6 +33,7 @@ export default function ContactSupportScreen({ navigation }: any) {
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [saving, setSaving] = useState(false);
+  const [focused, setFocused] = useState<'subject' | 'body' | null>(null);
 
   const submit = async () => {
     if (!user?.id) return;
@@ -51,99 +55,97 @@ export default function ContactSupportScreen({ navigation }: any) {
     }
   };
 
-  const inputStyle = {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1,
-    borderColor: tokens.colors.border.divider,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    color: tokens.colors.text.primary,
-    ...settingsHebrewText,
-    ...settingsBodyType,
-    marginBottom: 12,
-  };
+  const shell = (field: 'subject' | 'body', multiline = false) => [
+    {
+      flexDirection: 'row' as const,
+      borderRadius: multiline ? UI_CARD_RADIUS : tokens.borderRadius.full,
+      paddingHorizontal: APP_LAYOUT.cardPadding,
+      minHeight: multiline ? 140 : 52,
+      marginBottom: APP_LAYOUT.componentGap,
+    },
+    formFieldShellStyle({ tokens, focused: focused === field, error: false, multiline }),
+  ];
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: tokens.colors.background.primary }}
+      edges={['top', 'bottom']}
+    >
       <ChatSubScreenHeader title="יצירת קשר" onBack={() => navigation.goBack()} />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView contentContainerStyle={{ padding: tokens.spacing.base }}>
-          <UICard variant="glass" glassIntensity="light" padding="md">
+        <ScrollView
+          contentContainerStyle={{
+            paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+            paddingTop: APP_LAYOUT.sectionHeaderToContent,
+            paddingBottom: 48,
+          }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <SettingsGlassCard style={{ padding: APP_LAYOUT.cardPadding }}>
             <Text
               style={{
                 ...settingsHebrewText,
                 ...settingsBodyType,
                 color: tokens.colors.text.secondary,
-                marginBottom: 14,
+                marginBottom: APP_LAYOUT.cardTitleToBodyGap,
               }}
             >
               פנייה זו תיפתח כטיקט במערכת התמיכה ותגיע למנהלים.
             </Text>
-            <Text
-              style={{
-                ...settingsHebrewText,
-                ...settingsMetaType,
-                color: tokens.colors.text.tertiary,
-                marginBottom: 6,
-              }}
-            >
+            <Text style={formFieldLabelStyle({ tokens, focused: focused === 'subject' })}>
               נושא
             </Text>
-            <TextInput
-              value={subject}
-              onChangeText={setSubject}
-              maxLength={120}
-              placeholder="למשל: בעיה בתשלום"
-              placeholderTextColor={tokens.colors.text.tertiary}
-              style={inputStyle}
-            />
-            <Text
-              style={{
-                ...settingsHebrewText,
-                ...settingsMetaType,
-                color: tokens.colors.text.tertiary,
-                marginBottom: 6,
-              }}
-            >
+            <View style={shell('subject')}>
+              <TextInput
+                value={subject}
+                onChangeText={setSubject}
+                maxLength={120}
+                placeholder="למשל: בעיה בתשלום"
+                placeholderTextColor={tokens.colors.text.muted}
+                onFocus={() => setFocused('subject')}
+                onBlur={() => setFocused(null)}
+                style={[formFieldInputStyle(), { color: tokens.colors.text.primary }]}
+              />
+            </View>
+            <Text style={formFieldLabelStyle({ tokens, focused: focused === 'body' })}>
               פירוט
             </Text>
-            <TextInput
-              value={body}
-              onChangeText={setBody}
-              multiline
-              maxLength={4000}
-              placeholder="תארו את הבעיה..."
-              placeholderTextColor={tokens.colors.text.tertiary}
-              style={[inputStyle, { minHeight: 140, textAlignVertical: 'top' }]}
-            />
-            <TouchableOpacity
+            <View style={[shell('body', true), { marginBottom: APP_LAYOUT.cardStackGap }]}>
+              <TextInput
+                value={body}
+                onChangeText={setBody}
+                multiline
+                maxLength={4000}
+                placeholder="תארו את הבעיה..."
+                placeholderTextColor={tokens.colors.text.muted}
+                onFocus={() => setFocused('body')}
+                onBlur={() => setFocused(null)}
+                style={[
+                  formFieldInputStyle(),
+                  {
+                    color: tokens.colors.text.primary,
+                    minHeight: 120,
+                    textAlignVertical: 'top',
+                    paddingVertical: 12,
+                  },
+                ]}
+              />
+            </View>
+            <UIButton
+              title="שלח פנייה"
+              variant="primary"
+              fullWidth
+              loading={saving}
               disabled={saving}
               onPress={() => {
                 void HapticFeedback.impactLight();
                 void submit();
               }}
-              style={{
-                backgroundColor: tokens.colors.primary.main,
-                borderRadius: tokens.borderRadius.full,
-                paddingVertical: 14,
-                paddingHorizontal: 24,
-                alignItems: 'center',
-                justifyContent: 'center',
-                minHeight: 52,
-                opacity: saving ? 0.6 : 1,
-              }}
-            >
-              {saving ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={{ ...settingsButtonLabelStyle, color: '#fff' }}>שלח פנייה</Text>
-              )}
-            </TouchableOpacity>
-          </UICard>
+            />
+          </SettingsGlassCard>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

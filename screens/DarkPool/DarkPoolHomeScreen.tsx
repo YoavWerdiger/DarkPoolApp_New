@@ -14,7 +14,6 @@ import {
   View,
   type ListRenderItem,
 } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -294,7 +293,6 @@ export default function DarkPoolHomeScreen() {
 
   return (
     <ScreenChrome rtl>
-      <StatusBar style="light" />
       <SafeAreaView style={[styles.safe, darkPoolTransparentFill]} edges={['top']}>
         <MainDrawerScreenHeader
           inRtlTree

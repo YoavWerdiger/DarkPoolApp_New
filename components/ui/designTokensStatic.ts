@@ -15,6 +15,8 @@ const darkColors = {
     glow: 'rgba(0, 200, 5, 0.35)',
     subtle: 'rgba(0, 200, 5, 0.06)',
     gradient: [SoftUI.brand, SoftUI.brandDark],
+    /** מילוי CTA ראשי בכהה — גלולה לבנה. ירוק המותג נשאר accent, לא מילוי הכפתור. */
+    lightCta: '#FFFFFF',
   },
   secondary: {
     main: SoftUI.textSecondary,
@@ -81,9 +83,9 @@ const darkColors = {
     strong: 'rgba(255, 255, 255, 0.10)',
     accent: 'rgba(0, 200, 5, 0.30)',
     active: 'rgba(0, 200, 5, 0.30)',
-    danger: 'rgba(248, 113, 113, 0.25)',
+    danger: 'rgba(239, 68, 68, 0.25)',
     hover: 'rgba(255, 255, 255, 0.08)',
-    divider: SoftUI.borderSubtle,
+    divider: 'rgba(255, 255, 255, 0.13)',
   },
 
   glass: {
@@ -110,6 +112,13 @@ const darkColors = {
   },
 };
 
+/** קנבס מסך במצב בהיר */
+export const LIGHT_CANVAS = '#F4F2F1';
+/** כרטיס אטום במצב בהיר (UICard soft / דיאלוג) */
+export const LIGHT_CARD = '#FFFFFF';
+/** טקסט ראשי (כותרת / גוף) על הקנבס והכרטיס הלבן */
+export const LIGHT_TEXT_PRIMARY = '#1E1A24';
+
 // Light Theme
 const lightColors = {
   primary: {
@@ -122,6 +131,8 @@ const lightColors = {
     glow: 'rgba(0, 184, 74, 0.25)',
     subtle: 'rgba(0, 184, 74, 0.06)',
     gradient: ['#00B84A', '#009E3E'],
+    /** מילוי CTA ראשי בבהיר — גלולה שחורה, לא ירוק. */
+    lightCta: '#010000',
   },
   secondary: {
     main: '#34D399',
@@ -135,41 +146,41 @@ const lightColors = {
   },
 
   background: {
-    primary: '#F5F5F7',
-    screen: 'transparent',
-    secondary: '#FFFFFF',
+    primary: LIGHT_CANVAS,
+    screen: LIGHT_CANVAS,
+    secondary: LIGHT_CARD,
     tertiary: '#E8E8ED',
-    elevated: '#FFFFFF',
+    elevated: LIGHT_CARD,
     elevated2: '#FAFAFA',
-    card: 'rgba(0, 0, 0, 0.03)',
+    card: LIGHT_CARD,
     cardHover: 'rgba(0, 0, 0, 0.05)',
-    cardSolid: '#F2F2F7',
-    navChrome: '#FFFFFF',
-    surface: 'rgba(0, 0, 0, 0.02)',
+    cardSolid: LIGHT_CARD,
+    navChrome: LIGHT_CARD,
+    surface: LIGHT_CARD,
     input: 'rgba(0, 0, 0, 0.04)',
-    header: 'rgba(245, 245, 247, 0.85)',
-    tabBar: 'rgba(245, 245, 247, 0.95)',
+    header: 'rgba(244, 242, 241, 0.85)',
+    tabBar: 'rgba(244, 242, 241, 0.95)',
     tabActive: '#00B84A',
     sheet: '#FFFFFF',
     overlay: 'rgba(0, 0, 0, 0.50)',
     overlayHeavy: 'rgba(0, 0, 0, 0.70)',
   },
 
-  /** light: אותו עיקרון — מרכיבים rgba כמו בקודם מעל רקע #F5F5F7 */
+  /** light: אותו עיקרון — מרכיבים rgba כמו בקודם מעל רקע #F4F2F1 */
   bubbleMe: '#C8F4CA', // מעט יותר “פגז” / בולט
   bubbleOther: '#FAFAFA',
   bubbleMeText: '#0A0E0A',
   bubbleMeMetaText: 'rgba(10, 14, 10, 0.55)',
 
   text: {
-    primary: '#000000',
+    primary: LIGHT_TEXT_PRIMARY,
     secondary: 'rgba(0, 0, 0, 0.65)',
     tertiary: 'rgba(0, 0, 0, 0.45)',
     muted: 'rgba(0, 0, 0, 0.30)',
     disabled: 'rgba(0, 0, 0, 0.30)',
     inverse: '#FFFFFF',
     accent: '#00B84A',
-    danger: '#F87171',
+    danger: '#EF4444',
     success: '#10B981',
     warning: '#F59E0B',
     info: '#3B82F6',
@@ -187,9 +198,9 @@ const lightColors = {
     strong: 'rgba(0, 0, 0, 0.18)',
     accent: 'rgba(0, 184, 74, 0.30)',
     active: 'rgba(0, 184, 74, 0.30)',
-    danger: 'rgba(248, 113, 113, 0.30)',
+    danger: 'rgba(239, 68, 68, 0.30)',
     hover: 'rgba(0, 0, 0, 0.15)',
-    divider: 'rgba(0, 0, 0, 0.06)',
+    divider: 'rgba(0, 0, 0, 0.10)',
   },
 
   glass: {
@@ -206,11 +217,11 @@ const lightColors = {
       border: 'rgba(0, 0, 0, 0.08)',
     },
     header: {
-      bg: 'rgba(245, 245, 247, 0.85)',
+      bg: 'rgba(244, 242, 241, 0.85)',
       border: 'rgba(0, 0, 0, 0.06)',
     },
     tabBar: {
-      bg: 'rgba(245, 245, 247, 0.95)',
+      bg: 'rgba(244, 242, 241, 0.95)',
       border: 'rgba(0, 0, 0, 0.06)',
     },
   },
@@ -230,8 +241,8 @@ const staticColors = {
 const staticTokens = {
   typography: {
     fontFamily: {
-      system: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
-      assistant: ['Assistant-ExtraBold', 'Assistant', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+      system: ['Heebo_400Regular', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+      assistant: ['Heebo_700Bold', 'Heebo_400Regular', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
       mono: ['SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'monospace'],
     },
     fontSize: {
@@ -633,7 +644,7 @@ const staticTokens = {
       
       // Secondary - אפור בהיר לכפתורים משניים
       buttonSecondary: '#F5F5F5',
-      buttonSecondaryText: '#000000',
+      buttonSecondaryText: LIGHT_TEXT_PRIMARY,
       
       // Disabled
       buttonDisabled: '#E0E0E0',
@@ -645,7 +656,7 @@ const staticTokens = {
       input: '#F8F8F8',
       
       // Text
-      headline: '#000000',
+      headline: LIGHT_TEXT_PRIMARY,
       body: '#666666',
       secondary: '#999999',
       placeholder: '#BBBBBB',
@@ -657,7 +668,7 @@ const staticTokens = {
       subtle: '#F0F0F0',
       
       // States
-      error: '#F87171',
+      error: '#EF4444',
       success: '#00C805',
       warning: '#FFB800',
     },

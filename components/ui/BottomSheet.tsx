@@ -20,6 +20,7 @@ import {
   GestureHandlerStateChangeEvent,
 } from "react-native-gesture-handler";
 import { HapticFeedback } from "../../utils/hapticFeedback";
+import { useDesignTokens } from "./DesignTokens";
 import {
   SHEET_OPEN_TIMING,
   SHEET_CLOSE_TIMING,
@@ -53,6 +54,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   closeOnBackdropPress = true,
   maxHeight = "80%",
 }) => {
+  const tokens = useDesignTokens();
   const translateY = useSharedValue(SCREEN_HEIGHT);
   const isOpen = useSharedValue(false);
 
@@ -152,12 +154,19 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
     <Animated.View
       style={[
         styles.sheetContainer,
-        { maxHeight: maxHeightValue },
+        {
+          maxHeight: maxHeightValue,
+          backgroundColor: tokens.colors.background.cardSolid,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderColor: tokens.colors.border.divider,
+        },
         sheetStyle,
         contentStyle,
       ]}
     >
-      {showHandle && <View style={styles.dragLine} />}
+      {showHandle && (
+        <View style={[styles.dragLine, { backgroundColor: tokens.colors.text.secondary }]} />
+      )}
       {children}
     </Animated.View>
   );

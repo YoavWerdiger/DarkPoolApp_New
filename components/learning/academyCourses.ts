@@ -113,14 +113,16 @@ export function getCourseDurationMinutes(course: {
 /** רוחב אחיד לתג העליון */
 export const ACADEMY_BADGE_MIN_WIDTH = 108;
 
-const ADVANCED_COURSE_BADGE_COLOR = '#6366F1';
+const ADVANCED_COURSE_ACCENT = '#6366F1';
+const ADVANCED_COURSE_BADGE_COLOR = '#FFD60A';
+const ADVANCED_COURSE_BADGE_TEXT = '#1E1A24';
 
 /** תווית תג על כרטיס הקורס */
 export function getAcademyCourseBadgeLabel(
   course: Pick<CourseWithProgress, 'id' | 'slug' | 'title' | 'access'> & { price?: number }
 ): string {
   if (isDavidTrainingCourse(course)) return 'בסיסי';
-  if (isWhalesCourse(course)) return 'קורס מלא';
+  if (isWhalesCourse(course)) return 'קורס בסיס';
   if (isOracleCourse(course)) return 'קורס מתקדם';
   if (getAcademyCourseTier(course) === 'premium') return 'קורס מלא';
   return 'חינמי';
@@ -136,12 +138,19 @@ export function getAcademyCourseBadgeColor(
   return primaryMain;
 }
 
+export function getAcademyCourseBadgeTextColor(
+  course: Pick<CourseWithProgress, 'id' | 'slug' | 'title'>
+): string {
+  if (isOracleCourse(course)) return ADVANCED_COURSE_BADGE_TEXT;
+  return '#FFFFFF';
+}
+
 /** צבע הדגשה (מטא / CTA) לפי סוג הקורס */
 export function getAcademyCourseAccentColor(
   course: Pick<CourseWithProgress, 'id' | 'slug' | 'title' | 'access'> & { price?: number },
   primaryMain: string
 ): string {
-  if (isOracleCourse(course)) return ADVANCED_COURSE_BADGE_COLOR;
+  if (isOracleCourse(course)) return ADVANCED_COURSE_ACCENT;
   return primaryMain;
 }
 
@@ -160,5 +169,36 @@ export function sortAcademyCourses<T extends { id: string }>(courses: T[]): T[] 
     const bRank = bi === -1 ? Number.MAX_SAFE_INTEGER : bi;
     if (aRank !== bRank) return aRank - bRank;
     return a.id.localeCompare(b.id);
+  });
+}
+
+/** רשימת האקדמיה הנראית: רק הלווייתנים והאורקל. */
+export function isAcademyCatalogCourse(
+  course: Pick<CourseWithProgress, 'id' | 'slug' | 'title'>
+): boolean {
+  return isWhalesCourse(course) || isOracleCourse(course);
+}
+
+/**
+ * מסנן את קטלוג האקדמיה לכרטיס אחד של הלווייתנים וכרטיס אחד של האורקל.
+ * יסודות המסחר, קורסים אחרים ושורות כפולות לא מוצגים. הנתונים עצמם לא נמחקים.
+ */
+export function selectAcademyCatalogCourses<
+  T extends Pick<CourseWithProgress, 'id' | 'slug' | 'title'>,
+>(courses: T[]): T[] {
+  let keptWhales = false;
+  let keptOracle = false;
+  return sortAcademyCourses(courses.filter(isAcademyCatalogCourse)).filter((course) => {
+    if (isWhalesCourse(course)) {
+      if (keptWhales) return false;
+      keptWhales = true;
+      return true;
+    }
+    if (isOracleCourse(course)) {
+      if (keptOracle) return false;
+      keptOracle = true;
+      return true;
+    }
+    return false;
   });
 }

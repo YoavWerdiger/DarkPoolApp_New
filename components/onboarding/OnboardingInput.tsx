@@ -7,6 +7,7 @@ import {
   formFieldLabelStyle,
   formFieldShellStyle,
 } from '../ui/formControl';
+import { PasswordVisibilityToggle } from '../ui/PasswordVisibilityToggle';
 import { appFormFieldHelperStyle } from '../ui/appType';
 
 interface OnboardingInputProps extends TextInputProps {
@@ -30,11 +31,14 @@ const OnboardingInput: React.FC<OnboardingInputProps> = ({
   isLast = false,
   onFocus,
   onBlur,
+  secureTextEntry,
   ...textInputProps
 }) => {
   const tokens = useDesignTokens();
   const [focused, setFocused] = useState(false);
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const hasError = !!error;
+  const isPassword = secureTextEntry === true;
 
   return (
     <View style={[styles.block, isLast && styles.blockLast]}>
@@ -46,6 +50,12 @@ const OnboardingInput: React.FC<OnboardingInputProps> = ({
           formFieldShellStyle({ tokens, focused, error: hasError, multiline }),
         ]}
       >
+        {isPassword ? (
+          <PasswordVisibilityToggle
+            visible={passwordVisible}
+            onToggle={() => setPasswordVisible((v) => !v)}
+          />
+        ) : null}
         <TextInput
           style={[
             formFieldInputStyle(),
@@ -59,6 +69,7 @@ const OnboardingInput: React.FC<OnboardingInputProps> = ({
           placeholderTextColor={DesignTokens.colors.text.muted}
           multiline={multiline}
           {...textInputProps}
+          secureTextEntry={isPassword ? !passwordVisible : secureTextEntry}
           onFocus={(e) => {
             setFocused(true);
             onFocus?.(e);

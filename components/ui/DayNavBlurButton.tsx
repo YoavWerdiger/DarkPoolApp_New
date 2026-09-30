@@ -2,12 +2,32 @@ import React from 'react';
 import { View, Pressable, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { NavGlassSurface } from './NavGlassSurface';
 import type { NavGlassIntensity } from './navGlass';
+import { useDesignTokens } from './DesignTokens';
+import { LIGHT_CARD } from './designTokensStatic';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 
 /** ברירת מחדל — ניווט תאריכים / שיעור (~40pt) */
 export const DAY_NAV_BUTTON_SIZE = 40;
 /** כפתור תפריט מגירה — קצת גדול יותר */
 export const DRAWER_MENU_BUTTON_SIZE = 46;
+
+/**
+ * פני כפתור התפריט בלבד.
+ * לייט: מילוי כרטיס אטום (`cardSolid`).
+ * כהה: `undefined` — נשארת זכוכית הניווט הקיימת.
+ */
+export function drawerMenuFaceColor(cardSolid: string): string | undefined {
+  return cardSolid === LIGHT_CARD ? cardSolid : undefined;
+}
+
+/**
+ * מילוי כפתור יציאה / חזרה / סגירה.
+ * תמיד `cardSolid` של הערכה הפעילה.
+ */
+export function headerExitButtonFill(cardSolid: string): string {
+  return cardSolid;
+}
+
 /** כפתור חזרה / פעולה בכותרת מסך פרטים (אחיד לכל ה-stack screens) */
 export const HEADER_BACK_BTN_SIZE = 40;
 
@@ -18,14 +38,19 @@ type Props = {
   style?: StyleProp<ViewStyle>;
   /** רוחב/גובה עגול (ברירת מחדל DAY_NAV_BUTTON_SIZE) */
   size?: number;
-  /** עדין יותר בשורת תאריך / תפריט (פחות משקל ויזואלי) */
+  /** עדין יותר בשורת תאריך / תפריט (פחות משקל ויזואלי) — רק כש-`glass` */
   glassIntensity?: NavGlassIntensity;
+  /**
+   * זכוכית ניווט. ברירת מחדל כבוי: מילוי `cardSolid` בשתי הערכות.
+   * נשאר דלוק לניווט בתוך כרטיס ולתפריט המגירה בכהה.
+   */
+  glass?: boolean;
   accessibilityLabel?: string;
 };
 
 /**
- * כפתור ניווט עגול — Blur + tint (NavGlassSurface), לא slab אטום של navChrome.
- * מיכל חיתוך קשיח כדי שה-blur יישאר עיגול מלא בשורות flex.
+ * כפתור עגול בכותרת — מילוי כרטיס (`cardSolid`) בשתי ערכות הנושא, בלי BlurView.
+ * `glass` משאיר את NavGlassSurface לניווט שיושב על כרטיס.
  */
 export function DayNavBlurButton({
   onPress,
@@ -34,14 +59,20 @@ export function DayNavBlurButton({
   style,
   size = DAY_NAV_BUTTON_SIZE,
   glassIntensity = 'light',
+  glass = false,
   accessibilityLabel,
 }: Props) {
+  const tokens = useDesignTokens();
   const r = size / 2;
   const flatUser = StyleSheet.flatten(style) as ViewStyle | undefined;
   const userBg = flatUser?.backgroundColor;
   const { backgroundColor: _drop, ...restUser } = flatUser ?? {};
   const hasSolidOverride =
     typeof userBg === 'string' && userBg.length > 0 && userBg !== 'transparent';
+  const useGlass = glass && !hasSolidOverride;
+  const faceColor = hasSolidOverride
+    ? userBg
+    : headerExitButtonFill(tokens.colors.background.cardSolid);
 
   const dim: ViewStyle = {
     width: size,
@@ -54,10 +85,10 @@ export function DayNavBlurButton({
     ...restUser,
   };
 
-  if (hasSolidOverride) {
+  if (!useGlass) {
     const face: ViewStyle = {
       ...dim,
-      backgroundColor: userBg,
+      backgroundColor: faceColor,
       borderWidth: 0,
       alignItems: 'center',
       justifyContent: 'center',

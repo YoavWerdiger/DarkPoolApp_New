@@ -23,19 +23,23 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useChat } from '../../context/ChatContext';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { CommonActions, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useLockParentDrawerWhileFocused } from '../../hooks/useLockParentDrawerWhileFocused';
 import { scheduleAfterNavigationTransition } from '../../hooks/afterNavigationTransition';
 import { ChatGroupMember, ChatMemberRole } from '../../types/chat.types';
 import { Ionicons } from '@expo/vector-icons';
+import { Bell, BellOff, ChevronDown, ChevronLeft, LogOut, Plus, Star, Users } from 'lucide-react-native';
 import UICard from '../../components/ui/UICard';
+import UIButton from '../../components/ui/UIButton';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { ChatScreenShell, ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 import { chatGroupService } from '../../services/chat';
 import { getChatMediaDisplayUri } from '../../services/chat/chatSignedMediaUrl';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { openUserProfile } from '../../lib/openUserProfile';
-import { chatRtlRoot, chatRtlRow, chatRtlText } from '../../components/chat/chatDesignTokens';
+import { chatRtlRoot, chatRtlRow } from '../../components/chat/chatDesignTokens';
+import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
 import {
   formatUserPresenceLabel,
   isUserPresenceOnline,
@@ -44,13 +48,13 @@ import { isolateNumericRuns } from '../DarkPool/utils/bidi';
 import { useGroupNotificationMute } from '../../hooks/useGroupNotificationMute';
 import {
   settingsHeroType,
+  settingsGroupLabelStyle,
   settingsRowType,
-  settingsRowTitleStyle,
   settingsBodyType,
   settingsMetaType,
   settingsCaptionType,
   settingsCaption2Type,
-  settingsButtonLabelStyle,
+  settingsHebrewText,
 } from '../../components/profile/settingsType';
 
 if (
@@ -64,6 +68,7 @@ export default function ChatGroupInfoScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const { user } = useAuth();
+  const { theme } = useTheme();
   const DesignTokens = useDesignTokens();
   useLockParentDrawerWhileFocused();
 
@@ -239,8 +244,8 @@ export default function ChatGroupInfoScreen() {
     action?: React.ReactNode,
   ) => (
     <View style={styles.sectionHeader}>
-      <Text style={styles.sectionHeaderTitle}>{title}</Text>
       {action}
+      <Text style={styles.sectionHeaderTitle}>{title}</Text>
     </View>
   );
 
@@ -411,38 +416,43 @@ export default function ChatGroupInfoScreen() {
         disabled={!isAdmin && member.user_id !== user?.id}
         activeOpacity={0.7}
       >
-        <View style={styles.memberAvatarWrap}>
-          {member.user?.profile_picture ? (
-            <Image source={{ uri: member.user.profile_picture }} style={styles.memberAvatar} />
-          ) : (
-            <View style={styles.memberAvatarPlaceholder}>
-              <Text style={styles.memberAvatarText}>
-                {member.user?.display_name?.charAt(0) || '?'}
-              </Text>
-            </View>
-          )}
-          {isOnline ? <View style={styles.avatarOnlineDot} /> : null}
-        </View>
-        <View style={styles.memberInfo}>
+        {label ? (
+          <Text
+            style={isOnline ? styles.onlineText : styles.lastSeenText}
+            numberOfLines={1}
+          >
+            {isolateNumericRuns(label)}
+          </Text>
+        ) : null}
+        <View style={styles.menuTextCol}>
           <View style={styles.memberNameRow}>
+            {member.user_id === user?.id ? (
+              <Text style={styles.youLabel}>(אתה)</Text>
+            ) : null}
+            {member.role === 'admin' ? (
+              <View style={styles.adminBadge}>
+                <Star size={10} color={DesignTokens.colors.warning.main} strokeWidth={2} />
+                <Text style={styles.adminBadgeText}>אדמין</Text>
+              </View>
+            ) : null}
             <Text style={styles.memberName} numberOfLines={1}>
               {member.user?.display_name || 'משתמש'}
             </Text>
-            {member.role === 'admin' && (
-              <View style={styles.adminBadge}>
-                <Ionicons name="star" size={10} color={DesignTokens.colors.warning.main} />
-                <Text style={styles.adminBadgeText}>אדמין</Text>
+          </View>
+        </View>
+        <View style={styles.leadingIcon}>
+          <View style={styles.memberAvatarWrap}>
+            {member.user?.profile_picture ? (
+              <Image source={{ uri: member.user.profile_picture }} style={styles.memberAvatar} />
+            ) : (
+              <View style={styles.memberAvatarPlaceholder}>
+                <Text style={styles.memberAvatarText}>
+                  {member.user?.display_name?.charAt(0) || '?'}
+                </Text>
               </View>
             )}
-            {member.user_id === user?.id && (
-              <Text style={styles.youLabel}>(אתה)</Text>
-            )}
+            {isOnline ? <View style={styles.avatarOnlineDot} /> : null}
           </View>
-          {label ? (
-            <Text style={isOnline ? styles.onlineText : styles.lastSeenText} numberOfLines={1}>
-              {isolateNumericRuns(label)}
-            </Text>
-          ) : null}
         </View>
       </TouchableOpacity>
     );
@@ -483,7 +493,7 @@ export default function ChatGroupInfoScreen() {
                 <Image source={{ uri: currentGroup.avatar_url }} style={styles.avatar} />
               ) : (
                 <View style={styles.avatarPlaceholder}>
-                  <Ionicons name="people" size={44} color={DesignTokens.colors.text.secondary} />
+                  <Users size={44} color={DesignTokens.colors.text.secondary} strokeWidth={2} />
                 </View>
               )}
               <Text style={styles.groupName} numberOfLines={2}>
@@ -545,52 +555,6 @@ export default function ChatGroupInfoScreen() {
           </View>
 
           <View style={styles.sectionBlock}>
-            {renderSectionHeader('פעולות')}
-            <UICard variant="soft" padding="none" style={styles.sectionSurface}>
-              <View style={styles.quickPanel}>
-                <View style={styles.quickPanelRow}>
-                  <View style={styles.quickMuteBlock}>
-                    <View style={styles.quickMuteIconWrap}>
-                      <Ionicons
-                        name={isMuted ? 'notifications-off-outline' : 'notifications-outline'}
-                        size={20}
-                        color={DesignTokens.colors.primary.main}
-                      />
-                    </View>
-                    <View style={styles.quickMuteTextWrap}>
-                      <Text style={styles.quickPanelTitle}>התראות</Text>
-                      <Text style={styles.quickPanelHint}>
-                        {isMuted ? 'מושתק' : 'פעילות'}
-                      </Text>
-                    </View>
-                    <Switch
-                      value={isMuted}
-                      onValueChange={(v) => { void handleToggleMute(v); }}
-                      trackColor={{
-                        false: DesignTokens.colors.background.tertiary,
-                        true: DesignTokens.colors.primary.main,
-                      }}
-                      thumbColor="#FFFFFF"
-                    />
-                  </View>
-                </View>
-                <View style={styles.separator} />
-                <TouchableOpacity
-                  style={styles.quickStarRow}
-                  onPress={() => { void HapticFeedback.selection(); handleStarredMessages(); }}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.quickMuteIconWrap}>
-                    <Ionicons name="star" size={20} color={DesignTokens.colors.primary.main} />
-                  </View>
-                  <Text style={styles.quickPanelTitleGrow}>הודעות מסומנות</Text>
-                  <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.tertiary} />
-                </TouchableOpacity>
-              </View>
-            </UICard>
-          </View>
-
-          <View style={styles.sectionBlock}>
             {renderSectionHeader(
               isolateNumericRuns(`חברים · ${sortedMembers.length}`),
               isAdmin ? (
@@ -599,7 +563,7 @@ export default function ChatGroupInfoScreen() {
                   style={styles.addButton}
                   hitSlop={8}
                 >
-                  <Ionicons name="add" size={18} color={DesignTokens.colors.primary.main} />
+                  <Plus size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
                   <Text style={styles.addButtonText}>הוסף</Text>
                 </TouchableOpacity>
               ) : undefined,
@@ -613,24 +577,26 @@ export default function ChatGroupInfoScreen() {
               ))}
               {otherRows.length > 0 ? (
                 <>
-                  <View style={styles.separator} />
+                  {activeMembers.length > 0 ? <View style={styles.separator} /> : null}
                   <TouchableOpacity
-                    style={styles.othersToggleRow}
+                    style={styles.menuRow}
                     onPress={toggleExpandedMembers}
                     activeOpacity={0.7}
                     accessibilityRole="button"
                     accessibilityState={{ expanded: expandedMembers }}
                   >
-                    <Text style={styles.othersToggleText}>
-                      {isolateNumericRuns(`חברים נוספים · ${otherRows.length}`)}
-                    </Text>
                     <Animated.View style={{ transform: [{ rotate: chevronRotate }] }}>
-                      <Ionicons
-                        name="chevron-down"
+                      <ChevronDown
                         size={20}
                         color={DesignTokens.colors.text.tertiary}
+                        strokeWidth={2}
                       />
                     </Animated.View>
+                    <View style={styles.menuTextCol}>
+                      <Text style={styles.menuTitle}>
+                        {isolateNumericRuns(`חברים נוספים · ${otherRows.length}`)}
+                      </Text>
+                    </View>
                   </TouchableOpacity>
                   {expandedMembers
                     ? otherRows.map((member) => (
@@ -645,13 +611,62 @@ export default function ChatGroupInfoScreen() {
             </UICard>
           </View>
 
-          <TouchableOpacity
-            activeOpacity={0.75}
-            onPress={() => { void HapticFeedback.impactLight(); handleLeaveGroup(); }}
-            style={styles.leaveButton}
-          >
-            <Text style={styles.leaveButtonText}>עזוב קבוצה</Text>
-          </TouchableOpacity>
+          <View style={styles.sectionBlock}>
+            {renderSectionHeader('פעולות')}
+            <UICard variant="soft" padding="none" style={styles.sectionSurface}>
+              <View style={styles.menuRow}>
+                <Switch
+                  value={isMuted}
+                  onValueChange={(v) => { void handleToggleMute(v); }}
+                  trackColor={{
+                    false: theme.switchTrackOff,
+                    true: DesignTokens.colors.primary.main,
+                  }}
+                  thumbColor={isMuted ? DesignTokens.colors.text.primary : theme.switchThumbOff}
+                  ios_backgroundColor={theme.switchTrackOff}
+                  style={{ transform: [{ scaleX: 0.82 }, { scaleY: 0.82 }] }}
+                />
+                <View style={styles.menuTextCol}>
+                  <Text style={styles.menuTitle}>התראות</Text>
+                </View>
+                <View style={styles.leadingIcon}>
+                  {isMuted ? (
+                    <BellOff size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
+                  ) : (
+                    <Bell size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
+                  )}
+                </View>
+              </View>
+              <View style={styles.separator} />
+              <TouchableOpacity
+                style={styles.menuRow}
+                onPress={() => { void HapticFeedback.selection(); handleStarredMessages(); }}
+                activeOpacity={0.7}
+              >
+                <ChevronLeft size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
+                <View style={styles.menuTextCol}>
+                  <Text style={styles.menuTitle}>הודעות מסומנות</Text>
+                </View>
+                <View style={styles.leadingIcon}>
+                  <Star size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
+                </View>
+              </TouchableOpacity>
+              <View style={styles.separator} />
+              <TouchableOpacity
+                style={styles.menuRow}
+                onPress={() => { void HapticFeedback.impactLight(); handleLeaveGroup(); }}
+                activeOpacity={0.7}
+              >
+                <ChevronLeft size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
+                <View style={styles.menuTextCol}>
+                  <Text style={[styles.menuTitle, styles.menuTitleDanger]}>יציאה מהקבוצה</Text>
+                </View>
+                <View style={styles.leadingIcon}>
+                  <LogOut size={20} color={DesignTokens.colors.danger.main} strokeWidth={2} />
+                </View>
+              </TouchableOpacity>
+            </UICard>
+          </View>
           </ScrollView>
         </View>
       </SafeAreaView>
@@ -666,21 +681,22 @@ export default function ChatGroupInfoScreen() {
               value={promptValue}
               onChangeText={setPromptValue}
               autoFocus
-              placeholderTextColor="rgba(148,163,184,0.6)"
+              placeholderTextColor={DesignTokens.colors.text.tertiary}
             />
             <View style={styles.promptButtons}>
               <TouchableOpacity onPress={() => setPromptVisible(false)} style={styles.promptBtn}>
                 <Text style={styles.promptBtnCancel}>ביטול</Text>
               </TouchableOpacity>
-              <TouchableOpacity
+              <UIButton
+                title="אישור"
+                variant="primary"
+                size="sm"
+                haptic={false}
                 onPress={() => {
                   setPromptVisible(false);
                   promptCallback?.(promptValue);
                 }}
-                style={[styles.promptBtn, styles.promptBtnConfirmBg]}
-              >
-                <Text style={styles.promptBtnConfirm}>אישור</Text>
-              </TouchableOpacity>
+              />
             </View>
           </View>
         </KeyboardAvoidingView>
@@ -703,7 +719,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: tokens.spacing.base,
+    paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
     paddingTop: tokens.spacing.sm,
     paddingBottom: tokens.spacing['3xl'],
   },
@@ -711,62 +727,60 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: tokens.spacing.base,
+    paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
   },
   heroCard: {
-    borderRadius: tokens.borderRadius.xl,
+    borderRadius: UI_CARD_RADIUS,
     overflow: 'hidden',
     backgroundColor: tokens.colors.background.cardSolid,
   },
   heroBlock: {
     alignItems: 'center',
-    paddingTop: tokens.spacing.xl,
-    paddingBottom: tokens.spacing.lg,
-    paddingHorizontal: tokens.spacing.base,
+    padding: APP_LAYOUT.cardPadding,
   },
   sectionBlock: {
-    marginBottom: tokens.spacing.lg,
+    marginBottom: APP_LAYOUT.cardStackGap,
   },
   sectionSurface: {
-    borderRadius: tokens.borderRadius.lg,
+    borderRadius: UI_CARD_RADIUS,
     overflow: 'hidden',
     backgroundColor: tokens.colors.background.cardSolid,
   },
   sectionHeader: {
-    ...chatRtlRow,
+    flexDirection: 'row',
+    direction: 'ltr',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: tokens.spacing.sm,
-    marginBottom: tokens.spacing.sm,
     width: '100%',
     alignSelf: 'stretch',
+    marginBottom: APP_LAYOUT.groupLabelToContent,
   },
   sectionHeaderTitle: {
-    ...settingsRowTitleStyle,
+    ...settingsHebrewText,
+    ...(({ width: _width, marginBottom: _marginBottom, ...label }) => label)(settingsGroupLabelStyle),
     flex: 1,
     minWidth: 0,
     color: tokens.colors.text.secondary,
   },
   sectionHeaderAction: {
-    ...chatRtlText,
+    ...settingsHebrewText,
     ...settingsCaptionType,
-    color: tokens.colors.primary.main,
+    color: tokens.colors.text.primary,
   },
   sectionBody: {
-    paddingHorizontal: tokens.spacing.base,
-    paddingVertical: tokens.spacing.md,
+    paddingHorizontal: APP_LAYOUT.cardPadding,
+    paddingVertical: APP_LAYOUT.cardPadding,
   },
   avatar: {
     width: 108,
     height: 108,
     borderRadius: 54,
-    marginBottom: tokens.spacing.md,
+    marginBottom: APP_LAYOUT.cardStackGap,
   },
   avatarPlaceholder: {
     width: 108,
     height: 108,
     borderRadius: 54,
-    marginBottom: tokens.spacing.md,
+    marginBottom: APP_LAYOUT.cardStackGap,
     backgroundColor: tokens.colors.background.tertiary,
     justifyContent: 'center',
     alignItems: 'center',
@@ -774,31 +788,29 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   groupName: {
     ...settingsHeroType,
     color: tokens.colors.text.primary,
-    marginBottom: tokens.spacing.xs,
+    marginBottom: APP_LAYOUT.titleSubtitleGap,
     textAlign: 'center',
     writingDirection: 'rtl',
     paddingHorizontal: tokens.spacing.sm,
   },
   groupStatus: {
-    ...chatRtlText,
     ...settingsMetaType,
     color: tokens.colors.text.secondary,
     textAlign: 'center',
+    writingDirection: 'rtl',
   },
   heroDivider: {
     alignSelf: 'stretch',
-    height: StyleSheet.hairlineWidth,
+    height: 1,
     backgroundColor: tokens.colors.border.divider,
-    marginTop: tokens.spacing.md,
-    marginBottom: tokens.spacing.sm,
-    marginHorizontal: tokens.spacing.lg,
+    marginTop: APP_LAYOUT.cardTitleToBodyGap,
+    marginBottom: APP_LAYOUT.cardTitleToBodyGap,
   },
   aboutText: {
-    ...chatRtlText,
-    ...settingsMetaType,
+    ...settingsBodyType,
     color: tokens.colors.text.secondary,
     textAlign: 'center',
-    paddingHorizontal: tokens.spacing.xs,
+    writingDirection: 'rtl',
   },
   mediaGrid: {
     ...chatRtlRow,
@@ -823,69 +835,46 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     padding: 4,
   },
   emptyMediaText: {
-    ...chatRtlText,
+    ...settingsHebrewText,
     ...settingsMetaType,
     color: tokens.colors.text.tertiary,
   },
-  quickPanel: {
-    paddingVertical: tokens.spacing.xs,
-  },
-  quickPanelRow: {
-    paddingHorizontal: tokens.spacing.base,
-    paddingVertical: tokens.spacing.sm,
-  },
-  quickMuteBlock: {
-    ...chatRtlRow,
+  menuRow: {
+    flexDirection: 'row',
+    direction: 'ltr',
     alignItems: 'center',
-    gap: tokens.spacing.md,
+    paddingVertical: 15,
+    paddingHorizontal: APP_LAYOUT.cardPadding,
   },
-  quickMuteIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: tokens.borderRadius.sm,
-    backgroundColor: `${tokens.colors.primary.main}1A`,
+  memberRow: {
+    flexDirection: 'row',
+    direction: 'ltr',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: APP_LAYOUT.cardPadding,
+  },
+  menuTextCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  leadingIcon: {
+    marginLeft: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  quickMuteTextWrap: {
-    flex: 1,
-    alignItems: 'flex-start',
-  },
-  quickPanelTitle: {
-    ...chatRtlText,
+  menuTitle: {
+    ...settingsHebrewText,
     ...settingsRowType,
+    lineHeight: 20,
     color: tokens.colors.text.primary,
   },
-  quickPanelTitleGrow: {
-    ...chatRtlText,
-    ...settingsRowType,
-    flex: 1,
-    color: tokens.colors.text.primary,
-  },
-  quickPanelHint: {
-    ...chatRtlText,
-    ...settingsMetaType,
-    color: tokens.colors.text.tertiary,
-    marginTop: 1,
-  },
-  quickStarRow: {
-    ...chatRtlRow,
-    alignItems: 'center',
-    paddingHorizontal: tokens.spacing.base,
-    paddingVertical: tokens.spacing.md,
-    gap: tokens.spacing.md,
+  menuTitleDanger: {
+    color: tokens.colors.danger.main,
   },
   separator: {
-    height: StyleSheet.hairlineWidth,
+    height: 1,
     backgroundColor: tokens.colors.border.divider,
-    marginHorizontal: tokens.spacing.base,
-  },
-  memberRow: {
-    ...chatRtlRow,
-    alignItems: 'center',
-    paddingVertical: tokens.spacing.md,
-    paddingHorizontal: tokens.spacing.base,
-    gap: tokens.spacing.md,
+    marginHorizontal: APP_LAYOUT.cardPadding,
   },
   memberAvatarWrap: {
     position: 'relative',
@@ -899,13 +888,13 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: tokens.colors.primary.dim,
+    backgroundColor: tokens.colors.background.tertiary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   memberAvatarText: {
     ...settingsRowType,
-    color: tokens.colors.primary.main,
+    color: tokens.colors.text.primary,
   },
   avatarOnlineDot: {
     position: 'absolute',
@@ -916,107 +905,73 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     borderRadius: 6,
     backgroundColor: tokens.colors.success.main,
     borderWidth: 2,
-    borderColor: tokens.colors.background.primary,
-  },
-  memberInfo: {
-    flex: 1,
-    alignItems: 'flex-start',
+    borderColor: tokens.colors.background.cardSolid,
   },
   memberNameRow: {
-    ...chatRtlRow,
+    flexDirection: 'row',
+    direction: 'ltr',
     alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: tokens.spacing.xs,
-    marginBottom: 2,
+    justifyContent: 'flex-end',
   },
   memberName: {
-    ...chatRtlText,
+    ...settingsHebrewText,
     ...settingsRowType,
+    lineHeight: 20,
+    flexShrink: 1,
     color: tokens.colors.text.primary,
   },
   adminBadge: {
-    ...chatRtlRow,
+    flexDirection: 'row',
+    direction: 'ltr',
     alignItems: 'center',
     backgroundColor: tokens.colors.warning.main + '20',
     paddingHorizontal: tokens.spacing.xs,
     paddingVertical: 2,
     borderRadius: tokens.borderRadius.md,
-    gap: 4,
+    marginRight: 4,
   },
   adminBadgeText: {
-    ...chatRtlText,
+    ...settingsHebrewText,
     ...settingsCaption2Type,
+    marginLeft: 4,
     color: tokens.colors.warning.main,
   },
   youLabel: {
-    ...chatRtlText,
+    ...settingsHebrewText,
     ...settingsMetaType,
+    marginRight: 4,
     color: tokens.colors.text.tertiary,
   },
   onlineText: {
-    ...chatRtlText,
+    ...settingsHebrewText,
     ...settingsMetaType,
-    color: tokens.colors.success.main,
+    flexShrink: 1,
+    marginRight: 12,
+    color: tokens.colors.text.secondary,
   },
   lastSeenText: {
-    ...chatRtlText,
+    ...settingsHebrewText,
     ...settingsMetaType,
+    flexShrink: 1,
+    marginRight: 12,
     color: tokens.colors.text.tertiary,
   },
   addButton: {
-    ...chatRtlRow,
+    flexDirection: 'row',
+    direction: 'ltr',
     alignItems: 'center',
-    gap: tokens.spacing.xs,
-  },
-  othersToggleRow: {
-    ...chatRtlRow,
-    alignItems: 'center',
-    paddingVertical: tokens.spacing.md,
-    paddingHorizontal: tokens.spacing.base,
-    gap: tokens.spacing.md,
-  },
-  othersToggleIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: tokens.borderRadius.sm,
-    backgroundColor: tokens.colors.background.tertiary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  othersToggleText: {
-    ...chatRtlText,
-    ...settingsRowType,
-    flex: 1,
-    color: tokens.colors.text.primary,
   },
   addButtonText: {
-    ...chatRtlText,
+    ...settingsHebrewText,
     ...settingsCaptionType,
-    color: tokens.colors.primary.main,
-  },
-  leaveButton: {
-    marginTop: tokens.spacing.md,
-    marginBottom: tokens.spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: tokens.spacing.md,
-    paddingHorizontal: tokens.spacing.xl,
-    borderRadius: tokens.borderRadius.full,
-    overflow: 'hidden',
-    backgroundColor: `${tokens.colors.danger.main}1A`,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: `${tokens.colors.danger.main}55`,
-  },
-  leaveButtonText: {
-    ...chatRtlText,
-    ...settingsButtonLabelStyle,
-    color: tokens.colors.danger.main,
+    marginLeft: 12,
+    color: tokens.colors.text.primary,
   },
   errorText: {
-    ...chatRtlText,
     ...settingsBodyType,
     color: tokens.colors.text.secondary,
     textAlign: 'center',
+    writingDirection: 'rtl',
   },
   promptOverlay: {
     flex: 1,
@@ -1026,50 +981,44 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   promptContainer: {
     width: '85%',
-    backgroundColor: tokens.colors.glass.card.bg,
-    borderRadius: tokens.borderRadius.lg,
-    padding: tokens.spacing.xl,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: tokens.colors.border.subtle,
-    direction: 'rtl',
+    maxWidth: 340,
+    backgroundColor: tokens.colors.background.cardSolid,
+    borderRadius: UI_CARD_RADIUS,
+    padding: APP_LAYOUT.cardPadding,
+    borderWidth: 0,
+    direction: 'ltr',
   },
   promptTitle: {
-    ...chatRtlText,
+    ...settingsHebrewText,
     ...settingsRowType,
     color: tokens.colors.text.primary,
-    marginBottom: tokens.spacing.base,
+    marginBottom: APP_LAYOUT.cardTitleToBodyGap,
   },
   promptInput: {
-    ...chatRtlText,
+    ...settingsHebrewText,
     ...settingsBodyType,
     backgroundColor: tokens.colors.background.input,
-    borderRadius: tokens.borderRadius.md,
-    padding: tokens.spacing.md,
+    borderRadius: tokens.borderRadius.full,
+    paddingHorizontal: APP_LAYOUT.cardPadding,
+    paddingVertical: 12,
     color: tokens.colors.text.primary,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: tokens.colors.border.subtle,
+    borderWidth: 0,
   },
   promptButtons: {
-    ...chatRtlRow,
-    justifyContent: 'flex-start',
-    gap: tokens.spacing.md,
-    marginTop: tokens.spacing.lg,
+    flexDirection: 'row',
+    direction: 'ltr',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: APP_LAYOUT.cardStackGap,
+    marginTop: APP_LAYOUT.cardTitleToBodyGap,
   },
   promptBtn: {
     paddingHorizontal: tokens.spacing.lg,
     paddingVertical: tokens.spacing.sm + 2,
-    borderRadius: tokens.borderRadius.md,
   },
   promptBtnCancel: {
-    ...chatRtlText,
+    ...settingsHebrewText,
     ...settingsBodyType,
     color: tokens.colors.text.secondary,
-  },
-  promptBtnConfirmBg: {
-    backgroundColor: '#FFFFFF',
-  },
-  promptBtnConfirm: {
-    ...settingsRowType,
-    color: tokens.colors.text.inverse,
   },
 });

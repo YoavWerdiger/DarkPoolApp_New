@@ -3,8 +3,12 @@ import { View, Text, Pressable, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from './DesignTokens';
 import { APP_LAYOUT } from './appLayout';
-import { appScreenTitleStyle, appScreenSubtitleStyle, APP_TYPE } from './appType';
-import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from './DayNavBlurButton';
+import { appPageTitleStyle, appScreenTitleStyle, appScreenSubtitleStyle, APP_TYPE } from './appType';
+import {
+  DayNavBlurButton,
+  DRAWER_MENU_BUTTON_SIZE,
+  drawerMenuFaceColor,
+} from './DayNavBlurButton';
 
 /** כמו מסך שווקים (בית) / רשימת צ׳אטים — מרווח אופקי לכותרת ול־section */
 export const MAIN_SCREEN_HEADER_HP = APP_LAYOUT.screenPaddingHorizontal;
@@ -39,8 +43,8 @@ export type MainDrawerScreenHeaderProps = {
 };
 
 /**
- * שורת תפריט + כותרת ממורכזת כמו מסכי שורש (שווקים, חדשות, צ׳אטים).
- * כותרת (וכותרת משנה בכרום ההדר) = center. טקסט גוף במסך = hebrewText.
+ * שורת תפריט, ומתחתיה כותרת מערכת גדולה מיושרת לימין — כמו «פרופיל».
+ * לוגו במרכז השורה (צ׳אט) נשאר במקום כותרת הטקסט.
  */
 export function MainDrawerScreenHeader({
   title,
@@ -57,25 +61,35 @@ export function MainDrawerScreenHeader({
   const tokens = useDesignTokens();
   const styles = useMemo(() => createStyles(tokens, inRtlTree), [tokens, inRtlTree]);
   const row = inRtlTree ? styles.rowLtrInRtlTree : styles.rowAppLtr;
+  const menuFace = drawerMenuFaceColor(tokens.colors.background.cardSolid);
 
-  const subtitleNode = subtitle ? (
-    onSubtitlePress ? (
-      <Pressable
-        onPress={onSubtitlePress}
-        hitSlop={8}
-        accessibilityRole="button"
-        accessibilityLabel={subtitle}
-      >
-        <Text style={styles.appHeaderSubtitle} numberOfLines={2}>
+  const showPageTitle = title.length > 0 && centerAccessory == null;
+
+  const subtitleNode = (align: 'center' | 'right') =>
+    subtitle ? (
+      onSubtitlePress ? (
+        <Pressable
+          onPress={onSubtitlePress}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={subtitle}
+        >
+          <Text
+            style={align === 'right' ? styles.pageSubtitle : styles.appHeaderSubtitle}
+            numberOfLines={2}
+          >
+            {subtitle}
+          </Text>
+        </Pressable>
+      ) : (
+        <Text
+          style={align === 'right' ? styles.pageSubtitle : styles.appHeaderSubtitle}
+          numberOfLines={2}
+        >
           {subtitle}
         </Text>
-      </Pressable>
-    ) : (
-      <Text style={styles.appHeaderSubtitle} numberOfLines={2}>
-        {subtitle}
-      </Text>
-    )
-  ) : null;
+      )
+    ) : null;
 
   return (
     <View style={style}>
@@ -83,8 +97,10 @@ export function MainDrawerScreenHeader({
         <View style={styles.appHeaderActionsMenu}>
           <DayNavBlurButton
             onPress={onMenuPress}
+            glass={!menuFace}
             glassIntensity="subtle"
             size={DRAWER_MENU_BUTTON_SIZE}
+            style={menuFace ? { backgroundColor: menuFace } : undefined}
             accessibilityLabel="תפריט ראשי"
           >
             <Ionicons name="menu" size={24} color={tokens.colors.text.primary} />
@@ -92,20 +108,29 @@ export function MainDrawerScreenHeader({
         </View>
         <View
           style={styles.titleBlock}
-          accessibilityRole="header"
-          accessibilityLabel={title}
+          accessibilityRole={showPageTitle ? undefined : 'header'}
+          accessibilityLabel={showPageTitle ? undefined : title}
         >
-          {centerAccessory ?? (
-            <Text style={styles.appHeaderTitle} numberOfLines={1}>
-              {title}
-            </Text>
-          )}
-          {subtitleNode}
+          {centerAccessory ??
+            (showPageTitle ? null : (
+              <Text style={styles.appHeaderTitle} numberOfLines={1}>
+                {title}
+              </Text>
+            ))}
+          {showPageTitle ? null : subtitleNode('center')}
         </View>
         <View style={styles.appHeaderActionsEnd} pointerEvents="box-none">
           {rightAccessory ?? <View style={styles.headerActionSpacer} />}
         </View>
       </View>
+      {showPageTitle ? (
+        <View style={styles.pageTitleWrap} accessibilityRole="header" accessibilityLabel={title}>
+          <Text style={[styles.pageTitle, { color: tokens.colors.text.primary }]} numberOfLines={1}>
+            {title}
+          </Text>
+          {subtitleNode('right')}
+        </View>
+      ) : null}
       {section != null ? (
         <View style={[styles.sectionPicker, sectionContainerStyle]}>{section}</View>
       ) : null}
@@ -165,6 +190,25 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, inRtlTree: boo
     },
     appHeaderSubtitle: {
       ...appScreenSubtitleStyle,
+      color: tokens.colors.text.secondary,
+    },
+    pageTitleWrap: {
+      direction: 'ltr',
+      width: '100%',
+      alignSelf: 'stretch',
+      alignItems: 'stretch',
+      paddingHorizontal: MAIN_SCREEN_HEADER_HP,
+      paddingBottom: APP_LAYOUT.cardPadding,
+    },
+    pageTitle: {
+      ...appPageTitleStyle,
+    },
+    pageSubtitle: {
+      ...appScreenSubtitleStyle,
+      direction: 'ltr',
+      textAlign: 'right',
+      writingDirection: 'rtl',
+      width: '100%',
       color: tokens.colors.text.secondary,
     },
     sectionPicker: {

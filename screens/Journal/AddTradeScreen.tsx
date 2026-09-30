@@ -15,9 +15,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
 import UICard from '../../components/ui/UICard';
+import UIButton from '../../components/ui/UIButton';
 import { DayDividerPill } from '../../components/ui/DayDividerPill';
 import { ChatSessionBackdrop } from '../../components/chat/ChatSessionBackdrop';
 import { useAuth } from '../../context/AuthContext';
@@ -248,7 +249,6 @@ export default function AddTradeScreen() {
   };
 
   const goBackStep = () => {
-    void HapticFeedback.impactLight();
     if (step > 0) setStep((x) => x - 1);
     else navigation.goBack();
   };
@@ -256,7 +256,6 @@ export default function AddTradeScreen() {
   return (
     <View style={styles.screenRoot}>
       <ChatSessionBackdrop />
-      <StatusBar style="light" />
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <KeyboardAvoidingView
           style={styles.flex1}
@@ -264,10 +263,9 @@ export default function AddTradeScreen() {
           keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
         >
           <View style={styles.topBar}>
-            <TouchableOpacity
+            <DayNavBlurButton
               onPress={goBackStep}
-              style={styles.topBarBtn}
-              accessibilityRole="button"
+              size={44}
               accessibilityLabel={step === 0 ? 'סגור' : 'שלב קודם'}
             >
               <Ionicons
@@ -275,7 +273,7 @@ export default function AddTradeScreen() {
                 size={26}
                 color={DesignTokens.colors.text.primary}
               />
-            </TouchableOpacity>
+            </DayNavBlurButton>
             <Text style={styles.topTitle} numberOfLines={1}>
               הוסף טרייד
             </Text>
@@ -713,19 +711,19 @@ export default function AddTradeScreen() {
           </ScrollView>
 
           <View style={styles.footer}>
-            <TouchableOpacity
-              style={[styles.primaryBtn, loading && styles.primaryBtnDisabled]}
+            <UIButton
+              title={loading ? 'שומר…' : step === STEPS.length - 1 ? 'שמור טרייד' : 'המשך'}
+              variant="primary"
+              size="lg"
+              fullWidth
+              loading={loading}
+              disabled={loading}
+              haptic={false}
               onPress={() => {
                 void HapticFeedback.medium();
                 goNext();
               }}
-              disabled={loading}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.primaryBtnText}>
-                {loading ? 'שומר…' : step === STEPS.length - 1 ? 'שמור טרייד' : 'המשך'}
-              </Text>
-            </TouchableOpacity>
+            />
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -791,20 +789,17 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       borderBottomWidth: 1,
       borderBottomColor: tokens.colors.border.primary,
     },
-    topBarBtn: {
-      width: 44,
-      height: 44,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
     topBarSpacer: { width: 44 },
     topTitle: {
       flex: 1,
-      fontSize: 24,
-      lineHeight: 30,
-      fontWeight: '800',
+      fontSize: JOURNAL_TYPE.screenTitle.fontSize,
+      fontWeight: JOURNAL_TYPE.screenTitle.fontWeight,
+      lineHeight: JOURNAL_TYPE.screenTitle.lineHeight,
+      letterSpacing: JOURNAL_TYPE.screenTitle.letterSpacing,
       color: tokens.colors.text.primary,
+      direction: 'ltr',
       textAlign: 'center',
+      writingDirection: 'rtl',
     },
     stepDots: {
       ...journalRow,
@@ -897,11 +892,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     directionGlassLongOn: {
       backgroundColor: `${tokens.colors.primary.main}18`,
-      borderColor: `${tokens.colors.primary.main}55`,
     },
     directionGlassShortOn: {
       backgroundColor: `${tokens.colors.text.danger}18`,
-      borderColor: `${tokens.colors.text.danger}55`,
     },
     directionTouch: {
       paddingVertical: tokens.spacing.md,
@@ -938,8 +931,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       overflow: 'hidden',
     },
     mistakeCardOn: {
-      borderColor: `${tokens.colors.primary.main}55`,
-      backgroundColor: tokens.colors.selection.subtle,
+      backgroundColor: tokens.colors.background.tertiary,
     },
     mistakeRowInner: {
       ...journalRow,
@@ -956,8 +948,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       justifyContent: 'center',
     },
     mistakeBoxOn: {
-      borderColor: tokens.colors.primary.main,
-      backgroundColor: `${tokens.colors.primary.main}18`,
+      borderColor: tokens.colors.border.primary,
+      backgroundColor: tokens.colors.background.tertiary,
     },
     mistakeLabel: {
       flex: 1,
@@ -969,20 +961,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       paddingTop: 8,
       paddingBottom: 12,
       borderTopWidth: 1,
-      borderTopColor: tokens.colors.border.primary,
-    },
-    primaryBtn: {
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: tokens.colors.primary.main,
-      borderRadius: tokens.borderRadius['3xl'],
-      paddingVertical: 14,
-    },
-    primaryBtnDisabled: { opacity: 0.55 },
-    primaryBtnText: {
-      fontSize: JOURNAL_TYPE.body.fontSize,
-      fontWeight: tokens.typography.fontWeight.bold,
-      lineHeight: JOURNAL_TYPE.body.lineHeight,
-      color: tokens.colors.text.inverse,
+      borderTopColor: tokens.colors.border.divider,
     },
   });

@@ -12,7 +12,6 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { StatusBar } from 'expo-status-bar';
 import { useCourses, useEnrollInCourse } from '../../hooks/useLearning';
 import { useAllowAfterNavigationTransition } from '../../hooks/afterNavigationTransition';
 import {
@@ -25,7 +24,7 @@ import {
   getAcademyCourseTier,
   isComingSoonCourse,
   isNativeLearningCourse,
-  sortAcademyCourses,
+  selectAcademyCatalogCourses,
   DAVID_TRAINING_COURSE_ID,
   ORACLE_COURSE_ID,
 } from '../../components/learning/academyCourses';
@@ -40,6 +39,12 @@ import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { Ionicons } from '@expo/vector-icons';
 import UICard from '../../components/ui/UICard';
+import UIButton from '../../components/ui/UIButton';
+import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
+import {
+  ACADEMY_TYPE,
+  academySectionTitleStyle,
+} from '../../components/learning/academyLayout';
 import { dispatchOpenMainDrawer, type DrawerParentNavigation } from '../../navigation/mainDrawerNav';
 import { triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
 
@@ -174,7 +179,7 @@ export const CoursesScreen: React.FC = () => {
     [enrollMutation]
   );
 
-  const orderedCourses = useMemo(() => sortAcademyCourses(courses), [courses]);
+  const orderedCourses = useMemo(() => selectAcademyCatalogCourses(courses), [courses]);
   const isSearching = searchQuery.trim().length > 0;
   const filteredCourses = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -187,20 +192,6 @@ export const CoursesScreen: React.FC = () => {
       return hay.includes(q);
     });
   }, [orderedCourses, searchQuery]);
-  const freeCourses = useMemo(
-    () =>
-      filteredCourses.filter(
-        (c) => getAcademyCourseTier(c as CourseWithProgress & { price?: number }) === 'free'
-      ),
-    [filteredCourses]
-  );
-  const premiumCourses = useMemo(
-    () =>
-      filteredCourses.filter(
-        (c) => getAcademyCourseTier(c as CourseWithProgress & { price?: number }) === 'premium'
-      ),
-    [filteredCourses]
-  );
 
   const renderHorizontalRow = (list: CourseWithProgress[]) => (
     <ScrollView
@@ -209,7 +200,7 @@ export const CoursesScreen: React.FC = () => {
       style={styles.horizontalScroll}
       contentContainerStyle={styles.horizontalList}
       decelerationRate="fast"
-      snapToInterval={horizontalCardWidth + DesignTokens.spacing.md}
+      snapToInterval={horizontalCardWidth + APP_LAYOUT.cardStackGap}
       snapToAlignment="start"
       disableIntervalMomentum
     >
@@ -228,10 +219,9 @@ export const CoursesScreen: React.FC = () => {
   if (error) {
     return (
       <ScreenChrome>
-        <StatusBar style="light" />
         <RNSafeAreaView style={styles.flex} edges={['top']}>
           <View style={styles.errorInner}>
-            <UICard variant="blur" padding="lg" style={styles.errorCard}>
+            <UICard variant="soft" padding="lg" style={styles.errorCard}>
               <Ionicons name="cloud-offline-outline" size={48} color={DesignTokens.colors.text.danger} />
               <Text style={[styles.errorTitle, { color: DesignTokens.colors.text.primary }]}>
                 שגיאה בטעינת הקורסים
@@ -239,15 +229,7 @@ export const CoursesScreen: React.FC = () => {
               <Text style={[styles.errorMessage, { color: DesignTokens.colors.text.secondary }]}>
                 {error.message || 'אירעה שגיאה לא צפויה'}
               </Text>
-              <TouchableOpacity
-                style={[styles.retryButton, { backgroundColor: DesignTokens.colors.primary.main }]}
-                onPress={() => refetch()}
-                activeOpacity={0.88}
-              >
-                <Text style={[styles.retryButtonText, { color: DesignTokens.colors.text.inverse }]}>
-                  נסה שוב
-                </Text>
-              </TouchableOpacity>
+              <UIButton title="נסה שוב" variant="primary" onPress={() => refetch()} />
             </UICard>
           </View>
         </RNSafeAreaView>
@@ -257,7 +239,6 @@ export const CoursesScreen: React.FC = () => {
 
   return (
     <ScreenChrome>
-      <StatusBar style="light" />
       <RNSafeAreaView style={styles.flex} edges={['top']}>
         <ScrollView
           style={styles.flex}
@@ -350,19 +331,10 @@ export const CoursesScreen: React.FC = () => {
             </View>
           ) : (
             <View style={styles.sections}>
-              {freeCourses.length > 0 ? (
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>קורס בסיסי</Text>
-                  {renderHorizontalRow(freeCourses)}
-                </View>
-              ) : null}
-
-              {premiumCourses.length > 0 ? (
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>קורסים מלאים</Text>
-                  {renderHorizontalRow(premiumCourses)}
-                </View>
-              ) : null}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>קורסים מלאים</Text>
+                {renderHorizontalRow(filteredCourses)}
+              </View>
             </View>
           )}
         </ScrollView>
@@ -399,12 +371,13 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       overflow: 'hidden',
     },
     searchCardFill: {
-      backgroundColor: tokens.colors.background.navChrome,
+      backgroundColor: tokens.colors.background.input,
+      borderWidth: 0,
     },
     searchInner: {
       flexDirection: 'row-reverse',
       alignItems: 'center',
-      paddingHorizontal: 14,
+      paddingHorizontal: APP_LAYOUT.cardPadding,
       minHeight: 44,
     },
     searchClearSpacer: {
@@ -414,25 +387,22 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       flex: 1,
       marginHorizontal: 8,
       color: tokens.colors.text.primary,
-      fontSize: 15,
+      ...ACADEMY_TYPE.body,
       textAlign: 'right',
       writingDirection: 'rtl',
       paddingVertical: 6,
     },
     sections: {
       width: '100%',
-      gap: tokens.spacing.xl,
+      gap: APP_LAYOUT.sectionGap,
     },
     section: {
       width: '100%',
-      gap: tokens.spacing.md,
+      gap: APP_LAYOUT.sectionHeaderToContent,
     },
     sectionTitle: {
-      fontSize: tokens.typography.fontSize.base,
-      fontWeight: '800' as const,
+      ...academySectionTitleStyle,
       color: tokens.colors.text.primary,
-      textAlign: 'right',
-      writingDirection: 'rtl',
       paddingHorizontal: ACADEMY_CARD_HP,
     },
     horizontalScroll: {
@@ -440,7 +410,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     horizontalList: {
       paddingHorizontal: ACADEMY_CARD_HP,
-      gap: tokens.spacing.md,
+      gap: APP_LAYOUT.cardStackGap,
       flexDirection: 'row',
     },
     loadingWrap: {
@@ -449,67 +419,52 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       gap: tokens.spacing.md,
     },
     loadingHint: {
-      fontSize: tokens.typography.subhead.size,
-      fontWeight: '500' as const,
+      ...ACADEMY_TYPE.body,
       color: tokens.colors.text.secondary,
     },
     emptyState: {
       alignItems: 'center',
       paddingVertical: tokens.spacing['4xl'],
-      paddingHorizontal: tokens.spacing.lg,
+      paddingHorizontal: ACADEMY_CARD_HP,
     },
     emptyIconWrap: {
       width: 88,
       height: 88,
       borderRadius: 44,
       borderWidth: 1,
-      borderColor: tokens.colors.border.primary,
+      borderColor: tokens.colors.border.divider,
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: tokens.spacing.lg,
       backgroundColor: 'rgba(255,255,255,0.04)',
     },
     emptyStateTitle: {
-      fontSize: tokens.typography.titleSmall.size,
-      fontWeight: '700' as const,
+      ...ACADEMY_TYPE.cardTitle,
       color: tokens.colors.text.primary,
-      marginBottom: tokens.spacing.sm,
+      marginBottom: APP_LAYOUT.cardTitleToSubtitleGap,
       textAlign: 'center',
     },
     emptyStateSubtitle: {
-      fontSize: tokens.typography.bodySmall.size,
+      ...ACADEMY_TYPE.body,
       color: tokens.colors.text.secondary,
       textAlign: 'center',
-      lineHeight: 22,
     },
     errorInner: {
       flex: 1,
       justifyContent: 'center',
-      paddingHorizontal: tokens.spacing.lg,
+      paddingHorizontal: ACADEMY_CARD_HP,
     },
     errorCard: {
       alignItems: 'center',
       gap: tokens.spacing.md,
-      borderRadius: tokens.borderRadius['2xl'],
+      borderRadius: UI_CARD_RADIUS,
     },
     errorTitle: {
-      fontSize: tokens.typography.titleSmall.size,
-      fontWeight: '700' as const,
+      ...ACADEMY_TYPE.cardTitle,
       textAlign: 'center',
     },
     errorMessage: {
-      fontSize: tokens.typography.bodySmall.size,
+      ...ACADEMY_TYPE.body,
       textAlign: 'center',
-      lineHeight: 22,
-    },
-    retryButton: {
-      marginTop: tokens.spacing.sm,
-      paddingHorizontal: tokens.spacing.xl,
-      paddingVertical: tokens.spacing.md,
-      borderRadius: tokens.borderRadius['3xl'],
-    },
-    retryButtonText: {
-      fontSize: tokens.typography.button.size,
-      fontWeight: tokens.typography.button.weight,
     },
   });

@@ -62,7 +62,7 @@ function DateDivider({ label }: { label: string }) {
     <View style={styles.wrap}>
       <View style={styles.line} />
       <UICard
-        variant="glass"
+        variant="soft"
         glassIntensity="subtle"
         padding="none"
         style={styles.badge}

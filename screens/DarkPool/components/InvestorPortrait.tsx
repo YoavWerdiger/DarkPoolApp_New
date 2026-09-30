@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import { APP_TYPE } from '../../../components/ui/appType';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import {
   portraitDisplayUrl,
@@ -139,16 +140,16 @@ function InvestorPortraitFallbackInner({
 
   if (!uri) {
     return (
-      <View style={[styles.cardBg, style]}>
+      <View style={[styles.cardBg, { backgroundColor: tokens.colors.background.cardSolid }, style]}>
         <LinearGradient
-          colors={[monoBg, '#0a0e0a']}
+          colors={[monoBg, tokens.colors.background.primary]}
           style={StyleSheet.absoluteFill}
         />
         <View style={styles.cardMonoCenter}>
           <View
             style={[
               styles.cardMonoCircle,
-              { backgroundColor: `${tokens.colors.primary.main}33` },
+              { backgroundColor: tokens.colors.background.navChrome },
             ]}
           >
             <Text style={styles.cardMonoText}>{initials}</Text>
@@ -160,7 +161,7 @@ function InvestorPortraitFallbackInner({
   }
 
   return (
-    <View style={[styles.cardBg, style]}>
+    <View style={[styles.cardBg, { backgroundColor: tokens.colors.background.cardSolid }, style]}>
       <Image
         source={{ uri }}
         style={[StyleSheet.absoluteFill, styles.cardImage, imageStyle]}
@@ -196,6 +197,7 @@ function InvestorPortraitInner({
   children,
   priority = 'normal',
 }: Props) {
+  const tokens = useDesignTokens();
   const [failed, setFailed] = useState<Set<string>>(() => new Set());
 
   const candidates = useMemo(
@@ -239,7 +241,7 @@ function InvestorPortraitInner({
       );
     }
     return (
-      <View style={[styles.cardBg, style]}>
+      <View style={[styles.cardBg, { backgroundColor: tokens.colors.background.cardSolid }, style]}>
         <Image
           source={{ uri }}
           style={[StyleSheet.absoluteFill, styles.cardImageFull, imageStyle]}
@@ -287,7 +289,6 @@ const styles = StyleSheet.create({
   cardBg: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: '#0f160f',
     overflow: 'hidden',
   },
   cardImage: {
@@ -297,14 +298,13 @@ const styles = StyleSheet.create({
   ring: {
     overflow: 'hidden',
     borderWidth: 1,
-    backgroundColor: '#0f160f',
   },
   mono: {
     alignItems: 'center',
     justifyContent: 'center',
   },
   monoText: {
-    fontWeight: '800',
+    fontWeight: APP_TYPE.sectionTitle.fontWeight,
     color: '#FFFFFF',
     letterSpacing: 0.5,
   },
@@ -322,8 +322,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cardMonoText: {
-    fontSize: 26,
-    fontWeight: '800',
+    fontSize: APP_TYPE.cardMetricValue.fontSize,
+    lineHeight: APP_TYPE.cardMetricValue.lineHeight,
+    fontWeight: APP_TYPE.cardMetricValue.fontWeight,
     color: '#FFFFFF',
     letterSpacing: 0.5,
   },

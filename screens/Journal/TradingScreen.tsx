@@ -3,7 +3,6 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenChrome } from '../../components/ui/ScreenChrome';
 import { DayDividerPill } from '../../components/ui/DayDividerPill';
@@ -90,7 +89,7 @@ export default function TradingScreen() {
         },
         fabBtnText: {
           fontSize: JOURNAL_TYPE.body.fontSize,
-          fontWeight: '700',
+          fontWeight: JOURNAL_TYPE.cardTitle.fontWeight,
           lineHeight: JOURNAL_TYPE.body.lineHeight,
           color: DesignTokens.colors.primary.main,
         },
@@ -100,7 +99,6 @@ export default function TradingScreen() {
 
   return (
     <ScreenChrome>
-      <StatusBar style="light" />
       <RNSafeAreaView style={[styles.safeAreaContainer, journalRtlRoot]} edges={['top']}>
         <MainDrawerScreenHeader
           title="יומן מסחר"

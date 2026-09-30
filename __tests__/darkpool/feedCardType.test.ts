@@ -31,7 +31,7 @@ describe('FEED_CARD_TYPE', () => {
     expect(FEED_CARD_TYPE.name).toEqual({
       fontSize: 17,
       lineHeight: 22,
-      fontWeight: '700',
+      fontWeight: '600',
       letterSpacing: -0.2,
     });
     expect(FEED_CARD_TYPE.action).toEqual({
@@ -40,14 +40,14 @@ describe('FEED_CARD_TYPE', () => {
       fontWeight: '600',
     });
     expect(FEED_CARD_TYPE.dates).toEqual({
-      fontSize: 12,
-      lineHeight: 16,
-      fontWeight: '500',
+      fontSize: 13,
+      lineHeight: 18,
+      fontWeight: '400',
     });
     expect(FEED_CARD_TYPE.nestedTicker.fontSize).toBe(13);
-    expect(FEED_CARD_TYPE.nestedPrice.fontSize).toBe(15);
-    expect(FEED_CARD_TYPE.nestedLabel.fontSize).toBe(11);
-    expect(FEED_CARD_TYPE.nestedSince.fontSize).toBe(11);
+    expect(FEED_CARD_TYPE.nestedPrice.fontSize).toBe(16);
+    expect(FEED_CARD_TYPE.nestedLabel.fontSize).toBe(13);
+    expect(FEED_CARD_TYPE.nestedSince.fontSize).toBe(13);
   });
 
   it('trade hero action line uses cardSubtitle scale, not cardTitle', () => {
@@ -95,14 +95,14 @@ describe('feed trade card chrome', () => {
     expect(tradeCardSrc).toMatch(/summary\.metaRender/);
     expect(tradeCardSrc).toMatch(/buildCongressTradeDetailSummary/);
     expect(tradeCardSrc).toMatch(/buildInsiderTradeDetailSummary/);
-    expect(tradeCardSrc).toMatch(/<DarkPoolNestedQuoteCard/);
-    expect(tradeCardSrc).toMatch(/formatFeedLivePriceText/);
-    expect(tradeCardSrc).toMatch(/formatReturnPct/);
+    expect(tradeCardSrc).not.toMatch(/DarkPoolNestedQuoteCard/);
+    expect(tradeCardSrc).not.toMatch(/מאז העסקה/);
     expect(tradeCardSrc).not.toMatch(/DarkPoolFeedNestedCard/);
     expect(tradeCardSrc).not.toMatch(/resolveFeedDatesLine/);
     expect(tradeCardSrc).not.toMatch(/נחשף/);
     expect(tradeCardSrc).not.toMatch(/בוצע/);
     expect(feedCardSrc.split('<UICard').length - 1).toBe(1);
+    expect(stylesSrc).toMatch(/background\.cardSolid/);
     expect(nestSrc).toMatch(/<UICard[\s\S]*variant="soft"/);
     expect(nestSrc).toMatch(/disableBlur/);
     expect(nestSrc).toMatch(/background\.tertiary/);

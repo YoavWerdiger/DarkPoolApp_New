@@ -9,6 +9,7 @@ import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { DARK_POOL_TYPE } from '../darkPoolLayout';
 import type { DarkPoolDailyAggregateRow } from '../../../types/darkpool.types';
 
 interface AccumulationChartProps {
@@ -30,7 +31,9 @@ export function AccumulationChart({ data, height = 140 }: AccumulationChartProps
         emptyText: {
           textAlign: 'center',
           color: tokens.colors.text.tertiary,
-          fontSize: 12,
+          fontSize: DARK_POOL_TYPE.caption.fontSize,
+          lineHeight: DARK_POOL_TYPE.caption.lineHeight,
+          fontWeight: DARK_POOL_TYPE.caption.fontWeight,
           paddingVertical: 24,
         },
       }),

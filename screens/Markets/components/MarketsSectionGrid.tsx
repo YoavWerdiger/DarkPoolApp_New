@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import UICard from '../../../components/ui/UICard';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
-import { MARKETS_TYPE } from '../marketsLayout';
+import { MARKETS_LAYOUT, MARKETS_TYPE, UI_CARD_RADIUS } from '../marketsLayout';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 
 export type SectionItem = {
@@ -56,21 +56,18 @@ export function MarketsSectionGrid({
         accessibilityLabel={`${accessibilityGroupLabel}: ${item.title}`}
       >
         <UICard
-          variant="blur"
+          variant="soft"
           padding="md"
           style={[
             styles.card,
-            {
-              borderWidth: active ? 2 : 1,
-              borderColor: active ? t.colors.primary.main : t.colors.border.primary,
-              backgroundColor: active ? 'rgba(0, 200, 5, 0.08)' : undefined,
-            },
+            { backgroundColor: t.colors.background.cardSolid },
           ]}
         >
           <Ionicons
             name={item.icon}
             size={26}
-            color={active ? t.colors.primary.main : t.colors.text.secondary}
+            color={active ? t.colors.text.primary : t.colors.text.secondary}
+            style={styles.labelIcon}
           />
           <Text
             style={[
@@ -78,8 +75,8 @@ export function MarketsSectionGrid({
               {
                 color: active ? t.colors.text.primary : t.colors.text.secondary,
                 fontWeight: active
-                  ? (t.typography.fontWeight.semibold as '600')
-                  : (t.typography.fontWeight.medium as '500'),
+                  ? MARKETS_TYPE.cardTitle.fontWeight
+                  : MARKETS_TYPE.cardSubtitle.fontWeight,
               },
             ]}
             numberOfLines={2}
@@ -110,11 +107,11 @@ const styles = StyleSheet.create({
   outer: {
     width: '100%',
     alignSelf: 'stretch',
-    gap: 10,
+    gap: MARKETS_LAYOUT.cardStackGap,
   },
   row: {
     flexDirection: 'row-reverse',
-    gap: 10,
+    gap: MARKETS_LAYOUT.cardStackGap,
   },
   /** פריט יחיד בשורה — ממורכז, רוחב כמו תא ברשת 2×2 */
   rowSingleOrphan: {
@@ -133,8 +130,10 @@ const styles = StyleSheet.create({
     minHeight: 96,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    borderRadius: 18,
+    borderRadius: UI_CARD_RADIUS,
+  },
+  labelIcon: {
+    marginBottom: MARKETS_LAYOUT.stackGapSmall,
   },
   label: {
     fontSize: MARKETS_TYPE.cardSubtitle.fontSize,

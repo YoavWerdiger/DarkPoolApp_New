@@ -11,9 +11,13 @@ import {
 import { formatPercent, formatNumber, gainColor } from '../utils/format';
 import { PERFORMANCE_PERIODS } from '../portfolioConstants';
 import {
+  JOURNAL_LAYOUT,
   JOURNAL_TYPE,
+  journalCaptionStyle,
+  journalCardMetricValueSecondaryStyle,
+  journalCardSubtitleStyle,
+  journalCardTitleStyle,
   journalPhysicalRightText,
-  journalSectionTitleStyle,
 } from '../../Journal/journalLayout';
 
 interface Props {
@@ -55,9 +59,9 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
           direction: 'rtl',
         },
         sectionTitle: {
-          ...journalSectionTitleStyle,
+          ...journalCardTitleStyle,
           color: tokens.colors.text.primary,
-          marginBottom: 12,
+          marginBottom: JOURNAL_LAYOUT.cardTitleToBodyGap,
         },
         riskGrid: {
           flexDirection: 'row',
@@ -82,18 +86,17 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
           lineHeight: JOURNAL_TYPE.caption2.lineHeight,
           color: tokens.colors.text.tertiary,
           marginBottom: 4,
+          direction: 'ltr',
           writingDirection: 'rtl',
           textAlign: 'right',
         },
         riskValue: {
           alignSelf: 'stretch',
           maxWidth: '100%',
-          fontSize: JOURNAL_TYPE.body.fontSize,
-          fontWeight: '800',
-          lineHeight: JOURNAL_TYPE.body.lineHeight,
+          ...journalCardMetricValueSecondaryStyle,
           color: tokens.colors.text.primary,
           textAlign: 'right',
-          writingDirection: 'ltr',
+          direction: 'ltr',
         },
         riskHint: {
           maxWidth: '100%',
@@ -102,29 +105,30 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
           lineHeight: JOURNAL_TYPE.caption2.lineHeight,
           color: tokens.colors.text.tertiary,
           marginTop: 4,
+          direction: 'ltr',
           writingDirection: 'rtl',
           textAlign: 'right',
         },
         perfRow: {
           flexDirection: 'row',
           alignItems: 'center',
-          paddingVertical: 10,
-          paddingHorizontal: 4,
-          gap: 8,
+          paddingVertical: 15,
+          paddingHorizontal: JOURNAL_LAYOUT.cardPadding,
           borderTopWidth: 1,
-          borderTopColor: tokens.colors.border.subtle,
+          borderTopColor: tokens.colors.border.divider,
           width: '100%',
         },
         perfLabel: {
           flex: 1,
-          fontSize: 13,
+          ...journalCardSubtitleStyle,
+          width: undefined,
           color: tokens.colors.text.primary,
-          ...journalPhysicalRightText,
         },
         perfValue: {
           width: 90,
-          fontSize: 13,
-          fontWeight: '700',
+          fontSize: JOURNAL_TYPE.cardSubtitle.fontSize,
+          fontWeight: JOURNAL_TYPE.cardTitle.fontWeight,
+          lineHeight: JOURNAL_TYPE.cardSubtitle.lineHeight,
           direction: 'ltr',
           textAlign: 'right',
           writingDirection: 'ltr',
@@ -154,9 +158,8 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
         emptyText: {
           width: '100%',
           alignSelf: 'stretch',
-          fontSize: 13,
+          ...journalCardSubtitleStyle,
           color: tokens.colors.text.tertiary,
-          ...journalPhysicalRightText,
           paddingVertical: 30,
         },
         holdingRow: {
@@ -165,7 +168,7 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
           paddingVertical: 8,
           gap: 8,
           borderTopWidth: 1,
-          borderTopColor: tokens.colors.border.subtle,
+          borderTopColor: tokens.colors.border.divider,
           width: '100%',
         },
         holdingSymbol: {
@@ -203,7 +206,7 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
 
   if (!metrics) {
     return (
-      <UICard variant="glass" glassIntensity="light" padding="md" style={styles.section}>
+      <UICard variant="soft" glassIntensity="light" padding="md" style={styles.section}>
         <Text style={styles.emptyText}>
           לא הצלחנו לטעון מטריקות אנליזה. נסה למשוך מטה לרענון.
         </Text>
@@ -222,7 +225,7 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
   return (
     <View style={styles.root}>
       {/* Risk metrics */}
-      <UICard variant="glass" glassIntensity="light" padding="md" style={styles.section}>
+      <UICard variant="soft" glassIntensity="light" padding="md" style={styles.section}>
         <Text style={styles.sectionTitle}>מטריקות סיכון</Text>
         <View style={styles.riskGrid}>
           <RiskCell
@@ -285,7 +288,7 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
       </UICard>
 
       {/* Performance per period */}
-      <UICard variant="glass" glassIntensity="light" padding="md" style={styles.section}>
+      <UICard variant="soft" glassIntensity="light" padding="md" style={styles.section}>
         <Text style={styles.sectionTitle}>ביצועים על פני זמן</Text>
         <View style={styles.perfHeader}>
           <Text style={[styles.perfLabel, { fontSize: 11, color: tokens.colors.text.tertiary }]}>
@@ -329,7 +332,7 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
       </UICard>
 
       {/* Holdings performance */}
-      <UICard variant="glass" glassIntensity="light" padding="md" style={styles.section}>
+      <UICard variant="soft" glassIntensity="light" padding="md" style={styles.section}>
         <Text style={styles.sectionTitle}>ביצועי נכסים בתיק</Text>
         {sortedHoldings.length === 0 ? (
           <Text style={styles.emptyText}>אין נכסים להציג</Text>
@@ -355,14 +358,14 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
 
       {/* Disclaimer */}
       <UICard
-        variant="glass"
+        variant="soft"
         glassIntensity="subtle"
         padding="md"
         style={[styles.section, { borderColor: 'rgba(59, 130, 246, 0.25)' }]}
       >
         <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
           <Ionicons name="information-circle" size={18} color={tokens.colors.text.info} />
-          <Text style={{ flex: 1, fontSize: 12, color: tokens.colors.text.secondary, lineHeight: 18, textAlign: 'right', writingDirection: 'rtl' }}>
+          <Text style={{ flex: 1, ...journalCaptionStyle, color: tokens.colors.text.secondary }}>
             המטריקות מחושבות מבוססות תזרים השווי היומי של התיק שלך, מתוך מחירי close
             יומיים מ-Yahoo Finance. ביצועים בעבר אינם ערובה לביצועים עתידיים.
           </Text>

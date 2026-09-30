@@ -5,14 +5,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { Trash2 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
+import { APP_TYPE } from '../../components/ui/appType';
 import UICard from '../../components/ui/UICard';
 import { LikedArticlesService, LikedArticle } from '../../services/likedArticlesService';
 import { formatNewsDate } from '../../services/newsService';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { NewsScreenShell } from './NewsScreenShell';
 import { HapticFeedback } from '../../utils/hapticFeedback';
-
-const SHEET_DIVIDER = 'rgba(255, 255, 255, 0.12)';
 
 interface LikedArticleCardProps {
   article: LikedArticle;
@@ -25,12 +25,12 @@ const LikedArticleCard: React.FC<LikedArticleCardProps> = ({ article, onPress, o
   const DesignTokens = useDesignTokens();
   const hasImage = !!article.article_image_url && article.article_image_url.length > 0;
   const thumbnailHeight = 196;
-  const cardRadius = DesignTokens.borderRadius['2xl'];
+  const cardRadius = UI_CARD_RADIUS;
 
   return (
     <Pressable
       onPress={() => onPress(article)}
-      style={{ marginBottom: 12 }}
+      style={{ marginBottom: APP_LAYOUT.cardStackGap }}
       accessibilityRole="button"
     >
       <UICard variant="blur" padding="none" disableBlur style={{ borderRadius: cardRadius, overflow: 'hidden' }}>
@@ -59,11 +59,9 @@ const LikedArticleCard: React.FC<LikedArticleCardProps> = ({ article, onPress, o
               >
                 <Text
                   style={{
-                    fontSize: 17,
-                    fontWeight: '600',
+                    ...APP_TYPE.cardTitle,
                     color: '#FFFFFF',
                     textAlign: 'right',
-                    lineHeight: 22,
                   }}
                   numberOfLines={2}
                 >
@@ -71,9 +69,9 @@ const LikedArticleCard: React.FC<LikedArticleCardProps> = ({ article, onPress, o
                 </Text>
                 <Text
                   style={{
-                    fontSize: 12,
+                    ...APP_TYPE.caption,
                     color: 'rgba(255,255,255,0.7)',
-                    marginTop: 4,
+                    marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
                     textAlign: 'right',
                   }}
                 >
@@ -95,11 +93,10 @@ const LikedArticleCard: React.FC<LikedArticleCardProps> = ({ article, onPress, o
               <Ionicons name="newspaper-outline" size={48} color={DesignTokens.colors.text.tertiary} />
               <Text
                 style={{
-                  fontSize: 17,
-                  fontWeight: '600',
+                  ...APP_TYPE.cardTitle,
                   color: DesignTokens.colors.text.primary,
                   textAlign: 'right',
-                  marginTop: 12,
+                  marginTop: APP_LAYOUT.cardTitleToBodyGap,
                 }}
                 numberOfLines={3}
               >
@@ -109,13 +106,13 @@ const LikedArticleCard: React.FC<LikedArticleCardProps> = ({ article, onPress, o
           )}
         </View>
 
-        <View style={{ height: 1, backgroundColor: SHEET_DIVIDER }} />
+        <View style={{ height: 1, backgroundColor: DesignTokens.colors.border.divider }} />
 
         <View
           style={{
-            paddingHorizontal: DesignTokens.spacing.lg,
-            paddingTop: DesignTokens.spacing.md,
-            paddingBottom: DesignTokens.spacing.lg,
+            paddingHorizontal: APP_LAYOUT.cardPadding,
+            paddingTop: APP_LAYOUT.cardTitleToBodyGap,
+            paddingBottom: APP_LAYOUT.cardPadding,
           }}
         >
           {hasImage ? (
@@ -145,15 +142,15 @@ const LikedArticleCard: React.FC<LikedArticleCardProps> = ({ article, onPress, o
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                gap: 12,
               }}
             >
               <Text
                 style={{
-                  fontSize: 12,
+                  ...APP_TYPE.caption,
                   color: DesignTokens.colors.text.tertiary,
                   textAlign: 'right',
                   flex: 1,
+                  marginLeft: APP_LAYOUT.cardTitleToBodyGap,
                 }}
               >
                 {article.article_source} • {formatNewsDate(article.article_published_at)}
@@ -186,7 +183,7 @@ const LikedArticleCard: React.FC<LikedArticleCardProps> = ({ article, onPress, o
 
 export default function LikedArticlesScreen() {
   const DesignTokens = useDesignTokens();
-  const pad = DesignTokens.layout?.screenPadding ?? 20;
+  const pad = APP_LAYOUT.screenPaddingHorizontal;
   const listBottomPadding = useMainTabsHeight(16) + DesignTokens.spacing.sm;
   const [likedArticles, setLikedArticles] = useState<LikedArticle[]>([]);
   const [loading, setLoading] = useState(true);
@@ -284,20 +281,18 @@ export default function LikedArticlesScreen() {
         color={DesignTokens.colors.text.tertiary} 
       />
       <Text style={{
-        fontSize: 20,
-        fontWeight: 'bold',
-        marginTop: 16,
+        ...APP_TYPE.sectionTitle,
+        marginTop: APP_LAYOUT.componentGap,
         textAlign: 'center',
         color: DesignTokens.colors.text.primary
       }}>
         אין חדשות שאהבת
       </Text>
       <Text style={{
-        fontSize: 14,
-        marginTop: 8,
+        ...APP_TYPE.cardSubtitle,
+        marginTop: APP_LAYOUT.groupLabelToContent,
         textAlign: 'center',
         color: DesignTokens.colors.text.secondary,
-        lineHeight: 20
       }}>
         לחץ על הלב בחדשות כדי לשמור אותן כאן
       </Text>
@@ -328,10 +323,10 @@ export default function LikedArticlesScreen() {
     likedArticles.length > 0 ? (
       <Text
         style={{
-          fontSize: 12,
+          ...APP_TYPE.caption,
           color: DesignTokens.colors.text.secondary,
           textAlign: 'center',
-          marginBottom: 10,
+          marginBottom: APP_LAYOUT.groupLabelToContent,
         }}
       >
         {likedArticles.length} כתבות
@@ -343,7 +338,7 @@ export default function LikedArticlesScreen() {
       <NewsScreenShell title="כתבות שמורות">
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-          <Text style={{ marginTop: 16, fontSize: 16, color: DesignTokens.colors.text.secondary }}>טוען...</Text>
+          <Text style={{ marginTop: APP_LAYOUT.componentGap, ...APP_TYPE.body, color: DesignTokens.colors.text.secondary }}>טוען...</Text>
         </View>
       </NewsScreenShell>
     );

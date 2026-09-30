@@ -11,6 +11,7 @@ import { useAllowAfterNavigationTransition } from '../../hooks/afterNavigationTr
 import { LessonWithProgress, BlockType } from '../../types/learning';
 import { ChevronLeft, ChevronRight, Play, Pause, ChevronDown, Edit3, ArrowRight } from 'lucide-react-native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { APP_LAYOUT } from '../../components/ui/appLayout';
 import UICard from '../../components/ui/UICard';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
@@ -554,6 +555,7 @@ export const LessonPlayerScreen: React.FC = () => {
                 <DayNavBlurButton
                   onPress={goToPreviousBlock}
                   disabled={currentBlockIndex === 0}
+                  glass
                   glassIntensity="subtle"
                 >
                   <ChevronLeft
@@ -566,6 +568,7 @@ export const LessonPlayerScreen: React.FC = () => {
                 <DayNavBlurButton
                   onPress={goToNextBlock}
                   disabled={!lesson.blocks || currentBlockIndex >= lesson.blocks.length - 1}
+                  glass
                   glassIntensity="subtle"
                 >
                   <ChevronRight
@@ -640,19 +643,19 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     paddingTop: 8,
     paddingBottom: 8,
   },
-  /** פאנל נייטרלי — לא blur ולא ירוק ממותג; רקע אחיד מתחת */
+  /** פאנל נייטרלי — כרטיס תוכן, לא blur ולא ירוק ממותג */
   lessonPanel: {
-    backgroundColor: '#111111',
-    borderWidth: StyleSheet.hairlineWidth * 2,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: tokens.colors.background.cardSolid,
+    borderWidth: 1,
+    borderColor: tokens.colors.border.divider,
   },
   /** כמו שורת היומן הכלכלי — כרטיס blur חיצוני */
   headerOuterBlur: {
-    borderRadius: 16,
+    borderRadius: 24,
     overflow: 'hidden',
   },
   blockNavOuterBlur: {
-    borderRadius: 16,
+    borderRadius: 24,
     overflow: 'hidden',
   },
   blockNavRow: {
@@ -696,7 +699,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     width: DAY_NAV_BUTTON_SIZE,
   },
   videoContainer: {
-    borderRadius: 16,
+    borderRadius: 24,
     overflow: 'hidden',
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
@@ -835,7 +838,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   videoControls: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
   playButton: { width: 60, height: 60, borderRadius: 30, backgroundColor: tokens.colors.primary.main, justifyContent: 'center', alignItems: 'center' },
   lessonInfoStack: {
-    gap: tokens.spacing.sm,
     width: '100%',
   },
   lessonInfoTitle: {
@@ -847,6 +849,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     writingDirection: 'rtl',
   },
   lessonInfoSubtitle: {
+    marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
     fontSize: tokens.typography.fontSize.sm,
     color: tokens.colors.text.secondary,
     textAlign: 'right',
@@ -854,7 +857,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     writingDirection: 'rtl',
   },
   lessonProgressInfo: {
-    marginTop: 0,
+    marginTop: tokens.spacing.sm,
     paddingTop: tokens.spacing.sm,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.1)',

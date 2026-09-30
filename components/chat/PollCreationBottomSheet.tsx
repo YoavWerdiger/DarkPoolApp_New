@@ -339,7 +339,7 @@ export default function PollCreationBottomSheet({
                       {/* row-reverse: first child = rightmost */}
                       <GlassChip
                         disableBlur
-                        style={styles.optionIndexPill}
+                        style={[styles.optionIndexPill, { backgroundColor: tokens.colors.background.primary }]}
                         contentContainerStyle={styles.optionIndexPillContent}
                       >
                         <Text style={styles.optionIndexText}>{index + 1}</Text>
@@ -523,7 +523,8 @@ const glassCardStyles = StyleSheet.create({
 
 /* ── Main styles ── */
 const createStyles = (tokens: any) => {
-  const borderColor = 'rgba(255,255,255,0.1)';
+  const borderColor = tokens.colors.border.divider;
+  const controlFill = tokens.colors.background.primary;
 
   return StyleSheet.create({
     container: {
@@ -567,7 +568,7 @@ const createStyles = (tokens: any) => {
       alignItems: 'center',
       justifyContent: 'center',
       paddingHorizontal: 10,
-      backgroundColor: 'rgba(255,255,255,0.06)',
+      backgroundColor: controlFill,
     },
     headerTextButtonLabel: {
       fontSize: 13,
@@ -613,7 +614,7 @@ const createStyles = (tokens: any) => {
 
     /* Question input */
     questionInput: {
-      backgroundColor: 'rgba(255,255,255,0.06)',
+      backgroundColor: controlFill,
       borderWidth: 1,
       borderColor: borderColor,
       borderRadius: 12,
@@ -654,7 +655,7 @@ const createStyles = (tokens: any) => {
     },
     optionInput: {
       flex: 1,
-      backgroundColor: 'rgba(255,255,255,0.06)',
+      backgroundColor: controlFill,
       borderWidth: 1,
       borderColor: borderColor,
       borderRadius: 12,
@@ -689,7 +690,7 @@ const createStyles = (tokens: any) => {
       borderRadius: 12,
       paddingVertical: 11,
       paddingHorizontal: 14,
-      backgroundColor: 'rgba(255,255,255,0.03)',
+      backgroundColor: controlFill,
     },
     addOptionRowDisabled: {
       opacity: 0.45,
@@ -735,7 +736,7 @@ const createStyles = (tokens: any) => {
       paddingVertical: 11,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: 'rgba(255,255,255,0.04)',
+      backgroundColor: controlFill,
     },
     segmentActive: {
       backgroundColor: tokens.colors.primary.main,
@@ -781,7 +782,7 @@ const createStyles = (tokens: any) => {
       borderRadius: 7,
       borderWidth: 1.5,
       borderColor: borderColor,
-      backgroundColor: 'rgba(255,255,255,0.04)',
+      backgroundColor: controlFill,
       alignItems: 'center',
       justifyContent: 'center',
       flexShrink: 0,
@@ -808,7 +809,7 @@ const createStyles = (tokens: any) => {
       backgroundColor: tokens.colors.primary.main,
     },
     primaryButtonDisabled: {
-      backgroundColor: 'rgba(255,255,255,0.08)',
+      backgroundColor: controlFill,
     },
     primaryButtonText: {
       fontSize: 16,

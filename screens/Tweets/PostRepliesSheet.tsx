@@ -59,8 +59,6 @@ type Props = {
 };
 
 const MAX_LEN = 1000;
-const SHEET_BORDER = 'rgba(255, 255, 255, 0.12)';
-const DIVIDER = SHEET_BORDER;
 /**
  * fitContent + snapPoints = גובה השיט = גובה ה-snap (מעוגן לתחתית).
  * בלי fitContent ה-container בגובה מסך מלא + translateY חותך את ה-composer.
@@ -435,8 +433,8 @@ function PostRepliesSheetBody({
             style={[
               styles.parentCard,
               {
-                backgroundColor: tokens.colors.glass.card.bg,
-                borderColor: DIVIDER,
+                backgroundColor: tokens.colors.background.tertiary,
+                borderColor: tokens.colors.border.divider,
               },
             ]}
           >
@@ -572,8 +570,8 @@ function PostRepliesSheetBody({
           style={[
             styles.composer,
             {
-              borderTopColor: DIVIDER,
-              backgroundColor: 'rgba(0,0,0,0.35)',
+              borderTopColor: tokens.colors.border.divider,
+              backgroundColor: tokens.colors.background.cardSolid,
               paddingBottom: composerPaddingBottom,
             },
           ]}
@@ -583,7 +581,7 @@ function PostRepliesSheetBody({
               variant="glass"
               glassIntensity="light"
               padding="none"
-              style={styles.composerInputCard}
+              style={[styles.composerInputCard, { backgroundColor: tokens.colors.background.primary }]}
               contentContainerStyle={styles.composerInputCardInner}
             >
               <TextInput
@@ -610,7 +608,7 @@ function PostRepliesSheetBody({
               {
                 backgroundColor: canSubmit
                   ? tokens.colors.primary.main
-                  : 'rgba(255,255,255,0.08)',
+                  : tokens.colors.background.primary,
               },
             ]}
             accessibilityLabel="שלח תגובה"
@@ -650,7 +648,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       paddingHorizontal: 16,
       paddingBottom: 12,
       borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: SHEET_BORDER,
+      borderBottomColor: tokens.colors.border.divider,
       gap: 10,
       flexShrink: 0,
     },

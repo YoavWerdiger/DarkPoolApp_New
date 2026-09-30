@@ -25,7 +25,6 @@ import { useAuth } from '../../context/AuthContext';
 import { legacyAlert } from '../../utils/appDialog';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { ChatBottomSheet, ChatSheetContent } from './ChatBottomSheet';
-import { chatPalette } from './chatDesignTokens';
 import { APP_TYPE, appSectionTitleStyle, appSheetButtonLabelStyle } from '../ui/appType';
 
 interface CreateGroupSheetProps {
@@ -104,7 +103,7 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
             selected={canCreate}
             disableBlur
             onPress={canCreate && !isLoading ? handleCreate : undefined}
-            style={styles.createBtn}
+            style={[styles.createBtn, { backgroundColor: DesignTokens.colors.background.primary }]}
             contentContainerStyle={styles.createBtnContent}
             accessibilityLabel="צור קבוצה"
           >
@@ -165,7 +164,7 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
 
           <Text style={[styles.sectionTitle, { color: DesignTokens.colors.text.secondary }]}>הגדרות</Text>
 
-          <View style={[styles.settingRow, { borderColor: chatPalette.glassBorder }]}>
+          <View style={[styles.settingRow, { borderColor: DesignTokens.colors.border.divider }]}>
             <View style={styles.settingLeft}>
               <Ionicons name="megaphone-outline" size={20} color={DesignTokens.colors.text.secondary} />
               <View>
@@ -183,7 +182,7 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
             />
           </View>
 
-          <View style={[styles.settingRow, { borderColor: chatPalette.glassBorder }]}>
+          <View style={[styles.settingRow, { borderColor: DesignTokens.colors.border.divider }]}>
             <View style={styles.settingLeft}>
               <Ionicons name={isPublic ? 'globe-outline' : 'lock-closed-outline'} size={20} color={DesignTokens.colors.text.secondary} />
               <View>

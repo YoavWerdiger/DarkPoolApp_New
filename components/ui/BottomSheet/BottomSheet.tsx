@@ -36,7 +36,6 @@ import {
 } from './sheetMotion';
 import {
   SHEET_BACKDROP_OPACITY,
-  SHEET_GLASS_FLOOR,
   SHEET_GLASS_INTENSITY,
   SHEET_GLASS_OVERLAY,
   sheetContentBottomPadding,
@@ -44,7 +43,6 @@ import {
 } from './sheetGlass';
 import { SheetGlassBackground } from './SheetGlassBackground';
 
-const SHEET_SURFACE_COLOR = SHEET_GLASS_FLOOR;
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const DEFAULT_SNAP_POINTS = [0.5];
 const CLOSE_THRESHOLD = 88;
@@ -87,6 +85,7 @@ const BottomSheetImpl: React.FC<BottomSheetProps> = ({
   avoidKeyboard = false,
 }) => {
   const tokens = useDesignTokens();
+  const sheetFill = tokens.colors.background.cardSolid;
   const insets = useSafeAreaInsets();
   const dragStripPaddingV = showHandle ? 12 : 8;
   const dragStripMinHeight = showHandle ? 44 : 28;
@@ -562,7 +561,7 @@ const BottomSheetImpl: React.FC<BottomSheetProps> = ({
         pointerEvents="none"
         style={[
           styles.systemBarFill,
-          { height: systemBarFillHeight, backgroundColor: SHEET_SURFACE_COLOR },
+          { height: systemBarFillHeight, backgroundColor: sheetFill },
         ]}
       />
       <Pressable
@@ -580,6 +579,10 @@ const BottomSheetImpl: React.FC<BottomSheetProps> = ({
           sheetStyle,
           // שקוף כשיש זכוכית — הרצפה/Blur ב-SheetGlassBackground; צבע אטום על ה-container הורג frosted
           useGlassBackground ? { backgroundColor: 'transparent' } : null,
+          {
+            borderColor: tokens.colors.border.divider,
+            borderTopColor: tokens.colors.border.divider,
+          },
           topCornerRadius != null && topCornerRadius > 0
             ? {
                 borderTopLeftRadius: topCornerRadius,
@@ -594,14 +597,18 @@ const BottomSheetImpl: React.FC<BottomSheetProps> = ({
             active
             deferMs={SHEET_BLUR_DEFER_MS}
             intensity={glassIntensity}
-            overlayColor={glassOverlayColor}
+            overlayColor={
+              glassOverlayColor === SHEET_GLASS_OVERLAY
+                ? sheetFill
+                : glassOverlayColor
+            }
           />
         ) : showBrandBackground ? null : (
           <View
             pointerEvents="none"
             style={[
               StyleSheet.absoluteFill,
-              { backgroundColor: tokens.colors.background.secondary },
+              { backgroundColor: sheetFill },
             ]}
           />
         )}
@@ -622,7 +629,7 @@ const BottomSheetImpl: React.FC<BottomSheetProps> = ({
                       <View
                         style={[
                           styles.handle,
-                          handleColor ? { backgroundColor: handleColor } : null,
+                          { backgroundColor: handleColor ?? tokens.colors.text.secondary },
                         ]}
                       />
                     </View>
@@ -638,7 +645,7 @@ const BottomSheetImpl: React.FC<BottomSheetProps> = ({
                       <View
                         style={[
                           styles.handle,
-                          handleColor ? { backgroundColor: handleColor } : null,
+                          { backgroundColor: handleColor ?? tokens.colors.text.secondary },
                         ]}
                       />
                     )}

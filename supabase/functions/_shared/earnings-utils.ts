@@ -254,10 +254,23 @@ export async function claimEarningsNotificationSlot(
   return true
 }
 
+export type EarningsNotifyUser = {
+  user_id: string
+  earnings_alert_scope: 'all' | 'selected'
+  earnings_alert_symbols: string[]
+}
+
+export function earningsUserAcceptsTicker(user: EarningsNotifyUser, ticker: string): boolean {
+  if (user.earnings_alert_scope !== 'selected') return true
+  const want = ticker.trim().toUpperCase()
+  if (!want) return false
+  return user.earnings_alert_symbols.some((symbol) => symbol.trim().toUpperCase() === want)
+}
+
 /** משתמשים עם device token פעיל + התראות דיווחים (ברירת מחדל: מופעל) */
 export async function fetchEarningsNotificationUsers(
   supabase: SupabaseClient,
-): Promise<{ user_id: string }[]> {
+): Promise<EarningsNotifyUser[]> {
   const { data: tokens, error: tokensError } = await supabase
     .from('device_tokens')
     .select('user_id')
@@ -269,15 +282,22 @@ export async function fetchEarningsNotificationUsers(
   const userIds = [...new Set((tokens ?? []).map((t) => t.user_id as string).filter(Boolean))]
   if (userIds.length === 0) return []
 
-  const { data: settings, error: settingsError } = await supabase
+  const scoped = await supabase
     .from('user_notification_settings')
-    .select('user_id, notifications_enabled, earnings_notifications')
+    .select('user_id, notifications_enabled, earnings_notifications, earnings_alert_scope, earnings_alert_symbols')
     .in('user_id', userIds)
 
-  if (settingsError) throw settingsError
+  const settingsResult = scoped.error
+    ? await supabase
+        .from('user_notification_settings')
+        .select('user_id, notifications_enabled, earnings_notifications')
+        .in('user_id', userIds)
+    : scoped
+
+  if (settingsResult.error) throw settingsResult.error
 
   const settingsByUser = new Map(
-    (settings ?? []).map((row) => [row.user_id as string, row]),
+    (settingsResult.data ?? []).map((row) => [row.user_id as string, row]),
   )
 
   return userIds
@@ -288,7 +308,18 @@ export async function fetchEarningsNotificationUsers(
       if (row.earnings_notifications === false) return false
       return true
     })
-    .map((user_id) => ({ user_id }))
+    .map((user_id) => {
+      const row = settingsByUser.get(user_id) as {
+        earnings_alert_scope?: string | null
+        earnings_alert_symbols?: string[] | null
+      } | undefined
+      const symbols = Array.isArray(row?.earnings_alert_symbols) ? row.earnings_alert_symbols : []
+      return {
+        user_id,
+        earnings_alert_scope: row?.earnings_alert_scope === 'selected' ? 'selected' as const : 'all' as const,
+        earnings_alert_symbols: symbols,
+      }
+    })
 }
 
 /** חלון (ימים) לזיהוי תאריכי אומדן ישנים של אותו אירוע דיווח */

@@ -1,6 +1,7 @@
 import type { ViewStyle } from 'react-native';
 import { UI_CARD_RADIUS } from './appLayout';
 import { SoftUI } from './softUiPalette';
+import { LIGHT_CARD } from './designTokensStatic';
 
 /** מעטפת כרטיס כמו CourseCard — אטום, בלי border. */
 export function uiCardAcademyShellStyle(isDarkMode: boolean): ViewStyle {
@@ -8,7 +9,7 @@ export function uiCardAcademyShellStyle(isDarkMode: boolean): ViewStyle {
     borderRadius: UI_CARD_RADIUS,
     borderWidth: 0,
     overflow: 'hidden',
-    backgroundColor: isDarkMode ? SoftUI.surface1 : '#F2F2F7',
+    backgroundColor: isDarkMode ? SoftUI.surface1 : LIGHT_CARD,
   };
 }
 

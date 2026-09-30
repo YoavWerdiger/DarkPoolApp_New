@@ -299,7 +299,7 @@ export default function GroupMediaGalleryScreen() {
         <View style={styles.rtlRoot}>
           <View style={styles.cardWrap}>
             <UICard
-              variant="glass"
+              variant="soft"
               glassIntensity="subtle"
               padding="none"
               showGlassBorder={false}

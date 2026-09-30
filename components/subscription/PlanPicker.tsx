@@ -1,11 +1,19 @@
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { DesignTokens } from '../ui/DesignTokens';
+import { useDesignTokens } from '../ui/DesignTokens';
 import UICard from '../ui/UICard';
+import UIButton from '../ui/UIButton';
 import { SUBSCRIPTION_PLANS } from '../../services/paymentService';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { APP_LAYOUT, UI_CARD_RADIUS } from '../ui/appLayout';
+import {
+  APP_TYPE,
+  appCaptionStyle,
+  appCardSubtitleStyle,
+  appCardTitleStyle,
+  appPhysicalRightText,
+} from '../ui/appType';
 
 export type PlanPickerMode = 'registration' | 'upgrade';
 
@@ -101,6 +109,7 @@ export default function PlanPicker({
   intro,
   banner,
 }: PlanPickerProps) {
+  const tokens = useDesignTokens();
   const plans = useMemo(() => getSelectablePlans(mode), [mode]);
 
   const ctaText =
@@ -115,11 +124,13 @@ export default function PlanPicker({
 
   return (
     <View style={styles.root}>
-      {intro ? <Text style={styles.intro}>{intro}</Text> : null}
+      {intro ? (
+        <Text style={[styles.intro, { color: tokens.colors.text.secondary }]}>{intro}</Text>
+      ) : null}
 
       {banner ? (
-        <View style={styles.banner}>
-          <Text style={styles.bannerText}>{banner}</Text>
+        <View style={[styles.banner, { backgroundColor: tokens.colors.background.tertiary }]}>
+          <Text style={[styles.bannerText, { color: tokens.colors.warning.main }]}>{banner}</Text>
         </View>
       ) : null}
 
@@ -127,7 +138,6 @@ export default function PlanPicker({
         {plans.map((item) => {
           const isSelected = selectedPlanId === item.id;
           const isCurrent = mode === 'upgrade' && currentPlanId === item.id;
-          const isFree = item.id === 'free';
           const isTestPrice = item.id === 'monthly' && item.price === 1;
 
           return (
@@ -141,39 +151,26 @@ export default function PlanPicker({
               style={styles.cardTouch}
             >
               <UICard
-                variant="glass"
-                glassIntensity={isSelected || isCurrent ? 'medium' : 'light'}
+                variant="soft"
                 padding="none"
                 style={{
-                  borderRadius: 18,
+                  borderRadius: UI_CARD_RADIUS,
                   overflow: 'hidden',
-                  borderWidth: isSelected || isCurrent ? 1.5 : 1,
-                  borderColor: isSelected
-                    ? DesignTokens.colors.primary.main
-                    : isCurrent
-                      ? 'rgba(0,230,84,0.45)'
-                      : 'rgba(255,255,255,0.08)',
+                  backgroundColor: isSelected
+                    ? tokens.colors.background.tertiary
+                    : tokens.colors.background.cardSolid,
                 }}
               >
-                <LinearGradient
-                  colors={
-                    isSelected
-                      ? ['rgba(0,230,84,0.14)', 'rgba(0,230,84,0.03)']
-                      : ['rgba(255,255,255,0.04)', 'transparent']
-                  }
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.cardInner}
-                >
+                <View style={styles.cardInner}>
                   <View style={styles.badgesRow}>
                     {item.popular ? (
-                      <View style={styles.popularBadge}>
-                        <Text style={styles.popularText}>פופולרי</Text>
+                      <View style={[styles.popularBadge, { backgroundColor: tokens.colors.primary.main }]}>
+                        <Text style={[styles.popularText, { color: tokens.colors.text.inverse }]}>פופולרי</Text>
                       </View>
                     ) : null}
                     {isCurrent ? (
-                      <View style={styles.currentBadge}>
-                        <Text style={styles.currentText}>המסלול שלך</Text>
+                      <View style={[styles.currentBadge, { backgroundColor: tokens.colors.background.navChrome }]}>
+                        <Text style={[styles.currentText, { color: tokens.colors.text.primary }]}>המסלול שלך</Text>
                       </View>
                     ) : null}
                   </View>
@@ -182,96 +179,67 @@ export default function PlanPicker({
                     <View
                       style={[
                         styles.check,
-                        isSelected && styles.checkSelected,
+                        {
+                          backgroundColor: isSelected
+                            ? tokens.colors.primary.main
+                            : tokens.colors.background.navChrome,
+                        },
                       ]}
                     >
                       {isSelected ? (
-                        <Ionicons name="checkmark" size={15} color="#000" />
+                        <Ionicons name="checkmark" size={15} color={tokens.colors.text.inverse} />
                       ) : null}
                     </View>
 
                     <View style={styles.titleBlock}>
-                      <Text style={styles.planName}>{item.name}</Text>
+                      <Text style={[styles.planName, { color: tokens.colors.text.primary }]}>{item.name}</Text>
                       <View style={styles.priceRow}>
-                        <Text
-                          style={[
-                            styles.price,
-                            isFree && { color: DesignTokens.colors.primary.main },
-                          ]}
-                        >
+                        <Text style={[styles.price, { color: tokens.colors.text.primary }]}>
                           {item.price === 0 ? 'חינם' : `₪${item.price}`}
                         </Text>
                         {item.price > 0 ? (
-                          <Text style={styles.period}>{formatPlanPeriod(item.period)}</Text>
+                          <Text style={[styles.period, { color: tokens.colors.text.secondary }]}>
+                            {formatPlanPeriod(item.period)}
+                          </Text>
                         ) : null}
                       </View>
                       {isTestPrice ? (
-                        <Text style={styles.testHint}>מחיר בדיקה</Text>
+                        <Text style={[styles.testHint, { color: tokens.colors.warning.main }]}>מחיר בדיקה</Text>
                       ) : item.description ? (
-                        <Text style={styles.desc} numberOfLines={1}>
+                        <Text style={[styles.desc, { color: tokens.colors.text.secondary }]} numberOfLines={1}>
                           {item.description}
                         </Text>
                       ) : null}
                     </View>
                   </View>
 
-                  <View style={styles.highlights}>
+                  <View style={[styles.highlights, { borderTopColor: tokens.colors.border.divider }]}>
                     {item.highlights.map((feature) => (
                       <View key={feature} style={styles.highlightRow}>
                         <Ionicons
                           name="checkmark-circle"
                           size={14}
-                          color={DesignTokens.colors.primary.main}
+                          color={tokens.colors.text.secondary}
                         />
-                        <Text style={styles.highlightText}>{feature}</Text>
+                        <Text style={[styles.highlightText, { color: tokens.colors.text.secondary }]}>{feature}</Text>
                       </View>
                     ))}
                   </View>
-                </LinearGradient>
+                </View>
               </UICard>
             </TouchableOpacity>
           );
         })}
       </View>
 
-      <LinearGradient
-        colors={
-          !isDisabled
-            ? ['#00C805', '#00A004', '#008F03']
-            : ['#2A2A2A', '#2A2A2A']
-        }
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={[
-          styles.cta,
-          !isDisabled && {
-            shadowColor: DesignTokens.colors.primary.main,
-            shadowOpacity: 0.35,
-            shadowRadius: 16,
-            shadowOffset: { width: 0, height: 8 },
-            elevation: 8,
-          },
-        ]}
-      >
-        <TouchableOpacity
-          onPress={() => {
-            void HapticFeedback.medium();
-            onContinue();
-          }}
-          disabled={isDisabled}
-          activeOpacity={0.85}
-          style={styles.ctaBtn}
-        >
-          <Text
-            style={[
-              styles.ctaText,
-              { color: !isDisabled ? '#000' : 'rgba(255,255,255,0.25)' },
-            ]}
-          >
-            {ctaText}
-          </Text>
-        </TouchableOpacity>
-      </LinearGradient>
+      <UIButton
+        title={ctaText}
+        variant="primary"
+        fullWidth
+        disabled={isDisabled}
+        onPress={onContinue}
+        style={styles.cta}
+      />
     </View>
   );
 }
@@ -279,33 +247,23 @@ export default function PlanPicker({
 const styles = StyleSheet.create({
   root: { flexGrow: 1 },
   intro: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: 'rgba(255,255,255,0.55)',
-    textAlign: 'right',
-    writingDirection: 'rtl',
-    fontWeight: '500',
+    ...appPhysicalRightText,
+    ...APP_TYPE.sectionSubtitle,
     marginBottom: 14,
   },
   banner: {
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(245,180,0,0.35)',
-    backgroundColor: 'rgba(245,180,0,0.1)',
-    paddingHorizontal: 14,
+    borderRadius: UI_CARD_RADIUS,
+    paddingHorizontal: APP_LAYOUT.cardPadding,
     paddingVertical: 10,
     marginBottom: 14,
   },
   bannerText: {
-    color: '#F5B400',
-    textAlign: 'right',
-    fontSize: 12,
+    ...appCaptionStyle,
     fontWeight: '700',
-    lineHeight: 17,
   },
-  list: { gap: 12, marginBottom: 18 },
+  list: { gap: APP_LAYOUT.cardStackGap, marginBottom: 18 },
   cardTouch: {},
-  cardInner: { padding: 16 },
+  cardInner: { padding: APP_LAYOUT.cardPadding },
   badgesRow: {
     flexDirection: 'row-reverse',
     justifyContent: 'flex-start',
@@ -315,28 +273,22 @@ const styles = StyleSheet.create({
     minHeight: 22,
   },
   popularBadge: {
-    backgroundColor: DesignTokens.colors.primary.main,
     borderRadius: 8,
     paddingHorizontal: 9,
     paddingVertical: 3,
   },
   popularText: {
-    color: '#000',
-    fontSize: 11,
-    fontWeight: '800',
+    ...APP_TYPE.caption2,
+    fontWeight: '700',
   },
   currentBadge: {
-    backgroundColor: 'rgba(0,230,84,0.14)',
-    borderWidth: 1,
-    borderColor: 'rgba(0,230,84,0.4)',
     borderRadius: 8,
     paddingHorizontal: 9,
     paddingVertical: 3,
   },
   currentText: {
-    color: DesignTokens.colors.primary.main,
-    fontSize: 11,
-    fontWeight: '800',
+    ...APP_TYPE.caption2,
+    fontWeight: '700',
   },
   headerRow: {
     flexDirection: 'row',
@@ -347,16 +299,9 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,
-  },
-  checkSelected: {
-    backgroundColor: DesignTokens.colors.primary.main,
-    borderWidth: 0,
   },
   titleBlock: {
     flex: 1,
@@ -364,11 +309,9 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   planName: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 17,
-    textAlign: 'right',
-    marginBottom: 2,
+    ...appCardTitleStyle,
+    width: undefined,
+    marginBottom: APP_LAYOUT.titleSubtitleGap,
   },
   priceRow: {
     flexDirection: 'row',
@@ -376,34 +319,28 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   price: {
-    color: '#fff',
-    fontWeight: '800',
-    fontSize: 22,
+    ...APP_TYPE.cardMetricValueSecondary,
   },
   period: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 13,
-    fontWeight: '500',
+    ...appCardSubtitleStyle,
+    width: undefined,
+    marginTop: 0,
   },
   desc: {
-    color: 'rgba(255,255,255,0.45)',
-    fontSize: 12,
-    marginTop: 2,
-    textAlign: 'right',
+    ...appCaptionStyle,
+    marginTop: APP_LAYOUT.titleSubtitleGap,
   },
   testHint: {
-    color: 'rgba(245,180,0,0.85)',
-    fontSize: 11,
+    ...APP_TYPE.caption2,
     fontWeight: '600',
-    marginTop: 2,
+    marginTop: APP_LAYOUT.titleSubtitleGap,
     textAlign: 'right',
   },
   highlights: {
-    marginTop: 12,
+    marginTop: APP_LAYOUT.cardTitleToBodyGap,
     gap: 6,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
-    paddingTop: 12,
+    paddingTop: APP_LAYOUT.cardTitleToBodyGap,
   },
   highlightRow: {
     flexDirection: 'row-reverse',
@@ -411,23 +348,12 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   highlightText: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 13,
-    textAlign: 'right',
-    writingDirection: 'rtl',
+    ...appCardSubtitleStyle,
+    width: undefined,
+    marginTop: 0,
     flex: 1,
   },
   cta: {
-    borderRadius: 16,
     marginTop: 4,
-  },
-  ctaBtn: {
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  ctaText: {
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.3,
   },
 });

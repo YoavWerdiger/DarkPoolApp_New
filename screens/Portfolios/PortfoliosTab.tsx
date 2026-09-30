@@ -32,7 +32,6 @@ import { appQueryKeys } from '../../lib/appQueryKeys';
 import {
   JOURNAL_TYPE,
   journalBodyTextStyle,
-  journalPhysicalRightText,
   journalRow,
   journalRtlContent,
   journalSectionTitleStyle,
@@ -333,10 +332,7 @@ export default function PortfoliosTab() {
           flex: 1,
           marginHorizontal: 8,
           color: tokens.colors.text.primary,
-          ...journalPhysicalRightText,
-          fontSize: JOURNAL_TYPE.body.fontSize,
-          fontWeight: '500',
-          lineHeight: JOURNAL_TYPE.body.lineHeight,
+          ...journalBodyTextStyle,
           paddingVertical: 6,
         },
         emptyResults: {

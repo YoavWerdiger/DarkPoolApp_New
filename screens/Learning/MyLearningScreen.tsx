@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,18 +9,21 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import UICard from '../../components/ui/UICard';
+import UIButton from '../../components/ui/UIButton';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
 import { ScreenChrome } from '../../components/ui';
 import { useNavigation } from '@react-navigation/native';
 import { useMyEnrollments } from '../../hooks/useLearning';
 import { useAllowAfterNavigationTransition } from '../../hooks/afterNavigationTransition';
 import { AcademyScreenHeader, CourseCard } from '../../components/learning';
 import { ACADEMY_CARD_HP, academyCardFrameStyle } from '../../components/learning/academyCardLayout';
+import { ACADEMY_TYPE } from '../../components/learning/academyLayout';
+import { APP_LAYOUT } from '../../components/ui/appLayout';
 import {
   getAcademyCourseSubtitle,
   isComingSoonCourse,
   isNativeLearningCourse,
+  selectAcademyCatalogCourses,
 } from '../../components/learning/academyCourses';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { CourseWithProgress } from '../../types/learning';
@@ -39,6 +42,10 @@ export const MyLearningScreen: React.FC = () => {
   const { data: enrollments, isLoading, error, refetch } = useMyEnrollments({
     enabled: allowHeavy,
   });
+  const catalogEnrollments = useMemo(
+    () => selectAcademyCatalogCourses(enrollments ?? []),
+    [enrollments],
+  );
   const [refreshing, setRefreshing] = React.useState(false);
 
   const openMainDrawer = useCallback(() => {
@@ -117,15 +124,12 @@ export const MyLearningScreen: React.FC = () => {
                 <Text style={styles.progressPct}>{Math.round(pct)}%</Text>
               </View>
             )}
-            <TouchableOpacity
-              style={styles.continueButton}
+            <UIButton
+              title={pct > 0 ? 'המשך למידה' : 'התחל'}
+              variant="primary"
+              fullWidth
               onPress={() => handleContinueLearning(item)}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.continueButtonText}>
-                {pct > 0 ? 'המשך למידה ←' : 'התחל ←'}
-              </Text>
-            </TouchableOpacity>
+            />
           </View>
         )}
       </View>
@@ -139,28 +143,26 @@ export const MyLearningScreen: React.FC = () => {
       <Text style={styles.emptyStateSubtitle}>
         התחל לחקור את הקורסים הזמינים
       </Text>
-      <TouchableOpacity
-        style={styles.exploreButton}
+      <UIButton
+        title="גלה קורסים"
+        variant="primary"
         onPress={() => navigation.navigate('CoursesScreen')}
-      >
-        <Text style={styles.exploreButtonText}>גלה קורסים</Text>
-      </TouchableOpacity>
+      />
     </View>
   );
 
   const renderStats = () => {
-    if (!enrollments || enrollments.length === 0) return null;
-    const totalCourses = enrollments.length;
-    const completedCourses = enrollments.filter(c => c.progress?.progress_percentage === 100).length;
-    const inProgressCourses = enrollments.filter(c =>
+    if (catalogEnrollments.length === 0) return null;
+    const totalCourses = catalogEnrollments.length;
+    const completedCourses = catalogEnrollments.filter(c => c.progress?.progress_percentage === 100).length;
+    const inProgressCourses = catalogEnrollments.filter(c =>
       c.progress && c.progress.progress_percentage > 0 && c.progress.progress_percentage < 100
     ).length;
     return (
       <UICard
-        variant="blur"
+        variant="soft"
         padding="lg"
-        showGlassBorder={false}
-        style={[{ marginHorizontal: ACADEMY_CARD_HP, marginBottom: 16 }, academyCardFrameStyle('neutral')]}
+        style={[{ marginHorizontal: ACADEMY_CARD_HP, marginBottom: APP_LAYOUT.cardStackGap }, academyCardFrameStyle('neutral')]}
       >
         <Text style={styles.statsTitle}>התקדמות הלמידה</Text>
         <View style={styles.statsRow}>
@@ -182,7 +184,6 @@ export const MyLearningScreen: React.FC = () => {
   if (error) {
     return (
       <ScreenChrome>
-        <StatusBar style="light" />
         <RNSafeAreaView style={styles.safeAreaContainer} edges={['top']}>
           <View style={styles.errorContainer}>
             <Text style={styles.errorIcon}>⚠️</Text>
@@ -190,9 +191,7 @@ export const MyLearningScreen: React.FC = () => {
             <Text style={styles.errorMessage}>
               {error.message || 'אירעה שגיאה לא צפויה'}
             </Text>
-            <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
-              <Text style={styles.retryButtonText}>נסה שוב</Text>
-            </TouchableOpacity>
+            <UIButton title="נסה שוב" variant="primary" onPress={() => refetch()} />
           </View>
         </RNSafeAreaView>
       </ScreenChrome>
@@ -201,7 +200,6 @@ export const MyLearningScreen: React.FC = () => {
 
   return (
     <ScreenChrome>
-      <StatusBar style="light" />
       <RNSafeAreaView style={styles.safeAreaContainer} edges={['top']}>
         <AcademyScreenHeader onMenuPress={openMainDrawer} title="הלמידה שלי" />
 
@@ -211,7 +209,7 @@ export const MyLearningScreen: React.FC = () => {
         {/* Courses List */}
         <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
           <FlatList
-            data={enrollments || []}
+            data={catalogEnrollments}
             renderItem={renderCourse}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContainer}
@@ -241,11 +239,11 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       backgroundColor: tokens.colors.background.primary,
     },
     statsTitle: {
-      fontSize: tokens.typography.fontSize.base,
-      fontWeight: tokens.typography.fontWeight.semibold as any,
+      ...ACADEMY_TYPE.cardTitle,
       color: tokens.colors.text.primary,
-      marginBottom: tokens.spacing.md,
+      marginBottom: APP_LAYOUT.cardTitleToBodyGap,
       textAlign: 'right',
+      writingDirection: 'rtl',
     },
     statsRow: {
       flexDirection: 'row',
@@ -255,13 +253,13 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       alignItems: 'center',
     },
     statValue: {
-      fontSize: tokens.typography.fontSize.xl,
-      fontWeight: tokens.typography.fontWeight.bold as any,
-      color: tokens.colors.primary.main,
-      marginBottom: tokens.spacing.xs,
+      ...ACADEMY_TYPE.cardMetricValueSecondary,
+      color: tokens.colors.text.primary,
+      marginBottom: APP_LAYOUT.cardMetricLabelToValueGap,
+      textAlign: 'center',
     },
     statLabel: {
-      fontSize: tokens.typography.fontSize.sm,
+      ...ACADEMY_TYPE.cardMetricLabel,
       color: tokens.colors.text.secondary,
       textAlign: 'center',
     },
@@ -271,7 +269,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       paddingBottom: tokens.spacing['5xl'],
     },
     courseContainer: {
-      marginBottom: tokens.spacing.lg,
+      marginBottom: APP_LAYOUT.cardStackGap,
     },
     courseFooter: {
       marginTop: -tokens.spacing.sm,
@@ -296,21 +294,10 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       borderRadius: 2,
     },
     progressPct: {
-      fontSize: 11,
+      ...ACADEMY_TYPE.caption2,
       color: tokens.colors.text.secondary,
       minWidth: 32,
       textAlign: 'right',
-    },
-    continueButton: {
-      backgroundColor: tokens.colors.primary.main,
-      paddingVertical: tokens.spacing.md,
-      borderRadius: tokens.borderRadius.lg,
-      alignItems: 'center',
-    },
-    continueButtonText: {
-      fontSize: tokens.typography.fontSize.base,
-      fontWeight: tokens.typography.fontWeight.semibold as any,
-      color: '#fff',
     },
     emptyState: {
       alignItems: 'center',
@@ -321,28 +308,16 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       marginBottom: tokens.spacing.lg,
     },
     emptyStateTitle: {
-      fontSize: tokens.typography.fontSize.lg,
-      fontWeight: tokens.typography.fontWeight.semibold as any,
+      ...ACADEMY_TYPE.cardTitle,
       color: tokens.colors.text.primary,
-      marginBottom: tokens.spacing.sm,
+      marginBottom: APP_LAYOUT.cardTitleToSubtitleGap,
       textAlign: 'center',
     },
     emptyStateSubtitle: {
-      fontSize: tokens.typography.fontSize.sm,
+      ...ACADEMY_TYPE.body,
       color: tokens.colors.text.secondary,
       textAlign: 'center',
-      marginBottom: tokens.spacing.lg,
-    },
-    exploreButton: {
-      backgroundColor: tokens.colors.primary.main,
-      paddingHorizontal: tokens.spacing.lg,
-      paddingVertical: tokens.spacing.md,
-      borderRadius: tokens.borderRadius.lg,
-    },
-    exploreButtonText: {
-      fontSize: tokens.typography.fontSize.base,
-      fontWeight: tokens.typography.fontWeight.semibold as any,
-      color: tokens.colors.text.inverse,
+      marginBottom: APP_LAYOUT.sectionHeaderToContent,
     },
     errorContainer: {
       flex: 1,
@@ -355,28 +330,16 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       marginBottom: tokens.spacing.lg,
     },
     errorTitle: {
-      fontSize: tokens.typography.fontSize.lg,
-      fontWeight: tokens.typography.fontWeight.semibold,
+      ...ACADEMY_TYPE.cardTitle,
       color: tokens.colors.text.primary,
-      marginBottom: tokens.spacing.sm,
+      marginBottom: APP_LAYOUT.cardTitleToSubtitleGap,
       textAlign: 'center',
     },
     errorMessage: {
-      fontSize: tokens.typography.fontSize.sm,
+      ...ACADEMY_TYPE.body,
       color: tokens.colors.text.secondary,
       textAlign: 'center',
-      marginBottom: tokens.spacing.lg,
-    },
-    retryButton: {
-      backgroundColor: tokens.colors.primary.main,
-      paddingHorizontal: tokens.spacing.lg,
-      paddingVertical: tokens.spacing.md,
-      borderRadius: tokens.borderRadius.lg,
-    },
-    retryButtonText: {
-      fontSize: tokens.typography.fontSize.base,
-      fontWeight: tokens.typography.fontWeight.semibold,
-      color: tokens.colors.text.inverse,
+      marginBottom: APP_LAYOUT.sectionHeaderToContent,
     },
   });
 

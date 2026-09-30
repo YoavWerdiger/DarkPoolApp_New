@@ -3,11 +3,14 @@ import * as Notifications from 'expo-notifications';
 import { useAuth } from '../context/AuthContext';
 import {
   DEFAULT_NOTIFICATION_PREFS,
+  getCachedNotificationPrefs,
   loadNotificationPrefs,
+  patchNotificationPrefs,
   subscribeNotificationPrefs,
   updateNotificationPref,
   type NotificationPrefKey,
   type NotificationPrefs,
+  type NotificationScopePatch,
 } from '../lib/notificationPrefs';
 import { HapticFeedback } from '../utils/hapticFeedback';
 
@@ -35,7 +38,7 @@ export function useNotificationPrefs() {
     (async () => {
       const next = await loadNotificationPrefs(user?.id);
       if (!cancelled) {
-        setPrefs(next);
+        setPrefs(getCachedNotificationPrefs() ?? next);
         setLoading(false);
       }
       await refreshOs();
@@ -58,6 +61,11 @@ export function useNotificationPrefs() {
     [user?.id],
   );
 
+  const patchPrefs = useCallback(
+    async (patch: NotificationScopePatch) => patchNotificationPrefs(patch, user?.id),
+    [user?.id],
+  );
+
   return {
     prefs,
     loading,
@@ -65,6 +73,7 @@ export function useNotificationPrefs() {
     osGranted: osStatus === 'granted',
     refreshOs,
     setPref,
+    patchPrefs,
     userId: user?.id ?? null,
   };
 }

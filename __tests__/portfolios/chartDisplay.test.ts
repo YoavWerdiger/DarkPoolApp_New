@@ -25,9 +25,9 @@ describe('resolvePortfolioChartHeaderValue', () => {
     ).toBe(50_000);
   });
 
-  it('colors negative amounts Red 400', () => {
-    expect(PORTFOLIO_NEGATIVE_AMOUNT_COLOR).toBe('#F87171');
-    expect(portfolioAmountDisplayColor(-1200, '#FFF')).toBe('#F87171');
+  it('colors negative amounts Tailwind red-500', () => {
+    expect(PORTFOLIO_NEGATIVE_AMOUNT_COLOR).toBe('#EF4444');
+    expect(portfolioAmountDisplayColor(-1200, '#FFF')).toBe('#EF4444');
     expect(portfolioAmountDisplayColor(500, '#FFF')).toBe('#FFF');
     expect(portfolioAmountDisplayColor(0, '#FFF')).toBe('#FFF');
   });

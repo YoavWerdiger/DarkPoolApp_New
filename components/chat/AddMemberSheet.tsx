@@ -126,7 +126,7 @@ export default function AddMemberSheet({
           selected
           disableBlur
           onPress={isAdding ? undefined : () => handleAdd(item)}
-          style={styles.addBtn}
+          style={[styles.addBtn, { backgroundColor: tokens.colors.background.primary }]}
           contentContainerStyle={styles.addBtnContent}
           accessibilityLabel={`הוסף ${name}`}
         >

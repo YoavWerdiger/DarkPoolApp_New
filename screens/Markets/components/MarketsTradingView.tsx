@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { View, ActivityIndicator, Platform, StyleProp, ViewStyle } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { UI_CARD_RADIUS } from '../marketsLayout';
 
 type Props = {
   html: string;
@@ -117,7 +118,7 @@ export function MarketsTradingView({
 
   const outerStyle: StyleProp<ViewStyle> = [
     {
-      borderRadius: tokens.borderRadius.lg,
+      borderRadius: UI_CARD_RADIUS,
       overflow: 'hidden',
       ...(flexFill ? { flex: 1, minHeight: 0 } : {}),
       ...(height != null ? { height } : {}),

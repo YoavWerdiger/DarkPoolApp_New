@@ -5,10 +5,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { DayNavBlurButton } from '../ui/DayNavBlurButton';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { APP_LAYOUT } from '../ui/appLayout';
+import { ACADEMY_TYPE } from './academyLayout';
 
 /** כמו PersonProfileHero — עיגול 44pt */
 const HERO_BACK_BTN_SIZE = 44;
-const HERO_BAR_HP = 16;
 
 export type CourseListHeroProps = {
   coverUrl?: string | null;
@@ -77,7 +78,7 @@ function CourseListHeroInner({
           glassIntensity="light"
           accessibilityLabel="חזרה"
         >
-          <Ionicons name="chevron-forward" size={22} color="#FFFFFF" />
+          <Ionicons name="chevron-forward" size={22} color={T.colors.text.primary} />
         </DayNavBlurButton>
       </View>
 
@@ -137,14 +138,12 @@ function createProgressStyles(T: ReturnType<typeof useDesignTokens>) {
       width: '100%',
     },
     label: {
-      fontSize: T.typography.fontSize.sm,
-      fontWeight: '600',
+      ...ACADEMY_TYPE.caption,
       color: 'rgba(255,255,255,0.88)',
       writingDirection: 'rtl',
     },
     pct: {
-      fontSize: T.typography.fontSize.sm,
-      fontWeight: '700',
+      ...ACADEMY_TYPE.caption,
       color: '#FFFFFF',
     },
     barTrack: {
@@ -174,21 +173,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-start',
-    paddingHorizontal: HERO_BAR_HP,
+    paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
   },
   bottomWrap: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+    paddingBottom: APP_LAYOUT.screenPaddingHorizontal,
     gap: 4,
   },
   title: {
-    fontSize: 28,
-    lineHeight: 34,
-    fontWeight: '800',
+    ...ACADEMY_TYPE.pageTitle,
     color: '#FFFFFF',
     textAlign: 'right',
     writingDirection: 'rtl',
@@ -198,9 +195,8 @@ const styles = StyleSheet.create({
     textShadowRadius: 8,
   },
   subtitle: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '500',
+    ...ACADEMY_TYPE.sectionSubtitle,
+    marginTop: APP_LAYOUT.titleSubtitleGap,
     color: 'rgba(255,255,255,0.82)',
     textAlign: 'right',
     writingDirection: 'rtl',

@@ -10,7 +10,6 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -173,7 +172,7 @@ export default function ImportTransactionsScreen() {
         },
         summaryNumber: {
           fontSize: 22,
-          fontWeight: '800',
+          fontWeight: '700',
           writingDirection: 'ltr',
         },
         summaryLabel: {
@@ -246,9 +245,8 @@ export default function ImportTransactionsScreen() {
           alignItems: 'center',
           gap: 8,
           padding: 12,
-          backgroundColor: 'rgba(0, 200, 5, 0.08)',
-          borderColor: 'rgba(0, 200, 5, 0.30)',
-          borderWidth: 1,
+          backgroundColor: tokens.colors.background.tertiary,
+          borderWidth: 0,
           borderRadius: 18,
           marginTop: 12,
         },
@@ -267,7 +265,6 @@ export default function ImportTransactionsScreen() {
   return (
     <View style={styles.root}>
       <ChatSessionBackdrop />
-      <StatusBar style="light" />
       <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
         <PortfolioScreenHeader
           title="ייבוא טרנזקציות"

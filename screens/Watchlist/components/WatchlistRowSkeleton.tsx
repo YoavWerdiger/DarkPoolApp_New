@@ -32,6 +32,7 @@ function WatchlistRowSkeletonInner({ delay = 0, index = 0 }: Props) {
         styles.row,
         {
           borderBottomColor: tokens.colors.border.divider,
+          borderBottomWidth: 1,
         },
         index % 2 === 1 ? styles.rowAlt : null,
       ]}
@@ -40,7 +41,9 @@ function WatchlistRowSkeletonInner({ delay = 0, index = 0 }: Props) {
     >
       <View style={colSymbol}>
         <View style={styles.identity}>
-          <SkeletonBox width={30} height={30} borderRadius={8} delay={delay} />
+          <View style={styles.logoWrap}>
+            <SkeletonBox width={30} height={30} borderRadius={8} delay={delay} />
+          </View>
           <View style={styles.textBlock}>
             <SkeletonBox width={52} height={13} delay={delay + 40} />
             <SkeletonBox width={72} height={10} delay={delay + 80} />
@@ -70,13 +73,14 @@ const styles = StyleSheet.create({
   row: {
     paddingVertical: 8,
     minHeight: 48,
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   rowAlt: { backgroundColor: 'rgba(255,255,255,0.015)' },
+  logoWrap: {
+    marginLeft: 12,
+  },
   identity: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: 8,
     minWidth: 0,
     flex: 1,
   },

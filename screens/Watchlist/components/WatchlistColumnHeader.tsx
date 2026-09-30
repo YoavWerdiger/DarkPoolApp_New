@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { appCardSubtitleStyle } from '../../../components/ui/appType';
 import type { WatchlistSortMode } from '../../../services/watchlist/watchlistTypes';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 import {
@@ -63,7 +64,7 @@ export function WatchlistColumnHeader({ sortMode, onSortChange }: Props) {
         wrap: {
           ...quoteRow,
           paddingVertical: 8,
-          borderBottomWidth: StyleSheet.hairlineWidth,
+          borderBottomWidth: 1,
           borderBottomColor: tokens.colors.border.divider,
         },
         cell: { justifyContent: 'center' },
@@ -76,9 +77,10 @@ export function WatchlistColumnHeader({ sortMode, onSortChange }: Props) {
           minHeight: 22,
         },
         label: {
+          ...appCardSubtitleStyle,
+          width: undefined,
+          marginTop: 0,
           color: tokens.colors.text.tertiary,
-          fontSize: 11,
-          fontWeight: '600',
         },
         labelActive: {
           color: tokens.colors.primary.main,

@@ -9,6 +9,8 @@ import {
 import Svg, { Polyline } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import UICard from '../../../components/ui/UICard';
+import { UI_CARD_RADIUS } from '../../../components/ui/appLayout';
+import { APP_TYPE } from '../../../components/ui/appType';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 import type { ExplorePerson } from '../../../services/darkpool/uwExploreService';
@@ -54,7 +56,7 @@ export function TrendingInvestorCard({ person, onPress }: Props) {
       style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
     >
       <UICard
-        variant="glass"
+        variant="soft"
         glassIntensity="light"
         padding="md"
         disableBlur
@@ -117,7 +119,7 @@ export function TrendingInvestorCard({ person, onPress }: Props) {
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     card: {
-      borderRadius: tokens.borderRadius['2xl'],
+      borderRadius: UI_CARD_RADIUS,
       borderWidth: 0,
       backgroundColor: 'transparent',
       marginBottom: tokens.spacing.sm,
@@ -126,35 +128,41 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       direction: 'rtl',
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 12,
+      gap: 0,
     },
     avatar: {
-      backgroundColor: 'rgba(255,255,255,0.08)',
+      marginLeft: 12,
+      backgroundColor: tokens.colors.background.navChrome,
     },
     textCol: {
       flex: 1,
       alignItems: 'stretch',
     },
     name: {
-      fontSize: 16,
-      fontWeight: '800',
+      fontSize: APP_TYPE.cardTitle.fontSize,
+      lineHeight: APP_TYPE.cardTitle.lineHeight,
+      fontWeight: APP_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
       ...darkPoolPhysicalRightText,
     },
     subtitle: {
       marginTop: 2,
-      fontSize: 12,
+      fontSize: APP_TYPE.cardSubtitle.fontSize,
+      lineHeight: APP_TYPE.cardSubtitle.lineHeight,
+      fontWeight: APP_TYPE.cardSubtitle.fontWeight,
       color: tokens.colors.text.tertiary,
       ...darkPoolPhysicalRightText,
     },
     metric: {
       marginTop: 4,
-      fontSize: 12,
+      fontSize: APP_TYPE.caption.fontSize,
+      lineHeight: APP_TYPE.caption.lineHeight,
+      fontWeight: APP_TYPE.caption.fontWeight,
       color: tokens.colors.text.secondary,
       ...darkPoolPhysicalRightText,
     },
     metricVal: {
-      fontWeight: '800',
+      fontWeight: APP_TYPE.sectionTitle.fontWeight,
       color: tokens.colors.primary.main,
     },
     chartBox: {
@@ -165,7 +173,9 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       alignItems: 'flex-start',
     },
     noChart: {
-      fontSize: 11,
+      fontSize: APP_TYPE.caption2.fontSize,
+      lineHeight: APP_TYPE.caption2.lineHeight,
+      fontWeight: APP_TYPE.caption2.fontWeight,
       color: tokens.colors.text.tertiary,
     },
   });

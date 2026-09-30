@@ -3,9 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Image, TouchableOpacity, Share, Linking, ActivityIndicator, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import DesignTokens, { useDesignTokens } from '../../components/ui/DesignTokens';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
+import { APP_TYPE } from '../../components/ui/appType';
+import UIButton from '../../components/ui/UIButton';
+import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
 import { NewsArticle, newsService, formatNewsDate, getNewsCategoryColor, getNewsCategoryIcon } from '../../services/newsService';
 
 type RootStackParamList = {
@@ -17,6 +20,7 @@ type ArticleDetailRouteProp = RouteProp<RootStackParamList, 'ArticleDetail'>;
 const { width } = Dimensions.get('window');
 
 export default function ArticleDetailScreen() {
+  const DesignTokens = useDesignTokens();
   const navigation = useNavigation();
   const route = useRoute<ArticleDetailRouteProp>();
   const { article } = route.params;
@@ -78,26 +82,24 @@ export default function ArticleDetailScreen() {
     <View 
       className="flex-1"
       style={{ backgroundColor: 'transparent' }}
-    >
-      <StatusBar style="light" />
-      
+    > 
       <SafeAreaView className="flex-1">
         {/* Header עם כפתורים */}
         <View 
           className="flex-row items-center justify-between px-4 py-3"
           style={{ backgroundColor: DesignTokens.colors.background.secondary }}
         >
-          <TouchableOpacity
+          <DayNavBlurButton
             onPress={() => navigation.goBack()}
-            className="w-10 h-10 rounded-full items-center justify-center"
-            style={{ backgroundColor: DesignTokens.colors.background.tertiary }}
+            size={40}
+            accessibilityLabel="חזרה"
           >
-            <Ionicons 
-              name="arrow-back" 
-              size={20} 
-              color={DesignTokens.colors.text.primary} 
+            <Ionicons
+              name="arrow-back"
+              size={20}
+              color={DesignTokens.colors.text.primary}
             />
-          </TouchableOpacity>
+          </DayNavBlurButton>
 
           <View className="flex-row items-center">
             <TouchableOpacity
@@ -142,205 +144,208 @@ export default function ArticleDetailScreen() {
           )}
 
           {/* תוכן */}
-          <View className="px-4 pt-6">
-            {/* קטגוריה */}
-            {article.category && (
-              <View 
-                className="px-4 py-2 rounded-full self-start mb-4"
-                style={{ backgroundColor: categoryColor + '20' }}
+          <View style={{ paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal, paddingTop: APP_LAYOUT.sectionGap }}>
+            {article.category ? (
+              <View
+                style={{
+                  paddingHorizontal: APP_LAYOUT.cardPadding,
+                  paddingVertical: APP_LAYOUT.groupLabelToContent,
+                  borderRadius: DesignTokens.borderRadius.full,
+                  alignSelf: 'flex-start',
+                  marginBottom: APP_LAYOUT.componentGap,
+                  backgroundColor: categoryColor + '20',
+                }}
               >
-                <View className="flex-row items-center">
-                  <Ionicons 
-                    name={categoryIcon as any} 
-                    size={16} 
-                    color={categoryColor} 
-                    style={{ marginRight: 8 }}
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons
+                    name={categoryIcon as any}
+                    size={16}
+                    color={categoryColor}
+                    style={{ marginLeft: APP_LAYOUT.cardTitleToBodyGap }}
                   />
-                  <Text 
-                    className="text-sm font-semibold"
-                    style={{ color: categoryColor }}
-                  >
+                  <Text style={{ ...APP_TYPE.cardSubtitle, color: categoryColor }}>
                     {article.category}
                   </Text>
                 </View>
               </View>
-            )}
+            ) : null}
 
-            {/* כותרת */}
-            <Text 
-              className="text-2xl font-bold mb-4 leading-8"
-              style={{ color: DesignTokens.colors.text.primary }}
+            <Text
+              style={{
+                ...APP_TYPE.sectionTitle,
+                color: DesignTokens.colors.text.primary,
+                marginBottom: APP_LAYOUT.componentGap,
+              }}
             >
               {article.title}
             </Text>
 
-            {/* מידע על הכתבה */}
-            <View className="flex-row items-center justify-between mb-6">
-              <View className="flex-row items-center">
-                <Text 
-                  className="text-sm font-medium"
-                  style={{ color: DesignTokens.colors.text.secondary }}
-                >
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: APP_LAYOUT.sectionGap,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ ...APP_TYPE.cardSubtitle, color: DesignTokens.colors.text.secondary }}>
                   {article.source}
                 </Text>
-                {article.author && (
+                {article.author ? (
                   <>
-                    <Text 
-                      className="text-sm mx-2"
-                      style={{ color: DesignTokens.colors.text.tertiary }}
+                    <Text
+                      style={{
+                        ...APP_TYPE.cardSubtitle,
+                        color: DesignTokens.colors.text.tertiary,
+                        marginHorizontal: 8,
+                      }}
                     >
                       •
                     </Text>
-                    <Text 
-                      className="text-sm"
-                      style={{ color: DesignTokens.colors.text.secondary }}
-                    >
+                    <Text style={{ ...APP_TYPE.cardSubtitle, color: DesignTokens.colors.text.secondary }}>
                       {article.author}
                     </Text>
                   </>
-                )}
+                ) : null}
               </View>
 
-              <Text 
-                className="text-sm"
-                style={{ color: DesignTokens.colors.text.tertiary }}
-              >
+              <Text style={{ ...APP_TYPE.cardSubtitle, color: DesignTokens.colors.text.tertiary }}>
                 {formatNewsDate(article.published_at)}
               </Text>
             </View>
 
-            {/* סיכום */}
-            {article.summary && (
-              <View 
-                className="p-4 rounded-xl mb-6"
-                style={{ backgroundColor: DesignTokens.colors.background.secondary }}
+            {article.summary ? (
+              <View
+                style={{
+                  padding: APP_LAYOUT.cardPadding,
+                  borderRadius: UI_CARD_RADIUS,
+                  marginBottom: APP_LAYOUT.sectionGap,
+                  backgroundColor: DesignTokens.colors.background.cardSolid,
+                }}
               >
-                <Text 
-                  className="text-base leading-6 font-medium"
-                  style={{ color: DesignTokens.colors.text.primary }}
-                >
+                <Text style={{ ...APP_TYPE.body, color: DesignTokens.colors.text.primary }}>
                   {article.summary}
                 </Text>
               </View>
-            )}
+            ) : null}
 
-            {/* תוכן מלא */}
-            <View className="mb-6">
-              <Text 
-                className="text-base leading-7"
-                style={{ color: DesignTokens.colors.text.primary }}
-              >
+            <View style={{ marginBottom: APP_LAYOUT.sectionGap }}>
+              <Text style={{ ...APP_TYPE.body, color: DesignTokens.colors.text.primary }}>
                 {article.content}
               </Text>
             </View>
 
-            {/* מידע נוסף */}
-            <View 
-              className="p-4 rounded-xl"
-              style={{ backgroundColor: DesignTokens.colors.background.secondary }}
+            <View
+              style={{
+                paddingHorizontal: APP_LAYOUT.cardPadding,
+                borderRadius: UI_CARD_RADIUS,
+                backgroundColor: DesignTokens.colors.background.cardSolid,
+              }}
             >
-              <Text 
-                className="text-sm font-semibold mb-3"
-                style={{ color: DesignTokens.colors.text.primary }}
+              <Text
+                style={{
+                  ...APP_TYPE.cardTitle,
+                  color: DesignTokens.colors.text.primary,
+                  marginTop: APP_LAYOUT.cardPadding,
+                  marginBottom: APP_LAYOUT.cardTitleToBodyGap,
+                }}
               >
                 פרטים נוספים
               </Text>
-              
-              <View className="space-y-2">
-                {article.source_url && (
-                  <TouchableOpacity
-                    onPress={handleOpenSource}
-                    className="flex-row items-center justify-between py-2"
-                  >
-                    <View className="flex-row items-center">
-                      <Ionicons 
-                        name="link" 
-                        size={16} 
-                        color={DesignTokens.colors.primary.main} 
-                        style={{ marginRight: 8 }}
-                      />
-                      <Text 
-                        className="text-sm"
-                        style={{ color: DesignTokens.colors.text.secondary }}
-                      >
-                        קישור למקור
-                      </Text>
-                    </View>
-                    <Ionicons 
-                      name="chevron-forward" 
-                      size={16} 
-                      color={DesignTokens.colors.text.tertiary} 
-                    />
-                  </TouchableOpacity>
-                )}
 
-                {article.view_count && (
-                  <View className="flex-row items-center py-2">
-                    <Ionicons 
-                      name="eye" 
-                      size={16} 
-                      color={DesignTokens.colors.text.tertiary} 
-                      style={{ marginRight: 8 }}
+              {article.source_url ? (
+                <TouchableOpacity
+                  onPress={handleOpenSource}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    paddingVertical: 15,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Ionicons
+                      name="link"
+                      size={16}
+                      color={DesignTokens.colors.text.primary}
+                      style={{ marginLeft: APP_LAYOUT.cardTitleToBodyGap }}
                     />
-                    <Text 
-                      className="text-sm"
-                      style={{ color: DesignTokens.colors.text.tertiary }}
-                    >
-                      {article.view_count.toLocaleString()} צפיות
+                    <Text style={{ ...APP_TYPE.cardTitle, color: DesignTokens.colors.text.primary }}>
+                      קישור למקור
                     </Text>
                   </View>
-                )}
-
-                {article.sentiment && (
-                  <View className="flex-row items-center py-2">
-                    <Ionicons 
-                      name={
-                        article.sentiment === 'positive' ? 'trending-up' :
-                        article.sentiment === 'negative' ? 'trending-down' : 'remove'
-                      } 
-                      size={16} 
-                      color={
-                        article.sentiment === 'positive' ? DesignTokens.colors.success.main :
-                        article.sentiment === 'negative' ? DesignTokens.colors.danger.main : 
-                        DesignTokens.colors.text.tertiary
-                      } 
-                      style={{ marginRight: 8 }}
-                    />
-                    <Text 
-                      className="text-sm"
-                      style={{ color: DesignTokens.colors.text.tertiary }}
-                    >
-                      {article.sentiment === 'positive' ? 'חיובי' :
-                       article.sentiment === 'negative' ? 'שלילי' : 'ניטרלי'}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </View>
-
-            {/* כפתור לקריאה במקור */}
-            {article.source_url && (
-              <TouchableOpacity
-                onPress={handleOpenSource}
-                className="mt-6 py-4 px-6 rounded-xl items-center"
-                style={{ backgroundColor: DesignTokens.colors.primary.main }}
-              >
-                <View className="flex-row items-center">
-                  <Ionicons 
-                    name="open-outline" 
-                    size={20} 
-                    color={DesignTokens.colors.text.primary} 
-                    style={{ marginRight: 8 }}
+                  <Ionicons
+                    name="chevron-forward"
+                    size={16}
+                    color={DesignTokens.colors.text.tertiary}
                   />
-                  <Text 
-                    className="text-base font-semibold"
-                    style={{ color: DesignTokens.colors.text.primary }}
-                  >
-                    קרא במקור המלא
+                </TouchableOpacity>
+              ) : null}
+
+              {article.view_count ? (
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingVertical: 15,
+                    borderTopWidth: article.source_url ? 1 : 0,
+                    borderTopColor: DesignTokens.colors.border.divider,
+                  }}
+                >
+                  <Ionicons
+                    name="eye"
+                    size={16}
+                    color={DesignTokens.colors.text.primary}
+                    style={{ marginLeft: APP_LAYOUT.cardTitleToBodyGap }}
+                  />
+                  <Text style={{ ...APP_TYPE.body, color: DesignTokens.colors.text.secondary }}>
+                    {article.view_count.toLocaleString()} צפיות
                   </Text>
                 </View>
-              </TouchableOpacity>
-            )}
+              ) : null}
+
+              {article.sentiment ? (
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingVertical: 15,
+                    borderTopWidth: 1,
+                    borderTopColor: DesignTokens.colors.border.divider,
+                  }}
+                >
+                  <Ionicons
+                    name={
+                      article.sentiment === 'positive' ? 'trending-up' :
+                      article.sentiment === 'negative' ? 'trending-down' : 'remove'
+                    }
+                    size={16}
+                    color={
+                      article.sentiment === 'positive' ? DesignTokens.colors.success.main :
+                      article.sentiment === 'negative' ? DesignTokens.colors.danger.main :
+                      DesignTokens.colors.text.primary
+                    }
+                    style={{ marginLeft: APP_LAYOUT.cardTitleToBodyGap }}
+                  />
+                  <Text style={{ ...APP_TYPE.body, color: DesignTokens.colors.text.secondary }}>
+                    {article.sentiment === 'positive' ? 'חיובי' :
+                     article.sentiment === 'negative' ? 'שלילי' : 'ניטרלי'}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+
+            {article.source_url ? (
+              <UIButton
+                title="קרא במקור המלא"
+                variant="primary"
+                icon="open-outline"
+                onPress={handleOpenSource}
+                fullWidth
+                style={{ marginTop: APP_LAYOUT.sectionGap }}
+              />
+            ) : null}
           </View>
         </ScrollView>
       </SafeAreaView>

@@ -18,6 +18,7 @@ import Reanimated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { LIGHT_CANVAS } from '../ui/designTokensStatic';
 import { ChatMessage as ChatMessageType, ChatMessageType as MessageType } from '../../types/chat.types';
 import { format } from 'date-fns';
 import { Ionicons } from '@expo/vector-icons';
@@ -2006,6 +2007,23 @@ function AudioPlayer({
   }, [storedWaveform, message.local_media_uri]);
 
   const waveformData = storedWaveform ?? recoveredWaveform;
+  const lightBubble = tokens.colors.background.primary === LIGHT_CANVAS;
+  const waveThumb = lightBubble ? tokens.colors.text.primary : 'rgba(255,255,255,0.92)';
+  const waveActive = lightBubble
+    ? tokens.colors.text.primary
+    : isMe
+      ? 'rgba(255,255,255,0.78)'
+      : 'rgba(255,255,255,0.68)';
+  const waveInactive = lightBubble
+    ? 'rgba(30, 26, 36, 0.9)'
+    : isMe
+      ? 'rgba(255,255,255,0.32)'
+      : 'rgba(255,255,255,0.22)';
+  const waveNear = lightBubble
+    ? 'rgba(30, 26, 36, 0.72)'
+    : isMe
+      ? 'rgba(255,255,255,0.55)'
+      : 'rgba(255,255,255,0.42)';
 
   return (
     <View style={styles.mediaAudio}>
@@ -2034,16 +2052,10 @@ function AudioPlayer({
               onScrubStart={onScrubStart}
               onScrubUpdate={onScrubUpdate}
               onScrubEnd={onScrubEnd}
-              thumbColor="rgba(255,255,255,0.92)"
-              activeColor={
-                isMe ? 'rgba(255,255,255,0.78)' : 'rgba(255,255,255,0.68)'
-              }
-              inactiveColor={
-                isMe ? 'rgba(255,255,255,0.32)' : 'rgba(255,255,255,0.22)'
-              }
-              nearActiveColor={
-                isMe ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.42)'
-              }
+              thumbColor={waveThumb}
+              activeColor={waveActive}
+              inactiveColor={waveInactive}
+              nearActiveColor={waveNear}
             />
           </View>
         </View>
@@ -2151,7 +2163,9 @@ export default memo(ChatMessage, (prevProps, nextProps) => {
 // Styles - Modern Design from Reference
 // ============================================
 
-const createStyles = (tokens: any) => StyleSheet.create({
+const createStyles = (tokens: any) => {
+  const isDarkMode = tokens.colors.background.primary !== LIGHT_CANVAS;
+  return StyleSheet.create({
   /* מרווחים בסגנון WhatsApp: צפיפות בין הודעות אותו שולח;
      מרווח גדול מול older בהחלפת שולח — senderGapStyle.marginTop (isAfterSenderChange) */
   messageContainer: {
@@ -2325,11 +2339,11 @@ const createStyles = (tokens: any) => StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     borderBottomLeftRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.18,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowColor: isDarkMode ? '#000' : 'transparent',
+    shadowOffset: isDarkMode ? { width: 0, height: 1 } : { width: 0, height: 0 },
+    shadowOpacity: isDarkMode ? 0.18 : 0,
+    shadowRadius: isDarkMode ? 3 : 0,
+    elevation: isDarkMode ? 2 : 0,
   },
   theirBubble: {
     backgroundColor: tokens.colors.bubbleOther,
@@ -2337,11 +2351,11 @@ const createStyles = (tokens: any) => StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     borderBottomRightRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.14,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowColor: isDarkMode ? '#000' : 'transparent',
+    shadowOffset: isDarkMode ? { width: 0, height: 1 } : { width: 0, height: 0 },
+    shadowOpacity: isDarkMode ? 0.14 : 0,
+    shadowRadius: isDarkMode ? 3 : 0,
+    elevation: isDarkMode ? 2 : 0,
   },
   deletedBubble: {
     opacity: 0.6,
@@ -2776,5 +2790,6 @@ const createStyles = (tokens: any) => StyleSheet.create({
     borderRadius: tokens.borderRadius.lg,
     overflow: 'hidden',
   },
-});
+  });
+};
 

@@ -70,7 +70,7 @@ const UIInput: React.FC<UIInputProps> = ({
     borderRadius: borderRadius.md,
     borderWidth: 0,
     backgroundColor: error
-      ? 'rgba(248, 113, 113, 0.1)'
+      ? 'rgba(239, 68, 68, 0.1)'
       : isFocused
         ? colors.background.tertiary
         : colors.background.input,

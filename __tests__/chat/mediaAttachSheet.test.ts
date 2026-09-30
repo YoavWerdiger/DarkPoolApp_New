@@ -36,13 +36,23 @@ describe('media attach sheet — WhatsApp open path', () => {
     expect(peek.showGrid).toBe(false);
     expect(peek.showSkeleton).toBe(false);
     expect(sheetSrc).toContain('מצלמה');
+    expect(sheetSrc).toContain('גלריה');
+    expect(sheetSrc).not.toContain('צילום מהיר');
+    expect(sheetSrc).not.toContain('תמונות וסרטונים');
+    expect(sheetSrc).not.toContain('chromeSurfaceCardStyle');
+    expect(sheetSrc).toMatch(
+      /primaryTile:\s*\{[^}]*backgroundColor:\s*tokens\.colors\.background\.primary/,
+    );
+    expect(sheetSrc).toMatch(
+      /actionCircle:\s*\{[^}]*backgroundColor:\s*tokens\.colors\.background\.primary/,
+    );
     expect(sheetSrc).toContain("label: 'שיתוף'");
     expect(sheetSrc).toContain("label: 'סקר'");
     expect(sheetSrc).toContain('primaryRow');
     expect(sheetSrc).toContain('secondaryRow');
     expect(sheetSrc).toContain('peekRecentsTitle');
     expect(sheetSrc).toContain('ChatAttachCameraSheet');
-    expect(sheetSrc).toContain('secondaryHeading');
+    expect(sheetSrc).not.toContain('כלים נוספים');
     expect(sheetSrc).toContain('galleryChrome');
     expect(sheetSrc).toContain('scheduleMediaRecentsPrefetch');
     expect(sheetSrc).toContain('runAfterSheetDismiss');

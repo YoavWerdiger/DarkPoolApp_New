@@ -14,7 +14,7 @@ import type { ExplorePerson } from '../../../services/darkpool/uwExploreService'
 import { formatInsiderDisplayName } from '../utils/investorPlaceholder';
 import { InvestorPortrait } from './InvestorPortrait';
 import { isolateData, toDataIsland } from '../utils/bidi';
-import { darkPoolPhysicalRightText } from '../darkPoolLayout';
+import { DARK_POOL_TYPE, darkPoolPhysicalRightText } from '../darkPoolLayout';
 import {
   isNegativeReturnMetric,
   isReturnMetric,
@@ -112,8 +112,6 @@ export const ExplorePortraitCard = memo(function ExplorePortraitCard({
 });
 
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
-  const nameSize = 12;
-
   return StyleSheet.create({
     card: {
       borderRadius: tokens.borderRadius.xl,
@@ -135,25 +133,27 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     name: {
       ...darkPoolPhysicalRightText,
       width: '100%',
-      fontSize: nameSize,
-      lineHeight: nameSize + 3,
-      fontWeight: tokens.typography.fontWeight.extrabold,
+      fontSize: DARK_POOL_TYPE.caption.fontSize,
+      lineHeight: DARK_POOL_TYPE.caption.lineHeight,
+      fontWeight: DARK_POOL_TYPE.caption.fontWeight,
       color: '#fff',
     },
     subtitle: {
       ...darkPoolPhysicalRightText,
       width: '100%',
       marginTop: 2,
-      fontSize: tokens.typography.caption2.size,
-      fontWeight: tokens.typography.fontWeight.semibold,
+      fontSize: DARK_POOL_TYPE.caption2.fontSize,
+      lineHeight: DARK_POOL_TYPE.caption2.lineHeight,
+      fontWeight: DARK_POOL_TYPE.caption2.fontWeight,
       color: 'rgba(255,255,255,0.72)',
     },
     metric: {
       ...darkPoolPhysicalRightText,
       width: '100%',
       marginTop: 2,
-      fontSize: 12,
-      fontWeight: tokens.typography.fontWeight.bold,
+      fontSize: DARK_POOL_TYPE.caption.fontSize,
+      lineHeight: DARK_POOL_TYPE.caption.lineHeight,
+      fontWeight: DARK_POOL_TYPE.sectionTitle.fontWeight,
     },
   });
 }

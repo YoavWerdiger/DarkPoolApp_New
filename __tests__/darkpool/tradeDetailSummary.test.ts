@@ -329,8 +329,8 @@ describe('trade detail hero render', () => {
   });
 });
 
-describe('trade detail nested quote glass', () => {
-  it('uses UICard glass like the table, not a solid DarkPoolFeedNestedCard pill', () => {
+describe('trade detail nested quote card', () => {
+  it('uses a soft nested card, not a glass pill', () => {
     const src = readFileSync(
       join(
         __dirname,
@@ -338,10 +338,11 @@ describe('trade detail nested quote glass', () => {
       ),
       'utf8'
     );
-    expect(src).toMatch(/<UICard[\s\S]*variant="glass"/);
-    expect(src).toMatch(/glassIntensity="light"/);
+    expect(src).toMatch(/<UICard[\s\S]*variant="soft"/);
+    expect(src).toMatch(/background\.tertiary/);
     expect(src).toMatch(/FEED_NESTED_RADIUS/);
     expect(src).not.toMatch(/DarkPoolFeedNestedCard/);
+    expect(src).not.toContain('variant="glass"');
   });
 
   it('pins live-price / מאז העסקה to the physical left of an LTR cluster', () => {

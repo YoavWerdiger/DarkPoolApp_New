@@ -22,9 +22,11 @@ import { DayDividerPill } from '../../components/ui/DayDividerPill';
 import { queryClient } from '../../lib/queryClient';
 import { appQueryKeys } from '../../lib/appQueryKeys';
 import {
+  JOURNAL_LAYOUT,
   JOURNAL_TYPE,
   journalBodyTextStyle,
-  journalCaption2Style,
+  journalCardMetricLabelStyle,
+  journalCardMetricValueSecondaryStyle,
   journalPhysicalRightText,
   journalRow,
   journalRtlContent,
@@ -235,47 +237,67 @@ export default function TradesListTab() {
       {/* Summary */}
       {summary ? (
         <UICard
-          variant="glass"
-          glassIntensity="light"
+          variant="soft"
           padding="md"
-          style={{ borderRadius: 16, marginBottom: 12 }}
+          style={{ marginBottom: JOURNAL_LAYOUT.cardStackGap }}
         >
-          <View style={{ ...journalRow, justifyContent: 'space-between' }}>
-            <View style={{ alignItems: 'center' }}>
-              <Text style={{ ...journalCaption2Style, color: DesignTokens.colors.text.tertiary, marginBottom: 3, textAlign: 'center' }}>
-                P&L כולל
-              </Text>
-              <Text style={{ fontSize: JOURNAL_TYPE.sectionTitle.fontSize, fontWeight: JOURNAL_TYPE.sectionTitle.fontWeight, lineHeight: JOURNAL_TYPE.sectionTitle.lineHeight, color: pnlColor }}>
-                {summary.totalPnl >= 0 ? '+' : '-'}$
-                {Math.abs(summary.totalPnl).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-              </Text>
-            </View>
-            <View style={{ alignItems: 'center' }}>
-              <Text style={{ ...journalCaption2Style, color: DesignTokens.colors.text.tertiary, marginBottom: 3, textAlign: 'center' }}>
-                Win Rate
-              </Text>
-              <Text style={{ fontSize: JOURNAL_TYPE.sectionTitle.fontSize, fontWeight: JOURNAL_TYPE.sectionTitle.fontWeight, lineHeight: JOURNAL_TYPE.sectionTitle.lineHeight, color: summary.winRate >= 50 ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger }}>
-                {summary.winRate.toFixed(0)}%
-              </Text>
-            </View>
-            <View style={{ alignItems: 'center' }}>
-              <Text style={{ ...journalCaption2Style, color: DesignTokens.colors.text.tertiary, marginBottom: 3, textAlign: 'center' }}>
-                טריידים
-              </Text>
-              <Text style={{ fontSize: JOURNAL_TYPE.sectionTitle.fontSize, fontWeight: JOURNAL_TYPE.sectionTitle.fontWeight, lineHeight: JOURNAL_TYPE.sectionTitle.lineHeight, color: DesignTokens.colors.text.primary }}>
-                {summary.totalTrades}
-              </Text>
-            </View>
-            {summary.profitFactor != null ? (
-              <View style={{ alignItems: 'center' }}>
-                <Text style={{ ...journalCaption2Style, color: DesignTokens.colors.text.tertiary, marginBottom: 3, textAlign: 'center' }}>
-                  Profit F.
+          <View
+            style={{
+              ...journalRow,
+              alignItems: 'flex-start',
+              gap: JOURNAL_LAYOUT.cardStackGap,
+            }}
+          >
+            {(
+              [
+                { label: 'P&L כולל', value: `${summary.totalPnl >= 0 ? '+' : '-'}$${Math.abs(summary.totalPnl).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, color: pnlColor },
+                { label: 'Win Rate', value: `${summary.winRate.toFixed(0)}%`, color: summary.winRate >= 50 ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger },
+                { label: 'טריידים', value: String(summary.totalTrades), color: DesignTokens.colors.text.primary },
+                ...(summary.profitFactor != null
+                  ? [{
+                      label: 'Profit F.',
+                      value: summary.profitFactor.toFixed(1),
+                      color: summary.profitFactor >= 1 ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger,
+                    }]
+                  : []),
+              ] as const
+            ).map((cell) => (
+              <View
+                key={cell.label}
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  alignItems: 'center',
+                  gap: JOURNAL_LAYOUT.cardMetricLabelToValueGap,
+                }}
+              >
+                <Text
+                  style={{
+                    ...journalCardMetricLabelStyle,
+                    color: DesignTokens.colors.text.secondary,
+                    textAlign: 'center',
+                    includeFontPadding: false,
+                  }}
+                  numberOfLines={1}
+                >
+                  {cell.label}
                 </Text>
-                <Text style={{ fontSize: JOURNAL_TYPE.sectionTitle.fontSize, fontWeight: JOURNAL_TYPE.sectionTitle.fontWeight, lineHeight: JOURNAL_TYPE.sectionTitle.lineHeight, color: summary.profitFactor >= 1 ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger }}>
-                  {summary.profitFactor.toFixed(1)}
+                <Text
+                  style={{
+                    ...journalCardMetricValueSecondaryStyle,
+                    color: cell.color,
+                    textAlign: 'center',
+                    writingDirection: 'ltr',
+                    includeFontPadding: false,
+                  }}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.8}
+                >
+                  {cell.value}
                 </Text>
               </View>
-            ) : null}
+            ))}
           </View>
         </UICard>
       ) : null}
@@ -430,10 +452,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
     gap: 16,
   },
   loadingText: {
-    fontSize: tokens.typography.body.size,
-    fontWeight: tokens.typography.body.weight as any,
-    lineHeight: tokens.typography.body.lineHeight,
+    ...journalBodyTextStyle,
     color: tokens.colors.text.secondary,
+    textAlign: 'center',
   },
   searchSection: {
     marginHorizontal: tokens.layout?.screenPadding ?? 20,

@@ -101,7 +101,7 @@ export function CommunityPortfolioLeaderCard({
       accessibilityLabel={`תיק ${portfolio.name} של ${ownerLabel}`}
       style={({ pressed }) => [{ opacity: pressed ? 0.88 : 1 }]}
     >
-      <UICard variant="soft" padding="md" style={{ borderRadius: tokens.borderRadius.xl }}>
+      <UICard variant="soft" padding="md">
         <View style={styles.cardInner}>
           <View style={styles.topRow}>
             <View style={styles.titleBlock}>

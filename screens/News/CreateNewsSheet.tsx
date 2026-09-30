@@ -25,6 +25,8 @@ import * as ImagePicker from 'expo-image-picker';
 
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import UICard from '../../components/ui/UICard';
+import UIButton from '../../components/ui/UIButton';
+import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
 import BottomSheet, { useBottomSheetClose } from '../../components/ui/BottomSheet/BottomSheet';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import { useAuth } from '../../context/AuthContext';
@@ -35,7 +37,7 @@ import {
   APP_TYPE,
   appPhysicalRightText,
   appSectionTitleStyle,
-  appSheetButtonLabelStyle,
+  appFormFieldLabelStyle,
 } from '../../components/ui/appType';
 
 interface CreateNewsSheetProps {
@@ -45,7 +47,6 @@ interface CreateNewsSheetProps {
 }
 
 const DEFAULT_SOURCE = 'DarkPool';
-const SHEET_BORDER = 'rgba(255, 255, 255, 0.10)';
 const SHEET_WATERMARK_SCALE = 0.65;
 
 /** טקסט עברי בתוך עץ RTL — תיבת LTR + יישור ימין פיזי */
@@ -238,26 +239,17 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
             </Text>
           </View>
 
-          <TouchableOpacity
+          <UIButton
+            title="פרסם"
+            variant="primary"
+            size="sm"
+            loading={isSubmitting}
+            disabled={!canSubmit}
             onPress={() => {
-              void HapticFeedback.medium();
               void handleSubmit();
             }}
-            disabled={!canSubmit}
-            activeOpacity={0.85}
-            style={[styles.headerPublishBtn, !canSubmit && styles.headerPublishBtnDisabled]}
-            accessibilityRole="button"
-            accessibilityLabel="פרסם כתבה"
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={[styles.headerPublishBtnText, !canSubmit && styles.headerPublishBtnTextDisabled]}>
-                פרסם
-              </Text>
-            )}
-          </TouchableOpacity>
+            haptic={false}
+          />
         </View>
 
         {/* גוף גלילה */}
@@ -274,7 +266,6 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
                 styles.banner,
                 {
                   backgroundColor: (DesignTokens.colors.danger?.main || '#FF3B5C') + '1f',
-                  borderColor: (DesignTokens.colors.danger?.main || '#FF3B5C') + '66',
                 },
               ]}
             >
@@ -294,8 +285,7 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
               style={[
                 styles.banner,
                 {
-                  backgroundColor: primary + '1f',
-                  borderColor: primary + '66',
+                  backgroundColor: DesignTokens.colors.background.cardSolid,
                 },
               ]}
             >
@@ -464,14 +454,11 @@ const formFieldStyles = StyleSheet.create({
   },
   label: {
     flex: 1,
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 0.2,
+    ...appFormFieldLabelStyle,
   },
   counter: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginRight: 8,
+    ...APP_TYPE.caption,
+    marginLeft: APP_LAYOUT.stackGapSmall,
   },
 });
 
@@ -485,38 +472,18 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     header: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: 16,
-      paddingBottom: 12,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: SHEET_BORDER,
-      gap: 10,
+      paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+      paddingBottom: APP_LAYOUT.cardTitleToBodyGap,
+      borderBottomWidth: 1,
+      borderBottomColor: tokens.colors.border.divider,
     },
     headerIconButton: {
       alignSelf: 'center',
+      marginLeft: APP_LAYOUT.cardTitleToBodyGap,
     },
     headerCenter: {
       flex: 1,
       alignItems: 'flex-start',
-    },
-    headerPublishBtn: {
-      minWidth: DAY_NAV_BUTTON_SIZE + 12,
-      height: DAY_NAV_BUTTON_SIZE,
-      paddingHorizontal: 14,
-      borderRadius: 14,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: tokens.colors.primary.main,
-    },
-    headerPublishBtnDisabled: {
-      backgroundColor: 'rgba(255,255,255,0.08)',
-    },
-    headerPublishBtnText: {
-      ...appSheetButtonLabelStyle,
-      fontWeight: '800',
-      color: '#fff',
-    },
-    headerPublishBtnTextDisabled: {
-      color: tokens.colors.text.tertiary,
     },
     headerTitle: {
       ...appSectionTitleStyle,
@@ -524,17 +491,15 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       letterSpacing: 0,
     },
     headerSubtitle: {
-      marginTop: 2,
-      fontSize: APP_TYPE.sectionSubtitle.fontSize,
-      fontWeight: '500',
-      lineHeight: APP_TYPE.sectionSubtitle.lineHeight,
+      ...APP_TYPE.cardSubtitle,
+      marginTop: APP_LAYOUT.titleSubtitleGap,
     },
     scroll: {
       flex: 1,
     },
     scrollContent: {
       flexGrow: 1,
-      paddingHorizontal: 16,
+      paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
       paddingTop: 14,
       paddingBottom: 28,
       gap: 18,
@@ -555,14 +520,12 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     inputInner: {
       backgroundColor: 'transparent',
       borderWidth: 0,
-      fontSize: 15,
+      ...APP_TYPE.body,
       paddingVertical: 10,
       width: '100%',
     },
     titleInput: {
-      fontSize: APP_TYPE.body.fontSize,
-      fontWeight: '600',
-      lineHeight: APP_TYPE.body.lineHeight,
+      ...APP_TYPE.body,
     },
     textAreaInner: {
       minHeight: 160,
@@ -572,56 +535,50 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     sourceInputRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
     },
     sourceInputInner: {
       flex: 1,
       paddingVertical: 10,
+      marginLeft: APP_LAYOUT.cardTitleToBodyGap,
     },
     banner: {
       flexDirection: 'row-reverse',
       alignItems: 'center',
-      gap: 10,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      borderRadius: 14,
-      borderWidth: 1,
+      paddingHorizontal: APP_LAYOUT.cardPadding,
+      paddingVertical: 15,
+      borderRadius: UI_CARD_RADIUS,
+      borderWidth: 0,
     },
     bannerText: {
       flex: 1,
-      fontSize: 13,
-      fontWeight: '600',
+      ...APP_TYPE.cardSubtitle,
       textAlign: 'right',
-      lineHeight: 19,
+      marginLeft: APP_LAYOUT.cardTitleToBodyGap,
     },
     imageSlot: {
       aspectRatio: 16 / 9,
-      borderRadius: 16,
-      borderWidth: 1.5,
-      borderColor: 'rgba(255, 255, 255, 0.14)',
-      borderStyle: 'dashed',
-      backgroundColor: 'rgba(255, 255, 255, 0.03)',
+      borderRadius: UI_CARD_RADIUS,
+      borderWidth: 0,
+      backgroundColor: tokens.colors.background.cardSolid,
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 6,
-      paddingHorizontal: 20,
+      paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
     },
     imageSlotTitle: {
-      fontSize: 15,
-      fontWeight: '700',
+      ...APP_TYPE.cardTitle,
       textAlign: 'center',
+      marginTop: APP_LAYOUT.cardTitleToBodyGap,
     },
     imageSlotHint: {
-      fontSize: 12,
-      fontWeight: '500',
+      ...APP_TYPE.caption,
       textAlign: 'center',
+      marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
     },
     imagePreviewWrap: {
-      borderRadius: 16,
+      borderRadius: UI_CARD_RADIUS,
       overflow: 'hidden',
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: SHEET_BORDER,
-      backgroundColor: '#000',
+      borderWidth: 0,
+      backgroundColor: tokens.colors.background.cardSolid,
     },
     imagePreview: {
       width: '100%',
@@ -632,37 +589,35 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: 'rgba(0, 0, 0, 0.55)',
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: 'rgba(255, 255, 255, 0.1)',
+      borderTopWidth: 1,
+      borderTopColor: tokens.colors.border.divider,
     },
     imageToolbarBtn: {
       flex: 1,
       flexDirection: 'row-reverse',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 6,
       paddingVertical: 11,
     },
     imageToolbarBtnText: {
       color: '#fff',
-      fontSize: 13,
-      fontWeight: '600',
+      ...APP_TYPE.cardSubtitle,
+      marginLeft: APP_LAYOUT.stackGapSmall,
     },
     imageToolbarDivider: {
-      width: StyleSheet.hairlineWidth,
+      width: 1,
       height: 20,
-      backgroundColor: 'rgba(255, 255, 255, 0.18)',
+      backgroundColor: tokens.colors.border.divider,
     },
     imageUploadingOverlay: {
       ...StyleSheet.absoluteFill,
       backgroundColor: 'rgba(0,0,0,0.45)',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 8,
     },
     imageUploadingText: {
       color: '#fff',
-      fontSize: 13,
-      fontWeight: '600',
+      ...APP_TYPE.cardSubtitle,
+      marginTop: APP_LAYOUT.stackGapSmall,
     },
   });

@@ -185,7 +185,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
           borderRadius: 17,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: tokens.colors.glass.card.bg,
+          backgroundColor: tokens.colors.background.tertiary,
           flexShrink: 0,
         },
         monthTitle: {
@@ -195,20 +195,20 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
           fontWeight: journalSectionTitleStyle.fontWeight,
           lineHeight: journalSectionTitleStyle.lineHeight,
           color: tokens.colors.text.primary,
+          direction: 'ltr',
           textAlign: 'center',
           writingDirection: 'rtl',
         },
         mainCard: {
-          borderRadius: 20,
           overflow: 'hidden',
           marginBottom: 12,
         },
         cardPadding: {
-          padding: 14,
+          padding: 16,
         },
         divider: {
-          height: StyleSheet.hairlineWidth,
-          backgroundColor: tokens.colors.border.subtle,
+          height: 1,
+          backgroundColor: tokens.colors.border.divider,
           marginVertical: 12,
         },
         summaryRow: {
@@ -230,7 +230,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
         },
         summaryValue: {
           fontSize: 13,
-          fontWeight: '800',
+          fontWeight: '700',
           color: tokens.colors.text.primary,
           writingDirection: 'ltr',
           textAlign: 'center',
@@ -265,7 +265,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
           backgroundColor: 'transparent',
         },
         cellDefault: {
-          backgroundColor: tokens.colors.glass.card.bg,
+          backgroundColor: tokens.colors.background.tertiary,
         },
         cellSelected: {
           borderWidth: 2,
@@ -280,7 +280,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
         },
         cellPnl: {
           fontSize: 8,
-          fontWeight: '800',
+          fontWeight: '700',
           marginTop: 1,
           writingDirection: 'ltr',
           textAlign: 'center',
@@ -310,13 +310,13 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
           paddingVertical: 10,
           paddingHorizontal: 14,
           borderRadius: 14,
-          backgroundColor: tokens.colors.glass.card.bg,
+          backgroundColor: tokens.colors.background.tertiary,
           marginTop: 8,
           gap: 10,
         },
         tradeSymbol: {
           fontSize: 14,
-          fontWeight: '800',
+          fontWeight: '700',
           color: tokens.colors.text.primary,
           flex: 1,
           writingDirection: 'ltr',
@@ -336,7 +336,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
         },
         tradePnl: {
           fontSize: 13,
-          fontWeight: '800',
+          fontWeight: '700',
           writingDirection: 'ltr',
           textAlign: 'right',
         },
@@ -379,7 +379,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.root}>
       <UICard
-        variant="glass"
+        variant="soft"
         glassIntensity="light"
         padding="none"
         style={styles.mainCard}

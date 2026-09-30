@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { MARKETS_TYPE } from '../marketsLayout';
 import { GlassChip } from '../../../components/ui/GlassChip';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 
@@ -40,8 +41,8 @@ export function MarketsSegmentedControl<T extends string>({
         const isActive = value === opt.id;
         const color = isActive ? tokens.colors.primary.main : tokens.colors.text.secondary;
         const fontWeight = isActive
-          ? (tokens.typography.fontWeight.bold as '700')
-          : (tokens.typography.fontWeight.medium as '500');
+          ? MARKETS_TYPE.cardTitle.fontWeight
+          : MARKETS_TYPE.groupLabel.fontWeight;
         return (
           <TouchableOpacity
             key={opt.id}
@@ -95,7 +96,8 @@ export function MarketsSegmentedControl<T extends string>({
                   style={{
                     flexShrink: 1,
                     minWidth: 0,
-                    fontSize: tokens.typography.bodySmall.size,
+                    fontSize: MARKETS_TYPE.cardSubtitle.fontSize,
+                    lineHeight: MARKETS_TYPE.cardSubtitle.lineHeight,
                     fontWeight,
                     color,
                     textAlign: 'center',
@@ -111,7 +113,8 @@ export function MarketsSegmentedControl<T extends string>({
                 minimumFontScale={0.7}
                 style={{
                   zIndex: 1,
-                  fontSize: tokens.typography.bodySmall.size,
+                  fontSize: MARKETS_TYPE.cardSubtitle.fontSize,
+                  lineHeight: MARKETS_TYPE.cardSubtitle.lineHeight,
                   fontWeight,
                   color,
                   textAlign: 'center',

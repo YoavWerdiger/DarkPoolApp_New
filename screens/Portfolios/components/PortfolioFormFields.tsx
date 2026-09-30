@@ -1,6 +1,6 @@
 /**
  * שדות טופס משותפים — Portfolios (יצירת תיק, ברוקר, עסקאות).
- * formControl.ts · APP_TYPE · בלי מסגרת ירוקה / בלי אייקונים בתוך השדה.
+ * formControl.ts · APP_TYPE · בלי מסגרת ירוקה. עין סיסמה בלבד בתוך השדה, בצד שמאל.
  */
 
 import React, { useMemo, useState } from 'react';
@@ -9,7 +9,6 @@ import {
   Text,
   StyleSheet,
   TextInput,
-  Pressable,
   type KeyboardTypeOptions,
   type ReturnKeyTypeOptions,
   type TextInputProps,
@@ -22,6 +21,7 @@ import {
   formFieldLabelStyle,
   formFieldShellStyle,
 } from '../../../components/ui/formControl';
+import { PasswordVisibilityToggle } from '../../../components/ui/PasswordVisibilityToggle';
 import { APP_LAYOUT } from '../../../components/ui/appLayout';
 import {
   journalCardSubtitleStyle,
@@ -128,7 +128,7 @@ export interface TextFieldProps {
   onSubmitEditing?: () => void;
   numeric?: boolean;
   prefix?: string;
-  /** @deprecated — השתמש ב-labelAccessory (הצג/הסתר ליד התווית) */
+  /** @deprecated */
   accessory?: React.ReactNode;
   labelAccessory?: React.ReactNode;
   spacing?: number;
@@ -160,6 +160,8 @@ export function TextField({
 }: TextFieldProps) {
   const tokens = useDesignTokens();
   const [focused, setFocused] = useState(false);
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const isPassword = secureTextEntry === true;
   const shellRadius = multiline ? tokens.borderRadius.xl : tokens.borderRadius.full;
 
   const shell = useMemo(
@@ -183,7 +185,13 @@ export function TextField({
         optional={optional}
         labelAccessory={labelAccessory ?? accessory}
       />
-      <View style={shell}>
+      <View style={[shell, isPassword ? styles.passwordShell : null]}>
+        {isPassword ? (
+          <PasswordVisibilityToggle
+            visible={passwordVisible}
+            onToggle={() => setPasswordVisible((v) => !v)}
+          />
+        ) : null}
         <TextInput
           style={[
             formFieldInputStyle(),
@@ -203,7 +211,7 @@ export function TextField({
           multiline={multiline}
           maxLength={maxLength}
           editable={editable}
-          secureTextEntry={secureTextEntry}
+          secureTextEntry={isPassword ? !passwordVisible : secureTextEntry}
           autoCapitalize={autoCapitalize}
           autoCorrect={autoCorrect}
           returnKeyType={returnKeyType}
@@ -251,9 +259,7 @@ export function SwitchRow({ title, hint, value, onChange, spacing = 0 }: SwitchR
       style={[
         styles.switchCard,
         value && {
-          borderWidth: 1,
-          borderColor: `${tokens.colors.primary.main}44`,
-          backgroundColor: tokens.colors.primary.subtle,
+          borderWidth: 0,
         },
         spacing ? { marginBottom: spacing } : null,
       ]}
@@ -316,6 +322,9 @@ const styles = StyleSheet.create({
     gap: 8,
     overflow: 'hidden',
   },
+  passwordShell: {
+    flexDirection: 'row',
+  },
   inputMultiline: {
     minHeight: 76,
     textAlignVertical: 'top',
@@ -338,7 +347,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 12,
-    paddingVertical: 14,
+    paddingVertical: 15,
     paddingHorizontal: 16,
   },
   switchTextCol: {
@@ -360,23 +369,3 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
 });
-
-/** קישור טקסט ליד תווית (הצג/הסתר סיסמה) */
-export function FormLabelLink({
-  children,
-  onPress,
-  accessibilityLabel,
-}: {
-  children: string;
-  onPress: () => void;
-  accessibilityLabel?: string;
-}) {
-  const tokens = useDesignTokens();
-  return (
-    <Pressable onPress={onPress} hitSlop={8} accessibilityRole="button" accessibilityLabel={accessibilityLabel}>
-      <Text style={[journalCardSubtitleStyle, { color: tokens.colors.text.secondary }]}>
-        {children}
-      </Text>
-    </Pressable>
-  );
-}

@@ -2,12 +2,13 @@ import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { APP_LAYOUT } from '../../../components/ui/appLayout';
 import {
-  APP_TYPE,
-  appPhysicalRightText,
-  appSectionTitleStyle,
-  appSheetButtonLabelStyle,
+  appCardSubtitleStyle,
+  appCardTitleStyle,
+  appGroupLabelStyle,
 } from '../../../components/ui/appType';
+import UIButton from '../../../components/ui/UIButton';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
 import { SUGGESTED_WATCHLIST_SYMBOLS } from '../../../services/watchlist/watchlistTypes';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
@@ -26,11 +27,10 @@ export function WatchlistEmpty({ onAddPress, onSuggest }: Props) {
         wrap: { paddingBottom: 8 },
         hero: {
           alignItems: 'center',
-          paddingHorizontal: 20,
+          paddingHorizontal: APP_LAYOUT.cardPadding,
           paddingTop: 28,
           paddingBottom: 20,
-          gap: 8,
-          borderBottomWidth: StyleSheet.hairlineWidth,
+          borderBottomWidth: 1,
           borderBottomColor: tokens.colors.border.divider,
         },
         iconWrap: {
@@ -39,80 +39,66 @@ export function WatchlistEmpty({ onAddPress, onSuggest }: Props) {
           borderRadius: 28,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: tokens.colors.primary.dim,
-          marginBottom: 4,
+          backgroundColor: tokens.colors.background.navChrome,
+          marginBottom: APP_LAYOUT.sectionHeaderToContent,
         },
         title: {
+          ...appCardTitleStyle,
           color: tokens.colors.text.primary,
-          ...appSectionTitleStyle,
           textAlign: 'center',
         },
         subtitle: {
-          color: tokens.colors.text.tertiary,
-          fontSize: APP_TYPE.sectionSubtitle.fontSize,
-          lineHeight: APP_TYPE.sectionSubtitle.lineHeight,
-          fontWeight: APP_TYPE.sectionSubtitle.fontWeight,
+          ...appCardSubtitleStyle,
+          color: tokens.colors.text.secondary,
           textAlign: 'center',
-          writingDirection: 'rtl',
         },
         cta: {
-          flexDirection: 'row-reverse',
-          alignItems: 'center',
-          gap: 6,
-          marginTop: 8,
-          backgroundColor: tokens.colors.primary.main,
-          paddingHorizontal: 16,
-          paddingVertical: 11,
-          borderRadius: tokens.borderRadius.button,
-        },
-        ctaText: {
-          color: tokens.colors.text.inverse,
-          ...appSheetButtonLabelStyle,
-          fontWeight: '800',
+          marginTop: APP_LAYOUT.sectionHeaderToContent,
+          alignSelf: 'center',
         },
         suggestHeader: {
-          paddingHorizontal: 14,
-          paddingTop: 14,
-          paddingBottom: 6,
+          paddingHorizontal: APP_LAYOUT.cardPadding,
+          paddingTop: APP_LAYOUT.sectionHeaderToContent,
         },
         suggestLabel: {
-          color: tokens.colors.text.tertiary,
-          fontSize: APP_TYPE.caption.fontSize,
-          fontWeight: '700',
-          lineHeight: APP_TYPE.caption.lineHeight,
-          ...appPhysicalRightText,
+          ...appGroupLabelStyle,
+          color: tokens.colors.text.secondary,
         },
         suggestRow: {
           flexDirection: 'row-reverse',
           alignItems: 'center',
-          paddingHorizontal: 14,
-          paddingVertical: 11,
-          borderBottomWidth: StyleSheet.hairlineWidth,
+          paddingHorizontal: APP_LAYOUT.cardPadding,
+          paddingVertical: 15,
+        },
+        suggestDivider: {
+          borderBottomWidth: 1,
           borderBottomColor: tokens.colors.border.divider,
-          gap: 10,
+        },
+        suggestLogo: {
+          marginLeft: 12,
         },
         suggestText: {
           flex: 1,
           alignItems: 'flex-end',
-          gap: 2,
+          minWidth: 0,
         },
         suggestSymbol: {
+          ...appCardTitleStyle,
+          width: undefined,
+          alignSelf: 'flex-end',
           color: tokens.colors.text.primary,
-          fontSize: APP_TYPE.body.fontSize,
-          fontWeight: '700',
-          lineHeight: APP_TYPE.body.lineHeight,
-          textAlign: 'right',
         },
         suggestName: {
-          color: tokens.colors.text.tertiary,
-          fontSize: APP_TYPE.caption2.fontSize,
-          lineHeight: APP_TYPE.caption2.lineHeight,
-          ...appPhysicalRightText,
+          ...appCardSubtitleStyle,
+          width: undefined,
+          alignSelf: 'flex-end',
+          color: tokens.colors.text.secondary,
         },
         addHint: {
-          color: tokens.colors.primary.main,
-          fontSize: 13,
-          fontWeight: '700',
+          ...appCardSubtitleStyle,
+          width: undefined,
+          marginTop: 0,
+          color: tokens.colors.text.secondary,
         },
       }),
     [tokens]
@@ -122,37 +108,37 @@ export function WatchlistEmpty({ onAddPress, onSuggest }: Props) {
     <View style={styles.wrap}>
       <View style={styles.hero}>
         <View style={styles.iconWrap}>
-          <Ionicons name="eye-outline" size={26} color={tokens.colors.primary.main} />
+          <Ionicons name="eye-outline" size={26} color={tokens.colors.text.primary} />
         </View>
         <Text style={styles.title}>הרשימה ריקה</Text>
         <Text style={styles.subtitle}>
           הוסיפו מניות למעקב — מחיר חי ושינוי יומי ($ / %)
         </Text>
-        <TouchableOpacity
+        <UIButton
+          title="הוספת סימבול"
+          variant="primary"
+          icon="add"
+          iconPosition="right"
           style={styles.cta}
-          onPress={() => {
-            void HapticFeedback.selection();
-            onAddPress();
-          }}
-        >
-          <Ionicons name="add" size={18} color={tokens.colors.text.inverse} />
-          <Text style={styles.ctaText}>הוספת סימבול</Text>
-        </TouchableOpacity>
+          onPress={onAddPress}
+        />
       </View>
 
       <View style={styles.suggestHeader}>
         <Text style={styles.suggestLabel}>הוספה מהירה</Text>
       </View>
-      {SUGGESTED_WATCHLIST_SYMBOLS.slice(0, 6).map((s) => (
+      {SUGGESTED_WATCHLIST_SYMBOLS.slice(0, 6).map((s, index, list) => (
         <TouchableOpacity
           key={s.symbol}
-          style={styles.suggestRow}
+          style={[styles.suggestRow, index < list.length - 1 && styles.suggestDivider]}
           onPress={() => {
             void HapticFeedback.selection();
             onSuggest(s.symbol, s.name);
           }}
         >
-          <TickerLogo symbol={s.symbol} size={28} />
+          <View style={styles.suggestLogo}>
+            <TickerLogo symbol={s.symbol} size={28} />
+          </View>
           <View style={styles.suggestText}>
             <Text style={styles.suggestSymbol}>{s.symbol}</Text>
             <Text style={styles.suggestName}>{s.name}</Text>

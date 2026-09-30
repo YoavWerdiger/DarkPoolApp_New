@@ -301,15 +301,12 @@ export default function CommunityPortfoliosTab() {
         sortRow: {
           ...journalRow,
           alignItems: 'center',
-          paddingVertical: 14,
-          paddingHorizontal: 14,
-          borderRadius: 14,
-          gap: 12,
+          paddingVertical: 15,
+          paddingHorizontal: JOURNAL_LAYOUT.cardPadding,
         },
         sortRowActive: {
-          backgroundColor: `${tokens.colors.primary.main}1A`,
-          borderWidth: 1,
-          borderColor: `${tokens.colors.primary.main}55`,
+          backgroundColor: tokens.colors.background.tertiary,
+          borderWidth: 0,
         },
         sortRowText: {
           flex: 1,
@@ -506,15 +503,13 @@ export default function CommunityPortfoliosTab() {
                 accessibilityRole="button"
                 accessibilityState={{ selected: isActive }}
               >
-                <Ionicons
-                  name={opt.icon}
-                  size={20}
-                  color={
-                    isActive
-                      ? tokens.colors.primary.main
-                      : tokens.colors.text.secondary
-                  }
-                />
+                <View style={{ marginLeft: 12 }}>
+                  <Ionicons
+                    name={opt.icon}
+                    size={20}
+                    color={tokens.colors.text.primary}
+                  />
+                </View>
                 <Text
                   style={[
                     styles.sortRowText,

@@ -15,6 +15,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { Sun, Moon, ChevronUp, Search } from 'lucide-react-native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import UICard from '../../components/ui/UICard';
+import UIButton from '../../components/ui/UIButton';
+import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
+import { APP_TYPE } from '../../components/ui/appType';
 import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
 import { TickerLogo } from '../../components/ui/TickerLogo';
 import EarningsService, { EarningsReport } from '../../services/earningsService';
@@ -64,70 +67,6 @@ const PRE_COLOR = '#d1a11d'; // זהב — מסחר מוקדם
 const POST_COLOR = '#007AFF'; // כחול — מסחר מאוחר
 const TILE_LOGO = 40;
 const TILE_WIDTH = 56;
-const LOGO_SURPRISE_BORDER = 2;
-
-/**
- * אחוז surprise של דיווח — תואם ללוגיקת הצבע בכרטיס היומי:
- * מעדיפים EPS percent (או חישוב actual מול estimate), ואם אין — revenue surprise.
- * null = אין תוצאה עדיין / אין נתון לחישוב.
- */
-function getEarningsSurprisePercent(report: EarningsReport): number | null {
-  const hasEpsActual = report.actual != null && report.actual !== 0;
-  if (hasEpsActual) {
-    let surprisePercent = report.percent;
-    if (surprisePercent == null) {
-      const estimate =
-        typeof report.estimate === 'number'
-          ? report.estimate
-          : typeof report.eps_estimate === 'number'
-            ? report.eps_estimate
-            : typeof report.eps_estimate === 'string'
-              ? parseFloat(report.eps_estimate)
-              : null;
-      if (estimate != null && estimate !== 0 && !Number.isNaN(estimate)) {
-        surprisePercent = ((report.actual as number) - estimate) / Math.abs(estimate) * 100;
-      }
-    }
-    if (surprisePercent != null && !Number.isNaN(Number(surprisePercent))) {
-      return Number(surprisePercent);
-    }
-  }
-
-  const hasRevenueActual = report.revenue_actual != null && report.revenue_actual !== 0;
-  if (hasRevenueActual) {
-    let revenuePercent = report.revenue_surprise_percent ?? null;
-    if (revenuePercent == null) {
-      const revenueEstimate =
-        typeof report.revenue_estimate === 'number'
-          ? report.revenue_estimate
-          : typeof report.revenue_estimate === 'string'
-            ? parseFloat(report.revenue_estimate)
-            : typeof report.revenue_estimate_avg === 'number'
-              ? report.revenue_estimate_avg
-              : null;
-      if (revenueEstimate != null && revenueEstimate !== 0 && !Number.isNaN(revenueEstimate)) {
-        revenuePercent =
-          ((report.revenue_actual as number) - revenueEstimate) / Math.abs(revenueEstimate) * 100;
-      }
-    }
-    if (revenuePercent != null && !Number.isNaN(Number(revenuePercent))) {
-      return Number(revenuePercent);
-    }
-  }
-
-  return null;
-}
-
-/** ירוק/אדום כמו ביום — null כשאין תוצאה או surprise === 0. */
-function getSurpriseBorderColor(
-  report: EarningsReport,
-  colors: { primary: { main: string }; danger: { main: string } },
-): string | null {
-  const percent = getEarningsSurprisePercent(report);
-  if (percent == null || percent === 0) return null;
-  if (percent > 0) return colors.primary.main;
-  return colors.danger.main;
-}
 
 function getTimingMeta(value: string | null | undefined): {
   label: string;
@@ -150,8 +89,7 @@ const LogoTile = memo(function LogoTile({
 }) {
   const DesignTokens = useDesignTokens();
   const symbol = getSymbolDisplay(report.code);
-  const surpriseBorder = getSurpriseBorderColor(report, DesignTokens.colors);
-  const ringOuter = TILE_LOGO + LOGO_SURPRISE_BORDER * 2;
+  const ringOuter = TILE_LOGO;
   return (
     <Pressable
       onPress={() => onPress(report)}
@@ -166,8 +104,7 @@ const LogoTile = memo(function LogoTile({
             width: ringOuter,
             height: ringOuter,
             borderRadius: ringOuter / 2,
-            borderWidth: LOGO_SURPRISE_BORDER,
-            borderColor: surpriseBorder ?? 'transparent',
+            borderWidth: 0,
           },
         ]}
       >
@@ -197,14 +134,13 @@ const SearchResultRow = memo(function SearchResultRow({
   const { dayLabel, dateLabel } = formatReportDayLabel(report.report_date);
   const timing = getTimingMeta(report.before_after_market || report.report_time);
   const TimingIcon = timing.icon;
-  const surpriseBorder = getSurpriseBorderColor(report, DesignTokens.colors);
   const searchLogoSize = 44;
-  const searchRingOuter = searchLogoSize + LOGO_SURPRISE_BORDER * 2;
+  const searchRingOuter = searchLogoSize;
   const now = new Date();
   const todayLocal = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const isToday = report.report_date === todayLocal;
-  const screenPad = DesignTokens.layout?.screenPadding ?? 20;
-  const cardRadius = DesignTokens.borderRadius['3xl'];
+  const screenPad = APP_LAYOUT.screenPaddingHorizontal;
+  const cardRadius = UI_CARD_RADIUS;
   const rtl = DesignTokens.rtlText;
 
   return (
@@ -215,8 +151,7 @@ const SearchResultRow = memo(function SearchResultRow({
       accessibilityLabel={`${symbol} ${dayLabel} ${timing.label}`}
     >
       <UICard
-        variant="blur"
-        glassIntensity="subtle"
+        variant="soft"
         padding="md"
         style={{ borderRadius: cardRadius, overflow: 'hidden' }}
         contentContainerStyle={searchStyles.resultCardContent}
@@ -228,8 +163,6 @@ const SearchResultRow = memo(function SearchResultRow({
               width: searchRingOuter,
               height: searchRingOuter,
               borderRadius: searchRingOuter / 2,
-              borderWidth: LOGO_SURPRISE_BORDER,
-              borderColor: surpriseBorder ?? 'transparent',
               alignItems: 'center',
               justifyContent: 'center',
             },
@@ -255,7 +188,6 @@ const SearchResultRow = memo(function SearchResultRow({
                   searchStyles.todayPill,
                   {
                     backgroundColor: `${DesignTokens.colors.primary.main}22`,
-                    borderColor: `${DesignTokens.colors.primary.main}44`,
                   },
                 ]}
               >
@@ -293,7 +225,6 @@ const SearchResultRow = memo(function SearchResultRow({
           style={[
             searchStyles.timingPill,
             {
-              borderColor: `${timing.color}55`,
               backgroundColor: `${timing.color}18`,
             },
           ]}
@@ -319,10 +250,10 @@ const SubSectionHeader: React.FC<{
   const DesignTokens = useDesignTokens();
   return (
     <View style={[weekStyles.subHeader, !isFirst && weekStyles.subHeaderSpaced]}>
-      <View style={weekStyles.subHeaderHairline} />
+      <View style={[weekStyles.subHeaderHairline, { backgroundColor: DesignTokens.colors.border.divider }]} />
       <View style={weekStyles.subHeaderPill}>
         <Icon size={11} color={color} strokeWidth={2.2} />
-        <Text style={[weekStyles.subHeaderText, { color: DesignTokens.colors.text.primary }]}>
+        <Text style={[weekStyles.subHeaderText, { color: DesignTokens.colors.text.secondary, marginLeft: APP_LAYOUT.cardTitleToBodyGap }]}>
           {label}
         </Text>
         <View
@@ -334,7 +265,7 @@ const SubSectionHeader: React.FC<{
           <Text style={[weekStyles.subHeaderCount, { color }]}>{count}</Text>
         </View>
       </View>
-      <View style={weekStyles.subHeaderHairline} />
+      <View style={[weekStyles.subHeaderHairline, { backgroundColor: DesignTokens.colors.border.divider }]} />
     </View>
   );
 };
@@ -353,15 +284,14 @@ const DayCard = memo(function DayCard({
   const hasAfter = day.after.length > 0;
 
   return (
-    <UICard
-      variant="blur"
-      glassIntensity="subtle"
-      padding="md"
+      <UICard
+        variant="soft"
+        padding="md"
       style={weekStyles.dayCard}
       contentContainerStyle={weekStyles.dayCardContent}
     >
       {/* כותרת היום: שם + תגית «היום» בשורה אחת, תאריך מתחת */}
-      <View style={weekStyles.dayHeader}>
+      <View style={[weekStyles.dayHeader, { borderBottomColor: DesignTokens.colors.border.divider }]}>
         <View style={weekStyles.dayHeaderTitleRow}>
           <Text style={[weekStyles.dayName, { color: DesignTokens.colors.text.primary }]}>
             {day.dayLabel}
@@ -372,7 +302,6 @@ const DayCard = memo(function DayCard({
                 weekStyles.todayPill,
                 {
                   backgroundColor: `${DesignTokens.colors.primary.main}22`,
-                  borderColor: `${DesignTokens.colors.primary.main}44`,
                 },
               ]}
             >
@@ -389,11 +318,11 @@ const DayCard = memo(function DayCard({
 
       {total === 0 ? (
         <View style={weekStyles.emptyDay}>
-          <View style={weekStyles.emptyDayRule} />
+          <View style={[weekStyles.emptyDayRule, { backgroundColor: DesignTokens.colors.border.divider }]} />
           <Text style={[weekStyles.emptyDayText, { color: DesignTokens.colors.text.muted }]}>
             אין דיווחים ביום זה
           </Text>
-          <View style={weekStyles.emptyDayRule} />
+          <View style={[weekStyles.emptyDayRule, { backgroundColor: DesignTokens.colors.border.divider }]} />
         </View>
       ) : (
         <>
@@ -469,7 +398,7 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
   bottomPad,
 }) => {
   const DesignTokens = useDesignTokens();
-  const screenPad = DesignTokens.layout?.screenPadding ?? 20;
+  const screenPad = APP_LAYOUT.screenPaddingHorizontal;
   const listRef = useRef<FlatList<WeekDay>>(null);
   const searchListRef = useRef<FlatList<EarningsReport>>(null);
   const [showScrollToTop, setShowScrollToTop] = useState(false);
@@ -668,15 +597,15 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
               onChangeText={setSearchQuery}
               placeholder="חיפוש טיקר או חברה..."
               placeholderTextColor={DesignTokens.colors.text.tertiary}
-              style={{
-                flex: 1,
-                marginHorizontal: 8,
-                color: DesignTokens.colors.text.primary,
-                fontSize: 15,
-                textAlign: 'right',
-                writingDirection: 'rtl',
-                paddingVertical: 8,
-              }}
+                style={{
+                  flex: 1,
+                  marginHorizontal: 8,
+                  ...APP_TYPE.body,
+                  color: DesignTokens.colors.text.primary,
+                  textAlign: 'right',
+                  writingDirection: 'rtl',
+                  paddingVertical: 8,
+                }}
               returnKeyType="search"
               autoCapitalize="none"
               autoCorrect={false}
@@ -718,16 +647,14 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
               justifyContent: 'space-between',
             }}
           >
-            <DayNavBlurButton onPress={onPrevWeek} glassIntensity="subtle" accessibilityLabel="שבוע קודם">
+            <DayNavBlurButton onPress={onPrevWeek} glass glassIntensity="subtle" accessibilityLabel="שבוע קודם">
               <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.primary} />
             </DayNavBlurButton>
 
             <View style={{ alignItems: 'center', flex: 1, paddingHorizontal: 10 }}>
               <Text
                 style={{
-                  fontSize: 16,
-                  fontWeight: '600',
-                  lineHeight: 21,
+                  ...APP_TYPE.cardTitle,
                   color: DesignTokens.colors.text.primary,
                   textAlign: 'center',
                 }}
@@ -737,19 +664,18 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
               </Text>
               <Text
                 style={{
-                  fontSize: 11,
+                  ...APP_TYPE.caption2,
                   color: isCurrentWeek
                     ? DesignTokens.colors.primary.main
                     : DesignTokens.colors.text.tertiary,
-                  fontWeight: '600',
-                  marginTop: 2,
+                  marginTop: APP_LAYOUT.titleSubtitleGap,
                 }}
               >
                 {isCurrentWeek ? 'השבוע הנוכחי' : `${totalWeekReports} דיווחים`}
               </Text>
             </View>
 
-            <DayNavBlurButton onPress={onNextWeek} glassIntensity="subtle" accessibilityLabel="שבוע הבא">
+            <DayNavBlurButton onPress={onNextWeek} glass glassIntensity="subtle" accessibilityLabel="שבוע הבא">
               <Ionicons name="chevron-forward" size={20} color={DesignTokens.colors.text.primary} />
             </DayNavBlurButton>
           </View>
@@ -853,18 +779,13 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
 
       {showCurrentWeekFab && (
         <View style={weekStyles.fabWrap} pointerEvents="box-none">
-          <TouchableOpacity
-            style={[weekStyles.fabBtn, { backgroundColor: DesignTokens.colors.primary.main, ...DesignTokens.shadows.md }]}
+          <UIButton
+            title="השבוע הנוכחי"
+            variant="primary"
+            icon="calendar-outline"
+            iconPosition="right"
             onPress={onGoToCurrentWeek}
-            activeOpacity={0.88}
-            accessibilityRole="button"
-            accessibilityLabel="חזרה לשבוע הנוכחי"
-          >
-            <Ionicons name="calendar-outline" size={22} color={DesignTokens.colors.text.inverse} />
-            <Text style={[weekStyles.fabText, { color: DesignTokens.colors.text.inverse }]}>
-              השבוע הנוכחי
-            </Text>
-          </TouchableOpacity>
+          />
         </View>
       )}
 
@@ -932,9 +853,8 @@ const tileStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   tileText: {
-    marginTop: 4,
-    fontSize: 10,
-    fontWeight: '700',
+    marginTop: APP_LAYOUT.cardMetricLabelToValueGap,
+    ...APP_TYPE.caption2,
     textAlign: 'center',
     maxWidth: TILE_WIDTH,
   },
@@ -942,104 +862,92 @@ const tileStyles = StyleSheet.create({
 
 const searchStyles = StyleSheet.create({
   resultPressable: {
-    marginBottom: 12,
+    marginBottom: APP_LAYOUT.cardStackGap,
   },
   resultCardContent: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: 14,
     width: '100%',
   },
   logoWrap: {
     flexShrink: 0,
+    marginLeft: APP_LAYOUT.cardTitleToBodyGap,
   },
   resultMain: {
     flex: 1,
     minWidth: 0,
     alignItems: 'flex-end',
     justifyContent: 'center',
-    gap: 3,
   },
   resultTitleRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: 8,
     maxWidth: '100%',
   },
   resultSymbol: {
     flexShrink: 1,
-    fontSize: 17,
-    fontWeight: '800',
-    letterSpacing: 0.2,
-    lineHeight: 22,
+    ...APP_TYPE.cardTitle,
   },
   resultCompany: {
-    fontSize: 12,
-    fontWeight: '500',
-    lineHeight: 16,
+    ...APP_TYPE.cardSubtitle,
+    marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
     maxWidth: '100%',
   },
   resultWhen: {
-    marginTop: 2,
-    fontSize: 12,
-    fontWeight: '600',
-    lineHeight: 16,
+    marginTop: APP_LAYOUT.titleSubtitleGap,
+    ...APP_TYPE.caption,
   },
   todayPill: {
     flexShrink: 0,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 9999,
-    borderWidth: 1,
+    borderWidth: 0,
+    marginLeft: APP_LAYOUT.stackGapSmall,
   },
   todayPillText: {
-    fontSize: 10,
-    fontWeight: '700',
+    ...APP_TYPE.caption2,
     textAlign: 'center',
   },
   timingPill: {
     flexShrink: 0,
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: 5,
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: 9999,
-    borderWidth: 1,
+    borderWidth: 0,
     maxWidth: 118,
   },
   timingText: {
-    fontSize: 11,
-    fontWeight: '700',
+    ...APP_TYPE.caption2,
     textAlign: 'center',
+    marginLeft: APP_LAYOUT.stackGapSmall,
   },
   emptyWrap: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 28,
+    paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
     paddingVertical: 48,
-    gap: 10,
   },
   emptyTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    ...APP_TYPE.sectionTitle,
     textAlign: 'center',
-    marginTop: 6,
+    marginTop: APP_LAYOUT.componentGap,
   },
   emptySubtitle: {
-    fontSize: 13,
-    fontWeight: '500',
+    ...APP_TYPE.cardSubtitle,
     textAlign: 'center',
-    lineHeight: 18,
+    marginTop: APP_LAYOUT.groupLabelToContent,
   },
 });
 
 const weekStyles = StyleSheet.create({
   dayCard: {
-    marginHorizontal: 16,
-    marginBottom: 14,
-    borderRadius: 20,
+    marginHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+    marginBottom: APP_LAYOUT.cardStackGap,
+    borderRadius: UI_CARD_RADIUS,
   },
   dayCardContent: {
     alignItems: 'center',
@@ -1052,8 +960,7 @@ const weekStyles = StyleSheet.create({
     gap: 3,
     marginBottom: 4,
     paddingBottom: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+    borderBottomWidth: 1,
   },
   dayHeaderTitleRow: {
     flexDirection: 'row',
@@ -1063,25 +970,23 @@ const weekStyles = StyleSheet.create({
     gap: 8,
   },
   dayName: {
-    fontSize: 16,
-    fontWeight: '800',
+    ...APP_TYPE.cardTitle,
     textAlign: 'center',
-    letterSpacing: 0.2,
   },
   dayDate: {
-    fontSize: 12,
-    fontWeight: '500',
+    ...APP_TYPE.cardSubtitle,
     textAlign: 'center',
+    marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
   },
   todayPill: {
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 9999,
-    borderWidth: 1,
+    borderWidth: 0,
+    marginLeft: APP_LAYOUT.stackGapSmall,
   },
   todayPillText: {
-    fontSize: 10,
-    fontWeight: '700',
+    ...APP_TYPE.caption2,
     textAlign: 'center',
   },
   emptyDay: {
@@ -1094,12 +999,11 @@ const weekStyles = StyleSheet.create({
   },
   emptyDayRule: {
     flex: 1,
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    height: 1,
+    backgroundColor: 'transparent',
   },
   emptyDayText: {
-    fontSize: 12,
-    fontWeight: '500',
+    ...APP_TYPE.body,
     textAlign: 'center',
   },
   subSection: {
@@ -1118,27 +1022,19 @@ const weekStyles = StyleSheet.create({
   },
   subHeaderHairline: {
     flex: 1,
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    height: 1,
   },
   subHeaderPill: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
     marginHorizontal: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 9999,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.14)',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    paddingVertical: 0,
+    borderWidth: 0,
   },
   subHeaderText: {
-    fontSize: 11,
-    fontWeight: '700',
+    ...APP_TYPE.groupLabel,
     textAlign: 'center',
-    letterSpacing: 0.2,
   },
   subHeaderCountBadge: {
     minWidth: 18,
@@ -1149,8 +1045,7 @@ const weekStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   subHeaderCount: {
-    fontSize: 10,
-    fontWeight: '800',
+    ...APP_TYPE.caption2,
     textAlign: 'center',
   },
   tilesWrap: {
@@ -1170,20 +1065,8 @@ const weekStyles = StyleSheet.create({
     right: 0,
     bottom: 0,
     alignItems: 'center',
-    paddingBottom: 16,
+    paddingBottom: APP_LAYOUT.componentGap,
     zIndex: 40,
-  },
-  fabBtn: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 22,
-    paddingVertical: 14,
-    borderRadius: 28,
-  },
-  fabText: {
-    fontSize: 16,
-    fontWeight: '700',
   },
 });
 

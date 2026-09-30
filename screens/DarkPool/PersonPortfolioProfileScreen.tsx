@@ -16,7 +16,6 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenChrome } from '../../components/ui/ScreenChrome';
 import {
@@ -26,7 +25,7 @@ import {
 } from '../../components/ui/ChangeDot';
 import UICard from '../../components/ui/UICard';
 import { chromeSurfaceCardStyle } from '../../components/ui/chromeControl';
-import { APP_LAYOUT } from '../../components/ui/appLayout';
+import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { ChartSkeleton, ListItemSkeleton } from '../../components/ui/SkeletonLoader';
 import { useQuery } from '@tanstack/react-query';
@@ -1275,7 +1274,6 @@ export function PersonPortfolioProfileScreen({
   if (loading) {
     return (
       <ScreenChrome rtl>
-        <StatusBar style="light" />
         <View style={[styles.flex, darkPoolTransparentFill]}>
           {envelope}
           <ScrollView style={styles.flex} contentContainerStyle={[styles.body, { paddingBottom: 12 }]}>
@@ -1296,7 +1294,6 @@ export function PersonPortfolioProfileScreen({
 
   return (
     <ScreenChrome rtl>
-      <StatusBar style="light" />
       <View style={[styles.flex, darkPoolTransparentFill]}>
         <Animated.ScrollView
           style={[styles.flex, darkPoolTransparentFill]}
@@ -1417,7 +1414,7 @@ export function PersonPortfolioProfileScreen({
             (kind === 'politician' &&
               quiverHoldingsQuery.isFetched &&
               !trumpProfile) ? (
-            <UICard variant="glass" padding="md" style={styles.chartCard}>
+            <UICard variant="soft" padding="md" style={styles.chartCard}>
               <Text style={[styles.muted]}>
                 {snapshotChartEmptyCopy({
                   kind,
@@ -1479,7 +1476,7 @@ export function PersonPortfolioProfileScreen({
                 </Text>
               </View>
               <UICard
-                variant="glass"
+                variant="soft"
                 glassIntensity="light"
                 padding="none"
                 style={styles.listPanel}
@@ -1520,7 +1517,7 @@ export function PersonPortfolioProfileScreen({
             <>
               <Text style={[styles.sectionTitle, { marginTop: 8 }]}>עסקאות אחרונות</Text>
               <UICard
-                variant="glass"
+                variant="soft"
                 glassIntensity="light"
                 padding="none"
                 style={styles.listPanel}
@@ -1540,7 +1537,9 @@ export function PersonPortfolioProfileScreen({
                         accessibilityLabel={`פרטי עסקה ${t.ticker}`}
                       >
                         <View style={styles.listRow}>
-                          <TickerLogo symbol={t.ticker} size={36} borderRadius={18} />
+                          <View style={styles.leadingIcon}>
+                            <TickerLogo symbol={t.ticker} size={36} borderRadius={18} />
+                          </View>
                           <View style={styles.rowText}>
                             <View style={styles.tickerLine}>
                               <Text style={[styles.sideVerb, { color: sideColor }]}>
@@ -1727,7 +1726,8 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       ...darkPoolPhysicalRightText,
       color: tokens.colors.text.danger,
       fontSize: DARK_POOL_TYPE.body.fontSize,
-      fontWeight: '700',
+      lineHeight: DARK_POOL_TYPE.body.lineHeight,
+      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       alignSelf: 'stretch',
     },
     valueBlock: {
@@ -1744,9 +1744,9 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     valueLabel: {
       ...darkPoolTextRtl,
-      fontSize: DARK_POOL_TYPE.sectionSubtitle.fontSize,
-      lineHeight: DARK_POOL_TYPE.sectionSubtitle.lineHeight,
-      fontWeight: '600',
+      fontSize: DARK_POOL_TYPE.cardMetricLabel.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardMetricLabel.lineHeight,
+      fontWeight: DARK_POOL_TYPE.cardMetricLabel.fontWeight,
       color: tokens.colors.text.tertiary,
     },
     valueHelpBtn: {
@@ -1756,10 +1756,11 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       direction: 'ltr',
       writingDirection: 'ltr',
       textAlign: 'right',
-      marginTop: 4,
-      fontSize: 34,
-      lineHeight: 40,
-      fontWeight: '800',
+      marginTop: APP_LAYOUT.cardMetricLabelToValueGap,
+      fontSize: DARK_POOL_TYPE.cardMetricValue.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardMetricValue.lineHeight,
+      fontWeight: DARK_POOL_TYPE.cardMetricValue.fontWeight,
+      letterSpacing: DARK_POOL_TYPE.cardMetricValue.letterSpacing,
       color: tokens.colors.text.primary,
     },
     deltaRow: {
@@ -1767,15 +1768,15 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       alignSelf: 'flex-end',
     },
     deltaUsd: {
-      fontSize: DARK_POOL_TYPE.body.fontSize,
-      lineHeight: DARK_POOL_TYPE.body.lineHeight,
-      fontWeight: '700',
+      fontSize: DARK_POOL_TYPE.cardMetricValueSecondary.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardMetricValueSecondary.lineHeight,
+      fontWeight: DARK_POOL_TYPE.cardMetricValueSecondary.fontWeight,
       writingDirection: 'ltr',
     },
     deltaPct: {
-      fontSize: DARK_POOL_TYPE.sectionSubtitle.fontSize,
-      lineHeight: DARK_POOL_TYPE.sectionSubtitle.lineHeight,
-      fontWeight: '700',
+      fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
+      fontWeight: DARK_POOL_TYPE.cardSubtitle.fontWeight,
       writingDirection: 'ltr',
     },
     followDock: {
@@ -1798,7 +1799,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     followPillText: {
       fontSize: DARK_POOL_TYPE.body.fontSize,
       lineHeight: DARK_POOL_TYPE.body.lineHeight,
-      fontWeight: '600',
+      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
       textAlign: 'center',
     },
@@ -1808,7 +1809,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     chartCard: {
       marginBottom: 8,
-      borderRadius: tokens.borderRadius['2xl'],
+      borderRadius: UI_CARD_RADIUS,
       overflow: 'hidden',
     },
     sectionTitle: {
@@ -1832,17 +1833,18 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     honestyTag: {
       ...darkPoolPhysicalRightText,
       fontSize: DARK_POOL_TYPE.caption2.fontSize,
-      fontWeight: '800',
+      fontWeight: DARK_POOL_TYPE.caption2.fontWeight,
       color: tokens.colors.text.tertiary,
     },
     rowHonestyTag: {
       fontSize: DARK_POOL_TYPE.caption2.fontSize,
-      fontWeight: '700',
+      lineHeight: DARK_POOL_TYPE.caption2.lineHeight,
+      fontWeight: DARK_POOL_TYPE.caption2.fontWeight,
       color: tokens.colors.text.tertiary,
     },
     listPanel: {
       marginBottom: 12,
-      borderRadius: tokens.borderRadius['2xl'],
+      borderRadius: UI_CARD_RADIUS,
       overflow: 'hidden',
       alignSelf: 'stretch',
       width: '100%',
@@ -1850,6 +1852,9 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     listPanelInner: {
       width: '100%',
       alignSelf: 'stretch',
+    },
+    leadingIcon: {
+      marginLeft: 12,
     },
     listRowPress: {
       width: '100%',
@@ -1861,16 +1866,15 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       alignItems: 'center',
       alignSelf: 'stretch',
       width: '100%',
-      columnGap: 12,
-      paddingVertical: 12,
-      paddingHorizontal: 14,
+      paddingVertical: 15,
+      paddingHorizontal: APP_LAYOUT.cardPadding,
       minHeight: 56,
     },
     listRowDivider: {
       // קו מפריד מפורש (לא border על Pressable) — נראה ברור יותר על רקע glass
-      height: Math.max(StyleSheet.hairlineWidth * 2, 1),
+      height: 1,
       backgroundColor: tokens.colors.border.divider,
-      marginHorizontal: 14,
+      marginHorizontal: APP_LAYOUT.cardPadding,
       alignSelf: 'stretch',
     },
     rowText: {
@@ -1890,22 +1894,24 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     sideVerb: {
       ...darkPoolPhysicalRightText,
-      fontSize: DARK_POOL_TYPE.sectionSubtitle.fontSize,
-      fontWeight: '800',
+      fontSize: DARK_POOL_TYPE.cardBody.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardBody.lineHeight,
+      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
     },
     rowTitle: {
       ...darkPoolPhysicalRightText,
-      fontSize: DARK_POOL_TYPE.body.fontSize,
-      fontWeight: '700',
+      fontSize: DARK_POOL_TYPE.cardTitle.fontSize,
+      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
+      lineHeight: DARK_POOL_TYPE.cardTitle.lineHeight,
       color: tokens.colors.text.primary,
-      lineHeight: 20,
       flexShrink: 1,
     },
     rowMeta: {
       ...darkPoolPhysicalRightText,
-      marginTop: 3,
-      fontSize: DARK_POOL_TYPE.sectionSubtitle.fontSize,
-      lineHeight: DARK_POOL_TYPE.sectionSubtitle.lineHeight,
+      marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
+      fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
+      fontWeight: DARK_POOL_TYPE.cardSubtitle.fontWeight,
       color: tokens.colors.text.secondary,
     },
     tradeRight: { alignItems: 'stretch', flexShrink: 0 },
@@ -1918,8 +1924,9 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     muted: {
       ...darkPoolPhysicalRightText,
       marginTop: 8,
-      fontSize: DARK_POOL_TYPE.sectionSubtitle.fontSize,
-      lineHeight: 20,
+      fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
+      fontWeight: DARK_POOL_TYPE.cardSubtitle.fontWeight,
       color: tokens.colors.text.tertiary,
     },
   });

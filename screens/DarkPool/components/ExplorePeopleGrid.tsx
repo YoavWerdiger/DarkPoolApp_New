@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import type { ExplorePerson } from '../../../services/darkpool/uwExploreService';
-import { darkPoolPhysicalRightText } from '../darkPoolLayout';
+import { DARK_POOL_TYPE, darkPoolPhysicalRightText } from '../darkPoolLayout';
 import { EXPLORE_GRID_GAP, EXPLORE_PROFILE_CARD } from '../utils/exploreGrid';
 import { ExplorePortraitCard } from './ExplorePortraitCard';
 
@@ -45,9 +45,10 @@ export function ExplorePeopleGrid({
         emptyText: {
           ...darkPoolPhysicalRightText,
           width: '100%',
-          fontSize: 15,
+          fontSize: DARK_POOL_TYPE.sectionSubtitle.fontSize,
+          fontWeight: DARK_POOL_TYPE.sectionSubtitle.fontWeight,
           color: tokens.colors.text.tertiary,
-          lineHeight: 22,
+          lineHeight: DARK_POOL_TYPE.sectionSubtitle.lineHeight,
         },
       }),
     [tokens, cardWidth, padded]

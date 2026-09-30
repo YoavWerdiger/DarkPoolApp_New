@@ -46,7 +46,6 @@ type ChatGroupRow = {
   avatar_url?: string | null;
 };
 
-const SHEET_BORDER = 'rgba(255, 255, 255, 0.12)';
 
 export default function ShareDestinationSheet({
   visible,
@@ -335,7 +334,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       paddingHorizontal: 16,
       paddingBottom: 12,
       borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: SHEET_BORDER,
+      borderBottomColor: tokens.colors.border.divider,
       gap: 10,
     },
     headerIconButton: {
@@ -392,7 +391,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       gap: 12,
       paddingVertical: 12,
       borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: 'rgba(255,255,255,0.1)',
+      borderBottomColor: tokens.colors.border.divider,
     },
     groupAvatar: { width: 44, height: 44, borderRadius: tokens.borderRadius.full },
     groupAvatarPh: {

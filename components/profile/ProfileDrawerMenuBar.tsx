@@ -3,7 +3,11 @@ import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useDesignTokens } from '../ui/DesignTokens';
-import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../ui/DayNavBlurButton';
+import {
+  DayNavBlurButton,
+  DRAWER_MENU_BUTTON_SIZE,
+  drawerMenuFaceColor,
+} from '../ui/DayNavBlurButton';
 import { dispatchOpenMainDrawer, type DrawerParentNavigation } from '../../navigation/mainDrawerNav';
 import { triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
 
@@ -13,6 +17,7 @@ import { triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
 export function ProfileDrawerMenuBar() {
   const DesignTokens = useDesignTokens();
   const navigation = useNavigation();
+  const menuFace = drawerMenuFaceColor(DesignTokens.colors.background.cardSolid);
 
   const openMainDrawer = useCallback(() => {
     void triggerDrawerMenuHaptic();
@@ -36,8 +41,10 @@ export function ProfileDrawerMenuBar() {
     >
       <DayNavBlurButton
         onPress={openMainDrawer}
+        glass={!menuFace}
         glassIntensity="subtle"
         size={DRAWER_MENU_BUTTON_SIZE}
+        style={menuFace ? { backgroundColor: menuFace } : undefined}
         accessibilityLabel="תפריט ראשי"
       >
         <Ionicons name="menu" size={24} color={DesignTokens.colors.text.primary} />

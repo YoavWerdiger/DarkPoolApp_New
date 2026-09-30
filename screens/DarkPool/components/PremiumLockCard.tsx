@@ -5,15 +5,14 @@
  */
 
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { APP_LAYOUT, UI_CARD_RADIUS } from '../../../components/ui/appLayout';
+import { APP_TYPE } from '../../../components/ui/appType';
+import UIButton from '../../../components/ui/UIButton';
 import UICard from '../../../components/ui/UICard';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
-import { HapticFeedback } from '../../../utils/hapticFeedback';
-import {
-  DARK_POOL_TYPE,
-  darkPoolPhysicalRightText,
-} from '../darkPoolLayout';
+import { darkPoolPhysicalRightText } from '../darkPoolLayout';
 
 interface PremiumLockCardProps {
   onPress?: () => void;
@@ -23,22 +22,12 @@ interface PremiumLockCardProps {
 export function PremiumLockCard({ onPress, variant = 'feed' }: PremiumLockCardProps) {
   const tokens = useDesignTokens();
   return (
-    <Pressable
-      onPress={
-        onPress
-          ? () => {
-              void HapticFeedback.medium();
-              onPress();
-            }
-          : undefined
-      }
-    >
       <UICard
-        variant="glass"
+        variant="soft"
         glassIntensity="medium"
         padding="md"
         style={{
-          borderRadius: tokens.borderRadius.xl,
+          borderRadius: UI_CARD_RADIUS,
           borderWidth: 0,
           backgroundColor: 'transparent',
         }}
@@ -48,11 +37,11 @@ export function PremiumLockCard({ onPress, variant = 'feed' }: PremiumLockCardPr
             style={[
               styles.iconWrap,
               {
-                backgroundColor: tokens.colors.primary.dim,
+                backgroundColor: tokens.colors.background.navChrome,
               },
             ]}
           >
-            <Ionicons name="lock-closed" size={20} color={tokens.colors.primary.main} />
+            <Ionicons name="lock-closed" size={20} color={tokens.colors.text.primary} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.title, { color: tokens.colors.text.primary }]}>
@@ -64,27 +53,17 @@ export function PremiumLockCard({ onPress, variant = 'feed' }: PremiumLockCardPr
               משתמשי חינם רואים 3 סיגנלים מובילים עם השהייה של 15 דקות. עבור לפרימיום
               להתראות, היסטוריה מלאה ועדכונים בזמן אמת.
             </Text>
-            <View
-              style={[
-                styles.cta,
-                {
-                  backgroundColor: tokens.colors.primary.main,
-                },
-              ]}
-            >
-              <Text style={[styles.ctaText, { color: tokens.colors.text.inverse }]}>
-                שדרג לפרימיום
-              </Text>
-              <Ionicons
-                name="arrow-back"
-                size={16}
-                color={tokens.colors.text.inverse}
-              />
-            </View>
+            <UIButton
+              title="שדרג לפרימיום"
+              variant="primary"
+              size="sm"
+              icon="arrow-back"
+              onPress={onPress}
+              style={styles.cta}
+            />
           </View>
         </View>
       </UICard>
-    </Pressable>
   );
 }
 
@@ -93,41 +72,31 @@ const styles = StyleSheet.create({
     direction: 'rtl',
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
   },
   iconWrap: {
     width: 40,
     height: 40,
     borderRadius: 20,
     borderWidth: 0,
+    marginLeft: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
-    fontSize: DARK_POOL_TYPE.sectionTitle.fontSize,
-    lineHeight: DARK_POOL_TYPE.sectionTitle.lineHeight,
-    fontWeight: '800',
+    fontSize: APP_TYPE.cardTitle.fontSize,
+    lineHeight: APP_TYPE.cardTitle.lineHeight,
+    fontWeight: APP_TYPE.cardTitle.fontWeight,
     ...darkPoolPhysicalRightText,
   },
   subtitle: {
-    marginTop: 4,
-    fontSize: DARK_POOL_TYPE.sectionSubtitle.fontSize,
-    lineHeight: DARK_POOL_TYPE.sectionSubtitle.lineHeight,
+    marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
+    fontSize: APP_TYPE.cardSubtitle.fontSize,
+    lineHeight: APP_TYPE.cardSubtitle.lineHeight,
+    fontWeight: APP_TYPE.cardSubtitle.fontWeight,
     ...darkPoolPhysicalRightText,
   },
   cta: {
     alignSelf: 'flex-start',
-    marginTop: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
-  },
-  ctaText: {
-    fontSize: DARK_POOL_TYPE.sectionSubtitle.fontSize,
-    fontWeight: '800',
-    ...darkPoolPhysicalRightText,
+    marginTop: APP_LAYOUT.cardTitleToBodyGap,
   },
 });

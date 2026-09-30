@@ -474,8 +474,8 @@ export default function OverviewTab({
           backgroundColor: 'rgba(255,255,255,0.06)',
         },
         groupChipActive: {
-          borderColor: `${tokens.colors.primary.main}66`,
-          backgroundColor: `${tokens.colors.primary.main}1F`,
+          borderWidth: 0,
+          backgroundColor: tokens.colors.background.tertiary,
         },
         groupChipText: {
           fontSize: 12,

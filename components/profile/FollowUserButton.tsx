@@ -90,15 +90,10 @@ export default function FollowUserButton({
       accessibilityLabel={following ? 'הפסק מעקב' : 'עקוב'}
       style={[
         styles.btn,
-        following
-          ? {
-              backgroundColor: 'rgba(255,255,255,0.08)',
-              borderColor: 'rgba(255,255,255,0.16)',
-            }
-          : {
-              backgroundColor: 'rgba(255,255,255,0.14)',
-              borderColor: 'rgba(255,255,255,0.28)',
-            },
+        {
+          backgroundColor: tokens.colors.background.primary,
+          borderColor: tokens.colors.border.primary,
+        },
       ]}
     >
       {busy ? (

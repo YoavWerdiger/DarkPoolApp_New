@@ -1,11 +1,12 @@
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Linking, Platform, Image } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { APP_LAYOUT } from '../ui/appLayout';
 import { ACADEMY_CARD_RADIUS } from './academyCardLayout';
+import { ACADEMY_TYPE } from './academyLayout';
 
 const channelAvatar = require('../../assets/youtube-channel-avatar.png');
 
@@ -50,10 +51,6 @@ export const AcademyYouTubeCTA: React.FC<AcademyYouTubeCTAProps> = ({
         accessibilityRole="button"
         accessibilityLabel="מעבר לערוץ היוטיוב של דוד אריאל"
       >
-        <BlurView tint="dark" intensity={55} style={StyleSheet.absoluteFill} />
-        <View style={styles.glassOverlay} />
-        <View style={styles.glassTopHighlight} />
-
         {/* רקע אמביינטי — זוהר אדום עדין שמרמז על מותג היוטיוב בלי להציף */}
         <LinearGradient
           colors={[
@@ -127,23 +124,11 @@ const createStyles = (T: ReturnType<typeof useDesignTokens>) =>
       borderWidth: 0,
       backgroundColor: T.colors.background.cardSolid,
     },
-    glassOverlay: {
-      ...StyleSheet.absoluteFill,
-      backgroundColor: 'rgba(17, 17, 17, 0.55)',
-    },
-    glassTopHighlight: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      height: 0,
-      backgroundColor: 'transparent',
-    },
     content: {
       flexDirection: 'row-reverse',
       alignItems: 'center',
-      padding: 18,
-      gap: 16,
+      padding: APP_LAYOUT.cardPadding,
+      gap: APP_LAYOUT.cardPadding,
     },
     avatarWrap: {
       width: 68,
@@ -174,8 +159,8 @@ const createStyles = (T: ReturnType<typeof useDesignTokens>) =>
       borderRadius: 34,
       overflow: 'hidden',
       borderWidth: 2,
-      borderColor: 'rgba(255,255,255,0.22)',
-      backgroundColor: '#111111',
+      borderColor: T.colors.border.divider,
+      backgroundColor: T.colors.background.cardSolid,
     },
     avatarImg: {
       width: '100%',
@@ -192,7 +177,7 @@ const createStyles = (T: ReturnType<typeof useDesignTokens>) =>
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: 2,
-      borderColor: '#111111',
+      borderColor: T.colors.background.cardSolid,
       ...Platform.select({
         ios: {
           shadowColor: '#000',
@@ -210,17 +195,16 @@ const createStyles = (T: ReturnType<typeof useDesignTokens>) =>
       gap: 6,
     },
     title: {
-      fontSize: 17,
-      fontWeight: '800',
+      ...ACADEMY_TYPE.cardTitle,
       color: T.colors.text.primary,
       textAlign: 'right',
-      letterSpacing: 0.2,
+      writingDirection: 'rtl',
     },
     subtitle: {
-      fontSize: 13,
+      ...ACADEMY_TYPE.cardSubtitle,
       color: T.colors.text.secondary,
       textAlign: 'right',
-      lineHeight: 19,
+      writingDirection: 'rtl',
     },
     ctaRow: {
       flexDirection: 'row-reverse',
@@ -240,10 +224,9 @@ const createStyles = (T: ReturnType<typeof useDesignTokens>) =>
       borderColor: 'rgba(255,255,255,0.18)',
     },
     ctaText: {
-      fontSize: 13,
-      fontWeight: '800',
+      ...ACADEMY_TYPE.footnote,
       color: '#fff',
-      letterSpacing: 0.3,
+      textAlign: 'center',
     },
     chevron: {
       opacity: 0.7,

@@ -7,15 +7,30 @@ import {
   Image,
   ActivityIndicator,
   TouchableOpacity,
-  StyleSheet,
 } from 'react-native';
-import { User } from 'lucide-react-native';
+import {
+  User,
+  UserPen,
+  Settings,
+  KeyRound,
+  CreditCard,
+  Shield,
+  Inbox,
+  MessageCircle,
+  FileText,
+  ScrollText,
+  Bell,
+  Trash2,
+  LogOut,
+  ChevronLeft,
+  type LucideIcon,
+} from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { useRegistration } from '../../context/RegistrationContext';
-import { useSubscription } from '../../hooks/useSubscription';
 import { useIsAdmin } from '../../hooks/useIsAdmin';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { APP_LAYOUT } from '../../components/ui/appLayout';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import UICard from '../../components/ui/UICard';
 import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHeader';
@@ -25,13 +40,12 @@ import {
   SettingsSectionTitle,
   SettingsGlassCard,
   ProfileMenuRow,
-  SettingsActionRow,
 } from '../../components/profile/ProfileSettingsUI';
 
 type MenuRow = {
   id: string;
   title: string;
-  subtitle?: string;
+  icon: LucideIcon;
   onPress: () => void;
   danger?: boolean;
 };
@@ -39,7 +53,6 @@ type MenuRow = {
 export default function UserProfileScreen({ navigation }: any) {
   const { user, isLoading, signOut } = useAuth();
   const { resetData: resetRegistrationData } = useRegistration();
-  const { planName, isLoading: subscriptionLoading } = useSubscription();
   const { isAdmin } = useIsAdmin();
   const DesignTokens = useDesignTokens();
 
@@ -77,19 +90,19 @@ export default function UserProfileScreen({ navigation }: any) {
     {
       id: 'edit',
       title: 'עריכת פרופיל',
-      subtitle: 'שם, טלפון ותמונה',
+      icon: UserPen,
       onPress: () => navigation.navigate('EditProfile'),
     },
     {
       id: 'settings',
       title: 'הגדרות כלליות',
-      subtitle: 'שפה, ביומטריה ומטמון',
+      icon: Settings,
       onPress: () => navigation.navigate('Settings'),
     },
     {
       id: 'password',
       title: 'שינוי סיסמה',
-      subtitle: 'אבטחת החשבון',
+      icon: KeyRound,
       onPress: () => navigation.navigate('ChangePassword'),
     },
   ];
@@ -98,7 +111,7 @@ export default function UserProfileScreen({ navigation }: any) {
     {
       id: 'billing',
       title: 'מנוי והיסטוריית רכישות',
-      subtitle: 'סטטוס, חידוש וחשבוניות',
+      icon: CreditCard,
       onPress: () => navigation.navigate('Billing'),
     },
   ];
@@ -108,7 +121,7 @@ export default function UserProfileScreen({ navigation }: any) {
         {
           id: 'admin-panel',
           title: 'פאנל מנהלים',
-          subtitle: 'משתמשים, מנויים ופושים',
+          icon: Shield,
           onPress: () => {
             const root = navigation.getParent?.();
             try {
@@ -121,7 +134,7 @@ export default function UserProfileScreen({ navigation }: any) {
         {
           id: 'admin-tickets',
           title: 'תיבת פניות תמיכה',
-          subtitle: 'טיקטים מהמשתמשים',
+          icon: Inbox,
           onPress: () => {
             const root = navigation.getParent?.();
             try {
@@ -136,35 +149,60 @@ export default function UserProfileScreen({ navigation }: any) {
 
   const supportItems: MenuRow[] = [
     {
-      id: 'contact',
-      title: 'יצירת קשר',
-      subtitle: 'פתיחת פנייה לתמיכה',
-      onPress: () => navigation.navigate('ContactSupport'),
-    },
-  ];
-
-  const legalItems: MenuRow[] = [
-    {
       id: 'privacy',
       title: 'מדיניות פרטיות',
-      subtitle: 'darkpool.site/privacy',
+      icon: FileText,
       onPress: () => navigation.navigate('LegalWebView', { kind: 'privacy' }),
     },
     {
       id: 'terms',
       title: 'תנאי שימוש',
-      subtitle: 'darkpool.site/terms',
+      icon: ScrollText,
       onPress: () => navigation.navigate('LegalWebView', { kind: 'terms' }),
+    },
+    {
+      id: 'contact',
+      title: 'יצירת קשר',
+      icon: MessageCircle,
+      onPress: () => navigation.navigate('ContactSupport'),
     },
   ];
 
-  const dangerItems: MenuRow[] = [
+  const accountItems: MenuRow[] = [
     {
       id: 'delete',
       title: 'מחיקת חשבון',
-      subtitle: 'פעולה בלתי הפיכה',
+      icon: Trash2,
       danger: true,
-      onPress: () => navigation.navigate('DeleteAccount'),
+      onPress: () => {
+        void HapticFeedback.impactLight();
+        navigation.navigate('DeleteAccount');
+      },
+    },
+    {
+      id: 'logout',
+      title: 'התנתקות',
+      icon: LogOut,
+      onPress: () => {
+        void HapticFeedback.warning();
+        legacyAlert('התנתקות', 'האם אתה בטוח שברצונך להתנתק?', [
+          { text: 'ביטול', style: 'cancel' },
+          {
+            text: 'התנתק',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                const { error } = await signOut();
+                resetRegistrationData();
+                if (error) legacyAlert('שגיאה', 'לא הצלחנו להתנתק. נסה שוב.');
+              } catch {
+                resetRegistrationData();
+                legacyAlert('שגיאה', 'אירעה שגיאה בהתנתקות. נסה שוב.');
+              }
+            },
+          },
+        ]);
+      },
     },
   ];
 
@@ -214,53 +252,36 @@ export default function UserProfileScreen({ navigation }: any) {
   const displayName = profileData?.full_name || user?.email?.split('@')[0] || 'משתמש';
   const email = user?.email || '';
 
-  const getMemberSinceDate = () => {
-    if (profileData?.created_at) {
-      return new Date(profileData.created_at).toLocaleDateString('he-IL', {
-        month: 'long',
-        year: 'numeric',
-      });
-    }
-    return '—';
-  };
-
   const profileTextBlock = (
-    <View style={{ flex: 1, minWidth: 0, alignItems: 'flex-end', gap: DesignTokens.spacing.xs }}>
+    <View style={{ flex: 1, minWidth: 0, alignItems: 'flex-end' }}>
       <Text
         style={{
-          fontSize: DesignTokens.typography.titleSmall.size,
-          fontWeight: DesignTokens.typography.titleSmall.weight as any,
+          fontSize: 17,
+          fontWeight: '600',
+          lineHeight: 22,
           color: DesignTokens.colors.text.primary,
           textAlign: 'right',
           writingDirection: 'rtl',
           width: '100%',
         }}
+        numberOfLines={1}
       >
         {displayName}
       </Text>
       <Text
         style={{
-          fontSize: DesignTokens.typography.bodySmall.size,
+          marginTop: 2,
+          fontSize: 13,
+          lineHeight: 18,
+          fontWeight: '400',
           color: DesignTokens.colors.text.secondary,
           textAlign: 'right',
           writingDirection: 'ltr',
           width: '100%',
         }}
+        numberOfLines={1}
       >
         {email}
-      </Text>
-      <Text
-        style={{
-          marginTop: DesignTokens.spacing.xs,
-          fontSize: DesignTokens.typography.caption.size,
-          color: DesignTokens.colors.text.tertiary,
-          textAlign: 'right',
-          writingDirection: 'rtl',
-          width: '100%',
-        }}
-      >
-        חבר מאז {getMemberSinceDate()} · מסלול{' '}
-        {subscriptionLoading ? '...' : (planName ?? 'חינמי')}
       </Text>
     </View>
   );
@@ -268,17 +289,14 @@ export default function UserProfileScreen({ navigation }: any) {
   const profileAvatar = (
     <View
       style={{
-        width: 88,
-        height: 88,
-        borderRadius: 44,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
         backgroundColor: DesignTokens.colors.background.tertiary,
         alignItems: 'center',
         justifyContent: 'center',
-        borderWidth: 2,
-        borderColor: `${DesignTokens.colors.primary.main}99`,
         overflow: 'hidden',
         flexShrink: 0,
-        ...DesignTokens.shadows.greenGlow,
       }}
     >
       {profileData?.profile_picture ? (
@@ -288,7 +306,7 @@ export default function UserProfileScreen({ navigation }: any) {
           resizeMode="cover"
         />
       ) : (
-        <User size={42} color={DesignTokens.colors.primary.main} strokeWidth={2} />
+        <User size={26} color={DesignTokens.colors.text.primary} strokeWidth={2} />
       )}
     </View>
   );
@@ -296,48 +314,54 @@ export default function UserProfileScreen({ navigation }: any) {
   return (
     <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top', 'bottom']}>
-        <MainDrawerScreenHeader title="פרופיל והגדרות" onMenuPress={openMainDrawer} />
+        <MainDrawerScreenHeader title="פרופיל" onMenuPress={openMainDrawer} />
         <ScrollView
           style={{ flex: 1 }}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: DesignTokens.spacing.xl }}
         >
-          <UICard
-            variant="glass"
-            glassIntensity="light"
-            padding="none"
-            style={{
-              marginHorizontal: DesignTokens.spacing.base,
-              marginTop: DesignTokens.spacing.xs,
-              paddingTop: DesignTokens.spacing.sm,
-              paddingBottom: DesignTokens.spacing.lg,
-              paddingHorizontal: DesignTokens.spacing.md,
-              borderRadius: DesignTokens.borderRadius['2xl'],
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => {
+              void HapticFeedback.impactLight();
+              navigation.navigate('EditProfile');
             }}
+            accessibilityRole="button"
+            accessibilityLabel="עריכת פרופיל"
           >
-            {/* App LTR tree + forceRTL: אל תסמכו על isRTL — row-reverse שומר אווטאר בימין */}
-            <View
+            <UICard
+              variant="soft"
+              padding="none"
               style={{
-                flexDirection: 'row-reverse',
-                alignItems: 'center',
-                width: '100%',
-                paddingTop: DesignTokens.spacing.md,
-                gap: DesignTokens.spacing.md,
+                marginHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+                borderRadius: 20,
               }}
             >
-              {profileAvatar}
-              {profileTextBlock}
-            </View>
-          </UICard>
+              <View
+                style={{
+                  flexDirection: 'row-reverse',
+                  alignItems: 'center',
+                  width: '100%',
+                  paddingVertical: 14,
+                  paddingHorizontal: 16,
+                  gap: 12,
+                }}
+              >
+                {profileAvatar}
+                {profileTextBlock}
+                <ChevronLeft size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
+              </View>
+            </UICard>
+          </TouchableOpacity>
 
-          <View style={{ paddingHorizontal: DesignTokens.spacing.base, marginTop: DesignTokens.spacing.md }}>
+          <View style={{ paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal, marginTop: APP_LAYOUT.cardStackGap }}>
             <SettingsSectionTitle title="אישי" />
             <SettingsGlassCard>
               {personalItems.map((item, index) => (
                 <ProfileMenuRow
                   key={item.id}
                   title={item.title}
-                  subtitle={item.subtitle}
+                  icon={item.icon}
                   onPress={() => {
                     void HapticFeedback.impactLight();
                     item.onPress();
@@ -351,7 +375,7 @@ export default function UserProfileScreen({ navigation }: any) {
             <SettingsGlassCard>
               <ProfileMenuRow
                 title="הגדרות התראות"
-                subtitle="צ'אט, קהילה, דארק פול, רשימה וחדשות"
+                icon={Bell}
                 onPress={() => {
                   void HapticFeedback.impactLight();
                   navigation.navigate('Notifications');
@@ -366,7 +390,7 @@ export default function UserProfileScreen({ navigation }: any) {
                 <ProfileMenuRow
                   key={item.id}
                   title={item.title}
-                  subtitle={item.subtitle}
+                  icon={item.icon}
                   onPress={() => {
                     void HapticFeedback.impactLight();
                     item.onPress();
@@ -384,7 +408,7 @@ export default function UserProfileScreen({ navigation }: any) {
                     <ProfileMenuRow
                       key={item.id}
                       title={item.title}
-                      subtitle={item.subtitle}
+                      icon={item.icon}
                       onPress={() => {
                         void HapticFeedback.impactLight();
                         item.onPress();
@@ -402,7 +426,7 @@ export default function UserProfileScreen({ navigation }: any) {
                 <ProfileMenuRow
                   key={item.id}
                   title={item.title}
-                  subtitle={item.subtitle}
+                  icon={item.icon}
                   onPress={() => {
                     void HapticFeedback.impactLight();
                     item.onPress();
@@ -412,88 +436,19 @@ export default function UserProfileScreen({ navigation }: any) {
               ))}
             </SettingsGlassCard>
 
-            <SettingsSectionTitle title="משפטי" />
-            <SettingsGlassCard>
-              {legalItems.map((item, index) => (
+            <SettingsSectionTitle title="חשבון" />
+            <SettingsGlassCard style={{ marginBottom: DesignTokens.spacing.md }}>
+              {accountItems.map((item, index) => (
                 <ProfileMenuRow
                   key={item.id}
                   title={item.title}
-                  subtitle={item.subtitle}
-                  onPress={() => {
-                    void HapticFeedback.impactLight();
-                    item.onPress();
-                  }}
-                  showDivider={index < legalItems.length - 1}
+                  icon={item.icon}
+                  danger={item.danger}
+                  onPress={item.onPress}
+                  showDivider={index < accountItems.length - 1}
                 />
               ))}
             </SettingsGlassCard>
-
-            <SettingsSectionTitle title="חשבון" />
-            <SettingsGlassCard style={{ marginBottom: DesignTokens.spacing.md }}>
-              {dangerItems.map((item, index) => (
-                <SettingsActionRow
-                  key={item.id}
-                  title={item.title}
-                  subtitle={item.subtitle ?? ''}
-                  danger
-                  onPress={() => {
-                    void HapticFeedback.impactLight();
-                    item.onPress();
-                  }}
-                  showDivider={index < dangerItems.length - 1}
-                />
-              ))}
-            </SettingsGlassCard>
-
-            <TouchableOpacity
-              activeOpacity={0.75}
-              onPress={() => {
-                void HapticFeedback.warning();
-                legacyAlert('התנתקות', 'האם אתה בטוח שברצונך להתנתק?', [
-                  { text: 'ביטול', style: 'cancel' },
-                  {
-                    text: 'התנתק',
-                    style: 'destructive',
-                    onPress: async () => {
-                      try {
-                        const { error } = await signOut();
-                        resetRegistrationData();
-                        if (error) legacyAlert('שגיאה', 'לא הצלחנו להתנתק. נסה שוב.');
-                      } catch {
-                        resetRegistrationData();
-                        legacyAlert('שגיאה', 'אירעה שגיאה בהתנתקות. נסה שוב.');
-                      }
-                    },
-                  },
-                ]);
-              }}
-              style={{
-                marginTop: DesignTokens.spacing.sm,
-                marginBottom: DesignTokens.spacing['3xl'],
-                alignItems: 'center',
-                justifyContent: 'center',
-                minHeight: 52,
-                paddingVertical: DesignTokens.spacing.md,
-                paddingHorizontal: DesignTokens.spacing.xl,
-                borderRadius: DesignTokens.borderRadius.full,
-                overflow: 'hidden',
-                backgroundColor: `${DesignTokens.colors.danger.main}1A`,
-                borderWidth: StyleSheet.hairlineWidth,
-                borderColor: `${DesignTokens.colors.danger.main}55`,
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: DesignTokens.typography.body.size,
-                  fontWeight: DesignTokens.typography.buttonSmall.weight as any,
-                  lineHeight: DesignTokens.typography.body.lineHeight,
-                  color: DesignTokens.colors.danger.main,
-                  textAlign: 'center',
-                }}
-              >
-                התנתקות
-              </Text>
-            </TouchableOpacity>
           </View>
         </ScrollView>
       </RNSafeAreaView>

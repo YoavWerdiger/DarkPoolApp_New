@@ -1,6 +1,9 @@
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { APP_LAYOUT } from '../../../components/ui/appLayout';
+import { APP_TYPE } from '../../../components/ui/appType';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { darkPoolPhysicalRightText } from '../darkPoolLayout';
 import type { CongressTradeCard } from '../../../services/darkpool/uwExploreService';
 import { ExploreCongressCard } from './ExploreCongressCard';
 
@@ -54,18 +57,20 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       alignItems: 'flex-end',
     },
     title: {
-      fontSize: 20,
-      fontWeight: '800',
+      ...darkPoolPhysicalRightText,
+      fontSize: APP_TYPE.sectionTitle.fontSize,
+      lineHeight: APP_TYPE.sectionTitle.lineHeight,
+      fontWeight: APP_TYPE.sectionTitle.fontWeight,
+      letterSpacing: APP_TYPE.sectionTitle.letterSpacing,
       color: tokens.colors.text.primary,
-      textAlign: 'right',
-      writingDirection: 'rtl',
     },
     subtitle: {
-      marginTop: 4,
-      fontSize: 13,
-      color: tokens.colors.text.tertiary,
-      textAlign: 'right',
-      writingDirection: 'rtl',
+      ...darkPoolPhysicalRightText,
+      marginTop: APP_LAYOUT.titleSubtitleGap,
+      fontSize: APP_TYPE.cardSubtitle.fontSize,
+      lineHeight: APP_TYPE.cardSubtitle.lineHeight,
+      fontWeight: APP_TYPE.cardSubtitle.fontWeight,
+      color: tokens.colors.text.secondary,
     },
     row: {
       flexDirection: 'row-reverse',

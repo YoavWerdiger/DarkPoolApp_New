@@ -18,6 +18,7 @@ import {
   formFieldLabelStyle,
   formFieldShellStyle,
 } from '../../components/ui/formControl';
+import { PasswordVisibilityToggle } from '../../components/ui/PasswordVisibilityToggle';
 
 const { width } = Dimensions.get('window');
 const WELCOME_LOGO_URI = 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/app-media/image%20(3).png';
@@ -31,8 +32,6 @@ interface FieldProps {
   secureTextEntry?: boolean;
   keyboardType?: any;
   autoCapitalize?: any;
-  /** קישור טקסט ליד התווית (למשל הצג/הסתר סיסמה) — לא בתוך תיבת הקלט */
-  labelAccessory?: React.ReactNode;
   tokens: ReturnType<typeof useDesignTokens>;
 }
 
@@ -44,11 +43,12 @@ const Field: React.FC<FieldProps> = ({
   secureTextEntry,
   keyboardType,
   autoCapitalize = 'none',
-  labelAccessory,
   tokens,
 }) => {
   const [focused, setFocused] = useState(false);
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const { colors } = tokens;
+  const isPassword = secureTextEntry === true;
   return (
     <View style={{ marginBottom: 16 }}>
       <View
@@ -60,7 +60,6 @@ const Field: React.FC<FieldProps> = ({
         }}
       >
         <Text style={formFieldLabelStyle({ tokens, focused, error: false })}>{label}</Text>
-        {labelAccessory}
       </View>
       <View
         style={[
@@ -74,13 +73,19 @@ const Field: React.FC<FieldProps> = ({
           formFieldShellStyle({ tokens, focused, error: false }),
         ]}
       >
+        {isPassword ? (
+          <PasswordVisibilityToggle
+            visible={passwordVisible}
+            onToggle={() => setPasswordVisible((v) => !v)}
+          />
+        ) : null}
         <TextInput
           style={[formFieldInputStyle(), { paddingVertical: 15 }]}
           placeholder={placeholder}
           placeholderTextColor={colors.text.disabled}
           value={value}
           onChangeText={onChangeText}
-          secureTextEntry={secureTextEntry}
+          secureTextEntry={isPassword ? !passwordVisible : secureTextEntry}
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
           autoCorrect={false}
@@ -98,7 +103,6 @@ export default function LoginScreen({ navigation }: any) {
   const { colors } = tokens;
   const [email, setEmail]               = useState('');
   const [password, setPassword]         = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe]     = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -339,27 +343,8 @@ export default function LoginScreen({ navigation }: any) {
                   value={password}
                   onChangeText={setPassword}
                   placeholder="הכנס את הסיסמה"
-                  secureTextEntry={!showPassword}
+                  secureTextEntry
                   tokens={tokens}
-                  labelAccessory={
-                    <Pressable
-                      onPress={() => {
-                        void HapticFeedback.selection();
-                        setShowPassword(!showPassword);
-                      }}
-                      hitSlop={8}
-                    >
-                      <Text
-                        style={{
-                          color: colors.text.secondary,
-                          fontSize: 13,
-                          fontWeight: '600',
-                        }}
-                      >
-                        {showPassword ? 'הסתר' : 'הצג'}
-                      </Text>
-                    </Pressable>
-                  }
                 />
 
                 {/* Remember me + Forgot */}

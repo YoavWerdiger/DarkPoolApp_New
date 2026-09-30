@@ -34,7 +34,6 @@ interface ChatSearchBottomSheetProps {
   onMessagePress: (messageId: string) => void;
 }
 
-const SHEET_BORDER = 'rgba(255, 255, 255, 0.10)';
 
 export default function ChatSearchBottomSheet({
   visible,
@@ -301,7 +300,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       alignItems: 'center',
       paddingBottom: 12,
       borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: SHEET_BORDER,
+      borderBottomColor: tokens.colors.border.divider,
       gap: 10,
     },
     headerCenter: {
@@ -360,7 +359,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       flexShrink: 0,
     },
     searchActionDisabled: {
-      backgroundColor: 'rgba(255,255,255,0.08)',
+      backgroundColor: tokens.colors.background.primary,
       opacity: 0.55,
     },
     resultsWrap: {
@@ -379,6 +378,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       paddingVertical: 14,
       paddingHorizontal: 4,
       borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: SHEET_BORDER,
+      borderBottomColor: tokens.colors.border.divider,
     },
   });

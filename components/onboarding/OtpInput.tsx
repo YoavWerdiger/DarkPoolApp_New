@@ -95,7 +95,7 @@ const OtpInput: React.FC<OtpInputProps> = ({
               styles.box,
               {
                 backgroundColor: error
-                  ? 'rgba(248, 113, 113, 0.1)'
+                  ? 'rgba(239, 68, 68, 0.1)'
                   : isFocused
                     ? tokens.colors.background.tertiary
                     : tokens.colors.background.input,

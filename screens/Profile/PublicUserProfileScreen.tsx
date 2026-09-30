@@ -16,6 +16,14 @@ import { useAuth } from '../../context/AuthContext';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 import UICard from '../../components/ui/UICard';
+import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
+import { APP_TYPE } from '../../components/ui/appType';
+import {
+  settingsCaptionType,
+  settingsGroupLabelStyle,
+  settingsHebrewText,
+  settingsRowType,
+} from '../../components/profile/settingsType';
 import {
   fetchPublicUserProfile,
   fetchUserFollowStats,
@@ -148,8 +156,7 @@ export default function PublicUserProfileScreen() {
 
   const headerBlock = profile ? (
     <UICard
-      variant="glass"
-      glassIntensity="light"
+      variant="soft"
       padding="none"
       style={styles.heroCard}
     >
@@ -158,7 +165,7 @@ export default function PublicUserProfileScreen() {
           {profile.avatarUrl ? (
             <Image source={{ uri: profile.avatarUrl }} style={styles.avatarImage} />
           ) : (
-            <User size={42} color={tokens.colors.primary.main} strokeWidth={2} />
+            <User size={26} color={tokens.colors.text.primary} strokeWidth={2} />
           )}
         </View>
         <View style={styles.heroText}>
@@ -201,10 +208,7 @@ export default function PublicUserProfileScreen() {
             styles.followBtn,
             {
               backgroundColor: following
-                ? 'rgba(255,255,255,0.08)'
-                : tokens.colors.primary.main,
-              borderColor: following
-                ? tokens.colors.border.divider
+                ? tokens.colors.background.navChrome
                 : tokens.colors.primary.main,
             },
           ]}
@@ -276,7 +280,7 @@ export default function PublicUserProfileScreen() {
               </Text>
             }
             renderItem={({ item }) => (
-              <UICard variant="blur" padding="none" style={styles.postCard}>
+              <UICard variant="soft" padding="none" style={styles.postCard}>
                 <Text
                   style={[styles.postBody, { color: tokens.colors.text.primary }]}
                   numberOfLines={6}
@@ -304,10 +308,10 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       paddingHorizontal: tokens.spacing.xl,
     },
     heroCard: {
-      marginHorizontal: tokens.spacing.base,
-      marginBottom: tokens.spacing.md,
-      padding: tokens.spacing.md,
-      borderRadius: tokens.borderRadius['2xl'],
+      marginHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+      marginBottom: APP_LAYOUT.cardStackGap,
+      padding: APP_LAYOUT.cardPadding,
+      borderRadius: UI_CARD_RADIUS,
     },
     heroRow: {
       flexDirection: 'row-reverse',
@@ -315,15 +319,13 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       gap: tokens.spacing.md,
     },
     avatarWrap: {
-      width: 88,
-      height: 88,
-      borderRadius: 44,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
       backgroundColor: tokens.colors.background.tertiary,
       alignItems: 'center',
       justifyContent: 'center',
       overflow: 'hidden',
-      borderWidth: 2,
-      borderColor: `${tokens.colors.primary.main}99`,
       flexShrink: 0,
     },
     avatarImage: {
@@ -337,16 +339,13 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       gap: tokens.spacing.xs,
     },
     displayName: {
-      fontSize: tokens.typography.titleSmall.size,
-      fontWeight: tokens.typography.titleSmall.weight as any,
-      textAlign: 'right',
-      writingDirection: 'rtl',
+      ...settingsHebrewText,
+      ...settingsRowType,
       width: '100%',
     },
     memberSince: {
-      fontSize: tokens.typography.caption.size,
-      textAlign: 'right',
-      writingDirection: 'rtl',
+      ...settingsCaptionType,
+      marginTop: APP_LAYOUT.titleSubtitleGap,
       width: '100%',
     },
     statsRow: {
@@ -361,58 +360,47 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       minWidth: 72,
     },
     statValue: {
-      fontSize: 20,
-      fontWeight: '800',
+      ...APP_TYPE.cardMetricValueSecondary,
     },
     statLabel: {
-      fontSize: 12,
-      marginTop: 2,
-      writingDirection: 'rtl',
+      ...settingsCaptionType,
+      marginTop: APP_LAYOUT.titleSubtitleGap,
     },
     statDivider: {
-      width: StyleSheet.hairlineWidth,
+      width: 1,
       height: 28,
     },
     followBtn: {
-      marginTop: tokens.spacing.lg,
+      marginTop: APP_LAYOUT.componentGap,
       minHeight: 44,
       borderRadius: tokens.borderRadius.full,
       alignItems: 'center',
       justifyContent: 'center',
-      borderWidth: StyleSheet.hairlineWidth,
     },
     followBtnText: {
-      fontSize: tokens.typography.body.size,
+      ...APP_TYPE.body,
       fontWeight: '700',
     },
     listContent: {
       paddingBottom: tokens.spacing['3xl'],
     },
     sectionTitle: {
-      marginHorizontal: tokens.spacing.base,
-      marginBottom: tokens.spacing.sm,
-      fontSize: 13,
-      fontWeight: '700',
-      textAlign: 'right',
-      writingDirection: 'rtl',
+      ...settingsGroupLabelStyle,
+      marginHorizontal: APP_LAYOUT.screenPaddingHorizontal,
     },
     postCard: {
-      marginHorizontal: tokens.spacing.base,
-      marginBottom: tokens.spacing.sm,
-      padding: tokens.spacing.md,
-      borderRadius: tokens.borderRadius.xl,
+      marginHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+      marginBottom: APP_LAYOUT.cardStackGap,
+      padding: APP_LAYOUT.cardPadding,
+      borderRadius: UI_CARD_RADIUS,
     },
     postBody: {
-      fontSize: 14,
-      lineHeight: 20,
-      textAlign: 'right',
-      writingDirection: 'rtl',
+      ...settingsHebrewText,
+      ...APP_TYPE.cardBody,
     },
     postTime: {
-      marginTop: tokens.spacing.xs,
-      fontSize: 12,
-      textAlign: 'right',
-      writingDirection: 'rtl',
+      ...settingsCaptionType,
+      marginTop: APP_LAYOUT.titleSubtitleGap,
     },
     emptyPosts: {
       textAlign: 'center',

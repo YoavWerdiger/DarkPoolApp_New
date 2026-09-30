@@ -37,7 +37,8 @@ export function MarketsUnderlineTabs<T extends string>({
       style={[
         styles.tabsRow,
         {
-          borderBottomColor: tokens.colors.border.subtle,
+          borderBottomColor: tokens.colors.border.divider,
+          borderBottomWidth: 1,
         },
       ]}
     >
@@ -62,7 +63,7 @@ export function MarketsUnderlineTabs<T extends string>({
               style={[
                 styles.tabText,
                 { color: tokens.colors.text.tertiary },
-                isActive && { color: tokens.colors.text.primary, fontWeight: '800' },
+                isActive && { color: tokens.colors.text.primary },
               ]}
               numberOfLines={1}
             >
@@ -86,7 +87,7 @@ export function MarketsUnderlineTabs<T extends string>({
 const styles = StyleSheet.create({
   tabsRow: {
     flexDirection: 'row-reverse' as any,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: 1,
   },
   tab: {
     flex: 1,
@@ -100,12 +101,12 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: MARKETS_TYPE.sectionSubtitle.fontSize,
     lineHeight: MARKETS_TYPE.sectionSubtitle.lineHeight,
-    fontWeight: '700' as any,
+    fontWeight: MARKETS_TYPE.sectionTitle.fontWeight,
     letterSpacing: 0.2,
   },
   activeIndicator: {
     position: 'absolute' as any,
-    bottom: -StyleSheet.hairlineWidth,
+    bottom: -1,
     left: '15%',
     right: '15%',
     height: 3,

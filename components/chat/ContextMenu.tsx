@@ -24,11 +24,24 @@ function ActionCard({
   children: React.ReactNode;
   danger?: boolean;
 }) {
+  const tokens = useDesignTokens();
   // מעטפת clip נפרדת: borderWidth על אותו View עם overflow עלול
   // להשאיר מילוי מרובע ב-Android — הרדיוס + overflow על המעטפת חותכים בבירור.
   return (
     <View style={styles.gridCardClip} collapsable={false}>
-      <View style={[styles.gridCard, danger ? styles.dangerCard : null]}>
+      <View
+        style={[
+          styles.gridCard,
+          {
+            backgroundColor: danger
+              ? 'rgba(239, 68, 68, 0.10)'
+              : tokens.colors.background.tertiary,
+            borderColor: danger
+              ? tokens.colors.border.danger
+              : tokens.colors.border.primary,
+          },
+        ]}
+      >
         {children}
       </View>
     </View>
@@ -72,7 +85,7 @@ export default function ContextMenu({ onSelect, isAdmin = false, isMe = false, c
                 style={styles.tile}
                 accessibilityLabel={opt.label}
               >
-                <View style={styles.tileIcon}>
+                <View style={[styles.tileIcon, { backgroundColor: tokens.colors.background.cardSolid }]}>
                   <Ionicons name={opt.icon as any} size={20} color={tokens.colors.text.primary} />
                 </View>
                 <Text style={[styles.tileLabel, { color: tokens.colors.text.secondary }]} numberOfLines={1}>
@@ -123,14 +136,8 @@ const styles = StyleSheet.create({
   gridCard: {
     borderRadius: 28,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.08)',
     paddingVertical: 12,
     paddingHorizontal: 6,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-  },
-  dangerCard: {
-    backgroundColor: 'rgba(255,60,60,0.08)',
-    borderColor: 'rgba(255,60,60,0.18)',
   },
   grid: {
     flexDirection: 'row-reverse',
@@ -151,7 +158,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
   },
   dangerTileIcon: {
     backgroundColor: 'rgba(255,60,60,0.14)',

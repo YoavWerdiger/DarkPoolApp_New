@@ -102,6 +102,29 @@ export async function deleteWatchlist(id: string): Promise<void> {
   if (error) throw error;
 }
 
+/** סימולים שכבר ברשימות המעקב — בלי ליצור רשימה ובלי ציטוטי מחיר. */
+export async function listUserWatchlistSymbols(
+  userId: string,
+): Promise<{ symbol: string; companyName: string | null }[]> {
+  const { data, error } = await supabase
+    .from('stock_watchlist_items')
+    .select('symbol, company_name')
+    .eq('user_id', userId)
+    .order('sort_order', { ascending: true });
+  if (error) throw error;
+  const seen = new Set<string>();
+  const symbols: { symbol: string; companyName: string | null }[] = [];
+  for (const row of data ?? []) {
+    const raw = row as { symbol?: string; company_name?: string | null };
+    const symbol = String(raw.symbol ?? '').trim().toUpperCase();
+    if (!symbol || seen.has(symbol)) continue;
+    seen.add(symbol);
+    const companyName = String(raw.company_name ?? '').trim();
+    symbols.push({ symbol, companyName: companyName || null });
+  }
+  return symbols;
+}
+
 export async function listWatchlistItems(
   watchlistId: string
 ): Promise<StockWatchlistItem[]> {

@@ -13,7 +13,7 @@ type Props = {
 };
 
 /**
- * כפתור שיתוף טרייד — עיגול glass קטן ודיסקרטי (לא פעולה ראשית בכרטיס).
+ * כפתור שיתוף טרייד — עיגול בצבע הקנבס, כדי שיבלוט על הכרטיס.
  */
 export default function TradeShareButton({
   onPress,
@@ -23,20 +23,15 @@ export default function TradeShareButton({
 }: Props) {
   const tokens = useDesignTokens();
   const iconSize = Math.max(13, Math.round(size * 0.46));
-  const glassIntensity = size <= 30 ? 'subtle' : 'light';
-  const iconColor =
-    size <= 30 ? tokens.colors.text.secondary : tokens.colors.primary.main;
 
   return (
     <DayNavBlurButton
       onPress={onPress}
       size={size}
-      glass
-      glassIntensity={glassIntensity}
       accessibilityLabel={accessibilityLabel}
-      style={style}
+      style={[{ backgroundColor: tokens.colors.background.primary }, style]}
     >
-      <Ionicons name="share-outline" size={iconSize} color={iconColor} />
+      <Ionicons name="share-outline" size={iconSize} color={tokens.colors.text.primary} />
     </DayNavBlurButton>
   );
 }

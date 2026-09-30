@@ -647,7 +647,6 @@ export default function PortfolioActionsBottomSheet({
       enablePanDownToClose
       useModal
       showBrandBackground={false}
-      useGlassBackground
       avoidKeyboard
     >
       <PortfolioActionsSheetBody

@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { SkeletonBox } from '../../../components/ui/SkeletonLoader';
-import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { APP_LAYOUT } from '../../../components/ui/appLayout';
 import {
   colChg,
   colChgPct,
@@ -22,31 +22,21 @@ type Props = {
  * Yoga של המסך LTR: `quoteRow` הוא `row-reverse` בלי `direction: 'rtl'`.
  * ילד ראשון (סימבול+לוגו) מימין; מחיר / % / ווליום משמאל.
  */
-function WatchlistRowSkeletonInner({ delay = 0, index = 0 }: Props) {
-  const tokens = useDesignTokens();
-
+function WatchlistRowSkeletonInner({ delay = 0 }: Props) {
   return (
     <View
-      style={[
-        quoteRow,
-        styles.row,
-        {
-          borderBottomColor: tokens.colors.border.divider,
-          borderBottomWidth: 1,
-        },
-        index % 2 === 1 ? styles.rowAlt : null,
-      ]}
+      style={[quoteRow, styles.row]}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
       <View style={colSymbol}>
         <View style={styles.identity}>
           <View style={styles.logoWrap}>
-            <SkeletonBox width={30} height={30} borderRadius={8} delay={delay} />
+            <SkeletonBox width={28} height={28} borderRadius={14} delay={delay} />
           </View>
           <View style={styles.textBlock}>
-            <SkeletonBox width={52} height={13} delay={delay + 40} />
-            <SkeletonBox width={72} height={10} delay={delay + 80} />
+            <SkeletonBox width={44} height={12} delay={delay + 40} />
+            <SkeletonBox width={64} height={10} delay={delay + 80} />
           </View>
         </View>
       </View>
@@ -71,10 +61,9 @@ function WatchlistRowSkeletonInner({ delay = 0, index = 0 }: Props) {
 
 const styles = StyleSheet.create({
   row: {
-    paddingVertical: 8,
-    minHeight: 48,
+    paddingVertical: APP_LAYOUT.cardTitleToBodyGap,
+    minHeight: 52,
   },
-  rowAlt: { backgroundColor: 'rgba(255,255,255,0.015)' },
   logoWrap: {
     marginLeft: 12,
   },

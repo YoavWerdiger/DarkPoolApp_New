@@ -22,6 +22,9 @@ import {
   listPortfolios,
   loadPortfolioDisplaySummary,
   deletePortfolio,
+  buildHistoricalPortfolioSeriesFromSnapshots,
+  buildHistoricalPortfolioSeries,
+  getValueHistory,
 } from '../../services/portfolios';
 import type { Portfolio, PortfolioSummary } from './portfolioTypes';
 import { PortfolioCard } from './components/PortfolioCard';
@@ -60,6 +63,34 @@ type Nav = NativeStackNavigationProp<PortfoliosStackParamList, 'PortfoliosHub'>;
 interface PortfolioWithSummary {
   portfolio: Portfolio;
   summary: PortfolioSummary | null;
+  /** שווי לאורך זמן — רק נקודות אמיתיות, בלי קו שטוח מומצא */
+  sparklineValues?: number[] | null;
+}
+
+function downsampleSparkline(values: number[], maxPoints = 32): number[] {
+  if (values.length <= maxPoints) return values;
+  const result: number[] = [];
+  const step = (values.length - 1) / (maxPoints - 1);
+  for (let i = 0; i < maxPoints - 1; i++) result.push(values[Math.round(i * step)]);
+  result.push(values[values.length - 1]);
+  return result;
+}
+
+async function loadPortfolioSparkline(portfolio: Portfolio): Promise<number[] | null> {
+  try {
+    const snapshots = await buildHistoricalPortfolioSeriesFromSnapshots(portfolio.id, 365);
+    if (snapshots.length >= 2) return downsampleSparkline(snapshots.map((point) => point.value));
+    if (portfolio.source === 'colmex_pro') return null;
+    const fromTrades = await buildHistoricalPortfolioSeries(portfolio.id, 365);
+    if (fromTrades.length >= 2) return downsampleSparkline(fromTrades.map((point) => point.value));
+    const history = await getValueHistory(portfolio.id, 365);
+    const values = history
+      .map((point) => point.total_value)
+      .filter((value) => Number.isFinite(value) && value > 0);
+    return values.length >= 2 ? downsampleSparkline(values) : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -133,10 +164,13 @@ export default function PortfoliosTab() {
       const enriched = await Promise.all(
         portfolios.map(async (p) => {
           try {
-            const summary = await loadPortfolioDisplaySummary(p);
-            return { portfolio: p, summary };
+            const [summary, sparklineValues] = await Promise.all([
+              loadPortfolioDisplaySummary(p),
+              loadPortfolioSparkline(p),
+            ]);
+            return { portfolio: p, summary, sparklineValues };
           } catch {
-            return { portfolio: p, summary: null };
+            return { portfolio: p, summary: null, sparklineValues: null };
           }
         })
       );
@@ -317,7 +351,7 @@ export default function PortfoliosTab() {
         searchCardWrap: {
           flex: 1,
           minWidth: 0,
-          backgroundColor: tokens.colors.background.input,
+          backgroundColor: tokens.colors.background.cardSolid,
           borderRadius: tokens.borderRadius.search,
           overflow: 'hidden',
           borderWidth: 0,
@@ -462,6 +496,7 @@ export default function PortfoliosTab() {
           <PortfolioCard
             portfolio={item.portfolio}
             summary={item.summary}
+            sparklineValues={item.sparklineValues ?? null}
             onPress={() => handleOpen(item.portfolio.id)}
             onLongPress={() => handleDelete(item.portfolio)}
           />
@@ -499,7 +534,6 @@ export default function PortfoliosTab() {
           setSortSheetHeight(0);
         }}
         snapPoints={sortSnapPoints}
-        useGlassBackground
         showBrandBackground={false}
         showHandle
       >

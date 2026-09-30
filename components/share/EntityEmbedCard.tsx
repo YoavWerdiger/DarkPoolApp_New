@@ -5,9 +5,13 @@ import {
   Text,
   TouchableOpacity,
   View,
+  type StyleProp,
+  type ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { APP_TYPE } from '../ui/appType';
+import { APP_LAYOUT, UI_CARD_RADIUS } from '../ui/appLayout';
 import type { ShareableAttachment } from '../../types/shareableEntity';
 import { PREVIEW_METRIC_LABELS } from '../../types/shareableEntity';
 import {
@@ -23,6 +27,7 @@ type Props = {
   attachment: ShareableAttachment;
   onPress?: () => void;
   compact?: boolean;
+  style?: StyleProp<ViewStyle>;
 };
 
 type MetricItem = { key: string; label: string; value: string };
@@ -185,7 +190,7 @@ function AvatarOrThumb({
         <Text
           style={{
             color: tokens.colors.primary.main,
-            fontWeight: '800',
+            fontWeight: '700',
             fontSize: size * 0.38,
           }}
         >
@@ -202,7 +207,7 @@ function AvatarOrThumb({
   );
 }
 
-export default function EntityEmbedCard({ attachment, onPress, compact }: Props) {
+export default function EntityEmbedCard({ attachment, onPress, compact, style }: Props) {
   const tokens = useDesignTokens();
   const isCompact = !!compact;
   const [expanded, setExpanded] = useState(false);
@@ -272,7 +277,7 @@ export default function EntityEmbedCard({ attachment, onPress, compact }: Props)
     <TouchableOpacity
       activeOpacity={0.88}
       onPress={handlePress}
-      style={styles.card}
+      style={[styles.card, style]}
       accessibilityRole="button"
       accessibilityLabel={
         isTrade
@@ -423,8 +428,8 @@ export default function EntityEmbedCard({ attachment, onPress, compact }: Props)
             <Text style={styles.expandHint}>{expandHint}</Text>
             <Ionicons
               name={expanded ? 'chevron-up' : 'chevron-down'}
-              size={13}
-              color={tokens.colors.text.tertiary}
+              size={14}
+              color={tokens.colors.text.secondary}
             />
           </View>
         ) : null}
@@ -437,7 +442,6 @@ function createStyles(
   tokens: ReturnType<typeof useDesignTokens>,
   compact: boolean
 ) {
-  const r = tokens.borderRadius;
   return StyleSheet.create({
     /**
      * Yoga הגלובלי הוא LTR. row-reverse שם אווטאר/טקסט לימין.
@@ -446,10 +450,9 @@ function createStyles(
     card: {
       direction: 'ltr',
       overflow: 'hidden',
-      borderRadius: r['2xl'],
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: 'rgba(255,255,255,0.14)',
-      backgroundColor: 'rgba(255,255,255,0.06)',
+      borderRadius: UI_CARD_RADIUS,
+      borderWidth: 0,
+      backgroundColor: `${tokens.colors.text.primary}0F`,
     },
     heroWrap: {
       width: '100%',
@@ -457,19 +460,19 @@ function createStyles(
       maxHeight: compact ? 160 : 200,
       backgroundColor: tokens.colors.background.tertiary,
       overflow: 'hidden',
-      borderTopLeftRadius: r['2xl'],
-      borderTopRightRadius: r['2xl'],
+      borderTopLeftRadius: UI_CARD_RADIUS,
+      borderTopRightRadius: UI_CARD_RADIUS,
     },
     heroImage: {
       width: '100%',
       height: '100%',
-      borderTopLeftRadius: r['2xl'],
-      borderTopRightRadius: r['2xl'],
+      borderTopLeftRadius: UI_CARD_RADIUS,
+      borderTopRightRadius: UI_CARD_RADIUS,
     },
     main: {
-      paddingVertical: compact ? 10 : 12,
-      paddingHorizontal: compact ? 12 : 14,
-      gap: compact ? 8 : 10,
+      paddingVertical: compact ? APP_LAYOUT.cardTitleToBodyGap : APP_LAYOUT.cardPadding,
+      paddingHorizontal: APP_LAYOUT.cardPadding,
+      gap: APP_LAYOUT.cardTitleToBodyGap,
     },
     headerRow: {
       flexDirection: 'row-reverse',
@@ -479,14 +482,13 @@ function createStyles(
     tradeLogoWrap: {
       borderRadius: Math.round((compact ? 48 : 60) * 0.28),
       overflow: 'hidden',
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: 'rgba(255,255,255,0.2)',
+      borderWidth: 0,
       backgroundColor: '#FFFFFF',
     },
     headerText: {
       flex: 1,
       minWidth: 0,
-      gap: 4,
+      gap: 0,
       alignItems: 'flex-end',
     },
     titleRow: {
@@ -497,7 +499,6 @@ function createStyles(
       width: '100%',
     },
     tradeTitle: {
-      letterSpacing: 0.35,
       writingDirection: 'ltr',
     },
     /** צ׳יפ Long/Short — כמו TradeListCard */
@@ -511,11 +512,10 @@ function createStyles(
       backgroundColor: tokens.colors.primary.dim,
     },
     sideChipShort: {
-      backgroundColor: 'rgba(255, 68, 68, 0.18)',
+      backgroundColor: `${tokens.colors.text.danger}2E`,
     },
     sideChipText: {
-      fontSize: 11,
-      fontWeight: '800',
+      ...APP_TYPE.cardMetricLabel,
       textAlign: 'center',
       writingDirection: 'ltr',
     },
@@ -527,23 +527,19 @@ function createStyles(
     },
     title: {
       flexShrink: 1,
-      fontSize: compact ? 14 : 16,
-      fontWeight: '800',
+      ...APP_TYPE.cardTitle,
       color: tokens.colors.text.primary,
       textAlign: 'right',
       writingDirection: 'rtl',
-      lineHeight: compact ? 18 : 22,
     },
     subtitle: {
-      fontSize: compact ? 12 : 13,
+      ...APP_TYPE.cardSubtitle,
       color: tokens.colors.text.secondary,
       textAlign: 'right',
       writingDirection: 'rtl',
-      lineHeight: 18,
     },
     snippet: {
-      fontSize: compact ? 12 : 13,
-      lineHeight: compact ? 17 : 19,
+      ...APP_TYPE.cardSubtitle,
       color: tokens.colors.text.secondary,
       textAlign: 'right',
       writingDirection: 'rtl',
@@ -551,11 +547,9 @@ function createStyles(
     metricsRow: {
       flexDirection: 'row-reverse',
       alignItems: 'stretch',
-      borderRadius: r.xl,
-      backgroundColor: 'rgba(255,255,255,0.04)',
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: 'rgba(255,255,255,0.08)',
-      overflow: 'hidden',
+      borderTopWidth: 1,
+      borderTopColor: tokens.colors.border.divider,
+      paddingTop: 4,
     },
     /** גריד 2 עמודות לטרייד מורחב — כמו TradeListCard, בלי דחיסה */
     metricsGrid: {
@@ -565,12 +559,9 @@ function createStyles(
       rowGap: 12,
       columnGap: 8,
       width: '100%',
-      paddingVertical: compact ? 10 : 12,
-      paddingHorizontal: compact ? 10 : 12,
-      borderRadius: r.xl,
-      backgroundColor: 'rgba(255,255,255,0.04)',
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: 'rgba(255,255,255,0.08)',
+      paddingTop: APP_LAYOUT.cardTitleToBodyGap,
+      borderTopWidth: 1,
+      borderTopColor: tokens.colors.border.divider,
     },
     metricGridCell: {
       width: '47%',
@@ -587,33 +578,30 @@ function createStyles(
     },
     metricCell: {
       flex: 1,
-      paddingVertical: compact ? 8 : 10,
-      paddingHorizontal: 8,
-      gap: 3,
+      paddingVertical: 8,
+      paddingHorizontal: 6,
+      gap: APP_LAYOUT.cardMetricLabelToValueGap,
       alignItems: 'center',
       minWidth: 0,
     },
     metricDivider: {
-      width: StyleSheet.hairlineWidth,
-      backgroundColor: 'rgba(255,255,255,0.1)',
+      width: 1,
+      marginVertical: 8,
+      backgroundColor: tokens.colors.border.divider,
     },
     metricLabel: {
-      fontSize: 10,
-      fontWeight: '600',
-      color: tokens.colors.text.tertiary,
+      ...APP_TYPE.cardMetricLabel,
+      color: tokens.colors.text.secondary,
       writingDirection: 'rtl',
       textAlign: 'center',
     },
     metricValue: {
-      fontSize: compact ? 12 : 13,
-      fontWeight: '800',
+      ...APP_TYPE.cardBody,
+      fontWeight: APP_TYPE.cardTitle.fontWeight,
       writingDirection: 'ltr',
       textAlign: 'center',
     },
-    metricValueExpanded: {
-      fontSize: compact ? 13 : 14,
-      lineHeight: compact ? 17 : 19,
-    },
+    metricValueExpanded: {},
     footer: {
       flexDirection: 'row-reverse',
       alignItems: 'center',
@@ -623,9 +611,8 @@ function createStyles(
       alignSelf: 'stretch',
     },
     expandHint: {
-      fontSize: 11,
-      fontWeight: '600',
-      color: tokens.colors.text.tertiary,
+      ...APP_TYPE.caption,
+      color: tokens.colors.text.secondary,
       writingDirection: 'rtl',
       textAlign: 'right',
     },

@@ -1,7 +1,7 @@
 import { legacyAlert } from '../../utils/appDialog';
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { View, Text, Modal, Pressable, StyleSheet, ActivityIndicator, Animated as RNAnimated,
-  Keyboard, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+  Keyboard, ScrollView, TouchableOpacity, TextInput, useWindowDimensions } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,7 +16,7 @@ import Animated, {
   withTiming,
   runOnJS,
 } from 'react-native-reanimated';
-import { useGenericKeyboardHandler } from 'react-native-keyboard-controller';
+import { useAnimatedKeyboard } from 'react-native-keyboard-controller';
 import { useTheme } from '../../context/ThemeContext';
 
 interface MediaPreviewModalProps {
@@ -24,40 +24,29 @@ interface MediaPreviewModalProps {
   onClose: () => void;
   onSend: (mediaFiles: MediaFile[], captions: Record<string, string>) => void;
   mediaFiles: MediaFile[];
+  /** בתוך מודל שכבר פתוח — בלי מודל שני ובלי אנימציית כניסה. */
+  embedded?: boolean;
 }
 
-import ChatComposerBar from './ChatComposerBar';
-import { ChatComposerDock } from './ChatComposerDock';
-import ReactionPicker from './ReactionPicker';
 import { useDesignTokens } from '../ui/DesignTokens';
-import { UI_CARD_RADIUS } from '../ui/appLayout';
 import { CHAT_LAYOUT, CHAT_TYPE, chatPhysicalRightText } from './chatLayout';
-import {
-  CHAT_COMPOSER_KEYBOARD_GAP,
-  chatComposerKeyboardTranslate,
-  chatComposerSafeBottomInset,
-} from './chatInputLayout';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import { useMediaZoomGestures } from './useMediaZoomGestures';
+import { MediaBlurBackdrop, MediaKeyboardDim } from './MediaViewerChrome';
 
 export default function MediaPreviewModal({
   visible,
   onClose,
   onSend,
-  mediaFiles
+  mediaFiles,
+  embedded = false,
 }: MediaPreviewModalProps) {
   const insets = useSafeAreaInsets();
+  const { width: screenW, height: screenH } = useWindowDimensions();
   const { isDarkMode } = useTheme();
   const tokens = useDesignTokens();
-  const composerPaddingBottom = useMemo(
-    () => chatComposerSafeBottomInset(insets.bottom),
-    [insets.bottom],
-  );
-  const composerInsetSV = useSharedValue(composerPaddingBottom);
-  /** כווץ את משבצת התמונה באותו שיעור שהקומפוזר עולה — בלי translateY על התמונה */
-  const mediaShrinkSV = useSharedValue(0);
+  const iconColor = isDarkMode ? tokens.colors.text.primary : tokens.colors.text.inverse;
   const [videoPosterUri, setVideoPosterUri] = useState<string | null>(null);
-  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const captionRef = useRef<TextInput>(null);
   
   const [localFiles, setLocalFiles] = useState(mediaFiles);
@@ -83,50 +72,18 @@ export default function MediaPreviewModal({
   videoDraggingRef.current = videoDragging;
 
   // Animation refs for modal open/close (using React Native Animated for modal)
-  const modalScaleAnim = useRef(new RNAnimated.Value(0.9)).current;
-  const modalOpacityAnim = useRef(new RNAnimated.Value(0)).current;
+  const modalScaleAnim = useRef(new RNAnimated.Value(embedded ? 1 : 0.9)).current;
+  const modalOpacityAnim = useRef(new RNAnimated.Value(embedded ? 1 : 0)).current;
   // Controls are always visible - no animation needed
   
-  useEffect(() => {
-    composerInsetSV.value = composerPaddingBottom;
-  }, [composerPaddingBottom, composerInsetSV]);
-
-  useEffect(() => {
-    if (!visible) {
-      mediaShrinkSV.value = 0;
-      setEmojiPickerOpen(false);
-    }
-  }, [visible, mediaShrinkSV]);
-
-  /**
-   * אותו מעקב פריים של react-native-keyboard-controller כמו ChatComposerDock.
-   * paddingBottom (לא translateY) — ב-iOS פרודקשן translateY של Reanimated לא דוחף.
-   */
-  useGenericKeyboardHandler(
-    {
-      onMove: (event) => {
-        'worklet';
-        mediaShrinkSV.value = -chatComposerKeyboardTranslate(
-          event.height,
-          composerInsetSV.value,
-          CHAT_COMPOSER_KEYBOARD_GAP,
-        );
-      },
-      onEnd: (event) => {
-        'worklet';
-        mediaShrinkSV.value = -chatComposerKeyboardTranslate(
-          event.height,
-          composerInsetSV.value,
-          CHAT_COMPOSER_KEYBOARD_GAP,
-        );
-      },
-    },
-    [],
-  );
-
-  const mediaStageStyle = useAnimatedStyle(() => ({
-    paddingBottom: 12 + mediaShrinkSV.value,
-  }));
+  const keyboard = useAnimatedKeyboard();
+  const captionLift = useAnimatedStyle(() => {
+    const open = keyboard.height.value > 8;
+    return {
+      paddingBottom: open ? 8 : insets.bottom + 12,
+      transform: [{ translateY: -keyboard.height.value }],
+    };
+  });
 
   const dismissKeyboard = useCallback(() => {
     Keyboard.dismiss();
@@ -152,6 +109,11 @@ export default function MediaPreviewModal({
       // ⚡ לא מחכים ל-decode — מודאל נפתח מייד; thumb/full נטענים בשכבות
       setIsLoading(false);
       resetZoomImmediate();
+      if (embedded) {
+        modalScaleAnim.setValue(1);
+        modalOpacityAnim.setValue(1);
+        return;
+      }
       RNAnimated.parallel([
         RNAnimated.timing(modalScaleAnim, {
           toValue: 1,
@@ -168,9 +130,8 @@ export default function MediaPreviewModal({
       modalScaleAnim.setValue(0.9);
       modalOpacityAnim.setValue(0);
       resetZoomImmediate();
-      mediaShrinkSV.value = 0;
     }
-  }, [visible, resetZoomImmediate, mediaShrinkSV]);
+  }, [visible, embedded, resetZoomImmediate, modalOpacityAnim, modalScaleAnim]);
 
   useEffect(() => {
     setLocalFiles(mediaFiles);
@@ -457,44 +418,28 @@ export default function MediaPreviewModal({
     return null;
   }
 
-  const themeBorder = {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: tokens.colors.border.divider,
-  } as const;
-
-  const iconBtnStyle = [
-    styles.iconBtn,
-    themeBorder,
-    { backgroundColor: tokens.colors.background.cardSolid },
-  ];
-
-  /** שדה על כרטיס — מילוי הקנבס מאחורי הכרטיס, מסגרת לפי ערכת הנושא */
-  const captionPillStyle = [
-    themeBorder,
-    { backgroundColor: tokens.colors.background.primary },
-  ];
-
   const renderMediaContent = () => {
     switch (currentMedia.type) {
-      case 'image':
+      case 'image': {
+        const srcW = currentMedia.width && currentMedia.width > 0 ? currentMedia.width : screenW;
+        const srcH = currentMedia.height && currentMedia.height > 0 ? currentMedia.height : screenH;
+        const naturalH = screenW * (srcH / srcW);
+        const frameH = Math.min(naturalH, screenH);
+        const box = { width: screenW, height: frameH };
+        const placed = {
+          ...box,
+          position: 'absolute' as const,
+          top: (screenH - frameH) / 2,
+          left: 0,
+        };
         return (
           <GestureDetector gesture={zoomGesture}>
-            <Animated.View style={styles.mediaFill} collapsable={false}>
-              <Animated.View style={[StyleSheet.absoluteFill, animatedImageStyle]}>
-                {currentMedia.thumbnail_url ? (
-                  <ExpoImage
-                    source={{ uri: currentMedia.thumbnail_url }}
-                    style={StyleSheet.absoluteFill}
-                    contentFit="contain"
-                    cachePolicy="memory-disk"
-                    transition={0}
-                    recyclingKey={`${currentMedia.id}-thumb`}
-                  />
-                ) : null}
+            <Animated.View style={placed} collapsable={false}>
+              <Animated.View style={[box, animatedImageStyle]}>
                 <ExpoImage
                   source={{ uri: currentMedia.uri }}
-                  style={StyleSheet.absoluteFill}
-                  contentFit="contain"
+                  style={box}
+                  contentFit="cover"
                   transition={0}
                   priority="high"
                   onLoadStart={() => setIsLoading(false)}
@@ -507,10 +452,11 @@ export default function MediaPreviewModal({
             </Animated.View>
           </GestureDetector>
         );
+      }
 
       case 'video':
         return (
-          <View style={styles.mediaFill}>
+          <View style={{ width: screenW, height: screenH }}>
             {videoPosterUri && !videoPlaying ? (
               <ExpoImage
                 source={{ uri: videoPosterUri }}
@@ -521,7 +467,7 @@ export default function MediaPreviewModal({
             ) : null}
             {isLoading && (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={tokens.colors.primary.main} />
+                <ActivityIndicator size="large" color={iconColor} />
               </View>
             )}
             <Video
@@ -548,23 +494,19 @@ export default function MediaPreviewModal({
           <View style={styles.audioContent}>
             <Pressable
               onPress={() => toggleAudio(currentMedia.id)}
-              style={[
-                styles.audioPlayBtn,
-                themeBorder,
-                { backgroundColor: tokens.colors.background.cardSolid },
-              ]}
+              style={styles.audioPlayBtn}
             >
               {isPlaying[currentMedia.id] ? (
-                <Pause size={48} color={tokens.colors.text.primary} strokeWidth={1.5} />
+                <Pause size={48} color={iconColor} strokeWidth={1.5} />
               ) : (
-                <Play size={48} color={tokens.colors.text.primary} strokeWidth={1.5} fill={tokens.colors.text.primary} />
+                <Play size={48} color={iconColor} strokeWidth={1.5} fill={iconColor} />
               )}
             </Pressable>
-            <Text style={[styles.audioTime, { color: tokens.colors.text.primary }]}>
+            <Text style={[styles.audioTime, { color: iconColor }]}>
               {formatDuration(currentMedia.duration)}
             </Text>
             {currentMedia.name ? (
-              <Text style={[styles.audioName, { color: tokens.colors.text.secondary }]}>
+              <Text style={[styles.audioName, { color: iconColor }]}>
                 {currentMedia.name}
               </Text>
             ) : null}
@@ -575,16 +517,12 @@ export default function MediaPreviewModal({
         return (
           <View style={styles.documentContent}>
             <View
-              style={[
-                styles.documentIcon,
-                themeBorder,
-                { backgroundColor: tokens.colors.background.cardSolid },
-              ]}
+              style={styles.documentIcon}
             >
-              <Ionicons name="document-text" size={64} color={tokens.colors.text.primary} />
+              <Ionicons name="document-text" size={64} color={iconColor} />
             </View>
             {currentMedia.name ? (
-              <Text style={[styles.documentName, { color: tokens.colors.text.primary }]}>
+              <Text style={[styles.documentName, { color: iconColor }]}>
                 {currentMedia.name}
               </Text>
             ) : null}
@@ -599,6 +537,211 @@ export default function MediaPreviewModal({
   const RNAnimatedView = RNAnimated.View;
   const captionId = currentMedia.id;
 
+  const shell = (
+      <GestureHandlerRootView style={styles.modalRoot}>
+        <RNAnimatedView
+          style={[
+            styles.container,
+            {
+              backgroundColor: 'transparent',
+              opacity: modalOpacityAnim,
+              transform: [{ scale: modalScaleAnim }],
+            },
+          ]}
+        >
+          <MediaBlurBackdrop
+            uri={
+              currentMedia.type === 'image'
+                ? currentMedia.uri
+                : currentMedia.type === 'video'
+                  ? videoPosterUri
+                  : null
+            }
+          />
+
+          <View style={styles.mediaStage} pointerEvents="box-none">
+            {renderMediaContent()}
+            {localFiles.length > 1 && currentIndex > 0 ? (
+              <Pressable
+                onPress={goToPrev}
+                style={[styles.navArrow, styles.navRight, styles.themeBtn, { backgroundColor: tokens.colors.background.cardSolid }]}
+                accessibilityRole="button"
+                accessibilityLabel="הקובץ הקודם"
+              >
+                <ChevronRight size={26} color={tokens.colors.text.primary} strokeWidth={2} />
+              </Pressable>
+            ) : null}
+            {localFiles.length > 1 && currentIndex < localFiles.length - 1 ? (
+              <Pressable
+                onPress={goToNext}
+                style={[styles.navArrow, styles.navLeft, styles.themeBtn, { backgroundColor: tokens.colors.background.cardSolid }]}
+                accessibilityRole="button"
+                accessibilityLabel="הקובץ הבא"
+              >
+                <ChevronLeft size={26} color={tokens.colors.text.primary} strokeWidth={2} />
+              </Pressable>
+            ) : null}
+          </View>
+
+          <MediaKeyboardDim />
+
+          <View style={[styles.topBar, { paddingTop: insets.top + 8 }]} pointerEvents="box-none">
+            <Pressable
+              onPress={onClose}
+              style={[styles.iconBtn, styles.themeBtn, { backgroundColor: tokens.colors.background.cardSolid }]}
+              accessibilityRole="button"
+              accessibilityLabel="סגירה"
+            >
+              <X size={22} color={tokens.colors.text.primary} strokeWidth={2} />
+            </Pressable>
+            {localFiles.length > 1 ? (
+              <Text style={[styles.counterText, { color: iconColor }]}>
+                {currentIndex + 1}/{localFiles.length}
+              </Text>
+            ) : (
+              <View style={styles.iconBtn} />
+            )}
+            <Pressable
+              onPress={() => removeMedia(currentMedia.id)}
+              style={[styles.iconBtn, styles.themeBtn, { backgroundColor: tokens.colors.background.cardSolid }]}
+              accessibilityRole="button"
+              accessibilityLabel="הסרת מדיה"
+            >
+              <Trash2 size={20} color={tokens.colors.text.danger} strokeWidth={2} />
+            </Pressable>
+          </View>
+
+          <Animated.View style={[styles.captionDock, captionLift]} pointerEvents="box-none">
+            {currentMedia.type === 'video' ? (
+              <View style={styles.videoControlsRow}>
+                <TouchableOpacity
+                  style={[styles.videoPlayBtn, styles.themeBtn, { backgroundColor: tokens.colors.background.cardSolid }]}
+                  onPress={toggleVideoPlayPause}
+                  accessibilityRole="button"
+                  accessibilityLabel={videoPlaying ? 'השהיה' : 'ניגון'}
+                >
+                  <Ionicons name={videoPlaying ? 'pause' : 'play'} size={22} color={tokens.colors.text.primary} />
+                </TouchableOpacity>
+                <Text style={[styles.videoTimeText, { color: iconColor }]}>
+                  {formatDuration(videoDisplayPosition)}
+                </Text>
+                <GestureDetector gesture={videoTimelineGesture}>
+                  <View
+                    style={styles.timelineTrack}
+                    onLayout={(e) => setTimelineWidth(e.nativeEvent.layout.width)}
+                  >
+                    <View style={[styles.timelineTrackBg, { backgroundColor: iconColor, opacity: 0.35 }]} />
+                    <Animated.View
+                      style={[styles.timelineFill, videoAnimatedFillStyle, { backgroundColor: iconColor }]}
+                    />
+                    <Animated.View
+                      style={[styles.timelineThumb, videoAnimatedThumbStyle, { backgroundColor: iconColor }]}
+                    />
+                  </View>
+                </GestureDetector>
+                <Text style={[styles.videoTimeText, { color: iconColor }]}>
+                  {formatDuration(videoDuration)}
+                </Text>
+              </View>
+            ) : null}
+
+            {localFiles.length > 1 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.thumbnailStrip}
+                keyboardShouldPersistTaps="handled"
+              >
+                {localFiles.map((media, index) => (
+                  <Pressable
+                    key={media.id}
+                    onPress={() => {
+                      setCurrentIndex(index);
+                      setIsLoading(true);
+                    }}
+                    style={[
+                      styles.thumbnailContainer,
+                      index === currentIndex && { borderColor: iconColor },
+                    ]}
+                  >
+                    {media.type === 'image' ? (
+                      <ExpoImage
+                        source={{ uri: media.thumbnail_url || media.uri }}
+                        style={styles.thumbnail}
+                        contentFit="cover"
+                        cachePolicy="memory-disk"
+                        transition={0}
+                      />
+                    ) : media.type === 'video' ? (
+                      <View style={styles.thumbnailVideo}>
+                        <ExpoImage
+                          source={{ uri: media.uri }}
+                          style={styles.thumbnail}
+                          contentFit="cover"
+                          cachePolicy="memory-disk"
+                        />
+                        <View style={styles.thumbnailVideoOverlay}>
+                          <Play size={16} color={iconColor} fill={iconColor} />
+                        </View>
+                      </View>
+                    ) : (
+                      <View style={[styles.thumbnail, styles.thumbnailDocument]}>
+                        <Ionicons name="document-text" size={24} color={iconColor} />
+                      </View>
+                    )}
+                    <Pressable
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        removeMedia(media.id);
+                      }}
+                      style={styles.thumbnailRemove}
+                      accessibilityRole="button"
+                      accessibilityLabel="הסרת קובץ"
+                    >
+                      <X size={12} color={iconColor} strokeWidth={3} />
+                    </Pressable>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            ) : null}
+
+            <View style={styles.captionRow}>
+              <Pressable
+                onPress={handleSend}
+                style={[styles.sendBtn, { backgroundColor: tokens.colors.primary.lightCta }]}
+                accessibilityRole="button"
+                accessibilityLabel="שליחה"
+              >
+                <Ionicons name="send" size={22} color={tokens.colors.text.inverse} style={styles.sendIcon} />
+              </Pressable>
+              <TextInput
+                ref={captionRef}
+                value={captions[captionId] || ''}
+                onChangeText={(text) => setCaptions((prev) => ({ ...prev, [captionId]: text }))}
+                placeholder="הוסף כיתוב..."
+                placeholderTextColor={tokens.colors.text.tertiary}
+                style={[
+                  styles.captionInput,
+                  {
+                    backgroundColor: tokens.colors.background.cardSolid,
+                    borderColor: tokens.colors.border.divider,
+                    color: tokens.colors.text.primary,
+                  },
+                ]}
+                maxLength={500}
+                keyboardAppearance={isDarkMode ? 'dark' : 'light'}
+                returnKeyType="send"
+                blurOnSubmit={false}
+                onSubmitEditing={handleSend}
+              />
+            </View>
+          </Animated.View>
+        </RNAnimatedView>
+      </GestureHandlerRootView>
+  );
+
+  if (embedded) return shell;
+
   return (
     <Modal
       visible={visible}
@@ -607,291 +750,7 @@ export default function MediaPreviewModal({
       presentationStyle="overFullScreen"
       onRequestClose={onClose}
     >
-      <GestureHandlerRootView style={styles.modalRoot}>
-        <RNAnimatedView
-          style={[
-            styles.container,
-            {
-              backgroundColor: tokens.colors.background.primary,
-              opacity: modalOpacityAnim,
-              transform: [{ scale: modalScaleAnim }],
-            },
-          ]}
-        >
-          <View
-            style={[
-              styles.topBar,
-              {
-                paddingTop: insets.top + 8,
-                backgroundColor: tokens.colors.background.primary,
-                borderBottomColor: tokens.colors.border.divider,
-              },
-            ]}
-          >
-            <Pressable
-              onPress={onClose}
-              style={iconBtnStyle}
-              accessibilityRole="button"
-              accessibilityLabel="סגירה"
-            >
-              <X size={22} color={tokens.colors.text.primary} strokeWidth={2} />
-            </Pressable>
-
-            {localFiles.length > 1 ? (
-              <Text style={[styles.counterText, { color: tokens.colors.text.secondary }]}>
-                {currentIndex + 1}/{localFiles.length}
-              </Text>
-            ) : (
-              <View style={styles.iconBtn} />
-            )}
-
-            <Pressable
-              onPress={() => removeMedia(currentMedia.id)}
-              style={iconBtnStyle}
-              accessibilityRole="button"
-              accessibilityLabel="הסרת מדיה"
-            >
-              <Trash2 size={20} color={tokens.colors.danger.main} strokeWidth={2} />
-            </Pressable>
-          </View>
-
-          <Animated.View style={[styles.mediaStage, mediaStageStyle]}>
-            <View
-              style={[
-                styles.mediaSlot,
-                themeBorder,
-                { backgroundColor: tokens.colors.background.cardSolid },
-              ]}
-            >
-              {renderMediaContent()}
-
-              {localFiles.length > 1 && currentIndex > 0 ? (
-                <Pressable
-                  onPress={goToPrev}
-                  style={[
-                    styles.navArrow,
-                    styles.navRight,
-                    themeBorder,
-                    { backgroundColor: tokens.colors.background.cardSolid },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel="הקובץ הקודם"
-                >
-                  <ChevronRight size={26} color={tokens.colors.text.primary} strokeWidth={2} />
-                </Pressable>
-              ) : null}
-              {localFiles.length > 1 && currentIndex < localFiles.length - 1 ? (
-                <Pressable
-                  onPress={goToNext}
-                  style={[
-                    styles.navArrow,
-                    styles.navLeft,
-                    themeBorder,
-                    { backgroundColor: tokens.colors.background.cardSolid },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel="הקובץ הבא"
-                >
-                  <ChevronLeft size={26} color={tokens.colors.text.primary} strokeWidth={2} />
-                </Pressable>
-              ) : null}
-            </View>
-          </Animated.View>
-
-          <ChatComposerDock bottomInset={composerPaddingBottom} style={styles.composerDock}>
-            <View
-              style={[
-                styles.composerSurface,
-                {
-                  backgroundColor: tokens.colors.background.cardSolid,
-                  paddingBottom: composerPaddingBottom,
-                  borderTopColor: tokens.colors.border.divider,
-                },
-              ]}
-            >
-              {currentMedia.type === 'video' ? (
-                <View style={styles.videoControlsRow}>
-                  <TouchableOpacity
-                    style={[
-                      styles.videoPlayBtn,
-                      themeBorder,
-                      { backgroundColor: tokens.colors.background.primary },
-                    ]}
-                    onPress={toggleVideoPlayPause}
-                    accessibilityRole="button"
-                    accessibilityLabel={videoPlaying ? 'השהיה' : 'ניגון'}
-                  >
-                    <Ionicons
-                      name={videoPlaying ? 'pause' : 'play'}
-                      size={22}
-                      color={tokens.colors.text.primary}
-                    />
-                  </TouchableOpacity>
-                  <Text style={[styles.videoTimeText, { color: tokens.colors.text.secondary }]}>
-                    {formatDuration(videoDisplayPosition)}
-                  </Text>
-                  <GestureDetector gesture={videoTimelineGesture}>
-                    <View
-                      style={styles.timelineTrack}
-                      onLayout={(e) => setTimelineWidth(e.nativeEvent.layout.width)}
-                    >
-                      <View
-                        style={[styles.timelineTrackBg, { backgroundColor: tokens.colors.border.divider }]}
-                      />
-                      <Animated.View
-                        style={[
-                          styles.timelineFill,
-                          videoAnimatedFillStyle,
-                          { backgroundColor: tokens.colors.primary.main },
-                        ]}
-                      />
-                      <Animated.View
-                        style={[
-                          styles.timelineThumb,
-                          videoAnimatedThumbStyle,
-                          { backgroundColor: tokens.colors.text.primary },
-                        ]}
-                      />
-                    </View>
-                  </GestureDetector>
-                  <Text style={[styles.videoTimeText, { color: tokens.colors.text.secondary }]}>
-                    {formatDuration(videoDuration)}
-                  </Text>
-                </View>
-              ) : null}
-
-              <ChatComposerBar
-                inputRef={captionRef}
-                value={captions[captionId] || ''}
-                onChangeText={(text) => setCaptions((prev) => ({ ...prev, [captionId]: text }))}
-                placeholder="הוסף כיתוב..."
-                maxLength={500}
-                onSend={handleSend}
-                keyboardAppearance={isDarkMode ? 'dark' : 'light'}
-                inputStyle={[styles.captionInput, { color: tokens.colors.text.primary }]}
-                pillStyle={captionPillStyle}
-                leading={
-                  <Pressable
-                    onPress={() => {
-                      Keyboard.dismiss();
-                      setEmojiPickerOpen(true);
-                    }}
-                    style={styles.emojiBtn}
-                    hitSlop={8}
-                    accessibilityRole="button"
-                    accessibilityLabel="אימוג'י"
-                  >
-                    <Ionicons name="happy-outline" size={22} color={tokens.colors.text.primary} />
-                  </Pressable>
-                }
-                trailing={
-                  <View
-                    style={[
-                      styles.sendBtnOuter,
-                      { backgroundColor: tokens.colors.primary.lightCta },
-                    ]}
-                    collapsable={false}
-                  >
-                    <Pressable
-                      onPress={handleSend}
-                      style={({ pressed }) => [
-                        styles.sendBtnTouchable,
-                        pressed ? { opacity: 0.82 } : null,
-                      ]}
-                      accessibilityRole="button"
-                      accessibilityLabel="שליחה"
-                    >
-                      <Ionicons name="send" size={22} color={tokens.colors.text.inverse} />
-                    </Pressable>
-                  </View>
-                }
-              />
-
-              {localFiles.length > 1 ? (
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.thumbnailStrip}
-                  keyboardShouldPersistTaps="handled"
-                >
-                  {localFiles.map((media, index) => (
-                    <Pressable
-                      key={media.id}
-                      onPress={() => {
-                        setCurrentIndex(index);
-                        setIsLoading(true);
-                      }}
-                      style={[
-                        styles.thumbnailContainer,
-                        index === currentIndex && {
-                          borderColor: tokens.colors.primary.main,
-                        },
-                      ]}
-                    >
-                      {media.type === 'image' ? (
-                        <ExpoImage
-                          source={{ uri: media.thumbnail_url || media.uri }}
-                          style={styles.thumbnail}
-                          contentFit="cover"
-                          cachePolicy="memory-disk"
-                          transition={0}
-                        />
-                      ) : media.type === 'video' ? (
-                        <View style={styles.thumbnailVideo}>
-                          <ExpoImage
-                            source={{ uri: media.uri }}
-                            style={styles.thumbnail}
-                            contentFit="cover"
-                            cachePolicy="memory-disk"
-                          />
-                          <View style={styles.thumbnailVideoOverlay}>
-                            <Play size={16} color="#FFFFFF" fill="#FFFFFF" />
-                          </View>
-                        </View>
-                      ) : (
-                        <View
-                          style={[
-                            styles.thumbnail,
-                            styles.thumbnailDocument,
-                            { backgroundColor: tokens.colors.background.primary },
-                          ]}
-                        >
-                          <Ionicons name="document-text" size={24} color={tokens.colors.text.primary} />
-                        </View>
-                      )}
-                      <Pressable
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          removeMedia(media.id);
-                        }}
-                        style={[styles.thumbnailRemove, { backgroundColor: tokens.colors.danger.main }]}
-                        accessibilityRole="button"
-                        accessibilityLabel="הסרת קובץ"
-                      >
-                        <X size={12} color={tokens.colors.text.inverse} strokeWidth={3} />
-                      </Pressable>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-              ) : null}
-            </View>
-          </ChatComposerDock>
-
-          <ReactionPicker
-            visible={emojiPickerOpen}
-            embedded
-            title="אימוג'י"
-            onClose={() => setEmojiPickerOpen(false)}
-            onReaction={(emoji) => {
-              setCaptions((prev) => ({
-                ...prev,
-                [captionId]: `${prev[captionId] || ''}${emoji}`,
-              }));
-              setTimeout(() => captionRef.current?.focus(), 280);
-            }}
-          />
-        </RNAnimatedView>
-      </GestureHandlerRootView>
+      {shell}
     </Modal>
   );
 }
@@ -904,44 +763,40 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   topBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    direction: 'ltr',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
     paddingBottom: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    backgroundColor: 'transparent',
     zIndex: 3,
   },
   iconBtn: {
     width: 44,
     height: 44,
-    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  themeBtn: {
+    borderRadius: 22,
   },
   counterText: {
     ...CHAT_TYPE.groupLabel,
     textAlign: 'center',
   },
-  /** משבצת מעל הקומפוזר — מתכווצת עם המקלדת, בלי לכסות את הכיתוב */
   mediaStage: {
-    flex: 1,
-    minHeight: 0,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-  },
-  mediaSlot: {
-    flex: 1,
-    minHeight: 0,
-    borderRadius: UI_CARD_RADIUS,
-    overflow: 'hidden',
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
   },
   mediaFill: {
-    flex: 1,
-    alignSelf: 'stretch',
-    minHeight: 0,
+    ...StyleSheet.absoluteFillObject,
   },
   fullMediaInner: {
     ...StyleSheet.absoluteFillObject,
@@ -973,30 +828,30 @@ const styles = StyleSheet.create({
     zIndex: 5,
     backgroundColor: 'transparent',
   },
-  composerDock: {
-    zIndex: 2,
+  captionDock: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 8,
+    backgroundColor: 'transparent',
+    zIndex: 3,
   },
-  composerSurface: {
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  sendBtnOuter: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    justifyContent: 'center',
+  captionRow: {
+    direction: 'ltr',
+    flexDirection: 'row',
     alignItems: 'center',
-    flexShrink: 0,
-    marginStart: 8,
-    alignSelf: 'flex-end',
-    marginBottom: 3,
+    backgroundColor: 'transparent',
   },
-  sendBtnTouchable: {
-    width: 46,
-    height: 46,
-    justifyContent: 'center',
+  sendBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sendIcon: {
+    transform: [{ scaleX: -1 }],
   },
   videoControlsRow: {
     flexDirection: 'row',
@@ -1052,6 +907,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   captionInput: {
+    flex: 1,
+    minHeight: 44,
+    marginLeft: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 22,
+    borderWidth: StyleSheet.hairlineWidth,
+    textAlign: 'right',
     ...chatPhysicalRightText,
     ...CHAT_TYPE.cardBody,
   },

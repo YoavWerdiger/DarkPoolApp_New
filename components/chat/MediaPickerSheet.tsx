@@ -131,6 +131,8 @@ export type MediaPickerSheetProps = {
   showCamera?: boolean;
   /** מצלמה מ-fullscreen מחוץ לשיט (מומלץ בצ'אט — Modal אחרי dismiss). */
   onBuiltinCamera?: () => void;
+  /** שליחה מהפריביו של המצלמה, בלי לפתוח פריביו נוסף אחרי חזרה לצ'אט. */
+  onCameraCommit?: (result: { uri: string; width?: number; height?: number; mediaType?: 'image' | 'video'; durationMs?: number }, caption: string) => void | Promise<void>;
 };
 
 export default function MediaPickerSheet({
@@ -149,6 +151,7 @@ export default function MediaPickerSheet({
   cameraLaunch,
   showCamera,
   onBuiltinCamera,
+  onCameraCommit,
 }: MediaPickerSheetProps) {
   const tokens = useDesignTokens();
   const insets = useSafeAreaInsets();
@@ -341,15 +344,17 @@ export default function MediaPickerSheet({
   }, [cameraMode, launchSystem, onBuiltinCamera, onCamera, onClose]);
 
   const onBuiltinCapture = useCallback(
-    (result: { uri: string; width?: number; height?: number }) => {
+    (result: { uri: string; width?: number; height?: number; mediaType?: 'image' | 'video'; durationMs?: number }) => {
+      const isVideo = result.mediaType === 'video';
       const picked: PickedRecentMedia = {
         id: `camera-${Date.now()}`,
         uri: result.uri,
         thumbnailUri: result.uri,
-        type: 'image',
-        name: `photo_${Date.now()}.jpg`,
+        type: isVideo ? 'video' : 'image',
+        name: isVideo ? `video_${Date.now()}.mp4` : `photo_${Date.now()}.jpg`,
         width: result.width,
         height: result.height,
+        duration: result.durationMs != null ? result.durationMs / 1000 : undefined,
       };
       onPickedMedia?.([picked]);
     },
@@ -539,7 +544,6 @@ export default function MediaPickerSheet({
       openSnapIndex={0}
       snapIndex={snapIndex}
       onSnapPointChange={setSnapIndex}
-      useGlassBackground
       showBrandBackground={false}
       showBrandWatermark={false}
       contentPaddingBottom={0}
@@ -647,6 +651,7 @@ export default function MediaPickerSheet({
       visible={cameraOpen}
       onClose={() => setCameraOpen(false)}
       onCapture={onBuiltinCapture}
+      onCommit={onCameraCommit}
     />
     </>
   );

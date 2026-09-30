@@ -2,12 +2,9 @@ import React, { memo, useCallback, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
-import {
-  appBodyTextStyle,
-  appCardSubtitleStyle,
-  appCardTitleStyle,
-} from '../../../components/ui/appType';
+import { APP_TYPE } from '../../../components/ui/appType';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
+import { APP_LAYOUT } from '../../../components/ui/appLayout';
 import type { WatchlistRowData } from '../../../services/watchlist/watchlistTypes';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 import {
@@ -27,6 +24,8 @@ type Props = {
   onDrag?: () => void;
   isActive?: boolean;
 };
+
+export const LOGO_SIZE = 28;
 
 function formatPrice(n: number | null): string {
   if (n == null || !Number.isFinite(n)) return '—';
@@ -54,7 +53,7 @@ function formatVolume(n: number | null): string {
   return `${Math.round(n)}`;
 }
 
-function WatchlistRowInner({ row, index, onPress, onDrag, isActive }: Props) {
+function WatchlistRowInner({ row, onPress, onDrag, isActive }: Props) {
   const tokens = useDesignTokens();
   const symbol = row?.item?.symbol ?? '';
   const company = row?.item?.company_name?.trim() || '';
@@ -79,16 +78,18 @@ function WatchlistRowInner({ row, index, onPress, onDrag, isActive }: Props) {
         // View = מיכל ה-flex (לא Pressable) — אותן עמודות כמו הכותרת
         row: {
           ...quoteRow,
-          paddingVertical: 8,
-          minHeight: 48,
-          borderBottomWidth: 1,
-          borderBottomColor: tokens.colors.border.divider,
+          paddingVertical: APP_LAYOUT.cardTitleToBodyGap,
+          minHeight: 52,
         },
         rowActive: {
-          backgroundColor: tokens.colors.selection.subtle,
-          borderRadius: 10,
+          backgroundColor: tokens.colors.background.cardSolid,
+          borderRadius: APP_LAYOUT.cardPadding,
+          shadowColor: '#000',
+          shadowOpacity: 0.18,
+          shadowRadius: 12,
+          shadowOffset: { width: 0, height: 4 },
+          elevation: 6,
         },
-        rowAlt: { backgroundColor: 'rgba(255,255,255,0.015)' },
         identity: {
           flexDirection: 'row-reverse',
           alignItems: 'center',
@@ -96,8 +97,8 @@ function WatchlistRowInner({ row, index, onPress, onDrag, isActive }: Props) {
           flex: 1,
         },
         logoWrap: {
-          width: 30,
-          height: 30,
+          width: LOGO_SIZE,
+          height: LOGO_SIZE,
           marginLeft: 12,
           position: 'relative',
         },
@@ -119,17 +120,15 @@ function WatchlistRowInner({ row, index, onPress, onDrag, isActive }: Props) {
           alignItems: 'flex-end',
         },
         symbol: {
-          ...appCardTitleStyle,
-          width: undefined,
-          alignSelf: 'flex-end',
+          ...APP_TYPE.cardSubtitle,
+          fontWeight: APP_TYPE.cardTitle.fontWeight,
+          textAlign: 'right',
+          writingDirection: 'ltr',
           color: tokens.colors.text.primary,
-          letterSpacing: 0.15,
         },
         company: {
-          ...appCardSubtitleStyle,
-          width: undefined,
-          alignSelf: 'flex-end',
-          marginTop: 0,
+          ...APP_TYPE.caption2,
+          textAlign: 'right',
           color: tokens.colors.text.secondary,
         },
         cellHit: {
@@ -139,29 +138,29 @@ function WatchlistRowInner({ row, index, onPress, onDrag, isActive }: Props) {
           minHeight: 32,
         },
         num: {
-          ...appBodyTextStyle,
+          ...APP_TYPE.cardSubtitle,
+          fontWeight: APP_TYPE.cardTitle.fontWeight,
+          writingDirection: 'ltr',
+          textAlign: 'right',
           fontVariant: ['tabular-nums'],
           color: tokens.colors.text.primary,
         },
         chg: {
-          ...appCardSubtitleStyle,
-          width: undefined,
-          alignSelf: 'flex-end',
-          marginTop: 0,
+          ...APP_TYPE.caption,
+          writingDirection: 'ltr',
+          textAlign: 'right',
           fontVariant: ['tabular-nums'],
         },
         pct: {
-          ...appCardSubtitleStyle,
-          width: undefined,
-          alignSelf: 'flex-end',
-          marginTop: 0,
+          ...APP_TYPE.caption,
+          writingDirection: 'ltr',
+          textAlign: 'right',
           fontVariant: ['tabular-nums'],
         },
         vol: {
-          ...appCardSubtitleStyle,
-          width: undefined,
-          alignSelf: 'flex-end',
-          marginTop: 0,
+          ...APP_TYPE.caption,
+          writingDirection: 'ltr',
+          textAlign: 'right',
           fontVariant: ['tabular-nums'],
           color: tokens.colors.text.secondary,
         },
@@ -179,23 +178,21 @@ function WatchlistRowInner({ row, index, onPress, onDrag, isActive }: Props) {
 
   return (
     <View
-      style={[
-        styles.row,
-        index % 2 === 1 && !isActive && styles.rowAlt,
-        isActive && styles.rowActive,
-      ]}
+      style={[styles.row, isActive && styles.rowActive]}
       accessibilityRole="button"
       accessibilityLabel={`${symbol} ${company} ${formatPrice(row.price)} ${formatSigned(row.change)} ${formatSigned(row.changePct)}%${hasAlert ? ' עם התראה' : ''}`}
     >
       <View style={colSymbol}>
         <Pressable
           onPress={handlePress}
+          onLongPress={onDrag}
+          delayLongPress={300}
           style={styles.identity}
           accessibilityRole="button"
           accessibilityLabel={symbol}
         >
           <View style={styles.logoWrap}>
-            <TickerLogo symbol={symbol} size={30} />
+            <TickerLogo symbol={symbol} size={LOGO_SIZE} />
             {hasAlert ? (
               <View style={styles.alertBadge} accessibilityLabel="התראה פעילה">
                 <Ionicons name="notifications" size={9} color="#041204" />
@@ -216,15 +213,30 @@ function WatchlistRowInner({ row, index, onPress, onDrag, isActive }: Props) {
       </View>
 
       <View style={colLast}>
-        <Pressable onPress={handlePress} style={styles.cellHit}>
-          <Text style={styles.num} numberOfLines={1}>
+        <Pressable
+          onPress={handlePress}
+          onLongPress={onDrag}
+          delayLongPress={300}
+          style={styles.cellHit}
+        >
+          <Text
+            style={styles.num}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.85}
+          >
             {formatPrice(row.price)}
           </Text>
         </Pressable>
       </View>
 
       <View style={colChg}>
-        <Pressable onPress={handlePress} style={styles.cellHit}>
+        <Pressable
+          onPress={handlePress}
+          onLongPress={onDrag}
+          delayLongPress={300}
+          style={styles.cellHit}
+        >
           <Text style={[styles.chg, { color: tone }]} numberOfLines={1}>
             {formatSigned(row.change)}
           </Text>
@@ -232,7 +244,12 @@ function WatchlistRowInner({ row, index, onPress, onDrag, isActive }: Props) {
       </View>
 
       <View style={colChgPct}>
-        <Pressable onPress={handlePress} style={styles.cellHit}>
+        <Pressable
+          onPress={handlePress}
+          onLongPress={onDrag}
+          delayLongPress={300}
+          style={styles.cellHit}
+        >
           <Text style={[styles.pct, { color: tone }]} numberOfLines={1}>
             {formatSigned(row.changePct)}%
           </Text>
@@ -240,7 +257,12 @@ function WatchlistRowInner({ row, index, onPress, onDrag, isActive }: Props) {
       </View>
 
       <View style={colVol}>
-        <Pressable onPress={handlePress} style={styles.cellHit}>
+        <Pressable
+          onPress={handlePress}
+          onLongPress={onDrag}
+          delayLongPress={300}
+          style={styles.cellHit}
+        >
           <Text style={styles.vol} numberOfLines={1}>
             {formatVolume(row.volume)}
           </Text>
@@ -250,10 +272,8 @@ function WatchlistRowInner({ row, index, onPress, onDrag, isActive }: Props) {
       <View style={colDrag}>
         {onDrag ? (
           <Pressable
-            onPress={() => {
-              void HapticFeedback.selection();
-              onDrag();
-            }}
+            onPressIn={onDrag}
+            delayLongPress={120}
             style={styles.dragHit}
             hitSlop={8}
             accessibilityLabel="סידור מחדש"
@@ -262,7 +282,7 @@ function WatchlistRowInner({ row, index, onPress, onDrag, isActive }: Props) {
             <Ionicons
               name="reorder-three"
               size={20}
-              color={tokens.colors.text.tertiary}
+              color={tokens.colors.text.secondary}
             />
           </Pressable>
         ) : null}

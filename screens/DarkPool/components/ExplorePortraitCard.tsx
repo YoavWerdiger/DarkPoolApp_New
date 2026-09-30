@@ -9,17 +9,30 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { SoftUI } from '../../../components/ui/softUiPalette';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 import type { ExplorePerson } from '../../../services/darkpool/uwExploreService';
 import { formatInsiderDisplayName } from '../utils/investorPlaceholder';
 import { InvestorPortrait } from './InvestorPortrait';
-import { isolateData, toDataIsland } from '../utils/bidi';
-import { DARK_POOL_TYPE, darkPoolPhysicalRightText } from '../darkPoolLayout';
-import {
-  isNegativeReturnMetric,
-  isReturnMetric,
-} from '../utils/exploreDisplay';
+import { hebrewText, ltrNameText } from '../utils/bidi';
+import { DARK_POOL_TYPE } from '../darkPoolLayout';
 import { EXPLORE_PROFILE_CARD } from '../utils/exploreGrid';
+
+const HEBREW_LETTER = /[\u0590-\u05FF]/;
+
+function isolateNumericRuns(text: string): string {
+  return text.replace(/\d+(?:[.,]\d+)*/g, (run) => `\u2066${run}\u2069`);
+}
+
+/** תפקיד או שיוך — לא מונה עסקאות, לא «דיווח», לא מדד. */
+function profileRole(subtitle: string | null | undefined, metric: string | null | undefined): string | null {
+  const raw = subtitle?.trim() ?? '';
+  if (!raw || raw === metric?.trim()) return null;
+  if (raw === 'קונגרס' || raw === 'בכיר' || raw === 'פעילות אחרונה') return null;
+  if (/^דיווח\b/.test(raw)) return null;
+  if (/עסקאות|עוקב/.test(raw)) return null;
+  return raw;
+}
 
 interface Props {
   person: ExplorePerson;
@@ -39,25 +52,9 @@ export const ExplorePortraitCard = memo(function ExplorePortraitCard({
     person.kind === 'insider'
       ? formatInsiderDisplayName(person.name)
       : person.name;
-  const kindFallback = person.subtitle?.trim()
-    ? person.subtitle
-    : person.kind === 'politician'
-      ? 'קונגרס'
-      : person.kind === 'fund_manager'
-        ? 'מנהל קרן'
-        : person.ticker
-          ? toDataIsland(person.ticker.toUpperCase())
-          : 'בכיר';
-
-  const metric = person.metric?.trim() || undefined;
-  const pct = isReturnMetric(metric);
-  const metricColor = !metric
-    ? undefined
-    : pct
-      ? isNegativeReturnMetric(metric)
-        ? tokens.colors.text.danger
-        : tokens.colors.primary.main
-      : 'rgba(255,255,255,0.78)';
+  const nameIsLatin = displayName.trim().length > 0 && !HEBREW_LETTER.test(displayName);
+  const role = profileRole(person.subtitle, person.metric);
+  const roleIsLatin = !!role && !HEBREW_LETTER.test(role);
 
   const content = (
     <View
@@ -74,24 +71,26 @@ export const ExplorePortraitCard = memo(function ExplorePortraitCard({
         priority="high"
       >
         <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.22)', 'rgba(0,0,0,0.88)']}
-          locations={[0, 0.52, 1]}
+          colors={['transparent', 'rgba(0,0,0,0.5)', 'rgba(0,0,0,0.94)']}
+          locations={[0.08, 0.46, 1]}
           start={{ x: 0.5, y: 0 }}
           end={{ x: 0.5, y: 1 }}
           style={styles.footer}
         >
-          <Text style={styles.name} numberOfLines={2}>
-            {displayName}
+          <Text
+            style={[styles.name, nameIsLatin ? styles.nameLatin : styles.nameHebrew]}
+            numberOfLines={2}
+          >
+            {nameIsLatin ? displayName : isolateNumericRuns(displayName)}
           </Text>
-          {metric ? (
-            <Text style={[styles.metric, { color: metricColor }]} numberOfLines={1}>
-              {pct ? isolateData(metric) : metric}
+          {role ? (
+            <Text
+              style={[styles.role, roleIsLatin ? styles.roleLatin : null]}
+              numberOfLines={1}
+            >
+              {roleIsLatin ? role : isolateNumericRuns(role)}
             </Text>
-          ) : (
-            <Text style={styles.subtitle} numberOfLines={1}>
-              {kindFallback}
-            </Text>
-          )}
+          ) : null}
         </LinearGradient>
       </InvestorPortrait>
     </View>
@@ -125,35 +124,39 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     footer: {
       direction: 'ltr',
-      alignItems: 'flex-end',
-      paddingHorizontal: 10,
-      paddingBottom: 8,
-      paddingTop: 36,
+      alignItems: 'stretch',
+      paddingHorizontal: 12,
+      paddingBottom: 10,
+      paddingTop: 72,
+      gap: 0,
     },
     name: {
-      ...darkPoolPhysicalRightText,
       width: '100%',
-      fontSize: DARK_POOL_TYPE.caption.fontSize,
-      lineHeight: DARK_POOL_TYPE.caption.lineHeight,
-      fontWeight: DARK_POOL_TYPE.caption.fontWeight,
+      fontSize: DARK_POOL_TYPE.cardBody.fontSize,
+      lineHeight: DARK_POOL_TYPE.groupLabel.lineHeight,
+      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
+      letterSpacing: DARK_POOL_TYPE.cardTitle.letterSpacing,
       color: '#fff',
+      includeFontPadding: false,
     },
-    subtitle: {
-      ...darkPoolPhysicalRightText,
-      width: '100%',
-      marginTop: 2,
-      fontSize: DARK_POOL_TYPE.caption2.fontSize,
-      lineHeight: DARK_POOL_TYPE.caption2.lineHeight,
-      fontWeight: DARK_POOL_TYPE.caption2.fontWeight,
-      color: 'rgba(255,255,255,0.72)',
+    nameLatin: {
+      ...ltrNameText,
     },
-    metric: {
-      ...darkPoolPhysicalRightText,
+    nameHebrew: {
+      ...hebrewText,
+    },
+    role: {
+      ...hebrewText,
       width: '100%',
-      marginTop: 2,
-      fontSize: DARK_POOL_TYPE.caption.fontSize,
-      lineHeight: DARK_POOL_TYPE.caption.lineHeight,
-      fontWeight: DARK_POOL_TYPE.sectionTitle.fontWeight,
+      fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
+      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
+      color: SoftUI.textSecondary,
+      marginTop: -2,
+      includeFontPadding: false,
+    },
+    roleLatin: {
+      ...ltrNameText,
     },
   });
 }

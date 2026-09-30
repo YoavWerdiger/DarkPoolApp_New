@@ -29,6 +29,8 @@ import {
 } from '../../components/chat/chatInputLayout';
 import { repliesSheetKeyboardShrink } from './repliesSheetKeyboard';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { APP_LAYOUT } from '../../components/ui/appLayout';
+import { APP_TYPE } from '../../components/ui/appType';
 import UICard from '../../components/ui/UICard';
 import BottomSheet, {
   useBottomSheetClose,
@@ -47,9 +49,6 @@ import { legacyAlert } from '../../utils/appDialog';
 import UserAvatarButton from '../../components/profile/UserAvatarButton';
 import UserNameButton from '../../components/profile/UserNameButton';
 import FollowUserButton from '../../components/profile/FollowUserButton';
-import EntityEmbedCard from '../../components/share/EntityEmbedCard';
-import { openUserProfile } from '../../lib/openUserProfile';
-import CommunityPostImage from './CommunityPostImage';
 
 type Props = {
   visible: boolean;
@@ -85,7 +84,6 @@ export default function PostRepliesSheet({
       enablePanDownToClose={panEnabled}
       edgeToEdge
       showHandle
-      useGlassBackground
       showBrandBackground={false}
       showBrandWatermark={false}
       contentPaddingBottom={0}
@@ -329,6 +327,16 @@ function PostRepliesSheetBody({
         contentContainerStyle={styles.listContent}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
+        ItemSeparatorComponent={() => (
+          <View style={[styles.replyDivider, { backgroundColor: tokens.colors.border.divider }]} />
+        )}
+        ListEmptyComponent={
+          !loading ? (
+            <Text style={[styles.emptyText, { color: tokens.colors.text.secondary }]}>
+              עדיין אין תגובות. היו הראשונים להגיב
+            </Text>
+          ) : null
+        }
         ListHeaderComponent={
           loading && replies.length > 0 ? (
             <View style={styles.inlineLoading}>
@@ -347,7 +355,7 @@ function PostRepliesSheetBody({
                 userId={item.author.id}
                 name={item.author.displayName}
                 uri={item.author.avatarUrl}
-                size={32}
+                size={36}
               />
               <View style={styles.replyMain}>
                 <View style={styles.replyMeta}>
@@ -360,30 +368,38 @@ function PostRepliesSheetBody({
                     ]}
                     numberOfLines={1}
                   />
-                  <Text
-                    style={[
-                      styles.replyTime,
-                      { color: tokens.colors.text.tertiary },
-                    ]}
-                  >
-                    {formatPostTime(item.createdAt)}
-                  </Text>
+                  {isMine ? null : <FollowUserButton userId={item.author.id} />}
+                  <View style={styles.replyMetaSpacer} />
                   {isMine ? (
                     <TouchableOpacity
                       onPress={() => handleDelete(item)}
-                      hitSlop={10}
+                      hitSlop={8}
                       accessibilityLabel="מחק תגובה"
+                      style={{
+                        width: 30,
+                        height: 30,
+                        borderRadius: 15,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: tokens.colors.background.primary,
+                      }}
                     >
                       <Ionicons
                         name="trash-outline"
                         size={15}
-                        color={tokens.colors.text.tertiary}
+                        color={tokens.colors.text.secondary}
                       />
                     </TouchableOpacity>
-                  ) : (
-                    <FollowUserButton userId={item.author.id} />
-                  )}
+                  ) : null}
                 </View>
+                <Text
+                  style={[
+                    styles.replyTime,
+                    { color: tokens.colors.text.secondary },
+                  ]}
+                >
+                  {formatPostTime(item.createdAt)}
+                </Text>
                 <Text
                   style={[
                     styles.replyBody,
@@ -406,7 +422,6 @@ function PostRepliesSheetBody({
           <DayNavBlurButton
             onPress={handleClose}
             size={DAY_NAV_BUTTON_SIZE}
-            glassIntensity="subtle"
             style={styles.headerIconButton}
             accessibilityLabel="סגור"
             disabled={busy}
@@ -427,109 +442,6 @@ function PostRepliesSheetBody({
           </View>
           <View style={styles.headerSideSpacer} />
         </View>
-
-        {post ? (
-          <View
-            style={[
-              styles.parentCard,
-              {
-                backgroundColor: tokens.colors.background.tertiary,
-                borderColor: tokens.colors.border.divider,
-              },
-            ]}
-          >
-            <View style={styles.parentHeader}>
-              <UserAvatarButton
-                userId={post.author.id}
-                name={post.author.displayName}
-                uri={post.author.avatarUrl}
-                size={40}
-              />
-              <View style={styles.parentMain}>
-                <View style={styles.parentMeta}>
-                  <UserNameButton
-                    userId={post.author.id}
-                    name={post.author.displayName}
-                    style={[
-                      styles.parentAuthor,
-                      { color: tokens.colors.text.primary },
-                    ]}
-                    numberOfLines={1}
-                  />
-                  {user?.id !== post.author.id ? (
-                    <FollowUserButton userId={post.author.id} />
-                  ) : null}
-                  <Text
-                    style={[
-                      styles.parentTime,
-                      { color: tokens.colors.text.tertiary },
-                    ]}
-                  >
-                    {formatPostTime(post.createdAt)}
-                  </Text>
-                </View>
-              </View>
-            </View>
-            <Text
-              style={[styles.parentBody, { color: tokens.colors.text.primary }]}
-              numberOfLines={4}
-            >
-              {post.body}
-            </Text>
-            {post.mentions?.length ? (
-              <View style={styles.parentMentions}>
-                {post.mentions.map((m) => (
-                  <TouchableOpacity
-                    key={m.userId}
-                    onPress={() => {
-                      openUserProfile(m.userId, { currentUserId: user?.id });
-                    }}
-                    style={[
-                      styles.mentionChip,
-                      { backgroundColor: `${tokens.colors.primary.main}22` },
-                    ]}
-                    accessibilityLabel={`פרופיל של ${m.displayName}`}
-                  >
-                    <Text
-                      style={[
-                        styles.mentionChipText,
-                        { color: tokens.colors.primary.main },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      @{m.displayName.replace(/\s+/g, '')}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            ) : null}
-            {!!post.imageUrl ||
-            (post.attachments?.length ?? 0) > 0 ||
-            post.attachment ? (
-              <View style={styles.parentMedia}>
-                {post.imageUrl ? (
-                  <CommunityPostImage
-                    uri={post.imageUrl}
-                    borderRadius={tokens.borderRadius['2xl']}
-                    maxHeight={220}
-                  />
-                ) : null}
-                {(post.attachments?.length
-                  ? post.attachments
-                  : post.attachment
-                    ? [post.attachment]
-                    : []
-                ).map((att, i) => (
-                  <EntityEmbedCard
-                    key={`${att.ref.type}-${att.ref.id}-${i}`}
-                    attachment={att}
-                    compact
-                  />
-                ))}
-              </View>
-            ) : null}
-          </View>
-        ) : null}
 
         <View style={styles.listWrap}>
           {repliesList}
@@ -552,9 +464,8 @@ function PostRepliesSheetBody({
               <TouchableOpacity onPress={refetch} hitSlop={8}>
                 <Text
                   style={{
-                    color: tokens.colors.primary.main,
-                    fontWeight: '700',
-                    fontSize: 13,
+                    color: tokens.colors.text.primary,
+                    ...APP_TYPE.caption,
                   }}
                 >
                   נסה שוב
@@ -607,19 +518,19 @@ function PostRepliesSheetBody({
               styles.sendBtn,
               {
                 backgroundColor: canSubmit
-                  ? tokens.colors.primary.main
+                  ? tokens.colors.primary.lightCta
                   : tokens.colors.background.primary,
               },
             ]}
             accessibilityLabel="שלח תגובה"
           >
             {busy ? (
-              <ActivityIndicator size="small" color="#fff" />
+              <ActivityIndicator size="small" color={tokens.colors.text.inverse} />
             ) : (
               <Ionicons
                 name="send"
                 size={18}
-                color={canSubmit ? '#fff' : tokens.colors.text.tertiary}
+                color={canSubmit ? tokens.colors.text.inverse : tokens.colors.text.tertiary}
               />
             )}
           </TouchableOpacity>
@@ -645,8 +556,8 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     header: {
       flexDirection: 'row-reverse',
       alignItems: 'center',
-      paddingHorizontal: 16,
-      paddingBottom: 12,
+      paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+      paddingBottom: APP_LAYOUT.cardTitleToBodyGap,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: tokens.colors.border.divider,
       gap: 10,
@@ -654,6 +565,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     headerIconButton: {
       alignSelf: 'center',
+      backgroundColor: tokens.colors.background.primary,
     },
     headerCenter: {
       flex: 1,
@@ -665,79 +577,12 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       height: DAY_NAV_BUTTON_SIZE,
     },
     headerTitle: {
-      fontSize: 20,
-      fontWeight: '800',
-      letterSpacing: -0.35,
+      fontSize: APP_TYPE.sectionTitle.fontSize,
+      fontWeight: APP_TYPE.sectionTitle.fontWeight,
+      lineHeight: APP_TYPE.sectionTitle.lineHeight,
+      letterSpacing: APP_TYPE.sectionTitle.letterSpacing,
       textAlign: 'center',
       writingDirection: 'rtl',
-      width: '100%',
-    },
-    parentCard: {
-      gap: 10,
-      marginHorizontal: 16,
-      marginTop: 16,
-      marginBottom: 16,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      borderRadius: r['2xl'],
-      borderWidth: StyleSheet.hairlineWidth,
-      flexShrink: 0,
-      overflow: 'hidden',
-    },
-    parentHeader: {
-      flexDirection: 'row-reverse',
-      alignItems: 'flex-start',
-      gap: 12,
-    },
-    parentMain: {
-      flex: 1,
-      minWidth: 0,
-      gap: 4,
-    },
-    parentMeta: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      gap: 8,
-      flexWrap: 'wrap',
-    },
-    parentAuthor: {
-      fontSize: 14,
-      fontWeight: '700',
-      flexShrink: 1,
-      textAlign: 'right',
-      writingDirection: 'rtl',
-    },
-    parentTime: {
-      fontSize: 12,
-      textAlign: 'right',
-      writingDirection: 'rtl',
-    },
-    parentBody: {
-      fontSize: 14,
-      lineHeight: 20,
-      textAlign: 'right',
-      writingDirection: 'rtl',
-    },
-    parentMentions: {
-      flexDirection: 'row-reverse',
-      flexWrap: 'wrap',
-      gap: 6,
-    },
-    mentionChip: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: r.button,
-    },
-    mentionChipText: {
-      fontSize: 12,
-      fontWeight: '700',
-      writingDirection: 'rtl',
-      textAlign: 'right',
-    },
-    parentMedia: {
-      gap: 8,
       width: '100%',
     },
     listWrap: {
@@ -749,9 +594,8 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       flex: 1,
     },
     listContent: {
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      paddingBottom: 20,
+      paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+      paddingBottom: APP_LAYOUT.screenPaddingHorizontal,
     },
     listLoading: {
       flex: 1,
@@ -765,35 +609,47 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     replyRow: {
       flexDirection: 'row-reverse',
-      gap: 10,
+      gap: 12,
       alignItems: 'flex-start',
-      marginBottom: 14,
+      paddingVertical: APP_LAYOUT.cardPadding,
+    },
+    replyDivider: {
+      height: 1,
+    },
+    emptyText: {
+      ...APP_TYPE.body,
+      textAlign: 'center',
+      writingDirection: 'rtl',
+      paddingVertical: APP_LAYOUT.sectionGap,
     },
     replyMain: {
       flex: 1,
       minWidth: 0,
-      gap: 4,
     },
     replyMeta: {
       flexDirection: 'row-reverse',
       alignItems: 'center',
-      gap: 8,
+      gap: APP_LAYOUT.stackGapSmall,
+    },
+    replyMetaSpacer: {
+      flex: 1,
     },
     replyName: {
-      fontSize: 14,
-      fontWeight: '700',
+      fontSize: APP_TYPE.cardTitle.fontSize,
+      lineHeight: APP_TYPE.cardTitle.lineHeight,
+      fontWeight: APP_TYPE.cardTitle.fontWeight,
       flexShrink: 1,
       textAlign: 'right',
       writingDirection: 'rtl',
     },
     replyTime: {
-      fontSize: 12,
+      ...APP_TYPE.caption,
       textAlign: 'right',
       writingDirection: 'rtl',
     },
     replyBody: {
-      fontSize: 14,
-      lineHeight: 20,
+      ...APP_TYPE.cardBody,
+      marginTop: APP_LAYOUT.stackGapSmall,
       textAlign: 'right',
       writingDirection: 'rtl',
     },
@@ -811,7 +667,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     bannerText: {
       flex: 1,
-      fontSize: 13,
+      ...APP_TYPE.cardSubtitle,
       textAlign: 'right',
       writingDirection: 'rtl',
     },
@@ -847,9 +703,8 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     composerInput: {
       minHeight: 44,
       maxHeight: 110,
-      fontSize: 15,
-      lineHeight: 21,
-      paddingHorizontal: 14,
+      ...APP_TYPE.body,
+      paddingHorizontal: APP_LAYOUT.cardPadding,
       paddingVertical: 11,
       writingDirection: 'rtl',
       textAlign: 'right',

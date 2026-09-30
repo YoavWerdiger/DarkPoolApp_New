@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Modal,
   View,
@@ -9,20 +9,25 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Pressable,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { useDesignTokens } from '../../../components/ui/DesignTokens';
-import UICard from '../../../components/ui/UICard';
-import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../../components/ui/DayNavBlurButton';
-import { ChatSessionBackdrop } from '../../../components/chat/ChatSessionBackdrop';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { useDesignTokens } from "../../../components/ui/DesignTokens";
+import { LIGHT_CANVAS } from "../../../components/ui/designTokensStatic";
+import { SheetSurfaceProvider } from "../../../components/ui/BottomSheet/sheetSurface";
+import { APP_TYPE } from "../../../components/ui/appType";
+import { APP_LAYOUT } from "../../../components/ui/appLayout";
+import {
+  DayNavBlurButton,
+  DRAWER_MENU_BUTTON_SIZE,
+} from "../../../components/ui/DayNavBlurButton";
 import {
   searchSymbols,
   type SymbolSearchResult,
-} from '../../../services/portfolios/portfolioPriceFeed';
-import { hebrewAssetTypeLabel } from '../../../services/portfolios/symbolSearchFilter';
-import { TickerLogo } from './TickerLogo';
-import { HapticFeedback } from '../../../utils/hapticFeedback';
+} from "../../../services/portfolios/portfolioPriceFeed";
+import { hebrewAssetTypeLabel } from "../../../services/portfolios/symbolSearchFilter";
+import { TickerLogo } from "./TickerLogo";
+import { HapticFeedback } from "../../../utils/hapticFeedback";
 
 interface Props {
   visible: boolean;
@@ -35,14 +40,14 @@ interface Props {
  */
 export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
   const tokens = useDesignTokens();
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const [results, setResults] = useState<SymbolSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!visible) {
-      setQuery('');
+      setQuery("");
       setResults([]);
     }
   }, [visible]);
@@ -70,138 +75,127 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
       StyleSheet.create({
         outer: {
           flex: 1,
-          backgroundColor: 'transparent',
-          direction: 'rtl',
+          backgroundColor: tokens.colors.background.cardSolid,
+          direction: "rtl",
         },
         safe: {
           flex: 1,
-          backgroundColor: 'transparent',
         },
         header: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          paddingHorizontal: tokens.layout.screenPadding,
-          paddingVertical: 12,
-          gap: 10,
+          flexDirection: "row",
+          alignItems: "center",
+          paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+          paddingTop: APP_LAYOUT.cardPadding,
+          paddingBottom: APP_LAYOUT.stackGapSmall,
+          gap: APP_LAYOUT.stackGapSmall,
         },
-        searchCard: {
+        title: {
+          ...APP_TYPE.screenTitle,
           flex: 1,
-          borderRadius: tokens.borderRadius.search,
-          overflow: 'hidden',
+          textAlign: "center",
+          writingDirection: "rtl",
+          color: tokens.colors.text.primary,
+        },
+        headerSide: {
+          width: DRAWER_MENU_BUTTON_SIZE,
+        },
+        searchWrap: {
+          paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+          paddingTop: APP_LAYOUT.stackGapSmall,
         },
         searchInner: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          paddingHorizontal: 14,
-          paddingVertical: 12,
-          gap: 8,
+          flexDirection: "row",
+          alignItems: "center",
+          height: 48,
+          paddingHorizontal: APP_LAYOUT.cardPadding,
+          gap: APP_LAYOUT.stackGapSmall,
+          borderRadius: tokens.borderRadius.full,
+          backgroundColor: tokens.colors.background.primary,
         },
         searchInput: {
+          ...APP_TYPE.cardBody,
           flex: 1,
-          fontSize: 15,
-          fontWeight: '500',
           color: tokens.colors.text.primary,
-          direction: 'ltr',
-          textAlign: 'right',
-          writingDirection: 'rtl',
+          textAlign: "right",
+          writingDirection: "rtl",
           padding: 0,
-        },
-        hint: {
-          paddingHorizontal: tokens.layout.screenPadding,
-          paddingBottom: 8,
-          color: tokens.colors.text.tertiary,
-          fontSize: 12,
-          fontWeight: '500',
-          direction: 'ltr',
-          textAlign: 'right',
-          writingDirection: 'rtl',
         },
         list: {
           flex: 1,
-          backgroundColor: 'transparent',
         },
         listContent: {
-          paddingHorizontal: tokens.layout.screenPadding,
-          paddingTop: 4,
-          paddingBottom: 32,
+          paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+          paddingTop: APP_LAYOUT.stackGapSmall,
+          paddingBottom: APP_LAYOUT.sectionGap,
         },
-        rowCard: {
-          overflow: 'hidden',
-          marginBottom: 12,
+        divider: {
+          height: 1,
+          backgroundColor: tokens.colors.border.divider,
         },
         rowInner: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          paddingVertical: 15,
-          paddingHorizontal: 16,
-          gap: 12,
+          flexDirection: "row",
+          alignItems: "center",
+          paddingVertical: APP_LAYOUT.cardTitleToBodyGap,
+          gap: APP_LAYOUT.cardTitleToBodyGap,
         },
         rowPressed: {
-          opacity: 0.9,
+          opacity: 0.7,
         },
         textBlock: {
           flex: 1,
           minWidth: 0,
-          alignItems: 'flex-start',
-          gap: 2,
+          alignItems: "flex-start",
         },
         symbolText: {
-          fontSize: 16,
-          fontWeight: '700',
+          ...APP_TYPE.cardBody,
+          fontWeight: APP_TYPE.cardTitle.fontWeight,
           color: tokens.colors.text.primary,
-          writingDirection: 'ltr',
-          textAlign: 'left',
+          writingDirection: "ltr",
+          textAlign: "left",
         },
         descriptionText: {
-          fontSize: 12,
-          fontWeight: '500',
-          color: tokens.colors.text.tertiary,
-          direction: 'ltr',
-          textAlign: 'right',
-          writingDirection: 'rtl',
+          ...APP_TYPE.caption,
+          color: tokens.colors.text.secondary,
+          textAlign: "left",
+          writingDirection: "ltr",
         },
         typeChip: {
-          paddingVertical: 5,
+          height: 24,
+          justifyContent: "center",
           paddingHorizontal: 10,
           borderRadius: tokens.borderRadius.full,
-          backgroundColor: tokens.colors.primary.dim,
-          borderWidth: 0,
-          borderColor: tokens.colors.border.accent,
+          backgroundColor: tokens.colors.background.primary,
         },
         typeChipText: {
-          fontSize: 11,
-          fontWeight: '700',
-          color: tokens.colors.primary.main,
+          ...APP_TYPE.cardMetricLabel,
+          color: tokens.colors.text.secondary,
         },
         emptyState: {
-          alignItems: 'center',
-          paddingTop: 72,
-          paddingHorizontal: 28,
-          gap: 10,
+          alignItems: "center",
+          paddingTop: APP_LAYOUT.sectionGap * 2,
+          paddingHorizontal: APP_LAYOUT.sectionGap,
+          gap: APP_LAYOUT.componentGap,
         },
         emptyIcon: {
           width: 56,
           height: 56,
           borderRadius: 28,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: tokens.colors.background.tertiary,
-          marginBottom: 4,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: tokens.colors.background.primary,
         },
         emptyText: {
-          fontSize: 14,
-          fontWeight: '500',
-          color: tokens.colors.text.tertiary,
-          textAlign: 'center',
-          writingDirection: 'rtl',
-          lineHeight: 20,
+          ...APP_TYPE.cardBody,
+          color: tokens.colors.text.secondary,
+          textAlign: "center",
+          writingDirection: "rtl",
         },
         loadingWrap: {
-          paddingVertical: 20,
-          alignItems: 'center',
+          paddingVertical: APP_LAYOUT.componentGap,
+          alignItems: "center",
         },
       }),
-    [tokens]
+    [tokens],
   );
 
   return (
@@ -211,36 +205,46 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
       onRequestClose={onClose}
       presentationStyle="pageSheet"
     >
-      <View style={styles.outer}>
-        <ChatSessionBackdrop local />
-        <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-          <View style={styles.header}>
-            <DayNavBlurButton
-              onPress={() => {
-                void HapticFeedback.impactLight();
-                onClose();
-              }}
-              glassIntensity="subtle"
-              size={DRAWER_MENU_BUTTON_SIZE}
-              accessibilityLabel="סגור"
-            >
-              <Ionicons name="close" size={22} color={tokens.colors.text.primary} />
-            </DayNavBlurButton>
+      <SheetSurfaceProvider>
+        <View style={styles.outer}>
+          <SafeAreaView style={styles.safe} edges={["bottom"]}>
+            <View style={styles.header}>
+              <View style={styles.headerSide} />
+              <Text style={styles.title}>הוספת מניה</Text>
+              <DayNavBlurButton
+                onPress={() => {
+                  void HapticFeedback.impactLight();
+                  onClose();
+                }}
+                size={DRAWER_MENU_BUTTON_SIZE}
+                accessibilityLabel="סגור"
+              >
+                <Ionicons
+                  name="close"
+                  size={22}
+                  color={tokens.colors.text.primary}
+                />
+              </DayNavBlurButton>
+            </View>
 
-            <UICard
-              variant="soft"
-              glassIntensity="light"
-              padding="none"
-              style={styles.searchCard}
-            >
+            <View style={styles.searchWrap}>
               <View style={styles.searchInner}>
-                <Ionicons name="search" size={18} color={tokens.colors.text.tertiary} />
+                <Ionicons
+                  name="search"
+                  size={18}
+                  color={tokens.colors.text.secondary}
+                />
                 <TextInput
                   style={styles.searchInput}
                   value={query}
                   onChangeText={setQuery}
                   placeholder="חפש מניה: AAPL, Apple, NVDA…"
                   placeholderTextColor={tokens.colors.text.tertiary}
+                  keyboardAppearance={
+                    tokens.colors.background.primary === LIGHT_CANVAS
+                      ? "light"
+                      : "dark"
+                  }
                   autoFocus
                   autoCapitalize="characters"
                   autoCorrect={false}
@@ -250,71 +254,63 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
                   <TouchableOpacity
                     onPress={() => {
                       void HapticFeedback.selection();
-                      setQuery('');
+                      setQuery("");
                     }}
                     hitSlop={10}
                   >
                     <Ionicons
                       name="close-circle"
                       size={18}
-                      color={tokens.colors.text.tertiary}
+                      color={tokens.colors.text.secondary}
                     />
                   </TouchableOpacity>
                 ) : null}
               </View>
-            </UICard>
-          </View>
-
-          <Text style={styles.hint}>מניות ו־ETF אמריקאיים · בלי בורסות זרות</Text>
-
-          {loading ? (
-            <View style={styles.loadingWrap}>
-              <ActivityIndicator color={tokens.colors.primary.main} />
             </View>
-          ) : null}
 
-          {!loading && results.length === 0 ? (
-            <View style={styles.emptyState}>
-              <View style={styles.emptyIcon}>
-                <Ionicons
-                  name="search-outline"
-                  size={26}
-                  color={tokens.colors.text.tertiary}
-                />
+
+            {loading ? (
+              <View style={styles.loadingWrap}>
+                <ActivityIndicator color={tokens.colors.primary.main} />
               </View>
-              <Text style={styles.emptyText}>
-                {query
-                  ? 'לא נמצאו מניות רלוונטיות. נסו סימבול אמריקאי (AAPL) או שם באנגלית.'
-                  : 'הקלידו סימבול או שם חברה כדי להוסיף לרשימה.'}
-              </Text>
-            </View>
-          ) : null}
+            ) : null}
 
-          <FlatList
-            style={styles.list}
-            contentContainerStyle={styles.listContent}
-            data={results}
-            keyExtractor={(item) => item.symbol}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-            renderItem={({ item }) => (
-              <Pressable
-                onPress={() => {
-                  void HapticFeedback.impactLight();
-                  onSelect(item);
-                  onClose();
-                }}
-                style={({ pressed }) => [pressed && styles.rowPressed]}
-              >
-                <UICard
-                  variant="soft"
-                  glassIntensity="light"
-                  padding="none"
-                  style={styles.rowCard}
-                  haptic={false}
+            {!loading && results.length === 0 ? (
+              <View style={styles.emptyState}>
+                <View style={styles.emptyIcon}>
+                  <Ionicons
+                    name="search-outline"
+                    size={26}
+                    color={tokens.colors.text.secondary}
+                  />
+                </View>
+                <Text style={styles.emptyText}>
+                  {query
+                    ? "לא נמצאו מניות רלוונטיות. נסו סימבול אמריקאי (AAPL) או שם באנגלית."
+                    : "הקלידו סימבול או שם חברה כדי להוסיף לרשימה."}
+                </Text>
+              </View>
+            ) : null}
+
+            <FlatList
+              style={styles.list}
+              contentContainerStyle={styles.listContent}
+              data={results}
+              keyExtractor={(item) => item.symbol}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              ItemSeparatorComponent={() => <View style={styles.divider} />}
+              renderItem={({ item }) => (
+                <Pressable
+                  onPress={() => {
+                    void HapticFeedback.impactLight();
+                    onSelect(item);
+                    onClose();
+                  }}
+                  style={({ pressed }) => [pressed && styles.rowPressed]}
                 >
                   <View style={styles.rowInner}>
-                    <TickerLogo symbol={item.symbol} size={40} />
+                    <TickerLogo symbol={item.symbol} size={36} />
                     <View style={styles.textBlock}>
                       <Text style={styles.symbolText}>
                         {item.display_symbol || item.symbol}
@@ -329,12 +325,12 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
                       </Text>
                     </View>
                   </View>
-                </UICard>
-              </Pressable>
-            )}
-          />
-        </SafeAreaView>
-      </View>
+                </Pressable>
+              )}
+            />
+          </SafeAreaView>
+        </View>
+      </SheetSurfaceProvider>
     </Modal>
   );
 }

@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { APP_LAYOUT } from '../../components/ui/appLayout';
-import { appSectionTitleStyle } from '../../components/ui/appType';
+import { APP_TYPE, appSectionTitleStyle } from '../../components/ui/appType';
 import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import BreakingNewsTab from './BreakingNewsTab';
 import { NewsScreenShell } from './NewsScreenShell';

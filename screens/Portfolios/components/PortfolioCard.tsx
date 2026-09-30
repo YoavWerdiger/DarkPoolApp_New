@@ -1,30 +1,26 @@
-import React from 'react';
-import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import Svg, { Circle, Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import UICard from '../../../components/ui/UICard';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 import type { Portfolio, PortfolioSummary } from '../portfolioTypes';
-import {
-  formatCurrency,
-  formatPercent,
-  formatRelative,
-  gainColor,
-  winRateColor,
-} from '../utils/format';
+import { formatCurrency, formatRelative } from '../utils/format';
 import {
   JOURNAL_LAYOUT,
-  journalCaption2Style,
+  JOURNAL_TYPE,
   journalCardMetricLabelStyle,
-  journalCardMetricValueSecondaryStyle,
   journalCardMetricValueStyle,
   journalCardSubtitleStyle,
-  journalCardTitleStyle,
+  journalHebrewText,
   journalRow,
   journalRtlContent,
 } from '../../Journal/journalLayout';
 
 const HEBREW_LETTER = /[\u0590-\u05FF]/;
+const SNAPSHOT_H = 56;
+const SNAPSHOT_PAD = 2;
 
 /** שם לועזי נשאר LTR ומיושר לימין — writingDirection rtl מדביק אותו לשורת «עודכן». */
 function portfolioNameIsLatin(name: string): boolean {
@@ -32,40 +28,62 @@ function portfolioNameIsLatin(name: string): boolean {
   return trimmed.length > 0 && !HEBREW_LETTER.test(trimmed);
 }
 
+/** המספר נשאר צמוד למילה («תיק 001»), לא קופץ לקצה השמאלי. */
+function isolateNumericRuns(text: string): string {
+  return text.replace(/\d+(?:[.,]\d+)*/g, (run) => `\u2066${run}\u2069`);
+}
+
+function snapshotGeometry(values: number[], width: number) {
+  if (values.length < 2 || width < 8) return null;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const innerW = width - SNAPSHOT_PAD * 2;
+  const innerH = SNAPSHOT_H - SNAPSHOT_PAD * 2;
+  const points = values.map((value, index) => ({
+    x: SNAPSHOT_PAD + (index / (values.length - 1)) * innerW,
+    y: SNAPSHOT_PAD + (1 - (value - min) / span) * innerH,
+  }));
+  const line = points
+    .map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x.toFixed(1)},${point.y.toFixed(1)}`)
+    .join(' ');
+  const last = points[points.length - 1];
+  const first = points[0];
+  const area = `${line} L${last.x.toFixed(1)},${SNAPSHOT_H} L${first.x.toFixed(1)},${SNAPSHOT_H} Z`;
+  return { line, area, end: last };
+}
+
 interface Props {
   portfolio: Portfolio;
   summary: PortfolioSummary | null;
+  /** נקודות שווי אמיתיות. בלי שתי נקודות אין קו. */
+  sparklineValues?: number[] | null;
   onPress: () => void;
   onLongPress?: () => void;
 }
 
 /**
- * כרטיס תיק – מציג את הנתונים העיקריים בצורה מודרנית.
- *  - שם + תאריך עדכון
- *  - שווי תיק (כמו במסך הפירוט) — תווית צמודה למספר
- *  - 3 KPIs קטנים: Daily / Total / אחוז הצלחה
- *
- * RTL: עץ direction:rtl + row (לא row-reverse).
- * כותרת עברית: journalCardTitleStyle (ימין פיזי). שם לועזי: writingDirection ltr, אותו יישור.
- * משנה: marginTop 2 מתוך journalCardSubtitleStyle — בלי gap נוסף על העמודה.
- * שווי: 28. שורת מדדים: תווית 12 וערך 20 על אותו קו, בלי שבירת «אחוז הצלחה».
+ * כרטיס תיק ברשימה — שם, עדכון ושווי.
+ * בלי אייקון ובלי שורת מדדים. הסנאפשוט יושב על הכרטיס, ליד השווי.
  */
-export function PortfolioCard({ portfolio, summary, onPress, onLongPress }: Props) {
+export function PortfolioCard({
+  portfolio,
+  summary,
+  sparklineValues,
+  onPress,
+  onLongPress,
+}: Props) {
   const tokens = useDesignTokens();
   const latinName = portfolioNameIsLatin(portfolio.name);
-
-  const positive = tokens.colors.primary.main;
-  const negative = tokens.colors.text.danger;
-  const neutral = tokens.colors.text.secondary;
-
-  const dailyColor = gainColor(summary?.daily_gain ?? null, positive, negative, neutral);
-  const totalColor = gainColor(summary?.total_gain ?? null, positive, negative, neutral);
-  const winRateC = winRateColor(
-    summary?.win_rate_pct ?? null,
-    positive,
-    negative,
-    neutral
+  const [snapshotWidth, setSnapshotWidth] = React.useState(0);
+  const snapshot = useMemo(
+    () => snapshotGeometry(sparklineValues ?? [], snapshotWidth),
+    [sparklineValues, snapshotWidth],
   );
+  const lineColor =
+    sparklineValues && sparklineValues.length >= 2 && sparklineValues[sparklineValues.length - 1] < sparklineValues[0]
+      ? tokens.colors.text.danger
+      : tokens.colors.primary.main;
 
   return (
     <View style={styles.rowOuter}>
@@ -92,58 +110,24 @@ export function PortfolioCard({ portfolio, summary, onPress, onLongPress }: Prop
         >
           <View style={styles.cardInner}>
             <View style={styles.header}>
-              <View
-                style={[
-                  styles.iconWrap,
-                  { backgroundColor: tokens.colors.background.tertiary },
-                  portfolio.source === 'colmex_pro' && styles.iconWrapLogo,
-                ]}
-              >
-                {portfolio.source === 'colmex_pro' ? (
-                  <Image
-                    source={require('../../../assets/colmex-logo.png')}
-                    style={styles.brokerLogo}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <Ionicons name="briefcase" size={20} color={tokens.colors.text.primary} />
-                )}
-              </View>
-              <View style={styles.headerText}>
-                <View style={styles.titleRow}>
-                  <View style={styles.titleBlock}>
-                    <Text
-                      style={[
-                        styles.title,
-                        { color: tokens.colors.text.primary },
-                        latinName && styles.titleLatin,
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {portfolio.name}
-                    </Text>
-                    <Text
-                      style={[styles.meta, { color: tokens.colors.text.secondary }]}
-                      numberOfLines={1}
-                    >
-                      עודכן {formatRelative(portfolio.updated_at)}
-                    </Text>
-                  </View>
-                  {portfolio.source === 'colmex_pro' ? (
-                    <View
-                      style={[
-                        styles.brokerBadge,
-                        { backgroundColor: 'rgba(0, 200, 5, 0.15)' },
-                      ]}
-                    >
-                      <Ionicons name="sync" size={10} color={tokens.colors.primary.main} />
-                      <Text
-                        style={[styles.brokerBadgeText, { color: tokens.colors.primary.main }]}
-                      >
-                        Colmex
-                      </Text>
-                    </View>
-                  ) : null}
+              <View style={styles.titleBlock}>
+                <Text
+                  style={[
+                    styles.title,
+                    { color: tokens.colors.text.primary },
+                    latinName ? styles.titleLatin : styles.titleHebrew,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {latinName ? portfolio.name : isolateNumericRuns(portfolio.name)}
+                </Text>
+                <View style={styles.metaRow}>
+                  <Text
+                    style={[styles.meta, { color: tokens.colors.text.secondary }]}
+                    numberOfLines={1}
+                  >
+                    {isolateNumericRuns(`עודכן ${formatRelative(portfolio.updated_at)}`)}
+                  </Text>
                 </View>
               </View>
               <Ionicons
@@ -153,51 +137,37 @@ export function PortfolioCard({ portfolio, summary, onPress, onLongPress }: Prop
               />
             </View>
 
-            <View style={styles.valueRow}>
-              <Text style={[styles.valueLabel, { color: tokens.colors.text.secondary }]}>
-                שווי תיק
-              </Text>
-              <Text style={[styles.valueAmount, { color: tokens.colors.text.primary }]}>
-                {summary ? formatCurrency(summary.total_value, portfolio.currency) : '—'}
-              </Text>
-            </View>
-
-            <View style={[styles.kpiRow, { borderTopColor: tokens.colors.border.divider }]}>
-              <View style={styles.kpi}>
-                <Text
-                  style={[styles.kpiLabel, { color: tokens.colors.text.secondary }]}
-                  numberOfLines={1}
+            <View style={[styles.valueRow, !(sparklineValues && sparklineValues.length >= 2) && styles.valueRowPlain]}>
+              {sparklineValues && sparklineValues.length >= 2 ? (
+                <View
+                  style={styles.snapshot}
+                  onLayout={(event) => {
+                    const next = Math.round(event.nativeEvent.layout.width);
+                    if (next !== snapshotWidth) setSnapshotWidth(next);
+                  }}
                 >
-                  יומי
+                  {snapshot ? (
+                    <Svg width={snapshotWidth} height={SNAPSHOT_H}>
+                      <Path d={snapshot.area} fill={lineColor} fillOpacity={0.16} />
+                      <Path
+                        d={snapshot.line}
+                        stroke={lineColor}
+                        strokeWidth={2.5}
+                        fill="none"
+                        strokeLinejoin="round"
+                        strokeLinecap="round"
+                      />
+                      <Circle cx={snapshot.end.x} cy={snapshot.end.y} r={3} fill={lineColor} />
+                    </Svg>
+                  ) : null}
+                </View>
+              ) : null}
+              <View style={styles.valueBlock}>
+                <Text style={[styles.valueLabel, { color: tokens.colors.text.secondary }]}>
+                  שווי תיק
                 </Text>
-                <Text style={[styles.kpiValue, { color: dailyColor }]} numberOfLines={1}>
-                  {summary ? formatPercent(summary.daily_gain_pct) : '—'}
-                </Text>
-              </View>
-              <View style={[styles.divider, { backgroundColor: tokens.colors.border.divider }]} />
-              <View style={styles.kpi}>
-                <Text
-                  style={[styles.kpiLabel, { color: tokens.colors.text.secondary }]}
-                  numberOfLines={1}
-                >
-                  רווח כולל
-                </Text>
-                <Text style={[styles.kpiValue, { color: totalColor }]} numberOfLines={1}>
-                  {summary ? formatPercent(summary.total_gain_pct) : '—'}
-                </Text>
-              </View>
-              <View style={[styles.divider, { backgroundColor: tokens.colors.border.divider }]} />
-              <View style={[styles.kpi, styles.kpiFit]}>
-                <Text
-                  style={[styles.kpiLabel, { color: tokens.colors.text.secondary }]}
-                  numberOfLines={1}
-                >
-                  אחוז הצלחה
-                </Text>
-                <Text style={[styles.kpiValue, { color: winRateC }]} numberOfLines={1}>
-                  {summary?.win_rate_pct != null && isFinite(summary.win_rate_pct)
-                    ? formatPercent(summary.win_rate_pct, 1, false)
-                    : '—'}
+                <Text style={[styles.valueAmount, { color: tokens.colors.text.primary }]}>
+                  {summary ? formatCurrency(summary.total_value, portfolio.currency) : '—'}
                 </Text>
               </View>
             </View>
@@ -209,7 +179,6 @@ export function PortfolioCard({ portfolio, summary, onPress, onLongPress }: Prop
 }
 
 const styles = StyleSheet.create({
-  /** מרווח אנכי בין כרטיסים (FlatList לא תמיד מכבד `gap` בכל הפלטפורמות) */
   rowOuter: {
     marginBottom: JOURNAL_LAYOUT.cardStackGap,
   },
@@ -223,32 +192,7 @@ const styles = StyleSheet.create({
   header: {
     ...journalRow,
     alignItems: 'center',
-    marginBottom: JOURNAL_LAYOUT.cardTitleToBodyGap,
-  },
-  iconWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    marginLeft: 12,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconWrapLogo: {
-    backgroundColor: '#FFFFFF',
-    overflow: 'hidden',
-  },
-  brokerLogo: { width: 38, height: 38 },
-  headerText: {
-    flex: 1,
-    minWidth: 0,
-    alignItems: 'stretch',
-  },
-  titleRow: {
-    ...journalRow,
-    alignItems: 'flex-start',
-    gap: 8,
-    width: '100%',
+    gap: 12,
   },
   titleBlock: {
     flex: 1,
@@ -257,95 +201,70 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
   },
   title: {
-    ...journalCardTitleStyle,
+    width: '100%',
+    alignSelf: 'stretch',
     flexShrink: 1,
     minWidth: 0,
+    fontSize: JOURNAL_TYPE.cardTitle.fontSize,
+    fontWeight: JOURNAL_TYPE.cardTitle.fontWeight,
+    lineHeight: JOURNAL_TYPE.cardTitle.lineHeight,
+    letterSpacing: JOURNAL_TYPE.cardTitle.letterSpacing,
     includeFontPadding: false,
   },
-  /** שם לועזי: אותו textAlign right, בלי writingDirection rtl שמדביק את השורה הבאה. */
+  titleHebrew: {
+    ...journalHebrewText,
+  },
   titleLatin: {
+    direction: 'ltr',
     writingDirection: 'ltr',
+    textAlign: 'right',
   },
-  brokerBadge: {
-    ...journalRow,
+  metaRow: {
+    width: '100%',
+    marginTop: JOURNAL_LAYOUT.cardTitleToSubtitleGap,
+    direction: 'ltr',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
-    flexShrink: 0,
-  },
-  brokerBadgeText: {
-    ...journalCaption2Style,
-    writingDirection: 'ltr',
-    textAlign: 'left',
+    gap: 6,
   },
   meta: {
     ...journalCardSubtitleStyle,
+    width: undefined,
+    flexShrink: 1,
+    marginTop: 0,
+    textAlign: 'right',
     includeFontPadding: false,
   },
-  /**
-   * כמו analyticsCell / PortfolioValueChart — LTR מקומי + flex-end
-   * דוחף תווית+שווי לימין הפיזי (לא textAlign בלבד בתוך RTL).
-   */
   valueRow: {
-    width: '100%',
-    alignSelf: 'stretch',
+    marginTop: JOURNAL_LAYOUT.cardTitleToBodyGap,
+    direction: 'ltr',
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 16,
+  },
+  valueRowPlain: {
+    justifyContent: 'flex-end',
+  },
+  snapshot: {
+    flex: 1,
+    height: SNAPSHOT_H,
+    minWidth: 0,
+  },
+  valueBlock: {
     direction: 'ltr',
     alignItems: 'flex-end',
-    marginBottom: 0,
   },
   valueLabel: {
-    maxWidth: '100%',
     ...journalCardMetricLabelStyle,
     marginBottom: JOURNAL_LAYOUT.cardMetricLabelToValueGap,
     textAlign: 'right',
     includeFontPadding: false,
   },
   valueAmount: {
-    maxWidth: '100%',
     ...journalCardMetricValueStyle,
-    writingDirection: 'ltr',
     textAlign: 'right',
     includeFontPadding: false,
     fontVariant: ['tabular-nums'],
-  },
-  kpiRow: {
-    ...journalRow,
-    alignItems: 'stretch',
-    paddingTop: JOURNAL_LAYOUT.cardTitleToBodyGap,
-    marginTop: JOURNAL_LAYOUT.cardTitleToBodyGap,
-    borderTopWidth: 1,
-  },
-  kpi: {
-    flexGrow: 1,
-    flexShrink: 1,
-    flexBasis: 0,
-    minWidth: 0,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-  },
-  /** «אחוז הצלחה» לא נדחס לשתי שורות — שאר הערכים נשארים על אותו קו. */
-  kpiFit: {
-    flexShrink: 0,
-    flexBasis: 'auto',
-  },
-  kpiLabel: {
-    ...journalCardMetricLabelStyle,
-    textAlign: 'center',
-    includeFontPadding: false,
-  },
-  kpiValue: {
-    ...journalCardMetricValueSecondaryStyle,
-    marginTop: JOURNAL_LAYOUT.cardMetricLabelToValueGap,
-    writingDirection: 'ltr',
-    textAlign: 'center',
-    includeFontPadding: false,
-    fontVariant: ['tabular-nums'],
-  },
-  divider: {
-    width: 1,
-    alignSelf: 'stretch',
-    marginVertical: 2,
   },
 });

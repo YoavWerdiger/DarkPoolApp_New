@@ -100,7 +100,9 @@ function InfoRow({
     >
       <Text
         style={{
-          ...journalCaptionStyle,
+          fontSize: JOURNAL_TYPE.groupLabel.fontSize,
+          fontWeight: JOURNAL_TYPE.groupLabel.fontWeight,
+          lineHeight: JOURNAL_TYPE.groupLabel.lineHeight,
           color: tokens.colors.text.secondary,
         }}
       >
@@ -108,7 +110,7 @@ function InfoRow({
       </Text>
       <Text
         style={{
-          ...journalBodyTextStyle,
+          ...journalCardTitleStyle,
           color: valueColor ?? tokens.colors.text.primary,
           textAlign: 'left',
           writingDirection: 'ltr',
@@ -137,7 +139,7 @@ function SectionCard({
       variant="soft"
       glassIntensity="light"
       padding="md"
-      style={{ marginBottom: 14 }}
+      style={{ marginBottom: JOURNAL_LAYOUT.cardStackGap }}
     >
       <View
         style={{
@@ -168,6 +170,7 @@ function SectionCard({
 }
 
 function SymbolLogo({ symbol, size }: { symbol: string; size: number }) {
+  const tokens = useDesignTokens();
   const [failed, setFailed] = useState(false);
   const uri = !failed ? brandfetchTickerLogoUri(symbol) : null;
   return (
@@ -176,7 +179,7 @@ function SymbolLogo({ symbol, size }: { symbol: string; size: number }) {
         width: size,
         height: size,
         borderRadius: size / 2,
-        backgroundColor: 'rgba(255,255,255,0.08)',
+        backgroundColor: tokens.colors.background.primary,
         overflow: 'hidden',
         alignItems: 'center',
         justifyContent: 'center',
@@ -354,7 +357,7 @@ export default function TradeDetailScreen() {
                 paddingHorizontal: 10,
                 paddingVertical: 4,
                 borderRadius: 999,
-                backgroundColor: `${directionColor}22`,
+                backgroundColor: tokens.colors.background.primary,
               }}
             >
               <Text style={{ fontSize: JOURNAL_TYPE.caption2.fontSize, fontWeight: JOURNAL_TYPE.caption2.fontWeight, lineHeight: JOURNAL_TYPE.caption2.lineHeight, color: directionColor }}>
@@ -366,8 +369,8 @@ export default function TradeDetailScreen() {
                 style={{
                   paddingHorizontal: 8,
                   paddingVertical: 3,
-                  borderRadius: 8,
-                  backgroundColor: 'rgba(255,255,255,0.08)',
+                  borderRadius: 999,
+                  backgroundColor: tokens.colors.background.primary,
                   flexShrink: 1,
                 }}
               >
@@ -452,7 +455,7 @@ export default function TradeDetailScreen() {
               variant="soft"
               glassIntensity="light"
               padding="md"
-              style={{ marginBottom: 14, marginTop: 14 }}
+              style={{ marginBottom: JOURNAL_LAYOUT.cardStackGap, marginTop: JOURNAL_LAYOUT.cardStackGap }}
             >
               <View
                 style={{
@@ -600,13 +603,13 @@ export default function TradeDetailScreen() {
                       style={{
                         paddingHorizontal: 10,
                         paddingVertical: 4,
-                        borderRadius: 10,
-                        backgroundColor: 'rgba(255,255,255,0.07)',
+                        borderRadius: 999,
+                        backgroundColor: tokens.colors.background.primary,
                       }}
                     >
                       <Text
                         style={{
-                          fontSize: 12,
+                          ...journalCaptionStyle,
                           color: tokens.colors.text.secondary,
                         }}
                       >
@@ -732,8 +735,8 @@ export default function TradeDetailScreen() {
                       style={{
                         paddingHorizontal: 12,
                         paddingVertical: 6,
-                        borderRadius: 12,
-                        backgroundColor: 'rgba(255,60,60,0.12)',
+                        borderRadius: 999,
+                        backgroundColor: tokens.colors.background.primary,
                       }}
                     >
                       <Text

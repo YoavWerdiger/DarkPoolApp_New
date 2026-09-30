@@ -371,7 +371,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       overflow: 'hidden',
     },
     searchCardFill: {
-      backgroundColor: tokens.colors.background.input,
+      backgroundColor: tokens.colors.background.cardSolid,
       borderWidth: 0,
     },
     searchInner: {

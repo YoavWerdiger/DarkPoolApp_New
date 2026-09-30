@@ -30,7 +30,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ScreenChrome } from '../../components/ui/ScreenChrome';
 import UICard from '../../components/ui/UICard';
 import { DayNavBlurButton, HEADER_BACK_BTN_SIZE } from '../../components/ui/DayNavBlurButton';
-import { ChangeDot } from '../../components/ui/ChangeDot';
+import { APP_LAYOUT } from '../../components/ui/appLayout';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { HelpSheet } from '../../components/ui/HelpSheet';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
@@ -439,7 +439,7 @@ export default function DarkPoolTradeDetailScreen() {
           </View>
 
           <View style={styles.section}>
-            <DarkPoolSectionHeader title="פרטי העסקה" />
+            <DarkPoolSectionHeader variant="group" title="פרטי העסקה" />
             <UICard variant="soft" glassIntensity="light" padding="md">
               {buildTradeDetailFieldRows({
                 isCongress,
@@ -467,6 +467,7 @@ export default function DarkPoolTradeDetailScreen() {
           (hasAnyReturn(congressTrade) || sinceTradePct != null) ? (
             <View style={styles.section}>
               <DarkPoolSectionHeader
+                variant="group"
                 title="תשואה מאז העסקה"
                 subtitle="שינוי מחיר המניה מפתיחת יום העסקה מול חי — לא רווח/הפסד של הפוזיציה"
               />
@@ -488,6 +489,7 @@ export default function DarkPoolTradeDetailScreen() {
           {historyLoading || historyCount > 0 ? (
             <View style={styles.historySection}>
               <DarkPoolSectionHeader
+                variant="group"
                 title="פעילות אחרונה"
                 subtitleA11y={activitySubtitle.sentence}
                 subtitle={
@@ -609,7 +611,6 @@ function ReturnRow({
       </Text>
       {text ? (
         <View style={styles.returnValueRow}>
-          <ChangeDot tone={tone} />
           <Text style={[styles.value, styles.valueLtr, { color }]} numberOfLines={1}>
             {toDataIsland(text)}
           </Text>
@@ -648,7 +649,6 @@ function ReturnLine({
         {label}
       </Text>
       <View style={styles.returnValueRow}>
-        <ChangeDot tone={tone} />
         <Text
           style={[styles.inlineReturnValue, { color }]}
           numberOfLines={1}
@@ -769,7 +769,7 @@ function rowStyles(tokens: ReturnType<typeof useDesignTokens>) {
       alignItems: 'center',
       justifyContent: 'space-between',
       gap: 12,
-      paddingVertical: 15,
+      paddingVertical: 12,
       borderBottomWidth: 1,
       borderBottomColor: tokens.colors.border.divider,
     },
@@ -778,14 +778,14 @@ function rowStyles(tokens: ReturnType<typeof useDesignTokens>) {
       ...darkPoolPhysicalRightText,
       fontSize: FEED_CARD_TYPE.dates.fontSize,
       lineHeight: FEED_CARD_TYPE.dates.lineHeight,
-      fontWeight: DARK_POOL_TYPE.caption.fontWeight,
-      color: tokens.colors.text.tertiary,
+      fontWeight: FEED_CARD_TYPE.dates.fontWeight,
+      color: tokens.colors.text.secondary,
       flexShrink: 0,
     },
     value: {
       fontSize: FEED_CARD_TYPE.action.fontSize,
       lineHeight: FEED_CARD_TYPE.action.lineHeight,
-      fontWeight: DARK_POOL_TYPE.sectionTitle.fontWeight,
+      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
       flexShrink: 1,
       minWidth: 0,
@@ -810,9 +810,9 @@ function rowStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     inlineReturnValue: {
       ...darkPoolPhysicalRightText,
-      fontSize: DARK_POOL_TYPE.footnote.fontSize,
-      lineHeight: 17,
-      fontWeight: DARK_POOL_TYPE.sectionTitle.fontWeight,
+      fontSize: FEED_CARD_TYPE.dates.fontSize,
+      lineHeight: FEED_CARD_TYPE.dates.lineHeight,
+      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       fontVariant: ['tabular-nums'],
       writingDirection: 'ltr',
     },
@@ -891,11 +891,11 @@ function createStyles(
       marginBottom: 16,
     },
     section: {
-      marginBottom: tokens.spacing.md,
+      marginBottom: APP_LAYOUT.sectionGap,
     },
     historySection: {
-      marginTop: tokens.spacing.sm,
-      marginBottom: tokens.spacing.lg,
+      marginTop: 0,
+      marginBottom: APP_LAYOUT.sectionGap,
     },
     subtitleName: {
       ...ltrNameText,

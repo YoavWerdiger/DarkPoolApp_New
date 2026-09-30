@@ -159,7 +159,7 @@ export default function AddMemberSheet({
 
         <UICard
           {...CHROME_UICARD}
-          style={[styles.searchContainer, chromeSurfaceCardStyle(tokens)]}
+          style={[styles.searchContainer, chromeSurfaceCardStyle(tokens), { backgroundColor: tokens.colors.background.cardSolid }]}
           contentContainerStyle={styles.searchContainerInner}
         >
           <Ionicons name="search" size={16} color={tokens.colors.text.tertiary} />

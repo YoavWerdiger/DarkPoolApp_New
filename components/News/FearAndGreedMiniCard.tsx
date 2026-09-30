@@ -8,6 +8,12 @@ import {
 } from 'react-native';
 import { useDesignTokens } from '../ui/DesignTokens';
 import UICard from '../ui/UICard';
+import { APP_LAYOUT, UI_CARD_RADIUS } from '../ui/appLayout';
+import {
+  APP_TYPE,
+  appCaption2Style,
+  appSectionTitleStyle,
+} from '../ui/appType';
 import {
   fearAndGreedService,
   FEAR_GREED_MINI_SEGMENTS,
@@ -35,38 +41,46 @@ export default function FearAndGreedMiniCard({ onPress }: Props) {
     : loading
       ? 'טוען…'
       : '—';
+  const zonePrefix = !hasValue ? '' : zoneLabel === 'ניטרלי' ? 'השוק כרגע ' : 'השוק כרגע ב';
   const pct = Math.max(0, Math.min(100, value));
 
   const Body = (
-    <UICard
-      variant="blur"
-      padding="none"
-      style={styles.card}
-      contentContainerStyle={styles.content}
-    >
-      <View style={styles.topRow}>
-        <View style={styles.titleBlock}>
-          <Text style={[styles.title, { color: tokens.colors.text.tertiary }]}>
-            מדד הפחד והתאווה
-          </Text>
-          <Text style={[styles.zoneLabel, { color: zoneColor }]} numberOfLines={1}>
-            {zoneLabel}
+    <View>
+      <Text style={[styles.sectionTitle, { color: tokens.colors.text.primary }]}>
+        מדד הפחד והתאווה
+      </Text>
+      <UICard
+        variant="blur"
+        padding="none"
+        style={styles.card}
+        contentContainerStyle={styles.content}
+      >
+        <View style={styles.topRow}>
+          {loading && !hasValue ? (
+            <ActivityIndicator size="small" color={tokens.colors.primary.main} />
+          ) : (
+            <View style={styles.valueBlock}>
+              <Text style={[styles.valueNum, { color: zoneColor }]}>
+                {hasValue ? value : '—'}
+              </Text>
+              <Text style={[styles.valueDen, { color: tokens.colors.text.secondary }]}>
+                /100
+              </Text>
+            </View>
+          )}
+
+          <Text
+            style={styles.zoneLabel}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.8}
+          >
+            <Text style={{ color: tokens.colors.text.primary, fontWeight: APP_TYPE.body.fontWeight }}>
+              {zonePrefix}
+            </Text>
+            <Text style={{ color: zoneColor }}>{zoneLabel}</Text>
           </Text>
         </View>
-
-        {loading && !hasValue ? (
-          <ActivityIndicator size="small" color={tokens.colors.primary.main} />
-        ) : (
-          <View style={styles.valueBlock}>
-            <Text style={[styles.valueNum, { color: zoneColor }]}>
-              {hasValue ? value : '—'}
-            </Text>
-            <Text style={[styles.valueDen, { color: tokens.colors.text.tertiary }]}>
-              /100
-            </Text>
-          </View>
-        )}
-      </View>
 
       <View style={styles.gaugeArea}>
         {hasValue ? (
@@ -107,6 +121,7 @@ export default function FearAndGreedMiniCard({ onPress }: Props) {
         </View>
       </View>
     </UICard>
+    </View>
   );
 
   if (onPress) {
@@ -118,7 +133,7 @@ export default function FearAndGreedMiniCard({ onPress }: Props) {
         }}
         activeOpacity={0.85}
         accessibilityRole="button"
-        accessibilityLabel={`מדד הפחד והתאווה: ${value} ${zoneLabel}`}
+        accessibilityLabel={`מדד הפחד והתאווה: ${value}, ${zonePrefix}${zoneLabel}`}
       >
         {Body}
       </TouchableOpacity>
@@ -132,44 +147,54 @@ const TRI_W = 10;
 const TRI_H = 8;
 
 const styles = StyleSheet.create({
-  card: { borderRadius: 14 },
+  sectionTitle: {
+    ...appSectionTitleStyle,
+    marginBottom: APP_LAYOUT.groupLabelToContent,
+  },
+  card: { borderRadius: UI_CARD_RADIUS },
   content: {
-    paddingHorizontal: 14,
-    paddingTop: 12,
-    paddingBottom: 10,
-    gap: 10,
+    paddingHorizontal: APP_LAYOUT.cardPadding,
+    paddingTop: APP_LAYOUT.cardPadding,
+    paddingBottom: APP_LAYOUT.cardPadding,
+    gap: APP_LAYOUT.cardTitleToBodyGap,
   },
   topRow: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  titleBlock: { alignItems: 'flex-end', flex: 1 },
-  title: {
-    fontSize: 11,
-    fontWeight: '500',
-  },
-  zoneLabel: {
-    fontSize: 15,
-    fontWeight: '700',
-    marginTop: 2,
-  },
-  valueBlock: {
+    direction: 'ltr',
     flexDirection: 'row',
     alignItems: 'flex-end',
-    marginLeft: 10,
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  zoneLabel: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: APP_TYPE.cardMetricValueSecondary.fontSize,
+    lineHeight: APP_TYPE.cardMetricValueSecondary.lineHeight,
+    fontWeight: APP_TYPE.cardMetricValueSecondary.fontWeight,
+    letterSpacing: APP_TYPE.cardMetricValueSecondary.letterSpacing,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  valueBlock: {
+    direction: 'ltr',
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 2,
   },
   valueNum: {
-    fontSize: 32,
-    fontWeight: '800',
-    lineHeight: 34,
+    fontSize: APP_TYPE.sectionTitle.fontSize,
+    lineHeight: APP_TYPE.sectionTitle.lineHeight,
+    fontWeight: APP_TYPE.sectionTitle.fontWeight,
+    letterSpacing: APP_TYPE.sectionTitle.letterSpacing,
+    textAlign: 'left',
+    writingDirection: 'ltr',
     fontVariant: ['tabular-nums'],
   },
   valueDen: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginBottom: 3,
-    marginLeft: 1,
+    ...APP_TYPE.groupLabel,
+    textAlign: 'left',
+    writingDirection: 'ltr',
+    marginBottom: 2,
   },
   gaugeArea: {
     gap: 0,
@@ -208,14 +233,15 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: BAR_H / 2,
   },
   labelsRow: {
+    direction: 'ltr',
     flexDirection: 'row',
-    marginTop: 5,
+    marginTop: APP_LAYOUT.groupLabelToContent,
   },
   segLabel: {
+    ...appCaption2Style,
     flex: 1,
-    fontSize: 9,
-    fontWeight: '500',
+    width: undefined,
     textAlign: 'center',
-    lineHeight: 12,
+    writingDirection: 'rtl',
   },
 });

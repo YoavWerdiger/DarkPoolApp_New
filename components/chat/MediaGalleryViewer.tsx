@@ -2,29 +2,21 @@
 // Media Gallery Viewer — MediaViewer chrome + horizontal paging
 // ============================================
 
-import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Modal,
   FlatList,
-  Pressable,
   Text,
   StyleSheet,
   Dimensions,
   ActivityIndicator,
   Share as RNShare,
-  Platform,
   TouchableOpacity,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Video, ResizeMode } from '../../lib/expoAvSafe';
 import { Ionicons } from '@expo/vector-icons';
-import { X, Share, Copy, Download } from 'lucide-react-native';
-import * as FileSystem from 'expo-file-system/legacy';
-import * as Sharing from 'expo-sharing';
-import * as Clipboard from 'expo-clipboard';
-import { BlurView } from 'expo-blur';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -39,9 +31,8 @@ import {
 import { logger } from '../../utils/logger';
 import { getChatMediaDisplayUri } from '../../services/chat/chatSignedMediaUrl';
 import { chatPalette as COLORS } from './chatDesignTokens';
-import { useDesignTokens } from '../ui/DesignTokens';
-import { DayNavBlurButton } from '../ui/DayNavBlurButton';
 import { useMediaZoomGestures } from './useMediaZoomGestures';
+import { MediaBlurBackdrop, MediaViewerChrome } from './MediaViewerChrome';
 
 export interface MediaGalleryItem {
   id: string;
@@ -67,19 +58,25 @@ function GalleryImageItem({
   url,
   isActive,
   onZoomChange,
+  onSingleTap,
+  onSwipeDismiss,
 }: {
   url: string;
   isActive: boolean;
   onZoomChange?: (zoomed: boolean) => void;
+  onSingleTap?: () => void;
+  onSwipeDismiss?: () => void;
 }) {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
 
-  const { zoomGesture, animatedStyle, resetZoomImmediate } = useMediaZoomGestures({
+  const { zoomGesture, animatedStyle, backdropStyle, resetZoomImmediate } = useMediaZoomGestures({
     resetKey: isActive ? url : false,
     width: SCREEN_WIDTH,
     height: SCREEN_HEIGHT,
     onZoomChange: isActive ? onZoomChange : undefined,
+    onSingleTap: isActive ? onSingleTap : undefined,
+    onSwipeDismiss: isActive ? onSwipeDismiss : undefined,
   });
 
   useEffect(() => {
@@ -89,7 +86,8 @@ function GalleryImageItem({
   }, [isActive, resetZoomImmediate]);
 
   return (
-    <View style={styles.page}>
+    <View style={[styles.page, styles.imagePage]}>
+      <MediaBlurBackdrop uri={url} style={backdropStyle} />
       {isLoading && !loadError && (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
@@ -139,8 +137,9 @@ export default function MediaGalleryViewer({
   mediaItems,
   initialIndex = 0,
 }: MediaGalleryViewerProps) {
-  const tokens = useDesignTokens();
   const insets = useSafeAreaInsets();
+  const [chromeVisible, setChromeVisible] = useState(true);
+  const chromeOpacity = useSharedValue(1);
   const flatListRef = useRef<FlatList>(null);
   const videoRef = useRef<Video>(null);
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
@@ -383,48 +382,22 @@ export default function MediaGalleryViewer({
     itemVisiblePercentThreshold: 50,
   }).current;
 
+  useEffect(() => {
+    if (visible) setChromeVisible(true);
+  }, [visible]);
+
+  useEffect(() => {
+    chromeOpacity.value = withTiming(chromeVisible ? 1 : 0, { duration: 180 });
+  }, [chromeVisible, chromeOpacity]);
+
+  const chromeStyle = useAnimatedStyle(() => ({ opacity: chromeOpacity.value }));
+
   const handleShare = async () => {
     if (!currentItem) return;
     try {
       await RNShare.share({ url: resolveUri(currentItem) });
     } catch (error) {
       logger.error('MediaGalleryViewer', 'Share failed', error);
-    }
-  };
-
-  const handleCopy = async () => {
-    if (!currentItem) return;
-    try {
-      await Clipboard.setStringAsync(resolveUri(currentItem));
-      legacyAlert('הועתק', 'הקישור הועתק ללוח');
-    } catch (error) {
-      logger.error('MediaGalleryViewer', 'Copy URL failed', error);
-    }
-  };
-
-  const handleDownload = async () => {
-    if (!currentItem) return;
-    try {
-      if (Platform.OS === 'web') {
-        legacyAlert('מידע', 'הורדה לא זמינה בפלטפורמה זו');
-        return;
-      }
-      const cacheDir = FileSystem.cacheDirectory;
-      if (!cacheDir) {
-        legacyAlert('שגיאה', 'לא ניתן לגשת לתיקייה');
-        return;
-      }
-      const uri = resolveUri(currentItem);
-      const fileUri = `${cacheDir}media_${Date.now()}.${currentItem.type === 'image' ? 'jpg' : 'mp4'}`;
-      const downloadResult = await FileSystem.downloadAsync(uri, fileUri);
-
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(downloadResult.uri);
-      } else {
-        legacyAlert('הורד', 'הקובץ נשמר בהצלחה');
-      }
-    } catch (error) {
-      legacyAlert('שגיאה', 'לא ניתן להוריד את הקובץ');
     }
   };
 
@@ -502,6 +475,8 @@ export default function MediaGalleryViewer({
         url={uri}
         isActive={isActive}
         onZoomChange={isActive ? handleZoomChange : undefined}
+        onSingleTap={() => setChromeVisible((open) => !open)}
+        onSwipeDismiss={onClose}
       />
     );
   };
@@ -511,16 +486,10 @@ export default function MediaGalleryViewer({
   const safeInitialIndex = Math.max(0, Math.min(initialIndex, mediaItems.length - 1));
   const caption = currentItem?.caption?.trim();
 
-  const ActionButton = ({ onPress, icon: Icon }: { onPress: () => void; icon: any }) => (
-    <Pressable onPress={onPress} style={styles.actionButton}>
-      <Icon size={24} color={COLORS.text} strokeWidth={1.5} />
-    </Pressable>
-  );
-
   return (
     <Modal
       visible={visible}
-      transparent={false}
+      transparent
       animationType="fade"
       onRequestClose={onClose}
     >
@@ -547,67 +516,35 @@ export default function MediaGalleryViewer({
           removeClippedSubviews
         />
 
-        {/* Top Bar — same glass chrome as MediaViewer */}
-        <View style={styles.topBar}>
-          <BlurView intensity={80} tint="dark" style={styles.topBlur}>
-            <View style={[styles.topContent, { paddingTop: insets.top + 8 }]}>
-              <DayNavBlurButton onPress={onClose} size={44} accessibilityLabel="סגור">
-                <X size={24} color={tokens.colors.text.primary} strokeWidth={2} />
-              </DayNavBlurButton>
-              {mediaItems.length > 1 ? (
-                <View style={styles.counter}>
-                  <Text style={styles.counterText}>
-                    {currentIndex + 1} / {mediaItems.length}
-                  </Text>
+        <MediaViewerChrome
+          chromeStyle={chromeStyle}
+          pointerEvents={chromeVisible ? 'box-none' : 'none'}
+          paddingTop={insets.top + 6}
+          paddingBottom={insets.bottom + 12}
+          caption={caption}
+          counter={mediaItems.length > 1 ? `${currentIndex + 1} / ${mediaItems.length}` : undefined}
+          onClose={onClose}
+          onShare={() => { void handleShare(); }}
+          videoSlot={currentItem?.type === 'video' ? (
+            <View style={styles.videoControlsRow}>
+              <TouchableOpacity style={styles.videoPlayBtn} onPress={togglePlayPause}>
+                <Ionicons name={isPlaying ? 'pause' : 'play'} size={24} color={COLORS.text} />
+              </TouchableOpacity>
+              <Text style={styles.videoTimeText}>{formatTime(displayPosition)}</Text>
+              <GestureDetector gesture={timelineGesture}>
+                <View
+                  style={styles.timelineTrack}
+                  onLayout={(e) => setTimelineWidth(e.nativeEvent.layout.width)}
+                >
+                  <View style={styles.timelineTrackBg} />
+                  <Animated.View style={[styles.timelineFill, animatedFillStyle]} />
+                  <Animated.View style={[styles.timelineThumb, animatedThumbStyle]} />
                 </View>
-              ) : (
-                <View style={styles.topSpacer} />
-              )}
-              <View style={{ width: 44 }} />
+              </GestureDetector>
+              <Text style={styles.videoTimeText}>{formatTime(duration)}</Text>
             </View>
-          </BlurView>
-        </View>
-
-        {/* Bottom Bar — same glass chrome as MediaViewer */}
-        <View style={styles.bottomBar}>
-          <BlurView intensity={80} tint="dark" style={styles.bottomBlur}>
-            <View style={[styles.bottomContent, { paddingBottom: insets.bottom + 12 }]}>
-              {currentItem?.type === 'video' && (
-                <View style={styles.videoControlsRow}>
-                  <TouchableOpacity style={styles.videoPlayBtn} onPress={togglePlayPause}>
-                    <Ionicons name={isPlaying ? 'pause' : 'play'} size={24} color={COLORS.text} />
-                  </TouchableOpacity>
-                  <Text style={styles.videoTimeText}>{formatTime(displayPosition)}</Text>
-                  <GestureDetector gesture={timelineGesture}>
-                    <View
-                      style={styles.timelineTrack}
-                      onLayout={(e) => setTimelineWidth(e.nativeEvent.layout.width)}
-                    >
-                      <View style={styles.timelineTrackBg} />
-                      <Animated.View style={[styles.timelineFill, animatedFillStyle]} />
-                      <Animated.View style={[styles.timelineThumb, animatedThumbStyle]} />
-                    </View>
-                  </GestureDetector>
-                  <Text style={styles.videoTimeText}>{formatTime(duration)}</Text>
-                </View>
-              )}
-
-              {caption ? (
-                <View style={styles.captionContainer}>
-                  <Text style={styles.captionText} numberOfLines={2}>
-                    {caption}
-                  </Text>
-                </View>
-              ) : null}
-
-              <View style={styles.actionsRow}>
-                <ActionButton onPress={handleShare} icon={Share} />
-                <ActionButton onPress={handleCopy} icon={Copy} />
-                <ActionButton onPress={handleDownload} icon={Download} />
-              </View>
-            </View>
-          </BlurView>
-        </View>
+          ) : null}
+        />
       </GestureHandlerRootView>
     </Modal>
   );
@@ -616,7 +553,7 @@ export default function MediaGalleryViewer({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: 'transparent',
   },
   page: {
     width: SCREEN_WIDTH,
@@ -624,6 +561,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#000',
+  },
+  imagePage: {
+    backgroundColor: 'transparent',
   },
   fullMedia: {
     width: SCREEN_WIDTH,

@@ -7,6 +7,7 @@ import {
   appCardSubtitleStyle,
   appCardTitleStyle,
   appGroupLabelStyle,
+  APP_TYPE,
 } from '../../../components/ui/appType';
 import UIButton from '../../../components/ui/UIButton';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
@@ -24,12 +25,12 @@ export function WatchlistEmpty({ onAddPress, onSuggest }: Props) {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        wrap: { paddingBottom: 8 },
+        wrap: { paddingBottom: APP_LAYOUT.stackGapSmall },
         hero: {
           alignItems: 'center',
           paddingHorizontal: APP_LAYOUT.cardPadding,
-          paddingTop: 28,
-          paddingBottom: 20,
+          paddingTop: APP_LAYOUT.sectionGap - APP_LAYOUT.stackGapSmall,
+          paddingBottom: APP_LAYOUT.componentGap + APP_LAYOUT.stackGapSmall,
           borderBottomWidth: 1,
           borderBottomColor: tokens.colors.border.divider,
         },
@@ -39,8 +40,8 @@ export function WatchlistEmpty({ onAddPress, onSuggest }: Props) {
           borderRadius: 28,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: tokens.colors.background.navChrome,
-          marginBottom: APP_LAYOUT.sectionHeaderToContent,
+          backgroundColor: tokens.colors.background.primary,
+          marginBottom: APP_LAYOUT.componentGap,
         },
         title: {
           ...appCardTitleStyle,
@@ -49,16 +50,17 @@ export function WatchlistEmpty({ onAddPress, onSuggest }: Props) {
         },
         subtitle: {
           ...appCardSubtitleStyle,
+          marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
           color: tokens.colors.text.secondary,
           textAlign: 'center',
         },
         cta: {
-          marginTop: APP_LAYOUT.sectionHeaderToContent,
+          marginTop: APP_LAYOUT.componentGap,
           alignSelf: 'center',
         },
         suggestHeader: {
           paddingHorizontal: APP_LAYOUT.cardPadding,
-          paddingTop: APP_LAYOUT.sectionHeaderToContent,
+          paddingTop: APP_LAYOUT.componentGap,
         },
         suggestLabel: {
           ...appGroupLabelStyle,
@@ -68,7 +70,7 @@ export function WatchlistEmpty({ onAddPress, onSuggest }: Props) {
           flexDirection: 'row-reverse',
           alignItems: 'center',
           paddingHorizontal: APP_LAYOUT.cardPadding,
-          paddingVertical: 15,
+          paddingVertical: APP_LAYOUT.cardTitleToBodyGap,
         },
         suggestDivider: {
           borderBottomWidth: 1,
@@ -83,22 +85,29 @@ export function WatchlistEmpty({ onAddPress, onSuggest }: Props) {
           minWidth: 0,
         },
         suggestSymbol: {
-          ...appCardTitleStyle,
-          width: undefined,
-          alignSelf: 'flex-end',
+          ...APP_TYPE.cardBody,
+          fontWeight: APP_TYPE.cardTitle.fontWeight,
+          textAlign: 'right',
+          writingDirection: 'ltr',
           color: tokens.colors.text.primary,
         },
         suggestName: {
-          ...appCardSubtitleStyle,
-          width: undefined,
-          alignSelf: 'flex-end',
+          ...APP_TYPE.caption,
+          textAlign: 'right',
           color: tokens.colors.text.secondary,
         },
+        addChip: {
+          flexDirection: 'row-reverse',
+          alignItems: 'center',
+          gap: 4,
+          height: 28,
+          paddingHorizontal: 12,
+          borderRadius: 14,
+          backgroundColor: tokens.colors.background.primary,
+        },
         addHint: {
-          ...appCardSubtitleStyle,
-          width: undefined,
-          marginTop: 0,
-          color: tokens.colors.text.secondary,
+          ...APP_TYPE.cardMetricLabel,
+          color: tokens.colors.text.primary,
         },
       }),
     [tokens]
@@ -137,13 +146,16 @@ export function WatchlistEmpty({ onAddPress, onSuggest }: Props) {
           }}
         >
           <View style={styles.suggestLogo}>
-            <TickerLogo symbol={s.symbol} size={28} />
+            <TickerLogo symbol={s.symbol} size={32} />
           </View>
           <View style={styles.suggestText}>
             <Text style={styles.suggestSymbol}>{s.symbol}</Text>
             <Text style={styles.suggestName}>{s.name}</Text>
           </View>
-          <Text style={styles.addHint}>הוסף</Text>
+          <View style={styles.addChip}>
+            <Ionicons name="add" size={14} color={tokens.colors.text.primary} />
+            <Text style={styles.addHint}>הוסף</Text>
+          </View>
         </TouchableOpacity>
       ))}
     </View>

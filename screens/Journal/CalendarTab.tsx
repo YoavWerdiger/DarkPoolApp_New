@@ -19,6 +19,7 @@ import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
 import type { Trade } from './tradeTypes';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import {
+  JOURNAL_LAYOUT,
   JOURNAL_TYPE,
   journalBodyTextStyle,
   journalCaption2Style,
@@ -528,10 +529,10 @@ const createStyles = (
   },
   /** כמו EarningsReportsTab — כרטיס blur + padding 12 */
   monthNavCard: {
-    marginBottom: 10,
+    marginBottom: JOURNAL_LAYOUT.cardStackGap,
   },
   monthNavCardInner: {
-    padding: 12,
+    padding: JOURNAL_LAYOUT.cardPadding,
   },
   monthHeader: {
     flexDirection: 'row',
@@ -558,15 +559,15 @@ const createStyles = (
   },
   /** שורה משנית — כמו תג "היום" בדיווח רווח */
   monthTotalCaption: {
-    fontSize: JOURNAL_TYPE.caption.fontSize,
-    fontWeight: '700' as any,
-    lineHeight: JOURNAL_TYPE.caption.lineHeight,
-    marginTop: 1,
+    fontSize: JOURNAL_TYPE.cardSubtitle.fontSize,
+    fontWeight: JOURNAL_TYPE.cardSubtitle.fontWeight,
+    lineHeight: JOURNAL_TYPE.cardSubtitle.lineHeight,
+    marginTop: JOURNAL_LAYOUT.cardTitleToSubtitleGap,
     textAlign: 'center',
-    writingDirection: 'rtl' as any,
+    writingDirection: 'rtl' as const,
   },
   monthTotalCaptionProfit: {
-    color: tokens.colors.success.main,
+    color: tokens.colors.primary.main,
   },
   monthTotalCaptionLoss: {
     color: tokens.colors.text.danger,
@@ -587,7 +588,7 @@ const createStyles = (
   weekDayText: {
     fontSize: JOURNAL_TYPE.caption.fontSize,
     lineHeight: JOURNAL_TYPE.caption.lineHeight,
-    fontWeight: '600' as any,
+    fontWeight: JOURNAL_TYPE.caption.fontWeight,
     color: tokens.colors.text.secondary,
     textAlign: 'center',
   },
@@ -606,15 +607,16 @@ const createStyles = (
     justifyContent: 'center',
   },
   dayName: {
-    fontSize: tokens.typography.fontSize.xs,
+    fontSize: JOURNAL_TYPE.caption2.fontSize,
+    lineHeight: JOURNAL_TYPE.caption2.lineHeight,
     color: tokens.colors.text.tertiary,
     marginBottom: 2,
-    display: 'none', // הסתרת שם היום כי יש כותרת נפרדת
+    display: 'none',
   },
   dayNumber: {
-    fontSize: tokens.typography.subhead.size,
-    lineHeight: tokens.typography.subhead.lineHeight,
-    fontWeight: tokens.typography.fontWeight.bold as any,
+    fontSize: JOURNAL_TYPE.cardTitle.fontSize,
+    lineHeight: JOURNAL_TYPE.cardTitle.lineHeight,
+    fontWeight: JOURNAL_TYPE.cardTitle.fontWeight,
     color: tokens.colors.text.primary,
     marginBottom: 1,
   },
@@ -634,7 +636,7 @@ const createStyles = (
     lineHeight: JOURNAL_TYPE.caption2.lineHeight,
   },
   pnlTextProfit: {
-    color: tokens.colors.success.main,
+    color: tokens.colors.primary.main,
   },
   pnlTextLoss: {
     color: tokens.colors.text.danger,
@@ -659,7 +661,7 @@ const createStyles = (
     paddingVertical: tokens.spacing.sm,
     paddingHorizontal: tokens.layout?.screenPadding ?? tokens.spacing.xl,
     borderTopWidth: 1,
-    borderTopColor: tokens.colors.border.primary,
+    borderTopColor: tokens.colors.border.divider,
     marginTop: tokens.spacing.sm,
     alignSelf: 'center',
     maxWidth: '100%',
@@ -674,7 +676,7 @@ const createStyles = (
     height: 16,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: tokens.colors.border.primary,
+    borderColor: tokens.colors.border.divider,
   },
   legendText: {
     ...journalCaptionStyle,

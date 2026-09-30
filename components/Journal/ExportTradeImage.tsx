@@ -285,7 +285,6 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
       enablePanDownToClose
       useModal
       topCornerRadius={28}
-      useGlassBackground
       glassIntensity={SHEET_GLASS_INTENSITY}
       glassOverlayColor={SHEET_GLASS_OVERLAY}
       backdropOpacity={SHEET_BACKDROP_OPACITY}

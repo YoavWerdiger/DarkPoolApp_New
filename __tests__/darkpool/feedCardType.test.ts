@@ -105,7 +105,7 @@ describe('feed trade card chrome', () => {
     expect(stylesSrc).toMatch(/background\.cardSolid/);
     expect(nestSrc).toMatch(/<UICard[\s\S]*variant="soft"/);
     expect(nestSrc).toMatch(/disableBlur/);
-    expect(nestSrc).toMatch(/background\.tertiary/);
+    expect(nestSrc).toMatch(/background\.primary/);
     expect(nestSrc).toMatch(/FEED_NESTED_RADIUS/);
   });
 

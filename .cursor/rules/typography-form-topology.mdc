@@ -22,7 +22,26 @@ alwaysApply: false
 | הגדרות / פרופיל / קבוצה | `components/profile/settingsType.ts` |
 | Auth / onboarding | `appType` + `OnboardingLayout` + `formControl` |
 
-כל `*_TYPE` חייב להיות **אותו** `APP_TYPE` (re-export).
+כל `*_TYPE` חייב להיות **אותו** `APP_TYPE` (re-export). בלי `fontSize` / `fontWeight` מקומיים. עוגן כותרת דף: «קהילה».
+
+## סקאלה קבועה
+
+| תפקיד | APP_TYPE | גודל | משקל | צבע |
+|---|---|---|---|---|
+| כותרת דף ראשי | `pageTitle` | 32 | 700 | ראשי. מתחת לתפריט, צמודה לימין |
+| כותרת מסך במרכז | `screenTitle` | 24 | 700 | ראשי. הדר קבוצה, שם תיק, מסך פנימי |
+| כותרת מחוץ לכרטיס | `sectionTitle` | 22 | 700 | ראשי. מקטע על הקנבס |
+| הסבר מתחת לכותרת דף | `sectionSubtitle` | 15 | 400 | משני |
+| תווית קבוצה | `groupLabel` | 15 | 500 | משני `#8E8E93` |
+| כותרת כרטיס | `cardTitle` | 17 | 600 | ראשי |
+| תת-כותרת כרטיס | `cardSubtitle` | 13 | 400 | משני, צמודה (`cardTitleToSubtitleGap` 2) |
+| תוכן כרטיס | `cardBody` | 15 | 400 | ראשי |
+| תוכן מסך | `body` | 16 | 400 | ראשי. פסקה מחוץ לכרטיס |
+| כיתוב | `caption` | 12 | 500 | משני. תשואה, הערת מדד, מטא |
+| ערך מדד ראשי | `cardMetricValue` | 28 | 700 | |
+| ערך בכרטיס קטן | `cardMetricValueSecondary` | 20 | 700 | |
+
+אין משקל 800.
 
 ## משטחים (כרום מול תוכן)
 

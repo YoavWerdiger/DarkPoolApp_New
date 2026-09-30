@@ -224,7 +224,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
         style={{
           ...APP_TYPE.sectionTitle,
           color: DesignTokens.colors.text.primary,
-          marginBottom: APP_LAYOUT.sectionHeaderToContent,
+          marginBottom: APP_LAYOUT.stackGapSmall,
           alignSelf: 'stretch',
           ...newsDetailParagraphText,
         }}
@@ -238,7 +238,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
           alignItems: 'center',
           alignSelf: 'stretch',
           width: '100%',
-          marginBottom: 16,
+          marginBottom: APP_LAYOUT.cardTitleToBodyGap,
         }}
       >
         <Text
@@ -263,7 +263,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
         <Text
           style={{
             ...APP_TYPE.caption,
-            color: DesignTokens.colors.text.tertiary,
+            color: DesignTokens.colors.text.secondary,
             ...newsDetailMetaText,
           }}
           numberOfLines={1}
@@ -285,7 +285,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
             }}
             style={{
               ...APP_TYPE.body,
-              color: DesignTokens.colors.text.secondary,
+              color: DesignTokens.colors.text.primary,
               alignSelf: 'stretch',
               ...newsDetailParagraphText,
             }}
@@ -301,7 +301,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
           }}
           style={{
             ...APP_TYPE.body,
-            color: DesignTokens.colors.text.secondary,
+            color: DesignTokens.colors.text.primary,
             marginBottom: 20,
             alignSelf: 'stretch',
             ...newsDetailParagraphText,
@@ -412,7 +412,6 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
       enablePanDownToClose
       showHandle={!article.image_url}
       edgeToEdge
-      useGlassBackground
       showBrandBackground={false}
       showBrandWatermark={false}
       contentPaddingBottom={0}
@@ -575,7 +574,7 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
                   color: DesignTokens.colors.text.secondary,
                   textAlign: 'right',
                   writingDirection: 'rtl',
-                  marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
+                  marginTop: APP_LAYOUT.cardMetricLabelToValueGap,
                 }}
                 numberOfLines={2}
               >
@@ -595,7 +594,7 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
                   borderRadius: 8,
                 }}
               >
-                <Text style={{ ...APP_TYPE.cardSubtitle, color: categoryColor }}>
+                <Text style={{ ...APP_TYPE.caption, color: categoryColor }}>
                   {article.category}
                 </Text>
               </View>
@@ -666,7 +665,7 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
           >
             <Text
               style={{
-                ...APP_TYPE.cardSubtitle,
+                ...APP_TYPE.caption,
                 color: DesignTokens.colors.text.secondary,
                 writingDirection: 'rtl',
               }}
@@ -676,7 +675,7 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
             </Text>
             <Text
               style={{
-                ...APP_TYPE.cardSubtitle,
+                ...APP_TYPE.caption,
                 color: DesignTokens.colors.text.tertiary,
                 marginHorizontal: 6,
               }}
@@ -685,8 +684,8 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
             </Text>
             <Text
               style={{
-                ...APP_TYPE.cardSubtitle,
-                color: DesignTokens.colors.text.tertiary,
+                ...APP_TYPE.caption,
+                color: DesignTokens.colors.text.secondary,
                 writingDirection: 'rtl',
               }}
               numberOfLines={1}
@@ -1336,7 +1335,7 @@ export default function BreakingNewsTab({
         </Text>
         <Text
           style={{
-            ...APP_TYPE.cardSubtitle,
+            ...APP_TYPE.body,
             color: DesignTokens.colors.text.secondary,
             textAlign: 'center',
             marginTop: APP_LAYOUT.groupLabelToContent,

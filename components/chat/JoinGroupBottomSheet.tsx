@@ -3,6 +3,8 @@ import { View, Text, TouchableOpacity, StyleSheet, Image, Platform } from 'react
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { useTheme } from '../../context/ThemeContext';
+import { chatGroupDisplayName, groupAvatarSource } from '../../assets/chatGroups/groupChatIcons';
 import {
   ChatBottomSheet,
   ChatSheetContent,
@@ -34,6 +36,7 @@ export default function JoinGroupBottomSheet({
   isJoining = false,
 }: JoinGroupBottomSheetProps) {
   const DesignTokens = useDesignTokens();
+  const { isDarkMode } = useTheme();
   const insets = useSafeAreaInsets();
 
   const sheetBottomPad = useMemo(() => {
@@ -112,13 +115,14 @@ export default function JoinGroupBottomSheet({
 
   if (!group) return null;
 
+  const avatar = groupAvatarSource(group.name, group.avatar_url, isDarkMode);
+
   return (
     <ChatBottomSheet
       visible={visible}
       onClose={onClose}
       snapPoints={[snapPoint]}
       fitContent
-      useGlassBackground
       showBrandBackground={false}
       showBrandWatermark={false}
       contentPaddingBottom={0}
@@ -133,9 +137,9 @@ export default function JoinGroupBottomSheet({
         <View style={styles.container}>
           {/* Avatar */}
           <View style={styles.avatarContainer}>
-            {group.avatar_url ? (
+            {avatar ? (
               <Image
-                source={{ uri: group.avatar_url }}
+                source={avatar}
                 style={styles.avatar}
                 resizeMode="cover"
               />
@@ -147,7 +151,7 @@ export default function JoinGroupBottomSheet({
           </View>
 
           {/* Group Name */}
-          <Text style={styles.groupName}>{group.name}</Text>
+          <Text style={styles.groupName}>{chatGroupDisplayName(group.name)}</Text>
 
           {/* Members Count */}
           <Text style={styles.membersCount}>

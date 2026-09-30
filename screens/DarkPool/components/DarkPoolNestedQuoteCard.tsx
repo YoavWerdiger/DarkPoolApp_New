@@ -6,7 +6,7 @@
 
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { ChangeDot, type ChangeTone } from '../../../components/ui/ChangeDot';
+import { type ChangeTone } from '../../../components/ui/ChangeDot';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import UICard from '../../../components/ui/UICard';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
@@ -74,7 +74,6 @@ export function DarkPoolNestedQuoteCard({
           {toDataIsland(priceDisplay)}
         </Text>
         <View style={styles.nestedSinceRow}>
-          {changeKnown && changeTone ? <ChangeDot tone={changeTone} /> : null}
           <Text
             style={[
               styles.nestedSinceValue,
@@ -103,7 +102,7 @@ export function DarkPoolNestedQuoteCard({
       disableBlur
       style={{
         borderRadius: FEED_NESTED_RADIUS,
-        backgroundColor: tokens.colors.background.tertiary,
+        backgroundColor: tokens.colors.background.primary,
       }}
     >
       {body}
@@ -160,7 +159,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       writingDirection: 'rtl',
       textAlign: 'right',
       fontSize: FEED_CARD_TYPE.nestedLabel.fontSize,
-      lineHeight: 13,
+      lineHeight: FEED_CARD_TYPE.nestedLabel.lineHeight,
       fontWeight: FEED_CARD_TYPE.nestedLabel.fontWeight,
       color: tokens.colors.text.tertiary,
     },
@@ -177,7 +176,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       writingDirection: 'rtl',
       textAlign: 'right',
       fontSize: FEED_CARD_TYPE.nestedLabel.fontSize,
-      lineHeight: 13,
+      lineHeight: FEED_CARD_TYPE.nestedLabel.lineHeight,
       fontWeight: FEED_CARD_TYPE.nestedLabel.fontWeight,
       color: tokens.colors.text.tertiary,
     },
@@ -192,7 +191,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     nestedSinceLabel: {
       fontSize: FEED_CARD_TYPE.nestedLabel.fontSize,
-      lineHeight: 13,
+      lineHeight: FEED_CARD_TYPE.nestedLabel.lineHeight,
       fontWeight: FEED_CARD_TYPE.nestedLabel.fontWeight,
       color: tokens.colors.text.secondary,
       writingDirection: 'rtl',
@@ -201,7 +200,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     nestedSinceValue: {
       fontSize: FEED_CARD_TYPE.nestedSince.fontSize,
-      lineHeight: 13,
+      lineHeight: FEED_CARD_TYPE.nestedLabel.lineHeight,
       fontWeight: FEED_CARD_TYPE.nestedSince.fontWeight,
       fontVariant: ['tabular-nums'],
       writingDirection: 'ltr',

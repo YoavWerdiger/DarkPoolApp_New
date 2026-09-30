@@ -15,6 +15,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
+import { chatGroupDisplayName } from '../../assets/chatGroups/groupChatIcons';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 import { NotificationService } from '../../services/notificationService';
 import { chatGroupService } from '../../services/chat';
@@ -137,7 +138,7 @@ function EarningsTickerPicker({
           minHeight: 52,
           paddingHorizontal: APP_LAYOUT.cardPadding,
           borderRadius: tokens.borderRadius.full,
-          backgroundColor: tokens.colors.background.tertiary,
+          backgroundColor: tokens.colors.background.cardSolid,
           gap: APP_LAYOUT.stackGapSmall,
         }}
       >
@@ -446,7 +447,7 @@ export default function NotificationsScreen({ navigation }: any) {
                   {groups.map((group, index) => (
                     <SettingsSwitchRow
                       key={group.id}
-                      title={group.name}
+                      title={chatGroupDisplayName(group.name)}
                       value={group.muted}
                       disabled={childrenLocked}
                       onValueChange={(v) => {

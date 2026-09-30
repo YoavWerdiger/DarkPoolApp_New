@@ -5,6 +5,7 @@ import {
   CashFlowEntry,
   brokerAlignedMarketPrice,
   computePortfolioAnalytics,
+  expandingSharpeSeries,
 } from '../../services/portfolios/portfolioCalc';
 
 describe('calculateFifoPosition (FIFO P&L)', () => {
@@ -177,5 +178,23 @@ describe('computePortfolioAnalytics ignores artificial spike series', () => {
     expect(good.volatility!).toBeLessThan(bad.volatility! * 0.5);
     expect(bad.maxDrawdown!).toBeGreaterThan(0.9);
     expect(good.maxDrawdown!).toBeLessThan(bad.maxDrawdown!);
+  });
+});
+
+describe('expandingSharpeSeries', () => {
+  it('ends on the same Sharpe the analytics card shows', () => {
+    const series = [
+      { date: '2025-01-01', value: 100 },
+      { date: '2025-01-02', value: 101 },
+      { date: '2025-01-03', value: 99 },
+      { date: '2025-01-06', value: 103 },
+      { date: '2025-01-07', value: 102 },
+      { date: '2025-01-08', value: 106 },
+    ];
+    const analytics = computePortfolioAnalytics(series);
+    const path = expandingSharpeSeries(series);
+    expect(analytics.sharpe).not.toBeNull();
+    expect(path.length).toBeGreaterThanOrEqual(2);
+    expect(path[path.length - 1]).toBeCloseTo(analytics.sharpe!, 8);
   });
 });

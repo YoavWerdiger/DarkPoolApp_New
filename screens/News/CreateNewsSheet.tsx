@@ -24,21 +24,15 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import UICard from '../../components/ui/UICard';
-import UIButton from '../../components/ui/UIButton';
 import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
 import BottomSheet, { useBottomSheetClose } from '../../components/ui/BottomSheet/BottomSheet';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
+import { formFieldInputStyle, formFieldShellStyle } from '../../components/ui/formControl';
 import { useAuth } from '../../context/AuthContext';
 import { newsService } from '../../services/newsService';
 import { mediaService } from '../../services/mediaService';
 import { HapticFeedback } from '../../utils/hapticFeedback';
-import {
-  APP_TYPE,
-  appPhysicalRightText,
-  appSectionTitleStyle,
-  appFormFieldLabelStyle,
-} from '../../components/ui/appType';
+import { APP_TYPE, appFormFieldLabelStyle } from '../../components/ui/appType';
 
 interface CreateNewsSheetProps {
   visible: boolean;
@@ -47,10 +41,6 @@ interface CreateNewsSheetProps {
 }
 
 const DEFAULT_SOURCE = 'DarkPool';
-const SHEET_WATERMARK_SCALE = 0.65;
-
-/** טקסט עברי בתוך עץ RTL — תיבת LTR + יישור ימין פיזי */
-const rtlText = appPhysicalRightText;
 
 export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateNewsSheetProps) {
   const DesignTokens = useDesignTokens();
@@ -83,10 +73,9 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
 
   const handleClose = useCallback(() => {
     if (isBusy) return;
-    reset();
     if (animatedClose) animatedClose();
     else onClose();
-  }, [isBusy, reset, animatedClose, onClose]);
+  }, [isBusy, animatedClose, onClose]);
 
   const handlePickImage = useCallback(async () => {
     try {
@@ -171,8 +160,8 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
       setStatusMessage('פורסם בהצלחה!');
       onCreated?.();
       setTimeout(() => {
-        reset();
-        onClose();
+        if (animatedClose) animatedClose();
+        else onClose();
       }, 700);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'שגיאה לא צפויה';
@@ -190,7 +179,7 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
     content,
     source,
     user,
-    reset,
+    animatedClose,
     onClose,
     onCreated,
   ]);
@@ -202,12 +191,14 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
   return (
     <BottomSheet
       isOpen={visible}
-      onClose={handleClose}
+      onClose={() => {
+        reset();
+        onClose();
+      }}
       snapPoints={snapPoints}
       enablePanDownToClose={!isBusy}
       edgeToEdge
       showHandle
-      useGlassBackground
       showBrandBackground={false}
       showBrandWatermark={false}
       contentPaddingBottom={0}
@@ -222,34 +213,36 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
           <DayNavBlurButton
             onPress={handleClose}
             size={DAY_NAV_BUTTON_SIZE}
-            glassIntensity="subtle"
-            style={styles.headerIconButton}
+            style={styles.headerFace}
             accessibilityLabel="סגור"
             disabled={isBusy}
           >
             <Ionicons name="chevron-forward" size={22} color={DesignTokens.colors.text.primary} />
           </DayNavBlurButton>
 
-          <View style={styles.headerCenter}>
-            <Text style={[styles.headerTitle, rtlText, { color: DesignTokens.colors.text.primary }]}>
-              כתבה חדשה
-            </Text>
-            <Text style={[styles.headerSubtitle, rtlText, { color: DesignTokens.colors.text.secondary }]}>
-              תפורסם לכל מנויי התראות החדשות
-            </Text>
-          </View>
+          <Text style={[styles.headerTitle, { color: DesignTokens.colors.text.primary }]}>
+            כתבה חדשה
+          </Text>
 
-          <UIButton
-            title="פרסם"
-            variant="primary"
-            size="sm"
-            loading={isSubmitting}
-            disabled={!canSubmit}
+          <DayNavBlurButton
             onPress={() => {
               void handleSubmit();
             }}
-            haptic={false}
-          />
+            size={DAY_NAV_BUTTON_SIZE}
+            style={styles.headerFace}
+            accessibilityLabel="פרסם"
+            disabled={!canSubmit}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator size="small" color={DesignTokens.colors.text.primary} />
+            ) : (
+              <Ionicons
+                name="checkmark"
+                size={22}
+                color={canSubmit ? DesignTokens.colors.text.primary : DesignTokens.colors.text.tertiary}
+              />
+            )}
+          </DayNavBlurButton>
         </View>
 
         {/* גוף גלילה */}
@@ -285,7 +278,7 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
               style={[
                 styles.banner,
                 {
-                  backgroundColor: DesignTokens.colors.background.cardSolid,
+                  backgroundColor: DesignTokens.colors.background.primary,
                 },
               ]}
             >
@@ -328,8 +321,8 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
                   style={styles.imageToolbarBtn}
                   hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                 >
-                  <Ionicons name="trash-outline" size={16} color="#FF8A9B" />
-                  <Text style={[styles.imageToolbarBtnText, { color: '#FF8A9B' }]}>הסר</Text>
+                  <Ionicons name="trash-outline" size={16} color={DesignTokens.colors.text.danger} />
+                  <Text style={[styles.imageToolbarBtnText, { color: DesignTokens.colors.text.danger }]}>הסר</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -342,8 +335,8 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
               activeOpacity={0.85}
               style={styles.imageSlot}
             >
-              <Ionicons name="image-outline" size={28} color={primary} />
-              <Text style={[styles.imageSlotTitle, rtlText, { color: DesignTokens.colors.text.primary }]}>
+              <Ionicons name="image-outline" size={28} color={DesignTokens.colors.text.secondary} />
+              <Text style={[styles.imageSlotTitle, { color: DesignTokens.colors.text.primary }]}>
                 הוסף תמונת כותרת
               </Text>
               <Text style={[styles.imageSlotHint, { color: placeholderColor }]}>
@@ -352,109 +345,131 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
             </TouchableOpacity>
           )}
 
-          <FormField
+          <NewsTextField
             label="כותרת"
             required
             counter={`${title.length}/160`}
-            labelColor={DesignTokens.colors.text.secondary}
-          >
-            <UICard variant="inputGlass" padding="none" style={styles.inputShell}>
-              <TextInput
-                value={title}
-                onChangeText={setTitle}
-                placeholder="מה קורה? כתבו כותרת חזקה..."
-                placeholderTextColor={placeholderColor}
-                style={[styles.inputInner, styles.titleInput, rtlText, { color: DesignTokens.colors.text.primary }]}
-                maxLength={160}
-                returnKeyType="next"
-              />
-            </UICard>
-          </FormField>
+            value={title}
+            onChangeText={setTitle}
+            placeholder="מה קורה? כתבו כותרת חזקה..."
+            maxLength={160}
+            returnKeyType="next"
+          />
 
-          <FormField
+          <NewsTextField
             label="תוכן הכתבה"
             required
             counter={`${content.length}/4000`}
-            labelColor={DesignTokens.colors.text.secondary}
-          >
-            <UICard variant="inputGlass" padding="none" style={styles.inputShellMultiline}>
-              <TextInput
-                value={content}
-                onChangeText={setContent}
-                placeholder="תוכן מלא של הכתבה..."
-                placeholderTextColor={placeholderColor}
-                style={[styles.inputInner, styles.textAreaInner, rtlText, { color: DesignTokens.colors.text.primary }]}
-                multiline
-                maxLength={4000}
-                textAlignVertical="top"
-              />
-            </UICard>
-          </FormField>
+            value={content}
+            onChangeText={setContent}
+            placeholder="תוכן מלא של הכתבה..."
+            multiline
+            maxLength={4000}
+          />
 
-          <FormField label="מקור" labelColor={DesignTokens.colors.text.secondary}>
-            <UICard variant="inputGlass" padding="none" style={styles.inputShell}>
-              <View style={styles.sourceInputRow}>
-                <Ionicons name="newspaper-outline" size={17} color={DesignTokens.colors.text.tertiary} />
-                <TextInput
-                  value={source}
-                  onChangeText={setSource}
-                  placeholder={DEFAULT_SOURCE}
-                  placeholderTextColor={placeholderColor}
-                  style={[styles.inputInner, styles.sourceInputInner, rtlText, { color: DesignTokens.colors.text.primary }]}
-                  maxLength={60}
-                />
-              </View>
-            </UICard>
-          </FormField>
+          <NewsTextField
+            label="מקור"
+            value={source}
+            onChangeText={setSource}
+            placeholder={DEFAULT_SOURCE}
+            maxLength={60}
+          />
         </ScrollView>
       </KeyboardAvoidingView>
     </BottomSheet>
   );
 }
 
-function FormField({
+function NewsTextField({
   label,
   required,
   counter,
-  labelColor,
-  children,
+  value,
+  onChangeText,
+  placeholder,
+  multiline,
+  maxLength,
+  returnKeyType,
 }: {
   label: string;
   required?: boolean;
   counter?: string;
-  labelColor: string;
-  children: React.ReactNode;
+  value: string;
+  onChangeText: (value: string) => void;
+  placeholder: string;
+  multiline?: boolean;
+  maxLength?: number;
+  returnKeyType?: 'next' | 'done';
 }) {
+  const tokens = useDesignTokens();
+  const [focused, setFocused] = useState(false);
+  const shellRadius = multiline ? tokens.borderRadius.xl : tokens.borderRadius.full;
+
   return (
     <View style={formFieldStyles.group}>
       <View style={formFieldStyles.labelRow}>
-        <Text style={[formFieldStyles.label, rtlText, { color: labelColor }]}>
+        <Text style={[appFormFieldLabelStyle, formFieldStyles.label]}>
           {label}
           {required ? ' *' : ''}
         </Text>
         {counter ? (
-          <Text style={[formFieldStyles.counter, rtlText, { color: labelColor }]}>{counter}</Text>
+          <Text style={[formFieldStyles.counter, { color: tokens.colors.text.secondary }]}>{counter}</Text>
         ) : null}
       </View>
-      {children}
+      <View
+        style={[
+          formFieldShellStyle({ tokens, focused, multiline }),
+          {
+            borderRadius: shellRadius,
+            backgroundColor: focused
+              ? tokens.colors.background.tertiary
+              : tokens.colors.background.primary,
+            paddingHorizontal: APP_LAYOUT.cardPadding,
+            minHeight: multiline ? 160 : 52,
+          },
+        ]}
+      >
+        <TextInput
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor={tokens.colors.text.tertiary}
+          style={[
+            formFieldInputStyle(),
+            {
+              color: tokens.colors.text.primary,
+              width: '100%',
+              minHeight: multiline ? 140 : undefined,
+              textAlignVertical: multiline ? 'top' : 'center',
+              paddingVertical: multiline ? 4 : 0,
+            },
+          ]}
+          multiline={multiline}
+          maxLength={maxLength}
+          returnKeyType={returnKeyType}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+        />
+      </View>
     </View>
   );
 }
 
 const formFieldStyles = StyleSheet.create({
   group: {
-    gap: 8,
     direction: 'rtl',
   },
   labelRow: {
+    direction: 'rtl',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
+    marginBottom: APP_LAYOUT.stackGapSmall,
   },
   label: {
     flex: 1,
-    ...appFormFieldLabelStyle,
+    marginBottom: 0,
   },
   counter: {
     ...APP_TYPE.caption,
@@ -470,6 +485,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       direction: 'rtl',
     },
     header: {
+      direction: 'rtl',
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
@@ -477,22 +493,17 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       borderBottomWidth: 1,
       borderBottomColor: tokens.colors.border.divider,
     },
-    headerIconButton: {
-      alignSelf: 'center',
-      marginLeft: APP_LAYOUT.cardTitleToBodyGap,
-    },
-    headerCenter: {
-      flex: 1,
-      alignItems: 'flex-start',
+    headerFace: {
+      backgroundColor: tokens.colors.background.primary,
     },
     headerTitle: {
-      ...appSectionTitleStyle,
-      textAlign: 'right',
-      letterSpacing: 0,
-    },
-    headerSubtitle: {
-      ...APP_TYPE.cardSubtitle,
-      marginTop: APP_LAYOUT.titleSubtitleGap,
+      flex: 1,
+      textAlign: 'center',
+      writingDirection: 'rtl',
+      fontSize: APP_TYPE.sectionTitle.fontSize,
+      fontWeight: APP_TYPE.sectionTitle.fontWeight,
+      lineHeight: APP_TYPE.sectionTitle.lineHeight,
+      letterSpacing: APP_TYPE.sectionTitle.letterSpacing,
     },
     scroll: {
       flex: 1,
@@ -500,46 +511,10 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     scrollContent: {
       flexGrow: 1,
       paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
-      paddingTop: 14,
-      paddingBottom: 28,
-      gap: 18,
+      paddingTop: APP_LAYOUT.cardPadding,
+      paddingBottom: APP_LAYOUT.sectionGap,
+      gap: APP_LAYOUT.componentGap,
       direction: 'rtl',
-    },
-    inputShell: {
-      borderRadius: 16,
-      overflow: 'hidden',
-      paddingHorizontal: 14,
-      paddingVertical: 4,
-    },
-    inputShellMultiline: {
-      borderRadius: 16,
-      overflow: 'hidden',
-      paddingHorizontal: 14,
-      paddingVertical: 10,
-    },
-    inputInner: {
-      backgroundColor: 'transparent',
-      borderWidth: 0,
-      ...APP_TYPE.body,
-      paddingVertical: 10,
-      width: '100%',
-    },
-    titleInput: {
-      ...APP_TYPE.body,
-    },
-    textAreaInner: {
-      minHeight: 160,
-      textAlignVertical: 'top',
-      paddingVertical: 4,
-    },
-    sourceInputRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    sourceInputInner: {
-      flex: 1,
-      paddingVertical: 10,
-      marginLeft: APP_LAYOUT.cardTitleToBodyGap,
     },
     banner: {
       flexDirection: 'row-reverse',
@@ -551,8 +526,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     bannerText: {
       flex: 1,
-      ...APP_TYPE.cardSubtitle,
+      ...APP_TYPE.body,
       textAlign: 'right',
+      writingDirection: 'rtl',
       marginLeft: APP_LAYOUT.cardTitleToBodyGap,
     },
     imageSlot: {
@@ -567,6 +543,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     imageSlotTitle: {
       ...APP_TYPE.cardTitle,
       textAlign: 'center',
+      writingDirection: 'rtl',
       marginTop: APP_LAYOUT.cardTitleToBodyGap,
     },
     imageSlotHint: {

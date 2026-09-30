@@ -12,7 +12,6 @@ import UICard from '../../../components/ui/UICard';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { loadTrades } from '../../../services/portfolios/portfolioTradeDerive';
 import type { Trade, PortfolioHolding } from '../portfolioTypes';
-import { formatCurrency } from '../utils/format';
 import PortfolioTradesTable from '../components/PortfolioTradesTable';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 import ExportTradeImage, {
@@ -20,9 +19,6 @@ import ExportTradeImage, {
   type ExportableTrade,
 } from '../../../components/Journal/ExportTradeImage';
 import {
-  JOURNAL_LAYOUT,
-  journalBodyTextStyle,
-  journalCardMetricValueSecondaryStyle,
   journalPhysicalRightText,
   journalSectionSubtitleStyle,
   journalSectionTitleStyle,
@@ -78,11 +74,6 @@ export default function HistoryTab({ portfolioId, refreshKey }: Props) {
     void load();
   }, [refreshKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const totalPnl = useMemo(
-    () => trades.reduce((s, t) => s + (t.profit_loss ?? 0), 0),
-    [trades]
-  );
-
   const filteredTrades = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return trades;
@@ -113,32 +104,10 @@ export default function HistoryTab({ portfolioId, refreshKey }: Props) {
           textAlign: 'center',
           paddingHorizontal: 30,
         },
-        summaryCard: {
-          marginBottom: JOURNAL_LAYOUT.cardStackGap,
-          overflow: 'hidden',
-        },
-        summaryInner: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'flex-start',
-          gap: 10,
-          paddingHorizontal: 16,
-          paddingVertical: 14,
-          width: '100%',
-        },
-        summaryLabel: {
-          fontSize: 13,
-          fontWeight: '600',
-          color: tokens.colors.text.tertiary,
-          ...journalPhysicalRightText,
-        },
-        summaryValue: {
-          ...journalCardMetricValueSecondaryStyle,
-          textAlign: 'right',
-        },
         searchRow: { marginBottom: 10 },
         searchCardWrap: { borderRadius: tokens.borderRadius.search, overflow: 'hidden' },
         searchInner: {
+          direction: 'ltr',
           flexDirection: 'row',
           alignItems: 'center',
           paddingHorizontal: 12,
@@ -195,41 +164,9 @@ export default function HistoryTab({ portfolioId, refreshKey }: Props) {
   }
 
   const hasQuery = searchQuery.trim().length > 0;
-  const pnlPositive = totalPnl > 0;
-  const pnlNegative = totalPnl < 0;
 
   return (
     <View style={layoutStyles.root}>
-      {trades.length > 0 && (
-        <UICard
-          variant="soft"
-          glassIntensity="light"
-          padding="none"
-          style={layoutStyles.summaryCard}
-        >
-          <View style={layoutStyles.summaryInner}>
-            <Text style={layoutStyles.summaryLabel}>
-              סך P&L ממומש ({trades.length} עסקאות)
-            </Text>
-            <Text
-              style={[
-                layoutStyles.summaryValue,
-                {
-                  color: pnlPositive
-                    ? tokens.colors.primary.main
-                    : pnlNegative
-                      ? tokens.colors.text.danger
-                      : tokens.colors.text.secondary,
-                },
-              ]}
-            >
-              {pnlPositive ? '+' : pnlNegative ? '−' : ''}
-              {formatCurrency(Math.abs(totalPnl), 'USD')}
-            </Text>
-          </View>
-        </UICard>
-      )}
-
       <View style={layoutStyles.searchRow}>
         <UICard
           variant="soft"

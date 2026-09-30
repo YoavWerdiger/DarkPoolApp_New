@@ -28,7 +28,7 @@ import {
   appCardTitleStyle,
   appGroupLabelStyle,
   appSheetButtonLabelStyle,
-  appSheetTitleStyle,
+  APP_TYPE,
 } from '../../../components/ui/appType';
 import {
   formFieldInputStyle,
@@ -136,7 +136,6 @@ export function WatchlistSymbolSheet({
       enablePanDownToClose
       useModal
       showBrandBackground={false}
-      useGlassBackground
       topCornerRadius={UI_CARD_RADIUS}
       avoidKeyboard
       contentPaddingBottom={0}
@@ -1048,15 +1047,14 @@ function useStyles() {
         },
         identityText: { flex: 1, minWidth: 0 },
         symbol: {
-          ...appSheetTitleStyle,
-          width: undefined,
-          alignSelf: 'flex-end',
+          ...APP_TYPE.cardTitle,
+          textAlign: 'right',
+          writingDirection: 'ltr',
           color: tokens.colors.text.primary,
         },
         company: {
-          ...appCardSubtitleStyle,
-          width: undefined,
-          alignSelf: 'flex-end',
+          ...APP_TYPE.cardSubtitle,
+          textAlign: 'right',
           color: tokens.colors.text.secondary,
         },
         pctBadge: {

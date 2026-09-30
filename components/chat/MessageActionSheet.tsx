@@ -219,7 +219,6 @@ export default function MessageActionSheet({
       onClose={onClose}
       snapPoints={[snapPoint]}
       fitContent
-      useGlassBackground
       showBrandBackground={false}
       showBrandWatermark={false}
       contentPaddingBottom={0}

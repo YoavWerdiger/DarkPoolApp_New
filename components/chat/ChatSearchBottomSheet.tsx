@@ -12,7 +12,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useBottomSheetClose } from '../ui/BottomSheet/BottomSheet';
 import { useDesignTokens } from '../ui/DesignTokens';
-import UICard from '../ui/UICard';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
 import {
   ChatBottomSheet,
@@ -237,7 +236,15 @@ export default function ChatSearchBottomSheet({
           <View style={styles.headerSideSpacer} />
         </View>
 
-        <UICard variant="inputGlass" padding="none" style={styles.searchShell}>
+        <View
+          style={[
+            styles.searchShell,
+            {
+              backgroundColor: tokens.colors.background.cardSolid,
+              borderColor: tokens.colors.border.divider,
+            },
+          ]}
+        >
           <View style={styles.searchRow}>
             <Ionicons name="search" size={18} color={tokens.colors.text.tertiary} />
             <TextInput
@@ -272,13 +279,17 @@ export default function ChatSearchBottomSheet({
               ]}
             >
               {isSearching ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={tokens.colors.text.inverse} />
               ) : (
-                <Ionicons name="search" size={17} color="#fff" />
+                <Ionicons
+                  name="search"
+                  size={17}
+                  color={canSearch ? tokens.colors.text.inverse : tokens.colors.text.tertiary}
+                />
               )}
             </Pressable>
           </View>
-        </UICard>
+        </View>
 
         <View style={styles.resultsWrap}>{resultsBody}</View>
       </View>
@@ -333,6 +344,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       overflow: 'hidden',
       paddingHorizontal: 14,
       paddingVertical: 4,
+      borderWidth: StyleSheet.hairlineWidth,
     },
     searchRow: {
       flexDirection: 'row',
@@ -353,14 +365,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       width: 34,
       height: 34,
       borderRadius: 17,
-      backgroundColor: tokens.colors.primary.main,
+      backgroundColor: tokens.colors.primary.lightCta,
       alignItems: 'center',
       justifyContent: 'center',
       flexShrink: 0,
     },
     searchActionDisabled: {
-      backgroundColor: tokens.colors.background.primary,
-      opacity: 0.55,
+      backgroundColor: tokens.colors.background.tertiary,
+      opacity: 1,
     },
     resultsWrap: {
       flex: 1,

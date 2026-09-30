@@ -129,7 +129,7 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
                   color: DesignTokens.colors.text.primary,
                   ...appPhysicalRightText,
                   flex: 1,
-                  marginRight: 10,
+                  marginRight: APP_LAYOUT.cardTitleToBodyGap,
                 }}
                 numberOfLines={2}
               >
@@ -137,7 +137,7 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
               </Text>
               <View
                 style={{
-                  backgroundColor: (DesignTokens.colors.primary as any).dim || 'rgba(0, 210, 106, 0.12)',
+                  backgroundColor: DesignTokens.colors.background.primary,
                   paddingHorizontal: 10,
                   paddingVertical: 4,
                   borderRadius: DesignTokens.borderRadius.full,
@@ -146,7 +146,7 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
               >
                 <Text
                   style={{
-                    ...APP_TYPE.cardSubtitle,
+                    ...APP_TYPE.cardMetricLabel,
                     color: DesignTokens.colors.text.primary,
                     textAlign: 'center',
                     fontVariant: ['tabular-nums'],
@@ -174,8 +174,8 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
                       <Text
                         style={{
                           ...APP_TYPE.cardMetricLabel,
-                          color: DesignTokens.colors.text.tertiary,
-                          marginBottom: APP_LAYOUT.cardMetricLabelToValueGap,
+                          color: DesignTokens.colors.text.secondary,
+                          marginBottom: APP_LAYOUT.cardTitleToSubtitleGap,
                           textAlign: 'center',
                         }}
                       >
@@ -183,7 +183,8 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
                       </Text>
                       <Text
                         style={{
-                          ...APP_TYPE.body,
+                          ...APP_TYPE.cardBody,
+                          fontWeight: APP_TYPE.cardTitle.fontWeight,
                           color: getActualColor(),
                           textAlign: 'center',
                           fontVariant: ['tabular-nums'],
@@ -209,8 +210,8 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
                       <Text
                         style={{
                           ...APP_TYPE.cardMetricLabel,
-                          color: DesignTokens.colors.text.tertiary,
-                          marginBottom: APP_LAYOUT.cardMetricLabelToValueGap,
+                          color: DesignTokens.colors.text.secondary,
+                          marginBottom: APP_LAYOUT.cardTitleToSubtitleGap,
                           textAlign: 'center',
                         }}
                       >
@@ -218,7 +219,8 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
                       </Text>
                       <Text
                         style={{
-                          ...APP_TYPE.body,
+                          ...APP_TYPE.cardBody,
+                          fontWeight: APP_TYPE.cardTitle.fontWeight,
                           color: DesignTokens.colors.text.primary,
                           textAlign: 'center',
                           fontVariant: ['tabular-nums'],
@@ -244,8 +246,8 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
                       <Text
                         style={{
                           ...APP_TYPE.cardMetricLabel,
-                          color: DesignTokens.colors.text.tertiary,
-                          marginBottom: APP_LAYOUT.cardMetricLabelToValueGap,
+                          color: DesignTokens.colors.text.secondary,
+                          marginBottom: APP_LAYOUT.cardTitleToSubtitleGap,
                           textAlign: 'center',
                         }}
                       >
@@ -253,7 +255,8 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
                       </Text>
                       <Text
                         style={{
-                          ...APP_TYPE.body,
+                          ...APP_TYPE.cardBody,
+                          fontWeight: APP_TYPE.cardTitle.fontWeight,
                           color: DesignTokens.colors.text.secondary,
                           textAlign: 'center',
                           fontVariant: ['tabular-nums'],
@@ -629,22 +632,26 @@ export default function EconomicCalendarTab() {
   }, [loadEconomicEvents]);
 
   // Realtime subscription - עדכונים אוטומטיים מ-Supabase
+  const loadEconomicEventsRef = useRef(loadEconomicEvents);
+  loadEconomicEventsRef.current = loadEconomicEvents;
+
   useEffect(() => {
-    const subscription = supabase
-      .channel('economic_events_channel')
-      .on('postgres_changes', 
+    // שם ייחודי לכל mount: supabase-js מחזיר ערוץ קיים לפי שם, ו-on() אחרי subscribe() זורק
+    const channel = supabase
+      .channel(`economic_events_${Date.now()}_${Math.random().toString(36).slice(2)}`)
+      .on(
+        'postgres_changes',
         { event: '*', schema: 'public', table: 'economic_events' },
-        (payload) => {
-          // רענן את הנתונים
-          loadEconomicEvents();
+        () => {
+          void loadEconomicEventsRef.current();
         }
       )
       .subscribe();
 
     return () => {
-      subscription.unsubscribe();
+      void supabase.removeChannel(channel);
     };
-  }, [loadEconomicEvents]);
+  }, []);
 
   // רענון
   const handleRefresh = useCallback(async () => {
@@ -689,20 +696,18 @@ export default function EconomicCalendarTab() {
     <View
       style={{
         paddingHorizontal: screenPad,
-        paddingTop: 10,
-        paddingBottom: 20,
-        marginBottom: 4,
+        paddingTop: APP_LAYOUT.stackGapSmall,
+        paddingBottom: APP_LAYOUT.componentGap,
       }}
     >
       <UICard
-        variant="blur"
-        glassIntensity="subtle"
+        variant="soft"
         padding="none"
         style={{
           borderRadius: DesignTokens.borderRadius.full,
           overflow: 'hidden',
-          paddingVertical: 12,
-          paddingHorizontal: 14,
+          paddingVertical: APP_LAYOUT.stackGapSmall,
+          paddingHorizontal: APP_LAYOUT.stackGapSmall,
         }}
       >
         <View
@@ -713,7 +718,7 @@ export default function EconomicCalendarTab() {
             justifyContent: 'space-between',
           }}
         >
-          <DayNavBlurButton onPress={goToPreviousDay} glass glassIntensity="subtle">
+          <DayNavBlurButton onPress={goToPreviousDay} style={{ backgroundColor: DesignTokens.colors.background.primary }}>
             <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.primary} />
           </DayNavBlurButton>
 
@@ -736,9 +741,9 @@ export default function EconomicCalendarTab() {
             {isSelectedToday && (
               <Text
                 style={{
-                  ...APP_TYPE.caption2,
-                  color: DesignTokens.colors.primary.main,
-                  marginTop: APP_LAYOUT.titleSubtitleGap,
+                  ...APP_TYPE.caption,
+                  color: DesignTokens.colors.text.secondary,
+                  marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
                 }}
               >
                 היום
@@ -746,7 +751,7 @@ export default function EconomicCalendarTab() {
             )}
           </View>
 
-          <DayNavBlurButton onPress={goToNextDay} glass glassIntensity="subtle">
+          <DayNavBlurButton onPress={goToNextDay} style={{ backgroundColor: DesignTokens.colors.background.primary }}>
             <Ionicons name="chevron-forward" size={20} color={DesignTokens.colors.text.primary} />
           </DayNavBlurButton>
         </View>
@@ -755,7 +760,7 @@ export default function EconomicCalendarTab() {
   );
 
   const renderEvent = ({ item, index }: { item: EconomicEvent; index: number }) => (
-    <View style={index === 0 ? { marginTop: 8 } : undefined}>
+    <View>
       <EconomicEventCard
         event={item}
         onPress={handleEventPress}
@@ -776,19 +781,19 @@ export default function EconomicCalendarTab() {
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32, paddingTop: 40 }}>
         <View 
           style={{ 
-            width: 120, 
-            height: 120, 
-            borderRadius: 60, 
-            backgroundColor: `${DesignTokens.colors.primary.main}1A`,
+            width: 72,
+            height: 72,
+            borderRadius: 36,
+            backgroundColor: DesignTokens.colors.background.cardSolid,
             alignItems: 'center',
             justifyContent: 'center',
-            marginBottom: 24
+            marginBottom: APP_LAYOUT.componentGap
           }}
         >
           <Ionicons 
-            name="calendar-outline" 
-            size={56} 
-            color={DesignTokens.colors.primary.main} 
+            name="calendar-outline"
+            size={32}
+            color={DesignTokens.colors.text.secondary}
           />
         </View>
         <Text 

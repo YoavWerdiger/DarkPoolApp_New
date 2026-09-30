@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { useTheme } from '../../context/ThemeContext';
+import { chatGroupDisplayName, groupAvatarSource } from '../../assets/chatGroups/groupChatIcons';
 import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
 import { supabase } from '../../services/supabase';
 import type { Trade } from './tradeTypes';
@@ -36,6 +38,7 @@ type ChatGroupRow = {
 
 export default function ShareTradeModal({ trade, visible, onClose }: ShareTradeModalProps) {
   const DesignTokens = useDesignTokens();
+  const { isDarkMode } = useTheme();
   const [chatGroups, setChatGroups] = useState<ChatGroupRow[]>([]);
   const [loading, setLoading] = useState(false);
   const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
@@ -137,7 +140,6 @@ export default function ShareTradeModal({ trade, visible, onClose }: ShareTradeM
       enablePanDownToClose={true}
       showHandle={true}
       showBrandBackground={false}
-      useGlassBackground
     >
       <View style={styles.container}>
         <View style={styles.header}>
@@ -208,14 +210,17 @@ export default function ShareTradeModal({ trade, visible, onClose }: ShareTradeM
                   shareToGroup(item.id, item.name);
                 }}
               >
-                {item.avatar_url ? (
-                  <Image source={{ uri: item.avatar_url }} style={styles.groupAvatar} />
+                {groupAvatarSource(item.name, item.avatar_url, isDarkMode) ? (
+                  <Image
+                    source={groupAvatarSource(item.name, item.avatar_url, isDarkMode)!}
+                    style={styles.groupAvatar}
+                  />
                 ) : (
                   <View style={styles.groupAvatarPlaceholder}>
                     <Ionicons name="people" size={24} color={DesignTokens.colors.text.primary} />
                   </View>
                 )}
-                <Text style={styles.groupName}>{item.name}</Text>
+                <Text style={styles.groupName}>{chatGroupDisplayName(item.name)}</Text>
                 <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.tertiary} />
               </TouchableOpacity>
             )}

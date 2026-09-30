@@ -1,6 +1,6 @@
 /**
- * מחוון שינוי P&L — נקודה צבעונית + מספר עם סימן.
- * ירוק/+ חיובי, אדום/− שלילי, נקודה מעומעמת באפס. בלי חצים.
+ * מחוון שינוי P&L — מספר עם סימן בלבד.
+ * ירוק/+ חיובי, אדום/− שלילי. בלי נקודה ובלי חצים.
  */
 
 import React from 'react';
@@ -76,7 +76,7 @@ export function ChangeDot({
   );
 }
 
-/** מספר בודד: `• +2.21%`. לזוג $ + % השתמשו ב-`SignedChangePair`. */
+/** מספר בודד: `+2.21%`. לזוג $ + % השתמשו ב-`SignedChangePair`. */
 export function SignedChange({
   tone,
   value,
@@ -102,7 +102,6 @@ export function SignedChange({
 
   return (
     <View style={[styles.row, style]}>
-      <ChangeDot tone={resolved} />
       <Text
         style={[styles.text, { color }, textStyle]}
         numberOfLines={numberOfLines}
@@ -113,7 +112,7 @@ export function SignedChange({
   );
 }
 
-/** סדר קבוע: שינוי $ ואז נקודה ואז תשואה %. `+$1.06 • +2.21%` */
+/** סדר קבוע: שינוי $ ואז תשואה %. `+$1.06 +2.21%` */
 export function SignedChangePair({
   tone,
   value,
@@ -146,7 +145,6 @@ export function SignedChangePair({
       <Text style={[styles.text, { color }, textStyle, absTextStyle]} numberOfLines={1}>
         {abs}
       </Text>
-      <ChangeDot tone={resolved} />
       <Text style={[styles.text, { color }, textStyle, pctTextStyle]} numberOfLines={1}>
         {pct}
       </Text>

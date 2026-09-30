@@ -105,7 +105,6 @@ export function HelpSheet({
       showHandle
       enablePanDownToClose
       useModal
-      useGlassBackground
       showBrandBackground={false}
     >
       <HelpSheetBody

@@ -6,7 +6,8 @@ import type { FollowingActivityItem } from '../../../services/darkpool/uwFollowi
 import { DarkPoolFeedCard } from './DarkPoolFeedCard';
 import { APP_LAYOUT } from '../../../components/ui/appLayout';
 import { FEED_CARD_TYPE } from './darkPoolFeedCardStyles';
-import { darkPoolTextRtl } from '../darkPoolLayout';
+import { darkPoolPhysicalRightText } from '../darkPoolLayout';
+import { ltrNameText } from '../utils/bidi';
 import { formatInsiderDisplayName } from '../utils/investorPlaceholder';
 import {
   formatFeedDisclosureRange,
@@ -76,12 +77,13 @@ export function ActivityFeedCard({
         </View>
 
         <View style={styles.main}>
+          <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
+            {displayName}
+          </Text>
           <Text style={styles.primary} numberOfLines={1} ellipsizeMode="tail">
-            <Text style={styles.name}>{displayName}</Text>
-            <Text style={{ color: sideColor, fontWeight: FEED_CARD_TYPE.action.fontWeight }}>{` ${verb} `}</Text>
+            <Text style={{ color: sideColor }}>{verb}</Text>
             <Text style={styles.ticker}>
-              {LRM}
-              {tickerSym}
+              {` ${LRM}${tickerSym}`}
             </Text>
           </Text>
           {detailParts.length > 0 ? (
@@ -108,8 +110,10 @@ export function ActivityFeedCard({
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     row: {
+      direction: 'rtl',
       flexDirection: 'row',
       alignItems: 'center',
+      width: '100%',
       gap: 10,
     },
     tickerCol: {
@@ -122,23 +126,29 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     main: {
       flex: 1,
       minWidth: 0,
+      direction: 'ltr',
+      alignItems: 'stretch',
       gap: APP_LAYOUT.cardTitleToSubtitleGap,
     },
     primary: {
-      ...darkPoolTextRtl,
+      ...darkPoolPhysicalRightText,
+      width: '100%',
       fontSize: FEED_CARD_TYPE.action.fontSize,
       lineHeight: FEED_CARD_TYPE.action.lineHeight,
       fontWeight: FEED_CARD_TYPE.action.fontWeight,
       color: tokens.colors.text.primary,
     },
     name: {
+      ...ltrNameText,
+      width: '100%',
       fontSize: FEED_CARD_TYPE.name.fontSize,
       lineHeight: FEED_CARD_TYPE.name.lineHeight,
       fontWeight: FEED_CARD_TYPE.name.fontWeight,
       color: tokens.colors.text.primary,
     },
     sub: {
-      ...darkPoolTextRtl,
+      ...darkPoolPhysicalRightText,
+      width: '100%',
       fontSize: FEED_CARD_TYPE.dates.fontSize,
       lineHeight: FEED_CARD_TYPE.dates.lineHeight,
       fontWeight: FEED_CARD_TYPE.dates.fontWeight,

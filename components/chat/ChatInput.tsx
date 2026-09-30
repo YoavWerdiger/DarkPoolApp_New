@@ -952,15 +952,17 @@ function ChatInputImpl({
   }, []);
 
   const onAttachCameraCapture = useCallback(
-    (result: { uri: string; width?: number; height?: number }) => {
+    (result: { uri: string; width?: number; height?: number; mediaType?: 'image' | 'video'; durationMs?: number }) => {
+      const isVideo = result.mediaType === 'video';
       const picked: PickedRecentMedia = {
         id: `camera-${Date.now()}`,
         uri: result.uri,
         thumbnailUri: result.uri,
-        type: 'image',
-        name: `photo_${Date.now()}.jpg`,
+        type: isVideo ? 'video' : 'image',
+        name: isVideo ? `video_${Date.now()}.mp4` : `photo_${Date.now()}.jpg`,
         width: result.width,
         height: result.height,
+        duration: result.durationMs != null ? result.durationMs / 1000 : undefined,
       };
       applyPickedMedia([picked]);
     },
@@ -2557,12 +2559,42 @@ function ChatInputImpl({
         onPoll={handleCreatePoll}
         onEntity={handleOpenEntityPicker}
         onPickedMedia={applyPickedMedia}
+        onCameraCommit={(result, caption) => {
+          const isVideo = result.mediaType === 'video';
+          const id = `camera-${Date.now()}`;
+          const file: MediaFile = {
+            id,
+            uri: result.uri,
+            type: isVideo ? 'video' : 'image',
+            name: isVideo ? `video_${Date.now()}.mp4` : `photo_${Date.now()}.jpg`,
+            width: result.width,
+            height: result.height,
+            duration: result.durationMs != null ? result.durationMs / 1000 : undefined,
+            thumbnail_url: result.uri,
+          };
+          return handleSendMedia([file], caption.trim() ? { [id]: caption } : {});
+        }}
       />
 
       <ChatAttachCameraSheet
         visible={attachCameraOpen}
         onClose={() => setAttachCameraOpen(false)}
         onCapture={onAttachCameraCapture}
+        onCommit={(result, caption) => {
+          const isVideo = result.mediaType === 'video';
+          const id = `camera-${Date.now()}`;
+          const file: MediaFile = {
+            id,
+            uri: result.uri,
+            type: isVideo ? 'video' : 'image',
+            name: isVideo ? `video_${Date.now()}.mp4` : `photo_${Date.now()}.jpg`,
+            width: result.width,
+            height: result.height,
+            duration: result.durationMs != null ? result.durationMs / 1000 : undefined,
+            thumbnail_url: result.uri,
+          };
+          return handleSendMedia([file], caption.trim() ? { [id]: caption } : {});
+        }}
       />
 
       <EntityAttachPickerSheet

@@ -42,6 +42,7 @@ import {
   sheetSystemBarFillHeight,
 } from './sheetGlass';
 import { SheetGlassBackground } from './SheetGlassBackground';
+import { SheetSurfaceProvider } from './sheetSurface';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const DEFAULT_SNAP_POINTS = [0.5];
@@ -622,6 +623,7 @@ const BottomSheetImpl: React.FC<BottomSheetProps> = ({
                 contentAnimatedStyle,
               ]}
             >
+              <SheetSurfaceProvider>
               {edgeToEdge ? (
                 <>
                   {showHandle && (
@@ -653,6 +655,7 @@ const BottomSheetImpl: React.FC<BottomSheetProps> = ({
                   {children}
                 </>
               )}
+              </SheetSurfaceProvider>
             </Animated.View>
           </GestureDetector>
         </Animated.View>

@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { LIGHT_CANVAS } from '../../../components/ui/designTokensStatic';
 import UICard from '../../../components/ui/UICard';
 import { UI_CARD_RADIUS } from '../../../components/ui/appLayout';
 import type { Trade } from '../portfolioTypes';
@@ -133,6 +134,9 @@ export default function PortfolioTradesTable({
   onEdit,
 }: PortfolioTradesTableProps) {
   const tokens = useDesignTokens();
+  const light = tokens.colors.background.primary === LIGHT_CANVAS;
+  /** פס עדין בצבע הערכה: בבהיר קנבס על כרטיס לבן, בכהה לבן שקוף. לא tertiary מלא. */
+  const rowStripe = light ? tokens.colors.background.primary : 'rgba(255,255,255,0.03)';
 
   const tableMinWidth = useMemo(() => {
     if (mode === 'open') {
@@ -238,14 +242,14 @@ export default function PortfolioTradesTable({
                 {headerCell('תאריך', COL.date)}
                 {headerCell('SL', COL.sl)}
                 {headerCell('TP', COL.tp)}
-                {headerCell('P&L', COL.pnl)}
+                {headerCell('P&L', COL.pnl, 'center')}
                 {!readOnly ? headerCell('', COL.actionsOpen, 'center') : null}
               </>
             ) : (
               <>
                 {headerCell('יציאה', COL.exit)}
                 {headerCell('תאריך', COL.date)}
-                {headerCell('P&L', COL.pnl)}
+                {headerCell('P&L', COL.pnl, 'center')}
                 {headerCell('', COL.actionsClosed, 'center')}
               </>
             )}
@@ -253,7 +257,7 @@ export default function PortfolioTradesTable({
 
           {trades.map((t, index) => {
             const isLong = t.direction === 'long';
-            const zebra = index % 2 === 1 ? 'rgba(255,255,255,0.03)' : 'transparent';
+            const zebra = index % 2 === 1 ? rowStripe : 'transparent';
             const entryStr = formatCurrency(t.entry_price, t.currency, 2);
             const qtyStr = formatQty(t.quantity);
             const slStr =
@@ -369,23 +373,24 @@ export default function PortfolioTradesTable({
                     {dataCell(dash(slStr), COL.sl)}
                     {dataCell(dash(tpStr), COL.tp)}
                     {dataCell(
-                      <View>
+                      <View style={styles.pnlStack}>
                         <Text
-                          style={[styles.cellText, { color: pnlColor }]}
+                          style={[styles.cellText, styles.pnlCenter, { color: pnlColor }]}
                           numberOfLines={1}
                         >
                           {pnlDisplay}
                         </Text>
                         {pnlPct ? (
                           <Text
-                            style={[styles.pnlPct, { color: pnlColor }]}
+                            style={[styles.pnlPct, styles.pnlCenter, { color: pnlColor }]}
                             numberOfLines={1}
                           >
                             {pnlPct}
                           </Text>
                         ) : null}
                       </View>,
-                      COL.pnl
+                      COL.pnl,
+                      'center'
                     )}
                     {!readOnly ? (
                       <View
@@ -427,23 +432,24 @@ export default function PortfolioTradesTable({
                     {dataCell(exitStr, COL.exit)}
                     {dataCell(dateStr, COL.date)}
                     {dataCell(
-                      <View>
+                      <View style={styles.pnlStack}>
                         <Text
-                          style={[styles.cellText, { color: pnlColor }]}
+                          style={[styles.cellText, styles.pnlCenter, { color: pnlColor }]}
                           numberOfLines={1}
                         >
                           {pnlDisplay}
                         </Text>
                         {pnlPct ? (
                           <Text
-                            style={[styles.pnlPct, { color: pnlColor }]}
+                            style={[styles.pnlPct, styles.pnlCenter, { color: pnlColor }]}
                             numberOfLines={1}
                           >
                             {pnlPct}
                           </Text>
                         ) : null}
                       </View>,
-                      COL.pnl
+                      COL.pnl,
+                      'center'
                     )}
                     <View
                       style={[
@@ -507,11 +513,18 @@ const styles = StyleSheet.create({
     ...journalPhysicalRightText,
   },
   cellText: {
-    fontSize: APP_TYPE.sectionSubtitle.fontSize,
-    fontWeight: '600',
-    lineHeight: APP_TYPE.sectionSubtitle.lineHeight,
+    fontSize: APP_TYPE.cardSubtitle.fontSize,
+    fontWeight: APP_TYPE.caption.fontWeight,
+    lineHeight: APP_TYPE.cardSubtitle.lineHeight,
     writingDirection: 'ltr',
     textAlign: 'right',
+  },
+  pnlStack: {
+    alignItems: 'center',
+  },
+  pnlCenter: {
+    textAlign: 'center',
+    width: '100%',
   },
   pnlPct: {
     fontSize: APP_TYPE.caption2.fontSize,
@@ -519,7 +532,7 @@ const styles = StyleSheet.create({
     lineHeight: APP_TYPE.caption2.lineHeight,
     marginTop: 1,
     writingDirection: 'ltr',
-    textAlign: 'right',
+    textAlign: 'center',
   },
   symbolCell: {
     flexDirection: 'row',

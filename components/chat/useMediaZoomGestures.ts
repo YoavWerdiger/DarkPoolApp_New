@@ -2,6 +2,8 @@ import { useCallback, useEffect } from 'react';
 import { Dimensions } from 'react-native';
 import { Gesture } from 'react-native-gesture-handler';
 import {
+  Extrapolation,
+  interpolate,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
@@ -24,6 +26,8 @@ export type UseMediaZoomGesturesOptions = {
   height?: number;
   /** Optional single-tap (e.g. dismiss keyboard in preview). Exclusive with double-tap. */
   onSingleTap?: () => void;
+  /** משיכה למטה כשאין זום — סוגר כמו בוואטסאפ */
+  onSwipeDismiss?: () => void;
   /** Fires when zoom settles above/below 1 (e.g. to disable gallery paging). */
   onZoomChange?: (zoomed: boolean) => void;
 };
@@ -39,6 +43,7 @@ export function useMediaZoomGestures(options: UseMediaZoomGesturesOptions = {}) 
     height = DEFAULT_HEIGHT,
     onSingleTap,
     onZoomChange,
+    onSwipeDismiss,
   } = options;
 
   const scale = useSharedValue(1);
@@ -54,6 +59,8 @@ export function useMediaZoomGestures(options: UseMediaZoomGesturesOptions = {}) 
   const pinchStartTranslateX = useSharedValue(0);
   const pinchStartTranslateY = useSharedValue(0);
   const isPinching = useSharedValue(false);
+  const dismissY = useSharedValue(0);
+  const dismissEnabled = useSharedValue(onSwipeDismiss ? 1 : 0);
 
   const screenW = useSharedValue(width);
   const screenH = useSharedValue(height);
@@ -63,6 +70,14 @@ export function useMediaZoomGestures(options: UseMediaZoomGesturesOptions = {}) 
     screenW.value = width;
     screenH.value = height;
   }, [width, height, screenW, screenH]);
+
+  useEffect(() => {
+    dismissEnabled.value = onSwipeDismiss ? 1 : 0;
+  }, [onSwipeDismiss, dismissEnabled]);
+
+  const fireDismiss = useCallback(() => {
+    onSwipeDismiss?.();
+  }, [onSwipeDismiss]);
 
   const clampTranslation = (tx: number, ty: number, s: number) => {
     'worklet';
@@ -109,12 +124,13 @@ export function useMediaZoomGestures(options: UseMediaZoomGesturesOptions = {}) 
     scale.value = 1;
     translateX.value = 0;
     translateY.value = 0;
+    dismissY.value = 0;
     savedScale.value = 1;
     savedTranslateX.value = 0;
     savedTranslateY.value = 0;
     isPinching.value = false;
     onZoomChange?.(false);
-  }, [onZoomChange]);
+  }, [onZoomChange, dismissY, isPinching, savedScale, savedTranslateX, savedTranslateY, scale, translateX, translateY]);
 
   const resetZoom = useCallback(() => {
     scale.value = withSpring(1, MEDIA_ZOOM_SPRING);
@@ -185,7 +201,16 @@ export function useMediaZoomGestures(options: UseMediaZoomGesturesOptions = {}) 
     })
     .onUpdate((event) => {
       'worklet';
-      if (isPinching.value || scale.value <= 1) return;
+      if (isPinching.value) return;
+      if (scale.value <= 1) {
+        if (!dismissEnabled.value) return;
+        if (event.translationY <= 0 || Math.abs(event.translationX) > Math.abs(event.translationY)) {
+          dismissY.value = 0;
+          return;
+        }
+        dismissY.value = event.translationY;
+        return;
+      }
       translateX.value = savedTranslateX.value + event.translationX;
       translateY.value = savedTranslateY.value + event.translationY;
     })
@@ -193,7 +218,11 @@ export function useMediaZoomGestures(options: UseMediaZoomGesturesOptions = {}) 
       'worklet';
       if (isPinching.value) return;
       if (scale.value <= 1) {
-        resetZoomWorklet();
+        if (dismissEnabled.value && (dismissY.value > 120 || event.velocityY > 900)) {
+          runOnJS(fireDismiss)();
+          return;
+        }
+        dismissY.value = withSpring(0, MEDIA_ZOOM_SPRING);
         return;
       }
       const nextX = translateX.value + event.velocityX * 0.08;
@@ -241,14 +270,19 @@ export function useMediaZoomGestures(options: UseMediaZoomGesturesOptions = {}) 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
       { translateX: translateX.value },
-      { translateY: translateY.value },
+      { translateY: translateY.value + dismissY.value },
       { scale: scale.value },
     ],
+  }));
+
+  const backdropStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(dismissY.value, [0, 280], [1, 0.15], Extrapolation.CLAMP),
   }));
 
   return {
     zoomGesture,
     animatedStyle,
+    backdropStyle,
     resetZoom,
     resetZoomImmediate,
   };

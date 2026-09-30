@@ -61,13 +61,12 @@ function TweetCardSkeletonInner({ delay = 0 }: Props) {
       importantForAccessibility="no-hide-descendants"
     >
       <UICard
-        variant="glass"
-        glassIntensity="light"
+        variant="soft"
         padding="none"
         disableBlur
         style={{
           borderRadius: tokens.borderRadius['2xl'],
-          backgroundColor: 'transparent',
+          backgroundColor: tokens.colors.background.cardSolid,
           overflow: 'hidden',
           ...tokens.shadows.none,
         }}

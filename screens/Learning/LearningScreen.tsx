@@ -15,6 +15,7 @@ import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import UICard from '../../components/ui/UICard';
 import UIButton from '../../components/ui/UIButton';
 import { APP_LAYOUT } from '../../components/ui/appLayout';
+import { appPhysicalRightText } from '../../components/ui/appType';
 import {
   ACADEMY_TYPE,
   academySectionTitleStyle,
@@ -1448,11 +1449,6 @@ function LearningScreen() {
             setSelectedLesson(null);
           }}
           title={selectedLesson.title}
-          subtitle={
-            courseData?.title
-              ? `שיעור ${lessonNumberLabel} · ${courseData.title}`
-              : `שיעור ${lessonNumberLabel}`
-          }
         />
 
           <View style={styles.lessonMainContent}>
@@ -1672,8 +1668,7 @@ function LearningScreen() {
                 <DayNavBlurButton
                   onPress={goToNextLesson}
                   disabled={!canGoNext}
-                  glass
-                  glassIntensity="subtle"
+                  style={{ backgroundColor: DesignTokens.colors.background.primary }}
                 >
                   <Ionicons
                     name="chevron-back"
@@ -1696,8 +1691,7 @@ function LearningScreen() {
                 <DayNavBlurButton
                   onPress={goToPrevLesson}
                   disabled={!canGoPrev}
-                  glass
-                  glassIntensity="subtle"
+                  style={{ backgroundColor: DesignTokens.colors.background.primary }}
                 >
                   <Ionicons
                     name="chevron-forward"
@@ -1748,7 +1742,6 @@ function LearningScreen() {
           enablePanDownToClose={!isSaving}
           edgeToEdge
           showHandle
-          useGlassBackground
           showBrandBackground={false}
           showBrandWatermark={false}
           contentPaddingBottom={0}
@@ -1758,46 +1751,43 @@ function LearningScreen() {
           <View style={styles.notesSheetContent}>
             <View style={styles.notesSheetHeader}>
               <DayNavBlurButton
-                onPress={() => !isSaving && setNotesModalVisible(false)}
-                size={DAY_NAV_BUTTON_SIZE}
-                glassIntensity="subtle"
-                style={styles.notesSheetHeaderIcon}
-                accessibilityLabel="סגור"
-                disabled={isSaving}
-              >
-                <Ionicons name="chevron-forward" size={22} color={DesignTokens.colors.text.primary} />
-              </DayNavBlurButton>
-
-              <View style={styles.notesSheetHeaderCenter}>
-                <Text style={[styles.notesSheetHeaderTitle, rtlText, { color: DesignTokens.colors.text.primary }]}>
-                  הערות אישיות
-                </Text>
-                <Text
-                  style={[styles.notesSheetHeaderSubtitle, rtlText, { color: DesignTokens.colors.text.secondary }]}
-                  numberOfLines={1}
-                >
-                  {selectedLesson?.title ?? 'נשמרות לחשבון שלך מכל מכשיר'}
-                </Text>
-              </View>
-
-              <TouchableOpacity
                 onPress={() => {
+                  if (!userNotes.length || isSaving) return;
                   void HapticFeedback.selection();
                   setUserNotes('');
                 }}
-                style={styles.notesSheetHeaderTextBtn}
-                disabled={!userNotes.length || isSaving}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                size={DAY_NAV_BUTTON_SIZE}
+                accessibilityLabel="נקה הערות"
+                style={{ backgroundColor: DesignTokens.colors.background.primary }}
               >
+                <Ionicons
+                  name="trash-outline"
+                  size={20}
+                  color={
+                    !userNotes.length || isSaving
+                      ? DesignTokens.colors.text.tertiary
+                      : DesignTokens.colors.text.danger
+                  }
+                />
+              </DayNavBlurButton>
+
+              <View pointerEvents="none" style={styles.notesSheetTitleWrap}>
                 <Text
-                  style={[
-                    styles.notesSheetHeaderTextBtnLabel,
-                    { color: (!userNotes.length || isSaving) ? DesignTokens.colors.text.tertiary : DesignTokens.colors.text.primary },
-                  ]}
+                  style={[styles.notesSheetHeaderTitle, { color: DesignTokens.colors.text.primary }]}
+                  numberOfLines={1}
                 >
-                  נקה
+                  הערות אישיות
                 </Text>
-              </TouchableOpacity>
+              </View>
+
+              <DayNavBlurButton
+                onPress={() => !isSaving && setNotesModalVisible(false)}
+                size={DAY_NAV_BUTTON_SIZE}
+                accessibilityLabel="סגור"
+                style={{ backgroundColor: DesignTokens.colors.background.primary }}
+              >
+                <Ionicons name="chevron-forward" size={22} color={DesignTokens.colors.text.primary} />
+              </DayNavBlurButton>
             </View>
 
             <ScrollView
@@ -1807,13 +1797,22 @@ function LearningScreen() {
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="on-drag"
             >
-              <UICard variant="inputGlass" padding="none" style={styles.notesSheetInputShell}>
+              <View
+                style={[
+                  styles.notesSheetInputShell,
+                  {
+                    direction: 'ltr',
+                    backgroundColor: DesignTokens.colors.background.primary,
+                    borderColor: DesignTokens.colors.border.divider,
+                  },
+                ]}
+              >
                 <TextInput
                   ref={textInputRef}
                   style={[
                     styles.notesSheetInput,
-                    rtlText,
-                    { color: DesignTokens.colors.text.primary },
+                    appPhysicalRightText,
+                    { color: DesignTokens.colors.text.primary, textAlign: 'right' },
                     Platform.OS === 'android' && { includeFontPadding: false },
                   ]}
                   placeholder="כתבו מחשבות, רעיונות ותזכורות מהשיעור..."
@@ -1822,11 +1821,12 @@ function LearningScreen() {
                   onChangeText={setUserNotes}
                   multiline
                   autoFocus
+                  textAlign="right"
                   textAlignVertical="top"
                 />
-              </UICard>
+              </View>
 
-              <Text style={[styles.notesSheetHint, rtlText, { color: DesignTokens.colors.text.tertiary }]}>
+              <Text style={[styles.notesSheetHint, { color: DesignTokens.colors.text.tertiary }]}>
                 ההערות נשמרות לחשבון שלך וזמינות מכל מכשיר
               </Text>
             </ScrollView>
@@ -2612,39 +2612,29 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   notesSheetHeader: {
     flexDirection: 'row',
+    direction: 'ltr',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: tokens.spacing.lg,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: tokens.colors.border.divider,
-    gap: 10,
+    paddingBottom: 16,
+    minHeight: DAY_NAV_BUTTON_SIZE,
   },
-  notesSheetHeaderIcon: {
-    alignSelf: 'center',
-  },
-  notesSheetHeaderCenter: {
-    flex: 1,
-    alignItems: 'flex-start',
-  },
-  notesSheetHeaderTitle: {
-    ...ACADEMY_TYPE.cardTitle,
-  },
-  notesSheetHeaderSubtitle: {
-    marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
-    ...ACADEMY_TYPE.caption,
-  },
-  notesSheetHeaderTextBtn: {
-    minWidth: DAY_NAV_BUTTON_SIZE,
-    height: DAY_NAV_BUTTON_SIZE,
+  notesSheetTitleWrap: {
+    position: 'absolute',
+    left: tokens.spacing.lg + DAY_NAV_BUTTON_SIZE,
+    right: tokens.spacing.lg + DAY_NAV_BUTTON_SIZE,
+    top: 0,
+    bottom: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  notesSheetHeaderTextBtnLabel: {
-    ...ACADEMY_TYPE.caption,
-    color: tokens.colors.text.primary,
-  },
-  notesSheetHeaderTextBtnLabelDisabled: {
-    color: tokens.colors.text.tertiary,
+  notesSheetHeaderTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    lineHeight: 28,
+    letterSpacing: -0.42,
+    textAlign: 'center',
+    writingDirection: 'rtl',
   },
   notesSheetScroll: {
     flex: 1,
@@ -2657,15 +2647,19 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     direction: 'rtl',
   },
   notesSheetInputShell: {
-    borderRadius: 16,
+    borderRadius: 22,
+    borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   notesSheetInput: {
     backgroundColor: 'transparent',
     borderWidth: 0,
     ...ACADEMY_TYPE.body,
+    direction: 'ltr',
+    textAlign: 'right',
+    writingDirection: 'rtl',
     textAlignVertical: 'top',
     minHeight: 220,
     width: '100%',
@@ -2673,13 +2667,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   notesSheetHint: {
     ...ACADEMY_TYPE.caption,
+    textAlign: 'center',
+    writingDirection: 'rtl',
+    width: '100%',
   },
   notesSheetFooter: {
     paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
     paddingTop: APP_LAYOUT.cardStackGap,
-    borderTopWidth: 1,
-    borderTopColor: tokens.colors.border.divider,
-    backgroundColor: tokens.colors.background.primary,
+    backgroundColor: 'transparent',
   },
   notesSheetSavePrimary: {
     height: 50,

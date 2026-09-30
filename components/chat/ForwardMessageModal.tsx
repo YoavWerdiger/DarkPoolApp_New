@@ -25,10 +25,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { chatGroupService } from '../../services/chat';
 import { ChatGroup } from '../../types/chat.types';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
+import { chatGroupDisplayName, groupAvatarSource } from '../../assets/chatGroups/groupChatIcons';
 import { logger } from '../../utils/logger';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
-import UICard from '../ui/UICard';
 import {
   ChatBottomSheet,
   ChatSheetContent,
@@ -58,6 +59,7 @@ export default function ForwardMessageModal({
   currentGroupId,
 }: ForwardMessageModalProps) {
   const tokens = useDesignTokens();
+  const { isDarkMode } = useTheme();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
   const { user } = useAuth();
@@ -142,6 +144,7 @@ export default function ForwardMessageModal({
 
   const renderGroupItem = ({ item }: { item: ChatGroup }) => {
     const isSelected = selectedGroups.has(item.id);
+    const avatar = groupAvatarSource(item.name, item.avatar_url, isDarkMode);
 
     return (
       <TouchableOpacity
@@ -151,10 +154,10 @@ export default function ForwardMessageModal({
         disabled={isForwarding}
         accessibilityRole="checkbox"
         accessibilityState={{ checked: isSelected }}
-        accessibilityLabel={item.name}
+        accessibilityLabel={chatGroupDisplayName(item.name)}
       >
-        {item.avatar_url ? (
-          <Image source={{ uri: item.avatar_url }} style={styles.groupAvatar} />
+        {avatar ? (
+          <Image source={avatar} style={styles.groupAvatar} />
         ) : (
           <View style={styles.groupAvatarPlaceholder}>
             <Ionicons name="people" size={22} color={tokens.colors.text.secondary} />
@@ -163,7 +166,7 @@ export default function ForwardMessageModal({
 
         <View style={styles.groupInfo}>
           <Text style={styles.groupName} numberOfLines={1}>
-            {item.name}
+            {chatGroupDisplayName(item.name)}
           </Text>
         </View>
 
@@ -237,7 +240,15 @@ export default function ForwardMessageModal({
           <View style={styles.headerSideSpacer} />
         </View>
 
-        <UICard variant="inputGlass" padding="none" style={styles.searchShell}>
+        <View
+          style={[
+            styles.searchShell,
+            {
+              backgroundColor: tokens.colors.background.cardSolid,
+              borderColor: tokens.colors.border.divider,
+            },
+          ]}
+        >
           <View style={styles.searchRow}>
             <Ionicons name="search" size={18} color={tokens.colors.text.tertiary} />
             <TextInput
@@ -262,7 +273,7 @@ export default function ForwardMessageModal({
               </Pressable>
             ) : null}
           </View>
-        </UICard>
+        </View>
 
         <View style={styles.listWrap}>{listBody}</View>
 
@@ -333,6 +344,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       overflow: 'hidden',
       paddingHorizontal: 14,
       paddingVertical: 4,
+      borderWidth: StyleSheet.hairlineWidth,
     },
     searchRow: {
       flexDirection: 'row',

@@ -29,6 +29,7 @@ import {
   sheetSystemBarFillHeight,
 } from './BottomSheet/sheetGlass';
 import { SheetGlassBackground } from './BottomSheet/SheetGlassBackground';
+import { SheetSurfaceProvider } from './BottomSheet/sheetSurface';
 import { applyAppSystemUI } from '../../lib/androidSystemUI';
 
 export interface UIBottomSheetProps {
@@ -285,7 +286,9 @@ const UIBottomSheet: React.FC<UIBottomSheetProps> = ({
           )}
 
           {/* Content */}
-          <View style={[{ zIndex: 2, backgroundColor: 'transparent' }, contentStyle]}>{children}</View>
+          <SheetSurfaceProvider>
+            <View style={[{ zIndex: 2, backgroundColor: 'transparent' }, contentStyle]}>{children}</View>
+          </SheetSurfaceProvider>
         </Animated.View>
       </View>
     </Modal>

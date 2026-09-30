@@ -118,7 +118,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
     const screenPad = 16;
     const cardPad = 14;
     const inner = windowWidth - screenPad * 2 - cardPad * 2;
-    const cellGap = 4;
+    const cellGap = 6;
     const dayWidth = Math.floor((inner - cellGap * 6) / 7);
     return { cellGap, dayWidth };
   }, [windowWidth]);
@@ -256,7 +256,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
         },
         cell: {
           aspectRatio: 1,
-          borderRadius: 7,
+          borderRadius: 10,
           alignItems: 'center',
           justifyContent: 'center',
           paddingVertical: 3,
@@ -502,13 +502,11 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
                 const data = dailyPnl.get(cell.key);
                 const pnl = data?.pnl ?? 0;
                 const bg =
-                  data == null
-                    ? 'rgba(255,255,255,0.04)'
+                  data == null || pnl === 0
+                    ? tokens.colors.background.tertiary
                     : pnl > 0
                       ? `${tokens.colors.primary.main}${TINT_ALPHA}`
-                      : pnl < 0
-                        ? `${tokens.colors.text.danger}${TINT_ALPHA}`
-                        : 'rgba(255,255,255,0.06)';
+                      : `${tokens.colors.text.danger}${TINT_ALPHA}`;
                 const isSelected = selectedDay === cell.key;
                 return (
                   <TouchableOpacity

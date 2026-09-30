@@ -7,11 +7,19 @@ import {
   Animated,
   useWindowDimensions,
   type ViewStyle,
-  type TextStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path, Circle, Line, Text as SvgText } from 'react-native-svg';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { APP_LAYOUT } from '../ui/appLayout';
+import {
+  APP_TYPE,
+  appCaption2Style,
+  appCardMetricValueStyle,
+  appCardSubtitleStyle,
+  appGroupLabelStyle,
+  appSectionTitleStyle,
+} from '../ui/appType';
 import { useFearAndGreed } from '../../hooks/useFearAndGreed';
 import {
   fearAndGreedService,
@@ -88,7 +96,6 @@ export default function FearAndGreedCard({
 
   const styles = useMemo(() => {
     const headerJustifyContent: ViewStyle['justifyContent'] = disableToggle ? 'center' : 'space-between';
-    const titleTextAlign: TextStyle['textAlign'] = disableToggle ? 'center' : 'right';
 
     return {
       container: {
@@ -109,13 +116,10 @@ export default function FearAndGreedCard({
         zIndex: 10,
         paddingHorizontal: DesignTokens.spacing.sm,
       },
-      title: {
-        fontSize: DesignTokens.typography.fontSize.lg,
-        fontWeight: DesignTokens.typography.fontWeight.bold as any,
+      sectionTitle: {
+        ...appSectionTitleStyle,
+        marginBottom: APP_LAYOUT.groupLabelToContent,
         color: DesignTokens.colors.text.primary,
-        textAlign: titleTextAlign,
-        writingDirection: 'rtl' as const,
-        ...(disableToggle ? { width: '100%' as const } : {}),
       },
       valueContainer: {
         flexDirection: 'row' as const,
@@ -124,16 +128,14 @@ export default function FearAndGreedCard({
         marginTop: DesignTokens.spacing.sm,
       },
       valueText: {
-        fontSize: DesignTokens.typography.fontSize['3xl'],
-        fontWeight: DesignTokens.typography.fontWeight.bold as any,
+        ...appCardMetricValueStyle,
         color: DesignTokens.colors.text.primary,
       },
       description: {
-        fontSize: DesignTokens.typography.fontSize.base,
-        fontWeight: DesignTokens.typography.fontWeight.medium as any,
+        ...appCardSubtitleStyle,
+        width: undefined,
         color: DesignTokens.colors.text.secondary,
-        textAlign: 'right' as const,
-        marginTop: DesignTokens.spacing.xs,
+        marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
       },
       progressBar: {
         height: 8,
@@ -151,10 +153,10 @@ export default function FearAndGreedCard({
         alignItems: 'center' as const,
       },
       errorText: {
-        fontSize: DesignTokens.typography.fontSize.sm,
+        ...appCardSubtitleStyle,
+        width: undefined,
         color: DesignTokens.colors.danger.main,
-        textAlign: 'right' as const,
-        marginTop: DesignTokens.spacing.xs,
+        marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
       },
       splitContainer: {
         flexDirection: 'row' as const,
@@ -211,11 +213,9 @@ export default function FearAndGreedCard({
         marginRight: DesignTokens.spacing.lg,
       },
       segmentLabel: {
-        fontSize: DesignTokens.typography.fontSize.xs,
-        fontWeight: DesignTokens.typography.fontWeight.medium as any,
+        ...appCaption2Style,
+        width: undefined,
         color: DesignTokens.colors.text.secondary,
-        textAlign: 'right' as const,
-        writingDirection: 'rtl' as const,
       },
       currentValueContainer: {
         alignItems: 'center' as const,
@@ -224,19 +224,29 @@ export default function FearAndGreedCard({
         marginBottom: DesignTokens.spacing.sm,
         paddingVertical: DesignTokens.spacing.xs,
       },
+      currentValueRow: {
+        direction: 'ltr' as const,
+        flexDirection: 'row' as const,
+        alignItems: 'flex-end' as const,
+        gap: 2,
+      },
       currentValueText: {
-        fontSize: DesignTokens.typography.fontSize['3xl'],
-        fontWeight: DesignTokens.typography.fontWeight.bold as any,
-        fontFamily: DesignTokens.typography.fontFamily.assistant?.[0] || 'System',
-        textAlign: 'center' as const,
-        lineHeight: DesignTokens.typography.fontSize['3xl'] * 1.05,
+        ...appCardMetricValueStyle,
+        fontVariant: ['tabular-nums'] as const,
+      },
+      currentValueUnit: {
+        ...APP_TYPE.groupLabel,
+        writingDirection: 'ltr' as const,
+        marginBottom: 3,
       },
       currentValueDescription: {
-        fontSize: DesignTokens.typography.fontSize.sm,
-        fontWeight: DesignTokens.typography.fontWeight.medium as any,
+        fontSize: APP_TYPE.cardMetricValueSecondary.fontSize,
+        lineHeight: APP_TYPE.cardMetricValueSecondary.lineHeight,
+        fontWeight: APP_TYPE.cardMetricValueSecondary.fontWeight,
+        letterSpacing: APP_TYPE.cardMetricValueSecondary.letterSpacing,
         textAlign: 'center' as const,
-        marginTop: 2,
-        lineHeight: DesignTokens.typography.fontSize.sm * 1.2,
+        writingDirection: 'rtl' as const,
+        marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
       },
       historicalDataContainer: {
         marginTop: 0,
@@ -246,34 +256,46 @@ export default function FearAndGreedCard({
         justifyContent: 'flex-start' as const,
       },
       historicalSectionTitle: {
-        fontSize: DesignTokens.typography.fontSize.base,
-        fontWeight: DesignTokens.typography.fontWeight.bold as any,
-        color: DesignTokens.colors.text.primary,
-        textAlign: 'right' as const,
-        writingDirection: 'rtl' as const,
-        marginBottom: DesignTokens.spacing.md,
+        ...appGroupLabelStyle,
+        color: DesignTokens.colors.text.secondary,
+        marginBottom: APP_LAYOUT.groupLabelToContent,
       },
       historicalItem: {
+        direction: 'ltr' as const,
         flexDirection: 'row' as const,
-        justifyContent: 'flex-start' as const,
+        justifyContent: 'space-between' as const,
         alignItems: 'center' as const,
-        marginBottom: DesignTokens.spacing.sm,
-        paddingHorizontal: DesignTokens.spacing.sm,
-        paddingVertical: DesignTokens.spacing.xs / 2,
+        gap: 12,
+        paddingVertical: APP_LAYOUT.groupLabelToContent,
       },
       historicalLabel: {
-        fontSize: DesignTokens.typography.fontSize.sm,
+        ...appCardSubtitleStyle,
+        flex: 1,
+        width: undefined,
+        marginTop: 0,
         color: DesignTokens.colors.text.secondary,
-        fontWeight: DesignTokens.typography.fontWeight.medium as any,
-        textAlign: 'right' as const,
-        writingDirection: 'rtl' as const,
-        marginLeft: DesignTokens.spacing.sm,
       },
       historicalValue: {
-        fontSize: DesignTokens.typography.fontSize.sm,
-        fontWeight: DesignTokens.typography.fontWeight.bold as any,
-        textAlign: 'right' as const,
-        writingDirection: 'rtl' as const,
+        fontSize: APP_TYPE.cardSubtitle.fontSize,
+        lineHeight: APP_TYPE.cardSubtitle.lineHeight,
+        fontWeight: '600' as const,
+        textAlign: 'left' as const,
+        writingDirection: 'ltr' as const,
+        fontVariant: ['tabular-nums'] as const,
+      },
+      timestamp: {
+        ...appCaption2Style,
+        width: '100%' as const,
+        textAlign: 'center' as const,
+        marginTop: APP_LAYOUT.groupLabelToContent,
+        color: DesignTokens.colors.text.tertiary,
+      },
+      legendRow: {
+        direction: 'ltr' as const,
+        flexDirection: 'row' as const,
+        justifyContent: 'flex-end' as const,
+        alignItems: 'center' as const,
+        gap: 8,
       },
     };
   }, [DesignTokens, fullWidth, cardPadding, disableToggle, gaugeViewportW]);
@@ -289,24 +311,17 @@ export default function FearAndGreedCard({
 
   const effectiveExpanded = disableToggle ? true : expanded;
 
-  const renderHeader = (_subtitle?: string) => (
+  const renderSectionTitle = () =>
+    hideHeader ? null : (
+      <Text style={styles.sectionTitle}>מדד הפחד והתאווה</Text>
+    );
+
+  const renderHeader = () => {
+    if (disableToggle) return null;
+    return (
     <View style={styles.header}>
-      <View
-        style={
-          disableToggle
-            ? {
-                width: '100%' as const,
-                flexDirection: 'row' as const,
-                alignItems: 'center' as const,
-                justifyContent: 'center' as const,
-              }
-            : { flexDirection: 'row' as const, alignItems: 'center' as const, flex: 1 }
-        }
-      >
-        <Text style={styles.title}>מדד הפחד והתאווה</Text>
-      </View>
-      {!disableToggle && (
-        <TouchableOpacity
+      <View style={{ flex: 1 }} />
+      <TouchableOpacity
           onPress={() => setExpanded(!expanded)}
           activeOpacity={0.7}
           style={{
@@ -319,11 +334,14 @@ export default function FearAndGreedCard({
           }}
         >
           <Text
-            style={{
-              fontSize: DesignTokens.typography.fontSize.xs,
-              color: DesignTokens.colors.text.secondary,
-              marginRight: DesignTokens.spacing.xs / 2,
-            }}
+            style={[
+              appCaption2Style,
+              {
+                width: undefined,
+                color: DesignTokens.colors.text.secondary,
+                marginRight: DesignTokens.spacing.xs / 2,
+              },
+            ]}
           >
             {expanded ? 'סגור' : 'פתח'}
           </Text>
@@ -333,13 +351,14 @@ export default function FearAndGreedCard({
             color={DesignTokens.colors.text.secondary}
           />
         </TouchableOpacity>
-      )}
     </View>
-  );
+    );
+  };
 
   if (loading) {
     return (
       <View style={styles.container}>
+        {renderSectionTitle()}
         <UICard
           variant="blur"
           padding={cardPadding}
@@ -360,6 +379,7 @@ export default function FearAndGreedCard({
   if (error || !data) {
     return (
       <View style={styles.container}>
+        {renderSectionTitle()}
         <UICard
           variant="blur"
           padding={cardPadding}
@@ -380,11 +400,7 @@ export default function FearAndGreedCard({
               alignSelf: 'flex-start',
             }}
           >
-            <Text style={{
-              fontSize: DesignTokens.typography.fontSize.sm,
-              color: DesignTokens.colors.primary.main,
-              fontWeight: DesignTokens.typography.fontWeight.medium as any,
-            }}>
+            <Text style={[styles.description, { marginTop: 0, color: DesignTokens.colors.primary.main }]}>
               נסה שוב
             </Text>
           </TouchableOpacity>
@@ -450,17 +466,18 @@ export default function FearAndGreedCard({
 
   const CardContent = (
     <View style={styles.container}>
+      {renderSectionTitle()}
       <UICard
         variant="blur"
         padding={cardPadding}
         contentContainerStyle={cardContentContainerStyle}
       >
-        {!hideHeader ? renderHeader(description) : null}
+        {!hideHeader ? renderHeader() : null}
 
         {!effectiveExpanded ? (
           <View style={{ marginTop: DesignTokens.spacing.sm }}>
             <Text style={[styles.description, { textAlign: 'right', marginBottom: DesignTokens.spacing.xs }]}>
-              ערך נוכחי: <Text style={{ fontWeight: DesignTokens.typography.fontWeight.bold as any, color }}>{value}</Text>
+              ערך נוכחי: <Text style={{ fontWeight: '600', color }}>{value}</Text>
             </Text>
             <Text style={[styles.description, { textAlign: 'right', color: DesignTokens.colors.text.secondary }]}>
               לחץ כדי לראות את הגרף וההיסטוריה
@@ -547,7 +564,7 @@ export default function FearAndGreedCard({
                         key={`text-${index}`}
                         x={x}
                         y={y}
-                        fontSize={12}
+                        fontSize={APP_TYPE.caption2.fontSize}
                         fill={DesignTokens.colors.text.secondary}
                         textAnchor="middle"
                         alignmentBaseline="middle"
@@ -589,27 +606,28 @@ export default function FearAndGreedCard({
 
               {/* ערך נוכחי — מתחת לגייג' */}
               <View style={styles.currentValueContainer}>
-                <Text style={[styles.currentValueText, { color }]}>
-                  {value}
-                </Text>
-                <Text style={[styles.currentValueDescription, { color }]}>
-                  {description}
+                <View style={styles.currentValueRow}>
+                  <Text style={[styles.currentValueText, { color }]}>{value}</Text>
+                  <Text style={[styles.currentValueUnit, { color: DesignTokens.colors.text.secondary }]}>
+                    /100
+                  </Text>
+                </View>
+                <Text style={styles.currentValueDescription}>
+                  <Text
+                    style={{
+                      color: DesignTokens.colors.text.primary,
+                      fontWeight: APP_TYPE.body.fontWeight,
+                    }}
+                  >
+                    {description === 'ניטרלי' ? 'השוק כרגע ' : 'השוק כרגע ב'}
+                  </Text>
+                  <Text style={{ color }}>{description}</Text>
                 </Text>
               </View>
 
               {/* Timestamp under the gauge column */}
               {data.timestamp && (
-                <Text
-                  style={[
-                    styles.description,
-                    {
-                      fontSize: DesignTokens.typography.fontSize.xs,
-                      marginTop: DesignTokens.spacing.xs,
-                      textAlign: 'center',
-                      color: DesignTokens.colors.text.tertiary,
-                    },
-                  ]}
-                >
+                <Text style={styles.timestamp}>
                   עודכן:{' '}
                   {new Date(data.timestamp * 1000).toLocaleString('he-IL', {
                     day: 'numeric',
@@ -633,18 +651,7 @@ export default function FearAndGreedCard({
                 paddingLeft: DesignTokens.spacing.sm,
               }}
             >
-              <Text
-                style={{
-                  fontSize: DesignTokens.typography.fontSize.sm,
-                  fontWeight: DesignTokens.typography.fontWeight.bold as any,
-                  color: DesignTokens.colors.text.primary,
-                  textAlign: 'right',
-                  writingDirection: 'rtl',
-                  marginBottom: DesignTokens.spacing.sm,
-                }}
-              >
-                היסטוריה
-              </Text>
+              <Text style={styles.historicalSectionTitle}>היסטוריה</Text>
 
               {[
                 { key: 'previousClose' as const, label: 'סגירה קודמת' },
@@ -656,36 +663,27 @@ export default function FearAndGreedCard({
                 return (
                   <View
                     key={key}
-                    style={{
-                      flexDirection: 'row-reverse',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      paddingVertical: DesignTokens.spacing.xs,
-                      borderBottomWidth: 1,
-                      borderBottomColor: 'rgba(255,255,255,0.06)',
-                    }}
+                    style={[
+                      styles.historicalItem,
+                      {
+                        borderBottomWidth: 1,
+                        borderBottomColor: DesignTokens.colors.border.divider,
+                      },
+                    ]}
                   >
                     <Text
-                      style={{
-                        fontSize: DesignTokens.typography.fontSize.xs,
-                        color: DesignTokens.colors.text.secondary,
-                        textAlign: 'right',
-                        writingDirection: 'rtl',
-                      }}
-                    >
-                      {label}
-                    </Text>
-                    <Text
-                      style={{
-                        fontSize: DesignTokens.typography.fontSize.base,
-                        fontWeight: DesignTokens.typography.fontWeight.bold as any,
-                        color: item
-                          ? fearAndGreedService.getValueColor(item.value)
-                          : DesignTokens.colors.text.tertiary,
-                      }}
+                      style={[
+                        styles.historicalValue,
+                        {
+                          color: item
+                            ? fearAndGreedService.getValueColor(item.value)
+                            : DesignTokens.colors.text.tertiary,
+                        },
+                      ]}
                     >
                       {item ? item.value : '–'}
                     </Text>
+                    <Text style={styles.historicalLabel}>{label}</Text>
                   </View>
                 );
               })}
@@ -693,14 +691,8 @@ export default function FearAndGreedCard({
               {/* Segment legend — vertical, fits under the history list */}
               <View style={{ marginTop: DesignTokens.spacing.sm, gap: 6 }}>
                 {FEAR_GREED_GAUGE_SEGMENTS.map((seg) => (
-                  <View
-                    key={seg.label}
-                    style={{
-                      flexDirection: 'row-reverse',
-                      alignItems: 'center',
-                      gap: 6,
-                    }}
-                  >
+                  <View key={seg.label} style={styles.legendRow}>
+                    <Text style={styles.segmentLabel}>{seg.label}</Text>
                     <View
                       style={{
                         width: 8,
@@ -709,14 +701,6 @@ export default function FearAndGreedCard({
                         backgroundColor: seg.color,
                       }}
                     />
-                    <Text
-                      style={{
-                        fontSize: 11,
-                        color: DesignTokens.colors.text.secondary,
-                      }}
-                    >
-                      {seg.label}
-                    </Text>
                   </View>
                 ))}
               </View>

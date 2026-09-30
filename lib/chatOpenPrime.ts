@@ -1,3 +1,4 @@
+import { chatGroupDisplayName } from '../assets/chatGroups/groupChatIcons';
 import { queryClient } from './queryClient';
 import { appQueryKeys } from './appQueryKeys';
 import { mergeChatMessages, readGroupMessagesCache } from './chatMessageCache';
@@ -127,7 +128,7 @@ export function chatGroupOpenParams(
 ): ChatGroupOpenParams {
   return {
     groupId: group.id,
-    groupName: group.name,
+    groupName: chatGroupDisplayName(group.name),
     avatarUrl: group.avatar_url ?? undefined,
     unreadCount: group.unread_count,
     lastReadMessageId: group.last_read_message_id,

@@ -126,7 +126,7 @@ export function UwTickerInsightsSection({ ticker }: Props) {
 
       {data.insider_live.length > 0 ? (
         <UICard variant="soft" glassIntensity="light" padding="md" style={styles.card}>
-          <DarkPoolSectionHeader title="עסקאות בכירים" icon="people-outline" />
+          <DarkPoolSectionHeader variant="group" title="עסקאות בכירים" icon="people-outline" />
           {data.insider_live.map((row, i) => (
             <View
               key={row.id}

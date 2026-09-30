@@ -114,7 +114,7 @@ const TradeListCardInner = memo(function TradeListCardInner({
               symbol={item.symbol}
               size={40}
               fallbackColor={DesignTokens.colors.text.primary}
-              backgroundColor="rgba(255,255,255,0.08)"
+              backgroundColor={DesignTokens.colors.background.primary}
             />
             <Text style={styles.tradeSymbol} numberOfLines={1}>
               {item.symbol}
@@ -122,10 +122,7 @@ const TradeListCardInner = memo(function TradeListCardInner({
             <View
               style={[
                 styles.directionBadge,
-                {
-                  backgroundColor: `${directionColor}20`,
-                  borderColor: `${directionColor}66`,
-                },
+                { backgroundColor: DesignTokens.colors.background.primary },
               ]}
             >
               <Text style={[styles.directionText, { color: directionColor }]}>
@@ -144,12 +141,12 @@ const TradeListCardInner = memo(function TradeListCardInner({
                 void HapticFeedback.warning();
                 onDelete(item.id);
               }}
-              style={styles.iconBtn}
+              style={[styles.iconBtn, { backgroundColor: DesignTokens.colors.background.primary }]}
               hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel="מחק טרייד"
             >
-              <Ionicons name="trash-outline" size={17} color={DesignTokens.colors.text.danger} />
+              <Ionicons name="trash-outline" size={16} color={DesignTokens.colors.text.danger} />
             </TouchableOpacity>
           </View>
         </View>
@@ -231,9 +228,6 @@ export function createTradeCardStyles(tokens: ReturnType<typeof useDesignTokens>
       justifyContent: 'space-between',
       width: '100%',
       marginBottom: JOURNAL_LAYOUT.cardTitleToBodyGap,
-      /** ב־RTL: ריווח מהקצה שבו התמונה (ה־start של השורה) */
-      paddingStart: tokens.spacing.sm,
-      paddingEnd: tokens.spacing.xs,
     },
     /**
      * ב־RTL (שורה): לוגו ימין → סימול → Long/Short משמאל לסימול
@@ -241,7 +235,7 @@ export function createTradeCardStyles(tokens: ReturnType<typeof useDesignTokens>
     tradeHeaderMain: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: tokens.spacing.sm,
+      gap: 12,
       flexGrow: 0,
       flexShrink: 1,
       minWidth: 0,
@@ -268,7 +262,6 @@ export function createTradeCardStyles(tokens: ReturnType<typeof useDesignTokens>
       paddingHorizontal: 8,
       paddingVertical: 2,
       borderRadius: 999,
-      borderWidth: 1,
     },
     directionText: {
       fontSize: JOURNAL_TYPE.cardSubtitle.fontSize,
@@ -289,7 +282,11 @@ export function createTradeCardStyles(tokens: ReturnType<typeof useDesignTokens>
       zIndex: 2,
     },
     iconBtn: {
-      padding: 6,
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     metricsGrid: {
       flexDirection: 'row',

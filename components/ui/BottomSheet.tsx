@@ -25,6 +25,7 @@ import {
   SHEET_OPEN_TIMING,
   SHEET_CLOSE_TIMING,
 } from "./BottomSheet/sheetMotion";
+import { SheetSurfaceProvider } from "./BottomSheet/sheetSurface";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -167,7 +168,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
       {showHandle && (
         <View style={[styles.dragLine, { backgroundColor: tokens.colors.text.secondary }]} />
       )}
-      {children}
+      <SheetSurfaceProvider>{children}</SheetSurfaceProvider>
     </Animated.View>
   );
 

@@ -11,7 +11,6 @@ import { useAllowAfterNavigationTransition } from '../../hooks/afterNavigationTr
 import { LessonWithProgress, BlockType } from '../../types/learning';
 import { ChevronLeft, ChevronRight, Play, Pause, ChevronDown, Edit3, ArrowRight } from 'lucide-react-native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import { APP_LAYOUT } from '../../components/ui/appLayout';
 import UICard from '../../components/ui/UICard';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
@@ -482,7 +481,6 @@ export const LessonPlayerScreen: React.FC = () => {
             <UICard variant="elevated" padding="lg" style={styles.lessonPanel}>
               <View style={styles.lessonInfoStack}>
                 <Text style={styles.lessonInfoTitle}>{lesson.title}</Text>
-                <Text style={styles.lessonInfoSubtitle}>שיעור {currentBlockIndex + 1} בקורס הכשרה של דוד אריאל</Text>
 
                 {/* Progress Info */}
                 {currentBlock?.type === 'video' && duration > 0 ? (
@@ -555,8 +553,7 @@ export const LessonPlayerScreen: React.FC = () => {
                 <DayNavBlurButton
                   onPress={goToPreviousBlock}
                   disabled={currentBlockIndex === 0}
-                  glass
-                  glassIntensity="subtle"
+                  style={{ backgroundColor: DesignTokens.colors.background.primary }}
                 >
                   <ChevronLeft
                     size={18}
@@ -568,8 +565,7 @@ export const LessonPlayerScreen: React.FC = () => {
                 <DayNavBlurButton
                   onPress={goToNextBlock}
                   disabled={!lesson.blocks || currentBlockIndex >= lesson.blocks.length - 1}
-                  glass
-                  glassIntensity="subtle"
+                  style={{ backgroundColor: DesignTokens.colors.background.primary }}
                 >
                   <ChevronRight
                     size={18}
@@ -846,14 +842,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     color: tokens.colors.text.primary,
     textAlign: 'right',
     lineHeight: Math.round(tokens.typography.fontSize.xl * tokens.typography.lineHeight.normal),
-    writingDirection: 'rtl',
-  },
-  lessonInfoSubtitle: {
-    marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
-    fontSize: tokens.typography.fontSize.sm,
-    color: tokens.colors.text.secondary,
-    textAlign: 'right',
-    lineHeight: Math.round(tokens.typography.fontSize.sm * tokens.typography.lineHeight.normal),
     writingDirection: 'rtl',
   },
   lessonProgressInfo: {

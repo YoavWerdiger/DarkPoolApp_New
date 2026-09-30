@@ -88,10 +88,10 @@ export default function TradingScreen() {
           minHeight: 52,
         },
         fabBtnText: {
-          fontSize: JOURNAL_TYPE.body.fontSize,
+          fontSize: JOURNAL_TYPE.cardTitle.fontSize,
           fontWeight: JOURNAL_TYPE.cardTitle.fontWeight,
-          lineHeight: JOURNAL_TYPE.body.lineHeight,
-          color: DesignTokens.colors.primary.main,
+          lineHeight: JOURNAL_TYPE.cardTitle.lineHeight,
+          color: DesignTokens.colors.text.inverse,
         },
       }),
     [DesignTokens, mainTabsHeight]
@@ -130,7 +130,7 @@ export default function TradingScreen() {
               onPress={() => navigation.navigate('AddTrade')}
               accessibilityLabel="הוסף טרייד"
             >
-              <Ionicons name="add" size={26} color={DesignTokens.colors.primary.main} />
+              <Ionicons name="add" size={22} color={DesignTokens.colors.text.inverse} />
               <Text style={styles.fabBtnText}>הוסף טרייד</Text>
             </DayDividerPill>
           </View>

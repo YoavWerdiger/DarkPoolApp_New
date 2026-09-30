@@ -297,7 +297,7 @@ export function ChatSheetSearchBar({
           style={[
             sheet.searchField,
             chromeSurfaceCardStyle(tokens),
-            { backgroundColor: tokens.colors.background.primary },
+            { backgroundColor: tokens.colors.background.cardSolid },
           ]}
           contentContainerStyle={sheet.searchFieldInner}
         >

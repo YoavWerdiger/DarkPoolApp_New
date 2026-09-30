@@ -14,6 +14,7 @@ import {
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { legacyAlert } from '../../utils/appDialog';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { APP_TYPE } from '../ui/appType';
 
 type Props = {
   userId: string;
@@ -90,10 +91,7 @@ export default function FollowUserButton({
       accessibilityLabel={following ? 'הפסק מעקב' : 'עקוב'}
       style={[
         styles.btn,
-        {
-          backgroundColor: tokens.colors.background.primary,
-          borderColor: tokens.colors.border.primary,
-        },
+        { backgroundColor: tokens.colors.background.primary },
       ]}
     >
       {busy ? (
@@ -113,20 +111,18 @@ export default function FollowUserButton({
 
 const styles = StyleSheet.create({
   btn: {
-    height: 20,
-    paddingHorizontal: 7,
+    height: 21,
+    paddingHorizontal: 10,
     paddingVertical: 0,
     borderRadius: 9999,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 0,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
     alignSelf: 'center',
   },
   label: {
-    fontSize: 10,
-    fontWeight: '700',
-    lineHeight: 13,
+    ...APP_TYPE.cardMetricLabel,
     writingDirection: 'rtl',
     textAlign: 'center',
   },

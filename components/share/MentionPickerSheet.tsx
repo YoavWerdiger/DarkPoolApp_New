@@ -137,7 +137,6 @@ export default function MentionPickerSheet({
       enablePanDownToClose
       edgeToEdge
       showHandle
-      useGlassBackground
       showBrandBackground={false}
       showBrandWatermark={false}
       contentPaddingBottom={0}
@@ -313,7 +312,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       paddingHorizontal: 12,
       minHeight: 46,
       borderRadius: 9999,
-      backgroundColor: tokens.colors.background.primary,
+      backgroundColor: tokens.colors.background.cardSolid,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: tokens.colors.border.divider,
     },

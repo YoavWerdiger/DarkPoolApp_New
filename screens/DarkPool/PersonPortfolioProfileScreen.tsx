@@ -19,7 +19,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenChrome } from '../../components/ui/ScreenChrome';
 import {
-  SignedChangePair,
+  CHANGE_DOT_SIZE,
+  changeToneColor,
   changeToneFromSigned,
   formatSignedChangePct,
 } from '../../components/ui/ChangeDot';
@@ -1144,7 +1145,7 @@ export function PersonPortfolioProfileScreen({
       ? 'מדד סל (משקל שווה לעסקה)'
       : holdingsEngine === 'form4' || holdingsEngine === 'trump'
         ? 'שווי פוזיציות מדווחות'
-        : 'שווי תיק';
+        : 'שווי תיק:';
   const heroValueText = showCongressValue
     ? formatCongressPortfolioHeroValue(portfolioValue)
     : showTrumpValue
@@ -1158,6 +1159,7 @@ export function PersonPortfolioProfileScreen({
     changeToneFromSigned(periodDelta?.usd) !== 'neutral'
       ? changeToneFromSigned(periodDelta?.usd)
       : changeToneFromSigned(periodDelta?.pct);
+  const deltaColor = changeToneColor(deltaTone, tokens);
 
   const heroProps = {
     name: displayName,
@@ -1366,15 +1368,15 @@ export function PersonPortfolioProfileScreen({
                 showOtherValue ||
                 (holdingsEngine === 'trump' && trumpUnitWeighted)) &&
               periodDelta ? (
-                <SignedChangePair
-                  tone={deltaTone}
-                  style={styles.deltaRow}
-                  absTextStyle={styles.deltaUsd}
-                  pctTextStyle={styles.deltaPct}
-                  isolate={toDataIsland}
-                  absText={formatCongressDeltaUsd(periodDelta.usd)}
-                  pctText={formatSignedChangePct(periodDelta.pct)}
-                />
+                <View style={styles.deltaRow}>
+                  <Text style={[styles.deltaFigure, { color: deltaColor }]} numberOfLines={1}>
+                    {toDataIsland(formatCongressDeltaUsd(periodDelta.usd))}
+                  </Text>
+                  <View style={[styles.deltaDot, { backgroundColor: deltaColor }]} />
+                  <Text style={[styles.deltaFigure, { color: deltaColor }]} numberOfLines={1}>
+                    {toDataIsland(formatSignedChangePct(periodDelta.pct))}
+                  </Text>
+                </View>
               ) : null}
             </View>
           ) : null}
@@ -1469,7 +1471,7 @@ export function PersonPortfolioProfileScreen({
               <View style={styles.sectionTitleRow}>
                 <Text style={[styles.sectionTitle, styles.sectionTitleInRow]}>
                   {holdingsEngine === 'congress'
-                    ? 'אחזקות מדווחות'
+                    ? 'רשימת אחזקות'
                     : holdingsEngine === 'form4' || holdingsEngine === 'trump'
                       ? 'פוזיציות מדווחות'
                       : 'אחזקות מובילות'}
@@ -1540,15 +1542,14 @@ export function PersonPortfolioProfileScreen({
                           <View style={styles.leadingIcon}>
                             <TickerLogo symbol={t.ticker} size={36} borderRadius={18} />
                           </View>
+                          <View style={styles.iconTickerGap} />
                           <View style={styles.rowText}>
-                            <View style={styles.tickerLine}>
-                              <Text style={[styles.sideVerb, { color: sideColor }]}>
+                            <Text style={styles.tradeLine} numberOfLines={1}>
+                              <Text style={{ color: sideColor }}>
                                 {sell ? 'מכירה' : 'קנייה'}
                               </Text>
-                              <Text style={styles.rowTitle} numberOfLines={1}>
-                                {t.ticker}
-                              </Text>
-                            </View>
+                              <Text>{` \u2066${t.ticker}\u2069`}</Text>
+                            </Text>
                             {t.amount ? (
                               <Text style={styles.rowMeta} numberOfLines={1}>
                                 {t.amount}
@@ -1740,14 +1741,16 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       direction: 'rtl',
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
+      alignSelf: 'stretch',
+      gap: 8,
     },
     valueLabel: {
-      ...darkPoolTextRtl,
-      fontSize: DARK_POOL_TYPE.cardMetricLabel.fontSize,
-      lineHeight: DARK_POOL_TYPE.cardMetricLabel.lineHeight,
-      fontWeight: DARK_POOL_TYPE.cardMetricLabel.fontWeight,
-      color: tokens.colors.text.tertiary,
+      ...darkPoolSectionTitleStyle,
+      flexShrink: 1,
+      width: undefined,
+      fontSize: 21,
+      lineHeight: 26,
+      color: tokens.colors.text.primary,
     },
     valueHelpBtn: {
       padding: 2,
@@ -1766,18 +1769,22 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     deltaRow: {
       marginTop: APP_LAYOUT.titleSubtitleGap,
       alignSelf: 'flex-end',
+      direction: 'ltr',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
     },
-    deltaUsd: {
-      fontSize: DARK_POOL_TYPE.cardMetricValueSecondary.fontSize,
-      lineHeight: DARK_POOL_TYPE.cardMetricValueSecondary.lineHeight,
-      fontWeight: DARK_POOL_TYPE.cardMetricValueSecondary.fontWeight,
-      writingDirection: 'ltr',
-    },
-    deltaPct: {
+    deltaFigure: {
       fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
       lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardSubtitle.fontWeight,
       writingDirection: 'ltr',
+      fontVariant: ['tabular-nums'],
+    },
+    deltaDot: {
+      width: CHANGE_DOT_SIZE,
+      height: CHANGE_DOT_SIZE,
+      borderRadius: CHANGE_DOT_SIZE / 2,
     },
     followDock: {
       paddingHorizontal: PROFILE_FOLLOW_DOCK_HPAD,
@@ -1804,7 +1811,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       textAlign: 'center',
     },
     chartWrap: {
-      marginBottom: 8,
+      marginBottom: 20,
       alignSelf: 'stretch',
     },
     chartCard: {
@@ -1854,7 +1861,11 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       alignSelf: 'stretch',
     },
     leadingIcon: {
-      marginLeft: 12,
+      flexShrink: 0,
+    },
+    iconTickerGap: {
+      width: 12,
+      flexShrink: 0,
     },
     listRowPress: {
       width: '100%',
@@ -1885,30 +1896,20 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       justifyContent: 'center',
       alignItems: 'stretch',
     },
-    tickerLine: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      columnGap: 8,
-      minWidth: 0,
-      maxWidth: '100%',
-    },
-    sideVerb: {
-      ...darkPoolPhysicalRightText,
+    tradeLine: {
+      width: '100%',
+      textAlign: 'right',
+      writingDirection: 'rtl',
       fontSize: DARK_POOL_TYPE.cardBody.fontSize,
       lineHeight: DARK_POOL_TYPE.cardBody.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
-    },
-    rowTitle: {
-      ...darkPoolPhysicalRightText,
-      fontSize: DARK_POOL_TYPE.cardTitle.fontSize,
-      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
-      lineHeight: DARK_POOL_TYPE.cardTitle.lineHeight,
       color: tokens.colors.text.primary,
-      flexShrink: 1,
+      includeFontPadding: false,
     },
     rowMeta: {
       ...darkPoolPhysicalRightText,
-      marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
+      marginTop: 0,
+      includeFontPadding: false,
       fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
       lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardSubtitle.fontWeight,

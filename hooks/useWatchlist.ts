@@ -166,7 +166,7 @@ export function useWatchlist() {
 
   const items = itemsQuery.data ?? EMPTY_ITEMS;
   const symbols = useMemo(() => items.map((i) => i.symbol), [items]);
-  const symbolsKey = symbols.join('|');
+  const symbolsKey = useMemo(() => [...symbols].sort().join('|'), [symbols]);
 
   const quotesQuery = useQuery({
     queryKey: appQueryKeys.watchlistQuotes(symbolsKey),
@@ -369,11 +369,32 @@ export function useWatchlist() {
   const reorderSymbols = useCallback(
     async (orderedSymbols: string[]) => {
       if (!activeWatchlistId) return;
+      const key = appQueryKeys.watchlistItems(activeWatchlistId);
+      void queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<typeof items>(key);
+      if (previous) {
+        const orderBySymbol = new Map(
+          orderedSymbols.map((symbol, index) => [symbol.toUpperCase(), index])
+        );
+        queryClient.setQueryData<typeof items>(
+          key,
+          previous
+            .map((it) => ({
+              ...it,
+              sort_order: orderBySymbol.get(it.symbol.toUpperCase()) ?? it.sort_order,
+            }))
+            .sort((a, b) => a.sort_order - b.sort_order)
+        );
+      }
       setSortMode('custom');
-      await reorderWatchlistItems(activeWatchlistId, orderedSymbols);
-      await invalidateItems();
+      try {
+        await reorderWatchlistItems(activeWatchlistId, orderedSymbols);
+      } catch (e) {
+        if (previous) queryClient.setQueryData(key, previous);
+        throw e;
+      }
     },
-    [activeWatchlistId, invalidateItems]
+    [activeWatchlistId, queryClient]
   );
 
   const moveSymbol = useCallback(

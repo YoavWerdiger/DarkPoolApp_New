@@ -187,11 +187,11 @@ const SearchResultRow = memo(function SearchResultRow({
                 style={[
                   searchStyles.todayPill,
                   {
-                    backgroundColor: `${DesignTokens.colors.primary.main}22`,
+                    backgroundColor: DesignTokens.colors.background.primary,
                   },
                 ]}
               >
-                <Text style={[searchStyles.todayPillText, { color: DesignTokens.colors.primary.main }]}>
+                <Text style={[searchStyles.todayPillText, { color: DesignTokens.colors.text.primary }]}>
                   היום
                 </Text>
               </View>
@@ -213,7 +213,7 @@ const SearchResultRow = memo(function SearchResultRow({
             style={[
               searchStyles.resultWhen,
               rtl,
-              { color: DesignTokens.colors.text.tertiary },
+              { color: DesignTokens.colors.text.secondary },
             ]}
             numberOfLines={1}
           >
@@ -244,28 +244,17 @@ const SubSectionHeader: React.FC<{
   label: string;
   icon: React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
   color: string;
-  count: number;
   isFirst?: boolean;
-}> = ({ label, icon: Icon, color, count, isFirst = false }) => {
+}> = ({ label, icon: Icon, color, isFirst = false }) => {
   const DesignTokens = useDesignTokens();
   return (
     <View style={[weekStyles.subHeader, !isFirst && weekStyles.subHeaderSpaced]}>
-      <View style={[weekStyles.subHeaderHairline, { backgroundColor: DesignTokens.colors.border.divider }]} />
-      <View style={weekStyles.subHeaderPill}>
-        <Icon size={11} color={color} strokeWidth={2.2} />
-        <Text style={[weekStyles.subHeaderText, { color: DesignTokens.colors.text.secondary, marginLeft: APP_LAYOUT.cardTitleToBodyGap }]}>
+      <View style={[weekStyles.subHeaderPill, { backgroundColor: DesignTokens.colors.background.primary }]}>
+        <Icon size={14} color={color} strokeWidth={2} />
+        <Text style={[weekStyles.subHeaderText, { color: DesignTokens.colors.text.secondary }]}>
           {label}
         </Text>
-        <View
-          style={[
-            weekStyles.subHeaderCountBadge,
-            { backgroundColor: `${color}28` },
-          ]}
-        >
-          <Text style={[weekStyles.subHeaderCount, { color }]}>{count}</Text>
-        </View>
       </View>
-      <View style={[weekStyles.subHeaderHairline, { backgroundColor: DesignTokens.colors.border.divider }]} />
     </View>
   );
 };
@@ -290,39 +279,34 @@ const DayCard = memo(function DayCard({
       style={weekStyles.dayCard}
       contentContainerStyle={weekStyles.dayCardContent}
     >
-      {/* כותרת היום: שם + תגית «היום» בשורה אחת, תאריך מתחת */}
-      <View style={[weekStyles.dayHeader, { borderBottomColor: DesignTokens.colors.border.divider }]}>
-        <View style={weekStyles.dayHeaderTitleRow}>
-          <Text style={[weekStyles.dayName, { color: DesignTokens.colors.text.primary }]}>
-            {day.dayLabel}
-          </Text>
-          {day.isToday ? (
+      <View style={weekStyles.dayHeader}>
+        <Text style={[weekStyles.dayName, { color: DesignTokens.colors.text.primary }]}>
+          {day.dayLabel}
+        </Text>
+        {day.isToday ? (
             <View
               style={[
                 weekStyles.todayPill,
                 {
-                  backgroundColor: `${DesignTokens.colors.primary.main}22`,
+                  backgroundColor: DesignTokens.colors.background.primary,
                 },
               ]}
             >
-              <Text style={[weekStyles.todayPillText, { color: DesignTokens.colors.primary.main }]}>
+              <Text style={[weekStyles.todayPillText, { color: DesignTokens.colors.text.primary }]}>
                 היום
               </Text>
             </View>
           ) : null}
-        </View>
-        <Text style={[weekStyles.dayDate, { color: DesignTokens.colors.text.tertiary }]}>
+        <Text style={[weekStyles.dayDate, { color: DesignTokens.colors.text.secondary }]}>
           {day.dateLabel}
         </Text>
       </View>
 
       {total === 0 ? (
         <View style={weekStyles.emptyDay}>
-          <View style={[weekStyles.emptyDayRule, { backgroundColor: DesignTokens.colors.border.divider }]} />
-          <Text style={[weekStyles.emptyDayText, { color: DesignTokens.colors.text.muted }]}>
+          <Text style={[weekStyles.emptyDayText, { color: DesignTokens.colors.text.secondary }]}>
             אין דיווחים ביום זה
           </Text>
-          <View style={[weekStyles.emptyDayRule, { backgroundColor: DesignTokens.colors.border.divider }]} />
         </View>
       ) : (
         <>
@@ -332,7 +316,6 @@ const DayCard = memo(function DayCard({
                 label="מסחר מוקדם"
                 icon={Sun}
                 color={PRE_COLOR}
-                count={day.before.length}
                 isFirst
               />
               <View style={weekStyles.tilesWrap}>
@@ -348,7 +331,6 @@ const DayCard = memo(function DayCard({
                 label="מסחר מאוחר"
                 icon={Moon}
                 color={POST_COLOR}
-                count={day.after.length}
                 isFirst={!hasBefore}
               />
               <View style={weekStyles.tilesWrap}>
@@ -565,10 +547,9 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
 
   const renderSearchBar = useCallback(
     () => (
-      <View style={{ paddingHorizontal: screenPad, paddingTop: 8, paddingBottom: 4 }}>
+      <View style={{ paddingHorizontal: screenPad, paddingTop: APP_LAYOUT.stackGapSmall }}>
         <UICard
-          variant="blur"
-          glassIntensity="subtle"
+          variant="soft"
           padding="none"
           style={{ borderRadius: DesignTokens.borderRadius.search, overflow: 'hidden' }}
         >
@@ -616,7 +597,7 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
             {searchLoading && isSearchMode ? (
               <ActivityIndicator size="small" color={DesignTokens.colors.text.tertiary} />
             ) : (
-              <Ionicons name="search" size={18} color={DesignTokens.colors.text.tertiary} />
+              <Ionicons name="search" size={18} color={DesignTokens.colors.text.secondary} />
             )}
           </View>
         </UICard>
@@ -627,16 +608,15 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
 
   const renderWeekNavigator = useCallback(
     () => (
-      <View style={{ paddingHorizontal: screenPad, paddingTop: 10, paddingBottom: 16 }}>
+      <View style={{ paddingHorizontal: screenPad, paddingTop: APP_LAYOUT.stackGapSmall, paddingBottom: APP_LAYOUT.componentGap }}>
         <UICard
-          variant="blur"
-          glassIntensity="subtle"
+          variant="soft"
           padding="none"
           style={{
             borderRadius: DesignTokens.borderRadius.full,
             overflow: 'hidden',
-            paddingVertical: 12,
-            paddingHorizontal: 14,
+            paddingVertical: APP_LAYOUT.stackGapSmall,
+            paddingHorizontal: APP_LAYOUT.stackGapSmall,
           }}
         >
           <View
@@ -647,7 +627,7 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
               justifyContent: 'space-between',
             }}
           >
-            <DayNavBlurButton onPress={onPrevWeek} glass glassIntensity="subtle" accessibilityLabel="שבוע קודם">
+            <DayNavBlurButton onPress={onPrevWeek} style={{ backgroundColor: DesignTokens.colors.background.primary }} accessibilityLabel="שבוע קודם">
               <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.primary} />
             </DayNavBlurButton>
 
@@ -664,18 +644,16 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
               </Text>
               <Text
                 style={{
-                  ...APP_TYPE.caption2,
-                  color: isCurrentWeek
-                    ? DesignTokens.colors.primary.main
-                    : DesignTokens.colors.text.tertiary,
-                  marginTop: APP_LAYOUT.titleSubtitleGap,
+                  ...APP_TYPE.caption,
+                  color: DesignTokens.colors.text.secondary,
+                  marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
                 }}
               >
                 {isCurrentWeek ? 'השבוע הנוכחי' : `${totalWeekReports} דיווחים`}
               </Text>
             </View>
 
-            <DayNavBlurButton onPress={onNextWeek} glass glassIntensity="subtle" accessibilityLabel="שבוע הבא">
+            <DayNavBlurButton onPress={onNextWeek} style={{ backgroundColor: DesignTokens.colors.background.primary }} accessibilityLabel="שבוע הבא">
               <Ionicons name="chevron-forward" size={20} color={DesignTokens.colors.text.primary} />
             </DayNavBlurButton>
           </View>
@@ -710,11 +688,11 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
     }
     return (
       <View style={searchStyles.emptyWrap}>
-        <Search size={40} color={DesignTokens.colors.text.tertiary} strokeWidth={1.8} />
+        <Search size={32} color={DesignTokens.colors.text.secondary} strokeWidth={1.8} />
         <Text style={[searchStyles.emptyTitle, { color: DesignTokens.colors.text.primary }]}>
           אין תוצאות לחיפוש
         </Text>
-        <Text style={[searchStyles.emptySubtitle, { color: DesignTokens.colors.text.tertiary }]}>
+        <Text style={[searchStyles.emptySubtitle, { color: DesignTokens.colors.text.secondary }]}>
           נסו טיקר (למשל NVDA) או שם חברה
         </Text>
       </View>
@@ -739,7 +717,7 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
           style={{ flex: 1 }}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
-            paddingTop: 10,
+            paddingTop: APP_LAYOUT.stackGapSmall,
             paddingBottom: bottomPad,
             flexGrow: searchResults.length === 0 ? 1 : undefined,
           }}
@@ -764,7 +742,7 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
             />
           }
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingTop: 6, paddingBottom: bottomPad }}
+          contentContainerStyle={{ paddingBottom: bottomPad }}
           onScroll={handleScroll}
           onScrollToIndexFailed={handleScrollToIndexFailed}
           scrollEventThrottle={16}
@@ -854,7 +832,7 @@ const tileStyles = StyleSheet.create({
   },
   tileText: {
     marginTop: APP_LAYOUT.cardMetricLabelToValueGap,
-    ...APP_TYPE.caption2,
+    ...APP_TYPE.caption,
     textAlign: 'center',
     maxWidth: TILE_WIDTH,
   },
@@ -894,7 +872,7 @@ const searchStyles = StyleSheet.create({
     maxWidth: '100%',
   },
   resultWhen: {
-    marginTop: APP_LAYOUT.titleSubtitleGap,
+    marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
     ...APP_TYPE.caption,
   },
   todayPill: {
@@ -906,7 +884,7 @@ const searchStyles = StyleSheet.create({
     marginLeft: APP_LAYOUT.stackGapSmall,
   },
   todayPillText: {
-    ...APP_TYPE.caption2,
+    ...APP_TYPE.cardMetricLabel,
     textAlign: 'center',
   },
   timingPill: {
@@ -914,13 +892,13 @@ const searchStyles = StyleSheet.create({
     flexDirection: 'row-reverse',
     alignItems: 'center',
     paddingHorizontal: 10,
-    paddingVertical: 7,
+    height: 24,
     borderRadius: 9999,
     borderWidth: 0,
     maxWidth: 118,
   },
   timingText: {
-    ...APP_TYPE.caption2,
+    ...APP_TYPE.caption,
     textAlign: 'center',
     marginLeft: APP_LAYOUT.stackGapSmall,
   },
@@ -957,53 +935,41 @@ const weekStyles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 3,
-    marginBottom: 4,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-  },
-  dayHeaderTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-    gap: 8,
   },
   dayName: {
     ...APP_TYPE.cardTitle,
     textAlign: 'center',
+    writingDirection: 'rtl',
   },
   dayDate: {
     ...APP_TYPE.cardSubtitle,
+    width: '100%',
     textAlign: 'center',
     marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
   },
   todayPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    height: 22,
+    justifyContent: 'center',
+    paddingHorizontal: 10,
     borderRadius: 9999,
-    borderWidth: 0,
-    marginLeft: APP_LAYOUT.stackGapSmall,
+    marginTop: APP_LAYOUT.cardMetricLabelToValueGap,
+    marginBottom: APP_LAYOUT.cardTitleToSubtitleGap,
   },
   todayPillText: {
-    ...APP_TYPE.caption2,
+    ...APP_TYPE.cardMetricLabel,
     textAlign: 'center',
   },
   emptyDay: {
     width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
+    justifyContent: 'center',
+    paddingTop: APP_LAYOUT.cardTitleToBodyGap,
     paddingHorizontal: 4,
-    gap: 10,
-  },
-  emptyDayRule: {
-    flex: 1,
-    height: 1,
-    backgroundColor: 'transparent',
+    gap: APP_LAYOUT.cardTitleToBodyGap,
   },
   emptyDayText: {
-    ...APP_TYPE.body,
+    ...APP_TYPE.cardBody,
     textAlign: 'center',
   },
   subSection: {
@@ -1014,38 +980,25 @@ const weekStyles = StyleSheet.create({
     width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 12,
+    justifyContent: 'center',
+    marginTop: APP_LAYOUT.cardTitleToBodyGap,
+    marginBottom: APP_LAYOUT.cardTitleToBodyGap,
   },
   subHeaderSpaced: {
-    marginTop: 14,
-  },
-  subHeaderHairline: {
-    flex: 1,
-    height: 1,
+    marginTop: APP_LAYOUT.componentGap,
   },
   subHeaderPill: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginHorizontal: 10,
-    paddingVertical: 0,
-    borderWidth: 0,
+    gap: 6,
+    height: 32,
+    paddingHorizontal: 12,
+    borderRadius: 9999,
+    marginHorizontal: APP_LAYOUT.stackGapSmall,
   },
   subHeaderText: {
     ...APP_TYPE.groupLabel,
-    textAlign: 'center',
-  },
-  subHeaderCountBadge: {
-    minWidth: 18,
-    height: 18,
-    paddingHorizontal: 5,
-    borderRadius: 9999,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  subHeaderCount: {
-    ...APP_TYPE.caption2,
     textAlign: 'center',
   },
   tilesWrap: {
@@ -1054,10 +1007,8 @@ const weekStyles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'center',
     alignItems: 'flex-start',
-    columnGap: 10,
-    rowGap: 12,
-    paddingHorizontal: 2,
-    marginBottom: 2,
+    columnGap: APP_LAYOUT.cardTitleToBodyGap,
+    rowGap: APP_LAYOUT.cardTitleToBodyGap,
   },
   fabWrap: {
     position: 'absolute',

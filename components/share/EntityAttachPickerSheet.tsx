@@ -173,7 +173,6 @@ export default function EntityAttachPickerSheet({
       enablePanDownToClose
       edgeToEdge
       showHandle
-      useGlassBackground
       showBrandBackground={false}
       showBrandWatermark={false}
       contentPaddingBottom={0}

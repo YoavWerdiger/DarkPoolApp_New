@@ -43,11 +43,11 @@ export const FEAR_GREED_GAUGE_SEGMENTS = [
 
 /** פס מיני (5 מקטעים — גבולות תואמים ל-getValueDescription) */
 export const FEAR_GREED_MINI_SEGMENTS = [
-  { label: 'פחד\nקיצוני', color: FEAR_GREED_COLORS.extremeFear, from: 0, to: 25 },
+  { label: 'פחד קיצוני', color: FEAR_GREED_COLORS.extremeFear, from: 0, to: 25 },
   { label: 'פחד', color: FEAR_GREED_COLORS.fear, from: 25, to: 45 },
   { label: 'ניטרלי', color: FEAR_GREED_COLORS.neutral, from: 45, to: 55 },
   { label: 'תאווה', color: FEAR_GREED_COLORS.greed, from: 55, to: 75 },
-  { label: 'תאווה\nקיצונית', color: FEAR_GREED_COLORS.greedExtreme, from: 75, to: 100 },
+  { label: 'תאווה קיצונית', color: FEAR_GREED_COLORS.greedExtreme, from: 75, to: 100 },
 ] as const;
 
 // v2 — מבטל קאש ישן (RapidAPI/יולי) שנשמר תחת v1 והציג 45/Neutral לנצח.

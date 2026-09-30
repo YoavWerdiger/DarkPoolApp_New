@@ -32,7 +32,7 @@ import {
 import { HapticFeedback, triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
 import { useFollowedInvestors } from '../../hooks/useFollowedInvestors';
 import { darkPoolRtlContent, darkPoolPhysicalRightText, darkPoolSectionTitleStyle, darkPoolTransparentFill, DARK_POOL_TYPE } from './darkPoolLayout';
-import { unfollowInvestor, type FollowedInvestor } from '../../services/darkpool/darkPoolFollowService';
+import { type FollowedInvestor } from '../../services/darkpool/darkPoolFollowService';
 import { useDarkPoolStackNav } from './hooks/useDarkPoolStackNav';
 import type { DarkPoolTabParamList } from '../../navigation/DarkPoolTabs';
 import { useDarkPoolFollowingFeed } from '../../hooks/useDarkPoolFollowingFeed';
@@ -135,22 +135,34 @@ export default function DarkPoolFollowingScreen() {
           textAlign: 'center',
         },
         followCard: {
-          marginBottom: 8,
+          marginBottom: APP_LAYOUT.cardStackGap,
           borderRadius: UI_CARD_RADIUS,
           overflow: 'hidden',
           backgroundColor: tokens.colors.background.cardSolid,
           borderWidth: 0,
           ...tokens.shadows.none,
         },
+        divider: {
+          height: 1,
+          backgroundColor: tokens.colors.border.divider,
+          marginHorizontal: APP_LAYOUT.cardPadding,
+          alignSelf: 'stretch',
+        },
         row: {
           direction: 'rtl',
           flexDirection: 'row',
           alignItems: 'center',
-          paddingVertical: 15,
+          paddingVertical: 11,
           paddingHorizontal: APP_LAYOUT.cardPadding,
         },
         avatar: {
-          marginLeft: 12,
+          overflow: 'hidden',
+          backgroundColor: tokens.colors.background.cardSolid,
+          borderWidth: 0,
+        },
+        iconTextGap: {
+          width: 12,
+          flexShrink: 0,
         },
         textCol: { flex: 1, minWidth: 0, alignItems: 'stretch' },
         name: {
@@ -189,11 +201,14 @@ export default function DarkPoolFollowingScreen() {
         <SafeAreaView style={[darkPoolTransparentFill, darkPoolRtlContent]} edges={['top']}>
           <MainDrawerScreenHeader inRtlTree title="מעקב" onMenuPress={openDrawer} />
           <View style={styles.scroll}>
-            {Array.from({ length: 3 }).map((_, i) => (
-              <UICard key={i} {...CHROME_UICARD} style={styles.followCard}>
-                <ListItemSkeleton showAvatar />
-              </UICard>
-            ))}
+            <UICard {...CHROME_UICARD} style={styles.followCard}>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <View key={i}>
+                  <ListItemSkeleton showAvatar />
+                  {i < 2 ? <View style={styles.divider} /> : null}
+                </View>
+              ))}
+            </UICard>
           </View>
         </SafeAreaView>
       </ScreenChrome>
@@ -225,15 +240,18 @@ export default function DarkPoolFollowingScreen() {
         >
           {list.length > 0 ? (
             <>
-              {list.map((person) => (
-                <FollowedRow
-                  key={`${person.kind}:${person.id}`}
-                  person={person}
-                  styles={styles}
-                  onPress={() => openProfile(person)}
-                  onUnfollow={() => void unfollowInvestor(person)}
-                />
-              ))}
+              <UICard {...CHROME_UICARD} style={styles.followCard}>
+                {list.map((person, index) => (
+                  <View key={`${person.kind}:${person.id}`}>
+                    <FollowedRow
+                      person={person}
+                      styles={styles}
+                      onPress={() => openProfile(person)}
+                    />
+                    {index < list.length - 1 ? <View style={styles.divider} /> : null}
+                  </View>
+                ))}
+              </UICard>
 
               <Text style={styles.activityTitle}>פעילות אחרונה</Text>
               {activityFeed.loading ? (
@@ -277,19 +295,17 @@ function FollowedRow({
   person,
   styles,
   onPress,
-  onUnfollow,
 }: {
   person: FollowedInvestor;
   styles: {
-    followCard: object;
     row: object;
     avatar: object;
+    iconTextGap: object;
     textCol: object;
     name: object;
     sub: object;
   };
   onPress: () => void;
-  onUnfollow: () => void;
 }) {
   const tokens = useDesignTokens();
   const kindLabel =
@@ -300,8 +316,7 @@ function FollowedRow({
         : 'בכיר';
 
   return (
-    <UICard {...CHROME_UICARD} style={styles.followCard}>
-      <Pressable onPress={onPress} style={styles.row}>
+    <Pressable onPress={onPress} style={styles.row}>
         <InvestorPortrait
           name={person.name}
           imageUrl={person.image_url}
@@ -312,6 +327,7 @@ function FollowedRow({
           size={52}
           style={styles.avatar}
         />
+        <View style={styles.iconTextGap} />
         <View style={styles.textCol}>
           <Text style={styles.name} numberOfLines={1}>
             {person.name}
@@ -321,17 +337,7 @@ function FollowedRow({
             {person.ticker ? ` · ${person.ticker}` : ''}
           </Text>
         </View>
-        <Pressable
-          onPress={(e) => {
-            e.stopPropagation?.();
-            onUnfollow();
-          }}
-          hitSlop={10}
-        >
-          <Ionicons name="close-circle" size={22} color={tokens.colors.text.tertiary} />
-        </Pressable>
         <Ionicons name="chevron-back" size={18} color={tokens.colors.text.tertiary} />
       </Pressable>
-    </UICard>
   );
 }

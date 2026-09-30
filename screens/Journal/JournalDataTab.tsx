@@ -304,7 +304,8 @@ const PnlBarChart = memo(function PnlBarChart({
             key={m.key}
             style={{
               width: barW,
-              fontSize: n > 18 ? 8 : n > 12 ? 9 : 10,
+              fontSize: JOURNAL_TYPE.caption2.fontSize,
+              lineHeight: JOURNAL_TYPE.caption2.lineHeight,
               color: colors.label,
               textAlign: 'center',
             }}
@@ -541,17 +542,21 @@ const journalTabStyles = StyleSheet.create({
   },
   journalInsightStack: {
     width: '100%',
-    gap: 16,
+    gap: JOURNAL_LAYOUT.cardStackGap,
   },
   journalInsightSectionTitle: {
-    ...journalCardTitleStyle,
+    fontSize: JOURNAL_TYPE.groupLabel.fontSize,
+    fontWeight: JOURNAL_TYPE.groupLabel.fontWeight,
+    lineHeight: JOURNAL_TYPE.groupLabel.lineHeight,
     marginBottom: JOURNAL_LAYOUT.groupLabelToContent,
+    textAlign: 'right',
+    writingDirection: 'rtl',
   },
   journalInsightSurface: {
     width: '100%',
-    borderRadius: 24,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
+    borderRadius: UI_CARD_RADIUS,
+    paddingVertical: JOURNAL_LAYOUT.cardPadding,
+    paddingHorizontal: JOURNAL_LAYOUT.cardPadding,
     borderWidth: 0,
   },
   journalCoverageWrap: {
@@ -602,18 +607,18 @@ const journalTabStyles = StyleSheet.create({
     ...journalRow,
     flexWrap: 'wrap',
     width: '100%',
-    gap: 10,
+    gap: JOURNAL_LAYOUT.cardStackGap,
     justifyContent: 'space-between',
   },
   journalMoodCell: {
     width: '48%',
-    borderRadius: 14,
+    borderRadius: UI_CARD_RADIUS,
     minHeight: 0,
   },
   journalMoodCellInner: {
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    gap: 8,
+    paddingVertical: JOURNAL_LAYOUT.cardPadding,
+    paddingHorizontal: JOURNAL_LAYOUT.cardPadding,
+    gap: JOURNAL_LAYOUT.stackGapSmall,
   },
   journalMoodCellTitle: {
     ...journalCardTitleStyle,
@@ -651,11 +656,11 @@ const journalTabStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 14,
+    paddingVertical: JOURNAL_LAYOUT.cardPadding,
+    paddingHorizontal: JOURNAL_LAYOUT.cardPadding,
+    borderRadius: UI_CARD_RADIUS,
     borderWidth: 0,
-    gap: 10,
+    gap: 12,
   },
   journalMistakeList: {
     width: '100%',
@@ -692,7 +697,7 @@ function JournalHeroKpis({
     <UICard
       variant="soft"
       padding="md"
-      style={{ width: '100%', maxWidth: 440, alignSelf: 'center', marginBottom: 10 }}
+      style={{ width: '100%', maxWidth: 440, alignSelf: 'center', marginBottom: JOURNAL_LAYOUT.cardStackGap }}
     >
       <View style={journalTabStyles.kpiHeroRow}>
         <View style={journalTabStyles.kpiHeroCol}>
@@ -774,7 +779,7 @@ function InsightCard({
     <UICard
       variant="soft"
       padding="md"
-      style={{ marginBottom: 14, width: '100%', maxWidth: 440, alignSelf: 'center' }}
+      style={{ marginBottom: JOURNAL_LAYOUT.cardStackGap, width: '100%', maxWidth: 440, alignSelf: 'center' }}
     >
       <Text style={[journalTabStyles.cardHeader, { color: DesignTokens.colors.text.primary }]}>
         {title}
@@ -795,9 +800,10 @@ function JournalMiniPill({
   labelColor: string;
   valueColor: string;
 }) {
+  const tokens = useDesignTokens();
   return (
     <DayDividerPill
-      style={journalTabStyles.journalMiniPill}
+      style={[journalTabStyles.journalMiniPill, { backgroundColor: tokens.colors.background.primary }]}
       contentContainerStyle={journalTabStyles.journalMiniPillContent}
     >
       <Text style={[journalTabStyles.journalMiniPillLabel, { color: labelColor }]}>{label}</Text>
@@ -821,13 +827,14 @@ function JournalMoodInsightCard({
   avgPosColor: string;
   avgNegColor: string;
 }) {
+  const tokens = useDesignTokens();
   const avgColor = item.avgPnl >= 0 ? avgPosColor : avgNegColor;
   return (
     <UICard
       variant="soft"
       padding="none"
       disableBlur
-      style={journalTabStyles.journalMoodCell}
+      style={[journalTabStyles.journalMoodCell, { backgroundColor: tokens.colors.background.primary }]}
       contentContainerStyle={journalTabStyles.journalMoodCellInner}
     >
       <Text style={[journalTabStyles.journalMoodCellTitle, { color: titleColor }]} numberOfLines={2}>
@@ -835,7 +842,7 @@ function JournalMoodInsightCard({
       </Text>
       <View style={journalTabStyles.journalMoodCellMeta}>
         <DayDividerPill
-          style={journalTabStyles.journalMoodCountBadge}
+          style={[journalTabStyles.journalMoodCountBadge, { backgroundColor: tokens.colors.background.cardSolid }]}
           contentContainerStyle={journalTabStyles.journalMoodCountBadgeContent}
         >
           <Text style={[journalTabStyles.journalMoodCountText, { color: badgeTextColor }]}>
@@ -878,7 +885,7 @@ export default function JournalDataTab() {
       width: '100%' as const,
       maxWidth: 440,
       alignSelf: 'center' as const,
-      marginBottom: DesignTokens.spacing.md,
+      marginBottom: JOURNAL_LAYOUT.cardStackGap,
       borderWidth: 0 as const,
       borderColor: 'transparent',
       borderRadius: UI_CARD_RADIUS,
@@ -1069,7 +1076,7 @@ export default function JournalDataTab() {
                     : DesignTokens.colors.text.danger
                 }
               />
-              <View style={{ ...journalRow, gap: 10, width: '100%', maxWidth: 440, alignSelf: 'center', marginBottom: 14 }}>
+              <View style={{ ...journalRow, gap: kpiGap, width: '100%', maxWidth: 440, alignSelf: 'center', marginBottom: kpiGap }}>
                 <KpiBlock title="טריידים" value={kpis.countStr} valueColor={DesignTokens.colors.text.primary} />
                 <KpiBlock title="Avg Win" value={kpis.avgWinStr} valueColor={DesignTokens.colors.primary.main} />
                 <KpiBlock title="Avg Loss" value={kpis.avgLossStr} valueColor={DesignTokens.colors.text.danger} />
@@ -1081,7 +1088,7 @@ export default function JournalDataTab() {
                   />
                 ) : null}
               </View>
-              <View style={{ ...journalRow, gap: 10, width: '100%', maxWidth: 440, alignSelf: 'center', marginBottom: 14 }}>
+              <View style={{ ...journalRow, gap: kpiGap, width: '100%', maxWidth: 440, alignSelf: 'center', marginBottom: kpiGap }}>
                 <KpiBlock title="הטרייד הטוב ביותר" value={kpis.bestStr} valueColor={DesignTokens.colors.primary.main} />
                 <KpiBlock title="הטרייד הגרוע ביותר" value={kpis.worstStr} valueColor={DesignTokens.colors.text.danger} />
               </View>
@@ -1148,7 +1155,13 @@ export default function JournalDataTab() {
                         {s.name}
                       </Text>
                       <Text
-                        style={[journalCardSubtitleStyle, { color: DesignTokens.colors.text.secondary }]}
+                        style={[
+                          journalCardSubtitleStyle,
+                          {
+                            color: DesignTokens.colors.text.secondary,
+                            marginTop: JOURNAL_LAYOUT.cardTitleToSubtitleGap,
+                          },
+                        ]}
                         numberOfLines={1}
                       >
                         {s.total} טריידים · Win {s.winRate}%
@@ -1276,7 +1289,7 @@ export default function JournalDataTab() {
                         {journalInsights.mistakes.map((mis) => (
                           <View
                             key={mis.id}
-                            style={[journalTabStyles.journalMistakeCard, { backgroundColor: 'rgba(255,60,60,0.06)', borderColor: 'rgba(255,60,60,0.15)' }]}
+                            style={[journalTabStyles.journalMistakeCard, { backgroundColor: DesignTokens.colors.background.primary }]}
                           >
                             <Text style={[journalTabStyles.journalMistakeLabel, { color: DesignTokens.colors.text.secondary }]} numberOfLines={2}>
                               {mis.label}

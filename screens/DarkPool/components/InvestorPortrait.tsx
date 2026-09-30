@@ -219,10 +219,17 @@ function InvestorPortraitInner({
   if (uri) {
     if (layout === 'circle') {
       return (
-        <View style={[circleStyle(size), styles.ring, style]}>
+        <View
+          style={[
+            circleStyle(size),
+            styles.ring,
+            { backgroundColor: tokens.colors.background.cardSolid, borderWidth: 0 },
+            style,
+          ]}
+        >
           <Image
             source={{ uri }}
-            style={[circleStyle(size), imageStyle]}
+            style={[circleStyle(size), { backgroundColor: 'transparent' }, imageStyle]}
             contentFit="cover"
             cachePolicy="memory-disk"
             recyclingKey={recyclingKey}

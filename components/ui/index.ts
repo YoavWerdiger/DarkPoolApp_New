@@ -35,7 +35,7 @@ export { DayNavBlurButton, DAY_NAV_BUTTON_SIZE, DRAWER_MENU_BUTTON_SIZE } from '
 export { NavGlassSurface } from './NavGlassSurface';
 export type { NavGlassSurfaceProps } from './NavGlassSurface';
 export { navGlassBlurIntensity, navGlassOverlay } from './navGlass';
-export { CHROME_UICARD, chromeSurfaceFill, chromeSurfaceCardStyle } from './chromeControl';
+export { CHROME_UICARD, chromeSurfaceFill, chromeSurfaceCardStyle, searchFieldFill } from './chromeControl';
 export { default as UIInput } from './UIInput';
 export {
   sheetActionColors,

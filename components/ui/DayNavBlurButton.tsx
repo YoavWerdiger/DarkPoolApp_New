@@ -5,6 +5,7 @@ import type { NavGlassIntensity } from './navGlass';
 import { useDesignTokens } from './DesignTokens';
 import { LIGHT_CARD } from './designTokensStatic';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { useSheetSurface } from './BottomSheet/sheetSurface';
 
 /** ברירת מחדל — ניווט תאריכים / שיעור (~40pt) */
 export const DAY_NAV_BUTTON_SIZE = 40;
@@ -63,6 +64,7 @@ export function DayNavBlurButton({
   accessibilityLabel,
 }: Props) {
   const tokens = useDesignTokens();
+  const inSheet = useSheetSurface();
   const r = size / 2;
   const flatUser = StyleSheet.flatten(style) as ViewStyle | undefined;
   const userBg = flatUser?.backgroundColor;
@@ -72,7 +74,9 @@ export function DayNavBlurButton({
   const useGlass = glass && !hasSolidOverride;
   const faceColor = hasSolidOverride
     ? userBg
-    : headerExitButtonFill(tokens.colors.background.cardSolid);
+    : inSheet
+      ? tokens.colors.background.primary
+      : headerExitButtonFill(tokens.colors.background.cardSolid);
 
   const dim: ViewStyle = {
     width: size,

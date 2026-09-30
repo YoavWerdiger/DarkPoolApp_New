@@ -260,6 +260,53 @@ function stdDev(arr: number[]): number {
 
 const TRADING_DAYS_PER_YEAR = 252;
 
+/** תשואות יומיות מותאמות לתזרים — אותה נוסחה של Sharpe / תנודתיות. */
+export function flowAdjustedReturns(
+  series: { date: string; value: number; external_flow?: number }[]
+): number[] {
+  if (series.length < 2) return [];
+  const sorted = [...series].sort((a, b) => a.date.localeCompare(b.date));
+  const returns: number[] = [];
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = sorted[i - 1].value;
+    const curr = sorted[i].value;
+    const flow = sorted[i].external_flow ?? 0;
+    const denominator = prev + flow;
+    if (denominator > 1e-9 && curr >= 0) {
+      returns.push(curr / denominator - 1);
+    } else if (prev > 0) {
+      returns.push((curr - prev) / prev);
+    }
+  }
+  return returns;
+}
+
+/**
+ * Sharpe מצטבר: כל נקודה היא Sharpe השנתי על התשואות עד אותו יום.
+ * הנקודה האחרונה זהה ל-`computePortfolioAnalytics().sharpe`.
+ */
+export function expandingSharpeSeries(
+  series: { date: string; value: number; external_flow?: number }[],
+  riskFreeRate = 0.04
+): number[] {
+  const excess = flowAdjustedReturns(series).map(
+    (r) => r - riskFreeRate / TRADING_DAYS_PER_YEAR
+  );
+  const out: number[] = [];
+  let sum = 0;
+  let sumSq = 0;
+  for (let i = 0; i < excess.length; i++) {
+    sum += excess[i];
+    sumSq += excess[i] * excess[i];
+    const n = i + 1;
+    if (n < 2) continue;
+    const variance = (sumSq - (sum * sum) / n) / (n - 1);
+    if (!(variance > 0)) continue;
+    out.push((sum / n / Math.sqrt(variance)) * Math.sqrt(TRADING_DAYS_PER_YEAR));
+  }
+  return out;
+}
+
 /**
  * Sharpe Ratio שנתי = (mean_daily_return - rf_daily) / std_daily * sqrt(252)
  * @param riskFreeRate - שיעור חסר סיכון שנתי כשבר עשרוני (0.04 = 4%)
@@ -490,20 +537,7 @@ export function computePortfolioAnalytics(
 
   const sorted = [...series].sort((a, b) => a.date.localeCompare(b.date));
   const hasExternalFlow = sorted.some((p) => p.external_flow != null);
-
-  // תשואות יומיות מותאמות לתזרים (HPR) — בלי זה משיכה נראית כקריסת תיק ב-vol/sharpe
-  const returns: number[] = [];
-  for (let i = 1; i < sorted.length; i++) {
-    const prev = sorted[i - 1].value;
-    const curr = sorted[i].value;
-    const flow = sorted[i].external_flow ?? 0;
-    const denominator = prev + flow;
-    if (denominator > 1e-9 && curr >= 0) {
-      returns.push(curr / denominator - 1);
-    } else if (prev > 0) {
-      returns.push((curr - prev) / prev);
-    }
-  }
+  const returns = flowAdjustedReturns(sorted);
 
   const vol = returns.length >= 2 ? annualizedVolatility(returns) : null;
   const sharpe = returns.length >= 2 ? sharpeRatio(returns, riskFreeRate) : null;

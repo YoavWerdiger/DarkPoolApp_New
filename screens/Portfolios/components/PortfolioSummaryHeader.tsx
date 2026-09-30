@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import UICard from '../../../components/ui/UICard';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
-import { ChangeDot, changeToneFromSigned } from '../../../components/ui/ChangeDot';
+import { changeToneFromSigned } from '../../../components/ui/ChangeDot';
 import type { Portfolio, PortfolioSummary } from '../portfolioTypes';
 import {
   formatCurrency,
@@ -106,7 +106,6 @@ export function PortfolioSummaryHeader({
               },
             ]}
           >
-            <ChangeDot tone={dailyTone} />
             <Text style={[styles.dailyText, { color: dailyColor }]} numberOfLines={1}>
               {summary
                 ? `${formatCurrency(summary.daily_gain, summary.currency)} (${formatPercent(

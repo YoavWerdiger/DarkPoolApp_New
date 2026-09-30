@@ -265,7 +265,6 @@ export default function LongPressOverlay({
       onClose={onClose}
       snapPoints={[snapPoint]}
       fitContent
-      useGlassBackground
       showBrandBackground={false}
       showBrandWatermark={false}
       showHandle

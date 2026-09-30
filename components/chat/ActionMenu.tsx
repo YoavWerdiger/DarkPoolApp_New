@@ -100,7 +100,6 @@ export default function ActionMenu({
       onClose={onClose}
       snapPoints={[snapPoint]}
       fitContent
-      useGlassBackground
       showBrandBackground={false}
       showBrandWatermark={false}
       contentPaddingBottom={0}

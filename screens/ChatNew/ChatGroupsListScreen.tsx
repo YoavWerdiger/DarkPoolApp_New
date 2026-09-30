@@ -16,12 +16,15 @@ import {
   TextInput,
   ScrollView,
   Animated,
+  type ImageSourcePropType,
 } from 'react-native';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHeader';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
+import { chatGroupDisplayName, groupChatIcon } from '../../assets/chatGroups/groupChatIcons';
 import { useChat, useChatActions } from '../../context/ChatContext';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import {
@@ -122,83 +125,12 @@ function contextGroupsToListRows(groups: ChatGroup[]): GroupWithMembership[] {
   });
 }
 
-// מיפוי fallback לתמונות קבוצות — מסונכרן עם chat_groups.avatar_url
-// הכרזות: אייקון nav ירוק (פעמון) — לא תמונת מגפון עם רקע לבן
-const NAV_ICON = (name: string) =>
-  `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/app-media/icons/nav/${name}.png`;
-
-const ICON_ANNOUNCEMENTS = NAV_ICON('notifications');
-const ICON_COMMUNITY = NAV_ICON('community');
-const ICON_LEARNING = NAV_ICON('learning');
-const ICON_DARKPOOL = NAV_ICON('darkpool');
-const ICON_CHAT = NAV_ICON('chat');
-const ICON_PORTFOLIOS = NAV_ICON('portfolios');
-const ICON_SEARCH = NAV_ICON('search');
-const ICON_ALERTS = NAV_ICON('alerts');
-const ICON_NEWS = NAV_ICON('news');
-const ICON_VIDEO = NAV_ICON('video');
-const ICON_ISRAEL = NAV_ICON('israel');
-
-const GROUP_IMAGES: { [key: string]: string } = {
-  'הכרזות': ICON_ANNOUNCEMENTS,
-  '🔔 הכרזות': ICON_ANNOUNCEMENTS,
-  'דיונים - כללי': ICON_COMMUNITY,
-  'דיונים - כללי 🗣️': ICON_COMMUNITY,
-  '💬 דיונים - כללי': ICON_COMMUNITY,
-  'שאלות תשובות': ICON_CHAT,
-  'שאלות תשובות ⁉️🗣️': ICON_CHAT,
-  'שאלות ותשובות בשוק': ICON_CHAT,
-  '❓ שאלות ותשובות בשוק': ICON_CHAT,
-  'דיוני פניסטוק': ICON_DARKPOOL,
-  'דיוני - פניסטוקס': ICON_DARKPOOL,
-  'דיוני - פניסטוקס 🚨🗣️': ICON_DARKPOOL,
-  '💰 דיוני - פניסטוקס': ICON_DARKPOOL,
-  'סווינגים והשקעות': ICON_SEARCH,
-  'סווינגים והשקעות 🌟🔇': ICON_SEARCH,
-  'סווינגים וסטאפים': ICON_SEARCH,
-  '🔄 סווינגים וסטאפים': ICON_SEARCH,
-  'ניתוחים ורעיונות': ICON_LEARNING,
-  'ניתוחים ורעיונות שלכם': ICON_LEARNING,
-  'ניתוחים ורעיונות שלכם 🗣️': ICON_LEARNING,
-  'נטו ניתוחים!': ICON_LEARNING,
-  '📊 נטו ניתוחים!': ICON_LEARNING,
-  'רווחים והצלחות': ICON_NEWS,
-  'רווחים והצלחות 💰': ICON_NEWS,
-  '🎯 רווחים והצלחות': ICON_NEWS,
-  'שאלות בלייבים': ICON_VIDEO,
-  'שאלות בלייבים 🎥🗣️': ICON_VIDEO,
-  'מסחר יומי': ICON_PORTFOLIOS,
-  'מסחר יומי 🌟🔇': ICON_PORTFOLIOS,
-  'עסקאות מסחר יומי': ICON_PORTFOLIOS,
-  '📈 עסקאות מסחר יומי': ICON_PORTFOLIOS,
-  'בורסה ישראלית': ICON_ISRAEL,
-  'בורסה ישראלית 🇮🇱🗣️': ICON_ISRAEL,
-  'פניסטוקס (סיכון גבוה)': ICON_ALERTS,
-  'פניסטוקס (סיכון גבוה)🌟🔇': ICON_ALERTS,
-  'מסחר פניסטוקס - סיכון גבוה': ICON_ALERTS,
-  '⚠️ מסחר פניסטוקס - סיכון גבוה': ICON_ALERTS,
-};
-
-const getImageByGroupName = (groupName: string): string | null => {
-  if (GROUP_IMAGES[groupName]) {
-    return GROUP_IMAGES[groupName];
+function avatarUri(source: ImageSourcePropType | null): string | null {
+  if (source && typeof source === 'object' && 'uri' in source && typeof source.uri === 'string') {
+    return source.uri;
   }
-
-  const nameWithoutLeadingEmoji = groupName.replace(/^[\u{1F300}-\u{1F9FF}]+\s*/u, '').trim();
-  if (GROUP_IMAGES[nameWithoutLeadingEmoji]) {
-    return GROUP_IMAGES[nameWithoutLeadingEmoji];
-  }
-
-  const baseName = groupName
-    .replace(/[\p{Extended_Pictographic}\uFE0F\u200D]+/gu, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-  if (GROUP_IMAGES[baseName]) {
-    return GROUP_IMAGES[baseName];
-  }
-
   return null;
-};
+}
 
 const GROUP_ICONS: { [key: string]: keyof typeof Ionicons.glyphMap } = {
   'הכרזות': 'megaphone',
@@ -247,6 +179,7 @@ const formatRelativeTime = (dateStr: string): string => {
 
 export default function ChatGroupsListScreen() {
   const tokens = useDesignTokens();
+  const { isDarkMode } = useTheme();
   const navigation = useNavigation();
   const { user } = useAuth();
   const { groups: contextGroups } = useChat();
@@ -783,7 +716,7 @@ export default function ChatGroupsListScreen() {
   const prepareChatOpen = useCallback((group: Pick<GroupWithMembership, 'id' | 'name' | 'avatar_url' | 'unread_count' | 'last_read_message_id' | 'my_role'>) => {
     lockAndroidChatSoftInput();
     const hint: ChatOpenHint = {
-      name: group.name,
+      name: chatGroupDisplayName(group.name),
       avatar_url: group.avatar_url,
       unread_count: group.unread_count,
       last_read_message_id: group.last_read_message_id,
@@ -956,8 +889,11 @@ export default function ChatGroupsListScreen() {
     }
     if (item.type === 'group') {
       const group = item.group;
-      const imageUrl = group.avatar_url || getImageByGroupName(group.name) || null;
-      const hasImageError = imageUrl ? imageErrorsRef.current.has(imageUrl) : false;
+      const imageSource =
+        groupChatIcon(group.name, isDarkMode) ||
+        (group.avatar_url ? { uri: group.avatar_url } : null);
+      const imageUri = avatarUri(imageSource);
+      const hasImageError = imageUri ? imageErrorsRef.current.has(imageUri) : false;
       const preview = group.is_member && group.last_message
         ? getChatMessagePreview(group.last_message.message_type, group.last_message.content)
         : group.is_member
@@ -973,8 +909,8 @@ export default function ChatGroupsListScreen() {
             if (group.is_member) prepareChatOpen(group);
           }}
         >
-          {imageUrl && !hasImageError ? (
-            <Image source={{ uri: imageUrl }} style={styles.searchRowAvatar} resizeMode="cover" />
+          {imageSource && !hasImageError ? (
+            <Image source={imageSource} style={styles.searchRowAvatar} resizeMode="cover" />
           ) : (
             <View style={[styles.searchRowAvatar, styles.searchRowAvatarPlaceholder]}>
               <Ionicons name={GROUP_ICONS[group.name] || 'chatbubbles'} size={22} color={tokens.colors.text.secondary} />
@@ -987,7 +923,7 @@ export default function ChatGroupsListScreen() {
               ]}
               numberOfLines={1}
             >
-              {group.name}
+              {chatGroupDisplayName(group.name)}
             </Text>
             <Text style={styles.searchRowSubtitle} numberOfLines={1}>{preview}</Text>
           </View>
@@ -999,7 +935,9 @@ export default function ChatGroupsListScreen() {
     const group = item.result.group as any;
     const senderName = msg?.sender?.display_name || 'משתמש';
     const groupName = group?.name || '';
-    const groupImage = group?.avatar_url || (groupName ? getImageByGroupName(groupName) : null) || null;
+    const groupImage =
+      (groupName ? groupChatIcon(groupName, isDarkMode) : null) ||
+      (group?.avatar_url ? { uri: group.avatar_url } : null);
     const preview = item.result.highlights?.[0]
       || (msg?.message_type && msg.message_type !== 'text'
         ? getChatMessagePreview(msg.message_type, msg?.content)
@@ -1017,7 +955,7 @@ export default function ChatGroupsListScreen() {
         }}
       >
         {groupImage ? (
-          <Image source={{ uri: groupImage }} style={styles.searchRowAvatar} resizeMode="cover" />
+          <Image source={groupImage} style={styles.searchRowAvatar} resizeMode="cover" />
         ) : (
           <View style={[styles.searchRowAvatar, styles.searchRowAvatarPlaceholder]}>
             <Ionicons name="chatbubbles" size={22} color={tokens.colors.text.secondary} />
@@ -1025,7 +963,7 @@ export default function ChatGroupsListScreen() {
         )}
         <View style={styles.searchRowBody}>
           <View style={styles.searchRowMsgHead}>
-            <Text style={styles.searchRowTitle} numberOfLines={1}>{groupName}</Text>
+            <Text style={styles.searchRowTitle} numberOfLines={1}>{chatGroupDisplayName(groupName)}</Text>
             {timeLabel ? <Text style={styles.searchRowTime}>{timeLabel}</Text> : null}
           </View>
             <Text style={styles.searchRowSubtitle} numberOfLines={2}>
@@ -1035,15 +973,18 @@ export default function ChatGroupsListScreen() {
         </View>
       </TouchableOpacity>
     );
-  }, [handleGroupPress, handleMessageResultPress, prepareChatOpen, tokens, styles]);
+  }, [handleGroupPress, handleMessageResultPress, prepareChatOpen, tokens, styles, isDarkMode]);
 
   const renderMyGroup = useCallback(
     (item: GroupWithMembership, isLastAnnouncement: boolean, isLastInSection: boolean) => {
       const iconName = GROUP_ICONS[item.name] || 'chatbubbles';
       const hasUnread = (item.unread_count || 0) > 0;
       const hasMentions = (item.mentioned_count || 0) > 0;
-      const imageUrl = item.avatar_url || getImageByGroupName(item.name) || null;
-      const hasImageError = imageUrl ? imageErrorsRef.current.has(imageUrl) : false;
+      const imageSource =
+        groupChatIcon(item.name, isDarkMode) ||
+        (item.avatar_url ? { uri: item.avatar_url } : null);
+      const imageUri = avatarUri(imageSource);
+      const hasImageError = imageUri ? imageErrorsRef.current.has(imageUri) : false;
 
       const previewBody =
         item.last_message_preview ||
@@ -1076,14 +1017,14 @@ export default function ChatGroupsListScreen() {
             activeOpacity={0.6}
           >
             <View style={styles.avatarWrap}>
-              {imageUrl && !hasImageError ? (
+              {imageSource && !hasImageError ? (
                 <Image
-                  source={{ uri: imageUrl }}
+                  source={imageSource}
                   style={styles.avatar}
                   resizeMode="cover"
                   onError={() => {
-                    if (!imageErrorsRef.current.has(imageUrl)) {
-                      imageErrorsRef.current.add(imageUrl);
+                    if (imageUri && !imageErrorsRef.current.has(imageUri)) {
+                      imageErrorsRef.current.add(imageUri);
                       setImageErrorCount(c => c + 1);
                     }
                   }}
@@ -1101,7 +1042,7 @@ export default function ChatGroupsListScreen() {
                   style={styles.chatName}
                   numberOfLines={1}
                 >
-                  {item.name}
+                  {chatGroupDisplayName(item.name)}
                 </Text>
                 {!!timeLabel && (
                   <Text style={[styles.chatTime, hasUnread && styles.chatTimeUnread]}>
@@ -1148,14 +1089,17 @@ export default function ChatGroupsListScreen() {
         </View>
       );
     },
-    [styles, tokens, handleGroupPress, prepareChatOpen, imageErrorCount]
+    [styles, tokens, handleGroupPress, prepareChatOpen, imageErrorCount, isDarkMode]
   );
 
   const renderJoinableGroup = useCallback(
     (item: GroupWithMembership, isLastInSection: boolean) => {
       const iconName = GROUP_ICONS[item.name] || 'chatbubbles';
-      const imageUrl = item.avatar_url || getImageByGroupName(item.name) || null;
-      const hasImageError = imageUrl ? imageErrorsRef.current.has(imageUrl) : false;
+      const imageSource =
+        groupChatIcon(item.name, isDarkMode) ||
+        (item.avatar_url ? { uri: item.avatar_url } : null);
+      const imageUri = avatarUri(imageSource);
+      const hasImageError = imageUri ? imageErrorsRef.current.has(imageUri) : false;
 
       return (
         <View key={`joinable-wrapper-${item.id}`}>
@@ -1163,17 +1107,17 @@ export default function ChatGroupsListScreen() {
             style={[styles.chatRow, styles.joinableRow]}
             onPress={() => handleGroupPress(item)}
             activeOpacity={0.6}
-            accessibilityLabel={`פרטי קבוצה ${item.name}`}
+            accessibilityLabel={`פרטי קבוצה ${chatGroupDisplayName(item.name)}`}
           >
             <View style={styles.avatarWrap}>
-              {imageUrl && !hasImageError ? (
+              {imageSource && !hasImageError ? (
                 <Image
-                  source={{ uri: imageUrl }}
+                  source={imageSource}
                   style={[styles.avatar, styles.joinableAvatar]}
                   resizeMode="cover"
                   onError={() => {
-                    if (!imageErrorsRef.current.has(imageUrl)) {
-                      imageErrorsRef.current.add(imageUrl);
+                    if (imageUri && !imageErrorsRef.current.has(imageUri)) {
+                      imageErrorsRef.current.add(imageUri);
                       setImageErrorCount(c => c + 1);
                     }
                   }}
@@ -1188,7 +1132,7 @@ export default function ChatGroupsListScreen() {
             <View style={styles.chatBody}>
               <View style={styles.chatRow1}>
                 <Text style={styles.chatName} numberOfLines={1}>
-                  {item.name}
+                  {chatGroupDisplayName(item.name)}
                 </Text>
               </View>
               <Text style={styles.joinableSubtitle} numberOfLines={1}>
@@ -1202,7 +1146,7 @@ export default function ChatGroupsListScreen() {
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               activeOpacity={0.75}
               accessibilityRole="button"
-              accessibilityLabel={`הצטרף לקבוצה ${item.name}`}
+              accessibilityLabel={`הצטרף לקבוצה ${chatGroupDisplayName(item.name)}`}
             >
               <Text style={styles.joinablePillText}>הצטרפות</Text>
             </TouchableOpacity>
@@ -1212,7 +1156,7 @@ export default function ChatGroupsListScreen() {
         </View>
       );
     },
-    [styles, tokens, handleGroupPress, openJoinSheet, imageErrorCount]
+    [styles, tokens, handleGroupPress, openJoinSheet, imageErrorCount, isDarkMode]
   );
 
   const renderSectionHeader = useCallback(
@@ -1710,7 +1654,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: tokens.colors.background.input,
+    backgroundColor: tokens.colors.background.cardSolid,
     borderWidth: 0,
     borderRadius: tokens.borderRadius.search,
     paddingHorizontal: 18,

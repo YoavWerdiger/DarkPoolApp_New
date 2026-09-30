@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import Svg, { Circle, Line, Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import type {
@@ -10,10 +11,7 @@ import type {
   PerformancePeriod,
   Trade,
 } from '../portfolioTypes';
-import {
-  buildDistribution,
-  getDailyGainersLosers,
-} from '../../../services/portfolios/portfolioAggregator';
+import { buildDistribution } from '../../../services/portfolios/portfolioAggregator';
 import { toLocalDateKey } from '../../../utils/dateKeys';
 import { DistributionDonut } from '../components/DistributionDonut';
 import { PortfolioValueChart } from '../components/PortfolioValueChart';
@@ -23,13 +21,14 @@ import {
   buildHistoricalPortfolioSeries,
   buildHistoricalPortfolioSeriesFromSnapshots,
   computePortfolioAnalytics,
+  expandingSharpeSeries,
   clearHistoricalSeriesCache,
   getQuotes,
 } from '../../../services/portfolios';
 import type { PortfolioAnalyticsResult } from '../../../services/portfolios';
 import { loadTrades } from '../../../services/portfolios/portfolioTradeDerive';
 import UICard from '../../../components/ui/UICard';
-import { TickerLogo } from '../components/TickerLogo';
+import { DayDividerPill } from '../../../components/ui/DayDividerPill';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 import {
   JOURNAL_LAYOUT,
@@ -38,16 +37,8 @@ import {
   journalCardMetricValueSecondaryStyle,
   journalCardTitleStyle,
   journalPhysicalRightText,
-  journalSectionTitleStyle,
 } from '../../Journal/journalLayout';
 import { filterChartSeriesByPeriod } from '../../DarkPool/utils/profileChartSeries';
-import {
-  moverImpactReturnLine,
-  moverImpactRow,
-  moverImpactTextCol,
-  moverImpactTicker,
-  moverImpactValueLine,
-} from '../utils/moverImpactAlign';
 
 interface Props {
   portfolio: Portfolio;
@@ -74,6 +65,10 @@ interface TradeStats {
   avgWin: number | null;
   avgLoss: number | null;
   count: number;
+  /** סכום רווחים חיוביים מעסקאות סגורות */
+  grossWin: number;
+  /** סכום הפסדים בערך מוחלט */
+  grossLossAbs: number;
 }
 
 type LiveQuote = { price: number; previousClose: number | null };
@@ -101,6 +96,8 @@ export default function OverviewTab({
     avgWin: null,
     avgLoss: null,
     count: 0,
+    grossWin: 0,
+    grossLossAbs: 0,
   });
   /** פוזיציות פתוחות — למחשב ערך תיק חי */
   const [openTrades, setOpenTrades] = useState<Trade[]>([]);
@@ -171,19 +168,27 @@ export default function OverviewTab({
           const totalPnl = withPnl.reduce((s, t) => s + (t.profit_loss ?? 0), 0);
           const wins = withPnl.filter((t) => (t.profit_loss ?? 0) > 0);
           const losses = withPnl.filter((t) => (t.profit_loss ?? 0) < 0);
+          const grossWin = wins.reduce((s, t) => s + (t.profit_loss ?? 0), 0);
+          const grossLossAbs = Math.abs(losses.reduce((s, t) => s + (t.profit_loss ?? 0), 0));
           setTradeStats({
             totalPnl,
             winRate: (wins.length / withPnl.length) * 100,
-            avgWin: wins.length > 0
-              ? wins.reduce((s, t) => s + (t.profit_loss ?? 0), 0) / wins.length
-              : null,
-            avgLoss: losses.length > 0
-              ? losses.reduce((s, t) => s + (t.profit_loss ?? 0), 0) / losses.length
-              : null,
+            avgWin: wins.length > 0 ? grossWin / wins.length : null,
+            avgLoss: losses.length > 0 ? -grossLossAbs / losses.length : null,
             count: withPnl.length,
+            grossWin,
+            grossLossAbs,
           });
         } else {
-          setTradeStats({ totalPnl: 0, winRate: null, avgWin: null, avgLoss: null, count: 0 });
+          setTradeStats({
+            totalPnl: 0,
+            winRate: null,
+            avgWin: null,
+            avgLoss: null,
+            count: 0,
+            grossWin: 0,
+            grossLossAbs: 0,
+          });
         }
 
         setOpenTrades(open);
@@ -298,26 +303,6 @@ export default function OverviewTab({
     [distribution]
   );
 
-  const { gainers, losers } = useMemo(() => {
-    const source = isColmex ? openTradeHoldings : holdings;
-    const result = getDailyGainersLosers(source);
-    // אם אין עליות/ירידות אבל יש פוזיציות — הצג אותן (גם בשינוי 0)
-    if (
-      result.gainers.length === 0 &&
-      result.losers.length === 0 &&
-      source.some((h) => !h.is_closed)
-    ) {
-      const open = [...source.filter((h) => !h.is_closed)].sort(
-        (a, b) => Math.abs(b.daily_gain) - Math.abs(a.daily_gain)
-      );
-      return {
-        gainers: open.filter((h) => h.daily_gain >= 0).slice(0, 5),
-        losers: open.filter((h) => h.daily_gain < 0).slice(0, 5),
-      };
-    }
-    return result;
-  }, [isColmex, openTradeHoldings, holdings]);
-
   // שווי חי של היום — נוסחה אחידה: cash + open (entry ± unrealized×leverage).
   // Colmex: available_cash מהברוקר; ידני: available_cash / summary.cash.
   const livePortfolioValue = useMemo(() => {
@@ -347,10 +332,6 @@ export default function OverviewTab({
       .reduce((s, h) => s + h.value, 0);
     return holdingsValue + cash > 0 ? holdingsValue + cash : null;
   }, [isColmex, portfolio.available_cash, summary?.cash, openTrades, openTradeQuotes, holdings]);
-
-  /** שווי תיק לחישוב השפעת נכס בודד על התיק (לא % המניה) */
-  const portfolioValueForImpact =
-    livePortfolioValue ?? summary?.total_value ?? 0;
 
   // שינוי יומי חי מפוזיציות + עדכון header
   const liveDailyGain = useMemo(() => {
@@ -415,12 +396,21 @@ export default function OverviewTab({
     return base;
   }, [chartSeries, livePortfolioValue]);
 
-  // מדדים על אותה תקופה כמו הגרף — עקביות TWR / vol / DD
+  // מדדים וגרפים קטנים על אותה תקופה כמו בורר התקופה בגרף הגדול
+  const periodSeries = useMemo(
+    () => filterChartSeriesByPeriod(filteredSeries, period),
+    [filteredSeries, period]
+  );
+
   const analytics = useMemo((): PortfolioAnalyticsResult | null => {
-    const periodSeries = filterChartSeriesByPeriod(filteredSeries, period);
     if (periodSeries.length < 2) return null;
     return computePortfolioAnalytics(periodSeries);
-  }, [filteredSeries, period]);
+  }, [periodSeries]);
+
+  const sharpePath = useMemo(
+    () => expandingSharpeSeries(periodSeries),
+    [periodSeries]
+  );
 
   const styles = useMemo(
     () =>
@@ -438,6 +428,9 @@ export default function OverviewTab({
           ...journalCardTitleStyle,
           color: tokens.colors.text.primary,
           marginBottom: JOURNAL_LAYOUT.cardTitleToBodyGap,
+        },
+        chartSectionTitle: {
+          marginBottom: 6,
         },
         tipsBanner: {
           flexDirection: 'row',
@@ -458,6 +451,7 @@ export default function OverviewTab({
           ...journalPhysicalRightText,
         },
         groupChips: {
+          direction: 'rtl',
           flexDirection: 'row',
           flexWrap: 'wrap',
           justifyContent: 'flex-start',
@@ -466,26 +460,7 @@ export default function OverviewTab({
           width: '100%',
         },
         groupChip: {
-          paddingVertical: 7,
-          paddingHorizontal: 12,
           borderRadius: 999,
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: tokens.colors.border.subtle,
-          backgroundColor: 'rgba(255,255,255,0.06)',
-        },
-        groupChipActive: {
-          borderWidth: 0,
-          backgroundColor: tokens.colors.background.tertiary,
-        },
-        groupChipText: {
-          fontSize: 12,
-          color: tokens.colors.text.secondary,
-          fontWeight: '600',
-          ...journalPhysicalRightText,
-        },
-        groupChipTextActive: {
-          color: tokens.colors.primary.main,
-          fontWeight: '700',
         },
         donutWrap: {
           flexDirection: 'row',
@@ -540,56 +515,6 @@ export default function OverviewTab({
           writingDirection: 'ltr',
           textAlign: 'right',
         },
-        moversWrap: {
-          gap: 14,
-          width: '100%',
-        },
-        moverGroup: {
-          gap: 4,
-          width: '100%',
-          alignItems: 'stretch',
-        },
-        moverGroupHeaderText: {
-          width: '100%',
-          alignSelf: 'stretch',
-          fontSize: 12,
-          fontWeight: '700',
-          ...journalPhysicalRightText,
-          marginBottom: 8,
-        },
-        moverRow: {
-          ...moverImpactRow,
-          paddingVertical: 9,
-          paddingHorizontal: 10,
-          gap: 10,
-          borderRadius: 12,
-          backgroundColor: tokens.colors.background.tertiary,
-          borderWidth: 0,
-          marginBottom: 6,
-          width: '100%',
-        },
-        moverTextCol: {
-          ...moverImpactTextCol,
-          gap: 2,
-        },
-        moverSymbol: {
-          ...moverImpactTicker,
-          fontSize: 13,
-          fontWeight: '700',
-          color: tokens.colors.text.primary,
-        },
-        moverPrimaryLine: {
-          ...moverImpactValueLine,
-          fontSize: 12,
-          fontWeight: '700',
-        },
-        moverStockPct: {
-          ...moverImpactReturnLine,
-          fontSize: JOURNAL_TYPE.caption2.fontSize,
-          fontWeight: JOURNAL_TYPE.caption2.fontWeight,
-          lineHeight: JOURNAL_TYPE.caption2.lineHeight,
-          opacity: 0.75,
-        },
         emptyText: {
           width: '100%',
           alignSelf: 'stretch',
@@ -598,103 +523,119 @@ export default function OverviewTab({
           ...journalPhysicalRightText,
           paddingVertical: 24,
         },
-        emptyTextSmall: {
+        cashList: {
           width: '100%',
-          alignSelf: 'stretch',
-          fontSize: 12,
-          color: tokens.colors.text.tertiary,
-          ...journalPhysicalRightText,
-          paddingVertical: 10,
         },
-        cashGrid: {
+        cashLine: {
+          direction: 'ltr',
           flexDirection: 'row',
-          flexWrap: 'wrap',
-          gap: 10,
-        },
-        cashCell: {
-          width: '48%',
-          flexGrow: 1,
-          padding: 12,
-          borderRadius: 14,
-          backgroundColor: tokens.colors.background.tertiary,
-          borderWidth: 0,
-          gap: JOURNAL_LAYOUT.cardMetricLabelToValueGap,
           alignItems: 'center',
-        },
-        cashCellLabel: {
-          maxWidth: '100%',
-          ...journalCardMetricLabelStyle,
-          color: tokens.colors.text.secondary,
-        },
-        cashCellValue: {
-          maxWidth: '100%',
-          ...journalCardMetricValueSecondaryStyle,
-          color: tokens.colors.text.primary,
-        },
-        analyticsGroup: {
-          gap: 8,
-          marginBottom: 14,
-          width: '100%',
-          alignItems: 'stretch',
-        },
-        analyticsGroupLast: {
-          marginBottom: 0,
-        },
-        analyticsGroupLabel: {
-          width: '100%',
-          alignSelf: 'stretch',
-          ...journalCardMetricLabelStyle,
-          color: tokens.colors.text.secondary,
-          textAlign: 'right',
-          marginBottom: 4,
-        },
-        analyticsGrid: {
-          flexDirection: 'row',
-          flexWrap: 'wrap',
-          gap: 10,
-        },
-        analyticsCell: {
-          width: '47%',
-          flexGrow: 1,
-          flexBasis: '47%',
-          minHeight: 76,
+          justifyContent: 'space-between',
+          gap: 12,
           paddingVertical: 12,
-          paddingHorizontal: 10,
-          borderRadius: 14,
-          backgroundColor: tokens.colors.background.tertiary,
-          borderWidth: 0,
-          justifyContent: 'center',
-          alignItems: 'center',
-          gap: JOURNAL_LAYOUT.cardMetricLabelToValueGap,
+          borderBottomWidth: StyleSheet.hairlineWidth,
+          borderBottomColor: tokens.colors.border.divider,
         },
-        analyticsCellPrimary: {
-          backgroundColor: tokens.colors.background.elevated2,
+        cashLineLast: {
+          borderBottomWidth: 0,
+          paddingBottom: 0,
         },
-        analyticsCellLabel: {
-          maxWidth: '100%',
-          ...journalCardMetricLabelStyle,
+        cashLabel: {
+          ...journalPhysicalRightText,
+          flexShrink: 1,
+          fontSize: JOURNAL_TYPE.cardSubtitle.fontSize,
+          fontWeight: JOURNAL_TYPE.cardSubtitle.fontWeight,
+          lineHeight: JOURNAL_TYPE.cardSubtitle.lineHeight,
           color: tokens.colors.text.secondary,
         },
-        analyticsCellValue: {
-          alignSelf: 'stretch',
-          maxWidth: '100%',
-          ...journalCardMetricValueSecondaryStyle,
+        cashValue: {
+          flexShrink: 0,
+          direction: 'ltr',
+          writingDirection: 'ltr',
+          textAlign: 'left',
+          fontSize: JOURNAL_TYPE.cardSubtitle.fontSize,
+          fontWeight: '600',
+          lineHeight: JOURNAL_TYPE.cardSubtitle.lineHeight,
+          color: tokens.colors.text.primary,
+          fontVariant: ['tabular-nums'],
         },
-        analyticsCellHint: {
-          maxWidth: '100%',
+        metricSection: {
+          marginBottom: JOURNAL_LAYOUT.cardStackGap,
+        },
+        metricSectionLabel: {
+          width: '100%',
+          alignSelf: 'stretch',
+          ...journalPhysicalRightText,
+          fontSize: JOURNAL_TYPE.groupLabel.fontSize,
+          fontWeight: JOURNAL_TYPE.groupLabel.fontWeight,
+          lineHeight: JOURNAL_TYPE.groupLabel.lineHeight,
+          color: tokens.colors.text.secondary,
+          marginBottom: JOURNAL_LAYOUT.groupLabelToContent,
+        },
+        metricRow: {
+          direction: 'rtl',
+          flexDirection: 'row',
+          alignItems: 'stretch',
+          gap: JOURNAL_LAYOUT.cardStackGap,
+        },
+        metricCard: {
+          width: 220,
+        },
+        metricCardInner: {
+          direction: 'ltr',
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+          minHeight: 76,
+        },
+        metricVisual: {
+          width: 68,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        metricText: {
+          flex: 1,
+          alignItems: 'flex-end',
+        },
+        metricLabel: {
+          width: '100%',
+          ...journalCardMetricLabelStyle,
+          textAlign: 'right',
+          color: tokens.colors.text.secondary,
+        },
+        metricValue: {
+          width: '100%',
+          ...journalCardMetricValueSecondaryStyle,
+          textAlign: 'right',
+          marginTop: JOURNAL_LAYOUT.cardMetricLabelToValueGap,
+        },
+        metricHint: {
+          width: '100%',
+          ...journalPhysicalRightText,
           fontSize: JOURNAL_TYPE.caption2.fontSize,
           fontWeight: JOURNAL_TYPE.caption2.fontWeight,
           lineHeight: JOURNAL_TYPE.caption2.lineHeight,
           color: tokens.colors.text.tertiary,
-          writingDirection: 'rtl',
-          textAlign: 'right',
-          marginTop: 0,
+          marginTop: 2,
         },
       }),
     [tokens]
   );
 
   const showTip = (summary?.holdings_count ?? 0) === 0;
+  const netPnl =
+    tradeStats.totalPnl + (summary?.total_dividends ?? 0) - (summary?.total_fees ?? 0);
+  const profitFactor =
+    tradeStats.grossLossAbs > 0 ? tradeStats.grossWin / tradeStats.grossLossAbs : null;
+  const profitShare =
+    tradeStats.grossWin + tradeStats.grossLossAbs > 0
+      ? tradeStats.grossWin / (tradeStats.grossWin + tradeStats.grossLossAbs)
+      : null;
+  const periodReturn = analytics?.twrReturn ?? analytics?.totalReturn ?? null;
+  const sparkValues = periodSeries.map((point) => point.value);
+  const positive = tokens.colors.primary.main;
+  const negative = tokens.colors.text.danger;
+  const neutral = tokens.colors.text.secondary;
 
   return (
     <View style={styles.root}>
@@ -709,7 +650,7 @@ export default function OverviewTab({
 
       {/* Performance chart — כותרת סקשן זהה בטעינה/טעון; בגרף רק amount→delta */}
       <UICard variant="soft" padding="md" style={styles.section}>
-        <Text style={styles.sectionTitle}>שווי תיק לאורך זמן</Text>
+        <Text style={[styles.sectionTitle, styles.chartSectionTitle]}>שווי תיק לאורך זמן</Text>
         {chartLoading ? (
           <Text style={styles.emptyText}>טוען נתונים…</Text>
         ) : filteredSeries.length === 0 ? (
@@ -734,26 +675,18 @@ export default function OverviewTab({
         <Text style={styles.sectionTitle}>חלוקת נכסים</Text>
         <View style={styles.groupChips}>
           {GROUP_BY_OPTIONS.map((opt) => (
-            <TouchableOpacity
+            <DayDividerPill
               key={opt.id}
+              selected={groupBy === opt.id}
               onPress={() => {
                 if (groupBy !== opt.id) void HapticFeedback.selection();
                 setGroupBy(opt.id);
               }}
-              style={[
-                styles.groupChip,
-                groupBy === opt.id && styles.groupChipActive,
-              ]}
+              style={styles.groupChip}
+              accessibilityLabel={opt.label}
             >
-              <Text
-                style={[
-                  styles.groupChipText,
-                  groupBy === opt.id && styles.groupChipTextActive,
-                ]}
-              >
-                {opt.label}
-              </Text>
-            </TouchableOpacity>
+              {opt.label}
+            </DayDividerPill>
           ))}
         </View>
         {distribution.length === 0 ? (
@@ -799,416 +732,393 @@ export default function OverviewTab({
         )}
       </UICard>
 
-      {/* Analytics metrics — עיקריים לפי חשיבות, ואז משניים */}
       {(analytics != null || tradeStats.count > 0) && (
-        <UICard variant="soft" padding="md" style={styles.section}>
-          <Text style={styles.sectionTitle}>מדדי ביצוע</Text>
-
-          <View style={styles.analyticsGroup}>
-            <Text style={styles.analyticsGroupLabel}>עיקריים</Text>
-            <View style={styles.analyticsGrid}>
-              <AnalyticsCell
-                label="כמות עסקאות"
-                value={tradeStats.count > 0 ? String(tradeStats.count) : '—'}
-                valueColor={
-                  tradeStats.count > 0
-                    ? tokens.colors.text.primary
-                    : tokens.colors.text.secondary
+        <View style={styles.metricSection}>
+          <Text style={styles.metricSectionLabel}>מדדי ביצוע</Text>
+          <ScrollView
+            horizontal
+            nestedScrollEnabled
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.metricRow}
+          >
+            {tradeStats.count > 0 ? (
+              <PerformanceMetricCard
+                label="P&L נטו"
+                value={`${netPnl >= 0 ? '+' : ''}${formatCurrency(netPnl, portfolio.currency)}`}
+                valueColor={gainColor(netPnl, positive, negative, neutral)}
+                hint={
+                  tradeStats.count === 1
+                    ? 'עסקה סגורה אחת'
+                    : `${tradeStats.count} עסקאות סגורות`
                 }
-                primary
                 styles={styles}
               />
-              <AnalyticsCell
-                label="Win Rate"
+            ) : null}
+            {tradeStats.count > 0 ? (
+              <PerformanceMetricCard
+                label="פקטור רווח"
                 value={
-                  tradeStats.winRate != null
-                    ? `${tradeStats.winRate.toFixed(0)}%`
+                  profitFactor != null
+                    ? profitFactor.toFixed(2)
+                    : tradeStats.grossWin > 0
+                    ? '∞'
                     : '—'
                 }
                 valueColor={
-                  tradeStats.winRate == null
-                    ? tokens.colors.text.secondary
-                    : tradeStats.winRate >= 50
-                    ? tokens.colors.primary.main
-                    : tokens.colors.text.primary
+                  profitFactor == null
+                    ? tradeStats.grossWin > 0
+                      ? positive
+                      : neutral
+                    : profitFactor >= 1
+                    ? positive
+                    : negative
                 }
-                primary
+                hint="רווח גולמי ÷ הפסד גולמי"
+                visual={
+                  profitShare != null ? (
+                    <SplitRing greenShare={profitShare} green={positive} red={negative} track={tokens.colors.border.divider} />
+                  ) : null
+                }
                 styles={styles}
               />
-              <AnalyticsCell
-                label="ממוצע רווח"
-                value={
-                  tradeStats.avgWin != null
-                    ? `+${formatCurrency(tradeStats.avgWin, portfolio.currency)}`
-                    : '—'
+            ) : null}
+            {tradeStats.winRate != null ? (
+              <PerformanceMetricCard
+                label="אחוז הצלחה"
+                value={`${tradeStats.winRate.toFixed(1)}%`}
+                valueColor={tradeStats.winRate >= 50 ? positive : tokens.colors.text.primary}
+                hint={
+                  tradeStats.avgWin != null && tradeStats.avgLoss != null
+                    ? `ממוצע ${formatCurrency(tradeStats.avgWin, portfolio.currency)} / ${formatCurrency(tradeStats.avgLoss, portfolio.currency)}`
+                    : undefined
                 }
-                valueColor={
-                  tradeStats.avgWin != null
-                    ? tokens.colors.primary.main
-                    : tokens.colors.text.secondary
+                visual={
+                  <WinGauge
+                    winRatio={tradeStats.winRate / 100}
+                    green={positive}
+                    red={negative}
+                    track={tokens.colors.border.divider}
+                  />
                 }
-                primary
                 styles={styles}
               />
-              <AnalyticsCell
-                label="ממוצע הפסד"
-                value={
-                  tradeStats.avgLoss != null
-                    ? formatCurrency(tradeStats.avgLoss, portfolio.currency)
-                    : '—'
-                }
-                valueColor={
-                  tradeStats.avgLoss != null
-                    ? tokens.colors.text.danger
-                    : tokens.colors.text.secondary
-                }
-                primary
-                styles={styles}
-              />
-              {/* TWR — אותו חישוב; תווית ברורה יותר */}
-              <AnalyticsCell
-                label="תשואה (TWR)"
-                value={
-                  analytics?.twrReturn != null
-                    ? formatPercent(analytics.twrReturn * 100)
-                    : analytics?.totalReturn != null
-                    ? formatPercent(analytics.totalReturn * 100)
-                    : '—'
-                }
-                valueColor={
-                  (analytics?.twrReturn ?? analytics?.totalReturn) == null
-                    ? tokens.colors.text.secondary
-                    : (analytics?.twrReturn ?? analytics?.totalReturn ?? 0) >= 0
-                    ? tokens.colors.primary.main
-                    : tokens.colors.text.danger
-                }
+            ) : null}
+            {periodReturn != null ? (
+              <PerformanceMetricCard
+                label="תשואה"
+                value={formatPercent(periodReturn * 100)}
+                valueColor={gainColor(periodReturn, positive, negative, neutral)}
                 hint={analytics?.twrReturn != null ? 'מנורמל להפקדות' : undefined}
-                primary
+                visual={
+                  sparkValues.length >= 2 ? (
+                    <Sparkline values={sparkValues} color={gainColor(periodReturn, positive, negative, neutral)} />
+                  ) : null
+                }
                 styles={styles}
               />
-              {/* P&L מסחרי בלבד (ללא דיבידנדים) */}
-              <AnalyticsCell
-                label="P&L מסחרי"
-                value={
-                  tradeStats.count > 0
-                    ? `${tradeStats.totalPnl >= 0 ? '+' : ''}${formatCurrency(tradeStats.totalPnl, portfolio.currency)}`
-                    : '—'
-                }
+            ) : null}
+            {analytics?.maxDrawdown != null ? (
+              <PerformanceMetricCard
+                label="ירידה מקסימלית"
+                value={formatPercent(analytics.maxDrawdown * 100, 1, false)}
+                valueColor={analytics.maxDrawdown > 0.2 ? negative : tokens.colors.text.primary}
+                styles={styles}
+              />
+            ) : null}
+            {analytics?.sharpe != null ? (
+              <PerformanceMetricCard
+                label="Sharpe"
+                value={analytics.sharpe.toFixed(2)}
                 valueColor={
-                  tradeStats.count === 0
-                    ? tokens.colors.text.secondary
-                    : tradeStats.totalPnl > 0
-                    ? tokens.colors.primary.main
-                    : tradeStats.totalPnl < 0
-                    ? tokens.colors.text.danger
-                    : tokens.colors.text.secondary
+                  analytics.sharpe >= 1 ? positive : analytics.sharpe >= 0 ? tokens.colors.text.primary : negative
                 }
-                hint="trades בלבד"
-                primary
+                hint="מצטבר על התקופה"
+                visual={
+                  sharpePath.length >= 2 ? (
+                    <Sparkline
+                      values={sharpePath}
+                      color={
+                        analytics.sharpe >= 1
+                          ? positive
+                          : analytics.sharpe >= 0
+                            ? tokens.colors.text.primary
+                            : negative
+                      }
+                      baseline={0}
+                      baselineColor={tokens.colors.border.divider}
+                    />
+                  ) : null
+                }
                 styles={styles}
               />
-            </View>
-          </View>
-
-          <View style={[styles.analyticsGroup, styles.analyticsGroupLast]}>
-            <Text style={styles.analyticsGroupLabel}>נוספים</Text>
-            <View style={styles.analyticsGrid}>
-              <AnalyticsCell
+            ) : null}
+            {analytics?.volatility != null ? (
+              <PerformanceMetricCard
                 label="תנודתיות שנתית"
-                value={
-                  analytics?.volatility != null
-                    ? formatPercent(analytics.volatility * 100, 1)
-                    : '—'
-                }
+                value={formatPercent(analytics.volatility * 100, 1)}
                 valueColor={tokens.colors.text.primary}
                 styles={styles}
               />
-              <AnalyticsCell
-                label="Sharpe Ratio"
-                value={analytics?.sharpe != null ? analytics.sharpe.toFixed(2) : '—'}
-                valueColor={
-                  analytics?.sharpe == null
-                    ? tokens.colors.text.secondary
-                    : analytics.sharpe >= 1
-                    ? tokens.colors.primary.main
-                    : analytics.sharpe >= 0
-                    ? tokens.colors.text.primary
-                    : tokens.colors.text.danger
-                }
-                styles={styles}
-              />
-              <AnalyticsCell
-                label="Max Drawdown"
-                value={
-                  analytics?.maxDrawdown != null
-                    ? formatPercent(analytics.maxDrawdown * 100, 1)
-                    : '—'
-                }
-                valueColor={
-                  analytics?.maxDrawdown == null
-                    ? tokens.colors.text.secondary
-                    : analytics.maxDrawdown > 0.2
-                    ? tokens.colors.text.danger
-                    : tokens.colors.text.primary
-                }
-                styles={styles}
-              />
-              {/* P&L נטו = מסחרי + דיבידנדים − עמלות */}
-              <AnalyticsCell
-                label="P&L נטו (כולל דיב׳)"
-                value={(() => {
-                  const netPnl =
-                    tradeStats.totalPnl +
-                    (summary?.total_dividends ?? 0) -
-                    (summary?.total_fees ?? 0);
-                  return tradeStats.count > 0 || (summary?.total_dividends ?? 0) > 0
-                    ? `${netPnl >= 0 ? '+' : ''}${formatCurrency(netPnl, portfolio.currency)}`
-                    : '—';
-                })()}
-                valueColor={(() => {
-                  const netPnl =
-                    tradeStats.totalPnl +
-                    (summary?.total_dividends ?? 0) -
-                    (summary?.total_fees ?? 0);
-                  return netPnl > 0
-                    ? tokens.colors.primary.main
-                    : netPnl < 0
-                    ? tokens.colors.text.danger
-                    : tokens.colors.text.secondary;
-                })()}
-                hint="+דיבידנדים −עמלות"
-                styles={styles}
-              />
-            </View>
-          </View>
-        </UICard>
+            ) : null}
+          </ScrollView>
+        </View>
       )}
-
-      {/* Daily gainers/losers — השפעה על התיק (לא % המניה) */}
-      <UICard variant="soft" padding="md" style={styles.section}>
-        <Text style={styles.sectionTitle}>השפעה על התיק היום</Text>
-        {(isColmex ? openTradeHoldings.length === 0 : holdings.length === 0) ? (
-          <Text style={styles.emptyText}>
-            {isColmex ? 'אין פוזיציות פתוחות' : 'אין נכסים בתיק'}
-          </Text>
-        ) : (
-          <View style={styles.moversWrap}>
-            <View style={styles.moverGroup}>
-              <Text
-                style={[
-                  styles.moverGroupHeaderText,
-                  { color: tokens.colors.primary.main },
-                ]}
-              >
-                תרומה חיובית
-              </Text>
-              {gainers.length === 0 ? (
-                <Text style={styles.emptyTextSmall}>
-                  אין עליות היום בנכסים הפתוחים
-                </Text>
-              ) : (
-                gainers.map((h) => (
-                  <MoverImpactRow
-                    key={h.symbol}
-                    holding={h}
-                    portfolioValue={portfolioValueForImpact}
-                    currency={portfolio.currency}
-                    tokens={tokens}
-                    styles={styles}
-                  />
-                ))
-              )}
-            </View>
-            <View style={styles.moverGroup}>
-              <Text
-                style={[
-                  styles.moverGroupHeaderText,
-                  { color: tokens.colors.text.danger },
-                ]}
-              >
-                תרומה שלילית
-              </Text>
-              {losers.length === 0 ? (
-                <Text style={styles.emptyTextSmall}>
-                  אין ירידות היום בנכסים הפתוחים
-                </Text>
-              ) : (
-                losers.map((h) => (
-                  <MoverImpactRow
-                    key={h.symbol}
-                    holding={h}
-                    portfolioValue={portfolioValueForImpact}
-                    currency={portfolio.currency}
-                    tokens={tokens}
-                    styles={styles}
-                  />
-                ))
-              )}
-            </View>
-          </View>
-        )}
-      </UICard>
 
       {/* Cash flow summary */}
       <UICard variant="soft" padding="md" style={styles.section}>
-        <Text style={styles.sectionTitle}>תזרים מזומנים</Text>
-        <View style={styles.cashGrid}>
-          <CashFlowCard
-            label="הפקדות"
-            value={summary ? formatCurrency(summary.total_deposits, portfolio.currency) : '—'}
-            tokens={tokens}
-            styles={styles}
-          />
-          <CashFlowCard
-            label="משיכות"
-            value={summary ? formatCurrency(summary.total_withdrawals, portfolio.currency) : '—'}
-            tokens={tokens}
-            styles={styles}
-          />
-          <CashFlowCard
-            label="עמלות / מסים"
-            value={summary ? formatCurrency(summary.total_fees, portfolio.currency) : '—'}
-            tokens={tokens}
-            styles={styles}
-          />
-          <CashFlowCard
-            label="דיבידנדים"
-            value={
-              summary ? formatCurrency(summary.total_dividends, portfolio.currency) : '—'
-            }
-            tokens={tokens}
-            styles={styles}
-          />
+        <Text style={styles.sectionTitle}>תזרים</Text>
+        <View style={styles.cashList}>
+          {(
+            [
+              ['הפקדות', summary ? formatCurrency(summary.total_deposits, portfolio.currency) : '—'],
+              ['משיכות', summary ? formatCurrency(summary.total_withdrawals, portfolio.currency) : '—'],
+              ['עמלות', summary ? formatCurrency(summary.total_fees, portfolio.currency) : '—'],
+              ['דיבידנדים', summary ? formatCurrency(summary.total_dividends, portfolio.currency) : '—'],
+            ] as const
+          ).map(([label, value], index, lines) => (
+            <View
+              key={label}
+              style={[styles.cashLine, index === lines.length - 1 && styles.cashLineLast]}
+            >
+              <Text style={styles.cashValue} numberOfLines={1}>
+                {value}
+              </Text>
+              <Text style={styles.cashLabel} numberOfLines={1}>
+                {label}
+              </Text>
+            </View>
+          ))}
         </View>
       </UICard>
     </View>
   );
 }
 
-interface MoverImpactRowProps {
-  holding: PortfolioHolding;
-  portfolioValue: number;
-  currency: string;
-  tokens: ReturnType<typeof useDesignTokens>;
-  styles: {
-    moverRow: any;
-    moverTextCol: any;
-    moverSymbol: any;
-    moverPrimaryLine: any;
-    moverStockPct: any;
-  };
-}
-
-/** שורת נכס: לוגו בימין, ואז טיקר / מחיר / תשואה על אותו קצה ימני. */
-function MoverImpactRow({
-  holding,
-  portfolioValue,
-  currency,
-  tokens,
-  styles,
-}: MoverImpactRowProps) {
-  const impactPct =
-    portfolioValue > 0 ? (holding.daily_gain / portfolioValue) * 100 : 0;
-  const color = gainColor(
-    holding.daily_gain,
-    tokens.colors.primary.main,
-    tokens.colors.text.danger,
-    tokens.colors.text.secondary
-  );
+function SplitRing({
+  greenShare,
+  green,
+  red,
+  track,
+}: {
+  greenShare: number;
+  green: string;
+  red: string;
+  track: string;
+}) {
+  const size = 54;
+  const stroke = 6;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const cx = size / 2;
+  const clamped = Math.min(1, Math.max(0, greenShare));
+  const gap = clamped > 0.04 && clamped < 0.96 ? 0.06 : 0;
+  const greenFrac = Math.max(0, clamped - gap / 2);
+  const redFrac = Math.max(0, 1 - clamped - gap / 2);
   return (
-    <View style={styles.moverRow}>
-      <TickerLogo symbol={holding.symbol} size={38} />
-      <View style={styles.moverTextCol}>
-        <Text style={styles.moverSymbol} numberOfLines={1}>
-          {holding.symbol}
-        </Text>
-        <Text
-          style={[styles.moverPrimaryLine, { color }]}
-          numberOfLines={1}
-          adjustsFontSizeToFit
-          minimumFontScale={0.8}
-        >
-          {formatPercent(impactPct)} · {formatCurrency(holding.daily_gain, currency)}
-        </Text>
-        {holding.avg_price > 0 ? (
-          <Text style={[styles.moverStockPct, { color: tokens.colors.text.tertiary }]}>
-            תשואה מכניסה {formatPercent(holding.unrealized_gain_pct)}
-          </Text>
-        ) : null}
-      </View>
-    </View>
+    <Svg width={size} height={size}>
+      <Circle cx={cx} cy={cx} r={r} stroke={track} strokeWidth={stroke} fill="none" />
+      {greenFrac > 0 ? (
+        <Circle
+          cx={cx}
+          cy={cx}
+          r={r}
+          stroke={green}
+          strokeWidth={stroke}
+          fill="none"
+          strokeLinecap="round"
+          strokeDasharray={`${greenFrac * c} ${c}`}
+          transform={`rotate(-90 ${cx} ${cx})`}
+        />
+      ) : null}
+      {redFrac > 0 ? (
+        <Circle
+          cx={cx}
+          cy={cx}
+          r={r}
+          stroke={red}
+          strokeWidth={stroke}
+          fill="none"
+          strokeLinecap="round"
+          strokeDasharray={`${redFrac * c} ${c}`}
+          strokeDashoffset={-((greenFrac + gap) * c)}
+          transform={`rotate(-90 ${cx} ${cx})`}
+        />
+      ) : null}
+    </Svg>
   );
 }
 
-interface CashFlowCardProps {
-  label: string;
-  value: string;
-  tokens: ReturnType<typeof useDesignTokens>;
-  styles: {
-    cashCell: any;
-    cashCellLabel: any;
-    cashCellValue: any;
-  };
-}
-
-function CashFlowCard({ label, value, tokens, styles }: CashFlowCardProps) {
+function WinGauge({
+  winRatio,
+  green,
+  red,
+  track,
+}: {
+  winRatio: number;
+  green: string;
+  red: string;
+  track: string;
+}) {
+  const width = 68;
+  const stroke = 6;
+  const r = (width - stroke) / 2;
+  const cx = width / 2;
+  const cy = r + stroke / 2;
+  const height = cy + stroke / 2;
+  const semi = Math.PI * r;
+  const full = semi * 2;
+  const clamped = Math.min(1, Math.max(0, winRatio));
+  const gap = clamped > 0.04 && clamped < 0.96 ? 3 : 0;
+  const lossLen = Math.max(0, semi * (1 - clamped) - gap / 2);
+  const winLen = Math.max(0, semi * clamped - gap / 2);
+  const lossSweep = (1 - clamped) * 180;
   return (
-    <View style={styles.cashCell}>
-      <Text style={styles.cashCellLabel} numberOfLines={1}>
-        {label}
-      </Text>
-      <Text style={[styles.cashCellValue, { color: tokens.colors.text.primary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
-        {value}
-      </Text>
-    </View>
+    <Svg width={width} height={height}>
+      <Circle
+        cx={cx}
+        cy={cy}
+        r={r}
+        stroke={track}
+        strokeWidth={stroke}
+        fill="none"
+        strokeDasharray={`${semi} ${full}`}
+        strokeLinecap="round"
+        transform={`rotate(180 ${cx} ${cy})`}
+      />
+      {lossLen > 0 ? (
+        <Circle
+          cx={cx}
+          cy={cy}
+          r={r}
+          stroke={red}
+          strokeWidth={stroke}
+          fill="none"
+          strokeDasharray={`${lossLen} ${full}`}
+          strokeLinecap="round"
+          transform={`rotate(180 ${cx} ${cy})`}
+        />
+      ) : null}
+      {winLen > 0 ? (
+        <Circle
+          cx={cx}
+          cy={cy}
+          r={r}
+          stroke={green}
+          strokeWidth={stroke}
+          fill="none"
+          strokeDasharray={`${winLen} ${full}`}
+          strokeLinecap="round"
+          transform={`rotate(${180 + lossSweep} ${cx} ${cy})`}
+        />
+      ) : null}
+    </Svg>
   );
 }
 
-interface AnalyticsCellProps {
-  label: string;
-  value: string;
-  valueColor: string;
-  /** רמז קצר מתחת לערך (אופציונלי) */
-  hint?: string;
-  /** הדגשה קלה לקבוצת העיקריים */
-  primary?: boolean;
-  styles: {
-    analyticsCell: any;
-    analyticsCellPrimary?: any;
-    analyticsCellLabel: any;
-    analyticsCellValue: any;
-    analyticsCellHint?: any;
-  };
+function Sparkline({
+  values,
+  color,
+  baseline,
+  baselineColor,
+}: {
+  values: number[];
+  color: string;
+  baseline?: number;
+  baselineColor?: string;
+}) {
+  const width = 64;
+  const height = 36;
+  const nums = values.filter((v) => Number.isFinite(v));
+  if (nums.length < 2) return null;
+  const plotted = nums.length > 32 ? sampleSeries(nums, 32) : nums;
+  let min = Math.min(...plotted);
+  let max = Math.max(...plotted);
+  if (baseline != null && Number.isFinite(baseline)) {
+    min = Math.min(min, baseline);
+    max = Math.max(max, baseline);
+  }
+  const span = max - min || 1;
+  const yOf = (v: number) => height - 2 - ((v - min) / span) * (height - 4);
+  const d = plotted
+    .map((v, i) => {
+      const x = (i / (plotted.length - 1)) * width;
+      return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${yOf(v).toFixed(1)}`;
+    })
+    .join(' ');
+  const baseY = baseline != null && Number.isFinite(baseline) ? yOf(baseline) : null;
+  return (
+    <Svg width={width} height={height}>
+      {baseY != null && baselineColor ? (
+        <Line
+          x1={0}
+          y1={baseY}
+          x2={width}
+          y2={baseY}
+          stroke={baselineColor}
+          strokeWidth={1}
+        />
+      ) : null}
+      <Path d={d} stroke={color} strokeWidth={2} fill="none" strokeLinejoin="round" strokeLinecap="round" />
+    </Svg>
+  );
 }
 
-function AnalyticsCell({
+/** שומר את הנקודה האחרונה — היא שווה למספר שמוצג בכרטיס. */
+function sampleSeries(values: number[], max: number): number[] {
+  if (values.length <= max) return values;
+  const out: number[] = [];
+  const step = (values.length - 1) / (max - 1);
+  for (let i = 0; i < max - 1; i++) out.push(values[Math.round(i * step)]);
+  out.push(values[values.length - 1]);
+  return out;
+}
+
+function PerformanceMetricCard({
   label,
   value,
   valueColor,
   hint,
-  primary,
+  visual,
   styles,
-}: AnalyticsCellProps) {
+}: {
+  label: string;
+  value: string;
+  valueColor: string;
+  hint?: string;
+  visual?: React.ReactNode;
+  styles: {
+    metricCard: object;
+    metricCardInner: object;
+    metricVisual: object;
+    metricText: object;
+    metricLabel: object;
+    metricValue: object;
+    metricHint: object;
+  };
+}) {
   return (
-    <View
-      style={[styles.analyticsCell, primary ? styles.analyticsCellPrimary : null]}
-    >
-      <Text style={styles.analyticsCellLabel} numberOfLines={1}>
-        {label}
-      </Text>
-      <Text
-        style={[styles.analyticsCellValue, { color: valueColor }]}
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={0.75}
-      >
-        {value}
-      </Text>
-      {hint != null ? (
-        <Text style={styles.analyticsCellHint} numberOfLines={1}>
-          {hint}
-        </Text>
-      ) : null}
-    </View>
+    <UICard variant="soft" padding="md" style={styles.metricCard}>
+      <View style={styles.metricCardInner}>
+        {visual ? <View style={styles.metricVisual}>{visual}</View> : null}
+        <View style={styles.metricText}>
+          <Text style={styles.metricLabel} numberOfLines={2}>
+            {label}
+          </Text>
+          <Text
+            style={[styles.metricValue, { color: valueColor }]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.85}
+          >
+            {value}
+          </Text>
+          {hint ? (
+            <Text style={styles.metricHint} numberOfLines={2}>
+              {hint}
+            </Text>
+          ) : null}
+        </View>
+      </View>
+    </UICard>
   );
 }

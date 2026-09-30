@@ -8,8 +8,10 @@ import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { APP_TYPE } from '../ui/appType';
 import UICard from '../ui/UICard';
 import { ChatGroup } from '../../types/chat.types';
+import { chatGroupDisplayName } from '../../assets/chatGroups/groupChatIcons';
 import { getChatMessagePreview } from '../../utils/chatMessagePreview';
 import { formatDistanceToNow } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -63,8 +65,7 @@ function ChatGroupCard({ group, onPress, onLongPress }: ChatGroupCardProps) {
         {/* Top Row: Name + Time */}
         <View style={styles.topRow}>
           <Text style={[styles.name, hasUnread && styles.nameUnread]} numberOfLines={1}>
-            {group.is_muted && '🔇 '}
-            {group.name}
+            {chatGroupDisplayName(group.name)}
           </Text>
           {timeText && (
             <Text style={[styles.time, hasUnread && styles.timeUnread]}>
@@ -162,10 +163,13 @@ const createStyles = (tokens: any) => StyleSheet.create({
   },
   name: {
     flex: 1,
-    fontSize: tokens.typography.fontSize.lg,
-    fontWeight: tokens.typography.fontWeight.medium,
+    fontSize: APP_TYPE.cardTitle.fontSize,
+    fontWeight: APP_TYPE.cardTitle.fontWeight,
+    lineHeight: APP_TYPE.cardTitle.lineHeight,
+    letterSpacing: APP_TYPE.cardTitle.letterSpacing,
     color: tokens.colors.text.primary,
     textAlign: 'right',
+    writingDirection: 'rtl',
   },
   nameUnread: {
     fontWeight: '700',

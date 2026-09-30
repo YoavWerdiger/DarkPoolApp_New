@@ -13,7 +13,6 @@ import Animated, {
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { DayDividerPill } from '../../../components/ui/DayDividerPill';
 import {
-  ChangeDot,
   SignedChange,
   changeToneColor,
   changeToneFromSigned,
@@ -491,6 +490,9 @@ export function PortfolioValueChart({
     plotted.length >= 2 ? ranges.lastValue - ranges.firstValue : 0;
   const isUp = change >= 0;
   const lineColor = isUp ? tokens.colors.primary.main : tokens.colors.text.danger;
+  const lightChart = tokens.colors.background.primary !== '#000000';
+  const cursorLineColor = lightChart ? 'rgba(30,26,36,0.38)' : 'rgba(255,255,255,0.45)';
+  const cursorRingColor = lightChart ? '#FFFFFF' : tokens.colors.background.primary;
   const headerAmountColor = (amount: number) =>
     portfolioAmountDisplayColor(amount, tokens.colors.text.primary, tokens.colors.text.danger);
   const benchmarkColor = tokens.colors.text.tertiary;
@@ -524,7 +526,6 @@ export function PortfolioValueChart({
               </Text>
             ) : periodReturn != null ? (
               <View style={styles.compactReturnRow}>
-                <ChangeDot tone={periodTone} />
                 <Text
                   style={[styles.compactReturn, { color: returnColor }]}
                   numberOfLines={1}
@@ -591,7 +592,7 @@ export function PortfolioValueChart({
               ]}
               numberOfLines={1}
               adjustsFontSizeToFit
-              minimumFontScale={0.55}
+              minimumFontScale={0.85}
             >
               {formatValue(headerValue, currency)}
             </Text>
@@ -729,17 +730,20 @@ export function PortfolioValueChart({
                   x2={activePoint.x}
                   y1={padding.top}
                   y2={plotBottom}
-                  stroke="rgba(255,255,255,0.35)"
-                  strokeWidth={1.5}
-                  strokeDasharray="4 4"
+                  stroke={cursorLineColor}
+                  strokeWidth={1}
                 />
                 <Circle
                   cx={activePoint.x}
                   cy={activePoint.y}
-                  r={5}
+                  r={6}
+                  fill={cursorRingColor}
+                />
+                <Circle
+                  cx={activePoint.x}
+                  cy={activePoint.y}
+                  r={3.5}
                   fill={lineColor}
-                  stroke="#111111"
-                  strokeWidth={2}
                 />
               </>
             ) : null}
@@ -813,7 +817,7 @@ const styles = StyleSheet.create({
   },
   /** כותרת סקשן — לייאוט פיזי (direction LTR מקומי) כדי שלא יישבר בתוך עץ RTL */
   header: {
-    marginBottom: 12,
+    marginBottom: 6,
     width: '100%',
     alignSelf: 'stretch',
     direction: 'ltr',
@@ -895,7 +899,7 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     width: '100%',
     maxWidth: '100%',
-    marginTop: 6,
+    marginTop: 2,
   },
   headerReturnJustifyRight: {
     justifyContent: 'flex-end',
@@ -907,9 +911,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerReturn: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: JOURNAL_TYPE.caption.fontSize,
+    fontWeight: JOURNAL_TYPE.caption.fontWeight,
+    lineHeight: JOURNAL_TYPE.caption.lineHeight,
     writingDirection: 'ltr',
+    fontVariant: ['tabular-nums'],
   },
   headerRange: {
     alignSelf: 'stretch',
@@ -947,7 +953,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'nowrap',
     alignItems: 'center',
-    paddingTop: 10,
+    paddingTop: 6,
     gap: 8,
   },
 });

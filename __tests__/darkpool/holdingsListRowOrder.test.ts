@@ -31,7 +31,7 @@ describe('HoldingsPieSection legend layout', () => {
     expect(pieFn).toMatch(/contentContainerStyle=\{styles\.cardContent\}/);
     expect(pieStyles).toMatch(/cardContent:\s*\{[\s\S]*?overflow:\s*'visible'/);
     expect(pieStyles).not.toMatch(/card:\s*\{[\s\S]*?overflow:\s*'hidden'/);
-    expect(pieStyles).toMatch(/donutWrap:[\s\S]*?alignItems:\s*'flex-start'/);
+    expect(pieStyles).toMatch(/donutWrap:[\s\S]*?alignItems:\s*'center'/);
     expect(pieStyles).toMatch(/legend:[\s\S]*?paddingBottom:\s*2/);
     expect(pieStyles).toMatch(
       /legendLabel:[\s\S]*?lineHeight:\s*DARK_POOL_TYPE\.caption\.lineHeight/
@@ -93,15 +93,14 @@ describe('HoldingsListRow visual order', () => {
       profileSrc.indexOf('valueLabel: {'),
       profileSrc.indexOf('valueHelpBtn:')
     );
-    expect(labelStyle).toMatch(/darkPoolTextRtl/);
-    expect(labelStyle).not.toMatch(/darkPoolPhysicalRightText/);
+    expect(labelStyle).toMatch(/darkPoolSectionTitleStyle/);
     expect(profileSrc).toMatch(/deltaRow: \{[\s\S]*?alignSelf: 'flex-end'/);
     expect(profileSrc).toMatch(
       /deltaRow: \{[\s\S]*?marginTop: APP_LAYOUT\.titleSubtitleGap/
     );
     const label = profileSrc.indexOf('styles.valueLabel');
     const aum = profileSrc.indexOf('styles.heroValue');
-    const delta = profileSrc.indexOf('<SignedChangePair');
+    const delta = profileSrc.indexOf('styles.deltaRow');
     expect(label).toBeGreaterThan(-1);
     expect(aum).toBeGreaterThan(label);
     expect(delta).toBeGreaterThan(aum);

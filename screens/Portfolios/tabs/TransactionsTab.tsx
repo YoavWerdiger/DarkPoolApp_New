@@ -24,11 +24,12 @@ import {
 import {
   formatCurrency,
   formatDateShort,
-  formatNumber,
 } from '../utils/format';
-import { TickerLogo } from '../components/TickerLogo';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
+import { UI_CARD_RADIUS } from '../../../components/ui/appLayout';
 import {
+  JOURNAL_LAYOUT,
+  JOURNAL_TYPE,
   journalBodyTextStyle,
   journalPhysicalRightText,
   journalSectionTitleStyle,
@@ -48,17 +49,6 @@ interface Props {
 }
 
 type Nav = NativeStackNavigationProp<PortfoliosStackParamList, 'PortfolioDetail'>;
-
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
-
-const TX_ICONS: Record<PortfolioTransaction['type'], IoniconName> = {
-  buy: 'arrow-down-circle',
-  sell: 'arrow-up-circle',
-  deposit: 'log-in-outline',
-  withdrawal: 'log-out-outline',
-  fee: 'cash-outline',
-  dividend: 'gift',
-};
 
 export default function TransactionsTab({
   portfolio,
@@ -189,58 +179,52 @@ export default function TransactionsTab({
           color: tokens.colors.text.inverse,
           ...journalPhysicalRightText,
         },
+        listCard: {
+          borderRadius: UI_CARD_RADIUS,
+          overflow: 'hidden',
+        },
         row: {
+          direction: 'rtl',
           flexDirection: 'row',
           alignItems: 'center',
-          paddingVertical: 10,
-          paddingHorizontal: 14,
+          paddingVertical: 14,
+          paddingHorizontal: JOURNAL_LAYOUT.cardPadding,
           gap: 12,
         },
-        iconWrap: {
-          width: 34,
-          height: 34,
-          borderRadius: 17,
-          alignItems: 'center',
-          justifyContent: 'center',
+        rowDivider: {
+          borderBottomWidth: StyleSheet.hairlineWidth,
+          borderBottomColor: tokens.colors.border.divider,
         },
         rowMain: {
           flex: 1,
-          justifyContent: 'center',
-        },
-        rowSide: {
-          justifyContent: 'center',
-          alignItems: 'flex-start',
+          minWidth: 0,
+          alignItems: 'stretch',
         },
         rowTitle: {
-          fontSize: 14,
-          fontWeight: '700',
+          ...journalPhysicalRightText,
+          fontSize: JOURNAL_TYPE.cardSubtitle.fontSize,
+          fontWeight: '600',
+          lineHeight: JOURNAL_TYPE.cardSubtitle.lineHeight,
           color: tokens.colors.text.primary,
-          lineHeight: 18,
-          width: '100%',
-          ...journalPhysicalRightText,
-        },
-        rowSub: {
-          fontSize: 11,
-          color: tokens.colors.text.tertiary,
-          marginTop: 2,
-          lineHeight: 14,
-          width: '100%',
-          ...journalPhysicalRightText,
-        },
-        rowAmount: {
-          fontSize: 13,
-          fontWeight: '700',
-          lineHeight: 16,
-          textAlign: 'right',
-          writingDirection: 'ltr',
         },
         rowDate: {
-          fontSize: 11,
-          color: tokens.colors.text.tertiary,
+          ...journalPhysicalRightText,
           marginTop: 2,
-          lineHeight: 14,
-          textAlign: 'right',
+          fontSize: JOURNAL_TYPE.caption2.fontSize,
+          fontWeight: JOURNAL_TYPE.caption2.fontWeight,
+          lineHeight: JOURNAL_TYPE.caption2.lineHeight,
+          color: tokens.colors.text.tertiary,
+        },
+        rowAmount: {
+          flexShrink: 0,
+          direction: 'ltr',
           writingDirection: 'ltr',
+          textAlign: 'left',
+          fontSize: JOURNAL_TYPE.cardSubtitle.fontSize,
+          fontWeight: '600',
+          lineHeight: JOURNAL_TYPE.cardSubtitle.lineHeight,
+          color: tokens.colors.text.primary,
+          fontVariant: ['tabular-nums'],
         },
       }),
     [tokens]
@@ -289,63 +273,36 @@ export default function TransactionsTab({
     <View style={styles.root}>
       {sectionTitle ? (
         <Text style={{
-          ...journalSectionTitleStyle,
+          ...journalPhysicalRightText,
+          fontSize: JOURNAL_TYPE.groupLabel.fontSize,
+          fontWeight: JOURNAL_TYPE.groupLabel.fontWeight,
+          lineHeight: JOURNAL_TYPE.groupLabel.lineHeight,
           color: tokens.colors.text.secondary,
-          marginBottom: 12,
+          marginTop: JOURNAL_LAYOUT.sectionGap,
+          marginBottom: JOURNAL_LAYOUT.groupLabelToContent,
           paddingHorizontal: 4,
         }}>
           {sectionTitle}
         </Text>
       ) : null}
-      {items.map((tx) => {
-        const isBuy = tx.type === 'buy';
-        const isSell = tx.type === 'sell';
-        const isCashOut = tx.type === 'withdrawal' || tx.type === 'fee';
-        const isCashIn =
-          tx.type === 'deposit' || tx.type === 'dividend';
-        const iconColor = isBuy
-          ? tokens.colors.primary.main
-          : isSell
-          ? tokens.colors.text.danger
-          : isCashIn
-          ? tokens.colors.primary.main
-          : isCashOut
-          ? tokens.colors.text.warning
-          : tokens.colors.text.secondary;
+      <UICard variant="soft" padding="none" style={styles.listCard}>
+        {items.map((tx, index) => {
+          const isOut = tx.type === 'buy' || tx.type === 'withdrawal' || tx.type === 'fee';
+          const raw =
+            tx.type === 'buy' || tx.type === 'sell'
+              ? Number(tx.quantity ?? 0) * Number(tx.price ?? 0)
+              : Number(tx.amount ?? 0);
+          const formatted = formatCurrency(Math.abs(raw), tx.currency);
+          const amount = formatted === '—' ? formatted : `${isOut ? '−' : '+'}${formatted}`;
+          const title =
+            tx.type === 'dividend' && tx.symbol
+              ? `${TRANSACTION_LABELS[tx.type]} · ${tx.symbol}`
+              : TRANSACTION_LABELS[tx.type];
 
-        const amount = (() => {
-          if (tx.type === 'buy' || tx.type === 'sell') {
-            return formatCurrency(
-              Number(tx.quantity ?? 0) * Number(tx.price ?? 0),
-              tx.currency
-            );
-          }
-          return formatCurrency(Number(tx.amount ?? 0), tx.currency);
-        })();
-
-        const subtitle = (() => {
-          if (tx.type === 'buy' || tx.type === 'sell') {
-            return `${tx.symbol} · ${formatNumber(
-              Number(tx.quantity ?? 0),
-              4
-            )} × ${formatCurrency(Number(tx.price ?? 0), tx.currency, 2)}`;
-          }
-          if (tx.type === 'dividend') {
-            return `${tx.symbol} · דיבידנד`;
-          }
-          return tx.notes || TRANSACTION_LABELS[tx.type];
-        })();
-
-        return (
-          <UICard
-            key={tx.id}
-            variant="soft"
-            glassIntensity="light"
-            padding="none"
-            style={{ borderRadius: 16, marginBottom: 8, overflow: 'hidden' }}
-          >
+          return (
             <TouchableOpacity
-              style={styles.row}
+              key={tx.id}
+              style={[styles.row, index < items.length - 1 && styles.rowDivider]}
               onLongPress={
                 readOnly
                   ? undefined
@@ -365,44 +322,21 @@ export default function TransactionsTab({
               activeOpacity={readOnly ? 1 : 0.85}
               disabled={readOnly}
             >
-              {tx.symbol && (tx.type === 'buy' || tx.type === 'sell' || tx.type === 'dividend') ? (
-                <TickerLogo symbol={tx.symbol} size={36} />
-              ) : (
-                <View
-                  style={[
-                    styles.iconWrap,
-                    { backgroundColor: `${iconColor}20` },
-                  ]}
-                >
-                  <Ionicons name={TX_ICONS[tx.type]} size={18} color={iconColor} />
-                </View>
-              )}
               <View style={styles.rowMain}>
-                <Text style={styles.rowTitle}>{TRANSACTION_LABELS[tx.type]}</Text>
-                <Text style={styles.rowSub} numberOfLines={1}>
-                  {subtitle}
+                <Text style={styles.rowTitle} numberOfLines={1}>
+                  {title}
+                </Text>
+                <Text style={styles.rowDate} numberOfLines={1}>
+                  {formatDateShort(tx.date)}
                 </Text>
               </View>
-              <View style={styles.rowSide}>
-                <Text
-                  style={[
-                    styles.rowAmount,
-                    {
-                      color: isBuy || isCashOut
-                        ? tokens.colors.text.danger
-                        : tokens.colors.primary.main,
-                    },
-                  ]}
-                >
-                  {(isBuy || isCashOut) ? '-' : '+'}
-                  {amount}
-                </Text>
-                <Text style={styles.rowDate}>{formatDateShort(tx.date)}</Text>
-              </View>
+              <Text style={styles.rowAmount} numberOfLines={1}>
+                {amount}
+              </Text>
             </TouchableOpacity>
-          </UICard>
-        );
-      })}
+          );
+        })}
+      </UICard>
     </View>
   );
 }

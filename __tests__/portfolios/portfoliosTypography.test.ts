@@ -19,14 +19,17 @@ describe('portfolios typography (journal topology)', () => {
 
   it('PortfolioCard uses soft UICard and card title/subtitle tokens', () => {
     expect(portfolioCardSrc).toContain('variant="soft"');
-    expect(portfolioCardSrc).toContain('journalCardTitleStyle');
+    expect(portfolioCardSrc).toContain('JOURNAL_TYPE.cardTitle');
+    expect(portfolioCardSrc).toContain('journalHebrewText');
     expect(portfolioCardSrc).toContain('journalCardSubtitleStyle');
     expect(portfolioCardSrc).toContain('journalCardMetricValueStyle');
-    expect(portfolioCardSrc).toContain('journalCardMetricValueSecondaryStyle');
     expect(portfolioCardSrc).toMatch(
       /valueAmount:[\s\S]*journalCardMetricValueStyle/,
     );
-    expect(portfolioCardSrc).toMatch(/kpiValue:[\s\S]*journalCardMetricValueSecondaryStyle/);
+    expect(portfolioCardSrc).toContain('journalCardMetricLabelStyle');
+    expect(portfolioCardSrc).toContain('שווי תיק');
+    expect(portfolioCardSrc).not.toContain('אחוז הצלחה');
+    expect(portfolioCardSrc).not.toContain('colmex-logo');
     expect(portfolioCardSrc).toContain('titleLatin');
     expect(portfolioCardSrc).toMatch(/titleLatin:[\s\S]*writingDirection:\s*'ltr'/);
     expect(portfolioCardSrc).toContain('background.cardSolid');

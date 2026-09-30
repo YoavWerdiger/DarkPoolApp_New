@@ -13,6 +13,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
+import { APP_TYPE } from '../../components/ui/appType';
 import MediaPickerSheet from '../../components/chat/MediaPickerSheet';
 import {
   resolvePickedMedia,
@@ -108,7 +110,6 @@ export default function CreateCommunityPostSheet({
       enablePanDownToClose={panEnabled}
       edgeToEdge
       showHandle
-      useGlassBackground
       showBrandBackground={false}
       showBrandWatermark={false}
       contentPaddingBottom={0}
@@ -334,7 +335,7 @@ function CreateCommunityPostSheetBody({
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               {busy ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={tokens.colors.text.inverse} />
               ) : (
                 <Text
                   style={[
@@ -378,8 +379,9 @@ function CreateCommunityPostSheetBody({
           ) : null}
 
           <UICard
-            variant="blur"
+            variant="soft"
             padding="none"
+            disableBlur
             style={styles.composeCard}
             contentContainerStyle={styles.composeCardInner}
           >
@@ -507,13 +509,26 @@ function CreateCommunityPostSheetBody({
             <View style={{ gap: 10 }}>
               {attachments.map((att, index) => (
                 <View key={`${att.ref.type}-${att.ref.id}-${index}`} style={{ gap: 6 }}>
-                  <EntityEmbedCard attachment={att} onPress={() => undefined} />
+                  <EntityEmbedCard
+                    attachment={att}
+                    onPress={() => undefined}
+                    style={{
+                      backgroundColor: tokens.colors.background.primary,
+                      borderWidth: 0,
+                    }}
+                  />
                   <TouchableOpacity
                     onPress={() => removeAttachment(index)}
                     disabled={busy}
-                    style={{ alignSelf: 'flex-start' }}
+                    style={styles.removeAttachBtn}
+                    accessibilityLabel="הסר צירוף"
                   >
-                    <Text style={{ color: tokens.colors.text.tertiary, fontSize: 13 }}>
+                    <Ionicons
+                      name="trash-outline"
+                      size={16}
+                      color={tokens.colors.text.primary}
+                    />
+                    <Text style={[styles.removeAttachLabel, { color: tokens.colors.text.primary }]}>
                       הסר צירוף
                     </Text>
                   </TouchableOpacity>
@@ -528,7 +543,7 @@ function CreateCommunityPostSheetBody({
                   disabled={busy}
                   style={{ alignSelf: 'flex-start' }}
                 >
-                  <Text style={{ color: tokens.colors.primary.main, fontSize: 13, fontWeight: '600' }}>
+                  <Text style={{ color: tokens.colors.primary.main, ...APP_TYPE.caption }}>
                     + הוסף צירוף נוסף
                   </Text>
                 </TouchableOpacity>
@@ -565,7 +580,7 @@ function CreateCommunityPostSheetBody({
                 accessibilityLabel="הסר תמונה"
                 hitSlop={8}
               >
-                <Ionicons name="close" size={16} color="#fff" />
+                <Ionicons name="close" size={16} color={tokens.colors.text.primary} />
               </TouchableOpacity>
             </View>
           ) : null}
@@ -604,7 +619,6 @@ function CreateCommunityPostSheetBody({
 
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   const r = tokens.borderRadius;
-  const radius = r['2xl'];
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -614,8 +628,8 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     header: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: 16,
-      paddingBottom: 12,
+      paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+      paddingBottom: APP_LAYOUT.cardTitleToBodyGap,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: tokens.colors.border.divider,
       gap: 10,
@@ -628,6 +642,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     headerIconButton: {
       alignSelf: 'center',
+      backgroundColor: tokens.colors.background.primary,
     },
     headerCenter: {
       flex: 1,
@@ -635,9 +650,10 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       justifyContent: 'center',
     },
     headerTitle: {
-      fontSize: 20,
-      fontWeight: '800',
-      letterSpacing: -0.35,
+      fontSize: APP_TYPE.sectionTitle.fontSize,
+      fontWeight: APP_TYPE.sectionTitle.fontWeight,
+      lineHeight: APP_TYPE.sectionTitle.lineHeight,
+      letterSpacing: APP_TYPE.sectionTitle.letterSpacing,
       writingDirection: 'rtl',
       textAlign: 'center',
       width: '100%',
@@ -649,15 +665,16 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       borderRadius: r.button,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: tokens.colors.primary.main,
+      backgroundColor: tokens.colors.primary.lightCta,
     },
     headerPublishBtnDisabled: {
       backgroundColor: tokens.colors.background.primary,
     },
     headerPublishBtnText: {
-      fontSize: 15,
-      fontWeight: '800',
-      color: '#fff',
+      fontSize: APP_TYPE.cardTitle.fontSize,
+      fontWeight: APP_TYPE.cardTitle.fontWeight,
+      lineHeight: APP_TYPE.cardTitle.lineHeight,
+      color: tokens.colors.text.inverse,
     },
     headerPublishBtnTextDisabled: {
       color: tokens.colors.text.tertiary,
@@ -667,43 +684,41 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     scrollContent: {
       flexGrow: 1,
-      paddingHorizontal: 16,
-      paddingTop: 16,
-      paddingBottom: 28,
-      gap: 14,
+      paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+      paddingTop: APP_LAYOUT.cardPadding,
+      paddingBottom: APP_LAYOUT.sectionGap,
+      gap: APP_LAYOUT.cardStackGap,
       direction: 'rtl',
     },
     banner: {
       flexDirection: 'row-reverse',
       alignItems: 'center',
-      gap: 8,
-      paddingHorizontal: 12,
+      gap: APP_LAYOUT.stackGapSmall,
+      paddingHorizontal: APP_LAYOUT.cardPadding,
       paddingVertical: 10,
-      borderRadius: r.xl,
-      borderWidth: StyleSheet.hairlineWidth,
+      borderRadius: UI_CARD_RADIUS,
+      borderWidth: 0,
     },
     bannerText: {
       flex: 1,
-      fontSize: 13,
-      lineHeight: 18,
+      ...APP_TYPE.cardSubtitle,
       writingDirection: 'rtl',
       textAlign: 'right',
     },
     composeCard: {
-      borderRadius: radius,
+      borderRadius: UI_CARD_RADIUS,
       overflow: 'hidden',
+      backgroundColor: tokens.colors.background.cardSolid,
     },
     composeCardInner: {
-      paddingHorizontal: 14,
-      paddingTop: 14,
+      paddingHorizontal: APP_LAYOUT.cardPadding,
+      paddingTop: APP_LAYOUT.cardPadding,
       paddingBottom: 10,
-      gap: 10,
+      gap: APP_LAYOUT.cardTitleToBodyGap,
     },
     composeInput: {
       minHeight: 140,
-      fontSize: 16,
-      lineHeight: 24,
-      fontWeight: '500',
+      ...APP_TYPE.body,
       padding: 0,
       writingDirection: 'rtl',
     },
@@ -723,8 +738,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       maxWidth: '100%',
     },
     chipText: {
-      fontSize: 12,
-      fontWeight: '700',
+      ...APP_TYPE.caption,
       writingDirection: 'rtl',
       textAlign: 'right',
     },
@@ -737,8 +751,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       paddingTop: 10,
     },
     counter: {
-      fontSize: 12,
-      fontWeight: '600',
+      ...APP_TYPE.caption,
       writingDirection: 'ltr',
     },
     attachBtn: {
@@ -752,10 +765,25 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     attachBtnActive: {
       backgroundColor: tokens.colors.primary.dim,
     },
+    removeAttachBtn: {
+      alignSelf: 'flex-start',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: tokens.colors.background.primary,
+      borderRadius: r.full,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+    },
+    removeAttachLabel: {
+      ...APP_TYPE.caption,
+      writingDirection: 'rtl',
+      textAlign: 'right',
+    },
     previewFrame: {
-      borderRadius: radius,
+      borderRadius: UI_CARD_RADIUS,
       overflow: 'hidden',
-      backgroundColor: tokens.colors.background.tertiary,
+      backgroundColor: tokens.colors.background.primary,
       direction: 'rtl',
     },
     previewOverlay: {
@@ -771,11 +799,10 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       width: 30,
       height: 30,
       borderRadius: r.full,
-      backgroundColor: 'rgba(0,0,0,0.6)',
+      backgroundColor: tokens.colors.background.primary,
       alignItems: 'center',
       justifyContent: 'center',
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: tokens.colors.border.divider,
+      borderWidth: 0,
     },
   });
 }

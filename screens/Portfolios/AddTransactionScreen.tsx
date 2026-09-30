@@ -18,6 +18,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { LIGHT_CANVAS } from '../../components/ui/designTokensStatic';
 import {
   formFieldInputStyle,
   formFieldLabelStyle,
@@ -399,26 +400,33 @@ export default function AddTransactionScreen() {
           paddingVertical: 12,
           borderRadius: tokens.borderRadius.full,
           alignItems: 'center',
-          borderWidth: 0,
-          backgroundColor: tokens.colors.background.input,
+          backgroundColor: tokens.colors.background.cardSolid,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: tokens.colors.border.divider,
         },
         modeChipActive: {
-          backgroundColor: tokens.colors.background.tertiary,
-          borderWidth: 0,
+          backgroundColor: tokens.colors.primary.lightCta,
+          borderColor: 'transparent',
         },
         modeChipText: {
-          ...journalCardSubtitleStyle,
-          fontWeight: '700',
+          fontSize: JOURNAL_TYPE.cardSubtitle.fontSize,
+          fontWeight: '600',
+          lineHeight: JOURNAL_TYPE.cardSubtitle.lineHeight,
           textAlign: 'center',
+          color: tokens.colors.text.secondary,
         },
         modeChipTextActive: {
-          color: tokens.colors.primary.main,
+          color: tokens.colors.text.inverse,
         },
         section: { marginBottom: PORTFOLIO_FORM.sectionGap },
         label: formFieldLabelStyle({ tokens, focused: false, error: false }),
         input: {
           ...formFieldShellStyle({ tokens, focused: false, multiline: false }),
           ...formFieldInputStyle(),
+          color: tokens.colors.text.primary,
+          backgroundColor: tokens.colors.background.cardSolid,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: tokens.colors.border.divider,
           borderRadius: tokens.borderRadius.full,
           paddingHorizontal: 16,
           paddingVertical: 14,
@@ -434,6 +442,9 @@ export default function AddTransactionScreen() {
           alignItems: 'center',
           gap: 10,
           ...formFieldShellStyle({ tokens, focused: false, multiline: false }),
+          backgroundColor: tokens.colors.background.cardSolid,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: tokens.colors.border.divider,
           borderRadius: tokens.borderRadius.full,
           paddingHorizontal: 16,
           paddingVertical: 14,
@@ -464,8 +475,9 @@ export default function AddTransactionScreen() {
           borderRadius: tokens.borderRadius.full,
           alignItems: 'center',
           justifyContent: 'center',
-          borderWidth: 0,
-          backgroundColor: tokens.colors.background.input,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: tokens.colors.border.divider,
+          backgroundColor: tokens.colors.background.cardSolid,
         },
         sideBtnText: {
           fontSize: JOURNAL_TYPE.cardBody.fontSize,
@@ -484,8 +496,9 @@ export default function AddTransactionScreen() {
           borderRadius: tokens.borderRadius.full,
           alignItems: 'center',
           justifyContent: 'center',
-          borderWidth: 0,
-          backgroundColor: tokens.colors.background.input,
+          backgroundColor: tokens.colors.background.cardSolid,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: tokens.colors.border.divider,
         },
         twoCol: {
           flexDirection: 'row',
@@ -557,6 +570,9 @@ export default function AddTransactionScreen() {
           justifyContent: 'flex-start',
           gap: 8,
           ...formFieldShellStyle({ tokens, focused: false, multiline: false }),
+          backgroundColor: tokens.colors.background.cardSolid,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: tokens.colors.border.divider,
           borderRadius: tokens.borderRadius.full,
           paddingHorizontal: 14,
           paddingVertical: 14,
@@ -589,14 +605,14 @@ export default function AddTransactionScreen() {
         },
         pickerDoneBtn: {
           marginTop: 12,
-          backgroundColor: tokens.colors.primary.main,
-          borderRadius: 14,
+          backgroundColor: tokens.colors.primary.lightCta,
+          borderRadius: tokens.borderRadius.full,
           paddingVertical: 14,
           alignItems: 'center',
         },
         pickerDoneBtnText: {
           fontSize: 15,
-          fontWeight: '700',
+          fontWeight: '600',
           color: tokens.colors.text.inverse,
         },
         footerRow: {
@@ -610,15 +626,15 @@ export default function AddTransactionScreen() {
           alignItems: 'center',
           justifyContent: 'center',
           paddingVertical: 16,
-          borderRadius: 14,
-          borderWidth: 1.5,
-          borderColor: tokens.colors.border.subtle,
-          backgroundColor: 'transparent',
+          borderRadius: tokens.borderRadius.full,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: tokens.colors.border.divider,
+          backgroundColor: tokens.colors.background.cardSolid,
         },
         cancelBtnText: {
           fontSize: 15,
-          fontWeight: '700',
-          color: tokens.colors.text.secondary,
+          fontWeight: '600',
+          color: tokens.colors.text.primary,
         },
         submit: {
           flex: 1.4,
@@ -626,18 +642,20 @@ export default function AddTransactionScreen() {
           alignItems: 'center',
           justifyContent: 'center',
           gap: 8,
-          backgroundColor: tokens.colors.primary.main,
+          backgroundColor: tokens.colors.primary.lightCta,
           paddingVertical: 16,
-          borderRadius: 14,
+          borderRadius: tokens.borderRadius.full,
         },
         submitText: {
           fontSize: 16,
-          fontWeight: '700',
+          fontWeight: '600',
           color: tokens.colors.text.inverse,
         },
       }),
     [tokens]
   );
+
+  const pickerTheme = tokens.colors.background.primary === LIGHT_CANVAS ? 'light' : 'dark';
 
   return (
     <View style={styles.root}>
@@ -703,7 +721,8 @@ export default function AddTransactionScreen() {
                         style={[
                           styles.assetTypeChip,
                           assetType === t && {
-                            backgroundColor: tokens.colors.background.tertiary,
+                            backgroundColor: tokens.colors.primary.lightCta,
+                            borderColor: 'transparent',
                           },
                         ]}
                         onPress={() => {
@@ -718,7 +737,7 @@ export default function AddTransactionScreen() {
                             {
                               color:
                                 assetType === t
-                                  ? tokens.colors.primary.main
+                                  ? tokens.colors.text.inverse
                                   : tokens.colors.text.secondary,
                             },
                           ]}
@@ -766,14 +785,11 @@ export default function AddTransactionScreen() {
                       style={[
                         styles.sideBtn,
                         {
-                          borderColor:
-                            direction === 'long'
-                              ? tokens.colors.primary.main
-                              : tokens.colors.border.subtle,
+                          borderColor: tokens.colors.border.divider,
                           backgroundColor:
                             direction === 'long'
-                              ? 'rgba(0, 200, 5, 0.12)'
-                              : 'transparent',
+                              ? tokens.colors.primary.dim
+                              : tokens.colors.background.cardSolid,
                         },
                       ]}
                       onPress={() => {
@@ -810,14 +826,11 @@ export default function AddTransactionScreen() {
                       style={[
                         styles.sideBtn,
                         {
-                          borderColor:
-                            direction === 'short'
-                              ? tokens.colors.text.danger
-                              : tokens.colors.border.subtle,
+                          borderColor: tokens.colors.border.divider,
                           backgroundColor:
                             direction === 'short'
-                              ? 'rgba(255, 68, 68, 0.12)'
-                              : 'transparent',
+                              ? tokens.colors.border.danger
+                              : tokens.colors.background.cardSolid,
                         },
                       ]}
                       onPress={() => {
@@ -861,6 +874,7 @@ export default function AddTransactionScreen() {
                     keyboardType="decimal-pad"
                     placeholder={assetType === 'futures' ? '1' : '10'}
                     placeholderTextColor={tokens.colors.text.tertiary}
+                    keyboardAppearance={pickerTheme}
                   />
                 </View>
 
@@ -873,6 +887,7 @@ export default function AddTransactionScreen() {
                     keyboardType="decimal-pad"
                     placeholder="150.00"
                     placeholderTextColor={tokens.colors.text.tertiary}
+                    keyboardAppearance={pickerTheme}
                   />
                 </View>
 
@@ -886,6 +901,7 @@ export default function AddTransactionScreen() {
                       keyboardType="decimal-pad"
                       placeholder="145.00"
                       placeholderTextColor={tokens.colors.text.tertiary}
+                    keyboardAppearance={pickerTheme}
                     />
                   </View>
                   <View style={[styles.section, styles.col]}>
@@ -897,6 +913,7 @@ export default function AddTransactionScreen() {
                       keyboardType="decimal-pad"
                       placeholder="165.00"
                       placeholderTextColor={tokens.colors.text.tertiary}
+                    keyboardAppearance={pickerTheme}
                     />
                   </View>
                 </View>
@@ -918,13 +935,11 @@ export default function AddTransactionScreen() {
                             styles.sideBtn,
                             {
                               borderColor:
-                                cashSide === t
-                                  ? tokens.colors.primary.main
-                                  : tokens.colors.border.subtle,
+                                cashSide === t ? 'transparent' : tokens.colors.border.divider,
                               backgroundColor:
                                 cashSide === t
-                                  ? 'rgba(0, 200, 5, 0.10)'
-                                  : 'transparent',
+                                  ? tokens.colors.primary.lightCta
+                                  : tokens.colors.background.cardSolid,
                             },
                           ]}
                           onPress={() => {
@@ -938,7 +953,7 @@ export default function AddTransactionScreen() {
                               {
                                 color:
                                   cashSide === t
-                                    ? tokens.colors.primary.main
+                                    ? tokens.colors.text.inverse
                                     : tokens.colors.text.secondary,
                                 fontSize: 12,
                               },
@@ -961,6 +976,7 @@ export default function AddTransactionScreen() {
                     keyboardType="decimal-pad"
                     placeholder="0.00"
                     placeholderTextColor={tokens.colors.text.tertiary}
+                    keyboardAppearance={pickerTheme}
                   />
                 </View>
               </>
@@ -1000,6 +1016,7 @@ export default function AddTransactionScreen() {
                     keyboardType="decimal-pad"
                     placeholder="0.00"
                     placeholderTextColor={tokens.colors.text.tertiary}
+                    keyboardAppearance={pickerTheme}
                   />
                 </View>
               </>
@@ -1012,11 +1029,9 @@ export default function AddTransactionScreen() {
                   styles.validationCard,
                   {
                     backgroundColor: cashValidation.ok
-                      ? 'rgba(0,200,5,0.06)'
-                      : 'rgba(255,68,68,0.08)',
-                    borderColor: cashValidation.ok
-                      ? 'rgba(0,200,5,0.25)'
-                      : 'rgba(255,68,68,0.35)',
+                      ? tokens.colors.primary.dim
+                      : tokens.colors.border.danger,
+                    borderColor: tokens.colors.border.divider,
                   },
                 ]}
               >
@@ -1111,7 +1126,7 @@ export default function AddTransactionScreen() {
                         mode="date"
                         display="inline"
                         locale="he-IL"
-                        themeVariant="dark"
+                        themeVariant={pickerTheme}
                         onChange={(_, d) => { if (d) setTradeDate(d); }}
                         style={{ alignSelf: 'stretch' }}
                       />
@@ -1156,7 +1171,7 @@ export default function AddTransactionScreen() {
                         mode="time"
                         display="spinner"
                         locale="he-IL"
-                        themeVariant="dark"
+                        themeVariant={pickerTheme}
                         is24Hour
                         onChange={(_, d) => { if (d) setTradeDate(d); }}
                         style={{ alignSelf: 'stretch' }}
@@ -1197,6 +1212,7 @@ export default function AddTransactionScreen() {
                       keyboardType="decimal-pad"
                       placeholder="0.00"
                       placeholderTextColor={tokens.colors.text.tertiary}
+                    keyboardAppearance={pickerTheme}
                     />
                   </View>
                   <View style={[styles.section, styles.col]}>
@@ -1208,6 +1224,7 @@ export default function AddTransactionScreen() {
                       keyboardType="decimal-pad"
                       placeholder="1"
                       placeholderTextColor={tokens.colors.text.tertiary}
+                    keyboardAppearance={pickerTheme}
                     />
                   </View>
                 </View>
@@ -1221,6 +1238,7 @@ export default function AddTransactionScreen() {
                       keyboardType="decimal-pad"
                       placeholder="לדוגמה: 50 ל-ES, 20 ל-NQ"
                       placeholderTextColor={tokens.colors.text.tertiary}
+                    keyboardAppearance={pickerTheme}
                     />
                   </View>
                 ) : null}
@@ -1240,6 +1258,7 @@ export default function AddTransactionScreen() {
                 onChangeText={setNotes}
                 placeholder="הוסף הערות על העסקה…"
                 placeholderTextColor={tokens.colors.text.tertiary}
+                    keyboardAppearance={pickerTheme}
                 multiline
                 maxLength={128}
               />

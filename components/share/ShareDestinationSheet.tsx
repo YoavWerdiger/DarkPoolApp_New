@@ -15,6 +15,8 @@ import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
 import UICard from '../ui/UICard';
 import EntityEmbedCard from './EntityEmbedCard';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
+import { chatGroupDisplayName, groupAvatarSource } from '../../assets/chatGroups/groupChatIcons';
 import { getChatGroups } from '../../services/chat/chatGroupService';
 import { sendChatMessage } from '../../services/chat/chatMessageService';
 import { createCommunityPost } from '../../services/tweetsService';
@@ -55,6 +57,7 @@ export default function ShareDestinationSheet({
   onShareAsImage,
 }: Props) {
   const tokens = useDesignTokens();
+  const { isDarkMode } = useTheme();
   const { user } = useAuth();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
   const [dest, setDest] = useState<Dest>('menu');
@@ -171,7 +174,6 @@ export default function ShareDestinationSheet({
       snapPoints={[0.62, 0.9]}
       enablePanDownToClose={!busy}
       showHandle
-      useGlassBackground
       showBrandBackground={false}
       showBrandWatermark={false}
       edgeToEdge
@@ -305,15 +307,18 @@ export default function ShareDestinationSheet({
                 disabled={busy}
                 onPress={() => void shareToGroup(item.id, item.name)}
               >
-                {item.avatar_url ? (
-                  <Image source={{ uri: item.avatar_url }} style={styles.groupAvatar} />
+                {groupAvatarSource(item.name, item.avatar_url, isDarkMode) ? (
+                  <Image
+                    source={groupAvatarSource(item.name, item.avatar_url, isDarkMode)!}
+                    style={styles.groupAvatar}
+                  />
                 ) : (
                   <View style={[styles.groupAvatar, styles.groupAvatarPh]}>
                     <Ionicons name="people" size={20} color={tokens.colors.text.secondary} />
                   </View>
                 )}
                 <Text style={[styles.groupName, { color: tokens.colors.text.primary }]}>
-                  {item.name}
+                  {chatGroupDisplayName(item.name)}
                 </Text>
                 <Ionicons name="chevron-back" size={18} color={tokens.colors.text.tertiary} />
               </TouchableOpacity>

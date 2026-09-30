@@ -5,6 +5,8 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { APP_TYPE } from '../ui/appType';
+import { APP_LAYOUT } from '../ui/appLayout';
 import { DistributionDonut } from '../../screens/Portfolios/components/DistributionDonut';
 import type { DistributionSlice } from '../../screens/Portfolios/portfolioTypes';
 import type { SharePreviewHoldingSlice } from '../../types/shareableEntity';
@@ -87,29 +89,21 @@ function createStyles(
 ) {
   return StyleSheet.create({
     wrap: {
-      gap: compact ? 10 : 12,
+      gap: APP_LAYOUT.cardTitleToBodyGap,
       width: '100%',
     },
     valueBlock: {
       alignItems: 'flex-end',
-      paddingVertical: compact ? 8 : 10,
-      paddingHorizontal: compact ? 10 : 12,
-      borderRadius: tokens.borderRadius.xl,
-      backgroundColor: 'rgba(255,255,255,0.05)',
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: 'rgba(255,255,255,0.1)',
     },
     valueLabel: {
-      fontSize: 11,
-      fontWeight: '600',
-      color: tokens.colors.text.tertiary,
+      ...APP_TYPE.cardMetricLabel,
+      color: tokens.colors.text.secondary,
       writingDirection: 'rtl',
       textAlign: 'right',
     },
     valueAmount: {
-      marginTop: 4,
-      fontSize: compact ? 20 : 22,
-      fontWeight: '800',
+      marginTop: APP_LAYOUT.cardMetricLabelToValueGap,
+      ...(compact ? APP_TYPE.cardMetricValueSecondary : APP_TYPE.cardMetricValue),
       color: tokens.colors.text.primary,
       writingDirection: 'ltr',
       textAlign: 'right',
@@ -138,15 +132,13 @@ function createStyles(
     },
     legendTicker: {
       flex: 1,
-      fontSize: 12,
-      fontWeight: '700',
+      ...APP_TYPE.cardMetricLabel,
       color: tokens.colors.text.primary,
       writingDirection: 'ltr',
       textAlign: 'right',
     },
     legendPct: {
-      fontSize: 12,
-      fontWeight: '700',
+      ...APP_TYPE.caption,
       color: tokens.colors.text.secondary,
       writingDirection: 'ltr',
     },

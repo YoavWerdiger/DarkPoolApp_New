@@ -165,7 +165,7 @@ export default function ReactionPicker({
             styles.searchField,
             styles.searchFieldGap,
             {
-              backgroundColor: tokens.colors.background.primary,
+              backgroundColor: tokens.colors.background.cardSolid,
               borderColor: tokens.colors.border.divider,
             },
           ]}

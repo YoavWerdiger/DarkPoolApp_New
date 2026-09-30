@@ -2,17 +2,12 @@
 // Media Viewer Component - Glass Design
 // ============================================
 
-import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { logger } from '../../utils/logger';
-import { View, Text, Modal, Pressable, StyleSheet, Dimensions, ActivityIndicator, Share as RNShare, Platform, TouchableOpacity } from 'react-native';
+import { View, Text, Modal, StyleSheet, Dimensions, ActivityIndicator, Share as RNShare, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Video, ResizeMode } from '../../lib/expoAvSafe';
 import { Ionicons } from '@expo/vector-icons';
-import { X, Share, Forward, Copy, Download, Reply } from 'lucide-react-native';
-import * as FileSystem from 'expo-file-system/legacy';
-import * as Sharing from 'expo-sharing';
-import * as Clipboard from 'expo-clipboard';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -24,13 +19,10 @@ import {
   Gesture,
   GestureHandlerRootView,
 } from 'react-native-gesture-handler';
-import { BlurView } from 'expo-blur';
-import { Image as ExpoImage } from 'expo-image';
 import { getChatMediaDisplayUri } from '../../services/chat/chatSignedMediaUrl';
 import { chatPalette as COLORS } from './chatDesignTokens';
 import { useMediaZoomGestures } from './useMediaZoomGestures';
-import { useDesignTokens } from '../ui/DesignTokens';
-import { DayNavBlurButton } from '../ui/DayNavBlurButton';
+import { MediaBlurBackdrop, MediaKeyboardDim, MediaViewerChrome } from './MediaViewerChrome';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -43,9 +35,11 @@ interface MediaViewerProps {
   mediaUrl: string;
   mediaType: 'image' | 'video' | 'audio' | 'document';
   caption?: string;
+  senderName?: string;
+  timeLabel?: string;
   onClose: () => void;
-  onReply?: () => void;
   onForward?: () => void;
+  onSubmitReply?: (text: string) => void;
 }
 
 export default function MediaViewer({
@@ -53,12 +47,15 @@ export default function MediaViewer({
   mediaUrl,
   mediaType,
   caption,
+  senderName,
+  timeLabel,
   onClose,
-  onReply,
   onForward,
+  onSubmitReply,
 }: MediaViewerProps) {
-  const tokens = useDesignTokens();
   const insets = useSafeAreaInsets();
+  const [chromeVisible, setChromeVisible] = useState(true);
+  const chromeOpacity = useSharedValue(1);
   const [displayUri, setDisplayUri] = useState(mediaUrl);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -250,10 +247,22 @@ export default function MediaViewer({
     }
   }, [visible, mediaUrl]);
 
-  const { zoomGesture, animatedStyle: imageAnimatedStyle } = useMediaZoomGestures({
+  useEffect(() => {
+    if (visible) setChromeVisible(true);
+  }, [visible]);
+
+  useEffect(() => {
+    chromeOpacity.value = withTiming(chromeVisible ? 1 : 0, { duration: 180 });
+  }, [chromeVisible, chromeOpacity]);
+
+  const chromeStyle = useAnimatedStyle(() => ({ opacity: chromeOpacity.value }));
+
+  const { zoomGesture, animatedStyle: imageAnimatedStyle, backdropStyle } = useMediaZoomGestures({
     resetKey: visible ? mediaUrl : false,
     width: SCREEN_WIDTH,
     height: SCREEN_HEIGHT,
+    onSingleTap: () => setChromeVisible((open) => !open),
+    onSwipeDismiss: onClose,
   });
 
   const handleShare = async () => {
@@ -264,55 +273,20 @@ export default function MediaViewer({
     }
   };
 
-  const handleCopy = async () => {
-    try {
-      await Clipboard.setStringAsync(displayUri);
-      legacyAlert('הועתק', 'הקישור הועתק ללוח');
-    } catch (error) {
-      logger.error('MediaViewer', 'Copy URL failed', error);
-    }
-  };
-
-  const handleDownload = async () => {
-    try {
-      if (Platform.OS === 'web') {
-        legacyAlert('מידע', 'הורדה לא זמינה בפלטפורמה זו');
-        return;
-      }
-      const cacheDir = FileSystem.cacheDirectory;
-      if (!cacheDir) {
-        legacyAlert('שגיאה', 'לא ניתן לגשת לתיקייה');
-        return;
-      }
-      const fileUri = `${cacheDir}media_${Date.now()}.${mediaType === 'image' ? 'jpg' : 'mp4'}`;
-      const downloadResult = await FileSystem.downloadAsync(displayUri, fileUri);
-
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(downloadResult.uri);
-      } else {
-        legacyAlert('הורד', 'הקובץ נשמר בהצלחה');
-      }
-    } catch (error) {
-      legacyAlert('שגיאה', 'לא ניתן להוריד את הקובץ');
-    }
-  };
-
   if (!visible) return null;
-
-  const ActionButton = ({ onPress, icon: Icon }: any) => (
-    <Pressable onPress={onPress} style={styles.actionButton}>
-      <Icon size={24} color={COLORS.text} strokeWidth={1.5} />
-    </Pressable>
-  );
 
   return (
     <Modal
       visible={visible}
-      transparent={false}
+      transparent
       animationType="fade"
       onRequestClose={onClose}
     >
       <GestureHandlerRootView style={styles.container}>
+        <MediaBlurBackdrop
+          uri={mediaType === 'image' && isDisplayableMediaUri(displayUri) ? displayUri : null}
+          style={backdropStyle}
+        />
         {/* Media Content */}
         <View style={styles.mediaContainer}>
           {mediaType === 'image' ? (
@@ -394,71 +368,40 @@ export default function MediaViewer({
           ) : null}
         </View>
 
-        {/* Top Bar - Full Width (always visible like MediaPreviewModal) */}
-        <View style={styles.topBar}>
-            <BlurView intensity={80} tint="dark" style={styles.topBlur}>
-              <View style={[styles.topContent, { paddingTop: insets.top + 8 }]}>
-                <DayNavBlurButton onPress={onClose} size={44} accessibilityLabel="סגור">
-                  <X size={24} color={tokens.colors.text.primary} strokeWidth={2} />
-                </DayNavBlurButton>
-                <View style={styles.topSpacer} />
-              </View>
-            </BlurView>
-          </View>
+        <MediaKeyboardDim />
 
-        {/* Bottom Bar - Full Width (always visible like MediaPreviewModal) */}
-        <View style={styles.bottomBar}>
-            <BlurView intensity={80} tint="dark" style={styles.bottomBlur}>
-              <View style={[styles.bottomContent, { paddingBottom: insets.bottom + 12 }]}>
-                {/* Video controls: טיימליין + play/pause */}
-                {mediaType === 'video' && (
-                  <View style={styles.videoControlsRow}>
-                    <TouchableOpacity style={styles.videoPlayBtn} onPress={togglePlayPause}>
-                      <Ionicons name={isPlaying ? 'pause' : 'play'} size={24} color={COLORS.text} />
-                    </TouchableOpacity>
-                    <Text style={styles.videoTimeText}>{formatTime(displayPosition)}</Text>
-                    <GestureDetector gesture={timelineGesture}>
-                      <View
-                        style={styles.timelineTrack}
-                        onLayout={(e) => setTimelineWidth(e.nativeEvent.layout.width)}
-                      >
-                        <View style={styles.timelineTrackBg} />
-                        <Animated.View style={[styles.timelineFill, animatedFillStyle]} />
-                        <Animated.View style={[styles.timelineThumb, animatedThumbStyle]} />
-                      </View>
-                    </GestureDetector>
-                    <Text style={styles.videoTimeText}>{formatTime(duration)}</Text>
-                  </View>
-                )}
-
-                {/* Caption */}
-                {caption && caption.trim().length > 0 && (
-                  <View style={styles.captionContainer}>
-                    <Text style={styles.captionText} numberOfLines={2}>{caption}</Text>
-                  </View>
-                )}
-
-                {/* Actions Row */}
-                <View style={styles.actionsRow}>
-                  <ActionButton onPress={handleShare} icon={Share} />
-                  {onReply && (
-                    <ActionButton 
-                      onPress={() => { onClose(); onReply(); }} 
-                      icon={Reply} 
-                    />
-                  )}
-                  {onForward && (
-                    <ActionButton 
-                      onPress={() => { onClose(); onForward(); }} 
-                      icon={Forward} 
-                    />
-                  )}
-                  <ActionButton onPress={handleCopy} icon={Copy} />
-                  <ActionButton onPress={handleDownload} icon={Download} />
+        <MediaViewerChrome
+          chromeStyle={chromeStyle}
+          pointerEvents={chromeVisible ? 'box-none' : 'none'}
+          paddingTop={insets.top + 6}
+          paddingBottom={insets.bottom + 12}
+          title={senderName}
+          timeLabel={timeLabel}
+          caption={caption}
+          onClose={onClose}
+          onShare={() => { void handleShare(); }}
+          onSubmitReply={onSubmitReply}
+          onForward={onForward ? () => { onClose(); onForward(); } : undefined}
+          videoSlot={mediaType === 'video' ? (
+            <View style={styles.videoControlsRow}>
+              <TouchableOpacity style={styles.videoPlayBtn} onPress={togglePlayPause}>
+                <Ionicons name={isPlaying ? 'pause' : 'play'} size={24} color={COLORS.text} />
+              </TouchableOpacity>
+              <Text style={styles.videoTimeText}>{formatTime(displayPosition)}</Text>
+              <GestureDetector gesture={timelineGesture}>
+                <View
+                  style={styles.timelineTrack}
+                  onLayout={(e) => setTimelineWidth(e.nativeEvent.layout.width)}
+                >
+                  <View style={styles.timelineTrackBg} />
+                  <Animated.View style={[styles.timelineFill, animatedFillStyle]} />
+                  <Animated.View style={[styles.timelineThumb, animatedThumbStyle]} />
                 </View>
-              </View>
-            </BlurView>
-          </View>
+              </GestureDetector>
+              <Text style={styles.videoTimeText}>{formatTime(duration)}</Text>
+            </View>
+          ) : null}
+        />
       </GestureHandlerRootView>
     </Modal>
   );
@@ -467,7 +410,7 @@ export default function MediaViewer({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: 'transparent',
   },
   mediaContainer: {
     ...StyleSheet.absoluteFill,

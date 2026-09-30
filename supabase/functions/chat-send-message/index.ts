@@ -98,12 +98,41 @@ serve(async (req) => {
     // --- Membership check ---
     const { data: membership } = await adminClient
       .from('chat_group_members')
-      .select('id')
+      .select('id, role')
       .eq('group_id', group_id)
       .eq('user_id', user.id)
       .single();
 
     if (!membership) return respond({ error: 'Not a group member' }, 403);
+
+    const { data: groupRow } = await adminClient
+      .from('chat_groups')
+      .select('settings')
+      .eq('id', group_id)
+      .maybeSingle();
+
+    const groupSettings = (groupRow?.settings ?? {}) as {
+      onlyAdminsCanSend?: boolean;
+      is_announcement?: boolean;
+    };
+    const adminOnly = !!(groupSettings.onlyAdminsCanSend || groupSettings.is_announcement);
+    if (adminOnly) {
+      const role = String(membership.role || '').toLowerCase();
+      const groupAdmin = role === 'admin' || role === 'owner';
+      let appAdmin = false;
+      if (!groupAdmin) {
+        const { data: profile } = await adminClient
+          .from('users')
+          .select('subscription_role')
+          .eq('id', user.id)
+          .maybeSingle();
+        const sub = String(profile?.subscription_role || '').toLowerCase();
+        appAdmin = sub === 'admin' || sub === 'super_admin';
+      }
+      if (!groupAdmin && !appAdmin) {
+        return respond({ error: 'רק מנהלי הקהילה יכולים לכתוב בקבוצה זו' }, 403);
+      }
+    }
 
     // --- Global mute / suspend (admin panel) ---
     const { data: senderProfile } = await adminClient

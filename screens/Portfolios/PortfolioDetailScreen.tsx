@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -20,10 +20,8 @@ import { supabase } from '../../lib/supabase';
 import { ChatSessionBackdrop } from '../../components/chat/ChatSessionBackdrop';
 import { PortfolioScreenHeader } from './components/PortfolioScreenHeader';
 import PortfolioActionsBottomSheet from './components/PortfolioActionsBottomSheet';
-import { PortfolioSummaryHeader } from './components/PortfolioSummaryHeader';
 import {
   PORTFOLIO_DETAIL_TABS,
-  portfolioDetailTabLabelStyle,
   type PortfolioDetailTab,
 } from './portfolioConstants';
 import {
@@ -75,7 +73,6 @@ export default function PortfolioDetailScreen() {
   const [chartRefreshKey, setChartRefreshKey] = useState(0);
   /** מפתח שמשתנה בכל טעינה של נתוני התיק — מאלץ טאבים לרענן את הנתונים שלהם */
   const [dataVersion, setDataVersion] = useState(0);
-  const tabsScrollRef = useRef<ScrollView | null>(null);
 
   const viewerAvatarUrl = authUser?.profile_picture ?? null;
   const viewerInitial = (authUser?.display_name ?? authUser?.full_name ?? authUser?.email ?? '').charAt(0).toUpperCase();
@@ -203,24 +200,15 @@ export default function PortfolioDetailScreen() {
           marginBottom: 2,
         },
         tabsScrollContent: {
-          // עץ RTL — row (לא row-reverse)
+          direction: 'rtl',
           flexDirection: 'row',
+          alignItems: 'center',
           paddingHorizontal: 16,
           gap: 8,
         },
         tabBtn: {
           borderRadius: 999,
           overflow: 'hidden',
-        },
-        tabBtnInner: {
-          paddingHorizontal: 16,
-          paddingVertical: 7,
-        },
-        tabBtnActive: {},
-        tabText: portfolioDetailTabLabelStyle(tokens.colors.text.secondary),
-        tabTextActive: {
-          color: tokens.colors.primary.main,
-          fontWeight: '700',
         },
         fabWrap: {
           position: 'absolute',
@@ -239,12 +227,11 @@ export default function PortfolioDetailScreen() {
           paddingHorizontal: 22,
           paddingVertical: 14,
           borderRadius: 28,
-          backgroundColor: tokens.colors.primary.main,
-          ...tokens.shadows.md,
+          backgroundColor: tokens.colors.primary.lightCta,
         },
         fabBtnText: {
           fontSize: 16,
-          fontWeight: '700',
+          fontWeight: '600',
           color: tokens.colors.text.inverse,
           ...journalPhysicalRightText,
         },
@@ -309,20 +296,11 @@ export default function PortfolioDetailScreen() {
           }
           showsVerticalScrollIndicator={false}
         >
-          <PortfolioSummaryHeader
-            summary={displaySummary}
-            portfolio={portfolio}
-          />
-
           <ScrollView
-            ref={tabsScrollRef}
             horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.tabsScroll}
             contentContainerStyle={styles.tabsScrollContent}
-            onContentSizeChange={() =>
-              tabsScrollRef.current?.scrollTo({ x: 0, animated: false })
-            }
           >
             {PORTFOLIO_DETAIL_TABS.map((tab) => {
               const active = tab.id === activeTab;
@@ -336,14 +314,9 @@ export default function PortfolioDetailScreen() {
                     setActiveTab(tab.id);
                   }}
                   style={styles.tabBtn}
-                  contentContainerStyle={styles.tabBtnInner}
                   accessibilityLabel={tab.label}
                 >
-                  <Text
-                    style={[styles.tabText, active && styles.tabTextActive]}
-                  >
-                    {tab.label}
-                  </Text>
+                  {tab.label}
                 </DayDividerPill>
               );
             })}
@@ -394,7 +367,7 @@ export default function PortfolioDetailScreen() {
                   onAddPress={handleAddTransaction}
                   readOnly={!canAddTransaction}
                   typeFilter={['deposit', 'withdrawal', 'dividend', 'fee']}
-                  sectionTitle="הפקדות, דיבידנדים ופעולות"
+                  sectionTitle="תזרים"
                   refreshKey={dataVersion}
                 />
               </View>

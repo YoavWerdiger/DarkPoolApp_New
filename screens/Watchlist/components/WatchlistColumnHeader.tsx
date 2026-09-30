@@ -2,7 +2,8 @@ import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
-import { appCardSubtitleStyle } from '../../../components/ui/appType';
+import { APP_TYPE } from '../../../components/ui/appType';
+import { APP_LAYOUT } from '../../../components/ui/appLayout';
 import type { WatchlistSortMode } from '../../../services/watchlist/watchlistTypes';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 import {
@@ -63,7 +64,8 @@ export function WatchlistColumnHeader({ sortMode, onSortChange }: Props) {
       StyleSheet.create({
         wrap: {
           ...quoteRow,
-          paddingVertical: 8,
+          paddingTop: APP_LAYOUT.cardPadding,
+          paddingBottom: APP_LAYOUT.stackGapSmall,
           borderBottomWidth: 1,
           borderBottomColor: tokens.colors.border.divider,
         },
@@ -77,13 +79,12 @@ export function WatchlistColumnHeader({ sortMode, onSortChange }: Props) {
           minHeight: 22,
         },
         label: {
-          ...appCardSubtitleStyle,
-          width: undefined,
-          marginTop: 0,
-          color: tokens.colors.text.tertiary,
+          ...APP_TYPE.cardMetricLabel,
+          textAlign: 'right',
+          color: tokens.colors.text.secondary,
         },
         labelActive: {
-          color: tokens.colors.primary.main,
+          color: tokens.colors.text.primary,
         },
       }),
     [tokens]
@@ -124,8 +125,8 @@ export function WatchlistColumnHeader({ sortMode, onSortChange }: Props) {
               {active ? (
                 <Ionicons
                   name={asc ? 'chevron-up' : 'chevron-down'}
-                  size={10}
-                  color={tokens.colors.primary.main}
+                  size={12}
+                  color={tokens.colors.text.primary}
                 />
               ) : null}
               <Text style={[styles.label, active && styles.labelActive]}>{col.label}</Text>

@@ -19,6 +19,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { legacyAlert } from '../../utils/appDialog';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
+import { APP_TYPE } from '../../components/ui/appType';
 import UICard from '../../components/ui/UICard';
 import { TweetCardSkeleton } from './TweetCardSkeleton';
 import { useAuth } from '../../context/AuthContext';
@@ -45,7 +47,6 @@ import UserNameButton from '../../components/profile/UserNameButton';
 import CommunityPostImage from './CommunityPostImage';
 
 const PAGE_SIZE = 30;
-const DIVIDER = 'rgba(255, 255, 255, 0.12)';
 
 const FEED_TABS: { id: CommunityFeedMode; label: string }[] = [
   { id: 'for_you', label: 'בשבילך' },
@@ -91,7 +92,6 @@ function PostCard({
 }) {
   const tokens = useDesignTokens();
   const pad = tokens.layout?.screenPadding ?? 20;
-  const contentPad = tokens.spacing.md;
   const attachments = post.attachments?.length
     ? post.attachments
     : post.attachment
@@ -100,14 +100,15 @@ function PostCard({
   const hasMedia = !!post.imageUrl || attachments.length > 0;
 
   return (
-    <View style={{ marginHorizontal: pad, marginBottom: 12 }}>
+    <View style={{ marginHorizontal: pad, marginBottom: APP_LAYOUT.cardStackGap }}>
       <UICard
-        variant="blur"
+        variant="soft"
         padding="none"
         disableBlur
         style={{
-          borderRadius: tokens.borderRadius['2xl'],
+          borderRadius: UI_CARD_RADIUS,
           overflow: 'hidden',
+          backgroundColor: tokens.colors.background.cardSolid,
         }}
       >
         <Pressable
@@ -116,12 +117,12 @@ function PostCard({
           accessibilityLabel="פתח תגובות"
           style={({ pressed }) => (pressed ? { opacity: 0.92 } : undefined)}
         >
-          <View style={{ padding: contentPad, gap: 10 }}>
+          <View style={{ padding: APP_LAYOUT.cardPadding, gap: APP_LAYOUT.cardTitleToBodyGap }}>
           <View
             style={{
               flexDirection: 'row-reverse',
               alignItems: 'center',
-              gap: 10,
+              gap: 12,
             }}
           >
             <UserAvatarButton
@@ -134,7 +135,7 @@ function PostCard({
                 style={{
                   flexDirection: 'row-reverse',
                   alignItems: 'center',
-                  gap: 6,
+                  gap: APP_LAYOUT.stackGapSmall,
                 }}
               >
                 <UserNameButton
@@ -142,8 +143,9 @@ function PostCard({
                   name={post.author.displayName}
                   style={{
                     color: tokens.colors.text.primary,
-                    fontWeight: '700',
-                    fontSize: 15,
+                    fontSize: APP_TYPE.cardTitle.fontSize,
+                    lineHeight: APP_TYPE.cardTitle.lineHeight,
+                    fontWeight: APP_TYPE.cardTitle.fontWeight,
                     writingDirection: 'rtl',
                     flexShrink: 1,
                   }}
@@ -157,9 +159,10 @@ function PostCard({
               </View>
               <Text
                 style={{
-                  color: tokens.colors.text.tertiary,
-                  fontSize: 12,
-                  marginTop: 2,
+                  color: tokens.colors.text.secondary,
+                  fontSize: APP_TYPE.caption.fontSize,
+                  lineHeight: APP_TYPE.caption.lineHeight,
+                  fontWeight: APP_TYPE.caption.fontWeight,
                   textAlign: 'right',
                   writingDirection: 'rtl',
                 }}
@@ -170,13 +173,21 @@ function PostCard({
             {isMine ? (
               <TouchableOpacity
                 onPress={onDelete}
-                hitSlop={10}
+                hitSlop={8}
                 accessibilityLabel="מחק ציוץ"
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 17,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: tokens.colors.background.primary,
+                }}
               >
                 <Ionicons
                   name="trash-outline"
-                  size={18}
-                  color={tokens.colors.text.tertiary}
+                  size={17}
+                  color={tokens.colors.text.secondary}
                 />
               </TouchableOpacity>
             ) : null}
@@ -185,8 +196,9 @@ function PostCard({
           <Text
             style={{
               color: tokens.colors.text.primary,
-              fontSize: 15,
-              lineHeight: 22,
+              fontSize: APP_TYPE.cardBody.fontSize,
+              lineHeight: APP_TYPE.cardBody.lineHeight,
+              fontWeight: APP_TYPE.cardBody.fontWeight,
               writingDirection: 'rtl',
               textAlign: 'right',
             }}
@@ -215,7 +227,7 @@ function PostCard({
                     gap: 4,
                     paddingHorizontal: 10,
                     paddingVertical: 5,
-                    borderRadius: tokens.borderRadius.button,
+                    borderRadius: tokens.borderRadius.full,
                     backgroundColor: `${tokens.colors.primary.main}22`,
                   }}
                   accessibilityLabel={`פרופיל של ${m.displayName}`}
@@ -223,8 +235,9 @@ function PostCard({
                   <Text
                     style={{
                       color: tokens.colors.primary.main,
-                      fontSize: 12,
-                      fontWeight: '700',
+                      fontSize: APP_TYPE.caption.fontSize,
+                      lineHeight: APP_TYPE.caption.lineHeight,
+                      fontWeight: APP_TYPE.caption.fontWeight,
                       writingDirection: 'rtl',
                       textAlign: 'right',
                     }}
@@ -238,7 +251,7 @@ function PostCard({
           ) : null}
 
           {hasMedia ? (
-            <View style={{ gap: tokens.spacing.sm }}>
+            <View style={{ gap: APP_LAYOUT.stackGapSmall }}>
               {post.imageUrl ? (
                 <CommunityPostImage
                   uri={post.imageUrl}
@@ -250,6 +263,7 @@ function PostCard({
                   key={`${att.ref.type}-${att.ref.id}-${i}`}
                   attachment={att}
                   compact
+                  style={{ backgroundColor: tokens.colors.background.primary, borderWidth: 0 }}
                 />
               ))}
             </View>
@@ -257,16 +271,16 @@ function PostCard({
           </View>
         </Pressable>
 
-        <View style={{ height: 1, backgroundColor: DIVIDER }} />
+        <View style={{ height: 1, backgroundColor: tokens.colors.border.divider }} />
 
         <View
           style={{
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'flex-start',
-            paddingHorizontal: tokens.spacing.lg,
-            paddingVertical: tokens.spacing.md,
-            gap: 8,
+            paddingHorizontal: APP_LAYOUT.cardPadding,
+            paddingVertical: APP_LAYOUT.cardTitleToBodyGap,
+            gap: APP_LAYOUT.stackGapSmall,
           }}
         >
           <TouchableOpacity
@@ -279,7 +293,7 @@ function PostCard({
               height: 36,
               borderRadius: tokens.borderRadius.button,
               backgroundColor: post.likedByMe
-                ? 'rgba(255, 59, 92, 0.15)'
+                ? `${tokens.colors.text.danger}26`
                 : tokens.colors.background.primary,
             }}
             accessibilityLabel={post.likedByMe ? 'הסר לייק' : 'לייק'}
@@ -287,14 +301,15 @@ function PostCard({
             <Ionicons
               name={post.likedByMe ? 'heart' : 'heart-outline'}
               size={18}
-              color={post.likedByMe ? '#FF3B5C' : tokens.colors.text.secondary}
+              color={post.likedByMe ? tokens.colors.text.danger : tokens.colors.text.secondary}
             />
             {post.likeCount > 0 ? (
               <Text
                 style={{
                   color: tokens.colors.text.secondary,
-                  fontSize: 13,
-                  fontWeight: '600',
+                  fontSize: APP_TYPE.caption.fontSize,
+                  lineHeight: APP_TYPE.caption.lineHeight,
+                  fontWeight: APP_TYPE.caption.fontWeight,
                 }}
               >
                 {post.likeCount}
@@ -324,8 +339,9 @@ function PostCard({
               <Text
                 style={{
                   color: tokens.colors.text.secondary,
-                  fontSize: 13,
-                  fontWeight: '600',
+                  fontSize: APP_TYPE.caption.fontSize,
+                  lineHeight: APP_TYPE.caption.lineHeight,
+                  fontWeight: APP_TYPE.caption.fontWeight,
                 }}
               >
                 {post.replyCount}
@@ -399,10 +415,9 @@ function FeedTabToggle({
           >
             <Text
               style={{
-                fontSize: tokens.typography.body.size,
-                fontWeight: active
-                  ? (tokens.typography.fontWeight.bold as '700')
-                  : (tokens.typography.fontWeight.medium as '500'),
+                fontSize: APP_TYPE.groupLabel.fontSize,
+                lineHeight: APP_TYPE.groupLabel.lineHeight,
+                fontWeight: APP_TYPE.groupLabel.fontWeight,
                 color: active
                   ? tokens.colors.text.primary
                   : tokens.colors.text.secondary,
@@ -809,30 +824,33 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       paddingVertical: 40,
     },
     hint: {
-      color: tokens.colors.text.tertiary,
-      fontSize: 14,
+      color: tokens.colors.text.secondary,
+      fontSize: APP_TYPE.sectionSubtitle.fontSize,
+      fontWeight: APP_TYPE.sectionSubtitle.fontWeight,
+      lineHeight: APP_TYPE.sectionSubtitle.lineHeight,
       textAlign: 'center',
       writingDirection: 'rtl',
-      lineHeight: 20,
     },
     errorTitle: {
       color: tokens.colors.text.primary,
-      fontSize: 17,
-      fontWeight: '700',
+      fontSize: APP_TYPE.sectionTitle.fontSize,
+      fontWeight: APP_TYPE.sectionTitle.fontWeight,
+      lineHeight: APP_TYPE.sectionTitle.lineHeight,
       textAlign: 'center',
       writingDirection: 'rtl',
     },
     retryBtn: {
-      marginTop: 8,
+      marginTop: APP_LAYOUT.stackGapSmall,
       paddingHorizontal: 18,
       paddingVertical: 10,
       borderRadius: tokens.borderRadius.button,
-      backgroundColor: tokens.colors.primary.dim,
+      backgroundColor: tokens.colors.primary.lightCta,
     },
     retryText: {
-      color: tokens.colors.primary.main,
-      fontWeight: '600',
-      fontSize: 14,
+      color: tokens.colors.text.inverse,
+      fontSize: APP_TYPE.cardTitle.fontSize,
+      fontWeight: APP_TYPE.cardTitle.fontWeight,
+      lineHeight: APP_TYPE.cardTitle.lineHeight,
     },
   });
 }

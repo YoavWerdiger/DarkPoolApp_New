@@ -48,6 +48,7 @@ interface Props {
 }
 
 const CONGRESS_HINT = 'חבר קונגרס';
+const CONGRESS_BELL = require('../../../assets/icons/nav/notifications.png');
 
 export function DarkPoolTradeFeedCard({
   ticker,
@@ -123,6 +124,7 @@ export function DarkPoolTradeFeedCard({
               name={displayName}
               logoUrl={logoUrl}
               size={FEED_AVATAR_SIZE}
+              fallbackSource={isCongress ? CONGRESS_BELL : undefined}
             />
           </Pressable>
           <View style={styles.textCol}>

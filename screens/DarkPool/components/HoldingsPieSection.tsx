@@ -66,12 +66,7 @@ export function HoldingsPieSection({
   if (slices.length === 0) return null;
 
   return (
-    <UICard
-      variant="soft"
-      padding="md"
-      style={styles.card}
-      contentContainerStyle={styles.cardContent}
-    >
+    <View style={styles.section}>
       <View style={styles.titleRow}>
         <Text style={styles.title}>{title}</Text>
         {honestyTag && honestyTag !== 'משוער' ? (
@@ -93,7 +88,13 @@ export function HoldingsPieSection({
           </Pressable>
         ) : null}
       </View>
-      <View style={styles.donutWrap}>
+      <UICard
+        variant="soft"
+        padding="md"
+        style={styles.card}
+        contentContainerStyle={styles.cardContent}
+      >
+        <View style={styles.donutWrap}>
         <DistributionDonut
           slices={slices}
           size={128}
@@ -118,8 +119,9 @@ export function HoldingsPieSection({
             );
           })}
         </View>
-      </View>
-    </UICard>
+        </View>
+      </UICard>
+    </View>
   );
 }
 
@@ -158,6 +160,7 @@ export function HoldingsListRow({
       <View style={styles.leadingIcon}>
         <TickerLogo symbol={ticker} size={36} borderRadius={18} />
       </View>
+      <View style={styles.iconTickerGap} />
       <View style={styles.holdingTickerCol}>
         <View style={styles.tickerLine}>
           <Text style={styles.ticker} numberOfLines={1}>
@@ -220,8 +223,10 @@ export function useHoldingsPieColors(holdings: HoldingAllocationInput[]) {
 
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
-    card: {
+    section: {
       marginBottom: 12,
+    },
+    card: {
       borderRadius: UI_CARD_RADIUS,
     },
     /** UICard שכבת תוכן עם overflow:hidden חותכת שורת מקרא תחתונה (אחר) ליד מסגרת הזכוכית */
@@ -252,7 +257,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     donutWrap: {
       direction: 'rtl',
       flexDirection: 'row',
-      alignItems: 'flex-start',
+      alignItems: 'center',
       gap: 14,
     },
     legend: {
@@ -302,7 +307,11 @@ function createRowStyles(tokens: ReturnType<typeof useDesignTokens>) {
       minHeight: 56,
     },
     leadingIcon: {
-      marginLeft: 12,
+      flexShrink: 0,
+    },
+    iconTickerGap: {
+      width: 12,
+      flexShrink: 0,
     },
     holdingTickerCol: {
       flexGrow: 1,
@@ -323,17 +332,18 @@ function createRowStyles(tokens: ReturnType<typeof useDesignTokens>) {
       direction: 'ltr',
       textAlign: 'right',
       writingDirection: 'ltr',
-      fontSize: DARK_POOL_TYPE.cardTitle.fontSize,
+      fontSize: DARK_POOL_TYPE.cardBody.fontSize,
       fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
-      lineHeight: DARK_POOL_TYPE.cardTitle.lineHeight,
+      lineHeight: DARK_POOL_TYPE.cardBody.lineHeight,
       flexShrink: 1,
     },
     allocation: {
       direction: 'ltr',
       textAlign: 'right',
       writingDirection: 'ltr',
-      marginTop: 3,
+      marginTop: 0,
+      includeFontPadding: false,
       fontSize: DARK_POOL_TYPE.caption2.fontSize,
       lineHeight: DARK_POOL_TYPE.caption2.lineHeight,
       fontWeight: DARK_POOL_TYPE.caption2.fontWeight,

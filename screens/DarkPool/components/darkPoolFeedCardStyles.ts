@@ -43,24 +43,16 @@ export const TRADE_HERO_UICARD = {
 export const FEED_OUTER_UICARD = TRADE_HERO_UICARD;
 export const FEED_OUTER_GLASS_INTENSITY = TRADE_HERO_UICARD.glassIntensity;
 
-/** מעטפת עם קו זכוכית — FlatList לא חותך את stroke של UICard. */
+/** מעטפת אטומה — מילוי כרטיס של הערכה, לא זכוכית שקופה על הקנבס. */
 export function tradeHeroGlassFrameStyle(
   tokens: DarkPoolFeedCardTokens,
-  opts?: { accent?: boolean }
+  _opts?: { accent?: boolean }
 ): ViewStyle {
-  if (opts?.accent) {
-    return {
-      borderRadius: UI_CARD_RADIUS,
-      borderWidth: 0,
-      overflow: 'hidden',
-      backgroundColor: 'transparent',
-    };
-  }
   return {
     borderRadius: UI_CARD_RADIUS,
     borderWidth: 0,
     overflow: 'hidden',
-    backgroundColor: 'transparent',
+    backgroundColor: tokens.colors.background.cardSolid,
   };
 }
 
@@ -145,14 +137,14 @@ export function createTradeHeroCardStyles(tokens: DarkPoolFeedCardTokens) {
       marginTop: FEED_RHYTHM.nameToDates,
       fontSize: FEED_CARD_TYPE.action.fontSize,
       lineHeight: FEED_CARD_TYPE.action.lineHeight,
-      fontWeight: FEED_CARD_TYPE.action.fontWeight,
+      fontWeight: FEED_CARD_TYPE.dates.fontWeight,
       color: tokens.colors.text.secondary,
     },
     personHintLtr: {
       ...ltrNameText,
       fontSize: FEED_CARD_TYPE.action.fontSize,
       lineHeight: FEED_CARD_TYPE.action.lineHeight,
-      fontWeight: APP_TYPE.groupLabel.fontWeight,
+      fontWeight: FEED_CARD_TYPE.dates.fontWeight,
       color: tokens.colors.text.secondary,
     },
     action: {
@@ -170,13 +162,13 @@ export function createTradeHeroCardStyles(tokens: DarkPoolFeedCardTokens) {
     actionVerb: {
       fontSize: FEED_CARD_TYPE.action.fontSize,
       lineHeight: FEED_CARD_TYPE.action.lineHeight,
-      fontWeight: APP_TYPE.sectionTitle.fontWeight,
+      fontWeight: FEED_CARD_TYPE.action.fontWeight,
     },
     actionRest: {
       fontSize: FEED_CARD_TYPE.action.fontSize,
       lineHeight: FEED_CARD_TYPE.action.lineHeight,
       color: tokens.colors.text.secondary,
-      fontWeight: APP_TYPE.groupLabel.fontWeight,
+      fontWeight: FEED_CARD_TYPE.dates.fontWeight,
     },
     actionMeta: {
       ...darkPoolPhysicalRightText,

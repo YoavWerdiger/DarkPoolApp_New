@@ -53,13 +53,11 @@ export function DayDividerPill({
   const radius =
     (flatStyle?.borderRadius as number | undefined) ?? tokens.borderRadius.lg;
   const baseFill = chromeSurfaceFill(tokens);
-  const selectedFill = `${tokens.colors.primary.main}22`;
 
   const faceStyle: ViewStyle = {
     borderRadius: radius,
-    backgroundColor: selected ? selectedFill : baseFill,
-    borderWidth: selected ? 1 : 0,
-    borderColor: selected ? `${tokens.colors.primary.main}55` : undefined,
+    backgroundColor: selected ? tokens.colors.primary.lightCta : baseFill,
+    borderWidth: 0,
     alignSelf: 'flex-start',
     flexShrink: 0,
   };
@@ -111,12 +109,12 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       fontSize: DAY_DIVIDER_PILL_FONT_SIZE,
       lineHeight: DAY_DIVIDER_PILL_LINE_HEIGHT,
       fontWeight: tokens.typography.fontWeight.medium,
-      color: tokens.colors.text.secondary,
+      color: tokens.colors.text.primary,
       writingDirection: 'rtl',
       textAlign: 'center',
     },
     textSelected: {
-      color: tokens.colors.text.primary,
+      color: tokens.colors.text.inverse,
       fontWeight: tokens.typography.fontWeight.semibold,
     },
   });

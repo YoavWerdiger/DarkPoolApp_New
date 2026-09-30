@@ -482,7 +482,6 @@ export default function CommunityPortfoliosTab() {
           setSortSheetHeight(0);
         }}
         snapPoints={sortSnapPoints}
-        useGlassBackground
         showBrandBackground={false}
         showHandle
       >

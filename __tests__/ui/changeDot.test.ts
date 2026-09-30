@@ -44,22 +44,29 @@ describe('CHANGE_DOT_SIZE', () => {
   });
 });
 
-describe('SignedChangePair order — $change then dot then %', () => {
-  it('renders abs, then ChangeDot, then pct — not a leading or trailing dot', () => {
+describe('SignedChangePair order — $change then %', () => {
+  it('renders abs then pct, without a colored dot', () => {
     const pairFn = pairSrc.slice(pairSrc.indexOf('export function SignedChangePair'));
-    expect(pairFn.indexOf('{abs}')).toBeLessThan(pairFn.indexOf('<ChangeDot'));
-    expect(pairFn.indexOf('<ChangeDot')).toBeLessThan(pairFn.indexOf('{pct}'));
-    expect(pairSrc).toMatch(/\+\$1\.06 • \+2\.21%/);
+    const signedFn = pairSrc.slice(
+      pairSrc.indexOf('export function SignedChange('),
+      pairSrc.indexOf('export function SignedChangePair')
+    );
+    expect(pairFn.indexOf('{abs}')).toBeLessThan(pairFn.indexOf('{pct}'));
+    expect(pairFn).not.toMatch(/<ChangeDot/);
+    expect(signedFn).not.toMatch(/<ChangeDot/);
+    expect(pairSrc).toMatch(/\+\$1\.06 \+2\.21%/);
   });
 
-  it('ticker hero and profile delta use the pair, not a leading-dot blob', () => {
+  it('ticker hero uses the pair, profile snapshot puts a dot only between $ and %', () => {
     expect(tickerSrc).toMatch(/SignedChangePair/);
     expect(tickerSrc).toMatch(/absText=\{formatTickerAbsChange/);
     expect(tickerSrc).toMatch(/pctText=\{formatTickerPctChange/);
     expect(tickerSrc).not.toMatch(/▲|▼/);
-    expect(profileSrc).toMatch(/SignedChangePair/);
-    expect(profileSrc).toMatch(/absText=\{formatCongressDeltaUsd/);
-    expect(profileSrc).toMatch(/pctText=\{formatSignedChangePct/);
+    expect(tickerSrc).not.toMatch(/<ChangeDot/);
+    expect(profileSrc).toMatch(/formatCongressDeltaUsd\(periodDelta\.usd\)/);
+    expect(profileSrc).toMatch(/formatSignedChangePct\(periodDelta\.pct\)/);
+    expect(profileSrc).toMatch(/styles\.deltaDot/);
+    expect(profileSrc).not.toMatch(/SignedChangePair/);
     expect(profileSrc).not.toMatch(/▲|▼/);
   });
 });

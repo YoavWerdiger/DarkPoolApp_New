@@ -3,11 +3,12 @@ import { StyleSheet, Text, View } from 'react-native';
 import UICard from '../../../components/ui/UICard';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
-import { UI_CARD_RADIUS } from '../../../components/ui/appLayout';
+import { APP_LAYOUT, UI_CARD_RADIUS } from '../../../components/ui/appLayout';
 import {
   DARK_POOL_TYPE,
   darkPoolPhysicalRightText,
 } from '../darkPoolLayout';
+import { ltrNameText } from '../utils/bidi';
 import { formatRelativeTime, formatUsdCompact } from '../utils/darkPoolFormat';
 import { formatInsiderDisplayName } from '../utils/investorPlaceholder';
 import { toDataIsland } from '../utils/bidi';
@@ -46,10 +47,12 @@ export function TickerInsiderBuyRow({ item, onPress }: Props) {
       <View style={styles.row}>
         <TickerLogo symbol={item.ticker} size={40} borderRadius={20} />
         <View style={styles.main}>
+          <Text style={styles.name} numberOfLines={1}>
+            {displayName}
+          </Text>
           <Text style={styles.primary} numberOfLines={1}>
-            <Text style={styles.name}>{displayName}</Text>
-            <Text style={{ color: sideColor, fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight }}>{` ${verb} `}</Text>
-            <Text style={styles.ticker}>{toDataIsland(tickerSym)}</Text>
+            <Text style={{ color: sideColor }}>{verb}</Text>
+            <Text style={styles.ticker}>{` ${toDataIsland(tickerSym)}`}</Text>
           </Text>
           {item.insider_role?.trim() ? (
             <Text style={styles.role} numberOfLines={1}>
@@ -76,9 +79,9 @@ export function TickerInsiderBuyRow({ item, onPress }: Props) {
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     card: {
-      marginBottom: 8,
+      marginBottom: APP_LAYOUT.cardStackGap,
       borderRadius: UI_CARD_RADIUS,
-      backgroundColor: 'transparent',
+      backgroundColor: tokens.colors.background.cardSolid,
     },
     row: {
       direction: 'rtl',
@@ -93,11 +96,16 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     primary: {
       ...darkPoolPhysicalRightText,
-      fontSize: DARK_POOL_TYPE.body.fontSize,
-      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
+      marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
+      fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
+      fontWeight: DARK_POOL_TYPE.cardSubtitle.fontWeight,
       color: tokens.colors.text.primary,
     },
     name: {
+      ...ltrNameText,
+      fontSize: DARK_POOL_TYPE.cardTitle.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardTitle.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
     },
@@ -125,7 +133,8 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       minWidth: 72,
     },
     value: {
-      fontSize: DARK_POOL_TYPE.body.fontSize,
+      fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
       writingDirection: 'ltr',

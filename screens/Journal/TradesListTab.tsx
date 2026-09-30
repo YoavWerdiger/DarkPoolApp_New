@@ -331,7 +331,7 @@ export default function TradesListTab() {
       <View style={styles.searchSection}>
         <View accessibilityRole="search">
         <DayDividerPill
-          style={styles.searchPill}
+          style={[styles.searchPill, { backgroundColor: DesignTokens.colors.background.cardSolid }]}
           contentContainerStyle={styles.searchPillContent}
           accessibilityLabel="חיפוש רשימת טריידים לפי סמל"
         >

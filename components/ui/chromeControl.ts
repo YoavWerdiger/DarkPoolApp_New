@@ -15,6 +15,11 @@ export function chromeSurfaceFill(tokens: Tokens): string {
   return tokens.colors.background.navChrome;
 }
 
+/** תיבת חיפוש — צבע כרטיס הערכה: לבן בבהיר, cardSolid בכהה. */
+export function searchFieldFill(tokens: Tokens): string {
+  return tokens.colors.background.cardSolid;
+}
+
 export function chromeSurfaceCardStyle(tokens: Tokens, extra?: ViewStyle): ViewStyle {
   return {
     backgroundColor: chromeSurfaceFill(tokens),

@@ -24,6 +24,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useChat } from '../../context/ChatContext';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { chatGroupDisplayName, groupChatIcon } from '../../assets/chatGroups/groupChatIcons';
 import { CommonActions, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useLockParentDrawerWhileFocused } from '../../hooks/useLockParentDrawerWhileFocused';
 import { scheduleAfterNavigationTransition } from '../../hooks/afterNavigationTransition';
@@ -68,7 +69,7 @@ export default function ChatGroupInfoScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const { user } = useAuth();
-  const { theme } = useTheme();
+  const { theme, isDarkMode } = useTheme();
   const DesignTokens = useDesignTokens();
   useLockParentDrawerWhileFocused();
 
@@ -476,6 +477,10 @@ export default function ChatGroupInfoScreen() {
     );
   }
 
+  const groupAvatar =
+    groupChatIcon(currentGroup.name, isDarkMode) ||
+    (currentGroup.avatar_url ? { uri: currentGroup.avatar_url } : null);
+
   return (
     <ChatScreenShell>
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
@@ -489,15 +494,15 @@ export default function ChatGroupInfoScreen() {
           >
           <UICard variant="soft" padding="none" style={[styles.heroCard, styles.sectionBlock]}>
             <View style={styles.heroBlock}>
-              {currentGroup.avatar_url ? (
-                <Image source={{ uri: currentGroup.avatar_url }} style={styles.avatar} />
+              {groupAvatar ? (
+                <Image source={groupAvatar} style={styles.avatar} />
               ) : (
                 <View style={styles.avatarPlaceholder}>
                   <Users size={44} color={DesignTokens.colors.text.secondary} strokeWidth={2} />
                 </View>
               )}
               <Text style={styles.groupName} numberOfLines={2}>
-                {currentGroup.name}
+                {chatGroupDisplayName(currentGroup.name)}
               </Text>
               <Text style={styles.groupStatus}>
                 {isolateNumericRuns(`${sortedMembers.length} חברים`)}

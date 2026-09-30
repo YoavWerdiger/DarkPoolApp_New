@@ -3,11 +3,17 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
+import ReorderableList, {
+  reorderItems,
+  useIsActive,
+  useReorderableDrag,
+  type ReorderableListReorderEvent,
+} from 'react-native-reorderable-list';
+import { runOnJS } from 'react-native-reanimated';
 import { CommonActions, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenChrome } from '../../components/ui/ScreenChrome';
@@ -16,7 +22,7 @@ import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/D
 import UICard from '../../components/ui/UICard';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { UI_CARD_RADIUS, APP_LAYOUT } from '../../components/ui/appLayout';
-import { appCaption2Style, appSectionSubtitleStyle } from '../../components/ui/appType';
+import { appCaptionStyle } from '../../components/ui/appType';
 import { WatchlistRow } from './components/WatchlistRow';
 import { WatchlistRowSkeleton } from './components/WatchlistRowSkeleton';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
@@ -32,6 +38,49 @@ import { WatchlistEmpty } from './components/WatchlistEmpty';
 import { WatchlistListNameSheet } from './components/WatchlistFormSheet';
 import { WatchlistSymbolSheet } from './components/WatchlistSymbolSheet';
 import { MarketsErrorBoundary } from '../Markets/MarketsErrorBoundary';
+
+function hapticDragStart() {
+  void HapticFeedback.medium();
+}
+
+function hapticDragStep() {
+  void HapticFeedback.selection();
+}
+
+const ReorderableWatchlistRow = React.memo(function ReorderableWatchlistRow({
+  row,
+  index,
+  onPress,
+}: {
+  row: WatchlistRowData;
+  index: number;
+  onPress: (row: WatchlistRowData) => void;
+}) {
+  const drag = useReorderableDrag();
+  const isActive = useIsActive();
+  return (
+    <WatchlistRow
+      row={row}
+      index={index}
+      isActive={isActive}
+      onDrag={drag}
+      onPress={() => onPress(row)}
+    />
+  );
+});
+
+function RowDivider() {
+  const tokens = useDesignTokens();
+  return (
+    <View
+      style={{
+        height: 1,
+        marginHorizontal: APP_LAYOUT.cardPadding,
+        backgroundColor: tokens.colors.border.divider,
+      }}
+    />
+  );
+}
 
 export default function WatchlistScreen() {
   const navigation = useNavigation();
@@ -61,7 +110,7 @@ export default function WatchlistScreen() {
     removeSymbol,
     setNotes,
     patchItem,
-    moveSymbol,
+    reorderSymbols,
     addList,
     renameList,
     removeList,
@@ -218,47 +267,40 @@ export default function WatchlistScreen() {
     [rows]
   );
 
-  const onReorderPress = useCallback(
-    (symbol: string) => {
-      void showAppDialog({
-        title: symbol,
-        message: 'סידור ברשימה',
-        type: 'info',
-        buttons: [
-          {
-            text: 'העבר למעלה',
-            style: 'default',
-            onPress: () => {
-              void moveSymbol(symbol, -1);
-            },
-          },
-          {
-            text: 'העבר למטה',
-            style: 'default',
-            onPress: () => {
-              void moveSymbol(symbol, 1);
-            },
-          },
-          { text: 'ביטול', style: 'cancel' },
-        ],
+  const handleReorder = useCallback(
+    ({ from, to }: ReorderableListReorderEvent) => {
+      if (from === to) return;
+      void HapticFeedback.impactLight();
+      const data = reorderItems(listData, from, to);
+      reorderSymbols(data.map((r) => r.item.symbol)).catch(() => {
+        legacyAlert('שגיאה', 'לא ניתן לשמור את הסדר');
       });
     },
-    [moveSymbol]
+    [listData, reorderSymbols]
   );
+
+  const handleDragStart = useCallback(() => {
+    'worklet';
+    runOnJS(hapticDragStart)();
+  }, []);
+
+  const handleIndexChange = useCallback(() => {
+    'worklet';
+    runOnJS(hapticDragStep)();
+  }, []);
 
   const renderWatchlistItem = useCallback(
     ({ item, index }: { item: WatchlistRowData; index: number }) => {
       if (!item?.item?.symbol) return null;
       return (
-        <WatchlistRow
+        <ReorderableWatchlistRow
           row={item}
           index={index}
-          onDrag={() => onReorderPress(item.item.symbol)}
-          onPress={() => handleRowPress(item)}
+          onPress={handleRowPress}
         />
       );
     },
-    [handleRowPress, onReorderPress]
+    [handleRowPress]
   );
 
   const openListActions = useCallback(
@@ -359,7 +401,7 @@ export default function WatchlistScreen() {
           flex: 1,
           minHeight: 0,
           paddingHorizontal: hp,
-          paddingTop: 4,
+          paddingTop: APP_LAYOUT.stackGapSmall,
         },
         panel: {
           flex: 1,
@@ -373,34 +415,23 @@ export default function WatchlistScreen() {
           width: '100%',
           alignSelf: 'stretch',
         },
-        skeletonList: { width: '100%', paddingTop: 4 },
+        skeletonList: { width: '100%' },
         listWrap: { flex: 1, minHeight: 0, width: '100%' },
         list: { flex: 1 },
-        listContent: { flexGrow: 1, paddingBottom: 8 },
+        listContent: { flexGrow: 1, paddingBottom: APP_LAYOUT.stackGapSmall },
         listContentEmpty: { flexGrow: 1 },
-        center: {
-          flex: 1,
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 10,
-        },
-        centerText: {
-          ...appSectionSubtitleStyle,
-          color: tokens.colors.text.tertiary,
-          textAlign: 'center',
-          marginTop: 0,
-        },
         updatingRow: {
           flexDirection: 'row-reverse',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 6,
-          paddingVertical: 6,
+          gap: APP_LAYOUT.stackGapSmall,
+          paddingVertical: APP_LAYOUT.stackGapSmall,
           borderBottomWidth: 1,
           borderBottomColor: tokens.colors.border.divider,
         },
         updatingText: {
-          ...appCaption2Style,
+          ...appCaptionStyle,
+          width: undefined,
           color: tokens.colors.text.secondary,
         },
       }),
@@ -440,7 +471,10 @@ export default function WatchlistScreen() {
               >
                 <View style={styles.skeletonList}>
                   {Array.from({ length: 8 }).map((_, i) => (
-                    <WatchlistRowSkeleton key={i} delay={i * 50} index={i} />
+                    <React.Fragment key={i}>
+                      {i > 0 ? <RowDivider /> : null}
+                      <WatchlistRowSkeleton delay={i * 50} index={i} />
+                    </React.Fragment>
                   ))}
                 </View>
               </UICard>
@@ -469,8 +503,12 @@ export default function WatchlistScreen() {
                   ) : null}
 
                   <View style={styles.listWrap}>
-                    <FlatList
+                    <ReorderableList
                       data={listData}
+                      onReorder={handleReorder}
+                      onDragStart={handleDragStart}
+                      onIndexChange={handleIndexChange}
+                      shouldUpdateActiveItem
                       keyExtractor={(item) =>
                         item?.item?.id ?? String(item?.item?.symbol)
                       }
@@ -481,6 +519,7 @@ export default function WatchlistScreen() {
                           : styles.listContent
                       }
                       showsVerticalScrollIndicator={false}
+                      ItemSeparatorComponent={RowDivider}
                       refreshControl={
                         <RefreshControl
                           refreshing={isRefreshing}

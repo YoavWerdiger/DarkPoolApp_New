@@ -14,11 +14,13 @@ import { useChatKeyboardInsets } from '../../hooks/useChatKeyboardInsets';
 import Reanimated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useGenericKeyboardHandler } from 'react-native-keyboard-controller';
 
+import { chatGroupDisplayName } from '../../assets/chatGroups/groupChatIcons';
 import { ChatScreenShell } from '../../components/chat/ChatScreenShell';
 import UICard from '../../components/ui/UICard';
 import { CHROME_UICARD, chromeSurfaceCardStyle } from '../../components/ui/chromeControl';
 import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
 import { MAIN_SCREEN_HEADER_HP } from '../../components/ui/MainDrawerScreenHeader';
+import { APP_TYPE } from '../../components/ui/appType';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { LIGHT_CANVAS } from '../../components/ui/designTokensStatic';
 
@@ -53,7 +55,7 @@ import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { logger } from '../../utils/logger';
 import { isAnnouncementGroup as checkIsAnnouncementGroup } from '../../utils/isAnnouncementGroup';
-import { canSendInAdminOnlyChat } from '../../utils/canSendInAdminOnlyChat';
+import { canSendInAdminOnlyChat, isAdminOnlySendSettings } from '../../utils/canSendInAdminOnlyChat';
 import { useIsAdmin } from '../../hooks/useIsAdmin';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { useChatMessageScroll } from '../../hooks/useChatMessageScroll';
@@ -248,9 +250,14 @@ export default function ChatGroupScreen() {
     [shellGroup?.name, shellGroup?.id],
   );
 
-  /** הכרזות: מנהל קבוצה או מנהל אפליקציה (subscription_role) יכולים לכתוב */
+  /** הכרזות וקבוצות שקטות: רק מנהל קבוצה או מנהל קהילה יכולים לכתוב */
+  const adminOnlySend = useMemo(
+    () => isAnnouncementGroup || isAdminOnlySendSettings(shellGroup?.settings),
+    [isAnnouncementGroup, shellGroup?.settings],
+  );
+
   const canSendInAnnouncements = useMemo(() => {
-    if (!isAnnouncementGroup) return true;
+    if (!adminOnlySend) return true;
     const myRole =
       currentGroup?.my_role ?? (shellGroup as { my_role?: string } | null)?.my_role;
     return canSendInAdminOnlyChat({
@@ -259,7 +266,7 @@ export default function ChatGroupScreen() {
       myRole,
     });
   }, [
-    isAnnouncementGroup,
+    adminOnlySend,
     currentGroup?.is_admin,
     currentGroup?.my_role,
     shellGroup,
@@ -1581,6 +1588,22 @@ export default function ChatGroupScreen() {
     });
   }, []);
 
+  const sendViewerReplyRef = useRef<(message: ChatMessageType, text: string) => void>(() => {});
+  sendViewerReplyRef.current = (message, text) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    replyToRef.current = {
+      id: message.id,
+      senderName: message.sender?.display_name || 'משתמש',
+      content: message.content || '',
+      messageType: message.message_type,
+    };
+    void handleSendMessage(trimmed);
+  };
+  const handleSendReplyText = useCallback((message: ChatMessageType, text: string) => {
+    sendViewerReplyRef.current(message, text);
+  }, []);
+
   // Memoised onCancelReply so ChatInput's React.memo can short-circuit when
   // the user just types a key (was: `() => setReplyTo(undefined)` inline,
   // which gave a fresh function reference on every keystroke).
@@ -1789,7 +1812,7 @@ export default function ChatGroupScreen() {
       <TouchableOpacity style={styles.headerContent} onPress={handleGroupInfoPress} activeOpacity={0.7}>
         <View style={styles.headerTextWrap}>
           <Text style={styles.headerTitle} numberOfLines={1}>
-            {headerGroup.name}
+            {chatGroupDisplayName(headerGroup.name)}
           </Text>
           {typingLabel ? (
           <Text style={styles.headerSubtitle} numberOfLines={1}>
@@ -1914,6 +1937,7 @@ export default function ChatGroupScreen() {
           onLayout={(h) => onMessageCellLayout(item.id, h)}
             onLongPress={() => handleMessageLongPress(item)}
             onReply={() => handleReply(item)}
+            onSendReply={(text) => handleSendReplyText(item, text)}
             onReactionPress={(emoji) => handleReactionPress(item, emoji)}
             onReactionDetailsPress={() => handleReactionDetailsPress(item)}
             onJumpToMessage={handleJumpToMessage}
@@ -1941,6 +1965,7 @@ export default function ChatGroupScreen() {
       isAnnouncementGroup,
       handleMessageLongPress,
       handleReply,
+      handleSendReplyText,
       handleReactionPress,
       handleReactionDetailsPress,
       handleJumpToMessage,
@@ -2045,12 +2070,17 @@ export default function ChatGroupScreen() {
         styles={styles}
         iconColor={DesignTokens.colors.text.secondary}
       />
-      {isAnnouncementGroup && !canSendInAnnouncements ? (
-        <View style={styles.announcementOnlyView}>
-          <Ionicons name="megaphone-outline" size={18} color={DesignTokens.colors.text.tertiary} />
-          <Text style={styles.announcementOnlyText}>
-            רק מנהלי הקהילה יכולים לכתוב בצ'אט זה
+      {adminOnlySend && !canSendInAnnouncements ? (
+        <View style={styles.quietGroupNotice}>
+          <Ionicons
+            name={isAnnouncementGroup ? 'megaphone-outline' : 'volume-mute-outline'}
+            size={16}
+            color={DesignTokens.colors.text.secondary}
+          />
+          <Text style={styles.quietGroupTitle}>
+            {isAnnouncementGroup ? 'הכרזות' : 'קבוצה שקטה'}
           </Text>
+          <Text style={styles.quietGroupBody}>רק מנהלי הקהילה יכולים לכתוב</Text>
         </View>
       ) : (
         <ChatInput
@@ -2598,13 +2628,14 @@ const createChatGroupStyles = (tokens: any) => {
     justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: APP_TYPE.screenTitle.fontSize,
+    fontWeight: APP_TYPE.screenTitle.fontWeight,
+    lineHeight: APP_TYPE.screenTitle.lineHeight,
+    letterSpacing: APP_TYPE.screenTitle.letterSpacing,
     color: tokens.colors.text.primary,
-    letterSpacing: -0.2,
     textAlign: 'center',
+    writingDirection: 'rtl',
     width: '100%',
-    lineHeight: 20,
   },
   headerSubtitle: {
     fontSize: 11,
@@ -2879,19 +2910,31 @@ const createChatGroupStyles = (tokens: any) => {
     alignItems: 'center',
   },
 
-  /* ── Announcement only ── */
-  announcementOnlyView: {
-    flexDirection: 'row',
+  /* ── Quiet / announcements — no filled composer ── */
+  quietGroupNotice: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 12,
+    paddingHorizontal: 28,
+    gap: 2,
+    backgroundColor: 'transparent',
   },
-  announcementOnlyText: {
-    fontSize: 14,
+  quietGroupTitle: {
+    fontSize: APP_TYPE.cardSubtitle.fontSize,
+    fontWeight: '500',
+    lineHeight: APP_TYPE.cardSubtitle.lineHeight,
+    color: tokens.colors.text.secondary,
+    textAlign: 'center',
+    writingDirection: 'rtl',
+  },
+  quietGroupBody: {
+    fontSize: APP_TYPE.caption.fontSize,
+    fontWeight: APP_TYPE.caption.fontWeight,
+    lineHeight: APP_TYPE.caption.lineHeight,
     color: tokens.colors.text.tertiary,
     textAlign: 'center',
+    writingDirection: 'rtl',
   },
 });
 };

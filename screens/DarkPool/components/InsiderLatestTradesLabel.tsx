@@ -5,9 +5,10 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { APP_LAYOUT } from '../../../components/ui/appLayout';
 import {
   DARK_POOL_TYPE,
-  darkPoolSectionTitleStyle,
+  darkPoolPhysicalRightText,
 } from '../darkPoolLayout';
 
 interface Props {
@@ -36,17 +37,21 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginBottom: tokens.spacing.sm,
-      marginTop: tokens.spacing.xs,
+      marginBottom: APP_LAYOUT.groupLabelToContent,
+      marginTop: 0,
     },
     label: {
-      ...darkPoolSectionTitleStyle,
-      color: tokens.colors.text.tertiary,
-      letterSpacing: 0.4,
+      ...darkPoolPhysicalRightText,
+      flex: 1,
+      fontSize: DARK_POOL_TYPE.groupLabel.fontSize,
+      lineHeight: DARK_POOL_TYPE.groupLabel.lineHeight,
+      fontWeight: DARK_POOL_TYPE.groupLabel.fontWeight,
+      color: tokens.colors.text.secondary,
     },
     count: {
       fontSize: DARK_POOL_TYPE.caption2.fontSize,
-      fontWeight: DARK_POOL_TYPE.sectionTitle.fontWeight,
+      lineHeight: DARK_POOL_TYPE.caption2.lineHeight,
+      fontWeight: DARK_POOL_TYPE.caption2.fontWeight,
       color: tokens.colors.text.tertiary,
       writingDirection: 'ltr',
     },

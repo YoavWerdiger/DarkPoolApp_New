@@ -176,10 +176,12 @@ export default function HoldingsTab({ portfolio, holdings }: Props) {
           gap: 8,
         },
         symbolCol: {
-          width: 96,
+          width: 128,
           flexDirection: 'row',
           alignItems: 'center',
-          gap: 8,
+        },
+        symbolLogo: {
+          marginLeft: 12,
         },
         symbolTextWrap: {
           flex: 1,
@@ -405,7 +407,9 @@ function HoldingRow({ holding, viewMode, currency, styles, tokens }: RowProps) {
   return (
     <View style={styles.row}>
       <View style={styles.symbolCol}>
-        <TickerLogo symbol={holding.symbol} size={28} />
+        <View style={styles.symbolLogo}>
+          <TickerLogo symbol={holding.symbol} size={28} />
+        </View>
         <View style={styles.symbolTextWrap}>
           <Text style={styles.symbolText}>{holding.symbol}</Text>
           <Text style={styles.symbolMeta} numberOfLines={1}>

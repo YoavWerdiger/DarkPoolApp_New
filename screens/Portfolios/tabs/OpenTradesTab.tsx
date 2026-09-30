@@ -552,7 +552,6 @@ export default function OpenTradesTab({
         topCornerRadius={28}
         useModal
         edgeToEdge
-        useGlassBackground
         glassIntensity={SHEET_GLASS_INTENSITY}
         glassOverlayColor={SHEET_GLASS_OVERLAY}
         backdropOpacity={SHEET_BACKDROP_OPACITY}

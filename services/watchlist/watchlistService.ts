@@ -298,7 +298,7 @@ export async function reorderWatchlistItems(
   orderedSymbols: string[]
 ): Promise<void> {
   const userId = await requireUserId();
-  await Promise.all(
+  const results = await Promise.all(
     orderedSymbols.map((symbol, index) =>
       supabase
         .from('stock_watchlist_items')
@@ -308,4 +308,6 @@ export async function reorderWatchlistItems(
         .eq('symbol', symbol.toUpperCase())
     )
   );
+  const failed = results.find((r) => r.error);
+  if (failed?.error) throw failed.error;
 }

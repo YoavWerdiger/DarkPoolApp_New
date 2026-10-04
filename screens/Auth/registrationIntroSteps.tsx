@@ -64,7 +64,6 @@ const experienceConfig: IntroQuestionConfig = {
   subtitle: 'בחר את האפשרות הקרובה ביותר',
   options: EXPERIENCE_LEVEL_OPTIONS_DETAILED,
   nextRoute: 'RegistrationTradingFocus',
-  displayMode: 'sliderLevel',
 };
 
 const focusConfig: IntroQuestionConfig = {
@@ -102,6 +101,7 @@ const portfolioConfig: IntroQuestionConfig = {
   subtitle: 'שאלה אופציונלית — אפשר לדלג',
   options: PORTFOLIO_SIZE_OPTIONS.map((o, i) => ({ ...o, level: i + 1 })),
   nextRoute: 'RegistrationTrack',
+  displayMode: 'sliderLevel',
   optional: true,
   allowDeselect: true,
 };

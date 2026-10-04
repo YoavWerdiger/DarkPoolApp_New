@@ -10,6 +10,14 @@ import {
   PORTFOLIO_SIZE_OPTIONS,
 } from '../../constants/onboardingQuestionnaire';
 
+/** אימוג'י לכל אופציה — כרטיסי הבחירה בסגנון Cal AI */
+function withEmoji<T extends string>(
+  options: { label: string; value: T }[],
+  emojis: Record<string, string>,
+): { label: string; value: T; emoji?: string }[] {
+  return options.map((o) => ({ ...o, emoji: emojis[o.value] }));
+}
+
 // הוספת emojis לאופציות רמת הניסיון
 const EXPERIENCE_LEVEL_OPTIONS_WITH_EMOJI = [
   { ...EXPERIENCE_LEVEL_OPTIONS[0], emoji: '🌱' }, // עושה צעדים ראשונים
@@ -25,7 +33,6 @@ const experienceConfig: IntroQuestionConfig = {
   subtitle: 'בחר את האפשרות הקרובה ביותר',
   options: EXPERIENCE_LEVEL_OPTIONS_WITH_EMOJI,
   nextRoute: 'RegistrationTradingFocus',
-  displayMode: 'swipe',
 };
 
 const focusConfig: IntroQuestionConfig = {
@@ -33,7 +40,7 @@ const focusConfig: IntroQuestionConfig = {
   stepKey: 'tradingFocus',
   title: 'מה סגנון המסחר שלך?',
   subtitle: 'נוכל להציג תוכן רלוונטי יותר',
-  options: TRADING_FOCUS_OPTIONS,
+  options: withEmoji(TRADING_FOCUS_OPTIONS, { day_trading: '⚡️', swing: '🌊', long_term: '🏔️' }),
   nextRoute: 'RegistrationPlatform',
 };
 
@@ -42,7 +49,13 @@ const platformConfig: IntroQuestionConfig = {
   stepKey: 'platform',
   title: 'באיזו פלטפורמה אתה סוחר?',
   subtitle: 'אפשר לבחור יותר מאחת',
-  options: TRADING_PLATFORM_OPTIONS,
+  options: withEmoji(TRADING_PLATFORM_OPTIONS, {
+    bank: '🏦',
+    interactive_brokers: '🌐',
+    tradestation: '📊',
+    colmex: '💼',
+    other: '✨',
+  }),
   nextRoute: 'RegistrationPortfolio',
   multiple: true,
 };
@@ -52,7 +65,12 @@ const portfolioConfig: IntroQuestionConfig = {
   stepKey: 'portfolio',
   title: 'מה גודל התיק שלך?',
   subtitle: 'שאלה אופציונלית — אפשר לדלג',
-  options: PORTFOLIO_SIZE_OPTIONS,
+  options: withEmoji(PORTFOLIO_SIZE_OPTIONS, {
+    under_10k: '🌱',
+    '10k_50k': '🌿',
+    '50k_100k': '🌳',
+    over_100k: '💎',
+  }),
   nextRoute: 'RegistrationTrack',
   optional: true,
   allowDeselect: true,

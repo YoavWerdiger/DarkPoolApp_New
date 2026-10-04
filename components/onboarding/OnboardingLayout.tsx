@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { useTheme } from '../../context/ThemeContext';
+import Reanimated, { FadeInDown } from 'react-native-reanimated';
 import { APP_LAYOUT } from '../ui/appLayout';
 import {
   appFlowSubtitleStyle,
@@ -66,7 +67,16 @@ const HP = APP_LAYOUT.screenPaddingHorizontal;
  * פס התקדמות רציף (במקום סגמנטים/נקודות) — מתמלא מימין לשמאל (RTL),
  * ומונפש בין שלבים.
  */
-const ProgressBar = ({ current, total }: { current: number; total: number }) => {
+const ProgressBar = ({
+  current,
+  total,
+  inline = false,
+}: {
+  current: number;
+  total: number;
+  /** בתוך שורת הכפתורים (Cal AI) — בלי ריפוד צד משלו */
+  inline?: boolean;
+}) => {
   const tokens = useDesignTokens();
   const ratio = total > 0 ? Math.min(1, Math.max(0, current / total)) : 0;
   const anim = useRef(new Animated.Value(ratio)).current;
@@ -81,7 +91,13 @@ const ProgressBar = ({ current, total }: { current: number; total: number }) => 
   }, [anim, ratio]);
 
   return (
-    <View style={{ paddingHorizontal: HP, paddingTop: 10, paddingBottom: 4 }}>
+    <View
+      style={
+        inline
+          ? { flex: 1, marginHorizontal: APP_LAYOUT.stackGapTight }
+          : { paddingHorizontal: HP, paddingTop: 10, paddingBottom: 4 }
+      }
+    >
       <View
         style={{
           height: 4,
@@ -237,6 +253,9 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
                 ) : (
                   <View style={{ width: HEADER_BACK_BTN_SIZE, height: HEADER_BACK_BTN_SIZE }} />
                 )}
+                {showProgress ? (
+                  <ProgressBar current={currentStep} total={totalSteps} inline />
+                ) : null}
                 {shouldShowBack ? (
                   <DayNavBlurButton
                     onPress={onBack}
@@ -259,7 +278,9 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
               <View style={{ height: 8 }} />
             )}
 
-            {showProgress ? <ProgressBar current={currentStep} total={totalSteps} /> : null}
+            {showProgress && !hasTopBar ? (
+              <ProgressBar current={currentStep} total={totalSteps} />
+            ) : null}
 
             <View style={{ flex: 1 }}>
               <Content {...contentProps}>
@@ -272,9 +293,10 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
                   }}
                 >
                   {hasHeader ? (
-                    <View
+                    <Reanimated.View
+                      entering={FadeInDown.duration(380)}
                       style={{
-                        marginBottom: APP_LAYOUT.sectionHeaderToContent,
+                        marginBottom: APP_LAYOUT.sectionGap / 2 + 4,
                         width: '100%',
                         alignItems: 'stretch',
                       }}
@@ -321,7 +343,7 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
                           </Text>
                         </Pressable>
                       ) : null}
-                    </View>
+                    </Reanimated.View>
                   ) : null}
 
                   {children}

@@ -7,6 +7,8 @@ import {
 import CashAppScreen from '../../components/ui/CashAppScreen';
 import CashAppButton from '../../components/ui/CashAppButton';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { appCaptionStyle } from '../../components/ui/appType';
+import { APP_LAYOUT } from '../../components/ui/appLayout';
 import OnboardingChoiceRow, {
   OnboardingChoiceGroup,
 } from '../../components/onboarding/OnboardingChoiceRow';
@@ -113,13 +115,14 @@ const RegistrationIntroQuestionScreen = ({ navigation, config }: Props) => {
         <View>
           {config.optional ? (
             <Text
-              style={{
-                color: tokens.cashAppStyle.colors.secondary,
-                fontSize: 13,
-                textAlign: 'center',
-                marginBottom: 10,
-                writingDirection: 'rtl',
-              }}
+              style={[
+                appCaptionStyle,
+                {
+                  color: tokens.colors.text.secondary,
+                  textAlign: 'center',
+                  marginBottom: APP_LAYOUT.stackGapSmall,
+                },
+              ]}
             >
               אפשר לדלג ולהמשיך בלי לבחור
             </Text>
@@ -143,9 +146,11 @@ const RegistrationIntroQuestionScreen = ({ navigation, config }: Props) => {
       ) : (
         <>
           <OnboardingChoiceGroup>
-            {config.options.map((opt) => (
+            {config.options.map((opt, i) => (
               <OnboardingChoiceRow
                 key={opt.value}
+                index={i}
+                emoji={opt.emoji}
                 label={opt.label}
                 selected={selected.includes(opt.value)}
                 allowDeselect={!!config.allowDeselect}

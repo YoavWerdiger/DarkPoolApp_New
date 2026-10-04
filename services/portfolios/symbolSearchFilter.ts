@@ -1,4 +1,5 @@
 import type { SymbolSearchResult } from './portfolioPriceFeed';
+import type { AssetType } from '../../screens/Portfolios/portfolioTypes';
 
 /** סיומות בורסות זרות / listings כפולים — לא רלוונטי לרוב משתמשי האפליקציה */
 const FOREIGN_SUFFIX_RE =
@@ -8,6 +9,8 @@ const FOREIGN_SUFFIX_RE =
 const ALLOWED_TYPES = new Set([
   'common stock',
   'etf',
+  // Finnhub מחזיר ETF כ-"ETP"
+  'etp',
   'adr',
   'closed-end fund',
   'reit',
@@ -38,7 +41,7 @@ function isAllowedType(type: string): boolean {
   if (ALLOWED_TYPES.has(t)) return true;
   // "Common Stock" וכו'
   if (t.includes('common stock')) return true;
-  if (t === 'etf' || t.includes('exchange traded')) return true;
+  if (t === 'etf' || t === 'etp' || t.includes('exchange traded')) return true;
   if (t === 'adr') return true;
   return false;
 }
@@ -54,7 +57,7 @@ function rankResult(r: SymbolSearchResult, q: string): number {
 
   const t = (r.type || '').toLowerCase();
   if (t.includes('common stock')) score += 80;
-  else if (t === 'etf' || t.includes('etf')) score += 40;
+  else if (t === 'etf' || t === 'etp' || t.includes('etf')) score += 40;
   else if (t === 'adr') score += 30;
 
   // קצרים עדיפים (פחות "זבל")
@@ -103,9 +106,54 @@ export function filterSymbolSearchResults(
 export function hebrewAssetTypeLabel(type: string): string {
   const t = (type || '').toLowerCase();
   if (t.includes('common stock') || t === 'equity' || t === 'stock') return 'מניה';
-  if (t.includes('etf') || t.includes('exchange traded')) return 'ETF';
+  if (t === 'crypto') return 'קריפטו';
+  if (t.includes('etf') || t === 'etp' || t.includes('exchange traded')) return 'ETF';
   if (t === 'adr') return 'ADR';
   if (t.includes('reit')) return 'REIT';
   if (t.includes('closed-end')) return 'קרן';
   return 'מניה';
+}
+
+/** סוג נכס לפוזיציה לפי סוג הנייר מהחיפוש — המשתמש עדיין יכול לשנות ידנית */
+export function assetTypeFromSearchType(type: string): AssetType {
+  const t = (type || '').toLowerCase();
+  if (t === 'crypto') return 'crypto';
+  if (t === 'etp' || t.includes('etf') || t.includes('exchange traded')) return 'etf';
+  if (t.includes('closed-end') || t.includes('fund')) return 'fund';
+  return 'stock';
+}
+
+/** קריפטו מובילים — Finnhub search לא מחזיר קריפטו; מחיר דרך Yahoo (BTC-USD) */
+const CRYPTO_UNIVERSE: Array<{ base: string; name: string }> = [
+  { base: 'BTC', name: 'Bitcoin' },
+  { base: 'ETH', name: 'Ethereum' },
+  { base: 'SOL', name: 'Solana' },
+  { base: 'XRP', name: 'XRP' },
+  { base: 'BNB', name: 'BNB' },
+  { base: 'DOGE', name: 'Dogecoin' },
+  { base: 'ADA', name: 'Cardano' },
+  { base: 'AVAX', name: 'Avalanche' },
+  { base: 'LINK', name: 'Chainlink' },
+  { base: 'DOT', name: 'Polkadot' },
+  { base: 'LTC', name: 'Litecoin' },
+  { base: 'TRX', name: 'TRON' },
+  { base: 'MATIC', name: 'Polygon' },
+  { base: 'SHIB', name: 'Shiba Inu' },
+  { base: 'TON', name: 'Toncoin' },
+  { base: 'SUI', name: 'Sui' },
+];
+
+export function searchCryptoUniverse(query: string): SymbolSearchResult[] {
+  const q = query.trim().toUpperCase();
+  if (!q) return [];
+  return CRYPTO_UNIVERSE.filter(
+    (c) => c.base.startsWith(q) || c.name.toUpperCase().startsWith(q) || `${c.base}-USD`.startsWith(q),
+  )
+    .sort((a, b) => Number(b.base === q) - Number(a.base === q))
+    .map((c) => ({
+      symbol: `${c.base}-USD`,
+      description: c.name,
+      display_symbol: `${c.base}-USD`,
+      type: 'Crypto',
+    }));
 }

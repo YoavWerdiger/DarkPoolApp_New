@@ -23,7 +23,7 @@ import {
   QUOTE_CACHE_TTL_MS,
   HISTORICAL_CACHE_TTL_MS,
 } from '../../screens/Portfolios/portfolioConstants';
-import { filterSymbolSearchResults } from './symbolSearchFilter';
+import { filterSymbolSearchResults, searchCryptoUniverse } from './symbolSearchFilter';
 
 const FINNHUB_API_KEY = 'd1uf6gpr01qpci1cbg00d1uf6gpr01qpci1cbg0g';
 const FINNHUB_BASE = 'https://finnhub.io/api/v1';
@@ -557,12 +557,18 @@ export async function searchSymbols(
       display_symbol: r.displaySymbol || r.symbol,
       type: r.type || '',
     }));
-    return filterSymbolSearchResults(mapped, query, {
+    const crypto = searchCryptoUniverse(query);
+    const securities = filterSymbolSearchResults(mapped, query, {
       usPrimaryOnly: true,
-      limit: 20,
+      limit: 20 - Math.min(crypto.length, 5),
     });
+    // התאמה מדויקת לקריפטו (BTC) קודמת; אחרת ניירות קודם
+    const exactCrypto = crypto.some((c) => c.symbol.split('-')[0] === query.trim().toUpperCase());
+    return exactCrypto
+      ? [...crypto.slice(0, 5), ...securities]
+      : [...securities, ...crypto.slice(0, 5)];
   } catch {
-    return [];
+    return searchCryptoUniverse(query);
   }
 }
 

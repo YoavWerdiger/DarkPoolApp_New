@@ -41,6 +41,7 @@ import { ChatSessionBackdrop } from '../../components/chat/ChatSessionBackdrop';
 import { PortfolioScreenHeader } from './components/PortfolioScreenHeader';
 import { useToast } from '../../components/ui/Toast';
 import { SymbolSearchModal } from './components/SymbolSearchModal';
+import { assetTypeFromSearchType } from '../../services/portfolios/symbolSearchFilter';
 import {
   createTransaction,
   updateTransaction,
@@ -1135,7 +1136,11 @@ export default function AddTransactionScreen() {
       <SymbolSearchModal
         visible={searchOpen}
         onClose={() => setSearchOpen(false)}
-        onSelect={(r) => handlePickSymbol(r.symbol)}
+        onSelect={(r) => {
+          // סוג הנכס מזוהה מהחיפוש (ETF/קריפטו/מניה); חוזים/פורקס נשארים בחירה ידנית
+          if (r.type) setAssetType(assetTypeFromSearchType(r.type));
+          void handlePickSymbol(r.symbol);
+        }}
       />
     </View>
   );

@@ -14,6 +14,63 @@ type ScreenerRow = {
   country?: string
 }
 
+const FINNHUB_PER_RUN = 50
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+/** סימבולים מדיווחי רווחים (30 יום אחורה ←) שאין להם שווי — Finnhub profile2 (60/דקה) */
+// deno-lint-ignore no-explicit-any
+async function backfillFromFinnhub(supabase: any, known: Set<string>): Promise<number> {
+  const key = Deno.env.get('FINNHUB_API_KEY')
+  if (!key) return 0
+  const since = new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10)
+  const { data } = await supabase
+    .from('earnings_calendar')
+    .select('ticker, code')
+    .gte('report_date', since)
+    .limit(10000)
+  const missing = Array.from(
+    new Set(
+      ((data ?? []) as Array<{ ticker: string | null; code: string | null }>)
+        .map((r) => normalizeCapSymbol(String(r.ticker || (r.code ?? '').split('.')[0] || '')))
+        .filter((s) => s && !known.has(s)),
+    ),
+  ).slice(0, FINNHUB_PER_RUN)
+
+  const now = new Date().toISOString()
+  const rows: Array<Record<string, unknown>> = []
+  for (const sym of missing) {
+    try {
+      const res = await fetch(
+        `https://finnhub.io/api/v1/stock/profile2?symbol=${encodeURIComponent(sym)}&token=${key}`,
+      )
+      if (res.ok) {
+        const p = await res.json()
+        // marketCapitalization ב-Finnhub הוא במיליוני USD
+        const cap = Number(p?.marketCapitalization ?? 0) * 1_000_000
+        if (Number.isFinite(cap) && cap > 0) {
+          rows.push({
+            symbol: sym,
+            market_cap: cap,
+            name: p?.name ?? null,
+            sector: p?.finnhubIndustry ?? null,
+            country: p?.country ?? null,
+            updated_at: now,
+          })
+        }
+      }
+    } catch {
+      // סימבול בודד שנכשל לא עוצר את השאר
+    }
+    await sleep(1100)
+  }
+  if (rows.length) {
+    const { error } = await supabase.from('stock_market_caps').upsert(rows, { onConflict: 'symbol' })
+    if (error) console.warn('[market-caps] finnhub upsert failed:', error.message)
+  }
+  console.log(`[market-caps] finnhub backfill ${rows.length}/${missing.length}`)
+  return rows.length
+}
+
 serve(async () => {
   try {
     const supabase = createClient(
@@ -53,7 +110,11 @@ serve(async () => {
 
     const ge1b = records.filter((r) => r.market_cap >= 1_000_000_000).length
     console.log(`[market-caps] upserted ${records.length} (>=1B: ${ge1b})`)
-    return new Response(JSON.stringify({ ok: true, upserted: records.length, ge_1b: ge1b }), {
+
+    // ה-screener חלקי (חסרות למשל AVB/EQR) — משלימים סימבולים מלוח הדיווחים דרך Finnhub
+    const backfilled = await backfillFromFinnhub(supabase, new Set(records.map((r) => r.symbol)))
+
+    return new Response(JSON.stringify({ ok: true, upserted: records.length, ge_1b: ge1b, backfilled }), {
       headers: { 'Content-Type': 'application/json' },
     })
   } catch (e) {

@@ -1355,14 +1355,20 @@ serve(async (req) => {
     const nearConfirmedKept = dropEstimatesNearConfirmedActuals(revenuePropagated)
     const droppedNearConfirmed = revenuePropagated.length - nearConfirmedKept.length
 
-    // רק חברות בשווי 1B+ (stock_market_caps). טבלה ריקה/לא זמינה → לא מסננים.
+    // רק חברות בשווי 1B+ (stock_market_caps). שווי לא ידוע נשאר (מקור השווי חלקי —
+    // refresh-market-caps משלים אותו מ-Finnhub). טבלה ריקה/לא זמינה → לא מסננים.
     const capMap = await loadMarketCapMap(supabase)
     let droppedBelowCap = 0
+    let unknownCap = 0
     const records = capMap
       ? nearConfirmedKept.filter((r) => {
-          const sym = normalizeCapSymbol(String(r.ticker ?? r.code ?? ''))
+          const sym = normalizeCapSymbol(String(r.ticker ?? r.code ?? '').split('.US')[0])
           const cap = capMap.get(sym)
-          if (cap != null && cap >= MIN_EARNINGS_MARKET_CAP_USD) {
+          if (cap == null) {
+            unknownCap++
+            return true
+          }
+          if (cap >= MIN_EARNINGS_MARKET_CAP_USD) {
             r.market_cap = cap
             return true
           }
@@ -1372,7 +1378,7 @@ serve(async (req) => {
       : nearConfirmedKept
     console.log(
       capMap
-        ? `[market-cap] kept ${records.length}, dropped ${droppedBelowCap} below $1B / unknown`
+        ? `[market-cap] kept ${records.length} (unknown cap: ${unknownCap}), dropped ${droppedBelowCap} below $1B`
         : '[market-cap] caps table unavailable — no cap filter this run',
     )
     console.log(

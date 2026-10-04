@@ -4,11 +4,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { DesignTokens, useDesignTokens } from '../ui/DesignTokens';
 import {
   formFieldInputStyle,
+  formFieldPlaceholderColor,
   formFieldLabelStyle,
   formFieldShellStyle,
 } from '../ui/formControl';
 import { PasswordVisibilityToggle } from '../ui/PasswordVisibilityToggle';
-import { appFormFieldHelperStyle } from '../ui/appType';
+import { appCaptionStyle, appFormFieldHelperStyle } from '../ui/appType';
+import { APP_LAYOUT } from '../ui/appLayout';
 
 interface OnboardingInputProps extends TextInputProps {
   label: string;
@@ -58,7 +60,7 @@ const OnboardingInput: React.FC<OnboardingInputProps> = ({
         ) : null}
         <TextInput
           style={[
-            formFieldInputStyle(),
+            formFieldInputStyle(tokens),
             {
               paddingHorizontal: 0,
               paddingVertical: multiline ? 4 : 15,
@@ -66,7 +68,7 @@ const OnboardingInput: React.FC<OnboardingInputProps> = ({
               textAlignVertical: multiline ? 'top' : 'center',
             },
           ]}
-          placeholderTextColor={DesignTokens.colors.text.muted}
+          placeholderTextColor={formFieldPlaceholderColor(tokens)}
           multiline={multiline}
           {...textInputProps}
           secureTextEntry={isPassword ? !passwordVisible : secureTextEntry}
@@ -89,7 +91,7 @@ const OnboardingInput: React.FC<OnboardingInputProps> = ({
             color={tokens.colors.danger.main}
             style={{ marginLeft: 6 }}
           />
-          <Text style={[styles.errorText, { color: tokens.colors.danger.main }]}>{error}</Text>
+          <Text style={[appCaptionStyle, styles.errorText, { color: tokens.colors.danger.main }]}>{error}</Text>
         </View>
       ) : helperText ? (
         <Text style={appFormFieldHelperStyle}>{helperText}</Text>
@@ -100,7 +102,7 @@ const OnboardingInput: React.FC<OnboardingInputProps> = ({
 
 const styles = StyleSheet.create({
   block: {
-    marginBottom: 16,
+    marginBottom: APP_LAYOUT.componentGap,
   },
   blockLast: {
     marginBottom: 0,
@@ -118,8 +120,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   errorText: {
-    fontSize: 13,
-    fontWeight: '500',
     textAlign: 'right',
     flex: 1,
     writingDirection: 'rtl',

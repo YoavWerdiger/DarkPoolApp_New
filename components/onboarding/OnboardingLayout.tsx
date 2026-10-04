@@ -1,5 +1,7 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import {
+  Animated,
+  Easing,
   View,
   Text,
   KeyboardAvoidingView,
@@ -14,14 +16,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { DesignTokens } from '../ui/DesignTokens';
+import { useDesignTokens } from '../ui/DesignTokens';
+import { useTheme } from '../../context/ThemeContext';
 import { APP_LAYOUT } from '../ui/appLayout';
 import {
   appFlowSubtitleStyle,
   appFlowTitleCompactStyle,
   appFlowTitleStyle,
+  APP_TYPE,
 } from '../ui/appType';
-import { DayNavBlurButton, HEADER_BACK_BTN_SIZE } from '../ui/DayNavBlurButton';
+import {
+  DayNavBlurButton,
+  HEADER_BACK_BTN_SIZE,
+  headerExitButtonFill,
+} from '../ui/DayNavBlurButton';
 import { useRegistrationExitOptional } from '../../hooks/useExitRegistration';
 
 export type OnboardingDensity = 'focused' | 'compact';
@@ -52,29 +60,51 @@ interface OnboardingLayoutProps {
   showProgress?: boolean;
 }
 
-/** RTL: שלב 1 מימין — row-reverse ממלא את הסגמנטים מימין לשמאל */
-const ProgressBar = ({ current, total }: { current: number; total: number }) => (
-  <View style={{ paddingHorizontal: 24, paddingTop: 10, paddingBottom: 4 }}>
-    <View style={{ flexDirection: 'row-reverse', gap: 4 }}>
-      {Array.from({ length: total }).map((_, index) => {
-        const filled = index < current;
-        return (
-          <View
-            key={index}
-            style={{
-              flex: 1,
-              height: 3,
-              borderRadius: 1.5,
-              backgroundColor: filled
-                ? DesignTokens.colors.primary.main
-                : 'rgba(255,255,255,0.1)',
-            }}
-          />
-        );
-      })}
+const HP = APP_LAYOUT.screenPaddingHorizontal;
+
+/**
+ * פס התקדמות רציף (במקום סגמנטים/נקודות) — מתמלא מימין לשמאל (RTL),
+ * ומונפש בין שלבים.
+ */
+const ProgressBar = ({ current, total }: { current: number; total: number }) => {
+  const tokens = useDesignTokens();
+  const ratio = total > 0 ? Math.min(1, Math.max(0, current / total)) : 0;
+  const anim = useRef(new Animated.Value(ratio)).current;
+
+  useEffect(() => {
+    Animated.timing(anim, {
+      toValue: ratio,
+      duration: 320,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [anim, ratio]);
+
+  return (
+    <View style={{ paddingHorizontal: HP, paddingTop: 10, paddingBottom: 4 }}>
+      <View
+        style={{
+          height: 4,
+          borderRadius: 2,
+          overflow: 'hidden',
+          backgroundColor: tokens.colors.border.divider,
+          flexDirection: 'row-reverse',
+        }}
+        accessibilityRole="progressbar"
+        accessibilityValue={{ min: 0, max: total, now: current }}
+      >
+        <Animated.View
+          style={{
+            height: '100%',
+            borderRadius: 2,
+            backgroundColor: tokens.colors.primary.main,
+            width: anim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
+          }}
+        />
+      </View>
     </View>
-  </View>
-);
+  );
+};
 
 const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
   children,
@@ -94,6 +124,11 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
   showProgress = true,
 }) => {
   const navigation = useNavigation<any>();
+  const tokens = useDesignTokens();
+  const { isDarkMode } = useTheme();
+  const navButtonStyle = {
+    backgroundColor: headerExitButtonFill(tokens.colors.background.cardSolid),
+  };
   const exitFromContext = useRegistrationExitOptional();
   const resolvedClose = onClose ?? exitFromContext ?? undefined;
   const shouldShowClose = (showClose ?? !!resolvedClose) && !!resolvedClose;
@@ -162,19 +197,21 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
         style={{ flex: 1 }}
       >
         <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-          <LinearGradient
-            colors={['rgba(0,0,0,0.28)', 'transparent', 'rgba(0,0,0,0.22)']}
-            start={{ x: 1, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            pointerEvents="none"
-            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-          />
+          {isDarkMode ? (
+            <LinearGradient
+              colors={['rgba(0,0,0,0.28)', 'transparent', 'rgba(0,0,0,0.22)']}
+              start={{ x: 1, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              pointerEvents="none"
+              style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+            />
+          ) : null}
 
           <SafeAreaView style={{ flex: 1 }}>
             {hasTopBar ? (
               <View
                 style={{
-                  paddingHorizontal: 24,
+                  paddingHorizontal: HP,
                   paddingTop: 6,
                   flexDirection: 'row',
                   alignItems: 'center',
@@ -187,13 +224,14 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
                       void resolvedClose?.();
                     }}
                     size={HEADER_BACK_BTN_SIZE}
-                    glassIntensity="subtle"
+                    glass={false}
+                    style={navButtonStyle}
                     accessibilityLabel="יציאה מהרישום"
                   >
                     <Ionicons
                       name="close"
                       size={22}
-                      color={DesignTokens.colors.text.primary}
+                      color={tokens.colors.text.primary}
                     />
                   </DayNavBlurButton>
                 ) : (
@@ -203,13 +241,14 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
                   <DayNavBlurButton
                     onPress={onBack}
                     size={HEADER_BACK_BTN_SIZE}
-                    glassIntensity="subtle"
+                    glass={false}
+                    style={navButtonStyle}
                     accessibilityLabel="חזרה"
                   >
                     <Ionicons
                       name="chevron-forward"
                       size={22}
-                      color={DesignTokens.colors.text.primary}
+                      color={tokens.colors.text.primary}
                     />
                   </DayNavBlurButton>
                 ) : (
@@ -226,7 +265,7 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
               <Content {...contentProps}>
                 <View
                   style={{
-                    paddingHorizontal: 24,
+                    paddingHorizontal: HP,
                     paddingTop: hasTopBar ? (isFocused ? 20 : 14) : isFocused ? 28 : 20,
                     paddingBottom: footer ? 12 : 24,
                     flex: scrollable ? undefined : 1,
@@ -241,7 +280,12 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
                       }}
                     >
                       {title ? (
-                        <Text style={isFocused ? appFlowTitleStyle : appFlowTitleCompactStyle}>
+                        <Text
+                          style={[
+                            isFocused ? appFlowTitleStyle : appFlowTitleCompactStyle,
+                            { color: tokens.colors.text.primary },
+                          ]}
+                        >
                           {title}
                         </Text>
                       ) : null}
@@ -249,6 +293,7 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
                         <Text
                           style={[
                             appFlowSubtitleStyle,
+                            { color: tokens.colors.text.secondary },
                             exitHint ? { marginBottom: 10 } : null,
                           ]}
                         >
@@ -264,9 +309,10 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
                         >
                           <Text
                             style={{
-                              fontSize: 14,
-                              fontWeight: '600',
-                              color: DesignTokens.colors.primary.main,
+                              fontSize: APP_TYPE.cardBody.fontSize,
+                              lineHeight: APP_TYPE.cardBody.lineHeight,
+                              fontWeight: APP_TYPE.cardTitle.fontWeight,
+                              color: tokens.colors.text.primary,
                               textAlign: 'right',
                               writingDirection: 'rtl',
                             }}
@@ -286,7 +332,7 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
             {footer ? (
               <View
                 style={{
-                  paddingHorizontal: 24,
+                  paddingHorizontal: HP,
                   paddingTop: 4,
                   paddingBottom: Platform.OS === 'ios' ? 4 : 10,
                 }}

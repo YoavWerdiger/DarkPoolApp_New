@@ -3,7 +3,7 @@
     "name": "DarkPool",
     "slug": "DarkPool",
     "scheme": "com.darkpool.app",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "sdkVersion": "57.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

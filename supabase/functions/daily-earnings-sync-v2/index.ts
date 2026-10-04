@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { loadMarketCapMap, MIN_EARNINGS_MARKET_CAP_USD, normalizeCapSymbol } from '../_shared/marketCaps.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
 import {
   DEFAULT_EARNINGS_IMPORTANCE,
@@ -1351,8 +1352,29 @@ serve(async (req) => {
     const merged = mergeByKey(rawRecords)
     const { records: revenuePropagated, filled: revenueNearbyFilled } = propagateRevenueNearby(merged, 10)
     // כשהמקור עדיין מחזיר תאריכי אומדן ישנים ליד דיווח עם actual — לא לכתוב אותם מחדש
-    const records = dropEstimatesNearConfirmedActuals(revenuePropagated)
-    const droppedNearConfirmed = revenuePropagated.length - records.length
+    const nearConfirmedKept = dropEstimatesNearConfirmedActuals(revenuePropagated)
+    const droppedNearConfirmed = revenuePropagated.length - nearConfirmedKept.length
+
+    // רק חברות בשווי 1B+ (stock_market_caps). טבלה ריקה/לא זמינה → לא מסננים.
+    const capMap = await loadMarketCapMap(supabase)
+    let droppedBelowCap = 0
+    const records = capMap
+      ? nearConfirmedKept.filter((r) => {
+          const sym = normalizeCapSymbol(String(r.ticker ?? r.code ?? ''))
+          const cap = capMap.get(sym)
+          if (cap != null && cap >= MIN_EARNINGS_MARKET_CAP_USD) {
+            r.market_cap = cap
+            return true
+          }
+          droppedBelowCap++
+          return false
+        })
+      : nearConfirmedKept
+    console.log(
+      capMap
+        ? `[market-cap] kept ${records.length}, dropped ${droppedBelowCap} below $1B / unknown`
+        : '[market-cap] caps table unavailable — no cap filter this run',
+    )
     console.log(
       `Prepared ${records.length} unique records (raw: ${rawRecords.length}, parse: ${allItems.length}, benzinga: ${benzingaRecords.length}, finnhub: ${finnhubRecords.length}, eodhd: ${eodhdRecords.length}, uw_gapfill: ${uwRecords.length}, skipped: ${skipped}, revenue_nearby_filled: ${revenueNearbyFilled}, dropped_near_confirmed: ${droppedNearConfirmed}, uw_filtered_out: ${uwFilteredOut})`,
     )

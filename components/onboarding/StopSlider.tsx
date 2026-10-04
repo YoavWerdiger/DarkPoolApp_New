@@ -191,8 +191,8 @@ export function StopSlider({ options, value, onChange, hero }: Props) {
   );
 }
 
-/** יעד הסכום לכל טווח גודל תיק (המונה סופר אליו) */
-const MONEY_TARGETS = [10_000, 50_000, 100_000, 250_000];
+/** הקצה העליון של כל טווח גודל תיק (האחרון פתוח — «+») */
+const MONEY_TARGETS = [10_000, 50_000, 100_000, 100_000];
 
 /**
  * מונה כסף מתגלגל — הסכום סופר בין יעדים בזמן הגרירה (ease-out),
@@ -201,8 +201,9 @@ const MONEY_TARGETS = [10_000, 50_000, 100_000, 250_000];
 function MoneyCounter({ index, total, color, accent }: { index: number; total: number; color: string; accent: string }) {
   const target = MONEY_TARGETS[Math.min(index, MONEY_TARGETS.length - 1)];
   const isTop = index === total - 1;
-  const [shown, setShown] = useState(target);
-  const fromRef = React.useRef(target);
+  // סופר מ-0 בכניסה למסך, ואחר כך בין קצוות הטווחים
+  const [shown, setShown] = useState(0);
+  const fromRef = React.useRef(0);
   const pulse = useSharedValue(0);
 
   useEffect(() => {
@@ -210,7 +211,7 @@ function MoneyCounter({ index, total, color, accent }: { index: number; total: n
     const to = target;
     if (from === to) return undefined;
     const startT = Date.now();
-    const DUR = 520;
+    const DUR = from === 0 ? 900 : 520;
     let raf = 0;
     const step = () => {
       const t = Math.min(1, (Date.now() - startT) / DUR);

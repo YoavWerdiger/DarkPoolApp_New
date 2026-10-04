@@ -213,6 +213,8 @@ function MoneyCounter({ index, total, color, accent }: { index: number; total: n
     const from = fromRef.current;
     const to = target;
     if (from === to) return undefined;
+    // בטווח העליון — הספירה הרגילה רק מגיעה ל-100K; הטיפוס הלאה מנוהל בנפרד
+    if (isTop && from > to) return undefined;
     const startT = Date.now();
     const DUR = from === 0 ? 900 : 520;
     let raf = 0;
@@ -226,9 +228,11 @@ function MoneyCounter({ index, total, color, accent }: { index: number; total: n
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [target]);
+    // isTop: לטווח העליון ולזה שלפניו אותו יעד (100K) — בלי זה חזרה אחורה לא סופרת למטה
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target, isTop]);
 
-  // מעבר ל«$$$$$»: מ-$100,000 המונה ממשיך לטפס בהאצה (עד מיליונים), ובסוף
+  // מעבר ל«$$$$$»: מ-$100,000 המונה ממשיך לטפס בהאצה (עד 999,999), ובסוף
   // הסכום «מתפוצץ» לסימני דולר עם קפיצה וטיק
   const [dollars, setDollars] = useState(false);
   useEffect(() => {
@@ -239,8 +243,8 @@ function MoneyCounter({ index, total, color, accent }: { index: number; total: n
     }
     let raf = 0;
     const FROM = 100_000;
-    const TO = 9_999_999;
-    const DELAY = 380; // אחרי שהספירה הרגילה הגיעה ל-100K
+    const TO = 999_999;
+    const DELAY = 560; // אחרי שהספירה הרגילה (520ms) הגיעה ל-100K
     const DUR = 700;
     const startT = Date.now() + DELAY;
     const step = () => {
@@ -263,8 +267,7 @@ function MoneyCounter({ index, total, color, accent }: { index: number; total: n
     raf = requestAnimationFrame(step);
     return () => {
       cancelAnimationFrame(raf);
-      // חזרה מהטווח העליון — המונה יורד מ-100K ולא ממיליונים
-      fromRef.current = Math.min(fromRef.current, FROM);
+      // חזרה מהטווח העליון — המונה יורד מהערך שהגיע אליו (עד 999,999)
     };
   }, [isTop, pulse]);
 

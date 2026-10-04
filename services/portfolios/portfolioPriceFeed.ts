@@ -25,7 +25,7 @@ import {
 } from '../../screens/Portfolios/portfolioConstants';
 import { filterSymbolSearchResults, searchCryptoUniverse } from './symbolSearchFilter';
 
-const FINNHUB_API_KEY = 'd1uf6gpr01qpci1cbg00d1uf6gpr01qpci1cbg0g';
+const FINNHUB_API_KEY = process.env.EXPO_PUBLIC_FINNHUB_API_KEY ?? '';
 const FINNHUB_BASE = 'https://finnhub.io/api/v1';
 const YAHOO_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart';
 

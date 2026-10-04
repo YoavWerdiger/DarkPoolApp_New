@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useDesignTokens } from '../components/ui/DesignTokens';
 import RegistrationNameScreen from '../screens/Auth/RegistrationNameScreen';
 import RegistrationPhoneScreen from '../screens/Auth/RegistrationPhoneScreen';
 import RegistrationPhoneVerificationScreen from '../screens/Auth/RegistrationPhoneVerificationScreen';
@@ -108,6 +109,8 @@ const OnboardingNavigator = () => {
     user,
   ]);
 
+  const tokens = useDesignTokens();
+
   return (
     <RegistrationExitProvider>
       <Stack.Navigator
@@ -116,9 +119,11 @@ const OnboardingNavigator = () => {
           animation: 'slide_from_left',
           gestureDirection: 'horizontal',
           gestureEnabled: true,
-          animationDuration: 400,
+          animationDuration: 320,
+          // רקע אטום בצבע הקנבס — עם רקע שקוף שני המסכים נראים זה דרך זה בזמן ההחלקה
+          // (והאורורה מאחור מצוירת מחדש), מה שנראה תקוע
           contentStyle: {
-            backgroundColor: 'transparent',
+            backgroundColor: tokens.colors.background.primary,
           },
         }}
         initialRouteName={initialRoute}

@@ -9,6 +9,7 @@ import {
   formFieldShellStyle,
 } from '../ui/formControl';
 import { PasswordVisibilityToggle } from '../ui/PasswordVisibilityToggle';
+import { useFocusAfterTransition } from '../../hooks/useFocusAfterTransition';
 import { appCaptionStyle, appFormFieldHelperStyle } from '../ui/appType';
 import { APP_LAYOUT } from '../ui/appLayout';
 
@@ -34,9 +35,12 @@ const OnboardingInput: React.FC<OnboardingInputProps> = ({
   onFocus,
   onBlur,
   secureTextEntry,
+  autoFocus,
   ...textInputProps
 }) => {
   const tokens = useDesignTokens();
+  // autoFocus מושהה עד סוף מעבר המסך (מקלדת + החלקה יחד = גמגום)
+  const inputRef = useFocusAfterTransition(!!autoFocus);
   const [focused, setFocused] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
   const hasError = !!error;
@@ -59,6 +63,7 @@ const OnboardingInput: React.FC<OnboardingInputProps> = ({
           />
         ) : null}
         <TextInput
+          ref={inputRef}
           style={[
             formFieldInputStyle(tokens),
             {

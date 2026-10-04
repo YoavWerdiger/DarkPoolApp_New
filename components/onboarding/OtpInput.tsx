@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { View, TextInput, StyleSheet, Pressable } from 'react-native';
+import { useFocusAfterTransition } from '../../hooks/useFocusAfterTransition';
 import { DesignTokens, useDesignTokens } from '../ui/DesignTokens';
 
 interface OtpInputProps {
@@ -25,6 +26,8 @@ const OtpInput: React.FC<OtpInputProps> = ({
 }) => {
   const tokens = useDesignTokens();
   const inputRefs = useRef<Array<TextInput | null>>([null, null, null, null, null, null]);
+  // autoFocus מושהה עד סוף מעבר המסך
+  const firstRef = useFocusAfterTransition(autoFocus);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(autoFocus ? 0 : null);
 
   // ערך מסודר ל-6 תיבות
@@ -103,9 +106,6 @@ const OtpInput: React.FC<OtpInputProps> = ({
             ]}
           >
             <TextInput
-              ref={(ref) => {
-                inputRefs.current[index] = ref;
-              }}
               style={styles.input}
               value={digit}
               onChangeText={(text) => handleChange(text, index)}
@@ -114,7 +114,10 @@ const OtpInput: React.FC<OtpInputProps> = ({
               onBlur={() => setFocusedIndex(null)}
               keyboardType="number-pad"
               maxLength={6} // תמיכה ב-paste של כמה ספרות
-              autoFocus={autoFocus && index === 0}
+              ref={(r) => {
+                inputRefs.current[index] = r;
+                if (index === 0) firstRef.current = r;
+              }}
               selectTextOnFocus
               autoComplete="sms-otp"
               textContentType="oneTimeCode"

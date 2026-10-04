@@ -85,7 +85,7 @@ const OnboardingChoiceRow: React.FC<OnboardingChoiceRowProps> = ({
   const hasLeading = !!icon || !!logo || level != null;
 
   return (
-    <Animated.View entering={FadeInDown.delay(120 + index * STAGGER_MS).duration(360)}>
+    <Animated.View entering={FadeInDown.delay(300 + index * STAGGER_MS).duration(360)}>
       <Pressable
         onPress={handlePress}
         onPressIn={() => {

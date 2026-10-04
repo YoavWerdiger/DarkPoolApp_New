@@ -294,7 +294,7 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
                 >
                   {hasHeader ? (
                     <Reanimated.View
-                      entering={FadeInDown.duration(380)}
+                      entering={FadeInDown.delay(220).duration(380)}
                       style={{
                         marginBottom: APP_LAYOUT.sectionGap / 2 + 4,
                         width: '100%',

@@ -296,7 +296,7 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
       title="יומן מסחר"
       onMenuPress={embedded.onMenuPress}
       inRtlTree
-      centerAccessory={
+      section={
         <PortfolioSwitcher
           portfolios={embedded.portfolios}
           selectedId={embedded.portfolioId}

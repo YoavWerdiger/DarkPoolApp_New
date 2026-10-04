@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import { Picker } from '@react-native-picker/picker';
 import {
   Animated,
+  Platform,
   StyleSheet,
   Text,
   View,
@@ -27,7 +29,31 @@ type Props = {
  * השכנים קטנים ודהויים, רטט קל בכל מעבר ערך.
  * Animated של RN + ScrollView רגיל — גלילה יציבה גם בתוך OnboardingLayout.
  */
-export function WheelPicker({ values, value, onChange }: Props) {
+export function WheelPicker(props: Props) {
+  // iOS: גלגל נייטיבי (UIPickerView) — גלילה, אינרציה ורטט של המערכת
+  return Platform.OS === 'ios' ? <NativeWheel {...props} /> : <ScrollWheel {...props} />;
+}
+
+function NativeWheel({ values, value, onChange }: Props) {
+  const tokens = useDesignTokens();
+  return (
+    <Picker
+      selectedValue={value}
+      onValueChange={(v) => {
+        void HapticFeedback.selection();
+        onChange(Number(v));
+      }}
+      itemStyle={[styles.nativeItem, { color: tokens.colors.text.primary }]}
+      style={styles.native}
+    >
+      {values.map((v) => (
+        <Picker.Item key={v} label={String(v)} value={v} />
+      ))}
+    </Picker>
+  );
+}
+
+function ScrollWheel({ values, value, onChange }: Props) {
   const tokens = useDesignTokens();
   const initialIndex = useMemo(() => Math.max(0, values.indexOf(value)), []); // eslint-disable-line react-hooks/exhaustive-deps
   const scrollY = useRef(new Animated.Value(initialIndex * ITEM_H)).current;
@@ -120,6 +146,14 @@ export function WheelPicker({ values, value, onChange }: Props) {
 }
 
 const styles = StyleSheet.create({
+  native: {
+    height: ITEM_H * VISIBLE,
+  },
+  nativeItem: {
+    height: ITEM_H * VISIBLE,
+    fontSize: 40,
+    fontWeight: '700',
+  },
   wrap: {
     height: ITEM_H * VISIBLE,
     justifyContent: 'center',

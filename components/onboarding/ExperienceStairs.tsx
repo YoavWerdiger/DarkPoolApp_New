@@ -6,12 +6,11 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withDelay,
-  withRepeat,
   withSequence,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { APP_LAYOUT } from '../ui/appLayout';
 import { APP_TYPE } from '../ui/appType';
@@ -23,7 +22,6 @@ const STEP_H = 74;
 const MARKER = 40;
 /** מרווח בין ראש המדרגה לדגל */
 const FLAG_GAP = 10;
-const TAP_ICON = 30;
 const SPRING = { damping: 22, stiffness: 150, mass: 0.8, overshootClamping: true };
 
 type Option = { label: string; value: string; description?: string };
@@ -146,25 +144,11 @@ export function ExperienceStairs({ options, value, onChange }: Props) {
   }));
 
   const pick = (i: number) => {
-    setTapped(true);
     if (i === index) return;
     void HapticFeedback.selection();
     setIndex(i);
     onChange(options[i].value);
   };
-
-  const [tapped, setTapped] = useState(false);
-  const tap = useSharedValue(0);
-  useEffect(() => {
-    tap.value = withRepeat(
-      withSequence(withTiming(1, { duration: 520 }), withTiming(0, { duration: 520 })),
-      -1,
-    );
-  }, [tap]);
-  const tapStyle = useAnimatedStyle(() => ({
-    opacity: 0.55 + tap.value * 0.45,
-    transform: [{ scale: 1 - tap.value * 0.12 }, { translateY: tap.value * 3 }],
-  }));
 
   const current = options[index];
 
@@ -198,24 +182,6 @@ export function ExperienceStairs({ options, value, onChange }: Props) {
               );
             })
           : null}
-
-        {/* רמז: אצבע לוחצת פועמת על המדרגה הבאה — נעלמת אחרי הלחיצה הראשונה */}
-        {stepW > 0 && !tapped && index < count - 1 ? (
-          <Animated.View
-            pointerEvents="none"
-            entering={FadeIn.delay(900).duration(300)}
-            style={[
-              styles.tapHint,
-              {
-                right: stepPos(index + 1).right + stepW / 2 - TAP_ICON / 2,
-                bottom: stepPos(index + 1).bottom + STEP_H / 2 - TAP_ICON / 2,
-              },
-              tapStyle,
-            ]}
-          >
-            <MaterialCommunityIcons name="gesture-tap" size={TAP_ICON} color={tokens.colors.text.secondary} />
-          </Animated.View>
-        ) : null}
 
         {stepW > 0 ? (
           <Animated.View pointerEvents="none" style={[styles.marker, markerStyle]}>
@@ -277,11 +243,6 @@ const styles = StyleSheet.create({
     fontWeight: APP_TYPE.caption.fontWeight,
     textAlign: 'center',
     writingDirection: 'rtl',
-  },
-  tapHint: {
-    position: 'absolute',
-    width: TAP_ICON,
-    height: TAP_ICON,
   },
   hintRow: {
     flexDirection: 'row-reverse',

@@ -3,6 +3,7 @@ import RegistrationIntroQuestionScreen, {
   type IntroQuestionConfig,
 } from './RegistrationIntroQuestionScreen';
 import RegistrationAgeInputScreen from './RegistrationAgeInputScreen';
+import { BRANDFETCH_CLIENT_ID } from '../../config/publicEnv';
 import {
   EXPERIENCE_LEVEL_OPTIONS,
   TRADING_FOCUS_OPTIONS,
@@ -19,6 +20,23 @@ function withIcons<T extends string>(
 ) {
   return options.map((o) => ({ ...o, icon: icons[o.value] }));
 }
+
+/** לוגואים של ברוקרים — Brandfetch לפי דומיין; קולמקס מה-assets */
+const brandLogo = (domain: string) =>
+  BRANDFETCH_CLIENT_ID
+    ? `https://cdn.brandfetch.io/domain/${domain}/icon?c=${BRANDFETCH_CLIENT_ID}&theme=light`
+    : undefined;
+const PLATFORM_LOGOS: Record<string, string | number | undefined> = {
+  interactive_brokers: brandLogo('interactivebrokers.com'),
+  colmex: require('../../assets/colmex-logo.png'),
+};
+
+/** בלי לוגו זמין (Brandfetch מחזיר fallback ל-TradeStation) */
+const PLATFORM_ICONS: Record<string, IconName> = {
+  bank: 'business-outline',
+  tradestation: 'stats-chart-outline',
+  other: 'ellipsis-horizontal',
+};
 
 /** רמת ניסיון — מד 1–4 + הסבר קצר */
 const EXPERIENCE_DETAILS: Record<string, { level: number; description: string }> = {
@@ -59,13 +77,12 @@ const platformConfig: IntroQuestionConfig = {
   stepKey: 'platform',
   title: 'באיזו פלטפורמה אתה סוחר?',
   subtitle: 'אפשר לבחור יותר מאחת',
-  options: withIcons(TRADING_PLATFORM_OPTIONS, {
-    bank: 'business-outline',
-    interactive_brokers: 'globe-outline',
-    tradestation: 'stats-chart-outline',
-    colmex: 'briefcase-outline',
-    other: 'ellipsis-horizontal',
-  }),
+  options: TRADING_PLATFORM_OPTIONS.map((o) => ({
+    ...o,
+    ...(PLATFORM_LOGOS[o.value]
+      ? { logo: PLATFORM_LOGOS[o.value] }
+      : { icon: (PLATFORM_ICONS[o.value] ?? 'ellipsis-horizontal') as IconName }),
+  })),
   nextRoute: 'RegistrationPortfolio',
   multiple: true,
 };

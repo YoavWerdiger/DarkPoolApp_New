@@ -40,6 +40,7 @@ export type IntroQuestionConfig = {
     icon?: React.ComponentProps<typeof import('@expo/vector-icons').Ionicons>['name'];
     level?: number;
     description?: string;
+    logo?: string | number;
   }[];
   nextRoute: string;
   /** Optional questions stay continuable without a selection */
@@ -158,6 +159,7 @@ const RegistrationIntroQuestionScreen = ({ navigation, config }: Props) => {
                 key={opt.value}
                 index={i}
                 icon={opt.icon}
+                logo={opt.logo}
                 level={opt.level}
                 description={opt.description}
                 label={opt.label}

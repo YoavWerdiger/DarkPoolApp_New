@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, type ImageSourcePropType } from 'react-native';
+import { Image } from 'expo-image';
 import Animated, {
   FadeInDown,
   useAnimatedStyle,
@@ -28,6 +29,8 @@ interface OnboardingChoiceRowProps {
   multiple?: boolean;
   /** אייקון קו (Ionicons) בריבוע מימין */
   icon?: keyof typeof Ionicons.glyphMap;
+  /** לוגו מותג (ברוקר) במקום אייקון */
+  logo?: ImageSourcePropType | string;
   /** מד רמה 1–4 (עמודות) במקום אייקון — לשאלת ניסיון */
   level?: number;
   /** שורת הסבר משנית מתחת לתווית */
@@ -47,6 +50,7 @@ const OnboardingChoiceRow: React.FC<OnboardingChoiceRowProps> = ({
   allowDeselect = false,
   multiple = false,
   icon,
+  logo,
   level,
   description,
   index = 0,
@@ -78,7 +82,7 @@ const OnboardingChoiceRow: React.FC<OnboardingChoiceRowProps> = ({
   const labelColor = selected ? tokens.colors.text.inverse : tokens.colors.text.primary;
   const subColor = selected ? tokens.colors.text.inverse : tokens.colors.text.secondary;
   const glyphColor = selected ? tokens.colors.text.inverse : tokens.colors.text.primary;
-  const hasLeading = !!icon || level != null;
+  const hasLeading = !!icon || !!logo || level != null;
 
   return (
     <Animated.View entering={FadeInDown.delay(120 + index * STAGGER_MS).duration(360)}>
@@ -122,7 +126,15 @@ const OnboardingChoiceRow: React.FC<OnboardingChoiceRowProps> = ({
                 },
               ]}
             >
-              {level != null ? (
+              {logo ? (
+                <Image
+                  source={typeof logo === 'string' ? { uri: logo } : logo}
+                  style={styles.logo}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                  transition={120}
+                />
+              ) : level != null ? (
                 <LevelBars level={level} color={glyphColor} />
               ) : icon ? (
                 <Ionicons name={icon} size={21} color={glyphColor} />
@@ -198,6 +210,11 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  logo: {
+    width: ICON_TILE,
+    height: ICON_TILE,
+    borderRadius: 14,
   },
   bars: {
     flexDirection: 'row',

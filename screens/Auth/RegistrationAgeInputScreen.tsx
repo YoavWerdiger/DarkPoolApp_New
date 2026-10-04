@@ -1,5 +1,10 @@
 import React, { useLayoutEffect, useState } from 'react';
-import { Text, View, TextInput, StyleSheet } from 'react-native';
+import { Text, View, StyleSheet } from 'react-native';
+import { WheelPicker } from '../../components/onboarding/WheelPicker';
+import { appCaptionStyle } from '../../components/ui/appType';
+
+const AGES = Array.from({ length: 100 - 16 + 1 }, (_, i) => 16 + i);
+const DEFAULT_AGE = 28;
 import { useRegistration } from '../../context/RegistrationContext';
 import CashAppScreen from '../../components/ui/CashAppScreen';
 import CashAppButton from '../../components/ui/CashAppButton';
@@ -23,7 +28,7 @@ const RegistrationAgeInputScreen = ({ navigation }: Props) => {
   const { data, setData } = useRegistration();
   const exitRegistration = useRegistrationExitOptional();
   const tokens = useDesignTokens();
-  const existingAge = data.age ? String(data.age) : '';
+  const existingAge = data.age ? String(data.age) : String(DEFAULT_AGE);
   const [value, setValue] = useState(existingAge);
   const [error, setError] = useState('');
   const isGoogleFlow = data.isGoogleSignUp || !!data.googleUserId;
@@ -97,7 +102,9 @@ const RegistrationAgeInputScreen = ({ navigation }: Props) => {
       footer={
         <View>
           {error ? (
-            <Text style={styles.errorText}>{error}</Text>
+            <Text style={[appCaptionStyle, styles.errorText, { color: tokens.colors.danger.main }]}>
+              {error}
+            </Text>
           ) : null}
           <CashAppButton
             title="המשך"
@@ -110,34 +117,12 @@ const RegistrationAgeInputScreen = ({ navigation }: Props) => {
       }
     >
       <View style={styles.container}>
-        <View
-          style={{
-            backgroundColor: tokens.colors.background.input,
-            borderRadius: tokens.borderRadius.full,
-            borderWidth: 1,
-            borderColor: error ? '#F85149' : tokens.colors.border.strong,
-            paddingHorizontal: 36,
-            paddingVertical: 12,
-            alignItems: 'center',
-            minWidth: 180,
-          }}
-        >
-          <TextInput
-            style={[
-              styles.input,
-              { color: tokens.colors.text.primary }
-            ]}
-            value={value}
-            onChangeText={handleChangeText}
-            keyboardType="number-pad"
-            placeholder="28"
-            placeholderTextColor={tokens.colors.text.muted}
-            maxLength={3}
-            autoFocus
-            textAlign="center"
-            selectionColor={tokens.colors.primary.main}
-          />
-        </View>
+        <WheelPicker
+          values={AGES}
+          value={parseInt(value, 10) || DEFAULT_AGE}
+          onChange={(v) => handleChangeText(String(v))}
+          suffix="שנים"
+        />
       </View>
       <View style={{ flex: 1 }} />
     </CashAppScreen>
@@ -146,22 +131,13 @@ const RegistrationAgeInputScreen = ({ navigation }: Props) => {
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: 'center',
+    alignItems: 'stretch',
     justifyContent: 'center',
-    paddingTop: 40,
-  },
-  input: {
-    fontSize: 80,
-    fontWeight: '700',
-    textAlign: 'center',
-    letterSpacing: -2,
+    paddingTop: 12,
   },
   errorText: {
-    color: '#F85149',
-    fontSize: 15,
     textAlign: 'center',
     marginBottom: 12,
-    fontWeight: '600',
     writingDirection: 'rtl',
   },
 });

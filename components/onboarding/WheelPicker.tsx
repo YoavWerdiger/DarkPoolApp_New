@@ -137,15 +137,16 @@ function WheelItem({
   const style = useAnimatedStyle(() => {
     const d = index - offset.value / ITEM_H; // מרחק מהמרכז ביחידות שורה
     const abs = Math.abs(d);
-    // מיקום על גליל: sin לגובה, rotateX לסיבוב — כמו UIPickerView
+    // גליל בדו-ממד: sin למיקום, cos לכיווץ אנכי. בלי rotateX/perspective —
+    // שכבה מסובבת ב-3D ב-iOS נחתכת מול פס הבחירה שמאחוריה (הספרה «נבלעת» בנחיתה)
     const angle = Math.max(-80, Math.min(80, d * STEP_DEG));
     const rad = (angle * Math.PI) / 180;
     return {
       opacity: interpolate(abs, [0, 1, 2, 3.2], [1, 0.5, 0.2, 0], Extrapolation.CLAMP),
       transform: [
-        { perspective: 700 },
         { translateY: HALF * ITEM_H + Math.sin(rad) * RADIUS },
-        { rotateX: `${-angle}deg` },
+        { scaleY: Math.max(0.2, Math.cos(rad)) },
+        { scaleX: interpolate(abs, [0, 2], [1, 0.86], Extrapolation.CLAMP) },
       ],
     };
   });

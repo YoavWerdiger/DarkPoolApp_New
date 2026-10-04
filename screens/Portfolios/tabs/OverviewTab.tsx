@@ -526,10 +526,13 @@ export default function OverviewTab({
         deltaRow: {
           marginTop: APP_LAYOUT.titleSubtitleGap,
           marginBottom: APP_LAYOUT.cardTitleToBodyGap,
-          alignSelf: 'flex-end',
+          // קצה ימין פיזי — alignSelf:flex-end מתהפך לשמאל בתוך עץ RTL
+          alignSelf: 'stretch',
           direction: 'ltr',
           flexDirection: 'row',
+          justifyContent: 'flex-end',
           alignItems: 'center',
+          textAlign: 'right',
           gap: 6,
         },
         deltaFigure: {

@@ -70,6 +70,7 @@ const OnboardingInput: React.FC<OnboardingInputProps> = ({
               paddingHorizontal: 0,
               paddingVertical: multiline ? 4 : 15,
               minHeight: multiline ? 80 : undefined,
+              lineHeight: multiline ? 22 : undefined,
               textAlignVertical: multiline ? 'top' : 'center',
             },
           ]}

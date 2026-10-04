@@ -73,7 +73,8 @@ export function formFieldInputStyle(tokens?: Tokens): TextStyle {
     color: tokens?.colors.text.primary ?? SoftUI.textPrimary,
     fontSize: APP_TYPE.body.fontSize,
     fontWeight: APP_TYPE.body.fontWeight,
-    lineHeight: APP_TYPE.body.lineHeight,
+    // בלי lineHeight: ב-iOS TextInput חד-שורתי עם lineHeight דוחף את הטקסט למטה («שוקע»).
+    // שדות multiline מוסיפים lineHeight בעצמם.
     textAlign: 'right',
     writingDirection: 'rtl',
   };

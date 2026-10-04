@@ -1975,8 +1975,25 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     );
 
     if (!error) {
-      // הסרת ההודעה מה-state המקומי - גם במחיקה אישית וגם במחיקה לכולם
-      setMessages(prev => prev.filter(m => m.id !== messageId));
+      if (deleteForEveryone) {
+        // מחיקה לכולם — נשארת במקום כ«מחקת את ההודעה» (כמו וואטסאפ)
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === messageId
+              ? {
+                  ...m,
+                  is_deleted: true,
+                  deleted_for_everyone: true,
+                  content: null,
+                  media_url: null,
+                }
+              : m,
+          ),
+        );
+      } else {
+        // מחיקה אצלי בלבד — נעלמת מהשיחה שלי
+        setMessages((prev) => prev.filter((m) => m.id !== messageId));
+      }
 
       // אם זו מחיקה אישית, נוסיף את ה-ID ל-Set של הודעות שנמחקו אישית
       if (!deleteForEveryone) {

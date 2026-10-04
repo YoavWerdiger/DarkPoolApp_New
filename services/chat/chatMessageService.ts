@@ -442,7 +442,8 @@ export async function getChatMessages(
         )
       `)
       .eq('group_id', groupId)
-      .eq('is_deleted', false);
+      // מחיקה לכולם נשארת בשיחה כ«ההודעה נמחקה» (כמו וואטסאפ)
+      .or('is_deleted.eq.false,deleted_for_everyone.eq.true');
 
     if (filters?.message_type && filters.message_type.length > 0) {
       query = query.in('message_type', filters.message_type);

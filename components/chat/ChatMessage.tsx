@@ -646,23 +646,6 @@ function ChatMessage({
     marginTop: isAfterSenderChange ? CHAT_SENDER_CHANGE_MARGIN : CHAT_BUBBLE_MARGIN,
   };
 
-  // הודעה מחוקה
-  if (message.is_deleted) {
-    return (
-      <View
-        style={[styles.messageContainer, isMe ? styles.myMessage : styles.theirMessage, senderGapStyle]}
-        accessibilityRole="text"
-        accessibilityLabel="Deleted message"
-      >
-        <View style={[styles.bubble, isMe ? styles.myBubble : styles.theirBubble, styles.deletedBubble]}>
-          <Text style={[styles.messageText, styles.deletedText]}>
-            🚫 הודעה זו נמחקה
-          </Text>
-        </View>
-      </View>
-    );
-  }
-
   const timeText = format(new Date(message.created_at), 'HH:mm');
 
   const handleProfileOpen = useCallback(() => {
@@ -678,6 +661,28 @@ function ChatMessage({
     }
     handleProfileOpen();
   }, [handleProfileOpen, onAvatarPress]);
+
+  // הודעה שנמחקה לכולם — כמו וואטסאפ. אחרי כל ה-hooks: מחיקה בזמן אמת משנה את
+  // ההודעה במקום, ו-return מוקדם לפני hooks היה שובר את סדר ה-hooks.
+  if (message.is_deleted) {
+    const metaColorStyle = isMe ? styles.myTimeText : styles.theirTimeText;
+    const label = isMe ? 'מחקת את ההודעה' : 'ההודעה נמחקה';
+    return (
+      <View
+        style={[styles.messageContainer, isMe ? styles.myMessage : styles.theirMessage, senderGapStyle]}
+        accessibilityRole="text"
+        accessibilityLabel={label}
+      >
+        <View style={[styles.bubble, isMe ? styles.myBubble : styles.theirBubble]}>
+          <View style={styles.deletedRow}>
+            <Ionicons name="ban-outline" size={15} style={[styles.deletedIcon, metaColorStyle]} />
+            <Text style={[styles.messageText, styles.deletedText, metaColorStyle]}>{label}</Text>
+            <Text style={[styles.timeText, metaColorStyle]}>{timeText}</Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
   // הודעות שלי – תמיד opacity 1 (מונע היעלמות כשמחליפים מ-temp ל-real)
   // בלי scale/zoom בכניסה — קפיצה לריפליי מרנדרת בועות מחדש והזום נראה מיותר
   const effectiveOpacity = isMe ? 1 : fadeAnim;
@@ -2362,8 +2367,14 @@ const createStyles = (tokens: any) => {
     shadowRadius: isDarkMode ? 3 : 0,
     elevation: isDarkMode ? 2 : 0,
   },
-  deletedBubble: {
-    opacity: 0.6,
+  deletedRow: {
+    direction: 'rtl',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  deletedIcon: {
+    opacity: 0.85,
   },
 
   forwardedTag: {
@@ -2705,7 +2716,7 @@ const createStyles = (tokens: any) => {
   },
   deletedText: {
     fontStyle: 'italic',
-    opacity: 0.6,
+    writingDirection: 'rtl',
   },
 
   metadata: {

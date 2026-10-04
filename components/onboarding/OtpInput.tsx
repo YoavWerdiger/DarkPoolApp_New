@@ -5,7 +5,6 @@ import Animated, {
   useSharedValue,
   withRepeat,
   withSequence,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { useFocusAfterTransition } from '../../hooks/useFocusAfterTransition';
@@ -118,7 +117,7 @@ function OtpBox({
   const pop = useSharedValue(1);
   useEffect(() => {
     if (!digit) return;
-    pop.value = withSequence(withTiming(1.08, { duration: 80 }), withSpring(1, { damping: 12, stiffness: 300 }));
+    pop.value = withSequence(withTiming(1.02, { duration: 70 }), withTiming(1, { duration: 120 }));
   }, [digit, pop]);
   const popStyle = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }] }));
 

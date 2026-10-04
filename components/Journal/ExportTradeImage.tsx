@@ -27,8 +27,6 @@ import BottomSheet from '../ui/BottomSheet/BottomSheet';
 import { useBottomSheetClose } from '../ui/BottomSheet/BottomSheet';
 import {
   SHEET_BACKDROP_OPACITY,
-  SHEET_GLASS_INTENSITY,
-  SHEET_GLASS_OVERLAY,
   sheetContentBottomPadding,
 } from '../ui/BottomSheet/sheetGlass';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
@@ -310,9 +308,8 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
       showHandle
       enablePanDownToClose
       useModal
-      topCornerRadius={28}
-      glassIntensity={SHEET_GLASS_INTENSITY}
-      glassOverlayColor={SHEET_GLASS_OVERLAY}
+      backgroundColor={DesignTokens.colors.background.primary}
+      topCornerRadius={DesignTokens.borderRadius.xl}
       backdropOpacity={SHEET_BACKDROP_OPACITY}
       showBrandBackground={false}
       showBrandWatermark={false}
@@ -541,7 +538,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       paddingHorizontal: 16,
       paddingBottom: 12,
       borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: 'rgba(255,255,255,0.12)',
+      borderBottomColor: tokens.colors.border.divider,
       gap: 10,
     },
     headerIconButton: {
@@ -807,7 +804,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       paddingHorizontal: 16,
       paddingTop: 14,
       borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: 'rgba(255,255,255,0.12)',
+      borderTopColor: tokens.colors.border.divider,
       backgroundColor: 'transparent',
     },
     exportButton: {

@@ -16,8 +16,9 @@ import { APP_LAYOUT } from '../ui/appLayout';
 import { APP_TYPE } from '../ui/appType';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 
-const AREA_H = 300;
-const STEP_H = 44;
+const AREA_H = 316;
+/** גובה המדרגה הנמוכה — מספיק למספר + שם בשתי שורות */
+const STEP_H = 74;
 const MARKER = 40;
 /** מרווח בין ראש המדרגה לדגל */
 const FLAG_GAP = 10;
@@ -234,11 +235,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'flex-start',
-    paddingTop: 8,
-    paddingHorizontal: 4,
-    gap: 2,
+    paddingTop: 10,
+    paddingHorizontal: 6,
+    gap: 4,
   },
   stepLabel: {
+    alignSelf: 'stretch',
     fontSize: APP_TYPE.caption.fontSize,
     lineHeight: APP_TYPE.caption.lineHeight,
     fontWeight: APP_TYPE.caption.fontWeight,
@@ -259,7 +261,9 @@ const styles = StyleSheet.create({
   },
   stepNum: {
     fontSize: APP_TYPE.cardTitle.fontSize,
+    lineHeight: APP_TYPE.cardTitle.lineHeight,
     fontWeight: APP_TYPE.cardTitle.fontWeight,
+    textAlign: 'center',
   },
   marker: {
     position: 'absolute',

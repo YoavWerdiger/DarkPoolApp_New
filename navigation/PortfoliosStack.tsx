@@ -9,7 +9,7 @@ import ConnectBrokerScreen from '../screens/Portfolios/ConnectBrokerScreen';
 import SelectBrokerAccountScreen from '../screens/Portfolios/SelectBrokerAccountScreen';
 
 export type PortfoliosStackParamList = {
-  PortfoliosHub: undefined;
+  PortfoliosHub: { selectPortfolioId?: string } | undefined;
   CreatePortfolio: undefined;
   PortfolioDetail: { portfolioId: string };
   AddTransaction: {

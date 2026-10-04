@@ -79,7 +79,7 @@ export default function SelectBrokerAccountScreen() {
             'הסנכרון המלא מול Colmex לא הושלם. פתח את התיק ומשוך לרענון, או חבר מחדש אם הנתונים חסרים.'
           );
         }
-        navigation.replace('PortfolioDetail', { portfolioId: res.portfolioId });
+        navigation.navigate('PortfoliosHub', { selectPortfolioId: res.portfolioId });
       } catch (e) {
         Alert.alert('שגיאה', (e as Error).message ?? 'לא הצלחנו ליצור את התיק');
       } finally {

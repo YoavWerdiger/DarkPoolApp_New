@@ -141,7 +141,7 @@ export default function CreatePortfolioScreen() {
       if (mode === 'import') {
         navigation.replace('ImportTransactions', { portfolioId: portfolio.id });
       } else {
-        navigation.replace('PortfolioDetail', { portfolioId: portfolio.id });
+        navigation.navigate('PortfoliosHub', { selectPortfolioId: portfolio.id });
       }
     } catch (err) {
       Alert.alert('שגיאה', 'לא הצלחנו ליצור את התיק. נסה שוב.');

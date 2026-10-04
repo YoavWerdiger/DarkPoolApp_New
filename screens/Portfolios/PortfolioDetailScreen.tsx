@@ -46,6 +46,8 @@ import { useAuth } from '../../context/AuthContext';
 import { useColmexSync } from '../../hooks/useColmexSync';
 import { DayNavBlurButton, HEADER_BACK_BTN_SIZE } from '../../components/ui/DayNavBlurButton';
 import { DayDividerPill } from '../../components/ui/DayDividerPill';
+import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHeader';
+import { PortfolioSwitcher } from './components/PortfolioSwitcher';
 import {
   JOURNAL_TYPE,
   journalPhysicalRightText,
@@ -55,11 +57,22 @@ import {
 type Nav = NativeStackNavigationProp<PortfoliosStackParamList, 'PortfolioDetail'>;
 type Route = RouteProp<PortfoliosStackParamList, 'PortfolioDetail'>;
 
-export default function PortfolioDetailScreen() {
+/** מצב מוטמע במסך היומן הראשי: כותרת עם תפריט + מחליף תיקים במקום כפתור חזרה */
+export interface PortfolioDetailEmbedded {
+  portfolioId: string;
+  portfolios: Portfolio[];
+  onSelect: (portfolioId: string) => void;
+  onCreate: () => void;
+  onMenuPress: () => void;
+  /** התיק נמחק/לא נמצא — ההורה טוען מחדש את הרשימה */
+  onMissing: () => void;
+}
+
+export default function PortfolioDetailScreen({ embedded }: { embedded?: PortfolioDetailEmbedded } = {}) {
   const tokens = useDesignTokens();
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
-  const { portfolioId } = route.params;
+  const portfolioId = embedded?.portfolioId ?? route.params?.portfolioId ?? '';
   const { user: authUser } = useAuth();
 
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
@@ -122,6 +135,10 @@ export default function PortfolioDetailScreen() {
       const p = await getPortfolio(portfolioId);
       if (!isMounted) return;
       if (!p) {
+        if (embedded) {
+          embedded.onMissing();
+          return;
+        }
         Alert.alert('שגיאה', 'התיק לא נמצא');
         navigation.goBack();
         return;
@@ -151,7 +168,18 @@ export default function PortfolioDetailScreen() {
       }
     }
     return () => { isMounted = false; };
-  }, [portfolioId, navigation]);
+  }, [portfolioId, navigation, embedded?.onMissing]);
+
+  // מעבר תיק במחליף — מציגים טעינה במקום נתוני התיק הקודם
+  const shownPortfolioIdRef = React.useRef(portfolioId);
+  useEffect(() => {
+    if (shownPortfolioIdRef.current === portfolioId) return;
+    shownPortfolioIdRef.current = portfolioId;
+    setLoading(true);
+    setPortfolio(null);
+    setSummary(null);
+    setHoldings([]);
+  }, [portfolioId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -245,15 +273,52 @@ export default function PortfolioDetailScreen() {
     [tokens, mainTabsHeight]
   );
 
+  const moreAction = isOwner ? (
+    <DayNavBlurButton
+      onPress={() => {
+        void HapticFeedback.impactLight();
+        openPortfolioActions();
+      }}
+      size={HEADER_BACK_BTN_SIZE}
+      glassIntensity="light"
+      accessibilityLabel="פעולות תיק"
+    >
+      <Ionicons
+        name="ellipsis-horizontal"
+        size={18}
+        color={tokens.colors.text.primary}
+      />
+    </DayNavBlurButton>
+  ) : undefined;
+
+  const embeddedHeader = embedded ? (
+    <MainDrawerScreenHeader
+      title="יומן מסחר"
+      onMenuPress={embedded.onMenuPress}
+      inRtlTree
+      centerAccessory={
+        <PortfolioSwitcher
+          portfolios={embedded.portfolios}
+          selectedId={embedded.portfolioId}
+          onSelect={embedded.onSelect}
+          onCreate={embedded.onCreate}
+        />
+      }
+      rightAccessory={loading ? undefined : moreAction}
+    />
+  ) : null;
+
   if (loading) {
     return (
       <View style={styles.root}>
         <ChatSessionBackdrop />
         <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-          <PortfolioScreenHeader
-            title="טוען..."
-            onBack={() => navigation.goBack()}
-          />
+          {embeddedHeader ?? (
+            <PortfolioScreenHeader
+              title="טוען..."
+              onBack={() => navigation.goBack()}
+            />
+          )}
           <View style={styles.loading}>
             <ActivityIndicator color={tokens.colors.primary.main} />
           </View>
@@ -266,30 +331,14 @@ export default function PortfolioDetailScreen() {
     <View style={styles.root}>
       <ChatSessionBackdrop />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <PortfolioScreenHeader
-          title={portfolio?.name ?? ''}
-          subtitle={portfolio && !isOwner ? 'צפייה בלבד' : undefined}
-          onBack={() => navigation.goBack()}
-          moreAction={
-            isOwner ? (
-              <DayNavBlurButton
-                onPress={() => {
-                  void HapticFeedback.impactLight();
-                  openPortfolioActions();
-                }}
-                size={HEADER_BACK_BTN_SIZE}
-                glassIntensity="light"
-                accessibilityLabel="פעולות תיק"
-              >
-                <Ionicons
-                  name="ellipsis-horizontal"
-                  size={18}
-                  color={tokens.colors.text.primary}
-                />
-              </DayNavBlurButton>
-            ) : undefined
-          }
-        />
+        {embeddedHeader ?? (
+          <PortfolioScreenHeader
+            title={portfolio?.name ?? ''}
+            subtitle={portfolio && !isOwner ? 'צפייה בלבד' : undefined}
+            onBack={() => navigation.goBack()}
+            moreAction={moreAction}
+          />
+        )}
 
         <ScrollView
           style={{ flex: 1 }}

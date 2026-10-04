@@ -38,6 +38,13 @@ const PLATFORM_ICONS: Record<string, IconName> = {
   other: 'ellipsis-horizontal',
 };
 
+/** טווח החזקה לכל סגנון מסחר */
+const FOCUS_HORIZON: Record<string, string> = {
+  day_trading: 'פוזיציות של דקות עד שעות',
+  swing: 'פוזיציות של ימים עד שבועות',
+  long_term: 'פוזיציות של חודשים עד שנים',
+};
+
 /** רמת ניסיון — מד 1–4 + הסבר קצר */
 const EXPERIENCE_DETAILS: Record<string, { level: number; description: string }> = {
   first_steps: { level: 1, description: 'עוד לא ביצעתי עסקאות בשוק' },
@@ -57,6 +64,7 @@ const experienceConfig: IntroQuestionConfig = {
   subtitle: 'בחר את האפשרות הקרובה ביותר',
   options: EXPERIENCE_LEVEL_OPTIONS_DETAILED,
   nextRoute: 'RegistrationTradingFocus',
+  displayMode: 'sliderLevel',
 };
 
 const focusConfig: IntroQuestionConfig = {
@@ -68,8 +76,9 @@ const focusConfig: IntroQuestionConfig = {
     day_trading: 'flash-outline',
     swing: 'pulse-outline',
     long_term: 'trending-up-outline',
-  }),
+  }).map((o) => ({ ...o, description: FOCUS_HORIZON[o.value] })),
   nextRoute: 'RegistrationPlatform',
+  displayMode: 'sliderIcon',
 };
 
 const platformConfig: IntroQuestionConfig = {

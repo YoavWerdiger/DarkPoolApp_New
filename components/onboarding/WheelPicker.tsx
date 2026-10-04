@@ -17,7 +17,10 @@ import { APP_TYPE } from '../ui/appType';
 import { UI_CARD_RADIUS } from '../ui/appLayout';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 
-const ITEM_H = 64;
+const ITEM_H = 52;
+/** זווית בין שורות על הגליל — נותן את תחושת ה-wheel המעוגל */
+const STEP_DEG = 24;
+const RADIUS = ITEM_H / ((STEP_DEG * Math.PI) / 180);
 const VISIBLE = 5;
 const HALF = Math.floor(VISIBLE / 2);
 /** כמה פריטים לרנדר סביב המרכז — מספיק לגלילה מהירה בלי לרנדר את כל הטווח */
@@ -134,11 +137,15 @@ function WheelItem({
   const style = useAnimatedStyle(() => {
     const d = index - offset.value / ITEM_H; // מרחק מהמרכז ביחידות שורה
     const abs = Math.abs(d);
+    // מיקום על גליל: sin לגובה, rotateX לסיבוב — כמו UIPickerView
+    const angle = Math.max(-80, Math.min(80, d * STEP_DEG));
+    const rad = (angle * Math.PI) / 180;
     return {
-      opacity: interpolate(abs, [0, 1, 2, 3], [1, 0.38, 0.14, 0], Extrapolation.CLAMP),
+      opacity: interpolate(abs, [0, 1, 2, 3.2], [1, 0.5, 0.2, 0], Extrapolation.CLAMP),
       transform: [
-        { translateY: (HALF + d) * ITEM_H },
-        { scale: interpolate(abs, [0, 1, 2], [1, 0.68, 0.52], Extrapolation.CLAMP) },
+        { perspective: 700 },
+        { translateY: HALF * ITEM_H + Math.sin(rad) * RADIUS },
+        { rotateX: `${-angle}deg` },
       ],
     };
   });
@@ -170,8 +177,7 @@ const styles = StyleSheet.create({
     height: ITEM_H,
     lineHeight: ITEM_H,
     textAlign: 'center',
-    // הערך הנבחר בולט — 48 (השכנים מוקטנים ב-scale)
-    fontSize: 48,
+    fontSize: 34,
     fontWeight: APP_TYPE.cardMetricValue.fontWeight,
     fontVariant: ['tabular-nums'],
   },

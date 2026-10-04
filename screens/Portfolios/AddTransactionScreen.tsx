@@ -452,6 +452,8 @@ export default function AddTransactionScreen() {
           flex: 1,
           width: undefined,
           marginTop: 0,
+          // appCardTitleStyle מביא alignSelf: stretch — דורס את המרכוז האנכי של השורה
+          alignSelf: 'center',
           color: tokens.colors.text.primary,
           writingDirection: 'ltr',
           textAlign: 'right',
@@ -462,6 +464,7 @@ export default function AddTransactionScreen() {
           ...journalPhysicalRightText,
           flex: 1,
           width: undefined,
+          alignSelf: 'center',
           color: tokens.colors.text.secondary,
         },
         /** לונג/שורט — שורת half-width כמו DayDividerPill, צבע רק בנבחר */

@@ -49,7 +49,7 @@ export type IntroQuestionConfig = {
   optional?: boolean;
   allowDeselect?: boolean;
   /** Display mode: 'list' (default), 'swipe', או סליידר עם עצירות */
-  displayMode?: 'list' | 'swipe' | 'sliderLevel' | 'sliderIcon' | 'sliderMoney' | 'tiles';
+  displayMode?: 'list' | 'swipe' | 'sliderLevel' | 'sliderIcon' | 'sliderMoney' | 'sliderGauge' | 'tiles';
   /** Multi-select question — the answer is stored as an array of values */
   multiple?: boolean;
 };
@@ -156,14 +156,23 @@ const RegistrationIntroQuestionScreen = ({ navigation, config }: Props) => {
           />
           <View style={{ flex: 1 }} />
         </>
-      ) : displayMode === 'sliderLevel' || displayMode === 'sliderIcon' || displayMode === 'sliderMoney' ? (
+      ) : displayMode === 'sliderLevel' ||
+        displayMode === 'sliderIcon' ||
+        displayMode === 'sliderMoney' ||
+        displayMode === 'sliderGauge' ? (
         <>
           <StopSlider
             options={config.options}
             value={selected[0] ?? ''}
             onChange={handleValueChange}
             hero={
-              displayMode === 'sliderMoney' ? 'money' : displayMode === 'sliderLevel' ? 'level' : 'icon'
+              displayMode === 'sliderMoney'
+                ? 'money'
+                : displayMode === 'sliderGauge'
+                  ? 'gauge'
+                  : displayMode === 'sliderLevel'
+                    ? 'level'
+                    : 'icon'
             }
           />
           <View style={{ flex: 1 }} />

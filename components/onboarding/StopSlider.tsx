@@ -11,6 +11,7 @@ import Animated, {
   ZoomIn,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
+import Svg, { Path } from 'react-native-svg';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { APP_LAYOUT, UI_CARD_RADIUS } from '../ui/appLayout';
 import { APP_TYPE } from '../ui/appType';
@@ -31,8 +32,8 @@ type Props = {
   options: StopOption[];
   value: string;
   onChange: (v: string) => void;
-  /** ויזואל גדול מעל — 'level' = מד עמודות, 'icon' = אייקון, 'money' = מונה כסף מתגלגל */
-  hero: 'level' | 'icon' | 'money';
+  /** ויזואל גדול מעל — 'level' = מד עמודות, 'icon' = אייקון, 'money' = מונה כסף, 'gauge' = מד מהירות */
+  hero: 'level' | 'icon' | 'money' | 'gauge';
 };
 
 /**
@@ -107,7 +108,15 @@ export function StopSlider({ options, value, onChange, hero }: Props) {
     <View style={styles.wrap}>
       {/* ויזואל גדול */}
       <View style={[styles.hero, { backgroundColor: tokens.colors.background.cardSolid }]}>
-        {hero === 'money' ? (
+        {hero === 'gauge' ? (
+          <SpeedGauge
+            index={index}
+            total={count}
+            color={tokens.colors.text.primary}
+            track={tokens.colors.border.divider}
+            accent={tokens.colors.primary.main}
+          />
+        ) : hero === 'money' ? (
           <MoneyCounter
             index={index}
             total={count}
@@ -242,6 +251,85 @@ function MoneyCounter({ index, total, color, accent }: { index: number; total: n
   );
 }
 
+const GAUGE_W = 200;
+const GAUGE_R = 84;
+const GAUGE_STROKE = 12;
+/** זווית המחוג לכל עצירה: הראשונה (ימין, «מהיר») → +70°, האחרונה (שמאל, «איטי») → -70° */
+const gaugeAngle = (i: number, total: number) => (total > 1 ? 70 - (140 * i) / (total - 1) : 0);
+
+/** קשת בין שתי זוויות (0° = למעלה, חיובי = ימינה) סביב (cx,cy) */
+function arcPath(cx: number, cy: number, r: number, fromDeg: number, toDeg: number) {
+  const p = (deg: number) => {
+    const rad = ((deg - 90) * Math.PI) / 180;
+    return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)];
+  };
+  const [x1, y1] = p(fromDeg);
+  const [x2, y2] = p(toDeg);
+  const large = Math.abs(toDeg - fromDeg) > 180 ? 1 : 0;
+  return `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2}`;
+}
+
+/** מד מהירות — מקטעים על חצי עיגול + מחוג מסתובב עם קפיצה */
+function SpeedGauge({
+  index,
+  total,
+  color,
+  track,
+  accent,
+}: {
+  index: number;
+  total: number;
+  color: string;
+  track: string;
+  accent: string;
+}) {
+  const angle = useSharedValue(gaugeAngle(index, total));
+  useEffect(() => {
+    angle.value = withSpring(gaugeAngle(index, total), { damping: 11, stiffness: 140, mass: 0.7 });
+  }, [index, total, angle]);
+  const needleStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${angle.value}deg` }],
+  }));
+
+  const cx = GAUGE_W / 2;
+  const cy = GAUGE_R + GAUGE_STROKE;
+  const span = 180 / total;
+  // מקטע i מכסה זוויות מ-(90 - span*(i+1)) עד (90 - span*i), כשהראשון בצד ימין
+  const segments = Array.from({ length: total }).map((_, i) => {
+    const to = 90 - span * i - 3;
+    const from = 90 - span * (i + 1) + 3;
+    return { i, d: arcPath(cx, cy, GAUGE_R, from, to) };
+  });
+
+  return (
+    <View style={{ width: GAUGE_W, height: cy + 8, alignItems: 'center' }}>
+      <Svg width={GAUGE_W} height={cy + 8}>
+        {segments.map((seg) => (
+          <Path
+            key={seg.i}
+            d={seg.d}
+            stroke={seg.i === index ? (index === 0 ? accent : color) : track}
+            strokeWidth={GAUGE_STROKE}
+            strokeLinecap="round"
+            fill="none"
+          />
+        ))}
+      </Svg>
+      {/* מחוג — מסתובב סביב המרכז התחתון */}
+      <Animated.View
+        style={[
+          styles.needleWrap,
+          { left: cx - 2, top: cy - GAUGE_R + 14, height: (GAUGE_R - 14) * 2 },
+          needleStyle,
+        ]}
+      >
+        <View style={[styles.needle, { backgroundColor: color, height: GAUGE_R - 14 }]} />
+      </Animated.View>
+      <View style={[styles.hub, { left: cx - 9, top: cy - 9, backgroundColor: color }]} />
+    </View>
+  );
+}
+
 /** מד רמה גדול — עמודות עולות שמתמלאות עד הרמה */
 function BigLevel({ level, total, color, accent }: { level: number; total: number; color: string; accent: string }) {
   return (
@@ -302,6 +390,21 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: -0.5,
     fontVariant: ['tabular-nums'],
+  },
+  needleWrap: {
+    position: 'absolute',
+    width: 4,
+    alignItems: 'center',
+  },
+  needle: {
+    width: 4,
+    borderRadius: 2,
+  },
+  hub: {
+    position: 'absolute',
+    width: 18,
+    height: 18,
+    borderRadius: 9,
   },
   bigBars: {
     flexDirection: 'row',

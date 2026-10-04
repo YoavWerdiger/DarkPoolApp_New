@@ -13,7 +13,6 @@ import OnboardingChoiceRow, {
   OnboardingChoiceGroup,
 } from '../../components/onboarding/OnboardingChoiceRow';
 import OnboardingSwipeCards from '../../components/onboarding/OnboardingSwipeCards';
-import { TradingStyleCards } from '../../components/onboarding/TradingStyleCards';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import type { OnboardingStepKey } from '../../constants/onboardingFlow';
 import { ONBOARDING_STEPS, ONBOARDING_TOTAL_STEPS } from '../../constants/onboardingFlow';
@@ -47,8 +46,8 @@ export type IntroQuestionConfig = {
   /** Optional questions stay continuable without a selection */
   optional?: boolean;
   allowDeselect?: boolean;
-  /** Display mode: 'list' (default), 'swipe', or 'tradingStyle' (כרטיסים עם גרף מצויר) */
-  displayMode?: 'list' | 'swipe' | 'tradingStyle';
+  /** Display mode: 'list' (default) or 'swipe' */
+  displayMode?: 'list' | 'swipe';
   /** Multi-select question — the answer is stored as an array of values */
   multiple?: boolean;
 };
@@ -146,16 +145,7 @@ const RegistrationIntroQuestionScreen = ({ navigation, config }: Props) => {
         </View>
       }
     >
-      {displayMode === 'tradingStyle' ? (
-        <>
-          <TradingStyleCards
-            options={config.options}
-            value={selected[0] ?? ''}
-            onChange={handleValueChange}
-          />
-          <View style={{ flex: 1 }} />
-        </>
-      ) : displayMode === 'swipe' ? (
+      {displayMode === 'swipe' ? (
         <OnboardingSwipeCards
           options={config.options}
           currentValue={selected[0] ?? ''}

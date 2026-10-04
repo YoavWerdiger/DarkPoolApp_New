@@ -64,9 +64,12 @@ const focusConfig: IntroQuestionConfig = {
   stepKey: 'tradingFocus',
   title: 'מה סגנון המסחר שלך?',
   subtitle: 'נוכל להציג תוכן רלוונטי יותר',
-  options: TRADING_FOCUS_OPTIONS,
+  options: withIcons(TRADING_FOCUS_OPTIONS, {
+    day_trading: 'flash-outline',
+    swing: 'pulse-outline',
+    long_term: 'trending-up-outline',
+  }),
   nextRoute: 'RegistrationPlatform',
-  displayMode: 'tradingStyle',
 };
 
 const platformConfig: IntroQuestionConfig = {

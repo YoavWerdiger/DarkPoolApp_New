@@ -10,6 +10,7 @@ import BottomSheet, {
   useBottomSheetClose,
   BOTTOM_SHEET_EDGE_HANDLE_HEIGHT,
   SHEET_MOTION_MS,
+  SHEET_OPEN_MS,
 } from '../../components/ui/BottomSheet/BottomSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
@@ -147,9 +148,13 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
   useEffect(() => {
     if (visible && article?.id) {
       const articleId = article.id;
-      LikedArticlesService.getArticleLikeCount(articleId).then(count => {
-        setLikeCount(count);
-      }).catch(() => {});
+      // אחרי העלייה — re-render באמצע האנימציה גורם לגמגום
+      const timer = setTimeout(() => {
+        LikedArticlesService.getArticleLikeCount(articleId).then(count => {
+          setLikeCount(count);
+        }).catch(() => {});
+      }, SHEET_OPEN_MS);
+      return () => clearTimeout(timer);
     } else {
       setLikeCount(0);
     }
@@ -1096,8 +1101,8 @@ export default function BreakingNewsTab({
   }, [loadBreakingNews, loadLikedArticles]);
 
   // בחירת כתבה - פתיחת מודל מפורט
+  // בלי רטט כאן — ה-BottomSheet כבר מרטיט בפתיחה
   const handleArticlePress = useCallback((article: NewsArticle) => {
-    void HapticFeedback.impactLight();
     const index = filteredArticles.findIndex((a) => a.id === article.id);
     setSelectedArticle(article);
     setSelectedArticleIndex(index >= 0 ? index : 0);

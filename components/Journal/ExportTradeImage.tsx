@@ -14,7 +14,11 @@ import { Image } from 'expo-image';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import QRCode from 'react-native-qrcode-svg';
-import { useDesignTokens } from '../ui/DesignTokens';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createDesignTokensForTheme, useDesignTokens } from '../ui/DesignTokens';
+import { ForceDarkTheme } from '../../context/ThemeContext';
+import UIButton from '../ui/UIButton';
+import { SettingsGlassCard, SettingsSwitchRow, SettingsSectionTitle } from '../profile/ProfileSettingsUI';
 import { APP_TYPE } from '../ui/appType';
 import type { Trade as JournalTrade } from '../../screens/Journal/tradeTypes';
 import type { Trade as PortfolioTrade } from '../../screens/Portfolios/portfolioTypes';
@@ -29,7 +33,6 @@ import {
 } from '../ui/BottomSheet/sheetGlass';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
 import UICard from '../ui/UICard';
-import { BrandTransbackWatermark } from '../ui/BrandTransbackWatermark';
 import { brandfetchTickerLogoUri } from '../../utils/brandfetch';
 import { ScreenGradientBackground } from '../VideoBackground';
 import { HapticFeedback } from '../../utils/hapticFeedback';
@@ -63,6 +66,14 @@ interface ExportTradeImageProps {
 /** משפט שיווקי קצר ליד ה־QR — מקצועי, לא זול */
 const SHARE_CTA_LINE = 'הצטרף לקהילת הסוחרים של DarkPool';
 const SHARE_CTA_SUB = 'סרוק להורדת האפליקציה';
+
+/** התמונה תמיד בעיצוב הכהה — גם כשהאפליקציה בלייט */
+const SHARE_CARD_TOKENS = createDesignTokensForTheme(true);
+
+/** מה מוצג בתמונה — נשמר בין שיתופים */
+type ShareOptions = { showPnl: boolean; showReturn: boolean; showPrices: boolean };
+const SHARE_OPTIONS_KEY = 'tradeShare:options';
+const DEFAULT_SHARE_OPTIONS: ShareOptions = { showPnl: true, showReturn: true, showPrices: false };
 
 /** לוגו שור־ודוב / קהילת DarkPool — מעל כרטיסיית הזכוכית */
 const BRAND_LOGO = require('../../assets/darkpool-drawer-logo.png');
@@ -178,8 +189,25 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
   const viewShotRef = useRef<View>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [layoutReady, setLayoutReady] = useState(false);
-  /** גבולות כרטיס הזכוכית בפועל — למרכוז watermark (לא גובה כל כרטיס השיתוף) */
-  const [glassFrame, setGlassFrame] = useState<{ w: number; h: number } | null>(null);
+  const [options, setOptions] = useState<ShareOptions>(DEFAULT_SHARE_OPTIONS);
+
+  useEffect(() => {
+    AsyncStorage.getItem(SHARE_OPTIONS_KEY)
+      .then((raw) => {
+        if (raw) setOptions({ ...DEFAULT_SHARE_OPTIONS, ...JSON.parse(raw) });
+      })
+      .catch(() => {});
+  }, []);
+
+  /** חייב להישאר לפחות רווח או תשואה — אחרת אין מה לשתף */
+  const setOption = useCallback((key: keyof ShareOptions, value: boolean) => {
+    setOptions((prev) => {
+      const next = { ...prev, [key]: value };
+      if (!next.showPnl && !next.showReturn) return prev;
+      AsyncStorage.setItem(SHARE_OPTIONS_KEY, JSON.stringify(next)).catch(() => {});
+      return next;
+    });
+  }, []);
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   /** Footer מנהל את ה-safe-area — BottomSheet עם contentPaddingBottom={0} */
   const footerPadBottom = useMemo(
@@ -199,7 +227,6 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
   useEffect(() => {
     if (visible) {
       setLayoutReady(false);
-      setGlassFrame(null);
     }
   }, [visible, normalized?.id]);
 
@@ -214,15 +241,14 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
     const isOpen = normalized.status === 'OPEN';
     const isProfit = normalized.pnl >= 0;
     const ret = getReturnPercentage(normalized);
+    const T = SHARE_CARD_TOKENS;
     const dirColor =
-      normalized.direction === 'long'
-        ? DesignTokens.colors.primary.main
-        : DesignTokens.colors.text.danger;
-    const pnlColor = isProfit ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger;
-    const retColor = ret >= 0 ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger;
+      normalized.direction === 'long' ? T.colors.primary.main : T.colors.text.danger;
+    const pnlColor = isProfit ? T.colors.primary.main : T.colors.text.danger;
+    const retColor = ret >= 0 ? T.colors.primary.main : T.colors.text.danger;
     const logoUri = brandfetchTickerLogoUri(normalized.symbol);
     return { isOpen, isProfit, ret, dirColor, pnlColor, retColor, logoUri };
-  }, [normalized, DesignTokens]);
+  }, [normalized]);
 
   const handleExport = useCallback(async () => {
     if (!viewShotRef.current || !layoutReady) {
@@ -322,6 +348,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
               style={[styles.shotWrap, { width: cardW }]}
               onLayout={() => setLayoutReady(true)}
             >
+              <ForceDarkTheme>
               <View style={[styles.cardRoot, { width: cardW, minHeight: cardH }]}>
                 <ScreenGradientBackground style={StyleSheet.absoluteFill} animated={false} />
 
@@ -343,30 +370,6 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                     style={styles.pnlHeroCard}
                     contentContainerStyle={styles.pnlHero}
                   >
-                    {/* Watermark לפי גבולות הזכוכית בפועל — לא cardH של כל כרטיס השיתוף */}
-                    <View
-                      pointerEvents="none"
-                      style={StyleSheet.absoluteFill}
-                      onLayout={(e) => {
-                        const { width, height } = e.nativeEvent.layout;
-                        if (!(width > 0 && height > 0)) return;
-                        setGlassFrame((prev) =>
-                          prev &&
-                          Math.abs(prev.w - width) < 0.5 &&
-                          Math.abs(prev.h - height) < 0.5
-                            ? prev
-                            : { w: width, h: height }
-                        );
-                      }}
-                    >
-                      {glassFrame ? (
-                        <BrandTransbackWatermark
-                          frameWidth={glassFrame.w}
-                          frameHeight={glassFrame.h}
-                        />
-                      ) : null}
-                    </View>
-
                     {/* ממורכז: לוגו חברה → טיקר → LONG/SHORT → רווח/הפסד → תשואה */}
                     <View style={styles.symbolBlock}>
                       {logoUri ? (
@@ -383,7 +386,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                           <Text
                             style={[
                               styles.logoFallbackText,
-                              { color: DesignTokens.colors.text.secondary },
+                              { color: SHARE_CARD_TOKENS.colors.text.secondary },
                             ]}
                           >
                             {normalized.symbol.trim().slice(0, 4).toUpperCase()}
@@ -391,7 +394,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                         </View>
                       )}
                       <Text
-                        style={[styles.symbolBig, { color: DesignTokens.colors.text.primary }]}
+                        style={[styles.symbolBig, { color: SHARE_CARD_TOKENS.colors.text.primary }]}
                         numberOfLines={1}
                       >
                         {normalized.symbol}
@@ -409,7 +412,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                             <Text
                               style={[
                                 styles.dirPillText,
-                                { color: DesignTokens.colors.text.secondary },
+                                { color: SHARE_CARD_TOKENS.colors.text.secondary },
                               ]}
                             >
                               OPEN
@@ -419,16 +422,42 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                       </View>
                     </View>
 
-                    <Text style={styles.pnlHeroLabel}>רווח/הפסד:</Text>
-                    <Text style={[styles.pnlHeroValue, { color: pnlColor }]}>
-                      {isProfit ? '+' : '−'}${formatCurrencyPlain(normalized.pnl)}
-                    </Text>
-                    <View style={[styles.retChip, { backgroundColor: `${retColor}22` }]}>
-                      <Text style={[styles.retChipText, { color: retColor }]}>
-                        {ret >= 0 ? '+' : ''}
-                        {ret.toFixed(2)}%
-                      </Text>
-                    </View>
+                    {options.showPnl ? (
+                      <>
+                        <Text style={styles.pnlHeroLabel}>רווח/הפסד:</Text>
+                        <Text style={[styles.pnlHeroValue, { color: pnlColor }]}>
+                          {isProfit ? '+' : '−'}${formatCurrencyPlain(normalized.pnl)}
+                        </Text>
+                        {options.showReturn ? (
+                          <View style={[styles.retChip, { backgroundColor: `${retColor}22` }]}>
+                            <Text style={[styles.retChipText, { color: retColor }]}>
+                              {ret >= 0 ? '+' : ''}
+                              {ret.toFixed(2)}%
+                            </Text>
+                          </View>
+                        ) : null}
+                      </>
+                    ) : (
+                      <>
+                        <Text style={styles.pnlHeroLabel}>תשואה:</Text>
+                        <Text style={[styles.pnlHeroValue, { color: retColor }]}>
+                          {ret >= 0 ? '+' : ''}
+                          {ret.toFixed(2)}%
+                        </Text>
+                      </>
+                    )}
+                    {options.showPrices ? (
+                      <View style={styles.pricesRow}>
+                        <View style={styles.priceCol}>
+                          <Text style={styles.priceLabel}>כניסה</Text>
+                          <Text style={styles.priceValue}>${formatCurrencyPlain(normalized.entry_price)}</Text>
+                        </View>
+                        <View style={styles.priceCol}>
+                          <Text style={styles.priceLabel}>{isOpen ? 'נוכחי' : 'יציאה'}</Text>
+                          <Text style={styles.priceValue}>${formatCurrencyPlain(normalized.exit_price)}</Text>
+                        </View>
+                      </View>
+                    ) : null}
                   </UICard>
 
                   <View style={styles.spacer} />
@@ -453,35 +482,45 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                   </View>
                 </View>
               </View>
+              </ForceDarkTheme>
             </View>
+          </View>
+
+          <View style={styles.optionsBlock}>
+            <SettingsSectionTitle title="מה להציג בתמונה" />
+            <SettingsGlassCard style={{ marginBottom: 0 }}>
+              <SettingsSwitchRow
+                title="רווח/הפסד בדולרים"
+                value={options.showPnl}
+                disabled={options.showPnl && !options.showReturn}
+                onValueChange={(v) => setOption('showPnl', v)}
+              />
+              <SettingsSwitchRow
+                title="תשואה באחוזים"
+                value={options.showReturn}
+                disabled={options.showReturn && !options.showPnl}
+                onValueChange={(v) => setOption('showReturn', v)}
+              />
+              <SettingsSwitchRow
+                title="מחירי כניסה ויציאה"
+                value={options.showPrices}
+                showDivider={false}
+                onValueChange={(v) => setOption('showPrices', v)}
+              />
+            </SettingsGlassCard>
           </View>
         </ScrollView>
 
         <View style={[styles.footer, { paddingBottom: footerPadBottom }]}>
-          <UICard
-            variant="blur"
-            glassIntensity="medium"
-            padding="none"
-            onPress={isExporting || !layoutReady ? undefined : handleExport}
-            style={[
-              styles.exportButton,
-              (isExporting || !layoutReady) && styles.exportButtonDisabled,
-            ]}
-            contentContainerStyle={styles.exportButtonContent}
-            accessibilityLabel="שתף תמונה"
-          >
-            {isExporting ? (
-              <>
-                <ActivityIndicator size="small" color={DesignTokens.colors.primary.main} />
-                <Text style={styles.exportButtonText}>מייצא...</Text>
-              </>
-            ) : (
-              <>
-                <Ionicons name="share-outline" size={20} color={DesignTokens.colors.primary.main} />
-                <Text style={styles.exportButtonText}>שתף תמונה</Text>
-              </>
-            )}
-          </UICard>
+          <UIButton
+            title={isExporting ? 'מייצא…' : 'שתף תמונה'}
+            variant="primary"
+            icon="share-outline"
+            fullWidth
+            loading={isExporting}
+            disabled={isExporting || !layoutReady}
+            onPress={handleExport}
+          />
         </View>
       </View>
     </BottomSheet>
@@ -685,6 +724,37 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       writingDirection: 'ltr',
       textAlign: 'center',
       fontVariant: ['tabular-nums'],
+    },
+    pricesRow: {
+      flexDirection: 'row',
+      alignSelf: 'stretch',
+      justifyContent: 'center',
+      gap: 28,
+      marginTop: 12,
+    },
+    priceCol: {
+      alignItems: 'center',
+      gap: 2,
+    },
+    priceLabel: {
+      fontSize: APP_TYPE.caption.fontSize,
+      fontWeight: APP_TYPE.caption.fontWeight,
+      lineHeight: APP_TYPE.caption.lineHeight,
+      color: 'rgba(255,255,255,0.58)',
+      textAlign: 'center',
+    },
+    priceValue: {
+      fontSize: APP_TYPE.cardBody.fontSize,
+      fontWeight: APP_TYPE.cardTitle.fontWeight,
+      lineHeight: APP_TYPE.cardBody.lineHeight,
+      color: 'rgba(255,255,255,0.92)',
+      writingDirection: 'ltr',
+      textAlign: 'center',
+      fontVariant: ['tabular-nums'],
+    },
+    optionsBlock: {
+      alignSelf: 'stretch',
+      marginTop: tokens.spacing.xl,
     },
     spacer: {
       flexGrow: 1,

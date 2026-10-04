@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { captureRef } from 'react-native-view-shot';
@@ -33,6 +33,32 @@ interface ThemeContextType {
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+
+function buildTheme(isDarkMode: boolean): ThemeContextType['theme'] {
+  return {
+    background: isDarkMode ? SoftUI.canvas : LIGHT_CANVAS,
+    cardBackground: isDarkMode ? SoftUI.surface1 : LIGHT_CARD,
+    textPrimary: isDarkMode ? SoftUI.textPrimary : LIGHT_TEXT_PRIMARY,
+    textSecondary: isDarkMode ? SoftUI.textSecondary : 'rgba(0,0,0,0.65)',
+    textTertiary: isDarkMode ? SoftUI.textMuted : 'rgba(0,0,0,0.45)',
+    border: isDarkMode ? SoftUI.borderSubtle : 'rgba(0,0,0,0.10)',
+    headerBorder: isDarkMode ? SoftUI.borderSubtle : 'rgba(0,0,0,0.08)',
+    switchTrackOff: isDarkMode ? '#252525' : '#E5E5E7',
+    switchThumbOff: isDarkMode ? '#FFFFFF' : '#FFFFFF'
+  };
+}
+
+/**
+ * עוטף תת-עץ בערכה כהה קבועה (למשל תמונת שיתוף) — בלי לשנות את ערכת האפליקציה.
+ */
+export const ForceDarkTheme: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const parent = useTheme();
+  const value = useMemo(
+    () => ({ ...parent, isDarkMode: true, theme: buildTheme(true) }),
+    [parent],
+  );
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+};
 
 export const useTheme = () => {
   const context = useContext(ThemeContext);
@@ -185,17 +211,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     ? `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/backgrounds/1.png`
     : `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/backgrounds/2.png`;
 
-  const theme = {
-    background: isDarkMode ? SoftUI.canvas : LIGHT_CANVAS,
-    cardBackground: isDarkMode ? SoftUI.surface1 : LIGHT_CARD,
-    textPrimary: isDarkMode ? SoftUI.textPrimary : LIGHT_TEXT_PRIMARY,
-    textSecondary: isDarkMode ? SoftUI.textSecondary : 'rgba(0,0,0,0.65)',
-    textTertiary: isDarkMode ? SoftUI.textMuted : 'rgba(0,0,0,0.45)',
-    border: isDarkMode ? SoftUI.borderSubtle : 'rgba(0,0,0,0.10)',
-    headerBorder: isDarkMode ? SoftUI.borderSubtle : 'rgba(0,0,0,0.08)',
-    switchTrackOff: isDarkMode ? '#252525' : '#E5E5E7',
-    switchThumbOff: isDarkMode ? '#FFFFFF' : '#FFFFFF'
-  };
+  const theme = buildTheme(isDarkMode);
 
   return (
     <ThemeContext.Provider value={{ isDarkMode, toggleTheme, backgroundImage, theme }}>

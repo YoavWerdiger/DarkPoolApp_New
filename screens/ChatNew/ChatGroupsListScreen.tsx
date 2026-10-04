@@ -987,7 +987,9 @@ export default function ChatGroupsListScreen() {
       const hasImageError = imageUri ? imageErrorsRef.current.has(imageUri) : false;
 
       const previewBody =
-        item.last_message_preview ||
+        (item.last_message_preview
+          ? getChatMessagePreview(item.last_message?.message_type, item.last_message_preview)
+          : '') ||
         (item.last_message
           ? getChatMessagePreview(item.last_message.message_type, item.last_message.content)
           : '');

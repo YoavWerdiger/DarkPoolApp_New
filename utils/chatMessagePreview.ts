@@ -4,6 +4,7 @@
 // ============================================
 
 import { ChatMessageType } from '../types/chat.types';
+import { parseEntityAttachmentFromContent } from '../types/shareableEntity';
 
 function formatPreviewDuration(seconds: number): string {
   const mins = Math.floor(seconds / 60);
@@ -34,6 +35,12 @@ export function getChatMessagePreview(
       const trade = parsed.trade as { symbol?: string } | undefined;
       if (trade && typeof trade.symbol === 'string' && trade.symbol) {
         return `טרייד · ${trade.symbol}`;
+      }
+      // שיתוף ישות (טרייד/חדשה/פרופיל) — מזוהה גם בלי message_type (last_message_preview מהשרת)
+      const entity = parseEntityAttachmentFromContent(trimmed);
+      if (entity) {
+        const caption = typeof parsed.caption === 'string' ? parsed.caption.trim() : '';
+        return caption || `📎 ${entity.preview.title}`;
       }
       if (isAudioWaveformPayload(parsed)) {
         const dur =

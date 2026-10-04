@@ -7,6 +7,7 @@ import Animated, {
   useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
+  withDelay,
   withSpring,
   ZoomIn,
 } from 'react-native-reanimated';
@@ -31,8 +32,8 @@ type Props = {
   options: StopOption[];
   value: string;
   onChange: (v: string) => void;
-  /** ויזואל גדול מעל — 'level' = מד עמודות, 'icon' = אייקון האופציה */
-  hero: 'level' | 'icon';
+  /** ויזואל גדול מעל — 'level' = מד עמודות, 'icon' = אייקון, 'money' = ערימות מטבעות */
+  hero: 'level' | 'icon' | 'money';
 };
 
 /**
@@ -107,7 +108,9 @@ export function StopSlider({ options, value, onChange, hero }: Props) {
     <View style={styles.wrap}>
       {/* ויזואל גדול */}
       <View style={[styles.hero, { backgroundColor: tokens.colors.background.cardSolid }]}>
-        {hero === 'level' ? (
+        {hero === 'money' ? (
+          <CoinStacks level={index + 1} total={count} />
+        ) : hero === 'level' ? (
           <BigLevel level={index + 1} total={count} color={tokens.colors.text.primary} accent={tokens.colors.primary.main} />
         ) : current?.icon ? (
           <Animated.View key={current.value} entering={ZoomIn.duration(240)}>
@@ -175,6 +178,45 @@ export function StopSlider({ options, value, onChange, hero }: Props) {
   );
 }
 
+const COIN_W = 38;
+const COIN_H = 12;
+const COIN_GAP = 6;
+const COIN_GOLD = '#F5B820';
+const COIN_EDGE = '#C98F0A';
+
+/** ערימות מטבעות — עוד ערימה (וגבוהה יותר) לכל טווח גודל תיק */
+function CoinStacks({ level, total }: { level: number; total: number }) {
+  return (
+    <View style={styles.coinsRow}>
+      {Array.from({ length: total }).map((_, stack) => (
+        <View key={stack} style={styles.coinStack}>
+          {Array.from({ length: (stack + 1) * 2 }).map((__, coin) => (
+            <Coin key={coin} visible={stack < level} delay={stack * 60 + coin * 45} />
+          ))}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function Coin({ visible, delay }: { visible: boolean; delay: number }) {
+  const drop = useSharedValue(visible ? 1 : 0);
+  useEffect(() => {
+    drop.value = visible
+      ? withDelay(delay, withSpring(1, { damping: 11, stiffness: 220, mass: 0.5 }))
+      : withSpring(0, SPRING);
+  }, [visible, delay, drop]);
+  const style = useAnimatedStyle(() => ({
+    opacity: drop.value,
+    transform: [{ translateY: (1 - drop.value) * -40 }],
+  }));
+  return (
+    <Animated.View style={[styles.coin, style]}>
+      <View style={styles.coinTop} />
+    </Animated.View>
+  );
+}
+
 /** מד רמה גדול — עמודות עולות שמתמלאות עד הרמה */
 function BigLevel({ level, total, color, accent }: { level: number; total: number; color: string; accent: string }) {
   return (
@@ -222,6 +264,30 @@ const styles = StyleSheet.create({
     lineHeight: APP_TYPE.cardBody.lineHeight,
     textAlign: 'center',
     writingDirection: 'rtl',
+  },
+  coinsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 10,
+    height: 112,
+  },
+  coinStack: {
+    // column-reverse — המטבע הראשון בתחתית
+    flexDirection: 'column-reverse',
+    alignItems: 'center',
+  },
+  coin: {
+    width: COIN_W,
+    height: COIN_H,
+    marginTop: -COIN_GAP,
+    borderRadius: COIN_H / 2,
+    backgroundColor: COIN_EDGE,
+    justifyContent: 'flex-start',
+  },
+  coinTop: {
+    height: COIN_H - 3,
+    borderRadius: COIN_H / 2,
+    backgroundColor: COIN_GOLD,
   },
   bigBars: {
     flexDirection: 'row',

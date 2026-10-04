@@ -166,6 +166,7 @@ const RegistrationIntroQuestionScreen = ({ navigation, config }: Props) => {
             options={config.options}
             value={selected[0] ?? ''}
             onChange={handleValueChange}
+            control={displayMode === 'sliderRank' ? 'list' : 'slider'}
             hero={
               displayMode === 'sliderMoney'
                 ? 'money'

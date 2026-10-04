@@ -17,6 +17,7 @@ import { useDesignTokens } from '../ui/DesignTokens';
 import { APP_LAYOUT, UI_CARD_RADIUS } from '../ui/appLayout';
 import { APP_TYPE } from '../ui/appType';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import OnboardingChoiceRow from './OnboardingChoiceRow';
 
 const KNOB = 30;
 const TRACK_H = 6;
@@ -35,13 +36,15 @@ type Props = {
   onChange: (v: string) => void;
   /** ויזואל גדול מעל — 'level' = מד עמודות, 'icon' = אייקון, 'money' = מונה כסף, 'gauge' = מד מהירות */
   hero: 'level' | 'icon' | 'money' | 'gauge' | 'rank';
+  /** בקרה מתחת לויזואל — סליידר גרירה (ברירת מחדל) או כרטיסי בחירה */
+  control?: 'slider' | 'list';
 };
 
 /**
  * בחירה בסליידר עם עצירות (במקום רשימה): ויזואל גדול משתנה מעל,
  * גרירה או הקשה על עצירה, רטט בכל מעבר עצירה. RTL — האופציה הראשונה מימין.
  */
-export function StopSlider({ options, value, onChange, hero }: Props) {
+export function StopSlider({ options, value, onChange, hero, control = 'slider' }: Props) {
   const tokens = useDesignTokens();
   const count = options.length;
   const initial = Math.max(0, options.findIndex((o) => o.value === value));
@@ -151,45 +154,66 @@ export function StopSlider({ options, value, onChange, hero }: Props) {
         ) : null}
       </View>
 
-      {/* סליידר */}
-      <GestureDetector gesture={pan}>
-        <View style={styles.trackArea} onLayout={onTrackLayout} collapsable={false}>
-          <View style={[styles.track, { backgroundColor: tokens.colors.border.divider }]} />
-          <Animated.View style={[styles.trackFill, { backgroundColor: tokens.colors.text.primary }, fillStyle]} />
+      {control === 'list' ? (
+        <View style={{ gap: APP_LAYOUT.stackGapSmall }}>
           {options.map((o, i) => (
-            <Pressable
+            <OnboardingChoiceRow
               key={o.value}
-              hitSlop={14}
+              index={i}
+              label={o.label}
+              selected={i === index}
               onPress={() => {
-                pos.value = withSpring(i * step, SPRING);
-                if (i !== index) select(i);
+                // הכרטיס כבר מרטיט בעצמו — בלי select() שמוסיף רטט שני
+                if (i === index) return;
+                setIndex(i);
+                onChange(o.value);
               }}
-              style={[
-                styles.stop,
-                {
-                  right: i * step + KNOB / 2 - 5,
-                  backgroundColor: i <= index ? tokens.colors.text.primary : tokens.colors.text.tertiary,
-                },
-              ]}
             />
           ))}
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              styles.knob,
-              { backgroundColor: tokens.colors.text.primary, borderColor: tokens.colors.background.primary },
-              knobStyle,
-            ]}
-          />
         </View>
-      </GestureDetector>
+      ) : (
+        <>
+        {/* סליידר */}
+        <GestureDetector gesture={pan}>
+          <View style={styles.trackArea} onLayout={onTrackLayout} collapsable={false}>
+            <View style={[styles.track, { backgroundColor: tokens.colors.border.divider }]} />
+            <Animated.View style={[styles.trackFill, { backgroundColor: tokens.colors.text.primary }, fillStyle]} />
+            {options.map((o, i) => (
+              <Pressable
+                key={o.value}
+                hitSlop={14}
+                onPress={() => {
+                  pos.value = withSpring(i * step, SPRING);
+                  if (i !== index) select(i);
+                }}
+                style={[
+                  styles.stop,
+                  {
+                    right: i * step + KNOB / 2 - 5,
+                    backgroundColor: i <= index ? tokens.colors.text.primary : tokens.colors.text.tertiary,
+                  },
+                ]}
+              />
+            ))}
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                styles.knob,
+                { backgroundColor: tokens.colors.text.primary, borderColor: tokens.colors.background.primary },
+                knobStyle,
+              ]}
+            />
+          </View>
+        </GestureDetector>
 
-      <View style={styles.endLabels}>
-        <Text style={[styles.endText, { color: tokens.colors.text.tertiary }]}>{options[0]?.label}</Text>
-        <Text style={[styles.endText, { color: tokens.colors.text.tertiary }]}>
-          {options[count - 1]?.label}
-        </Text>
-      </View>
+        <View style={styles.endLabels}>
+          <Text style={[styles.endText, { color: tokens.colors.text.tertiary }]}>{options[0]?.label}</Text>
+          <Text style={[styles.endText, { color: tokens.colors.text.tertiary }]}>
+            {options[count - 1]?.label}
+          </Text>
+        </View>
+        </>
+      )}
     </View>
   );
 }

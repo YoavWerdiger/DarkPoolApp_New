@@ -20,7 +20,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
   // המרת תוכניות המנוי לפורמט המתאים לתצוגה (ללא אד-אונים ותשלום חד פעמי)
   const getPeriodLabel = (period: string, planId: string) => {
     if (planId === 'yearly') return '12 תשלומים של ₪135';
-    if (planId === 'quarterly') return '3 תשלומים של ₪149';
+    if (planId === 'quarterly') return '3 תשלומים של ₪150';
     switch (period) {
       case 'monthly':   return 'לחודש';
       case 'quarterly': return 'ל-3 חודשים';

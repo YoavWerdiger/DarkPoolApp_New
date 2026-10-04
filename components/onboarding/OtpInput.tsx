@@ -1,156 +1,188 @@
-import React, { useRef, useState } from 'react';
-import { View, TextInput, StyleSheet, Pressable } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { useFocusAfterTransition } from '../../hooks/useFocusAfterTransition';
-import { DesignTokens, useDesignTokens } from '../ui/DesignTokens';
+import { useDesignTokens } from '../ui/DesignTokens';
+import { APP_TYPE } from '../ui/appType';
+import { HapticFeedback } from '../../utils/hapticFeedback';
+
+const LENGTH = 6;
+const BOX_H = 60;
 
 interface OtpInputProps {
-  /** Current OTP value (6 digits string) */
+  /** Current OTP value (up to 6 digits) */
   value: string;
-  /** Called with new complete 6-digit value */
+  /** Called with the cleaned value on every change */
   onChangeText: (text: string) => void;
-  /** Auto-focus first input on mount */
+  /** Focus after the screen transition */
   autoFocus?: boolean;
-  /** Error state (red borders) */
+  /** Error state — red boxes + shake */
   error?: boolean;
 }
 
 /**
- * קומפוננטת OTP עם 6 תיבות נפרדות.
- * auto-focus בין תיבות, תמיכה ב-paste, backspace חכם.
+ * OTP — שדה טקסט אחד (שקוף) שמקבל את כל ההקלדה/הדבקה/השלמת SMS,
+ * ושש תיבות תצוגה מעליו. בלי קפיצת focus בין שדות — תגובה מיידית להקלדה.
+ * ספרות תמיד LTR (משמאל לימין), גם באפליקציה בעברית.
  */
-const OtpInput: React.FC<OtpInputProps> = ({
-  value,
-  onChangeText,
-  autoFocus = false,
-  error = false,
-}) => {
+const OtpInput: React.FC<OtpInputProps> = ({ value, onChangeText, autoFocus = false, error = false }) => {
   const tokens = useDesignTokens();
-  const inputRefs = useRef<Array<TextInput | null>>([null, null, null, null, null, null]);
-  // autoFocus מושהה עד סוף מעבר המסך
-  const firstRef = useFocusAfterTransition(autoFocus);
-  const [focusedIndex, setFocusedIndex] = useState<number | null>(autoFocus ? 0 : null);
+  const inputRef = useFocusAfterTransition(autoFocus);
+  const [focused, setFocused] = useState(false);
+  const digits = (value || '').replace(/\D/g, '').slice(0, LENGTH);
+  const activeIndex = Math.min(digits.length, LENGTH - 1);
 
-  // ערך מסודר ל-6 תיבות
-  const digits = (value || '').split('').slice(0, 6);
-  while (digits.length < 6) digits.push('');
+  // רעידה בשגיאה
+  const shake = useSharedValue(0);
+  useEffect(() => {
+    if (!error) return;
+    void HapticFeedback.error?.();
+    shake.value = withSequence(
+      withTiming(-8, { duration: 50 }),
+      withTiming(8, { duration: 50 }),
+      withTiming(-6, { duration: 50 }),
+      withTiming(6, { duration: 50 }),
+      withTiming(0, { duration: 50 }),
+    );
+  }, [error, shake]);
+  const shakeStyle = useAnimatedStyle(() => ({ transform: [{ translateX: shake.value }] }));
 
-  const handleChange = (text: string, index: number) => {
-    const cleaned = text.replace(/[^0-9]/g, '');
-    if (cleaned.length === 0) {
-      // backspace — מחק תו נוכחי ועבור לאחור
-      const newDigits = [...digits];
-      newDigits[index] = '';
-      onChangeText(newDigits.join(''));
-      if (index > 0) {
-        inputRefs.current[index - 1]?.focus();
-      }
-      return;
-    }
-
-    // תמיכה ב-paste של מספר ארוך
-    if (cleaned.length > 1) {
-      const pasteDigits = cleaned.slice(0, 6).split('');
-      const newDigits = [...digits];
-      for (let i = 0; i < pasteDigits.length && index + i < 6; i++) {
-        newDigits[index + i] = pasteDigits[i];
-      }
-      onChangeText(newDigits.join(''));
-      // עבור לתיבה הבאה אחרי paste
-      const nextEmpty = newDigits.findIndex((d) => d === '');
-      if (nextEmpty >= 0 && nextEmpty < 6) {
-        inputRefs.current[nextEmpty]?.focus();
-      } else {
-        inputRefs.current[5]?.blur();
-      }
-      return;
-    }
-
-    // תו בודד
-    const newDigits = [...digits];
-    newDigits[index] = cleaned[0];
-    onChangeText(newDigits.join(''));
-
-    // עבור לתיבה הבאה
-    if (index < 5) {
-      inputRefs.current[index + 1]?.focus();
-    } else {
-      // הסתיים — הסר focus
-      inputRefs.current[5]?.blur();
-    }
-  };
-
-  const handleKeyPress = (e: any, index: number) => {
-    if (e.nativeEvent.key === 'Backspace' && digits[index] === '' && index > 0) {
-      // backspace בתיבה ריקה — עבור לתיבה הקודמת
-      inputRefs.current[index - 1]?.focus();
-    }
+  const handleChange = (text: string) => {
+    const cleaned = text.replace(/\D/g, '').slice(0, LENGTH);
+    if (cleaned.length > digits.length) void HapticFeedback.selection();
+    onChangeText(cleaned);
+    if (cleaned.length === LENGTH) inputRef.current?.blur();
   };
 
   return (
-    <View style={styles.container}>
-      {digits.map((digit, index) => {
-        const isFocused = focusedIndex === index;
-        return (
-          <Pressable
-            key={index}
-            onPress={() => inputRefs.current[index]?.focus()}
-            style={[
-              styles.box,
-              {
-                backgroundColor: error
-                  ? 'rgba(239, 68, 68, 0.1)'
-                  : isFocused
-                    ? tokens.colors.background.tertiary
-                    : tokens.colors.background.input,
-              },
-            ]}
-          >
-            <TextInput
-              style={styles.input}
-              value={digit}
-              onChangeText={(text) => handleChange(text, index)}
-              onKeyPress={(e) => handleKeyPress(e, index)}
-              onFocus={() => setFocusedIndex(index)}
-              onBlur={() => setFocusedIndex(null)}
-              keyboardType="number-pad"
-              maxLength={6} // תמיכה ב-paste של כמה ספרות
-              ref={(r) => {
-                inputRefs.current[index] = r;
-                if (index === 0) firstRef.current = r;
-              }}
-              selectTextOnFocus
-              autoComplete="sms-otp"
-              textContentType="oneTimeCode"
-            />
-          </Pressable>
-        );
-      })}
-    </View>
+    <Pressable onPress={() => inputRef.current?.focus()} accessible={false}>
+      <Animated.View style={[styles.row, shakeStyle]}>
+        {Array.from({ length: LENGTH }).map((_, i) => (
+          <OtpBox
+            key={i}
+            digit={digits[i] ?? ''}
+            active={focused && i === activeIndex && digits.length < LENGTH}
+            filled={i < digits.length}
+            error={error}
+            colors={{
+              bg: tokens.colors.background.cardSolid,
+              bgActive: tokens.colors.background.tertiary,
+              text: tokens.colors.text.primary,
+              border: tokens.colors.text.primary,
+              danger: tokens.colors.danger.main,
+            }}
+          />
+        ))}
+      </Animated.View>
+
+      {/* השדה האמיתי — שקוף ומכסה את התיבות (גם לחיצה עליו פותחת מקלדת) */}
+      <TextInput
+        ref={inputRef}
+        value={digits}
+        onChangeText={handleChange}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        keyboardType="number-pad"
+        maxLength={LENGTH}
+        autoComplete="sms-otp"
+        textContentType="oneTimeCode"
+        caretHidden
+        style={styles.hiddenInput}
+        accessibilityLabel="קוד אימות בן 6 ספרות"
+      />
+    </Pressable>
   );
 };
 
+function OtpBox({
+  digit,
+  active,
+  filled,
+  error,
+  colors,
+}: {
+  digit: string;
+  active: boolean;
+  filled: boolean;
+  error: boolean;
+  colors: { bg: string; bgActive: string; text: string; border: string; danger: string };
+}) {
+  // קפיצה קטנה כשנכנסת ספרה
+  const pop = useSharedValue(1);
+  useEffect(() => {
+    if (!digit) return;
+    pop.value = withSequence(withTiming(1.08, { duration: 80 }), withSpring(1, { damping: 12, stiffness: 300 }));
+  }, [digit, pop]);
+  const popStyle = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }] }));
+
+  // סמן מהבהב בתיבה הפעילה
+  const blink = useSharedValue(1);
+  useEffect(() => {
+    blink.value = active
+      ? withRepeat(withSequence(withTiming(0, { duration: 450 }), withTiming(1, { duration: 450 })), -1)
+      : 1;
+  }, [active, blink]);
+  const caretStyle = useAnimatedStyle(() => ({ opacity: blink.value }));
+
+  return (
+    <Animated.View
+      style={[
+        styles.box,
+        {
+          backgroundColor: error ? `${colors.danger}1A` : active ? colors.bgActive : colors.bg,
+          borderColor: error ? colors.danger : active || filled ? colors.border : 'transparent',
+          borderWidth: active ? 2 : filled ? 1 : 0,
+        },
+        popStyle,
+      ]}
+    >
+      {digit ? (
+        <Text style={[styles.digit, { color: error ? colors.danger : colors.text }]}>{digit}</Text>
+      ) : active ? (
+        <Animated.View style={[styles.caret, { backgroundColor: colors.text }, caretStyle]} />
+      ) : null}
+    </Animated.View>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: {
+  row: {
+    // קודים תמיד LTR
+    direction: 'ltr',
     flexDirection: 'row',
     justifyContent: 'center',
-    alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   box: {
-    width: 48,
-    height: 56,
-    borderRadius: DesignTokens.borderRadius.full,
-    justifyContent: 'center',
+    flex: 1,
+    maxWidth: 52,
+    height: BOX_H,
+    borderRadius: 14,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  input: {
-    width: '100%',
-    height: '100%',
-    textAlign: 'center',
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#fff',
-    padding: 0,
+  digit: {
+    fontSize: APP_TYPE.cardMetricValueSecondary.fontSize + 4,
+    fontWeight: APP_TYPE.cardMetricValueSecondary.fontWeight,
+    fontVariant: ['tabular-nums'],
+  },
+  caret: {
+    width: 2,
+    height: 26,
+    borderRadius: 1,
+  },
+  hiddenInput: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.011,
+    color: 'transparent',
+    fontSize: 1,
   },
 });
 

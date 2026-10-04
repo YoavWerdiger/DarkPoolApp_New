@@ -5,7 +5,7 @@ import { AuthService } from '../../services/authService';
 import CashAppScreen from '../../components/ui/CashAppScreen';
 import CashAppButton from '../../components/ui/CashAppButton';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import OtpInput from '../../components/onboarding/OtpInput';
+import { OtpBody } from '../../components/onboarding/OtpBody';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { ONBOARDING_STEPS, ONBOARDING_TOTAL_STEPS } from '../../constants/onboardingFlow';
 import {
@@ -233,116 +233,20 @@ const RegistrationEmailVerificationScreen = ({ navigation }: { navigation: any }
         />
       }
     >
-      {sending ? (
-        <View style={{ alignItems: 'center', marginBottom: tokens.spacing.lg }}>
-          <ActivityIndicator color={tokens.cashAppStyle.colors.headline} />
-          <Text
-            style={{
-              color: tokens.cashAppStyle.colors.body,
-              fontSize: 14,
-              marginTop: 10,
-              writingDirection: 'rtl',
-            }}
-          >
-            שולחים קוד אימות...
-          </Text>
-        </View>
-      ) : null}
-
-      {error ? (
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            backgroundColor: 'rgba(248,81,73,0.08)',
-            borderWidth: 1,
-            borderColor: 'rgba(248,81,73,0.35)',
-            borderRadius: 12,
-            padding: 16,
-            marginBottom: tokens.spacing.lg,
-          }}
-        >
-          <Text
-            style={{
-              color: '#F85149',
-              fontSize: 15,
-              fontWeight: '600',
-              textAlign: 'right',
-              writingDirection: 'rtl',
-              flex: 1,
-            }}
-          >
-            {error}
-          </Text>
-        </View>
-      ) : null}
-
-      <View
-        style={{
-          backgroundColor: tokens.cashAppStyle.colors.screen,
-          borderRadius: tokens.cashAppStyle.borderRadius.input,
-          padding: tokens.spacing.xl,
-          alignItems: 'center',
+      <OtpBody
+        value={otp}
+        onChangeText={(text) => {
+          setOtp(text);
+          if (error) setError('');
         }}
-      >
-        <Text
-          style={{
-            color: tokens.cashAppStyle.colors.body,
-            fontSize: 15,
-            fontWeight: '500',
-            textAlign: 'center',
-            marginBottom: 24,
-            writingDirection: 'rtl',
-          }}
-        >
-          הזן את הקוד בן 6 הספרות מהמייל
-        </Text>
-
-        <OtpInput
-          value={otp}
-          onChangeText={(text) => {
-            setOtp(text);
-            if (error) setError('');
-          }}
-          autoFocus
-          error={!!error}
-        />
-
-        <View style={{ height: 32 }} />
-
-        <Pressable
-          onPress={handleResend}
-          disabled={!canResend || loading || sending}
-          style={{
-            paddingVertical: 12,
-            paddingHorizontal: 20,
-            borderRadius: tokens.cashAppStyle.borderRadius.button,
-            backgroundColor: canResend && !sending
-              ? 'rgba(0,0,0,0.08)'
-              : 'rgba(0,0,0,0.03)',
-            opacity: canResend && !sending ? 1 : 0.5,
-          }}
-        >
-          <Text
-            style={{
-              color:
-                canResend && !sending
-                  ? tokens.cashAppStyle.colors.headline
-                  : tokens.cashAppStyle.colors.secondary,
-              fontSize: 15,
-              fontWeight: '600',
-              textAlign: 'center',
-              writingDirection: 'rtl',
-            }}
-          >
-            {sending
-              ? 'שולחים...'
-              : canResend
-              ? 'שלח קוד שוב'
-              : `שלח שוב בעוד ${resendCountdown} שניות`}
-          </Text>
-        </Pressable>
-      </View>
+        error={error}
+        hint={sending ? 'שולחים קוד אימות…' : 'הזן את הקוד בן 6 הספרות שנשלח למייל'}
+        canResend={canResend}
+        countdown={resendCountdown}
+        onResend={handleResend}
+        sending={sending}
+        disabled={loading}
+      />
 
       <View style={{ flex: 1 }} />
     </CashAppScreen>

@@ -8,7 +8,7 @@ import UICard from '../../components/ui/UICard';
 import OnboardingLayout from '../../components/onboarding/OnboardingLayout';
 import OnboardingButton from '../../components/onboarding/OnboardingButton';
 import OnboardingErrorBanner from '../../components/onboarding/OnboardingErrorBanner';
-import OtpInput from '../../components/onboarding/OtpInput';
+import { OtpBody } from '../../components/onboarding/OtpBody';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { logger } from '../../utils/logger';
 
@@ -188,71 +188,20 @@ const ForgotPasswordOtpScreen = ({ navigation, route }: { navigation: any; route
         />
       }
     >
-      {error ? <OnboardingErrorBanner message={error} /> : null}
-
-      <UICard
-        variant="glass"
-        glassIntensity="light"
-        padding="lg"
-        style={{ borderRadius: DesignTokens.borderRadius.xl, alignItems: 'center' }}
-      >
-        <Text
-          style={{
-            color: DesignTokens.colors.text.secondary,
-            fontSize: 15,
-            fontWeight: '500',
-            textAlign: 'center',
-            marginBottom: 24,
-            writingDirection: 'rtl',
-          }}
-        >
-          {sending ? 'שולחים את הקוד…' : 'הזן את הקוד בן 6 הספרות מהמייל'}
-        </Text>
-
-        <OtpInput
-          value={otp}
-          onChangeText={(text) => {
-            setOtp(text);
-            if (error) setError('');
-          }}
-          autoFocus
-          error={!!error}
-        />
-
-        <View style={{ height: 32 }} />
-
-        <Pressable
-          onPress={() => void resend()}
-          disabled={!canResend || loading || sending}
-          style={{
-            paddingVertical: 12,
-            paddingHorizontal: 20,
-            borderRadius: DesignTokens.borderRadius.md,
-            backgroundColor:
-              canResend && !sending ? 'rgba(0,200,5,0.12)' : 'rgba(255,255,255,0.05)',
-            opacity: canResend && !sending ? 1 : 0.5,
-          }}
-        >
-          {sending ? (
-            <ActivityIndicator color={DesignTokens.colors.primary.main} />
-          ) : (
-            <Text
-              style={{
-                color:
-                  canResend && !sending
-                    ? DesignTokens.colors.primary.main
-                    : DesignTokens.colors.text.tertiary,
-                fontSize: 15,
-                fontWeight: '600',
-                textAlign: 'center',
-                writingDirection: 'rtl',
-              }}
-            >
-              {canResend ? 'שלח קוד שוב' : `שלח שוב בעוד ${resendCountdown} שניות`}
-            </Text>
-          )}
-        </Pressable>
-      </UICard>
+      <OtpBody
+        value={otp}
+        onChangeText={(text) => {
+          setOtp(text);
+          if (error) setError('');
+        }}
+        error={error}
+        hint={sending ? 'שולחים את הקוד…' : 'הזן את הקוד בן 6 הספרות מהמייל'}
+        canResend={canResend}
+        countdown={resendCountdown}
+        onResend={() => void resend()}
+        sending={sending}
+        disabled={loading}
+      />
       <View style={{ flex: 1 }} />
     </OnboardingLayout>
   );

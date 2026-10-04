@@ -48,6 +48,7 @@ import { DayNavBlurButton, HEADER_BACK_BTN_SIZE } from '../../components/ui/DayN
 import { DayDividerPill } from '../../components/ui/DayDividerPill';
 import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHeader';
 import { PortfolioSwitcher } from './components/PortfolioSwitcher';
+import { APP_LAYOUT } from '../../components/ui/appLayout';
 import {
   JOURNAL_TYPE,
   journalPhysicalRightText,
@@ -296,6 +297,8 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
       title="יומן מסחר"
       onMenuPress={embedded.onMenuPress}
       inRtlTree
+      // שם התיק צמוד לכותרת הדף — מבטלים את ריפוד התחתית של הכותרת ואת ריפוד ה-section
+      sectionContainerStyle={{ paddingTop: 0, marginTop: -APP_LAYOUT.cardPadding }}
       section={
         <PortfolioSwitcher
           portfolios={embedded.portfolios}

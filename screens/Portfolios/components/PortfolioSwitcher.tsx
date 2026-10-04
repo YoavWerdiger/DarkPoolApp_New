@@ -9,12 +9,13 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
-import { APP_TYPE } from '../../../components/ui/appType';
+import { APP_TYPE, appPhysicalRightText } from '../../../components/ui/appType';
 import { UI_CARD_RADIUS, APP_LAYOUT } from '../../../components/ui/appLayout';
 import { SHEET_BACKDROP_OPACITY } from '../../../components/ui/BottomSheet/BottomSheet';
 import {
@@ -190,17 +191,14 @@ export function PortfolioSwitcher({ portfolios, selectedId, onSelect, onCreate }
             {portfolios.map((p) => {
               const active = p.id === selectedId;
               return (
-                <Pressable
+                <TouchableOpacity
                   key={p.id}
                   onPress={() => {
                     if (!active) void HapticFeedback.selection();
                     hide(active ? undefined : () => onSelect(p.id));
                   }}
-                  style={({ pressed }) => [
-                    styles.row,
-                    { borderBottomColor: tokens.colors.border.divider },
-                    pressed ? { opacity: 0.6 } : null,
-                  ]}
+                  activeOpacity={0.6}
+                  style={[styles.row, { borderBottomColor: tokens.colors.border.divider }]}
                   accessibilityRole="button"
                   accessibilityState={{ selected: active }}
                 >
@@ -217,14 +215,15 @@ export function PortfolioSwitcher({ portfolios, selectedId, onSelect, onCreate }
                   {active ? (
                     <Ionicons name="checkmark" size={20} color={tokens.colors.primary.main} />
                   ) : null}
-                </Pressable>
+                </TouchableOpacity>
               );
             })}
           </ScrollView>
 
-          <Pressable
+          <TouchableOpacity
             onPress={() => hide(onCreate)}
-            style={({ pressed }) => [styles.row, styles.createRow, pressed ? { opacity: 0.6 } : null]}
+            activeOpacity={0.6}
+            style={[styles.row, styles.createRow]}
             accessibilityRole="button"
             accessibilityLabel="תיק חדש"
           >
@@ -232,7 +231,7 @@ export function PortfolioSwitcher({ portfolios, selectedId, onSelect, onCreate }
               תיק חדש
             </Text>
             <Ionicons name="add" size={20} color={tokens.colors.primary.main} />
-          </Pressable>
+          </TouchableOpacity>
 
           <View style={styles.handleWrap}>
             <View style={[styles.handle, { backgroundColor: tokens.colors.text.tertiary }]} />
@@ -253,9 +252,8 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
   },
   anchorTitle: {
+    ...appPhysicalRightText,
     flexShrink: 1,
-    textAlign: 'right',
-    writingDirection: 'rtl',
   },
   sheet: {
     position: 'absolute',
@@ -280,13 +278,13 @@ const styles = StyleSheet.create({
     height: 200,
   },
   sheetTitle: {
+    ...appPhysicalRightText,
     paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
     paddingTop: 8,
     paddingBottom: 6,
-    textAlign: 'right',
-    writingDirection: 'rtl',
   },
   row: {
+    direction: 'rtl',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -298,9 +296,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   rowText: {
+    ...appPhysicalRightText,
     flex: 1,
-    textAlign: 'right',
-    writingDirection: 'rtl',
   },
   handleWrap: {
     alignItems: 'center',

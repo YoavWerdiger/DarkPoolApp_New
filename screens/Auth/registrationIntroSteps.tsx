@@ -21,20 +21,20 @@ function withIcons<T extends string>(
   return options.map((o) => ({ ...o, icon: icons[o.value] }));
 }
 
-/** לוגואים של ברוקרים — Brandfetch לפי דומיין; קולמקס מה-assets */
+/** לוגואים של ברוקרים — IB דרך Brandfetch; TradeStation וקולמקס מה-assets */
 const brandLogo = (domain: string) =>
   BRANDFETCH_CLIENT_ID
     ? `https://cdn.brandfetch.io/domain/${domain}/icon?c=${BRANDFETCH_CLIENT_ID}&theme=light`
     : undefined;
 const PLATFORM_LOGOS: Record<string, string | number | undefined> = {
   interactive_brokers: brandLogo('interactivebrokers.com'),
+  tradestation: require('../../assets/branding/tradestation-logo.png'),
   colmex: require('../../assets/colmex-logo.png'),
 };
 
-/** בלי לוגו זמין (Brandfetch מחזיר fallback ל-TradeStation) */
+/** אפשרויות בלי לוגו מותג */
 const PLATFORM_ICONS: Record<string, IconName> = {
   bank: 'business-outline',
-  tradestation: 'stats-chart-outline',
   other: 'ellipsis-horizontal',
 };
 

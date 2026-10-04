@@ -297,8 +297,11 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
       title="יומן מסחר"
       onMenuPress={embedded.onMenuPress}
       inRtlTree
-      // שם התיק צמוד לכותרת הדף — מבטלים את ריפוד התחתית של הכותרת ואת ריפוד ה-section
-      sectionContainerStyle={{ paddingTop: 0, marginTop: -APP_LAYOUT.cardPadding }}
+      // שם התיק קרוב לכותרת הדף: 8 במקום 16+12 (ריפוד תחתון של הכותרת + ריפוד ה-section)
+      sectionContainerStyle={{
+        paddingTop: 0,
+        marginTop: APP_LAYOUT.stackGapSmall - APP_LAYOUT.cardPadding,
+      }}
       section={
         <PortfolioSwitcher
           portfolios={embedded.portfolios}

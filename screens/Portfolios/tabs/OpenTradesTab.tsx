@@ -293,10 +293,13 @@ export default function OpenTradesTab({
         emptyTitle: {
           ...journalSectionTitleStyle,
           color: tokens.colors.text.primary,
+          alignSelf: 'stretch',
+          textAlign: 'center',
         },
         emptyText: {
           ...journalSectionSubtitleStyle,
           color: tokens.colors.text.tertiary,
+          alignSelf: 'stretch',
           textAlign: 'center',
           paddingHorizontal: 30,
         },

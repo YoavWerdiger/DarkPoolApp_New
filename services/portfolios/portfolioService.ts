@@ -651,6 +651,49 @@ function _findPriceAtOrBefore(
  *
  * Cache: 5 דקות, מפתח 'snap:{portfolioId}:{rangeDays}'.
  */
+type SnapshotRowRaw = {
+  snapshot_date: string;
+  portfolio_value: number | string;
+  deposits_today: number | string | null;
+  withdrawals_today: number | string | null;
+};
+
+/**
+ * משלים ימי מסחר (שני–שישי) חסרים בין snapshots ועד היום.
+ * snapshot נכתב רק באירועים (פתיחה/סגירה/הפקדה) — בלי השלמה הגרף מותח קו ישר
+ * ולא משקף את מחירי האחזקות לאורך זמן האחזקה.
+ * ביום חסר: בסיס (הפקדות נטו + ממומש) נגרר מה-snapshot הקודם, בלי תזרים.
+ */
+export function densifySnapshotRows(rows: SnapshotRowRaw[], untilDate: string): SnapshotRowRaw[] {
+  if (rows.length === 0) return rows;
+  const byDate = new Map(rows.map((r) => [r.snapshot_date, r]));
+  const out: SnapshotRowRaw[] = [];
+  const cursor = new Date(`${rows[0].snapshot_date}T12:00:00`);
+  const end = untilDate > rows[rows.length - 1].snapshot_date ? untilDate : rows[rows.length - 1].snapshot_date;
+  let carry = rows[0];
+  for (let guard = 0; guard < 4000; guard++) {
+    const key = toLocalDateKey(cursor);
+    if (key > end) break;
+    const actual = byDate.get(key);
+    if (actual) {
+      carry = actual;
+      out.push(actual);
+    } else {
+      const dow = cursor.getDay();
+      if (dow !== 0 && dow !== 6) {
+        out.push({
+          snapshot_date: key,
+          portfolio_value: carry.portfolio_value,
+          deposits_today: 0,
+          withdrawals_today: 0,
+        });
+      }
+    }
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return out;
+}
+
 export async function buildHistoricalPortfolioSeriesFromSnapshots(
   portfolioId: string,
   rangeDays: number = 365
@@ -672,12 +715,7 @@ export async function buildHistoricalPortfolioSeriesFromSnapshots(
 
   if (snapErr) throw snapErr;
 
-  const rows = (snapData ?? []) as Array<{
-    snapshot_date: string;
-    portfolio_value: number | string;
-    deposits_today: number | string | null;
-    withdrawals_today: number | string | null;
-  }>;
+  const rows = densifySnapshotRows((snapData ?? []) as SnapshotRowRaw[], todayLocalKey());
 
   if (rows.length === 0) {
     _historicalSeriesCache.set(cacheKey, { ts: now, data: [] });

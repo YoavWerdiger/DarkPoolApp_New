@@ -18,6 +18,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createDesignTokensForTheme, useDesignTokens } from '../ui/DesignTokens';
 import { ForceDarkTheme } from '../../context/ThemeContext';
 import UIButton from '../ui/UIButton';
+import { UI_CARD_RADIUS } from '../ui/appLayout';
 import { SettingsGlassCard, SettingsSwitchRow, SettingsSectionTitle } from '../profile/ProfileSettingsUI';
 import { APP_TYPE } from '../ui/appType';
 import type { Trade as JournalTrade } from '../../screens/Journal/tradeTypes';
@@ -30,7 +31,6 @@ import {
   sheetContentBottomPadding,
 } from '../ui/BottomSheet/sheetGlass';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
-import UICard from '../ui/UICard';
 import { brandfetchTickerLogoUri } from '../../utils/brandfetch';
 import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { HapticFeedback } from '../../utils/hapticFeedback';
@@ -393,14 +393,8 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                     accessibilityLabel="קהילת הסוחרים DarkPool"
                   />
 
-                  {/* זכוכית סטנדרטית — disableBlur כדי ש־view-shot ילכוד נכון */}
-                  <UICard
-                    variant="blur"
-                    padding="none"
-                    disableBlur
-                    style={styles.pnlHeroCard}
-                    contentContainerStyle={styles.pnlHero}
-                  >
+                  {/* כרטיס מלא (cardSolid) — זכוכית בלי blur יוצאת עכורה בצילום */}
+                  <View style={[styles.pnlHeroCard, styles.pnlHero]}>
                     {/* ממורכז: לוגו חברה → טיקר → LONG/SHORT → רווח/הפסד → תשואה */}
                     <View style={styles.symbolBlock}>
                       {logoUri ? (
@@ -489,7 +483,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                         </View>
                       </View>
                     ) : null}
-                  </UICard>
+                  </View>
 
                   <View style={styles.spacer} />
 
@@ -705,13 +699,17 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       fontWeight: '700',
       letterSpacing: 0.8,
     },
-    /** UICard מספק את הזכוכית — מרווח עליון מול הלוגו, תחתון מול פס ה־QR */
+    /** כרטיס cardSolid — מרווח עליון מול הלוגו, תחתון מול פס ה־QR */
     pnlHeroCard: {
       width: '100%',
       alignSelf: 'stretch',
       overflow: 'hidden',
       marginTop: 2,
       marginBottom: 6,
+      borderRadius: UI_CARD_RADIUS,
+      backgroundColor: SHARE_CARD_TOKENS.colors.background.cardSolid,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: SHARE_CARD_TOKENS.colors.border.divider,
     },
     pnlHero: {
       alignItems: 'center',

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Dimensions,
   View,
   Text,
   StyleSheet,
@@ -15,7 +16,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { PortfoliosStackParamList } from '../../../navigation/PortfoliosStack';
-import BottomSheet from '../../../components/ui/BottomSheet/BottomSheet';
+import BottomSheet, {
+  BOTTOM_SHEET_EDGE_HANDLE_HEIGHT,
+  resolveFitContentSnapPoint,
+} from '../../../components/ui/BottomSheet/BottomSheet';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import ExportTradeImage, {
   portfolioTradeToExportable,
@@ -60,6 +64,10 @@ import {
   journalSectionTitleStyle,
 } from '../../Journal/journalLayout';
 
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+/** גובה תוכן שיט הסגירה האחרון — הפתיחה הבאה עולה ישר בגובה הנכון */
+let lastCloseSheetHeight = 0;
+
 interface Props {
   portfolioId: string;
   holdings: PortfolioHolding[];
@@ -83,6 +91,19 @@ export default function OpenTradesTab({
   const { isDarkMode } = useTheme();
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
+  const [closeSheetH, setCloseSheetH] = useState(lastCloseSheetHeight);
+  const closeSheetSnap = useMemo(
+    () => [
+      resolveFitContentSnapPoint({
+        contentHeight: closeSheetH,
+        screenHeight: SCREEN_HEIGHT,
+        handlePx: BOTTOM_SHEET_EDGE_HANDLE_HEIGHT,
+        initialEstimate: 0.62,
+        maxSnap: 0.92,
+      }),
+    ],
+    [closeSheetH],
+  );
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
   const [closingTrade, setClosingTrade] = useState<Trade | null>(null);
@@ -506,6 +527,7 @@ export default function OpenTradesTab({
         onClose={() => {
           setClosingTrade(null);
         }}
+        snapPoints={closeSheetSnap}
         fitContent
         showHandle
         enablePanDownToClose
@@ -517,10 +539,22 @@ export default function OpenTradesTab({
         showBrandBackground={false}
         showBrandWatermark={false}
         avoidKeyboard
-        contentPaddingBottom={sheetContentBottomPadding(insets.bottom)}
+        contentPaddingBottom={0}
       >
         {closingTrade ? (
-          <View style={{ position: 'relative' }}>
+          <View
+            style={{
+              position: 'relative',
+              // safe area בתוך התוכן הנמדד — הגובה כולל אותו, הכפתורים לא נדחפים מתחת לקצה
+              paddingBottom: sheetContentBottomPadding(insets.bottom),
+            }}
+            onLayout={(e) => {
+              const h = e.nativeEvent.layout.height;
+              if (!(h > 0)) return;
+              lastCloseSheetHeight = h;
+              setCloseSheetH((prev) => (Math.abs(prev - h) < 1 ? prev : h));
+            }}
+          >
             <View style={styles.sheetBody}>
               <View style={styles.sheetHeader}>
                 <TickerLogo symbol={closingTrade.symbol} size={48} />

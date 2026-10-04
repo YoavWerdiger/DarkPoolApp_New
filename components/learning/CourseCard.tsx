@@ -169,7 +169,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
             ) : null}
           </View>
 
-          {!comingSoon && audience ? (
+          {audience ? (
             <View style={styles.audienceBlock}>
               <Text style={styles.audienceLabel}>למי הקורס מתאים</Text>
               <Text style={styles.audienceText}>{audience}</Text>

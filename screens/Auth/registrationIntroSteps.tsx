@@ -78,7 +78,6 @@ const focusConfig: IntroQuestionConfig = {
     long_term: 'trending-up-outline',
   }).map((o) => ({ ...o, description: FOCUS_HORIZON[o.value] })),
   nextRoute: 'RegistrationPlatform',
-  displayMode: 'tiles',
 };
 
 const platformConfig: IntroQuestionConfig = {

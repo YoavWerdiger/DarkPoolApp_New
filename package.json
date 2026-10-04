@@ -36,6 +36,7 @@
     "benzinga:setup": "npm run supabase:secrets:set && npm run supabase:deploy:all"
   },
   "dependencies": {
+    "@expo-google-fonts/assistant": "^0.4.1",
     "@expo-google-fonts/heebo": "^0.4.2",
     "@expo/metro-runtime": "~57.0.15",
     "@expo/vector-icons": "^15.0.2",

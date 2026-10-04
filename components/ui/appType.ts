@@ -1,6 +1,7 @@
 import type { TextStyle, ViewStyle } from 'react-native';
 import { APP_LAYOUT } from './appLayout';
 import { SoftUI } from './softUiPalette';
+import { APP_CTA_LABEL_FONT } from './appFont';
 
 /**
  * סקאלת טיפוגרפיה אחת — Soft UI / Blink-inspired consumer fintech.
@@ -345,7 +346,7 @@ export const appSheetSubtitleStyle: TextStyle = {
 
 export const appSheetButtonLabelStyle: TextStyle = {
   fontSize: APP_TYPE.body.fontSize,
-  fontWeight: '600' as const,
+  ...APP_CTA_LABEL_FONT,
   lineHeight: APP_TYPE.body.lineHeight,
   textAlign: 'center',
 };

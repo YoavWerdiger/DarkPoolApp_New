@@ -9,6 +9,7 @@ import { AuthService } from '../../services/authService';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { useTheme } from '../../context/ThemeContext';
 import UIButton from '../../components/ui/UIButton';
 import { APP_LAYOUT } from '../../components/ui/appLayout';
 import {
@@ -29,6 +30,8 @@ import { PasswordVisibilityToggle } from '../../components/ui/PasswordVisibility
 
 const { width } = Dimensions.get('window');
 const WELCOME_LOGO_URI = 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/app-media/image%20(3).png';
+/** בבהיר — כיתוב «קהילת הסוחרים» בשחור (בלוגו הכהה הוא לבן ונעלם על קנבס בהיר) */
+const WELCOME_LOGO_LIGHT = require('../../assets/branding/welcome-logo-light.png');
 
 // ─── Reusable input ────────────────────────────────────────────────────────
 interface FieldProps {
@@ -103,6 +106,7 @@ const Field: React.FC<FieldProps> = ({
 export default function LoginScreen({ navigation }: any) {
   const tokens = useDesignTokens();
   const { colors } = tokens;
+  const { isDarkMode } = useTheme();
   const [email, setEmail]               = useState('');
   const [password, setPassword]         = useState('');
   const [rememberMe, setRememberMe]     = useState(false);
@@ -237,7 +241,7 @@ export default function LoginScreen({ navigation }: any) {
                   <View style={styles.logoWrap}>
                     <Animated.View style={{ transform: [{ translateY: logoFloat }] }}>
                       <Image
-                        source={{ uri: WELCOME_LOGO_URI }}
+                        source={isDarkMode ? { uri: WELCOME_LOGO_URI } : WELCOME_LOGO_LIGHT}
                         style={{ width: width * 0.78, height: width * 0.78 }}
                         resizeMode="contain"
                       />
@@ -257,6 +261,7 @@ export default function LoginScreen({ navigation }: any) {
                       variant="secondary"
                       size="lg"
                       fullWidth
+                      style={{ borderRadius: tokens.borderRadius.full }}
                       onPress={() => setShowForm(true)}
                     />
                   </View>
@@ -351,6 +356,7 @@ export default function LoginScreen({ navigation }: any) {
                       fullWidth
                       loading={googleLoading}
                       disabled={isLoading || googleLoading}
+                      style={{ borderRadius: tokens.borderRadius.full }}
                       onPress={() => void handleGoogleSignIn()}
                     />
                     <UIButton

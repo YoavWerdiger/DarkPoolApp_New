@@ -3,6 +3,7 @@ import { Pressable, Text, View, ActivityIndicator, ViewStyle, TextStyle } from '
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from './DesignTokens';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { APP_CTA_LABEL_FONT } from './appFont';
 
 export type UIButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline' | 'hairline';
 export type UIButtonSize = 'sm' | 'md' | 'lg';
@@ -188,7 +189,7 @@ const UIButton: React.FC<UIButtonProps> = ({
   const textStyleCombined: TextStyle = {
     ...sizeStyles.text,
     ...variantStyles.text,
-    fontFamily: typography.fontFamily.system[0],
+    ...APP_CTA_LABEL_FONT,
     ...textStyle,
   };
 

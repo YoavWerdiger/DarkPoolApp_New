@@ -125,7 +125,7 @@ export function monthlyEquivalent(price: number, period: string): number {
   return Math.round(price / months);
 }
 
-/** «חסוך 47% ברבעון» → «חיסכון 47%» */
+/** «חסוך 40% · …» → «חיסכון 40%» */
 function savingsLabel(description: string): string | null {
   const m = description.match(/(\d+)%/);
   return m ? `חיסכון ${m[1]}%` : null;
@@ -274,7 +274,7 @@ export default function PlanPicker({
                     <Text style={[styles.testHint, { color: tokens.colors.warning.main }]}>מחיר בדיקה</Text>
                   ) : multiMonth ? (
                     <Text style={[styles.desc, { color: tokens.colors.text.secondary }]}>
-                      ₪{item.price.toLocaleString('he-IL')} {formatPlanPeriod(item.period).replace('/', 'ל')}
+                      התחייבות ל-{PERIOD_MONTHS[item.period]} חודשים · ₪{item.price.toLocaleString('he-IL')} סה״כ
                     </Text>
                   ) : item.description ? (
                     <Text style={[styles.desc, { color: tokens.colors.text.secondary }]} numberOfLines={1}>

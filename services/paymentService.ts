@@ -76,8 +76,8 @@ export const SUBSCRIPTION_PLANS = {
   quarterly: {
     id: 'quarterly',
     name: 'רבעוני',
-    description: 'חסוך 47% ברבעון',
-    price: 399,
+    description: 'חסוך 40% · 3 תשלומים של ₪149',
+    price: 447,
     period: 'quarterly',
     features: [
       'מענה על שאלות',
@@ -102,8 +102,8 @@ export const SUBSCRIPTION_PLANS = {
   yearly: {
     id: 'yearly',
     name: 'חודשי - שנתי',
-    description: 'חסוך 53% בשנה',
-    price: 1404,
+    description: 'חסוך 46% · 12 תשלומים של ₪135',
+    price: 1620,
     period: 'yearly',
     features: [
       'מענה על שאלות',

@@ -107,7 +107,7 @@ serve(async (req) => {
 
     const { data: planRow, error: planErr } = await svc
       .from('subscription_plans')
-      .select('id, price, active')
+      .select('id, price, period, active')
       .eq('id', planId)
       .maybeSingle();
     if (planErr || !planRow || planRow.active === false || !(Number(planRow.price) > 0)) {
@@ -115,6 +115,9 @@ serve(async (req) => {
       return json({ success: false, error: 'Invalid planId' }, 400);
     }
     const amount = Number(planRow.price);
+    // רבעוני/שנתי — תשלומים חודשיים בכרטיס (התחייבות): 3 / 12 תשלומים קבועים
+    const numOfPayments =
+      planRow.period === 'quarterly' ? 3 : planRow.period === 'yearly' ? 12 : 1;
     if (Number.isFinite(clientAmount) && Math.round(clientAmount) !== Math.round(amount)) {
       console.warn('[create-payment] client amount ignored (server price wins)', {
         planId,
@@ -198,6 +201,9 @@ serve(async (req) => {
       // AVS כבוי — עיר/כתובת/מיקוד של בעל הכרטיס לא יוצגו
       AdvancedDefinition: {
         IsAVSEnable: false,
+        // מספר תשלומים קבוע (min = max) — המשתמש לא בוחר
+        MinNumOfPayments: numOfPayments,
+        MaxNumOfPayments: numOfPayments,
         VirtualTerminal: {
           IsEnable: false,
           IsOpenSum: false,

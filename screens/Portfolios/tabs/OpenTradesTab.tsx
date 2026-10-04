@@ -444,7 +444,8 @@ export default function OpenTradesTab({
           borderTopRightRadius: tokens.borderRadius.xl,
           paddingTop: APP_LAYOUT.componentGap,
           paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
-          paddingBottom: 36,
+          // safe area — הבורר יושב על קצה המסך
+          paddingBottom: sheetContentBottomPadding(insets.bottom),
           direction: 'rtl',
         },
         exitPickerTitle: {
@@ -454,7 +455,7 @@ export default function OpenTradesTab({
           marginBottom: 8,
         },
       }),
-    [tokens]
+    [tokens, insets.bottom]
   );
 
   if (loading) {

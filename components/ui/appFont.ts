@@ -6,12 +6,12 @@ export const APP_FONT = {
   medium: 'Heebo_500Medium',
   semiBold: 'Heebo_600SemiBold',
   bold: 'Heebo_700Bold',
-  /** כפתורי CTA — Assistant Bold (עברית, עבה ונקייה יותר מ-Heebo SemiBold) */
-  cta: 'Assistant_700Bold',
+  /** כפתורי CTA — Assistant SemiBold */
+  cta: 'Assistant_600SemiBold',
 } as const;
 
 /**
- * תווית כפתור CTA. fontWeight 400 — הקובץ כבר Bold; אחרת המערכת מעבה שוב.
+ * תווית כפתור CTA. fontWeight 400 — המשקל כבר בקובץ; אחרת המערכת מעבה שוב.
  * fontFamily שאינו Heebo לא נדרס ב-installAppFont.
  */
 export const APP_CTA_LABEL_FONT: TextStyle = {

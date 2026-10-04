@@ -71,7 +71,7 @@ alwaysApply: false
 
 - `formFieldShellStyle` — **ללא border**; פוקוס = `background.tertiary`, לא ירוק
 - תווית: `formFieldLabelStyle` / `appFormFieldHelperStyle` מתחת לשדה
-- CTA ראשי: `UIButton` variant `primary` בלבד — בהיר `primary.lightCta` `#010000` וטקסט לבן, כהה מילוי `#FFFFFF` וטקסט `text.inverse` `#1A1918`; תווית Assistant Bold (`APP_CTA_LABEL_FONT`). שניהם pill (`borderRadius.full`). ירוק `#00C805` הוא accent, לא מילוי ה-CTA הכהה. משני נשאר `navChrome` ולא גלולה שחורה
+- CTA ראשי: `UIButton` variant `primary` בלבד — בהיר `primary.lightCta` `#010000` וטקסט לבן, כהה מילוי `#FFFFFF` וטקסט `text.inverse` `#1A1918`; תווית Assistant SemiBold (`APP_CTA_LABEL_FONT`). שניהם pill (`borderRadius.full`). ירוק `#00C805` הוא accent, לא מילוי ה-CTA הכהה. משני נשאר `navChrome` ולא גלולה שחורה
 - עריכת פרופיל: אותם שדות על קנבס, אווטאר בלי טבעת ירוקה, בלי `fontSize` מקומי
 - הצג/הסתר סיסמה: אייקון עין (Eye כשמוסתר, EyeOff כשגלוי) בצד שמאל בתוך מעטפת השדה
 

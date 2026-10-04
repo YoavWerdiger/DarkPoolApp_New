@@ -79,6 +79,7 @@ const RegistrationPasswordScreen = ({ navigation }: { navigation: any }) => {
       currentStep={ONBOARDING_STEPS.password}
       totalSteps={ONBOARDING_TOTAL_STEPS}
       progressVariant="dots"
+      scrollable
       showBack
       onBack={handleBack}
       footer={
@@ -134,6 +135,8 @@ const RegistrationPasswordScreen = ({ navigation }: { navigation: any }) => {
           autoCapitalize="none"
           autoFocus
         />
+        {/* מתחת לשדה הסיסמה — נראה בזמן ההקלדה גם כשהמקלדת פתוחה */}
+        <PasswordStrength password={password} />
         <CashAppInput
           label="אימות סיסמה"
           placeholder="הכנס שוב את הסיסמה"
@@ -144,8 +147,6 @@ const RegistrationPasswordScreen = ({ navigation }: { navigation: any }) => {
           error={confirmError}
         />
       </View>
-      <PasswordStrength password={password} />
-      <View style={{ flex: 1 }} />
     </CashAppScreen>
   );
 };

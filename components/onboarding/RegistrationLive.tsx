@@ -7,7 +7,7 @@ import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-nativ
 import Reanimated, { FadeIn, FadeInDown, FadeOut, ZoomIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
-import { APP_LAYOUT, UI_CARD_RADIUS } from '../ui/appLayout';
+import { APP_LAYOUT } from '../ui/appLayout';
 import { APP_TYPE, appPhysicalRightText } from '../ui/appType';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 
@@ -233,10 +233,8 @@ const styles = StyleSheet.create({
     writingDirection: 'ltr',
   },
   pwWrap: {
-    marginTop: APP_LAYOUT.componentGap,
-    padding: APP_LAYOUT.cardPadding,
-    borderRadius: UI_CARD_RADIUS,
-    gap: APP_LAYOUT.stackGapTight,
+    marginTop: -APP_LAYOUT.stackGapSmall,
+    gap: APP_LAYOUT.stackGapSmall,
   },
   pwHeader: {
     flexDirection: 'row-reverse',
@@ -264,16 +262,21 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   rules: {
-    gap: 8,
+    // שתי עמודות — חצי מהגובה
+    flexDirection: 'row-reverse',
+    flexWrap: 'wrap',
+    rowGap: 6,
   },
   ruleRow: {
+    width: '50%',
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   ruleText: {
-    fontSize: APP_TYPE.cardBody.fontSize,
-    lineHeight: APP_TYPE.cardBody.lineHeight,
+    flexShrink: 1,
+    fontSize: APP_TYPE.cardSubtitle.fontSize,
+    lineHeight: APP_TYPE.cardSubtitle.lineHeight,
     writingDirection: 'rtl',
   },
 });

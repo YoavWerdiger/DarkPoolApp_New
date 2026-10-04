@@ -17,6 +17,8 @@ export interface CashAppScreenProps {
   currentStep: number;
   totalSteps: number;
   progressVariant?: CashAppProgressVariant;
+  /** תוכן גליל (מסכים ארוכים / עם מקלדת) */
+  scrollable?: boolean;
   style?: ViewStyle;
 }
 

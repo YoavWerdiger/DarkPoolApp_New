@@ -3,7 +3,6 @@ import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-nati
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   FadeIn,
-  FadeInDown,
   runOnJS,
   useAnimatedReaction,
   useAnimatedStyle,
@@ -117,7 +116,7 @@ export function StopSlider({ options, value, onChange, hero }: Props) {
         ) : null}
         <Animated.Text
           key={`l-${current?.value}`}
-          entering={FadeInDown.duration(220)}
+          entering={FadeIn.duration(200)}
           style={[styles.heroLabel, { color: tokens.colors.text.primary }]}
         >
           {current?.label}
@@ -210,6 +209,7 @@ const styles = StyleSheet.create({
     gap: APP_LAYOUT.stackGapTight,
   },
   heroLabel: {
+    minHeight: APP_TYPE.sectionTitle.lineHeight,
     fontSize: APP_TYPE.sectionTitle.fontSize,
     lineHeight: APP_TYPE.sectionTitle.lineHeight,
     fontWeight: APP_TYPE.sectionTitle.fontWeight,
@@ -217,6 +217,7 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   heroDesc: {
+    minHeight: APP_TYPE.cardBody.lineHeight * 2,
     fontSize: APP_TYPE.cardBody.fontSize,
     lineHeight: APP_TYPE.cardBody.lineHeight,
     textAlign: 'center',

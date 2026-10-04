@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Extrapolation,
@@ -150,9 +150,11 @@ function WheelItem({
     };
   });
   return (
-    <Animated.Text style={[styles.item, { color }, style]} numberOfLines={1}>
-      {label}
-    </Animated.Text>
+    <Animated.View style={[styles.item, style]}>
+      <Text style={[styles.itemText, { color }]} numberOfLines={1}>
+        {label}
+      </Text>
+    </Animated.View>
   );
 }
 
@@ -175,7 +177,10 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
     height: ITEM_H,
-    lineHeight: ITEM_H,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  itemText: {
     textAlign: 'center',
     fontSize: 34,
     fontWeight: APP_TYPE.cardMetricValue.fontWeight,

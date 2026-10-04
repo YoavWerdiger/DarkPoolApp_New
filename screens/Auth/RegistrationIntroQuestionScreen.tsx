@@ -14,6 +14,7 @@ import OnboardingChoiceRow, {
 } from '../../components/onboarding/OnboardingChoiceRow';
 import OnboardingSwipeCards from '../../components/onboarding/OnboardingSwipeCards';
 import { StopSlider } from '../../components/onboarding/StopSlider';
+import { ExpandingTiles } from '../../components/onboarding/ExpandingTiles';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import type { OnboardingStepKey } from '../../constants/onboardingFlow';
 import { ONBOARDING_STEPS, ONBOARDING_TOTAL_STEPS } from '../../constants/onboardingFlow';
@@ -48,7 +49,7 @@ export type IntroQuestionConfig = {
   optional?: boolean;
   allowDeselect?: boolean;
   /** Display mode: 'list' (default), 'swipe', או סליידר עם עצירות */
-  displayMode?: 'list' | 'swipe' | 'sliderLevel' | 'sliderIcon';
+  displayMode?: 'list' | 'swipe' | 'sliderLevel' | 'sliderIcon' | 'tiles';
   /** Multi-select question — the answer is stored as an array of values */
   multiple?: boolean;
 };
@@ -146,7 +147,16 @@ const RegistrationIntroQuestionScreen = ({ navigation, config }: Props) => {
         </View>
       }
     >
-      {displayMode === 'sliderLevel' || displayMode === 'sliderIcon' ? (
+      {displayMode === 'tiles' ? (
+        <>
+          <ExpandingTiles
+            options={config.options}
+            value={selected[0] ?? ''}
+            onChange={handleValueChange}
+          />
+          <View style={{ flex: 1 }} />
+        </>
+      ) : displayMode === 'sliderLevel' || displayMode === 'sliderIcon' ? (
         <>
           <StopSlider
             options={config.options}

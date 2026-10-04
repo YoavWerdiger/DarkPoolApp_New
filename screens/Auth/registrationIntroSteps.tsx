@@ -40,9 +40,9 @@ const PLATFORM_ICONS: Record<string, IconName> = {
 
 /** טווח החזקה לכל סגנון מסחר */
 const FOCUS_HORIZON: Record<string, string> = {
-  day_trading: 'פוזיציות של דקות עד שעות',
-  swing: 'פוזיציות של ימים עד שבועות',
-  long_term: 'פוזיציות של חודשים עד שנים',
+  day_trading: 'דקות עד שעות',
+  swing: 'ימים עד שבועות',
+  long_term: 'חודשים עד שנים',
 };
 
 /** רמת ניסיון — מד 1–4 + הסבר קצר */
@@ -78,7 +78,7 @@ const focusConfig: IntroQuestionConfig = {
     long_term: 'trending-up-outline',
   }).map((o) => ({ ...o, description: FOCUS_HORIZON[o.value] })),
   nextRoute: 'RegistrationPlatform',
-  displayMode: 'sliderIcon',
+  displayMode: 'tiles',
 };
 
 const platformConfig: IntroQuestionConfig = {

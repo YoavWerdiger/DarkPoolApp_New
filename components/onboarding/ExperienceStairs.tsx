@@ -22,7 +22,7 @@ const STEP_H = 74;
 const MARKER = 40;
 /** מרווח בין ראש המדרגה לדגל */
 const FLAG_GAP = 10;
-const SPRING = { damping: 14, stiffness: 160, mass: 0.7 };
+const SPRING = { damping: 22, stiffness: 150, mass: 0.8, overshootClamping: true };
 
 type Option = { label: string; value: string; description?: string };
 
@@ -59,7 +59,7 @@ function Step({
     if (hintDelay == null) return;
     scale.value = withDelay(
       hintDelay,
-      withSequence(withTiming(1.06, { duration: 160 }), withSpring(1, { damping: 10, stiffness: 260 })),
+      withSequence(withTiming(1.03, { duration: 200 }), withTiming(1, { duration: 220 })),
     );
   }, [hintDelay, scale]);
 
@@ -71,10 +71,10 @@ function Step({
       <Pressable
         onPress={onPress}
         onPressIn={() => {
-          scale.value = withSpring(0.94, { damping: 15, stiffness: 400 });
+          scale.value = withTiming(0.97, { duration: 90 });
         }}
         onPressOut={() => {
-          scale.value = withSpring(1, { damping: 12, stiffness: 300 });
+          scale.value = withTiming(1, { duration: 140 });
         }}
         accessibilityRole="radio"
         accessibilityState={{ checked: selected }}
@@ -133,7 +133,7 @@ export function ExperienceStairs({ options, value, onChange }: Props) {
     mx.value = withSpring(p.right + stepW / 2 - MARKER / 2, SPRING);
     my.value = withSpring(p.bottom + STEP_H + FLAG_GAP, SPRING);
     // קשת קפיצה בזמן המעבר
-    hop.value = withSequence(withTiming(-26, { duration: 170 }), withSpring(0, SPRING));
+    hop.value = withSequence(withTiming(-12, { duration: 180 }), withTiming(0, { duration: 220 }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index, stepW]);
 

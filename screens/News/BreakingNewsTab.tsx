@@ -43,6 +43,7 @@ const NEWS_DETAIL_BODY_MAX_LINES = 6;
 const NEWS_DETAIL_BODY_LINE_PX = APP_TYPE.body.lineHeight;
 const NEWS_DETAIL_BODY_MAX_PX = NEWS_DETAIL_BODY_MAX_LINES * NEWS_DETAIL_BODY_LINE_PX;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
+const SCREEN_WIDTH = Dimensions.get('window').width;
 
 /** שורת מטא קצרה (מקור/תאריך) — בתוך row-reverse */
 const newsDetailMetaText = {
@@ -182,6 +183,23 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
     return Math.min(lines * NEWS_DETAIL_BODY_LINE_PX, NEWS_DETAIL_BODY_MAX_PX);
   }, [bodyText]);
 
+  const titleTextStyle = {
+    ...APP_TYPE.sectionTitle,
+    color: DesignTokens.colors.text.primary,
+    marginBottom: APP_LAYOUT.stackGapSmall,
+    alignSelf: 'stretch' as const,
+    ...newsDetailParagraphText,
+  };
+  const bodyTextStyle = {
+    ...APP_TYPE.body,
+    color: DesignTokens.colors.text.primary,
+    alignSelf: 'stretch' as const,
+    ...newsDetailParagraphText,
+  };
+
+  // גובה השיט ננעל בזמן העלייה — פותחים רק אחרי מדידה אמיתית, אחרת יש קפיצה בנחיתה
+  const measured = titleBlockH != null && bodyNaturalH != null;
+
   const titleH = titleBlockH ?? estimatedTitleH;
   const bodyVisibleH =
     bodyNaturalH != null
@@ -221,13 +239,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
           const h = e.nativeEvent.layout.height;
           if (h > 0) setTitleBlockH((prev) => (prev === h ? prev : h));
         }}
-        style={{
-          ...APP_TYPE.sectionTitle,
-          color: DesignTokens.colors.text.primary,
-          marginBottom: APP_LAYOUT.stackGapSmall,
-          alignSelf: 'stretch',
-          ...newsDetailParagraphText,
-        }}
+        style={titleTextStyle}
       >
         {titleText}
       </Text>
@@ -283,12 +295,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
               const h = e.nativeEvent.layout.height;
               if (h > 0) setBodyNaturalH((prev) => (prev === h ? prev : h));
             }}
-            style={{
-              ...APP_TYPE.body,
-              color: DesignTokens.colors.text.primary,
-              alignSelf: 'stretch',
-              ...newsDetailParagraphText,
-            }}
+            style={bodyTextStyle}
           >
             {bodyText}
           </Text>
@@ -299,13 +306,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
             const h = e.nativeEvent.layout.height;
             if (h > 0) setBodyNaturalH((prev) => (prev === h ? prev : h));
           }}
-          style={{
-            ...APP_TYPE.body,
-            color: DesignTokens.colors.text.primary,
-            marginBottom: 20,
-            alignSelf: 'stretch',
-            ...newsDetailParagraphText,
-          }}
+          style={{ ...bodyTextStyle, marginBottom: 20 }}
         >
           {bodyText}
         </Text>
@@ -404,8 +405,35 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
   );
 
   return (
+    <>
+    {visible && !measured ? (
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: SCREEN_WIDTH,
+          paddingHorizontal: detailPad,
+          opacity: 0,
+        }}
+      >
+        <Text
+          onLayout={(e) => setTitleBlockH(e.nativeEvent.layout.height)}
+          style={titleTextStyle}
+        >
+          {titleText}
+        </Text>
+        <Text
+          onLayout={(e) => setBodyNaturalH(e.nativeEvent.layout.height)}
+          style={bodyTextStyle}
+        >
+          {bodyText}
+        </Text>
+      </View>
+    ) : null}
     <BottomSheet
-      isOpen={visible}
+      isOpen={visible && measured}
       onClose={onClose}
       snapPoints={dynamicSnapPoints}
       fitContent
@@ -466,6 +494,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
         {articleBody}
       </View>
     </BottomSheet>
+    </>
   );
 };
 

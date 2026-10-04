@@ -32,7 +32,7 @@ import {
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
 import UICard from '../ui/UICard';
 import { brandfetchTickerLogoUri } from '../../utils/brandfetch';
-import { ScreenGradientBackground } from '../VideoBackground';
+import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { APP_LINKS } from '../../utils/appMeta';
@@ -72,6 +72,31 @@ const SHARE_CARD_TOKENS = createDesignTokensForTheme(true);
 type ShareOptions = { showPnl: boolean; showReturn: boolean; showPrices: boolean };
 const SHARE_OPTIONS_KEY = 'tradeShare:options';
 const DEFAULT_SHARE_OPTIONS: ShareOptions = { showPnl: true, showReturn: true, showPrices: false };
+
+/**
+ * רקע סטטי לכרטיס — אותה פלטה כמו שיידר האורורה (כהה → ירוק כהה → ניאון),
+ * אבל SVG: view-shot לא לוכד GLView (יוצא שחור/מפוקסל).
+ */
+function ShareCardBackground({ width, height }: { width: number; height: number }) {
+  return (
+    <Svg width={width} height={height} style={StyleSheet.absoluteFill}>
+      <Defs>
+        <RadialGradient id="glowTop" cx="50%" cy="0%" rx="85%" ry="55%">
+          <Stop offset="0" stopColor="#00E63D" stopOpacity="0.55" />
+          <Stop offset="0.45" stopColor="#004717" stopOpacity="0.55" />
+          <Stop offset="1" stopColor="#000A04" stopOpacity="0" />
+        </RadialGradient>
+        <RadialGradient id="glowBottom" cx="15%" cy="100%" rx="70%" ry="40%">
+          <Stop offset="0" stopColor="#00E63D" stopOpacity="0.18" />
+          <Stop offset="1" stopColor="#000A04" stopOpacity="0" />
+        </RadialGradient>
+      </Defs>
+      <Rect width={width} height={height} fill="#000A04" />
+      <Rect width={width} height={height} fill="url(#glowTop)" />
+      <Rect width={width} height={height} fill="url(#glowBottom)" />
+    </Svg>
+  );
+}
 
 /** לוגו שור־ודוב / קהילת DarkPool — מעל כרטיסיית הזכוכית */
 const BRAND_LOGO = require('../../assets/darkpool-drawer-logo.png');
@@ -188,6 +213,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
   const [isExporting, setIsExporting] = useState(false);
   const [layoutReady, setLayoutReady] = useState(false);
   const [options, setOptions] = useState<ShareOptions>(DEFAULT_SHARE_OPTIONS);
+  const [cardSize, setCardSize] = useState<{ w: number; h: number } | null>(null);
 
   useEffect(() => {
     AsyncStorage.getItem(SHARE_OPTIONS_KEY)
@@ -346,8 +372,16 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
               onLayout={() => setLayoutReady(true)}
             >
               <ForceDarkTheme>
-              <View style={[styles.cardRoot, { width: cardW, minHeight: cardH }]}>
-                <ScreenGradientBackground style={StyleSheet.absoluteFill} animated={false} />
+              <View
+                style={[styles.cardRoot, { width: cardW, minHeight: cardH }]}
+                onLayout={(e) => {
+                  const { width, height } = e.nativeEvent.layout;
+                  setCardSize((prev) =>
+                    prev && prev.w === width && prev.h === height ? prev : { w: width, h: height },
+                  );
+                }}
+              >
+                <ShareCardBackground width={cardSize?.w ?? cardW} height={cardSize?.h ?? cardH} />
 
                 <View style={[styles.cardContent, { minHeight: cardH - 8 }]}>
                   {/* לוגו DarkPool / שור־ודוב — מעל הזכוכית, ממורכז */}

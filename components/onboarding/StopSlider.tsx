@@ -232,8 +232,8 @@ function MoneyCounter({ index, total, color, accent }: { index: number; total: n
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [target, isTop]);
 
-  // מעבר ל«$$$$$»: מ-$100,000 המונה ממשיך לטפס בהאצה (עד 9,999,999), ובסוף
-  // הסכום «מתפוצץ» לסימני דולר עם קפיצה וטיק
+  // מעבר ל«$$$$$»: מ-$100,000 המונה ממשיך לטפס בהאצה (טיפוס קצר עד 1,000,000), ובסוף
+  // הסכום מתחלף ל-«$,$$$,$$$» עם קפיצה וטיק
   const [dollars, setDollars] = useState(false);
   useEffect(() => {
     if (!isTop) {
@@ -243,9 +243,9 @@ function MoneyCounter({ index, total, color, accent }: { index: number; total: n
     }
     let raf = 0;
     const FROM = 100_000;
-    const TO = 9_999_999;
+    const TO = 1_000_000;
     const DELAY = 560; // אחרי שהספירה הרגילה (520ms) הגיעה ל-100K
-    const DUR = 700;
+    const DUR = 360;
     const startT = Date.now() + DELAY;
     const step = () => {
       const t = Math.min(1, Math.max(0, (Date.now() - startT) / DUR));
@@ -267,7 +267,7 @@ function MoneyCounter({ index, total, color, accent }: { index: number; total: n
     raf = requestAnimationFrame(step);
     return () => {
       cancelAnimationFrame(raf);
-      // חזרה מהטווח העליון — המונה יורד מהערך שהגיע אליו (עד 9,999,999)
+      // חזרה מהטווח העליון — המונה יורד מהערך שהגיע אליו (טיפוס קצר עד 1,000,000)
     };
   }, [isTop, pulse]);
 
@@ -283,7 +283,7 @@ function MoneyCounter({ index, total, color, accent }: { index: number; total: n
         adjustsFontSizeToFit
       >
         {/* הטווח הפתוח (מעל $100K) — הסכום מתחלף ב-«$$$$$» */}
-        {isTop && dollars ? '$$$$$' : `$${shown.toLocaleString('en-US')}`}
+        {isTop && dollars ? '$,$$$,$$$' : `$${shown.toLocaleString('en-US')}`}
       </Text>
     </Animated.View>
   );

@@ -11,7 +11,6 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { APP_LAYOUT } from '../ui/appLayout';
 import { APP_TYPE } from '../ui/appType';
@@ -151,32 +150,14 @@ export function ExperienceStairs({ options, value, onChange }: Props) {
     onChange(options[i].value);
   };
 
-  // גרירה אנכית על המדרגות — גובה האצבע מהתחתית קובע את המדרגה
-  const indexAtY = (y: number) => {
-    const fromBottom = AREA_H - y - STEP_H / 2;
-    return Math.min(count - 1, Math.max(0, Math.round(fromBottom / rise)));
-  };
-  // runOnJS(true): הקולבקים רצים ב-JS — indexAtY/pick הן פונקציות JS רגילות.
-  // בלי זה הן נקראו מתוך worklet (UI thread) והאפליקציה קרסה.
-  const drag = Gesture.Pan()
-    .runOnJS(true)
-    .activeOffsetY([-6, 6])
-    .onBegin((e) => {
-      pick(indexAtY(e.y));
-    })
-    .onUpdate((e) => {
-      pick(indexAtY(e.y));
-    });
-
   const current = options[index];
 
   return (
     <View style={styles.wrap}>
       <Animated.View entering={FadeIn.delay(200).duration(300)} style={styles.hintRow}>
-        <Ionicons name="arrow-up" size={16} color={tokens.colors.text.secondary} />
-        <Text style={[styles.hint, { color: tokens.colors.text.secondary }]}>גרור למעלה או לחץ על המדרגה שמתאימה לך</Text>
+        <Ionicons name="hand-left-outline" size={16} color={tokens.colors.text.secondary} />
+        <Text style={[styles.hint, { color: tokens.colors.text.secondary }]}>לחץ על המדרגה שמתאימה לך</Text>
       </Animated.View>
-      <GestureDetector gesture={drag}>
       <View
         style={styles.area}
         collapsable={false}
@@ -214,7 +195,6 @@ export function ExperienceStairs({ options, value, onChange }: Props) {
           </Animated.View>
         ) : null}
       </View>
-      </GestureDetector>
 
       <View style={styles.textBlock}>
         <Animated.Text

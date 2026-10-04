@@ -64,7 +64,7 @@ const experienceConfig: IntroQuestionConfig = {
   subtitle: 'בחר את האפשרות הקרובה ביותר',
   options: EXPERIENCE_LEVEL_OPTIONS_DETAILED,
   nextRoute: 'RegistrationTradingFocus',
-  displayMode: 'sliderVertical',
+  displayMode: 'stairs',
 };
 
 const focusConfig: IntroQuestionConfig = {

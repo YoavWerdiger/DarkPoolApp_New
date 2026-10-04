@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, Text, ActivityIndicator, Pressable, StyleSheet } from 'react-native';
+import Reanimated, { ZoomIn } from 'react-native-reanimated';
+import { APP_LAYOUT } from '../../components/ui/appLayout';
+import { APP_TYPE } from '../../components/ui/appType';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useRegistration } from '../../context/RegistrationContext';
@@ -130,149 +133,143 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
         />
       }
     >
-      <View style={{ alignItems: 'center', marginBottom: 32, flex: 1, justifyContent: 'center' }}>
-        <View
-          style={{
-            backgroundColor: tokens.cashAppStyle.colors.input,
-            borderRadius: tokens.cashAppStyle.borderRadius.input,
-            borderWidth: 1,
-            borderColor: tokens.cashAppStyle.colors.input,
-            width: '100%',
-            marginBottom: 20,
-          }}
+      <View style={styles.body}>
+        <Pressable
+          onPress={loading ? undefined : handlePickFromGallery}
+          accessibilityRole="button"
+          accessibilityLabel={image ? 'החלף תמונת פרופיל' : 'בחר תמונת פרופיל'}
         >
-          <View style={{ alignItems: 'center', paddingVertical: 40, paddingHorizontal: 24 }}>
-            <View
-              style={{
-                width: AVATAR,
-                height: AVATAR,
-                borderRadius: AVATAR / 2,
-                borderWidth: 2,
-                borderColor: image
-                  ? tokens.colors.border.strong
-                  : 'rgba(0,0,0,0.1)',
-                backgroundColor: '#FFFFFF',
-                alignItems: 'center',
-                justifyContent: 'center',
-                overflow: 'hidden',
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.1,
-                shadowRadius: 8,
-                marginBottom: 24,
-              }}
-            >
-              {image ? (
+          <View
+            style={[
+              styles.avatar,
+              {
+                backgroundColor: tokens.colors.background.cardSolid,
+                borderColor: image ? tokens.colors.text.primary : tokens.colors.text.tertiary,
+                borderStyle: image ? 'solid' : 'dashed',
+              },
+            ]}
+          >
+            {image ? (
+              <Reanimated.View key={image} entering={ZoomIn.duration(320)} style={styles.avatarImgWrap}>
                 <Image
                   source={{ uri: image }}
-                  style={{ width: AVATAR, height: AVATAR, borderRadius: AVATAR / 2 }}
+                  style={styles.avatarImg}
                   contentFit="cover"
-                  placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
                   transition={150}
                 />
-              ) : loading ? (
-                <ActivityIndicator size="large" color={tokens.cashAppStyle.colors.headline} />
-              ) : (
-                <Ionicons 
-                  name="person-outline" 
-                  size={80} 
-                  color="rgba(0,0,0,0.2)" 
-                />
-              )}
-            </View>
-
-            {loading ? (
-              <Text
-                style={{
-                  color: tokens.cashAppStyle.colors.headline,
-                  fontSize: 15,
-                  fontWeight: '600',
-                  textAlign: 'center',
-                  marginBottom: 20,
-                }}
-              >
-                מעבד תמונה...
-              </Text>
-            ) : image ? (
-              <>
-                <Text
-                  style={{
-                    color: tokens.cashAppStyle.colors.headline,
-                    fontSize: 17,
-                    fontWeight: '700',
-                    textAlign: 'center',
-                    marginBottom: 6,
-                  }}
-                >
-                  נראה מעולה! 🎉
-                </Text>
-                <Text
-                  style={{
-                    color: tokens.cashAppStyle.colors.body,
-                    fontSize: 14,
-                    textAlign: 'center',
-                    lineHeight: 18,
-                    marginBottom: 20,
-                  }}
-                >
-                  תמונה זו תוצג בפרופיל שלך ובצ'אטים
-                </Text>
-              </>
+              </Reanimated.View>
+            ) : loading ? (
+              <ActivityIndicator size="large" color={tokens.colors.text.primary} />
             ) : (
-              <>
-                <Text
-                  style={{
-                    color: tokens.cashAppStyle.colors.headline,
-                    fontSize: 17,
-                    fontWeight: '700',
-                    textAlign: 'center',
-                    marginBottom: 6,
-                  }}
-                >
-                  הוסף תמונת פרופיל
-                </Text>
-                <Text
-                  style={{
-                    color: tokens.cashAppStyle.colors.body,
-                    fontSize: 14,
-                    textAlign: 'center',
-                    lineHeight: 18,
-                    paddingHorizontal: 20,
-                    marginBottom: 20,
-                  }}
-                >
-                  בחר תמונה שמייצגת אותך בצ'אטים
-                </Text>
-              </>
-            )}
-
-            {!loading && (
-              <View style={{ flexDirection: 'row-reverse', gap: 12, width: '100%' }}>
-                <View style={{ flex: 1 }}>
-                  <CashAppButton
-                    title="מצלמה"
-                    variant="secondary"
-                    size="md"
-                    icon="camera"
-                    onPress={handleTakePhoto}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <CashAppButton
-                    title="גלריה"
-                    variant="secondary"
-                    size="md"
-                    icon="images"
-                    onPress={handlePickFromGallery}
-                  />
-                </View>
-              </View>
+              <Ionicons name="person" size={72} color={tokens.colors.text.tertiary} />
             )}
           </View>
-        </View>
+          {!loading ? (
+            <View
+              style={[
+                styles.badge,
+                {
+                  backgroundColor: tokens.colors.text.primary,
+                  borderColor: tokens.colors.background.primary,
+                },
+              ]}
+            >
+              <Ionicons
+                name={image ? 'pencil' : 'add'}
+                size={image ? 16 : 22}
+                color={tokens.colors.text.inverse}
+              />
+            </View>
+          ) : null}
+        </Pressable>
+
+        <Text style={[styles.status, { color: tokens.colors.text.secondary }]}>
+          {loading
+            ? 'מעבד תמונה…'
+            : image
+              ? 'נראה מעולה. התמונה תוצג בפרופיל ובצ׳אטים'
+              : 'לחץ על העיגול או בחר מקור למטה'}
+        </Text>
+
+        {!loading ? (
+          <View style={styles.actions}>
+            <View style={{ flex: 1 }}>
+              <CashAppButton
+                title="צלם"
+                variant="secondary"
+                size="md"
+                icon="camera-outline"
+                onPress={handleTakePhoto}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <CashAppButton
+                title="מהגלריה"
+                variant="secondary"
+                size="md"
+                icon="images-outline"
+                onPress={handlePickFromGallery}
+              />
+            </View>
+          </View>
+        ) : null}
       </View>
     </CashAppScreen>
   );
 };
 
 export default RegistrationProfileImageScreen;
+
+const BADGE = 40;
+
+const styles = StyleSheet.create({
+  body: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingBottom: APP_LAYOUT.sectionGap,
+  },
+  avatar: {
+    width: AVATAR,
+    height: AVATAR,
+    borderRadius: AVATAR / 2,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImgWrap: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarImg: {
+    width: '100%',
+    height: '100%',
+  },
+  badge: {
+    position: 'absolute',
+    bottom: 6,
+    left: 6,
+    width: BADGE,
+    height: BADGE,
+    borderRadius: BADGE / 2,
+    borderWidth: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  status: {
+    fontSize: APP_TYPE.cardBody.fontSize,
+    lineHeight: APP_TYPE.cardBody.lineHeight,
+    fontWeight: APP_TYPE.cardBody.fontWeight,
+    textAlign: 'center',
+    writingDirection: 'rtl',
+    marginTop: APP_LAYOUT.componentGap + 4,
+    marginBottom: APP_LAYOUT.sectionGap / 2 + 4,
+    paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+  },
+  actions: {
+    flexDirection: 'row-reverse',
+    gap: APP_LAYOUT.stackGapTight,
+    width: '100%',
+  },
+});

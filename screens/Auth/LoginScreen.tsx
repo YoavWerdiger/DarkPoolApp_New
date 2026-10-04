@@ -1,21 +1,28 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Dimensions, Keyboard, Image, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, ActivityIndicator, Pressable, ScrollView, Animated, Easing } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Dimensions, Keyboard, Image, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, ScrollView, Animated, Easing, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { useRegistration } from '../../context/RegistrationContext';
 import { AuthService } from '../../services/authService';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import { chromeSurfaceCardStyle } from '../../components/ui/chromeControl';
+import UIButton from '../../components/ui/UIButton';
+import { APP_LAYOUT } from '../../components/ui/appLayout';
+import {
+  APP_TYPE,
+  appCaptionStyle,
+  appFlowSubtitleStyle,
+  appFlowTitleStyle,
+} from '../../components/ui/appType';
 import { ScreenGradientBackground } from '../../components/VideoBackground';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import {
   formFieldInputStyle,
   formFieldLabelStyle,
+  formFieldPlaceholderColor,
   formFieldShellStyle,
 } from '../../components/ui/formControl';
 import { PasswordVisibilityToggle } from '../../components/ui/PasswordVisibilityToggle';
@@ -50,25 +57,20 @@ const Field: React.FC<FieldProps> = ({
   const { colors } = tokens;
   const isPassword = secureTextEntry === true;
   return (
-    <View style={{ marginBottom: 16 }}>
+    <View style={{ marginBottom: APP_LAYOUT.componentGap }}>
       <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 8,
-        }}
+        style={{ marginBottom: APP_LAYOUT.stackGapSmall }}
       >
-        <Text style={formFieldLabelStyle({ tokens, focused, error: false })}>{label}</Text>
+        <Text style={[formFieldLabelStyle({ tokens, focused, error: false }), { textAlign: 'right', writingDirection: 'rtl' }]}>{label}</Text>
       </View>
       <View
         style={[
           {
-            borderRadius: 26,
+            borderRadius: tokens.borderRadius.search,
             paddingHorizontal: 16,
             flexDirection: 'row',
             alignItems: 'center',
-            minHeight: 56,
+            minHeight: 52,
           },
           formFieldShellStyle({ tokens, focused, error: false }),
         ]}
@@ -80,9 +82,9 @@ const Field: React.FC<FieldProps> = ({
           />
         ) : null}
         <TextInput
-          style={[formFieldInputStyle(), { paddingVertical: 15 }]}
+          style={[formFieldInputStyle(tokens), { flex: 1, paddingVertical: 14 }]}
           placeholder={placeholder}
-          placeholderTextColor={colors.text.disabled}
+          placeholderTextColor={formFieldPlaceholderColor(tokens)}
           value={value}
           onChangeText={onChangeText}
           secureTextEntry={isPassword ? !passwordVisible : secureTextEntry}
@@ -223,387 +225,161 @@ export default function LoginScreen({ navigation }: any) {
 
           <SafeAreaView style={{ flex: 1 }}>
             <ScrollView
-              contentContainerStyle={{
-                flexGrow: 1,
-                justifyContent: showForm ? 'center' : 'space-between',
-                paddingHorizontal: 24,
-                paddingTop: showForm ? 20 : 40,
-                paddingBottom: 28,
-              }}
+              contentContainerStyle={[
+                styles.scroll,
+                showForm ? styles.scrollForm : styles.scrollWelcome,
+              ]}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
               {!showForm ? (
                 <>
-                  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 20 }}>
+                  <View style={styles.logoWrap}>
                     <Animated.View style={{ transform: [{ translateY: logoFloat }] }}>
                       <Image
                         source={{ uri: WELCOME_LOGO_URI }}
-                        style={{ width: width * 0.78, height: width * 0.78, marginBottom: 10 }}
+                        style={{ width: width * 0.78, height: width * 0.78 }}
                         resizeMode="contain"
                       />
                     </Animated.View>
                   </View>
 
-                  <View style={{ gap: 12 }}>
-                    <LinearGradient
-                      colors={colors.primary.gradient as [string, string]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={{
-                        borderRadius: 28,
-                        shadowColor: colors.primary.main,
-                        shadowOffset: { width: 0, height: 8 },
-                        shadowOpacity: 0.3,
-                        shadowRadius: 14,
-                        elevation: 8,
-                      }}
-                    >
-                <TouchableOpacity
-                  onPress={() => {
-                    void HapticFeedback.medium();
-                    navigation.navigate('Register');
-                  }}
-                  activeOpacity={0.86}
-                  style={{ paddingVertical: 17, alignItems: 'center' }}
-                      >
-                        <Text style={{ color: colors.text.inverse, fontSize: 17, fontWeight: '800' }}>
-                          התחל כאן
-                        </Text>
-                      </TouchableOpacity>
-                    </LinearGradient>
-
-                    <Pressable
-                      onPress={() => {
-                        void HapticFeedback.impactLight();
-                        setShowForm(true);
-                      }}
-                      style={({ pressed }) => [
-                        chromeSurfaceCardStyle(tokens, {
-                          borderRadius: 28,
-                          width: '100%',
-                          minHeight: 56,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }),
-                        pressed && { opacity: 0.88, transform: [{ scale: 0.985 }] },
-                      ]}
-                    >
-                      <Text
-                        style={{
-                          color: colors.text.primary,
-                          fontSize: 17,
-                          fontWeight: '800',
-                          textAlign: 'center',
-                        }}
-                      >
-                        יש לי כבר חשבון
-                      </Text>
-                    </Pressable>
+                  <View style={styles.buttonStack}>
+                    <UIButton
+                      title="התחל כאן"
+                      variant="primary"
+                      size="lg"
+                      fullWidth
+                      onPress={() => navigation.navigate('Register')}
+                    />
+                    <UIButton
+                      title="יש לי כבר חשבון"
+                      variant="secondary"
+                      size="lg"
+                      fullWidth
+                      onPress={() => setShowForm(true)}
+                    />
                   </View>
                 </>
               ) : (
-                <View style={{ width: '100%', alignSelf: 'center' }}>
-                  <View style={{ marginBottom: 24 }}>
-                    <Text
-                      style={{
-                        fontSize: 28,
-                        fontWeight: '800',
-                        color: colors.text.primary,
-                        marginBottom: 8,
-                        letterSpacing: -0.5,
-                        textAlign: 'right',
-                      }}
-                    >
+                <View style={styles.form}>
+                  <View style={styles.titleBlock}>
+                    <Text style={[appFlowTitleStyle, { color: colors.text.primary }]}>
                       התחברות לחשבון
                     </Text>
-                    <Text
-                      style={{
-                        fontSize: 14,
-                        color: colors.text.secondary,
-                        fontWeight: '500',
-                        textAlign: 'right',
-                      }}
-                    >
+                    <Text style={[appFlowSubtitleStyle, { color: colors.text.secondary }]}>
                       ברוכים הבאים לקהילת DarkPool
                     </Text>
                   </View>
 
-                <Field
-                  label="כתובת אימייל"
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="you@example.com"
-                  keyboardType="email-address"
-                  tokens={tokens}
-                />
+                  <Field
+                    label="כתובת אימייל"
+                    value={email}
+                    onChangeText={setEmail}
+                    placeholder="you@example.com"
+                    keyboardType="email-address"
+                    tokens={tokens}
+                  />
 
-                <Field
-                  label="סיסמה"
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="הכנס את הסיסמה"
-                  secureTextEntry
-                  tokens={tokens}
-                />
+                  <Field
+                    label="סיסמה"
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="הכנס את הסיסמה"
+                    secureTextEntry
+                    tokens={tokens}
+                  />
 
-                {/* Remember me + Forgot */}
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: 28,
-                    marginTop: 4,
-                  }}
-                >
-                  <Pressable
-                    onPress={() => {
-                      void HapticFeedback.selection();
-                      setRememberMe(!rememberMe);
-                    }}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 8,
-                      paddingVertical: 4,
-                      paddingHorizontal: 2,
-                    }}
-                  >
-                    <View
-                      style={{
-                        width: 20,
-                        height: 20,
-                        borderRadius: 999,
-                        borderWidth: 1.5,
-                        borderColor: rememberMe
-                          ? colors.primary.main
-                          : colors.border.hover,
-                        backgroundColor: rememberMe
-                          ? colors.primary.main
-                          : 'transparent',
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                  {/* זכור אותי (ימין) · שכחת סיסמה (שמאל) */}
+                  <View style={styles.optionsRow}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        void HapticFeedback.selection();
+                        setRememberMe(!rememberMe);
                       }}
+                      activeOpacity={0.7}
+                      style={styles.rememberBtn}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: rememberMe }}
                     >
-                      {rememberMe && (
-                        <Ionicons name="checkmark" size={13} color={colors.text.inverse} />
-                      )}
-                    </View>
-                    <Text
-                      style={{
-                        color: colors.text.secondary,
-                        fontSize: 14,
-                        fontWeight: '500',
-                      }}
-                    >
-                      זכור אותי
-                    </Text>
-                  </Pressable>
+                      <View
+                        style={[
+                          styles.checkbox,
+                          {
+                            borderColor: rememberMe ? colors.text.primary : colors.text.tertiary,
+                            backgroundColor: rememberMe ? colors.text.primary : 'transparent',
+                          },
+                        ]}
+                      >
+                        {rememberMe ? (
+                          <Ionicons name="checkmark" size={13} color={colors.text.inverse} />
+                        ) : null}
+                      </View>
+                      <Text style={[styles.optionText, { color: colors.text.secondary }]}>זכור אותי</Text>
+                    </TouchableOpacity>
 
-                  <Pressable
-                    onPress={() => {
-                      void HapticFeedback.impactLight();
-                      handleForgotPassword();
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: colors.primary.main,
-                        fontSize: 14,
-                        fontWeight: '600',
-                      }}
-                    >
-                      שכחת סיסמה?
-                    </Text>
-                  </Pressable>
-                </View>
+                    <TouchableOpacity onPress={handleForgotPassword} activeOpacity={0.7} hitSlop={8}>
+                      <Text style={[styles.optionText, styles.linkText, { color: colors.text.primary }]}>
+                        שכחת סיסמה?
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
 
-                {/* Login CTA */}
-                <LinearGradient
-                  colors={colors.primary.gradient as [string, string]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={{
-                    borderRadius: 30,
-                    shadowColor: colors.primary.main,
-                    shadowOffset: { width: 0, height: 8 },
-                    shadowOpacity: 0.35,
-                    shadowRadius: 16,
-                    elevation: 8,
-                    marginBottom: 12,
-                  }}
-                >
+                  <UIButton
+                    title="התחבר"
+                    variant="primary"
+                    size="lg"
+                    fullWidth
+                    loading={isLoading}
+                    disabled={isLoading}
+                    onPress={() => void handleSignIn()}
+                  />
+
+                  <View style={styles.dividerRow}>
+                    <View style={[styles.dividerLine, { backgroundColor: colors.border.divider }]} />
+                    <Text style={[appCaptionStyle, styles.dividerText, { color: colors.text.tertiary }]}>או</Text>
+                    <View style={[styles.dividerLine, { backgroundColor: colors.border.divider }]} />
+                  </View>
+
+                  <View style={styles.buttonStack}>
+                    <UIButton
+                      title="התחבר עם Google"
+                      variant="secondary"
+                      size="lg"
+                      icon="logo-google"
+                      iconPosition="right"
+                      fullWidth
+                      loading={googleLoading}
+                      disabled={isLoading || googleLoading}
+                      onPress={() => void handleGoogleSignIn()}
+                    />
+                    <UIButton
+                      title="צור חשבון חדש"
+                      variant="ghost"
+                      size="lg"
+                      fullWidth
+                      textStyle={{ color: colors.text.primary }}
+                      onPress={() => navigation.navigate('Register')}
+                    />
+                  </View>
+
+                  <Text style={[appCaptionStyle, styles.footer, { color: colors.text.tertiary }]}>
+                    בהתחברות אתה מסכים לתנאי השימוש ומדיניות הפרטיות
+                  </Text>
+
                   <TouchableOpacity
                     onPress={() => {
-                      void HapticFeedback.medium();
-                      handleSignIn();
+                      void HapticFeedback.impactLight();
+                      setShowForm(false);
                     }}
-                    disabled={isLoading}
-                    activeOpacity={0.85}
-                    style={{
-                      paddingVertical: 17,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      opacity: isLoading ? 0.75 : 1,
-                    }}
+                    activeOpacity={0.7}
+                    style={styles.backLink}
                   >
-                    {isLoading ? (
-                      <ActivityIndicator color={colors.text.inverse} size="small" />
-                    ) : (
-                      <Text
-                        style={{
-                          color: colors.text.inverse,
-                          fontSize: 16,
-                          fontWeight: '700',
-                          letterSpacing: 0.3,
-                        }}
-                      >
-                        התחבר
-                      </Text>
-                    )}
+                    <Text style={[styles.optionText, { color: colors.text.secondary }]}>
+                      חזרה למסך ברוכים הבאים
+                    </Text>
                   </TouchableOpacity>
-                </LinearGradient>
-
-                {/* Divider */}
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    marginVertical: 18,
-                  }}
-                >
-                  <View
-                    style={{
-                      flex: 1,
-                      height: 1,
-                      backgroundColor: 'rgba(255, 255, 255, 0.12)',
-                      borderRadius: 999,
-                    }}
-                  />
-                  <Text
-                    style={{
-                      color: colors.text.tertiary,
-                      fontSize: 12,
-                      fontWeight: '600',
-                      marginHorizontal: 12,
-                      backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                      borderRadius: 999,
-                      paddingHorizontal: 9,
-                      paddingVertical: 2,
-                    }}
-                  >
-                    או
-                  </Text>
-                  <View
-                    style={{
-                      flex: 1,
-                      height: 1,
-                      backgroundColor: 'rgba(255, 255, 255, 0.12)',
-                      borderRadius: 999,
-                    }}
-                  />
                 </View>
-
-                {/* Google */}
-                <TouchableOpacity
-                  onPress={() => {
-                    void HapticFeedback.medium();
-                    handleGoogleSignIn();
-                  }}
-                  disabled={isLoading || googleLoading}
-                  activeOpacity={0.8}
-                  style={{
-                    backgroundColor: colors.selection.subtle,
-                    borderRadius: 30,
-                    borderWidth: 1,
-                    borderColor: colors.glass.card.border,
-                    paddingVertical: 15,
-                    paddingHorizontal: 16,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 10,
-                    marginBottom: 12,
-                    opacity: isLoading || googleLoading ? 0.6 : 1,
-                  }}
-                >
-                  {googleLoading ? (
-                    <ActivityIndicator color={colors.text.primary} size="small" />
-                  ) : (
-                    <>
-                      <Image
-                        source={{ uri: 'https://www.google.com/favicon.ico' }}
-                        style={{ width: 18, height: 18 }}
-                      />
-                      <Text
-                        style={{
-                          color: colors.text.primary,
-                          fontSize: 15,
-                          fontWeight: '600',
-                          letterSpacing: 0.2,
-                        }}
-                      >
-                        התחבר עם Google
-                      </Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-
-                {/* Register */}
-              <TouchableOpacity
-                onPress={() => {
-                  void HapticFeedback.impactLight();
-                  navigation.navigate('Register');
-                }}
-                activeOpacity={0.75}
-                style={{
-                    borderRadius: 30,
-                    borderWidth: 1.5,
-                    borderColor: colors.primary.main,
-                    paddingVertical: 15,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: colors.primary.main,
-                      fontSize: 15,
-                      fontWeight: '700',
-                      letterSpacing: 0.2,
-                    }}
-                  >
-                    צור חשבון חדש
-                  </Text>
-                </TouchableOpacity>
-
-                {/* Footer */}
-                <Text
-                  style={{
-                    color: colors.text.disabled,
-                    fontSize: 12,
-                    textAlign: 'center',
-                    marginTop: 28,
-                    lineHeight: 18,
-                  }}
-                >
-                  בהתחברות אתה מסכים לתנאי השימוש ומדיניות הפרטיות
-                </Text>
-
-                <TouchableOpacity
-                  onPress={() => {
-                    void HapticFeedback.impactLight();
-                    setShowForm(false);
-                  }}
-                  activeOpacity={0.75}
-                  style={{ alignItems: 'center', marginTop: 18 }}
-                >
-                  <Text style={{ color: colors.text.tertiary, fontSize: 13, fontWeight: '600' }}>
-                    חזרה למסך ברוכים הבאים
-                  </Text>
-                </TouchableOpacity>
-              </View>
               )}
             </ScrollView>
           </SafeAreaView>
@@ -612,3 +388,85 @@ export default function LoginScreen({ navigation }: any) {
     </TouchableWithoutFeedback>
   );
 }
+
+const styles = StyleSheet.create({
+  scroll: {
+    flexGrow: 1,
+    paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+    paddingBottom: APP_LAYOUT.componentGap,
+  },
+  scrollWelcome: {
+    justifyContent: 'space-between',
+    paddingTop: APP_LAYOUT.sectionGap,
+  },
+  scrollForm: {
+    justifyContent: 'center',
+    paddingTop: APP_LAYOUT.componentGap,
+  },
+  logoWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  buttonStack: {
+    gap: APP_LAYOUT.stackGapTight,
+  },
+  form: {
+    width: '100%',
+  },
+  titleBlock: {
+    marginBottom: APP_LAYOUT.sectionGap / 2 + 4,
+  },
+  optionsRow: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: APP_LAYOUT.stackGapSmall / 2,
+    marginBottom: APP_LAYOUT.sectionGap / 2 + 4,
+  },
+  rememberBtn: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: APP_LAYOUT.stackGapSmall,
+    paddingVertical: 4,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  optionText: {
+    fontSize: APP_TYPE.cardBody.fontSize,
+    lineHeight: APP_TYPE.cardBody.lineHeight,
+    fontWeight: APP_TYPE.cardBody.fontWeight,
+    writingDirection: 'rtl',
+  },
+  linkText: {
+    fontWeight: APP_TYPE.cardTitle.fontWeight,
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: APP_LAYOUT.componentGap + 4,
+  },
+  dividerLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+  },
+  dividerText: {
+    marginHorizontal: APP_LAYOUT.stackGapTight,
+    textAlign: 'center',
+  },
+  footer: {
+    textAlign: 'center',
+    marginTop: APP_LAYOUT.sectionGap / 2 + 4,
+  },
+  backLink: {
+    alignItems: 'center',
+    marginTop: APP_LAYOUT.componentGap,
+    paddingVertical: 4,
+  },
+});

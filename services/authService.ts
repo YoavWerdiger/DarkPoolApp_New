@@ -4,6 +4,7 @@ import { supabase } from './supabase';
 import { openAuthSessionAsync, type WebBrowserAuthSessionResult } from '../lib/expoWebBrowserSafe';
 import { makeRedirectUri } from 'expo-auth-session';
 import * as Linking from 'expo-linking';
+import Constants from 'expo-constants';
 import { logger } from '../utils/logger';
 import { SUPABASE_URL } from '../config/publicEnv';
 import { mediaService } from './mediaService';
@@ -1488,11 +1489,17 @@ export class AuthService {
       // makeRedirectUri + native: בבילד אמיתי מחזירים בדיוק com.darkpool.app://oauth (תיעוד Supabase).
       // בלי native, createURL עלול להחזיר com.darkpool.app:/oauth — ואז ב-Android ה-deep link
       // com.darkpool.app://oauth?code=... לא מתחיל ב-returnUrl והזרימה נכשלת.
-      const redirectUrl = makeRedirectUri({
-        scheme: 'com.darkpool.app',
-        path: 'oauth',
-        native: GOOGLE_OAUTH_REDIRECT_NATIVE,
-      });
+      // Expo Go לא מטפל ב-com.darkpool.app:// — הדפדפן חוזר ל-Supabase אבל האפליקציה לא מקבלת
+      // את ה-code (נראה בלוגים: /callback 302 בלי /token pkce). ב-Expo Go: exp://…/--/oauth
+      // (דורש exp://** ב-Redirect URLs של Supabase Auth).
+      const isExpoGo = Constants.appOwnership === 'expo';
+      const redirectUrl = isExpoGo
+        ? makeRedirectUri({ path: 'oauth' })
+        : makeRedirectUri({
+            scheme: 'com.darkpool.app',
+            path: 'oauth',
+            native: GOOGLE_OAUTH_REDIRECT_NATIVE,
+          });
       if (__DEV__) {
         logger.info('AuthService', `Google OAuth redirectTo: ${redirectUrl}`);
       }

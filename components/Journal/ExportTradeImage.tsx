@@ -749,7 +749,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       textAlign: 'center',
       fontVariant: ['tabular-nums'],
     },
+    /** שורות ההגדרות בנויות לעץ LTR (כמו מסך ההגדרות) — בתוך שיט RTL הן מתהפכות */
     optionsBlock: {
+      direction: 'ltr',
       alignSelf: 'stretch',
       marginTop: tokens.spacing.xl,
     },

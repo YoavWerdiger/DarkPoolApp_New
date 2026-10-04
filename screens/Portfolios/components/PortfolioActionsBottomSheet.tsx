@@ -1,18 +1,22 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Alert, Dimensions } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FileText, Gift, Pencil, RefreshCw, RotateCcw, Trash2, Wallet } from 'lucide-react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CommonActions } from '@react-navigation/native';
 import BottomSheet, {
   useBottomSheetClose,
+  BOTTOM_SHEET_EDGE_HANDLE_HEIGHT,
+  resolveFitContentSnapPoint,
 } from '../../../components/ui/BottomSheet/BottomSheet';
+import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../../../components/ui/DayNavBlurButton';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { APP_LAYOUT } from '../../../components/ui/appLayout';
 import {
+  APP_TYPE,
   appPhysicalRightText,
   appSheetSubtitleStyle,
-  appSheetTitleStyle,
 } from '../../../components/ui/appType';
 import {
   formFieldInputStyle,
@@ -33,6 +37,10 @@ type Nav = NativeStackNavigationProp<PortfoliosStackParamList, 'PortfolioDetail'
 type Phase = 'menu' | 'confirmDelete';
 
 const NAV_AFTER_CLOSE_MS = 280;
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+
+/** גובה התפריט האחרון שנמדד (לפי סוג תיק) — הפתיחה הבאה עולה ישר בגובה הנכון */
+const lastMenuHeight: Record<'manual' | 'colmex', number> = { manual: 0, colmex: 0 };
 
 interface BodyProps {
   portfolioId: string;
@@ -49,6 +57,7 @@ interface BodyProps {
   onSyncBroker?: () => Promise<void> | void;
   lastSyncAt?: Date | null;
   isSyncing?: boolean;
+  onContentHeight: (h: number) => void;
 }
 
 function PortfolioActionsSheetBody({
@@ -65,6 +74,7 @@ function PortfolioActionsSheetBody({
   onSyncBroker,
   lastSyncAt,
   isSyncing,
+  onContentHeight,
 }: BodyProps) {
   const tokens = useDesignTokens();
   const insets = useSafeAreaInsets();
@@ -205,16 +215,37 @@ function PortfolioActionsSheetBody({
           paddingTop: 4,
           paddingBottom: Math.max(insets.bottom, 12),
         },
+        /** כמו שאר השיטים: חזרה מימין, כותרת ממורכזת, ריווח שמאלי */
         header: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 10,
           marginBottom: APP_LAYOUT.cardTitleToBodyGap,
         },
+        headerCenter: {
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        headerSideSpacer: {
+          width: DAY_NAV_BUTTON_SIZE,
+          height: DAY_NAV_BUTTON_SIZE,
+        },
         title: {
-          ...appSheetTitleStyle,
+          fontSize: APP_TYPE.sectionTitle.fontSize,
+          fontWeight: APP_TYPE.sectionTitle.fontWeight,
+          lineHeight: APP_TYPE.sectionTitle.lineHeight,
+          letterSpacing: APP_TYPE.sectionTitle.letterSpacing,
           color: tokens.colors.text.primary,
+          direction: 'ltr',
+          textAlign: 'center',
+          writingDirection: 'rtl',
+          width: '100%',
         },
         subtitle: {
           ...appSheetSubtitleStyle,
-          marginTop: APP_LAYOUT.titleSubtitleGap,
+          textAlign: 'center',
+          marginBottom: APP_LAYOUT.cardTitleToBodyGap,
           color: tokens.colors.text.secondary,
         },
         fieldShell: {
@@ -264,13 +295,24 @@ function PortfolioActionsSheetBody({
   const noChevron = <View />;
 
   return (
-    <View style={styles.root}>
+    <View style={styles.root} onLayout={(e) => onContentHeight(e.nativeEvent.layout.height)}>
       <View style={styles.header}>
-        <Text style={styles.title} numberOfLines={1}>
-          {sheetTitle}
-        </Text>
-        {sheetSubtitle ? <Text style={styles.subtitle}>{sheetSubtitle}</Text> : null}
+        <DayNavBlurButton
+          onPress={handleHeaderBack}
+          size={DAY_NAV_BUTTON_SIZE}
+          glassIntensity="subtle"
+          accessibilityLabel="חזרה"
+        >
+          <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
+        </DayNavBlurButton>
+        <View style={styles.headerCenter}>
+          <Text style={styles.title} numberOfLines={1}>
+            {sheetTitle}
+          </Text>
+        </View>
+        <View style={styles.headerSideSpacer} />
       </View>
+      {sheetSubtitle ? <Text style={styles.subtitle}>{sheetSubtitle}</Text> : null}
 
       {phase === 'confirmDelete' ? (
         <View style={styles.buttons}>
@@ -441,6 +483,30 @@ export default function PortfolioActionsBottomSheet({
   const tokens = useDesignTokens();
   const [phase, setPhase] = useState<Phase>('menu');
   const [deleting, setDeleting] = useState(false);
+  const variant = portfolio.source === 'colmex_pro' ? 'colmex' : 'manual';
+  const [contentH, setContentH] = useState<number>(lastMenuHeight[variant]);
+
+  const handleContentHeight = useCallback(
+    (h: number) => {
+      if (!(h > 0)) return;
+      if (phase === 'menu') lastMenuHeight[variant] = h;
+      setContentH((prev) => (Math.abs(prev - h) < 1 ? prev : h));
+    },
+    [phase, variant],
+  );
+
+  const snapPoints = useMemo(
+    () => [
+      resolveFitContentSnapPoint({
+        contentHeight: contentH,
+        screenHeight: SCREEN_HEIGHT,
+        handlePx: BOTTOM_SHEET_EDGE_HANDLE_HEIGHT,
+        initialEstimate: 0.55,
+        maxSnap: 0.9,
+      }),
+    ],
+    [contentH],
+  );
 
   useEffect(() => {
     if (visible) {
@@ -452,7 +518,7 @@ export default function PortfolioActionsBottomSheet({
     <BottomSheet
       isOpen={visible}
       onClose={onClose}
-      snapPoints={[0.9]}
+      snapPoints={snapPoints}
       fitContent
       edgeToEdge
       showHandle
@@ -478,6 +544,7 @@ export default function PortfolioActionsBottomSheet({
         onSyncBroker={onSyncBroker}
         lastSyncAt={lastSyncAt}
         isSyncing={isSyncing}
+        onContentHeight={handleContentHeight}
       />
     </BottomSheet>
   );

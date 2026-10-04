@@ -10,7 +10,11 @@ import BottomSheet, {
   BOTTOM_SHEET_EDGE_HANDLE_HEIGHT,
   resolveFitContentSnapPoint,
 } from '../../../components/ui/BottomSheet/BottomSheet';
-import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../../../components/ui/DayNavBlurButton';
+import {
+  DayNavBlurButton,
+  DAY_NAV_BUTTON_SIZE,
+  headerExitButtonFill,
+} from '../../../components/ui/DayNavBlurButton';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { APP_LAYOUT } from '../../../components/ui/appLayout';
 import {
@@ -300,7 +304,8 @@ function PortfolioActionsSheetBody({
         <DayNavBlurButton
           onPress={handleHeaderBack}
           size={DAY_NAV_BUTTON_SIZE}
-          glassIntensity="subtle"
+          glass={false}
+          style={{ backgroundColor: headerExitButtonFill(tokens.colors.background.cardSolid) }}
           accessibilityLabel="חזרה"
         >
           <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />

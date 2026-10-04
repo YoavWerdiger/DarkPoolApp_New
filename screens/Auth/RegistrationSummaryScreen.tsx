@@ -1,6 +1,19 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
+import Reanimated, {
+  Easing,
+  FadeIn,
+  FadeInDown,
+  FadeOut,
+  runOnJS,
+  useAnimatedProps,
+  useAnimatedReaction,
+  useSharedValue,
+  withTiming,
+  ZoomIn,
+} from 'react-native-reanimated';
+import Svg, { Circle } from 'react-native-svg';
 import { useRegistration } from '../../context/RegistrationContext';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
@@ -15,7 +28,6 @@ import { HapticFeedback } from '../../utils/hapticFeedback';
 import { ONBOARDING_STEPS, ONBOARDING_TOTAL_STEPS } from '../../constants/onboardingFlow';
 import {
   buildOnboardingIntroData,
-  getExperienceLevelLabel,
   getTradingFocusLabel,
   getTradingPlatformLabels,
 } from '../../constants/onboardingQuestionnaire';
@@ -23,44 +35,45 @@ import { Confetti } from '../../components/onboarding/Confetti';
 import { APP_LAYOUT } from '../../components/ui/appLayout';
 import { APP_TYPE } from '../../components/ui/appType';
 
-const EXPERIENCE_ORDER = ['first_steps', 'beginner', 'intermediate', 'advanced'];
+const RING = 168;
+const STROKE = 8;
+const R = (RING - STROKE) / 2;
+const CIRC = 2 * Math.PI * R;
+const LOAD_MS = 3400;
 
-/** עמודה בתג הרמה — גדלה מלמטה לגובה המלא כשהיא «מתמלאת» */
-function LevelBar({
-  active,
-  filled,
-  height,
-  color,
-}: {
-  active: boolean;
-  filled: boolean;
-  height: number;
-  color: string;
-}) {
-  const grow = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    if (!filled) return;
-    Animated.spring(grow, { toValue: 1, damping: 9, stiffness: 180, mass: 0.5, useNativeDriver: true }).start();
-  }, [filled, grow]);
+const AnimatedCircle = Reanimated.createAnimatedComponent(Circle);
+
+/** שלבי ה«איסוף» המדומה — כל שלב מסומן ב-✓ כשההתקדמות עוברת את הסף שלו */
+const SETUP_STEPS = [
+  { at: 22, label: 'מנתחים את הפרופיל שלך' },
+  { at: 48, label: 'מתאימים חדשות ודיווחי רווח' },
+  { at: 74, label: 'בונים את הפיד האישי' },
+  { at: 98, label: 'מכינים את יומן המסחר' },
+];
+
+function SetupStep({ label, state }: { label: string; state: 'wait' | 'active' | 'done' }) {
+  const tokens = useDesignTokens();
   return (
-    <View style={{ width: 14, height, justifyContent: 'flex-end' }}>
-      <View
-        style={{ position: 'absolute', bottom: 0, width: 14, height, borderRadius: 7, backgroundColor: color, opacity: 0.16 }}
-      />
-      {active ? (
-        <Animated.View
-          style={{
-            width: 14,
-            height,
-            borderRadius: 7,
-            backgroundColor: color,
-            transform: [
-              { translateY: grow.interpolate({ inputRange: [0, 1], outputRange: [height / 2, 0] }) },
-              { scaleY: grow },
-            ],
-          }}
-        />
-      ) : null}
+    <View style={styles.stepRow}>
+      <View style={styles.stepIcon}>
+        {state === 'done' ? (
+          <Reanimated.View key="d" entering={ZoomIn.duration(200)}>
+            <Ionicons name="checkmark-circle" size={22} color={tokens.colors.text.primary} />
+          </Reanimated.View>
+        ) : state === 'active' ? (
+          <ActivityIndicator size="small" color={tokens.colors.text.secondary} />
+        ) : (
+          <Ionicons name="ellipse-outline" size={22} color={tokens.colors.text.tertiary} />
+        )}
+      </View>
+      <Text
+        style={[
+          styles.stepText,
+          { color: state === 'wait' ? tokens.colors.text.tertiary : tokens.colors.text.primary },
+        ]}
+      >
+        {label}
+      </Text>
     </View>
   );
 }
@@ -72,53 +85,45 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
   const tokens = useDesignTokens();
   const [loading, setLoading] = useState(false);
 
-  const badgeScale = useRef(new Animated.Value(0.82)).current;
-  const contentOpacity = useRef(new Animated.Value(0)).current;
-
-  // רמה לפי הניסיון שנבחר (1–4)
-  const level = Math.max(1, EXPERIENCE_ORDER.indexOf(data.experienceLevel) + 1);
-  const levelName = getExperienceLevelLabel(data.experienceLevel) || 'סוחר בקהילה';
   const firstName = (data.fullName || '').trim().split(/\s+/)[0] || '';
   const chips = [
     getTradingFocusLabel(data.tradingFocus),
     getTradingPlatformLabels(data.tradingPlatform),
   ].filter((c): c is string => !!c);
-  const [barsFilled, setBarsFilled] = useState(0);
-  const [celebrate, setCelebrate] = useState(false);
 
-  // תג נכנס → עמודות מתמלאות אחת-אחת עם טיק → קונפטי + רטט הצלחה → טקסט
+  // טעינה מדומה: טבעת 0→100% עם שלבים, ואז קונפטי + ברוך הבא
+  const progress = useSharedValue(0);
+  const [pct, setPct] = useState(0);
+  const [done, setDone] = useState(false);
+
   useEffect(() => {
-    Animated.spring(badgeScale, {
-      toValue: 1,
-      damping: 9,
-      stiffness: 140,
-      mass: 0.6,
-      useNativeDriver: true,
-    }).start();
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    for (let i = 0; i < level; i++) {
-      timers.push(
-        setTimeout(() => {
-          setBarsFilled(i + 1);
-          void HapticFeedback.selection();
-        }, 450 + i * 220),
-      );
-    }
-    timers.push(
-      setTimeout(() => {
-        setCelebrate(true);
-        void HapticFeedback.success();
-        Animated.timing(contentOpacity, {
-          toValue: 1,
-          duration: 360,
-          easing: Easing.out(Easing.quad),
-          useNativeDriver: true,
-        }).start();
-      }, 450 + level * 220 + 120),
-    );
-    return () => timers.forEach(clearTimeout);
+    progress.value = withTiming(100, { duration: LOAD_MS, easing: Easing.bezier(0.45, 0.05, 0.35, 1) });
+    const t = setTimeout(() => {
+      setDone(true);
+      void HapticFeedback.success();
+    }, LOAD_MS + 250);
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useAnimatedReaction(
+    () => Math.round(progress.value),
+    (v, prev) => {
+      if (v !== prev) runOnJS(setPct)(v);
+    },
+  );
+
+  // טיק עדין בכל שלב שמסתיים
+  const doneSteps = SETUP_STEPS.filter((st) => pct >= st.at).length;
+  const prevDone = useRef(0);
+  useEffect(() => {
+    if (doneSteps > prevDone.current) void HapticFeedback.selection();
+    prevDone.current = doneSteps;
+  }, [doneSteps]);
+
+  const ringProps = useAnimatedProps(() => ({
+    strokeDashoffset: CIRC * (1 - progress.value / 100),
+  }));
 
   const handleFinish = async () => {
     setLoading(true);
@@ -291,7 +296,7 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
       showClose={false}
       footer={
         <CashAppButton
-          title="התחל להשתמש"
+          title={done ? 'הצטרף לקהילה' : 'רק רגע…'}
           variant="primary"
           size="lg"
           onPress={() => {
@@ -299,56 +304,95 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
             handleFinish();
           }}
           loading={loading}
-          disabled={loading}
+          disabled={loading || !done}
         />
       }
     >
       <View style={styles.centered}>
-        <Animated.View
-          style={[
-            styles.badge,
-            { backgroundColor: tokens.colors.background.cardSolid, transform: [{ scale: badgeScale }] },
-          ]}
-        >
-          <View style={styles.bars}>
-            {[0, 1, 2, 3].map((i) => (
-              <LevelBar
-                key={i}
-                active={i < level}
-                filled={barsFilled > i}
-                height={18 + i * 14}
-                color={level === 4 ? tokens.colors.primary.main : tokens.colors.text.primary}
-              />
-            ))}
-          </View>
-          <Text style={[styles.levelNum, { color: tokens.colors.text.primary }]}>רמה {level}</Text>
-        </Animated.View>
-
-        <Animated.View style={[styles.textBlock, { opacity: contentOpacity }]}>
-          <Text style={[styles.title, { color: tokens.colors.text.primary }]}>
-            {firstName ? `ברוך הבא, ${firstName}` : 'ברוך הבא'}
-          </Text>
-          <Text style={[styles.levelName, { color: tokens.colors.text.secondary }]}>{levelName}</Text>
-          {chips.length > 0 ? (
-            <View style={styles.chips}>
-              {chips.map((c) => (
-                <View key={c} style={[styles.chip, { backgroundColor: tokens.colors.background.cardSolid }]}>
-                  <Text style={[styles.chipText, { color: tokens.colors.text.primary }]}>{c}</Text>
+        <View style={styles.ring}>
+          <Svg width={RING} height={RING} style={StyleSheet.absoluteFill}>
+            <Circle
+              cx={RING / 2}
+              cy={RING / 2}
+              r={R}
+              stroke={tokens.colors.border.divider}
+              strokeWidth={STROKE}
+              fill="none"
+            />
+            <AnimatedCircle
+              cx={RING / 2}
+              cy={RING / 2}
+              r={R}
+              stroke={tokens.colors.text.primary}
+              strokeWidth={STROKE}
+              strokeLinecap="round"
+              fill="none"
+              strokeDasharray={`${CIRC} ${CIRC}`}
+              animatedProps={ringProps}
+              transform={`rotate(-90 ${RING / 2} ${RING / 2})`}
+            />
+          </Svg>
+          {done ? (
+            <Reanimated.View key="avatar" entering={ZoomIn.springify().damping(12)} style={styles.ringInner}>
+              {data.profileImage ? (
+                <Image source={{ uri: data.profileImage }} style={styles.avatar} />
+              ) : (
+                <View style={[styles.avatar, styles.avatarFallback, { backgroundColor: tokens.colors.text.primary }]}>
+                  <Ionicons name="checkmark" size={64} color={tokens.colors.text.inverse} />
                 </View>
-              ))}
+              )}
+            </Reanimated.View>
+          ) : (
+            <Reanimated.View key="pct" exiting={FadeOut.duration(150)} style={styles.ringInner}>
+              <Text style={[styles.pct, { color: tokens.colors.text.primary }]}>{pct}%</Text>
+            </Reanimated.View>
+          )}
+        </View>
+
+        {done ? (
+          <Reanimated.View key="welcome" entering={FadeInDown.delay(150).duration(380)} style={styles.textBlock}>
+            <Text style={[styles.title, { color: tokens.colors.text.primary }]}>
+              {firstName ? `ברוך הבא, ${firstName}` : 'ברוך הבא'}
+            </Text>
+            <Text style={[styles.subtitle, { color: tokens.colors.text.secondary }]}>
+              הכול מוכן. החשבון שלך הותאם אישית.
+            </Text>
+            {chips.length > 0 ? (
+              <View style={styles.chips}>
+                {chips.map((c) => (
+                  <View key={c} style={[styles.chip, { backgroundColor: tokens.colors.background.cardSolid }]}>
+                    <Text style={[styles.chipText, { color: tokens.colors.text.primary }]}>{c}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+          </Reanimated.View>
+        ) : (
+          <Reanimated.View key="loading" exiting={FadeOut.duration(180)} style={styles.textBlock}>
+            <Text style={[styles.title, { color: tokens.colors.text.primary }]}>מכינים את החשבון שלך</Text>
+            <View style={styles.steps}>
+              {SETUP_STEPS.map((st, i) => {
+                const prevAt = i === 0 ? 0 : SETUP_STEPS[i - 1].at;
+                const state = pct >= st.at ? 'done' : pct >= prevAt ? 'active' : 'wait';
+                return (
+                  <Reanimated.View key={st.label} entering={FadeIn.delay(120 + i * 90).duration(260)}>
+                    <SetupStep label={st.label} state={state} />
+                  </Reanimated.View>
+                );
+              })}
             </View>
-          ) : null}
-        </Animated.View>
+          </Reanimated.View>
+        )}
       </View>
       <Confetti
-        fire={celebrate}
+        fire={done}
         colors={[tokens.colors.primary.main, tokens.colors.text.primary, '#FFC531', '#8E8E93', '#00E63D']}
       />
     </CashAppScreen>
   );
 };
 
-const BADGE = 168;
+const AVATAR = RING - STROKE * 2 - 12;
 
 const styles = StyleSheet.create({
   centered: {
@@ -356,24 +400,58 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  badge: {
-    width: BADGE,
-    height: BADGE,
-    borderRadius: BADGE / 2,
+  ring: {
+    width: RING,
+    height: RING,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: APP_LAYOUT.stackGapTight,
-    marginBottom: APP_LAYOUT.sectionGap / 2 + 8,
+    marginBottom: APP_LAYOUT.sectionGap,
   },
-  bars: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 8,
-    height: 60,
+  ringInner: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  levelNum: {
-    fontSize: APP_TYPE.cardTitle.fontSize,
+  pct: {
+    fontSize: APP_TYPE.flowTitle.fontSize + 6,
+    fontWeight: APP_TYPE.flowTitle.fontWeight,
+    fontVariant: ['tabular-nums'],
+  },
+  avatar: {
+    width: AVATAR,
+    height: AVATAR,
+    borderRadius: AVATAR / 2,
+  },
+  avatarFallback: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  subtitle: {
+    fontSize: APP_TYPE.sectionSubtitle.fontSize,
+    lineHeight: APP_TYPE.sectionSubtitle.lineHeight,
+    textAlign: 'center',
+    writingDirection: 'rtl',
+  },
+  steps: {
+    alignSelf: 'stretch',
+    gap: APP_LAYOUT.stackGapSmall + 4,
+    marginTop: APP_LAYOUT.componentGap,
+  },
+  stepRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 10,
+  },
+  stepIcon: {
+    width: 24,
+    alignItems: 'center',
+  },
+  stepText: {
+    flex: 1,
+    fontSize: APP_TYPE.cardBody.fontSize,
+    lineHeight: APP_TYPE.cardBody.lineHeight,
     fontWeight: APP_TYPE.cardTitle.fontWeight,
+    textAlign: 'right',
     writingDirection: 'rtl',
   },
   textBlock: {
@@ -385,12 +463,6 @@ const styles = StyleSheet.create({
     fontSize: APP_TYPE.flowTitle.fontSize,
     lineHeight: APP_TYPE.flowTitle.lineHeight,
     fontWeight: APP_TYPE.flowTitle.fontWeight,
-    textAlign: 'center',
-    writingDirection: 'rtl',
-  },
-  levelName: {
-    fontSize: APP_TYPE.sectionSubtitle.fontSize,
-    lineHeight: APP_TYPE.sectionSubtitle.lineHeight,
     textAlign: 'center',
     writingDirection: 'rtl',
   },

@@ -149,7 +149,9 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
         // account_type לא נכתב מהקליינט — היא עמודת הרשאה. המסלול שנבחר כבר
         // רשום ב-payment_transactions, וה-webhook של Cardcom הוא שמעדכן את
         // המנוי אחרי תשלום מאומת.
-        const { error: updateError } = await supabase
+        // חשבון auth ישן בלי שורה ב-users — יוצרים אותה לפני העדכון
+        await supabase.rpc('ensure_my_user_row');
+        const { data: updatedRows, error: updateError } = await supabase
           .from('users')
           .update({
             phone: data.phone || null,
@@ -161,9 +163,11 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
             registration_completed: true,
             updated_at: new Date().toISOString(),
           })
-          .eq('id', userId);
+          .eq('id', userId)
+          .select('id');
 
         if (updateError) throw new Error(updateError.message);
+        if (!updatedRows?.length) throw new Error('לא נמצא חשבון מחובר — התחבר מחדש ונסה שוב');
 
         if (planId === 'free') {
           await AuthService.ensureFreeSubscriptionRow(userId);
@@ -271,6 +275,7 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
           );
         }
       } else {
+        setLoading(false);
         legacyAlert('שגיאה', 'לא ניתן היה ליצור את המשתמש');
       }
     } catch {

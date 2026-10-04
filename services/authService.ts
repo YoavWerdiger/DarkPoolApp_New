@@ -39,12 +39,23 @@ async function upsertOwnUserRow(
   if (updateError) return { error: updateError };
   if ((updated?.length ?? 0) > 0) return { error: null };
 
-  // הטריגר on_auth_user_created בדרך כלל כבר יצר את השורה; אם לא — יוצרים אותה.
-  const { error: insertError } = await supabase
+  // השורה חסרה (חשבון auth ישן) — יוצרים אותה בשרת ומעדכנים שוב.
+  // insert ישיר מהקליינט נחסם בהרשאות-עמודה (400).
+  const { error: ensureError } = await supabase.rpc('ensure_my_user_row');
+  if (ensureError) {
+    const { error: insertError } = await supabase
+      .from('users')
+      .insert({ id: userId, ...insertOnly, ...columns });
+    return { error: insertError };
+  }
+  const { data: retried, error: retryError } = await supabase
     .from('users')
-    .insert({ id: userId, ...insertOnly, ...columns });
-
-  return { error: insertError };
+    .update(columns)
+    .eq('id', userId)
+    .select('id');
+  if (retryError) return { error: retryError };
+  if ((retried?.length ?? 0) === 0) return { error: { message: 'לא נמצא פרופיל משתמש לעדכון' } };
+  return { error: null };
 }
 
 /** מפתח אחסון הסשן של GoTrue ב-AsyncStorage (sb-<project-ref>-auth-token) */

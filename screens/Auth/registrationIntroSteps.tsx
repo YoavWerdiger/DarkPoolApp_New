@@ -46,11 +46,11 @@ const FOCUS_HORIZON: Record<string, string> = {
 };
 
 /** רמת ניסיון — מד 1–4 + הסבר קצר */
-const EXPERIENCE_DETAILS: Record<string, { level: number; description: string }> = {
-  first_steps: { level: 1, description: 'עוד לא ביצעתי עסקאות בשוק' },
-  beginner: { level: 2, description: 'מסחר ראשון, פחות משנה בשוק' },
-  intermediate: { level: 3, description: 'כמה שנים של מסחר פעיל' },
-  advanced: { level: 4, description: 'מסחר שיטתי עם אסטרטגיה מוגדרת' },
+const EXPERIENCE_DETAILS: Record<string, { level: number; description: string; shortLabel: string }> = {
+  first_steps: { level: 1, description: 'עוד לא ביצעתי עסקאות בשוק', shortLabel: 'צעדים ראשונים' },
+  beginner: { level: 2, description: 'מסחר ראשון, פחות משנה בשוק', shortLabel: 'מתחיל' },
+  intermediate: { level: 3, description: 'כמה שנים של מסחר פעיל', shortLabel: 'בינוני' },
+  advanced: { level: 4, description: 'מסחר שיטתי עם אסטרטגיה מוגדרת', shortLabel: 'מתקדם' },
 };
 const EXPERIENCE_LEVEL_OPTIONS_DETAILED = EXPERIENCE_LEVEL_OPTIONS.map((o) => ({
   ...o,
@@ -64,7 +64,7 @@ const experienceConfig: IntroQuestionConfig = {
   subtitle: 'בחר את האפשרות הקרובה ביותר',
   options: EXPERIENCE_LEVEL_OPTIONS_DETAILED,
   nextRoute: 'RegistrationTradingFocus',
-  displayMode: 'stairs',
+  displayMode: 'sliderVertical',
 };
 
 const focusConfig: IntroQuestionConfig = {

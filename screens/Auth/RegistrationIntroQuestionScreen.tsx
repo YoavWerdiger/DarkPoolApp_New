@@ -16,6 +16,7 @@ import OnboardingSwipeCards from '../../components/onboarding/OnboardingSwipeCar
 import { StopSlider } from '../../components/onboarding/StopSlider';
 import { ExpandingTiles } from '../../components/onboarding/ExpandingTiles';
 import { ExperienceStairs } from '../../components/onboarding/ExperienceStairs';
+import { VerticalStopSlider } from '../../components/onboarding/VerticalStopSlider';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import type { OnboardingStepKey } from '../../constants/onboardingFlow';
 import { ONBOARDING_STEPS, ONBOARDING_TOTAL_STEPS } from '../../constants/onboardingFlow';
@@ -43,6 +44,7 @@ export type IntroQuestionConfig = {
     icon?: React.ComponentProps<typeof import('@expo/vector-icons').Ionicons>['name'];
     level?: number;
     description?: string;
+    shortLabel?: string;
     logo?: string | number;
   }[];
   nextRoute: string;
@@ -50,7 +52,7 @@ export type IntroQuestionConfig = {
   optional?: boolean;
   allowDeselect?: boolean;
   /** Display mode: 'list' (default), 'swipe', או סליידר עם עצירות */
-  displayMode?: 'list' | 'swipe' | 'sliderLevel' | 'sliderIcon' | 'sliderMoney' | 'sliderGauge' | 'sliderRank' | 'stairs' | 'tiles';
+  displayMode?: 'list' | 'swipe' | 'sliderLevel' | 'sliderIcon' | 'sliderMoney' | 'sliderGauge' | 'sliderRank' | 'stairs' | 'sliderVertical' | 'tiles';
   /** Multi-select question — the answer is stored as an array of values */
   multiple?: boolean;
 };
@@ -148,7 +150,16 @@ const RegistrationIntroQuestionScreen = ({ navigation, config }: Props) => {
         </View>
       }
     >
-      {displayMode === 'stairs' ? (
+      {displayMode === 'sliderVertical' ? (
+        <>
+          <VerticalStopSlider
+            options={config.options}
+            value={selected[0] ?? ''}
+            onChange={handleValueChange}
+          />
+          <View style={{ flex: 1 }} />
+        </>
+      ) : displayMode === 'stairs' ? (
         <>
           <ExperienceStairs
             options={config.options}

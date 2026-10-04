@@ -40,7 +40,9 @@ function NativeWheel({ values, value, onChange }: Props) {
     <Picker
       selectedValue={value}
       onValueChange={(v) => {
-        void HapticFeedback.selection();
+        // UIPickerView מנגן רטט «טיק» מערכתי בכל שורה בזמן גלילה (כשרטט מערכת פעיל בהגדרות);
+        // ב-RN אין אירוע לכל שורה — כאן «נחיתה» מורגשת על הערך הסופי
+        void HapticFeedback.impactLight();
         onChange(Number(v));
       }}
       itemStyle={[styles.nativeItem, { color: tokens.colors.text.primary }]}

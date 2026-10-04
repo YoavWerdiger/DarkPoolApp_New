@@ -7,7 +7,7 @@ import AuthStack from './navigation/AuthStack';
 import MainTabs from './navigation/MainTabs';
 import ProfileStack from './navigation/ProfileStack';
 import AdminStack from './navigation/AdminStack';
-import { View, ActivityIndicator, Text, StyleSheet, AppState, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, AppState, TouchableOpacity, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { AuroraHost } from './components/VideoBackground';
 import "./global.css";
@@ -25,6 +25,7 @@ import { ToastProvider } from './components/ui/Toast';
 import { AppDialogProvider } from './components/ui/AppDialogProvider';
 import { logger } from './utils/logger';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { AppLaunchScreen } from './components/AppLaunchScreen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { HapticFeedback } from './utils/hapticFeedback';
@@ -97,6 +98,10 @@ function AppContent() {
   const [biometricLocked, setBiometricLocked] = useState(false);
   const [biometricChecked, setBiometricChecked] = useState(false);
   const appState = useRef(AppState.currentState);
+  const [launchDone, setLaunchDone] = useState(false);
+  const [appRevealed, setAppRevealed] = useState(false);
+  const revealApp = useCallback(() => setAppRevealed(true), []);
+  const finishLaunch = useCallback(() => setLaunchDone(true), []);
   /** רק אחרי מעבר ראשון מ-loading — לנקות סשן רישום ישן ב-cold start בלי לפגוע ב-Google/OTP חי */
   const bootAuthHandledRef = useRef(false);
   // באמצע אשף הרישום עבור אותו משתמש מחובר — לא מדלגים ל-Main גם אם הפרופיל עוד לא מעודכן
@@ -315,26 +320,14 @@ function AppContent() {
     if (!isLoading && !user) clearShareTargets();
   }, [isLoading, user]);
 
-  // מסך טעינה מינימלי בלבד בזמן טעינת ה-Auth (בלי splash \"מלאכותי\" ובלי תמונת רקע מרשת)
-  if (isLoading) {
-    return (
-      <View style={{ flex: 1, backgroundColor: canvas, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#00C805" />
-      </View>
-    );
-  }
-
-  // לא מציגים את ה-Main לפני שידוע אם נדרשת ביומטריה — מונע תחושת "זריקה" לשכבת הנעילה
-  if (user && registrationDone && !biometricChecked) {
-    return (
-      <View style={{ flex: 1, backgroundColor: canvas, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#00C805" />
-      </View>
-    );
-  }
+  // מסך פתיחה: ממשיך מה-splash הנייטיב עד שה-Auth (וה-check הביומטרי) מוכנים.
+  // עץ האפליקציה נטען מתחתיו רק כשהפס מלא ועומד (appRevealed) — כדי שה-mount הכבד לא ייפול על אנימציה.
+  const bootReady = !isLoading && !(user && registrationDone && !biometricChecked);
 
   return (
     <View style={{ flex: 1, direction: 'ltr', backgroundColor: canvas }}>
+      {bootReady && (appRevealed || launchDone) && (
+      <>
       {/* KeyboardProvider בתוך עץ LTR — ה-dummy translateX של הספרייה לא מתהפך מ-forceRTL כמו מחוץ למעטפת (פרודקשן ≠ Expo Go). */}
       <KeyboardProvider
         statusBarTranslucent={Platform.OS === 'android'}
@@ -409,6 +402,9 @@ function AppContent() {
       )}
       </AuroraHost>
       </KeyboardProvider>
+      </>
+      )}
+      {!launchDone && <AppLaunchScreen ready={bootReady} onRevealApp={revealApp} onFinish={finishLaunch} />}
     </View>
   );
 }

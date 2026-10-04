@@ -228,30 +228,44 @@ function MoneyCounter({ index, total, color, accent }: { index: number; total: n
     return () => cancelAnimationFrame(raf);
   }, [target]);
 
-  // מעבר ל«$$$$$»: המונה מגיע ל-$100,000, ואז הסכום מתחלף בסימני דולר
-  // שנוספים אחד-אחד (עם טיק), ובסוף קפיצה קטנה
-  const [dollars, setDollars] = useState(0);
+  // מעבר ל«$$$$$»: מ-$100,000 המונה ממשיך לטפס בהאצה (עד מיליונים), ובסוף
+  // הסכום «מתפוצץ» לסימני דולר עם קפיצה וטיק
+  const [dollars, setDollars] = useState(false);
   useEffect(() => {
     if (!isTop) {
-      setDollars(0);
+      setDollars(false);
       pulse.value = withSpring(0, SPRING);
       return undefined;
     }
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    const startAt = 380; // אחרי שהמונה סיים לספור ל-100K
-    for (let n = 1; n <= 5; n++) {
-      timers.push(
-        setTimeout(() => {
-          setDollars(n);
-          void HapticFeedback.selection();
-          if (n === 5) {
-            pulse.value = 0;
-            pulse.value = withSpring(1, { damping: 10, stiffness: 180, mass: 0.6 });
-          }
-        }, startAt + (n - 1) * 85),
-      );
-    }
-    return () => timers.forEach(clearTimeout);
+    let raf = 0;
+    const FROM = 100_000;
+    const TO = 9_999_999;
+    const DELAY = 380; // אחרי שהספירה הרגילה הגיעה ל-100K
+    const DUR = 700;
+    const startT = Date.now() + DELAY;
+    const step = () => {
+      const t = Math.min(1, Math.max(0, (Date.now() - startT) / DUR));
+      // האצה אקספוננציאלית — לאט בהתחלה ומהר מאוד בסוף
+      const v = Math.round(FROM * Math.pow(TO / FROM, t * t));
+      if (t > 0) {
+        setShown(v);
+        fromRef.current = v;
+      }
+      if (t < 1) {
+        raf = requestAnimationFrame(step);
+      } else {
+        setDollars(true);
+        void HapticFeedback.medium();
+        pulse.value = 0;
+        pulse.value = withSpring(1, { damping: 10, stiffness: 180, mass: 0.6 });
+      }
+    };
+    raf = requestAnimationFrame(step);
+    return () => {
+      cancelAnimationFrame(raf);
+      // חזרה מהטווח העליון — המונה יורד מ-100K ולא ממיליונים
+      fromRef.current = Math.min(fromRef.current, FROM);
+    };
   }, [isTop, pulse]);
 
   const style = useAnimatedStyle(() => ({
@@ -261,12 +275,12 @@ function MoneyCounter({ index, total, color, accent }: { index: number; total: n
   return (
     <Animated.View style={[styles.moneyRow, style]}>
       <Text
-        style={[styles.money, { color: isTop && dollars > 0 ? accent : color }]}
+        style={[styles.money, { color: isTop && dollars ? accent : color }]}
         numberOfLines={1}
         adjustsFontSizeToFit
       >
         {/* הטווח הפתוח (מעל $100K) — הסכום מתחלף ב-«$$$$$» */}
-        {isTop && dollars > 0 ? '$'.repeat(dollars) : `$${shown.toLocaleString('en-US')}`}
+        {isTop && dollars ? '$$$$$' : `$${shown.toLocaleString('en-US')}`}
       </Text>
     </Animated.View>
   );

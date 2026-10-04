@@ -33,7 +33,14 @@ export type IntroQuestionConfig = {
   stepKey: OnboardingStepKey;
   title: string;
   subtitle: string;
-  options: { label: string; value: string; emoji?: string }[];
+  options: {
+    label: string;
+    value: string;
+    emoji?: string;
+    icon?: React.ComponentProps<typeof import('@expo/vector-icons').Ionicons>['name'];
+    level?: number;
+    description?: string;
+  }[];
   nextRoute: string;
   /** Optional questions stay continuable without a selection */
   optional?: boolean;
@@ -150,7 +157,9 @@ const RegistrationIntroQuestionScreen = ({ navigation, config }: Props) => {
               <OnboardingChoiceRow
                 key={opt.value}
                 index={i}
-                emoji={opt.emoji}
+                icon={opt.icon}
+                level={opt.level}
+                description={opt.description}
                 label={opt.label}
                 selected={selected.includes(opt.value)}
                 allowDeselect={!!config.allowDeselect}

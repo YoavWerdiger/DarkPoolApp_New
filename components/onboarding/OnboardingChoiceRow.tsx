@@ -26,8 +26,12 @@ interface OnboardingChoiceRowProps {
   allowDeselect?: boolean;
   /** Multi-select row: square checkbox indicator, tapping always toggles */
   multiple?: boolean;
-  /** אייקון/אימוג'י בריבוע מימין (כמו Cal AI) */
-  emoji?: string;
+  /** אייקון קו (Ionicons) בריבוע מימין */
+  icon?: keyof typeof Ionicons.glyphMap;
+  /** מד רמה 1–4 (עמודות) במקום אייקון — לשאלת ניסיון */
+  level?: number;
+  /** שורת הסבר משנית מתחת לתווית */
+  description?: string;
   /** מיקום ברשימה — לכניסה מדורגת */
   index?: number;
 }
@@ -42,7 +46,9 @@ const OnboardingChoiceRow: React.FC<OnboardingChoiceRowProps> = ({
   onPress,
   allowDeselect = false,
   multiple = false,
-  emoji,
+  icon,
+  level,
+  description,
   index = 0,
 }) => {
   const tokens = useDesignTokens();
@@ -70,6 +76,9 @@ const OnboardingChoiceRow: React.FC<OnboardingChoiceRowProps> = ({
   };
 
   const labelColor = selected ? tokens.colors.text.inverse : tokens.colors.text.primary;
+  const subColor = selected ? tokens.colors.text.inverse : tokens.colors.text.secondary;
+  const glyphColor = selected ? tokens.colors.text.inverse : tokens.colors.text.primary;
+  const hasLeading = !!icon || level != null;
 
   return (
     <Animated.View entering={FadeInDown.delay(120 + index * STAGGER_MS).duration(360)}>
@@ -102,24 +111,35 @@ const OnboardingChoiceRow: React.FC<OnboardingChoiceRowProps> = ({
             ]}
           />
 
-          {emoji ? (
+          {hasLeading ? (
             <View
               style={[
                 styles.iconTile,
                 {
                   backgroundColor: selected
-                    ? 'rgba(127,127,127,0.18)'
+                    ? 'rgba(127,127,127,0.22)'
                     : tokens.colors.background.tertiary,
                 },
               ]}
             >
-              <Text style={styles.emoji}>{emoji}</Text>
+              {level != null ? (
+                <LevelBars level={level} color={glyphColor} />
+              ) : icon ? (
+                <Ionicons name={icon} size={21} color={glyphColor} />
+              ) : null}
             </View>
           ) : null}
 
-          <Text style={[styles.label, { color: labelColor }]} numberOfLines={2}>
-            {label}
-          </Text>
+          <View style={styles.textCol}>
+            <Text style={[styles.label, { color: labelColor }]} numberOfLines={2}>
+              {label}
+            </Text>
+            {description ? (
+              <Text style={[styles.description, { color: subColor }]} numberOfLines={2}>
+                {description}
+              </Text>
+            ) : null}
+          </View>
 
           {multiple ? (
             <View
@@ -145,6 +165,21 @@ const OnboardingChoiceRow: React.FC<OnboardingChoiceRowProps> = ({
   );
 };
 
+/** מד רמה בסגנון פס קליטה — 4 עמודות עולות, ממולאות עד level */
+const LevelBars: React.FC<{ level: number; color: string }> = ({ level, color }) => (
+  <View style={styles.bars}>
+    {[1, 2, 3, 4].map((n) => (
+      <View
+        key={n}
+        style={[
+          styles.bar,
+          { height: 6 + n * 4, backgroundColor: color, opacity: n <= level ? 1 : 0.22 },
+        ]}
+      />
+    ))}
+  </View>
+);
+
 const styles = StyleSheet.create({
   card: {
     // עץ האפליקציה LTR — row-reverse שם את האימוג'י מימין
@@ -164,13 +199,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  emoji: {
-    fontSize: 22,
-    lineHeight: 28,
+  bars: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 3,
+    height: 22,
+  },
+  bar: {
+    width: 4,
+    borderRadius: 2,
+  },
+  textCol: {
+    flex: 1,
+    gap: APP_LAYOUT.cardTitleToSubtitleGap,
+  },
+  description: {
+    ...appPhysicalRightText,
+    fontSize: APP_TYPE.cardSubtitle.fontSize,
+    lineHeight: APP_TYPE.cardSubtitle.lineHeight,
+    fontWeight: APP_TYPE.cardSubtitle.fontWeight,
   },
   label: {
     ...appPhysicalRightText,
-    flex: 1,
     fontSize: APP_TYPE.cardTitle.fontSize,
     lineHeight: APP_TYPE.cardTitle.lineHeight,
     fontWeight: APP_TYPE.cardTitle.fontWeight,

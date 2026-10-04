@@ -308,7 +308,7 @@ function SpeedGauge({
           <Path
             key={seg.i}
             d={seg.d}
-            stroke={seg.i === index ? (index === 0 ? accent : color) : track}
+            stroke={seg.i === index ? color : track}
             strokeWidth={GAUGE_STROKE}
             strokeLinecap="round"
             fill="none"

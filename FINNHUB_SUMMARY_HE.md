@@ -121,7 +121,7 @@ console.log(`נמצאו ${events.length} אירועים`);
 ## 🔑 פרטי ה-API
 
 ```
-API Key: d1uf6gpr01qpci1cbg00d1uf6gpr01qpci1cbg0g
+API Key: <FINNHUB_API_KEY>
 Base URL: https://finnhub.io/api/v1
 WebSocket: wss://ws.finnhub.io
 Secret: d1uf6gpr01qpci1cbg1g

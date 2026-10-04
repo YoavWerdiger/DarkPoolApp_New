@@ -25,7 +25,7 @@ expo start
 ## פרטי ה-API שבשימוש
 
 ```
-API Key: d1uf6gpr01qpci1cbg00d1uf6gpr01qpci1cbg0g
+API Key: <FINNHUB_API_KEY>
 Base URL: https://finnhub.io/api/v1
 ```
 

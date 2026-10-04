@@ -10,7 +10,7 @@
 
 ### API Key
 ```
-d1uf6gpr01qpci1cbg00d1uf6gpr01qpci1cbg0g
+<FINNHUB_API_KEY>
 ```
 
 ### Base URL
@@ -20,7 +20,7 @@ https://finnhub.io/api/v1
 
 ### WebSocket URL (לעתיד - עדכונים בזמן אמת)
 ```
-wss://ws.finnhub.io?token=d1uf6gpr01qpci1cbg00d1uf6gpr01qpci1cbg0g
+wss://ws.finnhub.io?token=<FINNHUB_API_KEY>
 ```
 
 ### Secret (לWebhooks)

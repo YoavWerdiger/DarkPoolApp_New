@@ -53,7 +53,6 @@ import {
   getTrade,
   updateTrade,
 } from '../../services/portfolios/portfolioTradeDerive';
-import { ASSET_TYPE_LABELS } from './portfolioConstants';
 import { supabase } from '../../lib/supabase';
 import type {
   AssetType,
@@ -657,34 +656,7 @@ export default function AddTransactionScreen() {
             {/* Asset / position — מצב ברירת מחדל; מזומן/דיבידנד מגיעים מ־initialMode בתפריט */}
             {mode === 'asset' && (
               <>
-                <View>
-                  <FieldLabel label="סוג נכס" />
-                  <View style={styles.chipsWrap}>
-                    {(['stock', 'etf', 'crypto', 'forex', 'futures', 'fund'] as AssetType[]).map((t) => (
-                      <DayDividerPill
-                        key={t}
-                        selected={assetType === t}
-                        haptic={assetType !== t}
-                        style={styles.assetChip}
-                        contentContainerStyle={styles.assetChipPad}
-                        accessibilityLabel={ASSET_TYPE_LABELS[t]}
-                        onPress={() => {
-                          if (assetType !== t) setAssetType(t);
-                        }}
-                      >
-                        <Text
-                          style={[
-                            styles.chipLabel,
-                            assetType === t && styles.chipLabelSelected,
-                          ]}
-                        >
-                          {ASSET_TYPE_LABELS[t]}
-                        </Text>
-                      </DayDividerPill>
-                    ))}
-                  </View>
-                </View>
-
+                {/* סוג הנכס מזוהה אוטומטית מהחיפוש (assetTypeFromSearchType) — בלי בחירה ידנית */}
                 <View style={styles.fieldBlock}>
                   <FieldLabel label="סימבול" />
                   <TouchableOpacity

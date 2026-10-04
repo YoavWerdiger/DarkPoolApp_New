@@ -213,8 +213,8 @@ function MoneyCounter({ index, total, color, accent }: { index: number; total: n
     const from = fromRef.current;
     const to = target;
     if (from === to) return undefined;
-    // בטווח העליון — הספירה הרגילה רק מגיעה ל-100K; הטיפוס הלאה מנוהל בנפרד
-    if (isTop && from > to) return undefined;
+    // בטווח העליון הספירה מנוהלת באפקט הנפרד (ישר מהערך הנוכחי ל-1,000,000)
+    if (isTop) return undefined;
     const startT = Date.now();
     const DUR = from === 0 ? 900 : 520;
     let raf = 0;
@@ -232,8 +232,8 @@ function MoneyCounter({ index, total, color, accent }: { index: number; total: n
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [target, isTop]);
 
-  // מעבר ל«$$$$$»: מ-$100,000 המונה ממשיך לטפס בהאצה (טיפוס קצר עד 1,000,000), ובסוף
-  // הסכום מתחלף ל-«$,$$$,$$$» עם קפיצה וטיק
+  // טווח עליון: סופר ישר מהערך הנוכחי ל-1,000,000 (אותה ספירה כמו בשאר הטווחים),
+  // ובסוף הסכום מתחלף ל-«$,$$$,$$$» עם קפיצה וטיק
   const [dollars, setDollars] = useState(false);
   useEffect(() => {
     if (!isTop) {
@@ -242,19 +242,16 @@ function MoneyCounter({ index, total, color, accent }: { index: number; total: n
       return undefined;
     }
     let raf = 0;
-    const FROM = 100_000;
+    const FROM = fromRef.current;
     const TO = 1_000_000;
-    const DELAY = 560; // אחרי שהספירה הרגילה (520ms) הגיעה ל-100K
-    const DUR = 360;
-    const startT = Date.now() + DELAY;
+    const DUR = 520;
+    const startT = Date.now();
     const step = () => {
-      const t = Math.min(1, Math.max(0, (Date.now() - startT) / DUR));
-      // האצה אקספוננציאלית — לאט בהתחלה ומהר מאוד בסוף
-      const v = Math.round(FROM * Math.pow(TO / FROM, t * t));
-      if (t > 0) {
-        setShown(v);
-        fromRef.current = v;
-      }
+      const t = Math.min(1, (Date.now() - startT) / DUR);
+      const eased = 1 - Math.pow(1 - t, 3);
+      const v = Math.round(FROM + (TO - FROM) * eased);
+      setShown(v);
+      fromRef.current = v;
       if (t < 1) {
         raf = requestAnimationFrame(step);
       } else {
@@ -265,10 +262,7 @@ function MoneyCounter({ index, total, color, accent }: { index: number; total: n
       }
     };
     raf = requestAnimationFrame(step);
-    return () => {
-      cancelAnimationFrame(raf);
-      // חזרה מהטווח העליון — המונה יורד מהערך שהגיע אליו (טיפוס קצר עד 1,000,000)
-    };
+    return () => cancelAnimationFrame(raf);
   }, [isTop, pulse]);
 
   const style = useAnimatedStyle(() => ({

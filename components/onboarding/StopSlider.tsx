@@ -31,7 +31,7 @@ type Props = {
   options: StopOption[];
   value: string;
   onChange: (v: string) => void;
-  /** ויזואל גדול מעל — 'level' = מד עמודות, 'icon' = אייקון, 'money' = סימני דולר */
+  /** ויזואל גדול מעל — 'level' = מד עמודות, 'icon' = אייקון, 'money' = מונה כסף מתגלגל */
   hero: 'level' | 'icon' | 'money';
 };
 
@@ -108,7 +108,12 @@ export function StopSlider({ options, value, onChange, hero }: Props) {
       {/* ויזואל גדול */}
       <View style={[styles.hero, { backgroundColor: tokens.colors.background.cardSolid }]}>
         {hero === 'money' ? (
-          <DollarSigns level={index + 1} total={count} color={tokens.colors.primary.main} />
+          <MoneyCounter
+            index={index}
+            total={count}
+            color={tokens.colors.text.primary}
+            accent={tokens.colors.primary.main}
+          />
         ) : hero === 'level' ? (
           <BigLevel level={index + 1} total={count} color={tokens.colors.text.primary} accent={tokens.colors.primary.main} />
         ) : current?.icon ? (
@@ -177,27 +182,64 @@ export function StopSlider({ options, value, onChange, hero }: Props) {
   );
 }
 
-/** דירוג בסימני דולר ($ עד $$$$) — הפעילים מלאים, השאר דהויים */
-function DollarSigns({ level, total, color }: { level: number; total: number; color: string }) {
-  return (
-    <View style={styles.dollarsRow}>
-      {Array.from({ length: total }).map((_, i) => (
-        <DollarSign key={i} on={i < level} color={color} />
-      ))}
-    </View>
-  );
-}
+/** יעד הסכום לכל טווח גודל תיק (המונה סופר אליו) */
+const MONEY_TARGETS = [10_000, 50_000, 100_000, 250_000];
 
-function DollarSign({ on, color }: { on: boolean; color: string }) {
-  const pop = useSharedValue(on ? 1 : 0);
+/**
+ * מונה כסף מתגלגל — הסכום סופר בין יעדים בזמן הגרירה (ease-out),
+ * והטווח העליון מקבל «+» והבהוב ירוק.
+ */
+function MoneyCounter({ index, total, color, accent }: { index: number; total: number; color: string; accent: string }) {
+  const target = MONEY_TARGETS[Math.min(index, MONEY_TARGETS.length - 1)];
+  const isTop = index === total - 1;
+  const [shown, setShown] = useState(target);
+  const fromRef = React.useRef(target);
+  const pulse = useSharedValue(0);
+
   useEffect(() => {
-    pop.value = withSpring(on ? 1 : 0, { damping: 10, stiffness: 260, mass: 0.5 });
-  }, [on, pop]);
+    const from = fromRef.current;
+    const to = target;
+    if (from === to) return undefined;
+    const startT = Date.now();
+    const DUR = 420;
+    let raf = 0;
+    const step = () => {
+      const t = Math.min(1, (Date.now() - startT) / DUR);
+      const eased = 1 - Math.pow(1 - t, 3);
+      const v = Math.round(from + (to - from) * eased);
+      setShown(v);
+      fromRef.current = v;
+      if (t < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [target]);
+
+  useEffect(() => {
+    if (isTop) {
+      pulse.value = 0;
+      pulse.value = withSpring(1, { damping: 8, stiffness: 160, mass: 0.6 });
+    } else {
+      pulse.value = withSpring(0, SPRING);
+    }
+  }, [isTop, pulse]);
+
   const style = useAnimatedStyle(() => ({
-    opacity: 0.16 + pop.value * 0.84,
-    transform: [{ scale: 0.82 + pop.value * 0.18 }],
+    transform: [{ scale: 1 + pulse.value * 0.06 }],
   }));
-  return <Animated.Text style={[styles.dollar, { color }, style]}>$</Animated.Text>;
+
+  return (
+    <Animated.View style={[styles.moneyRow, style]}>
+      <Text
+        style={[styles.money, { color: isTop ? accent : color }]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+      >
+        ${shown.toLocaleString('en-US')}
+        {isTop ? '+' : ''}
+      </Text>
+    </Animated.View>
+  );
 }
 
 /** מד רמה גדול — עמודות עולות שמתמלאות עד הרמה */
@@ -248,18 +290,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     writingDirection: 'rtl',
   },
-  dollarsRow: {
-    // שמאל→ימין כמו $$$ (סמל לטיני)
-    flexDirection: 'row',
+  moneyRow: {
     direction: 'ltr',
+    alignSelf: 'stretch',
     alignItems: 'center',
-    gap: 4,
     height: 80,
+    justifyContent: 'center',
   },
-  dollar: {
-    fontSize: 64,
-    lineHeight: 76,
+  money: {
+    fontSize: 54,
     fontWeight: '700',
+    letterSpacing: -1.5,
+    fontVariant: ['tabular-nums'],
   },
   bigBars: {
     flexDirection: 'row',

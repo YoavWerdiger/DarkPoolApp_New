@@ -23,11 +23,21 @@ import ExportTradeImage, {
 } from '../../../components/Journal/ExportTradeImage';
 import {
   SHEET_BACKDROP_OPACITY,
-  SHEET_GLASS_FLOOR,
-  SHEET_GLASS_INTENSITY,
-  SHEET_GLASS_OVERLAY,
   sheetContentBottomPadding,
 } from '../../../components/ui/BottomSheet/sheetGlass';
+import UIButton from '../../../components/ui/UIButton';
+import { APP_LAYOUT, UI_CARD_RADIUS } from '../../../components/ui/appLayout';
+import {
+  appCardMetricLabelStyle,
+  appFormFieldLabelStyle,
+} from '../../../components/ui/appType';
+import {
+  formFieldInputStyle,
+  formFieldNumericInputStyle,
+  formFieldPlaceholderColor,
+  formFieldShellStyle,
+} from '../../../components/ui/formControl';
+import { useTheme } from '../../../context/ThemeContext';
 import {
   loadTrades,
   closeTrade,
@@ -70,6 +80,7 @@ export default function OpenTradesTab({
   refreshKey,
 }: Props) {
   const tokens = useDesignTokens();
+  const { isDarkMode } = useTheme();
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
   const [trades, setTrades] = useState<Trade[]>([]);
@@ -311,16 +322,13 @@ export default function OpenTradesTab({
           flexShrink: 0,
         },
         dirPillText: {
-          fontSize: JOURNAL_TYPE.caption2.fontSize,
-          fontWeight: '700',
-          lineHeight: JOURNAL_TYPE.caption2.lineHeight,
-          letterSpacing: 0.2,
+          ...appCardMetricLabelStyle,
           textAlign: 'center',
         },
         sheetBody: {
-          paddingHorizontal: 20,
-          paddingTop: 24,
-          gap: 14,
+          paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+          paddingTop: APP_LAYOUT.componentGap,
+          gap: APP_LAYOUT.componentGap,
           direction: 'rtl',
         },
         sheetHeader: {
@@ -348,112 +356,74 @@ export default function OpenTradesTab({
           color: tokens.colors.text.tertiary,
         },
         sheetInputBlock: {
-          gap: 6,
+          gap: APP_LAYOUT.stackGapSmall,
         },
         sheetLabel: {
-          fontSize: 13,
-          fontWeight: '600',
-          color: tokens.colors.text.tertiary,
-          ...journalPhysicalRightText,
+          ...appFormFieldLabelStyle,
+          color: tokens.colors.text.secondary,
         },
         sheetInputWrap: {
+          ...formFieldShellStyle({ tokens, focused: false }),
           flexDirection: 'row',
-          alignItems: 'center',
           gap: 8,
-          backgroundColor: tokens.colors.background.tertiary,
-          borderRadius: 14,
-          borderWidth: 0,
-          borderColor: tokens.colors.border.subtle,
-          paddingHorizontal: 14,
-          paddingVertical: 8,
+          borderRadius: tokens.borderRadius.search,
+          paddingHorizontal: 16,
+          minHeight: 52,
           direction: 'ltr',
         },
         sheetInputPrefix: {
-          fontSize: 18,
-          fontWeight: '700',
-          color: tokens.colors.text.tertiary,
+          ...formFieldInputStyle(tokens),
+          color: tokens.colors.text.secondary,
           writingDirection: 'ltr',
         },
         sheetInput: {
+          ...formFieldNumericInputStyle(tokens),
           flex: 1,
-          fontSize: 22,
-          fontWeight: '700',
-          color: tokens.colors.text.primary,
+          minHeight: 52,
           textAlign: 'left',
-          writingDirection: 'ltr',
-          paddingVertical: 4,
+          color: tokens.colors.text.primary,
         },
         pnlPreview: {
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
-          paddingHorizontal: 14,
-          paddingVertical: 10,
-          backgroundColor: tokens.colors.background.tertiary,
-          borderRadius: 12,
+          padding: APP_LAYOUT.cardPadding,
+          backgroundColor: tokens.colors.background.cardSolid,
+          borderRadius: UI_CARD_RADIUS,
         },
         pnlPreviewLabel: {
-          fontSize: JOURNAL_TYPE.caption.fontSize,
-          fontWeight: '600',
-          lineHeight: JOURNAL_TYPE.caption.lineHeight,
-          color: tokens.colors.text.tertiary,
-          ...journalPhysicalRightText,
+          ...appCardMetricLabelStyle,
+          color: tokens.colors.text.secondary,
         },
         pnlPreviewValue: {
-          fontSize: JOURNAL_TYPE.body.fontSize,
-          fontWeight: '700',
-          lineHeight: JOURNAL_TYPE.body.lineHeight,
+          fontSize: JOURNAL_TYPE.cardMetricValueSecondary.fontSize,
+          fontWeight: JOURNAL_TYPE.cardMetricValueSecondary.fontWeight,
+          lineHeight: JOURNAL_TYPE.cardMetricValueSecondary.lineHeight,
           writingDirection: 'ltr',
           textAlign: 'right',
+          fontVariant: ['tabular-nums'],
         },
         sheetActions: {
-          flexDirection: 'row',
-          gap: 10,
-          paddingHorizontal: 20,
-          paddingTop: 6,
-          paddingBottom: 0,
-          direction: 'rtl',
-        },
-        sheetBtn: {
-          flex: 1,
-          paddingVertical: 14,
-          borderRadius: 18,
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
-        sheetBtnPrimary: {
-          backgroundColor: tokens.colors.primary.main,
-        },
-        sheetBtnCancel: {
-          backgroundColor: 'rgba(255,255,255,0.08)',
-        },
-        sheetBtnText: {
-          fontSize: JOURNAL_TYPE.body.fontSize,
-          fontWeight: '700',
-          lineHeight: JOURNAL_TYPE.body.lineHeight,
-          ...journalPhysicalRightText,
+          gap: APP_LAYOUT.stackGapSmall,
+          paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+          paddingTop: APP_LAYOUT.componentGap,
         },
         dateRow: {
           flexDirection: 'row',
           gap: 8,
         },
         datePill: {
+          ...formFieldShellStyle({ tokens, focused: false }),
           flex: 1,
           flexDirection: 'row',
-          alignItems: 'center',
           justifyContent: 'center',
           gap: 8,
-          backgroundColor: tokens.colors.background.tertiary,
-          borderRadius: 28,
-          paddingHorizontal: 14,
-          paddingVertical: 14,
-          borderWidth: 0,
-          borderColor: tokens.colors.border.subtle,
+          borderRadius: tokens.borderRadius.search,
+          paddingHorizontal: 16,
+          minHeight: 52,
         },
         datePillText: {
-          fontSize: JOURNAL_TYPE.body.fontSize,
-          fontWeight: '600',
-          lineHeight: JOURNAL_TYPE.body.lineHeight,
+          ...formFieldInputStyle(tokens),
           color: tokens.colors.text.primary,
           textAlign: 'center',
           writingDirection: 'ltr',
@@ -469,11 +439,11 @@ export default function OpenTradesTab({
           zIndex: 100,
         },
         exitPickerSheet: {
-          backgroundColor: SHEET_GLASS_FLOOR,
-          borderTopLeftRadius: 24,
-          borderTopRightRadius: 24,
-          paddingTop: 16,
-          paddingHorizontal: 16,
+          backgroundColor: tokens.colors.background.primary,
+          borderTopLeftRadius: tokens.borderRadius.xl,
+          borderTopRightRadius: tokens.borderRadius.xl,
+          paddingTop: APP_LAYOUT.componentGap,
+          paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
           paddingBottom: 36,
           direction: 'rtl',
         },
@@ -482,20 +452,6 @@ export default function OpenTradesTab({
           color: tokens.colors.text.primary,
           textAlign: 'center',
           marginBottom: 8,
-        },
-        exitPickerDoneBtn: {
-          marginTop: 12,
-          backgroundColor: tokens.colors.primary.main,
-          borderRadius: 28,
-          paddingVertical: 14,
-          alignItems: 'center',
-        },
-        exitPickerDoneBtnText: {
-          fontSize: JOURNAL_TYPE.body.fontSize,
-          fontWeight: '700',
-          lineHeight: JOURNAL_TYPE.body.lineHeight,
-          color: tokens.colors.text.inverse,
-          textAlign: 'center',
         },
       }),
     [tokens]
@@ -552,11 +508,10 @@ export default function OpenTradesTab({
         fitContent
         showHandle
         enablePanDownToClose
-        topCornerRadius={28}
+        topCornerRadius={tokens.borderRadius.xl}
         useModal
         edgeToEdge
-        glassIntensity={SHEET_GLASS_INTENSITY}
-        glassOverlayColor={SHEET_GLASS_OVERLAY}
+        backgroundColor={tokens.colors.background.primary}
         backdropOpacity={SHEET_BACKDROP_OPACITY}
         showBrandBackground={false}
         showBrandWatermark={false}
@@ -621,7 +576,7 @@ export default function OpenTradesTab({
                     value={exitPriceText}
                     onChangeText={setExitPriceText}
                     placeholder="0.00"
-                    placeholderTextColor={tokens.colors.text.tertiary}
+                    placeholderTextColor={formFieldPlaceholderColor(tokens)}
                     keyboardType="decimal-pad"
                     style={styles.sheetInput}
                   />
@@ -646,7 +601,7 @@ export default function OpenTradesTab({
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.datePill, { flex: 0.7 }]}
+                    style={styles.datePill}
                     activeOpacity={0.8}
                     onPress={() => {
                       void HapticFeedback.impactLight();
@@ -730,42 +685,24 @@ export default function OpenTradesTab({
             </View>
 
             <View style={styles.sheetActions}>
-              <TouchableOpacity
-                style={[styles.sheetBtn, styles.sheetBtnCancel]}
-                onPress={() => {
-                  void HapticFeedback.selection();
-                  setClosingTrade(null);
-                }}
+              <UIButton
+                title={busy ? 'סוגר…' : 'סגור פוזיציה'}
+                variant="primary"
+                fullWidth
+                loading={busy}
                 disabled={busy}
-                activeOpacity={0.85}
-              >
-                <Text
-                  style={[
-                    styles.sheetBtnText,
-                    { color: tokens.colors.text.primary },
-                  ]}
-                >
-                  ביטול
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.sheetBtn, styles.sheetBtnPrimary]}
                 onPress={() => {
                   void HapticFeedback.medium();
                   void handleConfirmClose();
                 }}
+              />
+              <UIButton
+                title="ביטול"
+                variant="secondary"
+                fullWidth
                 disabled={busy}
-                activeOpacity={0.85}
-              >
-                <Text
-                  style={[
-                    styles.sheetBtnText,
-                    { color: tokens.colors.text.inverse },
-                  ]}
-                >
-                  {busy ? 'סוגר…' : 'אישור סגירה'}
-                </Text>
-              </TouchableOpacity>
+                onPress={() => setClosingTrade(null)}
+              />
             </View>
 
             {Platform.OS === 'ios' && showExitDatePicker && (
@@ -777,7 +714,7 @@ export default function OpenTradesTab({
                     mode="date"
                     display="spinner"
                     locale="he-IL"
-                    themeVariant="dark"
+                    themeVariant={isDarkMode ? 'dark' : 'light'}
                     maximumDate={new Date()}
                     minimumDate={(() => { const d = closingTrade ? new Date(closingTrade.entry_date) : null; return d && d.getFullYear() > 2000 ? d : undefined; })()}
                     onChange={(_, d) => {
@@ -789,15 +726,16 @@ export default function OpenTradesTab({
                     }}
                     style={{ alignSelf: 'stretch' }}
                   />
-                  <TouchableOpacity
-                    style={styles.exitPickerDoneBtn}
+                  <UIButton
+                    title="אישור"
+                    variant="primary"
+                    fullWidth
+                    style={{ marginTop: APP_LAYOUT.cardTitleToBodyGap }}
                     onPress={() => {
                       setExitDate(tempExitDate);
                       setShowExitDatePicker(false);
                     }}
-                  >
-                    <Text style={styles.exitPickerDoneBtnText}>אישור</Text>
-                  </TouchableOpacity>
+                  />
                 </View>
               </View>
             )}
@@ -811,7 +749,7 @@ export default function OpenTradesTab({
                     mode="time"
                     display="spinner"
                     locale="he-IL"
-                    themeVariant="dark"
+                    themeVariant={isDarkMode ? 'dark' : 'light'}
                     is24Hour
                     onChange={(_, d) => {
                       if (d && d.getFullYear() > 1971) {
@@ -822,15 +760,16 @@ export default function OpenTradesTab({
                     }}
                     style={{ alignSelf: 'stretch' }}
                   />
-                  <TouchableOpacity
-                    style={styles.exitPickerDoneBtn}
+                  <UIButton
+                    title="אישור"
+                    variant="primary"
+                    fullWidth
+                    style={{ marginTop: APP_LAYOUT.cardTitleToBodyGap }}
                     onPress={() => {
                       setExitDate(tempExitDate);
                       setShowExitTimePicker(false);
                     }}
-                  >
-                    <Text style={styles.exitPickerDoneBtnText}>אישור</Text>
-                  </TouchableOpacity>
+                  />
                 </View>
               </View>
             )}

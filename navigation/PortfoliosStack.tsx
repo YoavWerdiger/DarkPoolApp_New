@@ -53,8 +53,9 @@ export default function PortfoliosStack() {
         name="AddTransaction"
         component={AddTransactionScreen}
         options={{
-          animation: 'slide_from_bottom',
+          // שיט iOS נייטיבי — סגירה בגרירה למטה
           presentation: 'modal',
+          gestureEnabled: true,
           contentStyle: { backgroundColor: 'transparent' },
         }}
       />

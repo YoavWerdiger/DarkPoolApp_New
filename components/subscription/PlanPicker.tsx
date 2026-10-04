@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
 import UICard from '../ui/UICard';
@@ -59,6 +60,9 @@ export function getSelectablePlans(mode: PlanPickerMode): DisplayPlan[] {
 }
 
 const PERIOD_MONTHS: Record<string, number> = { monthly: 1, quarterly: 3, yearly: 12 };
+
+/** שינוי גובה הכרטיסים (פתיחת היתרונות) מונפש — גם הכרטיסים שמתחת זזים ברצף */
+const CARD_LAYOUT = LinearTransition.duration(280);
 
 /** מחיר חודשי שווה-ערך (לרבעוני/שנתי) — המחיר הבולט בכרטיס */
 export function monthlyEquivalent(price: number, period: string): number {
@@ -159,8 +163,8 @@ export default function PlanPicker({
           const savings = multiMonth ? savingsLabel(item.description) : null;
 
           return (
+            <Animated.View key={item.id} layout={CARD_LAYOUT}>
             <TouchableOpacity
-              key={item.id}
               onPress={() => {
                 if (selectedPlanId !== item.id) void HapticFeedback.selection();
                 onSelect(item.id);
@@ -235,16 +239,21 @@ export default function PlanPicker({
               </View>
 
               {isSelected ? (
-                <View style={[styles.highlights, { borderTopColor: tokens.colors.border.divider }]}>
+                <Animated.View
+                  entering={FadeIn.delay(80).duration(260)}
+                  exiting={FadeOut.duration(120)}
+                  style={[styles.highlights, { borderTopColor: tokens.colors.border.divider }]}
+                >
                   {item.highlights.map((feature) => (
                     <View key={feature} style={styles.highlightRow}>
                       <Ionicons name="checkmark" size={16} color={tokens.colors.primary.main} />
                       <Text style={[styles.highlightText, { color: tokens.colors.text.primary }]}>{feature}</Text>
                     </View>
                   ))}
-                </View>
+                </Animated.View>
               ) : null}
             </TouchableOpacity>
+            </Animated.View>
           );
         })}
       </View>

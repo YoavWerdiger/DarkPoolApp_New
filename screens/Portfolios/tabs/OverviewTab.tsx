@@ -38,7 +38,19 @@ import {
   journalCardTitleStyle,
   journalPhysicalRightText,
 } from '../../Journal/journalLayout';
-import { filterChartSeriesByPeriod } from '../../DarkPool/utils/profileChartSeries';
+import {
+  computeChartPeriodReturn,
+  filterChartSeriesByPeriod,
+} from '../../DarkPool/utils/profileChartSeries';
+import {
+  CHANGE_DOT_SIZE,
+  changeToneColor,
+  changeToneFromSigned,
+  formatSignedChangePct,
+} from '../../../components/ui/ChangeDot';
+import { formatCongressDeltaUsd } from '../../DarkPool/utils/investorHoldings';
+import { toDataIsland } from '../../DarkPool/utils/bidi';
+import { APP_LAYOUT } from '../../../components/ui/appLayout';
 import { appendOpenPositionSession } from '../../DarkPool/utils/sessionSnapshots';
 import { getHistoricalPrices } from '../../../services/portfolios/portfolioPriceFeed';
 
@@ -87,6 +99,8 @@ export default function OverviewTab({
   const tokens = useDesignTokens();
   const [groupBy, setGroupBy] = useState<DistributionGroupBy>('symbol');
   const [period, setPeriod] = useState<PerformancePeriod>('3M');
+  /** נקודה בגרירה על הגרף — הסכום בכותרת מתעדכן אליה (כמו באינסיידרים) */
+  const [scrubPoint, setScrubPoint] = useState<{ date: string; value: number } | null>(null);
   /** סדרת שווי לגרף + מדדי ביצוע */
   const [chartSeries, setChartSeries] = useState<
     { date: string; value: number; external_flow: number }[]
@@ -444,6 +458,28 @@ export default function OverviewTab({
     [filteredSeries, period]
   );
 
+  /**
+   * רווח + תשואה לתקופה — כמו בפרופיל אינסיידר, אבל בלי לספור הפקדות/משיכות כרווח.
+   * כשהסדרה לא אמינה (הפקדה בלי external_flow) — נופלים לרווח/תשואה הכוללים של התיק.
+   */
+  const periodDelta = useMemo(() => {
+    if (periodSeries.length >= 2) {
+      const first = periodSeries[0].value;
+      const last = periodSeries[periodSeries.length - 1].value;
+      const flows = periodSeries
+        .slice(1)
+        .reduce((sum, p) => sum + (p.external_flow ?? 0), 0);
+      const pct = computeChartPeriodReturn(periodSeries);
+      if (pct != null && Number.isFinite(last - first - flows)) {
+        return { usd: last - first - flows, pct };
+      }
+    }
+    if (summary && Number.isFinite(summary.total_gain_pct)) {
+      return { usd: summary.total_gain, pct: summary.total_gain_pct };
+    }
+    return null;
+  }, [periodSeries, summary]);
+
   const analytics = useMemo((): PortfolioAnalyticsResult | null => {
     if (periodSeries.length < 2) return null;
     return computePortfolioAnalytics(periodSeries);
@@ -471,8 +507,42 @@ export default function OverviewTab({
           color: tokens.colors.text.primary,
           marginBottom: JOURNAL_LAYOUT.cardTitleToBodyGap,
         },
-        chartSectionTitle: {
-          marginBottom: 6,
+        /** כמו פרופיל אינסיידר: תווית → סכום (cardMetricValue) → רווח · תשואה */
+        valueLabel: {
+          ...journalCardTitleStyle,
+          color: tokens.colors.text.primary,
+        },
+        heroValue: {
+          direction: 'ltr',
+          writingDirection: 'ltr',
+          textAlign: 'right',
+          marginTop: APP_LAYOUT.cardMetricLabelToValueGap,
+          fontSize: JOURNAL_TYPE.cardMetricValue.fontSize,
+          lineHeight: JOURNAL_TYPE.cardMetricValue.lineHeight,
+          fontWeight: JOURNAL_TYPE.cardMetricValue.fontWeight,
+          letterSpacing: JOURNAL_TYPE.cardMetricValue.letterSpacing,
+          color: tokens.colors.text.primary,
+        },
+        deltaRow: {
+          marginTop: APP_LAYOUT.titleSubtitleGap,
+          marginBottom: APP_LAYOUT.cardTitleToBodyGap,
+          alignSelf: 'flex-end',
+          direction: 'ltr',
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 6,
+        },
+        deltaFigure: {
+          fontSize: JOURNAL_TYPE.cardBody.fontSize,
+          lineHeight: JOURNAL_TYPE.cardBody.lineHeight,
+          fontWeight: JOURNAL_TYPE.cardTitle.fontWeight,
+          writingDirection: 'ltr',
+          fontVariant: ['tabular-nums'],
+        },
+        deltaDot: {
+          width: CHANGE_DOT_SIZE,
+          height: CHANGE_DOT_SIZE,
+          borderRadius: CHANGE_DOT_SIZE / 2,
         },
         tipsBanner: {
           flexDirection: 'row',
@@ -678,6 +748,14 @@ export default function OverviewTab({
       : null;
   const periodReturn = analytics?.twrReturn ?? analytics?.totalReturn ?? null;
   const sparkValues = periodSeries.map((point) => point.value);
+  const heroValue =
+    scrubPoint?.value ??
+    (filteredSeries.length > 0 ? filteredSeries[filteredSeries.length - 1].value : null);
+  const deltaTone =
+    changeToneFromSigned(periodDelta?.usd) !== 'neutral'
+      ? changeToneFromSigned(periodDelta?.usd)
+      : changeToneFromSigned(periodDelta?.pct);
+  const deltaColor = changeToneColor(deltaTone, tokens);
   const positive = tokens.colors.primary.main;
   const negative = tokens.colors.text.danger;
   const neutral = tokens.colors.text.secondary;
@@ -695,7 +773,27 @@ export default function OverviewTab({
 
       {/* Performance chart — כותרת סקשן זהה בטעינה/טעון; בגרף רק amount→delta */}
       <UICard variant="soft" padding="md" style={styles.section}>
-        <Text style={[styles.sectionTitle, styles.chartSectionTitle]}>שווי תיק</Text>
+        <Text style={styles.valueLabel}>שווי תיק:</Text>
+        {heroValue != null ? (
+          <Text style={styles.heroValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>
+            {toDataIsland(formatCurrency(heroValue, portfolio.currency))}
+          </Text>
+        ) : null}
+        {scrubPoint ? (
+          <Text style={[styles.deltaFigure, styles.deltaRow, { color: tokens.colors.text.secondary }]}>
+            {toDataIsland(scrubPoint.date.split('-').reverse().join('.'))}
+          </Text>
+        ) : periodDelta ? (
+          <View style={styles.deltaRow}>
+            <Text style={[styles.deltaFigure, { color: deltaColor }]} numberOfLines={1}>
+              {toDataIsland(formatCongressDeltaUsd(periodDelta.usd))}
+            </Text>
+            <View style={[styles.deltaDot, { backgroundColor: deltaColor }]} />
+            <Text style={[styles.deltaFigure, { color: deltaColor }]} numberOfLines={1}>
+              {toDataIsland(formatSignedChangePct(periodDelta.pct))}
+            </Text>
+          </View>
+        ) : null}
         {chartLoading ? (
           <Text style={styles.emptyText}>טוען נתונים…</Text>
         ) : filteredSeries.length === 0 ? (
@@ -712,8 +810,8 @@ export default function OverviewTab({
             currency={portfolio.currency}
             selectedPeriod={period}
             onPeriodChange={setPeriod}
-            headerTitle=""
-            fallbackReturnPct={summary?.total_gain_pct ?? null}
+            showHeader={false}
+            onScrubPoint={setScrubPoint}
           />
         )}
       </UICard>

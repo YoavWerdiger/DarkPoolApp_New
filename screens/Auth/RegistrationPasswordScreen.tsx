@@ -6,6 +6,7 @@ import { AuthService } from '../../services/authService';
 import CashAppScreen from '../../components/ui/CashAppScreen';
 import CashAppInput from '../../components/ui/CashAppInput';
 import CashAppButton from '../../components/ui/CashAppButton';
+import { PasswordStrength } from '../../components/onboarding/RegistrationLive';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { ONBOARDING_STEPS, ONBOARDING_TOTAL_STEPS } from '../../constants/onboardingFlow';
@@ -132,7 +133,6 @@ const RegistrationPasswordScreen = ({ navigation }: { navigation: any }) => {
           secureTextEntry
           autoCapitalize="none"
           autoFocus
-          helperText="שמור סיסמה שקל לזכור לך וקשה לנחש"
         />
         <CashAppInput
           label="אימות סיסמה"
@@ -144,6 +144,7 @@ const RegistrationPasswordScreen = ({ navigation }: { navigation: any }) => {
           error={confirmError}
         />
       </View>
+      <PasswordStrength password={password} />
       <View style={{ flex: 1 }} />
     </CashAppScreen>
   );

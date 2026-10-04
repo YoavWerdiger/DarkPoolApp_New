@@ -4,6 +4,7 @@ import { useRegistration } from '../../context/RegistrationContext';
 import CashAppScreen from '../../components/ui/CashAppScreen';
 import CashAppInput from '../../components/ui/CashAppInput';
 import CashAppButton from '../../components/ui/CashAppButton';
+import { NameGreeting } from '../../components/onboarding/RegistrationLive';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { ONBOARDING_STEPS, ONBOARDING_TOTAL_STEPS } from '../../constants/onboardingFlow';
 import {
@@ -66,8 +67,8 @@ const RegistrationNameScreen = ({ navigation }: { navigation: any }) => {
         autoCapitalize="words"
         autoCorrect={false}
         autoFocus
-        helperText="לפחות שני תווים"
       />
+      <NameGreeting name={name} />
       <View style={{ flex: 1 }} />
     </CashAppScreen>
   );

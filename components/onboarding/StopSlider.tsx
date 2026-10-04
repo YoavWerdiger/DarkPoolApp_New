@@ -7,6 +7,7 @@ import Animated, {
   useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
+  withDelay,
   withSpring,
   ZoomIn,
 } from 'react-native-reanimated';
@@ -33,7 +34,7 @@ type Props = {
   value: string;
   onChange: (v: string) => void;
   /** ויזואל גדול מעל — 'level' = מד עמודות, 'icon' = אייקון, 'money' = מונה כסף, 'gauge' = מד מהירות */
-  hero: 'level' | 'icon' | 'money' | 'gauge';
+  hero: 'level' | 'icon' | 'money' | 'gauge' | 'rank';
 };
 
 /**
@@ -108,7 +109,9 @@ export function StopSlider({ options, value, onChange, hero }: Props) {
     <View style={styles.wrap}>
       {/* ויזואל גדול */}
       <View style={[styles.hero, { backgroundColor: tokens.colors.background.cardSolid }]}>
-        {hero === 'gauge' ? (
+        {hero === 'rank' ? (
+          <RankBadge index={index} total={count} dim={tokens.colors.text.tertiary} />
+        ) : hero === 'gauge' ? (
           <SpeedGauge
             index={index}
             total={count}
@@ -245,9 +248,58 @@ function MoneyCounter({ index, total, color, accent }: { index: number; total: n
         numberOfLines={1}
         adjustsFontSizeToFit
       >
-        ${shown.toLocaleString('en-US')}
-        {isTop ? '+' : ''}
+        {/* הטווח הפתוח (מעל $100K) — בלי סכום, «$$$$$» */}
+        {isTop ? '$$$$$' : `$${shown.toLocaleString('en-US')}`}
       </Text>
+    </Animated.View>
+  );
+}
+
+/** דרגות — ארד, כסף, זהב, יהלום */
+const RANKS = [
+  { name: 'ארד', color: '#C27C46' },
+  { name: 'כסף', color: '#A7B0BA' },
+  { name: 'זהב', color: '#E8B21C' },
+  { name: 'יהלום', color: '#3FC8E4' },
+];
+
+/** מגן דרגה בסגנון משחק — צבע לפי הרמה, כוכבים נדלקים אחד-אחד */
+function RankBadge({ index, total, dim }: { index: number; total: number; dim: string }) {
+  const rank = RANKS[Math.min(index, RANKS.length - 1)];
+  const pop = useSharedValue(1);
+  useEffect(() => {
+    pop.value = 0.7;
+    pop.value = withSpring(1, { damping: 9, stiffness: 220, mass: 0.6 });
+  }, [index, pop]);
+  const style = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }] }));
+
+  return (
+    <View style={styles.rankWrap}>
+      <Animated.View style={style}>
+        <Ionicons name="shield" size={84} color={rank.color} />
+        <View style={styles.rankInner}>
+          <Ionicons name="trending-up" size={30} color="#FFFFFF" />
+        </View>
+      </Animated.View>
+      <View style={styles.stars}>
+        {Array.from({ length: total }).map((_, i) => (
+          <Star key={i} on={i <= index} color={i <= index ? rank.color : dim} delay={i * 70} />
+        ))}
+      </View>
+      <Text style={[styles.rankName, { color: rank.color }]}>{rank.name}</Text>
+    </View>
+  );
+}
+
+function Star({ on, color, delay }: { on: boolean; color: string; delay: number }) {
+  const s = useSharedValue(on ? 1 : 0.85);
+  useEffect(() => {
+    s.value = on ? withDelay(delay, withSpring(1, { damping: 8, stiffness: 260 })) : withSpring(0.85, SPRING);
+  }, [on, delay, s]);
+  const style = useAnimatedStyle(() => ({ transform: [{ scale: s.value }], opacity: on ? 1 : 0.35 }));
+  return (
+    <Animated.View style={style}>
+      <Ionicons name={on ? 'star' : 'star-outline'} size={20} color={color} />
     </Animated.View>
   );
 }
@@ -391,6 +443,28 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: -0.5,
     fontVariant: ['tabular-nums'],
+  },
+  rankWrap: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  rankInner: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stars: {
+    flexDirection: 'row-reverse',
+    gap: 4,
+  },
+  rankName: {
+    fontSize: APP_TYPE.cardSubtitle.fontSize,
+    fontWeight: APP_TYPE.cardTitle.fontWeight,
+    letterSpacing: 0.5,
   },
   needleWrap: {
     position: 'absolute',

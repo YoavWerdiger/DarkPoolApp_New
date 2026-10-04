@@ -121,7 +121,6 @@ const RegistrationAgeInputScreen = ({ navigation }: Props) => {
           values={AGES}
           value={parseInt(value, 10) || DEFAULT_AGE}
           onChange={(v) => handleChangeText(String(v))}
-          suffix="שנים"
         />
       </View>
       <View style={{ flex: 1 }} />

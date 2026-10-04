@@ -207,7 +207,7 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
     : { style: { flex: 1 } };
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}

@@ -178,20 +178,22 @@ export function StopSlider({ options, value, onChange, hero }: Props) {
   );
 }
 
-const COIN_W = 38;
-const COIN_H = 12;
-const COIN_GAP = 6;
-const COIN_GOLD = '#F5B820';
-const COIN_EDGE = '#C98F0A';
+const BILL_W = 52;
+const BILL_H = 24;
+/** כמה מכל שטר מוסתר מתחת לשטר שמעליו — הערימה נראית צפופה */
+const BILL_OVERLAP = 14;
+const BILL_GREEN = '#2E9E4F';
+const BILL_EDGE = '#1E7A3A';
+const BILL_INK = '#D9F5E1';
 
-/** ערימות מטבעות — עוד ערימה (וגבוהה יותר) לכל טווח גודל תיק */
+/** ערימות שטרות דולר — עוד ערימה (וגבוהה יותר) לכל טווח גודל תיק */
 function CoinStacks({ level, total }: { level: number; total: number }) {
   return (
     <View style={styles.coinsRow}>
       {Array.from({ length: total }).map((_, stack) => (
         <View key={stack} style={styles.coinStack}>
-          {Array.from({ length: (stack + 1) * 2 }).map((__, coin) => (
-            <Coin key={coin} visible={stack < level} delay={stack * 60 + coin * 45} />
+          {Array.from({ length: (stack + 1) * 2 }).map((__, bill) => (
+            <Bill key={bill} visible={stack < level} delay={stack * 60 + bill * 45} />
           ))}
         </View>
       ))}
@@ -199,7 +201,7 @@ function CoinStacks({ level, total }: { level: number; total: number }) {
   );
 }
 
-function Coin({ visible, delay }: { visible: boolean; delay: number }) {
+function Bill({ visible, delay }: { visible: boolean; delay: number }) {
   const drop = useSharedValue(visible ? 1 : 0);
   useEffect(() => {
     drop.value = visible
@@ -211,8 +213,8 @@ function Coin({ visible, delay }: { visible: boolean; delay: number }) {
     transform: [{ translateY: (1 - drop.value) * -40 }],
   }));
   return (
-    <Animated.View style={[styles.coin, style]}>
-      <View style={styles.coinTop} />
+    <Animated.View style={[styles.bill, style]}>
+      <Text style={styles.billSign}>$</Text>
     </Animated.View>
   );
 }
@@ -276,18 +278,22 @@ const styles = StyleSheet.create({
     flexDirection: 'column-reverse',
     alignItems: 'center',
   },
-  coin: {
-    width: COIN_W,
-    height: COIN_H,
-    marginTop: -COIN_GAP,
-    borderRadius: COIN_H / 2,
-    backgroundColor: COIN_EDGE,
-    justifyContent: 'flex-start',
+  bill: {
+    width: BILL_W,
+    height: BILL_H,
+    marginTop: -BILL_OVERLAP,
+    borderRadius: 4,
+    backgroundColor: BILL_GREEN,
+    borderWidth: 1.5,
+    borderColor: BILL_EDGE,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  coinTop: {
-    height: COIN_H - 3,
-    borderRadius: COIN_H / 2,
-    backgroundColor: COIN_GOLD,
+  billSign: {
+    fontSize: 14,
+    lineHeight: 16,
+    fontWeight: '700',
+    color: BILL_INK,
   },
   bigBars: {
     flexDirection: 'row',

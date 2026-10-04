@@ -8,6 +8,8 @@ interface Props {
   symbol: string;
   size?: number;
   borderRadius?: number;
+  /** מילוי מאחורי תמונת הלוגו (ברירת מחדל לבן). */
+  backgroundColor?: string;
 }
 
 /**
@@ -17,7 +19,12 @@ interface Props {
  * ייצוא כ־function (לא memo object) — Fast Refresh / Hermes
  * נופלים על "Component is not a function (it is Object)" כשמשנים function↔memo ב־HMR.
  */
-export function TickerLogo({ symbol, size = 36, borderRadius }: Props) {
+export function TickerLogo({
+  symbol,
+  size = 36,
+  borderRadius,
+  backgroundColor = '#FFFFFF',
+}: Props) {
   const tokens = useDesignTokens();
   const [errored, setErrored] = useState(false);
   const uri = useMemo(() => brandfetchTickerLogoUri(symbol), [symbol]);
@@ -79,7 +86,7 @@ export function TickerLogo({ symbol, size = 36, borderRadius }: Props) {
         height: size,
         borderRadius: radius,
         overflow: 'hidden',
-        backgroundColor: '#FFFFFF',
+        backgroundColor,
       }}
     >
       <ExpoImage

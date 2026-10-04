@@ -15,7 +15,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useDesignTokens } from "../../../components/ui/DesignTokens";
 import { LIGHT_CANVAS } from "../../../components/ui/designTokensStatic";
 import { SheetSurfaceProvider } from "../../../components/ui/BottomSheet/sheetSurface";
-import { APP_TYPE } from "../../../components/ui/appType";
+import { ChatSessionBackdrop } from "../../../components/chat/ChatSessionBackdrop";
+import { formFieldShellStyle } from "../../../components/ui/formControl";
+import { APP_TYPE, appPhysicalRightText } from "../../../components/ui/appType";
 import { APP_LAYOUT } from "../../../components/ui/appLayout";
 import {
   DayNavBlurButton,
@@ -36,19 +38,21 @@ interface Props {
 }
 
 /**
- * חיפוש סימבול — UICard + סינון מניות אמריקאיות (בלי listings זרים).
+ * חיפוש סימבול — Soft UI pill + סינון מניות אמריקאיות.
  */
 export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
   const tokens = useDesignTokens();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SymbolSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [focused, setFocused] = useState(false);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!visible) {
       setQuery("");
       setResults([]);
+      setFocused(false);
     }
   }, [visible]);
 
@@ -75,14 +79,13 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
       StyleSheet.create({
         outer: {
           flex: 1,
-          backgroundColor: tokens.colors.background.cardSolid,
-          direction: "rtl",
+          backgroundColor: "transparent",
         },
         safe: {
           flex: 1,
         },
         header: {
-          flexDirection: "row",
+          flexDirection: "row-reverse",
           alignItems: "center",
           paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
           paddingTop: APP_LAYOUT.cardPadding,
@@ -102,22 +105,23 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
         searchWrap: {
           paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
           paddingTop: APP_LAYOUT.stackGapSmall,
+          paddingBottom: APP_LAYOUT.stackGapSmall,
         },
         searchInner: {
-          flexDirection: "row",
+          flexDirection: "row-reverse",
           alignItems: "center",
-          height: 48,
-          paddingHorizontal: APP_LAYOUT.cardPadding,
+          minHeight: 52,
+          paddingHorizontal: 16,
           gap: APP_LAYOUT.stackGapSmall,
-          borderRadius: tokens.borderRadius.full,
-          backgroundColor: tokens.colors.background.primary,
+          borderRadius: tokens.borderRadius.search,
+          borderWidth: 0,
+          ...formFieldShellStyle({ tokens, focused, multiline: false }),
         },
         searchInput: {
-          ...APP_TYPE.cardBody,
+          ...APP_TYPE.body,
+          ...appPhysicalRightText,
           flex: 1,
           color: tokens.colors.text.primary,
-          textAlign: "right",
-          writingDirection: "rtl",
           padding: 0,
         },
         list: {
@@ -129,11 +133,11 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
           paddingBottom: APP_LAYOUT.sectionGap,
         },
         divider: {
-          height: 1,
+          height: StyleSheet.hairlineWidth,
           backgroundColor: tokens.colors.border.divider,
         },
         rowInner: {
-          flexDirection: "row",
+          flexDirection: "row-reverse",
           alignItems: "center",
           paddingVertical: APP_LAYOUT.cardTitleToBodyGap,
           gap: APP_LAYOUT.cardTitleToBodyGap,
@@ -147,24 +151,25 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
           alignItems: "flex-start",
         },
         symbolText: {
-          ...APP_TYPE.cardBody,
-          fontWeight: APP_TYPE.cardTitle.fontWeight,
+          ...APP_TYPE.cardTitle,
           color: tokens.colors.text.primary,
           writingDirection: "ltr",
           textAlign: "left",
         },
         descriptionText: {
-          ...APP_TYPE.caption,
+          ...APP_TYPE.cardSubtitle,
           color: tokens.colors.text.secondary,
           textAlign: "left",
           writingDirection: "ltr",
+          marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
         },
         typeChip: {
-          height: 24,
+          height: 28,
           justifyContent: "center",
           paddingHorizontal: 10,
-          borderRadius: tokens.borderRadius.full,
-          backgroundColor: tokens.colors.background.primary,
+          borderRadius: tokens.borderRadius.search,
+          backgroundColor: tokens.colors.background.navChrome,
+          borderWidth: 0,
         },
         typeChipText: {
           ...APP_TYPE.cardMetricLabel,
@@ -182,20 +187,21 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
           borderRadius: 28,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: tokens.colors.background.primary,
+          backgroundColor: tokens.colors.background.input,
+          borderWidth: 0,
         },
         emptyText: {
           ...APP_TYPE.cardBody,
+          ...appPhysicalRightText,
           color: tokens.colors.text.secondary,
           textAlign: "center",
-          writingDirection: "rtl",
         },
         loadingWrap: {
           paddingVertical: APP_LAYOUT.componentGap,
           alignItems: "center",
         },
       }),
-    [tokens],
+    [tokens, focused],
   );
 
   return (
@@ -207,6 +213,7 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
     >
       <SheetSurfaceProvider>
         <View style={styles.outer}>
+          <ChatSessionBackdrop />
           <SafeAreaView style={styles.safe} edges={["bottom"]}>
             <View style={styles.header}>
               <View style={styles.headerSide} />
@@ -238,6 +245,8 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
                   style={styles.searchInput}
                   value={query}
                   onChangeText={setQuery}
+                  onFocus={() => setFocused(true)}
+                  onBlur={() => setFocused(false)}
                   placeholder="חפש מניה: AAPL, Apple, NVDA…"
                   placeholderTextColor={tokens.colors.text.tertiary}
                   keyboardAppearance={
@@ -267,7 +276,6 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
                 ) : null}
               </View>
             </View>
-
 
             {loading ? (
               <View style={styles.loadingWrap}>

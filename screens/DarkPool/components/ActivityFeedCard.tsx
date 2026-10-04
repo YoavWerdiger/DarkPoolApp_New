@@ -5,9 +5,10 @@ import { TickerLogo } from '../../Portfolios/components/TickerLogo';
 import type { FollowingActivityItem } from '../../../services/darkpool/uwFollowingFeedService';
 import { DarkPoolFeedCard } from './DarkPoolFeedCard';
 import { APP_LAYOUT } from '../../../components/ui/appLayout';
+import { APP_TYPE } from '../../../components/ui/appType';
 import { FEED_CARD_TYPE } from './darkPoolFeedCardStyles';
 import { darkPoolPhysicalRightText } from '../darkPoolLayout';
-import { ltrNameText } from '../utils/bidi';
+import { isolateData, ltrNameText } from '../utils/bidi';
 import { formatInsiderDisplayName } from '../utils/investorPlaceholder';
 import {
   formatFeedDisclosureRange,
@@ -77,15 +78,23 @@ export function ActivityFeedCard({
         </View>
 
         <View style={styles.main}>
-          <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
-            {displayName}
-          </Text>
-          <Text style={styles.primary} numberOfLines={1} ellipsizeMode="tail">
-            <Text style={{ color: sideColor }}>{verb}</Text>
-            <Text style={styles.ticker}>
-              {` ${LRM}${tickerSym}`}
+          <View style={styles.sentence}>
+            <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
+              {displayName}
             </Text>
-          </Text>
+            <Text style={styles.wordSpace}>{'\u00A0'}</Text>
+            <Text style={[styles.verb, { color: sideColor }]} numberOfLines={1}>
+              {verb}
+            </Text>
+            {tickerSym ? (
+              <>
+                <Text style={styles.wordSpace}>{'\u00A0'}</Text>
+                <Text style={styles.ticker} numberOfLines={1}>
+                  {isolateData(tickerSym)}
+                </Text>
+              </>
+            ) : null}
+          </View>
           {detailParts.length > 0 ? (
             <Text style={styles.sub} numberOfLines={1} ellipsizeMode="tail">
               {detailParts
@@ -114,7 +123,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       flexDirection: 'row',
       alignItems: 'center',
       width: '100%',
-      gap: 10,
+      gap: APP_LAYOUT.cardTitleToBodyGap,
     },
     tickerCol: {
       width: 40,
@@ -130,21 +139,33 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       alignItems: 'stretch',
       gap: APP_LAYOUT.cardTitleToSubtitleGap,
     },
-    primary: {
-      ...darkPoolPhysicalRightText,
+    sentence: {
+      direction: 'rtl',
+      flexDirection: 'row',
+      alignItems: 'center',
       width: '100%',
+      minWidth: 0,
+    },
+    wordSpace: {
+      flexShrink: 0,
       fontSize: FEED_CARD_TYPE.action.fontSize,
       lineHeight: FEED_CARD_TYPE.action.lineHeight,
-      fontWeight: FEED_CARD_TYPE.action.fontWeight,
-      color: tokens.colors.text.primary,
     },
     name: {
       ...ltrNameText,
-      width: '100%',
-      fontSize: FEED_CARD_TYPE.name.fontSize,
-      lineHeight: FEED_CARD_TYPE.name.lineHeight,
-      fontWeight: FEED_CARD_TYPE.name.fontWeight,
+      flexShrink: 1,
+      minWidth: 0,
+      fontSize: FEED_CARD_TYPE.action.fontSize,
+      lineHeight: FEED_CARD_TYPE.action.lineHeight,
+      fontWeight: APP_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
+    },
+    verb: {
+      flexShrink: 0,
+      writingDirection: 'rtl',
+      fontSize: FEED_CARD_TYPE.action.fontSize,
+      lineHeight: FEED_CARD_TYPE.action.lineHeight,
+      fontWeight: FEED_CARD_TYPE.action.fontWeight,
     },
     sub: {
       ...darkPoolPhysicalRightText,
@@ -155,12 +176,16 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       color: tokens.colors.text.secondary,
     },
     ticker: {
+      flexShrink: 0,
+      writingDirection: 'ltr',
+      fontSize: FEED_CARD_TYPE.action.fontSize,
+      lineHeight: FEED_CARD_TYPE.action.lineHeight,
       fontWeight: FEED_CARD_TYPE.name.fontWeight,
       color: tokens.colors.text.primary,
       letterSpacing: 0,
     },
     muted: {
-      color: tokens.colors.text.tertiary,
+      color: tokens.colors.text.secondary,
       fontWeight: FEED_CARD_TYPE.dates.fontWeight,
     },
     meta: {
@@ -170,11 +195,12 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       maxWidth: 88,
     },
     time: {
-      fontSize: FEED_CARD_TYPE.nestedLabel.fontSize,
-      lineHeight: FEED_CARD_TYPE.nestedLabel.lineHeight,
-      fontWeight: FEED_CARD_TYPE.dates.fontWeight,
-      color: tokens.colors.text.tertiary,
+      fontSize: APP_TYPE.caption.fontSize,
+      lineHeight: APP_TYPE.caption.lineHeight,
+      fontWeight: APP_TYPE.caption.fontWeight,
+      color: tokens.colors.text.secondary,
       textAlign: 'right',
+      fontVariant: ['tabular-nums'],
     },
   });
 }

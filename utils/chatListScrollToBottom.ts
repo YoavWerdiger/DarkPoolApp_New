@@ -23,6 +23,8 @@ export type ScrollToBottomRetryOptions = {
 const BOTTOM_REACHED_PX = 80;
 /** מתחת לזה native animated מספיק קצר ונעים */
 const NATIVE_ANIM_MAX_DIST_PX = 220;
+/** אורך הגלישה הנייטיבית בסוף FAB — בערך מסך; מעבר לזה קופצים קודם. */
+const NATIVE_GLIDE_MAX_PX = 720;
 const CONTROLLED_MIN_MS = 480;
 const CONTROLLED_MAX_MS = 900;
 /** כמה זמן בלי התקדמות לפני hard fallback (לא קוטעים אנימציה חיה) */
@@ -131,16 +133,37 @@ function runControlledScroll(
   requestAnimationFrame(frame);
 }
 
-function runControlledScrollToZero(
+/**
+ * FAB לתחתית: קפיצה מיידית לגובה מסך אחד מהתחתית, ואז גלישה native.
+ * גלילת RAF מ-JS נתקעת בכל פעם שה-JS thread עסוק (טעינת הודעות, render) — native לא.
+ */
+function glideToBottom(
   refs: ScrollRefs,
   gen: number,
   startDist: number,
-  onFrameDone: () => void,
+  onStarted: () => void,
 ): void {
-  runControlledScroll(refs, gen, startDist, 0, () => {
+  const list = refs.listRef.current;
+  if (!list) {
+    onStarted();
+    return;
+  }
+  const viewport = refs.layoutHeightRef.current;
+  const glide = Math.max(
+    NATIVE_ANIM_MAX_DIST_PX,
+    Math.min(NATIVE_GLIDE_MAX_PX, viewport > 0 ? viewport : NATIVE_GLIDE_MAX_PX),
+  );
+  if (startDist <= glide) {
+    forceInvertedListToBottom(list, true);
+    onStarted();
+    return;
+  }
+  setInvertedOffset(list, glide, false);
+  requestAnimationFrame(() => {
+    if (gen !== scrollGeneration) return;
     const current = refs.listRef.current;
-    if (current) forceInvertedListToBottom(current, false);
-    onFrameDone();
+    if (current) forceInvertedListToBottom(current, true);
+    onStarted();
   });
 }
 
@@ -270,12 +293,7 @@ export function scrollChatListToBottom(
       });
     };
 
-    if (dist <= NATIVE_ANIM_MAX_DIST_PX) {
-      forceInvertedListToBottom(list, true);
-      afterAnim();
-    } else {
-      runControlledScrollToZero(refs, gen, dist, afterAnim);
-    }
+    glideToBottom(refs, gen, dist, afterAnim);
     return 0;
   }
 
@@ -350,14 +368,8 @@ export function scrollChatListToBottom(
       });
     };
 
-    if (dist <= NATIVE_ANIM_MAX_DIST_PX) {
-      forceInvertedListToBottom(list, true);
-      attempts = 1;
-      beginWatch();
-    } else {
-      attempts = 1;
-      runControlledScrollToZero(refs, gen, dist, beginWatch);
-    }
+    attempts = 1;
+    glideToBottom(refs, gen, dist, beginWatch);
     return 0;
   }
 

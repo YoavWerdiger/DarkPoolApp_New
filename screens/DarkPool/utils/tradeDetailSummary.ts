@@ -210,9 +210,19 @@ export function buildInsiderTradeDetailSummary(input: {
   );
 }
 
+export type TradeDetailFieldIcon =
+  | 'ticker'
+  | 'amount'
+  | 'shares'
+  | 'price'
+  | 'value'
+  | 'traded'
+  | 'filed';
+
 export type TradeDetailFieldRow = {
   label: string;
   value: string;
+  icon: TradeDetailFieldIcon;
   ltr?: boolean;
 };
 
@@ -221,12 +231,13 @@ function pushIf(
   row: {
     label: string;
     value: string | null | undefined;
+    icon: TradeDetailFieldIcon;
     ltr?: boolean;
   }
 ) {
   const v = row.value?.trim();
   if (!v) return;
-  rows.push({ label: row.label, value: v, ltr: row.ltr });
+  rows.push({ label: row.label, value: v, icon: row.icon, ltr: row.ltr });
 }
 
 /**
@@ -246,23 +257,25 @@ export function buildTradeDetailFieldRows(input: {
 }): TradeDetailFieldRow[] {
   const rows: TradeDetailFieldRow[] = [];
   if (input.isCongress) {
-    pushIf(rows, { label: 'נייר ערך', value: input.tickerSym, ltr: true });
+    pushIf(rows, { label: 'נייר ערך', value: input.tickerSym, icon: 'ticker', ltr: true });
     pushIf(rows, {
       label: 'סכום מדווח',
       value: input.amountRange,
+      icon: 'amount',
       ltr: Boolean(input.amountRange?.startsWith('$')),
     });
   } else {
-    pushIf(rows, { label: 'נייר ערך', value: input.tickerSym, ltr: true });
-    pushIf(rows, { label: 'כמות', value: input.shares, ltr: true });
-    pushIf(rows, { label: 'מחיר למניה', value: input.price, ltr: true });
+    pushIf(rows, { label: 'נייר ערך', value: input.tickerSym, icon: 'ticker', ltr: true });
+    pushIf(rows, { label: 'כמות', value: input.shares, icon: 'shares', ltr: true });
+    pushIf(rows, { label: 'מחיר למניה', value: input.price, icon: 'price', ltr: true });
     pushIf(rows, {
       label: input.valueLabel ?? 'שווי אחזקה',
       value: input.value,
+      icon: 'value',
       ltr: true,
     });
   }
-  pushIf(rows, { label: 'בוצע', value: input.traded, ltr: true });
-  pushIf(rows, { label: 'נחשף', value: input.filed, ltr: true });
+  pushIf(rows, { label: 'בוצע', value: input.traded, icon: 'traded', ltr: true });
+  pushIf(rows, { label: 'נחשף', value: input.filed, icon: 'filed', ltr: true });
   return rows;
 }

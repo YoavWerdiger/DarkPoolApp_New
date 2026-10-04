@@ -1060,7 +1060,7 @@ export default function ChatGroupsListScreen() {
                       <Ionicons
                         name={getMessageTypeIcon(item.last_message.message_type, item.last_message.content) as any}
                         size={13}
-                        color={hasUnread ? tokens.colors.text.primary : tokens.colors.text.tertiary}
+                        color={hasUnread ? tokens.colors.text.primary : tokens.colors.text.secondary}
                       />{' '}
                     </>
                   ) : null}
@@ -1299,6 +1299,7 @@ export default function ChatGroupsListScreen() {
               </View>
               <Text style={[styles.statusLabel, { color: tokens.colors.text.primary }]}>הוסף</Text>
             </Pressable>
+            <View style={styles.statusStoryGap} />
             <ScrollView
               ref={storiesScrollRef}
               horizontal
@@ -1316,10 +1317,11 @@ export default function ChatGroupsListScreen() {
               const isOwn = s.user_id === user?.id;
               const count = Math.max(1, s.story_count || 1);
               return (
+                <View key={s.user_id} style={styles.statusStorySlot}>
+                {idx > 0 ? <View style={styles.statusStoryGap} /> : null}
                 <Pressable
-                  key={s.user_id}
                   style={({ pressed }) => [
-                    styles.statusCircle,
+                    styles.statusStoryItem,
                     pressed && { opacity: 0.72, transform: [{ scale: 0.94 }] },
                   ]}
                   onPress={() => {
@@ -1355,6 +1357,7 @@ export default function ChatGroupsListScreen() {
                     {isOwn ? 'שלי' : displayName}
                   </Text>
                 </Pressable>
+                </View>
               );
             })}
             </ScrollView>
@@ -1567,10 +1570,11 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'flex-end',
-    paddingRight: 0,
-    marginLeft: 14,
   },
-  statusCircle: { alignItems: 'center', marginLeft: 14 },
+  statusCircle: { alignItems: 'center' },
+  statusStorySlot: { flexDirection: 'row', alignItems: 'flex-start', flexShrink: 0 },
+  statusStoryGap: { width: 7, flexShrink: 0 },
+  statusStoryItem: { alignItems: 'center', flexShrink: 0 },
   statusCircleInner: {
     width: 56,
     height: 56,
@@ -1825,13 +1829,13 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   chatPreview: {
     ...APP_TYPE.cardSubtitle,
-    color: tokens.colors.text.tertiary,
+    color: tokens.colors.text.secondary,
     flex: 1,
     textAlign: 'right',
     writingDirection: 'rtl',
   },
   chatPreviewUnread: {
-    color: tokens.colors.text.secondary,
+    color: tokens.colors.text.primary,
   },
   badge: {
     backgroundColor: tokens.colors.primary.main,

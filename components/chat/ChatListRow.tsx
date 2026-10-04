@@ -59,7 +59,6 @@ export type ChatListRowProps = {
   onLayout: (height: number) => void;
   onLongPress: () => void;
   onReply: () => void;
-  onSendReply?: (text: string) => void;
   onReactionPress: (emoji: string) => void;
   onReactionDetailsPress: () => void;
   onJumpToMessage: (messageId: string) => void;
@@ -86,7 +85,6 @@ function ChatListRow({
   onLayout,
   onLongPress,
   onReply,
-  onSendReply,
   onReactionPress,
   onReactionDetailsPress,
   onJumpToMessage,
@@ -142,7 +140,6 @@ function ChatListRow({
         isAfterSenderChange={isAfterSenderChange}
         onLongPress={onLongPress}
         onReply={onReply}
-        onSendReply={onSendReply}
         onReactionPress={onReactionPress}
         onReactionDetailsPress={onReactionDetailsPress}
         onJumpToMessage={onJumpToMessage}

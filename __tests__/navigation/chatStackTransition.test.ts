@@ -32,15 +32,17 @@ describe('chat stack transitions', () => {
   });
 
   it('restores a native slide instead of the short fade that felt stuck', () => {
-    const options = createChatStackScreenOptions();
+    const options = createChatStackScreenOptions(false);
     expect(options.animation).toBe('slide_from_right');
     expect(options.animation).toBe(CHAT_STACK_ANIMATION);
+    expect(options.animationDuration).toBeUndefined();
     expect(options.freezeOnBlur).toBe(false);
-    expect(options.contentStyle).toEqual({ backgroundColor: 'transparent' });
-    expect(options.animationDuration).toBe(CHAT_STACK_ANIMATION_MS);
-    expect(CHAT_STACK_ANIMATION_MS).toBeGreaterThanOrEqual(300);
+    expect(options.contentStyle).toEqual({ backgroundColor: '#F4F2F1' });
+    expect(createChatStackScreenOptions(true).contentStyle).toEqual({ backgroundColor: '#000000' });
+    expect(CHAT_STACK_ANIMATION_MS).toBeGreaterThanOrEqual(350);
     expect(chatStackSrc).not.toContain("animation: 'fade'");
     expect(chatStackSrc).not.toContain('animationDuration: 90');
+    expect(chatStackSrc).not.toContain('ios_from_right');
     expect(chatStackSrc).not.toContain('THREAD_TRANSITION');
   });
 
@@ -52,9 +54,10 @@ describe('chat stack transitions', () => {
     );
   });
 
-  it('uses a slightly shorter android duration than ios', () => {
-    const expected = Platform.OS === 'android' ? 300 : 350;
+  it('uses the platform slide duration without overriding it', () => {
+    const expected = Platform.OS === 'android' ? 400 : 350;
     expect(CHAT_STACK_ANIMATION_MS).toBe(expected);
+    expect(createChatStackScreenOptions().animationDuration).toBeUndefined();
   });
 
   it('pauses aurora once for a transition and resumes on the matching end', () => {

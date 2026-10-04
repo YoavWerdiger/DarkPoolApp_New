@@ -25,6 +25,11 @@ import BottomSheet, {
   useBottomSheetClose,
 } from '../../components/ui/BottomSheet/BottomSheet';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
+import {
+  DayDividerPill,
+  DAY_DIVIDER_PILL_FONT_SIZE,
+  DAY_DIVIDER_PILL_LINE_HEIGHT,
+} from '../../components/ui/DayDividerPill';
 import { useAuth } from '../../context/AuthContext';
 import { mediaService } from '../../services/mediaService';
 import { createCommunityPost } from '../../services/tweetsService';
@@ -337,14 +342,15 @@ function CreateCommunityPostSheetBody({
               {busy ? (
                 <ActivityIndicator size="small" color={tokens.colors.text.inverse} />
               ) : (
-                <Text
-                  style={[
-                    styles.headerPublishBtnText,
-                    !canSubmit && styles.headerPublishBtnTextDisabled,
-                  ]}
-                >
-                  פרסם
-                </Text>
+                <Ionicons
+                  name="arrow-up"
+                  size={22}
+                  color={
+                    canSubmit
+                      ? tokens.colors.text.inverse
+                      : tokens.colors.text.tertiary
+                  }
+                />
               )}
             </TouchableOpacity>
           </View>
@@ -402,113 +408,85 @@ function CreateCommunityPostSheetBody({
             {mentions.length > 0 ? (
               <View style={styles.chipsRow}>
                 {mentions.map((m) => (
-                  <TouchableOpacity
+                  <DayDividerPill
                     key={m.userId}
                     onPress={() => removeMention(m.userId)}
-                    style={[
-                      styles.chip,
-                      { backgroundColor: `${tokens.colors.primary.main}22` },
-                    ]}
                     disabled={busy}
+                    accessibilityLabel={`הסר תיוג של ${m.displayName}`}
                   >
-                    <Text
-                      style={[styles.chipText, { color: tokens.colors.primary.main }]}
-                      numberOfLines={1}
-                    >
-                      @{m.displayName.replace(/\s+/g, '')}
-                    </Text>
-                    <Ionicons
-                      name="close-circle"
-                      size={14}
-                      color={tokens.colors.primary.main}
-                    />
-                  </TouchableOpacity>
+                    <View style={styles.chipInner}>
+                      <Text style={styles.chipText} numberOfLines={1}>
+                        @{m.displayName.replace(/\s+/g, '')}
+                      </Text>
+                      <Ionicons
+                        name="close"
+                        size={14}
+                        color={tokens.colors.text.secondary}
+                      />
+                    </View>
+                  </DayDividerPill>
                 ))}
               </View>
             ) : null}
 
-            <View style={styles.toolbar}>
-              <Text style={[styles.counter, { color: tokens.colors.text.tertiary }]}>
-                {body.trim().length}/{MAX_LEN}
-              </Text>
-              <View style={{ flexDirection: 'row-reverse', gap: 8 }}>
-                <TouchableOpacity
-                  onPress={() => {
-                    void HapticFeedback.impactLight();
-                    setMentionPickerOpen(true);
-                  }}
-                  disabled={busy || mentions.length >= MAX_MENTIONS}
-                  style={[
-                    styles.attachBtn,
-                    mentions.length > 0 ? styles.attachBtnActive : null,
-                  ]}
-                  accessibilityLabel="תייג חבר"
-                  hitSlop={8}
-                >
-                  <Ionicons
-                    name="at"
-                    size={22}
-                    color={
-                      mentions.length > 0
-                        ? tokens.colors.primary.main
-                        : tokens.colors.text.secondary
-                    }
-                  />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => {
-                    void HapticFeedback.impactLight();
-                    setEntityPickerOpen(true);
-                  }}
-                  disabled={busy || attachments.length >= MAX_ATTACHMENTS}
-                  style={[
-                    styles.attachBtn,
-                    attachments.length > 0 ? styles.attachBtnActive : null,
-                  ]}
-                  accessibilityLabel="צרף תוכן"
-                  hitSlop={8}
-                >
-                  <Ionicons
-                    name="link-outline"
-                    size={22}
-                    color={
-                      attachments.length > 0
-                        ? tokens.colors.primary.main
-                        : tokens.colors.text.secondary
-                    }
-                  />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => {
-                    void HapticFeedback.impactLight();
-                    void pickImage();
-                  }}
-                  disabled={busy}
-                  style={[
-                    styles.attachBtn,
-                    imageUri ? styles.attachBtnActive : null,
-                  ]}
-                  accessibilityLabel={imageUri ? 'החלף תמונה' : 'הוסף תמונה'}
-                  hitSlop={8}
-                >
-                  <Ionicons
-                    name={imageUri ? 'image' : 'image-outline'}
-                    size={22}
-                    color={
-                      imageUri
-                        ? tokens.colors.primary.main
-                        : tokens.colors.text.secondary
-                    }
-                  />
-                </TouchableOpacity>
-              </View>
-            </View>
+            <Text style={[styles.counter, { color: tokens.colors.text.tertiary }]}>
+              {body.trim().length}/{MAX_LEN}
+            </Text>
           </UICard>
 
+          <View style={styles.toolbar}>
+            <TouchableOpacity
+              onPress={() => {
+                void HapticFeedback.impactLight();
+                setMentionPickerOpen(true);
+              }}
+              disabled={busy || mentions.length >= MAX_MENTIONS}
+              style={[
+                styles.attachBtn,
+                (busy || mentions.length >= MAX_MENTIONS) && styles.attachBtnDisabled,
+              ]}
+              accessibilityLabel="תייג חבר"
+              hitSlop={8}
+            >
+              <Ionicons name="at" size={22} color={tokens.colors.text.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                void HapticFeedback.impactLight();
+                setEntityPickerOpen(true);
+              }}
+              disabled={busy || attachments.length >= MAX_ATTACHMENTS}
+              style={[
+                styles.attachBtn,
+                (busy || attachments.length >= MAX_ATTACHMENTS) && styles.attachBtnDisabled,
+              ]}
+              accessibilityLabel="צרף תוכן"
+              hitSlop={8}
+            >
+              <Ionicons name="link-outline" size={22} color={tokens.colors.text.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                void HapticFeedback.impactLight();
+                void pickImage();
+              }}
+              disabled={busy}
+              style={[styles.attachBtn, busy && styles.attachBtnDisabled]}
+              accessibilityLabel={imageUri ? 'החלף תמונה' : 'הוסף תמונה'}
+              hitSlop={8}
+            >
+              <Ionicons
+                name={imageUri ? 'image' : 'image-outline'}
+                size={22}
+                color={tokens.colors.text.primary}
+              />
+            </TouchableOpacity>
+          </View>
+
           {attachments.length > 0 ? (
-            <View style={{ gap: 10 }}>
+            <View style={{ gap: APP_LAYOUT.cardStackGap }}>
               {attachments.map((att, index) => (
-                <View key={`${att.ref.type}-${att.ref.id}-${index}`} style={{ gap: 6 }}>
+                <View key={`${att.ref.type}-${att.ref.id}-${index}`} style={styles.previewFrame}>
                   <EntityEmbedCard
                     attachment={att}
                     onPress={() => undefined}
@@ -520,34 +498,14 @@ function CreateCommunityPostSheetBody({
                   <TouchableOpacity
                     onPress={() => removeAttachment(index)}
                     disabled={busy}
-                    style={styles.removeAttachBtn}
+                    style={styles.removeBadge}
                     accessibilityLabel="הסר צירוף"
+                    hitSlop={8}
                   >
-                    <Ionicons
-                      name="trash-outline"
-                      size={16}
-                      color={tokens.colors.text.primary}
-                    />
-                    <Text style={[styles.removeAttachLabel, { color: tokens.colors.text.primary }]}>
-                      הסר צירוף
-                    </Text>
+                    <Ionicons name="close" size={16} color={tokens.colors.text.primary} />
                   </TouchableOpacity>
                 </View>
               ))}
-              {attachments.length < MAX_ATTACHMENTS ? (
-                <TouchableOpacity
-                  onPress={() => {
-                    void HapticFeedback.selection();
-                    setEntityPickerOpen(true);
-                  }}
-                  disabled={busy}
-                  style={{ alignSelf: 'flex-start' }}
-                >
-                  <Text style={{ color: tokens.colors.primary.main, ...APP_TYPE.caption }}>
-                    + הוסף צירוף נוסף
-                  </Text>
-                </TouchableOpacity>
-              ) : null}
             </View>
           ) : null}
 
@@ -635,7 +593,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       gap: 10,
     },
     headerSide: {
-      minWidth: DAY_NAV_BUTTON_SIZE + 32,
+      width: DAY_NAV_BUTTON_SIZE,
       alignItems: 'center',
       justifyContent: 'center',
       flexShrink: 0,
@@ -650,34 +608,24 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       justifyContent: 'center',
     },
     headerTitle: {
-      fontSize: APP_TYPE.sectionTitle.fontSize,
-      fontWeight: APP_TYPE.sectionTitle.fontWeight,
-      lineHeight: APP_TYPE.sectionTitle.lineHeight,
-      letterSpacing: APP_TYPE.sectionTitle.letterSpacing,
+      fontSize: APP_TYPE.screenTitle.fontSize,
+      fontWeight: APP_TYPE.screenTitle.fontWeight,
+      lineHeight: APP_TYPE.screenTitle.lineHeight,
+      letterSpacing: APP_TYPE.screenTitle.letterSpacing,
       writingDirection: 'rtl',
       textAlign: 'center',
       width: '100%',
     },
     headerPublishBtn: {
-      minWidth: DAY_NAV_BUTTON_SIZE,
+      width: DAY_NAV_BUTTON_SIZE,
       height: DAY_NAV_BUTTON_SIZE,
-      paddingHorizontal: 16,
-      borderRadius: r.button,
+      borderRadius: DAY_NAV_BUTTON_SIZE / 2,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: tokens.colors.primary.lightCta,
     },
     headerPublishBtnDisabled: {
-      backgroundColor: tokens.colors.background.primary,
-    },
-    headerPublishBtnText: {
-      fontSize: APP_TYPE.cardTitle.fontSize,
-      fontWeight: APP_TYPE.cardTitle.fontWeight,
-      lineHeight: APP_TYPE.cardTitle.lineHeight,
-      color: tokens.colors.text.inverse,
-    },
-    headerPublishBtnTextDisabled: {
-      color: tokens.colors.text.tertiary,
+      backgroundColor: tokens.colors.background.tertiary,
     },
     scroll: {
       flex: 1,
@@ -708,12 +656,11 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     composeCard: {
       borderRadius: UI_CARD_RADIUS,
       overflow: 'hidden',
-      backgroundColor: tokens.colors.background.cardSolid,
+      backgroundColor: tokens.colors.background.primary,
     },
     composeCardInner: {
       paddingHorizontal: APP_LAYOUT.cardPadding,
-      paddingTop: APP_LAYOUT.cardPadding,
-      paddingBottom: 10,
+      paddingVertical: APP_LAYOUT.cardPadding,
       gap: APP_LAYOUT.cardTitleToBodyGap,
     },
     composeInput: {
@@ -726,59 +673,42 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       direction: 'rtl',
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: 6,
+      gap: APP_LAYOUT.stackGapSmall,
     },
-    chip: {
+    chipInner: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: r.button,
       maxWidth: '100%',
     },
     chipText: {
-      ...APP_TYPE.caption,
+      fontSize: DAY_DIVIDER_PILL_FONT_SIZE,
+      lineHeight: DAY_DIVIDER_PILL_LINE_HEIGHT,
+      fontWeight: tokens.typography.fontWeight.medium,
+      color: tokens.colors.text.primary,
       writingDirection: 'rtl',
       textAlign: 'right',
     },
     toolbar: {
-      flexDirection: 'row-reverse',
+      flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: tokens.colors.border.divider,
-      paddingTop: 10,
+      gap: APP_LAYOUT.stackGapSmall,
     },
     counter: {
       ...APP_TYPE.caption,
       writingDirection: 'ltr',
+      textAlign: 'right',
     },
     attachBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: r.full,
+      width: DAY_NAV_BUTTON_SIZE,
+      height: DAY_NAV_BUTTON_SIZE,
+      borderRadius: DAY_NAV_BUTTON_SIZE / 2,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: tokens.colors.background.primary,
     },
-    attachBtnActive: {
-      backgroundColor: tokens.colors.primary.dim,
-    },
-    removeAttachBtn: {
-      alignSelf: 'flex-start',
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      backgroundColor: tokens.colors.background.primary,
-      borderRadius: r.full,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-    },
-    removeAttachLabel: {
-      ...APP_TYPE.caption,
-      writingDirection: 'rtl',
-      textAlign: 'right',
+    attachBtnDisabled: {
+      opacity: 0.4,
     },
     previewFrame: {
       borderRadius: UI_CARD_RADIUS,

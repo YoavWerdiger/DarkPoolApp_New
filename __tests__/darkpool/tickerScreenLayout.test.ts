@@ -56,18 +56,14 @@ describe('DarkPoolTickerScreen topology', () => {
     expect(screenSrc).not.toMatch(/headerTicker/);
   });
 
-  it('renders each holder with the same UICard glass chrome as feed/journal', () => {
+  it('renders holders as rows inside one soft UICard with dividers', () => {
     expect(screenSrc).toMatch(/import UICard from '..\/..\/components\/ui\/UICard'/);
     expect(screenSrc).toMatch(
-      /holders\.map\([\s\S]*?<UICard[\s\S]*?variant="soft"[\s\S]*?glassIntensity="light"[\s\S]*?padding="none"[\s\S]*?disableBlur[\s\S]*?InvestorPortrait/
+      /<UICard[\s\S]*?variant="soft"[\s\S]*?padding="none"[\s\S]*?style=\{styles\.holdersCard\}[\s\S]*?holders\.map\(/
     );
-    expect(screenSrc).not.toMatch(/showGlassBorder=\{false\}/);
-    expect(screenSrc).not.toMatch(/holders\.map\([\s\S]*?enableBlur/);
-    expect(screenSrc).not.toMatch(/holders\.map\([\s\S]*?padding="sm"/);
-    expect(screenSrc).toMatch(/holdersSection: \{[\s\S]*?gap:\s*8/);
-    expect(screenSrc).toMatch(/holderPad: \{[\s\S]*?paddingVertical:\s*12[\s\S]*?paddingHorizontal:\s*14/);
+    expect(screenSrc).toMatch(/index > 0 \? <View style=\{styles\.holderDivider\} \/>/);
     expect(screenSrc).toMatch(
-      /holderCard: \{[\s\S]*?borderRadius:\s*tokens\.borderRadius\.xl[\s\S]*?borderWidth:\s*0[\s\S]*?overflow:\s*'hidden'[\s\S]*?backgroundColor:\s*'transparent'[\s\S]*?tokens\.shadows\.none/
+      /holderPad: \{[\s\S]*?paddingVertical:\s*APP_LAYOUT\.cardTitleToBodyGap[\s\S]*?paddingHorizontal:\s*APP_LAYOUT\.cardPadding/
     );
     expect(screenSrc).toMatch(/openHolder/);
     expect(screenSrc).toMatch(/DarkPoolInvestor/);
@@ -112,12 +108,12 @@ describe('DarkPoolTickerScreen topology', () => {
     expect(screenSrc).not.toMatch(/TICKER_ROLL_|stepRollingValue|durationMs/);
     expect(screenSrc).toMatch(/heroBlock/);
     expect(screenSrc).toMatch(/identityTicker: \{[\s\S]*?sectionTitle/);
-    expect(screenSrc).toMatch(/livePrice: \{[\s\S]*?fontSize:\s*44/);
+    expect(screenSrc).toMatch(/livePrice: \{[\s\S]*?DARK_POOL_TYPE\.pageTitle\.fontSize/);
     expect(screenSrc).toMatch(
-      /marketCapValue: \{[\s\S]*?DARK_POOL_TYPE\.sectionTitle\.fontSize[\s\S]*?DARK_POOL_TYPE\.sectionTitle\.lineHeight[\s\S]*?DARK_POOL_TYPE\.sectionTitle\.fontWeight/
+      /styles\.priceCol[\s\S]*?styles\.identityRow[\s\S]*?styles\.marketCapLine/
     );
     expect(screenSrc).toMatch(
-      /marketCapLabel: \{[\s\S]*?DARK_POOL_TYPE\.caption\.fontSize[\s\S]*?DARK_POOL_TYPE\.caption\.fontWeight/
+      /marketCapLine: \{[\s\S]*?DARK_POOL_TYPE\.caption\.fontSize[\s\S]*?text\.secondary/
     );
     expect(screenSrc).not.toMatch(/marketCapValue: \{[\s\S]*?fontSize:\s*17/);
     expect(screenSrc).toMatch(/SignedChangePair/);

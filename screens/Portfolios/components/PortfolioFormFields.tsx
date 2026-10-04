@@ -15,10 +15,13 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { useTheme } from '../../../context/ThemeContext';
 import UICard from '../../../components/ui/UICard';
 import {
   formFieldInputStyle,
   formFieldLabelStyle,
+  formFieldNumericInputStyle,
+  formFieldPlaceholderColor,
   formFieldShellStyle,
 } from '../../../components/ui/formControl';
 import { PasswordVisibilityToggle } from '../../../components/ui/PasswordVisibilityToggle';
@@ -69,11 +72,25 @@ export function FieldLabel({ label, optional, labelAccessory }: FieldLabelProps)
   return (
     <View style={styles.labelRow}>
       <View style={styles.labelMain}>
-        <Text style={formFieldLabelStyle({ tokens, focused: false, error: false })}>
+        <Text
+          style={[
+            formFieldLabelStyle({ tokens, focused: false, error: false }),
+            { marginBottom: 0 },
+          ]}
+        >
           {label}
         </Text>
         {optional ? (
-          <Text style={[journalCardSubtitleStyle, { color: tokens.colors.text.muted }]}>
+          <Text
+            style={[
+              journalCardSubtitleStyle,
+              {
+                color: tokens.colors.text.secondary,
+                width: undefined,
+                marginTop: 0,
+              },
+            ]}
+          >
             אופציונלי
           </Text>
         ) : null}
@@ -102,7 +119,7 @@ function FieldMessage({ hint, error }: FieldMessageProps) {
   }
   if (!hint) return null;
   return (
-    <Text style={[portfolioFormHelperStyle, { color: tokens.colors.text.muted }]}>
+    <Text style={[portfolioFormHelperStyle, { color: tokens.colors.text.secondary }]}>
       {hint}
     </Text>
   );
@@ -159,6 +176,7 @@ export function TextField({
   spacing,
 }: TextFieldProps) {
   const tokens = useDesignTokens();
+  const { isDarkMode } = useTheme();
   const [focused, setFocused] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
   const isPassword = secureTextEntry === true;
@@ -194,9 +212,9 @@ export function TextField({
         ) : null}
         <TextInput
           style={[
-            formFieldInputStyle(),
+            formFieldInputStyle(tokens),
             multiline && styles.inputMultiline,
-            numeric && styles.inputNumeric,
+            numeric && formFieldNumericInputStyle(tokens),
           ]}
           value={value}
           onChangeText={onChangeText}
@@ -206,7 +224,8 @@ export function TextField({
             onBlur?.();
           }}
           placeholder={placeholder}
-          placeholderTextColor={tokens.colors.text.muted}
+          placeholderTextColor={formFieldPlaceholderColor(tokens)}
+          keyboardAppearance={isDarkMode ? 'dark' : 'light'}
           keyboardType={keyboardType}
           multiline={multiline}
           maxLength={maxLength}
@@ -220,10 +239,12 @@ export function TextField({
         {prefix ? (
           <Text
             style={[
-              formFieldInputStyle(),
+              formFieldInputStyle(tokens),
               {
                 fontWeight: '700',
-                color: value ? tokens.colors.text.secondary : tokens.colors.text.muted,
+                color: value
+                  ? tokens.colors.text.secondary
+                  : tokens.colors.text.tertiary,
               },
             ]}
           >
@@ -329,10 +350,6 @@ const styles = StyleSheet.create({
     minHeight: 76,
     textAlignVertical: 'top',
     paddingVertical: 4,
-  },
-  inputNumeric: {
-    textAlign: 'left',
-    writingDirection: 'ltr',
   },
   errorRow: {
     flexDirection: 'row-reverse',

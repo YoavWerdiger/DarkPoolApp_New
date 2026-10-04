@@ -12,8 +12,12 @@ export const MEDIA_ATTACH_SNAP_POINTS: readonly [number, number] = [
   MEDIA_ATTACH_EXPANDED_SNAP,
 ];
 
-/** כמה תמונות אחרונות בשורת ה-peek — רק אם כבר ב-cache. */
-export const MEDIA_ATTACH_PEEK_THUMBS = 3;
+/** כמה תמונות אחרונות בסטריפ הגלילה של ה-peek — רק אם כבר ב-cache. */
+export const MEDIA_ATTACH_PEEK_THUMBS = 12;
+/** תמונה בסטריפ ה-peek — קבועה, לא תלויה ברוחב הגריד. */
+export const MEDIA_ATTACH_PEEK_THUMB_PX = 96;
+export const MEDIA_ATTACH_PEEK_THUMB_GAP = 8;
+export const MEDIA_ATTACH_PEEK_THUMB_RADIUS = 12;
 
 export const MEDIA_ATTACH_GRID_COLS = 3;
 export const MEDIA_ATTACH_GRID_GAP = 2;
@@ -25,9 +29,11 @@ export const MEDIA_ATTACH_PERMISSION_CTA = 'אפשר גישה לתמונות';
 
 /** handle ב-edgeToEdge (כולל buffer) — תואם BOTTOM_SHEET_EDGE_HANDLE_HEIGHT. */
 export const MEDIA_ATTACH_HANDLE_PX = 36;
-/** שורת גלריה + מצלמה (כרטיסים). */
-export const MEDIA_ATTACH_PRIMARY_ROW_PX = 76;
-/** שורת אייקונים — מסמך, סקר, שיתוף וכו'. */
+/** עיגול כלי בשורה המשנית (מסמך, אודיו, סקר...). */
+export const MEDIA_ATTACH_ACTION_BTN_PX = 56;
+/** שורה ראשונה: גלריה | מצלמה — שני כפתורי גלולה, חצי רוחב כל אחד. */
+export const MEDIA_ATTACH_PRIMARY_ROW_PX = 56;
+/** שורת כלים: עיגול + תווית. */
 export const MEDIA_ATTACH_SECONDARY_ROW_PX = 80;
 export const MEDIA_ATTACH_SECONDARY_COLS = 4;
 export const MEDIA_ATTACH_ACTION_ROW_GAP = 16;
@@ -36,12 +42,12 @@ export const MEDIA_ATTACH_ACTION_ROW_PX = MEDIA_ATTACH_SECONDARY_ROW_PX;
 export const MEDIA_ATTACH_ACTION_ROWS = 2;
 /** peek paddingTop + actionRow paddingTop */
 export const MEDIA_ATTACH_PEEK_CHROME_PX = 12;
-export const MEDIA_ATTACH_PEEK_STRIP_GAP = 12;
+export const MEDIA_ATTACH_PEEK_STRIP_GAP = 16;
 /** כותרת «אחרונים» + «הכל» מעל שורת ה-thumbnails. */
 export const MEDIA_ATTACH_PEEK_RECENTS_HEADER_PX = 28;
 export const MEDIA_ATTACH_PEEK_BUFFER_PX = 8;
 export const MEDIA_ATTACH_PEEK_MIN = 0.24;
-export const MEDIA_ATTACH_PEEK_MAX = 0.52;
+export const MEDIA_ATTACH_PEEK_MAX = 0.56;
 
 /**
  * שורת גריד בתוך עץ RTL: `row` בלבד.
@@ -72,14 +78,22 @@ export function mediaAttachSecondaryRowCount(secondaryCount: number): number {
   return Math.ceil(secondaryCount / MEDIA_ATTACH_SECONDARY_COLS);
 }
 
-/** גובה בלוק הפעולות ב-peek — גלריה/מצלמה + שורות משניות. */
-export function mediaAttachActionsBlockHeightPx(secondaryCount: number): number {
-  const primary = MEDIA_ATTACH_PRIMARY_ROW_PX;
-  const secondaryRows = mediaAttachSecondaryRowCount(secondaryCount);
-  if (secondaryRows === 0) return primary;
-  const secondaryGap = secondaryRows > 1 ? 8 : 0;
-  const secondary = secondaryRows * MEDIA_ATTACH_SECONDARY_ROW_PX + secondaryGap;
-  return primary + MEDIA_ATTACH_ACTION_ROW_GAP + secondary;
+/** עמודות בשורת הכלים — 3 כלים = 3 עמודות, לא 4 עם חור. */
+export function mediaAttachActionColumns(count: number): number {
+  return Math.max(1, Math.min(MEDIA_ATTACH_SECONDARY_COLS, count));
+}
+
+/** גובה בלוק הפעולות ב-peek — שורת גלריה/מצלמה + שורות כלים. */
+export function mediaAttachActionsBlockHeightPx(
+  secondaryCount: number,
+  primaryCount = 2,
+): number {
+  const primary = primaryCount > 0 ? MEDIA_ATTACH_PRIMARY_ROW_PX : 0;
+  const rows = mediaAttachSecondaryRowCount(secondaryCount);
+  const secondary =
+    rows * MEDIA_ATTACH_SECONDARY_ROW_PX + Math.max(0, rows - 1) * MEDIA_ATTACH_ACTION_ROW_GAP;
+  const gap = primary > 0 && rows > 0 ? MEDIA_ATTACH_ACTION_ROW_GAP : 0;
+  return primary + gap + secondary;
 }
 
 export function mediaAttachPeekHeightPx(input: {
@@ -87,13 +101,17 @@ export function mediaAttachPeekHeightPx(input: {
   thumbSize: number;
   bottomPad: number;
   secondaryCount?: number;
+  primaryCount?: number;
 }): number {
   const strip = input.hasCachedThumbs
     ? MEDIA_ATTACH_PEEK_RECENTS_HEADER_PX +
       Math.max(0, input.thumbSize) +
       MEDIA_ATTACH_PEEK_STRIP_GAP
     : 0;
-  const actions = mediaAttachActionsBlockHeightPx(input.secondaryCount ?? 0);
+  const actions = mediaAttachActionsBlockHeightPx(
+    input.secondaryCount ?? 0,
+    input.primaryCount ?? 2,
+  );
   return (
     MEDIA_ATTACH_HANDLE_PX +
     MEDIA_ATTACH_PEEK_CHROME_PX +
@@ -114,6 +132,7 @@ export function mediaAttachPeekPlan(input: {
   bottomPad: number;
   cachedCount: number;
   secondaryCount?: number;
+  primaryCount?: number;
 }): MediaAttachPeekPlan {
   const screenH = Math.max(1, input.screenHeight);
   const wantsThumbs = input.cachedCount > 0;
@@ -123,6 +142,7 @@ export function mediaAttachPeekPlan(input: {
       thumbSize: input.thumbSize,
       bottomPad: input.bottomPad,
       secondaryCount: input.secondaryCount,
+      primaryCount: input.primaryCount,
     }) / screenH;
   const menuOnly =
     mediaAttachPeekHeightPx({
@@ -130,6 +150,7 @@ export function mediaAttachPeekPlan(input: {
       thumbSize: input.thumbSize,
       bottomPad: input.bottomPad,
       secondaryCount: input.secondaryCount,
+      primaryCount: input.primaryCount,
     }) / screenH;
   const showPeekRecents = wantsThumbs && withThumbs <= MEDIA_ATTACH_PEEK_MAX;
   const raw = showPeekRecents ? withThumbs : menuOnly;

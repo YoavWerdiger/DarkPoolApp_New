@@ -1,5 +1,5 @@
 import { SUPABASE_URL } from '../../../config/publicEnv';
-import { knownPortraitForInvestor } from './knownInvestorPortraits';
+import { knownPortraitForInvestor, localPortraitForInvestor } from './knownInvestorPortraits';
 
 /** תמונת ברירת מחדל — שור/דוב (transback) מה-storage של האפליקציה. */
 export const INVESTOR_PORTRAIT_PLACEHOLDER_URI = `${SUPABASE_URL}/storage/v1/object/public/backgrounds/transback.png`;
@@ -158,6 +158,9 @@ export function portraitPhotoCandidates(opts: {
     const t = url?.trim();
     if (t && looksLikePersonPhoto(t)) add(t);
   };
+
+  add(localPortraitForInvestor({ personId: opts.personId, name: opts.name }));
+  add(localPortraitForInvestor({ personId: opts.bioguideId, name: opts.name }));
 
   if (opts.kind === 'politician' && opts.photoSize === '450x550') {
     add(congressPhotoUrl(opts.bioguideId, '450x550'));

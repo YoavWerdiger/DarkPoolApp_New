@@ -5,14 +5,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -24,6 +17,7 @@ import { DayDividerPill } from '../../components/ui/DayDividerPill';
 import { SignedChangePair } from '../../components/ui/ChangeDot';
 import { DayNavBlurButton, HEADER_BACK_BTN_SIZE } from '../../components/ui/DayNavBlurButton';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { APP_LAYOUT } from '../../components/ui/appLayout';
 import { TickerLogo } from '../Portfolios/components/TickerLogo';
 import { PortfolioValueChart } from '../Portfolios/components/PortfolioValueChart';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
@@ -40,10 +34,7 @@ import {
   listCongressTradesByTicker,
 } from '../../services/darkpool/darkPoolDbCacheService';
 import { getTickerInsiderBuys } from '../../services/darkpool/darkPoolService';
-import {
-  getHistoricalPrices,
-  getQuote,
-} from '../../services/portfolios/portfolioPriceFeed';
+import { getHistoricalPrices, getQuote } from '../../services/portfolios/portfolioPriceFeed';
 import { fetchDailyBarsForTickers } from './utils/congressTradeOpens';
 import { ltrNameText, toDataIsland } from './utils/bidi';
 import {
@@ -80,10 +71,7 @@ import {
 } from './utils/tickerScreenIa';
 import { buildCongressFeedItem } from './utils/congressFeedCalc';
 import { buildFeedItem } from './utils/insiderFeedCalc';
-import {
-  congressTradeDetailParams,
-  insiderTradeDetailParams,
-} from './utils/tradeDetailParams';
+import { congressTradeDetailParams, insiderTradeDetailParams } from './utils/tradeDetailParams';
 import type { PriceQuote } from '../Portfolios/portfolioTypes';
 import {
   DARK_POOL_TYPE,
@@ -97,8 +85,18 @@ type Nav = NativeStackNavigationProp<DarkPoolStackParamList, 'DarkPoolTicker'>;
 type RP = RouteProp<DarkPoolStackParamList, 'DarkPoolTicker'>;
 
 type TickerFeedRow =
-  | { kind: 'congress'; key: string; sortAt: number; item: ReturnType<typeof buildCongressFeedItem> }
-  | { kind: 'insider'; key: string; sortAt: number; item: ReturnType<typeof buildFeedItem> };
+  | {
+      kind: 'congress';
+      key: string;
+      sortAt: number;
+      item: ReturnType<typeof buildCongressFeedItem>;
+    }
+  | {
+      kind: 'insider';
+      key: string;
+      sortAt: number;
+      item: ReturnType<typeof buildFeedItem>;
+    };
 
 export default function DarkPoolTickerScreen() {
   const tokens = useDesignTokens();
@@ -107,12 +105,11 @@ export default function DarkPoolTickerScreen() {
   const mainTabsHeight = useMainTabsHeight();
   const ticker = (route.params?.ticker || '').toUpperCase().replace(/^\$/, '');
   const [range, setRange] = useState<TickerChartRange>('1Y');
-  const [tab, setTab] = useState<TickerScreenTab>(() =>
-    resolveTickerScreenTab(route.params?.tab)
-  );
-  const [scrubPoint, setScrubPoint] = useState<{ date: string; value: number } | null>(
-    null
-  );
+  const [tab, setTab] = useState<TickerScreenTab>(() => resolveTickerScreenTab(route.params?.tab));
+  const [scrubPoint, setScrubPoint] = useState<{
+    date: string;
+    value: number;
+  } | null>(null);
 
   const { data: insights } = useUwTickerInsights(ticker);
 
@@ -128,11 +125,7 @@ export default function DarkPoolTickerScreen() {
     return yahooRequestForTickerRange(range);
   }, [range]);
   const historyQuery = useQuery({
-    queryKey: appQueryKeys.tickerHistory(
-      ticker,
-      historySpec.yahooRange,
-      historySpec.interval
-    ),
+    queryKey: appQueryKeys.tickerHistory(ticker, historySpec.yahooRange, historySpec.interval),
     queryFn: () =>
       getHistoricalPrices(ticker, historySpec.yahooRange, {
         interval: historySpec.interval,
@@ -142,11 +135,22 @@ export default function DarkPoolTickerScreen() {
     gcTime: 24 * 60 * 60_000,
   });
 
+  const needsSessionBars = historySpec.interval === '1d' || range === '1D';
+  const sessionQuery = useQuery({
+    queryKey: appQueryKeys.tickerHistory(ticker, '1d', '1h'),
+    queryFn: () => getHistoricalPrices(ticker, '1d', { interval: '1h' }),
+    enabled: ticker.length > 0 && needsSessionBars,
+    staleTime: tickerHistoryStaleMs('1h'),
+    gcTime: 30 * 60_000,
+  });
+
   const intraSpec = yahooRequestForTickerRange('1D');
   const intradayQuery = useQuery({
     queryKey: appQueryKeys.tickerHistory(ticker, intraSpec.yahooRange, intraSpec.interval),
     queryFn: () =>
-      getHistoricalPrices(ticker, intraSpec.yahooRange, { interval: intraSpec.interval }),
+      getHistoricalPrices(ticker, intraSpec.yahooRange, {
+        interval: intraSpec.interval,
+      }),
     enabled: ticker.length > 0 && range === '1D',
     staleTime: tickerHistoryStaleMs('5m'),
     gcTime: 30 * 60_000,
@@ -172,10 +176,7 @@ export default function DarkPoolTickerScreen() {
       const map = await fetchDailyBarsForTickers([ticker], '5y');
       return map.get(ticker) ?? [];
     },
-    enabled:
-      ticker.length > 0 &&
-      tab === 'feed' &&
-      (congressTradesQuery.data?.length ?? 0) > 0,
+    enabled: ticker.length > 0 && tab === 'feed' && (congressTradesQuery.data?.length ?? 0) > 0,
     staleTime: 60 * 60_000,
   });
 
@@ -192,7 +193,7 @@ export default function DarkPoolTickerScreen() {
         date: p.date,
         close: p.close,
       })),
-    [historyQuery.data]
+    [historyQuery.data],
   );
   const intraday: TickerClosePoint[] = useMemo(
     () =>
@@ -200,13 +201,21 @@ export default function DarkPoolTickerScreen() {
         date: p.date,
         close: p.close,
       })),
-    [intradayQuery.data]
+    [intradayQuery.data],
+  );
+  const sessionBars: TickerClosePoint[] = useMemo(
+    () =>
+      (sessionQuery.data ?? []).map((p) => ({
+        date: p.date,
+        close: p.close,
+      })),
+    [sessionQuery.data],
   );
 
   const livePrice = quoteQuery.data?.price ?? null;
   const previousClose = quoteQuery.data?.previous_close ?? null;
   const marketCapText = formatTickerMarketCap(
-    quoteQuery.data?.market_cap ?? insiderBuysQuery.data?.[0]?.marketcap ?? null
+    quoteQuery.data?.market_cap ?? insiderBuysQuery.data?.[0]?.marketcap ?? null,
   );
 
   const visibleRanges = TICKER_CHART_RANGES;
@@ -226,12 +235,13 @@ export default function DarkPoolTickerScreen() {
       livePrice,
       previousClose,
       intraday,
+      sessionBars,
     });
     return sampleChartSeriesForPeriod(
       built.map((p) => ({ date: p.date, value: p.value })),
-      tickerRangeToSamplePeriod(range)
+      tickerRangeToSamplePeriod(range),
     );
-  }, [daily, range, livePrice, previousClose, intraday]);
+  }, [daily, range, livePrice, previousClose, intraday, sessionBars]);
 
   const displayPrice = scrubPoint?.value ?? livePrice;
   const rangeChange = useMemo(
@@ -242,14 +252,14 @@ export default function DarkPoolTickerScreen() {
         previousClose,
         daily,
       }),
-    [range, displayPrice, previousClose, daily]
+    [range, displayPrice, previousClose, daily],
   );
   const scrubDateText = formatTickerScrubDate(scrubPoint?.date);
   const priceText = formatTickerLivePrice(displayPrice) ?? '—';
 
   const holders = useMemo(
     () => (holdersQuery.data ?? []).filter((holder) => tickerHolderRowCopy(holder)),
-    [holdersQuery.data]
+    [holdersQuery.data],
   );
   const holdersEmpty = useMemo(() => tickerHoldersEmptyCopy(ticker), [ticker]);
   const holdersError = tickerHoldersErrorCopy();
@@ -316,7 +326,7 @@ export default function DarkPoolTickerScreen() {
         imageHint: holder.imageUrl,
       });
     },
-    [navigation, ticker]
+    [navigation, ticker],
   );
 
   const openPolitician = useCallback(
@@ -335,7 +345,7 @@ export default function DarkPoolTickerScreen() {
         imageHint: image,
       });
     },
-    [navigation, ticker]
+    [navigation, ticker],
   );
 
   const openInsider = useCallback(
@@ -353,7 +363,7 @@ export default function DarkPoolTickerScreen() {
         nameHint: name,
       });
     },
-    [navigation, ticker]
+    [navigation, ticker],
   );
 
   const feedLoading =
@@ -375,17 +385,6 @@ export default function DarkPoolTickerScreen() {
           >
             <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
           </DayNavBlurButton>
-          <View style={styles.identityRow}>
-            <TickerLogo symbol={ticker} size={48} borderRadius={24} />
-            <View style={styles.identityText}>
-              <Text style={styles.identityTicker}>{toDataIsland(ticker)}</Text>
-              {companyName ? (
-                <Text style={styles.companyName} numberOfLines={2}>
-                  {companyName}
-                </Text>
-              ) : null}
-            </View>
-          </View>
         </View>
 
         <ScrollView
@@ -407,25 +406,33 @@ export default function DarkPoolTickerScreen() {
                     pctText={formatTickerPctChange(rangeChange.pct)}
                   />
                 ) : (
-                  <Text style={[styles.liveChange, { color: tokens.colors.text.tertiary }]}>—</Text>
+                  <Text style={[styles.liveChange, { color: tokens.colors.text.secondary }]}>
+                    —
+                  </Text>
                 )}
                 {scrubDateText ? (
                   <Text style={styles.scrubDate}>{toDataIsland(scrubDateText)}</Text>
                 ) : null}
               </View>
-              {marketCapText ? (
-                <View style={styles.marketCapCol}>
-                  <Text
-                    style={styles.marketCapValue}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.55}
-                  >
-                    {toDataIsland(marketCapText)}
+              <View style={styles.identityRow}>
+                <TickerLogo symbol={ticker} size={48} borderRadius={24} />
+                <View style={styles.identityText}>
+                  <Text style={styles.identityTicker} numberOfLines={1}>
+                    {toDataIsland(ticker)}
                   </Text>
-                  <Text style={styles.marketCapLabel}>{tickerMarketCapLabel()}</Text>
+                  {companyName ? (
+                    <Text style={styles.companyName} numberOfLines={1}>
+                      {companyName}
+                    </Text>
+                  ) : null}
+                  {marketCapText ? (
+                    <Text style={styles.marketCapLine} numberOfLines={1}>
+                      {`${tickerMarketCapLabel()} `}
+                      <Text style={styles.marketCapValue}>{toDataIsland(marketCapText)}</Text>
+                    </Text>
+                  ) : null}
                 </View>
-              ) : null}
+              </View>
             </View>
           </View>
 
@@ -476,7 +483,10 @@ export default function DarkPoolTickerScreen() {
           <View style={styles.tablist} accessibilityRole="tablist">
             {(
               [
-                { id: 'holders' as const, label: tickerScreenHoldersTabLabel(holders.length) },
+                {
+                  id: 'holders' as const,
+                  label: tickerScreenHoldersTabLabel(holders.length),
+                },
                 { id: 'feed' as const, label: tickerScreenFeedTabLabel() },
               ] as const
             ).map((item) => {
@@ -491,29 +501,22 @@ export default function DarkPoolTickerScreen() {
                   accessibilityRole="tab"
                   accessibilityState={{ selected: active }}
                   accessibilityLabel={item.label}
-                  style={styles.tabBtn}
+                  style={[styles.tabBtn, active && styles.tabBtnActive]}
                 >
                   <Text
+                    numberOfLines={1}
                     style={[
                       styles.tabLabel,
                       {
-                        color: active
-                          ? tokens.colors.text.primary
-                          : tokens.colors.text.secondary,
+                        color: active ? tokens.colors.text.primary : tokens.colors.text.secondary,
                         fontWeight: active
-                          ? DARK_POOL_TYPE.sectionTitle.fontWeight
+                          ? DARK_POOL_TYPE.cardTitle.fontWeight
                           : DARK_POOL_TYPE.groupLabel.fontWeight,
                       },
                     ]}
                   >
                     {item.label}
                   </Text>
-                  <View
-                    style={[
-                      styles.tabUnderline,
-                      { backgroundColor: active ? tokens.colors.text.primary : 'transparent' },
-                    ]}
-                  />
                 </Pressable>
               );
             })}
@@ -531,54 +534,66 @@ export default function DarkPoolTickerScreen() {
                   <Text style={styles.emptyBody}>{holdersError.body}</Text>
                 </UICard>
               ) : holders.length > 0 ? (
-                holders.map((holder) => {
-                  const row = tickerHolderRowCopy(holder, livePrice);
-                  if (!row) return null;
-                  return (
-                    <UICard
-                      key={holder.bioguideId}
-                      variant="soft"
-                      glassIntensity="light"
-                      padding="none"
-                      disableBlur
-                      onPress={() => openHolder(holder)}
-                      style={styles.holderCard}
-                      contentContainerStyle={styles.holderPad}
-                      accessibilityLabel={
-                        row.sharesLabel
-                          ? `${holder.name} ${row.metric.text} ${row.sharesLabel}`
-                          : `${holder.name} ${row.metric.text}`
-                      }
-                    >
-                      <View style={styles.holderRow}>
-                        <InvestorPortrait
-                          name={holder.name}
-                          imageUrl={holder.imageUrl}
-                          kind="politician"
-                          personId={holder.bioguideId}
-                          layout="circle"
-                          size={36}
-                        />
-                        <View style={styles.holderText}>
-                          <Text style={styles.holderName} numberOfLines={1}>
-                            {holder.name}
-                          </Text>
-                          {row.subtitle ? (
-                            <Text style={styles.holderSubtitle}>{toDataIsland(row.subtitle)}</Text>
-                          ) : null}
-                        </View>
-                        <View style={styles.holderMetricCol}>
-                          <Text style={styles.holderMetric}>{toDataIsland(row.metric.text)}</Text>
-                          {row.sharesLabel ? (
-                            <Text style={styles.holderShares}>
-                              {toDataIsland(row.sharesLabel)}
-                            </Text>
-                          ) : null}
-                        </View>
-                      </View>
-                    </UICard>
-                  );
-                })
+                <UICard
+                  variant="soft"
+                  glassIntensity="light"
+                  padding="none"
+                  style={styles.holdersCard}
+                >
+                  {holders.map((holder, index) => {
+                    const row = tickerHolderRowCopy(holder, livePrice);
+                    if (!row) return null;
+                    return (
+                      <React.Fragment key={holder.bioguideId}>
+                        {index > 0 ? <View style={styles.holderDivider} /> : null}
+                        <Pressable
+                          onPress={() => openHolder(holder)}
+                          style={({ pressed }) => [
+                            styles.holderPad,
+                            pressed && styles.holderPressed,
+                          ]}
+                          accessibilityRole="button"
+                          accessibilityLabel={
+                            row.sharesLabel
+                              ? `${holder.name} ${row.metric.text} ${row.sharesLabel}`
+                              : `${holder.name} ${row.metric.text}`
+                          }
+                        >
+                          <View style={styles.holderRow}>
+                            <InvestorPortrait
+                              name={holder.name}
+                              imageUrl={holder.imageUrl}
+                              kind="politician"
+                              personId={holder.bioguideId}
+                              layout="circle"
+                              size={36}
+                            />
+                            <View style={styles.holderText}>
+                              <Text style={styles.holderName} numberOfLines={1}>
+                                {holder.name}
+                              </Text>
+                              {row.subtitle ? (
+                                <Text style={styles.holderSubtitle}>
+                                  {toDataIsland(row.subtitle)}
+                                </Text>
+                              ) : null}
+                            </View>
+                            <View style={styles.holderMetricCol}>
+                              <Text style={styles.holderMetric}>
+                                {toDataIsland(row.metric.text)}
+                              </Text>
+                              {row.sharesLabel ? (
+                                <Text style={styles.holderShares}>
+                                  {toDataIsland(row.sharesLabel)}
+                                </Text>
+                              ) : null}
+                            </View>
+                          </View>
+                        </Pressable>
+                      </React.Fragment>
+                    );
+                  })}
+                </UICard>
               ) : (
                 <UICard variant="soft" glassIntensity="light" padding="md">
                   <Text style={styles.emptyTitle}>{holdersEmpty.title}</Text>
@@ -604,7 +619,7 @@ export default function DarkPoolTickerScreen() {
                     onDetailPress={() =>
                       navigation.navigate(
                         'DarkPoolTradeDetail',
-                        congressTradeDetailParams(row.item.trade)
+                        congressTradeDetailParams(row.item.trade),
                       )
                     }
                   />
@@ -616,11 +631,11 @@ export default function DarkPoolTickerScreen() {
                     onDetailPress={() =>
                       navigation.navigate(
                         'DarkPoolTradeDetail',
-                        insiderTradeDetailParams(row.item.trade)
+                        insiderTradeDetailParams(row.item.trade),
                       )
                     }
                   />
-                )
+                ),
               )}
             </View>
           ) : (
@@ -635,19 +650,16 @@ export default function DarkPoolTickerScreen() {
   );
 }
 
-function createStyles(
-  tokens: ReturnType<typeof useDesignTokens>,
-  bottomPadding: number
-) {
+function createStyles(tokens: ReturnType<typeof useDesignTokens>, bottomPadding: number) {
   return StyleSheet.create({
     topBar: {
       direction: 'rtl',
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 12,
+      gap: APP_LAYOUT.cardTitleToBodyGap,
       paddingHorizontal: tokens.layout.screenPadding,
       paddingTop: 10,
-      paddingBottom: 16,
+      paddingBottom: APP_LAYOUT.stackGapSmall,
     },
     identityRow: {
       flex: 1,
@@ -655,7 +667,7 @@ function createStyles(
       direction: 'ltr',
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 12,
+      gap: APP_LAYOUT.cardTitleToBodyGap,
     },
     identityText: {
       flex: 1,
@@ -673,79 +685,72 @@ function createStyles(
     },
     companyName: {
       ...darkPoolPhysicalLeftText,
-      marginTop: 2,
+      marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
       fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
       lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardSubtitle.fontWeight,
       color: tokens.colors.text.secondary,
     },
     heroBlock: {
-      marginBottom: 16,
+      marginBottom: APP_LAYOUT.componentGap,
     },
     priceRow: {
       direction: 'rtl',
       flexDirection: 'row',
-      alignItems: 'flex-start',
+      alignItems: 'center',
       justifyContent: 'space-between',
-      gap: 16,
+      gap: APP_LAYOUT.componentGap,
     },
     priceCol: {
-      flexShrink: 1,
-      alignItems: 'flex-end',
+      flexShrink: 0,
+      alignItems: 'flex-start',
     },
     livePrice: {
       ...darkPoolPhysicalRightText,
-      fontSize: 44,
-      lineHeight: 50,
-      fontWeight: DARK_POOL_TYPE.cardMetricValue.fontWeight,
-      letterSpacing: -1,
+      fontSize: DARK_POOL_TYPE.pageTitle.fontSize,
+      lineHeight: DARK_POOL_TYPE.pageTitle.lineHeight,
+      fontWeight: DARK_POOL_TYPE.pageTitle.fontWeight,
+      letterSpacing: DARK_POOL_TYPE.pageTitle.letterSpacing,
       color: tokens.colors.text.primary,
       writingDirection: 'ltr',
+      fontVariant: ['tabular-nums'],
     },
     liveChangeRow: {
-      marginTop: 6,
-      alignSelf: 'flex-end',
+      marginTop: APP_LAYOUT.cardMetricLabelToValueGap,
+      alignSelf: 'flex-start',
     },
     liveChange: {
       ...darkPoolPhysicalRightText,
-      fontSize: DARK_POOL_TYPE.body.fontSize,
-      lineHeight: DARK_POOL_TYPE.body.lineHeight,
+      fontSize: DARK_POOL_TYPE.cardBody.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardBody.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       writingDirection: 'ltr',
+      fontVariant: ['tabular-nums'],
     },
     scrubDate: {
       ...darkPoolPhysicalRightText,
-      marginTop: 4,
+      marginTop: APP_LAYOUT.cardMetricLabelToValueGap,
       fontSize: DARK_POOL_TYPE.caption.fontSize,
       lineHeight: DARK_POOL_TYPE.caption.lineHeight,
       fontWeight: DARK_POOL_TYPE.caption.fontWeight,
-      color: tokens.colors.text.tertiary,
+      color: tokens.colors.text.secondary,
     },
-    marketCapCol: {
-      flexShrink: 1,
-      minWidth: 0,
-      maxWidth: '42%',
-      alignItems: 'flex-start',
-      paddingTop: 8,
+    marketCapLine: {
+      ...darkPoolPhysicalLeftText,
+      writingDirection: 'rtl',
+      marginTop: APP_LAYOUT.cardMetricLabelToValueGap,
+      fontSize: DARK_POOL_TYPE.caption.fontSize,
+      lineHeight: DARK_POOL_TYPE.caption.lineHeight,
+      fontWeight: DARK_POOL_TYPE.caption.fontWeight,
+      color: tokens.colors.text.secondary,
     },
     marketCapValue: {
-      ...darkPoolPhysicalLeftText,
-      fontSize: DARK_POOL_TYPE.sectionTitle.fontSize,
-      lineHeight: DARK_POOL_TYPE.sectionTitle.lineHeight,
-      fontWeight: DARK_POOL_TYPE.sectionTitle.fontWeight,
+      fontWeight: DARK_POOL_TYPE.cardMetricLabel.fontWeight,
       color: tokens.colors.text.primary,
-      writingDirection: 'ltr',
-    },
-    marketCapLabel: {
-      ...darkPoolPhysicalLeftText,
-      marginTop: 3,
-      fontSize: DARK_POOL_TYPE.caption.fontSize,
-      lineHeight: DARK_POOL_TYPE.caption.lineHeight,
-      fontWeight: DARK_POOL_TYPE.caption.fontWeight,
-      color: tokens.colors.text.tertiary,
+      fontVariant: ['tabular-nums'],
     },
     chartWrap: {
-      marginTop: 8,
+      marginTop: APP_LAYOUT.stackGapSmall,
       marginHorizontal: -4,
     },
     chartPlaceholder: {
@@ -757,51 +762,61 @@ function createStyles(
       direction: 'rtl',
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
-      paddingVertical: 12,
+      gap: APP_LAYOUT.stackGapSmall,
+      paddingVertical: APP_LAYOUT.cardTitleToBodyGap,
     },
     tablist: {
       direction: 'rtl',
       flexDirection: 'row',
-      backgroundColor: 'transparent',
-      marginBottom: tokens.spacing.sm,
+      alignItems: 'center',
+      height: 44,
+      padding: 4,
+      gap: 4,
+      borderRadius: 22,
+      backgroundColor: tokens.colors.background.cardSolid,
+      marginTop: APP_LAYOUT.stackGapSmall,
+      marginBottom: APP_LAYOUT.componentGap,
     },
     tabBtn: {
       flex: 1,
+      height: '100%',
       alignItems: 'center',
-      paddingTop: tokens.spacing.sm,
-      backgroundColor: 'transparent',
+      justifyContent: 'center',
+      borderRadius: 18,
+      paddingHorizontal: APP_LAYOUT.stackGapSmall,
+    },
+    tabBtnActive: {
+      backgroundColor: tokens.colors.background.primary,
     },
     tabLabel: {
-      fontSize: DARK_POOL_TYPE.body.fontSize,
-      lineHeight: DARK_POOL_TYPE.body.lineHeight,
-    },
-    tabUnderline: {
-      marginTop: 8,
-      height: 2,
-      alignSelf: 'stretch',
-      marginHorizontal: 12,
+      fontSize: DARK_POOL_TYPE.groupLabel.fontSize,
+      lineHeight: DARK_POOL_TYPE.groupLabel.lineHeight,
+      textAlign: 'center',
+      writingDirection: 'rtl',
     },
     holdersSection: {
-      marginBottom: tokens.spacing.md,
-      gap: 8,
+      marginBottom: APP_LAYOUT.componentGap,
     },
-    holderCard: {
-      borderRadius: tokens.borderRadius.xl,
-      borderWidth: 0,
+    holdersCard: {
       overflow: 'hidden',
-      backgroundColor: 'transparent',
-      ...tokens.shadows.none,
     },
     holderPad: {
-      paddingVertical: 12,
-      paddingHorizontal: 14,
+      paddingVertical: APP_LAYOUT.cardTitleToBodyGap,
+      paddingHorizontal: APP_LAYOUT.cardPadding,
+    },
+    holderPressed: {
+      opacity: 0.7,
+    },
+    holderDivider: {
+      height: 1,
+      marginHorizontal: APP_LAYOUT.cardPadding,
+      backgroundColor: tokens.colors.border.divider,
     },
     holderRow: {
       direction: 'rtl',
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 12,
+      gap: APP_LAYOUT.cardTitleToBodyGap,
     },
     holderText: {
       flex: 1,
@@ -809,18 +824,18 @@ function createStyles(
     },
     holderName: {
       ...ltrNameText,
-      fontSize: DARK_POOL_TYPE.cardTitle.fontSize,
-      lineHeight: DARK_POOL_TYPE.cardTitle.lineHeight,
+      fontSize: DARK_POOL_TYPE.cardBody.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardBody.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
     },
     holderSubtitle: {
       ...darkPoolPhysicalRightText,
-      marginTop: 2,
-      fontSize: DARK_POOL_TYPE.caption.fontSize,
-      lineHeight: DARK_POOL_TYPE.caption.lineHeight,
-      fontWeight: DARK_POOL_TYPE.caption.fontWeight,
-      color: tokens.colors.text.tertiary,
+      marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
+      fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
+      fontWeight: DARK_POOL_TYPE.cardSubtitle.fontWeight,
+      color: tokens.colors.text.secondary,
     },
     holderMetricCol: {
       alignItems: 'flex-end',
@@ -831,17 +846,18 @@ function createStyles(
       lineHeight: DARK_POOL_TYPE.cardBody.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
+      fontVariant: ['tabular-nums'],
     },
     holderShares: {
       ...darkPoolPhysicalLeftText,
-      marginTop: 2,
+      marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
       fontSize: DARK_POOL_TYPE.caption.fontSize,
       lineHeight: DARK_POOL_TYPE.caption.lineHeight,
       fontWeight: DARK_POOL_TYPE.caption.fontWeight,
-      color: tokens.colors.text.tertiary,
+      color: tokens.colors.text.secondary,
     },
     feedSection: {
-      marginBottom: tokens.spacing.md,
+      marginBottom: APP_LAYOUT.componentGap,
     },
     emptyTitle: {
       ...darkPoolPhysicalRightText,
@@ -849,13 +865,13 @@ function createStyles(
       lineHeight: DARK_POOL_TYPE.cardTitle.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
-      marginBottom: 6,
+      marginBottom: APP_LAYOUT.cardTitleToSubtitleGap,
     },
     emptyBody: {
       ...darkPoolPhysicalRightText,
-      fontSize: DARK_POOL_TYPE.caption.fontSize,
-      lineHeight: DARK_POOL_TYPE.caption.lineHeight,
-      fontWeight: DARK_POOL_TYPE.caption.fontWeight,
+      fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
+      fontWeight: DARK_POOL_TYPE.cardSubtitle.fontWeight,
       color: tokens.colors.text.secondary,
     },
     listLoading: {
@@ -865,7 +881,7 @@ function createStyles(
     scrollContent: {
       direction: 'rtl',
       paddingHorizontal: tokens.layout.screenPadding,
-      paddingTop: tokens.spacing.sm,
+      paddingTop: APP_LAYOUT.stackGapSmall,
       paddingBottom: bottomPadding + 32,
     },
   });

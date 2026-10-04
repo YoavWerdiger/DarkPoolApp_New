@@ -188,8 +188,6 @@ interface ChatMessageProps {
   onLongPress?: () => void;
   onPress?: () => void;
   onReply?: () => void;
-  /** שליחת טקסט כתגובה מתוך צופה התמונה. */
-  onSendReply?: (text: string) => void;
   onReactionPress?: (emoji: string) => void;
   onReactionDetailsPress?: (message: ChatMessageType) => void;
   onAvatarPress?: () => void;
@@ -272,7 +270,6 @@ function ChatMessage({
   onLongPress,
   onPress,
   onReply,
-  onSendReply,
   onReactionPress,
   onReactionDetailsPress,
   onAvatarPress,
@@ -1048,7 +1045,10 @@ function ChatMessage({
           senderName={isMe ? 'אתה' : (message.sender?.display_name || 'משתמש')}
           timeLabel={timeText}
           onClose={() => setShowMediaViewer(false)}
-          onSubmitReply={onSendReply ? (text) => { setShowMediaViewer(false); onSendReply(text); } : undefined}
+          onReply={onReply ? () => {
+            setShowMediaViewer(false);
+            setTimeout(() => onReply(), 280);
+          } : undefined}
         />
       )}
 

@@ -159,6 +159,7 @@ export const GradientBackground = memo(function GradientBackground({
   style,
   animated = true,
 }: Props) {
+  const { isDarkMode, theme } = useTheme();
   const [reduceMotion, setReduceMotion] = useState(false);
   const [glFailed, setGlFailed] = useState(!isExpoGlAvailable || !GLView);
   const layoutPxRef = useRef({ w: 0, h: 0 });
@@ -317,6 +318,18 @@ export const GradientBackground = memo(function GradientBackground({
     },
     [motionFrozen, startLoop, stopLoop],
   );
+
+  // מצב בהיר: קנבס בהיר בלבד — אורורה כהה שוברת ניגודיות עם טוקני דיו כהה.
+  if (!isDarkMode) {
+    return (
+      <View
+        pointerEvents="none"
+        style={[StyleSheet.absoluteFill, { backgroundColor: theme.background }, style]}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      />
+    );
+  }
 
   if (glFailed || !GLView) {
     return <DarkGreenAuroraBackground style={style} animated={animated} />;

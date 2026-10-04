@@ -83,7 +83,7 @@ export function HoldingsPieSection({
             <Ionicons
               name="help-circle-outline"
               size={16}
-              color={tokens.colors.text.tertiary}
+              color={tokens.colors.text.secondary}
             />
           </Pressable>
         ) : null}
@@ -150,7 +150,7 @@ export function HoldingsListRow({
   const styles = useMemo(() => createRowStyles(tokens), [tokens]);
   const hasReturn = returnPct != null && Number.isFinite(returnPct);
   const retColor = !hasReturn
-    ? tokens.colors.text.tertiary
+    ? tokens.colors.text.secondary
     : (returnPct as number) >= 0
       ? tokens.colors.primary.main
       : tokens.colors.text.danger;
@@ -224,7 +224,7 @@ export function useHoldingsPieColors(holdings: HoldingAllocationInput[]) {
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     section: {
-      marginBottom: 12,
+      marginBottom: APP_LAYOUT.sectionGap,
     },
     card: {
       borderRadius: UI_CARD_RADIUS,
@@ -237,8 +237,8 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       direction: 'rtl',
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
-      marginBottom: 12,
+      gap: APP_LAYOUT.stackGapSmall,
+      marginBottom: APP_LAYOUT.sectionHeaderToContent,
     },
     title: {
       ...darkPoolSectionTitleStyle,
@@ -246,9 +246,10 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       flexShrink: 1,
     },
     honestyTag: {
-      fontSize: DARK_POOL_TYPE.caption2.fontSize,
-      fontWeight: DARK_POOL_TYPE.caption2.fontWeight,
-      color: tokens.colors.text.tertiary,
+      fontSize: DARK_POOL_TYPE.caption.fontSize,
+      lineHeight: DARK_POOL_TYPE.caption.lineHeight,
+      fontWeight: DARK_POOL_TYPE.caption.fontWeight,
+      color: tokens.colors.text.secondary,
       ...darkPoolPhysicalRightText,
     },
     helpBtn: {
@@ -258,11 +259,11 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       direction: 'rtl',
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 14,
+      gap: APP_LAYOUT.componentGap,
     },
     legend: {
       flex: 1,
-      gap: 7,
+      gap: APP_LAYOUT.stackGapSmall,
       paddingBottom: 2,
     },
     legendRow: {
@@ -287,9 +288,10 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     legendPct: {
       fontSize: DARK_POOL_TYPE.caption.fontSize,
       lineHeight: DARK_POOL_TYPE.caption.lineHeight,
-      fontWeight: DARK_POOL_TYPE.sectionTitle.fontWeight,
+      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.secondary,
       writingDirection: 'ltr',
+      fontVariant: ['tabular-nums'],
     },
   });
 }
@@ -302,7 +304,7 @@ function createRowStyles(tokens: ReturnType<typeof useDesignTokens>) {
       alignItems: 'center',
       alignSelf: 'stretch',
       width: '100%',
-      paddingVertical: 15,
+      paddingVertical: APP_LAYOUT.cardTitleToBodyGap,
       paddingHorizontal: APP_LAYOUT.cardPadding,
       minHeight: 56,
     },
@@ -342,17 +344,17 @@ function createRowStyles(tokens: ReturnType<typeof useDesignTokens>) {
       direction: 'ltr',
       textAlign: 'right',
       writingDirection: 'ltr',
-      marginTop: 0,
+      marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
       includeFontPadding: false,
-      fontSize: DARK_POOL_TYPE.caption2.fontSize,
-      lineHeight: DARK_POOL_TYPE.caption2.lineHeight,
-      fontWeight: DARK_POOL_TYPE.caption2.fontWeight,
-      color: tokens.colors.text.tertiary,
+      fontSize: DARK_POOL_TYPE.caption.fontSize,
+      lineHeight: DARK_POOL_TYPE.caption.lineHeight,
+      fontWeight: DARK_POOL_TYPE.caption.fontWeight,
+      color: tokens.colors.text.secondary,
     },
     holdingValueCol: {
       flexShrink: 0,
       minWidth: 72,
-      gap: 2,
+      gap: APP_LAYOUT.cardTitleToSubtitleGap,
       direction: 'ltr',
       alignItems: 'stretch',
     },
@@ -364,6 +366,7 @@ function createRowStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
       lineHeight: DARK_POOL_TYPE.cardBody.lineHeight,
+      fontVariant: ['tabular-nums'],
     },
     holdingReturnRow: {
       alignSelf: 'stretch',
@@ -373,9 +376,10 @@ function createRowStyles(tokens: ReturnType<typeof useDesignTokens>) {
       direction: 'ltr',
       textAlign: 'right',
       writingDirection: 'ltr',
-      fontSize: DARK_POOL_TYPE.caption2.fontSize,
-      lineHeight: DARK_POOL_TYPE.caption2.lineHeight,
-      fontWeight: DARK_POOL_TYPE.sectionTitle.fontWeight,
+      fontSize: DARK_POOL_TYPE.caption.fontSize,
+      lineHeight: DARK_POOL_TYPE.caption.lineHeight,
+      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
+      fontVariant: ['tabular-nums'],
     },
   });
 }

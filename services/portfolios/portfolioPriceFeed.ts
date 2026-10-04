@@ -29,6 +29,17 @@ const FINNHUB_API_KEY = 'd1uf6gpr01qpci1cbg00d1uf6gpr01qpci1cbg0g';
 const FINNHUB_BASE = 'https://finnhub.io/api/v1';
 const YAHOO_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart';
 
+/** בלי User-Agent‏ Yahoo מחזיר 429 והגרף נופל לנקודת המחיר החי בלבד. */
+const YAHOO_CHART_HEADERS = {
+  'User-Agent':
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  Accept: 'application/json',
+};
+
+function fetchYahooChart(url: string): Promise<Response> {
+  return fetch(url, { headers: YAHOO_CHART_HEADERS });
+}
+
 interface CachedQuote {
   quote: PriceQuote;
   fetchedAt: number;
@@ -143,7 +154,7 @@ async function fetchYahooQuote(symbol: string): Promise<PriceQuote | null> {
     const url = `${YAHOO_BASE}/${encodeURIComponent(
       toYahooSymbol(symbol)
     )}?range=5d&interval=1d`;
-    const res = await fetch(url);
+    const res = await fetchYahooChart(url);
     if (!res.ok) return null;
     const data = await res.json();
     const result = data?.chart?.result?.[0];
@@ -348,7 +359,7 @@ export async function getSymbolRangeStats(
     const url = `${YAHOO_BASE}/${encodeURIComponent(
       toYahooSymbol(sym)
     )}?range=1mo&interval=1d`;
-    const res = await fetch(url);
+    const res = await fetchYahooChart(url);
     if (!res.ok) return empty;
     const data = (await res.json()) as YahooChartResponse;
     const result = data?.chart?.result?.[0];
@@ -375,7 +386,7 @@ export async function getSymbolRangeStats(
         const yUrl = `${YAHOO_BASE}/${encodeURIComponent(
           toYahooSymbol(sym)
         )}?range=1y&interval=1d`;
-        const yRes = await fetch(yUrl);
+        const yRes = await fetchYahooChart(yUrl);
         if (yRes.ok) {
           const yData = (await yRes.json()) as YahooChartResponse;
           const yResult = yData?.chart?.result?.[0];
@@ -461,7 +472,7 @@ export async function getHistoricalPrices(
     const url = `${YAHOO_BASE}/${encodeURIComponent(
       toYahooSymbol(sym)
     )}?range=${range}&interval=${interval}`;
-    const res = await fetch(url);
+    const res = await fetchYahooChart(url);
     if (!res.ok) return [];
     const data = (await res.json()) as YahooChartResponse;
     const result = data?.chart?.result?.[0];

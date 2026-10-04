@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
-  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -12,6 +11,9 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { APP_LAYOUT } from '../ui/appLayout';
+import { APP_TYPE } from '../ui/appType';
+import { formFieldShellStyle } from '../ui/formControl';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
 import { useAuth } from '../../context/AuthContext';
@@ -165,23 +167,28 @@ export default function MentionPickerSheet({
           <View style={styles.headerSideSpacer} />
         </View>
 
-        <View style={styles.searchWrap}>
-          <Ionicons name="search" size={18} color={tokens.colors.text.tertiary} />
+        <View
+          style={[
+            formFieldShellStyle({ tokens, focused: false }),
+            styles.searchWrap,
+          ]}
+        >
           <TextInput
             value={query}
             onChangeText={handleQueryChange}
             placeholder="חיפוש לפי שם…"
             placeholderTextColor={tokens.colors.text.tertiary}
-            style={[styles.searchInput, { color: tokens.colors.text.primary, writingDirection: 'rtl' }]}
+            style={[styles.searchInput, { color: tokens.colors.text.primary }]}
             textAlign="right"
             autoCorrect={false}
             autoCapitalize="none"
           />
+          <Ionicons name="search" size={18} color={tokens.colors.text.tertiary} />
         </View>
 
         {loading && results.length === 0 ? (
           <View style={styles.center}>
-            <ActivityIndicator color={tokens.colors.primary.main} />
+            <ActivityIndicator color={tokens.colors.text.secondary} />
           </View>
         ) : error ? (
           <View style={styles.center}>
@@ -219,23 +226,8 @@ export default function MentionPickerSheet({
                       style={styles.avatar}
                     />
                   ) : (
-                    <View
-                      style={[
-                        styles.avatar,
-                        {
-                          backgroundColor: tokens.colors.primary.dim,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={{
-                          color: tokens.colors.primary.main,
-                          fontWeight: '800',
-                          fontSize: 16,
-                        }}
-                      >
+                    <View style={[styles.avatar, styles.avatarFallback]}>
+                      <Text style={styles.avatarLetter}>
                         {(name[0] || '?').toUpperCase()}
                       </Text>
                     </View>
@@ -256,8 +248,8 @@ export default function MentionPickerSheet({
                   </View>
                   <Ionicons
                     name="at"
-                    size={18}
-                    color={tokens.colors.primary.main}
+                    size={20}
+                    color={tokens.colors.text.tertiary}
                   />
                 </TouchableOpacity>
               );
@@ -271,12 +263,12 @@ export default function MentionPickerSheet({
 
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
-    container: { flex: 1, minHeight: 0, direction: 'rtl' },
+    container: { flex: 1, minHeight: 0, direction: 'ltr' },
     header: {
-      flexDirection: 'row',
+      flexDirection: 'row-reverse',
       alignItems: 'center',
-      paddingHorizontal: 16,
-      paddingBottom: 12,
+      paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+      paddingBottom: APP_LAYOUT.cardTitleToBodyGap,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: tokens.colors.border.divider,
       gap: 10,
@@ -284,6 +276,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     headerIconButton: {
       alignSelf: 'center',
+      backgroundColor: tokens.colors.background.primary,
     },
     headerCenter: {
       flex: 1,
@@ -295,56 +288,53 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       height: DAY_NAV_BUTTON_SIZE,
     },
     headerTitle: {
-      fontSize: 20,
-      fontWeight: '800',
-      letterSpacing: -0.35,
+      ...APP_TYPE.screenTitle,
       textAlign: 'center',
       writingDirection: 'rtl',
       width: '100%',
     },
     searchWrap: {
       flexDirection: 'row-reverse',
-      alignItems: 'center',
-      gap: 8,
-      marginHorizontal: 16,
-      marginTop: 14,
-      marginBottom: 12,
-      paddingHorizontal: 12,
-      minHeight: 46,
-      borderRadius: 9999,
-      backgroundColor: tokens.colors.background.cardSolid,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: tokens.colors.border.divider,
+      marginHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+      marginTop: APP_LAYOUT.cardPadding,
+      marginBottom: APP_LAYOUT.cardStackGap,
+      paddingHorizontal: 16,
+      minHeight: 52,
+      borderRadius: 999,
+      gap: 10,
     },
     searchInput: {
       flex: 1,
-      fontSize: 16,
-      fontWeight: '500',
-      paddingVertical: Platform.OS === 'ios' ? 10 : 8,
+      ...APP_TYPE.body,
+      padding: 0,
+      textAlign: 'right',
       writingDirection: 'rtl',
     },
     center: {
       flex: 1,
       alignItems: 'center',
       justifyContent: 'center',
-      padding: 24,
+      padding: APP_LAYOUT.screenPaddingHorizontal,
     },
-    listContent: { paddingHorizontal: 16, paddingBottom: 28 },
+    listContent: {
+      paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+      paddingBottom: 28,
+    },
     listEmpty: {
       flexGrow: 1,
       justifyContent: 'center',
       padding: 28,
     },
     empty: {
+      ...APP_TYPE.cardSubtitle,
       textAlign: 'center',
       writingDirection: 'rtl',
-      fontSize: 14,
     },
     row: {
       flexDirection: 'row-reverse',
       alignItems: 'center',
       gap: 12,
-      paddingVertical: 12,
+      paddingVertical: 15,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: tokens.colors.border.divider,
     },
@@ -353,15 +343,24 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       height: 44,
       borderRadius: tokens.borderRadius.full,
     },
-    rowText: { flex: 1, minWidth: 0, gap: 2 },
+    avatarFallback: {
+      backgroundColor: tokens.colors.background.tertiary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarLetter: {
+      ...APP_TYPE.cardTitle,
+      color: tokens.colors.text.primary,
+    },
+    rowText: { flex: 1, minWidth: 0, gap: APP_LAYOUT.cardTitleToSubtitleGap },
     rowTitle: {
-      fontSize: 15,
-      fontWeight: '700',
+      ...APP_TYPE.cardTitle,
       textAlign: 'right',
       writingDirection: 'rtl',
+      color: tokens.colors.text.primary,
     },
     rowSub: {
-      fontSize: 12,
+      ...APP_TYPE.cardSubtitle,
       textAlign: 'right',
       writingDirection: 'rtl',
     },

@@ -49,11 +49,10 @@ export function formFieldLabelStyle(input: {
     fontWeight: APP_TYPE.cardMetricLabel.fontWeight,
     lineHeight: APP_TYPE.cardMetricLabel.lineHeight,
     marginBottom: 8,
+    // primary — קריא על קנבס כהה; secondary של light (rgba שחור) נעלם על אורורה.
     color: input.error
       ? input.tokens.colors.danger.main
-      : input.focused
-        ? input.tokens.colors.text.secondary
-        : input.tokens.colors.text.tertiary,
+      : input.tokens.colors.text.primary,
   };
 }
 
@@ -68,15 +67,29 @@ export function formFieldIconColor(input: {
   return input.tokens.colors.text.tertiary;
 }
 
-export function formFieldInputStyle(): TextStyle {
+export function formFieldInputStyle(tokens?: Tokens): TextStyle {
   return {
     flex: 1,
-    color: SoftUI.textPrimary,
+    color: tokens?.colors.text.primary ?? SoftUI.textPrimary,
     fontSize: APP_TYPE.body.fontSize,
     fontWeight: APP_TYPE.body.fontWeight,
     lineHeight: APP_TYPE.body.lineHeight,
     textAlign: 'right',
     writingDirection: 'rtl',
   };
+}
+
+/** מספרים/טיקרים — גליפים LTR, יישור פיזי לימין (placeholder + ערך). */
+export function formFieldNumericInputStyle(tokens?: Tokens): TextStyle {
+  return {
+    ...formFieldInputStyle(tokens),
+    textAlign: 'right',
+    writingDirection: 'ltr',
+  };
+}
+
+/** Placeholder / chip לא-נבחר — secondary של הערכה (כהה: #8E8E93, לא muted כהה מדי). */
+export function formFieldPlaceholderColor(tokens: Tokens): string {
+  return tokens.colors.text.secondary;
 }
 

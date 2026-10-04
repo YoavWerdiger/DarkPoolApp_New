@@ -1,7 +1,6 @@
 import React from 'react';
-import { View } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { ChatSessionBackdrop } from '../components/chat/ChatSessionBackdrop';
+import { AdminScreen } from '../components/admin/AdminSurface';
 import AdminDashboardScreen from '../screens/Admin/AdminDashboardScreen';
 import AdminUsersScreen from '../screens/Admin/AdminUsersScreen';
 import AdminPushScreen from '../screens/Admin/AdminPushScreen';
@@ -12,10 +11,9 @@ import AdminPaymentsScreen from '../screens/Admin/AdminPaymentsScreen';
 function withAdminShell<P extends object>(ScreenComponent: React.ComponentType<P>): React.FC<P> {
   return function Wrapped(props: P) {
     return (
-      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-        <ChatSessionBackdrop />
+      <AdminScreen>
         <ScreenComponent {...props} />
-      </View>
+      </AdminScreen>
     );
   };
 }

@@ -89,6 +89,11 @@ export const FEED_CARD_TYPE = {
   nestedPrice: { ...APP_TYPE.body },
   nestedLabel: APP_TYPE.cardSubtitle,
   nestedSince: { ...APP_TYPE.cardSubtitle, fontWeight: APP_TYPE.cardTitle.fontWeight },
+  /** קן מחיר דו-שורתי: שורה 1 טיקר ↔ מחיר, שורה 2 כיתוב ↔ מאז העסקה. */
+  nestedRowValue: { ...APP_TYPE.cardBody, fontWeight: APP_TYPE.cardTitle.fontWeight },
+  nestedRowValueMuted: APP_TYPE.cardBody,
+  nestedRowCaption: APP_TYPE.caption,
+  nestedRowCaptionStrong: APP_TYPE.cardMetricLabel,
 } as const;
 
 /**

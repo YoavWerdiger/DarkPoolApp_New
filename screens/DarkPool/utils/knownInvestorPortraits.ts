@@ -3,10 +3,68 @@
  * Wikimedia / congress (יציב יחסית לגילוי).
  */
 
+import { Image } from 'react-native';
 import { CURATED_CEO_PORTRAIT_BY_PERSON_ID } from './executivePortraitUrls';
 
 const WIKI = 'https://upload.wikimedia.org/wikipedia/commons';
 const CONGRESS = 'https://unitedstates.github.io/images/congress/225x275';
+
+const PORTRAIT_MODULES = {
+  ackman: require('../../../assets/portraits/bill-ackman.jpg'),
+  buffett: require('../../../assets/portraits/warren-buffett.jpg'),
+  pelosi: require('../../../assets/portraits/nancy-pelosi.jpg'),
+  musk: require('../../../assets/portraits/elon-musk.jpg'),
+  huang: require('../../../assets/portraits/jensen-huang.jpg'),
+} as const;
+
+type LocalPortraitKey = keyof typeof PORTRAIT_MODULES;
+
+const resolvedLocalUris = new Map<LocalPortraitKey, string | null>();
+
+function localUri(key: LocalPortraitKey): string | null {
+  if (resolvedLocalUris.has(key)) return resolvedLocalUris.get(key) ?? null;
+  const uri = Image.resolveAssetSource?.(PORTRAIT_MODULES[key])?.uri ?? null;
+  resolvedLocalUris.set(key, uri);
+  return uri;
+}
+
+/** דיוקנאות מקומיים — גוברים על DB / Wikimedia / congress בכל המסכים. */
+const LOCAL_PORTRAIT_BY_ID: Record<string, LocalPortraitKey> = {
+  '1336528': 'ackman',
+  '1067983': 'buffett',
+  P000197: 'pelosi',
+  'TSLA:Elon Musk': 'musk',
+  'NVDA:Jensen Huang': 'huang',
+};
+
+const LOCAL_PORTRAIT_BY_NAME: Record<string, LocalPortraitKey> = {
+  'bill ackman': 'ackman',
+  'william ackman': 'ackman',
+  'william a. ackman': 'ackman',
+  'ackman william': 'ackman',
+  'warren buffett': 'buffett',
+  'warren e. buffett': 'buffett',
+  'buffett warren e': 'buffett',
+  'nancy pelosi': 'pelosi',
+  'elon musk': 'musk',
+  'musk elon': 'musk',
+  'jensen huang': 'huang',
+  'jen-hsun huang': 'huang',
+  'huang jen hsun': 'huang',
+};
+
+export function localPortraitForInvestor(opts: {
+  personId?: string | null;
+  name?: string | null;
+}): string | null {
+  const id = opts.personId?.trim();
+  if (id && LOCAL_PORTRAIT_BY_ID[id]) return localUri(LOCAL_PORTRAIT_BY_ID[id]);
+  const nameKey = opts.name?.trim().toLowerCase().replace(/\s+/g, ' ');
+  if (nameKey && LOCAL_PORTRAIT_BY_NAME[nameKey]) {
+    return localUri(LOCAL_PORTRAIT_BY_NAME[nameKey]);
+  }
+  return null;
+}
 
 export const KNOWN_INVESTOR_PORTRAIT_BY_ID: Record<string, string> = {
   ...CURATED_CEO_PORTRAIT_BY_PERSON_ID,
@@ -72,6 +130,9 @@ export function knownPortraitForInvestor(opts: {
   personId?: string | null;
   name?: string | null;
 }): string | null {
+  const local = localPortraitForInvestor(opts);
+  if (local) return local;
+
   const id = opts.personId?.trim();
   if (id && KNOWN_INVESTOR_PORTRAIT_BY_ID[id]) {
     return KNOWN_INVESTOR_PORTRAIT_BY_ID[id];

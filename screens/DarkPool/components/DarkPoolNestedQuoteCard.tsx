@@ -2,11 +2,17 @@
  * קן טיקר פנימי — מחיר חי / מאז העסקה.
  * UICard פנימי בתוך הכרטיס החיצוני (יומן: כרטיס-בתוך-כרטיס).
  * משותף לגיבור פרטי עסקה ולכרטיס הפיד.
+ *
+ * שתי שורות מיושרות משני הצדדים:
+ *   [לוגו] TICKER  ↔  $price
+ *          מחיר חי ↔  X% מאז העסקה
+ * גובה הלוגו = שורה 1 + מרווח + שורה 2. הטקסט יושב בראש השורה, לא במרכזה.
  */
 
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { type ChangeTone } from '../../../components/ui/ChangeDot';
+import { APP_LAYOUT } from '../../../components/ui/appLayout';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import UICard from '../../../components/ui/UICard';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
@@ -15,7 +21,17 @@ import { FEED_QUOTE_PLACEHOLDER } from '../utils/feedQuoteSlots';
 import { formatFeedTickerBare } from '../utils/feedTradeDisplay';
 import { FEED_CARD_TYPE, FEED_NESTED_RADIUS } from './darkPoolFeedCardStyles';
 
-const NESTED_LOGO = 40;
+/** צמוד יותר מ-lineHeight של APP_TYPE — הכרטיס הפנימי בפרטי עסקה. */
+const NESTED_VALUE_LINE = 18;
+const NESTED_CAPTION_LINE = 14;
+const ROW_GAP = 4;
+const NESTED_LOGO = NESTED_VALUE_LINE + ROW_GAP + NESTED_CAPTION_LINE;
+
+/** בלי ריפוד פונט — הגליף יושב בראש ה-line box (במיוחד באנדרואיד). */
+const TEXT_TOP = {
+  includeFontPadding: false,
+  textAlignVertical: 'top' as const,
+};
 
 interface Props {
   ticker: string;
@@ -56,14 +72,24 @@ export function DarkPoolNestedQuoteCard({
     >
       <View style={styles.nestedTicker}>
         <View style={styles.nestedLogo}>
-          <TickerLogo symbol={ticker} size={NESTED_LOGO} borderRadius={NESTED_LOGO / 2} />
+          <TickerLogo
+            symbol={ticker}
+            size={NESTED_LOGO}
+            borderRadius={NESTED_LOGO / 2}
+            backgroundColor={tokens.colors.background.cardSolid}
+          />
+          <View style={styles.nestedLogoRing} />
         </View>
-        <Text style={styles.nestedTickerText} numberOfLines={1}>
-          {toDataIsland(tickerBare)}
-        </Text>
+        <View style={styles.nestedTickerCol}>
+          <Text style={styles.nestedTickerText} numberOfLines={1}>
+            {toDataIsland(tickerBare)}
+          </Text>
+          <Text style={styles.nestedPriceLabel} numberOfLines={1}>
+            מחיר חי
+          </Text>
+        </View>
       </View>
       <View style={styles.nestedPrice}>
-        <Text style={styles.nestedPriceLabel}>מחיר חי</Text>
         <Text
           style={[
             priceKnown ? styles.nestedPriceValue : styles.nestedPriceMissing,
@@ -82,10 +108,13 @@ export function DarkPoolNestedQuoteCard({
                 opacity: changeKnown ? 1 : placeholderOpacity,
               },
             ]}
+            numberOfLines={1}
           >
             {toDataIsland(changeDisplay)}
           </Text>
-          <Text style={styles.nestedSinceLabel}>מאז העסקה</Text>
+          <Text style={styles.nestedSinceLabel} numberOfLines={1}>
+            מאז העסקה
+          </Text>
         </View>
       </View>
     </View>
@@ -115,11 +144,11 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     nested: {
       direction: 'rtl',
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       justifyContent: 'space-between',
-      gap: 10,
-      paddingVertical: 12,
-      paddingHorizontal: 12,
+      gap: APP_LAYOUT.stackGapTight,
+      paddingVertical: APP_LAYOUT.stackGapTight,
+      paddingHorizontal: APP_LAYOUT.stackGapTight,
       backgroundColor: 'transparent',
     },
     nestedPlain: {
@@ -129,8 +158,8 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     nestedTicker: {
       flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
+      alignItems: 'flex-start',
+      gap: APP_LAYOUT.stackGapSmall,
       flexShrink: 0,
     },
     nestedLogo: {
@@ -140,10 +169,25 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       overflow: 'hidden',
       flexShrink: 0,
     },
+    nestedLogoRing: {
+      position: 'absolute',
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+      borderRadius: NESTED_LOGO / 2,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: tokens.colors.border.divider,
+    },
+    nestedTickerCol: {
+      alignItems: 'flex-start',
+      gap: ROW_GAP,
+    },
     nestedTickerText: {
-      fontSize: FEED_CARD_TYPE.nestedTicker.fontSize,
-      lineHeight: FEED_CARD_TYPE.nestedTicker.lineHeight,
-      fontWeight: FEED_CARD_TYPE.nestedTicker.fontWeight,
+      ...TEXT_TOP,
+      fontSize: FEED_CARD_TYPE.nestedRowValue.fontSize,
+      lineHeight: NESTED_VALUE_LINE,
+      fontWeight: FEED_CARD_TYPE.nestedRowValue.fontWeight,
       color: tokens.colors.text.primary,
       writingDirection: 'ltr',
       flexShrink: 0,
@@ -153,55 +197,58 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       alignItems: 'flex-end',
       flexShrink: 1,
       minWidth: 0,
-      gap: 2,
+      gap: ROW_GAP,
     },
     nestedPriceLabel: {
+      ...TEXT_TOP,
       writingDirection: 'rtl',
       textAlign: 'right',
-      fontSize: FEED_CARD_TYPE.nestedLabel.fontSize,
-      lineHeight: FEED_CARD_TYPE.nestedLabel.lineHeight,
-      fontWeight: FEED_CARD_TYPE.nestedLabel.fontWeight,
-      color: tokens.colors.text.tertiary,
+      fontSize: FEED_CARD_TYPE.nestedRowCaption.fontSize,
+      lineHeight: NESTED_CAPTION_LINE,
+      fontWeight: FEED_CARD_TYPE.nestedRowCaption.fontWeight,
+      color: tokens.colors.text.secondary,
     },
     nestedPriceValue: {
-      fontSize: FEED_CARD_TYPE.nestedPrice.fontSize,
-      lineHeight: FEED_CARD_TYPE.nestedPrice.lineHeight,
-      fontWeight: FEED_CARD_TYPE.nestedPrice.fontWeight,
+      ...TEXT_TOP,
+      fontSize: FEED_CARD_TYPE.nestedRowValue.fontSize,
+      lineHeight: NESTED_VALUE_LINE,
+      fontWeight: FEED_CARD_TYPE.nestedRowValue.fontWeight,
       color: tokens.colors.text.primary,
       fontVariant: ['tabular-nums'],
       writingDirection: 'ltr',
       textAlign: 'right',
     },
     nestedPriceMissing: {
+      ...TEXT_TOP,
       writingDirection: 'rtl',
       textAlign: 'right',
-      fontSize: FEED_CARD_TYPE.nestedLabel.fontSize,
-      lineHeight: FEED_CARD_TYPE.nestedLabel.lineHeight,
-      fontWeight: FEED_CARD_TYPE.nestedLabel.fontWeight,
+      fontSize: FEED_CARD_TYPE.nestedRowValueMuted.fontSize,
+      lineHeight: NESTED_VALUE_LINE,
+      fontWeight: FEED_CARD_TYPE.nestedRowValueMuted.fontWeight,
       color: tokens.colors.text.tertiary,
     },
     nestedSinceRow: {
-      marginTop: 4,
       direction: 'ltr',
       flexDirection: 'row',
-      flexWrap: 'wrap',
-      alignItems: 'baseline',
+      alignItems: 'flex-start',
       justifyContent: 'flex-end',
       gap: 4,
     },
     nestedSinceLabel: {
-      fontSize: FEED_CARD_TYPE.nestedLabel.fontSize,
-      lineHeight: FEED_CARD_TYPE.nestedLabel.lineHeight,
-      fontWeight: FEED_CARD_TYPE.nestedLabel.fontWeight,
+      ...TEXT_TOP,
+      fontSize: FEED_CARD_TYPE.nestedRowCaption.fontSize,
+      lineHeight: NESTED_CAPTION_LINE,
+      fontWeight: FEED_CARD_TYPE.nestedRowCaption.fontWeight,
       color: tokens.colors.text.secondary,
       writingDirection: 'rtl',
       textAlign: 'right',
       flexShrink: 1,
     },
     nestedSinceValue: {
-      fontSize: FEED_CARD_TYPE.nestedSince.fontSize,
-      lineHeight: FEED_CARD_TYPE.nestedLabel.lineHeight,
-      fontWeight: FEED_CARD_TYPE.nestedSince.fontWeight,
+      ...TEXT_TOP,
+      fontSize: FEED_CARD_TYPE.nestedRowCaptionStrong.fontSize,
+      lineHeight: NESTED_CAPTION_LINE,
+      fontWeight: FEED_CARD_TYPE.nestedRowCaptionStrong.fontWeight,
       fontVariant: ['tabular-nums'],
       writingDirection: 'ltr',
       textAlign: 'right',

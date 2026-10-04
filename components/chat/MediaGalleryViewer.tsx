@@ -14,7 +14,7 @@ import {
   Share as RNShare,
   TouchableOpacity,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { initialWindowMetrics, SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Video, ResizeMode } from '../../lib/expoAvSafe';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, {
@@ -85,11 +85,15 @@ function GalleryImageItem({
     }
   }, [isActive, resetZoomImmediate]);
 
+  useEffect(() => {
+    if (isDisplayableMediaUri(url)) setIsLoading(false);
+  }, [url]);
+
   return (
     <View style={[styles.page, styles.imagePage]}>
       <MediaBlurBackdrop uri={url} style={backdropStyle} />
       {isLoading && !loadError && (
-        <View style={styles.loadingContainer}>
+        <View style={styles.loadingContainer} pointerEvents="none">
           <ActivityIndicator size="large" color={COLORS.primary} />
         </View>
       )}
@@ -114,10 +118,6 @@ function GalleryImageItem({
               source={{ uri: url }}
               style={[StyleSheet.absoluteFill, animatedStyle]}
               resizeMode="contain"
-              onLoadStart={() => {
-                setIsLoading(true);
-                setLoadError(false);
-              }}
               onLoadEnd={() => setIsLoading(false)}
               onError={() => {
                 setIsLoading(false);
@@ -151,7 +151,6 @@ export default function MediaGalleryViewer({
   const [timelineWidth, setTimelineWidth] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [dragPosition, setDragPosition] = useState(0);
-  const [videoLoading, setVideoLoading] = useState(true);
   const [videoError, setVideoError] = useState(false);
   const isMountedRef = useRef(true);
   const isDraggingRef = useRef(false);
@@ -224,7 +223,6 @@ export default function MediaGalleryViewer({
     setIsPlaying(false);
     setPosition(0);
     setDuration(0);
-    setVideoLoading(true);
     setVideoError(false);
     positionShared.value = 0;
     if (videoRef.current) {
@@ -417,8 +415,8 @@ export default function MediaGalleryViewer({
 
       return (
         <View style={styles.page}>
-          {(!isDisplayableMediaUri(uri) || videoLoading) && !videoError && (
-            <View style={styles.loadingContainer}>
+          {!isDisplayableMediaUri(uri) && !videoError && (
+            <View style={styles.loadingContainer} pointerEvents="none">
               <ActivityIndicator size="large" color={COLORS.primary} />
             </View>
           )}
@@ -452,16 +450,10 @@ export default function MediaGalleryViewer({
                   setIsPlaying(status.isPlaying);
                 }
               }}
-              onLoadStart={() => {
-                setVideoLoading(true);
-                setVideoError(false);
-              }}
               onLoad={() => {
-                setVideoLoading(false);
                 (videoRef.current as any)?.setStatusAsync?.({ progressUpdateIntervalMillis: 100 });
               }}
               onError={() => {
-                setVideoLoading(false);
                 setVideoError(true);
               }}
             />
@@ -493,6 +485,7 @@ export default function MediaGalleryViewer({
       animationType="fade"
       onRequestClose={onClose}
     >
+      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <GestureHandlerRootView style={styles.container}>
         <FlatList
           ref={flatListRef}
@@ -519,7 +512,7 @@ export default function MediaGalleryViewer({
         <MediaViewerChrome
           chromeStyle={chromeStyle}
           pointerEvents={chromeVisible ? 'box-none' : 'none'}
-          paddingTop={insets.top + 6}
+          paddingTop={insets.top + 12}
           paddingBottom={insets.bottom + 12}
           caption={caption}
           counter={mediaItems.length > 1 ? `${currentIndex + 1} / ${mediaItems.length}` : undefined}
@@ -546,6 +539,7 @@ export default function MediaGalleryViewer({
           ) : null}
         />
       </GestureHandlerRootView>
+      </SafeAreaProvider>
     </Modal>
   );
 }
@@ -573,7 +567,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 5,
+    zIndex: 2,
   },
   mediaErrorContainer: {
     flex: 1,

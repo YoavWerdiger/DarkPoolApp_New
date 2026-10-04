@@ -47,6 +47,7 @@ import { useColmexSync } from '../../hooks/useColmexSync';
 import { DayNavBlurButton, HEADER_BACK_BTN_SIZE } from '../../components/ui/DayNavBlurButton';
 import { DayDividerPill } from '../../components/ui/DayDividerPill';
 import {
+  JOURNAL_TYPE,
   journalPhysicalRightText,
   journalRtlRoot,
 } from '../Journal/journalLayout';
@@ -139,6 +140,8 @@ export default function PortfolioDetailScreen() {
         setHoldings(h);
       }
       setDataVersion((v) => v + 1);
+      // OverviewTab נשען על chartRefreshKey לטעינת trades — חובה אחרי פוזיציה חדשה
+      setChartRefreshKey((k) => k + 1);
     } catch (err) {
       console.error('load portfolio error:', err);
     } finally {
@@ -221,19 +224,22 @@ export default function PortfolioDetailScreen() {
           pointerEvents: 'box-none',
         },
         fabBtn: {
-          flexDirection: 'row',
+          flexDirection: 'row-reverse',
           alignItems: 'center',
           gap: 8,
           paddingHorizontal: 22,
           paddingVertical: 14,
-          borderRadius: 28,
+          borderRadius: tokens.borderRadius.search,
           backgroundColor: tokens.colors.primary.lightCta,
+          borderWidth: 0,
         },
         fabBtnText: {
-          fontSize: 16,
-          fontWeight: '600',
+          ...JOURNAL_TYPE.body,
+          fontWeight: JOURNAL_TYPE.cardTitle.fontWeight,
+          lineHeight: JOURNAL_TYPE.body.lineHeight,
           color: tokens.colors.text.inverse,
           ...journalPhysicalRightText,
+          textAlign: 'center',
         },
       }),
     [tokens, mainTabsHeight]
@@ -386,10 +392,10 @@ export default function PortfolioDetailScreen() {
             }}
             activeOpacity={0.88}
             accessibilityRole="button"
-            accessibilityLabel="פעולה חדשה"
+            accessibilityLabel="פוזיציה חדשה"
           >
             <Ionicons name="add" size={26} color={tokens.colors.text.inverse} />
-            <Text style={styles.fabBtnText}>פעולה חדשה</Text>
+            <Text style={styles.fabBtnText}>פוזיציה חדשה</Text>
           </TouchableOpacity>
         </View>
       ) : null}

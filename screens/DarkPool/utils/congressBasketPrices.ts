@@ -71,6 +71,32 @@ export async function fetchForm4DailyCloses(
   return fetchDailyClosesForTickers(tickers, '5y');
 }
 
+/** ברי שעה של היום — סנאפשוט לסשן, לא סגירה יומית אחת. */
+export async function fetchSessionHourlyCloses(
+  tickers: string[]
+): Promise<Record<string, { date: string; close: number }[]>> {
+  const unique = Array.from(
+    new Set(
+      tickers
+        .map((t) => t.toUpperCase().trim())
+        .filter((t) => t.length > 0 && t.length <= 8)
+    )
+  ).slice(0, MAX_BASKET_TICKERS);
+  const out: Record<string, { date: string; close: number }[]> = {};
+  for (let i = 0; i < unique.length; i += CHUNK) {
+    const chunk = unique.slice(i, i + CHUNK);
+    await Promise.all(
+      chunk.map(async (sym) => {
+        const points = await getHistoricalPrices(sym, '1d', { interval: '1h' });
+        out[sym] = points
+          .filter((p) => p.close > 0 && /T\d{2}:/.test(p.date))
+          .map((p) => ({ date: p.date, close: p.close }));
+      })
+    );
+  }
+  return out;
+}
+
 /** 13F — 5y כדי לסמן לשוק בין רבעונים כמו אצל קתי ווד. */
 export async function fetch13FDailyCloses(
   tickers: string[]

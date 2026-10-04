@@ -1,4 +1,6 @@
+import { useMemo } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useTheme } from '../context/ThemeContext';
 import LearningScreen from '../screens/Learning';
 import { CoursesScreen } from '../screens/Learning/CoursesScreen';
 import { CourseDetailScreen } from '../screens/Learning/CourseDetailScreen';
@@ -41,10 +43,15 @@ export type LearningStackParamList = {
 const Stack = createNativeStackNavigator<LearningStackParamList>();
 
 export default function LearningStack() {
+  const { isDarkMode } = useTheme();
+  const screenOptions = useMemo(
+    () => createLearningStackScreenOptions(isDarkMode),
+    [isDarkMode],
+  );
   return (
     <Stack.Navigator
       initialRouteName="CoursesScreen"
-      screenOptions={createLearningStackScreenOptions()}
+      screenOptions={screenOptions}
       screenListeners={learningStackScreenListeners}
     >
       <Stack.Screen

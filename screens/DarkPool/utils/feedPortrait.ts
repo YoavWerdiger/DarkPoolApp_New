@@ -3,7 +3,7 @@ import {
   extractBioguideFromCongressUrl,
   looksLikePersonPhoto,
 } from './investorPlaceholder';
-import { knownPortraitForInvestor } from './knownInvestorPortraits';
+import { knownPortraitForInvestor, localPortraitForInvestor } from './knownInvestorPortraits';
 
 /**
  * אווטאר לפיד — פנים אמיתיות בלבד.
@@ -15,6 +15,12 @@ export function resolveFeedPortraitUrl(opts: {
   personId?: string | null;
   personName?: string | null;
 }): string | null {
+  const local = localPortraitForInvestor({
+    personId: opts.personId ?? undefined,
+    name: opts.personName,
+  });
+  if (local) return local;
+
   const stored = opts.storedUrl?.trim() || null;
   if (stored && looksLikePersonPhoto(stored)) return stored;
 

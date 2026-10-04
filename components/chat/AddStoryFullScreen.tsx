@@ -12,7 +12,8 @@ import {
   resolveMediaRecentLocalUri,
   type MediaRecentAsset,
 } from '../../lib/mediaRecentsCache';
-import { Video, ResizeMode } from '../../lib/expoAvSafe';
+import { Audio, Video, ResizeMode } from '../../lib/expoAvSafe';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CameraView, useCameraPermissions, CameraType } from 'expo-camera';
@@ -38,11 +39,28 @@ import { uploadStoryImage, uploadStoryVideo, createStory } from '../../services/
 import { chatPalette } from './chatDesignTokens';
 
 const { width: SW, height: SH } = Dimensions.get('window');
-const GALLERY_THUMB = 56;
-const CAPTURE_SIZE = 78;
-const CAPTURE_RING = 88;
-const PILL_W = 70;
-const PILL_GAP = 6;
+const GALLERY_THUMB = 52;
+const CAPTURE_SIZE = 66;
+const CAPTURE_RING = 80;
+const PILL_W = 76;
+const PILL_GAP = 4;
+const CHROME_FILL = 'rgba(0,0,0,0.42)';
+const CHROME_LINE = 'rgba(255,255,255,0.18)';
+
+/** Camera keeps the recording file until the session stops. Copy first so preview playback is independent. */
+async function persistRecordedStoryVideo(uri: string): Promise<string> {
+  const base = FileSystem.cacheDirectory;
+  if (!base) return uri;
+  const ext = uri.toLowerCase().includes('.mov') ? 'mov' : 'mp4';
+  const dest = `${base}story-capture-${Date.now()}.${ext}`;
+  try {
+    await FileSystem.copyAsync({ from: uri, to: dest });
+    return dest;
+  } catch (err) {
+    logger.warn('AddStoryFullScreen', 'persist recorded video failed', err);
+    return uri;
+  }
+}
 
 const GRADIENT_BACKGROUNDS: [string, string][] = [
   ['#0F2027', '#2C5364'],
@@ -421,7 +439,7 @@ function TextEditorOverlay({
             style={[editorStyles.toolBtn, bold && editorStyles.toolBtnActive]}
             onPress={() => setBold(!bold)}
           >
-            <Text style={[editorStyles.toolBtnLabel, { fontWeight: '800' }]}>B</Text>
+            <Text style={[editorStyles.toolBtnLabel, { fontWeight: '700' }]}>B</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -459,7 +477,7 @@ function TextEditorOverlay({
               {
                 color,
                 fontSize,
-                fontWeight: bold ? '800' : '400',
+                fontWeight: bold ? '700' : '400',
               },
             ]}
             value={text}
@@ -518,10 +536,12 @@ const editorStyles = StyleSheet.create({
     gap: 8,
   },
   toolBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.42)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.18)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -548,7 +568,7 @@ const editorStyles = StyleSheet.create({
   doneBtnText: {
     color: '#fff',
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   inputArea: {
     flex: 1,
@@ -954,6 +974,11 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
 
   const [mediaUri, setMediaUri] = useState<string | null>(null);
   const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
+  /** Mount the player only after the camera session has released the file and audio route. */
+  const [videoSurfaceReady, setVideoSurfaceReady] = useState(false);
+  /** Player view must have a real frame before AVPlayerLayer will draw (audio can start at 0×0). */
+  const [videoFrameReady, setVideoFrameReady] = useState(false);
+  const [videoAttempt, setVideoAttempt] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [textContent, setTextContent] = useState('');
   const [textBgIndex, setTextBgIndex] = useState(0);
@@ -1189,6 +1214,9 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
       dismissY.value = 0;
       setMediaUri(null);
       setMediaType('image');
+      setVideoSurfaceReady(false);
+      setVideoFrameReady(false);
+      setVideoAttempt(0);
       setIsUploading(false);
       setTextContent('');
       setTextBgIndex(0);
@@ -1222,6 +1250,32 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
       }
     }
   }, [visible]);
+
+  useEffect(() => {
+    if (!visible || phase !== 'preview' || mediaType !== 'video' || !mediaUri) {
+      setVideoSurfaceReady(false);
+      setVideoFrameReady(false);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      void (async () => {
+        try {
+          await Audio.setAudioModeAsync({
+            allowsRecordingIOS: false,
+            playsInSilentModeIOS: true,
+          });
+        } catch (err) {
+          logger.warn('AddStoryFullScreen', 'playback audio mode failed', err);
+        }
+        if (!cancelled) setVideoSurfaceReady(true);
+      })();
+    }, 150);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [visible, phase, mediaType, mediaUri, videoAttempt]);
 
   useEffect(() => {
     if (mode === 'text') {
@@ -1351,7 +1405,9 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
       }, 30000);
       const video = await cameraRef.current.recordAsync?.({ maxDuration: 30 });
       if (video?.uri) {
-        setMediaUri(video.uri);
+        const uri = await persistRecordedStoryVideo(video.uri);
+        setVideoAttempt(0);
+        setMediaUri(uri);
         setMediaType('video');
         setOverlays([]);
         setPhase('preview');
@@ -1691,21 +1747,26 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
+              <Pressable
+                style={StyleSheet.absoluteFill}
+                onPress={() => Keyboard.dismiss()}
+                accessibilityLabel="סגור מקלדת"
+              />
               <View style={{ height: insets.top + 60 }} pointerEvents="none" />
 
-              <View style={s.textInputArea}>
+              <View style={s.textInputArea} pointerEvents="box-none">
                 <TextInput
                   ref={textInputRef}
                   style={s.textBigInput}
-                  placeholder="מה על הלב?..."
-                  placeholderTextColor="rgba(255,255,255,0.35)"
+                  placeholder="מה קורה?"
+                  placeholderTextColor="rgba(255,255,255,0.45)"
                   value={textContent}
                   onChangeText={setTextContent}
                   multiline
                   maxLength={250}
                   textAlign="center"
                 />
-                <Text style={s.textCounter}>{textContent.length}/250</Text>
+                <Text style={s.textCounter} pointerEvents="none">{textContent.length}/250</Text>
               </View>
 
               <View style={[s.textBgPicker, { paddingBottom: insets.bottom + 52 }]}>
@@ -1874,12 +1935,13 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
           </TouchableOpacity>
           <View style={{ flex: 1 }} />
           <TouchableOpacity
-            style={[s.textDoneBtn, !textContent.trim() && { opacity: 0.4 }]}
+            style={[s.sendChevronBtn, (!textContent.trim() || isUploading) && { opacity: 0.4 }]}
             onPress={handleShareText}
             disabled={!textContent.trim() || isUploading}
+            accessibilityRole="button"
+            accessibilityLabel="שיתוף"
           >
-            <Ionicons name="paper-plane" size={16} color="#fff" style={{ marginRight: 4 }} />
-            <Text style={s.textDoneBtnLabel}>שתף</Text>
+            <Ionicons name="chevron-up" size={28} color="#fff" />
           </TouchableOpacity>
         </View>
       )}
@@ -1904,15 +1966,39 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
           <View style={StyleSheet.absoluteFill} pointerEvents="none">
             {mediaType === 'image' ? (
               <Image source={{ uri: mediaUri! }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+            ) : videoSurfaceReady ? (
+              <View
+                pointerEvents="none"
+                collapsable={false}
+                style={s.recordedVideo}
+                onLayout={(e) => {
+                  const { width, height } = e.nativeEvent.layout;
+                  if (width > 0 && height > 0) setVideoFrameReady(true);
+                }}
+              >
+                {videoFrameReady ? (
+                  <Video
+                    key={`${mediaUri}-${videoAttempt}`}
+                    pointerEvents="none"
+                    source={{ uri: mediaUri! }}
+                    style={s.recordedVideoFill}
+                    useNativeControls={false}
+                    resizeMode={ResizeMode.CONTAIN}
+                    shouldPlay
+                    isLooping
+                    onError={() => {
+                      if (videoAttempt >= 1) return;
+                      setVideoFrameReady(false);
+                      setVideoSurfaceReady(false);
+                      setVideoAttempt((n) => n + 1);
+                    }}
+                  />
+                ) : null}
+              </View>
             ) : (
-              <Video
-                source={{ uri: mediaUri! }}
-                style={StyleSheet.absoluteFill}
-                useNativeControls={false}
-                resizeMode={ResizeMode.CONTAIN}
-                shouldPlay
-                isLooping
-              />
+              <View style={[StyleSheet.absoluteFill, s.videoWait]}>
+                <ActivityIndicator color="#fff" />
+              </View>
             )}
           </View>
 
@@ -1946,37 +2032,31 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
         >
           {/* direction:ltr — כמו StoryViewer: Modal לא תמיד מכבד forceRTL */}
           <View style={s.previewTopRow}>
-            <View style={s.previewToolbar}>
-              <TouchableOpacity style={s.previewToolBtn} onPress={() => openTextEditor()} activeOpacity={0.7}>
-                <MaterialCommunityIcons name="format-text" size={22} color="#fff" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={s.previewToolBtn}
-                onPress={() => setShowEmojiPicker(true)}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="happy-outline" size={22} color="#fff" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={s.previewToolBtn}
-                onPress={() => setDrawMode(true)}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="brush-outline" size={22} color="#fff" />
-              </TouchableOpacity>
-            </View>
-
             <TouchableOpacity
+              style={s.topIconBtn}
               onPress={() => { setMediaUri(null); setOverlays([]); setDrawPaths([]); setDrawMode(false); setPhase('capture'); }}
-              hitSlop={16}
               activeOpacity={0.7}
               accessibilityRole="button"
               accessibilityLabel="חזרה"
             >
-              <Ionicons name="chevron-forward" size={28} color="#fff" />
+              <Ionicons name="chevron-forward" size={26} color="#fff" />
             </TouchableOpacity>
           </View>
         </LinearGradient>
+      )}
+
+      {!drawMode && (
+        <View style={[s.toolRail, s.chromeLayer, { top: insets.top + 64 }]} pointerEvents="box-none">
+          <TouchableOpacity style={s.previewToolBtn} onPress={() => openTextEditor()} activeOpacity={0.75} accessibilityLabel="טקסט">
+            <MaterialCommunityIcons name="format-text" size={20} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity style={s.previewToolBtn} onPress={() => setShowEmojiPicker(true)} activeOpacity={0.75} accessibilityLabel="אימוג׳י">
+            <Ionicons name="happy-outline" size={20} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity style={s.previewToolBtn} onPress={() => setDrawMode(true)} activeOpacity={0.75} accessibilityLabel="ציור">
+            <Ionicons name="brush-outline" size={20} color="#fff" />
+          </TouchableOpacity>
+        </View>
       )}
 
       {/* Drawing toolbar — outside dismiss Pan */}
@@ -1984,7 +2064,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
         <>
           <View style={[s.drawTopBar, s.chromeLayer, { paddingTop: insets.top + 12 }]}>
             <TouchableOpacity
-              style={s.drawIconBtn}
+              style={s.drawDonePill}
               onPress={() => setDrawMode(false)}
               activeOpacity={0.7}
             >
@@ -2063,16 +2143,18 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
           style={[s.previewBottomGrad, s.chromeLayer, { paddingBottom: insets.bottom + 16 }]}
           pointerEvents="box-none"
         >
-          <TouchableOpacity
-            onPress={handleShareMedia}
-            disabled={isUploading}
-            style={[s.shareFabBtn, isUploading && { opacity: 0.82 }]}
-            activeOpacity={0.88}
-            accessibilityRole="button"
-            accessibilityLabel="העלאה"
-          >
-            <Text style={s.shareFabBtnText}>העלאה</Text>
-          </TouchableOpacity>
+          <View style={s.sendRow}>
+            <TouchableOpacity
+              onPress={handleShareMedia}
+              disabled={isUploading}
+              style={[s.sendChevronBtn, isUploading && { opacity: 0.82 }]}
+              activeOpacity={0.88}
+              accessibilityRole="button"
+              accessibilityLabel="שיתוף"
+            >
+              <Ionicons name="chevron-up" size={28} color="#fff" />
+            </TouchableOpacity>
+          </View>
         </LinearGradient>
       )}
 
@@ -2115,8 +2197,14 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
           dismissY animates this root, but dismiss Pan is NOT wrapped around chrome.
           Capture: pans/pinch live only on the camera preview panel.
           Preview: dismiss wraps the media stack inside renderPreview; toolbars are siblings.
+          A translate on an ancestor stops AVPlayerLayer from drawing (audio only, duration 0).
         */}
-        <Reanimated.View style={[s.root, dismissAnimStyle]}>
+        <Reanimated.View
+          style={[
+            s.root,
+            phase === 'preview' && mediaType === 'video' ? s.videoPreviewRoot : dismissAnimStyle,
+          ]}
+        >
           {phase === 'capture' && renderCapturePhase()}
           {phase === 'preview' && mediaUri && renderPreview()}
 
@@ -2172,6 +2260,26 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
 /* ═══════════════════════════════════════════════ */
 const s = StyleSheet.create({
   fullFlex: { flex: 1 },
+  recordedVideo: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: SW,
+    height: SH,
+    backgroundColor: '#000',
+  },
+  recordedVideoFill: {
+    width: SW,
+    height: SH,
+  },
+  videoPreviewRoot: {
+    overflow: 'visible',
+  },
+  videoWait: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#000',
+  },
   root: {
     flex: 1,
     backgroundColor: '#000',
@@ -2211,7 +2319,9 @@ const s = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: CHROME_FILL,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: CHROME_LINE,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -2299,11 +2409,11 @@ const s = StyleSheet.create({
   galleryBtn: {
     width: GALLERY_THUMB,
     height: GALLERY_THUMB,
-    borderRadius: 12,
+    borderRadius: 14,
     overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.4)',
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.9)',
+    backgroundColor: CHROME_FILL,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -2316,7 +2426,7 @@ const s = StyleSheet.create({
     width: CAPTURE_RING,
     height: CAPTURE_RING,
     borderRadius: CAPTURE_RING / 2,
-    borderWidth: 4,
+    borderWidth: 3,
     borderColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
@@ -2330,9 +2440,9 @@ const s = StyleSheet.create({
     backgroundColor: '#fff',
   },
   captureRecording: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: '#FF3B30',
   },
 
@@ -2340,7 +2450,9 @@ const s = StyleSheet.create({
     width: GALLERY_THUMB,
     height: GALLERY_THUMB,
     borderRadius: GALLERY_THUMB / 2,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: CHROME_FILL,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: CHROME_LINE,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -2357,7 +2469,9 @@ const s = StyleSheet.create({
   },
   modeSwitcherTrack: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: CHROME_FILL,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: CHROME_LINE,
     borderRadius: 22,
     padding: 3,
     gap: PILL_GAP,
@@ -2381,7 +2495,10 @@ const s = StyleSheet.create({
   modePillText: {
     color: '#fff',
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '600',
+    textShadowColor: 'rgba(0,0,0,0.45)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
 
   /* ---- Permission fallback ---- */
@@ -2399,19 +2516,6 @@ const s = StyleSheet.create({
   },
 
   /* ---- Text mode ---- */
-  textDoneBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: chatPalette.primary,
-    paddingVertical: 9,
-    paddingHorizontal: 18,
-    borderRadius: 20,
-  },
-  textDoneBtnLabel: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
-  },
   textInputArea: {
     flex: 1,
     justifyContent: 'center',
@@ -2471,19 +2575,23 @@ const s = StyleSheet.create({
     /** כמו StoryViewer progressRow — נועל LTR כדי שהסדר לא יהפוך פעמיים ב-Modal */
     flexDirection: 'row',
     direction: 'ltr',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     alignItems: 'center',
   },
-  previewToolbar: {
-    flexDirection: 'row',
-    direction: 'ltr',
-    gap: 8,
+  toolRail: {
+    position: 'absolute',
+    left: 14,
+    zIndex: 20,
+    gap: 10,
+    alignItems: 'center',
   },
   previewToolBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: CHROME_FILL,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: CHROME_LINE,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -2495,22 +2603,20 @@ const s = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 50,
     zIndex: 10,
-    alignItems: 'center',
   },
-  /** כמו fabBtn ב-PortfoliosHubScreen / PortfolioDetailScreen */
-  shareFabBtn: {
-    flexDirection: 'row-reverse',
+  sendRow: {
+    flexDirection: 'row',
+    direction: 'ltr',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 22,
-    paddingVertical: 14,
-    borderRadius: 28,
+    justifyContent: 'flex-end',
+  },
+  sendChevronBtn: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: chatPalette.primary,
-  },
-  shareFabBtnText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#fff',
   },
 
   /* ---- Drawing mode ---- */
@@ -2529,15 +2635,28 @@ const s = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: CHROME_FILL,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: CHROME_LINE,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 4,
+  },
+  drawDonePill: {
+    height: 36,
+    paddingHorizontal: 16,
+    borderRadius: 18,
+    backgroundColor: CHROME_FILL,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: CHROME_LINE,
     justifyContent: 'center',
     alignItems: 'center',
     marginHorizontal: 4,
   },
   drawDoneText: {
     color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '600',
   },
   drawBottomBar: {
     position: 'absolute',
@@ -2545,8 +2664,8 @@ const s = StyleSheet.create({
     right: 0,
     bottom: 0,
     zIndex: 25,
-    paddingTop: 10,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    paddingTop: 12,
+    backgroundColor: 'rgba(0,0,0,0.55)',
   },
   drawStrokeRow: {
     flexDirection: 'row',

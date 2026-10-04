@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["ShareTargetsModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.sharetargets.ShareTargetsModule"]
+  }
+}

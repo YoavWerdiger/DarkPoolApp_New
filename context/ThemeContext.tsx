@@ -105,15 +105,25 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const next = pendingNext.current;
     if (next == null) return;
     animatedEpoch.current = blendEpoch;
-    setIsDarkMode(next);
     overlayOpacity.value = 1;
-    overlayOpacity.value = withTiming(
-      0,
-      { duration: THEME_BLEND_MS, easing: Easing.inOut(Easing.cubic) },
-      (finished) => {
-        if (finished) runOnJS(endBlend)();
-      },
-    );
+    setIsDarkMode(next);
+    // הערכה החדשה צריכה להיות מצוירת מתחת לצילום לפני שהדעיכה מתחילה, אחרת הפריימים הראשונים נתקעים על ה-re-render.
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        overlayOpacity.value = withTiming(
+          0,
+          { duration: THEME_BLEND_MS, easing: Easing.out(Easing.cubic) },
+          (finished) => {
+            if (finished) runOnJS(endBlend)();
+          },
+        );
+      });
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      if (raf2) cancelAnimationFrame(raf2);
+    };
   }, [blendEpoch, endBlend, overlayOpacity]);
 
   const onOverlayLoad = useCallback(() => {

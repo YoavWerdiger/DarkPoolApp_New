@@ -39,6 +39,8 @@ import {
   journalPhysicalRightText,
 } from '../../Journal/journalLayout';
 import { filterChartSeriesByPeriod } from '../../DarkPool/utils/profileChartSeries';
+import { appendOpenPositionSession } from '../../DarkPool/utils/sessionSnapshots';
+import { getHistoricalPrices } from '../../../services/portfolios/portfolioPriceFeed';
 
 interface Props {
   portfolio: Portfolio;
@@ -89,6 +91,9 @@ export default function OverviewTab({
   const [chartSeries, setChartSeries] = useState<
     { date: string; value: number; external_flow: number }[]
   >([]);
+  const [sessionSeries, setSessionSeries] = useState<
+    { date: string; value: number; external_flow: number }[] | null
+  >(null);
   const [chartLoading, setChartLoading] = useState(true);
   const [tradeStats, setTradeStats] = useState<TradeStats>({
     totalPnl: 0,
@@ -148,6 +153,43 @@ export default function OverviewTab({
     void load();
     return () => { cancel = true; };
   }, [portfolio.id, portfolio.source, chartRefreshKey]);
+
+  useEffect(() => {
+    if (!chartSeries.length || !openTrades.length) {
+      setSessionSeries(null);
+      return;
+    }
+    let cancel = false;
+    const symbols = Array.from(new Set(openTrades.map((t) => t.symbol.toUpperCase()))).slice(0, 20);
+    void (async () => {
+      const hourly: Record<string, { date: string; close: number }[]> = {};
+      await Promise.all(
+        symbols.map(async (sym) => {
+          const points = await getHistoricalPrices(sym, '1d', { interval: '1h' });
+          hourly[sym] = points
+            .filter((p) => p.close > 0 && /T\d{2}:/.test(p.date))
+            .map((p) => ({ date: p.date, close: p.close }));
+        })
+      );
+      if (cancel) return;
+      const next = appendOpenPositionSession(
+        chartSeries,
+        openTrades.map((t) => ({
+          symbol: t.symbol,
+          direction: t.direction,
+          entryPrice: t.entry_price,
+          quantity: t.quantity,
+          leverage: t.leverage ?? null,
+          previousClose: openTradeQuotes.get(t.symbol)?.previousClose ?? null,
+        })),
+        hourly
+      );
+      setSessionSeries(next.length > chartSeries.length ? next : null);
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [chartSeries, openTrades, openTradeQuotes]);
 
   // טוען סטטיסטיקות מסחר (סגורות) + פוזיציות פתוחות (לחישוב ערך תיק חי)
   // chartRefreshKey מאלץ רענון גם אחרי סגירת פוזיציה
@@ -289,12 +331,12 @@ export default function OverviewTab({
     });
   }, [openTrades, openTradeQuotes]);
 
-  // תיק Colmex: פילוח מפוזיציות פתוחות (trades) בלבד — לעולם לא holdings ישנים
+  // פילוח מפוזיציות OPEN (trades) — גם ידני וגם Colmex; fallback ל-holdings מ-TX ישן
   const distribution = useMemo(() => {
-    if (isColmex) {
-      if (openTradeHoldings.length === 0) return [];
+    if (openTradeHoldings.length > 0) {
       return buildDistribution(openTradeHoldings, groupBy);
     }
+    if (isColmex) return [];
     return buildDistribution(holdings, groupBy);
   }, [isColmex, openTradeHoldings, holdings, groupBy]);
 
@@ -364,7 +406,7 @@ export default function OverviewTab({
 
   // אחיד לכל סוגי התיקים: overlay של נקודת היום + fallback ל-2 נקודות (לגרף + מדדים)
   const filteredSeries = useMemo(() => {
-    let base = chartSeries;
+    let base = sessionSeries ?? chartSeries;
     if (base.length === 0 && livePortfolioValue != null && livePortfolioValue > 0) {
       const todayStr = toLocalDateKey(new Date());
       base = [{ date: todayStr, value: livePortfolioValue, external_flow: 0 }];
@@ -394,7 +436,7 @@ export default function OverviewTab({
       ];
     }
     return base;
-  }, [chartSeries, livePortfolioValue]);
+  }, [chartSeries, sessionSeries, livePortfolioValue]);
 
   // מדדים וגרפים קטנים על אותה תקופה כמו בורר התקופה בגרף הגדול
   const periodSeries = useMemo(
@@ -622,7 +664,10 @@ export default function OverviewTab({
     [tokens]
   );
 
-  const showTip = (summary?.holdings_count ?? 0) === 0;
+  const showTip =
+    openTrades.length === 0 &&
+    holdings.filter((h) => !h.is_closed).length === 0 &&
+    (summary?.holdings_count ?? 0) === 0;
   const netPnl =
     tradeStats.totalPnl + (summary?.total_dividends ?? 0) - (summary?.total_fees ?? 0);
   const profitFactor =
@@ -643,7 +688,7 @@ export default function OverviewTab({
         <View style={styles.tipsBanner}>
           <Ionicons name="bulb" size={20} color={tokens.colors.text.warning} />
           <Text style={styles.tipsText}>
-            התיק עוד ריק – הוסף הפקדה ראשונה ועסקאות buy כדי לראות חישובים מדויקים.
+            התיק עוד ריק – הוסף הפקדה ופתח פוזיציה ראשונה כדי לראות שווי ופילוח.
           </Text>
         </View>
       ) : null}
@@ -657,7 +702,9 @@ export default function OverviewTab({
           <Text style={styles.emptyText}>
             {isColmex
               ? 'אין נקודת שווי עדיין — משוך לסנכרון מהברוקר'
-              : 'אין נתונים היסטוריים עדיין — סגור פוזיציה ראשונה או הוסף הפקדה'}
+              : openTrades.length > 0
+                ? 'טוען שווי תיק…'
+                : 'אין נתונים היסטוריים עדיין — פתח פוזיציה או הוסף הפקדה'}
           </Text>
         ) : (
           <PortfolioValueChart
@@ -690,7 +737,11 @@ export default function OverviewTab({
           ))}
         </View>
         {distribution.length === 0 ? (
-          <Text style={styles.emptyText}>הוסף נכסים כדי לראות פילוח</Text>
+          <Text style={styles.emptyText}>
+            {openTrades.length > 0
+              ? 'טוען פילוח…'
+              : 'פתח פוזיציה כדי לראות פילוח נכסים'}
+          </Text>
         ) : (
           <>
             <View style={styles.donutWrap}>

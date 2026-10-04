@@ -165,9 +165,15 @@ function isRootProfileStackFocused(): boolean {
 }
 
 function openDrawerAfterSwitchToMain(navigation: DrawerParentNavigation) {
-  /** המסך של Chat יצרוך את הדגל ב־useFocusEffect ויפתח את המגירה מתוך הנאב שלו (אמין ביותר) */
+  /** גיבוי: רשימת הצ'אטים צורכת את הדגל ב־useFocusEffect אם הפתיחה הישירה נכשלה */
   markPendingOpenMainDrawer();
   navigateRootStackToMain(navigation);
+  /** המגירה נפתחת בזמן שהפרופיל דועך — לא רק כשמסך הבית הוא רשימת הצ'אטים */
+  requestAnimationFrame(() => {
+    if (tryOpenRegisteredSideMenu() || tryDispatchOpenDrawerViaRoot()) {
+      consumePendingOpenMainDrawer();
+    }
+  });
 }
 
 /**

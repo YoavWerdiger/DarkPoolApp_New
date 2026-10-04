@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, Pressable, TextInput, StyleSheet } from 'react-native';
+import React from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, {
@@ -12,9 +12,17 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useAnimatedKeyboard } from 'react-native-keyboard-controller';
 import type { ViewStyle } from 'react-native';
-import { APP_TYPE } from '../ui/appType';
-
+import { LinearGradient } from 'expo-linear-gradient';
 const ICON = '#FFFFFF';
+/** תמונה בהירה בולעת אייקונים לבנים — הדעיכה והעיגול נותנים ניגוד בלי פס אטום. */
+const SCRIM_TOP = ['rgba(0,0,0,0.55)', 'rgba(0,0,0,0)'] as const;
+const SCRIM_BOTTOM = ['rgba(0,0,0,0)', 'rgba(0,0,0,0.6)'] as const;
+const BTN_FILL = 'rgba(0,0,0,0.38)';
+const TEXT_SHADOW = {
+  textShadowColor: 'rgba(0,0,0,0.6)',
+  textShadowOffset: { width: 0, height: 1 },
+  textShadowRadius: 4,
+} as const;
 
 type Props = {
   paddingTop: number;
@@ -26,8 +34,8 @@ type Props = {
   onClose: () => void;
   onShare?: () => void;
   onForward?: () => void;
-  /** שליחת תגובה מהמקלדת, בלי כפתור אימוג'י. */
-  onSubmitReply?: (text: string) => void;
+  /** סוגר את הצופה ומפעיל תגובה בצ'אט, בלי תיבת טקסט כאן. */
+  onReply?: () => void;
   videoSlot?: React.ReactNode;
   chromeStyle?: AnimatedStyle<ViewStyle>;
   pointerEvents?: 'box-none' | 'none';
@@ -103,7 +111,7 @@ export function MediaKeyboardDim() {
   );
 }
 
-/** כרום פתיחת מדיה: כפתורים צפים בלי פס, ושדה תגובה שקוף מעל המקלדת. */
+/** כרום פתיחת מדיה: כפתורים צפים. «השב» מפעיל תגובה בצ'אט. */
 export function MediaViewerChrome({
   paddingTop,
   paddingBottom,
@@ -114,33 +122,25 @@ export function MediaViewerChrome({
   onClose,
   onShare,
   onForward,
-  onSubmitReply,
+  onReply,
   videoSlot,
   chromeStyle,
   pointerEvents = 'box-none',
 }: Props) {
-  const [draft, setDraft] = useState('');
   const captionText = caption?.trim();
-  const canSend = draft.trim().length > 0;
-  const keyboard = useAnimatedKeyboard();
-
-  const liftStyle = useAnimatedStyle(() => {
-    const open = keyboard.height.value > 8;
-    return {
-      paddingBottom: open ? 8 : paddingBottom,
-      transform: [{ translateY: -keyboard.height.value }],
-    };
-  });
-
-  const submit = () => {
-    const text = draft.trim();
-    if (!text || !onSubmitReply) return;
-    setDraft('');
-    onSubmitReply(text);
-  };
 
   return (
-    <Animated.View style={[StyleSheet.absoluteFill, chromeStyle]} pointerEvents={pointerEvents}>
+    <Animated.View style={[StyleSheet.absoluteFill, styles.chromeLayer, chromeStyle]} pointerEvents={pointerEvents}>
+      <LinearGradient
+        pointerEvents="none"
+        colors={SCRIM_TOP}
+        style={[styles.scrimTop, { height: paddingTop + 96 }]}
+      />
+      <LinearGradient
+        pointerEvents="none"
+        colors={SCRIM_BOTTOM}
+        style={[styles.scrimBottom, { height: paddingBottom + 160 }]}
+      />
       <View style={[styles.topRow, { paddingTop }]} pointerEvents="box-none">
         <View style={styles.actions}>
           {onShare ? <IconButton name="share-outline" label="שיתוף" onPress={onShare} /> : null}
@@ -165,50 +165,38 @@ export function MediaViewerChrome({
           accessibilityRole="button"
           accessibilityLabel="חזרה"
         >
-          <Ionicons name="chevron-forward" size={30} color={ICON} />
+          <Ionicons name="chevron-forward" size={26} color={ICON} />
         </Pressable>
       </View>
 
-      <Animated.View style={[styles.bottomAnchor, liftStyle]} pointerEvents="box-none">
+      <View style={[styles.bottomAnchor, { paddingBottom }]} pointerEvents="box-none">
         {videoSlot}
         {captionText ? (
           <Text style={styles.caption} numberOfLines={6}>
             {captionText}
           </Text>
         ) : null}
-        {onSubmitReply ? (
-          <View style={styles.replyRow}>
-            {canSend ? (
-              <Pressable
-                onPress={submit}
-                hitSlop={8}
-                style={styles.iconBtn}
-                accessibilityRole="button"
-                accessibilityLabel="שליחה"
-              >
-                <Ionicons name="send" size={22} color={ICON} style={styles.sendIcon} />
-              </Pressable>
-            ) : null}
-            <TextInput
-              value={draft}
-              onChangeText={setDraft}
-              placeholder="השב"
-              placeholderTextColor="rgba(255,255,255,0.45)"
-              style={styles.replyInput}
-              keyboardAppearance="dark"
-              returnKeyType="send"
-              blurOnSubmit={false}
-              onSubmitEditing={submit}
-              selectionColor={ICON}
-            />
-          </View>
+        {onReply ? (
+          <Pressable
+            onPress={onReply}
+            style={styles.replyBtn}
+            accessibilityRole="button"
+            accessibilityLabel="השב"
+          >
+            <Ionicons name="chatbubble-outline" size={18} color={ICON} />
+            <Text style={styles.replyBtnText}>השב</Text>
+          </Pressable>
         ) : null}
-      </Animated.View>
+      </View>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
+  chromeLayer: {
+    zIndex: 20,
+    elevation: 20,
+  },
   blurFallback: {
     backgroundColor: '#000',
   },
@@ -218,6 +206,18 @@ const styles = StyleSheet.create({
   keyboardDim: {
     backgroundColor: 'rgba(0,0,0,0.55)',
   },
+  scrimTop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+  },
+  scrimBottom: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
   topRow: {
     position: 'absolute',
     top: 0,
@@ -226,21 +226,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     direction: 'ltr',
     alignItems: 'center',
-    paddingHorizontal: 8,
+    paddingHorizontal: 20,
     paddingBottom: 8,
-    gap: 4,
+    gap: 12,
   },
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: 8,
   },
   iconBtn: {
     width: 40,
     height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'transparent',
+    backgroundColor: BTN_FILL,
   },
   titleCol: {
     flex: 1,
@@ -255,29 +256,33 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     textAlign: 'right',
     writingDirection: 'rtl',
+    ...TEXT_SHADOW,
   },
   time: {
-    color: 'rgba(255,255,255,0.72)',
+    color: 'rgba(255,255,255,0.85)',
     fontSize: 12,
     lineHeight: 16,
     textAlign: 'right',
     writingDirection: 'rtl',
     marginTop: 1,
+    ...TEXT_SHADOW,
   },
   backBtn: {
     width: 40,
     height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'transparent',
+    backgroundColor: BTN_FILL,
   },
   bottomAnchor: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     backgroundColor: 'transparent',
+    direction: 'ltr',
   },
   caption: {
     color: ICON,
@@ -286,25 +291,23 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     writingDirection: 'rtl',
     marginBottom: 8,
+    ...TEXT_SHADOW,
   },
-  replyRow: {
+  replyBtn: {
     flexDirection: 'row',
     direction: 'ltr',
+    alignSelf: 'flex-end',
     alignItems: 'center',
-    backgroundColor: 'transparent',
+    gap: 6,
+    height: 40,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    backgroundColor: BTN_FILL,
   },
-  replyInput: {
-    flex: 1,
-    minHeight: 40,
-    paddingVertical: 8,
-    paddingHorizontal: 4,
+  replyBtnText: {
     color: ICON,
-    backgroundColor: 'transparent',
-    textAlign: 'right',
-    writingDirection: 'rtl',
-    ...APP_TYPE.body,
-  },
-  sendIcon: {
-    transform: [{ scaleX: -1 }],
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: '600',
   },
 });

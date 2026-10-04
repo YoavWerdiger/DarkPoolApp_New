@@ -5,7 +5,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { logger } from '../../utils/logger';
 import { View, Text, Modal, StyleSheet, Dimensions, ActivityIndicator, Share as RNShare, TouchableOpacity } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { initialWindowMetrics, SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Video, ResizeMode } from '../../lib/expoAvSafe';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, {
@@ -39,7 +39,7 @@ interface MediaViewerProps {
   timeLabel?: string;
   onClose: () => void;
   onForward?: () => void;
-  onSubmitReply?: (text: string) => void;
+  onReply?: () => void;
 }
 
 export default function MediaViewer({
@@ -51,7 +51,7 @@ export default function MediaViewer({
   timeLabel,
   onClose,
   onForward,
-  onSubmitReply,
+  onReply,
 }: MediaViewerProps) {
   const insets = useSafeAreaInsets();
   const [chromeVisible, setChromeVisible] = useState(true);
@@ -282,6 +282,7 @@ export default function MediaViewer({
       animationType="fade"
       onRequestClose={onClose}
     >
+      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <GestureHandlerRootView style={styles.container}>
         <MediaBlurBackdrop
           uri={mediaType === 'image' && isDisplayableMediaUri(displayUri) ? displayUri : null}
@@ -292,7 +293,7 @@ export default function MediaViewer({
           {mediaType === 'image' ? (
             <>
               {isLoading && (
-                <View style={styles.loadingContainer}>
+                <View style={styles.loadingContainer} pointerEvents="none">
                   <ActivityIndicator size="large" color={COLORS.primary} />
                 </View>
               )}
@@ -314,7 +315,6 @@ export default function MediaViewer({
                       source={{ uri: displayUri }}
                       style={[StyleSheet.absoluteFill, imageAnimatedStyle]}
                       resizeMode="contain"
-                      onLoadStart={() => { setIsLoading(true); setLoadError(false); }}
                       onLoadEnd={() => setIsLoading(false)}
                       onError={() => { setIsLoading(false); setLoadError(true); }}
                     />
@@ -325,7 +325,7 @@ export default function MediaViewer({
           ) : mediaType === 'video' ? (
             <>
               {(!isDisplayableMediaUri(displayUri) || isLoading) && !loadError && (
-                <View style={styles.loadingContainer}>
+                <View style={styles.loadingContainer} pointerEvents="none">
                   <ActivityIndicator size="large" color={COLORS.primary} />
                 </View>
               )}
@@ -356,7 +356,6 @@ export default function MediaViewer({
                       }
                     }
                   }}
-                  onLoadStart={() => { setIsLoading(true); setLoadError(false); }}
                   onLoad={() => {
                     setIsLoading(false);
                     (videoRef.current as any)?.setStatusAsync?.({ progressUpdateIntervalMillis: 100 });
@@ -373,14 +372,14 @@ export default function MediaViewer({
         <MediaViewerChrome
           chromeStyle={chromeStyle}
           pointerEvents={chromeVisible ? 'box-none' : 'none'}
-          paddingTop={insets.top + 6}
+          paddingTop={insets.top + 12}
           paddingBottom={insets.bottom + 12}
           title={senderName}
           timeLabel={timeLabel}
           caption={caption}
           onClose={onClose}
           onShare={() => { void handleShare(); }}
-          onSubmitReply={onSubmitReply}
+          onReply={onReply}
           onForward={onForward ? () => { onClose(); onForward(); } : undefined}
           videoSlot={mediaType === 'video' ? (
             <View style={styles.videoControlsRow}>
@@ -403,6 +402,7 @@ export default function MediaViewer({
           ) : null}
         />
       </GestureHandlerRootView>
+      </SafeAreaProvider>
     </Modal>
   );
 }
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 5,
+    zIndex: 2,
   },
   mediaErrorContainer: {
     flex: 1,

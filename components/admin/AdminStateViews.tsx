@@ -1,17 +1,23 @@
 import React from 'react';
-import { View, Text, ActivityIndicator, TouchableOpacity, StyleSheet } from 'react-native';
-import DesignTokens, { useDesignTokens } from '../ui/DesignTokens';
-import { chatPalette } from '../chat/chatDesignTokens';
-import UICard from '../ui/UICard';
+import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { useDesignTokens } from '../ui/DesignTokens';
+import UIButton from '../ui/UIButton';
+import { APP_LAYOUT } from '../ui/appLayout';
+import { AdminSurface } from './AdminSurface';
+import {
+  adminBody,
+  adminCaption,
+  adminCardSubtitle,
+  adminCardTitle,
+  adminHebrewText,
+} from './adminType';
 
 export function AdminLoadingState({ label = 'טוען...' }: { label?: string }) {
   const tokens = useDesignTokens();
   return (
     <View style={styles.center}>
-      <ActivityIndicator size="large" color={tokens.colors.primary.main} />
-      <Text style={[styles.msg, { color: tokens.colors.text.secondary, marginTop: tokens.spacing.md }]}>
-        {label}
-      </Text>
+      <ActivityIndicator size="large" color={tokens.colors.text.secondary} />
+      <Text style={[styles.msg, { color: tokens.colors.text.secondary }]}>{label}</Text>
     </View>
   );
 }
@@ -25,23 +31,12 @@ export function AdminEmptyState({
 }) {
   const tokens = useDesignTokens();
   return (
-    <UICard
-      variant="glass"
-      glassIntensity="light"
-      padding="lg"
-      style={{
-        borderRadius: tokens.borderRadius.xl,
-        borderWidth: 1,
-        borderColor: chatPalette.glassBorder,
-        alignItems: 'center',
-        marginTop: 24,
-      }}
-    >
+    <AdminSurface padding="lg" style={styles.emptyCard}>
       <Text style={[styles.emptyTitle, { color: tokens.colors.text.primary }]}>{title}</Text>
       {subtitle ? (
-        <Text style={[styles.emptySub, { color: tokens.colors.text.tertiary }]}>{subtitle}</Text>
+        <Text style={[styles.emptySub, { color: tokens.colors.text.secondary }]}>{subtitle}</Text>
       ) : null}
-    </UICard>
+    </AdminSurface>
   );
 }
 
@@ -54,37 +49,15 @@ export function AdminErrorState({
 }) {
   const tokens = useDesignTokens();
   return (
-    <UICard
-      variant="glass"
-      glassIntensity="light"
-      padding="md"
-      style={{
-        borderRadius: tokens.borderRadius.xl,
-        borderWidth: 1,
-        borderColor: `${tokens.colors.danger.main}44`,
-        marginBottom: tokens.spacing.md,
-      }}
-    >
-      <Text style={[styles.errorTitle, { color: tokens.colors.danger.main }]}>שגיאה</Text>
+    <AdminSurface padding="md">
+      <Text style={[styles.errorTitle, { color: tokens.colors.text.danger }]}>שגיאה</Text>
       <Text style={[styles.errorMsg, { color: tokens.colors.text.secondary }]}>{message}</Text>
       {onRetry ? (
-        <TouchableOpacity
-          onPress={onRetry}
-          activeOpacity={0.75}
-          style={[
-            styles.retryBtn,
-            {
-              backgroundColor: tokens.colors.primary.dim,
-              borderColor: `${tokens.colors.primary.main}44`,
-            },
-          ]}
-        >
-          <Text style={{ color: tokens.colors.primary.main, fontWeight: '700', fontSize: 13 }}>
-            נסה שוב
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.retryWrap}>
+          <UIButton title="נסה שוב" variant="secondary" onPress={onRetry} />
+        </View>
       ) : null}
-    </UICard>
+    </AdminSurface>
   );
 }
 
@@ -93,7 +66,7 @@ export function AdminDeniedState() {
   return (
     <View style={styles.center}>
       <Text style={[styles.emptyTitle, { color: tokens.colors.text.primary }]}>אין הרשאת מנהל</Text>
-      <Text style={[styles.emptySub, { color: tokens.colors.text.tertiary }]}>
+      <Text style={[styles.emptySub, { color: tokens.colors.text.secondary }]}>
         המסך זמין רק למשתמשים עם הרשאות מנהל
       </Text>
     </View>
@@ -105,44 +78,40 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
   },
   msg: {
-    fontSize: 15,
-    fontWeight: '600',
+    ...adminHebrewText,
+    ...adminBody,
+    marginTop: APP_LAYOUT.componentGap,
     textAlign: 'center',
-    writingDirection: 'rtl',
+  },
+  emptyCard: {
+    alignItems: 'center',
+    marginTop: APP_LAYOUT.sectionHeaderToContent,
   },
   emptyTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+    ...adminHebrewText,
+    ...adminCardTitle,
     textAlign: 'center',
-    writingDirection: 'rtl',
   },
   emptySub: {
-    fontSize: 13,
+    ...adminHebrewText,
+    ...adminCardSubtitle,
     textAlign: 'center',
-    writingDirection: 'rtl',
-    marginTop: 6,
-    lineHeight: 18,
+    marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
   },
   errorTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    ...DesignTokens.rtlText,
-    marginBottom: 4,
+    ...adminHebrewText,
+    ...adminCardTitle,
+    marginBottom: APP_LAYOUT.cardTitleToSubtitleGap,
   },
   errorMsg: {
-    fontSize: 13,
-    ...DesignTokens.rtlText,
-    lineHeight: 18,
+    ...adminHebrewText,
+    ...adminCaption,
   },
-  retryBtn: {
-    marginTop: 12,
-    alignSelf: 'flex-end',
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: DesignTokens.borderRadius.button,
-    borderWidth: 1,
+  retryWrap: {
+    marginTop: APP_LAYOUT.cardTitleToBodyGap,
+    alignSelf: 'flex-start',
   },
 });

@@ -3,47 +3,42 @@ import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
   RefreshControl,
   StyleSheet,
   LayoutChangeEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft } from 'lucide-react-native';
+import { Bell, CreditCard, KeyRound, LifeBuoy, Users } from 'lucide-react-native';
 import Svg, { Circle, Line, Polyline, Text as SvgText } from 'react-native-svg';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
-import { chatPalette } from '../../components/chat/chatDesignTokens';
-import UICard from '../../components/ui/UICard';
-import DesignTokens, { useDesignTokens } from '../../components/ui/DesignTokens';
+import { SettingsActionRow } from '../../components/profile/ProfileSettingsUI';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { APP_LAYOUT } from '../../components/ui/appLayout';
 import {
   AdminSectionLabel,
-  AdminFilterChip,
   AdminLoadingState,
   AdminErrorState,
   AdminDeniedState,
+  AdminSurface,
+  adminScreenPad,
 } from '../../components/admin';
+import {
+  adminCardSubtitle,
+  adminCardTitle,
+  adminMetric,
+  adminPhysicalRightText,
+} from '../../components/admin/adminType';
+import { APP_TYPE } from '../../components/ui/appType';
 import {
   adminService,
   type AdminGrowthPoint,
   type AdminStats,
-  type AdminStatsBucket,
 } from '../../services/admin';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { useIsAdmin } from '../../hooks/useIsAdmin';
 
 const CHART_H = 176;
-type ChartDays = 7 | 30 | 90;
-
-const INTERVAL_OPTIONS: { days: ChartDays; label: string }[] = [
-  { days: 7, label: '7 ימים' },
-  { days: 30, label: '30 ימים' },
-  { days: 90, label: '90 ימים' },
-];
-
-function formatIls(amount: number): string {
-  const n = Number.isFinite(amount) ? amount : 0;
-  return `₪${n.toLocaleString('he-IL')}`;
-}
+const CHART_DAYS = 30;
 
 function formatShortHeDate(dateStr: string): string {
   const parts = dateStr.split('-');
@@ -72,12 +67,11 @@ export default function AdminDashboardScreen({ navigation }: any) {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [chartWidth, setChartWidth] = useState(0);
-  const [chartDays, setChartDays] = useState<ChartDays>(30);
 
   const load = useCallback(async () => {
     try {
       setError(null);
-      const data = await adminService.getStats({ days: chartDays });
+      const data = await adminService.getStats({ days: CHART_DAYS });
       setStats(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'שגיאה בטעינת נתונים');
@@ -85,7 +79,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [chartDays]);
+  }, []);
 
   useEffect(() => {
     if (!adminLoading && isAdmin) {
@@ -94,11 +88,6 @@ export default function AdminDashboardScreen({ navigation }: any) {
       setLoading(false);
     }
   }, [adminLoading, isAdmin, load]);
-
-  const onChangeInterval = (days: ChartDays) => {
-    if (days === chartDays) return;
-    setChartDays(days);
-  };
 
   const header = (
     <ChatSubScreenHeader
@@ -130,25 +119,13 @@ export default function AdminDashboardScreen({ navigation }: any) {
 
   const series = stats?.growthSeries ?? [];
   const totalUsers = stats?.totals?.users ?? 0;
-  // תפקיד/מסלול גישה (חינמי / פרימיום / מנהל…) — ברור יותר מ־plan id גולמי
-  const planBuckets: AdminStatsBucket[] =
-    (stats?.byRole && stats.byRole.length > 0 ? stats.byRole : stats?.byPlan) ?? [];
-  const monthRevenue = stats?.revenue?.month ?? 0;
-  const plansLine =
-    planBuckets.length > 0
-      ? planBuckets.map((b) => `${b.label} ${b.count.toLocaleString('he-IL')}`).join(' · ')
-      : null;
 
   return (
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
       {header}
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingHorizontal: tokens.spacing.base,
-          paddingTop: tokens.spacing.sm,
-          paddingBottom: 48,
-        }}
+        contentContainerStyle={adminScreenPad}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -171,35 +148,17 @@ export default function AdminDashboardScreen({ navigation }: any) {
         ) : null}
 
         <AdminSectionLabel>מדדים</AdminSectionLabel>
-        <UICard
-          variant="glass"
-          glassIntensity="light"
-          padding="md"
-          style={{
-            borderRadius: tokens.borderRadius.xl,
-            borderWidth: 1,
-            borderColor: chatPalette.glassBorder,
-            marginBottom: tokens.spacing.md,
-          }}
-        >
-          <View style={styles.totalBlock}>
-            <Text style={[styles.totalValue, { color: tokens.colors.text.primary }]}>
-              {totalUsers.toLocaleString('he-IL')}
-            </Text>
-            <Text style={[styles.totalLabel, { color: tokens.colors.text.tertiary }]}>
+        <AdminSurface padding="md">
+          <View style={styles.metricBlock}>
+            <Text style={[styles.metricLabel, { color: tokens.colors.text.primary }]}>
               סה״כ משתמשים
             </Text>
-          </View>
-
-          <View style={styles.intervalRow}>
-            {INTERVAL_OPTIONS.map((opt) => (
-              <AdminFilterChip
-                key={opt.days}
-                label={opt.label}
-                active={chartDays === opt.days}
-                onPress={() => onChangeInterval(opt.days)}
-              />
-            ))}
+            <Text style={[styles.metricSubtitle, { color: tokens.colors.text.secondary }]}>
+              30 הימים האחרונים
+            </Text>
+            <Text style={[styles.metricValue, { color: tokens.colors.text.primary }]}>
+              {totalUsers.toLocaleString('he-IL')}
+            </Text>
           </View>
 
           <View
@@ -214,7 +173,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
                 series={series}
                 width={chartWidth}
                 lineColor={tokens.colors.primary.main}
-                gridColor="rgba(255,255,255,0.05)"
+                gridColor={tokens.colors.border.divider}
                 dotColor={tokens.colors.primary.lighter}
                 labelColor={tokens.colors.text.tertiary}
               />
@@ -222,93 +181,56 @@ export default function AdminDashboardScreen({ navigation }: any) {
               <View style={styles.chartPlaceholder} />
             )}
           </View>
+        </AdminSurface>
 
-          <View
-            style={[styles.stripDivider, { backgroundColor: tokens.colors.border.divider }]}
-          />
-
-          <View style={styles.metricsFooter}>
-            {plansLine ? (
-              <Text
-                style={[styles.metricsFooterText, { color: tokens.colors.text.secondary }]}
-                numberOfLines={1}
-              >
-                {plansLine}
-              </Text>
-            ) : null}
-            <Text
-              style={[styles.metricsFooterText, { color: tokens.colors.text.secondary }]}
-              numberOfLines={1}
-            >
-              הכנסות החודש {formatIls(monthRevenue)}
-            </Text>
-          </View>
-        </UICard>
-
-        <AdminSectionLabel>משתמשים וחיובים</AdminSectionLabel>
-        <UICard
-          variant="glass"
-          glassIntensity="light"
-          padding="none"
-          style={{
-            borderRadius: tokens.borderRadius.xl,
-            borderWidth: 1,
-            borderColor: chatPalette.glassBorder,
-            marginBottom: tokens.spacing.md,
-          }}
-        >
-          <ActionRow
+        <AdminSurface>
+          <SettingsActionRow
             title="ניהול משתמשים"
-            subtitle="חיפוש, פרימיום, השעיה ומחיקה"
+            icon={Users}
             onPress={() => {
               void HapticFeedback.impactLight();
               navigation.navigate('AdminUsers');
             }}
           />
-          <View
-            style={[styles.actionDivider, { backgroundColor: tokens.colors.border.divider }]}
-          />
-          <ActionRow
+          <SettingsActionRow
             title="בקרת תשלומים ומנויים"
-            subtitle="היסטוריית תשלומים, מנויים פעילים וחיובים קרובים"
+            icon={CreditCard}
             onPress={() => {
               void HapticFeedback.impactLight();
               navigation.navigate('AdminPayments');
             }}
           />
-        </UICard>
+          <SettingsActionRow
+            title="הגדרות CardCom"
+            icon={KeyRound}
+            showDivider={false}
+            onPress={() => {
+              void HapticFeedback.impactLight();
+              navigation.navigate('AdminCardCom');
+            }}
+          />
+        </AdminSurface>
 
         <AdminSectionLabel>תקשורת ותמיכה</AdminSectionLabel>
-        <UICard
-          variant="glass"
-          glassIntensity="light"
-          padding="none"
-          style={{
-            borderRadius: tokens.borderRadius.xl,
-            borderWidth: 1,
-            borderColor: chatPalette.glassBorder,
-          }}
-        >
-          <ActionRow
+        <AdminSurface>
+          <SettingsActionRow
             title="שליחת פוש"
-            subtitle="הודעה מותאמת לקהל יעד"
+            icon={Bell}
             onPress={() => {
               void HapticFeedback.impactLight();
               navigation.navigate('AdminPush');
             }}
           />
-          <View
-            style={[styles.actionDivider, { backgroundColor: tokens.colors.border.divider }]}
-          />
-          <ActionRow
+          <SettingsActionRow
             title="פניות תמיכה"
-            subtitle="תיבת טיקטים מהמשתמשים"
+            icon={LifeBuoy}
+            showDivider={false}
             onPress={() => {
               void HapticFeedback.impactLight();
               navigation.navigate('AdminTickets');
             }}
           />
-        </UICard>
+        </AdminSurface>
       </ScrollView>
     </SafeAreaView>
   );
@@ -385,7 +307,7 @@ function GrowthLineChart({
             x={c.x}
             y={H - 6}
             fill={labelColor}
-            fontSize={10}
+            fontSize={APP_TYPE.caption2.fontSize}
             textAnchor={anchor}
           >
             {formatShortHeDate(point.date)}
@@ -396,56 +318,27 @@ function GrowthLineChart({
   );
 }
 
-const ty = DesignTokens.typography;
-
-function ActionRow({
-  title,
-  subtitle,
-  onPress,
-}: {
-  title: string;
-  subtitle: string;
-  onPress: () => void;
-}) {
-  const tokens = useDesignTokens();
-  return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={styles.actionRow}>
-      <ChevronLeft size={20} color={tokens.colors.text.tertiary} strokeWidth={2} />
-      <View style={styles.actionText}>
-        <Text style={[styles.actionTitle, { color: tokens.colors.text.primary }]}>{title}</Text>
-        <Text style={[styles.actionSub, { color: tokens.colors.text.tertiary }]}>{subtitle}</Text>
-      </View>
-    </TouchableOpacity>
-  );
-}
-
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: 'transparent' },
-  totalBlock: {
-    alignItems: 'center',
-    marginBottom: 12,
+  metricBlock: {
+    width: '100%',
+    alignItems: 'flex-end',
+    marginBottom: APP_LAYOUT.cardTitleToBodyGap,
   },
-  totalValue: {
-    fontSize: 34,
-    fontWeight: ty.fontWeight.bold,
-    lineHeight: 40,
-    letterSpacing: -0.5,
+  metricLabel: {
+    ...adminPhysicalRightText,
+    ...adminCardTitle,
+  },
+  metricValue: {
+    ...adminPhysicalRightText,
+    ...adminMetric,
+    marginTop: APP_LAYOUT.cardTitleToBodyGap,
     fontVariant: ['tabular-nums'],
-    textAlign: 'center',
   },
-  totalLabel: {
-    marginTop: 2,
-    fontSize: ty.caption.size,
-    fontWeight: ty.fontWeight.semibold,
-    lineHeight: ty.caption.lineHeight,
-    textAlign: 'center',
-  },
-  intervalRow: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 12,
+  metricSubtitle: {
+    ...adminPhysicalRightText,
+    ...adminCardSubtitle,
+    marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
   },
   chartCanvas: {
     width: '100%',
@@ -455,46 +348,5 @@ const styles = StyleSheet.create({
   chartPlaceholder: {
     width: '100%',
     height: CHART_H,
-  },
-  stripDivider: {
-    height: StyleSheet.hairlineWidth,
-    marginTop: 12,
-    marginBottom: 12,
-  },
-  metricsFooter: {
-    alignItems: 'center',
-    gap: 6,
-  },
-  metricsFooterText: {
-    fontSize: ty.footnote.size,
-    fontWeight: ty.fontWeight.medium,
-    lineHeight: ty.footnote.lineHeight,
-    textAlign: 'center',
-  },
-  actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-  },
-  actionText: {
-    flex: 1,
-    marginStart: 12,
-  },
-  actionTitle: {
-    fontSize: ty.body.size,
-    fontWeight: ty.fontWeight.bold,
-    lineHeight: ty.body.lineHeight,
-    ...DesignTokens.rtlText,
-  },
-  actionSub: {
-    fontSize: ty.footnote.size,
-    lineHeight: ty.footnote.lineHeight,
-    marginTop: 3,
-    ...DesignTokens.rtlText,
-  },
-  actionDivider: {
-    height: StyleSheet.hairlineWidth,
-    marginHorizontal: 16,
   },
 });

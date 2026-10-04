@@ -26,6 +26,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import {
+  Banknote,
+  CalendarCheck,
+  CandlestickChart,
+  CircleDollarSign,
+  Eye,
+  Hash,
+  Wallet,
+  type LucideIcon,
+} from 'lucide-react-native';
 import { useQuery } from '@tanstack/react-query';
 import { ScreenChrome } from '../../components/ui/ScreenChrome';
 import UICard from '../../components/ui/UICard';
@@ -54,6 +64,7 @@ import {
   FEED_AVATAR_SIZE,
   FEED_CARD_TYPE,
   TRADE_HERO_UICARD,
+  FEED_RHYTHM,
   tradeHeroGlassFrameStyle,
   tradeHeroInnerCardStyle,
 } from './components/darkPoolFeedCardStyles';
@@ -101,6 +112,7 @@ import {
   buildCongressTradeDetailSummary,
   buildInsiderTradeDetailSummary,
   buildTradeDetailFieldRows,
+  type TradeDetailFieldIcon,
 } from './utils/tradeDetailSummary';
 
 type Nav = NativeStackNavigationProp<DarkPoolStackParamList, 'DarkPoolTradeDetail'>;
@@ -333,7 +345,9 @@ export default function DarkPoolTradeDetailScreen() {
               color={tokens.colors.text.primary}
             />
           </DayNavBlurButton>
-          <View style={styles.topBarSpacer} />
+          <Text style={styles.topBarTitle} numberOfLines={1} accessibilityRole="header">
+            פרטי עסקה
+          </Text>
           <DayNavBlurButton
             onPress={openHonesty}
             glassIntensity="subtle"
@@ -343,7 +357,7 @@ export default function DarkPoolTradeDetailScreen() {
             <Ionicons
               name="help-circle-outline"
               size={18}
-              color={tokens.colors.text.tertiary}
+              color={tokens.colors.text.secondary}
             />
           </DayNavBlurButton>
         </View>
@@ -354,7 +368,7 @@ export default function DarkPoolTradeDetailScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={[styles.card, tradeHeroGlassFrameStyle(tokens)]}>
-            <UICard {...TRADE_HERO_UICARD} style={tradeHeroInnerCardStyle(tokens)}>
+            <UICard {...TRADE_HERO_UICARD} style={tradeHeroInnerCardStyle(tokens)} contentContainerStyle={styles.heroPad}>
             <View style={heroStyles.heroBody}>
               <View style={heroStyles.headerRow}>
                 <Pressable
@@ -440,7 +454,12 @@ export default function DarkPoolTradeDetailScreen() {
 
           <View style={styles.section}>
             <DarkPoolSectionHeader variant="group" title="פרטי העסקה" />
-            <UICard variant="soft" glassIntensity="light" padding="md">
+            <UICard
+                variant="soft"
+                glassIntensity="light"
+                padding="none"
+                contentContainerStyle={styles.rowsCard}
+              >
               {buildTradeDetailFieldRows({
                 isCongress,
                 tickerSym,
@@ -456,35 +475,13 @@ export default function DarkPoolTradeDetailScreen() {
                   key={row.label}
                   label={row.label}
                   value={row.value}
+                  icon={row.icon}
                   ltr={row.ltr}
                   last={i === all.length - 1}
                 />
               ))}
             </UICard>
           </View>
-
-          {congressTrade &&
-          (hasAnyReturn(congressTrade) || sinceTradePct != null) ? (
-            <View style={styles.section}>
-              <DarkPoolSectionHeader
-                variant="group"
-                title="תשואה מאז העסקה"
-                subtitle="שינוי מחיר המניה מפתיחת יום העסקה מול חי — לא רווח/הפסד של הפוזיציה"
-              />
-              <UICard variant="soft" glassIntensity="light" padding="md">
-                <ReturnRow
-                  label="מחיר המניה"
-                  pct={sinceTradePct ?? congressTrade.price_change_pct}
-                />
-                <ReturnRow label="S&P 500" pct={congressTrade.spy_change_pct} />
-                <ReturnRow
-                  label="עודף תשואה מול המדד"
-                  pct={congressTrade.excess_return_pct}
-                  last
-                />
-              </UICard>
-            </View>
-          ) : null}
 
           {historyLoading || historyCount > 0 ? (
             <View style={styles.historySection}>
@@ -506,7 +503,12 @@ export default function DarkPoolTradeDetailScreen() {
                   <ActivityIndicator color={tokens.colors.primary.main} />
                 </View>
               ) : (
-                <UICard variant="soft" glassIntensity="light" padding="md">
+                <UICard
+                variant="soft"
+                glassIntensity="light"
+                padding="none"
+                contentContainerStyle={styles.rowsCard}
+              >
                   {otherCongressTrades.map((t, i) => (
                     <CongressHistoryRow
                       key={t.id}
@@ -540,24 +542,28 @@ export default function DarkPoolTradeDetailScreen() {
   );
 }
 
-function hasAnyReturn(trade: CongressFeedTrade): boolean {
-  return (
-    trade.price_change_pct != null ||
-    trade.spy_change_pct != null ||
-    trade.excess_return_pct != null
-  );
-}
-
 /* -------------------------------------------------------------------------- */
+
+const DETAIL_FIELD_ICONS: Record<TradeDetailFieldIcon, LucideIcon> = {
+  ticker: CandlestickChart,
+  amount: Banknote,
+  shares: Hash,
+  price: CircleDollarSign,
+  value: Wallet,
+  traded: CalendarCheck,
+  filed: Eye,
+};
 
 function DetailRow({
   label,
   value,
+  icon,
   ltr = false,
   last = false,
 }: {
   label: string;
   value: string | null | undefined;
+  icon: TradeDetailFieldIcon;
   ltr?: boolean;
   last?: boolean;
 }) {
@@ -565,98 +571,23 @@ function DetailRow({
   const styles = useMemo(() => rowStyles(tokens), [tokens]);
   const text = orUnavailable(value);
   const missing = text === DARK_POOL_UNAVAILABLE;
-  const color = missing ? tokens.colors.text.tertiary : tokens.colors.text.primary;
+  const Icon = DETAIL_FIELD_ICONS[icon];
 
   return (
     <View style={[styles.row, last && styles.rowLast]}>
-      <Text style={styles.label} numberOfLines={1}>
-        {label}
-      </Text>
+      <View style={styles.labelCluster}>
+        <Icon size={20} color={tokens.colors.text.primary} strokeWidth={2} />
+        <Text style={styles.label} numberOfLines={1}>
+          {label}
+        </Text>
+      </View>
       <Text
-        style={[styles.value, { color }, ltr && !missing ? styles.valueLtr : null]}
+        style={[styles.value, ltr && !missing ? styles.valueLtr : null]}
         numberOfLines={2}
         ellipsizeMode="tail"
       >
         {ltr && !missing ? toDataIsland(text) : text}
       </Text>
-    </View>
-  );
-}
-
-function ReturnRow({
-  label,
-  pct,
-  last = false,
-}: {
-  label: string;
-  pct: number | null | undefined;
-  last?: boolean;
-}) {
-  const tokens = useDesignTokens();
-  const styles = useMemo(() => rowStyles(tokens), [tokens]);
-  const text = formatReturnPct(pct);
-  const tone = returnTone(pct);
-  const color = !text
-    ? tokens.colors.text.tertiary
-    : tone === 'positive'
-      ? tokens.colors.primary.main
-      : tone === 'negative'
-        ? tokens.colors.text.danger
-        : tokens.colors.text.secondary;
-
-  return (
-    <View style={[styles.row, last && styles.rowLast]}>
-      <Text style={styles.label} numberOfLines={1}>
-        {label}
-      </Text>
-      {text ? (
-        <View style={styles.returnValueRow}>
-          <Text style={[styles.value, styles.valueLtr, { color }]} numberOfLines={1}>
-            {toDataIsland(text)}
-          </Text>
-        </View>
-      ) : (
-        <Text style={[styles.value, { color }]} numberOfLines={1}>
-          {DARK_POOL_UNAVAILABLE}
-        </Text>
-      )}
-    </View>
-  );
-}
-
-function ReturnLine({
-  label,
-  pct,
-}: {
-  label: string;
-  pct: number | null | undefined;
-}) {
-  const tokens = useDesignTokens();
-  const styles = useMemo(() => rowStyles(tokens), [tokens]);
-  const text = formatReturnPct(pct);
-  if (!text) return null;
-  const tone = returnTone(pct);
-  const color =
-    tone === 'positive'
-      ? tokens.colors.primary.main
-      : tone === 'negative'
-        ? tokens.colors.text.danger
-        : tokens.colors.text.secondary;
-
-  return (
-    <View style={styles.sinceBlock}>
-      <Text style={styles.inlineReturnLabel} numberOfLines={2}>
-        {label}
-      </Text>
-      <View style={styles.returnValueRow}>
-        <Text
-          style={[styles.inlineReturnValue, { color }]}
-          numberOfLines={1}
-          ellipsizeMode="clip"
-        >
-          {toDataIsland(text)}
-        </Text>
-      </View>
     </View>
   );
 }
@@ -768,25 +699,32 @@ function rowStyles(tokens: ReturnType<typeof useDesignTokens>) {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      gap: 12,
-      paddingVertical: 12,
+      gap: APP_LAYOUT.cardTitleToBodyGap,
+      paddingVertical: APP_LAYOUT.cardTitleToBodyGap,
       borderBottomWidth: 1,
       borderBottomColor: tokens.colors.border.divider,
     },
-    rowLast: { borderBottomWidth: 0, paddingBottom: 0 },
+    rowLast: { borderBottomWidth: 0 },
+    labelCluster: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      flexShrink: 1,
+      minWidth: 0,
+    },
     label: {
       ...darkPoolPhysicalRightText,
-      fontSize: FEED_CARD_TYPE.dates.fontSize,
-      lineHeight: FEED_CARD_TYPE.dates.lineHeight,
-      fontWeight: FEED_CARD_TYPE.dates.fontWeight,
-      color: tokens.colors.text.secondary,
+      fontSize: DARK_POOL_TYPE.cardBody.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardBody.lineHeight,
+      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
+      color: tokens.colors.text.primary,
       flexShrink: 0,
     },
     value: {
-      fontSize: FEED_CARD_TYPE.action.fontSize,
-      lineHeight: FEED_CARD_TYPE.action.lineHeight,
-      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
-      color: tokens.colors.text.primary,
+      fontSize: DARK_POOL_TYPE.cardBody.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardBody.lineHeight,
+      fontWeight: DARK_POOL_TYPE.cardBody.fontWeight,
+      color: tokens.colors.text.secondary,
       flexShrink: 1,
       minWidth: 0,
       textAlign: 'left',
@@ -795,64 +733,38 @@ function rowStyles(tokens: ReturnType<typeof useDesignTokens>) {
       writingDirection: 'ltr',
       fontVariant: ['tabular-nums'],
     },
-    returnValueRow: {
-      direction: 'ltr',
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 5,
-      flexShrink: 1,
-      minWidth: 0,
-    },
-    sinceBlock: {
-      marginTop: 2,
-      alignItems: 'stretch',
-      minWidth: 0,
-    },
-    inlineReturnValue: {
-      ...darkPoolPhysicalRightText,
-      fontSize: FEED_CARD_TYPE.dates.fontSize,
-      lineHeight: FEED_CARD_TYPE.dates.lineHeight,
-      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
-      fontVariant: ['tabular-nums'],
-      writingDirection: 'ltr',
-    },
-    inlineReturnLabel: {
-      fontSize: DARK_POOL_TYPE.caption2.fontSize,
-      lineHeight: DARK_POOL_TYPE.caption2.lineHeight,
-      fontWeight: DARK_POOL_TYPE.caption.fontWeight,
-      ...darkPoolPhysicalRightText,
-    },
     historyStart: {
       direction: 'rtl',
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
+      gap: APP_LAYOUT.stackGapSmall,
       flexShrink: 1,
       minWidth: 0,
     },
     dot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
     historyVerb: {
       ...darkPoolPhysicalRightText,
-      fontSize: DARK_POOL_TYPE.footnote.fontSize,
-      lineHeight: DARK_POOL_TYPE.footnote.lineHeight,
+      fontSize: DARK_POOL_TYPE.cardBody.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardBody.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       flexShrink: 1,
       minWidth: 0,
     },
     historyDate: {
-      fontSize: DARK_POOL_TYPE.caption.fontSize,
+      fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
       fontWeight: DARK_POOL_TYPE.caption.fontWeight,
-      color: tokens.colors.text.tertiary,
+      color: tokens.colors.text.secondary,
       fontVariant: ['tabular-nums'],
       writingDirection: 'ltr',
       flexShrink: 0,
     },
     historyAmount: {
       ...darkPoolPhysicalRightText,
-      fontSize: DARK_POOL_TYPE.caption.fontSize,
-      lineHeight: DARK_POOL_TYPE.caption.lineHeight,
+      fontSize: DARK_POOL_TYPE.cardBody.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardBody.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
-      color: tokens.colors.text.secondary,
+      color: tokens.colors.text.primary,
       flexShrink: 0,
     },
     historyAmountData: {
@@ -874,11 +786,20 @@ function createStyles(
       paddingHorizontal: tokens.layout.screenPadding,
       paddingTop: 4,
     },
-    topBarSpacer: { flex: 1 },
+    topBarTitle: {
+      flex: 1,
+      fontSize: DARK_POOL_TYPE.screenTitle.fontSize,
+      lineHeight: DARK_POOL_TYPE.screenTitle.lineHeight,
+      fontWeight: DARK_POOL_TYPE.screenTitle.fontWeight,
+      letterSpacing: DARK_POOL_TYPE.screenTitle.letterSpacing,
+      color: tokens.colors.text.primary,
+      textAlign: 'center',
+      writingDirection: 'rtl',
+    },
     scrollContent: {
       direction: 'rtl',
       paddingHorizontal: tokens.layout.screenPadding,
-      paddingTop: tokens.spacing.sm,
+      paddingTop: APP_LAYOUT.componentGap + 12,
       paddingBottom: bottomPadding + 32,
     },
     center: {
@@ -888,7 +809,15 @@ function createStyles(
       justifyContent: 'center',
     },
     card: {
-      marginBottom: 16,
+      marginBottom: APP_LAYOUT.sectionGap,
+    },
+    heroPad: {
+      paddingHorizontal: FEED_RHYTHM.cardPadH,
+      paddingVertical: FEED_RHYTHM.cardPadV,
+    },
+    rowsCard: {
+      paddingHorizontal: APP_LAYOUT.cardPadding,
+      paddingVertical: 4,
     },
     section: {
       marginBottom: APP_LAYOUT.sectionGap,
@@ -908,7 +837,7 @@ function createStyles(
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      gap: 10,
+      gap: APP_LAYOUT.cardTitleToBodyGap,
     },
     priceStart: {
       flexDirection: 'row',
@@ -918,7 +847,7 @@ function createStyles(
       flexBasis: 0,
       minWidth: 0,
     },
-    priceTexts: { gap: 1, minWidth: 0, flexShrink: 1 },
+    priceTexts: { gap: APP_LAYOUT.cardTitleToSubtitleGap, minWidth: 0, flexShrink: 1 },
     priceTicker: {
       fontSize: DARK_POOL_TYPE.cardTitle.fontSize,
       lineHeight: DARK_POOL_TYPE.cardTitle.lineHeight,
@@ -930,8 +859,9 @@ function createStyles(
     priceCaption: {
       ...darkPoolPhysicalRightText,
       fontSize: DARK_POOL_TYPE.caption.fontSize,
+      lineHeight: DARK_POOL_TYPE.caption.lineHeight,
       fontWeight: DARK_POOL_TYPE.caption.fontWeight,
-      color: tokens.colors.text.tertiary,
+      color: tokens.colors.text.secondary,
     },
     priceEnd: {
       alignItems: 'stretch',
@@ -951,8 +881,9 @@ function createStyles(
     priceMissing: {
       ...darkPoolPhysicalRightText,
       fontSize: DARK_POOL_TYPE.caption.fontSize,
+      lineHeight: DARK_POOL_TYPE.caption.lineHeight,
       fontWeight: DARK_POOL_TYPE.caption.fontWeight,
-      color: tokens.colors.text.tertiary,
+      color: tokens.colors.text.secondary,
     },
     historyLoading: {
       paddingVertical: 12,
@@ -964,9 +895,10 @@ function createStyles(
     },
     emptyBody: {
       ...darkPoolPhysicalRightText,
-      fontSize: DARK_POOL_TYPE.footnote.fontSize,
-      lineHeight: 20,
-      fontWeight: DARK_POOL_TYPE.caption.fontWeight,
+      marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
+      fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
+      fontWeight: DARK_POOL_TYPE.cardSubtitle.fontWeight,
       color: tokens.colors.text.secondary,
     },
   });

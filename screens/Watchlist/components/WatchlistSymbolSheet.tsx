@@ -13,46 +13,48 @@ import { Ionicons } from '@expo/vector-icons';
 import BottomSheet, {
   useBottomSheetClose,
 } from '../../../components/ui/BottomSheet/BottomSheet';
-import { sheetContentBottomPadding } from '../../../components/ui/BottomSheet/sheetGlass';
-import UICard from '../../../components/ui/UICard';
 import UIButton from '../../../components/ui/UIButton';
+import UICard from '../../../components/ui/UICard';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
-import { APP_LAYOUT, UI_CARD_RADIUS } from '../../../components/ui/appLayout';
+import { APP_LAYOUT } from '../../../components/ui/appLayout';
 import {
-  appBodyTextStyle,
-  appCaption2Style,
+  APP_TYPE,
   appCaptionStyle,
   appCardBodyStyle,
-  appCardMetricValueSecondaryStyle,
   appCardSubtitleStyle,
   appCardTitleStyle,
   appGroupLabelStyle,
+  appPhysicalLeftText,
+  appPhysicalRightText,
   appSheetButtonLabelStyle,
-  APP_TYPE,
 } from '../../../components/ui/appType';
 import {
   formFieldInputStyle,
-  formFieldLabelStyle,
   formFieldShellStyle,
 } from '../../../components/ui/formControl';
+import { SignedChangePair } from '../../../components/ui/ChangeDot';
 import {
   DayNavBlurButton,
-  DAY_NAV_BUTTON_SIZE,
+  HEADER_BACK_BTN_SIZE,
 } from '../../../components/ui/DayNavBlurButton';
-import { HapticFeedback } from '../../../utils/hapticFeedback';
-import { ensureNotificationCategoryOn } from '../../../lib/notificationPrefs';
-import { TickerLogo } from '../../Portfolios/components/TickerLogo';
 import { MarketsTradingView } from '../../Markets/components/MarketsTradingView';
 import { getTradingViewSymbolChartHTML } from '../../Markets/embeds/tradingViewEmbeds';
+import { HapticFeedback } from '../../../utils/hapticFeedback';
+import { ensureNotificationCategoryOn } from '../../../lib/notificationPrefs';
+import { useTheme } from '../../../context/ThemeContext';
+import { TickerLogo } from '../../Portfolios/components/TickerLogo';
+import { toDataIsland } from '../../DarkPool/utils/bidi';
+import {
+  formatTickerAbsChange,
+  formatTickerLivePrice,
+  formatTickerPctChange,
+  tickerChangeTone,
+} from '../../DarkPool/utils/tickerChart';
 import type {
   WatchlistItemPatch,
   WatchlistRowData,
 } from '../../../services/watchlist/watchlistTypes';
 import {
-  DAILY_CHANGE_PRESETS,
-  ENTRY_GAIN_PRESETS,
-  ENTRY_LOSS_PRESETS,
-  PRICE_MOVE_PRESETS,
   addThreshold,
   parseThresholdList,
   toggleThreshold,
@@ -74,14 +76,14 @@ type Props = {
   }) => void;
 };
 
-const CHART_HEIGHT = 280;
-/**
- * שיט גבוה (גרף + התראות מרובות).
- * fitContent + snapPoints = מעוגן לתחתית בגובה ה-snap (בלי אזור off-screen
- * שחותך את ה-footer). לא fitContent בלבד בלי flex — וגם לא snapPoints
- * על container בגובה מסך מלא בלי פיצוי.
- */
+/** שיט גבוה (גרף + נתונים + התראות). fitContent + snap = מעוגן לתחתית. */
 const SHEET_SNAP = 0.92;
+const CHART_HEIGHT = 240;
+
+type Chip = { key: string; label: string };
+type PriceSide = 'above' | 'below';
+type AlertEditorKey = 'price' | 'daily';
+type IonName = React.ComponentProps<typeof Ionicons>['name'];
 
 function formatPrice(n: number | null | undefined): string {
   if (n == null || !Number.isFinite(n)) return '—';
@@ -89,12 +91,6 @@ function formatPrice(n: number | null | undefined): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
-}
-
-function formatSigned(n: number | null | undefined, digits = 2): string {
-  if (n == null || !Number.isFinite(n)) return '—';
-  const sign = n > 0 ? '+' : '';
-  return `${sign}${n.toFixed(digits)}`;
 }
 
 function formatVolume(n: number | null | undefined): string {
@@ -105,11 +101,26 @@ function formatVolume(n: number | null | undefined): string {
   return `${Math.round(n)}`;
 }
 
+function formatPctLabel(n: number): string {
+  const rounded = Math.round(n * 100) / 100;
+  return Number.isInteger(rounded) ? String(rounded) : String(rounded);
+}
+
 function parseNum(text: string): number | null {
   const t = text.trim().replace(',', '');
   if (!t) return null;
   const n = Number(t);
   return Number.isFinite(n) ? n : null;
+}
+
+function splitChipKey(key: string): { kind: string; raw: string } {
+  const i = key.indexOf(':');
+  return { kind: key.slice(0, i), raw: key.slice(i + 1) };
+}
+
+function summarizeChips(chips: Chip[], empty: string): string {
+  if (chips.length === 0) return empty;
+  return chips.map((chip) => chip.label).join('  ·  ');
 }
 
 export function WatchlistSymbolSheet({
@@ -121,8 +132,8 @@ export function WatchlistSymbolSheet({
   onSaveNotes,
   onRemove,
   onPatch,
-  onAddToJournal,
 }: Props) {
+  const tokens = useDesignTokens();
   const symbol = row?.item?.symbol ?? '';
 
   return (
@@ -136,7 +147,8 @@ export function WatchlistSymbolSheet({
       enablePanDownToClose
       useModal
       showBrandBackground={false}
-      topCornerRadius={UI_CARD_RADIUS}
+      backgroundColor={tokens.colors.background.primary}
+      topCornerRadius={tokens.borderRadius.xl}
       avoidKeyboard
       contentPaddingBottom={0}
     >
@@ -150,7 +162,6 @@ export function WatchlistSymbolSheet({
           onSaveNotes={onSaveNotes}
           onRemove={onRemove}
           onPatch={onPatch}
-          onAddToJournal={onAddToJournal}
         />
       ) : null}
     </BottomSheet>
@@ -166,7 +177,6 @@ function Body({
   onSaveNotes,
   onRemove,
   onPatch,
-  onAddToJournal,
 }: {
   row: WatchlistRowData;
   symbol: string;
@@ -176,34 +186,23 @@ function Body({
   onSaveNotes: () => void | Promise<void>;
   onRemove: () => void;
   onPatch: (itemId: string, patch: WatchlistItemPatch) => Promise<void>;
-  onAddToJournal: (payload: {
-    symbol: string;
-    entryPrice?: number | null;
-    notes?: string | null;
-  }) => void;
 }) {
   const tokens = useDesignTokens();
   const insets = useSafeAreaInsets();
   const animatedClose = useBottomSheetClose();
   const styles = useStyles();
-  /** Footer מנהל את ה-safe-area — BottomSheet עם contentPaddingBottom={0} */
-  const footerPadBottom = useMemo(
-    () => sheetContentBottomPadding(insets.bottom),
-    [insets.bottom]
-  );
+  const footerPadBottom = Math.max(insets.bottom, 8);
+  const chartHtml = useMemo(() => getTradingViewSymbolChartHTML(symbol), [symbol]);
 
-  const [entryText, setEntryText] = useState('');
-  const [targetText, setTargetText] = useState('');
   const [alertAbovePrices, setAlertAbovePrices] = useState<number[]>([]);
   const [alertBelowPrices, setAlertBelowPrices] = useState<number[]>([]);
   const [alertChangePcts, setAlertChangePcts] = useState<number[]>([]);
-  const [entryGainPcts, setEntryGainPcts] = useState<number[]>([]);
-  const [entryLossPcts, setEntryLossPcts] = useState<number[]>([]);
-  const [alertAboveText, setAlertAboveText] = useState('');
-  const [alertBelowText, setAlertBelowText] = useState('');
-  const [alertPctText, setAlertPctText] = useState('');
-  const [entryGainText, setEntryGainText] = useState('');
-  const [entryLossText, setEntryLossText] = useState('');
+  const [priceDraft, setPriceDraft] = useState('');
+  const [dailyDraft, setDailyDraft] = useState('');
+  const [priceSide, setPriceSide] = useState<PriceSide>('above');
+  const [priceAlertsOn, setPriceAlertsOn] = useState(false);
+  const [dailyAlertsOn, setDailyAlertsOn] = useState(false);
+  const [openAlert, setOpenAlert] = useState<AlertEditorKey | null>(null);
   const [alertsOn, setAlertsOn] = useState(false);
   const [alertDayHigh, setAlertDayHigh] = useState(false);
   const [alertWeekHigh, setAlertWeekHigh] = useState(false);
@@ -216,28 +215,18 @@ function Body({
 
   useEffect(() => {
     const item = row.item;
-    setEntryText(item.entry_price != null ? String(item.entry_price) : '');
-    setTargetText(item.target_price != null ? String(item.target_price) : '');
-    setAlertAbovePrices(
-      parseThresholdList(item.alert_above_prices, item.alert_above)
-    );
-    setAlertBelowPrices(
-      parseThresholdList(item.alert_below_prices, item.alert_below)
-    );
-    setAlertChangePcts(
-      parseThresholdList(item.alert_change_pcts, item.alert_change_pct)
-    );
-    setEntryGainPcts(
-      parseThresholdList(item.alert_entry_gain_pcts, item.alert_entry_gain_pct)
-    );
-    setEntryLossPcts(
-      parseThresholdList(item.alert_entry_loss_pcts, item.alert_entry_loss_pct)
-    );
-    setAlertAboveText('');
-    setAlertBelowText('');
-    setAlertPctText('');
-    setEntryGainText('');
-    setEntryLossText('');
+    const nextAbove = parseThresholdList(item.alert_above_prices, item.alert_above);
+    const nextBelow = parseThresholdList(item.alert_below_prices, item.alert_below);
+    const nextChange = parseThresholdList(item.alert_change_pcts, item.alert_change_pct);
+    setAlertAbovePrices(nextAbove);
+    setAlertBelowPrices(nextBelow);
+    setAlertChangePcts(nextChange);
+    setPriceAlertsOn(nextAbove.length + nextBelow.length > 0);
+    setDailyAlertsOn(nextChange.length > 0);
+    setPriceDraft('');
+    setDailyDraft('');
+    setPriceSide('above');
+    setOpenAlert(null);
     setAlertsOn(!!item.alerts_enabled);
     setAlertDayHigh(!!item.alert_day_high);
     setAlertWeekHigh(!!item.alert_week_high);
@@ -248,24 +237,13 @@ function Body({
     setAlertEarnings(!!item.alert_earnings);
   }, [row.item.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const company = row.item.company_name?.trim() || '';
-  const chartHtml = useMemo(
-    () => getTradingViewSymbolChartHTML(symbol),
-    [symbol]
-  );
-
-  const up = (row.changePct ?? 0) > 0.005;
-  const down = (row.changePct ?? 0) < -0.005;
-  const tone = up
-    ? tokens.colors.primary.main
-    : down
-      ? tokens.colors.text.danger
-      : tokens.colors.text.tertiary;
-  const toneSoft = up
-    ? tokens.colors.primary.dim
-    : down
-      ? 'rgba(255, 68, 68, 0.14)'
-      : tokens.colors.selection.subtle;
+  const company = row.item.company_name?.trim() ?? '';
+  const priceText = formatTickerLivePrice(row.price) ?? '—';
+  const hasMove =
+    row.change != null &&
+    Number.isFinite(row.change) &&
+    row.changePct != null &&
+    Number.isFinite(row.changePct);
 
   const handleClose = useCallback(() => {
     if (animatedClose) animatedClose();
@@ -280,31 +258,24 @@ function Body({
   const saveAll = useCallback(async () => {
     setSavingMeta(true);
     try {
-      let nextAbove = alertAbovePrices;
-      let nextBelow = alertBelowPrices;
-      let nextChange = alertChangePcts;
-      let nextGain = entryGainPcts;
-      let nextLoss = entryLossPcts;
+      let nextAbove = priceAlertsOn ? alertAbovePrices : [];
+      let nextBelow = priceAlertsOn ? alertBelowPrices : [];
+      let nextChange = dailyAlertsOn ? alertChangePcts : [];
 
-      const pendingAbove = parseNum(alertAboveText);
-      const pendingBelow = parseNum(alertBelowText);
-      const pendingChange = parseNum(alertPctText);
-      const pendingGain = parseNum(entryGainText);
-      const pendingLoss = parseNum(entryLossText);
-      if (pendingAbove != null) nextAbove = addThreshold(nextAbove, pendingAbove);
-      if (pendingBelow != null) nextBelow = addThreshold(nextBelow, pendingBelow);
-      if (pendingChange != null) nextChange = addThreshold(nextChange, pendingChange);
-      if (pendingGain != null) nextGain = addThreshold(nextGain, pendingGain);
-      if (pendingLoss != null) nextLoss = addThreshold(nextLoss, pendingLoss);
+      const pendingPrice = priceAlertsOn ? parseNum(priceDraft) : null;
+      const pendingDaily = dailyAlertsOn ? parseNum(dailyDraft) : null;
+      if (pendingPrice != null) {
+        if (priceSide === 'above') nextAbove = addThreshold(nextAbove, pendingPrice);
+        else nextBelow = addThreshold(nextBelow, pendingPrice);
+      }
+      if (pendingDaily != null) nextChange = addThreshold(nextChange, pendingDaily);
 
       await onPatch(row.item.id, {
-        entry_price: parseNum(entryText),
-        target_price: parseNum(targetText),
         alert_above_prices: nextAbove,
         alert_below_prices: nextBelow,
         alert_change_pcts: nextChange,
-        alert_entry_gain_pcts: nextGain,
-        alert_entry_loss_pcts: nextLoss,
+        alert_entry_gain_pcts: [],
+        alert_entry_loss_pcts: [],
         alerts_enabled: alertsOn,
         alert_day_high: alertDayHigh,
         alert_week_high: alertWeekHigh,
@@ -317,13 +288,10 @@ function Body({
       setAlertAbovePrices(nextAbove);
       setAlertBelowPrices(nextBelow);
       setAlertChangePcts(nextChange);
-      setEntryGainPcts(nextGain);
-      setEntryLossPcts(nextLoss);
-      setAlertAboveText('');
-      setAlertBelowText('');
-      setAlertPctText('');
-      setEntryGainText('');
-      setEntryLossText('');
+      setPriceAlertsOn(nextAbove.length + nextBelow.length > 0);
+      setDailyAlertsOn(nextChange.length > 0);
+      setPriceDraft('');
+      setDailyDraft('');
       await Promise.resolve(onSaveNotes());
       void HapticFeedback.success();
     } finally {
@@ -333,18 +301,14 @@ function Body({
     onPatch,
     onSaveNotes,
     row.item.id,
-    entryText,
-    targetText,
     alertAbovePrices,
     alertBelowPrices,
     alertChangePcts,
-    entryGainPcts,
-    entryLossPcts,
-    alertAboveText,
-    alertBelowText,
-    alertPctText,
-    entryGainText,
-    entryLossText,
+    priceAlertsOn,
+    dailyAlertsOn,
+    priceDraft,
+    dailyDraft,
+    priceSide,
     alertsOn,
     alertDayHigh,
     alertWeekHigh,
@@ -358,7 +322,7 @@ function Body({
   const togglePreset = useCallback(
     (key: string, value: boolean) => {
       void HapticFeedback.selection();
-      if (!alertsOn && value) setAlertsOn(true);
+      if (!alertsOn && value) enableAlerts();
       switch (key) {
         case 'day_high':
           setAlertDayHigh(value);
@@ -385,71 +349,197 @@ function Body({
           break;
       }
     },
-    [alertsOn]
+    [alertsOn, enableAlerts]
   );
 
-  const presets: Array<{ key: string; label: string; on: boolean }> = [
-    { key: 'week_high', label: 'שיא שבועי', on: alertWeekHigh },
-    { key: 'week_low', label: 'שפל שבועי', on: alertWeekLow },
-    { key: 'y52_high', label: 'שיא 52ש׳', on: alert52wHigh },
-    { key: 'y52_low', label: 'שפל 52ש׳', on: alert52wLow },
-    { key: 'day_high', label: 'שיא יומי', on: alertDayHigh },
-    { key: 'target', label: 'הגעה ליעד', on: alertTargetHit },
-    { key: 'earnings', label: 'דיווח קרוב', on: alertEarnings },
+  const presets: Array<{ key: string; label: string; on: boolean; icon: IonName }> = [
+    { key: 'day_high', label: 'שיא יומי', on: alertDayHigh, icon: 'sunny-outline' },
+    { key: 'week_high', label: 'שיא שבועי', on: alertWeekHigh, icon: 'trending-up' },
+    { key: 'week_low', label: 'שפל שבועי', on: alertWeekLow, icon: 'trending-down' },
+    { key: 'y52_high', label: 'שיא 52 שבועות', on: alert52wHigh, icon: 'flag-outline' },
+    { key: 'y52_low', label: 'שפל 52 שבועות', on: alert52wLow, icon: 'flag' },
+    { key: 'target', label: 'הגעה ליעד', on: alertTargetHit, icon: 'locate-outline' },
+    { key: 'earnings', label: 'דיווח קרוב', on: alertEarnings, icon: 'calendar-outline' },
   ];
 
-  const dayRows = [
-    { label: 'פתיחה', value: formatPrice(row.open) },
-    { label: 'גבוה', value: formatPrice(row.dayHigh) },
-    { label: 'נמוך', value: formatPrice(row.dayLow) },
-    { label: 'סגירה קודמת', value: formatPrice(row.previousClose) },
-    { label: 'ווליום', value: formatVolume(row.volume) },
-    { label: 'שיא שבועי', value: formatPrice(row.weekHigh) },
-    { label: 'שפל שבועי', value: formatPrice(row.weekLow) },
-    { label: 'שיא 52ש׳', value: formatPrice(row.high52) },
-    { label: 'שפל 52ש׳', value: formatPrice(row.low52) },
+  const dayRows: Array<{ label: string; value: string; icon: IonName }> = [
+    { label: 'פתיחה', value: formatPrice(row.open), icon: 'sunny-outline' },
+    { label: 'גבוה', value: formatPrice(row.dayHigh), icon: 'arrow-up' },
+    { label: 'נמוך', value: formatPrice(row.dayLow), icon: 'arrow-down' },
+    { label: 'סגירה קודמת', value: formatPrice(row.previousClose), icon: 'time-outline' },
+    { label: 'ווליום', value: formatVolume(row.volume), icon: 'bar-chart-outline' },
+    { label: 'שיא שבועי', value: formatPrice(row.weekHigh), icon: 'trending-up' },
+    { label: 'שפל שבועי', value: formatPrice(row.weekLow), icon: 'trending-down' },
+    { label: 'שיא 52 שבועות', value: formatPrice(row.high52), icon: 'flag-outline' },
+    { label: 'שפל 52 שבועות', value: formatPrice(row.low52), icon: 'flag' },
+  ];
+  if (row.earningsDate) {
+    dayRows.push({
+      label: 'דיווח רווח',
+      value: row.earningsSession
+        ? `${row.earningsDate} · ${row.earningsSession}`
+        : row.earningsDate,
+      icon: 'calendar-outline',
+    });
+  }
+
+  const priceSelected: Chip[] = [
+    ...alertAbovePrices.map((level) => ({
+      key: `above:${level}`,
+      label: `מעל ${formatPrice(level)}`,
+    })),
+    ...alertBelowPrices.map((level) => ({
+      key: `below:${level}`,
+      label: `מתחת ${formatPrice(level)}`,
+    })),
   ];
 
-  const eventBits: string[] = [];
-  if (row.earningsDate) eventBits.push(`דיווח רווח ${row.earningsDate}`);
+  const dailySelected: Chip[] = alertChangePcts.map((pct) => ({
+    key: `daily:${pct}`,
+    label: `${formatPctLabel(pct)}%`,
+  }));
+
+  const applyPriceKey = useCallback(
+    (key: string, mode: 'add' | 'remove') => {
+      const { kind, raw } = splitChipKey(key);
+      const n = Number(raw);
+      if (!Number.isFinite(n)) return;
+      void HapticFeedback.selection();
+      const update = kind === 'below' ? setAlertBelowPrices : setAlertAbovePrices;
+      update((prev) =>
+        mode === 'add' ? addThreshold(prev, n) : toggleThreshold(prev, n)
+      );
+      if (mode === 'add') {
+        setPriceAlertsOn(true);
+        enableAlerts();
+      }
+    },
+    [enableAlerts]
+  );
+
+  const applyDailyKey = useCallback(
+    (key: string, mode: 'add' | 'remove') => {
+      const n = Number(splitChipKey(key).raw);
+      if (!Number.isFinite(n)) return;
+      void HapticFeedback.selection();
+      setAlertChangePcts((prev) =>
+        mode === 'add' ? addThreshold(prev, n) : toggleThreshold(prev, n)
+      );
+      if (mode === 'add') {
+        setDailyAlertsOn(true);
+        enableAlerts();
+      }
+    },
+    [enableAlerts]
+  );
+
+  const submitPriceDraft = useCallback(() => {
+    const n = parseNum(priceDraft);
+    if (n == null) return;
+    applyPriceKey(`${priceSide}:${n}`, 'add');
+    setPriceDraft('');
+  }, [applyPriceKey, priceDraft, priceSide]);
+
+  const submitDailyDraft = useCallback(() => {
+    const n = parseNum(dailyDraft);
+    if (n == null) return;
+    applyDailyKey(`daily:${n}`, 'add');
+    setDailyDraft('');
+  }, [applyDailyKey, dailyDraft]);
+
+  const setPriceEnabled = useCallback(
+    (on: boolean) => {
+      void HapticFeedback.selection();
+      if (on) {
+        setPriceAlertsOn(true);
+        setOpenAlert('price');
+        enableAlerts();
+        return;
+      }
+      setPriceAlertsOn(false);
+      setAlertAbovePrices([]);
+      setAlertBelowPrices([]);
+      setPriceDraft('');
+      setOpenAlert((prev) => (prev === 'price' ? null : prev));
+    },
+    [enableAlerts]
+  );
+
+  const setDailyEnabled = useCallback(
+    (on: boolean) => {
+      void HapticFeedback.selection();
+      if (on) {
+        setDailyAlertsOn(true);
+        setOpenAlert('daily');
+        enableAlerts();
+        return;
+      }
+      setDailyAlertsOn(false);
+      setAlertChangePcts([]);
+      setDailyDraft('');
+      setOpenAlert((prev) => (prev === 'daily' ? null : prev));
+    },
+    [enableAlerts]
+  );
+
+  const toggleEditor = useCallback((key: AlertEditorKey) => {
+    void HapticFeedback.selection();
+    setOpenAlert((prev) => (prev === key ? null : key));
+  }, []);
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <DayNavBlurButton
-          onPress={() => {
-            void HapticFeedback.selection();
-            handleClose();
-          }}
-          size={DAY_NAV_BUTTON_SIZE}
-          glassIntensity="subtle"
-          accessibilityLabel="סגור"
-        >
-          <Ionicons
-            name="chevron-forward"
-            size={22}
-            color={tokens.colors.text.primary}
-          />
-        </DayNavBlurButton>
-
-        <View style={styles.identity}>
-          <View style={styles.headerLogo}>
-            <TickerLogo symbol={symbol} size={40} />
-          </View>
-          <View style={styles.identityText}>
-            <Text style={styles.symbol}>{symbol}</Text>
-            {company ? (
-              <Text style={styles.company} numberOfLines={1}>
-                {company}
-              </Text>
-            ) : null}
+        <View style={styles.topBar}>
+          <View style={styles.closeSlot}>
+            <DayNavBlurButton
+              glass
+              glassIntensity="light"
+              onPress={handleClose}
+              size={HEADER_BACK_BTN_SIZE}
+              accessibilityLabel="סגור"
+            >
+              <Ionicons
+                name="chevron-forward"
+                size={22}
+                color={tokens.colors.text.primary}
+              />
+            </DayNavBlurButton>
           </View>
         </View>
 
-        <View style={[styles.pctBadge, { backgroundColor: toneSoft }]}>
-          <Text style={[styles.pctBadgeText, { color: tone }]}>
-            {formatSigned(row.changePct)}%
-          </Text>
+        <View style={styles.heroBlock}>
+          <View style={styles.priceRow}>
+            <View style={styles.priceCol}>
+              <Text style={styles.livePrice}>{toDataIsland(priceText)}</Text>
+              {hasMove ? (
+                <SignedChangePair
+                  tone={tickerChangeTone(row.changePct)}
+                  style={styles.liveChangeRow}
+                  textStyle={styles.liveChange}
+                  isolate={toDataIsland}
+                  absText={formatTickerAbsChange(row.change as number)}
+                  pctText={formatTickerPctChange(row.changePct as number)}
+                />
+              ) : (
+                <Text style={[styles.liveChange, styles.liveChangeMuted]}>—</Text>
+              )}
+              {row.isLive ? <Text style={styles.liveTag}>חי</Text> : null}
+            </View>
+            <View style={styles.identityRow}>
+              <TickerLogo symbol={symbol} size={48} borderRadius={24} />
+              <View style={styles.identityText}>
+                <Text style={styles.identityTicker} numberOfLines={1}>
+                  {toDataIsland(symbol)}
+                </Text>
+                {company ? (
+                  <Text style={styles.companyName} numberOfLines={1}>
+                    {company}
+                  </Text>
+                ) : null}
+              </View>
+            </View>
+          </View>
         </View>
       </View>
 
@@ -459,533 +549,113 @@ function Body({
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.quoteStrip}>
-          <Text style={styles.lastPrice}>{formatPrice(row.price)}</Text>
-          <Text style={[styles.dayChange, { color: tone }]}>
-            {formatSigned(row.change)}
-          </Text>
-          {row.vsEntryPct != null ? (
-            <Text style={styles.vsHint}>
-              מול כניסה {formatSigned(row.vsEntryPct)}%
-            </Text>
-          ) : null}
-          {row.vsTargetPct != null ? (
-            <Text style={styles.vsHint}>
-              ליעד {formatSigned(row.vsTargetPct)}%
-            </Text>
-          ) : null}
-        </View>
-
-        {eventBits.length > 0 ? (
-          <View style={styles.eventRow}>
-            {eventBits.map((b) => (
-              <Text key={b} style={styles.eventChip}>
-                {b}
-              </Text>
-            ))}
-          </View>
-        ) : null}
-
-        <UIButton
-          title="פתח ביומן"
-          variant="secondary"
-          fullWidth
-          onPress={() => {
-            onAddToJournal({
-              symbol,
-              entryPrice: row.price ?? row.item.entry_price,
-              notes: notes || row.item.notes,
-            });
-          }}
-        />
-
-        <UICard
-          variant="soft"
-          padding="none"
-          style={styles.chartCard}
-          contentContainerStyle={styles.chartInner}
-        >
+        <UICard variant="soft" glassIntensity="subtle" padding="none" style={styles.chartCard}>
           <MarketsTradingView
             html={chartHtml}
             instanceKey={`watchlist-sheet-${symbol}`}
             height={CHART_HEIGHT}
-            containerStyle={styles.chartWebView}
             loadingBackgroundColor="transparent"
           />
         </UICard>
 
-        <UICard variant="soft" padding="md" style={styles.card}>
-          <Text style={styles.sectionTitle}>נתוני היום</Text>
-          {dayRows.map((item, index) => (
-            <View
-              key={item.label}
-              style={[
-                styles.metaRow,
-                index < dayRows.length - 1 && styles.metaRowBorder,
-              ]}
-            >
-              <Text style={styles.metaLabel}>{item.label}</Text>
-              <Text style={styles.metaValue}>{item.value}</Text>
-            </View>
-          ))}
-        </UICard>
-
-        <UICard variant="soft" padding="md" style={styles.card}>
-          <Text style={styles.sectionTitle}>ייחוס ויעד</Text>
-          <View style={styles.fieldRow}>
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>מחיר כניסה</Text>
-              <TextInput
-                style={styles.fieldInput}
-                value={entryText}
-                onChangeText={setEntryText}
-                keyboardType="decimal-pad"
-                placeholder="0.00"
-                placeholderTextColor={tokens.colors.text.muted}
+        <View>
+          <Text style={styles.groupHeading}>נתוני היום</Text>
+          <UICard variant="soft" glassIntensity="subtle" padding="none">
+            {dayRows.map((item, index) => (
+              <TopoValueRow
+                key={item.label}
+                icon={item.icon}
+                label={item.label}
+                value={item.value}
+                showDivider={index < dayRows.length - 1}
               />
-            </View>
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>יעד</Text>
-              <TextInput
-                style={styles.fieldInput}
-                value={targetText}
-                onChangeText={setTargetText}
-                keyboardType="decimal-pad"
-                placeholder="0.00"
-                placeholderTextColor={tokens.colors.text.muted}
-              />
-            </View>
-          </View>
-        </UICard>
+            ))}
+          </UICard>
+        </View>
 
-        <UICard variant="soft" padding="md" style={styles.card}>
-          <View style={styles.alertHeader}>
-            <Text style={styles.alertTitle}>התראות</Text>
-            <Switch
+        <View>
+          <Text style={styles.groupHeading}>התראות</Text>
+          <UICard variant="soft" glassIntensity="subtle" padding="none">
+            <AlertSwitchRow
+              icon="notifications-outline"
+              title="התראות"
               value={alertsOn}
               onValueChange={(v) => {
                 void HapticFeedback.selection();
                 setAlertsOn(v);
+                if (!v) setOpenAlert(null);
                 if (v) void ensureNotificationCategoryOn('watchlistNotifications');
               }}
-              trackColor={{
-                false: tokens.colors.background.tertiary,
-                true: tokens.colors.primary.dim,
-              }}
-              thumbColor={
-                alertsOn ? tokens.colors.primary.main : tokens.colors.text.tertiary
-              }
+              showDivider
             />
-          </View>
-
-          <Text style={[styles.presetLabel, styles.presetLabelFirst]}>תבניות</Text>
-          <View style={styles.presetGrid}>
-            {presets.map((p) => (
-              <Pressable
-                key={p.key}
-                style={[styles.presetBtn, p.on && styles.presetBtnOn]}
-                onPress={() => togglePreset(p.key, !p.on)}
-              >
-                <Text style={[styles.presetText, p.on && styles.presetTextOn]}>
-                  {p.label}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-
-          <Text style={styles.presetLabel}>
-            רווח מהכניסה +% · אפשר כמה
-          </Text>
-          <View style={styles.presetGrid}>
-            {ENTRY_GAIN_PRESETS.map((pct) => {
-              const on = entryGainPcts.some((n) => Math.abs(n - pct) < 1e-9);
-              return (
-                <Pressable
-                  key={`gain-${pct}`}
-                  style={[styles.presetBtn, on && styles.presetBtnOn]}
-                  onPress={() => {
-                    void HapticFeedback.selection();
-                    setEntryGainPcts((prev) => toggleThreshold(prev, pct));
-                    enableAlerts();
-                  }}
-                >
-                  <Text style={[styles.presetText, on && styles.presetTextOn]}>
-                    +{pct}%
-                  </Text>
-                </Pressable>
-              );
-            })}
-            {entryGainPcts
-              .filter((pct) => !ENTRY_GAIN_PRESETS.some((p) => Math.abs(p - pct) < 1e-9))
-              .map((pct) => (
-                <Pressable
-                  key={`gain-custom-${pct}`}
-                  style={[styles.presetBtn, styles.presetBtnOn]}
-                  onPress={() => {
-                    void HapticFeedback.selection();
-                    setEntryGainPcts((prev) => toggleThreshold(prev, pct));
-                  }}
-                >
-                  <Text style={[styles.presetText, styles.presetTextOn]}>
-                    +{pct}% ×
-                  </Text>
-                </Pressable>
+            <View
+              style={!alertsOn ? styles.alertsLocked : undefined}
+              pointerEvents={alertsOn ? 'auto' : 'none'}
+            >
+              {presets.map((preset) => (
+                <AlertSwitchRow
+                  key={preset.key}
+                  icon={preset.icon}
+                  title={preset.label}
+                  value={preset.on}
+                  onValueChange={(v) => togglePreset(preset.key, v)}
+                  showDivider
+                />
               ))}
-          </View>
-          <View style={[styles.fieldRow, { marginTop: 8 }]}>
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>מותאם אישית</Text>
-              <TextInput
-                style={styles.fieldInput}
-                value={entryGainText}
-                onChangeText={setEntryGainText}
-                onSubmitEditing={() => {
-                  const n = parseNum(entryGainText);
-                  if (n == null) return;
-                  setEntryGainPcts((prev) => addThreshold(prev, n));
-                  setEntryGainText('');
-                  enableAlerts();
-                }}
-                keyboardType="decimal-pad"
-                placeholder="הוסף %…"
-                placeholderTextColor={tokens.colors.text.muted}
-                returnKeyType="done"
+              <AlertEditorRow
+                icon="pricetag-outline"
+                title="מחיר"
+                subtitle={summarizeChips(priceSelected, 'הוספת רמת מחיר')}
+                enabled={priceAlertsOn}
+                onEnabledChange={setPriceEnabled}
+                expanded={openAlert === 'price'}
+                onToggle={() => toggleEditor('price')}
+                showDivider
+                selected={priceSelected}
+                onRemove={(key) => applyPriceKey(key, 'remove')}
+                draft={priceDraft}
+                onDraft={setPriceDraft}
+                onSubmit={submitPriceDraft}
+                placeholder={priceSide === 'above' ? 'מחיר עליון' : 'מחיר תחתון'}
+                sides={[
+                  { key: 'above', label: 'מעל' },
+                  { key: 'below', label: 'מתחת' },
+                ]}
+                side={priceSide}
+                onSide={(key) => setPriceSide(key as PriceSide)}
+              />
+              <AlertEditorRow
+                icon="swap-vertical-outline"
+                title="שינוי יומי"
+                subtitle={summarizeChips(dailySelected, 'הוספת אחוז שינוי ביום')}
+                enabled={dailyAlertsOn}
+                onEnabledChange={setDailyEnabled}
+                expanded={openAlert === 'daily'}
+                onToggle={() => toggleEditor('daily')}
+                showDivider={false}
+                selected={dailySelected}
+                onRemove={(key) => applyDailyKey(key, 'remove')}
+                draft={dailyDraft}
+                onDraft={setDailyDraft}
+                onSubmit={submitDailyDraft}
+                placeholder="אחוז"
               />
             </View>
-            <Pressable
-              style={styles.addChipBtn}
-              onPress={() => {
-                const n = parseNum(entryGainText);
-                if (n == null) return;
-                void HapticFeedback.selection();
-                setEntryGainPcts((prev) => addThreshold(prev, n));
-                setEntryGainText('');
-                enableAlerts();
-              }}
-            >
-              <Text style={styles.addChipBtnText}>הוסף</Text>
-            </Pressable>
-          </View>
+          </UICard>
+        </View>
 
-          <Text style={styles.presetLabel}>
-            הפסד מהכניסה −% · אפשר כמה
-          </Text>
-          <View style={styles.presetGrid}>
-            {ENTRY_LOSS_PRESETS.map((pct) => {
-              const on = entryLossPcts.some((n) => Math.abs(n - pct) < 1e-9);
-              return (
-                <Pressable
-                  key={`loss-${pct}`}
-                  style={[styles.presetBtn, on && styles.presetBtnOn]}
-                  onPress={() => {
-                    void HapticFeedback.selection();
-                    setEntryLossPcts((prev) => toggleThreshold(prev, pct));
-                    enableAlerts();
-                  }}
-                >
-                  <Text style={[styles.presetText, on && styles.presetTextOn]}>
-                    −{pct}%
-                  </Text>
-                </Pressable>
-              );
-            })}
-            {entryLossPcts
-              .filter((pct) => !ENTRY_LOSS_PRESETS.some((p) => Math.abs(p - pct) < 1e-9))
-              .map((pct) => (
-                <Pressable
-                  key={`loss-custom-${pct}`}
-                  style={[styles.presetBtn, styles.presetBtnOn]}
-                  onPress={() => {
-                    void HapticFeedback.selection();
-                    setEntryLossPcts((prev) => toggleThreshold(prev, pct));
-                  }}
-                >
-                  <Text style={[styles.presetText, styles.presetTextOn]}>
-                    −{pct}% ×
-                  </Text>
-                </Pressable>
-              ))}
-          </View>
-          <View style={[styles.fieldRow, { marginTop: 8 }]}>
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>מותאם אישית</Text>
-              <TextInput
-                style={styles.fieldInput}
-                value={entryLossText}
-                onChangeText={setEntryLossText}
-                onSubmitEditing={() => {
-                  const n = parseNum(entryLossText);
-                  if (n == null) return;
-                  setEntryLossPcts((prev) => addThreshold(prev, n));
-                  setEntryLossText('');
-                  enableAlerts();
-                }}
-                keyboardType="decimal-pad"
-                placeholder="הוסף %…"
-                placeholderTextColor={tokens.colors.text.muted}
-                returnKeyType="done"
-              />
-            </View>
-            <Pressable
-              style={styles.addChipBtn}
-              onPress={() => {
-                const n = parseNum(entryLossText);
-                if (n == null) return;
-                void HapticFeedback.selection();
-                setEntryLossPcts((prev) => addThreshold(prev, n));
-                setEntryLossText('');
-                enableAlerts();
-              }}
-            >
-              <Text style={styles.addChipBtnText}>הוסף</Text>
-            </Pressable>
-          </View>
-
-          <Text style={styles.presetLabel}>
-            מעל מחיר · אפשר כמה
-          </Text>
-          <View style={styles.presetGrid}>
-            {PRICE_MOVE_PRESETS.map((pct) => {
-              const base = row.price;
-              if (base == null || !Number.isFinite(base)) return null;
-              const level = Number((base * (1 + pct / 100)).toFixed(2));
-              const on = alertAbovePrices.some((n) => Math.abs(n - level) < 0.005);
-              return (
-                <Pressable
-                  key={`above-pct-${pct}`}
-                  style={[styles.presetBtn, on && styles.presetBtnOn]}
-                  onPress={() => {
-                    void HapticFeedback.selection();
-                    setAlertAbovePrices((prev) => toggleThreshold(prev, level));
-                    enableAlerts();
-                  }}
-                >
-                  <Text style={[styles.presetText, on && styles.presetTextOn]}>
-                    +{pct}%
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-          {alertAbovePrices.length > 0 ? (
-            <View style={styles.presetGrid}>
-              {alertAbovePrices.map((level) => (
-                <Pressable
-                  key={`above-${level}`}
-                  style={[styles.presetBtn, styles.presetBtnOn]}
-                  onPress={() => {
-                    void HapticFeedback.selection();
-                    setAlertAbovePrices((prev) => toggleThreshold(prev, level));
-                  }}
-                >
-                  <Text style={[styles.presetText, styles.presetTextOn]}>
-                    {formatPrice(level)} ×
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          ) : null}
-          <View style={[styles.fieldRow, { marginTop: 8 }]}>
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>מחיר מותאם</Text>
-              <TextInput
-                style={styles.fieldInput}
-                value={alertAboveText}
-                onChangeText={setAlertAboveText}
-                onSubmitEditing={() => {
-                  const n = parseNum(alertAboveText);
-                  if (n == null) return;
-                  setAlertAbovePrices((prev) => addThreshold(prev, n));
-                  setAlertAboveText('');
-                  enableAlerts();
-                }}
-                keyboardType="decimal-pad"
-                placeholder="הוסף מחיר…"
-                placeholderTextColor={tokens.colors.text.muted}
-                returnKeyType="done"
-              />
-            </View>
-            <Pressable
-              style={styles.addChipBtn}
-              onPress={() => {
-                const n = parseNum(alertAboveText);
-                if (n == null) return;
-                void HapticFeedback.selection();
-                setAlertAbovePrices((prev) => addThreshold(prev, n));
-                setAlertAboveText('');
-                enableAlerts();
-              }}
-            >
-              <Text style={styles.addChipBtnText}>הוסף</Text>
-            </Pressable>
-          </View>
-
-          <Text style={styles.presetLabel}>
-            מתחת למחיר · אפשר כמה
-          </Text>
-          <View style={styles.presetGrid}>
-            {PRICE_MOVE_PRESETS.map((pct) => {
-              const base = row.price;
-              if (base == null || !Number.isFinite(base)) return null;
-              const level = Number((base * (1 - pct / 100)).toFixed(2));
-              const on = alertBelowPrices.some((n) => Math.abs(n - level) < 0.005);
-              return (
-                <Pressable
-                  key={`below-pct-${pct}`}
-                  style={[styles.presetBtn, on && styles.presetBtnOn]}
-                  onPress={() => {
-                    void HapticFeedback.selection();
-                    setAlertBelowPrices((prev) => toggleThreshold(prev, level));
-                    enableAlerts();
-                  }}
-                >
-                  <Text style={[styles.presetText, on && styles.presetTextOn]}>
-                    −{pct}%
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-          {alertBelowPrices.length > 0 ? (
-            <View style={styles.presetGrid}>
-              {alertBelowPrices.map((level) => (
-                <Pressable
-                  key={`below-${level}`}
-                  style={[styles.presetBtn, styles.presetBtnOn]}
-                  onPress={() => {
-                    void HapticFeedback.selection();
-                    setAlertBelowPrices((prev) => toggleThreshold(prev, level));
-                  }}
-                >
-                  <Text style={[styles.presetText, styles.presetTextOn]}>
-                    {formatPrice(level)} ×
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          ) : null}
-          <View style={[styles.fieldRow, { marginTop: 8 }]}>
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>מחיר מותאם</Text>
-              <TextInput
-                style={styles.fieldInput}
-                value={alertBelowText}
-                onChangeText={setAlertBelowText}
-                onSubmitEditing={() => {
-                  const n = parseNum(alertBelowText);
-                  if (n == null) return;
-                  setAlertBelowPrices((prev) => addThreshold(prev, n));
-                  setAlertBelowText('');
-                  enableAlerts();
-                }}
-                keyboardType="decimal-pad"
-                placeholder="הוסף מחיר…"
-                placeholderTextColor={tokens.colors.text.muted}
-                returnKeyType="done"
-              />
-            </View>
-            <Pressable
-              style={styles.addChipBtn}
-              onPress={() => {
-                const n = parseNum(alertBelowText);
-                if (n == null) return;
-                void HapticFeedback.selection();
-                setAlertBelowPrices((prev) => addThreshold(prev, n));
-                setAlertBelowText('');
-                enableAlerts();
-              }}
-            >
-              <Text style={styles.addChipBtnText}>הוסף</Text>
-            </Pressable>
-          </View>
-
-          <Text style={styles.presetLabel}>
-            שינוי יומי |%| · אפשר כמה
-          </Text>
-          <View style={styles.presetGrid}>
-            {DAILY_CHANGE_PRESETS.map((pct) => {
-              const on = alertChangePcts.some((n) => Math.abs(n - pct) < 1e-9);
-              return (
-                <Pressable
-                  key={`chg-${pct}`}
-                  style={[styles.presetBtn, on && styles.presetBtnOn]}
-                  onPress={() => {
-                    void HapticFeedback.selection();
-                    setAlertChangePcts((prev) => toggleThreshold(prev, pct));
-                    enableAlerts();
-                  }}
-                >
-                  <Text style={[styles.presetText, on && styles.presetTextOn]}>
-                    {pct}%
-                  </Text>
-                </Pressable>
-              );
-            })}
-            {alertChangePcts
-              .filter((pct) => !DAILY_CHANGE_PRESETS.some((p) => Math.abs(p - pct) < 1e-9))
-              .map((pct) => (
-                <Pressable
-                  key={`chg-custom-${pct}`}
-                  style={[styles.presetBtn, styles.presetBtnOn]}
-                  onPress={() => {
-                    void HapticFeedback.selection();
-                    setAlertChangePcts((prev) => toggleThreshold(prev, pct));
-                  }}
-                >
-                  <Text style={[styles.presetText, styles.presetTextOn]}>
-                    {pct}% ×
-                  </Text>
-                </Pressable>
-              ))}
-          </View>
-          <View style={[styles.fieldRow, { marginTop: 8 }]}>
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>מותאם אישית</Text>
-              <TextInput
-                style={styles.fieldInput}
-                value={alertPctText}
-                onChangeText={setAlertPctText}
-                onSubmitEditing={() => {
-                  const n = parseNum(alertPctText);
-                  if (n == null) return;
-                  setAlertChangePcts((prev) => addThreshold(prev, n));
-                  setAlertPctText('');
-                  enableAlerts();
-                }}
-                keyboardType="decimal-pad"
-                placeholder="הוסף %…"
-                placeholderTextColor={tokens.colors.text.muted}
-                returnKeyType="done"
-              />
-            </View>
-            <Pressable
-              style={styles.addChipBtn}
-              onPress={() => {
-                const n = parseNum(alertPctText);
-                if (n == null) return;
-                void HapticFeedback.selection();
-                setAlertChangePcts((prev) => addThreshold(prev, n));
-                setAlertPctText('');
-                enableAlerts();
-              }}
-            >
-              <Text style={styles.addChipBtnText}>הוסף</Text>
-            </Pressable>
-          </View>
-        </UICard>
-
-        <UICard variant="soft" padding="md" style={styles.card}>
-          <Text style={styles.sectionTitle}>הערה</Text>
+        <View>
+          <Text style={styles.groupHeading}>הערה</Text>
           <TextInput
-            style={styles.input}
+            style={styles.notesInput}
             value={notes}
             onChangeText={onChangeNotes}
-            placeholder="יעד, תזכורת או הערה…"
-            placeholderTextColor={tokens.colors.text.muted}
+            placeholder="תזכורת או הערה…"
+            placeholderTextColor={tokens.colors.text.secondary}
             multiline
             textAlignVertical="top"
           />
-        </UICard>
+        </View>
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: footerPadBottom }]}>
@@ -999,7 +669,6 @@ function Body({
             void saveAll();
           }}
         />
-
         <Pressable
           onPress={() => {
             void HapticFeedback.medium();
@@ -1019,6 +688,233 @@ function Body({
   );
 }
 
+function TopoValueRow({
+  icon,
+  label,
+  value,
+  showDivider,
+}: {
+  icon: IonName;
+  label: string;
+  value: string;
+  showDivider: boolean;
+}) {
+  const tokens = useDesignTokens();
+  const styles = useStyles();
+  return (
+    <View>
+      <View style={styles.menuRow}>
+        <Text style={styles.statValue} numberOfLines={1}>
+          {value}
+        </Text>
+        <View style={styles.menuTextCol}>
+          <Text style={styles.menuTitle} numberOfLines={1}>
+            {label}
+          </Text>
+        </View>
+        <View style={styles.leadingIcon}>
+          <Ionicons name={icon} size={20} color={tokens.colors.text.primary} />
+        </View>
+      </View>
+      {showDivider ? <View style={styles.menuDivider} /> : null}
+    </View>
+  );
+}
+
+function AlertSwitchRow({
+  icon,
+  title,
+  subtitle,
+  value,
+  onValueChange,
+  showDivider,
+}: {
+  icon: IonName;
+  title: string;
+  subtitle?: string;
+  value: boolean;
+  onValueChange: (value: boolean) => void;
+  showDivider: boolean;
+}) {
+  const tokens = useDesignTokens();
+  const { theme } = useTheme();
+  const styles = useStyles();
+  return (
+    <View>
+      <View style={styles.menuRow}>
+        <Switch
+          value={value}
+          onValueChange={onValueChange}
+          trackColor={{
+            false: theme.switchTrackOff,
+            true: tokens.colors.primary.main,
+          }}
+          thumbColor={value ? tokens.colors.text.primary : theme.switchThumbOff}
+          ios_backgroundColor={theme.switchTrackOff}
+          style={styles.switchScale}
+          accessibilityLabel={title}
+        />
+        <View style={styles.menuTextCol}>
+          <Text style={styles.menuTitle} numberOfLines={1}>
+            {title}
+          </Text>
+          {subtitle ? (
+            <Text style={styles.menuSubtitle} numberOfLines={2}>
+              {subtitle}
+            </Text>
+          ) : null}
+        </View>
+        <View style={styles.leadingIcon}>
+          <Ionicons name={icon} size={20} color={tokens.colors.text.primary} />
+        </View>
+      </View>
+      {showDivider ? <View style={styles.menuDivider} /> : null}
+    </View>
+  );
+}
+
+function AlertEditorRow({
+  icon,
+  title,
+  subtitle,
+  enabled,
+  onEnabledChange,
+  expanded,
+  onToggle,
+  showDivider,
+  selected,
+  onRemove,
+  draft,
+  onDraft,
+  onSubmit,
+  placeholder,
+  sides,
+  side,
+  onSide,
+}: {
+  icon: IonName;
+  title: string;
+  subtitle: string;
+  enabled: boolean;
+  onEnabledChange: (on: boolean) => void;
+  expanded: boolean;
+  onToggle: () => void;
+  showDivider: boolean;
+  selected: Chip[];
+  onRemove: (key: string) => void;
+  draft: string;
+  onDraft: (v: string) => void;
+  onSubmit: () => void;
+  placeholder: string;
+  sides?: Chip[];
+  side?: string;
+  onSide?: (key: string) => void;
+}) {
+  const tokens = useDesignTokens();
+  const { theme } = useTheme();
+  const styles = useStyles();
+  return (
+    <View>
+      <View style={styles.menuRow}>
+        <Switch
+          value={enabled}
+          onValueChange={onEnabledChange}
+          trackColor={{
+            false: theme.switchTrackOff,
+            true: tokens.colors.primary.main,
+          }}
+          thumbColor={enabled ? tokens.colors.text.primary : theme.switchThumbOff}
+          ios_backgroundColor={theme.switchTrackOff}
+          style={styles.switchScale}
+          accessibilityLabel={title}
+        />
+        <Pressable
+          onPress={onToggle}
+          style={styles.menuTextCol}
+          accessibilityRole="button"
+          accessibilityState={{ expanded }}
+          accessibilityLabel={title}
+        >
+          <Text style={styles.menuTitle} numberOfLines={1}>
+            {title}
+          </Text>
+          <Text style={styles.menuSubtitle} numberOfLines={1}>
+            {subtitle}
+          </Text>
+        </Pressable>
+        <Pressable onPress={onToggle} style={styles.leadingIcon} accessibilityLabel={title}>
+          <Ionicons name={icon} size={20} color={tokens.colors.text.primary} />
+        </Pressable>
+      </View>
+      {expanded ? (
+        <View style={styles.editor}>
+          {sides && sides.length > 0 ? (
+            <View style={styles.sideRow}>
+              {sides.map((item) => {
+                const on = item.key === side;
+                return (
+                  <Pressable
+                    key={item.key}
+                    style={[styles.sideChip, on && styles.sideChipOn]}
+                    onPress={() => onSide?.(item.key)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: on }}
+                    accessibilityLabel={item.label}
+                  >
+                    <Text style={[styles.sideChipText, on && styles.sideChipTextOn]}>
+                      {item.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : null}
+          <View style={styles.addField}>
+            <Pressable
+              style={styles.addBtn}
+              onPress={onSubmit}
+              accessibilityRole="button"
+              accessibilityLabel="הוסף"
+            >
+              <Text style={styles.addBtnText}>הוסף</Text>
+            </Pressable>
+            <TextInput
+              style={styles.addInput}
+              value={draft}
+              onChangeText={onDraft}
+              onSubmitEditing={onSubmit}
+              keyboardType="decimal-pad"
+              placeholder={placeholder}
+              placeholderTextColor={tokens.colors.text.secondary}
+              returnKeyType="done"
+              accessibilityLabel={placeholder}
+            />
+          </View>
+          {selected.length > 0 ? (
+            <View style={styles.selectedWrap}>
+              {selected.map((chip) => (
+                <Pressable
+                  key={chip.key}
+                  style={styles.selectedPill}
+                  onPress={() => onRemove(chip.key)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`הסר ${chip.label}`}
+                >
+                  <Ionicons name="close" size={14} color={tokens.colors.text.tertiary} />
+                  <Text style={styles.selectedPillText}>{chip.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : (
+            <Text style={styles.emptyHint}>אין סף פעיל</Text>
+          )}
+        </View>
+      ) : null}
+      {showDivider ? <View style={styles.menuDivider} /> : null}
+    </View>
+  );
+}
+
 function useStyles() {
   const tokens = useDesignTokens();
 
@@ -1027,231 +923,271 @@ function useStyles() {
       StyleSheet.create({
         container: { flex: 1, minHeight: 0 },
         header: {
-          flexDirection: 'row-reverse',
-          alignItems: 'center',
           paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
-          paddingTop: 2,
-          paddingBottom: 12,
-          gap: 12,
-          borderBottomWidth: 1,
-          borderBottomColor: tokens.colors.border.divider,
+          paddingTop: 10,
+          paddingBottom: APP_LAYOUT.stackGapSmall,
+          gap: APP_LAYOUT.cardTitleToBodyGap,
         },
-        identity: {
-          flex: 1,
-          flexDirection: 'row-reverse',
+        topBar: {
+          direction: 'rtl',
+          flexDirection: 'row',
           alignItems: 'center',
-          minWidth: 0,
+          minHeight: HEADER_BACK_BTN_SIZE,
         },
-        headerLogo: {
-          marginLeft: 12,
+        closeSlot: {
+          width: HEADER_BACK_BTN_SIZE,
+          height: HEADER_BACK_BTN_SIZE,
+          overflow: 'visible',
+          flexShrink: 0,
         },
-        identityText: { flex: 1, minWidth: 0 },
-        symbol: {
-          ...APP_TYPE.cardTitle,
-          textAlign: 'right',
-          writingDirection: 'ltr',
+        heroBlock: {
+          marginBottom: APP_LAYOUT.stackGapSmall,
+        },
+        priceRow: {
+          direction: 'rtl',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: APP_LAYOUT.componentGap,
+        },
+        priceCol: {
+          flexShrink: 0,
+          alignItems: 'flex-start',
+        },
+        livePrice: {
+          ...appPhysicalRightText,
+          fontSize: APP_TYPE.pageTitle.fontSize,
+          lineHeight: APP_TYPE.pageTitle.lineHeight,
+          fontWeight: APP_TYPE.pageTitle.fontWeight,
+          letterSpacing: APP_TYPE.pageTitle.letterSpacing,
           color: tokens.colors.text.primary,
+          writingDirection: 'ltr',
+          fontVariant: ['tabular-nums'],
         },
-        company: {
-          ...APP_TYPE.cardSubtitle,
-          textAlign: 'right',
+        liveChangeRow: {
+          marginTop: APP_LAYOUT.cardMetricLabelToValueGap,
+          alignSelf: 'flex-start',
+        },
+        liveChange: {
+          ...appPhysicalRightText,
+          fontSize: APP_TYPE.cardBody.fontSize,
+          lineHeight: APP_TYPE.cardBody.lineHeight,
+          fontWeight: APP_TYPE.cardTitle.fontWeight,
+          writingDirection: 'ltr',
+          fontVariant: ['tabular-nums'],
+        },
+        liveChangeMuted: {
+          marginTop: APP_LAYOUT.cardMetricLabelToValueGap,
           color: tokens.colors.text.secondary,
         },
-        pctBadge: {
-          paddingHorizontal: 10,
-          paddingVertical: 5,
-          borderRadius: 8,
+        liveTag: {
+          ...appPhysicalRightText,
+          marginTop: APP_LAYOUT.cardMetricLabelToValueGap,
+          fontSize: APP_TYPE.caption.fontSize,
+          lineHeight: APP_TYPE.caption.lineHeight,
+          fontWeight: APP_TYPE.caption.fontWeight,
+          color: tokens.colors.primary.main,
         },
-        pctBadgeText: {
-          ...appCaptionStyle,
-          width: undefined,
-          fontVariant: ['tabular-nums'],
+        identityRow: {
+          flex: 1,
+          minWidth: 0,
+          direction: 'ltr',
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: APP_LAYOUT.cardTitleToBodyGap,
+        },
+        identityText: {
+          flex: 1,
+          minWidth: 0,
+          alignItems: 'flex-start',
+        },
+        identityTicker: {
+          fontSize: APP_TYPE.sectionTitle.fontSize,
+          lineHeight: APP_TYPE.sectionTitle.lineHeight,
+          fontWeight: APP_TYPE.sectionTitle.fontWeight,
+          letterSpacing: APP_TYPE.sectionTitle.letterSpacing,
+          color: tokens.colors.text.primary,
           writingDirection: 'ltr',
           textAlign: 'left',
+        },
+        companyName: {
+          ...appPhysicalLeftText,
+          marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
+          fontSize: APP_TYPE.cardSubtitle.fontSize,
+          lineHeight: APP_TYPE.cardSubtitle.lineHeight,
+          fontWeight: APP_TYPE.cardSubtitle.fontWeight,
+          color: tokens.colors.text.secondary,
         },
         scroll: { flex: 1, minHeight: 0 },
         scrollContent: {
           paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
-          paddingTop: 14,
+          paddingTop: 8,
           paddingBottom: APP_LAYOUT.cardPadding,
           gap: APP_LAYOUT.cardStackGap,
         },
-        quoteStrip: {
-          flexDirection: 'row-reverse',
-          flexWrap: 'wrap',
-          alignItems: 'baseline',
-          gap: 8,
-        },
-        lastPrice: {
-          ...appCardMetricValueSecondaryStyle,
-          color: tokens.colors.text.primary,
-          fontVariant: ['tabular-nums'],
-          textAlign: 'right',
-        },
-        dayChange: {
-          ...appCardBodyStyle,
-          width: undefined,
-          fontVariant: ['tabular-nums'],
-          writingDirection: 'ltr',
-          textAlign: 'left',
-        },
-        vsHint: {
-          ...appCaptionStyle,
-          width: undefined,
-          color: tokens.colors.text.secondary,
-        },
-        eventRow: {
-          flexDirection: 'row-reverse',
-          flexWrap: 'wrap',
-          gap: 6,
-        },
-        eventChip: {
-          ...appCaption2Style,
-          width: undefined,
-          color: tokens.colors.text.primary,
-          backgroundColor: tokens.colors.background.primary,
-          paddingHorizontal: 8,
-          paddingVertical: 4,
-          borderRadius: 6,
-          overflow: 'hidden',
-        },
         chartCard: {
-          borderRadius: UI_CARD_RADIUS,
           overflow: 'hidden',
-          height: CHART_HEIGHT,
+          borderRadius: tokens.borderRadius.xl,
         },
-        chartInner: { flex: 1, minHeight: CHART_HEIGHT },
-        chartWebView: {
-          backgroundColor: 'transparent',
-          borderRadius: 0,
-        },
-        card: { borderRadius: UI_CARD_RADIUS, overflow: 'hidden' },
-        sectionTitle: {
-          ...appCardTitleStyle,
-          color: tokens.colors.text.primary,
-          marginBottom: APP_LAYOUT.cardTitleToBodyGap,
-        },
-        metaRow: {
-          flexDirection: 'row-reverse',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingVertical: 15,
-        },
-        metaRowBorder: {
-          borderBottomWidth: 1,
-          borderBottomColor: tokens.colors.border.divider,
-        },
-        metaLabel: {
-          ...appCardSubtitleStyle,
-          width: undefined,
-          alignSelf: 'flex-end',
-          marginTop: 0,
-          color: tokens.colors.text.secondary,
-        },
-        metaValue: {
-          ...appBodyTextStyle,
-          color: tokens.colors.text.primary,
-          fontVariant: ['tabular-nums'],
-          writingDirection: 'ltr',
-          textAlign: 'left',
-        },
-        fieldRow: {
-          flexDirection: 'row-reverse',
-          gap: APP_LAYOUT.stackGapSmall,
-          marginTop: APP_LAYOUT.groupLabelToContent,
-          alignItems: 'flex-end',
-        },
-        field: { flex: 1 },
-        fieldLabel: formFieldLabelStyle({ tokens, focused: false }),
-        fieldInput: {
-          ...formFieldShellStyle({ tokens, focused: false }),
-          ...formFieldInputStyle(),
-          borderRadius: tokens.borderRadius.md,
-          minHeight: 48,
-          paddingHorizontal: APP_LAYOUT.cardPadding,
-          color: tokens.colors.text.primary,
-          fontVariant: ['tabular-nums'],
-          textAlign: 'left',
-          writingDirection: 'ltr',
-        },
-        addChipBtn: {
-          minHeight: 48,
-          paddingHorizontal: 14,
-          borderRadius: tokens.borderRadius.md,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: tokens.colors.background.primary,
-          borderWidth: 0,
-        },
-        addChipBtnText: {
-          ...appCaptionStyle,
-          width: undefined,
-          color: tokens.colors.text.primary,
-        },
-        alertHeader: {
-          flexDirection: 'row-reverse',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: APP_LAYOUT.cardTitleToBodyGap,
-        },
-        alertTitle: {
-          ...appCardTitleStyle,
-          width: undefined,
-          flex: 1,
-          color: tokens.colors.text.primary,
-        },
-        presetLabel: {
+        groupHeading: {
           ...appGroupLabelStyle,
           color: tokens.colors.text.secondary,
-          marginTop: APP_LAYOUT.cardTitleToBodyGap,
         },
-        presetLabelFirst: {
-          marginTop: 0,
+        menuRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingVertical: 15,
+          paddingHorizontal: APP_LAYOUT.cardPadding,
         },
-        presetGrid: {
+        menuTextCol: {
+          flex: 1,
+          minWidth: 0,
+        },
+        menuTitle: {
+          ...appCardTitleStyle,
+          color: tokens.colors.text.primary,
+        },
+        menuSubtitle: {
+          ...appCardSubtitleStyle,
+          color: tokens.colors.text.secondary,
+        },
+        leadingIcon: {
+          marginLeft: 12,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        menuDivider: {
+          height: 1,
+          backgroundColor: tokens.colors.border.divider,
+          marginHorizontal: APP_LAYOUT.cardPadding,
+        },
+        statValue: {
+          ...appCardBodyStyle,
+          width: undefined,
+          flexShrink: 1,
+          maxWidth: '46%',
+          color: tokens.colors.text.primary,
+          fontVariant: ['tabular-nums'],
+          writingDirection: 'ltr',
+          textAlign: 'left',
+        },
+        switchScale: {
+          transform: [{ scaleX: 0.82 }, { scaleY: 0.82 }],
+        },
+        alertsLocked: {
+          opacity: 0.45,
+        },
+        editor: {
+          paddingHorizontal: APP_LAYOUT.cardPadding,
+          paddingBottom: APP_LAYOUT.cardPadding,
+          gap: 8,
+        },
+        sideRow: {
           flexDirection: 'row-reverse',
-          flexWrap: 'wrap',
-          gap: APP_LAYOUT.groupLabelToContent,
+          gap: 8,
         },
-        presetBtn: {
-          paddingHorizontal: 10,
-          paddingVertical: 7,
-          borderRadius: 10,
-          backgroundColor: tokens.colors.background.primary,
-          borderWidth: 0,
+        sideChip: {
+          flex: 1,
+          minHeight: 40,
+          paddingHorizontal: 14,
+          paddingVertical: 8,
+          borderRadius: tokens.borderRadius.full,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: tokens.colors.background.tertiary,
         },
-        presetBtnOn: {
+        sideChipOn: {
           backgroundColor: tokens.colors.primary.dim,
         },
-        presetText: {
+        sideChipText: {
           ...appCaptionStyle,
           width: undefined,
           color: tokens.colors.text.secondary,
         },
-        presetTextOn: {
+        sideChipTextOn: {
           color: tokens.colors.primary.main,
         },
-        input: {
+        addField: {
+          direction: 'ltr',
+          flexDirection: 'row',
+          alignItems: 'center',
+          minHeight: 48,
+          paddingLeft: 6,
+          paddingRight: 4,
+          borderRadius: tokens.borderRadius.full,
+          backgroundColor: tokens.colors.background.tertiary,
+          gap: 8,
+        },
+        addInput: {
+          ...formFieldInputStyle(),
+          flex: 1,
+          minHeight: 44,
+          paddingHorizontal: 8,
+          color: tokens.colors.text.primary,
+          textAlign: 'right',
+          writingDirection: 'ltr',
+          fontVariant: ['tabular-nums'],
+          backgroundColor: 'transparent',
+        },
+        addBtn: {
+          minHeight: 36,
+          paddingHorizontal: 14,
+          borderRadius: tokens.borderRadius.full,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        addBtnText: {
+          ...appSheetButtonLabelStyle,
+          color: tokens.colors.text.primary,
+        },
+        selectedWrap: {
+          direction: 'ltr',
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          justifyContent: 'flex-end',
+          gap: 8,
+        },
+        selectedPill: {
+          direction: 'ltr',
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 6,
+          minHeight: 36,
+          paddingVertical: 6,
+          paddingLeft: 10,
+          paddingRight: 12,
+          borderRadius: tokens.borderRadius.full,
+          backgroundColor: tokens.colors.background.primary,
+        },
+        selectedPillText: {
+          ...appCaptionStyle,
+          width: undefined,
+          color: tokens.colors.text.primary,
+        },
+        emptyHint: {
+          ...appCaptionStyle,
+          width: undefined,
+          color: tokens.colors.text.secondary,
+        },
+        notesInput: {
           ...formFieldShellStyle({ tokens, focused: false, multiline: true }),
           ...formFieldInputStyle(),
-          marginTop: APP_LAYOUT.groupLabelToContent,
           borderRadius: tokens.borderRadius.md,
           paddingHorizontal: APP_LAYOUT.cardPadding,
-          minHeight: 84,
+          minHeight: 72,
           color: tokens.colors.text.primary,
         },
         footer: {
           paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
-          paddingTop: APP_LAYOUT.cardTitleToBodyGap,
+          paddingTop: APP_LAYOUT.stackGapSmall,
           gap: APP_LAYOUT.stackGapSmall,
           backgroundColor: 'transparent',
         },
         removeBtn: {
           width: '100%',
-          minHeight: 40,
+          minHeight: 36,
           alignItems: 'center',
           justifyContent: 'center',
-          paddingVertical: 8,
         },
         removeBtnPressed: { opacity: 0.65 },
         removeText: {

@@ -37,6 +37,7 @@ import { useDarkPoolStackNav } from './hooks/useDarkPoolStackNav';
 import type { DarkPoolTabParamList } from '../../navigation/DarkPoolTabs';
 import { useDarkPoolFollowingFeed } from '../../hooks/useDarkPoolFollowingFeed';
 import { InvestorPortrait } from './components/InvestorPortrait';
+import { ltrNameText } from './utils/bidi';
 import { ActivityFeedCard } from './components/ActivityFeedCard';
 import {
   followingActivityToTradeDetail,
@@ -131,11 +132,11 @@ export default function DarkPoolFollowingScreen() {
           ...darkPoolPhysicalRightText,
           fontSize: DARK_POOL_TYPE.body.fontSize,
           lineHeight: DARK_POOL_TYPE.body.lineHeight,
-          color: tokens.colors.text.tertiary,
+          color: tokens.colors.text.secondary,
           textAlign: 'center',
         },
         followCard: {
-          marginBottom: APP_LAYOUT.cardStackGap,
+          marginBottom: APP_LAYOUT.sectionGap,
           borderRadius: UI_CARD_RADIUS,
           overflow: 'hidden',
           backgroundColor: tokens.colors.background.cardSolid,
@@ -152,7 +153,7 @@ export default function DarkPoolFollowingScreen() {
           direction: 'rtl',
           flexDirection: 'row',
           alignItems: 'center',
-          paddingVertical: 11,
+          paddingVertical: APP_LAYOUT.cardTitleToBodyGap,
           paddingHorizontal: APP_LAYOUT.cardPadding,
         },
         avatar: {
@@ -161,26 +162,26 @@ export default function DarkPoolFollowingScreen() {
           borderWidth: 0,
         },
         iconTextGap: {
-          width: 12,
+          width: APP_LAYOUT.cardTitleToBodyGap,
           flexShrink: 0,
         },
         textCol: { flex: 1, minWidth: 0, alignItems: 'stretch' },
         name: {
-          ...darkPoolPhysicalRightText,
+          ...ltrNameText,
           width: '100%',
-          fontSize: DARK_POOL_TYPE.cardTitle.fontSize,
-          lineHeight: DARK_POOL_TYPE.cardTitle.lineHeight,
+          fontSize: DARK_POOL_TYPE.cardBody.fontSize,
+          lineHeight: 20,
           fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
           color: tokens.colors.text.primary,
         },
         sub: {
           ...darkPoolPhysicalRightText,
           width: '100%',
-          marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
+          marginTop: 0,
           fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
           lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
           fontWeight: DARK_POOL_TYPE.cardSubtitle.fontWeight,
-          color: tokens.colors.text.tertiary,
+          color: tokens.colors.text.secondary,
         },
         actions: {
           marginTop: tokens.spacing.md,
@@ -189,7 +190,7 @@ export default function DarkPoolFollowingScreen() {
         activityTitle: {
           ...darkPoolSectionTitleStyle,
           color: tokens.colors.text.primary,
-          marginBottom: 4,
+          marginBottom: APP_LAYOUT.sectionHeaderToContent,
         },
       }),
     [tokens, bottomPad]
@@ -255,7 +256,7 @@ export default function DarkPoolFollowingScreen() {
 
               <Text style={styles.activityTitle}>פעילות אחרונה</Text>
               {activityFeed.loading ? (
-                <View style={{ marginTop: 12 }}>
+                <View>
                   {Array.from({ length: 3 }).map((_, i) => (
                     <CardSkeleton key={i} delay={i * 70} />
                   ))}
@@ -277,7 +278,7 @@ export default function DarkPoolFollowingScreen() {
             </>
           ) : (
             <View style={styles.empty}>
-              <Ionicons name="people-outline" size={40} color={tokens.colors.text.tertiary} />
+              <Ionicons name="people-outline" size={40} color={tokens.colors.text.secondary} />
               <Text style={styles.emptyText}>
                 עדיין לא עוקב אחרי אף משקיע.{'\n'}
                 גלה פוליטיקאים ובכירים בטאב חקור ולחץ «עקוב».
@@ -324,7 +325,7 @@ function FollowedRow({
           kind={person.kind}
           personId={person.id}
           layout="circle"
-          size={52}
+          size={40}
           style={styles.avatar}
         />
         <View style={styles.iconTextGap} />
@@ -337,7 +338,7 @@ function FollowedRow({
             {person.ticker ? ` · ${person.ticker}` : ''}
           </Text>
         </View>
-        <Ionicons name="chevron-back" size={18} color={tokens.colors.text.tertiary} />
+        <Ionicons name="chevron-back" size={18} color={tokens.colors.text.secondary} />
       </Pressable>
   );
 }

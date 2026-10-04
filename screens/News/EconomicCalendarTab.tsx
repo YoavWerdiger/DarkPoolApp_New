@@ -2,6 +2,7 @@ import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { View, Text, FlatList, RefreshControl, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useIsFocused } from '@react-navigation/native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { EconomicCalendarListSkeleton } from '../../components/ui/SkeletonLoader';
 import { HapticFeedback } from '../../utils/hapticFeedback';
@@ -28,6 +29,59 @@ import {
   type EconomicImportance,
 } from '../../utils/economicEventImportance';
 
+/** חלון קצר אחרי זמן האירוע — מציגים "עכשיו" לפני מעבר לקאונטדאון הבא. */
+const COUNTDOWN_GRACE_MS = 45_000;
+
+function parseEventTimeParts(time: string): { h: number; m: number; s: number } {
+  const parts = (time || '00:00').split(':').map((p) => Number(p) || 0);
+  return { h: parts[0] || 0, m: parts[1] || 0, s: parts[2] || 0 };
+}
+
+function getEventDateOnDay(day: Date, time: string): Date {
+  const { h, m, s } = parseEventTimeParts(time);
+  const d = new Date(day);
+  d.setHours(h, m, s, 0);
+  return d;
+}
+
+/** פורמט קומפקטי לבייג': MM:SS מתחת לשעה, H:MM:SS מעל. */
+function formatEventCountdown(remainingMs: number): string {
+  if (remainingMs <= 0) return 'עכשיו';
+  const totalSec = Math.floor(remainingMs / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) {
+    return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+/**
+ * האירוע העתידי הקרוב ביותר להיום — אותה כוונה כמו גלילה ל־nearest,
+ * עם דיוק שניות + חלון "עכשיו" קצר אחרי הזמן.
+ */
+function findCountdownTarget(
+  list: EconEvent[],
+  day: Date,
+  now: Date,
+): { index: number; label: string } | null {
+  if (list.length === 0) return null;
+  if (day.toDateString() !== now.toDateString()) return null;
+
+  for (let i = 0; i < list.length; i++) {
+    const eventAt = getEventDateOnDay(day, list[i].time);
+    const remaining = eventAt.getTime() - now.getTime();
+    if (remaining > 0) {
+      return { index: i, label: formatEventCountdown(remaining) };
+    }
+    if (remaining > -COUNTDOWN_GRACE_MS) {
+      return { index: i, label: 'עכשיו' };
+    }
+  }
+  return null;
+}
+
 function displayImportance(event: EconEvent): EconomicImportance {
   const fallback = (event.importance as EconomicImportance) || 'low';
   return resolveEconomicEventImportance(
@@ -51,9 +105,15 @@ function stripFlagImportance(event: EconEvent): EconomicImportance {
   return 'low';
 }
 
-const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent) => void }> = ({ 
-  event, 
-  onPress 
+const EconomicEventCard: React.FC<{
+  event: EconEvent;
+  onPress: (event: EconEvent) => void;
+  /** קאונטדאון חי לאירוע הקרוב ביותר בלבד — מחליף את בייג' השעה. */
+  countdownLabel?: string;
+}> = ({
+  event,
+  onPress,
+  countdownLabel,
 }) => {
   const DesignTokens = useDesignTokens();
   
@@ -152,7 +212,7 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
                     fontVariant: ['tabular-nums'],
                   }}
                 >
-                  {event.time}
+                  {countdownLabel ?? event.time}
                 </Text>
               </View>
             </View>
@@ -286,6 +346,7 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
 
 export default function EconomicCalendarTab() {
   const DesignTokens = useDesignTokens();
+  const isFocused = useIsFocused();
   const screenPad = APP_LAYOUT.screenPaddingHorizontal;
   // זריעה אופטימית מה-cache (נטען מהדיסק בהפעלה קרה) — רינדור מיידי
   const [events, setEvents] = useState<EconEvent[]>(
@@ -302,6 +363,8 @@ export default function EconomicCalendarTab() {
   // תצוגה יומית חדשה
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [dailyEvents, setDailyEvents] = useState<EconEvent[]>([]);
+  /** טיק לשנייה — מפעיל קאונטדאון חי לאירוע הקרוב בהיום. */
+  const [nowMs, setNowMs] = useState(() => Date.now());
   
   // Ref לגלילה לאירוע הקרוב ביותר
   const dailyEventsListRef = useRef<FlatList>(null);
@@ -330,6 +393,19 @@ export default function EconomicCalendarTab() {
   }, []);
 
   const isSelectedToday = selectedDate.toDateString() === new Date().toDateString();
+
+  // קאונטדאון חי — טיק כל שנייה רק כשמסתכלים על היום והטאב בפוקוס
+  useEffect(() => {
+    if (!isFocused || !isSelectedToday) return;
+    setNowMs(Date.now());
+    const id = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [isFocused, isSelectedToday]);
+
+  const countdownTarget = useMemo(
+    () => findCountdownTarget(dailyEvents, selectedDate, new Date(nowMs)),
+    [dailyEvents, selectedDate, nowMs],
+  );
 
   const fabBottomInset = DesignTokens.spacing.lg;
   const listBottomPad = isSelectedToday ? DesignTokens.spacing.md : fabBottomInset + 68;
@@ -764,6 +840,9 @@ export default function EconomicCalendarTab() {
       <EconomicEventCard
         event={item}
         onPress={handleEventPress}
+        countdownLabel={
+          countdownTarget?.index === index ? countdownTarget.label : undefined
+        }
       />
     </View>
   );
@@ -840,6 +919,7 @@ export default function EconomicCalendarTab() {
         <FlatList
           ref={dailyEventsListRef}
           data={dailyEvents}
+          extraData={countdownTarget}
           keyExtractor={(item, index) => `${item.id}-${item.time}-${index}`}
           renderItem={renderEvent}
           style={{ flex: 1 }}

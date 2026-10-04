@@ -4,23 +4,42 @@ import {
   Text,
   FlatList,
   TextInput,
-  TouchableOpacity,
   StyleSheet,
   Image,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search } from 'lucide-react-native';
-import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
-import { chatPalette } from '../../components/chat/chatDesignTokens';
-import UICard from '../../components/ui/UICard';
-import DesignTokens, { useDesignTokens } from '../../components/ui/DesignTokens';
 import {
-  AdminSectionLabel,
+  Ban,
+  ClipboardList,
+  CreditCard,
+  KeyRound,
+  Search,
+  Sparkles,
+  Trash2,
+  Volume2,
+  VolumeX,
+} from 'lucide-react-native';
+import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
+import { ProfileMenuRow } from '../../components/profile/ProfileSettingsUI';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { formFieldShellStyle } from '../../components/ui/formControl';
+import { APP_LAYOUT } from '../../components/ui/appLayout';
+import {
+  adminBody,
+  adminCaption,
+  adminCardSubtitle,
+  adminCardTitle,
+  adminHebrewText,
+  adminPhysicalRightText,
+} from '../../components/admin/adminType';
+import { APP_TYPE } from '../../components/ui/appType';
+import {
   AdminFilterChip,
   AdminBadge,
   AdminLoadingState,
   AdminEmptyState,
+  AdminSurface,
 } from '../../components/admin';
 import {
   adminService,
@@ -46,6 +65,7 @@ export default function AdminUsersScreen({ navigation }: any) {
   const [filter, setFilter] = useState<AdminUserFilter>('all');
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [openIntroId, setOpenIntroId] = useState<string | null>(null);
 
   const load = useCallback(async (opts?: { silent?: boolean }) => {
     if (!opts?.silent) setLoading(true);
@@ -265,31 +285,26 @@ export default function AdminUsersScreen({ navigation }: any) {
         }}
       />
 
-      <View style={{ paddingHorizontal: tokens.spacing.base, paddingTop: tokens.spacing.sm }}>
-        <UICard
-          variant="inputGlass"
-          padding="none"
-          style={{
-            borderRadius: tokens.borderRadius.search,
-            marginBottom: tokens.spacing.md,
-            borderWidth: 1,
-            borderColor: chatPalette.glassBorder,
-          }}
+      <View style={{ paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal, paddingTop: tokens.spacing.sm }}>
+        <View
+          style={[
+            formFieldShellStyle({ tokens, focused: false }),
+            styles.searchShell,
+            { marginBottom: APP_LAYOUT.cardStackGap },
+          ]}
         >
-          <View style={styles.searchRow}>
-            <TextInput
-              value={query}
-              onChangeText={setQuery}
-              placeholder="חיפוש בשם / אימייל / טלפון"
-              placeholderTextColor={tokens.colors.text.tertiary}
-              style={[styles.searchInput, { color: tokens.colors.text.primary }]}
-              autoCorrect={false}
-              autoCapitalize="none"
-              returnKeyType="search"
-            />
-            <Search size={18} color={tokens.colors.text.tertiary} strokeWidth={2.2} />
-          </View>
-        </UICard>
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="חיפוש בשם / אימייל / טלפון"
+            placeholderTextColor={tokens.colors.text.tertiary}
+            style={[styles.searchInput, { color: tokens.colors.text.primary }]}
+            autoCorrect={false}
+            autoCapitalize="none"
+            returnKeyType="search"
+          />
+          <Search size={18} color={tokens.colors.text.tertiary} strokeWidth={2} />
+        </View>
 
         <View style={styles.filters}>
           {FILTERS.map((f) => (
@@ -302,12 +317,9 @@ export default function AdminUsersScreen({ navigation }: any) {
           ))}
         </View>
 
-        <View style={styles.countRow}>
-          <Text style={[styles.countText, { color: tokens.colors.text.tertiary }]}>
-            {total} משתמשים
-          </Text>
-          <AdminSectionLabel style={{ marginBottom: 0 }}>רשימה</AdminSectionLabel>
-        </View>
+        <Text style={[styles.countText, { color: tokens.colors.text.primary }]}>
+          {total} משתמשים
+        </Text>
       </View>
 
       {loading ? (
@@ -318,7 +330,7 @@ export default function AdminUsersScreen({ navigation }: any) {
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
-            paddingHorizontal: tokens.spacing.base,
+            paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
             paddingTop: 4,
             paddingBottom: 48,
           }}
@@ -328,286 +340,181 @@ export default function AdminUsersScreen({ navigation }: any) {
               subtitle="נסו לשנות את החיפוש או הסינון"
             />
           }
-          renderItem={({ item }) => {
-            const name = item.display_name || item.full_name || 'משתמש';
-            const busy = busyId === item.id;
-            const introRows = formatIntroDataRows(item.intro_data);
-            return (
-              <UICard
-                variant="glass"
-                glassIntensity="light"
-                padding="none"
-                style={{
-                  marginBottom: 10,
-                  borderRadius: tokens.borderRadius.xl,
-                  borderWidth: 1,
-                  borderColor: chatPalette.glassBorder,
-                  padding: tokens.spacing.md,
-                }}
-              >
-                <View style={styles.userTop}>
-                  {item.profile_picture ? (
-                    <Image source={{ uri: item.profile_picture }} style={styles.avatar} />
-                  ) : (
-                    <View
-                      style={[
-                        styles.avatar,
-                        {
-                          backgroundColor: tokens.colors.primary.dim,
-                          borderColor: `${tokens.colors.primary.main}44`,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        },
-                      ]}
-                    >
-                      <Text style={{ color: tokens.colors.primary.main, fontWeight: '800', fontSize: 16 }}>
-                        {name.charAt(0)}
-                      </Text>
-                    </View>
-                  )}
-                  <View style={{ flex: 1 }}>
-                    <Text
-                      style={[styles.userName, { color: tokens.colors.text.primary }]}
-                      numberOfLines={1}
-                    >
-                      {name}
-                    </Text>
-                    <Text
-                      style={[styles.userEmail, { color: tokens.colors.text.tertiary }]}
-                      numberOfLines={1}
-                    >
-                      {item.email}
-                    </Text>
-                    <View style={styles.badgeRow}>
-                      <AdminBadge
-                        label={roleLabel(item.subscription_role)}
-                        color={roleColor(item.subscription_role)}
-                      />
-                      {item.is_muted ? (
-                        <AdminBadge label="מושתק" color={tokens.colors.danger.main} />
-                      ) : null}
-                      {item.is_suspended ? (
-                        <AdminBadge label="מושעה" color={tokens.colors.warning.main} />
-                      ) : null}
-                    </View>
-                  </View>
-                </View>
-
-                {introRows.length > 0 ? (
-                  <View
-                    style={[
-                      styles.introBlock,
-                      { borderTopColor: tokens.colors.border.divider },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.introTitle,
-                        { color: tokens.colors.text.tertiary },
-                      ]}
-                    >
-                      שאלון קליטה
-                    </Text>
-                    {introRows.map((row) => (
-                      <View key={row.key} style={styles.introRow}>
-                        <Text
-                          style={[styles.introField, { color: tokens.colors.text.tertiary }]}
-                        >
-                          {row.fieldLabel}
-                        </Text>
-                        <Text
-                          style={[styles.introValue, { color: tokens.colors.text.primary }]}
-                          numberOfLines={2}
-                        >
-                          {row.valueLabel}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                ) : null}
-
-                <View style={[styles.actionsRow, { borderTopColor: tokens.colors.border.divider }]}>
-                  <ActionBtn
-                    busy={busy}
-                    active={item.is_muted}
-                    activeLabel="בטל השתקה"
-                    idleLabel="השתק"
-                    variant={item.is_muted ? 'glass' : 'destructive'}
-                    onPress={() => confirmMute(item)}
-                  />
-                  <ActionBtn
-                    busy={busy}
-                    active={item.is_suspended}
-                    activeLabel="בטל השעיה"
-                    idleLabel="השעה"
-                    variant={item.is_suspended ? 'glass' : 'warning'}
-                    onPress={() => confirmSuspend(item)}
-                  />
-                </View>
-
-                <View style={styles.secondaryActions}>
-                  <PillBtn
-                    busy={busy}
-                    label="תשלומים ומנויים"
-                    variant="glass"
-                    onPress={() => {
-                      void HapticFeedback.impactLight();
-                      navigation.navigate('AdminPayments', {
-                        userId: item.id,
-                        email: item.email,
-                        tab: 'active',
-                      });
-                    }}
-                  />
-                  <PillBtn
-                    busy={busy}
-                    label={isPremiumRole(item.subscription_role) ? 'הסר פרימיום' : 'הענק פרימיום'}
-                    variant={isPremiumRole(item.subscription_role) ? 'destructive' : 'primary'}
-                    onPress={() => confirmPremium(item)}
-                  />
-                  <PillBtn
-                    busy={busy}
-                    label="איפוס סיסמה"
-                    variant="glass"
-                    onPress={() => confirmResetPassword(item)}
-                  />
-                  <PillBtn
-                    busy={busy}
-                    label="מחק"
-                    variant="destructive"
-                    onPress={() => confirmDelete(item)}
-                  />
-                </View>
-              </UICard>
-            );
-          }}
+          renderItem={({ item }) => (
+            <UserCard
+              item={item}
+              busy={busyId === item.id}
+              introOpen={openIntroId === item.id}
+              onToggleIntro={() =>
+                setOpenIntroId((current) => (current === item.id ? null : item.id))
+              }
+              roleLabel={roleLabel(item.subscription_role)}
+              roleColor={roleColor(item.subscription_role)}
+              premium={isPremiumRole(item.subscription_role)}
+              onMute={() => confirmMute(item)}
+              onSuspend={() => confirmSuspend(item)}
+              onPremium={() => confirmPremium(item)}
+              onResetPassword={() => confirmResetPassword(item)}
+              onDelete={() => confirmDelete(item)}
+              onPayments={() => {
+                void HapticFeedback.impactLight();
+                navigation.navigate('AdminPayments', {
+                  userId: item.id,
+                  email: item.email,
+                  tab: 'active',
+                });
+              }}
+            />
+          )}
         />
       )}
     </SafeAreaView>
   );
 }
 
-type ActionVariant = 'primary' | 'glass' | 'destructive' | 'warning';
-
-function resolveActionColors(variant: ActionVariant, tokens: ReturnType<typeof useDesignTokens>) {
-  switch (variant) {
-    case 'primary':
-      return {
-        color: tokens.colors.primary.main,
-        border: `${tokens.colors.primary.main}66`,
-        bg: tokens.colors.primary.dim,
-      };
-    case 'destructive':
-      return {
-        color: tokens.colors.danger.main,
-        border: `${tokens.colors.danger.main}55`,
-        bg: `${tokens.colors.danger.main}14`,
-      };
-    case 'warning':
-      return {
-        color: tokens.colors.warning.main,
-        border: `${tokens.colors.warning.main}55`,
-        bg: `${tokens.colors.warning.main}14`,
-      };
-    case 'glass':
-    default:
-      return {
-        color: tokens.colors.text.secondary,
-        border: chatPalette.glassBorder,
-        bg: 'rgba(255,255,255,0.04)',
-      };
-  }
-}
-
-function ActionBtn({
+function UserCard({
+  item,
   busy,
-  active,
-  activeLabel,
-  idleLabel,
-  variant,
-  onPress,
+  introOpen,
+  onToggleIntro,
+  roleLabel,
+  roleColor,
+  premium,
+  onMute,
+  onSuspend,
+  onPremium,
+  onResetPassword,
+  onDelete,
+  onPayments,
 }: {
+  item: AdminUserRow;
   busy: boolean;
-  active: boolean;
-  activeLabel: string;
-  idleLabel: string;
-  variant: ActionVariant;
-  onPress: () => void;
+  introOpen: boolean;
+  onToggleIntro: () => void;
+  roleLabel: string;
+  roleColor: string;
+  premium: boolean;
+  onMute: () => void;
+  onSuspend: () => void;
+  onPremium: () => void;
+  onResetPassword: () => void;
+  onDelete: () => void;
+  onPayments: () => void;
 }) {
   const tokens = useDesignTokens();
-  const colors = resolveActionColors(variant, tokens);
-  return (
-    <TouchableOpacity
-      disabled={busy}
-      onPress={onPress}
-      activeOpacity={0.75}
-      style={[
-        styles.actionBtn,
-        {
-          borderColor: colors.border,
-          backgroundColor: active ? `${colors.color}22` : colors.bg,
-          opacity: busy ? 0.5 : 1,
-        },
-      ]}
-    >
-      {busy ? (
-        <ActivityIndicator size="small" color={colors.color} />
-      ) : (
-        <Text style={{ color: colors.color, fontWeight: '700', fontSize: 13 }}>
-          {active ? activeLabel : idleLabel}
-        </Text>
-      )}
-    </TouchableOpacity>
-  );
-}
+  const name = item.display_name || item.full_name || 'משתמש';
+  const introRows = formatIntroDataRows(item.intro_data);
+  const guard = (action: () => void) => () => {
+    if (busy) return;
+    action();
+  };
 
-function PillBtn({
-  busy,
-  label,
-  variant,
-  onPress,
-}: {
-  busy: boolean;
-  label: string;
-  variant: ActionVariant;
-  onPress: () => void;
-}) {
-  const tokens = useDesignTokens();
-  const colors = resolveActionColors(variant, tokens);
   return (
-    <TouchableOpacity
-      disabled={busy}
-      onPress={onPress}
-      activeOpacity={0.75}
-      style={[
-        styles.pillBtn,
-        {
-          borderColor: colors.border,
-          backgroundColor: colors.bg,
-          opacity: busy ? 0.5 : 1,
-        },
-      ]}
-    >
-      <Text style={{ color: colors.color, fontWeight: '700', fontSize: 12 }} numberOfLines={1}>
-        {label}
-      </Text>
-    </TouchableOpacity>
+    <AdminSurface style={busy ? { opacity: 0.55 } : undefined}>
+      <View style={styles.userTop}>
+        {item.profile_picture ? (
+          <Image source={{ uri: item.profile_picture }} style={styles.avatar} />
+        ) : (
+          <View
+            style={[
+              styles.avatar,
+              {
+                backgroundColor: tokens.colors.background.tertiary,
+                alignItems: 'center',
+                justifyContent: 'center',
+              },
+            ]}
+          >
+            <Text style={[adminCardTitle, { color: tokens.colors.text.primary }]}>
+              {name.charAt(0)}
+            </Text>
+          </View>
+        )}
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.userName, { color: tokens.colors.text.primary }]} numberOfLines={1}>
+            {name}
+          </Text>
+          <Text style={[styles.userEmail, { color: tokens.colors.text.secondary }]} numberOfLines={1}>
+            {item.email}
+          </Text>
+          <View style={styles.badgeRow}>
+            <AdminBadge label={roleLabel} color={roleColor} />
+            {item.is_muted ? <AdminBadge label="מושתק" color={tokens.colors.danger.main} /> : null}
+            {item.is_suspended ? (
+              <AdminBadge label="מושעה" color={tokens.colors.warning.main} />
+            ) : null}
+            {busy ? <ActivityIndicator size="small" color={tokens.colors.text.secondary} /> : null}
+          </View>
+        </View>
+      </View>
+
+      <View style={[styles.rule, { backgroundColor: tokens.colors.border.divider }]} />
+
+      {introRows.length > 0 ? (
+        <>
+          <ProfileMenuRow
+            title="שאלון קליטה"
+            icon={ClipboardList}
+            showDivider={!introOpen}
+            onPress={onToggleIntro}
+          />
+          {introOpen
+            ? introRows.map((row, index) => (
+                <View key={row.key}>
+                  <View style={styles.introRow}>
+                    <Text style={[styles.introField, { color: tokens.colors.text.primary }]}>
+                      {row.fieldLabel}
+                    </Text>
+                    <Text style={[styles.introValue, { color: tokens.colors.text.secondary }]}>
+                      {row.valueLabel}
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      index < introRows.length - 1 ? styles.ruleInset : styles.rule,
+                      { backgroundColor: tokens.colors.border.divider },
+                    ]}
+                  />
+                </View>
+              ))
+            : null}
+        </>
+      ) : null}
+      <ProfileMenuRow
+        title={item.is_muted ? 'בטל השתקה' : 'השתק'}
+        icon={item.is_muted ? Volume2 : VolumeX}
+        onPress={guard(onMute)}
+      />
+      <ProfileMenuRow
+        title={item.is_suspended ? 'בטל השעיה' : 'השעה'}
+        icon={Ban}
+        onPress={guard(onSuspend)}
+      />
+      <ProfileMenuRow title="תשלומים ומנויים" icon={CreditCard} onPress={guard(onPayments)} />
+      <ProfileMenuRow
+        title={premium ? 'הסר פרימיום' : 'הענק פרימיום'}
+        icon={Sparkles}
+        onPress={guard(onPremium)}
+      />
+      <ProfileMenuRow title="איפוס סיסמה" icon={KeyRound} onPress={guard(onResetPassword)} />
+      <ProfileMenuRow title="מחק" icon={Trash2} danger showDivider={false} onPress={guard(onDelete)} />
+    </AdminSurface>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: 'transparent' },
-  searchRow: {
+  searchShell: {
     flexDirection: 'row-reverse',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    minHeight: 52,
     gap: 10,
   },
   searchInput: {
     flex: 1,
-    ...DesignTokens.rtlText,
-    fontSize: 15,
+    ...adminHebrewText,
+    ...adminBody,
     padding: 0,
   },
   filters: {
@@ -616,37 +523,34 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 12,
   },
-  countRow: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
   countText: {
-    fontSize: 12,
-    fontWeight: '600',
-    ...DesignTokens.rtlText,
+    ...adminPhysicalRightText,
+    fontSize: APP_TYPE.pageTitle.fontSize,
+    fontWeight: APP_TYPE.pageTitle.fontWeight,
+    lineHeight: APP_TYPE.pageTitle.lineHeight,
+    letterSpacing: APP_TYPE.pageTitle.letterSpacing,
+    marginBottom: APP_LAYOUT.sectionHeaderToContent,
   },
   userTop: {
     flexDirection: 'row-reverse',
     gap: 12,
     alignItems: 'center',
+    paddingHorizontal: APP_LAYOUT.cardPadding,
+    paddingVertical: APP_LAYOUT.cardPadding,
   },
   avatar: {
     width: 48,
     height: 48,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 0,
   },
   userName: {
-    fontWeight: '700',
-    ...DesignTokens.rtlText,
-    fontSize: 15,
+    ...adminHebrewText,
+    ...adminCardTitle,
   },
   userEmail: {
-    textAlign: 'right',
-    fontSize: 12,
+    ...adminHebrewText,
+    ...adminCaption,
     marginTop: 2,
   },
   badgeRow: {
@@ -655,68 +559,25 @@ const styles = StyleSheet.create({
     gap: 6,
     marginTop: 8,
   },
-  introBlock: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    gap: 6,
+  rule: {
+    height: StyleSheet.hairlineWidth,
   },
-  introTitle: {
-    ...DesignTokens.rtlText,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-    marginBottom: 2,
+  ruleInset: {
+    height: StyleSheet.hairlineWidth,
+    marginHorizontal: APP_LAYOUT.cardPadding,
   },
   introRow: {
-    flexDirection: 'row-reverse',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 12,
+    paddingHorizontal: APP_LAYOUT.cardPadding,
+    paddingVertical: 12,
+    alignItems: 'flex-end',
   },
   introField: {
-    fontSize: 12,
-    fontWeight: '600',
-    ...DesignTokens.rtlText,
-    flexShrink: 0,
+    ...adminHebrewText,
+    ...adminCardTitle,
   },
   introValue: {
-    flex: 1,
-    fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'left',
-    writingDirection: 'rtl',
-  },
-  actionsRow: {
-    flexDirection: 'row-reverse',
-    gap: 10,
-    marginTop: 14,
-    paddingTop: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  actionBtn: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: DesignTokens.borderRadius.button,
-    paddingVertical: 11,
-    paddingHorizontal: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 42,
-  },
-  secondaryActions: {
-    flexDirection: 'row-reverse',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 10,
-  },
-  pillBtn: {
-    borderWidth: 1,
-    borderRadius: DesignTokens.borderRadius.button,
-    paddingVertical: 9,
-    paddingHorizontal: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 36,
+    ...adminHebrewText,
+    ...adminCardSubtitle,
+    marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
   },
 });

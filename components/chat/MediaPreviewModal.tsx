@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { View, Text, Modal, Pressable, StyleSheet, ActivityIndicator, Animated as RNAnimated,
   Keyboard, ScrollView, TouchableOpacity, TextInput, useWindowDimensions } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { initialWindowMetrics, SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { X, Trash2, ChevronLeft, ChevronRight, Play, Pause } from 'lucide-react-native';
 import { Audio, Video, ResizeMode } from '../../lib/expoAvSafe';
@@ -34,7 +34,7 @@ import * as VideoThumbnails from 'expo-video-thumbnails';
 import { useMediaZoomGestures } from './useMediaZoomGestures';
 import { MediaBlurBackdrop, MediaKeyboardDim } from './MediaViewerChrome';
 
-export default function MediaPreviewModal({
+function MediaPreviewBody({
   visible,
   onClose,
   onSend,
@@ -42,6 +42,7 @@ export default function MediaPreviewModal({
   embedded = false,
 }: MediaPreviewModalProps) {
   const insets = useSafeAreaInsets();
+  const safeBottom = Math.max(insets.bottom, initialWindowMetrics?.insets.bottom ?? 0);
   const { width: screenW, height: screenH } = useWindowDimensions();
   const { isDarkMode } = useTheme();
   const tokens = useDesignTokens();
@@ -80,7 +81,7 @@ export default function MediaPreviewModal({
   const captionLift = useAnimatedStyle(() => {
     const open = keyboard.height.value > 8;
     return {
-      paddingBottom: open ? 8 : insets.bottom + 12,
+      paddingBottom: open ? 8 : safeBottom + 12,
       transform: [{ translateY: -keyboard.height.value }],
     };
   });
@@ -466,7 +467,7 @@ export default function MediaPreviewModal({
               />
             ) : null}
             {isLoading && (
-              <View style={styles.loadingContainer}>
+              <View style={styles.loadingContainer} pointerEvents="none">
                 <ActivityIndicator size="large" color={iconColor} />
               </View>
             )}
@@ -740,17 +741,23 @@ export default function MediaPreviewModal({
       </GestureHandlerRootView>
   );
 
-  if (embedded) return shell;
+  return shell;
+}
 
+export default function MediaPreviewModal(props: MediaPreviewModalProps) {
+  if (props.embedded) return <MediaPreviewBody {...props} />;
   return (
     <Modal
-      visible={visible}
+      visible={props.visible}
       transparent={true}
       animationType="none"
       presentationStyle="overFullScreen"
-      onRequestClose={onClose}
+      statusBarTranslucent
+      onRequestClose={props.onClose}
     >
-      {shell}
+      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+        <MediaPreviewBody {...props} />
+      </SafeAreaProvider>
     </Modal>
   );
 }

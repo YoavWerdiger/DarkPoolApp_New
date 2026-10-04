@@ -101,9 +101,9 @@ const DRAWER_ITEMS: Array<{
   { name: 'DarkPool', title: 'אינסיידרים', icon: 'eye-outline' },
   { name: 'News', title: 'חדשות', icon: 'newspaper-outline' },
   { name: 'Tweets', title: 'ציוצים', icon: 'twitter', iconFamily: 'feather' },
-  { name: 'Watchlist', title: 'רשימת מעקב', icon: 'list-outline' },
   { name: 'NewsEarnings', title: 'דיווחי רווח', icon: 'notifications-outline' },
   { name: 'NewsCalendar', title: 'יומן כלכלי', icon: 'calendar-outline' },
+  { name: 'Watchlist', title: 'רשימת מעקב', icon: 'list-outline' },
   { name: 'MarketsHeatmap', title: 'מפת חום', icon: 'map-outline' },
 ];
 

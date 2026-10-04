@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import UserProfileScreen from '../screens/Profile/UserProfileScreen';
@@ -15,7 +15,9 @@ import InvoiceDocumentPreviewScreen from '../screens/Profile/InvoiceDocumentPrev
 import DeleteAccountScreen from '../screens/Profile/DeleteAccountScreen';
 import CreditCardCheckoutScreen from '../screens/Payment/CreditCardCheckoutScreen';
 import SubscriptionWelcomeScreen from '../screens/Profile/SubscriptionWelcomeScreen';
+import { useTheme } from '../context/ThemeContext';
 import { ChatSessionBackdrop } from '../components/chat/ChatSessionBackdrop';
+import { chatStackScreenListeners, createChatStackScreenOptions } from './chatStackTransition';
 
 /** אותו רקע כמו מערכת הצ'אט — שחור + שור ודוב */
 function withProfileChatShell<P extends object>(ScreenComponent: React.ComponentType<P>): React.FC<P> {
@@ -46,15 +48,15 @@ const CreditCardCheckoutWithShell = withProfileChatShell(CreditCardCheckoutScree
 const Stack = createNativeStackNavigator();
 
 export default function ProfileStack() {
+  const { isDarkMode } = useTheme();
+  const screenOptions = useMemo(
+    () => createChatStackScreenOptions(isDarkMode),
+    [isDarkMode],
+  );
   return (
     <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: 'transparent' },
-        animation: 'fade',
-        gestureEnabled: true,
-        animationDuration: 200,
-      }}
+      screenOptions={screenOptions}
+      screenListeners={chatStackScreenListeners}
     >
       <Stack.Screen name="ProfileMain" component={ProfileMainScreen} />
       <Stack.Screen name="PublicUserProfile" component={PublicUserProfileWithShell} />

@@ -89,9 +89,9 @@ describe('feed trade card chrome', () => {
     expect(tradeCardSrc).toMatch(/createTradeHeroCardStyles/);
     expect(tradeCardSrc).toMatch(/size=\{FEED_AVATAR_SIZE\}/);
     expect(tradeCardSrc).toMatch(/numberOfLines=\{2\}/);
-    expect(tradeCardSrc).toMatch(/heroStyles\.personHint|styles\.personHint/);
+    expect(tradeCardSrc).not.toMatch(/styles\.personHint/);
     expect(tradeCardSrc).toMatch(/summary\.verb/);
-    expect(tradeCardSrc).toMatch(/summary\.primaryRender/);
+    expect(tradeCardSrc).toMatch(/summary\.tickerDisplay/);
     expect(tradeCardSrc).toMatch(/summary\.metaRender/);
     expect(tradeCardSrc).toMatch(/buildCongressTradeDetailSummary/);
     expect(tradeCardSrc).toMatch(/buildInsiderTradeDetailSummary/);

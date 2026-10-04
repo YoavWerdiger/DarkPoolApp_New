@@ -7,7 +7,11 @@ import {
   MEDIA_ATTACH_PEEK_MAX,
   MEDIA_ATTACH_PERMISSION_CTA,
   MEDIA_ATTACH_SNAP_POINTS,
+  MEDIA_ATTACH_ACTION_ROW_GAP,
+  MEDIA_ATTACH_PRIMARY_ROW_PX,
+  MEDIA_ATTACH_SECONDARY_ROW_PX,
   formatMediaDuration,
+  mediaAttachActionColumns,
   mediaAttachActionsBlockHeightPx,
   mediaAttachPeekPlan,
   mediaAttachPresentation,
@@ -40,16 +44,22 @@ describe('media attach sheet — WhatsApp open path', () => {
     expect(sheetSrc).not.toContain('צילום מהיר');
     expect(sheetSrc).not.toContain('תמונות וסרטונים');
     expect(sheetSrc).not.toContain('chromeSurfaceCardStyle');
-    expect(sheetSrc).toMatch(
-      /primaryTile:\s*\{[^}]*backgroundColor:\s*tokens\.colors\.background\.primary/,
-    );
+    expect(sheetSrc).not.toContain('primaryTile');
     expect(sheetSrc).toMatch(
       /actionCircle:\s*\{[^}]*backgroundColor:\s*tokens\.colors\.background\.primary/,
     );
-    expect(sheetSrc).toContain("label: 'שיתוף'");
+    expect(sheetSrc).toMatch(
+      /primaryPill:\s*\{[^}]*backgroundColor:\s*tokens\.colors\.background\.primary/,
+    );
+    expect(sheetSrc).not.toContain("label: 'שיתוף'");
     expect(sheetSrc).toContain("label: 'סקר'");
+    expect(sheetSrc).toContain("from 'lucide-react-native'");
     expect(sheetSrc).toContain('primaryRow');
-    expect(sheetSrc).toContain('secondaryRow');
+    expect(sheetSrc).toContain("label: 'גלריה'");
+    expect(sheetSrc).toContain("label: 'מצלמה'");
+    expect(sheetSrc).toContain('actionGrid');
+    expect(sheetSrc).toMatch(/<ScrollView\s+horizontal/);
+    expect(sheetSrc).toContain('peekMoreTile');
     expect(sheetSrc).toContain('peekRecentsTitle');
     expect(sheetSrc).toContain('ChatAttachCameraSheet');
     expect(sheetSrc).not.toContain('כלים נוספים');
@@ -172,6 +182,16 @@ describe('media attach sheet — WhatsApp open path', () => {
     expect(mediaAttachActionsBlockHeightPx(4)).toBeGreaterThan(
       mediaAttachActionsBlockHeightPx(0),
     );
+  });
+
+  it('splits gallery | camera on the first row and tools below without ragged columns', () => {
+    expect(mediaAttachActionColumns(3)).toBe(3);
+    expect(mediaAttachActionColumns(4)).toBe(4);
+    expect(mediaAttachActionColumns(5)).toBe(4);
+    expect(mediaAttachActionsBlockHeightPx(3, 2)).toBe(
+      MEDIA_ATTACH_PRIMARY_ROW_PX + MEDIA_ATTACH_ACTION_ROW_GAP + MEDIA_ATTACH_SECONDARY_ROW_PX,
+    );
+    expect(mediaAttachActionsBlockHeightPx(0, 2)).toBe(MEDIA_ATTACH_PRIMARY_ROW_PX);
   });
 
   it('toggles selection immediately and formats video duration', () => {

@@ -306,7 +306,7 @@ describe('insider feed Hebrew — no direction:ltr on Text', () => {
     expect(isolateData(h.tickerDisplay)).toBe(`${LRI}$BRID${PDI}`);
     expect(isolateData(h.sentence)).toBe(h.sentence);
     expect(h.sentence).not.toMatch(/לקנה|של קנה|משוער/);
-    expect(feedCardSrc).toMatch(/summary\.primaryRender/);
+    expect(feedCardSrc).toMatch(/summary\.tickerDisplay/);
     expect(feedCardSrc).toMatch(/summary\.metaRender/);
     expect(feedCardSrc).toMatch(/buildInsiderTradeDetailSummary/);
   });

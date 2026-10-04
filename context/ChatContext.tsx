@@ -30,6 +30,7 @@ import {
 } from '../services/chat';
 import { stopRateLimitCleanup } from '../services/chat/chatValidation';
 import { hydrateGroupMute, hydrateGroupMutes } from '../lib/notificationGroupMute';
+import { removeShareTarget } from '../lib/shareTargets';
 import {
   enqueue as enqueueOffline,
   remove as removeOffline,
@@ -1651,6 +1652,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
       // Remove from groups list
       setGroups(prev => prev.filter(g => g.id !== groupId));
+      removeShareTarget(groupId);
 
       // Clear current group using the ref (always up-to-date) instead of state
       if (currentGroupId.current === groupId) {

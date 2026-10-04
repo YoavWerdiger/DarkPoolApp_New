@@ -112,6 +112,10 @@ describe('settings / group-info typography', () => {
     expect(switchRowSrc).toContain('s.menuRow');
     expect(switchRowSrc).toContain('s.title');
     expect(switchRowSrc).not.toContain('subtitle');
+    expect(profileSrc).toContain('ProfileIdentityCard');
+    expect(profileSrc).not.toMatch(/fontSize\s*:/);
+    expect(profileSrc).not.toContain('borderRadius: 20');
+    expect(profileSrc).not.toContain('variant="glass"');
     expect(profileSrc).toContain("navigation.navigate('Notifications')");
     expect(profileSrc).not.toContain('toggleContentNotifs');
     expect(profileSrc).not.toContain('news_notifications: value');

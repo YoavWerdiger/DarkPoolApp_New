@@ -1,6 +1,7 @@
 import React, { memo, useState } from 'react';
 import { StyleSheet, View, type ImageSourcePropType } from 'react-native';
 import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import {
   INVESTOR_PORTRAIT_PLACEHOLDER_URI,
@@ -31,6 +32,31 @@ export const InsiderAvatar = memo(function InsiderAvatar({
   const raw = showFace ? face! : INVESTOR_PORTRAIT_PLACEHOLDER_URI;
   const uri = portraitDisplayUrl(raw, Math.max(96, size * 3)) ?? raw;
   const source = showFace || !fallbackSource ? { uri } : fallbackSource;
+
+  if (!showFace && !fallbackSource) {
+    return (
+      <View
+        style={[
+          styles.ring,
+          styles.iconWrap,
+          {
+            width: size,
+            height: size,
+            borderRadius: radius,
+            borderWidth: 0,
+            backgroundColor: tokens.colors.primary.lightCta,
+          },
+        ]}
+        accessibilityLabel={label}
+      >
+        <Ionicons
+          name="notifications"
+          size={Math.round(size * 0.5)}
+          color={tokens.colors.text.inverse}
+        />
+      </View>
+    );
+  }
 
   return (
     <View
@@ -71,5 +97,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: 'transparent',
     borderWidth: 1,
+  },
+  iconWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

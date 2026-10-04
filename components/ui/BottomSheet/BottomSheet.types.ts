@@ -40,6 +40,11 @@ export interface BottomSheetProps {
   /** דריסת ריפוד תחתון לתוכן השיט (למשל 0 כשה-footer מטפל ב-safe area בעצמו) */
   contentPaddingBottom?: number;
   /**
+   * מילוי אטום של לוח השיט. ברירת מחדל: `background.cardSolid`.
+   * העבירו `background.primary` כשהשיט צריך את רקע המסך של ערכת הנושא.
+   */
+  backgroundColor?: string;
+  /**
    * ברירת מחדל: true. רקע זכוכית כהה כמו UICard / Action sheet —
    * BlurView (iOS) + overlay לבן עדין (`sheetGlass`). העברה false מחזירה
    * לרקע מותגי/משני. כשפעיל — `showBrandBackground` מתעלמים ממנו.

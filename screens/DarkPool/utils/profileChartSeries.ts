@@ -66,8 +66,13 @@ export function filterChartSeriesByPeriod(
   const sorted = sortSeries(series);
   if (period === 'All') return sorted;
 
-  // 1D יומי = סשן קודם → אחרון. לא יום קלנדרי שמתרוקן בסופ״ש.
-  if (period === '1D') return takeLastSessions(sorted, 2);
+  // 1D יומי = סשן קודם → אחרון. סדרה עם שעה (סנאפשוט תוך-יום) נשמרת ~36 שעות.
+  if (period === '1D') {
+    if (!sorted.some((p) => /T\d{2}:/.test(p.date))) return takeLastSessions(sorted, 2);
+    const lastMs = chartPointMs(sorted[sorted.length - 1].date);
+    const sliced = sorted.filter((p) => chartPointMs(p.date) >= lastMs - 36 * MS.hour);
+    return sliced.length >= 2 ? sliced : takeLastSessions(sorted, 2);
+  }
 
   const days = PERIOD_TO_DAYS[period];
   if (days == null) return sorted;
@@ -134,6 +139,9 @@ const MS = {
   week: 7 * 24 * 60 * 60_000,
 };
 
+/** מרווח מקסימלי בסשן האחרון — נקודה לפחות כל שעתיים, לא סגירה יומית אחת. */
+export const SESSION_SNAPSHOT_MAX_GAP_MS = 2 * 60 * 60_000;
+
 /** מרווח מינימלי בין נקודות מוצגות — תיק + טיקר (אחיד). */
 export function chartSampleGapMs(period: PerformancePeriod): number {
   switch (period) {
@@ -184,12 +192,15 @@ export function sampleChartSeriesForPeriod(
 
   const out: ChartPoint[] = [];
   let lastKept = -Infinity;
+  const lastMs = chartPointMs(sorted[sorted.length - 1].date);
   for (let i = 0; i < sorted.length; i++) {
     const p = sorted[i];
     const t = chartPointMs(p.date);
     const isEdge = i === 0 || i === sorted.length - 1;
     const hasFlow = (p.external_flow ?? 0) !== 0;
-    if (isEdge || hasFlow || t - lastKept >= gapMs) {
+    const inSession = /T\d{2}:/.test(p.date) && lastMs - t <= 16 * MS.hour;
+    const gap = inSession ? Math.min(gapMs, SESSION_SNAPSHOT_MAX_GAP_MS) : gapMs;
+    if (isEdge || hasFlow || t - lastKept >= gap) {
       out.push(p);
       lastKept = t;
     }

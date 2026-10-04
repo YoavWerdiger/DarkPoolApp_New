@@ -80,13 +80,14 @@ const BottomSheetImpl: React.FC<BottomSheetProps> = ({
   topCornerRadius,
   fitContent = false,
   contentPaddingBottom: contentPaddingBottomOverride,
+  backgroundColor,
   useGlassBackground = false,
   glassIntensity = SHEET_GLASS_INTENSITY,
   glassOverlayColor = SHEET_GLASS_OVERLAY,
   avoidKeyboard = false,
 }) => {
   const tokens = useDesignTokens();
-  const sheetFill = tokens.colors.background.cardSolid;
+  const sheetFill = backgroundColor ?? tokens.colors.background.cardSolid;
   const insets = useSafeAreaInsets();
   const dragStripPaddingV = showHandle ? 12 : 8;
   const dragStripMinHeight = showHandle ? 44 : 28;
@@ -480,7 +481,11 @@ const BottomSheetImpl: React.FC<BottomSheetProps> = ({
 
   const fitContentSizeStyle = useAnimatedStyle(() => {
     if (!fitContent) return {};
-    return { height: fitContentHeight.value + keyboardShift.value };
+    // מרימים את השיט מעל המקלדת בלי להגדיל אותו מעבר למסך — אחרת הראש נחתך והשדות נשארים מאחוריה.
+    const kb = keyboardShift.value;
+    const maxH = SCREEN_HEIGHT - kb - 12;
+    const h = Math.min(fitContentHeight.value, Math.max(180, maxH));
+    return { height: h, marginBottom: kb };
   }, [fitContent]);
 
   const backdropStyle = useAnimatedStyle(() => {
@@ -528,7 +533,9 @@ const BottomSheetImpl: React.FC<BottomSheetProps> = ({
       [contentPaddingBottomSV.value, 4],
       Extrapolation.CLAMP,
     );
-    return { paddingBottom: base + keyboardShift.value };
+    // fitContent כבר יושב מעל המקלדת; ריפוד נוסף דוחף את התוכן החוצה מהשיט.
+    const lift = fitContent ? 0 : keyboardShift.value;
+    return { paddingBottom: base + lift };
   });
 
   // Solid black — opacity alone is controlled by `backdropOpacity`

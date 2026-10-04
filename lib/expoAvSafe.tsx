@@ -604,13 +604,16 @@ function createExpoVideoCompat(videoMod: any) {
     onLoadRef.current = props.onLoad;
     const onErrorRef = useRef(props.onError);
     onErrorRef.current = props.onError;
+    const shouldPlayRef = useRef(!!props.shouldPlay);
+    shouldPlayRef.current = !!props.shouldPlay;
     const [showPoster, setShowPoster] = useState(!!props.usePoster && !!props.posterSource);
 
+    // play() before the item is attached is a no-op and is not retried.
+    // Local camera files load asynchronously, so start only once ready.
     const player = useVideoPlayer(uri, (p: any) => {
       p.loop = !!props.isLooping;
       p.muted = !!props.isMuted;
       p.timeUpdateEventInterval = 0.1;
-      if (props.shouldPlay) p.play();
     });
 
     const prevUri = useRef(uri);
@@ -630,8 +633,8 @@ function createExpoVideoCompat(videoMod: any) {
     }, [player, props.isLooping, props.isMuted]);
 
     useEffect(() => {
-      if (props.shouldPlay) player.play();
-      else player.pause();
+      if (!props.shouldPlay) player.pause();
+      else if (player.status === 'readyToPlay') player.play();
     }, [player, props.shouldPlay]);
 
     const emit = (extra?: { didJustFinish?: boolean }) => {
@@ -650,16 +653,25 @@ function createExpoVideoCompat(videoMod: any) {
     };
 
     useEffect(() => {
+      if (player.status === 'readyToPlay') onLoadRef.current?.();
       const subs = [
         player.addListener?.('statusChange', ({ status, error }: any) => {
           if (error) onErrorRef.current?.();
-          if (status === 'readyToPlay') onLoadRef.current?.();
+          if (status === 'readyToPlay') {
+            onLoadRef.current?.();
+            if (shouldPlayRef.current) player.play();
+          }
           emit();
         }),
         player.addListener?.('playingChange', () => emit()),
         player.addListener?.('playToEnd', () => emit({ didJustFinish: true })),
         player.addListener?.('timeUpdate', () => emit()),
-        player.addListener?.('sourceLoad', () => onLoadRef.current?.()),
+        player.addListener?.('sourceLoad', () => {
+          onLoadRef.current?.();
+          // Local camera files often report duration 0 until the track is attached.
+          // Play again once the source is actually loaded so the first frame is drawn.
+          if (shouldPlayRef.current) player.play();
+        }),
       ].filter(Boolean);
       return () => {
         for (const s of subs) {
@@ -741,6 +753,7 @@ function createExpoVideoCompat(videoMod: any) {
           style={StyleSheet.absoluteFill}
           contentFit={contentFit}
           nativeControls={!!props.useNativeControls}
+          {...(Platform.OS === 'android' ? { surfaceType: 'textureView' as const } : {})}
           onFirstFrameRender={() => setShowPoster(false)}
         />
         {showPoster && props.posterSource ? (

@@ -9,27 +9,37 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
   Keyboard,
   Pressable,
+  Switch,
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import UICard from '../ui/UICard';
-import { CHROME_UICARD, chromeSurfaceCardStyle } from '../ui/chromeControl';
-import { GlassChip } from '../ui/GlassChip';
+import UIButton from '../ui/UIButton';
 import { Trash2 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomSheetClose } from '../ui/BottomSheet/BottomSheet';
 import { ChatBottomSheet } from './ChatBottomSheet';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { UI_CARD_RADIUS } from '../ui/appLayout';
+import { formFieldInputStyle } from '../ui/formControl';
+import { appSheetButtonLabelStyle, appSheetSubtitleStyle } from '../ui/appType';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { useChatActions } from '../../context/ChatContext';
 import { PollService } from '../../services/pollService';
 import { makeClientMessageId, makeLocalId } from '../../services/chat/chatOfflineQueue';
 import { ChatMessage, ChatMessageType } from '../../types/chat.types';
-import { APP_TYPE, appPhysicalRightText, appSectionTitleStyle } from '../ui/appType';
+import {
+  CHAT_LAYOUT,
+  CHAT_TYPE,
+  chatCardSubtitleStyle,
+  chatCardTitleStyle,
+  chatPhysicalRightText,
+  chatSheetTitleStyle,
+} from './chatLayout';
 
 interface PollCreationBottomSheetProps {
   visible: boolean;
@@ -60,6 +70,7 @@ export default function PollCreationBottomSheet({
   onPollCreated,
 }: PollCreationBottomSheetProps) {
   const tokens = useDesignTokens();
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
   const { user } = useAuth();
@@ -78,6 +89,7 @@ export default function PollCreationBottomSheet({
   const [multipleChoice, setMultipleChoice] = useState(false);
   const [allowVoteChange, setAllowVoteChange] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [questionFocused, setQuestionFocused] = useState(false);
 
   const trimmedQuestion = question.trim();
   const trimmedOptions = options.map((o) => o.trim());
@@ -275,7 +287,11 @@ export default function PollCreationBottomSheet({
               dismissKeyboard();
               resetForm();
             }}
-            style={styles.headerTextButton}
+            style={[
+              styles.headerTextButton,
+              (isCreating || (!question.trim() && options.every((o) => !o.trim()))) &&
+                styles.headerTextButtonDisabled,
+            ]}
             disabled={isCreating || (!question.trim() && options.every((o) => !o.trim()))}
           >
             <Text style={styles.headerTextButtonLabel}>נקה</Text>
@@ -291,93 +307,93 @@ export default function PollCreationBottomSheet({
           onScrollBeginDrag={dismissKeyboard}
           showsVerticalScrollIndicator={false}
         >
-          <Pressable onPress={dismissKeyboard} style={{ gap: 12 }}>
-            {/* Question card */}
-            <UICard
-              {...CHROME_UICARD}
-              style={chromeSurfaceCardStyle(tokens, glassCardStyles.shell)}
-              contentContainerStyle={glassCardStyles.inner}
-            >
-              <View style={styles.cardHeaderRow}>
-                {/* row-reverse: child ראשון = ימין */}
-                <Text style={styles.cardTitle}>שאלה</Text>
-                <Text style={styles.counter}>{question.length}/{QUESTION_MAX_LEN}</Text>
+          <Pressable onPress={dismissKeyboard} style={styles.form}>
+            <View>
+              <View style={styles.sectionLabelRow}>
+                <Text style={styles.groupLabel}>שאלה</Text>
+                <Text style={styles.counter}>
+                  {question.length}/{QUESTION_MAX_LEN}
+                </Text>
               </View>
-              <TextInput
-                value={question}
-                onChangeText={setQuestion}
-                placeholder="מה תרצה לשאול?"
-                placeholderTextColor={tokens.colors.text.secondary}
-                style={[styles.questionInput, { writingDirection: 'rtl' }]}
-                textAlign="right"
-                textAlignVertical="top"
-                multiline
-                maxLength={QUESTION_MAX_LEN}
-                blurOnSubmit
-                returnKeyType="done"
-                onSubmitEditing={dismissKeyboard}
-              />
-            </UICard>
+              <UICard
+                variant="soft"
+                padding="none"
+                disableBlur
+                style={[styles.card, questionFocused && styles.cardFocused]}
+              >
+                <TextInput
+                  value={question}
+                  onChangeText={setQuestion}
+                  placeholder="מה תרצה לשאול?"
+                  placeholderTextColor={tokens.colors.text.tertiary}
+                  style={styles.questionInput}
+                  textAlignVertical="top"
+                  multiline
+                  maxLength={QUESTION_MAX_LEN}
+                  blurOnSubmit
+                  returnKeyType="done"
+                  onSubmitEditing={dismissKeyboard}
+                  onFocus={() => setQuestionFocused(true)}
+                  onBlur={() => setQuestionFocused(false)}
+                />
+              </UICard>
+            </View>
 
-            {/* Options card */}
-            <UICard
-              {...CHROME_UICARD}
-              style={chromeSurfaceCardStyle(tokens, glassCardStyles.shell)}
-              contentContainerStyle={glassCardStyles.inner}
-            >
-              <View style={styles.cardHeaderRow}>
-                <Text style={styles.cardTitle}>אפשרויות</Text>
-                <Text style={styles.counter}>{options.length}/{MAX_OPTIONS}</Text>
+            <View>
+              <View style={styles.sectionLabelRow}>
+                <Text style={styles.groupLabel}>אפשרויות</Text>
+                <Text style={styles.counter}>
+                  {options.length}/{MAX_OPTIONS}
+                </Text>
               </View>
-
-              <View style={styles.optionsList}>
+              <UICard variant="soft" padding="none" disableBlur style={styles.card}>
                 {options.map((option, index) => {
                   const showRemove = options.length > MIN_OPTIONS;
                   const isLast = index === options.length - 1;
                   return (
-                    <View key={`poll-option-${index}`} style={styles.optionRow}>
-                      {/* row-reverse: first child = rightmost */}
-                      <GlassChip
-                        disableBlur
-                        style={[styles.optionIndexPill, { backgroundColor: tokens.colors.background.primary }]}
-                        contentContainerStyle={styles.optionIndexPillContent}
-                      >
-                        <Text style={styles.optionIndexText}>{index + 1}</Text>
-                      </GlassChip>
-
-                      <TextInput
-                        value={option}
-                        onChangeText={(text) => updateOption(index, text)}
-                        placeholder={`אפשרות ${index + 1}`}
-                        placeholderTextColor={tokens.colors.text.secondary}
-                        style={[styles.optionInput, { writingDirection: 'rtl' }]}
-                        textAlign="right"
-                        maxLength={OPTION_MAX_LEN}
-                        returnKeyType={isLast ? 'done' : 'next'}
-                        blurOnSubmit={isLast}
-                        onSubmitEditing={() => {
-                          if (isLast) {
-                            dismissKeyboard();
-                          }
-                        }}
-                      />
-
-                      {showRemove ? (
-                        <TouchableOpacity
-                          onPress={() => removeOption(index)}
-                          style={styles.removeOptionButton}
-                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        >
-                          <Trash2 size={16} color={tokens.colors.text.danger ?? '#EF4444'} strokeWidth={2} />
-                        </TouchableOpacity>
-                      ) : (
-                        <View style={styles.removeOptionButtonPlaceholder} />
-                      )}
+                    <View key={`poll-option-${index}`}>
+                      {index > 0 ? <View style={styles.rowDivider} /> : null}
+                      <View style={styles.optionRow}>
+                        <View style={styles.optionIndex}>
+                          <Text style={styles.optionIndexText}>{index + 1}</Text>
+                        </View>
+                        <TextInput
+                          value={option}
+                          onChangeText={(text) => updateOption(index, text)}
+                          placeholder={`אפשרות ${index + 1}`}
+                          placeholderTextColor={tokens.colors.text.tertiary}
+                          style={styles.optionInput}
+                          maxLength={OPTION_MAX_LEN}
+                          returnKeyType={isLast ? 'done' : 'next'}
+                          blurOnSubmit={isLast}
+                          onSubmitEditing={() => {
+                            if (isLast) {
+                              dismissKeyboard();
+                            }
+                          }}
+                        />
+                        {showRemove ? (
+                          <TouchableOpacity
+                            onPress={() => removeOption(index)}
+                            style={styles.removeOptionButton}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            accessibilityLabel="הסר אפשרות"
+                          >
+                            <Trash2
+                              size={18}
+                              color={tokens.colors.danger.main}
+                              strokeWidth={2}
+                            />
+                          </TouchableOpacity>
+                        ) : (
+                          <View style={styles.removeOptionButtonPlaceholder} />
+                        )}
+                      </View>
                     </View>
                   );
                 })}
 
-                {/* Add option */}
+                <View style={styles.rowDivider} />
                 <TouchableOpacity
                   onPress={addOption}
                   disabled={options.length >= MAX_OPTIONS}
@@ -386,6 +402,15 @@ export default function PollCreationBottomSheet({
                     options.length >= MAX_OPTIONS && styles.addOptionRowDisabled,
                   ]}
                 >
+                  <Ionicons
+                    name="add"
+                    size={20}
+                    color={
+                      options.length >= MAX_OPTIONS
+                        ? tokens.colors.text.secondary
+                        : tokens.colors.primary.main
+                    }
+                  />
                   <Text
                     style={[
                       styles.addOptionText,
@@ -394,137 +419,103 @@ export default function PollCreationBottomSheet({
                   >
                     הוסף אפשרות
                   </Text>
-                  <View style={styles.addOptionLeft}>
-                    <Ionicons
-                      name="add"
-                      size={18}
-                      color={
-                        options.length >= MAX_OPTIONS
-                          ? tokens.colors.text.secondary
-                          : tokens.colors.primary.main
-                      }
-                    />
-                  </View>
                 </TouchableOpacity>
 
-                {hasDuplicateOptions && (
+                {hasDuplicateOptions ? (
                   <Text style={styles.inlineWarning}>
                     יש אפשרויות כפולות — כל אפשרות צריכה להיות ייחודית.
                   </Text>
-                )}
+                ) : null}
+              </UICard>
+            </View>
+
+            <View>
+              <View style={styles.sectionLabelRow}>
+                <Text style={styles.groupLabel}>הגדרות</Text>
               </View>
-            </UICard>
-
-            {/* Settings card */}
-            <UICard
-              {...CHROME_UICARD}
-              style={chromeSurfaceCardStyle(tokens, glassCardStyles.shell)}
-              contentContainerStyle={glassCardStyles.inner}
-            >
-              <Text style={[styles.cardTitle, styles.cardTitleBlock]}>הגדרות</Text>
-
-              <View style={styles.segmented}>
-                <TouchableOpacity
-                  onPress={() => {
-                    dismissKeyboard();
-                    setMultipleChoice(true);
-                  }}
-                  style={[styles.segment, multipleChoice && styles.segmentActive]}
-                >
-                  <Text style={[styles.segmentText, multipleChoice && styles.segmentTextActive]}>
-                    בחירה מרובה
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => {
-                    dismissKeyboard();
-                    setMultipleChoice(false);
-                  }}
-                  style={[styles.segment, !multipleChoice && styles.segmentActive]}
-                >
-                  <Text style={[styles.segmentText, !multipleChoice && styles.segmentTextActive]}>
-                    בחירה יחידה
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              <Text style={styles.helperText}>
-                {multipleChoice
-                  ? 'משתמשים יוכלו לבחור יותר מתשובה אחת.'
-                  : 'משתמשים יוכלו לבחור תשובה אחת בלבד.'}
-              </Text>
-
-              <TouchableOpacity
-                onPress={() => {
-                  dismissKeyboard();
-                  setAllowVoteChange((prev) => !prev);
-                }}
-                activeOpacity={0.75}
-                style={styles.toggleRow}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: allowVoteChange }}
-              >
-                <View style={styles.toggleCopy}>
-                  <Text style={styles.toggleTitle}>אפשר לשנות תשובה</Text>
-                  <Text style={styles.helperText}>
-                    משתמשים יוכלו לשנות את הבחירה אחרי ההצבעה.
-                  </Text>
+              <UICard variant="soft" padding="none" disableBlur style={styles.card}>
+                <View style={styles.segmented}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      dismissKeyboard();
+                      setMultipleChoice(true);
+                    }}
+                    style={[styles.segment, multipleChoice && styles.segmentActive]}
+                  >
+                    <Text style={[styles.segmentText, multipleChoice && styles.segmentTextActive]}>
+                      בחירה מרובה
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => {
+                      dismissKeyboard();
+                      setMultipleChoice(false);
+                    }}
+                    style={[styles.segment, !multipleChoice && styles.segmentActive]}
+                  >
+                    <Text style={[styles.segmentText, !multipleChoice && styles.segmentTextActive]}>
+                      בחירה יחידה
+                    </Text>
+                  </TouchableOpacity>
                 </View>
-                <View
-                  style={[
-                    styles.checkbox,
-                    allowVoteChange && styles.checkboxChecked,
-                  ]}
-                >
-                  {allowVoteChange && (
-                    <Ionicons name="checkmark" size={14} color="#fff" />
-                  )}
-                </View>
-              </TouchableOpacity>
-            </UICard>
 
-            <View style={{ height: 8 }} />
+                <Text style={styles.helperText}>
+                  {multipleChoice
+                    ? 'משתמשים יוכלו לבחור יותר מתשובה אחת.'
+                    : 'משתמשים יוכלו לבחור תשובה אחת בלבד.'}
+                </Text>
+
+                <View style={styles.rowDivider} />
+                <View style={styles.toggleRow}>
+                  <View style={styles.toggleCopy}>
+                    <Text style={styles.toggleTitle}>אפשר לשנות תשובה</Text>
+                    <Text style={styles.toggleSubtitle}>
+                      משתמשים יוכלו לשנות את הבחירה אחרי ההצבעה.
+                    </Text>
+                  </View>
+                  <Switch
+                    value={allowVoteChange}
+                    onValueChange={(next) => {
+                      dismissKeyboard();
+                      setAllowVoteChange(next);
+                    }}
+                    trackColor={{
+                      false: theme.switchTrackOff,
+                      true: tokens.colors.primary.main,
+                    }}
+                    thumbColor={
+                      allowVoteChange ? tokens.colors.text.primary : theme.switchThumbOff
+                    }
+                    ios_backgroundColor={theme.switchTrackOff}
+                    style={styles.switch}
+                    accessibilityLabel="אפשר לשנות תשובה"
+                  />
+                </View>
+              </UICard>
+            </View>
           </Pressable>
         </ScrollView>
 
         {/* Footer — bottom inset מגיע מ-contentPaddingBottom של השיט (כולל פיצוי off-screen) */}
         <View style={styles.footer}>
-          <TouchableOpacity
-            onPress={handleCreatePoll}
+          <UIButton
+            title={isCreating ? 'יוצר…' : 'צור סקר'}
+            variant="primary"
+            size="lg"
+            fullWidth
             disabled={!canCreate}
-            activeOpacity={0.85}
-            style={[styles.primaryButton, !canCreate && styles.primaryButtonDisabled]}
-          >
-            {isCreating ? (
-              <View style={styles.primaryButtonContent}>
-                <ActivityIndicator color="#fff" size="small" />
-                <Text style={styles.primaryButtonText}>יוצר…</Text>
-              </View>
-            ) : (
-              <Text style={styles.primaryButtonText}>צור סקר</Text>
-            )}
-          </TouchableOpacity>
+            loading={isCreating}
+            onPress={handleCreatePoll}
+            textStyle={appSheetButtonLabelStyle}
+          />
         </View>
       </KeyboardAvoidingView>
     </ChatBottomSheet>
   );
 }
 
-const glassCardStyles = StyleSheet.create({
-  shell: {
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  inner: {
-    padding: 16,
-    gap: 10,
-  },
-});
-
-/* ── Main styles ── */
-const createStyles = (tokens: any) => {
+const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => {
   const borderColor = tokens.colors.border.divider;
-  const controlFill = tokens.colors.background.primary;
 
   return StyleSheet.create({
     container: {
@@ -532,15 +523,14 @@ const createStyles = (tokens: any) => {
       backgroundColor: 'transparent',
     },
 
-    /* Header */
     header: {
-      flexDirection: 'row-reverse' as any,
+      flexDirection: 'row-reverse',
       alignItems: 'center',
-      paddingHorizontal: 16,
-      paddingVertical: 12,
+      paddingHorizontal: CHAT_LAYOUT.screenPaddingHorizontal,
+      paddingVertical: CHAT_LAYOUT.cardTitleToBodyGap,
       borderBottomWidth: 1,
       borderBottomColor: borderColor,
-      gap: 10,
+      gap: CHAT_LAYOUT.stackGapTight,
     },
     headerIconButton: {
       alignSelf: 'center',
@@ -550,125 +540,115 @@ const createStyles = (tokens: any) => {
       alignItems: 'flex-end',
     },
     title: {
-      ...appSectionTitleStyle,
+      ...chatSheetTitleStyle,
       color: tokens.colors.text.primary,
     },
     subtitle: {
-      marginTop: 2,
-      fontSize: APP_TYPE.sectionSubtitle.fontSize,
-      fontWeight: '500',
-      lineHeight: APP_TYPE.sectionSubtitle.lineHeight,
+      ...appSheetSubtitleStyle,
+      marginTop: CHAT_LAYOUT.titleSubtitleGap,
       color: tokens.colors.text.secondary,
-      ...appPhysicalRightText,
     },
     headerTextButton: {
       minWidth: 44,
       height: 36,
-      borderRadius: 10,
+      borderRadius: tokens.borderRadius.full,
       alignItems: 'center',
       justifyContent: 'center',
-      paddingHorizontal: 10,
-      backgroundColor: controlFill,
+      paddingHorizontal: CHAT_LAYOUT.stackGapTight,
+      backgroundColor: tokens.colors.background.navChrome,
+    },
+    headerTextButtonDisabled: {
+      opacity: 0.45,
     },
     headerTextButtonLabel: {
-      fontSize: 13,
-      fontWeight: '700',
+      ...CHAT_TYPE.footnote,
       color: tokens.colors.text.primary,
     },
 
-    /* Scroll */
     scroll: {
       flex: 1,
     },
     scrollContent: {
       flexGrow: 1,
-      paddingHorizontal: 16,
-      paddingVertical: 14,
-      gap: 12,
+      paddingHorizontal: CHAT_LAYOUT.screenPaddingHorizontal,
+      paddingTop: CHAT_LAYOUT.cardPadding,
+      paddingBottom: CHAT_LAYOUT.cardPadding,
     },
-
-    /* Card internals */
-    cardHeaderRow: {
-      flexDirection: 'row-reverse' as any,
+    form: {
+      gap: CHAT_LAYOUT.cardStackGap,
+    },
+    sectionLabelRow: {
+      flexDirection: 'row-reverse',
       alignItems: 'center',
       justifyContent: 'space-between',
-      width: '100%',
+      marginBottom: CHAT_LAYOUT.groupLabelToContent,
     },
-    cardTitle: {
-      fontSize: 15,
-      fontWeight: '800',
-      color: tokens.colors.text.primary,
-      textAlign: 'right',
-      writingDirection: 'rtl' as any,
-    },
-    cardTitleBlock: {
-      alignSelf: 'stretch',
-      width: '100%',
+    groupLabel: {
+      ...chatPhysicalRightText,
+      ...CHAT_TYPE.groupLabel,
+      flex: 1,
+      color: tokens.colors.text.secondary,
     },
     counter: {
-      fontSize: 12,
-      fontWeight: '600',
+      ...CHAT_TYPE.caption,
       color: tokens.colors.text.secondary,
       textAlign: 'left',
+      writingDirection: 'ltr',
+    },
+    card: {
+      borderRadius: UI_CARD_RADIUS,
+      overflow: 'hidden',
+    },
+    cardFocused: {
+      backgroundColor: tokens.colors.background.tertiary,
+    },
+    rowDivider: {
+      height: 1,
+      backgroundColor: borderColor,
+      marginHorizontal: CHAT_LAYOUT.cardPadding,
     },
 
-    /* Question input */
     questionInput: {
-      backgroundColor: controlFill,
-      borderWidth: 1,
-      borderColor: borderColor,
-      borderRadius: 12,
-      paddingHorizontal: 14,
-      paddingVertical: 10,
+      ...formFieldInputStyle(),
+      flex: 0,
+      width: '100%',
       color: tokens.colors.text.primary,
-      fontSize: 16,
-      minHeight: 80,
+      paddingHorizontal: CHAT_LAYOUT.cardPadding,
+      paddingVertical: CHAT_LAYOUT.cardTitleToBodyGap,
+      minHeight: 88,
+      textAlignVertical: 'top',
     },
 
-    /* Options */
-    optionsList: {
-      gap: 9,
-    },
     optionRow: {
-      flexDirection: 'row-reverse' as any,
+      flexDirection: 'row-reverse',
       alignItems: 'center',
-      gap: 8,
+      paddingVertical: 15,
+      paddingHorizontal: CHAT_LAYOUT.cardPadding,
     },
-    optionIndexPill: {
-      width: 26,
-      height: 26,
-      minHeight: 26,
-      borderRadius: 13,
+    optionIndex: {
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: tokens.colors.background.tertiary,
       flexShrink: 0,
     },
-    optionIndexPillContent: {
-      width: 26,
-      height: 26,
-      minHeight: 26,
-      paddingHorizontal: 0,
-      paddingVertical: 0,
-    },
     optionIndexText: {
-      fontSize: 11,
-      fontWeight: '800',
+      ...CHAT_TYPE.caption2,
       color: tokens.colors.text.secondary,
     },
     optionInput: {
+      ...formFieldInputStyle(),
       flex: 1,
-      backgroundColor: controlFill,
-      borderWidth: 1,
-      borderColor: borderColor,
-      borderRadius: 12,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
+      marginRight: 12,
       color: tokens.colors.text.primary,
-      fontSize: 15,
+      paddingVertical: 0,
     },
     removeOptionButton: {
       width: 32,
       height: 32,
-      borderRadius: 10,
-      backgroundColor: 'rgba(239,68,68,0.14)',
+      marginRight: 12,
       alignItems: 'center',
       justifyContent: 'center',
       flexShrink: 0,
@@ -676,150 +656,98 @@ const createStyles = (tokens: any) => {
     removeOptionButtonPlaceholder: {
       width: 32,
       height: 32,
+      marginRight: 12,
       flexShrink: 0,
     },
 
-    /* Add option */
     addOptionRow: {
-      flexDirection: 'row-reverse' as any,
+      flexDirection: 'row-reverse',
       alignItems: 'center',
-      gap: 8,
-      borderWidth: 1,
-      borderColor: borderColor,
-      borderStyle: 'dashed' as any,
-      borderRadius: 12,
-      paddingVertical: 11,
-      paddingHorizontal: 14,
-      backgroundColor: controlFill,
+      paddingVertical: 15,
+      paddingHorizontal: CHAT_LAYOUT.cardPadding,
     },
     addOptionRowDisabled: {
       opacity: 0.45,
     },
-    addOptionLeft: {
-      width: 26,
-      height: 26,
-      borderRadius: 13,
-      backgroundColor: 'rgba(0,200,5,0.12)',
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexShrink: 0,
-    },
     addOptionText: {
+      ...chatPhysicalRightText,
+      ...CHAT_TYPE.cardTitle,
       flex: 1,
-      fontSize: 14,
-      fontWeight: '700',
+      marginRight: 12,
       color: tokens.colors.primary.main,
-      textAlign: 'right',
     },
     addOptionTextDisabled: {
       color: tokens.colors.text.secondary,
     },
 
     inlineWarning: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: '#F59E0B',
-      textAlign: 'right',
+      ...chatPhysicalRightText,
+      ...CHAT_TYPE.caption,
+      color: tokens.colors.warning.main,
+      paddingHorizontal: CHAT_LAYOUT.cardPadding,
+      paddingBottom: CHAT_LAYOUT.cardPadding,
     },
 
-    /* Segmented control — RTL: מרובה | יחידה */
     segmented: {
-      flexDirection: 'row-reverse' as any,
-      borderWidth: 1,
-      borderColor: borderColor,
-      borderRadius: 12,
-      overflow: 'hidden',
-      marginTop: 8,
+      flexDirection: 'row-reverse',
+      backgroundColor: tokens.colors.background.tertiary,
+      borderRadius: tokens.borderRadius.full,
+      padding: 3,
+      marginTop: CHAT_LAYOUT.cardPadding,
+      marginHorizontal: CHAT_LAYOUT.cardPadding,
     },
     segment: {
       flex: 1,
-      paddingVertical: 11,
+      paddingVertical: CHAT_LAYOUT.stackGapSmall,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: controlFill,
+      borderRadius: tokens.borderRadius.full,
     },
     segmentActive: {
-      backgroundColor: tokens.colors.primary.main,
+      backgroundColor: tokens.colors.background.cardSolid,
     },
     segmentText: {
-      fontSize: 13,
-      fontWeight: '700',
+      ...appSheetButtonLabelStyle,
       color: tokens.colors.text.secondary,
     },
     segmentTextActive: {
-      color: '#fff',
-      fontWeight: '800' as any,
+      color: tokens.colors.text.primary,
     },
     helperText: {
-      fontSize: 12,
-      fontWeight: '500',
+      ...chatPhysicalRightText,
+      ...CHAT_TYPE.cardSubtitle,
       color: tokens.colors.text.secondary,
-      textAlign: 'right',
+      marginTop: CHAT_LAYOUT.stackGapSmall,
+      marginHorizontal: CHAT_LAYOUT.cardPadding,
+      marginBottom: CHAT_LAYOUT.cardTitleToBodyGap,
     },
     toggleRow: {
-      flexDirection: 'row-reverse' as any,
+      flexDirection: 'row-reverse',
       alignItems: 'center',
-      gap: 12,
-      marginTop: 12,
-      paddingTop: 12,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: borderColor,
+      paddingVertical: 15,
+      paddingHorizontal: CHAT_LAYOUT.cardPadding,
     },
     toggleCopy: {
       flex: 1,
-      gap: 4,
-      alignItems: 'flex-end',
     },
     toggleTitle: {
-      fontSize: 14,
-      fontWeight: '700',
+      ...chatCardTitleStyle,
       color: tokens.colors.text.primary,
-      textAlign: 'right',
     },
-    checkbox: {
-      width: 24,
-      height: 24,
-      borderRadius: 7,
-      borderWidth: 1.5,
-      borderColor: borderColor,
-      backgroundColor: controlFill,
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexShrink: 0,
+    toggleSubtitle: {
+      ...chatCardSubtitleStyle,
+      color: tokens.colors.text.secondary,
     },
-    checkboxChecked: {
-      backgroundColor: tokens.colors.primary.main,
-      borderColor: tokens.colors.primary.main,
+    switch: {
+      transform: [{ scaleX: 0.82 }, { scaleY: 0.82 }],
     },
 
-    /* Footer — bottom inset מ-ChatBottomSheet contentPaddingBottom */
     footer: {
-      paddingHorizontal: 16,
-      paddingTop: 12,
-      paddingBottom: 8,
-      gap: 10,
+      paddingHorizontal: CHAT_LAYOUT.screenPaddingHorizontal,
+      paddingTop: CHAT_LAYOUT.cardTitleToBodyGap,
+      paddingBottom: CHAT_LAYOUT.stackGapSmall,
       borderTopWidth: 1,
       borderTopColor: borderColor,
-    },
-    primaryButton: {
-      height: 50,
-      borderRadius: 14,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: tokens.colors.primary.main,
-    },
-    primaryButtonDisabled: {
-      backgroundColor: controlFill,
-    },
-    primaryButtonText: {
-      fontSize: 16,
-      fontWeight: '800',
-      color: '#fff',
-    },
-    primaryButtonContent: {
-      flexDirection: 'row-reverse' as any,
-      alignItems: 'center',
-      gap: 8,
     },
   });
 };

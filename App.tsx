@@ -42,6 +42,9 @@ import {
 } from './lib/notificationRouting';
 import { warmChatGroupOnPress } from './services/appPrefetch';
 import { lockAndroidChatSoftInput } from './components/chat/androidChatKeyboard';
+import { ShareIntentProvider } from 'expo-share-intent';
+import { useIncomingShare } from './hooks/useIncomingShare';
+import { clearShareTargets } from './lib/shareTargets';
 // מסכים לא-פעילים (כל ה-stacks ב-Drawer נשארים טעונים) מוקפאים ולא מתרנדרים ברקע —
 // משחרר את ה-JS thread ומשפר משמעותית את חלקות הניווט והאינטראקציות.
 enableScreens(true);
@@ -306,6 +309,12 @@ function AppContent() {
     };
   }, [user, registrationDone]);
 
+  useIncomingShare(!!user && registrationDone && biometricChecked && !biometricLocked);
+
+  useEffect(() => {
+    if (!isLoading && !user) clearShareTargets();
+  }, [isLoading, user]);
+
   // מסך טעינה מינימלי בלבד בזמן טעינת ה-Auth (בלי splash \"מלאכותי\" ובלי תמונת רקע מרשת)
   if (isLoading) {
     return (
@@ -415,6 +424,7 @@ export default function App() {
   }
 
   return (
+    <ShareIntentProvider>
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: APP_SYSTEM_BACKGROUND }}>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
@@ -435,5 +445,6 @@ export default function App() {
         </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
+    </ShareIntentProvider>
   );
 }

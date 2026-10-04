@@ -351,7 +351,7 @@ export default function PortfoliosTab() {
         searchCardWrap: {
           flex: 1,
           minWidth: 0,
-          backgroundColor: tokens.colors.background.cardSolid,
+          backgroundColor: tokens.colors.background.input,
           borderRadius: tokens.borderRadius.search,
           overflow: 'hidden',
           borderWidth: 0,

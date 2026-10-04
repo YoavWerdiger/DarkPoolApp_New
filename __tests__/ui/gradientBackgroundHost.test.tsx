@@ -3,6 +3,15 @@ import TestRenderer, { act } from 'react-test-renderer';
 import { ScreenGradientBackground } from '../../components/VideoBackground';
 import { AuroraHostContext } from '../../components/ui/DarkGreenAuroraBackground';
 
+jest.mock('../../context/ThemeContext', () => ({
+  useTheme: () => ({
+    isDarkMode: true,
+    theme: { background: '#000000' },
+    toggleTheme: jest.fn(),
+    backgroundImage: '',
+  }),
+}));
+
 describe('ScreenGradientBackground host skip', () => {
   it('does not mount a second animated layer under AuroraHost', () => {
     let tree: TestRenderer.ReactTestRenderer;

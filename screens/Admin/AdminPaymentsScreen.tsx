@@ -14,13 +14,28 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Receipt, RefreshCw, Ban, Zap, Search } from 'lucide-react-native';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
-import { chatPalette } from '../../components/chat/chatDesignTokens';
 import UICard from '../../components/ui/UICard';
 import DesignTokens, { useDesignTokens } from '../../components/ui/DesignTokens';
+import { formFieldShellStyle } from '../../components/ui/formControl';
+import { APP_LAYOUT } from '../../components/ui/appLayout';
+import {
+  adminBody,
+  adminCaption,
+  adminCaption2,
+  adminCardSubtitle,
+  adminCardTitle,
+  adminHebrewText,
+  adminMetric,
+  adminMetricLabel,
+  adminMetricSecondary,
+  adminPhysicalRightText,
+} from '../../components/admin/adminType';
 import {
   AdminSectionLabel,
   AdminFilterChip,
+  AdminSegmentedBar,
   AdminBadge,
+  AdminSurface,
   AdminLoadingState,
   AdminErrorState,
   AdminDeniedState,
@@ -32,8 +47,6 @@ import {
   type AdminUserSubscription,
 } from '../../services/admin';
 import { SUBSCRIPTION_PLANS } from '../../services/paymentService';
-import { MarketsEmbedSwitcher } from '../Markets/components/MarketsEmbedSwitcher';
-import type { SegmentedOption } from '../Markets/components/MarketsSegmentedControl';
 import { legacyAlert } from '../../utils/appDialog';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { useIsAdmin } from '../../hooks/useIsAdmin';
@@ -60,8 +73,8 @@ const STATUS_HE: Record<string, string> = {
   expired: 'פג תוקף',
 };
 
-/** סדר: ראשון במערך = ימין (row-reverse ב־MarketsEmbedSwitcher) — מנויים פעילים ראשי */
-const TABS: SegmentedOption<TabKey>[] = [
+/** סדר: ראשון במערך = ימין (row-reverse) — מנויים פעילים ראשי */
+const TABS: { id: TabKey; label: string }[] = [
   { id: 'active', label: 'מנויים פעילים' },
   { id: 'history', label: 'היסטוריית תשלומים' },
   { id: 'upcoming', label: 'חיובים קרובים' },
@@ -152,8 +165,6 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
     pending: 0,
     revenue: 0,
   });
-  const [activeCount, setActiveCount] = useState(0);
-
   const [status, setStatus] = useState('');
   const [query, setQuery] = useState(initialQuery || initialEmail);
   const [userIdFilter] = useState(initialUserId);
@@ -171,7 +182,6 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
         userId: userIdFilter || undefined,
       });
       setMonthSummary(res.month);
-      setActiveCount(res.activeSubscriptions);
       setUpcomingRows(res.upcoming);
       return;
     } catch {
@@ -185,7 +195,6 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
         status: 'active',
         userId: userIdFilter || undefined,
       });
-      setActiveCount(res.total);
       const horizon = Date.now() + 60 * 864e5;
       const upcoming = res.subscriptions
         .filter((s) => s.auto_renew && s.expires_at && new Date(s.expires_at).getTime() <= horizon)
@@ -401,7 +410,7 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
   }
 
   const listPad = {
-    paddingHorizontal: tokens.spacing.md,
+    paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
     paddingTop: tokens.spacing.sm,
     paddingBottom: 48,
     flexGrow: 1,
@@ -410,51 +419,30 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
   const listHeader = (
     <View style={styles.listHeader}>
       <AdminSectionLabel>סיכום החודש</AdminSectionLabel>
-      <UICard
-        variant="glass"
-        glassIntensity="light"
-        padding="md"
-        style={{
-          borderRadius: tokens.borderRadius.xl,
-          borderWidth: 1,
-          borderColor: chatPalette.glassBorder,
-          marginBottom: tokens.spacing.md,
-        }}
-      >
+      <AdminSurface padding="md">
         <View style={styles.kpiFeatured}>
-          <Text style={[styles.kpiFeaturedLabel, { color: tokens.colors.text.tertiary }]}>
+          <Text style={[styles.kpiFeaturedLabel, { color: tokens.colors.text.secondary }]}>
             הכנסה
           </Text>
           <Text
-            style={[styles.kpiFeaturedValue, { color: tokens.colors.primary.main }]}
+            style={[styles.kpiFeaturedValue, { color: tokens.colors.text.primary }]}
             numberOfLines={1}
             adjustsFontSizeToFit
             minimumFontScale={0.75}
           >
             {`₪${monthSummary.revenue.toLocaleString('he-IL')}`}
           </Text>
-          <View style={styles.kpiMetaRow}>
-            <Text style={[styles.kpiMeta, { color: tokens.colors.text.tertiary }]}>
-              {monthSummary.total} חיובים החודש
-            </Text>
-            <Text style={[styles.kpiMetaDot, { color: tokens.colors.text.muted }]}>·</Text>
-            <Text style={[styles.kpiMeta, { color: tokens.colors.primary.main }]}>
-              {activeCount} מנויים פעילים
-            </Text>
-          </View>
         </View>
-
-        <View style={[styles.kpiDivider, { backgroundColor: tokens.colors.border.divider }]} />
 
         <View style={styles.kpiRow}>
           <KpiCell label="שולמו" value={String(monthSummary.success)} />
           <KpiCell label="נכשלו" value={String(monthSummary.failed)} />
           <KpiCell label="ממתינים" value={String(monthSummary.pending)} />
         </View>
-      </UICard>
+      </AdminSurface>
 
-      <View style={styles.tabBarWrap} accessibilityRole="tablist">
-        <MarketsEmbedSwitcher
+      <View style={styles.tabBarWrap}>
+        <AdminSegmentedBar
           options={TABS}
           value={tab}
           onChange={switchTab}
@@ -463,39 +451,34 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
       </View>
 
       {userIdFilter ? (
-        <Text style={[styles.hint, { color: tokens.colors.warning.main, fontSize: 12, marginBottom: tokens.spacing.sm }]}>
+        <Text style={[styles.hint, { color: tokens.colors.warning.main, marginBottom: tokens.spacing.sm }]}>
           מסונן לפי משתמש: {initialEmail || userIdFilter.slice(0, 8)}…
         </Text>
       ) : null}
 
-      <UICard
-        variant="inputGlass"
-        padding="none"
-        style={{
-          borderRadius: tokens.borderRadius.search,
-          marginBottom: tokens.spacing.md,
-          borderWidth: 1,
-          borderColor: chatPalette.glassBorder,
-        }}
+      <View
+        style={[
+          formFieldShellStyle({ tokens, focused: false }),
+          styles.searchShell,
+          { marginBottom: APP_LAYOUT.cardStackGap },
+        ]}
       >
-        <View style={styles.searchRow}>
-          <TextInput
-            value={query}
-            onChangeText={setQuery}
-            onSubmitEditing={() => {
-              setLoading(true);
-              void load({ page: 1 });
-            }}
-            placeholder="חיפוש לפי אימייל / שם / מסלול"
-            placeholderTextColor={tokens.colors.text.tertiary}
-            autoCapitalize="none"
-            autoCorrect={false}
-            returnKeyType="search"
-            style={[styles.searchInput, { color: tokens.colors.text.primary }]}
-          />
-          <Search size={18} color={tokens.colors.text.tertiary} strokeWidth={2.2} />
-        </View>
-      </UICard>
+        <TextInput
+          value={query}
+          onChangeText={setQuery}
+          onSubmitEditing={() => {
+            setLoading(true);
+            void load({ page: 1 });
+          }}
+          placeholder="חיפוש לפי אימייל / שם / מסלול"
+          placeholderTextColor={tokens.colors.text.tertiary}
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="search"
+          style={[styles.searchInput, { color: tokens.colors.text.primary }]}
+        />
+        <Search size={18} color={tokens.colors.text.tertiary} strokeWidth={2} />
+      </View>
 
       {tab === 'history' ? (
         <ScrollView
@@ -515,29 +498,13 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
         </ScrollView>
       ) : null}
 
-      <View style={styles.countRow}>
-        <AdminSectionLabel style={styles.sectionLabelInline}>
-          {tab === 'history' ? 'היסטוריה' : tab === 'active' ? 'מנויים פעילים' : 'מחזורי חיוב'}
-        </AdminSectionLabel>
-        <Text
-          style={[
-            styles.countText,
-            {
-              color:
-                tab === 'active'
-                  ? tokens.colors.primary.main
-                  : tokens.colors.text.tertiary,
-              fontWeight: tab === 'active' ? '700' : '600',
-            },
-          ]}
-        >
-          {tab === 'history'
-            ? `${total} תשלומים`
-            : tab === 'active'
-              ? `${total} מנויים פעילים`
-              : `${filteredUpcoming.length} חיובים קרובים (עד 60 יום)`}
-        </Text>
-      </View>
+      <Text style={[styles.countText, { color: tokens.colors.text.secondary }]}>
+        {tab === 'history'
+          ? `${total} תשלומים`
+          : tab === 'active'
+            ? `${total} מנויים פעילים`
+            : `${filteredUpcoming.length} חיובים קרובים`}
+      </Text>
     </View>
   );
 
@@ -546,7 +513,7 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
       {header}
 
       {error ? (
-        <View style={{ paddingHorizontal: tokens.spacing.md, paddingTop: tokens.spacing.sm }}>
+        <View style={{ paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal, paddingTop: tokens.spacing.sm }}>
           <AdminErrorState
             message={error}
             onRetry={() => {
@@ -738,15 +705,9 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
             <ScrollView contentContainerStyle={styles.modalScroll}>
               <AdminSectionLabel>סיכום</AdminSectionLabel>
               <UICard
-                variant="glass"
-                glassIntensity="light"
+                variant="soft"
                 padding="md"
-                style={{
-                  borderRadius: tokens.borderRadius.xl,
-                  borderWidth: 1,
-                  borderColor: chatPalette.glassBorder,
-                  marginBottom: tokens.spacing.md,
-                }}
+                style={{ marginBottom: APP_LAYOUT.cardStackGap }}
               >
                 <DetailLine label="משתמש" value={detail.user?.email || detail.transaction.user_id || '—'} />
                 <DetailLine label="מסלול" value={planLabel(detail.transaction.plan_id)} />
@@ -816,6 +777,9 @@ function KpiCell({
   const tokens = useDesignTokens();
   return (
     <View style={styles.kpiCell}>
+      <Text style={[styles.kpiLabel, { color: tokens.colors.text.secondary }]} numberOfLines={1}>
+        {label}
+      </Text>
       <Text
         style={[styles.kpiValue, { color: tokens.colors.text.primary }]}
         numberOfLines={1}
@@ -823,9 +787,6 @@ function KpiCell({
         minimumFontScale={0.8}
       >
         {value}
-      </Text>
-      <Text style={[styles.kpiLabel, { color: tokens.colors.text.tertiary }]} numberOfLines={1}>
-        {label}
       </Text>
     </View>
   );
@@ -853,15 +814,9 @@ function BillingRowCard({
   const tokens = useDesignTokens();
   return (
     <UICard
-      variant="glass"
-      glassIntensity="light"
+      variant="soft"
       padding="md"
-      style={{
-        borderRadius: tokens.borderRadius.xl,
-        borderWidth: 1,
-        borderColor: chatPalette.glassBorder,
-        marginBottom: 10,
-      }}
+      style={{ marginBottom: APP_LAYOUT.cardStackGap }}
     >
       <View style={styles.rowTop}>
         <Text
@@ -881,7 +836,7 @@ function BillingRowCard({
       </View>
 
       {extra ? (
-        <Text style={[styles.hint, { color: tokens.colors.text.muted, marginTop: 8, fontSize: 12 }]}>
+        <Text style={[styles.hint, { color: tokens.colors.text.muted, marginTop: 8 }]}>
           {extra}
         </Text>
       ) : null}
@@ -983,23 +938,20 @@ const styles = StyleSheet.create({
   listHeader: {
     marginBottom: 4,
   },
-  sectionLabelInline: {
-    marginBottom: 0,
-  },
   tabBarWrap: {
-    marginBottom: DesignTokens.spacing.md,
+    marginBottom: APP_LAYOUT.cardStackGap,
   },
-  searchRow: {
+  searchShell: {
     flexDirection: 'row-reverse',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    minHeight: 52,
     gap: 10,
   },
   searchInput: {
     flex: 1,
-    ...DesignTokens.rtlText,
-    fontSize: 15,
+    ...adminHebrewText,
+    ...adminBody,
     padding: 0,
   },
   filterScroll: {
@@ -1013,24 +965,24 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   kpiFeatured: {
+    width: '100%',
     alignItems: 'flex-end',
-    gap: 4,
   },
   kpiFeaturedLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    ...DesignTokens.rtlText,
+    ...adminPhysicalRightText,
+    ...adminMetricLabel,
   },
   kpiFeaturedValue: {
-    fontSize: 28,
-    fontWeight: '800',
+    ...adminPhysicalRightText,
+    ...adminMetric,
+    marginTop: APP_LAYOUT.cardMetricLabelToValueGap,
     fontVariant: ['tabular-nums'],
-    ...DesignTokens.rtlText,
   },
   kpiRow: {
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     gap: 10,
+    marginTop: APP_LAYOUT.cardTitleToBodyGap,
   },
   kpiCell: {
     flex: 1,
@@ -1040,47 +992,20 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   kpiValue: {
-    fontSize: 18,
-    fontWeight: '800',
+    ...adminMetricSecondary,
     fontVariant: ['tabular-nums'],
-    textAlign: 'center',
-    ...DesignTokens.rtlText,
-  },
-  kpiLabel: {
-    fontSize: 12,
-    fontWeight: '600',
     textAlign: 'center',
     writingDirection: 'rtl',
   },
-  kpiDivider: {
-    height: StyleSheet.hairlineWidth,
-    marginVertical: 14,
-  },
-  kpiMetaRow: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 2,
-  },
-  kpiMeta: {
-    fontSize: 12,
-    fontWeight: '700',
-    ...DesignTokens.rtlText,
-  },
-  kpiMetaDot: {
-    fontSize: 12,
-  },
-  countRow: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: DesignTokens.spacing.sm,
+  kpiLabel: {
+    ...adminMetricLabel,
+    textAlign: 'center',
+    writingDirection: 'rtl',
   },
   countText: {
-    fontSize: 12,
-    fontWeight: '600',
-    ...DesignTokens.rtlText,
+    ...adminHebrewText,
+    ...adminCaption,
+    marginBottom: APP_LAYOUT.stackGapSmall,
   },
   rowTop: {
     flexDirection: 'row-reverse',
@@ -1090,11 +1015,10 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   rowUser: {
-    fontWeight: '800',
-    fontSize: 15,
+    ...adminHebrewText,
+    ...adminCardTitle,
     flex: 1,
     minWidth: 0,
-    ...DesignTokens.rtlText,
   },
   metaGrid: {
     flexDirection: 'row-reverse',
@@ -1106,34 +1030,32 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   metaLabel: {
-    fontSize: 11,
-    ...DesignTokens.rtlText,
+    ...adminHebrewText,
+    ...adminCaption2,
   },
   metaValue: {
-    fontSize: 13,
-    fontWeight: '700',
+    ...adminHebrewText,
+    ...adminCardSubtitle,
     marginTop: 2,
-    ...DesignTokens.rtlText,
   },
   detailLine: {
     marginBottom: 10,
   },
   detailLabel: {
-    fontSize: 11,
-    ...DesignTokens.rtlText,
+    ...adminHebrewText,
+    ...adminCaption2,
   },
   detailValue: {
-    fontSize: 14,
+    ...adminHebrewText,
+    ...adminBody,
     marginTop: 2,
-    fontWeight: '600',
-    ...DesignTokens.rtlText,
   },
   actionsCol: {
     gap: 10,
   },
   actionBtn: {
-    borderWidth: 1,
-    borderRadius: DesignTokens.borderRadius.button,
+    borderWidth: 0,
+    borderRadius: 999,
     paddingVertical: 12,
     flexDirection: 'row-reverse',
     alignItems: 'center',
@@ -1141,20 +1063,19 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   actionBtnLabel: {
-    fontWeight: '800',
-    fontSize: 15,
-    ...DesignTokens.rtlText,
+    ...adminHebrewText,
+    ...adminBody,
   },
   loadMore: {
     padding: 14,
     alignItems: 'center',
   },
   loadMoreText: {
-    fontWeight: '700',
-    ...DesignTokens.rtlText,
+    ...adminHebrewText,
+    ...adminCardTitle,
   },
   hint: {
-    ...DesignTokens.rtlText,
-    lineHeight: 18,
+    ...adminHebrewText,
+    ...adminCaption,
   },
 });

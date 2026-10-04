@@ -4,17 +4,17 @@ import {
   Text,
   TextInput,
   ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
-import { chatPalette } from '../../components/chat/chatDesignTokens';
 import UICard from '../../components/ui/UICard';
-import DesignTokens, { useDesignTokens } from '../../components/ui/DesignTokens';
+import UIButton from '../../components/ui/UIButton';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { APP_LAYOUT } from '../../components/ui/appLayout';
+import { adminBody, adminCaption, adminHebrewText } from '../../components/admin/adminType';
 import {
   AdminSectionLabel,
   AdminFilterChip,
@@ -161,7 +161,7 @@ export default function AdminCardComScreen({ navigation }: any) {
       >
         <ScrollView
           contentContainerStyle={{
-            paddingHorizontal: tokens.spacing.base,
+            paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
             paddingTop: tokens.spacing.sm,
             paddingBottom: 48,
           }}
@@ -179,17 +179,11 @@ export default function AdminCardComScreen({ navigation }: any) {
 
           <AdminSectionLabel>שער תשלומים</AdminSectionLabel>
           <UICard
-            variant="glass"
-            glassIntensity="light"
+            variant="soft"
             padding="md"
-            style={{
-              borderRadius: tokens.borderRadius.xl,
-              borderWidth: 1,
-              borderColor: chatPalette.glassBorder,
-              marginBottom: tokens.spacing.md,
-            }}
+            style={{ marginBottom: tokens.spacing.md }}
           >
-            <Text style={[styles.note, { color: tokens.colors.text.tertiary, fontSize: 12 }]}>
+            <Text style={[styles.note, { color: tokens.colors.text.tertiary }]}>
               סודות לא נשלחים לקליינט. מקור נוכחי:{' '}
               {source === 'db' ? 'מסד נתונים' : source === 'env' ? 'Edge secrets' : 'ברירת מחדל'}
               {hasPassword ? ' · סיסמה מוגדרת' : ' · ללא סיסמה'}
@@ -207,8 +201,7 @@ export default function AdminCardComScreen({ navigation }: any) {
                 styles.input,
                 {
                   color: tokens.colors.text.primary,
-                  borderColor: chatPalette.glassBorder,
-                  backgroundColor: 'rgba(0,0,0,0.25)',
+                  backgroundColor: tokens.colors.background.input,
                 },
               ]}
             />
@@ -231,8 +224,7 @@ export default function AdminCardComScreen({ navigation }: any) {
                 styles.input,
                 {
                   color: tokens.colors.text.primary,
-                  borderColor: chatPalette.glassBorder,
-                  backgroundColor: 'rgba(0,0,0,0.25)',
+                  backgroundColor: tokens.colors.background.input,
                 },
               ]}
             />
@@ -248,8 +240,7 @@ export default function AdminCardComScreen({ navigation }: any) {
                 styles.input,
                 {
                   color: tokens.colors.text.primary,
-                  borderColor: chatPalette.glassBorder,
-                  backgroundColor: 'rgba(0,0,0,0.25)',
+                  backgroundColor: tokens.colors.background.input,
                 },
               ]}
             />
@@ -265,30 +256,20 @@ export default function AdminCardComScreen({ navigation }: any) {
                 />
               ))}
             </View>
-            <Text style={[styles.note, { color: tokens.colors.text.muted, fontSize: 11, marginTop: 8 }]}>
+            <Text style={[styles.note, { color: tokens.colors.text.secondary, marginTop: 8 }]}>
               למנויים חוזרים השרת שולח Operation &quot;2&quot; (Charge+Token) זמנית כדי לא לשבור חידוש
               אוטומטי — עד מימוש Charge דחוי (Task 7).
             </Text>
           </UICard>
 
-          <TouchableOpacity
+          <UIButton
+            title="שמור הגדרות"
+            variant="primary"
             onPress={handleSave}
             disabled={saving}
-            activeOpacity={0.8}
-            style={[
-              styles.saveBtn,
-              {
-                backgroundColor: tokens.colors.primary.main,
-                opacity: saving ? 0.6 : 1,
-              },
-            ]}
-          >
-            {saving ? (
-              <ActivityIndicator color="#041006" />
-            ) : (
-              <Text style={styles.saveText}>שמור הגדרות</Text>
-            )}
-          </TouchableOpacity>
+            loading={saving}
+            fullWidth
+          />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -297,7 +278,7 @@ export default function AdminCardComScreen({ navigation }: any) {
 
 function FieldLabel({ children, color }: { children: React.ReactNode; color: string }) {
   return (
-    <Text style={{ color, fontSize: 12, fontWeight: '600', textAlign: 'right', marginBottom: 6, marginTop: 12 }}>
+    <Text style={[adminHebrewText, adminCaption, { color, textAlign: 'right', marginBottom: 6, marginTop: 12 }]}>
       {children}
     </Text>
   );
@@ -306,15 +287,15 @@ function FieldLabel({ children, color }: { children: React.ReactNode; color: str
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: 'transparent' },
   note: {
-    ...DesignTokens.rtlText,
-    lineHeight: 18,
+    ...adminHebrewText,
+    ...adminCaption,
   },
   input: {
-    borderWidth: 1,
-    borderRadius: 12,
+    borderWidth: 0,
+    borderRadius: 24,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    fontSize: 15,
+    ...adminBody,
     textAlign: 'left',
     writingDirection: 'ltr',
   },
@@ -322,18 +303,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row-reverse',
     flexWrap: 'wrap',
     gap: 8,
-  },
-  saveBtn: {
-    marginTop: 8,
-    borderRadius: DesignTokens.borderRadius.button,
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  saveText: {
-    color: '#041006',
-    fontWeight: '800',
-    fontSize: 16,
-    writingDirection: 'rtl',
   },
 });

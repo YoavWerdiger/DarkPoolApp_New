@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   ScrollView,
   TouchableOpacity,
   Alert,
@@ -19,20 +18,24 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { LIGHT_CANVAS } from '../../components/ui/designTokensStatic';
-import {
-  formFieldInputStyle,
-  formFieldLabelStyle,
-  formFieldShellStyle,
-} from '../../components/ui/formControl';
+import { UI_CARD_RADIUS } from '../../components/ui/appLayout';
+import { formFieldShellStyle } from '../../components/ui/formControl';
+import { chromeSurfaceFill } from '../../components/ui/chromeControl';
+import { DayDividerPill } from '../../components/ui/DayDividerPill';
+import UIButton from '../../components/ui/UIButton';
+import UICard from '../../components/ui/UICard';
 import {
   JOURNAL_LAYOUT,
   JOURNAL_TYPE,
   journalBodyTextStyle,
-  journalCardBodyStyle,
+  journalCaptionStyle,
   journalCardSubtitleStyle,
-  journalSectionTitleStyle,
+  journalCardTitleStyle,
+  journalPhysicalRightText,
   PORTFOLIO_FORM,
 } from './portfolioLayout';
+import { FieldLabel, TextField } from './components/PortfolioFormFields';
+import { PortfolioFormFooter } from './components/PortfolioFormFooter';
 import type { PortfoliosStackParamList } from '../../navigation/PortfoliosStack';
 import { ChatSessionBackdrop } from '../../components/chat/ChatSessionBackdrop';
 import { PortfolioScreenHeader } from './components/PortfolioScreenHeader';
@@ -383,199 +386,206 @@ export default function AddTransactionScreen() {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        root: { flex: 1, backgroundColor: 'transparent', direction: 'rtl' },
+        // LTR Yoga + row-reverse — כמו CreatePortfolio / PortfolioFormFields (בלי direction:rtl כפול)
+        root: { flex: 1, backgroundColor: tokens.colors.background.primary },
         scroll: { flex: 1, backgroundColor: 'transparent' },
         scrollContent: {
           paddingHorizontal: PORTFOLIO_FORM.screenPadH,
           paddingTop: 4,
           paddingBottom: 40,
         },
-        modeRow: {
-          flexDirection: 'row',
-          gap: JOURNAL_LAYOUT.stackGapSmall,
-          marginBottom: PORTFOLIO_FORM.sectionGap,
-        },
-        modeChip: {
+        /** DayDividerPill / AdminFilterChip — גלולה lightCta נבחרת, לא ירוק ניאון */
+        filterChipGrow: {
           flex: 1,
-          paddingVertical: 12,
+          alignSelf: 'stretch',
           borderRadius: tokens.borderRadius.full,
-          alignItems: 'center',
-          backgroundColor: tokens.colors.background.cardSolid,
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: tokens.colors.border.divider,
+          minHeight: 44,
         },
-        modeChipActive: {
-          backgroundColor: tokens.colors.primary.lightCta,
-          borderColor: 'transparent',
+        filterChipPad: {
+          minHeight: 44,
+          paddingVertical: 12,
+          paddingHorizontal: 12,
+          width: '100%',
         },
-        modeChipText: {
-          fontSize: JOURNAL_TYPE.cardSubtitle.fontSize,
-          fontWeight: '600',
-          lineHeight: JOURNAL_TYPE.cardSubtitle.lineHeight,
+        assetChip: {
+          alignSelf: 'flex-start',
+          borderRadius: tokens.borderRadius.full,
+          minHeight: 40,
+        },
+        assetChipPad: {
+          minHeight: 40,
+          paddingHorizontal: 14,
+          paddingVertical: 10,
+        },
+        /** תווית צ'יפ — APP_TYPE; נבחר = text.inverse על lightCta כמו DayDividerPill */
+        chipLabel: {
+          ...journalCardSubtitleStyle,
+          width: undefined,
+          marginTop: 0,
+          fontWeight: JOURNAL_TYPE.cardTitle.fontWeight,
           textAlign: 'center',
-          color: tokens.colors.text.secondary,
+          color: tokens.colors.text.primary,
         },
-        modeChipTextActive: {
+        chipLabelSelected: {
           color: tokens.colors.text.inverse,
         },
-        section: { marginBottom: PORTFOLIO_FORM.sectionGap },
-        label: formFieldLabelStyle({ tokens, focused: false, error: false }),
-        input: {
-          ...formFieldShellStyle({ tokens, focused: false, multiline: false }),
-          ...formFieldInputStyle(),
-          color: tokens.colors.text.primary,
-          backgroundColor: tokens.colors.background.cardSolid,
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: tokens.colors.border.divider,
-          borderRadius: tokens.borderRadius.full,
-          paddingHorizontal: 16,
-          paddingVertical: 14,
-          minHeight: 52,
+        chipsWrap: {
+          flexDirection: 'row-reverse',
+          flexWrap: 'wrap',
+          gap: JOURNAL_LAYOUT.stackGapSmall,
+          marginBottom: PORTFOLIO_FORM.fieldSpacing,
         },
-        inputMultiline: {
-          borderRadius: 14,
-          paddingVertical: 12,
-          minHeight: 88,
-        },
+        fieldBlock: { marginBottom: PORTFOLIO_FORM.fieldSpacing },
         symbolPicker: {
-          flexDirection: 'row',
+          flexDirection: 'row-reverse',
           alignItems: 'center',
           gap: 10,
           ...formFieldShellStyle({ tokens, focused: false, multiline: false }),
-          backgroundColor: tokens.colors.background.cardSolid,
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: tokens.colors.border.divider,
-          borderRadius: tokens.borderRadius.full,
+          borderRadius: tokens.borderRadius.search,
           paddingHorizontal: 16,
-          paddingVertical: 14,
           minHeight: 52,
+          borderWidth: 0,
         },
         symbolText: {
+          ...journalCardTitleStyle,
           flex: 1,
-          fontSize: 15,
-          fontWeight: '600',
+          width: undefined,
+          marginTop: 0,
           color: tokens.colors.text.primary,
           writingDirection: 'ltr',
-          textAlign: 'left',
+          textAlign: 'right',
+          direction: 'ltr',
         },
         symbolPlaceholder: {
+          ...journalBodyTextStyle,
+          ...journalPhysicalRightText,
           flex: 1,
-          ...journalCardBodyStyle,
-          color: tokens.colors.text.tertiary,
+          width: undefined,
+          color: tokens.colors.text.secondary,
         },
+        /** לונג/שורט — שורת half-width כמו DayDividerPill, צבע רק בנבחר */
         sideRow: {
-          flexDirection: 'row',
-          gap: 10,
+          flexDirection: 'row-reverse',
+          alignSelf: 'stretch',
+          width: '100%',
+          alignItems: 'stretch',
+          gap: JOURNAL_LAYOUT.stackGapSmall,
         },
         sideBtn: {
           flex: 1,
-          flexDirection: 'row',
-          gap: 6,
-          paddingVertical: 14,
+          minWidth: 0,
+          minHeight: 44,
           borderRadius: tokens.borderRadius.full,
+          flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: tokens.colors.border.divider,
-          backgroundColor: tokens.colors.background.cardSolid,
-        },
-        sideBtnText: {
-          fontSize: JOURNAL_TYPE.cardBody.fontSize,
-          fontWeight: JOURNAL_TYPE.cardTitle.fontWeight,
-          lineHeight: JOURNAL_TYPE.cardBody.lineHeight,
-          letterSpacing: 0.3,
-        },
-        assetTypeRow: {
-          flexDirection: 'row',
-          flexWrap: 'wrap',
-          gap: 8,
-        },
-        assetTypeChip: {
+          gap: 6,
           paddingHorizontal: 14,
           paddingVertical: 10,
-          borderRadius: tokens.borderRadius.full,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: tokens.colors.background.cardSolid,
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: tokens.colors.border.divider,
+          borderWidth: 0,
+        },
+        sideBtnLongSelected: {
+          backgroundColor: tokens.colors.primary.main,
+        },
+        sideBtnLongIdle: {
+          backgroundColor: chromeSurfaceFill(tokens),
+        },
+        sideBtnShortSelected: {
+          backgroundColor: tokens.colors.danger.main,
+        },
+        sideBtnShortIdle: {
+          backgroundColor: chromeSurfaceFill(tokens),
+        },
+        /** cardTitle — אותה משפחת כותרת כמו הדר, בלי screenTitle ענק שמתנגש */
+        sideLabel: {
+          ...journalCardTitleStyle,
+          width: undefined,
+          marginTop: 0,
+          textAlign: 'center',
+        },
+        sideLabelOnFill: {
+          color: tokens.colors.text.inverse,
+        },
+        sideLabelIdle: {
+          color: tokens.colors.text.primary,
         },
         twoCol: {
-          flexDirection: 'row',
-          gap: 10,
+          flexDirection: 'row-reverse',
+          gap: JOURNAL_LAYOUT.stackGapSmall,
+          marginBottom: PORTFOLIO_FORM.fieldSpacing,
         },
         col: { flex: 1 },
         advancedBlock: {
-          marginTop: 4,
-          marginBottom: 4,
-          paddingTop: 4,
-          gap: 0,
+          marginBottom: PORTFOLIO_FORM.fieldSpacing,
         },
         advancedTitle: {
-          ...journalSectionTitleStyle,
-          fontSize: journalCardSubtitleStyle.fontSize,
-          lineHeight: journalCardSubtitleStyle.lineHeight,
-          fontWeight: '700',
-          color: tokens.colors.text.tertiary,
-          marginBottom: JOURNAL_LAYOUT.stackGapSmall,
+          ...JOURNAL_TYPE.groupLabel,
+          ...journalPhysicalRightText,
+          color: tokens.colors.text.primary,
+          marginBottom: JOURNAL_LAYOUT.groupLabelToContent,
+        },
+        validationInner: {
+          gap: JOURNAL_LAYOUT.stackGapSmall,
         },
         validationCard: {
-          borderRadius: 14,
-          paddingHorizontal: 16,
-          paddingVertical: 12,
-          marginBottom: 18,
-          borderWidth: 1,
-          gap: 8,
+          marginBottom: PORTFOLIO_FORM.fieldSpacing,
+          borderRadius: UI_CARD_RADIUS,
+          overflow: 'hidden',
+          borderWidth: 0,
         },
         validationRow: {
-          flexDirection: 'row',
+          flexDirection: 'row-reverse',
           alignItems: 'center',
           justifyContent: 'space-between',
+          gap: 8,
         },
         validationLabel: {
           ...journalCardSubtitleStyle,
           width: undefined,
-          color: tokens.colors.text.secondary,
+          marginTop: 0,
+          color: tokens.colors.text.primary,
         },
         validationValue: {
-          fontSize: 13,
-          fontWeight: '700',
+          ...journalCardSubtitleStyle,
+          width: undefined,
+          marginTop: 0,
+          fontWeight: JOURNAL_TYPE.cardTitle.fontWeight,
           textAlign: 'left',
+          writingDirection: 'ltr',
+          direction: 'ltr',
           fontVariant: ['tabular-nums'],
+          color: tokens.colors.text.primary,
         },
         validationDivider: {
-          height: 1,
+          height: StyleSheet.hairlineWidth,
           backgroundColor: tokens.colors.border.divider,
         },
         validationWarningRow: {
-          flexDirection: 'row',
+          flexDirection: 'row-reverse',
           alignItems: 'center',
           gap: 6,
           paddingTop: 4,
         },
         validationWarningText: {
-          fontSize: 12,
-          fontWeight: '700',
-          textAlign: 'right',
+          ...journalCaptionStyle,
           flex: 1,
+          width: undefined,
+          color: tokens.colors.text.danger,
         },
         dateRow: {
-          flexDirection: 'row',
-          gap: 10,
+          flexDirection: 'row-reverse',
+          gap: JOURNAL_LAYOUT.stackGapSmall,
         },
         datePill: {
           flex: 1,
-          flexDirection: 'row',
+          flexDirection: 'row-reverse',
           alignItems: 'center',
-          justifyContent: 'flex-start',
           gap: 8,
           ...formFieldShellStyle({ tokens, focused: false, multiline: false }),
-          backgroundColor: tokens.colors.background.cardSolid,
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: tokens.colors.border.divider,
-          borderRadius: tokens.borderRadius.full,
+          borderRadius: tokens.borderRadius.search,
           paddingHorizontal: 14,
-          paddingVertical: 14,
+          minHeight: 52,
+          borderWidth: 0,
         },
         datePillText: {
           ...journalBodyTextStyle,
@@ -585,71 +595,26 @@ export default function AddTransactionScreen() {
         },
         pickerModalOverlay: {
           flex: 1,
-          backgroundColor: 'rgba(0,0,0,0.55)',
+          backgroundColor: tokens.colors.background.overlay,
           justifyContent: 'flex-end',
         },
         pickerModalSheet: {
           backgroundColor: tokens.colors.background.cardSolid,
-          borderTopLeftRadius: 24,
-          borderTopRightRadius: 24,
-          paddingTop: 16,
-          paddingHorizontal: 16,
-          paddingBottom: 36,
+          borderTopLeftRadius: UI_CARD_RADIUS,
+          borderTopRightRadius: UI_CARD_RADIUS,
+          paddingTop: JOURNAL_LAYOUT.cardPadding,
+          paddingHorizontal: PORTFOLIO_FORM.screenPadH,
+          paddingBottom: 28,
+          borderWidth: 0,
+          overflow: 'hidden',
         },
         pickerModalTitle: {
-          fontSize: 16,
-          fontWeight: '700',
+          ...journalCardTitleStyle,
+          width: undefined,
+          marginTop: 0,
           color: tokens.colors.text.primary,
           textAlign: 'center',
-          marginBottom: 8,
-        },
-        pickerDoneBtn: {
-          marginTop: 12,
-          backgroundColor: tokens.colors.primary.lightCta,
-          borderRadius: tokens.borderRadius.full,
-          paddingVertical: 14,
-          alignItems: 'center',
-        },
-        pickerDoneBtnText: {
-          fontSize: 15,
-          fontWeight: '600',
-          color: tokens.colors.text.inverse,
-        },
-        footerRow: {
-          flexDirection: 'row',
-          gap: 10,
-          marginTop: 8,
-          marginBottom: 8,
-        },
-        cancelBtn: {
-          flex: 1,
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingVertical: 16,
-          borderRadius: tokens.borderRadius.full,
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: tokens.colors.border.divider,
-          backgroundColor: tokens.colors.background.cardSolid,
-        },
-        cancelBtnText: {
-          fontSize: 15,
-          fontWeight: '600',
-          color: tokens.colors.text.primary,
-        },
-        submit: {
-          flex: 1.4,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 8,
-          backgroundColor: tokens.colors.primary.lightCta,
-          paddingVertical: 16,
-          borderRadius: tokens.borderRadius.full,
-        },
-        submitText: {
-          fontSize: 16,
-          fontWeight: '600',
-          color: tokens.colors.text.inverse,
+          marginBottom: JOURNAL_LAYOUT.stackGapSmall,
         },
       }),
     [tokens]
@@ -657,17 +622,20 @@ export default function AddTransactionScreen() {
 
   const pickerTheme = tokens.colors.background.primary === LIGHT_CANVAS ? 'light' : 'dark';
 
+  const headerTitle = isEdit
+    ? 'עריכת עסקה'
+    : mode === 'cash'
+      ? 'מזומן'
+      : mode === 'dividend'
+        ? 'דיבידנד'
+        : 'פוזיציה חדשה';
+
   return (
     <View style={styles.root}>
       <ChatSessionBackdrop />
       <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
         <PortfolioScreenHeader
-          title={isEdit ? 'עריכת עסקה' : 'פוזיציה חדשה'}
-          subtitle={
-            isEdit
-              ? 'עדכון פרטי הפוזיציה'
-              : 'הזן את פרטי הפוזיציה החדשה'
-          }
+          title={headerTitle}
           onBack={() => navigation.goBack()}
         />
         <KeyboardAvoidingView
@@ -682,75 +650,39 @@ export default function AddTransactionScreen() {
             keyboardDismissMode="on-drag"
             showsVerticalScrollIndicator={false}
           >
-            {/* Mode tabs */}
-            {!isEdit ? (
-              <View style={styles.modeRow}>
-                {(['asset', 'cash', 'dividend'] as Mode[]).map((m) => (
-                  <TouchableOpacity
-                    key={m}
-                    onPress={() => {
-                      if (mode !== m) void HapticFeedback.selection();
-                      setMode(m);
-                    }}
-                    style={[styles.modeChip, mode === m && styles.modeChipActive]}
-                    activeOpacity={0.85}
-                  >
-                    <Text
-                      style={[
-                        styles.modeChipText,
-                        mode === m && styles.modeChipTextActive,
-                      ]}
-                    >
-                      {m === 'asset' ? 'פוזיציה' : m === 'cash' ? 'מזומן' : 'דיבידנד'}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            ) : null}
-
-            {/* Asset mode — hierarchy inspired by clear journal-style entry */}
+            {/* Asset / position — מצב ברירת מחדל; מזומן/דיבידנד מגיעים מ־initialMode בתפריט */}
             {mode === 'asset' && (
               <>
-                <View style={styles.section}>
-                  <Text style={styles.label}>סוג נכס</Text>
-                  <View style={styles.assetTypeRow}>
+                <View>
+                  <FieldLabel label="סוג נכס" />
+                  <View style={styles.chipsWrap}>
                     {(['stock', 'etf', 'crypto', 'forex', 'futures', 'fund'] as AssetType[]).map((t) => (
-                      <TouchableOpacity
+                      <DayDividerPill
                         key={t}
-                        activeOpacity={1}
-                        style={[
-                          styles.assetTypeChip,
-                          assetType === t && {
-                            backgroundColor: tokens.colors.primary.lightCta,
-                            borderColor: 'transparent',
-                          },
-                        ]}
+                        selected={assetType === t}
+                        haptic={assetType !== t}
+                        style={styles.assetChip}
+                        contentContainerStyle={styles.assetChipPad}
+                        accessibilityLabel={ASSET_TYPE_LABELS[t]}
                         onPress={() => {
-                          if (assetType !== t) void HapticFeedback.selection();
-                          setAssetType(t);
+                          if (assetType !== t) setAssetType(t);
                         }}
                       >
                         <Text
                           style={[
-                            styles.sideBtnText,
-                            { fontSize: 13 },
-                            {
-                              color:
-                                assetType === t
-                                  ? tokens.colors.text.inverse
-                                  : tokens.colors.text.secondary,
-                            },
+                            styles.chipLabel,
+                            assetType === t && styles.chipLabelSelected,
                           ]}
                         >
                           {ASSET_TYPE_LABELS[t]}
                         </Text>
-                      </TouchableOpacity>
+                      </DayDividerPill>
                     ))}
                   </View>
                 </View>
 
-                <View style={styles.section}>
-                  <Text style={styles.label}>סימבול</Text>
+                <View style={styles.fieldBlock}>
+                  <FieldLabel label="סימבול" />
                   <TouchableOpacity
                     style={styles.symbolPicker}
                     onPress={() => {
@@ -762,7 +694,7 @@ export default function AddTransactionScreen() {
                     <Ionicons
                       name="search"
                       size={18}
-                      color={tokens.colors.text.tertiary}
+                      color={tokens.colors.text.secondary}
                     />
                     {symbol ? (
                       <Text style={styles.symbolText}>{symbol}</Text>
@@ -772,26 +704,25 @@ export default function AddTransactionScreen() {
                     <Ionicons
                       name="chevron-back"
                       size={18}
-                      color={tokens.colors.text.tertiary}
+                      color={tokens.colors.text.secondary}
                     />
                   </TouchableOpacity>
                 </View>
 
-                <View style={styles.section}>
-                  <Text style={styles.label}>סוג עסקה</Text>
+                <View style={styles.fieldBlock}>
+                  <FieldLabel label="סוג עסקה" />
                   <View style={styles.sideRow}>
                     <TouchableOpacity
-                      activeOpacity={1}
                       style={[
                         styles.sideBtn,
-                        {
-                          borderColor: tokens.colors.border.divider,
-                          backgroundColor:
-                            direction === 'long'
-                              ? tokens.colors.primary.dim
-                              : tokens.colors.background.cardSolid,
-                        },
+                        direction === 'long'
+                          ? styles.sideBtnLongSelected
+                          : styles.sideBtnLongIdle,
                       ]}
+                      activeOpacity={0.85}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: direction === 'long' }}
+                      accessibilityLabel="לונג"
                       onPress={() => {
                         if (direction !== 'long') void HapticFeedback.selection();
                         setDirection('long');
@@ -800,39 +731,26 @@ export default function AddTransactionScreen() {
                     >
                       <Text
                         style={[
-                          styles.sideBtnText,
-                          {
-                            color:
-                              direction === 'long'
-                                ? tokens.colors.primary.main
-                                : tokens.colors.text.secondary,
-                          },
+                          styles.sideLabel,
+                          direction === 'long'
+                            ? styles.sideLabelOnFill
+                            : styles.sideLabelIdle,
                         ]}
                       >
-                        LONG
+                        לונג
                       </Text>
-                      <Ionicons
-                        name="trending-up"
-                        size={18}
-                        color={
-                          direction === 'long'
-                            ? tokens.colors.primary.main
-                            : tokens.colors.text.secondary
-                        }
-                      />
                     </TouchableOpacity>
                     <TouchableOpacity
-                      activeOpacity={1}
                       style={[
                         styles.sideBtn,
-                        {
-                          borderColor: tokens.colors.border.divider,
-                          backgroundColor:
-                            direction === 'short'
-                              ? tokens.colors.border.danger
-                              : tokens.colors.background.cardSolid,
-                        },
+                        direction === 'short'
+                          ? styles.sideBtnShortSelected
+                          : styles.sideBtnShortIdle,
                       ]}
+                      activeOpacity={0.85}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: direction === 'short' }}
+                      accessibilityLabel="שורט"
                       onPress={() => {
                         if (direction !== 'short') void HapticFeedback.selection();
                         setDirection('short');
@@ -841,152 +759,111 @@ export default function AddTransactionScreen() {
                     >
                       <Text
                         style={[
-                          styles.sideBtnText,
-                          {
-                            color:
-                              direction === 'short'
-                                ? tokens.colors.text.danger
-                                : tokens.colors.text.secondary,
-                          },
+                          styles.sideLabel,
+                          direction === 'short'
+                            ? styles.sideLabelOnFill
+                            : styles.sideLabelIdle,
                         ]}
                       >
-                        SHORT
+                        שורט
                       </Text>
-                      <Ionicons
-                        name="trending-down"
-                        size={18}
-                        color={
-                          direction === 'short'
-                            ? tokens.colors.text.danger
-                            : tokens.colors.text.secondary
-                        }
-                      />
                     </TouchableOpacity>
                   </View>
                 </View>
 
-                <View style={styles.section}>
-                  <Text style={styles.label}>{assetType === 'futures' ? 'מספר חוזים' : 'כמות'}</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={quantity}
-                    onChangeText={setQuantity}
-                    keyboardType="decimal-pad"
-                    placeholder={assetType === 'futures' ? '1' : '10'}
-                    placeholderTextColor={tokens.colors.text.tertiary}
-                    keyboardAppearance={pickerTheme}
-                  />
-                </View>
-
-                <View style={styles.section}>
-                  <Text style={styles.label}>מחיר כניסה</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={price}
-                    onChangeText={setPrice}
-                    keyboardType="decimal-pad"
-                    placeholder="150.00"
-                    placeholderTextColor={tokens.colors.text.tertiary}
-                    keyboardAppearance={pickerTheme}
-                  />
-                </View>
+                <TextField
+                  label={assetType === 'futures' ? 'מספר חוזים' : 'כמות'}
+                  value={quantity}
+                  onChangeText={setQuantity}
+                  keyboardType="decimal-pad"
+                  numeric
+                  placeholder={assetType === 'futures' ? '1' : '10'}
+                  spacing={PORTFOLIO_FORM.fieldSpacing}
+                />
+                <TextField
+                  label="מחיר כניסה"
+                  value={price}
+                  onChangeText={setPrice}
+                  keyboardType="decimal-pad"
+                  numeric
+                  placeholder="150.00"
+                  spacing={PORTFOLIO_FORM.fieldSpacing}
+                />
 
                 <View style={styles.twoCol}>
-                  <View style={[styles.section, styles.col]}>
-                    <Text style={styles.label}>סטופ (אופציונלי)</Text>
-                    <TextInput
-                      style={styles.input}
+                  <View style={styles.col}>
+                    <TextField
+                      label="סטופ"
+                      optional
                       value={stopLoss}
                       onChangeText={setStopLoss}
                       keyboardType="decimal-pad"
+                      numeric
                       placeholder="145.00"
-                      placeholderTextColor={tokens.colors.text.tertiary}
-                    keyboardAppearance={pickerTheme}
+                      spacing={0}
                     />
                   </View>
-                  <View style={[styles.section, styles.col]}>
-                    <Text style={styles.label}>יעד (אופציונלי)</Text>
-                    <TextInput
-                      style={styles.input}
+                  <View style={styles.col}>
+                    <TextField
+                      label="יעד"
+                      optional
                       value={targetPrice}
                       onChangeText={setTargetPrice}
                       keyboardType="decimal-pad"
+                      numeric
                       placeholder="165.00"
-                      placeholderTextColor={tokens.colors.text.tertiary}
-                    keyboardAppearance={pickerTheme}
+                      spacing={0}
                     />
                   </View>
                 </View>
               </>
             )}
 
-            {/* Cash mode */}
             {mode === 'cash' && (
               <>
-                <View style={styles.section}>
-                  <Text style={styles.label}>סוג טרנזקציה</Text>
-                  <View style={styles.sideRow}>
-                    {(['deposit', 'withdrawal', 'fee'] as CashTransactionType[]).map(
-                      (t) => (
-                        <TouchableOpacity
-                          key={t}
-                          activeOpacity={1}
+                <View>
+                  <FieldLabel label="סוג טרנזקציה" />
+                  <View style={styles.chipsWrap}>
+                    {(['deposit', 'withdrawal', 'fee'] as CashTransactionType[]).map((t) => (
+                      <DayDividerPill
+                        key={t}
+                        selected={cashSide === t}
+                        haptic={cashSide !== t}
+                        style={styles.filterChipGrow}
+                        contentContainerStyle={styles.filterChipPad}
+                        accessibilityLabel={TRANSACTION_LABELS[t]}
+                        onPress={() => {
+                          if (cashSide !== t) setCashSide(t);
+                        }}
+                      >
+                        <Text
                           style={[
-                            styles.sideBtn,
-                            {
-                              borderColor:
-                                cashSide === t ? 'transparent' : tokens.colors.border.divider,
-                              backgroundColor:
-                                cashSide === t
-                                  ? tokens.colors.primary.lightCta
-                                  : tokens.colors.background.cardSolid,
-                            },
+                            styles.chipLabel,
+                            cashSide === t && styles.chipLabelSelected,
                           ]}
-                          onPress={() => {
-                            if (cashSide !== t) void HapticFeedback.selection();
-                            setCashSide(t);
-                          }}
                         >
-                          <Text
-                            style={[
-                              styles.sideBtnText,
-                              {
-                                color:
-                                  cashSide === t
-                                    ? tokens.colors.text.inverse
-                                    : tokens.colors.text.secondary,
-                                fontSize: 12,
-                              },
-                            ]}
-                          >
-                            {TRANSACTION_LABELS[t]}
-                          </Text>
-                        </TouchableOpacity>
-                      )
-                    )}
+                          {TRANSACTION_LABELS[t]}
+                        </Text>
+                      </DayDividerPill>
+                    ))}
                   </View>
                 </View>
-
-                <View style={styles.section}>
-                  <Text style={styles.label}>סכום</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={amount}
-                    onChangeText={setAmount}
-                    keyboardType="decimal-pad"
-                    placeholder="0.00"
-                    placeholderTextColor={tokens.colors.text.tertiary}
-                    keyboardAppearance={pickerTheme}
-                  />
-                </View>
+                <TextField
+                  label="סכום"
+                  value={amount}
+                  onChangeText={setAmount}
+                  keyboardType="decimal-pad"
+                  numeric
+                  placeholder="0.00"
+                  spacing={PORTFOLIO_FORM.fieldSpacing}
+                />
               </>
             )}
 
-            {/* Dividend mode */}
             {mode === 'dividend' && (
               <>
-                <View style={styles.section}>
-                  <Text style={styles.label}>סימבול</Text>
+                <View style={styles.fieldBlock}>
+                  <FieldLabel label="סימבול" />
                   <TouchableOpacity
                     style={styles.symbolPicker}
                     onPress={() => {
@@ -994,46 +871,34 @@ export default function AddTransactionScreen() {
                       setSearchOpen(true);
                     }}
                   >
-                    <Ionicons
-                      name="search"
-                      size={18}
-                      color={tokens.colors.text.tertiary}
-                    />
+                    <Ionicons name="search" size={18} color={tokens.colors.text.secondary} />
                     {symbol ? (
                       <Text style={styles.symbolText}>{symbol}</Text>
                     ) : (
-                      <Text style={styles.symbolPlaceholder}>בחר/י סימבול…</Text>
+                      <Text style={styles.symbolPlaceholder}>בחר סימבול</Text>
                     )}
                   </TouchableOpacity>
                 </View>
-
-                <View style={styles.section}>
-                  <Text style={styles.label}>סך הדיבידנד שהתקבל</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={amount}
-                    onChangeText={setAmount}
-                    keyboardType="decimal-pad"
-                    placeholder="0.00"
-                    placeholderTextColor={tokens.colors.text.tertiary}
-                    keyboardAppearance={pickerTheme}
-                  />
-                </View>
+                <TextField
+                  label="סך הדיבידנד שהתקבל"
+                  value={amount}
+                  onChangeText={setAmount}
+                  keyboardType="decimal-pad"
+                  numeric
+                  placeholder="0.00"
+                  spacing={PORTFOLIO_FORM.fieldSpacing}
+                />
               </>
             )}
 
             {/* Cash Validation Bar */}
             {cashValidation && (
-              <View
-                style={[
-                  styles.validationCard,
-                  {
-                    backgroundColor: cashValidation.ok
-                      ? tokens.colors.primary.dim
-                      : tokens.colors.border.danger,
-                    borderColor: tokens.colors.border.divider,
-                  },
-                ]}
+              <UICard
+                variant="soft"
+                padding="md"
+                disableBlur
+                style={styles.validationCard}
+                contentContainerStyle={styles.validationInner}
               >
                 <View style={styles.validationRow}>
                   <Text style={styles.validationLabel}>מזומן זמין</Text>
@@ -1049,12 +914,12 @@ export default function AddTransactionScreen() {
                 </View>
                 <View style={styles.validationDivider} />
                 <View style={styles.validationRow}>
-                  <Text style={[styles.validationLabel, { fontWeight: '700', color: tokens.colors.text.primary }]}>
+                  <Text style={[styles.validationLabel, { color: tokens.colors.text.primary }]}>
                     לאחר עסקה
                   </Text>
                   <Text style={[
                     styles.validationValue,
-                    { color: cashValidation.ok ? tokens.colors.primary.main : tokens.colors.text.danger, fontSize: 14 }
+                    { color: cashValidation.ok ? tokens.colors.primary.main : tokens.colors.text.danger }
                   ]}>
                     {cashValidation.remaining.toLocaleString('en-US', { style: 'currency', currency, maximumFractionDigits: 2 })}
                   </Text>
@@ -1068,14 +933,12 @@ export default function AddTransactionScreen() {
                     </Text>
                   </View>
                 )}
-              </View>
+              </UICard>
             )}
 
             {/* Common: Date + Time */}
-            <View style={styles.section}>
-              <Text style={styles.label}>
-                {mode === 'asset' ? 'תאריך ושעת כניסה' : 'תאריך ושעה'}
-              </Text>
+            <View style={styles.fieldBlock}>
+              <FieldLabel label={mode === 'asset' ? 'תאריך ושעת כניסה' : 'תאריך ושעה'} />
               <View style={styles.dateRow}>
                 <TouchableOpacity
                   style={styles.datePill}
@@ -1085,7 +948,7 @@ export default function AddTransactionScreen() {
                     setShowDatePicker(true);
                   }}
                 >
-                  <Ionicons name="calendar-outline" size={18} color={tokens.colors.text.tertiary} />
+                  <Ionicons name="calendar-outline" size={18} color={tokens.colors.text.secondary} />
                   <Text style={styles.datePillText}>
                     {tradeDate.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                   </Text>
@@ -1099,7 +962,7 @@ export default function AddTransactionScreen() {
                     setShowTimePicker(true);
                   }}
                 >
-                  <Ionicons name="time-outline" size={18} color={tokens.colors.text.tertiary} />
+                  <Ionicons name="time-outline" size={18} color={tokens.colors.text.secondary} />
                   <Text style={styles.datePillText}>
                     {tradeDate.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
                   </Text>
@@ -1130,12 +993,14 @@ export default function AddTransactionScreen() {
                         onChange={(_, d) => { if (d) setTradeDate(d); }}
                         style={{ alignSelf: 'stretch' }}
                       />
-                      <TouchableOpacity
-                        style={styles.pickerDoneBtn}
+                      <UIButton
+                        title="אישור"
+                        variant="primary"
+                        size="lg"
+                        fullWidth
                         onPress={() => setShowDatePicker(false)}
-                      >
-                        <Text style={styles.pickerDoneBtnText}>אישור</Text>
-                      </TouchableOpacity>
+                        style={{ marginTop: 12 }}
+                      />
                     </View>
                   </TouchableOpacity>
                 </Modal>
@@ -1176,12 +1041,14 @@ export default function AddTransactionScreen() {
                         onChange={(_, d) => { if (d) setTradeDate(d); }}
                         style={{ alignSelf: 'stretch' }}
                       />
-                      <TouchableOpacity
-                        style={styles.pickerDoneBtn}
+                      <UIButton
+                        title="אישור"
+                        variant="primary"
+                        size="lg"
+                        fullWidth
                         onPress={() => setShowTimePicker(false)}
-                      >
-                        <Text style={styles.pickerDoneBtnText}>אישור</Text>
-                      </TouchableOpacity>
+                        style={{ marginTop: 12 }}
+                      />
                     </View>
                   </TouchableOpacity>
                 </Modal>
@@ -1203,95 +1070,65 @@ export default function AddTransactionScreen() {
               <View style={styles.advancedBlock}>
                 <Text style={styles.advancedTitle}>פרטים נוספים</Text>
                 <View style={styles.twoCol}>
-                  <View style={[styles.section, styles.col]}>
-                    <Text style={styles.label}>עמלה (אופציונלי)</Text>
-                    <TextInput
-                      style={styles.input}
+                  <View style={styles.col}>
+                    <TextField
+                      label="עמלה"
+                      optional
                       value={commission}
                       onChangeText={setCommission}
                       keyboardType="decimal-pad"
+                      numeric
                       placeholder="0.00"
-                      placeholderTextColor={tokens.colors.text.tertiary}
-                    keyboardAppearance={pickerTheme}
+                      spacing={0}
                     />
                   </View>
-                  <View style={[styles.section, styles.col]}>
-                    <Text style={styles.label}>מינוף</Text>
-                    <TextInput
-                      style={styles.input}
+                  <View style={styles.col}>
+                    <TextField
+                      label="מינוף"
                       value={leverage}
                       onChangeText={setLeverage}
                       keyboardType="decimal-pad"
+                      numeric
                       placeholder="1"
-                      placeholderTextColor={tokens.colors.text.tertiary}
-                    keyboardAppearance={pickerTheme}
+                      spacing={0}
                     />
                   </View>
                 </View>
                 {assetType === 'futures' ? (
-                  <View style={styles.section}>
-                    <Text style={styles.label}>ערך לנקודה</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={pointValue}
-                      onChangeText={setPointValue}
-                      keyboardType="decimal-pad"
-                      placeholder="לדוגמה: 50 ל-ES, 20 ל-NQ"
-                      placeholderTextColor={tokens.colors.text.tertiary}
-                    keyboardAppearance={pickerTheme}
-                    />
-                  </View>
+                  <TextField
+                    label="ערך לנקודה"
+                    value={pointValue}
+                    onChangeText={setPointValue}
+                    keyboardType="decimal-pad"
+                    numeric
+                    placeholder="לדוגמה: 50 ל-ES, 20 ל-NQ"
+                    spacing={0}
+                  />
                 ) : null}
               </View>
             ) : null}
 
-            {/* Notes */}
-            <View style={styles.section}>
-              <Text style={styles.label}>הערות (אופציונלי)</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  styles.inputMultiline,
-                  { textAlignVertical: 'top' },
-                ]}
-                value={notes}
-                onChangeText={setNotes}
-                placeholder="הוסף הערות על העסקה…"
-                placeholderTextColor={tokens.colors.text.tertiary}
-                    keyboardAppearance={pickerTheme}
-                multiline
-                maxLength={128}
-              />
-            </View>
-
-            <View style={styles.footerRow}>
-              <TouchableOpacity
-                style={styles.cancelBtn}
-                onPress={() => {
-                  void HapticFeedback.impactLight();
-                  navigation.goBack();
-                }}
-                activeOpacity={0.85}
-                disabled={submitting}
-              >
-                <Text style={styles.cancelBtnText}>ביטול</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.submit, submitting && { opacity: 0.6 }]}
-                onPress={() => {
-                  void HapticFeedback.medium();
-                  void handleSubmit();
-                }}
-                disabled={submitting}
-                activeOpacity={0.88}
-              >
-                <Ionicons name="checkmark" size={20} color={tokens.colors.text.inverse} />
-                <Text style={styles.submitText}>
-                  {submitting ? 'שומר…' : isEdit ? 'עדכן עסקה' : 'הוסף עסקה'}
-                </Text>
-              </TouchableOpacity>
-            </View>
+            <TextField
+              label="הערות"
+              optional
+              value={notes}
+              onChangeText={setNotes}
+              placeholder="הוסף הערות על העסקה"
+              multiline
+              maxLength={128}
+              spacing={8}
+            />
           </ScrollView>
+          <PortfolioFormFooter
+            title={submitting ? 'שומר…' : isEdit ? 'עדכן עסקה' : 'הוסף עסקה'}
+            icon="checkmark"
+            loading={submitting}
+            disabled={submitting}
+            onPress={() => {
+              void HapticFeedback.medium();
+              void handleSubmit();
+            }}
+          />
         </KeyboardAvoidingView>
       </SafeAreaView>
 

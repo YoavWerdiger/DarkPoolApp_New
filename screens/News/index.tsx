@@ -1,11 +1,18 @@
 import React, { useState, ErrorInfo, ReactNode, useEffect, useCallback } from 'react';
-import { View, Text, ActivityIndicator, type TextStyle, type ViewStyle } from 'react-native';
+import {
+  View,
+  Text,
+  ActivityIndicator,
+  TouchableOpacity,
+  type TextStyle,
+  type ViewStyle,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { APP_LAYOUT } from '../../components/ui/appLayout';
 import { APP_TYPE, appSectionTitleStyle } from '../../components/ui/appType';
-import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
+import { DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import BreakingNewsTab from './BreakingNewsTab';
 import { NewsScreenShell } from './NewsScreenShell';
 import CreateNewsSheet from './CreateNewsSheet';
@@ -92,14 +99,15 @@ export default function NewsScreen({ route }: { route?: any }) {
   /** כפתור "+" — בצד הנגדי לכפתור ההמבורגר; מוצג רק ל-admins.
    *  אותו רכיב + אותו גודל כמו כפתור התפריט, כדי שיהיה מראה זהה. */
   const adminCreateButton = isAdmin ? (
-    <DayNavBlurButton
+    <TouchableOpacity
+      style={styles.createBtn}
       onPress={handleOpenCreateSheet}
-      glassIntensity="subtle"
-      size={DRAWER_MENU_BUTTON_SIZE}
+      activeOpacity={0.88}
+      accessibilityRole="button"
       accessibilityLabel="הוסף חדשה"
     >
-      <Ionicons name="add" size={24} color={DesignTokens.colors.text.primary} />
-    </DayNavBlurButton>
+      <Ionicons name="add" size={26} color={DesignTokens.colors.text.inverse} />
+    </TouchableOpacity>
   ) : null;
 
   return (
@@ -132,6 +140,14 @@ export default function NewsScreen({ route }: { route?: any }) {
 
 const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
   ({
+    createBtn: {
+      width: DRAWER_MENU_BUTTON_SIZE,
+      height: DRAWER_MENU_BUTTON_SIZE,
+      borderRadius: DRAWER_MENU_BUTTON_SIZE / 2,
+      backgroundColor: tokens.colors.primary.main,
+      alignItems: 'center',
+      justifyContent: 'center',
+    } as ViewStyle,
     loadingContainer: {
       flex: 1,
       justifyContent: 'center',

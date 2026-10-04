@@ -26,7 +26,7 @@ interface Props {
 /**
  * Hero portfolio summary
  * – שווי תיק + Daily change pill
- * – Quick actions (פעולה חדשה / ייבוא / שיתוף לקהילה)
+ * – Quick actions (פוזיציה חדשה / ייבוא / שיתוף לקהילה)
  * – 3 KPI inline בקווים דקים (רווח כולל / הצלחה / מזומן)
  */
 export function PortfolioSummaryHeader({

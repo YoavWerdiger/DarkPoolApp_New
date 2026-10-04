@@ -86,7 +86,22 @@
           "microphonePermission": "נדרשת גישה למיקרופון להקלטת הודעות קוליות",
           "recordAudioAndroid": true
         }
-      ]
+      ],
+      [
+        "expo-share-intent",
+        {
+          "iosActivationRules": {
+            "NSExtensionActivationSupportsText": true,
+            "NSExtensionActivationSupportsWebURLWithMaxCount": 1,
+            "NSExtensionActivationSupportsWebPageWithMaxCount": 1,
+            "NSExtensionActivationSupportsImageWithMaxCount": 10,
+            "NSExtensionActivationSupportsMovieWithMaxCount": 10
+          },
+          "androidIntentFilters": ["text/*", "image/*", "video/*"],
+          "androidMultiIntentFilters": ["image/*", "video/*"]
+        }
+      ],
+      "./plugins/withShareSuggestions"
     ],
     "owner": "darkpoolapp"
   },

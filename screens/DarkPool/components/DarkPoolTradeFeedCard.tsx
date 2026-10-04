@@ -2,7 +2,7 @@
  * כרטיס עסקה בפיד — קל יותר מגיבור פרטי העסקה:
  *
  *   UICard חיצוני (זכוכית)
- *     דיוקן + שם + רמז תפקיד + משפט (פועל צבעוני / rest מעומעם) + meta
+ *     דיוקן + שם · פעולה · טיקר, ובשורה מתחת הטווח או הכמות והתאריך.
  *
  * טיקר/מחיר — שורה plain בתוך אותו UICard (בלי כרטיס פנימי).
  * הקשה על הכרטיס = פרטי עסקה. הקשה על דיוקן/שם = פרופיל.
@@ -10,16 +10,20 @@
  */
 
 import React, { useMemo } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { InsiderAvatar } from './InsiderAvatar';
 import { DarkPoolFeedCard } from './DarkPoolFeedCard';
 import {
   createTradeHeroCardStyles,
   FEED_AVATAR_SIZE,
+  FEED_CARD_TYPE,
 } from './darkPoolFeedCardStyles';
 import { formatInsiderDisplayName } from '../utils/investorPlaceholder';
 import { resolveFeedPortraitUrl } from '../utils/feedPortrait';
+import { isolateData, ltrNameText } from '../utils/bidi';
+import { formatDisclosedAmountRange } from '../utils/congressTradeDisplay';
+import { formatInsiderShares } from '../utils/insiderTradeDisplay';
 import {
   buildCongressTradeDetailSummary,
   buildInsiderTradeDetailSummary,
@@ -43,11 +47,10 @@ interface Props {
   onCardPress?: () => void;
   onTickerPress?: () => void;
   personKind?: 'politician' | 'insider';
-  /** תפקיד בכיר — קונגרס מקבל «חבר קונגרס». */
+  /** לא מוצג בכרטיס — התפקיד נשאר בפירוט העסקה. */
   personHint?: string | null;
 }
 
-const CONGRESS_HINT = 'חבר קונגרס';
 const CONGRESS_BELL = require('../../../assets/icons/nav/notifications.png');
 
 export function DarkPoolTradeFeedCard({
@@ -63,14 +66,13 @@ export function DarkPoolTradeFeedCard({
   onPersonPress,
   onCardPress,
   personKind = 'insider',
-  personHint: personHintProp,
 }: Props) {
   const tokens = useDesignTokens();
   const styles = useMemo(() => createTradeHeroCardStyles(tokens), [tokens]);
+  const line = useMemo(() => createLineStyles(tokens), [tokens]);
   const isCongress = personKind === 'politician';
   const displayName =
     personKind === 'insider' ? formatInsiderDisplayName(personName) : personName;
-  const personHint = isCongress ? CONGRESS_HINT : personHintProp ?? null;
   const logoUrl = resolveFeedPortraitUrl({
     storedUrl: portraitUrl,
     personKind,
@@ -100,7 +102,18 @@ export function DarkPoolTradeFeedCard({
         ? tokens.colors.text.danger
         : tokens.colors.text.primary;
 
-  const a11y = [displayName, personHint, summary.sentence]
+  const detailBits: string[] = [];
+  if (isCongress) {
+    const range = formatDisclosedAmountRange(amountLabel);
+    if (range) detailBits.push(isolateData(range));
+  } else {
+    const sharesText = formatInsiderShares(shares);
+    if (sharesText) detailBits.push(`${isolateData(sharesText)} מניות`);
+  }
+  if (summary.metaRender) detailBits.push(summary.metaRender);
+  const detailLine = detailBits.join(' ');
+
+  const a11y = [displayName, summary.sentence]
     .filter(Boolean)
     .join(', ');
 
@@ -128,44 +141,82 @@ export function DarkPoolTradeFeedCard({
             />
           </Pressable>
           <View style={styles.textCol}>
-            <Pressable
-              onPress={onPersonPress}
-              disabled={!onPersonPress}
-              accessibilityRole={onPersonPress ? 'button' : undefined}
-              accessibilityLabel={onPersonPress ? `פרופיל ${displayName}` : undefined}
-            >
-              <Text style={styles.personName} numberOfLines={2} ellipsizeMode="tail">
-                {displayName}
-              </Text>
-              {personHint ? (
-                <Text
-                  style={[
-                    styles.personHint,
-                    !isCongress ? styles.personHintLtr : null,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {personHint}
+            <View style={line.sentence}>
+              <Pressable
+                onPress={onPersonPress}
+                disabled={!onPersonPress}
+                style={line.nameHit}
+                accessibilityRole={onPersonPress ? 'button' : undefined}
+                accessibilityLabel={onPersonPress ? `פרופיל ${displayName}` : undefined}
+              >
+                <Text style={line.name} numberOfLines={1} ellipsizeMode="tail">
+                  {displayName}
                 </Text>
-              ) : null}
-            </Pressable>
-            <Text
-              style={[styles.action, personHint ? null : styles.actionAfterName]}
-              accessibilityLabel={summary.sentence}
-            >
-              <Text style={[styles.actionVerb, { color: toneColor }]}>
+              </Pressable>
+              <Text style={line.wordSpace}>{'\u00A0'}</Text>
+              <Text style={[line.verb, { color: toneColor }]} numberOfLines={1}>
                 {summary.verb}
               </Text>
-              {summary.primaryRender ? (
-                <Text style={styles.actionRest}> {summary.primaryRender}</Text>
+              {summary.tickerDisplay ? (
+                <>
+                  <Text style={line.wordSpace}>{'\u00A0'}</Text>
+                  <Text style={line.ticker} numberOfLines={1}>
+                    {isolateData(summary.tickerDisplay)}
+                  </Text>
+                </>
               ) : null}
-            </Text>
-            {summary.metaRender ? (
-              <Text style={styles.actionMeta}>{summary.metaRender}</Text>
+            </View>
+            {detailLine ? (
+              <Text style={styles.actionMeta} numberOfLines={2}>
+                {detailLine}
+              </Text>
             ) : null}
           </View>
         </View>
       </View>
     </DarkPoolFeedCard>
   );
+}
+
+function createLineStyles(tokens: ReturnType<typeof useDesignTokens>) {
+  return StyleSheet.create({
+    sentence: {
+      direction: 'rtl',
+      flexDirection: 'row',
+      alignItems: 'center',
+      width: '100%',
+      minWidth: 0,
+    },
+    nameHit: {
+      flexShrink: 1,
+      minWidth: 0,
+    },
+    wordSpace: {
+      flexShrink: 0,
+      fontSize: FEED_CARD_TYPE.action.fontSize,
+      lineHeight: FEED_CARD_TYPE.action.lineHeight,
+    },
+    name: {
+      ...ltrNameText,
+      fontSize: FEED_CARD_TYPE.action.fontSize,
+      lineHeight: FEED_CARD_TYPE.action.lineHeight,
+      fontWeight: FEED_CARD_TYPE.name.fontWeight,
+      color: tokens.colors.text.primary,
+    },
+    verb: {
+      flexShrink: 0,
+      writingDirection: 'rtl',
+      fontSize: FEED_CARD_TYPE.action.fontSize,
+      lineHeight: FEED_CARD_TYPE.action.lineHeight,
+      fontWeight: FEED_CARD_TYPE.action.fontWeight,
+    },
+    ticker: {
+      flexShrink: 0,
+      writingDirection: 'ltr',
+      fontSize: FEED_CARD_TYPE.action.fontSize,
+      lineHeight: FEED_CARD_TYPE.action.lineHeight,
+      fontWeight: FEED_CARD_TYPE.name.fontWeight,
+      color: tokens.colors.text.primary,
+    },
+  });
 }

@@ -339,7 +339,8 @@ describe('trade detail nested quote card', () => {
       'utf8'
     );
     expect(src).toMatch(/<UICard[\s\S]*variant="soft"/);
-    expect(src).toMatch(/background\.tertiary/);
+    expect(src).toMatch(/backgroundColor: tokens\.colors\.background\.primary/);
+    expect(src).toMatch(/backgroundColor=\{tokens\.colors\.background\.cardSolid\}/);
     expect(src).toMatch(/FEED_NESTED_RADIUS/);
     expect(src).not.toMatch(/DarkPoolFeedNestedCard/);
     expect(src).not.toContain('variant="glass"');
@@ -361,5 +362,29 @@ describe('trade detail nested quote card', () => {
     expect(src).toMatch(/nestedSinceRow: \{[\s\S]*?justifyContent: 'flex-end'/);
     expect(src).not.toMatch(/width: '100%'/);
     expect(src).not.toMatch(/flex: 1/);
+  });
+
+  it('aligns ticker/price and caption/since rows across both columns', () => {
+    const src = readFileSync(
+      join(
+        __dirname,
+        '../../screens/DarkPool/components/DarkPoolNestedQuoteCard.tsx'
+      ),
+      'utf8'
+    );
+    const tickerCol = src.indexOf('styles.nestedTickerCol');
+    expect(tickerCol).toBeGreaterThan(-1);
+    expect(src.indexOf('styles.nestedTickerText', tickerCol)).toBeGreaterThan(tickerCol);
+    expect(src.indexOf('מחיר חי', tickerCol)).toBeGreaterThan(tickerCol);
+    expect(src.indexOf('מחיר חי', tickerCol)).toBeLessThan(src.indexOf('styles.nestedPrice}'));
+    expect(src).toMatch(/nestedTickerText: \{[\s\S]*?fontSize: FEED_CARD_TYPE\.nestedRowValue\.fontSize/);
+    expect(src).toMatch(/nestedPriceValue: \{[\s\S]*?fontSize: FEED_CARD_TYPE\.nestedRowValue\.fontSize/);
+    expect(src).toMatch(/nestedPriceMissing: \{[\s\S]*?lineHeight: NESTED_VALUE_LINE/);
+    expect(src).toMatch(/alignItems: 'flex-start'/);
+    expect(src).toMatch(/includeFontPadding: false/);
+    expect(src).toMatch(/nestedSinceLabel: \{[\s\S]*?fontSize: FEED_CARD_TYPE\.nestedRowCaption\.fontSize/);
+    expect(src).toMatch(/nestedPriceLabel: \{[\s\S]*?lineHeight: NESTED_CAPTION_LINE/);
+    expect(src).toMatch(/NESTED_VALUE_LINE \+ ROW_GAP \+ NESTED_CAPTION_LINE/);
+    expect(src).not.toMatch(/flexWrap: 'wrap'/);
   });
 });

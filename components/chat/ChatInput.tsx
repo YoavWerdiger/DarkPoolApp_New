@@ -37,6 +37,7 @@ import { useChatActions } from '../../context/ChatContext';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useChatDraft } from '../../hooks/useChatDraft';
+import { consumeShareForGroup, subscribePendingShare } from '../../lib/pendingShare';
 import { useTypingBroadcast } from '../../hooks/useTypingBroadcast';
 import MentionPickerSheet from '../share/MentionPickerSheet';
 import type { CommunityMention } from '../../types/tweets.types';
@@ -229,6 +230,7 @@ interface ChatInputProps {
     senderName: string;
     content: string;
     messageType?: string;
+    mediaUrl?: string;
   };
   onCancelReply?: () => void;
   disabled?: boolean;
@@ -263,7 +265,7 @@ function ChatInputImpl({
   // Per-group draft autosave: text typed but not sent survives screen exits,
   // app background, and process death. The hook restores any saved draft
   // when the user re-enters the same chat.
-  const { draft, setDraft, clearDraft } = useChatDraft(groupId);
+  const { draft, setDraft, clearDraft, isDraftHydrated } = useChatDraft(groupId);
   const text = draft;
   const setText = setDraft;
 
@@ -924,7 +926,7 @@ function ChatInputImpl({
     })();
   };
 
-  const applyPickedMedia = useCallback((items: PickedRecentMedia[]) => {
+  const applyPickedMedia = useCallback((items: PickedRecentMedia[], fromLibrary = true) => {
     if (items.length === 0) return;
     const mediaFiles: MediaFile[] = items.map((item, index) => ({
       id: item.id || `${Date.now()}_${index}`,
@@ -941,6 +943,7 @@ function ChatInputImpl({
     warmImageCache(mediaFiles.map((file) => file.thumbnail_url || file.uri));
     attachLocalImageThumbs(mediaFiles, setSelectedMedia);
     attachLocalVideoThumbs(mediaFiles, setSelectedMedia);
+    if (!fromLibrary) return;
     void resolvePickedMedia(items).then((resolved) => {
       setSelectedMedia((prev) =>
         prev.map((file) => {
@@ -950,6 +953,21 @@ function ChatInputImpl({
       );
     });
   }, []);
+
+  const [shareTick, setShareTick] = useState(0);
+  useEffect(() => subscribePendingShare(() => setShareTick((n) => n + 1)), []);
+  useEffect(() => {
+    if (!isDraftHydrated) return;
+    const share = consumeShareForGroup(groupId);
+    if (!share) return;
+    if (share.text) {
+      const current = textRef.current.trim();
+      setText(current ? `${current}\n${share.text}` : share.text);
+    }
+    if (share.media.length > 0) {
+      applyPickedMedia(share.media, false);
+    }
+  }, [groupId, isDraftHydrated, shareTick, applyPickedMedia, setText]);
 
   const onAttachCameraCapture = useCallback(
     (result: { uri: string; width?: number; height?: number; mediaType?: 'image' | 'video'; durationMs?: number }) => {
@@ -2173,6 +2191,13 @@ function ChatInputImpl({
               {getChatMessagePreview(replyTo.messageType, replyTo.content)}
             </Text>
           </View>
+          {replyTo.mediaUrl ? (
+            <ExpoImage
+              source={{ uri: replyTo.mediaUrl }}
+              style={styles.replyThumb}
+              contentFit="cover"
+            />
+          ) : null}
           {/* Green bar on the RIGHT — adjacent to text in RTL reading direction */}
           <View style={styles.replyPreviewBar} />
         </View>
@@ -2640,7 +2665,8 @@ const ChatInput = memo(ChatInputImpl, (prev, next) => {
     prev.replyTo?.id === next.replyTo?.id &&
     prev.replyTo?.content === next.replyTo?.content &&
     prev.replyTo?.senderName === next.replyTo?.senderName &&
-    prev.replyTo?.messageType === next.replyTo?.messageType
+    prev.replyTo?.messageType === next.replyTo?.messageType &&
+    prev.replyTo?.mediaUrl === next.replyTo?.mediaUrl
   );
 });
 
@@ -2663,7 +2689,7 @@ const createStyles = (tokens: any, paddingBottom: number) => StyleSheet.create({
   replyPreviewContainer: {
     flexDirection: 'row',
     alignItems: 'stretch',
-    backgroundColor: tokens.colors.border.divider,
+    backgroundColor: tokens.colors.background.cardSolid,
     marginHorizontal: tokens.spacing.xs,
     marginBottom: tokens.spacing.sm,
     paddingVertical: tokens.spacing.sm + 2,
@@ -2696,6 +2722,13 @@ const createStyles = (tokens: any, paddingBottom: number) => StyleSheet.create({
     fontSize: tokens.typography.fontSize.sm,
     color: tokens.colors.text.secondary,
     textAlign: 'right',
+  },
+  replyThumb: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    marginLeft: 8,
+    alignSelf: 'center',
   },
   cancelReply: {
     width: 30,

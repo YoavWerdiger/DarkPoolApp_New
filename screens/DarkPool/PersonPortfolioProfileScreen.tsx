@@ -146,8 +146,10 @@ import {
   fetch13FDailyCloses,
   fetchCongressBasketDailyCloses,
   fetchForm4DailyCloses,
+  fetchSessionHourlyCloses,
   MAX_BASKET_TICKERS,
 } from './utils/congressBasketPrices';
+import { appendWeightedSession } from './utils/sessionSnapshots';
 import { fetchFundHoldingsHistory } from '../../services/darkpool/uwFundProfileService';
 import { portraitPhotoCandidates } from './utils/investorPlaceholder';
 import { HapticFeedback } from '../../utils/hapticFeedback';
@@ -926,18 +928,56 @@ export function PersonPortfolioProfileScreen({
     return fromApi.length >= 2 ? fromApi : [];
   }, [fundMtmSeries, fund.profile?.value_series]);
 
-  const chartSeries = useMemo(
-    () =>
-      selectProfileSnapshotSeries({
-        kind,
-        holdingsEngine,
-        congressMtm: congressMtmSeries,
-        form4Mtm: form4MtmSeries,
-        trumpMtm: trumpMtmSeries,
-        fundSeries: resolvedFundSeries,
-      }),
-    [kind, holdingsEngine, congressMtmSeries, form4MtmSeries, trumpMtmSeries, resolvedFundSeries]
-  );
+  const sessionWeights = useMemo(() => {
+    if (holdingsEngine === 'congress' && congressPricedHoldings.length) {
+      return congressPricedHoldings
+        .filter((h) => h.quiverBaselineHoldingUSD > 0)
+        .map((h) => ({ ticker: h.ticker.toUpperCase(), weight: h.quiverBaselineHoldingUSD }));
+    }
+    return holdings
+      .map((h) => ({
+        ticker: h.ticker.toUpperCase(),
+        weight: Number(h.market_value ?? h.value_usd ?? 0),
+      }))
+      .filter((h) => h.ticker.length > 0 && h.weight > 0)
+      .slice(0, MAX_BASKET_TICKERS);
+  }, [holdingsEngine, congressPricedHoldings, holdings]);
+  const sessionTickersKey = sessionWeights.map((h) => h.ticker).join(',');
+  const sessionHourlyQuery = useQuery({
+    queryKey: ['darkpool', 'session-hourly', sessionTickersKey],
+    queryFn: () => fetchSessionHourlyCloses(sessionTickersKey.split(',')),
+    enabled: sessionTickersKey.length > 0,
+    staleTime: 5 * 60_000,
+  });
+
+  const chartSeries = useMemo(() => {
+    const base = selectProfileSnapshotSeries({
+      kind,
+      holdingsEngine,
+      congressMtm: congressMtmSeries,
+      form4Mtm: form4MtmSeries,
+      trumpMtm: trumpMtmSeries,
+      fundSeries: resolvedFundSeries,
+    });
+    const hourly = sessionHourlyQuery.data;
+    if (!hourly || !sessionWeights.length) return base;
+    return appendWeightedSession(
+      base,
+      sessionWeights.map((leg) => ({
+        weight: leg.weight,
+        bars: hourly[leg.ticker] ?? [],
+      }))
+    );
+  }, [
+    kind,
+    holdingsEngine,
+    congressMtmSeries,
+    form4MtmSeries,
+    trumpMtmSeries,
+    resolvedFundSeries,
+    sessionHourlyQuery.data,
+    sessionWeights,
+  ]);
 
   const snapshotPricesLoading =
     (kind === 'politician' &&
@@ -1344,7 +1384,7 @@ export function PersonPortfolioProfileScreen({
                     <Ionicons
                       name="information-circle-outline"
                       size={16}
-                      color={tokens.colors.text.tertiary}
+                      color={tokens.colors.text.secondary}
                     />
                   </Pressable>
                 ) : null}
@@ -1517,7 +1557,7 @@ export function PersonPortfolioProfileScreen({
           {/* עסקאות */}
           {trades.length > 0 ? (
             <>
-              <Text style={[styles.sectionTitle, { marginTop: 8 }]}>עסקאות אחרונות</Text>
+              <Text style={styles.sectionTitle}>עסקאות אחרונות</Text>
               <UICard
                 variant="soft"
                 glassIntensity="light"
@@ -1544,17 +1584,15 @@ export function PersonPortfolioProfileScreen({
                           </View>
                           <View style={styles.iconTickerGap} />
                           <View style={styles.rowText}>
-                            <Text style={styles.tradeLine} numberOfLines={1}>
-                              <Text style={{ color: sideColor }}>
+                            <Text style={styles.tradeTicker} numberOfLines={1}>
+                              {toDataIsland(t.ticker)}
+                            </Text>
+                            <Text style={styles.rowMeta} numberOfLines={1}>
+                              <Text style={[styles.rowMetaVerb, { color: sideColor }]}>
                                 {sell ? 'מכירה' : 'קנייה'}
                               </Text>
-                              <Text>{` \u2066${t.ticker}\u2069`}</Text>
+                              {t.amount ? ` · ${t.amount}` : null}
                             </Text>
-                            {t.amount ? (
-                              <Text style={styles.rowMeta} numberOfLines={1}>
-                                {t.amount}
-                              </Text>
-                            ) : null}
                           </View>
                           <View style={styles.tradeRight}>
                             {t.date ? (
@@ -1732,7 +1770,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       alignSelf: 'stretch',
     },
     valueBlock: {
-      marginBottom: 8,
+      marginBottom: APP_LAYOUT.stackGapSmall,
       width: '100%',
       direction: 'ltr',
       alignItems: 'flex-end',
@@ -1742,14 +1780,12 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       flexDirection: 'row',
       alignItems: 'center',
       alignSelf: 'stretch',
-      gap: 8,
+      gap: APP_LAYOUT.stackGapSmall,
     },
     valueLabel: {
       ...darkPoolSectionTitleStyle,
       flexShrink: 1,
       width: undefined,
-      fontSize: 21,
-      lineHeight: 26,
       color: tokens.colors.text.primary,
     },
     valueHelpBtn: {
@@ -1775,9 +1811,9 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       gap: 6,
     },
     deltaFigure: {
-      fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
-      lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
-      fontWeight: DARK_POOL_TYPE.cardSubtitle.fontWeight,
+      fontSize: DARK_POOL_TYPE.cardBody.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardBody.lineHeight,
+      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       writingDirection: 'ltr',
       fontVariant: ['tabular-nums'],
     },
@@ -1811,27 +1847,25 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       textAlign: 'center',
     },
     chartWrap: {
-      marginBottom: 20,
+      marginBottom: APP_LAYOUT.sectionGap,
       alignSelf: 'stretch',
     },
     chartCard: {
-      marginBottom: 8,
+      marginBottom: APP_LAYOUT.sectionGap,
       borderRadius: UI_CARD_RADIUS,
       overflow: 'hidden',
     },
     sectionTitle: {
       ...darkPoolSectionTitleStyle,
       color: tokens.colors.text.primary,
-      marginBottom: 10,
-      marginTop: 4,
+      marginBottom: APP_LAYOUT.sectionHeaderToContent,
     },
     sectionTitleRow: {
       direction: 'rtl',
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
-      marginBottom: 10,
-      marginTop: 4,
+      gap: APP_LAYOUT.stackGapSmall,
+      marginBottom: APP_LAYOUT.sectionHeaderToContent,
     },
     sectionTitleInRow: {
       marginBottom: 0,
@@ -1839,18 +1873,19 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     honestyTag: {
       ...darkPoolPhysicalRightText,
-      fontSize: DARK_POOL_TYPE.caption2.fontSize,
-      fontWeight: DARK_POOL_TYPE.caption2.fontWeight,
-      color: tokens.colors.text.tertiary,
+      fontSize: DARK_POOL_TYPE.caption.fontSize,
+      lineHeight: DARK_POOL_TYPE.caption.lineHeight,
+      fontWeight: DARK_POOL_TYPE.caption.fontWeight,
+      color: tokens.colors.text.secondary,
     },
     rowHonestyTag: {
-      fontSize: DARK_POOL_TYPE.caption2.fontSize,
-      lineHeight: DARK_POOL_TYPE.caption2.lineHeight,
-      fontWeight: DARK_POOL_TYPE.caption2.fontWeight,
-      color: tokens.colors.text.tertiary,
+      fontSize: DARK_POOL_TYPE.caption.fontSize,
+      lineHeight: DARK_POOL_TYPE.caption.lineHeight,
+      fontWeight: DARK_POOL_TYPE.caption.fontWeight,
+      color: tokens.colors.text.secondary,
     },
     listPanel: {
-      marginBottom: 12,
+      marginBottom: APP_LAYOUT.sectionGap,
       borderRadius: UI_CARD_RADIUS,
       overflow: 'hidden',
       alignSelf: 'stretch',
@@ -1877,7 +1912,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       alignItems: 'center',
       alignSelf: 'stretch',
       width: '100%',
-      paddingVertical: 15,
+      paddingVertical: APP_LAYOUT.cardTitleToBodyGap,
       paddingHorizontal: APP_LAYOUT.cardPadding,
       minHeight: 56,
     },
@@ -1896,10 +1931,10 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       justifyContent: 'center',
       alignItems: 'stretch',
     },
-    tradeLine: {
-      width: '100%',
+    tradeTicker: {
+      direction: 'ltr',
       textAlign: 'right',
-      writingDirection: 'rtl',
+      writingDirection: 'ltr',
       fontSize: DARK_POOL_TYPE.cardBody.fontSize,
       lineHeight: DARK_POOL_TYPE.cardBody.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
@@ -1908,27 +1943,31 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     rowMeta: {
       ...darkPoolPhysicalRightText,
-      marginTop: 0,
+      marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
       includeFontPadding: false,
-      fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
-      lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
-      fontWeight: DARK_POOL_TYPE.cardSubtitle.fontWeight,
+      fontSize: DARK_POOL_TYPE.caption.fontSize,
+      lineHeight: DARK_POOL_TYPE.caption.lineHeight,
+      fontWeight: DARK_POOL_TYPE.caption.fontWeight,
       color: tokens.colors.text.secondary,
+    },
+    rowMetaVerb: {
+      fontWeight: DARK_POOL_TYPE.cardMetricLabel.fontWeight,
     },
     tradeRight: { alignItems: 'stretch', flexShrink: 0 },
     tradeDate: {
       ...darkPoolPhysicalRightText,
-      fontSize: DARK_POOL_TYPE.caption2.fontSize,
-      lineHeight: DARK_POOL_TYPE.caption2.lineHeight,
-      color: tokens.colors.text.primary,
+      fontSize: DARK_POOL_TYPE.caption.fontSize,
+      lineHeight: DARK_POOL_TYPE.caption.lineHeight,
+      fontWeight: DARK_POOL_TYPE.caption.fontWeight,
+      color: tokens.colors.text.secondary,
+      fontVariant: ['tabular-nums'],
     },
     muted: {
       ...darkPoolPhysicalRightText,
-      marginTop: 8,
       fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
       lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardSubtitle.fontWeight,
-      color: tokens.colors.text.tertiary,
+      color: tokens.colors.text.secondary,
     },
   });
 }

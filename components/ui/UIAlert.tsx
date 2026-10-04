@@ -5,16 +5,17 @@ import {
   Text,
   Pressable,
   Animated,
+  ScrollView,
   StyleSheet,
   ViewStyle,
   TextStyle,
-  I18nManager,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from './DesignTokens';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { applyAppSystemUI } from '../../lib/androidSystemUI';
-import { APP_TYPE, appPhysicalRightText, appSheetButtonLabelStyle } from './appType';
+import { APP_TYPE, appSheetButtonLabelStyle } from './appType';
 import { APP_LAYOUT, UI_CARD_RADIUS } from './appLayout';
 
 export type UIAlertType = 'info' | 'success' | 'warning' | 'error';
@@ -37,13 +38,6 @@ export interface UIAlertProps {
   closeOnBackdropPress?: boolean;
 }
 
-const HEBREW_COPY = /[\u0590-\u05FF]/;
-
-function dialogCopyAlign(text?: string): TextStyle {
-  if (text && HEBREW_COPY.test(text)) return appPhysicalRightText;
-  return { textAlign: 'center', writingDirection: 'auto' };
-}
-
 const UIAlert: React.FC<UIAlertProps> = ({
   visible,
   title,
@@ -56,6 +50,16 @@ const UIAlert: React.FC<UIAlertProps> = ({
 }) => {
   const DesignTokens = useDesignTokens();
   const { colors, spacing, borderRadius } = DesignTokens;
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const cardWidth = Math.min(340, Math.max(260, windowWidth - spacing.lg * 2));
+  const copyWidth = cardWidth - APP_LAYOUT.cardPadding * 2;
+  const copyMaxHeight = Math.max(160, windowHeight * 0.5);
+
+  const centeredCopy: TextStyle = {
+    width: copyWidth,
+    textAlign: 'center',
+    writingDirection: 'rtl',
+  };
   
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
@@ -114,91 +118,59 @@ const UIAlert: React.FC<UIAlertProps> = ({
     }
   };
 
-  const rtlCard: ViewStyle = I18nManager.isRTL ? { direction: 'rtl' } : {};
-
   const containerStyle: ViewStyle = {
-    backgroundColor: colors.background.cardSolid,
+    backgroundColor: colors.background.primary,
     borderRadius: UI_CARD_RADIUS,
     borderWidth: 0,
     padding: APP_LAYOUT.cardPadding,
-    width: '100%',
-    maxWidth: 340,
+    width: cardWidth,
+    maxHeight: windowHeight - spacing.lg * 2,
     overflow: 'hidden',
-    ...rtlCard,
+    alignItems: 'stretch',
+    direction: 'ltr',
   };
 
   const titleStyle: TextStyle = {
-    ...APP_TYPE.cardTitle,
+    ...APP_TYPE.sectionTitle,
     color: colors.text.primary,
-    width: '100%',
     marginBottom: message ? APP_LAYOUT.cardTitleToBodyGap : 0,
-    ...dialogCopyAlign(title),
+    ...centeredCopy,
   };
 
   const messageStyle: TextStyle = {
     ...APP_TYPE.body,
     color: colors.text.secondary,
-    width: '100%',
     marginBottom: spacing.lg,
-    ...dialogCopyAlign(message),
+    ...centeredCopy,
   };
 
-  const twoCol = buttons.length === 2;
-  const isSingleButton = buttons.length === 1;
   const buttonContainerStyle: ViewStyle = {
-    flexDirection: buttons.length > 2 ? 'column' : twoCol && I18nManager.isRTL ? 'row-reverse' : 'row',
-    justifyContent: isSingleButton ? 'center' : 'space-between',
+    flexDirection: 'row-reverse',
+    direction: 'ltr',
+    alignItems: 'stretch',
+    alignSelf: 'stretch',
+    width: '100%',
     marginTop: spacing.xs,
-    gap: twoCol ? spacing.sm : 0,
+    gap: APP_LAYOUT.cardStackGap,
   };
 
-  const getButtonStyle = (button: UIAlertButton, index: number): ViewStyle => {
-    const baseStyle: ViewStyle = {
-      flex: buttons.length > 2 || isSingleButton ? 0 : 1,
-      minHeight: 48,
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.base,
-      borderRadius: borderRadius.button,
-      marginBottom: buttons.length > 2 && index < buttons.length - 1 ? spacing.sm : 0,
-      alignItems: 'center',
-      justifyContent: 'center',
-      alignSelf: isSingleButton ? 'center' : undefined,
-      minWidth: isSingleButton ? 180 : undefined,
-    };
+  const getButtonStyle = (): ViewStyle => ({
+    flex: 1,
+    minWidth: 0,
+    minHeight: 52,
+    borderRadius: borderRadius.full,
+    overflow: 'hidden',
+    borderWidth: 0,
+    backgroundColor: colors.background.cardSolid,
+  });
 
-    switch (button.style) {
-      case 'destructive':
-        return {
-          ...baseStyle,
-          backgroundColor: colors.danger.main,
-          borderWidth: 0,
-        };
-      case 'cancel':
-        return {
-          ...baseStyle,
-          backgroundColor: 'transparent',
-          borderWidth: 0,
-        };
-      default:
-        return {
-          ...baseStyle,
-          backgroundColor: colors.primary.main,
-          borderWidth: 0,
-        };
-    }
-  };
-
-  const getButtonTextStyle = (button: UIAlertButton): TextStyle => {
-    const label: TextStyle = { ...appSheetButtonLabelStyle };
-    switch (button.style) {
-      case 'destructive':
-        return { ...label, color: '#FFFFFF' };
-      case 'cancel':
-        return { ...label, color: colors.text.secondary };
-      default:
-        return { ...label, color: colors.text.inverse };
-    }
-  };
+  const getButtonTextStyle = (button: UIAlertButton): TextStyle => ({
+    ...appSheetButtonLabelStyle,
+    flexGrow: 0,
+    flexShrink: 0,
+    textAlign: 'center',
+    color: button.style === 'destructive' ? colors.text.danger : colors.text.primary,
+  });
 
   return (
     <Modal
@@ -223,14 +195,14 @@ const UIAlert: React.FC<UIAlertProps> = ({
           ]}
           pointerEvents="box-none"
         >
-          <View>
-            <Animated.View
-              style={[containerStyle, { transform: [{ scale: scaleAnim }] }]}
-            >
+          <Animated.View
+            style={[containerStyle, { transform: [{ scale: scaleAnim }] }]}
+          >
               {showIcon && (
                 <View
                   style={{
                     alignItems: 'center',
+                    alignSelf: 'center',
                     marginBottom: spacing.lg,
                   }}
                 >
@@ -239,7 +211,7 @@ const UIAlert: React.FC<UIAlertProps> = ({
                       width: 64,
                       height: 64,
                       borderRadius: 32,
-                      backgroundColor: 'rgba(255,255,255,0.08)',
+                      backgroundColor: colors.background.secondary,
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
@@ -249,23 +221,49 @@ const UIAlert: React.FC<UIAlertProps> = ({
                 </View>
               )}
 
-              <Text style={titleStyle}>{title}</Text>
-
-              {message && <Text style={messageStyle}>{message}</Text>}
+              <ScrollView
+                style={{ maxHeight: copyMaxHeight, alignSelf: 'stretch' }}
+                contentContainerStyle={{ width: '100%', alignItems: 'center' }}
+                bounces={false}
+                showsVerticalScrollIndicator={false}
+              >
+                <Text style={titleStyle}>{title}</Text>
+                {message ? <Text style={messageStyle}>{message}</Text> : null}
+              </ScrollView>
 
               <View style={buttonContainerStyle}>
                 {buttons.map((button, index) => (
-                  <Pressable
-                    key={index}
-                    style={({ pressed }) => [getButtonStyle(button, index), pressed && { opacity: 0.8 }]}
-                    onPress={() => handleButtonPress(button)}
-                  >
-                    <Text style={getButtonTextStyle(button)}>{button.text}</Text>
-                  </Pressable>
+                  <View key={index} style={getButtonStyle()}>
+                    <Pressable
+                      onPress={() => handleButtonPress(button)}
+                      style={({ pressed }) => [{ width: '100%', opacity: pressed ? 0.85 : 1 }]}
+                    >
+                      <View
+                        style={{
+                          width: '100%',
+                          minHeight: 52,
+                          paddingVertical: 12,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <View
+                          style={{
+                            alignSelf: 'center',
+                            direction: 'ltr',
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Text style={getButtonTextStyle(button)}>{button.text}</Text>
+                        </View>
+                      </View>
+                    </Pressable>
+                  </View>
                 ))}
               </View>
-            </Animated.View>
-          </View>
+          </Animated.View>
         </View>
       </View>
     </Modal>

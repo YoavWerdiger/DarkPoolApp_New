@@ -192,6 +192,8 @@ export function buildTickerChartSeries(opts: {
   now?: Date;
   /** ברים 5m מ-Yahoo `1d` — לא שני קצוות יומיים. */
   intraday?: TickerClosePoint[];
+  /** ברי שעה של הסשן הנוכחי — מחליפים סגירה יומית אחת. */
+  sessionBars?: TickerClosePoint[];
 }): TickerChartPoint[] {
   const now = opts.now ?? new Date();
   const today = utcTodayIso(now);
@@ -202,6 +204,13 @@ export function buildTickerChartSeries(opts: {
     const intra = sortCloses(opts.intraday ?? []);
     if (intra.length >= 2) {
       return appendLiveIntraday(intra, live, now).map((p) => ({
+        date: p.date,
+        value: p.close,
+      }));
+    }
+    const hourly = sortCloses(opts.sessionBars ?? []);
+    if (hourly.length >= 2) {
+      return appendLiveIntraday(hourly, live, now).map((p) => ({
         date: p.date,
         value: p.close,
       }));
@@ -217,10 +226,26 @@ export function buildTickerChartSeries(opts: {
   }
 
   const withLive = appendLiveClose(opts.daily, live, today);
-  return filterTickerClosesByRange(withLive, opts.range, now).map((p) => ({
+  const dailyPoints = filterTickerClosesByRange(withLive, opts.range, now).map((p) => ({
     date: p.date,
     value: p.close,
   }));
+  return mergeSessionPriceBars(dailyPoints, opts.sessionBars ?? []);
+}
+
+/** מחליף את נקודת היום בסגירות שעה אמיתיות. בלי ברי שעה — הסדרה היומית נשארת. */
+export function mergeSessionPriceBars(
+  series: TickerChartPoint[],
+  sessionBars: TickerClosePoint[]
+): TickerChartPoint[] {
+  const session = sortCloses(sessionBars);
+  if (session.length < 2) return series;
+  const sessionDay = session[session.length - 1].date.slice(0, 10);
+  const history = series.filter((p) => p.date.slice(0, 10) < sessionDay);
+  return [
+    ...history,
+    ...session.map((p) => ({ date: p.date, value: p.close })),
+  ];
 }
 
 function pctFrom(start: number, end: number): number | null {

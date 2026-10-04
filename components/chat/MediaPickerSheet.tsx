@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -11,7 +12,16 @@ import {
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  AtSign,
+  Camera,
+  ChartColumnBig,
+  FileText,
+  Images,
+  Mic,
+  type LucideIcon,
+} from 'lucide-react-native';
+import { initialWindowMetrics, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChatBottomSheet } from './ChatBottomSheet';
 import { sheetContentBottomPadding } from '../ui/BottomSheet/sheetGlass';
 import { useDesignTokens } from '../ui/DesignTokens';
@@ -25,12 +35,20 @@ import {
   MEDIA_ATTACH_GRID_COLS,
   MEDIA_ATTACH_GRID_GAP,
   MEDIA_ATTACH_GRID_ROW,
+  MEDIA_ATTACH_ACTION_BTN_PX,
+  MEDIA_ATTACH_ACTION_ROW_GAP,
+  MEDIA_ATTACH_PRIMARY_ROW_PX,
   MEDIA_ATTACH_PEEK_THUMBS,
+  MEDIA_ATTACH_PEEK_THUMB_GAP,
+  MEDIA_ATTACH_PEEK_THUMB_PX,
+  MEDIA_ATTACH_PEEK_THUMB_RADIUS,
+  MEDIA_ATTACH_PEEK_STRIP_GAP,
   MEDIA_ATTACH_PERMISSION_CTA,
-  MEDIA_ATTACH_SECONDARY_COLS,
+  mediaAttachActionColumns,
   MEDIA_ATTACH_SKELETON_CELLS,
   MEDIA_ATTACH_SNAP_POINTS,
   formatMediaDuration,
+  mediaAttachActionsBlockHeightPx,
   mediaAttachCellSize,
   mediaAttachPeekPlan,
   mediaAttachPresentation,
@@ -65,14 +83,12 @@ type AttachOpenLock = {
 
 function countSecondaryAttachActions(input: {
   onDocument?: boolean;
-  onEntity?: boolean;
   onMention?: boolean;
   onAudio?: boolean;
   onPoll?: boolean;
 }): number {
   let n = 0;
   if (input.onDocument) n += 1;
-  if (input.onEntity) n += 1;
   if (input.onMention) n += 1;
   if (input.onAudio) n += 1;
   if (input.onPoll) n += 1;
@@ -85,6 +101,7 @@ function lockAttachOpen(input: {
   thumbSize: number;
   bottomPad: number;
   secondaryCount: number;
+  primaryCount: number;
 }): AttachOpenLock {
   const hit = peekMediaRecents(input.kind) ?? peekMediaRecents('all');
   const cached = filterRecentsByKind(hit?.assets ?? [], input.kind);
@@ -94,6 +111,7 @@ function lockAttachOpen(input: {
     bottomPad: input.bottomPad,
     cachedCount: cached.length,
     secondaryCount: input.secondaryCount,
+    primaryCount: input.primaryCount,
   });
   return {
     snaps: [plan.peekSnap, MEDIA_ATTACH_EXPANDED_SNAP],
@@ -101,11 +119,11 @@ function lockAttachOpen(input: {
   };
 }
 
-type ActionId = 'camera' | 'gallery' | 'document' | 'audio' | 'poll' | 'entity' | 'mention';
+type ActionId = 'camera' | 'gallery' | 'document' | 'audio' | 'poll' | 'mention';
 
 type SheetAction = {
   id: ActionId;
-  icon: keyof typeof Ionicons.glyphMap | 'poll-image';
+  icon: LucideIcon;
   label: string;
   run: () => void;
 };
@@ -121,6 +139,7 @@ export type MediaPickerSheetProps = {
   onDocument?: () => void;
   onAudio?: () => void;
   onPoll?: () => void;
+  /** נשמר לתאימות — «שיתוף» הוסר מהשיט. */
   onEntity?: () => void;
   onMention?: () => void;
   kind?: MediaRecentsKind;
@@ -143,7 +162,6 @@ export default function MediaPickerSheet({
   onDocument,
   onAudio,
   onPoll,
-  onEntity,
   onMention,
   kind = 'all',
   allowsMultiple = true,
@@ -156,9 +174,10 @@ export default function MediaPickerSheet({
   const tokens = useDesignTokens();
   const insets = useSafeAreaInsets();
   const { width: screenW, height: screenH } = useWindowDimensions();
+  const safeBottom = Math.max(insets.bottom, initialWindowMetrics?.insets.bottom ?? 0);
   const sheetBottomPad = useMemo(
-    () => sheetContentBottomPadding(insets.bottom),
-    [insets.bottom],
+    () => sheetContentBottomPadding(safeBottom),
+    [safeBottom],
   );
 
   const cached = peekMediaRecents(kind) ?? peekMediaRecents('all');
@@ -184,21 +203,25 @@ export default function MediaPickerSheet({
     () =>
       countSecondaryAttachActions({
         onDocument: !!onDocument,
-        onEntity: !!onEntity,
         onMention: !!onMention,
         onAudio: !!onAudio,
         onPoll: !!onPoll,
       }),
-    [onAudio, onDocument, onEntity, onMention, onPoll],
+    [onAudio, onDocument, onMention, onPoll],
   );
+
+  const cameraMode = cameraLaunch ?? (onCamera ? 'system' : 'builtin');
+  const showCameraButton =
+    showCamera !== false && (onCamera != null || onPickedMedia != null);
 
   if (visible && openLockRef.current == null) {
     openLockRef.current = lockAttachOpen({
       kind,
       screenHeight: screenH,
-      thumbSize: cellSize,
+      thumbSize: MEDIA_ATTACH_PEEK_THUMB_PX,
       bottomPad: sheetBottomPad,
       secondaryCount,
+      primaryCount: showCameraButton ? 2 : 1,
     });
   }
   const openLock = openLockRef.current;
@@ -231,10 +254,6 @@ export default function MediaPickerSheet({
     const warm = scheduleMediaRecentsPrefetch(kind);
     return () => warm.cancel();
   }, [kind, visible]);
-
-  const cameraMode = cameraLaunch ?? (onCamera ? 'system' : 'builtin');
-  const showCameraButton =
-    showCamera !== false && (onCamera != null || onPickedMedia != null);
 
   useEffect(() => {
     if (!visible || !mediaAttachShouldQueryLibrary(expanded)) return;
@@ -287,8 +306,12 @@ export default function MediaPickerSheet({
     (picked: MediaRecentAsset[]) => {
       if (picked.length === 0) return;
       void HapticFeedback.selection();
-      onPickedMedia?.(picked.map(recentToPicked));
+      const mapped = picked.map(recentToPicked);
       onClose();
+      // פריוויו הוא Modal. פתיחה לפני שהשיט נסגר מקפיאה את המקלדת ב-iOS.
+      runAfterSheetDismiss(() => {
+        onPickedMedia?.(mapped);
+      });
     },
     [onClose, onPickedMedia],
   );
@@ -379,32 +402,19 @@ export default function MediaPickerSheet({
   const secondaryActions = useMemo<SheetAction[]>(() => {
     const next: SheetAction[] = [];
     if (onDocument) {
-      next.push({
-        id: 'document',
-        icon: 'document-text',
-        label: 'מסמך',
-        run: () => launchSystem(onDocument),
-      });
-    }
-    if (onEntity) {
-      next.push({ id: 'entity', icon: 'link', label: 'שיתוף', run: () => launchSystem(onEntity) });
-    }
-    if (onMention) {
-      next.push({ id: 'mention', icon: 'at', label: 'תיוג', run: () => launchSystem(onMention) });
+      next.push({ id: 'document', icon: FileText, label: 'מסמך', run: () => launchSystem(onDocument) });
     }
     if (onAudio) {
-      next.push({ id: 'audio', icon: 'mic', label: 'אודיו', run: () => launchSystem(onAudio) });
+      next.push({ id: 'audio', icon: Mic, label: 'אודיו', run: () => launchSystem(onAudio) });
     }
     if (onPoll) {
-      next.push({
-        id: 'poll',
-        icon: 'poll-image',
-        label: 'סקר',
-        run: () => launchSystem(onPoll),
-      });
+      next.push({ id: 'poll', icon: ChartColumnBig, label: 'סקר', run: () => launchSystem(onPoll) });
+    }
+    if (onMention) {
+      next.push({ id: 'mention', icon: AtSign, label: 'תיוג', run: () => launchSystem(onMention) });
     }
     return next;
-  }, [launchSystem, onAudio, onDocument, onEntity, onMention, onPoll]);
+  }, [launchSystem, onAudio, onDocument, onMention, onPoll]);
 
   const ui = mediaAttachPresentation({
     permission,
@@ -412,10 +422,18 @@ export default function MediaPickerSheet({
     loading,
     expanded,
   });
-  const styles = useMemo(() => createStyles(tokens, sheetBottomPad), [sheetBottomPad, tokens]);
+  const fabBottom = expanded
+    ? sheetBottomPad
+    : sheetBottomPad +
+      mediaAttachActionsBlockHeightPx(secondaryCount, showCameraButton ? 2 : 1) +
+      12;
+  const styles = useMemo(
+    () => createStyles(tokens, sheetBottomPad, fabBottom),
+    [fabBottom, sheetBottomPad, tokens],
+  );
 
-  const renderItem = useCallback(
-    ({ item }: { item: MediaRecentAsset }) => {
+  const renderThumb = useCallback(
+    (item: MediaRecentAsset, size: number, rounded: boolean) => {
       const selected = selectedSet.has(item.id);
       const order = selected ? selectedIds.indexOf(item.id) + 1 : 0;
       const duration = item.mediaType === 'video' ? formatMediaDuration(item.duration) : '';
@@ -423,7 +441,7 @@ export default function MediaPickerSheet({
         <TouchableOpacity
           onPress={() => onPressAsset(item)}
           activeOpacity={0.85}
-          style={{ width: cellSize, height: cellSize }}
+          style={[{ width: size, height: size }, rounded && styles.thumbRounded]}
           accessibilityRole="button"
           accessibilityLabel={item.mediaType === 'video' ? 'סרטון' : 'תמונה'}
           accessibilityState={{ selected }}
@@ -449,77 +467,71 @@ export default function MediaPickerSheet({
         </TouchableOpacity>
       );
     },
-    [allowsMultiple, cellSize, onPressAsset, selectedIds, selectedSet, styles],
+    [allowsMultiple, onPressAsset, selectedIds, selectedSet, styles],
   );
+
+  const renderItem = useCallback(
+    ({ item }: { item: MediaRecentAsset }) => renderThumb(item, cellSize, false),
+    [cellSize, renderThumb],
+  );
+
+  const primaryActions = useMemo<SheetAction[]>(() => {
+    const next: SheetAction[] = [
+      { id: 'gallery', icon: Images, label: 'גלריה', run: expandGallery },
+    ];
+    if (showCameraButton) {
+      next.push({ id: 'camera', icon: Camera, label: 'מצלמה', run: openCamera });
+    }
+    return next;
+  }, [expandGallery, openCamera, showCameraButton]);
+
+  const actionCols = mediaAttachActionColumns(secondaryActions.length);
 
   const peekActions = (
     <View style={styles.peekActions}>
       <View style={styles.primaryRow}>
-        <TouchableOpacity
-          style={styles.primaryTile}
-          onPress={expandGallery}
-          activeOpacity={0.82}
-          accessibilityRole="button"
-          accessibilityLabel="גלריה"
-        >
-          <View style={styles.primaryIconWrap}>
-            <Ionicons name="images" size={26} color={tokens.colors.text.primary} />
-          </View>
-          <View style={styles.primaryTextCol}>
-            <Text style={styles.primaryTitle} numberOfLines={1}>
-              גלריה
-            </Text>
-          </View>
-        </TouchableOpacity>
-        {showCameraButton ? (
-          <TouchableOpacity
-            style={styles.primaryTile}
-            onPress={openCamera}
-            activeOpacity={0.82}
-            accessibilityRole="button"
-            accessibilityLabel="מצלמה"
-          >
-            <View style={styles.primaryIconWrap}>
-              <Ionicons name="camera" size={26} color={tokens.colors.text.primary} />
-            </View>
-            <View style={styles.primaryTextCol}>
-              <Text style={styles.primaryTitle} numberOfLines={1}>
-                מצלמה
-              </Text>
-            </View>
-          </TouchableOpacity>
-        ) : null}
-      </View>
-
-      {secondaryActions.length > 0 ? (
-        <View style={styles.secondaryBlock}>
-          <View style={styles.secondaryRow}>
-          {secondaryActions.map((action) => (
+        {primaryActions.map((action) => {
+          const Icon = action.icon;
+          return (
             <TouchableOpacity
               key={action.id}
-              style={styles.secondaryItem}
+              style={styles.primaryPill}
               onPress={action.run}
-              activeOpacity={0.75}
+              activeOpacity={0.82}
               accessibilityRole="button"
               accessibilityLabel={action.label}
             >
-              <View style={styles.actionCircle}>
-                {action.icon === 'poll-image' ? (
-                  <Image
-                    source={require('../../assets/icons/ico-40-poll-2.png')}
-                    style={styles.pollIcon}
-                    resizeMode="contain"
-                  />
-                ) : (
-                  <Ionicons name={action.icon} size={22} color={tokens.colors.text.primary} />
-                )}
-              </View>
-              <Text style={styles.actionLabel} numberOfLines={1}>
+              <Icon size={22} color={tokens.colors.text.primary} strokeWidth={2} />
+              <Text style={styles.primaryPillLabel} numberOfLines={1}>
                 {action.label}
               </Text>
             </TouchableOpacity>
-          ))}
-          </View>
+          );
+        })}
+      </View>
+
+      {secondaryActions.length > 0 ? (
+        <View style={styles.actionGrid}>
+          {secondaryActions.map((action) => {
+            const Icon = action.icon;
+            return (
+              <TouchableOpacity
+                key={action.id}
+                style={[styles.actionItem, { width: `${100 / actionCols}%` }]}
+                onPress={action.run}
+                activeOpacity={0.75}
+                accessibilityRole="button"
+                accessibilityLabel={action.label}
+              >
+                <View style={styles.actionCircle}>
+                  <Icon size={22} color={tokens.colors.text.primary} strokeWidth={2} />
+                </View>
+                <Text style={styles.actionLabel} numberOfLines={1}>
+                  {action.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       ) : null}
     </View>
@@ -592,7 +604,13 @@ export default function MediaPickerSheet({
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
                 columnWrapperStyle={styles.gridRow}
-                contentContainerStyle={assets.length === 0 ? styles.emptyWrap : undefined}
+                contentContainerStyle={
+                  assets.length === 0
+                    ? styles.emptyWrap
+                    : selectedIds.length > 0
+                      ? styles.gridWithFab
+                      : undefined
+                }
                 ListEmptyComponent={
                   <Text style={[styles.empty, { color: tokens.colors.text.secondary }]}>
                     אין תמונות עדיין
@@ -621,13 +639,28 @@ export default function MediaPickerSheet({
                     <Text style={styles.peekRecentsLink}>הכל</Text>
                   </TouchableOpacity>
                 </View>
-                <View style={styles.peekStrip}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.peekStrip}
+                  keyboardShouldPersistTaps="handled"
+                >
                   {peekThumbs.map((item) => (
-                    <View key={item.id} style={styles.peekCell}>
-                      {renderItem({ item })}
-                    </View>
+                    <React.Fragment key={item.id}>
+                      {renderThumb(item, MEDIA_ATTACH_PEEK_THUMB_PX, true)}
+                    </React.Fragment>
                   ))}
-                </View>
+                  <TouchableOpacity
+                    style={styles.peekMoreTile}
+                    onPress={expandGallery}
+                    activeOpacity={0.8}
+                    accessibilityRole="button"
+                    accessibilityLabel="פתח את כל הגלריה"
+                  >
+                    <Images size={22} color={tokens.colors.text.primary} strokeWidth={2} />
+                    <Text style={styles.peekMoreLabel}>הכל</Text>
+                  </TouchableOpacity>
+                </ScrollView>
               </View>
             ) : null}
             {peekActions}
@@ -641,8 +674,10 @@ export default function MediaPickerSheet({
             accessibilityRole="button"
             accessibilityLabel={`הוסף ${selectedIds.length} קבצים`}
           >
-            <Ionicons name="arrow-up" size={22} color="#111" />
-            <Text style={styles.confirmCount}>{selectedIds.length}</Text>
+            <Ionicons name="arrow-up" size={22} color={tokens.colors.text.inverse} />
+            <Text style={[styles.confirmCount, { color: tokens.colors.text.inverse }]}>
+              {selectedIds.length}
+            </Text>
           </TouchableOpacity>
         ) : null}
       </View>
@@ -660,6 +695,7 @@ export default function MediaPickerSheet({
 const createStyles = (
   tokens: ReturnType<typeof useDesignTokens>,
   sheetBottomPad: number,
+  fabBottom: number,
 ) =>
   StyleSheet.create({
     root: {
@@ -674,16 +710,32 @@ const createStyles = (
       paddingTop: 4,
     },
     peekStrip: {
-      ...MEDIA_ATTACH_GRID_ROW,
-      gap: MEDIA_ATTACH_GRID_GAP,
-      marginBottom: 12,
+      paddingHorizontal: tokens.spacing.md,
+      gap: MEDIA_ATTACH_PEEK_THUMB_GAP,
     },
-    peekCell: {
-      flex: 1,
+    thumbRounded: {
+      borderRadius: MEDIA_ATTACH_PEEK_THUMB_RADIUS,
+      overflow: 'hidden',
+    },
+    peekMoreTile: {
+      width: MEDIA_ATTACH_PEEK_THUMB_PX,
+      height: MEDIA_ATTACH_PEEK_THUMB_PX,
+      borderRadius: MEDIA_ATTACH_PEEK_THUMB_RADIUS,
+      backgroundColor: tokens.colors.background.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 4,
+    },
+    peekMoreLabel: {
+      ...APP_TYPE.caption,
+      color: tokens.colors.text.primary,
     },
     gridWrap: {
       flex: 1,
       minHeight: 0,
+    },
+    gridWithFab: {
+      paddingBottom: fabBottom + 56 + 12,
     },
     gridRow: {
       ...MEDIA_ATTACH_GRID_ROW,
@@ -729,7 +781,7 @@ const createStyles = (
     checkNum: {
       color: '#111',
       fontSize: 11,
-      fontWeight: '800',
+      fontWeight: '700',
     },
     skeletonGrid: {
       ...MEDIA_ATTACH_GRID_ROW,
@@ -788,77 +840,53 @@ const createStyles = (
       paddingHorizontal: tokens.spacing.md,
       paddingTop: 4,
       paddingBottom: sheetBottomPad,
-      gap: 16,
     },
     peekRecentsBlock: {
-      paddingHorizontal: tokens.spacing.md,
-      marginBottom: 4,
+      marginBottom: MEDIA_ATTACH_PEEK_STRIP_GAP,
     },
     peekRecentsHeader: {
       direction: 'rtl',
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
+      paddingHorizontal: tokens.spacing.md,
       marginBottom: 8,
     },
     peekRecentsTitle: {
       ...appPhysicalRightText,
-      fontSize: APP_TYPE.sectionSubtitle.fontSize,
-      fontWeight: '700',
+      ...APP_TYPE.groupLabel,
       color: tokens.colors.text.secondary,
     },
     peekRecentsLink: {
       ...appPhysicalRightText,
-      fontSize: APP_TYPE.body.fontSize,
-      fontWeight: '600',
+      ...APP_TYPE.groupLabel,
+      fontWeight: APP_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
     },
     primaryRow: {
-      direction: 'rtl',
-      flexDirection: 'row',
-      alignItems: 'stretch',
-      gap: 10,
+      ...MEDIA_ATTACH_GRID_ROW,
+      gap: 12,
     },
-    primaryTile: {
+    primaryPill: {
       flex: 1,
-      minHeight: 76,
-      borderRadius: 18,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
+      height: MEDIA_ATTACH_PRIMARY_ROW_PX,
+      borderRadius: MEDIA_ATTACH_PRIMARY_ROW_PX / 2,
       backgroundColor: tokens.colors.background.primary,
-      borderWidth: 0,
-    },
-    primaryIconWrap: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
+      flexDirection: 'row',
+      direction: 'rtl',
       alignItems: 'center',
       justifyContent: 'center',
+      gap: 8,
     },
-    primaryTextCol: {
-      flex: 1,
-      minWidth: 0,
-      alignItems: 'flex-end',
-      gap: 2,
-    },
-    primaryTitle: {
-      ...appPhysicalRightText,
-      fontSize: APP_TYPE.body.fontSize,
-      fontWeight: '700',
+    primaryPillLabel: {
+      ...APP_TYPE.cardTitle,
       color: tokens.colors.text.primary,
-      width: '100%',
-      textAlign: 'right',
     },
-    secondaryBlock: {
-      gap: 10,
-    },
-    secondaryRow: {
+    actionGrid: {
       ...MEDIA_ATTACH_GRID_ROW,
       flexWrap: 'wrap',
-      rowGap: 14,
+      rowGap: MEDIA_ATTACH_ACTION_ROW_GAP,
+      marginTop: MEDIA_ATTACH_ACTION_ROW_GAP,
     },
     galleryChrome: {
       direction: 'rtl',
@@ -878,15 +906,14 @@ const createStyles = (
       width: 40,
       height: 40,
     },
-    secondaryItem: {
-      width: `${100 / MEDIA_ATTACH_SECONDARY_COLS}%`,
+    actionItem: {
       alignItems: 'center',
       gap: 6,
     },
     actionCircle: {
-      width: 52,
-      height: 52,
-      borderRadius: 26,
+      width: MEDIA_ATTACH_ACTION_BTN_PX,
+      height: MEDIA_ATTACH_ACTION_BTN_PX,
+      borderRadius: MEDIA_ATTACH_ACTION_BTN_PX / 2,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: tokens.colors.background.primary,
@@ -894,34 +921,29 @@ const createStyles = (
     },
     actionLabel: {
       ...appPhysicalRightText,
+      ...APP_TYPE.caption,
       color: tokens.colors.text.primary,
-      fontSize: 12,
-      fontWeight: '600',
       textAlign: 'center',
       width: '100%',
-    },
-    pollIcon: {
-      width: 22,
-      height: 22,
-      tintColor: tokens.colors.text.primary,
     },
     confirmFab: {
       position: 'absolute',
       left: 16,
-      bottom: sheetBottomPad + 8,
+      bottom: fabBottom,
       minWidth: 56,
       height: 56,
       borderRadius: 28,
-      paddingHorizontal: 14,
-      backgroundColor: tokens.colors.primary.main,
+      paddingHorizontal: 16,
+      backgroundColor: tokens.colors.primary.lightCta,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
       gap: 6,
+      zIndex: 6,
     },
     confirmCount: {
-      color: '#111',
-      fontSize: 16,
-      fontWeight: '800',
+      fontSize: APP_TYPE.cardTitle.fontSize,
+      fontWeight: APP_TYPE.cardTitle.fontWeight,
+      lineHeight: APP_TYPE.cardTitle.lineHeight,
     },
   });

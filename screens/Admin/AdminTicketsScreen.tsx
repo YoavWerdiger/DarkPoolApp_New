@@ -10,7 +10,15 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 import UICard from '../../components/ui/UICard';
-import DesignTokens, { useDesignTokens } from '../../components/ui/DesignTokens';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { AdminEmptyState, AdminFilterChip } from '../../components/admin';
+import { APP_LAYOUT } from '../../components/ui/appLayout';
+import {
+  adminCaption,
+  adminCardSubtitle,
+  adminCardTitle,
+  adminHebrewText,
+} from '../../components/admin/adminType';
 import { adminService, type AdminTicketRow } from '../../services/admin';
 import { legacyAlert } from '../../utils/appDialog';
 import { HapticFeedback } from '../../utils/hapticFeedback';
@@ -75,29 +83,12 @@ export default function AdminTicketsScreen({ navigation }: any) {
         ].map((f) => {
           const active = filter === f.key;
           return (
-            <TouchableOpacity
+            <AdminFilterChip
               key={String(f.key)}
+              label={f.label}
+              active={active}
               onPress={() => setFilter(f.key)}
-              style={[
-                styles.chip,
-                {
-                  backgroundColor: active
-                    ? `${tokens.colors.primary.main}28`
-                    : 'rgba(255,255,255,0.05)',
-                  borderColor: active ? tokens.colors.primary.main : 'rgba(255,255,255,0.1)',
-                },
-              ]}
-            >
-              <Text
-                style={{
-                  color: active ? tokens.colors.primary.main : tokens.colors.text.secondary,
-                  fontWeight: '700',
-                  fontSize: 12,
-                }}
-              >
-                {f.label}
-              </Text>
-            </TouchableOpacity>
+            />
           );
         })}
       </View>
@@ -110,11 +101,12 @@ export default function AdminTicketsScreen({ navigation }: any) {
         <FlatList
           data={tickets}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+          contentContainerStyle={{
+            paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+            paddingBottom: 40,
+          }}
           ListEmptyComponent={
-            <Text style={[styles.empty, { color: tokens.colors.text.tertiary }]}>
-              אין פניות
-            </Text>
+            <AdminEmptyState title="אין פניות" subtitle="פניות חדשות יופיעו כאן" />
           }
           renderItem={({ item }) => {
             const name =
@@ -125,10 +117,9 @@ export default function AdminTicketsScreen({ navigation }: any) {
             return (
               <TouchableOpacity onPress={() => cycleStatus(item)} activeOpacity={0.8}>
                 <UICard
-                  variant="glass"
-                  glassIntensity="light"
+                  variant="soft"
                   padding="md"
-                  style={{ marginBottom: 10 }}
+                  style={{ marginBottom: APP_LAYOUT.cardStackGap }}
                 >
                   <View style={styles.cardHeader}>
                     <Text style={[styles.subject, { color: tokens.colors.text.primary }]}>
@@ -162,42 +153,30 @@ const styles = StyleSheet.create({
   filters: {
     flexDirection: 'row-reverse',
     flexWrap: 'wrap',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-  },
-  chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: DesignTokens.borderRadius.button,
-    borderWidth: 1,
+    gap: APP_LAYOUT.stackGapSmall,
+    paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+    paddingBottom: APP_LAYOUT.stackGapSmall,
   },
   cardHeader: {
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',
-    marginBottom: 6,
+    marginBottom: APP_LAYOUT.cardTitleToSubtitleGap,
   },
   subject: {
-    fontWeight: '800',
+    ...adminHebrewText,
+    ...adminCardTitle,
     flex: 1,
-    ...DesignTokens.rtlText,
   },
   status: {
-    fontWeight: '700',
-    fontSize: 12,
+    ...adminCaption,
   },
   body: {
-    fontSize: 13,
-    marginBottom: 8,
-    ...DesignTokens.rtlText,
+    ...adminHebrewText,
+    ...adminCardSubtitle,
+    marginBottom: APP_LAYOUT.stackGapSmall,
   },
   meta: {
-    fontSize: 11,
-    ...DesignTokens.rtlText,
-  },
-  empty: {
-    textAlign: 'center',
-    writingDirection: 'rtl',
-    marginTop: 40,
+    ...adminHebrewText,
+    ...adminCaption,
   },
 });

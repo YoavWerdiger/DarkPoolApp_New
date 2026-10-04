@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
+  Image,
   Switch,
   TouchableOpacity,
   Pressable,
@@ -17,7 +18,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { ChevronLeft, type LucideIcon } from 'lucide-react-native';
+import { ChevronLeft, User, type LucideIcon } from 'lucide-react-native';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { useTheme } from '../../context/ThemeContext';
 import UICard from '../ui/UICard';
@@ -233,6 +234,58 @@ export function ProfileMenuRow({
   );
 }
 
+type ProfileIdentityCardProps = {
+  name: string;
+  email: string;
+  avatarUri?: string | null;
+  onPress: () => void;
+};
+
+/** כרטיס זהות בראש הפרופיל — אותה שורת תפריט (שברון, כותרת+משנה, אווטאר). */
+export function ProfileIdentityCard({
+  name,
+  email,
+  avatarUri,
+  onPress,
+}: ProfileIdentityCardProps) {
+  const tokens = useDesignTokens();
+  const s = styles(tokens);
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.85}
+      accessibilityRole="button"
+      accessibilityLabel="עריכת פרופיל"
+    >
+      <SettingsGlassCard>
+        <View style={s.menuRow}>
+          <ChevronLeft size={20} color={tokens.colors.text.tertiary} strokeWidth={2} />
+          <View style={s.menuTextCol}>
+            <Text style={s.title} numberOfLines={1}>
+              {name}
+            </Text>
+            {email ? (
+              <Text style={s.email} numberOfLines={1}>
+                {email}
+              </Text>
+            ) : null}
+          </View>
+          <View style={s.leadingIcon}>
+            <View style={s.identityAvatar}>
+              {avatarUri ? (
+                <Image source={{ uri: avatarUri }} style={s.identityAvatarImage} resizeMode="cover" />
+              ) : (
+                <User size={26} color={tokens.colors.text.primary} strokeWidth={2} />
+              )}
+            </View>
+          </View>
+        </View>
+      </SettingsGlassCard>
+    </TouchableOpacity>
+  );
+}
+
 const SCOPE_SLIDE_MS = 280;
 
 /** בחירה קומפקטית בתוך כרטיס: הכול / לפי הבחירה שלי. גלולה עם אגודל מחליק. בלי ירוק — זה לא CTA. */
@@ -388,13 +441,31 @@ function styles(tokens: ReturnType<typeof useDesignTokens>) {
     title: {
       ...settingsHebrewText,
       ...appCardTitleStyle,
-      lineHeight: 20,
       color: tokens.colors.text.primary,
     },
     subtitle: {
       ...settingsHebrewText,
       ...settingsRowSubtitleStyle,
       color: tokens.colors.text.secondary,
+    },
+    email: {
+      ...settingsHebrewText,
+      ...settingsRowSubtitleStyle,
+      color: tokens.colors.text.secondary,
+      writingDirection: 'ltr',
+    },
+    identityAvatar: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      overflow: 'hidden',
+      backgroundColor: tokens.colors.background.tertiary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    identityAvatarImage: {
+      width: '100%',
+      height: '100%',
     },
     menuDivider: {
       height: 1,

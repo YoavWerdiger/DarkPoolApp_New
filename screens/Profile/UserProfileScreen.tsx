@@ -4,12 +4,9 @@ import {
   View,
   Text,
   ScrollView,
-  Image,
   ActivityIndicator,
-  TouchableOpacity,
 } from 'react-native';
 import {
-  User,
   UserPen,
   Settings,
   KeyRound,
@@ -22,7 +19,6 @@ import {
   Bell,
   Trash2,
   LogOut,
-  ChevronLeft,
   type LucideIcon,
 } from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
@@ -32,7 +28,6 @@ import { useIsAdmin } from '../../hooks/useIsAdmin';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { APP_LAYOUT } from '../../components/ui/appLayout';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
-import UICard from '../../components/ui/UICard';
 import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHeader';
 import { dispatchOpenMainDrawer, type DrawerParentNavigation } from '../../navigation/mainDrawerNav';
 import { triggerDrawerMenuHaptic, HapticFeedback } from '../../utils/hapticFeedback';
@@ -40,7 +35,13 @@ import {
   SettingsSectionTitle,
   SettingsGlassCard,
   ProfileMenuRow,
+  ProfileIdentityCard,
 } from '../../components/profile/ProfileSettingsUI';
+import {
+  settingsBodyType,
+  settingsHebrewText,
+  settingsHeroType,
+} from '../../components/profile/settingsType';
 
 type MenuRow = {
   id: string;
@@ -213,8 +214,11 @@ export default function UserProfileScreen({ navigation }: any) {
           <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
           <Text
             style={{
+              ...settingsHebrewText,
+              ...settingsBodyType,
               color: DesignTokens.colors.text.secondary,
-              marginTop: DesignTokens.spacing.lg,
+              marginTop: APP_LAYOUT.componentGap,
+              textAlign: 'center',
             }}
           >
             טוען פרופיל...
@@ -237,9 +241,10 @@ export default function UserProfileScreen({ navigation }: any) {
         >
           <Text
             style={{
+              ...settingsHebrewText,
+              ...settingsHeroType,
               color: DesignTokens.colors.text.primary,
-              fontSize: DesignTokens.typography.titleSmall.size,
-              marginBottom: DesignTokens.spacing.sm,
+              textAlign: 'center',
             }}
           >
             לא מחובר
@@ -252,65 +257,6 @@ export default function UserProfileScreen({ navigation }: any) {
   const displayName = profileData?.full_name || user?.email?.split('@')[0] || 'משתמש';
   const email = user?.email || '';
 
-  const profileTextBlock = (
-    <View style={{ flex: 1, minWidth: 0, alignItems: 'flex-end' }}>
-      <Text
-        style={{
-          fontSize: 17,
-          fontWeight: '600',
-          lineHeight: 22,
-          color: DesignTokens.colors.text.primary,
-          textAlign: 'right',
-          writingDirection: 'rtl',
-          width: '100%',
-        }}
-        numberOfLines={1}
-      >
-        {displayName}
-      </Text>
-      <Text
-        style={{
-          marginTop: 2,
-          fontSize: 13,
-          lineHeight: 18,
-          fontWeight: '400',
-          color: DesignTokens.colors.text.secondary,
-          textAlign: 'right',
-          writingDirection: 'ltr',
-          width: '100%',
-        }}
-        numberOfLines={1}
-      >
-        {email}
-      </Text>
-    </View>
-  );
-
-  const profileAvatar = (
-    <View
-      style={{
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: DesignTokens.colors.background.tertiary,
-        alignItems: 'center',
-        justifyContent: 'center',
-        overflow: 'hidden',
-        flexShrink: 0,
-      }}
-    >
-      {profileData?.profile_picture ? (
-        <Image
-          source={{ uri: profileData.profile_picture }}
-          style={{ width: '100%', height: '100%' }}
-          resizeMode="cover"
-        />
-      ) : (
-        <User size={26} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-      )}
-    </View>
-  );
-
   return (
     <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top', 'bottom']}>
@@ -320,41 +266,16 @@ export default function UserProfileScreen({ navigation }: any) {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: DesignTokens.spacing.xl }}
         >
-          <TouchableOpacity
-            activeOpacity={0.85}
-            onPress={() => {
-              void HapticFeedback.impactLight();
-              navigation.navigate('EditProfile');
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="עריכת פרופיל"
-          >
-            <UICard
-              variant="soft"
-              padding="none"
-              style={{
-                marginHorizontal: APP_LAYOUT.screenPaddingHorizontal,
-                borderRadius: 20,
+          <View style={{ paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal }}>
+            <ProfileIdentityCard
+              name={displayName}
+              email={email}
+              avatarUri={profileData?.profile_picture}
+              onPress={() => {
+                void HapticFeedback.impactLight();
+                navigation.navigate('EditProfile');
               }}
-            >
-              <View
-                style={{
-                  flexDirection: 'row-reverse',
-                  alignItems: 'center',
-                  width: '100%',
-                  paddingVertical: 14,
-                  paddingHorizontal: 16,
-                  gap: 12,
-                }}
-              >
-                {profileAvatar}
-                {profileTextBlock}
-                <ChevronLeft size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
-              </View>
-            </UICard>
-          </TouchableOpacity>
-
-          <View style={{ paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal, marginTop: APP_LAYOUT.cardStackGap }}>
+            />
             <SettingsSectionTitle title="אישי" />
             <SettingsGlassCard>
               {personalItems.map((item, index) => (

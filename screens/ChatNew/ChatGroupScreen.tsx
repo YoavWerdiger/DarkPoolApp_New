@@ -8,6 +8,7 @@ import { View, FlatList, Text, StyleSheet, type ViewStyle, type DimensionValue, 
 import { SHEET_CLOSE_MS } from '../../components/ui/BottomSheet';
 import { chatComposerSafeBottomInset, chatComposerKeyboardTranslate, CHAT_COMPOSER_KEYBOARD_GAP, CHAT_KEYBOARD_LTR_STYLE } from '../../components/chat/chatInputLayout';
 import { ChatComposerDock, ChatKeyboardFollow } from '../../components/chat/ChatComposerDock';
+import ChatComposerBar from '../../components/chat/ChatComposerBar';
 import { lockAndroidChatSoftInput } from '../../components/chat/androidChatKeyboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChatKeyboardInsets } from '../../hooks/useChatKeyboardInsets';
@@ -58,6 +59,8 @@ import { isAnnouncementGroup as checkIsAnnouncementGroup } from '../../utils/isA
 import { canSendInAdminOnlyChat, isAdminOnlySendSettings } from '../../utils/canSendInAdminOnlyChat';
 import { useIsAdmin } from '../../hooks/useIsAdmin';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { useTheme } from '../../context/ThemeContext';
+import { donateShareTarget } from '../../lib/shareTargets';
 import { useChatMessageScroll } from '../../hooks/useChatMessageScroll';
 import {
   scrollChatListToBottom,
@@ -92,6 +95,23 @@ function ChatScrollFabGate({ children }: { children: React.ReactNode }) {
   const { keyboardShown } = useChatKeyboardInsets();
   if (keyboardShown) return null;
   return <>{children}</>;
+}
+
+function replyMediaUrl(message: ChatMessageType): string | undefined {
+  if (message.message_type === MessageType.IMAGE) {
+    return message.local_media_uri || message.media_url;
+  }
+  if (message.message_type === MessageType.VIDEO) {
+    return message.media_thumbnail_url;
+  }
+  if (message.message_type === MessageType.MEDIA_GROUP) {
+    const local = message.local_media_urls?.[0];
+    if (local?.type === 'image') return local.uri;
+    const remote = message.media_urls?.[0];
+    if (!remote) return undefined;
+    return remote.type === 'image' ? remote.thumbnail_url || remote.url : remote.thumbnail_url;
+  }
+  return undefined;
 }
 
 export default function ChatGroupScreen() {
@@ -230,6 +250,9 @@ export default function ChatGroupScreen() {
     const cached = readCachedChatGroup(user?.id, groupId);
     return buildPrimedGroup(groupId, cached, routeHint);
   }, [currentGroup, groupId, user?.id, routeHint]);
+  const { isDarkMode } = useTheme();
+  const shareTargetGroupRef = useRef(shellGroup);
+  shareTargetGroupRef.current = shellGroup;
 
   const initialUnreadInfoRef = useRef(initialUnreadInfo);
   /** Snapshot so divider can fade after initialUnreadInfo is cleared */
@@ -498,6 +521,7 @@ export default function ChatGroupScreen() {
     senderName: string;
     content: string;
     messageType?: string;
+    mediaUrl?: string;
   } | undefined>();
   const replyToRef = useRef(replyTo);
   replyToRef.current = replyTo;
@@ -1472,13 +1496,14 @@ export default function ChatGroupScreen() {
         logger.error('ChatGroupScreen', 'Send message failed', result.error);
       } else {
         void HapticFeedback.impactLight();
+        donateShareTarget(shareTargetGroupRef.current, isDarkMode, isAppAdmin);
       }
     } catch (e) {
       logger.error('ChatGroupScreen', 'Send message error', e);
     } finally {
       setTimeout(() => { isSendingRef.current = false; }, 500);
     }
-  }, [groupId, sendMessage, scrollToBottomOnSend]);
+  }, [groupId, sendMessage, scrollToBottomOnSend, isDarkMode, isAppAdmin]);
 
   const handleTyping = useCallback((isTyping: boolean) => {
     if (groupId) {
@@ -1585,23 +1610,8 @@ export default function ChatGroupScreen() {
       senderName: message.sender?.display_name || 'משתמש',
       content: message.content || '',
       messageType: message.message_type,
+      mediaUrl: replyMediaUrl(message),
     });
-  }, []);
-
-  const sendViewerReplyRef = useRef<(message: ChatMessageType, text: string) => void>(() => {});
-  sendViewerReplyRef.current = (message, text) => {
-    const trimmed = text.trim();
-    if (!trimmed) return;
-    replyToRef.current = {
-      id: message.id,
-      senderName: message.sender?.display_name || 'משתמש',
-      content: message.content || '',
-      messageType: message.message_type,
-    };
-    void handleSendMessage(trimmed);
-  };
-  const handleSendReplyText = useCallback((message: ChatMessageType, text: string) => {
-    sendViewerReplyRef.current(message, text);
   }, []);
 
   // Memoised onCancelReply so ChatInput's React.memo can short-circuit when
@@ -1937,7 +1947,6 @@ export default function ChatGroupScreen() {
           onLayout={(h) => onMessageCellLayout(item.id, h)}
             onLongPress={() => handleMessageLongPress(item)}
             onReply={() => handleReply(item)}
-            onSendReply={(text) => handleSendReplyText(item, text)}
             onReactionPress={(emoji) => handleReactionPress(item, emoji)}
             onReactionDetailsPress={() => handleReactionDetailsPress(item)}
             onJumpToMessage={handleJumpToMessage}
@@ -1965,7 +1974,6 @@ export default function ChatGroupScreen() {
       isAnnouncementGroup,
       handleMessageLongPress,
       handleReply,
-      handleSendReplyText,
       handleReactionPress,
       handleReactionDetailsPress,
       handleJumpToMessage,
@@ -2071,17 +2079,26 @@ export default function ChatGroupScreen() {
         iconColor={DesignTokens.colors.text.secondary}
       />
       {adminOnlySend && !canSendInAnnouncements ? (
-        <View style={styles.quietGroupNotice}>
-          <Ionicons
-            name={isAnnouncementGroup ? 'megaphone-outline' : 'volume-mute-outline'}
-            size={16}
-            color={DesignTokens.colors.text.secondary}
-          />
-          <Text style={styles.quietGroupTitle}>
-            {isAnnouncementGroup ? 'הכרזות' : 'קבוצה שקטה'}
-          </Text>
-          <Text style={styles.quietGroupBody}>רק מנהלי הקהילה יכולים לכתוב</Text>
-        </View>
+        <ChatComposerBar
+          value=""
+          onChangeText={() => {}}
+          editable={false}
+          showSoftInputOnFocus={false}
+          placeholder="רק מנהלי הקהילה יכולים לכתוב"
+          placeholderTextColor={DesignTokens.colors.text.secondary}
+          trailing={null}
+          containerStyle={{ paddingBottom: 6 }}
+          inputStyle={{
+            textAlign: 'center',
+            textAlignVertical: 'center',
+            fontSize: APP_TYPE.sectionTitle.fontSize,
+            lineHeight: APP_TYPE.sectionTitle.lineHeight,
+            fontWeight: APP_TYPE.sectionTitle.fontWeight,
+            letterSpacing: APP_TYPE.sectionTitle.letterSpacing,
+            minHeight: 52,
+            writingDirection: 'rtl',
+          }}
+        />
       ) : (
         <ChatInput
           groupId={groupId}
@@ -2628,10 +2645,10 @@ const createChatGroupStyles = (tokens: any) => {
     justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: APP_TYPE.screenTitle.fontSize,
-    fontWeight: APP_TYPE.screenTitle.fontWeight,
-    lineHeight: APP_TYPE.screenTitle.lineHeight,
-    letterSpacing: APP_TYPE.screenTitle.letterSpacing,
+    fontSize: APP_TYPE.cardTitle.fontSize,
+    fontWeight: APP_TYPE.cardTitle.fontWeight,
+    lineHeight: APP_TYPE.cardTitle.lineHeight,
+    letterSpacing: APP_TYPE.cardTitle.letterSpacing,
     color: tokens.colors.text.primary,
     textAlign: 'center',
     writingDirection: 'rtl',
@@ -2910,31 +2927,5 @@ const createChatGroupStyles = (tokens: any) => {
     alignItems: 'center',
   },
 
-  /* ── Quiet / announcements — no filled composer ── */
-  quietGroupNotice: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 8,
-    paddingBottom: 12,
-    paddingHorizontal: 28,
-    gap: 2,
-    backgroundColor: 'transparent',
-  },
-  quietGroupTitle: {
-    fontSize: APP_TYPE.cardSubtitle.fontSize,
-    fontWeight: '500',
-    lineHeight: APP_TYPE.cardSubtitle.lineHeight,
-    color: tokens.colors.text.secondary,
-    textAlign: 'center',
-    writingDirection: 'rtl',
-  },
-  quietGroupBody: {
-    fontSize: APP_TYPE.caption.fontSize,
-    fontWeight: APP_TYPE.caption.fontWeight,
-    lineHeight: APP_TYPE.caption.lineHeight,
-    color: tokens.colors.text.tertiary,
-    textAlign: 'center',
-    writingDirection: 'rtl',
-  },
 });
 };

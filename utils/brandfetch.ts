@@ -10,10 +10,14 @@ export function normalizeTickerSymbol(symbol: string): string {
   return s;
 }
 
+const CRYPTO_PAIR_RE = /^([A-Z0-9]{2,10})(?:-(?:USD|USDT|USDC)|USDT|USDC)$/;
+
 /**
  * URL ללוגו טיקר דרך Brandfetch CDN.
  * `icon` + `theme=light` — מונע לוגואים על רקע שחור מסביב.
- * @see https://docs.brandfetch.com/
+ * נתיב מפורש `ticker/` (או `crypto/` לזוגות) — בלי זיהוי אוטומטי, שמחזיר מותג
+ * אקראי עם אותו שם (למשל AIO → דמות אנימה במקום הקרן).
+ * @see https://docs.brandfetch.com/logo-api/overview
  */
 export function brandfetchTickerLogoUri(symbol: string): string | null {
   const s = normalizeTickerSymbol(symbol);
@@ -23,5 +27,9 @@ export function brandfetchTickerLogoUri(symbol: string): string | null {
     theme: 'light',
     fallback: 'lettermark',
   });
-  return `https://cdn.brandfetch.io/${encodeURIComponent(s)}/icon?${q.toString()}`;
+  const crypto = CRYPTO_PAIR_RE.exec(s);
+  const route = crypto
+    ? `crypto/${encodeURIComponent(crypto[1])}`
+    : `ticker/${encodeURIComponent(s)}`;
+  return `https://cdn.brandfetch.io/${route}/icon?${q.toString()}`;
 }

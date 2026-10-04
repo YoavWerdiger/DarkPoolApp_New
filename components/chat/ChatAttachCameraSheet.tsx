@@ -53,6 +53,7 @@ const SCREEN_W = Dimensions.get('window').width;
 const MODE_PILL_W = 78;
 const MODE_PILL_GAP = 6;
 const MODE_SPRING = { damping: 22, stiffness: 220, mass: 0.8 };
+const RECORD_RED = '#FF3B30';
 
 function shotToMediaFile(shot: ChatAttachCameraResult): MediaFile {
   const isVideo = shot.mediaType === 'video';
@@ -378,6 +379,17 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
           >
             <Ionicons name="close" size={26} color="#fff" />
           </Pressable>
+          <Pressable
+            onPress={() => {
+              void HapticFeedback.selection();
+              setFlashOn((on) => !on);
+            }}
+            style={styles.circleBtn}
+            accessibilityRole="button"
+            accessibilityLabel={flashOn ? 'כבה פלאש' : 'הדלק פלאש'}
+          >
+            <Ionicons name={flashOn ? 'flash' : 'flash-off'} size={22} color="#fff" />
+          </Pressable>
         </View>
 
         <View style={[styles.bottom, { paddingBottom: Math.max(insets.bottom, 8) }]} pointerEvents="box-none">
@@ -390,17 +402,6 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
                 accessibilityLabel="גלריה"
               >
                 <Ionicons name="images" size={22} color="#fff" />
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  void HapticFeedback.selection();
-                  setFlashOn((on) => !on);
-                }}
-                style={styles.circleBtn}
-                accessibilityRole="button"
-                accessibilityLabel={flashOn ? 'כבה פלאש' : 'הדלק פלאש'}
-              >
-                <Ionicons name={flashOn ? 'flash' : 'flash-off'} size={22} color="#fff" />
               </Pressable>
             </View>
 
@@ -418,7 +419,13 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
               {capturing ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <View style={[styles.shutterInner, recording && styles.shutterRecording]} />
+                <View
+                  style={[
+                    styles.shutterInner,
+                    captureMode === 'video' && styles.shutterVideo,
+                    recording && styles.shutterRecording,
+                  ]}
+                />
               )}
             </Pressable>
 
@@ -553,11 +560,14 @@ const styles = StyleSheet.create({
     borderRadius: 34,
     backgroundColor: '#fff',
   },
+  shutterVideo: {
+    backgroundColor: RECORD_RED,
+  },
   shutterRecording: {
     width: 28,
     height: 28,
     borderRadius: 8,
-    backgroundColor: '#FF3B30',
+    backgroundColor: RECORD_RED,
   },
   modeBar: {
     alignItems: 'center',

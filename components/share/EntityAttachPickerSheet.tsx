@@ -10,6 +10,9 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { APP_LAYOUT } from '../ui/appLayout';
+import { APP_TYPE } from '../ui/appType';
+import { DayDividerPill } from '../ui/DayDividerPill';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
 import { useAuth } from '../../context/AuthContext';
@@ -25,12 +28,10 @@ import {
 } from '../../types/shareableEntity';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { TickerLogo } from '../ui/TickerLogo';
-import { MarketsEmbedSwitcher } from '../../screens/Markets/components/MarketsEmbedSwitcher';
-import type { SegmentedOption } from '../../screens/Markets/components/MarketsSegmentedControl';
 
 type Category = 'people' | 'trades' | 'news';
 
-const TAB_OPTIONS: SegmentedOption<Category>[] = [
+const TAB_OPTIONS: { id: Category; label: string }[] = [
   { id: 'people', label: 'אנשים' },
   { id: 'trades', label: 'טריידים' },
   { id: 'news', label: 'חדשות' },
@@ -201,18 +202,29 @@ export default function EntityAttachPickerSheet({
           <View style={styles.headerSideSpacer} />
         </View>
 
-        <View style={styles.tabsWrap}>
-          <MarketsEmbedSwitcher
-            options={TAB_OPTIONS}
-            value={category}
-            onChange={setCategory}
-            accessibilityGroupLabel="סוג תוכן"
-          />
+        <View style={styles.tabsWrap} accessibilityRole="tablist">
+          {TAB_OPTIONS.map((opt) => {
+            const active = opt.id === category;
+            return (
+              <DayDividerPill
+                key={opt.id}
+                selected={active}
+                haptic
+                accessibilityLabel={`סוג תוכן: ${opt.label}`}
+                onPress={() => {
+                  if (active) return;
+                  setCategory(opt.id);
+                }}
+              >
+                {opt.label}
+              </DayDividerPill>
+            );
+          })}
         </View>
 
         {loading ? (
           <View style={styles.center}>
-            <ActivityIndicator color={tokens.colors.primary.main} />
+            <ActivityIndicator color={tokens.colors.text.secondary} />
           </View>
         ) : error ? (
           <View style={styles.center}>
@@ -254,12 +266,7 @@ export default function EntityAttachPickerSheet({
                 ) : item.imageUrl ? (
                   <Image source={{ uri: item.imageUrl }} style={styles.avatar} />
                 ) : (
-                  <View
-                    style={[
-                      styles.avatar,
-                      { backgroundColor: tokens.colors.primary.dim, alignItems: 'center', justifyContent: 'center' },
-                    ]}
-                  >
+                  <View style={[styles.avatar, styles.avatarFallback]}>
                     <Ionicons
                       name={
                         category === 'trades'
@@ -269,7 +276,7 @@ export default function EntityAttachPickerSheet({
                             : 'person-outline'
                       }
                       size={20}
-                      color={tokens.colors.primary.main}
+                      color={tokens.colors.text.primary}
                     />
                   </View>
                 )}
@@ -282,10 +289,8 @@ export default function EntityAttachPickerSheet({
                       {item.title}
                     </Text>
                     {item.badge ? (
-                      <View style={[styles.badge, { backgroundColor: `${tokens.colors.primary.main}22` }]}>
-                        <Text style={styles.badgeText}>
-                          {item.badge}
-                        </Text>
+                      <View style={styles.badge}>
+                        <Text style={styles.badgeText}>{item.badge}</Text>
                       </View>
                     ) : null}
                   </View>
@@ -319,8 +324,8 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     header: {
       flexDirection: 'row-reverse',
       alignItems: 'center',
-      paddingHorizontal: 16,
-      paddingBottom: 12,
+      paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+      paddingBottom: APP_LAYOUT.cardTitleToBodyGap,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: tokens.colors.border.divider,
       gap: 10,
@@ -328,6 +333,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     headerIconButton: {
       alignSelf: 'center',
+      backgroundColor: tokens.colors.background.primary,
     },
     headerCenter: {
       flex: 1,
@@ -339,17 +345,19 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       height: DAY_NAV_BUTTON_SIZE,
     },
     headerTitle: {
-      fontSize: 20,
-      fontWeight: '800',
-      letterSpacing: -0.35,
+      ...APP_TYPE.screenTitle,
       textAlign: 'center',
       writingDirection: 'rtl',
       width: '100%',
     },
     tabsWrap: {
-      paddingHorizontal: 16,
-      marginTop: 14,
-      marginBottom: 8,
+      flexDirection: 'row-reverse',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      gap: APP_LAYOUT.stackGapSmall,
+      paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+      marginTop: APP_LAYOUT.cardPadding,
+      marginBottom: APP_LAYOUT.stackGapSmall,
       flexShrink: 0,
     },
     center: {
@@ -358,22 +366,25 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       justifyContent: 'center',
       padding: 24,
     },
-    listContent: { paddingHorizontal: 16, paddingBottom: 28 },
+    listContent: {
+      paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+      paddingBottom: 28,
+    },
     listEmpty: {
       flexGrow: 1,
       justifyContent: 'center',
       padding: 28,
     },
     empty: {
+      ...APP_TYPE.cardSubtitle,
       ...rtlText,
       textAlign: 'center',
-      fontSize: 14,
     },
     row: {
       flexDirection: 'row-reverse',
       alignItems: 'center',
       gap: 12,
-      paddingVertical: 12,
+      paddingVertical: 15,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: tokens.colors.border.divider,
     },
@@ -382,17 +393,20 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       height: 44,
       borderRadius: tokens.borderRadius.full,
     },
+    avatarFallback: {
+      backgroundColor: tokens.colors.background.tertiary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     tradeLogoWrap: {
       borderRadius: 12,
       overflow: 'hidden',
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: tokens.colors.border.divider,
-      backgroundColor: '#FFFFFF',
+      backgroundColor: tokens.colors.background.cardSolid,
     },
     rowText: {
       flex: 1,
       minWidth: 0,
-      gap: 2,
+      gap: APP_LAYOUT.cardTitleToSubtitleGap,
       alignItems: 'flex-end',
     },
     titleRow: {
@@ -403,25 +417,24 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     rowTitle: {
       flexShrink: 1,
-      fontSize: 15,
-      fontWeight: '700',
+      ...APP_TYPE.cardTitle,
       ...rtlText,
     },
     rowSub: {
-      fontSize: 12,
+      ...APP_TYPE.cardSubtitle,
       width: '100%',
       ...rtlText,
     },
     badge: {
       flexShrink: 0,
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-      borderRadius: tokens.borderRadius.button,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 999,
+      backgroundColor: tokens.colors.background.tertiary,
     },
     badgeText: {
-      color: tokens.colors.primary.main,
-      fontSize: 10,
-      fontWeight: '700',
+      ...APP_TYPE.caption,
+      color: tokens.colors.text.secondary,
       ...rtlText,
     },
   });

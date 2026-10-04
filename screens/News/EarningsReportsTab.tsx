@@ -265,28 +265,30 @@ const EarningsReportCard: React.FC<{
                       }
                       
                       return (
-                        <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' }}>
-                          <Text style={{ ...APP_TYPE.caption, color: DesignTokens.colors.text.secondary, marginRight: 4 }}>
-                            (תוצאה)
-                          </Text>
-                          {surprisePercent !== null && surprisePercent !== undefined ? (
-                            <Text style={{ ...APP_TYPE.caption, color: getSurpriseColor(surprisePercent), marginRight: 6 }}>
-                              {surprisePercent > 0 ? '+' : ''}{surprisePercent.toFixed(1)}%
+                        <View style={{ alignItems: 'center' }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', flexWrap: 'wrap' }}>
+                            {surprisePercent !== null && surprisePercent !== undefined ? (
+                              <Text style={{ ...APP_TYPE.caption, color: getSurpriseColor(surprisePercent), marginRight: 6 }}>
+                                {surprisePercent > 0 ? '+' : ''}{surprisePercent.toFixed(1)}%
+                              </Text>
+                            ) : null}
+                            <Text style={{ ...APP_TYPE.cardBody, fontWeight: APP_TYPE.cardTitle.fontWeight, fontVariant: ['tabular-nums'], color: getSurpriseColor(surprisePercent ?? null), textAlign: 'center' }}>
+                              {formatRevenue(report.revenue_actual)}
                             </Text>
-                          ) : null}
-                          <Text style={{ ...APP_TYPE.cardBody, fontWeight: APP_TYPE.cardTitle.fontWeight, fontVariant: ['tabular-nums'], color: getSurpriseColor(surprisePercent ?? null), textAlign: 'center' }}>
-                            {formatRevenue(report.revenue_actual)}
+                          </View>
+                          <Text style={{ ...APP_TYPE.caption, color: DesignTokens.colors.text.secondary, marginTop: 2, textAlign: 'center' }}>
+                            (תוצאה)
                           </Text>
                         </View>
                       );
                     })()
                   ) : (report.revenue_estimate || report.revenue_estimate_avg) ? (
-                    <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' }}>
-                      <Text style={{ ...APP_TYPE.caption, color: DesignTokens.colors.text.secondary, marginRight: 4 }}>
-                        (תחזית)
-                      </Text>
+                    <View style={{ alignItems: 'center' }}>
                       <Text style={{ ...APP_TYPE.cardBody, fontWeight: APP_TYPE.cardTitle.fontWeight, fontVariant: ['tabular-nums'], color: DesignTokens.colors.text.primary, textAlign: 'center' }}>
                         {formatRevenue(report.revenue_estimate || report.revenue_estimate_avg || 0)}
+                      </Text>
+                      <Text style={{ ...APP_TYPE.caption, color: DesignTokens.colors.text.secondary, marginTop: 2, textAlign: 'center' }}>
+                        (תחזית)
                       </Text>
                     </View>
                   ) : null}
@@ -298,7 +300,7 @@ const EarningsReportCard: React.FC<{
                 <View
                   style={{
                     width: 1,
-                    height: 35,
+                    height: 48,
                     backgroundColor: DesignTokens.colors.border.divider,
                     marginHorizontal: 8,
                   }}
@@ -325,30 +327,32 @@ const EarningsReportCard: React.FC<{
                       }
                       
                       return (
-                        <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' }}>
-                          <Text style={{ ...APP_TYPE.caption, color: DesignTokens.colors.text.secondary, marginRight: 4 }}>
-                            (תוצאה)
-                          </Text>
-                          {surprisePercent !== null ? (
-                            <Text style={{ ...APP_TYPE.caption, color: getSurpriseColor(surprisePercent), marginRight: 6 }}>
-                              {surprisePercent > 0 ? '+' : ''}{surprisePercent.toFixed(1)}%
+                        <View style={{ alignItems: 'center' }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', flexWrap: 'wrap' }}>
+                            {surprisePercent !== null ? (
+                              <Text style={{ ...APP_TYPE.caption, color: getSurpriseColor(surprisePercent), marginRight: 6 }}>
+                                {surprisePercent > 0 ? '+' : ''}{surprisePercent.toFixed(1)}%
+                              </Text>
+                            ) : null}
+                            <Text style={{ ...APP_TYPE.cardBody, fontWeight: APP_TYPE.cardTitle.fontWeight, fontVariant: ['tabular-nums'], color: getSurpriseColor(surprisePercent), textAlign: 'center' }}>
+                              ${report.actual.toFixed(2)}
                             </Text>
-                          ) : null}
-                          <Text style={{ ...APP_TYPE.cardBody, fontWeight: APP_TYPE.cardTitle.fontWeight, fontVariant: ['tabular-nums'], color: getSurpriseColor(surprisePercent), textAlign: 'center' }}>
-                            ${report.actual.toFixed(2)}
+                          </View>
+                          <Text style={{ ...APP_TYPE.caption, color: DesignTokens.colors.text.secondary, marginTop: 2, textAlign: 'center' }}>
+                            (תוצאה)
                           </Text>
                         </View>
                       );
                     })()
                   ) : (report.estimate || report.eps_estimate) ? (
-                    <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' }}>
-                      <Text style={{ ...APP_TYPE.caption, color: DesignTokens.colors.text.secondary, marginRight: 4 }}>
-                        (תחזית)
-                      </Text>
+                    <View style={{ alignItems: 'center' }}>
                       <Text style={{ ...APP_TYPE.cardBody, fontWeight: APP_TYPE.cardTitle.fontWeight, fontVariant: ['tabular-nums'], color: DesignTokens.colors.text.primary, textAlign: 'center' }}>
                         ${typeof report.estimate === 'number' ? report.estimate.toFixed(2) :
                           typeof report.eps_estimate === 'number' ? report.eps_estimate.toFixed(2) :
                           typeof report.eps_estimate === 'string' ? parseFloat(report.eps_estimate).toFixed(2) : '0.00'}
+                      </Text>
+                      <Text style={{ ...APP_TYPE.caption, color: DesignTokens.colors.text.secondary, marginTop: 2, textAlign: 'center' }}>
+                        (תחזית)
                       </Text>
                     </View>
                   ) : null}
@@ -1157,6 +1161,9 @@ export default function EarningsReportsTab({
     
     const hasClosestReports = closestReports.length > 0;
     const closestDate = hasClosestReports ? new Date(closestReports[0].report_date) : null;
+    // יום שנטען בהצלחה ואין בו דיווחים — בלי כפתור רענון. כשל טעינה (היום לא במפה) שומר רענון כניסיון חוזר.
+    const dayReports = reportsByDate[selectedDateStr];
+    const isSuccessfulEmptyDay = Array.isArray(dayReports) && dayReports.length === 0;
     const daysUntilClosest = closestDate 
       ? Math.ceil((closestDate.getTime() - selectedDate.getTime()) / (1000 * 60 * 60 * 24))
       : null;
@@ -1211,12 +1218,14 @@ export default function EarningsReportsTab({
             style={{ marginTop: APP_LAYOUT.componentGap }}
           />
         )}
-        <UIButton
-          title="רענן נתונים"
-          variant="secondary"
-          onPress={handleRefresh}
-          style={{ marginTop: APP_LAYOUT.cardStackGap }}
-        />
+        {!isSuccessfulEmptyDay && (
+          <UIButton
+            title="רענן נתונים"
+            variant="secondary"
+            onPress={handleRefresh}
+            style={{ marginTop: APP_LAYOUT.cardStackGap }}
+          />
+        )}
       </View>
     );
   };

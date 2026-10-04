@@ -545,7 +545,7 @@ function PortfolioActionsSheetBody({
                     size={22}
                     color={tokens.colors.primary.main}
                   />
-                  <Text style={styles.actionBtnText}>הוסף הפקדה</Text>
+                  <Text style={styles.actionBtnText}>מזומן</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.actionBtn}
@@ -560,7 +560,7 @@ function PortfolioActionsSheetBody({
                     size={22}
                     color={tokens.colors.primary.main}
                   />
-                  <Text style={styles.actionBtnText}>הוסף דיבידנד</Text>
+                  <Text style={styles.actionBtnText}>דיבידנד</Text>
                 </TouchableOpacity>
               </>
             )}

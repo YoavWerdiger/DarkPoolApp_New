@@ -53,6 +53,60 @@ describe('portfolio form topology', () => {
     expect(importSrc).toMatch(/variant="soft"/);
   });
 
+  it('AddTransaction aligns Soft UI form chrome and LTR + row-reverse topology', () => {
+    expect(addTxSrc).toMatch(/PortfolioFormFields/);
+    expect(addTxSrc).toMatch(/PortfolioFormFooter/);
+    expect(addTxSrc).toMatch(/formFieldShellStyle/);
+    expect(addTxSrc).toMatch(/borderRadius\.search/);
+    expect(addTxSrc).toMatch(/UI_CARD_RADIUS/);
+    expect(addTxSrc).toMatch(/variant="soft"/);
+    expect(addTxSrc).toMatch(/journalPhysicalRightText|journalCardSubtitleStyle/);
+    expect(addTxSrc).toMatch(/flexDirection:\s*'row-reverse'/);
+    expect(addTxSrc).not.toMatch(/direction:\s*'rtl'/);
+    expect(addTxSrc).not.toMatch(/fontSize:\s*\d+/);
+    expect(addTxSrc).not.toMatch(/primary\.lightCta/);
+    expect(addTxSrc).toMatch(/backgroundColor:\s*tokens\.colors\.background\.primary/);
+    expect(addTxSrc).toMatch(/DayDividerPill/);
+    expect(addTxSrc).toMatch(/UIButton/);
+    expect(addTxSrc).toMatch(/chipLabelSelected/);
+    expect(addTxSrc).toMatch(/text\.inverse/);
+    expect(addTxSrc).toMatch(/sideBtnLongSelected/);
+    expect(addTxSrc).toMatch(/sideBtnShortSelected/);
+    expect(addTxSrc).toMatch(/colors\.primary\.main/);
+    expect(addTxSrc).toMatch(/colors\.danger\.main/);
+    expect(addTxSrc).toMatch(/chromeSurfaceFill/);
+    expect(addTxSrc).toMatch(/accessibilityLabel="לונג"/);
+    expect(addTxSrc).toMatch(/accessibilityLabel="שורט"/);
+    expect(addTxSrc).toMatch(/>\s*לונג\s*</);
+    expect(addTxSrc).toMatch(/>\s*שורט\s*</);
+    expect(addTxSrc).not.toMatch(/title="LONG"/);
+    expect(addTxSrc).not.toMatch(/title="SHORT"/);
+    expect(addTxSrc).toMatch(/sideRow:[\s\S]*width:\s*'100%'[\s\S]*sideBtn:/);
+    expect(addTxSrc).toMatch(/sideBtn:[\s\S]*flex:\s*1[\s\S]*minWidth:\s*0[\s\S]*minHeight:\s*44/);
+    expect(addTxSrc).toMatch(/sideLabel:[\s\S]*journalCardTitleStyle/);
+    expect(addTxSrc).toMatch(/sideLabelIdle/);
+    expect(addTxSrc).toMatch(/tabular-nums/);
+    expect(addTxSrc).toMatch(/פוזיציה חדשה/);
+    expect(addTxSrc).not.toMatch(/פעולה חדשה/);
+    expect(addTxSrc).not.toMatch(/\['asset', 'פוזיציה'\]/);
+    expect(addTxSrc).not.toMatch(/הזן את פרטי הפוזיציה/);
+    expect(addTxSrc).not.toMatch(/subtitle=\{/);
+    expect(addTxSrc).not.toMatch(/GlassChip/);
+    expect(addTxSrc).not.toMatch(
+      /mode === m \? tokens\.colors\.primary\.main : tokens\.colors\.text\.primary/,
+    );
+  });
+
+  it('PortfolioFormFields labels use primary text; placeholders secondary', () => {
+    expect(fieldsSrc).toMatch(/formFieldLabelStyle/);
+    expect(fieldsSrc).toMatch(/formFieldPlaceholderColor|placeholderTextColor/);
+    expect(fieldsSrc).toMatch(/formFieldInputStyle\(tokens\)/);
+    expect(fieldsSrc).toMatch(/formFieldNumericInputStyle/);
+    expect(fieldsSrc).not.toMatch(/tokens\.colors\.text\.muted/);
+  });
+});
+
+describe('portfolio module registration', () => {
   it('portfolio module is registered in productTopology', () => {
     const doc = readRel('docs/TYPOGRAPHY_AND_FORM_TOPOLOGY.md');
     expect(doc).toMatch(/productTopology\.ts/);

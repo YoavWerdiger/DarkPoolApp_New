@@ -62,7 +62,7 @@ export function PortfolioScreenHeader({
         </Text>
         {subtitle ? (
           <Text
-            style={[styles.subtitle, appScreenSubtitleStyle, { color: tokens.colors.text.tertiary }]}
+            style={[styles.subtitle, appScreenSubtitleStyle, { color: tokens.colors.text.secondary }]}
             numberOfLines={1}
           >
             {subtitle}
@@ -113,9 +113,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   title: {},
-  subtitle: {
-    fontSize: 13,
-    fontWeight: '500',
-    lineHeight: 17,
-  },
+  subtitle: {},
 });

@@ -341,6 +341,19 @@ export async function insertOpenTrade(input: TradeInsert): Promise<Trade> {
     .select()
     .single();
   if (error) throw error;
+
+  // Snapshot ליום הכניסה — כדי שגרף/סקירה ידניים יתעדכנו מיד (גם אם הטריגר כבר רץ)
+  try {
+    const entryKey = toLocalDateKey(new Date(input.entry_date));
+    await supabase.rpc('upsert_daily_snapshot', {
+      p_portfolio_id: input.portfolio_id,
+      p_date: entryKey,
+    });
+  } catch {
+    // לא קריטי — יש fallback לנקודת שווי חיה ב-OverviewTab
+  }
+  clearHistoricalSeriesCache(input.portfolio_id);
+
   return data as Trade;
 }
 

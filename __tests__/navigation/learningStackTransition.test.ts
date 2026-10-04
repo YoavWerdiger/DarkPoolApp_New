@@ -22,11 +22,11 @@ describe('learning stack transitions', () => {
     expect(learningStackScreenListeners).toBe(chatStackScreenListeners);
     expect(options.animation).toBe('slide_from_right');
     expect(options.animation).toBe(CHAT_STACK_ANIMATION);
+    expect(options.animationDuration).toBeUndefined();
     expect(options.freezeOnBlur).toBe(false);
-    expect(options.contentStyle).toEqual({ backgroundColor: 'transparent' });
-    expect(options.animationDuration).toBe(CHAT_STACK_ANIMATION_MS);
-    expect(CHAT_STACK_ANIMATION_MS).toBeGreaterThanOrEqual(300);
-    expect(CHAT_STACK_ANIMATION_MS).toBe(Platform.OS === 'android' ? 300 : 350);
+    expect(options.contentStyle).toEqual({ backgroundColor: '#000000' });
+    expect(CHAT_STACK_ANIMATION_MS).toBeGreaterThanOrEqual(350);
+    expect(CHAT_STACK_ANIMATION_MS).toBe(Platform.OS === 'android' ? 400 : 350);
   });
 
   it('does not keep the stuck fade / short duration / freezeOnBlur on academy screens', () => {

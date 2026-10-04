@@ -4,7 +4,6 @@ import {
   Text,
   TextInput,
   ScrollView,
-  TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
   KeyboardAvoidingView,
@@ -12,9 +11,19 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
-import { chatPalette } from '../../components/chat/chatDesignTokens';
 import UICard from '../../components/ui/UICard';
-import DesignTokens, { useDesignTokens } from '../../components/ui/DesignTokens';
+import UIButton from '../../components/ui/UIButton';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { formFieldShellStyle } from '../../components/ui/formControl';
+import { APP_LAYOUT } from '../../components/ui/appLayout';
+import {
+  adminBody,
+  adminCaption,
+  adminCaption2,
+  adminCardSubtitle,
+  adminCardTitle,
+  adminHebrewText,
+} from '../../components/admin/adminType';
 import {
   AdminSectionLabel,
   AdminFilterChip,
@@ -151,22 +160,18 @@ export default function AdminPushScreen({ navigation }: any) {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{
-            paddingHorizontal: tokens.spacing.base,
+            paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
             paddingTop: tokens.spacing.sm,
             paddingBottom: 48,
           }}
         >
           {/* Composer */}
           <UICard
-            variant="glass"
-            glassIntensity="light"
+            variant="soft"
             padding="none"
             style={{
-              borderRadius: tokens.borderRadius['2xl'],
-              borderWidth: 1,
-              borderColor: chatPalette.glassBorder,
-              marginBottom: tokens.spacing.lg,
-              padding: tokens.spacing.base,
+              marginBottom: APP_LAYOUT.cardStackGap,
+              padding: APP_LAYOUT.cardPadding,
             }}
           >
             <View style={styles.composerHeader}>
@@ -198,15 +203,12 @@ export default function AdminPushScreen({ navigation }: any) {
                 כותרת
               </Text>
             </View>
-            <UICard
-              variant="inputGlass"
-              padding="none"
-              style={{
-                borderRadius: tokens.borderRadius.lg,
-                marginBottom: tokens.spacing.md,
-                borderWidth: 1,
-                borderColor: chatPalette.glassBorder,
-              }}
+            <View
+              style={[
+                formFieldShellStyle({ tokens, focused: false }),
+                styles.fieldShell,
+                { marginBottom: APP_LAYOUT.componentGap },
+              ]}
             >
               <TextInput
                 value={title}
@@ -216,7 +218,7 @@ export default function AdminPushScreen({ navigation }: any) {
                 placeholderTextColor={tokens.colors.text.tertiary}
                 style={[styles.inputInner, { color: tokens.colors.text.primary }]}
               />
-            </UICard>
+            </View>
 
             <View style={styles.fieldHeader}>
               <Text style={[styles.counter, { color: tokens.colors.text.muted }]}>
@@ -226,15 +228,13 @@ export default function AdminPushScreen({ navigation }: any) {
                 תוכן
               </Text>
             </View>
-            <UICard
-              variant="inputGlass"
-              padding="none"
-              style={{
-                borderRadius: tokens.borderRadius.lg,
-                marginBottom: tokens.spacing.base,
-                borderWidth: 1,
-                borderColor: chatPalette.glassBorder,
-              }}
+            <View
+              style={[
+                formFieldShellStyle({ tokens, focused: false, multiline: true }),
+                styles.fieldShell,
+                styles.fieldShellMultiline,
+                { marginBottom: APP_LAYOUT.componentGap },
+              ]}
             >
               <TextInput
                 value={body}
@@ -249,29 +249,16 @@ export default function AdminPushScreen({ navigation }: any) {
                   { color: tokens.colors.text.primary },
                 ]}
               />
-            </UICard>
+            </View>
 
-            <TouchableOpacity
+            <UIButton
+              title="שלח התראה"
+              variant="primary"
               onPress={handleSend}
               disabled={!canSend}
-              activeOpacity={0.85}
-              style={[
-                styles.sendBtn,
-                {
-                  backgroundColor: tokens.colors.primary.main,
-                  opacity: canSend ? 1 : 0.45,
-                  ...tokens.shadows.greenGlow,
-                },
-              ]}
-            >
-              {sending ? (
-                <ActivityIndicator color={tokens.colors.text.inverse} />
-              ) : (
-                <Text style={[styles.sendLabel, { color: tokens.colors.text.inverse }]}>
-                  שלח התראה
-                </Text>
-              )}
-            </TouchableOpacity>
+              loading={sending}
+              fullWidth
+            />
           </UICard>
 
           {/* History */}
@@ -290,15 +277,11 @@ export default function AdminPushScreen({ navigation }: any) {
             campaigns.map((c) => (
               <UICard
                 key={c.id}
-                variant="glass"
-                glassIntensity="light"
+                variant="soft"
                 padding="none"
                 style={{
-                  marginBottom: 10,
-                  borderRadius: tokens.borderRadius.xl,
-                  borderWidth: 1,
-                  borderColor: chatPalette.glassBorder,
-                  padding: tokens.spacing.md,
+                  marginBottom: APP_LAYOUT.cardStackGap,
+                  padding: APP_LAYOUT.cardPadding,
                 }}
               >
                 <View style={styles.campaignTop}>
@@ -320,7 +303,7 @@ export default function AdminPushScreen({ navigation }: any) {
                 </View>
 
                 <View style={[styles.campaignMeta, { borderTopColor: tokens.colors.border.divider }]}>
-                  <Text style={{ color: tokens.colors.text.muted, fontSize: 11 }}>
+                  <Text style={[adminCaption2, { color: tokens.colors.text.muted }]}>
                     {formatDate(c.sent_at || c.created_at)}
                   </Text>
                   <Text style={[styles.campaignMetaText, { color: tokens.colors.text.tertiary }]}>
@@ -345,14 +328,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   composerTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    ...DesignTokens.rtlText,
+    ...adminHebrewText,
+    ...adminCardTitle,
   },
   composerSub: {
-    fontSize: 13,
-    ...DesignTokens.rtlText,
-    marginTop: 3,
+    ...adminHebrewText,
+    ...adminCardSubtitle,
+    marginTop: 2,
   },
   filters: {
     flexDirection: 'row-reverse',
@@ -367,34 +349,31 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   fieldLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    ...DesignTokens.rtlText,
+    ...adminHebrewText,
+    ...adminCaption,
   },
   counter: {
-    fontSize: 11,
-    fontWeight: '600',
+    ...adminCaption,
+  },
+  fieldShell: {
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    minHeight: 52,
+  },
+  fieldShellMultiline: {
+    borderRadius: 24,
+    minHeight: 110,
+    alignItems: 'stretch',
   },
   inputInner: {
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-    ...DesignTokens.rtlText,
-    fontSize: 15,
+    flex: 1,
+    padding: 0,
+    ...adminHebrewText,
+    ...adminBody,
   },
   textarea: {
     minHeight: 110,
     textAlignVertical: 'top',
-  },
-  sendBtn: {
-    borderRadius: DesignTokens.borderRadius.button,
-    paddingVertical: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sendLabel: {
-    fontWeight: '800',
-    fontSize: 16,
-    writingDirection: 'rtl',
   },
   campaignTop: {
     flexDirection: 'row-reverse',
@@ -402,15 +381,13 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   campaignTitle: {
-    fontWeight: '700',
-    ...DesignTokens.rtlText,
-    fontSize: 15,
+    ...adminHebrewText,
+    ...adminCardTitle,
   },
   campaignBody: {
-    ...DesignTokens.rtlText,
-    marginTop: 4,
-    fontSize: 13,
-    lineHeight: 18,
+    ...adminHebrewText,
+    ...adminCardSubtitle,
+    marginTop: 2,
   },
   campaignMeta: {
     flexDirection: 'row-reverse',
@@ -420,8 +397,7 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   campaignMetaText: {
-    fontSize: 11,
-    fontWeight: '600',
-    ...DesignTokens.rtlText,
+    ...adminHebrewText,
+    ...adminCaption,
   },
 });

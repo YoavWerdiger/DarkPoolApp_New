@@ -4,7 +4,6 @@ import {
   Dimensions,
   Easing,
   Modal,
-  PanResponder,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -23,7 +22,6 @@ import {
   SHEET_OPEN_MS,
   SHEET_EASE_IN_BEZIER,
   SHEET_EASE_OUT_BEZIER,
-  SHEET_SNAP_SPRING,
 } from '../../../components/ui/BottomSheet/sheetMotion';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 import type { Portfolio } from '../portfolioTypes';
@@ -52,7 +50,7 @@ interface Props {
 
 /**
  * שם התיק + שברון בכותרת היומן. לחיצה פותחת שיט עליון (יורד מקצה המסך) למעבר בין תיקים.
- * אותה שפת תנועה כמו BottomSheet — רק בכיוון ההפוך; גרירה למעלה סוגרת.
+ * אותה שפת תנועה כמו BottomSheet — רק בכיוון ההפוך. נסגר בלחיצה על הרקע או בבחירה.
  */
 export function PortfolioSwitcher({ portfolios, selectedId, onSelect, onCreate }: Props) {
   const tokens = useDesignTokens();
@@ -63,7 +61,6 @@ export function PortfolioSwitcher({ portfolios, selectedId, onSelect, onCreate }
   const closingRef = useRef(false);
 
   const selected = portfolios.find((p) => p.id === selectedId);
-  const fill = tokens.colors.background.cardSolid;
 
   const backdropOpacity = translateY.interpolate({
     inputRange: [-sheetH, 0],
@@ -107,50 +104,25 @@ export function PortfolioSwitcher({ portfolios, selectedId, onSelect, onCreate }
     [sheetH, translateY],
   );
 
-  const hideRef = useRef(hide);
-  hideRef.current = hide;
-
-  const pan = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dy) > 6 && Math.abs(g.dy) > Math.abs(g.dx),
-      onPanResponderMove: (_e, g) => {
-        // למעלה — עוקב אחרי האצבע; למטה — התנגדות קלה
-        translateY.setValue(g.dy < 0 ? g.dy : g.dy * 0.15);
-      },
-      onPanResponderRelease: (_e, g) => {
-        if (g.dy < -60 || g.vy < -0.5) {
-          hideRef.current();
-          return;
-        }
-        Animated.spring(translateY, {
-          toValue: 0,
-          damping: SHEET_SNAP_SPRING.damping,
-          stiffness: SHEET_SNAP_SPRING.stiffness,
-          mass: SHEET_SNAP_SPRING.mass,
-          overshootClamping: true,
-          useNativeDriver: true,
-        }).start();
-      },
-    }),
-  ).current;
-
   return (
     <>
-      <Pressable
-        onPress={show}
-        hitSlop={8}
-        style={styles.anchor}
-        accessibilityRole="button"
-        accessibilityLabel={`תיק: ${selected?.name ?? ''}. החלפת תיק`}
-      >
-        <Text
-          style={[APP_TYPE.cardTitle, styles.anchorTitle, { color: tokens.colors.text.primary }]}
-          numberOfLines={1}
+      <View style={styles.anchorWrap}>
+        <Pressable
+          onPress={show}
+          hitSlop={8}
+          style={styles.anchor}
+          accessibilityRole="button"
+          accessibilityLabel={`תיק: ${selected?.name ?? ''}. החלפת תיק`}
         >
-          {selected?.name ?? ''}
-        </Text>
-        <Ionicons name="chevron-down" size={18} color={tokens.colors.text.tertiary} />
-      </Pressable>
+          <Text
+            style={[styles.anchorTitle, { color: tokens.colors.text.primary }]}
+            numberOfLines={1}
+          >
+            {selected?.name ?? ''}
+          </Text>
+          <Ionicons name="chevron-down" size={20} color={tokens.colors.text.tertiary} />
+        </Pressable>
+      </View>
 
       <Modal
         visible={open}
@@ -166,76 +138,67 @@ export function PortfolioSwitcher({ portfolios, selectedId, onSelect, onCreate }
         </Pressable>
 
         <Animated.View
-          {...pan.panHandlers}
           onLayout={(e) => setSheetH(e.nativeEvent.layout.height)}
           style={[
             styles.sheet,
             {
               paddingTop: insets.top + 8,
-              backgroundColor: fill,
+              backgroundColor: tokens.colors.background.primary,
               borderColor: tokens.colors.border.divider,
               transform: [{ translateY }],
             },
           ]}
         >
-          {/* מילוי מעל הקצה — שלא ייראה פס בזמן התנגדות גרירה למטה */}
-          <View style={[styles.topOverscroll, { backgroundColor: fill }]} />
-
-          <Text
-            style={[APP_TYPE.sectionTitle, styles.sheetTitle, { color: tokens.colors.text.primary }]}
-          >
+          <Text style={[styles.sheetTitle, { color: tokens.colors.text.primary }]}>
             התיקים שלי
           </Text>
 
-          <ScrollView style={{ maxHeight: LIST_MAX_H }} bounces={false}>
-            {portfolios.map((p) => {
-              const active = p.id === selectedId;
-              return (
-                <TouchableOpacity
-                  key={p.id}
-                  onPress={() => {
-                    if (!active) void HapticFeedback.selection();
-                    hide(active ? undefined : () => onSelect(p.id));
-                  }}
-                  activeOpacity={0.6}
-                  style={[styles.row, { borderBottomColor: tokens.colors.border.divider }]}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                >
-                  <Text
-                    style={[
-                      APP_TYPE.body,
-                      styles.rowText,
-                      { color: tokens.colors.text.primary },
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {p.name}
-                  </Text>
-                  {active ? (
-                    <Ionicons name="checkmark" size={20} color={tokens.colors.primary.main} />
-                  ) : null}
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+          <View style={[styles.card, { backgroundColor: tokens.colors.background.cardSolid }]}>
+            <ScrollView style={{ maxHeight: LIST_MAX_H }} bounces={false}>
+              {portfolios.map((p, i) => {
+                const active = p.id === selectedId;
+                const last = i === portfolios.length - 1;
+                return (
+                  <View key={p.id}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (!active) void HapticFeedback.selection();
+                        hide(active ? undefined : () => onSelect(p.id));
+                      }}
+                      activeOpacity={0.6}
+                      style={styles.row}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
+                    >
+                      <Text
+                        style={[styles.rowText, { color: tokens.colors.text.primary }]}
+                        numberOfLines={1}
+                      >
+                        {p.name}
+                      </Text>
+                      {active ? (
+                        <Ionicons name="checkmark" size={20} color={tokens.colors.primary.main} />
+                      ) : null}
+                    </TouchableOpacity>
+                    {last ? null : (
+                      <View style={[styles.divider, { backgroundColor: tokens.colors.border.divider }]} />
+                    )}
+                  </View>
+                );
+              })}
+            </ScrollView>
+          </View>
 
           <TouchableOpacity
             onPress={() => hide(onCreate)}
             activeOpacity={0.6}
-            style={[styles.row, styles.createRow]}
+            style={[styles.card, styles.row, { backgroundColor: tokens.colors.background.cardSolid }]}
             accessibilityRole="button"
             accessibilityLabel="תיק חדש"
           >
-            <Text style={[APP_TYPE.body, styles.rowText, { color: tokens.colors.primary.main }]}>
-              תיק חדש
-            </Text>
-            <Ionicons name="add" size={20} color={tokens.colors.primary.main} />
+            <Text style={[styles.rowText, { color: tokens.colors.text.primary }]}>תיק חדש</Text>
+            <Ionicons name="add" size={22} color={tokens.colors.text.primary} />
           </TouchableOpacity>
-
-          <View style={styles.handleWrap}>
-            <View style={[styles.handle, { backgroundColor: tokens.colors.text.tertiary }]} />
-          </View>
         </Animated.View>
       </Modal>
     </>
@@ -243,16 +206,24 @@ export function PortfolioSwitcher({ portfolios, selectedId, onSelect, onCreate }
 }
 
 const styles = StyleSheet.create({
+  // עוגן פיזי לימין (כמו כותרת הדף) — לא תלוי ב-direction של ההורה
+  anchorWrap: {
+    direction: 'ltr',
+    alignItems: 'flex-end',
+    alignSelf: 'stretch',
+  },
   anchor: {
-    flexDirection: 'row',
-    direction: 'rtl',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
-    alignSelf: 'flex-end',
-    gap: 4,
+    gap: 6,
     maxWidth: '100%',
   },
+  /** שם תיק = screenTitle (24/700) לפי הטופולוגיה */
   anchorTitle: {
     ...appPhysicalRightText,
+    fontSize: APP_TYPE.screenTitle.fontSize,
+    fontWeight: APP_TYPE.screenTitle.fontWeight,
+    lineHeight: APP_TYPE.screenTitle.lineHeight,
     flexShrink: 1,
   },
   sheet: {
@@ -260,6 +231,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
+    paddingBottom: APP_LAYOUT.screenPaddingHorizontal,
     borderBottomLeftRadius: UI_CARD_RADIUS,
     borderBottomRightRadius: UI_CARD_RADIUS,
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -270,44 +242,40 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
     elevation: 16,
   },
-  topOverscroll: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: -200,
-    height: 200,
-  },
+  /** כותרת מחוץ לכרטיס — sectionTitle 22/700, 12 עד התוכן */
   sheetTitle: {
     ...appPhysicalRightText,
+    fontSize: APP_TYPE.sectionTitle.fontSize,
+    fontWeight: APP_TYPE.sectionTitle.fontWeight,
+    lineHeight: APP_TYPE.sectionTitle.lineHeight,
     paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
     paddingTop: 8,
-    paddingBottom: 6,
+    marginBottom: APP_LAYOUT.cardTitleToBodyGap,
   },
+  card: {
+    marginHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+    marginBottom: APP_LAYOUT.cardStackGap,
+    borderRadius: UI_CARD_RADIUS,
+    overflow: 'hidden',
+  },
+  /** שורת תפריט — paddingVertical 15, ריפוד כרטיס 16 */
   row: {
     direction: 'rtl',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+    gap: 12,
+    paddingHorizontal: APP_LAYOUT.cardPadding,
     paddingVertical: 15,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  createRow: {
-    borderBottomWidth: 0,
   },
   rowText: {
     ...appPhysicalRightText,
+    fontSize: APP_TYPE.cardBody.fontSize,
+    fontWeight: APP_TYPE.cardBody.fontWeight,
+    lineHeight: APP_TYPE.cardBody.lineHeight,
     flex: 1,
   },
-  handleWrap: {
-    alignItems: 'center',
-    paddingTop: 4,
-    paddingBottom: 10,
-  },
-  handle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    opacity: 0.5,
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    marginHorizontal: APP_LAYOUT.cardPadding,
   },
 });

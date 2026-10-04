@@ -1,30 +1,27 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  View,
-  Text,
-  Image,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  Alert,
-  ScrollView,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, TextInput, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FileText, Gift, Pencil, RefreshCw, RotateCcw, Trash2, Wallet } from 'lucide-react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CommonActions } from '@react-navigation/native';
 import BottomSheet, {
   useBottomSheetClose,
 } from '../../../components/ui/BottomSheet/BottomSheet';
-import { sheetActionColors } from '../../../components/ui/BottomSheet/sheetGlass';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { APP_LAYOUT } from '../../../components/ui/appLayout';
 import {
-  APP_TYPE,
   appPhysicalRightText,
-  appSheetButtonLabelStyle,
+  appSheetSubtitleStyle,
+  appSheetTitleStyle,
 } from '../../../components/ui/appType';
+import {
+  formFieldInputStyle,
+  formFieldPlaceholderColor,
+  formFieldShellStyle,
+} from '../../../components/ui/formControl';
+import UIButton from '../../../components/ui/UIButton';
+import { SettingsActionRow, SettingsGlassCard } from '../../../components/profile/ProfileSettingsUI';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
-import { PortfolioScreenHeader } from './PortfolioScreenHeader';
 import type { PortfoliosStackParamList } from '../../../navigation/PortfoliosStack';
 import { archivePortfolio, updatePortfolio } from '../../../services/portfolios';
 import { resetPortfolio } from '../../../services/portfolios/portfolioTradeDerive';
@@ -70,7 +67,9 @@ function PortfolioActionsSheetBody({
   isSyncing,
 }: BodyProps) {
   const tokens = useDesignTokens();
+  const insets = useSafeAreaInsets();
   const animatedClose = useBottomSheetClose();
+  const [nameFocused, setNameFocused] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [renameBusy, setRenameBusy] = useState(false);
@@ -187,166 +186,55 @@ function PortfolioActionsSheetBody({
     phase === 'confirmDelete'
       ? 'מחיקת תיק'
       : renaming
-        ? 'שנה שם תיק'
+        ? 'שינוי שם'
         : portfolioName?.trim() || 'פעולות תיק';
 
   const sheetSubtitle =
     phase === 'confirmDelete'
-      ? 'האם למחוק לצמיתות?'
+      ? 'התיק יועבר לארכיון וייעלם מהרשימה. לא ניתן לבטל מהאפליקציה.'
       : renaming
         ? 'השם שיוצג לך ולקהילה'
-        : 'בחר פעולה לתיק';
-
-  const actionColors = useMemo(() => sheetActionColors(tokens), [tokens]);
+        : null;
 
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        safe: { flex: 1, backgroundColor: 'transparent' },
-        scroll: { flex: 1, backgroundColor: 'transparent' },
-        scrollContent: {
-          padding: 16,
-          paddingBottom: 80,
+        root: {
           direction: 'rtl',
+          paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+          paddingTop: 4,
+          paddingBottom: Math.max(insets.bottom, 12),
         },
-        actionBtn: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 12,
-          paddingVertical: 14,
-          paddingHorizontal: 16,
-          marginBottom: 10,
-          borderRadius: 28,
-          borderWidth: actionColors.secondary.borderWidth,
-          borderColor: actionColors.secondary.borderColor,
-          backgroundColor: actionColors.secondary.backgroundColor,
+        header: {
+          marginBottom: APP_LAYOUT.cardTitleToBodyGap,
         },
-        actionBtnText: {
-          flex: 1,
-          ...appSheetButtonLabelStyle,
-          color: actionColors.secondary.color,
-          ...appPhysicalRightText,
-          textAlign: 'right',
+        title: {
+          ...appSheetTitleStyle,
+          color: tokens.colors.text.primary,
         },
-        actionBtnDanger: {
-          borderColor: actionColors.destructive.borderColor,
-          backgroundColor: actionColors.destructive.backgroundColor,
-        },
-        actionBtnDangerText: {
-          color: actionColors.destructive.color,
-        },
-        confirmText: {
-          fontSize: APP_TYPE.body.fontSize,
-          fontWeight: APP_TYPE.body.fontWeight,
-          lineHeight: APP_TYPE.body.lineHeight,
+        subtitle: {
+          ...appSheetSubtitleStyle,
+          marginTop: APP_LAYOUT.titleSubtitleGap,
           color: tokens.colors.text.secondary,
+        },
+        fieldShell: {
+          ...formFieldShellStyle({ tokens, focused: nameFocused }),
+          borderRadius: tokens.borderRadius.md,
+          paddingHorizontal: APP_LAYOUT.cardPadding,
+        },
+        fieldInput: {
+          ...formFieldInputStyle(tokens),
           ...appPhysicalRightText,
-          marginBottom: 16,
-        },
-        actionsRow: {
-          flexDirection: 'row',
-          gap: 10,
-        },
-        pill: {
-          flex: 1,
-          paddingVertical: 14,
-          borderRadius: 32,
-          alignItems: 'center',
-          borderWidth: 0,
-        },
-        pillCancel: {
-          borderColor: actionColors.cancel.borderColor,
-          backgroundColor: actionColors.cancel.backgroundColor,
-        },
-        pillDanger: {
-          borderColor: actionColors.destructive.borderColor,
-          backgroundColor: actionColors.destructive.backgroundColor,
-        },
-        pillTextCancel: {
-          ...appSheetButtonLabelStyle,
-          color: actionColors.cancel.color,
-        },
-        pillTextDanger: {
-          ...appSheetButtonLabelStyle,
-          color: actionColors.destructive.color,
-        },
-        shareBlock: {
-          marginBottom: 16,
-          paddingVertical: 12,
-          paddingHorizontal: 14,
-          borderRadius: 20,
-          borderWidth: 0,
-          borderColor: tokens.colors.border.subtle,
-          backgroundColor: actionColors.secondary.backgroundColor,
-        },
-        shareRow: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 12,
-        },
-        shareTitle: {
-          fontSize: APP_TYPE.body.fontSize,
-          fontWeight: '700',
-          lineHeight: APP_TYPE.body.lineHeight,
+          alignSelf: 'stretch',
+          minHeight: 48,
           color: tokens.colors.text.primary,
-          ...appPhysicalRightText,
         },
-        shareHint: {
-          fontSize: APP_TYPE.caption2.fontSize,
-          fontWeight: APP_TYPE.caption2.fontWeight,
-          lineHeight: APP_TYPE.caption2.lineHeight,
-          color: tokens.colors.text.tertiary,
-          ...appPhysicalRightText,
-          marginTop: 4,
-        },
-        brokerRow: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 12,
-        },
-        brokerLogoWrap: {
-          width: 36,
-          height: 36,
-          borderRadius: 18,
-          backgroundColor: '#FFFFFF',
-          overflow: 'hidden',
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
-        brokerLogo: { width: 36, height: 36 },
-        renameRow: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 10,
-          marginTop: 10,
-        },
-        renameInput: {
-          flex: 1,
-          paddingVertical: 10,
-          paddingHorizontal: 14,
-          borderRadius: 20,
-          borderWidth: 0,
-          borderColor: tokens.colors.border.subtle,
-          backgroundColor: actionColors.secondary.backgroundColor,
-          color: tokens.colors.text.primary,
-          fontSize: APP_TYPE.body.fontSize,
-          fontWeight: '600',
-          lineHeight: APP_TYPE.body.lineHeight,
-          ...appPhysicalRightText,
-        },
-        renameCheckBtn: {
-          width: 40,
-          height: 40,
-          borderRadius: 20,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: actionColors.primary.backgroundColor,
-          borderWidth: 0,
-          borderColor: actionColors.primary.borderColor,
+        buttons: {
+          gap: APP_LAYOUT.stackGapSmall,
+          marginTop: APP_LAYOUT.cardTitleToBodyGap,
         },
       }),
-    [tokens, actionColors],
+    [tokens, insets.bottom, nameFocused],
   );
 
   const onSaveName = useCallback(async () => {
@@ -372,234 +260,156 @@ function PortfolioActionsSheetBody({
     }
   }, [nameDraft, portfolio.name, portfolioId, onPortfolioUpdated]);
 
+  // שורות פעולה — בלי שברון (פעולה, לא ניווט)
+  const noChevron = <View />;
+
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <PortfolioScreenHeader
-        title={sheetTitle}
-        subtitle={sheetSubtitle}
-        onBack={handleHeaderBack}
-      />
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        bounces={false}
-        showsVerticalScrollIndicator={false}
-      >
-        {phase === 'confirmDelete' ? (
-          <>
-            <Text style={styles.confirmText}>
-              התיק יועבר לארכיון וייעלם מהרשימה. כל הטרנזקציות לא יוצגו עוד. לא ניתן לבטל
-              מהאפליקציה.
-            </Text>
-            <View style={styles.actionsRow}>
-              <TouchableOpacity
-                style={[styles.pill, styles.pillCancel]}
-                onPress={() => {
-                  void HapticFeedback.selection();
-                  setPhase('menu');
-                }}
-                disabled={deleting}
-                activeOpacity={0.88}
-              >
-                <Text style={styles.pillTextCancel}>ביטול</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.pill, styles.pillDanger]}
-                onPress={() => {
-                  void HapticFeedback.heavy();
-                  void onArchive();
-                }}
-                disabled={deleting}
-                activeOpacity={0.88}
-              >
-                <Text style={styles.pillTextDanger}>
-                  {deleting ? 'מוחק…' : 'מחק'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </>
-        ) : renaming ? (
-          <View style={styles.shareBlock}>
-            <Text style={styles.shareTitle}>שם התיק</Text>
-            <Text style={styles.shareHint}>
-              השם שיוצג ברשימת התיקים שלך.
-            </Text>
-            <View style={styles.renameRow}>
-              <TextInput
-                style={styles.renameInput}
-                value={nameDraft}
-                onChangeText={setNameDraft}
-                placeholder="שם התיק"
-                placeholderTextColor={tokens.colors.text.tertiary}
-                maxLength={128}
-                editable={!renameBusy}
-                autoFocus
-                returnKeyType="done"
-                onSubmitEditing={() => void onSaveName()}
-              />
-              <TouchableOpacity
-                style={[styles.renameCheckBtn, renameBusy && { opacity: 0.7 }]}
-                onPress={() => {
-                  void HapticFeedback.impactLight();
-                  void onSaveName();
-                }}
-                disabled={renameBusy}
-                activeOpacity={0.88}
-                accessibilityLabel="שמור שם תיק"
-              >
-                <Ionicons
-                  name="checkmark"
-                  size={22}
-                  color={actionColors.primary.color}
-                />
-              </TouchableOpacity>
-            </View>
+    <View style={styles.root}>
+      <View style={styles.header}>
+        <Text style={styles.title} numberOfLines={1}>
+          {sheetTitle}
+        </Text>
+        {sheetSubtitle ? <Text style={styles.subtitle}>{sheetSubtitle}</Text> : null}
+      </View>
+
+      {phase === 'confirmDelete' ? (
+        <View style={styles.buttons}>
+          <UIButton
+            title={deleting ? 'מוחק…' : 'מחק תיק'}
+            variant="danger"
+            fullWidth
+            loading={deleting}
+            disabled={deleting}
+            onPress={() => {
+              void HapticFeedback.heavy();
+              void onArchive();
+            }}
+          />
+          <UIButton
+            title="ביטול"
+            variant="secondary"
+            fullWidth
+            disabled={deleting}
+            onPress={() => setPhase('menu')}
+          />
+        </View>
+      ) : renaming ? (
+        <>
+          <View style={styles.fieldShell}>
+            <TextInput
+              style={styles.fieldInput}
+              value={nameDraft}
+              onChangeText={setNameDraft}
+              onFocus={() => setNameFocused(true)}
+              onBlur={() => setNameFocused(false)}
+              placeholder="שם התיק"
+              placeholderTextColor={formFieldPlaceholderColor(tokens)}
+              maxLength={128}
+              editable={!renameBusy}
+              autoFocus
+              returnKeyType="done"
+              onSubmitEditing={() => void onSaveName()}
+            />
           </View>
-        ) : (
-          <>
-            <TouchableOpacity
-              style={styles.actionBtn}
+          <View style={styles.buttons}>
+            <UIButton
+              title="שמור"
+              variant="primary"
+              fullWidth
+              loading={renameBusy}
+              disabled={renameBusy}
+              onPress={() => void onSaveName()}
+            />
+            <UIButton
+              title="ביטול"
+              variant="secondary"
+              fullWidth
+              disabled={renameBusy}
+              onPress={handleHeaderBack}
+            />
+          </View>
+        </>
+      ) : (
+        <>
+          <SettingsGlassCard>
+            <SettingsActionRow
+              title="שנה שם תיק"
+              icon={Pencil}
+              trailing={noChevron}
               onPress={() => {
                 void HapticFeedback.impactLight();
                 setNameDraft(portfolio.name ?? '');
                 setRenaming(true);
               }}
-              disabled={deleting}
-              activeOpacity={0.88}
-            >
-              <Ionicons
-                name="create-outline"
-                size={22}
-                color={tokens.colors.text.primary}
-              />
-              <Text style={styles.actionBtnText}>שנה שם תיק</Text>
-            </TouchableOpacity>
+            />
             {isColmex ? (
-              <>
-                <View style={styles.shareBlock}>
-                  <View style={styles.brokerRow}>
-                    <View style={styles.brokerLogoWrap}>
-                      <Image
-                        source={require('../../../assets/colmex-logo.png')}
-                        style={styles.brokerLogo}
-                        resizeMode="cover"
-                      />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.shareTitle}>מחובר ל-Colmex Pro</Text>
-                      <Text style={styles.shareHint}>
-                        {lastSyncAt
-                          ? `סנכרון אחרון: ${lastSyncAt.toLocaleString('he-IL')}`
-                          : 'הנתונים מסונכרנים אוטומטית מהברוקר'}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-                <TouchableOpacity
-                  style={styles.actionBtn}
-                  onPress={() => {
-                    void HapticFeedback.impactLight();
-                    void onSyncBroker?.();
-                  }}
-                  disabled={isSyncing || !onSyncBroker}
-                  activeOpacity={0.88}
-                >
-                  <Ionicons
-                    name="sync-outline"
-                    size={22}
-                    color={tokens.colors.primary.main}
-                  />
-                  <Text style={styles.actionBtnText}>
-                    {isSyncing ? 'מסנכרן…' : 'סנכרן עכשיו מ-Colmex'}
-                  </Text>
-                </TouchableOpacity>
-              </>
+              <SettingsActionRow
+                title={isSyncing ? 'מסנכרן…' : 'סנכרן עכשיו מ-Colmex'}
+                subtitle={
+                  lastSyncAt
+                    ? `סנכרון אחרון: ${lastSyncAt.toLocaleString('he-IL')}`
+                    : 'הנתונים מסונכרנים אוטומטית מהברוקר'
+                }
+                icon={RefreshCw}
+                trailing={noChevron}
+                showDivider={false}
+                onPress={() => {
+                  if (isSyncing || !onSyncBroker) return;
+                  void HapticFeedback.impactLight();
+                  void onSyncBroker();
+                }}
+              />
             ) : (
               <>
-                <TouchableOpacity
-                  style={styles.actionBtn}
-                  onPress={() => {
-                    void HapticFeedback.impactLight();
-                    goImport();
-                  }}
-                  activeOpacity={0.88}
-                >
-                  <Ionicons
-                    name="document-text-outline"
-                    size={22}
-                    color={tokens.colors.text.primary}
-                  />
-                  <Text style={styles.actionBtnText}>ייבוא טרנזקציות מ־CSV</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.actionBtn}
-                  onPress={() => {
-                    void HapticFeedback.impactLight();
-                    goAddCash();
-                  }}
-                  activeOpacity={0.88}
-                >
-                  <Ionicons
-                    name="wallet-outline"
-                    size={22}
-                    color={tokens.colors.primary.main}
-                  />
-                  <Text style={styles.actionBtnText}>מזומן</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.actionBtn}
-                  onPress={() => {
-                    void HapticFeedback.impactLight();
-                    goAddDividend();
-                  }}
-                  activeOpacity={0.88}
-                >
-                  <Ionicons
-                    name="gift-outline"
-                    size={22}
-                    color={tokens.colors.primary.main}
-                  />
-                  <Text style={styles.actionBtnText}>דיבידנד</Text>
-                </TouchableOpacity>
+                <SettingsActionRow
+                  title="ייבוא טרנזקציות מ־CSV"
+                  icon={FileText}
+                  trailing={noChevron}
+                  onPress={goImport}
+                />
+                <SettingsActionRow
+                  title="מזומן"
+                  icon={Wallet}
+                  trailing={noChevron}
+                  onPress={goAddCash}
+                />
+                <SettingsActionRow
+                  title="דיבידנד"
+                  icon={Gift}
+                  trailing={noChevron}
+                  showDivider={false}
+                  onPress={goAddDividend}
+                />
               </>
             )}
-            <TouchableOpacity
-              style={[styles.actionBtn, styles.actionBtnDanger]}
-              onPress={handleReset}
-              disabled={resetting || deleting}
-              activeOpacity={0.88}
-            >
-              <Ionicons
-                name="refresh-outline"
-                size={22}
-                color={tokens.colors.text.danger}
-              />
-              <Text style={[styles.actionBtnText, styles.actionBtnDangerText]}>
-                {resetting ? 'מאפס…' : 'אפס תיק'}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionBtn, styles.actionBtnDanger]}
+          </SettingsGlassCard>
+
+          <SettingsGlassCard style={{ marginBottom: 0 }}>
+            <SettingsActionRow
+              title={resetting ? 'מאפס…' : 'אפס תיק'}
+              icon={RotateCcw}
+              danger
+              trailing={noChevron}
+              onPress={() => {
+                if (resetting || deleting) return;
+                handleReset();
+              }}
+            />
+            <SettingsActionRow
+              title="מחק תיק"
+              icon={Trash2}
+              danger
+              trailing={noChevron}
+              showDivider={false}
               onPress={() => {
                 void HapticFeedback.warning();
                 setPhase('confirmDelete');
               }}
-              activeOpacity={0.88}
-            >
-              <Ionicons
-                name="trash-outline"
-                size={22}
-                color={tokens.colors.text.danger}
-              />
-              <Text style={[styles.actionBtnText, styles.actionBtnDangerText]}>
-                מחק תיק
-              </Text>
-            </TouchableOpacity>
-          </>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+            />
+          </SettingsGlassCard>
+        </>
+      )}
+    </View>
   );
 }
 
@@ -628,6 +438,7 @@ export default function PortfolioActionsBottomSheet({
   lastSyncAt,
   isSyncing,
 }: Props) {
+  const tokens = useDesignTokens();
   const [phase, setPhase] = useState<Phase>('menu');
   const [deleting, setDeleting] = useState(false);
 
@@ -641,13 +452,17 @@ export default function PortfolioActionsBottomSheet({
     <BottomSheet
       isOpen={visible}
       onClose={onClose}
-      snapPoints={[0.68]}
-      showHandle={false}
-      topCornerRadius={28}
+      snapPoints={[0.9]}
+      fitContent
+      edgeToEdge
+      showHandle
       enablePanDownToClose
       useModal
       showBrandBackground={false}
+      backgroundColor={tokens.colors.background.primary}
+      topCornerRadius={tokens.borderRadius.xl}
       avoidKeyboard
+      contentPaddingBottom={0}
     >
       <PortfolioActionsSheetBody
         portfolioId={portfolioId}

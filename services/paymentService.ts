@@ -51,7 +51,7 @@ export const SUBSCRIPTION_PLANS = {
     id: 'monthly',
     name: 'חודשי',
     description: 'ללא התחייבות',
-    price: 1, // TEMP test price — restore production amount after CardCom E2E
+    price: 249,
     period: 'monthly',
     features: [
       'מענה על שאלות',

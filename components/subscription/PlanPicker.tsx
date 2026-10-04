@@ -37,12 +37,29 @@ export type DisplayPlan = {
   highlights: string[];
 };
 
-/** נקודות קצרות לתצוגה — עד 3 לכל מסלול */
+/** מה כלול בכל מסלול — מוצג כשהכרטיס נפתח */
+const FREE_FEATURES = [
+  'יומן מסחר (לתקופה מוגבלת)',
+  'חדשות',
+  'ציוצים',
+  'דיווחי רווח',
+  'יומן כלכלי',
+  'רשימת מעקב',
+  'מפת חום',
+];
+const PREMIUM_FEATURES = [
+  'כל מה שיש במנוי החינמי',
+  'גישה לחדרי הקהילה',
+  'לייב מסחר',
+  'יומן מסחר',
+  'אינסיידרים',
+  'תג חבר פרימיום',
+];
 const PLAN_HIGHLIGHTS: Record<string, string[]> = {
-  free: ['חדשות כלכליות', 'לייב מסחר יומי', 'קבוצת השקעות ישראל'],
-  monthly: ['גישה מלאה לקהילה', 'חדשות מתפרצות', 'מענה על שאלות וליווי'],
-  quarterly: ['כל מה שבחודשי', 'חיסכון של 47%', 'גישה להלווייתנים'],
-  yearly: ['כל מה שבחודשי', 'חיסכון של 53%', '₪117 / חודש בממוצע'],
+  free: FREE_FEATURES,
+  monthly: PREMIUM_FEATURES,
+  quarterly: PREMIUM_FEATURES,
+  yearly: PREMIUM_FEATURES,
 };
 
 export function getSelectablePlans(mode: PlanPickerMode): DisplayPlan[] {
@@ -56,7 +73,7 @@ export function getSelectablePlans(mode: PlanPickerMode): DisplayPlan[] {
       price: plan.price,
       period: plan.period,
       popular: !!plan.popular,
-      highlights: (PLAN_HIGHLIGHTS[plan.id] ?? plan.features.slice(0, 3)).slice(0, 3),
+      highlights: PLAN_HIGHLIGHTS[plan.id] ?? plan.features,
     }));
 
   return plans.sort((a, b) => {

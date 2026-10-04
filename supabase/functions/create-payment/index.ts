@@ -86,7 +86,8 @@ serve(async (req) => {
     const legacy = body?.transaction && typeof body.transaction === 'object' ? body.transaction : null;
 
     const planId = String(body.planId || legacy?.planId || '');
-    const amount = Number(body.amount ?? legacy?.amount);
+    // הסכום מהלקוח לא קובע — המחיר נלקח מ-subscription_plans בשרת (אחרת אפשר לשלם ₪1 על כל מסלול)
+    const clientAmount = Number(body.amount ?? legacy?.amount);
     const description = String(body.description || legacy?.description || `מנוי ${planId}`);
     const userEmail = String(body.userEmail || legacy?.userEmail || authData.user.email || '').trim();
     const userName = String(body.userName || legacy?.userName || '').trim() || 'Customer';
@@ -96,13 +97,32 @@ serve(async (req) => {
     const requestedUserId = String(body.userId || legacy?.userId || authUserId);
     const userId = requestedUserId === authUserId ? authUserId : authUserId;
 
-    if (!planId || !Number.isFinite(amount) || amount <= 0) {
-      return json({ success: false, error: 'Invalid planId/amount' }, 400);
+    if (!planId) {
+      return json({ success: false, error: 'Invalid planId' }, 400);
     }
 
     const svc = createClient(supabaseUrl, serviceKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
+
+    const { data: planRow, error: planErr } = await svc
+      .from('subscription_plans')
+      .select('id, price, active')
+      .eq('id', planId)
+      .maybeSingle();
+    if (planErr || !planRow || planRow.active === false || !(Number(planRow.price) > 0)) {
+      console.warn('[create-payment] unknown/inactive/free plan', { planId, planErr: planErr?.message });
+      return json({ success: false, error: 'Invalid planId' }, 400);
+    }
+    const amount = Number(planRow.price);
+    if (Number.isFinite(clientAmount) && Math.round(clientAmount) !== Math.round(amount)) {
+      console.warn('[create-payment] client amount ignored (server price wins)', {
+        planId,
+        clientAmount,
+        serverAmount: amount,
+        userId: authUserId,
+      });
+    }
 
     const config = await loadCardComConfig(svc);
     if (!config) {

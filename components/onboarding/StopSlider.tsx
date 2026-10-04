@@ -7,7 +7,6 @@ import Animated, {
   useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
-  withDelay,
   withSpring,
   ZoomIn,
 } from 'react-native-reanimated';
@@ -32,7 +31,7 @@ type Props = {
   options: StopOption[];
   value: string;
   onChange: (v: string) => void;
-  /** ויזואל גדול מעל — 'level' = מד עמודות, 'icon' = אייקון, 'money' = ערימות מטבעות */
+  /** ויזואל גדול מעל — 'level' = מד עמודות, 'icon' = אייקון, 'money' = סימני דולר */
   hero: 'level' | 'icon' | 'money';
 };
 
@@ -109,7 +108,7 @@ export function StopSlider({ options, value, onChange, hero }: Props) {
       {/* ויזואל גדול */}
       <View style={[styles.hero, { backgroundColor: tokens.colors.background.cardSolid }]}>
         {hero === 'money' ? (
-          <CoinStacks level={index + 1} total={count} />
+          <DollarSigns level={index + 1} total={count} color={tokens.colors.primary.main} />
         ) : hero === 'level' ? (
           <BigLevel level={index + 1} total={count} color={tokens.colors.text.primary} accent={tokens.colors.primary.main} />
         ) : current?.icon ? (
@@ -178,45 +177,27 @@ export function StopSlider({ options, value, onChange, hero }: Props) {
   );
 }
 
-const BILL_W = 52;
-const BILL_H = 24;
-/** כמה מכל שטר מוסתר מתחת לשטר שמעליו — הערימה נראית צפופה */
-const BILL_OVERLAP = 14;
-const BILL_GREEN = '#2E9E4F';
-const BILL_EDGE = '#1E7A3A';
-const BILL_INK = '#D9F5E1';
-
-/** ערימות שטרות דולר — עוד ערימה (וגבוהה יותר) לכל טווח גודל תיק */
-function CoinStacks({ level, total }: { level: number; total: number }) {
+/** דירוג בסימני דולר ($ עד $$$$) — הפעילים מלאים, השאר דהויים */
+function DollarSigns({ level, total, color }: { level: number; total: number; color: string }) {
   return (
-    <View style={styles.coinsRow}>
-      {Array.from({ length: total }).map((_, stack) => (
-        <View key={stack} style={styles.coinStack}>
-          {Array.from({ length: (stack + 1) * 2 }).map((__, bill) => (
-            <Bill key={bill} visible={stack < level} delay={stack * 60 + bill * 45} />
-          ))}
-        </View>
+    <View style={styles.dollarsRow}>
+      {Array.from({ length: total }).map((_, i) => (
+        <DollarSign key={i} on={i < level} color={color} />
       ))}
     </View>
   );
 }
 
-function Bill({ visible, delay }: { visible: boolean; delay: number }) {
-  const drop = useSharedValue(visible ? 1 : 0);
+function DollarSign({ on, color }: { on: boolean; color: string }) {
+  const pop = useSharedValue(on ? 1 : 0);
   useEffect(() => {
-    drop.value = visible
-      ? withDelay(delay, withSpring(1, { damping: 11, stiffness: 220, mass: 0.5 }))
-      : withSpring(0, SPRING);
-  }, [visible, delay, drop]);
+    pop.value = withSpring(on ? 1 : 0, { damping: 10, stiffness: 260, mass: 0.5 });
+  }, [on, pop]);
   const style = useAnimatedStyle(() => ({
-    opacity: drop.value,
-    transform: [{ translateY: (1 - drop.value) * -40 }],
+    opacity: 0.16 + pop.value * 0.84,
+    transform: [{ scale: 0.82 + pop.value * 0.18 }],
   }));
-  return (
-    <Animated.View style={[styles.bill, style]}>
-      <Text style={styles.billSign}>$</Text>
-    </Animated.View>
-  );
+  return <Animated.Text style={[styles.dollar, { color }, style]}>$</Animated.Text>;
 }
 
 /** מד רמה גדול — עמודות עולות שמתמלאות עד הרמה */
@@ -267,33 +248,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     writingDirection: 'rtl',
   },
-  coinsRow: {
+  dollarsRow: {
+    // שמאל→ימין כמו $$$ (סמל לטיני)
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 10,
-    height: 112,
-  },
-  coinStack: {
-    // column-reverse — המטבע הראשון בתחתית
-    flexDirection: 'column-reverse',
+    direction: 'ltr',
     alignItems: 'center',
+    gap: 4,
+    height: 80,
   },
-  bill: {
-    width: BILL_W,
-    height: BILL_H,
-    marginTop: -BILL_OVERLAP,
-    borderRadius: 4,
-    backgroundColor: BILL_GREEN,
-    borderWidth: 1.5,
-    borderColor: BILL_EDGE,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  billSign: {
-    fontSize: 14,
-    lineHeight: 16,
+  dollar: {
+    fontSize: 64,
+    lineHeight: 76,
     fontWeight: '700',
-    color: BILL_INK,
   },
   bigBars: {
     flexDirection: 'row',

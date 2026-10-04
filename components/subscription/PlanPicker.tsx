@@ -1,6 +1,13 @@
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  FadeInDown,
+  useAnimatedStyle,
+  withSpring,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
 import UICard from '../ui/UICard';
@@ -61,8 +68,39 @@ export function getSelectablePlans(mode: PlanPickerMode): DisplayPlan[] {
 
 const PERIOD_MONTHS: Record<string, number> = { monthly: 1, quarterly: 3, yearly: 12 };
 
-/** שינוי גובה הכרטיסים (פתיחת היתרונות) מונפש — גם הכרטיסים שמתחת זזים ברצף */
-const CARD_LAYOUT = LinearTransition.duration(280);
+const EXPAND_MS = 300;
+const EXPAND_EASE = Easing.bezier(0.25, 0.1, 0.25, 1);
+
+/**
+ * פתיחה/סגירה חלקה של היתרונות: גובה מונפש מ-0 לגובה הנמדד + דהייה.
+ * התוכן תמיד מרונדר (למדידה) — בלי layout animations שקופצות.
+ */
+function Collapse({ open, children }: { open: boolean; children: React.ReactNode }) {
+  const measured = useSharedValue(0);
+  const progress = useSharedValue(open ? 1 : 0);
+  React.useEffect(() => {
+    // פתיחה בקפיץ (קצת «מושן»), סגירה מהירה וחלקה
+    progress.value = open
+      ? withSpring(1, { damping: 15, stiffness: 150, mass: 0.8 })
+      : withTiming(0, { duration: EXPAND_MS - 80, easing: EXPAND_EASE });
+  }, [open, progress]);
+  const style = useAnimatedStyle(() => ({
+    height: measured.value * Math.max(0, progress.value),
+    opacity: Math.min(1, Math.max(0, progress.value)),
+  }));
+  return (
+    <Animated.View style={[{ overflow: 'hidden' }, style]}>
+      <View
+        style={{ position: 'absolute', left: 0, right: 0, top: 0 }}
+        onLayout={(e) => {
+          measured.value = e.nativeEvent.layout.height;
+        }}
+      >
+        {children}
+      </View>
+    </Animated.View>
+  );
+}
 
 /** מחיר חודשי שווה-ערך (לרבעוני/שנתי) — המחיר הבולט בכרטיס */
 export function monthlyEquivalent(price: number, period: string): number {
@@ -163,8 +201,8 @@ export default function PlanPicker({
           const savings = multiMonth ? savingsLabel(item.description) : null;
 
           return (
-            <Animated.View key={item.id} layout={CARD_LAYOUT}>
             <TouchableOpacity
+              key={item.id}
               onPress={() => {
                 if (selectedPlanId !== item.id) void HapticFeedback.selection();
                 onSelect(item.id);
@@ -238,22 +276,25 @@ export default function PlanPicker({
                 </View>
               </View>
 
-              {isSelected ? (
-                <Animated.View
-                  entering={FadeIn.delay(80).duration(260)}
-                  exiting={FadeOut.duration(120)}
+              <Collapse open={isSelected}>
+                {/* key מתחלף בפתיחה — השורות נכנסות מחדש אחת-אחת */}
+                <View
+                  key={isSelected ? 'open' : 'closed'}
                   style={[styles.highlights, { borderTopColor: tokens.colors.border.divider }]}
                 >
-                  {item.highlights.map((feature) => (
-                    <View key={feature} style={styles.highlightRow}>
+                  {item.highlights.map((feature, fi) => (
+                    <Animated.View
+                      key={feature}
+                      entering={isSelected ? FadeInDown.delay(90 + fi * 70).duration(320) : undefined}
+                      style={styles.highlightRow}
+                    >
                       <Ionicons name="checkmark" size={16} color={tokens.colors.primary.main} />
                       <Text style={[styles.highlightText, { color: tokens.colors.text.primary }]}>{feature}</Text>
-                    </View>
+                    </Animated.View>
                   ))}
-                </Animated.View>
-              ) : null}
+                </View>
+              </Collapse>
             </TouchableOpacity>
-            </Animated.View>
           );
         })}
       </View>

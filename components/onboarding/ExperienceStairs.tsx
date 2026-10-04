@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
-  runOnJS,
   FadeIn,
   FadeInUp,
   useAnimatedStyle,
@@ -157,13 +156,16 @@ export function ExperienceStairs({ options, value, onChange }: Props) {
     const fromBottom = AREA_H - y - STEP_H / 2;
     return Math.min(count - 1, Math.max(0, Math.round(fromBottom / rise)));
   };
+  // runOnJS(true): הקולבקים רצים ב-JS — indexAtY/pick הן פונקציות JS רגילות.
+  // בלי זה הן נקראו מתוך worklet (UI thread) והאפליקציה קרסה.
   const drag = Gesture.Pan()
+    .runOnJS(true)
     .activeOffsetY([-6, 6])
     .onBegin((e) => {
-      runOnJS(pick)(indexAtY(e.y));
+      pick(indexAtY(e.y));
     })
     .onUpdate((e) => {
-      runOnJS(pick)(indexAtY(e.y));
+      pick(indexAtY(e.y));
     });
 
   const current = options[index];

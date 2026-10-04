@@ -72,6 +72,11 @@ interface Props {
   showIntervalSelector?: boolean;
   /** תקופות מוצגות — ברירת מחדל כל הסקאלה */
   periods?: PerformancePeriod[];
+  /**
+   * תשואה כוללת של התיק — מוצגת כשאין תשואת תקופה אמינה מהסדרה
+   * (למשל הפקדה גדולה בלי external_flow → מעל ±250%).
+   */
+  fallbackReturnPct?: number | null;
   /** נקודת גרירה — null בשחרור (חזרה לחי). */
   onScrubPoint?: (point: { date: string; value: number } | null) => void;
 }
@@ -187,6 +192,7 @@ export function PortfolioValueChart({
   showIntervalSelector = true,
   periods,
   onScrubPoint,
+  fallbackReturnPct = null,
 }: Props) {
   const tokens = useDesignTokens();
   const [containerW, setContainerW] = useState(0);
@@ -212,10 +218,18 @@ export function PortfolioValueChart({
     [filteredSeries, selectedPeriod]
   );
 
-  const periodReturn = useMemo(
+  const seriesPeriodReturn = useMemo(
     () => computeChartPeriodReturn(filteredSeries),
     [filteredSeries]
   );
+  const usingFallbackReturn =
+    seriesPeriodReturn == null && fallbackReturnPct != null && Number.isFinite(fallbackReturnPct);
+  const periodReturn = usingFallbackReturn ? fallbackReturnPct : seriesPeriodReturn;
+  const returnSuffix = usingFallbackReturn
+    ? 'סה״כ'
+    : selectedPeriod === 'All'
+      ? 'ALL'
+      : selectedPeriod;
 
   useEffect(() => {
     setActiveIndex(null);
@@ -631,9 +645,7 @@ export function PortfolioValueChart({
                       : styles.headerTextRight,
                 ]}
               >
-                {`${formatSignedChangePct(periodReturn)} · ${
-                  selectedPeriod === 'All' ? 'ALL' : selectedPeriod
-                }`}
+                {`${formatSignedChangePct(periodReturn)} · ${returnSuffix}`}
               </SignedChange>
             ) : null}
           </View>

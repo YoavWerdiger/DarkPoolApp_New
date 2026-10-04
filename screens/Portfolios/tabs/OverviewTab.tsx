@@ -695,7 +695,7 @@ export default function OverviewTab({
 
       {/* Performance chart — כותרת סקשן זהה בטעינה/טעון; בגרף רק amount→delta */}
       <UICard variant="soft" padding="md" style={styles.section}>
-        <Text style={[styles.sectionTitle, styles.chartSectionTitle]}>שווי תיק לאורך זמן</Text>
+        <Text style={[styles.sectionTitle, styles.chartSectionTitle]}>שווי תיק</Text>
         {chartLoading ? (
           <Text style={styles.emptyText}>טוען נתונים…</Text>
         ) : filteredSeries.length === 0 ? (
@@ -713,6 +713,7 @@ export default function OverviewTab({
             selectedPeriod={period}
             onPeriodChange={setPeriod}
             headerTitle=""
+            fallbackReturnPct={summary?.total_gain_pct ?? null}
           />
         )}
       </UICard>

@@ -3,10 +3,10 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -14,8 +14,19 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Search } from 'lucide-react-native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import { APP_LAYOUT } from '../../components/ui/appLayout';
-import { APP_TYPE } from '../../components/ui/appType';
+import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
+import {
+  appCardBodyStyle,
+  appCardTitleStyle,
+  appGroupLabelStyle,
+  appPhysicalRightText,
+} from '../../components/ui/appType';
+import {
+  formFieldInputStyle,
+  formFieldPlaceholderColor,
+  formFieldShellStyle,
+} from '../../components/ui/formControl';
+import { ChatScreenShell, ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 import { useTheme } from '../../context/ThemeContext';
 import { useChat, useChatActions } from '../../context/ChatContext';
 import { lockAndroidChatSoftInput } from '../../components/chat/androidChatKeyboard';
@@ -33,7 +44,7 @@ import { canPostInGroup } from '../../utils/canSendInAdminOnlyChat';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import type { ChatGroup } from '../../types/chat.types';
 
-const AVATAR = 44;
+const AVATAR = 48;
 const THUMB = 44;
 
 function shareSummary(share: PendingShare | null): string {
@@ -59,6 +70,7 @@ export default function ShareToChatScreen() {
   const { primeGroupForOpen } = useChatActions();
   const { isAdmin: isAppAdmin } = useIsAdmin();
   const [query, setQuery] = useState('');
+  const [searchFocused, setSearchFocused] = useState(false);
   const [share, setShare] = useState<PendingShare | null>(() => peekIncomingShare());
 
   useEffect(
@@ -100,153 +112,141 @@ export default function ShareToChatScreen() {
   const firstThumb = share?.media[0]?.thumbnailUri;
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top + 8 }]}>
-      <View style={styles.header}>
-        <Text style={styles.title}>שליחה אל…</Text>
-        <Pressable onPress={close} hitSlop={12} style={styles.closeBtn} accessibilityLabel="סגירה">
-          <Ionicons name="close" size={22} color={tokens.colors.text.primary} />
-        </Pressable>
-      </View>
+    <ChatScreenShell>
+      <View style={[styles.root, { paddingTop: insets.top }]}>
+        <ChatSubScreenHeader title="שליחה אל…" onBack={close} backIcon="close" />
 
-      {share ? (
-        <View style={styles.preview}>
-          {firstThumb ? (
-            <Image source={{ uri: firstThumb }} style={styles.previewThumb} />
-          ) : (
-            <View style={[styles.previewThumb, styles.previewIcon]}>
-              <Ionicons name="link-outline" size={20} color={tokens.colors.text.secondary} />
-            </View>
-          )}
-          <Text style={styles.previewText} numberOfLines={2}>
-            {shareSummary(share)}
-          </Text>
+        {share ? (
+          <View style={styles.previewCard}>
+            {firstThumb ? (
+              <Image source={{ uri: firstThumb }} style={styles.previewThumb} />
+            ) : (
+              <View style={[styles.previewThumb, styles.previewIcon]}>
+                <Ionicons name="link-outline" size={20} color={tokens.colors.text.secondary} />
+              </View>
+            )}
+            <Text style={styles.previewText} numberOfLines={2}>
+              {shareSummary(share)}
+            </Text>
+          </View>
+        ) : null}
+
+        <View style={[styles.searchBox, searchFocused && styles.searchBoxFocused]}>
+          <Search size={18} color={tokens.colors.text.secondary} />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
+            placeholder="חיפוש קבוצה"
+            placeholderTextColor={formFieldPlaceholderColor(tokens)}
+            style={styles.searchInput}
+            returnKeyType="search"
+          />
         </View>
-      ) : null}
 
-      <View style={styles.searchBox}>
-        <Search size={18} color={tokens.colors.text.secondary} />
-        <TextInput
-          value={query}
-          onChangeText={setQuery}
-          placeholder="חיפוש קבוצה"
-          placeholderTextColor={tokens.colors.text.secondary}
-          style={styles.searchInput}
-          returnKeyType="search"
-        />
+        <Text style={styles.groupLabel}>קבוצות</Text>
+
+        {isLoadingGroups && groups.length === 0 ? (
+          <ActivityIndicator style={styles.loading} color={tokens.colors.text.secondary} />
+        ) : (
+          <FlatList
+            data={sendable}
+            keyExtractor={(g) => g.id}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ paddingBottom: insets.bottom + APP_LAYOUT.componentGap }}
+            ItemSeparatorComponent={() => <View style={styles.divider} />}
+            ListEmptyComponent={<Text style={styles.empty}>לא נמצאו קבוצות</Text>}
+            renderItem={({ item }) => {
+              const avatar = groupAvatarSource(item.name, item.avatar_url, isDarkMode);
+              return (
+                <TouchableOpacity onPress={() => pick(item)} activeOpacity={0.6} style={styles.row}>
+                  {avatar ? (
+                    <Image source={avatar} style={styles.avatar} />
+                  ) : (
+                    <View style={[styles.avatar, styles.avatarPlaceholder]}>
+                      <Ionicons name="people" size={20} color={tokens.colors.text.secondary} />
+                    </View>
+                  )}
+                  <Text style={styles.rowName} numberOfLines={1}>
+                    {chatGroupDisplayName(item.name)}
+                  </Text>
+                  <Ionicons name="chevron-back" size={18} color={tokens.colors.text.tertiary} />
+                </TouchableOpacity>
+              );
+            }}
+          />
+        )}
       </View>
-
-      {isLoadingGroups && groups.length === 0 ? (
-        <ActivityIndicator style={styles.loading} color={tokens.colors.text.secondary} />
-      ) : (
-        <FlatList
-          data={sendable}
-          keyExtractor={(g) => g.id}
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
-          ListEmptyComponent={<Text style={styles.empty}>לא נמצאו קבוצות</Text>}
-          renderItem={({ item }) => {
-            const avatar = groupAvatarSource(item.name, item.avatar_url, isDarkMode);
-            return (
-              <Pressable
-                onPress={() => pick(item)}
-                style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
-              >
-                {avatar ? (
-                  <Image source={avatar} style={styles.avatar} />
-                ) : (
-                  <View style={[styles.avatar, styles.avatarPlaceholder]}>
-                    <Ionicons name="people" size={20} color={tokens.colors.text.secondary} />
-                  </View>
-                )}
-                <Text style={styles.rowName} numberOfLines={1}>
-                  {chatGroupDisplayName(item.name)}
-                </Text>
-                <Ionicons name="chevron-back" size={18} color={tokens.colors.text.secondary} />
-              </Pressable>
-            );
-          }}
-        />
-      )}
-    </View>
+    </ChatScreenShell>
   );
 }
 
 function createStyles(t: ReturnType<typeof useDesignTokens>) {
+  const HP = APP_LAYOUT.screenPaddingHorizontal;
   return StyleSheet.create({
     root: {
       flex: 1,
-      backgroundColor: t.colors.background.primary,
     },
-    header: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
-      marginBottom: APP_LAYOUT.componentGap,
-    },
-    title: {
-      ...APP_TYPE.screenTitle,
-      color: t.colors.text.primary,
-      textAlign: 'right',
-    },
-    closeBtn: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: t.colors.border.primary,
-    },
-    preview: {
+    /** כרטיס cardSolid — מה נשלח */
+    previewCard: {
       flexDirection: 'row-reverse',
       alignItems: 'center',
       gap: APP_LAYOUT.stackGapTight,
-      marginHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+      marginHorizontal: HP,
+      marginTop: APP_LAYOUT.stackGapSmall,
       marginBottom: APP_LAYOUT.componentGap,
-      padding: APP_LAYOUT.stackGapTight,
-      borderRadius: 16,
-      backgroundColor: t.colors.border.primary,
+      padding: APP_LAYOUT.cardPadding,
+      borderRadius: UI_CARD_RADIUS,
+      backgroundColor: t.colors.background.cardSolid,
     },
     previewThumb: {
       width: THUMB,
       height: THUMB,
-      borderRadius: 10,
+      borderRadius: t.borderRadius.md,
     },
     previewIcon: {
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: t.colors.background.cardSolid,
+      backgroundColor: t.colors.background.tertiary,
     },
     previewText: {
-      ...APP_TYPE.cardBody,
+      ...appCardBodyStyle,
       flex: 1,
+      width: undefined,
       color: t.colors.text.primary,
-      textAlign: 'right',
     },
     searchBox: {
+      ...formFieldShellStyle({ tokens: t, focused: false }),
       flexDirection: 'row-reverse',
-      alignItems: 'center',
       gap: APP_LAYOUT.stackGapSmall,
-      height: 44,
-      paddingHorizontal: APP_LAYOUT.stackGapTight,
-      marginHorizontal: APP_LAYOUT.screenPaddingHorizontal,
-      marginBottom: APP_LAYOUT.stackGapSmall,
+      minHeight: 52,
+      paddingHorizontal: 16,
+      marginHorizontal: HP,
       borderRadius: t.borderRadius.search,
-      backgroundColor: t.colors.border.primary,
+    },
+    searchBoxFocused: {
+      backgroundColor: t.colors.background.tertiary,
     },
     searchInput: {
-      ...APP_TYPE.body,
+      ...formFieldInputStyle(t),
+      ...appPhysicalRightText,
       flex: 1,
+      minHeight: 52,
       color: t.colors.text.primary,
-      textAlign: 'right',
-      writingDirection: 'rtl',
-      paddingVertical: 0,
+    },
+    /** תווית קבוצה — 15/500 אפורה, 8 עד התוכן */
+    groupLabel: {
+      ...appGroupLabelStyle,
+      color: t.colors.text.secondary,
+      paddingHorizontal: HP,
+      marginTop: APP_LAYOUT.componentGap,
     },
     loading: {
       marginTop: 40,
     },
     empty: {
-      ...APP_TYPE.cardBody,
+      ...appCardBodyStyle,
       color: t.colors.text.secondary,
       textAlign: 'center',
       marginTop: 40,
@@ -255,11 +255,15 @@ function createStyles(t: ReturnType<typeof useDesignTokens>) {
       flexDirection: 'row-reverse',
       alignItems: 'center',
       gap: APP_LAYOUT.stackGapTight,
-      paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
-      paddingVertical: 10,
+      paddingHorizontal: HP,
+      paddingVertical: APP_LAYOUT.stackGapTight,
     },
-    rowPressed: {
-      opacity: 0.6,
+    divider: {
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: t.colors.border.divider,
+      // מתחיל אחרי האווטאר (כמו רשימת הצ'אטים)
+      marginRight: HP + AVATAR + APP_LAYOUT.stackGapTight,
+      marginLeft: HP,
     },
     avatar: {
       width: AVATAR,
@@ -269,13 +273,14 @@ function createStyles(t: ReturnType<typeof useDesignTokens>) {
     avatarPlaceholder: {
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: t.colors.border.primary,
+      backgroundColor: t.colors.background.cardSolid,
     },
     rowName: {
-      ...APP_TYPE.cardTitle,
+      ...appCardTitleStyle,
       flex: 1,
+      width: undefined,
+      alignSelf: 'center',
       color: t.colors.text.primary,
-      textAlign: 'right',
     },
   });
 }

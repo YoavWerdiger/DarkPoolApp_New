@@ -201,7 +201,7 @@ function MoneyCounter({ index, total, color, accent }: { index: number; total: n
     const to = target;
     if (from === to) return undefined;
     const startT = Date.now();
-    const DUR = 420;
+    const DUR = 520;
     let raf = 0;
     const step = () => {
       const t = Math.min(1, (Date.now() - startT) / DUR);
@@ -218,14 +218,14 @@ function MoneyCounter({ index, total, color, accent }: { index: number; total: n
   useEffect(() => {
     if (isTop) {
       pulse.value = 0;
-      pulse.value = withSpring(1, { damping: 8, stiffness: 160, mass: 0.6 });
+      pulse.value = withSpring(1, { damping: 18, stiffness: 140, mass: 0.6 });
     } else {
       pulse.value = withSpring(0, SPRING);
     }
   }, [isTop, pulse]);
 
   const style = useAnimatedStyle(() => ({
-    transform: [{ scale: 1 + pulse.value * 0.06 }],
+    transform: [{ scale: 1 + pulse.value * 0.02 }],
   }));
 
   return (
@@ -294,13 +294,13 @@ const styles = StyleSheet.create({
     direction: 'ltr',
     alignSelf: 'stretch',
     alignItems: 'center',
-    height: 80,
+    height: 56,
     justifyContent: 'center',
   },
   money: {
-    fontSize: 54,
-    fontWeight: '700',
-    letterSpacing: -1.5,
+    fontSize: APP_TYPE.cardMetricValue.fontSize + 8,
+    fontWeight: '600',
+    letterSpacing: -0.5,
     fontVariant: ['tabular-nums'],
   },
   bigBars: {

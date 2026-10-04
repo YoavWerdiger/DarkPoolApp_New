@@ -228,28 +228,45 @@ function MoneyCounter({ index, total, color, accent }: { index: number; total: n
     return () => cancelAnimationFrame(raf);
   }, [target]);
 
+  // מעבר ל«$$$$$»: המונה מגיע ל-$100,000, ואז הסכום מתחלף בסימני דולר
+  // שנוספים אחד-אחד (עם טיק), ובסוף קפיצה קטנה
+  const [dollars, setDollars] = useState(0);
   useEffect(() => {
-    if (isTop) {
-      pulse.value = 0;
-      pulse.value = withSpring(1, { damping: 18, stiffness: 140, mass: 0.6 });
-    } else {
+    if (!isTop) {
+      setDollars(0);
       pulse.value = withSpring(0, SPRING);
+      return undefined;
     }
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const startAt = 380; // אחרי שהמונה סיים לספור ל-100K
+    for (let n = 1; n <= 5; n++) {
+      timers.push(
+        setTimeout(() => {
+          setDollars(n);
+          void HapticFeedback.selection();
+          if (n === 5) {
+            pulse.value = 0;
+            pulse.value = withSpring(1, { damping: 10, stiffness: 180, mass: 0.6 });
+          }
+        }, startAt + (n - 1) * 85),
+      );
+    }
+    return () => timers.forEach(clearTimeout);
   }, [isTop, pulse]);
 
   const style = useAnimatedStyle(() => ({
-    transform: [{ scale: 1 + pulse.value * 0.02 }],
+    transform: [{ scale: 1 + pulse.value * 0.04 }],
   }));
 
   return (
     <Animated.View style={[styles.moneyRow, style]}>
       <Text
-        style={[styles.money, { color: isTop ? accent : color }]}
+        style={[styles.money, { color: isTop && dollars > 0 ? accent : color }]}
         numberOfLines={1}
         adjustsFontSizeToFit
       >
-        {/* הטווח הפתוח (מעל $100K) — בלי סכום, «$$$$$» */}
-        {isTop ? '$$$$$' : `$${shown.toLocaleString('en-US')}`}
+        {/* הטווח הפתוח (מעל $100K) — הסכום מתחלף ב-«$$$$$» */}
+        {isTop && dollars > 0 ? '$'.repeat(dollars) : `$${shown.toLocaleString('en-US')}`}
       </Text>
     </Animated.View>
   );

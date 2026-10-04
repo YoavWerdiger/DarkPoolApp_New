@@ -28,8 +28,6 @@ import { HapticFeedback } from '../../utils/hapticFeedback';
 import { ONBOARDING_STEPS, ONBOARDING_TOTAL_STEPS } from '../../constants/onboardingFlow';
 import {
   buildOnboardingIntroData,
-  getTradingFocusLabel,
-  getTradingPlatformLabels,
 } from '../../constants/onboardingQuestionnaire';
 import { Confetti } from '../../components/onboarding/Confetti';
 import { APP_LAYOUT } from '../../components/ui/appLayout';
@@ -86,10 +84,6 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
   const [loading, setLoading] = useState(false);
 
   const firstName = (data.fullName || '').trim().split(/\s+/)[0] || '';
-  const chips = [
-    getTradingFocusLabel(data.tradingFocus),
-    getTradingPlatformLabels(data.tradingPlatform),
-  ].filter((c): c is string => !!c);
 
   // טעינה מדומה: טבעת 0→100% עם שלבים, ואז קונפטי + ברוך הבא
   const progress = useSharedValue(0);
@@ -333,7 +327,7 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
             />
           </Svg>
           {done ? (
-            <Reanimated.View key="avatar" entering={ZoomIn.springify().damping(12)} style={styles.ringInner}>
+            <Reanimated.View key="avatar" entering={FadeIn.duration(450)} style={styles.ringInner}>
               {data.profileImage ? (
                 <Image source={{ uri: data.profileImage }} style={styles.avatar} />
               ) : (
@@ -357,15 +351,6 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
             <Text style={[styles.subtitle, { color: tokens.colors.text.secondary }]}>
               הכול מוכן. החשבון שלך הותאם אישית.
             </Text>
-            {chips.length > 0 ? (
-              <View style={styles.chips}>
-                {chips.map((c) => (
-                  <View key={c} style={[styles.chip, { backgroundColor: tokens.colors.background.cardSolid }]}>
-                    <Text style={[styles.chipText, { color: tokens.colors.text.primary }]}>{c}</Text>
-                  </View>
-                ))}
-              </View>
-            ) : null}
           </Reanimated.View>
         ) : (
           <Reanimated.View key="loading" exiting={FadeOut.duration(180)} style={styles.textBlock}>
@@ -464,23 +449,6 @@ const styles = StyleSheet.create({
     lineHeight: APP_TYPE.flowTitle.lineHeight,
     fontWeight: APP_TYPE.flowTitle.fontWeight,
     textAlign: 'center',
-    writingDirection: 'rtl',
-  },
-  chips: {
-    flexDirection: 'row-reverse',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: APP_LAYOUT.stackGapSmall,
-    marginTop: APP_LAYOUT.stackGapSmall,
-  },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 999,
-  },
-  chipText: {
-    fontSize: APP_TYPE.cardSubtitle.fontSize,
-    fontWeight: APP_TYPE.cardTitle.fontWeight,
     writingDirection: 'rtl',
   },
 });

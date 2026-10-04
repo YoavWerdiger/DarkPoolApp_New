@@ -136,8 +136,8 @@ function OtpBox({
         styles.box,
         {
           backgroundColor: error ? `${colors.danger}1A` : active ? colors.bgActive : colors.bg,
-          borderColor: error ? colors.danger : active || filled ? colors.border : 'transparent',
-          borderWidth: active ? 2 : filled ? 1 : 0,
+          // עובי מסגרת קבוע — שינוי עובי הזיז את הספרה בפיקסל-שניים בכל הקלדה
+          borderColor: error ? colors.danger : active ? colors.border : filled ? `${colors.border}55` : 'transparent',
         },
         popStyle,
       ]}
@@ -164,6 +164,7 @@ const styles = StyleSheet.create({
     maxWidth: 52,
     height: BOX_H,
     borderRadius: 14,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },

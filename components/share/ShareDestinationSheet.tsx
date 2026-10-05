@@ -15,6 +15,7 @@ import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE, headerExitButtonFill } from '../
 import { Image as ImageIcon, MessageSquareText, Send } from 'lucide-react-native';
 import { SettingsActionRow, SettingsGlassCard } from '../profile/ProfileSettingsUI';
 import { APP_LAYOUT } from '../ui/appLayout';
+import { useChatSheetDismiss } from '../chat/ChatBottomSheet';
 import EntityEmbedCard from './EntityEmbedCard';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -188,23 +189,12 @@ export default function ShareDestinationSheet({
     >
       <View style={styles.container}>
         <View style={styles.header}>
-          <DayNavBlurButton
-            onPress={() => {
-              if (busy) return;
-              if (dest === 'chat') {
-                setDest('menu');
-                return;
-              }
-              onClose();
-            }}
-            size={DAY_NAV_BUTTON_SIZE}
-            glass={false}
-            style={{ backgroundColor: headerExitButtonFill(tokens.colors.background.cardSolid) }}
-            accessibilityLabel={dest === 'chat' ? 'חזרה' : 'סגור'}
+          <ShareHeaderBack
             disabled={busy}
-          >
-            <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
-          </DayNavBlurButton>
+            label={dest === 'chat' ? 'חזרה' : 'סגור'}
+            onBack={dest === 'chat' ? () => setDest('menu') : undefined}
+            onClose={onClose}
+          />
           <View style={styles.headerCenter}>
             <Text style={[styles.headerTitle, { color: tokens.colors.text.primary }]}>
               {dest === 'chat' ? 'בחר קבוצה' : 'שיתוף'}
@@ -244,6 +234,7 @@ export default function ShareDestinationSheet({
               <SettingsActionRow
                 title="שלח לצ׳אט"
                 icon={Send}
+                trailing={noChevron}
                 showDivider={false}
                 onPress={() => {
                   if (busy) return;
@@ -297,6 +288,38 @@ export default function ShareDestinationSheet({
         )}
       </View>
     </BottomSheet>
+  );
+}
+
+/** כפתור שברון בכותרת — בתוך השיט, כדי שהסגירה תהיה מונפשת כמו בשאר השיטים */
+function ShareHeaderBack({
+  disabled,
+  label,
+  onBack,
+  onClose,
+}: {
+  disabled: boolean;
+  label: string;
+  onBack?: () => void;
+  onClose: () => void;
+}) {
+  const tokens = useDesignTokens();
+  const dismiss = useChatSheetDismiss(onClose);
+  return (
+    <DayNavBlurButton
+      onPress={() => {
+        if (disabled) return;
+        if (onBack) onBack();
+        else dismiss();
+      }}
+      size={DAY_NAV_BUTTON_SIZE}
+      glass={false}
+      style={{ backgroundColor: headerExitButtonFill(tokens.colors.background.cardSolid) }}
+      accessibilityLabel={label}
+      disabled={disabled}
+    >
+      <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
+    </DayNavBlurButton>
   );
 }
 

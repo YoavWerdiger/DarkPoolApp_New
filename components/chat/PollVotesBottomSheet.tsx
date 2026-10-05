@@ -5,7 +5,7 @@ import { useDesignTokens } from '../ui/DesignTokens';
 import { GlassChip } from '../ui/GlassChip';
 import { useBottomSheetClose } from '../ui/BottomSheet/BottomSheet';
 import { ChatBottomSheet } from './ChatBottomSheet';
-import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
+import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE, chromeButtonFace } from '../ui/DayNavBlurButton';
 import { PollService, PollOption } from '../../services/pollService';
 import { logger } from '../../utils/logger';
 import { APP_TYPE, appPhysicalRightText, appSectionTitleStyle } from '../ui/appType';
@@ -74,8 +74,7 @@ export default function PollVotesBottomSheet({
           <DayNavBlurButton
             onPress={handleHeaderClose}
             size={DAY_NAV_BUTTON_SIZE}
-            glass={false}
-            style={[styles.headerIconButton, { backgroundColor: DesignTokens.colors.background.cardSolid }]}
+            {...chromeButtonFace(DesignTokens.colors.background.cardSolid, styles.headerIconButton)}
             accessibilityLabel="חזרה"
           >
             <Ionicons name="chevron-forward" size={22} color={DesignTokens.colors.text.primary} />

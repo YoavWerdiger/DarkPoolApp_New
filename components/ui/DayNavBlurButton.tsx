@@ -28,6 +28,24 @@ export function headerExitButtonFill(cardSolid: string): string {
   return cardSolid;
 }
 
+/**
+ * פני כפתור כרום (חזרה/חיפוש/סגירה) לפי ערכה:
+ * לייט — זכוכית (כמו תמיד; כפתור לבן נבלע על רקעים בהירים),
+ * דארק — מילוי cardSolid אטום (הזכוכית יצאה בגוון של הרקע).
+ */
+export function chromeButtonFace(
+  cardSolid: string,
+  baseStyle?: ViewStyle,
+): { glass: boolean; glassIntensity: 'subtle'; style?: ViewStyle | ViewStyle[] } {
+  const light = cardSolid === LIGHT_CARD;
+  if (light) return { glass: true, glassIntensity: 'subtle', style: baseStyle };
+  return {
+    glass: false,
+    glassIntensity: 'subtle',
+    style: baseStyle ? [baseStyle, { backgroundColor: cardSolid }] : { backgroundColor: cardSolid },
+  };
+}
+
 /** כפתור חזרה / פעולה בכותרת מסך פרטים (אחיד לכל ה-stack screens) */
 export const HEADER_BACK_BTN_SIZE = 40;
 

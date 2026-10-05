@@ -12,7 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useBottomSheetClose } from '../ui/BottomSheet/BottomSheet';
 import { useDesignTokens } from '../ui/DesignTokens';
-import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
+import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE, chromeButtonFace } from '../ui/DayNavBlurButton';
 import {
   ChatBottomSheet,
   ChatSheetEmptyState,
@@ -220,8 +220,7 @@ export default function ChatSearchBottomSheet({
           <DayNavBlurButton
             onPress={handleHeaderClose}
             size={DAY_NAV_BUTTON_SIZE}
-            glass={false}
-            style={{ backgroundColor: tokens.colors.background.cardSolid }}
+            {...chromeButtonFace(tokens.colors.background.cardSolid)}
             accessibilityLabel="סגור"
           >
             <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />

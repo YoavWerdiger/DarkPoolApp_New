@@ -156,8 +156,8 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
   const { isDarkMode } = useTheme();
   const tokens = useDesignTokens();
   const drawerStyles = useMemo(
-    () => createDrawerStyles(tokens),
-    [tokens],
+    () => createDrawerStyles(tokens, isDarkMode),
+    [tokens, isDarkMode],
   );
 
   useEffect(() => {
@@ -313,7 +313,7 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
   );
 }
 
-function createDrawerStyles(tokens: ReturnType<typeof useDesignTokens>) {
+function createDrawerStyles(tokens: ReturnType<typeof useDesignTokens>, isDarkMode: boolean) {
   return StyleSheet.create({
   /** ריווח אופקי מוגדר ב־CustomDrawerContent (אסימטרי + safe area) */
   root: {
@@ -358,8 +358,9 @@ function createDrawerStyles(tokens: ReturnType<typeof useDesignTokens>) {
     marginBottom: 3,
     gap: 10,
   },
+  // בדארק: מילוי משטח של הערכה (ירוק שקוף על אפור יוצא «בוצי»); בלייט — הגוון הירוק העדין
   rowActive: {
-    backgroundColor: 'rgba(0, 200, 5, 0.10)',
+    backgroundColor: isDarkMode ? tokens.colors.background.tertiary : 'rgba(0, 200, 5, 0.10)',
   },
   label: {
     flex: 1,

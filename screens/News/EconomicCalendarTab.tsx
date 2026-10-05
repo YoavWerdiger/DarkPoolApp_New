@@ -140,6 +140,9 @@ const EconomicEventCard: React.FC<{
   // תרגום שם האירוע לעברית
   const translatedTitle = translateEconomicEventNameSmart(event.title || '');
   const cleanTitle = stripEmojis(translatedTitle);
+  const importanceLevel = stripFlagImportance(event);
+  // דגל צבעוני אחרי שם הדוח — רק לחשיבות אדומה/כתומה
+  const showFlag = importanceLevel === 'high' || importanceLevel === 'medium';
 
   const getActualColor = (): string => {
     const actual = parseEconomicNumber(event.actual);
@@ -154,7 +157,8 @@ const EconomicEventCard: React.FC<{
   const screenPad = APP_LAYOUT.screenPaddingHorizontal;
   const cardRadius = UI_CARD_RADIUS;
   const cardPad = APP_LAYOUT.cardPadding;
-  const accentW = 3;
+  // פס חשיבות עבה יותר — אדום/כתום ברורים במבט ראשון
+  const accentW = 6;
   return (
     <Pressable onPress={() => onPress(event)} style={{ marginHorizontal: screenPad, marginBottom: APP_LAYOUT.cardStackGap }}>
       <UICard
@@ -194,6 +198,12 @@ const EconomicEventCard: React.FC<{
                 numberOfLines={2}
               >
                 {cleanTitle}
+                {showFlag ? (
+                  <Text>
+                    {'  '}
+                    <Ionicons name="flag" size={15} color={importanceColor} />
+                  </Text>
+                ) : null}
               </Text>
               <View
                 style={{

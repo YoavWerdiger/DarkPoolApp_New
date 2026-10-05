@@ -8,7 +8,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "backgroundColor": "#0A0E0A",
+    "backgroundColor": "#111111",
     "androidStatusBar": {
       "barStyle": "light-content"
     },
@@ -24,7 +24,7 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "monochromeImage": "./assets/icon.png",
-        "backgroundColor": "#000000"
+        "backgroundColor": "#111111"
       },
       "softwareKeyboardLayoutMode": "resize",
       "package": "com.darkpool.app",
@@ -66,7 +66,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#000000",
+          "backgroundColor": "#111111",
           "image": "./assets/splash-icon.png",
           "resizeMode": "contain",
           "imageWidth": 200

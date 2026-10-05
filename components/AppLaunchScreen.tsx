@@ -10,7 +10,6 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
-import { DarkGreenAuroraBackground, AURORA_LAYER_OPACITY } from './ui/DarkGreenAuroraBackground';
 import { useTheme } from '../context/ThemeContext';
 
 /**
@@ -19,7 +18,8 @@ import { useTheme } from '../context/ThemeContext';
  * האמבלם עולה בעדינות, DARKPOOL והסלוגן נכנסים, ופס התקדמות דק מתמלא עד שהאפליקציה מוכנה.
  */
 
-const SPLASH_BG = '#000000';
+/** = רקע ה-splash הנייטיב (app.json) — הפריים הראשון זהה, ואז דעיכה לרקע הערכה */
+const SPLASH_BG = '#111111';
 const COMP_W = 300;
 const COMP_H = 600;
 /** מרכז פס ההתקדמות ביחס למרכז המסך (תחתית הסלוגן בקומפוזיציה 387 → +40) */
@@ -57,7 +57,6 @@ export function AppLaunchScreen({ ready, onRevealApp, onFinish }: Props) {
   const exiting = useRef(false);
 
   const themeIn = useSharedValue(0);
-  const aurora = useSharedValue(0);
   const dots = useSharedValue(0);
   const progress = useSharedValue(0);
   const exit = useSharedValue(0);
@@ -73,7 +72,6 @@ export function AppLaunchScreen({ ready, onRevealApp, onFinish }: Props) {
     void SplashScreen.hideAsync().catch(() => {});
 
     themeIn.value = withDelay(120, withTiming(1, { duration: 480, easing: EASE }));
-    aurora.value = withDelay(250, withTiming(1, { duration: 1400, easing: EASE }));
     dots.value = withDelay(700, withTiming(1, { duration: 260, easing: EASE }));
     progress.value = withDelay(
       700,
@@ -101,7 +99,6 @@ export function AppLaunchScreen({ ready, onRevealApp, onFinish }: Props) {
 
   const rootStyle = useAnimatedStyle(() => ({ opacity: 1 - exit.value }));
   const veilStyle = useAnimatedStyle(() => ({ opacity: 1 - themeIn.value }));
-  const auroraStyle = useAnimatedStyle(() => ({ opacity: aurora.value * AURORA_LAYER_OPACITY }));
   const contentStyle = useAnimatedStyle(() => ({
     transform: [{ scale: 1 + exit.value * (reduceMotion ? 0 : 0.03) }],
   }));
@@ -117,11 +114,6 @@ export function AppLaunchScreen({ ready, onRevealApp, onFinish }: Props) {
       accessibilityRole="progressbar"
       accessibilityLabel="DarkPool נטען"
     >
-      {isDarkMode && (
-        <Animated.View style={[StyleSheet.absoluteFill, auroraStyle]} pointerEvents="none">
-          <DarkGreenAuroraBackground animated={false} />
-        </Animated.View>
-      )}
       <Animated.View
         style={[StyleSheet.absoluteFill, { backgroundColor: SPLASH_BG }, veilStyle]}
         pointerEvents="none"
@@ -147,7 +139,8 @@ export function AppLaunchScreen({ ready, onRevealApp, onFinish }: Props) {
           <Animated.View
             style={[
               styles.barFill,
-              { backgroundColor: isDarkMode ? '#00C805' : theme.textPrimary },
+              // כמו בלייט: מילוי בצבע הטקסט של הערכה (בלי ירוק/אורורה בדארק)
+              { backgroundColor: theme.textPrimary },
               barFillStyle,
             ]}
           />

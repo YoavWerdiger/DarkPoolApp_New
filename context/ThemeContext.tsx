@@ -70,6 +70,12 @@ export const useTheme = () => {
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isDarkMode, setIsDarkMode] = useState(true);
+  /**
+   * הערכה השמורה נטענת מ-AsyncStorage — עד אז לא מרנדרים את האפליקציה,
+   * אחרת היא מצוירת שנייה בדארק (ברירת המחדל) ואז «קופצת» ללייט.
+   * ה-splash הנייטיב נשאר על המסך בזמן הזה (מוסתר רק ב-AppLaunchScreen).
+   */
+  const [hydrated, setHydrated] = useState(false);
   const [overlayUri, setOverlayUri] = useState<string | null>(null);
   const [blendEpoch, setBlendEpoch] = useState(0);
   const shellRef = useRef<View>(null);
@@ -92,6 +98,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     loadTheme();
+    // רשת ביטחון — אם AsyncStorage נתקע, לא להשאיר את האפליקציה ריקה
+    const t = setTimeout(() => setHydrated(true), 1500);
+    return () => clearTimeout(t);
   }, []);
 
   const loadTheme = async () => {
@@ -102,6 +111,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setIsDarkMode(parsedSettings.darkMode ?? true);
       }
     } catch (error) {
+    } finally {
+      setHydrated(true);
     }
   };
 
@@ -215,8 +226,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   return (
     <ThemeContext.Provider value={{ isDarkMode, toggleTheme, backgroundImage, theme }}>
-      <View ref={shellRef} collapsable={false} style={styles.shell}>
-        {children}
+      <View ref={shellRef} collapsable={false} style={[styles.shell, { backgroundColor: theme.background }]}>
+        {hydrated ? children : null}
         {overlayUri ? (
           <Animated.View pointerEvents="none" style={[styles.overlay, overlayStyle]}>
             <Image

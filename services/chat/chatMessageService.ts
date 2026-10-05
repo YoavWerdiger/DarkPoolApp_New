@@ -288,6 +288,10 @@ export async function sendChatMessage(
         if (input.client_message_id) {
           insertRow.client_message_id = input.client_message_id;
         }
+        const mediaGroupId = input.metadata?.media_group_id;
+        if (typeof mediaGroupId === 'string' && mediaGroupId) {
+          insertRow.media_group_id = mediaGroupId;
+        }
 
         const runInsert = (row: Record<string, unknown>) =>
           supabase

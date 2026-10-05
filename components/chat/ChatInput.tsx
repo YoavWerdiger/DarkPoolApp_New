@@ -773,6 +773,9 @@ function ChatInputImpl({
     // Multiple media - send each as a separate message (like WhatsApp)
     // This avoids the MEDIA_GROUP type that's not in the database constraint
 
+    // אלבום — כל ההודעות חולקות media_group_id ומוצגות כגריד אחד
+    const mediaGroupId = makeClientMessageId(); // UUID v4
+
     // Create optimistic messages for each media file
     const optimisticIds: string[] = [];
     const optimisticClientIds: string[] = [];
@@ -800,6 +803,7 @@ function ChatInputImpl({
         sender_id: user.id,
         content: i === 0 ? firstCaption.trim() : '', // Only first message gets caption
         message_type: messageType,
+        media_group_id: mediaGroupId,
         media_url: undefined,
         local_media_uri: mediaFile.uri,
         media_thumbnail_url: mediaFile.thumbnail_url,
@@ -894,6 +898,7 @@ function ChatInputImpl({
           const metadata: Record<string, any> = {
             existing_optimistic_id: itemTempId,
             client_message_id: optimisticClientIds[index],
+            media_group_id: mediaGroupId,
           };
           if ('thumbnail_url' in uploadResult && uploadResult.thumbnail_url) {
             metadata.media_thumbnail_url = uploadResult.thumbnail_url;

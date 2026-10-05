@@ -51,6 +51,7 @@ import SeenBySheet from '../../components/chat/SeenBySheet';
 import { MessageSnapshot } from '../../types/MessageSnapshot';
 import { ChatMessage as ChatMessageType, ChatMessageType as MessageType } from '../../types/chat.types';
 import { Ionicons } from '@expo/vector-icons';
+import { collapseMediaAlbums } from '../../utils/chatMediaAlbums';
 import { APP_LAYOUT } from '../../components/ui/appLayout';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -241,7 +242,9 @@ export default function ChatGroupScreen() {
 
   /** יש data מקומי לקבוצה הזו — כניסה בסגנון WhatsApp בלי סקלטון.
    * לא תלוי ב-isLoadingMessages: רענון רשת ברקע לא צריך להסתיר הודעות cache. */
-  const displayMessages = contextMessagesForGroup ?? cachedSeedMessages;
+  const rawDisplayMessages = contextMessagesForGroup ?? cachedSeedMessages;
+  // תמונות שנשלחו יחד (media_group_id) → בועת גריד אחת, כמו וואטסאפ
+  const displayMessages = useMemo(() => collapseMediaAlbums(rawDisplayMessages), [rawDisplayMessages]);
   const hasLocalMessagesForGroup = displayMessages.length > 0;
 
   /** כותרת מיידית משורת הרשימה / cache — לא נופלים לשם של קבוצה אחרת */

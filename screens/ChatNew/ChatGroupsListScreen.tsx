@@ -21,6 +21,7 @@ import {
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
+import { useIsAdmin } from '../../hooks/useIsAdmin';
 import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHeader';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -241,9 +242,11 @@ export default function ChatGroupsListScreen() {
   const [createGroupSheetVisible, setCreateGroupSheetVisible] = useState(false);
 
   // בדיקת admin — האם המשתמש admin בלפחות קבוצה אחת
+  const { isAdmin: isAppAdmin } = useIsAdmin();
+  // אדמין אפליקציה או אדמין באחת הקבוצות — יכול ליצור קבוצה
   const isGlobalAdmin = useMemo(
-    () => allGroups.some(g => g.my_role === 'admin'),
-    [allGroups]
+    () => isAppAdmin || allGroups.some(g => g.my_role === 'admin'),
+    [allGroups, isAppAdmin]
   );
 
   const loadGroups = async () => {
@@ -1251,6 +1254,19 @@ export default function ChatGroupsListScreen() {
             onMenuPress={openMainDrawer}
             rightAccessory={
               <View style={styles.headerEndActions}>
+                {isGlobalAdmin ? (
+                  <DayNavBlurButton
+                    onPress={() => {
+                      void HapticFeedback.selection();
+                      setCreateGroupSheetVisible(true);
+                    }}
+                    glassIntensity="subtle"
+                    size={DRAWER_MENU_BUTTON_SIZE}
+                    accessibilityLabel="יצירת קבוצה חדשה"
+                  >
+                    <Ionicons name="add" size={24} color={tokens.colors.text.primary} />
+                  </DayNavBlurButton>
+                ) : null}
                 <DayNavBlurButton
                   onPress={() => {
                     void HapticFeedback.selection();
@@ -1400,25 +1416,7 @@ export default function ChatGroupsListScreen() {
               data={listData}
               renderItem={renderRow}
               keyExtractor={(item) => item.id}
-              ListHeaderComponent={
-                isGlobalAdmin ? (
-                  <TouchableOpacity
-                    style={styles.createGroupRow}
-                    activeOpacity={0.7}
-                    onPress={() => {
-                      void HapticFeedback.selection();
-                      setCreateGroupSheetVisible(true);
-                    }}
-                    accessibilityRole="button"
-                    accessibilityLabel="יצירת קבוצה חדשה"
-                  >
-                    <View style={styles.createGroupIcon}>
-                      <Ionicons name="add" size={24} color={tokens.colors.text.primary} />
-                    </View>
-                    <Text style={styles.createGroupText}>יצירת קבוצה חדשה</Text>
-                  </TouchableOpacity>
-                ) : null
-              }
+              ListHeaderComponent={null}
               ListEmptyComponent={renderEmpty}
               refreshControl={
                 <RefreshControl
@@ -1552,7 +1550,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   headerEndActions: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: 4,
+    gap: 8,
   },
   headerActionBtn: {
     width: 34,

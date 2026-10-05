@@ -683,14 +683,7 @@ export default function MediaPickerSheet({
             {/* בתצוגה המקוצרת: אחרי בחירה — כפתור העלאה במקום שורת הפעולות (לא מעל התמונות) */}
             {allowsMultiple && selectedIds.length > 0 ? (
               <View style={styles.peekCta}>
-                <UIButton
-                  title={selectedIds.length > 1 ? `העלאה · ${selectedIds.length}` : 'העלאה'}
-                  variant="primary"
-                  icon="arrow-up"
-                  iconPosition="right"
-                  fullWidth
-                  onPress={confirmSelection}
-                />
+                <UploadCta count={selectedIds.length} onPress={confirmSelection} fullWidth />
               </View>
             ) : (
               peekActions
@@ -701,13 +694,7 @@ export default function MediaPickerSheet({
         {expanded && allowsMultiple && selectedIds.length > 0 ? (
           // CTA ממורכז כמו «חזרה להיום» ביומן הכלכלי
           <View style={styles.confirmWrap} pointerEvents="box-none">
-            <UIButton
-              title={selectedIds.length > 1 ? `העלאה · ${selectedIds.length}` : 'העלאה'}
-              variant="primary"
-              icon="arrow-up"
-              iconPosition="right"
-              onPress={confirmSelection}
-            />
+            <UploadCta count={selectedIds.length} onPress={confirmSelection} />
           </View>
         ) : null}
       </View>
@@ -719,6 +706,36 @@ export default function MediaPickerSheet({
       onCommit={onCameraCommit}
     />
     </>
+  );
+}
+
+/**
+ * CTA «העלאה» — מראה של UIButton primary, אבל הלחיצה ב-TouchableOpacity:
+ * Pressable של UIButton לא מקבל לחיצות בתוך השיט (מחוות הגרירה של השיט בולעת אותן).
+ */
+function UploadCta({ count, onPress, fullWidth = false }: { count: number; onPress: () => void; fullWidth?: boolean }) {
+  return (
+    <TouchableOpacity
+      onPress={() => {
+        void HapticFeedback.selection();
+        onPress();
+      }}
+      activeOpacity={0.85}
+      style={fullWidth ? { alignSelf: 'stretch' } : undefined}
+      accessibilityRole="button"
+      accessibilityLabel={`העלאה של ${count} קבצים`}
+    >
+      <View pointerEvents="none">
+        <UIButton
+          title={count > 1 ? `העלאה · ${count}` : 'העלאה'}
+          variant="primary"
+          icon="arrow-up"
+          iconPosition="right"
+          fullWidth={fullWidth}
+          haptic={false}
+        />
+      </View>
+    </TouchableOpacity>
   );
 }
 

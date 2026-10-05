@@ -8,7 +8,6 @@ import { View, FlatList, Text, StyleSheet, type ViewStyle, type DimensionValue, 
 import { SHEET_CLOSE_MS } from '../../components/ui/BottomSheet';
 import { chatComposerSafeBottomInset, chatComposerKeyboardTranslate, CHAT_COMPOSER_KEYBOARD_GAP, CHAT_KEYBOARD_LTR_STYLE } from '../../components/chat/chatInputLayout';
 import { ChatComposerDock, ChatKeyboardFollow } from '../../components/chat/ChatComposerDock';
-import ChatComposerBar from '../../components/chat/ChatComposerBar';
 import { lockAndroidChatSoftInput } from '../../components/chat/androidChatKeyboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChatKeyboardInsets } from '../../hooks/useChatKeyboardInsets';
@@ -2079,26 +2078,15 @@ export default function ChatGroupScreen() {
         iconColor={DesignTokens.colors.text.secondary}
       />
       {adminOnlySend && !canSendInAnnouncements ? (
-        <ChatComposerBar
-          value=""
-          onChangeText={() => {}}
-          editable={false}
-          showSoftInputOnFocus={false}
-          placeholder="רק מנהלי הקהילה יכולים לכתוב"
-          placeholderTextColor={DesignTokens.colors.text.secondary}
-          trailing={null}
-          containerStyle={{ paddingBottom: 6 }}
-          inputStyle={{
-            textAlign: 'center',
-            textAlignVertical: 'center',
-            fontSize: APP_TYPE.sectionTitle.fontSize,
-            lineHeight: APP_TYPE.sectionTitle.lineHeight,
-            fontWeight: APP_TYPE.sectionTitle.fontWeight,
-            letterSpacing: APP_TYPE.sectionTitle.letterSpacing,
-            minHeight: 52,
-            writingDirection: 'rtl',
-          }}
-        />
+        // קבוצת קריאה בלבד — שורת מידע קטנה במקום שדה כתיבה מנוטרל
+        <View style={[styles.readOnlyBar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+          <View style={[styles.readOnlyPill, { backgroundColor: DesignTokens.colors.background.cardSolid }]}>
+            <Ionicons name="lock-closed" size={14} color={DesignTokens.colors.text.secondary} />
+            <Text style={[styles.readOnlyText, { color: DesignTokens.colors.text.secondary }]}>
+              רק מנהלי הקהילה יכולים לשלוח הודעות
+            </Text>
+          </View>
+        </View>
       ) : (
         <ChatInput
           groupId={groupId}
@@ -2587,6 +2575,25 @@ const CHAT_GROUP_HEADER_HEIGHT = 44;
 const createChatGroupStyles = (tokens: any) => {
   const isDarkMode = tokens.colors.background.primary !== LIGHT_CANVAS;
   return StyleSheet.create({
+  readOnlyBar: {
+    alignItems: 'center',
+    paddingTop: 8,
+    paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+  },
+  readOnlyPill: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+  },
+  readOnlyText: {
+    fontSize: APP_TYPE.cardSubtitle.fontSize,
+    lineHeight: APP_TYPE.cardSubtitle.lineHeight,
+    fontWeight: APP_TYPE.cardTitle.fontWeight,
+    writingDirection: 'rtl',
+  },
   /* ── Header — כרטיסי זכוכית אחידים (כפתורים + קבוצה) ── */
   headerOuterRow: {
     flexDirection: 'row-reverse',

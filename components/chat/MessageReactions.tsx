@@ -206,7 +206,9 @@ export function ReactionsReveal({ visible, children }: { visible: boolean; child
   }, [visible, maxH, progress, clearLimit]);
 
   const outerStyle = useAnimatedStyle(() =>
-    maxH.value < 0 ? { maxHeight: 1000 } : { maxHeight: maxH.value, overflow: 'hidden' },
+    // בלי overflow:hidden — רק המקום גדל בהדרגה; התוכן לא נחתך ועושה בדיוק את
+    // כניסת ההודעה (fade + עלייה של 8px), במקום «וילון» שנפתח
+    maxH.value < 0 ? { maxHeight: 1000 } : { maxHeight: maxH.value },
   );
   const innerStyle = useAnimatedStyle(() => ({
     opacity: progress.value,

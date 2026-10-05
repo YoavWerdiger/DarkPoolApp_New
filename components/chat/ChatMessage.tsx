@@ -1261,34 +1261,31 @@ function renderMediaContent(
         : (fileExtension !== 'קובץ' ? fileExtension : '');
 
       {
-        // כרטיס מסמך (כמו וואטסאפ): תג סוג קובץ צבעוני, שם בשתי שורות, «PDF · 1.2MB», כל הכרטיס לחיץ
-        const ext = fileExtension !== 'קובץ' ? fileExtension.slice(0, 4) : 'FILE';
-        const badgeColor = documentBadgeColor(ext);
+        // מסמך בסגנון וואטסאפ, נקי: אריח עדין בתוך הבועה, אייקון דף מונוכרומטי עם סוג הקובץ,
+        // שם עד שתי שורות ומתחתיו «PDF · 1.2 MB». כל האריח לחיץ לפתיחה.
+        const ext = fileExtension !== 'קובץ' ? fileExtension.slice(0, 4) : '';
         const fg = isMe ? tokens.colors.bubbleMeText : tokens.colors.text.primary;
-        const meta = [ext !== 'FILE' ? ext : null, message.media_size ? formatFileSize(message.media_size) : null]
+        const sub = isMe ? tokens.colors.bubbleMeMetaText : tokens.colors.text.secondary;
+        const meta = [ext || null, message.media_size ? formatFileSize(message.media_size) : null]
           .filter(Boolean)
           .join(' · ');
         return (
           <TouchableOpacity
             onPress={onMediaPress}
             activeOpacity={0.75}
-            style={[styles.documentCard, { backgroundColor: isMe ? 'rgba(0,0,0,0.08)' : tokens.colors.selection.subtle }]}
+            style={[styles.documentCard, { backgroundColor: isMe ? 'rgba(0,0,0,0.06)' : 'rgba(127,127,127,0.10)' }]}
             accessibilityRole="button"
             accessibilityLabel={`פתיחת מסמך ${fileName}`}
           >
-            <View style={[styles.documentBadge, { backgroundColor: badgeColor }]}>
-              <Ionicons name="document-text" size={16} color="#FFFFFF" />
-              <Text style={styles.documentBadgeText} numberOfLines={1}>{ext}</Text>
+            <View style={[styles.documentPage, { borderColor: sub }]}>
+              <Ionicons name="document-text-outline" size={18} color={sub} />
+              {ext ? <Text style={[styles.documentPageExt, { color: sub }]}>{ext}</Text> : null}
             </View>
             <View style={styles.documentTextContainer}>
               <Text style={[styles.documentName, { color: fg }]} numberOfLines={2}>
                 {fileName}
               </Text>
-              {meta ? (
-                <Text style={[styles.documentSize, { color: isMe ? tokens.colors.bubbleMeMetaText : tokens.colors.text.secondary }]}>
-                  {meta}
-                </Text>
-              ) : null}
+              {meta ? <Text style={[styles.documentSize, { color: sub }]}>{meta}</Text> : null}
             </View>
           </TouchableOpacity>
         );
@@ -1481,17 +1478,6 @@ function formatFileSize(bytes: number): string {
 }
 
 // קבלת סיומת קובץ
-/** צבע תג לפי סוג קובץ — כמו אייקוני מסמכים מוכרים */
-function documentBadgeColor(ext: string): string {
-  const e = ext.toUpperCase();
-  if (e === 'PDF') return '#E5484D';
-  if (['DOC', 'DOCX', 'PAGE', 'PAGES', 'RTF', 'TXT'].includes(e)) return '#3E7BFA';
-  if (['XLS', 'XLSX', 'CSV', 'NUMB', 'NUMBERS'].includes(e)) return '#30A46C';
-  if (['PPT', 'PPTX', 'KEY'].includes(e)) return '#F76B15';
-  if (['ZIP', 'RAR', '7Z'].includes(e)) return '#8E8E93';
-  return '#6E56CF';
-}
-
 function getFileExtension(fileName: string): string {
   if (!fileName) return 'קובץ';
   const parts = fileName.split('.');
@@ -2713,24 +2699,27 @@ const createStyles = (tokens: any) => {
     direction: 'rtl',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    width: 240,
-    padding: 10,
-    borderRadius: 12,
+    gap: 10,
+    minWidth: 210,
+    maxWidth: 260,
+    paddingVertical: 9,
+    paddingHorizontal: 10,
+    borderRadius: 10,
     marginVertical: 2,
   },
-  documentBadge: {
-    width: 42,
-    height: 50,
-    borderRadius: 8,
+  /** «דף» קטן — מסגרת דקה, אייקון וסוג הקובץ, בצבע המשני של הבועה */
+  documentPage: {
+    width: 34,
+    height: 42,
+    borderRadius: 6,
+    borderWidth: 1.2,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
+    gap: 1,
   },
-  documentBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    lineHeight: 12,
+  documentPageExt: {
+    fontSize: 8,
+    lineHeight: 10,
     fontWeight: '700',
     letterSpacing: 0.3,
   },

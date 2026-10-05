@@ -1,5 +1,12 @@
 import React, { useMemo, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
+import Reanimated, {
+  Easing,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { GlassChip } from '../ui/GlassChip';
@@ -150,3 +157,67 @@ function MessageReactions({ reactions, onReactionDetails, isMe = false }: Messag
 }
 
 export default React.memo(MessageReactions);
+
+/**
+ * פתיחה/סגירה חלקה של שורת הריאקציות — הגובה גדל מ-0 לגובה הטבעי, כך שהבועה
+ * «דוחפת» את ההודעות מעליה בהדרגה (כמו כניסת הודעה) במקום קפיצה של ~26px בפריים אחד.
+ * הודעה שכבר יש לה ריאקציות ב-mount — מוצגת מיד, בלי אנימציה.
+ */
+export function ReactionsReveal({ visible, children }: { visible: boolean; children: React.ReactNode }) {
+  const [render, setRender] = React.useState(visible);
+  const prevVisible = useRef(visible);
+  const pendingOpen = useRef(false);
+  // -1 = גובה אוטומטי (ללא אילוץ)
+  const height = useSharedValue(visible ? -1 : 0);
+  const progress = useSharedValue(visible ? 1 : 0);
+
+  if (visible !== prevVisible.current) {
+    prevVisible.current = visible;
+    if (visible) {
+      pendingOpen.current = true;
+      if (!render) setRender(true);
+    }
+  }
+
+  useEffect(() => {
+    if (visible) return;
+    if (!render) return;
+    progress.value = withTiming(0, { duration: 140 });
+    height.value = withTiming(0, { duration: 200, easing: Easing.out(Easing.cubic) }, (finished) => {
+      if (finished) runOnJS(setRender)(false);
+    });
+  }, [visible, render, height, progress]);
+
+  const onLayout = React.useCallback(
+    (e: { nativeEvent: { layout: { height: number } } }) => {
+      const h = e.nativeEvent.layout.height;
+      if (pendingOpen.current) {
+        pendingOpen.current = false;
+        height.value = 0;
+        height.value = withTiming(h, { duration: 220, easing: Easing.out(Easing.cubic) });
+        progress.value = withTiming(1, { duration: 220 });
+      } else if (height.value >= 0 && visible) {
+        // שורה קיימת שגדלה (עוד סוג אימוג׳י) — גם היא בהדרגה
+        height.value = withTiming(h, { duration: 180, easing: Easing.out(Easing.cubic) });
+      }
+    },
+    [height, progress, visible],
+  );
+
+  const outerStyle = useAnimatedStyle(() =>
+    height.value < 0 ? {} : { height: height.value, overflow: 'hidden' },
+  );
+  const innerStyle = useAnimatedStyle(() => ({
+    opacity: progress.value,
+    transform: [{ scale: 0.85 + 0.15 * progress.value }],
+  }));
+
+  if (!render) return null;
+  return (
+    <Reanimated.View style={[{ alignSelf: 'stretch' }, outerStyle]}>
+      <Reanimated.View onLayout={onLayout} style={innerStyle}>
+        {children}
+      </Reanimated.View>
+    </Reanimated.View>
+  );
+}

@@ -48,7 +48,7 @@ import { parseEntityAttachmentFromContent } from '../../types/shareableEntity';
 import type { CommunityMention } from '../../types/tweets.types';
 import { openUserProfile } from '../../lib/openUserProfile';
 import LinkPreview, { extractFirstUrl } from './LinkPreview';
-import MessageReactions from './MessageReactions';
+import MessageReactions, { ReactionsReveal } from './MessageReactions';
 import { useAuth } from '../../context/AuthContext';
 import { PollService, type PollWithVotes } from '../../services/pollService';
 import {
@@ -1061,13 +1061,15 @@ function ChatMessage({
           </Reanimated.View>
         </GestureDetector>
 
-        {message.reactions && message.reactions.length > 0 ? (
-          <MessageReactions
-            reactions={message.reactions}
-            isMe={isMe}
-            onReactionDetails={() => onReactionDetailsPress?.(message)}
-          />
-        ) : null}
+        <ReactionsReveal visible={!!message.reactions && message.reactions.length > 0}>
+          {message.reactions && message.reactions.length > 0 ? (
+            <MessageReactions
+              reactions={message.reactions}
+              isMe={isMe}
+              onReactionDetails={() => onReactionDetailsPress?.(message)}
+            />
+          ) : null}
+        </ReactionsReveal>
         </View>
         </View>
       </View>

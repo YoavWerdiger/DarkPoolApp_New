@@ -75,6 +75,8 @@ export function getSelectablePlans(mode: PlanPickerMode): DisplayPlan[] {
 }
 
 const PERIOD_MONTHS: Record<string, number> = { monthly: 1, quarterly: 3, yearly: 12 };
+/** תווית קצרה לטאב התקופה (שמות המסלולים עצמם ארוכים יותר) */
+const PERIOD_TAB_LABEL: Record<string, string> = { monthly: 'חודשי', quarterly: 'רבעוני', yearly: 'שנתי' };
 
 /** מחיר חודשי שווה-ערך (לרבעוני/שנתי) — המחיר הבולט בכרטיס */
 export function monthlyEquivalent(price: number, period: string): number {
@@ -205,7 +207,8 @@ export default function PlanPicker({
   const CARD_GAP = 12;
   const [carouselW, setCarouselW] = React.useState(0);
   const carouselRef = React.useRef<ScrollView>(null);
-  const cardW = Math.max(0, carouselW - 36);
+  // השכן מציץ ~16px; הכרטיס הפעיל ממורכז
+  const cardW = Math.max(0, carouselW - 2 * (CARD_GAP + 16));
   const sidePad = (carouselW - cardW) / 2;
   // סדר LTR: חינמי משמאל, פרימיום מימין (הראשון בקריאה מימין לשמאל) — פותחים על פרימיום
   const pages: ('free' | 'premium')[] = [
@@ -239,7 +242,7 @@ export default function PlanPicker({
                     accessibilityState={{ selected: active }}
                   >
                     <Text style={[styles.tabText, { color: active ? tokens.colors.text.primary : tokens.colors.text.secondary }]}>
-                      {p.name}
+                      {PERIOD_TAB_LABEL[p.period] ?? p.name}
                     </Text>
                   </Pressable>
                 );
@@ -394,8 +397,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   carouselWrap: {
-    // הקרוסלה מגיעה עד קצות המסך (מבטלת את ריפוד הדף) כדי שהכרטיס השכן יציץ
-    marginHorizontal: -APP_LAYOUT.screenPaddingHorizontal,
+    // ההורה חותך מעבר לריפוד הדף — הקרוסלה בתוך רוחב התוכן, והשכן מציץ בתוכו
     marginBottom: APP_LAYOUT.componentGap + 4,
   },
   dots: {

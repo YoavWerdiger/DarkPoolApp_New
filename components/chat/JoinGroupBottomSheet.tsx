@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Image, Platform, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -55,14 +55,26 @@ export default function JoinGroupBottomSheet({
   }, [insets.bottom]);
 
   const estimate = (CONTENT_EST_PX + sheetBottomPad + 28) / Dimensions.get('window').height;
-  const { snapPoint, onContentLayout } = useChatFitContentSnap(
+  const { snapPoint, onContentLayout, contentHeight } = useChatFitContentSnap(
     estimate,
     0.8,
     0.22,
     `${visible}-${group?.id ?? ''}`,
   );
+  // מודדים את התוכן מחוץ למסך לפני הפתיחה — כך השיט עולה ישר לגובה הסופי, בלי «קפיצה» באמצע האנימציה
+  const [measuredId, setMeasuredId] = useState<string | null>(null);
+  const ready = !!group && measuredId === group.id && contentHeight != null;
+  const sheetVisible = visible && ready;
 
   const styles = useMemo(() => StyleSheet.create({
+    measurer: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: 0,
+      opacity: 0,
+      transform: [{ translateY: 10000 }],
+    },
     container: {
       alignItems: 'center',
       paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
@@ -114,9 +126,56 @@ export default function JoinGroupBottomSheet({
 
   const avatar = groupAvatarSource(group.name, group.avatar_url, isDarkMode);
 
+  const body = (
+        <View style={styles.container}>
+      <View style={styles.avatarRing}>
+        {avatar ? (
+          <Image source={avatar} style={styles.avatar} resizeMode="cover" />
+        ) : (
+          <View style={styles.avatarPlaceholder}>
+            <Ionicons name="people" size={36} color={DesignTokens.colors.text.primary} />
+          </View>
+        )}
+      </View>
+
+      <Text style={styles.groupName} numberOfLines={2}>
+        {chatGroupDisplayName(group.name)}
+      </Text>
+
+
+      {group.description ? <Text style={styles.description}>{group.description}</Text> : null}
+
+      <View style={styles.cta}>
+        <UIButton
+          title={isJoining ? 'מצטרף…' : 'הצטרף לקבוצה'}
+          variant="primary"
+          size="lg"
+          fullWidth
+          loading={isJoining}
+          disabled={isJoining}
+          onPress={onJoin}
+        />
+      </View>
+    </View>
+  );
+
   return (
+    <>
+    {visible && !ready ? (
+      // מודד נסתר — אותו תוכן ואותו ריפוד כמו בשיט
+      <View
+        pointerEvents="none"
+        style={styles.measurer}
+        onLayout={(e) => {
+          onContentLayout(e);
+          if (group) setMeasuredId(group.id);
+        }}
+      >
+        <View style={{ paddingBottom: sheetBottomPad }}>{body}</View>
+      </View>
+    ) : null}
     <ChatBottomSheet
-      visible={visible}
+      visible={sheetVisible}
       onClose={onClose}
       snapPoints={[snapPoint]}
       fitContent
@@ -131,37 +190,9 @@ export default function JoinGroupBottomSheet({
           paddingBottom: sheetBottomPad,
         }}
       >
-        <View style={styles.container}>
-          <View style={styles.avatarRing}>
-            {avatar ? (
-              <Image source={avatar} style={styles.avatar} resizeMode="cover" />
-            ) : (
-              <View style={styles.avatarPlaceholder}>
-                <Ionicons name="people" size={36} color={DesignTokens.colors.text.primary} />
-              </View>
-            )}
-          </View>
-
-          <Text style={styles.groupName} numberOfLines={2}>
-            {chatGroupDisplayName(group.name)}
-          </Text>
-
-
-          {group.description ? <Text style={styles.description}>{group.description}</Text> : null}
-
-          <View style={styles.cta}>
-            <UIButton
-              title={isJoining ? 'מצטרף…' : 'הצטרף לקבוצה'}
-              variant="primary"
-              size="lg"
-              fullWidth
-              loading={isJoining}
-              disabled={isJoining}
-              onPress={onJoin}
-            />
-          </View>
-        </View>
+        {body}
       </ChatSheetContent>
     </ChatBottomSheet>
+    </>
   );
 }

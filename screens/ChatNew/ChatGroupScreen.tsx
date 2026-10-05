@@ -5,7 +5,7 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useMemo, useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
 import { View, FlatList, Text, StyleSheet, type ViewStyle, type DimensionValue, TouchableOpacity, Pressable, ActivityIndicator, Image, Modal, TextInput, Animated as RNAnimated, Easing, Platform, LayoutChangeEvent, InteractionManager } from 'react-native';
-import { SHEET_CLOSE_MS } from '../../components/ui/BottomSheet';
+import { SHEET_CLOSE_MS } from '../../components/ui/BottomSheet/sheetMotion';
 import { chatComposerSafeBottomInset, chatComposerKeyboardTranslate, CHAT_COMPOSER_KEYBOARD_GAP, CHAT_KEYBOARD_LTR_STYLE } from '../../components/chat/chatInputLayout';
 import { ChatComposerDock, ChatKeyboardFollow } from '../../components/chat/ChatComposerDock';
 import { lockAndroidChatSoftInput } from '../../components/chat/androidChatKeyboard';

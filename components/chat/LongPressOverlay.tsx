@@ -10,7 +10,7 @@ import {
   ChatSheetContent,
   useChatFitContentSnap,
 } from './ChatBottomSheet';
-import { SHEET_CLOSE_MS } from '../ui/BottomSheet';
+import { SHEET_CLOSE_MS } from '../ui/BottomSheet/sheetMotion';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { LIGHT_CANVAS } from '../ui/designTokensStatic';
 import { Ionicons } from '@expo/vector-icons';
@@ -106,10 +106,9 @@ export default function LongPressOverlay({
       ? 220
       : 64 + previewLines * 20 + (displayMessage.mediaUrl ? 20 : 0);
     const reactionPx = 58;
-    const menuRowPx = 80;
-    const mainRows = Math.ceil(mainCount / 4);
-    const dangerRows = dangerCount > 0 ? 1 : 0;
-    const menuPx = mainRows * menuRowPx + dangerRows * menuRowPx + 28;
+    // שורות תפריט לפי הטופו (~51px לשורה) + מרווח בין הכרטיסים
+    const menuRowPx = 51;
+    const menuPx = (mainCount + dangerCount) * menuRowPx + (dangerCount > 0 ? 12 : 0) + 8;
     const estimatedPx = previewPx + reactionPx + menuPx + 42 + Math.max(insets.bottom, 16);
     return Math.min(0.88, Math.max(0.22, estimatedPx / SCREEN_HEIGHT));
   }, [displayMessage, isAdmin, insets.bottom]);
@@ -277,7 +276,7 @@ export default function LongPressOverlay({
         style={{
           direction: 'ltr',
           paddingBottom: sheetBottomPad,
-          paddingHorizontal: 12,
+          paddingHorizontal: 16,
           backgroundColor: 'transparent',
         }}
         onLayout={onContentLayout}

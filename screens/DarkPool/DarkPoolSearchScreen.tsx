@@ -5,7 +5,6 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Keyboard,
   Pressable,
   ScrollView,
@@ -22,9 +21,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ScreenChrome } from '../../components/ui/ScreenChrome';
 import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHeader';
 import UICard from '../../components/ui/UICard';
-import { CHROME_UICARD, chromeSurfaceFill } from '../../components/ui/chromeControl';
+import { CHROME_UICARD } from '../../components/ui/chromeControl';
+import { DayDividerPill } from '../../components/ui/DayDividerPill';
 import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
-import { APP_TYPE, appPhysicalRightText } from '../../components/ui/appType';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { LIGHT_CANVAS } from '../../components/ui/designTokensStatic';
 import { formFieldShellStyle } from '../../components/ui/formControl';
@@ -47,7 +46,15 @@ import {
 } from '../../navigation/mainDrawerNav';
 import { HapticFeedback, triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
 import { useDarkPoolStackNav } from './hooks/useDarkPoolStackNav';
-import { darkPoolRtlContent, darkPoolSectionTitleStyle, darkPoolTransparentFill } from './darkPoolLayout';
+import {
+  DARK_POOL_TYPE,
+  darkPoolPhysicalLeftText,
+  darkPoolPhysicalRightText,
+  darkPoolRtlContent,
+  darkPoolTransparentFill,
+} from './darkPoolLayout';
+import { DarkPoolSectionHeader } from './components/DarkPoolSectionHeader';
+import { toDataIsland } from './utils/bidi';
 
 const RECENTS_KEY = 'darkpool:recent_tickers';
 const RECENTS_MAX = 10;
@@ -219,61 +226,33 @@ export default function DarkPoolSearchScreen() {
           paddingBottom: bottomPad,
           paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
         },
+        // בתוך עץ rtl — row (לא row-reverse): הילד הראשון בימין
         searchInner: {
-          flexDirection: 'row-reverse',
+          direction: 'rtl',
+          flexDirection: 'row',
           alignItems: 'center',
           minHeight: 52,
           paddingHorizontal: 16,
           gap: APP_LAYOUT.stackGapSmall,
           borderRadius: tokens.borderRadius.search,
-          borderWidth: 0,
           marginBottom: APP_LAYOUT.sectionGap,
           ...formFieldShellStyle({ tokens, focused, multiline: false }),
         },
         searchInput: {
-          ...APP_TYPE.body,
-          ...appPhysicalRightText,
+          ...DARK_POOL_TYPE.body,
+          ...darkPoolPhysicalRightText,
           flex: 1,
           color: tokens.colors.text.primary,
           padding: 0,
         },
-        sectionHead: {
-          flexDirection: 'row-reverse',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: APP_LAYOUT.sectionHeaderToContent,
-        },
-        sectionTitle: {
-          ...darkPoolSectionTitleStyle,
-          color: tokens.colors.text.primary,
-        },
-        sectionAction: {
-          ...APP_TYPE.cardMetricLabel,
-          color: tokens.colors.text.secondary,
-        },
         section: {
           marginBottom: APP_LAYOUT.sectionGap,
         },
-        chips: {
-          flexDirection: 'row-reverse',
-          flexWrap: 'wrap',
-          gap: APP_LAYOUT.stackGapSmall,
-        },
-        chip: {
-          flexDirection: 'row-reverse',
+        pills: {
+          direction: 'rtl',
+          flexDirection: 'row',
           alignItems: 'center',
           gap: 8,
-          height: 40,
-          paddingLeft: 14,
-          paddingRight: 6,
-          borderRadius: 999,
-          backgroundColor: chromeSurfaceFill(tokens),
-        },
-        chipText: {
-          ...APP_TYPE.cardMetricLabel,
-          fontWeight: '700',
-          color: tokens.colors.text.primary,
-          writingDirection: 'ltr',
         },
         card: {
           borderRadius: UI_CARD_RADIUS,
@@ -283,59 +262,65 @@ export default function DarkPoolSearchScreen() {
           ...tokens.shadows.none,
         },
         row: {
-          flexDirection: 'row-reverse',
+          direction: 'rtl',
+          flexDirection: 'row',
           alignItems: 'center',
           paddingVertical: APP_LAYOUT.cardTitleToBodyGap,
           paddingHorizontal: APP_LAYOUT.cardPadding,
-          gap: APP_LAYOUT.cardTitleToBodyGap,
+        },
+        iconTextGap: {
+          width: APP_LAYOUT.cardTitleToBodyGap,
+          flexShrink: 0,
         },
         divider: {
           height: 1,
           backgroundColor: tokens.colors.border.divider,
           marginHorizontal: APP_LAYOUT.cardPadding,
+          alignSelf: 'stretch',
         },
-        textCol: {
-          flex: 1,
-          minWidth: 0,
-          alignItems: 'flex-end',
-        },
-        symbol: {
-          ...APP_TYPE.cardTitle,
+        textCol: { flex: 1, minWidth: 0, alignItems: 'stretch' },
+        title: {
+          ...darkPoolPhysicalRightText,
+          width: '100%',
+          fontSize: DARK_POOL_TYPE.cardTitle.fontSize,
+          lineHeight: DARK_POOL_TYPE.cardTitle.lineHeight,
+          fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
           color: tokens.colors.text.primary,
-          writingDirection: 'ltr',
         },
         sub: {
-          ...APP_TYPE.cardSubtitle,
-          ...appPhysicalRightText,
-          color: tokens.colors.text.secondary,
+          ...darkPoolPhysicalRightText,
+          width: '100%',
           marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
-        },
-        subLtr: {
-          ...APP_TYPE.cardSubtitle,
+          fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
+          lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
+          fontWeight: DARK_POOL_TYPE.cardSubtitle.fontWeight,
           color: tokens.colors.text.secondary,
-          marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
-          writingDirection: 'ltr',
         },
         side: {
-          alignItems: 'flex-start',
+          alignItems: 'flex-end',
+          marginStart: APP_LAYOUT.cardTitleToBodyGap,
         },
-        changePill: {
-          ...APP_TYPE.cardMetricLabel,
-          fontWeight: '700',
+        price: {
+          ...darkPoolPhysicalLeftText,
+          fontSize: DARK_POOL_TYPE.cardTitle.fontSize,
+          lineHeight: DARK_POOL_TYPE.cardTitle.lineHeight,
+          fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
+          color: tokens.colors.text.primary,
           fontVariant: ['tabular-nums'],
-          writingDirection: 'ltr',
         },
-        empty: {
-          alignItems: 'center',
-          paddingTop: APP_LAYOUT.sectionGap,
-          paddingHorizontal: APP_LAYOUT.sectionGap,
-          gap: APP_LAYOUT.componentGap,
+        change: {
+          ...darkPoolPhysicalLeftText,
+          marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
+          fontSize: DARK_POOL_TYPE.caption.fontSize,
+          lineHeight: DARK_POOL_TYPE.caption.lineHeight,
+          fontWeight: DARK_POOL_TYPE.caption.fontWeight,
+          fontVariant: ['tabular-nums'],
         },
         emptyText: {
-          ...APP_TYPE.cardBody,
+          ...darkPoolPhysicalRightText,
+          fontSize: DARK_POOL_TYPE.body.fontSize,
+          lineHeight: DARK_POOL_TYPE.body.lineHeight,
           color: tokens.colors.text.secondary,
-          textAlign: 'center',
-          writingDirection: 'rtl',
         },
       }),
     [tokens, focused, bottomPad],
@@ -367,11 +352,8 @@ export default function DarkPoolSearchScreen() {
               onChangeText={setQuery}
               onFocus={() => setFocused(true)}
               onBlur={() => setFocused(false)}
-              onSubmitEditing={() => {
-                const first = results[0]?.symbol ?? query;
-                openTicker(first);
-              }}
-              placeholder="טיקר או שם חברה: NVDA, Apple…"
+              onSubmitEditing={() => openTicker(results[0]?.symbol ?? query)}
+              placeholder="טיקר או שם חברה"
               placeholderTextColor={tokens.colors.text.tertiary}
               keyboardAppearance={(tokens.colors.background.primary as string) === LIGHT_CANVAS ? 'light' : 'dark'}
               autoCapitalize="characters"
@@ -395,26 +377,31 @@ export default function DarkPoolSearchScreen() {
 
           {showResults ? (
             searching && results.length === 0 ? (
-              <ActivityIndicator color={tokens.colors.primary.main} />
+              <UICard {...CHROME_UICARD} style={styles.card}>
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <ListItemSkeleton key={i} showAvatar />
+                ))}
+              </UICard>
             ) : results.length === 0 ? (
-              <View style={styles.empty}>
-                <Text style={styles.emptyText}>
-                  לא נמצאו מניות. נסו סימבול אמריקאי (AAPL) או שם באנגלית.
-                </Text>
-              </View>
+              <Text style={styles.emptyText}>
+                לא נמצאו מניות. נסו סימבול אמריקאי (AAPL) או שם באנגלית.
+              </Text>
             ) : (
               <UICard {...CHROME_UICARD} style={styles.card}>
                 {results.map((r, i) => (
                   <View key={r.symbol}>
                     <Pressable onPress={() => openTicker(r.symbol)} style={styles.row}>
-                      <TickerLogo symbol={r.symbol} size={36} />
+                      <TickerLogo symbol={r.symbol} size={40} borderRadius={20} />
+                      <View style={styles.iconTextGap} />
                       <View style={styles.textCol}>
-                        <Text style={styles.symbol}>{r.display_symbol || r.symbol}</Text>
-                        <Text style={styles.subLtr} numberOfLines={1}>
-                          {r.description}
+                        <Text style={styles.title} numberOfLines={1}>
+                          {toDataIsland(r.display_symbol || r.symbol)}
+                        </Text>
+                        <Text style={styles.sub} numberOfLines={1}>
+                          {toDataIsland(r.description)}
                         </Text>
                       </View>
-                      <Ionicons name="chevron-back" size={18} color={tokens.colors.text.secondary} />
+                      <Ionicons name="chevron-back" size={18} color={tokens.colors.text.tertiary} />
                     </Pressable>
                     {i < results.length - 1 ? <View style={styles.divider} /> : null}
                   </View>
@@ -425,27 +412,26 @@ export default function DarkPoolSearchScreen() {
             <>
               {recents.length > 0 ? (
                 <View style={styles.section}>
-                  <View style={styles.sectionHead}>
-                    <Text style={styles.sectionTitle}>חיפושים אחרונים</Text>
-                    <Pressable onPress={clearRecents} hitSlop={10} accessibilityLabel="נקה חיפושים אחרונים">
-                      <Text style={styles.sectionAction}>נקה</Text>
-                    </Pressable>
-                  </View>
-                  <View style={styles.chips}>
+                  <DarkPoolSectionHeader
+                    title="חיפושים אחרונים"
+                    actionLabel="נקה"
+                    onActionPress={clearRecents}
+                  />
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pills}>
                     {recents.map((t) => (
-                      <Pressable key={t} onPress={() => openTicker(t)} style={styles.chip}>
-                        <TickerLogo symbol={t} size={28} borderRadius={14} />
-                        <Text style={styles.chipText}>{t}</Text>
-                      </Pressable>
+                      <DayDividerPill key={t} onPress={() => openTicker(t)} accessibilityLabel={t}>
+                        {toDataIsland(t)}
+                      </DayDividerPill>
                     ))}
-                  </View>
+                  </ScrollView>
                 </View>
               ) : null}
 
               <View style={styles.section}>
-                <View style={styles.sectionHead}>
-                  <Text style={styles.sectionTitle}>הכי פעילות השבוע</Text>
-                </View>
+                <DarkPoolSectionHeader
+                  title="הכי פעילות השבוע"
+                  subtitle="מניות עם הכי הרבה עסקאות של פוליטיקאים ובכירים"
+                />
                 {feedLoading ? (
                   <UICard {...CHROME_UICARD} style={styles.card}>
                     {Array.from({ length: 4 }).map((_, i) => (
@@ -470,26 +456,26 @@ export default function DarkPoolSearchScreen() {
                       return (
                         <View key={row.ticker}>
                           <Pressable onPress={() => openTicker(row.ticker)} style={styles.row}>
-                            <TickerLogo symbol={row.ticker} size={36} />
+                            <TickerLogo symbol={row.ticker} size={40} borderRadius={20} />
+                            <View style={styles.iconTextGap} />
                             <View style={styles.textCol}>
-                              <Text style={styles.symbol}>{row.ticker}</Text>
+                              <Text style={styles.title} numberOfLines={1}>
+                                {toDataIsland(row.ticker)}
+                              </Text>
                               <Text style={styles.sub} numberOfLines={1}>
                                 {parts.join(' · ')}
                               </Text>
                             </View>
-                            <View style={styles.side}>
-                              {row.quote ? (
-                                <Text style={[styles.symbol, { fontVariant: ['tabular-nums'] }]}>
-                                  ${row.quote.price.toFixed(2)}
-                                </Text>
-                              ) : null}
-                              {pct != null ? (
-                                <Text style={[styles.changePill, { color: pctColor }]}>
-                                  {pct >= 0 ? '+' : ''}
-                                  {pct.toFixed(2)}%
-                                </Text>
-                              ) : null}
-                            </View>
+                            {row.quote ? (
+                              <View style={styles.side}>
+                                <Text style={styles.price}>{toDataIsland(`$${row.quote.price.toFixed(2)}`)}</Text>
+                                {pct != null ? (
+                                  <Text style={[styles.change, { color: pctColor }]}>
+                                    {toDataIsland(`${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`)}
+                                  </Text>
+                                ) : null}
+                              </View>
+                            ) : null}
                           </Pressable>
                           {i < activeTickers.length - 1 ? <View style={styles.divider} /> : null}
                         </View>
@@ -501,17 +487,14 @@ export default function DarkPoolSearchScreen() {
 
               {watchSymbols.length > 0 ? (
                 <View style={styles.section}>
-                  <View style={styles.sectionHead}>
-                    <Text style={styles.sectionTitle}>מהווצ׳ליסט שלך</Text>
-                  </View>
-                  <View style={styles.chips}>
+                  <DarkPoolSectionHeader title="מהווצ׳ליסט שלך" />
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pills}>
                     {watchSymbols.map((t) => (
-                      <Pressable key={t} onPress={() => openTicker(t)} style={styles.chip}>
-                        <TickerLogo symbol={t} size={28} borderRadius={14} />
-                        <Text style={styles.chipText}>{t}</Text>
-                      </Pressable>
+                      <DayDividerPill key={t} onPress={() => openTicker(t)} accessibilityLabel={t}>
+                        {toDataIsland(t)}
+                      </DayDividerPill>
                     ))}
-                  </View>
+                  </ScrollView>
                 </View>
               ) : null}
             </>

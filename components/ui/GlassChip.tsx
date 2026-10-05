@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   selectedFill: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderRadius: GLASS_CHIP_RADIUS,
   },
 });

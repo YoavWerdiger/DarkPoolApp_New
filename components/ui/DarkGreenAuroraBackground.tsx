@@ -231,19 +231,19 @@ export function useAuroraHosted(): boolean {
 
 const styles = StyleSheet.create({
   root: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     overflow: 'hidden',
     backgroundColor: AURORA_BASE,
   },
   base: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: AURORA_BASE,
   },
   ribbon: {
     position: 'absolute',
   },
   glowLayer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     opacity: AURORA_LAYER_OPACITY,
   },
 });

@@ -1465,7 +1465,7 @@ function LearningScreen() {
                 {selectedLesson.thumbnail ? (
                   <Image
                     source={{ uri: selectedLesson.thumbnail }}
-                    style={StyleSheet.absoluteFillObject}
+                    style={StyleSheet.absoluteFill}
                     resizeMode="cover"
                   />
                 ) : null}
@@ -2215,7 +2215,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     overflow: 'hidden',
   },
   videoPlayerPlaceholder: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#000',

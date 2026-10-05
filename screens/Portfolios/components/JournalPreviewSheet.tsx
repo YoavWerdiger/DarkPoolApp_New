@@ -470,10 +470,10 @@ export function JournalPreviewSheet({
           overflow: 'hidden',
         },
         footerBlur: {
-          ...StyleSheet.absoluteFillObject,
+          ...StyleSheet.absoluteFill,
         },
         footerTint: {
-          ...StyleSheet.absoluteFillObject,
+          ...StyleSheet.absoluteFill,
           backgroundColor: tokens.colors.background.cardSolid,
         },
         ctaBtn: {

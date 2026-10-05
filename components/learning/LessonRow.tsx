@@ -233,7 +233,7 @@ function createStyles(T: ReturnType<typeof useDesignTokens>) {
       justifyContent: 'center',
     },
     playOverlay: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -251,7 +251,7 @@ function createStyles(T: ReturnType<typeof useDesignTokens>) {
       marginLeft: 2,
     },
     lockOverlay: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: 'rgba(0,0,0,0.35)',

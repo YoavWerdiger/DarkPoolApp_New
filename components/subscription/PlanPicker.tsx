@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Pressable } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Pressable, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
 import UIButton from '../ui/UIButton';
@@ -201,21 +201,21 @@ export default function PlanPicker({
   const perMonth = activePremium ? monthlyEquivalent(activePremium.price, activePremium.period) : 0;
   const multiMonth = !!activePremium && activePremium.period !== 'monthly';
 
-  return (
-    <View style={styles.root}>
-      {intro ? (
-        <Text style={[styles.intro, { color: tokens.colors.text.secondary }]}>{intro}</Text>
-      ) : null}
+  // ── קרוסלה ──
+  const CARD_GAP = 12;
+  const [carouselW, setCarouselW] = React.useState(0);
+  const carouselRef = React.useRef<ScrollView>(null);
+  const cardW = Math.max(0, carouselW - 36);
+  const sidePad = (carouselW - cardW) / 2;
+  // סדר LTR: חינמי משמאל, פרימיום מימין (הראשון בקריאה מימין לשמאל) — פותחים על פרימיום
+  const pages: ('free' | 'premium')[] = [
+    ...(freePlan ? (['free'] as const) : []),
+    ...(activePremium ? (['premium'] as const) : []),
+  ];
+  const initialPage = Math.max(0, pages.indexOf(freeSelected ? 'free' : 'premium'));
+  const [page, setPage] = React.useState(initialPage);
 
-      {banner ? (
-        <View style={[styles.banner, { backgroundColor: tokens.colors.background.tertiary }]}>
-          <Text style={[styles.bannerText, { color: tokens.colors.warning.main }]}>{banner}</Text>
-        </View>
-      ) : null}
-
-      <View style={styles.list}>
-        {/* ── פרימיום: בורר תקופה למעלה, מחיר גדול, ואז מה כלול ── */}
-        {activePremium ? (
+  const premiumCard = activePremium ? (
           <TouchableOpacity
             onPress={() => selectPlan(activePremium.id)}
             activeOpacity={0.92}
@@ -274,27 +274,85 @@ export default function PlanPicker({
 
             {features(activePremium.highlights)}
           </TouchableOpacity>
-        ) : null}
+  ) : null;
 
-        {/* ── חינמי ── */}
-        {freePlan ? (
-          <TouchableOpacity
-            onPress={() => selectPlan(freePlan.id)}
-            activeOpacity={0.92}
-            accessibilityRole="radio"
-            accessibilityState={{ checked: freeSelected }}
-            style={cardStyle(freeSelected)}
+  const freeCard = freePlan ? (
+    <TouchableOpacity
+      onPress={() => selectPlan(freePlan.id)}
+      activeOpacity={0.92}
+      accessibilityRole="radio"
+      accessibilityState={{ checked: freeSelected }}
+      style={cardStyle(freeSelected)}
+    >
+      <View style={styles.planHead}>
+        <Text style={[styles.planName, { color: tokens.colors.text.primary }]}>{freePlan.name}</Text>
+      </View>
+      <View style={styles.priceRow}>
+        <Text style={[styles.priceBig, { color: tokens.colors.text.primary }]}>₪0</Text>
+        <Text style={[styles.priceUnit, { color: tokens.colors.text.secondary }]}>/ לחודש</Text>
+      </View>
+      <Text style={[styles.priceNote, { color: tokens.colors.text.secondary }]}>להתחיל בלי התחייבות</Text>
+      {features(freePlan.highlights)}
+    </TouchableOpacity>
+  ) : null;
+
+  return (
+    <View style={styles.root}>
+      {intro ? (
+        <Text style={[styles.intro, { color: tokens.colors.text.secondary }]}>{intro}</Text>
+      ) : null}
+
+      {banner ? (
+        <View style={[styles.banner, { backgroundColor: tokens.colors.background.tertiary }]}>
+          <Text style={[styles.bannerText, { color: tokens.colors.warning.main }]}>{banner}</Text>
+        </View>
+      ) : null}
+
+      {/* קרוסלה אופקית — כרטיס לכל מסלול, השכן מציץ מהצד; הכרטיס שבמרכז נבחר */}
+      <View
+        style={styles.carouselWrap}
+        onLayout={(e) => setCarouselW(e.nativeEvent.layout.width)}
+      >
+        {carouselW > 0 ? (
+          <ScrollView
+            ref={carouselRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            decelerationRate="fast"
+            snapToInterval={cardW + CARD_GAP}
+            snapToAlignment="start"
+            disableIntervalMomentum
+            contentContainerStyle={{ paddingHorizontal: sidePad, gap: CARD_GAP }}
+            contentOffset={{ x: initialPage * (cardW + CARD_GAP), y: 0 }}
+            onMomentumScrollEnd={(e) => {
+              const page = Math.round(e.nativeEvent.contentOffset.x / (cardW + CARD_GAP));
+              const key = pages[page];
+              if (!key) return;
+              setPage(page);
+              const id = key === 'premium' ? activePremium?.id : freePlan?.id;
+              if (id && id !== selectedPlanId) selectPlan(id);
+            }}
+            style={{ direction: 'ltr' }}
           >
-            <View style={styles.planHead}>
-              <Text style={[styles.planName, { color: tokens.colors.text.primary }]}>{freePlan.name}</Text>
-            </View>
-            <View style={styles.priceRow}>
-              <Text style={[styles.priceBig, { color: tokens.colors.text.primary }]}>₪0</Text>
-              <Text style={[styles.priceUnit, { color: tokens.colors.text.secondary }]}>/ לחודש</Text>
-            </View>
-            <Text style={[styles.priceNote, { color: tokens.colors.text.secondary }]}>להתחיל בלי התחייבות</Text>
-            {features(freePlan.highlights)}
-          </TouchableOpacity>
+            {pages.map((key) => (
+              <View key={key} style={{ width: cardW }}>
+                {key === 'premium' ? premiumCard : freeCard}
+              </View>
+            ))}
+          </ScrollView>
+        ) : null}
+        {pages.length > 1 ? (
+          <View style={styles.dots}>
+            {pages.map((key, i) => (
+              <View
+                key={key}
+                style={[
+                  styles.dot,
+                  { backgroundColor: i === page ? tokens.colors.text.primary : tokens.colors.border.divider },
+                ]}
+              />
+            ))}
+          </View>
         ) : null}
       </View>
 
@@ -335,7 +393,22 @@ const styles = StyleSheet.create({
     ...appCaptionStyle,
     fontWeight: '700',
   },
-  list: { gap: APP_LAYOUT.cardStackGap, marginBottom: APP_LAYOUT.componentGap + 4 },
+  carouselWrap: {
+    // הקרוסלה מגיעה עד קצות המסך (מבטלת את ריפוד הדף) כדי שהכרטיס השכן יציץ
+    marginHorizontal: -APP_LAYOUT.screenPaddingHorizontal,
+    marginBottom: APP_LAYOUT.componentGap + 4,
+  },
+  dots: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: APP_LAYOUT.componentGap,
+  },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
   card: {
     borderRadius: UI_CARD_RADIUS,
     borderWidth: 2,

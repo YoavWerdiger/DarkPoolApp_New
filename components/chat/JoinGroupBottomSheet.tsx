@@ -16,7 +16,7 @@ import UIButton from '../ui/UIButton';
 
 const AVATAR = 84;
 /** גובה התוכן הקבוע (טבעת + שם + חברים + כפתור) — הערכה מדויקת כדי שהשיט ייפתח ישר לגובה הנכון בלי «קפיצה» */
-const CONTENT_EST_PX = 8 + (AVATAR + 12) + 16 + 30 + 40 + 28 + 56;
+const CONTENT_EST_PX = 8 + (AVATAR + 12) + 16 + 30 + 28 + 56;
 
 interface GroupInfo {
   id: string;
@@ -96,23 +96,6 @@ export default function JoinGroupBottomSheet({
       textAlign: 'center',
       writingDirection: 'rtl',
     },
-    membersPill: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      gap: 6,
-      marginTop: APP_LAYOUT.stackGapSmall,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 999,
-      backgroundColor: DesignTokens.colors.background.cardSolid,
-    },
-    membersText: {
-      fontSize: APP_TYPE.cardSubtitle.fontSize,
-      lineHeight: APP_TYPE.cardSubtitle.lineHeight,
-      fontWeight: APP_TYPE.cardTitle.fontWeight,
-      color: DesignTokens.colors.text.primary,
-      writingDirection: 'rtl',
-    },
     description: {
       fontSize: APP_TYPE.cardBody.fontSize,
       lineHeight: APP_TYPE.cardBody.lineHeight,
@@ -130,7 +113,6 @@ export default function JoinGroupBottomSheet({
   if (!group) return null;
 
   const avatar = groupAvatarSource(group.name, group.avatar_url, isDarkMode);
-  const members = group.members_count || 0;
 
   return (
     <ChatBottomSheet
@@ -164,14 +146,6 @@ export default function JoinGroupBottomSheet({
             {chatGroupDisplayName(group.name)}
           </Text>
 
-          {members > 0 ? (
-            <View style={styles.membersPill}>
-              <Ionicons name="people" size={14} color={DesignTokens.colors.text.secondary} />
-              <Text style={styles.membersText}>
-                {members.toLocaleString('he-IL')} חברים בקבוצה
-              </Text>
-            </View>
-          ) : null}
 
           {group.description ? <Text style={styles.description}>{group.description}</Text> : null}
 

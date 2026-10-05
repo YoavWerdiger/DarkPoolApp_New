@@ -316,6 +316,8 @@ function ChatInputImpl({
   const recordingDotOpacity = useRef(new Animated.Value(1)).current;
   const timelineProgress = useSharedValue(0);
   const previewPlayingSV = useSharedValue(0);
+  /** מיקום הפריוויו האחרון שדווח (0–1) — ה-playhead מתקרב אליו ברכות */
+  const previewTargetSV = useSharedValue(0);
   const previewScrubbingSV = useSharedValue(0);
   const previewDurationSV = useSharedValue(0);
   const isPreviewScrubbingRef = useRef(false);
@@ -1215,6 +1217,7 @@ function ChatInputImpl({
     const seconds = Math.floor(Math.max(0, elapsedMs) / 1000);
     const progress = Math.min(seconds / MAX_RECORDING_DURATION, 1);
     timelineProgress.value = progress;
+    previewTargetSV.value = timelineProgress.value;
     setRecordingDuration((prev) => (prev === seconds ? prev : seconds));
   }, [timelineProgress]);
 
@@ -1309,6 +1312,7 @@ function ChatInputImpl({
       waveformSamplesRef.current = [];
       recordingAccumMsRef.current = 0;
       timelineProgress.value = 0;
+      previewTargetSV.value = timelineProgress.value;
 
       pulseAnimationRef.current?.stop();
       const pulseAnim = Animated.loop(
@@ -1509,6 +1513,7 @@ function ChatInputImpl({
         previewDurationSV.value = totalMs;
         setPreviewPosition(0);
         timelineProgress.value = 0;
+        previewTargetSV.value = timelineProgress.value;
       }
     } catch (error) {
       logger.error('ChatInput', 'Recording error', error);
@@ -1526,11 +1531,22 @@ function ChatInputImpl({
     const d = previewDurationSV.value;
     if (d <= 0) return;
     const dt = Math.min(1 / 20, (frame.timeSincePreviousFrame ?? 16) / 1000);
-    timelineProgress.value = Math.min(1, timelineProgress.value + dt / (d / 1000));
+    const step = dt / (d / 1000);
+    // יעד = מיקום האודיו האחרון שדווח, מוקדם קדימה באותו קצב
+    const target = Math.min(1, previewTargetSV.value + step);
+    previewTargetSV.value = target;
+    const cur = timelineProgress.value;
+    let next = cur + step;
+    // תיקון רך לעבר האודיו — בלי קפיצות; אחורה רק בסייק אמיתי (סטייה גדולה)
+    next += (target - next) * 0.12;
+    if (target - cur < -0.05) next = target;
+    else if (next < cur) next = cur;
+    timelineProgress.value = Math.min(1, next); // SMOOTH
   }, true);
 
   const resetPreviewPlayhead = useCallback(async () => {
     timelineProgress.value = 0;
+    previewTargetSV.value = timelineProgress.value;
     setPreviewPosition(0);
     setIsPlayingPreview(false);
     previewPlayingSV.value = 0;
@@ -1566,6 +1582,7 @@ function ChatInputImpl({
       }
     }
     timelineProgress.value = 0;
+    previewTargetSV.value = timelineProgress.value;
     setPreviewPosition(0);
     setIsPlayingPreview(false);
     previewPlayingSV.value = 0;
@@ -1592,6 +1609,7 @@ function ChatInputImpl({
           if (status.didJustFinish || timelineProgress.value >= 0.995) {
             await soundRef.current.setPositionAsync(0);
             timelineProgress.value = 0;
+            previewTargetSV.value = timelineProgress.value;
             setPreviewPosition(0);
           }
           await soundRef.current.playAsync();
@@ -1628,6 +1646,7 @@ function ChatInputImpl({
         previewDurationSV.value = dur;
         if (dur > 0) {
           timelineProgress.value = (status.positionMillis || startMs) / dur;
+          previewTargetSV.value = timelineProgress.value;
         }
       }
 
@@ -1646,15 +1665,19 @@ function ChatInputImpl({
         const dur = st.durationMillis || previewDurationSV.value;
         if (dur > 0) {
           const pos = st.positionMillis || 0;
-          const reported = pos / dur;
-          if (Math.abs(reported - timelineProgress.value) > 0.03) {
+          const reported = Math.min(1, pos / dur);
+          // לא כותבים ישר ל-playhead (זה מה שריצד) — רק יעד; קפיצה רק בסטייה גדולה
+          if (previewPlayingSV.value > 0.5 && Math.abs(reported - timelineProgress.value) < 0.08) {
+            previewTargetSV.value = reported;
+          } else {
             timelineProgress.value = reported;
+            previewTargetSV.value = timelineProgress.value;
           }
           setPreviewPosition(pos);
         }
         if (st.isPlaying) {
           setIsPlayingPreview(true);
-          previewPlayingSV.value = 1;
+          previewPlayingSV.value = st.isBuffering ? 0 : 1;
         }
       });
     } catch (error) {
@@ -1674,6 +1697,7 @@ function ChatInputImpl({
           const dur = status.durationMillis || previewDuration;
           if (dur > 0) {
             timelineProgress.value = (status.positionMillis || 0) / dur;
+            previewTargetSV.value = timelineProgress.value;
             setPreviewPosition(status.positionMillis || 0);
           }
         }
@@ -1720,6 +1744,7 @@ function ChatInputImpl({
       const clamped = Math.max(0, Math.min(1, progress01));
       const targetMs = clamped * dur;
       timelineProgress.value = clamped;
+      previewTargetSV.value = timelineProgress.value;
       setPreviewPosition(targetMs);
 
       try {
@@ -1744,6 +1769,7 @@ function ChatInputImpl({
             const d = st.durationMillis || previewDurationSV.value;
             if (d > 0) {
               timelineProgress.value = (st.positionMillis || 0) / d;
+              previewTargetSV.value = timelineProgress.value;
               setPreviewPosition(st.positionMillis || 0);
             }
           });
@@ -1851,6 +1877,7 @@ function ChatInputImpl({
     setIsLocked(false);
     isLockedRef.current = false;
     timelineProgress.value = 0;
+    previewTargetSV.value = timelineProgress.value;
 
     setIsUploading(true);
     (async () => {
@@ -1924,6 +1951,7 @@ function ChatInputImpl({
     setIsLocked(false);
     isLockedRef.current = false;
     timelineProgress.value = 0;
+    previewTargetSV.value = timelineProgress.value;
 
     if (recordingRef.current) {
       recordingRef.current.setOnRecordingStatusUpdate(null);

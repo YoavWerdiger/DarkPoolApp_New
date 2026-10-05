@@ -1632,6 +1632,8 @@ function AudioPlayer({
   const stopExternallyRef = useRef<() => Promise<void>>(async () => {});
 
   const progressSV = useSharedValue(0);
+  /** מיקום האודיו האחרון שדווח (0–1) — ה-playhead מתקרב אליו ברכות */
+  const audioTargetSV = useSharedValue(0);
   const isPlayingSV = useSharedValue(0);
   const isScrubbingSV = useSharedValue(0);
   const durationSV = useSharedValue(Math.max(0, duration));
@@ -1677,6 +1679,7 @@ function AudioPlayer({
 
   const resetPlayheadToStart = useCallback(async () => {
     progressSV.value = 0;
+    audioTargetSV.value = progressSV.value;
     setPosition(0);
     setIsPlaying(false);
     isPlayingSV.value = 0;
@@ -1712,6 +1715,7 @@ function AudioPlayer({
     }
     if (!isMountedRef.current) return;
     progressSV.value = 0;
+    audioTargetSV.value = progressSV.value;
     setPosition(0);
     setIsPlaying(false);
     isPlayingSV.value = 0;
@@ -1727,6 +1731,7 @@ function AudioPlayer({
       const d = Math.max(durSeconds, 0.001);
       const p = Math.max(0, Math.min(1, posSeconds / d));
       progressSV.value = p;
+      audioTargetSV.value = progressSV.value;
       setPosition(posSeconds);
     },
     [progressSV],
@@ -1739,7 +1744,17 @@ function AudioPlayer({
     const d = durationSV.value;
     if (d <= 0) return;
     const dt = Math.min(1 / 20, (frame.timeSincePreviousFrame ?? 16) / 1000);
-    progressSV.value = Math.min(1, progressSV.value + (dt * rateSV.value) / d);
+    const step = (dt * rateSV.value) / d;
+    // יעד = מיקום האודיו האחרון שדווח, מוקדם קדימה באותו קצב
+    const target = Math.min(1, audioTargetSV.value + step);
+    audioTargetSV.value = target;
+    const cur = progressSV.value;
+    let next = cur + step;
+    // תיקון רך לעבר האודיו — בלי קפיצות; אחורה רק בסייק אמיתי (סטייה גדולה)
+    next += (target - next) * 0.12;
+    if (target - cur < -0.05) next = target;
+    else if (next < cur) next = cur;
+    progressSV.value = Math.min(1, next); // SMOOTH
   }, true);
 
   const createSoundWithSignedUrlRetry = async (initialUri: string) => {
@@ -1792,20 +1807,23 @@ function AudioPlayer({
           : actualDuration || duration;
       if (dur > 0) {
         const reported = Math.min(1, pos / dur);
-        // סנכרון רק כשיש סטייה — שומר חלקות של ה-frame callback
-        if (Math.abs(reported - progressSV.value) > 0.03) {
-          syncProgressFromAudio(pos, dur);
-        } else {
+        // לא כותבים ישר ל-playhead (זה מה שריצד) — רק מעדכנים יעד; קפיצה רק בסייק/עצירה
+        if (isPlayingSV.value > 0.5 && Math.abs(reported - progressSV.value) < 0.08) {
+          audioTargetSV.value = reported;
           setPosition(pos);
+        } else {
+          syncProgressFromAudio(pos, dur);
         }
       }
       if (status.isPlaying) {
         setIsPlaying(true);
-        isPlayingSV.value = 1;
+        // בזמן buffering האודיו לא זז — גם ה-playhead לא
+        isPlayingSV.value = status.isBuffering ? 0 : 1;
       } else if (!status.isPlaying && isPlayingSV.value > 0.5) {
         setIsPlaying(false);
         isPlayingSV.value = 0;
         progressSV.value = dur > 0 ? Math.min(1, pos / dur) : 0;
+        audioTargetSV.value = progressSV.value;
       }
     },
     [
@@ -1838,6 +1856,7 @@ function AudioPlayer({
       const clamped = Math.max(0, Math.min(1, progress01));
       const targetMs = clamped * dur * 1000;
       progressSV.value = clamped;
+      audioTargetSV.value = progressSV.value;
       setPosition(clamped * dur);
 
       try {
@@ -1973,12 +1992,14 @@ function AudioPlayer({
                 : actualDuration;
             if (dur > 0) {
               progressSV.value = Math.min(1, pos / dur);
+              audioTargetSV.value = progressSV.value;
               setPosition(pos);
             }
           } else {
             if (status.didJustFinish || progressSV.value >= 0.995) {
               await soundRef.current.setPositionAsync(0);
               progressSV.value = 0;
+              audioTargetSV.value = progressSV.value;
               setPosition(0);
             }
             claimExclusivePlayback();

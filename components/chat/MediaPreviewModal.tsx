@@ -5,7 +5,7 @@ import { View, Text, Modal, Pressable, StyleSheet, ActivityIndicator, Animated a
 import { Image as ExpoImage } from 'expo-image';
 import { initialWindowMetrics, SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { X, ChevronLeft, ChevronRight, Play, Pause } from 'lucide-react-native';
+import { X, Play, Pause } from 'lucide-react-native';
 import { Audio, Video, ResizeMode } from '../../lib/expoAvSafe';
 import { MediaFile } from '../../services/mediaService';
 import { logger } from '../../utils/logger';
@@ -254,20 +254,6 @@ function MediaPreviewBody({
     // Send with copies of data, then close
     onSend([...validMediaFiles], { ...captions });
     onClose();
-  };
-
-  const goToNext = () => {
-    if (currentIndex < localFiles.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-      setIsLoading(true);
-    }
-  };
-
-  const goToPrev = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
-      setIsLoading(true);
-    }
   };
 
   const handleVideoSeek = useCallback((positionSeconds: number) => {
@@ -609,26 +595,6 @@ function MediaPreviewBody({
             {renderNeighbor(localFiles[currentIndex - 1], prevPagerStyle)}
             {renderNeighbor(localFiles[currentIndex + 1], nextPagerStyle)}
             {renderMediaContent()}
-            {localFiles.length > 1 && currentIndex > 0 ? (
-              <Pressable
-                onPress={goToPrev}
-                style={[styles.navArrow, styles.navRight, styles.themeBtn, { backgroundColor: tokens.colors.background.cardSolid }]}
-                accessibilityRole="button"
-                accessibilityLabel="הקובץ הקודם"
-              >
-                <ChevronRight size={26} color={tokens.colors.text.primary} strokeWidth={2} />
-              </Pressable>
-            ) : null}
-            {localFiles.length > 1 && currentIndex < localFiles.length - 1 ? (
-              <Pressable
-                onPress={goToNext}
-                style={[styles.navArrow, styles.navLeft, styles.themeBtn, { backgroundColor: tokens.colors.background.cardSolid }]}
-                accessibilityRole="button"
-                accessibilityLabel="הקובץ הבא"
-              >
-                <ChevronLeft size={26} color={tokens.colors.text.primary} strokeWidth={2} />
-              </Pressable>
-            ) : null}
           </View>
 
           <MediaKeyboardDim />

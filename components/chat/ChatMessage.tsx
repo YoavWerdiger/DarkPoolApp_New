@@ -537,18 +537,17 @@ function ChatMessage({
   }, [isHighlighted]);
 
   const swipeTranslateX = useSharedValue(0);
+  /** האם עברנו את סף התשובה בגרירה הנוכחית — טיק אחד בחציית הסף (כמו וואטסאפ) */
+  const swipeArmed = useSharedValue(0);
 
   const triggerReplySwipe = useCallback(() => {
     if (!onReply) return;
     onReply();
-    if (Platform.OS !== 'web') {
-      try {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      } catch {
-        /* noop */
-      }
-    }
   }, [onReply]);
+
+  const replyThresholdTick = useCallback(() => {
+    void HapticFeedback.impactLight();
+  }, []);
 
   const replyPanGesture = useMemo(
     () =>
@@ -564,6 +563,14 @@ function ChatMessage({
           } else {
             swipeTranslateX.value = tx < 0 ? 0 : Math.min(REPLY_SWIPE_MAX, tx);
           }
+          const v = swipeTranslateX.value;
+          const over = isMe ? v <= -REPLY_SWIPE_THRESHOLD : v >= REPLY_SWIPE_THRESHOLD;
+          if (over && !swipeArmed.value) {
+            swipeArmed.value = 1;
+            runOnJS(replyThresholdTick)();
+          } else if (!over && swipeArmed.value) {
+            swipeArmed.value = 0;
+          }
         })
         .onEnd(() => {
           'worklet';
@@ -571,6 +578,7 @@ function ChatMessage({
           const crossed = isMe
             ? v <= -REPLY_SWIPE_THRESHOLD
             : v >= REPLY_SWIPE_THRESHOLD;
+          swipeArmed.value = 0;
           if (crossed) {
             runOnJS(triggerReplySwipe)();
           }
@@ -579,7 +587,7 @@ function ChatMessage({
             easing: ReanimatedEasing.out(ReanimatedEasing.cubic),
           });
         }),
-    [isMe, onReply, triggerReplySwipe]
+    [isMe, onReply, triggerReplySwipe, replyThresholdTick]
   );
 
   const swipeReplyAnimatedStyle = useAnimatedStyle(() => ({

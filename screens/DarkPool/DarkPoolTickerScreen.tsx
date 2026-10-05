@@ -798,8 +798,9 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, bottomPadding:
     holdersCard: {
       overflow: 'hidden',
     },
+    // שורת רשימה לפי הטופו — 15 אנכי, ריפוד כרטיס אופקי
     holderPad: {
-      paddingVertical: APP_LAYOUT.cardTitleToBodyGap,
+      paddingVertical: 15,
       paddingHorizontal: APP_LAYOUT.cardPadding,
     },
     holderPressed: {

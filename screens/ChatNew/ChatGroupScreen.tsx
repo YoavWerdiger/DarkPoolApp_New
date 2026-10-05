@@ -1498,7 +1498,6 @@ export default function ChatGroupScreen() {
       if (!result.success && !(result as any).queued) {
         logger.error('ChatGroupScreen', 'Send message failed', result.error);
       } else {
-        void HapticFeedback.impactLight();
         donateShareTarget(shareTargetGroupRef.current, isDarkMode, isAppAdmin);
       }
     } catch (e) {
@@ -1515,7 +1514,7 @@ export default function ChatGroupScreen() {
   }, [groupId, setTyping]);
 
   const handleMessageLongPress = useCallback((message: ChatMessageType) => {
-    void HapticFeedback.medium();
+    void HapticFeedback.impactMedium();
     const isMe = message.sender_id === user?.id;
 
     const snapshot: MessageSnapshot = {
@@ -2087,7 +2086,8 @@ export default function ChatGroupScreen() {
       />
       {adminOnlySend && !canSendInAnnouncements ? (
         // קבוצת קריאה בלבד — שורת מידע קטנה במקום שדה כתיבה מנוטרל
-        <View style={[styles.readOnlyBar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+        // ה-dock כבר מוסיף safe area — כאן רק מרווח קטן
+        <View style={[styles.readOnlyBar, { paddingBottom: 6 }]}>
           <View style={[styles.readOnlyPill, { backgroundColor: DesignTokens.colors.background.cardSolid }]}>
             <Ionicons name="lock-closed" size={14} color={DesignTokens.colors.text.secondary} />
             <Text style={[styles.readOnlyText, { color: DesignTokens.colors.text.secondary }]}>

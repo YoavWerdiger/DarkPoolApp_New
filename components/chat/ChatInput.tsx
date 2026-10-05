@@ -1300,6 +1300,8 @@ function ChatInputImpl({
       await recording.startAsync();
 
       recordingRef.current = recording;
+      // תחילת הקלטה — impactMedium (טופולוגיית רטט)
+      void HapticFeedback.impactMedium();
       setIsRecording(true);
       setRecordingDuration(0);
       setAudioLevel(0);
@@ -2221,7 +2223,7 @@ function ChatInputImpl({
               <View style={styles.recordingLeftCluster}>
                 <TouchableOpacity
                   onPress={() => {
-                    void HapticFeedback.warning();
+                    void HapticFeedback.impactLight();
                     void cancelRecording();
                   }}
                   style={styles.cancelButton}
@@ -2279,7 +2281,7 @@ function ChatInputImpl({
               <View style={styles.recordingLeftCluster}>
                 <TouchableOpacity
                   onPress={() => {
-                    void HapticFeedback.warning();
+                    void HapticFeedback.impactLight();
                     void cancelRecording();
                   }}
                   style={styles.cancelButton}
@@ -2348,7 +2350,7 @@ function ChatInputImpl({
             <Pressable
               unstable_pressDelay={0}
               onPress={() => {
-                void HapticFeedback.medium();
+                void HapticFeedback.impactLight();
                 void sendRecordedAudio();
               }}
               style={styles.sendBtnTouchable}
@@ -2362,7 +2364,7 @@ function ChatInputImpl({
             <Pressable
               unstable_pressDelay={0}
               onPress={() => {
-                void HapticFeedback.medium();
+                void HapticFeedback.selection();
                 void stopRecording();
               }}
               style={styles.sendBtnTouchable}

@@ -38,7 +38,6 @@ function PreviewThumb({ src, style }: { src?: string | null; style: any }) {
   );
 }
 
-import { HapticFeedback } from '../../utils/hapticFeedback';
 import { logger } from '../../utils/logger';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
@@ -182,11 +181,6 @@ export default function LongPressOverlay({
     }
   }, [displayMessage?.id, displayMessage?.channelId]);
 
-  useEffect(() => {
-    if (visible && displayMessage) {
-      try { HapticFeedback.impactLight(); } catch { /* non-critical */ }
-    }
-  }, [visible, displayMessage?.id]);
 
   const handleReaction = useCallback((emoji: string) => {
     onAction('react', { messageId: displayMessage?.id, emoji });

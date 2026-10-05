@@ -690,11 +690,13 @@ export default function ChatGroupsListScreen() {
         });
 
       if (error) {
+        void HapticFeedback.error();
         legacyAlert('שגיאה', 'לא הצלחנו להצטרף');
         setIsJoining(false);
         return;
       }
 
+      void HapticFeedback.success();
       // סגור את ה-BottomSheet ונווט לקבוצה
       setJoinGroupSheet({ visible: false, group: null });
       setIsJoining(false);

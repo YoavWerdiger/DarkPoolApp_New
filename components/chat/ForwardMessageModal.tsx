@@ -126,7 +126,7 @@ export default function ForwardMessageModal({
     if (selectedGroups.size === 0 || isForwarding) return;
 
     setIsForwarding(true);
-    void HapticFeedback.medium();
+    void HapticFeedback.impactLight();
     try {
       await onForward(Array.from(selectedGroups));
       onClose();

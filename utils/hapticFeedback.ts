@@ -24,6 +24,11 @@ export async function drawerMenuTap(): Promise<void> {
   return triggerDrawerMenuHaptic();
 }
 
+/**
+ * רטט באפליקציה — ראה `.cursor/rules/haptics-topology.mdc` (מתי ובאיזו עוצמה).
+ * כל הרמות עוברות דרך expo-haptics (Taptic Engine ב-iOS). Vibration רק כגיבוי —
+ * ב-iOS Vibration.vibrate מתעלם מהמשך ומרטיט ~0.4 שנ׳ (זה מה שהרגיש «מוגזם»).
+ */
 export class HapticFeedback {
   private static _enabled: boolean = true;
   private static _initialized: boolean = false;
@@ -58,7 +63,12 @@ export class HapticFeedback {
     try {
       await HapticFeedback.ensureInit();
       if (!HapticFeedback._enabled) return;
-      Vibration.vibrate(10);
+      try {
+        const Haptics = require('expo-haptics');
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      } catch {
+        Vibration.vibrate(Platform.OS === 'ios' ? 8 : 12);
+      }
     } catch {}
   }
 
@@ -66,7 +76,12 @@ export class HapticFeedback {
     try {
       await HapticFeedback.ensureInit();
       if (!HapticFeedback._enabled) return;
-      Vibration.vibrate(25);
+      try {
+        const Haptics = require('expo-haptics');
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      } catch {
+        Vibration.vibrate(Platform.OS === 'ios' ? 15 : 20);
+      }
     } catch {}
   }
 
@@ -74,7 +89,12 @@ export class HapticFeedback {
     try {
       await HapticFeedback.ensureInit();
       if (!HapticFeedback._enabled) return;
-      Vibration.vibrate(50);
+      try {
+        const Haptics = require('expo-haptics');
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      } catch {
+        Vibration.vibrate(Platform.OS === 'ios' ? 20 : 30);
+      }
     } catch {}
   }
 
@@ -82,7 +102,12 @@ export class HapticFeedback {
     try {
       await HapticFeedback.ensureInit();
       if (!HapticFeedback._enabled) return;
-      Vibration.vibrate([0, 10, 50, 10]);
+      try {
+        const Haptics = require('expo-haptics');
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch {
+        Vibration.vibrate(Platform.OS === 'ios' ? 12 : 20);
+      }
     } catch {}
   }
 
@@ -90,7 +115,12 @@ export class HapticFeedback {
     try {
       await HapticFeedback.ensureInit();
       if (!HapticFeedback._enabled) return;
-      Vibration.vibrate([0, 25, 25, 25]);
+      try {
+        const Haptics = require('expo-haptics');
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      } catch {
+        Vibration.vibrate(Platform.OS === 'ios' ? 15 : 25);
+      }
     } catch {}
   }
 
@@ -98,7 +128,12 @@ export class HapticFeedback {
     try {
       await HapticFeedback.ensureInit();
       if (!HapticFeedback._enabled) return;
-      Vibration.vibrate([0, 50, 50, 50, 50, 50]);
+      try {
+        const Haptics = require('expo-haptics');
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      } catch {
+        Vibration.vibrate(Platform.OS === 'ios' ? 20 : 35);
+      }
     } catch {}
   }
 

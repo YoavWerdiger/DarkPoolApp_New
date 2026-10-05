@@ -38,8 +38,8 @@ export function PortfolioFormFooter({
         styles.footer,
         {
           paddingBottom: Math.max(insets.bottom, 12),
-          borderTopColor: tokens.colors.border.divider,
-          backgroundColor: tokens.colors.background.navChrome,
+          // בצבע הקנבס, בלי פס/מפריד — הכפתור «צף» על המסך כמו בשאר ה-flows
+          backgroundColor: tokens.colors.background.primary,
         },
         style,
       ]}
@@ -74,7 +74,6 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: PORTFOLIO_FORM.screenPadH,
     paddingTop: 12,
-    borderTopWidth: 1,
     gap: 8,
   },
   note: {

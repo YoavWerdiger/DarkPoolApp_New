@@ -113,6 +113,8 @@ function MediaPreviewBody({
       onSingleTap: dismissKeyboard,
       // RTL: הבא משמאל — החלקה ימינה (אצבע זזה ימינה) = הבא
       onSwipeHorizontal: localFiles.length > 1 ? handleSwipe : undefined,
+      canSwipeNext: currentIndex < localFiles.length - 1,
+      canSwipePrev: currentIndex > 0,
     });
 
   useEffect(() => {

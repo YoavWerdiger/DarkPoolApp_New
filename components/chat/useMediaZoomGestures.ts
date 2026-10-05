@@ -2,12 +2,14 @@ import { useCallback, useEffect } from 'react';
 import { Dimensions } from 'react-native';
 import { Gesture } from 'react-native-gesture-handler';
 import {
+  Easing,
   Extrapolation,
   interpolate,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 
 const { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT } = Dimensions.get('window');
@@ -30,6 +32,9 @@ export type UseMediaZoomGesturesOptions = {
   onSwipeDismiss?: () => void;
   /** החלקה אופקית כשאין זום — מעבר בין קבצים (1 = שמאלה/הבא ב-RTL, -1 = הקודם) */
   onSwipeHorizontal?: (direction: 1 | -1) => void;
+  /** האם יש קובץ בכיוון (1 = הבא, -1 = הקודם) — אחרת התנגדות גומי בלי מעבר */
+  canSwipeNext?: boolean;
+  canSwipePrev?: boolean;
   /** Fires when zoom settles above/below 1 (e.g. to disable gallery paging). */
   onZoomChange?: (zoomed: boolean) => void;
 };
@@ -47,6 +52,8 @@ export function useMediaZoomGestures(options: UseMediaZoomGesturesOptions = {}) 
     onZoomChange,
     onSwipeDismiss,
     onSwipeHorizontal,
+    canSwipeNext = true,
+    canSwipePrev = true,
   } = options;
 
   const scale = useSharedValue(1);
@@ -83,9 +90,15 @@ export function useMediaZoomGestures(options: UseMediaZoomGesturesOptions = {}) 
   }, [onSwipeDismiss]);
 
   const swipeEnabled = useSharedValue(onSwipeHorizontal ? 1 : 0);
+  const swipeNextOk = useSharedValue(canSwipeNext ? 1 : 0);
+  const swipePrevOk = useSharedValue(canSwipePrev ? 1 : 0);
+  /** אחרי מעבר: הקובץ החדש נכנס מהצד הזה (פיקסלים), כמו מעבר סטוריז */
+  const enterFrom = useSharedValue(0);
   useEffect(() => {
     swipeEnabled.value = onSwipeHorizontal ? 1 : 0;
-  }, [onSwipeHorizontal, swipeEnabled]);
+    swipeNextOk.value = canSwipeNext ? 1 : 0;
+    swipePrevOk.value = canSwipePrev ? 1 : 0;
+  }, [onSwipeHorizontal, canSwipeNext, canSwipePrev, swipeEnabled, swipeNextOk, swipePrevOk]);
   const fireSwipe = useCallback(
     (direction: 1 | -1) => {
       onSwipeHorizontal?.(direction);
@@ -159,8 +172,15 @@ export function useMediaZoomGestures(options: UseMediaZoomGesturesOptions = {}) 
 
   useEffect(() => {
     if (resetKey === undefined) return;
+    const from = enterFrom.value;
     resetZoomImmediate();
-  }, [resetKey, resetZoomImmediate]);
+    if (from !== 0) {
+      // החדש מחליק פנימה מהצד הנגדי
+      enterFrom.value = 0;
+      translateX.value = from;
+      translateX.value = withTiming(0, { duration: 240, easing: Easing.out(Easing.cubic) });
+    }
+  }, [resetKey, resetZoomImmediate, enterFrom, translateX]);
 
   const pinchGesture = Gesture.Pinch()
     .onStart((event) => {
@@ -219,7 +239,10 @@ export function useMediaZoomGestures(options: UseMediaZoomGesturesOptions = {}) 
       if (scale.value <= 1) {
         // החלקה אופקית — התמונה זזה עם האצבע (מרוסן)
         if (swipeEnabled.value && Math.abs(event.translationX) > Math.abs(event.translationY)) {
-          translateX.value = event.translationX * 0.6;
+          const dir = event.translationX > 0 ? 1 : -1;
+          const ok = dir === 1 ? swipeNextOk.value : swipePrevOk.value;
+          // עוקב אחרי האצבע 1:1; בקצה — התנגדות גומי
+          translateX.value = ok ? event.translationX : event.translationX * 0.25;
           dismissY.value = 0;
           return;
         }
@@ -238,13 +261,22 @@ export function useMediaZoomGestures(options: UseMediaZoomGesturesOptions = {}) 
       'worklet';
       if (isPinching.value) return;
       if (scale.value <= 1) {
+        const swipeDir: 1 | -1 = event.translationX > 0 ? 1 : -1;
         if (
           swipeEnabled.value &&
+          (swipeDir === 1 ? swipeNextOk.value : swipePrevOk.value) &&
           Math.abs(event.translationX) > Math.abs(event.translationY) &&
-          (Math.abs(event.translationX) > 70 || Math.abs(event.velocityX) > 700)
+          (Math.abs(event.translationX) > screenW.value * 0.22 || Math.abs(event.velocityX) > 600)
         ) {
-          translateX.value = 0;
-          runOnJS(fireSwipe)(event.translationX > 0 ? 1 : -1);
+          // הנוכחי יוצא מהמסך, ואז מחליפים — החדש ייכנס מהצד השני (ראה resetKey)
+          enterFrom.value = -swipeDir * screenW.value;
+          translateX.value = withTiming(
+            swipeDir * screenW.value,
+            { duration: 200, easing: Easing.out(Easing.quad) },
+            (finished) => {
+              if (finished) runOnJS(fireSwipe)(swipeDir);
+            },
+          );
           return;
         }
         translateX.value = withSpring(0, MEDIA_ZOOM_SPRING);

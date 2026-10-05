@@ -209,6 +209,7 @@ export const CoursesScreen: React.FC = () => {
           key={course.id}
           course={course}
           width={horizontalCardWidth}
+          fillHeight
           onPress={handleCoursePress}
           onEnroll={course.enrollment ? undefined : handleEnroll}
         />

@@ -48,6 +48,8 @@ interface CourseCardProps {
   hideBadges?: boolean;
   /** רוחב קבוע לכרטיס אופקי; אם לא מועבר — רוחב מלא */
   width?: number;
+  /** בשורה אופקית: למתוח לגובה הכרטיס הגבוה בשורה (כל הכרטיסים באותו אורך, CTA בתחתית) */
+  fillHeight?: boolean;
 }
 
 export const CourseCard: React.FC<CourseCardProps> = ({
@@ -55,6 +57,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   onPress,
   hideBadges = false,
   width,
+  fillHeight = false,
 }) => {
   const T = useDesignTokens();
   const { width: screenWidth } = useWindowDimensions();
@@ -113,14 +116,19 @@ export const CourseCard: React.FC<CourseCardProps> = ({
 
   return (
     <TouchableOpacity
-      style={styles.wrapper}
+      style={[styles.wrapper, fillHeight && styles.fill]}
       onPress={() => {
         void HapticFeedback.impactLight();
         onPress(course);
       }}
       activeOpacity={0.88}
     >
-      <UICard variant="soft" padding="none" style={styles.card}>
+      <UICard
+        variant="soft"
+        padding="none"
+        style={[styles.card, fillHeight && styles.fillFlex]}
+        contentContainerStyle={fillHeight ? styles.fillFlex : undefined}
+      >
         <View style={styles.cover}>
           {course.cover_url ? (
             <Image
@@ -157,7 +165,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
           ) : null}
         </View>
 
-        <View style={styles.body}>
+        <View style={[styles.body, fillHeight && styles.fillFlex]}>
           <View style={styles.titleBlock}>
             <Text style={styles.title} numberOfLines={2}>
               {course.title}
@@ -190,7 +198,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
             </View>
           ) : null}
 
-          <View pointerEvents="none" style={styles.ctaSlot}>
+          <View pointerEvents="none" style={[styles.ctaSlot, fillHeight && { marginTop: 'auto' }]}>
             <UIButton title={ctaLabel} variant="primary" fullWidth haptic={false} />
           </View>
         </View>
@@ -208,6 +216,12 @@ const createStyles = (
     wrapper: {
       width: cardWidth,
       direction: 'ltr',
+    },
+    fill: {
+      alignSelf: 'stretch',
+    },
+    fillFlex: {
+      flex: 1,
     },
     card: {
       width: '100%',

@@ -806,8 +806,9 @@ function ChatMessage({
               activeOpacity={0.75}
               accessibilityRole="button"
               accessibilityLabel={`פרופיל של ${message.sender?.display_name}`}
+              style={styles.senderNameTouch}
             >
-            <Text style={[
+            <Text numberOfLines={1} style={[
               styles.senderNameInside,
               { color: senderColor },
               // Media bubbles have reduced padding — compensate so name isn't cramped
@@ -2277,15 +2278,20 @@ const createStyles = (tokens: any) => {
     alignItems: 'flex-end',
   },
 
+  // שם השולח בבועת other: שורה אחת שתורמת לרוחב הבועה (לא width:100% — זה מתווכח עם רוחב התוכן),
+  // צמוד לימין, עם נשימה קטנה מעל הטקסט
+  senderNameTouch: {
+    alignSelf: 'stretch',
+  },
   senderNameInside: {
-    fontSize: tokens.typography.label.size,
+    fontSize: tokens.typography.label.size + 1,
     fontWeight: tokens.typography.fontWeight.semibold,
-    marginTop: 0,
-    marginBottom: 1,
+    lineHeight: 18,
+    marginTop: 1,
+    marginBottom: 2,
+    direction: 'ltr',
     textAlign: 'right',
-    alignSelf: 'flex-end',
-    width: '100%',
-    lineHeight: 16,
+    writingDirection: 'auto',
   },
 
   replyContainer: {

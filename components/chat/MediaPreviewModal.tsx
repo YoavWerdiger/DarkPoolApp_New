@@ -31,6 +31,7 @@ interface MediaPreviewModalProps {
 import { useDesignTokens } from '../ui/DesignTokens';
 import { CHAT_LAYOUT, CHAT_TYPE, chatPhysicalRightText } from './chatLayout';
 import * as VideoThumbnails from 'expo-video-thumbnails';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 import { useMediaZoomGestures } from './useMediaZoomGestures';
 import { MediaBlurBackdrop, MediaKeyboardDim } from './MediaViewerChrome';
 
@@ -90,12 +91,28 @@ function MediaPreviewBody({
     Keyboard.dismiss();
   }, []);
 
+  const handleSwipe = useCallback(
+    (direction: 1 | -1) => {
+      setCurrentIndex((i) => {
+        const next = Math.min(localFiles.length - 1, Math.max(0, i + direction));
+        if (next !== i) {
+          setIsLoading(true);
+          void HapticFeedback.selection();
+        }
+        return next;
+      });
+    },
+    [localFiles.length],
+  );
+
   const currentMedia = localFiles[currentIndex];
 
   const { zoomGesture, animatedStyle: animatedImageStyle, resetZoomImmediate } =
     useMediaZoomGestures({
       resetKey: visible ? `${currentIndex}:${currentMedia?.id ?? ''}` : false,
       onSingleTap: dismissKeyboard,
+      // RTL: הבא משמאל — החלקה ימינה (אצבע זזה ימינה) = הבא
+      onSwipeHorizontal: localFiles.length > 1 ? handleSwipe : undefined,
     });
 
   useEffect(() => {
@@ -928,6 +945,8 @@ const styles = StyleSheet.create({
   thumbnailStrip: {
     paddingHorizontal: 16,
     paddingTop: 12,
+    // מרווח מעל שורת הכיתוב
+    paddingBottom: 14,
     gap: 8,
     flexDirection: 'row',
   },

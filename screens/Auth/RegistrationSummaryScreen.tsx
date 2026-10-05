@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
     marginBottom: APP_LAYOUT.sectionGap,
   },
   ringInner: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
   },

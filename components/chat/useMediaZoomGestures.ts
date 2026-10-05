@@ -28,6 +28,8 @@ export type UseMediaZoomGesturesOptions = {
   onSingleTap?: () => void;
   /** משיכה למטה כשאין זום — סוגר כמו בוואטסאפ */
   onSwipeDismiss?: () => void;
+  /** החלקה אופקית כשאין זום — מעבר בין קבצים (1 = שמאלה/הבא ב-RTL, -1 = הקודם) */
+  onSwipeHorizontal?: (direction: 1 | -1) => void;
   /** Fires when zoom settles above/below 1 (e.g. to disable gallery paging). */
   onZoomChange?: (zoomed: boolean) => void;
 };
@@ -44,6 +46,7 @@ export function useMediaZoomGestures(options: UseMediaZoomGesturesOptions = {}) 
     onSingleTap,
     onZoomChange,
     onSwipeDismiss,
+    onSwipeHorizontal,
   } = options;
 
   const scale = useSharedValue(1);
@@ -78,6 +81,17 @@ export function useMediaZoomGestures(options: UseMediaZoomGesturesOptions = {}) 
   const fireDismiss = useCallback(() => {
     onSwipeDismiss?.();
   }, [onSwipeDismiss]);
+
+  const swipeEnabled = useSharedValue(onSwipeHorizontal ? 1 : 0);
+  useEffect(() => {
+    swipeEnabled.value = onSwipeHorizontal ? 1 : 0;
+  }, [onSwipeHorizontal, swipeEnabled]);
+  const fireSwipe = useCallback(
+    (direction: 1 | -1) => {
+      onSwipeHorizontal?.(direction);
+    },
+    [onSwipeHorizontal],
+  );
 
   const clampTranslation = (tx: number, ty: number, s: number) => {
     'worklet';
@@ -203,6 +217,12 @@ export function useMediaZoomGestures(options: UseMediaZoomGesturesOptions = {}) 
       'worklet';
       if (isPinching.value) return;
       if (scale.value <= 1) {
+        // החלקה אופקית — התמונה זזה עם האצבע (מרוסן)
+        if (swipeEnabled.value && Math.abs(event.translationX) > Math.abs(event.translationY)) {
+          translateX.value = event.translationX * 0.6;
+          dismissY.value = 0;
+          return;
+        }
         if (!dismissEnabled.value) return;
         if (event.translationY <= 0 || Math.abs(event.translationX) > Math.abs(event.translationY)) {
           dismissY.value = 0;
@@ -218,6 +238,16 @@ export function useMediaZoomGestures(options: UseMediaZoomGesturesOptions = {}) 
       'worklet';
       if (isPinching.value) return;
       if (scale.value <= 1) {
+        if (
+          swipeEnabled.value &&
+          Math.abs(event.translationX) > Math.abs(event.translationY) &&
+          (Math.abs(event.translationX) > 70 || Math.abs(event.velocityX) > 700)
+        ) {
+          translateX.value = 0;
+          runOnJS(fireSwipe)(event.translationX > 0 ? 1 : -1);
+          return;
+        }
+        translateX.value = withSpring(0, MEDIA_ZOOM_SPRING);
         if (dismissEnabled.value && (dismissY.value > 120 || event.velocityY > 900)) {
           runOnJS(fireDismiss)();
           return;

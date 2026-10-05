@@ -14,6 +14,29 @@ import { LIGHT_CANVAS } from '../ui/designTokensStatic';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import TradeMessage from './TradeMessage';
+import { Image as ExpoImage } from 'expo-image';
+import { getCachedChatMediaDisplayUri, getChatMediaDisplayUri } from '../../services/chat/chatSignedMediaUrl';
+
+/** ממוזערת בתצוגת ההודעה בשיט — נתיב storage נחתם, URL/קובץ מקומי משמש ישירות */
+function PreviewThumb({ src, style }: { src?: string | null; style: any }) {
+  const direct = src && /^(https?:|file:|content:)/.test(src) ? src : null;
+  const [uri, setUri] = useState<string | null>(direct ?? getCachedChatMediaDisplayUri(src));
+  useEffect(() => {
+    if (uri || !src) return;
+    let cancelled = false;
+    void getChatMediaDisplayUri(src).then((u) => {
+      if (!cancelled) setUri(u);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [src, uri]);
+  return uri ? (
+    <ExpoImage source={{ uri }} style={style} contentFit="cover" transition={120} cachePolicy="memory-disk" />
+  ) : (
+    <View style={[style, { backgroundColor: 'rgba(127,127,127,0.18)' }]} />
+  );
+}
 
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { logger } from '../../utils/logger';
@@ -98,9 +121,10 @@ export default function LongPressOverlay({
       ? Math.min(4, displayMessage.content.split('\n').length + Math.ceil(displayMessage.content.length / 40))
       : 0;
     const isTrade = isTradeMessageType(displayMessage.type) || !!parseTradeFromContent(displayMessage.content);
+    const isMediaMsg = !!displayMessage.mediaUrl && (displayMessage.type === 'image' || displayMessage.type === 'video');
     const previewPx = isTrade
       ? 220
-      : 64 + previewLines * 20 + (displayMessage.mediaUrl ? 20 : 0);
+      : 64 + previewLines * 20 + (isMediaMsg ? 250 : 0);
     const reactionPx = 58;
     // שורות תפריט לפי הטופו (~51px לשורה) + מרווח בין הכרטיסים
     const menuRowPx = 51;
@@ -231,12 +255,48 @@ export default function LongPressOverlay({
               <TradeMessage trade={tradePayload} isMe={!!isMe} embeddedInBubble />
             ) : (
               <>
-                {(isMedia || isAudio) && (
+                {isMedia ? (
+                  (displayMessage.albumThumbs?.length ?? 0) > 1 ? (
+                    <View style={p.albumGrid}>
+                      {displayMessage.albumThumbs!.slice(0, 4).map((t, i) => (
+                        <View key={`${t}-${i}`} style={p.albumCell}>
+                          <PreviewThumb src={t} style={p.albumImg} />
+                          {i === 3 && displayMessage.albumThumbs!.length > 4 ? (
+                            <View style={p.albumMore}>
+                              <Text style={p.albumMoreText}>+{displayMessage.albumThumbs!.length - 4}</Text>
+                            </View>
+                          ) : null}
+                        </View>
+                      ))}
+                    </View>
+                  ) : (
+                    <View>
+                      <PreviewThumb
+                        src={displayMessage.mediaThumbUrl || displayMessage.mediaUrl}
+                        style={[
+                          p.mediaImg,
+                          {
+                            aspectRatio:
+                              displayMessage.mediaWidth && displayMessage.mediaHeight
+                                ? Math.min(1.15, Math.max(0.65, displayMessage.mediaWidth / displayMessage.mediaHeight))
+                                : 0.9,
+                          },
+                        ]}
+                      />
+                      {displayMessage.type === 'video' ? (
+                        <View style={p.playBadge}>
+                          <Ionicons name="play" size={20} color="#FFFFFF" />
+                        </View>
+                      ) : null}
+                    </View>
+                  )
+                ) : null}
+                {isAudio ? (
                   <View style={p.mediaRow}>
                     <Ionicons name={mediaIcon as any} size={16} color={mediaIconColor} />
                     <Text style={[p.mediaText, isMe && p.myMediaText]}>{mediaLabel}</Text>
                   </View>
-                )}
+                ) : null}
 
                 {displayMessage.content && !isAudio ? (
                   <Text style={[p.msgText, isMe ? p.myText : p.theirText]} numberOfLines={4}>
@@ -308,7 +368,7 @@ export default function LongPressOverlay({
 
 const styles = StyleSheet.create({
   reactionWrapper: {
-    alignItems: 'center',
+    alignItems: 'stretch',
     marginTop: 8,
     marginBottom: 12,
   },
@@ -394,6 +454,53 @@ const createMessagePreviewStyles = (tokens: any) => {
     marginTop: 0,
     marginBottom: 1,
     lineHeight: 16,
+  },
+  mediaImg: {
+    width: 220,
+    borderRadius: 12,
+    marginTop: 4,
+    marginBottom: 2,
+  },
+  albumGrid: {
+    width: 220,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 2,
+    marginTop: 4,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  albumCell: {
+    width: 109,
+    height: 109,
+  },
+  albumImg: {
+    width: '100%',
+    height: '100%',
+  },
+  albumMore: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  albumMoreText: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  playBadge: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    marginTop: -20,
+    marginLeft: -20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   mediaRow: {
     flexDirection: 'row-reverse',

@@ -13,11 +13,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { useDesignTokens } from '../ui/DesignTokens';
-import {
-  ChatBottomSheet,
-  useChatSheetDismiss,
-  useChatSheetStyles,
-} from './ChatBottomSheet';
+import { ChatSheetTopoHeader, useChatSheetDismiss, useChatSheetStyles } from './ChatBottomSheet';
+import BottomSheet from '../ui/BottomSheet/BottomSheet';
+import { APP_LAYOUT } from '../ui/appLayout';
+import { APP_TYPE } from '../ui/appType';
+import { formFieldInputStyle, formFieldPlaceholderColor, formFieldShellStyle } from '../ui/formControl';
 import {
   REACTION_EMOJI_CATEGORIES,
   emojiSearchHaystack,
@@ -87,7 +87,7 @@ export default function ReactionPicker({
   const [query, setQuery] = useState('');
   const emojiBtnWidth = useMemo(() => {
     // paddingHorizontal 16 * 2 על ה-root
-    const inner = Math.max(windowWidth - 32, 280);
+    const inner = Math.max(windowWidth - APP_LAYOUT.screenPaddingHorizontal * 2, 280);
     return Math.floor(inner / COLS);
   }, [windowWidth]);
 
@@ -143,31 +143,29 @@ export default function ReactionPicker({
   const bottomPad = Math.max(insets.bottom, Platform.OS === 'android' ? 16 : 8);
 
   return (
-    <ChatBottomSheet
-      visible={visible}
+    // שיט לפי הטופו (כמו 3 הנקודות ביומן): קנבס ערכת הנושא, כותרת עם שברון, שדה חיפוש formField
+    <BottomSheet
+      isOpen={visible}
       onClose={onClose}
       snapPoints={[0.72]}
-      fitContent={false}
-      showBrandWatermark={false}
-      contentPaddingBottom={0}
-      avoidKeyboard={!embedded}
+      edgeToEdge
+      showHandle
+      enablePanDownToClose
       useModal={!embedded}
+      showBrandBackground={false}
+      backgroundColor={tokens.colors.background.primary}
+      topCornerRadius={tokens.borderRadius.xl}
+      avoidKeyboard={!embedded}
+      contentPaddingBottom={0}
     >
       <View style={[styles.root, { paddingBottom: bottomPad, direction: 'rtl' }]}>
-        <View style={sheet.header}>
-          <Text style={[sheet.headerTitlePlain, styles.sheetTitle]}>
-            {title}
-          </Text>
-        </View>
+        <ChatSheetTopoHeader title={title} onClose={onClose} />
 
         <View
           style={[
+            formFieldShellStyle({ tokens, focused: false }),
             styles.searchField,
             styles.searchFieldGap,
-            {
-              backgroundColor: tokens.colors.background.cardSolid,
-              borderColor: tokens.colors.border.divider,
-            },
           ]}
         >
           <Ionicons name="search" size={18} color={tokens.colors.text.secondary} />
@@ -175,8 +173,8 @@ export default function ReactionPicker({
             value={query}
             onChangeText={setQuery}
             placeholder="חיפוש אימוג'י..."
-            placeholderTextColor={tokens.colors.text.tertiary}
-            style={[styles.searchInput, { color: tokens.colors.text.primary }]}
+            placeholderTextColor={formFieldPlaceholderColor(tokens)}
+            style={[formFieldInputStyle(tokens), styles.searchInput]}
             autoCorrect={false}
             autoCapitalize="none"
             clearButtonMode="while-editing"
@@ -253,40 +251,30 @@ export default function ReactionPicker({
           }}
         />
       </View>
-    </ChatBottomSheet>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
-    paddingHorizontal: 16,
+    paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
     flexGrow: 0,
   },
-  sheetTitle: {
-    backgroundColor: 'transparent',
-  },
   searchFieldGap: {
-    marginTop: 2,
-    marginBottom: 14,
+    marginTop: APP_LAYOUT.cardTitleToBodyGap,
+    marginBottom: 6,
   },
   searchField: {
     ...chatRtlRow,
     direction: 'ltr',
     flexDirection: 'row',
-    alignItems: 'center',
     gap: 8,
-    borderWidth: 1,
     borderRadius: 9999,
-    paddingHorizontal: 14,
-    minHeight: 44,
+    paddingHorizontal: 16,
+    minHeight: 48,
   },
   searchInput: {
-    flex: 1,
-    writingDirection: 'rtl',
-    textAlign: 'right',
-    fontSize: 16,
-    paddingVertical: Platform.OS === 'ios' ? 10 : 8,
-    backgroundColor: 'transparent',
+    minHeight: 48,
   },
   listContent: {
     paddingBottom: 8,
@@ -304,9 +292,9 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
     textAlign: 'right',
     alignSelf: 'flex-end',
-    fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 18,
+    fontSize: APP_TYPE.cardMetricLabel.fontSize,
+    fontWeight: APP_TYPE.cardMetricLabel.fontWeight,
+    lineHeight: APP_TYPE.cardMetricLabel.lineHeight,
   },
   grid: {
     flexDirection: 'row',

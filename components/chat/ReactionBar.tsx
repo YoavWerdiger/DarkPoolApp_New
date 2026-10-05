@@ -1,9 +1,8 @@
 import React from 'react';
-import { Text, StyleSheet } from 'react-native';
+import { Text, StyleSheet, View } from 'react-native';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { HapticFeedback } from '../../utils/hapticFeedback';
-import { GlassChip } from '../ui/GlassChip';
 import { useDesignTokens } from '../ui/DesignTokens';
 
 interface ReactionBarProps {
@@ -24,11 +23,8 @@ const HIT_SLOP = { top: 6, bottom: 6, left: 4, right: 4 };
 export default function ReactionBar({ onReaction, currentReaction, onOpenPicker }: ReactionBarProps) {
   const tokens = useDesignTokens();
   return (
-    <GlassChip
-      disableBlur
-      style={[styles.pill, { backgroundColor: tokens.colors.background.tertiary }]}
-      contentContainerStyle={styles.pillContent}
-    >
+    // פיל מלא בצבע הכרטיסים (טופו) לרוחב השיט
+    <View style={[styles.pill, { backgroundColor: tokens.colors.background.cardSolid }]}>
       {EMOJIS.map(emoji => {
         const isSelected = currentReaction === emoji;
         return (
@@ -42,7 +38,7 @@ export default function ReactionBar({ onReaction, currentReaction, onOpenPicker 
             }}
             style={[
               styles.emojiBtn,
-              isSelected && { backgroundColor: tokens.colors.primary.dim },
+              isSelected && { backgroundColor: tokens.colors.background.tertiary },
             ]}
             accessibilityLabel={`React ${emoji}`}
             accessibilityState={{ selected: isSelected }}
@@ -63,7 +59,7 @@ export default function ReactionBar({ onReaction, currentReaction, onOpenPicker 
           style={[
             styles.emojiBtn,
             styles.plusBtn,
-            { backgroundColor: tokens.colors.background.cardSolid },
+            { backgroundColor: tokens.colors.background.tertiary },
           ]}
           accessibilityLabel="עוד אימוג'ים"
           accessibilityRole="button"
@@ -71,23 +67,19 @@ export default function ReactionBar({ onReaction, currentReaction, onOpenPicker 
           <Ionicons name="add" size={20} color={tokens.colors.text.secondary} />
         </TouchableOpacity>
       ) : null}
-    </GlassChip>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   pill: {
-    borderRadius: 22,
-    minHeight: 0,
-    overflow: 'hidden',
-  },
-  pillContent: {
+    alignSelf: 'stretch',
+    borderRadius: 999,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
     paddingVertical: 6,
-    minHeight: 0,
-    gap: 2,
   },
   emojiBtn: {
     width: 40,
@@ -96,9 +88,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 20,
   },
-  plusBtn: {
-    marginLeft: 4,
-  },
+  plusBtn: {},
   emoji: {
     fontSize: 24,
   },

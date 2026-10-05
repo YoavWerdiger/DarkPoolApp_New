@@ -201,7 +201,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
   },
   blurDim: {
-    backgroundColor: 'rgba(0,0,0,0.82)',
+    // הטשטוש צריך להיראות — רק החשכה קלה לקריאות הכפתורים
+    backgroundColor: 'rgba(0,0,0,0.35)',
   },
   keyboardDim: {
     backgroundColor: 'rgba(0,0,0,0.55)',

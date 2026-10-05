@@ -709,17 +709,6 @@ function MediaPreviewBody({
                         <Ionicons name="document-text" size={24} color={iconColor} />
                       </View>
                     )}
-                    <Pressable
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        removeMedia(media.id);
-                      }}
-                      style={styles.thumbnailRemove}
-                      accessibilityRole="button"
-                      accessibilityLabel="הסרת קובץ"
-                    >
-                      <X size={12} color={iconColor} strokeWidth={3} />
-                    </Pressable>
                   </Pressable>
                 ))}
               </ScrollView>

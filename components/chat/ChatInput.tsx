@@ -322,6 +322,7 @@ function ChatInputImpl({
   const previewPlayingSV = useSharedValue(0);
   /** מיקום הפריוויו האחרון שדווח (0–1) — ה-playhead מתקרב אליו ברכות */
   const previewTargetSV = useSharedValue(0);
+  const previewBufferingSV = useSharedValue(0);
   const previewAnchorSV = useSharedValue(0);
   const previewSeenSV = useSharedValue(-1);
   const previewActiveSV = useSharedValue(0);
@@ -1534,7 +1535,7 @@ function ChatInputImpl({
   // פלייהד חלק בפריוויו — UI thread
   useFrameCallback((frame) => {
     'worklet';
-    if (previewPlayingSV.value < 0.5 || previewScrubbingSV.value > 0.5) {
+    if (previewPlayingSV.value < 0.5 || previewScrubbingSV.value > 0.5 || previewBufferingSV.value > 0.5) {
       previewActiveSV.value = 0;
       return;
     }
@@ -1552,8 +1553,8 @@ function ChatInputImpl({
     const aheadSec = Math.min(0.25, Math.max(0, (now - previewAnchorSV.value) / 1000));
     let p = Math.min(1, rep + aheadSec / (d / 1000));
     const cur = timelineProgress.value;
-    // נסיגה קטנה (דיווח מאחר) — מחזיקים במקום במקום לקפוץ אחורה; סייק אמיתי עובר
-    if (p < cur && cur - p < 0.04) p = cur;
+    // נסיגה קטנה (דיווח מאחר) — מחזיקים במקום; סייק אמיתי (>0.6s) עובר. בשניות, לא באחוזים
+    if (p < cur && (cur - p) * (d / 1000) < 0.6) p = cur;
     timelineProgress.value = p; // SMOOTH
   }, true);
 
@@ -1679,10 +1680,11 @@ function ChatInputImpl({
         if (dur > 0) {
           const pos = st.positionMillis || 0;
           const reported = Math.min(1, pos / dur);
-          // לא כותבים ישר ל-playhead (זה מה שריצד) — רק יעד; קפיצה רק בסטייה גדולה
-          if (previewPlayingSV.value > 0.5) {
+          if (st.isPlaying) {
+            // בניגון: רק יעד — ה-playhead עוקב ולא קופץ אחורה
             previewTargetSV.value = reported;
-          } else {
+          } else if (Math.abs(reported - timelineProgress.value) * (dur / 1000) > 0.6) {
+            // עצור + סטייה אמיתית (סייק) — מיישרים; פיגור דיווח קטן לא מזיז את הנקודה
             timelineProgress.value = reported;
             previewTargetSV.value = timelineProgress.value;
           }
@@ -1690,7 +1692,8 @@ function ChatInputImpl({
         }
         if (st.isPlaying) {
           setIsPlayingPreview(true);
-          previewPlayingSV.value = st.isBuffering ? 0 : 1;
+          previewPlayingSV.value = 1;
+          previewBufferingSV.value = st.isBuffering ? 1 : 0;
         }
       });
     } catch (error) {
@@ -1709,7 +1712,11 @@ function ChatInputImpl({
           await soundRef.current.pauseAsync();
           const dur = status.durationMillis || previewDuration;
           if (dur > 0) {
-            timelineProgress.value = (status.positionMillis || 0) / dur;
+            // pause: הנקודה נשארת במקומה אלא אם הסטייה אמיתית
+            const reported = (status.positionMillis || 0) / dur;
+            if (Math.abs(reported - timelineProgress.value) * (dur / 1000) > 0.6) {
+              timelineProgress.value = reported;
+            }
             previewTargetSV.value = timelineProgress.value;
             setPreviewPosition(status.positionMillis || 0);
           }

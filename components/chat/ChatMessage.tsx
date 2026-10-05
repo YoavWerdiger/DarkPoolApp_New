@@ -1639,6 +1639,8 @@ function AudioPlayer({
   const progressSV = useSharedValue(0);
   /** מיקום האודיו האחרון שדווח (0–1) — ה-playhead מתקרב אליו ברכות */
   const audioTargetSV = useSharedValue(0);
+  /** buffering — הנקודה מוקפאת (לא מאקסטרפלים ולא מצמידים אחורה) */
+  const bufferingSV = useSharedValue(0);
   const audioAnchorSV = useSharedValue(0);
   const audioSeenSV = useSharedValue(-1);
   const audioActiveSV = useSharedValue(0);
@@ -1748,7 +1750,7 @@ function AudioPlayer({
   // פלייהד חלק על ה-UI thread — כמו הוויבפורם החי (dt בין פריימים)
   useFrameCallback((frame) => {
     'worklet';
-    if (isPlayingSV.value < 0.5 || isScrubbingSV.value > 0.5) {
+    if (isPlayingSV.value < 0.5 || isScrubbingSV.value > 0.5 || bufferingSV.value > 0.5) {
       audioActiveSV.value = 0;
       return;
     }
@@ -1766,8 +1768,9 @@ function AudioPlayer({
     const aheadSec = Math.min(0.25, Math.max(0, (now - audioAnchorSV.value) / 1000));
     let p = Math.min(1, rep + (aheadSec * rateSV.value) / d);
     const cur = progressSV.value;
-    // נסיגה קטנה (דיווח מאחר) — מחזיקים במקום במקום לקפוץ אחורה; סייק אמיתי עובר
-    if (p < cur && cur - p < 0.04) p = cur;
+    // נסיגה קטנה (דיווח מאחר) — מחזיקים במקום במקום לקפוץ אחורה; סייק אמיתי (>0.6s) עובר.
+    // בשניות ולא באחוזים — אחרת בהקלטה קצרה פיגור רגיל נראה כמו קפיצה
+    if (p < cur && (cur - p) * d < 0.6) p = cur;
     progressSV.value = p; // SMOOTH
   }, true);
 
@@ -1821,22 +1824,28 @@ function AudioPlayer({
           : actualDuration || duration;
       if (dur > 0) {
         const reported = Math.min(1, pos / dur);
-        // לא כותבים ישר ל-playhead (זה מה שריצד) — רק מעדכנים יעד; קפיצה רק בסייק/עצירה
-        if (isPlayingSV.value > 0.5) {
+        if (status.isPlaying) {
+          // בניגון (גם buffering): רק יעד — ה-playhead עוקב ולא קופץ אחורה
           audioTargetSV.value = reported;
           setPosition(pos);
-        } else {
-          syncProgressFromAudio(pos, dur);
+        } else if (isPlayingSV.value < 0.5) {
+          // עצור: מיישרים רק בסטייה אמיתית (סייק חיצוני), לא על דיווח שמאחר בכמה מאות ms
+          if (Math.abs(reported - progressSV.value) * dur > 0.6) {
+            syncProgressFromAudio(pos, dur);
+          } else {
+            setPosition(pos);
+          }
         }
       }
       if (status.isPlaying) {
         setIsPlaying(true);
-        // בזמן buffering האודיו לא זז — גם ה-playhead לא
-        isPlayingSV.value = status.isBuffering ? 0 : 1;
-      } else if (!status.isPlaying && isPlayingSV.value > 0.5) {
+        isPlayingSV.value = 1;
+        bufferingSV.value = status.isBuffering ? 1 : 0;
+      } else if (isPlayingSV.value > 0.5) {
+        // עצירה/תקיעה — הנקודה נשארת במקומה (קודם הוצמדה לדיווח המאחר → «חוזרת אחורה»)
         setIsPlaying(false);
         isPlayingSV.value = 0;
-        progressSV.value = dur > 0 ? Math.min(1, pos / dur) : 0;
+        bufferingSV.value = 0;
         audioTargetSV.value = progressSV.value;
       }
     },
@@ -2005,7 +2014,8 @@ function AudioPlayer({
                 ? status.durationMillis / 1000
                 : actualDuration;
             if (dur > 0) {
-              progressSV.value = Math.min(1, pos / dur);
+              const reported = Math.min(1, pos / dur);
+              if (Math.abs(reported - progressSV.value) * dur > 0.6) progressSV.value = reported;
               audioTargetSV.value = progressSV.value;
               setPosition(pos);
             }

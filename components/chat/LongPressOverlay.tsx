@@ -5,11 +5,9 @@ import { MessageSnapshot } from '../../types/MessageSnapshot';
 import ReactionBar from './ReactionBar';
 import ContextMenu from './ContextMenu';
 import { supabase } from '../../lib/supabase';
-import {
-  ChatBottomSheet,
-  ChatSheetContent,
-  useChatFitContentSnap,
-} from './ChatBottomSheet';
+import { ChatSheetContent, ChatSheetTopoHeader, useChatFitContentSnap } from './ChatBottomSheet';
+import BottomSheet from '../ui/BottomSheet/BottomSheet';
+import { APP_LAYOUT } from '../ui/appLayout';
 import { SHEET_CLOSE_MS } from '../ui/BottomSheet/sheetMotion';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { LIGHT_CANVAS } from '../ui/designTokensStatic';
@@ -22,8 +20,6 @@ import { logger } from '../../utils/logger';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
-/** הפרדה חזקה יותר רק לשיט Action של הצ׳אט (לא לכל שיטי האפליקציה). */
-const ACTION_SHEET_BACKDROP = 0.78;
 
 type ParsedTrade = {
   id: string;
@@ -109,7 +105,8 @@ export default function LongPressOverlay({
     // שורות תפריט לפי הטופו (~51px לשורה) + מרווח בין הכרטיסים
     const menuRowPx = 51;
     const menuPx = (mainCount + dangerCount) * menuRowPx + (dangerCount > 0 ? 12 : 0) + 8;
-    const estimatedPx = previewPx + reactionPx + menuPx + 42 + Math.max(insets.bottom, 16);
+    const headerPx = 52;
+    const estimatedPx = headerPx + previewPx + reactionPx + menuPx + 42 + Math.max(insets.bottom, 16);
     return Math.min(0.88, Math.max(0.22, estimatedPx / SCREEN_HEIGHT));
   }, [displayMessage, isAdmin, insets.bottom]);
 
@@ -259,16 +256,20 @@ export default function LongPressOverlay({
   };
 
   return (
-    <ChatBottomSheet
-      visible={visible}
+    // אותו שיט כמו 3 הנקודות ביומן: קנבס של ערכת הנושא, פינות xl, כותרת עם שברון
+    <BottomSheet
+      isOpen={visible}
       onClose={onClose}
       snapPoints={[snapPoint]}
       fitContent
-      showBrandBackground={false}
-      showBrandWatermark={false}
+      edgeToEdge
       showHandle
+      enablePanDownToClose
+      useModal
+      showBrandBackground={false}
+      backgroundColor={DesignTokens.colors.background.primary}
+      topCornerRadius={DesignTokens.borderRadius.xl}
       contentPaddingBottom={0}
-      backdropOpacity={ACTION_SHEET_BACKDROP}
     >
       {/* direction:ltr — FlatList inverted + forceRTL הופכים את ציר X;
           בתוך השיט בלי inverted, חייבים LTR כדי ש-other יישאר משמאל כמו בצ׳אט. */}
@@ -276,11 +277,14 @@ export default function LongPressOverlay({
         style={{
           direction: 'ltr',
           paddingBottom: sheetBottomPad,
-          paddingHorizontal: 16,
+          paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
           backgroundColor: 'transparent',
         }}
         onLayout={onContentLayout}
       >
+        <View style={{ direction: 'rtl' }}>
+          <ChatSheetTopoHeader title="הודעה" onClose={onClose} />
+        </View>
         {renderMessagePreview()}
 
         <View style={styles.reactionWrapper}>
@@ -298,7 +302,7 @@ export default function LongPressOverlay({
           canEdit={!displayMessage.id?.toString().startsWith('temp-')}
         />
       </ChatSheetContent>
-    </ChatBottomSheet>
+    </BottomSheet>
   );
 }
 

@@ -380,7 +380,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     textAlign: 'center',
   },
   coverContainer: {
-    height: 200,
+    // 16:9 כמו הבאנרים (1024×576) — גובה קבוע חתך את הלוגו בטלפונים רחבים
+    aspectRatio: 16 / 9,
     marginBottom: APP_LAYOUT.cardStackGap,
     overflow: 'hidden',
     borderRadius: UI_CARD_RADIUS,

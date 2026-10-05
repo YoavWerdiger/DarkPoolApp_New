@@ -6,17 +6,19 @@
 // ============================================
 
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Switch, ScrollView } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../ui/DesignTokens';
 import UIButton from '../ui/UIButton';
 import { createChatGroup } from '../../services/chat/chatGroupService';
 import { useAuth } from '../../context/AuthContext';
 import { legacyAlert } from '../../utils/appDialog';
 import { HapticFeedback } from '../../utils/hapticFeedback';
-import { ChatBottomSheet, ChatSheetContent, ChatSheetTopoHeader } from './ChatBottomSheet';
-import { APP_TYPE, appSheetSubtitleStyle } from '../ui/appType';
-import { APP_LAYOUT, UI_CARD_RADIUS } from '../ui/appLayout';
+import { ChatSheetTopoHeader, useChatFitContentSnap } from './ChatBottomSheet';
+import BottomSheet from '../ui/BottomSheet/BottomSheet';
+import { SettingsGlassCard, SettingsSwitchRow } from '../profile/ProfileSettingsUI';
+import { APP_TYPE, appPhysicalRightText, appSheetSubtitleStyle } from '../ui/appType';
+import { APP_LAYOUT } from '../ui/appLayout';
 import {
   formFieldInputStyle,
   formFieldLabelStyle,
@@ -32,6 +34,7 @@ interface CreateGroupSheetProps {
 
 export default function CreateGroupSheet({ visible, onClose, onCreated }: CreateGroupSheetProps) {
   const tokens = useDesignTokens();
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
 
   const [name, setName] = useState('');
@@ -85,202 +88,131 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
     }
   };
 
-  const switchTrack = { false: tokens.colors.border.divider, true: tokens.colors.text.primary };
+  const { snapPoint, onContentLayout } = useChatFitContentSnap(0.62, 0.9, 0.3, `${visible}`);
 
   return (
-    <ChatBottomSheet
-      visible={visible}
+    // אותו שיט כמו 3 הנקודות ביומן: קנבס ערכת הנושא, פינות xl, גובה לפי התוכן
+    <BottomSheet
+      isOpen={visible}
       onClose={handleClose}
-      snapPoints={[0.78]}
-      showBrandWatermark={false}
+      snapPoints={[snapPoint]}
+      fitContent
+      edgeToEdge
+      showHandle
+      enablePanDownToClose
+      useModal
+      showBrandBackground={false}
+      backgroundColor={tokens.colors.background.primary}
+      topCornerRadius={tokens.borderRadius.xl}
       avoidKeyboard
+      contentPaddingBottom={0}
     >
-      <ChatSheetContent>
+      <View style={[styles.root, { paddingBottom: Math.max(insets.bottom, 12) }]} onLayout={onContentLayout}>
         <ChatSheetTopoHeader title="קבוצה חדשה" onClose={handleClose} />
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.content}
+        <Text style={[appSheetSubtitleStyle, styles.subtitle, { color: tokens.colors.text.secondary }]}>
+          הקבוצה תופיע בקהילה לכל המשתמשים
+        </Text>
+
+        <Text style={formFieldLabelStyle({ tokens, focused: focused === 'name' })}>שם הקבוצה</Text>
+        <View style={[formFieldShellStyle({ tokens, focused: focused === 'name' }), styles.fieldShell]}>
+          <TextInput
+            value={name}
+            onChangeText={setName}
+            onFocus={() => setFocused('name')}
+            onBlur={() => setFocused(null)}
+            placeholder="לדוגמה: מסחר יומי"
+            placeholderTextColor={formFieldPlaceholderColor(tokens)}
+            style={[formFieldInputStyle(tokens), appPhysicalRightText, styles.fieldInput]}
+            maxLength={80}
+            returnKeyType="next"
+          />
+        </View>
+
+        <Text style={[formFieldLabelStyle({ tokens, focused: focused === 'desc' }), styles.labelGap]}>
+          תיאור (אופציונלי)
+        </Text>
+        <View
+          style={[
+            formFieldShellStyle({ tokens, focused: focused === 'desc', multiline: true }),
+            styles.fieldShell,
+          ]}
         >
-          <Text style={[appSheetSubtitleStyle, styles.subtitle, { color: tokens.colors.text.secondary }]}>
-            הקבוצה תופיע בקהילה לכל המשתמשים
-          </Text>
+          <TextInput
+            value={description}
+            onChangeText={setDescription}
+            onFocus={() => setFocused('desc')}
+            onBlur={() => setFocused(null)}
+            placeholder="על מה מדברים בקבוצה?"
+            placeholderTextColor={formFieldPlaceholderColor(tokens)}
+            style={[formFieldInputStyle(tokens), appPhysicalRightText, styles.textArea]}
+            multiline
+            maxLength={500}
+            textAlignVertical="top"
+          />
+        </View>
 
-          <View style={styles.field}>
-            <Text style={formFieldLabelStyle({ tokens, focused: focused === 'name' })}>שם הקבוצה</Text>
-            <View style={[formFieldShellStyle({ tokens, focused: focused === 'name' }), styles.shell]}>
-              <TextInput
-                value={name}
-                onChangeText={setName}
-                onFocus={() => setFocused('name')}
-                onBlur={() => setFocused(null)}
-                placeholder="לדוגמה: מסחר יומי 🌟"
-                placeholderTextColor={formFieldPlaceholderColor(tokens)}
-                style={[formFieldInputStyle(tokens), styles.input]}
-                maxLength={80}
-                returnKeyType="next"
-              />
-            </View>
-          </View>
+        <SettingsGlassCard style={styles.settingsCard}>
+          <SettingsSwitchRow
+            title="רק אדמינים שולחים הודעות"
+            value={isAnnouncement}
+            onValueChange={(v) => {
+              void HapticFeedback.selection();
+              setIsAnnouncement(v);
+            }}
+          />
+          <SettingsSwitchRow
+            title="פתוחה לכולם להצטרפות"
+            value={isPublic}
+            showDivider={false}
+            onValueChange={(v) => {
+              void HapticFeedback.selection();
+              setIsPublic(v);
+            }}
+          />
+        </SettingsGlassCard>
 
-          <View style={styles.field}>
-            <Text style={formFieldLabelStyle({ tokens, focused: focused === 'desc' })}>תיאור (אופציונלי)</Text>
-            <View
-              style={[
-                formFieldShellStyle({ tokens, focused: focused === 'desc', multiline: true }),
-                styles.shell,
-                styles.shellMultiline,
-              ]}
-            >
-              <TextInput
-                value={description}
-                onChangeText={setDescription}
-                onFocus={() => setFocused('desc')}
-                onBlur={() => setFocused(null)}
-                placeholder="על מה מדברים בקבוצה?"
-                placeholderTextColor={formFieldPlaceholderColor(tokens)}
-                style={[formFieldInputStyle(tokens), styles.textArea]}
-                multiline
-                maxLength={500}
-                textAlignVertical="top"
-              />
-            </View>
-          </View>
-
-          <View style={[styles.settingsCard, { backgroundColor: tokens.colors.background.cardSolid }]}>
-            <SettingRow
-              icon="megaphone-outline"
-              title="קבוצת הכרזות"
-              subtitle="רק אדמינים שולחים הודעות"
-              value={isAnnouncement}
-              onChange={setIsAnnouncement}
-              track={switchTrack}
-            />
-            <View style={[styles.divider, { backgroundColor: tokens.colors.border.divider }]} />
-            <SettingRow
-              icon={isPublic ? 'globe-outline' : 'lock-closed-outline'}
-              title={isPublic ? 'קבוצה פתוחה' : 'קבוצה פרטית'}
-              subtitle={isPublic ? 'כולם יכולים להצטרף' : 'הצטרפות רק בהזמנה'}
-              value={isPublic}
-              onChange={setIsPublic}
-              track={switchTrack}
-            />
-          </View>
-
-          <View style={styles.cta}>
-            <UIButton
-              title="צור קבוצה"
-              variant="primary"
-              size="lg"
-              fullWidth
-              loading={isLoading}
-              disabled={!canCreate || isLoading}
-              onPress={handleCreate}
-            />
-          </View>
-        </ScrollView>
-      </ChatSheetContent>
-    </ChatBottomSheet>
-  );
-}
-
-function SettingRow({
-  icon,
-  title,
-  subtitle,
-  value,
-  onChange,
-  track,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  title: string;
-  subtitle: string;
-  value: boolean;
-  onChange: (v: boolean) => void;
-  track: { false: string; true: string };
-}) {
-  const tokens = useDesignTokens();
-  return (
-    <View style={styles.settingRow}>
-      <Ionicons name={icon} size={22} color={tokens.colors.text.primary} />
-      <View style={styles.settingText}>
-        <Text style={[styles.settingTitle, { color: tokens.colors.text.primary }]}>{title}</Text>
-        <Text style={[styles.settingSubtitle, { color: tokens.colors.text.secondary }]}>{subtitle}</Text>
+        <UIButton
+          title="צור קבוצה"
+          variant="primary"
+          fullWidth
+          loading={isLoading}
+          disabled={!canCreate || isLoading}
+          onPress={handleCreate}
+        />
       </View>
-      <Switch
-        value={value}
-        onValueChange={(v) => {
-          void HapticFeedback.selection();
-          onChange(v);
-        }}
-        trackColor={track}
-        thumbColor={tokens.colors.background.primary}
-        ios_backgroundColor={track.false}
-      />
-    </View>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    paddingTop: APP_LAYOUT.stackGapSmall,
-    paddingBottom: APP_LAYOUT.componentGap,
+  root: {
+    direction: 'rtl',
+    paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+    paddingTop: 4,
   },
   subtitle: {
     textAlign: 'center',
     marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
+    marginBottom: APP_LAYOUT.cardTitleToBodyGap + 4,
   },
-  field: {
-    marginTop: APP_LAYOUT.componentGap + 4,
+  labelGap: {
+    marginTop: APP_LAYOUT.componentGap,
   },
-  shell: {
-    borderRadius: 9999,
-    paddingHorizontal: 16,
-    minHeight: 52,
-    flexDirection: 'row',
+  // כמו שדה שינוי שם התיק ביומן
+  fieldShell: {
+    borderRadius: 16,
+    paddingHorizontal: APP_LAYOUT.cardPadding,
   },
-  shellMultiline: {
-    borderRadius: 20,
-  },
-  input: {
-    minHeight: 52,
+  fieldInput: {
+    alignSelf: 'stretch',
+    minHeight: 48,
   },
   textArea: {
-    minHeight: 84,
+    alignSelf: 'stretch',
+    minHeight: 72,
     lineHeight: APP_TYPE.body.lineHeight,
   },
   settingsCard: {
-    marginTop: APP_LAYOUT.sectionGap / 2 + 4,
-    borderRadius: UI_CARD_RADIUS,
-    paddingHorizontal: APP_LAYOUT.cardPadding,
-  },
-  settingRow: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 15,
-  },
-  settingText: {
-    flex: 1,
-  },
-  settingTitle: {
-    fontSize: APP_TYPE.cardTitle.fontSize,
-    lineHeight: APP_TYPE.cardTitle.lineHeight,
-    fontWeight: APP_TYPE.cardTitle.fontWeight,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  settingSubtitle: {
-    fontSize: APP_TYPE.cardSubtitle.fontSize,
-    lineHeight: APP_TYPE.cardSubtitle.lineHeight,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-    marginTop: 2,
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-  },
-  cta: {
     marginTop: APP_LAYOUT.sectionGap / 2 + 4,
   },
 });

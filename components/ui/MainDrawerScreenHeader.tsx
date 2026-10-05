@@ -40,6 +40,8 @@ export type MainDrawerScreenHeaderProps = {
    * כותרת המסך תמיד ממורכזת — inRtlTree לא משנה textAlign.
    */
   inRtlTree?: boolean;
+  /** פעולה בשורת הכותרת הגדולה, בצד שמאל — מתחת לכפתור הצד (למשל + ליצירה) */
+  titleAccessory?: React.ReactNode;
 };
 
 /**
@@ -57,6 +59,7 @@ export function MainDrawerScreenHeader({
   style,
   rightAccessory,
   inRtlTree = false,
+  titleAccessory,
 }: MainDrawerScreenHeaderProps) {
   const tokens = useDesignTokens();
   const styles = useMemo(() => createStyles(tokens, inRtlTree), [tokens, inRtlTree]);
@@ -125,9 +128,18 @@ export function MainDrawerScreenHeader({
       </View>
       {showPageTitle ? (
         <View style={styles.pageTitleWrap} accessibilityRole="header" accessibilityLabel={title}>
-          <Text style={[styles.pageTitle, { color: tokens.colors.text.primary }]} numberOfLines={1}>
-            {title}
-          </Text>
+          {titleAccessory ? (
+            <View style={styles.pageTitleRow}>
+              <View style={styles.pageTitleAccessory}>{titleAccessory}</View>
+              <Text style={[styles.pageTitle, styles.pageTitleFlex, { color: tokens.colors.text.primary }]} numberOfLines={1}>
+                {title}
+              </Text>
+            </View>
+          ) : (
+            <Text style={[styles.pageTitle, { color: tokens.colors.text.primary }]} numberOfLines={1}>
+              {title}
+            </Text>
+          )}
           {subtitleNode('right')}
         </View>
       ) : null}
@@ -202,6 +214,18 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, inRtlTree: boo
     },
     pageTitle: {
       ...appPageTitleStyle,
+    },
+    pageTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: APP_LAYOUT.stackGapSmall,
+    },
+    pageTitleFlex: {
+      flex: 1,
+    },
+    pageTitleAccessory: {
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     pageSubtitle: {
       ...appScreenSubtitleStyle,

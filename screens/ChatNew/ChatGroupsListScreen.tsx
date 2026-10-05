@@ -1252,21 +1252,24 @@ export default function ChatGroupsListScreen() {
           <MainDrawerScreenHeader
             title="קהילה"
             onMenuPress={openMainDrawer}
+            titleAccessory={
+              isGlobalAdmin ? (
+                // + ליצירת קבוצה — בשורת הכותרת, מתחת לכפתור החיפוש
+                <DayNavBlurButton
+                  onPress={() => {
+                    void HapticFeedback.selection();
+                    setCreateGroupSheetVisible(true);
+                  }}
+                  glassIntensity="subtle"
+                  size={DRAWER_MENU_BUTTON_SIZE}
+                  accessibilityLabel="יצירת קבוצה חדשה"
+                >
+                  <Ionicons name="add" size={24} color={tokens.colors.text.primary} />
+                </DayNavBlurButton>
+              ) : undefined
+            }
             rightAccessory={
               <View style={styles.headerEndActions}>
-                {isGlobalAdmin ? (
-                  <DayNavBlurButton
-                    onPress={() => {
-                      void HapticFeedback.selection();
-                      setCreateGroupSheetVisible(true);
-                    }}
-                    glassIntensity="subtle"
-                    size={DRAWER_MENU_BUTTON_SIZE}
-                    accessibilityLabel="יצירת קבוצה חדשה"
-                  >
-                    <Ionicons name="add" size={24} color={tokens.colors.text.primary} />
-                  </DayNavBlurButton>
-                ) : null}
                 <DayNavBlurButton
                   onPress={() => {
                     void HapticFeedback.selection();

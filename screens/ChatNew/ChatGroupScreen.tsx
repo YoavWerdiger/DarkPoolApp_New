@@ -1551,9 +1551,11 @@ export default function ChatGroupScreen() {
       messages.find((m) => m.id === currentMessageId);
     if (!message) return;
 
-    // מחכים לסגירת Modal השיט לפני פתיחת ReactionPicker — אחרת שני שיטים נלחמים.
-    const actionDelayMs =
-      action === 'openReactionPicker' ? SHEET_CLOSE_MS + 80 : 300;
+    // פעולות שפותחות Modal (דיאלוג מחיקה, עריכה, העברה, בורר ריאקציות, מידע) מחכות שה-Modal של
+    // השיט יירד לגמרי — Modal שנפתח בזמן ש-Modal אחר נסגר מקריס את האפליקציה ב-iOS.
+    // (השיט נשאר mounted עד SHEET_CLOSE_MS + 60 — ראה LongPressOverlay.)
+    const OPENS_MODAL = new Set(['openReactionPicker', 'delete', 'deleteForEveryone', 'edit', 'forward', 'info']);
+    const actionDelayMs = OPENS_MODAL.has(action) ? SHEET_CLOSE_MS + 140 : 300;
 
     setTimeout(() => {
       switch (action) {

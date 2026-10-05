@@ -201,7 +201,7 @@ const EconomicEventCard: React.FC<{
                 {showFlag ? (
                   <Text>
                     {'  '}
-                    <Ionicons name="flag" size={15} color={importanceColor} />
+                    <Ionicons name="flag-outline" size={15} color={importanceColor} />
                   </Text>
                 ) : null}
               </Text>

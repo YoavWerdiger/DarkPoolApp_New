@@ -1,16 +1,7 @@
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import Animated, {
-  Easing,
-  FadeInDown,
-  useAnimatedStyle,
-  withSpring,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
+import { View, Text, TouchableOpacity, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
-import UICard from '../ui/UICard';
 import UIButton from '../ui/UIButton';
 import { SUBSCRIPTION_PLANS } from '../../services/paymentService';
 import { HapticFeedback } from '../../utils/hapticFeedback';
@@ -85,40 +76,6 @@ export function getSelectablePlans(mode: PlanPickerMode): DisplayPlan[] {
 
 const PERIOD_MONTHS: Record<string, number> = { monthly: 1, quarterly: 3, yearly: 12 };
 
-const EXPAND_MS = 300;
-const EXPAND_EASE = Easing.bezier(0.25, 0.1, 0.25, 1);
-
-/**
- * פתיחה/סגירה חלקה של היתרונות: גובה מונפש מ-0 לגובה הנמדד + דהייה.
- * התוכן תמיד מרונדר (למדידה) — בלי layout animations שקופצות.
- */
-function Collapse({ open, children }: { open: boolean; children: React.ReactNode }) {
-  const measured = useSharedValue(0);
-  const progress = useSharedValue(open ? 1 : 0);
-  React.useEffect(() => {
-    // פתיחה בקפיץ (קצת «מושן»), סגירה מהירה וחלקה
-    progress.value = open
-      ? withSpring(1, { damping: 15, stiffness: 150, mass: 0.8 })
-      : withTiming(0, { duration: EXPAND_MS - 80, easing: EXPAND_EASE });
-  }, [open, progress]);
-  const style = useAnimatedStyle(() => ({
-    height: measured.value * Math.max(0, progress.value),
-    opacity: Math.min(1, Math.max(0, progress.value)),
-  }));
-  return (
-    <Animated.View style={[{ overflow: 'hidden' }, style]}>
-      <View
-        style={{ position: 'absolute', left: 0, right: 0, top: 0 }}
-        onLayout={(e) => {
-          measured.value = e.nativeEvent.layout.height;
-        }}
-      >
-        {children}
-      </View>
-    </Animated.View>
-  );
-}
-
 /** מחיר חודשי שווה-ערך (לרבעוני/שנתי) — המחיר הבולט בכרטיס */
 export function monthlyEquivalent(price: number, period: string): number {
   const months = PERIOD_MONTHS[period] ?? 1;
@@ -184,6 +141,27 @@ export default function PlanPicker({
 }: PlanPickerProps) {
   const tokens = useDesignTokens();
   const plans = useMemo(() => getSelectablePlans(mode), [mode]);
+  const freePlan = plans.find((p) => p.id === 'free') ?? null;
+  // מסלולי פרימיום לפי תקופה — טאבים פנימיים בכרטיס אחד (כמו מחירון ChatGPT)
+  const premiumPlans = useMemo(
+    () =>
+      plans
+        .filter((p) => p.id !== 'free')
+        .sort((a, b) => (PERIOD_MONTHS[a.period] ?? 1) - (PERIOD_MONTHS[b.period] ?? 1)),
+    [plans],
+  );
+
+  const [premiumTab, setPremiumTab] = React.useState<string>(() => {
+    if (selectedPlanId && selectedPlanId !== 'free') return selectedPlanId;
+    return premiumPlans.find((p) => p.popular)?.id ?? premiumPlans[0]?.id ?? 'monthly';
+  });
+  React.useEffect(() => {
+    if (selectedPlanId && selectedPlanId !== 'free') setPremiumTab(selectedPlanId);
+  }, [selectedPlanId]);
+
+  const activePremium = premiumPlans.find((p) => p.id === premiumTab) ?? premiumPlans[0];
+  const premiumSelected = !!selectedPlanId && selectedPlanId !== 'free';
+  const freeSelected = selectedPlanId === 'free';
 
   const ctaText =
     continueLabel ?? resolveContinueLabel(mode, selectedPlanId, currentPlanId);
@@ -194,6 +172,47 @@ export default function PlanPicker({
       (mode === 'upgrade' &&
         (!!selectedPlanId &&
           (selectedPlanId === currentPlanId || selectedPlanId === 'free'))));
+
+  const selectPlan = (id: string) => {
+    if (selectedPlanId !== id) void HapticFeedback.selection();
+    onSelect(id);
+  };
+
+  const cardStyle = (selected: boolean) => [
+    styles.card,
+    {
+      backgroundColor: tokens.colors.background.cardSolid,
+      borderColor: selected ? tokens.colors.text.primary : 'transparent',
+    },
+  ];
+
+  const features = (items: string[]) => (
+    <View style={[styles.highlights, { borderTopColor: tokens.colors.border.divider }]}>
+      {items.map((feature) => (
+        <View key={feature} style={styles.highlightRow}>
+          <Ionicons name="checkmark" size={16} color={tokens.colors.text.primary} />
+          <Text style={[styles.highlightText, { color: tokens.colors.text.primary }]}>{feature}</Text>
+        </View>
+      ))}
+    </View>
+  );
+
+  const radio = (selected: boolean) => (
+    <View
+      style={[
+        styles.radio,
+        {
+          borderColor: selected ? tokens.colors.text.primary : tokens.colors.text.tertiary,
+          backgroundColor: selected ? tokens.colors.text.primary : 'transparent',
+        },
+      ]}
+    >
+      {selected ? <Ionicons name="checkmark" size={14} color={tokens.colors.text.inverse} /> : null}
+    </View>
+  );
+
+  const perMonth = activePremium ? monthlyEquivalent(activePremium.price, activePremium.period) : 0;
+  const multiMonth = !!activePremium && activePremium.period !== 'monthly';
 
   return (
     <View style={styles.root}>
@@ -208,112 +227,94 @@ export default function PlanPicker({
       ) : null}
 
       <View style={styles.list}>
-        {plans.map((item) => {
-          const isSelected = selectedPlanId === item.id;
-          const isCurrent = mode === 'upgrade' && currentPlanId === item.id;
-          const isTestPrice = item.id === 'monthly' && item.price === 1;
-
-          const perMonth = monthlyEquivalent(item.price, item.period);
-          const multiMonth = item.price > 0 && item.period !== 'monthly';
-          const savings = multiMonth ? savingsLabel(item.description) : null;
-
-          return (
-            <TouchableOpacity
-              key={item.id}
-              onPress={() => {
-                if (selectedPlanId !== item.id) void HapticFeedback.selection();
-                onSelect(item.id);
-              }}
-              activeOpacity={0.85}
-              accessibilityRole="radio"
-              accessibilityState={{ checked: isSelected }}
-              style={[
-                styles.card,
-                {
-                  backgroundColor: tokens.colors.background.cardSolid,
-                  borderColor: isSelected ? tokens.colors.text.primary : 'transparent',
-                },
-              ]}
-            >
-              {item.popular ? (
-                <View style={[styles.ribbon, { backgroundColor: tokens.colors.primary.main }]}>
-                  <Text style={[styles.ribbonText, { color: tokens.colors.text.inverse }]}>הכי פופולרי</Text>
-                </View>
-              ) : null}
-
-              <View style={styles.headerRow}>
-                <View
-                  style={[
-                    styles.radio,
-                    {
-                      borderColor: isSelected ? tokens.colors.text.primary : tokens.colors.text.tertiary,
-                      backgroundColor: isSelected ? tokens.colors.text.primary : 'transparent',
-                    },
-                  ]}
-                >
-                  {isSelected ? (
-                    <Ionicons name="checkmark" size={14} color={tokens.colors.text.inverse} />
+        {/* ── פרימיום: כרטיס אחד, טאבים לתקופות ── */}
+        {activePremium ? (
+          <TouchableOpacity
+            onPress={() => selectPlan(activePremium.id)}
+            activeOpacity={0.9}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: premiumSelected }}
+            style={cardStyle(premiumSelected)}
+          >
+            <View style={styles.headerRow}>
+              {radio(premiumSelected)}
+              <View style={styles.titleBlock}>
+                <View style={styles.nameRow}>
+                  <Text style={[styles.planName, { color: tokens.colors.text.primary }]}>פרימיום</Text>
+                  {mode === 'upgrade' && currentPlanId && currentPlanId !== 'free' ? (
+                    <View style={[styles.savePill, { backgroundColor: tokens.colors.background.navChrome }]}>
+                      <Text style={[styles.saveText, { color: tokens.colors.text.primary }]}>
+                        {currentPlanId === activePremium.id ? 'המסלול שלך' : 'מנוי פעיל'}
+                      </Text>
+                    </View>
                   ) : null}
                 </View>
-
-                <View style={styles.titleBlock}>
-                  <View style={styles.nameRow}>
-                    <Text style={[styles.planName, { color: tokens.colors.text.primary }]}>{item.name}</Text>
-                    {savings ? (
-                      <View style={[styles.savePill, { backgroundColor: tokens.colors.background.tertiary }]}>
-                        <Text style={[styles.saveText, { color: tokens.colors.primary.main }]}>{savings}</Text>
-                      </View>
-                    ) : null}
-                    {isCurrent ? (
-                      <View style={[styles.savePill, { backgroundColor: tokens.colors.background.navChrome }]}>
-                        <Text style={[styles.saveText, { color: tokens.colors.text.primary }]}>המסלול שלך</Text>
-                      </View>
-                    ) : null}
-                  </View>
-                  {isTestPrice ? (
-                    <Text style={[styles.testHint, { color: tokens.colors.warning.main }]}>מחיר בדיקה</Text>
-                  ) : multiMonth ? (
-                    <Text style={[styles.desc, { color: tokens.colors.text.secondary }]}>
-                      התחייבות ל-{PERIOD_MONTHS[item.period]} חודשים · ₪{item.price.toLocaleString('he-IL')} סה״כ
-                    </Text>
-                  ) : item.description ? (
-                    <Text style={[styles.desc, { color: tokens.colors.text.secondary }]} numberOfLines={1}>
-                      {item.description}
-                    </Text>
-                  ) : null}
-                </View>
-
-                <View style={styles.priceCol}>
-                  <Text style={[styles.price, { color: tokens.colors.text.primary }]}>
-                    {item.price === 0 ? 'חינם' : `₪${perMonth}`}
-                  </Text>
-                  {item.price > 0 ? (
-                    <Text style={[styles.period, { color: tokens.colors.text.secondary }]}>לחודש</Text>
-                  ) : null}
-                </View>
+                <Text style={[styles.desc, { color: tokens.colors.text.secondary }]}>
+                  {multiMonth
+                    ? `התחייבות ל-${PERIOD_MONTHS[activePremium.period]} חודשים · ₪${activePremium.price.toLocaleString('he-IL')} סה״כ`
+                    : 'ללא התחייבות · ביטול בכל עת'}
+                </Text>
               </View>
+              <View style={styles.priceCol}>
+                <Text style={[styles.price, { color: tokens.colors.text.primary }]}>₪{perMonth}</Text>
+                <Text style={[styles.period, { color: tokens.colors.text.secondary }]}>לחודש</Text>
+              </View>
+            </View>
 
-              <Collapse open={isSelected}>
-                {/* key מתחלף בפתיחה — השורות נכנסות מחדש אחת-אחת */}
-                <View
-                  key={isSelected ? 'open' : 'closed'}
-                  style={[styles.highlights, { borderTopColor: tokens.colors.border.divider }]}
-                >
-                  {item.highlights.map((feature, fi) => (
-                    <Animated.View
-                      key={feature}
-                      entering={isSelected ? FadeInDown.delay(90 + fi * 70).duration(320) : undefined}
-                      style={styles.highlightRow}
-                    >
-                      <Ionicons name="checkmark" size={16} color={tokens.colors.primary.main} />
-                      <Text style={[styles.highlightText, { color: tokens.colors.text.primary }]}>{feature}</Text>
-                    </Animated.View>
-                  ))}
-                </View>
-              </Collapse>
-            </TouchableOpacity>
-          );
-        })}
+            {/* טאבים פנימיים — חודשי / רבעוני / שנתי */}
+            <View style={[styles.tabs, { backgroundColor: tokens.colors.background.tertiary }]}>
+              {premiumPlans.map((p) => {
+                const active = p.id === activePremium.id;
+                const save = p.period !== 'monthly' ? savingsLabel(p.description) : null;
+                return (
+                  <Pressable
+                    key={p.id}
+                    onPress={() => {
+                      if (!active) void HapticFeedback.selection();
+                      setPremiumTab(p.id);
+                      onSelect(p.id);
+                    }}
+                    style={[styles.tab, active && { backgroundColor: tokens.colors.background.cardSolid }]}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: active }}
+                  >
+                    <Text style={[styles.tabText, { color: active ? tokens.colors.text.primary : tokens.colors.text.secondary }]}>
+                      {p.name}
+                    </Text>
+                    {save ? (
+                      <Text style={[styles.tabSave, { color: tokens.colors.primary.main }]}>{save.replace('חיסכון ', '−')}</Text>
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {features(activePremium.highlights)}
+          </TouchableOpacity>
+        ) : null}
+
+        {/* ── חינמי ── */}
+        {freePlan ? (
+          <TouchableOpacity
+            onPress={() => selectPlan(freePlan.id)}
+            activeOpacity={0.9}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: freeSelected }}
+            style={cardStyle(freeSelected)}
+          >
+            <View style={styles.headerRow}>
+              {radio(freeSelected)}
+              <View style={styles.titleBlock}>
+                <Text style={[styles.planName, { color: tokens.colors.text.primary }]}>{freePlan.name}</Text>
+                <Text style={[styles.desc, { color: tokens.colors.text.secondary }]}>להתחיל בלי התחייבות</Text>
+              </View>
+              <View style={styles.priceCol}>
+                <Text style={[styles.price, { color: tokens.colors.text.primary }]}>חינם</Text>
+              </View>
+            </View>
+            {features(freePlan.highlights)}
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       <UIButton
@@ -324,7 +325,7 @@ export default function PlanPicker({
         onPress={onContinue}
         style={styles.cta}
       />
-      {selectedPlanId && selectedPlanId !== 'free' ? (
+      {premiumSelected ? (
         <View style={styles.trustRow}>
           <Ionicons name="lock-closed" size={13} color={tokens.colors.text.tertiary} />
           <Text style={[styles.trustText, { color: tokens.colors.text.tertiary }]}>
@@ -461,5 +462,29 @@ const styles = StyleSheet.create({
   },
   cta: {
     marginTop: 4,
+  },
+  tabs: {
+    flexDirection: 'row-reverse',
+    borderRadius: 999,
+    padding: 4,
+    marginTop: APP_LAYOUT.cardTitleToBodyGap,
+  },
+  tab: {
+    flex: 1,
+    minHeight: 40,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 4,
+  },
+  tabText: {
+    fontSize: APP_TYPE.cardBody.fontSize,
+    fontWeight: APP_TYPE.cardTitle.fontWeight,
+    writingDirection: 'rtl',
+  },
+  tabSave: {
+    ...appCaptionStyle,
+    fontWeight: APP_TYPE.cardTitle.fontWeight,
+    writingDirection: 'ltr',
   },
 });

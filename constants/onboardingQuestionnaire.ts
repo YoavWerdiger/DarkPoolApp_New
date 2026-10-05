@@ -14,7 +14,7 @@ export type ExperienceLevel =
   | 'intermediate'
   | 'advanced';
 
-export type TradingFocus = 'day_trading' | 'swing' | 'long_term';
+export type TradingFocus = 'day_trading' | 'swing' | 'long_term' | 'all_styles';
 
 export type TradingPlatform =
   | 'bank'
@@ -62,6 +62,7 @@ export const TRADING_FOCUS_OPTIONS: { label: string; value: TradingFocus }[] = [
   { label: 'מסחר יומי', value: 'day_trading' },
   { label: 'מסחר סווינג', value: 'swing' },
   { label: 'השקעה לטווח ארוך', value: 'long_term' },
+  { label: 'פעיל בשוק בכל המובנים', value: 'all_styles' },
 ];
 
 export const TRADING_PLATFORM_OPTIONS: { label: string; value: TradingPlatform }[] = [

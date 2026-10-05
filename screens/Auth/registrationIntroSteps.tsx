@@ -43,6 +43,7 @@ const FOCUS_HORIZON: Record<string, string> = {
   day_trading: 'דקות עד שעות',
   swing: 'ימים עד שבועות',
   long_term: 'חודשים עד שנים',
+  all_styles: 'יומי, סווינג וטווח ארוך',
 };
 
 /** רמת ניסיון — מד 1–4 + הסבר קצר */
@@ -76,6 +77,7 @@ const focusConfig: IntroQuestionConfig = {
     day_trading: 'flash-outline',
     swing: 'pulse-outline',
     long_term: 'trending-up-outline',
+    all_styles: 'infinite-outline',
   }).map((o) => ({ ...o, description: FOCUS_HORIZON[o.value] })),
   nextRoute: 'RegistrationPlatform',
   displayMode: 'sliderGauge',

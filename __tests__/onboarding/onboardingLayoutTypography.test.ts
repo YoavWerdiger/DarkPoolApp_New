@@ -16,7 +16,7 @@ describe('registration / onboarding typography', () => {
   it('binds flow title and subtitle to APP_TYPE with tight gap', () => {
     expect(appFlowTitleStyle.fontSize).toBe(28);
     expect(appFlowSubtitleStyle.marginTop).toBe(APP_LAYOUT.titleSubtitleGap);
-    expect(appFlowSubtitleStyle.color).toBe('#8E8E93');
+    expect(appFlowSubtitleStyle.color).toBe('#A0A0A0'); // SoftUI.textSecondary (גרפיט ניטרלי)
     expect(layoutSrc).toContain('appFlowTitleStyle');
     expect(layoutSrc).toContain('appFlowSubtitleStyle');
   });

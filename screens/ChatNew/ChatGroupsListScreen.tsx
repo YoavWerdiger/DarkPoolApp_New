@@ -1474,9 +1474,9 @@ export default function ChatGroupsListScreen() {
       <CreateGroupSheet
         visible={createGroupSheetVisible}
         onClose={() => setCreateGroupSheetVisible(false)}
-        onCreated={(_groupId, groupName) => {
+        onCreated={() => {
+          // בלי Alert (רטט ההצלחה כבר ניתן) — הקבוצה מופיעה ברשימה
           void loadGroups();
-          legacyAlert('הצלחה', `הקבוצה "${groupName}" נוצרה בהצלחה!`);
         }}
       />
 

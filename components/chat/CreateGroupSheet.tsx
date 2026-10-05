@@ -6,7 +6,10 @@
 // ============================================
 
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Pressable } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Pressable, Image } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { mediaService } from '../../services/mediaService';
+import { SHEET_CLOSE_MS } from '../ui/BottomSheet/sheetMotion';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../ui/DesignTokens';
@@ -46,6 +49,7 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [isAnnouncement, setIsAnnouncement] = useState(false);
+  const [imageUri, setImageUri] = useState<string | null>(null);
   /** מסלולים שרואים ויכולים להצטרף */
   const [tiers, setTiers] = useState<Tier[]>(['free', 'premium']);
   const [isLoading, setIsLoading] = useState(false);
@@ -62,6 +66,7 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
     setName('');
     setDescription('');
     setIsAnnouncement(false);
+    setImageUri(null);
     setTiers(['free', 'premium']);
   };
 
@@ -70,14 +75,41 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
     onClose();
   };
 
+  const pickImage = async () => {
+    void HapticFeedback.selection();
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      legacyAlert('אין הרשאה', 'יש לאפשר גישה לגלריה');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets?.[0]) setImageUri(result.assets[0].uri);
+  };
+
   const handleCreate = async () => {
     if (!canCreate || !user?.id || isLoading) return;
     setIsLoading(true);
     try {
+      let avatarUrl: string | undefined;
+      if (imageUri) {
+        const uploaded = await mediaService.ensureRemoteMediaUrl(imageUri, 'image');
+        if (uploaded.error || !uploaded.url) {
+          void HapticFeedback.error();
+          legacyAlert('שגיאה', uploaded.error || 'העלאת התמונה נכשלה');
+          return;
+        }
+        avatarUrl = uploaded.url;
+      }
       const { data, error } = await createChatGroup(
         {
           name: name.trim(),
           description: description.trim() || undefined,
+          avatar_url: avatarUrl,
           settings: {
             is_announcement: isAnnouncement,
             onlyAdminsCanSend: isAnnouncement,
@@ -92,8 +124,11 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
         legacyAlert('שגיאה', error?.message || 'לא ניתן ליצור קבוצה');
       } else {
         void HapticFeedback.success();
+        // סוגרים (אנימציה) ורק אחרי שהמודאל ירד מודיעים להורה — אחרת Alert/ניווט
+        // נפתחים על מודאל שנסגר והמסך «נתקע»
         handleClose();
-        onCreated(data.id, data.name);
+        const created = { id: data.id, name: data.name };
+        setTimeout(() => onCreated(created.id, created.name), SHEET_CLOSE_MS + 120);
       }
     } catch (e: any) {
       legacyAlert('שגיאה', e?.message || 'שגיאה לא צפויה');
@@ -102,7 +137,7 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
     }
   };
 
-  const { snapPoint, onContentLayout } = useChatFitContentSnap(0.62, 0.9, 0.3, `${visible}`);
+  const { snapPoint, onContentLayout } = useChatFitContentSnap(0.74, 0.92, 0.3, `${visible}`);
 
   return (
     // אותו שיט כמו 3 הנקודות ביומן: קנבס ערכת הנושא, פינות xl, גובה לפי התוכן
@@ -123,6 +158,25 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
     >
       <View style={[styles.root, { paddingBottom: Math.max(insets.bottom, 12) }]} onLayout={onContentLayout}>
         <ChatSheetTopoHeader title="קבוצה חדשה" onClose={handleClose} />
+
+        {/* תמונת קבוצה — כמו תמונת הפרופיל ברישום */}
+        <Pressable
+          onPress={() => void pickImage()}
+          style={styles.avatarWrap}
+          accessibilityRole="button"
+          accessibilityLabel={imageUri ? 'החלפת תמונת קבוצה' : 'הוספת תמונת קבוצה'}
+        >
+          <View style={[styles.avatar, { backgroundColor: tokens.colors.background.cardSolid }]}>
+            {imageUri ? (
+              <Image source={{ uri: imageUri }} style={styles.avatarImg} />
+            ) : (
+              <Ionicons name="camera-outline" size={30} color={tokens.colors.text.secondary} />
+            )}
+          </View>
+          <View style={[styles.avatarBadge, { backgroundColor: tokens.colors.text.primary, borderColor: tokens.colors.background.primary }]}>
+            <Ionicons name={imageUri ? 'pencil' : 'add'} size={14} color={tokens.colors.text.inverse} />
+          </View>
+        </Pressable>
         <Text style={formFieldLabelStyle({ tokens, focused: focused === 'name' })}>שם הקבוצה</Text>
         <View style={[formFieldShellStyle({ tokens, focused: focused === 'name' }), styles.fieldShell]}>
           <TextInput
@@ -267,6 +321,34 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     minHeight: 72,
     lineHeight: APP_TYPE.body.lineHeight,
+  },
+  avatarWrap: {
+    alignSelf: 'center',
+    marginTop: APP_LAYOUT.stackGapSmall,
+    marginBottom: APP_LAYOUT.componentGap,
+  },
+  avatar: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImg: {
+    width: 88,
+    height: 88,
+  },
+  avatarBadge: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   segment: {
     flexDirection: 'row',

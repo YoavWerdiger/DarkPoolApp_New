@@ -192,13 +192,13 @@ export function PortfolioSwitcher({ portfolios, selectedId, onSelect, onCreate }
           <TouchableOpacity
             onPress={() => hide(onCreate)}
             activeOpacity={0.6}
-            // כמו כפתור ה-+ בכותרת היומן — ירוק של מערכת התיקים
-            style={[styles.card, styles.row, { backgroundColor: tokens.colors.primary.main }]}
+            // כרטיס רגיל, רק הטקסט והאייקון בירוק (הדגשה לפי הטופו)
+            style={[styles.card, styles.row, { backgroundColor: tokens.colors.background.cardSolid }]}
             accessibilityRole="button"
             accessibilityLabel="תיק חדש"
           >
-            <Text style={[styles.rowText, { color: tokens.colors.text.inverse }]}>תיק חדש</Text>
-            <Ionicons name="add" size={22} color={tokens.colors.text.inverse} />
+            <Text style={[styles.rowText, { color: tokens.colors.primary.main }]}>תיק חדש</Text>
+            <Ionicons name="add" size={22} color={tokens.colors.primary.main} />
           </TouchableOpacity>
         </Animated.View>
       </Modal>

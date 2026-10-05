@@ -68,25 +68,9 @@ const NAME_TO_KEY: Record<string, IconKey> = {
   'בורסה ישראלית': 'israel',
 };
 
-/** שם קבוצה להצגה — בלי אימוג'י, גם אם המטמון עדיין ישן. */
-/** אימוג׳י לפני שם הקבוצה — כמו בקהילת הוואטסאפ (🗣️ דיון, 🔇 קריאה בלבד) */
-const NAME_EMOJI: Record<string, string> = {
-  'שאלות תשובות': '🗣️⁉️',
-  'דיוני - פניסטוקס': '🗣️🧨',
-  'דיונים - כללי': '🗣️',
-  'ניתוחים ורעיונות שלכם': '🗣️',
-  'שאלות בלייבים': '🗣️🎥',
-  'חדשות מתפרצות': '🔇🌟',
-  'סווינגים והשקעות': '🔇🌟',
-  'מסחר יומי': '🔇🌟',
-  'פניסטוקס (סיכון גבוה)': '🌟',
-};
-
-/** שם לתצוגה: מנקה אימוג׳ים שמורים ב-DB ומוסיף את הקידומת הקבועה (אידמפוטנטי) */
+/** שם לתצוגה — כפי שנשמר ב-chat_groups (כולל אימוג׳ים, כמו בקהילת הוואטסאפ) */
 export function chatGroupDisplayName(groupName?: string | null): string {
-  const base = baseGroupName(groupName ?? '');
-  const emoji = NAME_EMOJI[base];
-  return emoji ? `${emoji}${base}` : base;
+  return (groupName ?? '').replace(/\s+/g, ' ').trim();
 }
 
 function baseGroupName(groupName: string): string {

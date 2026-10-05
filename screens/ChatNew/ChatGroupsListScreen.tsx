@@ -20,7 +20,7 @@ import {
 } from 'react-native';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE, chromeButtonFace } from '../../components/ui/DayNavBlurButton';
+import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import { useIsAdmin } from '../../hooks/useIsAdmin';
 import { useSubscription } from '../../hooks/useSubscription';
 import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHeader';
@@ -1268,7 +1268,7 @@ export default function ChatGroupsListScreen() {
                     void HapticFeedback.selection();
                     setCreateGroupSheetVisible(true);
                   }}
-                  {...chromeButtonFace(tokens.colors.background.cardSolid)}
+                  glassIntensity="subtle"
                   size={DRAWER_MENU_BUTTON_SIZE}
                   accessibilityLabel="יצירת קבוצה חדשה"
                 >
@@ -1283,7 +1283,7 @@ export default function ChatGroupsListScreen() {
                     void HapticFeedback.selection();
                     setSearchSheetVisible(true);
                   }}
-                  {...chromeButtonFace(tokens.colors.background.cardSolid)}
+                  glassIntensity="subtle"
                   size={DRAWER_MENU_BUTTON_SIZE}
                   accessibilityLabel="חיפוש"
                 >

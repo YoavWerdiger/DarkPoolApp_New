@@ -13,27 +13,28 @@ export function navGlassBlurIntensity(intensity: NavGlassIntensity = 'light'): n
   return DesignTokens.glassmorphism.blurIntensity[intensity];
 }
 
-/** tint מעל BlurView — ב-dark שקוף־למחצה כדי לקרוא «זכוכית» ולא slab אטום. */
+/** tint מעל BlurView — ב-dark שקוף־למחצה (בהיר מעט יותר כדי שהכפתורים יבלטו מהקנבס). */
 export function navGlassOverlay(isDarkMode: boolean, intensity: NavGlassIntensity = 'light'): string {
   if (!isDarkMode) {
     return DesignTokens.glassmorphism.cardBackground.light[intensity];
   }
   switch (intensity) {
     case 'subtle':
-      return 'rgba(255, 255, 255, 0.07)';
+      return 'rgba(255, 255, 255, 0.13)';
     case 'medium':
-      return 'rgba(255, 255, 255, 0.12)';
+      return 'rgba(255, 255, 255, 0.18)';
     case 'strong':
-      return 'rgba(255, 255, 255, 0.16)';
+      return 'rgba(255, 255, 255, 0.22)';
     case 'light':
     default:
-      return 'rgba(255, 255, 255, 0.10)';
+      return 'rgba(255, 255, 255, 0.15)';
   }
 }
 
 /** רצפה דקה כשה-blur חלש — לא slab אטום שמסתיר את הזכוכית. */
 export function navGlassBaseFill(isDarkMode: boolean): string {
-  return isDarkMode ? 'rgba(22, 21, 20, 0.22)' : 'rgba(255, 255, 255, 0.18)';
+  // דארק: רצפה בהירה מעט (לא כהה) — הכפתורים בולטים מעל הקנבס
+  return isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.18)';
 }
 
 export function navGlassBorderStyle(

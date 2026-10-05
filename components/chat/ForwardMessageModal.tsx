@@ -29,7 +29,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { chatGroupDisplayName, groupAvatarSource } from '../../assets/chatGroups/groupChatIcons';
 import { logger } from '../../utils/logger';
 import { HapticFeedback } from '../../utils/hapticFeedback';
-import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE, chromeButtonFace } from '../ui/DayNavBlurButton';
+import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
 import {
   ChatBottomSheet,
   ChatSheetContent,
@@ -229,7 +229,7 @@ export default function ForwardMessageModal({
           <DayNavBlurButton
             onPress={onClose}
             size={DAY_NAV_BUTTON_SIZE}
-            {...chromeButtonFace(tokens.colors.background.cardSolid)}
+            glassIntensity="subtle"
             accessibilityLabel="סגור"
           >
             <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />

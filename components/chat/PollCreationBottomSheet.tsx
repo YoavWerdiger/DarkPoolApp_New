@@ -21,7 +21,7 @@ import { Trash2 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomSheetClose } from '../ui/BottomSheet/BottomSheet';
 import { ChatBottomSheet } from './ChatBottomSheet';
-import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE, chromeButtonFace } from '../ui/DayNavBlurButton';
+import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { UI_CARD_RADIUS } from '../ui/appLayout';
 import { formFieldInputStyle } from '../ui/formControl';
@@ -270,7 +270,8 @@ export default function PollCreationBottomSheet({
           <DayNavBlurButton
             onPress={handleClose}
             size={DAY_NAV_BUTTON_SIZE}
-            {...chromeButtonFace(tokens.colors.background.cardSolid, styles.headerIconButton)}
+            glassIntensity="subtle"
+            style={styles.headerIconButton}
             accessibilityLabel="חזרה"
           >
             <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />

@@ -29,7 +29,7 @@ import {
   resolveFitContentSnapPoint,
 } from '../ui/BottomSheet/sheetMotion';
 import { useDesignTokens } from '../ui/DesignTokens';
-import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE, headerExitButtonFill, chromeButtonFace } from '../ui/DayNavBlurButton';
+import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE, headerExitButtonFill } from '../ui/DayNavBlurButton';
 import { CHROME_UICARD, chromeSurfaceCardStyle } from '../ui/chromeControl';
 import UICard from '../ui/UICard';
 import {
@@ -250,7 +250,7 @@ export function ChatSheetNavHeader({
       <DayNavBlurButton
         onPress={onClose}
         size={DAY_NAV_BUTTON_SIZE}
-        {...chromeButtonFace(tokens.colors.background.cardSolid)}
+        glassIntensity="subtle"
         accessibilityLabel="חזרה"
       >
         <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />

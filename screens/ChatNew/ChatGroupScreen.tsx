@@ -18,7 +18,7 @@ import { chatGroupDisplayName } from '../../assets/chatGroups/groupChatIcons';
 import { ChatScreenShell } from '../../components/chat/ChatScreenShell';
 import UICard from '../../components/ui/UICard';
 import { CHROME_UICARD, chromeSurfaceCardStyle } from '../../components/ui/chromeControl';
-import { DayNavBlurButton, headerExitButtonFill, chromeButtonFace } from '../../components/ui/DayNavBlurButton';
+import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
 import { MAIN_SCREEN_HEADER_HP } from '../../components/ui/MainDrawerScreenHeader';
 import { APP_TYPE } from '../../components/ui/appType';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
@@ -1801,11 +1801,9 @@ export default function ChatGroupScreen() {
       onPress: () => void;
       flip?: boolean;
     }) => (
-      // כמו כפתורי היציאה בשאר האפליקציה — מילוי cardSolid של הערכה, לא זכוכית
       <DayNavBlurButton
         onPress={opts.onPress}
         size={CHAT_GROUP_HEADER_HEIGHT}
-        {...chromeButtonFace(DesignTokens.colors.background.cardSolid)}
         accessibilityLabel={opts.label}
       >
         <View style={opts.flip ? styles.headerBackIconFlip : undefined}>
@@ -1853,10 +1851,7 @@ export default function ChatGroupScreen() {
         </View>
       <UICard
         {...CHROME_UICARD}
-        style={[
-          styles.headerGlassOuter,
-          chromeSurfaceCardStyle(DesignTokens, { backgroundColor: DesignTokens.colors.background.cardSolid }),
-        ]}
+        style={[styles.headerGlassOuter, chromeSurfaceCardStyle(DesignTokens)]}
           contentContainerStyle={[
             styles.headerBarInner,
             typingLabel ? styles.headerBarInnerTyping : null,

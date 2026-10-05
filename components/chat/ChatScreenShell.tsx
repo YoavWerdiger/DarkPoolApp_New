@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { appScreenSubtitleStyle, appScreenTitleStyle } from '../ui/appType';
 import { MAIN_SCREEN_HEADER_HP } from '../ui/MainDrawerScreenHeader';
-import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE, chromeButtonFace } from '../ui/DayNavBlurButton';
+import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../ui/DayNavBlurButton';
 import { ChatSessionBackdrop } from './ChatSessionBackdrop';
 
 type ChatScreenShellProps = {
@@ -67,7 +67,7 @@ export function ChatSubScreenHeader({
           <DayNavBlurButton
             onPress={onBack}
             size={DRAWER_MENU_BUTTON_SIZE}
-            {...chromeButtonFace(tokens.colors.background.cardSolid)}
+            glassIntensity="subtle"
             accessibilityLabel="חזרה"
           >
             <Ionicons name={backIcon} size={24} color={tokens.colors.text.primary} />

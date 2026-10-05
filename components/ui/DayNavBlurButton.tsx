@@ -13,11 +13,12 @@ export const DAY_NAV_BUTTON_SIZE = 40;
 export const DRAWER_MENU_BUTTON_SIZE = 46;
 
 /**
- * פני כפתור התפריט — מילוי כרטיס אטום (`cardSolid`) בשתי הערכות,
- * כמו כפתורי חזרה/חיפוש בכותרות (אחידות בדארק — לא זכוכית).
+ * פני כפתור התפריט בלבד.
+ * לייט: מילוי כרטיס אטום (`cardSolid`).
+ * כהה: `undefined` — נשארת זכוכית הניווט הקיימת.
  */
 export function drawerMenuFaceColor(cardSolid: string): string | undefined {
-  return cardSolid;
+  return cardSolid === LIGHT_CARD ? cardSolid : undefined;
 }
 
 /**
@@ -26,24 +27,6 @@ export function drawerMenuFaceColor(cardSolid: string): string | undefined {
  */
 export function headerExitButtonFill(cardSolid: string): string {
   return cardSolid;
-}
-
-/**
- * פני כפתור כרום (חזרה/חיפוש/סגירה) לפי ערכה:
- * לייט — זכוכית (כמו תמיד; כפתור לבן נבלע על רקעים בהירים),
- * דארק — מילוי cardSolid אטום (הזכוכית יצאה בגוון של הרקע).
- */
-export function chromeButtonFace(
-  cardSolid: string,
-  baseStyle?: ViewStyle,
-): { glass: boolean; glassIntensity: 'subtle'; style?: ViewStyle | ViewStyle[] } {
-  const light = cardSolid === LIGHT_CARD;
-  if (light) return { glass: true, glassIntensity: 'subtle', style: baseStyle };
-  return {
-    glass: false,
-    glassIntensity: 'subtle',
-    style: baseStyle ? [baseStyle, { backgroundColor: cardSolid }] : { backgroundColor: cardSolid },
-  };
 }
 
 /** כפתור חזרה / פעולה בכותרת מסך פרטים (אחיד לכל ה-stack screens) */

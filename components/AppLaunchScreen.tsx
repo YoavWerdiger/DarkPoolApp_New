@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, StyleSheet } from 'react-native';
+import { AccessibilityInfo, StyleSheet, Appearance } from 'react-native';
 import LottieView from 'lottie-react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import Animated, {
@@ -18,8 +18,11 @@ import { useTheme } from '../context/ThemeContext';
  * האמבלם עולה בעדינות, DARKPOOL והסלוגן נכנסים, ופס התקדמות דק מתמלא עד שהאפליקציה מוכנה.
  */
 
-/** = רקע ה-splash הנייטיב (app.json, לייט — ברירת המחדל) — הפריים הראשון זהה, ואז דעיכה לרקע הערכה */
-const SPLASH_BG = '#F4F2F1';
+/**
+ * = רקע ה-splash הנייטיב (app.json): לייט, או דארק כשמצב המערכת של הטלפון כהה.
+ * נקרא בטעינת המודול — לפני ש-ThemeProvider מיישר את Appearance לערכת האפליקציה.
+ */
+const SPLASH_BG = Appearance.getColorScheme() === 'dark' ? '#111111' : '#F4F2F1';
 const COMP_W = 300;
 const COMP_H = 600;
 /** מרכז פס ההתקדמות ביחס למרכז המסך (תחתית הסלוגן בקומפוזיציה 387 → +40) */

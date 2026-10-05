@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Image, StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View, Appearance } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { captureRef } from 'react-native-view-shot';
 import Animated, {
@@ -224,6 +224,16 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     : `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/backgrounds/2.png`;
 
   const theme = buildTheme(isDarkMode);
+
+  // חלונות מערכת (מקלדת, דיאלוגים של iOS) לפי ערכת האפליקציה ולא לפי הטלפון
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      Appearance.setColorScheme(isDarkMode ? 'dark' : 'light');
+    } catch {
+      /* noop */
+    }
+  }, [isDarkMode, hydrated]);
 
   return (
     <ThemeContext.Provider value={{ isDarkMode, toggleTheme, backgroundImage, theme }}>

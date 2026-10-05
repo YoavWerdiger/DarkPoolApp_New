@@ -28,8 +28,10 @@ const RegistrationPasswordScreen = ({ navigation }: { navigation: any }) => {
     return navigation.addListener('state', syncBackState);
   }, [navigation]);
 
-  // מינימום בלבד: 6 תווים. בלי שדה אימות (יש כפתור הצגת סיסמה) ובלי חובת אותיות/מספרים/סימנים
-  const canContinue = !loading && password.length >= 6;
+  // דרישה מאוזנת: 8 תווים לפחות + אות ומספר. בלי שדה אימות (יש כפתור הצגת סיסמה), סימן מיוחד לא חובה
+  const meetsRules =
+    password.length >= 8 && /[A-Za-z\u0590-\u05FF]/.test(password) && /\d/.test(password);
+  const canContinue = !loading && meetsRules;
 
   const handleNext = async () => {
     if (!canContinue) return;
@@ -68,7 +70,7 @@ const RegistrationPasswordScreen = ({ navigation }: { navigation: any }) => {
   return (
     <CashAppScreen
       title="צור סיסמה"
-      subtitle="לפחות 6 תווים"
+      subtitle="לפחות 8 תווים, עם אות ומספר"
       currentStep={ONBOARDING_STEPS.password}
       totalSteps={ONBOARDING_TOTAL_STEPS}
       progressVariant="dots"
@@ -118,7 +120,7 @@ const RegistrationPasswordScreen = ({ navigation }: { navigation: any }) => {
       <View style={{ gap: tokens.spacing.lg }}>
         <CashAppInput
           label="סיסמה"
-          placeholder="לפחות 6 תווים"
+          placeholder="לפחות 8 תווים"
           value={password}
           onChangeText={(t) => {
             setPassword(t);
@@ -128,8 +130,8 @@ const RegistrationPasswordScreen = ({ navigation }: { navigation: any }) => {
           autoCapitalize="none"
           autoFocus
         />
-        {/* מד חוזק כהמלצה בלבד — בלי רשימת חובות */}
-        <PasswordStrength password={password} showRules={false} />
+        {/* שתי הדרישות בלבד + מד חוזק */}
+        <PasswordStrength password={password} ruleKeys={['len8', 'mix']} />
       </View>
     </CashAppScreen>
   );

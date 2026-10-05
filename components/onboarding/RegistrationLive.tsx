@@ -114,7 +114,17 @@ const RULES: Rule[] = [
 
 const STRENGTH_LABELS = ['', 'חלשה', 'סבירה', 'טובה', 'חזקה'];
 
-export function PasswordStrength({ password, showRules = true }: { password: string; showRules?: boolean }) {
+export function PasswordStrength({
+  password,
+  showRules = true,
+  ruleKeys,
+}: {
+  password: string;
+  showRules?: boolean;
+  /** להציג רק חלק מהכללים (למשל הדרישות בפועל) */
+  ruleKeys?: string[];
+}) {
+  const visibleRules = ruleKeys ? RULES.filter((r) => ruleKeys.includes(r.key)) : RULES;
   const tokens = useDesignTokens();
   const passed = RULES.map((r) => r.test(password));
   const score = password ? passed.filter(Boolean).length : 0;
@@ -162,9 +172,9 @@ export function PasswordStrength({ password, showRules = true }: { password: str
       </View>
       {showRules ? (
       <View style={styles.rules}>
-        {RULES.map((r, i) => (
+        {visibleRules.map((r) => (
           <View key={r.key} style={styles.ruleRow}>
-            {passed[i] ? (
+            {r.test(password) ? (
               <Reanimated.View key="on" entering={ZoomIn.duration(200)}>
                 <Ionicons name="checkmark-circle" size={18} color={tokens.colors.primary.main} />
               </Reanimated.View>
@@ -174,7 +184,7 @@ export function PasswordStrength({ password, showRules = true }: { password: str
             <Text
               style={[
                 styles.ruleText,
-                { color: passed[i] ? tokens.colors.text.primary : tokens.colors.text.tertiary },
+                { color: r.test(password) ? tokens.colors.text.primary : tokens.colors.text.tertiary },
               ]}
             >
               {r.label}

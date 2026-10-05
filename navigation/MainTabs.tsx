@@ -316,10 +316,10 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
 function createDrawerStyles(tokens: ReturnType<typeof useDesignTokens>, isDarkMode: boolean) {
   return StyleSheet.create({
   /** ריווח אופקי מוגדר ב־CustomDrawerContent (אסימטרי + safe area) */
-  // לייט: כרטיס לבן מעל קנבס הבז׳; דארק: צבע הרקע (הקנבס)
+  // כרטיס מעל הקנבס בשתי הערכות (לבן בלייט, cardSolid בדארק)
   root: {
     flex: 1,
-    backgroundColor: isDarkMode ? tokens.colors.background.primary : tokens.colors.background.cardSolid,
+    backgroundColor: tokens.colors.background.cardSolid,
   },
   brandHeader: {
     alignItems: 'center',
@@ -440,8 +440,7 @@ function createDrawerStyles(tokens: ReturnType<typeof useDesignTokens>, isDarkMo
 export default function MainTabs() {
   const drawerPosition = getMainDrawerPosition();
   const tokens = useDesignTokens();
-  const { isDarkMode: drawerDark } = useTheme();
-  const drawerFill = drawerDark ? tokens.colors.background.primary : tokens.colors.background.cardSolid;
+  const drawerFill = tokens.colors.background.cardSolid;
 
   return (
     <View style={{ flex: 1, backgroundColor: SCREEN_BG }}>

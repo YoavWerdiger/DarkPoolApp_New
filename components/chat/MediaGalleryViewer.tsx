@@ -91,14 +91,17 @@ function GalleryImageItem({
     }
   }, [isActive, resetZoomImmediate]);
 
+  // כתובת חדשה (נתיב → URL חתום) — מתחילים טעינה נקייה; שגיאה מכתובת קודמת לא נשארת
+  const displayable = isDisplayableMediaUri(url);
   useEffect(() => {
-    if (isDisplayableMediaUri(url)) setIsLoading(false);
+    setLoadError(false);
+    setIsLoading(true);
   }, [url]);
 
   return (
     <View style={[styles.page, styles.imagePage]}>
-      <MediaBlurBackdrop uri={url} style={backdropStyle} />
-      {isLoading && !loadError && (
+      <MediaBlurBackdrop uri={displayable ? url : undefined} style={backdropStyle} />
+      {(isLoading || !displayable) && !loadError && (
         <View style={styles.loadingContainer} pointerEvents="none">
           <ActivityIndicator size="large" color={COLORS.primary} />
         </View>
@@ -117,7 +120,7 @@ function GalleryImageItem({
             <Text style={styles.mediaErrorRetryText}>נסה שוב</Text>
           </TouchableOpacity>
         </View>
-      ) : (
+      ) : !displayable ? null : (
         <GestureDetector gesture={zoomGesture}>
           <Animated.View style={styles.fullMedia} collapsable={false}>
             <Animated.Image

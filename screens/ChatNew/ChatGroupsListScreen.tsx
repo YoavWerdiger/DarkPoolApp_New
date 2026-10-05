@@ -1891,15 +1891,11 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
 
   /* ── Joinable group row ── */
-  joinableRow: {
-    opacity: 0.9,
-  },
-  joinableAvatar: {
-    opacity: 0.85,
-  },
+  joinableRow: {},
+  joinableAvatar: {},
   joinableSubtitle: {
     ...APP_TYPE.cardSubtitle,
-    color: tokens.colors.text.tertiary,
+    color: tokens.colors.text.secondary,
     textAlign: 'right',
     writingDirection: 'rtl',
     marginTop: APP_LAYOUT.cardTitleToSubtitleGap,

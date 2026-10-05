@@ -1258,7 +1258,7 @@ export default function ChatGroupsListScreen() {
       <RNSafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <View style={styles.container}>
           <MainDrawerScreenHeader
-            title="קהילה"
+            title="הקהילה"
             onMenuPress={openMainDrawer}
             titleAccessory={
               isGlobalAdmin ? (

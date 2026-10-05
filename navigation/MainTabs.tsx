@@ -95,7 +95,7 @@ const DRAWER_ITEMS: Array<{
   icon: string;
   iconFamily?: DrawerIconFamily;
 }> = [
-  { name: 'Chat', title: 'קהילה', icon: 'chatbubbles-outline' },
+  { name: 'Chat', title: 'הקהילה', icon: 'chatbubbles-outline' },
   { name: 'Courses', title: 'האקדמיה', icon: 'school-outline' },
   { name: 'Portfolios', title: 'יומן מסחר', icon: 'book-outline' },
   { name: 'DarkPool', title: 'אינסיידרים', icon: 'eye-outline' },
@@ -465,7 +465,7 @@ export default function MainTabs() {
           // (צ'אט/realtime) לא ימשיכו לרנדר ברקע וייגנבו את ה-JS thread בניווט.
         }}
       >
-        <Drawer.Screen name="Chat" component={ChatStack} options={{ title: 'קהילה' }} />
+        <Drawer.Screen name="Chat" component={ChatStack} options={{ title: 'הקהילה' }} />
         <Drawer.Screen name="Courses" component={LearningStack} options={{ title: 'האקדמיה' }} />
         {/* Journal stack kept registered for backward-compat deep links, hidden from drawer menu. */}
         <Drawer.Screen

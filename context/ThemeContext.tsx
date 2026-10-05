@@ -69,7 +69,8 @@ export const useTheme = () => {
 };
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  // ברירת מחדל מהתקנה: לייט. המשתמש יכול לעבור לדארק בהגדרות (נשמר ב-appSettings)
+  const [isDarkMode, setIsDarkMode] = useState(false);
   /**
    * הערכה השמורה נטענת מ-AsyncStorage — עד אז לא מרנדרים את האפליקציה,
    * אחרת היא מצוירת שנייה בדארק (ברירת המחדל) ואז «קופצת» ללייט.
@@ -108,7 +109,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const saved = await AsyncStorage.getItem('appSettings');
       if (saved && !ignoreHydrate.current) {
         const parsedSettings = JSON.parse(saved);
-        setIsDarkMode(parsedSettings.darkMode ?? true);
+        setIsDarkMode(parsedSettings.darkMode ?? false);
       }
     } catch (error) {
     } finally {

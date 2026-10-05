@@ -8,7 +8,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "backgroundColor": "#111111",
+    "backgroundColor": "#F4F2F1",
     "androidStatusBar": {
       "barStyle": "light-content"
     },
@@ -66,8 +66,8 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#111111",
-          "image": "./assets/splash-icon.png",
+          "backgroundColor": "#F4F2F1",
+          "image": "./assets/splash-icon-light.png",
           "resizeMode": "contain",
           "imageWidth": 200
         }

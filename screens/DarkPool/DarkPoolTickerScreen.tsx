@@ -548,10 +548,8 @@ export default function DarkPoolTickerScreen() {
                         {index > 0 ? <View style={styles.holderDivider} /> : null}
                         <Pressable
                           onPress={() => openHolder(holder)}
-                          style={({ pressed }) => [
-                            styles.holderPad,
-                            pressed && styles.holderPressed,
-                          ]}
+                          // ריפוד על ה-View הפנימי — סטייל-פונקציה של Pressable לא תמיד מוחל
+                          style={({ pressed }) => (pressed ? styles.holderPressed : undefined)}
                           accessibilityRole="button"
                           accessibilityLabel={
                             row.sharesLabel
@@ -559,7 +557,7 @@ export default function DarkPoolTickerScreen() {
                               : `${holder.name} ${row.metric.text}`
                           }
                         >
-                          <View style={styles.holderRow}>
+                          <View style={[styles.holderRow, styles.holderPad]}>
                             <InvestorPortrait
                               name={holder.name}
                               imageUrl={holder.imageUrl}

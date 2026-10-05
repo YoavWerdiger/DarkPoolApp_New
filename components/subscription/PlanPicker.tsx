@@ -208,14 +208,14 @@ export default function PlanPicker({
   const [carouselW, setCarouselW] = React.useState(0);
   const carouselRef = React.useRef<ScrollView>(null);
   // השכן מציץ ~16px; הכרטיס הפעיל ממורכז
-  const cardW = Math.max(0, carouselW - 2 * (CARD_GAP + 16));
-  const sidePad = (carouselW - cardW) / 2;
   // סדר LTR: חינמי משמאל, פרימיום מימין (הראשון בקריאה מימין לשמאל) — פותחים על פרימיום
   const pages: ('free' | 'premium')[] = [
     ...(freePlan ? (['free'] as const) : []),
     ...(activePremium ? (['premium'] as const) : []),
   ];
+  const cardW = Math.max(0, pages.length > 1 ? carouselW - 2 * (CARD_GAP + 16) : carouselW);
   const initialPage = Math.max(0, pages.indexOf(freeSelected ? 'free' : 'premium'));
+  const sidePad = (carouselW - cardW) / 2;
   const [page, setPage] = React.useState(initialPage);
 
   const premiumCard = activePremium ? (
@@ -313,7 +313,8 @@ export default function PlanPicker({
 
       {/* קרוסלה אופקית — כרטיס לכל מסלול, השכן מציץ מהצד; הכרטיס שבמרכז נבחר */}
       <View
-        style={styles.carouselWrap}
+        // כמה מסלולים — הקרוסלה מגיעה לקצות המסך (המארח נותן ScrollView ברוחב מלא)
+        style={[styles.carouselWrap, pages.length > 1 && { marginHorizontal: -APP_LAYOUT.screenPaddingHorizontal }]}
         onLayout={(e) => setCarouselW(e.nativeEvent.layout.width)}
       >
         {carouselW > 0 ? (

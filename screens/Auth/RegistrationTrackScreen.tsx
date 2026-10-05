@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ScrollView } from 'react-native';
 import { useRegistration } from '../../context/RegistrationContext';
 import CashAppScreen from '../../components/ui/CashAppScreen';
+import { APP_LAYOUT } from '../../components/ui/appLayout';
 import PlanPicker, { getSelectablePlans } from '../../components/subscription/PlanPicker';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { ONBOARDING_STEPS, ONBOARDING_TOTAL_STEPS } from '../../constants/onboardingFlow';
@@ -70,9 +71,11 @@ const RegistrationTrackScreen = ({ navigation }: { navigation: any }) => {
       }}
       footer={undefined}
     >
-      <ScrollView 
+      {/* ה-ScrollView ברוחב המסך המלא (ריפוד בפנים) — כדי שקרוסלת המסלולים תגיע לקצוות ולא תיחתך */}
+      <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 20 }}
+        style={{ marginHorizontal: -APP_LAYOUT.screenPaddingHorizontal }}
+        contentContainerStyle={{ paddingBottom: 20, paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal }}
       >
         <PlanPicker
           mode="registration"

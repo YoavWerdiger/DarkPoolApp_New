@@ -8,7 +8,6 @@ import { chatGroupDisplayName, groupAvatarSource } from '../../assets/chatGroups
 import {
   ChatBottomSheet,
   ChatSheetContent,
-  ChatSheetTopoHeader,
   useChatFitContentSnap,
 } from './ChatBottomSheet';
 import { APP_TYPE, appSectionTitleStyle } from '../ui/appType';
@@ -17,7 +16,7 @@ import UIButton from '../ui/UIButton';
 
 const AVATAR = 84;
 /** גובה התוכן הקבוע (טבעת + שם + חברים + כפתור) — הערכה מדויקת כדי שהשיט ייפתח ישר לגובה הנכון בלי «קפיצה» */
-const CONTENT_EST_PX = 44 + 8 + (AVATAR + 12) + 16 + 30 + 40 + 28 + 56;
+const CONTENT_EST_PX = 8 + (AVATAR + 12) + 16 + 30 + 40 + 28 + 56;
 
 interface GroupInfo {
   id: string;
@@ -150,7 +149,6 @@ export default function JoinGroupBottomSheet({
           paddingBottom: sheetBottomPad,
         }}
       >
-        <ChatSheetTopoHeader onClose={onClose} />
         <View style={styles.container}>
           <View style={styles.avatarRing}>
             {avatar ? (

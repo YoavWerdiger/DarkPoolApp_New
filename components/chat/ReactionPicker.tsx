@@ -16,7 +16,7 @@ import { useDesignTokens } from '../ui/DesignTokens';
 import { ChatSheetTopoHeader, useChatSheetDismiss, useChatSheetStyles } from './ChatBottomSheet';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';
 import { APP_LAYOUT } from '../ui/appLayout';
-import { APP_TYPE } from '../ui/appType';
+import { APP_TYPE, appPhysicalRightText } from '../ui/appType';
 import { formFieldInputStyle, formFieldPlaceholderColor, formFieldShellStyle } from '../ui/formControl';
 import {
   REACTION_EMOJI_CATEGORIES,
@@ -209,7 +209,7 @@ export default function ReactionPicker({
               <Text
                 style={[
                   styles.sectionTitle,
-                  { color: tokens.colors.text.secondary },
+                  { color: tokens.colors.text.primary },
                 ]}
               >
                 {section.title}
@@ -281,17 +281,16 @@ const styles = StyleSheet.create({
     paddingTop: 2,
   },
   sectionHeader: {
-    paddingTop: 14,
-    paddingBottom: 8,
+    paddingTop: APP_LAYOUT.componentGap,
+    paddingBottom: 6,
     backgroundColor: 'transparent',
     width: '100%',
     alignSelf: 'stretch',
-    alignItems: 'flex-end',
   },
+  // כותרת קטגוריה — צמודה לימין פיזית (ב-RTL flex-end מתהפך לשמאל)
   sectionTitle: {
-    writingDirection: 'rtl',
-    textAlign: 'right',
-    alignSelf: 'flex-end',
+    ...appPhysicalRightText,
+    width: '100%',
     fontSize: APP_TYPE.cardMetricLabel.fontSize,
     fontWeight: APP_TYPE.cardMetricLabel.fontWeight,
     lineHeight: APP_TYPE.cardMetricLabel.lineHeight,

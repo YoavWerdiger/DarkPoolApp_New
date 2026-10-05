@@ -158,7 +158,7 @@ const EconomicEventCard: React.FC<{
   const cardRadius = UI_CARD_RADIUS;
   const cardPad = APP_LAYOUT.cardPadding;
   // פס חשיבות עבה יותר — אדום/כתום ברורים במבט ראשון
-  const accentW = 6;
+  const accentW = 4;
   return (
     <Pressable onPress={() => onPress(event)} style={{ marginHorizontal: screenPad, marginBottom: APP_LAYOUT.cardStackGap }}>
       <UICard

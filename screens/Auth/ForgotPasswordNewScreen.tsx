@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { isPasswordValid } from '../../utils/passwordPolicy';
-import { View, Text } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { checkPassword, isPasswordValid, PASSWORD_MIN_LENGTH } from '../../utils/passwordPolicy';
+import OnboardingErrorBanner from '../../components/onboarding/OnboardingErrorBanner';
+import { PasswordStrength } from '../../components/onboarding/RegistrationLive';
+import { View } from 'react-native';
 import { AuthService } from '../../services/authService';
 import { useAuth } from '../../context/AuthContext';
-import { DesignTokens } from '../../components/ui/DesignTokens';
-import UICard from '../../components/ui/UICard';
 import OnboardingLayout from '../../components/onboarding/OnboardingLayout';
 import OnboardingInput from '../../components/onboarding/OnboardingInput';
 import OnboardingButton from '../../components/onboarding/OnboardingButton';
@@ -61,20 +60,11 @@ const ForgotPasswordNewScreen = ({ navigation, route }: { navigation: any; route
     .trim()
     .toLowerCase();
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [cancelling, setCancelling] = useState(false);
 
-  const passwordsMatch = password.length > 0 && password === confirmPassword;
-  const confirmError =
-    confirmPassword.length === 0
-      ? undefined
-      : password !== confirmPassword
-        ? 'הסיסמאות אינן תואמות'
-        : undefined;
-  const canContinue =
-    !loading && !cancelling && isPasswordValid(password, emailHint) && passwordsMatch;
+  const canContinue = !loading && !cancelling && isPasswordValid(password, emailHint);
 
   const goToLogin = () => {
     navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
@@ -134,7 +124,7 @@ const ForgotPasswordNewScreen = ({ navigation, route }: { navigation: any; route
   return (
     <OnboardingLayout
       title="סיסמה חדשה"
-      subtitle="לפחות 6 תווים — ואשר אותה למטה"
+      subtitle="לפחות 8 תווים, עם אות ומספר"
       density="focused"
       showBack={false}
       showProgress={false}
@@ -154,64 +144,23 @@ const ForgotPasswordNewScreen = ({ navigation, route }: { navigation: any; route
         />
       }
     >
-      {error ? (
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            backgroundColor: 'rgba(248,81,73,0.08)',
-            borderWidth: 1,
-            borderColor: 'rgba(248,81,73,0.35)',
-            borderRadius: 14,
-            padding: 13,
-            marginBottom: 18,
-          }}
-        >
-          <Ionicons name="alert-circle" size={18} color="#F85149" style={{ marginLeft: 8 }} />
-          <Text
-            style={{
-              color: '#F85149',
-              fontSize: 14,
-              fontWeight: '500',
-              textAlign: 'right',
-              writingDirection: 'rtl',
-              flex: 1,
-            }}
-          >
-            {error}
-          </Text>
-        </View>
-      ) : null}
+      <OnboardingErrorBanner message={error} />
 
-      <UICard
-        variant="glass"
-        glassIntensity="light"
-        padding="md"
-        style={{ borderRadius: DesignTokens.borderRadius.xl }}
-      >
-        <OnboardingInput
-          label="סיסמה חדשה"
-          placeholder="לפחות 6 תווים"
-          value={password}
-          onChangeText={(t) => {
-            setPassword(t);
-            if (error) setError('');
-          }}
-          secureTextEntry
-          autoCapitalize="none"
-          autoFocus
-        />
-        <OnboardingInput
-          label="אימות סיסמה"
-          placeholder="הכנס שוב את הסיסמה"
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          secureTextEntry
-          autoCapitalize="none"
-          error={confirmError}
-          isLast
-        />
-      </UICard>
+      <OnboardingInput
+        label="סיסמה חדשה"
+        placeholder={`לפחות ${PASSWORD_MIN_LENGTH} תווים`}
+        value={password}
+        onChangeText={(t) => {
+          setPassword(t);
+          if (error) setError('');
+        }}
+        secureTextEntry
+        autoCapitalize="none"
+        autoFocus
+        isLast
+      />
+      {/* אותה מדיניות ותצוגה כמו ברישום */}
+      <PasswordStrength password={password} checks={checkPassword(password, emailHint)} />
       <View style={{ flex: 1 }} />
     </OnboardingLayout>
   );

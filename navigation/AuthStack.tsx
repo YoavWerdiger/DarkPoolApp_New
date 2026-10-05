@@ -8,6 +8,7 @@ import ForgotPasswordScreen from '../screens/Auth/ForgotPasswordScreen';
 import ForgotPasswordOtpScreen from '../screens/Auth/ForgotPasswordOtpScreen';
 import ForgotPasswordNewScreen from '../screens/Auth/ForgotPasswordNewScreen';
 import { useAuth } from '../context/AuthContext';
+import { useDesignTokens } from '../components/ui/DesignTokens';
 
 const Stack = createNativeStackNavigator();
 
@@ -62,6 +63,7 @@ function LoginWithRecoveryRedirect(props: any) {
 
 export default function AuthStack() {
   const { passwordRecoveryMode } = useAuth();
+  const tokens = useDesignTokens();
 
   return (
     <Stack.Navigator
@@ -72,9 +74,10 @@ export default function AuthStack() {
         animation: 'slide_from_left',
         gestureDirection: 'horizontal',
         gestureEnabled: true,
-        animationDuration: 250,
+        animationDuration: 320,
+        // רקע אטום בצבע הקנבס (כמו ברישום) — עם שקוף שני המסכים נראים זה דרך זה בזמן ההחלקה ונראה תקוע
         contentStyle: {
-          backgroundColor: 'transparent',
+          backgroundColor: tokens.colors.background.primary,
         },
       }}
     >

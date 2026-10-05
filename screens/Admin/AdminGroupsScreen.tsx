@@ -400,7 +400,15 @@ function GroupEditSheet({
         <View style={styles.actions}>
           <UIButton title="שמור שינויים" variant="primary" fullWidth loading={saving} disabled={!dirty || saving} onPress={() => void save()} />
           {!isAnnouncements ? (
-            <UIButton title="מחק קבוצה" variant="secondary" fullWidth onPress={confirmDelete} textStyle={{ color: tokens.colors.danger.main }} />
+            // פיל מלא כמו ה-CTA (הטופו), בצבע הכרטיסים וטקסט אדום
+            <UIButton
+              title="מחק קבוצה"
+              variant="secondary"
+              fullWidth
+              onPress={confirmDelete}
+              style={{ borderRadius: 999, backgroundColor: tokens.colors.background.cardSolid }}
+              textStyle={{ color: tokens.colors.danger.main }}
+            />
           ) : null}
         </View>
       </View>

@@ -492,6 +492,9 @@ export default function MediaGalleryViewer({
           data={mediaItems}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
+          // LTR קבוע: בתוך Modal ה-RTL של האפליקציה הופך את הגלילה האופקית, ו-initialScrollIndex
+          // לעמוד האחרון נחת מחוץ לתוכן (מסך שקוף)
+          style={styles.pager}
           horizontal
           pagingEnabled
           scrollEnabled={!isZoomed}
@@ -504,9 +507,12 @@ export default function MediaGalleryViewer({
           })}
           onViewableItemsChanged={onViewableItemsChanged}
           viewabilityConfig={viewabilityConfig}
-          windowSize={3}
+          initialNumToRender={Math.min(mediaItems.length, 10)}
+          windowSize={5}
           maxToRenderPerBatch={3}
-          removeClippedSubviews
+          onScrollToIndexFailed={({ index }) => {
+            setTimeout(() => flatListRef.current?.scrollToOffset({ offset: index * SCREEN_WIDTH, animated: false }), 50);
+          }}
         />
 
         <MediaViewerChrome
@@ -545,6 +551,10 @@ export default function MediaGalleryViewer({
 }
 
 const styles = StyleSheet.create({
+  pager: {
+    flex: 1,
+    direction: 'ltr',
+  },
   container: {
     flex: 1,
     backgroundColor: 'transparent',

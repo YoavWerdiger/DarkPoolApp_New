@@ -100,17 +100,19 @@ function MediaGridBubble({
     }));
   }, [localMediaItems, mediaItems, signedById]);
 
-  const galleryItems = useMemo(
-    () =>
-      items
-        .filter((item) => isLoadableUri(item.url))
-        .map((item) => ({
-          id: item.id,
-          url: item.url,
-          type: item.type as 'image' | 'video',
-        })),
-    [items],
-  );
+  // לגלריה: כל הפריטים (לא רק מה שכבר נחתם) עם ה-URL המקורי — הגלריה חותמת בעצמה
+  // ומציגה את התמונה המלאה, לא את ה-thumbnail של הגריד. סינון כאן היה מזיז אינדקסים
+  // (לחיצה על התמונה השלישית פתחה אינדקס שלא קיים → מסך שקוף).
+  const galleryItems = useMemo(() => {
+    if (localMediaItems && localMediaItems.length > 0) {
+      return localMediaItems.map((it) => ({ id: it.id, url: it.uri, type: it.type }));
+    }
+    return mediaItems.map((it) => ({
+      id: it.id,
+      url: it.url || signedById[it.id] || '',
+      type: (it.type === 'video' ? 'video' : 'image') as 'image' | 'video',
+    }));
+  }, [localMediaItems, mediaItems, signedById]);
 
   const totalCount = items.length;
   const visibleItems = items.slice(0, MAX_VISIBLE);
@@ -118,7 +120,9 @@ function MediaGridBubble({
 
   const openGallery = (index: number) => {
     if (isUploading) return;
-    setInitialIndex(index);
+    const id = items[index]?.id;
+    const galleryIndex = Math.max(0, galleryItems.findIndex((g) => g.id === id));
+    setInitialIndex(galleryIndex);
     setGalleryVisible(true);
   };
 

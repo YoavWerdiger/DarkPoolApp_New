@@ -1,5 +1,5 @@
-import React, { memo, useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { memo, useEffect, useMemo, useState } from 'react';
+import { Image as RNImage, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,7 +15,8 @@ export type CourseListHeroProps = {
   coverUrl?: string | null;
   title: string;
   subtitle?: string;
-  height: number;
+  /** לא בשימוש — גובה התמונה נגזר מהיחס שלה (נשמר לתאימות) */
+  height?: number;
   topInset: number;
   onBack: () => void;
   progressLabel: string;
@@ -27,7 +28,6 @@ function CourseListHeroInner({
   coverUrl,
   title,
   subtitle,
-  height,
   topInset,
   onBack,
   progressLabel,
@@ -37,57 +37,62 @@ function CourseListHeroInner({
   const T = useDesignTokens();
   const progressStyles = useMemo(() => createProgressStyles(T), [T]);
 
+  // יחס הבאנר מהקובץ עצמו (ברירת מחדל 16:9): התמונה ברוחב המסך, כולה גלויה, בלי טקסט מעליה
+  const [ratio, setRatio] = useState(16 / 9);
+  useEffect(() => {
+    if (!coverUrl) return;
+    let alive = true;
+    RNImage.getSize(
+      coverUrl,
+      (w, h) => {
+        if (alive && w > 0 && h > 0) setRatio(w / h);
+      },
+      () => undefined,
+    );
+    return () => {
+      alive = false;
+    };
+  }, [coverUrl]);
+
   return (
-    <View style={[styles.root, { height }]}>
-      {coverUrl ? (
-        <Image
-          source={{ uri: coverUrl }}
-          style={StyleSheet.absoluteFill}
-          contentFit="cover"
-          contentPosition="top"
-          cachePolicy="memory-disk"
-          recyclingKey={coverUrl}
-          priority="high"
-          transition={120}
-          accessibilityLabel={title}
-        />
-      ) : (
-        <LinearGradient
-          colors={['rgba(26,38,26,0.55)', 'rgba(15,22,15,0.28)', 'rgba(8,12,8,0.92)']}
-          style={StyleSheet.absoluteFill}
-        />
-      )}
+    <View style={[styles.root, { paddingTop: topInset }]}>
+      <View style={[styles.media, { aspectRatio: ratio }]}>
+        {coverUrl ? (
+          <Image
+            source={{ uri: coverUrl }}
+            style={StyleSheet.absoluteFill}
+            contentFit="contain"
+            cachePolicy="memory-disk"
+            recyclingKey={coverUrl}
+            priority="high"
+            transition={120}
+            accessibilityLabel={title}
+          />
+        ) : (
+          <LinearGradient
+            colors={['rgba(26,38,26,0.55)', 'rgba(15,22,15,0.28)', 'rgba(8,12,8,0.92)']}
+            style={StyleSheet.absoluteFill}
+          />
+        )}
 
-      <LinearGradient
-        colors={[
-          'rgba(0,0,0,0.35)',
-          'transparent',
-          'rgba(0,0,0,0.35)',
-          'rgba(0,0,0,0.72)',
-          'transparent',
-        ]}
-        locations={[0, 0.22, 0.58, 0.86, 1]}
-        style={StyleSheet.absoluteFill}
-        pointerEvents="none"
-      />
-
-      <View style={[styles.topBar, { paddingTop: Math.max(topInset, 8) + 6 }]}>
-        <DayNavBlurButton
-          onPress={onBack}
-          size={HERO_BACK_BTN_SIZE}
-          glassIntensity="light"
-          accessibilityLabel="חזרה"
-        >
-          <Ionicons name="chevron-forward" size={22} color={T.colors.text.primary} />
-        </DayNavBlurButton>
+        <View style={styles.topBar}>
+          <DayNavBlurButton
+            onPress={onBack}
+            size={HERO_BACK_BTN_SIZE}
+            glassIntensity="light"
+            accessibilityLabel="חזרה"
+          >
+            <Ionicons name="chevron-forward" size={22} color={T.colors.text.primary} />
+          </DayNavBlurButton>
+        </View>
       </View>
 
       <View style={styles.bottomWrap} pointerEvents="none">
-        <Text style={styles.title} numberOfLines={3}>
+        <Text style={[styles.title, { color: T.colors.text.primary }]} numberOfLines={3}>
           {title}
         </Text>
         {subtitle ? (
-          <Text style={styles.subtitle} numberOfLines={2}>
+          <Text style={[styles.subtitle, { color: T.colors.text.secondary }]} numberOfLines={2}>
             {subtitle}
           </Text>
         ) : null}
@@ -139,18 +144,18 @@ function createProgressStyles(T: ReturnType<typeof useDesignTokens>) {
     },
     label: {
       ...ACADEMY_TYPE.caption,
-      color: 'rgba(255,255,255,0.88)',
+      color: T.colors.text.secondary,
       writingDirection: 'rtl',
     },
     pct: {
       ...ACADEMY_TYPE.caption,
-      color: '#FFFFFF',
+      color: T.colors.text.primary,
     },
     barTrack: {
       width: '100%',
       height: 4,
       borderRadius: 2,
-      backgroundColor: 'rgba(255,255,255,0.22)',
+      backgroundColor: T.colors.background.tertiary,
       overflow: 'hidden',
     },
     barFill: {
@@ -164,40 +169,36 @@ function createProgressStyles(T: ReturnType<typeof useDesignTokens>) {
 const styles = StyleSheet.create({
   root: {
     width: '100%',
+  },
+  media: {
+    width: '100%',
     overflow: 'hidden',
-    backgroundColor: '#000',
   },
   topBar: {
+    position: 'absolute',
+    top: 8,
+    left: 0,
+    right: 0,
     direction: 'rtl',
-    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-start',
     paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
   },
   bottomWrap: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
     paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
-    paddingBottom: APP_LAYOUT.screenPaddingHorizontal,
+    paddingTop: APP_LAYOUT.cardPadding,
     gap: 4,
   },
   title: {
     ...ACADEMY_TYPE.pageTitle,
-    color: '#FFFFFF',
     textAlign: 'right',
     writingDirection: 'rtl',
     width: '100%',
-    textShadowColor: 'rgba(0,0,0,0.45)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 8,
   },
   subtitle: {
     ...ACADEMY_TYPE.sectionSubtitle,
     marginTop: APP_LAYOUT.titleSubtitleGap,
-    color: 'rgba(255,255,255,0.82)',
     textAlign: 'right',
     writingDirection: 'rtl',
     width: '100%',

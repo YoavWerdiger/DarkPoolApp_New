@@ -1,5 +1,5 @@
 import { legacyAlert } from '../../utils/appDialog';
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { View, Text, ScrollView, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useCourse, useEnrollInCourse, useCourseProgress } from '../../hooks/useLearning';
@@ -43,23 +43,6 @@ export const CourseDetailScreen: React.FC = () => {
   const skipFirstFocusRefetch = useRef(true);
   
   const { data: course, isLoading, error, refetch } = useCourse(courseId, { enabled: allowHeavy });
-  // יחס הבאנר מהקובץ עצמו (ברירת מחדל 16:9) — המסגרת בדיוק בגודל התמונה
-  const [coverRatio, setCoverRatio] = useState(16 / 9);
-  const coverUrl = course?.cover_url;
-  useEffect(() => {
-    if (!coverUrl) return;
-    let alive = true;
-    Image.getSize(
-      coverUrl,
-      (w, h) => {
-        if (alive && w > 0 && h > 0) setCoverRatio(w / h);
-      },
-      () => undefined,
-    );
-    return () => {
-      alive = false;
-    };
-  }, [coverUrl]);
   const { data: progressData, refetch: refetchProgress } = useCourseProgress(courseId, {
     enabled: allowHeavy,
   });
@@ -182,14 +165,12 @@ export const CourseDetailScreen: React.FC = () => {
 
         <View style={{ paddingHorizontal: ACADEMY_CARD_HP }}>
         {/* Cover Image */}
-        {/* ברוחב המסך המלא (יוצא מהריפוד), בלי מסגרת/פינות — הבאנר כולו גלוי */}
-        <View style={[styles.coverContainer, { aspectRatio: coverRatio, marginHorizontal: -ACADEMY_CARD_HP }]}>
+        <View style={[styles.coverContainer, academyCardFrameStyle(frameTier)]}>
           {course.cover_url ? (
             <Image
               source={{ uri: course.cover_url }}
               style={styles.coverImage}
-              // contain + יחס אמיתי של הקובץ — הבאנר נכנס בדיוק ברוחב, בלי חיתוך של הלוגו/הכיתוב
-              resizeMode="contain"
+              resizeMode="cover"
             />
           ) : (
             <View style={styles.coverPlaceholder}>
@@ -399,9 +380,10 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     textAlign: 'center',
   },
   coverContainer: {
-    // aspectRatio נקבע בזמן ריצה לפי הקובץ (ברירת מחדל 16:9) — גובה קבוע חתך את הלוגו
+    height: 200,
     marginBottom: APP_LAYOUT.cardStackGap,
     overflow: 'hidden',
+    borderRadius: UI_CARD_RADIUS,
   },
   infoCard: {
     marginBottom: APP_LAYOUT.cardStackGap,

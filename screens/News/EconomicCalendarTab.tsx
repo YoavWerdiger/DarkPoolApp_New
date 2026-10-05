@@ -158,7 +158,7 @@ const EconomicEventCard: React.FC<{
   const cardRadius = UI_CARD_RADIUS;
   const cardPad = APP_LAYOUT.cardPadding;
   // פס חשיבות עבה יותר — אדום/כתום ברורים במבט ראשון
-  const accentW = 4;
+  const accentW = 5;
   return (
     <Pressable onPress={() => onPress(event)} style={{ marginHorizontal: screenPad, marginBottom: APP_LAYOUT.cardStackGap }}>
       <UICard
@@ -201,7 +201,7 @@ const EconomicEventCard: React.FC<{
                 {showFlag ? (
                   <Text>
                     {'  '}
-                    <Ionicons name="flag-outline" size={15} color={importanceColor} />
+                    <Ionicons name="flag" size={15} color={importanceColor} />
                   </Text>
                 ) : null}
               </Text>

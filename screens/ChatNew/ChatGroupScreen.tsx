@@ -17,8 +17,8 @@ import { useGenericKeyboardHandler } from 'react-native-keyboard-controller';
 import { chatGroupDisplayName } from '../../assets/chatGroups/groupChatIcons';
 import { ChatScreenShell } from '../../components/chat/ChatScreenShell';
 import UICard from '../../components/ui/UICard';
-import { CHROME_UICARD, chromeSurfaceCardStyle } from '../../components/ui/chromeControl';
-import { DayNavBlurButton, headerExitButtonFill } from '../../components/ui/DayNavBlurButton';
+import { CHROME_UICARD, chromeSurfaceCardStyle, chromeSurfaceFill } from '../../components/ui/chromeControl';
+import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
 import { MAIN_SCREEN_HEADER_HP } from '../../components/ui/MainDrawerScreenHeader';
 import { APP_TYPE } from '../../components/ui/appType';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
@@ -1801,12 +1801,12 @@ export default function ChatGroupScreen() {
       onPress: () => void;
       flip?: boolean;
     }) => (
-      // לפי הטופו: כפתורי יציאה/פעולה בכותרת במילוי cardSolid של הערכה (headerExitButtonFill)
+      // אותו מילוי כמו פיל שם הקבוצה שבאמצע (chromeSurfaceFill) — בדארק navChrome בהיר מ-cardSolid
       <DayNavBlurButton
         onPress={opts.onPress}
         size={CHAT_GROUP_HEADER_HEIGHT}
         glass={false}
-        style={{ backgroundColor: headerExitButtonFill(DesignTokens.colors.background.cardSolid) }}
+        style={{ backgroundColor: chromeSurfaceFill(DesignTokens) }}
         accessibilityLabel={opts.label}
       >
         <View style={opts.flip ? styles.headerBackIconFlip : undefined}>

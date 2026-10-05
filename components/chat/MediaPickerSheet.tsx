@@ -664,11 +664,25 @@ export default function MediaPickerSheet({
                 </ScrollView>
               </View>
             ) : null}
-            {peekActions}
+            {/* בתצוגה המקוצרת: אחרי בחירה — כפתור העלאה במקום שורת הפעולות (לא מעל התמונות) */}
+            {allowsMultiple && selectedIds.length > 0 ? (
+              <View style={styles.peekCta}>
+                <UIButton
+                  title={selectedIds.length > 1 ? `העלאה · ${selectedIds.length}` : 'העלאה'}
+                  variant="primary"
+                  icon="arrow-up"
+                  iconPosition="right"
+                  fullWidth
+                  onPress={confirmSelection}
+                />
+              </View>
+            ) : (
+              peekActions
+            )}
           </View>
         )}
 
-        {allowsMultiple && selectedIds.length > 0 ? (
+        {expanded && allowsMultiple && selectedIds.length > 0 ? (
           // CTA ממורכז כמו «חזרה להיום» ביומן הכלכלי
           <View style={styles.confirmWrap} pointerEvents="box-none">
             <UIButton
@@ -925,6 +939,10 @@ const createStyles = (
       color: tokens.colors.text.primary,
       textAlign: 'center',
       width: '100%',
+    },
+    peekCta: {
+      paddingHorizontal: 16,
+      paddingTop: 12,
     },
     confirmWrap: {
       position: 'absolute',

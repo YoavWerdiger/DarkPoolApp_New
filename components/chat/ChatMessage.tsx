@@ -1634,6 +1634,9 @@ function AudioPlayer({
   const progressSV = useSharedValue(0);
   /** מיקום האודיו האחרון שדווח (0–1) — ה-playhead מתקרב אליו ברכות */
   const audioTargetSV = useSharedValue(0);
+  const audioAnchorSV = useSharedValue(0);
+  const audioSeenSV = useSharedValue(-1);
+  const audioActiveSV = useSharedValue(0);
   const isPlayingSV = useSharedValue(0);
   const isScrubbingSV = useSharedValue(0);
   const durationSV = useSharedValue(Math.max(0, duration));
@@ -1740,21 +1743,27 @@ function AudioPlayer({
   // פלייהד חלק על ה-UI thread — כמו הוויבפורם החי (dt בין פריימים)
   useFrameCallback((frame) => {
     'worklet';
-    if (isPlayingSV.value < 0.5 || isScrubbingSV.value > 0.5) return;
+    if (isPlayingSV.value < 0.5 || isScrubbingSV.value > 0.5) {
+      audioActiveSV.value = 0;
+      return;
+    }
     const d = durationSV.value;
     if (d <= 0) return;
-    const dt = Math.min(1 / 20, (frame.timeSincePreviousFrame ?? 16) / 1000);
-    const step = (dt * rateSV.value) / d;
-    // יעד = מיקום האודיו האחרון שדווח, מוקדם קדימה באותו קצב
-    const target = Math.min(1, audioTargetSV.value + step);
-    audioTargetSV.value = target;
+    const now = frame.timestamp;
+    const rep = audioTargetSV.value;
+    // עוגן זמן: כל דיווח חדש מהנגן, או חידוש ניגון — נמדד על ה-UI thread
+    if (audioActiveSV.value < 0.5 || rep !== audioSeenSV.value) {
+      audioSeenSV.value = rep;
+      audioAnchorSV.value = now;
+      audioActiveSV.value = 1;
+    }
+    // מקור אמת = מיקום האודיו שדווח; אינטרפולציה רק עד 250ms קדימה (לא רץ לפני הקול)
+    const aheadSec = Math.min(0.25, Math.max(0, (now - audioAnchorSV.value) / 1000));
+    let p = Math.min(1, rep + (aheadSec * rateSV.value) / d);
     const cur = progressSV.value;
-    let next = cur + step;
-    // תיקון רך לעבר האודיו — בלי קפיצות; אחורה רק בסייק אמיתי (סטייה גדולה)
-    next += (target - next) * 0.12;
-    if (target - cur < -0.05) next = target;
-    else if (next < cur) next = cur;
-    progressSV.value = Math.min(1, next); // SMOOTH
+    // נסיגה קטנה (דיווח מאחר) — מחזיקים במקום במקום לקפוץ אחורה; סייק אמיתי עובר
+    if (p < cur && cur - p < 0.04) p = cur;
+    progressSV.value = p; // SMOOTH
   }, true);
 
   const createSoundWithSignedUrlRetry = async (initialUri: string) => {
@@ -1808,7 +1817,7 @@ function AudioPlayer({
       if (dur > 0) {
         const reported = Math.min(1, pos / dur);
         // לא כותבים ישר ל-playhead (זה מה שריצד) — רק מעדכנים יעד; קפיצה רק בסייק/עצירה
-        if (isPlayingSV.value > 0.5 && Math.abs(reported - progressSV.value) < 0.08) {
+        if (isPlayingSV.value > 0.5) {
           audioTargetSV.value = reported;
           setPosition(pos);
         } else {

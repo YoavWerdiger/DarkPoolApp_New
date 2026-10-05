@@ -318,6 +318,9 @@ function ChatInputImpl({
   const previewPlayingSV = useSharedValue(0);
   /** מיקום הפריוויו האחרון שדווח (0–1) — ה-playhead מתקרב אליו ברכות */
   const previewTargetSV = useSharedValue(0);
+  const previewAnchorSV = useSharedValue(0);
+  const previewSeenSV = useSharedValue(-1);
+  const previewActiveSV = useSharedValue(0);
   const previewScrubbingSV = useSharedValue(0);
   const previewDurationSV = useSharedValue(0);
   const isPreviewScrubbingRef = useRef(false);
@@ -1527,21 +1530,27 @@ function ChatInputImpl({
   // פלייהד חלק בפריוויו — UI thread
   useFrameCallback((frame) => {
     'worklet';
-    if (previewPlayingSV.value < 0.5 || previewScrubbingSV.value > 0.5) return;
+    if (previewPlayingSV.value < 0.5 || previewScrubbingSV.value > 0.5) {
+      previewActiveSV.value = 0;
+      return;
+    }
     const d = previewDurationSV.value;
     if (d <= 0) return;
-    const dt = Math.min(1 / 20, (frame.timeSincePreviousFrame ?? 16) / 1000);
-    const step = dt / (d / 1000);
-    // יעד = מיקום האודיו האחרון שדווח, מוקדם קדימה באותו קצב
-    const target = Math.min(1, previewTargetSV.value + step);
-    previewTargetSV.value = target;
+    const now = frame.timestamp;
+    const rep = previewTargetSV.value;
+    // עוגן זמן: כל דיווח חדש מהנגן, או חידוש ניגון — נמדד על ה-UI thread
+    if (previewActiveSV.value < 0.5 || rep !== previewSeenSV.value) {
+      previewSeenSV.value = rep;
+      previewAnchorSV.value = now;
+      previewActiveSV.value = 1;
+    }
+    // מקור אמת = מיקום האודיו שדווח; אינטרפולציה רק עד 250ms קדימה (לא רץ לפני הקול)
+    const aheadSec = Math.min(0.25, Math.max(0, (now - previewAnchorSV.value) / 1000));
+    let p = Math.min(1, rep + aheadSec / (d / 1000));
     const cur = timelineProgress.value;
-    let next = cur + step;
-    // תיקון רך לעבר האודיו — בלי קפיצות; אחורה רק בסייק אמיתי (סטייה גדולה)
-    next += (target - next) * 0.12;
-    if (target - cur < -0.05) next = target;
-    else if (next < cur) next = cur;
-    timelineProgress.value = Math.min(1, next); // SMOOTH
+    // נסיגה קטנה (דיווח מאחר) — מחזיקים במקום במקום לקפוץ אחורה; סייק אמיתי עובר
+    if (p < cur && cur - p < 0.04) p = cur;
+    timelineProgress.value = p; // SMOOTH
   }, true);
 
   const resetPreviewPlayhead = useCallback(async () => {
@@ -1667,7 +1676,7 @@ function ChatInputImpl({
           const pos = st.positionMillis || 0;
           const reported = Math.min(1, pos / dur);
           // לא כותבים ישר ל-playhead (זה מה שריצד) — רק יעד; קפיצה רק בסטייה גדולה
-          if (previewPlayingSV.value > 0.5 && Math.abs(reported - timelineProgress.value) < 0.08) {
+          if (previewPlayingSV.value > 0.5) {
             previewTargetSV.value = reported;
           } else {
             timelineProgress.value = reported;

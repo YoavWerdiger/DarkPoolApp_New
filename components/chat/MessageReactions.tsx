@@ -159,66 +159,41 @@ function MessageReactions({ reactions, onReactionDetails, isMe = false }: Messag
 export default React.memo(MessageReactions);
 
 /**
- * פתיחה/סגירה חלקה של שורת הריאקציות — maxHeight נפתח מ-0, כך שהבועה «דוחפת» את
- * ההודעות מעליה בהדרגה (כמו כניסת הודעה) במקום קפיצה בפריים אחד.
- * בלי מדידה (onLayout) — תקרה קבועה גבוהה מהשורה, ובסוף האנימציה המגבלה מוסרת.
+ * כניסה/יציאה של שורת הריאקציות — בדיוק כמו כניסת הודעה (ChatMessage fadeAnim/slideAnim):
+ * 180ms ease-out, fade + עלייה של 8px. בלי אנימציית גובה: שינוי גובה בכל פריים
+ * מכריח את רשימת ההודעות לחשב layout מחדש — זה מה שהיה תקוע ולאגי.
  * הודעה שכבר יש לה ריאקציות ב-mount — מוצגת מיד, בלי אנימציה.
  */
-const REVEAL_MAX_H = 40;
-/** זהה לכניסת הודעה ב-ChatMessage (fadeAnim / slideAnim) */
 const ENTER_MS = 180;
 const ENTER_SLIDE_PX = 8;
 
 export function ReactionsReveal({ visible, children }: { visible: boolean; children: React.ReactNode }) {
   const [render, setRender] = React.useState(visible);
   const prevVisible = useRef(visible);
-  // בסגירה הריאקציות כבר ריקות — מציגים את התוכן האחרון עד סוף האנימציה (אחרת נעלם בבת אחת)
+  // ביציאה הריאקציות כבר ריקות — מציגים את התוכן האחרון עד סוף האנימציה
   const lastChildren = useRef<React.ReactNode>(children);
   if (visible) lastChildren.current = children;
-  // -1 = ללא מגבלה
-  const maxH = useSharedValue(-1);
   const progress = useSharedValue(visible ? 1 : 0);
 
-  const clearLimit = React.useCallback(() => {
-    maxH.value = -1;
-  }, [maxH]);
-
-  // layout effect — לפני הציור, כדי שלא יהיה פריים בגובה מלא לפני שהאנימציה מתחילה
   React.useLayoutEffect(() => {
     if (visible === prevVisible.current) return;
     prevVisible.current = visible;
     if (visible) {
       setRender(true);
-      maxH.value = 0;
       progress.value = 0;
-      // אותה כניסה כמו הודעה חדשה (ChatMessage): 180ms, ease-out cubic, fade + עלייה של 8px
-      maxH.value = withTiming(REVEAL_MAX_H, { duration: ENTER_MS, easing: Easing.out(Easing.cubic) }, (finished) => {
-        if (finished) runOnJS(clearLimit)();
-      });
       progress.value = withTiming(1, { duration: ENTER_MS, easing: Easing.out(Easing.cubic) });
     } else {
-      if (maxH.value < 0) maxH.value = REVEAL_MAX_H;
-      progress.value = withTiming(0, { duration: ENTER_MS, easing: Easing.out(Easing.cubic) });
-      maxH.value = withTiming(0, { duration: ENTER_MS, easing: Easing.out(Easing.cubic) }, (finished) => {
+      progress.value = withTiming(0, { duration: ENTER_MS, easing: Easing.out(Easing.cubic) }, (finished) => {
         if (finished) runOnJS(setRender)(false);
       });
     }
-  }, [visible, maxH, progress, clearLimit]);
+  }, [visible, progress]);
 
-  const outerStyle = useAnimatedStyle(() =>
-    // בלי overflow:hidden — רק המקום גדל בהדרגה; התוכן לא נחתך ועושה בדיוק את
-    // כניסת ההודעה (fade + עלייה של 8px), במקום «וילון» שנפתח
-    maxH.value < 0 ? { maxHeight: 1000 } : { maxHeight: maxH.value },
-  );
-  const innerStyle = useAnimatedStyle(() => ({
+  const style = useAnimatedStyle(() => ({
     opacity: progress.value,
     transform: [{ translateY: (1 - progress.value) * ENTER_SLIDE_PX }],
   }));
 
   if (!render && !visible) return null;
-  return (
-    <Reanimated.View style={outerStyle}>
-      <Reanimated.View style={innerStyle}>{visible ? children : lastChildren.current}</Reanimated.View>
-    </Reanimated.View>
-  );
+  return <Reanimated.View style={style}>{visible ? children : lastChildren.current}</Reanimated.View>;
 }

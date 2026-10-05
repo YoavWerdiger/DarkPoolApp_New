@@ -4,7 +4,7 @@
 
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useMemo, useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
-import { View, FlatList, Text, StyleSheet, type ViewStyle, type DimensionValue, TouchableOpacity, Pressable, ActivityIndicator, Image, Modal, TextInput, Animated as RNAnimated, Easing, Platform, LayoutChangeEvent, InteractionManager } from 'react-native';
+import { View, FlatList, Text, StyleSheet, type ViewStyle, type DimensionValue, TouchableOpacity, Pressable, ActivityIndicator, Image, Modal, TextInput, Animated as RNAnimated, Easing, Platform, LayoutChangeEvent, InteractionManager, Keyboard } from 'react-native';
 import { SHEET_CLOSE_MS } from '../../components/ui/BottomSheet/sheetMotion';
 import { chatComposerSafeBottomInset, chatComposerKeyboardTranslate, CHAT_COMPOSER_KEYBOARD_GAP, CHAT_KEYBOARD_LTR_STYLE } from '../../components/chat/chatInputLayout';
 import { ChatComposerDock, ChatKeyboardFollow } from '../../components/chat/ChatComposerDock';
@@ -1514,6 +1514,9 @@ export default function ChatGroupScreen() {
   }, [groupId, setTyping]);
 
   const handleMessageLongPress = useCallback((message: ChatMessageType) => {
+    // ה-overlay הוא Modal: ב-iOS בסגירה המערכת מחזירה פוקוס לשדה שהיה פעיל → המקלדת
+    // קופצת אחרי ריאקציה. סוגרים מקלדת מראש; «השב»/«ערוך» פותחים אותה בעצמם.
+    Keyboard.dismiss();
     void HapticFeedback.impactMedium();
     const isMe = message.sender_id === user?.id;
 

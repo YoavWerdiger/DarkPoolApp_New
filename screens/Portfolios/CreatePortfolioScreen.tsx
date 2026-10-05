@@ -15,6 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import UICard from '../../components/ui/UICard';
+import { chromeSurfaceFill } from '../../components/ui/chromeControl';
 import type { PortfoliosStackParamList } from '../../navigation/PortfoliosStack';
 import { ChatSessionBackdrop } from '../../components/chat/ChatSessionBackdrop';
 import { PortfolioScreenHeader } from './components/PortfolioScreenHeader';
@@ -181,8 +182,8 @@ export default function CreatePortfolioScreen() {
           textAlign: 'center',
         },
         chip: {
-          minHeight: 40,
-          paddingHorizontal: 16,
+          minHeight: 44,
+          paddingHorizontal: 18,
           borderRadius: 999,
           alignItems: 'center',
           justifyContent: 'center',
@@ -273,7 +274,7 @@ export default function CreatePortfolioScreen() {
                       <Ionicons
                         name="checkmark-circle"
                         size={18}
-                        color={tokens.colors.text.primary}
+                        color={tokens.colors.primary.main}
                       />
                       <Text style={styles.brokerInfoText}>{line}</Text>
                     </View>
@@ -318,6 +319,7 @@ export default function CreatePortfolioScreen() {
                     {SUPPORTED_CURRENCIES.map((c) => {
                       const active = currency === c.code;
                       return (
+                        // כמו לונג/שורט בפוזיציה: נבחר = מילוי ירוק, לא נבחר = משטח כרום
                         <Pressable
                           key={c.code}
                           onPress={() => {
@@ -329,11 +331,7 @@ export default function CreatePortfolioScreen() {
                           accessibilityLabel={`מטבע ${c.label}`}
                           style={[
                             styles.chip,
-                            {
-                              backgroundColor: active
-                                ? tokens.colors.text.primary
-                                : tokens.colors.background.cardSolid,
-                            },
+                            { backgroundColor: active ? tokens.colors.primary.main : chromeSurfaceFill(tokens) },
                           ]}
                         >
                           <Text
@@ -433,7 +431,7 @@ export default function CreatePortfolioScreen() {
                               name={active ? 'radio-button-on' : 'radio-button-off'}
                               size={20}
                               color={
-                                active ? tokens.colors.text.primary : tokens.colors.text.tertiary
+                                active ? tokens.colors.primary.main : tokens.colors.text.muted
                               }
                             />
                           </UICard>
@@ -552,7 +550,11 @@ function ModeCard({ active, icon, title, description, onPress, logo }: ModeCardP
           alignItems: 'center',
           justifyContent: 'center',
           overflow: 'hidden',
-          backgroundColor: logo ? '#FFFFFF' : tokens.colors.background.cardSolid,
+          backgroundColor: logo
+            ? '#FFFFFF'
+            : active
+            ? 'rgba(0, 200, 5, 0.20)'
+            : tokens.colors.background.card,
         }}
       >
         {logo ? (
@@ -561,7 +563,7 @@ function ModeCard({ active, icon, title, description, onPress, logo }: ModeCardP
           <Ionicons
             name={icon}
             size={21}
-            color={tokens.colors.text.primary}
+            color={active ? tokens.colors.primary.main : tokens.colors.text.secondary}
           />
         )}
       </View>
@@ -569,7 +571,7 @@ function ModeCard({ active, icon, title, description, onPress, logo }: ModeCardP
         <Text
           style={[
             journalCardTitleStyle,
-            { color: tokens.colors.text.primary },
+            { color: active ? tokens.colors.primary.main : tokens.colors.text.primary },
           ]}
         >
           {title}
@@ -589,7 +591,7 @@ function ModeCard({ active, icon, title, description, onPress, logo }: ModeCardP
       <Ionicons
         name={active ? 'checkmark-circle' : 'ellipse-outline'}
         size={22}
-        color={active ? tokens.colors.text.primary : tokens.colors.text.tertiary}
+        color={active ? tokens.colors.primary.main : tokens.colors.text.muted}
       />
     </UICard>
   );

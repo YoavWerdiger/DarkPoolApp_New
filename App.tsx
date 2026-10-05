@@ -46,6 +46,8 @@ import { lockAndroidChatSoftInput } from './components/chat/androidChatKeyboard'
 import { ShareIntentProvider } from 'expo-share-intent';
 import { useIncomingShare } from './hooks/useIncomingShare';
 import { clearShareTargets } from './lib/shareTargets';
+import { DeviceConflictScreen } from './components/DeviceConflictScreen';
+import { checkActiveDevice, claimActiveDevice, subscribeActiveDevice } from './services/deviceSession';
 // מסכים לא-פעילים (כל ה-stacks ב-Drawer נשארים טעונים) מוקפאים ולא מתרנדרים ברקע —
 // משחרר את ה-JS thread ומשפר משמעותית את חלקות הניווט והאינטראקציות.
 enableScreens(true);
@@ -117,6 +119,32 @@ function AppContent() {
     isRegistrationComplete(user) && !midRegistrationWizard && !passwordRecoveryMode;
   // Warm/hydrate רק אחרי רישום מלא — לא לבזבז רשת באמצע OTP
   useAppBootstrap(user?.id, !isLoading && registrationDone);
+
+  // מכשיר פעיל יחיד: בכניסה / חזרה לחזית בודקים; מכשיר אחר תפס → מסך «התחבר מכאן»
+  const [deviceConflict, setDeviceConflict] = useState(false);
+  useEffect(() => {
+    if (isLoading || !user?.id || !registrationDone) {
+      setDeviceConflict(false);
+      return;
+    }
+    let alive = true;
+    const check = async () => {
+      const state = await checkActiveDevice();
+      if (alive) setDeviceConflict(state === 'conflict');
+    };
+    void check();
+    const unsubscribe = subscribeActiveDevice(user.id, () => {
+      if (alive) setDeviceConflict(true);
+    });
+    const appStateSub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') void check();
+    });
+    return () => {
+      alive = false;
+      unsubscribe();
+      appStateSub.remove();
+    };
+  }, [isLoading, user?.id, registrationDone]);
 
   // Cold start: סשן OTP/רישום לא-הושלם בלי כוונת המשך פעילה → Welcome (לא Onboarding)
   // לא רצים בזמן recovery — אחרת מסלקים את סשן ה-OTP לפני מסך סיסמה חדשה
@@ -363,6 +391,24 @@ function AppContent() {
           )}
         </Stack.Navigator>
       </NavigationContainer>
+
+      {deviceConflict && registrationDone && !biometricLocked ? (
+        <DeviceConflictScreen
+          onConnectHere={async () => {
+            const ok = await claimActiveDevice({ revokeOthers: true });
+            if (ok) {
+              void HapticFeedback.success();
+              setDeviceConflict(false);
+            } else {
+              void HapticFeedback.error();
+            }
+          }}
+          onSignOut={() => {
+            setDeviceConflict(false);
+            void signOut();
+          }}
+        />
+      ) : null}
 
       {biometricLocked && registrationDone && (
         <View style={[StyleSheet.absoluteFill, { backgroundColor: canvas, justifyContent: 'center', alignItems: 'center', zIndex: 9999 }]}>

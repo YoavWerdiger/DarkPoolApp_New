@@ -1718,7 +1718,8 @@ export default function ChatGroupScreen() {
       forEveryone ? 'ההודעה תימחק לכל המשתתפים' : 'ההודעה תוסתר רק אצלך',
       [
         { text: 'ביטול', style: 'cancel' },
-        { text: 'מחק', style: 'destructive', onPress: doDelete },
+        // מחכים שהדיאלוג ייסגר לפני המחיקה — התראת שגיאה שנפתחת על Modal שעוד נסגר תוקעת את המסך
+        { text: 'מחק', style: 'destructive', onPress: () => setTimeout(() => void doDelete(), SHEET_CLOSE_MS) },
       ]
     );
   };

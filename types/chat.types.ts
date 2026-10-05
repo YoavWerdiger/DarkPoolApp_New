@@ -235,6 +235,8 @@ export interface ChatMessage {
   is_deleted: boolean;
   deleted_at?: string;
   deleted_for_everyone: boolean;
+  /** נמחקה «רק אצלי» — מוצגת כ«מחקת את ההודעה» (רק למשתמש הזה) */
+  deleted_for_me?: boolean;
   is_silent: boolean;
 
   // הודעת מערכת

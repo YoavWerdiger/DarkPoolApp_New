@@ -1346,6 +1346,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                   return m;
                 }
                 if (m.id !== enrichedMessage.id && !enrichedMessage.client_message_id) return m;
+                // נמחקה אצלי — UPDATE (ריאקציה/קריאה של אחרים) לא מחזיר את התוכן
+                if (m.deleted_for_me || personalDeletedIds.current.has(m.id)) return m;
                 return {
                   ...enrichedMessage,
                   id: m.id.startsWith('temp-') ? enrichedMessage.id : m.id,
@@ -1991,8 +1993,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           ),
         );
       } else {
-        // מחיקה אצלי בלבד — נעלמת מהשיחה שלי
-        setMessages((prev) => prev.filter((m) => m.id !== messageId));
+        // מחיקה אצלי בלבד — נשארת במקום כ«מחקת את ההודעה» (רק אצלי). לא מסירים
+        // מהרשימה: הסרה משנה אינדקסים ב-FlatList ההפוך וגורמת לקפיצה/תקיעה.
+        setMessages((prev) =>
+          prev.map((m) => (m.id === messageId ? chatMessageService.personalTombstone(m) : m)),
+        );
       }
 
       // אם זו מחיקה אישית, נוסיף את ה-ID ל-Set של הודעות שנמחקו אישית

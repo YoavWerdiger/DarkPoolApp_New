@@ -675,7 +675,8 @@ function ChatMessage({
   // ההודעה במקום, ו-return מוקדם לפני hooks היה שובר את סדר ה-hooks.
   if (message.is_deleted) {
     const metaColorStyle = isMe ? styles.myTimeText : styles.theirTimeText;
-    const label = isMe ? 'מחקת את ההודעה' : 'ההודעה נמחקה';
+    // «רק אצלי» — תמיד «מחקת» (גם על הודעה של אחר); לכולם — לפי השולח
+    const label = isMe || message.deleted_for_me ? 'מחקת את ההודעה' : 'ההודעה נמחקה';
     return (
       <View
         style={[styles.messageContainer, isMe ? styles.myMessage : styles.theirMessage, senderGapStyle]}
@@ -2171,6 +2172,7 @@ export default memo(ChatMessage, (prevProps, nextProps) => {
     a.is_edited === b.is_edited &&
     a.is_deleted === b.is_deleted &&
     a.deleted_for_everyone === b.deleted_for_everyone &&
+    a.deleted_for_me === b.deleted_for_me &&
     a.media_url === b.media_url &&
     a.media_thumbnail_url === b.media_thumbnail_url &&
     a.is_sending === b.is_sending &&

@@ -577,8 +577,8 @@ export async function getChatMessages(
       });
     });
 
-    // המרת הנתונים לפורמט הנכון - סינון הודעות שנמחקו אישית
-    const filteredMessages = rows.filter((msg: any) => !deletedIds.has(msg.id));
+    // מחיקה «רק אצלי» נשארת בשיחה כ«מחקת את ההודעה» (ממופה למטה) — לא מסננים
+    const filteredMessages = rows;
     // תשובה תמיד newest-first (FlatList inverted), גם אם השאילתה הייתה ascending
     const orderedRows = ascending ? [...filteredMessages].reverse() : filteredMessages;
 
@@ -637,7 +637,7 @@ export async function getChatMessages(
         }
       }
 
-      return {
+      const mapped = {
         ...msg,
         content: parsedContent,
         media_urls,
@@ -647,6 +647,7 @@ export async function getChatMessages(
         is_starred_by_me: starredIds.has(msg.id),
         is_read_by_me: readIds.has(msg.id),
       };
+      return deletedIds.has(msg.id) ? personalTombstone(mapped) : mapped;
     });
 
     // lean/full: אם ה-embed ל-users חזר null — משלימים בפרופילים ציבוריים (batch).
@@ -741,6 +742,23 @@ export async function editChatMessage(
 // ============================================
 // מחיקת הודעה
 // ============================================
+
+/** הודעה שנמחקה «רק אצלי» — בלי תוכן/מדיה/ריאקציות, מוצגת כ«מחקת את ההודעה» */
+export function personalTombstone<T extends Record<string, any>>(m: T): T {
+  return {
+    ...m,
+    is_deleted: true,
+    deleted_for_me: true,
+    content: null,
+    media_url: null,
+    media_urls: undefined,
+    media_thumbnail_url: null,
+    reactions: [],
+    reactions_count: 0,
+    reply_to: undefined,
+    poll: undefined,
+  };
+}
 
 export async function deleteChatMessage(
   input: DeleteChatMessageInput,
@@ -1417,6 +1435,7 @@ export const chatMessageService = {
   fetchMessagesAround,
   editChatMessage,
   deleteChatMessage,
+  personalTombstone,
   forwardChatMessage,
   addReaction,
   removeReaction,

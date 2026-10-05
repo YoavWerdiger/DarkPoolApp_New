@@ -1249,15 +1249,6 @@ export default function ChatGroupsListScreen() {
             onMenuPress={openMainDrawer}
             rightAccessory={
               <View style={styles.headerEndActions}>
-                {isGlobalAdmin ? (
-                  <TouchableOpacity
-                    style={styles.headerActionBtn}
-                    onPress={() => setCreateGroupSheetVisible(true)}
-                    accessibilityLabel="צור קבוצה חדשה"
-                  >
-                    <Ionicons name="create-outline" size={22} color={tokens.colors.text.primary} />
-                  </TouchableOpacity>
-                ) : null}
                 <DayNavBlurButton
                   onPress={() => {
                     void HapticFeedback.selection();
@@ -1407,7 +1398,25 @@ export default function ChatGroupsListScreen() {
               data={listData}
               renderItem={renderRow}
               keyExtractor={(item) => item.id}
-              ListHeaderComponent={null}
+              ListHeaderComponent={
+                isGlobalAdmin ? (
+                  <TouchableOpacity
+                    style={styles.createGroupRow}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      void HapticFeedback.selection();
+                      setCreateGroupSheetVisible(true);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel="יצירת קבוצה חדשה"
+                  >
+                    <View style={styles.createGroupIcon}>
+                      <Ionicons name="add" size={24} color={tokens.colors.text.primary} />
+                    </View>
+                    <Text style={styles.createGroupText}>יצירת קבוצה חדשה</Text>
+                  </TouchableOpacity>
+                ) : null
+              }
               ListEmptyComponent={renderEmpty}
               refreshControl={
                 <RefreshControl
@@ -1892,6 +1901,27 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
 
   /* ── Joinable group row ── */
   joinableRow: {},
+  createGroupRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+    paddingVertical: 15,
+  },
+  createGroupIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: tokens.colors.background.cardSolid,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  createGroupText: {
+    ...APP_TYPE.cardTitle,
+    color: tokens.colors.text.primary,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
   joinableAvatar: {},
   joinableSubtitle: {
     ...APP_TYPE.cardSubtitle,

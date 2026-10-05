@@ -22,6 +22,7 @@ import {
   type LucideIcon,
 } from 'lucide-react-native';
 import { initialWindowMetrics, useSafeAreaInsets } from 'react-native-safe-area-context';
+import UIButton from '../ui/UIButton';
 import { ChatBottomSheet } from './ChatBottomSheet';
 import { sheetContentBottomPadding } from '../ui/BottomSheet/sheetGlass';
 import { useDesignTokens } from '../ui/DesignTokens';
@@ -668,17 +669,16 @@ export default function MediaPickerSheet({
         )}
 
         {allowsMultiple && selectedIds.length > 0 ? (
-          <TouchableOpacity
-            onPress={confirmSelection}
-            style={styles.confirmFab}
-            accessibilityRole="button"
-            accessibilityLabel={`הוסף ${selectedIds.length} קבצים`}
-          >
-            <Ionicons name="arrow-up" size={22} color={tokens.colors.text.inverse} />
-            <Text style={[styles.confirmCount, { color: tokens.colors.text.inverse }]}>
-              {selectedIds.length}
-            </Text>
-          </TouchableOpacity>
+          // CTA ממורכז כמו «חזרה להיום» ביומן הכלכלי
+          <View style={styles.confirmWrap} pointerEvents="box-none">
+            <UIButton
+              title={selectedIds.length > 1 ? `העלאה · ${selectedIds.length}` : 'העלאה'}
+              variant="primary"
+              icon="arrow-up"
+              iconPosition="right"
+              onPress={confirmSelection}
+            />
+          </View>
         ) : null}
       </View>
     </ChatBottomSheet>
@@ -926,24 +926,12 @@ const createStyles = (
       textAlign: 'center',
       width: '100%',
     },
-    confirmFab: {
+    confirmWrap: {
       position: 'absolute',
-      left: 16,
+      left: 0,
+      right: 0,
       bottom: fabBottom,
-      minWidth: 56,
-      height: 56,
-      borderRadius: 28,
-      paddingHorizontal: 16,
-      backgroundColor: tokens.colors.primary.lightCta,
-      flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
-      gap: 6,
       zIndex: 6,
-    },
-    confirmCount: {
-      fontSize: APP_TYPE.cardTitle.fontSize,
-      fontWeight: APP_TYPE.cardTitle.fontWeight,
-      lineHeight: APP_TYPE.cardTitle.lineHeight,
     },
   });

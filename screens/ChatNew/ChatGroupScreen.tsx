@@ -1952,7 +1952,6 @@ export default function ChatGroupScreen() {
           unreadDividerDismissing={unreadDividerPhase === 'fading'}
           onUnreadDividerDismissed={handleUnreadDividerDismissed}
           isHighlighted={item.id === highlightedMessageId}
-          boldText={isAnnouncementGroup}
           onLayout={(h) => onMessageCellLayout(item.id, h)}
             onLongPress={() => handleMessageLongPress(item)}
             onReply={() => handleReply(item)}

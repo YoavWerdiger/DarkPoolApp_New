@@ -29,7 +29,7 @@ import {
   resolveFitContentSnapPoint,
 } from '../ui/BottomSheet/sheetMotion';
 import { useDesignTokens } from '../ui/DesignTokens';
-import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
+import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE, headerExitButtonFill } from '../ui/DayNavBlurButton';
 import { CHROME_UICARD, chromeSurfaceCardStyle } from '../ui/chromeControl';
 import UICard from '../ui/UICard';
 import {
@@ -262,6 +262,62 @@ export function ChatSheetNavHeader({
     </View>
   );
 }
+
+/**
+ * כותרת שיט לפי הטופו: כפתור שברון חזרה (מילוי cardSolid) מימין, כותרת ממורכזת.
+ * הסגירה מונפשת (useChatSheetDismiss) — חייב להיות בתוך ChatBottomSheet.
+ */
+export function ChatSheetTopoHeader({ title, onClose }: { title?: string; onClose: () => void }) {
+  const tokens = useDesignTokens();
+  const dismiss = useChatSheetDismiss(onClose);
+  return (
+    <View style={topoHeaderStyles.row}>
+      <DayNavBlurButton
+        onPress={dismiss}
+        size={DAY_NAV_BUTTON_SIZE}
+        glass={false}
+        style={{ backgroundColor: headerExitButtonFill(tokens.colors.background.cardSolid) }}
+        accessibilityLabel="חזרה"
+      >
+        <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
+      </DayNavBlurButton>
+      <View style={topoHeaderStyles.center}>
+        {title ? (
+          <Text style={[topoHeaderStyles.title, { color: tokens.colors.text.primary }]} numberOfLines={1}>
+            {title}
+          </Text>
+        ) : null}
+      </View>
+      <View style={topoHeaderStyles.spacer} />
+    </View>
+  );
+}
+
+const topoHeaderStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  spacer: {
+    width: DAY_NAV_BUTTON_SIZE,
+    height: DAY_NAV_BUTTON_SIZE,
+  },
+  title: {
+    fontSize: APP_TYPE.sectionTitle.fontSize,
+    fontWeight: APP_TYPE.sectionTitle.fontWeight,
+    lineHeight: APP_TYPE.sectionTitle.lineHeight,
+    direction: 'ltr',
+    textAlign: 'center',
+    writingDirection: 'rtl',
+    width: '100%',
+  },
+});
 
 type ChatSheetSearchBarProps = {
   value: string;

@@ -2,6 +2,7 @@
 // Chat Group Info Screen - Modern Design
 // ============================================
 
+import { isAnnouncementGroup } from '../../utils/isAnnouncementGroup';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import {
@@ -656,6 +657,9 @@ export default function ChatGroupInfoScreen() {
                   <Star size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
                 </View>
               </TouchableOpacity>
+              {/* הכרזות — כל המשתמשים חברים קבועים, אין יציאה */}
+              {!isAnnouncementGroup(currentGroup?.name, groupId) ? (
+              <>
               <View style={styles.separator} />
               <TouchableOpacity
                 style={styles.menuRow}
@@ -670,6 +674,8 @@ export default function ChatGroupInfoScreen() {
                   <LogOut size={20} color={DesignTokens.colors.danger.main} strokeWidth={2} />
                 </View>
               </TouchableOpacity>
+              </>
+              ) : null}
             </UICard>
           </View>
           </ScrollView>

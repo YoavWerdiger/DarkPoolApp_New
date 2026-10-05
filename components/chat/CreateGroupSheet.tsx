@@ -14,8 +14,8 @@ import { createChatGroup } from '../../services/chat/chatGroupService';
 import { useAuth } from '../../context/AuthContext';
 import { legacyAlert } from '../../utils/appDialog';
 import { HapticFeedback } from '../../utils/hapticFeedback';
-import { ChatBottomSheet, ChatSheetContent } from './ChatBottomSheet';
-import { APP_TYPE, appSheetSubtitleStyle, appSheetTitleStyle } from '../ui/appType';
+import { ChatBottomSheet, ChatSheetContent, ChatSheetTopoHeader } from './ChatBottomSheet';
+import { APP_TYPE, appSheetSubtitleStyle } from '../ui/appType';
 import { APP_LAYOUT, UI_CARD_RADIUS } from '../ui/appLayout';
 import {
   formFieldInputStyle,
@@ -96,12 +96,12 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
       avoidKeyboard
     >
       <ChatSheetContent>
+        <ChatSheetTopoHeader title="קבוצה חדשה" onClose={handleClose} />
         <ScrollView
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.content}
         >
-          <Text style={[appSheetTitleStyle, { color: tokens.colors.text.primary }]}>קבוצה חדשה</Text>
           <Text style={[appSheetSubtitleStyle, styles.subtitle, { color: tokens.colors.text.secondary }]}>
             הקבוצה תופיע בקהילה לכל המשתמשים
           </Text>
@@ -227,6 +227,7 @@ const styles = StyleSheet.create({
     paddingBottom: APP_LAYOUT.componentGap,
   },
   subtitle: {
+    textAlign: 'center',
     marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
   },
   field: {

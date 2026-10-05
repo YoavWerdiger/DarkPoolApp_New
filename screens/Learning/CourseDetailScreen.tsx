@@ -182,7 +182,8 @@ export const CourseDetailScreen: React.FC = () => {
 
         <View style={{ paddingHorizontal: ACADEMY_CARD_HP }}>
         {/* Cover Image */}
-        <View style={[styles.coverContainer, academyCardFrameStyle(frameTier), { aspectRatio: coverRatio }]}>
+        {/* ברוחב המסך המלא (יוצא מהריפוד), בלי מסגרת/פינות — הבאנר כולו גלוי */}
+        <View style={[styles.coverContainer, { aspectRatio: coverRatio, marginHorizontal: -ACADEMY_CARD_HP }]}>
           {course.cover_url ? (
             <Image
               source={{ uri: course.cover_url }}
@@ -401,7 +402,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     // aspectRatio נקבע בזמן ריצה לפי הקובץ (ברירת מחדל 16:9) — גובה קבוע חתך את הלוגו
     marginBottom: APP_LAYOUT.cardStackGap,
     overflow: 'hidden',
-    borderRadius: UI_CARD_RADIUS,
   },
   infoCard: {
     marginBottom: APP_LAYOUT.cardStackGap,

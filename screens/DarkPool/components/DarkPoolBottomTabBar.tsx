@@ -1,5 +1,5 @@
 /**
- * סרגל תחתון — פיד | חקור | חיפוש | מעקב
+ * סרגל תחתון — פיד | חקור | טיקרים | מעקב
  */
 
 import React, { useMemo } from 'react';
@@ -32,7 +32,7 @@ const TAB_META: Record<
     iconActive: 'compass',
   },
   DarkPoolSearch: {
-    label: 'חיפוש',
+    label: 'טיקרים',
     icon: 'search-outline',
     iconActive: 'search',
   },

@@ -165,6 +165,9 @@ export default React.memo(MessageReactions);
  * הודעה שכבר יש לה ריאקציות ב-mount — מוצגת מיד, בלי אנימציה.
  */
 const REVEAL_MAX_H = 40;
+/** זהה לכניסת הודעה ב-ChatMessage (fadeAnim / slideAnim) */
+const ENTER_MS = 180;
+const ENTER_SLIDE_PX = 8;
 
 export function ReactionsReveal({ visible, children }: { visible: boolean; children: React.ReactNode }) {
   const [render, setRender] = React.useState(visible);
@@ -185,14 +188,15 @@ export function ReactionsReveal({ visible, children }: { visible: boolean; child
       setRender(true);
       maxH.value = 0;
       progress.value = 0;
-      maxH.value = withTiming(REVEAL_MAX_H, { duration: 240, easing: Easing.out(Easing.cubic) }, (finished) => {
+      // אותה כניסה כמו הודעה חדשה (ChatMessage): 180ms, ease-out cubic, fade + עלייה של 8px
+      maxH.value = withTiming(REVEAL_MAX_H, { duration: ENTER_MS, easing: Easing.out(Easing.cubic) }, (finished) => {
         if (finished) runOnJS(clearLimit)();
       });
-      progress.value = withTiming(1, { duration: 220 });
+      progress.value = withTiming(1, { duration: ENTER_MS, easing: Easing.out(Easing.cubic) });
     } else {
       if (maxH.value < 0) maxH.value = REVEAL_MAX_H;
-      progress.value = withTiming(0, { duration: 140 });
-      maxH.value = withTiming(0, { duration: 200, easing: Easing.out(Easing.cubic) }, (finished) => {
+      progress.value = withTiming(0, { duration: ENTER_MS, easing: Easing.out(Easing.cubic) });
+      maxH.value = withTiming(0, { duration: ENTER_MS, easing: Easing.out(Easing.cubic) }, (finished) => {
         if (finished) runOnJS(setRender)(false);
       });
     }
@@ -203,7 +207,7 @@ export function ReactionsReveal({ visible, children }: { visible: boolean; child
   );
   const innerStyle = useAnimatedStyle(() => ({
     opacity: progress.value,
-    transform: [{ scale: 0.85 + 0.15 * progress.value }],
+    transform: [{ translateY: (1 - progress.value) * ENTER_SLIDE_PX }],
   }));
 
   if (!render && !visible) return null;

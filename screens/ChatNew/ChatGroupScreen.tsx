@@ -51,6 +51,7 @@ import SeenBySheet from '../../components/chat/SeenBySheet';
 import { MessageSnapshot } from '../../types/MessageSnapshot';
 import { ChatMessage as ChatMessageType, ChatMessageType as MessageType } from '../../types/chat.types';
 import { Ionicons } from '@expo/vector-icons';
+import { APP_LAYOUT } from '../../components/ui/appLayout';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { logger } from '../../utils/logger';

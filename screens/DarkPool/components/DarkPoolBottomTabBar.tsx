@@ -1,5 +1,5 @@
 /**
- * סרגל תחתון — פיד | חקור | מעקב
+ * סרגל תחתון — פיד | חקור | חיפוש | מעקב
  */
 
 import React, { useMemo } from 'react';
@@ -14,6 +14,7 @@ import { DARK_POOL_TAB_BAR_HEIGHT } from '../../../hooks/useDarkPoolTabBarHeight
 type TabRoute =
   | 'DarkPoolExplore'
   | 'DarkPoolFollowing'
+  | 'DarkPoolSearch'
   | 'DarkPoolFeed';
 
 const TAB_META: Record<
@@ -27,6 +28,11 @@ const TAB_META: Record<
   },
   DarkPoolExplore: {
     label: 'חקור',
+    icon: 'compass-outline',
+    iconActive: 'compass',
+  },
+  DarkPoolSearch: {
+    label: 'חיפוש',
     icon: 'search-outline',
     iconActive: 'search',
   },

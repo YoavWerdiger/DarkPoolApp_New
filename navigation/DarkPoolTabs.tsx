@@ -1,5 +1,5 @@
 /**
- * טאבים פנימיים של Dark Pool: פיד · חקור · מעקב.
+ * טאבים פנימיים של Dark Pool: פיד · חקור · חיפוש · מעקב.
  * יושבים תחת route `DarkPoolHome` ב-Stack — MainTabs לא משתנה.
  */
 
@@ -9,10 +9,12 @@ import { DarkPoolBottomTabBar } from '../screens/DarkPool/components/DarkPoolBot
 import DarkPoolHomeScreen from '../screens/DarkPool/DarkPoolHomeScreen';
 import DarkPoolExploreScreen from '../screens/DarkPool/DarkPoolExploreScreen';
 import DarkPoolFollowingScreen from '../screens/DarkPool/DarkPoolFollowingScreen';
+import DarkPoolSearchScreen from '../screens/DarkPool/DarkPoolSearchScreen';
 
 export type DarkPoolTabParamList = {
   DarkPoolFeed: undefined;
   DarkPoolExplore: undefined;
+  DarkPoolSearch: undefined;
   DarkPoolFollowing: undefined;
 };
 
@@ -39,6 +41,7 @@ export default function DarkPoolTabs() {
     >
       <Tab.Screen name="DarkPoolFeed" component={DarkPoolHomeScreen} />
       <Tab.Screen name="DarkPoolExplore" component={DarkPoolExploreScreen} />
+      <Tab.Screen name="DarkPoolSearch" component={DarkPoolSearchScreen} />
       <Tab.Screen name="DarkPoolFollowing" component={DarkPoolFollowingScreen} />
     </Tab.Navigator>
   );

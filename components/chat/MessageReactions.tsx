@@ -159,65 +159,57 @@ function MessageReactions({ reactions, onReactionDetails, isMe = false }: Messag
 export default React.memo(MessageReactions);
 
 /**
- * פתיחה/סגירה חלקה של שורת הריאקציות — הגובה גדל מ-0 לגובה הטבעי, כך שהבועה
- * «דוחפת» את ההודעות מעליה בהדרגה (כמו כניסת הודעה) במקום קפיצה של ~26px בפריים אחד.
+ * פתיחה/סגירה חלקה של שורת הריאקציות — maxHeight נפתח מ-0, כך שהבועה «דוחפת» את
+ * ההודעות מעליה בהדרגה (כמו כניסת הודעה) במקום קפיצה בפריים אחד.
+ * בלי מדידה (onLayout) — תקרה קבועה גבוהה מהשורה, ובסוף האנימציה המגבלה מוסרת.
  * הודעה שכבר יש לה ריאקציות ב-mount — מוצגת מיד, בלי אנימציה.
  */
+const REVEAL_MAX_H = 40;
+
 export function ReactionsReveal({ visible, children }: { visible: boolean; children: React.ReactNode }) {
   const [render, setRender] = React.useState(visible);
   const prevVisible = useRef(visible);
-  const pendingOpen = useRef(false);
-  // -1 = גובה אוטומטי (ללא אילוץ)
-  const height = useSharedValue(visible ? -1 : 0);
+  // -1 = ללא מגבלה
+  const maxH = useSharedValue(-1);
   const progress = useSharedValue(visible ? 1 : 0);
 
-  if (visible !== prevVisible.current) {
+  const clearLimit = React.useCallback(() => {
+    maxH.value = -1;
+  }, [maxH]);
+
+  // layout effect — לפני הציור, כדי שלא יהיה פריים בגובה מלא לפני שהאנימציה מתחילה
+  React.useLayoutEffect(() => {
+    if (visible === prevVisible.current) return;
     prevVisible.current = visible;
     if (visible) {
-      pendingOpen.current = true;
-      if (!render) setRender(true);
+      setRender(true);
+      maxH.value = 0;
+      progress.value = 0;
+      maxH.value = withTiming(REVEAL_MAX_H, { duration: 240, easing: Easing.out(Easing.cubic) }, (finished) => {
+        if (finished) runOnJS(clearLimit)();
+      });
+      progress.value = withTiming(1, { duration: 220 });
+    } else {
+      if (maxH.value < 0) maxH.value = REVEAL_MAX_H;
+      progress.value = withTiming(0, { duration: 140 });
+      maxH.value = withTiming(0, { duration: 200, easing: Easing.out(Easing.cubic) }, (finished) => {
+        if (finished) runOnJS(setRender)(false);
+      });
     }
-  }
-
-  useEffect(() => {
-    if (visible) return;
-    if (!render) return;
-    progress.value = withTiming(0, { duration: 140 });
-    height.value = withTiming(0, { duration: 200, easing: Easing.out(Easing.cubic) }, (finished) => {
-      if (finished) runOnJS(setRender)(false);
-    });
-  }, [visible, render, height, progress]);
-
-  const onLayout = React.useCallback(
-    (e: { nativeEvent: { layout: { height: number } } }) => {
-      const h = e.nativeEvent.layout.height;
-      if (pendingOpen.current) {
-        pendingOpen.current = false;
-        height.value = 0;
-        height.value = withTiming(h, { duration: 220, easing: Easing.out(Easing.cubic) });
-        progress.value = withTiming(1, { duration: 220 });
-      } else if (height.value >= 0 && visible) {
-        // שורה קיימת שגדלה (עוד סוג אימוג׳י) — גם היא בהדרגה
-        height.value = withTiming(h, { duration: 180, easing: Easing.out(Easing.cubic) });
-      }
-    },
-    [height, progress, visible],
-  );
+  }, [visible, maxH, progress, clearLimit]);
 
   const outerStyle = useAnimatedStyle(() =>
-    height.value < 0 ? {} : { height: height.value, overflow: 'hidden' },
+    maxH.value < 0 ? { maxHeight: 1000 } : { maxHeight: maxH.value, overflow: 'hidden' },
   );
   const innerStyle = useAnimatedStyle(() => ({
     opacity: progress.value,
     transform: [{ scale: 0.85 + 0.15 * progress.value }],
   }));
 
-  if (!render) return null;
+  if (!render && !visible) return null;
   return (
-    <Reanimated.View style={[{ alignSelf: 'stretch' }, outerStyle]}>
-      <Reanimated.View onLayout={onLayout} style={innerStyle}>
-        {children}
-      </Reanimated.View>
+    <Reanimated.View style={outerStyle}>
+      <Reanimated.View style={innerStyle}>{children}</Reanimated.View>
     </Reanimated.View>
   );
 }

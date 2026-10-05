@@ -61,6 +61,14 @@ function formatEventCountdown(remainingMs: number): string {
  * האירוע העתידי הקרוב ביותר להיום — אותה כוונה כמו גלילה ל־nearest,
  * עם דיוק שניות + חלון "עכשיו" קצר אחרי הזמן.
  */
+/** YYYY-MM-DD לפי השעון המקומי — toISOString נותן תאריך UTC (בלילה בישראל = אתמול) */
+function localDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function findCountdownTarget(
   list: EconEvent[],
   day: Date,
@@ -70,6 +78,8 @@ function findCountdownTarget(
   if (day.toDateString() !== now.toDateString()) return null;
 
   for (let i = 0; i < list.length; i++) {
+    // דוח שכבר פורסם (יש תוצאה) — אין לו קאונטדאון
+    if (String(list[i].actual ?? '').trim()) continue;
     const eventAt = getEventDateOnDay(day, list[i].time);
     const remaining = eventAt.getTime() - now.getTime();
     if (remaining > 0) {
@@ -449,7 +459,7 @@ export default function EconomicCalendarTab() {
 
   // פילטור אירועים לפי יום נבחר עם תיקון שעה
   const filterEventsByDate = useCallback(() => {
-    const selectedDateStr = selectedDate.toISOString().split('T')[0]; // YYYY-MM-DD
+    const selectedDateStr = localDateStr(selectedDate); // YYYY-MM-DD מקומי
     // פילטור חכם: דיווחים מ-00:00 עד 06:00 שייכים ליום הקודם
     // דיווחים מ-06:00 והלאה שייכים ליום הנוכחי
     let eventsForDay = events.filter(event => {
@@ -468,7 +478,6 @@ export default function EconomicCalendarTab() {
           const selectedDateObj = new Date(selectedDate);
           const previousDay = new Date(selectedDateObj);
           previousDay.setDate(selectedDateObj.getDate() - 1);
-          const previousDayStr = previousDay.toISOString().split('T')[0];
           
           return false; // לא להציג אותו ביום הנוכחי
         }
@@ -480,7 +489,7 @@ export default function EconomicCalendarTab() {
       const selectedDateObj = new Date(selectedDate);
       const nextDay = new Date(selectedDateObj);
       nextDay.setDate(selectedDateObj.getDate() + 1);
-      const nextDayStr = nextDay.toISOString().split('T')[0];
+      const nextDayStr = localDateStr(nextDay);
       
       if (eventDate === nextDayStr) {
         const [hours, minutes] = eventTime.split(':').map(Number);
@@ -498,6 +507,17 @@ export default function EconomicCalendarTab() {
     // סינון קבוע לדוחות מוכרים בלבד (FED / CPI / NFP / ...) — מסיר אלפי
     // אירועים מקומיים/קלים שלא משפיעים על השווקים האמריקאיים.
     eventsForDay = eventsForDay.filter(isCriticalEvent);
+
+    // הספק מחזיר לעיתים אותו דוח פעמיים (ids שונים) — אחד לכל כותרת+תאריך+שעה
+    {
+      const seen = new Set<string>();
+      eventsForDay = eventsForDay.filter((e) => {
+        const key = `${e.date}|${e.time}|${(e.title || '').trim().toLowerCase()}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
 
     // מיון לפי זמן (מהשעה הקטנה לגדולה)
     eventsForDay.sort((a, b) => {
@@ -579,13 +599,13 @@ export default function EconomicCalendarTab() {
   const loadFromDatabase = async (): Promise<EconEvent[]> => {
     try {
       const today = new Date();
-      const todayStr = today.toISOString().split('T')[0];
+      const todayStr = localDateStr(today);
       const startDate = new Date(today);
       startDate.setMonth(startDate.getMonth() - 3);
       const endDate = new Date(today);
       endDate.setMonth(endDate.getMonth() + 3);
-      const startDateStr = startDate.toISOString().split('T')[0];
-      const endDateStr = endDate.toISOString().split('T')[0];
+      const startDateStr = localDateStr(startDate);
+      const endDateStr = localDateStr(endDate);
       
       // שליפה 1: אירועים מהיום והלאה (טווח קצר) – עד 600 רשומות
       const { data: futureData, error: futureError } = await supabase
@@ -672,7 +692,7 @@ export default function EconomicCalendarTab() {
       if (loadedEvents.length === 0) {
       } else {
         const datesWithEvents = [...new Set(loadedEvents.map(e => e.date))].sort();
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = localDateStr(new Date());
         const hasEventsForToday = loadedEvents.some(e => e.date === todayStr);
         if (datesWithEvents.length > 0 && !hasEventsForToday) {
           setSelectedDate(new Date(datesWithEvents[0] + 'T12:00:00'));

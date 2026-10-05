@@ -16,7 +16,6 @@ const RegistrationPasswordScreen = ({ navigation }: { navigation: any }) => {
   const { data, setData } = useRegistration();
   const tokens = useDesignTokens();
   const [password, setPassword] = useState(data.password || '');
-  const [confirmPassword, setConfirmPassword] = useState(data.password || '');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -29,14 +28,8 @@ const RegistrationPasswordScreen = ({ navigation }: { navigation: any }) => {
     return navigation.addListener('state', syncBackState);
   }, [navigation]);
 
-  const passwordsMatch = password.length > 0 && password === confirmPassword;
-  const confirmError =
-    confirmPassword.length === 0
-      ? undefined
-      : password !== confirmPassword
-        ? 'הסיסמאות אינן תואמות'
-        : undefined;
-  const canContinue = !loading && password.length >= 6 && passwordsMatch;
+  // מינימום בלבד: 6 תווים. בלי שדה אימות (יש כפתור הצגת סיסמה) ובלי חובת אותיות/מספרים/סימנים
+  const canContinue = !loading && password.length >= 6;
 
   const handleNext = async () => {
     if (!canContinue) return;
@@ -75,7 +68,7 @@ const RegistrationPasswordScreen = ({ navigation }: { navigation: any }) => {
   return (
     <CashAppScreen
       title="צור סיסמה"
-      subtitle="לפחות 6 תווים — ואשר אותה למטה"
+      subtitle="לפחות 6 תווים"
       currentStep={ONBOARDING_STEPS.password}
       totalSteps={ONBOARDING_TOTAL_STEPS}
       progressVariant="dots"
@@ -135,17 +128,8 @@ const RegistrationPasswordScreen = ({ navigation }: { navigation: any }) => {
           autoCapitalize="none"
           autoFocus
         />
-        {/* מתחת לשדה הסיסמה — נראה בזמן ההקלדה גם כשהמקלדת פתוחה */}
-        <PasswordStrength password={password} />
-        <CashAppInput
-          label="אימות סיסמה"
-          placeholder="הכנס שוב את הסיסמה"
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          secureTextEntry
-          autoCapitalize="none"
-          error={confirmError}
-        />
+        {/* מד חוזק כהמלצה בלבד — בלי רשימת חובות */}
+        <PasswordStrength password={password} showRules={false} />
       </View>
     </CashAppScreen>
   );

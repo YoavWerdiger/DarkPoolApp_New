@@ -114,7 +114,7 @@ const RULES: Rule[] = [
 
 const STRENGTH_LABELS = ['', 'חלשה', 'סבירה', 'טובה', 'חזקה'];
 
-export function PasswordStrength({ password }: { password: string }) {
+export function PasswordStrength({ password, showRules = true }: { password: string; showRules?: boolean }) {
   const tokens = useDesignTokens();
   const passed = RULES.map((r) => r.test(password));
   const score = password ? passed.filter(Boolean).length : 0;
@@ -160,6 +160,7 @@ export function PasswordStrength({ password }: { password: string }) {
           ]}
         />
       </View>
+      {showRules ? (
       <View style={styles.rules}>
         {RULES.map((r, i) => (
           <View key={r.key} style={styles.ruleRow}>
@@ -181,6 +182,7 @@ export function PasswordStrength({ password }: { password: string }) {
           </View>
         ))}
       </View>
+      ) : null}
     </View>
   );
 }

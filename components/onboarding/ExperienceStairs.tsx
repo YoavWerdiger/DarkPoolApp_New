@@ -24,6 +24,11 @@ const MARKER = 40;
 const FLAG_GAP = 10;
 const SPRING = { damping: 22, stiffness: 150, mass: 0.8, overshootClamping: true };
 
+/** צבע לכל רמה: 1 — צבע הערכה, 2 — תכלת, 3 — ירוק, 4 — זהב (null = צבע הטקסט של הערכה) */
+const LEVEL_COLORS: (string | null)[] = [null, '#64B5F6', '#34C759', '#E0B030'];
+/** טקסט על רמה צבעונית — כהה (קריא על תכלת/ירוק/זהב בשתי הערכות) */
+const ON_LEVEL_TEXT = '#111111';
+
 type Option = { label: string; value: string; description?: string };
 
 /** שם קצר על המדרגה עצמה (התווית המלאה מופיעה מתחת) */
@@ -64,7 +69,9 @@ function Step({
   }, [hintDelay, scale]);
 
   const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-  const fg = reached ? tokens.colors.text.inverse : tokens.colors.text.primary;
+  const levelColor = LEVEL_COLORS[index] ?? null;
+  const fill = levelColor ?? tokens.colors.text.primary;
+  const fg = reached ? (levelColor ? ON_LEVEL_TEXT : tokens.colors.text.inverse) : tokens.colors.text.primary;
 
   return (
     <Animated.View style={[{ flex: 1 }, style]}>
@@ -82,7 +89,7 @@ function Step({
         style={[
           styles.step,
           {
-            backgroundColor: reached ? tokens.colors.text.primary : tokens.colors.background.cardSolid,
+            backgroundColor: reached ? fill : tokens.colors.background.cardSolid,
             borderColor: reached ? 'transparent' : tokens.colors.border.divider,
           },
         ]}
@@ -185,8 +192,12 @@ export function ExperienceStairs({ options, value, onChange }: Props) {
 
         {stepW > 0 ? (
           <Animated.View pointerEvents="none" style={[styles.marker, markerStyle]}>
-            <View style={[styles.markerDot, { backgroundColor: tokens.colors.primary.main }]}>
-              <Ionicons name="flag" size={20} color="#FFFFFF" />
+            <View style={[styles.markerDot, { backgroundColor: LEVEL_COLORS[index] ?? tokens.colors.text.primary }]}>
+              <Ionicons
+                name="flag"
+                size={20}
+                color={LEVEL_COLORS[index] ? ON_LEVEL_TEXT : tokens.colors.text.inverse}
+              />
             </View>
           </Animated.View>
         ) : null}

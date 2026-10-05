@@ -50,6 +50,8 @@ const CLOSE_THRESHOLD = 88;
 const VELOCITY_THRESHOLD = 650;
 /** התעלמות משינויי גובה זעירים אחרי מדידה (מונע "קפיצה" בסוף פתיחה) */
 const FIT_CONTENT_HEIGHT_EPS = 2;
+/** fallback אם המדידה לא שינתה snapPoints (ההערכה כבר מדויקת) */
+const FIT_OPEN_MEASURE_WAIT_MS = 90;
 /** handle + padding ב-edgeToEdge (paddingTop 10 + handle margins + handle 4 + paddingBottom 4) + buffer */
 export const BOTTOM_SHEET_EDGE_HANDLE_HEIGHT = 36;
 
@@ -249,6 +251,41 @@ const BottomSheetImpl: React.FC<BottomSheetProps> = ({
   }, [fitContent, openSnapIndex, snapValues]);
 
   // פתיחה/סגירה - זה הקוד הקריטי
+  const pendingFitOpenRef = useRef(false);
+  const fitOpenTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const startFitOpen = useCallback(() => {
+    if (!pendingFitOpenRef.current) return;
+    pendingFitOpenRef.current = false;
+    if (fitOpenTimerRef.current) {
+      clearTimeout(fitOpenTimerRef.current);
+      fitOpenTimerRef.current = null;
+    }
+    const h = visibleHeightPxRef.current;
+    openLockHeightRef.current = h;
+    runOnUI((height: number) => {
+      'worklet';
+      fitContentHeight.value = height;
+      motionClosedY.value = height;
+      translateY.value = height;
+      translateY.value = withTiming(0, FIT_CONTENT_OPEN_TIMING, (finished) => {
+        'worklet';
+        if (finished) runOnJS(onFitContentOpenComplete)();
+      });
+    })(h);
+  }, [fitContentHeight, motionClosedY, translateY, onFitContentOpenComplete]);
+
+  // המדידה הגיעה (snapPoints עודכנו לגובה האמיתי) — מתחילים את העלייה מיד
+  useEffect(() => {
+    if (pendingFitOpenRef.current) startFitOpen();
+  }, [snapKey, startFitOpen]);
+
+  useEffect(
+    () => () => {
+      if (fitOpenTimerRef.current) clearTimeout(fitOpenTimerRef.current);
+    },
+    [],
+  );
+
   // snapKey יציב לפי ערכים — מערך inline חדש בכל רינדור לא מאפס את השיט
   useEffect(() => {
     if (isOpen && snapValues.length > 0) {
@@ -270,17 +307,22 @@ const BottomSheetImpl: React.FC<BottomSheetProps> = ({
         translateY.value = closedTranslateY;
         currentSnapIndex.value = resolvedOpenIndex;
         if (fitContent) {
-          translateY.value = withTiming(0, FIT_CONTENT_OPEN_TIMING, (finished) => {
-            'worklet';
-            if (finished) {
-              runOnJS(onFitContentOpenComplete)();
-            }
-          });
+          // עלייה נדחית עד שהתוכן נמדד (פריים-שניים, לכל היותר FIT_OPEN_MEASURE_WAIT_MS):
+          // קודם השיט עלה רק את הגובה המוערך — כשהתוכן גבוה מההערכה העלייה הייתה קצרה
+          // ומהירה מדי ואחריה גדילה. עכשיו עולה את הגובה האמיתי, באותו קצב כמו כל השיטים.
+          pendingFitOpenRef.current = true;
+          if (fitOpenTimerRef.current) clearTimeout(fitOpenTimerRef.current);
+          fitOpenTimerRef.current = setTimeout(() => startFitOpen(), FIT_OPEN_MEASURE_WAIT_MS);
         } else {
           translateY.value = withTiming(snapValues[resolvedOpenIndex] ?? snapValues[0], SHEET_OPEN_TIMING);
         }
       }
     } else if (!isOpen) {
+      pendingFitOpenRef.current = false;
+      if (fitOpenTimerRef.current) {
+        clearTimeout(fitOpenTimerRef.current);
+        fitOpenTimerRef.current = null;
+      }
       // Parent העביר isOpen=false בלי animateClose — מנגנים סגירה (ה-wrapper משאיר mount ל-SHEET_CLOSE_MS).
       // לא קוראים ל-onClose שוב: ההורה כבר סגר.
       parentNotifiedRef.current = true;

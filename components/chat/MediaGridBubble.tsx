@@ -21,6 +21,10 @@ interface MediaGridBubbleProps {
   localMediaItems?: { id: string; uri: string; type: 'image' | 'video' }[];
   isUploading?: boolean;
   maxWidth?: number;
+  senderName?: string;
+  timeLabel?: string;
+  /** «השב» בגלריה — לתמונה המוצגת (id ההודעה המקורית) */
+  onReplyItem?: (messageId: string) => void;
 }
 
 const GRID_GAP = 2;
@@ -41,6 +45,9 @@ function MediaGridBubble({
   localMediaItems,
   isUploading = false,
   maxWidth = 220,
+  senderName,
+  timeLabel,
+  onReplyItem,
 }: MediaGridBubbleProps) {
   const [galleryVisible, setGalleryVisible] = useState(false);
   const [initialIndex, setInitialIndex] = useState(0);
@@ -243,6 +250,17 @@ function MediaGridBubble({
         onClose={() => setGalleryVisible(false)}
         mediaItems={galleryItems}
         initialIndex={initialIndex}
+        senderName={senderName}
+        timeLabel={timeLabel}
+        onReply={
+          onReplyItem && !isUploading
+            ? (item) => {
+                setGalleryVisible(false);
+                // כמו בצופה הבודד: נותנים ל-Modal להיסגר לפני שהמקלדת עולה
+                setTimeout(() => onReplyItem(item.id), 280);
+              }
+            : undefined
+        }
       />
     </>
   );

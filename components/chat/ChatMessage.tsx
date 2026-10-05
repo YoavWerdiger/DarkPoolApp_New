@@ -189,6 +189,8 @@ interface ChatMessageProps {
   onLongPress?: () => void;
   onPress?: () => void;
   onReply?: () => void;
+  /** אלבום: תגובה לתמונה מסוימת (ה-id של ההודעה המקורית בתוך האלבום) */
+  onReplyToMessageId?: (messageId: string) => void;
   onReactionPress?: (emoji: string) => void;
   onReactionDetailsPress?: (message: ChatMessageType) => void;
   onAvatarPress?: () => void;
@@ -271,6 +273,7 @@ function ChatMessage({
   onLongPress,
   onPress,
   onReply,
+  onReplyToMessageId,
   onReactionPress,
   onReactionDetailsPress,
   onAvatarPress,
@@ -937,6 +940,11 @@ function ChatMessage({
             runtimeVideoThumb,
             videoServerThumbFailed,
             () => setVideoServerThumbFailed(true),
+            {
+              senderName: isMe ? 'אתה' : (message.sender?.display_name || 'משתמש'),
+              timeLabel: timeText,
+              onReplyItem: onReplyToMessageId,
+            },
           )}
 
           {/* Text Content */}
@@ -1091,6 +1099,7 @@ function renderMediaContent(
   videoPoster?: string | null,
   videoServerThumbFailed?: boolean,
   onVideoThumbError?: () => void,
+  album?: { senderName?: string; timeLabel?: string; onReplyItem?: (messageId: string) => void },
 ) {
   const imageUri =
     message.local_media_uri || resolved.main || message.media_url;
@@ -1294,6 +1303,9 @@ function renderMediaContent(
           localMediaItems={message.local_media_urls}
           isUploading={message.is_uploading}
           maxWidth={220}
+          senderName={album?.senderName}
+          timeLabel={album?.timeLabel}
+          onReplyItem={album?.onReplyItem}
         />
       );
 

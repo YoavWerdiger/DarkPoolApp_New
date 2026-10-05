@@ -46,6 +46,10 @@ interface MediaGalleryViewerProps {
   onClose: () => void;
   mediaItems: MediaGalleryItem[];
   initialIndex?: number;
+  senderName?: string;
+  timeLabel?: string;
+  /** «השב» — לפריט המוצג כרגע (כמו בצופה הבודד) */
+  onReply?: (item: MediaGalleryItem) => void;
 }
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -138,6 +142,9 @@ export default function MediaGalleryViewer({
   onClose,
   mediaItems,
   initialIndex = 0,
+  senderName,
+  timeLabel,
+  onReply,
 }: MediaGalleryViewerProps) {
   const insets = useSafeAreaInsets();
   const [chromeVisible, setChromeVisible] = useState(true);
@@ -525,6 +532,9 @@ export default function MediaGalleryViewer({
           caption={caption}
           counter={mediaItems.length > 1 ? `${currentIndex + 1} / ${mediaItems.length}` : undefined}
           onClose={onClose}
+          title={senderName}
+          timeLabel={timeLabel}
+          onReply={onReply && currentItem ? () => onReply(currentItem) : undefined}
           onShare={() => { void handleShare(); }}
           videoSlot={currentItem?.type === 'video' ? (
             <View style={styles.videoControlsRow}>

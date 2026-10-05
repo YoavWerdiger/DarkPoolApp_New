@@ -1622,6 +1622,17 @@ export default function ChatGroupScreen() {
     });
   }, []);
 
+  // אלבום: «השב» בגלריה על תמונה מסוימת — מוצאים את ההודעה המקורית (לפני כיווץ האלבום)
+  const rawMessagesRef = useRef(rawDisplayMessages);
+  rawMessagesRef.current = rawDisplayMessages;
+  const handleReplyToMessageId = useCallback(
+    (messageId: string) => {
+      const target = rawMessagesRef.current?.find((m) => m.id === messageId);
+      if (target) handleReply(target);
+    },
+    [handleReply],
+  );
+
   // Memoised onCancelReply so ChatInput's React.memo can short-circuit when
   // the user just types a key (was: `() => setReplyTo(undefined)` inline,
   // which gave a fresh function reference on every keystroke).
@@ -1958,6 +1969,7 @@ export default function ChatGroupScreen() {
           onLayout={(h) => onMessageCellLayout(item.id, h)}
             onLongPress={() => handleMessageLongPress(item)}
             onReply={() => handleReply(item)}
+            onReplyToMessageId={handleReplyToMessageId}
             onReactionPress={(emoji) => handleReactionPress(item, emoji)}
             onReactionDetailsPress={() => handleReactionDetailsPress(item)}
             onJumpToMessage={handleJumpToMessage}

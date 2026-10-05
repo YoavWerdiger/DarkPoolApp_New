@@ -12,7 +12,7 @@ import Animated, {
   ZoomIn,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { APP_LAYOUT, UI_CARD_RADIUS } from '../ui/appLayout';
 import { APP_TYPE } from '../ui/appType';
@@ -403,11 +403,18 @@ function SpeedGauge({
   const span = 180 / total;
   // מקטע i מכסה זוויות מ-(90 - span*(i+1)) עד (90 - span*i), כשהראשון בצד ימין
   const segments = Array.from({ length: total }).map((_, i) => {
-    const inset = GAUGE_GAP_DEG;
-    const to = 90 - span * i - inset;
-    const from = 90 - span * (i + 1) + inset;
+    // רווח רק בין מקטעים — בקצוות החיצוניים של הקשת אין רווח (שם יש עיגול)
+    const to = 90 - span * i - (i === 0 ? 0 : GAUGE_GAP_DEG);
+    const from = 90 - span * (i + 1) + (i === total - 1 ? 0 : GAUGE_GAP_DEG);
     return { i, d: arcPath(cx, cy, GAUGE_R, from, to) };
   });
+  // נקודות הקצה החיצוניות (ימין +90°, שמאל −90°) — עיגול בקוטר הקו, רק שם הקשת מעוגלת
+  const endPoint = (deg: number) => {
+    const rad = ((deg - 90) * Math.PI) / 180;
+    return { x: cx + GAUGE_R * Math.cos(rad), y: cy + GAUGE_R * Math.sin(rad) };
+  };
+  const rightEnd = endPoint(90);
+  const leftEnd = endPoint(-90);
 
   return (
     <View style={{ width: GAUGE_W, height: cy + 8, alignItems: 'center' }}>
@@ -423,6 +430,13 @@ function SpeedGauge({
             fill="none"
           />
         ))}
+        <Circle cx={rightEnd.x} cy={rightEnd.y} r={GAUGE_STROKE / 2} fill={index === 0 ? color : track} />
+        <Circle
+          cx={leftEnd.x}
+          cy={leftEnd.y}
+          r={GAUGE_STROKE / 2}
+          fill={index === total - 1 ? color : track}
+        />
       </Svg>
       {/* מחוג — מסתובב סביב המרכז התחתון */}
       <Animated.View

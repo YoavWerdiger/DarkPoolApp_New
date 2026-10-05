@@ -15,10 +15,13 @@ const RegistrationTrackScreen = ({ navigation }: { navigation: any }) => {
   const { data, setData } = useRegistration();
   const exitRegistration = useRegistrationExitOptional();
   const plans = getSelectablePlans('registration');
+  // נפתח תמיד על פרימיום (המסלול הפופולרי / הראשון), אלא אם כבר נבחר מסלול בתשלום
+  const defaultPremium =
+    plans.find((p) => p.id !== 'free' && p.popular)?.id ?? plans.find((p) => p.id !== 'free')?.id ?? null;
   const initial =
-    data.accountType && plans.some((p) => p.id === data.accountType)
+    data.accountType && data.accountType !== 'free' && plans.some((p) => p.id === data.accountType)
       ? data.accountType
-      : null;
+      : defaultPremium;
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(initial);
 
   const handleContinue = () => {

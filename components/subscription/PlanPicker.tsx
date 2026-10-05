@@ -207,6 +207,7 @@ export default function PlanPicker({
   const CARD_GAP = 12;
   const [carouselW, setCarouselW] = React.useState(0);
   const carouselRef = React.useRef<ScrollView>(null);
+  const didInitialScroll = React.useRef(false);
   // השכן מציץ ~16px; הכרטיס הפעיל ממורכז
   // סדר LTR: חינמי משמאל, פרימיום מימין (הראשון בקריאה מימין לשמאל) — פותחים על פרימיום
   const pages: ('free' | 'premium')[] = [
@@ -214,7 +215,8 @@ export default function PlanPicker({
     ...(activePremium ? (['premium'] as const) : []),
   ];
   const cardW = Math.max(0, pages.length > 1 ? carouselW - 2 * (CARD_GAP + 16) : carouselW);
-  const initialPage = Math.max(0, pages.indexOf(freeSelected ? 'free' : 'premium'));
+  // תמיד נפתחים על כרטיס הפרימיום
+  const initialPage = Math.max(0, pages.indexOf('premium'));
   const sidePad = (carouselW - cardW) / 2;
   const [page, setPage] = React.useState(initialPage);
 
@@ -328,6 +330,12 @@ export default function PlanPicker({
             disableIntervalMomentum
             contentContainerStyle={{ paddingHorizontal: sidePad, gap: CARD_GAP }}
             contentOffset={{ x: initialPage * (cardW + CARD_GAP), y: 0 }}
+            onContentSizeChange={() => {
+              // contentOffset עובד רק ב-iOS — מוודאים שנפתחים על פרימיום גם באנדרואיד
+              if (didInitialScroll.current) return;
+              didInitialScroll.current = true;
+              carouselRef.current?.scrollTo({ x: initialPage * (cardW + CARD_GAP), animated: false });
+            }}
             onMomentumScrollEnd={(e) => {
               const page = Math.round(e.nativeEvent.contentOffset.x / (cardW + CARD_GAP));
               const key = pages[page];
@@ -339,7 +347,8 @@ export default function PlanPicker({
             style={{ direction: 'ltr' }}
           >
             {pages.map((key) => (
-              <View key={key} style={{ width: cardW }}>
+              // כל הכרטיסים באותו גובה (של הגבוה) — הכרטיס נוכח ומלא
+              <View key={key} style={{ width: cardW, alignSelf: 'stretch' }}>
                 {key === 'premium' ? premiumCard : freeCard}
               </View>
             ))}
@@ -413,9 +422,11 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   card: {
+    flex: 1,
+    minHeight: 460,
     borderRadius: UI_CARD_RADIUS,
     borderWidth: 2,
-    padding: APP_LAYOUT.cardPadding,
+    padding: APP_LAYOUT.cardPadding + 4,
     overflow: 'hidden',
   },
   ribbon: {

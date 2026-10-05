@@ -428,9 +428,25 @@ export default function MediaPickerSheet({
     : sheetBottomPad +
       mediaAttachActionsBlockHeightPx(secondaryCount, showCameraButton ? 2 : 1) +
       12;
+  // בגלריה המלאה הפאנל של השיט גבוה מהחלק הנראה — מודדים כמה ממנו מתחת לקצה המסך
+  const rootRef = useRef<View>(null);
+  const [hiddenBelow, setHiddenBelow] = useState(0);
+  useEffect(() => {
+    if (!expanded) {
+      setHiddenBelow(0);
+      return;
+    }
+    const t = setTimeout(() => {
+      rootRef.current?.measureInWindow((_x, y, _w, h) => {
+        setHiddenBelow(Math.max(0, Math.round(y + h - screenH)));
+      });
+    }, 420);
+    return () => clearTimeout(t);
+  }, [expanded, screenH]);
+
   const styles = useMemo(
-    () => createStyles(tokens, sheetBottomPad, fabBottom),
-    [fabBottom, sheetBottomPad, tokens],
+    () => createStyles(tokens, sheetBottomPad, fabBottom + hiddenBelow),
+    [fabBottom, hiddenBelow, sheetBottomPad, tokens],
   );
 
   const renderThumb = useCallback(
@@ -561,7 +577,7 @@ export default function MediaPickerSheet({
       showBrandWatermark={false}
       contentPaddingBottom={0}
     >
-      <View style={[styles.root, expanded && styles.rootExpanded]}>
+      <View ref={rootRef} collapsable={false} style={[styles.root, expanded && styles.rootExpanded]}>
         {expanded ? (
           <View style={styles.gridWrap}>
             {galleryChrome}

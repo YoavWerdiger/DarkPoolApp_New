@@ -58,6 +58,7 @@ function CourseListHeroInner({
   const heroHeight = coverUrl ? Math.round(screenW / ratio) : height;
 
   return (
+    <View>
     <View style={[styles.root, { height: heroHeight }]}>
       {coverUrl ? (
         <Image
@@ -88,7 +89,45 @@ function CourseListHeroInner({
           <Ionicons name="chevron-forward" size={22} color={T.colors.text.primary} />
         </DayNavBlurButton>
       </View>
+    </View>
 
+      {/* מתחת לבאנר, על הקנבס — טיפוגרפיית דף (pageTitle / sectionSubtitle) וצבעי הערכה */}
+      <View style={styles.info} pointerEvents="none">
+        <Text style={[styles.title, { color: T.colors.text.primary }]} numberOfLines={3}>
+          {title}
+        </Text>
+        {subtitle ? (
+          <Text style={[styles.subtitle, { color: T.colors.text.secondary }]} numberOfLines={2}>
+            {subtitle}
+          </Text>
+        ) : null}
+
+        <View style={progressStyles.block}>
+          {progressLoading ? (
+            <View style={progressStyles.barTrack}>
+              <View style={[progressStyles.barFill, { width: '0%' }]} />
+            </View>
+          ) : (
+            <>
+              <View style={progressStyles.row}>
+                <Text style={progressStyles.label}>{progressLabel}</Text>
+                <Text style={progressStyles.pct}>{progressPct}%</Text>
+              </View>
+              <View style={progressStyles.barTrack}>
+                <View
+                  style={[
+                    progressStyles.barFill,
+                    {
+                      width: `${Math.min(100, Math.max(0, progressPct))}%`,
+                      minWidth: progressPct > 0 ? 4 : 0,
+                    },
+                  ]}
+                />
+              </View>
+            </>
+          )}
+        </View>
+      </View>
     </View>
   );
 }
@@ -110,18 +149,18 @@ function createProgressStyles(T: ReturnType<typeof useDesignTokens>) {
     },
     label: {
       ...ACADEMY_TYPE.caption,
-      color: 'rgba(255,255,255,0.88)',
+      color: T.colors.text.secondary,
       writingDirection: 'rtl',
     },
     pct: {
       ...ACADEMY_TYPE.caption,
-      color: '#FFFFFF',
+      color: T.colors.text.primary,
     },
     barTrack: {
       width: '100%',
       height: 4,
       borderRadius: 2,
-      backgroundColor: 'rgba(255,255,255,0.22)',
+      backgroundColor: T.colors.background.tertiary,
       overflow: 'hidden',
     },
     barFill: {
@@ -146,29 +185,20 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
   },
-  bottomWrap: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
+  info: {
     paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
-    paddingBottom: APP_LAYOUT.screenPaddingHorizontal,
+    paddingTop: APP_LAYOUT.cardPadding,
     gap: 4,
   },
   title: {
     ...ACADEMY_TYPE.pageTitle,
-    color: '#FFFFFF',
     textAlign: 'right',
     writingDirection: 'rtl',
     width: '100%',
-    textShadowColor: 'rgba(0,0,0,0.45)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 8,
   },
   subtitle: {
     ...ACADEMY_TYPE.sectionSubtitle,
     marginTop: APP_LAYOUT.titleSubtitleGap,
-    color: 'rgba(255,255,255,0.82)',
     textAlign: 'right',
     writingDirection: 'rtl',
     width: '100%',

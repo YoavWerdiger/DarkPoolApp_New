@@ -11,8 +11,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';
-import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
-import UICard from '../ui/UICard';
+import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE, headerExitButtonFill } from '../ui/DayNavBlurButton';
+import { Image as ImageIcon, MessageSquareText, Send } from 'lucide-react-native';
+import { SettingsActionRow, SettingsGlassCard } from '../profile/ProfileSettingsUI';
+import { APP_LAYOUT } from '../ui/appLayout';
 import EntityEmbedCard from './EntityEmbedCard';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -26,7 +28,7 @@ import {
   type ShareableAttachment,
 } from '../../types/shareableEntity';
 import { HapticFeedback } from '../../utils/hapticFeedback';
-import { appPhysicalRightText, appSheetButtonLabelStyle } from '../ui/appType';
+import { APP_TYPE, appPhysicalRightText } from '../ui/appType';
 import { legacyAlert } from '../../utils/appDialog';
 import { rootNavigationRef } from '../../navigation/rootNavigationRef';
 
@@ -167,17 +169,22 @@ export default function ShareDestinationSheet({
 
   if (!attachment) return null;
 
+  const noChevron = <View />;
+
   return (
+    // לפי הטופו (כמו 3 הנקודות ביומן): קנבס ערכת הנושא, פינות xl, כותרת עם שברון, שורות פעולה בכרטיס
     <BottomSheet
       isOpen={visible}
       onClose={onClose}
       snapPoints={[0.62, 0.9]}
       enablePanDownToClose={!busy}
       showHandle
+      useModal
       showBrandBackground={false}
       showBrandWatermark={false}
       edgeToEdge
-      topCornerRadius={28}
+      backgroundColor={tokens.colors.background.primary}
+      topCornerRadius={tokens.borderRadius.xl}
     >
       <View style={styles.container}>
         <View style={styles.header}>
@@ -191,20 +198,16 @@ export default function ShareDestinationSheet({
               onClose();
             }}
             size={DAY_NAV_BUTTON_SIZE}
-            glassIntensity="subtle"
-            style={styles.headerIconButton}
-            accessibilityLabel="סגור"
+            glass={false}
+            style={{ backgroundColor: headerExitButtonFill(tokens.colors.background.cardSolid) }}
+            accessibilityLabel={dest === 'chat' ? 'חזרה' : 'סגור'}
             disabled={busy}
           >
-            <Ionicons
-              name="chevron-forward"
-              size={22}
-              color={tokens.colors.text.primary}
-            />
+            <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
           </DayNavBlurButton>
           <View style={styles.headerCenter}>
             <Text style={[styles.headerTitle, { color: tokens.colors.text.primary }]}>
-              {dest === 'chat' ? 'בחר קבוצה' : 'שתף'}
+              {dest === 'chat' ? 'בחר קבוצה' : 'שיתוף'}
             </Text>
           </View>
           <View style={styles.headerSideSpacer} />
@@ -216,113 +219,80 @@ export default function ShareDestinationSheet({
 
         {dest === 'menu' ? (
           <View style={styles.actions}>
-            {onShareAsImage ? (
-              <UICard
-                variant="blur"
-                glassIntensity="medium"
-                padding="none"
-                onPress={
-                  busy
-                    ? undefined
-                    : () => {
-                        void HapticFeedback.selection();
-                        onShareAsImage();
-                      }
-                }
-                style={styles.actionBtn}
-                contentContainerStyle={styles.actionBtnContent}
-                accessibilityLabel="שתף כתמונה"
-              >
-                <Ionicons name="image-outline" size={22} color={tokens.colors.primary.main} />
-                <Text style={[styles.actionText, { color: tokens.colors.text.primary }]}>
-                  שתף כתמונה
-                </Text>
-              </UICard>
-            ) : null}
-            <UICard
-              variant="blur"
-              glassIntensity={onShareAsImage ? 'light' : 'medium'}
-              padding="none"
-              onPress={busy ? undefined : () => void shareTweet()}
-              style={styles.actionBtn}
-              contentContainerStyle={styles.actionBtnContent}
-              accessibilityLabel="פרסם בציוצים"
-            >
-              {busy ? (
-                <ActivityIndicator color={tokens.colors.primary.main} />
-              ) : (
-                <>
-                  <Ionicons
-                    name="chatbubble-ellipses-outline"
-                    size={22}
-                    color={tokens.colors.primary.main}
-                  />
-                  <Text style={[styles.actionText, { color: tokens.colors.text.primary }]}>
-                    פרסם בציוצים
-                  </Text>
-                </>
-              )}
-            </UICard>
-            <UICard
-              variant="blur"
-              glassIntensity="light"
-              padding="none"
-              onPress={
-                busy
-                  ? undefined
-                  : () => {
-                      void HapticFeedback.selection();
-                      setDest('chat');
-                      void loadGroups();
-                    }
-              }
-              style={styles.actionBtn}
-              contentContainerStyle={styles.actionBtnContent}
-              accessibilityLabel="שלח לצ׳אט"
-            >
-              <Ionicons name="people-outline" size={22} color={tokens.colors.text.primary} />
-              <Text style={[styles.actionText, { color: tokens.colors.text.primary }]}>
-                שלח לצ׳אט
-              </Text>
-            </UICard>
+            <SettingsGlassCard style={{ marginBottom: 0 }}>
+              {onShareAsImage ? (
+                <SettingsActionRow
+                  title="שתף כתמונה"
+                  icon={ImageIcon}
+                  trailing={noChevron}
+                  onPress={() => {
+                    if (busy) return;
+                    void HapticFeedback.selection();
+                    onShareAsImage();
+                  }}
+                />
+              ) : null}
+              <SettingsActionRow
+                title={busy ? 'מפרסם…' : 'פרסם בציוצים'}
+                icon={MessageSquareText}
+                trailing={busy ? <ActivityIndicator size="small" color={tokens.colors.text.secondary} /> : noChevron}
+                onPress={() => {
+                  if (busy) return;
+                  void shareTweet();
+                }}
+              />
+              <SettingsActionRow
+                title="שלח לצ׳אט"
+                icon={Send}
+                showDivider={false}
+                onPress={() => {
+                  if (busy) return;
+                  void HapticFeedback.selection();
+                  setDest('chat');
+                  void loadGroups();
+                }}
+              />
+            </SettingsGlassCard>
           </View>
         ) : loading ? (
           <View style={styles.center}>
-            <ActivityIndicator color={tokens.colors.primary.main} />
+            <ActivityIndicator color={tokens.colors.text.secondary} />
           </View>
         ) : groups.length === 0 ? (
           <View style={styles.center}>
-            <Text style={{ color: tokens.colors.text.secondary, writingDirection: 'rtl' }}>
-              אין קבוצות זמינות
-            </Text>
+            <Text style={[styles.emptyText, { color: tokens.colors.text.secondary }]}>אין קבוצות זמינות</Text>
           </View>
         ) : (
           <FlatList
             data={groups}
             keyExtractor={(g) => g.id}
-            contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.groupRow}
-                disabled={busy}
-                onPress={() => void shareToGroup(item.id, item.name)}
-              >
-                {groupAvatarSource(item.name, item.avatar_url, isDarkMode) ? (
-                  <Image
-                    source={groupAvatarSource(item.name, item.avatar_url, isDarkMode)!}
-                    style={styles.groupAvatar}
-                  />
-                ) : (
-                  <View style={[styles.groupAvatar, styles.groupAvatarPh]}>
-                    <Ionicons name="people" size={20} color={tokens.colors.text.secondary} />
-                  </View>
-                )}
-                <Text style={[styles.groupName, { color: tokens.colors.text.primary }]}>
-                  {chatGroupDisplayName(item.name)}
-                </Text>
-                <Ionicons name="chevron-back" size={18} color={tokens.colors.text.tertiary} />
-              </TouchableOpacity>
+            contentContainerStyle={styles.listContent}
+            ItemSeparatorComponent={() => (
+              <View style={[styles.divider, { backgroundColor: tokens.colors.border.divider }]} />
             )}
+            renderItem={({ item }) => {
+              const avatar = groupAvatarSource(item.name, item.avatar_url, isDarkMode);
+              return (
+                <TouchableOpacity
+                  style={styles.groupRow}
+                  activeOpacity={0.7}
+                  disabled={busy}
+                  onPress={() => void shareToGroup(item.id, item.name)}
+                >
+                  {avatar ? (
+                    <Image source={avatar} style={styles.groupAvatar} />
+                  ) : (
+                    <View style={[styles.groupAvatar, styles.groupAvatarPh]}>
+                      <Ionicons name="people" size={20} color={tokens.colors.text.secondary} />
+                    </View>
+                  )}
+                  <Text style={[styles.groupName, { color: tokens.colors.text.primary }]} numberOfLines={1}>
+                    {chatGroupDisplayName(item.name)}
+                  </Text>
+                  <Ionicons name="chevron-back" size={18} color={tokens.colors.text.tertiary} />
+                </TouchableOpacity>
+              );
+            }}
           />
         )}
       </View>
@@ -336,14 +306,9 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     header: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: 16,
-      paddingBottom: 12,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: tokens.colors.border.divider,
+      paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+      paddingTop: 4,
       gap: 10,
-    },
-    headerIconButton: {
-      alignSelf: 'center',
     },
     headerCenter: {
       flex: 1,
@@ -355,61 +320,54 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       height: DAY_NAV_BUTTON_SIZE,
     },
     headerTitle: {
-      fontSize: 20,
-      fontWeight: '800',
-      letterSpacing: -0.35,
+      fontSize: APP_TYPE.sectionTitle.fontSize,
+      lineHeight: APP_TYPE.sectionTitle.lineHeight,
+      fontWeight: APP_TYPE.sectionTitle.fontWeight,
+      direction: 'ltr',
       textAlign: 'center',
       writingDirection: 'rtl',
       width: '100%',
     },
-    preview: { paddingHorizontal: 16, marginBottom: 12, marginTop: 12 },
-    actions: { paddingHorizontal: 16, gap: 10 },
-    actionBtn: {
-      borderRadius: 999,
-      minHeight: 52,
-      overflow: 'hidden',
+    preview: {
+      paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+      marginTop: APP_LAYOUT.cardTitleToBodyGap + 4,
+      marginBottom: APP_LAYOUT.componentGap,
     },
-    actionBtnContent: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 10,
-      minHeight: 52,
-      paddingVertical: 14,
-      paddingHorizontal: 20,
-    },
-    actionText: {
-      flex: 1,
-      ...appSheetButtonLabelStyle,
-      ...appPhysicalRightText,
-      textAlign: 'right',
-    },
+    actions: { paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal },
     center: {
       flex: 1,
       alignItems: 'center',
       justifyContent: 'center',
       padding: 24,
     },
+    emptyText: {
+      ...appPhysicalRightText,
+      textAlign: 'center',
+      fontSize: APP_TYPE.cardBody.fontSize,
+    },
+    listContent: {
+      paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+      paddingBottom: 24,
+    },
+    divider: { height: StyleSheet.hairlineWidth },
     groupRow: {
       flexDirection: 'row-reverse',
       alignItems: 'center',
       gap: 12,
-      paddingVertical: 12,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: tokens.colors.border.divider,
+      paddingVertical: 15,
     },
     groupAvatar: { width: 44, height: 44, borderRadius: tokens.borderRadius.full },
     groupAvatarPh: {
-      backgroundColor: tokens.colors.background.secondary,
+      backgroundColor: tokens.colors.background.cardSolid,
       alignItems: 'center',
       justifyContent: 'center',
     },
     groupName: {
+      ...appPhysicalRightText,
       flex: 1,
-      fontSize: 15,
-      fontWeight: '600',
-      textAlign: 'right',
-      writingDirection: 'rtl',
+      fontSize: APP_TYPE.cardTitle.fontSize,
+      lineHeight: APP_TYPE.cardTitle.lineHeight,
+      fontWeight: APP_TYPE.cardTitle.fontWeight,
     },
   });
 }

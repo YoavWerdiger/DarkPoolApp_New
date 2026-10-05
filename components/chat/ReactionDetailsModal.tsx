@@ -20,8 +20,8 @@ import {
 } from './ChatBottomSheet';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';
 import { useDesignTokens } from '../ui/DesignTokens';
-import { APP_LAYOUT, UI_CARD_RADIUS } from '../ui/appLayout';
-import { APP_TYPE } from '../ui/appType';
+import { APP_LAYOUT } from '../ui/appLayout';
+import { APP_TYPE, appPhysicalRightText } from '../ui/appType';
 import { formatDistanceToNow } from 'date-fns';
 import { he } from 'date-fns/locale';
 
@@ -84,9 +84,9 @@ const ReactionDetailsModal: React.FC<ReactionDetailsModalProps> = memo(({
   }, [insets.bottom]);
 
   const { snapPoint, onContentLayout } = useChatFitContentSnap(
-    0.5,
+    0.4,
     0.85,
-    0.48,
+    0.2,
     visible ? message?.id : null,
   );
 
@@ -169,18 +169,15 @@ const ReactionDetailsModal: React.FC<ReactionDetailsModalProps> = memo(({
         tabEmoji: {
           fontSize: 18,
         },
+        // רשימה שטוחה כמו רשימת האחזקות — שורות עם מפרידים, בלי כרטיס
         card: {
-          borderRadius: UI_CARD_RADIUS,
-          backgroundColor: tokens.colors.background.cardSolid,
-          paddingHorizontal: APP_LAYOUT.cardPadding,
-          minHeight: 120,
           maxHeight: 380,
         },
         row: {
           flexDirection: 'row',
           alignItems: 'center',
           gap: 12,
-          paddingVertical: 12,
+          paddingVertical: 15,
         },
         divider: {
           height: StyleSheet.hairlineWidth,
@@ -203,6 +200,7 @@ const ReactionDetailsModal: React.FC<ReactionDetailsModalProps> = memo(({
           flex: 1,
         },
         name: {
+          ...appPhysicalRightText,
           fontSize: APP_TYPE.cardTitle.fontSize,
           lineHeight: APP_TYPE.cardTitle.lineHeight,
           fontWeight: APP_TYPE.cardTitle.fontWeight,
@@ -211,6 +209,7 @@ const ReactionDetailsModal: React.FC<ReactionDetailsModalProps> = memo(({
           writingDirection: 'rtl',
         },
         meta: {
+          ...appPhysicalRightText,
           fontSize: APP_TYPE.cardSubtitle.fontSize,
           lineHeight: APP_TYPE.cardSubtitle.lineHeight,
           color: tokens.colors.text.secondary,

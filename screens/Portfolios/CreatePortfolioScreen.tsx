@@ -25,7 +25,6 @@ import {
   TextField,
 } from './components/PortfolioFormFields';
 import { PortfolioFormFooter } from './components/PortfolioFormFooter';
-import { GlassChip } from '../../components/ui/GlassChip';
 import {
   JOURNAL_LAYOUT,
   journalCardBodyStyle,

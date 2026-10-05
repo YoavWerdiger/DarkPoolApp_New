@@ -242,6 +242,33 @@ async function invokeAdminCardcom<T>(action: string, payload: Record<string, unk
   return data as T;
 }
 
+export type AdminChatGroup = {
+  id: string;
+  name: string;
+  description: string | null;
+  avatar_url: string | null;
+  members_count: number | null;
+  settings: {
+    onlyAdminsCanSend?: boolean;
+    is_announcement?: boolean;
+    allowed_tiers?: ('free' | 'premium')[];
+  } | null;
+  created_at: string;
+};
+
+export type AdminGroupMember = {
+  user_id: string;
+  role: 'admin' | 'member' | 'owner' | string;
+  joined_at: string;
+  user: {
+    id: string;
+    display_name: string | null;
+    full_name: string | null;
+    email: string | null;
+    profile_picture: string | null;
+  } | null;
+};
+
 export const adminService = {
   getStats: (opts: { days?: 7 | 30 | 90 } = {}) =>
     invokeAdminApi<AdminStats>('stats', {
@@ -278,6 +305,23 @@ export const adminService = {
       'set_suspend',
       { userId, suspended, reason },
     ),
+
+  // ── קבוצות צ'אט ──
+  listGroups: () => invokeAdminApi<{ groups: AdminChatGroup[] }>('list_groups'),
+  updateGroup: (
+    groupId: string,
+    patch: { name?: string; description?: string; adminsOnly?: boolean; allowedTiers?: ('free' | 'premium')[] },
+  ) => invokeAdminApi<{ group: AdminChatGroup }>('update_group', { groupId, ...patch }),
+  deleteGroup: (groupId: string) => invokeAdminApi<{ ok: true }>('delete_group', { groupId }),
+  listGroupMembers: (groupId: string) =>
+    invokeAdminApi<{ members: AdminGroupMember[] }>('list_group_members', { groupId }),
+  setGroupMemberRole: (groupId: string, userId: string, role: 'admin' | 'member') =>
+    invokeAdminApi<{ ok: true }>('set_group_member_role', { groupId, userId, role }),
+  removeGroupMember: (groupId: string, userId: string) =>
+    invokeAdminApi<{ ok: true }>('remove_group_member', { groupId, userId }),
+  /** הרשאת ניהול באפליקציה — רק סופר-אדמין */
+  setAppAdmin: (userId: string, admin: boolean) =>
+    invokeAdminApi<{ ok: true; role: string }>('set_app_role', { userId, admin }),
 
   setPremium: (userId: string, grant: boolean) =>
     invokeAdminApi<{

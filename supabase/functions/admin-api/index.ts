@@ -45,7 +45,7 @@ async function requireAdmin(req: Request) {
   if (!profile || !ADMIN_ROLES.has(role)) {
     return { ok: false as const, response: json({ error: 'Forbidden — admin only' }, 403) };
   }
-  return { ok: true as const, adminId: profile.id as string, supabase };
+  return { ok: true as const, adminId: profile.id as string, adminRole: role, supabase };
 }
 
 async function audit(
@@ -73,7 +73,7 @@ serve(async (req) => {
 
   const gate = await requireAdmin(req);
   if (!gate.ok) return gate.response;
-  const { adminId, supabase } = gate;
+  const { adminId, adminRole, supabase } = gate;
 
   let body: Record<string, unknown>;
   try {
@@ -113,6 +113,20 @@ serve(async (req) => {
         return await getCardcomConfig(supabase);
       case 'upsert_cardcom_config':
         return await upsertCardcomConfig(supabase, adminId, body);
+      case 'list_groups':
+        return await listGroups(supabase);
+      case 'update_group':
+        return await updateGroup(supabase, adminId, body);
+      case 'delete_group':
+        return await deleteGroup(supabase, adminId, body);
+      case 'list_group_members':
+        return await listGroupMembers(supabase, body);
+      case 'set_group_member_role':
+        return await setGroupMemberRole(supabase, adminId, body);
+      case 'remove_group_member':
+        return await removeGroupMember(supabase, adminId, body);
+      case 'set_app_role':
+        return await setAppRole(supabase, adminId, adminRole, body);
       default:
         return json({ error: `Unknown action: ${action}` }, 400);
     }
@@ -660,4 +674,126 @@ async function upsertCardcomConfig(
       updatedAt: data.updated_at,
     },
   });
+}
+
+
+/* ───────────────────────── ניהול קבוצות ───────────────────────── */
+
+const ANNOUNCEMENTS_GROUP_ID = '00000000-0000-0000-0000-000000000001';
+const TIERS = new Set(['free', 'premium']);
+
+async function listGroups(supabase: SupabaseClient) {
+  const { data, error } = await supabase
+    .from('chat_groups')
+    .select('id, name, description, avatar_url, members_count, settings, created_at')
+    .neq('name', 'קבוצה (מיגרציה)')
+    .order('name');
+  if (error) throw error;
+  return json({ groups: data ?? [] });
+}
+
+async function updateGroup(supabase: SupabaseClient, adminId: string, body: Record<string, unknown>) {
+  const groupId = String(body.groupId || '');
+  if (!groupId) return json({ error: 'groupId required' }, 400);
+  const { data: existing } = await supabase.from('chat_groups').select('id, settings').eq('id', groupId).maybeSingle();
+  if (!existing) return json({ error: 'Group not found' }, 404);
+
+  const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (typeof body.name === 'string') {
+    const name = body.name.replace(/<[^>]*>/g, '').trim().slice(0, 80);
+    if (name.length < 2) return json({ error: 'שם קצר מדי' }, 400);
+    patch.name = name;
+  }
+  if (typeof body.description === 'string') {
+    patch.description = body.description.replace(/<[^>]*>/g, '').trim().slice(0, 500) || null;
+  }
+  const settings = { ...((existing.settings as Record<string, unknown>) || {}) };
+  if (typeof body.adminsOnly === 'boolean') {
+    settings.onlyAdminsCanSend = body.adminsOnly;
+    settings.is_announcement = body.adminsOnly;
+  }
+  if (Array.isArray(body.allowedTiers)) {
+    const tiers = (body.allowedTiers as unknown[]).map(String).filter((t) => TIERS.has(t));
+    if (tiers.length === 0) return json({ error: 'צריך לפחות מסלול אחד' }, 400);
+    settings.allowed_tiers = tiers;
+  }
+  patch.settings = settings;
+
+  const { data, error } = await supabase.from('chat_groups').update(patch).eq('id', groupId).select().maybeSingle();
+  if (error) throw error;
+  await audit(supabase, adminId, 'update_group', null, { groupId, patch });
+  return json({ group: data });
+}
+
+async function deleteGroup(supabase: SupabaseClient, adminId: string, body: Record<string, unknown>) {
+  const groupId = String(body.groupId || '');
+  if (!groupId) return json({ error: 'groupId required' }, 400);
+  if (groupId === ANNOUNCEMENTS_GROUP_ID) return json({ error: 'אי אפשר למחוק את קבוצת ההכרזות' }, 400);
+  // reactions לא במחיקה מדורגת — מוחקים קודם
+  await supabase.from('chat_message_reactions').delete().eq('group_id', groupId);
+  await supabase.from('chat_messages').delete().eq('group_id', groupId);
+  const { error } = await supabase.from('chat_groups').delete().eq('id', groupId);
+  if (error) throw error;
+  await audit(supabase, adminId, 'delete_group', null, { groupId });
+  return json({ ok: true });
+}
+
+async function listGroupMembers(supabase: SupabaseClient, body: Record<string, unknown>) {
+  const groupId = String(body.groupId || '');
+  if (!groupId) return json({ error: 'groupId required' }, 400);
+  const { data, error } = await supabase
+    .from('chat_group_members')
+    .select('user_id, role, joined_at, user:users!chat_group_members_user_id_fkey(id, display_name, full_name, email, profile_picture)')
+    .eq('group_id', groupId)
+    .order('joined_at', { ascending: true });
+  if (error) throw error;
+  return json({ members: data ?? [] });
+}
+
+async function setGroupMemberRole(supabase: SupabaseClient, adminId: string, body: Record<string, unknown>) {
+  const groupId = String(body.groupId || '');
+  const userId = String(body.userId || '');
+  const role = String(body.role || '');
+  if (!groupId || !userId || !['admin', 'member'].includes(role)) return json({ error: 'Invalid input' }, 400);
+  const { error } = await supabase.from('chat_group_members').update({ role }).eq('group_id', groupId).eq('user_id', userId);
+  if (error) throw error;
+  await audit(supabase, adminId, 'set_group_member_role', userId, { groupId, role });
+  return json({ ok: true });
+}
+
+async function removeGroupMember(supabase: SupabaseClient, adminId: string, body: Record<string, unknown>) {
+  const groupId = String(body.groupId || '');
+  const userId = String(body.userId || '');
+  if (!groupId || !userId) return json({ error: 'Invalid input' }, 400);
+  if (groupId === ANNOUNCEMENTS_GROUP_ID) return json({ error: 'כל המשתמשים חברים בהכרזות' }, 400);
+  const { error } = await supabase.from('chat_group_members').delete().eq('group_id', groupId).eq('user_id', userId);
+  if (error) throw error;
+  await audit(supabase, adminId, 'remove_group_member', userId, { groupId });
+  return json({ ok: true });
+}
+
+/** הרשאת אפליקציה (אדמין) — רק super_admin, ולא על עצמו */
+async function setAppRole(
+  supabase: SupabaseClient,
+  adminId: string,
+  adminRole: string,
+  body: Record<string, unknown>,
+) {
+  if (adminRole !== 'super_admin') return json({ error: 'רק סופר-אדמין יכול לשנות הרשאות ניהול' }, 403);
+  const userId = String(body.userId || '');
+  const makeAdmin = Boolean(body.admin);
+  if (!userId) return json({ error: 'userId required' }, 400);
+  if (userId === adminId) return json({ error: 'Cannot change own role' }, 400);
+  const { data: target } = await supabase.from('users').select('id, subscription_role').eq('id', userId).maybeSingle();
+  if (!target) return json({ error: 'User not found' }, 404);
+  const currentRole = String(target.subscription_role || '').toLowerCase();
+  if (currentRole === 'super_admin') return json({ error: 'Cannot change super admin' }, 400);
+  const nextRole = makeAdmin ? 'admin' : 'free_user';
+  const { error } = await supabase
+    .from('users')
+    .update({ subscription_role: nextRole, updated_at: new Date().toISOString() })
+    .eq('id', userId);
+  if (error) throw error;
+  await audit(supabase, adminId, makeAdmin ? 'grant_admin' : 'revoke_admin', userId, { previousRole: currentRole, nextRole });
+  return json({ ok: true, role: nextRole });
 }

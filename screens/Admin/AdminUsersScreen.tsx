@@ -18,8 +18,7 @@ import {
   Sparkles,
   Trash2,
   Volume2,
-  VolumeX,
-} from 'lucide-react-native';
+  VolumeX, ShieldCheck } from 'lucide-react-native';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 import { ProfileMenuRow } from '../../components/profile/ProfileSettingsUI';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
@@ -193,6 +192,39 @@ export default function AdminUsersScreen({ navigation }: any) {
     );
   };
 
+  /** הרשאת ניהול באפליקציה — השרת מאפשר רק לסופר-אדמין */
+  const confirmAppAdmin = (user: AdminUserRow) => {
+    const role = String(user.subscription_role || '').toLowerCase();
+    const makeAdmin = role !== 'admin';
+    const who = user.display_name || user.full_name || user.email;
+    legacyAlert(
+      makeAdmin ? 'הרשאת מנהל' : 'הסרת הרשאת מנהל',
+      makeAdmin
+        ? `לתת ל־${who} גישה לפאנל המנהלים ולכל פעולות הניהול?`
+        : `להסיר מ־${who} את הרשאות הניהול?`,
+      [
+        { text: 'ביטול', style: 'cancel' },
+        {
+          text: makeAdmin ? 'הפוך למנהל' : 'הסר',
+          style: makeAdmin ? 'default' : 'destructive',
+          onPress: async () => {
+            setBusyId(user.id);
+            try {
+              const res = await adminService.setAppAdmin(user.id, makeAdmin);
+              patchUserLocally(user.id, { subscription_role: res.role });
+              void HapticFeedback.success();
+            } catch (e) {
+              void HapticFeedback.error();
+              legacyAlert('שגיאה', e instanceof Error ? e.message : 'פעולה נכשלה');
+            } finally {
+              setBusyId(null);
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const confirmResetPassword = (user: AdminUserRow) => {
     legacyAlert('איפוס סיסמה', `ליצור קישור איפוס עבור ${user.email}?`, [
       { text: 'ביטול', style: 'cancel' },
@@ -355,6 +387,11 @@ export default function AdminUsersScreen({ navigation }: any) {
               onSuspend={() => confirmSuspend(item)}
               onPremium={() => confirmPremium(item)}
               onResetPassword={() => confirmResetPassword(item)}
+              onAppAdmin={
+                String(item.subscription_role || '').toLowerCase() === 'super_admin'
+                  ? undefined
+                  : () => confirmAppAdmin(item)
+              }
               onDelete={() => confirmDelete(item)}
               onPayments={() => {
                 void HapticFeedback.impactLight();
@@ -384,6 +421,7 @@ function UserCard({
   onSuspend,
   onPremium,
   onResetPassword,
+  onAppAdmin,
   onDelete,
   onPayments,
 }: {
@@ -398,6 +436,7 @@ function UserCard({
   onSuspend: () => void;
   onPremium: () => void;
   onResetPassword: () => void;
+  onAppAdmin?: () => void;
   onDelete: () => void;
   onPayments: () => void;
 }) {
@@ -496,6 +535,13 @@ function UserCard({
         icon={Sparkles}
         onPress={guard(onPremium)}
       />
+      {onAppAdmin ? (
+        <ProfileMenuRow
+          title={String(item.subscription_role || '').toLowerCase() === 'admin' ? 'הסר הרשאת מנהל' : 'הפוך למנהל'}
+          icon={ShieldCheck}
+          onPress={guard(onAppAdmin)}
+        />
+      ) : null}
       <ProfileMenuRow title="איפוס סיסמה" icon={KeyRound} onPress={guard(onResetPassword)} />
       <ProfileMenuRow title="מחק" icon={Trash2} danger showDivider={false} onPress={guard(onDelete)} />
     </AdminSurface>

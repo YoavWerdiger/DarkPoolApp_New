@@ -686,6 +686,20 @@ function ChatMessage({
         accessibilityRole="text"
         accessibilityLabel={label}
       >
+        {/* אותה עמודת אווטאר כמו בהודעה רגילה — אחרת הבועה של other נצמדת לקצה */}
+        {!isMe && (showAvatar ? (
+          <View style={styles.avatarContainer}>
+            {message.sender?.profile_picture ? (
+              <Image source={{ uri: message.sender.profile_picture }} style={styles.avatar} />
+            ) : (
+              <View style={[styles.avatar, styles.avatarPlaceholder]}>
+                <Text style={styles.avatarText}>{message.sender?.display_name?.charAt(0) || '?'}</Text>
+              </View>
+            )}
+          </View>
+        ) : (
+          <View style={styles.avatarSpacer} />
+        ))}
         <View style={[styles.bubble, isMe ? styles.myBubble : styles.theirBubble]}>
           <View style={styles.deletedRow}>
             <Ionicons name="ban-outline" size={15} style={[styles.deletedIcon, metaColorStyle]} />
@@ -1828,14 +1842,9 @@ function AudioPlayer({
           // בניגון (גם buffering): רק יעד — ה-playhead עוקב ולא קופץ אחורה
           audioTargetSV.value = reported;
           setPosition(pos);
-        } else if (isPlayingSV.value < 0.5) {
-          // עצור: מיישרים רק בסטייה אמיתית (סייק חיצוני), לא על דיווח שמאחר בכמה מאות ms
-          if (Math.abs(reported - progressSV.value) * dur > 0.6) {
-            syncProgressFromAudio(pos, dur);
-          } else {
-            setPosition(pos);
-          }
         }
+        // עצור: דיווחי הנגן לא מזיזים את הנקודה (רק גרירה). בסיום ההשמעה מגיע דיווח אחרון
+        // עם מיקום = סוף, אחרי האיפוס להתחלה — הוא סימן לרגע את כל הוויבפורם כנשמע.
       }
       if (status.isPlaying) {
         setIsPlaying(true);

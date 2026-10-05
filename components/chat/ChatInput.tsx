@@ -1683,11 +1683,8 @@ function ChatInputImpl({
           if (st.isPlaying) {
             // בניגון: רק יעד — ה-playhead עוקב ולא קופץ אחורה
             previewTargetSV.value = reported;
-          } else if (Math.abs(reported - timelineProgress.value) * (dur / 1000) > 0.6) {
-            // עצור + סטייה אמיתית (סייק) — מיישרים; פיגור דיווח קטן לא מזיז את הנקודה
-            timelineProgress.value = reported;
-            previewTargetSV.value = timelineProgress.value;
           }
+          // עצור: דיווחים לא מזיזים את הנקודה (דיווח «סוף» אחרי איפוס סימן הכל כנשמע)
           setPreviewPosition(pos);
         }
         if (st.isPlaying) {

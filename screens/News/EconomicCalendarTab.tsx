@@ -122,7 +122,8 @@ const EconomicEventCard: React.FC<{
       case 'high':
         return DesignTokens.colors.danger.main; // 🔴 אדום
       case 'medium':
-        return DesignTokens.colors.warning.main; // 🟠 כתום
+        // כתום אמיתי — warning.main של הערכה זהוב מדי לחשיבות בינונית
+        return '#FF8A00'; // 🟠 כתום
       case 'low':
       default:
         return DesignTokens.colors.border.primary; // נייטרלי — לא דגל

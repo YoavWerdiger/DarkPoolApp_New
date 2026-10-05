@@ -70,7 +70,9 @@ const NAME_TO_KEY: Record<string, IconKey> = {
 
 /** שם לתצוגה — כפי שנשמר ב-chat_groups (כולל אימוג׳ים, כמו בקהילת הוואטסאפ) */
 export function chatGroupDisplayName(groupName?: string | null): string {
-  return (groupName ?? '').replace(/\s+/g, ' ').trim();
+  const name = (groupName ?? '').replace(/\s+/g, ' ').trim();
+  // RLM — אימוג׳ים בתחילת שם עברי נשארים מימין לשם (אחרת ה-bidi זורק אותם לשמאל)
+  return /[\u0590-\u05FF]/.test(name) ? `\u200F${name}` : name;
 }
 
 function baseGroupName(groupName: string): string {

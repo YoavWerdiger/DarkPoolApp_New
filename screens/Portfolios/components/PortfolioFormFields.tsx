@@ -26,6 +26,7 @@ import {
 } from '../../../components/ui/formControl';
 import { PasswordVisibilityToggle } from '../../../components/ui/PasswordVisibilityToggle';
 import { APP_LAYOUT } from '../../../components/ui/appLayout';
+import { APP_TYPE } from '../../../components/ui/appType';
 import {
   journalCardSubtitleStyle,
   journalCardTitleStyle,
@@ -65,12 +66,15 @@ interface FieldLabelProps {
   label: string;
   optional?: boolean;
   labelAccessory?: React.ReactNode;
+  /** הסבר קצר מתחת לתווית (למשל «מדד השוואה») */
+  hint?: string;
 }
 
-export function FieldLabel({ label, optional, labelAccessory }: FieldLabelProps) {
+export function FieldLabel({ label, optional, labelAccessory, hint }: FieldLabelProps) {
   const tokens = useDesignTokens();
   return (
-    <View style={styles.labelRow}>
+    <>
+    <View style={[styles.labelRow, hint ? { marginBottom: 2 } : null]}>
       <View style={styles.labelMain}>
         <Text
           style={[
@@ -97,6 +101,12 @@ export function FieldLabel({ label, optional, labelAccessory }: FieldLabelProps)
       </View>
       {labelAccessory}
     </View>
+    {hint ? (
+      <Text style={[portfolioFormHelperStyle, { color: tokens.colors.text.secondary, marginTop: 0, marginBottom: 8 }]}>
+        {hint}
+      </Text>
+    ) : null}
+    </>
   );
 }
 
@@ -346,10 +356,12 @@ const styles = StyleSheet.create({
   passwordShell: {
     flexDirection: 'row',
   },
+  // רב-שורתי: lineHeight מהסקאלה (חד-שורתי בלי — אחרת הטקסט «שוקע» ב-iOS)
   inputMultiline: {
     minHeight: 76,
     textAlignVertical: 'top',
     paddingVertical: 4,
+    lineHeight: APP_TYPE.body.lineHeight,
   },
   errorRow: {
     flexDirection: 'row-reverse',

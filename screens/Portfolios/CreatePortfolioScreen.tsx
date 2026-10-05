@@ -8,8 +8,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  type ImageSourcePropType,
-} from 'react-native';
+  type ImageSourcePropType, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -182,7 +181,13 @@ export default function CreatePortfolioScreen() {
           fontWeight: '600',
           textAlign: 'center',
         },
-        chipTextActive: { color: tokens.colors.primary.main },
+        chip: {
+          minHeight: 40,
+          paddingHorizontal: 16,
+          borderRadius: 999,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
         advancedBody: { marginTop: JOURNAL_LAYOUT.sectionHeaderToContent },
         benchmarkRowInner: {
           flexDirection: 'row-reverse',
@@ -269,7 +274,7 @@ export default function CreatePortfolioScreen() {
                       <Ionicons
                         name="checkmark-circle"
                         size={18}
-                        color={tokens.colors.primary.main}
+                        color={tokens.colors.text.primary}
                       />
                       <Text style={styles.brokerInfoText}>{line}</Text>
                     </View>
@@ -314,20 +319,33 @@ export default function CreatePortfolioScreen() {
                     {SUPPORTED_CURRENCIES.map((c) => {
                       const active = currency === c.code;
                       return (
-                        <GlassChip
+                        <Pressable
                           key={c.code}
-                          selected={active}
                           onPress={() => {
                             if (!active) void HapticFeedback.selection();
                             setCurrency(c.code);
                           }}
+                          accessibilityRole="radio"
+                          accessibilityState={{ checked: active }}
                           accessibilityLabel={`מטבע ${c.label}`}
-                          contentContainerStyle={{ paddingHorizontal: 14, paddingVertical: 8 }}
+                          style={[
+                            styles.chip,
+                            {
+                              backgroundColor: active
+                                ? tokens.colors.text.primary
+                                : tokens.colors.background.cardSolid,
+                            },
+                          ]}
                         >
-                          <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                          <Text
+                            style={[
+                              styles.chipText,
+                              { color: active ? tokens.colors.text.inverse : tokens.colors.text.primary },
+                            ]}
+                          >
                             {c.symbol} {c.label}
                           </Text>
-                        </GlassChip>
+                        </Pressable>
                       );
                     })}
                   </View>
@@ -416,7 +434,7 @@ export default function CreatePortfolioScreen() {
                               name={active ? 'radio-button-on' : 'radio-button-off'}
                               size={20}
                               color={
-                                active ? tokens.colors.primary.main : tokens.colors.text.muted
+                                active ? tokens.colors.text.primary : tokens.colors.text.tertiary
                               }
                             />
                           </UICard>
@@ -535,11 +553,7 @@ function ModeCard({ active, icon, title, description, onPress, logo }: ModeCardP
           alignItems: 'center',
           justifyContent: 'center',
           overflow: 'hidden',
-          backgroundColor: logo
-            ? '#FFFFFF'
-            : active
-            ? 'rgba(0, 200, 5, 0.20)'
-            : tokens.colors.background.card,
+          backgroundColor: logo ? '#FFFFFF' : tokens.colors.background.cardSolid,
         }}
       >
         {logo ? (
@@ -548,7 +562,7 @@ function ModeCard({ active, icon, title, description, onPress, logo }: ModeCardP
           <Ionicons
             name={icon}
             size={21}
-            color={active ? tokens.colors.primary.main : tokens.colors.text.secondary}
+            color={tokens.colors.text.primary}
           />
         )}
       </View>
@@ -556,7 +570,7 @@ function ModeCard({ active, icon, title, description, onPress, logo }: ModeCardP
         <Text
           style={[
             journalCardTitleStyle,
-            { color: active ? tokens.colors.primary.main : tokens.colors.text.primary },
+            { color: tokens.colors.text.primary },
           ]}
         >
           {title}
@@ -576,7 +590,7 @@ function ModeCard({ active, icon, title, description, onPress, logo }: ModeCardP
       <Ionicons
         name={active ? 'checkmark-circle' : 'ellipse-outline'}
         size={22}
-        color={active ? tokens.colors.primary.main : tokens.colors.text.muted}
+        color={active ? tokens.colors.text.primary : tokens.colors.text.tertiary}
       />
     </UICard>
   );

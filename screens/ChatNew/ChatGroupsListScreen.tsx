@@ -22,6 +22,7 @@ import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import { useIsAdmin } from '../../hooks/useIsAdmin';
+import { useSubscription } from '../../hooks/useSubscription';
 import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHeader';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -243,6 +244,7 @@ export default function ChatGroupsListScreen() {
 
   // בדיקת admin — האם המשתמש admin בלפחות קבוצה אחת
   const { isAdmin: isAppAdmin } = useIsAdmin();
+  const { isPremium: isPremiumUser } = useSubscription();
   // אדמין אפליקציה או אדמין באחת הקבוצות — יכול ליצור קבוצה
   const isGlobalAdmin = useMemo(
     () => isAppAdmin || allGroups.some(g => g.my_role === 'admin'),
@@ -551,8 +553,14 @@ export default function ChatGroupsListScreen() {
     // is_public מוגדר ב-settings JSONB. ברירת מחדל: קבוצה גלויה = ניתנת להצטרפות.
     // רק אם מפורש `is_public === false` נסתיר אותה מהסקשן של joinable.
     const isJoinablePublic = (g: GroupWithMembership) => {
-      const s = (g as any).settings as { is_public?: boolean } | undefined;
-      return s?.is_public !== false;
+      const s = (g as any).settings as { is_public?: boolean; allowed_tiers?: string[] } | undefined;
+      if (s?.is_public === false) return false;
+      // מסלולים מורשים (חינמי/פרימיום) — אדמין רואה הכול
+      const tiers = Array.isArray(s?.allowed_tiers) ? s!.allowed_tiers : null;
+      if (tiers && tiers.length > 0 && !isGlobalAdmin) {
+        return tiers.includes(isPremiumUser ? 'premium' : 'free');
+      }
+      return true;
     };
 
     const my = allGroups.filter(g => g.is_member && matchesQuery(g));
@@ -602,7 +610,7 @@ export default function ChatGroupsListScreen() {
       joinableFilteredGroups: joinableSorted,
       myAnnouncementCount: announcements.length,
     };
-  }, [allGroups, searchQuery, activeTab]);
+  }, [allGroups, searchQuery, activeTab, isGlobalAdmin, isPremiumUser]);
 
   // רשימה מאוחדת לצורכי חיפוש-שיט וספירות empty-state
   const filteredGroups = useMemo(

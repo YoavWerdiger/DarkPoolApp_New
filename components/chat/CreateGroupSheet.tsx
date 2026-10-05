@@ -6,7 +6,8 @@
 // ============================================
 
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Pressable } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../ui/DesignTokens';
 import UIButton from '../ui/UIButton';
@@ -16,8 +17,7 @@ import { legacyAlert } from '../../utils/appDialog';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { ChatSheetTopoHeader, useChatFitContentSnap } from './ChatBottomSheet';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';
-import { SettingsGlassCard, SettingsSwitchRow } from '../profile/ProfileSettingsUI';
-import { APP_TYPE, appPhysicalRightText, appSheetSubtitleStyle } from '../ui/appType';
+import { APP_TYPE, appPhysicalRightText } from '../ui/appType';
 import { APP_LAYOUT } from '../ui/appLayout';
 import {
   formFieldInputStyle,
@@ -25,6 +25,12 @@ import {
   formFieldPlaceholderColor,
   formFieldShellStyle,
 } from '../ui/formControl';
+
+type Tier = 'free' | 'premium';
+const TIERS: { key: Tier; label: string }[] = [
+  { key: 'free', label: 'חינמי' },
+  { key: 'premium', label: 'פרימיום' },
+];
 
 interface CreateGroupSheetProps {
   visible: boolean;
@@ -40,17 +46,23 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [isAnnouncement, setIsAnnouncement] = useState(false);
-  const [isPublic, setIsPublic] = useState(true);
+  /** מסלולים שרואים ויכולים להצטרף */
+  const [tiers, setTiers] = useState<Tier[]>(['free', 'premium']);
   const [isLoading, setIsLoading] = useState(false);
   const [focused, setFocused] = useState<'name' | 'desc' | null>(null);
 
-  const canCreate = name.trim().length >= 2;
+  const canCreate = name.trim().length >= 2 && tiers.length > 0;
+
+  const toggleTier = (t: Tier) => {
+    void HapticFeedback.selection();
+    setTiers((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
+  };
 
   const reset = () => {
     setName('');
     setDescription('');
     setIsAnnouncement(false);
-    setIsPublic(true);
+    setTiers(['free', 'premium']);
   };
 
   const handleClose = () => {
@@ -68,7 +80,9 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
           description: description.trim() || undefined,
           settings: {
             is_announcement: isAnnouncement,
-            is_public: isPublic,
+            onlyAdminsCanSend: isAnnouncement,
+            is_public: true,
+            allowed_tiers: tiers,
           },
         },
         user.id
@@ -109,10 +123,6 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
     >
       <View style={[styles.root, { paddingBottom: Math.max(insets.bottom, 12) }]} onLayout={onContentLayout}>
         <ChatSheetTopoHeader title="קבוצה חדשה" onClose={handleClose} />
-        <Text style={[appSheetSubtitleStyle, styles.subtitle, { color: tokens.colors.text.secondary }]}>
-          הקבוצה תופיע בקהילה לכל המשתמשים
-        </Text>
-
         <Text style={formFieldLabelStyle({ tokens, focused: focused === 'name' })}>שם הקבוצה</Text>
         <View style={[formFieldShellStyle({ tokens, focused: focused === 'name' }), styles.fieldShell]}>
           <TextInput
@@ -151,25 +161,70 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
           />
         </View>
 
-        <SettingsGlassCard style={styles.settingsCard}>
-          <SettingsSwitchRow
-            title="רק אדמינים שולחים הודעות"
-            value={isAnnouncement}
-            onValueChange={(v) => {
-              void HapticFeedback.selection();
-              setIsAnnouncement(v);
-            }}
-          />
-          <SettingsSwitchRow
-            title="פתוחה לכולם להצטרפות"
-            value={isPublic}
-            showDivider={false}
-            onValueChange={(v) => {
-              void HapticFeedback.selection();
-              setIsPublic(v);
-            }}
-          />
-        </SettingsGlassCard>
+        {/* מי כותב — בחירה אחת: דיון או הכרזות */}
+        <Text style={[formFieldLabelStyle({ tokens, focused: false }), styles.labelGap]}>מי כותב בקבוצה</Text>
+        <View style={[styles.segment, { backgroundColor: tokens.colors.background.cardSolid }]}>
+          {([
+            { key: false, label: 'כל החברים' },
+            { key: true, label: 'רק אדמינים' },
+          ] as const).map((opt) => {
+            const active = isAnnouncement === opt.key;
+            return (
+              <Pressable
+                key={opt.label}
+                onPress={() => {
+                  if (!active) void HapticFeedback.selection();
+                  setIsAnnouncement(opt.key);
+                }}
+                style={[styles.segmentItem, active && { backgroundColor: tokens.colors.background.tertiary }]}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: active }}
+              >
+                <Text
+                  style={[
+                    styles.segmentText,
+                    { color: active ? tokens.colors.text.primary : tokens.colors.text.secondary },
+                  ]}
+                >
+                  {opt.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {/* מי רואה ויכול להצטרף — לפי מסלול */}
+        <Text style={[formFieldLabelStyle({ tokens, focused: false }), styles.labelGap]}>
+          מסלולים שרואים ומצטרפים
+        </Text>
+        <View style={styles.tiersRow}>
+          {TIERS.map((t) => {
+            const on = tiers.includes(t.key);
+            return (
+              <Pressable
+                key={t.key}
+                onPress={() => toggleTier(t.key)}
+                style={[
+                  styles.tierChip,
+                  { backgroundColor: on ? tokens.colors.text.primary : tokens.colors.background.cardSolid },
+                ]}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: on }}
+              >
+                <Ionicons
+                  name={on ? 'checkmark' : 'add'}
+                  size={16}
+                  color={on ? tokens.colors.text.inverse : tokens.colors.text.secondary}
+                />
+                <Text style={[styles.tierText, { color: on ? tokens.colors.text.inverse : tokens.colors.text.primary }]}>
+                  {t.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <View style={styles.cta}>
 
         <UIButton
           title="צור קבוצה"
@@ -179,6 +234,7 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
           disabled={!canCreate || isLoading}
           onPress={handleCreate}
         />
+        </View>
       </View>
     </BottomSheet>
   );
@@ -212,7 +268,41 @@ const styles = StyleSheet.create({
     minHeight: 72,
     lineHeight: APP_TYPE.body.lineHeight,
   },
-  settingsCard: {
+  segment: {
+    flexDirection: 'row',
+    borderRadius: 999,
+    padding: 4,
+  },
+  segmentItem: {
+    flex: 1,
+    height: 40,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  segmentText: {
+    fontSize: APP_TYPE.cardBody.fontSize,
+    fontWeight: APP_TYPE.cardTitle.fontWeight,
+    writingDirection: 'rtl',
+  },
+  tiersRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  tierChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 40,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+  },
+  tierText: {
+    fontSize: APP_TYPE.cardBody.fontSize,
+    fontWeight: APP_TYPE.cardTitle.fontWeight,
+    writingDirection: 'rtl',
+  },
+  cta: {
     marginTop: APP_LAYOUT.sectionGap / 2 + 4,
   },
 });

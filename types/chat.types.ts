@@ -93,6 +93,8 @@ export interface ChatGroupSettings {
   // is_public controls whether the group is discoverable to non-members.
   is_announcement?: boolean;
   is_public?: boolean;
+  /** מסלולים שרואים ויכולים להצטרף (ריק/חסר = כולם) */
+  allowed_tiers?: ('free' | 'premium')[];
 }
 
 export interface ChatGroup {

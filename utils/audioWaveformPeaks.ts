@@ -18,11 +18,12 @@ import { logger } from './logger';
  */
 export function meteringDbToLevel(db: number): number {
   if (!Number.isFinite(db) || db <= -80) return 0;
-  const MIN_DB = -52;
-  const MAX_DB = -6;
+  // חלון דיבור צר יותר (‎-46…-10 dB) + עקומה שמרחיבה ניגודיות:
+  // הברות חזקות קופצות גבוה, הפסקות בין מילים צונחות — גל «חי» כמו בוואטסאפ
+  const MIN_DB = -46;
+  const MAX_DB = -10;
   const t = Math.max(0, Math.min(1, (db - MIN_DB) / (MAX_DB - MIN_DB)));
-  // מעט מרחיב שקט — בלי לדחוס את הפיקים החזקים לשטוח
-  return Math.pow(t, 0.72);
+  return Math.pow(t, 1.35);
 }
 
 /**

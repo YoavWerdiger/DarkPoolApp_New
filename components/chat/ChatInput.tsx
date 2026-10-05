@@ -1190,9 +1190,8 @@ function ChatInputImpl({
     if (typeof metering !== 'number') return;
 
     const raw = meteringDbToLevel(metering);
-    const prev = audioLevelRef.current;
-    const next = raw >= prev ? raw : prev * 0.32 + raw * 0.68;
-    audioLevelRef.current = next < 0.02 ? 0 : Math.min(1, next);
+    // בלי החלקה כאן — הגל החי מחליק פעם אחת (החלקה כפולה «שיטחה» את התגובה)
+    audioLevelRef.current = raw < 0.02 ? 0 : Math.min(1, raw);
     waveformSamplesRef.current.push(raw);
   }, []);
 

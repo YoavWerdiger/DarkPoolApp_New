@@ -1261,8 +1261,7 @@ function renderMediaContent(
         : (fileExtension !== 'קובץ' ? fileExtension : '');
 
       {
-        // מסמך בסגנון וואטסאפ, נקי: אריח עדין בתוך הבועה, אייקון דף מונוכרומטי עם סוג הקובץ,
-        // שם עד שתי שורות ומתחתיו «PDF · 1.2 MB». כל האריח לחיץ לפתיחה.
+        // מסמך נקי: אריח עדין בתוך הבועה — שם עד שתי שורות ומתחתיו «PDF · 1.2 MB». כל האריח לחיץ לפתיחה.
         const ext = fileExtension !== 'קובץ' ? fileExtension.slice(0, 4) : '';
         const fg = isMe ? tokens.colors.bubbleMeText : tokens.colors.text.primary;
         const sub = isMe ? tokens.colors.bubbleMeMetaText : tokens.colors.text.secondary;
@@ -1277,10 +1276,6 @@ function renderMediaContent(
             accessibilityRole="button"
             accessibilityLabel={`פתיחת מסמך ${fileName}`}
           >
-            <View style={[styles.documentPage, { borderColor: sub }]}>
-              <Ionicons name="document-text-outline" size={18} color={sub} />
-              {ext ? <Text style={[styles.documentPageExt, { color: sub }]}>{ext}</Text> : null}
-            </View>
             <View style={styles.documentTextContainer}>
               <Text style={[styles.documentName, { color: fg }]} numberOfLines={2}>
                 {fileName}
@@ -2706,22 +2701,6 @@ const createStyles = (tokens: any) => {
     paddingHorizontal: 10,
     borderRadius: 10,
     marginVertical: 2,
-  },
-  /** «דף» קטן — מסגרת דקה, אייקון וסוג הקובץ, בצבע המשני של הבועה */
-  documentPage: {
-    width: 34,
-    height: 42,
-    borderRadius: 6,
-    borderWidth: 1.2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 1,
-  },
-  documentPageExt: {
-    fontSize: 8,
-    lineHeight: 10,
-    fontWeight: '700',
-    letterSpacing: 0.3,
   },
   documentTextContainer: {
     flex: 1,

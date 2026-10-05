@@ -25,7 +25,7 @@ const BAR_W = 2.5;
 const BAR_GAP = 1.5;
 const STRIDE = BAR_W + BAR_GAP;
 /** כמה ברים חדשים בשנייה — קובע גם את מהירות ה-translate */
-const BARS_PER_SEC = 20;
+const BARS_PER_SEC = 24;
 const SCROLL_SPEED_PX_S = STRIDE * BARS_PER_SEC; // = מסונכרן במדויק
 const EXTRA_BARS = 8;
 
@@ -67,6 +67,8 @@ export default function VoiceWaveform({ isRecording, audioLevelRef }: VoiceWavef
   const offsetX = useSharedValue(0);
   const recordingSV = useSharedValue(0);
   const barCountSV = useSharedValue(totalBars);
+  /** שיא בתוך חלון הבר הנוכחי — כל בר מציג את ההברה החזקה ביותר בזמן שלו (לא רק את הרגע של הדחיפה) */
+  const barPeakSV = useSharedValue(0);
 
   useEffect(() => {
     barCountSV.value = totalBars;
@@ -125,17 +127,18 @@ export default function VoiceWaveform({ isRecording, audioLevelRef }: VoiceWavef
     if (target > liveSV.value) {
       liveSV.value = target;
     } else if (target < 0.025) {
-      liveSV.value = liveSV.value < 0.02 ? 0 : liveSV.value * 0.38;
+      liveSV.value = liveSV.value < 0.02 ? 0 : liveSV.value * 0.3;
     } else {
-      liveSV.value = liveSV.value * 0.22 + target * 0.78;
+      liveSV.value = liveSV.value * 0.12 + target * 0.88;
     }
+    if (liveSV.value > barPeakSV.value) barPeakSV.value = liveSV.value;
 
     // 2) תמיד מעדכנים את הבר האחרון באותו פריים — אין "בר חי" נפרד שיוצא מסנכרון
     {
       const cur = historySV.value;
       if (cur.length === n) {
         const tip = cur.slice();
-        tip[n - 1] = liveSV.value;
+        tip[n - 1] = barPeakSV.value;
         historySV.value = tip;
       }
     }
@@ -151,8 +154,10 @@ export default function VoiceWaveform({ isRecording, audioLevelRef }: VoiceWavef
       for (let i = 0; i < n - 1; i++) {
         next[i] = prev[i + 1] ?? 0;
       }
-      next[n - 1] = liveSV.value;
+      next[n - 1] = barPeakSV.value;
       historySV.value = next;
+      // בר חדש — מתחילים חלון שיא חדש מהרמה הנוכחית
+      barPeakSV.value = liveSV.value;
     }
 
     offsetX.value = x;

@@ -5,7 +5,7 @@ import { View, Text, Modal, Pressable, StyleSheet, ActivityIndicator, Animated a
 import { Image as ExpoImage } from 'expo-image';
 import { initialWindowMetrics, SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { X, Trash2, ChevronLeft, ChevronRight, Play, Pause } from 'lucide-react-native';
+import { X, ChevronLeft, ChevronRight, Play, Pause } from 'lucide-react-native';
 import { Audio, Video, ResizeMode } from '../../lib/expoAvSafe';
 import { MediaFile } from '../../services/mediaService';
 import { logger } from '../../utils/logger';
@@ -621,14 +621,8 @@ function MediaPreviewBody({
             ) : (
               <View style={styles.iconBtn} />
             )}
-            <Pressable
-              onPress={() => removeMedia(currentMedia.id)}
-              style={[styles.iconBtn, styles.themeBtn, { backgroundColor: tokens.colors.background.cardSolid }]}
-              accessibilityRole="button"
-              accessibilityLabel="הסרת מדיה"
-            >
-              <Trash2 size={20} color={tokens.colors.text.danger} strokeWidth={2} />
-            </Pressable>
+            {/* בלי כפתור מחיקה נוסף — X סוגר; יציאה מקובץ בודד דרך הסגירה */}
+            <View style={styles.iconBtn} />
           </View>
 
           <Animated.View style={[styles.captionDock, captionLift]} pointerEvents="box-none">
@@ -675,6 +669,12 @@ function MediaPreviewBody({
                 {localFiles.map((media, index) => (
                   <Pressable
                     key={media.id}
+                    // לחיצה ארוכה על ממוזערת — הסרת הקובץ מהשליחה
+                    onLongPress={() => {
+                      void HapticFeedback.impactLight();
+                      removeMedia(media.id);
+                    }}
+                    delayLongPress={350}
                     onPress={() => {
                       setCurrentIndex(index);
                       setIsLoading(true);

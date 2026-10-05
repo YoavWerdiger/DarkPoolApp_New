@@ -681,13 +681,18 @@ export default function MediaPickerSheet({
               </View>
             ) : null}
             {/* בתצוגה המקוצרת: אחרי בחירה — כפתור העלאה במקום שורת הפעולות (לא מעל התמונות) */}
+            {/* הפעולות נשארות בפריסה (גובה קבוע) אבל מוסתרות כשנבחרו קבצים — ה-CTA מונח מעליהן */}
+            <View
+              style={allowsMultiple && selectedIds.length > 0 ? styles.peekActionsHidden : undefined}
+              pointerEvents={allowsMultiple && selectedIds.length > 0 ? 'none' : 'auto'}
+            >
+              {peekActions}
+            </View>
             {allowsMultiple && selectedIds.length > 0 ? (
-              <View style={styles.peekCta}>
+              <View style={styles.peekCta} pointerEvents="box-none">
                 <UploadCta count={selectedIds.length} onPress={confirmSelection} fullWidth />
               </View>
-            ) : (
-              peekActions
-            )}
+            ) : null}
           </View>
         )}
 
@@ -974,8 +979,14 @@ const createStyles = (
       width: '100%',
     },
     peekCta: {
-      paddingHorizontal: 16,
-      paddingTop: 12,
+      position: 'absolute',
+      left: 16,
+      right: 16,
+      bottom: sheetBottomPad + 12,
+      zIndex: 6,
+    },
+    peekActionsHidden: {
+      opacity: 0,
     },
     confirmWrap: {
       position: 'absolute',

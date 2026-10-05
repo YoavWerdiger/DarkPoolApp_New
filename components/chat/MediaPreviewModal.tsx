@@ -107,7 +107,7 @@ function MediaPreviewBody({
 
   const currentMedia = localFiles[currentIndex];
 
-  const { zoomGesture, animatedStyle: animatedImageStyle, resetZoomImmediate } =
+  const { zoomGesture, animatedStyle: animatedImageStyle, resetZoomImmediate, prevPagerStyle, nextPagerStyle } =
     useMediaZoomGestures({
       resetKey: visible ? `${currentIndex}:${currentMedia?.id ?? ''}` : false,
       onSingleTap: dismissKeyboard,
@@ -438,6 +438,32 @@ function MediaPreviewBody({
     return null;
   }
 
+  /** שכן (קודם/הבא) צמוד לצד — נע יחד עם הגרירה, כמו מעבר בין סטוריז */
+  const renderNeighbor = (media: MediaFile | undefined, pagerStyle: typeof prevPagerStyle) => {
+    if (!media) return null;
+    const uri = media.type === 'image' ? media.uri : media.type === 'video' ? media.thumbnail_url : null;
+    const srcW = media.width && media.width > 0 ? media.width : screenW;
+    const srcH = media.height && media.height > 0 ? media.height : screenH;
+    const frameH = Math.min(screenW * (srcH / srcW), screenH);
+    return (
+      <Animated.View
+        pointerEvents="none"
+        style={[{ position: 'absolute', top: 0, left: 0, width: screenW, height: screenH }, pagerStyle]}
+      >
+        {uri ? (
+          <ExpoImage
+            source={{ uri }}
+            style={{ position: 'absolute', top: (screenH - frameH) / 2, left: 0, width: screenW, height: frameH }}
+            contentFit={media.type === 'image' ? 'cover' : 'contain'}
+            transition={0}
+            cachePolicy="memory-disk"
+            recyclingKey={`n-${media.id}`}
+          />
+        ) : null}
+      </Animated.View>
+    );
+  };
+
   const renderMediaContent = () => {
     switch (currentMedia.type) {
       case 'image': {
@@ -580,6 +606,8 @@ function MediaPreviewBody({
           />
 
           <View style={styles.mediaStage} pointerEvents="box-none">
+            {renderNeighbor(localFiles[currentIndex - 1], prevPagerStyle)}
+            {renderNeighbor(localFiles[currentIndex + 1], nextPagerStyle)}
             {renderMediaContent()}
             {localFiles.length > 1 && currentIndex > 0 ? (
               <Pressable

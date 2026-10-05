@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useLayoutEffect } from 'react';
 import { Dimensions } from 'react-native';
 import { Gesture } from 'react-native-gesture-handler';
 import {
@@ -92,8 +92,6 @@ export function useMediaZoomGestures(options: UseMediaZoomGesturesOptions = {}) 
   const swipeEnabled = useSharedValue(onSwipeHorizontal ? 1 : 0);
   const swipeNextOk = useSharedValue(canSwipeNext ? 1 : 0);
   const swipePrevOk = useSharedValue(canSwipePrev ? 1 : 0);
-  /** אחרי מעבר: הקובץ החדש נכנס מהצד הזה (פיקסלים), כמו מעבר סטוריז */
-  const enterFrom = useSharedValue(0);
   useEffect(() => {
     swipeEnabled.value = onSwipeHorizontal ? 1 : 0;
     swipeNextOk.value = canSwipeNext ? 1 : 0;
@@ -170,17 +168,11 @@ export function useMediaZoomGestures(options: UseMediaZoomGesturesOptions = {}) 
     onZoomChange?.(false);
   }, [onZoomChange]);
 
-  useEffect(() => {
+  // layout effect — מאפסים לפני הציור, כדי שהקובץ החדש (שכבר הגיע למרכז כשכן) לא «יקפוץ»
+  useLayoutEffect(() => {
     if (resetKey === undefined) return;
-    const from = enterFrom.value;
     resetZoomImmediate();
-    if (from !== 0) {
-      // החדש מחליק פנימה מהצד הנגדי
-      enterFrom.value = 0;
-      translateX.value = from;
-      translateX.value = withTiming(0, { duration: 240, easing: Easing.out(Easing.cubic) });
-    }
-  }, [resetKey, resetZoomImmediate, enterFrom, translateX]);
+  }, [resetKey, resetZoomImmediate]);
 
   const pinchGesture = Gesture.Pinch()
     .onStart((event) => {
@@ -268,8 +260,7 @@ export function useMediaZoomGestures(options: UseMediaZoomGesturesOptions = {}) 
           Math.abs(event.translationX) > Math.abs(event.translationY) &&
           (Math.abs(event.translationX) > screenW.value * 0.22 || Math.abs(event.velocityX) > 600)
         ) {
-          // הנוכחי יוצא מהמסך, ואז מחליפים — החדש ייכנס מהצד השני (ראה resetKey)
-          enterFrom.value = -swipeDir * screenW.value;
+          // הנוכחי יוצא והשכן (שמרונדר צמוד) נכנס למרכז — ואז מחליפים אינדקס
           translateX.value = withTiming(
             swipeDir * screenW.value,
             { duration: 200, easing: Easing.out(Easing.quad) },
@@ -341,8 +332,18 @@ export function useMediaZoomGestures(options: UseMediaZoomGesturesOptions = {}) 
     opacity: interpolate(dismissY.value, [0, 280], [1, 0.15], Extrapolation.CLAMP),
   }));
 
+  /** הזזה אופקית בלי זום — לשכנים (קודם/הבא) שמרונדרים צמודים כמו פייג׳ר. RTL: הבא משמאל */
+  const prevPagerStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: screenW.value + (scale.value <= 1 ? translateX.value : 0) }],
+  }));
+  const nextPagerStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: -screenW.value + (scale.value <= 1 ? translateX.value : 0) }],
+  }));
+
   return {
     zoomGesture,
+    prevPagerStyle,
+    nextPagerStyle,
     animatedStyle,
     backdropStyle,
     resetZoom,

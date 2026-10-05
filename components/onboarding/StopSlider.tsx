@@ -359,8 +359,12 @@ function Star({ on, color, delay }: { on: boolean; color: string; delay: number 
 const GAUGE_W = 200;
 const GAUGE_R = 84;
 const GAUGE_STROKE = 12;
-/** זווית המחוג לכל עצירה: הראשונה (ימין, «מהיר») → +70°, האחרונה (שמאל, «איטי») → -70° */
-const gaugeAngle = (i: number, total: number) => (total > 1 ? 70 - (140 * i) / (total - 1) : 0);
+/** זווית המחוג לכל עצירה — בדיוק במרכז המקטע שלה (הראשון בצד ימין) */
+const gaugeAngle = (i: number, total: number) => (total > 0 ? 90 - (180 / total) * (i + 0.5) : 0);
+/** קצה מעוגל מאריך כל מקטע ב-stroke/2 — מחשבים כמה מעלות זה, כדי שהמקטעים לא יגלשו זה על זה */
+const GAUGE_CAP_DEG = ((GAUGE_STROKE / 2) / GAUGE_R) * (180 / Math.PI);
+/** רווח נראה בין מקטעים (מעלות, לכל צד) */
+const GAUGE_GAP_DEG = 2.5;
 
 /** קשת בין שתי זוויות (0° = למעלה, חיובי = ימינה) סביב (cx,cy) */
 function arcPath(cx: number, cy: number, r: number, fromDeg: number, toDeg: number) {
@@ -401,8 +405,9 @@ function SpeedGauge({
   const span = 180 / total;
   // מקטע i מכסה זוויות מ-(90 - span*(i+1)) עד (90 - span*i), כשהראשון בצד ימין
   const segments = Array.from({ length: total }).map((_, i) => {
-    const to = 90 - span * i - 3;
-    const from = 90 - span * (i + 1) + 3;
+    const inset = GAUGE_CAP_DEG + GAUGE_GAP_DEG;
+    const to = 90 - span * i - inset;
+    const from = 90 - span * (i + 1) + inset;
     return { i, d: arcPath(cx, cy, GAUGE_R, from, to) };
   });
 

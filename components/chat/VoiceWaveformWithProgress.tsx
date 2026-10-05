@@ -37,7 +37,8 @@ const MAX_BAR_HEIGHT = 26;
 const MIN_BAR_HEIGHT = 3.5;
 const THUMB_SIZE = 12;
 
-function WaveBar({
+/** memo: re-render של הבועה לא יוצר מחדש 40 animated styles (הבהוב בהשמעה) */
+const WaveBar = memo(function WaveBar({
   index,
   value,
   progress,
@@ -83,7 +84,7 @@ function WaveBar({
       <Animated.View style={[styles.bar, style]} />
     </View>
   );
-}
+});
 
 function VoiceWaveformWithProgress({
   progress,

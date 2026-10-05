@@ -1621,7 +1621,12 @@ function AudioPlayer({
   /** URI אחרי ניסיון חידוש חתימה (מפחית 400 כשהטוקן בקאש פג) */
   const currentUriRef = useRef(audioUrl);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [position, setPosition] = useState(0);
+  const [position, setPositionRaw] = useState(0);
+  // התווית מציגה שניות שלמות — state מתעדכן רק כשהשנייה משתנה. סטטוס האודיו מגיע
+  // כל 80ms, ו-render של כל הבועה 12 פעמים בשנייה הוא מה שגרם לבועה לרצד בהשמעה.
+  const setPosition = useCallback((sec: number) => {
+    setPositionRaw((prev) => (Math.floor(prev) === Math.floor(sec) ? prev : sec));
+  }, []);
   const [actualDuration, setActualDuration] = useState(duration);
   const [playbackRate, setPlaybackRate] = useState(1.0);
   const isMountedRef = useRef(true);

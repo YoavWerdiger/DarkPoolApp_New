@@ -283,7 +283,11 @@ function ChatInputImpl({
   const [recordedAudioUri, setRecordedAudioUri] = useState<string | null>(null);
 
   const [isPlayingPreview, setIsPlayingPreview] = useState(false);
-  const [previewPosition, setPreviewPosition] = useState(0);
+  const [previewPosition, setPreviewPositionRaw] = useState(0);
+  // מוצג בשניות שלמות — עדכון state רק כשהשנייה משתנה (לא כל 80ms: render של כל ה-input ריצד)
+  const setPreviewPosition = useCallback((ms: number) => {
+    setPreviewPositionRaw((prev) => (Math.floor(prev / 1000) === Math.floor(ms / 1000) ? prev : ms));
+  }, []);
   const [previewDuration, setPreviewDuration] = useState(0);
 
   // Media Preview State

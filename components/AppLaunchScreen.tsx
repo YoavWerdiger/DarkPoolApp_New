@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, StyleSheet, Appearance } from 'react-native';
+import { AccessibilityInfo, StyleSheet } from 'react-native';
 import LottieView from 'lottie-react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import Animated, {
@@ -19,10 +19,10 @@ import { useTheme } from '../context/ThemeContext';
  */
 
 /**
- * = רקע ה-splash הנייטיב (app.json): לייט, או דארק כשמצב המערכת של הטלפון כהה.
- * נקרא בטעינת המודול — לפני ש-ThemeProvider מיישר את Appearance לערכת האפליקציה.
+ * = רקע ה-splash הנייטיב (app.json) — תמיד לייט (ברירת המחדל של האפליקציה).
+ * ה-splash של המערכת לא יודע איזו ערכה נבחרה; משתמשי דארק מקבלים דעיכה רכה לכהה.
  */
-const SPLASH_BG = Appearance.getColorScheme() === 'dark' ? '#111111' : '#F4F2F1';
+const SPLASH_BG = '#F4F2F1';
 const COMP_W = 300;
 const COMP_H = 600;
 /** מרכז פס ההתקדמות ביחס למרכז המסך (תחתית הסלוגן בקומפוזיציה 387 → +40) */

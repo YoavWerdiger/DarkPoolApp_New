@@ -120,10 +120,16 @@ export default function ReactionPicker({
         }
       }
       if (emojis.length === 0) continue;
+      // שורות של COLS — SectionList מרנדר רק מה שבמסך (קודם כל קטגוריה = item אחד
+      // עם מאות כפתורים, וכולן נבנו בזמן אנימציית הפתיחה)
+      const rows: { id: string; emojis: string[] }[] = [];
+      for (let i = 0; i < emojis.length; i += COLS) {
+        rows.push({ id: `${cat.id}-${i / COLS}`, emojis: emojis.slice(i, i + COLS) });
+      }
       out.push({
         title: cat.title,
         key: cat.id,
-        data: [{ id: cat.id, emojis }],
+        data: rows,
       });
     }
 
@@ -197,6 +203,10 @@ export default function ReactionPicker({
           sections={sections}
           keyExtractor={(item, index) => resolveRowId(item, index)}
           stickySectionHeadersEnabled={false}
+          initialNumToRender={10}
+          maxToRenderPerBatch={8}
+          windowSize={5}
+          removeClippedSubviews
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           style={{ maxHeight: listMaxHeight }}

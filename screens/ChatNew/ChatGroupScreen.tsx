@@ -45,7 +45,7 @@ import ReactionPicker from '../../components/chat/ReactionPicker';
 import ReactionDetailsModal from '../../components/chat/ReactionDetailsModal';
 import ForwardMessageModal from '../../components/chat/ForwardMessageModal';
 import ChatListRow from '../../components/chat/ChatListRow';
-import LongPressOverlay from '../../components/chat/LongPressOverlay';
+import LongPressOverlay, { prefetchGroupAdminRole } from '../../components/chat/LongPressOverlay';
 import ChatSearchBottomSheet from '../../components/chat/ChatSearchBottomSheet';
 import SeenBySheet from '../../components/chat/SeenBySheet';
 import { MessageSnapshot } from '../../types/MessageSnapshot';
@@ -1512,6 +1512,11 @@ export default function ChatGroupScreen() {
       setTyping(groupId, isTyping);
     }
   }, [groupId, setTyping]);
+
+  // תפקיד אדמין מראש — תפריט הלונג-פרס נפתח בגובה הסופי בלי רשת
+  useEffect(() => {
+    if (groupId) void prefetchGroupAdminRole(groupId);
+  }, [groupId]);
 
   const handleMessageLongPress = useCallback((message: ChatMessageType) => {
     // ה-overlay הוא Modal: ב-iOS בסגירה המערכת מחזירה פוקוס לשדה שהיה פעיל → המקלדת

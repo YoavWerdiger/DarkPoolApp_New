@@ -81,6 +81,32 @@ interface LongPressOverlayProps {
 }
 
 
+/** תפקיד אדמין לפי קבוצה — נטען פעם אחת בכניסה לצ'אט, לא בכל לונג-פרס */
+const groupAdminCache = new Map<string, boolean>();
+
+export async function prefetchGroupAdminRole(groupId: string): Promise<boolean> {
+  const cached = groupAdminCache.get(groupId);
+  if (cached !== undefined) return cached;
+  try {
+    // getSession מקומי (getUser = קריאת רשת)
+    const { data: sess } = await supabase.auth.getSession();
+    const userId = sess.session?.user?.id;
+    if (!userId) return false;
+    const { data, error } = await supabase
+      .from('chat_group_members')
+      .select('role')
+      .eq('group_id', groupId)
+      .eq('user_id', userId)
+      .maybeSingle();
+    const admin = !error && !!data && (data.role === 'admin' || data.role === 'owner');
+    if (!error) groupAdminCache.set(groupId, admin);
+    return admin;
+  } catch (error) {
+    logger.error('LongPressOverlay', 'Failed to fetch role', error);
+    return false;
+  }
+}
+
 export default function LongPressOverlay({
   visible,
   message,
@@ -88,7 +114,9 @@ export default function LongPressOverlay({
   onAction
 }: LongPressOverlayProps) {
   const insets = useSafeAreaInsets();
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(() =>
+    message?.channelId ? groupAdminCache.get(message.channelId) ?? false : false,
+  );
   const DesignTokens = useDesignTokens();
   const messagePreviewStyles = useMemo(() => createMessagePreviewStyles(DesignTokens), [DesignTokens]);
 
@@ -154,32 +182,24 @@ export default function LongPressOverlay({
     return myReaction?.emoji || null;
   }, [displayMessage?.reactions]);
 
+  // תפקיד מקאש (נטען בכניסה לצ'אט) — התפריט נפתח בתוכן הסופי מהפריים הראשון.
+  // קודם: 2 קריאות רשת בכל פתיחה, ושורת האדמין נוספה אחרי הנחיתה → «קפיצה שנייה».
   useEffect(() => {
-    const fetchRole = async () => {
-      try {
-        const { data: auth } = await supabase.auth.getUser();
-        const userId = auth.user?.id;
-        const channelId = displayMessage?.channelId;
-        if (!userId || !channelId) return;
-
-        const { data, error } = await supabase
-          .from('chat_group_members')
-          .select('role')
-          .eq('group_id', channelId)
-          .eq('user_id', userId)
-          .single();
-
-        if (!error && data) {
-          setIsAdmin(data.role === 'admin' || data.role === 'owner');
-        }
-      } catch (error) {
-        logger.error('LongPressOverlay', 'Failed to fetch role', error);
-      }
-    };
-    if (displayMessage) {
-      fetchRole();
+    const channelId = displayMessage?.channelId;
+    if (!channelId) return;
+    const cached = groupAdminCache.get(channelId);
+    if (cached !== undefined) {
+      setIsAdmin(cached);
+      return;
     }
-  }, [displayMessage?.id, displayMessage?.channelId]);
+    let alive = true;
+    void prefetchGroupAdminRole(channelId).then((admin) => {
+      if (alive) setIsAdmin(admin);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [displayMessage?.channelId]);
 
 
   const handleReaction = useCallback((emoji: string) => {

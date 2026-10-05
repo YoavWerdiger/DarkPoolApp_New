@@ -47,7 +47,23 @@ export default function ReactionBar({ onReaction, currentReaction, onOpenPicker 
           </TouchableOpacity>
         );
       })}
-      {onOpenPicker ? (
+      {currentReaction && !EMOJIS.includes(currentReaction) ? (
+        // ריאקציה שבחרתי מהרשימה המלאה — במקום ה-«+», מסומנת; לחיצה מסירה אותה
+        <TouchableOpacity
+          key="__custom_reaction__"
+          hitSlop={HIT_SLOP}
+          activeOpacity={0.65}
+          onPress={() => {
+            void HapticFeedback.selection();
+            onReaction(currentReaction);
+          }}
+          style={[styles.emojiBtn, { backgroundColor: tokens.colors.background.tertiary }]}
+          accessibilityLabel={`הסר ריאקציה ${currentReaction}`}
+          accessibilityState={{ selected: true }}
+        >
+          <Text style={styles.emoji}>{currentReaction}</Text>
+        </TouchableOpacity>
+      ) : onOpenPicker ? (
         <TouchableOpacity
           key="__open_picker__"
           hitSlop={HIT_SLOP}

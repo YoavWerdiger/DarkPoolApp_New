@@ -69,8 +69,24 @@ const NAME_TO_KEY: Record<string, IconKey> = {
 };
 
 /** שם קבוצה להצגה — בלי אימוג'י, גם אם המטמון עדיין ישן. */
+/** אימוג׳י לפני שם הקבוצה — כמו בקהילת הוואטסאפ (🗣️ דיון, 🔇 קריאה בלבד) */
+const NAME_EMOJI: Record<string, string> = {
+  'שאלות תשובות': '🗣️⁉️',
+  'דיוני - פניסטוקס': '🗣️🧨',
+  'דיונים - כללי': '🗣️',
+  'ניתוחים ורעיונות שלכם': '🗣️',
+  'שאלות בלייבים': '🗣️🎥',
+  'חדשות מתפרצות': '🔇🌟',
+  'סווינגים והשקעות': '🔇🌟',
+  'מסחר יומי': '🔇🌟',
+  'פניסטוקס (סיכון גבוה)': '🌟',
+};
+
+/** שם לתצוגה: מנקה אימוג׳ים שמורים ב-DB ומוסיף את הקידומת הקבועה (אידמפוטנטי) */
 export function chatGroupDisplayName(groupName?: string | null): string {
-  return baseGroupName(groupName ?? '');
+  const base = baseGroupName(groupName ?? '');
+  const emoji = NAME_EMOJI[base];
+  return emoji ? `${emoji}${base}` : base;
 }
 
 function baseGroupName(groupName: string): string {

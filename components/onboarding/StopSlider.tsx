@@ -119,7 +119,7 @@ export function StopSlider({ options, value, onChange, hero, control = 'slider' 
             index={index}
             total={count}
             color={tokens.colors.text.primary}
-            track={tokens.colors.border.divider}
+            track={tokens.colors.background.tertiary}
             accent={tokens.colors.primary.main}
           />
         ) : hero === 'money' ? (
@@ -361,10 +361,8 @@ const GAUGE_R = 84;
 const GAUGE_STROKE = 12;
 /** זווית המחוג לכל עצירה — בדיוק במרכז המקטע שלה (הראשון בצד ימין) */
 const gaugeAngle = (i: number, total: number) => (total > 0 ? 90 - (180 / total) * (i + 0.5) : 0);
-/** קצה מעוגל מאריך כל מקטע ב-stroke/2 — מחשבים כמה מעלות זה, כדי שהמקטעים לא יגלשו זה על זה */
-const GAUGE_CAP_DEG = ((GAUGE_STROKE / 2) / GAUGE_R) * (180 / Math.PI);
-/** רווח נראה בין מקטעים (מעלות, לכל צד) */
-const GAUGE_GAP_DEG = 2.5;
+/** רווח בין מקטעים (מעלות, לכל צד) — קצוות ישרים, אז אין הארכה של הקצה */
+const GAUGE_GAP_DEG = 2;
 
 /** קשת בין שתי זוויות (0° = למעלה, חיובי = ימינה) סביב (cx,cy) */
 function arcPath(cx: number, cy: number, r: number, fromDeg: number, toDeg: number) {
@@ -405,7 +403,7 @@ function SpeedGauge({
   const span = 180 / total;
   // מקטע i מכסה זוויות מ-(90 - span*(i+1)) עד (90 - span*i), כשהראשון בצד ימין
   const segments = Array.from({ length: total }).map((_, i) => {
-    const inset = GAUGE_CAP_DEG + GAUGE_GAP_DEG;
+    const inset = GAUGE_GAP_DEG;
     const to = 90 - span * i - inset;
     const from = 90 - span * (i + 1) + inset;
     return { i, d: arcPath(cx, cy, GAUGE_R, from, to) };
@@ -420,7 +418,8 @@ function SpeedGauge({
             d={seg.d}
             stroke={seg.i === index ? color : track}
             strokeWidth={GAUGE_STROKE}
-            strokeLinecap="round"
+            // קצוות ישרים + רווח קבוע — בלי חפיפה בין מקטעים (עיגול הקצה גלש למקטע השכן)
+            strokeLinecap="butt"
             fill="none"
           />
         ))}

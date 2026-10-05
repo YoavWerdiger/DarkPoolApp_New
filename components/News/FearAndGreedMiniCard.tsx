@@ -99,7 +99,8 @@ export default function FearAndGreedMiniCard({ onPress }: Props) {
               key={s.label}
               style={[
                 styles.barSegment,
-                { backgroundColor: s.color },
+                // רוחב יחסי לטווח (0–25, 25–45, 45–55…) — כך הסמן על 43 נופל בתוך «פחד» ולא ב«ניטרלי»
+                { backgroundColor: s.color, flex: s.to - s.from },
                 i === 0 && styles.barLeft,
                 i === SEGMENTS.length - 1 && styles.barRight,
                 i > 0 && styles.barGap,
@@ -113,7 +114,7 @@ export default function FearAndGreedMiniCard({ onPress }: Props) {
             <Text
               key={s.label}
               numberOfLines={2}
-              style={[styles.segLabel, { color: tokens.colors.text.tertiary }]}
+              style={[styles.segLabel, { color: tokens.colors.text.tertiary, flex: s.to - s.from }]}
             >
               {s.label}
             </Text>
@@ -197,6 +198,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   gaugeArea: {
+    direction: 'ltr',
     gap: 0,
   },
   triangle: {
@@ -213,6 +215,8 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   barRow: {
+    // כמו שורת התוויות — 0 משמאל, 100 מימין, תואם ל-left של הסמן
+    direction: 'ltr',
     flexDirection: 'row',
     height: BAR_H,
     marginTop: TRI_H + 2,

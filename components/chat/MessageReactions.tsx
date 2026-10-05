@@ -172,6 +172,9 @@ const ENTER_SLIDE_PX = 8;
 export function ReactionsReveal({ visible, children }: { visible: boolean; children: React.ReactNode }) {
   const [render, setRender] = React.useState(visible);
   const prevVisible = useRef(visible);
+  // בסגירה הריאקציות כבר ריקות — מציגים את התוכן האחרון עד סוף האנימציה (אחרת נעלם בבת אחת)
+  const lastChildren = useRef<React.ReactNode>(children);
+  if (visible) lastChildren.current = children;
   // -1 = ללא מגבלה
   const maxH = useSharedValue(-1);
   const progress = useSharedValue(visible ? 1 : 0);
@@ -213,7 +216,7 @@ export function ReactionsReveal({ visible, children }: { visible: boolean; child
   if (!render && !visible) return null;
   return (
     <Reanimated.View style={outerStyle}>
-      <Reanimated.View style={innerStyle}>{children}</Reanimated.View>
+      <Reanimated.View style={innerStyle}>{visible ? children : lastChildren.current}</Reanimated.View>
     </Reanimated.View>
   );
 }

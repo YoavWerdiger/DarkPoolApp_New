@@ -121,8 +121,9 @@ export function writeGroupMessagesCache(
   messages: ChatMessage[],
   userId?: string | null,
 ): ChatMessage[] {
+  // אינווריאנט: קאש של קבוצה מכיל רק הודעות של אותה קבוצה (מונע «הודעות של צ'אט אחר»)
   const persistable = capChatMessages(
-    messages.filter((m) => !m.id.startsWith('temp-')),
+    onlyGroupMessages(messages, groupId).filter((m) => !m.id.startsWith('temp-')),
   );
   queryClient.setQueryData(appQueryKeys.chatMessages(groupId), persistable);
   if (userId) scheduleChatMessagesPersist(userId);
@@ -143,5 +144,21 @@ export function appendMessageToGroupCache(
 }
 
 export function readGroupMessagesCache(groupId: string): ChatMessage[] {
-  return queryClient.getQueryData<ChatMessage[]>(appQueryKeys.chatMessages(groupId)) ?? [];
+  const cached = queryClient.getQueryData<ChatMessage[]>(appQueryKeys.chatMessages(groupId)) ?? [];
+  // מרפא גם קאש שכבר זוהם בגרסאות קודמות
+  return onlyGroupMessages(cached, groupId);
+}
+
+/**
+ * רק הודעות שה-group_id שלהן הוא הקבוצה. מחזיר את אותו מערך אם אין מה לסנן
+ * (שומר referential equality ל-memo).
+ */
+export function onlyGroupMessages(messages: ChatMessage[], groupId: string | null | undefined): ChatMessage[] {
+  if (!groupId || !messages?.length) return messages ?? [];
+  for (let i = 0; i < messages.length; i++) {
+    if (messages[i].group_id && messages[i].group_id !== groupId) {
+      return messages.filter((m) => !m.group_id || m.group_id === groupId);
+    }
+  }
+  return messages;
 }

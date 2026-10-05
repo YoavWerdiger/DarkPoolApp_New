@@ -71,8 +71,7 @@ import {
   mergeChatMessages,
   messageIdInCache,
   readGroupMessagesCache,
-  writeGroupMessagesCache,
-} from '../lib/chatMessageCache';
+  writeGroupMessagesCache, onlyGroupMessages } from '../lib/chatMessageCache';
 import {
   chatMessageListKey,
   dedupeOwnOutboundCopies,
@@ -246,7 +245,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   // State
   const [groups, setGroups] = useState<ChatGroup[]>([]);
   const [currentGroup, setCurrentGroup] = useState<ChatGroupWithDetails | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessagesRaw] = useState<ChatMessage[]>([]);
   const [typingUsers, setTypingUsers] = useState<ChatTypingIndicator[]>([]);
   const [isLoadingGroups, setIsLoadingGroups] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
@@ -261,6 +260,23 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const messagesOffset = useRef(0);
   const hasMoreMessages = useRef(true);
   const currentGroupId = useRef<string | null>(null);
+
+  /**
+   * אינווריאנט ה-thread: messages מכיל רק הודעות של הקבוצה הפתוחה.
+   * כל כתיבה עוברת כאן — fetch/realtime/loadMore שחוזרים אחרי מעבר קבוצה, או merge
+   * עם thread קודם, לא יכולים להכניס הודעות של צ'אט אחר.
+   */
+  /** הקבוצה שה-thread שייך לה כרגע — נקבע במפורש ע״י prime / selectGroup */
+  const threadGroupIdRef = useRef<string | null>(null);
+  const setMessages = useCallback(
+    (next: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => {
+      setMessagesRaw((prev) => {
+        const value = typeof next === 'function' ? next(prev) : next;
+        return onlyGroupMessages(value, threadGroupIdRef.current);
+      });
+    },
+    [],
+  );
   const resubscribeActiveGroupRef = useRef<(() => Promise<void>) | null>(null);
   const personalDeletedIds = useRef<Set<string>>(new Set());
   // C1: version counter to abort stale selectGroup calls
@@ -386,6 +402,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const gid = currentGroupId.current;
     if (!gid || !user?.id || messages.length === 0) return;
+    // thread של קבוצה קודמת (רגע אחרי מעבר) לא נכתב לקאש של הקבוצה החדשה
+    if (!messages.some((m) => m.group_id === gid)) return;
     writeGroupMessagesCache(gid, messages, user.id);
   }, [messages, user?.id]);
 
@@ -820,7 +838,17 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         ? messagesRef.current
         : [];
     const seeded = seedMessagesForOpen(groupId, pending, existingForGroup);
-    if (!seeded.length) return;
+    // מעכשיו ה-thread שייך לקבוצה הזו — כתיבות מאוחרות של קבוצה קודמת מסוננות
+    threadGroupIdRef.current = groupId;
+    if (!seeded.length) {
+      // אין קאש לקבוצה — לא משאירים thread של קבוצה אחרת (שיתמזג עם ה-fetch)
+      if (messagesRef.current.some((m) => m.group_id && m.group_id !== groupId)) {
+        messagesRef.current = [];
+        setMessages([]);
+        messagesOffset.current = 0;
+      }
+      return;
+    }
 
     const sameTip =
       existingForGroup.length === seeded.length &&
@@ -889,6 +917,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         : (pendingOutboundRef.current.get(groupId) ?? []);
 
     currentGroupId.current = groupId;
+    threadGroupIdRef.current = groupId;
     startGroupViewing(groupId);
     if (!isSameGroup) {
       // כניסה מחדש לקבוצה — אפשר שוב להציג unread מהשרת/cache
@@ -1256,7 +1285,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           const baseForMerge =
             mode === 'fresh' && cachedForFetch.length === 0
               ? []
-              : (messagesRef.current.length > 0 ? messagesRef.current : cachedForFetch);
+              : (() => {
+                  const ownThread = onlyGroupMessages(messagesRef.current, groupId);
+                  return ownThread.length > 0 ? ownThread : cachedForFetch;
+                })();
 
           if (mode === 'delta' && apiMessages.length === 0) {
             // אין חדשות — משאירים קאש, רק סוגרים טעינה (+ השלמת שולחים חסרים)
@@ -1512,16 +1544,18 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     isLoadingMoreRef.current = true;
     logger.info('ChatContext', `loadMoreMessages start (have ${messagesRef.current.length})`);
     try {
+      const gid = currentGroupId.current;
       const oldestMessage = messagesRef.current[messagesRef.current.length - 1];
       const cursor = oldestMessage?.created_at;
 
       const { data } = await chatMessageService.getChatMessages(
-        currentGroupId.current,
+        gid,
         user.id,
         { limit: 50, before: cursor }
       );
 
-      if (data) {
+      // עברו לקבוצה אחרת בזמן הטעינה — לא ממזגים היסטוריה של הקבוצה הקודמת
+      if (data && currentGroupId.current === gid) {
         const existingIds = new Set(messagesRef.current.map(m => m.id));
         const newMessages = data.messages.filter(m => !existingIds.has(m.id));
         warmChatMediaCache(newMessages);
@@ -1561,13 +1595,17 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     isLoadingAroundRef.current = true;
 
     try {
+      const gid = currentGroupId.current;
       const { data: combined, error } = await chatMessageService.fetchMessagesAround(
-        currentGroupId.current,
+        gid,
         user.id,
         messageId,
         { before: 50, after: 50 },
       );
 
+      if (currentGroupId.current !== gid) {
+        return { success: false, error: 'הקבוצה השתנתה' };
+      }
       if (error || !combined?.length) {
         return { success: false, error: error?.message || 'לא נמצאו הודעות' };
       }
@@ -1579,7 +1617,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       setMessages(all);
       messagesOffset.current = all.length;
       warmChatMediaCache(combined);
-      writeGroupMessagesCache(currentGroupId.current, all, user.id);
+      writeGroupMessagesCache(gid, all, user.id);
       return { success: true };
     } catch (error: any) {
       logger.error('ChatContext', 'Error loading messages around', error);

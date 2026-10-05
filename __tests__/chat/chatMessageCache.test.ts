@@ -1,4 +1,9 @@
-import { mergeChatMessages } from '../../lib/chatMessageCache';
+import {
+  mergeChatMessages,
+  onlyGroupMessages,
+  readGroupMessagesCache,
+  writeGroupMessagesCache,
+} from '../../lib/chatMessageCache';
 import type { ChatMessage } from '../../types/chat.types';
 
 const base = (over: Partial<ChatMessage>): ChatMessage =>
@@ -151,5 +156,25 @@ describe('mergeChatMessages', () => {
     const out = mergeChatMessages([withReactions], [lean]);
     expect(out[0].reactions?.[0]?.emoji).toBe('🔥');
     expect(out[0].reactions?.[0]?.reacted_by_me).toBe(true);
+  });
+});
+
+describe('group isolation (רגרסיה: הודעות של צ׳אט אחר)', () => {
+  it('onlyGroupMessages keeps the same array when already clean', () => {
+    const clean = [base({ id: 'a', group_id: 'g1' }), base({ id: 'b', group_id: 'g1' })];
+    expect(onlyGroupMessages(clean, 'g1')).toBe(clean);
+  });
+
+  it('onlyGroupMessages drops messages of other groups', () => {
+    const mixed = [base({ id: 'a', group_id: 'g1' }), base({ id: 'x', group_id: 'g2' })];
+    expect(onlyGroupMessages(mixed, 'g1').map((m) => m.id)).toEqual(['a']);
+  });
+
+  it('writing a mixed thread never stores foreign messages in a group cache', () => {
+    writeGroupMessagesCache('iso-g1', [
+      base({ id: 'iso-a', group_id: 'iso-g1' }),
+      base({ id: 'iso-x', group_id: 'iso-g2' }),
+    ]);
+    expect(readGroupMessagesCache('iso-g1').map((m) => m.id)).toEqual(['iso-a']);
   });
 });

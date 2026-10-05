@@ -1,3 +1,4 @@
+import { onlyGroupMessages } from './chatMessageCache';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { queryClient } from './queryClient';
 import { appQueryKeys } from './appQueryKeys';
@@ -51,7 +52,8 @@ export async function hydrateChatMessages(userId: string): Promise<void> {
         if (!Array.isArray(messages) || messages.length === 0) continue;
         // לא דורסים cache קיים (טרי יותר מ-realtime/רשת)
         if (queryClient.getQueryData(appQueryKeys.chatMessages(groupId))) continue;
-        queryClient.setQueryData(appQueryKeys.chatMessages(groupId), messages);
+        const clean = onlyGroupMessages(messages, groupId);
+        if (clean.length) queryClient.setQueryData(appQueryKeys.chatMessages(groupId), clean);
       }
     } catch (error) {
       logger.warn('chatMessagePersist', 'hydrate failed', error);
@@ -75,10 +77,11 @@ export async function readCachedMessagesForGroup(
   if (!userId || !groupId) return null;
 
   const fromMemory = () => {
-    const mem = queryClient.getQueryData<ChatMessage[]>(
-      appQueryKeys.chatMessages(groupId),
+    const mem = onlyGroupMessages(
+      queryClient.getQueryData<ChatMessage[]>(appQueryKeys.chatMessages(groupId)) ?? [],
+      groupId,
     );
-    return mem?.length ? mem : null;
+    return mem.length ? mem : null;
   };
 
   const hit = fromMemory();
@@ -95,8 +98,11 @@ export async function readCachedMessagesForGroup(
     if (!raw) return null;
     const payload = JSON.parse(raw) as PersistedPayload;
     if (!payload?.groups || Date.now() - payload.savedAt > MAX_AGE_MS) return null;
-    const messages = payload.groups[groupId];
-    if (!Array.isArray(messages) || messages.length === 0) return null;
+    const stored = payload.groups[groupId];
+    if (!Array.isArray(stored) || stored.length === 0) return null;
+    // דיסק מגרסה ישנה יכול להכיל הודעות של קבוצה אחרת — מסננים
+    const messages = onlyGroupMessages(stored, groupId);
+    if (messages.length === 0) return null;
     queryClient.setQueryData(appQueryKeys.chatMessages(groupId), messages);
     return messages;
   } catch (error) {

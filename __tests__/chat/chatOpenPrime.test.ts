@@ -138,6 +138,18 @@ describe('chatOpenPrime', () => {
     );
   });
 
+  it('never shows another chat\'s messages when the thread is mixed', () => {
+    // רגרסיה: thread מעורב (g2 + הודעה אחת של g1) הוצג כולו כשנכנסו ל-g1
+    const mixed = [
+      msg({ id: 'b1', group_id: 'g2' }),
+      msg({ id: 'b2', group_id: 'g2' }),
+      msg({ id: 'a1', group_id: 'g1' }),
+    ];
+    const shown = filterThreadForOpenGroup(mixed, 'g1');
+    expect(shown?.map((m) => m.id)).toEqual(['a1']);
+    expect(shown?.every((m) => m.group_id === 'g1')).toBe(true);
+  });
+
   it('cache tip changes only when the thread window changes', () => {
     const a = [msg({ id: 'a' }), msg({ id: 'b' })];
     const b = [msg({ id: 'a' }), msg({ id: 'b' })];

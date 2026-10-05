@@ -1,7 +1,7 @@
 import { chatGroupDisplayName } from '../assets/chatGroups/groupChatIcons';
 import { queryClient } from './queryClient';
 import { appQueryKeys } from './appQueryKeys';
-import { mergeChatMessages, readGroupMessagesCache } from './chatMessageCache';
+import { mergeChatMessages, readGroupMessagesCache, onlyGroupMessages } from './chatMessageCache';
 import type { ChatGroup, ChatGroupWithDetails, ChatMessage } from '../types/chat.types';
 
 /**
@@ -73,8 +73,11 @@ export function filterThreadForOpenGroup(
   groupId: string,
 ): ChatMessage[] | null {
   if (!groupId || !messages?.length) return null;
-  if (messages.some((m) => m.group_id === groupId)) return messages;
-  return null;
+  // רק הודעות של הקבוצה הפתוחה — לעולם לא «כל המערך אם יש התאמה אחת»
+  // (זה מה שהציג הודעות של צ'אט אחר כשה-thread היה מעורב)
+  if (!messages.some((m) => m.group_id === groupId)) return null;
+  const own = onlyGroupMessages(messages, groupId);
+  return own.length ? own : null;
 }
 
 export function seedMessagesForOpen(

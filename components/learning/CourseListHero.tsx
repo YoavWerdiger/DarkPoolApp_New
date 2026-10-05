@@ -78,19 +78,6 @@ function CourseListHeroInner({
         />
       )}
 
-      <LinearGradient
-        colors={[
-          'rgba(0,0,0,0.35)',
-          'transparent',
-          'rgba(0,0,0,0.35)',
-          'rgba(0,0,0,0.72)',
-          'transparent',
-        ]}
-        locations={[0, 0.22, 0.58, 0.86, 1]}
-        style={StyleSheet.absoluteFill}
-        pointerEvents="none"
-      />
-
       <View style={[styles.topBar, { paddingTop: Math.max(topInset, 8) + 6 }]}>
         <DayNavBlurButton
           onPress={onBack}
@@ -102,42 +89,6 @@ function CourseListHeroInner({
         </DayNavBlurButton>
       </View>
 
-      <View style={styles.bottomWrap} pointerEvents="none">
-        <Text style={styles.title} numberOfLines={3}>
-          {title}
-        </Text>
-        {subtitle ? (
-          <Text style={styles.subtitle} numberOfLines={2}>
-            {subtitle}
-          </Text>
-        ) : null}
-
-        <View style={progressStyles.block}>
-          {progressLoading ? (
-            <View style={progressStyles.barTrack}>
-              <View style={[progressStyles.barFill, { width: '0%' }]} />
-            </View>
-          ) : (
-            <>
-              <View style={progressStyles.row}>
-                <Text style={progressStyles.label}>{progressLabel}</Text>
-                <Text style={progressStyles.pct}>{progressPct}%</Text>
-              </View>
-              <View style={progressStyles.barTrack}>
-                <View
-                  style={[
-                    progressStyles.barFill,
-                    {
-                      width: `${Math.min(100, Math.max(0, progressPct))}%`,
-                      minWidth: progressPct > 0 ? 4 : 0,
-                    },
-                  ]}
-                />
-              </View>
-            </>
-          )}
-        </View>
-      </View>
     </View>
   );
 }

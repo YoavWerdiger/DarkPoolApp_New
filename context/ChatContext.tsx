@@ -559,7 +559,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const setTyping = useCallback(async (groupId: string, isTyping: boolean) => {
     if (!user) return;
     try {
-      await chatRealtimeService.setTypingStatus({ group_id: groupId, is_typing: isTyping }, user.id);
+      await chatRealtimeService.setTypingStatus(
+        { group_id: groupId, is_typing: isTyping, display_name: user.display_name || undefined },
+        user.id,
+      );
     } catch (error) {
       logger.error('ChatContext', 'Error sending typing status', error);
     }

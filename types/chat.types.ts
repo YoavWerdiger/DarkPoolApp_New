@@ -495,6 +495,8 @@ export interface MarkMessagesAsReadInput {
 export interface SetTypingStatusInput {
   group_id: string;
   is_typing: boolean;
+  /** שם להצגה אצל הנמענים (broadcast — בלי join ל-users) */
+  display_name?: string;
 }
 
 export interface UpdateGroupMemberInput {

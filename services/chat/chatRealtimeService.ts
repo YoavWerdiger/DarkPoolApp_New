@@ -345,19 +345,23 @@ function scheduleRetry(groupId: string, retryFn: () => void) {
 // Subscribe to group
 // ============================================
 
-function groupChannelPrefix(groupId: string): string {
-  return `group:${groupId}:`;
+/**
+ * Broadcast מה-DB (ערוצים פרטיים) — במקום postgres_changes:
+ * - `chat-group:<id>` — הודעות/ריאקציות/חברים/פרטי קבוצה/«מקליד...» (טריגרים ב-DB)
+ * - `chat-user:<id>` — הצטרפות/הסרה מקבוצה + אישורי קריאה על ההודעות שלי
+ * הרשאה נבדקת פעם אחת בהצטרפות (RLS על realtime.messages) — לא לכל הודעה ולכל מנוי.
+ */
+function groupTopic(groupId: string): string {
+  return `chat-group:${groupId}`;
 }
 
-function listGroupChannelKeys(groupId: string): string[] {
-  const prefix = groupChannelPrefix(groupId);
-  return [...activeChannels.keys()].filter((key) => key.startsWith(prefix));
+function userTopic(userId: string): string {
+  return `chat-user:${userId}`;
 }
 
-/** True when group realtime slots exist and are actually joined (not zombie Map entries). */
+/** True when the group's broadcast channel is actually joined (not a zombie Map entry). */
 export function isGroupRealtimeSubscribed(groupId: string): boolean {
-  const keys = listGroupChannelKeys(groupId);
-  return areChannelsJoined(keys);
+  return isChannelJoined(activeChannels.get(groupTopic(groupId)));
 }
 
 /**
@@ -473,40 +477,204 @@ export async function enrichChatMessageSender(
   return enriched ?? message;
 }
 
-function teardownGroupChannels(groupId: string): Promise<void> {
-  return Promise.all(listGroupChannelKeys(groupId).map(removeChannelByKey)).then(() => undefined);
+/** משתמש שהערוצים הנוכחיים שייכים לו (לסינון הודעות שלי / typing של עצמי) */
+let hubUserId: string | null = null;
+/** «מקליד...» לפי קבוצה — מצב מקומי מאירועי broadcast, פג אחרי TYPING_TTL_MS */
+const TYPING_TTL_MS = 6000;
+const typingByGroup = new Map<
+  string,
+  Map<string, { indicator: ChatTypingIndicator; timer: ReturnType<typeof setTimeout> }>
+>();
+
+function emitTyping(groupId: string): void {
+  const cb = getGroupListeners(groupId)?.onTyping;
+  if (!cb) return;
+  const map = typingByGroup.get(groupId);
+  cb(map ? [...map.values()].map((v) => v.indicator) : []);
+}
+
+function clearTypingForGroup(groupId: string): void {
+  const map = typingByGroup.get(groupId);
+  if (!map) return;
+  map.forEach((v) => clearTimeout(v.timer));
+  typingByGroup.delete(groupId);
+}
+
+function handleTypingEvent(groupId: string, payload: any): void {
+  const uid = payload?.user_id as string | undefined;
+  if (!uid || uid === hubUserId) return;
+  let map = typingByGroup.get(groupId);
+  if (!map) {
+    map = new Map();
+    typingByGroup.set(groupId, map);
+  }
+  const prev = map.get(uid);
+  if (prev) clearTimeout(prev.timer);
+  if (!payload.is_typing) {
+    map.delete(uid);
+    emitTyping(groupId);
+    return;
+  }
+  const indicator = {
+    id: `${groupId}-${uid}`,
+    group_id: groupId,
+    user_id: uid,
+    started_typing_at: new Date().toISOString(),
+    user: { id: uid, display_name: payload.display_name || peekCachedSender(uid)?.display_name || '' },
+  } as unknown as ChatTypingIndicator;
+  const timer = setTimeout(() => {
+    typingByGroup.get(groupId)?.delete(uid);
+    emitTyping(groupId);
+  }, TYPING_TTL_MS);
+  map.set(uid, { indicator, timer });
+  emitTyping(groupId);
+}
+
+function handleGroupMessageEvent(groupId: string, kind: 'INSERT' | 'UPDATE' | 'DELETE', payload: any): void {
+  const message = payload as ChatMessage;
+  if (!message?.id) return;
+  rtLog(`Message event: ${kind} ${message.id}`);
+
+  // רשימת הצ'אטים (badge / preview) — כמו ה-membership channel הקודם
+  if (kind === 'INSERT') {
+    const cb = membershipCallbacks;
+    if (
+      cb &&
+      hubUserId &&
+      membershipCallbacksUserId === hubUserId &&
+      message.sender_id !== hubUserId &&
+      !message.is_silent &&
+      !message.is_system_message
+    ) {
+      try {
+        cb.onNewMessage(groupId, message);
+      } catch (e) {
+        logger.error(TAG, 'onNewMessage callback error', e);
+      }
+    }
+    // הודעה מהמשתמש שהקליד — מנקים את ה«מקליד...» שלו מיד
+    if (message.sender_id && typingByGroup.get(groupId)?.has(message.sender_id)) {
+      handleTypingEvent(groupId, { user_id: message.sender_id, is_typing: false });
+    }
+  }
+
+  // הצ'אט הפתוח
+  const onMessage = getGroupListeners(groupId)?.onMessage;
+  if (!onMessage) return;
+  try {
+    onMessage(message, kind);
+  } catch (e) {
+    logger.error(TAG, 'onMessage callback error', e);
+  }
+}
+
+async function handleReactionEvent(groupId: string, payload: any): Promise<void> {
+  const cb = getGroupListeners(groupId)?.onReaction;
+  const row = payload?.row as ChatReaction | undefined;
+  if (!cb || !row?.message_id) return;
+  try {
+    if (payload.op === 'INSERT') {
+      if (row.user_id) {
+        const userData = await getCachedUser(row.user_id);
+        if (userData) {
+          row.user = {
+            id: userData.id,
+            display_name: userData.display_name,
+            profile_picture: userData.profile_picture,
+          };
+        }
+      }
+      cb(row, 'INSERT');
+    } else if (payload.op === 'DELETE') {
+      cb(row, 'DELETE');
+    }
+  } catch (e) {
+    logger.error(TAG, 'onReaction callback error', e);
+  }
+}
+
+/**
+ * ערוץ broadcast אחד לקבוצה — משותף לרשימת הצ'אטים ולצ'אט הפתוח.
+ * idempotent: ערוץ חי (joined/joining) מוחזר כמו שהוא.
+ */
+function ensureGroupTopic(groupId: string): RealtimeChannel {
+  const key = groupTopic(groupId);
+  const existing = activeChannels.get(key);
+  if (existing && (existing.state === 'joined' || existing.state === 'joining')) {
+    return existing;
+  }
+  if (existing) {
+    activeChannels.delete(key);
+    void supabase.removeChannel(existing).catch(() => undefined);
+  }
+
+  const generation = (groupSubscribeGeneration.get(groupId) ?? 0) + 1;
+  groupSubscribeGeneration.set(groupId, generation);
+  cancelRetry(key);
+
+  const channel = supabase
+    .channel(key, { config: { private: true, broadcast: { self: false, ack: false } } })
+    .on('broadcast', { event: 'message_insert' }, ({ payload }) =>
+      handleGroupMessageEvent(groupId, 'INSERT', payload),
+    )
+    .on('broadcast', { event: 'message_update' }, ({ payload }) =>
+      handleGroupMessageEvent(groupId, 'UPDATE', payload),
+    )
+    .on('broadcast', { event: 'message_delete' }, ({ payload }) =>
+      handleGroupMessageEvent(groupId, 'DELETE', payload),
+    )
+    .on('broadcast', { event: 'reaction' }, ({ payload }) => {
+      void handleReactionEvent(groupId, payload);
+    })
+    .on('broadcast', { event: 'member' }, ({ payload }) => {
+      const op = payload?.op as 'INSERT' | 'DELETE' | undefined;
+      if (!op) return;
+      getGroupListeners(groupId)?.onMember?.(payload.row, op);
+    })
+    .on('broadcast', { event: 'group' }, ({ payload }) => {
+      if (payload) getGroupListeners(groupId)?.onGroup?.(payload, 'UPDATE');
+    })
+    .on('broadcast', { event: 'typing' }, ({ payload }) => handleTypingEvent(groupId, payload));
+
+  channel.subscribe((status, err) => {
+    if (groupSubscribeGeneration.get(groupId) !== generation) return;
+    if (status === 'SUBSCRIBED') {
+      rtLog(`Subscribed: ${key}`);
+      failedChannels.delete(key);
+      connectionStatusCallback?.('CONNECTED');
+    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+      logSubscribeFailure(key, err ?? status, status);
+      if (activeChannels.get(key) === channel) activeChannels.delete(key);
+      void supabase.removeChannel(channel).catch(() => undefined);
+      // ממשיכים לנסות רק אם עדיין רלוונטי (חבר בקבוצה או צ'אט פתוח)
+      scheduleRetry(key, () => {
+        if (groupSubscribeGeneration.get(groupId) !== generation) return;
+        const stillMember = hubUserId ? userGroupsCache.get(hubUserId)?.has(groupId) : false;
+        if (!stillMember && !groupListenersMap.has(groupId)) return;
+        ensureGroupTopic(groupId);
+      });
+    }
+  });
+  activeChannels.set(key, channel);
+  return channel;
+}
+
+async function removeGroupTopic(groupId: string): Promise<void> {
+  groupSubscribeGeneration.set(groupId, (groupSubscribeGeneration.get(groupId) ?? 0) + 1);
+  cancelRetry(groupTopic(groupId));
+  failedChannels.delete(groupTopic(groupId));
+  clearTypingForGroup(groupId);
+  await removeChannelByKey(groupTopic(groupId));
 }
 
 function teardownMembershipChannels(userId: string): Promise<void> {
-  const baseName = `user-membership:${userId}`;
+  const groupIds = [...activeChannels.keys()]
+    .filter((k) => k.startsWith('chat-group:'))
+    .map((k) => k.slice('chat-group:'.length));
   return Promise.all([
-    removeChannelByKey(`${baseName}:messages`),
-    removeChannelByKey(`${baseName}:members`),
+    removeChannelByKey(userTopic(userId)),
+    ...groupIds.filter((gid) => !groupListenersMap.has(gid)).map(removeGroupTopic),
   ]).then(() => undefined);
-}
-
-function subscribeGroupSlot(
-  channelKey: string,
-  build: () => RealtimeChannel,
-  onSubscribed: () => void,
-  onError: (err: unknown, status: string) => void
-): RealtimeChannel {
-  const channel = build();
-  channel.subscribe((status, err) => {
-    if (status === 'SUBSCRIBED') {
-      rtLog(`Subscribed: ${channelKey}`);
-      onSubscribed();
-    } else if (
-      status === 'CHANNEL_ERROR' ||
-      status === 'TIMED_OUT' ||
-      status === 'CLOSED'
-    ) {
-      rtLog(`Channel status ${status}: ${channelKey}`);
-      onError(err ?? status, status);
-    }
-  });
-  activeChannels.set(channelKey, channel);
-  return channel;
 }
 
 function getGroupListeners(groupId: string): GroupRealtimeListeners | undefined {
@@ -518,288 +686,13 @@ export async function subscribeToGroup(
   userId: string,
   listeners: GroupRealtimeListeners
 ): Promise<RealtimeChannel | null> {
-  rtLog(`Subscribing to group: ${groupId}`);
-
-  // תמיד מעדכנים listeners — גם ב-early return (מונע stale closures אחרי resume)
+  // תמיד מעדכנים listeners — גם כשהערוץ כבר חי (מונע stale closures אחרי resume)
   groupListenersMap.set(groupId, listeners);
-
+  hubUserId = hubUserId ?? userId;
   await waitForRealtimeSession();
-
-  const retryCount = failedChannels.get(groupId) ?? 0;
-  if (retryCount >= MAX_RETRIES) {
-    logger.warn(TAG, `Skipping subscription to ${groupId} - max retries reached`);
-    return null;
-  }
-
-  const slotKeys: string[] = [];
-  if (listeners.onMessage) slotKeys.push(`${groupChannelPrefix(groupId)}messages`);
-  if (listeners.onReaction) slotKeys.push(`${groupChannelPrefix(groupId)}reactions`);
-  if (listeners.onReadReceipt) slotKeys.push(`${groupChannelPrefix(groupId)}reads`);
-  if (listeners.onTyping) slotKeys.push(`${groupChannelPrefix(groupId)}typing`);
-  if (listeners.onMember) {
-    slotKeys.push(`${groupChannelPrefix(groupId)}members-in`);
-    slotKeys.push(`${groupChannelPrefix(groupId)}members-out`);
-  }
-  if (listeners.onGroup) slotKeys.push(`${groupChannelPrefix(groupId)}group`);
-
-  if (slotKeys.length === 0) {
-    logger.warn(TAG, `No listeners for group ${groupId} — skipping subscription`);
-    return null;
-  }
-
-  const slotsPresent = slotKeys.every((key) => activeChannels.has(key));
-  if (slotsPresent && areChannelsAlive(slotKeys)) {
-    rtLog(`Group channels alive — listeners refreshed: ${groupId}`);
-    return activeChannels.get(slotKeys[0]) ?? null;
-  }
-
-  if (slotsPresent) {
-    rtLog(`Group channels zombie/closed — tearing down: ${groupId}`);
-  }
-
-  const generation = (groupSubscribeGeneration.get(groupId) ?? 0) + 1;
-  groupSubscribeGeneration.set(groupId, generation);
-  cancelRetry(groupId);
-  await teardownGroupChannels(groupId);
-
-  if (groupSubscribeGeneration.get(groupId) !== generation) {
-    rtLog(`Stale group subscribe aborted for ${groupId}`);
-    return null;
-  }
-
-  let subscribedSlots = 0;
-  let errorHandled = false;
-  const requiredSlots = slotKeys.length;
-
-  const onSlotSubscribed = () => {
-    if (groupSubscribeGeneration.get(groupId) !== generation) return;
-    subscribedSlots += 1;
-    if (subscribedSlots === requiredSlots) {
-      failedChannels.delete(groupId);
-      connectionStatusCallback?.('CONNECTED');
-      logger.debug(TAG, `All ${requiredSlots} realtime slots ready for group ${groupId}`);
-    }
-  };
-
-  const onSlotError = (slotKey: string, err: unknown, status: string) => {
-    // teardown/resubscribe intentional — אל תדווח ותאלץ retry מתחרה
-    if (groupSubscribeGeneration.get(groupId) !== generation) return;
-    if (errorHandled) return;
-    errorHandled = true;
-    logSubscribeFailure(slotKey, err, status);
-    void teardownGroupChannels(groupId).then(() => {
-      if (groupSubscribeGeneration.get(groupId) !== generation) return;
-      scheduleRetry(groupId, () => {
-        if (groupSubscribeGeneration.get(groupId) !== generation) return;
-        const latest = groupListenersMap.get(groupId);
-        if (!latest) return;
-        void subscribeToGroup(groupId, userId, latest);
-      });
-    });
-  };
-
-  let primaryChannel: RealtimeChannel | null = null;
-
-  if (listeners.onMessage) {
-    const key = `${groupChannelPrefix(groupId)}messages`;
-    primaryChannel = subscribeGroupSlot(
-      key,
-      () =>
-        supabase.channel(key).on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'chat_messages',
-            filter: `group_id=eq.${groupId}`,
-          },
-          (payload: RealtimePostgresChangesPayload<any>) => {
-            try {
-              const cb = getGroupListeners(groupId)?.onMessage;
-              if (!cb) return;
-              const changedId =
-                payload.eventType === 'DELETE' ? payload.old?.id : payload.new?.id;
-              rtLog(`Message event: ${payload.eventType} ${changedId}`);
-              if (payload.eventType === 'INSERT') {
-                cb(payload.new as ChatMessage, 'INSERT');
-              } else if (payload.eventType === 'UPDATE') {
-                cb(payload.new as ChatMessage, 'UPDATE');
-              } else if (payload.eventType === 'DELETE') {
-                cb(payload.old as ChatMessage, 'DELETE');
-              }
-            } catch (e) {
-              logger.error(TAG, 'onMessage callback error', e);
-            }
-          }
-        ),
-      onSlotSubscribed,
-      (err, status) => onSlotError(key, err, status)
-    );
-  }
-
-  if (listeners.onReaction) {
-    const key = `${groupChannelPrefix(groupId)}reactions`;
-    const ch = subscribeGroupSlot(
-      key,
-      () =>
-        supabase.channel(key).on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'chat_message_reactions',
-            filter: `group_id=eq.${groupId}`,
-          },
-          async (payload: RealtimePostgresChangesPayload<any>) => {
-            try {
-              const cb = getGroupListeners(groupId)?.onReaction;
-              if (!cb) return;
-              const reactionData = payload.new || payload.old;
-              if (!reactionData?.message_id) return;
-              rtLog(`Reaction event: ${payload.eventType}`);
-              if (payload.eventType === 'INSERT') {
-                const reaction = payload.new as ChatReaction;
-                if (reaction.user_id) {
-                  const userData = await getCachedUser(reaction.user_id);
-                  if (userData) {
-                    reaction.user = {
-                      id: userData.id,
-                      display_name: userData.display_name,
-                      profile_picture: userData.profile_picture,
-                    };
-                  }
-                }
-                cb(reaction, 'INSERT');
-              } else if (payload.eventType === 'DELETE') {
-                cb(payload.old as ChatReaction, 'DELETE');
-              }
-            } catch (e) {
-              logger.error(TAG, 'onReaction callback error', e);
-            }
-          }
-        ),
-      onSlotSubscribed,
-      (err, status) => onSlotError(key, err, status)
-    );
-    if (!primaryChannel) primaryChannel = ch;
-  }
-
-  if (listeners.onReadReceipt) {
-    const key = `${groupChannelPrefix(groupId)}reads`;
-    subscribeGroupSlot(
-      key,
-      () =>
-        supabase.channel(key).on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'chat_message_reads',
-            filter: `group_id=eq.${groupId}`,
-          },
-          (payload: RealtimePostgresChangesPayload<any>) => {
-            try {
-              const cb = getGroupListeners(groupId)?.onReadReceipt;
-              if (!cb) return;
-              const read = payload.new as { message_id: string; user_id: string; group_id: string };
-              if (read?.message_id && read?.user_id) {
-                cb(read);
-              }
-            } catch (e) {
-              logger.error(TAG, 'onReadReceipt callback error', e);
-            }
-          }
-        ),
-      onSlotSubscribed,
-      (err, status) => onSlotError(key, err, status)
-    );
-  }
-
-  if (listeners.onTyping) {
-    const key = `${groupChannelPrefix(groupId)}typing`;
-    subscribeGroupSlot(
-      key,
-      () =>
-        supabase.channel(key).on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'chat_typing_indicators',
-            filter: `group_id=eq.${groupId}`,
-          },
-          async () => {
-            try {
-              const cb = getGroupListeners(groupId)?.onTyping;
-              if (!cb) return;
-              const { data } = await supabase
-                .from('chat_typing_indicators')
-                .select(`*, user:users (id, display_name)`)
-                .eq('group_id', groupId)
-                .neq('user_id', userId);
-              if (data) {
-                cb(data as any);
-              }
-            } catch (e) {
-              logger.error(TAG, 'onTyping callback error', e);
-            }
-          }
-        ),
-      onSlotSubscribed,
-      (err, status) => onSlotError(key, err, status)
-    );
-  }
-
-  if (listeners.onMember) {
-    const keyIn = `${groupChannelPrefix(groupId)}members-in`;
-    subscribeGroupSlot(
-      keyIn,
-      () =>
-        supabase.channel(keyIn).on(
-          'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'chat_group_members', filter: `group_id=eq.${groupId}` },
-          (payload: RealtimePostgresChangesPayload<any>) => {
-            getGroupListeners(groupId)?.onMember?.(payload.new, 'INSERT');
-          }
-        ),
-      onSlotSubscribed,
-      (err, status) => onSlotError(keyIn, err, status)
-    );
-
-    const keyOut = `${groupChannelPrefix(groupId)}members-out`;
-    subscribeGroupSlot(
-      keyOut,
-      () =>
-        supabase.channel(keyOut).on(
-          'postgres_changes',
-          { event: 'DELETE', schema: 'public', table: 'chat_group_members', filter: `group_id=eq.${groupId}` },
-          (payload: RealtimePostgresChangesPayload<any>) => {
-            getGroupListeners(groupId)?.onMember?.(payload.old, 'DELETE');
-          }
-        ),
-      onSlotSubscribed,
-      (err, status) => onSlotError(keyOut, err, status)
-    );
-  }
-
-  if (listeners.onGroup) {
-    const key = `${groupChannelPrefix(groupId)}group`;
-    subscribeGroupSlot(
-      key,
-      () =>
-        supabase.channel(key).on(
-          'postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'chat_groups', filter: `id=eq.${groupId}` },
-          (payload: RealtimePostgresChangesPayload<any>) => {
-            getGroupListeners(groupId)?.onGroup?.(payload.new, 'UPDATE');
-          }
-        ),
-      onSlotSubscribed,
-      (err, status) => onSlotError(key, err, status)
-    );
-  }
-
-  return primaryChannel ?? activeChannels.get(slotKeys[0]) ?? null;
+  const channel = ensureGroupTopic(groupId);
+  rtLog(`Group listeners attached: ${groupId} (state=${channel.state})`);
+  return channel;
 }
 
 // ============================================
@@ -807,21 +700,19 @@ export async function subscribeToGroup(
 // ============================================
 
 export async function unsubscribeFromGroup(groupId: string): Promise<void> {
-  groupSubscribeGeneration.set(
-    groupId,
-    (groupSubscribeGeneration.get(groupId) ?? 0) + 1,
-  );
-  cancelRetry(groupId);
-  failedChannels.delete(groupId);
+  // יציאה מהצ'אט: מנתקים רק את ה-listeners של המסך. הערוץ נשאר לרשימת הצ'אטים
+  // (badge / preview) כל עוד המשתמש חבר — אלא אם הוא מת, ואז מפרקים כדי ש-subscribe הבא יבנה מחדש.
   groupListenersMap.delete(groupId);
-  await teardownGroupChannels(groupId);
-
-  // Clean up all typing timers for this group (keyed as groupId-userId)
+  clearTypingForGroup(groupId);
   for (const [key, timer] of typingTimers.entries()) {
     if (key.startsWith(`${groupId}-`)) {
       clearTimeout(timer);
       typingTimers.delete(key);
     }
+  }
+  const stillMember = hubUserId ? userGroupsCache.get(hubUserId)?.has(groupId) : false;
+  if (!stillMember || !isGroupRealtimeSubscribed(groupId)) {
+    await removeGroupTopic(groupId);
   }
 }
 
@@ -835,6 +726,9 @@ export function unsubscribeAll(): void {
   }
   membershipCallbacks = null;
   membershipCallbacksUserId = null;
+  hubUserId = null;
+  typingByGroup.forEach((map) => map.forEach((v) => clearTimeout(v.timer)));
+  typingByGroup.clear();
   retryTimers.forEach((timer) => { clearTimeout(timer); });
   retryTimers.clear();
   failedChannels.clear();
@@ -858,53 +752,39 @@ export async function setTypingStatus(
   input: SetTypingStatusInput,
   userId: string
 ): Promise<{ error: ChatError | null }> {
+  // «מקליד...» = broadcast רגעי בין לקוחות בערוץ הקבוצה. בלי כתיבה למסד.
   try {
-    if (input.is_typing) {
-      const { error } = await supabase
-        .from('chat_typing_indicators')
-        .upsert({
-          group_id: input.group_id,
-          user_id: userId,
-          started_typing_at: new Date().toISOString(),
-        }, { onConflict: 'group_id,user_id' });
-
-      if (error) {
-        const isCommonError = error.code === '42501' || error.code === '23505' || error.message?.includes('permission');
-        if (!isCommonError) {
-          logger.error(TAG, `Error setting typing status: ${error.message}`);
-        }
-        return { error: { code: 'TYPING_ERROR', message: error.message || 'Unknown error' } };
-      }
-
-      const existingTimer = typingTimers.get(`${input.group_id}-${userId}`);
-      if (existingTimer) clearTimeout(existingTimer);
-
-      const timer = setTimeout(() => {
-        setTypingStatus({ ...input, is_typing: false }, userId);
-      }, 4000);
-      typingTimers.set(`${input.group_id}-${userId}`, timer);
-    } else {
-      const timer = typingTimers.get(`${input.group_id}-${userId}`);
-      if (timer) {
-        clearTimeout(timer);
-        typingTimers.delete(`${input.group_id}-${userId}`);
-      }
-
-      try {
-        await supabase
-          .from('chat_typing_indicators')
-          .delete()
-          .eq('group_id', input.group_id)
-          .eq('user_id', userId);
-      } catch (_) {
-        // Harmless – record may already be gone
-      }
+    const timerKey = `${input.group_id}-${userId}`;
+    const existingTimer = typingTimers.get(timerKey);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+      typingTimers.delete(timerKey);
     }
-
+    const channel = activeChannels.get(groupTopic(input.group_id));
+    if (!isChannelJoined(channel)) return { error: null };
+    await channel!.send({
+      type: 'broadcast',
+      event: 'typing',
+      payload: {
+        user_id: userId,
+        display_name: input.display_name || peekCachedSender(userId)?.display_name || '',
+        is_typing: input.is_typing,
+      },
+    });
+    if (input.is_typing) {
+      // עצירה אוטומטית אם המשתמש הפסיק להקליד בלי אירוע stop
+      typingTimers.set(
+        timerKey,
+        setTimeout(() => {
+          typingTimers.delete(timerKey);
+          void setTypingStatus({ ...input, is_typing: false }, userId);
+        }, 4000),
+      );
+    }
     return { error: null };
   } catch (error: any) {
-    logger.error(TAG, `Unexpected error setting typing status: ${error.message}`);
-    return { error: { code: 'UNEXPECTED_ERROR', message: error.message } };
+    logger.warn(TAG, `typing broadcast failed: ${error?.message ?? error}`);
+    return { error: { code: 'TYPING_ERROR', message: error?.message || 'typing failed' } };
   }
 }
 
@@ -916,29 +796,13 @@ export async function getTypingUsers(
   groupId: string,
   excludeUserId?: string
 ): Promise<{ data: ChatTypingIndicator[] | null; error: ChatError | null }> {
-  try {
-    let query = supabase
-      .from('chat_typing_indicators')
-      .select(`*, user:users (id, display_name)`)
-      .eq('group_id', groupId);
-
-    if (excludeUserId) query = query.neq('user_id', excludeUserId);
-
-    const { data, error } = await query;
-    if (error) {
-      logger.error(TAG, `Error fetching typing users: ${error.message}`);
-      return { data: null, error: { code: 'FETCH_TYPING_ERROR', message: error.message } };
-    }
-    return { data: data as any, error: null };
-  } catch (error: any) {
-    logger.error(TAG, `Unexpected error fetching typing users: ${error.message}`);
-    return { data: null, error: { code: 'UNEXPECTED_ERROR', message: error.message } };
-  }
+  const map = typingByGroup.get(groupId);
+  const list = map ? [...map.values()].map((v) => v.indicator) : [];
+  return {
+    data: excludeUserId ? list.filter((t) => t.user_id !== excludeUserId) : list,
+    error: null,
+  };
 }
-
-// ============================================
-// Online status
-// ============================================
 
 export async function updateOnlineStatus(
   userId: string,
@@ -1036,43 +900,32 @@ export async function subscribeToAllUserGroups(
   options?: { force?: boolean }
 ): Promise<RealtimeChannel | null> {
   /**
-   * שני מנויי postgres_changes על אותו channel מפיקים אצל Supabase
-   * "mismatch between server and client bindings for postgres changes" — לכן
-   * מפרידים ל־2 ערוצים.
+   * ערוץ broadcast לכל קבוצה שהמשתמש חבר בה (הודעות חדשות → badge/preview ברשימה)
+   * + ערוץ אישי (הצטרפות/הסרה, אישורי קריאה). כל הודעה = שידור אחד לקבוצה,
+   * לא בדיקת RLS לכל משתמש מחובר כמו ה-postgres_changes הגלובלי הקודם.
    */
-  const baseName = `user-membership:${userId}`;
-  const nameMessages = `${baseName}:messages`;
-  const nameMembers = `${baseName}:members`;
-
   membershipCallbacks = { onNewMessage, onGroupUpdate, onMembershipRemoved };
   membershipCallbacksUserId = userId;
+  hubUserId = userId;
 
-  const retryCount = failedChannels.get(baseName) ?? 0;
+  const userKey = userTopic(userId);
+  const retryCount = failedChannels.get(userKey) ?? 0;
   if (retryCount >= MAX_RETRIES && !options?.force) {
-    logger.warn(TAG, `Skipping subscription to ${baseName} - max retries reached`);
+    logger.warn(TAG, `Skipping subscription to ${userKey} - max retries reached`);
     return null;
   }
 
-  const membershipKeys = [nameMessages, nameMembers];
-  const alreadyLive =
-    areChannelsAlive(membershipKeys) &&
-    !retryTimers.has(baseName);
-
-  if (!options?.force && alreadyLive) {
-    rtLog(`Membership channels already alive for ${userId} — callbacks refreshed`);
-    return activeChannels.get(nameMessages) ?? null;
-  }
-
-  if (!options?.force && activeChannels.has(nameMessages) && !alreadyLive) {
-    rtLog(`Membership channels zombie — forcing resubscribe for ${userId}`);
+  if (!options?.force && isMembershipRealtimeHealthy(userId) && !retryTimers.has(userKey)) {
+    rtLog(`Membership channels alive for ${userId} — callbacks refreshed`);
+    return activeChannels.get(userKey) ?? null;
   }
 
   const generation = ++membershipSubscribeGeneration;
-  cancelRetry(baseName);
+  cancelRetry(userKey);
   if (options?.force) {
-    failedChannels.delete(baseName);
+    failedChannels.delete(userKey);
+    await teardownMembershipChannels(userId);
   }
-  await teardownMembershipChannels(userId);
 
   await waitForRealtimeSession();
   if (generation !== membershipSubscribeGeneration) {
@@ -1080,130 +933,78 @@ export async function subscribeToAllUserGroups(
     return null;
   }
 
-  const { data: memberships } = await supabase
+  const { data: memberships, error } = await supabase
     .from('chat_group_members')
     .select('group_id')
     .eq('user_id', userId);
-
-  const userGroups = new Set<string>(memberships?.map(m => m.group_id) || []);
-  userGroupsCache.set(userId, userGroups);
-
-  if (generation !== membershipSubscribeGeneration) {
-    logger.debug(TAG, `Stale membership subscribe aborted after fetch for ${userId}`);
-    return null;
+  if (error) {
+    logger.warn(TAG, 'membership fetch failed', error);
   }
+  if (generation !== membershipSubscribeGeneration) return null;
 
-  rtLog(`User is member of ${userGroups.size} groups — subscribing membership`);
+  const userGroups = new Set<string>(memberships?.map((m) => m.group_id) || []);
+  userGroupsCache.set(userId, userGroups);
+  rtLog(`User is member of ${userGroups.size} groups — joining group topics`);
 
-  let errorTeardownOnce = false;
-  const handleError = (from: string, err: unknown, status: string) => {
+  // קבוצות שהמשתמש כבר לא חבר בהן (ולא פתוחות) — מפרקים
+  for (const key of [...activeChannels.keys()]) {
+    if (!key.startsWith('chat-group:')) continue;
+    const gid = key.slice('chat-group:'.length);
+    if (!userGroups.has(gid) && !groupListenersMap.has(gid)) void removeGroupTopic(gid);
+  }
+  userGroups.forEach((gid) => ensureGroupTopic(gid));
+
+  // ערוץ אישי
+  const existingUser = activeChannels.get(userKey);
+  if (existingUser && (existingUser.state === 'joined' || existingUser.state === 'joining')) {
+    return existingUser;
+  }
+  if (existingUser) await removeChannelByKey(userKey);
+
+  const channel = supabase
+    .channel(userKey, { config: { private: true, broadcast: { self: false, ack: false } } })
+    .on('broadcast', { event: 'read' }, ({ payload }) => {
+      const read = payload as { message_id: string; user_id: string; group_id: string };
+      if (!read?.message_id || !read?.user_id) return;
+      try {
+        getGroupListeners(read.group_id)?.onReadReceipt?.(read);
+      } catch (e) {
+        logger.error(TAG, 'onReadReceipt callback error', e);
+      }
+    })
+    .on('broadcast', { event: 'membership' }, ({ payload }) => {
+      const cb = membershipCallbacks;
+      const gid = payload?.group_id as string | undefined;
+      if (!gid || membershipCallbacksUserId !== userId) return;
+      if (payload.op === 'INSERT') {
+        userGroupsCache.get(userId)?.add(gid);
+        ensureGroupTopic(gid);
+      } else if (payload.op === 'DELETE') {
+        userGroupsCache.get(userId)?.delete(gid);
+        if (!groupListenersMap.has(gid)) void removeGroupTopic(gid);
+        cb?.onMembershipRemoved?.(gid);
+      }
+    });
+
+  channel.subscribe((status, err) => {
     if (generation !== membershipSubscribeGeneration) return;
-    if (errorTeardownOnce) return;
-    errorTeardownOnce = true;
-    logSubscribeFailure(from, err, status);
-    rtLog(`Membership channel failure (${status}) from ${from} — scheduling retry`);
-    void teardownMembershipChannels(userId).then(() => {
-      if (generation !== membershipSubscribeGeneration) return;
-      scheduleRetry(baseName, () => {
-        const cb = membershipCallbacks;
-        if (!cb || membershipCallbacksUserId !== userId) return;
-        void subscribeToAllUserGroups(
-          userId,
-          cb.onNewMessage,
-          cb.onGroupUpdate,
-          cb.onMembershipRemoved
-        );
-      });
-    });
-  };
-
-  let subMessagesOk = false;
-  let subMembersOk = false;
-  const onBothSubscribed = () => {
-    if (subMessagesOk && subMembersOk) {
-      failedChannels.delete(baseName);
+    if (status === 'SUBSCRIBED') {
+      failedChannels.delete(userKey);
       connectionStatusCallback?.('CONNECTED');
-      rtLog(`Membership channels ready for ${userId}`);
+      rtLog(`Subscribed: ${userKey}`);
+    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+      logSubscribeFailure(userKey, err ?? status, status);
+      if (activeChannels.get(userKey) === channel) activeChannels.delete(userKey);
+      void supabase.removeChannel(channel).catch(() => undefined);
+      scheduleRetry(userKey, () => {
+        const cb = membershipCallbacks;
+        if (!cb || membershipCallbacksUserId !== userId) return;
+        void subscribeToAllUserGroups(userId, cb.onNewMessage, cb.onGroupUpdate, cb.onMembershipRemoved);
+      });
     }
-  };
-
-  const chMessages = supabase
-    .channel(nameMessages)
-    .on(
-      'postgres_changes',
-      { event: 'INSERT', schema: 'public', table: 'chat_messages' },
-      async (payload: RealtimePostgresChangesPayload<any>) => {
-        const cb = membershipCallbacks;
-        if (!cb || membershipCallbacksUserId !== userId) return;
-
-        const newMessage = payload.new as ChatMessage;
-        const groupId = newMessage.group_id;
-        const currentUserGroups = userGroupsCache.get(userId);
-
-        if (!currentUserGroups?.has(groupId)) return;
-        if (newMessage.sender_id === userId) return;
-        if (newMessage.is_silent || newMessage.is_system_message) return;
-
-        rtLog(`Membership INSERT msg=${newMessage.id} group=${groupId}`);
-        cb.onNewMessage(groupId, newMessage);
-      }
-    )
-    .subscribe((status, err) => {
-      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-        handleError(nameMessages, err ?? status, status);
-      } else if (status === 'SUBSCRIBED') {
-        subMessagesOk = true;
-        rtLog(`Subscribed: ${nameMessages}`);
-        onBothSubscribed();
-      }
-    });
-
-  const chMembers = supabase
-    .channel(nameMembers)
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'chat_group_members',
-        filter: `user_id=eq.${userId}`,
-      },
-      async (payload: RealtimePostgresChangesPayload<any>) => {
-        const cb = membershipCallbacks;
-        if (!cb || membershipCallbacksUserId !== userId) return;
-
-        if (payload.eventType === 'INSERT') {
-          userGroupsCache.get(userId)?.add(payload.new.group_id);
-        } else if (payload.eventType === 'DELETE') {
-          const removedGroupId = payload.old?.group_id;
-          if (removedGroupId) {
-            userGroupsCache.get(userId)?.delete(removedGroupId);
-            cb.onMembershipRemoved?.(removedGroupId);
-          }
-        } else if (payload.eventType === 'UPDATE') {
-          rtLog(
-            `Membership UPDATE group=${payload.new.group_id} unread=${payload.new.unread_count}`,
-          );
-          cb.onGroupUpdate(payload.new.group_id, {
-            unread_count: payload.new.unread_count,
-            mentioned_count: payload.new.mentioned_count,
-          });
-        }
-      }
-    )
-    .subscribe((status, err) => {
-      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-        handleError(nameMembers, err ?? status, status);
-      } else if (status === 'SUBSCRIBED') {
-        subMembersOk = true;
-        rtLog(`Subscribed: ${nameMembers}`);
-        onBothSubscribed();
-      }
-    });
-
-  activeChannels.set(nameMessages, chMessages);
-  activeChannels.set(nameMembers, chMembers);
-  return chMessages;
+  });
+  activeChannels.set(userKey, channel);
+  return channel;
 }
 
 export function updateUserGroupsCache(userId: string, groupId: string, action: 'add' | 'remove'): void {
@@ -1227,27 +1028,13 @@ export function clearUserGroupsCache(userId?: string): void {
 
 let cleanupInterval: NodeJS.Timeout | null = null;
 
+/** «מקליד...» עבר ל-broadcast — אין יותר טבלה לנקות. נשמר כ-no-op לתאימות API. */
 export function startTypingCleanup(): void {
-  if (cleanupInterval) return;
-
-  cleanupInterval = setInterval(async () => {
-    try {
-      const tenSecondsAgo = new Date(Date.now() - 10000).toISOString();
-      await supabase
-        .from('chat_typing_indicators')
-        .delete()
-        .lt('started_typing_at', tenSecondsAgo);
-    } catch (_) {
-      // Non-critical cleanup failure
-    }
-  }, 5000);
+  /* no-op */
 }
 
 export function stopTypingCleanup(): void {
-  if (cleanupInterval) {
-    clearInterval(cleanupInterval);
-    cleanupInterval = null;
-  }
+  /* no-op */
 }
 
 // ============================================
@@ -1299,10 +1086,15 @@ export function clearFailedChannel(groupId: string): void {
   failedChannels.delete(groupId);
 }
 
-/** Health check — true אם membership channels joined. */
+/** Health check — הערוץ האישי וערוצי כל הקבוצות joined. */
 export function isMembershipRealtimeHealthy(userId: string): boolean {
-  const baseName = `user-membership:${userId}`;
-  return areChannelsJoined([`${baseName}:messages`, `${baseName}:members`]);
+  if (!isChannelJoined(activeChannels.get(userTopic(userId)))) return false;
+  const groups = userGroupsCache.get(userId);
+  if (!groups) return false;
+  for (const gid of groups) {
+    if (!isChannelJoined(activeChannels.get(groupTopic(gid)))) return false;
+  }
+  return true;
 }
 
 export const chatRealtimeService = {

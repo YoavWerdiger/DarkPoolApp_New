@@ -1,4 +1,5 @@
 import type { AuthChangeEvent, User as SupabaseAuthUser } from '@supabase/supabase-js';
+import { isPasswordValid } from '../utils/passwordPolicy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
 import { openAuthSessionAsync, type WebBrowserAuthSessionResult } from '../lib/expoWebBrowserSafe';
@@ -733,7 +734,7 @@ export class AuthService {
   ): Promise<{ success: boolean; error: string | null }> {
     const started = Date.now();
     try {
-      if (!password || password.length < 6) {
+      if (!isPasswordValid(password)) {
         return { success: false, error: 'weak_password' };
       }
 
@@ -845,7 +846,7 @@ export class AuthService {
     const normalizedHint = (emailHint || '').trim().toLowerCase();
 
     try {
-      if (!password || password.length < 6) {
+      if (!isPasswordValid(password, normalizedHint)) {
         return { success: false, error: 'weak_password' };
       }
 

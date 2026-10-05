@@ -1,4 +1,5 @@
 import React, { useLayoutEffect, useState } from 'react';
+import { checkPassword, isPasswordValid, passwordErrorMessage } from '../../utils/passwordPolicy';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRegistration } from '../../context/RegistrationContext';
@@ -28,10 +29,9 @@ const RegistrationPasswordScreen = ({ navigation }: { navigation: any }) => {
     return navigation.addListener('state', syncBackState);
   }, [navigation]);
 
-  // דרישה מאוזנת: 8 תווים לפחות + אות ומספר. בלי שדה אימות (יש כפתור הצגת סיסמה), סימן מיוחד לא חובה
-  const meetsRules =
-    password.length >= 8 && /[A-Za-z\u0590-\u05FF]/.test(password) && /\d/.test(password);
-  const canContinue = !loading && meetsRules;
+  // מדיניות אחידה (utils/passwordPolicy): 8+ תווים, אות ומספר, לא נפוצה/האימייל
+  const checks = checkPassword(password, data.email);
+  const canContinue = !loading && isPasswordValid(password, data.email);
 
   const handleNext = async () => {
     if (!canContinue) return;
@@ -45,7 +45,7 @@ const RegistrationPasswordScreen = ({ navigation }: { navigation: any }) => {
           if (result.error === 'no_session') {
             setError('פג תוקף החיבור. חזור לאימות האימייל.');
           } else if (result.error === 'weak_password') {
-            setError('הסיסמה חייבת להכיל לפחות 6 תווים');
+            setError(passwordErrorMessage(password, data.email) || 'הסיסמה חלשה מדי');
           } else {
             setError(result.error);
           }
@@ -131,7 +131,7 @@ const RegistrationPasswordScreen = ({ navigation }: { navigation: any }) => {
           autoFocus
         />
         {/* שתי הדרישות בלבד + מד חוזק */}
-        <PasswordStrength password={password} ruleKeys={['len8', 'mix']} />
+        <PasswordStrength password={password} checks={checks} />
       </View>
     </CashAppScreen>
   );

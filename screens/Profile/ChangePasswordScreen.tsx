@@ -1,4 +1,5 @@
 import { legacyAlert } from '../../utils/appDialog';
+import { isPasswordValid, passwordErrorMessage } from '../../utils/passwordPolicy';
 import React, { useMemo, useState } from 'react';
 import {
   View,
@@ -142,7 +143,7 @@ export default function ChangePasswordScreen({ navigation }: any) {
   const canSubmit =
     !saving &&
     currentPassword.length > 0 &&
-    newPassword.length >= 8 &&
+    isPasswordValid(newPassword, user?.email) &&
     newPassword === confirmPassword;
 
   const handleSave = async () => {
@@ -156,9 +157,12 @@ export default function ChangePasswordScreen({ navigation }: any) {
       setFormError('נא למלא את כל השדות');
       return;
     }
-    if (newPassword.length < 8) {
-      setFormError('הסיסמה החדשה חייבת להכיל לפחות 8 תווים');
-      return;
+    {
+      const policyError = passwordErrorMessage(newPassword, user.email);
+      if (policyError) {
+        setFormError(policyError);
+        return;
+      }
     }
     if (newPassword !== confirmPassword) {
       setFormError('הסיסמאות החדשות אינן תואמות');

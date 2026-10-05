@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { isPasswordValid } from '../../utils/passwordPolicy';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthService } from '../../services/authService';
@@ -45,7 +46,7 @@ async function raceDeadline(
 
 function mapSaveError(code: string | null | undefined): string {
   if (code === 'no_session') return 'הסשן פג – בקש קוד חדש';
-  if (code === 'weak_password') return 'הסיסמה חייבת להכיל לפחות 6 תווים';
+  if (code === 'weak_password') return 'הסיסמה חייבת להכיל לפחות 8 תווים, אות ומספר';
   if (code === 'timeout') return 'שמירת הסיסמה ארכה יותר מדי. בדוק חיבור ונסה שוב.';
   if (code === 'invalid_email') return 'חסרה כתובת אימייל. חזור להתחברות ובקש קוד חדש.';
   if (code === 'password_not_persisted') {
@@ -73,7 +74,7 @@ const ForgotPasswordNewScreen = ({ navigation, route }: { navigation: any; route
         ? 'הסיסמאות אינן תואמות'
         : undefined;
   const canContinue =
-    !loading && !cancelling && password.length >= 6 && passwordsMatch;
+    !loading && !cancelling && isPasswordValid(password, emailHint) && passwordsMatch;
 
   const goToLogin = () => {
     navigation.reset({ index: 0, routes: [{ name: 'Login' }] });

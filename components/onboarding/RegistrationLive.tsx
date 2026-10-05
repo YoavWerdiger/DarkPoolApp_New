@@ -118,13 +118,20 @@ export function PasswordStrength({
   password,
   showRules = true,
   ruleKeys,
+  checks,
 }: {
   password: string;
   showRules?: boolean;
   /** להציג רק חלק מהכללים (למשל הדרישות בפועל) */
   ruleKeys?: string[];
+  /** דרישות חיצוניות (מדיניות הסיסמה) — מחליפות את רשימת הכללים */
+  checks?: { key: string; label: string; passed: boolean }[];
 }) {
-  const visibleRules = ruleKeys ? RULES.filter((r) => ruleKeys.includes(r.key)) : RULES;
+  const visibleRules = checks
+    ? checks.map((c) => ({ key: c.key, label: c.label, test: () => c.passed }))
+    : ruleKeys
+      ? RULES.filter((r) => ruleKeys.includes(r.key))
+      : RULES;
   const tokens = useDesignTokens();
   const passed = RULES.map((r) => r.test(password));
   const score = password ? passed.filter(Boolean).length : 0;

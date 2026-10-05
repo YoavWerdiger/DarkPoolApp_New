@@ -4,20 +4,20 @@
  */
 export const SoftUI = {
   /**
-   * קנבס פחם חם (לא שחור) — המראה ההפוך של הלייט (#F4F2F1 / כרטיס לבן):
-   * אותו גוון חם ואותו יחס «כרטיס מעל קנבס» (~1.1:1), בלי ניגודיות קשה של שחור מוחלט.
+   * קנבס גרפיט ניטרלי (לא שחור, בלי גוון צהבהב) — אותו יחס «כרטיס מעל קנבס» (~1.1:1) כמו בלייט,
+   * בלי הניגודיות הקשה של שחור מוחלט.
    */
-  canvas: '#161514',
+  canvas: '#121212',
   /** כרטיס תוכן */
-  surface1: '#222120',
+  surface1: '#1E1E1E',
   /** כרטיס פנימי / כרום */
-  surface2: '#2D2B29',
-  surface3: '#383532',
-  surfaceHover: '#45423E',
-  /** טקסט ראשי = קנבס הלייט (לבן חם, לא #FFF) */
-  textPrimary: '#F4F2F1',
-  textSecondary: '#A19D98',
-  textMuted: '#6F6B66',
+  surface2: '#2A2A2A',
+  surface3: '#353535',
+  surfaceHover: '#424242',
+  /** טקסט ראשי — לבן רך (לא #FFF) */
+  textPrimary: '#F2F2F2',
+  textSecondary: '#A0A0A0',
+  textMuted: '#6B6B6B',
   positive: '#6EE7A0',
   /** Tailwind red-500 — אדום חזק לשלילי / סכנה */
   negative: '#EF4444',
@@ -26,5 +26,5 @@ export const SoftUI = {
   brandDark: '#00A004',
   brandLight: '#33D43B',
   accentBlue: '#7B96F2',
-  borderSubtle: 'rgba(244, 242, 241, 0.07)',
+  borderSubtle: 'rgba(255, 255, 255, 0.07)',
 } as const;

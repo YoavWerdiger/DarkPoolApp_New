@@ -24,7 +24,7 @@ import Animated, {
  * `Create dark green animation` (1zJ5mGZ6R9JUTfCE4zSOLH).
  * שיא הזוהר ≈ #00B531; למעלה כמעט שחור; S מימין-למעלה לשמאל-למטה.
  */
-export const AURORA_BASE = '#161514'; // = SoftUI.canvas
+export const AURORA_BASE = '#121212'; // = SoftUI.canvas
 export const AURORA_GREEN = '#00B531';
 export const AURORA_GREEN_DEEP = '#013B13';
 export const AURORA_GREEN_BRAND = '#00C805';

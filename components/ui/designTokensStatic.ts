@@ -85,7 +85,7 @@ const darkColors = {
     active: 'rgba(0, 200, 5, 0.30)',
     danger: 'rgba(239, 68, 68, 0.25)',
     hover: 'rgba(255, 255, 255, 0.08)',
-    divider: 'rgba(244, 242, 241, 0.10)',
+    divider: 'rgba(255, 255, 255, 0.10)',
   },
 
   glass: {

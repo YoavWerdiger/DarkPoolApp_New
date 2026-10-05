@@ -270,8 +270,8 @@ export default function PollCreationBottomSheet({
           <DayNavBlurButton
             onPress={handleClose}
             size={DAY_NAV_BUTTON_SIZE}
-            glassIntensity="subtle"
-            style={styles.headerIconButton}
+            glass={false}
+            style={[styles.headerIconButton, { backgroundColor: tokens.colors.background.cardSolid }]}
             accessibilityLabel="חזרה"
           >
             <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />

@@ -13,12 +13,11 @@ export const DAY_NAV_BUTTON_SIZE = 40;
 export const DRAWER_MENU_BUTTON_SIZE = 46;
 
 /**
- * פני כפתור התפריט בלבד.
- * לייט: מילוי כרטיס אטום (`cardSolid`).
- * כהה: `undefined` — נשארת זכוכית הניווט הקיימת.
+ * פני כפתור התפריט — מילוי כרטיס אטום (`cardSolid`) בשתי הערכות,
+ * כמו כפתורי חזרה/חיפוש בכותרות (אחידות בדארק — לא זכוכית).
  */
 export function drawerMenuFaceColor(cardSolid: string): string | undefined {
-  return cardSolid === LIGHT_CARD ? cardSolid : undefined;
+  return cardSolid;
 }
 
 /**

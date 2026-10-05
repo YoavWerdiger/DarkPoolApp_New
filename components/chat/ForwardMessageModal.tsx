@@ -229,7 +229,8 @@ export default function ForwardMessageModal({
           <DayNavBlurButton
             onPress={onClose}
             size={DAY_NAV_BUTTON_SIZE}
-            glassIntensity="subtle"
+            glass={false}
+            style={{ backgroundColor: tokens.colors.background.cardSolid }}
             accessibilityLabel="סגור"
           >
             <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />

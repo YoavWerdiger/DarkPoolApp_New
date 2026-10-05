@@ -67,7 +67,8 @@ export function ChatSubScreenHeader({
           <DayNavBlurButton
             onPress={onBack}
             size={DRAWER_MENU_BUTTON_SIZE}
-            glassIntensity="subtle"
+            glass={false}
+            style={{ backgroundColor: tokens.colors.background.cardSolid }}
             accessibilityLabel="חזרה"
           >
             <Ionicons name={backIcon} size={24} color={tokens.colors.text.primary} />

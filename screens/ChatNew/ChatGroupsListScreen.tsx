@@ -1268,7 +1268,8 @@ export default function ChatGroupsListScreen() {
                     void HapticFeedback.selection();
                     setCreateGroupSheetVisible(true);
                   }}
-                  glassIntensity="subtle"
+                  glass={false}
+                  style={{ backgroundColor: tokens.colors.background.cardSolid }}
                   size={DRAWER_MENU_BUTTON_SIZE}
                   accessibilityLabel="יצירת קבוצה חדשה"
                 >
@@ -1283,7 +1284,8 @@ export default function ChatGroupsListScreen() {
                     void HapticFeedback.selection();
                     setSearchSheetVisible(true);
                   }}
-                  glassIntensity="subtle"
+                  glass={false}
+                  style={{ backgroundColor: tokens.colors.background.cardSolid }}
                   size={DRAWER_MENU_BUTTON_SIZE}
                   accessibilityLabel="חיפוש"
                 >

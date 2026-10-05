@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { Dimensions } from 'react-native';
 import { Gesture } from 'react-native-gesture-handler';
 import {
@@ -37,6 +37,11 @@ export type UseMediaZoomGesturesOptions = {
   canSwipePrev?: boolean;
   /** Fires when zoom settles above/below 1 (e.g. to disable gallery paging). */
   onZoomChange?: (zoomed: boolean) => void;
+  /**
+   * המדיה יושבת בתוך pager אופקי (FlatList) — כשאין זום, ה-pan תופס רק תנועה אנכית
+   * (משיכה לסגירה) ומשחרר החלקה אופקית ל-pager. בזום — pan חופשי כרגיל.
+   */
+  parentPager?: boolean;
 };
 
 /**
@@ -54,7 +59,9 @@ export function useMediaZoomGestures(options: UseMediaZoomGesturesOptions = {}) 
     onSwipeHorizontal,
     canSwipeNext = true,
     canSwipePrev = true,
+    parentPager = false,
   } = options;
+  const [zoomedJs, setZoomedJs] = useState(false);
 
   const scale = useSharedValue(1);
   const translateX = useSharedValue(0);
@@ -117,6 +124,7 @@ export function useMediaZoomGestures(options: UseMediaZoomGesturesOptions = {}) 
 
   const notifyZoomChange = useCallback(
     (zoomed: boolean) => {
+      setZoomedJs(zoomed);
       onZoomChange?.(zoomed);
     },
     [onZoomChange]
@@ -154,6 +162,7 @@ export function useMediaZoomGestures(options: UseMediaZoomGesturesOptions = {}) 
     savedTranslateX.value = 0;
     savedTranslateY.value = 0;
     isPinching.value = false;
+    setZoomedJs(false);
     onZoomChange?.(false);
   }, [onZoomChange, dismissY, isPinching, savedScale, savedTranslateX, savedTranslateY, scale, translateX, translateY]);
 
@@ -165,6 +174,7 @@ export function useMediaZoomGestures(options: UseMediaZoomGesturesOptions = {}) 
     savedTranslateX.value = 0;
     savedTranslateY.value = 0;
     isPinching.value = false;
+    setZoomedJs(false);
     onZoomChange?.(false);
   }, [onZoomChange]);
 
@@ -216,7 +226,7 @@ export function useMediaZoomGestures(options: UseMediaZoomGesturesOptions = {}) 
       commitTransform(targetScale, clamped.x, clamped.y, true);
     });
 
-  const panGesture = Gesture.Pan()
+  const basePanGesture = Gesture.Pan()
     .maxPointers(1)
     .minDistance(8)
     .onStart(() => {
@@ -287,6 +297,11 @@ export function useMediaZoomGestures(options: UseMediaZoomGesturesOptions = {}) 
       savedTranslateY.value = clamped.y;
       savedScale.value = scale.value;
     });
+
+  const panGesture =
+    parentPager && !zoomedJs
+      ? basePanGesture.activeOffsetY([-10, 10]).failOffsetX([-12, 12])
+      : basePanGesture;
 
   const doubleTapGesture = Gesture.Tap()
     .numberOfTaps(2)

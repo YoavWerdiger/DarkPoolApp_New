@@ -77,6 +77,8 @@ function GalleryImageItem({
     onZoomChange: isActive ? onZoomChange : undefined,
     onSingleTap: isActive ? onSingleTap : undefined,
     onSwipeDismiss: isActive ? onSwipeDismiss : undefined,
+    // בתוך FlatList אופקי — החלקה בין תמונות האלבום עוברת ל-pager
+    parentPager: true,
   });
 
   useEffect(() => {

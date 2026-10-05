@@ -47,7 +47,7 @@ import { ShareIntentProvider } from 'expo-share-intent';
 import { useIncomingShare } from './hooks/useIncomingShare';
 import { clearShareTargets } from './lib/shareTargets';
 import { DeviceConflictScreen } from './components/DeviceConflictScreen';
-import { checkActiveDevice, claimActiveDevice, subscribeActiveDevice } from './services/deviceSession';
+import { checkActiveDevice, installDeviceClaimOnSignIn, subscribeActiveDevice } from './services/deviceSession';
 // מסכים לא-פעילים (כל ה-stacks ב-Drawer נשארים טעונים) מוקפאים ולא מתרנדרים ברקע —
 // משחרר את ה-JS thread ומשפר משמעותית את חלקות הניווט והאינטראקציות.
 enableScreens(true);
@@ -120,7 +120,8 @@ function AppContent() {
   // Warm/hydrate רק אחרי רישום מלא — לא לבזבז רשת באמצע OTP
   useAppBootstrap(user?.id, !isLoading && registrationDone);
 
-  // מכשיר פעיל יחיד: בכניסה / חזרה לחזית בודקים; מכשיר אחר תפס → מסך «התחבר מכאן»
+  // מכשיר פעיל יחיד: התחברות טרייה תופסת את המכשיר; מכשיר שנזרק → מסך התנתקות
+  useEffect(() => installDeviceClaimOnSignIn(), []);
   const [deviceConflict, setDeviceConflict] = useState(false);
   useEffect(() => {
     if (isLoading || !user?.id || !registrationDone) {
@@ -394,15 +395,6 @@ function AppContent() {
 
       {deviceConflict && registrationDone && !biometricLocked ? (
         <DeviceConflictScreen
-          onConnectHere={async () => {
-            const ok = await claimActiveDevice({ revokeOthers: true });
-            if (ok) {
-              void HapticFeedback.success();
-              setDeviceConflict(false);
-            } else {
-              void HapticFeedback.error();
-            }
-          }}
           onSignOut={() => {
             setDeviceConflict(false);
             void signOut();

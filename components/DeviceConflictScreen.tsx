@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -9,20 +9,18 @@ import { APP_LAYOUT } from './ui/appLayout';
 import { APP_TYPE } from './ui/appType';
 
 type Props = {
-  /** «התחבר מכאן» — המכשיר הזה הופך לפעיל, האחר מתנתק */
-  onConnectHere: () => Promise<void> | void;
-  /** «התנתק» — יציאה מהמכשיר הזה */
+  /** יציאה מהמכשיר הזה → מסך התחברות. רק התחברות מחדש מחזירה את החשבון לכאן. */
   onSignOut: () => void;
 };
 
 /**
- * מסך מלא כשהחשבון פעיל במכשיר אחר (מכשיר אחד לכל משתמש).
- * בצבע הקנבס של הערכה, כמו מסכי ה-flow.
+ * מסך מלא כשהחשבון נפתח במכשיר אחר (מכשיר אחד לכל משתמש).
+ * אין «התחבר מכאן»: מכשיר שנזרק חייב להתחבר מחדש (השרת מסרב לסשן הישן) —
+ * כך שני אנשים לא יכולים להתחלף על אותו חשבון בלי סיסמה.
  */
-export function DeviceConflictScreen({ onConnectHere, onSignOut }: Props) {
+export function DeviceConflictScreen({ onSignOut }: Props) {
   const tokens = useDesignTokens();
   const insets = useSafeAreaInsets();
-  const [busy, setBusy] = useState(false);
 
   return (
     <Animated.View
@@ -39,38 +37,15 @@ export function DeviceConflictScreen({ onConnectHere, onSignOut }: Props) {
           <Ionicons name="phone-portrait-outline" size={38} color={tokens.colors.text.primary} />
         </View>
         <Text style={[styles.title, { color: tokens.colors.text.primary }]}>
-          החשבון מחובר במכשיר אחר
+          התחברת ממכשיר אחר
         </Text>
         <Text style={[styles.body, { color: tokens.colors.text.secondary }]}>
-          אפשר להשתמש בחשבון במכשיר אחד בכל פעם. אם תתחבר מכאן — החשבון יתנתק במכשיר השני.
+          אפשר להשתמש בחשבון במכשיר אחד בכל פעם, ולכן התנתקת מהמכשיר הזה. כדי להמשיך כאן — התחבר מחדש.
         </Text>
       </View>
 
       <View style={styles.actions}>
-        <UIButton
-          title="התחבר מכאן"
-          variant="primary"
-          size="lg"
-          fullWidth
-          loading={busy}
-          disabled={busy}
-          onPress={async () => {
-            setBusy(true);
-            try {
-              await onConnectHere();
-            } finally {
-              setBusy(false);
-            }
-          }}
-        />
-        <UIButton
-          title="התנתק"
-          variant="secondary"
-          fullWidth
-          disabled={busy}
-          onPress={onSignOut}
-          style={{ borderRadius: 999, backgroundColor: tokens.colors.background.cardSolid }}
-        />
+        <UIButton title="התחבר מחדש" variant="primary" size="lg" fullWidth onPress={onSignOut} />
       </View>
     </Animated.View>
   );

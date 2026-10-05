@@ -4,6 +4,8 @@
  * - claim_active_device מסמן את המכשיר הנוכחי כפעיל; אחרי claim מנתקים את שאר הסשנים
  *   (refresh tokens) כדי שמכשיר ישן לא יוכל להמשיך.
  * - אדמינים פטורים (enforced=false בשרת).
+ * - מכשיר שנזרק לא יכול לתפוס בחזרה: השרת מסרב לסשן שנוצר לפני התפיסה הנוכחית
+ *   (session_superseded). רק התחברות מחדש (סשן חדש) מחזירה את החשבון למכשיר.
  */
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
@@ -39,9 +41,31 @@ export async function getDeviceId(): Promise<string> {
 
 export type DeviceState = 'active' | 'conflict' | 'exempt' | 'unknown';
 
+/** תפיסה שרצה אחרי התחברות — בדיקת מצב ממתינה לה (אחרת רואים «מכשיר אחר» לרגע) */
+let pendingClaim: Promise<boolean> | null = null;
+
+/** התחברות טרייה (סיסמה / קוד) — המכשיר הזה הופך לפעיל אוטומטית */
+export function claimOnSignIn(): Promise<boolean> {
+  const run = claimActiveDevice({ revokeOthers: true });
+  pendingClaim = run.finally(() => {
+    if (pendingClaim === run) pendingClaim = null;
+  });
+  return run;
+}
+
+/** מאזין לאירועי התחברות — פעם אחת בשורש האפליקציה */
+export function installDeviceClaimOnSignIn(): () => void {
+  const { data } = supabase.auth.onAuthStateChange((event) => {
+    // גם אם SIGNED_IN נורה בשחזור סשן — השרת מסרב לסשן ישן, כך שזה בטוח
+    if (event === 'SIGNED_IN') void claimOnSignIn();
+  });
+  return () => data.subscription.unsubscribe();
+}
+
 /** בודק אם המכשיר הזה הוא הפעיל. אין רשומה עדיין → טוען בעלות בשקט. */
 export async function checkActiveDevice(): Promise<DeviceState> {
   try {
+    if (pendingClaim) await pendingClaim.catch(() => undefined);
     const deviceId = await getDeviceId();
     const { data, error } = await supabase.rpc('get_my_active_device');
     if (error || !data) return 'unknown';
@@ -70,7 +94,12 @@ export async function claimActiveDevice(opts: { revokeOthers: boolean }): Promis
       p_platform: Platform.OS,
     });
     if (error) {
-      logger.warn('deviceSession', 'claim failed', error);
+      if (String(error.message || '').includes('session_superseded')) {
+        // המכשיר נזרק — רק התחברות מחדש מחזירה אותו
+        logger.info('deviceSession', 'claim refused: session superseded');
+      } else {
+        logger.warn('deviceSession', 'claim failed', error);
+      }
       return false;
     }
     const enforced = !!(data as { enforced?: boolean } | null)?.enforced;

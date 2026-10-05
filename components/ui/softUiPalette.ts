@@ -3,17 +3,21 @@
  * docs/DARKPOOL_DESIGN_DIRECTION.md
  */
 export const SoftUI = {
-  /** קנבס שחור — כמו מסכי התוכן בצילום הייחוס */
-  canvas: '#000000',
+  /**
+   * קנבס פחם חם (לא שחור) — המראה ההפוך של הלייט (#F4F2F1 / כרטיס לבן):
+   * אותו גוון חם ואותו יחס «כרטיס מעל קנבס» (~1.1:1), בלי ניגודיות קשה של שחור מוחלט.
+   */
+  canvas: '#161514',
   /** כרטיס תוכן */
-  surface1: '#1C1C1E',
+  surface1: '#222120',
   /** כרטיס פנימי / כרום */
-  surface2: '#2C2C2E',
-  surface3: '#3A3A3C',
-  surfaceHover: '#48484A',
-  textPrimary: '#FFFFFF',
-  textSecondary: '#8E8E93',
-  textMuted: '#636366',
+  surface2: '#2D2B29',
+  surface3: '#383532',
+  surfaceHover: '#45423E',
+  /** טקסט ראשי = קנבס הלייט (לבן חם, לא #FFF) */
+  textPrimary: '#F4F2F1',
+  textSecondary: '#A19D98',
+  textMuted: '#6F6B66',
   positive: '#6EE7A0',
   /** Tailwind red-500 — אדום חזק לשלילי / סכנה */
   negative: '#EF4444',
@@ -22,5 +26,5 @@ export const SoftUI = {
   brandDark: '#00A004',
   brandLight: '#33D43B',
   accentBlue: '#7B96F2',
-  borderSubtle: 'rgba(255, 255, 255, 0.06)',
+  borderSubtle: 'rgba(244, 242, 241, 0.07)',
 } as const;

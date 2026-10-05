@@ -1,3 +1,4 @@
+import { LIGHT_CANVAS } from '../../../components/ui/designTokensStatic';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import Svg, { Path, Defs, LinearGradient, Stop, Line, Circle } from 'react-native-svg';
@@ -490,7 +491,7 @@ export function PortfolioValueChart({
     plotted.length >= 2 ? ranges.lastValue - ranges.firstValue : 0;
   const isUp = change >= 0;
   const lineColor = isUp ? tokens.colors.primary.main : tokens.colors.text.danger;
-  const lightChart = tokens.colors.background.primary !== '#000000';
+  const lightChart = String(tokens.colors.background.primary) === LIGHT_CANVAS;
   const cursorLineColor = lightChart ? 'rgba(30,26,36,0.38)' : 'rgba(255,255,255,0.45)';
   const cursorRingColor = lightChart ? '#FFFFFF' : tokens.colors.background.primary;
   const headerAmountColor = (amount: number) =>

@@ -53,7 +53,7 @@ const darkColors = {
 
   /** בועות צ'אט — ירוק/אפור המקוריים (אטום, לא Soft UI surface) */
   bubbleMe: '#134D37',
-  bubbleOther: '#262626',
+  bubbleOther: SoftUI.surface2,
   bubbleMeText: '#FFFFFF',
   bubbleMeMetaText: 'rgba(255, 255, 255, 0.65)',
 
@@ -85,7 +85,7 @@ const darkColors = {
     active: 'rgba(0, 200, 5, 0.30)',
     danger: 'rgba(239, 68, 68, 0.25)',
     hover: 'rgba(255, 255, 255, 0.08)',
-    divider: 'rgba(255, 255, 255, 0.13)',
+    divider: 'rgba(244, 242, 241, 0.10)',
   },
 
   glass: {

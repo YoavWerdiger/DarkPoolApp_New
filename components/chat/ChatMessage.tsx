@@ -56,6 +56,7 @@ import {
   releaseVoicePlayback,
 } from '../../utils/voicePlaybackController';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { APP_TYPE, appPhysicalRightText } from '../ui/appType';
 import { isUsableChatDisplayName } from '../../lib/chatMessageIdentity';
 
 type ResolvedMessageMedia = {
@@ -1259,18 +1260,39 @@ function renderMediaContent(
         ? formatFileSize(message.media_size)
         : (fileExtension !== 'קובץ' ? fileExtension : '');
 
-      return (
-        <View style={styles.documentRow}>
-          <Ionicons name="document-text-outline" size={28} color={tokens.colors.text.primary} />
-          <View style={styles.documentTextContainer}>
-            <Text style={styles.documentName} numberOfLines={1}>{fileName}</Text>
-            {fileSizeText ? <Text style={styles.documentSize}>{fileSizeText}</Text> : null}
-          </View>
-          <TouchableOpacity onPress={onMediaPress} style={styles.downloadButton}>
-            <Ionicons name="download-outline" size={22} color={tokens.colors.text.primary} />
+      {
+        // כרטיס מסמך (כמו וואטסאפ): תג סוג קובץ צבעוני, שם בשתי שורות, «PDF · 1.2MB», כל הכרטיס לחיץ
+        const ext = fileExtension !== 'קובץ' ? fileExtension.slice(0, 4) : 'FILE';
+        const badgeColor = documentBadgeColor(ext);
+        const fg = isMe ? tokens.colors.bubbleMeText : tokens.colors.text.primary;
+        const meta = [ext !== 'FILE' ? ext : null, message.media_size ? formatFileSize(message.media_size) : null]
+          .filter(Boolean)
+          .join(' · ');
+        return (
+          <TouchableOpacity
+            onPress={onMediaPress}
+            activeOpacity={0.75}
+            style={[styles.documentCard, { backgroundColor: isMe ? 'rgba(0,0,0,0.08)' : tokens.colors.selection.subtle }]}
+            accessibilityRole="button"
+            accessibilityLabel={`פתיחת מסמך ${fileName}`}
+          >
+            <View style={[styles.documentBadge, { backgroundColor: badgeColor }]}>
+              <Ionicons name="document-text" size={16} color="#FFFFFF" />
+              <Text style={styles.documentBadgeText} numberOfLines={1}>{ext}</Text>
+            </View>
+            <View style={styles.documentTextContainer}>
+              <Text style={[styles.documentName, { color: fg }]} numberOfLines={2}>
+                {fileName}
+              </Text>
+              {meta ? (
+                <Text style={[styles.documentSize, { color: isMe ? tokens.colors.bubbleMeMetaText : tokens.colors.text.secondary }]}>
+                  {meta}
+                </Text>
+              ) : null}
+            </View>
           </TouchableOpacity>
-        </View>
-      );
+        );
+      }
 
     case MessageType.MEDIA_GROUP:
       return (
@@ -1459,6 +1481,17 @@ function formatFileSize(bytes: number): string {
 }
 
 // קבלת סיומת קובץ
+/** צבע תג לפי סוג קובץ — כמו אייקוני מסמכים מוכרים */
+function documentBadgeColor(ext: string): string {
+  const e = ext.toUpperCase();
+  if (e === 'PDF') return '#E5484D';
+  if (['DOC', 'DOCX', 'PAGE', 'PAGES', 'RTF', 'TXT'].includes(e)) return '#3E7BFA';
+  if (['XLS', 'XLSX', 'CSV', 'NUMB', 'NUMBERS'].includes(e)) return '#30A46C';
+  if (['PPT', 'PPTX', 'KEY'].includes(e)) return '#F76B15';
+  if (['ZIP', 'RAR', '7Z'].includes(e)) return '#8E8E93';
+  return '#6E56CF';
+}
+
 function getFileExtension(fileName: string): string {
   if (!fileName) return 'קובץ';
   const parts = fileName.split('.');
@@ -2676,27 +2709,48 @@ const createStyles = (tokens: any) => {
   },
 
   // Document - פשוט בתוך הבועה הקיימת
-  documentRow: {
+  documentCard: {
+    direction: 'rtl',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    gap: 14,
-    minWidth: 200,
-    paddingVertical: 6,
+    gap: 12,
+    width: 240,
+    padding: 10,
+    borderRadius: 12,
+    marginVertical: 2,
+  },
+  documentBadge: {
+    width: 42,
+    height: 50,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  documentBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    lineHeight: 12,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   documentTextContainer: {
     flex: 1,
     justifyContent: 'center',
-    gap: 4,
+    gap: 3,
   },
   documentName: {
-    fontSize: tokens.typography.fontSize.base,
-    fontWeight: tokens.typography.fontWeight.medium,
-    color: tokens.colors.text.primary,
+    ...appPhysicalRightText,
+    fontSize: APP_TYPE.cardBody.fontSize,
+    lineHeight: APP_TYPE.cardBody.lineHeight,
+    fontWeight: APP_TYPE.cardTitle.fontWeight,
+    writingDirection: 'auto',
   },
   documentSize: {
-    fontSize: tokens.typography.fontSize.sm,
-    color: tokens.colors.text.secondary,
+    ...appPhysicalRightText,
+    fontSize: APP_TYPE.caption.fontSize,
+    lineHeight: APP_TYPE.caption.lineHeight,
+    fontVariant: ['tabular-nums'],
   },
   downloadButton: {
     width: 36,

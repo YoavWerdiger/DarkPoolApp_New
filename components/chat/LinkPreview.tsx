@@ -195,20 +195,23 @@ export default function LinkPreview({ url, isMe, onLongPress }: LinkPreviewProps
   );
 }
 
+const CARD_W = 252;
+
 const styles = StyleSheet.create({
+  // רוחב קבוע (כמו וואטסאפ): לבועה אין רוחב משלה (נקבע מהתוכן), ולכן stretch + תמונה ב-100%
+  // ויחס קבוע יצרו לולאה ב-Yoga → כרטיס ענק שכיסה את הצ׳אט
   card: {
     marginTop: 8,
+    width: CARD_W,
     borderRadius: 12,
     overflow: 'hidden',
-    alignSelf: 'stretch',
-    maxWidth: 300,
   },
   pressed: {
     opacity: 0.8,
   },
   hero: {
-    width: '100%',
-    aspectRatio: 1.91,
+    width: CARD_W,
+    height: Math.round(CARD_W / 1.91),
   },
   body: {
     paddingHorizontal: 10,

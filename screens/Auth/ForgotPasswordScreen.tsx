@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { View } from 'react-native';
 import OnboardingErrorBanner from '../../components/onboarding/OnboardingErrorBanner';
 import OnboardingLayout from '../../components/onboarding/OnboardingLayout';
 import OnboardingInput from '../../components/onboarding/OnboardingInput';
@@ -38,6 +37,8 @@ const ForgotPasswordScreen = ({ navigation, route }: { navigation: any; route?: 
       title="איפוס סיסמה"
       subtitle="נשלח קוד בן 6 ספרות לאימייל שלך"
       density="focused"
+      // גלילה כמו במסכי הרישום — מקלדת פתוחה במסך קטן לא דוחפת תוכן מתחת לכפתור
+      scrollable
       showBack
       showProgress={false}
       currentStep={1}
@@ -71,7 +72,6 @@ const ForgotPasswordScreen = ({ navigation, route }: { navigation: any; route?: 
         isLast
         helperText="אם קיים חשבון עם המייל הזה — יישלח אליו קוד"
       />
-      <View style={{ flex: 1 }} />
     </OnboardingLayout>
   );
 };

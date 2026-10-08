@@ -171,6 +171,8 @@ const ForgotPasswordOtpScreen = ({ navigation, route }: { navigation: any; route
             : 'הזן את הקוד מהמייל'
       }
       density="focused"
+      // גלילה כמו במסכי הרישום — מקלדת פתוחה במסך קטן לא דוחפת תוכן מתחת לכפתור
+      scrollable
       showBack
       showProgress={false}
       currentStep={1}
@@ -202,7 +204,6 @@ const ForgotPasswordOtpScreen = ({ navigation, route }: { navigation: any; route
         sending={sending}
         disabled={loading}
       />
-      <View style={{ flex: 1 }} />
     </OnboardingLayout>
   );
 };

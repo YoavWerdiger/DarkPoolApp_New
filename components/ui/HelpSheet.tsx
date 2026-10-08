@@ -16,6 +16,8 @@ import BottomSheet, {
 } from './BottomSheet/BottomSheet';
 import { SheetActionButton } from './BottomSheet/SheetActionButton';
 import { useDesignTokens } from './DesignTokens';
+import { APP_LAYOUT } from './appLayout';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   appBodyTextStyle,
   appSheetTitleStyle,
@@ -47,6 +49,7 @@ function HelpSheetBody({
   onLayout?: (e: LayoutChangeEvent) => void;
 }) {
   const tokens = useDesignTokens();
+  const insets = useSafeAreaInsets();
   const animatedClose = useBottomSheetClose();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
 
@@ -59,7 +62,7 @@ function HelpSheetBody({
   }, [animatedClose, onClose]);
 
   return (
-    <View onLayout={onLayout} style={styles.wrap}>
+    <View onLayout={onLayout} style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 16) + 4 }]}>
       <Text style={[styles.title, { color: tokens.colors.text.primary }]}>{title}</Text>
       <Text style={[styles.body, { color: tokens.colors.text.secondary }]}>{body}</Text>
       <SheetActionButton variant="secondary" label={gotItLabel} onPress={dismiss} />
@@ -123,18 +126,21 @@ export const InfoSheet = HelpSheet;
 
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
+    // מרווחים כמו שאר השיטים: צדדים 20, כותרת→טקסט 10, טקסט→כפתור 24
     wrap: {
       width: '100%',
       alignSelf: 'stretch',
-      paddingHorizontal: tokens.spacing.md,
+      paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+      paddingTop: 6,
       direction: 'rtl',
-      gap: tokens.spacing.md,
     },
     title: {
       ...appSheetTitleStyle,
+      marginBottom: 10,
     },
     body: {
       ...appBodyTextStyle,
+      marginBottom: 24,
     },
   });
 }

@@ -27,3 +27,11 @@ formatDisclosedAmountRange(trade.amount_label);
 trade.price_change_pct; // PriceChange
 trade.excess_return_pct; // ExcessReturn vs S&P
 ```
+
+## חריג: תיק טראמפ (החלטת בעלים, 2026-10-08)
+
+טראמפ אינו חבר קונגרס — אין לו bioguide/CurrentHolding, ו-UW politician-portfolios הוא Enterprise בלבד.
+לכן מוצג **שווי משוער כטווח** (`metrics.value_range` low–high, `portfolio_value` = אמצע):
+כל עסקה = טווח $ → ספרי FIFO ל-low/mid/high → שווי לפי מחיר יום העסקה מול מחיר נוכחי.
+מחושב רק ב-`materialize-trump-portfolio` (cron כל 20 דק׳). ה-UI חייב לסמן «משוער» ולהציג טווח, לא מספר בודד.
+החריג הזה לא חל על חברי קונגרס.

@@ -207,7 +207,224 @@ function AvatarOrThumb({
   );
 }
 
+/**
+ * טרייד משותף — כרטיס בסגנון הטופו: כותרת (לוגו, סימבול, Long/Short) מול תשואה ו-P&L,
+ * דיבידר, רשת 2×2 עם אייקונים (כניסה/יציאה/גודל/תאריך), ואסטרטגיה אם יש.
+ * רוחב קבוע — בתוך בועה אין רוחב משלה.
+ */
+const TRADE_CARD_W = 264;
+
+function TradeShareCard({
+  attachment,
+  onPress,
+  style,
+}: {
+  attachment: ShareableAttachment;
+  onPress?: () => void;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const tokens = useDesignTokens();
+  const { preview, ref } = attachment;
+  const m = preview.metrics ?? {};
+  const ticker = (ref.extras?.ticker || preview.title || '').toString().trim().toUpperCase();
+  const isShort = String(preview.badge ?? '').toUpperCase() === 'SHORT';
+  const up = tokens.colors.primary.main;
+  const down = tokens.colors.text.danger;
+  const signColor = (v: unknown) => (/^[−\-]/.test(String(v ?? '').trim()) ? down : up);
+  const ret = m.return_pct != null ? String(m.return_pct) : null;
+  const pnl = m.pnl != null ? String(m.pnl) : null;
+  const resultColor = signColor(ret ?? pnl);
+
+  const cells: Array<{ icon: keyof typeof Ionicons.glyphMap; label: string; value: string }> = [];
+  if (m.entry != null) cells.push({ icon: 'enter-outline', label: 'כניסה', value: String(m.entry) });
+  if (m.exit != null) cells.push({ icon: 'exit-outline', label: 'יציאה', value: String(m.exit) });
+  if (m.size != null) cells.push({ icon: 'layers-outline', label: 'גודל', value: String(m.size) });
+  if (m.exit_date != null) cells.push({ icon: 'calendar-outline', label: 'נסגר', value: String(m.exit_date) });
+  else if (m.entry_date != null) cells.push({ icon: 'calendar-outline', label: 'נפתח', value: String(m.entry_date) });
+  const strategy = m.strategy != null && String(m.strategy).trim() ? String(m.strategy) : null;
+
+  const cardStyles = tradeCardStyles;
+  return (
+    <TouchableOpacity
+      activeOpacity={0.88}
+      onPress={() => {
+        void HapticFeedback.selection();
+        onPress?.();
+      }}
+      disabled={!onPress}
+      style={style}
+      accessibilityRole="button"
+      accessibilityLabel={`${ticker}, ${isShort ? 'Short' : 'Long'}${ret ? `, ${ret}` : ''}`}
+    >
+      <View style={[cardStyles.card, { backgroundColor: `${tokens.colors.text.primary}0F` }]}>
+        <View style={cardStyles.header}>
+          <View style={cardStyles.logo}>
+            <TickerLogo symbol={ticker} size={40} borderRadius={12} />
+          </View>
+          <View style={cardStyles.headerText}>
+            <Text style={[cardStyles.ticker, { color: tokens.colors.text.primary }]} numberOfLines={1}>
+              {ticker}
+            </Text>
+            <View style={[cardStyles.sideChip, { backgroundColor: isShort ? down : up }]}>
+              <Ionicons name={isShort ? 'trending-down' : 'trending-up'} size={11} color="#FFFFFF" />
+              <Text style={cardStyles.sideText}>{isShort ? 'Short' : 'Long'}</Text>
+            </View>
+          </View>
+          {ret || pnl ? (
+            <View style={cardStyles.result}>
+              {ret ? <Text style={[cardStyles.resultMain, { color: resultColor }]}>{ret}</Text> : null}
+              {pnl ? (
+                <Text style={[ret ? cardStyles.resultSub : cardStyles.resultMain, { color: signColor(pnl) }]}>{pnl}</Text>
+              ) : null}
+            </View>
+          ) : null}
+        </View>
+
+        {cells.length ? (
+          <>
+            <View style={[cardStyles.divider, { backgroundColor: tokens.colors.border.divider }]} />
+            <View style={cardStyles.grid}>
+              {cells.map((c) => (
+                <View key={c.label} style={cardStyles.cell}>
+                  <View style={cardStyles.cellLabelRow}>
+                    <Ionicons name={c.icon} size={13} color={tokens.colors.text.secondary} />
+                    <Text style={[cardStyles.cellLabel, { color: tokens.colors.text.secondary }]}>{c.label}</Text>
+                  </View>
+                  <Text style={[cardStyles.cellValue, { color: tokens.colors.text.primary }]} numberOfLines={1}>
+                    {c.value}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </>
+        ) : null}
+
+        {strategy ? (
+          <>
+            <View style={[cardStyles.divider, { backgroundColor: tokens.colors.border.divider }]} />
+            <View style={cardStyles.footRow}>
+              <Ionicons name="bulb-outline" size={14} color={tokens.colors.text.secondary} />
+              <Text style={[cardStyles.footText, { color: tokens.colors.text.secondary }]} numberOfLines={2}>
+                {strategy}
+              </Text>
+            </View>
+          </>
+        ) : null}
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+const tradeCardStyles = StyleSheet.create({
+  card: {
+    direction: 'ltr',
+    width: TRADE_CARD_W,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  header: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 10,
+  },
+  logo: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+  },
+  headerText: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  ticker: {
+    ...APP_TYPE.cardTitle,
+    writingDirection: 'ltr',
+  },
+  sideChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
+  sideText: {
+    ...APP_TYPE.caption,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  result: {
+    alignItems: 'flex-start',
+  },
+  resultMain: {
+    ...APP_TYPE.cardTitle,
+    fontVariant: ['tabular-nums'],
+    writingDirection: 'ltr',
+  },
+  resultSub: {
+    ...APP_TYPE.caption,
+    fontWeight: '600',
+    fontVariant: ['tabular-nums'],
+    writingDirection: 'ltr',
+  },
+  divider: {
+    height: 1,
+    marginHorizontal: 12,
+  },
+  grid: {
+    flexDirection: 'row-reverse',
+    flexWrap: 'wrap',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    rowGap: 10,
+  },
+  cell: {
+    width: '50%',
+    alignItems: 'flex-end',
+    gap: 2,
+  },
+  cellLabelRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 4,
+  },
+  cellLabel: {
+    ...APP_TYPE.caption,
+  },
+  cellValue: {
+    ...APP_TYPE.cardSubtitle,
+    fontWeight: '600',
+    fontVariant: ['tabular-nums'],
+    writingDirection: 'ltr',
+  },
+  footRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'flex-start',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  footText: {
+    flex: 1,
+    ...APP_TYPE.cardSubtitle,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+});
+
 export default function EntityEmbedCard({ attachment, onPress, compact, style }: Props) {
+  if (attachment.ref.type === 'journal_trade') {
+    return <TradeShareCard attachment={attachment} onPress={onPress} style={style} />;
+  }
+  return <EntityEmbedCardGeneric attachment={attachment} onPress={onPress} compact={compact} style={style} />;
+}
+
+function EntityEmbedCardGeneric({ attachment, onPress, compact, style }: Props) {
   const tokens = useDesignTokens();
   const isCompact = !!compact;
   const [expanded, setExpanded] = useState(false);

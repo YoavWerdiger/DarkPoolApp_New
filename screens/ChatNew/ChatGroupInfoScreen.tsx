@@ -562,7 +562,7 @@ export default function ChatGroupInfoScreen() {
 
           <View style={styles.sectionBlock}>
             {renderSectionHeader(
-              isolateNumericRuns(`חברים · ${sortedMembers.length}`),
+              'חברים',
               isAdmin ? (
                 <TouchableOpacity
                   onPress={() => { void HapticFeedback.selection(); handleAddMembers(); }}

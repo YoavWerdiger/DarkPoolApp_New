@@ -2408,10 +2408,11 @@ const createStyles = (tokens: any) => {
   senderNameTouch: {
     alignSelf: 'stretch',
   },
+  // שם השולח קטן מהטקסט (13 מול 15) — כותרת קטנה בצבע, לא מתחרה בהודעה; lineHeight מלא
   senderNameInside: {
-    fontSize: tokens.typography.label.size + 1,
-    fontWeight: tokens.typography.fontWeight.semibold,
-    lineHeight: 18,
+    fontSize: APP_TYPE.cardSubtitle.fontSize,
+    fontWeight: '600',
+    lineHeight: APP_TYPE.cardSubtitle.lineHeight,
     marginTop: 0,
     marginBottom: 3,
     direction: 'ltr',

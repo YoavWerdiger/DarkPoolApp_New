@@ -22,9 +22,9 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.png",
-        "monochromeImage": "./assets/icon.png",
-        "backgroundColor": "#111111"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "monochromeImage": "./assets/adaptive-icon-mono.png",
+        "backgroundColor": "#171717"
       },
       "softwareKeyboardLayoutMode": "resize",
       "package": "com.darkpool.app",
@@ -97,8 +97,15 @@
             "NSExtensionActivationSupportsImageWithMaxCount": 10,
             "NSExtensionActivationSupportsMovieWithMaxCount": 10
           },
-          "androidIntentFilters": ["text/*", "image/*", "video/*"],
-          "androidMultiIntentFilters": ["image/*", "video/*"]
+          "androidIntentFilters": [
+            "text/*",
+            "image/*",
+            "video/*"
+          ],
+          "androidMultiIntentFilters": [
+            "image/*",
+            "video/*"
+          ]
         }
       ],
       "./plugins/withShareSuggestions"

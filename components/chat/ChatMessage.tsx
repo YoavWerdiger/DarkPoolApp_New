@@ -2412,8 +2412,8 @@ const createStyles = (tokens: any) => {
     fontSize: tokens.typography.label.size + 1,
     fontWeight: tokens.typography.fontWeight.semibold,
     lineHeight: 18,
-    marginTop: 1,
-    marginBottom: 2,
+    marginTop: 0,
+    marginBottom: 3,
     direction: 'ltr',
     textAlign: 'right',
     writingDirection: 'auto',
@@ -2461,26 +2461,28 @@ const createStyles = (tokens: any) => {
     opacity: 0.9,
   },
 
+  // קצב אנכי: ריפוד 7/6, שם→טקסט 3, טקסט→שעה 3 (קודם 5/5, 2, 1 — הכל נצמד)
   bubble: {
     borderRadius: 16,
-    paddingVertical: 5,
-    paddingHorizontal: 9,
+    paddingTop: 7,
+    paddingBottom: 6,
+    paddingHorizontal: 10,
     maxWidth: '100%',
   },
   /** כשיש ריפליי — גוף ההודעה מתחת לרצועת הריפליי */
   bubbleBodyTouchable: {
     alignSelf: 'stretch',
   },
+  // top/bottom מפורשים — paddingTop של bubble גובר על paddingVertical
   mediaBubble: {
-    paddingVertical: tokens.spacing.xs,
+    paddingTop: tokens.spacing.xs,
+    paddingBottom: tokens.spacing.xs,
     paddingHorizontal: tokens.spacing.xs,
   },
   pollBubble: {
     minWidth: 220,
     alignSelf: 'stretch',
-    // כמו בועת טקסט רגילה — לא mediaBubble (xs) שמצמיד שאלה/שם לקצה
-    paddingVertical: 5,
-    paddingHorizontal: 9,
+    // ריפוד כמו בועת טקסט רגילה (יורש מ-bubble) — לא mediaBubble (xs) שמצמיד שאלה/שם לקצה
   },
   myBubble: {
     backgroundColor: tokens.colors.bubbleMe,
@@ -2896,7 +2898,7 @@ const createStyles = (tokens: any) => {
   metadata: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 1,
+    marginTop: 3,
     gap: 4,
     justifyContent: 'flex-end',
     alignSelf: 'stretch',
@@ -2908,6 +2910,7 @@ const createStyles = (tokens: any) => {
   // text-xs text-gray-500
   timeText: {
     fontSize: tokens.typography.fontSize.xs,
+    lineHeight: 14,
     opacity: 0.8,
   },
   myTimeText: {

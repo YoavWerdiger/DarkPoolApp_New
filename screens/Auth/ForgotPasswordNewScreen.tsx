@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { checkPassword, isPasswordValid, PASSWORD_MIN_LENGTH } from '../../utils/passwordPolicy';
 import OnboardingErrorBanner from '../../components/onboarding/OnboardingErrorBanner';
 import { PasswordStrength } from '../../components/onboarding/RegistrationLive';
-import { View } from 'react-native';
 import { AuthService } from '../../services/authService';
 import { useAuth } from '../../context/AuthContext';
 import OnboardingLayout from '../../components/onboarding/OnboardingLayout';
@@ -126,6 +125,9 @@ const ForgotPasswordNewScreen = ({ navigation, route }: { navigation: any; route
       title="סיסמה חדשה"
       subtitle="לפחות 8 תווים, עם אות ומספר"
       density="focused"
+      // גלילה כמו בסיסמת הרישום — באנדרואיד המקלדת מקטינה את האזור והתוכן (חוזק + כללים)
+      // חרג ממנו ונצבע מתחת לכפתור «שמור סיסמה»
+      scrollable
       showBack={false}
       showProgress={false}
       currentStep={1}
@@ -161,7 +163,6 @@ const ForgotPasswordNewScreen = ({ navigation, route }: { navigation: any; route
       />
       {/* אותה מדיניות ותצוגה כמו ברישום */}
       <PasswordStrength password={password} checks={checkPassword(password, emailHint)} />
-      <View style={{ flex: 1 }} />
     </OnboardingLayout>
   );
 };

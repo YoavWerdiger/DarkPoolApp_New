@@ -301,6 +301,69 @@ function coalesceRecords(
   return out
 }
 
+/**
+ * דיווח אחד לכל חברה לכל מחזור (≤25 יום = אותו דיווח) — כמו dedupe_earnings_cycles ב-DB.
+ * מקורות חלוקים על התאריך (Finnhub = תחזית, Benzinga/Earningshub = מה שהחברה פרסמה);
+ * בלי זה כל מקור כותב שורה בתאריך שלו. נשארת: תוצאה > תאריך מאושר > מקור > שעה.
+ */
+function dedupeByCycle(records: Record<string, unknown>[]): { records: Record<string, unknown>[]; dropped: number } {
+  const rank = (r: Record<string, unknown>): number[] => {
+    const s = String(r.source ?? '').toLowerCase()
+    const src = s.includes('benzinga') || s.includes('earningshub') ? 4 : s.includes('finnhub') ? 2 : s.includes('unusual') ? 1 : 0
+    return [
+      r.actual != null || r.revenue_actual != null ? 1 : 0,
+      r.is_date_confirmed === true ? 1 : 0,
+      src,
+      r.before_after_market ? 1 : 0,
+    ]
+  }
+  const better = (a: Record<string, unknown>, b: Record<string, unknown>): boolean => {
+    const ra = rank(a), rb = rank(b)
+    for (let i = 0; i < ra.length; i++) if (ra[i] !== rb[i]) return ra[i] > rb[i]
+    return false
+  }
+  const bySym = new Map<string, Record<string, unknown>[]>()
+  for (const r of records) {
+    const sym = String(r.ticker ?? r.code ?? '').split('.US')[0].toUpperCase()
+    if (!sym || !r.report_date) continue
+    const list = bySym.get(sym) ?? []
+    list.push(r)
+    bySym.set(sym, list)
+  }
+  const out: Record<string, unknown>[] = []
+  for (const list of bySym.values()) {
+    list.sort((a, b) => String(a.report_date).localeCompare(String(b.report_date)))
+    let cluster: Record<string, unknown>[] = []
+    let prevDate: number | null = null
+    const flush = () => {
+      if (!cluster.length) return
+      const withActuals = cluster.filter((r) => r.actual != null || r.revenue_actual != null)
+      if (withActuals.length > 1) {
+        out.push(...withActuals) // לא מוותרים על תוצאה אמיתית
+      } else {
+        let keeper = cluster[0]
+        for (const r of cluster) if (better(r, keeper)) keeper = r
+        let merged = keeper
+        for (const r of cluster) if (r !== keeper) merged = coalesceRecords(merged, r)
+        // התאריך/מקור/אישור של הנבחר — לא של מי שהשלים שדות
+        merged.report_date = keeper.report_date
+        merged.date = keeper.report_date
+        merged.is_date_confirmed = keeper.is_date_confirmed ?? false
+        out.push(merged)
+      }
+      cluster = []
+    }
+    for (const r of list) {
+      const t = Date.parse(String(r.report_date))
+      if (prevDate !== null && (t - prevDate) / 86_400_000 > 25) flush()
+      cluster.push(r)
+      prevDate = t
+    }
+    flush()
+  }
+  return { records: out, dropped: records.length - out.length }
+}
+
 // Merge duplicates: prefer actuals, then Parse/earningshub, never let null wipe a populated field.
 function mergeByKey(records: Record<string, unknown>[]): Record<string, unknown>[] {
   const sourceRank = (source: unknown): number => {
@@ -687,6 +750,8 @@ function mapBenzingaEarningsItem(item: Record<string, unknown>): Record<string, 
     symbol: rawTicker,
     asset_name: item.name ?? null,
 
+    // תאריך שהחברה אישרה — קודם בבחירת התאריך הנכון כשמקורות חלוקים
+    is_date_confirmed: item.date_confirmed === 1 || item.date_confirmed === '1' || item.date_confirmed === true,
     source: 'benzinga.com',
     api_source: 'benzinga.com',
     currency: item.currency ?? 'USD',
@@ -1349,7 +1414,9 @@ serve(async (req) => {
       )
     }
 
-    const merged = mergeByKey(rawRecords)
+    const mergedByDate = mergeByKey(rawRecords)
+    const { records: merged, dropped: cycleDupesDropped } = dedupeByCycle(mergedByDate)
+    console.log(`[cycle-dedupe] dropped ${cycleDupesDropped} same-report rows on other dates`)
     const { records: revenuePropagated, filled: revenueNearbyFilled } = propagateRevenueNearby(merged, 10)
     // כשהמקור עדיין מחזיר תאריכי אומדן ישנים ליד דיווח עם actual — לא לכתוב אותם מחדש
     const nearConfirmedKept = dropEstimatesNearConfirmedActuals(revenuePropagated)
@@ -1471,6 +1538,16 @@ serve(async (req) => {
           console.error('per-row exception:', err instanceof Error ? err.message : String(err))
         }
       }
+    }
+
+    // 6b. דיווח אחד לכל מחזור גם מול מה שכבר במסד (תאריכים ישנים שהמקור הזיז) + סף שווי שוק
+    {
+      const { data: dd, error: ddErr } = await supabase.rpc('dedupe_earnings_cycles', { p_days_back: 45 })
+      if (ddErr) console.warn('[cycle-dedupe] db failed:', ddErr.message)
+      else console.log('[cycle-dedupe] db:', JSON.stringify(dd))
+      const { data: pg, error: pgErr } = await supabase.rpc('purge_small_cap_earnings')
+      if (pgErr) console.warn('[market-cap] purge failed:', pgErr.message)
+      else console.log(`[market-cap] purged ${pg ?? 0}`)
     }
 
     // 7. נקה תאריכי אומדן ישנים ליד דיווחים עם actual מה-batch

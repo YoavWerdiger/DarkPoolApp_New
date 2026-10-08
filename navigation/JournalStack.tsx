@@ -1,4 +1,5 @@
 import React from 'react';
+import { useDesignTokens } from '../components/ui/DesignTokens';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import TradingScreen from '../screens/Journal/TradingScreen';
 import AddTradeScreen from '../screens/Journal/AddTradeScreen';
@@ -19,12 +20,15 @@ export type JournalStackParamList = {
 const Stack = createNativeStackNavigator<JournalStackParamList>();
 
 export default function JournalStack() {
+  // רקע אטום בצבע הקנבס — עם רקע שקוף, בזמן המעבר המסך הקודם נראה דרך החדש
+  // («רק חלק מהקומפוננטות»). סטטית נראה זהה; בתנועה נכנס מסך שלם.
+  const screenCanvas = useDesignTokens().colors.background.primary;
   return (
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
         freezeOnBlur: true,
-        contentStyle: { backgroundColor: 'transparent' },
+        contentStyle: { backgroundColor: screenCanvas },
       }}
     >
       <Stack.Screen name="JournalMain" component={TradingScreen} />

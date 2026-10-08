@@ -1,4 +1,5 @@
 import React from 'react';
+import { useDesignTokens } from '../components/ui/DesignTokens';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import PortfoliosHubScreen from '../screens/Portfolios/PortfoliosHubScreen';
 import CreatePortfolioScreen from '../screens/Portfolios/CreatePortfolioScreen';
@@ -29,13 +30,16 @@ export type PortfoliosStackParamList = {
 const Stack = createNativeStackNavigator<PortfoliosStackParamList>();
 
 export default function PortfoliosStack() {
+  // רקע אטום בצבע הקנבס — עם רקע שקוף, בזמן המעבר המסך הקודם נראה דרך החדש
+  // («רק חלק מהקומפוננטות»). סטטית נראה זהה; בתנועה נכנס מסך שלם.
+  const screenCanvas = useDesignTokens().colors.background.primary;
   return (
     <Stack.Navigator
       initialRouteName="PortfoliosHub"
       screenOptions={{
         headerShown: false,
         freezeOnBlur: true,
-        contentStyle: { backgroundColor: 'transparent' },
+        contentStyle: { backgroundColor: screenCanvas },
       }}
     >
       <Stack.Screen name="PortfoliosHub" component={PortfoliosHubScreen} />
@@ -56,7 +60,7 @@ export default function PortfoliosStack() {
           // שיט iOS נייטיבי — סגירה בגרירה למטה
           presentation: 'modal',
           gestureEnabled: true,
-          contentStyle: { backgroundColor: 'transparent' },
+          contentStyle: { backgroundColor: screenCanvas },
         }}
       />
       <Stack.Screen

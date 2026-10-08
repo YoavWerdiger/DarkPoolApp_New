@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+import { useDesignTokens } from '../components/ui/DesignTokens';
 import { Platform, View } from 'react-native';
 import type { NavigatorScreenParams } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -35,6 +36,9 @@ export type DarkPoolStackParamList = {
 const Stack = createNativeStackNavigator<DarkPoolStackParamList>();
 
 export default function DarkPoolStack() {
+  // רקע אטום בצבע הקנבס — עם רקע שקוף, בזמן המעבר המסך הקודם נראה דרך החדש
+  // («רק חלק מהקומפוננטות»). סטטית נראה זהה; בתנועה נכנס מסך שלם.
+  const screenCanvas = useDesignTokens().colors.background.primary;
   return (
     <View style={darkPoolRtlRoot}>
       <Stack.Navigator
@@ -42,8 +46,7 @@ export default function DarkPoolStack() {
         screenOptions={{
           headerShown: false,
           freezeOnBlur: true,
-          animationDuration: Platform.OS === 'android' ? 180 : 220,
-          contentStyle: { backgroundColor: 'transparent', direction: 'rtl' },
+          contentStyle: { backgroundColor: screenCanvas, direction: 'rtl' },
         }}
       >
         <Stack.Screen name="DarkPoolHome" component={DarkPoolTabs} />

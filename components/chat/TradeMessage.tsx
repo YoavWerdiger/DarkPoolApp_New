@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { APP_TYPE } from '../ui/appType';
 import { brandfetchTickerLogoUri } from '../../utils/brandfetch';
 
 /** תואם ללוגיקה ב־TradesListTab — קודם מהמסד, אחרת חישוב ממחירים */
@@ -113,255 +115,202 @@ function TradeSymbolLogo({
   );
 }
 
-export default function TradeMessage({ trade: tradeRaw, isMe, embeddedInBubble }: TradeMessageProps) {
-  const DesignTokens = useDesignTokens();
-  const lightOnBubble = !!embeddedInBubble && isMe;
-  const styles = useMemo(
-    () => createStyles(DesignTokens, !!embeddedInBubble, lightOnBubble),
-    [DesignTokens, embeddedInBubble, lightOnBubble]
-  );
+/** תואם לכרטיס הקישור — רוחב קבוע: לבועה אין רוחב משלה */
+const CARD_W = 264;
 
+export default function TradeMessage({ trade: tradeRaw, isMe }: TradeMessageProps) {
+  const tokens = useDesignTokens();
   const trade = useMemo(() => normalizeTrade(tradeRaw), [tradeRaw]);
 
-  const isProfit = trade.pnl >= 0;
-  const directionColor = lightOnBubble
-    ? trade.direction === 'long'
-      ? '#A7F3A9'
-      : '#FCA5A5'
-    : trade.direction === 'long'
-      ? DesignTokens.colors.primary.main
-      : DesignTokens.colors.text.danger;
+  // צבעים מצבע הטקסט של הבועה — עובד בבועה שלי ושל אחר, בבהיר ובכהה
+  const ink = isMe ? tokens.colors.bubbleMeText : tokens.colors.text.primary;
+  const secondary = isMe ? tokens.colors.bubbleMeMetaText : tokens.colors.text.secondary;
+  const up = tokens.colors.primary.main;
+  const down = tokens.colors.danger.main;
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-    }).format(value);
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('he-IL', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-  };
-
+  const isLong = trade.direction === 'long';
   const returnPct = resolveTradeReturnPercent(trade);
-  const pnlLabel = isProfit ? 'רווח נטו' : 'הפסד נטו';
+  const positive = trade.pnl >= 0;
+  const resultColor = positive ? up : down;
+
+  const money = (value: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(value);
+  const date = (d: string) =>
+    new Date(d).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: '2-digit' });
+
+  const metrics: Array<{ icon: React.ComponentProps<typeof Ionicons>['name']; label: string; value: string }> = [
+    { icon: 'enter-outline', label: 'כניסה', value: money(trade.entry_price) },
+    { icon: 'exit-outline', label: 'יציאה', value: money(trade.exit_price) },
+    { icon: 'layers-outline', label: 'כמות', value: String(trade.quantity) },
+    { icon: 'calendar-outline', label: 'נסגר', value: date(trade.exit_date) },
+  ];
 
   return (
-    <View style={styles.container}>
-      <View style={styles.headerRow}>
-        <View style={styles.headerTextCol}>
-          <View style={styles.symbolRow}>
-            <Text style={styles.symbol}>{trade.symbol}</Text>
-            <View style={[styles.directionBadge, { backgroundColor: `${directionColor}22` }]}>
-              <Text style={[styles.directionText, { color: directionColor }]}>
-                {trade.direction === 'long' ? 'Long' : 'Short'}
-              </Text>
-            </View>
+    <View style={styles.card}>
+      <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: ink, opacity: 0.06 }]} />
+
+      {/* כותרת: לוגו + סימבול + כיוון | תשואה ורווח */}
+      <View style={styles.header}>
+        <TradeSymbolLogo
+          symbol={trade.symbol}
+          size={40}
+          fallbackColor={ink}
+          backgroundColor="rgba(127,127,127,0.18)"
+        />
+        <View style={styles.headerText}>
+          <Text style={[styles.symbol, { color: ink }]} numberOfLines={1}>
+            {trade.symbol}
+          </Text>
+          <View style={[styles.sideChip, { backgroundColor: isLong ? up : down }]}>
+            <Ionicons name={isLong ? 'trending-up' : 'trending-down'} size={11} color="#FFFFFF" />
+            <Text style={styles.sideText}>{isLong ? 'Long' : 'Short'}</Text>
           </View>
         </View>
-        <View style={styles.logoWrap}>
-          <TradeSymbolLogo
-            symbol={trade.symbol}
-            size={44}
-            fallbackColor={lightOnBubble ? '#FFFFFF' : DesignTokens.colors.text.primary}
-            backgroundColor="rgba(255,255,255,0.1)"
-          />
-        </View>
-      </View>
-
-      <View style={styles.details}>
-        <View style={styles.row}>
-          <Text style={styles.label}>כניסה:{'\u00a0'}</Text>
-          <Text style={styles.price}>{formatCurrency(trade.entry_price)}</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>יציאה:{'\u00a0'}</Text>
-          <Text style={styles.price}>{formatCurrency(trade.exit_price)}</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>כמות:{'\u00a0'}</Text>
-          <Text style={styles.value}>{trade.quantity}</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>תאריך:{'\u00a0'}</Text>
-          <Text style={styles.value}>{formatDate(trade.exit_date)}</Text>
-        </View>
-
-        {/* שורה אחת: רווח נטו: $X / הפסד נטו: $X — ערך מ־trade.pnl (מסד) */}
-        <View style={styles.row}>
-          <Text
-            style={[
-              styles.label,
-              isProfit ? styles.labelProfit : styles.labelLoss,
-            ]}
-          >
-            {pnlLabel}:{'\u00a0'}
-          </Text>
-          <Text
-            style={[
-              styles.emphasisValue,
-              isProfit ? styles.valueProfit : styles.valueLoss,
-            ]}
-          >
-            {formatCurrency(trade.pnl)}
-          </Text>
-        </View>
-
-        {/* שורה נפרדת: תשואה: ±X% — קודם מ־return_percentage במסד, אחרת כמו ביומן */}
-        <View style={styles.row}>
-          <Text style={styles.label}>תשואה:{'\u00a0'}</Text>
-          <Text
-            style={[
-              styles.emphasisValue,
-              returnPct >= 0 ? styles.valueProfit : styles.valueLoss,
-            ]}
-          >
+        <View style={styles.result}>
+          <Text style={[styles.resultPct, { color: resultColor }]}>
             {returnPct >= 0 ? '+' : ''}
             {returnPct.toFixed(2)}%
           </Text>
+          <Text style={[styles.resultPnl, { color: resultColor }]}>{money(trade.pnl)}</Text>
         </View>
       </View>
 
+      <View style={[styles.divider, { backgroundColor: ink }]} />
+
+      {/* 2×2: כניסה / יציאה / כמות / תאריך */}
+      <View style={styles.grid}>
+        {metrics.map((m) => (
+          <View key={m.label} style={styles.metric}>
+            <View style={styles.metricLabelRow}>
+              <Ionicons name={m.icon} size={13} color={secondary} />
+              <Text style={[styles.metricLabel, { color: secondary }]}>{m.label}</Text>
+            </View>
+            <Text style={[styles.metricValue, { color: ink }]} numberOfLines={1}>
+              {m.value}
+            </Text>
+          </View>
+        ))}
+      </View>
+
       {trade.notes ? (
-        <View style={styles.notesContainer}>
-          <Text style={styles.notesText}>{trade.notes}</Text>
-        </View>
+        <>
+          <View style={[styles.divider, { backgroundColor: ink }]} />
+          <View style={styles.notesRow}>
+            <Ionicons name="chatbox-ellipses-outline" size={14} color={secondary} />
+            <Text style={[styles.notes, { color: secondary }]} numberOfLines={4}>
+              {trade.notes}
+            </Text>
+          </View>
+        </>
       ) : null}
     </View>
   );
 }
 
-const createStyles = (
-  tokens: ReturnType<typeof useDesignTokens>,
-  embeddedInBubble: boolean,
-  lightOnBubble: boolean,
-) =>
-  StyleSheet.create({
-    container: embeddedInBubble
-      ? {
-          width: '100%',
-          maxWidth: 300,
-          alignSelf: 'stretch',
-          paddingVertical: tokens.spacing.sm,
-          paddingHorizontal: tokens.spacing.md,
-          marginHorizontal: tokens.spacing.xs,
-        }
-      : {
-          backgroundColor: tokens.colors.background.tertiary,
-          borderRadius: tokens.borderRadius.lg,
-          padding: tokens.spacing.lg,
-          maxWidth: '90%',
-          marginVertical: tokens.spacing.xs,
-          marginHorizontal: tokens.spacing.sm,
-          borderWidth: 1,
-          borderColor: `${tokens.colors.primary.main}28`,
-        },
-    headerRow: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: tokens.spacing.md,
-      marginBottom: tokens.spacing.md,
-      paddingBottom: tokens.spacing.sm,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: lightOnBubble ? 'rgba(255,255,255,0.2)' : tokens.colors.border.primary,
-    },
-    logoWrap: {
-      flexShrink: 0,
-    },
-    headerTextCol: {
-      flex: 1,
-      minWidth: 0,
-    },
-    symbolRow: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      gap: tokens.spacing.sm,
-      flexWrap: 'wrap',
-    },
-    symbol: {
-      fontSize: tokens.typography.fontSize.lg,
-      fontWeight: tokens.typography.fontWeight.bold,
-      color: lightOnBubble ? '#FFFFFF' : tokens.colors.text.primary,
-      textAlign: 'right',
-    },
-    directionBadge: {
-      paddingHorizontal: tokens.spacing.sm,
-      paddingVertical: 4,
-      borderRadius: tokens.borderRadius.sm,
-    },
-    directionText: {
-      fontSize: tokens.typography.fontSize.xs,
-      fontWeight: tokens.typography.fontWeight.bold,
-    },
-    details: {
-      gap: tokens.spacing.sm,
-    },
-    row: {
-      flexDirection: 'row-reverse',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      gap: tokens.spacing.md,
-      width: '100%',
-    },
-    label: {
-      fontSize: tokens.typography.fontSize.sm,
-      color: lightOnBubble ? 'rgba(255,255,255,0.75)' : tokens.colors.text.secondary,
-      textAlign: 'right',
-      flexShrink: 0,
-      fontWeight: tokens.typography.fontWeight.medium,
-    },
-    labelProfit: {
-      color: lightOnBubble ? 'rgba(255,255,255,0.9)' : tokens.colors.primary.main,
-    },
-    labelLoss: {
-      color: lightOnBubble ? 'rgba(255,255,255,0.9)' : tokens.colors.text.danger,
-    },
-    price: {
-      fontSize: tokens.typography.fontSize.sm,
-      color: lightOnBubble ? '#FFFFFF' : tokens.colors.primary.main,
-      fontWeight: tokens.typography.fontWeight.semibold,
-      textAlign: 'left',
-      writingDirection: 'ltr',
-      flex: 1,
-    },
-    value: {
-      fontSize: tokens.typography.fontSize.sm,
-      color: lightOnBubble ? '#FFFFFF' : tokens.colors.text.primary,
-      fontWeight: tokens.typography.fontWeight.medium,
-      textAlign: 'left',
-      flex: 1,
-    },
-    emphasisValue: {
-      fontSize: tokens.typography.fontSize.sm,
-      fontWeight: tokens.typography.fontWeight.bold,
-      textAlign: 'left',
-      writingDirection: 'ltr',
-      flex: 1,
-    },
-    valueProfit: {
-      color: lightOnBubble ? '#86EFAC' : tokens.colors.primary.main,
-    },
-    valueLoss: {
-      color: lightOnBubble ? '#FCA5A5' : tokens.colors.text.danger,
-    },
-    notesContainer: {
-      marginTop: tokens.spacing.md,
-      paddingTop: tokens.spacing.sm,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: lightOnBubble ? 'rgba(255,255,255,0.2)' : tokens.colors.border.primary,
-    },
-    notesText: {
-      fontSize: tokens.typography.fontSize.sm,
-      color: lightOnBubble ? 'rgba(255,255,255,0.8)' : tokens.colors.text.secondary,
-      fontStyle: 'italic',
-      textAlign: 'right',
-      writingDirection: 'rtl',
-    },
-  });
+const styles = StyleSheet.create({
+  card: {
+    width: CARD_W,
+    borderRadius: 14,
+    overflow: 'hidden',
+    marginVertical: 2,
+  },
+  header: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 10,
+  },
+  headerText: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  symbol: {
+    fontSize: APP_TYPE.cardTitle.fontSize,
+    lineHeight: APP_TYPE.cardTitle.lineHeight,
+    fontWeight: APP_TYPE.cardTitle.fontWeight,
+    writingDirection: 'ltr',
+  },
+  sideChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
+  sideText: {
+    fontSize: APP_TYPE.caption.fontSize,
+    lineHeight: APP_TYPE.caption.lineHeight,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  result: {
+    alignItems: 'flex-start',
+  },
+  resultPct: {
+    fontSize: APP_TYPE.cardTitle.fontSize,
+    lineHeight: APP_TYPE.cardTitle.lineHeight,
+    fontWeight: APP_TYPE.cardTitle.fontWeight,
+    fontVariant: ['tabular-nums'],
+    writingDirection: 'ltr',
+  },
+  resultPnl: {
+    fontSize: APP_TYPE.caption.fontSize,
+    lineHeight: APP_TYPE.caption.lineHeight,
+    fontWeight: '600',
+    fontVariant: ['tabular-nums'],
+    writingDirection: 'ltr',
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    opacity: 0.18,
+    marginHorizontal: 12,
+  },
+  grid: {
+    flexDirection: 'row-reverse',
+    flexWrap: 'wrap',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    rowGap: 10,
+  },
+  metric: {
+    width: '50%',
+    alignItems: 'flex-end',
+    gap: 2,
+  },
+  metricLabelRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 4,
+  },
+  metricLabel: {
+    fontSize: APP_TYPE.caption.fontSize,
+    lineHeight: APP_TYPE.caption.lineHeight,
+    fontWeight: APP_TYPE.caption.fontWeight,
+  },
+  metricValue: {
+    fontSize: APP_TYPE.cardSubtitle.fontSize,
+    lineHeight: APP_TYPE.cardSubtitle.lineHeight,
+    fontWeight: '600',
+    fontVariant: ['tabular-nums'],
+    writingDirection: 'ltr',
+  },
+  notesRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'flex-start',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  notes: {
+    flex: 1,
+    fontSize: APP_TYPE.cardSubtitle.fontSize,
+    lineHeight: APP_TYPE.cardSubtitle.lineHeight,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+});

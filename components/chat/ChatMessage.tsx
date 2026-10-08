@@ -996,10 +996,9 @@ function ChatMessage({
               boldText && styles.messageTextBold,
               { textAlign: detectTextDirection(displayContent) }
             ];
+            // תיוג ירוק גם בבועה שלי — כמו הקישור
             const mentionStyle = {
-              color: isMe
-                ? DesignTokens.colors.bubbleMeText
-                : DesignTokens.colors.primary.main,
+              color: DesignTokens.colors.primary.main,
               fontWeight: '700' as const,
             };
 

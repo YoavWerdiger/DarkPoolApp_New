@@ -71,14 +71,16 @@ function resolveRowId(item: EmojiRow | string[] | null | undefined, index: numbe
   return `emoji-row-${index}`;
 }
 
-export default function ReactionPicker({
-  visible,
+/**
+ * תוכן הבורר (כותרת, חיפוש, רשת) — בלי שיט. משמש גם בתוך שיט הלונג-פרס עצמו:
+ * «+» מחליף את התוכן במקום לסגור שיט ולפתוח שיט חדש (זה מה שלקח ~0.8s).
+ */
+export function ReactionPickerContent({
   onClose,
   onReaction,
   messageReactions = [],
   title = 'בחר ריאקציה',
-  embedded = false,
-}: ReactionPickerProps) {
+}: Pick<ReactionPickerProps, 'onClose' | 'onReaction' | 'messageReactions' | 'title'>) {
   const sheet = useChatSheetStyles();
   const tokens = useDesignTokens();
   const insets = useSafeAreaInsets();
@@ -91,9 +93,6 @@ export default function ReactionPicker({
     return Math.floor(inner / COLS);
   }, [windowWidth]);
 
-  useEffect(() => {
-    if (!visible) setQuery('');
-  }, [visible]);
 
   const selectedSet = useMemo(() => {
     const set = new Set<string>();
@@ -149,21 +148,6 @@ export default function ReactionPicker({
   const bottomPad = Math.max(insets.bottom, Platform.OS === 'android' ? 16 : 8);
 
   return (
-    // שיט לפי הטופו (כמו 3 הנקודות ביומן): קנבס ערכת הנושא, כותרת עם שברון, שדה חיפוש formField
-    <BottomSheet
-      isOpen={visible}
-      onClose={onClose}
-      snapPoints={[0.72]}
-      edgeToEdge
-      showHandle
-      enablePanDownToClose
-      useModal={!embedded}
-      showBrandBackground={false}
-      backgroundColor={tokens.colors.background.primary}
-      topCornerRadius={tokens.borderRadius.xl}
-      avoidKeyboard={!embedded}
-      contentPaddingBottom={0}
-    >
       <View style={[styles.root, { paddingBottom: bottomPad, direction: 'rtl' }]}>
         <ChatSheetTopoHeader title={title} onClose={onClose} />
 
@@ -261,6 +245,40 @@ export default function ReactionPicker({
           }}
         />
       </View>
+  );
+}
+
+export default function ReactionPicker({
+  visible,
+  onClose,
+  onReaction,
+  messageReactions = [],
+  title = 'בחר ריאקציה',
+  embedded = false,
+}: ReactionPickerProps) {
+  const tokens = useDesignTokens();
+  return (
+    // שיט לפי הטופו (כמו 3 הנקודות ביומן): קנבס ערכת הנושא, כותרת עם שברון, שדה חיפוש formField
+    <BottomSheet
+      isOpen={visible}
+      onClose={onClose}
+      snapPoints={[0.72]}
+      edgeToEdge
+      showHandle
+      enablePanDownToClose
+      useModal={!embedded}
+      showBrandBackground={false}
+      backgroundColor={tokens.colors.background.primary}
+      topCornerRadius={tokens.borderRadius.xl}
+      avoidKeyboard={!embedded}
+      contentPaddingBottom={0}
+    >
+      <ReactionPickerContent
+        onClose={onClose}
+        onReaction={onReaction}
+        messageReactions={messageReactions}
+        title={title}
+      />
     </BottomSheet>
   );
 }

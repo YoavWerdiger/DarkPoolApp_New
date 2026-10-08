@@ -3,6 +3,7 @@ import { View, StyleSheet, Text, Image, Platform, Dimensions } from 'react-nativ
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MessageSnapshot } from '../../types/MessageSnapshot';
 import ReactionBar from './ReactionBar';
+import { ReactionPickerContent } from './ReactionPicker';
 import ContextMenu from './ContextMenu';
 import { supabase } from '../../lib/supabase';
 import { ChatSheetContent, ChatSheetTopoHeader, useChatFitContentSnap } from './ChatBottomSheet';
@@ -206,9 +207,17 @@ export default function LongPressOverlay({
     onAction('react', { messageId: displayMessage?.id, emoji });
   }, [displayMessage?.id, onAction]);
 
+  // «+» — הבורר נפתח בתוך אותו שיט (החלפת תוכן + התאמת גובה), במקום לסגור ולפתוח שיט חדש
+  const [pickerMode, setPickerMode] = useState(false);
+  useEffect(() => {
+    if (!visible) setPickerMode(false);
+  }, [visible]);
+  useEffect(() => {
+    setPickerMode(false);
+  }, [displayMessage?.id]);
   const handleOpenPicker = useCallback(() => {
-    onAction('openReactionPicker', { messageId: displayMessage?.id });
-  }, [displayMessage?.id, onAction]);
+    setPickerMode(true);
+  }, []);
 
   const handleOptionSelect = useCallback((option: string) => {
     onAction(option, displayMessage);
@@ -347,6 +356,15 @@ export default function LongPressOverlay({
     >
       {/* direction:ltr — FlatList inverted + forceRTL הופכים את ציר X;
           בתוך השיט בלי inverted, חייבים LTR כדי ש-other יישאר משמאל כמו בצ׳אט. */}
+      {pickerMode ? (
+        <View onLayout={onContentLayout}>
+          <ReactionPickerContent
+            onClose={onClose}
+            onReaction={handleReaction}
+            messageReactions={displayMessage.reactions ?? []}
+          />
+        </View>
+      ) : (
       <ChatSheetContent
         style={{
           direction: 'ltr',
@@ -376,6 +394,7 @@ export default function LongPressOverlay({
           canEdit={!displayMessage.id?.toString().startsWith('temp-')}
         />
       </ChatSheetContent>
+      )}
     </BottomSheet>
   );
 }

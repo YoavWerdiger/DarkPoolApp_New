@@ -14,69 +14,97 @@ type ScreenerRow = {
   country?: string
 }
 
-const FINNHUB_PER_RUN = 50
+/** בריצה הלילית (אחרי ה-screener) — מעט, כדי לא לחרוג מזמן הריצה */
+const FINNHUB_PER_RUN_FULL = 50
+/** ריצת באקפיל בלבד (mode=backfill, כל 20 דק׳) — 120 × ~1.05s ≈ 2 דקות, בתוך 150s */
+const FINNHUB_PER_RUN_BACKFILL = 120
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-/** סימבולים מדיווחי רווחים (30 יום אחורה ←) שאין להם שווי — Finnhub profile2 (60/דקה) */
+/**
+ * סימבולים מדיווחי רווחים (7 ימים אחורה והלאה) שאין להם שורה ב-stock_market_caps — Finnhub profile2.
+ * הרשימה מגיעה מהמסד (earnings_symbols_missing_cap), לא מול ה-screener של אותו לילה: אחרת אותם
+ * 50 חזרו כל לילה והשאר לעולם לא הושלמו (215 דיווחים עתידיים בלי שווי).
+ * סימבול ש-Finnhub לא מכיר (פרופיל ריק) נרשם עם 0 = «נבדק, לא 1B+» — כמעט תמיד מיקרו-קאפ.
+ */
 // deno-lint-ignore no-explicit-any
-async function backfillFromFinnhub(supabase: any, known: Set<string>): Promise<number> {
+async function backfillFromFinnhub(supabase: any, limit: number): Promise<{ checked: number; found: number; unknownMarked: number }> {
   const key = Deno.env.get('FINNHUB_API_KEY')
-  if (!key) return 0
-  const since = new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10)
-  const { data } = await supabase
-    .from('earnings_calendar')
-    .select('ticker, code')
-    .gte('report_date', since)
-    .limit(10000)
-  const missing = Array.from(
-    new Set(
-      ((data ?? []) as Array<{ ticker: string | null; code: string | null }>)
-        .map((r) => normalizeCapSymbol(String(r.ticker || (r.code ?? '').split('.')[0] || '')))
-        .filter((s) => s && !known.has(s)),
-    ),
-  ).slice(0, FINNHUB_PER_RUN)
+  if (!key) return { checked: 0, found: 0, unknownMarked: 0 }
+  const { data, error } = await supabase.rpc('earnings_symbols_missing_cap', { p_limit: limit })
+  if (error) {
+    console.warn('[market-caps] missing list failed:', error.message)
+    return { checked: 0, found: 0, unknownMarked: 0 }
+  }
+  const missing = ((data ?? []) as string[]).map((s) => normalizeCapSymbol(s)).filter(Boolean)
 
   const now = new Date().toISOString()
   const rows: Array<Record<string, unknown>> = []
+  let found = 0
+  let unknownMarked = 0
   for (const sym of missing) {
     try {
       const res = await fetch(
         `https://finnhub.io/api/v1/stock/profile2?symbol=${encodeURIComponent(sym)}&token=${key}`,
       )
+      if (res.status === 429) {
+        // מגבלת קצב — עוצרים; הריצה הבאה תמשיך מאותו מקום
+        console.warn('[market-caps] finnhub rate limited — stopping this run')
+        break
+      }
       if (res.ok) {
         const p = await res.json()
         // marketCapitalization ב-Finnhub הוא במיליוני USD
         const cap = Number(p?.marketCapitalization ?? 0) * 1_000_000
+        const recognized = p && typeof p === 'object' && Object.keys(p).length > 0
         if (Number.isFinite(cap) && cap > 0) {
-          rows.push({
-            symbol: sym,
-            market_cap: cap,
-            name: p?.name ?? null,
-            sector: p?.finnhubIndustry ?? null,
-            country: p?.country ?? null,
-            updated_at: now,
-          })
+          rows.push({ symbol: sym, market_cap: cap, name: p?.name ?? null, sector: p?.finnhubIndustry ?? null, country: p?.country ?? null, updated_at: now })
+          found++
+        } else if (!recognized || cap === 0) {
+          // לא מוכר / בלי שווי — מסומן 0 כדי שלא ייבדק שוב ושהסינון יוריד אותו
+          rows.push({ symbol: sym, market_cap: 0, name: p?.name ?? null, sector: null, country: null, updated_at: now })
+          unknownMarked++
         }
       }
     } catch {
-      // סימבול בודד שנכשל לא עוצר את השאר
+      // סימבול בודד שנכשל לא עוצר את השאר (יישאר חסר ויטופל בריצה הבאה)
     }
-    await sleep(1100)
+    await sleep(1050)
   }
   if (rows.length) {
-    const { error } = await supabase.from('stock_market_caps').upsert(rows, { onConflict: 'symbol' })
-    if (error) console.warn('[market-caps] finnhub upsert failed:', error.message)
+    const { error: upErr } = await supabase.from('stock_market_caps').upsert(rows, { onConflict: 'symbol' })
+    if (upErr) console.warn('[market-caps] finnhub upsert failed:', upErr.message)
   }
-  console.log(`[market-caps] finnhub backfill ${rows.length}/${missing.length}`)
-  return rows.length
+  console.log(`[market-caps] finnhub backfill checked=${missing.length} found=${found} unknown=${unknownMarked}`)
+  return { checked: missing.length, found, unknownMarked }
 }
 
-serve(async () => {
+/** ניקוי דיווחים עתידיים (בלי תוצאה) של חברות שידוע שהן מתחת ל-1B */
+// deno-lint-ignore no-explicit-any
+async function purgeSmallCaps(supabase: any): Promise<number> {
+  const { data, error } = await supabase.rpc('purge_small_cap_earnings')
+  if (error) {
+    console.warn('[market-caps] purge failed:', error.message)
+    return 0
+  }
+  console.log(`[market-caps] purged ${data ?? 0} small-cap upcoming reports`)
+  return Number(data ?? 0)
+}
+
+serve(async (req) => {
   try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
+
+    // באקפיל בלבד — בלי screener (ריצה מהירה כל 20 דק׳)
+    if (new URL(req.url).searchParams.get('mode') === 'backfill') {
+      const backfill = await backfillFromFinnhub(supabase, FINNHUB_PER_RUN_BACKFILL)
+      const purged = await purgeSmallCaps(supabase)
+      return new Response(JSON.stringify({ ok: true, mode: 'backfill', ...backfill, purged }), {
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
 
     const resp = await fetch(SCREENER_URL, {
       headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' },
@@ -112,9 +140,10 @@ serve(async () => {
     console.log(`[market-caps] upserted ${records.length} (>=1B: ${ge1b})`)
 
     // ה-screener חלקי (חסרות למשל AVB/EQR) — משלימים סימבולים מלוח הדיווחים דרך Finnhub
-    const backfilled = await backfillFromFinnhub(supabase, new Set(records.map((r) => r.symbol)))
+    const backfilled = await backfillFromFinnhub(supabase, FINNHUB_PER_RUN_FULL)
+    const purged = await purgeSmallCaps(supabase)
 
-    return new Response(JSON.stringify({ ok: true, upserted: records.length, ge_1b: ge1b, backfilled }), {
+    return new Response(JSON.stringify({ ok: true, upserted: records.length, ge_1b: ge1b, backfilled, purged }), {
       headers: { 'Content-Type': 'application/json' },
     })
   } catch (e) {

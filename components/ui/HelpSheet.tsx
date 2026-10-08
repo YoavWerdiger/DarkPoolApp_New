@@ -14,7 +14,7 @@ import BottomSheet, {
   BOTTOM_SHEET_EDGE_HANDLE_HEIGHT,
   useBottomSheetClose,
 } from './BottomSheet/BottomSheet';
-import { SheetActionButton } from './BottomSheet/SheetActionButton';
+import UIButton from './UIButton';
 import { useDesignTokens } from './DesignTokens';
 import { APP_LAYOUT } from './appLayout';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -65,7 +65,8 @@ function HelpSheetBody({
     <View onLayout={onLayout} style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 16) + 4 }]}>
       <Text style={[styles.title, { color: tokens.colors.text.primary }]}>{title}</Text>
       <Text style={[styles.body, { color: tokens.colors.text.secondary }]}>{body}</Text>
-      <SheetActionButton variant="secondary" label={gotItLabel} onPress={dismiss} />
+      {/* CTA לפי הטופו — UIButton primary (pill) */}
+      <UIButton title={gotItLabel} variant="primary" size="lg" fullWidth onPress={dismiss} />
     </View>
   );
 }

@@ -6,16 +6,16 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
-} from 'react-native';
+  View, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../ui/DesignTokens';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE, headerExitButtonFill } from '../ui/DayNavBlurButton';
 import { Image as ImageIcon, MessageSquareText, Send } from 'lucide-react-native';
 import { SettingsActionRow, SettingsGlassCard } from '../profile/ProfileSettingsUI';
 import { APP_LAYOUT } from '../ui/appLayout';
-import { useChatSheetDismiss } from '../chat/ChatBottomSheet';
+import { useChatFitContentSnap, useChatSheetDismiss } from '../chat/ChatBottomSheet';
 import EntityEmbedCard from './EntityEmbedCard';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -60,6 +60,9 @@ export default function ShareDestinationSheet({
   onShareAsImage,
 }: Props) {
   const tokens = useDesignTokens();
+  const insets = useSafeAreaInsets();
+  // השיט בגובה התוכן (תפריט / רשימת קבוצות) — נמדד מחדש במעבר בין המסכים
+  const { snapPoint, onContentLayout } = useChatFitContentSnap(0.45, 0.92, 0.12);
   const { isDarkMode } = useTheme();
   const { user } = useAuth();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
@@ -171,13 +174,16 @@ export default function ShareDestinationSheet({
   if (!attachment) return null;
 
   const noChevron = <View />;
+  const windowHeight = Dimensions.get('window').height;
 
   return (
     // לפי הטופו (כמו 3 הנקודות ביומן): קנבס ערכת הנושא, פינות xl, כותרת עם שברון, שורות פעולה בכרטיס
     <BottomSheet
       isOpen={visible}
       onClose={onClose}
-      snapPoints={[0.62, 0.9]}
+      // גובה לפי התוכן — בלי שטח מת מתחת לאפשרויות
+      snapPoints={[snapPoint]}
+      fitContent
       enablePanDownToClose={!busy}
       showHandle
       useModal
@@ -187,7 +193,7 @@ export default function ShareDestinationSheet({
       backgroundColor={tokens.colors.background.primary}
       topCornerRadius={tokens.borderRadius.xl}
     >
-      <View style={styles.container}>
+      <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 16) }]} onLayout={onContentLayout}>
         <View style={styles.header}>
           <ShareHeaderBack
             disabled={busy}
@@ -209,33 +215,12 @@ export default function ShareDestinationSheet({
 
         {dest === 'menu' ? (
           <View style={styles.actions}>
+            {/* סדר: צ׳אט → ציוצים → תמונה */}
             <SettingsGlassCard style={{ marginBottom: 0 }}>
-              {onShareAsImage ? (
-                <SettingsActionRow
-                  title="שתף כתמונה"
-                  icon={ImageIcon}
-                  trailing={noChevron}
-                  onPress={() => {
-                    if (busy) return;
-                    void HapticFeedback.selection();
-                    onShareAsImage();
-                  }}
-                />
-              ) : null}
-              <SettingsActionRow
-                title={busy ? 'מפרסם…' : 'פרסם בציוצים'}
-                icon={MessageSquareText}
-                trailing={busy ? <ActivityIndicator size="small" color={tokens.colors.text.secondary} /> : noChevron}
-                onPress={() => {
-                  if (busy) return;
-                  void shareTweet();
-                }}
-              />
               <SettingsActionRow
                 title="שלח לצ׳אט"
                 icon={Send}
                 trailing={noChevron}
-                showDivider={false}
                 onPress={() => {
                   if (busy) return;
                   void HapticFeedback.selection();
@@ -243,6 +228,29 @@ export default function ShareDestinationSheet({
                   void loadGroups();
                 }}
               />
+              <SettingsActionRow
+                title={busy ? 'מפרסם…' : 'פרסם בציוצים'}
+                icon={MessageSquareText}
+                trailing={busy ? <ActivityIndicator size="small" color={tokens.colors.text.secondary} /> : noChevron}
+                showDivider={!!onShareAsImage}
+                onPress={() => {
+                  if (busy) return;
+                  void shareTweet();
+                }}
+              />
+              {onShareAsImage ? (
+                <SettingsActionRow
+                  title="שתף כתמונה"
+                  icon={ImageIcon}
+                  trailing={noChevron}
+                  showDivider={false}
+                  onPress={() => {
+                    if (busy) return;
+                    void HapticFeedback.selection();
+                    onShareAsImage();
+                  }}
+                />
+              ) : null}
             </SettingsGlassCard>
           </View>
         ) : loading ? (
@@ -257,6 +265,7 @@ export default function ShareDestinationSheet({
           <FlatList
             data={groups}
             keyExtractor={(g) => g.id}
+            style={{ maxHeight: Math.round(windowHeight * 0.5) }}
             contentContainerStyle={styles.listContent}
             ItemSeparatorComponent={() => (
               <View style={[styles.divider, { backgroundColor: tokens.colors.border.divider }]} />
@@ -325,7 +334,7 @@ function ShareHeaderBack({
 
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
-    container: { flex: 1, minHeight: 0, direction: 'rtl' },
+    container: { direction: 'rtl' },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -358,7 +367,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     actions: { paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal },
     center: {
-      flex: 1,
+      minHeight: 160,
       alignItems: 'center',
       justifyContent: 'center',
       padding: 24,

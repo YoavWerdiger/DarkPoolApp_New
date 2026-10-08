@@ -24,7 +24,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
  * סימבולים מדיווחי רווחים (7 ימים אחורה והלאה) שאין להם שורה ב-stock_market_caps — Finnhub profile2.
  * הרשימה מגיעה מהמסד (earnings_symbols_missing_cap), לא מול ה-screener של אותו לילה: אחרת אותם
  * 50 חזרו כל לילה והשאר לעולם לא הושלמו (215 דיווחים עתידיים בלי שווי).
- * סימבול ש-Finnhub לא מכיר (פרופיל ריק) נרשם עם 0 = «נבדק, לא 1B+» — כמעט תמיד מיקרו-קאפ.
+ * סימבול בלי נתון ב-Finnhub נשאר «לא ידוע» (לא נמחק!) — ה-free tier מחזיר פרופיל ריק גם לחברות
+ * גדולות (EQR, LC, SATS). נרשם ב-market_cap_lookup_misses כדי לא לחזור עליו 24 שעות.
  */
 // deno-lint-ignore no-explicit-any
 async function backfillFromFinnhub(supabase: any, limit: number): Promise<{ checked: number; found: number; unknownMarked: number }> {
@@ -39,6 +40,7 @@ async function backfillFromFinnhub(supabase: any, limit: number): Promise<{ chec
 
   const now = new Date().toISOString()
   const rows: Array<Record<string, unknown>> = []
+  const misses: Array<Record<string, unknown>> = []
   let found = 0
   let unknownMarked = 0
   for (const sym of missing) {
@@ -55,13 +57,12 @@ async function backfillFromFinnhub(supabase: any, limit: number): Promise<{ chec
         const p = await res.json()
         // marketCapitalization ב-Finnhub הוא במיליוני USD
         const cap = Number(p?.marketCapitalization ?? 0) * 1_000_000
-        const recognized = p && typeof p === 'object' && Object.keys(p).length > 0
         if (Number.isFinite(cap) && cap > 0) {
           rows.push({ symbol: sym, market_cap: cap, name: p?.name ?? null, sector: p?.finnhubIndustry ?? null, country: p?.country ?? null, updated_at: now })
           found++
-        } else if (!recognized || cap === 0) {
-          // לא מוכר / בלי שווי — מסומן 0 כדי שלא ייבדק שוב ושהסינון יוריד אותו
-          rows.push({ symbol: sym, market_cap: 0, name: p?.name ?? null, sector: null, country: null, updated_at: now })
+        } else {
+          // אין נתון — נשאר לא-ידוע (לא מסננים), רק לא ננסה שוב 24 שעות
+          misses.push({ symbol: sym, attempted_at: now })
           unknownMarked++
         }
       }
@@ -73,6 +74,10 @@ async function backfillFromFinnhub(supabase: any, limit: number): Promise<{ chec
   if (rows.length) {
     const { error: upErr } = await supabase.from('stock_market_caps').upsert(rows, { onConflict: 'symbol' })
     if (upErr) console.warn('[market-caps] finnhub upsert failed:', upErr.message)
+  }
+  if (misses.length) {
+    const { error: mErr } = await supabase.from('market_cap_lookup_misses').upsert(misses, { onConflict: 'symbol' })
+    if (mErr) console.warn('[market-caps] misses upsert failed:', mErr.message)
   }
   console.log(`[market-caps] finnhub backfill checked=${missing.length} found=${found} unknown=${unknownMarked}`)
   return { checked: missing.length, found, unknownMarked }

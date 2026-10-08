@@ -9,7 +9,8 @@ import { supabase } from '../../lib/supabase';
 import { ChatSheetContent, ChatSheetTopoHeader, useChatFitContentSnap } from './ChatBottomSheet';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';
 import { APP_LAYOUT } from '../ui/appLayout';
-import { SHEET_CLOSE_MS } from '../ui/BottomSheet/sheetMotion';
+import { SHEET_CLOSE_MS, SHEET_OPEN_MS, SHEET_EASE_OUT } from '../ui/BottomSheet/sheetMotion';
+import Reanimated, { FadeInDown } from 'react-native-reanimated';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { LIGHT_CANVAS } from '../ui/designTokensStatic';
 import { Ionicons } from '@expo/vector-icons';
@@ -358,11 +359,14 @@ export default function LongPressOverlay({
           בתוך השיט בלי inverted, חייבים LTR כדי ש-other יישאר משמאל כמו בצ׳אט. */}
       {pickerMode ? (
         <View onLayout={onContentLayout}>
-          <ReactionPickerContent
-            onClose={onClose}
-            onReaction={handleReaction}
-            messageReactions={displayMessage.reactions ?? []}
-          />
+          {/* כניסה רכה בזמן שהשיט גדל — לא החלפה בפריים אחד */}
+          <Reanimated.View entering={FadeInDown.duration(SHEET_OPEN_MS).easing(SHEET_EASE_OUT).withInitialValues({ opacity: 0, transform: [{ translateY: 16 }] })}>
+            <ReactionPickerContent
+              onClose={onClose}
+              onReaction={handleReaction}
+              messageReactions={displayMessage.reactions ?? []}
+            />
+          </Reanimated.View>
         </View>
       ) : (
       <ChatSheetContent

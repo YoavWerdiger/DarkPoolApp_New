@@ -178,8 +178,10 @@ const BottomSheetImpl: React.FC<BottomSheetProps> = ({
         fitContentHeight.value = to;
         return;
       }
+      // שינוי גדול (למשל החלפת תוכן לבורר ריאקציות) — באותה תנועה כמו פתיחת שיט;
+      // תיקון קטן אחרי מדידה — קצר ושקט
       fitContentHeight.value = shouldAnimate
-        ? withTiming(to, FIT_CONTENT_HEIGHT_TIMING)
+        ? withTiming(to, Math.abs(to - current) > 80 ? SHEET_OPEN_TIMING : FIT_CONTENT_HEIGHT_TIMING)
         : to;
     })(target, animate);
   }, [fitContentHeight]);

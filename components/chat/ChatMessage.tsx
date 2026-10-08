@@ -2080,6 +2080,23 @@ function AudioPlayer({
   };
 
   const displayDuration = actualDuration > 0 ? actualDuration : duration > 0 ? duration : 0;
+  // כמו אינסטגרם: עצור = הזמן שנותר במקום כפתור המהירות; בהשמעה הזמן עולה וקטן
+  // וכפתור המהירות מופיע מתחתיו (הזמן ממשיך לרדת)
+  const remainingSec = Math.max(0, displayDuration - position);
+  const sideProg = useSharedValue(isPlaying ? 1 : 0);
+  useEffect(() => {
+    sideProg.value = withTiming(isPlaying ? 1 : 0, {
+      duration: 200,
+      easing: ReanimatedEasing.out(ReanimatedEasing.cubic),
+    });
+  }, [isPlaying, sideProg]);
+  const sideTimeStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: -11 * sideProg.value }, { scale: 1 - 0.12 * sideProg.value }],
+  }));
+  const sideSpeedStyle = useAnimatedStyle(() => ({
+    opacity: sideProg.value,
+    transform: [{ translateY: 10 * (1 - sideProg.value) }],
+  }));
 
   // raw samples — VoiceWaveformWithProgress מנרמל ל־DISPLAY_BARS (מתיחה, לא ריפוד באפסים)
   const storedWaveform = useMemo(
@@ -2162,13 +2179,29 @@ function AudioPlayer({
           </View>
         </View>
 
-        <TouchableOpacity
-          onPress={togglePlaybackRate}
-          style={styles.audioSpeedButton}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.audioSpeedText}>{playbackRate.toFixed(1)}x</Text>
-        </TouchableOpacity>
+        <View style={styles.audioSideSlot}>
+          <Reanimated.View style={[styles.audioSideTimeWrap, sideTimeStyle]} pointerEvents="none">
+            <Text
+              style={[styles.audioSideTime, isMe ? styles.myTimeText : styles.theirTimeText]}
+              accessibilityLabel={`נותרו ${formatDuration(remainingSec)}`}
+            >
+              {formatDuration(remainingSec)}
+            </Text>
+          </Reanimated.View>
+          <Reanimated.View
+            style={[styles.audioSideSpeedWrap, sideSpeedStyle]}
+            pointerEvents={isPlaying ? 'auto' : 'none'}
+          >
+            <TouchableOpacity
+              onPress={togglePlaybackRate}
+              style={styles.audioSpeedButton}
+              activeOpacity={0.7}
+              accessibilityLabel={`מהירות ${playbackRate.toFixed(1)}`}
+            >
+              <Text style={styles.audioSpeedText}>{playbackRate.toFixed(1)}x</Text>
+            </TouchableOpacity>
+          </Reanimated.View>
+        </View>
       </View>
 
       <View style={styles.audioMetadataMerged}>
@@ -2186,15 +2219,6 @@ function AudioPlayer({
               נערך ·{' '}
             </Text>
           )}
-          <Text
-            style={[
-              styles.timeText,
-              isMe ? styles.myTimeText : styles.theirTimeText,
-              styles.audioPlaybackTimeText,
-            ]}
-          >
-            {formatDuration(position)} / {formatDuration(displayDuration)}
-          </Text>
         </View>
         <View style={styles.audioMetadataRight}>
           {!!sentTimeText && (
@@ -2724,12 +2748,37 @@ const createStyles = (tokens: any) => {
     zIndex: 2,
     pointerEvents: 'none',
   },
+  audioSideSlot: {
+    width: 46,
+    height: 40,
+    flexShrink: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  audioSideTimeWrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  audioSideTime: {
+    fontSize: tokens.typography.fontSize.xs,
+    fontWeight: tokens.typography.fontWeight.semibold,
+    fontVariant: ['tabular-nums'],
+  },
+  audioSideSpeedWrap: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
   audioSpeedButton: {
     backgroundColor: tokens.colors.border.hover,
     borderRadius: tokens.borderRadius.full,
-    paddingHorizontal: 7,
-    height: 28,
-    minWidth: 42,
+    paddingHorizontal: 6,
+    height: 20,
+    minWidth: 36,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,

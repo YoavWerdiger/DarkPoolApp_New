@@ -2783,8 +2783,8 @@ const createStyles = (tokens: any) => {
     alignItems: 'center',
   },
   audioSideTime: {
-    fontSize: APP_TYPE.cardSubtitle.fontSize,
-    lineHeight: APP_TYPE.cardSubtitle.lineHeight,
+    fontSize: APP_TYPE.caption.fontSize,
+    lineHeight: APP_TYPE.caption.lineHeight,
     fontWeight: tokens.typography.fontWeight.semibold,
     fontVariant: ['tabular-nums'],
   },

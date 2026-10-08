@@ -132,6 +132,8 @@ const renderTextWithMentions = (
           }}
           // לונג-פרס על קישור — עדיין תפריט ההודעה (לא נבלע ע״י ה-Text)
           onLongPress={onLinkLongPress}
+          // בלי המלבן האפור של iOS בלחיצה — נראה זר בבועה
+          suppressHighlighting
           accessibilityRole="link"
         >
           {url}
@@ -139,15 +141,10 @@ const renderTextWithMentions = (
       );
       pushPlain(trailing);
     } else {
+      // תיוג = הדגשה בלבד: בלי ניווט לפרופיל ובלי ה-highlight האפור של iOS בלחיצה
       const tag = match[2];
-      const userId = resolveMentionUserId(tag, mentions);
       parts.push(
-        <Text
-          key={`mention-${keyIndex++}`}
-          style={[baseStyle, mentionStyle]}
-          onPress={userId ? () => openMentionProfile(userId, currentUserId) : undefined}
-          suppressHighlighting={!userId}
-        >
+        <Text key={`mention-${keyIndex++}`} style={[baseStyle, mentionStyle]} suppressHighlighting>
           {tag}
         </Text>
       );

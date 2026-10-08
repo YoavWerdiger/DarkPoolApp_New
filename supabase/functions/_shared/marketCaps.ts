@@ -3,8 +3,8 @@
 // deno-lint-ignore no-explicit-any
 type Db = { from: (table: string) => any }
 
-/** דיווחי רווחים רק לחברות בשווי 1B ומעלה */
-export const MIN_EARNINGS_MARKET_CAP_USD = 1_000_000_000
+/** דיווחי רווחים רק לחברות בשווי שוק 2B ומעלה */
+export const MIN_EARNINGS_MARKET_CAP_USD = 2_000_000_000
 
 /** BRK/B, BRK-B → BRK.B (הפורמט ב-earnings_calendar) */
 export function normalizeCapSymbol(symbol: string): string {

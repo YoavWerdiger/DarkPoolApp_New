@@ -99,6 +99,7 @@ interface LinkPreviewProps {
 export default function LinkPreview({ url, isMe, onLongPress }: LinkPreviewProps) {
   const tokens = useDesignTokens();
   const [og, setOg] = useState<OgData | null>(() => ogCache.get(url) ?? null);
+  const [pressed, setPressed] = useState(false);
   const mountedRef = useRef(true);
   const domain = extractDomain(url);
 
@@ -130,10 +131,13 @@ export default function LinkPreview({ url, isMe, onLongPress }: LinkPreviewProps
       }}
       onLongPress={onLongPress}
       delayLongPress={350}
-      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
       accessibilityRole="link"
       accessibilityLabel={title ? `${title}, ${domain}` : domain}
     >
+      {/* סגנון על View פנימי — style כפונקציה ב-Pressable לא תמיד מוחל אצלנו (הכרטיס איבד רוחב/חיתוך) */}
+      <View style={[styles.card, pressed && styles.pressed]}>
       {/* רקע = צבע הטקסט בשקיפות נמוכה → מתאים לכל בועה ולכל ערכת נושא */}
       <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: ink, opacity: 0.07 }]} />
 
@@ -190,6 +194,7 @@ export default function LinkPreview({ url, isMe, onLongPress }: LinkPreviewProps
             </>
           )}
         </View>
+      </View>
       </View>
     </Pressable>
   );

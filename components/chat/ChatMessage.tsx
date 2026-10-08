@@ -2658,8 +2658,9 @@ const createStyles = (tokens: any) => {
     width: '100%',
     maxWidth: 280,
     minWidth: 200,
-    paddingVertical: 2,
-    paddingHorizontal: 2,
+    // בלי ריפוד נוסף — הכפתור והוויבפורם מיושרים לשם ולקצה הבועה כמו בשאר ההודעות
+    paddingVertical: 0,
+    paddingHorizontal: 0,
     gap: 0,
     backgroundColor: 'transparent',
   },

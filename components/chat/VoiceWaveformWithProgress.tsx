@@ -33,8 +33,11 @@ export interface VoiceWaveformWithProgressProps {
 }
 
 const BARS_COUNT = WAVEFORM_DISPLAY_BARS;
-const MAX_BAR_HEIGHT = 26;
-const MIN_BAR_HEIGHT = 3.5;
+// בסגנון אינסטגרם: עמודות דקות ומעוגלות, נמוכות יותר
+const MAX_BAR_HEIGHT = 22;
+const MIN_BAR_HEIGHT = 3;
+/** החלק שלא נוגן — אותו צבע בשקיפות (חלוקה חדה, לא מעבר צבעים על כמה עמודות) */
+const UNPLAYED_OPACITY = 0.35;
 const THUMB_SIZE = 12;
 
 /** memo: re-render של הבועה לא יוצר מחדש 40 animated styles (הבהוב בהשמעה) */
@@ -53,29 +56,18 @@ const WaveBar = memo(function WaveBar({
   inactiveColor: string;
   nearActiveColor: string;
 }) {
-  const barFrac = (index + 0.5) / BARS_COUNT;
-  const lookAhead = 0.04;
-  const inputStart = Math.max(0, barFrac - lookAhead);
+  // תחום העמודה בציר ההתקדמות — המעבר נוגן/לא נוגן קורה רק בתוך העמודה עצמה
+  const start = index / BARS_COUNT;
+  const end = (index + 1) / BARS_COUNT;
   const height = Math.max(MIN_BAR_HEIGHT, value * MAX_BAR_HEIGHT);
 
   const style = useAnimatedStyle(() => {
     const p = progress.value;
-    const color =
-      p <= inputStart
-        ? inactiveColor
-        : p >= barFrac
-          ? activeColor
-          : interpolateColor(
-              p,
-              [inputStart, barFrac],
-              [nearActiveColor, activeColor],
-            );
-    const opacity =
-      p <= inputStart ? 0.38 : p >= barFrac ? 1 : 0.38 + ((p - inputStart) / (barFrac - inputStart || 1)) * 0.62;
+    const t = p <= start ? 0 : p >= end ? 1 : (p - start) / (end - start);
     return {
       height,
-      backgroundColor: color,
-      opacity,
+      backgroundColor: activeColor,
+      opacity: UNPLAYED_OPACITY + (1 - UNPLAYED_OPACITY) * t,
     };
   });
 
@@ -127,7 +119,8 @@ function VoiceWaveformWithProgress({
     const p = Math.max(0, Math.min(1, progress.value));
     if (w <= 0) return { opacity: 0, transform: [{ translateX: 0 }] };
     return {
-      opacity: 1,
+      // כמו אינסטגרם: בלי נקודה — מופיעה רק בזמן גרירה
+      opacity: isScrubbingSV.value > 0.5 ? 1 : 0,
       transform: [{ translateX: p * w - THUMB_SIZE / 2 }],
     };
   });
@@ -244,7 +237,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   bar: {
-    width: 2.5,
+    width: 3,
     borderRadius: 999,
   },
   thumb: {

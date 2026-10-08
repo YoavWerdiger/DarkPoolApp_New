@@ -19,7 +19,8 @@ import { useLockParentDrawerWhileFocused } from '../../hooks/useLockParentDrawer
 import { useAfterNavigationTransition } from '../../hooks/afterNavigationTransition';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import UICard from '../../components/ui/UICard';
+import { APP_LAYOUT } from '../../components/ui/appLayout';
+import { APP_TYPE } from '../../components/ui/appType';
 import { ChatScreenShell, ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 import MediaGalleryViewer from '../../components/chat/MediaGalleryViewer';
 import { getGroupMediaGallery } from '../../services/chat/chatMediaService';
@@ -47,6 +48,7 @@ interface GalleryMediaItem {
 
 const PAGE_SIZE = 60;
 const NUM_COLUMNS = 3;
+const GRID_GAP = 3;
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function GroupMediaGalleryScreen() {
@@ -62,13 +64,11 @@ export default function GroupMediaGalleryScreen() {
 
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
 
+  // רשת על הקנבס (בלי כרטיס עוטף) — רוחב המסך פחות שולי המסך
   const cellSize = useMemo(() => {
-    const outerPad = DesignTokens.spacing.base;
-    const innerPad = DesignTokens.spacing.base;
-    const gap = DesignTokens.spacing.xs;
-    const contentWidth = SCREEN_WIDTH - outerPad * 2 - innerPad * 2;
-    return (contentWidth - gap * (NUM_COLUMNS - 1)) / NUM_COLUMNS;
-  }, [DesignTokens.spacing.base, DesignTokens.spacing.xs]);
+    const contentWidth = SCREEN_WIDTH - APP_LAYOUT.screenPaddingHorizontal * 2;
+    return Math.floor((contentWidth - GRID_GAP * (NUM_COLUMNS - 1)) / NUM_COLUMNS);
+  }, []);
 
   const videoBadgeCorner = useMemo(
     () => ({
@@ -211,7 +211,7 @@ export default function GroupMediaGalleryScreen() {
     return (
       <TouchableOpacity
         key={key}
-        style={[styles.filterChip, active && styles.filterChipActive]}
+        style={[styles.filterPill, active && styles.filterPillActive]}
         onPress={() => {
           if (filter === key) return;
           void HapticFeedback.selection();
@@ -219,7 +219,7 @@ export default function GroupMediaGalleryScreen() {
         }}
         activeOpacity={0.75}
       >
-        <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{label}</Text>
+        <Text style={[styles.filterPillText, active && styles.filterPillTextActive]}>{label}</Text>
       </TouchableOpacity>
     );
   };
@@ -245,10 +245,12 @@ export default function GroupMediaGalleryScreen() {
 
   const renderGalleryBody = () => {
     if (loading) {
+      // שלד רשת במקום ספינר
       return (
-        <View style={styles.centerContent}>
-          <ActivityIndicator size="small" color={DesignTokens.colors.primary.main} />
-          <Text style={styles.emptyText}>טוען מדיה...</Text>
+        <View style={styles.skeletonGrid}>
+          {Array.from({ length: 12 }).map((_, i) => (
+            <View key={i} style={[styles.gridItem, { width: cellSize, height: cellSize }]} />
+          ))}
         </View>
       );
     }
@@ -256,7 +258,9 @@ export default function GroupMediaGalleryScreen() {
     if (items.length === 0) {
       return (
         <View style={styles.centerContent}>
-          <Ionicons name="images-outline" size={48} color={DesignTokens.colors.text.secondary} />
+          <View style={styles.emptyIcon}>
+            <Ionicons name="images-outline" size={28} color={DesignTokens.colors.text.secondary} />
+          </View>
           <Text style={styles.emptyTitle}>אין מדיה בקבוצה</Text>
           <Text style={styles.emptyText}>
             {filter === 'video'
@@ -297,28 +301,12 @@ export default function GroupMediaGalleryScreen() {
         <ChatSubScreenHeader title="מדיה" onBack={handleBack} />
 
         <View style={styles.rtlRoot}>
-          <View style={styles.cardWrap}>
-            <UICard
-              variant="soft"
-              glassIntensity="subtle"
-              padding="none"
-              showGlassBorder={false}
-              style={styles.galleryCard}
-              contentContainerStyle={styles.galleryCardContent}
-            >
-              <View style={styles.toolbar}>
-                <View style={styles.filterRow}>
-                  {renderFilterChip('all', 'הכל')}
-                  {renderFilterChip('image', 'תמונות')}
-                  {renderFilterChip('video', 'סרטונים')}
-                </View>
-                {items.length > 0 && !loading ? (
-                  <Text style={styles.toolbarCount}>{isolateNumericRuns(String(items.length))}</Text>
-                ) : null}
-              </View>
-              <View style={styles.sectionBody}>{renderGalleryBody()}</View>
-            </UICard>
+          <View style={styles.filterRow}>
+            {renderFilterChip('all', 'הכל')}
+            {renderFilterChip('image', 'תמונות')}
+            {renderFilterChip('video', 'סרטונים')}
           </View>
+          <View style={styles.body}>{renderGalleryBody()}</View>
         </View>
 
         <MediaGalleryViewer
@@ -338,88 +326,69 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     rtlRoot: {
       ...chatRtlRoot,
     },
-    cardWrap: {
-      flex: 1,
-      paddingHorizontal: tokens.spacing.base,
-      paddingTop: tokens.spacing.sm,
-      paddingBottom: tokens.spacing.md,
-    },
-    galleryCard: {
-      flex: 1,
-      borderRadius: tokens.borderRadius.lg,
-      overflow: 'hidden',
-    },
-    galleryCardContent: {
-      flex: 1,
-    },
-    toolbar: {
-      ...chatRtlRow,
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: tokens.spacing.sm,
-      paddingHorizontal: tokens.spacing.base,
-      paddingTop: tokens.spacing.md,
-      paddingBottom: tokens.spacing.sm,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: tokens.colors.border.divider,
-    },
     filterRow: {
       ...chatRtlRow,
-      flex: 1,
-      flexWrap: 'wrap',
-      gap: tokens.spacing.sm,
+      alignItems: 'center',
+      gap: 8,
+      paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+      paddingTop: APP_LAYOUT.stackGapSmall,
+      paddingBottom: APP_LAYOUT.cardTitleToBodyGap,
     },
-    filterChip: {
-      paddingHorizontal: tokens.spacing.md,
-      paddingVertical: tokens.spacing.xs + 2,
-      borderRadius: tokens.borderRadius.full,
-      backgroundColor: 'rgba(255,255,255,0.08)',
-      borderWidth: 1,
-      borderColor: tokens.colors.border.divider,
+    // כמו פילטרי רשימת הצ׳אטים
+    filterPill: {
+      backgroundColor: tokens.colors.background.tertiary,
+      borderRadius: 20,
+      paddingHorizontal: 16,
+      paddingVertical: 7,
     },
-    filterChipActive: {
-      backgroundColor: `${tokens.colors.primary.main}33`,
-      borderColor: tokens.colors.primary.main,
+    filterPillActive: {
+      backgroundColor: 'rgba(0, 200, 5, 0.12)',
     },
-    filterChipText: {
+    filterPillText: {
       ...chatRtlText,
-      ...settingsCaptionType,
+      ...APP_TYPE.caption,
       color: tokens.colors.text.secondary,
     },
-    filterChipTextActive: {
+    filterPillTextActive: {
       color: tokens.colors.primary.main,
-      fontWeight: '600',
     },
-    toolbarCount: {
-      ...chatRtlText,
-      ...settingsCaptionType,
-      color: tokens.colors.text.tertiary,
-    },
-    sectionBody: {
+    body: {
       flex: 1,
       minHeight: 0,
-      paddingHorizontal: tokens.spacing.base,
-      paddingTop: tokens.spacing.md,
-      paddingBottom: tokens.spacing.sm,
+      paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+    },
+    skeletonGrid: {
+      ...chatRtlRow,
+      flexWrap: 'wrap',
+      gap: GRID_GAP,
+      opacity: 0.6,
     },
     centerContent: {
       flex: 1,
       alignItems: 'center',
       justifyContent: 'center',
-      paddingHorizontal: tokens.spacing.sm,
-      minHeight: 220,
+      paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+      paddingBottom: 80,
+      gap: 8,
+    },
+    emptyIcon: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: tokens.colors.background.tertiary,
+      marginBottom: 4,
     },
     emptyTitle: {
       ...chatRtlText,
-      ...settingsRowType,
-      marginTop: 12,
+      ...APP_TYPE.cardTitle,
       color: tokens.colors.text.primary,
       textAlign: 'center',
     },
     emptyText: {
       ...chatRtlText,
-      ...settingsMetaType,
-      marginTop: 8,
+      ...APP_TYPE.cardSubtitle,
       color: tokens.colors.text.secondary,
       textAlign: 'center',
     },
@@ -432,14 +401,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     gridRow: {
       ...chatRtlRow,
-      gap: tokens.spacing.xs,
-      marginBottom: tokens.spacing.xs,
+      gap: GRID_GAP,
+      marginBottom: GRID_GAP,
     },
     gridItem: {
-      borderRadius: tokens.borderRadius.md,
+      borderRadius: 10,
       overflow: 'hidden',
       position: 'relative',
-      backgroundColor: 'rgba(255,255,255,0.06)',
+      backgroundColor: tokens.colors.background.tertiary,
     },
     thumbnail: {
       width: '100%',
@@ -447,9 +416,12 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     videoBadge: {
       position: 'absolute',
-      backgroundColor: 'rgba(0, 0, 0, 0.6)',
-      borderRadius: tokens.borderRadius.sm,
-      padding: 4,
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'rgba(0, 0, 0, 0.55)',
     },
     footerLoader: {
       paddingVertical: tokens.spacing.md,

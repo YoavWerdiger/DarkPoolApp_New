@@ -86,64 +86,80 @@ function openMentionProfile(userId: string, currentUserId?: string | null) {
   openUserProfile(userId, { currentUserId });
 }
 
-// פונקציה לרנדור טקסט עם תיוגים (@mentions)
+// פונקציה לרנדור טקסט עם תיוגים (@mentions) וקישורים
 const renderTextWithMentions = (
   text: string,
   baseStyle: any,
   mentionStyle: any,
   mentions?: CommunityMention[] | null,
-  currentUserId?: string | null
+  currentUserId?: string | null,
+  linkStyle?: any,
+  onLinkLongPress?: () => void,
 ): React.ReactNode[] => {
   if (!text) return [];
 
-  // חיפוש של @שם משתמש בטקסט
-  const mentionRegex = /@[\u0590-\u05FFa-zA-Z0-9_]+/g;
+  // קישור או @שם — לפי סדר ההופעה בטקסט
+  const tokenRegex = /(https?:\/\/[^\s<>"]+)|(@[\u0590-\u05FFa-zA-Z0-9_]+)/g;
   const parts: React.ReactNode[] = [];
   let lastIndex = 0;
-  let match;
+  let match: RegExpExecArray | null;
   let keyIndex = 0;
 
-  while ((match = mentionRegex.exec(text)) !== null) {
-    // טקסט לפני ה-mention
-    if (match.index > lastIndex) {
+  const pushPlain = (chunk: string) => {
+    if (!chunk) return;
+    parts.push(
+      <Text key={`text-${keyIndex++}`} style={baseStyle}>
+        {chunk}
+      </Text>
+    );
+  };
+
+  while ((match = tokenRegex.exec(text)) !== null) {
+    pushPlain(text.slice(lastIndex, match.index));
+
+    if (match[1]) {
+      // סימני פיסוק בסוף לא שייכים לקישור
+      const raw = match[1];
+      const url = raw.replace(/[.,;:!?)\]]+$/, '');
+      const trailing = raw.slice(url.length);
       parts.push(
-        <Text key={`text-${keyIndex++}`} style={baseStyle}>
-          {text.slice(lastIndex, match.index)}
+        <Text
+          key={`link-${keyIndex++}`}
+          style={[baseStyle, linkStyle]}
+          onPress={() => {
+            void HapticFeedback.selection();
+            openBrowserAsync(url).catch(() => {});
+          }}
+          // לונג-פרס על קישור — עדיין תפריט ההודעה (לא נבלע ע״י ה-Text)
+          onLongPress={onLinkLongPress}
+          accessibilityRole="link"
+        >
+          {url}
+        </Text>
+      );
+      pushPlain(trailing);
+    } else {
+      const tag = match[2];
+      const userId = resolveMentionUserId(tag, mentions);
+      parts.push(
+        <Text
+          key={`mention-${keyIndex++}`}
+          style={[baseStyle, mentionStyle]}
+          onPress={userId ? () => openMentionProfile(userId, currentUserId) : undefined}
+          suppressHighlighting={!userId}
+        >
+          {tag}
         </Text>
       );
     }
-
-    const tag = match[0];
-    const userId = resolveMentionUserId(tag, mentions);
-    // ה-mention עצמו
-    parts.push(
-      <Text
-        key={`mention-${keyIndex++}`}
-        style={[baseStyle, mentionStyle]}
-        onPress={userId ? () => openMentionProfile(userId, currentUserId) : undefined}
-        suppressHighlighting={!userId}
-      >
-        {tag}
-      </Text>
-    );
-
     lastIndex = match.index + match[0].length;
   }
 
-  // טקסט אחרי ה-mention האחרון
-  if (lastIndex < text.length) {
-    parts.push(
-      <Text key={`text-${keyIndex++}`} style={baseStyle}>
-        {text.slice(lastIndex)}
-      </Text>
-    );
-  }
+  pushPlain(text.slice(lastIndex));
 
-  // אם אין mentions - החזר טקסט רגיל
   if (parts.length === 0) {
     return [<Text key="full-text" style={baseStyle}>{text}</Text>];
   }
-
   return parts;
 };
 
@@ -996,11 +1012,16 @@ function ChatMessage({
                     textStyle,
                     mentionStyle,
                     message.mentions as CommunityMention[] | undefined,
-                    user?.id
+                    user?.id,
+                    {
+                      color: isMe ? DesignTokens.colors.bubbleMeText : DesignTokens.colors.primary.main,
+                      textDecorationLine: 'underline' as const,
+                    },
+                    onLongPress,
                   )}
                 </Text>
                 {linkUrl && !message.is_sending && (
-                  <LinkPreview url={linkUrl} isMe={isMe} />
+                  <LinkPreview url={linkUrl} isMe={isMe} onLongPress={onLongPress} />
                 )}
               </>
             );

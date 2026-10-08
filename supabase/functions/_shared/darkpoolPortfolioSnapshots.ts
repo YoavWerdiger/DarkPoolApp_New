@@ -222,7 +222,8 @@ export async function persistPriceMaps(
 export async function ensureYahooPriceMaps(
   supabase: SupabaseClient,
   tickers: string[],
-  opts: { forceRefresh?: boolean; concurrency?: number } = {}
+  /** maxFetch — כמה טיקרים חסרים למשוך מ-Yahoo בריצה אחת (השאר מהקאש / בריצה הבאה) */
+  opts: { forceRefresh?: boolean; concurrency?: number; maxFetch?: number } = {}
 ): Promise<Map<string, Map<string, number>>> {
   const unique = Array.from(
     new Set(tickers.map((t) => t.toUpperCase().trim()).filter((t) => t.length <= 5))
@@ -235,7 +236,9 @@ export async function ensureYahooPriceMaps(
     for (const [k, v] of cached) out.set(k, v);
   }
 
-  const missing = unique.filter((t) => !out.has(t) || out.get(t)!.size === 0);
+  const allMissing = unique.filter((t) => !out.has(t) || out.get(t)!.size === 0);
+  const missing =
+    opts.maxFetch != null ? allMissing.slice(0, Math.max(0, opts.maxFetch)) : allMissing;
   const concurrency = Math.min(6, Math.max(2, opts.concurrency ?? 4));
   const fetched = new Map<string, Map<string, number>>();
 

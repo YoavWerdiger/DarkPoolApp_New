@@ -196,6 +196,12 @@ serve(async (req) => {
             continue;
           }
           const isTrump = t.id === TRUMP_DARKPOOL_PERSON_ID;
+          // טראמפ מחושב ב-materialize-trump-portfolio (כל העסקאות, טווחים, ~1,000 טיקרים) —
+          // כאן הוא היה מקבל 500 עסקאות ו-56 טיקרים ודורס את התוצאה המלאה
+          if (isTrump) {
+            ok++;
+            continue;
+          }
           const metrics = isTrump
             ? metricsFromTrumpCongressInputs(inputs, pricesByTicker)
             : await metricsFromCongressTrades(inputs, {

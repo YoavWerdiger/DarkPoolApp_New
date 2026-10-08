@@ -24,8 +24,45 @@ export interface TrumpTradeInput {
   ticker: string;
   transaction_date: string;
   side: 'buy' | 'sell';
+  /** אמצע הטווח (או הסכום המדויק) — לגרף ולמשקלים */
   amountUsd: number;
+  /** גבולות הטווח המדווח — לשווי משוער low–high */
+  amountLow: number;
+  amountHigh: number;
   price?: number | null;
+}
+
+/** «$1,001 - $15,000» → [1001, 15000]; «Over $50,000,000» → [50M, 50M]; סכום בודד → [x, x] */
+export function parseUsdRangeBounds(raw: string | null | undefined): { low: number; high: number } | null {
+  if (!raw?.trim()) return null;
+  const nums = (raw.replace(/,/g, '').match(/\d+(?:\.\d+)?/g) ?? [])
+    .map(Number)
+    .filter((n) => Number.isFinite(n) && n > 0);
+  if (!nums.length) return null;
+  const low = Math.min(...nums);
+  const high = Math.max(...nums);
+  return { low, high };
+}
+
+/**
+ * Quiver ו-UW מחזירים את אותה עסקה פעמיים (770 כפילויות נמדדו) — עסקה אחת לכל
+ * טיקר+תאריך+כיוון+טווח; Quiver קודם.
+ */
+export function dedupeTrumpInputs(rows: Array<CongressTradeInput & { source?: string | null }>): CongressTradeInput[] {
+  const byKey = new Map<string, CongressTradeInput & { source?: string | null }>();
+  for (const r of rows) {
+    const key = [
+      String(r.ticker ?? '').toUpperCase().trim(),
+      String(r.transaction_date ?? '').slice(0, 10),
+      String(r.txn_type ?? '').toLowerCase(),
+      String(r.amounts ?? '').replace(/\s+/g, ''),
+    ].join('|');
+    const prev = byKey.get(key);
+    if (!prev || (String(prev.source ?? '') !== 'quiverquant' && String(r.source ?? '') === 'quiverquant')) {
+      byKey.set(key, r);
+    }
+  }
+  return [...byKey.values()];
 }
 
 interface TrumpLot {
@@ -36,7 +73,6 @@ interface TrumpLot {
 
 const RANGE_RE = /[\d.]+\s*[-–—]|to\s*[\d.$]/i;
 
-const TRUMP_EQUAL_WEIGHT_NOTIONAL_USD = 1;
 
 function isTrumpStockActRangeLabel(raw: string | null | undefined): boolean {
   if (!raw?.trim()) return false;
@@ -90,14 +126,24 @@ export function trumpTradesFromCongressInputs(
       price > 0
         ? shares * price
         : null;
+    // סכום מדויק אם יש; אחרת טווח STOCK Act → low/high, ואמצע לגרף ולמשקלים
+    // (במקום «משקל שווה» של $1 לעסקה — שנתן «שווי» של 120 ותשואה של אלפי אחוזים)
+    let amountLow: number | null = null;
+    let amountHigh: number | null = null;
     let amountUsd = fromLabel ?? fromPx;
-    if (
-      amountUsd == null &&
-      isTrumpStockActRangeLabel(row.amounts ?? null)
-    ) {
-      amountUsd = TRUMP_EQUAL_WEIGHT_NOTIONAL_USD;
+    if (amountUsd != null) {
+      amountLow = amountUsd;
+      amountHigh = amountUsd;
+    } else {
+      // טווח («$1,001 - $15,000») או רצפה («Over $50,000,000») — כל מה שיש בו מספרים
+      const b = parseUsdRangeBounds(row.amounts ?? null);
+      if (b) {
+        amountLow = b.low;
+        amountHigh = b.high;
+        amountUsd = (b.low + b.high) / 2;
+      }
     }
-    if (amountUsd == null || !(amountUsd > 0)) continue;
+    if (amountUsd == null || !(amountUsd > 0) || amountLow == null || amountHigh == null) continue;
 
     const entryPrice =
       price != null && Number.isFinite(price) && price > 0 ? price : null;
@@ -106,6 +152,8 @@ export function trumpTradesFromCongressInputs(
       transaction_date: day,
       side,
       amountUsd,
+      amountLow,
+      amountHigh,
       price: entryPrice,
     });
   }
@@ -358,6 +406,14 @@ export function metricsFromTrumpCongressInputs(
   const fullSeries = buildTrumpFullSeries(trades, pricesByTicker);
   const series = sparsifyValueSeries(fullSeries, 7);
   const holdings = buildTrumpHoldingsMetrics(trades, pricesByTicker);
+  // שווי משוער: אותו ספר FIFO עם הגבול התחתון ועם העליון של כל טווח
+  const sumMarket = (rows: PortfolioHoldingMetric[]) => rows.reduce((s, h) => s + (h.market_value || 0), 0);
+  const valueLow = sumMarket(
+    buildTrumpHoldingsMetrics(trades.map((t) => ({ ...t, amountUsd: t.amountLow })), pricesByTicker),
+  );
+  const valueHigh = sumMarket(
+    buildTrumpHoldingsMetrics(trades.map((t) => ({ ...t, amountUsd: t.amountHigh })), pricesByTicker),
+  );
 
   let totalValue = 0;
   let totalCost = 0;
@@ -400,5 +456,10 @@ export function metricsFromTrumpCongressInputs(
     win_rate: null,
     avg_delay_days: computeAvgDelay(inputs),
     trade_count: trades.length,
+    value_range: {
+      low: Math.round(valueLow),
+      high: Math.round(valueHigh),
+      estimated: true,
+    },
   };
 }

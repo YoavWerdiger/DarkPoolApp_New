@@ -71,6 +71,8 @@ export interface ValuePoint {
 }
 
 export interface CongressPortfolioMetrics {
+  /** שווי משוער מטווחי STOCK Act (טראמפ) — portfolio_value הוא האמצע */
+  value_range?: { low: number; high: number; estimated: true };
   portfolio_value: number;
   total_cost: number;
   total_return_usd: number;

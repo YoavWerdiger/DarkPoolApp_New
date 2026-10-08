@@ -546,6 +546,35 @@ export function PersonPortfolioProfileScreen({
       }));
 
       if (trump) {
+        // השרת (materialize-trump-portfolio): כל העסקאות, בלי כפילויות, שווי משוער מטווחים
+        // וכל ~1,000 הטיקרים — עדיף על חישוב בטלפון (500 עסקאות, «משקל שווה» של $1)
+        const serverHoldings = m?.holdings ?? [];
+        if (m && serverHoldings.length && m.portfolio_value > 0) {
+          return {
+            portfolioValue: m.portfolio_value,
+            fullChartSeries: [] as ChartPoint[],
+            holdings: serverHoldings.slice(0, 16).map((h): HoldingRow => ({
+              ticker: h.ticker,
+              title: h.ticker,
+              meta: [formatForm4Value(h.market_value), formatForm4Weight(h.allocation_pct), 'משוער']
+                .filter(Boolean)
+                .join(' · '),
+              allocation_pct: h.allocation_pct,
+              market_value: h.market_value,
+              value_usd: h.market_value,
+              return_pct: h.return_pct ?? null,
+              avg_price: h.entry_price ?? null,
+              entry_price: h.entry_price ?? null,
+              first_added_date: h.first_added_date ?? null,
+              dateLabel: h.first_added_date ? ('added' as const) : null,
+            })),
+            trades: tradeRows,
+            holdingsEngine: 'trump' as const,
+            congressHoldings: [] as CongressModelHolding[],
+            form4Trades: emptyForm4,
+            trumpTrades: emptyTrump,
+          };
+        }
         const fromDb = trumpTradesFromRows(congressPersonTradesQuery.data ?? []);
         const fromRecent = trumpTradesFromRows(p?.recent_trades ?? []);
         const trumpInputs = fromDb.length ? fromDb : fromRecent;
@@ -1180,13 +1209,23 @@ export function PersonPortfolioProfileScreen({
     portfolioValue != null &&
     portfolioValue > 0;
   const showOtherValue = kind !== 'politician' && portfolioValue != null && portfolioValue > 0;
+  // טווח שווי משוער מהשרת (טראמפ) — לפי טווחי הדיווח × מחיר ביום העסקה → מחיר נוכחי
+  const trumpValueRange =
+    holdingsEngine === 'trump'
+      ? ((investor.profile?.metrics as { value_range?: { low: number; high: number } } | undefined)
+          ?.value_range ?? null)
+      : null;
   const valueLabel =
-    holdingsEngine === 'trump' && trumpUnitWeighted
+    trumpValueRange
+      ? 'שווי משוער (לפי טווחי הדיווח)'
+      : holdingsEngine === 'trump' && trumpUnitWeighted
       ? 'מדד סל (משקל שווה לעסקה)'
       : holdingsEngine === 'form4' || holdingsEngine === 'trump'
         ? 'שווי פוזיציות מדווחות'
         : 'שווי תיק:';
-  const heroValueText = showCongressValue
+  const heroValueText = trumpValueRange && trumpValueRange.high > 0
+    ? `${formatCompactUsd(trumpValueRange.low)}–${formatCompactUsd(trumpValueRange.high)}`
+    : showCongressValue
     ? formatCongressPortfolioHeroValue(portfolioValue)
     : showTrumpValue
       ? formatCongressPortfolioHeroValue(portfolioValue)
@@ -1661,6 +1700,15 @@ function congressHoldingToRow(
     dateLabel: firstKnownDate ? 'added' : null,
     honestyTag: null,
   };
+}
+
+/** $76.7M / $1.2B — לטווח שווי משוער */
+function formatCompactUsd(v: number): string {
+  const abs = Math.abs(v);
+  if (abs >= 1e9) return `$${(v / 1e9).toFixed(1)}B`;
+  if (abs >= 1e6) return `$${(v / 1e6).toFixed(0)}M`;
+  if (abs >= 1e3) return `$${(v / 1e3).toFixed(0)}K`;
+  return `$${Math.round(v)}`;
 }
 
 function trumpHoldingToRow(h: TrumpModelHolding, unitWeighted = false): HoldingRow {

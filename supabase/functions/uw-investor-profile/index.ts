@@ -237,7 +237,9 @@ async function buildPoliticianProfile(
   let portfolio_source: ProfilePayload['portfolio_source'] = 'none';
   let snapshot_computed_at: string | null = snap?.computed_at ?? null;
 
-  if (snapFresh && snap?.metrics) {
+  if ((snapFresh || politicianId === TRUMP_DARKPOOL_PERSON_ID) && snap?.metrics) {
+    // טראמפ: תמיד מה-snapshot של materialize-trump-portfolio (כל העסקאות + טווח שווי, כל 20 דק׳).
+    // bootstrap כאן (40 טיקרים, עסקאות חלקיות) היה דורס את התוצאה המלאה.
     metrics = snap.metrics as CongressPortfolioMetrics;
     portfolio_source = 'snapshot';
   } else if (

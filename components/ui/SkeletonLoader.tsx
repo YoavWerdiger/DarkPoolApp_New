@@ -131,27 +131,28 @@ export const CardSkeleton: React.FC<CardSkeletonProps> = ({ delay = 0 }) => {
       style={{
         padding: tokens.spacing.base,
         gap: tokens.spacing.md,
+        // direction:'rtl' כבר מתחיל מימין — row / flex-start (row-reverse + flex-end היפכו בחזרה לשמאל)
         direction: 'rtl',
       }}
     >
       {/* Header row */}
-      <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 12 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <SkeletonBox width={44} height={44} borderRadius={22} delay={delay} />
-        <View style={{ flex: 1, gap: 6, alignItems: 'flex-end' }}>
+        <View style={{ flex: 1, gap: 6, alignItems: 'flex-start' }}>
           <SkeletonBox width="60%" height={16} delay={delay + 50} />
           <SkeletonBox width="40%" height={12} delay={delay + 100} />
         </View>
       </View>
 
       {/* Content */}
-      <View style={{ gap: 8, alignItems: 'flex-end' }}>
+      <View style={{ gap: 8, alignItems: 'flex-start' }}>
         <SkeletonBox width="100%" height={14} delay={delay + 150} />
         <SkeletonBox width="85%" height={14} delay={delay + 200} />
         <SkeletonBox width="70%" height={14} delay={delay + 250} />
       </View>
 
       {/* Footer */}
-      <View style={{ flexDirection: 'row-reverse', gap: 12 }}>
+      <View style={{ flexDirection: 'row', gap: 12 }}>
         <SkeletonBox width={60} height={12} delay={delay + 300} />
         <SkeletonBox width={80} height={12} delay={delay + 350} />
       </View>

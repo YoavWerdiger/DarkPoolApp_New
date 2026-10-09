@@ -6,11 +6,11 @@ import {
   StyleSheet,
   FlatList,
   RefreshControl,
-  Alert,
   TextInput,
   Dimensions,
   type LayoutChangeEvent,
 } from 'react-native';
+import { legacyAlert } from '../../utils/appDialog';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -206,7 +206,7 @@ export default function PortfoliosTab() {
 
   const handleDelete = useCallback(
     (p: Portfolio) => {
-      Alert.alert(
+      legacyAlert(
         'מחיקת תיק',
         `האם למחוק את "${p.name}"? פעולה זו אינה ניתנת לביטול והטרנזקציות יימחקו.`,
         [
@@ -219,7 +219,7 @@ export default function PortfoliosTab() {
                 await deletePortfolio(p.id);
                 await load();
               } catch (err) {
-                Alert.alert('שגיאה', 'לא הצלחנו למחוק את התיק');
+                legacyAlert('שגיאה', 'לא הצלחנו למחוק את התיק');
               }
             },
           },

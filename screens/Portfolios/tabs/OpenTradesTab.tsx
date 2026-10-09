@@ -6,10 +6,10 @@ import {
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
-  Alert,
   TextInput,
   Platform,
 } from 'react-native';
+import { legacyAlert } from '../../../utils/appDialog';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -213,7 +213,7 @@ export default function OpenTradesTab({
   const handleDeleteTrade = useCallback(
     (trade: Trade) => {
       void HapticFeedback.impactLight();
-      Alert.alert(
+      legacyAlert(
         'מחיקת פוזיציה',
         `האם למחוק את פוזיציית ${trade.symbol}? הפעולה תחזיר את ה-Cash ולא ניתנת לביטול.`,
         [
@@ -228,7 +228,7 @@ export default function OpenTradesTab({
                 onChanged?.();
               } catch (err: unknown) {
                 const msg = err instanceof Error ? err.message : String(err);
-                Alert.alert('שגיאה', `מחיקה נכשלה: ${msg}`);
+                legacyAlert('שגיאה', `מחיקה נכשלה: ${msg}`);
               }
             },
           },
@@ -245,7 +245,7 @@ export default function OpenTradesTab({
         currentPrice: priceMap[trade.symbol],
       });
       if (!mapped) {
-        Alert.alert('שיתוף', 'ממתין למחיר נוכחי — נסה שוב בעוד רגע');
+        legacyAlert('שיתוף', 'ממתין למחיר נוכחי — נסה שוב בעוד רגע');
         return;
       }
       setExportTrade(mapped);
@@ -262,21 +262,21 @@ export default function OpenTradesTab({
     if (!closingTrade) return;
     const px = parseFloat(exitPriceText);
     if (!px || px <= 0) {
-      Alert.alert('שגיאה', 'מחיר יציאה לא תקין');
+      legacyAlert('שגיאה', 'מחיר יציאה לא תקין');
       return;
     }
     const finalDate = exitDate;
 
     const openedAt = new Date(closingTrade.entry_date);
     if (finalDate < openedAt) {
-      Alert.alert(
+      legacyAlert(
         'תאריך לא תקין',
         `לא ניתן לסגור לפני תאריך הפתיחה (${formatDateForInput(openedAt)})`
       );
       return;
     }
     if (finalDate > new Date()) {
-      Alert.alert('תאריך לא תקין', 'לא ניתן לסגור בתאריך עתידי');
+      legacyAlert('תאריך לא תקין', 'לא ניתן לסגור בתאריך עתידי');
       return;
     }
 
@@ -301,7 +301,7 @@ export default function OpenTradesTab({
               : err?.message === 'trade_update_failed'
                 ? 'עדכון הטרייד נכשל — ייתכן בעיית הרשאות'
                 : `שגיאה: ${err?.message ?? err?.code ?? 'לא ידוע'}`;
-      Alert.alert('שגיאת סגירה', msg);
+      legacyAlert('שגיאת סגירה', msg);
     } finally {
       setBusy(false);
     }

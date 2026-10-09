@@ -5,10 +5,10 @@ import {
   Image,
   StyleSheet,
   ScrollView,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { legacyAlert } from '../../utils/appDialog';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -167,7 +167,7 @@ export default function ConnectBrokerScreen() {
       setSubmitting(true);
       const res = await connectColmex({ username: u, password: p, environment });
       if (!res.accounts || res.accounts.length === 0) {
-        Alert.alert('לא נמצאו חשבונות', 'לחשבון Colmex Pro שלך לא משויכים חשבונות trading.');
+        legacyAlert('לא נמצאו חשבונות', 'לחשבון Colmex Pro שלך לא משויכים חשבונות trading.');
         return;
       }
       navigation.replace('SelectBrokerAccount', {
@@ -199,7 +199,7 @@ export default function ConnectBrokerScreen() {
         : msg
         ? `החיבור נכשל. פרטים: ${msg.slice(0, 160)}`
         : 'התרחשה שגיאה בעת החיבור. נסה שוב.';
-      Alert.alert('חיבור נכשל', friendly);
+      legacyAlert('חיבור נכשל', friendly);
     } finally {
       setSubmitting(false);
     }

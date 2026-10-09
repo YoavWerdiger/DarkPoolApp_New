@@ -5,10 +5,12 @@ import {
   Image,
   StyleSheet,
   ScrollView,
-  Alert,
   KeyboardAvoidingView,
   Platform,
-  type ImageSourcePropType, Pressable } from 'react-native';
+  type ImageSourcePropType,
+  Pressable,
+} from 'react-native';
+import { legacyAlert } from '../../utils/appDialog';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -143,7 +145,7 @@ export default function CreatePortfolioScreen() {
         navigation.navigate('PortfoliosHub', { selectPortfolioId: portfolio.id });
       }
     } catch (err) {
-      Alert.alert('שגיאה', 'לא הצלחנו ליצור את התיק. נסה שוב.');
+      legacyAlert('שגיאה', 'לא הצלחנו ליצור את התיק. נסה שוב.');
     } finally {
       setSubmitting(false);
     }

@@ -5,11 +5,11 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Modal,
 } from 'react-native';
+import { legacyAlert } from '../../utils/appDialog';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -143,7 +143,7 @@ export default function AddTransactionScreen() {
         setNotes(tx.notes ?? '');
         setCurrency(tx.currency);
       } catch {
-        Alert.alert('שגיאה', 'לא הצלחנו לטעון את הטרנזקציה');
+        legacyAlert('שגיאה', 'לא הצלחנו לטעון את הטרנזקציה');
       }
     })();
   }, [transactionId]);
@@ -171,7 +171,7 @@ export default function AddTransactionScreen() {
         setNotes(trade.notes ?? '');
         setCurrency(trade.currency);
       } catch {
-        Alert.alert('שגיאה', 'לא הצלחנו לטעון את הטרייד');
+        legacyAlert('שגיאה', 'לא הצלחנו לטעון את הטרייד');
       }
     })();
   }, [editTradeId]);
@@ -224,29 +224,29 @@ export default function AddTransactionScreen() {
         const stopLossNum = stopLoss.trim() ? parseFloat(stopLoss) : null;
         const targetPriceNum = targetPrice.trim() ? parseFloat(targetPrice) : null;
         if (stopLossNum != null && (isNaN(stopLossNum) || stopLossNum < 0)) {
-          Alert.alert('סטופ לא תקין', 'הכנס מחיר סטופ תקין, או השאר ריק.');
+          legacyAlert('סטופ לא תקין', 'הכנס מחיר סטופ תקין, או השאר ריק.');
           return;
         }
         if (targetPriceNum != null && (isNaN(targetPriceNum) || targetPriceNum < 0)) {
-          Alert.alert('יעד לא תקין', 'הכנס מחיר יעד תקין, או השאר ריק.');
+          legacyAlert('יעד לא תקין', 'הכנס מחיר יעד תקין, או השאר ריק.');
           return;
         }
 
         if (!symbol) {
-          Alert.alert('שדה חסר', 'יש לבחור סימבול לנכס.');
+          legacyAlert('שדה חסר', 'יש לבחור סימבול לנכס.');
           return;
         }
         if (!qtyNum || qtyNum <= 0) {
-          Alert.alert('כמות לא תקינה', 'הכנס כמות גדולה מ-0.');
+          legacyAlert('כמות לא תקינה', 'הכנס כמות גדולה מ-0.');
           return;
         }
         if (isNaN(priceNum) || priceNum < 0) {
-          Alert.alert('מחיר לא תקין', 'הכנס מחיר אמיתי (0 ומעלה).');
+          legacyAlert('מחיר לא תקין', 'הכנס מחיר אמיתי (0 ומעלה).');
           return;
         }
         // ולידציה: תאריך פתיחה לא יכול להיות בעתיד (רק לפוזיציות חדשות)
         if (!editTradeId && !transactionId && tradeDate > new Date()) {
-          Alert.alert('תאריך לא תקין', 'תאריך הפתיחה לא יכול להיות בעתיד.');
+          legacyAlert('תאריך לא תקין', 'תאריך הפתיחה לא יכול להיות בעתיד.');
           return;
         }
 
@@ -305,7 +305,7 @@ export default function AddTransactionScreen() {
       } else if (mode === 'cash') {
         const amountNum = parseFloat(amount);
         if (!amountNum || amountNum <= 0) {
-          Alert.alert('סכום לא תקין', 'הכנס סכום גדול מ-0.');
+          legacyAlert('סכום לא תקין', 'הכנס סכום גדול מ-0.');
           return;
         }
         const payload = {
@@ -321,11 +321,11 @@ export default function AddTransactionScreen() {
       } else if (mode === 'dividend') {
         const amountNum = parseFloat(amount);
         if (!symbol) {
-          Alert.alert('שדה חסר', 'יש לבחור סימבול לדיבידנד.');
+          legacyAlert('שדה חסר', 'יש לבחור סימבול לדיבידנד.');
           return;
         }
         if (!amountNum || amountNum <= 0) {
-          Alert.alert('סכום לא תקין', 'הכנס סכום דיבידנד גדול מ-0.');
+          legacyAlert('סכום לא תקין', 'הכנס סכום דיבידנד גדול מ-0.');
           return;
         }
         const payload = {
@@ -345,7 +345,7 @@ export default function AddTransactionScreen() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : (err as { message?: string })?.message ?? String(err);
       console.error('[AddTransaction] submit error:', err);
-      Alert.alert(
+      legacyAlert(
         'שגיאה',
         isEdit
           ? `עדכון העסקה נכשל: ${msg}`

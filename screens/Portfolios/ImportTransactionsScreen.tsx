@@ -6,9 +6,9 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-  Alert,
   Platform,
 } from 'react-native';
+import { legacyAlert } from '../../utils/appDialog';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -65,7 +65,7 @@ export default function ImportTransactionsScreen() {
       const parsed = parsePortfolioCsv(content, portfolioId);
       setParseResult(parsed);
     } catch (err) {
-      Alert.alert('שגיאה', 'קריאת הקובץ נכשלה');
+      legacyAlert('שגיאה', 'קריאת הקובץ נכשלה');
     }
   }, [portfolioId]);
 
@@ -77,7 +77,7 @@ export default function ImportTransactionsScreen() {
         .map((r) => r.transaction!)
         .filter(Boolean);
       const inserted = await bulkCreateTransactions(inputs);
-      Alert.alert(
+      legacyAlert(
         'ייבוא הסתיים',
         `נוספו ${inserted} טרנזקציות לתיק.${
           parseResult.invalidRows.length > 0
@@ -94,7 +94,7 @@ export default function ImportTransactionsScreen() {
         ]
       );
     } catch (err) {
-      Alert.alert('שגיאה', 'הייבוא נכשל. אנא נסה שוב.');
+      legacyAlert('שגיאה', 'הייבוא נכשל. אנא נסה שוב.');
     } finally {
       setSubmitting(false);
     }

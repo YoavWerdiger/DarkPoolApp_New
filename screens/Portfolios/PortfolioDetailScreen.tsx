@@ -7,8 +7,8 @@ import {
   RefreshControl,
   ScrollView,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
+import { legacyAlert } from '../../utils/appDialog';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
@@ -140,7 +140,7 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
           embedded.onMissing();
           return;
         }
-        Alert.alert('שגיאה', 'התיק לא נמצא');
+        legacyAlert('שגיאה', 'התיק לא נמצא');
         navigation.goBack();
         return;
       }

@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Platform,
   StyleSheet,
@@ -45,7 +44,7 @@ import {
 } from '../../services/tweetsService';
 import type { CommunityPost, CommunityPostReply } from '../../types/tweets.types';
 import { HapticFeedback } from '../../utils/hapticFeedback';
-import { legacyAlert } from '../../utils/appDialog';
+import { legacyAlert, showAppConfirm } from '../../utils/appDialog';
 import UserAvatarButton from '../../components/profile/UserAvatarButton';
 import UserNameButton from '../../components/profile/UserNameButton';
 import FollowUserButton from '../../components/profile/FollowUserButton';
@@ -114,6 +113,10 @@ function PostRepliesSheetBody({
   const styles = useMemo(() => createStyles(tokens), [tokens]);
 
   const [replies, setReplies] = useState<CommunityPostReply[]>([]);
+  // עדכון מונה התגובות בפיד — מחוץ ל-updater של setReplies (שרץ בזמן רינדור →
+  // «Cannot update TweetsFeed while rendering PostRepliesSheetBody»)
+  const repliesRef = useRef<CommunityPostReply[]>([]);
+  repliesRef.current = replies;
   const [loading, setLoading] = useState(false);
   const [body, setBody] = useState('');
   const [busy, setBusy] = useState(false);
@@ -209,12 +212,13 @@ function PostRepliesSheetBody({
         postId: current.id,
         body: body.trim(),
       });
-      setReplies((prev) => {
-        if (prev.some((r) => r.id === reply.id)) return prev;
-        const next = [...prev, reply];
+      const prevReplies = repliesRef.current;
+      if (!prevReplies.some((r) => r.id === reply.id)) {
+        const next = [...prevReplies, reply];
+        repliesRef.current = next;
+        setReplies(next);
         notifyCount(current.id, next.length);
-        return next;
-      });
+      }
       setBody('');
       void HapticFeedback.success();
       requestAnimationFrame(() => {
@@ -232,28 +236,22 @@ function PostRepliesSheetBody({
     (reply: CommunityPostReply) => {
       const current = postRef.current;
       if (!current) return;
-      Alert.alert('מחיקת תגובה', 'למחוק את התגובה?', [
-        { text: 'ביטול', style: 'cancel' },
-        {
-          text: 'מחק',
-          style: 'destructive',
-          onPress: () => {
-            void (async () => {
-              try {
-                await deleteCommunityPostReply(reply.id);
-                setReplies((prev) => {
-                  const next = prev.filter((r) => r.id !== reply.id);
-                  notifyCount(current.id, next.length);
-                  return next;
-                });
-                void HapticFeedback.success();
-              } catch {
-                legacyAlert('שגיאה', 'לא ניתן למחוק את התגובה');
-              }
-            })();
-          },
-        },
-      ]);
+      void showAppConfirm('מחיקת תגובה', 'למחוק את התגובה?', {
+        confirmText: 'מחק',
+        destructive: true,
+      }).then(async (ok) => {
+        if (!ok) return;
+        try {
+          await deleteCommunityPostReply(reply.id);
+          const next = repliesRef.current.filter((r) => r.id !== reply.id);
+          repliesRef.current = next;
+          setReplies(next);
+          notifyCount(current.id, next.length);
+          void HapticFeedback.success();
+        } catch {
+          legacyAlert('שגיאה', 'לא ניתן למחוק את התגובה');
+        }
+      });
     },
     [notifyCount]
   );

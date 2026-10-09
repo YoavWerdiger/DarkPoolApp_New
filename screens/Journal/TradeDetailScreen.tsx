@@ -7,8 +7,8 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
+import { legacyAlert } from '../../utils/appDialog';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -235,7 +235,7 @@ export default function TradeDetailScreen() {
 
   const handleDelete = useCallback(() => {
     if (!trade) return;
-    Alert.alert('מחיקת טרייד', `האם למחוק את ${trade.symbol}?`, [
+    legacyAlert('מחיקת טרייד', `האם למחוק את ${trade.symbol}?`, [
       { text: 'ביטול', style: 'cancel' },
       {
         text: 'מחק',

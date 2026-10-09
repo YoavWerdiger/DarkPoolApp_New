@@ -4,9 +4,9 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
+import { legacyAlert } from '../../../utils/appDialog';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -99,7 +99,7 @@ export default function TransactionsTab({
 
   const handleDelete = useCallback(
     (tx: PortfolioTransaction) => {
-      Alert.alert(
+      legacyAlert(
         'מחיקת טרנזקציה',
         'הפעולה תעדכן את הסיכומים בתיק. האם להמשיך?',
         [
@@ -112,7 +112,7 @@ export default function TransactionsTab({
                 await deleteTransaction(tx.id);
                 await load();
               } catch {
-                Alert.alert('שגיאה', 'מחיקה נכשלה');
+                legacyAlert('שגיאה', 'מחיקה נכשלה');
               }
             },
           },

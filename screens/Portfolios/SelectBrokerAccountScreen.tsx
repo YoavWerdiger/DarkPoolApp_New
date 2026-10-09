@@ -4,9 +4,9 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
+import { legacyAlert } from '../../utils/appDialog';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
@@ -55,7 +55,7 @@ export default function SelectBrokerAccountScreen() {
         setAccounts(list);
         if (list.length === 1) setSelectedId(list[0].id);
       } catch (e) {
-        Alert.alert('שגיאה', (e as Error).message ?? 'לא הצלחנו לטעון את החשבונות');
+        legacyAlert('שגיאה', (e as Error).message ?? 'לא הצלחנו לטעון את החשבונות');
       } finally {
         if (alive) setLoading(false);
       }
@@ -74,14 +74,14 @@ export default function SelectBrokerAccountScreen() {
           triggerSync: true,
         });
         if (res.syncOk === false) {
-          Alert.alert(
+          legacyAlert(
             'התיק נוצר',
             'הסנכרון המלא מול Colmex לא הושלם. פתח את התיק ומשוך לרענון, או חבר מחדש אם הנתונים חסרים.'
           );
         }
         navigation.navigate('PortfoliosHub', { selectPortfolioId: res.portfolioId });
       } catch (e) {
-        Alert.alert('שגיאה', (e as Error).message ?? 'לא הצלחנו ליצור את התיק');
+        legacyAlert('שגיאה', (e as Error).message ?? 'לא הצלחנו ליצור את התיק');
       } finally {
         setLinkingId(null);
       }

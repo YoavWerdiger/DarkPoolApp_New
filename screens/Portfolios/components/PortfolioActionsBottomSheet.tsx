@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TextInput, Alert, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Dimensions } from 'react-native';
+import { legacyAlert } from '../../../utils/appDialog';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FileText, Gift, Pencil, RefreshCw, RotateCcw, Trash2, Wallet } from 'lucide-react-native';
@@ -148,7 +149,7 @@ function PortfolioActionsSheetBody({
   const handleReset = useCallback(() => {
     void HapticFeedback.warning();
     const isColmex = portfolio.source === 'colmex_pro';
-    Alert.alert(
+    legacyAlert(
       'אפס תיק',
       isColmex
         ? 'פעולה זו תמחק את כל הטריידים, הטרנזקציות, ה-snapshots והפוזיציות המקומיות מהברוקר, ותאפס את יתרת המזומן. סנכרון הבא מ-Colmex ימלא מחדש מהחשבון. לא ניתן לבטל.'
@@ -167,7 +168,7 @@ function PortfolioActionsSheetBody({
               onRequestClose();
             } catch (err) {
               console.error('reset portfolio:', err);
-              Alert.alert('שגיאה', 'האיפוס נכשל. נסה שוב.');
+              legacyAlert('שגיאה', 'האיפוס נכשל. נסה שוב.');
             } finally {
               setResetting(false);
             }
@@ -190,7 +191,7 @@ function PortfolioActionsSheetBody({
       );
     } catch (e) {
       console.error('archive portfolio:', e);
-      Alert.alert('שגיאה', 'לא הצלחנו למחוק את התיק. נסה שוב.');
+      legacyAlert('שגיאה', 'לא הצלחנו למחוק את התיק. נסה שוב.');
     } finally {
       setDeleting(false);
     }
@@ -275,7 +276,7 @@ function PortfolioActionsSheetBody({
   const onSaveName = useCallback(async () => {
     const next = nameDraft.trim().slice(0, 128);
     if (!next) {
-      Alert.alert('שם לא תקין', 'יש להזין שם לתיק.');
+      legacyAlert('שם לא תקין', 'יש להזין שם לתיק.');
       return;
     }
     if (next === (portfolio.name ?? '')) {
@@ -289,7 +290,7 @@ function PortfolioActionsSheetBody({
       onPortfolioUpdated?.();
     } catch (e) {
       console.error('rename portfolio:', e);
-      Alert.alert('שגיאה', 'לא הצלחנו לעדכן את שם התיק.');
+      legacyAlert('שגיאה', 'לא הצלחנו לעדכן את שם התיק.');
     } finally {
       setRenameBusy(false);
     }

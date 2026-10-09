@@ -5,7 +5,8 @@
 // ============================================
 
 import React, { useState, useRef, useMemo, useEffect, useCallback, memo } from 'react';
-import { View, TextInput, TouchableOpacity, Pressable, Text, StyleSheet, Alert, Animated, Easing, Platform, Keyboard } from 'react-native';
+import { View, TextInput, TouchableOpacity, Pressable, Text, StyleSheet, Animated, Easing, Platform, Keyboard } from 'react-native';
+import { legacyAlert } from '../../utils/appDialog';
 import { chatInputBottomPadding, CHAT_COMPOSER_NATIVE_ID } from './chatInputLayout';
 import { useDesignTokens } from '../ui/DesignTokens';
 import UICard from '../ui/UICard';
@@ -575,7 +576,7 @@ function ChatInputImpl({
         mentions: mentionsPayload,
       }).catch((e: any) => {
         updateOptimisticMessage(tempId, { is_sending: false, send_failed: true } as any);
-        Alert.alert('שגיאה', e?.message || 'לא הצלחנו לשלוח');
+        legacyAlert('שגיאה', e?.message || 'לא הצלחנו לשלוח');
       });
       sendInFlightRef.current = false;
       return;
@@ -605,7 +606,7 @@ function ChatInputImpl({
         mentions: mentionsPayload,
       }).catch((error) => {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        Alert.alert('שגיאה', errorMessage || 'לא הצלחנו לשלוח את ההודעה');
+        legacyAlert('שגיאה', errorMessage || 'לא הצלחנו לשלוח את ההודעה');
         // Restore draft on send error so the user can edit and retry. This
         // also re-persists it via useChatDraft's debounce.
         setText(textToSend);
@@ -617,7 +618,7 @@ function ChatInputImpl({
     } catch (error) {
       sendInFlightRef.current = false;
       const errorMessage = error instanceof Error ? error.message : String(error);
-      Alert.alert('שגיאה', errorMessage || 'לא הצלחנו לשלוח את ההודעה');
+      legacyAlert('שגיאה', errorMessage || 'לא הצלחנו לשלוח את ההודעה');
       setText(textToSend);
     }
   };
@@ -628,7 +629,7 @@ function ChatInputImpl({
 
   const handleSendMedia = async (mediaFiles: MediaFile[], captions: Record<string, string>) => {
     if (mediaFiles.length === 0 || !user) {
-      Alert.alert('שגיאה', 'לא נמצא קובץ מדיה');
+      legacyAlert('שגיאה', 'לא נמצא קובץ מדיה');
       return;
     }
 
@@ -642,7 +643,7 @@ function ChatInputImpl({
     for (const file of mediaFiles) {
       const limit = MAX_SIZE[file.type] ?? 50 * 1024 * 1024;
       if (file.size && file.size > limit) {
-        Alert.alert('שגיאה', `הקובץ ${file.name || ''} גדול מדי (מקסימום ${Math.round(limit / 1024 / 1024)}MB)`);
+        legacyAlert('שגיאה', `הקובץ ${file.name || ''} גדול מדי (מקסימום ${Math.round(limit / 1024 / 1024)}MB)`);
         return;
       }
     }
@@ -1052,7 +1053,7 @@ function ChatInputImpl({
       if (currentStatus !== 'granted') {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
-          Alert.alert('הרשאה נדרשת', 'אנא אפשר גישה לגלריה');
+          legacyAlert('הרשאה נדרשת', 'אנא אפשר גישה לגלריה');
           return;
         }
       }
@@ -1068,7 +1069,7 @@ function ChatInputImpl({
           exif: false,
         });
       } catch (launchError) {
-        Alert.alert('שגיאה', 'לא הצלחנו לפתוח את הגלריה');
+        legacyAlert('שגיאה', 'לא הצלחנו לפתוח את הגלריה');
         return;
       }
 
@@ -1090,7 +1091,7 @@ function ChatInputImpl({
         attachLocalImageThumbs(mediaFiles, setSelectedMedia);
       }
     } catch (error) {
-      Alert.alert('שגיאה', 'לא הצלחנו לבחור תמונה');
+      legacyAlert('שגיאה', 'לא הצלחנו לבחור תמונה');
     }
   };
 
@@ -1191,7 +1192,7 @@ function ChatInputImpl({
         })();
       }
     } catch (error) {
-      Alert.alert('שגיאה', 'לא הצלחנו לבחור מסמך');
+      legacyAlert('שגיאה', 'לא הצלחנו לבחור מסמך');
     }
   };
 
@@ -1292,7 +1293,7 @@ function ChatInputImpl({
 
   const startRecording = async (opts?: { openInLockedMode?: boolean }) => {
     if (!isExpoAvAvailable) {
-      Alert.alert('לא זמין ב-Expo Go', EXPO_AV_UNAVAILABLE_MESSAGE);
+      legacyAlert('לא זמין ב-Expo Go', EXPO_AV_UNAVAILABLE_MESSAGE);
       return;
     }
 
@@ -1331,7 +1332,7 @@ function ChatInputImpl({
       const { status } = await Audio.requestPermissionsAsync();
 
       if (status !== 'granted') {
-        Alert.alert('הרשאה נדרשת', 'אנא אפשר גישה למיקרופון');
+        legacyAlert('הרשאה נדרשת', 'אנא אפשר גישה למיקרופון');
         isStartingRecordingRef.current = false;
         return;
       }
@@ -1388,7 +1389,7 @@ function ChatInputImpl({
 
       isStartingRecordingRef.current = false;
     } catch (error) {
-      Alert.alert('שגיאה', 'לא הצלחנו להתחיל הקלטה');
+      legacyAlert('שגיאה', 'לא הצלחנו להתחיל הקלטה');
       clearRecordingClock();
       isStartingRecordingRef.current = false;
 
@@ -1492,7 +1493,7 @@ function ChatInputImpl({
       recordingRef.current.setProgressUpdateInterval(32);
     } catch (error) {
       logger.error('ChatInput', 'Recording error', error);
-      Alert.alert('שגיאה', 'לא הצלחנו להמשיך את ההקלטה');
+      legacyAlert('שגיאה', 'לא הצלחנו להמשיך את ההקלטה');
     }
   };
 
@@ -1735,7 +1736,7 @@ function ChatInputImpl({
     } catch (error) {
       releaseVoicePlayback(PREVIEW_PLAYER_ID);
       logger.error('ChatInput', 'Playback error', error);
-      Alert.alert('שגיאה', 'לא ניתן להפעיל את ההקלטה');
+      legacyAlert('שגיאה', 'לא ניתן להפעיל את ההקלטה');
     }
   };
 
@@ -2152,7 +2153,7 @@ function ChatInputImpl({
       if (currentStatus !== 'granted') {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
-          Alert.alert('הרשאה נדרשת', 'אנא אפשר גישה לגלריה');
+          legacyAlert('הרשאה נדרשת', 'אנא אפשר גישה לגלריה');
           return;
         }
       }
@@ -2167,7 +2168,7 @@ function ChatInputImpl({
           videoQuality: 1,
         });
       } catch (launchError) {
-        Alert.alert('שגיאה', 'לא הצלחנו לפתוח את הגלריה');
+        legacyAlert('שגיאה', 'לא הצלחנו לפתוח את הגלריה');
         return;
       }
 
@@ -2192,7 +2193,7 @@ function ChatInputImpl({
         attachLocalVideoThumbs(mediaFiles, setSelectedMedia);
       }
     } catch (error) {
-      Alert.alert('שגיאה', 'לא הצלחנו לבחור סרטון');
+      legacyAlert('שגיאה', 'לא הצלחנו לבחור סרטון');
     }
   };
 

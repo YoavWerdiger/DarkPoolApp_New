@@ -6,7 +6,6 @@ import React, {
   useState,
 } from 'react';
 import {
-  Alert,
   FlatList,
   Pressable,
   RefreshControl,
@@ -17,7 +16,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { legacyAlert } from '../../utils/appDialog';
+import { legacyAlert, showAppConfirm } from '../../utils/appDialog';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
 import { APP_TYPE } from '../../components/ui/appType';
@@ -680,24 +679,19 @@ export default function TweetsFeed({ handleRef }: TweetsFeedProps) {
   );
 
   const handleDelete = useCallback((post: CommunityPost) => {
-    Alert.alert('מחיקת ציוץ', 'למחוק את הציוץ לצמיתות?', [
-      { text: 'ביטול', style: 'cancel' },
-      {
-        text: 'מחק',
-        style: 'destructive',
-        onPress: () => {
-          void (async () => {
-            try {
-              await deleteCommunityPost(post.id);
-              setPosts((prev) => prev.filter((p) => p.id !== post.id));
-              void HapticFeedback.success();
-            } catch {
-              legacyAlert('שגיאה', 'לא ניתן למחוק את הציוץ');
-            }
-          })();
-        },
-      },
-    ]);
+    void showAppConfirm('מחיקת ציוץ', 'למחוק את הציוץ לצמיתות?', {
+      confirmText: 'מחק',
+      destructive: true,
+    }).then(async (ok) => {
+      if (!ok) return;
+      try {
+        await deleteCommunityPost(post.id);
+        setPosts((prev) => prev.filter((p) => p.id !== post.id));
+        void HapticFeedback.success();
+      } catch {
+        legacyAlert('שגיאה', 'לא ניתן למחוק את הציוץ');
+      }
+    });
   }, []);
 
   if (loading && posts.length === 0) {

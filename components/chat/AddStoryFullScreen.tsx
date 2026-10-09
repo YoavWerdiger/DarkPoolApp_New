@@ -1366,11 +1366,12 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
     const cam = cameraRef.current;
     if (!cam) return;
     try {
-      // iOS: בלי החלפת עדשה / גודל תמונה — כל שינוי מגדיר מחדש את הסשן (קפיאה / כשל צילום).
-      // כמו מצלמת הצ'אט שעובדת יציב
-      // iOS: גודל תמונה כפוי לצד mode="video" (1080p) מפיל את הצילום —
-      // «Image could not be captured». כמו מצלמת הצ'אט: רק באנדרואיד
-      if (Platform.OS !== 'ios' && typeof cam.getAvailablePictureSizesAsync === 'function') {
+      if (Platform.OS === 'ios' && typeof cam.getAvailableLensesAsync === 'function') {
+        const lenses = await cam.getAvailableLensesAsync();
+        const wide = pickWideAngleLens(lenses);
+        if (wide) setSelectedLens(wide);
+      }
+      if (typeof cam.getAvailablePictureSizesAsync === 'function') {
         const sizes = await cam.getAvailablePictureSizesAsync();
         const best = pickBestPictureSize(sizes);
         if (best) setPictureSize((prev) => (prev === best ? prev : best));
@@ -1751,14 +1752,10 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
                   {...(pictureSize ? { pictureSize } : {})}
                   {...(selectedLens ? { selectedLens } : {})}
                   onCameraReady={configureCamera}
-                  onAvailableLensesChanged={
-                    Platform.OS === 'ios'
-                      ? undefined
-                      : ({ lenses }) => {
-                          const wide = pickWideAngleLens(lenses);
-                          if (wide) setSelectedLens((prev) => (prev === wide ? prev : wide));
-                        }
-                  }
+                  onAvailableLensesChanged={({ lenses }) => {
+                    const wide = pickWideAngleLens(lenses);
+                    if (wide) setSelectedLens((prev) => (prev === wide ? prev : wide));
+                  }}
                 />
               ) : (
                 <View style={[StyleSheet.absoluteFill, { backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' }]}>

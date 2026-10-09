@@ -2,7 +2,7 @@ import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { logger } from '../../utils/logger';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Modal, Pressable, Image, Dimensions, StatusBar, TextInput, KeyboardAvoidingView, Platform, ScrollView, FlatList, Animated, Keyboard } from 'react-native';
-import { cameraPreviewFrame } from '../../lib/cameraFrame';
+import { stableCameraPreviewFrame } from '../../lib/cameraFrame';
 import { InAppGalleryPanel, type InAppGalleryPick } from './InAppGalleryPanel';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { Image as ExpoImage } from 'expo-image';
@@ -998,7 +998,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
 
   const [mode, setMode] = useState<ScreenMode>('camera');
   const [phase, setPhase] = useState<ScreenPhase>('capture');
-  const cameraFrame = cameraPreviewFrame(SW, SH, insets);
+  const cameraFrame = stableCameraPreviewFrame();
   const [facing, setFacing] = useState<CameraType>('back');
   const [flash, setFlash] = useState(false);
   const [isRecording, setIsRecording] = useState(false);

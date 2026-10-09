@@ -13,7 +13,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { cameraPreviewFrame } from '../../lib/cameraFrame';
+import { stableCameraPreviewFrame } from '../../lib/cameraFrame';
 import { InAppGalleryPanel, type InAppGalleryPick } from './InAppGalleryPanel';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
@@ -286,7 +286,7 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
   if (!visible) return null;
 
   const granted = permission?.granted === true;
-  const frame = cameraPreviewFrame(SCREEN_W, Dimensions.get('window').height, insets);
+  const frame = stableCameraPreviewFrame();
 
   return (
     <Modal

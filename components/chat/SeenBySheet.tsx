@@ -117,6 +117,7 @@ const SeenBySheet: React.FC<SeenBySheetProps> = memo(({
   const renderUser = ({ item }: { item: SeenByUser }) => (
     <ChatSheetUserRow
       name={item.full_name || 'משתמש'}
+      userId={item.id}
       subtitle="ראה את ההודעה"
       avatarUri={item.profile_picture}
       trailing={

@@ -44,6 +44,7 @@ import FollowUserButton from '../../components/profile/FollowUserButton';
 import UserAvatarButton from '../../components/profile/UserAvatarButton';
 import UserNameButton from '../../components/profile/UserNameButton';
 import CommunityPostImage from './CommunityPostImage';
+import { UserBadges, badgeSizeForLineHeight } from '../../components/ui/badges/UserBadges';
 
 const PAGE_SIZE = 30;
 
@@ -149,6 +150,10 @@ function PostCard({
                     flexShrink: 1,
                   }}
                   numberOfLines={1}
+                />
+                <UserBadges
+                  userId={post.author.id}
+                  size={badgeSizeForLineHeight(APP_TYPE.cardTitle.lineHeight)}
                 />
                 <FollowUserButton
                   userId={post.author.id}

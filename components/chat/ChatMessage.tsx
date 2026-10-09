@@ -58,6 +58,7 @@ import {
 } from '../../utils/voicePlaybackController';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { APP_TYPE, appPhysicalRightText } from '../ui/appType';
+import { UserNameRow, badgeSizeForLineHeight } from '../ui/badges/UserBadges';
 import { isUsableChatDisplayName } from '../../lib/chatMessageIdentity';
 
 type ResolvedMessageMedia = {
@@ -832,17 +833,25 @@ function ChatMessage({
               accessibilityLabel={`פרופיל של ${message.sender?.display_name}`}
               style={styles.senderNameTouch}
             >
+            <UserNameRow
+              userId={message.sender_id}
+              size={badgeSizeForLineHeight(APP_TYPE.cardSubtitle.lineHeight)}
+              style={
+                (message.message_type === MessageType.IMAGE ||
+                 message.message_type === MessageType.VIDEO ||
+                 message.message_type === MessageType.MEDIA_GROUP)
+                  ? styles.senderNameRowMedia
+                  : styles.senderNameRow
+              }
+            >
             <Text numberOfLines={1} style={[
               styles.senderNameInside,
+              styles.senderNameInRow,
               { color: senderColor },
-              // Media bubbles have reduced padding — compensate so name isn't cramped
-              (message.message_type === MessageType.IMAGE ||
-               message.message_type === MessageType.VIDEO ||
-               message.message_type === MessageType.MEDIA_GROUP)
-                && { paddingHorizontal: 8, paddingTop: 4, paddingBottom: 6 },
             ]}>
               {message.sender!.display_name}
             </Text>
+            </UserNameRow>
             </TouchableOpacity>
           )}
 
@@ -2404,6 +2413,20 @@ const createStyles = (tokens: any) => {
   // צמוד לימין, עם נשימה קטנה מעל הטקסט
   senderNameTouch: {
     alignSelf: 'stretch',
+  },
+  // שורת שם + תגים; ריפוד המדיה עבר מהטקסט לשורה
+  senderNameRow: {
+    marginBottom: 3,
+  },
+  senderNameRowMedia: {
+    paddingHorizontal: 8,
+    paddingTop: 4,
+    paddingBottom: 6,
+    marginBottom: 3,
+  },
+  senderNameInRow: {
+    marginBottom: 0,
+    flexShrink: 1,
   },
   // שם השולח קטן מהטקסט (13 מול 15) — כותרת קטנה בצבע, לא מתחרה בהודעה; lineHeight מלא
   senderNameInside: {

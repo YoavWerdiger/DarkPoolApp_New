@@ -9,6 +9,7 @@ import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
 import { PollService, PollOption } from '../../services/pollService';
 import { logger } from '../../utils/logger';
 import { APP_TYPE, appPhysicalRightText, appSectionTitleStyle } from '../ui/appType';
+import { UserNameRow } from '../ui/badges/UserBadges';
 
 interface PollVotesBottomSheetProps {
   visible: boolean;
@@ -147,9 +148,11 @@ export default function PollVotesBottomSheet({
                                 </Text>
                               </View>
                             )}
-                            <Text style={styles.voterName} numberOfLines={1}>
-                              {voter.display_name || 'משתמש'}
-                            </Text>
+                            <UserNameRow userId={voter.id} style={styles.voterNameRow}>
+                              <Text style={styles.voterName} numberOfLines={1}>
+                                {voter.display_name || 'משתמש'}
+                              </Text>
+                            </UserNameRow>
                           </View>
                         ))}
                       </View>
@@ -304,8 +307,11 @@ const createStyles = (tokens: any) => {
       fontWeight: tokens.typography.fontWeight.bold,
       color: tokens.colors.text.inverse,
     },
-    voterName: {
+    voterNameRow: {
       flex: 1,
+    },
+    voterName: {
+      flexShrink: 1,
       fontSize: 15,
       fontWeight: '600',
       color: tokens.colors.text.primary,

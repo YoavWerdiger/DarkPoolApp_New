@@ -49,6 +49,7 @@ import {
 } from '../../utils/userPresence';
 import { isolateNumericRuns } from '../DarkPool/utils/bidi';
 import { useGroupNotificationMute } from '../../hooks/useGroupNotificationMute';
+import { UserBadges, badgeSizeForLineHeight } from '../../components/ui/badges/UserBadges';
 import {
   settingsHeroType,
   settingsGroupLabelStyle,
@@ -435,6 +436,11 @@ export default function ChatGroupInfoScreen() {
                 <Text style={styles.adminBadgeText}>אדמין</Text>
               </View>
             ) : null}
+            <UserBadges
+              userId={member.user_id}
+              size={badgeSizeForLineHeight(20)}
+              style={styles.memberBadges}
+            />
             <Text style={styles.memberName} numberOfLines={1}>
               {member.user?.display_name || 'משתמש'}
             </Text>
@@ -922,6 +928,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     direction: 'ltr',
     alignItems: 'center',
     justifyContent: 'flex-end',
+  },
+  memberBadges: {
+    marginRight: 4,
   },
   memberName: {
     ...settingsHebrewText,

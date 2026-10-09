@@ -54,6 +54,7 @@ import {
 } from '../../services/storiesService';
 import { useAuth } from '../../context/AuthContext';
 import * as Haptics from 'expo-haptics';
+import { UserBadges, UserNameRow, badgeSizeForLineHeight } from '../ui/badges/UserBadges';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const STORY_DURATION = 10000;
@@ -361,7 +362,9 @@ function ViewersSheet({
                   <View key={`${row.viewer_id || row.reactor_id}-${idx}`} style={sheetStyles.row}>
                     {emoji ? <Text style={sheetStyles.rowEmoji}>{emoji}</Text> : null}
                     <View style={{ flex: 1 }}>
-                      <Text style={sheetStyles.rowName} numberOfLines={1}>{displayName(row.user)}</Text>
+                      <UserNameRow userId={row.viewer_id || row.reactor_id || row.user?.id}>
+                        <Text style={[sheetStyles.rowName, { flexShrink: 1 }]} numberOfLines={1}>{displayName(row.user)}</Text>
+                      </UserNameRow>
                     </View>
                     {row.user.profile_picture ? (
                       <Image source={{ uri: row.user.profile_picture }} style={sheetStyles.avatar} />
@@ -1648,6 +1651,12 @@ export default function StoryViewer({
             <Text style={styles.headerTime}>
               {currentStory?.created_at ? formatTime(currentStory.created_at) : ''}
             </Text>
+            <UserBadges
+              userId={currentUser?.user_id}
+              interactive={false}
+              size={badgeSizeForLineHeight(20)}
+              style={styles.headerBadges}
+            />
             <Text style={styles.headerName} numberOfLines={1}>{displayName}</Text>
             {avatar ? (
               <Image source={{ uri: avatar }} style={styles.headerAvatar} />
@@ -2181,6 +2190,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.15)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  headerBadges: {
+    marginRight: 6,
   },
   headerName: {
     color: '#fff',

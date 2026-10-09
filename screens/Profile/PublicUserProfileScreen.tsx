@@ -39,6 +39,7 @@ import {
 import type { CommunityPost } from '../../types/tweets.types';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { legacyAlert } from '../../utils/appDialog';
+import { UserNameRow, badgeSizeForLineHeight } from '../../components/ui/badges/UserBadges';
 
 type RouteParams = {
   PublicUserProfile: { userId: string };
@@ -169,9 +170,11 @@ export default function PublicUserProfileScreen() {
           )}
         </View>
         <View style={styles.heroText}>
-          <Text style={[styles.displayName, { color: tokens.colors.text.primary }]}>
-            {profile.displayName}
-          </Text>
+          <UserNameRow userId={userId} size={badgeSizeForLineHeight(APP_TYPE.cardTitle.lineHeight)} style={{ alignSelf: 'stretch' }}>
+            <Text style={[styles.displayName, styles.displayNameInRow, { color: tokens.colors.text.primary }]}>
+              {profile.displayName}
+            </Text>
+          </UserNameRow>
           <Text style={[styles.memberSince, { color: tokens.colors.text.tertiary }]}>
             {formatMemberSince(profile.memberSince)}
           </Text>
@@ -342,6 +345,10 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       ...settingsHebrewText,
       ...settingsRowType,
       width: '100%',
+    },
+    displayNameInRow: {
+      width: undefined,
+      flexShrink: 1,
     },
     memberSince: {
       ...settingsCaptionType,

@@ -269,6 +269,7 @@ export default function UserProfileScreen({ navigation }: any) {
           <View style={{ paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal }}>
             <ProfileIdentityCard
               name={displayName}
+              userId={user?.id}
               email={email}
               avatarUri={profileData?.profile_picture}
               onPress={() => {

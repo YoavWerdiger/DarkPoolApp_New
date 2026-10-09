@@ -45,6 +45,7 @@ import {
   appSectionTitleStyle,
   appSheetButtonLabelStyle,
 } from '../ui/appType';
+import { UserNameRow, badgeSizeForLineHeight } from '../ui/badges/UserBadges';
 
 /** ירושה מ־sheetGlass — שיטי צ׳אט לא דורסים את ההפרדה הגלובלית. */
 export const CHAT_SHEET_BACKDROP_OPACITY = SHEET_BACKDROP_OPACITY;
@@ -449,12 +450,15 @@ export function ChatSheetLoading({ label = 'טוען...' }: { label?: string }) 
 
 export function ChatSheetUserRow({
   name,
+  userId,
   subtitle,
   meta,
   avatarUri,
   trailing,
 }: {
   name: string;
+  /** מציג תגי משתמש (וי / דרגה) ליד השם */
+  userId?: string | null;
   subtitle?: string;
   meta?: string;
   avatarUri?: string | null;
@@ -473,9 +477,21 @@ export function ChatSheetUserRow({
         </View>
       )}
       <View style={sheet.userInfo}>
-        <Text style={sheet.userName} numberOfLines={1}>
-          {name}
-        </Text>
+        {userId ? (
+          <UserNameRow
+            userId={userId}
+            size={badgeSizeForLineHeight(APP_TYPE.body.lineHeight)}
+            style={{ maxWidth: '100%' }}
+          >
+            <Text style={[sheet.userName, { flexShrink: 1 }]} numberOfLines={1}>
+              {name}
+            </Text>
+          </UserNameRow>
+        ) : (
+          <Text style={sheet.userName} numberOfLines={1}>
+            {name}
+          </Text>
+        )}
         {subtitle ? (
           <Text style={sheet.userSubtitle} numberOfLines={1}>
             {subtitle}

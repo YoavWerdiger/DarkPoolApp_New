@@ -11,6 +11,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { AppSwitch } from '../ui/AppSwitch';
+import { UserNameRow, badgeSizeForLineHeight } from '../ui/badges/UserBadges';
 import Animated, {
   Easing,
   interpolateColor,
@@ -25,7 +26,7 @@ import UICard from '../ui/UICard';
 import { getAppVersionLabel } from '../../utils/appMeta';
 import { isolateNumericRuns } from '../../screens/DarkPool/utils/bidi';
 import { APP_LAYOUT, UI_CARD_RADIUS } from '../ui/appLayout';
-import { appCardTitleStyle, appCaptionStyle } from '../ui/appType';
+import { APP_TYPE, appCardTitleStyle, appCaptionStyle } from '../ui/appType';
 import {
   settingsHebrewText,
   settingsGroupLabelStyle,
@@ -236,6 +237,8 @@ export function ProfileMenuRow({
 
 type ProfileIdentityCardProps = {
   name: string;
+  /** תגי משתמש ליד השם */
+  userId?: string | null;
   email: string;
   avatarUri?: string | null;
   onPress: () => void;
@@ -244,6 +247,7 @@ type ProfileIdentityCardProps = {
 /** כרטיס זהות בראש הפרופיל — אותה שורת תפריט (שברון, כותרת+משנה, אווטאר). */
 export function ProfileIdentityCard({
   name,
+  userId,
   email,
   avatarUri,
   onPress,
@@ -262,9 +266,11 @@ export function ProfileIdentityCard({
         <View style={s.menuRow}>
           <ChevronLeft size={20} color={tokens.colors.text.tertiary} strokeWidth={2} />
           <View style={s.menuTextCol}>
-            <Text style={s.title} numberOfLines={1}>
-              {name}
-            </Text>
+            <UserNameRow userId={userId} size={badgeSizeForLineHeight(APP_TYPE.cardTitle.lineHeight)}>
+              <Text style={[s.title, { flexShrink: 1 }]} numberOfLines={1}>
+                {name}
+              </Text>
+            </UserNameRow>
             {email ? (
               <Text style={s.email} numberOfLines={1}>
                 {email}

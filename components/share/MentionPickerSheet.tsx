@@ -21,6 +21,7 @@ import { searchUsers } from '../../services/chat/chatSearchService';
 import { supabase } from '../../services/supabase';
 import type { CommunityMention } from '../../types/tweets.types';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { UserNameRow, badgeSizeForLineHeight } from '../ui/badges/UserBadges';
 
 type Props = {
   visible: boolean;
@@ -233,12 +234,18 @@ export default function MentionPickerSheet({
                     </View>
                   )}
                   <View style={styles.rowText}>
-                    <Text
-                      style={[styles.rowTitle, { color: tokens.colors.text.primary }]}
-                      numberOfLines={1}
+                    <UserNameRow
+                      userId={item.id}
+                      interactive={false}
+                      size={badgeSizeForLineHeight(APP_TYPE.cardTitle.lineHeight)}
                     >
-                      {name}
-                    </Text>
+                      <Text
+                        style={[styles.rowTitle, { color: tokens.colors.text.primary, flexShrink: 1 }]}
+                        numberOfLines={1}
+                      >
+                        {name}
+                      </Text>
+                    </UserNameRow>
                     <Text
                       style={[styles.rowSub, { color: tokens.colors.text.tertiary }]}
                       numberOfLines={1}

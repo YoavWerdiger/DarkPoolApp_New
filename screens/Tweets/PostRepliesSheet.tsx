@@ -30,6 +30,7 @@ import { repliesSheetKeyboardShrink } from './repliesSheetKeyboard';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { APP_LAYOUT } from '../../components/ui/appLayout';
 import { APP_TYPE } from '../../components/ui/appType';
+import { UserBadges, badgeSizeForLineHeight } from '../../components/ui/badges/UserBadges';
 import UICard from '../../components/ui/UICard';
 import BottomSheet, {
   useBottomSheetClose,
@@ -365,6 +366,10 @@ function PostRepliesSheetBody({
                       { color: tokens.colors.text.primary },
                     ]}
                     numberOfLines={1}
+                  />
+                  <UserBadges
+                    userId={item.author.id}
+                    size={badgeSizeForLineHeight(APP_TYPE.cardTitle.lineHeight)}
                   />
                   {isMine ? null : <FollowUserButton userId={item.author.id} />}
                   <View style={styles.replyMetaSpacer} />

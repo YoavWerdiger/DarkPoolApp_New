@@ -1,7 +1,5 @@
 import React, { useCallback } from 'react';
 import { Pressable, Text, type TextStyle } from 'react-native';
-import { useAuth } from '../../context/AuthContext';
-import { openUserProfile } from '../../lib/openUserProfile';
 
 type Props = {
   userId?: string;
@@ -20,19 +18,13 @@ export default function UserNameButton({
   style,
   numberOfLines,
 }: Props) {
-  const { user } = useAuth();
 
+  // בלי פרופיל ציבורי — לחיץ רק כשהקורא מעביר onPress
   const handlePress = useCallback(() => {
-    if (onPress) {
-      onPress();
-      return;
-    }
-    if (userId) {
-      openUserProfile(userId, { currentUserId: user?.id });
-    }
-  }, [onPress, user?.id, userId]);
+    onPress?.();
+  }, [onPress]);
 
-  const canPress = !disabled && (!!onPress || !!userId);
+  const canPress = !disabled && !!onPress;
   if (!canPress) {
     return (
       <Text style={style} numberOfLines={numberOfLines}>

@@ -39,7 +39,6 @@ import { queryClient } from '../../lib/queryClient';
 import { appQueryKeys } from '../../lib/appQueryKeys';
 import PostRepliesSheet from './PostRepliesSheet';
 import EntityEmbedCard from '../../components/share/EntityEmbedCard';
-import { openUserProfile } from '../../lib/openUserProfile';
 import FollowUserButton from '../../components/profile/FollowUserButton';
 import UserAvatarButton from '../../components/profile/UserAvatarButton';
 import UserNameButton from '../../components/profile/UserNameButton';
@@ -220,11 +219,8 @@ function PostCard({
               }}
             >
               {post.mentions.map((m) => (
-                <TouchableOpacity
+                <View
                   key={m.userId}
-                  onPress={() => {
-                    openUserProfile(m.userId, { currentUserId });
-                  }}
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
@@ -249,7 +245,7 @@ function PostCard({
                   >
                     @{m.displayName.replace(/\s+/g, '')}
                   </Text>
-                </TouchableOpacity>
+                </View>
               ))}
             </View>
           ) : null}

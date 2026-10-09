@@ -2,7 +2,6 @@ import React, { useMemo } from 'react';
 import { View } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import UserProfileScreen from '../screens/Profile/UserProfileScreen';
-import PublicUserProfileScreen from '../screens/Profile/PublicUserProfileScreen';
 import EditProfileScreen from '../screens/Profile/EditProfileScreen';
 import NotificationsScreen from '../screens/Profile/NotificationsScreen';
 import SettingsScreen from '../screens/Profile/SettingsScreen';
@@ -32,7 +31,6 @@ function withProfileChatShell<P extends object>(ScreenComponent: React.Component
 }
 
 const ProfileMainScreen = withProfileChatShell(UserProfileScreen);
-const PublicUserProfileWithShell = withProfileChatShell(PublicUserProfileScreen);
 const EditProfileWithShell = withProfileChatShell(EditProfileScreen);
 const NotificationsWithShell = withProfileChatShell(NotificationsScreen);
 const SettingsWithShell = withProfileChatShell(SettingsScreen);
@@ -59,7 +57,6 @@ export default function ProfileStack() {
       screenListeners={chatStackScreenListeners}
     >
       <Stack.Screen name="ProfileMain" component={ProfileMainScreen} />
-      <Stack.Screen name="PublicUserProfile" component={PublicUserProfileWithShell} />
       <Stack.Screen name="EditProfile" component={EditProfileWithShell} />
       <Stack.Screen name="Notifications" component={NotificationsWithShell} />
       <Stack.Screen name="Settings" component={SettingsWithShell} />

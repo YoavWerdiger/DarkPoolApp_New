@@ -47,7 +47,6 @@ import PollMessage from './PollMessage';
 import EntityEmbedCard from '../share/EntityEmbedCard';
 import { parseEntityAttachmentFromContent } from '../../types/shareableEntity';
 import type { CommunityMention } from '../../types/tweets.types';
-import { openUserProfile } from '../../lib/openUserProfile';
 import LinkPreview, { extractFirstUrl } from './LinkPreview';
 import MessageReactions, { ReactionsReveal } from './MessageReactions';
 import { useAuth } from '../../context/AuthContext';
@@ -82,10 +81,6 @@ function resolveMentionUserId(
     (m) => normalizeMentionTag(m.displayName) === needle
   );
   return hit?.userId ?? null;
-}
-
-function openMentionProfile(userId: string, currentUserId?: string | null) {
-  openUserProfile(userId, { currentUserId });
 }
 
 // פונקציה לרנדור טקסט עם תיוגים (@mentions) וקישורים
@@ -666,19 +661,10 @@ function ChatMessage({
 
   const timeText = format(new Date(message.created_at), 'HH:mm');
 
-  const handleProfileOpen = useCallback(() => {
-    if (!isMe && message.sender_id) {
-      openUserProfile(message.sender_id, { currentUserId: user?.id });
-    }
-  }, [isMe, message.sender_id, user?.id]);
-
+  // בלי פרופיל ציבורי — לחיצה על האווטאר רק אם הקורא העביר פעולה
   const handleAvatarPress = useCallback(() => {
-    if (onAvatarPress) {
-      onAvatarPress();
-      return;
-    }
-    handleProfileOpen();
-  }, [handleProfileOpen, onAvatarPress]);
+    onAvatarPress?.();
+  }, [onAvatarPress]);
 
   // הודעה שנמחקה לכולם — כמו וואטסאפ. אחרי כל ה-hooks: מחיקה בזמן אמת משנה את
   // ההודעה במקום, ו-return מוקדם לפני hooks היה שובר את סדר ה-hooks.
@@ -736,7 +722,7 @@ function ChatMessage({
       {!isMe && (showAvatar ? (
         <TouchableOpacity
           onPress={handleAvatarPress}
-          disabled={!onAvatarPress && !message.sender_id}
+          disabled={!onAvatarPress}
           style={styles.avatarContainer}
           accessibilityRole="button"
           accessibilityLabel={`פרופיל של ${message.sender?.display_name || 'משתמש'}`}
@@ -825,14 +811,7 @@ function ChatMessage({
           >
           {/* Sender Name - בתוך הבועה – רק כשיש שם אמיתי, בלי placeholder */}
           {!isMe && showSenderName && isUsableChatDisplayName(message.sender?.display_name) && (
-            <TouchableOpacity
-              onPress={handleProfileOpen}
-              disabled={!message.sender_id}
-              activeOpacity={0.75}
-              accessibilityRole="button"
-              accessibilityLabel={`פרופיל של ${message.sender?.display_name}`}
-              style={styles.senderNameTouch}
-            >
+            <View style={styles.senderNameTouch}>
             <UserNameRow
               userId={message.sender_id}
               size={badgeSizeForLineHeight(APP_TYPE.cardSubtitle.lineHeight)}
@@ -852,7 +831,7 @@ function ChatMessage({
               {message.sender!.display_name}
             </Text>
             </UserNameRow>
-            </TouchableOpacity>
+            </View>
           )}
 
           {/* Forwarded Tag */}

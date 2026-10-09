@@ -40,7 +40,6 @@ import { ChatScreenShell, ChatSubScreenHeader } from '../../components/chat/Chat
 import { chatGroupService } from '../../services/chat';
 import { getChatMediaDisplayUri } from '../../services/chat/chatSignedMediaUrl';
 import { HapticFeedback } from '../../utils/hapticFeedback';
-import { openUserProfile } from '../../lib/openUserProfile';
 import { chatRtlRoot, chatRtlRow } from '../../components/chat/chatDesignTokens';
 import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
 import {
@@ -266,9 +265,7 @@ export default function ChatGroupInfoScreen() {
   const handleMemberPress = (member: ChatGroupMember) => {
     if (!isAdmin) return;
 
-    const options: any[] = [
-      { text: 'הצג פרופיל', onPress: () => { openUserProfile(member.user_id, { currentUserId: user?.id }); } },
-    ];
+    const options: any[] = [];
 
     if (member.role === 'member') {
       options.push({ text: 'הפוך לאדמין', onPress: () => handlePromoteMember(member) });

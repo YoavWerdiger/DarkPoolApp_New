@@ -1,10 +1,13 @@
 import type { ShareIntent } from 'expo-share-intent';
 import type { PickedRecentMedia } from './mediaRecentsCache';
+import type { ShareableAttachment } from '../types/shareableEntity';
 
 /** תוכן שהגיע מגיליון השיתוף של המערכת, עד שבוחרים קבוצה ו-ChatInput צורך אותו. */
 export type PendingShare = {
   text: string | null;
   media: PickedRecentMedia[];
+  /** כרטיס מתוך האפליקציה (תיק/טרייד/כתבה) — נכנס לשורת הכתיבה עם כיתוב אופציונלי */
+  entity?: ShareableAttachment | null;
 };
 
 type Slot = { share: PendingShare; groupId: string | null };
@@ -83,4 +86,10 @@ export function subscribePendingShare(fn: () => void): () => void {
   return () => {
     listeners.delete(fn);
   };
+}
+
+/** שיתוף כרטיס מהאפליקציה לקבוצה: נכנס לשורת הכתיבה של הקבוצה (כמו העברה בוואטסאפ) */
+export function setEntityShareForGroup(groupId: string, entity: ShareableAttachment) {
+  slot = { share: { text: null, media: [], entity }, groupId };
+  emit();
 }

@@ -1,4 +1,5 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NewsScreenShell } from '../News/NewsScreenShell';
@@ -8,6 +9,7 @@ import { DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import type { CommunityPost } from '../../types/tweets.types';
+import type { ShareableAttachment } from '../../types/shareableEntity';
 
 /**
  * מסך מגירה — ציוצי קהילה (מיקרו-בלוג של חברי האפליקציה).
@@ -16,14 +18,32 @@ import type { CommunityPost } from '../../types/tweets.types';
 export default function TweetsScreen() {
   const DesignTokens = useDesignTokens();
   const [createOpen, setCreateOpen] = useState(false);
+  const [composeAttachment, setComposeAttachment] = useState<ShareableAttachment | null>(null);
   const feedRef = useRef<TweetsFeedHandle | null>(null);
+
+  // שיתוף מהאפליקציה («פרסם בציוצים») — פותח את מסך הכתיבה עם הכרטיס מצורף
+  const route = useRoute();
+  const navigation = useNavigation();
+  const routeParams = route.params as
+    | { composeAttachment?: ShareableAttachment; composeKey?: number }
+    | undefined;
+  useEffect(() => {
+    const att = routeParams?.composeAttachment;
+    if (!att) return;
+    setComposeAttachment(att);
+    setCreateOpen(true);
+    navigation.setParams({ composeAttachment: undefined, composeKey: undefined } as never);
+  }, [routeParams?.composeKey, routeParams?.composeAttachment, navigation]);
 
   const openCreate = useCallback(() => {
     void HapticFeedback.impactLight();
     setCreateOpen(true);
   }, []);
 
-  const closeCreate = useCallback(() => setCreateOpen(false), []);
+  const closeCreate = useCallback(() => {
+    setCreateOpen(false);
+    setComposeAttachment(null);
+  }, []);
 
   const handleCreated = useCallback((post: CommunityPost) => {
     feedRef.current?.prependPost(post);
@@ -63,6 +83,7 @@ export default function TweetsScreen() {
         visible={createOpen}
         onClose={closeCreate}
         onCreated={handleCreated}
+        initialAttachment={composeAttachment}
       />
     </NewsScreenShell>
   );

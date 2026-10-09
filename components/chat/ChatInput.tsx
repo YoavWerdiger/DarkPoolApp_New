@@ -1016,6 +1016,11 @@ function ChatInputImpl({
     if (share.media.length > 0) {
       applyPickedMedia(share.media, false);
     }
+    if (share.entity) {
+      setPendingEntity(share.entity);
+      // כמו בוואטסאפ: המקלדת נפתחת לכיתוב
+      setTimeout(() => textInputRef.current?.focus(), 350);
+    }
   }, [groupId, isDraftHydrated, shareTick, applyPickedMedia, setText]);
 
   const onAttachCameraCapture = useCallback(

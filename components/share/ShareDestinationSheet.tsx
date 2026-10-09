@@ -5,7 +5,6 @@ import {
   Image,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,17 +21,12 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { chatGroupDisplayName, groupAvatarSource } from '../../assets/chatGroups/groupChatIcons';
 import { getChatGroups } from '../../services/chat/chatGroupService';
-import { sendChatMessage } from '../../services/chat/chatMessageService';
-import { createCommunityPost } from '../../services/tweetsService';
-import { ChatMessageType } from '../../types/chat.types';
-import {
-  serializeEntityMessageContent,
-  type ShareableAttachment,
-} from '../../types/shareableEntity';
+import type { ShareableAttachment } from '../../types/shareableEntity';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { APP_TYPE, appPhysicalRightText } from '../ui/appType';
 import { legacyAlert } from '../../utils/appDialog';
 import { rootNavigationRef } from '../../navigation/rootNavigationRef';
+import { setEntityShareForGroup } from '../../lib/pendingShare';
 
 type Dest = 'menu' | 'chat';
 
@@ -71,12 +65,9 @@ export default function ShareDestinationSheet({
   const [groups, setGroups] = useState<ChatGroupRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
-  /** מלל שנשלח עם השיתוף — גוף הציוץ / כיתוב בצ׳אט */
-  const [message, setMessage] = useState('');
 
   useEffect(() => {
     if (!visible) {
-      setMessage('');
       setDest('menu');
       setGroups([]);
       setLoading(false);
@@ -110,71 +101,39 @@ export default function ShareDestinationSheet({
     }
   }, [user?.id]);
 
-  const shareTweet = useCallback(async () => {
+  // ציוץ: פותחים את מסך הכתיבה של הציוצים עם הכרטיס מצורף — כותבים שם ומפרסמים
+  const shareTweet = useCallback(() => {
     if (!attachment || busy) return;
     if (!user?.id) {
       legacyAlert('שגיאה', 'יש להתחבר כדי לצייץ');
       return;
     }
-    setBusy(true);
-    void HapticFeedback.impactLight();
-    try {
-      // מה שהמשתמש כתב; ריק → שם הכרטיס (ציוץ לא יכול להיות ריק)
-      const body =
-        message.trim() ||
-        (attachment.preview.title ?? '').trim() ||
-        (attachment.preview.subtitle ?? '').trim() ||
-        'שיתוף מהאפליקציה';
-      await createCommunityPost({
-        body,
-        attachments: [attachment],
-        attachment,
-      });
-      void HapticFeedback.success();
-      legacyAlert('הצלחה', 'התוכן פורסם בציוצים');
-      onSharedTweet?.();
+    void HapticFeedback.selection();
+    onClose();
+    onSharedTweet?.();
+    if (rootNavigationRef.isReady()) {
+      rootNavigationRef.navigate('Main', {
+        screen: 'Tweets',
+        params: { composeAttachment: attachment, composeKey: Date.now() },
+      } as never);
+    }
+  }, [attachment, busy, onClose, onSharedTweet, user?.id]);
+
+  // צ׳אט: הכרטיס נכנס לשורת הכתיבה של הקבוצה (כיתוב אופציונלי) — כמו העברה בוואטסאפ
+  const shareToGroup = useCallback(
+    (groupId: string) => {
+      if (!attachment || !user?.id || busy) return;
+      void HapticFeedback.selection();
+      setEntityShareForGroup(groupId, attachment);
       onClose();
       if (rootNavigationRef.isReady()) {
         rootNavigationRef.navigate('Main', {
-          screen: 'Tweets',
+          screen: 'Chat',
+          params: { screen: 'ChatGroup', params: { groupId }, initial: false },
         } as never);
       }
-    } catch (e: any) {
-      legacyAlert('שגיאה', e?.message || 'לא ניתן לפרסם ציוץ');
-    } finally {
-      setBusy(false);
-    }
-  }, [attachment, busy, message, onClose, onSharedTweet, user?.id]);
-
-  const shareToGroup = useCallback(
-    async (groupId: string, groupName: string) => {
-      if (!attachment || !user?.id || busy) return;
-      setBusy(true);
-      void HapticFeedback.medium();
-      try {
-        const content = serializeEntityMessageContent(attachment, message);
-        const { data: sent, error } = await sendChatMessage(
-          {
-            group_id: groupId,
-            message_type: ChatMessageType.ENTITY,
-            content,
-          },
-          user.id
-        );
-        if (error || !sent) {
-          legacyAlert('שגיאה', error?.message || 'לא ניתן לשתף לקבוצה');
-          return;
-        }
-        void HapticFeedback.success();
-        legacyAlert('הצלחה', `שותף לקבוצה "${groupName}"`);
-        onClose();
-      } catch {
-        legacyAlert('שגיאה', 'לא ניתן לשתף לקבוצה');
-      } finally {
-        setBusy(false);
-      }
     },
-    [attachment, busy, message, onClose, user?.id]
+    [attachment, busy, onClose, user?.id]
   );
 
   if (!attachment) return null;
@@ -190,8 +149,6 @@ export default function ShareDestinationSheet({
       // גובה לפי התוכן — בלי שטח מת מתחת לאפשרויות
       snapPoints={[snapPoint]}
       fitContent
-      // שדה ההודעה — השיט עולה מעל המקלדת
-      avoidKeyboard
       enablePanDownToClose={!busy}
       showHandle
       useModal
@@ -221,21 +178,6 @@ export default function ShareDestinationSheet({
           <EntityEmbedCard attachment={attachment} onPress={() => undefined} />
         </View>
 
-        <View style={styles.messageWrap}>
-          <TextInput
-            value={message}
-            onChangeText={setMessage}
-            placeholder="הוסף הודעה…"
-            placeholderTextColor={tokens.colors.text.tertiary}
-            style={[styles.messageInput, { color: tokens.colors.text.primary }]}
-            multiline
-            maxLength={2000}
-            editable={!busy}
-            textAlign="right"
-            keyboardAppearance={isDarkMode ? 'dark' : 'light'}
-          />
-        </View>
-
         {dest === 'menu' ? (
           <View style={styles.actions}>
             {/* סדר: צ׳אט → ציוצים → תמונה */}
@@ -252,13 +194,13 @@ export default function ShareDestinationSheet({
                 }}
               />
               <SettingsActionRow
-                title={busy ? 'מפרסם…' : 'פרסם בציוצים'}
+                title="פרסם בציוצים"
                 icon={MessageSquareText}
                 trailing={busy ? <ActivityIndicator size="small" color={tokens.colors.text.secondary} /> : noChevron}
                 showDivider={!!onShareAsImage}
                 onPress={() => {
                   if (busy) return;
-                  void shareTweet();
+                  shareTweet();
                 }}
               />
               {onShareAsImage ? (
@@ -300,7 +242,7 @@ export default function ShareDestinationSheet({
                   style={styles.groupRow}
                   activeOpacity={0.7}
                   disabled={busy}
-                  onPress={() => void shareToGroup(item.id, item.name)}
+                  onPress={() => shareToGroup(item.id)}
                 >
                   {avatar ? (
                     <Image source={avatar} style={styles.groupAvatar} />
@@ -389,23 +331,6 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       marginBottom: APP_LAYOUT.componentGap,
     },
     actions: { paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal },
-    messageWrap: {
-      marginHorizontal: APP_LAYOUT.screenPaddingHorizontal,
-      marginBottom: APP_LAYOUT.componentGap,
-      backgroundColor: tokens.colors.background.cardSolid,
-      borderRadius: tokens.borderRadius.lg,
-      paddingHorizontal: 14,
-    },
-    messageInput: {
-      ...appPhysicalRightText,
-      minHeight: 44,
-      maxHeight: 110,
-      paddingTop: 11,
-      paddingBottom: 11,
-      fontSize: APP_TYPE.cardBody.fontSize,
-      lineHeight: APP_TYPE.cardBody.lineHeight,
-      writingDirection: 'rtl',
-    },
     center: {
       minHeight: 160,
       alignItems: 'center',
@@ -422,8 +347,9 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       paddingBottom: 24,
     },
     divider: { height: StyleSheet.hairlineWidth },
+    // direction:'rtl' (container) — row = תמונה מימין, שם, שברון בקצה השמאלי
     groupRow: {
-      flexDirection: 'row-reverse',
+      flexDirection: 'row',
       alignItems: 'center',
       gap: 12,
       paddingVertical: 15,

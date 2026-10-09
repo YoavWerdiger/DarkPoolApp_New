@@ -1101,7 +1101,17 @@ export function PersonPortfolioProfileScreen({
     const first = periodSeries[0]?.value;
     const last = periodSeries[periodSeries.length - 1]?.value;
     if (!(first > 0) || last == null || !Number.isFinite(last)) return null;
-    return { usd: last - first, pct: ((last - first) / first) * 100 };
+    // נטו מקניות/מכירות בתוך התקופה — אחרת כסף חדש שנכנס (טראמפ: ‎$0.3M → ‎$200M) נראה כרווח
+    let netFlow = 0;
+    let invested = first;
+    for (let i = 1; i < periodSeries.length; i++) {
+      const f = periodSeries[i]?.external_flow ?? 0;
+      if (!Number.isFinite(f)) continue;
+      netFlow += f;
+      if (f > 0) invested += f;
+    }
+    const usd = last - first - netFlow;
+    return { usd, pct: invested > 0 ? (usd / invested) * 100 : 0 };
   }, [periodSeries]);
 
   const openTradeRow = useCallback(

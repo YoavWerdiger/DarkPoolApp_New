@@ -163,7 +163,9 @@ const PRICE_CACHE_MAX_AGE_MS = 6 * 3600_000;
 export async function loadCachedPriceMaps(
   supabase: SupabaseClient,
   tickers: string[],
-  maxAgeMs = PRICE_CACHE_MAX_AGE_MS
+  maxAgeMs = PRICE_CACHE_MAX_AGE_MS,
+  /** קאש ישן מ-maxAgeMs — נאסף כאן (גיבוי כשאין משיכה טרייה בריצה הזו) */
+  staleOut?: Map<string, Map<string, number>>
 ): Promise<Map<string, Map<string, number>>> {
   const unique = Array.from(
     new Set(tickers.map((t) => t.toUpperCase().trim()).filter(Boolean))
@@ -171,20 +173,27 @@ export async function loadCachedPriceMaps(
   const out = new Map<string, Map<string, number>>();
   if (!unique.length) return out;
 
-  const { data, error } = await supabase
-    .from('market_daily_prices')
-    .select('ticker, series, fetched_at')
-    .in('ticker', unique);
-  if (error) {
-    console.warn('loadCachedPriceMaps', error.message);
-    return out;
-  }
+  // בצ'אנקים: PostgREST מחזיר עד 1,000 שורות לבקשה — עם ~1,100 טיקרים (טראמפ) נפלו
+  // ~100 טיקרים אקראיים בכל ריצה ונספרו כבלי מחיר
   const cutoff = Date.now() - maxAgeMs;
-  for (const row of data ?? []) {
-    const fetched = Date.parse(String(row.fetched_at ?? ''));
-    if (!Number.isFinite(fetched) || fetched < cutoff) continue;
-    const map = seriesMapFromJson(row.series);
-    if (map.size) out.set(String(row.ticker).toUpperCase(), map);
+  const CHUNK = 150;
+  for (let i = 0; i < unique.length; i += CHUNK) {
+    const { data, error } = await supabase
+      .from('market_daily_prices')
+      .select('ticker, series, fetched_at')
+      .in('ticker', unique.slice(i, i + CHUNK));
+    if (error) {
+      console.warn('loadCachedPriceMaps', error.message);
+      continue;
+    }
+    for (const row of data ?? []) {
+      const map = seriesMapFromJson(row.series);
+      if (!map.size) continue;
+      const sym = String(row.ticker).toUpperCase();
+      const fetched = Date.parse(String(row.fetched_at ?? ''));
+      if (Number.isFinite(fetched) && fetched >= cutoff) out.set(sym, map);
+      else staleOut?.set(sym, map);
+    }
   }
   return out;
 }
@@ -231,12 +240,17 @@ export async function ensureYahooPriceMaps(
   const out = new Map<string, Map<string, number>>();
   if (!unique.length) return out;
 
+  const stale = new Map<string, Map<string, number>>();
   if (!opts.forceRefresh) {
-    const cached = await loadCachedPriceMaps(supabase, unique);
+    const cached = await loadCachedPriceMaps(supabase, unique, PRICE_CACHE_MAX_AGE_MS, stale);
     for (const [k, v] of cached) out.set(k, v);
   }
 
-  const allMissing = unique.filter((t) => !out.has(t) || out.get(t)!.size === 0);
+  // בלי שום מחיר קודם, אחר כך ישנים (לרענון) — סדר הטיקרים מהקורא = עדיפות
+  const allMissing = [
+    ...unique.filter((t) => !out.has(t) && !stale.has(t)),
+    ...unique.filter((t) => !out.has(t) && stale.has(t)),
+  ];
   const missing =
     opts.maxFetch != null ? allMissing.slice(0, Math.max(0, opts.maxFetch)) : allMissing;
   const concurrency = Math.min(6, Math.max(2, opts.concurrency ?? 4));
@@ -258,6 +272,10 @@ export async function ensureYahooPriceMaps(
         out.set(sym, out.get(sym) ?? new Map());
       }
     }
+  }
+  // לא נמשך/נכשל — מחיר ישן עדיף על «בלי מחיר» (שווי לפי עלות)
+  for (const [sym, map] of stale) {
+    if (!out.get(sym)?.size) out.set(sym, map);
   }
 
   if (fetched.size) {

@@ -1304,7 +1304,7 @@ function renderMediaContent(
         : (fileExtension !== 'קובץ' ? fileExtension : '');
 
       {
-        // מסמך נקי: אריח עדין בתוך הבועה — שם עד שתי שורות ומתחתיו «PDF · 1.2 MB». כל האריח לחיץ לפתיחה.
+        // מסמך נקי ישירות על הבועה (בלי אריח כהה פנימי) — שם עד שתי שורות ומתחתיו «PDF · 1.2 MB». כולו לחיץ לפתיחה.
         const ext = fileExtension !== 'קובץ' ? fileExtension.slice(0, 4) : '';
         const fg = isMe ? tokens.colors.bubbleMeText : tokens.colors.text.primary;
         const sub = isMe ? tokens.colors.bubbleMeMetaText : tokens.colors.text.secondary;
@@ -1315,7 +1315,7 @@ function renderMediaContent(
           <TouchableOpacity
             onPress={onMediaPress}
             activeOpacity={0.75}
-            style={[styles.documentCard, { backgroundColor: isMe ? 'rgba(0,0,0,0.06)' : 'rgba(127,127,127,0.10)' }]}
+            style={styles.documentCard}
             accessibilityRole="button"
             accessibilityLabel={`פתיחת מסמך ${fileName}`}
           >
@@ -2836,12 +2836,9 @@ const createStyles = (tokens: any) => {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    minWidth: 210,
+    minWidth: 180,
     maxWidth: 260,
-    paddingVertical: 9,
-    paddingHorizontal: 10,
-    borderRadius: 10,
-    marginVertical: 2,
+    paddingVertical: 2,
   },
   documentTextContainer: {
     flex: 1,

@@ -254,48 +254,45 @@ function buildTrumpFullSeries(
 
   const pos = new Map<string, TrumpLot[]>();
   const lastClose = new Map<string, number>();
-  const flowByDay = new Map<string, number>();
   let tradeIdx = 0;
   const out: ValuePoint[] = [];
 
+  const lotsValue = (ticker: string, lots: TrumpLot[], date: string): number => {
+    const sym = ticker.toUpperCase();
+    const map = pricesByTicker.get(sym);
+    const live =
+      map?.get(date) ??
+      (lastClose.get(sym) != null && lastClose.get(sym)! > 0 ? lastClose.get(sym)! : null);
+    let v = 0;
+    for (const lot of lots) v += lotMarketValue(lot, live, map);
+    return v;
+  };
+
   for (const date of days) {
-    while (tradeIdx < sorted.length && sorted[tradeIdx].transaction_date <= date) {
-      const t = sorted[tradeIdx];
-      tradeIdx += 1;
-      const prevLots = pos.get(t.ticker) ?? [];
-      const before = prevLots.reduce((s, l) => s + l.notional, 0);
-      const afterLots = applyTrumpTrade(prevLots, t);
-      const after = afterLots.reduce((s, l) => s + l.notional, 0);
-      pos.set(t.ticker, afterLots);
-      const flow = after - before;
-      if (flow !== 0) {
-        flowByDay.set(date, (flowByDay.get(date) ?? 0) + flow);
-      }
-    }
     for (const [ticker, map] of pricesByTicker) {
       const px = map.get(date);
       if (px != null && px > 0) lastClose.set(ticker.toUpperCase(), px);
     }
 
-    let value = 0;
-    for (const [ticker, lots] of pos) {
-      const sym = ticker.toUpperCase();
-      const map = pricesByTicker.get(sym);
-      const live =
-        map?.get(date) ??
-        (lastClose.get(sym) != null && lastClose.get(sym)! > 0
-          ? lastClose.get(sym)!
-          : null);
-      for (const lot of lots) {
-        value += lotMarketValue(lot, live, map);
-      }
+    // תזרים = שינוי השווי *בשוק* מהעסקאות של היום (לא שינוי העלות): מכירה של מניה שעלתה
+    // נרשמה כתזרים לפי עלות → נראתה כהפסד/רווח של כל התיק (YTD +89% מול +11% בפועל)
+    let dayFlow = 0;
+    while (tradeIdx < sorted.length && sorted[tradeIdx].transaction_date <= date) {
+      const t = sorted[tradeIdx];
+      tradeIdx += 1;
+      const prevLots = pos.get(t.ticker) ?? [];
+      const afterLots = applyTrumpTrade(prevLots, t);
+      dayFlow += lotsValue(t.ticker, afterLots, date) - lotsValue(t.ticker, prevLots, date);
+      pos.set(t.ticker, afterLots);
     }
+
+    let value = 0;
+    for (const [ticker, lots] of pos) value += lotsValue(ticker, lots, date);
     if (value <= 0) continue;
-    const dayFlow = flowByDay.get(date) ?? 0;
     out.push({
       date,
       value,
-      ...(dayFlow !== 0 ? { external_flow: dayFlow } : {}),
+      ...(Math.abs(dayFlow) > 1e-6 ? { external_flow: dayFlow } : {}),
     });
   }
 
@@ -348,7 +345,9 @@ function buildTrumpHoldingsMetrics(
 
     let market = 0;
     let firstDate: string | null = null;
-    let weightedEntry = 0;
+    // מניות משוערות = $ / מחיר ביום העסקה; מחיר כניסה = עלות / מניות (ממוצע אמיתי, לא ממוצע מחירים לפי $)
+    let estShares = 0;
+    let pricedCost = 0;
     for (const lot of lots) {
       market += lotMarketValue(lot, live > 0 ? live : null, map);
       if (!firstDate || lot.date < firstDate) firstDate = lot.date;
@@ -356,21 +355,24 @@ function buildTrumpHoldingsMetrics(
         lot.entryPrice != null && lot.entryPrice > 0
           ? lot.entryPrice
           : closeOnOrBeforeMap(map, lot.date);
-      if (entryPx != null && entryPx > 0) weightedEntry += lot.notional * entryPx;
+      if (entryPx != null && entryPx > 0) {
+        estShares += lot.notional / entryPx;
+        pricedCost += lot.notional;
+      }
     }
 
     totalValue += market;
     totalCost += remaining;
-    const avgEntry =
-      remaining > 0 && weightedEntry > 0 ? weightedEntry / remaining : null;
+    const avgEntry = estShares > 0 ? pricedCost / estShares : null;
+    // תשואה = שווי מול עלות — אותו חישוב של השווי בכותרת
     const returnPct =
-      live > 0 && avgEntry != null && avgEntry > 0
-        ? Math.round(((live - avgEntry) / avgEntry) * 10000) / 100
+      live > 0 && remaining > 0
+        ? Math.round(((market - remaining) / remaining) * 10000) / 100
         : 0;
 
     rows.push({
       ticker: sym,
-      qty: 0,
+      qty: estShares > 0 ? Math.round(estShares) : 0,
       cost_usd: Math.round(remaining * 100) / 100,
       current_price: live > 0 ? live : 0,
       market_value: Math.round(market * 100) / 100,
@@ -429,7 +431,20 @@ export function metricsFromTrumpCongressInputs(
   const rawTotalReturnPct =
     totalCost > 0 ? (totalReturnUsd / totalCost) * 100 : 0;
   const totalReturnPct = sanitizePeriodReturnPct(rawTotalReturnPct) ?? 0;
-  const allReturn = twrPeriodReturnPct(fullSeries);
+  // תקופה שמכסה את כל ההיסטוריה = תשואה בדולרים (שווי מול עלות) — כמו הכותרת.
+  // TWR כאן מטעה: התיק התחיל ב-$0.3M ורוב הכסף נכנס מאוחר → TWR ‎+94% מול ‎+11% בפועל
+  const firstDate = fullSeries[0]?.date ?? null;
+  const lastDate = fullSeries[fullSeries.length - 1]?.date ?? null;
+  const coversAll = (days: number): boolean => {
+    if (!firstDate || !lastDate) return false;
+    const cutoff = new Date(lastDate);
+    cutoff.setDate(cutoff.getDate() - days);
+    return cutoff.toISOString().slice(0, 10) <= firstDate;
+  };
+  const windowReturn = (days: number) =>
+    coversAll(days) ? totalReturnPct : periodReturn(fullSeries, days);
+  const ytdStartsBeforeFirst = !!firstDate && !!lastDate && `${lastDate.slice(0, 4)}-01-01` <= firstDate;
+  const allReturn = totalReturnPct;
 
   const chartReliable =
     fullSeries.length >= 2 ||
@@ -444,13 +459,13 @@ export function metricsFromTrumpCongressInputs(
     chart_reliable: chartReliable,
     holdings,
     period_returns: {
-      '1D': periodReturn(fullSeries, 1),
-      '1W': periodReturn(fullSeries, 7),
-      '1M': periodReturn(fullSeries, 30),
-      '3M': periodReturn(fullSeries, 90),
-      YTD: ytdReturn(fullSeries),
-      '1Y': periodReturn(fullSeries, 365),
-      '5Y': periodReturn(fullSeries, 365 * 5),
+      '1D': windowReturn(1),
+      '1W': windowReturn(7),
+      '1M': windowReturn(30),
+      '3M': windowReturn(90),
+      YTD: ytdStartsBeforeFirst ? totalReturnPct : ytdReturn(fullSeries),
+      '1Y': windowReturn(365),
+      '5Y': windowReturn(365 * 5),
       ALL: allReturn,
     },
     win_rate: null,

@@ -1367,7 +1367,9 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
         const wide = pickWideAngleLens(lenses);
         if (wide) setSelectedLens(wide);
       }
-      if (typeof cam.getAvailablePictureSizesAsync === 'function') {
+      // iOS: גודל תמונה כפוי לצד mode="video" (1080p) מפיל את הצילום —
+      // «Image could not be captured». כמו מצלמת הצ'אט: רק באנדרואיד
+      if (Platform.OS !== 'ios' && typeof cam.getAvailablePictureSizesAsync === 'function') {
         const sizes = await cam.getAvailablePictureSizesAsync();
         const best = pickBestPictureSize(sizes);
         if (best) setPictureSize((prev) => (prev === best ? prev : best));
@@ -1377,6 +1379,8 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
     }
   }, []);
 
+  const captureRetriedRef = useRef(false);
+  const takePictureRef = useRef<(() => Promise<void>) | null>(null);
   const takePicture = useCallback(async () => {
     logger.debug(
       'AddStoryFullScreen',
@@ -1405,6 +1409,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
       });
       logger.debug('AddStoryFullScreen', `takePictureAsync end: uri=${photo?.uri ?? 'null'}`);
       if (photo?.uri) {
+        captureRetriedRef.current = false;
         setMediaUri(photo.uri);
         setMediaType('image');
         setOverlays([]);
@@ -1413,14 +1418,27 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
         legacyAlert('שגיאה', 'לא הצלחנו לצלם את התמונה. נסה שוב.');
       }
     } catch (err: any) {
+      // ניסיון חוזר אחד בלי ההגדרות המותאמות (גודל תמונה / עדשה) לפני שמציגים שגיאה
+      if (!captureRetriedRef.current && (pictureSize || selectedLens)) {
+        captureRetriedRef.current = true;
+        logger.warn('AddStoryFullScreen', 'Take picture failed — retrying without custom size/lens', err);
+        setPictureSize(undefined);
+        setSelectedLens(undefined);
+        capturingRef.current = false;
+        setIsCapturing(false);
+        setTimeout(() => void takePictureRef.current?.(), 350);
+        return;
+      }
+      captureRetriedRef.current = false;
       logger.error('AddStoryFullScreen', 'Take picture failed', err);
-      legacyAlert('שגיאה', err?.message || 'לא הצלחנו לצלם את התמונה.');
+      legacyAlert('שגיאה', 'לא הצלחנו לצלם את התמונה. נסה שוב.');
     } finally {
       capturingRef.current = false;
       setIsCapturing(false);
       logger.debug('AddStoryFullScreen', 'takePicture finally — isCapturing reset');
     }
-  }, [isRecording]);
+  }, [isRecording, pictureSize, selectedLens]);
+  takePictureRef.current = takePicture;
 
   const stopRecording = useCallback(() => {
     if (recordTimerRef.current) clearTimeout(recordTimerRef.current);

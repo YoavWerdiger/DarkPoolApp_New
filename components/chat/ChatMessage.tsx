@@ -595,9 +595,9 @@ function ChatMessage({
     if (!ok) legacyAlert('שגיאה', 'לא ניתן לפתוח את המסמך');
   };
 
-  // שם השולח בצבע הטקסט המשני של ערכת העיצוב (לא פלטת צבעים לכל משתמש — לא לפי הטופו,
-  // וחלק מהגוונים כמו צהוב/ליים לא קריאים ברקע בהיר)
-  const senderColor = DesignTokens.colors.text.secondary;
+  // שם השולח בצבע הטקסט הראשי של ערכת העיצוב (לא פלטת צבעים לכל משתמש — לא לפי הטופו).
+  // משני + 600 נראה «חלש וכבד» בו-זמנית; ראשי באותו גודל ומשקל — נוכח בלי לבלוט
+  const senderColor = DesignTokens.colors.text.primary;
 
   const replyTargetId = message.reply_to?.message_id || message.reply_to_message_id;
   const handleReplyJump = useCallback(() => {

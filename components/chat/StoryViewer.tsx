@@ -869,10 +869,9 @@ export default function StoryViewer({
     }
   }, [mediaReady, mediaError, currentStory?.id]);
 
-  // Mark viewed (skip own stories — no self-view rows, and avoids extra write on «שלי»)
+  // סימון כנצפה — גם בסטורי שלי (כדי שהטבעת תתעדכן); אני מסונן מרשימת הצופים
   useEffect(() => {
     if (!currentStory || !user?.id) return;
-    if (currentStory.user_id === user.id) return;
     markStoryViewed(currentStory.id, user.id).catch(() => {});
   }, [currentStory?.id, currentStory?.user_id, user?.id]);
 
@@ -1236,7 +1235,8 @@ export default function StoryViewer({
         getStoryReactions(storyId),
       ]);
       const reactionByUser = new Map(reactions.map((r) => [r.reactor_id, r.emoji]));
-      const merged: ViewerWithReaction[] = viewers.map((v) => ({
+      // הבעלים רואה את הסטורי של עצמו — לא נספר כצופה
+      const merged: ViewerWithReaction[] = viewers.filter((v) => v.viewer_id !== user?.id).map((v) => ({
         ...v,
         emoji: reactionByUser.get(v.viewer_id) ?? null,
       }));
@@ -1247,7 +1247,7 @@ export default function StoryViewer({
     } finally {
       setViewersLoading(false);
     }
-  }, []);
+  }, [user?.id]);
 
   const openViewersSheet = useCallback(() => {
     if (!currentStory?.id || !isOwnStory) return;

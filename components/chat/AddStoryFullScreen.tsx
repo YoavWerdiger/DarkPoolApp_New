@@ -48,8 +48,9 @@ const CAPTURE_SIZE = 66;
 const CAPTURE_RING = 80;
 const PILL_W = 76;
 const PILL_GAP = 4;
-const CHROME_FILL = 'rgba(0,0,0,0.42)';
-const CHROME_LINE = 'rgba(255,255,255,0.18)';
+// זכוכית בהירה — כפתורי המצלמה יושבים על פסים שחורים (חלון הצילום), כהה נבלע ברקע
+const CHROME_FILL = 'rgba(255,255,255,0.16)';
+const CHROME_LINE = 'rgba(255,255,255,0.22)';
 
 /** Camera keeps the recording file until the session stops. Copy first so preview playback is independent. */
 async function persistRecordedStoryVideo(uri: string): Promise<string> {

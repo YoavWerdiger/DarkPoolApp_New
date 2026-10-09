@@ -538,7 +538,8 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(40,40,43,0.55)',
+    // זכוכית בהירה — קריאה גם על הפסים השחורים וגם על התמונה
+    backgroundColor: 'rgba(255,255,255,0.16)',
   },
   shutterOuter: {
     width: 84,
@@ -573,7 +574,7 @@ const styles = StyleSheet.create({
   modeTrack: {
     direction: 'ltr',
     flexDirection: 'row',
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: 'rgba(255,255,255,0.14)',
     borderRadius: 22,
     padding: 3,
     gap: MODE_PILL_GAP,

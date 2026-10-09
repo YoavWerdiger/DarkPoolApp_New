@@ -18,6 +18,7 @@ import {
   Animated,
   type ImageSourcePropType,
 } from 'react-native';
+import { chromeSurfaceFill } from '../../components/ui/chromeControl';
 import { DayDividerPill, DayDividerSlidingLayer } from '../../components/ui/DayDividerPill';
 import { useSlidingIndicator } from '../../components/ui/SlidingIndicator';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
@@ -1618,11 +1619,12 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   statusStorySlot: { flexDirection: 'row', alignItems: 'flex-start', flexShrink: 0 },
   statusStoryGap: { width: 7, flexShrink: 0 },
   statusStoryItem: { alignItems: 'center', flexShrink: 0 },
+  // לפי הטופו: מילוי כפתורי הכרום (כמו שאר הכפתורים העגולים), לא אפור tertiary
   statusCircleInner: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: tokens.colors.background.tertiary,
+    backgroundColor: chromeSurfaceFill(tokens),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1632,7 +1634,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     borderRadius: 33,
     borderWidth: 1.5,
     borderColor: tokens.colors.border.divider,
-    borderStyle: 'dashed',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 6,

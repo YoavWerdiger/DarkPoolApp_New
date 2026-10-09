@@ -1,24 +1,35 @@
-import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
-import { StyleSheet, View, type TextProps, type TextStyle, type ViewStyle } from 'react-native';
+import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  type LayoutChangeEvent,
+  type TextProps,
+  type TextStyle,
+  type ViewStyle,
+} from 'react-native';
 import Animated, {
   Easing,
   interpolateColor,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
+  withDelay,
   withTiming,
 } from 'react-native-reanimated';
-import { scheduleOnRN } from 'react-native-worklets';
 import { useDesignTokens } from './useDesignTokens';
 
-export const NUMBER_ROLL_MS = 260;
+export const NUMBER_ROLL_MS = 320;
+export const NUMBER_FAST_MS = 110;
 export const NUMBER_FLASH_MS = 700;
-export const NUMBER_FAST_MS = 120;
+/** השהיה בין ספרה לספרה (מהאחדות שמאלה) — תחושת מונה */
+const STAGGER_MS = 28;
 const EASE_OUT = Easing.out(Easing.cubic);
-/** כמה פיקסלים הערך החדש נכנס מלמטה/מלמעלה */
-const ROLL_SHIFT = 10;
 
-// מיקום/גמישות עוברים לעטיפה (שבתוכה שכבת הערך הקודם ממוקמת בדיוק מעל)
+// תווי בקרה של bidi (LRI/PDI וכו׳) — שורת התאים כבר LTR פיזית
+const BIDI_CONTROLS = /[‎‏‪-‮⁦-⁩]/g;
+const DIGIT = /[0-9]/;
+
 const WRAPPER_KEYS = [
   'margin',
   'marginTop',
@@ -42,29 +53,43 @@ const WRAPPER_KEYS = [
   'flexBasis',
   'alignSelf',
   'zIndex',
+  'width',
+  'minWidth',
+  'maxWidth',
 ] as const;
 
-type Shown = {
-  text: string;
-  value: number | null | undefined;
-  animate: boolean;
-  /** הערך הקודם בזמן המעבר */
-  prev: { text: string; gen: number; dir: 1 | -1 } | null;
-  flashGen: number;
-  flashDir: 1 | -1;
-};
+const CHAR_KEYS = [
+  'color',
+  'fontFamily',
+  'fontSize',
+  'fontStyle',
+  'fontWeight',
+  'fontVariant',
+  'letterSpacing',
+  'includeFontPadding',
+  'textTransform',
+] as const;
 
 export type AnimatedNumberProps = Omit<TextProps, 'children'> & {
   /** המחרוזת המעוצבת (אפשר עטופה ב־toDataIsland) — אותו פורמטר כמו היום */
   text: string;
-  /** ערך מספרי לכיוון השינוי (עלייה = נכנס מלמטה + ירוק) */
+  /** ערך מספרי לכיוון השינוי (עלייה = הספרות מתגלגלות למעלה + ירוק) */
   value?: number | null;
   /** הבהוב ירוק/אדום עדין בשינוי */
   flash?: boolean;
   /** false = החלפה בלי אנימציה */
   animate?: boolean;
-  /** מעבר קצר (גרירה על הגרף — הערך משתנה כל פריים) */
+  /** מעבר קצר בלי השהיות (גרירה על הגרף — הערך משתנה כל פריים) */
   fast?: boolean;
+};
+
+type Change = { gen: number; prev: string; dir: 1 | -1; fast: boolean };
+type Shown = {
+  text: string;
+  value: number | null | undefined;
+  change: Change | null;
+  flashGen: number;
+  flashDir: 1 | -1;
 };
 
 function pickKeys<K extends string>(src: Record<string, unknown>, keys: readonly K[]) {
@@ -73,11 +98,14 @@ function pickKeys<K extends string>(src: Record<string, unknown>, keys: readonly
   return out;
 }
 
+const justifyFor = (align: TextStyle['textAlign']): ViewStyle['justifyContent'] =>
+  align === 'right' ? 'flex-end' : align === 'center' ? 'center' : 'flex-start';
+
 /**
- * מספר שמתחלף בתנועה: הערך הקודם עולה/יורד ודוהה, החדש נכנס מהכיוון של השינוי.
- * בלי מדידות — אותו Text בדיוק, ושכבת הערך הקודם באותה קופסה (אותו textAlign) — עובד
- * גם עם יישור לימין, הקטנת פונט וקיטוע. במנוחה: Text רגיל עם ספרות טבלאיות.
- * בלי אנימציה בעלייה ראשונה וכש-Reduce Motion פעיל.
+ * מספר בסגנון מונה: כל ספרה שהשתנתה מתגלגלת בתא משלה — למעלה בעלייה, למטה בירידה,
+ * בהשהיה קלה מהאחדות שמאלה. תווים שלא השתנו ($ , . % M) לא זזים.
+ * המספר תמיד מצויר כשורת תאים (LTR פיזי) — בלי מדידה/יישור מול Text נסתר שיכולים להיכשל.
+ * adjustsFontSizeToFit נתמך (הקטנת פונט לפי הרוחב). בלי אנימציה בעלייה ראשונה / Reduce Motion.
  */
 export function AnimatedNumber({
   text,
@@ -86,80 +114,65 @@ export function AnimatedNumber({
   animate = true,
   fast = false,
   style,
-  ...rest
+  adjustsFontSizeToFit,
+  minimumFontScale,
+  allowFontScaling,
+  maxFontSizeMultiplier,
+  accessibilityLabel,
+  testID,
 }: AnimatedNumberProps) {
   const tokens = useDesignTokens();
   const reduceMotion = useReducedMotion();
 
   const flat = (StyleSheet.flatten(style) ?? {}) as TextStyle;
   const wrapperStyle = pickKeys(flat as Record<string, unknown>, WRAPPER_KEYS) as ViewStyle;
-  const textStyle: TextStyle = { ...flat, fontVariant: flat.fontVariant ?? ['tabular-nums'] };
-  for (const k of WRAPPER_KEYS) delete (textStyle as Record<string, unknown>)[k];
+  const baseFont = flat.fontSize ?? 14;
+  const baseLine = flat.lineHeight ?? Math.round(baseFont * 1.22);
 
+  const clean = text.replace(BIDI_CONTROLS, '');
+
+  // שינוי ערך → מה התחלף ובאיזה כיוון
   const genRef = useRef(0);
   const [shown, setShown] = useState<Shown>(() => ({
-    text,
+    text: clean,
     value,
-    animate,
-    prev: null,
+    change: null,
     flashGen: 0,
     flashDir: 1,
   }));
-
-  if (shown.text !== text || shown.animate !== animate) {
-    let next: Shown = { ...shown, text, value, animate };
-    if (shown.text !== text) {
-      const canAnimate = animate && !reduceMotion;
-      const numericDir =
-        value != null && shown.value != null && Number.isFinite(value) && Number.isFinite(shown.value)
-          ? Math.sign(value - shown.value)
-          : 0;
-      const dir: 1 | -1 = numericDir < 0 ? -1 : 1;
-      if (canAnimate) {
-        genRef.current += 1;
-        next.prev = { text: shown.text, gen: genRef.current, dir };
-        if (flash && !fast && numericDir !== 0) {
-          next = { ...next, flashGen: shown.flashGen + 1, flashDir: dir };
-        }
-      } else {
-        next.prev = null;
-      }
-    }
-    setShown(next);
+  if (shown.text !== clean) {
+    const numericDir =
+      value != null && shown.value != null && Number.isFinite(value) && Number.isFinite(shown.value)
+        ? Math.sign(value - shown.value)
+        : 0;
+    const dir: 1 | -1 = numericDir < 0 ? -1 : 1;
+    const canAnimate = animate && !reduceMotion;
+    genRef.current += 1;
+    setShown({
+      text: clean,
+      value,
+      change: canAnimate ? { gen: genRef.current, prev: shown.text, dir, fast } : null,
+      flashGen:
+        canAnimate && flash && !fast && numericDir !== 0 ? shown.flashGen + 1 : shown.flashGen,
+      flashDir: numericDir !== 0 ? dir : shown.flashDir,
+    });
   }
 
-  const prev = shown.prev;
-  const endRoll = useCallback((gen: number) => {
-    setShown((s) => (s.prev && s.prev.gen === gen ? { ...s, prev: null } : s));
-  }, []);
+  // התאמת גודל פונט לרוחב (כמו adjustsFontSizeToFit)
+  const [availW, setAvailW] = useState(0);
+  const [naturalW, setNaturalW] = useState(0);
+  const scale = useMemo(() => {
+    if (!adjustsFontSizeToFit || !availW || !naturalW || naturalW <= availW) return 1;
+    return Math.max(minimumFontScale ?? 0.5, availW / naturalW);
+  }, [adjustsFontSizeToFit, availW, naturalW, minimumFontScale]);
+  const lineH = Math.round(baseLine * scale);
 
-  // מעבר: p 0→1
-  const p = useSharedValue(1);
-  const dirSv = useSharedValue(1);
-  const fastSv = useSharedValue(0);
-  useLayoutEffect(() => {
-    if (!prev) return;
-    const gen = prev.gen;
-    dirSv.value = prev.dir;
-    fastSv.value = fast ? 1 : 0;
-    p.value = 0;
-    p.value = withTiming(1, { duration: fast ? NUMBER_FAST_MS : NUMBER_ROLL_MS, easing: EASE_OUT }, (finished) => {
-      if (finished) scheduleOnRN(endRoll, gen);
-    });
-    // fast נקרא רק בתחילת מעבר — לא מתחילים מחדש כשהוא משתנה
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prev, p, dirSv, fastSv, endRoll]);
-
-  const inStyle = useAnimatedStyle(() => ({
-    // בגרירה (fast) הערך החדש תמיד מלא — אחרת הוא «מהבהב» כשהוא משתנה בכל פריים
-    opacity: fastSv.value ? 1 : p.value,
-    // עלייה: נכנס מלמטה ועולה למקום; ירידה: נכנס מלמעלה
-    transform: [{ translateY: dirSv.value * ROLL_SHIFT * (fastSv.value ? 0.4 : 1) * (1 - p.value) }],
-  }));
-  const outStyle = useAnimatedStyle(() => ({
-    opacity: 1 - p.value,
-    transform: [{ translateY: -dirSv.value * ROLL_SHIFT * p.value }],
-  }));
+  const charStyle: TextStyle = {
+    ...(pickKeys(flat as Record<string, unknown>, CHAR_KEYS) as TextStyle),
+    fontVariant: flat.fontVariant ?? ['tabular-nums'],
+    fontSize: baseFont * scale,
+    lineHeight: lineH,
+  };
 
   // הבהוב צבע
   const flashP = useSharedValue(0);
@@ -176,21 +189,152 @@ export function AnimatedNumber({
     return { color: interpolateColor(flashP.value, [0, 1], [baseColor, flashColor]) };
   }, [flashEnabled, baseColor, flashColor]);
 
+  // תאים מיושרים מימין (האחדות באותו תא גם כשאורך המספר משתנה)
+  const chars = Array.from(shown.text);
+  const change = shown.change;
+  const prevChars = change ? Array.from(change.prev) : null;
+  const offset = prevChars ? chars.length - prevChars.length : 0;
+  let digitsSeen = 0;
+  const cells = chars
+    .map((ch, i) => ({ ch, i }))
+    .reverse()
+    .map(({ ch, i }) => {
+      const old = prevChars ? prevChars[i - offset] ?? null : null;
+      const isDigit = DIGIT.test(ch);
+      const order = digitsSeen;
+      if (isDigit) digitsSeen += 1;
+      return {
+        key: `r${chars.length - 1 - i}`,
+        ch,
+        old,
+        rolls: !!change && isDigit && old != null && old !== ch,
+        order,
+      };
+    })
+    .reverse();
+
+  const onWrapLayout = useCallback((e: LayoutChangeEvent) => setAvailW(e.nativeEvent.layout.width), []);
+  const onMeasureLayout = useCallback(
+    (e: LayoutChangeEvent) => setNaturalW(e.nativeEvent.layout.width),
+    []
+  );
+
   return (
-    <View style={wrapperStyle}>
-      <Animated.Text {...rest} style={[textStyle, flashEnabled ? flashStyle : null, prev ? inStyle : null]}>
-        {text}
+    <View
+      style={[wrapperStyle, styles.wrap]}
+      onLayout={adjustsFontSizeToFit ? onWrapLayout : undefined}
+      accessible
+      accessibilityRole="text"
+      accessibilityLabel={accessibilityLabel ?? shown.text}
+      testID={testID}
+    >
+      <View
+        style={[styles.row, { justifyContent: justifyFor(flat.textAlign) }]}
+        importantForAccessibility="no-hide-descendants"
+      >
+        {cells.map((c) => (
+          <DigitCell
+            key={c.key}
+            ch={c.ch}
+            old={c.old}
+            gen={c.rolls && change ? change.gen : 0}
+            dir={change?.dir ?? 1}
+            delay={change?.fast ? 0 : c.order * STAGGER_MS}
+            duration={change?.fast ? NUMBER_FAST_MS : NUMBER_ROLL_MS}
+            height={lineH}
+            charStyle={charStyle}
+            flashStyle={flashEnabled ? flashStyle : null}
+            allowFontScaling={allowFontScaling}
+            maxFontSizeMultiplier={maxFontSizeMultiplier}
+          />
+        ))}
+      </View>
+      {adjustsFontSizeToFit ? (
+        // מדידה ברוחב טבעי בגודל הבסיס — לחישוב ההקטנה
+        <View style={styles.measure} pointerEvents="none">
+          <Text
+            onLayout={onMeasureLayout}
+            style={[charStyle, { fontSize: baseFont, lineHeight: baseLine }]}
+            allowFontScaling={allowFontScaling}
+            maxFontSizeMultiplier={maxFontSizeMultiplier}
+            numberOfLines={1}
+          >
+            {shown.text}
+          </Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function DigitCell({
+  ch,
+  old,
+  gen,
+  dir,
+  delay,
+  duration,
+  height,
+  charStyle,
+  flashStyle,
+  allowFontScaling,
+  maxFontSizeMultiplier,
+}: {
+  ch: string;
+  old: string | null;
+  gen: number;
+  dir: 1 | -1;
+  delay: number;
+  duration: number;
+  height: number;
+  charStyle: TextStyle;
+  flashStyle: ReturnType<typeof useAnimatedStyle> | null;
+  allowFontScaling?: boolean;
+  maxFontSizeMultiplier?: number | null;
+}) {
+  const p = useSharedValue(1);
+  const dirSv = useSharedValue<number>(dir);
+  const [rollingFrom, setRollingFrom] = useState<string | null>(null);
+  const lastGen = useRef(0);
+
+  useLayoutEffect(() => {
+    if (!gen || gen === lastGen.current || old == null) return;
+    lastGen.current = gen;
+    dirSv.value = dir;
+    setRollingFrom(old);
+    p.value = 0;
+    p.value = withDelay(delay, withTiming(1, { duration, easing: EASE_OUT }));
+  }, [gen, old, dir, delay, duration, p, dirSv]);
+
+  // עלייה: הספרה החדשה נכנסת מלמטה והישנה יוצאת למעלה; ירידה: הפוך
+  const inStyle = useAnimatedStyle(
+    () => ({ transform: [{ translateY: dirSv.value * height * (1 - p.value) }] }),
+    [height]
+  );
+  const outStyle = useAnimatedStyle(
+    () => ({
+      transform: [{ translateY: -dirSv.value * height * p.value }],
+      opacity: p.value >= 1 ? 0 : 1,
+    }),
+    [height]
+  );
+
+  return (
+    <View style={[styles.cell, { height }]}>
+      <Animated.Text
+        style={[charStyle, flashStyle, inStyle]}
+        allowFontScaling={allowFontScaling}
+        maxFontSizeMultiplier={maxFontSizeMultiplier}
+      >
+        {ch}
       </Animated.Text>
-      {prev ? (
+      {rollingFrom != null && rollingFrom !== ch ? (
         <Animated.Text
-          {...rest}
-          key={prev.gen}
-          pointerEvents="none"
-          accessibilityElementsHidden
-          importantForAccessibility="no-hide-descendants"
-          style={[textStyle, styles.overlay, flashEnabled ? flashStyle : null, outStyle]}
+          style={[charStyle, styles.outgoing, flashStyle, outStyle]}
+          allowFontScaling={allowFontScaling}
+          maxFontSizeMultiplier={maxFontSizeMultiplier}
         >
-          {prev.text}
+          {rollingFrom}
         </Animated.Text>
       ) : null}
     </View>
@@ -198,7 +342,30 @@ export function AnimatedNumber({
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFill,
+  wrap: {
+    overflow: 'hidden',
+  },
+  row: {
+    flexDirection: 'row',
+    // פיזי — המספר תמיד משמאל לימין, גם בעץ RTL
+    direction: 'ltr',
+  },
+  cell: {
+    overflow: 'hidden',
+  },
+  outgoing: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+  },
+  // רחב מאוד — הטקסט נמדד ברוחב הטבעי שלו ולא נחתך לרוחב ההורה
+  measure: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 4000,
+    opacity: 0,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
   },
 });

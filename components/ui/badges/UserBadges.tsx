@@ -32,13 +32,18 @@ export function UserBadges({ userId, size = 16, interactive = true, style }: Pro
   const { isDarkMode } = useTheme();
   const [rankOpen, setRankOpen] = useState(false);
   const [verifiedOpen, setVerifiedOpen] = useState(false);
+  // נשאר mounted אחרי פתיחה ראשונה — שאנימציית הסגירה לא תיחתך
+  const [rankMounted, setRankMounted] = useState(false);
+  const [verifiedMounted, setVerifiedMounted] = useState(false);
 
   const openRank = useCallback(() => {
     void HapticFeedback.impactLight();
+    setRankMounted(true);
     setRankOpen(true);
   }, []);
   const openVerified = useCallback(() => {
     void HapticFeedback.impactLight();
+    setVerifiedMounted(true);
     setVerifiedOpen(true);
   }, []);
 
@@ -80,10 +85,10 @@ export function UserBadges({ userId, size = 16, interactive = true, style }: Pro
           verifiedIcon
         )
       ) : null}
-      {interactive && rank && rankOpen ? (
+      {interactive && rank && rankMounted ? (
         <RankSheet visible={rankOpen} onClose={() => setRankOpen(false)} paidDays={badges.paidDays ?? 0} />
       ) : null}
-      {interactive && badges.isVerified && verifiedOpen ? (
+      {interactive && badges.isVerified && verifiedMounted ? (
         <HelpSheet
           visible={verifiedOpen}
           onClose={() => setVerifiedOpen(false)}

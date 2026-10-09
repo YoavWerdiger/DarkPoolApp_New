@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
+  Award,
   Ban,
   ClipboardList,
   CreditCard,
@@ -20,7 +21,13 @@ import {
   Volume2,
   VolumeX, ShieldCheck } from 'lucide-react-native';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
-import { ProfileMenuRow } from '../../components/profile/ProfileSettingsUI';
+import { ProfileMenuRow, SettingsSwitchRow } from '../../components/profile/ProfileSettingsUI';
+import UIButton from '../../components/ui/UIButton';
+import { UserNameRow, badgeSizeForLineHeight } from '../../components/ui/badges/UserBadges';
+import { formatDaysCount, rankColor, rankForPaidDays } from '../../components/ui/badges/userRank';
+import { setUserBadgesCache } from '../../hooks/useUserBadges';
+import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { formFieldShellStyle } from '../../components/ui/formControl';
 import { APP_LAYOUT } from '../../components/ui/appLayout';
@@ -42,6 +49,7 @@ import {
 } from '../../components/admin';
 import {
   adminService,
+  type AdminUserBadgeDetails,
   type AdminUserFilter,
   type AdminUserRow,
 } from '../../services/admin';
@@ -54,7 +62,15 @@ const FILTERS: { key: AdminUserFilter; label: string }[] = [
   { key: 'premium', label: 'פרימיום' },
   { key: 'muted', label: 'מושתקים' },
   { key: 'suspended', label: 'מושעים' },
+  { key: 'verified', label: 'מאומתים' },
 ];
+
+/** ותק אפקטיבי — כמו get_user_badges: null כשאין תשלום ואין התאמה חיובית */
+function effectivePaidDays(d: AdminUserBadgeDetails | undefined): number | null {
+  if (!d) return null;
+  if (d.computed_days == null && d.adjustment_days <= 0) return null;
+  return Math.max(0, (d.computed_days ?? 0) + d.adjustment_days);
+}
 
 export default function AdminUsersScreen({ navigation }: any) {
   const tokens = useDesignTokens();
@@ -65,19 +81,43 @@ export default function AdminUsersScreen({ navigation }: any) {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [openIntroId, setOpenIntroId] = useState<string | null>(null);
+  const [openTenureId, setOpenTenureId] = useState<string | null>(null);
+  const [badgeDetails, setBadgeDetails] = useState<Record<string, AdminUserBadgeDetails>>({});
+  const { user: me } = useAuth();
+
+  const loadBadgeDetails = useCallback(async (ids: string[]) => {
+    try {
+      const rows = await adminService.badgeDetails(ids);
+      setBadgeDetails((prev) => {
+        const next = { ...prev };
+        for (const r of rows) next[r.user_id] = r;
+        return next;
+      });
+    } catch {
+      // לא חוסם את הרשימה
+    }
+  }, []);
 
   const load = useCallback(async (opts?: { silent?: boolean }) => {
     if (!opts?.silent) setLoading(true);
     try {
-      const res = await adminService.listUsers({ query, filter, page: 1, pageSize: 40 });
-      setUsers(res.users);
-      setTotal(res.total);
+      if (filter === 'verified') {
+        const rows = await adminService.listVerifiedUsers(query, 40);
+        setUsers(rows);
+        setTotal(rows.length);
+        void loadBadgeDetails(rows.map((u) => u.id));
+      } else {
+        const res = await adminService.listUsers({ query, filter, page: 1, pageSize: 40 });
+        setUsers(res.users);
+        setTotal(res.total);
+        void loadBadgeDetails(res.users.map((u) => u.id));
+      }
     } catch (e) {
       legacyAlert('שגיאה', e instanceof Error ? e.message : 'טעינת משתמשים נכשלה');
     } finally {
       setLoading(false);
     }
-  }, [query, filter]);
+  }, [query, filter, loadBadgeDetails]);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -88,6 +128,44 @@ export default function AdminUsersScreen({ navigation }: any) {
 
   const patchUserLocally = (userId: string, patch: Partial<AdminUserRow>) => {
     setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, ...patch } : u)));
+  };
+
+  const toggleVerified = async (user: AdminUserRow, next: boolean) => {
+    setBusyId(user.id);
+    try {
+      await adminService.setVerified(user.id, next);
+      setBadgeDetails((prev) => {
+        const cur = prev[user.id];
+        if (!cur) return prev;
+        return { ...prev, [user.id]: { ...cur, is_verified: next } };
+      });
+      setUserBadgesCache(user.id, { isVerified: next });
+      void HapticFeedback.success();
+    } catch (e) {
+      void HapticFeedback.error();
+      legacyAlert('שגיאה', e instanceof Error ? e.message : 'פעולה נכשלה');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const saveTenureAdjustment = async (user: AdminUserRow, days: number) => {
+    setBusyId(user.id);
+    try {
+      await adminService.setTenureAdjustment(user.id, days);
+      const cur = badgeDetails[user.id];
+      const updated: AdminUserBadgeDetails = cur
+        ? { ...cur, adjustment_days: days }
+        : { user_id: user.id, is_verified: false, verified_at: null, computed_days: null, adjustment_days: days };
+      setBadgeDetails((prev) => ({ ...prev, [user.id]: updated }));
+      setUserBadgesCache(user.id, { paidDays: effectivePaidDays(updated) });
+      void HapticFeedback.success();
+    } catch (e) {
+      void HapticFeedback.error();
+      legacyAlert('שגיאה', e instanceof Error ? e.message : 'פעולה נכשלה');
+    } finally {
+      setBusyId(null);
+    }
   };
 
   const isPremiumRole = (role: string | null) =>
@@ -380,6 +458,20 @@ export default function AdminUsersScreen({ navigation }: any) {
               onToggleIntro={() =>
                 setOpenIntroId((current) => (current === item.id ? null : item.id))
               }
+              badges={badgeDetails[item.id]}
+              isSelf={item.id === me?.id}
+              tenureOpen={openTenureId === item.id}
+              onToggleTenure={() =>
+                setOpenTenureId((current) => (current === item.id ? null : item.id))
+              }
+              onToggleVerified={(next) => {
+                if (busyId === item.id) return;
+                void toggleVerified(item, next);
+              }}
+              onSaveTenure={(days) => {
+                if (busyId === item.id) return;
+                void saveTenureAdjustment(item, days);
+              }}
               roleLabel={roleLabel(item.subscription_role)}
               roleColor={roleColor(item.subscription_role)}
               premium={isPremiumRole(item.subscription_role)}
@@ -414,6 +506,12 @@ function UserCard({
   busy,
   introOpen,
   onToggleIntro,
+  badges,
+  isSelf,
+  tenureOpen,
+  onToggleTenure,
+  onToggleVerified,
+  onSaveTenure,
   roleLabel,
   roleColor,
   premium,
@@ -429,6 +527,12 @@ function UserCard({
   busy: boolean;
   introOpen: boolean;
   onToggleIntro: () => void;
+  badges?: AdminUserBadgeDetails;
+  isSelf: boolean;
+  tenureOpen: boolean;
+  onToggleTenure: () => void;
+  onToggleVerified: (next: boolean) => void;
+  onSaveTenure: (days: number) => void;
   roleLabel: string;
   roleColor: string;
   premium: boolean;
@@ -441,8 +545,16 @@ function UserCard({
   onPayments: () => void;
 }) {
   const tokens = useDesignTokens();
+  const { isDarkMode } = useTheme();
   const name = item.display_name || item.full_name || 'משתמש';
   const introRows = formatIntroDataRows(item.intro_data);
+  const paidDays = effectivePaidDays(badges);
+  const rank = rankForPaidDays(paidDays);
+  const [adjustDraft, setAdjustDraft] = useState('');
+  useEffect(() => {
+    if (tenureOpen) setAdjustDraft(String(badges?.adjustment_days ?? 0));
+  }, [tenureOpen, badges?.adjustment_days]);
+  const parsedAdjust = /^-?\d{1,5}$/.test(adjustDraft.trim()) ? Number(adjustDraft.trim()) : null;
   const guard = (action: () => void) => () => {
     if (busy) return;
     action();
@@ -470,14 +582,22 @@ function UserCard({
           </View>
         )}
         <View style={{ flex: 1 }}>
-          <Text style={[styles.userName, { color: tokens.colors.text.primary }]} numberOfLines={1}>
-            {name}
-          </Text>
+          <UserNameRow userId={item.id} size={badgeSizeForLineHeight(APP_TYPE.cardTitle.lineHeight)}>
+            <Text style={[styles.userName, { color: tokens.colors.text.primary }]} numberOfLines={1}>
+              {name}
+            </Text>
+          </UserNameRow>
           <Text style={[styles.userEmail, { color: tokens.colors.text.secondary }]} numberOfLines={1}>
             {item.email}
           </Text>
           <View style={styles.badgeRow}>
             <AdminBadge label={roleLabel} color={roleColor} />
+            {rank ? (
+              <AdminBadge
+                label={rank.name}
+                color={rankColor(rank.metal, isDarkMode, tokens.colors.text.tertiary)}
+              />
+            ) : null}
             {item.is_muted ? <AdminBadge label="מושתק" color={tokens.colors.danger.main} /> : null}
             {item.is_suspended ? (
               <AdminBadge label="מושעה" color={tokens.colors.warning.main} />
@@ -519,6 +639,56 @@ function UserCard({
             : null}
         </>
       ) : null}
+      <SettingsSwitchRow
+        title="משתמש מאומת"
+        value={!!badges?.is_verified}
+        disabled={busy || isSelf || !badges}
+        onValueChange={onToggleVerified}
+      />
+      <ProfileMenuRow
+        title={
+          paidDays != null
+            ? `ותק מנוי · ${rank?.name ?? ''} · ${formatDaysCount(paidDays)}`
+            : 'ותק מנוי · ללא'
+        }
+        icon={Award}
+        showDivider={!tenureOpen}
+        onPress={onToggleTenure}
+      />
+      {tenureOpen ? (
+        <View style={styles.tenureBox}>
+          <Text style={[styles.introValue, { color: tokens.colors.text.secondary, marginTop: 0 }]}>
+            {badges?.computed_days != null
+              ? `מחושב מתשלומים: ${formatDaysCount(badges.computed_days)}`
+              : 'אין תשלומים במערכת'}
+          </Text>
+          <Text style={[styles.introField, { color: tokens.colors.text.primary, marginTop: 10 }]}>
+            התאמה ידנית (ימים, אפשר שלילי)
+          </Text>
+          <View style={styles.tenureInputRow}>
+            <UIButton
+              title="שמור"
+              variant="primary"
+              size="sm"
+              disabled={busy || parsedAdjust == null || parsedAdjust === (badges?.adjustment_days ?? 0)}
+              onPress={() => {
+                if (parsedAdjust != null) onSaveTenure(parsedAdjust);
+              }}
+            />
+            <View style={[formFieldShellStyle({ tokens, focused: false }), styles.tenureInputShell]}>
+              <TextInput
+                value={adjustDraft}
+                onChangeText={setAdjustDraft}
+                keyboardType="numbers-and-punctuation"
+                placeholder="0"
+                placeholderTextColor={tokens.colors.text.tertiary}
+                style={[styles.searchInput, { color: tokens.colors.text.primary }]}
+              />
+            </View>
+          </View>
+        </View>
+      ) : null}
+      {tenureOpen ? <View style={[styles.rule, { backgroundColor: tokens.colors.border.divider }]} /> : null}
       <ProfileMenuRow
         title={item.is_muted ? 'בטל השתקה' : 'השתק'}
         icon={item.is_muted ? Volume2 : VolumeX}
@@ -611,6 +781,24 @@ const styles = StyleSheet.create({
   ruleInset: {
     height: StyleSheet.hairlineWidth,
     marginHorizontal: APP_LAYOUT.cardPadding,
+  },
+  tenureBox: {
+    paddingHorizontal: APP_LAYOUT.cardPadding,
+    paddingVertical: 12,
+    alignItems: 'flex-end',
+  },
+  tenureInputRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 8,
+    alignSelf: 'stretch',
+  },
+  tenureInputShell: {
+    flex: 1,
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    minHeight: 44,
   },
   introRow: {
     paddingHorizontal: APP_LAYOUT.cardPadding,

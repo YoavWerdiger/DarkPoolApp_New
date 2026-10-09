@@ -80,7 +80,24 @@ export type AdminTicketRow = {
   } | null;
 };
 
-export type AdminUserFilter = 'all' | 'muted' | 'suspended' | 'premium';
+export type AdminUserFilter = 'all' | 'muted' | 'suspended' | 'premium' | 'verified';
+
+/** תגים בפאנל: וי כחול + ותק מחושב מתשלומים + התאמה ידנית */
+export type AdminUserBadgeDetails = {
+  user_id: string;
+  is_verified: boolean;
+  verified_at: string | null;
+  /** null = אין תשלומים במערכת */
+  computed_days: number | null;
+  adjustment_days: number;
+};
+
+function rpcErrorMessage(error: { message?: string } | null): string {
+  const m = String(error?.message || '');
+  if (m.includes('cannot verify yourself')) return 'אי אפשר לאמת את עצמך';
+  if (m.includes('admin only')) return 'אין הרשאת מנהל';
+  return m || 'פעולה נכשלה';
+}
 export type AdminPushAudience = 'all' | 'free' | 'premium' | 'active_7d' | 'custom';
 
 export type CardComAdminOperation = 'ChargeOnly' | 'CreateTokenOnly';
@@ -322,6 +339,45 @@ export const adminService = {
   /** הרשאת ניהול באפליקציה — רק סופר-אדמין */
   setAppAdmin: (userId: string, admin: boolean) =>
     invokeAdminApi<{ ok: true; role: string }>('set_app_role', { userId, admin }),
+
+  /** וי כחול — RPC מנהל (admin_set_user_verified) */
+  setVerified: async (userId: string, verified: boolean) => {
+    const { error } = await supabase.rpc('admin_set_user_verified', {
+      p_user: userId,
+      p_verified: verified,
+    });
+    if (error) throw new Error(rpcErrorMessage(error));
+  },
+
+  /** התאמת ותק ידנית בימים (מתווסף לימים המחושבים מתשלומים) */
+  setTenureAdjustment: async (userId: string, days: number) => {
+    const { error } = await supabase.rpc('admin_set_user_tenure_adjustment', {
+      p_user: userId,
+      p_days: Math.round(days),
+    });
+    if (error) throw new Error(rpcErrorMessage(error));
+  },
+
+  badgeDetails: async (userIds: string[]): Promise<AdminUserBadgeDetails[]> => {
+    if (userIds.length === 0) return [];
+    const { data, error } = await supabase.rpc('admin_user_badge_details', { p_user_ids: userIds });
+    if (error) throw new Error(rpcErrorMessage(error));
+    return (data ?? []) as AdminUserBadgeDetails[];
+  },
+
+  /** פילטר «מאומתים» — admin-api לא מכיר את is_verified */
+  listVerifiedUsers: async (query: string, limit = 40): Promise<AdminUserRow[]> => {
+    const { data, error } = await supabase.rpc('admin_list_verified_users', {
+      p_query: query,
+      p_limit: limit,
+    });
+    if (error) throw new Error(rpcErrorMessage(error));
+    return ((data ?? []) as unknown[]).map((row) =>
+      row && typeof row === 'object' && 'admin_list_verified_users' in row
+        ? (row as { admin_list_verified_users: AdminUserRow }).admin_list_verified_users
+        : (row as AdminUserRow),
+    );
+  },
 
   setPremium: (userId: string, grant: boolean) =>
     invokeAdminApi<{

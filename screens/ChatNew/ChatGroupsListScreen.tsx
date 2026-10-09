@@ -1632,9 +1632,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     width: 66,
     height: 66,
     borderRadius: 33,
-    // קו מקווקו בצבע כפתור הפלוס (הירוק של האפליקציה)
+    // קו מקווקו בצבע כפתורי ה-CTA (primary.lightCta — כמו «העלאה», צ'יפ נבחר)
     borderWidth: 1.5,
-    borderColor: tokens.colors.primary.main,
+    borderColor: tokens.colors.primary.lightCta,
     borderStyle: 'dashed',
     justifyContent: 'center',
     alignItems: 'center',

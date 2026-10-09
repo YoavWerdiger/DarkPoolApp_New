@@ -50,6 +50,7 @@ import {
 } from '../../../components/ui/ChangeDot';
 import { formatCongressDeltaUsd } from '../../DarkPool/utils/investorHoldings';
 import { toDataIsland } from '../../DarkPool/utils/bidi';
+import { AnimatedNumber } from '../../../components/ui/AnimatedNumber';
 import { APP_LAYOUT } from '../../../components/ui/appLayout';
 import { appendOpenPositionSession } from '../../DarkPool/utils/sessionSnapshots';
 import { getHistoricalPrices } from '../../../services/portfolios/portfolioPriceFeed';
@@ -778,9 +779,16 @@ export default function OverviewTab({
       <UICard variant="soft" padding="md" style={styles.section}>
         <Text style={styles.valueLabel}>שווי תיק:</Text>
         {heroValue != null ? (
-          <Text style={styles.heroValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>
-            {toDataIsland(formatCurrency(heroValue, portfolio.currency))}
-          </Text>
+          <AnimatedNumber
+            text={toDataIsland(formatCurrency(heroValue, portfolio.currency))}
+            value={heroValue}
+            flash
+            animate={!scrubPoint}
+            style={styles.heroValue}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.6}
+          />
         ) : null}
         {scrubPoint ? (
           <Text style={[styles.deltaFigure, styles.deltaRow, { color: tokens.colors.text.secondary }]}>
@@ -788,13 +796,19 @@ export default function OverviewTab({
           </Text>
         ) : periodDelta ? (
           <View style={styles.deltaRow}>
-            <Text style={[styles.deltaFigure, { color: deltaColor }]} numberOfLines={1}>
-              {toDataIsland(formatCongressDeltaUsd(periodDelta.usd))}
-            </Text>
+            <AnimatedNumber
+              text={toDataIsland(formatCongressDeltaUsd(periodDelta.usd))}
+              value={periodDelta.usd}
+              style={[styles.deltaFigure, { color: deltaColor }]}
+              numberOfLines={1}
+            />
             <View style={[styles.deltaDot, { backgroundColor: deltaColor }]} />
-            <Text style={[styles.deltaFigure, { color: deltaColor }]} numberOfLines={1}>
-              {toDataIsland(formatSignedChangePct(periodDelta.pct))}
-            </Text>
+            <AnimatedNumber
+              text={toDataIsland(formatSignedChangePct(periodDelta.pct))}
+              value={periodDelta.pct}
+              style={[styles.deltaFigure, { color: deltaColor }]}
+              numberOfLines={1}
+            />
           </View>
         ) : null}
         {chartLoading ? (

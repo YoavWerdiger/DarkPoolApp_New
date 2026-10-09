@@ -5,6 +5,7 @@ import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { APP_TYPE } from '../../../components/ui/appType';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
 import { APP_LAYOUT } from '../../../components/ui/appLayout';
+import { AnimatedNumber } from '../../../components/ui/AnimatedNumber';
 import type { WatchlistRowData } from '../../../services/watchlist/watchlistTypes';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 import {
@@ -219,14 +220,16 @@ function WatchlistRowInner({ row, onPress, onDrag, isActive }: Props) {
           delayLongPress={300}
           style={styles.cellHit}
         >
-          <Text
+          <AnimatedNumber
+            key={symbol}
+            text={formatPrice(row.price)}
+            value={row.price}
+            flash
             style={styles.num}
             numberOfLines={1}
             adjustsFontSizeToFit
             minimumFontScale={0.85}
-          >
-            {formatPrice(row.price)}
-          </Text>
+          />
         </Pressable>
       </View>
 
@@ -237,9 +240,13 @@ function WatchlistRowInner({ row, onPress, onDrag, isActive }: Props) {
           delayLongPress={300}
           style={styles.cellHit}
         >
-          <Text style={[styles.chg, { color: tone }]} numberOfLines={1}>
-            {formatSigned(row.change)}
-          </Text>
+          <AnimatedNumber
+            key={symbol}
+            text={formatSigned(row.change)}
+            value={row.change}
+            style={[styles.chg, { color: tone }]}
+            numberOfLines={1}
+          />
         </Pressable>
       </View>
 
@@ -250,9 +257,13 @@ function WatchlistRowInner({ row, onPress, onDrag, isActive }: Props) {
           delayLongPress={300}
           style={styles.cellHit}
         >
-          <Text style={[styles.pct, { color: tone }]} numberOfLines={1}>
-            {formatSigned(row.changePct)}%
-          </Text>
+          <AnimatedNumber
+            key={symbol}
+            text={`${formatSigned(row.changePct)}%`}
+            value={row.changePct}
+            style={[styles.pct, { color: tone }]}
+            numberOfLines={1}
+          />
         </Pressable>
       </View>
 

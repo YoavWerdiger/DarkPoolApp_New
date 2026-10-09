@@ -63,6 +63,7 @@ import {
   resolveCongressHoldingDisplayReturnPct,
 } from './utils/congressHoldingSincePtr';
 import { toDataIsland } from './utils/bidi';
+import { AnimatedNumber } from '../../components/ui/AnimatedNumber';
 import {
   appendLivePortfolioPoint,
   filterChartSeriesByPeriod,
@@ -1439,18 +1440,21 @@ export function PersonPortfolioProfileScreen({
                 ) : null}
               </View>
               {heroValueText ? (
-                <Text
+                <AnimatedNumber
+                  text={toDataIsland(heroValueText)}
+                  value={trumpValueRange ? trumpValueRange.high : portfolioValue}
+                  flash
                   style={styles.heroValue}
                   numberOfLines={1}
                   adjustsFontSizeToFit
                   minimumFontScale={0.55}
-                >
-                  {toDataIsland(heroValueText)}
-                </Text>
+                />
               ) : holdingsEngine === 'trump' && trumpUnitWeighted && periodDelta ? (
-                <Text style={styles.heroValue}>
-                  {toDataIsland(formatSignedChangePct(periodDelta.pct))}
-                </Text>
+                <AnimatedNumber
+                  text={toDataIsland(formatSignedChangePct(periodDelta.pct))}
+                  value={periodDelta.pct}
+                  style={styles.heroValue}
+                />
               ) : null}
               {(showCongressValue ||
                 showTrumpValue ||
@@ -1458,13 +1462,19 @@ export function PersonPortfolioProfileScreen({
                 (holdingsEngine === 'trump' && trumpUnitWeighted)) &&
               periodDelta ? (
                 <View style={styles.deltaRow}>
-                  <Text style={[styles.deltaFigure, { color: deltaColor }]} numberOfLines={1}>
-                    {toDataIsland(formatCongressDeltaUsd(periodDelta.usd))}
-                  </Text>
+                  <AnimatedNumber
+                    text={toDataIsland(formatCongressDeltaUsd(periodDelta.usd))}
+                    value={periodDelta.usd}
+                    style={[styles.deltaFigure, { color: deltaColor }]}
+                    numberOfLines={1}
+                  />
                   <View style={[styles.deltaDot, { backgroundColor: deltaColor }]} />
-                  <Text style={[styles.deltaFigure, { color: deltaColor }]} numberOfLines={1}>
-                    {toDataIsland(formatSignedChangePct(periodDelta.pct))}
-                  </Text>
+                  <AnimatedNumber
+                    text={toDataIsland(formatSignedChangePct(periodDelta.pct))}
+                    value={periodDelta.pct}
+                    style={[styles.deltaFigure, { color: deltaColor }]}
+                    numberOfLines={1}
+                  />
                 </View>
               ) : null}
             </View>

@@ -11,7 +11,7 @@ import { HelpSheet } from '../HelpSheet';
 import { useUserBadges } from '../../../hooks/useUserBadges';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 import { VerifiedBadge } from './VerifiedBadge';
-import { RankAnimalIcon } from './RankAnimalIcon';
+import { RankMarkIcon } from './RankMarkIcon';
 import { RankSheet } from './RankSheet';
 import { rankColor, rankForPaidDays } from './userRank';
 
@@ -52,11 +52,7 @@ export function UserBadges({ userId, size = 16, interactive = true, style }: Pro
   if (!badges.isVerified && !rank) return null;
 
   const rankIcon = rank ? (
-    <RankAnimalIcon
-      animal={rank.animal}
-      color={rankColor(rank.metal, isDarkMode, tokens.colors.text.tertiary)}
-      size={size}
-    />
+    <RankMarkIcon metal={rank.metal} size={size} />
   ) : null;
   const verifiedIcon = badges.isVerified ? <VerifiedBadge size={size} /> : null;
 

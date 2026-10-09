@@ -20,7 +20,7 @@ import {
 } from '../appType';
 import { HELP_SHEET_GOT_IT } from '../HelpSheet';
 import { useTheme } from '../../../context/ThemeContext';
-import { RankAnimalIcon } from './RankAnimalIcon';
+import { RankMarkIcon } from './RankMarkIcon';
 import {
   USER_RANK_LADDER,
   formatDaysCount,
@@ -65,12 +65,12 @@ function RankSheetBody({
 
   if (!info) return null;
   const gray = tokens.colors.text.tertiary;
-  const color = rankColor(info.rank.metal, isDarkMode, gray);
+  const color = rankColor(info.rank.metal, isDarkMode, { grayToken: gray, brandGreen: tokens.colors.primary.main });
 
   return (
     <View onLayout={onLayout} style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 16) + 4 }]}>
       <View style={styles.hero}>
-        <RankAnimalIcon animal={info.rank.animal} color={color} size={HERO_ICON} />
+        <RankMarkIcon metal={info.rank.metal} size={HERO_ICON} />
         {/* בלי שמות דרגות — האייקון והוותק מספרים את הסיפור */}
         <Text style={[styles.title, { color: tokens.colors.text.primary }]}>
           {formatPaidTenure(paidDays)}
@@ -96,7 +96,7 @@ function RankSheetBody({
               style={[styles.ladderRow, active && { backgroundColor: tokens.colors.selection.subtle }]}
             >
               <View style={{ opacity: reached ? 1 : 0.4 }}>
-                <RankAnimalIcon animal={r.animal} color={rankColor(r.metal, isDarkMode, gray)} size={ROW_ICON} />
+                <RankMarkIcon metal={r.metal} size={ROW_ICON} />
               </View>
               <Text
                 style={[

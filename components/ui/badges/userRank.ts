@@ -1,14 +1,12 @@
 /**
- * דרגות ותק מנוי (דוב → שור) — לפי ימי מנוי בתשלום מצטברים (paid_days מ-get_user_badges).
+ * דרגות ותק מנוי — סמל השור־ודוב של הלוגו, הצבע עולה עם הוותק (מתכות → צבעי המותג) — לפי ימי מנוי בתשלום מצטברים (paid_days מ-get_user_badges).
  * paid_days = null → מעולם לא שילם → אין דרגה.
  */
 
-export type RankAnimal = 'bear' | 'bull';
-export type RankMetal = 'gray' | 'bronze' | 'silver' | 'gold';
+export type RankMetal = 'gray' | 'bronze' | 'silver' | 'gold' | 'platinum' | 'brand';
 
 export type UserRank = {
   level: 1 | 2 | 3 | 4 | 5 | 6;
-  animal: RankAnimal;
   metal: RankMetal;
   /** ימים מינימליים לדרגה */
   minDays: number;
@@ -17,12 +15,13 @@ export type UserRank = {
 };
 
 export const USER_RANK_LADDER: readonly UserRank[] = [
-  { level: 1, animal: 'bear', metal: 'gray', minDays: 0, rangeLabel: 'חודש ראשון' },
-  { level: 2, animal: 'bear', metal: 'bronze', minDays: 30, rangeLabel: '1–3 חודשים' },
-  { level: 3, animal: 'bear', metal: 'silver', minDays: 90, rangeLabel: '3–6 חודשים' },
-  { level: 4, animal: 'bull', metal: 'bronze', minDays: 180, rangeLabel: '6–12 חודשים' },
-  { level: 5, animal: 'bull', metal: 'silver', minDays: 365, rangeLabel: '1–2 שנים' },
-  { level: 6, animal: 'bull', metal: 'gold', minDays: 730, rangeLabel: 'שנתיים ומעלה' },
+  { level: 1, metal: 'gray', minDays: 0, rangeLabel: 'חודש ראשון' },
+  { level: 2, metal: 'bronze', minDays: 30, rangeLabel: '1–3 חודשים' },
+  { level: 3, metal: 'silver', minDays: 90, rangeLabel: '3–6 חודשים' },
+  { level: 4, metal: 'gold', minDays: 180, rangeLabel: '6–12 חודשים' },
+  { level: 5, metal: 'platinum', minDays: 365, rangeLabel: '1–2 שנים' },
+  // הדרגה העליונה — הצבעים המקוריים של הלוגו
+  { level: 6, metal: 'brand', minDays: 730, rangeLabel: 'שנתיים ומעלה' },
 ] as const;
 
 export function rankForPaidDays(days: number | null | undefined): UserRank | null {
@@ -76,14 +75,34 @@ export function formatDaysCount(days: number): string {
 export const VERIFIED_BLUE = '#1D9BF0';
 
 /** צבעי מתכת לדרגות — גוון בהיר לרקע כהה, גוון עמוק לרקע בהיר */
-export const RANK_METAL_COLORS: Record<Exclude<RankMetal, 'gray'>, { dark: string; light: string }> = {
+export const RANK_METAL_COLORS: Record<'bronze' | 'silver' | 'gold' | 'platinum', { dark: string; light: string }> = {
   bronze: { dark: '#D08A4E', light: '#A7622B' },
   silver: { dark: '#C9CED6', light: '#7D8692' },
   gold: { dark: '#F2C14E', light: '#B8860B' },
+  platinum: { dark: '#9FD3E8', light: '#4F8FAD' },
 };
 
-/** אפור — מטוקן הטקסט השלישי של ערכת העיצוב */
-export function rankColor(metal: RankMetal, isDarkMode: boolean, grayToken: string): string {
-  if (metal === 'gray') return grayToken;
+/** אפור הדוב בלוגו */
+export const BRAND_BEAR_GRAY = '#7A7A7A';
+
+/** הצבע הראשי של הדרגה (פס התקדמות וכו׳) */
+export function rankColor(
+  metal: RankMetal,
+  isDarkMode: boolean,
+  tokens: { grayToken: string; brandGreen: string }
+): string {
+  if (metal === 'gray') return tokens.grayToken;
+  if (metal === 'brand') return tokens.brandGreen;
   return isDarkMode ? RANK_METAL_COLORS[metal].dark : RANK_METAL_COLORS[metal].light;
+}
+
+/** צבעי הסמל: שור בצבע הדרגה, דוב באותו צבע מעומעם (בדרגת המותג — אפור כמו בלוגו) */
+export function rankMarkColors(
+  metal: RankMetal,
+  isDarkMode: boolean,
+  tokens: { grayToken: string; brandGreen: string }
+): { bull: string; bear: string; bearOpacity: number } {
+  if (metal === 'brand') return { bull: tokens.brandGreen, bear: BRAND_BEAR_GRAY, bearOpacity: 1 };
+  const c = rankColor(metal, isDarkMode, tokens);
+  return { bull: c, bear: c, bearOpacity: 0.55 };
 }

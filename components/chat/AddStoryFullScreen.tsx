@@ -26,6 +26,7 @@ import Reanimated, {
   withSpring,
   withTiming,
   interpolate,
+  Easing,
   cancelAnimation,
   runOnJS,
 } from 'react-native-reanimated';
@@ -827,10 +828,19 @@ function TrashZone({
 }) {
   const appear = useSharedValue(0);
   const pulse = useSharedValue(1);
+  const hover = useSharedValue(0);
+
+  // הופעה רכה (פייד) — לא קפיץ
+  useEffect(() => {
+    appear.value = withTiming(visible ? 1 : 0, {
+      duration: visible ? 220 : 180,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [visible]);
 
   useEffect(() => {
-    appear.value = withSpring(visible ? 1 : 0, { damping: 18, stiffness: 220, mass: 0.6 });
-  }, [visible]);
+    hover.value = withTiming(hovering ? 1 : 0, { duration: 200, easing: Easing.out(Easing.cubic) });
+  }, [hovering]);
 
   useEffect(() => {
     if (hovering) {
@@ -849,7 +859,7 @@ function TrashZone({
     return {
       opacity: appear.value,
       transform: [
-        { translateY: interpolate(appear.value, [0, 1], [40, 0]) },
+        { translateY: interpolate(appear.value, [0, 1], [16, 0]) },
       ],
     };
   });
@@ -871,7 +881,18 @@ function TrashZone({
     };
   });
 
+  // דעיכה כהה מתחתית המסך בזמן גרירה; מעל הפח — גוון אדום עדין
+  const fadeStyle = useAnimatedStyle(() => ({ opacity: appear.value }));
+  const dangerStyle = useAnimatedStyle(() => ({ opacity: appear.value * hover.value }));
+
   return (
+    <>
+    <Reanimated.View pointerEvents="none" style={[trashStyles.fade, fadeStyle]}>
+      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.72)']} style={StyleSheet.absoluteFill} />
+    </Reanimated.View>
+    <Reanimated.View pointerEvents="none" style={[trashStyles.fade, dangerStyle]}>
+      <LinearGradient colors={['transparent', 'rgba(229,57,53,0.38)']} style={StyleSheet.absoluteFill} />
+    </Reanimated.View>
     <Reanimated.View
       pointerEvents="none"
       style={[trashStyles.zone, { bottom: bottomOffset }, wrapStyle]}
@@ -896,10 +917,19 @@ function TrashZone({
         {hovering ? 'שחרר למחיקה' : 'גרור לכאן למחיקה'}
       </Text>
     </Reanimated.View>
+    </>
   );
 }
 
 const trashStyles = StyleSheet.create({
+  fade: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 280,
+    zIndex: 25,
+  },
   zone: {
     position: 'absolute',
     left: 0,

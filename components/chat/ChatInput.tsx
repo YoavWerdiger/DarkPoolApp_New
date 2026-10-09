@@ -2774,24 +2774,21 @@ const createStyles = (tokens: any, paddingBottom: number) => StyleSheet.create({
   clipboardChipRow: {
     direction: 'rtl',
     flexDirection: 'row',
-    marginHorizontal: tokens.spacing.xs,
+    justifyContent: 'center',
     marginBottom: tokens.spacing.sm,
   },
   clipboardChip: {
     direction: 'rtl',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: tokens.colors.background.cardSolid,
-    borderRadius: tokens.borderRadius.full,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    gap: 6,
+    paddingVertical: 4,
   },
   clipboardChipText: {
     fontSize: APP_TYPE.cardSubtitle.fontSize,
     lineHeight: APP_TYPE.cardSubtitle.lineHeight,
     fontWeight: '600',
-    color: tokens.colors.text.primary,
+    color: tokens.colors.primary.main,
   },
   replyPreviewContainer: {
     flexDirection: 'row',

@@ -5,6 +5,7 @@ import {
   Image,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -70,9 +71,12 @@ export default function ShareDestinationSheet({
   const [groups, setGroups] = useState<ChatGroupRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
+  /** מלל שנשלח עם השיתוף — גוף הציוץ / כיתוב בצ׳אט */
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
     if (!visible) {
+      setMessage('');
       setDest('menu');
       setGroups([]);
       setLoading(false);
@@ -115,7 +119,9 @@ export default function ShareDestinationSheet({
     setBusy(true);
     void HapticFeedback.impactLight();
     try {
+      // מה שהמשתמש כתב; ריק → שם הכרטיס (ציוץ לא יכול להיות ריק)
       const body =
+        message.trim() ||
         (attachment.preview.title ?? '').trim() ||
         (attachment.preview.subtitle ?? '').trim() ||
         'שיתוף מהאפליקציה';
@@ -138,7 +144,7 @@ export default function ShareDestinationSheet({
     } finally {
       setBusy(false);
     }
-  }, [attachment, busy, onClose, onSharedTweet, user?.id]);
+  }, [attachment, busy, message, onClose, onSharedTweet, user?.id]);
 
   const shareToGroup = useCallback(
     async (groupId: string, groupName: string) => {
@@ -146,7 +152,7 @@ export default function ShareDestinationSheet({
       setBusy(true);
       void HapticFeedback.medium();
       try {
-        const content = serializeEntityMessageContent(attachment);
+        const content = serializeEntityMessageContent(attachment, message);
         const { data: sent, error } = await sendChatMessage(
           {
             group_id: groupId,
@@ -168,7 +174,7 @@ export default function ShareDestinationSheet({
         setBusy(false);
       }
     },
-    [attachment, busy, onClose, user?.id]
+    [attachment, busy, message, onClose, user?.id]
   );
 
   if (!attachment) return null;
@@ -184,6 +190,8 @@ export default function ShareDestinationSheet({
       // גובה לפי התוכן — בלי שטח מת מתחת לאפשרויות
       snapPoints={[snapPoint]}
       fitContent
+      // שדה ההודעה — השיט עולה מעל המקלדת
+      avoidKeyboard
       enablePanDownToClose={!busy}
       showHandle
       useModal
@@ -211,6 +219,21 @@ export default function ShareDestinationSheet({
 
         <View style={styles.preview}>
           <EntityEmbedCard attachment={attachment} onPress={() => undefined} />
+        </View>
+
+        <View style={styles.messageWrap}>
+          <TextInput
+            value={message}
+            onChangeText={setMessage}
+            placeholder="הוסף הודעה…"
+            placeholderTextColor={tokens.colors.text.tertiary}
+            style={[styles.messageInput, { color: tokens.colors.text.primary }]}
+            multiline
+            maxLength={2000}
+            editable={!busy}
+            textAlign="right"
+            keyboardAppearance={isDarkMode ? 'dark' : 'light'}
+          />
         </View>
 
         {dest === 'menu' ? (
@@ -366,6 +389,23 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       marginBottom: APP_LAYOUT.componentGap,
     },
     actions: { paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal },
+    messageWrap: {
+      marginHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+      marginBottom: APP_LAYOUT.componentGap,
+      backgroundColor: tokens.colors.background.cardSolid,
+      borderRadius: tokens.borderRadius.lg,
+      paddingHorizontal: 14,
+    },
+    messageInput: {
+      ...appPhysicalRightText,
+      minHeight: 44,
+      maxHeight: 110,
+      paddingTop: 11,
+      paddingBottom: 11,
+      fontSize: APP_TYPE.cardBody.fontSize,
+      lineHeight: APP_TYPE.cardBody.lineHeight,
+      writingDirection: 'rtl',
+    },
     center: {
       minHeight: 160,
       alignItems: 'center',

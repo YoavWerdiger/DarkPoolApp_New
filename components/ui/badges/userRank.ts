@@ -15,14 +15,15 @@ export type UserRank = {
 };
 
 export const USER_RANK_LADDER: readonly UserRank[] = [
+  // הקהילה קיימת ~שנה וחצי — הסולם מכווץ כך שהוותיקים מגיעים לדרגה העליונה
   { level: 1, metal: 'gray', minDays: 0, rangeLabel: 'חודש ראשון' },
-  { level: 2, metal: 'silver', minDays: 30, rangeLabel: '1–3 חודשים' },
-  { level: 3, metal: 'gold', minDays: 90, rangeLabel: '3–6 חודשים' },
-  { level: 4, metal: 'platinum', minDays: 180, rangeLabel: '6–12 חודשים' },
-  { level: 5, metal: 'sapphire', minDays: 365, rangeLabel: '1–2 שנים' },
-  { level: 6, metal: 'diamond', minDays: 730, rangeLabel: '2–3 שנים' },
+  { level: 2, metal: 'silver', minDays: 30, rangeLabel: '1–2 חודשים' },
+  { level: 3, metal: 'gold', minDays: 60, rangeLabel: '2–4 חודשים' },
+  { level: 4, metal: 'platinum', minDays: 120, rangeLabel: '4–6 חודשים' },
+  { level: 5, metal: 'sapphire', minDays: 180, rangeLabel: '6–9 חודשים' },
+  { level: 6, metal: 'diamond', minDays: 270, rangeLabel: '9–12 חודשים' },
   // הדרגה העליונה — הירוק של האפליקציה
-  { level: 7, metal: 'brand', minDays: 1095, rangeLabel: '3 שנים ומעלה' },
+  { level: 7, metal: 'brand', minDays: 365, rangeLabel: 'שנה ומעלה' },
 ] as const;
 
 export function rankForPaidDays(days: number | null | undefined): UserRank | null {

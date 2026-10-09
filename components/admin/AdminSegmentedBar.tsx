@@ -1,7 +1,8 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { DayDividerPill } from '../ui/DayDividerPill';
+import { DayDividerPill, DayDividerSlidingLayer } from '../ui/DayDividerPill';
 import { APP_LAYOUT } from '../ui/appLayout';
+import { useSlidingIndicator } from '../ui/SlidingIndicator';
 
 export type AdminSegment<T extends string> = {
   id: T;
@@ -20,25 +21,31 @@ export function AdminSegmentedBar<T extends string>({
   onChange: (id: T) => void;
   accessibilityGroupLabel: string;
 }) {
+  const indicator = useSlidingIndicator(value);
   return (
     <View accessibilityRole="tablist" style={styles.row}>
       {options.map((opt) => {
         const active = opt.id === value;
         return (
-          <DayDividerPill
-            key={opt.id}
-            selected={active}
-            haptic
-            accessibilityLabel={`${accessibilityGroupLabel}: ${opt.label}`}
-            onPress={() => {
-              if (active) return;
-              onChange(opt.id);
-            }}
-          >
-            {opt.label}
-          </DayDividerPill>
+          <View key={opt.id} onLayout={indicator.onItemLayout(opt.id)}>
+            <DayDividerPill
+              selected={indicator.visualSelected === opt.id}
+              haptic
+              accessibilityLabel={`${accessibilityGroupLabel}: ${opt.label}`}
+              onPress={() => {
+                if (active) return;
+                onChange(opt.id);
+              }}
+            >
+              {opt.label}
+            </DayDividerPill>
+          </View>
         );
       })}
+      <DayDividerSlidingLayer
+        indicator={indicator}
+        labelOf={(id) => options.find((o) => o.id === id)?.label ?? ''}
+      />
     </View>
   );
 }

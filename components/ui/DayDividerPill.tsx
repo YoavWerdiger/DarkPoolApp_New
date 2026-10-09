@@ -10,6 +10,7 @@ import {
 import { useDesignTokens } from './DesignTokens';
 import { chromeSurfaceFill } from './chromeControl';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { SlidingIndicatorLayer, type SlidingIndicator } from './SlidingIndicator';
 
 export const DAY_DIVIDER_CARD = {
   glassIntensity: 'light' as const,
@@ -92,6 +93,42 @@ export function DayDividerPill({
     <View accessibilityLabel={accessibilityLabel ?? label} pointerEvents={disabled ? 'none' : 'auto'}>
       {inner}
     </View>
+  );
+}
+
+/**
+ * מחוון מחליק לשורת DayDividerPill — עותק של הצ'יפ הנבחר (אותו מילוי, רדיוס וטקסט).
+ * ילד אחרון של המיכל שבו כל צ'יפ עטוף ב־View עם indicator.onItemLayout(id).
+ */
+export function DayDividerSlidingLayer<K extends string>({
+  indicator,
+  labelOf,
+}: {
+  indicator: SlidingIndicator<K>;
+  labelOf: (key: K) => string;
+}) {
+  const tokens = useDesignTokens();
+  const styles = useMemo(() => createStyles(tokens), [tokens]);
+  return (
+    <SlidingIndicatorLayer
+      indicator={indicator}
+      renderFace={(content) => (
+        <View
+          style={{
+            flex: 1,
+            borderRadius: tokens.borderRadius.lg,
+            backgroundColor: tokens.colors.primary.lightCta,
+          }}
+        >
+          {content}
+        </View>
+      )}
+      renderLabel={(key) => (
+        <Text numberOfLines={1} style={[styles.text, styles.textSelected]}>
+          {labelOf(key)}
+        </Text>
+      )}
+    />
   );
 }
 

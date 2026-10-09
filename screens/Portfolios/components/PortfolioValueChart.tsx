@@ -12,7 +12,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
-import { DayDividerPill } from '../../../components/ui/DayDividerPill';
+import { DayDividerPill, DayDividerSlidingLayer } from '../../../components/ui/DayDividerPill';
+import { useSlidingIndicator } from '../../../components/ui/SlidingIndicator';
 import {
   SignedChange,
   changeToneColor,
@@ -190,6 +191,7 @@ export function PortfolioValueChart({
   onScrubPoint,
 }: Props) {
   const tokens = useDesignTokens();
+  const periodIndicator = useSlidingIndicator<PerformancePeriod>(selectedPeriod);
   const [containerW, setContainerW] = useState(0);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const onScrubPointRef = useRef(onScrubPoint);
@@ -786,20 +788,22 @@ export function PortfolioValueChart({
             const isActive = selectedPeriod === p;
             const available = isChartPeriodAvailable(series, p);
             return (
-              <DayDividerPill
-                key={p}
-                selected={isActive}
-                disabled={!available}
-                onPress={() => {
-                  if (!isActive && available) void HapticFeedback.selection();
-                  if (available) onPeriodChange(p);
-                }}
-                accessibilityLabel={`טווח ${p}`}
-              >
-                {p}
-              </DayDividerPill>
+              <View key={p} onLayout={periodIndicator.onItemLayout(p)}>
+                <DayDividerPill
+                  selected={periodIndicator.visualSelected === p}
+                  disabled={!available}
+                  onPress={() => {
+                    if (!isActive && available) void HapticFeedback.selection();
+                    if (available) onPeriodChange(p);
+                  }}
+                  accessibilityLabel={`טווח ${p}`}
+                >
+                  {p}
+                </DayDividerPill>
+              </View>
             );
           })}
+          <DayDividerSlidingLayer indicator={periodIndicator} labelOf={(p) => p} />
         </ScrollView>
       ) : null}
     </View>

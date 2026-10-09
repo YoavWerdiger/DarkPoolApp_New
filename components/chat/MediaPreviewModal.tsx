@@ -87,6 +87,16 @@ function MediaPreviewBody({
     };
   });
 
+  // כמו וואטסאפ: רק שורת הכיתוב עולה עם המקלדת — נגן הווידאו והממוזערות נשארים במקומם
+  // (המקלדת מכסה אותם): מבטלים בדיוק את ההרמה נטו של הדוק (מקלדת פחות שינוי ה-padding)
+  const stayBehindKeyboard = useAnimatedStyle(() => {
+    const kb = keyboard.height.value;
+    const open = kb > 8;
+    return {
+      transform: [{ translateY: open ? Math.max(0, kb - (safeBottom + 12 - 8)) : 0 }],
+    };
+  });
+
   const dismissKeyboard = useCallback(() => {
     Keyboard.dismiss();
   }, []);
@@ -620,6 +630,7 @@ function MediaPreviewBody({
           </View>
 
           <Animated.View style={[styles.captionDock, captionLift]} pointerEvents="box-none">
+            <Animated.View style={stayBehindKeyboard} pointerEvents="box-none">
             {currentMedia.type === 'video' ? (
               <View style={styles.videoControlsRow}>
                 <TouchableOpacity
@@ -707,6 +718,7 @@ function MediaPreviewBody({
                 ))}
               </ScrollView>
             ) : null}
+            </Animated.View>
 
             <View style={styles.captionRow}>
               <Pressable

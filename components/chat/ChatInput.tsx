@@ -40,6 +40,7 @@ import { useChatDraft } from '../../hooks/useChatDraft';
 import { consumeShareForGroup, subscribePendingShare } from '../../lib/pendingShare';
 import { useTypingBroadcast } from '../../hooks/useTypingBroadcast';
 import { useClipboardImagePaste } from '../../hooks/useClipboardImagePaste';
+import { addPasteImagesListener, nativeImagePasteAvailable } from '../../modules/clipboard-paste';
 import { APP_TYPE } from '../ui/appType';
 import MentionPickerSheet from '../share/MentionPickerSheet';
 import type { CommunityMention } from '../../types/tweets.types';
@@ -971,8 +972,31 @@ function ChatInputImpl({
     });
   }, []);
 
-  // תמונה שהועתקה באפליקציה אחרת → צ'יפ «הדבק תמונה» מעל שורת הכתיבה
-  const clipboardPaste = useClipboardImagePaste(!disabled && !showMediaPreview);
+  // «הדבק» של iOS/המקלדת עם תמונה בלוח → פריוויו (מודול נייטיב clipboard-paste).
+  // בבילד ישן בלי המודול — צ'יפ «הדבק תמונה» מעל שורת הכתיבה
+  useEffect(() => {
+    const sub = addPasteImagesListener((items) => {
+      if (!items.length || disabled || !textInputRef.current?.isFocused()) return;
+      void HapticFeedback.selection();
+      const stamp = Date.now();
+      applyPickedMedia(
+        items.map((item, index) => ({
+          id: `clipboard-${stamp}-${index}`,
+          uri: item.uri,
+          thumbnailUri: item.uri,
+          type: 'image' as const,
+          name: `photo_${stamp}_${index}.jpg`,
+          width: item.width,
+          height: item.height,
+        })),
+        false,
+      );
+    });
+    return () => sub?.remove();
+  }, [applyPickedMedia, disabled]);
+  const clipboardPaste = useClipboardImagePaste(
+    !nativeImagePasteAvailable && !disabled && !showMediaPreview,
+  );
   const pasteClipboardImage = useCallback(async () => {
     void HapticFeedback.selection();
     const picked = await clipboardPaste.readImage();

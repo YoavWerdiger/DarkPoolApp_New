@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { View } from 'react-native';
+import { APP_LAYOUT } from '../../components/ui/appLayout';
 import { checkPassword, isPasswordValid, PASSWORD_MIN_LENGTH } from '../../utils/passwordPolicy';
 import OnboardingErrorBanner from '../../components/onboarding/OnboardingErrorBanner';
 import { PasswordStrength } from '../../components/onboarding/RegistrationLive';
@@ -161,8 +163,11 @@ const ForgotPasswordNewScreen = ({ navigation, route }: { navigation: any; route
         autoFocus
         isLast
       />
-      {/* אותה מדיניות ותצוגה כמו ברישום */}
-      <PasswordStrength password={password} checks={checkPassword(password, emailHint)} />
+      {/* אותה מדיניות ותצוגה כמו ברישום. למד יש marginTop שלילי (נבנה לרווח gap של הרישום) —
+          כאן אין gap, ולכן הוא נצמד לשדה; מוסיפים את אותו רווח (20 − 8 = 12 כמו ברישום) */}
+      <View style={{ marginTop: APP_LAYOUT.stackGapSmall + 12 }}>
+        <PasswordStrength password={password} checks={checkPassword(password, emailHint)} />
+      </View>
     </OnboardingLayout>
   );
 };

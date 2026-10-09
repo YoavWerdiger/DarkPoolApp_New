@@ -16,6 +16,7 @@ import {
   NativeScrollEvent,
   ViewToken,
 } from 'react-native';
+import { InlineAppDialog } from '../ui/InlineAppDialog';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Video, ResizeMode } from '../../lib/expoAvSafe';
@@ -1869,52 +1870,18 @@ export default function StoryViewer({
           />
         )}
 
-        {/* Inline delete-confirmation overlay (rendered inside the Story Modal
-             so it never gets stacked below it, unlike a nested <Modal>). */}
-        {confirmDelete.visible && (
-          <View style={dialogStyles.root} pointerEvents="box-none">
-            <Pressable
-              style={dialogStyles.backdrop}
-              onPress={deleting ? undefined : closeDeleteConfirm}
-            />
-            <View style={dialogStyles.card}>
-              <View style={dialogStyles.iconWrap}>
-                <View style={dialogStyles.iconCircle}>
-                  <Ionicons name="trash" size={28} color="#FF453A" />
-                </View>
-              </View>
-
-              <Text style={dialogStyles.title}>מחיקת סטטוס</Text>
-              <Text style={dialogStyles.message}>
-                {confirmDelete.error || 'האם למחוק את הסטטוס? לא ניתן לשחזר.'}
-              </Text>
-
-              <View style={dialogStyles.buttonsRow}>
-                <TouchableOpacity
-                  style={[dialogStyles.btn, dialogStyles.btnDelete, deleting && { opacity: 0.6 }]}
-                  onPress={confirmDeleteStory}
-                  disabled={deleting}
-                  activeOpacity={0.7}
-                >
-                  {deleting ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Text style={dialogStyles.btnDeleteText}>מחק</Text>
-                  )}
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[dialogStyles.btn, dialogStyles.btnCancel]}
-                  onPress={closeDeleteConfirm}
-                  disabled={deleting}
-                  activeOpacity={0.7}
-                >
-                  <Text style={dialogStyles.btnCancelText}>ביטול</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        )}
+        {/* אישור מחיקה — הדיאלוג של האפליקציה, בתוך ה-Modal של הסטורי (Modal מקונן נפתח מתחת) */}
+        <InlineAppDialog
+          visible={confirmDelete.visible}
+          title="מחיקת סטטוס"
+          message={confirmDelete.error || 'האם למחוק את הסטטוס? לא ניתן לשחזר.'}
+          icon="trash-outline"
+          onBackdropPress={deleting ? undefined : closeDeleteConfirm}
+          buttons={[
+            { text: 'מחק', style: 'destructive', onPress: () => void confirmDeleteStory(), loading: deleting },
+            { text: 'ביטול', style: 'cancel', onPress: closeDeleteConfirm },
+          ]}
+        />
       </GestureHandlerRootView>
     </Modal>
   );
@@ -1984,93 +1951,6 @@ const reactStyles = StyleSheet.create({
     bottom: 0,
   },
 });
-
-const dialogStyles = StyleSheet.create({
-  root: {
-    ...StyleSheet.absoluteFill,
-    zIndex: 100,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 32,
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.72)',
-  },
-  card: {
-    width: '100%',
-    maxWidth: 340,
-    backgroundColor: 'rgba(28,28,32,0.98)',
-    borderRadius: 20,
-    paddingHorizontal: 22,
-    paddingTop: 20,
-    paddingBottom: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    shadowColor: '#000',
-    shadowOpacity: 0.5,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 12,
-  },
-  iconWrap: {
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  iconCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(255,69,58,0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,69,58,0.35)',
-  },
-  title: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: 6,
-  },
-  message: {
-    color: 'rgba(255,255,255,0.68)',
-    fontSize: 14,
-    fontWeight: '500',
-    textAlign: 'center',
-    marginBottom: 18,
-    lineHeight: 20,
-  },
-  buttonsRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  btn: {
-    flex: 1,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  btnCancel: {
-    backgroundColor: 'rgba(255,255,255,0.12)',
-  },
-  btnCancelText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  btnDelete: {
-    backgroundColor: '#FF3B30',
-  },
-  btnDeleteText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-});
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,

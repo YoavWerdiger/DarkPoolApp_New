@@ -2,6 +2,7 @@ import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { logger } from '../../utils/logger';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Modal, Pressable, Image, Dimensions, StatusBar, TextInput, KeyboardAvoidingView, Platform, ScrollView, FlatList, Animated, Keyboard } from 'react-native';
+import { InlineAppDialog } from '../ui/InlineAppDialog';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { APP_TYPE } from '../ui/appType';
 import { stableCameraPreviewFrame } from '../../lib/cameraFrame';
@@ -2312,45 +2313,22 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
             </View>
           )}
 
-          {phase === 'uploading' && (
-            // מסך העלאה לפי הטופו: התמונה מטושטשת ברקע (המשך הפריוויו) + כרטיס cardSolid
-            <View style={s.uploadOverlay}>
-              {mediaType === 'image' && mediaUri ? (
-                <ExpoImage
-                  source={{ uri: mediaUri }}
-                  style={StyleSheet.absoluteFill}
-                  contentFit="cover"
-                  blurRadius={40}
-                  transition={0}
-                />
-              ) : null}
-              <View style={[StyleSheet.absoluteFill, s.previewBlurDim]} />
-              <View
-                style={[
-                  s.uploadCard,
-                  {
-                    backgroundColor: tokens.colors.background.cardSolid,
-                    borderRadius: tokens.borderRadius.xl,
-                  },
-                ]}
-              >
-                {mediaUri ? (
-                  <View style={s.uploadThumbWrap}>
-                    {mediaType === 'image' ? (
-                      <ExpoImage source={{ uri: mediaUri }} style={s.uploadThumb} contentFit="cover" transition={0} />
-                    ) : (
-                      <View style={[s.uploadThumb, s.uploadThumbVideo]}>
-                        <Ionicons name="videocam" size={22} color="#fff" />
-                      </View>
-                    )}
-                  </View>
-                ) : null}
-                <ActivityIndicator size="small" color={tokens.colors.primary.main} />
-                <Text style={[s.uploadTitle, { color: tokens.colors.text.primary }]}>מעלה סטטוס…</Text>
-                <Text style={[s.uploadSub, { color: tokens.colors.text.secondary }]}>זה ייקח רק רגע</Text>
-              </View>
-            </View>
-          )}
+          {/* העלאה — הדיאלוג של האפליקציה (ספינר, בלי כפתורים) מעל הפריוויו המטושטש */}
+          {phase === 'uploading' && mediaType === 'image' && mediaUri ? (
+            <ExpoImage
+              source={{ uri: mediaUri }}
+              style={StyleSheet.absoluteFill}
+              contentFit="cover"
+              blurRadius={40}
+              transition={0}
+            />
+          ) : null}
+          <InlineAppDialog
+            visible={phase === 'uploading'}
+            busy
+            title="מעלה סטטוס…"
+            message="זה ייקח רק רגע"
+          />
         </Reanimated.View>
       </GestureHandlerRootView>
     </Modal>
@@ -2881,43 +2859,4 @@ const s = StyleSheet.create({
   },
 
   /* ---- Upload overlay ---- */
-  uploadOverlay: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: '#000',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 30,
-  },
-  uploadCard: {
-    minWidth: 220,
-    paddingVertical: 24,
-    paddingHorizontal: 32,
-    alignItems: 'center',
-    gap: 10,
-  },
-  uploadThumbWrap: {
-    marginBottom: 4,
-  },
-  uploadThumb: {
-    width: 64,
-    height: 96,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  uploadThumbVideo: {
-    backgroundColor: '#1c1c1e',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  uploadTitle: {
-    fontSize: APP_TYPE.cardTitle.fontSize,
-    lineHeight: APP_TYPE.cardTitle.lineHeight,
-    fontWeight: APP_TYPE.cardTitle.fontWeight,
-    writingDirection: 'rtl',
-  },
-  uploadSub: {
-    fontSize: APP_TYPE.cardSubtitle.fontSize,
-    lineHeight: APP_TYPE.cardSubtitle.lineHeight,
-    writingDirection: 'rtl',
-  },
 });

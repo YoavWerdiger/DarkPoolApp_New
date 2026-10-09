@@ -106,7 +106,8 @@ export function InlineAppDialog({
               style={[
                 APP_TYPE.body,
                 centered,
-                { color: colors.text.secondary, marginBottom: buttons.length ? spacing.lg : 0 },
+                // בלי כפתורים (למשל העלאה) — מרווח קטן מתחת לטקסט כדי שלא ייצמד לתחתית הכרטיס
+                { color: colors.text.secondary, marginBottom: buttons.length ? spacing.lg : spacing.sm },
               ]}
             >
               {message}

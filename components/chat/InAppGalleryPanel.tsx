@@ -201,6 +201,8 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     backgroundColor: '#000',
     zIndex: 50,
+    // מעל שכבות הכרום של המצלמה (באנדרואיד הסדר לפי elevation)
+    elevation: 60,
   },
   header: {
     direction: 'ltr',

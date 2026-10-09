@@ -2,6 +2,9 @@ import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { logger } from '../../utils/logger';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Modal, Pressable, Image, Dimensions, StatusBar, TextInput, KeyboardAvoidingView, Platform, ScrollView, FlatList, Animated, Keyboard } from 'react-native';
+import { cameraPreviewFrame } from '../../lib/cameraFrame';
+import { InAppGalleryPanel, type InAppGalleryPick } from './InAppGalleryPanel';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 import { Image as ExpoImage } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
@@ -961,6 +964,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
 
   const [mode, setMode] = useState<ScreenMode>('camera');
   const [phase, setPhase] = useState<ScreenPhase>('capture');
+  const cameraFrame = cameraPreviewFrame(SW, SH, insets);
   const [facing, setFacing] = useState<CameraType>('back');
   const [flash, setFlash] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -1459,22 +1463,22 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
     }
   }, [user?.id]);
 
+  // אותה גלריה כמו במצלמת הצ'אט — בתוך המסך
+  const [inAppGalleryOpen, setInAppGalleryOpen] = useState(false);
+  const onInAppGalleryPick = useCallback((pick: InAppGalleryPick) => {
+    setInAppGalleryOpen(false);
+    setMediaUri(pick.uri);
+    setMediaType(pick.mediaType);
+    setOverlays([]);
+    setGalleryExpanded(false);
+    setPhase('preview');
+  }, []);
+
   const handleGalleryPress = useCallback(() => {
-    logger.debug(
-      'AddStoryFullScreen',
-      `gallery press (platform=${Platform.OS}, expanded=${galleryExpanded}, recent=${recentPhotos.length})`,
-    );
-    if (galleryExpanded) {
-      setGalleryExpanded(false);
-    } else {
-      setGalleryExpanded(true);
-      if (recentPhotos.length === 0) {
-        void requestMediaLibraryRead().then((ok) => {
-          if (ok) void loadRecentPhotos();
-        });
-      }
-    }
-  }, [galleryExpanded, recentPhotos.length]);
+    void HapticFeedback.selection();
+    setInAppGalleryOpen(true);
+  }, []);
+
 
   const handleCapturePress = useCallback(() => {
     logger.debug('AddStoryFullScreen', `capture press / shutter tap (platform=${Platform.OS})`);
@@ -1693,7 +1697,9 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
         {/* ── Panel 0: Camera preview + background gestures ── */}
         <View style={s.modePanel} collapsable={false}>
           <GestureDetector gesture={captureBackgroundGestures}>
-            <View style={StyleSheet.absoluteFill} collapsable={false}>
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: '#000' }]} collapsable={false}>
+              {/* חלון המצלמה כמו בצ'אט (cameraPreviewFrame) — לא מסך מלא */}
+              <View style={[s.cameraFrame, { top: cameraFrame.top, height: cameraFrame.height }]}>
               {permission?.granted ? (
                 <CameraView
                   ref={cameraRef}
@@ -1731,6 +1737,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
                 style={s.vignetteBottom}
                 pointerEvents="none"
               />
+              </View>
             </View>
           </GestureDetector>
         </View>
@@ -2207,6 +2214,13 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
         >
           {phase === 'capture' && renderCapturePhase()}
           {phase === 'preview' && mediaUri && renderPreview()}
+          {phase === 'capture' ? (
+            <InAppGalleryPanel
+              visible={inAppGalleryOpen}
+              onClose={() => setInAppGalleryOpen(false)}
+              onPick={onInAppGalleryPick}
+            />
+          ) : null}
 
           {/* Mode switcher — sibling outside all Pans */}
           {phase === 'capture' && (
@@ -2295,6 +2309,13 @@ const s = StyleSheet.create({
   modePanel: {
     width: SW,
     height: '100%',
+  },
+  cameraFrame: {
+    position: 'absolute',
+    left: 0,
+    width: SW,
+    overflow: 'hidden',
+    backgroundColor: '#000',
   },
 
   /* Chrome overlays sit above background Pans (Android touch isolation). */

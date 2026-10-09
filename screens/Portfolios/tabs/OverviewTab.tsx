@@ -783,7 +783,7 @@ export default function OverviewTab({
             text={toDataIsland(formatCurrency(heroValue, portfolio.currency))}
             value={heroValue}
             flash
-            animate={!scrubPoint}
+            fast={!!scrubPoint}
             style={styles.heroValue}
             numberOfLines={1}
             adjustsFontSizeToFit

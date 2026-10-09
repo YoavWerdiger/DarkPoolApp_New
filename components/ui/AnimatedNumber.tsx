@@ -13,6 +13,7 @@ import { useDesignTokens } from './useDesignTokens';
 
 export const NUMBER_ROLL_MS = 260;
 export const NUMBER_FLASH_MS = 700;
+export const NUMBER_FAST_MS = 120;
 const EASE_OUT = Easing.out(Easing.cubic);
 /** כמה פיקסלים הערך החדש נכנס מלמטה/מלמעלה */
 const ROLL_SHIFT = 10;
@@ -60,8 +61,10 @@ export type AnimatedNumberProps = Omit<TextProps, 'children'> & {
   value?: number | null;
   /** הבהוב ירוק/אדום עדין בשינוי */
   flash?: boolean;
-  /** false = החלפה בלי אנימציה (למשל בזמן גרירה על הגרף) */
+  /** false = החלפה בלי אנימציה */
   animate?: boolean;
+  /** מעבר קצר (גרירה על הגרף — הערך משתנה כל פריים) */
+  fast?: boolean;
 };
 
 function pickKeys<K extends string>(src: Record<string, unknown>, keys: readonly K[]) {
@@ -81,6 +84,7 @@ export function AnimatedNumber({
   value,
   flash = false,
   animate = true,
+  fast = false,
   style,
   ...rest
 }: AnimatedNumberProps) {
@@ -105,7 +109,7 @@ export function AnimatedNumber({
   if (shown.text !== text || shown.animate !== animate) {
     let next: Shown = { ...shown, text, value, animate };
     if (shown.text !== text) {
-      const canAnimate = animate && shown.animate && !reduceMotion;
+      const canAnimate = animate && !reduceMotion;
       const numericDir =
         value != null && shown.value != null && Number.isFinite(value) && Number.isFinite(shown.value)
           ? Math.sign(value - shown.value)
@@ -114,7 +118,7 @@ export function AnimatedNumber({
       if (canAnimate) {
         genRef.current += 1;
         next.prev = { text: shown.text, gen: genRef.current, dir };
-        if (flash && numericDir !== 0) {
+        if (flash && !fast && numericDir !== 0) {
           next = { ...next, flashGen: shown.flashGen + 1, flashDir: dir };
         }
       } else {
@@ -132,20 +136,25 @@ export function AnimatedNumber({
   // מעבר: p 0→1
   const p = useSharedValue(1);
   const dirSv = useSharedValue(1);
+  const fastSv = useSharedValue(0);
   useLayoutEffect(() => {
     if (!prev) return;
     const gen = prev.gen;
     dirSv.value = prev.dir;
+    fastSv.value = fast ? 1 : 0;
     p.value = 0;
-    p.value = withTiming(1, { duration: NUMBER_ROLL_MS, easing: EASE_OUT }, (finished) => {
+    p.value = withTiming(1, { duration: fast ? NUMBER_FAST_MS : NUMBER_ROLL_MS, easing: EASE_OUT }, (finished) => {
       if (finished) scheduleOnRN(endRoll, gen);
     });
-  }, [prev, p, dirSv, endRoll]);
+    // fast נקרא רק בתחילת מעבר — לא מתחילים מחדש כשהוא משתנה
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prev, p, dirSv, fastSv, endRoll]);
 
   const inStyle = useAnimatedStyle(() => ({
-    opacity: p.value,
+    // בגרירה (fast) הערך החדש תמיד מלא — אחרת הוא «מהבהב» כשהוא משתנה בכל פריים
+    opacity: fastSv.value ? 1 : p.value,
     // עלייה: נכנס מלמטה ועולה למקום; ירידה: נכנס מלמעלה
-    transform: [{ translateY: dirSv.value * ROLL_SHIFT * (1 - p.value) }],
+    transform: [{ translateY: dirSv.value * ROLL_SHIFT * (fastSv.value ? 0.4 : 1) * (1 - p.value) }],
   }));
   const outStyle = useAnimatedStyle(() => ({
     opacity: 1 - p.value,

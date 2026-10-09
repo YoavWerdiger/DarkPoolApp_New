@@ -2363,11 +2363,12 @@ const s = StyleSheet.create({
     width: SW,
     height: '100%',
   },
+  // בלי overflow:hidden — חיתוך שכבת התצוגה של המצלמה בתוך אב עם transform (רצועת המצבים /
+  // גרירת הסגירה) מקפיא את התצוגה ב-iOS על הפריים הראשון. CameraView כבר בגודל החלון בדיוק
   cameraFrame: {
     position: 'absolute',
     left: 0,
     width: SW,
-    overflow: 'hidden',
     backgroundColor: '#000',
   },
 

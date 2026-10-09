@@ -1,5 +1,6 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { Collapsible } from '../../components/ui/Collapsible';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Pressable, ActivityIndicator, Dimensions, TextInput } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Video, ResizeMode } from '../../lib/expoAvSafe';
@@ -527,7 +528,7 @@ export const LessonPlayerScreen: React.FC = () => {
                 </View>
               </TouchableOpacity>
 
-              {notesExpanded && (
+              <Collapsible open={notesExpanded}>
                 <View style={styles.notesContent}>
                   <TextInput
                     style={styles.notesInput}
@@ -542,7 +543,7 @@ export const LessonPlayerScreen: React.FC = () => {
                     returnKeyType="default"
                   />
                 </View>
-              )}
+              </Collapsible>
             </UICard>
           </View>
 

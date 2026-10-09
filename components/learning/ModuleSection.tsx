@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { Collapsible } from '../ui/Collapsible';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { ModuleWithLessons, Enrollment } from '../../types/learning';
 import { useDesignTokens } from '../ui/DesignTokens';
@@ -161,7 +162,8 @@ export const ModuleSection: React.FC<ModuleSectionProps> = ({
         </View>
       </TouchableOpacity>
 
-      {isExpanded && module.lessons && (
+      {module.lessons ? (
+        <Collapsible open={isExpanded}>
         <View style={styles.lessonsContainer}>
           {module.lessons.map((lesson, index) => (
             <LessonRow
@@ -175,7 +177,8 @@ export const ModuleSection: React.FC<ModuleSectionProps> = ({
             />
           ))}
         </View>
-      )}
+        </Collapsible>
+      ) : null}
     </UICard>
   );
 };

@@ -32,6 +32,7 @@ import { scheduleAfterNavigationTransition } from '../../hooks/afterNavigationTr
 import { ChatGroupMember, ChatMemberRole } from '../../types/chat.types';
 import { Ionicons } from '@expo/vector-icons';
 import { Bell, BellOff, ChevronDown, ChevronLeft, LogOut, Plus, Star, Users } from 'lucide-react-native';
+import { Collapsible } from '../../components/ui/Collapsible';
 import UICard from '../../components/ui/UICard';
 import UIButton from '../../components/ui/UIButton';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
@@ -213,14 +214,11 @@ export default function ChatGroupInfoScreen() {
 
   const toggleExpandedMembers = useCallback(() => {
     void HapticFeedback.selection();
-    if (Platform.OS !== 'web') {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    }
     setExpandedMembers((prev) => {
       const next = !prev;
       Animated.timing(chevronAnim, {
         toValue: next ? 1 : 0,
-        duration: 200,
+        duration: 260,
         useNativeDriver: true,
       }).start();
       return next;
@@ -604,14 +602,14 @@ export default function ChatGroupInfoScreen() {
                       </Text>
                     </View>
                   </TouchableOpacity>
-                  {expandedMembers
-                    ? otherRows.map((member) => (
-                        <React.Fragment key={member.id}>
-                          <View style={styles.separator} />
-                          {renderMemberRow(member)}
-                        </React.Fragment>
-                      ))
-                    : null}
+                  <Collapsible open={expandedMembers}>
+                    {otherRows.map((member) => (
+                      <React.Fragment key={member.id}>
+                        <View style={styles.separator} />
+                        {renderMemberRow(member)}
+                      </React.Fragment>
+                    ))}
+                  </Collapsible>
                 </>
               ) : null}
             </UICard>

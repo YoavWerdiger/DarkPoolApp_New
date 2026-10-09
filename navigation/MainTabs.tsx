@@ -10,6 +10,7 @@ import {
   InteractionManager,
   Platform,
 } from 'react-native';
+import { UserNameRow, badgeSizeForLineHeight } from '../components/ui/badges/UserBadges';
 import { Image as ExpoImage } from 'expo-image';
 import { createDrawerNavigator, DrawerContentComponentProps } from '@react-navigation/drawer';
 import { CommonActions } from '@react-navigation/native';
@@ -304,7 +305,10 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
             </View>
           )}
           <View style={drawerStyles.profileFooterInfo}>
-            <Text style={drawerStyles.profileFooterName} numberOfLines={1}>{displayName}</Text>
+            {/* תגי המשתמש (וי כחול + דרגת ותק) צמודים לשם — כמו בכל האפליקציה */}
+            <UserNameRow userId={user?.id} size={badgeSizeForLineHeight(22)}>
+              <Text style={drawerStyles.profileFooterName} numberOfLines={1}>{displayName}</Text>
+            </UserNameRow>
             <Text style={drawerStyles.profileFooterMeta} numberOfLines={1}>{activeSinceText}</Text>
           </View>
         </View>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Image } from 'react-native';
 
-// וי כחול «משתמש מאומת» (icons8, 64×64 — מספיק עד ~21pt ב-@3x)
+// וי כחול «משתמש מאומת» (icons8 64 חתוך לחותם עצמו, 47×47 — בלי השוליים השקופים שהקטינו אותו)
 const VERIFIED = require('../../../assets/badges/verified.png');
 
 type Props = {

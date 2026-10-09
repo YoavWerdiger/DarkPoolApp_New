@@ -520,10 +520,11 @@ export default function MediaPickerSheet({
               accessibilityRole="button"
               accessibilityLabel={action.label}
             >
-              <Icon size={22} color={tokens.colors.text.primary} strokeWidth={2} />
+              {/* RTL: הטקסט קודם (מימין) והאייקון אחריו */}
               <Text style={styles.primaryPillLabel} numberOfLines={1}>
                 {action.label}
               </Text>
+              <Icon size={22} color={tokens.colors.text.primary} strokeWidth={2} />
             </TouchableOpacity>
           );
         })}

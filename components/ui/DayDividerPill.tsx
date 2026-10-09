@@ -1,4 +1,13 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
+import Animated, {
+  Easing,
+  interpolateColor,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import {
   Text,
   StyleSheet,
@@ -34,6 +43,8 @@ export type DayDividerPillProps = {
   accessibilityLabel?: string;
   style?: StyleProp<ViewStyle>;
   contentContainerStyle?: StyleProp<ViewStyle>;
+  /** בלי מעבר צבע (שורות עם מחוון מחליק — העותק המחליק כבר מנפיש את הבחירה) */
+  instantSelection?: boolean;
 };
 
 /** צ'יפ / כפתור משני — אותו מילוי כמו כפתורי כרום. */
@@ -46,6 +57,7 @@ export function DayDividerPill({
   accessibilityLabel,
   style,
   contentContainerStyle,
+  instantSelection = false,
 }: DayDividerPillProps) {
   const tokens = useDesignTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
@@ -55,22 +67,48 @@ export function DayDividerPill({
     (flatStyle?.borderRadius as number | undefined) ?? tokens.borderRadius.lg;
   const baseFill = chromeSurfaceFill(tokens);
 
+  // מושן: מעבר צבע לבחירה (מילוי + טקסט) ולחיצה שמתכווצת קלות — בכל הצ'יפים באפליקציה
+  const reduceMotion = useReducedMotion();
+  const selectedFill = tokens.colors.primary.lightCta;
+  const textColor = tokens.colors.text.primary;
+  const textSelectedColor = tokens.colors.text.inverse;
+  const sel = useSharedValue(selected ? 1 : 0);
+  const press = useSharedValue(1);
+  useEffect(() => {
+    const target = selected ? 1 : 0;
+    sel.value =
+      instantSelection || reduceMotion
+        ? target
+        : withTiming(target, { duration: 200, easing: Easing.out(Easing.cubic) });
+  }, [selected, instantSelection, reduceMotion, sel]);
+
+  const faceAnim = useAnimatedStyle(
+    () => ({
+      backgroundColor: interpolateColor(sel.value, [0, 1], [baseFill, selectedFill]),
+      transform: [{ scale: press.value }],
+    }),
+    [baseFill, selectedFill]
+  );
+  const textAnim = useAnimatedStyle(
+    () => ({ color: interpolateColor(sel.value, [0, 1], [textColor, textSelectedColor]) }),
+    [textColor, textSelectedColor]
+  );
+
   const faceStyle: ViewStyle = {
     borderRadius: radius,
-    backgroundColor: selected ? tokens.colors.primary.lightCta : baseFill,
     borderWidth: 0,
     alignSelf: 'flex-start',
     flexShrink: 0,
   };
 
   const inner = (
-    <View style={[faceStyle, flatStyle, styles.frame, contentContainerStyle, styles.dividerInner]}>
+    <Animated.View style={[faceStyle, flatStyle, styles.frame, contentContainerStyle, styles.dividerInner, faceAnim]}>
       {typeof children === 'string' ? (
-        <Text style={[styles.text, selected && styles.textSelected]}>{children}</Text>
+        <Animated.Text style={[styles.text, selected && styles.textSelected, textAnim]}>{children}</Animated.Text>
       ) : (
         children
       )}
-    </View>
+    </Animated.View>
   );
 
   if (onPress && !disabled) {
@@ -80,9 +118,15 @@ export function DayDividerPill({
           if (haptic) void HapticFeedback.impactLight();
           onPress();
         }}
+        onPressIn={() => {
+          if (!reduceMotion) press.value = withTiming(0.95, { duration: 90 });
+        }}
+        onPressOut={() => {
+          press.value = withSpring(1, { damping: 14, stiffness: 260 });
+        }}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel ?? label}
-        style={({ pressed }) => [pressed && { opacity: 0.9 }]}
+        accessibilityState={{ selected }}
       >
         {inner}
       </Pressable>

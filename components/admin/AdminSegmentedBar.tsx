@@ -30,6 +30,7 @@ export function AdminSegmentedBar<T extends string>({
           <View key={opt.id} onLayout={indicator.onItemLayout(opt.id)}>
             <DayDividerPill
               selected={indicator.visualSelected === opt.id}
+                  instantSelection
               haptic
               accessibilityLabel={`${accessibilityGroupLabel}: ${opt.label}`}
               onPress={() => {

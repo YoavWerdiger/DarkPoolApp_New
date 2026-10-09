@@ -791,6 +791,7 @@ export function PortfolioValueChart({
               <View key={p} onLayout={periodIndicator.onItemLayout(p)}>
                 <DayDividerPill
                   selected={periodIndicator.visualSelected === p}
+                  instantSelection
                   disabled={!available}
                   onPress={() => {
                     if (!isActive && available) void HapticFeedback.selection();

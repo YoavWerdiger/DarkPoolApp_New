@@ -13,7 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenChrome } from '../../components/ui/ScreenChrome';
 import UICard from '../../components/ui/UICard';
-import { DayDividerPill } from '../../components/ui/DayDividerPill';
+import { DayDividerPill, SlidingPillGroup } from '../../components/ui/DayDividerPill';
 import { SignedChangePair } from '../../components/ui/ChangeDot';
 import { DayNavBlurButton, HEADER_BACK_BTN_SIZE } from '../../components/ui/DayNavBlurButton';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
@@ -456,28 +456,14 @@ export default function DarkPoolTickerScreen() {
           ) : null}
 
           {visibleRanges.length > 0 ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
+            <SlidingPillGroup
+              scroll
+              options={visibleRanges.map((id) => ({ id, label: id }))}
+              value={range}
+              onChange={setRange}
               contentContainerStyle={styles.chipRow}
-            >
-              {visibleRanges.map((id) => {
-                const selected = id === range;
-                return (
-                  <DayDividerPill
-                    key={id}
-                    selected={selected}
-                    onPress={() => {
-                      if (id !== range) void HapticFeedback.selection();
-                      setRange(id);
-                    }}
-                    accessibilityLabel={`טווח ${id}`}
-                  >
-                    {id}
-                  </DayDividerPill>
-                );
-              })}
-            </ScrollView>
+              accessibilityLabelFor={(o) => `טווח ${o.label}`}
+            />
           ) : null}
 
           <View style={styles.tablist} accessibilityRole="tablist">

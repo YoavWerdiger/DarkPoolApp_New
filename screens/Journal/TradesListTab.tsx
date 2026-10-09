@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { SlidingPillGroup } from '../../components/ui/DayDividerPill';
 import { CardSkeleton } from '../../components/ui/SkeletonLoader';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabase';
@@ -303,26 +304,14 @@ export default function TradesListTab() {
       ) : null}
 
       {/* Filter chips */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
+      {/* מחוון מחליק — כמו בורר האינטרוולים */}
+      <SlidingPillGroup
+        scroll
+        options={allFilters}
+        value={activeFilter}
+        onChange={setActiveFilter}
         contentContainerStyle={{ ...journalRow, gap: 8, paddingBottom: 10 }}
-      >
-        {allFilters.map((f) => {
-          const active = activeFilter === f.id;
-          return (
-            <DayDividerPill
-              key={f.id}
-              selected={active}
-              onPress={() => setActiveFilter(f.id)}
-              haptic={!active}
-              accessibilityLabel={f.label}
-            >
-              {f.label}
-            </DayDividerPill>
-          );
-        })}
-      </ScrollView>
+      />
     </View>
   );
 

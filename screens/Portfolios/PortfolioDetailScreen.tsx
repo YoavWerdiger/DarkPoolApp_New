@@ -45,7 +45,7 @@ import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { useAuth } from '../../context/AuthContext';
 import { useColmexSync } from '../../hooks/useColmexSync';
 import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE, drawerMenuFaceColor } from '../../components/ui/DayNavBlurButton';
-import { DayDividerPill } from '../../components/ui/DayDividerPill';
+import { DayDividerPill, SlidingPillGroup } from '../../components/ui/DayDividerPill';
 import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHeader';
 import { PortfolioSwitcher } from './components/PortfolioSwitcher';
 import { APP_LAYOUT } from '../../components/ui/appLayout';
@@ -361,31 +361,16 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
           }
           showsVerticalScrollIndicator={false}
         >
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
+          {/* מחוון מחליק — כמו בורר האינטרוולים */}
+          <SlidingPillGroup
+            scroll
+            options={PORTFOLIO_DETAIL_TABS}
+            value={activeTab}
+            onChange={setActiveTab}
             style={styles.tabsScroll}
             contentContainerStyle={styles.tabsScrollContent}
-          >
-            {PORTFOLIO_DETAIL_TABS.map((tab) => {
-              const active = tab.id === activeTab;
-              return (
-                <DayDividerPill
-                  key={tab.id}
-                  selected={active}
-                  haptic={false}
-                  onPress={() => {
-                    if (!active) void HapticFeedback.selection();
-                    setActiveTab(tab.id);
-                  }}
-                  style={styles.tabBtn}
-                  accessibilityLabel={tab.label}
-                >
-                  {tab.label}
-                </DayDividerPill>
-              );
-            })}
-          </ScrollView>
+            pillStyle={styles.tabBtn}
+          />
 
           <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: canAddTransaction ? mainTabsHeight + 90 : 60, direction: 'rtl' }}>
             {activeTab === 'overview' && portfolio && (

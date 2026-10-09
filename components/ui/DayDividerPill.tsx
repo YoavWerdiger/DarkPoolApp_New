@@ -19,7 +19,8 @@ import {
 import { useDesignTokens } from './DesignTokens';
 import { chromeSurfaceFill } from './chromeControl';
 import { HapticFeedback } from '../../utils/hapticFeedback';
-import { SlidingIndicatorLayer, type SlidingIndicator } from './SlidingIndicator';
+import { SlidingIndicatorLayer, useSlidingIndicator, type SlidingIndicator } from './SlidingIndicator';
+import { ScrollView } from 'react-native';
 
 export const DAY_DIVIDER_CARD = {
   glassIntensity: 'light' as const,
@@ -191,6 +192,77 @@ export function DayDividerSlidingLayer<K extends string>({
         </Text>
       )}
     />
+  );
+}
+
+/**
+ * שורת צ'יפים עם המחוון המחליק — אותו מושן כמו בורר האינטרוולים בגרף התיק.
+ * לכל שורת בחירה (טאבים / פילטרים / טווחים) במקום DayDividerPill ידני.
+ */
+export function SlidingPillGroup<K extends string>({
+  options,
+  value,
+  onChange,
+  scroll = false,
+  style,
+  contentContainerStyle,
+  pillStyle,
+  haptic = true,
+  accessibilityLabelFor,
+}: {
+  options: readonly { id: K; label: string }[];
+  value: K;
+  onChange: (id: K) => void;
+  /** ScrollView אופקי (שורה ארוכה) במקום View */
+  scroll?: boolean;
+  style?: StyleProp<ViewStyle>;
+  contentContainerStyle?: StyleProp<ViewStyle>;
+  pillStyle?: StyleProp<ViewStyle>;
+  haptic?: boolean;
+  accessibilityLabelFor?: (opt: { id: K; label: string }) => string;
+}) {
+  const indicator = useSlidingIndicator<K>(value);
+  const items = options.map((opt) => (
+    <View key={opt.id} onLayout={indicator.onItemLayout(opt.id)}>
+      <DayDividerPill
+        selected={indicator.visualSelected === opt.id}
+        instantSelection
+        style={pillStyle}
+        accessibilityLabel={accessibilityLabelFor ? accessibilityLabelFor(opt) : opt.label}
+        onPress={() => {
+          if (opt.id === value) return;
+          if (haptic) void HapticFeedback.selection();
+          onChange(opt.id);
+        }}
+      >
+        {opt.label}
+      </DayDividerPill>
+    </View>
+  ));
+  const layer = (
+    <DayDividerSlidingLayer
+      indicator={indicator}
+      labelOf={(id) => options.find((o) => o.id === id)?.label ?? ''}
+    />
+  );
+  if (scroll) {
+    return (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={style}
+        contentContainerStyle={contentContainerStyle}
+      >
+        {items}
+        {layer}
+      </ScrollView>
+    );
+  }
+  return (
+    <View style={[style, contentContainerStyle]} accessibilityRole="tablist">
+      {items}
+      {layer}
+    </View>
   );
 }
 

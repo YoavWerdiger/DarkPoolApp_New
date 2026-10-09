@@ -10,7 +10,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { DayDividerPill } from '../../../components/ui/DayDividerPill';
+import { DayDividerPill, SlidingPillGroup } from '../../../components/ui/DayDividerPill';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import type { ExplorePerson } from '../../../services/darkpool/uwExploreService';
 import {
@@ -78,20 +78,13 @@ export function ExploreTopPerformersSection({
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
+      <SlidingPillGroup
+        scroll
+        options={PERIODS.map((p) => ({ id: p, label: p }))}
+        value={period}
+        onChange={setPeriod}
         contentContainerStyle={styles.periodRow}
-      >
-        {PERIODS.map((p) => {
-          const active = p === period;
-          return (
-            <DayDividerPill key={p} selected={active} onPress={() => setPeriod(p)}>
-              {p}
-            </DayDividerPill>
-          );
-        })}
-      </ScrollView>
+      />
 
       <ScrollView
         horizontal

@@ -28,7 +28,7 @@ import {
 import type { PortfolioAnalyticsResult } from '../../../services/portfolios';
 import { loadTrades } from '../../../services/portfolios/portfolioTradeDerive';
 import UICard from '../../../components/ui/UICard';
-import { DayDividerPill } from '../../../components/ui/DayDividerPill';
+import { DayDividerPill, SlidingPillGroup } from '../../../components/ui/DayDividerPill';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 import {
   JOURNAL_LAYOUT,
@@ -836,22 +836,13 @@ export default function OverviewTab({
       {/* Distribution */}
       <UICard variant="soft" padding="md" style={styles.section}>
         <Text style={styles.sectionTitle}>חלוקת נכסים</Text>
-        <View style={styles.groupChips}>
-          {GROUP_BY_OPTIONS.map((opt) => (
-            <DayDividerPill
-              key={opt.id}
-              selected={groupBy === opt.id}
-              onPress={() => {
-                if (groupBy !== opt.id) void HapticFeedback.selection();
-                setGroupBy(opt.id);
-              }}
-              style={styles.groupChip}
-              accessibilityLabel={opt.label}
-            >
-              {opt.label}
-            </DayDividerPill>
-          ))}
-        </View>
+        <SlidingPillGroup
+          options={GROUP_BY_OPTIONS}
+          value={groupBy}
+          onChange={setGroupBy}
+          style={styles.groupChips}
+          pillStyle={styles.groupChip}
+        />
         {distribution.length === 0 ? (
           <Text style={styles.emptyText}>
             {openTrades.length > 0

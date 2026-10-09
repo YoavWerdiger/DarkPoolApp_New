@@ -12,7 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { APP_LAYOUT } from '../ui/appLayout';
 import { APP_TYPE } from '../ui/appType';
-import { DayDividerPill } from '../ui/DayDividerPill';
+import { DayDividerPill, SlidingPillGroup } from '../ui/DayDividerPill';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
 import { useAuth } from '../../context/AuthContext';
@@ -202,25 +202,13 @@ export default function EntityAttachPickerSheet({
           <View style={styles.headerSideSpacer} />
         </View>
 
-        <View style={styles.tabsWrap} accessibilityRole="tablist">
-          {TAB_OPTIONS.map((opt) => {
-            const active = opt.id === category;
-            return (
-              <DayDividerPill
-                key={opt.id}
-                selected={active}
-                haptic
-                accessibilityLabel={`סוג תוכן: ${opt.label}`}
-                onPress={() => {
-                  if (active) return;
-                  setCategory(opt.id);
-                }}
-              >
-                {opt.label}
-              </DayDividerPill>
-            );
-          })}
-        </View>
+        <SlidingPillGroup
+          options={TAB_OPTIONS}
+          value={category}
+          onChange={setCategory}
+          style={styles.tabsWrap}
+          accessibilityLabelFor={(o) => `סוג תוכן: ${o.label}`}
+        />
 
         {loading ? (
           <View style={styles.center}>

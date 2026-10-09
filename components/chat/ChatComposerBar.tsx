@@ -172,7 +172,12 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       minHeight: 40,
       maxHeight: 88,
       paddingHorizontal: tokens.spacing.md - 2,
-      paddingVertical: tokens.spacing.sm - 1,
+      // iOS מתעלם מ-textAlignVertical: שורה אחת חייבת למלא בדיוק את minHeight (9 + 22 + 9 = 40),
+      // אחרת הטקסט נצמד למעלה והרווח העודף נאסף למטה
+      paddingTop: 9,
+      paddingBottom: 9,
+      lineHeight: 22,
+      includeFontPadding: false,
       fontSize: tokens.typography.body.size,
       color: tokens.colors.text.primary,
       textAlignVertical: 'center',

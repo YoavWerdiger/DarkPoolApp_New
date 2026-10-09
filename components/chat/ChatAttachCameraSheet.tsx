@@ -50,6 +50,10 @@ type Props = {
 type CaptureMode = 'photo' | 'video';
 
 const SCREEN_W = Dimensions.get('window').width;
+// כמו וואטסאפ: חלון מצלמה ברוחב מלא ביחס 3:4 (יחס הצילום של החיישן) מתחת לפס העליון —
+// לא מסך מלא; הכפתורים על השחור מתחת
+const PREVIEW_H = Math.round((SCREEN_W * 4) / 3);
+const TOP_BAR_H = 56;
 const MODE_PILL_W = 78;
 const MODE_PILL_GAP = 6;
 const MODE_SPRING = { damping: 22, stiffness: 220, mass: 0.8 };
@@ -343,10 +347,14 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
         {shot ? null : (<>
         {granted ? (
           <GestureDetector gesture={modeSwipe}>
-            <View style={StyleSheet.absoluteFill} collapsable={false}>
+            <View
+              style={[styles.preview, { top: insets.top + TOP_BAR_H }]}
+              collapsable={false}
+            >
               <CameraView
                 ref={cameraRef}
                 style={StyleSheet.absoluteFill}
+                ratio="4:3"
                 facing={facing}
                 mode="video"
                 flash={flashOn ? 'on' : 'off'}
@@ -500,6 +508,14 @@ const styles = StyleSheet.create({
     fontSize: APP_TYPE.body.fontSize,
     fontWeight: '600',
     color: '#111',
+  },
+  preview: {
+    position: 'absolute',
+    left: 0,
+    width: SCREEN_W,
+    height: PREVIEW_H,
+    overflow: 'hidden',
+    backgroundColor: '#000',
   },
   topBar: {
     position: 'absolute',

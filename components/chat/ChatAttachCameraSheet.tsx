@@ -320,10 +320,7 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
         {shot ? null : (<>
         {granted ? (
           <GestureDetector gesture={modeSwipe}>
-            <View
-              style={[styles.preview, { top: frame.top, height: frame.height }]}
-              collapsable={false}
-            >
+            <View style={StyleSheet.absoluteFill} collapsable={false}>
               <CameraView
                 ref={cameraRef}
                 style={StyleSheet.absoluteFill}
@@ -350,6 +347,11 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
             </Pressable>
           </View>
         )}
+
+        {/* «חלון» המצלמה — המצלמה במסך מלא (כמו קודם; מיכל בגודל מותאם הקפיא את התצוגה ב-iOS)
+            ופסים שחורים מעליו ומתחתיו */}
+        <View pointerEvents="none" style={[styles.mask, { top: 0, height: frame.top }]} />
+        <View pointerEvents="none" style={[styles.mask, { top: frame.top + frame.height, bottom: 0 }]} />
 
         <View style={[styles.topBar, { paddingTop: insets.top + 10 }]} pointerEvents="box-none">
           <Pressable
@@ -489,11 +491,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#111',
   },
-  preview: {
+  mask: {
     position: 'absolute',
     left: 0,
-    width: SCREEN_W,
-    overflow: 'hidden',
+    right: 0,
     backgroundColor: '#000',
   },
   topBar: {

@@ -1731,8 +1731,6 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
         <View style={s.modePanel} collapsable={false}>
           <GestureDetector gesture={captureBackgroundGestures}>
             <View style={[StyleSheet.absoluteFill, { backgroundColor: '#000' }]} collapsable={false}>
-              {/* חלון המצלמה כמו בצ'אט (cameraPreviewFrame) — לא מסך מלא */}
-              <View style={[s.cameraFrame, { top: cameraFrame.top, height: cameraFrame.height }]}>
               {permission?.granted ? (
                 <CameraView
                   ref={cameraRef}
@@ -1774,7 +1772,13 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
                 style={s.vignetteBottom}
                 pointerEvents="none"
               />
-              </View>
+              {/* «חלון» כמו בצ'אט — המצלמה במסך מלא (מיכל בגודל מותאם הקפיא את התצוגה ב-iOS)
+                  ופסים שחורים מעליו ומתחתיו */}
+              <View pointerEvents="none" style={[s.cameraMask, { top: 0, height: cameraFrame.top }]} />
+              <View
+                pointerEvents="none"
+                style={[s.cameraMask, { top: cameraFrame.top + cameraFrame.height, bottom: 0 }]}
+              />
             </View>
           </GestureDetector>
         </View>
@@ -2363,12 +2367,10 @@ const s = StyleSheet.create({
     width: SW,
     height: '100%',
   },
-  // בלי overflow:hidden — חיתוך שכבת התצוגה של המצלמה בתוך אב עם transform (רצועת המצבים /
-  // גרירת הסגירה) מקפיא את התצוגה ב-iOS על הפריים הראשון. CameraView כבר בגודל החלון בדיוק
-  cameraFrame: {
+  cameraMask: {
     position: 'absolute',
     left: 0,
-    width: SW,
+    right: 0,
     backgroundColor: '#000',
   },
 

@@ -1632,8 +1632,10 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     width: 66,
     height: 66,
     borderRadius: 33,
+    // קו מקווקו בצבע הכפתור עצמו (מילוי הכרום) — אחיד עם העיגול
     borderWidth: 1.5,
-    borderColor: tokens.colors.border.divider,
+    borderColor: chromeSurfaceFill(tokens),
+    borderStyle: 'dashed',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 6,

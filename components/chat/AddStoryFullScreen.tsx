@@ -2,6 +2,8 @@ import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { logger } from '../../utils/logger';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Modal, Pressable, Image, Dimensions, StatusBar, TextInput, KeyboardAvoidingView, Platform, ScrollView, FlatList, Animated, Keyboard } from 'react-native';
+import { useDesignTokens } from '../ui/DesignTokens';
+import { APP_TYPE } from '../ui/appType';
 import { stableCameraPreviewFrame } from '../../lib/cameraFrame';
 import { InAppGalleryPanel, type InAppGalleryPick } from './InAppGalleryPanel';
 import { HapticFeedback } from '../../utils/hapticFeedback';
@@ -1000,6 +1002,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
   const [mode, setMode] = useState<ScreenMode>('camera');
   const [phase, setPhase] = useState<ScreenPhase>('capture');
   const cameraFrame = stableCameraPreviewFrame();
+  const tokens = useDesignTokens();
   const [facing, setFacing] = useState<CameraType>('back');
   const [flash, setFlash] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -2313,11 +2316,41 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
           )}
 
           {phase === 'uploading' && (
+            // מסך העלאה לפי הטופו: התמונה מטושטשת ברקע (המשך הפריוויו) + כרטיס cardSolid
             <View style={s.uploadOverlay}>
-              <View style={s.uploadCard}>
-                <ActivityIndicator size="large" color={chatPalette.primary} />
-                <Text style={s.uploadTitle}>מעלה סטטוס...</Text>
-                <Text style={s.uploadSub}>רק רגע</Text>
+              {mediaType === 'image' && mediaUri ? (
+                <ExpoImage
+                  source={{ uri: mediaUri }}
+                  style={StyleSheet.absoluteFill}
+                  contentFit="cover"
+                  blurRadius={40}
+                  transition={0}
+                />
+              ) : null}
+              <View style={[StyleSheet.absoluteFill, s.previewBlurDim]} />
+              <View
+                style={[
+                  s.uploadCard,
+                  {
+                    backgroundColor: tokens.colors.background.cardSolid,
+                    borderRadius: tokens.borderRadius.xl,
+                  },
+                ]}
+              >
+                {mediaUri ? (
+                  <View style={s.uploadThumbWrap}>
+                    {mediaType === 'image' ? (
+                      <ExpoImage source={{ uri: mediaUri }} style={s.uploadThumb} contentFit="cover" transition={0} />
+                    ) : (
+                      <View style={[s.uploadThumb, s.uploadThumbVideo]}>
+                        <Ionicons name="videocam" size={22} color="#fff" />
+                      </View>
+                    )}
+                  </View>
+                ) : null}
+                <ActivityIndicator size="small" color={tokens.colors.primary.main} />
+                <Text style={[s.uploadTitle, { color: tokens.colors.text.primary }]}>מעלה סטטוס…</Text>
+                <Text style={[s.uploadSub, { color: tokens.colors.text.secondary }]}>זה ייקח רק רגע</Text>
               </View>
             </View>
           )}
@@ -2853,28 +2886,41 @@ const s = StyleSheet.create({
   /* ---- Upload overlay ---- */
   uploadOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.85)',
+    backgroundColor: '#000',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 30,
   },
   uploadCard: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 24,
-    paddingVertical: 40,
-    paddingHorizontal: 56,
+    minWidth: 220,
+    paddingVertical: 24,
+    paddingHorizontal: 32,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-    gap: 12,
+    gap: 10,
+  },
+  uploadThumbWrap: {
+    marginBottom: 4,
+  },
+  uploadThumb: {
+    width: 64,
+    height: 96,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  uploadThumbVideo: {
+    backgroundColor: '#1c1c1e',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   uploadTitle: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '600',
+    fontSize: APP_TYPE.cardTitle.fontSize,
+    lineHeight: APP_TYPE.cardTitle.lineHeight,
+    fontWeight: APP_TYPE.cardTitle.fontWeight,
+    writingDirection: 'rtl',
   },
   uploadSub: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 13,
+    fontSize: APP_TYPE.cardSubtitle.fontSize,
+    lineHeight: APP_TYPE.cardSubtitle.lineHeight,
+    writingDirection: 'rtl',
   },
 });

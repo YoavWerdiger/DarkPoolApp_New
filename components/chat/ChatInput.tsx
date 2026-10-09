@@ -2272,7 +2272,12 @@ function ChatInputImpl({
             accessibilityRole="button"
             accessibilityLabel="הדבקת תמונה מהלוח"
           >
-            <View style={styles.clipboardChip}>
+            {/* אותו משטח גלס של שורת הכתיבה */}
+            <UICard
+              {...CHROME_UICARD}
+              style={[styles.clipboardChipOuter, chromeSurfaceCardStyle(DesignTokens)]}
+              contentContainerStyle={styles.clipboardChip}
+            >
               <Ionicons name="clipboard-outline" size={16} color={DesignTokens.colors.primary.main} />
               <Text style={styles.clipboardChipText}>הדבק תמונה מהלוח</Text>
               <TouchableOpacity
@@ -2283,7 +2288,7 @@ function ChatInputImpl({
               >
                 <Ionicons name="close" size={16} color={DesignTokens.colors.text.tertiary} />
               </TouchableOpacity>
-            </View>
+            </UICard>
           </TouchableOpacity>
         </View>
       ) : null}
@@ -2777,12 +2782,17 @@ const createStyles = (tokens: any, paddingBottom: number) => StyleSheet.create({
     justifyContent: 'center',
     marginBottom: tokens.spacing.sm,
   },
+  clipboardChipOuter: {
+    borderRadius: tokens.borderRadius.full,
+    overflow: 'hidden',
+  },
   clipboardChip: {
     direction: 'rtl',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingVertical: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
   },
   clipboardChipText: {
     fontSize: APP_TYPE.cardSubtitle.fontSize,

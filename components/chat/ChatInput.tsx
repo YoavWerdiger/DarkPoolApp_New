@@ -39,6 +39,8 @@ import { useTheme } from '../../context/ThemeContext';
 import { useChatDraft } from '../../hooks/useChatDraft';
 import { consumeShareForGroup, subscribePendingShare } from '../../lib/pendingShare';
 import { useTypingBroadcast } from '../../hooks/useTypingBroadcast';
+import { useClipboardImagePaste } from '../../hooks/useClipboardImagePaste';
+import { APP_TYPE } from '../ui/appType';
 import MentionPickerSheet from '../share/MentionPickerSheet';
 import type { CommunityMention } from '../../types/tweets.types';
 import { logger } from '../../utils/logger';
@@ -968,6 +970,14 @@ function ChatInputImpl({
       );
     });
   }, []);
+
+  // תמונה שהועתקה באפליקציה אחרת → צ'יפ «הדבק תמונה» מעל שורת הכתיבה
+  const clipboardPaste = useClipboardImagePaste(!disabled && !showMediaPreview);
+  const pasteClipboardImage = useCallback(async () => {
+    void HapticFeedback.selection();
+    const picked = await clipboardPaste.readImage();
+    if (picked) applyPickedMedia([picked], false);
+  }, [clipboardPaste, applyPickedMedia]);
 
   const [shareTick, setShareTick] = useState(0);
   useEffect(() => subscribePendingShare(() => setShareTick((n) => n + 1)), []);
@@ -2254,6 +2264,30 @@ function ChatInputImpl({
         </View>
       ) : null}
 
+      {clipboardPaste.available && !isVoiceCapturing ? (
+        <View style={styles.clipboardChipRow}>
+          <TouchableOpacity
+            onPress={() => void pasteClipboardImage()}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="הדבקת תמונה מהלוח"
+          >
+            <View style={styles.clipboardChip}>
+              <Ionicons name="clipboard-outline" size={16} color={DesignTokens.colors.primary.main} />
+              <Text style={styles.clipboardChipText}>הדבק תמונה מהלוח</Text>
+              <TouchableOpacity
+                onPress={clipboardPaste.dismiss}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="סגירה"
+              >
+                <Ionicons name="close" size={16} color={DesignTokens.colors.text.tertiary} />
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
       {(isRecording || isPaused) ? (
       <View style={styles.container}>
         {/* הקלטה / פריוויו — פעולה ראשית מחוץ לגלולה (✓ לעצירה, מטוס לשליחה) */}
@@ -2737,6 +2771,28 @@ const createStyles = (tokens: any, paddingBottom: number) => StyleSheet.create({
     gap: 0,
   },
 
+  clipboardChipRow: {
+    direction: 'rtl',
+    flexDirection: 'row',
+    marginHorizontal: tokens.spacing.xs,
+    marginBottom: tokens.spacing.sm,
+  },
+  clipboardChip: {
+    direction: 'rtl',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: tokens.colors.background.cardSolid,
+    borderRadius: tokens.borderRadius.full,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  clipboardChipText: {
+    fontSize: APP_TYPE.cardSubtitle.fontSize,
+    lineHeight: APP_TYPE.cardSubtitle.lineHeight,
+    fontWeight: '600',
+    color: tokens.colors.text.primary,
+  },
   replyPreviewContainer: {
     flexDirection: 'row',
     alignItems: 'stretch',

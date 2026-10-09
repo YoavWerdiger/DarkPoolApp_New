@@ -94,6 +94,8 @@ export const appQueryKeys = {
   userSubscription: (userId: string) => ['user', 'subscription', userId] as const,
   userPaymentHistory: (userId: string) => ['user', 'paymentHistory', userId] as const,
   userIsAdmin: (userId: string) => ['user', 'isAdmin', userId] as const,
+  /** תגי משתמש (וי כחול + ימי מנוי בתשלום) — נטען באצוות דרך get_user_badges */
+  userBadges: (userId: string) => ['user', 'badges', userId] as const,
 
   // Portfolios / Stories
   portfolios: ['portfolios', 'list'] as const,

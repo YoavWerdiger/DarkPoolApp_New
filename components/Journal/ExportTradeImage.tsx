@@ -99,7 +99,10 @@ function ShareCardBackground({ width, height }: { width: number; height: number 
 }
 
 /** לוגו שור־ודוב / קהילת DarkPool — מעל כרטיסיית הזכוכית */
-const BRAND_LOGO = require('../../assets/darkpool-drawer-logo.png');
+// לוגו מלא (שור־ודוב + DARKPOOL + «קהילת הסוחרים של ישראל») — מקומי ולא מ-Storage,
+// כדי שיהיה טעון ברגע הצילום. עותק: app-media/branding/darkpool-share-logo.png
+const BRAND_LOGO = require('../../assets/darkpool-share-logo.png');
+const BRAND_LOGO_ASPECT = 1330 / 595;
 
 export function journalTradeToExportable(trade: JournalTrade): ExportableTrade {
   return {
@@ -638,14 +641,13 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       gap: 6,
       overflow: 'visible',
     },
-    /** גדול במכוון — מרווח שלילי קל בלבד; לא לכסות את תוכן הזכוכית */
+    /** הלוגו החתוך (בלי שוליים) — ביחס המקורי, מעל כרטיס הטרייד */
     brandLogoAbove: {
-      width: 168,
-      height: 168,
-      marginBottom: -44,
+      width: 196,
+      height: Math.round(196 / BRAND_LOGO_ASPECT),
+      marginTop: 12,
+      marginBottom: 8,
       alignSelf: 'center',
-      opacity: 0.96,
-      zIndex: 3,
     },
     symbolBlock: {
       alignItems: 'center',
@@ -791,30 +793,31 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       flexGrow: 1,
       minHeight: 4,
     },
-    /** row + RTL parent: טקסט מימין, QR משמאל (הפוך מ־row-reverse הקודם) */
+    /** כרטיס CTA ברוחב מלא, כמו כרטיס הטרייד — טקסט מימין, QR משמאל (row בעץ RTL) */
     ctaBar: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
-      alignSelf: 'center',
-      gap: 12,
-      maxWidth: '100%',
-      paddingTop: 8,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: 'rgba(255,255,255,0.12)',
+      alignSelf: 'stretch',
+      gap: 14,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      borderRadius: UI_CARD_RADIUS,
+      backgroundColor: SHARE_CARD_TOKENS.colors.background.cardSolid,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: SHARE_CARD_TOKENS.colors.border.divider,
     },
     qrWrap: {
-      padding: 5,
-      borderRadius: 10,
+      padding: 6,
+      borderRadius: 12,
       backgroundColor: '#FFFFFF',
       flexShrink: 0,
     },
     ctaTextCol: {
-      flexShrink: 1,
+      flex: 1,
       minWidth: 0,
-      maxWidth: 210,
       alignItems: 'flex-start',
-      gap: 3,
+      justifyContent: 'center',
+      gap: 4,
     },
     ctaHeadline: {
       fontSize: 13,

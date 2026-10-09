@@ -41,7 +41,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Search } from 'lucide-react-native';
 import JoinGroupBottomSheet from '../../components/chat/JoinGroupBottomSheet';
 import CreateGroupSheet from '../../components/chat/CreateGroupSheet';
-import { ChatBottomSheet, ChatSheetEmptyState, ChatSheetLoading } from '../../components/chat/ChatBottomSheet';
+import { ChatSheetEmptyState, ChatSheetLoading, ChatSheetTopoHeader } from '../../components/chat/ChatBottomSheet';
+import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
 import { ChatSearchResult } from '../../types/chat.types';
 import StoryViewer from '../../components/chat/StoryViewer';
 import AddStoryFullScreen from '../../components/chat/AddStoryFullScreen';
@@ -61,7 +62,7 @@ import { HapticFeedback, triggerDrawerMenuHaptic } from '../../utils/hapticFeedb
 import { ChatSessionBackdrop } from '../../components/chat/ChatSessionBackdrop';
 import { CHAT_LAYOUT, chatSectionTitleStyle } from '../../components/chat/chatLayout';
 import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
-import { APP_TYPE } from '../../components/ui/appType';
+import { APP_TYPE, appPhysicalRightText } from '../../components/ui/appType';
 
 // Skeleton row for groups list
 const SkeletonGroupRow = React.memo(({ delay }: { delay: number }) => {
@@ -1481,13 +1482,23 @@ export default function ChatGroupsListScreen() {
       />
 
       {/* Search Sheet — חיפוש בצ'אטים ובתוכן ההודעות */}
-      <ChatBottomSheet
-        visible={searchSheetVisible}
+      {/* לפי הטופו (כמו «קבוצה חדשה»): קנבס ערכת הנושא, פינות xl, כותרת עם שברון */}
+      <BottomSheet
+        isOpen={searchSheetVisible}
         onClose={closeSearchSheet}
         snapPoints={[0.92]}
+        edgeToEdge
+        showHandle
+        enablePanDownToClose
+        useModal
+        showBrandBackground={false}
         showBrandWatermark={false}
+        backgroundColor={tokens.colors.background.primary}
+        topCornerRadius={tokens.borderRadius.xl}
+        contentPaddingBottom={0}
       >
-        <View style={{ flex: 1, paddingHorizontal: 16 }}>
+        <View style={styles.searchSheetRoot}>
+          <ChatSheetTopoHeader title="חיפוש" onClose={closeSearchSheet} />
           <View style={styles.searchPill}>
             <Search size={18} color={tokens.colors.text.tertiary} />
             <TextInput
@@ -1523,7 +1534,7 @@ export default function ChatGroupsListScreen() {
             }
           />
         </View>
-      </ChatBottomSheet>
+      </BottomSheet>
 
       {/* Add Story – מסך מלא בסגנון Instagram/WhatsApp */}
       {addStorySheetVisible && (
@@ -1676,8 +1687,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     paddingVertical: 0,
   },
   /* ── Search Sheet ── */
+  searchSheetRoot: {
+    flex: 1,
+    direction: 'rtl',
+    paddingHorizontal: HP,
+    gap: 12,
+  },
   searchPill: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     backgroundColor: tokens.colors.background.cardSolid,
@@ -1685,7 +1702,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     borderRadius: tokens.borderRadius.search,
     paddingHorizontal: 18,
     height: 46,
-    marginBottom: 14,
   },
   searchPillInput: {
     flex: 1,
@@ -1698,8 +1714,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   searchSectionHeader: {
     ...APP_TYPE.groupLabel,
     color: tokens.colors.text.secondary,
-    textAlign: 'right',
-    writingDirection: 'rtl',
+    ...appPhysicalRightText,
     marginTop: 6,
     marginBottom: APP_LAYOUT.groupLabelToContent,
   },
@@ -1710,9 +1725,11 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     paddingVertical: APP_LAYOUT.cardPadding,
     writingDirection: 'rtl',
   },
+  // בתוך searchSheetRoot (direction rtl): row = תמונה מימין, טקסט משמאל לה
   searchRowItem: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
     paddingVertical: 15,
   },
   searchRowAvatar: {
@@ -1721,7 +1738,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     borderRadius: 24,
     overflow: 'hidden',
     backgroundColor: tokens.colors.background.tertiary,
-    marginLeft: 12,
   },
   searchRowAvatarPlaceholder: {
     backgroundColor: tokens.colors.background.tertiary,
@@ -1735,14 +1751,12 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   searchRowTitle: {
     ...APP_TYPE.cardTitle,
     color: tokens.colors.text.primary,
-    textAlign: 'right',
-    writingDirection: 'rtl',
+    ...appPhysicalRightText,
   },
   searchRowSubtitle: {
     ...APP_TYPE.cardSubtitle,
     color: tokens.colors.text.secondary,
-    textAlign: 'right',
-    writingDirection: 'rtl',
+    ...appPhysicalRightText,
     marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
   },
   searchSenderName: {
@@ -1751,7 +1765,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     color: tokens.colors.text.primary,
   },
   searchRowMsgHead: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,

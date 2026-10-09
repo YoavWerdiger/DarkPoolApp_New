@@ -22,7 +22,8 @@ import { ScreenChrome } from '../../components/ui/ScreenChrome';
 import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHeader';
 import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import UICard from '../../components/ui/UICard';
-import { DayDividerPill } from '../../components/ui/DayDividerPill';
+import { DayDividerPill, DayDividerSlidingLayer } from '../../components/ui/DayDividerPill';
+import { useSlidingIndicator } from '../../components/ui/SlidingIndicator';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { TradeCardSkeleton } from '../../components/ui/SkeletonLoader';
 import { curatedCeoPortraitUrl } from './utils/executivePortraitUrls';
@@ -82,6 +83,7 @@ export default function DarkPoolHomeScreen() {
   const bottomPad = useDarkPoolTabBarHeight();
 
   const [recentKind, setRecentKind] = useState<FeedRecentKind>(FEED_RECENT_KIND_DEFAULT);
+  const kindIndicator = useSlidingIndicator<FeedRecentKind>(recentKind);
   const congress = useCongressFeed(DARK_POOL_FEED_LIMIT, true);
   const insiders = useDarkPoolInsiderFeed({
     tab: 'all',
@@ -247,7 +249,6 @@ export default function DarkPoolHomeScreen() {
     () => (
       <View style={styles.listHeader}>
         <View style={styles.tradesHead}>
-          <Text style={styles.sectionTitle}>עסקאות אחרונות</Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -257,17 +258,24 @@ export default function DarkPoolHomeScreen() {
             {FEED_RECENT_KIND_CHIPS.map((chip) => {
               const active = recentKind === chip.id;
               return (
-                <DayDividerPill
-                  key={chip.id}
-                  selected={active}
-                  haptic={!active}
-                  onPress={() => setRecentKind(chip.id)}
-                  accessibilityLabel={chip.label}
-                >
-                  {chip.label}
-                </DayDividerPill>
+                // מחוון מחליק — אותו מושן כמו בורר האינטרוולים
+                <View key={chip.id} onLayout={kindIndicator.onItemLayout(chip.id)}>
+                  <DayDividerPill
+                    selected={kindIndicator.visualSelected === chip.id}
+                    instantSelection
+                    haptic={!active}
+                    onPress={() => setRecentKind(chip.id)}
+                    accessibilityLabel={chip.label}
+                  >
+                    {chip.label}
+                  </DayDividerPill>
+                </View>
               );
             })}
+            <DayDividerSlidingLayer
+              indicator={kindIndicator}
+              labelOf={(id) => FEED_RECENT_KIND_CHIPS.find((c) => c.id === id)?.label ?? ''}
+            />
           </ScrollView>
         </View>
 
@@ -278,7 +286,7 @@ export default function DarkPoolHomeScreen() {
         ) : null}
       </View>
     ),
-    [styles, error, recentKind]
+    [styles, error, recentKind, kindIndicator]
   );
 
   const listEmpty = useMemo(() => {
@@ -296,7 +304,7 @@ export default function DarkPoolHomeScreen() {
       <SafeAreaView style={[styles.safe, darkPoolTransparentFill]} edges={['top']}>
         <MainDrawerScreenHeader
           inRtlTree
-          title="אינסיידרים"
+          title="פיד עסקאות"
           onMenuPress={openDrawer}
           rightAccessory={
             <DayNavBlurButton

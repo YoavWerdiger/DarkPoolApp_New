@@ -286,7 +286,6 @@ describe('insider feed Hebrew — no direction:ltr on Text', () => {
   });
 
   it('HomeScreen section title uses the Hebrew title style inside an LTR box', () => {
-    expect(homeSrc).toMatch(/עסקאות אחרונות/);
     expect(homeSrc).toMatch(/darkPoolHebrewTitleStyle/);
     expect(homeSrc).toMatch(/tradesHead: \{\s*direction: 'ltr'/);
     expect(homeSrc).not.toMatch(/sectionTitle: \{\s*\.\.\.darkPoolSectionTitleStyle/);

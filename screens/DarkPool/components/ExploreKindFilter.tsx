@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
-import { ScrollView, StyleSheet } from 'react-native';
-import { DayDividerPill } from '../../../components/ui/DayDividerPill';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { DayDividerPill, DayDividerSlidingLayer } from '../../../components/ui/DayDividerPill';
+import { useSlidingIndicator } from '../../../components/ui/SlidingIndicator';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import {
   EXPLORE_KIND_CHIPS,
@@ -30,6 +31,16 @@ export function ExploreKindFilterBar({ value, onChange, counts }: Props) {
     [tokens]
   );
 
+  // מחוון מחליק (כמו האינטרוולים); «אין בחירה» = מפתח ריק — בלי מחוון
+  const NONE = '__none__';
+  const indicator = useSlidingIndicator<string>(value ?? NONE);
+  const labelFor = (id: string) => {
+    const opt = EXPLORE_KIND_CHIPS.find((o) => o.id === id);
+    if (!opt) return '';
+    const count = counts?.[opt.id];
+    return count != null && count > 0 ? `${opt.label} (${toDataIsland(count)})` : opt.label;
+  };
+
   return (
     <ScrollView
       horizontal
@@ -38,22 +49,20 @@ export function ExploreKindFilterBar({ value, onChange, counts }: Props) {
     >
       {EXPLORE_KIND_CHIPS.map((opt) => {
         const active = value === opt.id;
-        const count = counts?.[opt.id];
-        const label =
-          count != null && count > 0
-            ? `${opt.label} (${toDataIsland(count)})`
-            : opt.label;
         return (
-          <DayDividerPill
-            key={opt.id}
-            selected={active}
-            onPress={() => onChange(active ? null : opt.id)}
-            accessibilityLabel={opt.label}
-          >
-            {label}
-          </DayDividerPill>
+          <View key={opt.id} onLayout={indicator.onItemLayout(opt.id)}>
+            <DayDividerPill
+              selected={indicator.visualSelected === opt.id}
+              instantSelection
+              onPress={() => onChange(active ? null : opt.id)}
+              accessibilityLabel={opt.label}
+            >
+              {labelFor(opt.id)}
+            </DayDividerPill>
+          </View>
         );
       })}
+      <DayDividerSlidingLayer indicator={indicator} labelOf={labelFor} />
     </ScrollView>
   );
 }

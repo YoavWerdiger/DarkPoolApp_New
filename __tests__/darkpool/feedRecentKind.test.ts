@@ -49,12 +49,13 @@ describe('feed recent-kind chips', () => {
     expect(matchesFeedRecentKind('congress')).toBe(true);
   });
 
-  it('wires DayDividerPill under עסקאות אחרונות on the home feed', () => {
+  it('wires DayDividerPill chips (sliding indicator) at the top of the home feed', () => {
+    // כותרת המסך «פיד עסקאות»; תת-הכותרת «עסקאות אחרונות» הוסרה
+    expect(homeSrc).toMatch(/title="פיד עסקאות"/);
+    expect(homeSrc).not.toMatch(/עסקאות אחרונות/);
     const header = homeSrc.slice(homeSrc.indexOf('const listHeader'));
-    const titleAt = header.indexOf('עסקאות אחרונות');
-    const chipsAt = header.indexOf('FEED_RECENT_KIND_CHIPS.map');
-    expect(titleAt).toBeGreaterThan(-1);
-    expect(chipsAt).toBeGreaterThan(titleAt);
+    expect(header.indexOf('FEED_RECENT_KIND_CHIPS.map')).toBeGreaterThan(-1);
+    expect(homeSrc).toMatch(/DayDividerSlidingLayer/);
     expect(homeSrc).toMatch(/DayDividerPill/);
     expect(homeSrc).not.toMatch(/GlassChip/);
     expect(homeSrc).toMatch(/FEED_RECENT_KIND_DEFAULT/);

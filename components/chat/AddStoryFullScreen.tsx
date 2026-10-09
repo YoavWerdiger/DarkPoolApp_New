@@ -189,7 +189,12 @@ function DraggableText({
   onDragStateChange,
   onRequestDelete,
   onCommitPosition,
+  canvasH = SH,
+  canvasTop = 0,
 }: {
+  /** גובה הקנבס (חלון המדיה) והיסט שלו מראש המסך — הבסיס הוא מרכז הקנבס */
+  canvasH?: number;
+  canvasTop?: number;
   item: TextOverlayItem;
   onDoubleTap: (id: string) => void;
   onDragStateChange?: (dragging: boolean, y: number, hovering: boolean) => void;
@@ -250,7 +255,7 @@ function DraggableText({
       translateX.value = savedTranslateX.value + e.translationX;
       translateY.value = savedTranslateY.value + e.translationY;
 
-      const absY = (SH / 2 - 60) + translateY.value;
+      const absY = canvasTop + (canvasH / 2 - 60) + translateY.value;
       // Ramp from 0 (safe) → 1 (fully over trash)
       const raw = (absY - DELETE_Y_ACTIVATE) / (DELETE_Y_TRIGGER - DELETE_Y_ACTIVATE);
       const clamped = Math.max(0, Math.min(1, raw));
@@ -269,7 +274,7 @@ function DraggableText({
     .onEnd(() => {
       'worklet';
       isDragging.value = 0;
-      const absY = (SH / 2 - 60) + translateY.value;
+      const absY = canvasTop + (canvasH / 2 - 60) + translateY.value;
       const willDelete = absY >= DELETE_Y_TRIGGER;
       if (willDelete) {
         // Shrink to nothing before removal
@@ -328,7 +333,7 @@ function DraggableText({
 
   return (
     <GestureDetector gesture={composed}>
-      <Reanimated.View style={[dragStyles.container, animStyle]}>
+      <Reanimated.View style={[dragStyles.container, { top: canvasH / 2 - 60 }, animStyle]}>
         <View style={[
           dragStyles.textPill,
           {
@@ -359,7 +364,6 @@ function DraggableText({
 const dragStyles = StyleSheet.create({
   container: {
     position: 'absolute',
-    top: SH / 2 - 60,
     alignSelf: 'center',
     zIndex: 15,
   },
@@ -1592,7 +1596,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
         ? JSON.stringify({
             v: 2,
             canvasWidth: SW,
-            canvasHeight: SH,
+            canvasHeight: cameraFrame.height,
             overlays: overlays.map(o => ({
               type: o.type || 'text',
               text: o.text,
@@ -1959,7 +1963,21 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
   /* ═══════ PREVIEW PHASE ════════════════════════ */
   /* ═══════════════════════════════════════════════ */
   const renderPreview = () => (
-    <View style={s.fullFlex}>
+    <View style={[s.fullFlex, { backgroundColor: '#000' }]}>
+      {/* רקע: אותה תמונה מטושטשת ומוכהה מסביב לחלון (כמו וואטסאפ/אינסטגרם) */}
+      {mediaType === 'image' && mediaUri ? (
+        <>
+          <ExpoImage
+            source={{ uri: mediaUri }}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            blurRadius={40}
+            transition={0}
+            pointerEvents="none"
+          />
+          <View style={[StyleSheet.absoluteFill, s.previewBlurDim]} pointerEvents="none" />
+        </>
+      ) : null}
       {/*
         Dismiss Pan wraps ONLY the media stack. Toolbars / share FAB are siblings
         so Android taps aren't stolen by the outer dismiss gesture.
@@ -1967,7 +1985,8 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
       <GestureDetector gesture={previewDismissGesture}>
         <View
           ref={captureAreaRef}
-          style={StyleSheet.absoluteFill}
+          // אותו חלון כמו המצלמה (cameraPreviewFrame) — לא מסך מלא
+          style={[s.previewFrame, { top: cameraFrame.top, height: cameraFrame.height }]}
           collapsable={false}
         >
           <View style={StyleSheet.absoluteFill} pointerEvents="none">
@@ -1977,7 +1996,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
               <View
                 pointerEvents="none"
                 collapsable={false}
-                style={s.recordedVideo}
+                style={[s.recordedVideo, { height: cameraFrame.height }]}
                 onLayout={(e) => {
                   const { width, height } = e.nativeEvent.layout;
                   if (width > 0 && height > 0) setVideoFrameReady(true);
@@ -1988,7 +2007,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
                     key={`${mediaUri}-${videoAttempt}`}
                     pointerEvents="none"
                     source={{ uri: mediaUri! }}
-                    style={s.recordedVideoFill}
+                    style={[s.recordedVideoFill, { height: cameraFrame.height }]}
                     useNativeControls={false}
                     resizeMode={ResizeMode.CONTAIN}
                     shouldPlay
@@ -2025,43 +2044,36 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
               onDragStateChange={(dragging, absY, hovering) => handleOverlayDragChange(item.id, dragging, absY, hovering)}
               onRequestDelete={handleOverlayDelete}
               onCommitPosition={handleOverlayCommitPosition}
+              canvasH={cameraFrame.height}
+              canvasTop={cameraFrame.top}
             />
           ))}
         </View>
       </GestureDetector>
 
-      {/* Top bar – hidden while drawing (OUTSIDE dismiss Pan) */}
+      {/* פס עליון (מחוץ ל-Pan, מוסתר בזמן ציור): חזרה מימין, כלי טקסט/אימוג'י/ציור משמאל —
+          על השחור מעל חלון המדיה, כמו וואטסאפ (לא עמודה מעל התמונה) */}
       {!drawMode && (
-        <LinearGradient
-          colors={['rgba(0,0,0,0.55)', 'transparent']}
-          style={[s.previewTopGrad, s.chromeLayer, { paddingTop: insets.top + 12 }]}
-          pointerEvents="box-none"
-        >
-          {/* direction:ltr — כמו StoryViewer: Modal לא תמיד מכבד forceRTL */}
-          <View style={s.previewTopRow}>
-            <TouchableOpacity
-              style={s.topIconBtn}
-              onPress={() => { setMediaUri(null); setOverlays([]); setDrawPaths([]); setDrawMode(false); setPhase('capture'); }}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel="חזרה"
-            >
-              <Ionicons name="chevron-forward" size={26} color="#fff" />
+        <View style={[s.previewTopBar, s.chromeLayer, { paddingTop: insets.top + 10 }]} pointerEvents="box-none">
+          <View style={s.previewTools}>
+            <TouchableOpacity style={s.topIconBtn} onPress={() => setDrawMode(true)} activeOpacity={0.75} accessibilityLabel="ציור">
+              <Ionicons name="brush-outline" size={22} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity style={s.topIconBtn} onPress={() => setShowEmojiPicker(true)} activeOpacity={0.75} accessibilityLabel="אימוג׳י">
+              <Ionicons name="happy-outline" size={22} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity style={s.topIconBtn} onPress={() => openTextEditor()} activeOpacity={0.75} accessibilityLabel="טקסט">
+              <MaterialCommunityIcons name="format-text" size={22} color="#fff" />
             </TouchableOpacity>
           </View>
-        </LinearGradient>
-      )}
-
-      {!drawMode && (
-        <View style={[s.toolRail, s.chromeLayer, { top: insets.top + 64 }]} pointerEvents="box-none">
-          <TouchableOpacity style={s.previewToolBtn} onPress={() => openTextEditor()} activeOpacity={0.75} accessibilityLabel="טקסט">
-            <MaterialCommunityIcons name="format-text" size={20} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity style={s.previewToolBtn} onPress={() => setShowEmojiPicker(true)} activeOpacity={0.75} accessibilityLabel="אימוג׳י">
-            <Ionicons name="happy-outline" size={20} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity style={s.previewToolBtn} onPress={() => setDrawMode(true)} activeOpacity={0.75} accessibilityLabel="ציור">
-            <Ionicons name="brush-outline" size={20} color="#fff" />
+          <TouchableOpacity
+            style={s.topIconBtn}
+            onPress={() => { setMediaUri(null); setOverlays([]); setDrawPaths([]); setDrawMode(false); setPhase('capture'); }}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="חזרה"
+          >
+            <Ionicons name="chevron-forward" size={26} color="#fff" />
           </TouchableOpacity>
         </View>
       )}
@@ -2583,6 +2595,33 @@ const s = StyleSheet.create({
   },
 
   /* ---- Preview ---- */
+  previewBlurDim: {
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  previewFrame: {
+    position: 'absolute',
+    left: 0,
+    width: SW,
+    overflow: 'hidden',
+    backgroundColor: '#000',
+  },
+  /** direction:ltr — כמו StoryViewer: Modal לא תמיד מכבד forceRTL. כלים משמאל, חזרה מימין */
+  previewTopBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    direction: 'ltr',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+  },
+  previewTools: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
   previewTopGrad: {
     position: 'absolute',
     top: 0,

@@ -11,7 +11,6 @@ import {
   StyleSheet,
   Dimensions,
   ActivityIndicator,
-  Share as RNShare,
   TouchableOpacity,
 } from 'react-native';
 import { initialWindowMetrics, SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -28,6 +27,7 @@ import {
   Gesture,
   GestureDetector,
 } from 'react-native-gesture-handler';
+import { shareMediaFile } from '../../lib/shareMediaFile';
 import { logger } from '../../utils/logger';
 import { getChatMediaDisplayUri } from '../../services/chat/chatSignedMediaUrl';
 import { chatPalette as COLORS } from './chatDesignTokens';
@@ -405,7 +405,8 @@ export default function MediaGalleryViewer({
   const handleShare = async () => {
     if (!currentItem) return;
     try {
-      await RNShare.share({ url: resolveUri(currentItem) });
+      // קובץ אמיתי (לא קישור ל-bucket)
+      await shareMediaFile(currentItem.url || resolveUri(currentItem), { kind: currentItem.type });
     } catch (error) {
       logger.error('MediaGalleryViewer', 'Share failed', error);
     }

@@ -32,6 +32,7 @@ import VoiceWaveformWithProgress from './VoiceWaveformWithProgress';
 import { extractWaveformData, WAVEFORM_STORE_BARS } from '../../utils/waveformSamples';
 import { resolveMessageWaveform } from '../../utils/audioWaveformPeaks';
 import { openBrowserAsync } from '../../lib/expoWebBrowserSafe';
+import { shareMediaFile } from '../../lib/shareMediaFile';
 import { logger } from '../../utils/logger';
 import { getChatMessagePreview } from '../../utils/chatMessagePreview';
 import {
@@ -613,27 +614,18 @@ function ChatMessage({
 
   // פתיחת מסמך
   const openDocument = async () => {
-    const docUri =
-      resolvedMedia.doc ||
-      (message.media_url
-        ? (await getChatMediaDisplayUri(message.media_url)) || message.media_url
-        : null);
-    if (!docUri) {
+    // קובץ אמיתי עם השם והסיומת (תצוגה מקדימה, «שמירה בקבצים», פתיחה באפליקציה, שליחה כקובץ)
+    // — לא קישור ל-bucket בדפדפן (באנדרואיד הדפדפן גם לא מציג PDF)
+    const source = message.local_media_uri || message.media_url || resolvedMedia.doc;
+    if (!source) {
       legacyAlert('שגיאה', 'לא נמצא קישור למסמך');
       return;
     }
-
-    try {
-      const supported = await Linking.canOpenURL(docUri);
-      if (supported) {
-        await openBrowserAsync(docUri);
-      } else {
-        await Linking.openURL(docUri);
-      }
-    } catch (error) {
-      logger.error('ChatMessage', 'Document open error', error);
-      legacyAlert('שגיאה', 'לא ניתן לפתוח את המסמך');
-    }
+    const ok = await shareMediaFile(source, {
+      kind: 'document',
+      fileName: message.media_file_name || extractFileNameFromUrl(message.media_url),
+    });
+    if (!ok) legacyAlert('שגיאה', 'לא ניתן לפתוח את המסמך');
   };
 
   // צבע שם השולח

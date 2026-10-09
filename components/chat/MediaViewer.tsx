@@ -3,8 +3,9 @@
 // ============================================
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { shareMediaFile } from '../../lib/shareMediaFile';
 import { logger } from '../../utils/logger';
-import { View, Text, Modal, StyleSheet, Dimensions, ActivityIndicator, Share as RNShare, TouchableOpacity } from 'react-native';
+import { View, Text, Modal, StyleSheet, Dimensions, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { initialWindowMetrics, SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Video, ResizeMode } from '../../lib/expoAvSafe';
 import { Ionicons } from '@expo/vector-icons';
@@ -267,7 +268,9 @@ export default function MediaViewer({
 
   const handleShare = async () => {
     try {
-      await RNShare.share({ url: displayUri });
+      // קובץ אמיתי (לא קישור ל-bucket) — המקור היציב, לא ה-signed URL הזמני
+      const ok = await shareMediaFile(mediaUrl || displayUri, { kind: mediaType });
+      if (!ok) logger.warn('MediaViewer', 'Share unavailable');
     } catch (error) {
       logger.error('MediaViewer', 'Share failed', error);
     }

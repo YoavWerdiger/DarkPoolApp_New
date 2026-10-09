@@ -2053,7 +2053,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
 
       {/* פס עליון (מחוץ ל-Pan, מוסתר בזמן ציור): חזרה מימין, כלי טקסט/אימוג'י/ציור משמאל —
           על השחור מעל חלון המדיה, כמו וואטסאפ (לא עמודה מעל התמונה) */}
-      {!drawMode && (
+      {!drawMode && !showTextEditor && !showEmojiPicker && (
         <View style={[s.previewTopBar, s.chromeLayer, { paddingTop: insets.top + 10 }]} pointerEvents="box-none">
           <View style={s.previewTools}>
             <TouchableOpacity style={s.topIconBtn} onPress={() => setDrawMode(true)} activeOpacity={0.75} accessibilityLabel="ציור">

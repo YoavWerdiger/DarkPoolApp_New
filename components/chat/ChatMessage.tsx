@@ -1304,7 +1304,7 @@ function renderMediaContent(
         : (fileExtension !== 'קובץ' ? fileExtension : '');
 
       {
-        // מסמך נקי ישירות על הבועה (בלי אריח כהה פנימי) — שם עד שתי שורות ומתחתיו «PDF · 1.2 MB». כולו לחיץ לפתיחה.
+        // מסמך בסגנון וואטסאפ/טלגרם: אריח סוג קובץ + שם עד שתי שורות ומתחתיו «PDF · 1.2 MB», ישירות על הבועה. כולו לחיץ.
         const ext = fileExtension !== 'קובץ' ? fileExtension.slice(0, 4) : '';
         const fg = isMe ? tokens.colors.bubbleMeText : tokens.colors.text.primary;
         const sub = isMe ? tokens.colors.bubbleMeMetaText : tokens.colors.text.secondary;
@@ -1319,6 +1319,10 @@ function renderMediaContent(
             accessibilityRole="button"
             accessibilityLabel={`פתיחת מסמך ${fileName}`}
           >
+            {/* כמו וואטסאפ/טלגרם: אריח צבעוני לפי סוג הקובץ בתחילת השורה */}
+            <View style={[styles.documentIconTile, { backgroundColor: getDocumentColor(fileExtension) }]}>
+              <Ionicons name={getDocumentIcon(fileExtension)} size={20} color="#FFFFFF" />
+            </View>
             <View style={styles.documentTextContainer}>
               <Text style={[styles.documentName, { color: fg }]} numberOfLines={2}>
                 {fileName}
@@ -2839,6 +2843,14 @@ const createStyles = (tokens: any) => {
     minWidth: 180,
     maxWidth: 260,
     paddingVertical: 2,
+  },
+  documentIconTile: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   documentTextContainer: {
     flex: 1,

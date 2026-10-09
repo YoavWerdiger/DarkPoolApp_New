@@ -83,7 +83,7 @@ export type AnimatedNumberProps = Omit<TextProps, 'children'> & {
   fast?: boolean;
 };
 
-type Change = { gen: number; prev: string; dir: 1 | -1; fast: boolean };
+type Change = { gen: number; prev: string; dir: 1 | -1; fast: boolean; tint: boolean };
 type Shown = {
   text: string;
   value: number | null | undefined;
@@ -151,7 +151,10 @@ export function AnimatedNumber({
     setShown({
       text: clean,
       value,
-      change: canAnimate ? { gen: genRef.current, prev: shown.text, dir, fast } : null,
+      // גוון עדין על הספרות שהשתנו: ירוק בעלייה, אדום בירידה (לא בגרירה מהירה / בלי כיוון)
+      change: canAnimate
+        ? { gen: genRef.current, prev: shown.text, dir, fast, tint: !fast && numericDir !== 0 }
+        : null,
       flashGen:
         canAnimate && flash && !fast && numericDir !== 0 ? shown.flashGen + 1 : shown.flashGen,
       flashDir: numericDir !== 0 ? dir : shown.flashDir,
@@ -244,6 +247,14 @@ export function AnimatedNumber({
             height={lineH}
             charStyle={charStyle}
             flashStyle={flashEnabled ? flashStyle : null}
+            tintColor={
+              change?.tint && baseColor
+                ? change.dir > 0
+                  ? tokens.colors.text.success
+                  : tokens.colors.text.danger
+                : null
+            }
+            baseColor={baseColor}
             allowFontScaling={allowFontScaling}
             maxFontSizeMultiplier={maxFontSizeMultiplier}
           />
@@ -277,9 +288,13 @@ function DigitCell({
   height,
   charStyle,
   flashStyle,
+  tintColor,
+  baseColor,
   allowFontScaling,
   maxFontSizeMultiplier,
 }: {
+  tintColor: string | null;
+  baseColor: string | null;
   ch: string;
   old: string | null;
   gen: number;
@@ -293,6 +308,7 @@ function DigitCell({
   maxFontSizeMultiplier?: number | null;
 }) {
   const p = useSharedValue(1);
+  const tint = useSharedValue(0);
   const dirSv = useSharedValue<number>(dir);
   const [rollingFrom, setRollingFrom] = useState<string | null>(null);
   const lastGen = useRef(0);
@@ -304,7 +320,18 @@ function DigitCell({
     setRollingFrom(old);
     p.value = 0;
     p.value = withDelay(delay, withTiming(1, { duration, easing: EASE_OUT }));
-  }, [gen, old, dir, delay, duration, p, dirSv]);
+    if (tintColor) {
+      // הגוון נכנס עם הספרה ודועך מעט אחרי שהיא נוחתת
+      tint.value = 1;
+      tint.value = withDelay(delay + duration * 0.6, withTiming(0, { duration: 520, easing: EASE_OUT }));
+    }
+  }, [gen, old, dir, delay, duration, p, dirSv, tintColor, tint]);
+
+  const tintStyle = useAnimatedStyle(() => {
+    if (!tintColor || !baseColor) return {};
+    // עדין: לכל היותר ~65% מהמרחק בין צבע הבסיס לירוק/אדום
+    return { color: interpolateColor(tint.value * 0.65, [0, 1], [baseColor, tintColor]) };
+  }, [tintColor, baseColor]);
 
   // עלייה: הספרה החדשה נכנסת מלמטה והישנה יוצאת למעלה; ירידה: הפוך
   const inStyle = useAnimatedStyle(
@@ -322,7 +349,7 @@ function DigitCell({
   return (
     <View style={[styles.cell, { height }]}>
       <Animated.Text
-        style={[charStyle, flashStyle, inStyle]}
+        style={[charStyle, flashStyle, tintColor ? tintStyle : null, inStyle]}
         allowFontScaling={allowFontScaling}
         maxFontSizeMultiplier={maxFontSizeMultiplier}
       >

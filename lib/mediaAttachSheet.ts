@@ -46,6 +46,8 @@ export const MEDIA_ATTACH_PEEK_STRIP_GAP = 16;
 /** כותרת «אחרונים» + «הכל» מעל שורת ה-thumbnails. */
 export const MEDIA_ATTACH_PEEK_RECENTS_HEADER_PX = 28;
 export const MEDIA_ATTACH_PEEK_BUFFER_PX = 8;
+/** כותרת הטופו («צירוף» + שברון) + המרווח מתחתיה */
+export const MEDIA_ATTACH_PEEK_HEADER_PX = 40 + 12;
 export const MEDIA_ATTACH_PEEK_MIN = 0.24;
 export const MEDIA_ATTACH_PEEK_MAX = 0.56;
 
@@ -114,6 +116,7 @@ export function mediaAttachPeekHeightPx(input: {
   );
   return (
     MEDIA_ATTACH_HANDLE_PX +
+    MEDIA_ATTACH_PEEK_HEADER_PX +
     MEDIA_ATTACH_PEEK_CHROME_PX +
     strip +
     actions +

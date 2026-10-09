@@ -144,6 +144,9 @@ type ChatBottomSheetProps = {
    * למשל פריוויו מדיה לפני שליחה) בלי Modal מקונן.
    */
   useModal?: boolean;
+  /** רקע השיט — לפי הטופו: tokens.colors.background.primary */
+  backgroundColor?: string;
+  topCornerRadius?: number;
   children: React.ReactNode;
 };
 
@@ -168,6 +171,8 @@ export function ChatBottomSheet({
   handleColor,
   avoidKeyboard,
   useModal = true,
+  backgroundColor,
+  topCornerRadius,
   children,
 }: ChatBottomSheetProps) {
   return (
@@ -193,6 +198,8 @@ export function ChatBottomSheet({
       glassIntensity={glassIntensity}
       glassOverlayColor={glassOverlayColor}
       avoidKeyboard={avoidKeyboard}
+      backgroundColor={backgroundColor}
+      topCornerRadius={topCornerRadius}
     >
       {children}
     </BottomSheet>

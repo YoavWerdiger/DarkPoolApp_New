@@ -23,7 +23,9 @@ import {
 } from 'lucide-react-native';
 import { initialWindowMetrics, useSafeAreaInsets } from 'react-native-safe-area-context';
 import UIButton from '../ui/UIButton';
-import { ChatBottomSheet } from './ChatBottomSheet';
+import { ChatBottomSheet, ChatSheetTopoHeader } from './ChatBottomSheet';
+import { APP_LAYOUT } from '../ui/appLayout';
+import { DAY_NAV_BUTTON_SIZE, headerExitButtonFill } from '../ui/DayNavBlurButton';
 import { sheetContentBottomPadding } from '../ui/BottomSheet/sheetGlass';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { APP_TYPE, appPhysicalRightText } from '../ui/appType';
@@ -556,10 +558,18 @@ export default function MediaPickerSheet({
 
   const galleryChrome = (
     <View style={styles.galleryChrome}>
-      <DayNavBlurButton size={40} onPress={collapseGallery} accessibilityLabel="חזרה לתפריט">
+      <DayNavBlurButton
+        size={DAY_NAV_BUTTON_SIZE}
+        glass={false}
+        style={{ backgroundColor: headerExitButtonFill(tokens.colors.background.cardSolid) }}
+        onPress={collapseGallery}
+        accessibilityLabel="חזרה לתפריט"
+      >
         <Ionicons name="chevron-down" size={22} color={tokens.colors.text.primary} />
       </DayNavBlurButton>
-      <Text style={styles.galleryTitle}>גלריה</Text>
+      <View style={styles.galleryTitleWrap}>
+        <Text style={styles.galleryTitle}>גלריה</Text>
+      </View>
       <View style={styles.galleryChromeSpacer} />
     </View>
   );
@@ -576,6 +586,9 @@ export default function MediaPickerSheet({
       showBrandBackground={false}
       showBrandWatermark={false}
       contentPaddingBottom={0}
+      // לפי הטופו: קנבס ערכת הנושא ופינות xl, הכפתורים במילוי cardSolid
+      backgroundColor={tokens.colors.background.primary}
+      topCornerRadius={tokens.borderRadius.xl}
     >
       <View ref={rootRef} collapsable={false} style={[styles.root, expanded && styles.rootExpanded]}>
         {expanded ? (
@@ -643,6 +656,9 @@ export default function MediaPickerSheet({
           </View>
         ) : (
           <View style={styles.peek}>
+            <View style={styles.peekHeader}>
+              <ChatSheetTopoHeader title="צירוף" onClose={onClose} />
+            </View>
             {peekThumbs.length > 0 ? (
               <View style={styles.peekRecentsBlock}>
                 <View style={styles.peekRecentsHeader}>
@@ -761,8 +777,12 @@ const createStyles = (
     peek: {
       paddingTop: 4,
     },
+    peekHeader: {
+      paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+      marginBottom: 12,
+    },
     peekStrip: {
-      paddingHorizontal: tokens.spacing.md,
+      paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
       gap: MEDIA_ATTACH_PEEK_THUMB_GAP,
     },
     thumbRounded: {
@@ -773,7 +793,7 @@ const createStyles = (
       width: MEDIA_ATTACH_PEEK_THUMB_PX,
       height: MEDIA_ATTACH_PEEK_THUMB_PX,
       borderRadius: MEDIA_ATTACH_PEEK_THUMB_RADIUS,
-      backgroundColor: tokens.colors.background.primary,
+      backgroundColor: tokens.colors.background.cardSolid,
       alignItems: 'center',
       justifyContent: 'center',
       gap: 4,
@@ -797,7 +817,7 @@ const createStyles = (
     thumb: {
       width: '100%',
       height: '100%',
-      backgroundColor: tokens.colors.background.primary,
+      backgroundColor: tokens.colors.background.cardSolid,
     },
     videoBadge: {
       position: 'absolute',
@@ -841,7 +861,7 @@ const createStyles = (
       gap: MEDIA_ATTACH_GRID_GAP,
     },
     skeletonCell: {
-      backgroundColor: tokens.colors.background.primary,
+      backgroundColor: tokens.colors.background.cardSolid,
     },
     emptyWrap: {
       flexGrow: 1,
@@ -880,7 +900,7 @@ const createStyles = (
       borderRadius: 18,
       paddingHorizontal: 18,
       paddingVertical: 10,
-      backgroundColor: tokens.colors.background.primary,
+      backgroundColor: tokens.colors.background.cardSolid,
       borderWidth: 0,
     },
     permissionBtnLabel: {
@@ -889,7 +909,7 @@ const createStyles = (
       fontWeight: '700',
     },
     peekActions: {
-      paddingHorizontal: tokens.spacing.md,
+      paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
       paddingTop: 4,
       paddingBottom: sheetBottomPad,
     },
@@ -901,7 +921,7 @@ const createStyles = (
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingHorizontal: tokens.spacing.md,
+      paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
       marginBottom: 8,
     },
     peekRecentsTitle: {
@@ -923,7 +943,7 @@ const createStyles = (
       flex: 1,
       height: MEDIA_ATTACH_PRIMARY_ROW_PX,
       borderRadius: MEDIA_ATTACH_PRIMARY_ROW_PX / 2,
-      backgroundColor: tokens.colors.background.primary,
+      backgroundColor: tokens.colors.background.cardSolid,
       flexDirection: 'row',
       direction: 'rtl',
       alignItems: 'center',
@@ -944,19 +964,26 @@ const createStyles = (
       direction: 'rtl',
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: tokens.spacing.md,
+      gap: 10,
+      paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
       paddingBottom: 10,
     },
+    galleryTitleWrap: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    // כמו ChatSheetTopoHeader: כותרת ממורכזת בגודל sectionTitle
     galleryTitle: {
-      ...appPhysicalRightText,
       fontSize: APP_TYPE.sectionTitle.fontSize,
-      fontWeight: '700',
+      lineHeight: APP_TYPE.sectionTitle.lineHeight,
+      fontWeight: APP_TYPE.sectionTitle.fontWeight,
       color: tokens.colors.text.primary,
+      textAlign: 'center',
+      writingDirection: 'rtl',
     },
     galleryChromeSpacer: {
-      width: 40,
-      height: 40,
+      width: DAY_NAV_BUTTON_SIZE,
+      height: DAY_NAV_BUTTON_SIZE,
     },
     actionItem: {
       alignItems: 'center',
@@ -968,7 +995,7 @@ const createStyles = (
       borderRadius: MEDIA_ATTACH_ACTION_BTN_PX / 2,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: tokens.colors.background.primary,
+      backgroundColor: tokens.colors.background.cardSolid,
       borderWidth: 0,
     },
     actionLabel: {

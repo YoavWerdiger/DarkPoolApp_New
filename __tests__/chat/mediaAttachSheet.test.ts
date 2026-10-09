@@ -45,11 +45,13 @@ describe('media attach sheet — WhatsApp open path', () => {
     expect(sheetSrc).not.toContain('תמונות וסרטונים');
     expect(sheetSrc).not.toContain('chromeSurfaceCardStyle');
     expect(sheetSrc).not.toContain('primaryTile');
+    // טופו: השיט על קנבס ערכת הנושא, הכפתורים במילוי cardSolid
+    expect(sheetSrc).toContain('backgroundColor={tokens.colors.background.primary}');
     expect(sheetSrc).toMatch(
-      /actionCircle:\s*\{[^}]*backgroundColor:\s*tokens\.colors\.background\.primary/,
+      /actionCircle:\s*\{[^}]*backgroundColor:\s*tokens\.colors\.background\.cardSolid/,
     );
     expect(sheetSrc).toMatch(
-      /primaryPill:\s*\{[^}]*backgroundColor:\s*tokens\.colors\.background\.primary/,
+      /primaryPill:\s*\{[^}]*backgroundColor:\s*tokens\.colors\.background\.cardSolid/,
     );
     expect(sheetSrc).not.toContain("label: 'שיתוף'");
     expect(sheetSrc).toContain("label: 'סקר'");

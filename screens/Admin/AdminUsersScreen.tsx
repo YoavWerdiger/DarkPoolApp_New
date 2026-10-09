@@ -592,12 +592,6 @@ function UserCard({
           </Text>
           <View style={styles.badgeRow}>
             <AdminBadge label={roleLabel} color={roleColor} />
-            {rank ? (
-              <AdminBadge
-                label={rank.name}
-                color={rankColor(rank.metal, isDarkMode, tokens.colors.text.tertiary)}
-              />
-            ) : null}
             {item.is_muted ? <AdminBadge label="מושתק" color={tokens.colors.danger.main} /> : null}
             {item.is_suspended ? (
               <AdminBadge label="מושעה" color={tokens.colors.warning.main} />
@@ -648,7 +642,7 @@ function UserCard({
       <ProfileMenuRow
         title={
           paidDays != null
-            ? `ותק מנוי · ${rank?.name ?? ''} · ${formatDaysCount(paidDays)}`
+            ? `ותק מנוי · ${formatDaysCount(paidDays)}`
             : 'ותק מנוי · ללא'
         }
         icon={Award}

@@ -69,7 +69,7 @@ export function UserBadges({ userId, size = 16, interactive = true, style }: Pro
     >
       {rankIcon ? (
         interactive ? (
-          <Pressable onPress={openRank} hitSlop={HIT} accessibilityRole="button" accessibilityLabel={`דרגה: ${rank!.name}`}>
+          <Pressable onPress={openRank} hitSlop={HIT} accessibilityRole="button" accessibilityLabel="דרגת ותק">
             <View>{rankIcon}</View>
           </Pressable>
         ) : (
@@ -128,10 +128,18 @@ export function UserNameRow({ userId, children, size, interactive, align = 'righ
       ]}
     >
       <UserBadges userId={userId} size={size} interactive={interactive} />
-      {children}
+      {React.Children.map(children, (child) =>
+        React.isValidElement<{ style?: unknown }>(child)
+          ? React.cloneElement(child, { style: [child.props.style, NAME_FIT] })
+          : child
+      )}
     </View>
   );
 }
+
+// השם ברוחב הטבעי שלו — סגנונות כותרת רבים (appCardTitleStyle) הם width:'100%',
+// מה שדחף את התג לקצה השני של השורה במקום צמוד לשם
+const NAME_FIT = { width: 'auto', alignSelf: 'auto', flexShrink: 1, minWidth: 0 } as const;
 
 /** גודל תג לפי גובה שורת השם */
 export function badgeSizeForLineHeight(lineHeight: number): number {

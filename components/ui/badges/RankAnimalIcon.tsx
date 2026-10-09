@@ -1,7 +1,12 @@
 import React from 'react';
-import Svg, { Path } from 'react-native-svg';
+import { Image } from 'react-native';
 import type { RankAnimal } from './userRank';
-import { BEAR_ICON, BULL_ICON } from './rankAnimalPaths';
+
+// השור והדוב מהלוגו של DarkPool (assets/badges — מסכה לבנה, נצבעת לפי הדרגה)
+const ANIMAL_IMAGES = {
+  bull: require('../../../assets/badges/bull.png'),
+  bear: require('../../../assets/badges/bear.png'),
+} as const;
 
 type Props = {
   animal: RankAnimal;
@@ -9,15 +14,15 @@ type Props = {
   size?: number;
 };
 
-/** ראש דוב / שור חד-צבעי — הצבע לפי הדרגה */
+/** ראש שור / דוב מהלוגו — חד-צבעי, הצבע לפי הדרגה */
 export function RankAnimalIcon({ animal, color, size = 16 }: Props) {
-  const shape = animal === 'bull' ? BULL_ICON : BEAR_ICON;
   return (
-    <Svg width={size} height={size} viewBox={shape.viewBox}>
-      {shape.paths.map((d, i) => (
-        <Path key={i} d={d} fill={color} fillRule={shape.fillRule ?? 'nonzero'} />
-      ))}
-    </Svg>
+    <Image
+      source={ANIMAL_IMAGES[animal]}
+      style={{ width: size, height: size, tintColor: color }}
+      resizeMode="contain"
+      accessibilityIgnoresInvertColors
+    />
   );
 }
 

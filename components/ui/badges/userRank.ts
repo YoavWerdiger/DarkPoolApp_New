@@ -8,7 +8,6 @@ export type RankMetal = 'gray' | 'bronze' | 'silver' | 'gold';
 
 export type UserRank = {
   level: 1 | 2 | 3 | 4 | 5 | 6;
-  name: string;
   animal: RankAnimal;
   metal: RankMetal;
   /** ימים מינימליים לדרגה */
@@ -18,12 +17,12 @@ export type UserRank = {
 };
 
 export const USER_RANK_LADDER: readonly UserRank[] = [
-  { level: 1, name: 'גור דוב', animal: 'bear', metal: 'gray', minDays: 0, rangeLabel: 'חודש ראשון' },
-  { level: 2, name: 'דוב', animal: 'bear', metal: 'bronze', minDays: 30, rangeLabel: '1–3 חודשים' },
-  { level: 3, name: 'דוב כסף', animal: 'bear', metal: 'silver', minDays: 90, rangeLabel: '3–6 חודשים' },
-  { level: 4, name: 'שור', animal: 'bull', metal: 'bronze', minDays: 180, rangeLabel: '6–12 חודשים' },
-  { level: 5, name: 'שור כסף', animal: 'bull', metal: 'silver', minDays: 365, rangeLabel: '1–2 שנים' },
-  { level: 6, name: 'שור זהב', animal: 'bull', metal: 'gold', minDays: 730, rangeLabel: 'שנתיים ומעלה' },
+  { level: 1, animal: 'bear', metal: 'gray', minDays: 0, rangeLabel: 'חודש ראשון' },
+  { level: 2, animal: 'bear', metal: 'bronze', minDays: 30, rangeLabel: '1–3 חודשים' },
+  { level: 3, animal: 'bear', metal: 'silver', minDays: 90, rangeLabel: '3–6 חודשים' },
+  { level: 4, animal: 'bull', metal: 'bronze', minDays: 180, rangeLabel: '6–12 חודשים' },
+  { level: 5, animal: 'bull', metal: 'silver', minDays: 365, rangeLabel: '1–2 שנים' },
+  { level: 6, animal: 'bull', metal: 'gold', minDays: 730, rangeLabel: 'שנתיים ומעלה' },
 ] as const;
 
 export function rankForPaidDays(days: number | null | undefined): UserRank | null {

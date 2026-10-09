@@ -71,8 +71,8 @@ function RankSheetBody({
     <View onLayout={onLayout} style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 16) + 4 }]}>
       <View style={styles.hero}>
         <RankAnimalIcon animal={info.rank.animal} color={color} size={HERO_ICON} />
-        <Text style={[styles.title, { color: tokens.colors.text.primary }]}>{info.rank.name}</Text>
-        <Text style={[styles.tenure, { color: tokens.colors.text.secondary }]}>
+        {/* בלי שמות דרגות — האייקון והוותק מספרים את הסיפור */}
+        <Text style={[styles.title, { color: tokens.colors.text.primary }]}>
           {formatPaidTenure(paidDays)}
         </Text>
       </View>
@@ -82,7 +82,7 @@ function RankSheetBody({
       </View>
       <Text style={[styles.progressLabel, { color: tokens.colors.text.secondary }]}>
         {info.next && info.daysToNext != null
-          ? `עוד ${formatDaysCount(info.daysToNext)} ל${info.next.name}`
+          ? `עוד ${formatDaysCount(info.daysToNext)} לדרגה הבאה`
           : 'הגעת לדרגה הגבוהה ביותר'}
       </Text>
 
@@ -106,9 +106,6 @@ function RankSheetBody({
                 ]}
                 numberOfLines={1}
               >
-                {r.name}
-              </Text>
-              <Text style={[styles.ladderRange, { color: tokens.colors.text.tertiary }]} numberOfLines={1}>
                 {r.rangeLabel}
               </Text>
             </View>

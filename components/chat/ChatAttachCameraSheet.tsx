@@ -53,7 +53,7 @@ const SCREEN_W = Dimensions.get('window').width;
 // כמו וואטסאפ: חלון מצלמה ברוחב מלא ביחס 3:4 (יחס הצילום של החיישן) מתחת לפס העליון —
 // לא מסך מלא; הכפתורים על השחור מתחת
 const PREVIEW_H = Math.round((SCREEN_W * 4) / 3);
-const TOP_BAR_H = 56;
+const TOP_BAR_H = 64; // paddingTop 10 + כפתור 48 + מרווח
 const MODE_PILL_W = 78;
 const MODE_PILL_GAP = 6;
 const MODE_SPRING = { damping: 22, stiffness: 220, mass: 0.8 };

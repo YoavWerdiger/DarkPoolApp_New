@@ -13,6 +13,8 @@ import {
   Text,
   View,
 } from 'react-native';
+import { cameraPreviewFrame } from '../../lib/cameraFrame';
+import { InAppGalleryPanel, type InAppGalleryPick } from './InAppGalleryPanel';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   interpolate,
@@ -22,7 +24,6 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { CameraView, useCameraPermissions, useMicrophonePermissions, type CameraType } from 'expo-camera';
-import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { APP_TYPE, appPhysicalRightText } from '../ui/appType';
@@ -50,10 +51,6 @@ type Props = {
 type CaptureMode = 'photo' | 'video';
 
 const SCREEN_W = Dimensions.get('window').width;
-// כמו וואטסאפ: חלון מצלמה ברוחב מלא ביחס 3:4 (יחס הצילום של החיישן) מתחת לפס העליון —
-// לא מסך מלא; הכפתורים על השחור מתחת
-const PREVIEW_H = Math.round((SCREEN_W * 4) / 3);
-const TOP_BAR_H = 64; // paddingTop 10 + כפתור 48 + מרווח
 const MODE_PILL_W = 78;
 const MODE_PILL_GAP = 6;
 const MODE_SPRING = { damping: 22, stiffness: 220, mass: 0.8 };
@@ -87,7 +84,6 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
   const recordingRef = useRef(false);
   recordingRef.current = recording;
   const [shot, setShot] = useState<ChatAttachCameraResult | null>(null);
-  const [suspendForGallery, setSuspendForGallery] = useState(false);
   const cameraRef = useRef<CameraView>(null);
   const recordStartedAt = useRef(0);
   const discardRecordingRef = useRef(false);
@@ -144,7 +140,6 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
     setCaptureMode('photo');
     modeIndex.value = 0;
     setShot(null);
-    setSuspendForGallery(false);
   }, [modeIndex, visible]);
 
   const finish = useCallback((result: ChatAttachCameraResult) => {
@@ -215,43 +210,20 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
     void takePhoto();
   }, [captureMode, recording, startRecording, stopRecording, takePhoto]);
 
-  const openGallery = useCallback(async () => {
+  // גלריה בתוך המסך (לא בוחר המערכת) — לא יוצאים מהמצלמה
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const openGallery = useCallback(() => {
     if (recording || capturing) return;
     void HapticFeedback.selection();
-    const current = await ImagePicker.getMediaLibraryPermissionsAsync();
-    let status = current.status;
-    if (status !== 'granted') {
-      const next = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      status = next.status;
-    }
-    if (status !== 'granted') {
-      legacyAlert('אישור נדרש', 'אנא אשר גישה לגלריה');
-      return;
-    }
-    // בוחר התמונות של iOS לא נפתח מעל Modal במסך מלא.
-    setSuspendForGallery(true);
-    await new Promise((resolve) => setTimeout(resolve, 400));
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images', 'videos'],
-        quality: 0.85,
-      });
-      if (result.canceled || !result.assets[0]) return;
-      const asset = result.assets[0];
-      const isVideo = asset.type === 'video';
-      finish({
-        uri: asset.uri,
-        width: asset.width,
-        height: asset.height,
-        mediaType: isVideo ? 'video' : 'image',
-        durationMs: isVideo && asset.duration ? asset.duration : undefined,
-      });
-    } catch {
-      legacyAlert('שגיאה', 'לא הצלחנו לפתוח את הגלריה');
-    } finally {
-      setSuspendForGallery(false);
-    }
-  }, [capturing, finish, recording]);
+    setGalleryOpen(true);
+  }, [capturing, recording]);
+  const onGalleryPick = useCallback(
+    (pick: InAppGalleryPick) => {
+      setGalleryOpen(false);
+      finish(pick);
+    },
+    [finish],
+  );
 
   const commitMode = useCallback((idx: number) => {
     const mode: CaptureMode = idx <= 0 ? 'photo' : 'video';
@@ -314,11 +286,12 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
   if (!visible) return null;
 
   const granted = permission?.granted === true;
+  const frame = cameraPreviewFrame(SCREEN_W, Dimensions.get('window').height, insets);
 
   return (
     <Modal
-      visible={visible && !suspendForGallery}
-      animationType={shot || suspendForGallery ? 'none' : 'slide'}
+      visible={visible}
+      animationType={shot ? 'none' : 'slide'}
       presentationStyle="fullScreen"
       onRequestClose={() => {
         if (shot) setShot(null);
@@ -348,13 +321,13 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
         {granted ? (
           <GestureDetector gesture={modeSwipe}>
             <View
-              style={[styles.preview, { top: insets.top + TOP_BAR_H }]}
+              style={[styles.preview, { top: frame.top, height: frame.height }]}
               collapsable={false}
             >
               <CameraView
                 ref={cameraRef}
                 style={StyleSheet.absoluteFill}
-                ratio="4:3"
+
                 facing={facing}
                 mode="video"
                 flash={flashOn ? 'on' : 'off'}
@@ -404,7 +377,7 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
           <View style={styles.controls}>
             <View style={styles.sideCluster}>
               <Pressable
-                onPress={() => void openGallery()}
+                onPress={openGallery}
                 style={styles.circleBtn}
                 accessibilityRole="button"
                 accessibilityLabel="גלריה"
@@ -474,6 +447,13 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
           </View>
         </View>
         </>)}
+        {shot ? null : (
+          <InAppGalleryPanel
+            visible={galleryOpen}
+            onClose={() => setGalleryOpen(false)}
+            onPick={onGalleryPick}
+          />
+        )}
       </GestureHandlerRootView>
     </Modal>
   );
@@ -513,7 +493,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     width: SCREEN_W,
-    height: PREVIEW_H,
     overflow: 'hidden',
     backgroundColor: '#000',
   },

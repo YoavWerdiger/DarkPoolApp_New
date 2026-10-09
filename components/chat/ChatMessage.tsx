@@ -239,35 +239,6 @@ const detectTextDirection = (text: string): 'right' | 'left' | 'auto' => {
   return 'auto';
 };
 
-// פונקציה לקבלת צבע ייחודי למשתמש
-const getUserColor = (userId: string) => {
-  const colors = [
-    '#E53935', // אדום
-    '#D81B60', // ורוד
-    '#8E24AA', // סגול
-    '#5E35B1', // סגול כהה
-    '#3949AB', // אינדיגו
-    '#1E88E5', // כחול
-    '#039BE5', // תכלת
-    '#00ACC1', // ציאן
-    '#00897B', // טורקיז
-    '#43A047', // ירוק
-    '#7CB342', // ירוק בהיר
-    '#C0CA33', // ליים
-    '#FDD835', // צהוב
-    '#FFB300', // אמבר
-    '#FB8C00', // כתום
-    '#F4511E', // כתום עמוק
-  ];
-
-  let hash = 0;
-  for (let i = 0; i < userId.length; i++) {
-    hash = userId.charCodeAt(i) + ((hash << 5) - hash);
-  }
-
-  return colors[Math.abs(hash) % colors.length];
-};
-
 /** החלקה לריפליי (וואטסאפ): me = שמאלה, other = ימינה */
 const REPLY_SWIPE_MAX = 72;
 const REPLY_SWIPE_THRESHOLD = 44;
@@ -624,13 +595,9 @@ function ChatMessage({
     if (!ok) legacyAlert('שגיאה', 'לא ניתן לפתוח את המסמך');
   };
 
-  // צבע שם השולח
-  const senderColor = useMemo(() => {
-    if (message.sender_id) {
-      return getUserColor(message.sender_id);
-    }
-    return DesignTokens.colors.text.secondary;
-  }, [message.sender_id, DesignTokens]);
+  // שם השולח בצבע הטקסט המשני של ערכת העיצוב (לא פלטת צבעים לכל משתמש — לא לפי הטופו,
+  // וחלק מהגוונים כמו צהוב/ליים לא קריאים ברקע בהיר)
+  const senderColor = DesignTokens.colors.text.secondary;
 
   const replyTargetId = message.reply_to?.message_id || message.reply_to_message_id;
   const handleReplyJump = useCallback(() => {

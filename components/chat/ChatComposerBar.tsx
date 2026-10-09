@@ -10,6 +10,7 @@ import {
   type TextStyle,
   type TextInputProps,
 } from 'react-native';
+import { APP_TYPE } from '../ui/appType';
 import { Ionicons } from '@expo/vector-icons';
 import UICard from '../ui/UICard';
 import { CHROME_UICARD, chromeSurfaceCardStyle } from '../ui/chromeControl';
@@ -163,7 +164,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: tokens.spacing.sm + 1,
-      paddingVertical: tokens.spacing.xs + 1,
+      // 3 + 40 + 3 = 46 — אותו גובה כמו כפתור השליחה
+      paddingVertical: 3,
       gap: tokens.spacing.xs,
       minHeight: 46,
     },
@@ -178,7 +180,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       paddingBottom: 9,
       lineHeight: 22,
       includeFontPadding: false,
-      fontSize: tokens.typography.body.size,
+      // 17 כמו iMessage/וואטסאפ — 16 נראה קטן בגלולה של 46
+      fontSize: APP_TYPE.cardTitle.fontSize,
       color: tokens.colors.text.primary,
       textAlignVertical: 'center',
       textAlign: 'right',

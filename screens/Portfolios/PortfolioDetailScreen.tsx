@@ -44,7 +44,7 @@ import { HapticFeedback } from '../../utils/hapticFeedback';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { useAuth } from '../../context/AuthContext';
 import { useColmexSync } from '../../hooks/useColmexSync';
-import { DayNavBlurButton, HEADER_BACK_BTN_SIZE } from '../../components/ui/DayNavBlurButton';
+import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE, drawerMenuFaceColor } from '../../components/ui/DayNavBlurButton';
 import { DayDividerPill } from '../../components/ui/DayDividerPill';
 import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHeader';
 import { PortfolioSwitcher } from './components/PortfolioSwitcher';
@@ -274,19 +274,23 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
     [tokens, mainTabsHeight]
   );
 
+  const moreFace = drawerMenuFaceColor(tokens.colors.background.cardSolid);
   const moreAction = isOwner ? (
     <DayNavBlurButton
       onPress={() => {
         void HapticFeedback.impactLight();
         openPortfolioActions();
       }}
-      size={HEADER_BACK_BTN_SIZE}
-      glassIntensity="light"
+      // כמו כפתור התפריט הראשי: אותו גודל, גלס/מילוי ואייקון 24
+      size={DRAWER_MENU_BUTTON_SIZE}
+      glass={!moreFace}
+      glassIntensity="subtle"
+      style={moreFace ? { backgroundColor: moreFace } : undefined}
       accessibilityLabel="פעולות תיק"
     >
       <Ionicons
         name="ellipsis-horizontal"
-        size={18}
+        size={24}
         color={tokens.colors.text.primary}
       />
     </DayNavBlurButton>

@@ -82,9 +82,6 @@ export const RANK_METAL_COLORS: Record<'bronze' | 'silver' | 'gold' | 'platinum'
   platinum: { dark: '#9FD3E8', light: '#4F8FAD' },
 };
 
-/** אפור הדוב בלוגו */
-export const BRAND_BEAR_GRAY = '#7A7A7A';
-
 /** הצבע הראשי של הדרגה (פס התקדמות וכו׳) */
 export function rankColor(
   metal: RankMetal,
@@ -94,13 +91,4 @@ export function rankColor(
   if (metal === 'gray') return tokens.grayToken;
   if (metal === 'brand') return tokens.brandGreen;
   return isDarkMode ? RANK_METAL_COLORS[metal].dark : RANK_METAL_COLORS[metal].light;
-}
-
-/** צבעי הסמל: בכל הדרגות הלוגו המקורי — הדוב אפור כמו בלוגו, השור בצבע הדרגה */
-export function rankMarkColors(
-  metal: RankMetal,
-  isDarkMode: boolean,
-  tokens: { grayToken: string; brandGreen: string }
-): { bull: string; bear: string; bearOpacity: number } {
-  return { bull: rankColor(metal, isDarkMode, tokens), bear: BRAND_BEAR_GRAY, bearOpacity: 1 };
 }

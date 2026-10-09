@@ -1,36 +1,35 @@
 import React from 'react';
-import { Image, StyleSheet, View } from 'react-native';
+import { Image } from 'react-native';
 import { useDesignTokens } from '../DesignTokens';
 import { useTheme } from '../../../context/ThemeContext';
-import { rankMarkColors, type RankMetal } from './userRank';
+import { rankColor, type RankMetal } from './userRank';
 
-// סמל השור־ודוב מהלוגו — שתי שכבות על אותו קנבס (מסכות לבנות), כל אחת נצבעת בנפרד
-const BULL = require('../../../assets/badges/mark_bull.png');
-const BEAR = require('../../../assets/badges/mark_bear.png');
+// סמל השור־ודוב של DarkPool — מסכה אחת (לבנה), נצבעת כולה בצבע הדרגה
+const MARK = require('../../../assets/badges/rank_mark.png');
+/** רוחב/גובה של הקובץ (686×512) */
+export const RANK_MARK_ASPECT = 686 / 512;
 
 type Props = {
   metal: RankMetal;
+  /** גובה הסמל; הרוחב לפי היחס */
   size?: number;
 };
 
-/** סמל הדרגה — אותו שור־ודוב, הצבע לפי הוותק */
+/** סמל הדרגה — הלוגו המלא, הצבע לפי הוותק */
 export function RankMarkIcon({ metal, size = 16 }: Props) {
   const tokens = useDesignTokens();
   const { isDarkMode } = useTheme();
-  const c = rankMarkColors(metal, isDarkMode, {
+  const color = rankColor(metal, isDarkMode, {
     grayToken: tokens.colors.text.tertiary,
     brandGreen: tokens.colors.primary.main,
   });
-  const box = { width: size, height: size };
+  // מידות מפורשות על ה-Image עצמו — בלי absoluteFill (שגרם לסמל להתפרס על כל המסך)
   return (
-    <View style={box}>
-      <Image
-        source={BEAR}
-        style={[StyleSheet.absoluteFill, { tintColor: c.bear, opacity: c.bearOpacity }]}
-        resizeMode="contain"
-      />
-      <Image source={BULL} style={[StyleSheet.absoluteFill, { tintColor: c.bull }]} resizeMode="contain" />
-    </View>
+    <Image
+      source={MARK}
+      style={{ width: Math.round(size * RANK_MARK_ASPECT), height: size, tintColor: color }}
+      resizeMode="contain"
+    />
   );
 }
 

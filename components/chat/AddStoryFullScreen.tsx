@@ -2036,20 +2036,28 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
             enabled={drawMode}
           />
 
-          {overlays.map((item) => (
-            <DraggableText
-              key={item.id}
-              item={item}
-              onDoubleTap={openTextEditor}
-              onDragStateChange={(dragging, absY, hovering) => handleOverlayDragChange(item.id, dragging, absY, hovering)}
-              onRequestDelete={handleOverlayDelete}
-              onCommitPosition={handleOverlayCommitPosition}
-              canvasH={cameraFrame.height}
-              canvasTop={cameraFrame.top}
-            />
-          ))}
         </View>
       </GestureDetector>
+
+      {/* טקסטים ואימוג'י בשכבה נפרדת מעל החלון (אותו מיקום וגודל) — מחוץ ל-Pan של הסגירה,
+          אחרת בתוך חלון קטן הוא «גונב» את הגרירה ואי אפשר להזיז אותם */}
+      <View
+        style={[s.previewFrame, s.overlayLayer, { top: cameraFrame.top, height: cameraFrame.height }]}
+        pointerEvents={drawMode ? 'none' : 'box-none'}
+      >
+        {overlays.map((item) => (
+          <DraggableText
+            key={item.id}
+            item={item}
+            onDoubleTap={openTextEditor}
+            onDragStateChange={(dragging, absY, hovering) => handleOverlayDragChange(item.id, dragging, absY, hovering)}
+            onRequestDelete={handleOverlayDelete}
+            onCommitPosition={handleOverlayCommitPosition}
+            canvasH={cameraFrame.height}
+            canvasTop={cameraFrame.top}
+          />
+        ))}
+      </View>
 
       {/* פס עליון (מחוץ ל-Pan, מוסתר בזמן ציור): חזרה מימין, כלי טקסט/אימוג'י/ציור משמאל —
           על השחור מעל חלון המדיה, כמו וואטסאפ (לא עמודה מעל התמונה) */}
@@ -2604,6 +2612,12 @@ const s = StyleSheet.create({
     width: SW,
     overflow: 'hidden',
     backgroundColor: '#000',
+  },
+  overlayLayer: {
+    backgroundColor: 'transparent',
+    // בזמן גרירה לפח (בתחתית המסך, מתחת לחלון) הטקסט נשאר גלוי
+    overflow: 'visible',
+    zIndex: 5,
   },
   /** direction:ltr — כמו StoryViewer: Modal לא תמיד מכבד forceRTL. כלים משמאל, חזרה מימין */
   previewTopBar: {

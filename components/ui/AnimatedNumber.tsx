@@ -151,9 +151,9 @@ export function AnimatedNumber({
     setShown({
       text: clean,
       value,
-      // גוון עדין על הספרות שהשתנו: ירוק בעלייה, אדום בירידה (לא בגרירה מהירה / בלי כיוון)
+      // גוון עדין על הספרות שהשתנו: ירוק בעלייה, אדום בירידה — גם בגרירה על הגרף
       change: canAnimate
-        ? { gen: genRef.current, prev: shown.text, dir, fast, tint: !fast && numericDir !== 0 }
+        ? { gen: genRef.current, prev: shown.text, dir, fast, tint: numericDir !== 0 }
         : null,
       flashGen:
         canAnimate && flash && !fast && numericDir !== 0 ? shown.flashGen + 1 : shown.flashGen,

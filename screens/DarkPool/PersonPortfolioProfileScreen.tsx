@@ -1080,6 +1080,7 @@ export function PersonPortfolioProfileScreen({
     congressPersonTradesQuery.data,
   ]);
 
+  const [scrubPoint, setScrubPoint] = useState<{ date: string; value: number } | null>(null);
   const pickedPeriodFor = useRef<string | null>(null);
   useEffect(() => {
     pickedPeriodFor.current = null;
@@ -1211,6 +1212,16 @@ export function PersonPortfolioProfileScreen({
     ticker,
     portfolioValue,
   ]);
+
+  // ערך בנקודה על הגרף — גם לכותרת בזמן גרירה (מתגלגל + גוון ירוק/אדום)
+  const formatChartValue = (v: number) =>
+    holdingsEngine === 'trump' && trumpUnitWeighted
+      ? formatSignedChangePct(
+          chartSeries[0]?.value ? ((v - chartSeries[0].value) / chartSeries[0].value) * 100 : 0
+        )
+      : kind === 'politician'
+        ? formatCongressPortfolioHeroValue(v)
+        : formatUsdRawOrDash(v);
 
   const followLabel = isFollowing ? 'במעקב' : `עקוב אחרי ${displayName}`;
   const showCongressValue = kind === 'politician' && holdingsEngine === 'congress' && portfolioValue != null;
@@ -1441,9 +1452,10 @@ export function PersonPortfolioProfileScreen({
               </View>
               {heroValueText ? (
                 <AnimatedNumber
-                  text={toDataIsland(heroValueText)}
-                  value={trumpValueRange ? trumpValueRange.high : portfolioValue}
+                  text={toDataIsland(scrubPoint ? formatChartValue(scrubPoint.value) : heroValueText)}
+                  value={scrubPoint ? scrubPoint.value : trumpValueRange ? trumpValueRange.high : portfolioValue}
                   flash
+                  fast={!!scrubPoint}
                   style={styles.heroValue}
                   numberOfLines={1}
                   adjustsFontSizeToFit
@@ -1451,12 +1463,26 @@ export function PersonPortfolioProfileScreen({
                 />
               ) : holdingsEngine === 'trump' && trumpUnitWeighted && periodDelta ? (
                 <AnimatedNumber
-                  text={toDataIsland(formatSignedChangePct(periodDelta.pct))}
-                  value={periodDelta.pct}
+                  text={toDataIsland(
+                    scrubPoint ? formatChartValue(scrubPoint.value) : formatSignedChangePct(periodDelta.pct)
+                  )}
+                  value={scrubPoint ? scrubPoint.value : periodDelta.pct}
+                  fast={!!scrubPoint}
                   style={styles.heroValue}
                 />
               ) : null}
               {(showCongressValue ||
+                showTrumpValue ||
+                showOtherValue ||
+                (holdingsEngine === 'trump' && trumpUnitWeighted)) &&
+              scrubPoint ? (
+                // בזמן גרירה — התאריך של הנקודה במקום שינוי התקופה (כמו בתיקים)
+                <View style={styles.deltaRow}>
+                  <Text style={[styles.deltaFigure, { color: tokens.colors.text.secondary }]}>
+                    {toDataIsland(scrubPoint.date.split('-').reverse().join('.'))}
+                  </Text>
+                </View>
+              ) : (showCongressValue ||
                 showTrumpValue ||
                 showOtherValue ||
                 (holdingsEngine === 'trump' && trumpUnitWeighted)) &&
@@ -1489,17 +1515,8 @@ export function PersonPortfolioProfileScreen({
                 selectedPeriod={period}
                 onPeriodChange={setPeriod}
                 showHeader={false}
-                formatValue={(v) =>
-                  holdingsEngine === 'trump' && trumpUnitWeighted
-                    ? formatSignedChangePct(
-                        chartSeries[0]?.value
-                          ? ((v - chartSeries[0].value) / chartSeries[0].value) * 100
-                          : 0
-                      )
-                    : kind === 'politician'
-                      ? formatCongressPortfolioHeroValue(v)
-                      : formatUsdRawOrDash(v)
-                }
+                formatValue={formatChartValue}
+                onScrubPoint={setScrubPoint}
                 showPointMarkers={false}
                 periods={SNAPSHOT_CHART_PERIODS}
               />

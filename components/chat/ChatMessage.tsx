@@ -1304,7 +1304,7 @@ function renderMediaContent(
         : (fileExtension !== 'קובץ' ? fileExtension : '');
 
       {
-        // מסמך בסגנון וואטסאפ/טלגרם: אריח סוג קובץ + שם עד שתי שורות ומתחתיו «PDF · 1.2 MB», ישירות על הבועה. כולו לחיץ.
+        // מסמך: אריח אייקון עדין + שם עד שתי שורות ומתחתיו «PDF · 1.2 MB», ישירות על הבועה. כולו לחיץ.
         const ext = fileExtension !== 'קובץ' ? fileExtension.slice(0, 4) : '';
         const fg = isMe ? tokens.colors.bubbleMeText : tokens.colors.text.primary;
         const sub = isMe ? tokens.colors.bubbleMeMetaText : tokens.colors.text.secondary;
@@ -1319,9 +1319,10 @@ function renderMediaContent(
             accessibilityRole="button"
             accessibilityLabel={`פתיחת מסמך ${fileName}`}
           >
-            {/* כמו וואטסאפ/טלגרם: אריח צבעוני לפי סוג הקובץ בתחילת השורה */}
-            <View style={[styles.documentIconTile, { backgroundColor: getDocumentColor(fileExtension) }]}>
-              <Ionicons name={getDocumentIcon(fileExtension)} size={20} color="#FFFFFF" />
+            {/* אריח שקט בצבע הטקסט של הבועה (כמו כרטיס הלינק) — לא צבעי מותג שבורחים מהטופו */}
+            <View style={styles.documentIconTile}>
+              <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: fg, opacity: 0.08, borderRadius: 10 }]} />
+              <Ionicons name={getDocumentIcon(fileExtension)} size={20} color={fg} />
             </View>
             <View style={styles.documentTextContainer}>
               <Text style={[styles.documentName, { color: fg }]} numberOfLines={2}>

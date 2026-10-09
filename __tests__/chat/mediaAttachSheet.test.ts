@@ -60,7 +60,12 @@ describe('media attach sheet — WhatsApp open path', () => {
     expect(sheetSrc).toContain("label: 'גלריה'");
     expect(sheetSrc).toContain("label: 'מצלמה'");
     expect(sheetSrc).toContain('actionGrid');
-    expect(sheetSrc).toMatch(/<ScrollView\s+horizontal/);
+    // רצועת האחרונים: FlatList אופקי הפוך (האחרון מימין ב-RTL)
+    expect(sheetSrc).toMatch(/<FlatList\s+horizontal\s+inverted/);
+    // אחרי בחירה: כפתור ההעלאה בפריסה (לא מעל פעולות שקופות) והשיט מתכווץ
+    expect(sheetSrc).toContain('peekCtaInline');
+    expect(sheetSrc).not.toContain('peekActionsHidden');
+    expect(sheetSrc).toContain('mediaAttachSelectionPeekSnap');
     expect(sheetSrc).toContain('peekMoreTile');
     expect(sheetSrc).toContain('peekRecentsTitle');
     expect(sheetSrc).toContain('ChatAttachCameraSheet');

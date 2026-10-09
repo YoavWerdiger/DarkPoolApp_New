@@ -58,6 +58,7 @@ import {
   mediaAttachShouldQueryLibrary,
   toggleMediaSelection,
   type MediaAttachPermission,
+  mediaAttachSelectionPeekSnap,
 } from '../../lib/mediaAttachSheet';
 import { DayNavBlurButton } from '../ui/DayNavBlurButton';
 import { ChatAttachCameraSheet } from './ChatAttachCameraSheet';
@@ -97,6 +98,10 @@ function countSecondaryAttachActions(input: {
   if (input.onPoll) n += 1;
   return n;
 }
+
+const PEEK_MORE_ID = '__peek_more__';
+/** אריח «הכל» בסוף רצועת האחרונים */
+const PEEK_MORE_ITEM = { id: PEEK_MORE_ID } as MediaRecentAsset;
 
 function lockAttachOpen(input: {
   kind: MediaRecentsKind;
@@ -228,8 +233,23 @@ export default function MediaPickerSheet({
     });
   }
   const openLock = openLockRef.current;
-  const attachSnaps = openLock?.snaps ?? ATTACH_SNAP_POINTS;
   const peekThumbs = openLock?.thumbs ?? [];
+  // אחרי בחירה מהאחרונים (בתצוגה המקוצרת) — השיט מתכווץ לתוכן: אחרונים + כפתור העלאה
+  const peekHasSelection = allowsMultiple && selectedIds.length > 0 && snapIndex === 0;
+  const selectionPeekSnap = useMemo(
+    () =>
+      mediaAttachSelectionPeekSnap({
+        screenHeight: screenH,
+        thumbSize: MEDIA_ATTACH_PEEK_THUMB_PX,
+        bottomPad: sheetBottomPad,
+        hasThumbs: peekThumbs.length > 0,
+      }),
+    [screenH, sheetBottomPad, peekThumbs.length],
+  );
+  const attachSnaps = useMemo(() => {
+    const base = openLock?.snaps ?? ATTACH_SNAP_POINTS;
+    return peekHasSelection ? [selectionPeekSnap, ...base.slice(1)] : base;
+  }, [openLock, peekHasSelection, selectionPeekSnap]);
 
   const applyPage = useCallback(
     (page: { assets: MediaRecentAsset[]; hasNextPage: boolean; endCursor: string | null }) => {
@@ -673,43 +693,44 @@ export default function MediaPickerSheet({
                     <Text style={styles.peekRecentsLink}>הכל</Text>
                   </TouchableOpacity>
                 </View>
-                <ScrollView
+                {/* RTL: האחרון מימין וגוללים שמאלה — FlatList הפוך (ScrollView אופקי לא הופך את נקודת
+                    ההתחלה ב-direction:rtl, והרצועה נפתחה מהקצה הלא נכון) */}
+                <FlatList
                   horizontal
-                  showsHorizontalScrollIndicator={false}
+                  inverted
+                  data={[...peekThumbs, PEEK_MORE_ITEM]}
+                  keyExtractor={(item) => item.id}
+                  style={styles.peekStripList}
                   contentContainerStyle={styles.peekStrip}
+                  showsHorizontalScrollIndicator={false}
                   keyboardShouldPersistTaps="handled"
-                >
-                  {peekThumbs.map((item) => (
-                    <React.Fragment key={item.id}>
-                      {renderThumb(item, MEDIA_ATTACH_PEEK_THUMB_PX, true)}
-                    </React.Fragment>
-                  ))}
-                  <TouchableOpacity
-                    style={styles.peekMoreTile}
-                    onPress={expandGallery}
-                    activeOpacity={0.8}
-                    accessibilityRole="button"
-                    accessibilityLabel="פתח את כל הגלריה"
-                  >
-                    <Images size={22} color={tokens.colors.text.primary} strokeWidth={2} />
-                    <Text style={styles.peekMoreLabel}>הכל</Text>
-                  </TouchableOpacity>
-                </ScrollView>
+                  renderItem={({ item }) =>
+                    item.id === PEEK_MORE_ID ? (
+                      <TouchableOpacity
+                        style={styles.peekMoreTile}
+                        onPress={expandGallery}
+                        activeOpacity={0.8}
+                        accessibilityRole="button"
+                        accessibilityLabel="פתח את כל הגלריה"
+                      >
+                        <Images size={22} color={tokens.colors.text.primary} strokeWidth={2} />
+                        <Text style={styles.peekMoreLabel}>הכל</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      renderThumb(item, MEDIA_ATTACH_PEEK_THUMB_PX, true)
+                    )
+                  }
+                />
               </View>
             ) : null}
-            {/* בתצוגה המקוצרת: אחרי בחירה — כפתור העלאה במקום שורת הפעולות (לא מעל התמונות) */}
-            {/* הפעולות נשארות בפריסה (גובה קבוע) אבל מוסתרות כשנבחרו קבצים — ה-CTA מונח מעליהן */}
-            <View
-              style={allowsMultiple && selectedIds.length > 0 ? styles.peekActionsHidden : undefined}
-              pointerEvents={allowsMultiple && selectedIds.length > 0 ? 'none' : 'auto'}
-            >
-              {peekActions}
-            </View>
-            {allowsMultiple && selectedIds.length > 0 ? (
-              <View style={styles.peekCta} pointerEvents="box-none">
+            {/* אחרי בחירה: כפתור ההעלאה במקום שורת הפעולות, והשיט מתכווץ לגובה החדש */}
+            {peekHasSelection ? (
+              <View style={styles.peekCtaInline}>
                 <UploadCta count={selectedIds.length} onPress={confirmSelection} fullWidth />
               </View>
-            ) : null}
+            ) : (
+              peekActions
+            )}
           </View>
         )}
 
@@ -781,6 +802,10 @@ const createStyles = (
     peekHeader: {
       paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
       marginBottom: 12,
+    },
+    peekStripList: {
+      direction: 'ltr',
+      flexGrow: 0,
     },
     peekStrip: {
       paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
@@ -1006,15 +1031,10 @@ const createStyles = (
       textAlign: 'center',
       width: '100%',
     },
-    peekCta: {
-      position: 'absolute',
-      left: 16,
-      right: 16,
-      bottom: sheetBottomPad + 12,
-      zIndex: 6,
-    },
-    peekActionsHidden: {
-      opacity: 0,
+    peekCtaInline: {
+      paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+      paddingTop: 12,
+      paddingBottom: sheetBottomPad,
     },
     confirmWrap: {
       position: 'absolute',

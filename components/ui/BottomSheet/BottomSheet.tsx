@@ -355,15 +355,30 @@ const BottomSheetImpl: React.FC<BottomSheetProps> = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, snapKey, fitContent, onFitContentOpenComplete, resetClosingState, resolvedOpenIndex]);
 
+  // גם כשהאינדקס זהה אבל הגובה שלו השתנה (שיט שמתאים את עצמו לתוכן, למשל צירוף מדיה אחרי בחירה)
+  const lastSnapTargetRef = useRef<number | null>(null);
   useEffect(() => {
     if (!isOpen || fitContent || snapIndex == null) return;
     if (!wasOpenRef.current || isClosingRef.current) return;
     const idx = Math.max(0, Math.min(snapIndex, snapValues.length - 1));
     const target = snapValues[idx];
-    if (target == null || currentSnapIndex.value === idx) return;
+    if (target == null) return;
+    if (currentSnapIndex.value === idx && lastSnapTargetRef.current == null) {
+      // פתיחה — אנימציית הפתיחה כבר רצה ליעד הזה; רק זוכרים אותו
+      lastSnapTargetRef.current = target;
+      return;
+    }
+    if (currentSnapIndex.value === idx && lastSnapTargetRef.current === target) return;
+    const sameIndex = currentSnapIndex.value === idx;
     currentSnapIndex.value = idx;
-    translateY.value = withSpring(target, SHEET_SNAP_SPRING);
+    lastSnapTargetRef.current = target;
+    translateY.value = sameIndex
+      ? withTiming(target, SHEET_OPEN_TIMING)
+      : withSpring(target, SHEET_SNAP_SPRING);
   }, [currentSnapIndex, fitContent, isOpen, snapIndex, snapKey, snapValues, translateY]);
+  useEffect(() => {
+    if (!isOpen) lastSnapTargetRef.current = null;
+  }, [isOpen]);
 
   // כשהמקלדת עולה/יורדת — מזזים את השיט מעלה/מטה בהתאם.
   // באנדרואיד: ADJUST_NOTHING בזמן שהשיט פתוח — אחרת adjustResize מה-Manifest

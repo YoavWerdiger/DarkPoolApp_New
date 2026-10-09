@@ -228,3 +228,30 @@ export function mediaAttachCellSize(screenWidth: number, cols = MEDIA_ATTACH_GRI
   const gaps = MEDIA_ATTACH_GRID_GAP * Math.max(0, cols - 1);
   return Math.floor((screenWidth - gaps) / cols);
 }
+
+/** כפתור «העלאה» (UIButton) + המרווח מעליו */
+export const MEDIA_ATTACH_UPLOAD_CTA_PX = 52 + 12;
+
+/**
+ * גובה ה-peek אחרי בחירה מהאחרונים: הפעולות יורדות ובמקומן כפתור ההעלאה —
+ * השיט מתכווץ לתוכן (במקום להשאיר מקום ריק מתחת ל-CTA).
+ */
+export function mediaAttachSelectionPeekSnap(input: {
+  screenHeight: number;
+  thumbSize: number;
+  bottomPad: number;
+  hasThumbs: boolean;
+}): number {
+  const strip = input.hasThumbs
+    ? MEDIA_ATTACH_PEEK_RECENTS_HEADER_PX + Math.max(0, input.thumbSize) + MEDIA_ATTACH_PEEK_STRIP_GAP
+    : 0;
+  const px =
+    MEDIA_ATTACH_HANDLE_PX +
+    MEDIA_ATTACH_PEEK_HEADER_PX +
+    MEDIA_ATTACH_PEEK_CHROME_PX +
+    strip +
+    MEDIA_ATTACH_UPLOAD_CTA_PX +
+    Math.max(0, input.bottomPad) +
+    MEDIA_ATTACH_PEEK_BUFFER_PX;
+  return Math.max(MEDIA_ATTACH_PEEK_MIN, Math.min(MEDIA_ATTACH_PEEK_MAX, px / Math.max(1, input.screenHeight)));
+}

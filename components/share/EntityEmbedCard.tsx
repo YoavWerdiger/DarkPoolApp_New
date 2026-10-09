@@ -57,9 +57,8 @@ function pickMetrics(
     (attachment.preview.holdingsChart?.length ?? 0) >= 2;
 
   const preferredByType: Record<string, string[]> = {
-    person_profile: hasHoldingsChart
-      ? ['top_holding', 'top_holding_value']
-      : ['portfolio_value', 'top_holding', 'top_holding_value'],
+    // בלי «אחזקה מובילה» / «שווי אחזקה» — עם דונאט אין מטריקות, בלי דונאט רק שווי התיק
+    person_profile: hasHoldingsChart ? [] : ['portfolio_value'],
     journal_trade: [
       'side',
       'pnl',
@@ -96,6 +95,9 @@ function pickMetrics(
       value: String(raw),
     });
   }
+
+  // פרופיל: לא משלימים מכל המטריקות (הודעות ישנות עדיין נושאות top_holding)
+  if (attachment.ref.type === 'person_profile') return items;
 
   if (items.length === 0 || (opts.expanded && items.length < Object.keys(metrics).length)) {
     for (const [key, raw] of Object.entries(metrics)) {

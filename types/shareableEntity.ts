@@ -177,17 +177,7 @@ export function buildPersonAttachment(input: {
   ) {
     metrics.portfolio_value = formatUsdCompact(input.portfolioValue);
   }
-  const top = (input.topHolding ?? '').toString().trim().toUpperCase();
-  if (top) {
-    metrics.top_holding = top;
-    if (
-      typeof input.topHoldingValue === 'number' &&
-      Number.isFinite(input.topHoldingValue) &&
-      input.topHoldingValue > 0
-    ) {
-      metrics.top_holding_value = formatUsdCompact(input.topHoldingValue);
-    }
-  }
+  // «אחזקה מובילה» / «שווי אחזקה» הוסרו מכרטיס השיתוף (topHolding* נשארים בחתימה לתאימות)
 
   const role = (input.subtitle ?? '').toString().trim() || undefined;
   const name = (input.name ?? '').toString().trim() || 'פרופיל';

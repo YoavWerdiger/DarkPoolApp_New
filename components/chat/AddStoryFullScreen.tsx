@@ -1362,11 +1362,8 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
     const cam = cameraRef.current;
     if (!cam) return;
     try {
-      if (Platform.OS === 'ios' && typeof cam.getAvailableLensesAsync === 'function') {
-        const lenses = await cam.getAvailableLensesAsync();
-        const wide = pickWideAngleLens(lenses);
-        if (wide) setSelectedLens(wide);
-      }
+      // iOS: בלי החלפת עדשה / גודל תמונה — כל שינוי מגדיר מחדש את הסשן (קפיאה / כשל צילום).
+      // כמו מצלמת הצ'אט שעובדת יציב
       // iOS: גודל תמונה כפוי לצד mode="video" (1080p) מפיל את הצילום —
       // «Image could not be captured». כמו מצלמת הצ'אט: רק באנדרואיד
       if (Platform.OS !== 'ios' && typeof cam.getAvailablePictureSizesAsync === 'function') {
@@ -1379,8 +1376,6 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
     }
   }, []);
 
-  const captureRetriedRef = useRef(false);
-  const takePictureRef = useRef<(() => Promise<void>) | null>(null);
   const takePicture = useCallback(async () => {
     logger.debug(
       'AddStoryFullScreen',
@@ -1409,7 +1404,6 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
       });
       logger.debug('AddStoryFullScreen', `takePictureAsync end: uri=${photo?.uri ?? 'null'}`);
       if (photo?.uri) {
-        captureRetriedRef.current = false;
         setMediaUri(photo.uri);
         setMediaType('image');
         setOverlays([]);
@@ -1418,18 +1412,6 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
         legacyAlert('שגיאה', 'לא הצלחנו לצלם את התמונה. נסה שוב.');
       }
     } catch (err: any) {
-      // ניסיון חוזר אחד בלי ההגדרות המותאמות (גודל תמונה / עדשה) לפני שמציגים שגיאה
-      if (!captureRetriedRef.current && (pictureSize || selectedLens)) {
-        captureRetriedRef.current = true;
-        logger.warn('AddStoryFullScreen', 'Take picture failed — retrying without custom size/lens', err);
-        setPictureSize(undefined);
-        setSelectedLens(undefined);
-        capturingRef.current = false;
-        setIsCapturing(false);
-        setTimeout(() => void takePictureRef.current?.(), 350);
-        return;
-      }
-      captureRetriedRef.current = false;
       logger.error('AddStoryFullScreen', 'Take picture failed', err);
       legacyAlert('שגיאה', 'לא הצלחנו לצלם את התמונה. נסה שוב.');
     } finally {
@@ -1437,8 +1419,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
       setIsCapturing(false);
       logger.debug('AddStoryFullScreen', 'takePicture finally — isCapturing reset');
     }
-  }, [isRecording, pictureSize, selectedLens]);
-  takePictureRef.current = takePicture;
+  }, [isRecording]);
 
   const stopRecording = useCallback(() => {
     if (recordTimerRef.current) clearTimeout(recordTimerRef.current);
@@ -1768,10 +1749,14 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
                   {...(pictureSize ? { pictureSize } : {})}
                   {...(selectedLens ? { selectedLens } : {})}
                   onCameraReady={configureCamera}
-                  onAvailableLensesChanged={({ lenses }) => {
-                    const wide = pickWideAngleLens(lenses);
-                    if (wide) setSelectedLens((prev) => (prev === wide ? prev : wide));
-                  }}
+                  onAvailableLensesChanged={
+                    Platform.OS === 'ios'
+                      ? undefined
+                      : ({ lenses }) => {
+                          const wide = pickWideAngleLens(lenses);
+                          if (wide) setSelectedLens((prev) => (prev === wide ? prev : wide));
+                        }
+                  }
                 />
               ) : (
                 <View style={[StyleSheet.absoluteFill, { backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' }]}>

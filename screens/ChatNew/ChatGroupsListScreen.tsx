@@ -18,7 +18,8 @@ import {
   Animated,
   type ImageSourcePropType,
 } from 'react-native';
-import { DayDividerPill } from '../../components/ui/DayDividerPill';
+import { DayDividerPill, DayDividerSlidingLayer } from '../../components/ui/DayDividerPill';
+import { useSlidingIndicator } from '../../components/ui/SlidingIndicator';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
@@ -232,6 +233,7 @@ export default function ChatGroupsListScreen() {
   const [messageResults, setMessageResults] = useState<ChatSearchResult[]>([]);
   const [searchingMessages, setSearchingMessages] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('all');
+  const filterIndicator = useSlidingIndicator<TabType>(activeTab);
   const [joinGroupSheet, setJoinGroupSheet] = useState<{ visible: boolean; group: GroupWithMembership | null }>({ visible: false, group: null });
   const [isJoining, setIsJoining] = useState(false);
   const [addStorySheetVisible, setAddStorySheetVisible] = useState(false);
@@ -687,6 +689,16 @@ export default function ChatGroupsListScreen() {
   const mentionsCount = useMemo(() =>
     allGroups.filter(g => g.is_member && (g.mentioned_count || 0) > 0).length,
     [allGroups]
+  );
+
+  // תווית הצ'יפ (כולל מונה) — משותפת לצ'יפ ולעותק המחליק
+  const filterTabLabel = useCallback(
+    (tab: TabType) => {
+      const label = tab === 'all' ? 'הכל' : tab === 'unread' ? 'לא נקראו' : '@אזכורים';
+      const count = tab === 'unread' ? unreadCount : tab === 'mentions' ? mentionsCount : 0;
+      return count > 0 ? `${label} · ${count}` : label;
+    },
+    [unreadCount, mentionsCount]
   );
 
   const handleJoinGroup = async (group: GroupWithMembership) => {
@@ -1400,17 +1412,21 @@ export default function ChatGroupsListScreen() {
                 const count = tab === 'unread' ? unreadCount : tab === 'mentions' ? mentionsCount : 0;
                 const active = activeTab === tab;
                 return (
-                  <DayDividerPill
-                    key={tab}
-                    selected={active}
-                    haptic={!active}
-                    onPress={() => setActiveTab(tab)}
-                    accessibilityLabel={count > 0 ? `${label}, ${count}` : label}
-                  >
-                    {count > 0 ? `${label} · ${count}` : label}
-                  </DayDividerPill>
+                  // עטיפה למדידה — המחוון מחליק בין הצ'יפים כמו בבורר האינטרוולים בגרף
+                  <View key={tab} onLayout={filterIndicator.onItemLayout(tab)}>
+                    <DayDividerPill
+                      selected={filterIndicator.visualSelected === tab}
+                      instantSelection
+                      haptic={!active}
+                      onPress={() => setActiveTab(tab)}
+                      accessibilityLabel={count > 0 ? `${label}, ${count}` : label}
+                    >
+                      {filterTabLabel(tab)}
+                    </DayDividerPill>
+                  </View>
                 );
               })}
+              <DayDividerSlidingLayer indicator={filterIndicator} labelOf={filterTabLabel} />
             </View>
           </View>
 

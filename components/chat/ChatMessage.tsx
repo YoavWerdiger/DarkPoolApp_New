@@ -2860,9 +2860,9 @@ const createStyles = (tokens: any) => {
   },
   documentName: {
     ...appPhysicalRightText,
-    fontSize: APP_TYPE.cardBody.fontSize,
-    lineHeight: APP_TYPE.cardBody.lineHeight,
-    fontWeight: APP_TYPE.cardTitle.fontWeight,
+    fontSize: APP_TYPE.cardSubtitle.fontSize,
+    lineHeight: APP_TYPE.cardSubtitle.lineHeight,
+    fontWeight: '600',
     writingDirection: 'auto',
   },
   documentSize: {

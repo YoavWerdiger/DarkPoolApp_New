@@ -89,6 +89,7 @@ export function DayDividerPill({
     }),
     [baseFill, selectedFill]
   );
+  const pressAnim = useAnimatedStyle(() => ({ transform: [{ scale: press.value }] }));
   const textAnim = useAnimatedStyle(
     () => ({ color: interpolateColor(sel.value, [0, 1], [textColor, textSelectedColor]) }),
     [textColor, textSelectedColor]
@@ -101,10 +102,27 @@ export function DayDividerPill({
     flexShrink: 0,
   };
 
+  // instantSelection (שורות עם מחוון מחליק): צבע ישירות ברינדור — ערך מונפש מתעדכן ב-useEffect
+  // אחרי הציור, כך שכשהעותק המחליק נוחת ונעלם היה פריים בלי צ'יפ נבחר → הבהוב
+  const staticFace = instantSelection ? { backgroundColor: selected ? selectedFill : baseFill } : null;
   const inner = (
-    <Animated.View style={[faceStyle, flatStyle, styles.frame, contentContainerStyle, styles.dividerInner, faceAnim]}>
+    <Animated.View
+      style={[
+        faceStyle,
+        flatStyle,
+        styles.frame,
+        contentContainerStyle,
+        styles.dividerInner,
+        instantSelection ? pressAnim : faceAnim,
+        staticFace,
+      ]}
+    >
       {typeof children === 'string' ? (
-        <Animated.Text style={[styles.text, selected && styles.textSelected, textAnim]}>{children}</Animated.Text>
+        <Animated.Text
+          style={[styles.text, selected && styles.textSelected, instantSelection ? null : textAnim]}
+        >
+          {children}
+        </Animated.Text>
       ) : (
         children
       )}

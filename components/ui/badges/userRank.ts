@@ -96,13 +96,11 @@ export function rankColor(
   return isDarkMode ? RANK_METAL_COLORS[metal].dark : RANK_METAL_COLORS[metal].light;
 }
 
-/** צבעי הסמל: שור בצבע הדרגה, דוב באותו צבע מעומעם (בדרגת המותג — אפור כמו בלוגו) */
+/** צבעי הסמל: בכל הדרגות הלוגו המקורי — הדוב אפור כמו בלוגו, השור בצבע הדרגה */
 export function rankMarkColors(
   metal: RankMetal,
   isDarkMode: boolean,
   tokens: { grayToken: string; brandGreen: string }
 ): { bull: string; bear: string; bearOpacity: number } {
-  if (metal === 'brand') return { bull: tokens.brandGreen, bear: BRAND_BEAR_GRAY, bearOpacity: 1 };
-  const c = rankColor(metal, isDarkMode, tokens);
-  return { bull: c, bear: c, bearOpacity: 0.55 };
+  return { bull: rankColor(metal, isDarkMode, tokens), bear: BRAND_BEAR_GRAY, bearOpacity: 1 };
 }

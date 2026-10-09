@@ -6,8 +6,8 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
-  Switch,
 } from 'react-native';
+import { AppSwitch } from '../../../components/ui/AppSwitch';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import BottomSheet, {
@@ -742,7 +742,7 @@ function AlertSwitchRow({
   return (
     <View>
       <View style={styles.menuRow}>
-        <Switch
+        <AppSwitch
           value={value}
           onValueChange={onValueChange}
           trackColor={{
@@ -816,7 +816,7 @@ function AlertEditorRow({
   return (
     <View>
       <View style={styles.menuRow}>
-        <Switch
+        <AppSwitch
           value={enabled}
           onValueChange={onEnabledChange}
           trackColor={{

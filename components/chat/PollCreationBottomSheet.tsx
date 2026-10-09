@@ -11,9 +11,9 @@ import {
   Platform,
   Keyboard,
   Pressable,
-  Switch,
   Dimensions,
 } from 'react-native';
+import { AppSwitch } from '../ui/AppSwitch';
 import { Ionicons } from '@expo/vector-icons';
 import UICard from '../ui/UICard';
 import UIButton from '../ui/UIButton';
@@ -473,7 +473,7 @@ export default function PollCreationBottomSheet({
                       משתמשים יוכלו לשנות את הבחירה אחרי ההצבעה.
                     </Text>
                   </View>
-                  <Switch
+                  <AppSwitch
                     value={allowVoteChange}
                     onValueChange={(next) => {
                       dismissKeyboard();

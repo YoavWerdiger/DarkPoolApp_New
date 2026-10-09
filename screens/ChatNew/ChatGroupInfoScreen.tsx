@@ -16,11 +16,11 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
-  Switch,
   Animated,
   LayoutAnimation,
   UIManager,
 } from 'react-native';
+import { AppSwitch } from '../../components/ui/AppSwitch';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useChat } from '../../context/ChatContext';
 import { useAuth } from '../../context/AuthContext';
@@ -619,7 +619,7 @@ export default function ChatGroupInfoScreen() {
             {renderSectionHeader('פעולות')}
             <UICard variant="soft" padding="none" style={styles.sectionSurface}>
               <View style={styles.menuRow}>
-                <Switch
+                <AppSwitch
                   value={isMuted}
                   onValueChange={(v) => { void handleToggleMute(v); }}
                   trackColor={{

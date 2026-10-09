@@ -11,13 +11,13 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Switch,
   Modal,
   TextInput,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
 } from 'react-native';
+import { AppSwitch } from '../../components/ui/AppSwitch';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { scheduleAfterNavigationTransition } from '../../hooks/afterNavigationTransition';
@@ -245,7 +245,7 @@ export default function ChatGroupSettingsScreen() {
                 <View style={styles.settingRow}>
                   {renderSettingIcon('notifications-outline')}
                   <Text style={styles.settingTextGrow}>השתק התראות</Text>
-                  <Switch
+                  <AppSwitch
                     value={isMuted}
                     onValueChange={handleToggleMute}
                     trackColor={{
@@ -333,7 +333,7 @@ export default function ChatGroupSettingsScreen() {
                         {isPublic ? 'כולם יכולים להצטרף' : 'הצטרפות רק בהזמנה'}
                       </Text>
                     </View>
-                    <Switch
+                    <AppSwitch
                       value={isPublic}
                       onValueChange={(v) => {
                         void HapticFeedback.selection();
@@ -353,7 +353,7 @@ export default function ChatGroupSettingsScreen() {
                       <Text style={styles.settingText}>קבוצת הכרזות</Text>
                       <Text style={styles.settingHint}>רק אדמינים שולחים הודעות</Text>
                     </View>
-                    <Switch
+                    <AppSwitch
                       value={isAnnouncement}
                       onValueChange={(v) => {
                         void HapticFeedback.selection();

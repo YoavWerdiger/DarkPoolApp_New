@@ -4,11 +4,11 @@ import {
   View,
   Text,
   ScrollView,
-  Switch,
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
 } from 'react-native';
+import { AppSwitch } from '../../components/ui/AppSwitch';
 import {
   ChevronLeft,
   Languages,
@@ -302,7 +302,7 @@ export default function SettingsScreen({ navigation }: any) {
                           style={styles.row}
                         >
                           {item.type === 'switch' && item.onToggle ? (
-                            <Switch
+                            <AppSwitch
                               value={item.value}
                               onValueChange={item.onToggle}
                               trackColor={{ false: theme.switchTrackOff, true: DesignTokens.colors.primary.main }}

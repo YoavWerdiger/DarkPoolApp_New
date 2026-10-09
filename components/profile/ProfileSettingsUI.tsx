@@ -3,7 +3,6 @@ import {
   View,
   Text,
   Image,
-  Switch,
   TouchableOpacity,
   Pressable,
   StyleSheet,
@@ -11,6 +10,7 @@ import {
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
+import { AppSwitch } from '../ui/AppSwitch';
 import Animated, {
   Easing,
   interpolateColor,
@@ -137,7 +137,7 @@ export function SettingsSwitchRow({
   return (
     <View>
       <View style={[s.menuRow, disabled && { opacity: 0.45 }]}>
-        <Switch
+        <AppSwitch
           value={value}
           disabled={disabled}
           onValueChange={onValueChange}

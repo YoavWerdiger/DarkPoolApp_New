@@ -3,10 +3,10 @@
  * paid_days = null → מעולם לא שילם → אין דרגה.
  */
 
-export type RankMetal = 'gray' | 'silver' | 'gold' | 'platinum' | 'diamond' | 'brand';
+export type RankMetal = 'gray' | 'silver' | 'gold' | 'platinum' | 'sapphire' | 'diamond' | 'brand';
 
 export type UserRank = {
-  level: 1 | 2 | 3 | 4 | 5 | 6;
+  level: 1 | 2 | 3 | 4 | 5 | 6 | 7;
   metal: RankMetal;
   /** ימים מינימליים לדרגה */
   minDays: number;
@@ -19,9 +19,10 @@ export const USER_RANK_LADDER: readonly UserRank[] = [
   { level: 2, metal: 'silver', minDays: 30, rangeLabel: '1–3 חודשים' },
   { level: 3, metal: 'gold', minDays: 90, rangeLabel: '3–6 חודשים' },
   { level: 4, metal: 'platinum', minDays: 180, rangeLabel: '6–12 חודשים' },
-  { level: 5, metal: 'diamond', minDays: 365, rangeLabel: '1–2 שנים' },
+  { level: 5, metal: 'sapphire', minDays: 365, rangeLabel: '1–2 שנים' },
+  { level: 6, metal: 'diamond', minDays: 730, rangeLabel: '2–3 שנים' },
   // הדרגה העליונה — הירוק של האפליקציה
-  { level: 6, metal: 'brand', minDays: 730, rangeLabel: 'שנתיים ומעלה' },
+  { level: 7, metal: 'brand', minDays: 1095, rangeLabel: '3 שנים ומעלה' },
 ] as const;
 
 export function rankForPaidDays(days: number | null | undefined): UserRank | null {
@@ -75,11 +76,15 @@ export function formatDaysCount(days: number): string {
 export const VERIFIED_BLUE = '#1D9BF0';
 
 /** צבעי מתכת לדרגות — גוון בהיר לרקע כהה, גוון עמוק לרקע בהיר */
-export const RANK_METAL_COLORS: Record<'silver' | 'gold' | 'platinum' | 'diamond', { dark: string; light: string }> = {
+export const RANK_METAL_COLORS: Record<
+  'silver' | 'gold' | 'platinum' | 'sapphire' | 'diamond',
+  { dark: string; light: string }
+> = {
   silver: { dark: '#C9CED6', light: '#7D8692' },
   gold: { dark: '#F2C14E', light: '#B8860B' },
   platinum: { dark: '#9FD3E8', light: '#4F8FAD' },
-  diamond: { dark: '#B79CFF', light: '#7B5BE0' },
+  sapphire: { dark: '#5B8DEF', light: '#2457C5' },
+  diamond: { dark: '#9370E8', light: '#5A3BB8' },
 };
 
 /** הצבע הראשי של הדרגה (פס התקדמות וכו׳) */

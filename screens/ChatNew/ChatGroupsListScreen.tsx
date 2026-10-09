@@ -18,6 +18,7 @@ import {
   Animated,
   type ImageSourcePropType,
 } from 'react-native';
+import { DayDividerPill } from '../../components/ui/DayDividerPill';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
@@ -1393,30 +1394,23 @@ export default function ChatGroupsListScreen() {
           {/* Filters – Instagram style (search moved to header button → bottom sheet) */}
           <View style={styles.searchSection}>
             <View style={[styles.filterRow, { marginTop: 0 }]}>
-              {(['all', 'unread', 'mentions'] as TabType[]).map((tab) => (
-                <TouchableOpacity
-                  key={tab}
-                  style={[styles.filterPill, activeTab === tab && styles.filterPillActive]}
-                  onPress={() => {
-                    if (activeTab !== tab) void HapticFeedback.selection();
-                    setActiveTab(tab);
-                  }}
-                >
-                  <Text style={[styles.filterPillText, activeTab === tab && styles.filterPillTextActive]}>
-                    {tab === 'all' ? 'הכל' : tab === 'unread' ? 'לא נקראו' : '@אזכורים'}
-                  </Text>
-                  {tab === 'unread' && unreadCount > 0 && (
-                    <View style={styles.filterBadge}>
-                      <Text style={styles.filterBadgeText}>{unreadCount}</Text>
-                    </View>
-                  )}
-                  {tab === 'mentions' && mentionsCount > 0 && (
-                    <View style={styles.filterBadge}>
-                      <Text style={styles.filterBadgeText}>{mentionsCount}</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              ))}
+              {(['all', 'unread', 'mentions'] as TabType[]).map((tab) => {
+                // צ'יפ הטופו (DayDividerPill) — כמו ביומן ובשאר האפליקציה, כולל מעבר הבחירה
+                const label = tab === 'all' ? 'הכל' : tab === 'unread' ? 'לא נקראו' : '@אזכורים';
+                const count = tab === 'unread' ? unreadCount : tab === 'mentions' ? mentionsCount : 0;
+                const active = activeTab === tab;
+                return (
+                  <DayDividerPill
+                    key={tab}
+                    selected={active}
+                    haptic={!active}
+                    onPress={() => setActiveTab(tab)}
+                    accessibilityLabel={count > 0 ? `${label}, ${count}` : label}
+                  >
+                    {count > 0 ? `${label} · ${count}` : label}
+                  </DayDividerPill>
+                );
+              })}
             </View>
           </View>
 
@@ -1779,38 +1773,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     alignItems: 'center',
     gap: 8,
     marginTop: 12,
-  },
-  filterPill: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    backgroundColor: tokens.colors.background.tertiary,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 7,
-    gap: 6,
-  },
-  filterPillActive: {
-    backgroundColor: 'rgba(0, 200, 5, 0.12)',
-  },
-  filterPillText: {
-    ...APP_TYPE.caption,
-    color: tokens.colors.text.secondary,
-  },
-  filterPillTextActive: {
-    color: tokens.colors.primary.main,
-  },
-  filterBadge: {
-    backgroundColor: tokens.colors.primary.main,
-    borderRadius: 9,
-    minWidth: 18,
-    height: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 5,
-  },
-  filterBadgeText: {
-    ...APP_TYPE.caption2,
-    color: tokens.colors.text.inverse,
   },
 
   /* ── Chat row ── */

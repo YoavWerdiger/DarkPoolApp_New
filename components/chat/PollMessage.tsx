@@ -1,6 +1,7 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { APP_TYPE } from '../ui/appType';
 import { Ionicons } from '@expo/vector-icons';
 import { Lock, Trash2 } from 'lucide-react-native';
 import { PollService, PollWithVotes } from '../../services/pollService';
@@ -219,8 +220,9 @@ function PollMessage({
     ]);
   };
 
-  const accent = lightOnBubble ? '#FFFFFF' : chatPalette.primary;
-  const mutedIcon = lightOnBubble ? 'rgba(255,255,255,0.5)' : DesignTokens.colors.text.tertiary;
+  // נבחר = צבע כפתור ה-CTA → האייקון בצבע הטקסט ההפוך; לא נבחר = צבע משני של הבועה
+  const accent = DesignTokens.colors.text.inverse;
+  const mutedIcon = lightOnBubble ? DesignTokens.colors.bubbleMeMetaText : DesignTokens.colors.text.tertiary;
 
   return (
     <View style={styles.container}>
@@ -293,7 +295,7 @@ function PollMessage({
                   color={isSelected ? accent : mutedIcon}
                   style={styles.optionIcon}
                 />
-                <Text style={styles.optionText} numberOfLines={1}>
+                <Text style={[styles.optionText, isSelected && styles.optionTextSelected]} numberOfLines={1}>
                   {option.text}
                 </Text>
               </TouchableOpacity>
@@ -363,13 +365,14 @@ const createStyles = (
   lightOnBubble: boolean,
   embeddedInBubble: boolean,
 ) => {
-  const text = lightOnBubble ? '#FFFFFF' : tokens.colors.text.primary;
-  const muted = lightOnBubble ? 'rgba(255,255,255,0.55)' : tokens.colors.text.tertiary;
-  const optionBorder = lightOnBubble ? 'rgba(255,255,255,0.22)' : tokens.colors.border.primary;
-  const optionSelectedBg = lightOnBubble ? 'rgba(255,255,255,0.14)' : tokens.colors.primary.dim;
-  const optionSelectedBorder = lightOnBubble ? 'rgba(255,255,255,0.45)' : tokens.colors.border.accent;
-  const voteBg = lightOnBubble ? '#FFFFFF' : chatPalette.primary;
-  const voteFg = lightOnBubble ? tokens.colors.bubbleMe : '#0A0E0A';
+  // צבעים מהטוקנים של הבועה (לא לבן קבוע — בבהיר הבועה שלי ירוקה בהירה עם טקסט כהה)
+  const text = lightOnBubble ? tokens.colors.bubbleMeText : tokens.colors.text.primary;
+  const muted = lightOnBubble ? tokens.colors.bubbleMeMetaText : tokens.colors.text.tertiary;
+  // אפשרות: מילוי רך מצבע הטקסט של הבועה (כמו כרטיס הלינק), בלי מסגרת
+  const optionFill = withAlpha(text, 0.08);
+  // נבחר + כפתור ההצבעה: צבע כפתור ה-CTA של הטופו
+  const ctaBg = tokens.colors.primary.lightCta;
+  const ctaFg = tokens.colors.text.inverse;
 
   return StyleSheet.create({
     container: embeddedInBubble
@@ -428,9 +431,9 @@ const createStyles = (
     },
     question: {
       color: text,
-      fontWeight: tokens.typography.fontWeight.semibold,
-      fontSize: tokens.typography.fontSize.base,
-      lineHeight: 22,
+      fontWeight: APP_TYPE.cardTitle.fontWeight,
+      fontSize: APP_TYPE.cardTitle.fontSize,
+      lineHeight: APP_TYPE.cardTitle.lineHeight,
       marginBottom: 12,
       ...chatRtlText,
     },
@@ -443,16 +446,17 @@ const createStyles = (
       alignItems: 'center',
       alignSelf: 'stretch',
       gap: 10,
-      paddingVertical: 10,
-      paddingHorizontal: 12,
-      borderRadius: 10,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: optionBorder,
-      backgroundColor: 'transparent',
+      paddingVertical: 11,
+      paddingHorizontal: 14,
+      borderRadius: tokens.borderRadius.lg,
+      backgroundColor: optionFill,
     },
     optionButtonSelected: {
-      borderColor: optionSelectedBorder,
-      backgroundColor: optionSelectedBg,
+      backgroundColor: ctaBg,
+    },
+    optionTextSelected: {
+      color: ctaFg,
+      fontWeight: APP_TYPE.cardTitle.fontWeight,
     },
     optionButtonDisabled: {
       opacity: 0.5,
@@ -462,26 +466,28 @@ const createStyles = (
     },
     optionText: {
       color: text,
-      fontSize: 15,
+      fontSize: APP_TYPE.cardBody.fontSize,
+      lineHeight: APP_TYPE.cardBody.lineHeight,
       flex: 1,
       flexShrink: 1,
       minWidth: 0,
       ...chatRtlText,
     },
     voteButton: {
-      marginTop: 4,
-      paddingVertical: 11,
-      borderRadius: 10,
-      backgroundColor: voteBg,
+      marginTop: 6,
+      minHeight: 44,
+      justifyContent: 'center',
+      borderRadius: tokens.borderRadius.full,
+      backgroundColor: ctaBg,
     },
     voteButtonDisabled: {
       opacity: 0.5,
     },
     voteButtonText: {
       textAlign: 'center',
-      fontWeight: tokens.typography.fontWeight.bold,
-      fontSize: 15,
-      color: voteFg,
+      fontWeight: APP_TYPE.cardTitle.fontWeight,
+      fontSize: APP_TYPE.cardTitle.fontSize,
+      color: ctaFg,
     },
     showResultsButton: {
       paddingVertical: 8,
@@ -493,3 +499,13 @@ const createStyles = (
     },
   });
 };
+
+/** #RRGGBB / #RGB → rgba עם שקיפות; צבע אחר מוחזר כמו שהוא */
+function withAlpha(color: string, alpha: number): string {
+  const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(color.trim());
+  if (!m) return color;
+  let hex = m[1];
+  if (hex.length === 3) hex = hex.split('').map((c) => c + c).join('');
+  const n = parseInt(hex, 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
+}

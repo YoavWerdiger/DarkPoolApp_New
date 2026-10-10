@@ -16,6 +16,7 @@ import {
   NativeScrollEvent,
   ViewToken,
 } from 'react-native';
+import { localUriForStoryMedia } from '../../lib/pendingStories';
 import { APP_TYPE } from '../ui/appType';
 import { SlidingPillGroup } from '../ui/DayDividerPill';
 import { useDesignTokens } from '../ui/DesignTokens';
@@ -662,6 +663,9 @@ export default function StoryViewer({
     }
   }, []);
 
+  // הפריים הקודם נשאר רק לרגע (נגד הבהוב בין תמונות). וידאו נטען כמה שניות — אם הבא
+  // עוד לא מוכן אחרי 250ms משחררים, ומוצג ספינר במקום הסטורי הקודם (שנראה כאילו לא עברנו)
+  const holdReleaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const captureHoldMedia = useCallback(() => {
     const s = stories[storyIndexRef.current];
     if (!s) return;
@@ -672,8 +676,16 @@ export default function StoryViewer({
         content: s.content ?? null,
         background_color: s.background_color ?? null,
       });
+      if (holdReleaseTimerRef.current) clearTimeout(holdReleaseTimerRef.current);
+      holdReleaseTimerRef.current = setTimeout(() => setHoldMedia(null), 250);
     }
   }, [stories]);
+  useEffect(
+    () => () => {
+      if (holdReleaseTimerRef.current) clearTimeout(holdReleaseTimerRef.current);
+    },
+    [],
+  );
 
   // Scroll + cache reset on open/close only (index already synced in render via openGate).
   // Own story («שלי») sits at the END of the strip — guard pager sync until scroll settles.
@@ -1356,14 +1368,14 @@ export default function StoryViewer({
     if (!holdMedia || mediaReady) return null;
     if (holdMedia.media_type === 'image' && holdMedia.media_url) {
       return (
-        <View pointerEvents="none"><Image source={{ uri: holdMedia.media_url }} style={styles.fullMedia} resizeMode="contain" /></View>
+        <View pointerEvents="none"><Image source={{ uri: localUriForStoryMedia(holdMedia.media_url) ?? holdMedia.media_url }} style={styles.fullMedia} resizeMode="contain" /></View>
       );
     }
     if (holdMedia.media_type === 'video' && holdMedia.media_url) {
       return (
         <View style={styles.fullMedia} pointerEvents="none">
           <Video
-            source={{ uri: holdMedia.media_url }}
+            source={{ uri: localUriForStoryMedia(holdMedia.media_url) ?? holdMedia.media_url }}
             style={styles.fullMedia}
             resizeMode={ResizeMode.CONTAIN}
             shouldPlay={false}
@@ -1415,7 +1427,7 @@ export default function StoryViewer({
         <View pointerEvents="none">
           <Image
             key={story.id}
-            source={{ uri: story.media_url }}
+            source={{ uri: localUriForStoryMedia(story.media_url) ?? story.media_url }}
             style={[styles.fullMedia, gateOpacity && { opacity: 0 }]}
             resizeMode="contain"
             onLoad={() => { if (isActive) setMediaReady(true); }}
@@ -1441,7 +1453,7 @@ export default function StoryViewer({
       return (
         <View key={story.id} style={styles.fullMedia} pointerEvents="none">
           <Video
-            source={{ uri: story.media_url }}
+            source={{ uri: localUriForStoryMedia(story.media_url) ?? story.media_url }}
             style={[styles.fullMedia, gateOpacity && { opacity: 0 }]}
             resizeMode={ResizeMode.CONTAIN}
             shouldPlay={isActive && !isPaused && mediaReady}

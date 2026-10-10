@@ -20,6 +20,12 @@ export type PendingStory = {
 };
 
 let pending: PendingStory[] = [];
+/** URL בשרת → הקובץ המקומי שממנו הועלה — הצופה מציג את הסטורי שלי מיד, בלי לחכות לרשת */
+const localByRemoteUrl = new Map<string, string>();
+
+export function localUriForStoryMedia(url: string | null | undefined): string | null {
+  return url ? localByRemoteUrl.get(url) ?? null : null;
+}
 const listeners = new Set<() => void>();
 const doneListeners = new Set<() => void>();
 
@@ -57,6 +63,7 @@ async function run(item: PendingStory) {
           : await uploadStoryImage(item.localUri, item.userId);
       if (error || !url) throw new Error(error || 'ההעלאה נכשלה');
       mediaUrl = url;
+      localByRemoteUrl.set(url, item.localUri);
     }
     await createStory(item.userId, {
       media_type: item.mediaType,

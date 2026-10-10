@@ -23,6 +23,7 @@ import {
   type MediaRecentAsset,
 } from '../../lib/mediaRecentsCache';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import * as MediaLibrary from 'expo-media-library';
 
 const COLS = 4;
 const GAP = 2;
@@ -57,6 +58,7 @@ export function InAppGalleryPanel({ visible, onClose, onPick }: Props) {
   const [loading, setLoading] = useState(!cached);
   const loadingMoreRef = useRef(false);
   const [mounted, setMounted] = useState(visible);
+  const [resolving, setResolving] = useState(false);
 
   const y = useSharedValue(screenH);
   useEffect(() => {
@@ -116,8 +118,21 @@ export function InAppGalleryPanel({ visible, onClose, onPick }: Props) {
   const pick = useCallback(
     async (asset: MediaRecentAsset) => {
       void HapticFeedback.selection();
-      const uri = await resolveMediaRecentLocalUri(asset.id, asset.uri);
       const isVideo = asset.mediaType === 'video';
+      let uri = await resolveMediaRecentLocalUri(asset.id, asset.uri);
+      // וידאו ב-iCloud: אין קובץ מקומי (ph://) — הנגן מציג שחור. מבקשים מהמערכת להוריד
+      if (uri.startsWith('ph://')) {
+        setResolving(true);
+        try {
+          const info = await MediaLibrary.getAssetInfoAsync(asset.id, { shouldDownloadFromNetwork: true });
+          const local = info.localUri || info.uri;
+          if (local && !local.startsWith('ph://')) uri = local;
+        } catch {
+          /* נשאר ph:// */
+        } finally {
+          setResolving(false);
+        }
+      }
       onPick({
         uri,
         width: asset.width || undefined,
@@ -187,6 +202,12 @@ export function InAppGalleryPanel({ visible, onClose, onPick }: Props) {
           )}
         />
       )}
+      {resolving ? (
+        <View style={styles.resolving} pointerEvents="auto">
+          <ActivityIndicator color="#fff" />
+          <Text style={styles.message}>מוריד מ-iCloud…</Text>
+        </View>
+      ) : null}
     </Animated.View>
   );
 }
@@ -243,6 +264,13 @@ const styles = StyleSheet.create({
     lineHeight: APP_TYPE.cardBody.lineHeight,
     textAlign: 'center',
     writingDirection: 'rtl',
+  },
+  resolving: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
   },
   videoBadge: {
     position: 'absolute',

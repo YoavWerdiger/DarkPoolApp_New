@@ -2651,11 +2651,12 @@ const s = StyleSheet.create({
   previewBlurDim: {
     backgroundColor: 'rgba(0,0,0,0.35)',
   },
+  // בלי overflow:hidden — חיתוך מעל AVPlayerLayer משאיר וידאו שחור ב-iOS (כמו המצלמה);
+  // המדיה והציור כבר בגודל החלון בדיוק
   previewFrame: {
     position: 'absolute',
     left: 0,
     width: SW,
-    overflow: 'hidden',
     backgroundColor: '#000',
   },
   overlayLayer: {

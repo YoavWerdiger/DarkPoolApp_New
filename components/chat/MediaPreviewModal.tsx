@@ -720,15 +720,8 @@ function MediaPreviewBody({
             ) : null}
             </Animated.View>
 
+            {/* כמו שורת הכתיבה בצ'אט: שדה הכיתוב, ומימינו כפתור שליחה ירוק */}
             <View style={styles.captionRow}>
-              <Pressable
-                onPress={handleSend}
-                style={[styles.sendBtn, { backgroundColor: tokens.colors.primary.lightCta }]}
-                accessibilityRole="button"
-                accessibilityLabel="שליחה"
-              >
-                <Ionicons name="send" size={22} color={tokens.colors.text.inverse} style={styles.sendIcon} />
-              </Pressable>
               <TextInput
                 ref={captionRef}
                 value={captions[captionId] || ''}
@@ -749,6 +742,14 @@ function MediaPreviewBody({
                 blurOnSubmit={false}
                 onSubmitEditing={handleSend}
               />
+              <Pressable
+                onPress={handleSend}
+                style={[styles.sendBtn, { backgroundColor: tokens.colors.primary.main }]}
+                accessibilityRole="button"
+                accessibilityLabel="שליחה"
+              >
+                <Ionicons name="send" size={22} color={tokens.colors.text.inverse} />
+              </Pressable>
             </View>
           </Animated.View>
         </RNAnimatedView>
@@ -865,9 +866,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   sendBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    marginLeft: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -930,7 +932,6 @@ const styles = StyleSheet.create({
   captionInput: {
     flex: 1,
     minHeight: 44,
-    marginLeft: 8,
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 22,

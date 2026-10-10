@@ -13,6 +13,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { enterCameraAudioSession, ensurePermissionOrSettings, exitCameraAudioSession } from '../../lib/cameraSession';
 import { stableCameraPreviewFrame } from '../../lib/cameraFrame';
 import { InAppGalleryPanel, type InAppGalleryPick } from './InAppGalleryPanel';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -104,25 +105,31 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
     setFacing((prev) => (prev === 'back' ? 'front' : 'back'));
   }, [recording]);
 
-  const ensurePermission = useCallback(async (): Promise<boolean> => {
-    if (permission?.granted) return true;
-    const next = await requestPermission();
-    if (!next.granted) {
-      legacyAlert('אישור נדרש', 'אנא אשר גישה למצלמה');
-      return false;
-    }
-    return true;
-  }, [permission?.granted, requestPermission]);
+  // הרשאה חסומה → דיאלוג «פתח הגדרות» (כמו בהתראות)
+  const ensurePermission = useCallback(
+    () => ensurePermissionOrSettings(permission, requestPermission, 'camera'),
+    [permission, requestPermission],
+  );
 
-  const ensureMic = useCallback(async (): Promise<boolean> => {
-    if (micPermission?.granted) return true;
-    const next = await requestMicPermission();
-    if (!next.granted) {
-      legacyAlert('אישור נדרש', 'אנא אשר גישה למיקרופון כדי להקליט וידאו');
-      return false;
-    }
-    return true;
-  }, [micPermission?.granted, requestMicPermission]);
+  const ensureMic = useCallback(
+    () => ensurePermissionOrSettings(micPermission, requestMicPermission, 'microphone'),
+    [micPermission, requestMicPermission],
+  );
+
+  // סשן אודיו שמאפשר הקלטה לפני שמרכיבים את המצלמה (אחרת היא נתקעת על הפריים הראשון)
+  const [sessionReady, setSessionReady] = useState(false);
+  useEffect(() => {
+    if (!visible) return;
+    let cancelled = false;
+    setSessionReady(false);
+    void enterCameraAudioSession().then(() => {
+      if (!cancelled) setSessionReady(true);
+    });
+    return () => {
+      cancelled = true;
+      void exitCameraAudioSession();
+    };
+  }, [visible]);
 
   useEffect(() => {
     if (!visible) return;
@@ -318,7 +325,9 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
           />
         ) : null}
         {shot ? null : (<>
-        {granted ? (
+        {granted && !sessionReady ? (
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: '#000' }]} />
+        ) : granted ? (
           <GestureDetector gesture={modeSwipe}>
             <View style={StyleSheet.absoluteFill} collapsable={false}>
               <CameraView

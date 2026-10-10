@@ -2,6 +2,7 @@ import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { logger } from '../../utils/logger';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Modal, Pressable, Image, Dimensions, StatusBar, TextInput, KeyboardAvoidingView, Platform, ScrollView, FlatList, Animated, Keyboard } from 'react-native';
+import { enterCameraAudioSession, ensurePermissionOrSettings, exitCameraAudioSession } from '../../lib/cameraSession';
 import { publishStoryOptimistic } from '../../lib/pendingStories';
 import { InlineAppDialog } from '../ui/InlineAppDialog';
 import { useDesignTokens } from '../ui/DesignTokens';
@@ -1287,9 +1288,30 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
       zoomSV.value = 0;
       loadRecentPhotos();
       if (!permission?.granted) {
-        requestPermission();
+        // חסומה → דיאלוג «פתח הגדרות»
+        void ensurePermissionOrSettings(permission, requestPermission, 'camera');
       }
     }
+  }, [visible]);
+
+  // סשן אודיו שמאפשר הקלטה לפני שמרכיבים את המצלמה (בכל כניסה לצילום — גם אחרי פריוויו
+  // של וידאו שמחזיר ל«ניגון בלבד»); אחרת התצוגה נתקעת על הפריים הראשון
+  const [cameraSessionReady, setCameraSessionReady] = useState(false);
+  useEffect(() => {
+    if (!visible || phase !== 'capture') {
+      setCameraSessionReady(false);
+      return;
+    }
+    let cancelled = false;
+    void enterCameraAudioSession().then(() => {
+      if (!cancelled) setCameraSessionReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, phase]);
+  useEffect(() => {
+    if (!visible) void exitCameraAudioSession();
   }, [visible]);
 
   useEffect(() => {
@@ -1715,7 +1737,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
         <View style={s.modePanel} collapsable={false}>
           <GestureDetector gesture={captureBackgroundGestures}>
             <View style={[StyleSheet.absoluteFill, { backgroundColor: '#000' }]} collapsable={false}>
-              {permission?.granted ? (
+              {permission?.granted && cameraSessionReady ? (
                 <CameraView
                   ref={cameraRef}
                   style={StyleSheet.absoluteFill}
@@ -1842,7 +1864,10 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
             </TouchableOpacity>
             <View style={{ flex: 1 }} />
             {!permission?.granted ? (
-              <TouchableOpacity style={s.permissionBtnCompact} onPress={requestPermission}>
+              <TouchableOpacity
+                style={s.permissionBtnCompact}
+                onPress={() => void ensurePermissionOrSettings(permission, requestPermission, 'camera')}
+              >
                 <Text style={s.permissionBtnText}>אפשר מצלמה</Text>
               </TouchableOpacity>
             ) : (

@@ -24,6 +24,7 @@ import {
 } from '../../lib/mediaRecentsCache';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import * as MediaLibrary from 'expo-media-library';
+import { openAppSettings } from '../../lib/cameraSession';
 
 const COLS = 4;
 const GAP = 2;
@@ -159,6 +160,9 @@ export function InAppGalleryPanel({ visible, onClose, onPick }: Props) {
       {denied ? (
         <View style={styles.center}>
           <Text style={styles.message}>אין גישה לגלריה. אפשר גישה בהגדרות המכשיר.</Text>
+          <Pressable onPress={openAppSettings} style={styles.settingsBtn} accessibilityRole="button">
+            <Text style={styles.settingsBtnText}>פתח הגדרות</Text>
+          </Pressable>
         </View>
       ) : loading && assets.length === 0 ? (
         <View style={styles.center}>
@@ -271,6 +275,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
+  },
+  settingsBtn: {
+    marginTop: 16,
+    paddingHorizontal: 22,
+    paddingVertical: 12,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+  },
+  settingsBtnText: {
+    color: '#fff',
+    fontSize: APP_TYPE.cardTitle.fontSize,
+    fontWeight: APP_TYPE.cardTitle.fontWeight,
   },
   videoBadge: {
     position: 'absolute',

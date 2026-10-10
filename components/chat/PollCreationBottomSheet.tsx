@@ -373,7 +373,7 @@ export default function PollCreationBottomSheet({
         ) : null}
 
         {/* סוג הבחירה — כמו «מי כותב בקבוצה» */}
-        <Text style={[formFieldLabelStyle({ tokens, focused: false }), styles.labelGap]}>סוג בחירה</Text>
+        <Text style={[formFieldLabelStyle({ tokens, focused: false }), styles.labelGap, { marginBottom: 4 }]}>סוג בחירה</Text>
         <View style={[styles.segment, { backgroundColor: tokens.colors.background.cardSolid }]}>
           {([
             { key: false, label: 'בחירה יחידה' },
@@ -445,20 +445,22 @@ const styles = StyleSheet.create({
   root: {
     direction: 'rtl',
     paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
-    paddingTop: 4,
+    paddingTop: 6,
   },
   labelRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 4,
   },
   labelFlex: {
     flex: 1,
   },
+  // מרווחים נדיבים בין הקטעים — היה צפוף
   labelGap: {
-    marginTop: APP_LAYOUT.componentGap,
+    marginTop: 26,
   },
   firstLabel: {
-    marginTop: APP_LAYOUT.componentGap + 4,
+    marginTop: 22,
   },
   counter: {
     fontSize: APP_TYPE.caption.fontSize,
@@ -477,7 +479,7 @@ const styles = StyleSheet.create({
     lineHeight: APP_TYPE.body.lineHeight,
   },
   optionsList: {
-    gap: 8,
+    gap: 10,
   },
   optionShell: {
     flexDirection: 'row',
@@ -493,9 +495,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
+    marginTop: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 999,
   },
   addChipText: {
@@ -531,8 +533,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    marginTop: APP_LAYOUT.componentGap,
-    paddingVertical: 12,
+    marginTop: 26,
+    paddingVertical: 14,
     paddingHorizontal: APP_LAYOUT.cardPadding,
     borderRadius: 16,
   },
@@ -554,6 +556,6 @@ const styles = StyleSheet.create({
     transform: [{ scaleX: 0.82 }, { scaleY: 0.82 }],
   },
   cta: {
-    marginTop: APP_LAYOUT.componentGap + 4,
+    marginTop: 30,
   },
 });

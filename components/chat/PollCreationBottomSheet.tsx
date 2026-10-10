@@ -261,7 +261,10 @@ export default function PollCreationBottomSheet({
   };
 
   const { snapPoint, onContentLayout } = useChatFitContentSnap(0.8, 0.92, 0.4, `${visible}`);
-  const optionsMaxH = Math.round(Dimensions.get('window').height * 0.32);
+  // הכותרת והכפתור קבועים; רק הטופס ביניהם נגלל — גובה מקסימלי = שיט 92% פחות ידית/כותרת/כפתור/ריפוד
+  const formMaxH = Math.round(
+    Dimensions.get('window').height * 0.92 - 36 - 64 - (52 + 24) - Math.max(insets.bottom, 12) - 8,
+  );
   const field = (focused: boolean, multiline = false) => [
     formFieldShellStyle({ tokens, focused, multiline }),
     styles.fieldShell,
@@ -287,6 +290,12 @@ export default function PollCreationBottomSheet({
       <View style={[styles.root, { paddingBottom: Math.max(insets.bottom, 12) }]} onLayout={onContentLayout}>
         <ChatSheetTopoHeader title="סקר חדש" onClose={handleClose} />
 
+        <ScrollView
+          style={{ maxHeight: formMaxH }}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
+        >
         {/* מרווח מהכותרת — ב«קבוצה חדשה» התמונה יושבת כאן */}
         <View style={[styles.labelRow, styles.firstLabel]}>
           <Text style={[formFieldLabelStyle({ tokens, focused: questionFocused }), styles.labelFlex]}>שאלה</Text>
@@ -315,12 +324,7 @@ export default function PollCreationBottomSheet({
             {options.length}/{MAX_OPTIONS}
           </Text>
         </View>
-        <ScrollView
-          style={{ maxHeight: optionsMaxH }}
-          contentContainerStyle={styles.optionsList}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
+        <View style={styles.optionsList}>
           {options.map((option, index) => {
             const showRemove = options.length > MIN_OPTIONS;
             const isLast = index === options.length - 1;
@@ -352,7 +356,7 @@ export default function PollCreationBottomSheet({
               </View>
             );
           })}
-        </ScrollView>
+        </View>
         {options.length < MAX_OPTIONS ? (
           <Pressable
             onPress={() => {
@@ -426,6 +430,9 @@ export default function PollCreationBottomSheet({
           />
         </View>
 
+        </ScrollView>
+
+        {/* כפתור קבוע מעל ה-safe area — לא נדחף למטה כשמוסיפים אפשרויות */}
         <View style={styles.cta}>
           <UIButton
             title={isCreating ? 'יוצר…' : 'צור סקר'}
@@ -556,6 +563,6 @@ const styles = StyleSheet.create({
     transform: [{ scaleX: 0.82 }, { scaleY: 0.82 }],
   },
   cta: {
-    marginTop: 30,
+    marginTop: 20,
   },
 });

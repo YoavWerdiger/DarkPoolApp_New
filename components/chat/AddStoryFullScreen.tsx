@@ -1061,9 +1061,6 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
     const idx = MODES.indexOf(target);
     modeIndex.value = withSpring(idx, SPRING_CONFIG);
     setMode(target);
-    if (target === 'text') {
-      setTimeout(() => textInputRef.current?.focus(), 350);
-    }
   }, []);
 
   const logPanEvent = useCallback((name: string, phase: 'begin' | 'end') => {
@@ -1321,10 +1318,16 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
     };
   }, [visible, phase, mediaType, mediaUri, videoAttempt]);
 
+  // מעבר מצב (כפתור או החלקה): לטקסט — פוקוס; למצלמה — המקלדת יורדת.
+  // הטיימר מתבטל במעבר מהיר חזרה, כדי שפוקוס מאוחר לא יפתח שוב את המקלדת מעל המצלמה
   useEffect(() => {
     if (mode === 'text') {
-      setTimeout(() => textInputRef.current?.focus(), 350);
+      const t = setTimeout(() => textInputRef.current?.focus(), 350);
+      return () => clearTimeout(t);
     }
+    textInputRef.current?.blur();
+    Keyboard.dismiss();
+    return undefined;
   }, [mode]);
 
   useEffect(() => {

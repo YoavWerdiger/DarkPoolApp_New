@@ -1,4 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { APP_TYPE } from '../ui/appType';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { PollOption } from '../../services/pollService';
@@ -47,27 +49,18 @@ export default function PollResults({
       {options.map((option) => {
         const percentage = getVotePercentage(option.votes_count);
         const isVoted = userVotes.includes(option.id);
-        const fillColor = lightOnBubble
-          ? isVoted
-            ? 'rgba(255,255,255,0.28)'
-            : 'rgba(255,255,255,0.12)'
-          : isVoted
-            ? 'rgba(0, 200, 5, 0.28)'
-            : 'rgba(255,255,255,0.08)';
+        // לפי הטופו: מילוי מצבע הטקסט של הבועה — הבחירה שלי חזקה יותר
+        const fillColor = withAlpha(styles.optionText.color as string, isVoted ? 0.24 : 0.12);
 
         const content = (
           <>
-            <View style={[styles.barFill, { width: `${percentage}%`, backgroundColor: fillColor }]} />
+            <ResultBar percentage={percentage} color={fillColor} style={styles.barFill} />
             <View style={styles.rowContent}>
               <View style={styles.labelRow}>
                 {isVoted && (
-                  <Ionicons
-                    name="checkmark"
-                    size={14}
-                    color={lightOnBubble ? '#FFFFFF' : chatPalette.primary}
-                  />
+                  <Ionicons name="checkmark-circle" size={16} color={styles.optionText.color as string} />
                 )}
-                <Text style={styles.optionText} numberOfLines={1}>
+                <Text style={[styles.optionText, isVoted && styles.optionTextVoted]} numberOfLines={1}>
                   {option.text}
                 </Text>
               </View>
@@ -108,9 +101,10 @@ const createStyles = (
   tokens: ReturnType<typeof useDesignTokens>,
   lightOnBubble: boolean,
 ) => {
-  const text = lightOnBubble ? '#FFFFFF' : tokens.colors.text.primary;
-  const muted = lightOnBubble ? 'rgba(255,255,255,0.5)' : tokens.colors.text.tertiary;
-  const trackBg = lightOnBubble ? 'rgba(0,0,0,0.14)' : 'rgba(255,255,255,0.04)';
+  // צבעים מטוקני הבועה (לא לבן קבוע — בבהיר הבועה שלי בהירה)
+  const text = lightOnBubble ? tokens.colors.bubbleMeText : tokens.colors.text.primary;
+  const muted = lightOnBubble ? tokens.colors.bubbleMeMetaText : tokens.colors.text.tertiary;
+  const trackBg = withAlpha(text, 0.06);
 
   return StyleSheet.create({
     container: {
@@ -119,7 +113,7 @@ const createStyles = (
     },
     row: {
       position: 'relative',
-      borderRadius: 10,
+      borderRadius: tokens.borderRadius.lg,
       overflow: 'hidden',
       backgroundColor: trackBg,
       minHeight: 40,
@@ -130,14 +124,14 @@ const createStyles = (
       top: 0,
       bottom: 0,
       start: 0,
-      borderRadius: 10,
+      borderRadius: tokens.borderRadius.lg,
     },
     rowContent: {
       ...chatRtlRow,
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingVertical: 10,
-      paddingHorizontal: 12,
+      paddingVertical: 11,
+      paddingHorizontal: 14,
       gap: 8,
     },
     labelRow: {
@@ -149,16 +143,21 @@ const createStyles = (
     },
     optionText: {
       color: text,
-      fontSize: 15,
+      fontSize: APP_TYPE.cardBody.fontSize,
+      lineHeight: APP_TYPE.cardBody.lineHeight,
       flex: 1,
       flexShrink: 1,
       minWidth: 0,
       ...chatRtlText,
     },
+    optionTextVoted: {
+      fontWeight: APP_TYPE.cardTitle.fontWeight,
+    },
     percent: {
-      color: muted,
-      fontSize: tokens.typography.fontSize.sm,
-      fontWeight: tokens.typography.fontWeight.semibold,
+      color: text,
+      fontSize: APP_TYPE.cardSubtitle.fontSize,
+      fontWeight: APP_TYPE.cardTitle.fontWeight,
+      fontVariant: ['tabular-nums'],
       minWidth: 34,
       flexShrink: 0,
       textAlign: 'left',
@@ -166,8 +165,28 @@ const createStyles = (
     footer: {
       marginTop: 4,
       color: muted,
-      fontSize: tokens.typography.fontSize.xs,
+      fontSize: APP_TYPE.caption.fontSize,
+      lineHeight: APP_TYPE.caption.lineHeight,
       ...chatRtlText,
     },
   });
 };
+
+/** פס תוצאה שגדל מ-0 לאחוז (ובשינוי — מתעדכן בהנפשה) */
+function ResultBar({ percentage, color, style }: { percentage: number; color: string; style: object }) {
+  const w = useSharedValue(0);
+  useEffect(() => {
+    w.value = withTiming(percentage, { duration: 520, easing: Easing.out(Easing.cubic) });
+  }, [percentage, w]);
+  const animated = useAnimatedStyle(() => ({ width: `${w.value}%` }));
+  return <Animated.View style={[style, { backgroundColor: color }, animated]} />;
+}
+
+function withAlpha(color: string, alpha: number): string {
+  const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(color).trim());
+  if (!m) return color;
+  let hex = m[1];
+  if (hex.length === 3) hex = hex.split('').map((c) => c + c).join('');
+  const n = parseInt(hex, 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
+}

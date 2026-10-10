@@ -20,7 +20,8 @@ const rtJoinOk = new Rate('rt_join_ok');
 const rtReceived = new Counter('rt_messages_received');
 const sent = new Counter('chat_messages_sent');
 
-const stages = [
+const SMOKE = __ENV.SMOKE === '1';
+const stages = SMOKE ? [{ duration: '20s', target: PEAK }, { duration: '40s', target: PEAK }, { duration: '10s', target: 0 }] : [
   { duration: '1m', target: 50 },
   { duration: '2m', target: 200 },
   { duration: '2m', target: PEAK },
@@ -36,7 +37,7 @@ export const options = {
     // הודעה כל 5 שניות לקבוצה — מודדים כמה זמן לוקח לה להגיע לכל המחוברים
     sender: {
       executor: 'constant-arrival-rate', exec: 'sender', rate: 1, timeUnit: '5s',
-      duration: '9m', startTime: '1m', preAllocatedVUs: 2,
+      duration: SMOKE ? '50s' : '9m', startTime: SMOKE ? '15s' : '1m', preAllocatedVUs: 2,
     },
   },
   thresholds: {
@@ -120,7 +121,7 @@ export function realtime(data) {
         ref += 1;
         socket.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: String(ref) }));
       }, 25000);
-      socket.setTimeout(() => socket.close(), 120000 + Math.random() * 60000);
+      socket.setTimeout(() => socket.close(), SMOKE ? 55000 : 120000 + Math.random() * 60000);
     });
     socket.on('message', (raw) => {
       const m = JSON.parse(raw);

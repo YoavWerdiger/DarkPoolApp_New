@@ -51,6 +51,8 @@ const rtStages = scaled(PEAK).map((x) => ({ duration: x.duration, target: Math.m
 
 export const options = {
   setupTimeout: '3m',
+  // לא שומרים גוף תשובות בזיכרון (חוץ מ-setup) — פחות CPU/RAM במחשב המריץ
+  discardResponseBodies: true,
   scenarios: {
     browse: { executor: 'ramping-vus', exec: 'browse', startVUs: 0, stages: scaled(BROWSE_PEAK), gracefulRampDown: '20s' },
     realtime: { executor: 'ramping-vus', exec: 'realtime', startVUs: 0, stages: rtStages, gracefulRampDown: '20s' },
@@ -75,7 +77,7 @@ export function setup() {
     const r = http.post(
       `${URL}/auth/v1/token?grant_type=password`,
       JSON.stringify({ email: `loadtest+${i}@darkpool.test`, password: PW }),
-      { headers: { apikey: ANON, 'Content-Type': 'application/json' }, tags: { kind: 'login' } },
+      { headers: { apikey: ANON, 'Content-Type': 'application/json' }, tags: { kind: 'login' }, responseType: 'text' },
     );
     if (r.status === 200) users.push({ id: r.json('user.id'), token: r.json('access_token') });
     else console.error(`login ${i} failed: ${r.status} ${r.body}`);
@@ -90,7 +92,10 @@ function me(data) {
 }
 
 function hdr(u) {
-  return { headers: { apikey: ANON, Authorization: `Bearer ${u.token}`, 'Content-Type': 'application/json' } };
+  // gzip כמו האפליקציה — פי כמה פחות תעבורה (בהרצה הקודמת 3.5GB לא דחוסים חנקו את רשת המחשב)
+  return {
+    headers: { apikey: ANON, Authorization: `Bearer ${u.token}`, 'Content-Type': 'application/json', 'Accept-Encoding': 'gzip' },
+  };
 }
 
 function get(u, path, name) {

@@ -462,6 +462,26 @@ export default function ChatGroupsListScreen() {
       else if (idx === 1) discardPendingStory(p.id);
     });
   }, []);
+  const renderPendingOverlay = () => {
+    if (pendingStories.length === 0) return null;
+    const failed = pendingStories.some((p) => p.status === 'failed');
+    return (
+      <View
+        style={[
+          StyleSheet.absoluteFill,
+          styles.pendingStoryOverlay,
+          failed && { backgroundColor: 'rgba(229,57,53,0.55)' },
+        ]}
+        pointerEvents="none"
+      >
+        {failed ? (
+          <Ionicons name="alert-circle" size={22} color="#fff" />
+        ) : (
+          <ActivityIndicator size="small" color="#fff" />
+        )}
+      </View>
+    );
+  };
 
   useEffect(() => {
     if (!user?.id) return;
@@ -1379,52 +1399,35 @@ export default function ChatGroupsListScreen() {
                 storiesScrollRef.current?.scrollToEnd({ animated: false });
               }}
             >
-            {pendingStories.map((p) => (
-              <View key={p.id} style={styles.statusStorySlot}>
+            {/* אין לי עדיין סטורי ויש העלאה — טבעת «שלי» זמנית (בתמונה של ההעלאה) עם המצב */}
+            {pendingStories.length > 0 && !usersWithStories.some((u) => u.user_id === user?.id) ? (
+              <View style={styles.statusStorySlot}>
                 <Pressable
                   style={styles.statusStoryItem}
-                  onPress={() => onPendingPress(p)}
+                  onPress={() => {
+                    const failed = pendingStories.find((p) => p.status === 'failed');
+                    if (failed) onPendingPress(failed);
+                  }}
                   accessibilityRole="button"
-                  accessibilityLabel={p.status === 'failed' ? 'הסטטוס לא עלה — הקש לניסיון חוזר' : 'הסטטוס עולה'}
+                  accessibilityLabel="הסטטוס שלי"
                 >
-                  <StoryAvatarRing size={68} storyCount={1} hasViewed={false}>
-                    {p.mediaType === 'image' && p.localUri ? (
-                      <Image source={{ uri: p.localUri }} style={styles.statusCircleImage} resizeMode="cover" />
+                  <StoryAvatarRing size={68} storyCount={pendingStories.length} hasViewed={false}>
+                    {pendingStories[0].mediaType === 'image' && pendingStories[0].localUri ? (
+                      <Image source={{ uri: pendingStories[0].localUri }} style={styles.statusCircleImage} resizeMode="cover" />
                     ) : (
-                      <View
-                        style={[
-                          styles.storyAvatarPlaceholder,
-                          p.backgroundColor ? { backgroundColor: p.backgroundColor } : null,
-                        ]}
-                      >
-                        <Ionicons
-                          name={p.mediaType === 'video' ? 'videocam' : 'text'}
-                          size={20}
-                          color={p.backgroundColor ? '#fff' : tokens.colors.text.secondary}
-                        />
+                      <View style={styles.storyAvatarPlaceholder}>
+                        <Ionicons name="person" size={22} color={tokens.colors.text.secondary} />
                       </View>
                     )}
-                    <View
-                      style={[
-                        StyleSheet.absoluteFill,
-                        styles.pendingStoryOverlay,
-                        p.status === 'failed' && { backgroundColor: 'rgba(229,57,53,0.55)' },
-                      ]}
-                    >
-                      {p.status === 'failed' ? (
-                        <Ionicons name="alert-circle" size={22} color="#fff" />
-                      ) : (
-                        <ActivityIndicator size="small" color="#fff" />
-                      )}
-                    </View>
+                    {renderPendingOverlay()}
                   </StoryAvatarRing>
                   <Text style={[styles.statusLabel, { color: tokens.colors.text.primary }]} numberOfLines={1}>
-                    {p.status === 'failed' ? 'נכשל' : 'עולה…'}
+                    שלי
                   </Text>
                 </Pressable>
                 <View style={styles.statusStoryGap} />
               </View>
-            ))}
+            ) : null}
             {usersWithStories.map((s, idx) => {
               const avatar = s.user?.profile_picture;
               const displayName = s.user?.display_name || s.user?.full_name || 'משתמש';
@@ -1440,6 +1443,11 @@ export default function ChatGroupsListScreen() {
                     pressed && { opacity: 0.72, transform: [{ scale: 0.94 }] },
                   ]}
                   onPress={() => {
+                    const failed = isOwn ? pendingStories.find((p) => p.status === 'failed') : undefined;
+                    if (failed) {
+                      onPendingPress(failed);
+                      return;
+                    }
                     void HapticFeedback.selection();
                     setStoryViewerInitialIndex(idx);
                     setStoryViewerVisible(true);
@@ -1467,6 +1475,8 @@ export default function ChatGroupsListScreen() {
                         />
                       </View>
                     )}
+                    {/* העלאה אופטימית — המצב על טבעת «שלי» עצמה */}
+                    {isOwn ? renderPendingOverlay() : null}
                   </StoryAvatarRing>
                   <Text style={[styles.statusLabel, isOwn && { color: tokens.colors.text.primary }]} numberOfLines={1}>
                     {isOwn ? 'שלי' : displayName}

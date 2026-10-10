@@ -166,16 +166,15 @@ export default function LongPressOverlay({
   // מקום לתצוגת ההודעה = גובה השיט המקסימלי פחות הכותרת, הריאקציות, כרטיסי התפריט והריפוד.
   // הודעה גבוהה (תמונה גדולה) מוקטנת פרופורציונלית — אחרת «מחק לכולם» נחתך מתחת למסך
   const SHEET_MAX_SNAP = 0.94;
+  const sheetBottomPadRef = useRef(Math.max(insets.bottom, 16));
+  // גבהים מדודים (לא הערכה) של הכותרת ושל ריאקציות+תפריט — התצוגה מוקטנת רק בכמה שצריך
+  const [headerH, setHeaderH] = useState(0);
+  const [restH, setRestH] = useState(0);
   const maxPreviewPx = useMemo(() => {
-    if (!displayMessage) return SCREEN_HEIGHT;
-    const mainCount = 4
-      + (displayMessage.isMe && !displayMessage.id?.toString().startsWith('temp-') ? 1 : 0)
-      + (isAdmin ? 1 : 0);
-    const dangerCount = (displayMessage.isMe ? 1 : 0) + (displayMessage.isMe || isAdmin ? 1 : 0);
-    const menuPx = (mainCount + dangerCount) * 61 + (dangerCount > 0 ? 28 : 0) + 16;
-    const fixedPx = 44 /* handle */ + 56 /* header */ + 78 /* reactions */ + menuPx + Math.max(insets.bottom, 16) + 24;
-    return Math.max(120, SCREEN_HEIGHT * SHEET_MAX_SNAP - fixedPx);
-  }, [displayMessage, isAdmin, insets.bottom]);
+    if (!headerH || !restH) return SCREEN_HEIGHT;
+    const handlePx = 36;
+    return Math.max(160, SCREEN_HEIGHT * SHEET_MAX_SNAP - handlePx - headerH - restH - sheetBottomPadRef.current);
+  }, [headerH, restH]);
   const [previewNaturalH, setPreviewNaturalH] = useState(0);
   const previewScale = previewNaturalH > maxPreviewPx ? maxPreviewPx / previewNaturalH : 1;
 
@@ -191,6 +190,7 @@ export default function LongPressOverlay({
     const minBottom = Platform.OS === 'android' ? 16 : 8;
     return Math.max(insets.bottom, minBottom);
   }, [insets.bottom]);
+  sheetBottomPadRef.current = sheetBottomPad;
 
   const currentUserReaction = useMemo(() => {
     if (!displayMessage?.reactions || !Array.isArray(displayMessage.reactions)) return null;
@@ -394,7 +394,7 @@ export default function LongPressOverlay({
         }}
         onLayout={onContentLayout}
       >
-        <View style={{ direction: 'rtl' }}>
+        <View style={{ direction: 'rtl' }} onLayout={(e) => setHeaderH(e.nativeEvent.layout.height)}>
           <ChatSheetTopoHeader title="הודעה" onClose={onClose} />
         </View>
         {/* מוקטן פרופורציונלית מהפינה של הבועה אם אין מקום (בלי לגעת במרווחי הכרטיסים) */}
@@ -417,20 +417,22 @@ export default function LongPressOverlay({
           </View>
         </View>
 
-        <View style={styles.reactionWrapper}>
-          <ReactionBar
-            onReaction={handleReaction}
-            currentReaction={currentUserReaction}
-            onOpenPicker={handleOpenPicker}
+        <View onLayout={(e) => setRestH(e.nativeEvent.layout.height)}>
+          <View style={styles.reactionWrapper}>
+            <ReactionBar
+              onReaction={handleReaction}
+              currentReaction={currentUserReaction}
+              onOpenPicker={handleOpenPicker}
+            />
+          </View>
+
+          <ContextMenu
+            onSelect={handleOptionSelect}
+            isAdmin={isAdmin}
+            isMe={displayMessage.isMe}
+            canEdit={!displayMessage.id?.toString().startsWith('temp-')}
           />
         </View>
-
-        <ContextMenu
-          onSelect={handleOptionSelect}
-          isAdmin={isAdmin}
-          isMe={displayMessage.isMe}
-          canEdit={!displayMessage.id?.toString().startsWith('temp-')}
-        />
       </ChatSheetContent>
       )}
     </BottomSheet>

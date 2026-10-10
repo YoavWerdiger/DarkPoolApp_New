@@ -1,10 +1,12 @@
 #!/bin/sh
 # שימוש: sh loadtest/run.sh smoke   |   sh loadtest/run.sh full
+# stress: 1500 גולשים בלי הפסקות (+קפיצה ל-2250), 450 בצ'אט החי, 10 הודעות/שנייה
 # MSG_PER_SEC=2 → 2 הודעות בשנייה מכותבים שונים (ברירת מחדל 0.2)
 # דורש LT_PASSWORD בסביבה (סיסמת משתמשי loadtest+N@darkpool.test)
 cd "$(dirname "$0")/.." && set -a && . ./.env && set +a
 MODE=${1:-smoke}
-if [ "$MODE" = "full" ]; then EXTRA="-e PEAK=450 -e LOGIN_USERS=25"; else EXTRA="-e SMOKE=1 -e PEAK=5 -e LOGIN_USERS=3"; fi
+if [ "$MODE" = "full" ]; then EXTRA="-e PEAK=450 -e LOGIN_USERS=25";
+elif [ "$MODE" = "stress" ]; then EXTRA="-e STRESS=1 -e PEAK=450 -e LOGIN_USERS=25 -e BROWSE_PEAK=${BROWSE_PEAK:-1500} -e THINK=${THINK:-0.1}"; MSG_PER_SEC=${MSG_PER_SEC:-10}; else EXTRA="-e SMOKE=1 -e PEAK=5 -e LOGIN_USERS=3"; fi
 mkdir -p loadtest/out
 "${K6:-$HOME/.local/bin/k6}" run --no-color $EXTRA \
   -e SUPABASE_URL="$EXPO_PUBLIC_SUPABASE_URL" -e ANON_KEY="$EXPO_PUBLIC_SUPABASE_ANON_KEY" \

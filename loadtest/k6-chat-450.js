@@ -15,6 +15,11 @@ const GROUP = __ENV.GROUP_ID;
 const LOGIN_USERS = Number(__ENV.LOGIN_USERS || 25);
 const PEAK = Number(__ENV.PEAK || 450);
 const MSG_PER_SEC = Number(__ENV.MSG_PER_SEC || 0.2);
+// גולשים (HTTP בלבד) — לא מוגבלים במכסת ה-Realtime, אפשר הרבה מעבר ל-450
+const BROWSE_PEAK = Number(__ENV.BROWSE_PEAK || PEAK);
+// מכפיל «זמן קריאה» בין מסכים: 1 = אנושי, 0.1 = כמעט בלי הפסקות (אגרסיבי)
+const THINK = Number(__ENV.THINK || 1);
+const STRESS = __ENV.STRESS === '1';
 
 const rtLatency = new Trend('rt_message_latency_ms', true);
 const rtJoinOk = new Rate('rt_join_ok');
@@ -30,15 +35,30 @@ const stages = SMOKE ? [{ duration: '20s', target: PEAK }, { duration: '40s', ta
   { duration: '1m', target: 0 },
 ];
 
+// מצב STRESS: עלייה מהירה, החזקה, ואז קפיצה פתאומית (spike) לפי 1.5 ×
+function scaled(peak) {
+  if (!STRESS) return stages.map((x) => ({ duration: x.duration, target: Math.round((x.target / PEAK) * peak) }));
+  return [
+    { duration: '1m', target: Math.round(peak * 0.3) },
+    { duration: '1m', target: peak },
+    { duration: '4m', target: peak },
+    { duration: '20s', target: Math.round(peak * 1.5) },
+    { duration: '2m', target: Math.round(peak * 1.5) },
+    { duration: '1m', target: 0 },
+  ];
+}
+const rtStages = scaled(PEAK).map((x) => ({ duration: x.duration, target: Math.min(x.target, PEAK) }));
+
 export const options = {
   setupTimeout: '3m',
   scenarios: {
-    browse: { executor: 'ramping-vus', exec: 'browse', startVUs: 0, stages, gracefulRampDown: '20s' },
-    realtime: { executor: 'ramping-vus', exec: 'realtime', startVUs: 0, stages, gracefulRampDown: '20s' },
+    browse: { executor: 'ramping-vus', exec: 'browse', startVUs: 0, stages: scaled(BROWSE_PEAK), gracefulRampDown: '20s' },
+    realtime: { executor: 'ramping-vus', exec: 'realtime', startVUs: 0, stages: rtStages, gracefulRampDown: '20s' },
     // MSG_PER_SEC הודעות בשנייה מכותבים שונים — מודדים כמה זמן לוקח לכל הודעה להגיע לכל המחוברים
     sender: {
       executor: 'constant-arrival-rate', exec: 'sender', rate: Math.max(1, Math.round(MSG_PER_SEC * 60)), timeUnit: '1m',
-      duration: SMOKE ? '50s' : '9m', startTime: SMOKE ? '15s' : '1m', preAllocatedVUs: 10, maxVUs: 30,
+      duration: SMOKE ? '50s' : STRESS ? '8m' : '9m', startTime: SMOKE ? '15s' : '1m',
+      preAllocatedVUs: 20, maxVUs: 100,
     },
   },
   thresholds: {
@@ -87,22 +107,22 @@ export function browse(data) {
   const today = new Date().toISOString().slice(0, 10);
   get(u, `chat_group_members?select=group_id,unread_count,mentioned_count,is_muted&user_id=eq.${u.id}`, 'my_groups');
   get(u, 'chat_groups?select=*&order=last_message_at.desc.nullslast', 'groups');
-  sleep(1 + Math.random() * 2);
+  sleep((1 + Math.random() * 2) * THINK);
   get(
     u,
     `chat_messages?select=*,sender:users!chat_messages_sender_id_fkey(id,display_name,profile_picture,is_online)` +
       `&group_id=eq.${GROUP}&or=(is_deleted.eq.false,deleted_for_everyone.eq.true)&order=created_at.desc&limit=50`,
     'messages',
   );
-  sleep(2 + Math.random() * 3);
+  sleep((2 + Math.random() * 3) * THINK);
   get(u, 'app_news_clean?select=*&order=created_at.desc&limit=30', 'news');
   get(u, 'dark_pool_congress_trades?select=*&order=filed_at.desc&limit=50', 'congress');
   get(u, 'dark_pool_insider_buys?select=*&order=filed_at.desc&limit=50', 'insiders');
-  sleep(2 + Math.random() * 3);
+  sleep((2 + Math.random() * 3) * THINK);
   get(u, `economic_events_cache?select=*&date=gte.${today}&order=date.asc&limit=100`, 'economic');
   get(u, `earnings_calendar?select=*&report_date=gte.${today}&order=report_date.asc&limit=100`, 'earnings');
   get(u, `user_stories?select=*&expires_at=gt.${new Date().toISOString()}&order=created_at.desc`, 'stories');
-  sleep(3 + Math.random() * 4);
+  sleep((3 + Math.random() * 4) * THINK);
 }
 
 // מחובר לצ'אט: ערוץ פרטי chat-group:<id> (כמו האפליקציה), heartbeat, מחכה להודעות

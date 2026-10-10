@@ -50,6 +50,12 @@ function scaled(peak) {
 const rtStages = scaled(PEAK).map((x) => ({ duration: x.duration, target: Math.min(x.target, PEAK) }));
 
 export const options = {
+  // Grafana Cloud: מריץ מפרנקפורט (קרוב ל-Supabase eu-central-1). מתעלמים ממנו בהרצה מקומית.
+  cloud: {
+    name: `DarkPool ${STRESS ? 'stress' : SMOKE ? 'smoke' : 'full'}`,
+    ...(__ENV.CLOUD_PROJECT_ID ? { projectID: Number(__ENV.CLOUD_PROJECT_ID) } : {}),
+    distribution: { frankfurt: { loadZone: 'amazon:de:frankfurt', percent: 100 } },
+  },
   setupTimeout: '3m',
   // לא שומרים גוף תשובות בזיכרון (חוץ מ-setup) — פחות CPU/RAM במחשב המריץ
   discardResponseBodies: true,

@@ -19,12 +19,14 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useDesignTokens } from './useDesignTokens';
 
-export const NUMBER_ROLL_MS = 320;
-export const NUMBER_FAST_MS = 110;
+export const NUMBER_ROLL_MS = 420;
+export const NUMBER_FAST_MS = 140;
 export const NUMBER_FLASH_MS = 700;
 /** השהיה בין ספרה לספרה (מהאחדות שמאלה) — תחושת מונה */
-const STAGGER_MS = 28;
+const STAGGER_MS = 16;
 const EASE_OUT = Easing.out(Easing.cubic);
+/** גלגול רך — easeOutQuint, בלי «קפיצה» בסוף */
+const ROLL_EASE = Easing.bezier(0.22, 1, 0.36, 1);
 
 // תווי בקרה של bidi (LRI/PDI וכו׳) — שורת התאים כבר LTR פיזית
 const BIDI_CONTROLS = /[‎‏‪-‮⁦-⁩]/g;
@@ -244,6 +246,7 @@ export function AnimatedNumber({
             dir={change?.dir ?? 1}
             delay={change?.fast ? 0 : c.order * STAGGER_MS}
             duration={change?.fast ? NUMBER_FAST_MS : NUMBER_ROLL_MS}
+            fast={!!change?.fast}
             height={lineH}
             charStyle={charStyle}
             flashStyle={flashEnabled ? flashStyle : null}
@@ -290,9 +293,11 @@ function DigitCell({
   flashStyle,
   tintColor,
   baseColor,
+  fast,
   allowFontScaling,
   maxFontSizeMultiplier,
 }: {
+  fast: boolean;
   tintColor: string | null;
   baseColor: string | null;
   ch: string;
@@ -309,6 +314,7 @@ function DigitCell({
 }) {
   const p = useSharedValue(1);
   const tint = useSharedValue(0);
+  const fastSv = useSharedValue(0);
   const dirSv = useSharedValue<number>(dir);
   const [rollingFrom, setRollingFrom] = useState<string | null>(null);
   const lastGen = useRef(0);
@@ -319,13 +325,14 @@ function DigitCell({
     dirSv.value = dir;
     setRollingFrom(old);
     p.value = 0;
-    p.value = withDelay(delay, withTiming(1, { duration, easing: EASE_OUT }));
+    fastSv.value = fast ? 1 : 0;
+    p.value = withDelay(delay, withTiming(1, { duration, easing: ROLL_EASE }));
     if (tintColor) {
       // הגוון נכנס עם הספרה ודועך מעט אחרי שהיא נוחתת
       tint.value = 1;
       tint.value = withDelay(delay + duration * 0.6, withTiming(0, { duration: 520, easing: EASE_OUT }));
     }
-  }, [gen, old, dir, delay, duration, p, dirSv, tintColor, tint]);
+  }, [gen, old, dir, delay, duration, p, dirSv, tintColor, tint, fast, fastSv]);
 
   const tintStyle = useAnimatedStyle(() => {
     if (!tintColor || !baseColor) return {};
@@ -334,14 +341,18 @@ function DigitCell({
   }, [tintColor, baseColor]);
 
   // עלייה: הספרה החדשה נכנסת מלמטה והישנה יוצאת למעלה; ירידה: הפוך
+  // בגרירה (fast) — בלי גלגול, רק החלפה רכה (crossfade); אחרת גלגול עם דהייה הדרגתית
   const inStyle = useAnimatedStyle(
-    () => ({ transform: [{ translateY: dirSv.value * height * (1 - p.value) }] }),
+    () => ({
+      transform: [{ translateY: fastSv.value ? 0 : dirSv.value * height * (1 - p.value) }],
+      opacity: fastSv.value ? 1 : 0.25 + 0.75 * p.value,
+    }),
     [height]
   );
   const outStyle = useAnimatedStyle(
     () => ({
-      transform: [{ translateY: -dirSv.value * height * p.value }],
-      opacity: p.value >= 1 ? 0 : 1,
+      transform: [{ translateY: fastSv.value ? 0 : -dirSv.value * height * p.value }],
+      opacity: 1 - p.value,
     }),
     [height]
   );

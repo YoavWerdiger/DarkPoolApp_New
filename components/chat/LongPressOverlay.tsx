@@ -163,10 +163,26 @@ export default function LongPressOverlay({
     return Math.min(0.88, Math.max(0.22, estimatedPx / SCREEN_HEIGHT));
   }, [displayMessage, isAdmin, insets.bottom]);
 
+  // מקום לתצוגת ההודעה = גובה השיט המקסימלי פחות הכותרת, הריאקציות, כרטיסי התפריט והריפוד.
+  // הודעה גבוהה (תמונה גדולה) מוקטנת פרופורציונלית — אחרת «מחק לכולם» נחתך מתחת למסך
+  const SHEET_MAX_SNAP = 0.94;
+  const maxPreviewPx = useMemo(() => {
+    if (!displayMessage) return SCREEN_HEIGHT;
+    const mainCount = 4
+      + (displayMessage.isMe && !displayMessage.id?.toString().startsWith('temp-') ? 1 : 0)
+      + (isAdmin ? 1 : 0);
+    const dangerCount = (displayMessage.isMe ? 1 : 0) + (displayMessage.isMe || isAdmin ? 1 : 0);
+    const menuPx = (mainCount + dangerCount) * 61 + (dangerCount > 0 ? 28 : 0) + 16;
+    const fixedPx = 44 /* handle */ + 56 /* header */ + 78 /* reactions */ + menuPx + Math.max(insets.bottom, 16) + 24;
+    return Math.max(120, SCREEN_HEIGHT * SHEET_MAX_SNAP - fixedPx);
+  }, [displayMessage, isAdmin, insets.bottom]);
+  const [previewNaturalH, setPreviewNaturalH] = useState(0);
+  const previewScale = previewNaturalH > maxPreviewPx ? maxPreviewPx / previewNaturalH : 1;
+
   // snap לפי גובה מדוד — אותו hook כמו שאר ה-sheets
   const { snapPoint, onContentLayout } = useChatFitContentSnap(
     initialSnapEstimate,
-    0.92,
+    SHEET_MAX_SNAP,
     0.12,
     `${displayMessage?.id ?? ''}-${visible}-${isAdmin}`,
   );
@@ -381,7 +397,25 @@ export default function LongPressOverlay({
         <View style={{ direction: 'rtl' }}>
           <ChatSheetTopoHeader title="הודעה" onClose={onClose} />
         </View>
-        {renderMessagePreview()}
+        {/* מוקטן פרופורציונלית מהפינה של הבועה אם אין מקום (בלי לגעת במרווחי הכרטיסים) */}
+        <View style={previewScale < 1 ? { height: previewNaturalH * previewScale, overflow: 'hidden' } : undefined}>
+          <View
+            onLayout={(e) => {
+              const h = e.nativeEvent.layout.height;
+              if (h > 0 && Math.abs(h - previewNaturalH) > 1) setPreviewNaturalH(h);
+            }}
+            style={
+              previewScale < 1
+                ? {
+                    transform: [{ scale: previewScale }],
+                    transformOrigin: displayMessage.isMe ? 'top right' : 'top left',
+                  }
+                : undefined
+            }
+          >
+            {renderMessagePreview()}
+          </View>
+        </View>
 
         <View style={styles.reactionWrapper}>
           <ReactionBar

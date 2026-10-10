@@ -287,7 +287,8 @@ export default function PollCreationBottomSheet({
       <View style={[styles.root, { paddingBottom: Math.max(insets.bottom, 12) }]} onLayout={onContentLayout}>
         <ChatSheetTopoHeader title="סקר חדש" onClose={handleClose} />
 
-        <View style={styles.labelRow}>
+        {/* מרווח מהכותרת — ב«קבוצה חדשה» התמונה יושבת כאן */}
+        <View style={[styles.labelRow, styles.firstLabel]}>
           <Text style={[formFieldLabelStyle({ tokens, focused: questionFocused }), styles.labelFlex]}>שאלה</Text>
           <Text style={[styles.counter, { color: tokens.colors.text.tertiary }]}>
             {question.length}/{QUESTION_MAX_LEN}
@@ -455,6 +456,9 @@ const styles = StyleSheet.create({
   },
   labelGap: {
     marginTop: APP_LAYOUT.componentGap,
+  },
+  firstLabel: {
+    marginTop: APP_LAYOUT.componentGap + 4,
   },
   counter: {
     fontSize: APP_TYPE.caption.fontSize,

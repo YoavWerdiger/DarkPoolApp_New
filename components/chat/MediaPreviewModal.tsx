@@ -2,6 +2,7 @@ import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { View, Text, Modal, Pressable, StyleSheet, ActivityIndicator, Animated as RNAnimated,
   Keyboard, ScrollView, TouchableOpacity, TextInput, useWindowDimensions } from 'react-native';
+import { stableCameraPreviewFrame } from '../../lib/cameraFrame';
 import { Image as ExpoImage } from 'expo-image';
 import { initialWindowMetrics, SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -45,6 +46,7 @@ function MediaPreviewBody({
   const insets = useSafeAreaInsets();
   const safeBottom = Math.max(insets.bottom, initialWindowMetrics?.insets.bottom ?? 0);
   const { width: screenW, height: screenH } = useWindowDimensions();
+  const mediaFrame = stableCameraPreviewFrame();
   const { isDarkMode } = useTheme();
   const tokens = useDesignTokens();
   const iconColor = isDarkMode ? tokens.colors.text.primary : tokens.colors.text.inverse;
@@ -440,7 +442,14 @@ function MediaPreviewBody({
     const uri = media.type === 'image' ? media.uri : media.type === 'video' ? media.thumbnail_url : null;
     const srcW = media.width && media.width > 0 ? media.width : screenW;
     const srcH = media.height && media.height > 0 ? media.height : screenH;
-    const frameH = Math.min(screenW * (srcH / srcW), screenH);
+    // אותה התאמה לחלון כמו התמונה הנוכחית
+    const ratio = srcW / srcH;
+    let nW = screenW;
+    let nH = screenW / ratio;
+    if (nH > mediaFrame.height) {
+      nH = mediaFrame.height;
+      nW = nH * ratio;
+    }
     return (
       <Animated.View
         pointerEvents="none"
@@ -449,7 +458,13 @@ function MediaPreviewBody({
         {uri ? (
           <ExpoImage
             source={{ uri }}
-            style={{ position: 'absolute', top: (screenH - frameH) / 2, left: 0, width: screenW, height: frameH }}
+            style={{
+              position: 'absolute',
+              top: mediaFrame.top + (mediaFrame.height - nH) / 2,
+              left: (screenW - nW) / 2,
+              width: nW,
+              height: nH,
+            }}
             contentFit={media.type === 'image' ? 'cover' : 'contain'}
             transition={0}
             cachePolicy="memory-disk"
@@ -463,16 +478,23 @@ function MediaPreviewBody({
   const renderMediaContent = () => {
     switch (currentMedia.type) {
       case 'image': {
+        // כמו וואטסאפ ושאר המערכת: התמונה בתוך חלון (cameraPreviewFrame), לא על כל המסך —
+        // מותאמת פרופורציונלית לחלון וממורכזת בו; מסביב הרקע המטושטש
         const srcW = currentMedia.width && currentMedia.width > 0 ? currentMedia.width : screenW;
         const srcH = currentMedia.height && currentMedia.height > 0 ? currentMedia.height : screenH;
-        const naturalH = screenW * (srcH / srcW);
-        const frameH = Math.min(naturalH, screenH);
-        const box = { width: screenW, height: frameH };
+        const ratio = srcW / srcH;
+        let boxW = screenW;
+        let boxH = screenW / ratio;
+        if (boxH > mediaFrame.height) {
+          boxH = mediaFrame.height;
+          boxW = boxH * ratio;
+        }
+        const box = { width: boxW, height: boxH };
         const placed = {
           ...box,
           position: 'absolute' as const,
-          top: (screenH - frameH) / 2,
-          left: 0,
+          top: mediaFrame.top + (mediaFrame.height - boxH) / 2,
+          left: (screenW - boxW) / 2,
         };
         return (
           <GestureDetector gesture={zoomGesture}>
@@ -498,7 +520,9 @@ function MediaPreviewBody({
 
       case 'video':
         return (
-          <View style={{ width: screenW, height: screenH }}>
+          <View
+            style={{ position: 'absolute', left: 0, top: mediaFrame.top, width: screenW, height: mediaFrame.height }}
+          >
             {videoPosterUri && !videoPlaying ? (
               <ExpoImage
                 source={{ uri: videoPosterUri }}

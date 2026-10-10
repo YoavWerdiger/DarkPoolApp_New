@@ -8,7 +8,15 @@ MODE=${1:-smoke}
 if [ "$MODE" = "full" ]; then EXTRA="-e PEAK=450 -e LOGIN_USERS=25";
 elif [ "$MODE" = "stress" ]; then EXTRA="-e STRESS=1 -e PEAK=450 -e LOGIN_USERS=25 -e BROWSE_PEAK=${BROWSE_PEAK:-1500} -e THINK=${THINK:-0.1}"; MSG_PER_SEC=${MSG_PER_SEC:-10}; else EXTRA="-e SMOKE=1 -e PEAK=5 -e LOGIN_USERS=3"; fi
 mkdir -p loadtest/out
+# כל האפליקציה, 100 משתמשים (Grafana): sh loadtest/run.sh app-smoke | app
 # ענן (Grafana, עד 100 VUs): sh loadtest/run.sh cloud-smoke | cloud-stress
+case "$MODE" in app-smoke|app)
+  [ "$MODE" = "app-smoke" ] && SM="-e SMOKE=1" || SM=""
+  exec "${K6:-$HOME/.local/bin/k6}" cloud run $SM \
+    -e SUPABASE_URL="$EXPO_PUBLIC_SUPABASE_URL" -e ANON_KEY="$EXPO_PUBLIC_SUPABASE_ANON_KEY" \
+    -e LT_PASSWORD="$LT_PASSWORD" -e GROUP_ID=24e6abda-43f5-441f-a829-c6862625cc3e \
+    loadtest/k6-cloud-app.js ;;
+esac
 case "$MODE" in cloud-*)
   [ "$MODE" = "cloud-smoke" ] && SM="-e SMOKE=1" || SM=""
   exec "${K6:-$HOME/.local/bin/k6}" cloud run $SM \

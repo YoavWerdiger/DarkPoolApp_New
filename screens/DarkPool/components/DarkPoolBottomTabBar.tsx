@@ -3,7 +3,16 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  interpolateColor,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
@@ -86,8 +95,18 @@ export function DarkPoolBottomTabBar({ state, navigation }: BottomTabBarProps) {
           const meta = TAB_META[route.name as TabRoute];
           if (!meta) return null;
           return (
-            <Pressable
+            <TabButton
               key={route.key}
+              focused={focused}
+              meta={meta}
+              styles={styles}
+              onLayout={(e) => {
+                const { x, width } = e.nativeEvent.layout;
+                frames.current.set(index, { x, width });
+                if (index === state.index) moveTo(index, false);
+                if (frames.current.size >= state.routes.length && !measured) setMeasured(true);
+              }}
+              showStaticFocus={focused && !measured}
               onPress={() => {
                 if (!focused) void HapticFeedback.selection();
                 const e = navigation.emit({
@@ -99,28 +118,79 @@ export function DarkPoolBottomTabBar({ state, navigation }: BottomTabBarProps) {
                   navigation.navigate(route.name);
                 }
               }}
-              onLayout={(e) => {
-                const { x, width } = e.nativeEvent.layout;
-                frames.current.set(index, { x, width });
-                if (index === state.index) moveTo(index, false);
-                if (frames.current.size >= state.routes.length && !measured) setMeasured(true);
-              }}
-              style={[styles.tab, focused && !measured && styles.tabFocused]}
-              accessibilityRole="button"
-              accessibilityState={{ selected: focused }}
-            >
-              <Ionicons
-                name={focused ? meta.iconActive : meta.icon}
-                size={22}
-                color={focused ? tokens.colors.primary.main : tokens.colors.text.tertiary}
-              />
-              <Text style={[styles.label, focused && styles.labelFocused]}>{meta.label}</Text>
-            </Pressable>
+            />
           );
         })}
         </View>
       </View>
     </View>
+  );
+}
+
+/** טאב: קפיצה קטנה של האייקון בבחירה + מעבר צבע הדרגתי של האייקון והתווית */
+function TabButton({
+  focused,
+  meta,
+  styles,
+  onPress,
+  onLayout,
+  showStaticFocus,
+}: {
+  focused: boolean;
+  meta: { label: string; icon: React.ComponentProps<typeof Ionicons>['name']; iconActive: React.ComponentProps<typeof Ionicons>['name'] };
+  styles: ReturnType<typeof createStyles>;
+  onPress: () => void;
+  onLayout: (e: import('react-native').LayoutChangeEvent) => void;
+  showStaticFocus: boolean;
+}) {
+  const tokens = useDesignTokens();
+  const reduceMotion = useReducedMotion();
+  const scale = useSharedValue(1);
+  const lift = useSharedValue(0);
+  const focus = useSharedValue(focused ? 1 : 0);
+  const first = useRef(true);
+  useEffect(() => {
+    focus.value = reduceMotion ? (focused ? 1 : 0) : withTiming(focused ? 1 : 0, { duration: 220 });
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    if (focused && !reduceMotion) {
+      scale.value = withSequence(
+        withTiming(1.16, { duration: 120, easing: Easing.out(Easing.quad) }),
+        withSpring(1, { damping: 10, stiffness: 220 }),
+      );
+      lift.value = withSequence(withTiming(-3, { duration: 120 }), withSpring(0, { damping: 12, stiffness: 200 }));
+    }
+  }, [focused, reduceMotion, focus, scale, lift]);
+
+  const iconStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: lift.value }, { scale: scale.value }],
+  }));
+  const labelStyle = useAnimatedStyle(
+    () => ({
+      color: interpolateColor(focus.value, [0, 1], [tokens.colors.text.tertiary, tokens.colors.text.primary]),
+    }),
+    [tokens.colors.text.tertiary, tokens.colors.text.primary],
+  );
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onLayout={onLayout}
+      style={[styles.tab, showStaticFocus && styles.tabFocused]}
+      accessibilityRole="button"
+      accessibilityState={{ selected: focused }}
+    >
+      <Animated.View style={iconStyle}>
+        <Ionicons
+          name={focused ? meta.iconActive : meta.icon}
+          size={22}
+          color={focused ? tokens.colors.primary.main : tokens.colors.text.tertiary}
+        />
+      </Animated.View>
+      <Animated.Text style={[styles.label, focused && styles.labelFocused, labelStyle]}>{meta.label}</Animated.Text>
+    </Pressable>
   );
 }
 

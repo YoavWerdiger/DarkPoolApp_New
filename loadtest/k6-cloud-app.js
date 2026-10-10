@@ -144,7 +144,7 @@ function chat(u) {
       GET(u, 'group_by_id', `chat_groups?select=*&id=eq.${GROUP}`),
       GET(u, 'my_role', `chat_group_members?select=role&group_id=eq.${GROUP}&user_id=eq.${u.id}`),
       RPC(u, 'set_chat_group_viewing', { p_group_id: GROUP, p_is_viewing: true }, 'write'),
-      RPC(u, 'reset_unread_count', { p_group_id: GROUP, p_user_id: u.id }, 'write'),
+      RPC(u, 'reset_unread_count', { p_group_id: GROUP, p_user_id: u.id, p_last_read_message_id: null }, 'write'),
     ]);
     think(5, 20);
     // השלמת הודעות חדשות (delta) — הבקשה השכיחה ביותר בתעבורה האמיתית

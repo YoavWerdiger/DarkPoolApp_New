@@ -95,6 +95,24 @@ function previewChatContent(messageType: string | undefined, content: string | u
   }
 }
 
+/**
+ * .in() עם הרבה מזהים נכנס ל-URL — מעל כמה מאות חברים בקבוצה ה-URL ארוך מדי והשרת מחזיר 400
+ * (התגלה בבדיקת עומס: קבוצה של 1000 → אף פוש לא נשלח). מפצלים למנות.
+ */
+const IN_CHUNK = 150;
+async function selectInChunks<T>(
+  run: (ids: string[]) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+  ids: string[],
+): Promise<{ data: T[]; error: { message: string } | null }> {
+  const out: T[] = [];
+  for (let i = 0; i < ids.length; i += IN_CHUNK) {
+    const { data, error } = await run(ids.slice(i, i + IN_CHUNK));
+    if (error) return { data: out, error };
+    if (data) out.push(...data);
+  }
+  return { data: out, error: null };
+}
+
 serve(async (req) => {
   try {
     // CORS headers
@@ -173,10 +191,21 @@ serve(async (req) => {
 
     // 3. כל חברי הקבוצה (כולל שולח/מושתקים) — סינון גם ברמת user וגם ברמת Expo token
     // (טוקן משותף אחרי החלפת חשבון על אותו מכשיר).
-    const { data: membersData, error: membersError } = await supabase
-      .from('chat_group_members')
-      .select('user_id, muted, is_muted, notifications_enabled')
-      .eq('group_id', group_id);
+    // עמודים של 1000 — PostgREST מחזיר לכל היותר 1000 שורות לבקשה (בקבוצה גדולה יותר חלק מהחברים נעלמו)
+    type MemberRow = { user_id: string; muted: boolean | null; is_muted: boolean | null; notifications_enabled: boolean | null };
+    const membersData: MemberRow[] = [];
+    let membersError: { message: string } | null = null;
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await supabase
+        .from('chat_group_members')
+        .select('user_id, muted, is_muted, notifications_enabled')
+        .eq('group_id', group_id)
+        .order('user_id')
+        .range(from, from + 999);
+      if (error) { membersError = error; break; }
+      membersData.push(...((data ?? []) as MemberRow[]));
+      if (!data || data.length < 1000) break;
+    }
 
     if (membersError) {
       console.error('❌ Error fetching group members:', membersError);
@@ -263,10 +292,15 @@ serve(async (req) => {
     console.log(`📱 Eligible users for notification: ${eligibleUserIds.length}`);
 
     // 3b. כיבוי גלובלי / התראות הודעות — user_notification_settings
-    const { data: notifPrefs, error: prefsError } = await supabase
-      .from('user_notification_settings')
-      .select('user_id, notifications_enabled, message_notifications')
-      .in('user_id', eligibleUserIds);
+    const { data: notifPrefs, error: prefsError } = await selectInChunks<{
+      user_id: string; notifications_enabled: boolean | null; message_notifications: boolean | null;
+    }>(
+      (ids) => supabase
+        .from('user_notification_settings')
+        .select('user_id, notifications_enabled, message_notifications')
+        .in('user_id', ids),
+      eligibleUserIds,
+    );
 
     if (prefsError) {
       console.warn('⚠️ Could not load user_notification_settings:', prefsError.message);
@@ -304,11 +338,16 @@ serve(async (req) => {
     );
 
     // 4. קבלת device tokens של המשתמשים הזכאים
-    const { data: recipientTokenRows, error: tokensError } = await supabase
-      .from('device_tokens')
-      .select('expo_push_token, user_id')
-      .in('user_id', filteredUserIds)
-      .eq('is_active', true);
+    const { data: recipientTokenRows, error: tokensError } = await selectInChunks<{
+      expo_push_token: string; user_id: string;
+    }>(
+      (ids) => supabase
+        .from('device_tokens')
+        .select('expo_push_token, user_id')
+        .in('user_id', ids)
+        .eq('is_active', true),
+      filteredUserIds,
+    );
 
     if (tokensError) {
       console.error('❌ Error fetching device tokens:', tokensError);
@@ -321,11 +360,16 @@ serve(async (req) => {
     // 4b. טוקנים שיש להחריג — של השולח ושל מי שהשתיק/כיבה התראות (אותו מכשיר/טוקן משותף)
     let excludedTokenSet = new Set<string>();
     if (tokenExclusionUserIds.length > 0) {
-      const { data: excludedTokenRows, error: excludedTokensError } = await supabase
-        .from('device_tokens')
-        .select('expo_push_token')
-        .in('user_id', tokenExclusionUserIds)
-        .eq('is_active', true);
+      const { data: excludedTokenRows, error: excludedTokensError } = await selectInChunks<{
+        expo_push_token: string;
+      }>(
+        (ids) => supabase
+          .from('device_tokens')
+          .select('expo_push_token')
+          .in('user_id', ids)
+          .eq('is_active', true),
+        tokenExclusionUserIds,
+      );
 
       if (excludedTokensError) {
         console.warn('⚠️ Could not load excluded device tokens:', excludedTokensError.message);
@@ -462,10 +506,12 @@ serve(async (req) => {
 
     if (invalidTokens && invalidTokens.length > 0) {
       console.log(`🗑️ Marking ${invalidTokens.length} invalid tokens as inactive`);
-      await supabase
-        .from('device_tokens')
-        .update({ is_active: false })
-        .in('expo_push_token', invalidTokens);
+      for (let i = 0; i < invalidTokens.length; i += IN_CHUNK) {
+        await supabase
+          .from('device_tokens')
+          .update({ is_active: false })
+          .in('expo_push_token', invalidTokens.slice(i, i + IN_CHUNK));
+      }
     }
 
     console.log(`✅ Chat notification sent: ${successCount}/${messages.length} successful`);

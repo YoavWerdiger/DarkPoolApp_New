@@ -18,6 +18,14 @@ import {
   Animated,
   type ImageSourcePropType,
 } from 'react-native';
+import {
+  discardPendingStory,
+  getPendingStories,
+  onPendingStoryPublished,
+  retryPendingStory,
+  subscribePendingStories,
+  type PendingStory,
+} from '../../lib/pendingStories';
 import { chromeSurfaceFill } from '../../components/ui/chromeControl';
 import { DayDividerPill, DayDividerSlidingLayer } from '../../components/ui/DayDividerPill';
 import { useSlidingIndicator } from '../../components/ui/SlidingIndicator';
@@ -60,7 +68,7 @@ import { logger } from '../../utils/logger';
 import { getChatMessagePreview } from '../../utils/chatMessagePreview';
 import { isUsableChatDisplayName } from '../../lib/chatMessageIdentity';
 import { isAnnouncementGroup } from '../../utils/isAnnouncementGroup';
-import { legacyAlert } from '../../utils/appDialog';
+import { showAppDialog, legacyAlert } from '../../utils/appDialog';
 import { HapticFeedback, triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
 import { ChatSessionBackdrop } from '../../components/chat/ChatSessionBackdrop';
 import { CHAT_LAYOUT, chatSectionTitleStyle } from '../../components/chat/chatLayout';
@@ -430,6 +438,30 @@ export default function ChatGroupsListScreen() {
       setUsersWithStories([]);
     }
   }, [user?.id]);
+
+  // סטוריז שעולים ברקע (העלאה אופטימית) — מוצגים מיד בשורה; בסיום מרעננים
+  const [pendingStories, setPendingStories] = useState<PendingStory[]>(() => getPendingStories(user?.id));
+  useEffect(() => {
+    const sync = () => setPendingStories(getPendingStories(user?.id));
+    sync();
+    return subscribePendingStories(sync);
+  }, [user?.id]);
+  useEffect(() => onPendingStoryPublished(() => void loadStories()), [loadStories]);
+  const onPendingPress = useCallback((p: PendingStory) => {
+    if (p.status !== 'failed') return;
+    void showAppDialog({
+      title: 'הסטטוס לא עלה',
+      message: 'בדוק את החיבור ונסה שוב.',
+      type: 'error',
+      buttons: [
+        { text: 'נסה שוב', style: 'default' },
+        { text: 'מחק', style: 'destructive' },
+      ],
+    }).then((idx) => {
+      if (idx === 0) retryPendingStory(p.id);
+      else if (idx === 1) discardPendingStory(p.id);
+    });
+  }, []);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -1347,6 +1379,52 @@ export default function ChatGroupsListScreen() {
                 storiesScrollRef.current?.scrollToEnd({ animated: false });
               }}
             >
+            {pendingStories.map((p) => (
+              <View key={p.id} style={styles.statusStorySlot}>
+                <Pressable
+                  style={styles.statusStoryItem}
+                  onPress={() => onPendingPress(p)}
+                  accessibilityRole="button"
+                  accessibilityLabel={p.status === 'failed' ? 'הסטטוס לא עלה — הקש לניסיון חוזר' : 'הסטטוס עולה'}
+                >
+                  <StoryAvatarRing size={68} storyCount={1} hasViewed={false}>
+                    {p.mediaType === 'image' && p.localUri ? (
+                      <Image source={{ uri: p.localUri }} style={styles.statusCircleImage} resizeMode="cover" />
+                    ) : (
+                      <View
+                        style={[
+                          styles.storyAvatarPlaceholder,
+                          p.backgroundColor ? { backgroundColor: p.backgroundColor } : null,
+                        ]}
+                      >
+                        <Ionicons
+                          name={p.mediaType === 'video' ? 'videocam' : 'text'}
+                          size={20}
+                          color={p.backgroundColor ? '#fff' : tokens.colors.text.secondary}
+                        />
+                      </View>
+                    )}
+                    <View
+                      style={[
+                        StyleSheet.absoluteFill,
+                        styles.pendingStoryOverlay,
+                        p.status === 'failed' && { backgroundColor: 'rgba(229,57,53,0.55)' },
+                      ]}
+                    >
+                      {p.status === 'failed' ? (
+                        <Ionicons name="alert-circle" size={22} color="#fff" />
+                      ) : (
+                        <ActivityIndicator size="small" color="#fff" />
+                      )}
+                    </View>
+                  </StoryAvatarRing>
+                  <Text style={[styles.statusLabel, { color: tokens.colors.text.primary }]} numberOfLines={1}>
+                    {p.status === 'failed' ? 'נכשל' : 'עולה…'}
+                  </Text>
+                </Pressable>
+                <View style={styles.statusStoryGap} />
+              </View>
+            ))}
             {usersWithStories.map((s, idx) => {
               const avatar = s.user?.profile_picture;
               const displayName = s.user?.display_name || s.user?.full_name || 'משתמש';
@@ -1618,6 +1696,12 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   statusCircle: { alignItems: 'center' },
   statusStorySlot: { flexDirection: 'row', alignItems: 'flex-start', flexShrink: 0 },
   statusStoryGap: { width: 7, flexShrink: 0 },
+  pendingStoryOverlay: {
+    borderRadius: 999,
+    backgroundColor: 'rgba(0,0,0,0.38)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   statusStoryItem: { alignItems: 'center', flexShrink: 0 },
   // לפי הטופו: מילוי כפתורי הכרום (כמו שאר הכפתורים העגולים), לא אפור tertiary
   statusCircleInner: {

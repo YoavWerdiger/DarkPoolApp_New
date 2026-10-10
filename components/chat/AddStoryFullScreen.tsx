@@ -2,6 +2,7 @@ import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { logger } from '../../utils/logger';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Modal, Pressable, Image, Dimensions, StatusBar, TextInput, KeyboardAvoidingView, Platform, ScrollView, FlatList, Animated, Keyboard } from 'react-native';
+import { publishStoryOptimistic } from '../../lib/pendingStories';
 import { InlineAppDialog } from '../ui/InlineAppDialog';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { APP_TYPE } from '../ui/appType';
@@ -1651,59 +1652,33 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
           })
         : undefined;
 
-      setIsUploading(true);
-      setPhase('uploading');
-
-      const { url, error } = mediaType === 'video'
-        ? await uploadStoryVideo(mediaUri, user.id)
-        : await uploadStoryImage(mediaUri, user.id);
-
-      logger.debug('AddStoryFullScreen', `Upload result: url=${url}, error=${error}, contentLen=${overlayContent?.length ?? 0}`);
-
-      if (error || !url) {
-        legacyAlert('שגיאה', error || 'לא הצלחנו להעלות');
-        setPhase('preview');
-        return;
-      }
-
-      await createStory(user.id, {
-        media_type: mediaType,
-        media_url: url,
+      // אופטימי: המסך נסגר מיד, הסטורי מופיע בשורה עם «עולה», וההעלאה רצה ברקע
+      publishStoryOptimistic({
+        userId: user.id,
+        mediaType,
+        localUri: mediaUri,
         content: overlayContent,
       });
-
-      logger.debug('AddStoryFullScreen', 'Story created successfully');
-      onAdded();
+      void HapticFeedback.success();
       onClose();
     } catch (e: any) {
       logger.error('AddStoryFullScreen', 'Share failed', e);
       legacyAlert('שגיאה', e?.message || 'משהו השתבש');
-      setPhase('preview');
-    } finally {
-      setIsUploading(false);
     }
   };
 
   const handleShareText = async () => {
     if (!user?.id || !textContent.trim()) return;
-    setIsUploading(true);
-    setPhase('uploading');
-    try {
-      const bg = GRADIENT_BACKGROUNDS[textBgIndex];
-      await createStory(user.id, {
-        media_type: 'text',
-        content: textContent.trim(),
-        background_color: bg[0],
-      });
-      onAdded();
-      onClose();
-    } catch (e: any) {
-      legacyAlert('שגיאה', e?.message || 'משהו השתבש');
-      setMode('text');
-      setPhase('capture');
-    } finally {
-      setIsUploading(false);
-    }
+    const bg = GRADIENT_BACKGROUNDS[textBgIndex];
+    publishStoryOptimistic({
+      userId: user.id,
+      mediaType: 'text',
+      localUri: null,
+      content: textContent.trim(),
+      backgroundColor: bg[0],
+    });
+    void HapticFeedback.success();
+    onClose();
   };
 
   const editingOverlay = editingOverlayId

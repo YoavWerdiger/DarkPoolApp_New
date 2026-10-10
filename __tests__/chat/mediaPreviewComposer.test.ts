@@ -7,7 +7,7 @@ const src = readFileSync(
 );
 
 describe('media preview before send', () => {
-  it('shows the photo full-bleed over a blurred copy, with floating theme-colored controls', () => {
+  it('shows the photo inside the shared frame over a blurred copy, with a green send button', () => {
     expect(src).toMatch(/MediaBlurBackdrop/);
     expect(src).toMatch(/contentFit="cover"/);
     expect(src).toMatch(/ResizeMode\.CONTAIN/);
@@ -17,7 +17,10 @@ describe('media preview before send', () => {
     expect(src).not.toMatch(/happy-outline/);
     expect(src).not.toMatch(/<ReactionPicker/);
     expect(src).toMatch(/backgroundColor: tokens\.colors\.background\.cardSolid/);
-    expect(src).toMatch(/backgroundColor: tokens\.colors\.primary\.lightCta/);
+    // כמו שורת הכתיבה בצ'אט: כפתור שליחה ירוק
+    expect(src).toMatch(/backgroundColor: tokens\.colors\.primary\.main/);
+    // חלון כמו המצלמה / הסטורי — לא על כל המסך
+    expect(src).toMatch(/stableCameraPreviewFrame/);
     expect(src).toMatch(/color: tokens\.colors\.text\.primary/);
   });
 });

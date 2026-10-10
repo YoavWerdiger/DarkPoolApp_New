@@ -13,6 +13,7 @@ import {
   Pressable,
   Dimensions,
 } from 'react-native';
+import { SlidingPillGroup } from '../ui/DayDividerPill';
 import { AppSwitch } from '../ui/AppSwitch';
 import { Ionicons } from '@expo/vector-icons';
 import UICard from '../ui/UICard';
@@ -21,7 +22,7 @@ import { Trash2 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomSheetClose } from '../ui/BottomSheet/BottomSheet';
 import { ChatBottomSheet } from './ChatBottomSheet';
-import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
+import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE, headerExitButtonFill } from '../ui/DayNavBlurButton';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { UI_CARD_RADIUS } from '../ui/appLayout';
 import { formFieldInputStyle } from '../ui/formControl';
@@ -260,6 +261,9 @@ export default function PollCreationBottomSheet({
       snapPoints={[POLL_SHEET_SNAP]}
       showBrandWatermark={false}
       contentPaddingBottom={sheetBottomPad}
+      // לפי הטופו: קנבס ערכת הנושא ופינות xl
+      backgroundColor={tokens.colors.background.primary}
+      topCornerRadius={tokens.borderRadius.xl}
     >
       <KeyboardAvoidingView
         style={styles.container}
@@ -270,8 +274,8 @@ export default function PollCreationBottomSheet({
           <DayNavBlurButton
             onPress={handleClose}
             size={DAY_NAV_BUTTON_SIZE}
-            glassIntensity="subtle"
-            style={styles.headerIconButton}
+            glass={false}
+            style={[styles.headerIconButton, { backgroundColor: headerExitButtonFill(tokens.colors.background.cardSolid) }]}
             accessibilityLabel="חזרה"
           >
             <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
@@ -279,7 +283,6 @@ export default function PollCreationBottomSheet({
 
           <View style={styles.headerCenter}>
             <Text style={styles.title}>יצירת סקר</Text>
-            <Text style={styles.subtitle}>הסקר יישלח לצ׳אט אחרי יצירה</Text>
           </View>
 
           <TouchableOpacity
@@ -434,30 +437,18 @@ export default function PollCreationBottomSheet({
                 <Text style={styles.groupLabel}>הגדרות</Text>
               </View>
               <UICard variant="soft" padding="none" disableBlur style={styles.card}>
-                <View style={styles.segmented}>
-                  <TouchableOpacity
-                    onPress={() => {
-                      dismissKeyboard();
-                      setMultipleChoice(true);
-                    }}
-                    style={[styles.segment, multipleChoice && styles.segmentActive]}
-                  >
-                    <Text style={[styles.segmentText, multipleChoice && styles.segmentTextActive]}>
-                      בחירה מרובה
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => {
-                      dismissKeyboard();
-                      setMultipleChoice(false);
-                    }}
-                    style={[styles.segment, !multipleChoice && styles.segmentActive]}
-                  >
-                    <Text style={[styles.segmentText, !multipleChoice && styles.segmentTextActive]}>
-                      בחירה יחידה
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+                <SlidingPillGroup
+                  options={[
+                    { id: 'single' as const, label: 'בחירה יחידה' },
+                    { id: 'multiple' as const, label: 'בחירה מרובה' },
+                  ]}
+                  value={multipleChoice ? 'multiple' : 'single'}
+                  onChange={(id) => {
+                    dismissKeyboard();
+                    setMultipleChoice(id === 'multiple');
+                  }}
+                  style={styles.segmented}
+                />
 
                 <Text style={styles.helperText}>
                   {multipleChoice
@@ -528,8 +519,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => {
       alignItems: 'center',
       paddingHorizontal: CHAT_LAYOUT.screenPaddingHorizontal,
       paddingVertical: CHAT_LAYOUT.cardTitleToBodyGap,
-      borderBottomWidth: 1,
-      borderBottomColor: borderColor,
       gap: CHAT_LAYOUT.stackGapTight,
     },
     headerIconButton: {
@@ -537,7 +526,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => {
     },
     headerCenter: {
       flex: 1,
-      alignItems: 'flex-end',
+      alignItems: 'center',
     },
     title: {
       ...chatSheetTitleStyle,
@@ -555,7 +544,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => {
       alignItems: 'center',
       justifyContent: 'center',
       paddingHorizontal: CHAT_LAYOUT.stackGapTight,
-      backgroundColor: tokens.colors.background.navChrome,
+      backgroundColor: tokens.colors.background.cardSolid,
     },
     headerTextButtonDisabled: {
       opacity: 0.45,
@@ -598,10 +587,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => {
     card: {
       borderRadius: UI_CARD_RADIUS,
       overflow: 'hidden',
+      backgroundColor: tokens.colors.background.cardSolid,
     },
-    cardFocused: {
-      backgroundColor: tokens.colors.background.tertiary,
-    },
+    cardFocused: {},
     rowDivider: {
       height: 1,
       backgroundColor: borderColor,
@@ -631,7 +619,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => {
       borderRadius: 11,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: tokens.colors.background.tertiary,
+      backgroundColor: tokens.colors.background.primary,
       flexShrink: 0,
     },
     optionIndexText: {
@@ -690,9 +678,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => {
 
     segmented: {
       flexDirection: 'row-reverse',
-      backgroundColor: tokens.colors.background.tertiary,
-      borderRadius: tokens.borderRadius.full,
-      padding: 3,
+      gap: 8,
       marginTop: CHAT_LAYOUT.cardPadding,
       marginHorizontal: CHAT_LAYOUT.cardPadding,
     },
@@ -746,8 +732,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => {
       paddingHorizontal: CHAT_LAYOUT.screenPaddingHorizontal,
       paddingTop: CHAT_LAYOUT.cardTitleToBodyGap,
       paddingBottom: CHAT_LAYOUT.stackGapSmall,
-      borderTopWidth: 1,
-      borderTopColor: borderColor,
     },
   });
 };

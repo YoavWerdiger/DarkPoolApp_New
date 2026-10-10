@@ -21,13 +21,20 @@ import UIButton from '../ui/UIButton';
 import { Trash2 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomSheetClose } from '../ui/BottomSheet/BottomSheet';
-import { ChatBottomSheet } from './ChatBottomSheet';
+import { ChatSheetTopoHeader, useChatFitContentSnap } from './ChatBottomSheet';
+import BottomSheet from '../ui/BottomSheet/BottomSheet';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE, headerExitButtonFill } from '../ui/DayNavBlurButton';
 import { useDesignTokens } from '../ui/DesignTokens';
-import { UI_CARD_RADIUS } from '../ui/appLayout';
-import { formFieldInputStyle } from '../ui/formControl';
-import { appSheetButtonLabelStyle, appSheetSubtitleStyle } from '../ui/appType';
+import { APP_LAYOUT } from '../ui/appLayout';
+import {
+  formFieldInputStyle,
+  formFieldLabelStyle,
+  formFieldPlaceholderColor,
+  formFieldShellStyle,
+} from '../ui/formControl';
+import { APP_TYPE, appPhysicalRightText } from '../ui/appType';
 import { useAuth } from '../../context/AuthContext';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 import { useTheme } from '../../context/ThemeContext';
 import { useChatActions } from '../../context/ChatContext';
 import { PollService } from '../../services/pollService';
@@ -73,7 +80,6 @@ export default function PollCreationBottomSheet({
   const tokens = useDesignTokens();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-  const styles = useMemo(() => createStyles(tokens), [tokens]);
   const { user } = useAuth();
   const animatedClose = useBottomSheetClose();
   const { addOptimisticMediaMessage, removeOptimisticMessage } = useChatActions();
@@ -254,484 +260,296 @@ export default function PollCreationBottomSheet({
     }
   };
 
+  const { snapPoint, onContentLayout } = useChatFitContentSnap(0.8, 0.92, 0.4, `${visible}`);
+  const optionsMaxH = Math.round(Dimensions.get('window').height * 0.32);
+  const field = (focused: boolean, multiline = false) => [
+    formFieldShellStyle({ tokens, focused, multiline }),
+    styles.fieldShell,
+  ];
+
   return (
-    <ChatBottomSheet
-      visible={visible}
+    // אותו שיט כמו «קבוצה חדשה» (הטופו): קנבס ערכת הנושא, פינות xl, גובה לפי התוכן
+    <BottomSheet
+      isOpen={visible}
       onClose={handleClose}
-      snapPoints={[POLL_SHEET_SNAP]}
-      showBrandWatermark={false}
-      contentPaddingBottom={sheetBottomPad}
-      // לפי הטופו: קנבס ערכת הנושא ופינות xl
+      snapPoints={[snapPoint]}
+      fitContent
+      edgeToEdge
+      showHandle
+      enablePanDownToClose
+      useModal
+      showBrandBackground={false}
       backgroundColor={tokens.colors.background.primary}
       topCornerRadius={tokens.borderRadius.xl}
+      avoidKeyboard
+      contentPaddingBottom={0}
     >
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        {/* Header */}
-        <Pressable onPress={dismissKeyboard} style={styles.header}>
-          <DayNavBlurButton
-            onPress={handleClose}
-            size={DAY_NAV_BUTTON_SIZE}
-            glass={false}
-            style={[styles.headerIconButton, { backgroundColor: headerExitButtonFill(tokens.colors.background.cardSolid) }]}
-            accessibilityLabel="חזרה"
-          >
-            <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
-          </DayNavBlurButton>
+      <View style={[styles.root, { paddingBottom: Math.max(insets.bottom, 12) }]} onLayout={onContentLayout}>
+        <ChatSheetTopoHeader title="סקר חדש" onClose={handleClose} />
 
-          <View style={styles.headerCenter}>
-            <Text style={styles.title}>יצירת סקר</Text>
-          </View>
+        <View style={styles.labelRow}>
+          <Text style={[formFieldLabelStyle({ tokens, focused: questionFocused }), styles.labelFlex]}>שאלה</Text>
+          <Text style={[styles.counter, { color: tokens.colors.text.tertiary }]}>
+            {question.length}/{QUESTION_MAX_LEN}
+          </Text>
+        </View>
+        <View style={field(questionFocused, true)}>
+          <TextInput
+            value={question}
+            onChangeText={setQuestion}
+            onFocus={() => setQuestionFocused(true)}
+            onBlur={() => setQuestionFocused(false)}
+            placeholder="מה תרצה לשאול?"
+            placeholderTextColor={formFieldPlaceholderColor(tokens)}
+            style={[formFieldInputStyle(tokens), appPhysicalRightText, styles.textArea]}
+            multiline
+            maxLength={QUESTION_MAX_LEN}
+            textAlignVertical="top"
+          />
+        </View>
 
-          <TouchableOpacity
-            onPress={() => {
-              dismissKeyboard();
-              resetForm();
-            }}
-            style={[
-              styles.headerTextButton,
-              (isCreating || (!question.trim() && options.every((o) => !o.trim()))) &&
-                styles.headerTextButtonDisabled,
-            ]}
-            disabled={isCreating || (!question.trim() && options.every((o) => !o.trim()))}
-          >
-            <Text style={styles.headerTextButtonLabel}>נקה</Text>
-          </TouchableOpacity>
-        </Pressable>
-
-        {/* Body */}
+        <View style={[styles.labelRow, styles.labelGap]}>
+          <Text style={[formFieldLabelStyle({ tokens, focused: false }), styles.labelFlex]}>אפשרויות</Text>
+          <Text style={[styles.counter, { color: tokens.colors.text.tertiary }]}>
+            {options.length}/{MAX_OPTIONS}
+          </Text>
+        </View>
         <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
+          style={{ maxHeight: optionsMaxH }}
+          contentContainerStyle={styles.optionsList}
           keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          onScrollBeginDrag={dismissKeyboard}
           showsVerticalScrollIndicator={false}
         >
-          <Pressable onPress={dismissKeyboard} style={styles.form}>
-            <View>
-              <View style={styles.sectionLabelRow}>
-                <Text style={styles.groupLabel}>שאלה</Text>
-                <Text style={styles.counter}>
-                  {question.length}/{QUESTION_MAX_LEN}
-                </Text>
-              </View>
-              <UICard
-                variant="soft"
-                padding="none"
-                disableBlur
-                style={[styles.card, questionFocused && styles.cardFocused]}
-              >
+          {options.map((option, index) => {
+            const showRemove = options.length > MIN_OPTIONS;
+            const isLast = index === options.length - 1;
+            return (
+              <View key={`poll-option-${index}`} style={[field(false), styles.optionShell]}>
                 <TextInput
-                  value={question}
-                  onChangeText={setQuestion}
-                  placeholder="מה תרצה לשאול?"
-                  placeholderTextColor={tokens.colors.text.tertiary}
-                  style={styles.questionInput}
-                  textAlignVertical="top"
-                  multiline
-                  maxLength={QUESTION_MAX_LEN}
-                  blurOnSubmit
-                  returnKeyType="done"
-                  onSubmitEditing={dismissKeyboard}
-                  onFocus={() => setQuestionFocused(true)}
-                  onBlur={() => setQuestionFocused(false)}
+                  value={option}
+                  onChangeText={(text) => updateOption(index, text)}
+                  placeholder={`אפשרות ${index + 1}`}
+                  placeholderTextColor={formFieldPlaceholderColor(tokens)}
+                  style={[formFieldInputStyle(tokens), appPhysicalRightText, styles.optionInput]}
+                  maxLength={OPTION_MAX_LEN}
+                  returnKeyType={isLast ? 'done' : 'next'}
+                  blurOnSubmit={isLast}
+                  onSubmitEditing={() => {
+                    if (isLast) dismissKeyboard();
+                  }}
                 />
-              </UICard>
-            </View>
-
-            <View>
-              <View style={styles.sectionLabelRow}>
-                <Text style={styles.groupLabel}>אפשרויות</Text>
-                <Text style={styles.counter}>
-                  {options.length}/{MAX_OPTIONS}
-                </Text>
+                {showRemove ? (
+                  <Pressable
+                    onPress={() => removeOption(index)}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel="הסר אפשרות"
+                  >
+                    <Ionicons name="close-circle" size={20} color={tokens.colors.text.tertiary} />
+                  </Pressable>
+                ) : null}
               </View>
-              <UICard variant="soft" padding="none" disableBlur style={styles.card}>
-                {options.map((option, index) => {
-                  const showRemove = options.length > MIN_OPTIONS;
-                  const isLast = index === options.length - 1;
-                  return (
-                    <View key={`poll-option-${index}`}>
-                      {index > 0 ? <View style={styles.rowDivider} /> : null}
-                      <View style={styles.optionRow}>
-                        <View style={styles.optionIndex}>
-                          <Text style={styles.optionIndexText}>{index + 1}</Text>
-                        </View>
-                        <TextInput
-                          value={option}
-                          onChangeText={(text) => updateOption(index, text)}
-                          placeholder={`אפשרות ${index + 1}`}
-                          placeholderTextColor={tokens.colors.text.tertiary}
-                          style={styles.optionInput}
-                          maxLength={OPTION_MAX_LEN}
-                          returnKeyType={isLast ? 'done' : 'next'}
-                          blurOnSubmit={isLast}
-                          onSubmitEditing={() => {
-                            if (isLast) {
-                              dismissKeyboard();
-                            }
-                          }}
-                        />
-                        {showRemove ? (
-                          <TouchableOpacity
-                            onPress={() => removeOption(index)}
-                            style={styles.removeOptionButton}
-                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                            accessibilityLabel="הסר אפשרות"
-                          >
-                            <Trash2
-                              size={18}
-                              color={tokens.colors.danger.main}
-                              strokeWidth={2}
-                            />
-                          </TouchableOpacity>
-                        ) : (
-                          <View style={styles.removeOptionButtonPlaceholder} />
-                        )}
-                      </View>
-                    </View>
-                  );
-                })}
+            );
+          })}
+        </ScrollView>
+        {options.length < MAX_OPTIONS ? (
+          <Pressable
+            onPress={() => {
+              void HapticFeedback.selection();
+              addOption();
+            }}
+            style={[styles.addChip, { backgroundColor: tokens.colors.background.cardSolid }]}
+            accessibilityRole="button"
+          >
+            <Ionicons name="add" size={16} color={tokens.colors.text.secondary} />
+            <Text style={[styles.addChipText, { color: tokens.colors.text.primary }]}>הוסף אפשרות</Text>
+          </Pressable>
+        ) : null}
+        {hasDuplicateOptions ? (
+          <Text style={[styles.warning, { color: tokens.colors.warning.main }]}>
+            יש אפשרויות כפולות — כל אפשרות צריכה להיות ייחודית.
+          </Text>
+        ) : null}
 
-                <View style={styles.rowDivider} />
-                <TouchableOpacity
-                  onPress={addOption}
-                  disabled={options.length >= MAX_OPTIONS}
+        {/* סוג הבחירה — כמו «מי כותב בקבוצה» */}
+        <Text style={[formFieldLabelStyle({ tokens, focused: false }), styles.labelGap]}>סוג בחירה</Text>
+        <View style={[styles.segment, { backgroundColor: tokens.colors.background.cardSolid }]}>
+          {([
+            { key: false, label: 'בחירה יחידה' },
+            { key: true, label: 'בחירה מרובה' },
+          ] as const).map((opt) => {
+            const active = multipleChoice === opt.key;
+            return (
+              <Pressable
+                key={opt.label}
+                onPress={() => {
+                  if (!active) void HapticFeedback.selection();
+                  dismissKeyboard();
+                  setMultipleChoice(opt.key);
+                }}
+                style={[styles.segmentItem, active && { backgroundColor: tokens.colors.background.tertiary }]}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: active }}
+              >
+                <Text
                   style={[
-                    styles.addOptionRow,
-                    options.length >= MAX_OPTIONS && styles.addOptionRowDisabled,
+                    styles.segmentText,
+                    { color: active ? tokens.colors.text.primary : tokens.colors.text.secondary },
                   ]}
                 >
-                  <Ionicons
-                    name="add"
-                    size={20}
-                    color={
-                      options.length >= MAX_OPTIONS
-                        ? tokens.colors.text.secondary
-                        : tokens.colors.primary.main
-                    }
-                  />
-                  <Text
-                    style={[
-                      styles.addOptionText,
-                      options.length >= MAX_OPTIONS && styles.addOptionTextDisabled,
-                    ]}
-                  >
-                    הוסף אפשרות
-                  </Text>
-                </TouchableOpacity>
-
-                {hasDuplicateOptions ? (
-                  <Text style={styles.inlineWarning}>
-                    יש אפשרויות כפולות — כל אפשרות צריכה להיות ייחודית.
-                  </Text>
-                ) : null}
-              </UICard>
-            </View>
-
-            <View>
-              <View style={styles.sectionLabelRow}>
-                <Text style={styles.groupLabel}>הגדרות</Text>
-              </View>
-              <UICard variant="soft" padding="none" disableBlur style={styles.card}>
-                <SlidingPillGroup
-                  options={[
-                    { id: 'single' as const, label: 'בחירה יחידה' },
-                    { id: 'multiple' as const, label: 'בחירה מרובה' },
-                  ]}
-                  value={multipleChoice ? 'multiple' : 'single'}
-                  onChange={(id) => {
-                    dismissKeyboard();
-                    setMultipleChoice(id === 'multiple');
-                  }}
-                  style={styles.segmented}
-                />
-
-                <Text style={styles.helperText}>
-                  {multipleChoice
-                    ? 'משתמשים יוכלו לבחור יותר מתשובה אחת.'
-                    : 'משתמשים יוכלו לבחור תשובה אחת בלבד.'}
+                  {opt.label}
                 </Text>
+              </Pressable>
+            );
+          })}
+        </View>
 
-                <View style={styles.rowDivider} />
-                <View style={styles.toggleRow}>
-                  <View style={styles.toggleCopy}>
-                    <Text style={styles.toggleTitle}>אפשר לשנות תשובה</Text>
-                    <Text style={styles.toggleSubtitle}>
-                      משתמשים יוכלו לשנות את הבחירה אחרי ההצבעה.
-                    </Text>
-                  </View>
-                  <AppSwitch
-                    value={allowVoteChange}
-                    onValueChange={(next) => {
-                      dismissKeyboard();
-                      setAllowVoteChange(next);
-                    }}
-                    trackColor={{
-                      false: theme.switchTrackOff,
-                      true: tokens.colors.primary.main,
-                    }}
-                    thumbColor={
-                      allowVoteChange ? tokens.colors.text.primary : theme.switchThumbOff
-                    }
-                    ios_backgroundColor={theme.switchTrackOff}
-                    style={styles.switch}
-                    accessibilityLabel="אפשר לשנות תשובה"
-                  />
-                </View>
-              </UICard>
-            </View>
-          </Pressable>
-        </ScrollView>
+        <View style={[styles.toggleRow, { backgroundColor: tokens.colors.background.cardSolid }]}>
+          <View style={styles.toggleCopy}>
+            <Text style={[styles.toggleTitle, { color: tokens.colors.text.primary }]}>אפשר לשנות תשובה</Text>
+            <Text style={[styles.toggleSubtitle, { color: tokens.colors.text.secondary }]}>
+              אפשר לשנות את הבחירה אחרי ההצבעה
+            </Text>
+          </View>
+          <AppSwitch
+            value={allowVoteChange}
+            onValueChange={(next) => {
+              dismissKeyboard();
+              setAllowVoteChange(next);
+            }}
+            trackColor={{ false: theme.switchTrackOff, true: tokens.colors.primary.main }}
+            thumbColor={allowVoteChange ? tokens.colors.text.primary : theme.switchThumbOff}
+            ios_backgroundColor={theme.switchTrackOff}
+            style={styles.switch}
+            accessibilityLabel="אפשר לשנות תשובה"
+          />
+        </View>
 
-        {/* Footer — bottom inset מגיע מ-contentPaddingBottom של השיט (כולל פיצוי off-screen) */}
-        <View style={styles.footer}>
+        <View style={styles.cta}>
           <UIButton
             title={isCreating ? 'יוצר…' : 'צור סקר'}
             variant="primary"
-            size="lg"
             fullWidth
             disabled={!canCreate}
             loading={isCreating}
             onPress={handleCreatePoll}
-            textStyle={appSheetButtonLabelStyle}
           />
         </View>
-      </KeyboardAvoidingView>
-    </ChatBottomSheet>
+      </View>
+    </BottomSheet>
   );
 }
 
-const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => {
-  const borderColor = tokens.colors.border.divider;
-
-  return StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: 'transparent',
-    },
-
-    header: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      paddingHorizontal: CHAT_LAYOUT.screenPaddingHorizontal,
-      paddingVertical: CHAT_LAYOUT.cardTitleToBodyGap,
-      gap: CHAT_LAYOUT.stackGapTight,
-    },
-    headerIconButton: {
-      alignSelf: 'center',
-    },
-    headerCenter: {
-      flex: 1,
-      alignItems: 'center',
-    },
-    title: {
-      ...chatSheetTitleStyle,
-      color: tokens.colors.text.primary,
-    },
-    subtitle: {
-      ...appSheetSubtitleStyle,
-      marginTop: CHAT_LAYOUT.titleSubtitleGap,
-      color: tokens.colors.text.secondary,
-    },
-    headerTextButton: {
-      minWidth: 44,
-      height: 36,
-      borderRadius: tokens.borderRadius.full,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: CHAT_LAYOUT.stackGapTight,
-      backgroundColor: tokens.colors.background.cardSolid,
-    },
-    headerTextButtonDisabled: {
-      opacity: 0.45,
-    },
-    headerTextButtonLabel: {
-      ...CHAT_TYPE.footnote,
-      color: tokens.colors.text.primary,
-    },
-
-    scroll: {
-      flex: 1,
-    },
-    scrollContent: {
-      flexGrow: 1,
-      paddingHorizontal: CHAT_LAYOUT.screenPaddingHorizontal,
-      paddingTop: CHAT_LAYOUT.cardPadding,
-      paddingBottom: CHAT_LAYOUT.cardPadding,
-    },
-    form: {
-      gap: CHAT_LAYOUT.cardStackGap,
-    },
-    sectionLabelRow: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: CHAT_LAYOUT.groupLabelToContent,
-    },
-    groupLabel: {
-      ...chatPhysicalRightText,
-      ...CHAT_TYPE.groupLabel,
-      flex: 1,
-      color: tokens.colors.text.secondary,
-    },
-    counter: {
-      ...CHAT_TYPE.caption,
-      color: tokens.colors.text.secondary,
-      textAlign: 'left',
-      writingDirection: 'ltr',
-    },
-    card: {
-      borderRadius: UI_CARD_RADIUS,
-      overflow: 'hidden',
-      backgroundColor: tokens.colors.background.cardSolid,
-    },
-    cardFocused: {},
-    rowDivider: {
-      height: 1,
-      backgroundColor: borderColor,
-      marginHorizontal: CHAT_LAYOUT.cardPadding,
-    },
-
-    questionInput: {
-      ...formFieldInputStyle(),
-      flex: 0,
-      width: '100%',
-      color: tokens.colors.text.primary,
-      paddingHorizontal: CHAT_LAYOUT.cardPadding,
-      paddingVertical: CHAT_LAYOUT.cardTitleToBodyGap,
-      minHeight: 88,
-      textAlignVertical: 'top',
-    },
-
-    optionRow: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      paddingVertical: 15,
-      paddingHorizontal: CHAT_LAYOUT.cardPadding,
-    },
-    optionIndex: {
-      width: 22,
-      height: 22,
-      borderRadius: 11,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: tokens.colors.background.primary,
-      flexShrink: 0,
-    },
-    optionIndexText: {
-      ...CHAT_TYPE.caption2,
-      color: tokens.colors.text.secondary,
-    },
-    optionInput: {
-      ...formFieldInputStyle(),
-      flex: 1,
-      marginRight: 12,
-      color: tokens.colors.text.primary,
-      paddingVertical: 0,
-    },
-    removeOptionButton: {
-      width: 32,
-      height: 32,
-      marginRight: 12,
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexShrink: 0,
-    },
-    removeOptionButtonPlaceholder: {
-      width: 32,
-      height: 32,
-      marginRight: 12,
-      flexShrink: 0,
-    },
-
-    addOptionRow: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      paddingVertical: 15,
-      paddingHorizontal: CHAT_LAYOUT.cardPadding,
-    },
-    addOptionRowDisabled: {
-      opacity: 0.45,
-    },
-    addOptionText: {
-      ...chatPhysicalRightText,
-      ...CHAT_TYPE.cardTitle,
-      flex: 1,
-      marginRight: 12,
-      color: tokens.colors.primary.main,
-    },
-    addOptionTextDisabled: {
-      color: tokens.colors.text.secondary,
-    },
-
-    inlineWarning: {
-      ...chatPhysicalRightText,
-      ...CHAT_TYPE.caption,
-      color: tokens.colors.warning.main,
-      paddingHorizontal: CHAT_LAYOUT.cardPadding,
-      paddingBottom: CHAT_LAYOUT.cardPadding,
-    },
-
-    segmented: {
-      flexDirection: 'row-reverse',
-      gap: 8,
-      marginTop: CHAT_LAYOUT.cardPadding,
-      marginHorizontal: CHAT_LAYOUT.cardPadding,
-    },
-    segment: {
-      flex: 1,
-      paddingVertical: CHAT_LAYOUT.stackGapSmall,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderRadius: tokens.borderRadius.full,
-    },
-    segmentActive: {
-      backgroundColor: tokens.colors.background.cardSolid,
-    },
-    segmentText: {
-      ...appSheetButtonLabelStyle,
-      color: tokens.colors.text.secondary,
-    },
-    segmentTextActive: {
-      color: tokens.colors.text.primary,
-    },
-    helperText: {
-      ...chatPhysicalRightText,
-      ...CHAT_TYPE.cardSubtitle,
-      color: tokens.colors.text.secondary,
-      marginTop: CHAT_LAYOUT.stackGapSmall,
-      marginHorizontal: CHAT_LAYOUT.cardPadding,
-      marginBottom: CHAT_LAYOUT.cardTitleToBodyGap,
-    },
-    toggleRow: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      paddingVertical: 15,
-      paddingHorizontal: CHAT_LAYOUT.cardPadding,
-    },
-    toggleCopy: {
-      flex: 1,
-    },
-    toggleTitle: {
-      ...chatCardTitleStyle,
-      color: tokens.colors.text.primary,
-    },
-    toggleSubtitle: {
-      ...chatCardSubtitleStyle,
-      color: tokens.colors.text.secondary,
-    },
-    switch: {
-      transform: [{ scaleX: 0.82 }, { scaleY: 0.82 }],
-    },
-
-    footer: {
-      paddingHorizontal: CHAT_LAYOUT.screenPaddingHorizontal,
-      paddingTop: CHAT_LAYOUT.cardTitleToBodyGap,
-      paddingBottom: CHAT_LAYOUT.stackGapSmall,
-    },
-  });
-};
+const styles = StyleSheet.create({
+  root: {
+    direction: 'rtl',
+    paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+    paddingTop: 4,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  labelFlex: {
+    flex: 1,
+  },
+  labelGap: {
+    marginTop: APP_LAYOUT.componentGap,
+  },
+  counter: {
+    fontSize: APP_TYPE.caption.fontSize,
+    lineHeight: APP_TYPE.caption.lineHeight,
+    writingDirection: 'ltr',
+    fontVariant: ['tabular-nums'],
+  },
+  // כמו שדות «קבוצה חדשה»
+  fieldShell: {
+    borderRadius: 16,
+    paddingHorizontal: APP_LAYOUT.cardPadding,
+  },
+  textArea: {
+    alignSelf: 'stretch',
+    minHeight: 72,
+    lineHeight: APP_TYPE.body.lineHeight,
+  },
+  optionsList: {
+    gap: 8,
+  },
+  optionShell: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  optionInput: {
+    flex: 1,
+    minHeight: 48,
+  },
+  addChip: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 999,
+  },
+  addChipText: {
+    fontSize: APP_TYPE.cardSubtitle.fontSize,
+    lineHeight: APP_TYPE.cardSubtitle.lineHeight,
+    fontWeight: APP_TYPE.cardTitle.fontWeight,
+  },
+  warning: {
+    ...appPhysicalRightText,
+    marginTop: 8,
+    fontSize: APP_TYPE.caption.fontSize,
+    lineHeight: APP_TYPE.caption.lineHeight,
+  },
+  segment: {
+    flexDirection: 'row',
+    borderRadius: 999,
+    padding: 4,
+    gap: 4,
+  },
+  segmentItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 999,
+  },
+  segmentText: {
+    fontSize: APP_TYPE.cardSubtitle.fontSize,
+    lineHeight: APP_TYPE.cardSubtitle.lineHeight,
+    fontWeight: APP_TYPE.cardTitle.fontWeight,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: APP_LAYOUT.componentGap,
+    paddingVertical: 12,
+    paddingHorizontal: APP_LAYOUT.cardPadding,
+    borderRadius: 16,
+  },
+  toggleCopy: {
+    flex: 1,
+  },
+  toggleTitle: {
+    ...appPhysicalRightText,
+    fontSize: APP_TYPE.cardTitle.fontSize,
+    lineHeight: APP_TYPE.cardTitle.lineHeight,
+    fontWeight: APP_TYPE.cardTitle.fontWeight,
+  },
+  toggleSubtitle: {
+    ...appPhysicalRightText,
+    fontSize: APP_TYPE.cardSubtitle.fontSize,
+    lineHeight: APP_TYPE.cardSubtitle.lineHeight,
+  },
+  switch: {
+    transform: [{ scaleX: 0.82 }, { scaleY: 0.82 }],
+  },
+  cta: {
+    marginTop: APP_LAYOUT.componentGap + 4,
+  },
+});

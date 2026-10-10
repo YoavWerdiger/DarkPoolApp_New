@@ -13,6 +13,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { logger } from '../../utils/logger';
 import { enterCameraAudioSession, ensurePermissionOrSettings, exitCameraAudioSession } from '../../lib/cameraSession';
 import { stableCameraPreviewFrame } from '../../lib/cameraFrame';
 import { InAppGalleryPanel, type InAppGalleryPick } from './InAppGalleryPanel';
@@ -339,6 +340,9 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
                 flash={flashOn ? 'on' : 'off'}
                 enableTorch={flashOn && facing === 'back'}
                 animateShutter={false}
+                // אבחון קפיאה: מוכנות / שגיאת הרכבה ב-Metro
+                onCameraReady={() => logger.debug('ChatAttachCamera', 'camera ready')}
+                onMountError={(e) => logger.error('ChatAttachCamera', 'camera mount error', e?.message)}
               />
             </View>
           </GestureDetector>

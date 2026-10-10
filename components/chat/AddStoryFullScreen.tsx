@@ -1752,7 +1752,11 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
                   animateShutter={false}
                   {...(pictureSize ? { pictureSize } : {})}
                   {...(selectedLens ? { selectedLens } : {})}
-                  onCameraReady={configureCamera}
+                  onCameraReady={() => {
+                    logger.debug('AddStoryFullScreen', 'camera ready');
+                    void configureCamera();
+                  }}
+                  onMountError={(e) => logger.error('AddStoryFullScreen', 'camera mount error', e?.message)}
                   onAvailableLensesChanged={({ lenses }) => {
                     const wide = pickWideAngleLens(lenses);
                     if (wide) setSelectedLens((prev) => (prev === wide ? prev : wide));

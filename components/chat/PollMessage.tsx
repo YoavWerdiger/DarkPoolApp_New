@@ -1,6 +1,7 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Collapsible } from '../ui/Collapsible';
 import { APP_TYPE } from '../ui/appType';
 import { Ionicons } from '@expo/vector-icons';
 import { Lock, Trash2 } from 'lucide-react-native';
@@ -302,7 +303,8 @@ function PollMessage({
             );
           })}
 
-          {canVote && selectedOptions.length > 0 && (
+          {/* הכפתור נכנס בהנפשת גובה — הבועה גדלה בצורה חלקה ולא קופצת */}
+          <Collapsible open={canVote && selectedOptions.length > 0}>
             <TouchableOpacity
               onPress={handleVote}
               disabled={isVoting}
@@ -313,11 +315,11 @@ function PollMessage({
                 {isVoting
                   ? 'שולח...'
                   : isChangingVote
-                    ? 'עדכן הצבעה'
-                    : 'הצבע'}
+                    ? 'עדכן בחירה'
+                    : 'בחירה'}
               </Text>
             </TouchableOpacity>
-          )}
+          </Collapsible>
 
           {isUserVoted && allowVoteChange && (
             <TouchableOpacity

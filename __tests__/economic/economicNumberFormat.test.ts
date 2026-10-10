@@ -17,24 +17,29 @@ describe('shouldShowEconomicPercent', () => {
   });
 
   it('hides % for CPI family and levels/counts', () => {
-    expect(shouldShowEconomicPercent('CPI (MoM)')).toBe(false);
-    expect(shouldShowEconomicPercent('CPI (YoY)')).toBe(false);
+    expect(shouldShowEconomicPercent('CPI (MoM)')).toBe(true);
+    expect(shouldShowEconomicPercent('CPI (YoY)')).toBe(true);
     expect(shouldShowEconomicPercent('Core CPI')).toBe(false);
-    expect(shouldShowEconomicPercent('Core PCE Price Index (MoM)')).toBe(false);
-    expect(shouldShowEconomicPercent('PPI (YoY)')).toBe(false);
+    expect(shouldShowEconomicPercent('Core PCE Price Index (MoM)')).toBe(true);
+    expect(shouldShowEconomicPercent('PPI (YoY)')).toBe(true);
     expect(shouldShowEconomicPercent('Nonfarm Payrolls')).toBe(false);
     expect(shouldShowEconomicPercent('Initial Jobless Claims')).toBe(false);
     expect(shouldShowEconomicPercent('ISM Manufacturing PMI')).toBe(false);
     expect(shouldShowEconomicPercent('Consumer Confidence')).toBe(false);
     expect(shouldShowEconomicPercent('Retail Sales')).toBe(false);
+    // דוחות שינוי — אחוזים
+    expect(shouldShowEconomicPercent('Retail Sales (MoM)')).toBe(true);
+    expect(shouldShowEconomicPercent('Pending Home Sales (MoM)')).toBe(true);
+    expect(shouldShowEconomicPercent('Michigan Consumer Sentiment - Prelim')).toBe(false);
+    expect(shouldShowEconomicPercent('Philadelphia Fed Manufacturing Survey')).toBe(false);
   });
 });
 
 describe('formatEconomicDisplayValue — selective %', () => {
   it('CPI-style: decimal without %', () => {
-    expect(formatEconomicDisplayValue('0.4%', 'CPI (MoM)')).toBe('0.4');
-    expect(formatEconomicDisplayValue('3.2', 'CPI (YoY)')).toBe('3.2');
-    expect(formatEconomicDisplayValue('0.3%', 'Core PCE (MoM)')).toBe('0.3');
+    expect(formatEconomicDisplayValue('0.4%', 'CPI (MoM)')).toBe('0.4%');
+    expect(formatEconomicDisplayValue('3.2', 'CPI (YoY)')).toBe('3.2%');
+    expect(formatEconomicDisplayValue('0.3%', 'Core PCE (MoM)')).toBe('0.3%');
   });
 
   it('rate-style: decimal with %', () => {

@@ -57,7 +57,11 @@ export function shouldShowEconomicPercent(eventTitle?: string | null): boolean {
   if (!eventTitle) return false;
   const t = eventTitle.toLowerCase();
 
-  // קודם: משפחות בלי % (גם אם יש "inflation" בכותרת כמו CPI)
+  // דוחות שינוי (MoM / YoY / QoQ, גם בעברית) — הערך הוא שינוי באחוזים: CPI/PPI/PCE,
+  // מכירות קמעונאיות, דיור, הזמנות וכו׳. לפני רשימת «בלי %» שחוסמת משפחות לפי שם
+  if (/\((mom|yoy|qoq|m\/m|y\/y|q\/q)\)|\b(mom|yoy|qoq)\b|\b(m\/m|y\/y|q\/q)\b/.test(t)) return true;
+  if (/\((חודשי|שנתי|רבעוני)\)|חודש(י)? לחודש|שנה לשנה|רבעון לרבעון/.test(t)) return true;
+
   const noPercent = [
     /\bcpi\b/,
     /consumer price/,

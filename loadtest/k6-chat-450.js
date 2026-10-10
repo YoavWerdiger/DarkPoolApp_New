@@ -14,6 +14,7 @@ const PW = __ENV.LT_PASSWORD;
 const GROUP = __ENV.GROUP_ID;
 const LOGIN_USERS = Number(__ENV.LOGIN_USERS || 25);
 const PEAK = Number(__ENV.PEAK || 450);
+const MSG_PER_SEC = Number(__ENV.MSG_PER_SEC || 0.2);
 
 const rtLatency = new Trend('rt_message_latency_ms', true);
 const rtJoinOk = new Rate('rt_join_ok');
@@ -34,10 +35,10 @@ export const options = {
   scenarios: {
     browse: { executor: 'ramping-vus', exec: 'browse', startVUs: 0, stages, gracefulRampDown: '20s' },
     realtime: { executor: 'ramping-vus', exec: 'realtime', startVUs: 0, stages, gracefulRampDown: '20s' },
-    // הודעה כל 5 שניות לקבוצה — מודדים כמה זמן לוקח לה להגיע לכל המחוברים
+    // MSG_PER_SEC הודעות בשנייה מכותבים שונים — מודדים כמה זמן לוקח לכל הודעה להגיע לכל המחוברים
     sender: {
-      executor: 'constant-arrival-rate', exec: 'sender', rate: 1, timeUnit: '5s',
-      duration: SMOKE ? '50s' : '9m', startTime: SMOKE ? '15s' : '1m', preAllocatedVUs: 2,
+      executor: 'constant-arrival-rate', exec: 'sender', rate: Math.max(1, Math.round(MSG_PER_SEC * 60)), timeUnit: '1m',
+      duration: SMOKE ? '50s' : '9m', startTime: SMOKE ? '15s' : '1m', preAllocatedVUs: 10, maxVUs: 30,
     },
   },
   thresholds: {
@@ -141,7 +142,8 @@ export function realtime(data) {
 }
 
 export function sender(data) {
-  const u = data.users[0];
+  // כותב אקראי מבין המשתמשים המחוברים — כמו קבוצה פעילה
+  const u = data.users[Math.floor(Math.random() * data.users.length)];
   const p = hdr(u);
   p.headers.Prefer = 'return=minimal';
   p.tags = { kind: 'write', name: 'send_message' };

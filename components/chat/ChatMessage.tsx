@@ -1700,7 +1700,7 @@ function AudioPlayer({
     if (soundRef.current) {
       try {
         const st = await soundRef.current.getStatusAsync();
-        if (st.isLoaded && st.isPlaying) {
+        if (st?.isLoaded && st.isPlaying) {
           await soundRef.current.pauseAsync();
         }
         await soundRef.current.setPositionAsync(0);
@@ -1874,7 +1874,7 @@ function AudioPlayer({
           sound.setOnPlaybackStatusUpdate(handlePlaybackStatus);
           soundRef.current = sound;
           const st = await sound.getStatusAsync();
-          if (st.isLoaded && st.durationMillis && st.durationMillis > 0) {
+          if (st?.isLoaded && st.durationMillis && st.durationMillis > 0) {
             setActualDuration(st.durationMillis / 1000);
             durationSV.value = st.durationMillis / 1000;
           }
@@ -1973,7 +1973,7 @@ function AudioPlayer({
         setIsPlaying(true);
         isPlayingSV.value = 1;
         const status = await sound.getStatusAsync();
-        if (status.isLoaded && status.durationMillis && status.durationMillis > 0) {
+        if (status?.isLoaded && status.durationMillis && status.durationMillis > 0) {
           setActualDuration(status.durationMillis / 1000);
           durationSV.value = status.durationMillis / 1000;
         } else if (duration > 0 && actualDuration === 0) {
@@ -1982,7 +1982,7 @@ function AudioPlayer({
         }
       } else {
         const status = await soundRef.current.getStatusAsync();
-        if (status.isLoaded) {
+        if (status?.isLoaded) {
           if (status.isPlaying) {
             await soundRef.current.pauseAsync();
             releaseVoicePlayback(playerId);
@@ -2036,7 +2036,7 @@ function AudioPlayer({
     if (soundRef.current) {
       try {
         const status = await soundRef.current.getStatusAsync();
-        if (status.isLoaded) {
+        if (status?.isLoaded) {
           await soundRef.current.setRateAsync(nextRate, true);
           if (status.isPlaying) {
             await soundRef.current.playAsync();

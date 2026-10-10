@@ -226,7 +226,7 @@ function MediaPreviewBody({
           setIsPlaying(prev => ({ ...prev, [fileId]: true }));
 
           sound.setOnPlaybackStatusUpdate((status) => {
-            if (status.isLoaded && status.didJustFinish) {
+            if (status?.isLoaded && status.didJustFinish) {
               setIsPlaying(prev => ({ ...prev, [fileId]: false }));
             }
           });
@@ -400,7 +400,7 @@ function MediaPreviewBody({
     if (!video) return;
 
     const callback = (status: { isLoaded?: boolean; durationMillis?: number; positionMillis?: number }) => {
-      if (status.isLoaded) {
+      if (status?.isLoaded) {
         if (status.durationMillis != null) {
           const sec = status.durationMillis / 1000;
           setVideoDuration(sec);

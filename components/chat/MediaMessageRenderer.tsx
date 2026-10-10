@@ -57,7 +57,7 @@ export default function MediaMessageRenderer({
         try {
           const { sound } = await Audio.Sound.createAsync({ uri: message.file_url! });
           const status = await sound.getStatusAsync();
-          if (status.isLoaded && status.durationMillis && status.durationMillis > 0) {
+          if (status?.isLoaded && status.durationMillis && status.durationMillis > 0) {
             setDurationMs(status.durationMillis);
           }
           await sound.unloadAsync();
@@ -118,7 +118,7 @@ export default function MediaMessageRenderer({
   const ensureSound = async () => {
     if (soundRef.current) return soundRef.current;
     const { sound } = await Audio.Sound.createAsync({ uri: message.file_url! }, {}, async (status: any) => {
-      if (status.isLoaded) {
+      if (status?.isLoaded) {
         if (status.durationMillis && status.durationMillis > 0) {
           setDurationMs(status.durationMillis);
         }
@@ -136,7 +136,7 @@ export default function MediaMessageRenderer({
     });
     soundRef.current = sound;
     const st = await sound.getStatusAsync();
-    if (st.isLoaded && st.durationMillis && st.durationMillis > 0) {
+    if (st?.isLoaded && st.durationMillis && st.durationMillis > 0) {
       setDurationMs(st.durationMillis);
     }
     return sound;
@@ -146,10 +146,10 @@ export default function MediaMessageRenderer({
     try {
       const sound = await ensureSound();
       const st = await sound.getStatusAsync();
-      if (st.isLoaded && st.isPlaying) {
+      if (st?.isLoaded && st.isPlaying) {
         await sound.pauseAsync();
         setIsPlaying(false);
-      } else if (st.isLoaded) {
+      } else if (st?.isLoaded) {
         if ((st.durationMillis ?? 0) > 0 && (st.durationMillis! - st.positionMillis!) < 500) {
           await sound.setPositionAsync(0);
           setPositionMs(0);
@@ -209,7 +209,7 @@ export default function MediaMessageRenderer({
     const tick = async () => {
       if (!soundRef.current) return;
       const st = await soundRef.current.getStatusAsync();
-      if (st.isLoaded) {
+      if (st?.isLoaded) {
         setPositionMs(st.positionMillis ?? 0);
         setDurationMs(st.durationMillis ?? durationMs);
         setIsPlaying(st.isPlaying ?? false);

@@ -76,7 +76,7 @@ function MediaBubble({
         setAudioStatus(true);
 
         sound.setOnPlaybackStatusUpdate((status) => {
-          if (status.isLoaded) {
+          if (status?.isLoaded) {
             if (status.durationMillis) setAudioDuration(status.durationMillis / 1000);
             setAudioPosition(status.positionMillis / 1000);
             if (status.didJustFinish) {

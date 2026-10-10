@@ -1464,12 +1464,12 @@ export default function StoryViewer({
             pointerEvents="none"
             onReadyForDisplay={() => { if (isActive) setMediaReady(true); }}
             onLoad={(status) => {
-              if (isActive && status.isLoaded && status.durationMillis) {
+              if (isActive && status?.isLoaded && status.durationMillis) {
                 setVideoDuration(status.durationMillis);
               }
             }}
             onPlaybackStatusUpdate={(status) => {
-              if (isActive && status.isLoaded && status.didJustFinish) {
+              if (isActive && status?.isLoaded && status.didJustFinish) {
                 goNextRef.current();
               }
             }}

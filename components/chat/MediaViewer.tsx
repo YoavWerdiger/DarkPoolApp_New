@@ -346,7 +346,7 @@ export default function MediaViewer({
                   resizeMode={ResizeMode.CONTAIN}
                   shouldPlay={isPlaying}
                   onPlaybackStatusUpdate={(status) => {
-                    if (!isMountedRef.current || !status.isLoaded) return;
+                    if (!isMountedRef.current || !status?.isLoaded) return;
                     if (status.durationMillis != null) setDuration(status.durationMillis / 1000);
                     if (!isDraggingRef.current) {
                       const reported = (status.positionMillis ?? 0) / 1000;

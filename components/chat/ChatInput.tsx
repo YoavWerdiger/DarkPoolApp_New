@@ -1627,7 +1627,7 @@ function ChatInputImpl({
     if (soundRef.current) {
       try {
         const st = await soundRef.current.getStatusAsync();
-        if (st.isLoaded && st.isPlaying) {
+        if (st?.isLoaded && st.isPlaying) {
           await soundRef.current.pauseAsync();
         }
         await soundRef.current.setPositionAsync(0);
@@ -1659,7 +1659,7 @@ function ChatInputImpl({
 
       if (soundRef.current) {
         const status = await soundRef.current.getStatusAsync();
-        if (status.isLoaded) {
+        if (status?.isLoaded) {
           if (status.didJustFinish || timelineProgress.value >= 0.995) {
             await soundRef.current.setPositionAsync(0);
             timelineProgress.value = 0;
@@ -1694,7 +1694,7 @@ function ChatInputImpl({
       previewPlayingSV.value = 1;
 
       const status = await sound.getStatusAsync();
-      if (status.isLoaded) {
+      if (status?.isLoaded) {
         const dur = status.durationMillis || 0;
         setPreviewDuration(dur);
         previewDurationSV.value = dur;
@@ -1705,7 +1705,7 @@ function ChatInputImpl({
       }
 
       sound.setOnPlaybackStatusUpdate((st) => {
-        if (!st.isLoaded) return;
+        if (!st?.isLoaded) return;
         if (st.durationMillis && st.durationMillis > 0) {
           setPreviewDuration(st.durationMillis);
           previewDurationSV.value = st.durationMillis;
@@ -1745,7 +1745,7 @@ function ChatInputImpl({
     if (soundRef.current) {
       try {
         const status = await soundRef.current.getStatusAsync();
-        if (status.isLoaded) {
+        if (status?.isLoaded) {
           await soundRef.current.pauseAsync();
           const dur = status.durationMillis || previewDuration;
           if (dur > 0) {
@@ -1817,7 +1817,7 @@ function ChatInputImpl({
           );
           soundRef.current = sound;
           sound.setOnPlaybackStatusUpdate((st) => {
-            if (!st.isLoaded) return;
+            if (!st?.isLoaded) return;
             if (st.didJustFinish) {
               void resetPreviewPlayhead();
               return;

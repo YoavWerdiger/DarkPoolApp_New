@@ -69,6 +69,15 @@ export const options = {
     'http_req_duration{kind:read}': ['p(95)<800'],
     rt_join_ok: ['rate>0.98'],
     rt_message_latency_ms: ['p(95)<2000'],
+    // הקצב היעד הושג בפועל? (אם k6 לא הספיק — האיטרציות «נופלות» והעומס נמוך מהמתוכנן)
+    dropped_iterations: ['count<50'],
+    // לכל מסך בנפרד — שאילתה איטית לא תתחבא מאחורי הממוצע
+    'http_req_duration{name:messages}': ['p(95)<800'],
+    'http_req_duration{name:groups}': ['p(95)<800'],
+    'http_req_duration{name:my_groups}': ['p(95)<800'],
+    'http_req_duration{name:earnings}': ['p(95)<800'],
+    'http_req_duration{name:insiders}': ['p(95)<800'],
+    'http_req_duration{name:send_message}': ['p(95)<1000'],
   },
 };
 

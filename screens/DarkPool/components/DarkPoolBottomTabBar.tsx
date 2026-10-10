@@ -2,7 +2,8 @@
  * סרגל תחתון — פיד | חקור | טיקרים | מעקב
  */
 
-import React, { useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
@@ -48,9 +49,37 @@ export function DarkPoolBottomTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(tokens, insets.bottom), [tokens, insets.bottom]);
 
+  // רקע הטאב הנבחר מחליק בין הטאבים (כמו בורר האינטרוולים) — מיקומים נמדדים ב-onLayout
+  const reduceMotion = useReducedMotion();
+  const frames = useRef(new Map<number, { x: number; width: number }>());
+  const [measured, setMeasured] = useState(false);
+  const hx = useSharedValue(0);
+  const hw = useSharedValue(0);
+  const moveTo = useCallback(
+    (index: number, animate: boolean) => {
+      const f = frames.current.get(index);
+      if (!f) return;
+      const cfg = { duration: 260, easing: Easing.out(Easing.cubic) };
+      hx.value = animate && !reduceMotion ? withTiming(f.x, cfg) : f.x;
+      hw.value = animate && !reduceMotion ? withTiming(f.width, cfg) : f.width;
+    },
+    [hx, hw, reduceMotion],
+  );
+  useEffect(() => {
+    moveTo(state.index, measured);
+  }, [state.index, measured, moveTo]);
+  const highlightStyle = useAnimatedStyle(() => ({
+    width: hw.value,
+    transform: [{ translateX: hx.value }],
+  }));
+
   return (
     <View style={styles.outer} pointerEvents="box-none">
       <View style={styles.pill}>
+        {/* direction ltr — x של onLayout פיזי (left מתהפך בעץ RTL) */}
+        <View style={styles.highlightLayer} pointerEvents="none">
+          {measured ? <Animated.View style={[styles.highlight, highlightStyle]} /> : null}
+        </View>
         <View style={styles.pillInner}>
         {state.routes.map((route, index) => {
           const focused = state.index === index;
@@ -70,7 +99,13 @@ export function DarkPoolBottomTabBar({ state, navigation }: BottomTabBarProps) {
                   navigation.navigate(route.name);
                 }
               }}
-              style={[styles.tab, focused && styles.tabFocused]}
+              onLayout={(e) => {
+                const { x, width } = e.nativeEvent.layout;
+                frames.current.set(index, { x, width });
+                if (index === state.index) moveTo(index, false);
+                if (frames.current.size >= state.routes.length && !measured) setMeasured(true);
+              }}
+              style={[styles.tab, focused && !measured && styles.tabFocused]}
               accessibilityRole="button"
               accessibilityState={{ selected: focused }}
             >
@@ -118,6 +153,19 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, safeBottom: nu
       justifyContent: 'space-around',
       height: DARK_POOL_TAB_BAR_HEIGHT,
       paddingHorizontal: 8,
+    },
+    highlightLayer: {
+      ...StyleSheet.absoluteFill,
+      direction: 'ltr',
+      justifyContent: 'center',
+    },
+    highlight: {
+      position: 'absolute',
+      left: 0,
+      top: 4,
+      bottom: 4,
+      borderRadius: tokens.borderRadius.full,
+      backgroundColor: tokens.colors.selection.subtle,
     },
     tab: {
       flex: 1,

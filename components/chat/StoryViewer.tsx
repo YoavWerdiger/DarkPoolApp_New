@@ -16,6 +16,9 @@ import {
   NativeScrollEvent,
   ViewToken,
 } from 'react-native';
+import { APP_TYPE } from '../ui/appType';
+import { SlidingPillGroup } from '../ui/DayDividerPill';
+import { useDesignTokens } from '../ui/DesignTokens';
 import { InlineAppDialog } from '../ui/InlineAppDialog';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -237,6 +240,8 @@ function ViewersSheet({
   onChangeTab,
   onClose,
 }: ViewersSheetProps) {
+  // לפי הטופו ולערכת הנושא — כמו שאר השיטים (לא בלור כהה עם צבעים קבועים)
+  const tokens = useDesignTokens();
   const SHEET_HEIGHT = Math.max(SCREEN_HEIGHT * 0.6, 420);
   const MAX_TRANSLATE = SHEET_HEIGHT;
 
@@ -303,55 +308,45 @@ function ViewersSheet({
         <Reanimated.View
           style={[
             sheetStyles.sheet,
-            { height: SHEET_HEIGHT, top: SCREEN_HEIGHT - SHEET_HEIGHT },
+            {
+              height: SHEET_HEIGHT,
+              top: SCREEN_HEIGHT - SHEET_HEIGHT,
+              backgroundColor: tokens.colors.background.primary,
+              borderTopLeftRadius: tokens.borderRadius.xl,
+              borderTopRightRadius: tokens.borderRadius.xl,
+            },
             sheetStyle,
           ]}
         >
-          <BlurView intensity={95} tint="dark" style={StyleSheet.absoluteFill} />
-          <View style={sheetStyles.sheetTint} pointerEvents="none" />
-
-          {/* Grabber */}
+          {/* Grabber — כמו ידית השיטים באפליקציה */}
           <View style={sheetStyles.grabberWrap} pointerEvents="none">
-            <View style={sheetStyles.grabber} />
+            <View style={[sheetStyles.grabber, { backgroundColor: tokens.colors.text.secondary }]} />
           </View>
 
-          {/* Tabs */}
-          <View style={sheetStyles.tabsRow}>
-            <TouchableOpacity
-              style={[sheetStyles.tab, tab === 'viewers' && sheetStyles.tabActive]}
-              onPress={() => onChangeTab('viewers')}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="eye-outline" size={18} color={tab === 'viewers' ? '#fff' : 'rgba(255,255,255,0.55)'} />
-              <Text style={[sheetStyles.tabText, tab === 'viewers' && sheetStyles.tabTextActive]}>
-                {`צפיות${viewers.length ? ` · ${viewers.length}` : ''}`}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[sheetStyles.tab, tab === 'reactions' && sheetStyles.tabActive]}
-              onPress={() => onChangeTab('reactions')}
-              activeOpacity={0.7}
-            >
-              <Text style={{ fontSize: 16 }}>❤️</Text>
-              <Text style={[sheetStyles.tabText, tab === 'reactions' && sheetStyles.tabTextActive]}>
-                {`ריאקציות${reactions.length ? ` · ${reactions.length}` : ''}`}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          {/* טאבים — צ'יפי הטופו עם המחוון המחליק */}
+          <SlidingPillGroup
+            options={[
+              { id: 'viewers' as const, label: `צפיות${viewers.length ? ` · ${viewers.length}` : ''}` },
+              { id: 'reactions' as const, label: `ריאקציות${reactions.length ? ` · ${reactions.length}` : ''}` },
+            ]}
+            value={tab}
+            onChange={onChangeTab}
+            style={sheetStyles.tabsRow}
+          />
 
           {/* List / states */}
           {loading ? (
             <View style={sheetStyles.center}>
-              <ActivityIndicator color={chatPalette.primary} />
+              <ActivityIndicator color={tokens.colors.primary.main} />
             </View>
           ) : listData.length === 0 ? (
             <View style={sheetStyles.center}>
               <Ionicons
                 name={tab === 'viewers' ? 'eye-off-outline' : 'heart-outline'}
                 size={40}
-                color="rgba(255,255,255,0.25)"
+                color={tokens.colors.text.tertiary}
               />
-              <Text style={sheetStyles.emptyText}>
+              <Text style={[sheetStyles.emptyText, { color: tokens.colors.text.secondary }]}>
                 {tab === 'viewers' ? 'עדיין אף אחד לא צפה' : 'עדיין אין ריאקציות'}
               </Text>
             </View>
@@ -364,14 +359,14 @@ function ViewersSheet({
                     {emoji ? <Text style={sheetStyles.rowEmoji}>{emoji}</Text> : null}
                     <View style={{ flex: 1 }}>
                       <UserNameRow userId={row.viewer_id || row.reactor_id || row.user?.id}>
-                        <Text style={[sheetStyles.rowName, { flexShrink: 1 }]} numberOfLines={1}>{displayName(row.user)}</Text>
+                        <Text style={[sheetStyles.rowName, { flexShrink: 1, color: tokens.colors.text.primary }]} numberOfLines={1}>{displayName(row.user)}</Text>
                       </UserNameRow>
                     </View>
                     {row.user.profile_picture ? (
                       <Image source={{ uri: row.user.profile_picture }} style={sheetStyles.avatar} />
                     ) : (
-                      <View style={[sheetStyles.avatar, sheetStyles.avatarPlaceholder]}>
-                        <Ionicons name="person" size={18} color="rgba(255,255,255,0.7)" />
+                      <View style={[sheetStyles.avatar, sheetStyles.avatarPlaceholder, { backgroundColor: tokens.colors.background.cardSolid }]}>
+                        <Ionicons name="person" size={18} color={tokens.colors.text.secondary} />
                       </View>
                     )}
                   </View>
@@ -399,11 +394,7 @@ const sheetStyles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
     overflow: 'hidden',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.15)',
   },
   sheetTint: {
     ...StyleSheet.absoluteFill,
@@ -415,15 +406,14 @@ const sheetStyles = StyleSheet.create({
     paddingBottom: 8,
   },
   grabber: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.35)',
+    width: 36,
+    height: 5,
+    borderRadius: 2.5,
   },
   tabsRow: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     paddingHorizontal: 16,
-    gap: 10,
+    gap: 8,
     marginBottom: 12,
   },
   tab: {
@@ -461,18 +451,15 @@ const sheetStyles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
   },
   avatarPlaceholder: {
-    backgroundColor: 'rgba(255,255,255,0.10)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   rowName: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: APP_TYPE.cardTitle.fontSize,
+    lineHeight: APP_TYPE.cardTitle.lineHeight,
+    fontWeight: APP_TYPE.cardTitle.fontWeight,
     textAlign: 'right',
   },
   rowEmoji: {
@@ -486,9 +473,8 @@ const sheetStyles = StyleSheet.create({
     gap: 10,
   },
   emptyText: {
-    color: 'rgba(255,255,255,0.55)',
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: APP_TYPE.cardBody.fontSize,
+    lineHeight: APP_TYPE.cardBody.lineHeight,
   },
 });
 

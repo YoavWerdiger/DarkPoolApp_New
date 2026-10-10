@@ -1598,8 +1598,8 @@ export default function ChatGroupsListScreen() {
       >
         <View style={styles.searchSheetRoot}>
           <ChatSheetTopoHeader title="חיפוש" onClose={closeSearchSheet} />
+          {/* RTL: שדה הטקסט מימין, הזכוכית המגדלת בקצה השמאלי */}
           <View style={styles.searchPill}>
-            <Search size={18} color={tokens.colors.text.tertiary} />
             <TextInput
               ref={searchInputRef}
               style={styles.searchPillInput}
@@ -1616,6 +1616,7 @@ export default function ChatGroupsListScreen() {
                 <Ionicons name="close-circle" size={18} color={tokens.colors.text.tertiary} />
               </Pressable>
             )}
+            <Search size={18} color={tokens.colors.text.tertiary} />
           </View>
           <FlatList
             data={searchSheetRows}

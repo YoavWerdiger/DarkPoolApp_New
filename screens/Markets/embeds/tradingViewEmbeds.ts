@@ -75,7 +75,7 @@ export const tvWidgetHtml = (
 <body>
   <div class="tradingview-widget-container">
     <div class="tradingview-widget-container__widget"></div>
-    <script type="application/json" id="tv-config">${JSON.stringify(config)}</script>
+    <script type="application/json" id="tv-config">${JSON.stringify(config).replace(/</g, '\\u003c')}</script>
     <script>
       (function () {
         try {

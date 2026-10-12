@@ -622,14 +622,15 @@ export default function ChatGroupInfoScreen() {
             {renderSectionHeader('פעולות')}
             <UICard variant="soft" padding="none" style={styles.sectionSurface}>
               <View style={styles.menuRow}>
+                {/* «התראות»: דלוק = מקבלים התראות (כמו במסך ההתראות). המצב השמור הוא muted — הפוך */}
                 <AppSwitch
-                  value={isMuted}
-                  onValueChange={(v) => { void handleToggleMute(v); }}
+                  value={!isMuted}
+                  onValueChange={(on) => { void handleToggleMute(!on); }}
                   trackColor={{
                     false: theme.switchTrackOff,
                     true: DesignTokens.colors.primary.main,
                   }}
-                  thumbColor={isMuted ? DesignTokens.colors.text.primary : theme.switchThumbOff}
+                  thumbColor={!isMuted ? DesignTokens.colors.text.primary : theme.switchThumbOff}
                   ios_backgroundColor={theme.switchTrackOff}
                   style={{ transform: [{ scaleX: 0.82 }, { scaleY: 0.82 }] }}
                 />

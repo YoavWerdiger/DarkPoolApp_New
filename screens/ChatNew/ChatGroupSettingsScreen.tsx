@@ -17,6 +17,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 import { AppSwitch } from '../../components/ui/AppSwitch';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
@@ -42,6 +43,7 @@ export default function ChatGroupSettingsScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const DesignTokens = useDesignTokens();
+  const { theme } = useTheme();
   useLockParentDrawerWhileFocused();
 
   const { groupId } = route.params as { groupId: string };
@@ -244,15 +246,18 @@ export default function ChatGroupSettingsScreen() {
               <UICard variant="soft" padding="none" style={styles.sectionCard}>
                 <View style={styles.settingRow}>
                   {renderSettingIcon('notifications-outline')}
-                  <Text style={styles.settingTextGrow}>השתק התראות</Text>
+                  <Text style={styles.settingTextGrow}>התראות</Text>
+                  {/* דלוק = מקבלים התראות (אחיד עם פרטי הקבוצה ומסך ההתראות) */}
                   <AppSwitch
-                    value={isMuted}
-                    onValueChange={handleToggleMute}
+                    value={!isMuted}
+                    onValueChange={(on) => { void handleToggleMute(!on); }}
                     trackColor={{
-                      false: DesignTokens.colors.background.tertiary,
+                      false: theme.switchTrackOff,
                       true: DesignTokens.colors.primary.main,
                     }}
-                    thumbColor="#FFFFFF"
+                    thumbColor={!isMuted ? DesignTokens.colors.text.primary : theme.switchThumbOff}
+                    ios_backgroundColor={theme.switchTrackOff}
+                    style={{ transform: [{ scaleX: 0.82 }, { scaleY: 0.82 }] }}
                   />
                 </View>
               </UICard>

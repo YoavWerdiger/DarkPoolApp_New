@@ -7,7 +7,7 @@ import AuthStack from './navigation/AuthStack';
 import MainTabs from './navigation/MainTabs';
 import ProfileStack from './navigation/ProfileStack';
 import AdminStack from './navigation/AdminStack';
-import { View, Text, StyleSheet, AppState, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, AppState, TouchableOpacity, Platform, Modal } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { AuroraHost } from './components/VideoBackground';
 import "./global.css";
@@ -208,6 +208,13 @@ function AppContent() {
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', async (nextState) => {
+      // נועלים כבר ביציאה לרקע — בחזרה הנעילה כבר מוצגת (בלי הבזק של תוכן לפני האימות)
+      if (nextState === 'background' && user) {
+        try {
+          const saved = await AsyncStorage.getItem('appSettings');
+          if (saved && JSON.parse(saved).biometricAuth) setBiometricLocked(true);
+        } catch {}
+      }
       if (appState.current.match(/inactive|background/) && nextState === 'active' && user) {
         try {
           const saved = await AsyncStorage.getItem('appSettings');
@@ -403,7 +410,9 @@ function AppContent() {
       ) : null}
 
       {biometricLocked && registrationDone && (
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: canvas, justifyContent: 'center', alignItems: 'center', zIndex: 9999 }]}>
+        // Modal ולא View: חלון נייטיב שנפתח מעל כל Modal פתוח (תצוגת מדיה / סטורי) — View בתוך העץ לא מכסה אותם
+        <Modal visible animationType="none" presentationStyle="fullScreen" statusBarTranslucent onRequestClose={() => {}}>
+        <View style={{ flex: 1, backgroundColor: canvas, justifyContent: 'center', alignItems: 'center' }}>
           <View style={{ alignItems: 'center', gap: 24 }}>
             <View style={{
               width: 80,
@@ -437,6 +446,7 @@ function AppContent() {
             </TouchableOpacity>
           </View>
         </View>
+        </Modal>
       )}
       </AuroraHost>
       </KeyboardProvider>

@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1';
 import { isServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
+import { ensurePushBidi, formatPushMultiline } from '../_shared/notificationBidi.ts';
 
 const EXPO_PUSH_API_URL = 'https://exp.host/--/api/v2/push/send';
 
@@ -417,9 +418,10 @@ serve(async (req) => {
       return {
         to: token.expo_push_token,
         sound: 'default',
-        title: groupData.name,
-        subtitle: notificationSubtitle,
-        body,
+        // RLM + בידוד קטעים לטיניים — ההתראה מיושרת מימין לשמאל גם כשיש אנגלית/מספרים
+        title: ensurePushBidi(groupData.name),
+        subtitle: ensurePushBidi(notificationSubtitle),
+        body: formatPushMultiline(body),
         data: {
           type: 'chat_message',
           group_id: group_id,

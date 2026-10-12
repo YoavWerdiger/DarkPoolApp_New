@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { isServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { prepareEarningsRecord } from '../_shared/earnings-utils.ts'
 
@@ -8,6 +9,8 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  // רק cron/טריגרים (מפתח service)
+  if (req.method !== 'OPTIONS' && !isServiceCaller(req)) return serviceOnlyDenied();
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }

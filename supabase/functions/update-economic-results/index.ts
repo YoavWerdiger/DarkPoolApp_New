@@ -2,6 +2,7 @@
 // מעדכן תוצאות (actual values) בלייב ושולח Push Notifications
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { isServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
 
 const EODHD_API_KEY = Deno.env.get('EODHD_API_KEY') ?? ''
@@ -111,6 +112,8 @@ interface EconomicEvent {
 }
 
 serve(async (req) => {
+  // רק cron/טריגרים (מפתח service)
+  if (req.method !== 'OPTIONS' && !isServiceCaller(req)) return serviceOnlyDenied();
   try {
     console.log('🔄 Update Economic Results Started')
     

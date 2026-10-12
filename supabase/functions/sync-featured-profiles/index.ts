@@ -1,6 +1,7 @@
 // sync-featured-profiles — person_id + תמונות מ-DB / UW / Wikimedia
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { isServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import {
   fetchUwInsidersForTicker,
@@ -55,6 +56,8 @@ const KNOWN_BY_NAME: Record<string, string> = {
 };
 
 serve(async (req) => {
+  // רק cron/טריגרים (מפתח service)
+  if (req.method !== 'OPTIONS' && !isServiceCaller(req)) return serviceOnlyDenied();
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
   const supabase = createClient(

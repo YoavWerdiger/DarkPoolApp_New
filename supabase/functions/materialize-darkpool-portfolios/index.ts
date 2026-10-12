@@ -3,6 +3,7 @@
 // Yahoo batch once per unique ticker (market_daily_prices). No Form4 live.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { isServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
 import {
   congressDbRowToUwTrade,
   createServiceSupabase,
@@ -41,6 +42,8 @@ interface Target {
 }
 
 serve(async (req) => {
+  // רק cron/טריגרים (מפתח service)
+  if (req.method !== 'OPTIONS' && !isServiceCaller(req)) return serviceOnlyDenied();
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
   let body: {

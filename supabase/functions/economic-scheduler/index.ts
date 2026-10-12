@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { isServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
 import { resolveEconomicEventImportance } from '../_shared/economicEventImportance.ts'
 
@@ -14,6 +15,8 @@ const FRED_API_KEY = Deno.env.get('FRED_API_KEY') ?? '';
 const FRED_BASE_URL = 'https://api.stlouisfed.org/fred';
 
 serve(async (req) => {
+  // רק cron/טריגרים (מפתח service)
+  if (req.method !== 'OPTIONS' && !isServiceCaller(req)) return serviceOnlyDenied();
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })

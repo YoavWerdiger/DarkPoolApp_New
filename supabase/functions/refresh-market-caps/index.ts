@@ -1,5 +1,6 @@
 // מרענן stock_market_caps מה-screener של Nasdaq (קריאה אחת לכל המניות האמריקאיות)
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { isServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { normalizeCapSymbol } from '../_shared/marketCaps.ts'
 
@@ -96,6 +97,8 @@ async function purgeSmallCaps(supabase: any): Promise<number> {
 }
 
 serve(async (req) => {
+  // רק cron/טריגרים (מפתח service)
+  if (req.method !== 'OPTIONS' && !isServiceCaller(req)) return serviceOnlyDenied();
   try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',

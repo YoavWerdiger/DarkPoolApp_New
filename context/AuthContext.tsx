@@ -20,6 +20,37 @@ import { clear as clearChatOfflineQueue } from '../services/chat/chatOfflineQueu
 import { clearAllColmexLocal } from '../services/colmex/colmexCredentials';
 import * as Notifications from 'expo-notifications';
 
+/** בעלים של ה-cache המקומי — אם משתמש אחר נכנס (או התנתקות אוטומטית), לא מציגים לו נתונים של הקודם */
+const CACHE_OWNER_KEY = 'app_cache_owner_v1';
+
+async function clearUserScopedCaches(previousUserId?: string | null): Promise<void> {
+  if (previousUserId) {
+    try { await clearChatMessagesCache(previousUserId); } catch (_) { /* non-critical */ }
+  }
+  try { await clearPersistedQueryCache(); } catch (_) { /* non-critical */ }
+  try { queryClient.clear(); } catch (_) { /* non-critical */ }
+  try { await clearAllDrafts(); } catch (_) { /* non-critical */ }
+  try { await clearAllColmexLocal(); } catch (_) { /* non-critical */ }
+}
+
+async function ensureCacheOwner(userId: string): Promise<void> {
+  try {
+    const owner = await AsyncStorage.getItem(CACHE_OWNER_KEY);
+    if (owner && owner !== userId) {
+      await clearUserScopedCaches(owner);
+    }
+    if (owner !== userId) await AsyncStorage.setItem(CACHE_OWNER_KEY, userId);
+  } catch (_) { /* non-critical */ }
+}
+
+async function releaseCacheOwner(): Promise<void> {
+  try {
+    const owner = await AsyncStorage.getItem(CACHE_OWNER_KEY);
+    if (owner) await clearUserScopedCaches(owner);
+    await AsyncStorage.removeItem(CACHE_OWNER_KEY);
+  } catch (_) { /* non-critical */ }
+}
+
 /** שורד remount / Fast Refresh — מנוקה רק אחרי סיסמה חדשה, signIn רגיל, או signOut */
 export const PASSWORD_RECOVERY_PENDING_KEY = 'password_recovery_pending';
 
@@ -207,9 +238,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           if (resolved) {
             setSentryUser(resolved.id, resolved.email);
             setTimeout(() => registerTokenOnce(), 2000);
+            void ensureCacheOwner(resolved.id);
           } else {
             clearSentryUser();
             deviceTokenRegistered.current = false;
+            // התנתקות אוטומטית (refresh נכשל / סשן בוטל) — לא דרך signOut, אז מנקים כאן
+            if (event === 'SIGNED_OUT') void releaseCacheOwner();
             // SIGNED_OUT באמצע איפוס (verify round-trip) לא אמור למחוק את דגל ה-recovery.
             // ניקוי מפורש רק ב-setPasswordRecoveryMode(false) / signIn / AuthContext.signOut.
             if (event === 'INITIAL_SESSION' && !passwordRecoveryModeRef.current) {
@@ -360,6 +394,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } catch (_) { /* non-critical */ }
         try {
           await clearAllColmexLocal();
+        } catch (_) { /* non-critical */ }
+        try {
+          await AsyncStorage.removeItem(CACHE_OWNER_KEY);
         } catch (_) { /* non-critical */ }
       })();
 

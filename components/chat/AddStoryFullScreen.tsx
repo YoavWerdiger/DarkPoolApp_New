@@ -435,7 +435,14 @@ function TextEditorOverlay({
       style={editorStyles.root}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <Pressable style={editorStyles.backdrop} onPress={onCancel} />
+      {/* לחיצה מחוץ לטקסט = סיום (כמו אינסטגרם). קודם זה היה ביטול — הטקסט שהוקלד נעלם */}
+      <Pressable
+        style={editorStyles.backdrop}
+        onPress={() => {
+          if (text.trim()) onDone(text.trim(), color, fontSize, bold, bgStyle);
+          else onCancel();
+        }}
+      />
 
       <View style={[editorStyles.topBar, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity
@@ -506,21 +513,29 @@ function TextEditorOverlay({
       </View>
 
       <View style={editorStyles.colorRow}>
+        {/* always — בלי זה הלחיצה הראשונה רק סוגרת מקלדת והצבע לא נבחר */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
+          keyboardShouldPersistTaps="always"
           contentContainerStyle={editorStyles.colorScroll}
         >
           {OVERLAY_COLORS.map((c) => (
             <TouchableOpacity
               key={c}
               onPress={() => setColor(c)}
-              style={[
-                editorStyles.colorDot,
-                { backgroundColor: c },
-                color === c && editorStyles.colorDotActive,
-              ]}
-            />
+              hitSlop={6}
+              style={[editorStyles.colorRing, color === c && editorStyles.colorRingActive]}
+            >
+              <View
+                style={[
+                  editorStyles.colorDot,
+                  { backgroundColor: c },
+                  // לבן — קו כהה דק כדי שייראה עגול כמו שאר הצבעים
+                  c === '#FFFFFF' && { borderColor: 'rgba(0,0,0,0.28)' },
+                ]}
+              />
+            </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
@@ -610,17 +625,25 @@ const editorStyles = StyleSheet.create({
     paddingHorizontal: 20,
     gap: 10,
   },
-  colorDot: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+  // טבעת חיצונית לבחירה + עיגול צבע פנימי — כל הצבעים (כולל לבן) נראים עגולים ואחידים
+  colorRing: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  colorDotActive: {
-    borderColor: '#fff',
-    borderWidth: 3,
-    transform: [{ scale: 1.15 }],
+  colorRingActive: {
+    borderColor: '#FFFFFF',
+  },
+  colorDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
   },
 });
 

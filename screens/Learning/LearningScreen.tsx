@@ -33,6 +33,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
 import { sheetContentBottomPadding } from '../../components/ui/BottomSheet/sheetGlass';
+import { CourseTeaserLock, isCourseTeaserLocked } from '../../components/learning/CourseTeaserLock';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -3539,5 +3540,23 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
 });
 
-export default LearningScreen;
+/** קורסים שעוד לא פתוחים — התוכן מוצג מטושטש מתחת לטיזר «בקרוב» */
+function LearningScreenGate() {
+  const route = useRoute();
+  const navigation = useNavigation();
+  const courseId = ((route.params as { courseId?: string } | undefined)?.courseId) ?? null;
+  const locked = isCourseTeaserLocked(courseId);
+  return (
+    <View style={{ flex: 1 }}>
+      <View style={{ flex: 1 }} pointerEvents={locked ? 'none' : 'auto'}>
+        <LearningScreen />
+      </View>
+      {locked && courseId ? (
+        <CourseTeaserLock courseId={courseId} onBack={() => navigation.goBack()} />
+      ) : null}
+    </View>
+  );
+}
+
+export default LearningScreenGate;
 

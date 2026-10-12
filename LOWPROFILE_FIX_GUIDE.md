@@ -22,7 +22,7 @@ ResponseCode: 660
 ```json
 {
   "TerminalNumber": 147763,
-  "ApiName": "y5N7Nh1YfRIrqaa1TFzY",
+  "ApiName": "<REDACTED-CARDCOM-API-NAME>",
   "Operation": "ChargeOnly",
   "ReturnValue": "txn_1234567890_abc123",
   "Amount": 99,

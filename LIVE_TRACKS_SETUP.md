@@ -68,8 +68,8 @@ npm start
 
 ## 🔐 פרטי CardCom:
 - **מסוף:** 147763
-- **משתמש:** y5N7Nh1YfRIrqaa1TFzY
-- **API Key:** IQWEk245ICRSmSJHJ3Ya
+- **משתמש:** <REDACTED-CARDCOM-API-NAME>
+- **API Key:** <REDACTED-CARDCOM-API-KEY>
 
 ## 🎉 מה מוכן:
 

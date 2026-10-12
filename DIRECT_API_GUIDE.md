@@ -14,7 +14,7 @@
 ```json
 {
   "TerminalNumber": 147763,
-  "ApiName": "y5N7Nh1YfRIrqaa1TFzY",
+  "ApiName": "<REDACTED-CARDCOM-API-NAME>",
   "Amount": 99,
   "ISOCoinId": 1,
   "NumOfPayments": 1,

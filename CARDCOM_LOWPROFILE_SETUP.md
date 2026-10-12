@@ -83,8 +83,8 @@ npm start
 ```typescript
 export const CARDCOM_CONFIG = {
   terminalNumber: 147763,
-  apiName: 'y5N7Nh1YfRIrqaa1TFzY',
-  apiPassword: 'IQWEk245ICRSmSJHJ3Ya',
+  apiName: '<REDACTED-CARDCOM-API-NAME>',
+  apiPassword: '<REDACTED-CARDCOM-API-KEY>',
   baseUrl: 'https://secure.cardcom.solutions/api/v11',
   successUrl: 'https://wpmrtczbfcijoocguime.supabase.co/functions/v1/super-action',
   errorUrl: 'https://wpmrtczbfcijoocguime.supabase.co/functions/v1/super-action',
@@ -96,7 +96,7 @@ export const CARDCOM_CONFIG = {
 ```json
 {
   "TerminalNumber": 147763,
-  "ApiName": "y5N7Nh1YfRIrqaa1TFzY",
+  "ApiName": "<REDACTED-CARDCOM-API-NAME>",
   "Operation": "ChargeOnly",
   "ReturnValue": "txn_1234567890_abc123",
   "Amount": 99,

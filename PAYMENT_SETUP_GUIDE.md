@@ -61,8 +61,8 @@ supabase functions deploy payment-success
 ```typescript
 export const CARDCOM_CONFIG = {
   terminalNumber: '147763',
-  userName: 'y5N7Nh1YfRIrqaa1TFzY',
-  apiKey: 'IQWEk245ICRSmSJHJ3Ya',
+  userName: '<REDACTED-CARDCOM-API-NAME>',
+  apiKey: '<REDACTED-CARDCOM-API-KEY>',
   baseUrl: 'https://secure.cardcom.solutions/api/v1',
   successUrl: 'https://YOUR_PROJECT_REF.supabase.co/functions/v1/payment-success',
   errorUrl: 'https://YOUR_PROJECT_REF.supabase.co/functions/v1/payment-success',

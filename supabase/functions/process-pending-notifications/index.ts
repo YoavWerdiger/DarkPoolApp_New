@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1';
+import { isServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
 import { ensurePushBidi, formatPushMultiline, buildEconomicPushContent } from '../_shared/notificationBidi.ts';
 
 const EXPO_PUSH_API_URL = 'https://exp.host/--/api/v2/push/send';
@@ -35,6 +36,8 @@ async function ensureNotificationImageUrl(
 }
 
 serve(async (req) => {
+  // רק cron / טריגרים / פונקציות earnings (מפתח service) — מבחוץ אי אפשר להפעיל שליחת פושים
+  if (req.method !== 'OPTIONS' && !isServiceCaller(req)) return serviceOnlyDenied();
   let lockAcquired = false;
   const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';

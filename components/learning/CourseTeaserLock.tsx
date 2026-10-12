@@ -95,21 +95,21 @@ export function CourseTeaserLock({ courseId, onBack }: { courseId: string; onBac
             },
           ]}
         >
-          {/* תמונת הקורס עם תג נעילה — ולא אייקון גנרי */}
-          <View style={styles.coverWrap}>
+          {/* באנר: תמונת הקורס בכל רוחב הדיאלוג, עם תג נעילה */}
+          <View style={styles.banner}>
             {coverUrl ? (
-              <Image source={{ uri: coverUrl }} style={styles.cover} contentFit="cover" transition={150} />
+              <Image source={{ uri: coverUrl }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
             ) : (
-              <View style={[styles.cover, styles.coverFallback, { backgroundColor: tokens.colors.background.secondary }]}>
-                <Ionicons name="school" size={34} color={tokens.colors.text.primary} />
+              <View style={[StyleSheet.absoluteFill, styles.bannerFallback, { backgroundColor: tokens.colors.background.secondary }]}>
+                <Ionicons name="school" size={40} color={tokens.colors.text.primary} />
               </View>
             )}
-            <View style={[styles.lockBadge, { backgroundColor: tokens.colors.text.primary, borderColor: tokens.colors.background.primary }]}>
-              <Ionicons name="lock-closed" size={13} color={tokens.colors.background.primary} />
+            <View style={[styles.lockBadge, { backgroundColor: tokens.colors.background.primary }]}>
+              <Ionicons name="lock-closed" size={16} color={tokens.colors.text.primary} />
             </View>
           </View>
 
-          <Text style={[styles.eyebrow, { color: tokens.colors.text.secondary }]}>בקרוב באקדמיה</Text>
+          <View style={styles.body}>
           <Text style={[styles.title, { color: tokens.colors.text.primary }]}>{teaser.title}</Text>
           <Text style={[styles.pitch, { color: tokens.colors.text.secondary }]}>{teaser.pitch}</Text>
 
@@ -140,6 +140,7 @@ export function CourseTeaserLock({ courseId, onBack }: { courseId: string; onBac
           <View style={styles.cta}>
             <UIButton title="חזרה לאקדמיה" variant="primary" fullWidth onPress={onBack} />
           </View>
+          </View>
         </View>
       </View>
     </View>
@@ -156,40 +157,31 @@ const createStyles = (_tokens: ReturnType<typeof useDesignTokens>) =>
     // כמו InlineAppDialog / UIAlert
     dialog: {
       alignItems: 'center',
-      padding: APP_LAYOUT.cardPadding,
       overflow: 'hidden',
-    },
-    coverWrap: {
-      width: 84,
-      height: 84,
-      marginBottom: 18,
-    },
-    cover: {
-      width: 84,
-      height: 84,
-      borderRadius: 22,
-    },
-    coverFallback: {
-      alignItems: 'center',
-      justifyContent: 'center',
     },
     lockBadge: {
       position: 'absolute',
-      bottom: -6,
-      left: -6,
-      width: 30,
-      height: 30,
-      borderRadius: 15,
-      borderWidth: 3,
+      top: 12,
+      left: 12,
+      width: 34,
+      height: 34,
+      borderRadius: 17,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    eyebrow: {
-      ...APP_TYPE.caption,
-      fontWeight: '700',
-      textAlign: 'center',
-      writingDirection: 'rtl',
-      marginBottom: APP_LAYOUT.cardTitleToSubtitleGap + 2,
+    banner: {
+      alignSelf: 'stretch',
+      height: 150,
+    },
+    bannerFallback: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    body: {
+      alignSelf: 'stretch',
+      alignItems: 'center',
+      padding: APP_LAYOUT.cardPadding,
+      paddingTop: 18,
     },
     title: {
       ...APP_TYPE.pageTitle,

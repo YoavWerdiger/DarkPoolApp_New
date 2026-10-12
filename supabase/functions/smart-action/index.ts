@@ -15,6 +15,11 @@
  */
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 
+/** JSON בתוך <script> — מונע יציאה מהתגית עם </script> מפרמטר ב-URL */
+function scriptSafeJson(v: unknown): string {
+  return JSON.stringify(v ?? null).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026');
+}
+
 const corsHeaders: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -141,9 +146,9 @@ function landingHtml(isSuccess: boolean, transactionId: string): string {
     (function () {
       var payload = JSON.stringify({
         type: '${messageType}',
-        transactionId: ${JSON.stringify(transactionId)},
+        transactionId: ${scriptSafeJson(transactionId)},
         status: '${isSuccess ? 'success' : 'failed'}',
-        message: ${JSON.stringify(body)}
+        message: ${scriptSafeJson(body)}
       });
       try {
         if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {

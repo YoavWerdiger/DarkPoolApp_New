@@ -43,7 +43,9 @@ serve(async (req) => {
     }
 
     // Parse request body
-    const { path, expiresIn = 3600 }: RequestBody = await req.json()
+    const { path, expiresIn: requestedExpiresIn = 3600 }: RequestBody = await req.json()
+    // תוקף קישור לתוכן קורס: 1 דקה עד 24 שעות (בלי קישורים «לתמיד» שאפשר להפיץ)
+    const expiresIn = Math.min(Math.max(Math.floor(Number(requestedExpiresIn) || 3600), 60), 86400)
 
     if (!path) {
       return new Response(

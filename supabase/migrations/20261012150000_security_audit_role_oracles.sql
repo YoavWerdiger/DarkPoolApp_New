@@ -22,3 +22,10 @@ returns boolean language sql stable security definer set search_path = public as
         and (u.subscription_expires_at is null or u.subscription_expires_at > now()))
   end;
 $$;
+
+-- פונקציות הטריגר החדשות — לא נגישות ב-RPC (טריגרים ממשיכים לפעול; נבדק)
+revoke execute on function public.chat_members_guard() from public, anon, authenticated;
+revoke execute on function public.chat_messages_update_guard() from public, anon, authenticated;
+revoke execute on function public.chat_messages_sender_status_guard() from public, anon, authenticated;
+revoke execute on function public.chat_groups_creator_guard() from public, anon, authenticated;
+revoke execute on function public.community_posts_mentions_cap() from public, anon, authenticated;

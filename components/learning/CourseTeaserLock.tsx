@@ -1,12 +1,12 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, useWindowDimensions, Pressable } from 'react-native';
+import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../ui/DesignTokens';
-import { APP_TYPE, appPhysicalRightText, appSheetButtonLabelStyle } from '../ui/appType';
+import { APP_TYPE, appPhysicalRightText } from '../ui/appType';
+import UIButton from '../ui/UIButton';
 import { APP_LAYOUT, UI_CARD_RADIUS } from '../ui/appLayout';
-import { HapticFeedback } from '../../utils/hapticFeedback';
 import { useTheme } from '../../context/ThemeContext';
 
 /**
@@ -114,20 +114,9 @@ export function CourseTeaserLock({ courseId, onBack }: { courseId: string; onBac
             הקורס בשלבי הפקה אחרונים — נעדכן אתכם ברגע שייפתח
           </Text>
 
-          <Pressable
-            onPress={() => {
-              void HapticFeedback.selection();
-              onBack();
-            }}
-            style={({ pressed }) => [
-              styles.btn,
-              { backgroundColor: tokens.colors.background.cardSolid, opacity: pressed ? 0.85 : 1 },
-            ]}
-          >
-            <Text style={[appSheetButtonLabelStyle, { color: tokens.colors.text.primary, textAlign: 'center' }]}>
-              חזרה לאקדמיה
-            </Text>
-          </Pressable>
+          <View style={styles.cta}>
+            <UIButton title="חזרה לאקדמיה" variant="primary" fullWidth onPress={onBack} />
+          </View>
         </View>
       </View>
     </View>
@@ -222,14 +211,9 @@ const createStyles = (_tokens: ReturnType<typeof useDesignTokens>) =>
       writingDirection: 'rtl',
       marginTop: APP_LAYOUT.cardStackGap,
     },
-    btn: {
+    cta: {
       alignSelf: 'stretch',
       marginTop: 20,
-      minHeight: 52,
-      borderRadius: 999,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 12,
     },
   });
 

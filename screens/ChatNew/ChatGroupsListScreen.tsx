@@ -1379,11 +1379,16 @@ export default function ChatGroupsListScreen() {
               accessibilityLabel="הוסף סטטוס"
             >
               <View style={styles.statusAddOuter}>
-                <View style={styles.statusCircleInner}>
-                  <Ionicons name="add" size={24} color={tokens.colors.text.primary} />
+                {/* כמו באינסטגרם: תמונת הפרופיל שלי + פלוס קטן בפינה (בלי תמונה — אייקון פלוס) */}
+                <View style={[styles.statusCircleInner, { overflow: 'hidden' }]}>
+                  {user?.profile_picture ? (
+                    <Image source={{ uri: user.profile_picture }} style={styles.statusCircleImage} resizeMode="cover" />
+                  ) : (
+                    <Ionicons name="add" size={24} color={tokens.colors.text.primary} />
+                  )}
                 </View>
                 <View style={styles.statusAddBadge}>
-                  <Ionicons name="add" size={11} color={tokens.colors.text.inverse} />
+                  <Ionicons name="add" size={13} color={tokens.colors.text.inverse} />
                 </View>
               </View>
               <Text style={[styles.statusLabel, { color: tokens.colors.text.primary }]}>הוסף</Text>
@@ -1737,11 +1742,11 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   statusAddBadge: {
     position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    bottom: -1,
+    right: -1,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     backgroundColor: tokens.colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',

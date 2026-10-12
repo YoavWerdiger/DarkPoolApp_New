@@ -19,6 +19,7 @@ import UICard from '../../components/ui/UICard';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { CourseTeaserLock, isCourseTeaserLocked } from '../../components/learning/CourseTeaserLock';
 
 export type CourseComingSoonParams = {
   courseId: string;
@@ -59,6 +60,15 @@ export const CourseComingSoonScreen: React.FC = () => {
     void HapticFeedback.impactLight();
     navigation.goBack();
   };
+
+  // קורס עם טיזר (האורקל) — אותו דיאלוג «בקרוב» כמו בשאר הקורסים הנעולים
+  if (isCourseTeaserLocked(params.courseId)) {
+    return (
+      <ScreenChrome>
+        <CourseTeaserLock courseId={params.courseId} onBack={() => navigation.goBack()} />
+      </ScreenChrome>
+    );
+  }
 
   return (
     <ScreenChrome>

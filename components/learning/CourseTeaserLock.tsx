@@ -32,6 +32,15 @@ const TRADING_BASICS: CourseTeaser = {
 const LOCKED_COURSES: Record<string, CourseTeaser> = {
   'david-training-course': TRADING_BASICS,
   'david-training-course-1': TRADING_BASICS,
+  'oracle-course': {
+    title: 'האורקל',
+    pitch: 'קורס מסחר מתקדם באופציות — לסוחרים שכבר מכירים את השוק ורוצים להתמקצע באסטרטגיות מתקדמות.',
+    highlights: [
+      { icon: 'layers-outline', title: 'אסטרטגיות אופציות מתקדמות', subtitle: '' },
+      { icon: 'shield-checkmark-outline', title: 'בניית פוזיציות וניהול סיכונים', subtitle: '' },
+      { icon: 'analytics-outline', title: 'קריאת השוק דרך זרימת האופציות', subtitle: '' },
+    ],
+  },
   'whales-course-1': {
     title: 'הלווייתנים',
     pitch: 'איך עוקבים אחרי הכסף הגדול — לזהות מה הגופים המוסדיים עושים, לפני שזה מגיע לכותרות.',

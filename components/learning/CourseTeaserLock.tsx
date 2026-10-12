@@ -1,14 +1,13 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, useWindowDimensions, Pressable } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import UICard from '../ui/UICard';
-import UIButton from '../ui/UIButton';
 import { useDesignTokens } from '../ui/DesignTokens';
-import { APP_TYPE, appPhysicalRightText } from '../ui/appType';
-import { APP_LAYOUT } from '../ui/appLayout';
+import { APP_TYPE, appPhysicalRightText, appSheetButtonLabelStyle } from '../ui/appType';
+import { APP_LAYOUT, UI_CARD_RADIUS } from '../ui/appLayout';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 import { useTheme } from '../../context/ThemeContext';
 
 /**
@@ -51,7 +50,8 @@ export function CourseTeaserLock({ courseId, onBack }: { courseId: string; onBac
   const tokens = useDesignTokens();
   const { isDarkMode } = useTheme();
   const insets = useSafeAreaInsets();
-  const { height: windowHeight } = useWindowDimensions();
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
+  const dialogWidth = Math.min(360, windowWidth - APP_LAYOUT.screenPaddingHorizontal * 2);
   const styles = useMemo(() => createStyles(tokens), [tokens]);
   const teaser = LOCKED_COURSES[courseId];
   if (!teaser) return null;
@@ -74,56 +74,65 @@ export function CourseTeaserLock({ courseId, onBack }: { courseId: string; onBac
         />
       </View>
 
-      <View
-        style={[
-          styles.sheet,
-          {
-            backgroundColor: canvas,
-            borderTopLeftRadius: tokens.borderRadius.xl,
-            borderTopRightRadius: tokens.borderRadius.xl,
-            paddingBottom: Math.max(insets.bottom, 12) + APP_LAYOUT.cardStackGap,
-          },
-        ]}
-      >
-        <View style={[styles.grabber, { backgroundColor: tokens.colors.border.divider }]} />
-
-        <View style={styles.headerRow}>
-          <View style={[styles.lockCircle, { backgroundColor: tokens.colors.background.navChrome }]}>
-            <Ionicons name="lock-closed" size={20} color={tokens.colors.text.primary} />
+      <View style={[StyleSheet.absoluteFill, styles.dialogCenter]} pointerEvents="box-none">
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.35)' }]} pointerEvents="none" />
+        <View
+          style={[
+            styles.dialog,
+            {
+              width: dialogWidth,
+              backgroundColor: canvas,
+              borderRadius: UI_CARD_RADIUS,
+            },
+          ]}
+        >
+          <View style={[styles.iconCircle, { backgroundColor: tokens.colors.background.secondary }]}>
+            <Ionicons name="lock-closed" size={28} color={tokens.colors.text.secondary} />
           </View>
-          <View style={styles.headerText}>
-            <Text style={[styles.eyebrow, { color: tokens.colors.primary.main }]}>בקרוב באקדמיה</Text>
-            <Text style={[styles.title, { color: tokens.colors.text.primary }]}>{teaser.title}</Text>
-          </View>
-        </View>
 
-        <Text style={[styles.pitch, { color: tokens.colors.text.secondary }]}>{teaser.pitch}</Text>
+          <Text style={[styles.eyebrow, { color: tokens.colors.text.secondary }]}>בקרוב באקדמיה</Text>
+          <Text style={[styles.title, { color: tokens.colors.text.primary }]}>{teaser.title}</Text>
+          <Text style={[styles.pitch, { color: tokens.colors.text.secondary }]}>{teaser.pitch}</Text>
 
-        <Text style={[styles.groupLabel, { color: tokens.colors.text.secondary }]}>מה מחכה לכם בקורס</Text>
-        <UICard variant="soft" padding="none" style={styles.card}>
-          {teaser.highlights.map((h, i) => (
-            <View key={h.title}>
-              <View style={styles.row}>
-                <View style={[styles.rowIcon, { backgroundColor: tokens.colors.background.navChrome }]}>
-                  <Ionicons name={h.icon} size={18} color={tokens.colors.text.primary} />
+          <Text style={[styles.groupLabel, { color: tokens.colors.text.secondary }]}>מה מחכה לכם בקורס</Text>
+          <View style={[styles.card, { backgroundColor: tokens.colors.background.secondary }]}>
+            {teaser.highlights.map((h, i) => (
+              <View key={h.title}>
+                <View style={styles.row}>
+                  <View style={[styles.rowIcon, { backgroundColor: tokens.colors.background.navChrome }]}>
+                    <Ionicons name={h.icon} size={17} color={tokens.colors.text.primary} />
+                  </View>
+                  <View style={styles.rowText}>
+                    <Text style={[styles.rowTitle, { color: tokens.colors.text.primary }]}>{h.title}</Text>
+                    <Text style={[styles.rowSubtitle, { color: tokens.colors.text.secondary }]}>{h.subtitle}</Text>
+                  </View>
                 </View>
-                <View style={styles.rowText}>
-                  <Text style={[styles.rowTitle, { color: tokens.colors.text.primary }]}>{h.title}</Text>
-                  <Text style={[styles.rowSubtitle, { color: tokens.colors.text.secondary }]}>{h.subtitle}</Text>
-                </View>
+                {i < teaser.highlights.length - 1 ? (
+                  <View style={[styles.divider, { backgroundColor: tokens.colors.border.divider }]} />
+                ) : null}
               </View>
-              {i < teaser.highlights.length - 1 ? (
-                <View style={[styles.divider, { backgroundColor: tokens.colors.border.divider }]} />
-              ) : null}
-            </View>
-          ))}
-        </UICard>
+            ))}
+          </View>
 
-        <Text style={[styles.footnote, { color: tokens.colors.text.secondary }]}>
-          הקורס בשלבי הפקה אחרונים — נעדכן אתכם ברגע שייפתח
-        </Text>
+          <Text style={[styles.footnote, { color: tokens.colors.text.secondary }]}>
+            הקורס בשלבי הפקה אחרונים — נעדכן אתכם ברגע שייפתח
+          </Text>
 
-        <UIButton title="חזרה לאקדמיה" variant="primary" fullWidth onPress={onBack} style={styles.cta} />
+          <Pressable
+            onPress={() => {
+              void HapticFeedback.selection();
+              onBack();
+            }}
+            style={({ pressed }) => [
+              styles.btn,
+              { backgroundColor: tokens.colors.background.cardSolid, opacity: pressed ? 0.85 : 1 },
+            ]}
+          >
+            <Text style={[appSheetButtonLabelStyle, { color: tokens.colors.text.primary, textAlign: 'center' }]}>
+              חזרה לאקדמיה
+            </Text>
+          </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -138,73 +147,67 @@ const createStyles = (_tokens: ReturnType<typeof useDesignTokens>) =>
       bottom: 0,
       overflow: 'hidden',
     },
-    sheet: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      bottom: 0,
-      paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
-      paddingTop: 10,
-    },
-    grabber: {
-      alignSelf: 'center',
-      width: 40,
-      height: 5,
-      borderRadius: 3,
-      marginBottom: 18,
-    },
-    headerRow: {
-      direction: 'rtl',
-      flexDirection: 'row',
+    dialogCenter: {
+      justifyContent: 'center',
       alignItems: 'center',
-      gap: 12,
+      paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
     },
-    lockCircle: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
+    // כמו InlineAppDialog / UIAlert
+    dialog: {
+      alignItems: 'center',
+      padding: APP_LAYOUT.cardPadding,
+      overflow: 'hidden',
+    },
+    iconCircle: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
       alignItems: 'center',
       justifyContent: 'center',
-    },
-    headerText: {
-      flex: 1,
+      marginBottom: 20,
     },
     eyebrow: {
       ...APP_TYPE.caption,
       fontWeight: '700',
-      ...appPhysicalRightText,
+      textAlign: 'center',
+      writingDirection: 'rtl',
+      marginBottom: APP_LAYOUT.cardTitleToSubtitleGap + 2,
     },
     title: {
       ...APP_TYPE.sectionTitle,
-      ...appPhysicalRightText,
-      marginTop: 2,
+      textAlign: 'center',
+      writingDirection: 'rtl',
+      marginBottom: APP_LAYOUT.cardTitleToBodyGap,
     },
     pitch: {
       ...APP_TYPE.body,
-      ...appPhysicalRightText,
-      marginTop: 12,
+      textAlign: 'center',
+      writingDirection: 'rtl',
     },
     groupLabel: {
       ...APP_TYPE.groupLabel,
       ...appPhysicalRightText,
-      marginTop: 22,
-      marginBottom: 8,
+      alignSelf: 'stretch',
+      marginTop: 20,
+      marginBottom: APP_LAYOUT.sectionHeaderToContent - 4,
     },
     card: {
-      borderWidth: 0,
+      alignSelf: 'stretch',
+      borderRadius: 18,
+      overflow: 'hidden',
     },
     row: {
       direction: 'rtl',
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,
-      paddingVertical: 13,
-      paddingHorizontal: APP_LAYOUT.cardPadding,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
     },
     rowIcon: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
+      width: 34,
+      height: 34,
+      borderRadius: 17,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -222,16 +225,22 @@ const createStyles = (_tokens: ReturnType<typeof useDesignTokens>) =>
     },
     divider: {
       height: 1,
-      marginHorizontal: APP_LAYOUT.cardPadding,
+      marginHorizontal: 14,
     },
     footnote: {
       ...APP_TYPE.footnote,
       textAlign: 'center',
       writingDirection: 'rtl',
-      marginTop: 16,
+      marginTop: APP_LAYOUT.cardStackGap,
     },
-    cta: {
-      marginTop: 14,
+    btn: {
+      alignSelf: 'stretch',
+      marginTop: 20,
+      minHeight: 52,
+      borderRadius: 999,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 12,
     },
   });
 

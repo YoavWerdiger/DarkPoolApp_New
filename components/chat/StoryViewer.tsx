@@ -25,7 +25,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Video, ResizeMode } from '../../lib/expoAvSafe';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import Svg, { Path } from 'react-native-svg';
 import { chatPalette } from './chatDesignTokens';
 import Reanimated, {
@@ -495,6 +494,7 @@ export default function StoryViewer({
   initialUserIndex = 0,
   onStoriesChanged,
 }: StoryViewerProps) {
+  const designTokens = useDesignTokens();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
 
@@ -1711,19 +1711,12 @@ export default function StoryViewer({
             ))}
           </View>
 
-          <BlurView
-            intensity={60}
-            tint="dark"
-            style={reactStyles.bar}
+          {/* pill מעוגל בצבע הרקע של מערכת העיצוב (במקום זכוכית) */}
+          <View
+            style={[reactStyles.bar, { backgroundColor: designTokens.colors.background.primary }]}
             pointerEvents="box-none"
             onLayout={(e) => setBarWidth(e.nativeEvent.layout.width)}
           >
-            <LinearGradient
-              colors={['rgba(255,255,255,0.14)', 'rgba(255,255,255,0.04)', 'rgba(255,255,255,0)']}
-              locations={[0, 0.6, 1]}
-              style={reactStyles.barSheen}
-              pointerEvents="none"
-            />
             {REACTION_EMOJIS.map((emoji, i) => (
               <ReactionButton
                 key={emoji}
@@ -1732,7 +1725,7 @@ export default function StoryViewer({
                 onPress={() => handleReactionPress(emoji, i)}
               />
             ))}
-          </BlurView>
+          </View>
         </View>
       )}
     </>
@@ -1897,23 +1890,16 @@ const reactStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    // Pure translucent glass on top of BlurView – uniform tone, subtle border.
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 32,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    // צבע הרקע מגיע מה-tokens (inline) — pill מלא, בלי זכוכית/קו
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     marginHorizontal: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.20)',
     shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 14,
+    shadowOpacity: 0.22,
+    shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
-    overflow: 'hidden',
-  },
-  barSheen: {
-    ...StyleSheet.absoluteFill,
-    borderRadius: 32,
+    elevation: 6,
   },
   btn: {
     flex: 1,

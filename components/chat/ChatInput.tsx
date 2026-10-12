@@ -768,6 +768,11 @@ function ChatInputImpl({
           if (mediaFile.type === 'video' && mediaFile.duration && mediaFile.duration > 0) {
             metadata.media_duration = mediaFile.duration;
           }
+          // מידות — הבועה מוצגת ביחס האמיתי (גרף 16:9 לא נחתך לריבוע)
+          if (mediaFile.width && mediaFile.height) {
+            metadata.media_width = mediaFile.width;
+            metadata.media_height = mediaFile.height;
+          }
 
           await onSendMessage(firstCaption.trim(), uploadResult.url, messageType, metadata);
 
@@ -913,6 +918,9 @@ function ChatInputImpl({
             existing_optimistic_id: itemTempId,
             client_message_id: optimisticClientIds[index],
             media_group_id: mediaGroupId,
+            ...(mediaFile.width && mediaFile.height
+              ? { media_width: mediaFile.width, media_height: mediaFile.height }
+              : {}),
           };
           if ('thumbnail_url' in uploadResult && uploadResult.thumbnail_url) {
             metadata.media_thumbnail_url = uploadResult.thumbnail_url;

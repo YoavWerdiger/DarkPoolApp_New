@@ -1485,6 +1485,8 @@ export default function ChatGroupScreen() {
         media_size: metadata?.media_size,
         media_thumbnail_url: metadata?.media_thumbnail_url,
         media_duration: metadata?.media_duration,
+        media_width: metadata?.media_width,
+        media_height: metadata?.media_height,
         media_urls: metadata?.media_urls,
         mentioned_users: metadata?.mentioned_users || [],
         mentions: Array.isArray(metadata?.mentions) ? metadata.mentions : [],

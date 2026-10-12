@@ -1787,6 +1787,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       media_file_name: input.media_file_name || input.metadata?.media_file_name,
       media_size: input.media_size || input.metadata?.media_size,
       media_duration: input.media_duration || input.metadata?.media_duration,
+      media_width: input.media_width || input.metadata?.media_width,
+      media_height: input.media_height || input.metadata?.media_height,
       media_urls: input.media_urls || input.metadata?.media_urls,
       reply_to_message_id: input.reply_to_message_id,
       reply_to: replyToData,

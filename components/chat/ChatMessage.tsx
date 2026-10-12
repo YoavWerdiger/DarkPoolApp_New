@@ -60,6 +60,48 @@ import { APP_TYPE, appPhysicalRightText } from '../ui/appType';
 import { UserNameRow, badgeSizeForLineHeight } from '../ui/badges/UserBadges';
 import { isUsableChatDisplayName } from '../../lib/chatMessageIdentity';
 
+/** יחס תמונה בבועה — טווח רחב (פנורמי עד 2:1, אנכי עד 0.6) */
+const clampBubbleAspect = (a: number) => Math.min(2, Math.max(0.6, a || 0.9));
+/** יחס שנמדד בטעינה (הודעות ישנות בלי media_width/height) — נשמר כדי שהבועה לא «תקפוץ» בגלילה חוזרת */
+const bubbleAspectCache = new Map<string, number>();
+
+function BubbleImage({
+  uri,
+  cacheKey,
+  initialAspect,
+  knownAspect,
+  style,
+  recyclingKey,
+}: {
+  uri: string;
+  cacheKey: string;
+  initialAspect: number;
+  knownAspect: boolean;
+  style: any;
+  recyclingKey: string;
+}) {
+  const [aspect, setAspect] = React.useState(initialAspect);
+  return (
+    <ExpoImage
+      source={{ uri }}
+      style={[style, { aspectRatio: aspect }]}
+      contentFit="cover"
+      transition={0}
+      cachePolicy="memory-disk"
+      recyclingKey={recyclingKey}
+      onLoad={(e) => {
+        if (knownAspect) return;
+        const w = e?.source?.width;
+        const h = e?.source?.height;
+        if (!w || !h) return;
+        const next = clampBubbleAspect(w / h);
+        bubbleAspectCache.set(cacheKey, next);
+        if (Math.abs(next - aspect) > 0.02) setAspect(next);
+      }}
+    />
+  );
+}
+
 type ResolvedMessageMedia = {
   main: string | null;
   thumb: string | null;
@@ -1095,9 +1137,9 @@ function renderMediaContent(
     case MessageType.IMAGE: {
       const imgW = message.media_width;
       const imgH = message.media_height;
-      // Mild WhatsApp hint: soft portrait default + clamp (not hard 3:4)
+      // יחס אמיתי (גרף 16:9 נשאר רחב) — טווח כמו וואטסאפ; בלי מידות שמורות נמדד בטעינה
       const rawAspect = imgW && imgH ? imgW / imgH : 0.9;
-      const aspectRatio = Math.min(1.15, Math.max(0.65, rawAspect));
+      const aspectRatio = clampBubbleAspect(bubbleAspectCache.get(message.id) ?? rawAspect);
       const thumbUri =
         resolved.thumb ||
         getCachedChatMediaDisplayUri(message.media_thumbnail_url) ||
@@ -1117,12 +1159,12 @@ function renderMediaContent(
         <TouchableOpacity onPress={onMediaPress} activeOpacity={0.9} disabled={message.is_uploading}>
           <View style={{ position: 'relative' }}>
             {bubbleUri ? (
-              <ExpoImage
-                source={{ uri: bubbleUri }}
-                style={[styles.mediaImage, { aspectRatio }, message.is_uploading && { opacity: 0.7 }]}
-                contentFit="cover"
-                transition={0}
-                cachePolicy="memory-disk"
+              <BubbleImage
+                uri={bubbleUri}
+                cacheKey={message.id}
+                initialAspect={aspectRatio}
+                knownAspect={!!(imgW && imgH)}
+                style={[styles.mediaImage, message.is_uploading && { opacity: 0.7 }]}
                 recyclingKey={`${message.id}-bubble-${bubbleUri}`}
               />
             ) : (

@@ -18,6 +18,7 @@ import { queryClient } from '../lib/queryClient';
 import { clearAllDrafts } from '../services/chat/chatDrafts';
 import { clear as clearChatOfflineQueue } from '../services/chat/chatOfflineQueue';
 import { clearAllColmexLocal } from '../services/colmex/colmexCredentials';
+import * as Notifications from 'expo-notifications';
 
 /** שורד remount / Fast Refresh — מנוקה רק אחרי סיסמה חדשה, signIn רגיל, או signOut */
 export const PASSWORD_RECOVERY_PENDING_KEY = 'password_recovery_pending';
@@ -303,6 +304,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       clearSentryUser();
       deviceTokenRegistered.current = false;
 
+      // שחרור טוקן הפוש לפני ניקוי הסשן — אחרי signOut ה-RLS כבר לא מאפשר לעדכן את device_tokens,
+      // והמכשיר היה ממשיך לקבל תצוגות מקדימות של הצ'אט של המשתמש שהתנתק
+      if (previousUserId) {
+        try {
+          await Promise.race([
+            NotificationService.unregisterDeviceToken(previousUserId),
+            new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 3_000)),
+          ]);
+        } catch (_) { /* non-critical */ }
+      }
+      void Notifications.dismissAllNotificationsAsync().catch(() => undefined);
+
       // scrub סשן עם תקציב זמן — לא חוסמים את הקורא לנצח
       let error: string | null = null;
       try {
@@ -347,9 +360,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } catch (_) { /* non-critical */ }
         try {
           await clearAllColmexLocal();
-        } catch (_) { /* non-critical */ }
-        try {
-          await NotificationService.unregisterDeviceToken();
         } catch (_) { /* non-critical */ }
       })();
 

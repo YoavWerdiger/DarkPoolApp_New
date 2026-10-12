@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { isServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
 import {
   addCalendarDays,
@@ -91,6 +92,8 @@ function isWithinEarningsReleaseWindow(israelHour: number, israelMinute: number)
 }
 
 serve(async (req) => {
+  // רק cron (מפתח service)
+  if (req.method !== 'OPTIONS' && !isServiceCaller(req)) return serviceOnlyDenied();
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }

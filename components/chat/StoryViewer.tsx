@@ -65,6 +65,24 @@ const STORY_DURATION = 10000;
 const VIDEO_MAX_DURATION = 60000;
 const REACTION_EMOJIS = ['❤️', '🔥', '😂', '😮', '😢', '👏'];
 
+/**
+ * סטורי עם טקסט/ציור נערך בתוך מסגרת המצלמה (canvasWidth×canvasHeight).
+ * מציגים את המדיה באותה מסגרת ובאותו אופן כמו בעורך — מה שראו בעריכה זה מה שרואים בצפייה.
+ */
+function storyAuthoredFrame(content?: string | null): { top: number; height: number } | null {
+  if (!content || content.trim()[0] !== '{') return null;
+  try {
+    const parsed = JSON.parse(content) as { canvasWidth?: number; canvasHeight?: number };
+    if (typeof parsed.canvasWidth !== 'number' || typeof parsed.canvasHeight !== 'number' || parsed.canvasWidth <= 0) {
+      return null;
+    }
+    const height = parsed.canvasHeight * (SCREEN_WIDTH / parsed.canvasWidth);
+    return { top: (SCREEN_HEIGHT - height) / 2, height };
+  } catch {
+    return null;
+  }
+}
+
 /* ── Flying reaction emoji (one instance per tap, self-removes) ── */
 interface FlyingEmoji {
   id: number;
@@ -1423,13 +1441,20 @@ export default function StoryViewer({
           </View>
         );
       }
+      const authoredImg = storyAuthoredFrame(story.content);
       return (
         <View pointerEvents="none">
           <Image
             key={story.id}
             source={{ uri: localUriForStoryMedia(story.media_url) ?? story.media_url }}
-            style={[styles.fullMedia, gateOpacity && { opacity: 0 }]}
-            resizeMode="contain"
+            style={[
+              authoredImg
+                ? { position: 'absolute', left: 0, top: authoredImg.top, width: SCREEN_WIDTH, height: authoredImg.height }
+                : styles.fullMedia,
+              gateOpacity && { opacity: 0 },
+            ]}
+            // עם טקסט/ציור: cover במסגרת (כמו בעורך) — אחרת contain במסך מלא
+            resizeMode={authoredImg ? 'cover' : 'contain'}
             onLoad={() => { if (isActive) setMediaReady(true); }}
             onError={() => {
               if (isActive) {
@@ -1454,7 +1479,16 @@ export default function StoryViewer({
         <View key={story.id} style={styles.fullMedia} pointerEvents="none">
           <Video
             source={{ uri: localUriForStoryMedia(story.media_url) ?? story.media_url }}
-            style={[styles.fullMedia, gateOpacity && { opacity: 0 }]}
+            style={[
+              (() => {
+                const f = storyAuthoredFrame(story.content);
+                // בלי overflow:hidden (וידאו iOS נתקע בחיתוך) — רק מיקום וגודל המסגרת
+                return f
+                  ? { position: 'absolute' as const, left: 0, top: f.top, width: SCREEN_WIDTH, height: f.height }
+                  : styles.fullMedia;
+              })(),
+              gateOpacity && { opacity: 0 },
+            ]}
             resizeMode={ResizeMode.CONTAIN}
             shouldPlay={isActive && !isPaused && mediaReady}
             isMuted={!isActive}
@@ -1534,17 +1568,19 @@ export default function StoryViewer({
 
           const authoredW = typeof parsed?.canvasWidth === 'number' ? parsed.canvasWidth : SCREEN_WIDTH;
           const authoredH = typeof parsed?.canvasHeight === 'number' ? parsed.canvasHeight : SCREEN_HEIGHT;
-          const scaleX = SCREEN_WIDTH / authoredW;
-          const scaleY = SCREEN_HEIGHT / authoredH;
+          // התמונה מוצגת contain ובמרכז — שטח המדיה הוא רוחב המסך × גובה המסגרת בקנה אחד.
+          // קודם y נמתח לגובה המסך כולו (SCREEN_HEIGHT/canvasHeight) והטקסט «ירד» על סרגל הריאקציות.
+          const fit = SCREEN_WIDTH / authoredW;
+          const mediaH = authoredH * fit;
+          const mediaTop = (SCREEN_HEIGHT - mediaH) / 2;
 
           return (
             <>
               {drawingsArr.length > 0 && (
                 <Svg
-                  style={StyleSheet.absoluteFill}
+                  style={{ position: 'absolute', left: 0, top: mediaTop, width: SCREEN_WIDTH, height: mediaH }}
                   pointerEvents="none"
                   viewBox={`0 0 ${authoredW} ${authoredH}`}
-                  preserveAspectRatio="none"
                 >
                   {drawingsArr.map((p: any, idx: number) => (
                     <Path
@@ -1569,15 +1605,16 @@ export default function StoryViewer({
                     : o.bgStyle === 'semi'
                       ? 'rgba(0,0,0,0.45)'
                       : 'transparent';
-                const tx = (typeof o.x === 'number' ? o.x : 0) * scaleX;
-                const ty = (typeof o.y === 'number' ? o.y : 0) * scaleY;
-                const sc = typeof o.scale === 'number' ? o.scale : 1;
+                const tx = (typeof o.x === 'number' ? o.x : 0) * fit;
+                const ty = (typeof o.y === 'number' ? o.y : 0) * fit;
+                const sc = (typeof o.scale === 'number' ? o.scale : 1) * fit;
                 return (
                   <View
                     key={idx}
                     style={{
                       position: 'absolute',
-                      top: SCREEN_HEIGHT / 2 - 60,
+                      // כמו בעורך: מרכז המסגרת − 60 (בקנה של המסך)
+                      top: mediaTop + mediaH / 2 - 60 * fit,
                       alignSelf: 'center',
                       zIndex: 12,
                       transform: [

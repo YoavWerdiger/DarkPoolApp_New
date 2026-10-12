@@ -7,7 +7,6 @@ import { appPageTitleStyle, appScreenTitleStyle, appScreenSubtitleStyle, APP_TYP
 import {
   DayNavBlurButton,
   DRAWER_MENU_BUTTON_SIZE,
-  drawerMenuFaceColor,
 } from './DayNavBlurButton';
 
 /** כמו מסך שווקים (בית) / רשימת צ׳אטים — מרווח אופקי לכותרת ול־section */
@@ -64,7 +63,6 @@ export function MainDrawerScreenHeader({
   const tokens = useDesignTokens();
   const styles = useMemo(() => createStyles(tokens, inRtlTree), [tokens, inRtlTree]);
   const row = inRtlTree ? styles.rowLtrInRtlTree : styles.rowAppLtr;
-  const menuFace = drawerMenuFaceColor(tokens.colors.background.cardSolid);
 
   const showPageTitle = title.length > 0 && centerAccessory == null;
 
@@ -98,15 +96,15 @@ export function MainDrawerScreenHeader({
     <View style={style}>
       <View style={[styles.appHeader, row]}>
         <View style={styles.appHeaderActionsMenu}>
+          {/* כפתור התפריט בירוק של ה-CTA — גישה ברורה לשאר האפליקציה */}
           <DayNavBlurButton
             onPress={onMenuPress}
-            glass={!menuFace}
-            glassIntensity="subtle"
+            glass={false}
             size={DRAWER_MENU_BUTTON_SIZE}
-            style={menuFace ? { backgroundColor: menuFace } : undefined}
+            style={{ backgroundColor: tokens.colors.primary.lightCta }}
             accessibilityLabel="תפריט ראשי"
           >
-            <Ionicons name="menu" size={24} color={tokens.colors.text.primary} />
+            <Ionicons name="menu" size={24} color={tokens.colors.text.inverse} />
           </DayNavBlurButton>
         </View>
         <View

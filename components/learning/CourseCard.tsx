@@ -21,15 +21,12 @@ import {
 } from './academyCardLayout';
 import { APP_LAYOUT } from '../ui/appLayout';
 import {
-  appCardBodyStyle,
   appCardSubtitleStyle,
   appCardTitleStyle,
-  appGroupLabelStyle,
 } from '../ui/appType';
 import { ACADEMY_TYPE } from './academyLayout';
 import {
   getAcademyCourseAccentColor,
-  getAcademyCourseAudience,
   getAcademyCourseBadgeColor,
   getAcademyCourseBadgeLabel,
   getAcademyCourseBadgeTextColor,
@@ -37,6 +34,7 @@ import {
   getAcademyCourseTier,
   isComingSoonCourse,
 } from './academyCourses';
+import { isCourseTeaserLocked } from './CourseTeaserLock';
 
 /** @deprecated השתמשו ב־academyCardWidth — נשמר לתאימות */
 export const CARD_WIDTH = academyCardWidth(Dimensions.get('window').width);
@@ -100,14 +98,13 @@ export const CourseCard: React.FC<CourseCardProps> = ({
     T.colors.primary.main
   );
   const subtitle = getAcademyCourseSubtitle(course);
-  const audience = getAcademyCourseAudience(course);
   const accent = getAcademyCourseAccentColor(
     course as CourseWithProgress & { price?: number },
     T.colors.primary.main
   );
 
-  const ctaLabel = comingSoon
-    ? 'פרטים נוספים'
+  const ctaLabel = comingSoon || isCourseTeaserLocked(course.id)
+    ? 'לפרטים על הקורס'
     : isEnrolled
       ? 'המשך למידה'
       : isPremium
@@ -177,12 +174,6 @@ export const CourseCard: React.FC<CourseCardProps> = ({
             ) : null}
           </View>
 
-          {audience ? (
-            <View style={styles.audienceBlock}>
-              <Text style={styles.audienceLabel}>למי הקורס מתאים</Text>
-              <Text style={styles.audienceText}>{audience}</Text>
-            </View>
-          ) : null}
 
           {isEnrolled && totalLessons > 0 ? (
             <View style={styles.progressTrack}>
@@ -304,24 +295,10 @@ const createStyles = (
     subtitle: {
       ...appCardSubtitleStyle,
     },
-    audienceBlock: {
-      width: '100%',
-      alignItems: 'stretch',
-      gap: APP_LAYOUT.groupLabelToContent,
-    },
-    audienceLabel: {
-      ...appGroupLabelStyle,
-      marginBottom: 0,
-      color: T.colors.text.secondary,
-    },
-    audienceText: {
-      ...appCardBodyStyle,
-      color: T.colors.text.secondary,
-    },
     progressTrack: {
       height: 4,
       borderRadius: 2,
-      backgroundColor: 'rgba(255,255,255,0.1)',
+      backgroundColor: T.colors.border.divider,
       overflow: 'hidden',
       marginTop: 2,
       width: '100%',

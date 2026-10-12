@@ -27,3 +27,16 @@ describe('getChatMessagePreview — entity share', () => {
     expect(getChatMessagePreview('text', 'שלום')).toBe('שלום');
   });
 });
+
+describe('getChatMessagePreview — truncated JSON (old last_message_preview)', () => {
+  it('shows attachment title, not raw JSON', () => {
+    const cut = '{"attachment":{"v":1,"ref":{"type":"news_article","id":"1"},"preview":{"title":"מניות LULU בשפל';
+    expect(getChatMessagePreview(undefined, cut)).toBe('📎 מניות LULU בשפל');
+  });
+  it('shows a generic share label when title is cut off', () => {
+    expect(getChatMessagePreview(undefined, '{"attachment":{"v":1,"ref":{"type":"person_profile","id":"P0')).toBe('📎 שיתוף');
+  });
+  it('shows voice label for truncated waveform', () => {
+    expect(getChatMessagePreview(undefined, '{"waveform":[0.42,1,1,0.83')).toBe('הודעה קולית');
+  });
+});

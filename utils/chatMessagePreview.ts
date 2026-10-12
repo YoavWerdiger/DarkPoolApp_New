@@ -50,7 +50,13 @@ export function getChatMessagePreview(
         return dur ? `הודעה קולית · ${dur}` : 'הודעה קולית';
       }
     } catch {
-      /* לא JSON תקין */
+      // JSON חתוך (last_message_preview ישן נשמר כ-LEFT 100) — מזהים לפי מפתחות ולא מציגים גולמי
+      if (trimmed.includes('"attachment"')) {
+        const title = /"title"\s*:\s*"([^"]+)/.exec(trimmed)?.[1];
+        return title ? `📎 ${title}` : '📎 שיתוף';
+      }
+      if (trimmed.includes('"waveform"') || trimmed.includes('"waveformData"')) return 'הודעה קולית';
+      if (trimmed.includes('"trade"')) return 'טרייד';
     }
   }
 

@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { APP_TYPE } from '../ui/appType';
 import { brandfetchTickerLogoUri } from '../../utils/brandfetch';
@@ -138,22 +137,22 @@ export default function TradeMessage({ trade: tradeRaw, isMe }: TradeMessageProp
   const date = (d: string) =>
     new Date(d).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: '2-digit' });
 
-  const metrics: Array<{ icon: React.ComponentProps<typeof Ionicons>['name']; label: string; value: string }> = [
-    { icon: 'enter-outline', label: 'כניסה', value: money(trade.entry_price) },
-    { icon: 'exit-outline', label: 'יציאה', value: money(trade.exit_price) },
-    { icon: 'layers-outline', label: 'כמות', value: String(trade.quantity) },
-    { icon: 'calendar-outline', label: 'נסגר', value: date(trade.exit_date) },
+  const metrics: Array<{ label: string; value: string }> = [
+    { label: 'כניסה', value: money(trade.entry_price) },
+    { label: 'יציאה', value: money(trade.exit_price) },
+    { label: 'כמות', value: String(trade.quantity) },
+    { label: 'נסגר', value: date(trade.exit_date) },
   ];
 
   return (
     <View style={styles.card}>
       <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: ink, opacity: 0.06 }]} />
 
-      {/* כותרת: לוגו + סימבול + כיוון | תשואה ורווח */}
+      {/* כותרת (RTL): לוגו + סימבול + כיוון מימין | תשואה ורווח משמאל */}
       <View style={styles.header}>
         <TradeSymbolLogo
           symbol={trade.symbol}
-          size={40}
+          size={36}
           fallbackColor={ink}
           backgroundColor="rgba(127,127,127,0.18)"
         />
@@ -161,9 +160,8 @@ export default function TradeMessage({ trade: tradeRaw, isMe }: TradeMessageProp
           <Text style={[styles.symbol, { color: ink }]} numberOfLines={1}>
             {trade.symbol}
           </Text>
-          <View style={[styles.sideChip, { backgroundColor: isLong ? up : down }]}>
-            <Ionicons name={isLong ? 'trending-up' : 'trending-down'} size={11} color="#FFFFFF" />
-            <Text style={styles.sideText}>{isLong ? 'Long' : 'Short'}</Text>
+          <View style={[styles.sideChip, { backgroundColor: 'rgba(127,127,127,0.16)' }]}>
+            <Text style={[styles.sideText, { color: isLong ? up : down }]}>{isLong ? 'Long' : 'Short'}</Text>
           </View>
         </View>
         <View style={styles.result}>
@@ -171,20 +169,17 @@ export default function TradeMessage({ trade: tradeRaw, isMe }: TradeMessageProp
             {returnPct >= 0 ? '+' : ''}
             {returnPct.toFixed(2)}%
           </Text>
-          <Text style={[styles.resultPnl, { color: resultColor }]}>{money(trade.pnl)}</Text>
+          <Text style={[styles.resultPnl, { color: secondary }]}>{money(trade.pnl)}</Text>
         </View>
       </View>
 
       <View style={[styles.divider, { backgroundColor: ink }]} />
 
-      {/* 2×2: כניסה / יציאה / כמות / תאריך */}
+      {/* 2×2: תווית מעל ערך */}
       <View style={styles.grid}>
         {metrics.map((m) => (
           <View key={m.label} style={styles.metric}>
-            <View style={styles.metricLabelRow}>
-              <Ionicons name={m.icon} size={13} color={secondary} />
-              <Text style={[styles.metricLabel, { color: secondary }]}>{m.label}</Text>
-            </View>
+            <Text style={[styles.metricLabel, { color: secondary }]}>{m.label}</Text>
             <Text style={[styles.metricValue, { color: ink }]} numberOfLines={1}>
               {m.value}
             </Text>
@@ -195,12 +190,9 @@ export default function TradeMessage({ trade: tradeRaw, isMe }: TradeMessageProp
       {trade.notes ? (
         <>
           <View style={[styles.divider, { backgroundColor: ink }]} />
-          <View style={styles.notesRow}>
-            <Ionicons name="chatbox-ellipses-outline" size={14} color={secondary} />
-            <Text style={[styles.notes, { color: secondary }]} numberOfLines={4}>
-              {trade.notes}
-            </Text>
-          </View>
+          <Text style={[styles.notes, { color: secondary }]} numberOfLines={4}>
+            {trade.notes}
+          </Text>
         </>
       ) : null}
     </View>
@@ -208,24 +200,26 @@ export default function TradeMessage({ trade: tradeRaw, isMe }: TradeMessageProp
 }
 
 const styles = StyleSheet.create({
+  // כיוון קבוע RTL על הכרטיס — ב-RTL מאולץ row-reverse/flex-end הפכו את הפריסה
   card: {
     width: CARD_W,
-    borderRadius: 14,
+    borderRadius: 16,
     overflow: 'hidden',
     marginVertical: 2,
+    direction: 'rtl',
   },
   header: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    paddingHorizontal: 12,
-    paddingTop: 12,
-    paddingBottom: 10,
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    paddingBottom: 12,
   },
   headerText: {
     flex: 1,
     minWidth: 0,
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
     gap: 4,
   },
   symbol: {
@@ -235,26 +229,22 @@ const styles = StyleSheet.create({
     writingDirection: 'ltr',
   },
   sideChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 7,
+    paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 999,
   },
   sideText: {
     fontSize: APP_TYPE.caption.fontSize,
     lineHeight: APP_TYPE.caption.lineHeight,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: '700',
   },
   result: {
-    alignItems: 'flex-start',
+    alignItems: 'flex-end',
   },
   resultPct: {
-    fontSize: APP_TYPE.cardTitle.fontSize,
-    lineHeight: APP_TYPE.cardTitle.lineHeight,
-    fontWeight: APP_TYPE.cardTitle.fontWeight,
+    fontSize: APP_TYPE.cardTitle.fontSize + 2,
+    lineHeight: APP_TYPE.cardTitle.lineHeight + 2,
+    fontWeight: '700',
     fontVariant: ['tabular-nums'],
     writingDirection: 'ltr',
   },
@@ -268,29 +258,26 @@ const styles = StyleSheet.create({
   divider: {
     height: StyleSheet.hairlineWidth,
     opacity: 0.18,
-    marginHorizontal: 12,
+    marginHorizontal: 14,
   },
   grid: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    rowGap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    rowGap: 12,
   },
   metric: {
     width: '50%',
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
     gap: 2,
-  },
-  metricLabelRow: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 4,
   },
   metricLabel: {
     fontSize: APP_TYPE.caption.fontSize,
     lineHeight: APP_TYPE.caption.lineHeight,
     fontWeight: APP_TYPE.caption.fontWeight,
+    textAlign: 'right',
+    writingDirection: 'rtl',
   },
   metricValue: {
     fontSize: APP_TYPE.cardSubtitle.fontSize,
@@ -299,18 +286,12 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
     writingDirection: 'ltr',
   },
-  notesRow: {
-    flexDirection: 'row-reverse',
-    alignItems: 'flex-start',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
   notes: {
-    flex: 1,
     fontSize: APP_TYPE.cardSubtitle.fontSize,
     lineHeight: APP_TYPE.cardSubtitle.lineHeight,
     textAlign: 'right',
     writingDirection: 'rtl',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
 });

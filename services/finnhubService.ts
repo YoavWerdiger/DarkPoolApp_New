@@ -2,7 +2,8 @@
 import { supabase } from '../lib/supabase';
 
 // API Configuration
-const FINNHUB_API_KEY = process.env.EXPO_PUBLIC_FINNHUB_API_KEY ?? '';
+// המפתח לא נקרא באפליקציה (נשאר בשרת — finnhub-proxy). המודול לא בשימוש.
+const FINNHUB_API_KEY = '';
 const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1';
 const FINNHUB_WS_URL = 'wss://ws.finnhub.io';
 

@@ -25,8 +25,22 @@ import {
 } from '../../screens/Portfolios/portfolioConstants';
 import { filterSymbolSearchResults, searchCryptoUniverse } from './symbolSearchFilter';
 
-const FINNHUB_API_KEY = process.env.EXPO_PUBLIC_FINNHUB_API_KEY ?? '';
-const FINNHUB_BASE = 'https://finnhub.io/api/v1';
+/**
+ * Finnhub דרך finnhub-proxy (Edge Function) — המפתח נשאר בשרת ולא ב-bundle של האפליקציה.
+ * מחזיר Response רגיל (status/ok/json) כדי שהקוד הקיים (כולל טיפול ב-429) לא ישתנה.
+ */
+async function finnhubProxyFetch(endpoint: 'quote' | 'search', params: Record<string, string>): Promise<Response> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  const base = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
+  const anon = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
+  if (!token || !base) return new Response(null, { status: 401 });
+  return fetch(`${base}/functions/v1/finnhub-proxy`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: anon, Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ endpoint, params }),
+  });
+}
 const YAHOO_BASE = 'https://query1.finance.yahoo.com/v8/finance/chart';
 
 /** בלי User-Agent‏ Yahoo מחזיר 429 והגרף נופל לנקודת המחיר החי בלבד. */
@@ -124,17 +138,15 @@ function _parseFinnhubResponse(symbol: string, data: FinnhubQuoteResponse): Pric
 }
 
 async function fetchFinnhubQuote(symbol: string): Promise<PriceQuote | null> {
-  const url = `${FINNHUB_BASE}/quote?symbol=${encodeURIComponent(
-    toFinnhubSymbol(symbol)
-  )}&token=${FINNHUB_API_KEY}`;
+  const quoteParams = { symbol: toFinnhubSymbol(symbol) };
 
   try {
-    const res = await fetch(url);
+    const res = await finnhubProxyFetch('quote', quoteParams);
     if (res.status === 429) {
       // Rate limited — wait 5 seconds then retry once before falling back to Yahoo
       await new Promise((r) => setTimeout(r, 5000));
       try {
-        const retry = await fetch(url);
+        const retry = await finnhubProxyFetch('quote', quoteParams);
         if (!retry.ok) return null;
         return _parseFinnhubResponse(symbol, (await retry.json()) as FinnhubQuoteResponse);
       } catch {
@@ -539,10 +551,7 @@ export async function searchSymbols(
 ): Promise<SymbolSearchResult[]> {
   if (!query || query.trim().length < 1) return [];
   try {
-    const url = `${FINNHUB_BASE}/search?q=${encodeURIComponent(
-      query.trim()
-    )}&token=${FINNHUB_API_KEY}`;
-    const res = await fetch(url);
+    const res = await finnhubProxyFetch('search', { q: query.trim() });
     if (!res.ok) return [];
     const data = await res.json();
     const arr = (data?.result ?? []) as Array<{

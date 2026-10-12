@@ -12,8 +12,27 @@
  *  לכל סימבול: subscribe לראשון, unsubscribe כשהאחרון מתנתק.
  */
 
-const FINNHUB_API_KEY = process.env.EXPO_PUBLIC_FINNHUB_API_KEY ?? '';
+import { supabase } from '../../lib/supabase';
+
 const FINNHUB_WS_URL = 'wss://ws.finnhub.io';
+
+/**
+ * המפתח ל-WS מגיע מ-finnhub-proxy רק למשתמש מחובר — לא ב-bundle הציבורי של האפליקציה.
+ * נשמר בזיכרון בלבד לזמן הריצה.
+ */
+let wsTokenCache: string | null = null;
+async function getFinnhubWsToken(): Promise<string | null> {
+  if (wsTokenCache) return wsTokenCache;
+  try {
+    const { data } = await supabase.functions.invoke<{ token?: string }>('finnhub-proxy', {
+      body: { endpoint: 'ws-token' },
+    });
+    wsTokenCache = data?.token ?? null;
+  } catch {
+    wsTokenCache = null;
+  }
+  return wsTokenCache;
+}
 
 const RECONNECT_BASE_MS = 1500;
 const RECONNECT_MAX_MS = 30_000;
@@ -91,7 +110,13 @@ class RealtimeQuotes {
     if (this.isOpen || this.isConnecting) return;
     this.isConnecting = true;
     try {
-      const url = `${FINNHUB_WS_URL}?token=${FINNHUB_API_KEY}`;
+      const token = await getFinnhubWsToken();
+      if (!token) {
+        this.isConnecting = false;
+        this.scheduleReconnect();
+        return;
+      }
+      const url = `${FINNHUB_WS_URL}?token=${token}`;
       const ws = new WebSocket(url);
       this.ws = ws;
       ws.onopen = () => {

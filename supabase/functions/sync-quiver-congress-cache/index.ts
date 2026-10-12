@@ -4,6 +4,7 @@
 // ticker: GET /beta/live/congress_stock_holdings?ticker= → מיזוג ל-by_bioguide.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { isUserOrServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
 import {
   CURATED_CONGRESS_BIOGUIDES,
   QUIVER_HOLDINGS_CACHE_KEY,
@@ -26,6 +27,8 @@ const cors = {
 };
 
 serve(async (req) => {
+  // משתמש מחובר או השרת — לא רק מפתח anon
+  if (req.method !== 'OPTIONS' && !(await isUserOrServiceCaller(req))) return serviceOnlyDenied();
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
   const key = resolveQuiverApiKey();

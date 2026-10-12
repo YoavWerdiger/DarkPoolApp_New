@@ -20,6 +20,7 @@
 // ----------------------------------------------------------------------------
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { isUserOrServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1';
 import {
   fetchUwInsiderTransactions,
@@ -85,6 +86,8 @@ function parseInsiderSources(raw: string): Set<string> {
 }
 
 serve(async (req) => {
+  // משתמש מחובר או השרת — לא רק מפתח anon
+  if (req.method !== 'OPTIONS' && !(await isUserOrServiceCaller(req))) return serviceOnlyDenied();
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   let debugTicker: string | null = null;

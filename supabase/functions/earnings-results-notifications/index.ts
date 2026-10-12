@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
+import { isServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts'
 import {
   buildEarningsMetricLine,
   earningsResultsTitle,
@@ -38,6 +39,8 @@ async function flushPendingNotifications(supabaseUrl: string, serviceKey: string
 }
 
 serve(async (req) => {
+  // רק טריגר הרווחים / cron / update-earnings-results-live (מפתח service) — מבחוץ אי אפשר להזריק פוש
+  if (req.method !== 'OPTIONS' && !isServiceCaller(req)) return serviceOnlyDenied();
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }

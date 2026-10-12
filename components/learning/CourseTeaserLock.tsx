@@ -123,7 +123,6 @@ export function CourseTeaserLock({ courseId, onBack }: { courseId: string; onBac
                   </View>
                   <View style={styles.rowText}>
                     <Text style={[styles.rowTitle, { color: tokens.colors.text.primary }]}>{h.title}</Text>
-                    <Text style={[styles.rowSubtitle, { color: tokens.colors.text.secondary }]}>{h.subtitle}</Text>
                   </View>
                 </View>
                 {i < teaser.highlights.length - 1 ? (
@@ -227,11 +226,6 @@ const createStyles = (_tokens: ReturnType<typeof useDesignTokens>) =>
     rowTitle: {
       ...APP_TYPE.cardTitle,
       ...appPhysicalRightText,
-    },
-    rowSubtitle: {
-      ...APP_TYPE.cardSubtitle,
-      ...appPhysicalRightText,
-      marginTop: 2,
     },
     divider: {
       height: 1,

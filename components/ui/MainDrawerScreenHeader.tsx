@@ -96,15 +96,15 @@ export function MainDrawerScreenHeader({
     <View style={style}>
       <View style={[styles.appHeader, row]}>
         <View style={styles.appHeaderActionsMenu}>
-          {/* כפתור התפריט בירוק של ה-CTA — גישה ברורה לשאר האפליקציה */}
+          {/* כפתור התפריט בירוק המותג (primary.main; lightCta הוא לבן/שחור) עם אייקון שחור */}
           <DayNavBlurButton
             onPress={onMenuPress}
             glass={false}
             size={DRAWER_MENU_BUTTON_SIZE}
-            style={{ backgroundColor: tokens.colors.primary.lightCta }}
+            style={{ backgroundColor: tokens.colors.primary.main }}
             accessibilityLabel="תפריט ראשי"
           >
-            <Ionicons name="menu" size={24} color={tokens.colors.text.inverse} />
+            <Ionicons name="menu" size={24} color="#000000" />
           </DayNavBlurButton>
         </View>
         <View

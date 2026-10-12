@@ -793,7 +793,42 @@ export const chatGroupService = {
   isGroupMuted,
 };
 
+// ============================================
+// נעיצת קבוצות מועדפות (פר משתמש)
+// ============================================
 
+/** מפה groupId → pinned_at לקבוצות שהמשתמש נעץ */
+export async function getMyPinnedGroups(userId: string): Promise<Record<string, string>> {
+  const { data, error } = await supabase
+    .from('chat_group_members')
+    .select('group_id, pinned_at')
+    .eq('user_id', userId)
+    .not('pinned_at', 'is', null);
+  if (error) {
+    logger.warn('ChatGroup', 'getMyPinnedGroups failed', error);
+    return {};
+  }
+  const map: Record<string, string> = {};
+  for (const row of data ?? []) {
+    if (row.pinned_at) map[row.group_id as string] = row.pinned_at as string;
+  }
+  return map;
+}
 
-
+export async function setGroupPinned(
+  groupId: string,
+  userId: string,
+  pinned: boolean
+): Promise<{ error: ChatError | null }> {
+  const { error } = await supabase
+    .from('chat_group_members')
+    .update({ pinned_at: pinned ? new Date().toISOString() : null })
+    .eq('group_id', groupId)
+    .eq('user_id', userId);
+  if (error) {
+    logger.error('ChatGroup', 'setGroupPinned failed', error);
+    return { error: { code: 'PIN_GROUP_ERROR', message: error.message } };
+  }
+  return { error: null };
+}
 

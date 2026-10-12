@@ -68,6 +68,7 @@ import { logger } from '../../utils/logger';
 import { getChatMessagePreview } from '../../utils/chatMessagePreview';
 import { isUsableChatDisplayName } from '../../lib/chatMessageIdentity';
 import { isAnnouncementGroup } from '../../utils/isAnnouncementGroup';
+import { getMyPinnedGroups, setGroupPinned } from '../../services/chat/chatGroupService';
 import { showAppDialog, legacyAlert } from '../../utils/appDialog';
 import { HapticFeedback, triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
 import { ChatSessionBackdrop } from '../../components/chat/ChatSessionBackdrop';
@@ -196,6 +197,21 @@ export default function ChatGroupsListScreen() {
   const { isDarkMode } = useTheme();
   const navigation = useNavigation();
   const { user } = useAuth();
+  /** קבוצות נעוצות (פר משתמש): groupId → pinned_at */
+  const [pinnedMap, setPinnedMap] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (!user?.id) {
+      setPinnedMap({});
+      return;
+    }
+    let alive = true;
+    void getMyPinnedGroups(user.id).then((m) => {
+      if (alive) setPinnedMap(m);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [user?.id]);
   const { groups: contextGroups } = useChat();
   const { primeGroupForOpen } = useChatActions();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
@@ -649,10 +665,13 @@ export default function ChatGroupsListScreen() {
     const announcements = sortByLastMessage(
       myFiltered.filter(g => isAnnouncementGroup(g.name, g.id))
     );
-    const regular = sortByLastMessage(
-      myFiltered.filter(g => !isAnnouncementGroup(g.name, g.id))
-    );
-    const mySorted = [...announcements, ...regular];
+    const nonAnnouncement = myFiltered.filter(g => !isAnnouncementGroup(g.name, g.id));
+    // נעוצות — מיד אחרי ההכרזות, לפי סדר הנעיצה
+    const pinned = nonAnnouncement
+      .filter(g => !!pinnedMap[g.id])
+      .sort((a, b) => new Date(pinnedMap[a.id]).getTime() - new Date(pinnedMap[b.id]).getTime());
+    const regular = sortByLastMessage(nonAnnouncement.filter(g => !pinnedMap[g.id]));
+    const mySorted = [...announcements, ...pinned, ...regular];
 
     // Joinable מוצגות רק בטאב 'all' — 'unread'/'mentions' לא רלוונטיות
     const joinableSorted =
@@ -667,7 +686,7 @@ export default function ChatGroupsListScreen() {
       joinableFilteredGroups: joinableSorted,
       myAnnouncementCount: announcements.length,
     };
-  }, [allGroups, searchQuery, activeTab, isGlobalAdmin, isPremiumUser]);
+  }, [allGroups, searchQuery, activeTab, isGlobalAdmin, isPremiumUser, pinnedMap]);
 
   // רשימה מאוחדת לצורכי חיפוש-שיט וספירות empty-state
   const filteredGroups = useMemo(
@@ -805,6 +824,35 @@ export default function ChatGroupsListScreen() {
     primeGroupForOpen(group.id, hint);
     if (user?.id) warmChatGroupOnPress(user.id, group.id);
   }, [primeGroupForOpen, user?.id]);
+
+  /** לחיצה ארוכה על קבוצה שלי — נעיצה למעלה / ביטול נעיצה */
+  const handleGroupLongPress = useCallback(
+    async (group: GroupWithMembership) => {
+      if (!user?.id || !group.is_member || isAnnouncementGroup(group.name, group.id)) return;
+      void HapticFeedback.impactLight();
+      const isPinned = !!pinnedMap[group.id];
+      const choice = await showAppDialog({
+        title: chatGroupDisplayName(group.name),
+        message: isPinned ? 'להסיר את הקבוצה מהנעוצות?' : 'לנעוץ את הקבוצה בראש הרשימה, מתחת להכרזות?',
+        type: 'info',
+        buttons: [
+          { text: isPinned ? 'ביטול נעיצה' : 'נעץ למעלה', style: 'default' },
+          { text: 'ביטול', style: 'cancel' },
+        ],
+      });
+      if (choice !== 0) return;
+      const prev = pinnedMap;
+      setPinnedMap((m) => {
+        const next = { ...m };
+        if (isPinned) delete next[group.id];
+        else next[group.id] = new Date().toISOString();
+        return next;
+      });
+      const { error } = await setGroupPinned(group.id, user.id, !isPinned);
+      if (error) setPinnedMap(prev);
+    },
+    [user?.id, pinnedMap]
+  );
 
   const handleGroupPress = useCallback((group: GroupWithMembership) => {
     setSearchSheetVisible(false);
@@ -1092,6 +1140,8 @@ export default function ChatGroupsListScreen() {
           <TouchableOpacity
             style={styles.chatRow}
             onPress={() => handleGroupPress(item)}
+            onLongPress={() => { void handleGroupLongPress(item); }}
+            delayLongPress={350}
             onPressIn={() => {
               if (item.is_member) prepareChatOpen(item);
             }}
@@ -1126,11 +1176,16 @@ export default function ChatGroupsListScreen() {
                 >
                   {chatGroupDisplayName(item.name)}
                 </Text>
-                {!!timeLabel && (
-                  <Text style={[styles.chatTime, hasUnread && styles.chatTimeUnread]}>
-                    {timeLabel}
-                  </Text>
-                )}
+                <View style={styles.chatTimeWrap}>
+                  {pinnedMap[item.id] ? (
+                    <Ionicons name="pin" size={13} color={tokens.colors.text.secondary} style={styles.pinIcon} />
+                  ) : null}
+                  {!!timeLabel && (
+                    <Text style={[styles.chatTime, hasUnread && styles.chatTimeUnread]}>
+                      {timeLabel}
+                    </Text>
+                  )}
+                </View>
               </View>
               <View style={styles.chatRow2}>
                 <Text
@@ -1171,7 +1226,7 @@ export default function ChatGroupsListScreen() {
         </View>
       );
     },
-    [styles, tokens, handleGroupPress, prepareChatOpen, imageErrorCount, isDarkMode]
+    [styles, tokens, handleGroupPress, handleGroupLongPress, pinnedMap, prepareChatOpen, imageErrorCount, isDarkMode]
   );
 
   const renderJoinableGroup = useCallback(
@@ -1768,6 +1823,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     marginTop: 2,
   },
   statusCircleImage: { width: '100%', height: '100%' },
+  chatTimeWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  pinIcon: {
+    transform: [{ rotate: '45deg' }],
+  },
   storiesDivider: {
     height: 1,
     backgroundColor: tokens.colors.border.divider,

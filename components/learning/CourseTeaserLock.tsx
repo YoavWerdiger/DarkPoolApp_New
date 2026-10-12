@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, useWindowDimensions, Pressable } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../ui/DesignTokens';
@@ -50,32 +49,29 @@ export function CourseTeaserLock({ courseId, onBack }: { courseId: string; onBac
   const tokens = useDesignTokens();
   const { isDarkMode } = useTheme();
   const insets = useSafeAreaInsets();
-  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
+  const { width: windowWidth } = useWindowDimensions();
   const dialogWidth = Math.min(360, windowWidth - APP_LAYOUT.screenPaddingHorizontal * 2);
   const styles = useMemo(() => createStyles(tokens), [tokens]);
   const teaser = LOCKED_COURSES[courseId];
   if (!teaser) return null;
 
-  // תמונת הקורס (42% מהמסך ב-LearningScreen) נשארת חדה — הטשטוש מתחיל קצת לפני סופה, במעבר הדרגתי
-  const blurTop = Math.round(windowHeight * 0.42) - 56;
   const canvas = tokens.colors.background.primary;
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-      {/* חוסם נגיעה בתוכן (גם בתמונה) — הקורס סגור */}
+      {/* חוסם נגיעה בתוכן — הקורס סגור */}
       <View style={StyleSheet.absoluteFill} pointerEvents="auto" />
 
-      <View style={[styles.blurZone, { top: blurTop }]} pointerEvents="none">
-        <BlurView intensity={isDarkMode ? 45 : 35} tint={isDarkMode ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
-        <LinearGradient
-          colors={[`${canvas}00`, `${canvas}B3`, canvas]}
-          locations={[0, 0.35, 0.75]}
-          style={StyleSheet.absoluteFill}
-        />
-      </View>
+      {/* בלר מלא מאחורי הדיאלוג — רואים שיש קורס, אבל לא את התוכן */}
+      <BlurView
+        intensity={isDarkMode ? 55 : 45}
+        tint={isDarkMode ? 'dark' : 'light'}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
 
       <View style={[StyleSheet.absoluteFill, styles.dialogCenter]} pointerEvents="box-none">
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.35)' }]} pointerEvents="none" />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: isDarkMode ? 'rgba(0,0,0,0.30)' : 'rgba(0,0,0,0.18)' }]} pointerEvents="none" />
         <View
           style={[
             styles.dialog,
@@ -140,13 +136,6 @@ export function CourseTeaserLock({ courseId, onBack }: { courseId: string; onBac
 
 const createStyles = (_tokens: ReturnType<typeof useDesignTokens>) =>
   StyleSheet.create({
-    blurZone: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      bottom: 0,
-      overflow: 'hidden',
-    },
     dialogCenter: {
       justifyContent: 'center',
       alignItems: 'center',

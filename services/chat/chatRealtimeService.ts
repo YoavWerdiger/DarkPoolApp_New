@@ -347,12 +347,42 @@ function scheduleRetry(groupId: string, retryFn: () => void) {
 
 /**
  * Broadcast מה-DB (ערוצים פרטיים) — במקום postgres_changes:
- * - `chat-group:<id>` — הודעות/ריאקציות/חברים/פרטי קבוצה/«מקליד...» (טריגרים ב-DB)
+ * - `chat-group:<id>` — הודעות/ריאקציות/חברים/פרטי קבוצה (טריגרים ב-DB). לקוחות קוראים בלבד —
+ *   ה-RLS מתיר שידור מלקוח רק לערוץ ה-typing, כך שחבר קבוצה לא יכול לזייף הודעה/חבר/קבוצה.
+ * - `chat-typing:<id>` — «מקליד...» בין חברי הקבוצה (השידור היחיד שלקוח רשאי לשלוח).
  * - `chat-user:<id>` — הצטרפות/הסרה מקבוצה + אישורי קריאה על ההודעות שלי
  * הרשאה נבדקת פעם אחת בהצטרפות (RLS על realtime.messages) — לא לכל הודעה ולכל מנוי.
  */
 function groupTopic(groupId: string): string {
   return `chat-group:${groupId}`;
+}
+
+function typingTopic(groupId: string): string {
+  return `chat-typing:${groupId}`;
+}
+
+/** ערוץ «מקליד...» — best effort: נכשל = אין אינדיקציית הקלדה, והניסיון הבא ייצור אותו מחדש */
+function ensureTypingTopic(groupId: string): RealtimeChannel {
+  const key = typingTopic(groupId);
+  const existing = activeChannels.get(key);
+  if (existing && (existing.state === 'joined' || existing.state === 'joining')) {
+    return existing;
+  }
+  if (existing) {
+    activeChannels.delete(key);
+    void supabase.removeChannel(existing).catch(() => undefined);
+  }
+  const channel = supabase
+    .channel(key, { config: { private: true, broadcast: { self: false, ack: false } } })
+    .on('broadcast', { event: 'typing' }, ({ payload }) => handleTypingEvent(groupId, payload));
+  channel.subscribe((status) => {
+    if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+      if (activeChannels.get(key) === channel) activeChannels.delete(key);
+      void supabase.removeChannel(channel).catch(() => undefined);
+    }
+  });
+  activeChannels.set(key, channel);
+  return channel;
 }
 
 function userTopic(userId: string): string {
@@ -633,8 +663,7 @@ function ensureGroupTopic(groupId: string): RealtimeChannel {
     })
     .on('broadcast', { event: 'group' }, ({ payload }) => {
       if (payload) getGroupListeners(groupId)?.onGroup?.(payload, 'UPDATE');
-    })
-    .on('broadcast', { event: 'typing' }, ({ payload }) => handleTypingEvent(groupId, payload));
+    });
 
   channel.subscribe((status, err) => {
     if (groupSubscribeGeneration.get(groupId) !== generation) return;
@@ -656,6 +685,7 @@ function ensureGroupTopic(groupId: string): RealtimeChannel {
     }
   });
   activeChannels.set(key, channel);
+  ensureTypingTopic(groupId);
   return channel;
 }
 
@@ -664,6 +694,7 @@ async function removeGroupTopic(groupId: string): Promise<void> {
   cancelRetry(groupTopic(groupId));
   failedChannels.delete(groupTopic(groupId));
   clearTypingForGroup(groupId);
+  await removeChannelByKey(typingTopic(groupId));
   await removeChannelByKey(groupTopic(groupId));
 }
 
@@ -760,7 +791,7 @@ export async function setTypingStatus(
       clearTimeout(existingTimer);
       typingTimers.delete(timerKey);
     }
-    const channel = activeChannels.get(groupTopic(input.group_id));
+    const channel = ensureTypingTopic(input.group_id);
     if (!isChannelJoined(channel)) return { error: null };
     await channel!.send({
       type: 'broadcast',

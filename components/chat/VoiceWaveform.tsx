@@ -194,17 +194,24 @@ export default function VoiceWaveform({ isRecording, audioLevelRef }: VoiceWavef
 }
 
 const styles = StyleSheet.create({
+  // כיוון פיזי קבוע: ב-RTL השורה נפרסה מימין לשמאל והבר החדש (סוף המערך) ישב ~10 ברים מחוץ למסגרת
+  // משמאל — כל שיא נראה רק אחרי ~400ms של גלילה. עכשיו הבר החדש תמיד בקצה הנראה (ימין).
   clip: {
     flex: 1,
     minWidth: 0,
     height: TRACK_H,
     overflow: 'hidden',
-    justifyContent: 'center',
+    direction: 'ltr',
   },
   row: {
+    position: 'absolute',
+    top: 0,
+    // מעוגן לקצה הימני; STRIDE נוסף מכסה את ההזזה (offsetX < STRIDE) בלי פער בקצה
+    right: -STRIDE,
     flexDirection: 'row',
     alignItems: 'center',
     height: TRACK_H,
+    direction: 'ltr',
   },
   barCell: {
     width: STRIDE,

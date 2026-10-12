@@ -1712,21 +1712,23 @@ export default function StoryViewer({
       >
         {isOwnStory && (
           <View style={styles.bottomActions} pointerEvents="box-none">
+            {/* כמו סרגל הריאקציות: pill מלא בצבע הרקע של מערכת העיצוב */}
             <TouchableOpacity
-              style={styles.actionBtn}
+              style={[styles.actionBtn, { backgroundColor: designTokens.colors.background.primary }]}
               onPress={openViewersSheet}
               activeOpacity={0.75}
             >
-              <Ionicons name="eye-outline" size={20} color="#fff" />
-              <Text style={styles.actionText}>צפיות</Text>
+              <Ionicons name="eye-outline" size={20} color={designTokens.colors.text.primary} />
+              <Text style={[styles.actionText, { color: designTokens.colors.text.primary }]}>צפיות</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.actionBtn, styles.actionBtnDanger]}
+              style={[styles.actionBtnRound, { backgroundColor: designTokens.colors.background.primary }]}
               onPress={openDeleteConfirm}
               activeOpacity={0.75}
+              accessibilityLabel="מחיקת הסטורי"
             >
-              <Ionicons name="trash-outline" size={20} color="#FF6B6B" />
+              <Ionicons name="trash-outline" size={20} color={designTokens.colors.danger.main} />
             </TouchableOpacity>
           </View>
         )}
@@ -2133,23 +2135,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 44,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    gap: 6,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.18)',
+    height: 46,
+    paddingHorizontal: 18,
+    borderRadius: 999,
+    gap: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.22,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
   },
-  actionBtnDanger: {
-    paddingHorizontal: 12,
-    backgroundColor: 'rgba(255,107,107,0.12)',
-    borderColor: 'rgba(255,107,107,0.30)',
+  actionBtnRound: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.22,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
   },
   actionText: {
-    color: '#fff',
-    fontSize: 14,
+    fontSize: APP_TYPE.cardTitle.fontSize,
     fontWeight: '600',
   },
 

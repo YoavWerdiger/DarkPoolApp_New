@@ -132,9 +132,6 @@ export function CourseTeaserLock({ courseId, onBack }: { courseId: string; onBac
             ))}
           </View>
 
-          <Text style={[styles.footnote, { color: tokens.colors.text.secondary }]}>
-            הקורס בשלבי הפקה אחרונים — נעדכן אתכם ברגע שייפתח
-          </Text>
 
           <View style={styles.cta}>
             <UIButton title="חזרה לאקדמיה" variant="primary" fullWidth onPress={onBack} />
@@ -210,8 +207,9 @@ const createStyles = (_tokens: ReturnType<typeof useDesignTokens>) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,
-      paddingVertical: 12,
-      paddingHorizontal: 14,
+      minHeight: 56,
+      paddingVertical: 10,
+      paddingHorizontal: APP_LAYOUT.cardPadding,
     },
     rowIcon: {
       width: 34,
@@ -228,14 +226,10 @@ const createStyles = (_tokens: ReturnType<typeof useDesignTokens>) =>
       ...appPhysicalRightText,
     },
     divider: {
-      height: 1,
-      marginHorizontal: 14,
-    },
-    footnote: {
-      ...APP_TYPE.footnote,
-      textAlign: 'center',
-      writingDirection: 'rtl',
-      marginTop: APP_LAYOUT.cardStackGap,
+      height: StyleSheet.hairlineWidth,
+      // מתחיל בקו הטקסט (אחרי האייקון), כמו ברשימות של האפליקציה
+      marginRight: APP_LAYOUT.cardPadding + 34 + 12,
+      marginLeft: APP_LAYOUT.cardPadding,
     },
     cta: {
       alignSelf: 'stretch',

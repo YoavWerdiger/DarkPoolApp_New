@@ -1,6 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { Image } from 'expo-image';
+import { supabase } from '../../lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../ui/DesignTokens';
@@ -53,6 +55,17 @@ export function CourseTeaserLock({ courseId, onBack }: { courseId: string; onBac
   const dialogWidth = Math.min(360, windowWidth - APP_LAYOUT.screenPaddingHorizontal * 2);
   const styles = useMemo(() => createStyles(tokens), [tokens]);
   const teaser = LOCKED_COURSES[courseId];
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      const { data } = await supabase.from('courses').select('cover_url').eq('id', courseId).maybeSingle();
+      if (alive) setCoverUrl((data as { cover_url?: string | null } | null)?.cover_url ?? null);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [courseId]);
   if (!teaser) return null;
 
   const canvas = tokens.colors.background.primary;
@@ -82,8 +95,18 @@ export function CourseTeaserLock({ courseId, onBack }: { courseId: string; onBac
             },
           ]}
         >
-          <View style={[styles.iconCircle, { backgroundColor: tokens.colors.background.secondary }]}>
-            <Ionicons name="lock-closed" size={28} color={tokens.colors.text.secondary} />
+          {/* תמונת הקורס עם תג נעילה — ולא אייקון גנרי */}
+          <View style={styles.coverWrap}>
+            {coverUrl ? (
+              <Image source={{ uri: coverUrl }} style={styles.cover} contentFit="cover" transition={150} />
+            ) : (
+              <View style={[styles.cover, styles.coverFallback, { backgroundColor: tokens.colors.background.secondary }]}>
+                <Ionicons name="school" size={34} color={tokens.colors.text.primary} />
+              </View>
+            )}
+            <View style={[styles.lockBadge, { backgroundColor: tokens.colors.text.primary, borderColor: tokens.colors.background.primary }]}>
+              <Ionicons name="lock-closed" size={13} color={tokens.colors.background.primary} />
+            </View>
           </View>
 
           <Text style={[styles.eyebrow, { color: tokens.colors.text.secondary }]}>בקרוב באקדמיה</Text>
@@ -136,13 +159,30 @@ const createStyles = (_tokens: ReturnType<typeof useDesignTokens>) =>
       padding: APP_LAYOUT.cardPadding,
       overflow: 'hidden',
     },
-    iconCircle: {
-      width: 64,
-      height: 64,
-      borderRadius: 32,
+    coverWrap: {
+      width: 84,
+      height: 84,
+      marginBottom: 18,
+    },
+    cover: {
+      width: 84,
+      height: 84,
+      borderRadius: 22,
+    },
+    coverFallback: {
       alignItems: 'center',
       justifyContent: 'center',
-      marginBottom: 20,
+    },
+    lockBadge: {
+      position: 'absolute',
+      bottom: -6,
+      left: -6,
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      borderWidth: 3,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     eyebrow: {
       ...APP_TYPE.caption,
@@ -152,7 +192,7 @@ const createStyles = (_tokens: ReturnType<typeof useDesignTokens>) =>
       marginBottom: APP_LAYOUT.cardTitleToSubtitleGap + 2,
     },
     title: {
-      ...APP_TYPE.sectionTitle,
+      ...APP_TYPE.pageTitle,
       textAlign: 'center',
       writingDirection: 'rtl',
       marginBottom: APP_LAYOUT.cardTitleToBodyGap,

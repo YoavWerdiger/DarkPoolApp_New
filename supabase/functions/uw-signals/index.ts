@@ -1,6 +1,7 @@
 // uw-signals — סיגנלי אופציות + סקירת פוליטיקה מ-Unusual Whales (לטאב סקירה/פיד)
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { isUserOrServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
 import {
   fetchUwCongressRecent,
   fetchUwMarketTide,
@@ -46,6 +47,8 @@ let signalsCache: { at: number; payload: UwSignalsPayload } | null = null;
 const SIGNALS_CACHE_MS = 5 * 60 * 1000;
 
 serve(async (req) => {
+  // משתמש מחובר או השרת — לא רק מפתח anon
+  if (req.method !== 'OPTIONS' && !(await isUserOrServiceCaller(req))) return serviceOnlyDenied();
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
   const key = Deno.env.get('UNUSUAL_WHALES_API_KEY') || '';

@@ -1,6 +1,7 @@
 // uw-investor-search — חיפוש פוליטיקאים / בכירים / קרנות (DB + UW)
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { isUserOrServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import {
   fetchUwInsiderTransactions,
@@ -30,6 +31,8 @@ interface SearchPerson {
 }
 
 serve(async (req) => {
+  // משתמש מחובר או השרת — לא רק מפתח anon
+  if (req.method !== 'OPTIONS' && !(await isUserOrServiceCaller(req))) return serviceOnlyDenied();
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
   let q = '';

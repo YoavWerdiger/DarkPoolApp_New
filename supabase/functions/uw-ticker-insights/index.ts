@@ -1,6 +1,7 @@
 // תובנות לטיקר — UW + Form4API (חדשות, GEX, flow, בכירים, cluster signals)
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { isUserOrServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
 import {
   fetchUwDarkpoolByTicker,
   fetchUwFlowAlertsForTicker,
@@ -93,6 +94,8 @@ const cache = new Map<string, { at: number; payload: TickerInsightsPayload }>();
 const CACHE_MS = 5 * 60 * 1000;
 
 serve(async (req) => {
+  // משתמש מחובר או השרת — לא רק מפתח anon
+  if (req.method !== 'OPTIONS' && !(await isUserOrServiceCaller(req))) return serviceOnlyDenied();
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
   const uwKey = Deno.env.get('UNUSUAL_WHALES_API_KEY') || '';

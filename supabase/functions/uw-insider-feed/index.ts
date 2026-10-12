@@ -1,6 +1,7 @@
 // פיד חי מ-UW — גיבוי כש-DB ריק; cache 5 דקות למניעת 429
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { isUserOrServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
 import {
   fetchUwInsiderTransactions,
   fetchUwInsidersForTicker,
@@ -34,6 +35,8 @@ let feedCache: { at: number; trades: InsiderFeedRow[] } | null = null;
 const FEED_CACHE_MS = 5 * 60 * 1000;
 
 serve(async (req) => {
+  // משתמש מחובר או השרת — לא רק מפתח anon
+  if (req.method !== 'OPTIONS' && !(await isUserOrServiceCaller(req))) return serviceOnlyDenied();
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
   const key = Deno.env.get('UNUSUAL_WHALES_API_KEY') || '';

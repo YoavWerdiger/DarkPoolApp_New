@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { isServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
 import { loadMarketCapMap, MIN_EARNINGS_MARKET_CAP_USD, normalizeCapSymbol } from '../_shared/marketCaps.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
 import {
@@ -1205,6 +1206,8 @@ async function probeAllParseEndpoints(apiKey: string) {
 }
 
 serve(async (req) => {
+  // רק cron (מפתח service) — refreshData באפליקציה לא בשימוש
+  if (req.method !== 'OPTIONS' && !isServiceCaller(req)) return serviceOnlyDenied();
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }

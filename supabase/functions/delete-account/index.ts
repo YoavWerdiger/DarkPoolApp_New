@@ -117,6 +117,21 @@ serve(async (req) => {
     .eq('user_id', userId)
     .eq('status', 'active');
 
+  // פרטי הברוקר (שם משתמש/סיסמה/טוקן Colmex) ב-vault — לא להשאיר אחרי מחיקת החשבון.
+  // broker_connections נמחקות ב-cascade, ואז שמות הסודות אובדים — לכן מוחקים קודם.
+  try {
+    const { data: conns } = await supabase
+      .from('broker_connections')
+      .select('vault_secret_name, vault_token_secret_name')
+      .eq('user_id', userId);
+    for (const c of conns ?? []) {
+      if (c.vault_secret_name) await supabase.rpc('broker_delete_vault_secret', { p_name: c.vault_secret_name });
+      if (c.vault_token_secret_name) await supabase.rpc('broker_delete_vault_secret', { p_name: c.vault_token_secret_name });
+    }
+  } catch (e) {
+    console.error('broker vault cleanup failed', e);
+  }
+
   const { error: delErr } = await supabase.auth.admin.deleteUser(userId);
   if (delErr) {
     console.error('auth.admin.deleteUser failed', delErr);

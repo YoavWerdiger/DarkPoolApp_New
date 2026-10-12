@@ -96,7 +96,7 @@ export function MainDrawerScreenHeader({
     <View style={style}>
       <View style={[styles.appHeader, row]}>
         <View style={styles.appHeaderActionsMenu}>
-          {/* כפתור התפריט בירוק המותג (primary.main; lightCta הוא לבן/שחור) עם אייקון שחור */}
+          {/* כפתור התפריט בירוק המותג (primary.main; lightCta הוא לבן/שחור) עם אייקון לבן */}
           <DayNavBlurButton
             onPress={onMenuPress}
             glass={false}
@@ -104,7 +104,7 @@ export function MainDrawerScreenHeader({
             style={{ backgroundColor: tokens.colors.primary.main }}
             accessibilityLabel="תפריט ראשי"
           >
-            <Ionicons name="menu" size={24} color="#000000" />
+            <Ionicons name="menu" size={24} color="#FFFFFF" />
           </DayNavBlurButton>
         </View>
         <View

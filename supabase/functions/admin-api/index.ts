@@ -90,15 +90,15 @@ serve(async (req) => {
       case 'list_users':
         return await listUsers(supabase, body);
       case 'set_mute':
-        return await setMute(supabase, adminId, body);
+        return await setMute(supabase, adminId, adminRole, body);
       case 'set_suspend':
-        return await setSuspend(supabase, adminId, body);
+        return await setSuspend(supabase, adminId, adminRole, body);
       case 'set_premium':
         return await setPremium(supabase, adminId, body);
       case 'delete_user':
         return await deleteUser(supabase, adminId, body);
       case 'reset_password':
-        return await resetPassword(supabase, adminId, body);
+        return await resetPassword(supabase, adminId, adminRole, body);
       case 'list_tickets':
         return await listTickets(supabase, body);
       case 'update_ticket':
@@ -284,8 +284,20 @@ async function listUsers(supabase: SupabaseClient, body: Record<string, unknown>
   return json({ users: data ?? [], total: count ?? 0, page, pageSize });
 }
 
-async function setMute(supabase: SupabaseClient, adminId: string, body: Record<string, unknown>) {
+/** פעולה על מנהל אחר (השתקה/השעיה/איפוס סיסמה) — רק סופר־אדמין. מונע השתלטות של אדמין על סופר־אדמין. */
+async function guardAdminTarget(supabase: SupabaseClient, adminRole: string, userId: string): Promise<Response | null> {
+  if (!userId || adminRole === 'super_admin') return null;
+  const { data: target } = await supabase.from('users').select('subscription_role').eq('id', userId).maybeSingle();
+  if (ADMIN_ROLES.has(String(target?.subscription_role || '').toLowerCase())) {
+    return json({ error: 'רק סופר-אדמין יכול לבצע פעולה זו על מנהל' }, 403);
+  }
+  return null;
+}
+
+async function setMute(supabase: SupabaseClient, adminId: string, adminRole: string, body: Record<string, unknown>) {
   const userId = String(body.userId || '');
+  const targetDenied = await guardAdminTarget(supabase, adminRole, userId);
+  if (targetDenied) return targetDenied;
   const muted = Boolean(body.muted);
   const reason = body.reason ? String(body.reason).slice(0, 500) : null;
   if (!userId) return json({ error: 'userId required' }, 400);
@@ -300,8 +312,10 @@ async function setMute(supabase: SupabaseClient, adminId: string, body: Record<s
   return json({ user: data });
 }
 
-async function setSuspend(supabase: SupabaseClient, adminId: string, body: Record<string, unknown>) {
+async function setSuspend(supabase: SupabaseClient, adminId: string, adminRole: string, body: Record<string, unknown>) {
   const userId = String(body.userId || '');
+  const targetDenied = await guardAdminTarget(supabase, adminRole, userId);
+  if (targetDenied) return targetDenied;
   const suspended = Boolean(body.suspended);
   const reason = body.reason ? String(body.reason).slice(0, 500) : null;
   if (!userId) return json({ error: 'userId required' }, 400);
@@ -390,8 +404,10 @@ async function deleteUser(supabase: SupabaseClient, adminId: string, body: Recor
   return json({ ok: true });
 }
 
-async function resetPassword(supabase: SupabaseClient, adminId: string, body: Record<string, unknown>) {
+async function resetPassword(supabase: SupabaseClient, adminId: string, adminRole: string, body: Record<string, unknown>) {
   const userId = String(body.userId || '');
+  const targetDenied = await guardAdminTarget(supabase, adminRole, userId);
+  if (targetDenied) return targetDenied;
   if (!userId) return json({ error: 'userId required' }, 400);
   const { data: target } = await supabase.from('users').select('id, email').eq('id', userId).maybeSingle();
   if (!target?.email) return json({ error: 'User email not found' }, 404);

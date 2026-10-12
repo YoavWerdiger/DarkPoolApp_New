@@ -104,13 +104,23 @@ serve(async (req) => {
 
   // identify caller — user JWT או cron (service)
   let callerUserId: string | null = null;
+  let isServiceCaller = false;
   const authHeader = req.headers.get('Authorization') || '';
   if (authHeader.startsWith('Bearer ')) {
     const jwt = authHeader.slice('Bearer '.length);
-    if (jwt !== SERVICE_KEY) {
+    if (jwt === SERVICE_KEY) {
+      isServiceCaller = true;
+    } else {
       const { data: userData } = await sb.auth.getUser(jwt);
       callerUserId = userData?.user?.id ?? null;
     }
+  }
+  // סריקת אבטחה: בלי משתמש מחובר או מפתח service — אסור (מפתח anon לבד היה מסנכרן חיבורים של כולם)
+  if (!isServiceCaller && !callerUserId) {
+    return new Response(JSON.stringify({ error: 'unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   let body: SyncRequest = {};
@@ -186,6 +196,8 @@ async function pickConnectionsToSync(
       .eq('id', body.connectionId)
       .eq('status', 'active')
       .maybeSingle();
+    // משתמש — רק חיבור שלו
+    if (data && callerUserId && (data as BrokerConnectionRow).user_id !== callerUserId) return [];
     return data ? [data as BrokerConnectionRow] : [];
   }
 

@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1';
+import { isServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
 
 const EXPO_PUSH_API_URL = 'https://exp.host/--/api/v2/push/send';
 
@@ -114,6 +115,8 @@ async function selectInChunks<T>(
 }
 
 serve(async (req) => {
+  // רק הטריגר notify_chat_message (מפתח service מה-vault) — מבחוץ אי אפשר לשלוח פוש בשם קבוצה
+  if (req.method !== 'OPTIONS' && !isServiceCaller(req)) return serviceOnlyDenied();
   try {
     // CORS headers
     if (req.method === 'OPTIONS') {

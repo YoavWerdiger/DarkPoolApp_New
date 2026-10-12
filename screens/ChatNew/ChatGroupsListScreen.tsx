@@ -1787,9 +1787,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     width: 66,
     height: 66,
     borderRadius: 33,
-    // קו מקווקו בצבע כפתורי ה-CTA (primary.lightCta — כמו «העלאה», צ'יפ נבחר)
+    // קו מקווקו בירוק המותג (primary.main)
     borderWidth: 1.5,
-    borderColor: tokens.colors.primary.lightCta,
+    borderColor: tokens.colors.primary.main,
     borderStyle: 'dashed',
     justifyContent: 'center',
     alignItems: 'center',

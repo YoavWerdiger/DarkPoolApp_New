@@ -4,6 +4,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
 import { formatEconomicDisplayValue } from '../_shared/economicNumberFormat.ts'
+import { isServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts'
 
 const FINNHUB_API_KEY = Deno.env.get('FINNHUB_API_KEY') ?? ''
 const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1'
@@ -49,6 +50,8 @@ function createEventId(title: string, date: string, time: string): string {
 }
 
 serve(async (req) => {
+  // לא בשימוש (סריקת אבטחה 2026-10-12) — נעולה לשרת בלבד
+  if (req.method !== 'OPTIONS' && !isServiceCaller(req)) return serviceOnlyDenied();
   try {
     console.log('🔄 Check Today Economic Results (Finnhub) Started')
     

@@ -4,6 +4,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
 import { prepareEarningsRecord } from '../_shared/earnings-utils.ts'
+import { isServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,6 +12,8 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  // לא בשימוש (סריקת אבטחה 2026-10-12) — נעולה לשרת בלבד
+  if (req.method !== 'OPTIONS' && !isServiceCaller(req)) return serviceOnlyDenied();
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }

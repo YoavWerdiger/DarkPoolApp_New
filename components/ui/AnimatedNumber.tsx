@@ -15,12 +15,13 @@ import Animated, {
   useReducedMotion,
   useSharedValue,
   withDelay,
+  withSequence,
   withTiming,
 } from 'react-native-reanimated';
 import { useDesignTokens } from './useDesignTokens';
 
 export const NUMBER_ROLL_MS = 420;
-export const NUMBER_FAST_MS = 140;
+export const NUMBER_FAST_MS = 160;
 export const NUMBER_FLASH_MS = 700;
 /** השהיה בין ספרה לספרה (מהאחדות שמאלה) — תחושת מונה */
 const STAGGER_MS = 16;
@@ -185,8 +186,11 @@ export function AnimatedNumber({
   const flashColor = shown.flashDir > 0 ? tokens.colors.text.success : tokens.colors.text.danger;
   useLayoutEffect(() => {
     if (shown.flashGen === 0) return;
-    flashP.value = 1;
-    flashP.value = withTiming(0, { duration: NUMBER_FLASH_MS, easing: EASE_OUT });
+    // נכנס ברכות (לא קופץ לירוק מלא) ודועך לאט — צבע חלק לכל המספר
+    flashP.value = withSequence(
+      withTiming(0.85, { duration: 140, easing: EASE_OUT }),
+      withTiming(0, { duration: NUMBER_FLASH_MS, easing: Easing.inOut(Easing.quad) }),
+    );
   }, [shown.flashGen, flashP]);
   const flashEnabled = flash && baseColor != null;
   const flashStyle = useAnimatedStyle(() => {
@@ -250,13 +254,8 @@ export function AnimatedNumber({
             height={lineH}
             charStyle={charStyle}
             flashStyle={flashEnabled ? flashStyle : null}
-            tintColor={
-              change?.tint && baseColor
-                ? change.dir > 0
-                  ? tokens.colors.text.success
-                  : tokens.colors.text.danger
-                : null
-            }
+            // צבע אחיד לכל המספר (flash) — לא גוון לכל ספרה בנפרד, שנראה «מנומר» כשמשתנות הרבה ספרות
+            tintColor={null}
             baseColor={baseColor}
             allowFontScaling={allowFontScaling}
             maxFontSizeMultiplier={maxFontSizeMultiplier}
@@ -342,18 +341,25 @@ function DigitCell({
 
   // עלייה: הספרה החדשה נכנסת מלמטה והישנה יוצאת למעלה; ירידה: הפוך
   // בגרירה (fast) — בלי גלגול, רק החלפה רכה (crossfade); אחרת גלגול עם דהייה הדרגתית
+  // גם בגרירה — גלגול קצר (לא רק דהייה), כמו מונה; בגרירה מרחק קצר יותר כדי שלא ירצד
   const inStyle = useAnimatedStyle(
-    () => ({
-      transform: [{ translateY: fastSv.value ? 0 : dirSv.value * height * (1 - p.value) }],
-      opacity: fastSv.value ? 1 : 0.25 + 0.75 * p.value,
-    }),
+    () => {
+      const dist = fastSv.value ? height * 0.6 : height;
+      return {
+        transform: [{ translateY: dirSv.value * dist * (1 - p.value) }],
+        opacity: p.value,
+      };
+    },
     [height]
   );
   const outStyle = useAnimatedStyle(
-    () => ({
-      transform: [{ translateY: fastSv.value ? 0 : -dirSv.value * height * p.value }],
-      opacity: 1 - p.value,
-    }),
+    () => {
+      const dist = fastSv.value ? height * 0.6 : height;
+      return {
+        transform: [{ translateY: -dirSv.value * dist * p.value }],
+        opacity: 1 - p.value,
+      };
+    },
     [height]
   );
 

@@ -107,6 +107,7 @@ export default function WatchlistScreen() {
     isRefreshing,
     refreshAll,
     addSymbol,
+    addSymbols,
     removeSymbol,
     setNotes,
     patchItem,
@@ -532,8 +533,13 @@ export default function WatchlistScreen() {
                       ListEmptyComponent={
                         <WatchlistEmpty
                           onAddPress={() => setSearchOpen(true)}
-                          onSuggest={(symbol, name) => {
-                            void addSymbol(symbol, name);
+                          onSuggestMany={async (items) => {
+                            try {
+                              await addSymbols(items.map((i) => ({ symbol: i.symbol, companyName: i.name })));
+                              void HapticFeedback.success();
+                            } catch {
+                              legacyAlert('שגיאה', 'לא ניתן להוסיף את המניות');
+                            }
                           }}
                         />
                       }

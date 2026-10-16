@@ -341,6 +341,25 @@ export function useWatchlist() {
     [activeWatchlistId, invalidateItems, queryClient, symbolsKey]
   );
 
+  /** הוספה של כמה סימבולים יחד (הוספה מהירה) — רענון אחד בסוף */
+  const addSymbols = useCallback(
+    async (items: Array<{ symbol: string; companyName?: string | null }>) => {
+      if (!activeWatchlistId || items.length === 0) return;
+      for (const it of items) {
+        await addWatchlistItem({
+          watchlistId: activeWatchlistId,
+          symbol: it.symbol,
+          companyName: it.companyName,
+        });
+      }
+      await invalidateItems();
+      await queryClient.invalidateQueries({
+        queryKey: appQueryKeys.watchlistInsights(symbolsKey),
+      });
+    },
+    [activeWatchlistId, invalidateItems, queryClient, symbolsKey]
+  );
+
   const removeSymbol = useCallback(
     async (symbol: string) => {
       if (!activeWatchlistId) return;
@@ -464,6 +483,7 @@ export function useWatchlist() {
     refreshAll,
     refreshQuotes,
     addSymbol,
+    addSymbols,
     removeSymbol,
     setNotes,
     patchItem,

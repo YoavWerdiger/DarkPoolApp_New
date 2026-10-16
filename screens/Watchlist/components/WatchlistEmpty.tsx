@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
@@ -16,11 +16,32 @@ import { HapticFeedback } from '../../../utils/hapticFeedback';
 
 type Props = {
   onAddPress: () => void;
-  onSuggest: (symbol: string, name: string) => void;
+  /** «סיימתי» — כל המניות שסומנו בהוספה המהירה */
+  onSuggestMany: (items: Array<{ symbol: string; name: string }>) => Promise<void> | void;
 };
 
-export function WatchlistEmpty({ onAddPress, onSuggest }: Props) {
+export function WatchlistEmpty({ onAddPress, onSuggestMany }: Props) {
   const tokens = useDesignTokens();
+  // הוספה מהירה מרובה: מסמנים כמה, ומוסיפים יחד ב«סיימתי» (הוספה מיידית הייתה מעלימה את הרשימה אחרי אחת)
+  const [picked, setPicked] = useState<string[]>([]);
+  const [adding, setAdding] = useState(false);
+  const toggle = (symbol: string) => {
+    void HapticFeedback.selection();
+    setPicked((prev) => (prev.includes(symbol) ? prev.filter((x) => x !== symbol) : [...prev, symbol]));
+  };
+  const finish = async () => {
+    if (!picked.length || adding) return;
+    setAdding(true);
+    try {
+      const items = picked
+        .map((sym) => SUGGESTED_WATCHLIST_SYMBOLS.find((s) => s.symbol === sym))
+        .filter((s): s is (typeof SUGGESTED_WATCHLIST_SYMBOLS)[number] => !!s)
+        .map((s) => ({ symbol: s.symbol, name: s.name }));
+      await onSuggestMany(items);
+    } finally {
+      setAdding(false);
+    }
+  };
 
   const styles = useMemo(
     () =>
@@ -96,6 +117,10 @@ export function WatchlistEmpty({ onAddPress, onSuggest }: Props) {
           textAlign: 'right',
           color: tokens.colors.text.secondary,
         },
+        finishWrap: {
+          paddingHorizontal: APP_LAYOUT.cardPadding,
+          paddingTop: APP_LAYOUT.componentGap,
+        },
         addChip: {
           flexDirection: 'row-reverse',
           alignItems: 'center',
@@ -136,14 +161,15 @@ export function WatchlistEmpty({ onAddPress, onSuggest }: Props) {
       <View style={styles.suggestHeader}>
         <Text style={styles.suggestLabel}>הוספה מהירה</Text>
       </View>
-      {SUGGESTED_WATCHLIST_SYMBOLS.slice(0, 6).map((s, index, list) => (
+      {SUGGESTED_WATCHLIST_SYMBOLS.slice(0, 6).map((s, index, list) => {
+        const on = picked.includes(s.symbol);
+        return (
         <TouchableOpacity
           key={s.symbol}
           style={[styles.suggestRow, index < list.length - 1 && styles.suggestDivider]}
-          onPress={() => {
-            void HapticFeedback.selection();
-            onSuggest(s.symbol, s.name);
-          }}
+          onPress={() => toggle(s.symbol)}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: on }}
         >
           <View style={styles.suggestLogo}>
             <TickerLogo symbol={s.symbol} size={32} />
@@ -152,12 +178,24 @@ export function WatchlistEmpty({ onAddPress, onSuggest }: Props) {
             <Text style={styles.suggestSymbol}>{s.symbol}</Text>
             <Text style={styles.suggestName}>{s.name}</Text>
           </View>
-          <View style={styles.addChip}>
-            <Ionicons name="add" size={14} color={tokens.colors.text.primary} />
-            <Text style={styles.addHint}>הוסף</Text>
+          <View style={[styles.addChip, on && { backgroundColor: tokens.colors.primary.main }]}>
+            <Ionicons name={on ? 'checkmark' : 'add'} size={14} color={on ? '#000000' : tokens.colors.text.primary} />
+            <Text style={[styles.addHint, on && { color: '#000000' }]}>{on ? 'נבחר' : 'הוסף'}</Text>
           </View>
         </TouchableOpacity>
-      ))}
+        );
+      })}
+      {picked.length > 0 ? (
+        <View style={styles.finishWrap}>
+          <UIButton
+            title={picked.length === 1 ? 'סיימתי · הוספת מניה אחת' : `סיימתי · הוספת ${picked.length} מניות`}
+            variant="primary"
+            fullWidth
+            loading={adding}
+            onPress={() => void finish()}
+          />
+        </View>
+      ) : null}
     </View>
   );
 }

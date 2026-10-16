@@ -210,12 +210,15 @@ function AppContent() {
     const subscription = AppState.addEventListener('change', async (nextState) => {
       // נועלים כבר ביציאה לרקע — בחזרה הנעילה כבר מוצגת (בלי הבזק של תוכן לפני האימות)
       if (nextState === 'background' && user) {
+        // לזכור את מצב ההרשאה לפני היציאה (למשל להגדרות המכשיר)
+        void NotificationService.syncPermissionOnResume();
         try {
           const saved = await AsyncStorage.getItem('appSettings');
           if (saved && JSON.parse(saved).biometricAuth) setBiometricLocked(true);
         } catch {}
       }
       if (appState.current.match(/inactive|background/) && nextState === 'active' && user) {
+        void NotificationService.syncPermissionOnResume();
         try {
           const saved = await AsyncStorage.getItem('appSettings');
           if (saved) {

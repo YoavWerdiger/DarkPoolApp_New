@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { AppState } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -49,6 +50,14 @@ export function useNotificationPrefs() {
   }, [user?.id, refreshOs]);
 
   useEffect(() => subscribeNotificationPrefs(setPrefs), []);
+
+  // חזרה מהגדרות המכשיר (שינוי הרשאה) היא חזרה מרקע, לא focus של המסך — בודקים שוב
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void refreshOs();
+    });
+    return () => sub.remove();
+  }, [refreshOs]);
 
   const setPref = useCallback(
     async (key: NotificationPrefKey, value: boolean) => {

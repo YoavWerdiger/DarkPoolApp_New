@@ -228,6 +228,25 @@ export class NotificationService {
   }
 
   // Register device token in Supabase
+  private static lastOsPermission: string | null = null;
+
+  /**
+   * בחזרה לאפליקציה: אם ההרשאה ניתנה עכשיו (למשל בהגדרות המכשיר) — רושמים טוקן מיד.
+   * בלי זה הטוקן נרשם רק בהתחברות, והפוש לא מגיע עד יציאה וכניסה.
+   */
+  static async syncPermissionOnResume(): Promise<void> {
+    try {
+      const { status } = await Notifications.getPermissionsAsync();
+      const prev = this.lastOsPermission;
+      this.lastOsPermission = status;
+      if (status === 'granted' && prev !== null && prev !== 'granted') {
+        await this.registerDeviceToken();
+      }
+    } catch (error) {
+      logger.warn('Notification', 'syncPermissionOnResume failed', error);
+    }
+  }
+
   static async registerDeviceToken(): Promise<boolean> {
     if (this.registrationInProgress) {
       return this.registrationInProgress;

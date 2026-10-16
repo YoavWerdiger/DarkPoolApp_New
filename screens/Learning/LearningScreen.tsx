@@ -34,6 +34,7 @@ import { useTheme } from '../../context/ThemeContext';
 import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
 import { sheetContentBottomPadding } from '../../components/ui/BottomSheet/sheetGlass';
 import { CourseTeaserLock, isCourseTeaserLocked } from '../../components/learning/CourseTeaserLock';
+import { BlurTargetView } from 'expo-blur';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -3546,13 +3547,15 @@ function LearningScreenGate() {
   const navigation = useNavigation();
   const courseId = ((route.params as { courseId?: string } | undefined)?.courseId) ?? null;
   const locked = isCourseTeaserLocked(courseId);
+  // Android: BlurView מטשטש רק תוכן שעטוף ב-BlurTargetView
+  const blurTargetRef = useRef<View>(null);
   return (
     <View style={{ flex: 1 }}>
-      <View style={{ flex: 1 }} pointerEvents={locked ? 'none' : 'auto'}>
+      <BlurTargetView ref={blurTargetRef} style={{ flex: 1 }} pointerEvents={locked ? 'none' : 'auto'}>
         <LearningScreen />
-      </View>
+      </BlurTargetView>
       {locked && courseId ? (
-        <CourseTeaserLock courseId={courseId} onBack={() => navigation.goBack()} />
+        <CourseTeaserLock courseId={courseId} onBack={() => navigation.goBack()} blurTarget={blurTargetRef} />
       ) : null}
     </View>
   );

@@ -1,5 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
+import React, { useEffect, useMemo, useState, type RefObject } from 'react';
+import { View, Text, StyleSheet, Platform, Pressable, useWindowDimensions } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { supabase } from '../../lib/supabase';
@@ -57,7 +59,17 @@ export function isCourseTeaserLocked(courseId?: string | null): boolean {
   return !!courseId && courseId in LOCKED_COURSES;
 }
 
-export function CourseTeaserLock({ courseId, onBack }: { courseId: string; onBack: () => void }) {
+export function CourseTeaserLock({
+  courseId,
+  onBack,
+  blurTarget,
+}: {
+  courseId: string;
+  onBack: () => void;
+  /** Android: התוכן לטשטוש (BlurTargetView) — בלי זה BlurView ב-Android הוא רק שכבה שקופה */
+  blurTarget?: RefObject<View | null>;
+}) {
+  const navigation = useNavigation<any>();
   const tokens = useDesignTokens();
   const { isDarkMode } = useTheme();
   const insets = useSafeAreaInsets();
@@ -83,6 +95,20 @@ export function CourseTeaserLock({ courseId, onBack }: { courseId: string; onBac
     getAcademyCourseAudience({ id: courseId, slug: courseId, title: teaser.title, description: '' }) ||
     teaser.pitch;
   const canvas = tokens.colors.background.primary;
+  // Android לפני SDK 31 / בלי יעד לטשטוש — אין בלר אמיתי, לכן עמעום חזק שמסתיר את התוכן
+  const androidNoRealBlur = Platform.OS === 'android' && (!blurTarget || Number(Platform.Version) < 31);
+  const dimColor = androidNoRealBlur
+    ? isDarkMode
+      ? 'rgba(0,0,0,0.82)'
+      : 'rgba(0,0,0,0.6)'
+    : isDarkMode
+      ? 'rgba(0,0,0,0.30)'
+      : 'rgba(0,0,0,0.18)';
+  const goPurchase = () => {
+    void HapticFeedback.impactLight();
+    // SubscriptionPlans יושב ב-ProfileStack (route «Profile» ב-root)
+    navigation.navigate('Profile', { screen: 'SubscriptionPlans' });
+  };
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
@@ -95,10 +121,13 @@ export function CourseTeaserLock({ courseId, onBack }: { courseId: string; onBac
         tint={isDarkMode ? 'dark' : 'light'}
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
+        {...(Platform.OS === 'android' && blurTarget
+          ? { blurTarget, blurMethod: 'dimezisBlurViewSdk31Plus' as const, blurReductionFactor: 2 }
+          : {})}
       />
 
       <View style={[StyleSheet.absoluteFill, styles.dialogCenter]} pointerEvents="box-none">
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: isDarkMode ? 'rgba(0,0,0,0.30)' : 'rgba(0,0,0,0.18)' }]} pointerEvents="none" />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: dimColor }]} pointerEvents="none" />
         <View
           style={[
             styles.dialog,
@@ -148,10 +177,31 @@ export function CourseTeaserLock({ courseId, onBack }: { courseId: string; onBac
 
 
           <View style={styles.cta}>
-            <UIButton title="חזרה לאקדמיה" variant="primary" fullWidth onPress={onBack} />
+            <UIButton
+              title="לרכישת הקורס"
+              variant="primary"
+              fullWidth
+              onPress={goPurchase}
+              style={{ backgroundColor: tokens.colors.primary.main }}
+              textStyle={{ color: '#000000' }}
+            />
           </View>
           </View>
         </View>
+
+        {/* יציאה — מחוץ לדיאלוג */}
+        <Pressable
+          onPress={onBack}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="סגירה וחזרה לאקדמיה"
+          style={({ pressed }) => [
+            styles.closeBtn,
+            { backgroundColor: tokens.colors.background.navChrome, opacity: pressed ? 0.7 : 1 },
+          ]}
+        >
+          <Ionicons name="close" size={24} color={tokens.colors.text.primary} />
+        </Pressable>
       </View>
     </View>
   );
@@ -211,9 +261,10 @@ const createStyles = (_tokens: ReturnType<typeof useDesignTokens>) =>
       marginTop: 20,
       marginBottom: APP_LAYOUT.sectionHeaderToContent - 4,
     },
+    // כמו כרטיסי ההגדרות: רדיוס כרטיס, שורות 15/16, מפרידים מקצה לקצה (בתוך ריפוד הכרטיס)
     card: {
       alignSelf: 'stretch',
-      borderRadius: 18,
+      borderRadius: UI_CARD_RADIUS,
       overflow: 'hidden',
     },
     row: {
@@ -221,8 +272,7 @@ const createStyles = (_tokens: ReturnType<typeof useDesignTokens>) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,
-      minHeight: 56,
-      paddingVertical: 10,
+      paddingVertical: 15,
       paddingHorizontal: APP_LAYOUT.cardPadding,
     },
     rowIcon: {
@@ -240,10 +290,16 @@ const createStyles = (_tokens: ReturnType<typeof useDesignTokens>) =>
       ...appPhysicalRightText,
     },
     divider: {
-      height: StyleSheet.hairlineWidth,
-      // מתחיל בקו הטקסט (אחרי האייקון), כמו ברשימות של האפליקציה
-      marginRight: APP_LAYOUT.cardPadding + 34 + 12,
-      marginLeft: APP_LAYOUT.cardPadding,
+      height: 1,
+      marginHorizontal: APP_LAYOUT.cardPadding,
+    },
+    closeBtn: {
+      marginTop: 20,
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     cta: {
       alignSelf: 'stretch',

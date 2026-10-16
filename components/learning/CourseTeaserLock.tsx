@@ -74,8 +74,10 @@ export function CourseTeaserLock({
   const tokens = useDesignTokens();
   const { isDarkMode } = useTheme();
   const insets = useSafeAreaInsets();
-  const { width: windowWidth } = useWindowDimensions();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const dialogWidth = Math.min(360, windowWidth - APP_LAYOUT.screenPaddingHorizontal * 2);
+  // 16:9 מלא; במסכים נמוכים (SE) מגבילים כדי שהדיאלוג ייכנס במסך
+  const bannerHeight = Math.min(Math.round((dialogWidth * 9) / 16), Math.round(windowHeight * 0.24));
   const styles = useMemo(() => createStyles(tokens), [tokens]);
   const teaser = LOCKED_COURSES[courseId];
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
@@ -140,7 +142,7 @@ export function CourseTeaserLock({
           ]}
         >
           {/* באנר: תמונת הקורס בכל רוחב הדיאלוג, עם תג נעילה */}
-          <View style={styles.banner}>
+          <View style={[styles.banner, { height: bannerHeight }]}>
             {coverUrl ? (
               <Image source={{ uri: coverUrl }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
             ) : (
@@ -229,9 +231,9 @@ const createStyles = (_tokens: ReturnType<typeof useDesignTokens>) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
+    // באנרי הקורסים הם 16:9 — הגובה מחושב ברכיב (bannerHeight)
     banner: {
       alignSelf: 'stretch',
-      height: 150,
     },
     bannerFallback: {
       alignItems: 'center',

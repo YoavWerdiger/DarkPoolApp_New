@@ -63,7 +63,8 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   const T = useDesignTokens();
   const { width: screenWidth } = useWindowDimensions();
   const cardWidth = width ?? academyCardWidth(screenWidth);
-  const coverHeight = Math.round(cardWidth * 0.58);
+  // באנרי הקורסים 16:9 — אותו יחס בדיוק, בלי חיתוך בצדדים
+  const coverHeight = Math.round((cardWidth * 9) / 16);
   const styles = React.useMemo(
     () => createStyles(T, coverHeight, cardWidth),
     [T, coverHeight, cardWidth]

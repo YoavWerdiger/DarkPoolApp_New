@@ -22,9 +22,9 @@ import {
 import { APP_LAYOUT } from '../ui/appLayout';
 import {
   appCardBodyStyle,
+  appCardMetricLabelStyle,
   appCardSubtitleStyle,
   appCardTitleStyle,
-  appGroupLabelStyle,
 } from '../ui/appType';
 import { ACADEMY_TYPE } from './academyLayout';
 import {
@@ -304,20 +304,23 @@ const createStyles = (
     },
     subtitle: {
       ...appCardSubtitleStyle,
+      // appCardSubtitleStyle נושא צבע קבוע של מצב כהה — לפי ה-theme
+      color: T.colors.text.secondary,
     },
+    // בתוך כרטיס: תווית קטנה (כמו תווית מדד/שדה) מעל גוף הטקסט — לא תווית קבוצה של מחוץ לכרטיס
     audienceBlock: {
       width: '100%',
       alignItems: 'stretch',
-      gap: APP_LAYOUT.groupLabelToContent,
+      gap: APP_LAYOUT.cardMetricLabelToValueGap,
     },
     audienceLabel: {
-      ...appGroupLabelStyle,
-      marginBottom: 0,
-      color: T.colors.text.secondary,
+      ...appCardMetricLabelStyle,
+      textAlign: 'right',
+      color: T.colors.text.tertiary,
     },
     audienceText: {
       ...appCardBodyStyle,
-      color: T.colors.text.secondary,
+      color: T.colors.text.primary,
     },
     progressTrack: {
       height: 4,

@@ -13,6 +13,7 @@ import {
   loadPortfolioSnapshot,
   upsertPortfolioSnapshot,
 } from '../_shared/darkpoolPortfolioSnapshots.ts';
+import { loadAllFundHoldingRows } from '../_shared/fundHoldingsRows.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -133,10 +134,11 @@ serve(async (req) => {
   const filingDate = fund.last_filing_date;
   let holdings: FundHolding[] = [];
 
-  const { data: historyRows } = await supabase
-    .from('dark_pool_fund_holdings')
-    .select('filing_date, ticker, value_usd')
-    .eq('fund_cik', cik);
+  const historyRows = await loadAllFundHoldingRows<{
+    filing_date: string | null;
+    ticker: string | null;
+    value_usd: number | null;
+  }>(supabase, cik, 'filing_date, ticker, value_usd');
 
   const totalsByDate = new Map<string, number>();
   const firstSeenByTicker = new Map<string, string>();

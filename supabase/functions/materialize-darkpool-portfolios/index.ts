@@ -29,6 +29,7 @@ import {
   type SnapshotKind,
 } from '../_shared/darkpoolPortfolioSnapshots.ts';
 import type { UwCongressTrade } from '../_shared/unusualWhales.ts';
+import { loadAllFundHoldingRows } from '../_shared/fundHoldingsRows.ts';
 import {
   buildInsiderOwnershipMetrics,
   dominantInsiderCik,
@@ -405,10 +406,14 @@ async function materializeFund(
     ? String(fund.last_filing_date).slice(0, 10)
     : null;
 
-  const { data: historyRows } = await supabase
-    .from('dark_pool_fund_holdings')
-    .select('filing_date, ticker, value_usd, issuer_name, shares, allocation_pct')
-    .eq('fund_cik', cik);
+  const historyRows = await loadAllFundHoldingRows<{
+    filing_date: string | null;
+    ticker: string | null;
+    value_usd: number | null;
+    issuer_name: string | null;
+    shares: number | null;
+    allocation_pct: number | null;
+  }>(supabase, cik, 'filing_date, ticker, value_usd, issuer_name, shares, allocation_pct');
 
   const totalsByDate = new Map<string, number>();
   const firstSeenByTicker = new Map<string, string>();

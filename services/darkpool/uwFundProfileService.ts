@@ -73,14 +73,23 @@ export async function fetchFundHoldingsHistory(
 ): Promise<FundFilingHistoryRow[]> {
   const id = cik.trim();
   if (!id) return [];
-  const { data, error } = await supabase
-    .from('dark_pool_fund_holdings')
-    .select('filing_date, ticker, shares, value_usd')
-    .eq('fund_cik', id)
-    .order('filing_date', { ascending: true })
-    .limit(5000);
-  if (error) throw error;
-  return (data ?? []).map((row) => ({
+  // השרת מחזיר עד 1000 שורות לשאילתה (גם עם limit גבוה). ARK ~3200 שורות → בלי עימוד הגיעו רק
+  // הדוחות הישנים (2022: SQ, FB…) והאחזקות/הגרף היו שגויים.
+  const PAGE = 1000;
+  const data: Array<{ filing_date: unknown; ticker: unknown; shares: unknown; value_usd: unknown }> = [];
+  for (let from = 0; from < 20000; from += PAGE) {
+    const { data: batch, error } = await supabase
+      .from('dark_pool_fund_holdings')
+      .select('filing_date, ticker, shares, value_usd')
+      .eq('fund_cik', id)
+      .order('filing_date', { ascending: true })
+      .order('id', { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+    data.push(...(batch ?? []));
+    if (!batch || batch.length < PAGE) break;
+  }
+  return data.map((row) => ({
     filing_date: String(row.filing_date ?? '').slice(0, 10),
     ticker: String(row.ticker ?? '')
       .toUpperCase()

@@ -84,6 +84,18 @@ const KNOWN_FUNDS: Record<string, { name: string; manager: string; image?: strin
     manager: 'Seth Klarman',
     image: 'https://upload.wikimedia.org/wikipedia/commons/b/b8/Seth_Klarman_at_147th_Preakness_Stakes.jpg',
   },
+  '1166559': {
+    name: 'Gates Foundation Trust',
+    manager: 'Bill Gates',
+  },
+  '1105497': {
+    name: 'MSD Capital (Dell family office)',
+    manager: 'Michael Dell',
+  },
+  '1997453': {
+    name: 'Chan Zuckerberg Initiative',
+    manager: 'Mark Zuckerberg',
+  },
 };
 
 const CURATED_CIKS = new Set(Object.keys(CURATED_FUND_QUIVER_OWNERS));

@@ -323,6 +323,39 @@ export const CURATED_FUND_QUIVER_OWNERS: Record<
     name: 'Baupost Group LLC',
     manager: 'Seth Klarman',
   },
+  // משרדים משפחתיים / קרנות של מנכ"לים שמגישים 13F — המקור הציבורי היחיד לתיק «פרטי»
+  '1166559': {
+    owner: 'GATES FOUNDATION TRUST',
+    owners: [
+      'GATES FOUNDATION TRUST',
+      'Gates Foundation Trust',
+      'Bill & Melinda Gates Foundation Trust',
+    ],
+    name: 'Gates Foundation Trust',
+    manager: 'Bill Gates',
+  },
+  '1105497': {
+    owner: 'MSD CAPITAL, L.P.',
+    owners: [
+      'MSD CAPITAL, L.P.',
+      'MSD Capital, L.P.',
+      'MSD Capital L.P.',
+      'MSD Capital',
+    ],
+    name: 'MSD Capital (Dell family office)',
+    manager: 'Michael Dell',
+  },
+  '1997453': {
+    owner: 'Chan Zuckerberg Initiative, LLC',
+    owners: [
+      'Chan Zuckerberg Initiative, LLC',
+      'CHAN ZUCKERBERG INITIATIVE, LLC',
+      'Chan Zuckerberg Initiative LLC',
+      'Chan Zuckerberg Initiative',
+    ],
+    name: 'Chan Zuckerberg Initiative',
+    manager: 'Mark Zuckerberg',
+  },
 };
 
 export interface QuiverPoliticiansCachePayload {

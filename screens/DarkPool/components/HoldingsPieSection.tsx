@@ -22,7 +22,7 @@ import {
 } from '../darkPoolLayout';
 
 /** כמה שורות מקרא נראות בלי גלילה (≈ גובה העוגה) */
-const LEGEND_VISIBLE_ROWS = 9;
+const LEGEND_VISIBLE_ROWS = 7;
 const LEGEND_ROW_HEIGHT = 26;
 /** מעבר לזה — השאר מתקבצים ל«אחר» (תיק של מאות מניות) */
 const LEGEND_MAX_ROWS = 301;

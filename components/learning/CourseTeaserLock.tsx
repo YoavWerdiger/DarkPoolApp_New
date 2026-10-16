@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState, type RefObject } from 'react';
-import { View, Text, StyleSheet, Platform, Pressable, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, Platform, useWindowDimensions } from 'react-native';
+import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../ui/DayNavBlurButton';
 import { useNavigation } from '@react-navigation/native';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { BlurView } from 'expo-blur';
@@ -190,18 +191,17 @@ export function CourseTeaserLock({
         </View>
 
         {/* יציאה — מחוץ לדיאלוג */}
-        <Pressable
-          onPress={onBack}
-          hitSlop={10}
-          accessibilityRole="button"
-          accessibilityLabel="סגירה וחזרה לאקדמיה"
-          style={({ pressed }) => [
-            styles.closeBtn,
-            { backgroundColor: tokens.colors.background.navChrome, opacity: pressed ? 0.7 : 1 },
-          ]}
-        >
-          <Ionicons name="close" size={24} color={tokens.colors.text.primary} />
-        </Pressable>
+        {/* אותו כפתור יציאה כמו בכותרות האפליקציה (ChatSubScreenHeader) */}
+        <View style={styles.closeWrap}>
+          <DayNavBlurButton
+            onPress={onBack}
+            size={DRAWER_MENU_BUTTON_SIZE}
+            glassIntensity="subtle"
+            accessibilityLabel="סגירה וחזרה לאקדמיה"
+          >
+            <Ionicons name="close" size={24} color={tokens.colors.text.primary} />
+          </DayNavBlurButton>
+        </View>
       </View>
     </View>
   );
@@ -293,13 +293,8 @@ const createStyles = (_tokens: ReturnType<typeof useDesignTokens>) =>
       height: 1,
       marginHorizontal: APP_LAYOUT.cardPadding,
     },
-    closeBtn: {
+    closeWrap: {
       marginTop: 20,
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      alignItems: 'center',
-      justifyContent: 'center',
     },
     cta: {
       alignSelf: 'stretch',

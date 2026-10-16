@@ -27,8 +27,7 @@ export default function DarkPoolTabs() {
       tabBar={(props) => <DarkPoolBottomTabBar {...props} />}
       screenOptions={{
         headerShown: false,
-        // מעבר רך בין טאבים (דהייה + הזזה קלה) במקום החלפה בפריים אחד
-        animation: 'shift',
+        // החלפה מיידית בין הטאבים (כמו לפני 10.10) — רק רקע הטאב בסרגל מחליק
         freezeOnBlur: true,
         lazy: true,
         tabBarHideOnKeyboard: true,

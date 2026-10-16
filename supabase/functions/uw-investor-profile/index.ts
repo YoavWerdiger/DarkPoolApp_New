@@ -50,6 +50,11 @@ import {
 } from '../_shared/trumpPortfolio.ts';
 import { isSecProductionMode } from '../_shared/darkPoolMode.ts';
 import {
+  buildInsiderOwnershipMetrics,
+  dominantInsiderCik,
+  loadInsiderOwnershipPoints,
+} from '../_shared/insiderOwnershipPortfolio.ts';
+import {
   congressPhotoUrl,
   knownPortraitUrl,
   loadPortraitFromDb,
@@ -500,18 +505,26 @@ async function buildInsiderProfile(
     portfolio_source = 'snapshot';
   } else if (dedupedInputs.length && (CURATED_ID_SET.has(personKey) || !snap)) {
     try {
+      // יתרות מדווחות מ-SEC EDGAR — עדיפות על שחזור מעסקאות
+      const cik = dominantInsiderCik(dbRows);
+      const ownPoints = cik ? await loadInsiderOwnershipPoints(supabase, cik).catch(() => []) : [];
       const tickers = Array.from(
         new Set(
-          dedupedInputs
-            .map((t) => String(t.ticker ?? '').toUpperCase())
-            .filter((t) => t && t.length <= 5)
+          [
+            ...ownPoints.map((p) => p.ticker),
+            ...dedupedInputs.map((t) => String(t.ticker ?? '').toUpperCase()),
+          ].filter((t) => t && t.length <= 5)
         )
       ).slice(0, 20);
       const prices = await ensureYahooPriceMaps(supabase, tickers);
-      metrics = await metricsFromCongressTrades(dedupedInputs, {
+      const tradeMetrics = await metricsFromCongressTrades(dedupedInputs, {
         maxTickers: 20,
         pricesByTicker: prices,
       });
+      const ownMetrics = ownPoints.length
+        ? buildInsiderOwnershipMetrics(ownPoints, prices, tradeMetrics)
+        : null;
+      metrics = ownMetrics ?? tradeMetrics;
       if (metrics) {
         const fields = metricsToSnapshotFields(metrics);
         await upsertPortfolioSnapshot(supabase, {
@@ -520,9 +533,10 @@ async function buildInsiderProfile(
           ...fields,
           profile_meta: { name, bootstrap: true },
           source_meta: {
-            accuracy: 'form4_db_disclosed_when_basis_reliable',
+            accuracy: ownMetrics ? 'sec_edgar_reported_holdings' : 'form4_db_disclosed_when_basis_reliable',
             path: 'profile_bootstrap',
             trade_source: 'dark_pool_insider_buys',
+            ...(ownMetrics ? { ownership_cik: cik, ownership_as_of: ownMetrics.ownership_as_of } : {}),
           },
         });
         snapshot_computed_at = new Date().toISOString();

@@ -29,6 +29,12 @@ import {
   type SnapshotKind,
 } from '../_shared/darkpoolPortfolioSnapshots.ts';
 import type { UwCongressTrade } from '../_shared/unusualWhales.ts';
+import {
+  buildInsiderOwnershipMetrics,
+  dominantInsiderCik,
+  loadInsiderOwnershipPoints,
+  type InsiderOwnershipPoint,
+} from '../_shared/insiderOwnershipPortfolio.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -86,6 +92,8 @@ serve(async (req) => {
     const tickerHints = new Set<string>();
     const congressInputs = new Map<string, CongressTradeInput[]>();
     const insiderInputs = new Map<string, CongressTradeInput[]>();
+    // יתרות מדווחות מ-SEC EDGAR (sync-insider-ownership) — מקור השווי לאינסיידרים
+    const insiderOwnership = new Map<string, { cik: string; points: InsiderOwnershipPoint[] }>();
     const fundCiks: string[] = [];
 
     for (const t of targets) {
@@ -141,6 +149,14 @@ serve(async (req) => {
         for (const i of inputs) {
           const sym = String(i.ticker ?? '').toUpperCase();
           if (sym && sym.length <= 5) tickerHints.add(sym);
+        }
+        const cik = dominantInsiderCik(rows);
+        if (cik) {
+          const points = await loadInsiderOwnershipPoints(supabase, cik).catch(() => []);
+          if (points.length) {
+            insiderOwnership.set(t.id, { cik, points });
+            for (const p of points) if (p.ticker.length <= 5) tickerHints.add(p.ticker);
+          }
         }
       } else if (t.kind === 'fund_manager') {
         fundCiks.push(t.id);
@@ -247,10 +263,15 @@ serve(async (req) => {
             ok++;
             continue;
           }
-          const metrics = await metricsFromCongressTrades(inputs, {
+          const tradeMetrics = await metricsFromCongressTrades(inputs, {
             maxTickers: 20,
             pricesByTicker,
           });
+          const own = insiderOwnership.get(t.id);
+          const ownMetrics = own
+            ? buildInsiderOwnershipMetrics(own.points, pricesByTicker, tradeMetrics)
+            : null;
+          const metrics = ownMetrics ?? tradeMetrics;
           const fields = metrics
             ? metricsToSnapshotFields(metrics)
             : {
@@ -266,11 +287,19 @@ serve(async (req) => {
             kind: 'insider',
             ...fields,
             profile_meta: { trade_count: inputs.length },
-            source_meta: {
-              mode,
-              accuracy: 'form4_db_disclosed_when_basis_reliable',
-              trade_source: 'dark_pool_insider_buys',
-            },
+            source_meta: ownMetrics
+              ? {
+                  mode,
+                  accuracy: 'sec_edgar_reported_holdings',
+                  ownership_cik: own!.cik,
+                  ownership_as_of: ownMetrics.ownership_as_of,
+                  trade_source: 'dark_pool_insider_buys',
+                }
+              : {
+                  mode,
+                  accuracy: 'form4_db_disclosed_when_basis_reliable',
+                  trade_source: 'dark_pool_insider_buys',
+                },
           });
           ok++;
         } else if (t.kind === 'fund_manager') {

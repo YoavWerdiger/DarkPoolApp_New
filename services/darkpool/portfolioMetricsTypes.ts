@@ -51,6 +51,13 @@ export interface ReconstructedPortfolioMetrics {
   concentration?: ProfilePortfolioConcentration;
   /** ציון פרופיל 0–100 */
   score?: ProfilePortfolioScore;
+  /**
+   * 'sec_edgar' — אינסיידר: אחזקות מיתרות מדווחות בהגשות המקוריות (לכל קו אחזקה),
+   * לא שחזור מעסקאות. ה-UI מציג אותן כמו שהן ולא מחשב מחדש בטלפון.
+   */
+  ownership_source?: 'sec_edgar';
+  /** תאריך הדיווח האחרון שנכלל (YYYY-MM-DD) */
+  ownership_as_of?: string;
 }
 
 export interface ProfilePortfolioRiskMetrics {

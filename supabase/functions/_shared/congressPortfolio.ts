@@ -576,7 +576,7 @@ function buildDailySeries(
   return series;
 }
 
-function periodReturn(series: ValuePoint[], days: number): number | null {
+export function periodReturn(series: ValuePoint[], days: number): number | null {
   if (series.length < 2) return null;
   const last = series[series.length - 1];
   const cutoff = new Date(last.date);
@@ -587,7 +587,7 @@ function periodReturn(series: ValuePoint[], days: number): number | null {
   return twrPeriodReturnPct(series.slice(startIdx));
 }
 
-function ytdReturn(series: ValuePoint[]): number | null {
+export function ytdReturn(series: ValuePoint[]): number | null {
   if (series.length < 2) return null;
   const last = series[series.length - 1];
   const yearStart = `${last.date.slice(0, 4)}-01-01`;
@@ -651,7 +651,7 @@ function stdDev(arr: number[]): number {
   return Math.sqrt(arr.reduce((s, x) => s + (x - m) ** 2, 0) / (arr.length - 1));
 }
 
-function computeSeriesRisk(series: ValuePoint[]) {
+export function computeSeriesRisk(series: ValuePoint[]) {
   if (series.length < 2) {
     return {
       volatility_pct: null,
@@ -712,7 +712,7 @@ function computeSeriesRisk(series: ValuePoint[]) {
   };
 }
 
-function computeConcentration(holdings: PortfolioHoldingMetric[]) {
+export function computeConcentration(holdings: PortfolioHoldingMetric[]) {
   if (!holdings.length) return { hhi: 0, top3_pct: 0, unique_tickers: 0 };
   const hhi = holdings.reduce((s, h) => {
     const w = h.allocation_pct / 100;
@@ -726,7 +726,7 @@ function computeConcentration(holdings: PortfolioHoldingMetric[]) {
   };
 }
 
-function computeProfileScore(input: {
+export function computeProfileScore(input: {
   totalReturnPct: number;
   winRate: number | null;
   sharpe: number | null;

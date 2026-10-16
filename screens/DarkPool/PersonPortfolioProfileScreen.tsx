@@ -637,8 +637,10 @@ export function PersonPortfolioProfileScreen({
         if (h.current_price > 0) quotesByTicker.set(h.ticker.toUpperCase(), h.current_price);
       }
       const form4Engine = buildForm4Holdings(form4Inputs, quotesByTicker);
+      // יש אחזקות מהשרת מהמקור (SEC) — הן האמת; השחזור בטלפון מעסקאות form4api מערבב קווי אחזקה
+      const secOwnership = m?.ownership_source === 'sec_edgar' && (m.holdings?.length ?? 0) > 0;
 
-      if (form4Engine.length || form4Inputs.length) {
+      if (!secOwnership && (form4Engine.length || form4Inputs.length)) {
         return {
           portfolioValue: form4Engine.length
             ? form4Engine.reduce((s, h) => s + h.calculatedValueUSD, 0)

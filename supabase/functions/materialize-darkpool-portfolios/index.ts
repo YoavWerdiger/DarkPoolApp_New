@@ -32,6 +32,7 @@ import type { UwCongressTrade } from '../_shared/unusualWhales.ts';
 import {
   buildInsiderOwnershipMetrics,
   dominantInsiderCik,
+  heldOwnershipTickers,
   loadInsiderOwnershipPoints,
   type InsiderOwnershipPoint,
 } from '../_shared/insiderOwnershipPortfolio.ts';
@@ -153,9 +154,12 @@ serve(async (req) => {
         const cik = dominantInsiderCik(rows);
         if (cik) {
           const points = await loadInsiderOwnershipPoints(supabase, cik).catch(() => []);
-          if (points.length) {
-            insiderOwnership.set(t.id, { cik, points });
-            for (const p of points) if (p.ticker.length <= 5) tickerHints.add(p.ticker);
+          const held = heldOwnershipTickers(points);
+          if (held.length) {
+            const heldSet = new Set(held);
+            // רק טיקרים שעדיין מוחזקים — מחירים ל-5 שנים לכל טיקר כבדים בזיכרון
+            insiderOwnership.set(t.id, { cik, points: points.filter((p) => heldSet.has(p.ticker)) });
+            for (const tk of held) if (tk.length <= 5) tickerHints.add(tk);
           }
         }
       } else if (t.kind === 'fund_manager') {

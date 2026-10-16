@@ -52,6 +52,7 @@ import { isSecProductionMode } from '../_shared/darkPoolMode.ts';
 import {
   buildInsiderOwnershipMetrics,
   dominantInsiderCik,
+  heldOwnershipTickers,
   loadInsiderOwnershipPoints,
 } from '../_shared/insiderOwnershipPortfolio.ts';
 import {
@@ -500,14 +501,22 @@ async function buildInsiderProfile(
   let portfolio_source: ProfilePayload['portfolio_source'] = 'none';
   let snapshot_computed_at: string | null = snap?.computed_at ?? null;
 
-  if (snapFresh && snap?.metrics) {
-    metrics = snap.metrics as CongressPortfolioMetrics;
+  // יתרות מדווחות מ-SEC EDGAR — עדיפות על שחזור מעסקאות
+  const cik = dominantInsiderCik(dbRows);
+  const ownAll = cik ? await loadInsiderOwnershipPoints(supabase, cik).catch(() => []) : [];
+  const heldSet = new Set(heldOwnershipTickers(ownAll));
+  const ownPoints = ownAll.filter((p) => heldSet.has(p.ticker));
+  // snapshot ישן מהשחזור מעסקאות לא תקף כשיש כבר יתרות מ-SEC
+  const snapIsSec =
+    (snap?.metrics as { ownership_source?: string } | null)?.ownership_source === 'sec_edgar';
+  const snapUsable = !!(snapFresh && snap?.metrics && (snapIsSec || ownPoints.length === 0));
+
+  if (snapUsable) {
+    metrics = snap!.metrics as CongressPortfolioMetrics;
     portfolio_source = 'snapshot';
-  } else if (dedupedInputs.length && (CURATED_ID_SET.has(personKey) || !snap)) {
+  } else if (dedupedInputs.length || ownPoints.length) {
+    // לא רק לרשימה המאוצרת: snapshot שהתיישן (ה-materialize הלילי לא מכסה את כולם) מחושב מחדש בצפייה
     try {
-      // יתרות מדווחות מ-SEC EDGAR — עדיפות על שחזור מעסקאות
-      const cik = dominantInsiderCik(dbRows);
-      const ownPoints = cik ? await loadInsiderOwnershipPoints(supabase, cik).catch(() => []) : [];
       const tickers = Array.from(
         new Set(
           [
@@ -546,7 +555,9 @@ async function buildInsiderProfile(
       console.error('insider bootstrap failed', personKey, e);
       metrics = null;
     }
-  } else if (snap?.metrics) {
+  }
+  // חישוב מחדש נכשל / אין נתונים — עדיף ה-snapshot הקיים מכלום
+  if (!metrics && snap?.metrics) {
     metrics = snap.metrics as CongressPortfolioMetrics;
     portfolio_source = 'snapshot';
   }

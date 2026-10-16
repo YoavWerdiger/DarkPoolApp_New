@@ -53,12 +53,37 @@ export async function loadInsiderOwnershipPoints(
     .from('insider_ownership_points')
     .select('ticker, line_key, is_derivative, security_title, shares_owned, as_of_date')
     .eq('insider_cik', cik)
+    // נגזרים לא נספרים בשווי (חוץ ממניות Class B/C) — לא טוענים אופציות/RSU (זיכרון ב-materialize)
+    .or('is_derivative.eq.false,security_title.ilike.%class b%,security_title.ilike.%class c%')
     .order('as_of_date', { ascending: true })
-    .limit(5000);
+    .limit(3000);
   if (error || !data) return [];
   return (data as InsiderOwnershipPoint[])
     .map((p) => ({ ...p, ticker: String(p.ticker).toUpperCase(), shares_owned: Number(p.shares_owned) }))
     .filter((p) => isCommonEquityLine(p) && Number.isFinite(p.shares_owned));
+}
+
+/**
+ * טיקרים שעדיין מוחזקים (יתרה אחרונה > 0 באחד הקווים) — רק להם צריך מחירים.
+ * מוגבל למספר טיקרים כדי לא לטעון היסטוריית מחירים של כל מה שהאדם החזיק אי פעם.
+ */
+export function heldOwnershipTickers(points: InsiderOwnershipPoint[], max = 12): string[] {
+  const latest = new Map<string, { date: string; shares: number; ticker: string }>();
+  for (const p of points) {
+    const k = `${p.ticker}|${p.line_key}`;
+    const cur = latest.get(k);
+    if (!cur || p.as_of_date >= cur.date) latest.set(k, { date: p.as_of_date, shares: p.shares_owned, ticker: p.ticker });
+  }
+  const byTicker = new Map<string, string>();
+  for (const v of latest.values()) {
+    if (!(v.shares > 0)) continue;
+    const prev = byTicker.get(v.ticker);
+    if (!prev || v.date > prev) byTicker.set(v.ticker, v.date);
+  }
+  return Array.from(byTicker.entries())
+    .sort((a, b) => b[1].localeCompare(a[1]))
+    .slice(0, max)
+    .map(([t]) => t);
 }
 
 /** ה-CIK השכיח בשורות של האדם (שם זהה יכול להופיע אצל כמה מגישים) */

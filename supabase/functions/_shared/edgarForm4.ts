@@ -119,12 +119,16 @@ export function edgarFilingTxtUrl(cik: string, accession: string): string {
 }
 
 /**
- * מניות רגילות (לא נגזרים) — זה ה«תיק». Class B / RSU / אופציות בטבלה II לא נספרים
- * (כמו openinsider/secform4). קווים עקיפים (נאמנות, LLC) נספרים — הם בבעלות האינסיידר.
+ * מניות — זה ה«תיק»: טבלה I, וגם Class B/C מטבלה II (מניות מייסדים). RSU / אופציות לא נספרים.
+ * קווים עקיפים (נאמנות, LLC) נספרים — הם בבעלות האינסיידר.
  */
 export function isCommonEquityLine(l: { is_derivative: boolean; security_title: string | null }): boolean {
-  if (l.is_derivative) return false;
   const t = (l.security_title ?? '').toLowerCase();
+  // מניות מייסדים (Class B/C) מדווחות בטבלה II כי הן ניתנות להמרה 1:1 — אבל הן מניות שבבעלות מלאה
+  // (צוקרברג, קארפ...). אופציות / RSU / יחידות — לא.
+  if (l.is_derivative) {
+    return /\bclass\s+[b-z]\b/.test(t) && /\b(common|ordinary|capital)\b/.test(t) && !/\b(options?|units?|rights?|warrants?)\b/.test(t);
+  }
   if (/\b(note|warrant|option|right|debenture|bond|unit[s]? of limited|preferred)\b/.test(t)) return false;
   return true;
 }

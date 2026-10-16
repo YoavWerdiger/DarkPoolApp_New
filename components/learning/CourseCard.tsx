@@ -21,12 +21,15 @@ import {
 } from './academyCardLayout';
 import { APP_LAYOUT } from '../ui/appLayout';
 import {
+  appCardBodyStyle,
   appCardSubtitleStyle,
   appCardTitleStyle,
+  appGroupLabelStyle,
 } from '../ui/appType';
 import { ACADEMY_TYPE } from './academyLayout';
 import {
   getAcademyCourseAccentColor,
+  getAcademyCourseAudience,
   getAcademyCourseBadgeColor,
   getAcademyCourseBadgeLabel,
   getAcademyCourseBadgeTextColor,
@@ -98,6 +101,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
     T.colors.primary.main
   );
   const subtitle = getAcademyCourseSubtitle(course);
+  const audience = getAcademyCourseAudience(course);
   const accent = getAcademyCourseAccentColor(
     course as CourseWithProgress & { price?: number },
     T.colors.primary.main
@@ -174,6 +178,12 @@ export const CourseCard: React.FC<CourseCardProps> = ({
             ) : null}
           </View>
 
+          {audience ? (
+            <View style={styles.audienceBlock}>
+              <Text style={styles.audienceLabel}>למי הקורס מתאים</Text>
+              <Text style={styles.audienceText}>{audience}</Text>
+            </View>
+          ) : null}
 
           {isEnrolled && totalLessons > 0 ? (
             <View style={styles.progressTrack}>
@@ -294,6 +304,20 @@ const createStyles = (
     },
     subtitle: {
       ...appCardSubtitleStyle,
+    },
+    audienceBlock: {
+      width: '100%',
+      alignItems: 'stretch',
+      gap: APP_LAYOUT.groupLabelToContent,
+    },
+    audienceLabel: {
+      ...appGroupLabelStyle,
+      marginBottom: 0,
+      color: T.colors.text.secondary,
+    },
+    audienceText: {
+      ...appCardBodyStyle,
+      color: T.colors.text.secondary,
     },
     progressTrack: {
       height: 4,

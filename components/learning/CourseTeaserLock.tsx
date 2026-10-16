@@ -10,6 +10,7 @@ import { APP_TYPE, appPhysicalRightText } from '../ui/appType';
 import UIButton from '../ui/UIButton';
 import { APP_LAYOUT, UI_CARD_RADIUS } from '../ui/appLayout';
 import { useTheme } from '../../context/ThemeContext';
+import { getAcademyCourseAudience } from './academyCourses';
 
 /**
  * קורסים שעדיין לא פתוחים — נכנסים לקורס, תמונת הקורס נשארת חדה, רשימת השיעורים מטושטשת,
@@ -77,6 +78,10 @@ export function CourseTeaserLock({ courseId, onBack }: { courseId: string; onBac
   }, [courseId]);
   if (!teaser) return null;
 
+  // אותו הסבר כמו בכרטיס הקורס באקדמיה (בלי הכותרת «למי הקורס מתאים»)
+  const explanation =
+    getAcademyCourseAudience({ id: courseId, slug: courseId, title: teaser.title, description: '' }) ||
+    teaser.pitch;
   const canvas = tokens.colors.background.primary;
 
   return (
@@ -120,7 +125,7 @@ export function CourseTeaserLock({ courseId, onBack }: { courseId: string; onBac
 
           <View style={styles.body}>
           <Text style={[styles.title, { color: tokens.colors.text.primary }]}>{teaser.title}</Text>
-          <Text style={[styles.pitch, { color: tokens.colors.text.secondary }]}>{teaser.pitch}</Text>
+          <Text style={[styles.pitch, { color: tokens.colors.text.secondary }]}>{explanation}</Text>
 
           <Text style={[styles.groupLabel, { color: tokens.colors.text.secondary }]}>מה מחכה לכם בקורס</Text>
           <View style={[styles.card, { backgroundColor: tokens.colors.background.secondary }]}>

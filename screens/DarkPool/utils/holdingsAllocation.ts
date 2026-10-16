@@ -35,7 +35,7 @@ export function holdingsToDistributionSlices(
     label: h.ticker.toUpperCase(),
     value: h.market_value ?? h.value_usd ?? h.allocation_pct ?? 0,
     percentage: Math.round((h.allocation_pct ?? 0) * 10) / 10,
-    color: DISTRIBUTION_PALETTE[i % DISTRIBUTION_PALETTE.length],
+    color: distributionColor(i),
   }));
 
   if (otherPct > 0.05) {
@@ -50,6 +50,13 @@ export function holdingsToDistributionSlices(
   }
 
   return slices;
+}
+
+/** צבע לנתח i — הפלטה, ואחריה גוונים שנוצרים (זווית הזהב) כדי שלא יחזרו צבעים */
+export function distributionColor(i: number): string {
+  if (i < DISTRIBUTION_PALETTE.length) return DISTRIBUTION_PALETTE[i];
+  const hue = Math.round((i * 137.508) % 360);
+  return `hsl(${hue}, 62%, 56%)`;
 }
 
 export function sliceColorByTicker(slices: DistributionSlice[]): Map<string, string> {

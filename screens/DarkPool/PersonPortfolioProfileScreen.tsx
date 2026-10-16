@@ -1166,17 +1166,24 @@ export function PersonPortfolioProfileScreen({
     setHelpOpen(true);
   }, []);
 
-  const pieHoldings = useMemo<HoldingAllocationInput[]>(
-    () =>
-      holdings.map((h) => ({
+  // טראמפ: הרשימה מוצגת ל-16, אבל לפילוח — כל האחזקות מהשרת (מאות), כדי שהמקרא יפרט את כולן
+  const serverAllHoldings = investor.profile?.metrics?.holdings;
+  const pieHoldings = useMemo<HoldingAllocationInput[]>(() => {
+    if (trumpProfile && serverAllHoldings && serverAllHoldings.length > holdings.length) {
+      return serverAllHoldings.map((h) => ({
         ticker: h.ticker,
         allocation_pct: h.allocation_pct,
         market_value: h.market_value,
-        value_usd: h.value_usd,
-        trade_count: h.trade_count,
-      })),
-    [holdings]
-  );
+      }));
+    }
+    return holdings.map((h) => ({
+      ticker: h.ticker,
+      allocation_pct: h.allocation_pct,
+      market_value: h.market_value,
+      value_usd: h.value_usd,
+      trade_count: h.trade_count,
+    }));
+  }, [holdings, serverAllHoldings, trumpProfile]);
   const pieColors = useHoldingsPieColors(pieHoldings);
 
   const onShareProfile = useCallback(() => {

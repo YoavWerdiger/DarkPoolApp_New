@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useMemo, useRef, useState } from 'react';
+import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import UICard from '../../../components/ui/UICard';
 import { SignedChange } from '../../../components/ui/ChangeDot';
@@ -20,6 +20,12 @@ import {
   darkPoolPhysicalRightText,
   darkPoolSectionTitleStyle,
 } from '../darkPoolLayout';
+
+/** כמה שורות מקרא נראות בלי גלילה (≈ גובה העוגה) */
+const LEGEND_VISIBLE_ROWS = 9;
+const LEGEND_ROW_HEIGHT = 26;
+/** מעבר לזה — השאר מתקבצים ל«אחר» (תיק של מאות מניות) */
+const LEGEND_MAX_ROWS = 301;
 
 interface Props {
   title?: string;
@@ -50,15 +56,28 @@ export function HoldingsPieSection({
   helpA11yLabel,
 }: Props) {
   const tokens = useDesignTokens();
-  // «אחר» בצבע ניטרלי מה-theme (היה לבן שקוף — לא נראה על כרטיס בהיר)
+  // כל אחזקה עם צבע משלה — בעוגה ובמקרא (בלי «אחר» אפור). «אחר» רק אם לא הגיעו כל האחזקות.
   const slices = useMemo(
     () =>
-      holdingsToDistributionSlices(holdings).map((sl) =>
+      holdingsToDistributionSlices(holdings, LEGEND_MAX_ROWS).map((sl) =>
         sl.key === '__other__' ? { ...sl, color: tokens.colors.text.tertiary } : sl
       ),
     [holdings, tokens.colors.text.tertiary]
   );
   const colorByTicker = useMemo(() => sliceColorByTicker(slices), [slices]);
+  const legendRows = slices;
+  const scrollable = legendRows.length > LEGEND_VISIBLE_ROWS;
+  // פס גלילה קבוע (iOS מציג את המובנה רק בזמן גלילה) — שיהיה ברור שיש עוד
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const [viewH, setViewH] = useState(0);
+  const [contentH, setContentH] = useState(0);
+  const thumbH = contentH > 0 && viewH > 0 ? Math.max(24, (viewH * viewH) / contentH) : 0;
+  const maxScroll = Math.max(1, contentH - viewH);
+  const thumbY = scrollY.interpolate({
+    inputRange: [0, maxScroll],
+    outputRange: [0, Math.max(0, viewH - thumbH)],
+    extrapolate: 'clamp',
+  });
   const styles = useMemo(() => createStyles(tokens), [tokens]);
   const allocByTicker = useMemo(() => {
     const map = new Map<string, number>();
@@ -110,8 +129,21 @@ export function HoldingsPieSection({
           avatarCandidates={avatarCandidates}
           userInitial={userInitial}
         />
-        <View style={styles.legend}>
-          {slices.map((s) => {
+        <View style={styles.legendBox}>
+        <ScrollView
+          style={styles.legendScroll}
+          contentContainerStyle={[styles.legend, scrollable && styles.legendWithBar]}
+          nestedScrollEnabled
+          showsVerticalScrollIndicator={false}
+          scrollEnabled={scrollable}
+          scrollEventThrottle={16}
+          onLayout={(e) => setViewH(e.nativeEvent.layout.height)}
+          onContentSizeChange={(_, h) => setContentH(h)}
+          onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+            useNativeDriver: false,
+          })}
+        >
+          {legendRows.map((s) => {
             const raw = s.key === '__other__' ? s.percentage : allocByTicker.get(s.key) ?? s.percentage;
             return (
               <View key={s.key} style={styles.legendRow}>
@@ -125,6 +157,17 @@ export function HoldingsPieSection({
               </View>
             );
           })}
+        </ScrollView>
+        {scrollable && thumbH > 0 ? (
+          <View style={[styles.scrollTrack, { backgroundColor: tokens.colors.border.divider }]} pointerEvents="none">
+            <Animated.View
+              style={[
+                styles.scrollThumb,
+                { height: thumbH, backgroundColor: tokens.colors.text.tertiary, transform: [{ translateY: thumbY }] },
+              ]}
+            />
+          </View>
+        ) : null}
         </View>
         </View>
       </UICard>
@@ -223,7 +266,7 @@ export function HoldingTickerDot({
 
 export function useHoldingsPieColors(holdings: HoldingAllocationInput[]) {
   return useMemo(() => {
-    const slices = holdingsToDistributionSlices(holdings);
+    const slices = holdingsToDistributionSlices(holdings, LEGEND_MAX_ROWS);
     return sliceColorByTicker(slices);
   }, [holdings]);
 }
@@ -268,8 +311,33 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       alignItems: 'center',
       gap: APP_LAYOUT.componentGap,
     },
-    legend: {
+    // גלילה בתוך הכרטיס — לא חורג מגבולותיו
+    legendBox: {
       flex: 1,
+      // פס הגלילה בצד השמאלי הפיזי — direction ltr כדי ש-left יהיה פיזי
+      direction: 'ltr',
+    },
+    legendScroll: {
+      maxHeight: LEGEND_VISIBLE_ROWS * LEGEND_ROW_HEIGHT,
+    },
+    // מרווח בין האחוזים לפס הגלילה
+    legendWithBar: {
+      paddingLeft: 14,
+    },
+    scrollTrack: {
+      position: 'absolute',
+      left: 0,
+      top: 0,
+      bottom: 0,
+      width: 3,
+      borderRadius: 1.5,
+      overflow: 'hidden',
+    },
+    scrollThumb: {
+      width: 3,
+      borderRadius: 1.5,
+    },
+    legend: {
       gap: APP_LAYOUT.stackGapSmall,
       paddingBottom: 2,
     },

@@ -1026,6 +1026,20 @@ export function PersonPortfolioProfileScreen({
       form4PricesQuery.isLoading) ||
     fundSeriesLoading;
 
+  // סקלטון לגרף כל עוד אין סדרה ומשהו שהגרף תלוי בו עדיין נטען — גם כשהשווי כבר מוצג מ-cache
+  // (שאילתות המחירים מתחילות רק אחרי שהעסקאות הגיעו, ו-isLoading לבדו פספס את החלון הזה)
+  const chartInputsFetching =
+    snapshotPricesLoading ||
+    investor.loading ||
+    investor.refreshing ||
+    form4TradesQuery.isFetching ||
+    congressPersonTradesQuery.isFetching ||
+    quiverHoldingsQuery.isFetching ||
+    basketPricesQuery.isFetching ||
+    form4PricesQuery.isFetching ||
+    trumpPricesQuery.isFetching ||
+    sessionHourlyQuery.isFetching;
+
   const rowEngine =
     holdingsEngine === 'congress' ||
     holdingsEngine === 'form4' ||
@@ -1530,9 +1544,9 @@ export function PersonPortfolioProfileScreen({
                 periods={SNAPSHOT_CHART_PERIODS}
               />
             </View>
-          ) : snapshotPricesLoading ? (
+          ) : chartInputsFetching ? (
             <View style={styles.chartWrap}>
-              <ChartSkeleton delay={120} height={kind === 'politician' ? 176 : 220} />
+              <ChartSkeleton delay={0} height={kind === 'politician' ? 176 : 220} />
             </View>
           ) : kind === 'fund_manager' ||
             holdingsEngine === 'congress' ||

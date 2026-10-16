@@ -46,6 +46,44 @@ const KNOWN_FUNDS: Record<string, { name: string; manager: string; image?: strin
     image:
       'https://upload.wikimedia.org/wikipedia/commons/d/d8/Bill_Ackman_%2826410186110%29_%28cropped%29.jpg',
   },
+  // 2026-10-16 — תמונות מ-Wikipedia API (מי שאין לו תמונה שם — בלי)
+  '1350694': {
+    name: 'Bridgewater Associates',
+    manager: 'Ray Dalio',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/1/1f/Web_Summit_2018_-_Forum_-_Day_2%2C_November_7_HM1_7481_%2844858045925%29.jpg',
+  },
+  '1656456': {
+    name: 'Appaloosa LP',
+    manager: 'David Tepper',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/3/3d/David_Tepper_01.jpg',
+  },
+  '1536411': {
+    name: 'Duquesne Family Office LLC',
+    manager: 'Stanley Druckenmiller',
+  },
+  '1040273': {
+    name: 'Third Point LLC',
+    manager: 'Dan Loeb',
+  },
+  '921669': {
+    name: 'Icahn Capital',
+    manager: 'Carl Icahn',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/a/ad/Carl_Icahn%2C_1980s.jpg',
+  },
+  '1029160': {
+    name: 'Soros Fund Management LLC',
+    manager: 'George Soros',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/9/97/George_Soros%2C_Founder_and_Chairman_of_the_Open_Society_Foundations%2C_visits_the_EC_%283x4_cropped%29.jpg',
+  },
+  '1167483': {
+    name: 'Tiger Global Management LLC',
+    manager: 'Chase Coleman',
+  },
+  '1061768': {
+    name: 'Baupost Group LLC',
+    manager: 'Seth Klarman',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/b/b8/Seth_Klarman_at_147th_Preakness_Stakes.jpg',
+  },
 };
 
 const CURATED_CIKS = new Set(Object.keys(CURATED_FUND_QUIVER_OWNERS));

@@ -239,6 +239,90 @@ export const CURATED_FUND_QUIVER_OWNERS: Record<
     name: 'Pershing Square Capital Management LP',
     manager: 'Bill Ackman',
   },
+  // 2026-10-16: עוד קרנות מוכרות (CIK ושמות אומתו מול SEC). Citadel/Renaissance לא — אלפי אחזקות לרבעון.
+  '1350694': {
+    owner: 'Bridgewater Associates, LP',
+    owners: [
+      'Bridgewater Associates, LP',
+      'BRIDGEWATER ASSOCIATES, LP',
+      'Bridgewater Associates LP',
+      'Bridgewater Associates',
+    ],
+    name: 'Bridgewater Associates',
+    manager: 'Ray Dalio',
+  },
+  '1656456': {
+    owner: 'Appaloosa LP',
+    owners: [
+      'Appaloosa LP',
+      'APPALOOSA LP',
+      'Appaloosa Management',
+    ],
+    name: 'Appaloosa LP',
+    manager: 'David Tepper',
+  },
+  '1536411': {
+    owner: 'Duquesne Family Office LLC',
+    owners: [
+      'Duquesne Family Office LLC',
+      'DUQUESNE FAMILY OFFICE LLC',
+      'Duquesne Family Office',
+    ],
+    name: 'Duquesne Family Office LLC',
+    manager: 'Stanley Druckenmiller',
+  },
+  '1040273': {
+    owner: 'Third Point LLC',
+    owners: [
+      'Third Point LLC',
+      'THIRD POINT LLC',
+      'Third Point',
+    ],
+    name: 'Third Point LLC',
+    manager: 'Dan Loeb',
+  },
+  '921669': {
+    owner: 'ICAHN CARL C',
+    owners: [
+      'ICAHN CARL C',
+      'Icahn Carl C',
+      'Carl Icahn',
+      'Icahn Enterprises',
+    ],
+    name: 'Icahn Capital',
+    manager: 'Carl Icahn',
+  },
+  '1029160': {
+    owner: 'SOROS FUND MANAGEMENT LLC',
+    owners: [
+      'SOROS FUND MANAGEMENT LLC',
+      'Soros Fund Management LLC',
+      'Soros Fund Management',
+    ],
+    name: 'Soros Fund Management LLC',
+    manager: 'George Soros',
+  },
+  '1167483': {
+    owner: 'TIGER GLOBAL MANAGEMENT LLC',
+    owners: [
+      'TIGER GLOBAL MANAGEMENT LLC',
+      'Tiger Global Management LLC',
+      'Tiger Global Management',
+    ],
+    name: 'Tiger Global Management LLC',
+    manager: 'Chase Coleman',
+  },
+  '1061768': {
+    owner: 'BAUPOST GROUP LLC/MA',
+    owners: [
+      'BAUPOST GROUP LLC/MA',
+      'Baupost Group LLC/MA',
+      'Baupost Group LLC',
+      'Baupost Group',
+    ],
+    name: 'Baupost Group LLC',
+    manager: 'Seth Klarman',
+  },
 };
 
 export interface QuiverPoliticiansCachePayload {

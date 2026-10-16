@@ -9,8 +9,6 @@ import Animated, {
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
-  withSequence,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -127,7 +125,7 @@ export function DarkPoolBottomTabBar({ state, navigation }: BottomTabBarProps) {
   );
 }
 
-/** טאב: קפיצה קטנה של האייקון בבחירה + מעבר צבע הדרגתי של האייקון והתווית */
+/** טאב: רק צבע האייקון/התווית מתחלף — התנועה היחידה היא רקע הטאב שמחליק (בסרגל) */
 function TabButton({
   focused,
   meta,
@@ -145,28 +143,12 @@ function TabButton({
 }) {
   const tokens = useDesignTokens();
   const reduceMotion = useReducedMotion();
-  const scale = useSharedValue(1);
-  const lift = useSharedValue(0);
   const focus = useSharedValue(focused ? 1 : 0);
-  const first = useRef(true);
   useEffect(() => {
-    focus.value = reduceMotion ? (focused ? 1 : 0) : withTiming(focused ? 1 : 0, { duration: 220 });
-    if (first.current) {
-      first.current = false;
-      return;
-    }
-    if (focused && !reduceMotion) {
-      scale.value = withSequence(
-        withTiming(1.16, { duration: 120, easing: Easing.out(Easing.quad) }),
-        withSpring(1, { damping: 10, stiffness: 220 }),
-      );
-      lift.value = withSequence(withTiming(-3, { duration: 120 }), withSpring(0, { damping: 12, stiffness: 200 }));
-    }
-  }, [focused, reduceMotion, focus, scale, lift]);
+    // אותו משך כמו החלקת הרקע — הצבע מגיע יחד איתו
+    focus.value = reduceMotion ? (focused ? 1 : 0) : withTiming(focused ? 1 : 0, { duration: 260 });
+  }, [focused, reduceMotion, focus]);
 
-  const iconStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: lift.value }, { scale: scale.value }],
-  }));
   const labelStyle = useAnimatedStyle(
     () => ({
       color: interpolateColor(focus.value, [0, 1], [tokens.colors.text.tertiary, tokens.colors.text.primary]),
@@ -182,13 +164,11 @@ function TabButton({
       accessibilityRole="button"
       accessibilityState={{ selected: focused }}
     >
-      <Animated.View style={iconStyle}>
-        <Ionicons
-          name={focused ? meta.iconActive : meta.icon}
-          size={22}
-          color={focused ? tokens.colors.primary.main : tokens.colors.text.tertiary}
-        />
-      </Animated.View>
+      <Ionicons
+        name={focused ? meta.iconActive : meta.icon}
+        size={22}
+        color={focused ? tokens.colors.primary.main : tokens.colors.text.tertiary}
+      />
       <Animated.Text style={[styles.label, focused && styles.labelFocused, labelStyle]}>{meta.label}</Animated.Text>
     </Pressable>
   );

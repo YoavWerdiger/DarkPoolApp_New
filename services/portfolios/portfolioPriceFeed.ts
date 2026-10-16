@@ -551,21 +551,32 @@ export async function searchSymbols(
 ): Promise<SymbolSearchResult[]> {
   if (!query || query.trim().length < 1) return [];
   try {
-    const res = await finnhubProxyFetch('search', { q: query.trim() });
-    if (!res.ok) return [];
-    const data = await res.json();
-    const arr = (data?.result ?? []) as Array<{
-      symbol: string;
-      description: string;
-      displaySymbol: string;
-      type: string;
-    }>;
-    const mapped = arr.map((r) => ({
-      symbol: r.symbol,
-      description: r.description,
-      display_symbol: r.displaySymbol || r.symbol,
-      type: r.type || '',
-    }));
+    // Finnhub (מכסה חינמית 60/דקה — טעינת רשימת המעקב שולפת ציטוטים בבת אחת ולפעמים ממצה אותה).
+    // שגיאה/429 → חיפוש Yahoo, ולא רשימה ריקה שנראית כמו «אין תוצאות».
+    let mapped: SymbolSearchResult[] | null = null;
+    try {
+      const res = await finnhubProxyFetch('search', { q: query.trim() });
+      if (res.ok) {
+        const data = await res.json();
+        const arr = (data?.result ?? []) as Array<{
+          symbol: string;
+          description: string;
+          displaySymbol: string;
+          type: string;
+        }>;
+        mapped = arr.map((r) => ({
+          symbol: r.symbol,
+          description: r.description,
+          display_symbol: r.displaySymbol || r.symbol,
+          type: r.type || '',
+        }));
+      }
+    } catch {
+      mapped = null;
+    }
+    if (!mapped || mapped.length === 0) {
+      mapped = await searchSymbolsYahoo(query.trim());
+    }
     const crypto = searchCryptoUniverse(query);
     const securities = filterSymbolSearchResults(mapped, query, {
       usPrimaryOnly: true,
@@ -578,6 +589,35 @@ export async function searchSymbols(
       : [...securities, ...crypto.slice(0, 5)];
   } catch {
     return searchCryptoUniverse(query);
+  }
+}
+
+/** גיבוי לחיפוש — Yahoo search (בלי מפתח). סוגים ממופים לשמות של Finnhub כדי שהסינון יעבוד אותו דבר. */
+async function searchSymbolsYahoo(query: string): Promise<SymbolSearchResult[]> {
+  try {
+    const res = await fetch(
+      `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=15&newsCount=0`,
+      { headers: YAHOO_CHART_HEADERS }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    const quotes = (data?.quotes ?? []) as Array<{
+      symbol?: string;
+      shortname?: string;
+      longname?: string;
+      quoteType?: string;
+    }>;
+    const typeMap: Record<string, string> = { EQUITY: 'Common Stock', ETF: 'ETP' };
+    return quotes
+      .filter((q) => q.symbol && q.quoteType && typeMap[q.quoteType])
+      .map((q) => ({
+        symbol: q.symbol!,
+        description: q.longname || q.shortname || q.symbol!,
+        display_symbol: q.symbol!,
+        type: typeMap[q.quoteType!],
+      }));
+  } catch {
+    return [];
   }
 }
 

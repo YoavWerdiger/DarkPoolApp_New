@@ -46,6 +46,7 @@ import * as Haptics from 'expo-haptics';
 import { useAuth } from '../../context/AuthContext';
 import { uploadStoryImage, uploadStoryVideo, createStory } from '../../services/storiesService';
 import { chatPalette } from './chatDesignTokens';
+import { useCaptureCameraMode } from '../../hooks/useCaptureCameraMode';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const GALLERY_THUMB = 52;
@@ -1057,6 +1058,8 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
 
   const textInputRef = useRef<TextInput>(null);
   const cameraRef = useRef<CameraView>(null);
+  // Android: במצב 'video' אין צילום תמונה — 'picture' כברירת מחדל, 'video' רק להקלטה
+  const camMode = useCaptureCameraMode();
   const recordTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const [overlays, setOverlays] = useState<TextOverlayItem[]>([]);
@@ -1449,6 +1452,8 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
     capturingRef.current = true;
     setIsCapturing(true);
     try {
+      await camMode.ensurePictureMode();
+      if (!cameraRef.current) return;
       logger.debug('AddStoryFullScreen', 'takePictureAsync start');
       // `shutterSound` is iOS-only in expo-camera; passing it on Android does
       // nothing but keeping it iOS-scoped avoids any device-specific rejection.
@@ -1474,7 +1479,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
       setIsCapturing(false);
       logger.debug('AddStoryFullScreen', 'takePicture finally — isCapturing reset');
     }
-  }, [isRecording]);
+  }, [camMode, isRecording]);
 
   const stopRecording = useCallback(() => {
     if (recordTimerRef.current) clearTimeout(recordTimerRef.current);
@@ -1492,6 +1497,8 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
     }
     try {
       setIsRecording(true);
+      await camMode.ensureVideoMode();
+      if (!cameraRef.current) return;
       recordTimerRef.current = setTimeout(() => {
         stopRecording();
       }, 30000);
@@ -1511,7 +1518,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
       setIsRecording(false);
       if (recordTimerRef.current) clearTimeout(recordTimerRef.current);
     }
-  }, [stopRecording]);
+  }, [camMode, stopRecording]);
 
   const openGallery = useCallback(async () => {
     logger.debug('AddStoryFullScreen', `openGallery start (platform=${Platform.OS}, user=${!!user?.id})`);
@@ -1765,10 +1772,10 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
                   ref={cameraRef}
                   style={StyleSheet.absoluteFill}
                   facing={facing}
-                  // Always video mode: flipping picture↔video on long-press remounts
-                  // the session and makes recording feel delayed / preview stutter.
-                  // takePictureAsync still works in video mode on expo-camera 17.
-                  mode="video"
+                  // iOS: תמיד 'video' (גם תמונה עובדת, בלי קפיצה בהקלטה).
+                  // Android: ב-'video' ImageCapture לא מחובר ו-takePictureAsync נכשל תמיד —
+                  // 'picture' כברירת מחדל ו-'video' רק לפני הקלטה (useCaptureCameraMode).
+                  mode={camMode.mode}
                   flash={flash ? 'on' : 'off'}
                   zoom={cameraZoom}
                   videoQuality="1080p"
@@ -1777,6 +1784,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
                   {...(selectedLens ? { selectedLens } : {})}
                   onCameraReady={() => {
                     logger.debug('AddStoryFullScreen', 'camera ready');
+                    camMode.notifyCameraReady();
                     void configureCamera();
                   }}
                   onMountError={(e) => logger.error('AddStoryFullScreen', 'camera mount error', e?.message)}

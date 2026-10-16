@@ -32,6 +32,7 @@ import { APP_TYPE, appPhysicalRightText } from '../ui/appType';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { legacyAlert } from '../../utils/appDialog';
 import MediaPreviewModal from './MediaPreviewModal';
+import { useCaptureCameraMode } from '../../hooks/useCaptureCameraMode';
 import type { MediaFile } from '../../services/mediaService';
 
 export type ChatAttachCameraResult = {
@@ -87,6 +88,8 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
   recordingRef.current = recording;
   const [shot, setShot] = useState<ChatAttachCameraResult | null>(null);
   const cameraRef = useRef<CameraView>(null);
+  // Android: במצב 'video' אין צילום תמונה — מחליפים mode לפי הפעולה
+  const camMode = useCaptureCameraMode();
   const recordStartedAt = useRef(0);
   const discardRecordingRef = useRef(false);
   const sentShotRef = useRef(false);
@@ -161,6 +164,8 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
     setCapturing(true);
     void HapticFeedback.impactMedium();
     try {
+      await camMode.ensurePictureMode();
+      if (!cameraRef.current) return;
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.85,
         skipProcessing: Platform.OS === 'android',
@@ -178,7 +183,7 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
     } finally {
       setCapturing(false);
     }
-  }, [capturing, ensurePermission, finish, recording]);
+  }, [camMode, capturing, ensurePermission, finish, recording]);
 
   const stopRecording = useCallback(() => {
     cameraRef.current?.stopRecording();
@@ -190,9 +195,11 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
     const micOk = await ensureMic();
     if (!camOk || !micOk || !cameraRef.current) return;
     setRecording(true);
-    recordStartedAt.current = Date.now();
     void HapticFeedback.impactMedium();
     try {
+      await camMode.ensureVideoMode();
+      if (!cameraRef.current) return;
+      recordStartedAt.current = Date.now();
       const video = await cameraRef.current.recordAsync({ maxDuration: 60 });
       if (discardRecordingRef.current || !video?.uri) return;
       finish({
@@ -207,7 +214,7 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
     } finally {
       setRecording(false);
     }
-  }, [capturing, ensureMic, ensurePermission, finish, recording]);
+  }, [camMode, capturing, ensureMic, ensurePermission, finish, recording]);
 
   const onShutter = useCallback(() => {
     if (captureMode === 'video') {
@@ -336,12 +343,15 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
                 style={StyleSheet.absoluteFill}
 
                 facing={facing}
-                mode="video"
+                mode={camMode.mode}
                 flash={flashOn ? 'on' : 'off'}
                 enableTorch={flashOn && facing === 'back'}
                 animateShutter={false}
                 // אבחון קפיאה: מוכנות / שגיאת הרכבה ב-Metro
-                onCameraReady={() => logger.debug('ChatAttachCamera', 'camera ready')}
+                onCameraReady={() => {
+                  logger.debug('ChatAttachCamera', 'camera ready');
+                  camMode.notifyCameraReady();
+                }}
                 onMountError={(e) => logger.error('ChatAttachCamera', 'camera mount error', e?.message)}
               />
             </View>

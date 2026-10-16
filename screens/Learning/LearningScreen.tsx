@@ -49,7 +49,7 @@ const DEMO_COURSE = {
   title: 'הלווייתנים',
   description:
     'למי הקורס מתאים?\nלסוחרים שרוצים להעמיק במסחר יומי ולהבין כיצד לזהות זרימות גדולות ונזילות בשוק.\n\nמה תלמדו בקורס?\nבקורס תלמדו כלים לניתוח מבנה שוק ונזילות — כולל מושגים מעולם ה־Smart Money Concepts (Order Blocks, FVG, Premium & Discount ועוד) — ואיך ליישם אותם במסחר יומי במניות ובאופציות.\n\nבנוסף תלמדו כיצד לבנות תוכנית עבודה יומית, לנהל עסקאות בזמן אמת ולשלב בין ניתוח זרימות לבין ניהול סיכונים מסודר.',
-  cover_url: `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/course_media/whales-course-banner.jpg`,
+  cover_url: `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/course_media/whales-course-cover-2026-10.jpg`,
     instructor: {
       name: 'דוד אריאל',
       avatar: `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/course_media/channels4_profile.jpg`,

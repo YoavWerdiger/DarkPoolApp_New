@@ -259,7 +259,7 @@ class CourseService {
         subtitle: 'מ-0 לסוחר עצמאי בשוק ההון',
         description:
           'למי הקורס מתאים?\nלמתחילים ולסוחרים שרוצים ללמוד מהיסודות ועד ניתוח טכני מתקדם, מסחר סווינג ומסחר יומי במניות.\n\nמה תלמדו בקורס?\nבקורס תלמדו כלים לניתוח מבנה שוק ונזילות — כולל מושגים מעולם ה־Smart Money Concepts (Order Blocks, FVG, Premium & Discount ועוד) — ואיך ליישם אותם במסחר יומי במניות ובאופציות.\n\nבנוסף תלמדו כיצד לבנות תוכנית עבודה יומית, לנהל עסקאות בזמן אמת ולשלב בין ניתוח זרימות לבין ניהול סיכונים מסודר.',
-        cover_url: `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/course_media/whales-course-banner.jpg`,
+        cover_url: `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/course_media/whales-course-cover-2026-10.jpg`,
         instructor_name: 'דוד אריאל',
         instructor_avatar: `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/course_media/channels4_profile.jpg`,
         duration_hours: 8,

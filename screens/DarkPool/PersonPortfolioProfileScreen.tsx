@@ -1169,11 +1169,17 @@ export function PersonPortfolioProfileScreen({
         body: TRUMP_HOLDINGS_HELP_BODY,
       };
     }
+    if (kind === 'fund_manager') {
+      return {
+        title: FORM4_HOLDINGS_HELP_TITLE,
+        body: 'אחזקות מדוח 13F הרבעוני האחרון של הקרן ל-SEC (מניות אמריקאיות בלבד, בלי מזומן, שורטים ונכסים אחרים). הדוח מוגש עד 45 יום אחרי סוף הרבעון.',
+      };
+    }
     return {
       title: FORM4_HOLDINGS_HELP_TITLE,
       body: FORM4_HOLDINGS_HELP_BODY,
     };
-  }, [holdingsEngine]);
+  }, [holdingsEngine, kind]);
 
   const openHoldingsHelp = useCallback(() => {
     void HapticFeedback.selection();
@@ -1267,7 +1273,10 @@ export function PersonPortfolioProfileScreen({
       ? 'מדד סל (משקל שווה לעסקה)'
       : holdingsEngine === 'form4' || holdingsEngine === 'trump'
         ? 'שווי פוזיציות מדווחות'
-        : 'שווי תיק:';
+        : kind === 'insider'
+          ? // מנכ"ל/דירקטור מדווח רק על חברות שבהן הוא מכהן — לא כל התיק הפרטי
+            'שווי אחזקות מדווחות'
+          : 'שווי תיק:';
   const heroValueText = trumpValueRange && trumpValueRange.high > 0
     ? `${formatCompactUsd(trumpValueRange.low)}–${formatCompactUsd(trumpValueRange.high)}`
     : showCongressValue
@@ -1573,7 +1582,7 @@ export function PersonPortfolioProfileScreen({
           {/* אחזקות — עוגה כמו ביומן מסחר */}
           {pieHoldings.length > 0 ? (
             <HoldingsPieSection
-              title="פילוח אחזקות"
+              title={kind === 'insider' ? 'פילוח אחזקות מדווחות' : 'פילוח אחזקות'}
               holdings={pieHoldings}
               avatarUrl={portraitUri}
               avatarCandidates={portraitCandidates}
@@ -1611,9 +1620,11 @@ export function PersonPortfolioProfileScreen({
                 <Text style={[styles.sectionTitle, styles.sectionTitleInRow]}>
                   {holdingsEngine === 'congress'
                     ? 'רשימת אחזקות'
-                    : holdingsEngine === 'form4' || holdingsEngine === 'trump'
-                      ? 'פוזיציות מדווחות'
-                      : 'אחזקות מובילות'}
+                    : kind === 'insider'
+                      ? 'אחזקות בחברות שבהן מכהן'
+                      : holdingsEngine === 'form4' || holdingsEngine === 'trump'
+                        ? 'פוזיציות מדווחות'
+                        : 'אחזקות מובילות'}
                 </Text>
               </View>
               <UICard

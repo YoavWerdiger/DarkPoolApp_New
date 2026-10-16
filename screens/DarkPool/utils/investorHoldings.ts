@@ -27,7 +27,7 @@ export const CONGRESS_HOLDINGS_HELP_BODY =
 
 export const FORM4_HOLDINGS_HELP_TITLE = 'על המספרים';
 export const FORM4_HOLDINGS_HELP_BODY =
-  'כמות × מחיר מהפוזיציה שדווחה ב-Form 4 — לא כל השווי הנטו של האדם.';
+  'מניות בחברות שבהן האדם מכהן (מנהל, דירקטור או בעל יותר מ-10%), לפי הדיווחים המקוריים ל-SEC, כפול המחיר הנוכחי. השקעות פרטיות אחרות לא מחויבות בדיווח — ולכן זה לא כל השווי הנטו שלו.';
 
 export interface InsiderForm4Holding {
   type: 'INSIDER_FORM_4';

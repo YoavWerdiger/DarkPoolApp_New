@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import { View, Text, TouchableOpacity, StyleSheet, Pressable, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
@@ -228,28 +229,14 @@ export default function PlanPicker({
             accessibilityState={{ checked: premiumSelected }}
             style={cardStyle(premiumSelected)}
           >
-            <View style={[styles.tabs, { backgroundColor: tokens.colors.background.tertiary }]}>
-              {premiumPlans.map((p) => {
-                const active = p.id === activePremium.id;
-                return (
-                  <Pressable
-                    key={p.id}
-                    onPress={() => {
-                      if (!active) void HapticFeedback.selection();
-                      setPremiumTab(p.id);
-                      onSelect(p.id);
-                    }}
-                    style={[styles.tab, active && { backgroundColor: tokens.colors.background.cardSolid }]}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: active }}
-                  >
-                    <Text style={[styles.tabText, { color: active ? tokens.colors.text.primary : tokens.colors.text.secondary }]}>
-                      {PERIOD_TAB_LABEL[p.period] ?? p.name}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            <PeriodTabs
+              plans={premiumPlans}
+              activeId={activePremium.id}
+              onPick={(id) => {
+                setPremiumTab(id);
+                onSelect(id);
+              }}
+            />
 
             <View style={styles.planHead}>
               <Text style={[styles.planName, { color: tokens.colors.text.primary }]}>פרימיום</Text>
@@ -385,6 +372,81 @@ export default function PlanPicker({
           </Text>
         </View>
       ) : null}
+    </View>
+  );
+}
+
+/** טאבי תקופה — הרקע הנבחר מחליק בין הטאבים (כמו סרגל הטאבים באינסיידרים) */
+function PeriodTabs({
+  plans,
+  activeId,
+  onPick,
+}: {
+  plans: Array<{ id: string; period: string; name: string }>;
+  activeId: string;
+  onPick: (id: string) => void;
+}) {
+  const tokens = useDesignTokens();
+  const reduceMotion = useReducedMotion();
+  const frames = useRef(new Map<string, { x: number; width: number }>());
+  const [measured, setMeasured] = useState(false);
+  const hx = useSharedValue(0);
+  const hw = useSharedValue(0);
+
+  const moveTo = useCallback(
+    (id: string, animate: boolean) => {
+      const f = frames.current.get(id);
+      if (!f) return;
+      const cfg = { duration: 260, easing: Easing.out(Easing.cubic) };
+      hx.value = animate && !reduceMotion ? withTiming(f.x, cfg) : f.x;
+      hw.value = animate && !reduceMotion ? withTiming(f.width, cfg) : f.width;
+    },
+    [hx, hw, reduceMotion],
+  );
+  useEffect(() => {
+    moveTo(activeId, measured);
+  }, [activeId, measured, moveTo]);
+
+  const highlightStyle = useAnimatedStyle(() => ({
+    width: hw.value,
+    transform: [{ translateX: hx.value }],
+  }));
+
+  return (
+    <View style={[styles.tabs, { backgroundColor: tokens.colors.background.tertiary }]}>
+      {/* direction ltr — x של onLayout פיזי */}
+      <View style={styles.tabHighlightLayer} pointerEvents="none">
+        {measured ? (
+          <Animated.View
+            style={[styles.tabHighlight, { backgroundColor: tokens.colors.background.cardSolid }, highlightStyle]}
+          />
+        ) : null}
+      </View>
+      {plans.map((p) => {
+        const active = p.id === activeId;
+        return (
+          <Pressable
+            key={p.id}
+            onLayout={(e) => {
+              const { x, width } = e.nativeEvent.layout;
+              frames.current.set(p.id, { x, width });
+              if (p.id === activeId) moveTo(p.id, false);
+              if (frames.current.size >= plans.length && !measured) setMeasured(true);
+            }}
+            onPress={() => {
+              if (!active) void HapticFeedback.selection();
+              onPick(p.id);
+            }}
+            style={[styles.tab, active && !measured && { backgroundColor: tokens.colors.background.cardSolid }]}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
+          >
+            <Text style={[styles.tabText, { color: active ? tokens.colors.text.primary : tokens.colors.text.secondary }]}>
+              {PERIOD_TAB_LABEL[p.period] ?? p.name}
+            </Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
@@ -556,6 +618,17 @@ const styles = StyleSheet.create({
     ...appCardSubtitleStyle,
     width: undefined,
     marginTop: 2,
+  },
+  tabHighlightLayer: {
+    ...StyleSheet.absoluteFill,
+    direction: 'ltr',
+  },
+  tabHighlight: {
+    position: 'absolute',
+    left: 0,
+    top: 4,
+    bottom: 4,
+    borderRadius: 999,
   },
   tab: {
     flex: 1,

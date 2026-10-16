@@ -204,11 +204,21 @@ export interface QuiverSec13fByOwnerOpts {
   maxRows?: number;
 }
 
-/** CIK → שם owner ל-Quiver sec13f / sec13fchanges (סדר = עדיפות ניסוי) */
-export const CURATED_FUND_QUIVER_OWNERS: Record<
-  string,
-  { owner: string; owners: string[]; name: string; manager: string }
-> = {
+/**
+ * CIK → שם owner ל-Quiver sec13f / sec13fchanges (סדר = עדיפות ניסוי).
+ * `successorOwners` — ישות שהחליפה את המגיש (רה-אורגניזציה): האחזקות החדשות מוגשות
+ * תחת CIK אחר, אבל הפרופיל נשאר על ה-CIK המקורי. הסנכרון ממזג את שתי הישויות לפי תקופה.
+ */
+export type CuratedFundQuiverOwner = {
+  owner: string;
+  owners: string[];
+  name: string;
+  manager: string;
+  successorCik?: string;
+  successorOwners?: string[];
+};
+
+export const CURATED_FUND_QUIVER_OWNERS: Record<string, CuratedFundQuiverOwner> = {
   '1067983': {
     owner: 'BERKSHIRE HATHAWAY INC',
     owners: [
@@ -238,6 +248,16 @@ export const CURATED_FUND_QUIVER_OWNERS: Record<
     ],
     name: 'Pershing Square Capital Management LP',
     manager: 'Bill Ackman',
+    // מ-Q2 2026 ה-CIK הזה מגיש רק 13F-NT («Holdings ... are now included in the report of
+    // its public parent company»); האחזקות מוגשות תחת PERSHING SQUARE INC. (NYSE: PS).
+    successorCik: '2026053',
+    successorOwners: [
+      'PERSHING SQUARE INC.',
+      'PERSHING SQUARE INC',
+      'Pershing Square Inc.',
+      'Pershing Square Inc',
+      'Pershing Square, Inc.',
+    ],
   },
   // 2026-10-16: עוד קרנות מוכרות (CIK ושמות אומתו מול SEC). Citadel/Renaissance לא — אלפי אחזקות לרבעון.
   '1350694': {
@@ -1182,40 +1202,47 @@ export async function fetchQuiverCuratedFundChanges(
   const maxPerOwner = opts.maxPerOwner ?? 800;
 
   for (const meta of Object.values(CURATED_FUND_QUIVER_OWNERS)) {
-    const owners = meta.owners?.length ? meta.owners : [meta.owner];
     let got = 0;
-    for (const owner of owners) {
-      owners_tried.push(owner);
-      try {
-        const rows = await fetchQuiverLiveSec13fChanges(apiKey, {
-          owner,
-          mostRecent: opts.mostRecent !== false,
-          pageSize: opts.pageSize ?? 200,
-          maxRows: maxPerOwner,
-        });
-        by_owner[owner] = rows.length;
-        got = Math.max(got, rows.length);
-        for (const row of rows) {
-          const t = String(row.Ticker ?? '')
-            .trim()
-            .toUpperCase();
-          const d = String(row.Date ?? row.FilingDate ?? row.ReportDate ?? '').slice(0, 10);
-          const fund = String(row.Fund ?? row.Owner ?? owner).trim().toLowerCase();
-          const key = `${fund}|${t}|${d}|${row.Change ?? row.Change_Share ?? ''}`;
-          if (seen.has(key)) continue;
-          seen.add(key);
-          changes.push(row);
+    for (const owners of quiverOwnerGroups(meta)) {
+      for (const owner of owners) {
+        owners_tried.push(owner);
+        try {
+          const rows = await fetchQuiverLiveSec13fChanges(apiKey, {
+            owner,
+            mostRecent: opts.mostRecent !== false,
+            pageSize: opts.pageSize ?? 200,
+            maxRows: maxPerOwner,
+          });
+          by_owner[owner] = rows.length;
+          got = Math.max(got, rows.length);
+          for (const row of rows) {
+            const t = String(row.Ticker ?? '')
+              .trim()
+              .toUpperCase();
+            const d = String(row.Date ?? row.FilingDate ?? row.ReportDate ?? '').slice(0, 10);
+            const fund = String(row.Fund ?? row.Owner ?? owner).trim().toLowerCase();
+            const key = `${fund}|${t}|${d}|${row.Change ?? row.Change_Share ?? ''}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            changes.push(row);
+          }
+          if (rows.length > 0) break;
+        } catch {
+          by_owner[owner] = -1;
         }
-        if (rows.length > 0) break;
-      } catch {
-        by_owner[owner] = -1;
+        await delay(120);
       }
-      await delay(120);
     }
     by_owner[meta.owner] = by_owner[meta.owner] ?? got;
   }
 
   return { changes, by_owner, owners_tried };
+}
+
+/** קבוצות aliases לניסוי — היורשת (אם יש) קודם, ואז המגיש המקורי. בכל קבוצה עוצרים בהצלחה הראשונה. */
+export function quiverOwnerGroups(meta: CuratedFundQuiverOwner): string[][] {
+  const own = meta.owners?.length ? meta.owners : [meta.owner];
+  return meta.successorOwners?.length ? [meta.successorOwners, own] : [own];
 }
 
 export function quiverSec13fFundName(row: {

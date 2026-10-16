@@ -14,6 +14,7 @@ import {
   fetchQuiverLiveSec13fChanges,
   fetchQuiverSec13fByOwner,
   parseQuiverUsd,
+  quiverOwnerGroups,
   quiverSec13fChangePct,
   quiverSec13fChangeShares,
   quiverSec13fFundName,
@@ -395,6 +396,43 @@ async function probeQuiverFundEndpoints(quiverKey: string) {
     {};
 
   for (const [cik, meta] of Object.entries(CURATED_FUND_QUIVER_OWNERS)) {
+    // ישות יורשת — נבדקת בנפרד תחת המפתח `<cik>→<successorCik>`
+    if (meta.successorOwners?.length) {
+      const key = `${cik}→${meta.successorCik ?? 'successor'}`;
+      holdings[key] = { owner_used: null, rows: 0, sample_keys: [] };
+      changes[key] = { owner_used: null, rows: 0, sample_keys: [] };
+      for (const owner of meta.successorOwners) {
+        try {
+          const rows = await fetchQuiverSec13fByOwner(quiverKey, owner, {
+            pageSize: 200,
+            maxRows: 2000,
+          });
+          if (rows.length) {
+            holdings[key] = {
+              owner_used: owner,
+              rows: rows.length,
+              sample_keys: Object.keys(rows[0]).slice(0, 12),
+            };
+            const ch = await fetchQuiverLiveSec13fChanges(quiverKey, {
+              owner,
+              mostRecent: true,
+              pageSize: 200,
+              maxRows: 1500,
+            });
+            changes[key] = {
+              owner_used: owner,
+              rows: ch.length,
+              sample_keys: ch[0] ? Object.keys(ch[0]).slice(0, 14) : [],
+            };
+            break;
+          }
+        } catch {
+          /* try next alias */
+        }
+        await delay(100);
+      }
+    }
+
     let holdOwner: string | null = null;
     let holdRows = 0;
     let holdKeys: string[] = [];
@@ -532,29 +570,42 @@ async function loadFilings(
   secApiKey: string | undefined,
   uwApiKey: string | undefined
 ): Promise<{ filings: FilingLike[]; source: string; quiverOwner?: string }> {
-  // Quiver קודם לקרנות מאוצרות — אחזקות התקופה האחרונה
+  // Quiver קודם לקרנות מאוצרות — אחזקות התקופה האחרונה.
+  // לקרן עם ישות יורשת (Pershing → PERSHING SQUARE INC.) טוענים את שתי הישויות וממזגים
+  // לפי תקופה: אחרת ה-alias הראשון שמחזיר שורות (הישות הישנה) נעצר ברבעון האחרון שלה,
+  // ומחיקת התקופות הישנות למטה הייתה מוחקת את ההיסטוריה אם היינו עוברים רק ליורשת.
   if (quiverKey) {
     try {
       const meta = CURATED_FUND_QUIVER_OWNERS[cik];
-      const owners = meta?.owners?.length
-        ? meta.owners
-        : [meta?.owner || KNOWN_FUNDS[cik]?.name || ''].filter(Boolean);
-      for (const owner of owners) {
-        const holdings = await fetchQuiverSec13fByOwner(quiverKey, owner, {
-          pageSize: 500,
-          maxRows: 2000,
-        });
-        const filing = quiverHoldingsToFiling(cik, holdings, owner);
-        if (filing?.holdings.length) {
+      const groups = meta
+        ? quiverOwnerGroups(meta)
+        : [[KNOWN_FUNDS[cik]?.name || ''].filter(Boolean)];
+      const byPeriod = new Map<string, FilingLike>();
+      const ownersUsed: string[] = [];
+      for (const owners of groups) {
+        for (const owner of owners) {
+          const holdings = await fetchQuiverSec13fByOwner(quiverKey, owner, {
+            pageSize: 500,
+            maxRows: 2000,
+          });
+          const filing = quiverHoldingsToFiling(cik, holdings, owner);
+          await delay(120);
+          if (!filing?.holdings.length) continue;
           // שינויים → היסטוריית תקופות נוספת (ReportPeriod) כשיש
           const history = await quiverChangesToHistoryFilings(quiverKey, cik, owner, filing);
-          return {
-            filings: history.length ? history : [filing],
-            source: 'quiverquant',
-            quiverOwner: owner,
-          };
+          // הקבוצה הראשונה (היורשת) גוברת בתקופה חופפת
+          for (const f of history) {
+            if (!byPeriod.has(f.filing_date)) byPeriod.set(f.filing_date, f);
+          }
+          ownersUsed.push(owner);
+          break;
         }
-        await delay(120);
+      }
+      if (byPeriod.size) {
+        const filings = Array.from(byPeriod.values())
+          .sort((a, b) => a.filing_date.localeCompare(b.filing_date))
+          .slice(-16);
+        return { filings, source: 'quiverquant', quiverOwner: ownersUsed.join(' + ') };
       }
       if (CURATED_CIKS.has(cik)) {
         console.warn(`quiver sec13f empty for curated ${cik}; trying fallbacks`);
@@ -767,7 +818,13 @@ function resolveCikForOwner(owner: string | null): string | null {
   if (!owner) return null;
   const o = owner.toLowerCase();
   for (const [cik, meta] of Object.entries(CURATED_FUND_QUIVER_OWNERS)) {
-    const aliases = [meta.owner, meta.name, meta.manager, ...(meta.owners ?? [])].map((x) =>
+    const aliases = [
+      meta.owner,
+      meta.name,
+      meta.manager,
+      ...(meta.owners ?? []),
+      ...(meta.successorOwners ?? []),
+    ].map((x) =>
       x.toLowerCase()
     );
     if (aliases.some((a) => o.includes(a) || a.includes(o))) return cik;

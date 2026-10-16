@@ -46,6 +46,7 @@ export const NOTIFICATION_PREF_KEYS = [
   'darkPoolTickerAlerts',
   'watchlistNotifications',
   'newsNotifications',
+  'fearGreedNotifications',
   'earningsNotifications',
   'economicCalendarNotifications',
 ] as const;
@@ -61,6 +62,7 @@ export const NOTIFICATION_CATEGORY_KEYS = [
   'darkPoolTickerAlerts',
   'watchlistNotifications',
   'newsNotifications',
+  'fearGreedNotifications',
   'earningsNotifications',
   'economicCalendarNotifications',
 ] as const;
@@ -92,6 +94,7 @@ export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
   darkPoolTickerAlerts: true,
   watchlistNotifications: true,
   newsNotifications: true,
+  fearGreedNotifications: true,
   earningsNotifications: true,
   economicCalendarNotifications: true,
   newsSound: 'default',
@@ -115,6 +118,7 @@ export const PREF_TO_DB_COLUMN: Record<NotificationPrefKey, string> = {
   darkPoolTickerAlerts: 'dark_pool_ticker_alerts',
   watchlistNotifications: 'watchlist_notifications',
   newsNotifications: 'news_notifications',
+  fearGreedNotifications: 'fear_greed_notifications',
   earningsNotifications: 'earnings_notifications',
   economicCalendarNotifications: 'economic_calendar_notifications',
 };
@@ -130,6 +134,7 @@ const SOURCE_TO_PREF: Record<string, NotificationCategoryKey> = {
   dark_pool_signal: 'darkPoolTickerAlerts',
   watchlist_alert: 'watchlistNotifications',
   news: 'newsNotifications',
+  fear_greed: 'fearGreedNotifications',
   earnings: 'earningsNotifications',
   earnings_results: 'earningsNotifications',
   economic_calendar: 'economicCalendarNotifications',
@@ -187,6 +192,10 @@ export function parseNotificationPrefs(raw: unknown): NotificationPrefs {
       DEFAULT_NOTIFICATION_PREFS.watchlistNotifications,
     ),
     newsNotifications: asBool(src.newsNotifications, DEFAULT_NOTIFICATION_PREFS.newsNotifications),
+    fearGreedNotifications: asBool(
+      src.fearGreedNotifications,
+      DEFAULT_NOTIFICATION_PREFS.fearGreedNotifications,
+    ),
     earningsNotifications: asBool(
       src.earningsNotifications,
       DEFAULT_NOTIFICATION_PREFS.earningsNotifications,
@@ -232,6 +241,7 @@ export function prefsFromDbRow(row: Record<string, unknown> | null | undefined):
     darkPoolTickerAlerts: row.dark_pool_ticker_alerts,
     watchlistNotifications: row.watchlist_notifications,
     newsNotifications: row.news_notifications,
+    fearGreedNotifications: row.fear_greed_notifications,
     earningsNotifications: row.earnings_notifications,
     economicCalendarNotifications: row.economic_calendar_notifications,
     newsSound: row.news_sound,
@@ -266,6 +276,7 @@ export function prefsToDbRow(
     dark_pool_ticker_alerts: prefs.darkPoolTickerAlerts,
     watchlist_notifications: prefs.watchlistNotifications,
     news_notifications: prefs.newsNotifications,
+    fear_greed_notifications: prefs.fearGreedNotifications,
     earnings_notifications: prefs.earningsNotifications,
     economic_calendar_notifications: prefs.economicCalendarNotifications,
     earnings_alert_scope: prefs.earningsAlertScope,

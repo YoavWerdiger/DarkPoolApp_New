@@ -544,6 +544,15 @@ export default function NotificationsScreen({ navigation }: any) {
                 onValueChange={(v) => {
                   void handleCategory('newsNotifications', v);
                 }}
+                showDivider
+              />
+              <SettingsSwitchRow
+                title="מדד הפחד והתאווה"
+                value={isPrefEffective(prefs, 'fearGreedNotifications')}
+                disabled={childrenLocked}
+                onValueChange={(v) => {
+                  void handleCategory('fearGreedNotifications', v);
+                }}
                 showDivider={false}
               />
             </SettingsGlassCard>

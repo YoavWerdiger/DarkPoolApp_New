@@ -24,7 +24,11 @@ export function holdingsToDistributionSlices(
 
   const top = ranked.slice(0, Math.max(1, maxSlices - 1));
   const rest = ranked.slice(top.length);
-  const otherPct = rest.reduce((s, h) => s + (h.allocation_pct ?? 0), 0);
+  const topPct = top.reduce((s, h) => s + (h.allocation_pct ?? 0), 0);
+  const restPct = rest.reduce((s, h) => s + (h.allocation_pct ?? 0), 0);
+  // allocation_pct הוא משקל בכל התיק, אבל לעיתים מגיעות רק N האחזקות הגדולות (טראמפ: 16 מתוך מאות).
+  // «אחר» = כל מה שלא מוצג (100 − המוצגים), לא רק סכום מה שהגיע — אחרת העוגה חסרה ו«אחר» לא תואם לנתח.
+  const otherPct = topPct + restPct <= 100.5 ? Math.max(restPct, 100 - topPct) : restPct;
 
   const slices: DistributionSlice[] = top.map((h, i) => ({
     key: h.ticker.toUpperCase(),
@@ -40,7 +44,8 @@ export function holdingsToDistributionSlices(
       label: 'אחר',
       value: otherPct,
       percentage: Math.round(otherPct * 10) / 10,
-      color: 'rgba(255,255,255,0.22)',
+      // אפור ניטרלי שנראה גם על רקע בהיר וגם על כהה (לבן שקוף נעלם על כרטיס בהיר)
+      color: '#8E8E93',
     });
   }
 

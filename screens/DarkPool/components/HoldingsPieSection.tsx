@@ -50,7 +50,14 @@ export function HoldingsPieSection({
   helpA11yLabel,
 }: Props) {
   const tokens = useDesignTokens();
-  const slices = useMemo(() => holdingsToDistributionSlices(holdings), [holdings]);
+  // «אחר» בצבע ניטרלי מה-theme (היה לבן שקוף — לא נראה על כרטיס בהיר)
+  const slices = useMemo(
+    () =>
+      holdingsToDistributionSlices(holdings).map((sl) =>
+        sl.key === '__other__' ? { ...sl, color: tokens.colors.text.tertiary } : sl
+      ),
+    [holdings, tokens.colors.text.tertiary]
+  );
   const colorByTicker = useMemo(() => sliceColorByTicker(slices), [slices]);
   const styles = useMemo(() => createStyles(tokens), [tokens]);
   const allocByTicker = useMemo(() => {

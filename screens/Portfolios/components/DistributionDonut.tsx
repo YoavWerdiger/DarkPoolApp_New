@@ -78,7 +78,8 @@ export function DistributionDonut({
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="rgba(255,255,255,0.08)"
+          // מסלול הטבעת מה-theme (לבן שקוף לא נראה על כרטיס בהיר)
+          stroke={tokens.colors.border.divider}
           strokeWidth={strokeWidth}
           fill="transparent"
         />

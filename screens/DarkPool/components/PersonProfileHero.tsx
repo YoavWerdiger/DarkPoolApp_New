@@ -54,6 +54,9 @@ interface Props {
 /**
  * מעטפת InsiderWave: תמונת full-bleed, כפתורי אייקון עגולים קטנים, שם על הגרדיאנט.
  */
+/** כמה פיקסלים של משיכה למטה מגדילים את התמונה — מעבר לזה הכל נעצר */
+export const HERO_MAX_STRETCH = 110;
+
 function PersonProfileHeroInner({
   name,
   photoCandidates,
@@ -93,18 +96,17 @@ function PersonProfileHeroInner({
 
   const photoZoomStyle = useMemo(() => {
     if (!scrollY || !(height > 0) || hidePhoto) return null;
+    // הגדלה מוגבלת: עד HERO_MAX_STRETCH פיקסלים של משיכה, ואז נעצרת (קודם extend — גדלה בלי סוף)
     const scale = scrollY.interpolate({
-      inputRange: [-height, 0],
-      outputRange: [2, 1],
-      extrapolateLeft: 'extend',
-      extrapolateRight: 'clamp',
+      inputRange: [-HERO_MAX_STRETCH, 0],
+      outputRange: [1 + HERO_MAX_STRETCH / height, 1],
+      extrapolate: 'clamp',
     });
-    // scale ממרכז → מזיזים למטה ב-(scale-1)*h/2 כדי לגדול מלמעלה.
+    // scale ממרכז → מזיזים למטה ב-(scale-1)*h/2 כדי לגדול מלמעלה (התחתית יורדת בדיוק כמרחק המשיכה).
     const originFix = scrollY.interpolate({
-      inputRange: [-height, 0],
-      outputRange: [height / 2, 0],
-      extrapolateLeft: 'extend',
-      extrapolateRight: 'clamp',
+      inputRange: [-HERO_MAX_STRETCH, 0],
+      outputRange: [HERO_MAX_STRETCH / 2, 0],
+      extrapolate: 'clamp',
     });
     if (!pinned) {
       return { transform: [{ translateY: originFix }, { scale }] };

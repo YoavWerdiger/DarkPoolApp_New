@@ -103,7 +103,7 @@ import {
   useHoldingsPieColors,
 } from './components/HoldingsPieSection';
 import { TrumpActivitySection } from './components/TrumpActivitySection';
-import { PersonProfileHero } from './components/PersonProfileHero';
+import { HERO_MAX_STRETCH, PersonProfileHero } from './components/PersonProfileHero';
 import {
   holdingsToDistributionSlices,
   type HoldingAllocationInput,
@@ -1332,15 +1332,18 @@ export function PersonPortfolioProfileScreen({
     }),
     [heroScrollY]
   );
-  /** ב-overscroll (y<0) ה-ScrollView מוריד את התוכן — מחזירים את גוף המסך למקום; zoom נשאר על התמונה. */
+  /**
+   * ב-overscroll (y<0) התוכן יורד עם המשיכה ונשאר צמוד לתחתית התמונה (שגדלה באותו מרחק),
+   * עד HERO_MAX_STRETCH — משם הוא נעצר (מפצים על המשך המשיכה), כך שלא נמשך בלי סוף.
+   */
   const scrollBodyCompensateStyle = useMemo(
     () => ({
       transform: [
         {
           translateY: heroScrollY.interpolate({
-            inputRange: [-10000, 0],
-            outputRange: [10000, 0],
-            extrapolateRight: 'clamp',
+            inputRange: [-10000, -HERO_MAX_STRETCH, 0],
+            outputRange: [10000 - HERO_MAX_STRETCH, 0, 0],
+            extrapolate: 'clamp',
           }),
         },
       ],

@@ -13,6 +13,7 @@ import {
   metricsFromTrumpCongressInputs,
   TRUMP_DARKPOOL_PERSON_ID,
 } from '../_shared/trumpPortfolio.ts';
+import { buildTrumpActivity } from '../_shared/trumpActivity.ts';
 import {
   ensureYahooPriceMaps,
   metricsToSnapshotFields,
@@ -71,6 +72,9 @@ serve(async (req) => {
 
     const metrics = metricsFromTrumpCongressInputs(inputs, pricesByTicker);
     if (!metrics) return json({ ok: false, reason: 'no_trades', rows: rows.length });
+    // מה שבאמת מדווח: פעילות (קניות/מכירות בטווחי סכום) — המסך מציג את זה ולא «שווי תיק»
+    const activity = buildTrumpActivity(inputs);
+    (metrics as Record<string, unknown>).activity = activity;
 
     await upsertPortfolioSnapshot(supabase, {
       person_id: TRUMP_DARKPOOL_PERSON_ID,
@@ -95,6 +99,7 @@ serve(async (req) => {
       priced_tickers: priced,
       value_mid: metrics.portfolio_value,
       value_range: metrics.value_range,
+      activity_trades: activity?.trade_count ?? 0,
       holdings: metrics.holdings.length,
     });
   } catch (e) {

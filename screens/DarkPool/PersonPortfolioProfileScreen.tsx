@@ -102,6 +102,7 @@ import {
   HoldingsPieSection,
   useHoldingsPieColors,
 } from './components/HoldingsPieSection';
+import { TrumpActivitySection } from './components/TrumpActivitySection';
 import { PersonProfileHero } from './components/PersonProfileHero';
 import {
   holdingsToDistributionSlices,
@@ -1188,6 +1189,7 @@ export function PersonPortfolioProfileScreen({
 
   // טראמפ: הרשימה מוצגת ל-16, אבל לפילוח — כל האחזקות מהשרת (מאות), כדי שהמקרא יפרט את כולן
   const serverAllHoldings = investor.profile?.metrics?.holdings;
+  const trumpActivity = trumpProfile ? investor.profile?.metrics?.activity ?? null : null;
   const pieHoldings = useMemo<HoldingAllocationInput[]>(() => {
     if (trumpProfile && serverAllHoldings && serverAllHoldings.length > holdings.length) {
       return serverAllHoldings.map((h) => ({
@@ -1457,6 +1459,16 @@ export function PersonPortfolioProfileScreen({
             </UICard>
           ) : null}
 
+          {/* טראמפ: פעילות מדווחת במקום «שווי תיק» — אין דיווח יתרות, רק עסקאות בטווחי סכום */}
+          {trumpProfile && trumpActivity ? (
+            <View style={{ marginBottom: APP_LAYOUT.sectionGap }}>
+              <TrumpActivitySection
+                activity={trumpActivity}
+                onTickerPress={(ticker) => stackNav.navigate('DarkPoolTicker', { ticker })}
+              />
+            </View>
+          ) : (
+          <>
           {showCongressValue ||
           showTrumpValue ||
           showOtherValue ||
@@ -1663,6 +1675,9 @@ export function PersonPortfolioProfileScreen({
               </UICard>
             </>
           ) : null}
+
+          </>
+          )}
 
           {/* עסקאות */}
           {trades.length > 0 ? (

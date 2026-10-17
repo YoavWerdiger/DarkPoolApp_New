@@ -58,6 +58,8 @@ export interface ReconstructedPortfolioMetrics {
   ownership_source?: 'sec_edgar';
   /** תאריך הדיווח האחרון שנכלל (YYYY-MM-DD) */
   ownership_as_of?: string;
+  /** טראמפ: סיכום פעילות מדווחת (OGE 278-T) — במקום «שווי תיק» */
+  activity?: TrumpActivitySummary | null;
 }
 
 export interface ProfilePortfolioRiskMetrics {
@@ -92,3 +94,33 @@ export type PortfolioSource =
   | 'snapshot'
   | 'trades_only'
   | 'none';
+
+export interface TrumpAmountRange {
+  low: number;
+  high: number;
+}
+
+export interface TrumpTickerActivity {
+  ticker: string;
+  buys: number;
+  sells: number;
+  buy: TrumpAmountRange;
+  sell: TrumpAmountRange;
+  last_date: string;
+  last_side: 'buy' | 'sell';
+}
+
+export interface TrumpActivitySummary {
+  from: string;
+  to: string;
+  trade_count: number;
+  buys: number;
+  sells: number;
+  tickers: number;
+  buy: TrumpAmountRange;
+  sell: TrumpAmountRange;
+  monthly: Array<{ month: string; buys: number; sells: number; buy: TrumpAmountRange; sell: TrumpAmountRange }>;
+  top_bought: TrumpTickerActivity[];
+  top_sold: TrumpTickerActivity[];
+  most_active: TrumpTickerActivity[];
+}

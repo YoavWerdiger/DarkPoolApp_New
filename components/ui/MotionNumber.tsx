@@ -8,20 +8,28 @@ import Animated, {
   useAnimatedStyle,
   useDerivedValue,
   useSharedValue,
-  withSequence,
   withTiming,
 } from 'react-native-reanimated';
 
 /**
- * מספר דולרי שמתעדכן ישירות ב-UI thread (טקסט אחד, בלי גלילת ספרות):
- * בגרירה הגרף מעדכן SharedValue והטקסט מתחלף באותו פריים — בלי React.
- * בכל שינוי — motion blur קצר: מתיחה קלה + שני «צללים» דהויים בכיוון התנועה, שדועכים תוך ~200ms.
- * פורמט $1,234,567 קבוע (לא תלוי בשפת המכשיר — לא «US$»).
+ * מספר דולרי שמתחלף ב-UI thread (בלי React) בהחלפה מטושטשת:
+ * שתי שכבות מתחלפות — המספר החדש נכנס מטושטש ומתחדד, הישן יוצא ומיטשטש, עם תזוזה קלה בכיוון השינוי.
+ * «טשטוש» = הילה של עותקים מוזזים בשקיפות נמוכה, הכי חזקה באמצע המעבר ונעלמת כשהמספר נוחת.
+ * פורמט $1,234,567 קבוע (לא «US$»).
  */
 
 const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
-const BLUR_IN_MS = 30;
-const BLUR_OUT_MS = 200;
+const SWAP_MS = 200;
+const EASE = Easing.bezier(0.25, 0.1, 0.25, 1);
+/** תזוזה אנכית במעבר (חלק מגובה השורה) */
+const SHIFT = 0.18;
+/** הזזת עותקי ההילה (px) */
+const HALO = [
+  { x: 0, y: -2 },
+  { x: 0, y: 2 },
+  { x: -1.5, y: 0 },
+  { x: 1.5, y: 0 },
+];
 
 function formatUsd(v: number): string {
   'worklet';
@@ -52,43 +60,42 @@ export function MotionNumber({ scrubValue, scrubActive, value, style }: Props) {
   }, [value, restSV]);
 
   const current = useDerivedValue(() => (scrubActive.value ? scrubValue.value : restSV.value));
-  const text = useDerivedValue(() => formatUsd(current.value));
 
-  // עוצמת הטשטוש (0–1) וכיוון (1 עלייה / -1 ירידה)
-  const blur = useSharedValue(0);
+  const initial = formatUsd(value);
+  const liveText = useDerivedValue(() => formatUsd(current.value));
+  // שתי שכבות: טקסט + נראות (0..1) לכל אחת
+  const textA = useSharedValue(initial);
+  const textB = useSharedValue(initial);
+  const visA = useSharedValue(1);
+  const visB = useSharedValue(0);
+  const front = useSharedValue(0); // 0 = A מוצגת
   const dir = useSharedValue(1);
+
+  const prevNum = useSharedValue(value);
   useAnimatedReaction(
-    () => current.value,
+    () => formatUsd(current.value),
     (next, prev) => {
       if (prev == null || next === prev) return;
-      dir.value = next > prev ? 1 : -1;
-      blur.value = withSequence(
-        withTiming(1, { duration: BLUR_IN_MS }),
-        withTiming(0, { duration: BLUR_OUT_MS, easing: Easing.out(Easing.quad) })
-      );
+      dir.value = current.value >= prevNum.value ? 1 : -1;
+      prevNum.value = current.value;
+      const cfg = { duration: SWAP_MS, easing: EASE };
+      if (front.value === 0) {
+        textB.value = next;
+        visB.value = 0;
+        visB.value = withTiming(1, cfg);
+        visA.value = withTiming(0, cfg);
+        front.value = 1;
+      } else {
+        textA.value = next;
+        visA.value = 0;
+        visA.value = withTiming(1, cfg);
+        visB.value = withTiming(0, cfg);
+        front.value = 0;
+      }
     }
   );
 
-  const textProps = useAnimatedProps(() => {
-    // ReText: text + defaultValue כדי שיתעדכן גם ב-iOS וגם ב-Android
-    return { text: text.value, defaultValue: text.value } as never;
-  });
-
   const lineH = style.lineHeight ?? Math.round((style.fontSize ?? 32) * 1.2);
-  const mainStyle = useAnimatedStyle(() => ({
-    opacity: 1 - blur.value * 0.25,
-    transform: [{ scaleY: 1 + blur.value * 0.05 }],
-  }));
-  // צללים נגררים מאחורי כיוון התנועה
-  const ghostNear = useAnimatedStyle(() => ({
-    opacity: blur.value * 0.35,
-    transform: [{ translateY: -dir.value * blur.value * lineH * 0.12 }],
-  }));
-  const ghostFar = useAnimatedStyle(() => ({
-    opacity: blur.value * 0.18,
-    transform: [{ translateY: -dir.value * blur.value * lineH * 0.24 }],
-  }));
-
   const inputStyle: TextStyle = {
     ...style,
     textAlign: 'right',
@@ -99,23 +106,96 @@ export function MotionNumber({ scrubValue, scrubActive, value, style }: Props) {
     fontVariant: ['tabular-nums'],
     writingDirection: 'ltr',
   };
-  const initial = formatUsd(value);
+
+  return (
+    <View
+      style={[styles.wrap, { height: lineH }]}
+      pointerEvents="none"
+      accessibilityRole="text"
+      accessibilityLabel={initial}
+    >
+      {/* החלפה מיידית בלי אפקט — הכי חלק עם האצבע (ההחלפה המטושטשת נראתה גרוע יותר) */}
+      <PlainLayer text={liveText} inputStyle={inputStyle} />
+    </View>
+  );
+}
+
+function PlainLayer({ text, inputStyle }: { text: SharedValue<string>; inputStyle: TextStyle }) {
+  const textProps = useAnimatedProps(() => ({ text: text.value, defaultValue: text.value }) as never);
+  return (
+    <AnimatedTextInput
+      editable={false}
+      caretHidden
+      contextMenuHidden
+      scrollEnabled={false}
+      underlineColorAndroid="transparent"
+      defaultValue={text.value}
+      animatedProps={textProps}
+      style={[inputStyle, styles.abs]}
+    />
+  );
+}
+
+function Layer({
+  text,
+  vis,
+  front,
+  isA,
+  dir,
+  lineH,
+  inputStyle,
+}: {
+  text: SharedValue<string>;
+  vis: SharedValue<number>;
+  front: SharedValue<number>;
+  isA: boolean;
+  dir: SharedValue<number>;
+  lineH: number;
+  inputStyle: TextStyle;
+}) {
+  const textProps = useAnimatedProps(() => {
+    // ReText: text + defaultValue — מתעדכן ב-iOS וב-Android
+    return { text: text.value, defaultValue: text.value } as never;
+  });
+
+  // נכנסת: מגיעה מהכיוון של השינוי; יוצאת: ממשיכה הלאה
+  const layerStyle = useAnimatedStyle(() => {
+    const entering = (front.value === 0) === isA;
+    const off = (1 - vis.value) * lineH * SHIFT * dir.value;
+    return {
+      opacity: vis.value,
+      transform: [{ translateY: entering ? off : -off }],
+    };
+  });
+  // הילת טשטוש — חזקה באמצע המעבר, אפס כשהשכבה נחתה/נעלמה
+  const haloStyle = useAnimatedStyle(() => {
+    const mid = 1 - Math.abs(vis.value * 2 - 1);
+    return { opacity: mid * 0.45 };
+  });
+
   const common = {
     editable: false,
     caretHidden: true,
     contextMenuHidden: true,
     scrollEnabled: false,
     underlineColorAndroid: 'transparent',
-    defaultValue: initial,
+    defaultValue: text.value,
     animatedProps: textProps,
   } as const;
 
   return (
-    <View style={styles.wrap} pointerEvents="none" accessibilityRole="text" accessibilityLabel={initial}>
-      <AnimatedTextInput {...common} style={[inputStyle, styles.ghost, ghostFar]} />
-      <AnimatedTextInput {...common} style={[inputStyle, styles.ghost, ghostNear]} />
-      <AnimatedTextInput {...common} style={[inputStyle, mainStyle]} />
-    </View>
+    <Animated.View style={[StyleSheet.absoluteFill, layerStyle]}>
+      <Animated.View style={[StyleSheet.absoluteFill, haloStyle]}>
+        {HALO.map((h, i) => (
+          <AnimatedTextInput
+            key={i}
+            {...common}
+            style={[inputStyle, styles.abs, { opacity: 0.5, transform: [{ translateX: h.x }, { translateY: h.y }] }]}
+          />
+        ))}
+      </Animated.View>
+      <AnimatedTextInput {...common} style={[inputStyle, styles.abs]} />
+    </Animated.View>
   );
 }
 
@@ -123,7 +203,7 @@ const styles = StyleSheet.create({
   wrap: {
     alignSelf: 'stretch',
   },
-  ghost: {
+  abs: {
     position: 'absolute',
     top: 0,
     left: 0,

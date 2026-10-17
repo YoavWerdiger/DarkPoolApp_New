@@ -431,11 +431,17 @@ export function PortfolioValueChart({
   // נקודות לגרירה ב-UI thread: x ממוינים + ערכים
   const plottedXs = useSharedValue<number[]>([]);
   const plottedValues = useSharedValue<number[]>([]);
+  const plottedYs = useSharedValue<number[]>([]);
   const lastScrubIdx = useSharedValue(-1);
+  // הסמן (קו + נקודה) מצויר ב-UI thread — זז עם האצבע בלי לחכות לרינדור של React
+  const cursorX = useSharedValue(0);
+  const cursorY = useSharedValue(0);
+  const cursorOn = useSharedValue(0);
   useEffect(() => {
     plottedXs.value = plotted.map((p) => p.x);
+    plottedYs.value = plotted.map((p) => p.y);
     plottedValues.value = plotted.map((p) => p.value);
-  }, [plotted, plottedXs, plottedValues]);
+  }, [plotted, plottedXs, plottedYs, plottedValues]);
 
   const scrubToIndex = useCallback(
     (next: number) => {
@@ -471,14 +477,26 @@ export function PortfolioValueChart({
         else hi = mid;
       }
       const idx = Math.abs(xs[lo] - touchX) <= Math.abs(xs[hi] - touchX) ? lo : hi;
+      cursorX.value = xs[idx];
+      cursorY.value = plottedYs.value[idx] ?? 0;
+      cursorOn.value = 1;
       if (idx === lastScrubIdx.value) return;
       lastScrubIdx.value = idx;
       if (scrubValue) scrubValue.value = plottedValues.value[idx];
       if (scrubActive) scrubActive.value = 1;
       runOnJS(scrubToIndex)(idx);
     },
-    [plottedXs, plottedValues, lastScrubIdx, scrubValue, scrubActive, scrubToIndex]
+    [plottedXs, plottedYs, plottedValues, lastScrubIdx, scrubValue, scrubActive, scrubToIndex, cursorX, cursorY, cursorOn]
   );
+
+  const cursorLineStyle = useAnimatedStyle(() => ({
+    opacity: cursorOn.value,
+    transform: [{ translateX: cursorX.value - 0.5 }],
+  }));
+  const cursorDotStyle = useAnimatedStyle(() => ({
+    opacity: cursorOn.value,
+    transform: [{ translateX: cursorX.value - 6 }, { translateY: cursorY.value - 6 }],
+  }));
 
   const chartGesture = useMemo(
     () =>
@@ -497,10 +515,11 @@ export function PortfolioValueChart({
         .onFinalize(() => {
           'worklet';
           lastScrubIdx.value = -1;
+          cursorOn.value = 0;
           if (scrubActive) scrubActive.value = 0;
           runOnJS(clearActive)();
         }),
-    [scrubAt, clearActive, lastScrubIdx, scrubActive]
+    [scrubAt, clearActive, lastScrubIdx, scrubActive, cursorOn]
   );
 
   const activePoint =
@@ -755,31 +774,25 @@ export function PortfolioValueChart({
               strokeWidth={StyleSheet.hairlineWidth * 2}
             />
 
-            {activePoint ? (
-              <>
-                <Line
-                  x1={activePoint.x}
-                  x2={activePoint.x}
-                  y1={padding.top}
-                  y2={plotBottom}
-                  stroke={cursorLineColor}
-                  strokeWidth={1}
-                />
-                <Circle
-                  cx={activePoint.x}
-                  cy={activePoint.y}
-                  r={6}
-                  fill={cursorRingColor}
-                />
-                <Circle
-                  cx={activePoint.x}
-                  cy={activePoint.y}
-                  r={3.5}
-                  fill={lineColor}
-                />
-              </>
-            ) : null}
           </Svg>
+          ) : null}
+          {width > 0 ? (
+            <>
+              <Animated.View
+                pointerEvents="none"
+                style={[
+                  styles.cursorLine,
+                  { top: padding.top, height: Math.max(0, plotBottom - padding.top), backgroundColor: cursorLineColor },
+                  cursorLineStyle,
+                ]}
+              />
+              <Animated.View
+                pointerEvents="none"
+                style={[styles.cursorRing, { backgroundColor: cursorRingColor }, cursorDotStyle]}
+              >
+                <View style={[styles.cursorDot, { backgroundColor: lineColor }]} />
+              </Animated.View>
+            </>
           ) : null}
 
           {showXAxisLabels ? (
@@ -841,6 +854,26 @@ export function PortfolioValueChart({
 }
 
 const styles = StyleSheet.create({
+  cursorLine: {
+    position: 'absolute',
+    left: 0,
+    width: 1,
+  },
+  cursorRing: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cursorDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+  },
   wrap: {
     alignSelf: 'stretch',
     width: '100%',

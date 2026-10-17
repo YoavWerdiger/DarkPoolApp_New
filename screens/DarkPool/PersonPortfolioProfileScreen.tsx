@@ -104,6 +104,7 @@ import {
 } from './components/HoldingsPieSection';
 import { TrumpActivitySection } from './components/TrumpActivitySection';
 import { PersonProfileHero } from './components/PersonProfileHero';
+import { ScrubSubscriber, useScrubStore } from './components/ScrubSubscriber';
 import {
   holdingsToDistributionSlices,
   type HoldingAllocationInput,
@@ -1097,7 +1098,9 @@ export function PersonPortfolioProfileScreen({
     congressPersonTradesQuery.data,
   ]);
 
-  const [scrubPoint, setScrubPoint] = useState<{ date: string; value: number } | null>(null);
+  // גרירה על הגרף: מחוץ ל-state של המסך — אחרת כל פריים מרנדר את כל המסך (גרף, עוגה, אחזקות) והסמן נתקע.
+  // רק בלוק השווי (ScrubSubscriber) מתרנדר.
+  const scrubStore = useScrubStore();
   const pickedPeriodFor = useRef<string | null>(null);
   useEffect(() => {
     pickedPeriodFor.current = null;
@@ -1115,15 +1118,6 @@ export function PersonPortfolioProfileScreen({
     () => (showChart ? filterChartSeriesByPeriod(chartSeries, period) : []),
     [showChart, chartSeries, period]
   );
-  // גרירה: שינוי מתחילת התקופה המוצגת עד הנקודה (בלי תיקון זרימות — כמו הגרף)
-  const scrubDelta = useMemo(() => {
-    if (!scrubPoint || periodSeries.length < 2) return null;
-    const first = periodSeries[0]?.value;
-    if (!(first > 0)) return null;
-    const usd = scrubPoint.value - first;
-    return { usd, pct: (usd / first) * 100 };
-  }, [scrubPoint, periodSeries]);
-
   const periodDelta = useMemo(() => {
     if (periodSeries.length < 2) return null;
     const first = periodSeries[0]?.value;
@@ -1341,6 +1335,21 @@ export function PersonPortfolioProfileScreen({
     }),
     [heroScrollY]
   );
+  // משיכה למטה (overscroll): התוכן (שווי תיק וכו') נשאר במקום — מבטלים את תזוזת הגלילה
+  const scrollBodyPinStyle = useMemo(
+    () => ({
+      transform: [
+        {
+          translateY: heroScrollY.interpolate({
+            inputRange: [-10000, 0],
+            outputRange: [-10000, 0],
+            extrapolate: 'clamp',
+          }),
+        },
+      ],
+    }),
+    [heroScrollY]
+  );
   const heroBackdrop = (
     <View
       pointerEvents="none"
@@ -1443,7 +1452,7 @@ export function PersonPortfolioProfileScreen({
           }
           contentContainerStyle={[styles.scroll, { paddingBottom: 12 }]}
         >
-          <Animated.View collapsable={false}>
+          <Animated.View collapsable={false} style={scrollBodyPinStyle}>
           <View style={{ height: heroHeight }} collapsable={false} />
 
           <View style={styles.body}>
@@ -1488,6 +1497,19 @@ export function PersonPortfolioProfileScreen({
                   </Pressable>
                 ) : null}
               </View>
+              <ScrubSubscriber store={scrubStore}>
+                {(scrubPoint) => {
+                  // גרירה: שינוי מתחילת התקופה המוצגת עד הנקודה (בלי תיקון זרימות — כמו הגרף)
+                  const scrubFirst = periodSeries[0]?.value;
+                  const scrubDelta =
+                    scrubPoint && periodSeries.length >= 2 && scrubFirst > 0
+                      ? {
+                          usd: scrubPoint.value - scrubFirst,
+                          pct: ((scrubPoint.value - scrubFirst) / scrubFirst) * 100,
+                        }
+                      : null;
+                  return (
+                    <>
               {heroValueText ? (
                 <AnimatedNumber
                   text={toDataIsland(scrubPoint ? formatChartValue(scrubPoint.value) : heroValueText)}
@@ -1560,6 +1582,10 @@ export function PersonPortfolioProfileScreen({
                   />
                 </View>
               ) : null}
+                    </>
+                  );
+                }}
+              </ScrubSubscriber>
             </View>
           ) : null}
 
@@ -1573,7 +1599,7 @@ export function PersonPortfolioProfileScreen({
                 onPeriodChange={setPeriod}
                 showHeader={false}
                 formatValue={formatChartValue}
-                onScrubPoint={setScrubPoint}
+                onScrubPoint={scrubStore.set}
                 showPointMarkers={false}
                 periods={SNAPSHOT_CHART_PERIODS}
               />

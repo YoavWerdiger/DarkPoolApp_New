@@ -173,12 +173,18 @@ export function AnimatedNumber({
   }, [adjustsFontSizeToFit, availW, naturalW, minimumFontScale]);
   const lineH = Math.round(baseLine * scale);
 
-  const charStyle: TextStyle = {
-    ...(pickKeys(flat as Record<string, unknown>, CHAR_KEYS) as TextStyle),
-    fontVariant: flat.fontVariant ?? ['tabular-nums'],
-    fontSize: baseFont * scale,
-    lineHeight: lineH,
-  };
+  // יציב בין רנדרים — כך DigitCell (memo) מתרנדר רק כשהספרה שלו משתנה
+  const charKey = JSON.stringify(pickKeys(flat as Record<string, unknown>, CHAR_KEYS));
+  const charStyle = useMemo<TextStyle>(
+    () => ({
+      ...(JSON.parse(charKey) as TextStyle),
+      fontVariant: flat.fontVariant ?? ['tabular-nums'],
+      fontSize: baseFont * scale,
+      lineHeight: lineH,
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [charKey, baseFont, scale, lineH]
+  );
 
   // הבהוב צבע
   const flashP = useSharedValue(0);
@@ -292,7 +298,7 @@ const DIGITS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
  * שינוי חדש באמצע תנועה ממשיך מהמיקום הנוכחי (withTiming) — בגרירה אין «קפיצה לאחור» בכל פריים.
  * תו שאינו ספרה ($ , . %) — טקסט רגיל.
  */
-function DigitCell({
+const DigitCell = React.memo(function DigitCell({
   ch,
   gen,
   delay,
@@ -382,7 +388,7 @@ function DigitCell({
       </Animated.View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   wrap: {

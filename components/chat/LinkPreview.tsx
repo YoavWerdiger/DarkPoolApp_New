@@ -120,7 +120,6 @@ export default function LinkPreview({ url, isMe, onLongPress }: LinkPreviewProps
   const ink = isMe ? tokens.colors.bubbleMeText : tokens.colors.text.primary;
   const secondary = isMe ? tokens.colors.bubbleMeMetaText : tokens.colors.text.secondary;
   const loading = og === null;
-  const hasImage = !!og?.image;
   const title = og?.title ?? null;
 
   return (
@@ -141,18 +140,8 @@ export default function LinkPreview({ url, isMe, onLongPress }: LinkPreviewProps
       {/* רקע = צבע הטקסט בשקיפות נמוכה → מתאים לכל בועה ולכל ערכת נושא */}
       <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: ink, opacity: 0.07 }]} />
 
-      {hasImage ? (
-        <ExpoImage
-          source={{ uri: og!.image! }}
-          style={styles.hero}
-          contentFit="cover"
-          cachePolicy="memory-disk"
-          transition={160}
-        />
-      ) : null}
-
-      <View style={[styles.body, !hasImage && styles.bodyRow]}>
-        {!hasImage ? (
+      <View style={[styles.body, styles.bodyRow]}>
+        {(
           <View style={styles.iconTile}>
             <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: ink, opacity: 0.08, borderRadius: 8 }]} />
             <ExpoImage
@@ -162,7 +151,7 @@ export default function LinkPreview({ url, isMe, onLongPress }: LinkPreviewProps
               cachePolicy="memory-disk"
             />
           </View>
-        ) : null}
+        )}
 
         <View style={styles.textCol}>
           {loading ? (
@@ -177,7 +166,7 @@ export default function LinkPreview({ url, isMe, onLongPress }: LinkPreviewProps
                   {title}
                 </Text>
               ) : null}
-              {og?.description && hasImage ? (
+              {og?.description ? (
                 <Text
                   style={[styles.description, { color: secondary, textAlign: alignFor(og.description) }]}
                   numberOfLines={2}
@@ -200,6 +189,7 @@ export default function LinkPreview({ url, isMe, onLongPress }: LinkPreviewProps
   );
 }
 
+// רק favicon + כותרת + תיאור + דומיין (כמו מצב הטעינה) — בלי תמונת og גדולה
 const CARD_W = 252;
 
 const styles = StyleSheet.create({
@@ -213,10 +203,6 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.8,
-  },
-  hero: {
-    width: CARD_W,
-    height: Math.round(CARD_W / 1.91),
   },
   body: {
     paddingHorizontal: 10,

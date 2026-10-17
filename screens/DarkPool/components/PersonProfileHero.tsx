@@ -96,17 +96,19 @@ function PersonProfileHeroInner({
 
   const photoZoomStyle = useMemo(() => {
     if (!scrollY || !(height > 0) || hidePhoto) return null;
-    // הגדלה מוגבלת: עד HERO_MAX_STRETCH פיקסלים של משיכה, ואז נעצרת (קודם extend — גדלה בלי סוף)
+    // התמונה נמתחת בדיוק כמרחק המשיכה (בלי תקרה) — כך התוכן (השווי וכו') תמיד צמוד לתחתיתה, בלי רווח
     const scale = scrollY.interpolate({
       inputRange: [-HERO_MAX_STRETCH, 0],
       outputRange: [1 + HERO_MAX_STRETCH / height, 1],
-      extrapolate: 'clamp',
+      extrapolateLeft: 'extend',
+      extrapolateRight: 'clamp',
     });
     // scale ממרכז → מזיזים למטה ב-(scale-1)*h/2 כדי לגדול מלמעלה (התחתית יורדת בדיוק כמרחק המשיכה).
     const originFix = scrollY.interpolate({
       inputRange: [-HERO_MAX_STRETCH, 0],
       outputRange: [HERO_MAX_STRETCH / 2, 0],
-      extrapolate: 'clamp',
+      extrapolateLeft: 'extend',
+      extrapolateRight: 'clamp',
     });
     if (!pinned) {
       return { transform: [{ translateY: originFix }, { scale }] };

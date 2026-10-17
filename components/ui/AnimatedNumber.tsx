@@ -86,7 +86,7 @@ export type AnimatedNumberProps = Omit<TextProps, 'children'> & {
   fast?: boolean;
 };
 
-type Change = { gen: number; prev: string; dir: 1 | -1; fast: boolean; tint: boolean };
+type Change = { gen: number; prev: string; dir: 1 | -1; fast: boolean };
 type Shown = {
   text: string;
   value: number | null | undefined;
@@ -105,8 +105,8 @@ const justifyFor = (align: TextStyle['textAlign']): ViewStyle['justifyContent'] 
   align === 'right' ? 'flex-end' : align === 'center' ? 'center' : 'flex-start';
 
 /**
- * מספר בסגנון מונה: כל ספרה שהשתנתה מתגלגלת בתא משלה — למעלה בעלייה, למטה בירידה,
- * בהשהיה קלה מהאחדות שמאלה. תווים שלא השתנו ($ , . % M) לא זזים.
+ * מספר בסגנון מונה: כל ספרה היא עמודת 0–9 שגולשת לערך החדש (גם דרך הספרות שבדרך),
+ * בהשהיה קלה מהאחדות שמאלה. תווים שאינם ספרות ($ , . % M) לא זזים.
  * המספר תמיד מצויר כשורת תאים (LTR פיזי) — בלי מדידה/יישור מול Text נסתר שיכולים להיכשל.
  * adjustsFontSizeToFit נתמך (הקטנת פונט לפי הרוחב). בלי אנימציה בעלייה ראשונה / Reduce Motion.
  */
@@ -156,7 +156,7 @@ export function AnimatedNumber({
       value,
       // גוון עדין על הספרות שהשתנו: ירוק בעלייה, אדום בירידה — גם בגרירה על הגרף
       change: canAnimate
-        ? { gen: genRef.current, prev: shown.text, dir, fast, tint: numericDir !== 0 }
+        ? { gen: genRef.current, prev: shown.text, dir, fast }
         : null,
       flashGen:
         canAnimate && flash && !fast && numericDir !== 0 ? shown.flashGen + 1 : shown.flashGen,
@@ -245,22 +245,14 @@ export function AnimatedNumber({
           <DigitCell
             key={c.key}
             ch={c.ch}
-            old={c.old}
             gen={c.rolls && change ? change.gen : 0}
-            dir={
-              change?.fast && c.rolls && c.old != null
-                ? Number(c.ch) >= Number(c.old)
-                  ? 1
-                  : -1
-                : change?.dir ?? 1
-            }
+            animate={!!change}
             delay={change?.fast ? 0 : c.order * STAGGER_MS}
             duration={change?.fast ? NUMBER_FAST_MS : NUMBER_ROLL_MS}
-            fast={!!change?.fast}
             height={lineH}
             charStyle={charStyle}
             flashStyle={flashEnabled ? flashStyle : null}
-            // בגרירה (כמו InsiderWave): כל ספרה צובעת לפי הכיוון שלה — עולה ירוק, יורדת אדום — וחוזרת ללבן.
+            // בגרירה (כמו InsiderWave): כל ספרה צובעת לפי הכיוון שלה — עולה ירוק, יורדת אדום — וחוזרת לבסיס.
             // בשינוי ערך רגיל: צבע אחיד לכל המספר (flash).
             tintColor={
               change?.fast && c.rolls && c.old != null && baseColor
@@ -293,11 +285,16 @@ export function AnimatedNumber({
   );
 }
 
+const DIGITS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
+/**
+ * ספרה = עמודת 0–9 שגולשת לספרת היעד (מונה אמיתי, כמו InsiderWave).
+ * שינוי חדש באמצע תנועה ממשיך מהמיקום הנוכחי (withTiming) — בגרירה אין «קפיצה לאחור» בכל פריים.
+ * תו שאינו ספרה ($ , . %) — טקסט רגיל.
+ */
 function DigitCell({
   ch,
-  old,
   gen,
-  dir,
   delay,
   duration,
   height,
@@ -305,89 +302,84 @@ function DigitCell({
   flashStyle,
   tintColor,
   baseColor,
-  fast,
+  animate,
   allowFontScaling,
   maxFontSizeMultiplier,
 }: {
-  fast: boolean;
   tintColor: string | null;
   baseColor: string | null;
   ch: string;
-  old: string | null;
   gen: number;
-  dir: 1 | -1;
   delay: number;
   duration: number;
   height: number;
   charStyle: TextStyle;
   flashStyle: ReturnType<typeof useAnimatedStyle> | null;
+  animate: boolean;
   allowFontScaling?: boolean;
   maxFontSizeMultiplier?: number | null;
 }) {
-  const p = useSharedValue(1);
+  const isDigit = DIGIT.test(ch);
+  const target = isDigit ? Number(ch) : 0;
+  const pos = useSharedValue(target);
   const tint = useSharedValue(0);
-  const fastSv = useSharedValue(0);
-  const dirSv = useSharedValue<number>(dir);
-  const [rollingFrom, setRollingFrom] = useState<string | null>(null);
   const lastGen = useRef(0);
 
   useLayoutEffect(() => {
-    if (!gen || gen === lastGen.current || old == null) return;
-    lastGen.current = gen;
-    dirSv.value = dir;
-    setRollingFrom(old);
-    p.value = 0;
-    fastSv.value = fast ? 1 : 0;
-    p.value = withDelay(delay, withTiming(1, { duration, easing: ROLL_EASE }));
-    if (tintColor) {
-      // הגוון נכנס עם הספרה ודועך מעט אחרי שהיא נוחתת
-      tint.value = 1;
-      tint.value = withDelay(delay + duration * 0.6, withTiming(0, { duration: 520, easing: EASE_OUT }));
+    if (!isDigit) return;
+    if (!animate || !gen) {
+      pos.value = target;
+      return;
     }
-  }, [gen, old, dir, delay, duration, p, dirSv, tintColor, tint, fast, fastSv]);
+    if (gen === lastGen.current) return;
+    lastGen.current = gen;
+    pos.value = withDelay(delay, withTiming(target, { duration, easing: ROLL_EASE }));
+    if (tintColor) {
+      // הגוון נכנס עם הספרה ודועך אחרי שהיא נוחתת
+      tint.value = withTiming(1, { duration: 90, easing: EASE_OUT }, () => {
+        tint.value = withDelay(duration * 0.5, withTiming(0, { duration: 480, easing: EASE_OUT }));
+      });
+    }
+  }, [gen, target, isDigit, animate, delay, duration, tintColor, pos, tint]);
 
   const tintStyle = useAnimatedStyle(() => {
     if (!tintColor || !baseColor) return {};
-    // עדין: לכל היותר ~65% מהמרחק בין צבע הבסיס לירוק/אדום
-    return { color: interpolateColor(tint.value * 0.65, [0, 1], [baseColor, tintColor]) };
+    return { color: interpolateColor(tint.value * 0.8, [0, 1], [baseColor, tintColor]) };
   }, [tintColor, baseColor]);
 
-  // עלייה: הספרה החדשה נכנסת מלמטה והישנה יוצאת למעלה; ירידה: הפוך
-  // בגרירה (fast) — בלי גלגול, רק החלפה רכה (crossfade); אחרת גלגול עם דהייה הדרגתית
-  // גלגול מונה: הספרה גולשת גובה מלא בתוך התא (נחתכת בקצוות) — בגרירה בלי דהייה, כמו InsiderWave
-  const inStyle = useAnimatedStyle(
-    () => ({
-      transform: [{ translateY: dirSv.value * height * (1 - p.value) }],
-      opacity: fastSv.value ? 1 : p.value,
-    }),
-    [height]
-  );
-  const outStyle = useAnimatedStyle(
-    () => ({
-      transform: [{ translateY: -dirSv.value * height * p.value }],
-      opacity: fastSv.value ? 1 : 1 - p.value,
-    }),
+  const columnStyle = useAnimatedStyle(
+    () => ({ transform: [{ translateY: -pos.value * height }] }),
     [height]
   );
 
-  return (
-    <View style={[styles.cell, { height }]}>
-      <Animated.Text
-        style={[charStyle, flashStyle, tintColor ? tintStyle : null, inStyle]}
-        allowFontScaling={allowFontScaling}
-        maxFontSizeMultiplier={maxFontSizeMultiplier}
-      >
-        {ch}
-      </Animated.Text>
-      {rollingFrom != null && rollingFrom !== ch ? (
+  if (!isDigit) {
+    return (
+      <View style={[styles.cell, { height }]}>
         <Animated.Text
-          style={[charStyle, styles.outgoing, flashStyle, outStyle]}
+          style={[charStyle, flashStyle]}
           allowFontScaling={allowFontScaling}
           maxFontSizeMultiplier={maxFontSizeMultiplier}
         >
-          {rollingFrom}
+          {ch}
         </Animated.Text>
-      ) : null}
+      </View>
+    );
+  }
+
+  return (
+    <View style={[styles.cell, { height }]}>
+      <Animated.View style={columnStyle}>
+        {DIGITS.map((d) => (
+          <Animated.Text
+            key={d}
+            style={[charStyle, { height }, flashStyle, tintColor ? tintStyle : null]}
+            allowFontScaling={allowFontScaling}
+            maxFontSizeMultiplier={maxFontSizeMultiplier}
+          >
+            {d}
+          </Animated.Text>
+        ))}
+      </Animated.View>
     </View>
   );
 }
@@ -403,11 +395,6 @@ const styles = StyleSheet.create({
   },
   cell: {
     overflow: 'hidden',
-  },
-  outgoing: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
   },
   // רחב מאוד — הטקסט נמדד ברוחב הטבעי שלו ולא נחתך לרוחב ההורה
   measure: {

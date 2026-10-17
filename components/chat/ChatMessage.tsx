@@ -2682,8 +2682,9 @@ const createStyles = (tokens: any) => {
     direction: 'ltr',
     alignSelf: 'stretch',
     width: '100%',
-    maxWidth: 280,
-    minWidth: 200,
+    // קצת רחב יותר — מרווח בין הכפתור, הוויבפורם והתמונה
+    maxWidth: 300,
+    minWidth: 230,
     // בלי ריפוד נוסף — הכפתור והוויבפורם מיושרים לשם ולקצה הבועה כמו בשאר ההודעות
     paddingVertical: 0,
     paddingHorizontal: 0,
@@ -2728,7 +2729,7 @@ const createStyles = (tokens: any) => {
     alignItems: 'center',
     width: '100%',
     minHeight: 28,
-    gap: 6,
+    gap: 10,
   },
   audioWaveformFlex: {
     flexGrow: 1,

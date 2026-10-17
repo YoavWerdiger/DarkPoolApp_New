@@ -6,6 +6,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Easing,
   type SharedValue,
+  interpolateColor,
   runOnJS,
   useAnimatedProps,
   useAnimatedStyle,
@@ -92,6 +93,7 @@ const MORPH_MS = 420;
 const MORPH_EASE = Easing.bezier(0.25, 0.1, 0.25, 1);
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
+const AnimatedStop = Animated.createAnimatedComponent(Stop);
 
 type PlottedPoint = {
   x: number;
@@ -390,8 +392,19 @@ export function PortfolioValueChart({
     axisOpacity.value = withTiming(1, { duration: MORPH_MS, easing: MORPH_EASE });
   }, [targetCoords, plotted.length, plotBaseY, width, selectedPeriod]);
 
+  /** 1 = הנקודה מתחת לתחילת התקופה (קו אדום) — מתעדכן ב-UI thread, בלי רינדור של כל ה-SVG */
+  const downSV = useSharedValue(0);
+  const restDownSV = useSharedValue(0);
+  const upColorSV = useSharedValue<string>(tokens.colors.primary.main);
+  const downColorSV = useSharedValue<string>(tokens.colors.text.danger);
+  useEffect(() => {
+    upColorSV.value = tokens.colors.primary.main;
+    downColorSV.value = tokens.colors.text.danger;
+  }, [tokens.colors.primary.main, tokens.colors.text.danger, upColorSV, downColorSV]);
+  // צבע הקו לפי הנקודה (downSV) — ב-UI thread
   const animatedLineProps = useAnimatedProps(() => {
-    if (!hasPathSV.value) return { d: '' };
+    const stroke = interpolateColor(downSV.value, [0, 1], [upColorSV.value, downColorSV.value]);
+    if (!hasPathSV.value) return { d: '', stroke };
     const p = progress.value;
     const from = fromCoords.value;
     const to = toCoords.value;
@@ -401,7 +414,7 @@ export function PortfolioValueChart({
       const y = from[i * 2 + 1] + (to[i * 2 + 1] - from[i * 2 + 1]) * p;
       d += i === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`;
     }
-    return { d };
+    return { d, stroke };
   });
 
   const animatedAreaProps = useAnimatedProps(() => {
@@ -446,15 +459,14 @@ export function PortfolioValueChart({
   const scrubToIndex = useCallback(
     (next: number) => {
       const point = plotted[next];
-      setActiveIndex((prev) => {
-        if (prev !== next) void HapticFeedback.selection();
-        return next;
-      });
+      void HapticFeedback.selection();
+      // בלי כותרת (פרופיל) — אין צורך ברינדור React של הגרף: הסמן והצבע כבר ב-UI thread
+      if (showHeader || showPointMarkers) setActiveIndex(next);
       onScrubPointRef.current?.(
         point ? { date: point.date, value: point.value } : null
       );
     },
-    [plotted]
+    [plotted, showHeader, showPointMarkers]
   );
 
   const clearActive = useCallback(() => {
@@ -480,13 +492,15 @@ export function PortfolioValueChart({
       cursorX.value = xs[idx];
       cursorY.value = plottedYs.value[idx] ?? 0;
       cursorOn.value = 1;
+      const vals = plottedValues.value;
+      downSV.value = vals.length >= 2 && vals[idx] < vals[0] ? 1 : 0;
       if (idx === lastScrubIdx.value) return;
       lastScrubIdx.value = idx;
       if (scrubValue) scrubValue.value = plottedValues.value[idx];
       if (scrubActive) scrubActive.value = 1;
       runOnJS(scrubToIndex)(idx);
     },
-    [plottedXs, plottedYs, plottedValues, lastScrubIdx, scrubValue, scrubActive, scrubToIndex, cursorX, cursorY, cursorOn]
+    [plottedXs, plottedYs, plottedValues, lastScrubIdx, scrubValue, scrubActive, scrubToIndex, cursorX, cursorY, cursorOn, downSV]
   );
 
   const cursorLineStyle = useAnimatedStyle(() => ({
@@ -516,10 +530,11 @@ export function PortfolioValueChart({
           'worklet';
           lastScrubIdx.value = -1;
           cursorOn.value = 0;
+          downSV.value = restDownSV.value;
           if (scrubActive) scrubActive.value = 0;
           runOnJS(clearActive)();
         }),
-    [scrubAt, clearActive, lastScrubIdx, scrubActive, cursorOn]
+    [scrubAt, clearActive, lastScrubIdx, scrubActive, cursorOn, downSV, restDownSV]
   );
 
   const activePoint =
@@ -541,6 +556,22 @@ export function PortfolioValueChart({
       : 0;
   const isUp = change >= 0;
   const lineColor = isUp ? tokens.colors.primary.main : tokens.colors.text.danger;
+  const upColor = tokens.colors.primary.main;
+  const downColor = tokens.colors.text.danger;
+  const restDown = plotted.length >= 2 && ranges.lastValue < ranges.firstValue ? 1 : 0;
+  useEffect(() => {
+    restDownSV.value = restDown;
+    if (!cursorOn.value) downSV.value = restDown;
+  }, [restDown, restDownSV, downSV, cursorOn]);
+  const stopTopProps = useAnimatedProps(() => ({
+    stopColor: interpolateColor(downSV.value, [0, 1], [upColor, downColor]),
+  }));
+  const stopBottomProps = useAnimatedProps(() => ({
+    stopColor: interpolateColor(downSV.value, [0, 1], [upColor, downColor]),
+  }));
+  const cursorDotColorStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(downSV.value, [0, 1], [upColor, downColor]),
+  }));
   const lightChart = String(tokens.colors.background.primary) === LIGHT_CANVAS;
   const cursorLineColor = lightChart ? 'rgba(30,26,36,0.38)' : 'rgba(255,255,255,0.45)';
   const cursorRingColor = lightChart ? '#FFFFFF' : tokens.colors.background.primary;
@@ -697,8 +728,8 @@ export function PortfolioValueChart({
           <Svg width={width} height={height}>
             <Defs>
               <LinearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                <Stop offset="0%" stopColor={lineColor} stopOpacity={0.35} />
-                <Stop offset="100%" stopColor={lineColor} stopOpacity={0} />
+                <AnimatedStop offset="0%" stopColor={lineColor} stopOpacity={0.35} animatedProps={stopTopProps} />
+                <AnimatedStop offset="100%" stopColor={lineColor} stopOpacity={0} animatedProps={stopBottomProps} />
               </LinearGradient>
             </Defs>
             {[0.25, 0.5, 0.75].map((frac) => (
@@ -791,7 +822,7 @@ export function PortfolioValueChart({
                 pointerEvents="none"
                 style={[styles.cursorRing, { backgroundColor: cursorRingColor }, cursorDotStyle]}
               >
-                <View style={[styles.cursorDot, { backgroundColor: lineColor }]} />
+                <Animated.View style={[styles.cursorDot, cursorDotColorStyle]} />
               </Animated.View>
             </View>
           ) : null}

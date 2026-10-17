@@ -363,7 +363,7 @@ export const CURATED_FUND_QUIVER_OWNERS: Record<string, CuratedFundQuiverOwner> 
       'MSD Capital',
     ],
     name: 'MSD Capital (Dell family office)',
-    manager: 'Michael Dell',
+    manager: 'MSD Capital',
   },
   '1997453': {
     owner: 'Chan Zuckerberg Initiative, LLC',
@@ -374,7 +374,7 @@ export const CURATED_FUND_QUIVER_OWNERS: Record<string, CuratedFundQuiverOwner> 
       'Chan Zuckerberg Initiative',
     ],
     name: 'Chan Zuckerberg Initiative',
-    manager: 'Mark Zuckerberg',
+    manager: 'Chan Zuckerberg Initiative',
   },
 };
 

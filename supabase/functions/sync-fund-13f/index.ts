@@ -91,11 +91,13 @@ const KNOWN_FUNDS: Record<string, { name: string; manager: string; image?: strin
   },
   '1105497': {
     name: 'MSD Capital (Dell family office)',
-    manager: 'Michael Dell',
+    // 13F קטן (~$100M) — לא העושר של דל; שם הישות ולא שם האדם כדי לא להטעות
+    manager: 'MSD Capital',
   },
   '1997453': {
     name: 'Chan Zuckerberg Initiative',
-    manager: 'Mark Zuckerberg',
+    // 13F קטן (~$60M) — לא העושר של צוקרברג (META מופיע בפרופיל האינסיידר שלו)
+    manager: 'Chan Zuckerberg Initiative',
   },
 };
 

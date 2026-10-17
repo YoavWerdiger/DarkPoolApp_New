@@ -1115,6 +1115,15 @@ export function PersonPortfolioProfileScreen({
     () => (showChart ? filterChartSeriesByPeriod(chartSeries, period) : []),
     [showChart, chartSeries, period]
   );
+  // גרירה: שינוי מתחילת התקופה המוצגת עד הנקודה (בלי תיקון זרימות — כמו הגרף)
+  const scrubDelta = useMemo(() => {
+    if (!scrubPoint || periodSeries.length < 2) return null;
+    const first = periodSeries[0]?.value;
+    if (!(first > 0)) return null;
+    const usd = scrubPoint.value - first;
+    return { usd, pct: (usd / first) * 100 };
+  }, [scrubPoint, periodSeries]);
+
   const periodDelta = useMemo(() => {
     if (periodSeries.length < 2) return null;
     const first = periodSeries[0]?.value;
@@ -1523,8 +1532,27 @@ export function PersonPortfolioProfileScreen({
                 showOtherValue ||
                 (holdingsEngine === 'trump' && trumpUnitWeighted)) &&
               scrubPoint ? (
-                // בזמן גרירה — התאריך של הנקודה במקום שינוי התקופה (כמו בתיקים)
+                // בזמן גרירה — השינוי מתחילת התקופה עד הנקודה ($ ו-%) + התאריך, כמו InsiderWave
                 <View style={styles.deltaRow}>
+                  {scrubDelta ? (
+                    <>
+                      <AnimatedNumber
+                        text={toDataIsland(formatCongressDeltaUsd(scrubDelta.usd))}
+                        value={scrubDelta.usd}
+                        fast
+                        style={[styles.deltaFigure, { color: scrubDelta.usd >= 0 ? tokens.colors.text.success : tokens.colors.text.danger }]}
+                        numberOfLines={1}
+                      />
+                      <View style={[styles.deltaDot, { backgroundColor: scrubDelta.usd >= 0 ? tokens.colors.text.success : tokens.colors.text.danger }]} />
+                      <AnimatedNumber
+                        text={toDataIsland(formatSignedChangePct(scrubDelta.pct))}
+                        value={scrubDelta.pct}
+                        fast
+                        style={[styles.deltaFigure, { color: scrubDelta.usd >= 0 ? tokens.colors.text.success : tokens.colors.text.danger }]}
+                        numberOfLines={1}
+                      />
+                    </>
+                  ) : null}
                   <Text style={[styles.deltaFigure, { color: tokens.colors.text.secondary }]}>
                     {toDataIsland(scrubPoint.date.split('-').reverse().join('.'))}
                   </Text>

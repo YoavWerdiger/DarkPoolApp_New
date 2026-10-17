@@ -489,8 +489,11 @@ export function PortfolioValueChart({
   });
   const scrubDateLabel = activePoint ? formatScrubDate(activePoint.date) : null;
 
+  // בגרירה — הצבע לפי הנקודה מול תחילת התקופה (אדום כשמתחת), כמו InsiderWave
   const change =
-    plotted.length >= 2 ? ranges.lastValue - ranges.firstValue : 0;
+    plotted.length >= 2
+      ? (activePoint ? activePoint.value : ranges.lastValue) - ranges.firstValue
+      : 0;
   const isUp = change >= 0;
   const lineColor = isUp ? tokens.colors.primary.main : tokens.colors.text.danger;
   const lightChart = String(tokens.colors.background.primary) === LIGHT_CANVAS;

@@ -21,7 +21,7 @@ import Animated, {
 import { useDesignTokens } from './useDesignTokens';
 
 export const NUMBER_ROLL_MS = 420;
-export const NUMBER_FAST_MS = 160;
+export const NUMBER_FAST_MS = 220;
 export const NUMBER_FLASH_MS = 700;
 /** השהיה בין ספרה לספרה (מהאחדות שמאלה) — תחושת מונה */
 const STAGGER_MS = 16;
@@ -247,15 +247,28 @@ export function AnimatedNumber({
             ch={c.ch}
             old={c.old}
             gen={c.rolls && change ? change.gen : 0}
-            dir={change?.dir ?? 1}
+            dir={
+              change?.fast && c.rolls && c.old != null
+                ? Number(c.ch) >= Number(c.old)
+                  ? 1
+                  : -1
+                : change?.dir ?? 1
+            }
             delay={change?.fast ? 0 : c.order * STAGGER_MS}
             duration={change?.fast ? NUMBER_FAST_MS : NUMBER_ROLL_MS}
             fast={!!change?.fast}
             height={lineH}
             charStyle={charStyle}
             flashStyle={flashEnabled ? flashStyle : null}
-            // צבע אחיד לכל המספר (flash) — לא גוון לכל ספרה בנפרד, שנראה «מנומר» כשמשתנות הרבה ספרות
-            tintColor={null}
+            // בגרירה (כמו InsiderWave): כל ספרה צובעת לפי הכיוון שלה — עולה ירוק, יורדת אדום — וחוזרת ללבן.
+            // בשינוי ערך רגיל: צבע אחיד לכל המספר (flash).
+            tintColor={
+              change?.fast && c.rolls && c.old != null && baseColor
+                ? Number(c.ch) > Number(c.old)
+                  ? tokens.colors.text.success
+                  : tokens.colors.text.danger
+                : null
+            }
             baseColor={baseColor}
             allowFontScaling={allowFontScaling}
             maxFontSizeMultiplier={maxFontSizeMultiplier}
@@ -341,25 +354,19 @@ function DigitCell({
 
   // עלייה: הספרה החדשה נכנסת מלמטה והישנה יוצאת למעלה; ירידה: הפוך
   // בגרירה (fast) — בלי גלגול, רק החלפה רכה (crossfade); אחרת גלגול עם דהייה הדרגתית
-  // גם בגרירה — גלגול קצר (לא רק דהייה), כמו מונה; בגרירה מרחק קצר יותר כדי שלא ירצד
+  // גלגול מונה: הספרה גולשת גובה מלא בתוך התא (נחתכת בקצוות) — בגרירה בלי דהייה, כמו InsiderWave
   const inStyle = useAnimatedStyle(
-    () => {
-      const dist = fastSv.value ? height * 0.6 : height;
-      return {
-        transform: [{ translateY: dirSv.value * dist * (1 - p.value) }],
-        opacity: p.value,
-      };
-    },
+    () => ({
+      transform: [{ translateY: dirSv.value * height * (1 - p.value) }],
+      opacity: fastSv.value ? 1 : p.value,
+    }),
     [height]
   );
   const outStyle = useAnimatedStyle(
-    () => {
-      const dist = fastSv.value ? height * 0.6 : height;
-      return {
-        transform: [{ translateY: -dirSv.value * dist * p.value }],
-        opacity: 1 - p.value,
-      };
-    },
+    () => ({
+      transform: [{ translateY: -dirSv.value * height * p.value }],
+      opacity: fastSv.value ? 1 : 1 - p.value,
+    }),
     [height]
   );
 

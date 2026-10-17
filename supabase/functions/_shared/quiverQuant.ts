@@ -269,7 +269,8 @@ export const CURATED_FUND_QUIVER_OWNERS: Record<string, CuratedFundQuiverOwner> 
       'Bridgewater Associates',
     ],
     name: 'Bridgewater Associates',
-    manager: 'Ray Dalio',
+    // דאליו עזב את ניהול ההשקעות ב-2022 — שם הקרן, לא האדם
+    manager: 'Bridgewater Associates',
   },
   '1656456': {
     owner: 'Appaloosa LP',
@@ -320,7 +321,8 @@ export const CURATED_FUND_QUIVER_OWNERS: Record<string, CuratedFundQuiverOwner> 
       'Soros Fund Management',
     ],
     name: 'Soros Fund Management LLC',
-    manager: 'George Soros',
+    // הניהול עבר ל-Alex Soros ב-2023 — שם הקרן, לא האדם
+    manager: 'Soros Fund Management',
   },
   '1167483': {
     owner: 'TIGER GLOBAL MANAGEMENT LLC',
@@ -397,28 +399,6 @@ export const CURATED_FUND_QUIVER_OWNERS: Record<string, CuratedFundQuiverOwner> 
     ],
     name: 'Coatue Management',
     manager: 'Philippe Laffont',
-  },
-  '1747057': {
-    owner: 'D1 Capital Partners L.P.',
-    owners: [
-      'D1 Capital Partners L.P.',
-      'D1 CAPITAL PARTNERS L.P.',
-      'D1 Capital Partners LP',
-      'D1 Capital Partners',
-    ],
-    name: 'D1 Capital Partners',
-    manager: 'Dan Sundheim',
-  },
-  '1647251': {
-    owner: 'TCI Fund Management Ltd',
-    owners: [
-      'TCI Fund Management Ltd',
-      'TCI FUND MANAGEMENT LTD',
-      'TCI Fund Management Limited',
-      'TCI Fund Management',
-    ],
-    name: 'TCI Fund Management',
-    manager: 'Chris Hohn',
   },
   '1103804': {
     owner: 'VIKING GLOBAL INVESTORS LP',

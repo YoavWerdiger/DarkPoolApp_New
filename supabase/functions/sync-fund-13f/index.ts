@@ -51,7 +51,8 @@ const KNOWN_FUNDS: Record<string, { name: string; manager: string; image?: strin
   // 2026-10-16 — תמונות מ-Wikipedia API (מי שאין לו תמונה שם — בלי)
   '1350694': {
     name: 'Bridgewater Associates',
-    manager: 'Ray Dalio',
+    // דאליו עזב את ניהול ההשקעות ב-2022 — שם הקרן, לא האדם
+    manager: 'Bridgewater Associates',
     image: 'https://upload.wikimedia.org/wikipedia/commons/1/1f/Web_Summit_2018_-_Forum_-_Day_2%2C_November_7_HM1_7481_%2844858045925%29.jpg',
   },
   '1656456': {
@@ -74,7 +75,8 @@ const KNOWN_FUNDS: Record<string, { name: string; manager: string; image?: strin
   },
   '1029160': {
     name: 'Soros Fund Management LLC',
-    manager: 'George Soros',
+    // הניהול עבר ל-Alex Soros ב-2023 — שם הקרן, לא האדם
+    manager: 'Soros Fund Management',
     image: 'https://upload.wikimedia.org/wikipedia/commons/9/97/George_Soros%2C_Founder_and_Chairman_of_the_Open_Society_Foundations%2C_visits_the_EC_%283x4_cropped%29.jpg',
   },
   '1167483': {
@@ -107,15 +109,6 @@ const KNOWN_FUNDS: Record<string, { name: string; manager: string; image?: strin
   '1135730': {
     name: 'Coatue Management',
     manager: 'Philippe Laffont',
-  },
-  '1747057': {
-    name: 'D1 Capital Partners',
-    manager: 'Dan Sundheim',
-  },
-  '1647251': {
-    name: 'TCI Fund Management',
-    manager: 'Chris Hohn',
-    image: 'https://upload.wikimedia.org/wikipedia/commons/3/31/Chris_Hohn_GFSS_2023.jpg',
   },
   '1103804': {
     name: 'Viking Global Investors',

@@ -30,7 +30,7 @@ describe('explore grid size and scroll', () => {
     expect(EXPLORE_RAIL_CARD).toBe(EXPLORE_PROFILE_CARD);
     expect(EXPLORE_GRID_ASPECT).toBeCloseTo(0.72, 5);
     expect(EXPLORE_PROFILE_CARD.width / EXPLORE_PROFILE_CARD.height).toBeCloseTo(
-      0.85,
+      0.72,
       2
     );
     expect(EXPLORE_PROFILE_CARD).not.toHaveProperty('compact');

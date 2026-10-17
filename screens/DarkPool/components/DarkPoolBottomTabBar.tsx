@@ -151,9 +151,10 @@ function TabButton({
 
   const labelStyle = useAnimatedStyle(
     () => ({
-      color: interpolateColor(focus.value, [0, 1], [tokens.colors.text.tertiary, tokens.colors.text.primary]),
+      // על רקע ה-CTA הירוק — תווית כהה
+      color: interpolateColor(focus.value, [0, 1], [tokens.colors.text.tertiary, tokens.colors.text.inverse]),
     }),
-    [tokens.colors.text.tertiary, tokens.colors.text.primary],
+    [tokens.colors.text.tertiary, tokens.colors.text.inverse],
   );
 
   return (
@@ -167,7 +168,7 @@ function TabButton({
       <Ionicons
         name={focused ? meta.iconActive : meta.icon}
         size={22}
-        color={focused ? tokens.colors.primary.main : tokens.colors.text.tertiary}
+        color={focused ? tokens.colors.text.inverse : tokens.colors.text.tertiary}
       />
       <Animated.Text style={[styles.label, focused && styles.labelFocused, labelStyle]}>{meta.label}</Animated.Text>
     </Pressable>
@@ -215,7 +216,8 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, safeBottom: nu
       top: 4,
       bottom: 4,
       borderRadius: tokens.borderRadius.full,
-      backgroundColor: tokens.colors.selection.subtle,
+      // הטאב הנבחר בצבע ה-CTA (ירוק המותג)
+      backgroundColor: tokens.colors.primary.main,
     },
     tab: {
       flex: 1,
@@ -226,7 +228,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, safeBottom: nu
       gap: 2,
     },
     tabFocused: {
-      backgroundColor: tokens.colors.selection.subtle,
+      backgroundColor: tokens.colors.primary.main,
     },
     label: {
       fontSize: 10,
@@ -235,7 +237,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, safeBottom: nu
       writingDirection: 'rtl',
     },
     labelFocused: {
-      color: tokens.colors.text.primary,
+      color: tokens.colors.text.inverse,
       fontWeight: '800',
     },
   });

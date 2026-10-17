@@ -125,6 +125,9 @@ export function DarkPoolBottomTabBar({ state, navigation }: BottomTabBarProps) {
   );
 }
 
+/** אייקון/תווית לא נבחרים על הירוק — כהה שקוף */
+const INACTIVE_ON_CTA = 'rgba(0,0,0,0.55)';
+
 /** טאב: רק צבע האייקון/התווית מתחלף — התנועה היחידה היא רקע הטאב שמחליק (בסרגל) */
 function TabButton({
   focused,
@@ -152,9 +155,9 @@ function TabButton({
   const labelStyle = useAnimatedStyle(
     () => ({
       // על רקע ה-CTA הירוק — תווית כהה
-      color: interpolateColor(focus.value, [0, 1], [tokens.colors.text.tertiary, tokens.colors.text.inverse]),
+      color: interpolateColor(focus.value, [0, 1], [INACTIVE_ON_CTA, tokens.colors.text.inverse]),
     }),
-    [tokens.colors.text.tertiary, tokens.colors.text.inverse],
+    [tokens.colors.text.inverse],
   );
 
   return (
@@ -168,7 +171,7 @@ function TabButton({
       <Ionicons
         name={focused ? meta.iconActive : meta.icon}
         size={22}
-        color={focused ? tokens.colors.text.inverse : tokens.colors.text.tertiary}
+        color={focused ? tokens.colors.text.inverse : INACTIVE_ON_CTA}
       />
       <Animated.Text style={[styles.label, focused && styles.labelFocused, labelStyle]}>{meta.label}</Animated.Text>
     </Pressable>
@@ -193,7 +196,8 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, safeBottom: nu
       maxWidth: 420,
       height: DARK_POOL_TAB_BAR_HEIGHT,
       borderRadius: tokens.borderRadius.full,
-      backgroundColor: tokens.colors.background.navChrome,
+      // הסרגל כולו בצבע כפתור ה-CTA (ירוק המותג)
+      backgroundColor: tokens.colors.primary.main,
       borderWidth: 0,
       overflow: 'hidden',
     },
@@ -216,8 +220,8 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, safeBottom: nu
       top: 4,
       bottom: 4,
       borderRadius: tokens.borderRadius.full,
-      // הטאב הנבחר בצבע ה-CTA (ירוק המותג)
-      backgroundColor: tokens.colors.primary.main,
+      // הטאב הנבחר — הצללה כהה מעל הירוק
+      backgroundColor: 'rgba(0,0,0,0.18)',
     },
     tab: {
       flex: 1,
@@ -228,12 +232,12 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, safeBottom: nu
       gap: 2,
     },
     tabFocused: {
-      backgroundColor: tokens.colors.primary.main,
+      backgroundColor: 'rgba(0,0,0,0.18)',
     },
     label: {
       fontSize: 10,
       fontWeight: '600',
-      color: tokens.colors.text.tertiary,
+      color: INACTIVE_ON_CTA,
       writingDirection: 'rtl',
     },
     labelFocused: {

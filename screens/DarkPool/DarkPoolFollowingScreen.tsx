@@ -313,7 +313,7 @@ function FollowedRow({
     person.kind === 'politician'
       ? 'פוליטיקאי'
       : person.kind === 'fund_manager'
-        ? 'קרן · 13F'
+        ? 'קרן גידור'
         : 'בכיר';
 
   return (

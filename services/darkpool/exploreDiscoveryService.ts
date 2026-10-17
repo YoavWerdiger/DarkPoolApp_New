@@ -149,7 +149,7 @@ async function listReportedFundBooks(limit: number): Promise<ExplorePerson[]> {
       return {
         id: cik,
         name,
-        subtitle: manager && fundName && manager !== fundName ? fundName : 'פוזיציות 13F מדווחות',
+        subtitle: manager && fundName && manager !== fundName ? fundName : 'קרן גידור',
         image_url:
           (row.image_url ? String(row.image_url) : null) ||
           knownPortraitForInvestor({ personId: cik, name }),

@@ -7,14 +7,14 @@ export type ExploreKindFilter = 'politician' | 'insider' | 'fund';
 
 export const EXPLORE_KIND_CHIPS: { id: ExploreKindFilter; label: string }[] = [
   { id: 'politician', label: 'פוליטיקאים' },
-  { id: 'insider', label: 'בכירים' },
-  { id: 'fund', label: 'קרנות' },
+  { id: 'insider', label: 'מנכ״לים' },
+  { id: 'fund', label: 'קרנות גידור' },
 ];
 
 export const EXPLORE_KIND_TITLES: Record<ExploreKindFilter, string> = {
   politician: 'פוליטיקאים',
-  insider: 'בכירים',
-  fund: 'קרנות',
+  insider: 'מנכ״לים',
+  fund: 'קרנות גידור',
 };
 
 export const EXPLORE_UNFILTERED_TITLE = 'פרופילים';
@@ -40,10 +40,11 @@ export const EXPLORE_GRID_ROWS = 2;
 export const EXPLORE_GRID_GAP = 10;
 export const EXPLORE_RAIL_GAP = 10;
 /** נמוך יותר = כרטיס גבוה יותר (רוחב קבוע). */
-export const EXPLORE_GRID_ASPECT = 0.85;
+export const EXPLORE_GRID_ASPECT = 0.72;
+/** צר וגבוה יותר (היה 170×200) */
 export const EXPLORE_PROFILE_CARD = {
-  width: 170,
-  height: Math.round(170 / EXPLORE_GRID_ASPECT),
+  width: 156,
+  height: Math.round(156 / EXPLORE_GRID_ASPECT),
 } as const;
 export const EXPLORE_RAIL_CARD = EXPLORE_PROFILE_CARD;
 export const EXPLORE_FEATURED_LIMIT = 16;

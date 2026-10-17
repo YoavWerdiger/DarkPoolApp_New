@@ -20,15 +20,15 @@ import {
 import type { ExplorePerson } from '../../services/darkpool/uwExploreService';
 
 describe('explore grid size and scroll', () => {
-  it('locks one 170×200 profile card in every explore shelf', () => {
+  it('locks one 156×217 profile card in every explore shelf', () => {
     expect(EXPLORE_GRID_COLS).toBe(2);
     expect(EXPLORE_GRID_ROWS).toBe(2);
     expect(EXPLORE_GRID_GAP).toBe(10);
     expect(EXPLORE_RAIL_GAP).toBe(10);
-    expect(EXPLORE_PROFILE_CARD).toEqual({ width: 170, height: 200 });
-    expect(EXPLORE_RAIL_CARD).toEqual({ width: 170, height: 200 });
+    expect(EXPLORE_PROFILE_CARD).toEqual({ width: 156, height: 217 });
+    expect(EXPLORE_RAIL_CARD).toEqual({ width: 156, height: 217 });
     expect(EXPLORE_RAIL_CARD).toBe(EXPLORE_PROFILE_CARD);
-    expect(EXPLORE_GRID_ASPECT).toBeCloseTo(0.85, 5);
+    expect(EXPLORE_GRID_ASPECT).toBeCloseTo(0.72, 5);
     expect(EXPLORE_PROFILE_CARD.width / EXPLORE_PROFILE_CARD.height).toBeCloseTo(
       0.85,
       2
@@ -40,8 +40,8 @@ describe('explore grid size and scroll', () => {
   });
 
   it('returns the unified 2-col card width — not a 118 rail and not 3-col', () => {
-    expect(exploreGridCardWidth(390, 20)).toBe(170);
-    expect(exploreGridCardWidth(430, 16)).toBe(170);
+    expect(exploreGridCardWidth(390, 20)).toBe(156);
+    expect(exploreGridCardWidth(430, 16)).toBe(156);
     expect(exploreGridCardWidth()).toBe(EXPLORE_PROFILE_CARD.width);
     expect(EXPLORE_GRID_COLS).not.toBe(3);
   });

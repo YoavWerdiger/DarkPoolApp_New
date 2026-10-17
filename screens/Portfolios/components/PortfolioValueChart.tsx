@@ -93,7 +93,6 @@ const MORPH_MS = 420;
 const MORPH_EASE = Easing.bezier(0.25, 0.1, 0.25, 1);
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
-const AnimatedStop = Animated.createAnimatedComponent(Stop);
 
 type PlottedPoint = {
   x: number;
@@ -563,12 +562,6 @@ export function PortfolioValueChart({
     restDownSV.value = restDown;
     if (!cursorOn.value) downSV.value = restDown;
   }, [restDown, restDownSV, downSV, cursorOn]);
-  const stopTopProps = useAnimatedProps(() => ({
-    stopColor: interpolateColor(downSV.value, [0, 1], [upColor, downColor]),
-  }));
-  const stopBottomProps = useAnimatedProps(() => ({
-    stopColor: interpolateColor(downSV.value, [0, 1], [upColor, downColor]),
-  }));
   const cursorDotColorStyle = useAnimatedStyle(() => ({
     backgroundColor: interpolateColor(downSV.value, [0, 1], [upColor, downColor]),
   }));
@@ -728,8 +721,9 @@ export function PortfolioValueChart({
           <Svg width={width} height={height}>
             <Defs>
               <LinearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                <AnimatedStop offset="0%" stopColor={lineColor} stopOpacity={0.35} animatedProps={stopTopProps} />
-                <AnimatedStop offset="100%" stopColor={lineColor} stopOpacity={0} animatedProps={stopBottomProps} />
+                {/* Stop לא נתמך ב-Reanimated (אין host instance) — צבע המילוי מ-React */}
+                <Stop offset="0%" stopColor={lineColor} stopOpacity={0.35} />
+                <Stop offset="100%" stopColor={lineColor} stopOpacity={0} />
               </LinearGradient>
             </Defs>
             {[0.25, 0.5, 0.75].map((frac) => (

@@ -2101,12 +2101,14 @@ function AudioPlayer({
       easing: ReanimatedEasing.out(ReanimatedEasing.cubic),
     });
   }, [isPlaying, sideProg]);
-  const sideTimeStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: -11 * sideProg.value }, { scale: 1 - 0.12 * sideProg.value }],
+  // כמו וואטסאפ: במנוחה — תמונת השולח עם מיקרופון; בניגון — התמונה מתחלפת בכפתור המהירות
+  const sideAvatarStyle = useAnimatedStyle(() => ({
+    opacity: 1 - sideProg.value,
+    transform: [{ scale: 1 - 0.18 * sideProg.value }],
   }));
   const sideSpeedStyle = useAnimatedStyle(() => ({
     opacity: sideProg.value,
-    transform: [{ translateY: 10 * (1 - sideProg.value) }],
+    transform: [{ scale: 0.85 + 0.15 * sideProg.value }],
   }));
 
   // raw samples — VoiceWaveformWithProgress מנרמל ל־DISPLAY_BARS (מתיחה, לא ריפוד באפסים)
@@ -2191,13 +2193,19 @@ function AudioPlayer({
         </View>
 
         <View style={styles.audioSideSlot}>
-          <Reanimated.View style={[styles.audioSideTimeWrap, sideTimeStyle]} pointerEvents="none">
-            <Text
-              style={[styles.audioSideTime, isMe ? styles.myTimeText : styles.theirTimeText]}
-              accessibilityLabel={`נותרו ${formatDuration(remainingSec)}`}
-            >
-              {formatDuration(remainingSec)}
-            </Text>
+          <Reanimated.View style={[styles.audioSideTimeWrap, sideAvatarStyle]} pointerEvents="none">
+            {message.sender?.profile_picture ? (
+              <Image source={{ uri: message.sender.profile_picture }} style={styles.audioSenderAvatar} />
+            ) : (
+              <View style={[styles.audioSenderAvatar, styles.audioSenderAvatarFallback]}>
+                <Text style={styles.audioSenderInitial}>
+                  {(message.sender?.display_name || '?').charAt(0)}
+                </Text>
+              </View>
+            )}
+            <View style={styles.audioMicBadge}>
+              <Ionicons name="mic" size={13} color={tokens.colors.primary.main} />
+            </View>
           </Reanimated.View>
           <Reanimated.View
             style={[styles.audioSideSpeedWrap, sideSpeedStyle]}
@@ -2217,6 +2225,13 @@ function AudioPlayer({
 
       <View style={styles.audioMetadataMerged}>
         <View style={styles.audioMetadataLeft}>
+          {/* זמן מתחת לוויבפורם — בניגון: מה שנותר; במנוחה: האורך */}
+          <Text
+            style={[styles.audioSideTime, styles.audioUnderTime, isMe ? styles.myTimeText : styles.theirTimeText]}
+            accessibilityLabel={isPlaying ? `נותרו ${formatDuration(remainingSec)}` : `אורך ${formatDuration(displayDuration)}`}
+          >
+            {formatDuration(isPlaying || position > 0 ? remainingSec : displayDuration)}
+          </Text>
           {message.is_starred_by_me ? (
             <Ionicons
               name="star"
@@ -2779,7 +2794,7 @@ const createStyles = (tokens: any) => {
   },
   audioSideSlot: {
     width: 46,
-    height: 40,
+    height: 46,
     flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
@@ -2798,10 +2813,42 @@ const createStyles = (tokens: any) => {
   },
   audioSideSpeedWrap: {
     position: 'absolute',
+    top: 0,
     bottom: 0,
     left: 0,
     right: 0,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  audioSenderAvatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+  },
+  audioSenderAvatarFallback: {
+    backgroundColor: tokens.colors.border.hover,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  audioSenderInitial: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: tokens.colors.text.primary,
+  },
+  // מיקרופון קטן בפינה (כמו וואטסאפ)
+  audioMicBadge: {
+    position: 'absolute',
+    bottom: -2,
+    left: -4,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: tokens.colors.background.primary,
+  },
+  audioUnderTime: {
+    marginRight: 6,
   },
   audioSpeedButton: {
     backgroundColor: tokens.colors.border.hover,

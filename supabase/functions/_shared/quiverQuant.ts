@@ -376,6 +376,61 @@ export const CURATED_FUND_QUIVER_OWNERS: Record<string, CuratedFundQuiverOwner> 
     name: 'Chan Zuckerberg Initiative',
     manager: 'Chan Zuckerberg Initiative',
   },
+  // 2026-10-17 — «viable» מ-docs/ROSTER_WHALES_13F.md (CIK ושמות אומתו מול SEC)
+  '1345471': {
+    owner: 'TRIAN FUND MANAGEMENT, L.P.',
+    owners: [
+      'TRIAN FUND MANAGEMENT, L.P.',
+      'Trian Fund Management, L.P.',
+      'Trian Fund Management L.P.',
+      'Trian Fund Management',
+    ],
+    name: 'Trian Fund Management',
+    manager: 'Nelson Peltz',
+  },
+  '1135730': {
+    owner: 'COATUE MANAGEMENT LLC',
+    owners: [
+      'COATUE MANAGEMENT LLC',
+      'Coatue Management LLC',
+      'Coatue Management',
+    ],
+    name: 'Coatue Management',
+    manager: 'Philippe Laffont',
+  },
+  '1747057': {
+    owner: 'D1 Capital Partners L.P.',
+    owners: [
+      'D1 Capital Partners L.P.',
+      'D1 CAPITAL PARTNERS L.P.',
+      'D1 Capital Partners LP',
+      'D1 Capital Partners',
+    ],
+    name: 'D1 Capital Partners',
+    manager: 'Dan Sundheim',
+  },
+  '1647251': {
+    owner: 'TCI Fund Management Ltd',
+    owners: [
+      'TCI Fund Management Ltd',
+      'TCI FUND MANAGEMENT LTD',
+      'TCI Fund Management Limited',
+      'TCI Fund Management',
+    ],
+    name: 'TCI Fund Management',
+    manager: 'Chris Hohn',
+  },
+  '1103804': {
+    owner: 'VIKING GLOBAL INVESTORS LP',
+    owners: [
+      'VIKING GLOBAL INVESTORS LP',
+      'Viking Global Investors LP',
+      'Viking Global Investors, LP',
+      'Viking Global Investors',
+    ],
+    name: 'Viking Global Investors',
+    manager: 'Andreas Halvorsen',
+  },
 };
 
 export interface QuiverPoliticiansCachePayload {
@@ -1457,3 +1512,32 @@ export function parseQuiverAllocationPct(
 function delay(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
+/**
+ * גילוי שם ה-owner ש-Quiver שומר לקרן (אין CIK ב-Quiver): sec13f לפי טיקר שהקרן מחזיקה,
+ * ומחזירים שמות Fund שמכילים את המחרוזת. קריאה בלבד — לשימוש ב-probe.
+ */
+export async function findQuiverSec13fFundNames(
+  apiKey: string,
+  ticker: string,
+  contains: string,
+  maxPages = 8
+): Promise<Record<string, number>> {
+  const want = contains.trim().toLowerCase();
+  const out: Record<string, number> = {};
+  for (let page = 1; page <= maxPages; page++) {
+    const json = await quiverGetJson<unknown>(apiKey, '/beta/live/sec13f', {
+      ticker: ticker.trim().toUpperCase(),
+      page,
+      page_size: 500,
+    });
+    const rows = unwrapQuiverList<{ Fund?: string }>(json);
+    if (!rows.length) break;
+    for (const r of rows) {
+      const f = String(r.Fund ?? '').trim();
+      if (f && (!want || f.toLowerCase().includes(want))) out[f] = (out[f] ?? 0) + 1;
+    }
+    if (rows.length < 500) break;
+  }
+  return out;
+}
+

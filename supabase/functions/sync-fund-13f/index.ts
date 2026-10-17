@@ -9,6 +9,7 @@ import { fetch13fHistoryForCik } from '../_shared/secApi13f.ts';
 import { fetchUw13fHistoryForCik } from '../_shared/unusualWhales.ts';
 import {
   CURATED_FUND_QUIVER_OWNERS,
+  findQuiverSec13fFundNames,
   QUIVER_FUND_CHANGES_CACHE_KEY,
   fetchQuiverCuratedFundChanges,
   fetchQuiverLiveSec13fChanges,
@@ -99,6 +100,27 @@ const KNOWN_FUNDS: Record<string, { name: string; manager: string; image?: strin
     // 13F קטן (~$60M) — לא העושר של צוקרברג (META מופיע בפרופיל האינסיידר שלו)
     manager: 'Chan Zuckerberg Initiative',
   },
+  '1345471': {
+    name: 'Trian Fund Management',
+    manager: 'Nelson Peltz',
+  },
+  '1135730': {
+    name: 'Coatue Management',
+    manager: 'Philippe Laffont',
+  },
+  '1747057': {
+    name: 'D1 Capital Partners',
+    manager: 'Dan Sundheim',
+  },
+  '1647251': {
+    name: 'TCI Fund Management',
+    manager: 'Chris Hohn',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/3/31/Chris_Hohn_GFSS_2023.jpg',
+  },
+  '1103804': {
+    name: 'Viking Global Investors',
+    manager: 'Andreas Halvorsen',
+  },
 };
 
 const CURATED_CIKS = new Set(Object.keys(CURATED_FUND_QUIVER_OWNERS));
@@ -139,6 +161,7 @@ serve(async (req) => {
   );
 
   let cikFilter: string[] | null = null;
+  let probeFind: Array<{ ticker: string; contains?: string }> | null = null;
   let historyLimit = Number(Deno.env.get('FUND_13F_HISTORY_LIMIT') || '16');
   historyLimit = Math.min(24, Math.max(1, Number.isFinite(historyLimit) ? historyLimit : 16));
   let syncChanges = true;
@@ -153,6 +176,7 @@ serve(async (req) => {
     }
     if (body?.changes === false) syncChanges = false;
     if (body?.probe === true) probeOnly = true;
+    if (Array.isArray(body?.find)) probeFind = body.find;
   } catch {
     /* empty */
   }
@@ -160,6 +184,19 @@ serve(async (req) => {
   // Probe: ספירות בלבד מול Quiver (owner-filtered) — בלי secrets / בלי כתיבה
   if (probeOnly) {
     if (!quiverKey) return json({ error: 'QUIVER_API_KEY required for probe' }, 400);
+    // גילוי שם owner: {"probe":true,"find":[{"ticker":"GE","contains":"tci"}]}
+    if (Array.isArray(probeFind) && probeFind.length) {
+      const found: Record<string, Record<string, number>> = {};
+      for (const f of probeFind.slice(0, 6)) {
+        const key = `${f.ticker}:${f.contains}`;
+        try {
+          found[key] = await findQuiverSec13fFundNames(quiverKey, String(f.ticker), String(f.contains ?? ''));
+        } catch (e) {
+          found[key] = { error: String((e as Error).message ?? e).slice(0, 120) } as unknown as Record<string, number>;
+        }
+      }
+      return json({ ok: true, find: found, probed_at: new Date().toISOString() });
+    }
     const probe = await probeQuiverFundEndpoints(quiverKey);
     return json({ ok: true, probe, probed_at: new Date().toISOString() });
   }

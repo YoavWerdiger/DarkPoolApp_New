@@ -279,6 +279,8 @@ export function selectProfileSnapshotSeries(args: {
   form4Mtm: ChartPoint[];
   trumpMtm?: ChartPoint[];
   fundSeries: ChartPoint[];
+  /** סדרה מהשרת (snapshot) — למנכ"לים עם אחזקות SEC */
+  materialized?: ChartPoint[];
 }): ChartPoint[] {
   if (args.kind === 'politician') {
     if (args.holdingsEngine === 'congress' && args.congressMtm.length >= 2) {
@@ -290,9 +292,8 @@ export function selectProfileSnapshotSeries(args: {
     return [];
   }
   if (args.kind === 'insider') {
-    return args.holdingsEngine === 'form4' && args.form4Mtm.length >= 2
-      ? args.form4Mtm
-      : [];
+    if (args.holdingsEngine === 'form4' && args.form4Mtm.length >= 2) return args.form4Mtm;
+    return (args.materialized?.length ?? 0) >= 2 ? args.materialized ?? [] : [];
   }
   return args.fundSeries.length >= 2 ? args.fundSeries : [];
 }

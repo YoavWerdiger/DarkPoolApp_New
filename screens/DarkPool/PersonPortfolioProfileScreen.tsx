@@ -781,7 +781,8 @@ export function PersonPortfolioProfileScreen({
           : null,
         congressHoldings: [] as CongressModelHolding[],
         trades: tradeRows,
-        form4Trades: form4Inputs,
+        // אחזקות SEC מהשרת — לא משחזרים בטלפון מעסקאות (זה דרס את השווי והגרף של המנכ"לים)
+        form4Trades: secOwnership ? emptyForm4 : form4Inputs,
         trumpTrades: emptyTrump,
       };
     }, [
@@ -1023,6 +1024,7 @@ export function PersonPortfolioProfileScreen({
       form4Mtm: form4MtmSeries,
       trumpMtm: trumpMtmSeries,
       fundSeries: resolvedFundSeries,
+      materialized: materializedChartSeries,
     });
     const hourly = sessionHourlyQuery.data;
     if (!hourly || !sessionWeights.length) return base;
@@ -1040,6 +1042,7 @@ export function PersonPortfolioProfileScreen({
     form4MtmSeries,
     trumpMtmSeries,
     resolvedFundSeries,
+    materializedChartSeries,
     sessionHourlyQuery.data,
     sessionWeights,
   ]);

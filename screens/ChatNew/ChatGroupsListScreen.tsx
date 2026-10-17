@@ -1495,7 +1495,7 @@ export default function ChatGroupsListScreen() {
                     {/* מסגרת בגודל העיגול — הפלוס ממוקם ביחס אליה, בדיוק כמו בעיגול «הוסף» */}
                     <View style={styles.statusOwnRingWrap}>
                       <StoryAvatarRing
-                        size={66}
+                        size={68}
                         storyCount={Math.max(1, own?.story_count || pendingStories.length || 1)}
                         hasViewed={own ? own.has_viewed !== false : false}
                       >
@@ -1841,9 +1841,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     alignItems: 'center',
     marginBottom: 6,
   },
-  // עיגול 66 (הטבעת מוסיפה marginBottom 6 משלה) — כמו statusAddOuter
+  // אותו גודל כמו טבעות האחרים (68; הטבעת מוסיפה marginBottom 6 משלה)
   statusOwnRingWrap: {
-    width: 66,
+    width: 68,
   },
   // אותו מיקום כמו בעיגול «הוסף» (bottom:-1 מעל 66) — כאן מעל ה-marginBottom של הטבעת
   statusOwnAddBadge: {

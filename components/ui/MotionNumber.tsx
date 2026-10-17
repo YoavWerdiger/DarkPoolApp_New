@@ -27,8 +27,9 @@ const EASE = Easing.bezier(0.22, 1, 0.36, 1);
 /** כמה מגובה השורה הספרה גולשת */
 const TRAVEL = 0.5;
 /** צבע חזק: מחזיק רגע בצבע מלא ואז דועך לצבע הרגיל */
-const TINT_HOLD_MS = 260;
-const TINT_FADE_MS = 520;
+const TINT_IN_MS = 140;
+const TINT_HOLD_MS = 220;
+const TINT_FADE_MS = 650;
 
 function formatUsd(v: number): string {
   'worklet';
@@ -188,7 +189,7 @@ const Slot = React.memo(function Slot({
   const p = useSharedValue(1);
   const slideDir = useSharedValue(1);
   const w = useSharedValue(widthOf(first));
-  // 0 = צבע בסיס, 1 = ירוק/אדום מלא
+  // ציר צבע אחד: -1 אדום מלא, 0 צבע בסיס, 1 ירוק מלא — מעברים רציפים גם כשהכיוון מתחלף
   const tint = useSharedValue(0);
 
   useAnimatedReaction(
@@ -208,9 +209,10 @@ const Slot = React.memo(function Slot({
         p.value = 0;
         p.value = withTiming(1, { duration: SWAP_MS, easing: EASE });
         // ספרה ששינתה צבע מלא בכיוון שלה, מחזיקה רגע ודועכת
+        // ממשיך מהצבע הנוכחי (בלי איפוס) — כניסה רכה, החזקה, ודעיכה איטית
         tint.value = withSequence(
-          withTiming(1, { duration: 40 }),
-          withDelay(TINT_HOLD_MS, withTiming(0, { duration: TINT_FADE_MS, easing: Easing.out(Easing.quad) }))
+          withTiming(dir.value > 0 ? 1 : -1, { duration: TINT_IN_MS, easing: Easing.out(Easing.quad) }),
+          withDelay(TINT_HOLD_MS, withTiming(0, { duration: TINT_FADE_MS, easing: Easing.inOut(Easing.quad) }))
         );
       } else {
         p.value = 1;
@@ -226,7 +228,7 @@ const Slot = React.memo(function Slot({
   const inStyle = useAnimatedStyle(() => ({
     color:
       upColor && downColor
-        ? interpolateColor(tint.value, [0, 1], [baseColor, slideDir.value > 0 ? upColor : downColor])
+        ? interpolateColor(tint.value, [-1, 0, 1], [downColor, baseColor, upColor])
         : baseColor,
     opacity: p.value,
     transform: [{ translateY: slideDir.value * lineH * TRAVEL * (1 - p.value) }],

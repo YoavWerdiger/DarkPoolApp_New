@@ -90,6 +90,27 @@ export function ExploreDiscoverySections({
         onPersonPress={onPersonPress}
       />
       <ExploreTwoColSection
+        title="קרנות גידור מובילות"
+        people={fundShelf}
+        onPersonPress={onPersonPress}
+      />
+      <ExploreTwoColSection
+        title="פוליטיקאים"
+        people={congress}
+        onPersonPress={onPersonPress}
+      />
+      <ExploreTwoColSection
+        title="מנכ״לים"
+        people={insiders}
+        onPersonPress={onPersonPress}
+      />
+      <ExploreRailSection
+        title="עודף תשואה מול S&P"
+        people={excess}
+        showMetric
+        onPersonPress={onPersonPress}
+      />
+      <ExploreTwoColSection
         title="קרנות הגידור המובילות"
         people={books}
         onPersonPress={onPersonPress}
@@ -107,27 +128,6 @@ export function ExploreDiscoverySections({
       <ExploreRailSection
         title="הפעילים ביותר"
         people={active}
-        onPersonPress={onPersonPress}
-      />
-      <ExploreRailSection
-        title="עודף תשואה מול S&P"
-        people={excess}
-        showMetric
-        onPersonPress={onPersonPress}
-      />
-      <ExploreTwoColSection
-        title="פוליטיקאים"
-        people={congress}
-        onPersonPress={onPersonPress}
-      />
-      <ExploreTwoColSection
-        title="מנכ״לים"
-        people={insiders}
-        onPersonPress={onPersonPress}
-      />
-      <ExploreTwoColSection
-        title="קרנות גידור מובילות"
-        people={fundShelf}
         onPersonPress={onPersonPress}
       />
     </>

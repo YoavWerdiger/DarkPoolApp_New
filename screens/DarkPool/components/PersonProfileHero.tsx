@@ -55,7 +55,8 @@ interface Props {
  * מעטפת InsiderWave: תמונת full-bleed, כפתורי אייקון עגולים קטנים, שם על הגרדיאנט.
  */
 /** כמה פיקסלים של משיכה למטה מגדילים את התמונה — מעבר לזה הכל נעצר */
-export const HERO_MAX_STRETCH = 110;
+/** משיכה למטה: עד כמה התמונה גדלה (והשם/השווי יורדים) — מעבר לזה נעצר */
+export const HERO_MAX_STRETCH = 120;
 
 function PersonProfileHeroInner({
   name,
@@ -96,19 +97,17 @@ function PersonProfileHeroInner({
 
   const photoZoomStyle = useMemo(() => {
     if (!scrollY || !(height > 0) || hidePhoto) return null;
-    // משיכה למטה: התמונה גדלה למטה כמרחק המשיכה (בלי תקרה); השם יורד איתה והתוכן (שווי תיק) צמוד מתחת
+    // משיכה למטה: התמונה גדלה למטה כמרחק המשיכה (עד HERO_MAX_STRETCH); השם יורד איתה והתוכן (שווי תיק) צמוד מתחת
     const scale = scrollY.interpolate({
       inputRange: [-HERO_MAX_STRETCH, 0],
       outputRange: [1 + HERO_MAX_STRETCH / height, 1],
-      extrapolateLeft: 'extend',
-      extrapolateRight: 'clamp',
+      extrapolate: 'clamp',
     });
     // scale ממרכז → מזיזים למטה ב-(scale-1)*h/2: הראש נשאר למעלה והתחתית יורדת בדיוק כמרחק המשיכה
     const originFix = scrollY.interpolate({
       inputRange: [-HERO_MAX_STRETCH, 0],
       outputRange: [HERO_MAX_STRETCH / 2, 0],
-      extrapolateLeft: 'extend',
-      extrapolateRight: 'clamp',
+      extrapolate: 'clamp',
     });
     if (!pinned) {
       return { transform: [{ translateY: originFix }, { scale }] };
@@ -130,8 +129,8 @@ function PersonProfileHeroInner({
       transform: [
         {
           translateY: scrollY.interpolate({
-            inputRange: [-10000, 0],
-            outputRange: [10000, 0],
+            inputRange: [-HERO_MAX_STRETCH, 0],
+            outputRange: [HERO_MAX_STRETCH, 0],
             extrapolate: 'clamp',
           }),
         },

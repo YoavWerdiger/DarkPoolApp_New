@@ -103,7 +103,7 @@ import {
   useHoldingsPieColors,
 } from './components/HoldingsPieSection';
 import { TrumpActivitySection } from './components/TrumpActivitySection';
-import { PersonProfileHero } from './components/PersonProfileHero';
+import { HERO_MAX_STRETCH, PersonProfileHero } from './components/PersonProfileHero';
 import { ScrubSubscriber, useScrubStore } from './components/ScrubSubscriber';
 import {
   holdingsToDistributionSlices,
@@ -1335,6 +1335,21 @@ export function PersonPortfolioProfileScreen({
     }),
     [heroScrollY]
   );
+  // משיכה למטה מעבר ל-HERO_MAX_STRETCH: התוכן נעצר (מבטלים את המשך הגלילה) — צמוד לתמונה שנעצרה
+  const scrollBodyCapStyle = useMemo(
+    () => ({
+      transform: [
+        {
+          translateY: heroScrollY.interpolate({
+            inputRange: [-10000, -HERO_MAX_STRETCH, 0],
+            outputRange: [-(10000 - HERO_MAX_STRETCH), 0, 0],
+            extrapolate: 'clamp',
+          }),
+        },
+      ],
+    }),
+    [heroScrollY]
+  );
   const heroBackdrop = (
     <View
       pointerEvents="none"
@@ -1437,7 +1452,7 @@ export function PersonPortfolioProfileScreen({
           }
           contentContainerStyle={[styles.scroll, { paddingBottom: 12 }]}
         >
-          <Animated.View collapsable={false}>
+          <Animated.View collapsable={false} style={scrollBodyCapStyle}>
           <View style={{ height: heroHeight }} collapsable={false} />
 
           <View style={styles.body}>

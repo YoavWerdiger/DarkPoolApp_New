@@ -112,6 +112,7 @@ export function ExploreDiscoverySections({
       <ExploreRailSection
         title="עודף תשואה מול S&P"
         people={excess}
+        showMetric
         onPersonPress={onPersonPress}
       />
       <ExploreTwoColSection

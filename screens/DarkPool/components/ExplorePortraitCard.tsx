@@ -14,7 +14,8 @@ import { HapticFeedback } from '../../../utils/hapticFeedback';
 import type { ExplorePerson } from '../../../services/darkpool/uwExploreService';
 import { formatInsiderDisplayName } from '../utils/investorPlaceholder';
 import { InvestorPortrait } from './InvestorPortrait';
-import { hebrewText, ltrNameText } from '../utils/bidi';
+import { hebrewText, ltrNameText, toDataIsland } from '../utils/bidi';
+import { isNegativeReturnMetric } from '../utils/exploreDisplay';
 import { DARK_POOL_TYPE } from '../darkPoolLayout';
 import { EXPLORE_PROFILE_CARD } from '../utils/exploreGrid';
 
@@ -38,12 +39,15 @@ interface Props {
   person: ExplorePerson;
   onPress?: () => void;
   style?: StyleProp<ViewStyle>;
+  /** מציג את person.metric (למשל עודף תשואה) בירוק/אדום מתחת לשם */
+  showMetric?: boolean;
 }
 
 export const ExplorePortraitCard = memo(function ExplorePortraitCard({
   person,
   onPress,
   style,
+  showMetric = false,
 }: Props) {
   const tokens = useDesignTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
@@ -83,6 +87,17 @@ export const ExplorePortraitCard = memo(function ExplorePortraitCard({
           >
             {nameIsLatin ? displayName : isolateNumericRuns(displayName)}
           </Text>
+          {showMetric && person.metric ? (
+            <Text
+              style={[
+                styles.metric,
+                { color: isNegativeReturnMetric(person.metric) ? tokens.colors.text.danger : tokens.colors.text.success },
+              ]}
+              numberOfLines={1}
+            >
+              {toDataIsland(person.metric)}
+            </Text>
+          ) : null}
           {role ? (
             <Text
               style={[styles.role, roleIsLatin ? styles.roleLatin : null]}
@@ -144,6 +159,16 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     nameHebrew: {
       ...hebrewText,
+    },
+    metric: {
+      width: '100%',
+      fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
+      fontWeight: '700',
+      fontVariant: ['tabular-nums'],
+      textAlign: 'right',
+      marginTop: -2,
+      includeFontPadding: false,
     },
     role: {
       ...hebrewText,

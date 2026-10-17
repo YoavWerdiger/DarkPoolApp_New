@@ -10,6 +10,8 @@ interface Props {
   title: string;
   people: ExplorePerson[];
   onPersonPress: (person: ExplorePerson) => void;
+  /** מציג את המדד בכרטיס (עודף תשואה) */
+  showMetric?: boolean;
 }
 
 /** רייל אופקי לגילוי — אותו כרטיס EXPLORE_PROFILE_CARD כמו כל המדפים. */
@@ -17,6 +19,7 @@ export function ExploreRailSection({
   title,
   people,
   onPersonPress,
+  showMetric = false,
 }: Props) {
   const tokens = useDesignTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
@@ -40,6 +43,7 @@ export function ExploreRailSection({
             key={`${person.kind}:${person.id}`}
             person={person}
             onPress={() => onPersonPress(person)}
+            showMetric={showMetric}
           />
         ))}
       </ScrollView>

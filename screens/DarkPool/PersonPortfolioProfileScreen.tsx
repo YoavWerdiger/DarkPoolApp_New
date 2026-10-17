@@ -17,8 +17,8 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { NumberFlow } from 'number-flow-react-native';
-import { Easing as ReEasing } from 'react-native-reanimated';
+import { useSharedValue } from 'react-native-reanimated';
+import { RollingNumber } from '../../components/ui/RollingNumber';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenChrome } from '../../components/ui/ScreenChrome';
@@ -234,18 +234,10 @@ type TradeRow = {
 };
 
 
-const USD_WHOLE_FORMAT: Intl.NumberFormatOptions = {
-  style: 'currency',
-  currency: 'USD',
-  maximumFractionDigits: 0,
-  minimumFractionDigits: 0,
-};
-/** בגרירה: סיבוב קצר כדי שהספרות לא יפגרו אחרי האצבע */
-const SCRUB_SPIN_TIMING = { duration: 160, easing: ReEasing.out(ReEasing.cubic) };
 
-/** NumberFlow בלי adjustsFontSizeToFit — מקטינים פונט לפי אורך המספר כדי שייכנס בשורה */
+/** מקטינים פונט לפי אורך המספר כדי שייכנס בשורה */
 function heroFlowStyle(base: TextStyle, value: number | null | undefined): TextStyle {
-  const chars = USD_WHOLE_FORMAT_FN.format(Math.abs(value ?? 0)).length;
+  const chars = `$${Math.round(Math.abs(value ?? 0)).toLocaleString('en-US')}`.length;
   const avail = Dimensions.get('window').width - 40;
   const baseSize = base.fontSize ?? 32;
   const fit = avail / (chars * 0.62);
@@ -259,7 +251,6 @@ function heroFlowStyle(base: TextStyle, value: number | null | undefined): TextS
     textAlign: 'right',
   };
 }
-const USD_WHOLE_FORMAT_FN = new Intl.NumberFormat('en-US', USD_WHOLE_FORMAT);
 
 function kindLabel(kind: PersonKind): string {
   if (kind === 'politician') return 'לוויתן';
@@ -1135,6 +1126,9 @@ export function PersonPortfolioProfileScreen({
   // גרירה על הגרף: מחוץ ל-state של המסך — אחרת כל פריים מרנדר את כל המסך (גרף, עוגה, אחזקות) והסמן נתקע.
   // רק בלוק השווי (ScrubSubscriber) מתרנדר.
   const scrubStore = useScrubStore();
+  // ערך הגרירה ב-UI thread — למספר המתגלגל (בלי רינדור React בכל פריים)
+  const scrubValueSV = useSharedValue(0);
+  const scrubActiveSV = useSharedValue(0);
   const pickedPeriodFor = useRef<string | null>(null);
   useEffect(() => {
     pickedPeriodFor.current = null;
@@ -1526,16 +1520,15 @@ export function PersonPortfolioProfileScreen({
                   return (
                     <>
               {heroValueText ? (
-                // NumberFlow (כמו InsiderWave): גלגלי ספרות עם מסכת דהייה בקצוות; בגרירה — סיבוב קצר
-                <NumberFlow
-                  value={scrubPoint ? scrubPoint.value : portfolioValue ?? 0}
-                  format={USD_WHOLE_FORMAT}
-                  direction="ltr"
-                  style={heroFlowStyle(styles.heroValue, scrubPoint ? scrubPoint.value : portfolioValue)}
-                  containerStyle={styles.heroFlowContainer}
-                  spinTiming={scrubPoint ? SCRUB_SPIN_TIMING : undefined}
-                  transformTiming={scrubPoint ? SCRUB_SPIN_TIMING : undefined}
-                />
+                // מספר מתגלגל ב-UI thread (כמו InsiderWave): הגרירה מעדכנת SharedValue — בלי React, עם motion blur
+                <View style={styles.heroFlowContainer}>
+                  <RollingNumber
+                    scrubValue={scrubValueSV}
+                    scrubActive={scrubActiveSV}
+                    value={portfolioValue ?? 0}
+                    style={heroFlowStyle(styles.heroValue, portfolioValue)}
+                  />
+                </View>
               ) : holdingsEngine === 'trump' && trumpUnitWeighted && periodDelta ? (
                 <AnimatedNumber
                   text={toDataIsland(
@@ -1608,6 +1601,8 @@ export function PersonPortfolioProfileScreen({
                 showHeader={false}
                 formatValue={formatChartValue}
                 onScrubPoint={scrubStore.set}
+                scrubValue={scrubValueSV}
+                scrubActive={scrubActiveSV}
                 showPointMarkers={false}
                 periods={SNAPSHOT_CHART_PERIODS}
               />

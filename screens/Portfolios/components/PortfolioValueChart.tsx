@@ -5,6 +5,7 @@ import Svg, { Path, Defs, LinearGradient, Stop, Line, Circle } from 'react-nativ
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Easing,
+  type SharedValue,
   runOnJS,
   useAnimatedProps,
   useAnimatedStyle,
@@ -76,6 +77,12 @@ interface Props {
   periods?: PerformancePeriod[];
   /** נקודת גרירה — null בשחרור (חזרה לחי). */
   onScrubPoint?: (point: { date: string; value: number } | null) => void;
+  /**
+   * ערך הנקודה בגרירה — מתעדכן ב-UI thread (בלי React), למספר מתגלגל חלק.
+   * scrubActive: 1 בזמן גרירה, 0 בשחרור.
+   */
+  scrubValue?: SharedValue<number>;
+  scrubActive?: SharedValue<number>;
 }
 
 const PERIODS: PerformancePeriod[] = ['1W', '1M', '3M', 'YTD', '1Y', '5Y', 'All'];
@@ -189,6 +196,8 @@ export function PortfolioValueChart({
   showIntervalSelector = true,
   periods,
   onScrubPoint,
+  scrubValue,
+  scrubActive,
 }: Props) {
   const tokens = useDesignTokens();
   const periodIndicator = useSlidingIndicator<PerformancePeriod>(selectedPeriod);
@@ -419,27 +428,17 @@ export function PortfolioValueChart({
     opacity: axisOpacity.value,
   }));
 
-  const indexFromX = useCallback(
-    (touchX: number) => {
-      if (!plotted.length) return null;
-      let best = 0;
-      let bestDist = Infinity;
-      for (let i = 0; i < plotted.length; i++) {
-        const d = Math.abs(plotted[i].x - touchX);
-        if (d < bestDist) {
-          bestDist = d;
-          best = i;
-        }
-      }
-      return best;
-    },
-    [plotted]
-  );
+  // נקודות לגרירה ב-UI thread: x ממוינים + ערכים
+  const plottedXs = useSharedValue<number[]>([]);
+  const plottedValues = useSharedValue<number[]>([]);
+  const lastScrubIdx = useSharedValue(-1);
+  useEffect(() => {
+    plottedXs.value = plotted.map((p) => p.x);
+    plottedValues.value = plotted.map((p) => p.value);
+  }, [plotted, plottedXs, plottedValues]);
 
-  const scrubToX = useCallback(
-    (touchX: number) => {
-      const next = indexFromX(touchX);
-      if (next == null) return;
+  const scrubToIndex = useCallback(
+    (next: number) => {
       const point = plotted[next];
       setActiveIndex((prev) => {
         if (prev !== next) void HapticFeedback.selection();
@@ -449,13 +448,37 @@ export function PortfolioValueChart({
         point ? { date: point.date, value: point.value } : null
       );
     },
-    [indexFromX, plotted]
+    [plotted]
   );
 
   const clearActive = useCallback(() => {
     setActiveIndex(null);
     onScrubPointRef.current?.(null);
   }, []);
+
+  // ב-UI thread: הנקודה הקרובה (חיפוש בינארי), עדכון הערך המשותף; ל-JS רק כשהנקודה מתחלפת
+  const scrubAt = useCallback(
+    (touchX: number) => {
+      'worklet';
+      const xs = plottedXs.value;
+      const n = xs.length;
+      if (!n) return;
+      let lo = 0;
+      let hi = n - 1;
+      while (hi - lo > 1) {
+        const mid = (lo + hi) >> 1;
+        if (xs[mid] < touchX) lo = mid;
+        else hi = mid;
+      }
+      const idx = Math.abs(xs[lo] - touchX) <= Math.abs(xs[hi] - touchX) ? lo : hi;
+      if (idx === lastScrubIdx.value) return;
+      lastScrubIdx.value = idx;
+      if (scrubValue) scrubValue.value = plottedValues.value[idx];
+      if (scrubActive) scrubActive.value = 1;
+      runOnJS(scrubToIndex)(idx);
+    },
+    [plottedXs, plottedValues, lastScrubIdx, scrubValue, scrubActive, scrubToIndex]
+  );
 
   const chartGesture = useMemo(
     () =>
@@ -464,17 +487,20 @@ export function PortfolioValueChart({
         .failOffsetY([-18, 18])
         .onBegin((e) => {
           'worklet';
-          runOnJS(scrubToX)(e.x);
+          lastScrubIdx.value = -1;
+          scrubAt(e.x);
         })
         .onUpdate((e) => {
           'worklet';
-          runOnJS(scrubToX)(e.x);
+          scrubAt(e.x);
         })
         .onFinalize(() => {
           'worklet';
+          lastScrubIdx.value = -1;
+          if (scrubActive) scrubActive.value = 0;
           runOnJS(clearActive)();
         }),
-    [scrubToX, clearActive]
+    [scrubAt, clearActive, lastScrubIdx, scrubActive]
   );
 
   const activePoint =

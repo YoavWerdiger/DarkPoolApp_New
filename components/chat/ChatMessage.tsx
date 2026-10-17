@@ -2821,14 +2821,15 @@ const createStyles = (tokens: any) => {
   },
   audioSideSpeedWrap: {
     position: 'absolute',
-    bottom: 0,
+    // צמוד לזמן (מרווח ~2px)
+    bottom: 3,
     left: 0,
     right: 0,
     alignItems: 'center',
   },
   audioSidePlayTimeWrap: {
     position: 'absolute',
-    top: 2,
+    top: 5,
     left: 0,
     right: 0,
     alignItems: 'center',

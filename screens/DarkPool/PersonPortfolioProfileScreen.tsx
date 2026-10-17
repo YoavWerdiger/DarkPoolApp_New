@@ -1335,21 +1335,6 @@ export function PersonPortfolioProfileScreen({
     }),
     [heroScrollY]
   );
-  // משיכה למטה (overscroll): התוכן (שווי תיק וכו') נשאר במקום — מבטלים את תזוזת הגלילה
-  const scrollBodyPinStyle = useMemo(
-    () => ({
-      transform: [
-        {
-          translateY: heroScrollY.interpolate({
-            inputRange: [-10000, 0],
-            outputRange: [-10000, 0],
-            extrapolate: 'clamp',
-          }),
-        },
-      ],
-    }),
-    [heroScrollY]
-  );
   const heroBackdrop = (
     <View
       pointerEvents="none"
@@ -1452,7 +1437,7 @@ export function PersonPortfolioProfileScreen({
           }
           contentContainerStyle={[styles.scroll, { paddingBottom: 12 }]}
         >
-          <Animated.View collapsable={false} style={scrollBodyPinStyle}>
+          <Animated.View collapsable={false}>
           <View style={{ height: heroHeight }} collapsable={false} />
 
           <View style={styles.body}>
@@ -1912,7 +1897,8 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       right: 0,
       zIndex: 1,
       elevation: 1,
-      overflow: 'hidden',
+      // התמונה גדלה למטה במשיכה — לא לחתוך בגובה ה-hero
+      overflow: 'visible',
     },
     heroChrome: {
       position: 'absolute',

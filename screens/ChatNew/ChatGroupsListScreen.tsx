@@ -1421,33 +1421,102 @@ export default function ChatGroupsListScreen() {
 
           {/* שורת סטטוסים */}
           <View style={styles.statusRow}>
-            <Pressable
-              style={({ pressed }) => [
-                styles.statusCircle,
-                pressed && { opacity: 0.72, transform: [{ scale: 0.94 }] },
-              ]}
-              onPress={() => {
+            {/*
+              העיגול של «הוסף» הוא גם הסטורי שלי (כמו אינסטגרם): כשיש לי סטורי / העלאה —
+              הקווקווים הופכים לטבעת הסטורי (לא נצפה / נצפה) והפלוס נשאר. לחיצה על העיגול פותחת
+              את הסטורי שלי, הפלוס מוסיף עוד. אין טבעת «שלי» נפרדת בשורה.
+            */}
+            {(() => {
+              const ownIdx = usersWithStories.findIndex((u) => u.user_id === user?.id);
+              const own = ownIdx >= 0 ? usersWithStories[ownIdx] : null;
+              const hasOwn = !!own || pendingStories.length > 0;
+              const openAdd = () => {
                 void HapticFeedback.selection();
                 setAddStorySheetVisible(true);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="הוסף סטטוס"
-            >
-              <View style={styles.statusAddOuter}>
-                {/* כמו באינסטגרם: תמונת הפרופיל שלי + פלוס קטן בפינה (בלי תמונה — אייקון פלוס) */}
-                <View style={[styles.statusCircleInner, { overflow: 'hidden' }]}>
-                  {user?.profile_picture ? (
-                    <Image source={{ uri: user.profile_picture }} style={styles.statusCircleImage} resizeMode="cover" />
-                  ) : (
-                    <Ionicons name="add" size={24} color={tokens.colors.text.primary} />
-                  )}
+              };
+              const avatarInner = user?.profile_picture ? (
+                <Image source={{ uri: user.profile_picture }} style={styles.statusCircleImage} resizeMode="cover" />
+              ) : !own && pendingStories[0]?.mediaType === 'image' && pendingStories[0].localUri ? (
+                <Image source={{ uri: pendingStories[0].localUri }} style={styles.statusCircleImage} resizeMode="cover" />
+              ) : (
+                <View style={styles.storyAvatarPlaceholder}>
+                  <Ionicons name="person" size={22} color={tokens.colors.text.secondary} />
                 </View>
-                <View style={styles.statusAddBadge}>
-                  <Ionicons name="add" size={13} color={tokens.colors.text.inverse} />
+              );
+              if (!hasOwn) {
+                return (
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.statusCircle,
+                      pressed && { opacity: 0.72, transform: [{ scale: 0.94 }] },
+                    ]}
+                    onPress={openAdd}
+                    accessibilityRole="button"
+                    accessibilityLabel="הוסף סטטוס"
+                  >
+                    <View style={styles.statusAddOuter}>
+                      {/* כמו באינסטגרם: תמונת הפרופיל שלי + פלוס קטן בפינה (בלי תמונה — אייקון פלוס) */}
+                      <View style={[styles.statusCircleInner, { overflow: 'hidden' }]}>
+                        {user?.profile_picture ? (
+                          <Image source={{ uri: user.profile_picture }} style={styles.statusCircleImage} resizeMode="cover" />
+                        ) : (
+                          <Ionicons name="add" size={24} color={tokens.colors.text.primary} />
+                        )}
+                      </View>
+                      <View style={styles.statusAddBadge}>
+                        <Ionicons name="add" size={13} color={tokens.colors.text.inverse} />
+                      </View>
+                    </View>
+                    <Text style={[styles.statusLabel, { color: tokens.colors.text.primary }]}>הוסף</Text>
+                  </Pressable>
+                );
+              }
+              return (
+                <View style={styles.statusCircle}>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.statusCircle,
+                      pressed && { opacity: 0.72, transform: [{ scale: 0.94 }] },
+                    ]}
+                    onPress={() => {
+                      const failed = pendingStories.find((p) => p.status === 'failed');
+                      if (failed) {
+                        onPendingPress(failed);
+                        return;
+                      }
+                      if (ownIdx < 0) return;
+                      void HapticFeedback.selection();
+                      setStoryViewerInitialIndex(ownIdx);
+                      setStoryViewerVisible(true);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel="הסטטוס שלי"
+                  >
+                    <StoryAvatarRing
+                      size={66}
+                      storyCount={Math.max(1, own?.story_count || pendingStories.length || 1)}
+                      hasViewed={own ? own.has_viewed !== false : false}
+                    >
+                      {avatarInner}
+                      {renderPendingOverlay()}
+                    </StoryAvatarRing>
+                    <Text style={[styles.statusLabel, { color: tokens.colors.text.primary }]} numberOfLines={1}>
+                      שלי
+                    </Text>
+                  </Pressable>
+                  {/* הפלוס — הוספת סטורי נוסף */}
+                  <Pressable
+                    onPress={openAdd}
+                    hitSlop={8}
+                    style={[styles.statusAddBadge, styles.statusOwnAddBadge]}
+                    accessibilityRole="button"
+                    accessibilityLabel="הוסף סטטוס"
+                  >
+                    <Ionicons name="add" size={13} color={tokens.colors.text.inverse} />
+                  </Pressable>
                 </View>
-              </View>
-              <Text style={[styles.statusLabel, { color: tokens.colors.text.primary }]}>הוסף</Text>
-            </Pressable>
+              );
+            })()}
             <View style={styles.statusStoryGap} />
             <ScrollView
               ref={storiesScrollRef}
@@ -1459,36 +1528,10 @@ export default function ChatGroupsListScreen() {
                 storiesScrollRef.current?.scrollToEnd({ animated: false });
               }}
             >
-            {/* אין לי עדיין סטורי ויש העלאה — טבעת «שלי» זמנית (בתמונה של ההעלאה) עם המצב */}
-            {pendingStories.length > 0 && !usersWithStories.some((u) => u.user_id === user?.id) ? (
-              <View style={styles.statusStorySlot}>
-                <Pressable
-                  style={styles.statusStoryItem}
-                  onPress={() => {
-                    const failed = pendingStories.find((p) => p.status === 'failed');
-                    if (failed) onPendingPress(failed);
-                  }}
-                  accessibilityRole="button"
-                  accessibilityLabel="הסטטוס שלי"
-                >
-                  <StoryAvatarRing size={68} storyCount={pendingStories.length} hasViewed={false}>
-                    {pendingStories[0].mediaType === 'image' && pendingStories[0].localUri ? (
-                      <Image source={{ uri: pendingStories[0].localUri }} style={styles.statusCircleImage} resizeMode="cover" />
-                    ) : (
-                      <View style={styles.storyAvatarPlaceholder}>
-                        <Ionicons name="person" size={22} color={tokens.colors.text.secondary} />
-                      </View>
-                    )}
-                    {renderPendingOverlay()}
-                  </StoryAvatarRing>
-                  <Text style={[styles.statusLabel, { color: tokens.colors.text.primary }]} numberOfLines={1}>
-                    שלי
-                  </Text>
-                </Pressable>
-                <View style={styles.statusStoryGap} />
-              </View>
-            ) : null}
             {usersWithStories.map((s, idx) => {
+              // הסטורי שלי מוצג בעיגול «הוסף» — לא כאן
+              if (s.user_id === user?.id) return null;
+              const firstShownIdx = usersWithStories.findIndex((u) => u.user_id !== user?.id);
               const avatar = s.user?.profile_picture;
               const displayName = s.user?.display_name || s.user?.full_name || 'משתמש';
               const isUnread = s.has_viewed === false;
@@ -1496,7 +1539,7 @@ export default function ChatGroupsListScreen() {
               const count = Math.max(1, s.story_count || 1);
               return (
                 <View key={s.user_id} style={styles.statusStorySlot}>
-                {idx > 0 ? <View style={styles.statusStoryGap} /> : null}
+                {idx > firstShownIdx ? <View style={styles.statusStoryGap} /> : null}
                 <Pressable
                   style={({ pressed }) => [
                     styles.statusStoryItem,
@@ -1794,6 +1837,11 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 6,
+  },
+  // הפלוס על טבעת הסטורי שלי — מעל השוליים התחתונים של הטבעת (marginBottom 6)
+  statusOwnAddBadge: {
+    bottom: 5,
+    right: -1,
   },
   statusAddBadge: {
     position: 'absolute',

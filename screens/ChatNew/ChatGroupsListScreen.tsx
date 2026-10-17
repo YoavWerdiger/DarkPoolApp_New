@@ -1492,27 +1492,30 @@ export default function ChatGroupsListScreen() {
                     accessibilityRole="button"
                     accessibilityLabel="הסטטוס שלי"
                   >
-                    <StoryAvatarRing
-                      size={66}
-                      storyCount={Math.max(1, own?.story_count || pendingStories.length || 1)}
-                      hasViewed={own ? own.has_viewed !== false : false}
-                    >
-                      {avatarInner}
-                      {renderPendingOverlay()}
-                    </StoryAvatarRing>
+                    {/* מסגרת בגודל העיגול — הפלוס ממוקם ביחס אליה, בדיוק כמו בעיגול «הוסף» */}
+                    <View style={styles.statusOwnRingWrap}>
+                      <StoryAvatarRing
+                        size={66}
+                        storyCount={Math.max(1, own?.story_count || pendingStories.length || 1)}
+                        hasViewed={own ? own.has_viewed !== false : false}
+                      >
+                        {avatarInner}
+                        {renderPendingOverlay()}
+                      </StoryAvatarRing>
+                      {/* הפלוס — הוספת סטורי נוסף */}
+                      <Pressable
+                        onPress={openAdd}
+                        hitSlop={8}
+                        style={[styles.statusAddBadge, styles.statusOwnAddBadge]}
+                        accessibilityRole="button"
+                        accessibilityLabel="הוסף סטטוס"
+                      >
+                        <Ionicons name="add" size={13} color={tokens.colors.text.inverse} />
+                      </Pressable>
+                    </View>
                     <Text style={[styles.statusLabel, { color: tokens.colors.text.primary }]} numberOfLines={1}>
                       שלי
                     </Text>
-                  </Pressable>
-                  {/* הפלוס — הוספת סטורי נוסף */}
-                  <Pressable
-                    onPress={openAdd}
-                    hitSlop={8}
-                    style={[styles.statusAddBadge, styles.statusOwnAddBadge]}
-                    accessibilityRole="button"
-                    accessibilityLabel="הוסף סטטוס"
-                  >
-                    <Ionicons name="add" size={13} color={tokens.colors.text.inverse} />
                   </Pressable>
                 </View>
               );
@@ -1838,9 +1841,13 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     alignItems: 'center',
     marginBottom: 6,
   },
-  // הפלוס על טבעת הסטורי שלי — מעל השוליים התחתונים של הטבעת (marginBottom 6)
+  // עיגול 66 (הטבעת מוסיפה marginBottom 6 משלה) — כמו statusAddOuter
+  statusOwnRingWrap: {
+    width: 66,
+  },
+  // אותו מיקום כמו בעיגול «הוסף» (bottom:-1 מעל 66) — כאן מעל ה-marginBottom של הטבעת
   statusOwnAddBadge: {
-    bottom: 5,
+    bottom: 6 - 1,
     right: -1,
   },
   statusAddBadge: {

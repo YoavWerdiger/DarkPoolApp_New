@@ -102,7 +102,6 @@ import {
   HoldingsPieSection,
   useHoldingsPieColors,
 } from './components/HoldingsPieSection';
-import { TrumpActivitySection } from './components/TrumpActivitySection';
 import { HERO_MAX_STRETCH, PersonProfileHero } from './components/PersonProfileHero';
 import { ScrubSubscriber, useScrubStore } from './components/ScrubSubscriber';
 import {
@@ -1192,7 +1191,6 @@ export function PersonPortfolioProfileScreen({
 
   // טראמפ: הרשימה מוצגת ל-16, אבל לפילוח — כל האחזקות מהשרת (מאות), כדי שהמקרא יפרט את כולן
   const serverAllHoldings = investor.profile?.metrics?.holdings;
-  const trumpActivity = trumpProfile ? investor.profile?.metrics?.activity ?? null : null;
   const pieHoldings = useMemo<HoldingAllocationInput[]>(() => {
     if (trumpProfile && serverAllHoldings && serverAllHoldings.length > holdings.length) {
       return serverAllHoldings.map((h) => ({
@@ -1273,7 +1271,7 @@ export function PersonPortfolioProfileScreen({
       : null;
   const valueLabel =
     trumpValueRange
-      ? 'שווי משוער (לפי טווחי הדיווח)'
+      ? 'שווי תיק משוער'
       : holdingsEngine === 'trump' && trumpUnitWeighted
       ? 'מדד סל (משקל שווה לעסקה)'
       : holdingsEngine === 'form4' || holdingsEngine === 'trump'
@@ -1282,9 +1280,7 @@ export function PersonPortfolioProfileScreen({
           ? // מנכ"ל/דירקטור מדווח רק על חברות שבהן הוא מכהן — לא כל התיק הפרטי
             'שווי אחזקות מדווחות'
           : 'שווי תיק:';
-  const heroValueText = trumpValueRange && trumpValueRange.high > 0
-    ? `${formatCompactUsd(trumpValueRange.low)}–${formatCompactUsd(trumpValueRange.high)}`
-    : showCongressValue
+  const heroValueText = showCongressValue
     ? formatCongressPortfolioHeroValue(portfolioValue)
     : showTrumpValue
       ? formatCongressPortfolioHeroValue(portfolioValue)
@@ -1462,15 +1458,7 @@ export function PersonPortfolioProfileScreen({
             </UICard>
           ) : null}
 
-          {/* טראמפ: פעילות מדווחת במקום «שווי תיק» — אין דיווח יתרות, רק עסקאות בטווחי סכום */}
-          {trumpProfile && trumpActivity ? (
-            <View style={{ marginBottom: APP_LAYOUT.sectionGap }}>
-              <TrumpActivitySection
-                activity={trumpActivity}
-                onTickerPress={(ticker) => stackNav.navigate('DarkPoolTicker', { ticker })}
-              />
-            </View>
-          ) : (
+          {/* טראמפ: תיק משוער (טווחי הדיווח × מחיר ביום העסקה → מחיר נוכחי), כמו שאר הפוליטיקאים */}
           <>
           {showCongressValue ||
           showTrumpValue ||
@@ -1500,20 +1488,27 @@ export function PersonPortfolioProfileScreen({
               <ScrubSubscriber store={scrubStore}>
                 {(scrubPoint) => {
                   // גרירה: שינוי מתחילת התקופה המוצגת עד הנקודה (בלי תיקון זרימות — כמו הגרף)
+                  // נטו מכסף שנכנס/יצא עד הנקודה (קניות/מכירות) — כמו שינוי התקופה; אחרת קנייה נראית כרווח
                   const scrubFirst = periodSeries[0]?.value;
-                  const scrubDelta =
-                    scrubPoint && periodSeries.length >= 2 && scrubFirst > 0
-                      ? {
-                          usd: scrubPoint.value - scrubFirst,
-                          pct: ((scrubPoint.value - scrubFirst) / scrubFirst) * 100,
-                        }
-                      : null;
+                  let scrubDelta: { usd: number; pct: number } | null = null;
+                  if (scrubPoint && periodSeries.length >= 2 && scrubFirst > 0) {
+                    let netFlow = 0;
+                    let invested = scrubFirst;
+                    for (let i = 1; i < periodSeries.length && periodSeries[i].date <= scrubPoint.date; i++) {
+                      const f = periodSeries[i]?.external_flow ?? 0;
+                      if (!Number.isFinite(f)) continue;
+                      netFlow += f;
+                      if (f > 0) invested += f;
+                    }
+                    const usd = scrubPoint.value - scrubFirst - netFlow;
+                    scrubDelta = { usd, pct: invested > 0 ? (usd / invested) * 100 : 0 };
+                  }
                   return (
                     <>
               {heroValueText ? (
                 <AnimatedNumber
                   text={toDataIsland(scrubPoint ? formatChartValue(scrubPoint.value) : heroValueText)}
-                  value={scrubPoint ? scrubPoint.value : trumpValueRange ? trumpValueRange.high : portfolioValue}
+                  value={scrubPoint ? scrubPoint.value : portfolioValue}
                   flash
                   fast={!!scrubPoint}
                   style={styles.heroValue}
@@ -1716,7 +1711,6 @@ export function PersonPortfolioProfileScreen({
           ) : null}
 
           </>
-          )}
 
           {/* עסקאות */}
           {trades.length > 0 ? (
@@ -1828,14 +1822,6 @@ function congressHoldingToRow(
 }
 
 /** $76.7M / $1.2B — לטווח שווי משוער */
-function formatCompactUsd(v: number): string {
-  const abs = Math.abs(v);
-  if (abs >= 1e9) return `$${(v / 1e9).toFixed(1)}B`;
-  if (abs >= 1e6) return `$${(v / 1e6).toFixed(0)}M`;
-  if (abs >= 1e3) return `$${(v / 1e3).toFixed(0)}K`;
-  return `$${Math.round(v)}`;
-}
-
 function trumpHoldingToRow(h: TrumpModelHolding, unitWeighted = false): HoldingRow {
   return {
     ticker: h.ticker,

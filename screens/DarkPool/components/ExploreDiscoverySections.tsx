@@ -90,7 +90,7 @@ export function ExploreDiscoverySections({
         onPersonPress={onPersonPress}
       />
       <ExploreTwoColSection
-        title="קרנות הגידור הגדולות"
+        title="קרנות הגידור המובילות"
         people={books}
         onPersonPress={onPersonPress}
       />

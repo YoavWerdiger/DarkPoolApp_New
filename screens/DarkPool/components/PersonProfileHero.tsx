@@ -56,7 +56,7 @@ interface Props {
  */
 /** כמה פיקסלים של משיכה למטה מגדילים את התמונה — מעבר לזה הכל נעצר */
 /** משיכה למטה: עד כמה התמונה גדלה (והשם/השווי יורדים) — מעבר לזה נעצר */
-export const HERO_MAX_STRETCH = 120;
+export const HERO_MAX_STRETCH = 100;
 
 function PersonProfileHeroInner({
   name,

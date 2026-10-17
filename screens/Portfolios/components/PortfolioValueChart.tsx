@@ -777,7 +777,8 @@ export function PortfolioValueChart({
           </Svg>
           ) : null}
           {width > 0 ? (
-            <>
+            // direction ltr: באפליקציה RTL ‏left:0 מתפרש כימין — והסמן ברח מחוץ למסך
+            <View pointerEvents="none" style={styles.cursorLayer}>
               <Animated.View
                 pointerEvents="none"
                 style={[
@@ -792,7 +793,7 @@ export function PortfolioValueChart({
               >
                 <View style={[styles.cursorDot, { backgroundColor: lineColor }]} />
               </Animated.View>
-            </>
+            </View>
           ) : null}
 
           {showXAxisLabels ? (
@@ -854,6 +855,10 @@ export function PortfolioValueChart({
 }
 
 const styles = StyleSheet.create({
+  cursorLayer: {
+    ...StyleSheet.absoluteFillObject,
+    direction: 'ltr',
+  },
   cursorLine: {
     position: 'absolute',
     left: 0,

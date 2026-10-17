@@ -2108,7 +2108,11 @@ function AudioPlayer({
   }));
   const sideSpeedStyle = useAnimatedStyle(() => ({
     opacity: sideProg.value,
-    transform: [{ scale: 0.85 + 0.15 * sideProg.value }],
+    transform: [{ translateY: 8 * (1 - sideProg.value) }],
+  }));
+  const sidePlayTimeStyle = useAnimatedStyle(() => ({
+    opacity: sideProg.value,
+    transform: [{ translateY: -6 * (1 - sideProg.value) }],
   }));
 
   // raw samples — VoiceWaveformWithProgress מנרמל ל־DISPLAY_BARS (מתיחה, לא ריפוד באפסים)
@@ -2207,6 +2211,15 @@ function AudioPlayer({
               <Ionicons name="mic" size={13} color={tokens.colors.primary.main} />
             </View>
           </Reanimated.View>
+          {/* בניגון: הזמן שנותר למעלה והמהירות מתחתיו (כמו קודם); במנוחה — רק התמונה */}
+          <Reanimated.View style={[styles.audioSidePlayTimeWrap, sidePlayTimeStyle]} pointerEvents="none">
+            <Text
+              style={[styles.audioSideTime, isMe ? styles.myTimeText : styles.theirTimeText]}
+              accessibilityLabel={`נותרו ${formatDuration(remainingSec)}`}
+            >
+              {formatDuration(remainingSec)}
+            </Text>
+          </Reanimated.View>
           <Reanimated.View
             style={[styles.audioSideSpeedWrap, sideSpeedStyle]}
             pointerEvents={isPlaying ? 'auto' : 'none'}
@@ -2225,13 +2238,6 @@ function AudioPlayer({
 
       <View style={styles.audioMetadataMerged}>
         <View style={styles.audioMetadataLeft}>
-          {/* זמן מתחת לוויבפורם — בניגון: מה שנותר; במנוחה: האורך */}
-          <Text
-            style={[styles.audioSideTime, styles.audioUnderTime, isMe ? styles.myTimeText : styles.theirTimeText]}
-            accessibilityLabel={isPlaying ? `נותרו ${formatDuration(remainingSec)}` : `אורך ${formatDuration(displayDuration)}`}
-          >
-            {formatDuration(isPlaying || position > 0 ? remainingSec : displayDuration)}
-          </Text>
           {message.is_starred_by_me ? (
             <Ionicons
               name="star"
@@ -2454,11 +2460,12 @@ const createStyles = (tokens: any) => {
     borderWidth: 0,
     minHeight: 50,
   },
+  // בלייט שחור שקוף על הבועה הירוקה יוצא אפור-ירקרק כהה — שם לבן שקוף (ובבועת הצד השני אפור עדין)
   replyContainerMe: {
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    backgroundColor: isDarkMode ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.55)',
   },
   replyContainerThem: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.045)',
   },
   replyBar: {
     width: 3,
@@ -2814,12 +2821,17 @@ const createStyles = (tokens: any) => {
   },
   audioSideSpeedWrap: {
     position: 'absolute',
-    top: 0,
     bottom: 0,
     left: 0,
     right: 0,
     alignItems: 'center',
-    justifyContent: 'center',
+  },
+  audioSidePlayTimeWrap: {
+    position: 'absolute',
+    top: 2,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
   },
   audioSenderAvatar: {
     width: 42,
@@ -2848,9 +2860,7 @@ const createStyles = (tokens: any) => {
     justifyContent: 'center',
     backgroundColor: tokens.colors.background.primary,
   },
-  audioUnderTime: {
-    marginRight: 6,
-  },
+
   audioSpeedButton: {
     backgroundColor: tokens.colors.border.hover,
     borderRadius: tokens.borderRadius.full,

@@ -121,12 +121,12 @@ export function ExploreDiscoverySections({
         onPersonPress={onPersonPress}
       />
       <ExploreTwoColSection
-        title="בכירים"
+        title="מנכ״לים"
         people={insiders}
         onPersonPress={onPersonPress}
       />
       <ExploreTwoColSection
-        title="קרנות"
+        title="קרנות גידור מובילות"
         people={fundShelf}
         onPersonPress={onPersonPress}
       />

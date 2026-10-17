@@ -68,19 +68,23 @@ export interface FundFilingHistoryRow {
 }
 
 /** היסטוריית 13F גולמית — RLS ציבורי. בלי midpoint ובלי שחזור STOCK Act. */
-export async function fetchFundHoldingsHistory(
-  cik: string
-): Promise<FundFilingHistoryRow[]> {
+export async function fetchFundHoldingsHistory(cik: string): Promise<FundFilingHistoryRow[]> {
   const id = cik.trim();
   if (!id) return [];
   // השרת מחזיר עד 1000 שורות לשאילתה (גם עם limit גבוה). ARK ~3200 שורות → בלי עימוד הגיעו רק
   // הדוחות הישנים (2022: SQ, FB…) והאחזקות/הגרף היו שגויים.
   const PAGE = 1000;
-  const data: Array<{ filing_date: unknown; ticker: unknown; shares: unknown; value_usd: unknown }> = [];
+  const data: Array<{
+    filing_date: unknown;
+    ticker: unknown;
+    shares: unknown;
+    value_usd: unknown;
+    source?: unknown;
+  }> = [];
   for (let from = 0; from < 20000; from += PAGE) {
     const { data: batch, error } = await supabase
       .from('dark_pool_fund_holdings')
-      .select('filing_date, ticker, shares, value_usd')
+      .select('filing_date, ticker, shares, value_usd, source')
       .eq('fund_cik', id)
       .order('filing_date', { ascending: true })
       .order('id', { ascending: true })
@@ -89,12 +93,20 @@ export async function fetchFundHoldingsHistory(
     data.push(...(batch ?? []));
     if (!batch || batch.length < PAGE) break;
   }
-  return data.map((row) => ({
-    filing_date: String(row.filing_date ?? '').slice(0, 10),
-    ticker: String(row.ticker ?? '')
-      .toUpperCase()
-      .trim(),
-    shares: row.shares != null ? Number(row.shares) : null,
-    value_usd: row.value_usd != null ? Number(row.value_usd) : null,
-  }));
+  // תקופה שיש לה שורות מה-SEC — רק הן (שורות Quiver של אותה תקופה: טיקרים ישנים / ערכים שגויים)
+  const secDates = new Set(
+    data.filter((r) => r.source === 'sec').map((r) => String(r.filing_date ?? '').slice(0, 10))
+  );
+  return data
+    .filter(
+      (row) => !secDates.has(String(row.filing_date ?? '').slice(0, 10)) || row.source === 'sec'
+    )
+    .map((row) => ({
+      filing_date: String(row.filing_date ?? '').slice(0, 10),
+      ticker: String(row.ticker ?? '')
+        .toUpperCase()
+        .trim(),
+      shares: row.shares != null ? Number(row.shares) : null,
+      value_usd: row.value_usd != null ? Number(row.value_usd) : null,
+    }));
 }

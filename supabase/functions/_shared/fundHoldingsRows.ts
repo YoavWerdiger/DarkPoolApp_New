@@ -28,3 +28,26 @@ export async function loadAllFundHoldingRows<T = Record<string, unknown>>(
   }
   return out;
 }
+
+/**
+ * לכל תקופה: אם יש שורות מ-SEC — רק הן (Quiver של אותה תקופה מתעלמים: טיקרים ישנים / שורות שגויות).
+ * דורש עמודות filing_date + source.
+ */
+export function preferSecRows<T extends { filing_date?: string | null; source?: string | null }>(rows: T[]): T[] {
+  const secDates = new Set<string>();
+  for (const r of rows) if (r.source === 'sec' && r.filing_date) secDates.add(String(r.filing_date).slice(0, 10));
+  if (!secDates.size) return rows;
+  return rows.filter((r) => {
+    const d = String(r.filing_date ?? '').slice(0, 10);
+    return !secDates.has(d) || r.source === 'sec';
+  });
+}
+
+/** תקופה שסכומה חריג (יותר מפי 3 / פחות משליש מהחציון) — שגיאת נתונים, לא שינוי אמיתי */
+export function isOutlierTotal(total: number, allTotals: number[]): boolean {
+  const xs = allTotals.filter((x) => x > 0).sort((a, b) => a - b);
+  if (xs.length < 4 || !(total > 0)) return false;
+  const med = xs[Math.floor(xs.length / 2)];
+  return total > med * 3 || total < med / 3;
+}
+

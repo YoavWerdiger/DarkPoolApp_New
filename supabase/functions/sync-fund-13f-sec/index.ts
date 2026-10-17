@@ -1,5 +1,6 @@
 /**
- * sync-fund-13f-sec — אחזקות 13F ישירות מ-SEC EDGAR, לקרנות ש-Quiver לא מכסה (או מכסה חלקית).
+ * sync-fund-13f-sec — אחזקות 13F ישירות מ-SEC EDGAR לכל הקרנות (עד 16 רבעונים; רבעון שנקרא — מדלגים).
+ * שורות מסומנות source='sec', והקוראים מעדיפים אותן על Quiver לאותה תקופה.
  * כותב לאותן טבלאות כמו sync-fund-13f (dark_pool_fund_managers / dark_pool_fund_holdings),
  * כך שהמסכים וה-materialize עובדים בלי שינוי. שרת בלבד (מפתח service).
  */
@@ -28,15 +29,22 @@ const TIME_BUDGET_MS = 120_000;
 serve(async (req) => {
   if (!isServiceCaller(req)) return serviceOnlyDenied();
   const started = Date.now();
-  const body = (await req.json().catch(() => ({}))) as { ciks?: string[]; filings?: number };
-  const ciks = (body.ciks?.length ? body.ciks : Object.keys(SEC_13F_FUNDS)).map((c) => String(c).trim());
-  const maxFilings = Math.max(1, Math.min(Number(body.filings) || 8, 16));
+  const body = (await req.json().catch(() => ({}))) as { ciks?: string[]; filings?: number; refresh?: boolean };
+  const maxFilings = Math.max(1, Math.min(Number(body.filings) || 16, 16));
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     { auth: { persistSession: false } }
   );
+
+  // ברירת מחדל: כל הקרנות (גם אלה מ-Quiver) — ה-SEC הוא מקור האמת להיסטוריה; Quiver נשאר גיבוי
+  let ciks: string[];
+  if (body.ciks?.length) ciks = body.ciks.map((c) => String(c).trim());
+  else {
+    const { data } = await supabase.from('dark_pool_fund_managers').select('cik').order('synced_at', { ascending: true, nullsFirst: true });
+    ciks = Array.from(new Set([...Object.keys(SEC_13F_FUNDS), ...(data ?? []).map((r) => String(r.cik))]));
+  }
 
   const results: Array<Record<string, unknown>> = [];
   for (const cik of ciks) {
@@ -52,24 +60,42 @@ serve(async (req) => {
         continue;
       }
 
-      // קודם המנהל (FK של האחזקות)
-      await supabase.from('dark_pool_fund_managers').upsert(
-        {
-          cik,
-          name: meta?.name ?? secName,
-          manager_name: meta?.manager ?? secName,
-          image_url: meta?.image ?? null,
-          source: 'sec',
-        },
-        { onConflict: 'cik' }
-      );
+      // קודם המנהל (FK של האחזקות) — רק לקרנות SEC-בלבד; לקיימות לא דורסים שם/תמונה
+      if (meta) {
+        await supabase.from('dark_pool_fund_managers').upsert(
+          {
+            cik,
+            name: meta.name ?? secName,
+            manager_name: meta.manager ?? secName,
+            image_url: meta.image ?? null,
+            source: 'sec',
+          },
+          { onConflict: 'cik' }
+        );
+      }
+
+      // תקופות שכבר נקראו מה-SEC — לא קוראים שוב (חוץ מהאחרונה, למקרה של הגשה מתוקנת)
+      const { data: doneRows } = await supabase
+        .from('dark_pool_fund_holdings')
+        .select('filing_date')
+        .eq('fund_cik', cik)
+        .eq('source', 'sec')
+        .limit(1000);
+      const done = new Set((doneRows ?? []).map((r) => String(r.filing_date).slice(0, 10)));
 
       let latest: { period: string; total: number; count: number } | null = null;
       let written = 0;
-      for (const f of filings) {
+      let skipped = 0;
+      for (const [i, f] of filings.entries()) {
         if (Date.now() - started > TIME_BUDGET_MS) break;
+        if (i > 0 && !body.refresh && done.has(f.period)) {
+          skipped++;
+          continue;
+        }
         const rows = await fetchSec13fInfoTable(cik, f.accession);
         if (!rows.length) continue;
+        // הגשות לפני 3.1.2023 מדווחות value באלפי דולרים
+        if (f.filed && f.filed < '2023-01-03') for (const r of rows) r.value_usd *= 1000;
         const tickers = await mapCusipsToTickers(supabase, rows.map((r) => r.cusip));
         const holdings = aggregateSec13f(rows, tickers);
         const total = holdings.reduce((s, h) => s + h.value_usd, 0);
@@ -84,6 +110,7 @@ serve(async (req) => {
             shares: h.shares,
             value_usd: h.value_usd,
             allocation_pct: h.allocation_pct,
+            source: 'sec',
             synced_at: now,
           })),
           { onConflict: 'fund_cik,filing_date,ticker' }
@@ -93,7 +120,7 @@ serve(async (req) => {
         if (!latest) latest = { period: f.period, total, count: holdings.length };
       }
 
-      if (latest) {
+      if (latest && meta) {
         await supabase
           .from('dark_pool_fund_managers')
           .update({
@@ -104,7 +131,7 @@ serve(async (req) => {
           })
           .eq('cik', cik);
       }
-      results.push({ cik, ok: true, filings: filings.length, holdings_written: written, latest });
+      results.push({ cik, ok: true, filings: filings.length, skipped, holdings_written: written, latest });
     } catch (e) {
       results.push({ cik, ok: false, error: String((e as Error)?.message ?? e).slice(0, 200) });
     }

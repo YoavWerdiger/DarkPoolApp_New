@@ -13,7 +13,7 @@ import {
   loadPortfolioSnapshot,
   upsertPortfolioSnapshot,
 } from '../_shared/darkpoolPortfolioSnapshots.ts';
-import { loadAllFundHoldingRows } from '../_shared/fundHoldingsRows.ts';
+import { loadAllFundHoldingRows, preferSecRows } from '../_shared/fundHoldingsRows.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -134,11 +134,15 @@ serve(async (req) => {
   const filingDate = fund.last_filing_date;
   let holdings: FundHolding[] = [];
 
-  const historyRows = await loadAllFundHoldingRows<{
-    filing_date: string | null;
-    ticker: string | null;
-    value_usd: number | null;
-  }>(supabase, cik, 'filing_date, ticker, value_usd');
+  const historyRows = preferSecRows(
+    await loadAllFundHoldingRows<{
+      filing_date: string | null;
+      ticker: string | null;
+      value_usd: number | null;
+      source: string | null;
+    }>(supabase, cik, 'filing_date, ticker, value_usd, source')
+  );
+  const secLatest = historyRows.some((r) => r.source === 'sec' && String(r.filing_date ?? '').slice(0, 10) === String(filingDate ?? '').slice(0, 10));
 
   const totalsByDate = new Map<string, number>();
   const firstSeenByTicker = new Map<string, string>();
@@ -160,13 +164,15 @@ serve(async (req) => {
   if (filingDate) {
     const { data: rows } = await supabase
       .from('dark_pool_fund_holdings')
-      .select('ticker, issuer_name, shares, value_usd, allocation_pct')
+      .select('ticker, issuer_name, shares, value_usd, allocation_pct, source')
       .eq('fund_cik', cik)
       .eq('filing_date', filingDate)
       .order('value_usd', { ascending: false })
-      .limit(40);
+      .limit(80);
+    // יש לתקופה שורות SEC → רק הן
+    const latestRows = (rows ?? []).filter((r) => !secLatest || r.source === 'sec').slice(0, 40);
 
-    holdings = (rows ?? []).map((r) => {
+    holdings = latestRows.map((r) => {
       const ticker = String(r.ticker);
       const shares = r.shares != null ? Number(r.shares) : null;
       const value_usd = r.value_usd != null ? Number(r.value_usd) : null;

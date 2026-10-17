@@ -7,14 +7,18 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Animated,
+  Dimensions,
   Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  type TextStyle,
   useWindowDimensions,
   View,
 } from 'react-native';
+import { NumberFlow } from 'number-flow-react-native';
+import { Easing as ReEasing } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenChrome } from '../../components/ui/ScreenChrome';
@@ -228,6 +232,34 @@ type TradeRow = {
   date: string | null;
   traded_date: string | null;
 };
+
+
+const USD_WHOLE_FORMAT: Intl.NumberFormatOptions = {
+  style: 'currency',
+  currency: 'USD',
+  maximumFractionDigits: 0,
+  minimumFractionDigits: 0,
+};
+/** בגרירה: סיבוב קצר כדי שהספרות לא יפגרו אחרי האצבע */
+const SCRUB_SPIN_TIMING = { duration: 160, easing: ReEasing.out(ReEasing.cubic) };
+
+/** NumberFlow בלי adjustsFontSizeToFit — מקטינים פונט לפי אורך המספר כדי שייכנס בשורה */
+function heroFlowStyle(base: TextStyle, value: number | null | undefined): TextStyle {
+  const chars = USD_WHOLE_FORMAT_FN.format(Math.abs(value ?? 0)).length;
+  const avail = Dimensions.get('window').width - 40;
+  const baseSize = base.fontSize ?? 32;
+  const fit = avail / (chars * 0.62);
+  const fontSize = Math.max(baseSize * 0.55, Math.min(baseSize, fit));
+  const ratio = fontSize / baseSize;
+  return {
+    ...base,
+    marginTop: 0,
+    fontSize,
+    lineHeight: base.lineHeight ? Math.round(base.lineHeight * ratio) : undefined,
+    textAlign: 'right',
+  };
+}
+const USD_WHOLE_FORMAT_FN = new Intl.NumberFormat('en-US', USD_WHOLE_FORMAT);
 
 function kindLabel(kind: PersonKind): string {
   if (kind === 'politician') return 'לוויתן';
@@ -1491,15 +1523,15 @@ export function PersonPortfolioProfileScreen({
                   return (
                     <>
               {heroValueText ? (
-                <AnimatedNumber
-                  text={toDataIsland(scrubPoint ? formatChartValue(scrubPoint.value) : heroValueText)}
-                  value={scrubPoint ? scrubPoint.value : portfolioValue}
-                  flash
-                  fast={!!scrubPoint}
-                  style={styles.heroValue}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.55}
+                // NumberFlow (כמו InsiderWave): גלגלי ספרות עם מסכת דהייה בקצוות; בגרירה — סיבוב קצר
+                <NumberFlow
+                  value={scrubPoint ? scrubPoint.value : portfolioValue ?? 0}
+                  format={USD_WHOLE_FORMAT}
+                  direction="ltr"
+                  style={heroFlowStyle(styles.heroValue, scrubPoint ? scrubPoint.value : portfolioValue)}
+                  containerStyle={styles.heroFlowContainer}
+                  spinTiming={scrubPoint ? SCRUB_SPIN_TIMING : undefined}
+                  transformTiming={scrubPoint ? SCRUB_SPIN_TIMING : undefined}
                 />
               ) : holdingsEngine === 'trump' && trumpUnitWeighted && periodDelta ? (
                 <AnimatedNumber
@@ -1520,21 +1552,19 @@ export function PersonPortfolioProfileScreen({
                 <View style={styles.deltaRow}>
                   {scrubDelta ? (
                     <>
-                      <AnimatedNumber
-                        text={toDataIsland(formatCongressDeltaUsd(scrubDelta.usd))}
-                        value={scrubDelta.usd}
-                        fast
+                      <Text
                         style={[styles.deltaFigure, { color: scrubDelta.usd >= 0 ? tokens.colors.text.success : tokens.colors.text.danger }]}
                         numberOfLines={1}
-                      />
+                      >
+                        {toDataIsland(formatCongressDeltaUsd(scrubDelta.usd))}
+                      </Text>
                       <View style={[styles.deltaDot, { backgroundColor: scrubDelta.usd >= 0 ? tokens.colors.text.success : tokens.colors.text.danger }]} />
-                      <AnimatedNumber
-                        text={toDataIsland(formatSignedChangePct(scrubDelta.pct))}
-                        value={scrubDelta.pct}
-                        fast
+                      <Text
                         style={[styles.deltaFigure, { color: scrubDelta.usd >= 0 ? tokens.colors.text.success : tokens.colors.text.danger }]}
                         numberOfLines={1}
-                      />
+                      >
+                        {toDataIsland(formatSignedChangePct(scrubDelta.pct))}
+                      </Text>
                     </>
                   ) : null}
                   <Text style={[styles.deltaFigure, { color: tokens.colors.text.secondary }]}>
@@ -1546,20 +1576,15 @@ export function PersonPortfolioProfileScreen({
                 showOtherValue ||
                 (holdingsEngine === 'trump' && trumpUnitWeighted)) &&
               periodDelta ? (
+                // תשואה ורווח נטו — טקסט רגיל (בלי גלגול/הבהוב); האנימציה רק לשווי התיק
                 <View style={styles.deltaRow}>
-                  <AnimatedNumber
-                    text={toDataIsland(formatCongressDeltaUsd(periodDelta.usd))}
-                    value={periodDelta.usd}
-                    style={[styles.deltaFigure, { color: deltaColor }]}
-                    numberOfLines={1}
-                  />
+                  <Text style={[styles.deltaFigure, { color: deltaColor }]} numberOfLines={1}>
+                    {toDataIsland(formatCongressDeltaUsd(periodDelta.usd))}
+                  </Text>
                   <View style={[styles.deltaDot, { backgroundColor: deltaColor }]} />
-                  <AnimatedNumber
-                    text={toDataIsland(formatSignedChangePct(periodDelta.pct))}
-                    value={periodDelta.pct}
-                    style={[styles.deltaFigure, { color: deltaColor }]}
-                    numberOfLines={1}
-                  />
+                  <Text style={[styles.deltaFigure, { color: deltaColor }]} numberOfLines={1}>
+                    {toDataIsland(formatSignedChangePct(periodDelta.pct))}
+                  </Text>
                 </View>
               ) : null}
                     </>
@@ -1935,6 +1960,10 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     valueHelpBtn: {
       padding: 2,
+    },
+    heroFlowContainer: {
+      alignSelf: 'stretch',
+      marginTop: APP_LAYOUT.cardMetricLabelToValueGap,
     },
     heroValue: {
       direction: 'ltr',

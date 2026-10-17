@@ -54,50 +54,38 @@ function formatInsiderName(raw: string): string {
 }
 
 async function listMostActivePoliticians(limit: number): Promise<ExplorePerson[]> {
-  const { data, error } = await supabase
-    .from('dark_pool_congress_trades')
-    .select('politician_id, politician_name, politician_image_url')
-    .limit(2500);
-
+  // ספירה בשרת על כל הטבלה (קודם: מדגם לא ממוין של 1000 שורות + רק רשימה מאוצרת → ~15 מתוך 241)
+  const { data, error } = await supabase.rpc('darkpool_politicians_activity', {
+    p_limit: Math.max(limit * 3, 60),
+  });
   if (error) throw error;
 
-  const byId = new Map<
-    string,
-    { id: string; name: string; image: string | null; count: number }
-  >();
-  for (const row of data ?? []) {
-    const id = String(row.politician_id ?? '').trim();
-    const name = String(row.politician_name ?? '').trim();
-    if (!id || !name) continue;
-    const prev = byId.get(id);
-    if (prev) {
-      prev.count += 1;
-      continue;
-    }
-    byId.set(id, {
-      id,
-      name,
-      image: row.politician_image_url ? String(row.politician_image_url) : null,
-      count: 1,
-    });
-  }
-
-  return filterCuratedExplorePeople(
-    Array.from(byId.values())
-      .sort((a, b) => b.count - a.count)
-      .map((p) => {
-      const metric = formatTradeCountHe(p.count);
+  const people = ((data ?? []) as Array<{
+    politician_id: string;
+    politician_name: string;
+    politician_image_url: string | null;
+    trades_12m: number;
+  }>)
+    .filter((p) => p.politician_id && p.politician_name && Number(p.trades_12m) > 0)
+    .map((p) => {
+      const count = Number(p.trades_12m);
+      const metric = formatTradeCountHe(count);
       return {
-        id: p.id,
-        name: p.name,
+        id: String(p.politician_id),
+        name: String(p.politician_name),
         subtitle: metric ?? 'קונגרס',
-        image_url: congressPhoto(p.id, p.image),
+        image_url: congressPhoto(String(p.politician_id), p.politician_image_url),
         kind: 'politician' as const,
-        activity_score: p.count,
+        activity_score: count,
         metric: metric ?? undefined,
       };
-      })
-  ).slice(0, limit);
+    });
+
+  // המאוצרים קודם (תמונות/מטא בדוקים), ואחריהם כל השאר לפי פעילות בשנה האחרונה
+  const curated = filterCuratedExplorePeople(people);
+  const curatedIds = new Set(curated.map((p) => p.id));
+  const rest = people.filter((p) => !curatedIds.has(p.id));
+  return [...curated, ...rest].slice(0, limit);
 }
 
 async function listRecentlyActiveInsiders(

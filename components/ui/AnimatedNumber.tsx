@@ -21,7 +21,7 @@ import Animated, {
 import { useDesignTokens } from './useDesignTokens';
 
 export const NUMBER_ROLL_MS = 420;
-export const NUMBER_FAST_MS = 220;
+export const NUMBER_FAST_MS = 110;
 export const NUMBER_FLASH_MS = 700;
 /** השהיה בין ספרה לספרה (מהאחדות שמאלה) — תחושת מונה */
 const STAGGER_MS = 16;
@@ -88,6 +88,8 @@ export type AnimatedNumberProps = Omit<TextProps, 'children'> & {
 
 type Change = { gen: number; prev: string; dir: 1 | -1; fast: boolean };
 type Shown = {
+  /** הערך הקודם הגיע מגרירה */
+  fast: boolean;
   text: string;
   value: number | null | undefined;
   change: Change | null;
@@ -137,6 +139,7 @@ export function AnimatedNumber({
   // שינוי ערך → מה התחלף ובאיזה כיוון
   const genRef = useRef(0);
   const [shown, setShown] = useState<Shown>(() => ({
+    fast,
     text: clean,
     value,
     change: null,
@@ -149,9 +152,12 @@ export function AnimatedNumber({
         ? Math.sign(value - shown.value)
         : 0;
     const dir: 1 | -1 = numericDir < 0 ? -1 : 1;
-    const canAnimate = animate && !reduceMotion;
+    // סוף גרירה (חזרה לשווי) — מיד, בלי גלגול: אחרת המונה «ממשיך» אחרי שעוזבים את הסמן
+    const releasedScrub = shown.fast && !fast;
+    const canAnimate = animate && !reduceMotion && !releasedScrub;
     genRef.current += 1;
     setShown({
+      fast,
       text: clean,
       value,
       // גוון עדין על הספרות שהשתנו: ירוק בעלייה, אדום בירידה — גם בגרירה על הגרף

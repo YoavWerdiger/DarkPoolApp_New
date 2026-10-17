@@ -1527,6 +1527,8 @@ export function PersonPortfolioProfileScreen({
                     scrubActive={scrubActiveSV}
                     value={portfolioValue ?? 0}
                     style={heroFlowStyle(styles.heroValue, portfolioValue)}
+                    upColor={tokens.colors.text.success}
+                    downColor={tokens.colors.text.danger}
                   />
                 </View>
               ) : holdingsEngine === 'trump' && trumpUnitWeighted && periodDelta ? (

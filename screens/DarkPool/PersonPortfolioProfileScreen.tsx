@@ -18,7 +18,7 @@ import {
   View,
 } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
-import { RollingNumber } from '../../components/ui/RollingNumber';
+import { MotionNumber } from '../../components/ui/MotionNumber';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenChrome } from '../../components/ui/ScreenChrome';
@@ -1520,9 +1520,9 @@ export function PersonPortfolioProfileScreen({
                   return (
                     <>
               {heroValueText ? (
-                // מספר מתגלגל ב-UI thread (כמו InsiderWave): הגרירה מעדכנת SharedValue — בלי React, עם motion blur
+                // שווי ב-UI thread: הגרירה מעדכנת SharedValue והטקסט מתחלף מיד — בלי React; motion blur קצר בכל שינוי
                 <View style={styles.heroFlowContainer}>
-                  <RollingNumber
+                  <MotionNumber
                     scrubValue={scrubValueSV}
                     scrubActive={scrubActiveSV}
                     value={portfolioValue ?? 0}

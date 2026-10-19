@@ -63,6 +63,17 @@ function addDays(date: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** יום המסחר הבא (מדלג על סופ״ש וחגי NYSE) */
+function nextTradingDay(date: string): string {
+  let d = addDays(date, 1);
+  for (let i = 0; i < 10; i++) {
+    const wd = new Date(`${d}T12:00:00Z`).getUTCDay();
+    if (wd !== 0 && wd !== 6 && !NYSE_HOLIDAYS.has(d)) return d;
+    d = addDays(d, 1);
+  }
+  return d;
+}
+
 async function mapLimit<T, R>(list: T[], limit: number, fn: (x: T) => Promise<R>): Promise<R[]> {
   const out: R[] = new Array(list.length);
   let i = 0;
@@ -204,7 +215,7 @@ serve(async (req) => {
       .select('code, report_date')
       .in('code', earningsSymbols)
       .gte('report_date', now.date)
-      .lte('report_date', addDays(now.date, 1))
+      .lte('report_date', nextTradingDay(now.date))
       .order('report_date', { ascending: true });
     for (const r of (rows ?? []) as Array<{ code: string; report_date: string }>) {
       const sym = String(r.code).toUpperCase();

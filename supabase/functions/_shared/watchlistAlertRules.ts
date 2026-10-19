@@ -59,7 +59,7 @@ export interface WatchlistAlertMarket {
   /** מקסימום/מינימום של ~52 השבועות הקודמים (בלי היום) */
   prev52High: number | null;
   prev52Low: number | null;
-  /** תאריך דיווח קרוב (YYYY-MM-DD) אם הוא היום או מחר */
+  /** תאריך דיווח קרוב (YYYY-MM-DD) אם הוא היום או ביום המסחר הבא */
   earningsDate: string | null;
 }
 
@@ -111,6 +111,12 @@ export function thresholdList(arr: unknown, legacy: unknown): number[] {
 /** מפתח יציב לסף — 200 ו-200.0 הם אותו כלל */
 export function thresholdKey(n: number): string {
   return String(Number(n.toFixed(6)));
+}
+
+function nextCalendarDay(date: string): string {
+  const d = new Date(`${date}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
 }
 
 function fmtUsd(n: number): string {
@@ -259,7 +265,12 @@ export function evaluateWatchlistItem(
   }
 
   if (item.alert_earnings) {
-    const when = m.earningsDate === ctx.tradeDate ? 'היום' : 'מחר';
+    const when =
+      m.earningsDate === ctx.tradeDate
+        ? 'היום'
+        : m.earningsDate != null && m.earningsDate === nextCalendarDay(ctx.tradeDate)
+          ? 'מחר'
+          : 'ביום המסחר הבא';
     push({
       rule_key: 'earnings',
       mode: 'once',

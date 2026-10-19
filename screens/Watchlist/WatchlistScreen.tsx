@@ -271,27 +271,77 @@ export default function WatchlistScreen() {
 
   const activeList = watchlists.find((w) => w.id === activeWatchlistId);
 
-  const listData = useMemo(
+  const liveListData = useMemo(
     () => rows.filter((r) => !!r?.item?.symbol),
     [rows]
   );
 
+  // בזמן גרירה הרשימה «קפואה»: מחירים חיים (כל ~250ms) ומיון לפי שינוי היו מחליפים
+  // את data מתחת לאצבע — והגרירה נשברה / קפצה למקום אחר. משחררים אחרי השמירה.
+  const [dragFrozen, setDragFrozen] = useState(false);
+  const frozenDataRef = useRef<WatchlistRowData[]>(liveListData);
+  if (!dragFrozen) frozenDataRef.current = liveListData;
+  const listData = dragFrozen ? frozenDataRef.current : liveListData;
+  const unfreezeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const freezeForDrag = useCallback(() => {
+    if (unfreezeTimerRef.current) clearTimeout(unfreezeTimerRef.current);
+    unfreezeTimerRef.current = null;
+    hapticDragStart();
+    setDragFrozen(true);
+  }, []);
+
+  const releaseAfterDrag = useCallback((from: number, to: number) => {
+    if (unfreezeTimerRef.current) clearTimeout(unfreezeTimerRef.current);
+    // בלי שינוי מקום אין onReorder — משחררים מיד; אחרת onReorder משחרר (גיבוי בטיימר)
+    unfreezeTimerRef.current = setTimeout(
+      () => {
+        unfreezeTimerRef.current = null;
+        setDragFrozen(false);
+      },
+      from === to ? 0 : 1500
+    );
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (unfreezeTimerRef.current) clearTimeout(unfreezeTimerRef.current);
+    },
+    []
+  );
+
   const handleReorder = useCallback(
     ({ from, to }: ReorderableListReorderEvent) => {
-      if (from === to) return;
+      if (from === to) {
+        setDragFrozen(false);
+        return;
+      }
       void HapticFeedback.impactLight();
-      const data = reorderItems(listData, from, to);
-      reorderSymbols(data.map((r) => r.item.symbol)).catch(() => {
-        legacyAlert('שגיאה', 'לא ניתן לשמור את הסדר');
-      });
+      const data = reorderItems(frozenDataRef.current, from, to);
+      // העדכון האופטימיסטי ב-cache נכנס לפני השחרור — בלי הבהוב לסדר הישן
+      reorderSymbols(data.map((r) => r.item.symbol))
+        .catch(() => {
+          legacyAlert('שגיאה', 'לא ניתן לשמור את הסדר');
+        });
+      if (unfreezeTimerRef.current) clearTimeout(unfreezeTimerRef.current);
+      unfreezeTimerRef.current = null;
+      setDragFrozen(false);
     },
-    [listData, reorderSymbols]
+    [reorderSymbols]
   );
 
   const handleDragStart = useCallback(() => {
     'worklet';
-    runOnJS(hapticDragStart)();
-  }, []);
+    runOnJS(freezeForDrag)();
+  }, [freezeForDrag]);
+
+  const handleDragEnd = useCallback(
+    ({ from, to }: { from: number; to: number }) => {
+      'worklet';
+      runOnJS(releaseAfterDrag)(from, to);
+    },
+    [releaseAfterDrag]
+  );
 
   const handleIndexChange = useCallback(() => {
     'worklet';
@@ -499,6 +549,7 @@ export default function WatchlistScreen() {
                       data={listData}
                       onReorder={handleReorder}
                       onDragStart={handleDragStart}
+                      onDragEnd={handleDragEnd}
                       onIndexChange={handleIndexChange}
                       shouldUpdateActiveItem
                       keyExtractor={(item) =>

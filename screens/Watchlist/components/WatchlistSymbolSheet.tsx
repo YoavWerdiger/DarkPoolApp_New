@@ -571,7 +571,6 @@ function Body({
               ) : (
                 <Text style={[styles.liveChange, styles.liveChangeMuted]}>—</Text>
               )}
-              {row.isLive ? <Text style={styles.liveTag}>חי</Text> : null}
             </View>
             <View style={styles.identityRow}>
               <TickerLogo symbol={symbol} size={48} borderRadius={24} />
@@ -1026,14 +1025,6 @@ function useStyles() {
         liveChangeMuted: {
           marginTop: APP_LAYOUT.cardMetricLabelToValueGap,
           color: tokens.colors.text.secondary,
-        },
-        liveTag: {
-          ...appPhysicalRightText,
-          marginTop: APP_LAYOUT.cardMetricLabelToValueGap,
-          fontSize: APP_TYPE.caption.fontSize,
-          lineHeight: APP_TYPE.caption.lineHeight,
-          fontWeight: APP_TYPE.caption.fontWeight,
-          color: tokens.colors.primary.main,
         },
         identityRow: {
           flex: 1,

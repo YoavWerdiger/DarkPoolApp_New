@@ -79,18 +79,14 @@ export default function VoiceWaveform({ isRecording, audioLevelRef }: VoiceWavef
 
   useEffect(() => {
     if (!isRecording) {
+      // השהיה: הגל נקפא בדיוק כפי שהוקלט עד הנקודה (קודם אופס לאפס — נראה כאילו לא הוקלט כלום)
       recordingSV.value = 0;
-      liveSV.value = 0;
       inputSV.value = 0;
-      offsetX.value = 0;
-      historySV.value = Array(totalBars).fill(0);
       return;
     }
 
+    // המשך אחרי השהיה — ממשיכים מאותו גל (הקלטה חדשה = רכיב חדש, מתחיל ריק)
     recordingSV.value = 1;
-    historySV.value = Array(totalBars).fill(0);
-    offsetX.value = 0;
-    liveSV.value = 0;
 
     let raf = 0;
     const pump = () => {

@@ -29,7 +29,14 @@ import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
 import { UserBadges, badgeSizeForLineHeight } from '../../components/ui/badges/UserBadges';
 import { RankMarkIcon } from '../../components/ui/badges/RankMarkIcon';
 import { RankSheet } from '../../components/ui/badges/RankSheet';
-import { formatPaidTenure, rankColor, rankProgress } from '../../components/ui/badges/userRank';
+import {
+  USER_RANK_LADDER,
+  formatPaidTenure,
+  rankColor,
+  rankProgress,
+  type RankMetal,
+} from '../../components/ui/badges/userRank';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useUserBadges } from '../../hooks/useUserBadges';
 import {
   fetchPublicUserProfile,
@@ -47,6 +54,17 @@ import { HapticFeedback } from '../../utils/hapticFeedback';
 import { legacyAlert } from '../../utils/appDialog';
 
 const AVATAR = 92;
+
+/** שמות הדרגות — לפי צבע המתכת (העליונה בירוק המותג) */
+const RANK_NAMES: Record<RankMetal, string> = {
+  gray: 'פתיחה',
+  silver: 'כסף',
+  gold: 'זהב',
+  platinum: 'פלטינה',
+  sapphire: 'ספיר',
+  diamond: 'יהלום',
+  brand: 'DarkPool',
+};
 
 function formatMemberSince(iso: string | null): string | null {
   if (!iso) return null;
@@ -240,7 +258,7 @@ export default function PublicProfileScreen({ route, navigation }: any) {
             />
           )}
 
-          {/* ותק — הדגש של הפרופיל */}
+          {/* ותק — הדגש של הפרופיל: סמל הדרגה עם הילה, שם הדרגה, ומסלול 7 הדרגות */}
           {progress && metalColor ? (
             <Pressable
               onPress={() => {
@@ -248,32 +266,81 @@ export default function PublicProfileScreen({ route, navigation }: any) {
                 setRankOpen(true);
               }}
               accessibilityRole="button"
-              accessibilityLabel="דרגת ותק"
-              style={({ pressed }) => [styles.rankWrap, pressed && { opacity: 0.9 }]}
+              accessibilityLabel={`דרגת ותק: ${RANK_NAMES[progress.rank.metal]}`}
+              style={({ pressed }) => [styles.rankWrap, pressed && { opacity: 0.92, transform: [{ scale: 0.99 }] }]}
             >
-              <UICard variant="soft" padding="md" style={styles.rankCard}>
-                <View style={styles.rankRow}>
-                  <View style={[styles.rankMarkTile, { backgroundColor: `${metalColor}1F` }]}>
-                    <RankMarkIcon metal={progress.rank.metal} size={36} />
+              <UICard variant="soft" padding="none" style={styles.rankCard}>
+                <LinearGradient
+                  pointerEvents="none"
+                  colors={[`${metalColor}33`, `${metalColor}0D`, 'transparent']}
+                  locations={[0, 0.45, 1]}
+                  start={{ x: 1, y: 0 }}
+                  end={{ x: 0, y: 1 }}
+                  style={StyleSheet.absoluteFill}
+                />
+                <View style={styles.rankInner}>
+                  <View style={styles.rankRow}>
+                    <View style={styles.rankMarkHalo}>
+                      <View style={[styles.rankHaloOuter, { backgroundColor: `${metalColor}14` }]} />
+                      <View style={[styles.rankHaloInner, { backgroundColor: `${metalColor}26`, borderColor: `${metalColor}55` }]}>
+                        <RankMarkIcon metal={progress.rank.metal} size={40} />
+                      </View>
+                    </View>
+                    <View style={styles.rankText}>
+                      <Text style={styles.rankLabel}>ותק בקהילה</Text>
+                      <Text style={[styles.rankTitle, { color: metalColor }]} numberOfLines={1}>
+                        {`דרגת ${RANK_NAMES[progress.rank.metal]}`}
+                      </Text>
+                      <Text style={styles.rankTenure} numberOfLines={1}>
+                        {formatPaidTenure(badges?.paidDays ?? 0)}
+                      </Text>
+                    </View>
+                    <View style={[styles.levelPill, { borderColor: `${metalColor}66` }]}>
+                      <Text style={[styles.levelPillText, { color: metalColor }]}>{`${progress.rank.level}/7`}</Text>
+                    </View>
                   </View>
-                  <View style={styles.rankText}>
-                    <Text style={styles.rankLabel}>ותק בקהילה</Text>
-                    <Text style={[styles.rankTitle, { color: metalColor }]} numberOfLines={1}>
-                      {formatPaidTenure(badges?.paidDays ?? 0)}
+
+                  {/* מסלול הדרגות — כל נקודה דרגה; עד הנוכחית מלא בצבע הדרגה */}
+                  <View style={styles.ladder}>
+                    {USER_RANK_LADDER.map((r, idx) => {
+                      const done = r.level < progress.rank.level;
+                      const current = r.level === progress.rank.level;
+                      const segFill =
+                        r.level < progress.rank.level
+                          ? 1
+                          : r.level === progress.rank.level
+                            ? progress.progress
+                            : 0;
+                      return (
+                        <React.Fragment key={r.level}>
+                          <View
+                            style={[
+                              current ? styles.ladderDotCurrent : styles.ladderDot,
+                              {
+                                backgroundColor: done || current ? metalColor : tokens.colors.border.divider,
+                                borderColor: current ? `${metalColor}55` : 'transparent',
+                              },
+                            ]}
+                          />
+                          {idx < USER_RANK_LADDER.length - 1 ? (
+                            <View style={[styles.ladderSeg, { backgroundColor: tokens.colors.border.divider }]}>
+                              <View style={[styles.ladderSegFill, { width: `${Math.round(segFill * 100)}%`, backgroundColor: metalColor }]} />
+                            </View>
+                          ) : null}
+                        </React.Fragment>
+                      );
+                    })}
+                  </View>
+
+                  <View style={styles.rankFootRow}>
+                    <Text style={styles.rankFoot} numberOfLines={1}>
+                      {progress.next && progress.daysToNext != null
+                        ? `עוד ${progress.daysToNext} ימים לדרגת ${RANK_NAMES[progress.next.metal]}`
+                        : 'הדרגה הגבוהה בקהילה'}
                     </Text>
+                    <Ionicons name="chevron-back" size={16} color={tokens.colors.text.tertiary} />
                   </View>
-                  <Ionicons name="chevron-back" size={18} color={tokens.colors.text.tertiary} />
                 </View>
-                <View style={[styles.track, { backgroundColor: tokens.colors.border.divider }]}>
-                  <View
-                    style={[styles.fill, { width: `${Math.round(progress.progress * 100)}%`, backgroundColor: metalColor }]}
-                  />
-                </View>
-                <Text style={styles.rankFoot}>
-                  {progress.next && progress.daysToNext != null
-                    ? `עוד ${progress.daysToNext} ימים לדרגה הבאה · ${progress.next.rangeLabel}`
-                    : 'הדרגה הגבוהה ביותר'}
-                </Text>
               </UICard>
             </Pressable>
           ) : null}
@@ -495,49 +562,107 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       alignSelf: 'stretch',
     },
     rankCard: {
-      gap: 12,
+      overflow: 'hidden',
+    },
+    rankInner: {
+      padding: APP_LAYOUT.cardPadding,
+      gap: 16,
     },
     rankRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 12,
+      gap: 14,
     },
-    rankMarkTile: {
-      width: 56,
-      height: 56,
-      borderRadius: 16,
+    rankMarkHalo: {
+      width: 72,
+      height: 72,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    rankHaloOuter: {
+      position: 'absolute',
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+    },
+    rankHaloInner: {
+      width: 58,
+      height: 58,
+      borderRadius: 29,
+      borderWidth: 1,
       alignItems: 'center',
       justifyContent: 'center',
     },
     rankText: {
       flex: 1,
       minWidth: 0,
+      gap: 1,
     },
     rankLabel: {
       ...appPhysicalRightText,
-      ...APP_TYPE.cardSubtitle,
+      ...APP_TYPE.caption,
       color: tokens.colors.text.secondary,
     },
     rankTitle: {
       ...appPhysicalRightText,
       ...APP_TYPE.cardTitle,
-      fontSize: 18,
-      marginTop: 2,
+      fontSize: 20,
+      lineHeight: 26,
+      fontWeight: '800',
     },
-    track: {
-      height: 6,
-      borderRadius: 3,
+    rankTenure: {
+      ...appPhysicalRightText,
+      ...APP_TYPE.cardSubtitle,
+      color: tokens.colors.text.primary,
+    },
+    levelPill: {
+      borderWidth: 1,
+      borderRadius: 999,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+    },
+    levelPillText: {
+      ...APP_TYPE.caption,
+      fontWeight: '700',
+      fontVariant: ['tabular-nums'],
+    },
+    ladder: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    ladderDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+    },
+    ladderDotCurrent: {
+      width: 14,
+      height: 14,
+      borderRadius: 7,
+      borderWidth: 3,
+    },
+    ladderSeg: {
+      flex: 1,
+      height: 3,
+      borderRadius: 2,
+      marginHorizontal: 3,
       overflow: 'hidden',
       flexDirection: 'row',
     },
-    fill: {
+    ladderSegFill: {
       height: '100%',
-      borderRadius: 3,
+      borderRadius: 2,
+    },
+    rankFootRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
     },
     rankFoot: {
       ...appPhysicalRightText,
       ...APP_TYPE.caption,
-      color: tokens.colors.text.tertiary,
+      flex: 1,
+      color: tokens.colors.text.secondary,
     },
     sectionTitle: {
       ...appSectionTitleStyle,

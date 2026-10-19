@@ -95,13 +95,18 @@ function RankSheetBody({
               key={r.level}
               style={[styles.ladderRow, active && { backgroundColor: tokens.colors.selection.subtle }]}
             >
-              <View style={{ opacity: reached ? 1 : 0.4 }}>
-                <RankMarkIcon metal={r.metal} size={ROW_ICON} />
-              </View>
+              {/* הסמל תמיד בצבע המלא של הדרגה (גם שלא הושגה) — כדי שהסולם יראה את כל הצבעים, והעליונה בירוק המותג */}
+              <RankMarkIcon metal={r.metal} size={ROW_ICON} />
               <Text
                 style={[
                   styles.ladderName,
-                  { color: active ? tokens.colors.text.primary : tokens.colors.text.secondary },
+                  {
+                    color: active
+                      ? tokens.colors.text.primary
+                      : reached
+                        ? tokens.colors.text.secondary
+                        : tokens.colors.text.tertiary,
+                  },
                   active && { fontWeight: APP_TYPE.cardTitle.fontWeight },
                 ]}
                 numberOfLines={1}

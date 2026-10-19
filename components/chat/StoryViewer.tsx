@@ -534,6 +534,8 @@ export default function StoryViewer({
   const progress = useSharedValue(0);
   const present = useSharedValue(0);
   const dismissY = useSharedValue(0);
+  /** משיכה למטה לסגירה */
+  const dragY = useSharedValue(0);
   const closingRef = useRef(false);
   const startTimeRef = useRef(0);
   const remainingRef = useRef(STORY_DURATION);
@@ -1152,14 +1154,16 @@ export default function StoryViewer({
       progressStartedFor.current = null;
       present.value = 0;
       dismissY.value = 0;
+      dragY.value = 0;
       closingRef.current = false;
       return;
     }
     closingRef.current = false;
     dismissY.value = 0;
+    dragY.value = 0;
     present.value = 0;
     present.value = withTiming(1, { duration: 260, easing: Easing.out(Easing.cubic) });
-  }, [visible, progress, present, dismissY]);
+  }, [visible, progress, present, dismissY, dragY]);
 
   const handlePauseStart = useCallback(() => {
     setIsPaused(true);
@@ -1202,13 +1206,65 @@ export default function StoryViewer({
     });
   }, [present, dismissY, progress, finishClose]);
 
-  const stageAnim = useAnimatedStyle(() => ({
-    flex: 1,
-    opacity: present.value,
-    transform: [
-      { translateY: dismissY.value },
-      { scale: 0.96 + present.value * 0.04 },
-    ],
+  /* ── משיכה למטה לסגירה (כמו בתצוגת התמונה) ── */
+  const pauseForDrag = useCallback(() => {
+    handlePauseStartRef.current?.();
+  }, []);
+  const resumeAfterDrag = useCallback(() => {
+    handlePauseEndRef.current?.();
+  }, []);
+  const closeFromDrag = useCallback(() => {
+    if (closingRef.current) return;
+    closingRef.current = true;
+    cancelAnimation(progress);
+    finishClose();
+  }, [progress, finishClose]);
+  const dismissPan = React.useMemo(
+    () =>
+      Gesture.Pan()
+        // רק משיכה למטה; החלקה אופקית נשארת לדפדוף בין משתמשים, ולחיצות לניווט
+        .activeOffsetY(14)
+        .failOffsetX([-16, 16])
+        .onStart(() => {
+          'worklet';
+          runOnJS(pauseForDrag)();
+        })
+        .onUpdate((e) => {
+          'worklet';
+          dragY.value = Math.max(0, e.translationY);
+        })
+        .onEnd((e) => {
+          'worklet';
+          if (dragY.value > 120 || e.velocityY > 900) {
+            dragY.value = withTiming(SCREEN_HEIGHT, { duration: 220, easing: Easing.in(Easing.cubic) }, (finished) => {
+              'worklet';
+              if (finished) runOnJS(closeFromDrag)();
+            });
+          } else {
+            dragY.value = withSpring(0, { damping: 20, stiffness: 240, mass: 0.6 });
+            runOnJS(resumeAfterDrag)();
+          }
+        }),
+    [dragY, pauseForDrag, resumeAfterDrag, closeFromDrag]
+  );
+
+  const stageAnim = useAnimatedStyle(() => {
+    const d = Math.min(1, dragY.value / SCREEN_HEIGHT);
+    return {
+      flex: 1,
+      opacity: present.value,
+      borderRadius: d > 0 ? 18 : 0,
+      overflow: 'hidden',
+      transform: [
+        { translateY: dismissY.value + dragY.value },
+        // מתכווץ תוך כדי משיכה — כמו תצוגת התמונה
+        { scale: (0.96 + present.value * 0.04) * (1 - d * 0.25) },
+      ],
+    };
+  });
+  // הרקע השחור דועך במשיכה — רואים את המסך שמתחת
+  const containerAnim = useAnimatedStyle(() => ({
+    backgroundColor: `rgba(0,0,0,${1 - Math.min(1, dragY.value / (SCREEN_HEIGHT * 0.5)) * 0.9})`,
   }));
 
   const [confirmDelete, setConfirmDelete] = useState<{ visible: boolean; error?: string }>({
@@ -1835,6 +1891,8 @@ export default function StoryViewer({
     <Modal visible={visible} transparent animationType="none" statusBarTranslucent onRequestClose={requestClose}>
       <StatusBar hidden />
       <GestureHandlerRootView style={styles.container}>
+        <Reanimated.View style={[StyleSheet.absoluteFill, containerAnim]} pointerEvents="none" />
+        <GestureDetector gesture={dismissPan}>
         <Reanimated.View style={stageAnim}>
         {showPager ? (
           <View style={styles.stageRoot}>
@@ -1894,6 +1952,7 @@ export default function StoryViewer({
           </TouchableOpacity>
         )}
         </Reanimated.View>
+        </GestureDetector>
 
         {/* ===== Viewers + reactions sheet (own story only) ===== */}
         {viewersSheetOpen && (

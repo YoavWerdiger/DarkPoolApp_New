@@ -1602,15 +1602,17 @@ export function PersonPortfolioProfileScreen({
 
           {showChart ? (
             <View style={styles.chartWrap}>
-              {/* watermark של DarkPool (השור והדוב) מאחורי הקו — בצבע אחיד של הטקסט (כהה בבהיר, בהיר בכהה), שקיפות עדינה לפי ערכת הנושא */}
+              {/* watermark של DarkPool (השור והדוב) מאחורי הקו — בצבע אחיד של הטקסט (כהה בבהיר, בהיר בכהה), שקיפות עדינה לפי ערכת הנושא.
+                  נכס חד-צבעי ייעודי (שכבות שקיפות שומרות על הפרטים) — tint על הלוגו המקורי היה הופך אותו לכתם אחד. */}
               <View pointerEvents="none" style={[styles.chartWatermark, { height: kind === 'politician' ? 176 : 220 }]}>
                 <Image
-                  source={require('../../assets/bull-bear-drawer.png')}
+                  source={require('../../assets/bull-bear-watermark.png')}
                   style={[
-                    styles.chartWatermarkImage,
                     {
+                      height: (kind === 'politician' ? 176 : 220) * 0.86,
+                      aspectRatio: 816 / 596,
                       tintColor: tokens.colors.text.primary,
-                      opacity: String(tokens.colors.background.primary) === LIGHT_CANVAS ? 0.06 : 0.08,
+                      opacity: String(tokens.colors.background.primary) === LIGHT_CANVAS ? 0.045 : 0.055,
                     },
                   ]}
                   resizeMode="contain"
@@ -2049,10 +2051,6 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       right: 0,
       alignItems: 'center',
       justifyContent: 'center',
-    },
-    chartWatermarkImage: {
-      width: 150,
-      height: 150,
     },
     chartWrap: {
       marginBottom: APP_LAYOUT.sectionGap,

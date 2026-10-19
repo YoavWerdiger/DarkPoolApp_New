@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { ensureRealtimeAuth } from './chat/chatRealtimeService';
 import type {
   CommunityMention,
   CommunityPost,
@@ -383,44 +384,140 @@ export async function deleteCommunityPostReply(replyId: string): Promise<void> {
 
 export type CommunityPostRealtimeHandler = (post: CommunityPost) => void;
 
-export function subscribeToCommunityPosts(
-  onInsert: CommunityPostRealtimeHandler
-): () => void {
-  const channelName = `community_posts_${Date.now()}_${Math.random()
-    .toString(36)
-    .slice(2, 8)}`;
+/**
+ * אירועי זמן אמת של הציוצים (Broadcast from DB, topic פרטי `community-feed` — כמו הצ'אט).
+ * ערוץ אחד משותף לכל המכשיר; הפיד ושיט התגובות נרשמים כמאזינים.
+ * לייק/תגובה מגיעים עם הספירה המוחלטת — מציבים מספר, בלי שאילתה ובלי ספירה כפולה.
+ */
+export type CommunityFeedHandlers = {
+  onPostInsert?: (post: CommunityPost) => void;
+  onPostUpdate?: (post: CommunityPost) => void;
+  onPostDelete?: (postId: string) => void;
+  onLike?: (e: { postId: string; userId: string; op: 'add' | 'remove'; likeCount: number }) => void;
+  onReplyInsert?: (e: { id: string; postId: string; userId: string; replyCount: number }) => void;
+  onReplyDelete?: (e: { id: string; postId: string; replyCount: number }) => void;
+};
 
+const feedListeners = new Set<CommunityFeedHandlers>();
+let feedChannel: ReturnType<typeof supabase.channel> | null = null;
+let feedRetryTimer: ReturnType<typeof setTimeout> | null = null;
+let feedRetryCount = 0;
+
+async function fetchPostById(id: string): Promise<CommunityPost | null> {
+  const uid = await currentUserId();
+  const { data, error } = await supabase.from('community_posts').select(POST_SELECT).eq('id', id).maybeSingle();
+  if (error || !data) return null;
+  return mapRow(data as unknown as PostRow, uid);
+}
+
+function emit<K extends keyof CommunityFeedHandlers>(key: K, arg: Parameters<NonNullable<CommunityFeedHandlers[K]>>[0]) {
+  for (const l of feedListeners) {
+    try {
+      (l[key] as ((a: typeof arg) => void) | undefined)?.(arg);
+    } catch {
+      /* מאזין אחד שנכשל לא עוצר את השאר */
+    }
+  }
+}
+
+function teardownFeedChannel() {
+  if (feedRetryTimer) {
+    clearTimeout(feedRetryTimer);
+    feedRetryTimer = null;
+  }
+  if (feedChannel) {
+    void supabase.removeChannel(feedChannel).catch(() => undefined);
+    feedChannel = null;
+  }
+}
+
+async function ensureFeedChannel(): Promise<void> {
+  if (feedChannel || feedListeners.size === 0) return;
+  // הערוץ פרטי — חייבים JWT של המשתמש על ה-socket (אותה פונקציה כמו בצ'אט)
+  await ensureRealtimeAuth();
+  if (feedChannel || feedListeners.size === 0) return;
   const channel = supabase
-    .channel(channelName)
-    .on(
-      'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'community_posts',
-      },
-      async (payload) => {
-        const id = (payload.new as { id?: string })?.id;
-        if (!id) return;
-        try {
-          const uid = await currentUserId();
-          const { data, error } = await supabase
-            .from('community_posts')
-            .select(POST_SELECT)
-            .eq('id', id)
-            .maybeSingle();
-          if (error || !data) return;
-          onInsert(mapRow(data as unknown as PostRow, uid));
-        } catch {
-          /* ignore */
-        }
-      }
-    )
-    .subscribe();
+    .channel('community-feed', { config: { private: true, broadcast: { self: false, ack: false } } })
+    .on('broadcast', { event: 'post_insert' }, ({ payload }) => {
+      const id = String((payload as { id?: string })?.id ?? '');
+      if (!id) return;
+      void fetchPostById(id).then((post) => post && emit('onPostInsert', post));
+    })
+    .on('broadcast', { event: 'post_update' }, ({ payload }) => {
+      const id = String((payload as { id?: string })?.id ?? '');
+      if (!id) return;
+      void fetchPostById(id).then((post) => post && emit('onPostUpdate', post));
+    })
+    .on('broadcast', { event: 'post_delete' }, ({ payload }) => {
+      const id = String((payload as { id?: string })?.id ?? '');
+      if (id) emit('onPostDelete', id);
+    })
+    .on('broadcast', { event: 'like' }, ({ payload }) => {
+      const p = payload as { post_id?: string; user_id?: string; op?: string; like_count?: number };
+      if (!p?.post_id) return;
+      emit('onLike', {
+        postId: String(p.post_id),
+        userId: String(p.user_id ?? ''),
+        op: p.op === 'remove' ? 'remove' : 'add',
+        likeCount: Number(p.like_count ?? 0),
+      });
+    })
+    .on('broadcast', { event: 'reply_insert' }, ({ payload }) => {
+      const p = payload as { id?: string; post_id?: string; user_id?: string; reply_count?: number };
+      if (!p?.id || !p.post_id) return;
+      emit('onReplyInsert', {
+        id: String(p.id),
+        postId: String(p.post_id),
+        userId: String(p.user_id ?? ''),
+        replyCount: Number(p.reply_count ?? 0),
+      });
+    })
+    .on('broadcast', { event: 'reply_delete' }, ({ payload }) => {
+      const p = payload as { id?: string; post_id?: string; reply_count?: number };
+      if (!p?.id || !p.post_id) return;
+      emit('onReplyDelete', { id: String(p.id), postId: String(p.post_id), replyCount: Number(p.reply_count ?? 0) });
+    });
+  feedChannel = channel;
+  channel.subscribe((status) => {
+    if (status === 'SUBSCRIBED') {
+      feedRetryCount = 0;
+      return;
+    }
+    if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+      if (feedChannel !== channel) return;
+      teardownFeedChannel();
+      if (feedListeners.size === 0) return;
+      // חיבור מחדש עם השהיה עולה (עד 30 שנ׳)
+      const delay = Math.min(30_000, 1000 * 2 ** Math.min(feedRetryCount, 5));
+      feedRetryCount += 1;
+      feedRetryTimer = setTimeout(() => {
+        feedRetryTimer = null;
+        void ensureFeedChannel();
+      }, delay);
+    }
+  });
+}
 
+/** הרשמה לאירועי הפיד; מחזיר ביטול. הערוץ נסגר כשאין מאזינים. */
+export function subscribeToCommunityFeed(handlers: CommunityFeedHandlers): () => void {
+  feedListeners.add(handlers);
+  void ensureFeedChannel();
   return () => {
-    void supabase.removeChannel(channel);
+    feedListeners.delete(handlers);
+    if (feedListeners.size === 0) teardownFeedChannel();
   };
+}
+
+/** תאימות: ציוצים חדשים בלבד */
+export function subscribeToCommunityPosts(onInsert: CommunityPostRealtimeHandler): () => void {
+  return subscribeToCommunityFeed({ onPostInsert: onInsert });
+}
+
+/** תגובה בודדת (לשיט התגובות כשמגיעה תגובה חדשה בזמן אמת) */
+export async function fetchCommunityPostReplyById(id: string): Promise<CommunityPostReply | null> {
+  const { data, error } = await supabase.from('community_post_replies').select(REPLY_SELECT).eq('id', id).maybeSingle();
+  if (error || !data) return null;
+  return mapReplyRow(data as unknown as ReplyRow);
 }
 
 export function formatPostTime(iso: string): string {

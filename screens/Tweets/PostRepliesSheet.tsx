@@ -42,6 +42,8 @@ import { InlineAppDialog } from '../../components/ui/InlineAppDialog';
 import {
   createCommunityPostReply,
   deleteCommunityPostReply,
+  fetchCommunityPostReplyById,
+  subscribeToCommunityFeed,
   fetchCommunityPostReplies,
   formatPostTime,
 } from '../../services/tweetsService';
@@ -234,6 +236,32 @@ function PostRepliesSheetBody({
       setBusy(false);
     }
   }, [body, canSubmit, notifyCount]);
+
+  // זמן אמת: תגובה חדשה/נמחקה של אחרים בציוץ הפתוח — בלי לסגור ולפתוח את השיט
+  useEffect(() => {
+    return subscribeToCommunityFeed({
+      onReplyInsert: ({ id, postId, userId }) => {
+        const current = postRef.current;
+        if (!current || postId !== current.id) return;
+        if (user && userId === user.id) return; // שלי — כבר נוספה מקומית
+        if (repliesRef.current.some((r) => r.id === id)) return;
+        void fetchCommunityPostReplyById(id).then((reply) => {
+          if (!reply || repliesRef.current.some((r) => r.id === reply.id)) return;
+          const next = [...repliesRef.current, reply];
+          repliesRef.current = next;
+          setReplies(next);
+        });
+      },
+      onReplyDelete: ({ id, postId }) => {
+        const current = postRef.current;
+        if (!current || postId !== current.id) return;
+        if (!repliesRef.current.some((r) => r.id === id)) return;
+        const next = repliesRef.current.filter((r) => r.id !== id);
+        repliesRef.current = next;
+        setReplies(next);
+      },
+    });
+  }, [user]);
 
   // אישור מחיקה בתוך השיט: דיאלוג האפליקציה (Modal ברמת השורש) נפתח *מתחת* לשיט ולא נראה —
   // לכן לחיצה על מחיקה «לא עשתה כלום». InlineAppDialog מצויר בתוך השיט.

@@ -30,7 +30,7 @@ import {
   fetchFollowedUserIds,
   formatPostTime,
   likeCommunityPost,
-  subscribeToCommunityPosts,
+  subscribeToCommunityFeed,
   unlikeCommunityPost,
   type CommunityFeedMode,
 } from '../../services/tweetsService';
@@ -596,12 +596,42 @@ export default function TweetsFeed({ handleRef }: TweetsFeedProps) {
     void refreshFollowedIds();
   }, [feedMode, refreshFollowedIds, user]);
 
+  // זמן אמת (כמו הצ'אט): ציוץ חדש/נמחק/נערך, לייקים ותגובות — בלי לרענן את המסך
   useEffect(() => {
-    const unsub = subscribeToCommunityPosts((post) => {
-      prependPost(post);
+    const patch = (postId: string, fn: (p: CommunityPost) => CommunityPost) =>
+      setPosts((prev) => {
+        let changed = false;
+        const next = prev.map((p) => {
+          if (p.id !== postId) return p;
+          changed = true;
+          return fn(p);
+        });
+        if (!changed) return prev;
+        queryClient.setQueryData(cacheKeyFor(feedModeRef.current), next.slice(0, PAGE_SIZE));
+        return next;
+      });
+    const unsub = subscribeToCommunityFeed({
+      onPostInsert: (post) => prependPost(post),
+      onPostUpdate: (post) => patch(post.id, (p) => ({ ...post, likedByMe: p.likedByMe })),
+      onPostDelete: (postId) =>
+        setPosts((prev) => {
+          if (!prev.some((p) => p.id === postId)) return prev;
+          const next = prev.filter((p) => p.id !== postId);
+          queryClient.setQueryData(cacheKeyFor(feedModeRef.current), next.slice(0, PAGE_SIZE));
+          return next;
+        }),
+      // ספירה מוחלטת מהשרת; «לייקתי» מתעדכן רק כשזה אני (מכשיר אחר שלי)
+      onLike: ({ postId, userId, op, likeCount }) =>
+        patch(postId, (p) => ({
+          ...p,
+          likeCount,
+          likedByMe: user && userId === user.id ? op === 'add' : p.likedByMe,
+        })),
+      onReplyInsert: ({ postId, replyCount }) => patch(postId, (p) => ({ ...p, replyCount })),
+      onReplyDelete: ({ postId, replyCount }) => patch(postId, (p) => ({ ...p, replyCount })),
     });
     return unsub;
-  }, [prependPost]);
+  }, [prependPost, user]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);

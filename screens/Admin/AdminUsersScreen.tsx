@@ -14,6 +14,7 @@ import {
   Ban,
   ClipboardList,
   CreditCard,
+  BellRing,
   KeyRound,
   Search,
   Sparkles,
@@ -82,6 +83,27 @@ export default function AdminUsersScreen({ navigation }: any) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [openIntroId, setOpenIntroId] = useState<string | null>(null);
   const [openTenureId, setOpenTenureId] = useState<string | null>(null);
+  const [openPushId, setOpenPushId] = useState<string | null>(null);
+
+  // פוש אישי למשתמש אחד — אותו send_push של מסך הפוש, קהל custom עם המשתמש בלבד
+  const sendUserPush = async (user: AdminUserRow, title: string, body: string): Promise<boolean> => {
+    setBusyId(user.id);
+    try {
+      const res = await adminService.sendPush({ title, body, audience: 'custom', userIds: [user.id] });
+      if (res.tokens === 0) {
+        legacyAlert('לא נשלח', 'למשתמש אין מכשיר רשום להתראות (לא אישר התראות או לא התחבר מהאפליקציה).');
+        return false;
+      }
+      void HapticFeedback.success();
+      legacyAlert('נשלח', res.sent > 0 ? `הפוש נשלח (${res.sent} מכשירים)` : 'השליחה נכשלה בכל המכשירים');
+      return res.sent > 0;
+    } catch (e) {
+      legacyAlert('שגיאה', e instanceof Error ? e.message : 'שליחה נכשלה');
+      return false;
+    } finally {
+      setBusyId(null);
+    }
+  };
   const [badgeDetails, setBadgeDetails] = useState<Record<string, AdminUserBadgeDetails>>({});
   const { user: me } = useAuth();
 
@@ -479,6 +501,9 @@ export default function AdminUsersScreen({ navigation }: any) {
               onSuspend={() => confirmSuspend(item)}
               onPremium={() => confirmPremium(item)}
               onResetPassword={() => confirmResetPassword(item)}
+              pushOpen={openPushId === item.id}
+              onTogglePush={() => setOpenPushId((current) => (current === item.id ? null : item.id))}
+              onSendPush={(title, body) => sendUserPush(item, title, body)}
               onAppAdmin={
                 String(item.subscription_role || '').toLowerCase() === 'super_admin'
                   ? undefined
@@ -519,6 +544,9 @@ function UserCard({
   onSuspend,
   onPremium,
   onResetPassword,
+  pushOpen,
+  onTogglePush,
+  onSendPush,
   onAppAdmin,
   onDelete,
   onPayments,
@@ -540,6 +568,9 @@ function UserCard({
   onSuspend: () => void;
   onPremium: () => void;
   onResetPassword: () => void;
+  pushOpen: boolean;
+  onTogglePush: () => void;
+  onSendPush: (title: string, body: string) => Promise<boolean>;
   onAppAdmin?: () => void;
   onDelete: () => void;
   onPayments: () => void;
@@ -555,6 +586,9 @@ function UserCard({
     if (tenureOpen) setAdjustDraft(String(badges?.adjustment_days ?? 0));
   }, [tenureOpen, badges?.adjustment_days]);
   const parsedAdjust = /^-?\d{1,5}$/.test(adjustDraft.trim()) ? Number(adjustDraft.trim()) : null;
+  const [pushTitle, setPushTitle] = useState('');
+  const [pushBody, setPushBody] = useState('');
+  const canSendPush = pushTitle.trim().length > 0 && pushBody.trim().length > 0 && !busy;
   const guard = (action: () => void) => () => {
     if (busy) return;
     action();
@@ -706,6 +740,59 @@ function UserCard({
           onPress={guard(onAppAdmin)}
         />
       ) : null}
+      <ProfileMenuRow
+        title="שליחת פוש אישי"
+        icon={BellRing}
+        showDivider={!pushOpen}
+        onPress={guard(onTogglePush)}
+      />
+      {pushOpen ? (
+        <>
+          <View style={styles.tenureBox}>
+            <View style={[formFieldShellStyle({ tokens, focused: false }), styles.pushInputShell]}>
+              <TextInput
+                value={pushTitle}
+                onChangeText={setPushTitle}
+                placeholder="כותרת"
+                maxLength={80}
+                placeholderTextColor={tokens.colors.text.tertiary}
+                style={[styles.searchInput, { color: tokens.colors.text.primary }]}
+              />
+            </View>
+            <View style={[formFieldShellStyle({ tokens, focused: false }), styles.pushBodyShell]}>
+              <TextInput
+                value={pushBody}
+                onChangeText={setPushBody}
+                placeholder="תוכן ההודעה"
+                maxLength={240}
+                multiline
+                placeholderTextColor={tokens.colors.text.tertiary}
+                style={[styles.searchInput, styles.pushBodyInput, { color: tokens.colors.text.primary }]}
+              />
+            </View>
+            <Text style={[styles.introValue, { color: tokens.colors.text.tertiary, marginTop: 6 }]}>
+              {`${pushBody.length}/240 · יישלח רק ל-${name}`}
+            </Text>
+            <View style={[styles.tenureInputRow, { marginTop: 10 }]}>
+              <UIButton
+                title="שלח פוש"
+                variant="primary"
+                size="sm"
+                disabled={!canSendPush}
+                onPress={() => {
+                  void onSendPush(pushTitle.trim(), pushBody.trim()).then((ok) => {
+                    if (ok) {
+                      setPushTitle('');
+                      setPushBody('');
+                    }
+                  });
+                }}
+              />
+            </View>
+          </View>
+          <View style={[styles.rule, { backgroundColor: tokens.colors.border.divider }]} />
+        </>
+      ) : null}
       <ProfileMenuRow title="איפוס סיסמה" icon={KeyRound} onPress={guard(onResetPassword)} />
       <ProfileMenuRow title="מחק" icon={Trash2} danger showDivider={false} onPress={guard(onDelete)} />
     </AdminSurface>
@@ -787,6 +874,25 @@ const styles = StyleSheet.create({
     gap: 10,
     marginTop: 8,
     alignSelf: 'stretch',
+  },
+  pushInputShell: {
+    alignSelf: 'stretch',
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  pushBodyShell: {
+    alignSelf: 'stretch',
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    minHeight: 88,
+    marginTop: 8,
+  },
+  pushBodyInput: {
+    textAlignVertical: 'top',
+    minHeight: 68,
   },
   tenureInputShell: {
     flex: 1,

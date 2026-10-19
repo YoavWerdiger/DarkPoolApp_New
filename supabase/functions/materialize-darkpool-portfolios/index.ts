@@ -190,7 +190,7 @@ serve(async (req) => {
       120,
       Math.max(20, Number(Deno.env.get('MATERIALIZE_MAX_YAHOO_TICKERS') || '56'))
     );
-    if (mode === 'hot' && yahooTickers.length > yahooCap) {
+    if ((mode === 'hot' || mode === 'politicians') && yahooTickers.length > yahooCap) {
       yahooTickers = yahooTickers.slice(0, yahooCap);
     }
     const pricesByTicker = await ensureYahooPriceMaps(
@@ -348,6 +348,17 @@ async function resolveTargets(
     if (!t.id) return;
     byKey.set(`${t.kind}:${t.id}`, t);
   };
+
+  // סבב מתגלגל: כל הפוליטיקאים עם עסקאות (לא רק הרשימה המאוצרת) — הישנים ביותר קודם
+  if (String(mode).toLowerCase() === 'politicians') {
+    const limit = Math.min(20, Math.max(1, Number(body.max_targets) || 6));
+    const { data, error } = await supabase.rpc('darkpool_stale_politicians', { p_limit: limit });
+    if (error) throw error;
+    return (data ?? []).map((r: { politician_id: string }) => ({
+      id: String(r.politician_id),
+      kind: 'politician' as SnapshotKind,
+    }));
+  }
 
   for (const c of CURATED_MATERIALIZE_TARGETS) add(c);
 

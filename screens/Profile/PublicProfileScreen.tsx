@@ -342,9 +342,23 @@ export default function PublicProfileScreen({ route, navigation }: any) {
           ) : (
             <UICard variant="soft" padding="none" style={styles.postsCard}>
               {posts.map((p, i) => (
-                <View
+                <Pressable
                   key={p.id}
-                  style={[styles.postRow, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: tokens.colors.border.divider }]}
+                  onPress={() => {
+                    void HapticFeedback.selection();
+                    // לציוץ עצמו בפיד — גלילה + הדגשה
+                    (navigation.navigate as (name: string, params?: object) => void)('Main', {
+                      screen: 'Tweets',
+                      params: { highlightPostId: p.id, highlightKey: Date.now() },
+                    });
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="פתח את הציוץ"
+                  style={({ pressed }) => [
+                    styles.postRow,
+                    i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: tokens.colors.border.divider },
+                    pressed && { opacity: 0.85 },
+                  ]}
                 >
                   <Text style={styles.postBody} numberOfLines={4}>
                     {p.body}
@@ -358,7 +372,7 @@ export default function PublicProfileScreen({ route, navigation }: any) {
                       <Text style={styles.postMetaText}>{p.replyCount}</Text>
                     </View>
                   </View>
-                </View>
+                </Pressable>
               ))}
             </UICard>
           )}

@@ -403,6 +403,10 @@ let feedChannel: ReturnType<typeof supabase.channel> | null = null;
 let feedRetryTimer: ReturnType<typeof setTimeout> | null = null;
 let feedRetryCount = 0;
 
+export async function fetchCommunityPostById(id: string): Promise<CommunityPost | null> {
+  return fetchPostById(id);
+}
+
 async function fetchPostById(id: string): Promise<CommunityPost | null> {
   const uid = await currentUserId();
   const { data, error } = await supabase.from('community_posts').select(POST_SELECT).eq('id', id).maybeSingle();

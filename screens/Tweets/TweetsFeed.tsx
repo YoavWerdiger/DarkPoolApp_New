@@ -31,6 +31,7 @@ import {
   formatPostTime,
   likeCommunityPost,
   subscribeToCommunityFeed,
+  fetchCommunityPostById,
   unlikeCommunityPost,
   type CommunityFeedMode,
 } from '../../services/tweetsService';
@@ -62,6 +63,8 @@ function cacheKeyFor(mode: CommunityFeedMode) {
 export type TweetsFeedHandle = {
   prependPost: (post: CommunityPost) => void;
   refresh: () => void;
+  /** גלילה לציוץ מסוים + הדגשה רגעית (טוען אותו אם הוא לא ברשימה) */
+  focusPost: (postId: string) => void;
 };
 
 type TweetsFeedProps = {
@@ -80,7 +83,9 @@ function PostCard({
   currentUserId,
   following,
   onFollowingChange,
+  highlighted = false,
 }: {
+  highlighted?: boolean;
   post: CommunityPost;
   isMine: boolean;
   onLike: () => void;
@@ -111,6 +116,9 @@ function PostCard({
           borderRadius: UI_CARD_RADIUS,
           overflow: 'hidden',
           backgroundColor: tokens.colors.background.cardSolid,
+          // ציוץ שנפתח מפרופיל/התראה — מסגרת בצבע המותג לרגע
+          borderWidth: highlighted ? 1.5 : 0,
+          borderColor: highlighted ? tokens.colors.primary.main : 'transparent',
         }}
       >
         <Pressable
@@ -559,6 +567,27 @@ export default function TweetsFeed({ handleRef }: TweetsFeedProps) {
     [refreshFollowedIds]
   );
 
+  // ניווט לציוץ מסוים (מהפרופיל / מהתראה): מוודאים שהוא ברשימה, גוללים אליו ומדגישים לרגע
+  const listRef = useRef<FlatList<CommunityPost>>(null);
+  const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
+  const postsRef = useRef<CommunityPost[]>([]);
+  postsRef.current = posts;
+  const focusPost = useCallback(async (postId: string) => {
+    if (!postId) return;
+    if (!postsRef.current.some((p) => p.id === postId)) {
+      const post = await fetchCommunityPostById(postId);
+      if (!post) return;
+      // ציוץ ישן שלא נטען — מוסיפים בראש הרשימה (גם במצב «עוקב», כדי שיופיע)
+      setPosts((prev) => (prev.some((p) => p.id === post.id) ? prev : [post, ...prev]));
+    }
+    setHighlightedPostId(postId);
+    setTimeout(() => {
+      const i = postsRef.current.findIndex((p) => p.id === postId);
+      if (i >= 0) listRef.current?.scrollToIndex({ index: i, animated: true, viewPosition: 0.1 });
+    }, 120);
+    setTimeout(() => setHighlightedPostId((cur) => (cur === postId ? null : cur)), 2200);
+  }, []);
+
   useEffect(() => {
     if (!handleRef) return;
     handleRef.current = {
@@ -567,11 +596,12 @@ export default function TweetsFeed({ handleRef }: TweetsFeedProps) {
         setRefreshing(true);
         void loadPage({ reset: true, mode: feedModeRef.current });
       },
+      focusPost: (postId: string) => void focusPost(postId),
     };
     return () => {
       handleRef.current = null;
     };
-  }, [handleRef, loadPage, prependPost]);
+  }, [handleRef, loadPage, prependPost, focusPost]);
 
   useEffect(() => {
     const cached = queryClient.getQueryData<CommunityPost[]>(cacheKey);
@@ -780,8 +810,14 @@ export default function TweetsFeed({ handleRef }: TweetsFeedProps) {
       <View style={{ flex: 1 }}>
         <FeedTabToggle value={feedMode} onChange={handleFeedModeChange} />
         <FlatList
+          ref={listRef}
           data={posts}
           keyExtractor={(item) => item.id}
+          onScrollToIndexFailed={(info) => {
+            // גובה הכרטיסים משתנה — גוללים בערך ומנסים שוב
+            listRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: true });
+            setTimeout(() => listRef.current?.scrollToIndex({ index: info.index, animated: true, viewPosition: 0.1 }), 250);
+          }}
           renderItem={({ item }) => (
             <PostCard
               post={item}
@@ -795,6 +831,7 @@ export default function TweetsFeed({ handleRef }: TweetsFeedProps) {
               onReply={() => handleOpenReplies(item)}
               onShare={() => void handleShare(item)}
               onDelete={() => handleDelete(item)}
+              highlighted={item.id === highlightedPostId}
             />
           )}
           ListEmptyComponent={

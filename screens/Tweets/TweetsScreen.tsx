@@ -25,8 +25,17 @@ export default function TweetsScreen() {
   const route = useRoute();
   const navigation = useNavigation();
   const routeParams = route.params as
-    | { composeAttachment?: ShareableAttachment; composeKey?: number }
+    | { composeAttachment?: ShareableAttachment; composeKey?: number; highlightPostId?: string; highlightKey?: number }
     | undefined;
+  // ניווט לציוץ מסוים (מהפרופיל הציבורי / מהתראה) — הפיד גולל אליו ומדגיש
+  useEffect(() => {
+    const id = routeParams?.highlightPostId;
+    if (!id) return;
+    // הפיד צריך רגע לעלות בפתיחה ראשונה
+    const t = setTimeout(() => feedRef.current?.focusPost(id), 350);
+    navigation.setParams({ highlightPostId: undefined, highlightKey: undefined } as never);
+    return () => clearTimeout(t);
+  }, [routeParams?.highlightPostId, routeParams?.highlightKey, navigation]);
   useEffect(() => {
     const att = routeParams?.composeAttachment;
     if (!att) return;

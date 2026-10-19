@@ -1,4 +1,9 @@
-import { createStory, uploadStoryImage, uploadStoryVideo } from '../services/storiesService';
+import {
+  createStory,
+  getStoriesByUserId,
+  uploadStoryImage,
+  uploadStoryVideo,
+} from '../services/storiesService';
 import { logger } from '../utils/logger';
 
 /**
@@ -24,7 +29,15 @@ let pending: PendingStory[] = [];
 const localByRemoteUrl = new Map<string, string>();
 
 export function localUriForStoryMedia(url: string | null | undefined): string | null {
-  return url ? localByRemoteUrl.get(url) ?? null : null;
+  if (!url) return null;
+  const direct = localByRemoteUrl.get(url);
+  if (direct) return direct;
+  // ההעלאה מחזירה נתיב אחסון (stories/<uid>/<ts>.jpg), והצופה מקבל URL חתום שמכיל אותו —
+  // בלי ההתאמה הזו הסטורי הטרי שלי תמיד חיכה לרשת (מסך שחור בכניסה הראשונה)
+  for (const [path, local] of localByRemoteUrl) {
+    if (url.includes(path)) return local;
+  }
+  return null;
 }
 const listeners = new Set<() => void>();
 const doneListeners = new Set<() => void>();
@@ -71,6 +84,12 @@ async function run(item: PendingStory) {
       content: item.content,
       ...(item.backgroundColor ? { background_color: item.backgroundColor } : {}),
     });
+    // מרעננים את קאש הסטוריז שלי לפני שהטבעת מתעדכנת — אחרת הצופה נפתח מרשימה ישנה
+    try {
+      await getStoriesByUserId(item.userId);
+    } catch {
+      /* best effort — הצופה יטען מהרשת */
+    }
     pending = pending.filter((p) => p.id !== item.id);
     emit();
     doneListeners.forEach((fn) => fn());

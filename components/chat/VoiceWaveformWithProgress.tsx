@@ -119,8 +119,8 @@ function VoiceWaveformWithProgress({
     const p = Math.max(0, Math.min(1, progress.value));
     if (w <= 0) return { opacity: 0, transform: [{ translateX: 0 }] };
     return {
-      // כמו אינסטגרם: בלי נקודה — מופיעה רק בזמן גרירה
-      opacity: isScrubbingSV.value > 0.5 ? 1 : 0,
+      // כמו וואטסאפ: הנקודה תמיד מוצגת ומתקדמת עם הניגון (וגם בגרירה)
+      opacity: 1,
       transform: [{ translateX: p * w - THUMB_SIZE / 2 }],
     };
   });

@@ -1938,6 +1938,8 @@ export default function ChatGroupScreen() {
       // מרווח גדול בגבול מול older — מוחל כ-marginTop בתוך ChatMessage (inverted)
       const isAfterSenderChange =
         !!olderMessage && olderMessage.sender_id !== item.sender_id;
+      // שפיץ (כמו וואטסאפ) רק בבועה האחרונה ברצף — לא בכל הודעה
+      const showTail = !newerMessage || newerMessage.sender_id !== item.sender_id;
       const showDivider = shouldShowDateDivider(item, olderMessage);
       const dividerInfo = unreadDividerSnapshotRef.current;
 
@@ -1969,6 +1971,7 @@ export default function ChatGroupScreen() {
             showAvatar={showAvatar}
             showSenderName={showSenderName}
           isAfterSenderChange={isAfterSenderChange}
+          showTail={showTail}
           showDateDivider={showDivider}
           dateDividerLabel={showDivider ? formatDateDivider(new Date(item.created_at)) : ''}
           showUnreadDivider={showUnread}

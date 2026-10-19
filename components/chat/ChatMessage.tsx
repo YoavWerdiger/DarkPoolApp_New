@@ -26,6 +26,7 @@ import { Audio, isExpoAvAvailable } from '../../lib/expoAvSafe';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Path } from 'react-native-svg';
 import MediaViewer from './MediaViewer';
 import MediaGridBubble from './MediaGridBubble';
 import VoiceWaveformWithProgress from './VoiceWaveformWithProgress';
@@ -238,6 +239,8 @@ interface ChatMessageProps {
   showSenderName?: boolean;
   /** true כש-older (מעל ב-inverted) משולח אחר — מרווח גדול ב-marginTop */
   isAfterSenderChange?: boolean;
+  /** שפיץ קטן בפינה התחתונה (me ימין, other שמאל) — כמו וואטסאפ, באחרונה ברצף */
+  showTail?: boolean;
   onLongPress?: () => void;
   onPress?: () => void;
   onReply?: () => void;
@@ -253,6 +256,41 @@ interface ChatMessageProps {
   /** הודעות בערוץ הכרזות — טקסט בולד */
   boldText?: boolean;
 }
+
+const BUBBLE_TAIL_W = 8;
+const BUBBLE_TAIL_H = 13;
+
+/**
+ * שפיץ הבועה (כמו וואטסאפ) — ממשיך את הפינה התחתונה החדה החוצה בקשת קטנה.
+ * me: ימין למטה, other: שמאל למטה. פיקסל חפיפה אחד מול הבועה — בלי תפר.
+ */
+const BubbleTail = memo(function BubbleTail({ isMe, color }: { isMe: boolean; color: string }) {
+  return (
+    <View pointerEvents="none" style={[tailStyles.tail, isMe ? tailStyles.tailMe : tailStyles.tailThem]}>
+      <Svg width={BUBBLE_TAIL_W} height={BUBBLE_TAIL_H} viewBox={`0 0 ${BUBBLE_TAIL_W} ${BUBBLE_TAIL_H}`}>
+        <Path
+          d={isMe ? 'M0 0 C0 7 3 11 8 13 L0 13 Z' : 'M8 0 C8 7 5 11 0 13 L8 13 Z'}
+          fill={color}
+        />
+      </Svg>
+    </View>
+  );
+});
+
+const tailStyles = StyleSheet.create({
+  tail: {
+    position: 'absolute',
+    bottom: 0,
+    width: BUBBLE_TAIL_W,
+    height: BUBBLE_TAIL_H,
+  },
+  tailMe: {
+    right: -BUBBLE_TAIL_W + 1,
+  },
+  tailThem: {
+    left: -BUBBLE_TAIL_W + 1,
+  },
+});
 
 /** מרווח בין בועות רצופות של אותו שולח */
 export const CHAT_BUBBLE_MARGIN = 2;
@@ -293,6 +331,7 @@ function ChatMessage({
   showAvatar = true,
   showSenderName = true,
   isAfterSenderChange = false,
+  showTail = true,
   onLongPress,
   onPress,
   onReply,
@@ -701,7 +740,8 @@ function ChatMessage({
         ) : (
           <View style={styles.avatarSpacer} />
         ))}
-        <View style={[styles.bubble, isMe ? styles.myBubble : styles.theirBubble]}>
+        <View style={[styles.bubble, isMe ? styles.myBubble : styles.theirBubble, showTail && (isMe ? styles.myBubbleTail : styles.theirBubbleTail)]}>
+          {showTail ? <BubbleTail isMe={isMe} color={isMe ? DesignTokens.colors.bubbleMe : DesignTokens.colors.bubbleOther} /> : null}
           <View style={styles.deletedRow}>
             <Ionicons name="ban-outline" size={15} style={[styles.deletedIcon, metaColorStyle]} />
             <Text style={[styles.messageText, styles.deletedText, metaColorStyle]}>{label}</Text>
@@ -776,6 +816,7 @@ function ChatMessage({
               swipeReplyAnimatedStyle,
               styles.bubble,
               isMe ? styles.myBubble : styles.theirBubble,
+              showTail && (isMe ? styles.myBubbleTail : styles.theirBubbleTail),
               (message.message_type === MessageType.IMAGE ||
                 message.message_type === MessageType.VIDEO ||
                 message.message_type === MessageType.MEDIA_GROUP ||
@@ -785,6 +826,12 @@ function ChatMessage({
               message.reply_to && { minWidth: 200 },
             ]}
           >
+          {showTail ? (
+            <BubbleTail
+              isMe={isMe}
+              color={isMe ? DesignTokens.colors.bubbleMe : DesignTokens.colors.bubbleOther}
+            />
+          ) : null}
           {message.reply_to && (
             <GHTouchableOpacity
               key={`reply-${message.id}-${replyTargetId}`}
@@ -2283,6 +2330,7 @@ export default memo(ChatMessage, (prevProps, nextProps) => {
       prevProps.showAvatar === nextProps.showAvatar &&
       prevProps.showSenderName === nextProps.showSenderName &&
       prevProps.isAfterSenderChange === nextProps.isAfterSenderChange &&
+      prevProps.showTail === nextProps.showTail &&
       prevProps.boldText === nextProps.boldText) {
     return true;
   }
@@ -2313,6 +2361,7 @@ export default memo(ChatMessage, (prevProps, nextProps) => {
     prevProps.showAvatar === nextProps.showAvatar &&
     prevProps.showSenderName === nextProps.showSenderName &&
     prevProps.isAfterSenderChange === nextProps.isAfterSenderChange &&
+    prevProps.showTail === nextProps.showTail &&
     prevProps.isHighlighted === nextProps.isHighlighted &&
     prevProps.boldText === nextProps.boldText
   );
@@ -2375,11 +2424,14 @@ const createStyles = (tokens: any) => {
     maxWidth: '80%',
     minWidth: 0,
   },
+  // מקום לשפיץ (BUBBLE_TAIL_W) — לכל הבועות בצד, כדי שרצף יישאר מיושר
   gestureSwipeWrapperMe: {
     alignSelf: 'flex-end',
+    marginRight: BUBBLE_TAIL_W - 2,
   },
   gestureSwipeWrapperThem: {
     alignSelf: 'flex-start',
+    marginLeft: BUBBLE_TAIL_W - 2,
   },
   /** אודיו: בועה רחבה יחסית — כמו לפני ה־narrow polish */
   gestureSwipeWrapperAudio: {
@@ -2526,6 +2578,13 @@ const createStyles = (tokens: any) => {
     shadowOpacity: isDarkMode ? 0.18 : 0,
     shadowRadius: isDarkMode ? 3 : 0,
     elevation: isDarkMode ? 2 : 0,
+  },
+  // עם שפיץ — הפינה שלו חדה לגמרי, השפיץ ממשיך אותה החוצה
+  myBubbleTail: {
+    borderBottomRightRadius: 0,
+  },
+  theirBubbleTail: {
+    borderBottomLeftRadius: 0,
   },
   theirBubble: {
     backgroundColor: tokens.colors.bubbleOther,

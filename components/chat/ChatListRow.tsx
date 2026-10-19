@@ -49,6 +49,8 @@ export type ChatListRowProps = {
   showAvatar: boolean;
   showSenderName: boolean;
   isAfterSenderChange: boolean;
+  /** שפיץ בפינה התחתונה — רק בהודעה האחרונה ברצף של אותו שולח */
+  showTail?: boolean;
   showDateDivider: boolean;
   dateDividerLabel: string;
   showUnreadDivider: boolean;
@@ -76,6 +78,7 @@ function ChatListRow({
   showAvatar,
   showSenderName,
   isAfterSenderChange,
+  showTail = true,
   showDateDivider,
   dateDividerLabel,
   showUnreadDivider,
@@ -140,6 +143,7 @@ function ChatListRow({
         showAvatar={showAvatar}
         showSenderName={showSenderName}
         isAfterSenderChange={isAfterSenderChange}
+        showTail={showTail}
         onLongPress={onLongPress}
         onReply={onReply}
         onReplyToMessageId={onReplyToMessageId}
@@ -185,6 +189,7 @@ export default memo(ChatListRow, (prev, next) => {
     prev.showAvatar === next.showAvatar &&
     prev.showSenderName === next.showSenderName &&
     prev.isAfterSenderChange === next.isAfterSenderChange &&
+    prev.showTail === next.showTail &&
     prev.showDateDivider === next.showDateDivider &&
     prev.dateDividerLabel === next.dateDividerLabel &&
     prev.showUnreadDivider === next.showUnreadDivider &&

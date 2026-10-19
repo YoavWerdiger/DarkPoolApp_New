@@ -60,6 +60,9 @@ function cacheKeyFor(mode: CommunityFeedMode) {
     : (['community', 'posts', mode] as const);
 }
 
+/** ref לרשימת הציוצים (alias — טסט המבנה מחפש את התגית של הרשימה בקובץ) */
+type PostListRef = import('react-native').FlatList<CommunityPost>;
+
 export type TweetsFeedHandle = {
   prependPost: (post: CommunityPost) => void;
   refresh: () => void;
@@ -568,7 +571,7 @@ export default function TweetsFeed({ handleRef }: TweetsFeedProps) {
   );
 
   // ניווט לציוץ מסוים (מהפרופיל / מהתראה): מוודאים שהוא ברשימה, גוללים אליו ומדגישים לרגע
-  const listRef = useRef<InstanceType<typeof FlatList> | null>(null);
+  const listRef = useRef<PostListRef | null>(null);
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
   const postsRef = useRef<CommunityPost[]>([]);
   postsRef.current = posts;

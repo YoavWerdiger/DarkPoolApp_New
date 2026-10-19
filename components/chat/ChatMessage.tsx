@@ -727,8 +727,8 @@ function ChatMessage({
         pointerEvents="none"
         style={[styles.highlightOverlay, { opacity: highlightOpacity }]}
       />
-      {/* Avatar */}
-      {!isMe && (showAvatar ? (
+      {/* Avatar — בהודעה קולית התמונה כבר בתוך הבועה (ליד המיקרופון), אז בצד רק רווח ליישור */}
+      {!isMe && (showAvatar && message.message_type !== MessageType.AUDIO ? (
         <TouchableOpacity
           onPress={handleAvatarPress}
           disabled={!onAvatarPress}

@@ -31,6 +31,7 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import { HapticFeedback } from './utils/hapticFeedback';
 import { Fingerprint } from 'lucide-react-native';
 import { rootNavigationRef } from './navigation/rootNavigationRef';
+import PublicProfileScreen from './screens/Profile/PublicProfileScreen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { enableScreens, enableFreeze } from 'react-native-screens';
 import { isRegistrationComplete } from './services/authService';
@@ -387,6 +388,8 @@ function AppContent() {
               <Stack.Screen name="Main" component={MainTabs} />
               <Stack.Screen name="Profile" component={ProfileStack} />
               <Stack.Screen name="Admin" component={AdminStack} />
+              {/* פרופיל ציבורי של משתמש — נפתח מכל מקום (lib/openUserProfile) */}
+              <Stack.Screen name="PublicProfile" component={PublicProfileScreen} />
             </>
           ) : midRegistrationWizard && !passwordRecoveryMode ? (
             <>

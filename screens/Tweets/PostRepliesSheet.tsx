@@ -38,6 +38,7 @@ import BottomSheet, {
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import { useAuth } from '../../context/AuthContext';
 import { useIsAdmin } from '../../hooks/useIsAdmin';
+import { openUserProfile } from '../../lib/openUserProfile';
 import { InlineAppDialog } from '../../components/ui/InlineAppDialog';
 import {
   createCommunityPostReply,
@@ -398,6 +399,11 @@ function PostRepliesSheetBody({
                   <UserNameButton
                     userId={item.author.id}
                     name={item.author.displayName}
+                    // סוגרים את השיט קודם — אחרת הוא נשאר מעל הפרופיל
+                    onPress={() => {
+                      handleClose();
+                      setTimeout(() => openUserProfile(item.author.id), 260);
+                    }}
                     style={[
                       styles.replyName,
                       { color: tokens.colors.text.primary },

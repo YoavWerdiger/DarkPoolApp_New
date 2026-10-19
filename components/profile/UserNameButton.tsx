@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react';
 import { Pressable, Text, type TextStyle } from 'react-native';
+import { openUserProfile } from '../../lib/openUserProfile';
 
 type Props = {
   userId?: string;
@@ -19,12 +20,13 @@ export default function UserNameButton({
   numberOfLines,
 }: Props) {
 
-  // בלי פרופיל ציבורי — לחיץ רק כשהקורא מעביר onPress
+  // ברירת מחדל: פותח את הפרופיל הציבורי; קורא יכול להעביר onPress משלו (למשל לסגור שיט קודם)
   const handlePress = useCallback(() => {
-    onPress?.();
-  }, [onPress]);
+    if (onPress) onPress();
+    else openUserProfile(userId);
+  }, [onPress, userId]);
 
-  const canPress = !disabled && !!onPress;
+  const canPress = !disabled && (!!onPress || !!userId);
   if (!canPress) {
     return (
       <Text style={style} numberOfLines={numberOfLines}>

@@ -1,3 +1,4 @@
+import { openUserProfile } from '../../lib/openUserProfile';
 import React, { memo, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import ChatMessage from './ChatMessage';
@@ -148,6 +149,8 @@ function ChatListRow({
         isAfterSenderChange={isAfterSenderChange}
         showTail={showTail}
         centered={centered}
+        // לחיצה על תמונת השולח — הפרופיל הציבורי שלו
+        onAvatarPress={message.sender_id ? () => openUserProfile(message.sender_id) : undefined}
         onLongPress={onLongPress}
         onReply={onReply}
         onReplyToMessageId={onReplyToMessageId}

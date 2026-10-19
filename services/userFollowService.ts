@@ -116,3 +116,34 @@ export async function toggleFollowUser(targetUserId: string): Promise<boolean> {
   await followUser(targetUserId);
   return true;
 }
+
+export type FollowListUser = {
+  id: string;
+  displayName: string;
+  avatarUrl: string | null;
+};
+
+/** עוקבים / נעקבים של משתמש — לפרופיל הציבורי (RPC: רק פרטים ציבוריים) */
+export async function fetchUserFollowList(
+  userId: string,
+  kind: 'followers' | 'following',
+  limit = 100
+): Promise<FollowListUser[]> {
+  const { data, error } = await supabase.rpc('get_user_follow_list', {
+    p_user_id: userId,
+    p_kind: kind,
+    p_limit: limit,
+    p_offset: 0,
+  });
+  if (error) {
+    console.warn('fetchUserFollowList', error.message);
+    return [];
+  }
+  return ((data ?? []) as Array<{ id: string; display_name: string | null; profile_picture: string | null }>).map(
+    (r) => ({
+      id: String(r.id),
+      displayName: r.display_name || 'חבר קהילה',
+      avatarUrl: r.profile_picture || null,
+    })
+  );
+}

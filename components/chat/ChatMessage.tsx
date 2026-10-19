@@ -241,6 +241,8 @@ interface ChatMessageProps {
   isAfterSenderChange?: boolean;
   /** שפיץ קטן בפינה התחתונה (me ימין, other שמאל) — כמו וואטסאפ, באחרונה ברצף */
   showTail?: boolean;
+  /** קבוצת הכרזות (כמו וואטסאפ): כל ההודעות במרכז, ברוחב כמעט מלא, פינות עגולות, בלי שפיץ/אווטאר בצד — רק הצבע מבדיל הודעה שלי */
+  centered?: boolean;
   onLongPress?: () => void;
   onPress?: () => void;
   onReply?: () => void;
@@ -331,7 +333,8 @@ function ChatMessage({
   showAvatar = true,
   showSenderName = true,
   isAfterSenderChange = false,
-  showTail = true,
+  showTail: showTailProp = true,
+  centered = false,
   onLongPress,
   onPress,
   onReply,
@@ -345,6 +348,7 @@ function ChatMessage({
   isHighlighted = false,
   boldText = false,
 }: ChatMessageProps) {
+  const showTail = showTailProp && !centered;
   const DesignTokens = useDesignTokens();
   const { user } = useAuth();
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
@@ -722,12 +726,12 @@ function ChatMessage({
     const label = isMe || message.deleted_for_me ? 'מחקת את ההודעה' : 'ההודעה נמחקה';
     return (
       <View
-        style={[styles.messageContainer, isMe ? styles.myMessage : styles.theirMessage, senderGapStyle]}
+        style={[styles.messageContainer, centered ? styles.centeredMessage : isMe ? styles.myMessage : styles.theirMessage, senderGapStyle]}
         accessibilityRole="text"
         accessibilityLabel={label}
       >
         {/* אותה עמודת אווטאר כמו בהודעה רגילה — אחרת הבועה של other נצמדת לקצה */}
-        {!isMe && (showAvatar ? (
+        {!isMe && !centered && (showAvatar ? (
           <View style={styles.avatarContainer}>
             {message.sender?.profile_picture ? (
               <Image source={{ uri: message.sender.profile_picture }} style={styles.avatar} />
@@ -740,7 +744,7 @@ function ChatMessage({
         ) : (
           <View style={styles.avatarSpacer} />
         ))}
-        <View style={[styles.bubble, isMe ? styles.myBubble : styles.theirBubble, showTail && (isMe ? styles.myBubbleTail : styles.theirBubbleTail)]}>
+        <View style={[styles.bubble, isMe ? styles.myBubble : styles.theirBubble, showTail && (isMe ? styles.myBubbleTail : styles.theirBubbleTail), centered && styles.centeredBubble]}>
           {showTail ? <BubbleTail isMe={isMe} color={isMe ? DesignTokens.colors.bubbleMe : DesignTokens.colors.bubbleOther} /> : null}
           <View style={styles.deletedRow}>
             <Ionicons name="ban-outline" size={15} style={[styles.deletedIcon, metaColorStyle]} />
@@ -759,7 +763,7 @@ function ChatMessage({
   return (
     <Animated.View style={[
       styles.messageContainer,
-      isMe ? styles.myMessage : styles.theirMessage,
+      centered ? styles.centeredMessage : isMe ? styles.myMessage : styles.theirMessage,
       senderGapStyle,
       { opacity: effectiveOpacity, transform: [{ translateY: effectiveTranslateY }] },
     ]}>
@@ -768,7 +772,7 @@ function ChatMessage({
         style={[styles.highlightOverlay, { opacity: highlightOpacity }]}
       />
       {/* Avatar — בהודעה קולית התמונה כבר בתוך הבועה (ליד המיקרופון), אז בצד רק רווח ליישור */}
-      {!isMe && (showAvatar && message.message_type !== MessageType.AUDIO ? (
+      {!isMe && !centered && (showAvatar && message.message_type !== MessageType.AUDIO ? (
         <TouchableOpacity
           onPress={handleAvatarPress}
           disabled={!onAvatarPress}
@@ -795,7 +799,7 @@ function ChatMessage({
         collapsable={false}
         style={[
           styles.gestureSwipeWrapper,
-          isMe ? styles.gestureSwipeWrapperMe : styles.gestureSwipeWrapperThem,
+          centered ? styles.gestureSwipeWrapperCentered : isMe ? styles.gestureSwipeWrapperMe : styles.gestureSwipeWrapperThem,
           message.message_type === MessageType.AUDIO && styles.gestureSwipeWrapperAudio,
           message.message_type === MessageType.POLL && styles.gestureSwipeWrapperPoll,
         ]}
@@ -804,11 +808,12 @@ function ChatMessage({
           style={[
             styles.messageContent,
             isMe && styles.messageContentMe,
+            centered && styles.centeredStretch,
             message.message_type === MessageType.AUDIO && styles.audioMessageContent,
             message.message_type === MessageType.POLL && styles.pollMessageContent,
           ]}
         >
-        <View style={[styles.bubbleStack, isMe && styles.bubbleStackMe]}>
+        <View style={[styles.bubbleStack, isMe && styles.bubbleStackMe, centered && styles.centeredStretch]}>
         <GestureDetector gesture={replyPanGesture}>
           <Reanimated.View
             collapsable={false}
@@ -817,6 +822,7 @@ function ChatMessage({
               styles.bubble,
               isMe ? styles.myBubble : styles.theirBubble,
               showTail && (isMe ? styles.myBubbleTail : styles.theirBubbleTail),
+              centered && styles.centeredBubble,
               (message.message_type === MessageType.IMAGE ||
                 message.message_type === MessageType.VIDEO ||
                 message.message_type === MessageType.MEDIA_GROUP ||
@@ -2331,6 +2337,7 @@ export default memo(ChatMessage, (prevProps, nextProps) => {
       prevProps.showSenderName === nextProps.showSenderName &&
       prevProps.isAfterSenderChange === nextProps.isAfterSenderChange &&
       prevProps.showTail === nextProps.showTail &&
+      prevProps.centered === nextProps.centered &&
       prevProps.boldText === nextProps.boldText) {
     return true;
   }
@@ -2362,6 +2369,7 @@ export default memo(ChatMessage, (prevProps, nextProps) => {
     prevProps.showSenderName === nextProps.showSenderName &&
     prevProps.isAfterSenderChange === nextProps.isAfterSenderChange &&
     prevProps.showTail === nextProps.showTail &&
+      prevProps.centered === nextProps.centered &&
     prevProps.isHighlighted === nextProps.isHighlighted &&
     prevProps.boldText === nextProps.boldText
   );
@@ -2428,6 +2436,24 @@ const createStyles = (tokens: any) => {
   gestureSwipeWrapperMe: {
     alignSelf: 'flex-end',
     marginRight: BUBBLE_TAIL_W - 2,
+  },
+  // הכרזות: במרכז, כמעט ברוחב מלא (כמו וואטסאפ)
+  centeredMessage: {
+    justifyContent: 'center',
+  },
+  gestureSwipeWrapperCentered: {
+    alignSelf: 'center',
+    width: '94%',
+    maxWidth: '94%',
+  },
+  centeredStretch: {
+    alignItems: 'stretch',
+  },
+  centeredBubble: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
   },
   gestureSwipeWrapperThem: {
     alignSelf: 'flex-start',

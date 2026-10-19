@@ -1972,6 +1972,8 @@ export default function ChatGroupScreen() {
             showSenderName={showSenderName}
           isAfterSenderChange={isAfterSenderChange}
           showTail={showTail}
+          // הכרזות: כל ההודעות במרכז (כמו וואטסאפ), רק הצבע מבדיל הודעה שלי
+          centered={isAnnouncementGroup}
           showDateDivider={showDivider}
           dateDividerLabel={showDivider ? formatDateDivider(new Date(item.created_at)) : ''}
           showUnreadDivider={showUnread}

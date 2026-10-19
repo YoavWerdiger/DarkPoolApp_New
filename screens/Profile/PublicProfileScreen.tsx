@@ -36,7 +36,6 @@ import {
   rankProgress,
   type RankMetal,
 } from '../../components/ui/badges/userRank';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useUserBadges } from '../../hooks/useUserBadges';
 import {
   fetchPublicUserProfile,
@@ -270,21 +269,11 @@ export default function PublicProfileScreen({ route, navigation }: any) {
               style={({ pressed }) => [styles.rankWrap, pressed && { opacity: 0.92, transform: [{ scale: 0.99 }] }]}
             >
               <UICard variant="soft" padding="none" style={styles.rankCard}>
-                <LinearGradient
-                  pointerEvents="none"
-                  colors={[`${metalColor}33`, `${metalColor}0D`, 'transparent']}
-                  locations={[0, 0.45, 1]}
-                  start={{ x: 1, y: 0 }}
-                  end={{ x: 0, y: 1 }}
-                  style={StyleSheet.absoluteFill}
-                />
                 <View style={styles.rankInner}>
                   <View style={styles.rankRow}>
-                    <View style={styles.rankMarkHalo}>
-                      <View style={[styles.rankHaloOuter, { backgroundColor: `${metalColor}14` }]} />
-                      <View style={[styles.rankHaloInner, { backgroundColor: `${metalColor}26`, borderColor: `${metalColor}55` }]}>
-                        <RankMarkIcon metal={progress.rank.metal} size={40} />
-                      </View>
+                    {/* אריח ניטרלי — הצבע של הדרגה מופיע רק בשם ובמסלול */}
+                    <View style={[styles.rankMarkTile, { backgroundColor: tokens.colors.background.tertiary }]}>
+                      <RankMarkIcon metal={progress.rank.metal} size={34} />
                     </View>
                     <View style={styles.rankText}>
                       <Text style={styles.rankLabel}>ותק בקהילה</Text>
@@ -573,23 +562,10 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       alignItems: 'center',
       gap: 14,
     },
-    rankMarkHalo: {
-      width: 72,
-      height: 72,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    rankHaloOuter: {
-      position: 'absolute',
-      width: 72,
-      height: 72,
-      borderRadius: 36,
-    },
-    rankHaloInner: {
-      width: 58,
-      height: 58,
-      borderRadius: 29,
-      borderWidth: 1,
+    rankMarkTile: {
+      width: 56,
+      height: 56,
+      borderRadius: 16,
       alignItems: 'center',
       justifyContent: 'center',
     },

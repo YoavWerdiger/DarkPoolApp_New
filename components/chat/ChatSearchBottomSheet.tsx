@@ -228,9 +228,6 @@ export default function ChatSearchBottomSheet({
 
           <View style={styles.headerCenter}>
             <Text style={[styles.headerTitle, { color: tokens.colors.text.primary }]}>חיפוש הודעות</Text>
-            <Text style={[styles.headerSubtitle, { color: tokens.colors.text.secondary }]}>
-              חפש לפי תוכן ההודעה
-            </Text>
           </View>
 
           <View style={styles.headerSideSpacer} />

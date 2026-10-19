@@ -225,6 +225,7 @@ export default function PublicProfileScreen({ route, navigation }: any) {
               variant="secondary"
               size="md"
               fullWidth
+              style={styles.pillButton}
               onPress={() => navigation.navigate('Profile')}
             />
           ) : (
@@ -233,6 +234,7 @@ export default function PublicProfileScreen({ route, navigation }: any) {
               variant={following ? 'secondary' : 'primary'}
               size="md"
               fullWidth
+              style={styles.pillButton}
               loading={followBusy}
               onPress={() => void toggleFollow()}
             />
@@ -460,9 +462,15 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
+      // מרווח בין «עוקבים» ל«עוקב אחרי» — שני עמודים צמודים למרכז ולא נמתחים לקצוות
+      gap: 28,
+    },
+    // כמו כפתור «עקוב/במעקב» בשאר הפרופילים — עגול מלא
+    pillButton: {
+      borderRadius: 999,
     },
     stat: {
-      flex: 1,
+      minWidth: 88,
       alignItems: 'center',
       paddingVertical: 4,
     },

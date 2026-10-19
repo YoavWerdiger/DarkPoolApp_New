@@ -1602,13 +1602,16 @@ export function PersonPortfolioProfileScreen({
 
           {showChart ? (
             <View style={styles.chartWrap}>
-              {/* watermark של DarkPool (השור והדוב) מאחורי הקו — בצבעי הלוגו המקוריים, שקיפות לפי ערכת הנושא */}
+              {/* watermark של DarkPool (השור והדוב) מאחורי הקו — בצבע אחיד של הטקסט (כהה בבהיר, בהיר בכהה), שקיפות עדינה לפי ערכת הנושא */}
               <View pointerEvents="none" style={[styles.chartWatermark, { height: kind === 'politician' ? 176 : 220 }]}>
                 <Image
                   source={require('../../assets/bull-bear-drawer.png')}
                   style={[
                     styles.chartWatermarkImage,
-                    { opacity: String(tokens.colors.background.primary) === LIGHT_CANVAS ? 0.12 : 0.09 },
+                    {
+                      tintColor: tokens.colors.text.primary,
+                      opacity: String(tokens.colors.background.primary) === LIGHT_CANVAS ? 0.06 : 0.08,
+                    },
                   ]}
                   resizeMode="contain"
                 />

@@ -1,7 +1,7 @@
 import { LIGHT_CANVAS } from '../../../components/ui/designTokensStatic';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import Svg, { Path, Defs, LinearGradient, Stop, Line, Circle } from 'react-native-svg';
+import Svg, { Path, Defs, LinearGradient, Stop, Circle } from 'react-native-svg';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Easing,
@@ -726,17 +726,6 @@ export function PortfolioValueChart({
                 <Stop offset="100%" stopColor={lineColor} stopOpacity={0} />
               </LinearGradient>
             </Defs>
-            {[0.25, 0.5, 0.75].map((frac) => (
-              <Line
-                key={frac}
-                x1={padding.left}
-                x2={width - padding.right}
-                y1={padding.top + (height - padding.top - padding.bottom) * frac}
-                y2={padding.top + (height - padding.top - padding.bottom) * frac}
-                stroke="rgba(255,255,255,0.04)"
-                strokeWidth={1}
-              />
-            ))}
             {plotted.length >= 2 ? (
               <AnimatedPath
                 d=""
@@ -788,17 +777,6 @@ export function PortfolioValueChart({
                   />
                 ))
               : null}
-
-            {/* ציר X — קו בסיס */}
-            <Line
-              x1={padding.left}
-              x2={width - padding.right}
-              y1={plotBottom}
-              y2={plotBottom}
-              stroke="rgba(255,255,255,0.10)"
-              strokeWidth={StyleSheet.hairlineWidth * 2}
-            />
-
           </Svg>
           ) : null}
           {width > 0 ? (

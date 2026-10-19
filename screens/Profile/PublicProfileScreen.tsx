@@ -335,47 +335,48 @@ export default function PublicProfileScreen({ route, navigation }: any) {
             </Pressable>
           ) : null}
 
-          {/* ציוצים */}
-          <Text style={styles.sectionTitle}>ציוצים</Text>
-          {posts.length === 0 ? (
-            <Text style={[styles.muted, appPhysicalRightText]}>עדיין אין ציוצים</Text>
-          ) : (
-            <UICard variant="soft" padding="none" style={styles.postsCard}>
-              {posts.map((p, i) => (
-                <Pressable
-                  key={p.id}
-                  onPress={() => {
-                    void HapticFeedback.selection();
-                    // לציוץ עצמו בפיד — גלילה + הדגשה
-                    (navigation.navigate as (name: string, params?: object) => void)('Main', {
-                      screen: 'Tweets',
-                      params: { highlightPostId: p.id, highlightKey: Date.now() },
-                    });
-                  }}
-                  accessibilityRole="button"
-                  accessibilityLabel="פתח את הציוץ"
-                  style={({ pressed }) => [
-                    styles.postRow,
-                    i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: tokens.colors.border.divider },
-                    pressed && { opacity: 0.85 },
-                  ]}
-                >
-                  <Text style={styles.postBody} numberOfLines={4}>
-                    {p.body}
-                  </Text>
-                  <View style={styles.postMeta}>
-                    <Text style={styles.postMetaText}>{formatPostTime(p.createdAt)}</Text>
-                    <View style={styles.postMetaStats}>
-                      <Ionicons name="heart-outline" size={13} color={tokens.colors.text.tertiary} />
-                      <Text style={styles.postMetaText}>{p.likeCount}</Text>
-                      <Ionicons name="chatbubble-outline" size={13} color={tokens.colors.text.tertiary} style={{ marginStart: 10 }} />
-                      <Text style={styles.postMetaText}>{p.replyCount}</Text>
-                    </View>
-                  </View>
-                </Pressable>
-              ))}
-            </UICard>
-          )}
+          {/* ציוצים — כמו בפיד: כרטיס לכל ציוץ, מרווח אחיד בין כרטיסים וכותרת עם מרווח קבוע לתוכן */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>ציוצים</Text>
+            {posts.length === 0 ? (
+              <Text style={[styles.muted, appPhysicalRightText]}>עדיין אין ציוצים</Text>
+            ) : (
+              <View style={styles.postsList}>
+                {posts.map((p) => (
+                  <Pressable
+                    key={p.id}
+                    onPress={() => {
+                      void HapticFeedback.selection();
+                      // לציוץ עצמו בפיד — גלילה + הדגשה
+                      (navigation.navigate as (name: string, params?: object) => void)('Main', {
+                        screen: 'Tweets',
+                        params: { highlightPostId: p.id, highlightKey: Date.now() },
+                      });
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel="פתח את הציוץ"
+                    style={({ pressed }) => (pressed ? { opacity: 0.88 } : undefined)}
+                  >
+                    <UICard variant="soft" padding="none" style={styles.postCard}>
+                      <Text style={styles.postBody} numberOfLines={4}>
+                        {p.body}
+                      </Text>
+                      <View style={styles.postMeta}>
+                        <Text style={styles.postMetaText}>{formatPostTime(p.createdAt)}</Text>
+                        <View style={styles.postMetaStats}>
+                          <Ionicons name="heart-outline" size={14} color={tokens.colors.text.tertiary} />
+                          <Text style={styles.postMetaText}>{p.likeCount}</Text>
+                          <View style={styles.postMetaGap} />
+                          <Ionicons name="chatbubble-outline" size={14} color={tokens.colors.text.tertiary} />
+                          <Text style={styles.postMetaText}>{p.replyCount}</Text>
+                        </View>
+                      </View>
+                    </UICard>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+          </View>
         </ScrollView>
       )}
 
@@ -644,19 +645,20 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       flex: 1,
       color: tokens.colors.text.secondary,
     },
+    section: {
+      gap: APP_LAYOUT.sectionHeaderToContent,
+      marginTop: 4,
+    },
     sectionTitle: {
       ...appSectionTitleStyle,
       color: tokens.colors.text.primary,
-      marginTop: 8,
-      marginBottom: -8,
     },
-    postsCard: {
-      overflow: 'hidden',
+    postsList: {
+      gap: APP_LAYOUT.cardStackGap,
     },
-    postRow: {
-      paddingHorizontal: APP_LAYOUT.cardPadding,
-      paddingVertical: 14,
-      gap: 8,
+    postCard: {
+      padding: APP_LAYOUT.cardPadding,
+      gap: 10,
     },
     postBody: {
       ...appPhysicalRightText,
@@ -672,6 +674,9 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
+    },
+    postMetaGap: {
+      width: 10,
     },
     postMetaText: {
       ...APP_TYPE.caption,

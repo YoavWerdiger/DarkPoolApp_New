@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import { Image, Pressable, Text, View, type ViewStyle } from 'react-native';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { openUserProfile } from '../../lib/openUserProfile';
 
 type Props = {
   userId?: string;
@@ -26,12 +27,13 @@ export default function UserAvatarButton({
   const tokens = useDesignTokens();
   const initial = (name.trim()[0] || '?').toUpperCase();
 
-  // בלי פרופיל ציבורי — לחיץ רק כשהקורא מעביר onPress
+  // ברירת מחדל: פותח את הפרופיל הציבורי (גלובלי); קורא יכול להעביר onPress משלו
   const handlePress = useCallback(() => {
-    onPress?.();
-  }, [onPress]);
+    if (onPress) onPress();
+    else openUserProfile(userId);
+  }, [onPress, userId]);
 
-  const canPress = !disabled && !!onPress;
+  const canPress = !disabled && (!!onPress || !!userId);
 
   const avatar = uri ? (
     <Image

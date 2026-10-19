@@ -49,6 +49,7 @@ import {
 import { isolateNumericRuns } from '../DarkPool/utils/bidi';
 import { useGroupNotificationMute } from '../../hooks/useGroupNotificationMute';
 import { UserBadges, badgeSizeForLineHeight } from '../../components/ui/badges/UserBadges';
+import { openUserProfile } from '../../lib/openUserProfile';
 import {
   settingsHeroType,
   settingsGroupLabelStyle,
@@ -444,7 +445,14 @@ export default function ChatGroupInfoScreen() {
           </View>
         </View>
         <View style={styles.leadingIcon}>
-          <View style={styles.memberAvatarWrap}>
+          {/* לחיצה על התמונה — הפרופיל הציבורי (לחיצה על השורה נשארת לניהול) */}
+          <TouchableOpacity
+            style={styles.memberAvatarWrap}
+            onPress={() => openUserProfile(member.user_id)}
+            activeOpacity={0.75}
+            accessibilityRole="button"
+            accessibilityLabel={`פרופיל של ${member.user?.display_name || 'משתמש'}`}
+          >
             {member.user?.profile_picture ? (
               <Image source={{ uri: member.user.profile_picture }} style={styles.memberAvatar} />
             ) : (
@@ -455,7 +463,7 @@ export default function ChatGroupInfoScreen() {
               </View>
             )}
             {isOnline ? <View style={styles.avatarOnlineDot} /> : null}
-          </View>
+          </TouchableOpacity>
         </View>
       </TouchableOpacity>
     );

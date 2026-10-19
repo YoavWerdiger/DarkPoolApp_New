@@ -393,6 +393,10 @@ function PostRepliesSheetBody({
                 name={item.author.displayName}
                 uri={item.author.avatarUrl}
                 size={36}
+                onPress={() => {
+                  handleClose();
+                  setTimeout(() => openUserProfile(item.author.id), 260);
+                }}
               />
               <View style={styles.replyMain}>
                 <View style={styles.replyMeta}>

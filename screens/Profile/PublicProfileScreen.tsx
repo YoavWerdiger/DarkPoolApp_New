@@ -21,7 +21,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { APP_LAYOUT } from '../../components/ui/appLayout';
 import { APP_TYPE } from '../../components/ui/appType';
-import { ScreenChrome } from '../../components/ui/ScreenChrome';
+import { ChatSessionBackdrop } from '../../components/chat/ChatSessionBackdrop';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import UICard from '../../components/ui/UICard';
 import UIButton from '../../components/ui/UIButton';
@@ -167,7 +167,9 @@ export default function PublicProfileScreen({ route, navigation }: any) {
   const memberSince = formatMemberSince(profile?.memberSince ?? null);
 
   return (
-    <ScreenChrome rtl>
+    <View style={styles.root}>
+      {/* אותו רקע כמו דפי הפרופיל (צ'אט) — בלי direction כפוי: האפליקציה כבר forceRTL */}
+      <ChatSessionBackdrop />
       <View style={[styles.topBar, { paddingTop: Math.max(insets.top, 8) + 6 }]}>
         <DayNavBlurButton
           size={DAY_NAV_BUTTON_SIZE}
@@ -357,7 +359,7 @@ export default function PublicProfileScreen({ route, navigation }: any) {
           )}
         </View>
       </BottomSheet>
-    </ScreenChrome>
+    </View>
   );
 }
 
@@ -388,8 +390,11 @@ function Stat({
 
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
+    root: {
+      flex: 1,
+      backgroundColor: 'transparent',
+    },
     topBar: {
-      direction: 'rtl',
       flexDirection: 'row',
       paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
       paddingBottom: 6,
@@ -435,7 +440,6 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       color: tokens.colors.text.primary,
     },
     nameRow: {
-      direction: 'rtl',
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
@@ -451,7 +455,6 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       color: tokens.colors.text.secondary,
     },
     statsRow: {
-      direction: 'rtl',
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
@@ -483,7 +486,6 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       gap: 12,
     },
     rankRow: {
-      direction: 'rtl',
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,
@@ -502,12 +504,10 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     rankLabel: {
       ...APP_TYPE.cardSubtitle,
       color: tokens.colors.text.secondary,
-      textAlign: 'right',
     },
     rankTitle: {
       ...APP_TYPE.cardTitle,
       fontSize: 18,
-      textAlign: 'right',
       marginTop: 2,
     },
     track: {
@@ -523,12 +523,10 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     rankFoot: {
       ...APP_TYPE.caption,
       color: tokens.colors.text.tertiary,
-      textAlign: 'right',
     },
     sectionTitle: {
       ...APP_TYPE.sectionTitle,
       color: tokens.colors.text.primary,
-      textAlign: 'right',
       marginTop: 8,
       marginBottom: -8,
     },
@@ -543,17 +541,13 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     postBody: {
       ...APP_TYPE.body,
       color: tokens.colors.text.primary,
-      textAlign: 'right',
-      writingDirection: 'rtl',
     },
     postMeta: {
-      direction: 'rtl',
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
     },
     postMetaStats: {
-      direction: 'rtl',
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
@@ -575,7 +569,6 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       marginBottom: 12,
     },
     listRow: {
-      direction: 'rtl',
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,

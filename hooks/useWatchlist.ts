@@ -17,8 +17,6 @@ import {
 import {
   computeVsEntry,
   computeVsTarget,
-  dispatchWatchlistAlerts,
-  evaluateWatchlistAlerts,
   loadWatchlistInsights,
 } from '../services/watchlist/watchlistInsights';
 import type {
@@ -279,14 +277,8 @@ export function useWatchlist() {
     return sortRows(built, sortMode);
   }, [items, quotes, livePrices, sortMode, insights, rangeStats]);
 
-  // בדיקת התראות על שורות מלאות — רק כשבפוקוס (לא ברקע אחרי ניווט)
-  useEffect(() => {
-    if (!isFocused || rowsAll.length === 0) return;
-    const fires = evaluateWatchlistAlerts(rowsAll);
-    if (fires.length > 0) {
-      void dispatchWatchlistAlerts(fires);
-    }
-  }, [isFocused, rowsAll]);
+  // התראות אישיות נבדקות בשרת (Edge Function watchlist-alerts מ-pg_cron) ונשלחות כפוש —
+  // לא כאן. בדיקה בצד הלקוח ירתה רק כשהמסך פתוח, וחזרה על עצמה בכל כניסה.
 
   const rows = useMemo(
     () => filterRows(rowsAll, filterMode),

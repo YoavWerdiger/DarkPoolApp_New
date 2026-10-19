@@ -1,8 +1,8 @@
 import type { ViewStyle } from 'react-native';
 import { APP_LAYOUT } from '../../components/ui/appLayout';
 
-/** ריפוד אופקי זהה לכותרת ולשורות — ריפוד כרטיס */
-export const ROW_PAD_H = APP_LAYOUT.cardPadding;
+/** ריפוד אופקי זהה לכותרת ולשורות — ריפוד המסך (הרשימה פרוסה על כל המסך, בלי כרטיס) */
+export const ROW_PAD_H = APP_LAYOUT.screenPaddingHorizontal;
 
 /**
  * גריד RTL: סימבול → מחיר → שינוי → שינוי % → ווליום → גרירה

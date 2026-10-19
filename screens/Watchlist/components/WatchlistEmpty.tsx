@@ -49,7 +49,7 @@ export function WatchlistEmpty({ onAddPress, onSuggestMany }: Props) {
         wrap: { paddingBottom: APP_LAYOUT.stackGapSmall },
         hero: {
           alignItems: 'center',
-          paddingHorizontal: APP_LAYOUT.cardPadding,
+          paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
           paddingTop: APP_LAYOUT.sectionGap - APP_LAYOUT.stackGapSmall,
           paddingBottom: APP_LAYOUT.componentGap + APP_LAYOUT.stackGapSmall,
           borderBottomWidth: 1,
@@ -61,7 +61,7 @@ export function WatchlistEmpty({ onAddPress, onSuggestMany }: Props) {
           borderRadius: 28,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: tokens.colors.background.primary,
+          backgroundColor: tokens.colors.background.cardSolid,
           marginBottom: APP_LAYOUT.componentGap,
         },
         title: {
@@ -80,7 +80,7 @@ export function WatchlistEmpty({ onAddPress, onSuggestMany }: Props) {
           alignSelf: 'center',
         },
         suggestHeader: {
-          paddingHorizontal: APP_LAYOUT.cardPadding,
+          paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
           paddingTop: APP_LAYOUT.componentGap,
         },
         suggestLabel: {
@@ -90,7 +90,7 @@ export function WatchlistEmpty({ onAddPress, onSuggestMany }: Props) {
         suggestRow: {
           flexDirection: 'row-reverse',
           alignItems: 'center',
-          paddingHorizontal: APP_LAYOUT.cardPadding,
+          paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
           paddingVertical: APP_LAYOUT.cardTitleToBodyGap,
         },
         suggestDivider: {
@@ -118,7 +118,7 @@ export function WatchlistEmpty({ onAddPress, onSuggestMany }: Props) {
           color: tokens.colors.text.secondary,
         },
         finishWrap: {
-          paddingHorizontal: APP_LAYOUT.cardPadding,
+          paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
           paddingTop: APP_LAYOUT.componentGap,
         },
         addChip: {
@@ -128,7 +128,7 @@ export function WatchlistEmpty({ onAddPress, onSuggestMany }: Props) {
           height: 28,
           paddingHorizontal: 12,
           borderRadius: 14,
-          backgroundColor: tokens.colors.background.primary,
+          backgroundColor: tokens.colors.background.cardSolid,
         },
         addHint: {
           ...APP_TYPE.cardMetricLabel,

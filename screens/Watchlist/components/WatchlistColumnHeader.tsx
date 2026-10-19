@@ -64,7 +64,7 @@ export function WatchlistColumnHeader({ sortMode, onSortChange }: Props) {
       StyleSheet.create({
         wrap: {
           ...quoteRow,
-          paddingTop: APP_LAYOUT.cardPadding,
+          paddingTop: APP_LAYOUT.stackGapSmall,
           paddingBottom: APP_LAYOUT.stackGapSmall,
           borderBottomWidth: 1,
           borderBottomColor: tokens.colors.border.divider,

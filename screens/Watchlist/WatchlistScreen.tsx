@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -19,9 +19,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { ScreenChrome } from '../../components/ui/ScreenChrome';
 import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHeader';
 import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
-import UICard from '../../components/ui/UICard';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import { UI_CARD_RADIUS, APP_LAYOUT } from '../../components/ui/appLayout';
+import { APP_LAYOUT } from '../../components/ui/appLayout';
+import { ROW_PAD_H } from './watchlistTheme';
 import { appCaptionStyle } from '../../components/ui/appType';
 import { WatchlistRow } from './components/WatchlistRow';
 import { WatchlistRowSkeleton } from './components/WatchlistRowSkeleton';
@@ -75,7 +75,7 @@ function RowDivider() {
     <View
       style={{
         height: 1,
-        marginHorizontal: APP_LAYOUT.cardPadding,
+        marginHorizontal: ROW_PAD_H,
         backgroundColor: tokens.colors.border.divider,
       }}
     />
@@ -94,6 +94,8 @@ export default function WatchlistScreen() {
   const [newListName, setNewListName] = useState('');
   const [notesTarget, setNotesTarget] = useState<WatchlistRowData | null>(null);
   const [notesDraft, setNotesDraft] = useState('');
+  const notesDraftRef = useRef('');
+  notesDraftRef.current = notesDraft;
 
   const {
     watchlists,
@@ -173,12 +175,16 @@ export default function WatchlistScreen() {
       if (
         prev.price === live.price &&
         prev.changePct === live.changePct &&
-        prev.item.alerts_enabled === live.item.alerts_enabled &&
-        prev.item.notes === live.item.notes &&
-        prev.item.entry_price === live.item.entry_price &&
-        prev.item.target_price === live.item.target_price
+        prev.item === live.item
       ) {
         return prev;
+      }
+      // הערה שהתעדכנה בשרת (cache ישן → רענון) — רק אם המשתמש עוד לא ערך אותה
+      if (
+        prev.item.notes !== live.item.notes &&
+        notesDraftRef.current === (prev.item.notes ?? '')
+      ) {
+        setNotesDraft(live.item.notes ?? '');
       }
       return live;
     });
@@ -187,6 +193,8 @@ export default function WatchlistScreen() {
   const saveNotes = useCallback(async () => {
     const itemId = notesTarget?.item?.id;
     if (!itemId) return;
+    // בלי שינוי — לא כותבים (לא לדרוס הערה עדכנית יותר בשרת)
+    if ((notesTarget?.item?.notes ?? '').trim() === notesDraft.trim()) return;
     try {
       await setNotes(itemId, notesDraft);
     } catch {
@@ -388,7 +396,6 @@ export default function WatchlistScreen() {
     });
   }, [activeWatchlistId, openListActions, setActiveWatchlistId, watchlists]);
 
-  const hp = APP_LAYOUT.screenPaddingHorizontal;
   const subtitle =
     rows.length > 0
       ? `${activeList?.name ?? 'הרשימה שלי'} · ${rows.length}`
@@ -398,19 +405,13 @@ export default function WatchlistScreen() {
     () =>
       StyleSheet.create({
         safe: { flex: 1 },
+        // הרשימה על המסך עצמו (בלי כרטיס) — ריפוד אופקי בשורות (ROW_PAD_H = ריפוד מסך)
         body: {
           flex: 1,
           minHeight: 0,
-          paddingHorizontal: hp,
           paddingTop: APP_LAYOUT.stackGapSmall,
         },
         panel: {
-          flex: 1,
-          minHeight: 0,
-          borderRadius: UI_CARD_RADIUS,
-          overflow: 'hidden',
-        },
-        panelInner: {
           flex: 1,
           minHeight: 0,
           width: '100%',
@@ -436,7 +437,7 @@ export default function WatchlistScreen() {
           color: tokens.colors.text.secondary,
         },
       }),
-    [tokens, hp]
+    [tokens]
   );
 
   return (
@@ -464,12 +465,7 @@ export default function WatchlistScreen() {
         <View style={[styles.body, { marginBottom: Math.max(0, mainTabsHeight - 12) }]}>
           <MarketsErrorBoundary>
             {isLoading && rows.length === 0 ? (
-              <UICard
-                variant="soft"
-                padding="none"
-                style={styles.panel}
-                contentContainerStyle={styles.panelInner}
-              >
+              <View style={styles.panel}>
                 <View style={styles.skeletonList}>
                   {Array.from({ length: 8 }).map((_, i) => (
                     <React.Fragment key={i}>
@@ -478,15 +474,10 @@ export default function WatchlistScreen() {
                     </React.Fragment>
                   ))}
                 </View>
-              </UICard>
+              </View>
             ) : (
               <>
-                <UICard
-                  variant="soft"
-                  padding="none"
-                  style={styles.panel}
-                  contentContainerStyle={styles.panelInner}
-                >
+                <View style={styles.panel}>
                   {isFetchingQuotes && listData.length === 0 ? (
                     <View style={styles.updatingRow}>
                       <ActivityIndicator
@@ -546,7 +537,7 @@ export default function WatchlistScreen() {
                       renderItem={renderWatchlistItem}
                     />
                   </View>
-                </UICard>
+                </View>
               </>
             )}
           </MarketsErrorBoundary>

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -56,9 +56,14 @@ import type {
 } from '../../../services/watchlist/watchlistTypes';
 import {
   addThreshold,
-  parseThresholdList,
   toggleThreshold,
 } from '../../../services/watchlist/watchlistAlertThresholds';
+import {
+  alertSig,
+  alertValuesFromItem,
+  diffAlertPatch,
+  type AlertValues,
+} from '../../../services/watchlist/watchlistAlertForm';
 
 type Props = {
   visible: boolean;
@@ -122,6 +127,7 @@ function summarizeChips(chips: Chip[], empty: string): string {
   if (chips.length === 0) return empty;
   return chips.map((chip) => chip.label).join('  ·  ');
 }
+
 
 export function WatchlistSymbolSheet({
   visible,
@@ -213,29 +219,66 @@ function Body({
   const [alertEarnings, setAlertEarnings] = useState(false);
   const [savingMeta, setSavingMeta] = useState(false);
 
+  /** הערכים שהטופס נטען מהם לאחרונה (מהשרת) */
+  const syncedRef = useRef<{ id: string; values: AlertValues } | null>(null);
+
+  const loadForm = useCallback((itemId: string, v: AlertValues, resetUi: boolean) => {
+    setAlertAbovePrices(v.above);
+    setAlertBelowPrices(v.below);
+    setAlertChangePcts(v.change);
+    setPriceAlertsOn(v.above.length + v.below.length > 0);
+    setDailyAlertsOn(v.change.length > 0);
+    setAlertsOn(v.enabled);
+    setAlertDayHigh(v.dayHigh);
+    setAlertWeekHigh(v.weekHigh);
+    setAlertWeekLow(v.weekLow);
+    setAlert52wHigh(v.y52High);
+    setAlert52wLow(v.y52Low);
+    setAlertTargetHit(v.target);
+    setAlertEarnings(v.earnings);
+    if (resetUi) {
+      setPriceDraft('');
+      setDailyDraft('');
+      setPriceSide('above');
+      setOpenAlert(null);
+    }
+    syncedRef.current = { id: itemId, values: v };
+  }, []);
+
+  const serverValues = useMemo(() => alertValuesFromItem(row.item), [row.item]);
+  const serverSig = alertSig(serverValues);
+
+  const formValues: AlertValues = {
+    above: priceAlertsOn ? alertAbovePrices : [],
+    below: priceAlertsOn ? alertBelowPrices : [],
+    change: dailyAlertsOn ? alertChangePcts : [],
+    enabled: alertsOn,
+    dayHigh: alertDayHigh,
+    weekHigh: alertWeekHigh,
+    weekLow: alertWeekLow,
+    y52High: alert52wHigh,
+    y52Low: alert52wLow,
+    target: alertTargetHit,
+    earnings: alertEarnings,
+  };
+  const formSigRef = useRef('');
+  formSigRef.current =
+    alertSig(formValues) + (priceDraft.trim() || dailyDraft.trim() ? '|draft' : '');
+
+  // טעינה בפתיחה; ואם הנתונים מהשרת התעדכנו (למשל cache ישן → רענון) והמשתמש עוד
+  // לא נגע בטופס — מתעדכנים, כדי ששמירה לא תדרוס הגדרות עם ערכים ישנים.
   useEffect(() => {
-    const item = row.item;
-    const nextAbove = parseThresholdList(item.alert_above_prices, item.alert_above);
-    const nextBelow = parseThresholdList(item.alert_below_prices, item.alert_below);
-    const nextChange = parseThresholdList(item.alert_change_pcts, item.alert_change_pct);
-    setAlertAbovePrices(nextAbove);
-    setAlertBelowPrices(nextBelow);
-    setAlertChangePcts(nextChange);
-    setPriceAlertsOn(nextAbove.length + nextBelow.length > 0);
-    setDailyAlertsOn(nextChange.length > 0);
-    setPriceDraft('');
-    setDailyDraft('');
-    setPriceSide('above');
-    setOpenAlert(null);
-    setAlertsOn(!!item.alerts_enabled);
-    setAlertDayHigh(!!item.alert_day_high);
-    setAlertWeekHigh(!!item.alert_week_high);
-    setAlertWeekLow(!!item.alert_week_low);
-    setAlert52wHigh(!!item.alert_52w_high);
-    setAlert52wLow(!!item.alert_52w_low);
-    setAlertTargetHit(!!item.alert_target_hit);
-    setAlertEarnings(!!item.alert_earnings);
-  }, [row.item.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    const synced = syncedRef.current;
+    if (!synced || synced.id !== row.item.id) {
+      loadForm(row.item.id, serverValues, true);
+      return;
+    }
+    const syncedSig = alertSig(synced.values);
+    if (syncedSig === serverSig) return;
+    if (formSigRef.current === syncedSig) {
+      loadForm(row.item.id, serverValues, false);
+    }
+  }, [row.item.id, serverSig]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const company = row.item.company_name?.trim() ?? '';
   const priceText = formatTickerLivePrice(row.price) ?? '—';
@@ -270,21 +313,24 @@ function Body({
       }
       if (pendingDaily != null) nextChange = addThreshold(nextChange, pendingDaily);
 
-      await onPatch(row.item.id, {
-        alert_above_prices: nextAbove,
-        alert_below_prices: nextBelow,
-        alert_change_pcts: nextChange,
-        alert_entry_gain_pcts: [],
-        alert_entry_loss_pcts: [],
-        alerts_enabled: alertsOn,
-        alert_day_high: alertDayHigh,
-        alert_week_high: alertWeekHigh,
-        alert_week_low: alertWeekLow,
-        alert_52w_high: alert52wHigh,
-        alert_52w_low: alert52wLow,
-        alert_target_hit: alertTargetHit,
-        alert_earnings: alertEarnings,
-      });
+      const nextValues: AlertValues = {
+        above: nextAbove,
+        below: nextBelow,
+        change: nextChange,
+        enabled: alertsOn,
+        dayHigh: alertDayHigh,
+        weekHigh: alertWeekHigh,
+        weekLow: alertWeekLow,
+        y52High: alert52wHigh,
+        y52Low: alert52wLow,
+        target: alertTargetHit,
+        earnings: alertEarnings,
+      };
+      const patch = diffAlertPatch(serverValues, nextValues);
+      if (Object.keys(patch).length > 0) {
+        await onPatch(row.item.id, patch);
+      }
+      syncedRef.current = { id: row.item.id, values: nextValues };
       setAlertAbovePrices(nextAbove);
       setAlertBelowPrices(nextBelow);
       setAlertChangePcts(nextChange);
@@ -301,6 +347,7 @@ function Body({
     onPatch,
     onSaveNotes,
     row.item.id,
+    serverValues,
     alertAbovePrices,
     alertBelowPrices,
     alertChangePcts,

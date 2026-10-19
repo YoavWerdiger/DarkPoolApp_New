@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Animated,
   Dimensions,
+  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -1594,6 +1595,14 @@ export function PersonPortfolioProfileScreen({
 
           {showChart ? (
             <View style={styles.chartWrap}>
+              {/* watermark של DarkPool (השור והדוב) מאחורי הקו — עדין, בצבע אחד לפי ערכת הנושא */}
+              <View pointerEvents="none" style={[styles.chartWatermark, { height: kind === 'politician' ? 176 : 220 }]}>
+                <Image
+                  source={require('../../assets/bull-bear-drawer.png')}
+                  style={[styles.chartWatermarkImage, { tintColor: tokens.colors.text.primary }]}
+                  resizeMode="contain"
+                />
+              </View>
               <PortfolioValueChart
                 series={chartSeries}
                 height={kind === 'politician' ? 176 : 220}
@@ -2019,6 +2028,19 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
       textAlign: 'center',
+    },
+    chartWatermark: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    chartWatermarkImage: {
+      width: 132,
+      height: 132,
+      opacity: 0.06,
     },
     chartWrap: {
       marginBottom: APP_LAYOUT.sectionGap,

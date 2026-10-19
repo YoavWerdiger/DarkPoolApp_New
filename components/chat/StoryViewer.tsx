@@ -49,6 +49,7 @@ import {
   StoryViewer as StoryViewerRow,
   StoryReaction,
   getStoriesByUserId,
+  peekStoriesCache,
   markStoryViewed,
   deleteStory,
   reactToStory,
@@ -547,6 +548,14 @@ export default function StoryViewer({
   const pendingStoryIndexRef = useRef<number | 'last' | null>(null);
   /** Cache stories per user for instant user↔user switches (kills black flash). */
   const storiesCacheRef = useRef<Map<string, UserStory[]>>(new Map());
+  // קאש משותף מהשירות (נטען מראש מרשימת הצ'אטים) — פתיחה מיידית בלי לחכות לרשת
+  const cachedStoriesFor = (uid: string): UserStory[] | undefined => {
+    const local = storiesCacheRef.current.get(uid);
+    if (local) return local;
+    const shared = peekStoriesCache(uid);
+    if (shared && shared.length) storiesCacheRef.current.set(uid, shared);
+    return shared && shared.length ? shared : undefined;
+  };
   /** When switchToUser already applied cache, load effect should not reset storyIndex. */
   const skipLoadApplyRef = useRef(false);
   // Keep latest indices for timers/video callbacks (avoid stale closures).
@@ -753,7 +762,7 @@ export default function StoryViewer({
     progress.value = 0;
 
     const pending = pendingStoryIndexRef.current;
-    const cached = storiesCacheRef.current.get(currentUser.user_id);
+    const cached = cachedStoriesFor(currentUser.user_id);
     const alreadyApplied = skipLoadApplyRef.current;
     if (alreadyApplied) {
       skipLoadApplyRef.current = false;
@@ -930,7 +939,7 @@ export default function StoryViewer({
     setIsPaused(false);
 
     const nextUser = storiesByUser[nextUserIndex];
-    const cached = nextUser ? storiesCacheRef.current.get(nextUser.user_id) : undefined;
+    const cached = nextUser ? cachedStoriesFor(nextUser.user_id) : undefined;
     if (cached && cached.length > 0) {
       // Neighbor FlatList cell already paints this story — keep media mounted,
       // do NOT opacity-gate or hold previous user's frame (that caused black flash).
@@ -1773,7 +1782,7 @@ export default function StoryViewer({
   const renderUserPage = ({ item, index }: { item: StoryWithUser; index: number }) => {
     void cacheEpoch;
     const isActive = index === userIndex;
-    const cached = storiesCacheRef.current.get(item.user_id) ?? [];
+    const cached = cachedStoriesFor(item.user_id) ?? [];
     // Prefer live stories only when they belong to this page's user
     const storiesBelongToPage =
       isActive

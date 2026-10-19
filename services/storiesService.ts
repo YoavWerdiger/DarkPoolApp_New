@@ -18,6 +18,8 @@ const STORY_DURATION_HOURS = 24;
 const STORIES_BUCKET = 'chat-media';
 const STORIES_PATH_PREFIX = 'stories';
 const SIGNED_URL_EXPIRY = 3600; // 1 hour
+/** רוחב מקסימלי לתמונת סטורי בהעלאה */
+const STORY_MAX_WIDTH = 1440;
 
 export interface UserStory {
   id: string;
@@ -81,12 +83,22 @@ function extractStoragePath(mediaUrl: string): string {
  * Generate a signed URL for a storage path in the stories bucket.
  * Returns null if signing fails.
  */
+/**
+ * קאש URL חתום לפי נתיב: בלי זה כל פתיחה יצרה URL חדש (טוקן אחר) — גם תמונה שכבר ירדה
+ * לא זוהתה בקאש של התמונות ונטענה שוב (מסך שחור כמה שניות). נשמר עד 5 דק' לפני התפוגה.
+ */
+const signedUrlCache = new Map<string, { url: string; expiresAt: number }>();
+const SIGNED_URL_REUSE_MS = (SIGNED_URL_EXPIRY - 300) * 1000;
+
 async function getSignedUrl(storagePath: string): Promise<string | null> {
+  const hit = signedUrlCache.get(storagePath);
+  if (hit && hit.expiresAt > Date.now()) return hit.url;
   try {
     const { data, error } = await supabase.storage
       .from(STORIES_BUCKET)
       .createSignedUrl(storagePath, SIGNED_URL_EXPIRY);
     if (error || !data?.signedUrl) return null;
+    signedUrlCache.set(storagePath, { url: data.signedUrl, expiresAt: Date.now() + SIGNED_URL_REUSE_MS });
     return data.signedUrl;
   } catch {
     return null;
@@ -207,6 +219,38 @@ export async function getUsersWithStories(currentUserId?: string): Promise<Story
 /**
  * Get stories for a specific user, with signed media URLs.
  */
+/** סטוריז לפי משתמש — קאש בזיכרון כדי שהצופה ייפתח מיד (נטען מראש מרשימת הצ'אטים) */
+const storiesByUserCache = new Map<string, { data: UserStory[]; at: number }>();
+const STORIES_CACHE_MS = 60_000;
+
+export function peekStoriesCache(userId: string): UserStory[] | undefined {
+  const hit = storiesByUserCache.get(userId);
+  if (!hit) return undefined;
+  // סטורי שפג תוקפו לא מוצג גם מהקאש
+  const now = new Date().toISOString();
+  return hit.data.filter((s) => !s.expires_at || s.expires_at > now);
+}
+
+/**
+ * טעינה מראש מהשורה ברשימת הצ'אטים: רשימת הסטוריז + URL חתום + הורדת התמונה הראשונה,
+ * לכמה המשתמשים הראשונים — כשנכנסים לצופה הכל כבר מוכן.
+ */
+export async function prefetchStoriesForUsers(
+  userIds: string[],
+  prefetchImage: (uri: string) => void
+): Promise<void> {
+  for (const id of userIds) {
+    try {
+      const hit = storiesByUserCache.get(id);
+      const data = hit && Date.now() - hit.at < STORIES_CACHE_MS ? hit.data : await getStoriesByUserId(id);
+      const first = data[0];
+      if (first?.media_type === 'image' && first.media_url?.startsWith('http')) prefetchImage(first.media_url);
+    } catch {
+      /* best effort */
+    }
+  }
+}
+
 export async function getStoriesByUserId(userId: string): Promise<UserStory[]> {
   const { data, error } = await supabase
     .from('user_stories')
@@ -216,7 +260,10 @@ export async function getStoriesByUserId(userId: string): Promise<UserStory[]> {
     .order('created_at', { ascending: true });
 
   if (error) throw error;
-  if (!data || data.length === 0) return [];
+  if (!data || data.length === 0) {
+    storiesByUserCache.set(userId, { data: [], at: Date.now() });
+    return [];
+  }
 
   const resolved = await Promise.all(
     data.map(async (story) => {
@@ -228,6 +275,7 @@ export async function getStoriesByUserId(userId: string): Promise<UserStory[]> {
     })
   );
 
+  storiesByUserCache.set(userId, { data: resolved, at: Date.now() });
   return resolved;
 }
 
@@ -241,8 +289,11 @@ export async function uploadStoryImage(uri: string, userId: string): Promise<{ u
 
     let base64: string;
     try {
+      // מקטינים לרוחב 1440 (מסך טלפון) — תמונה מלאה מהמצלמה היא כמה MB והטעינה בצופה לקחה שניות
+      const probe = await ImageManipulator.manipulateAsync(uri, []);
+      const actions = probe.width > STORY_MAX_WIDTH ? [{ resize: { width: STORY_MAX_WIDTH } }] : [];
       const compressed = await ImageManipulator.manipulateAsync(
-        uri, [],
+        probe.uri, actions,
         { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG, base64: true }
       );
       base64 = compressed.base64!;

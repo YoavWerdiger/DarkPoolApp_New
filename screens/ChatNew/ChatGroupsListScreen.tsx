@@ -58,7 +58,7 @@ import { ChatSearchResult } from '../../types/chat.types';
 import StoryViewer from '../../components/chat/StoryViewer';
 import AddStoryFullScreen from '../../components/chat/AddStoryFullScreen';
 import StoryAvatarRing from '../../components/chat/StoryAvatarRing';
-import { getUsersWithStories, StoryWithUser } from '../../services/storiesService';
+import { getUsersWithStories, prefetchStoriesForUsers, StoryWithUser } from '../../services/storiesService';
 import { queryClient } from '../../lib/queryClient';
 import { appQueryKeys } from '../../lib/appQueryKeys';
 import { schedulePrefetchChatMessages, warmChatGroupFromDisk, warmChatGroupOnPress } from '../../services/appPrefetch';
@@ -266,6 +266,14 @@ export default function ChatGroupsListScreen() {
   const [usersWithStories, setUsersWithStories] = useState<StoryWithUser[]>(
     () => queryClient.getQueryData<StoryWithUser[]>(appQueryKeys.storiesUsers) ?? []
   );
+  // טעינה מראש של הסטוריז הראשונים (רשימה + URL + תמונה ראשונה) — פתיחת הצופה מיידית
+  useEffect(() => {
+    const ids = usersWithStories.slice(0, 6).map((u) => u.user_id);
+    if (!ids.length) return;
+    void prefetchStoriesForUsers(ids, (uri) => {
+      Image.prefetch(uri).catch(() => {});
+    });
+  }, [usersWithStories]);
   const [storyViewerVisible, setStoryViewerVisible] = useState(false);
   const [storyViewerInitialIndex, setStoryViewerInitialIndex] = useState(0);
   const storiesScrollRef = useRef<ScrollView>(null);

@@ -518,6 +518,8 @@ async function sendPush(supabase: SupabaseClient, adminId: string, body: Record<
       to: t.expo_push_token as string,
       sound: 'default',
       title,
+      // מקור קבוע — כותרת משנית (iOS); באנדרואיד שם האפליקציה כבר מוצג בראש ההתראה
+      subtitle: 'מערכת DarkPool',
       body: pushBody,
       data: { ...data, type: data.type || 'admin_broadcast', campaignId: campaign.id },
       channelId: 'default',

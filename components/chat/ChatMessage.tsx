@@ -6,7 +6,7 @@
 
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useMemo, useState, useRef, useEffect, useCallback, memo } from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator, Animated, Easing, Linking, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator, Animated, Easing, Linking, Platform, Dimensions } from 'react-native';
 import { Gesture, GestureDetector, TouchableOpacity as GHTouchableOpacity } from 'react-native-gesture-handler';
 import Reanimated, {
   Easing as ReanimatedEasing,
@@ -260,6 +260,8 @@ interface ChatMessageProps {
 }
 
 const BUBBLE_TAIL_W = 8;
+/** רוחב מדיה בבועת הכרזות: 94% מהמסך פחות ריפוד הבועה (xs משני הצדדים) ושולי הרשימה */
+const WIDE_MEDIA_W = Math.round(Dimensions.get('window').width * 0.94 - 8 - 16);
 const BUBBLE_TAIL_H = 13;
 
 /**
@@ -1014,6 +1016,7 @@ function ChatMessage({
               timeLabel: timeText,
               onReplyItem: onReplyToMessageId,
             },
+            centered,
           )}
 
           {/* Text Content */}
@@ -1175,7 +1178,10 @@ function renderMediaContent(
   videoServerThumbFailed?: boolean,
   onVideoThumbError?: () => void,
   album?: { senderName?: string; timeLabel?: string; onReplyItem?: (messageId: string) => void },
+  /** הכרזות: המדיה ממלאת את רוחב הבועה הרחבה (במקום 220) */
+  wide = false,
 ) {
+  const wideStyle = wide ? styles.mediaWide : null;
   const imageUri =
     message.local_media_uri || resolved.main || message.media_url;
 
@@ -1217,11 +1223,11 @@ function renderMediaContent(
                 cacheKey={message.id}
                 initialAspect={aspectRatio}
                 knownAspect={!!(imgW && imgH)}
-                style={[styles.mediaImage, message.is_uploading && { opacity: 0.7 }]}
+                style={[styles.mediaImage, wideStyle, message.is_uploading && { opacity: 0.7 }]}
                 recyclingKey={`${message.id}-bubble-${bubbleUri}`}
               />
             ) : (
-              <View style={[styles.mediaImage, styles.mediaImagePlaceholder, { aspectRatio }]}>
+              <View style={[styles.mediaImage, wideStyle, styles.mediaImagePlaceholder, { aspectRatio }]}>
                 <ActivityIndicator size="small" color={tokens.colors.text.tertiary} />
               </View>
             )}
@@ -1261,7 +1267,7 @@ function renderMediaContent(
 
       return (
         <TouchableOpacity onPress={onMediaPress} activeOpacity={0.9}>
-          <View style={styles.mediaVideo}>
+          <View style={[styles.mediaVideo, wideStyle]}>
             {videoThumbOk ? (
               <Image
                 source={{ uri: thumbUri }}
@@ -1382,7 +1388,7 @@ function renderMediaContent(
           mediaItems={message.media_urls || []}
           localMediaItems={message.local_media_urls}
           isUploading={message.is_uploading}
-          maxWidth={220}
+          maxWidth={wide ? WIDE_MEDIA_W : 220}
           senderName={album?.senderName}
           timeLabel={album?.timeLabel}
           onReplyItem={album?.onReplyItem}
@@ -2654,6 +2660,10 @@ const createStyles = (tokens: any) => {
     marginBottom: 4,
     overflow: 'hidden',
     alignSelf: 'flex-start',
+  },
+  mediaWide: {
+    maxWidth: '100%',
+    alignSelf: 'stretch',
   },
   mediaImagePlaceholder: {
     backgroundColor: tokens.colors.background.tertiary,

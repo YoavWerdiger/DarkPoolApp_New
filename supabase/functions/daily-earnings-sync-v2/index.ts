@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { isServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
-import { loadMarketCapMap, MIN_EARNINGS_MARKET_CAP_USD, normalizeCapSymbol } from '../_shared/marketCaps.ts'
+import { loadAvgVolumeMap, loadMarketCapMap, MIN_EARNINGS_AVG_VOLUME, MIN_EARNINGS_MARKET_CAP_USD, normalizeCapSymbol } from '../_shared/marketCaps.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
 import {
   DEFAULT_EARNINGS_IMPORTANCE,
@@ -1428,11 +1428,19 @@ serve(async (req) => {
     // רק חברות בשווי 2B+ (stock_market_caps, MIN_EARNINGS_MARKET_CAP_USD). שווי לא ידוע נשאר (מקור השווי חלקי —
     // refresh-market-caps משלים אותו מ-Finnhub). טבלה ריקה/לא זמינה → לא מסננים.
     const capMap = await loadMarketCapMap(supabase)
+    // + נפח מסחר ממוצע ≥ 1M מניות ליום (נפח לא ידוע — נשאר, כמו שווי לא ידוע)
+    const volMap = await loadAvgVolumeMap(supabase)
     let droppedBelowCap = 0
+    let droppedLowVolume = 0
     let unknownCap = 0
     const records = capMap
       ? nearConfirmedKept.filter((r) => {
           const sym = normalizeCapSymbol(String(r.ticker ?? r.code ?? '').split('.US')[0])
+          const vol = volMap?.get(sym)
+          if (vol != null && Number.isFinite(vol) && vol < MIN_EARNINGS_AVG_VOLUME) {
+            droppedLowVolume++
+            return false
+          }
           const cap = capMap.get(sym)
           if (cap == null) {
             unknownCap++
@@ -1448,7 +1456,7 @@ serve(async (req) => {
       : nearConfirmedKept
     console.log(
       capMap
-        ? `[market-cap] kept ${records.length} (unknown cap: ${unknownCap}), dropped ${droppedBelowCap} below $2B`
+        ? `[market-cap] kept ${records.length} (unknown cap: ${unknownCap}), dropped ${droppedBelowCap} below $2B, ${droppedLowVolume} below 1M avg volume`
         : '[market-cap] caps table unavailable — no cap filter this run',
     )
     console.log(

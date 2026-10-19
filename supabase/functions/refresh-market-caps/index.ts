@@ -11,6 +11,7 @@ type ScreenerRow = {
   symbol?: string
   name?: string
   marketCap?: string
+  volume?: string
   sector?: string
   country?: string
 }
@@ -121,16 +122,37 @@ serve(async (req) => {
     const json = await resp.json()
     const rows = (json?.data?.rows ?? []) as ScreenerRow[]
 
+    // ממוצע נפח קודם — ממוצע נע (EMA 0.8/0.2) כדי שיום שקט אחד לא יוציא מניה מהלוח
+    const prevAvg = new Map<string, number>()
+    for (let from = 0; from < 20000; from += 1000) {
+      const { data, error } = await supabase
+        .from('stock_market_caps')
+        .select('symbol, avg_volume')
+        .not('avg_volume', 'is', null)
+        .range(from, from + 999)
+      if (error) break
+      for (const row of data ?? []) prevAvg.set(String(row.symbol), Number(row.avg_volume))
+      if (!data || data.length < 1000) break
+    }
+
     const now = new Date().toISOString()
     const records = rows
-      .map((r) => ({
-        symbol: normalizeCapSymbol(String(r.symbol ?? '')),
-        market_cap: Number(r.marketCap ?? 0),
-        name: r.name ?? null,
-        sector: r.sector || null,
-        country: r.country || null,
-        updated_at: now,
-      }))
+      .map((r) => {
+        const symbol = normalizeCapSymbol(String(r.symbol ?? ''))
+        const vol = Number(String(r.volume ?? '').replace(/,/g, ''))
+        const hasVol = Number.isFinite(vol) && vol >= 0 && String(r.volume ?? '').trim() !== ''
+        const prev = prevAvg.get(symbol)
+        return {
+          symbol,
+          market_cap: Number(r.marketCap ?? 0),
+          name: r.name ?? null,
+          sector: r.sector || null,
+          country: r.country || null,
+          last_volume: hasVol ? vol : null,
+          avg_volume: hasVol ? (prev != null && Number.isFinite(prev) ? prev * 0.8 + vol * 0.2 : vol) : prev ?? null,
+          updated_at: now,
+        }
+      })
       .filter((r) => r.symbol && Number.isFinite(r.market_cap) && r.market_cap > 0)
 
     // הגנה: תשובה חלקית/שבורה לא דורסת את הטבלה

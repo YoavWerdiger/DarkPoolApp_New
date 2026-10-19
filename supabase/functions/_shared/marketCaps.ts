@@ -6,6 +6,9 @@ type Db = { from: (table: string) => any }
 /** דיווחי רווחים רק לחברות בשווי שוק 2B ומעלה */
 export const MIN_EARNINGS_MARKET_CAP_USD = 2_000_000_000
 
+/** ונפח מסחר ממוצע של מיליון מניות ליום ומעלה — שלא ייכנסו מניות «רנדומליות» */
+export const MIN_EARNINGS_AVG_VOLUME = 1_000_000
+
 /** BRK/B, BRK-B → BRK.B (הפורמט ב-earnings_calendar) */
 export function normalizeCapSymbol(symbol: string): string {
   return symbol.trim().toUpperCase().replace(/[/-]/g, '.')
@@ -32,6 +35,28 @@ export async function loadMarketCapMap(
     for (const row of data ?? []) {
       map.set(String(row.symbol), Number(row.market_cap))
     }
+    if (!data || data.length < PAGE) break
+  }
+  return map.size > 1000 ? map : null
+}
+
+/** מפת symbol → נפח ממוצע (EMA). null אם אין נתונים — אז לא מסננים לפי נפח */
+export async function loadAvgVolumeMap(
+  supabase: Db,
+): Promise<Map<string, number> | null> {
+  const map = new Map<string, number>()
+  const PAGE = 1000
+  for (let from = 0; from < 20000; from += PAGE) {
+    const { data, error } = await supabase
+      .from('stock_market_caps')
+      .select('symbol, avg_volume')
+      .not('avg_volume', 'is', null)
+      .range(from, from + PAGE - 1)
+    if (error) {
+      console.warn('[marketCaps] volume load failed:', error.message)
+      return null
+    }
+    for (const row of data ?? []) map.set(String(row.symbol), Number(row.avg_volume))
     if (!data || data.length < PAGE) break
   }
   return map.size > 1000 ? map : null

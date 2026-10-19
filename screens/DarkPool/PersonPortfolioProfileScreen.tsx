@@ -19,6 +19,7 @@ import {
   View,
 } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
+import { LIGHT_CANVAS } from '../../components/ui/designTokensStatic';
 import { MotionNumber } from '../../components/ui/MotionNumber';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -33,7 +34,7 @@ import UICard from '../../components/ui/UICard';
 import { chromeSurfaceCardStyle } from '../../components/ui/chromeControl';
 import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import { ChartSkeleton, ListItemSkeleton } from '../../components/ui/SkeletonLoader';
+import { LineChartSkeleton, ListItemSkeleton, SkeletonBox } from '../../components/ui/SkeletonLoader';
 import { useQuery } from '@tanstack/react-query';
 import { appQueryKeys } from '../../lib/appQueryKeys';
 import {
@@ -1428,8 +1429,14 @@ export function PersonPortfolioProfileScreen({
         <View style={[styles.flex, darkPoolTransparentFill]}>
           {envelope}
           <ScrollView style={styles.flex} contentContainerStyle={[styles.body, { paddingBottom: 12 }]}>
-            <View style={{ marginTop: 8 }}>
-              <ChartSkeleton delay={200} height={220} />
+            {/* כמו המסך האמיתי: תווית + שווי + שינוי, ואז הגרף ושורת התקופות */}
+            <View style={{ marginTop: 8, alignItems: 'flex-end', gap: 8 }}>
+              <SkeletonBox width={70} height={14} />
+              <SkeletonBox width="62%" height={34} borderRadius={10} />
+              <SkeletonBox width="44%" height={14} />
+            </View>
+            <View style={{ marginTop: 16 }}>
+              <LineChartSkeleton height={kind === 'politician' ? 176 : 220} periods={SNAPSHOT_CHART_PERIODS.length} />
             </View>
             <View style={{ marginTop: 24, gap: 12 }}>
               {Array.from({ length: 5 }).map((_, i) => (
@@ -1595,11 +1602,14 @@ export function PersonPortfolioProfileScreen({
 
           {showChart ? (
             <View style={styles.chartWrap}>
-              {/* watermark של DarkPool (השור והדוב) מאחורי הקו — עדין, בצבע אחד לפי ערכת הנושא */}
+              {/* watermark של DarkPool (השור והדוב) מאחורי הקו — בצבעי הלוגו המקוריים, שקיפות לפי ערכת הנושא */}
               <View pointerEvents="none" style={[styles.chartWatermark, { height: kind === 'politician' ? 176 : 220 }]}>
                 <Image
                   source={require('../../assets/bull-bear-drawer.png')}
-                  style={[styles.chartWatermarkImage, { tintColor: tokens.colors.text.primary }]}
+                  style={[
+                    styles.chartWatermarkImage,
+                    { opacity: tokens.colors.background.primary === LIGHT_CANVAS ? 0.12 : 0.09 },
+                  ]}
                   resizeMode="contain"
                 />
               </View>
@@ -1620,7 +1630,7 @@ export function PersonPortfolioProfileScreen({
             </View>
           ) : chartInputsFetching ? (
             <View style={styles.chartWrap}>
-              <ChartSkeleton delay={0} height={kind === 'politician' ? 176 : 220} />
+              <LineChartSkeleton height={kind === 'politician' ? 176 : 220} periods={SNAPSHOT_CHART_PERIODS.length} />
             </View>
           ) : kind === 'fund_manager' ||
             holdingsEngine === 'congress' ||
@@ -2038,9 +2048,8 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       justifyContent: 'center',
     },
     chartWatermarkImage: {
-      width: 132,
-      height: 132,
-      opacity: 0.06,
+      width: 150,
+      height: 150,
     },
     chartWrap: {
       marginBottom: APP_LAYOUT.sectionGap,

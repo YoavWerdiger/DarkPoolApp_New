@@ -7,6 +7,7 @@ import React, { useEffect } from 'react';
 import { View, Animated, StyleSheet, ViewStyle } from 'react-native';
 import { useDesignTokens } from './DesignTokens';
 import UICard from './UICard';
+import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 
 /**
  * Yoga בשורש LTR (App.tsx) גם כש-forceRTL פעיל.
@@ -295,6 +296,92 @@ export const ChartSkeleton: React.FC<ChartSkeletonProps> = ({ delay = 0, height 
       <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between' }}>
         {[0, 1, 2, 3, 4, 5].map((i) => (
           <SkeletonBox key={i} width={30} height={10} delay={delay + 300 + i * 30} />
+        ))}
+      </View>
+    </View>
+  );
+};
+
+/**
+ * Skeleton לגרף קו (פרופיל אינסיידרים) — באותה פריסה כמו הגרף האמיתי:
+ * אזור בגובה הגרף עם קו גלי ומילוי עדין, ומתחתיו שורת כפתורי התקופות.
+ */
+interface LineChartSkeletonProps {
+  height?: number;
+  periods?: number;
+}
+
+export const LineChartSkeleton: React.FC<LineChartSkeletonProps> = ({ height = 220, periods = 5 }) => {
+  const tokens = useDesignTokens();
+  // לפי ערכת הנושא (לבן בכהה, כהה בבהיר)
+  const ink = tokens.colors.text.primary;
+  const [w, setW] = React.useState(0);
+  useEffect(() => {
+    retainSharedSkeletonPulse();
+    return () => {
+      releaseSharedSkeletonPulse();
+    };
+  }, []);
+
+  // קו שנראה כמו גרף מניה אמיתי: מגמה עולה + תנודות בכמה תדירויות (דטרמיניסטי — לא קופץ בין רינדורים)
+  const left = 10;
+  const right = Math.max(left, w - 10);
+  const top = 12;
+  const bottom = height - 10;
+  const N = 72;
+  const raw: number[] = [];
+  for (let i = 0; i < N; i++) {
+    const t = i / (N - 1);
+    raw.push(
+      t * 0.55 +
+        Math.sin(t * 9.1 + 0.4) * 0.09 +
+        Math.sin(t * 23.7 + 1.3) * 0.045 +
+        Math.sin(t * 57.3 + 2.1) * 0.022 +
+        (t > 0.42 && t < 0.58 ? -Math.sin(((t - 0.42) / 0.16) * Math.PI) * 0.12 : 0)
+    );
+  }
+  const lo = Math.min(...raw);
+  const hi = Math.max(...raw);
+  let d = '';
+  raw.forEach((v, i) => {
+    const x = left + ((right - left) * i) / (N - 1);
+    // 15% שוליים מלמעלה/למטה כמו בגרף
+    const y = top + (bottom - top) * (0.85 - ((v - lo) / (hi - lo || 1)) * 0.7);
+    d += i === 0 ? `M ${x.toFixed(1)} ${y.toFixed(1)}` : ` L ${x.toFixed(1)} ${y.toFixed(1)}`;
+  });
+  const fill = w > 0 ? `${d} L ${right} ${bottom} L ${left} ${bottom} Z` : '';
+
+  return (
+    <View>
+      <Animated.View
+        style={{ height, opacity: SHARED_PULSE }}
+        onLayout={(e) => setW(e.nativeEvent.layout.width)}
+      >
+        {w > 0 ? (
+          <Svg width={w} height={height}>
+            <Defs>
+              <LinearGradient id="skelGrad" x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0%" stopColor={ink} stopOpacity={0.14} />
+                <Stop offset="100%" stopColor={ink} stopOpacity={0} />
+              </LinearGradient>
+            </Defs>
+            <Path d={fill} fill="url(#skelGrad)" />
+            <Path
+              d={d}
+              stroke={ink}
+              strokeOpacity={0.22}
+              strokeWidth={2.5}
+              fill="none"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+          </Svg>
+        ) : null}
+      </Animated.View>
+      {/* שורת התקופות — כמו periodsRow בגרף */}
+      <View style={{ direction: 'rtl', flexDirection: 'row', gap: 8, paddingTop: 6 }}>
+        {Array.from({ length: periods }, (_, i) => (
+          <SkeletonBox key={i} width={44} height={30} borderRadius={15} />
         ))}
       </View>
     </View>

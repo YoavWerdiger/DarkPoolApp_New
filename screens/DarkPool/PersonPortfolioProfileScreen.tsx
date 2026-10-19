@@ -1608,7 +1608,7 @@ export function PersonPortfolioProfileScreen({
                   source={require('../../assets/bull-bear-drawer.png')}
                   style={[
                     styles.chartWatermarkImage,
-                    { opacity: tokens.colors.background.primary === LIGHT_CANVAS ? 0.12 : 0.09 },
+                    { opacity: String(tokens.colors.background.primary) === LIGHT_CANVAS ? 0.12 : 0.09 },
                   ]}
                   resizeMode="contain"
                 />

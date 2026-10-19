@@ -14,6 +14,8 @@ export type AlertValues = {
   y52High: boolean;
   y52Low: boolean;
   target: boolean;
+  /** מחיר היעד להתראת «הגעה ליעד» */
+  targetPrice: number | null;
   earnings: boolean;
 };
 
@@ -29,6 +31,10 @@ export function alertValuesFromItem(item: StockWatchlistItem): AlertValues {
     y52High: !!item.alert_52w_high,
     y52Low: !!item.alert_52w_low,
     target: !!item.alert_target_hit,
+    targetPrice:
+      item.target_price != null && Number.isFinite(Number(item.target_price)) && Number(item.target_price) > 0
+        ? Number(item.target_price)
+        : null,
     earnings: !!item.alert_earnings,
   };
 }
@@ -57,6 +63,7 @@ export function diffAlertPatch(server: AlertValues, next: AlertValues): Watchlis
   if (server.y52High !== next.y52High) patch.alert_52w_high = next.y52High;
   if (server.y52Low !== next.y52Low) patch.alert_52w_low = next.y52Low;
   if (server.target !== next.target) patch.alert_target_hit = next.target;
+  if (server.targetPrice !== next.targetPrice) patch.target_price = next.targetPrice;
   if (server.earnings !== next.earnings) patch.alert_earnings = next.earnings;
   return patch;
 }

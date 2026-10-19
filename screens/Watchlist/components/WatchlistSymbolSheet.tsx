@@ -87,7 +87,7 @@ const CHART_HEIGHT = 240;
 
 type Chip = { key: string; label: string };
 type PriceSide = 'above' | 'below';
-type AlertEditorKey = 'price' | 'daily';
+type AlertEditorKey = 'price' | 'daily' | 'target';
 type IonName = React.ComponentProps<typeof Ionicons>['name'];
 
 function formatPrice(n: number | null | undefined): string {
@@ -216,6 +216,8 @@ function Body({
   const [alert52wHigh, setAlert52wHigh] = useState(false);
   const [alert52wLow, setAlert52wLow] = useState(false);
   const [alertTargetHit, setAlertTargetHit] = useState(false);
+  const [targetPrice, setTargetPrice] = useState<number | null>(null);
+  const [targetDraft, setTargetDraft] = useState('');
   const [alertEarnings, setAlertEarnings] = useState(false);
   const [savingMeta, setSavingMeta] = useState(false);
 
@@ -235,8 +237,10 @@ function Body({
     setAlert52wHigh(v.y52High);
     setAlert52wLow(v.y52Low);
     setAlertTargetHit(v.target);
+    setTargetPrice(v.targetPrice);
     setAlertEarnings(v.earnings);
     if (resetUi) {
+      setTargetDraft('');
       setPriceDraft('');
       setDailyDraft('');
       setPriceSide('above');
@@ -259,11 +263,12 @@ function Body({
     y52High: alert52wHigh,
     y52Low: alert52wLow,
     target: alertTargetHit,
+    targetPrice,
     earnings: alertEarnings,
   };
   const formSigRef = useRef('');
   formSigRef.current =
-    alertSig(formValues) + (priceDraft.trim() || dailyDraft.trim() ? '|draft' : '');
+    alertSig(formValues) + (priceDraft.trim() || dailyDraft.trim() || targetDraft.trim() ? '|draft' : '');
 
   // טעינה בפתיחה; ואם הנתונים מהשרת התעדכנו (למשל cache ישן → רענון) והמשתמש עוד
   // לא נגע בטופס — מתעדכנים, כדי ששמירה לא תדרוס הגדרות עם ערכים ישנים.
@@ -312,6 +317,11 @@ function Body({
         else nextBelow = addThreshold(nextBelow, pendingPrice);
       }
       if (pendingDaily != null) nextChange = addThreshold(nextChange, pendingDaily);
+      const pendingTarget = parseNum(targetDraft);
+      const nextTarget =
+        pendingTarget != null && pendingTarget > 0 ? pendingTarget : targetPrice;
+      // בלי מחיר יעד אין מה להתריע
+      const nextTargetHit = alertTargetHit && nextTarget != null;
 
       const nextValues: AlertValues = {
         above: nextAbove,
@@ -323,7 +333,8 @@ function Body({
         weekLow: alertWeekLow,
         y52High: alert52wHigh,
         y52Low: alert52wLow,
-        target: alertTargetHit,
+        target: nextTargetHit,
+        targetPrice: nextTarget,
         earnings: alertEarnings,
       };
       const patch = diffAlertPatch(serverValues, nextValues);
@@ -338,6 +349,9 @@ function Body({
       setDailyAlertsOn(nextChange.length > 0);
       setPriceDraft('');
       setDailyDraft('');
+      setTargetDraft('');
+      setTargetPrice(nextTarget);
+      setAlertTargetHit(nextTargetHit);
       await Promise.resolve(onSaveNotes());
       void HapticFeedback.success();
     } finally {
@@ -363,6 +377,8 @@ function Body({
     alert52wHigh,
     alert52wLow,
     alertTargetHit,
+    targetPrice,
+    targetDraft,
     alertEarnings,
   ]);
 
@@ -386,9 +402,6 @@ function Body({
         case 'y52_low':
           setAlert52wLow(value);
           break;
-        case 'target':
-          setAlertTargetHit(value);
-          break;
         case 'earnings':
           setAlertEarnings(value);
           break;
@@ -405,7 +418,6 @@ function Body({
     { key: 'week_low', label: 'שפל שבועי', on: alertWeekLow, icon: 'trending-down' },
     { key: 'y52_high', label: 'שיא 52 שבועות', on: alert52wHigh, icon: 'flag-outline' },
     { key: 'y52_low', label: 'שפל 52 שבועות', on: alert52wLow, icon: 'flag' },
-    { key: 'target', label: 'הגעה ליעד', on: alertTargetHit, icon: 'locate-outline' },
     { key: 'earnings', label: 'דיווח קרוב', on: alertEarnings, icon: 'calendar-outline' },
   ];
 
@@ -527,6 +539,34 @@ function Body({
       setOpenAlert((prev) => (prev === 'daily' ? null : prev));
     },
     [enableAlerts]
+  );
+
+  const targetSelected: Chip[] =
+    targetPrice != null ? [{ key: `target:${targetPrice}`, label: `יעד ${formatPrice(targetPrice)}` }] : [];
+
+  const submitTargetDraft = useCallback(() => {
+    const n = parseNum(targetDraft);
+    if (n == null || n <= 0) return;
+    void HapticFeedback.selection();
+    setTargetPrice(n);
+    setAlertTargetHit(true);
+    setTargetDraft('');
+    enableAlerts();
+  }, [enableAlerts, targetDraft]);
+
+  const setTargetEnabled = useCallback(
+    (on: boolean) => {
+      void HapticFeedback.selection();
+      setAlertTargetHit(on);
+      if (on) {
+        enableAlerts();
+        if (targetPrice == null) setOpenAlert('target');
+        return;
+      }
+      setTargetDraft('');
+      setOpenAlert((prev) => (prev === 'target' ? null : prev));
+    },
+    [enableAlerts, targetPrice]
   );
 
   const toggleEditor = useCallback((key: AlertEditorKey) => {
@@ -678,13 +718,35 @@ function Body({
                 onEnabledChange={setDailyEnabled}
                 expanded={openAlert === 'daily'}
                 onToggle={() => toggleEditor('daily')}
-                showDivider={false}
+                showDivider
                 selected={dailySelected}
                 onRemove={(key) => applyDailyKey(key, 'remove')}
                 draft={dailyDraft}
                 onDraft={setDailyDraft}
                 onSubmit={submitDailyDraft}
                 placeholder="אחוז"
+              />
+              <AlertEditorRow
+                icon="locate-outline"
+                title="הגעה ליעד"
+                subtitle={
+                  targetPrice != null ? `יעד ${formatPrice(targetPrice)}` : 'הגדרת מחיר יעד'
+                }
+                enabled={alertTargetHit}
+                onEnabledChange={setTargetEnabled}
+                expanded={openAlert === 'target'}
+                onToggle={() => toggleEditor('target')}
+                showDivider={false}
+                selected={targetSelected}
+                onRemove={() => {
+                  void HapticFeedback.selection();
+                  setTargetPrice(null);
+                  setAlertTargetHit(false);
+                }}
+                draft={targetDraft}
+                onDraft={setTargetDraft}
+                onSubmit={submitTargetDraft}
+                placeholder="מחיר יעד"
               />
             </View>
           </UICard>

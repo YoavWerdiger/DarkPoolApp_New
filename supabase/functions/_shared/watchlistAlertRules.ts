@@ -90,6 +90,8 @@ export const PRICE_REARM_PCT = 0.003;
 export const ENTRY_REARM_PTS = 0.5;
 /** שיא יומי רק אחרי חצי שעה מהפתיחה — בפתיחה המחיר הוא תמיד «השיא» */
 export const DAY_HIGH_MIN_MINUTES = 30;
+/** המחיר בטווח 0.15% מהשיא היומי נחשב «בשיא» — הבדיקה כל כמה דקות, לא בכל עסקה */
+export const DAY_HIGH_TOLERANCE_PCT = 0.0015;
 
 function num(v: unknown): number | null {
   if (v == null || v === '') return null;
@@ -193,7 +195,7 @@ export function evaluateWatchlistItem(
       met:
         price == null || m.dayHigh == null || !ready
           ? null
-          : price >= m.dayHigh && (m.open == null || price > m.open),
+          : price >= m.dayHigh * (1 - DAY_HIGH_TOLERANCE_PCT) && (m.open == null || price > m.open),
       ref: ctx.tradeDate,
       kind: 'day_high',
       threshold: m.dayHigh,
@@ -252,11 +254,26 @@ export function evaluateWatchlistItem(
 
   const target = num(item.target_price);
   if (item.alert_target_hit && target != null && target > 0) {
+    // יעד מתחת למחיר הכניסה = יעד בירידה; אחרת יעד בעלייה
+    const down = entry != null && entry > 0 && target < entry;
+    const met =
+      price == null
+        ? null
+        : down
+          ? price <= target
+            ? true
+            : price > target * (1 + PRICE_REARM_PCT)
+              ? false
+              : null
+          : price >= target
+            ? true
+            : price < target * (1 - PRICE_REARM_PCT)
+              ? false
+              : null;
     push({
       rule_key: `target:${thresholdKey(target)}`,
       mode: 'level',
-      met:
-        price == null ? null : price >= target ? true : price < target * (1 - PRICE_REARM_PCT) ? false : null,
+      met,
       ref: null,
       kind: 'target_hit',
       threshold: target,

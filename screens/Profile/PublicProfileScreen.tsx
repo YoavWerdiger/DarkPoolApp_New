@@ -1,7 +1,7 @@
 /**
  * פרופיל ציבורי של משתמש — מינימלי, לפי הטופו:
  * תמונה + שם + תגים, כרטיס «ותק» בולט (השור והדוב בצבע המתכת של הדרגה + התקדמות),
- * עוקבים / עוקב אחרי / ציוצים (לחיצה פותחת רשימה), כפתור מעקב, והציוצים האחרונים.
+ * עוקבים / עוקב אחרי (לחיצה פותחת רשימה), כפתור מעקב, והציוצים האחרונים.
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -20,7 +20,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { APP_LAYOUT } from '../../components/ui/appLayout';
-import { APP_TYPE } from '../../components/ui/appType';
+import { APP_TYPE, appPhysicalRightText, appSectionTitleStyle } from '../../components/ui/appType';
 import { ChatSessionBackdrop } from '../../components/chat/ChatSessionBackdrop';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import UICard from '../../components/ui/UICard';
@@ -168,7 +168,7 @@ export default function PublicProfileScreen({ route, navigation }: any) {
 
   return (
     <View style={styles.root}>
-      {/* אותו רקע כמו דפי הפרופיל (צ'אט) — בלי direction כפוי: האפליקציה כבר forceRTL */}
+      {/* אותו רקע כמו דפי הפרופיל (צ'אט); תת-עץ RTL — טקסט לימין דרך appPhysicalRightText */}
       <ChatSessionBackdrop />
       <View style={[styles.topBar, { paddingTop: Math.max(insets.top, 8) + 6 }]}>
         <DayNavBlurButton
@@ -207,7 +207,7 @@ export default function PublicProfileScreen({ route, navigation }: any) {
               </Text>
               <UserBadges userId={userId} size={badgeSizeForLineHeight(APP_TYPE.screenTitle.lineHeight)} />
             </View>
-            {memberSince ? <Text style={styles.muted}>{memberSince}</Text> : null}
+            {memberSince ? <Text style={[styles.muted, { textAlign: 'center' }]}>{memberSince}</Text> : null}
           </View>
 
           {/* מספרים */}
@@ -215,8 +215,7 @@ export default function PublicProfileScreen({ route, navigation }: any) {
             <Stat label="עוקבים" value={stats.followerCount} onPress={() => openList('followers')} styles={styles} />
             <View style={styles.statDivider} />
             <Stat label="עוקב אחרי" value={stats.followingCount} onPress={() => openList('following')} styles={styles} />
-            <View style={styles.statDivider} />
-            <Stat label="ציוצים" value={posts.length} styles={styles} />
+
           </View>
 
           {/* פעולה */}
@@ -280,7 +279,7 @@ export default function PublicProfileScreen({ route, navigation }: any) {
           {/* ציוצים */}
           <Text style={styles.sectionTitle}>ציוצים</Text>
           {posts.length === 0 ? (
-            <Text style={styles.muted}>עדיין אין ציוצים</Text>
+            <Text style={[styles.muted, appPhysicalRightText]}>עדיין אין ציוצים</Text>
           ) : (
             <UICard variant="soft" padding="none" style={styles.postsCard}>
               {posts.map((p, i) => (
@@ -390,9 +389,11 @@ function Stat({
 
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
+    // תת-עץ RTL (כמו Dark Pool): שורות מימין לשמאל; טקסט לימין דרך appPhysicalRightText
     root: {
       flex: 1,
       backgroundColor: 'transparent',
+      direction: 'rtl',
     },
     topBar: {
       flexDirection: 'row',
@@ -446,6 +447,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       maxWidth: '100%',
     },
     name: {
+      textAlign: 'center',
       ...APP_TYPE.screenTitle,
       color: tokens.colors.text.primary,
       flexShrink: 1,
@@ -465,11 +467,13 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       paddingVertical: 4,
     },
     statValue: {
+      textAlign: 'center',
       ...APP_TYPE.cardMetricValue,
       color: tokens.colors.text.primary,
       fontVariant: ['tabular-nums'],
     },
     statLabel: {
+      textAlign: 'center',
       ...APP_TYPE.cardSubtitle,
       color: tokens.colors.text.secondary,
       marginTop: 2,
@@ -502,10 +506,12 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       minWidth: 0,
     },
     rankLabel: {
+      ...appPhysicalRightText,
       ...APP_TYPE.cardSubtitle,
       color: tokens.colors.text.secondary,
     },
     rankTitle: {
+      ...appPhysicalRightText,
       ...APP_TYPE.cardTitle,
       fontSize: 18,
       marginTop: 2,
@@ -521,11 +527,12 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       borderRadius: 3,
     },
     rankFoot: {
+      ...appPhysicalRightText,
       ...APP_TYPE.caption,
       color: tokens.colors.text.tertiary,
     },
     sectionTitle: {
-      ...APP_TYPE.sectionTitle,
+      ...appSectionTitleStyle,
       color: tokens.colors.text.primary,
       marginTop: 8,
       marginBottom: -8,
@@ -539,6 +546,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       gap: 8,
     },
     postBody: {
+      ...appPhysicalRightText,
       ...APP_TYPE.body,
       color: tokens.colors.text.primary,
     },
@@ -585,6 +593,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       color: tokens.colors.text.primary,
     },
     listName: {
+      ...appPhysicalRightText,
       ...APP_TYPE.cardTitle,
       color: tokens.colors.text.primary,
       flexShrink: 1,

@@ -23,6 +23,7 @@ import { APP_TYPE } from '../../components/ui/appType';
 import UICard from '../../components/ui/UICard';
 import { TweetCardSkeleton } from './TweetCardSkeleton';
 import { useAuth } from '../../context/AuthContext';
+import { useIsAdmin } from '../../hooks/useIsAdmin';
 import {
   deleteCommunityPost,
   fetchCommunityPosts,
@@ -75,6 +76,7 @@ function PostCard({
   onReply,
   onShare,
   onDelete,
+  canDelete,
   currentUserId,
   following,
   onFollowingChange,
@@ -85,6 +87,7 @@ function PostCard({
   onReply: () => void;
   onShare: () => void;
   onDelete: () => void;
+  canDelete?: boolean;
   currentUserId?: string | null;
   following: boolean;
   onFollowingChange: (userId: string, following: boolean) => void;
@@ -173,7 +176,7 @@ function PostCard({
                 {formatPostTime(post.createdAt)}
               </Text>
             </View>
-            {isMine ? (
+            {canDelete ?? isMine ? (
               <TouchableOpacity
                 onPress={onDelete}
                 hitSlop={8}
@@ -445,6 +448,7 @@ function FeedTabToggle({
 export default function TweetsFeed({ handleRef }: TweetsFeedProps) {
   const tokens = useDesignTokens();
   const { user } = useAuth();
+  const { isAdmin } = useIsAdmin();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
 
   const [feedMode, setFeedMode] = useState<CommunityFeedMode>('for_you');
@@ -752,6 +756,8 @@ export default function TweetsFeed({ handleRef }: TweetsFeedProps) {
             <PostCard
               post={item}
               isMine={!!user && item.userId === user.id}
+              // מנהל רואה מחיקה בכל ציוץ (RLS מאפשר: user_id = auth.uid() OR is_app_admin)
+              canDelete={(!!user && item.userId === user.id) || isAdmin}
               currentUserId={user?.id}
               following={followedIds.has(item.userId)}
               onFollowingChange={handleFollowingChange}

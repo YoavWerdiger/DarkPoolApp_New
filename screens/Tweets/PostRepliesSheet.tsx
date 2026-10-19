@@ -37,6 +37,8 @@ import BottomSheet, {
 } from '../../components/ui/BottomSheet/BottomSheet';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import { useAuth } from '../../context/AuthContext';
+import { useIsAdmin } from '../../hooks/useIsAdmin';
+import { InlineAppDialog } from '../../components/ui/InlineAppDialog';
 import {
   createCommunityPostReply,
   deleteCommunityPostReply,
@@ -45,7 +47,6 @@ import {
 } from '../../services/tweetsService';
 import type { CommunityPost, CommunityPostReply } from '../../types/tweets.types';
 import { HapticFeedback } from '../../utils/hapticFeedback';
-import { legacyAlert, showAppConfirm } from '../../utils/appDialog';
 import UserAvatarButton from '../../components/profile/UserAvatarButton';
 import UserNameButton from '../../components/profile/UserNameButton';
 import FollowUserButton from '../../components/profile/FollowUserButton';
@@ -110,6 +111,7 @@ function PostRepliesSheetBody({
   const tokens = useDesignTokens();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const { isAdmin } = useIsAdmin();
   const animatedClose = useBottomSheetClose();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
 
@@ -233,29 +235,34 @@ function PostRepliesSheetBody({
     }
   }, [body, canSubmit, notifyCount]);
 
-  const handleDelete = useCallback(
-    (reply: CommunityPostReply) => {
-      const current = postRef.current;
-      if (!current) return;
-      void showAppConfirm('מחיקת תגובה', 'למחוק את התגובה?', {
-        confirmText: 'מחק',
-        destructive: true,
-      }).then(async (ok) => {
-        if (!ok) return;
-        try {
-          await deleteCommunityPostReply(reply.id);
-          const next = repliesRef.current.filter((r) => r.id !== reply.id);
-          repliesRef.current = next;
-          setReplies(next);
-          notifyCount(current.id, next.length);
-          void HapticFeedback.success();
-        } catch {
-          legacyAlert('שגיאה', 'לא ניתן למחוק את התגובה');
-        }
-      });
-    },
-    [notifyCount]
-  );
+  // אישור מחיקה בתוך השיט: דיאלוג האפליקציה (Modal ברמת השורש) נפתח *מתחת* לשיט ולא נראה —
+  // לכן לחיצה על מחיקה «לא עשתה כלום». InlineAppDialog מצויר בתוך השיט.
+  const [pendingDelete, setPendingDelete] = useState<CommunityPostReply | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const handleDelete = useCallback((reply: CommunityPostReply) => {
+    setDeleteError(null);
+    setPendingDelete(reply);
+  }, []);
+  const confirmDelete = useCallback(async () => {
+    const reply = pendingDelete;
+    const current = postRef.current;
+    if (!reply || !current) return;
+    setDeleting(true);
+    try {
+      await deleteCommunityPostReply(reply.id);
+      const next = repliesRef.current.filter((r) => r.id !== reply.id);
+      repliesRef.current = next;
+      setReplies(next);
+      notifyCount(current.id, next.length);
+      void HapticFeedback.success();
+      setPendingDelete(null);
+    } catch {
+      setDeleteError('לא ניתן למחוק את התגובה');
+    } finally {
+      setDeleting(false);
+    }
+  }, [pendingDelete, notifyCount]);
 
   const composerPaddingBottom = useMemo(
     () => chatComposerSafeBottomInset(insets.bottom),
@@ -348,6 +355,8 @@ function PostRepliesSheetBody({
         }
         renderItem={({ item }) => {
           const isMine = !!user && item.userId === user.id;
+          // מנהל יכול למחוק כל תגובה (RLS: user_id = auth.uid() OR is_app_admin)
+          const canDelete = isMine || isAdmin;
           return (
             <View style={styles.replyRow}>
               <UserAvatarButton
@@ -373,7 +382,7 @@ function PostRepliesSheetBody({
                   />
                   {isMine ? null : <FollowUserButton userId={item.author.id} />}
                   <View style={styles.replyMetaSpacer} />
-                  {isMine ? (
+                  {canDelete ? (
                     <TouchableOpacity
                       onPress={() => handleDelete(item)}
                       hitSlop={8}
@@ -539,6 +548,17 @@ function PostRepliesSheetBody({
           </TouchableOpacity>
         </View>
       </ChatComposerDock>
+      <InlineAppDialog
+        visible={!!pendingDelete}
+        title="מחיקת תגובה"
+        message={deleteError || 'למחוק את התגובה?'}
+        icon="trash-outline"
+        onBackdropPress={deleting ? undefined : () => setPendingDelete(null)}
+        buttons={[
+          { text: 'מחק', style: 'destructive', onPress: () => void confirmDelete(), loading: deleting },
+          { text: 'ביטול', style: 'cancel', onPress: () => setPendingDelete(null) },
+        ]}
+      />
       </View>
   );
 }

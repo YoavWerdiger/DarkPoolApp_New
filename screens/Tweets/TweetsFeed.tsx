@@ -568,7 +568,7 @@ export default function TweetsFeed({ handleRef }: TweetsFeedProps) {
   );
 
   // ניווט לציוץ מסוים (מהפרופיל / מהתראה): מוודאים שהוא ברשימה, גוללים אליו ומדגישים לרגע
-  const listRef = useRef<FlatList<CommunityPost>>(null);
+  const listRef = useRef<InstanceType<typeof FlatList> | null>(null);
   const [highlightedPostId, setHighlightedPostId] = useState<string | null>(null);
   const postsRef = useRef<CommunityPost[]>([]);
   postsRef.current = posts;

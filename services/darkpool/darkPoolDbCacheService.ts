@@ -113,19 +113,22 @@ export async function listCongressTradesForPerson(
       .from('dark_pool_congress_trades')
       .select(columns)
       .eq('politician_id', pid)
-      .order('transaction_date', { ascending: true })
+      // החדשות קודם: עם limit וסדר עולה, למי שיש >500 עסקאות נטענו רק הישנות ביותר
+      // (קניות אחרונות חסרו → 274 אחזקות בלי תשואה). אחרי הטעינה מחזירים לסדר עולה כמו קודם.
+      .order('transaction_date', { ascending: false })
       .limit(Math.min(1000, Math.max(1, limit)));
+
+  const ascending = (rows: Record<string, unknown>[]) =>
+    rows.slice().reverse().map((row) => mapCongressRow(row));
 
   const { data, error } = await run(CONGRESS_SELECT);
   if (error) {
     if (!isMissingColumnError(error)) throw error;
     const legacy = await run(CONGRESS_BASE_COLUMNS);
     if (legacy.error) throw legacy.error;
-    return (legacy.data ?? []).map((row) =>
-      mapCongressRow(row as unknown as Record<string, unknown>)
-    );
+    return ascending((legacy.data ?? []) as unknown as Record<string, unknown>[]);
   }
-  return (data ?? []).map((row) => mapCongressRow(row as unknown as Record<string, unknown>));
+  return ascending((data ?? []) as unknown as Record<string, unknown>[]);
 }
 
 /**

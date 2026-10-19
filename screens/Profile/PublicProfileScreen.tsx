@@ -284,9 +284,6 @@ export default function PublicProfileScreen({ route, navigation }: any) {
                         {formatPaidTenure(badges?.paidDays ?? 0)}
                       </Text>
                     </View>
-                    <View style={[styles.levelPill, { borderColor: `${metalColor}66` }]}>
-                      <Text style={[styles.levelPillText, { color: metalColor }]}>{`${progress.rank.level}/7`}</Text>
-                    </View>
                   </View>
 
                   {/* מסלול הדרגות — כל נקודה דרגה; עד הנוכחית מלא בצבע הדרגה */}
@@ -590,17 +587,6 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       ...appPhysicalRightText,
       ...APP_TYPE.cardSubtitle,
       color: tokens.colors.text.primary,
-    },
-    levelPill: {
-      borderWidth: 1,
-      borderRadius: 999,
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-    },
-    levelPillText: {
-      ...APP_TYPE.caption,
-      fontWeight: '700',
-      fontVariant: ['tabular-nums'],
     },
     ladder: {
       flexDirection: 'row',

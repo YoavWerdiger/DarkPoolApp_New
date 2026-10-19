@@ -81,11 +81,12 @@ export const RANK_METAL_COLORS: Record<
   'silver' | 'gold' | 'platinum' | 'sapphire' | 'diamond',
   { dark: string; light: string }
 > = {
-  silver: { dark: '#C9CED6', light: '#7D8692' },
-  gold: { dark: '#F2C14E', light: '#B8860B' },
-  platinum: { dark: '#9FD3E8', light: '#4F8FAD' },
-  sapphire: { dark: '#5B8DEF', light: '#2457C5' },
-  diamond: { dark: '#9370E8', light: '#5A3BB8' },
+  // גוונים נבדלים בבירור בין דרגה לדרגה: אפור → כסף בהיר → זהב → טורקיז → כחול → סגול → ירוק המותג
+  silver: { dark: '#D8DEE7', light: '#7E8896' },
+  gold: { dark: '#FFC53D', light: '#B98300' },
+  platinum: { dark: '#2DD4BF', light: '#0E8C7E' },
+  sapphire: { dark: '#4F7BFF', light: '#1F4FD1' },
+  diamond: { dark: '#B57BFF', light: '#7A3FD8' },
 };
 
 /** הצבע הראשי של הדרגה (פס התקדמות וכו׳) */

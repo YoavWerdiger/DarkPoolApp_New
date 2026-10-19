@@ -190,7 +190,11 @@ export default function PublicProfileScreen({ route, navigation }: any) {
       <View style={[styles.topBar, { paddingTop: Math.max(insets.top, 8) + 6 }]}>
         <DayNavBlurButton
           size={DAY_NAV_BUTTON_SIZE}
-          onPress={() => navigation.goBack()}
+          onPress={() => {
+            // רטט כמו בשאר כפתורי החזרה באפליקציה
+            void HapticFeedback.selection();
+            navigation.goBack();
+          }}
           accessibilityLabel="חזרה"
         >
           <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />

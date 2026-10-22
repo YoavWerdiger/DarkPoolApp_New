@@ -85,11 +85,13 @@ export function closeAnyOpenChatRow() {
 
 type Props = {
   actions: ChatListSwipeAction[];
+  /** רקע האזור שנחשף מאחורי השורה (צבע כרטיס) */
+  revealBackgroundColor?: string;
   enabled?: boolean;
   children: React.ReactNode;
 };
 
-export default function ChatListSwipeRow({ actions, enabled = true, children }: Props) {
+export default function ChatListSwipeRow({ actions, revealBackgroundColor, enabled = true, children }: Props) {
   const openX = actions.length * ACTION_W;
   const tx = useSharedValue(0);
   const startX = useSharedValue(0);
@@ -157,7 +159,9 @@ export default function ChatListSwipeRow({ actions, enabled = true, children }: 
   return (
     <View style={styles.wrap}>
       {/* הפעולות מאחורי השורה, בצד שמאל — נחשפות כשהשורה זזה ימינה */}
-      <Animated.View style={[styles.actionsClip, actionsClipStyle]}>
+      <Animated.View
+        style={[styles.actionsClip, revealBackgroundColor ? { backgroundColor: revealBackgroundColor } : null, actionsClipStyle]}
+      >
       <View style={[styles.actions, { width: openX }]}>
         {actions.map((a, i) => (
           <SwipeActionButton

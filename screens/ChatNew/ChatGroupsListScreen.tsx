@@ -1185,6 +1185,7 @@ export default function ChatGroupsListScreen() {
         <View key={`group-wrapper-${item.id}`}>
           <ChatListSwipeRow
             enabled={swipeEnabled}
+            revealBackgroundColor={tokens.colors.background.cardSolid}
             actions={[
               {
                 key: 'pin',
@@ -1198,7 +1199,8 @@ export default function ChatGroupsListScreen() {
                 key: 'mute',
                 label: rowMuted ? 'ביטול השתקה' : 'השתקה',
                 icon: <Ionicons name={rowMuted ? 'notifications-outline' : 'notifications-off-outline'} size={20} color={tokens.colors.text.primary} />,
-                backgroundColor: tokens.colors.background.cardSolid,
+                // על רקע כרטיס — עיגול ברקע המסך כדי שיבלוט
+                backgroundColor: tokens.colors.background.primary,
                 color: tokens.colors.text.primary,
                 onPress: () => { void toggleGroupMute(item); },
               },

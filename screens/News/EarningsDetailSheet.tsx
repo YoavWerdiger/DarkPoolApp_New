@@ -170,6 +170,12 @@ function Body({
     ...(extra.exchange ? [{ icon: 'business-outline' as IonName, label: 'בורסה', value: String(extra.exchange) }] : []),
   ];
 
+  const scheduleRows: Array<{ icon: IonName; label: string; value: string }> = [
+    { icon: 'calendar-outline', label: 'תאריך', value: dateLabel(report.report_date) },
+    { icon: timing?.icon ?? 'time-outline', label: 'מועד', value: timing?.label ?? 'טרם נקבע' },
+    ...(quarter ? [{ icon: 'layers-outline' as IonName, label: 'רבעון', value: quarter }] : []),
+  ];
+
   return (
     <View style={styles.container}>
       {/* ראש כמו בשיט הטיקר ברשימת המעקב: שורת כפתורים, ומתחת זהות (לוגו / טיקר / חברה) מול המועד */}
@@ -211,12 +217,6 @@ function Body({
                   </Text>
                 ) : null}
               </View>
-            </View>
-            <View style={styles.priceCol}>
-              <Text style={styles.heroDate}>{dateLabel(report.report_date)}</Text>
-              <Text style={styles.heroMeta} numberOfLines={1}>
-                {[timing?.label ?? null, quarter ? `רבעון ${quarter}` : null].filter(Boolean).join(' · ') || 'דוח רבעוני'}
-              </Text>
             </View>
           </View>
         </View>
@@ -263,10 +263,19 @@ function Body({
         </View>
 
         <View>
-          <Text style={styles.groupHeading}>פירוט</Text>
+          <Text style={styles.groupHeading}>ציפיות</Text>
           <UICard variant="soft" glassIntensity="subtle" padding="none">
             {detailRows.map((r, i) => (
               <DetailRow key={r.label} icon={r.icon} label={r.label} value={r.value} showDivider={i < detailRows.length - 1} />
+            ))}
+          </UICard>
+        </View>
+
+        <View>
+          <Text style={styles.groupHeading}>מועד הדיווח</Text>
+          <UICard variant="soft" glassIntensity="subtle" padding="none">
+            {scheduleRows.map((r, i) => (
+              <DetailRow key={r.label} icon={r.icon} label={r.label} value={r.value} showDivider={i < scheduleRows.length - 1} />
             ))}
           </UICard>
         </View>

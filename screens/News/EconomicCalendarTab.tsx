@@ -265,104 +265,58 @@ const EconomicEventCard: React.FC<{
                   }}
                 />
 
-                <View style={{ flexDirection: 'row', alignItems: 'flex-start', width: '100%' }}>
-                  {event.actual && (
-                    <View style={{ flex: 1, alignItems: 'center' }}>
-                      <Text
-                        style={{
-                          ...APP_TYPE.cardMetricLabel,
-                          color: DesignTokens.colors.text.secondary,
-                          marginBottom: APP_LAYOUT.cardTitleToSubtitleGap,
-                          textAlign: 'center',
-                        }}
-                      >
-                        תוצאה
-                      </Text>
-                      <Text
-                        style={{
-                          ...APP_TYPE.cardBody,
-                          fontWeight: APP_TYPE.cardTitle.fontWeight,
-                          color: getActualColor(),
-                          textAlign: 'center',
-                          fontVariant: ['tabular-nums'],
-                        }}
-                      >
-                        {formatEconomicDisplayValue(event.actual, event.title)}
-                      </Text>
-                    </View>
-                  )}
-                  {event.actual && (event.forecast || event.previous) && (
-                    <View
-                      style={{
-                        width: 1,
-                        height: 34,
-                        backgroundColor: DesignTokens.colors.border.divider,
-                        marginHorizontal: 8,
-                        alignSelf: 'flex-start',
-                      }}
-                    />
-                  )}
-                  {event.forecast && (
-                    <View style={{ flex: 1, alignItems: 'center' }}>
-                      <Text
-                        style={{
-                          ...APP_TYPE.cardMetricLabel,
-                          color: DesignTokens.colors.text.secondary,
-                          marginBottom: APP_LAYOUT.cardTitleToSubtitleGap,
-                          textAlign: 'center',
-                        }}
-                      >
-                        תחזית
-                      </Text>
-                      <Text
-                        style={{
-                          ...APP_TYPE.cardBody,
-                          fontWeight: APP_TYPE.cardTitle.fontWeight,
-                          color: DesignTokens.colors.text.primary,
-                          textAlign: 'center',
-                          fontVariant: ['tabular-nums'],
-                        }}
-                      >
-                        {formatEconomicDisplayValue(event.forecast, event.title)}
-                      </Text>
-                    </View>
-                  )}
-                  {event.forecast && event.previous && (
-                    <View
-                      style={{
-                        width: 1,
-                        height: 34,
-                        backgroundColor: DesignTokens.colors.border.divider,
-                        marginHorizontal: 8,
-                        alignSelf: 'flex-start',
-                      }}
-                    />
-                  )}
-                  {event.previous && (
-                    <View style={{ flex: 1, alignItems: 'center' }}>
-                      <Text
-                        style={{
-                          ...APP_TYPE.cardMetricLabel,
-                          color: DesignTokens.colors.text.secondary,
-                          marginBottom: APP_LAYOUT.cardTitleToSubtitleGap,
-                          textAlign: 'center',
-                        }}
-                      >
-                        קודם
-                      </Text>
-                      <Text
-                        style={{
-                          ...APP_TYPE.cardBody,
-                          fontWeight: APP_TYPE.cardTitle.fontWeight,
-                          color: DesignTokens.colors.text.secondary,
-                          textAlign: 'center',
-                          fontVariant: ['tabular-nums'],
-                        }}
-                      >
-                        {formatEconomicDisplayValue(event.previous, event.title)}
-                      </Text>
-                    </View>
-                  )}
+                {/* סדר קריאה (מימין לשמאל): תחזית → תוצאה → קודם */}
+                <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-start', width: '100%' }}>
+                  {[
+                    event.forecast
+                      ? { key: 'forecast', label: 'תחזית', value: event.forecast, color: DesignTokens.colors.text.primary }
+                      : null,
+                    event.actual
+                      ? { key: 'actual', label: 'תוצאה', value: event.actual, color: getActualColor() }
+                      : null,
+                    event.previous
+                      ? { key: 'previous', label: 'קודם', value: event.previous, color: DesignTokens.colors.text.secondary }
+                      : null,
+                  ]
+                    .filter((c): c is { key: string; label: string; value: string; color: string } => !!c)
+                    .map((col, i) => (
+                      <React.Fragment key={col.key}>
+                        {i > 0 ? (
+                          <View
+                            style={{
+                              width: 1,
+                              height: 34,
+                              backgroundColor: DesignTokens.colors.border.divider,
+                              marginHorizontal: 8,
+                              alignSelf: 'flex-start',
+                            }}
+                          />
+                        ) : null}
+                        <View style={{ flex: 1, alignItems: 'center' }}>
+                          <Text
+                            style={{
+                              ...APP_TYPE.cardMetricLabel,
+                              color: DesignTokens.colors.text.secondary,
+                              marginBottom: APP_LAYOUT.cardTitleToSubtitleGap,
+                              textAlign: 'center',
+                            }}
+                          >
+                            {col.label}
+                          </Text>
+                          <Text
+                            style={{
+                              ...APP_TYPE.cardBody,
+                              fontWeight: APP_TYPE.cardTitle.fontWeight,
+                              color: col.color,
+                              textAlign: 'center',
+                              fontVariant: ['tabular-nums'],
+                            }}
+                          >
+                            {formatEconomicDisplayValue(col.value, event.title)}
+                          </Text>
+                        </View>
+                      </React.Fragment>
+                    ))}
                 </View>
               </View>
             )}

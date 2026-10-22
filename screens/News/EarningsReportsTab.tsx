@@ -36,12 +36,21 @@ type EarningsReportsTabProps = {
   onOpenReportConsumed?: () => void;
 };
 
+/** «מכה» / «מפספסת» / «בקו הצפי» מול הצפי */
+function verdictLabel(pct: number | null | undefined): string {
+  if (pct == null || !Number.isFinite(pct)) return 'תוצאה';
+  if (Math.abs(pct) < 0.05) return 'בקו הצפי';
+  return pct > 0 ? 'מכה' : 'מפספסת';
+}
+
 const EarningsReportCard: React.FC<{
   report: EarningsReport;
   onPress: (report: EarningsReport) => void;
   /** לחיצה ארוכה — «העבר» לקבוצות צ׳אט */
   onLongPress?: (report: EarningsReport) => void;
-}> = ({ report, onPress, onLongPress }) => {
+  /** שיט הפירוט: «מכה» / «מפספסת» בצבע מתחת לערך במקום «(תוצאה)» */
+  verdictCaptions?: boolean;
+}> = ({ report, onPress, onLongPress, verdictCaptions = false }) => {
   const DesignTokens = useDesignTokens();
   
   // פונקציה לקבלת צבע לפי surprise
@@ -286,8 +295,15 @@ const EarningsReportCard: React.FC<{
                               {formatRevenue(report.revenue_actual)}
                             </Text>
                           </View>
-                          <Text style={{ ...APP_TYPE.caption, color: DesignTokens.colors.text.secondary, marginTop: 2, textAlign: 'center' }}>
-                            (תוצאה)
+                          <Text
+                            style={{
+                              ...APP_TYPE.caption,
+                              color: verdictCaptions ? getSurpriseColor(surprisePercent ?? null) : DesignTokens.colors.text.secondary,
+                              marginTop: 2,
+                              textAlign: 'center',
+                            }}
+                          >
+                            {verdictCaptions ? verdictLabel(surprisePercent) : '(תוצאה)'}
                           </Text>
                         </View>
                       );
@@ -348,8 +364,15 @@ const EarningsReportCard: React.FC<{
                               ${report.actual.toFixed(2)}
                             </Text>
                           </View>
-                          <Text style={{ ...APP_TYPE.caption, color: DesignTokens.colors.text.secondary, marginTop: 2, textAlign: 'center' }}>
-                            (תוצאה)
+                          <Text
+                            style={{
+                              ...APP_TYPE.caption,
+                              color: verdictCaptions ? getSurpriseColor(surprisePercent ?? null) : DesignTokens.colors.text.secondary,
+                              marginTop: 2,
+                              textAlign: 'center',
+                            }}
+                          >
+                            {verdictCaptions ? verdictLabel(surprisePercent) : '(תוצאה)'}
                           </Text>
                         </View>
                       );
@@ -1387,6 +1410,11 @@ export default function EarningsReportsTab({
       <EarningsDetailSheet
         visible={!!detailReport}
         report={detailReport}
+        card={
+          detailReport ? (
+            <EarningsReportCard report={detailReport} onPress={() => undefined} verdictCaptions />
+          ) : null
+        }
         onClose={() => setDetailReport(null)}
         onShare={(r) => {
           setDetailReport(null);

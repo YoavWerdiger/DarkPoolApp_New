@@ -112,6 +112,8 @@ function pickMetrics(
     for (const [key, raw] of Object.entries(metrics)) {
       if (items.length >= limit) break;
       if (raw == null || raw === '') continue;
+      // שדות עזר לצבע / פס / דגל — לא מטריקות לתצוגה
+      if (key === 'importance' || key === 'actual_vs' || key.endsWith('_surprise')) continue;
       if (items.some((i) => i.key === key)) continue;
       items.push({
         key,
@@ -142,6 +144,18 @@ function economicActualColor(
   const vs = Number(attachment.preview.metrics?.actual_vs);
   if (vs > 0) return tokens.colors.primary.main;
   if (vs < 0) return tokens.colors.text.danger;
+  return null;
+}
+
+/** דיווח כלכלי: צבע חשיבות כמו ביומן — אדום (גבוהה) / כתום (בינונית) */
+function economicImportanceColor(
+  attachment: ShareableAttachment,
+  tokens: ReturnType<typeof useDesignTokens>,
+): string | null {
+  if (attachment.ref.type !== 'economic_event') return null;
+  const imp = attachment.preview.metrics?.importance;
+  if (imp === 'high') return tokens.colors.danger.main;
+  if (imp === 'medium') return '#FF8A00';
   return null;
 }
 
@@ -561,7 +575,8 @@ function EntityEmbedCardGeneric({ attachment, onPress, compact, style }: Props) 
       {(() => {
         // דוח: פס צבע לפי ההפתעה ברווח למניה (אחרת בהכנסות) — כמו בדף הדיווחים
         const pct = metricSurprise(attachment, 'eps') ?? metricSurprise(attachment, 'revenue');
-        const color = surpriseColor(pct, tokens);
+        // דוח: לפי ההפתעה; דיווח כלכלי: לפי החשיבות (כמו בכרטיסים בדפים)
+        const color = surpriseColor(pct, tokens) ?? economicImportanceColor(attachment, tokens);
         return color ? <View pointerEvents="none" style={[styles.surpriseBar, { backgroundColor: color }]} /> : null;
       })()}
       <View style={styles.main}>
@@ -593,6 +608,9 @@ function EntityEmbedCardGeneric({ attachment, onPress, compact, style }: Props) 
               >
                 {preview.title}
               </Text>
+              {economicImportanceColor(attachment, tokens) ? (
+                <Ionicons name="flag" size={15} color={economicImportanceColor(attachment, tokens)!} />
+              ) : null}
               {showDirectionChip ? (
                 <View
                   style={[

@@ -748,7 +748,8 @@ export default function EconomicCalendarTab() {
   }, []);
   // כמו שיתוף חדשה: ShareDestinationSheet עם כרטיס (צ׳אט / ציוצים)
   const shareAttachment = useMemo(
-    () => (shareEvent ? buildEconomicEventAttachment(shareEvent) : null),
+    // חשיבות כמו בכרטיס ביומן (פס צבע + דגל) — לפי מיפוי הדגלים, לא השדה הגולמי
+    () => (shareEvent ? buildEconomicEventAttachment({ ...shareEvent, importance: stripFlagImportance(shareEvent) }) : null),
     [shareEvent],
   );
 

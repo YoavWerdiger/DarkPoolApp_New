@@ -450,6 +450,8 @@ export function buildEconomicEventAttachment(event: {
   const a = parseEconomicNumber(event.actual ?? undefined);
   const f = parseEconomicNumber(event.forecast ?? undefined);
   if (fmt(event.actual) && Number.isFinite(a) && Number.isFinite(f)) metrics.actual_vs = a >= f ? 1 : -1;
+  // חשיבות (פס צבע + דגל בכרטיס): high / medium — לא מוצג כמטריקה
+  if (event.importance === 'high' || event.importance === 'medium') metrics.importance = event.importance;
   const date = (event.date ?? '').slice(0, 10);
   let when = '';
   if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {

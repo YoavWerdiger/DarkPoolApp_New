@@ -193,7 +193,7 @@ serve(async (req) => {
           .insert({
             user_id: user.user_id,
             notification_type: 'earnings',
-            title: earningsUpcomingTitle(companyName),
+            title: earningsUpcomingTitle(ticker),
             body,
             data: {
               type: 'earnings',

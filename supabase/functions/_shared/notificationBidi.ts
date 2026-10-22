@@ -52,36 +52,43 @@ export function economicReportTitle(): string {
   return ensurePushBidi('פורסם דו"ח חדש!')
 }
 
-export function earningsUpcomingTitle(companyName: string): string {
-  return `${ltr(companyName)} מדווחת בקרוב!`
+/** $TICKER — קצר וקריא יותר משם החברה המלא */
+function tickerTag(ticker: string): string {
+  const t = String(ticker ?? '').trim().toUpperCase()
+  return ltr(t.startsWith('$') ? t : `$${t}`)
 }
 
-export function earningsResultsTitle(companyName: string): string {
-  return `${ltr(companyName)} פרסמה דוח רבעוני!`
+export function earningsUpcomingTitle(ticker: string): string {
+  return `${tickerTag(ticker)} מדווחת בקרוב!`
 }
 
+export function earningsResultsTitle(ticker: string): string {
+  return `${tickerTag(ticker)} פרסמה דוח רבעוני!`
+}
+
+/** «בקו הצפי» / «מעל ב-1.8%» / «מתחת ב-1.8%» — קצר, בתוך הסוגריים של הצפי */
 export function surpriseVerdict(pct: number | null | undefined): string {
   if (pct == null || isNaN(pct)) return ''
   if (Math.abs(pct) < 0.05) return 'בקו הצפי'
   const mag = ltr(`${Math.abs(pct).toFixed(1)}%`)
-  if (pct > 0) return `מעל הצפי ב-${mag}`
-  return `מתחת לצפי ב-${mag}`
+  if (pct > 0) return `מעל ב-${mag}`
+  return `מתחת ב-${mag}`
 }
 
+/** «רווחיות: $0.79 (צפי $0.79 · בקו הצפי)» — בלי תוויות לטיניות, הצפי והפער בסוגריים */
 export function buildEarningsMetricLine(
   hebrewLabel: string,
-  latinLabel: string,
+  _latinLabel: string,
   actual: string,
   estimate: string | null,
   surprisePct: number | null | undefined,
 ): string {
-  const label = `${hebrewLabel} (${ltr(latinLabel)})`
-  let line = `${label}: ${ltr(actual)}`
-  if (estimate && estimate !== 'N/A' && estimate !== '—') {
-    line += `${PUSH_SEP}צפי ${ltr(estimate)}`
-  }
+  let line = `${hebrewLabel}: ${ltr(actual)}`
+  const parts: string[] = []
+  if (estimate && estimate !== 'N/A' && estimate !== '—') parts.push(`צפי ${ltr(estimate)}`)
   const verdict = surpriseVerdict(surprisePct)
-  if (verdict) line += `${PUSH_SEP}${verdict}`
+  if (verdict) parts.push(verdict)
+  if (parts.length) line += ` (${parts.join(PUSH_SEP)})`
   return line
 }
 

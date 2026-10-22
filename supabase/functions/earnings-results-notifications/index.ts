@@ -214,7 +214,7 @@ serve(async (req) => {
         )
       }
 
-      const notificationTitle = earningsResultsTitle(companyName)
+      const notificationTitle = earningsResultsTitle(ticker)
       const notificationBody = lines.join('\n')
 
       let processedUsers = 0

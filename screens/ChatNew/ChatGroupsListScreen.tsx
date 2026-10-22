@@ -49,6 +49,8 @@ import {
 import { MainDrawerRegistration } from '../../navigation/MainDrawerRegistration';
 import { supabase } from '../../lib/supabase';
 import { ChatGroup } from '../../types/chat.types';
+import ChatListSwipeRow from '../../components/chat/ChatListSwipeRow';
+import { getCachedGroupMuteMap, setGroupMuted, subscribeGroupMutes, type GroupMuteMap } from '../../lib/notificationGroupMute';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Search } from 'lucide-react-native';
 import JoinGroupBottomSheet from '../../components/chat/JoinGroupBottomSheet';
@@ -69,7 +71,7 @@ import { logger } from '../../utils/logger';
 import { getChatMessagePreview } from '../../utils/chatMessagePreview';
 import { isUsableChatDisplayName } from '../../lib/chatMessageIdentity';
 import { isAnnouncementGroup } from '../../utils/isAnnouncementGroup';
-import { getMyPinnedGroups, setGroupPinned } from '../../services/chat/chatGroupService';
+import { getMyPinnedGroups, setGroupPinned, toggleGroupMute as toggleGroupMuteRemote } from '../../services/chat/chatGroupService';
 import { showAppDialog, legacyAlert } from '../../utils/appDialog';
 import { HapticFeedback, triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
 import { ChatSessionBackdrop } from '../../components/chat/ChatSessionBackdrop';
@@ -835,6 +837,45 @@ export default function ChatGroupsListScreen() {
     if (user?.id) warmChatGroupOnPress(user.id, group.id);
   }, [primeGroupForOpen, user?.id]);
 
+  /** נעיצה / ביטול נעיצה — אופטימי (לחיצה ארוכה עם דיאלוג, החלקה בלי) */
+  const toggleGroupPin = useCallback(
+    async (group: GroupWithMembership) => {
+      if (!user?.id) return;
+      const isPinned = !!pinnedMap[group.id];
+      const prev = pinnedMap;
+      setPinnedMap((m) => {
+        const next = { ...m };
+        if (isPinned) delete next[group.id];
+        else next[group.id] = new Date().toISOString();
+        return next;
+      });
+      const { error } = await setGroupPinned(group.id, user.id, !isPinned);
+      if (error) setPinnedMap(prev);
+    },
+    [user?.id, pinnedMap]
+  );
+
+  // השתקה — אותו store כמו בהגדרות הקבוצה (מתעדכן חי בין המסכים)
+  const [muteMap, setMuteMap] = useState<GroupMuteMap>(() => getCachedGroupMuteMap());
+  useEffect(() => subscribeGroupMutes((_id, _muted, map) => setMuteMap(map)), []);
+  const isRowMuted = useCallback(
+    (group: GroupWithMembership) =>
+      Object.prototype.hasOwnProperty.call(muteMap, group.id)
+        ? muteMap[group.id] === true
+        : !!(group as any).is_muted,
+    [muteMap]
+  );
+  const toggleGroupMute = useCallback(
+    async (group: GroupWithMembership) => {
+      if (!user?.id) return;
+      const next = !isRowMuted(group);
+      await setGroupMuted(group.id, next, (id, mutedValue) =>
+        toggleGroupMuteRemote(id, user.id, mutedValue),
+      );
+    },
+    [user?.id, isRowMuted]
+  );
+
   /** לחיצה ארוכה על קבוצה שלי — נעיצה למעלה / ביטול נעיצה */
   const handleGroupLongPress = useCallback(
     async (group: GroupWithMembership) => {
@@ -851,17 +892,9 @@ export default function ChatGroupsListScreen() {
         ],
       });
       if (choice !== 0) return;
-      const prev = pinnedMap;
-      setPinnedMap((m) => {
-        const next = { ...m };
-        if (isPinned) delete next[group.id];
-        else next[group.id] = new Date().toISOString();
-        return next;
-      });
-      const { error } = await setGroupPinned(group.id, user.id, !isPinned);
-      if (error) setPinnedMap(prev);
+      await toggleGroupPin(group);
     },
-    [user?.id, pinnedMap]
+    [user?.id, pinnedMap, toggleGroupPin]
   );
 
   const handleGroupPress = useCallback((group: GroupWithMembership) => {
@@ -1145,8 +1178,32 @@ export default function ChatGroupsListScreen() {
           ? formatRelativeTime(item.last_message.created_at)
           : '';
 
+      const swipeEnabled = !!item.is_member && !isAnnouncementGroup(item.name, item.id);
+      const rowPinned = !!pinnedMap[item.id];
+      const rowMuted = isRowMuted(item);
       return (
         <View key={`group-wrapper-${item.id}`}>
+          <ChatListSwipeRow
+            enabled={swipeEnabled}
+            actions={[
+              {
+                key: 'pin',
+                label: rowPinned ? 'ביטול נעיצה' : 'נעיצה',
+                icon: <MaterialCommunityIcons name={rowPinned ? 'pin-off' : 'pin'} size={22} color="#000" />,
+                backgroundColor: tokens.colors.primary.main,
+                color: '#000',
+                onPress: () => { void toggleGroupPin(item); },
+              },
+              {
+                key: 'mute',
+                label: rowMuted ? 'ביטול השתקה' : 'השתקה',
+                icon: <Ionicons name={rowMuted ? 'notifications-outline' : 'notifications-off-outline'} size={21} color="#fff" />,
+                backgroundColor: '#5A5A5F',
+                color: '#fff',
+                onPress: () => { void toggleGroupMute(item); },
+              },
+            ]}
+          >
           <TouchableOpacity
             style={styles.chatRow}
             onPress={() => handleGroupPress(item)}
@@ -1187,6 +1244,9 @@ export default function ChatGroupsListScreen() {
                   {chatGroupDisplayName(item.name)}
                 </Text>
                 <View style={styles.chatTimeWrap}>
+                  {rowMuted ? (
+                    <Ionicons name="notifications-off" size={13} color={tokens.colors.text.secondary} />
+                  ) : null}
                   {pinnedMap[item.id] ? (
                     // נעץ (pushpin) של MaterialCommunityIcons — Ionicons «pin» הוא סיכת מפה; ירוק המותג = מוצמד
                     <MaterialCommunityIcons name="pin" size={15} color={tokens.colors.primary.main} style={styles.pinIcon} />
@@ -1228,6 +1288,7 @@ export default function ChatGroupsListScreen() {
               </View>
             </View>
           </TouchableOpacity>
+          </ChatListSwipeRow>
 
           {isLastAnnouncement ? (
             <View style={styles.sectionDivider} />
@@ -1237,7 +1298,7 @@ export default function ChatGroupsListScreen() {
         </View>
       );
     },
-    [styles, tokens, handleGroupPress, handleGroupLongPress, pinnedMap, prepareChatOpen, imageErrorCount, isDarkMode]
+    [styles, tokens, handleGroupPress, handleGroupLongPress, pinnedMap, prepareChatOpen, imageErrorCount, isDarkMode, isRowMuted, toggleGroupPin, toggleGroupMute]
   );
 
   const renderJoinableGroup = useCallback(

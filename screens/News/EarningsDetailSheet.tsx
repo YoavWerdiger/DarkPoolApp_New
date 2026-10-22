@@ -386,12 +386,17 @@ function useStyles() {
           writingDirection: 'rtl',
           fontVariant: ['tabular-nums'],
         },
-        resultValueCol: { alignItems: 'flex-start', gap: 6, maxWidth: '60%' },
+        // ערך ותגית באותה שורה — שורה אחת בגובה רגיל
+        resultValueCol: {
+          direction: 'ltr',
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+          maxWidth: '64%',
+        },
         resultValue: {
           ...appCardBodyStyle,
           width: undefined,
-          fontSize: APP_TYPE.cardTitle.fontSize + 2,
-          lineHeight: APP_TYPE.cardTitle.lineHeight + 2,
           fontWeight: APP_TYPE.cardTitle.fontWeight,
           fontVariant: ['tabular-nums'],
           writingDirection: 'ltr',

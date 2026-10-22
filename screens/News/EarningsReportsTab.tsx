@@ -1414,7 +1414,7 @@ export default function EarningsReportsTab({
         onShare={(r) => {
           setDetailReport(null);
           // אחרי שהשיט נסגר — שני מודלים יחד ב-iOS נתקעים
-          setTimeout(() => setShareReport(r), 350);
+          setTimeout(() => setShareReport(r), 450);
         }}
       />
       <ShareDestinationSheet

@@ -15,6 +15,7 @@ import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { APP_LAYOUT } from '../../components/ui/appLayout';
 import {
   APP_TYPE,
+  appPhysicalRightText,
   appCardBodyStyle,
   appCardTitleStyle,
   appGroupLabelStyle,
@@ -171,42 +172,55 @@ function Body({
 
   return (
     <View style={styles.container}>
-      <View style={styles.topBar}>
-        <DayNavBlurButton glass glassIntensity="light" onPress={onClose} size={HEADER_BACK_BTN_SIZE} accessibilityLabel="סגור">
-          <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
-        </DayNavBlurButton>
-        {/* כותרת בשורה אחת עם כפתורי הניווט — ממורכזת ביניהם */}
-        <View style={styles.headerCenter}>
-          <View style={styles.headerIdentity}>
-            <TickerLogo symbol={symbol} size={36} borderRadius={18} />
-            <View style={styles.headerTextCol}>
-              <Text style={styles.ticker} numberOfLines={1}>{`\u2066$${symbol}\u2069`}</Text>
-              {company ? <Text style={styles.company} numberOfLines={1}>{company}</Text> : null}
+      {/* ראש כמו בשיט הטיקר ברשימת המעקב: שורת כפתורים, ומתחת זהות (לוגו / טיקר / חברה) מול המועד */}
+      <View style={styles.header}>
+        <View style={styles.topBar}>
+          <View style={styles.closeSlot}>
+            <DayNavBlurButton glass glassIntensity="light" onPress={onClose} size={HEADER_BACK_BTN_SIZE} accessibilityLabel="סגור">
+              <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
+            </DayNavBlurButton>
+          </View>
+          <View style={styles.topSpacer} />
+          {onShare ? (
+            <View style={styles.closeSlot}>
+              <DayNavBlurButton
+                glass
+                glassIntensity="light"
+                onPress={() => {
+                  void HapticFeedback.selection();
+                  onShare(report);
+                }}
+                size={HEADER_BACK_BTN_SIZE}
+                accessibilityLabel="שיתוף"
+              >
+                <Ionicons name="share-outline" size={20} color={tokens.colors.text.primary} />
+              </DayNavBlurButton>
+            </View>
+          ) : null}
+        </View>
+
+        <View style={styles.heroBlock}>
+          <View style={styles.priceRow}>
+            <View style={styles.identityRow}>
+              <TickerLogo symbol={symbol} size={48} borderRadius={24} />
+              <View style={styles.identityText}>
+                <Text style={styles.identityTicker} numberOfLines={1}>{`\u2066$${symbol}\u2069`}</Text>
+                {company ? (
+                  <Text style={styles.companyName} numberOfLines={1}>
+                    {company}
+                  </Text>
+                ) : null}
+              </View>
+            </View>
+            <View style={styles.priceCol}>
+              <Text style={styles.heroDate}>{dateLabel(report.report_date)}</Text>
+              <Text style={styles.heroMeta} numberOfLines={1}>
+                {[timing?.label ?? null, quarter ? `רבעון ${quarter}` : null].filter(Boolean).join(' · ') || 'דוח רבעוני'}
+              </Text>
             </View>
           </View>
         </View>
-        {onShare ? (
-          <DayNavBlurButton
-            glass
-            glassIntensity="light"
-            onPress={() => {
-              void HapticFeedback.selection();
-              onShare(report);
-            }}
-            size={HEADER_BACK_BTN_SIZE}
-            accessibilityLabel="שיתוף"
-          >
-            <Ionicons name="share-outline" size={20} color={tokens.colors.text.primary} />
-          </DayNavBlurButton>
-        ) : (
-          <View style={{ width: HEADER_BACK_BTN_SIZE }} />
-        )}
       </View>
-      <Text style={styles.metaLine} numberOfLines={1}>
-        {[quarter ? `רבעון ${quarter}` : null, timing?.label ?? null, dateLabel(report.report_date)]
-          .filter(Boolean)
-          .join(' · ')}
-      </Text>
 
       <ScrollView
         style={styles.scroll}
@@ -339,37 +353,81 @@ function useStyles() {
     () =>
       StyleSheet.create({
         container: { flex: 1, minHeight: 0 },
+        header: {
+          paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+          paddingTop: 10,
+          paddingBottom: APP_LAYOUT.stackGapSmall,
+          gap: APP_LAYOUT.cardTitleToBodyGap,
+        },
         topBar: {
           direction: 'rtl',
           flexDirection: 'row',
           alignItems: 'center',
           minHeight: HEADER_BACK_BTN_SIZE,
-          paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
-          paddingTop: 10,
-          paddingBottom: 6,
         },
-        headerCenter: { flex: 1, minWidth: 0, alignItems: 'center', paddingHorizontal: 8 },
-        headerIdentity: {
-          direction: 'ltr',
-          flexDirection: 'row-reverse',
+        closeSlot: {
+          width: HEADER_BACK_BTN_SIZE,
+          height: HEADER_BACK_BTN_SIZE,
+          overflow: 'visible',
+          flexShrink: 0,
+        },
+        topSpacer: { flex: 1 },
+        heroBlock: { marginBottom: APP_LAYOUT.stackGapSmall },
+        priceRow: {
+          direction: 'rtl',
+          flexDirection: 'row',
           alignItems: 'center',
-          gap: 10,
-          maxWidth: '100%',
+          justifyContent: 'space-between',
+          gap: APP_LAYOUT.componentGap,
         },
-        headerTextCol: { minWidth: 0, flexShrink: 1, alignItems: 'flex-end' },
-        scroll: { flex: 1, minHeight: 0 },
-        scrollContent: {
-          paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
-          gap: APP_LAYOUT.cardStackGap,
+        priceCol: { flexShrink: 0, alignItems: 'flex-end' },
+        heroDate: {
+          ...appPhysicalLeftText,
+          fontSize: APP_TYPE.cardTitle.fontSize,
+          lineHeight: APP_TYPE.cardTitle.lineHeight,
+          fontWeight: APP_TYPE.cardTitle.fontWeight,
+          color: tokens.colors.text.primary,
+          writingDirection: 'ltr',
+          fontVariant: ['tabular-nums'],
         },
-        hero: { gap: APP_LAYOUT.cardTitleToBodyGap, marginBottom: 4 },
+        heroMeta: {
+          ...appPhysicalLeftText,
+          marginTop: APP_LAYOUT.cardMetricLabelToValueGap,
+          fontSize: APP_TYPE.cardSubtitle.fontSize,
+          lineHeight: APP_TYPE.cardSubtitle.lineHeight,
+          color: tokens.colors.text.secondary,
+        },
         identityRow: {
+          flex: 1,
+          minWidth: 0,
           direction: 'ltr',
           flexDirection: 'row-reverse',
           alignItems: 'center',
           gap: APP_LAYOUT.cardTitleToBodyGap,
         },
         identityText: { flex: 1, minWidth: 0, alignItems: 'flex-end' },
+        identityTicker: {
+          fontSize: APP_TYPE.sectionTitle.fontSize,
+          lineHeight: APP_TYPE.sectionTitle.lineHeight,
+          fontWeight: APP_TYPE.sectionTitle.fontWeight,
+          letterSpacing: APP_TYPE.sectionTitle.letterSpacing,
+          color: tokens.colors.text.primary,
+          writingDirection: 'ltr',
+          textAlign: 'right',
+        },
+        companyName: {
+          ...appPhysicalRightText,
+          marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
+          fontSize: APP_TYPE.cardSubtitle.fontSize,
+          lineHeight: APP_TYPE.cardSubtitle.lineHeight,
+          fontWeight: APP_TYPE.cardSubtitle.fontWeight,
+          color: tokens.colors.text.secondary,
+        },
+        scroll: { flex: 1, minHeight: 0 },
+        scrollContent: {
+          paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+          gap: APP_LAYOUT.cardStackGap,
+        },
         ticker: {
           fontSize: APP_TYPE.cardTitle.fontSize + 1,
           lineHeight: APP_TYPE.cardTitle.lineHeight,

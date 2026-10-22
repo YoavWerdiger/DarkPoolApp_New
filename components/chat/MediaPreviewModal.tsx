@@ -39,6 +39,11 @@ import { useMediaZoomGestures } from './useMediaZoomGestures';
 import ForwardMessageModal from './ForwardMessageModal';
 import { MediaBlurBackdrop, MediaKeyboardDim } from './MediaViewerChrome';
 
+/** צילום מסך של טלפון: גבוה וצר (h/w ≥ 1.9 — מכשירים מודרניים 19.5:9) */
+function isPhoneScreenshotRatio(w: number, h: number): boolean {
+  return w > 0 && h > 0 && h / w >= 1.9;
+}
+
 function MediaPreviewBody({
   visible,
   onClose,
@@ -464,8 +469,9 @@ function MediaPreviewBody({
     const srcH = media.height && media.height > 0 ? media.height : screenH;
     // אותה התאמה לחלון כמו התמונה הנוכחית
     const ratio = srcW / srcH;
-    let nW = screenW;
-    let nH = screenW / ratio;
+    const nBaseW = media.type === 'image' && isPhoneScreenshotRatio(srcW, srcH) ? screenW * 0.9 : screenW;
+    let nW = nBaseW;
+    let nH = nBaseW / ratio;
     if (nH > mediaFrame.height) {
       nH = mediaFrame.height;
       nW = nH * ratio;
@@ -502,8 +508,10 @@ function MediaPreviewBody({
         const srcW = currentMedia.width && currentMedia.width > 0 ? currentMedia.width : screenW;
         const srcH = currentMedia.height && currentMedia.height > 0 ? currentMedia.height : screenH;
         const ratio = srcW / srcH;
-        let boxW = screenW;
-        let boxH = screenW / ratio;
+        // צילום מסך של טלפון (גבוה, ביחס המסך) — 90% רוחב, לא מלא; שאר התמונות ברוחב מלא
+        const baseW = isPhoneScreenshotRatio(srcW, srcH) ? screenW * 0.9 : screenW;
+        let boxW = baseW;
+        let boxH = baseW / ratio;
         if (boxH > mediaFrame.height) {
           boxH = mediaFrame.height;
           boxW = boxH * ratio;

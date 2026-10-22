@@ -463,7 +463,7 @@ export function buildEconomicEventAttachment(event: {
     ref: { type: 'economic_event', id: event.id },
     preview: {
       title,
-      ...(when ? { subtitle: `ארה״ב · ${when}` } : {}),
+      ...(when ? { subtitle: when } : {}),
       badge: event.importance === 'high' ? 'השפעה גבוהה' : 'יומן כלכלי',
       metrics,
     },

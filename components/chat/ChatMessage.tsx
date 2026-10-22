@@ -1127,6 +1127,8 @@ function ChatMessage({
           </Reanimated.View>
         </GestureDetector>
 
+        {/* ריאקשנים + (בהכרזות) בועת התגובות — באותה שורה, זו לצד זו */}
+        <View style={centered ? styles.reactionsAndComments : undefined}>
         <ReactionsReveal visible={!!message.reactions && message.reactions.length > 0}>
           {message.reactions && message.reactions.length > 0 ? (
             <MessageReactions
@@ -1152,7 +1154,8 @@ function ChatMessage({
             <GlassChip disableBlur style={styles.commentsPill} contentContainerStyle={styles.commentsPillContent}>
               <Ionicons
                 name="chatbubble-outline"
-                size={13}
+                size={14}
+                style={styles.commentsIcon}
                 color={isMe ? DesignTokens.colors.bubbleMeMetaText : DesignTokens.colors.text.secondary}
               />
               {(message.comments_count ?? 0) > 0 ? (
@@ -1169,6 +1172,7 @@ function ChatMessage({
             </GlassChip>
           </TouchableOpacity>
         ) : null}
+        </View>
         </View>
         </View>
       </View>
@@ -2495,6 +2499,12 @@ const createStyles = (tokens: any) => {
   centeredStretch: {
     alignItems: 'stretch',
   },
+  reactionsAndComments: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    alignSelf: 'flex-start',
+    gap: 6,
+  },
   // כמו בועת הריאקשנים (MessageReactions): גובה 22, רדיוס 11, מרווח 4 מהבועה
   commentsRow: {
     marginTop: 4,
@@ -2504,19 +2514,26 @@ const createStyles = (tokens: any) => {
     minHeight: 22,
     borderRadius: 11,
   },
+  // אותן מידות בדיוק כמו pillContent / count ב-MessageReactions
   commentsPillContent: {
     flexDirection: 'row',
     direction: 'ltr',
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 22,
-    paddingHorizontal: 7,
+    paddingHorizontal: 6,
     paddingVertical: 2,
-    gap: 3,
+    gap: 1,
+  },
+  // כמו האימוג'י בריאקשן (13px, שורה 16)
+  commentsIcon: {
+    lineHeight: 16,
+    paddingHorizontal: 1,
   },
   commentsCount: {
     fontSize: 11,
     fontWeight: '600',
+    marginLeft: 1,
     minWidth: 8,
     textAlign: 'center',
   },

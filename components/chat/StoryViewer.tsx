@@ -1,3 +1,7 @@
+/**
+ * @deprecated לא בשימוש — הוחלף ב-screens/Stories/StoryViewerScreen.tsx (מסך ניווט, נפתח דרך
+ * lib/storyViewerSession.openStoryViewer). נשמר בריפו לעיון בלבד.
+ */
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { logger } from '../../utils/logger';
 import {

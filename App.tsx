@@ -32,6 +32,7 @@ import { HapticFeedback } from './utils/hapticFeedback';
 import { Fingerprint } from 'lucide-react-native';
 import { rootNavigationRef } from './navigation/rootNavigationRef';
 import PublicProfileScreen from './screens/Profile/PublicProfileScreen';
+import StoryViewerScreen from './screens/Stories/StoryViewerScreen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { enableScreens, enableFreeze } from 'react-native-screens';
 import { isRegistrationComplete } from './services/authService';
@@ -390,6 +391,18 @@ function AppContent() {
               <Stack.Screen name="Admin" component={AdminStack} />
               {/* פרופיל ציבורי של משתמש — נפתח מכל מקום (lib/openUserProfile) */}
               <Stack.Screen name="PublicProfile" component={PublicProfileScreen} />
+              {/* צופה הסטוריז — מסך (לא Modal של RN): transparentModal כדי שבמשיכה למטה ייראה המסך שמתחת (lib/storyViewerSession) */}
+              <Stack.Screen
+                name="StoryViewer"
+                component={StoryViewerScreen}
+                options={{
+                  presentation: 'transparentModal',
+                  animation: 'fade',
+                  headerShown: false,
+                  gestureEnabled: false,
+                  contentStyle: { backgroundColor: 'transparent' },
+                }}
+              />
             </>
           ) : midRegistrationWizard && !passwordRecoveryMode ? (
             <>

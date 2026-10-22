@@ -59,7 +59,7 @@ import CreateGroupSheet from '../../components/chat/CreateGroupSheet';
 import { ChatSheetEmptyState, ChatSheetLoading, ChatSheetTopoHeader } from '../../components/chat/ChatBottomSheet';
 import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
 import { ChatSearchResult } from '../../types/chat.types';
-import StoryViewer from '../../components/chat/StoryViewer';
+import { openStoryViewer } from '../../lib/storyViewerSession';
 import AddStoryFullScreen from '../../components/chat/AddStoryFullScreen';
 import StoryAvatarRing from '../../components/chat/StoryAvatarRing';
 import { getUsersWithStories, prefetchStoriesForUsers, StoryWithUser } from '../../services/storiesService';
@@ -279,8 +279,6 @@ export default function ChatGroupsListScreen() {
       ExpoImage.prefetch(uri, 'memory-disk').catch(() => {});
     });
   }, [usersWithStories]);
-  const [storyViewerVisible, setStoryViewerVisible] = useState(false);
-  const [storyViewerInitialIndex, setStoryViewerInitialIndex] = useState(0);
   const storiesScrollRef = useRef<ScrollView>(null);
   const [createGroupSheetVisible, setCreateGroupSheetVisible] = useState(false);
 
@@ -1571,8 +1569,7 @@ export default function ChatGroupsListScreen() {
                       }
                       if (ownIdx < 0) return;
                       void HapticFeedback.selection();
-                      setStoryViewerInitialIndex(ownIdx);
-                      setStoryViewerVisible(true);
+                      openStoryViewer(usersWithStories, usersWithStories[ownIdx].user_id);
                     }}
                     accessibilityRole="button"
                     accessibilityLabel="הסטטוס שלי"
@@ -1640,8 +1637,7 @@ export default function ChatGroupsListScreen() {
                       return;
                     }
                     void HapticFeedback.selection();
-                    setStoryViewerInitialIndex(idx);
-                    setStoryViewerVisible(true);
+                    openStoryViewer(usersWithStories, s.user_id);
                   }}
                   accessibilityRole="button"
                   accessibilityLabel={isOwn ? 'הסטטוס שלי' : displayName}
@@ -1836,16 +1832,7 @@ export default function ChatGroupsListScreen() {
         />
       )}
 
-      {/* Story Viewer */}
-      {storyViewerVisible && (
-        <StoryViewer
-          visible={storyViewerVisible}
-          onClose={() => { setStoryViewerVisible(false); loadStories(); }}
-          storiesByUser={usersWithStories}
-          initialUserIndex={storyViewerInitialIndex}
-          onStoriesChanged={loadStories}
-        />
-      )}
+      {/* צופה הסטוריז — מסך StoryViewer בסטאק הראשי (openStoryViewer); בחזרה useFocusEffect מרענן את השורה */}
     </View>
   );
 }

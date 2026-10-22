@@ -1,27 +1,21 @@
 // ============================================
 // Forward Message Sheet
 // ============================================
-// בחירת קבוצות להעברת הודעה — ChatBottomSheet + RTL כמו שאר שיטי הצ׳אט
+// בחירת קבוצות להעברת הודעה — לפי הטופו וערכת הנושא:
+// כותרת כמו שאר השיטים, שורות כמו ברשימת הצ׳אטים (תמונה + שם צמוד מימין, דיבידר אחרי התמונה),
+// סימון עגול, כפתור UIButton (pill). בלי חיפוש.
 // ============================================
 
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  FlatList,
-  StyleSheet,
-  ActivityIndicator,
-  Image,
-  TextInput,
-  Pressable,
-  Platform,
-  Dimensions,
-} from 'react-native';
+import { View, Text, FlatList, StyleSheet, Image, Pressable, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useDesignTokens } from '../ui/DesignTokens';
 import { Ionicons } from '@expo/vector-icons';
+import { useDesignTokens } from '../ui/DesignTokens';
+import { APP_TYPE } from '../ui/appType';
+import { APP_LAYOUT } from '../ui/appLayout';
+import UIButton from '../ui/UIButton';
+import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
 import { chatGroupService } from '../../services/chat';
 import { ChatGroup } from '../../types/chat.types';
 import { useAuth } from '../../context/AuthContext';
@@ -29,7 +23,6 @@ import { useTheme } from '../../context/ThemeContext';
 import { chatGroupDisplayName, groupAvatarSource } from '../../assets/chatGroups/groupChatIcons';
 import { logger } from '../../utils/logger';
 import { HapticFeedback } from '../../utils/hapticFeedback';
-import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
 import {
   ChatBottomSheet,
   ChatSheetContent,
@@ -39,11 +32,13 @@ import {
 import { chatRtlRow, chatRtlText } from './chatDesignTokens';
 import { chatComposerSafeBottomInset } from './chatInputLayout';
 
-/** snap יחיד — קונטיינר השיט בגובה מסך מלא; חייבים לפצות על החלק מתחת ל-viewport. */
+/** snap יחיד — קונטיינר השיט בגובה מסך מלא; מפצים על החלק שמתחת ל-viewport. */
 const FORWARD_SHEET_SNAP = 0.9;
 const FORWARD_SHEET_OFFSCREEN_BELOW = Math.ceil(
   Dimensions.get('window').height * (1 - FORWARD_SHEET_SNAP),
 );
+const AVATAR = 48;
+const ROW_GAP = 12;
 
 interface ForwardMessageModalProps {
   visible: boolean;
@@ -61,32 +56,18 @@ export default function ForwardMessageModal({
   const tokens = useDesignTokens();
   const { isDarkMode } = useTheme();
   const insets = useSafeAreaInsets();
-  const styles = useMemo(() => createStyles(tokens), [tokens]);
   const { user } = useAuth();
-  const footerSafePad = useMemo(
-    () =>
-      FORWARD_SHEET_OFFSCREEN_BELOW + chatComposerSafeBottomInset(insets.bottom) + 8,
-    [insets.bottom],
-  );
+  const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const footerSafePad =
+    FORWARD_SHEET_OFFSCREEN_BELOW + chatComposerSafeBottomInset(insets.bottom) + 8;
 
   const [groups, setGroups] = useState<ChatGroup[]>([]);
-  const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
-  const [query, setQuery] = useState('');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [isForwarding, setIsForwarding] = useState(false);
 
-  useEffect(() => {
-    if (visible) {
-      void loadGroups();
-      return;
-    }
-    setSelectedGroups(new Set());
-    setQuery('');
-  }, [visible]);
-
-  const loadGroups = async () => {
+  const loadGroups = useCallback(async () => {
     if (!user) return;
-
     setIsLoading(true);
     try {
       const { data, error } = await chatGroupService.getChatGroups(user.id);
@@ -94,27 +75,25 @@ export default function ForwardMessageModal({
         logger.error('ForwardMessageModal', 'getChatGroups failed', error);
         return;
       }
-
-      const filteredGroups = (data || []).filter(
-        (group) => group.id !== currentGroupId,
-      );
-      setGroups(filteredGroups);
+      setGroups((data || []).filter((g) => g.id !== currentGroupId));
     } catch (error) {
       logger.error('ForwardMessageModal', 'Failed to load groups', error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user, currentGroupId]);
 
-  const filteredGroups = useMemo(() => {
-    const term = query.trim().toLowerCase();
-    if (!term) return groups;
-    return groups.filter((group) => group.name.toLowerCase().includes(term));
-  }, [groups, query]);
+  useEffect(() => {
+    if (visible) {
+      void loadGroups();
+      return;
+    }
+    setSelected(new Set());
+  }, [visible, loadGroups]);
 
-  const toggleGroupSelection = useCallback((groupId: string) => {
+  const toggle = useCallback((groupId: string) => {
     void HapticFeedback.selection();
-    setSelectedGroups((prev) => {
+    setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(groupId)) next.delete(groupId);
       else next.add(groupId);
@@ -122,16 +101,16 @@ export default function ForwardMessageModal({
     });
   }, []);
 
-  const handleForward = async () => {
-    if (selectedGroups.size === 0 || isForwarding) return;
+  const canForward = selected.size > 0 && !isForwarding;
 
+  const handleForward = async () => {
+    if (!canForward) return;
     setIsForwarding(true);
     void HapticFeedback.impactLight();
     try {
-      await onForward(Array.from(selectedGroups));
+      await onForward(Array.from(selected));
       onClose();
-      setSelectedGroups(new Set());
-      setQuery('');
+      setSelected(new Set());
     } catch (error) {
       logger.error('ForwardMessageModal', 'Forward failed', error);
       legacyAlert('שגיאה', 'לא ניתן להעביר את ההודעה');
@@ -140,80 +119,57 @@ export default function ForwardMessageModal({
     }
   };
 
-  const canForward = selectedGroups.size > 0 && !isForwarding;
-
-  const renderGroupItem = ({ item }: { item: ChatGroup }) => {
-    const isSelected = selectedGroups.has(item.id);
+  const renderRow = ({ item }: { item: ChatGroup }) => {
+    const isSelected = selected.has(item.id);
     const avatar = groupAvatarSource(item.name, item.avatar_url, isDarkMode);
-
+    const name = chatGroupDisplayName(item.name);
     return (
-      <TouchableOpacity
-        style={[styles.groupRow, isSelected && styles.groupRowSelected]}
-        onPress={() => toggleGroupSelection(item.id)}
-        activeOpacity={0.7}
+      <Pressable
+        onPress={() => toggle(item.id)}
         disabled={isForwarding}
+        style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
         accessibilityRole="checkbox"
         accessibilityState={{ checked: isSelected }}
-        accessibilityLabel={chatGroupDisplayName(item.name)}
+        accessibilityLabel={name}
       >
         {avatar ? (
-          <Image source={avatar} style={styles.groupAvatar} />
+          <Image source={avatar} style={styles.avatar} />
         ) : (
-          <View style={styles.groupAvatarPlaceholder}>
+          <View style={[styles.avatar, styles.avatarPlaceholder]}>
             <Ionicons name="people" size={22} color={tokens.colors.text.secondary} />
           </View>
         )}
-
-        <View style={styles.groupInfo}>
-          <Text style={styles.groupName} numberOfLines={1}>
-            {chatGroupDisplayName(item.name)}
-          </Text>
-        </View>
-
-        <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-          {isSelected ? (
-            <Ionicons name="checkmark" size={16} color={tokens.colors.text.inverse} />
-          ) : null}
-        </View>
-      </TouchableOpacity>
+        <Text style={styles.name} numberOfLines={1}>
+          {name}
+        </Text>
+        <Ionicons
+          name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
+          size={26}
+          color={isSelected ? tokens.colors.primary.main : tokens.colors.text.tertiary}
+        />
+      </Pressable>
     );
   };
 
-  const listBody = (() => {
-    if (isLoading) {
-      return <ChatSheetLoading label="טוען קבוצות..." />;
-    }
-    if (groups.length === 0) {
-      return (
-        <ChatSheetEmptyState
-          icon="people-outline"
-          title="אין קבוצות זמינות"
-          subtitle="אין לאן להעביר את ההודעה כרגע"
-        />
-      );
-    }
-    if (filteredGroups.length === 0) {
-      return (
-        <ChatSheetEmptyState
-          icon="search-outline"
-          title="לא נמצאו קבוצות"
-          subtitle="נסה שם אחר"
-        />
-      );
-    }
-    return (
-      <FlatList
-        data={filteredGroups}
-        renderItem={renderGroupItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-        style={styles.list}
-      />
-    );
-  })();
+  const body = isLoading ? (
+    <ChatSheetLoading label="טוען קבוצות..." />
+  ) : groups.length === 0 ? (
+    <ChatSheetEmptyState
+      icon="people-outline"
+      title="אין קבוצות זמינות"
+      subtitle="אין לאן להעביר את ההודעה כרגע"
+    />
+  ) : (
+    <FlatList
+      data={groups}
+      renderItem={renderRow}
+      keyExtractor={(item) => item.id}
+      ItemSeparatorComponent={() => <View style={styles.divider} />}
+      contentContainerStyle={styles.listContent}
+      showsVerticalScrollIndicator={false}
+      style={styles.list}
+    />
+  );
 
   return (
     <ChatBottomSheet
@@ -221,10 +177,9 @@ export default function ForwardMessageModal({
       onClose={onClose}
       snapPoints={[FORWARD_SHEET_SNAP]}
       showBrandWatermark={false}
-      avoidKeyboard
       contentPaddingBottom={0}
     >
-      <ChatSheetContent style={{ flex: 1, minHeight: 0 }}>
+      <ChatSheetContent style={styles.content}>
         <View style={styles.header}>
           <DayNavBlurButton
             onPress={onClose}
@@ -234,74 +189,24 @@ export default function ForwardMessageModal({
           >
             <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
           </DayNavBlurButton>
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>העבר הודעה</Text>
-          </View>
-          <View style={styles.headerSideSpacer} />
+          <Text style={styles.title} numberOfLines={1}>
+            העבר הודעה
+          </Text>
+          <View style={styles.headerSpacer} />
         </View>
 
-        <View
-          style={[
-            styles.searchShell,
-            {
-              backgroundColor: tokens.colors.background.cardSolid,
-              borderColor: tokens.colors.border.divider,
-            },
-          ]}
-        >
-          <View style={styles.searchRow}>
-            <Ionicons name="search" size={18} color={tokens.colors.text.tertiary} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="חפש קבוצה..."
-              placeholderTextColor={tokens.colors.text.tertiary}
-              value={query}
-              onChangeText={setQuery}
-              returnKeyType="search"
-              autoCapitalize="none"
-              autoCorrect={false}
-              textAlign="right"
-            />
-            {query.length > 0 ? (
-              <Pressable
-                onPress={() => setQuery('')}
-                hitSlop={8}
-                style={({ pressed }) => pressed && { opacity: 0.6 }}
-                accessibilityLabel="נקה חיפוש"
-              >
-                <Ionicons name="close-circle" size={18} color={tokens.colors.text.tertiary} />
-              </Pressable>
-            ) : null}
-          </View>
-        </View>
-
-        <View style={styles.listWrap}>{listBody}</View>
+        <View style={styles.listWrap}>{body}</View>
 
         <View style={[styles.footer, { paddingBottom: footerSafePad }]}>
-          <TouchableOpacity
-            style={[
-              styles.forwardButton,
-              selectedGroups.size === 0 && styles.forwardButtonDisabled,
-            ]}
-            onPress={() => void handleForward()}
+          <UIButton
+            title={selected.size > 0 ? `העבר (${selected.size})` : 'העבר'}
+            variant="primary"
+            size="lg"
+            fullWidth
             disabled={!canForward}
-            activeOpacity={0.85}
-            accessibilityRole="button"
-            accessibilityLabel="העבר"
-          >
-            {isForwarding ? (
-              <ActivityIndicator size="small" color={tokens.colors.text.inverse} />
-            ) : (
-              <Text
-                style={[
-                  styles.forwardButtonText,
-                  selectedGroups.size === 0 && styles.forwardButtonTextDisabled,
-                ]}
-              >
-                {selectedGroups.size > 0 ? `העבר (${selectedGroups.size})` : 'העבר'}
-              </Text>
-            )}
-          </TouchableOpacity>
+            loading={isForwarding}
+            onPress={() => void handleForward()}
+          />
         </View>
       </ChatSheetContent>
     </ChatBottomSheet>
@@ -310,57 +215,31 @@ export default function ForwardMessageModal({
 
 const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
   StyleSheet.create({
+    content: {
+      flex: 1,
+      minHeight: 0,
+    },
     header: {
       ...chatRtlRow,
       direction: 'rtl',
       alignItems: 'center',
-      paddingBottom: 12,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: tokens.colors.border.divider,
       gap: 10,
+      paddingBottom: APP_LAYOUT.stackGapSmall + 4,
     },
-    headerCenter: {
+    // כמו כותרות השיטים (תגובות)
+    title: {
+      ...chatRtlText,
       flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
+      textAlign: 'center',
+      color: tokens.colors.text.primary,
+      fontSize: APP_TYPE.sectionTitle.fontSize,
+      fontWeight: APP_TYPE.sectionTitle.fontWeight,
+      lineHeight: APP_TYPE.sectionTitle.lineHeight,
+      letterSpacing: APP_TYPE.sectionTitle.letterSpacing,
     },
-    headerSideSpacer: {
+    headerSpacer: {
       width: DAY_NAV_BUTTON_SIZE,
       height: DAY_NAV_BUTTON_SIZE,
-    },
-    headerTitle: {
-      ...chatRtlText,
-      color: tokens.colors.text.primary,
-      fontSize: 20,
-      fontWeight: '800',
-      letterSpacing: -0.35,
-      textAlign: 'center',
-      width: '100%',
-    },
-    searchShell: {
-      marginTop: 14,
-      marginBottom: 10,
-      borderRadius: tokens.borderRadius.search,
-      overflow: 'hidden',
-      paddingHorizontal: 14,
-      paddingVertical: 4,
-      borderWidth: StyleSheet.hairlineWidth,
-    },
-    searchRow: {
-      flexDirection: 'row',
-      direction: 'ltr',
-      alignItems: 'center',
-      gap: 10,
-      minHeight: 44,
-    },
-    searchInput: {
-      flex: 1,
-      writingDirection: 'rtl',
-      textAlign: 'right',
-      color: tokens.colors.text.primary,
-      fontSize: 16,
-      paddingVertical: Platform.OS === 'ios' ? 10 : 8,
-      backgroundColor: 'transparent',
     },
     listWrap: {
       flex: 1,
@@ -370,89 +249,46 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       flex: 1,
     },
     listContent: {
-      paddingVertical: tokens.spacing.xs,
+      paddingVertical: 4,
     },
-    groupRow: {
+    // כמו שורה ברשימת הצ׳אטים: תמונה מימין, השם צמוד אליה, הסימון בקצה
+    row: {
       ...chatRtlRow,
       direction: 'rtl',
       alignItems: 'center',
-      gap: 12,
-      paddingVertical: 12,
-      paddingHorizontal: 4,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: tokens.colors.border.divider,
+      gap: ROW_GAP,
+      paddingVertical: 10,
     },
-    groupRowSelected: {
-      backgroundColor: tokens.colors.primary.dim,
-      borderRadius: 12,
-      borderBottomColor: 'transparent',
+    rowPressed: {
+      opacity: 0.7,
     },
-    groupAvatar: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
+    avatar: {
+      width: AVATAR,
+      height: AVATAR,
+      borderRadius: AVATAR / 2,
       flexShrink: 0,
     },
-    groupAvatarPlaceholder: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
+    avatarPlaceholder: {
       backgroundColor: tokens.colors.background.primary,
-      justifyContent: 'center',
       alignItems: 'center',
-      flexShrink: 0,
+      justifyContent: 'center',
     },
-    groupInfo: {
+    // בתוך שורת rtl — textAlign:'left' של chatRtlText הוא הצד הימני (צמוד לתמונה)
+    name: {
+      ...APP_TYPE.cardTitle,
+      ...chatRtlText,
       flex: 1,
       minWidth: 0,
-    },
-    groupName: {
-      fontSize: 16,
-      fontWeight: '600',
       color: tokens.colors.text.primary,
-      writingDirection: 'rtl',
-      textAlign: 'right',
     },
-    checkbox: {
-      width: 24,
-      height: 24,
-      borderRadius: 12,
-      borderWidth: 1.5,
-      borderColor: tokens.colors.border.divider,
-      backgroundColor: tokens.colors.background.primary,
-      justifyContent: 'center',
-      alignItems: 'center',
-      flexShrink: 0,
-    },
-    checkboxSelected: {
-      backgroundColor: tokens.colors.primary.main,
-      borderColor: tokens.colors.primary.main,
+    // דיבידר שמתחיל אחרי התמונה, כמו ברשימות הצ׳אט
+    divider: {
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: tokens.colors.border.divider,
+      marginRight: AVATAR + ROW_GAP,
     },
     footer: {
       flexShrink: 0,
-      paddingTop: 12,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: tokens.colors.border.divider,
-    },
-    forwardButton: {
-      height: 50,
-      borderRadius: 14,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: tokens.colors.primary.main,
-    },
-    forwardButtonDisabled: {
-      backgroundColor: tokens.colors.background.primary,
-      opacity: 1,
-    },
-    forwardButtonText: {
-      ...chatRtlText,
-      fontSize: 16,
-      fontWeight: '800',
-      color: tokens.colors.text.inverse,
-      textAlign: 'center',
-    },
-    forwardButtonTextDisabled: {
-      color: tokens.colors.text.tertiary,
+      paddingTop: APP_LAYOUT.stackGapSmall,
     },
   });

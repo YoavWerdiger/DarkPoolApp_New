@@ -265,8 +265,6 @@ interface ChatMessageProps {
 const BUBBLE_TAIL_W = 8;
 /** רוחב מדיה בבועת הכרזות: 94% מהמסך פחות ריפוד הבועה (xs משני הצדדים) ושולי הרשימה */
 const WIDE_MEDIA_W = Math.round(Dimensions.get('window').width * 0.94 - 8 - 16);
-/** כרטיס דוח / דיווח בבועה — העוטף מורחב ל-92% מהמסך (gestureSwipeWrapperWideEntity); פחות ריפוד הבועה */
-const ENTITY_WIDE_W = Math.round(Dimensions.get('window').width * 0.92 - 24);
 
 /** הודעת שיתוף של דוח רווח / דיווח כלכלי — בועה רחבה */
 function isWideEntityMessage(message: { message_type?: string; content?: string | null }): boolean {
@@ -827,9 +825,10 @@ function ChatMessage({
             centered && styles.centeredStretch,
             message.message_type === MessageType.AUDIO && styles.audioMessageContent,
             message.message_type === MessageType.POLL && styles.pollMessageContent,
+            isWideEntityMessage(message) && styles.wideEntityStretch,
           ]}
         >
-        <View style={[styles.bubbleStack, isMe && styles.bubbleStackMe, centered && styles.centeredStretch]}>
+        <View style={[styles.bubbleStack, isMe && styles.bubbleStackMe, centered && styles.centeredStretch, isWideEntityMessage(message) && styles.wideEntityStretch]}>
         <GestureDetector gesture={replyPanGesture}>
           <Reanimated.View
             collapsable={false}
@@ -839,6 +838,7 @@ function ChatMessage({
               isMe ? styles.myBubble : styles.theirBubble,
               showTail && (isMe ? styles.myBubbleTail : styles.theirBubbleTail),
               centered && styles.centeredBubble,
+              isWideEntityMessage(message) && styles.wideEntityStretch,
               (message.message_type === MessageType.IMAGE ||
                 message.message_type === MessageType.VIDEO ||
                 message.message_type === MessageType.MEDIA_GROUP ||
@@ -973,10 +973,9 @@ function ChatMessage({
                   style={{
                     marginTop: 2,
                     // דוח / דיווח: מטריקות ארוכות (צפי · מכה ב-X%) — בועה רחבה יותר שלא תידחס
-                    minWidth:
-                      att.ref.type === 'earnings_report' || att.ref.type === 'economic_event'
-                        ? ENTITY_WIDE_W
-                        : 220,
+                    ...(att.ref.type === 'earnings_report' || att.ref.type === 'economic_event'
+                      ? { alignSelf: 'stretch' as const }
+                      : { minWidth: 220 }),
                     gap: 8,
                   }}
                 >
@@ -2573,9 +2572,15 @@ const createStyles = (tokens: any) => {
     minWidth: 210,
   },
   /** סקר: מונע התכווצות לרוחב אות בודדת אחרי הסרת כותרת האייקון */
-  /** שיתוף דוח / דיווח כלכלי — בועה רחבה יותר (ENTITY_WIDE_W) */
+  /** שיתוף דוח / דיווח כלכלי — בועה ברוחב קבוע 92% */
   gestureSwipeWrapperWideEntity: {
+    width: '92%',
     maxWidth: '92%',
+  },
+  /** שרשרת העוטפים של בועת דוח / דיווח ממלאת את ה-92% — הכרטיס מתמתח פנימה, בלי רוחב מחושב שגלש */
+  wideEntityStretch: {
+    alignSelf: 'stretch',
+    maxWidth: '100%',
   },
   gestureSwipeWrapperPoll: {
     maxWidth: '80%',

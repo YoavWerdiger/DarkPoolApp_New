@@ -14,7 +14,7 @@ import {
   View,
 } from 'react-native';
 import { logger } from '../../utils/logger';
-import { enterCameraAudioSession, ensurePermissionOrSettings, exitCameraAudioSession } from '../../lib/cameraSession';
+import { enterCameraAudioSession, ensurePermissionOrSettings, exitCameraAudioSession, requestCameraWithDialog } from '../../lib/cameraSession';
 import { stableCameraPreviewFrame } from '../../lib/cameraFrame';
 import { InAppGalleryPanel, type InAppGalleryPick } from './InAppGalleryPanel';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -110,8 +110,9 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
   }, [recording]);
 
   // הרשאה חסומה → דיאלוג «פתח הגדרות» (כמו בהתראות)
+  // דיאלוג לפי הטופו לפני בקשת המערכת (במקום כפתור «אפשר מצלמה»)
   const ensurePermission = useCallback(
-    () => ensurePermissionOrSettings(permission, requestPermission, 'camera'),
+    () => requestCameraWithDialog(permission, requestPermission),
     [permission, requestPermission],
   );
 
@@ -362,18 +363,8 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
             </View>
           </GestureDetector>
         ) : (
-          <View style={[StyleSheet.absoluteFill, styles.permissionFallback]}>
-            <Ionicons name="camera-outline" size={56} color="rgba(255,255,255,0.45)" />
-            <Text style={styles.permissionText}>נדרשת הרשאה למצלמה</Text>
-            <Pressable
-              onPress={() => void ensurePermission()}
-              style={styles.permissionBtn}
-              accessibilityRole="button"
-              accessibilityLabel="אפשר גישה למצלמה"
-            >
-              <Text style={styles.permissionBtnLabel}>אפשר מצלמה</Text>
-            </Pressable>
-          </View>
+          // בלי הרשאה: הממשק הרגיל על רקע שחור — הבקשה בדיאלוג (בפתיחה / בלחיצה על הצילום)
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: '#000' }]} />
         )}
 
         {/* «חלון» המצלמה — המצלמה במסך מלא (כמו קודם; מיכל בגודל מותאם הקפיא את התצוגה ב-iOS)

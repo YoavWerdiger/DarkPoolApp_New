@@ -75,3 +75,25 @@ export async function ensurePermissionOrSettings(
   if (next.canAskAgain === false) await promptPermissionSettings(kind);
   return false;
 }
+
+/**
+ * גישה למצלמה בדיאלוג לפי הטופו (במקום מסך «אפשר מצלמה»): קודם דיאלוג של האפליקציה,
+ * ורק באישור — בקשת ההרשאה של המערכת (או «פתח הגדרות» אם נחסמה).
+ */
+export async function requestCameraWithDialog(
+  current: { granted: boolean; canAskAgain?: boolean } | null | undefined,
+  request: () => Promise<{ granted: boolean; canAskAgain?: boolean }>,
+): Promise<boolean> {
+  if (current?.granted) return true;
+  const choice = await showAppDialog({
+    title: 'גישה למצלמה',
+    message: 'כדי לצלם ולשלוח תמונות וסרטונים, צריך לאפשר ל-DarkPool גישה למצלמה.',
+    type: 'info',
+    buttons: [
+      { text: 'אפשר גישה', style: 'default' },
+      { text: 'לא עכשיו', style: 'cancel' },
+    ],
+  });
+  if (choice !== 0) return false;
+  return ensurePermissionOrSettings(current, request, 'camera');
+}

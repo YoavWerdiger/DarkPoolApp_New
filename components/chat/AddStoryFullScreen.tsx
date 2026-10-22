@@ -2,7 +2,7 @@ import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { logger } from '../../utils/logger';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Modal, Pressable, Image, Dimensions, StatusBar, TextInput, KeyboardAvoidingView, Platform, ScrollView, FlatList, Animated, Keyboard } from 'react-native';
-import { enterCameraAudioSession, ensurePermissionOrSettings, exitCameraAudioSession } from '../../lib/cameraSession';
+import { enterCameraAudioSession, ensurePermissionOrSettings, exitCameraAudioSession , requestCameraWithDialog } from '../../lib/cameraSession';
 import { publishStoryOptimistic } from '../../lib/pendingStories';
 import { InlineAppDialog } from '../ui/InlineAppDialog';
 import { useDesignTokens } from '../ui/DesignTokens';
@@ -1315,7 +1315,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
       loadRecentPhotos();
       if (!permission?.granted) {
         // חסומה → דיאלוג «פתח הגדרות»
-        void ensurePermissionOrSettings(permission, requestPermission, 'camera');
+        void requestCameraWithDialog(permission, requestPermission);
       }
     }
   }, [visible]);
@@ -1577,8 +1577,13 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
 
   const handleCapturePress = useCallback(() => {
     logger.debug('AddStoryFullScreen', `capture press / shutter tap (platform=${Platform.OS})`);
+    // בלי הרשאה — הדיאלוג שוב (במקום כפתור «אפשר מצלמה»)
+    if (!permission?.granted) {
+      void requestCameraWithDialog(permission, requestPermission);
+      return;
+    }
     takePicture();
-  }, [takePicture]);
+  }, [takePicture, permission, requestPermission]);
 
   const handleCaptureLongPress = useCallback(() => {
     logger.debug('AddStoryFullScreen', `capture long-press → record (platform=${Platform.OS})`);
@@ -1899,12 +1904,8 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
             </TouchableOpacity>
             <View style={{ flex: 1 }} />
             {!permission?.granted ? (
-              <TouchableOpacity
-                style={s.permissionBtnCompact}
-                onPress={() => void ensurePermissionOrSettings(permission, requestPermission, 'camera')}
-              >
-                <Text style={s.permissionBtnText}>אפשר מצלמה</Text>
-              </TouchableOpacity>
+              // בלי הרשאה — בלי כפתור «אפשר מצלמה»; הבקשה בדיאלוג לפי הטופו
+              <View style={s.topIconBtn} />
             ) : (
               <TouchableOpacity
                 style={s.topIconBtn}

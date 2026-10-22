@@ -265,6 +265,8 @@ interface ChatMessageProps {
 const BUBBLE_TAIL_W = 8;
 /** רוחב מדיה בבועת הכרזות: 94% מהמסך פחות ריפוד הבועה (xs משני הצדדים) ושולי הרשימה */
 const WIDE_MEDIA_W = Math.round(Dimensions.get('window').width * 0.94 - 8 - 16);
+/** אלבום — קצת רחב מ-220 (עד 280, ולא יותר מ-70% מהמסך) */
+const ALBUM_W = Math.round(Math.min(280, Dimensions.get('window').width * 0.7));
 
 /** הודעת שיתוף של דוח רווח / דיווח כלכלי — בועה רחבה */
 function isWideEntityMessage(message: { message_type?: string; content?: string | null }): boolean {
@@ -1448,7 +1450,7 @@ function renderMediaContent(
           mediaItems={message.media_urls || []}
           localMediaItems={message.local_media_urls}
           isUploading={message.is_uploading}
-          maxWidth={wide ? WIDE_MEDIA_W : 220}
+          maxWidth={wide ? WIDE_MEDIA_W : ALBUM_W}
           senderName={album?.senderName}
           timeLabel={album?.timeLabel}
           onReplyItem={album?.onReplyItem}

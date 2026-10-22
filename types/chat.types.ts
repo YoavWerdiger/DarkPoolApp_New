@@ -212,7 +212,7 @@ export interface ChatMessage {
   
   // מדיה מרובה (לסוג MEDIA_GROUP)
   media_urls?: MediaGroupItem[];
-  local_media_urls?: { id: string; uri: string; type: 'image' | 'video' }[]; // For optimistic UI
+  local_media_urls?: { id: string; uri: string; type: 'image' | 'video'; width?: number; height?: number }[]; // For optimistic UI
   /** אלבום: הודעות מדיה שנשלחו יחד חולקות מזהה — מוצגות כגריד אחד */
   media_group_id?: string | null;
 

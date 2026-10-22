@@ -71,6 +71,8 @@ function buildAlbum(run: ChatMessage[]): ChatMessage {
         id: m.id,
         uri: m.local_media_uri || m.media_thumbnail_url || m.media_url || '',
         type: (m.message_type === MessageType.VIDEO ? 'video' : 'image') as 'image' | 'video',
+        width: m.media_width || undefined,
+        height: m.media_height || undefined,
       }))
     : undefined;
 

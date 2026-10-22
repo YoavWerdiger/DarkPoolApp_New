@@ -99,6 +99,9 @@ function MediaGridBubble({
         id: item.id,
         url: item.uri,
         type: item.type,
+        // מידות — לגובה התא לפי היחס (גם בזמן העלאה, בלי קפיצה כשהשרת מחזיר)
+        width: (item as { width?: number }).width,
+        height: (item as { height?: number }).height,
       }));
     }
     return mediaItems.map((it) => ({
@@ -148,8 +151,18 @@ function MediaGridBubble({
 
   const { columns } = getGridLayout();
   const itemWidth = (maxWidth - GRID_GAP * (columns - 1)) / columns;
-  // Single item: mild portrait (between square and 3:4), multi: square cells
-  const itemHeight = visibleItems.length === 1 ? maxWidth * 1.25 : itemWidth;
+  // גובה התא לפי היחס הממוצע של התמונות (פורטרט → גבוה יותר), בגבולות סבירים — לא ריבוע קבוע
+  const ratios = visibleItems
+    .map((it: any) => (it?.width > 0 && it?.height > 0 ? it.height / it.width : null))
+    .filter((r: number | null): r is number => r != null);
+  const avgRatio = ratios.length ? ratios.reduce((a: number, b: number) => a + b, 0) / ratios.length : 1;
+  const clampRatio = (r: number, min: number, max: number) => Math.min(max, Math.max(min, r));
+  const itemHeight =
+    visibleItems.length === 1
+      ? maxWidth * clampRatio(avgRatio, 0.75, 1.3)
+      : visibleItems.length === 2
+        ? itemWidth * clampRatio(avgRatio, 0.85, 1.6)
+        : itemWidth * clampRatio(avgRatio, 0.85, 1.25);
 
   const renderMediaItem = (item: (typeof items)[0], index: number, isLast: boolean) => {
     const showOverlay = isLast && remainingCount > 0;

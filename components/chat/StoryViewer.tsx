@@ -548,6 +548,14 @@ export default function StoryViewer({
     [failedLocalUris],
   );
   const [videoDuration, setVideoDuration] = useState<number | null>(null);
+  /** סטוריז שהמדיה שלהם נטענה/נכשלה בפועל (גם בעמוד שכן לא-פעיל) — לספינר */
+  const settledMediaRef = useRef<Set<string>>(new Set());
+  const [, setSettledTick] = useState(0);
+  const markMediaSettled = useCallback((id: string) => {
+    if (settledMediaRef.current.has(id)) return;
+    settledMediaRef.current.add(id);
+    setSettledTick((t) => t + 1);
+  }, []);
   // Own-story viewers/reactions sheet visibility (declared early so it can
   // gate the swipe/dismiss gestures below).
   const [viewersSheetOpen, setViewersSheetOpen] = useState(false);
@@ -609,6 +617,9 @@ export default function StoryViewer({
   /** Last index we programmatically scrolled to (skip redundant scrollToIndex). */
   const lastScrolledIndexRef = useRef<number | null>(null);
   const scrollSettleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** חלון הפתיחה: ה-pager עוד מתיישר לעמוד הפתיחה (ראו אפקט הפתיחה) */
+  const openPhaseRef = useRef(false);
+  const openAlignTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mediaFallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const goToUserPageRef = useRef<(next: number, pending: number | 'last', animated?: boolean) => void>(() => {});
@@ -646,6 +657,9 @@ export default function StoryViewer({
   }
 
   const clearStoryTimers = useCallback(() => {
+    openPhaseRef.current = false;
+    openAlignTimersRef.current.forEach(clearTimeout);
+    openAlignTimersRef.current = [];
     if (scrollSettleTimerRef.current) {
       clearTimeout(scrollSettleTimerRef.current);
       scrollSettleTimerRef.current = null;
@@ -762,16 +776,53 @@ export default function StoryViewer({
     cancelAnimation(progress);
     progress.value = 0;
 
+    // מסך שחור בפתיחה הראשונה: עם initialScrollIndex ה-FlatList מצייר רק את העמוד הפעיל
+    // (openIndex) ומקפיא את החלון/viewability עד אירוע גלילה. פקודת הגלילה הראשונה ב-Modal
+    // שעוד לא סיים mount נחתכת ב-native לגודל התוכן הנוכחי (0) או הולכת לאיבוד → ה-pager
+    // נשאר ב-offset 0 על spacer שחור, בלי אירוע גלילה שיתקן. רק החלקה של המשתמש "מעירה" אותו.
+    // לכן: מיישרים שוב כמה פעמים בחלון הפתיחה (no-op ב-native אם כבר מיושר), וסנכרון
+    // ה-pager מושתק עד סוף החלון — אלא אם המשתמש התחיל לגרור.
+    openPhaseRef.current = true;
+    const realign = () => {
+      if (!openPhaseRef.current || userIndexRef.current !== openIndex) return;
+      pagerRef.current?.scrollToOffset({ offset: openIndex * SCREEN_WIDTH, animated: false });
+    };
     requestAnimationFrame(() => {
       safeScrollToUser(openIndex, false);
-      scrollSettleTimerRef.current = setTimeout(() => {
-        ignorePagerSyncRef.current = false;
-        scrollSettleTimerRef.current = null;
-      }, 120);
+      realign();
     });
+    openAlignTimersRef.current = [50, 150, 300, 500].map((ms) => setTimeout(realign, ms));
+    scrollSettleTimerRef.current = setTimeout(() => {
+      openPhaseRef.current = false;
+      ignorePagerSyncRef.current = false;
+      scrollSettleTimerRef.current = null;
+    }, 600);
     // Intentionally omit storiesByUser.length — mid-view list refresh must not re-reset the pager.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, initialUserIndex]);
+
+  // רענון הרשימה תוך כדי צפייה (מספר משתמשים השתנה) ממנט מחדש את ה-pager (key) —
+  // הוא נפתח ב-initialScrollIndex של הפתיחה ולא בעמוד הפעיל. מיישרים לעמוד הפעיל.
+  const pagerLenRef = useRef(storiesByUser.length);
+  useEffect(() => {
+    if (pagerLenRef.current === storiesByUser.length) return;
+    pagerLenRef.current = storiesByUser.length;
+    if (!visible || storiesByUser.length === 0) return;
+    lastScrolledIndexRef.current = null;
+    const align = () => {
+      if (pausedByPagerRef.current) return;
+      pagerRef.current?.scrollToOffset({
+        offset: clampUserIndex(userIndexRef.current) * SCREEN_WIDTH,
+        animated: false,
+      });
+    };
+    const raf = requestAnimationFrame(align);
+    const timers = [150, 400].map((ms) => setTimeout(align, ms));
+    return () => {
+      cancelAnimationFrame(raf);
+      timers.forEach(clearTimeout);
+    };
+  }, [visible, storiesByUser.length, clampUserIndex]);
 
   // Cleanup timers if viewer unmounts mid-session
   useEffect(() => () => clearStoryTimers(), [clearStoryTimers]);
@@ -1017,6 +1068,7 @@ export default function StoryViewer({
   /** Connected pager: scroll to user page; sync story landing index. */
   const goToUserPage = useCallback((nextUserIndex: number, pending: number | 'last', animated = true) => {
     if (nextUserIndex < 0 || nextUserIndex >= storiesByUser.length) return;
+    openPhaseRef.current = false;
     if (scrollSettleTimerRef.current) {
       clearTimeout(scrollSettleTimerRef.current);
       scrollSettleTimerRef.current = null;
@@ -1097,6 +1149,15 @@ export default function StoryViewer({
   const handlePauseEndRef = useRef<(() => void) | undefined>(undefined);
 
   const onPagerScrollBegin = useCallback(() => {
+    // גרירה בחלון הפתיחה — המשתמש שולט: מפסיקים ליישר ומחזירים סנכרון
+    if (openPhaseRef.current) {
+      openPhaseRef.current = false;
+      if (scrollSettleTimerRef.current) {
+        clearTimeout(scrollSettleTimerRef.current);
+        scrollSettleTimerRef.current = null;
+      }
+      ignorePagerSyncRef.current = false;
+    }
     pausedByPagerRef.current = true;
     handlePauseStartRef.current?.();
   }, []);
@@ -1462,9 +1523,13 @@ export default function StoryViewer({
 
   const displayName = currentUser?.user?.display_name || currentUser?.user?.full_name || 'משתמש';
   const avatar = currentUser?.user?.profile_picture;
-  const showMediaSpinner = currentStory &&
+  // ספינר עד שהמדיה באמת נטענה (לא רק mediaReady — ה-fallback של 4 שנ׳ מסמן ready גם
+  // כשהתמונה עוד יורדת, ואז נשאר מסך שחור בלי חיווי)
+  const showMediaSpinner = !!currentStory &&
     (currentStory.media_type === 'image' || currentStory.media_type === 'video') &&
-    !mediaReady && !mediaError && !holdMedia;
+    isPlayableMediaUri(currentStory.media_url) &&
+    !mediaError && !holdMedia &&
+    (!mediaReady || !settledMediaRef.current.has(currentStory.id));
   const showPager = storiesByUser.length > 0;
 
   /** Within-user story change only — keep last frame under the next media. */
@@ -1545,9 +1610,10 @@ export default function StoryViewer({
             ]}
             // עם טקסט/ציור: cover במסגרת (כמו בעורך) — אחרת contain במסך מלא
             contentFit={authoredImg ? 'cover' : 'contain'}
-            onLoad={() => { if (isActive) setMediaReady(true); }}
+            onLoad={() => { markMediaSettled(story.id); if (isActive) setMediaReady(true); }}
             onError={() => {
               if (fallBackFromLocal(story.media_url)) return;
+              markMediaSettled(story.id);
               if (isActive) {
                 setMediaError(true);
                 setMediaReady(true);
@@ -1585,9 +1651,15 @@ export default function StoryViewer({
             isMuted={!isActive}
             isLooping={false}
             pointerEvents="none"
-            onReadyForDisplay={() => { if (isActive) setMediaReady(true); }}
-            onLoad={(status) => {
-              if (isActive && status?.isLoaded && status.durationMillis) {
+            onReadyForDisplay={() => { markMediaSettled(story.id); if (isActive) setMediaReady(true); }}
+            // הנגן (expo-video compat ב-lib/expoAvSafe) לא שולח onReadyForDisplay — רק onLoad
+            // (readyToPlay/sourceLoad, בלי status). בלי זה בפתיחה הראשונה mediaReady נשאר false,
+            // הווידאו לא מתנגן (shouldPlay) והמסך שחור עד ה-fallback של 4 שנ׳.
+            onLoad={(status?: { isLoaded?: boolean; durationMillis?: number }) => {
+              markMediaSettled(story.id);
+              if (!isActive) return;
+              setMediaReady(true);
+              if (status?.isLoaded && status.durationMillis) {
                 setVideoDuration(status.durationMillis);
               }
             }}
@@ -1598,6 +1670,7 @@ export default function StoryViewer({
             }}
             onError={() => {
               if (fallBackFromLocal(story.media_url)) return;
+              markMediaSettled(story.id);
               if (isActive) {
                 setMediaError(true);
                 setMediaReady(true);

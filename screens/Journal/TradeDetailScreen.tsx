@@ -46,11 +46,8 @@ import {
 } from './tradeJournalConstants';
 import { brandfetchTickerLogoUri } from '../../utils/brandfetch';
 import { getTradingViewTradeChartHTML } from '../Markets/embeds/tradingViewEmbeds';
-import ShareDestinationSheet from '../../components/share/ShareDestinationSheet';
 import ExportTradeImage from '../../components/Journal/ExportTradeImage';
 import TradeShareButton from '../../components/Journal/TradeShareButton';
-import { buildTradeAttachment } from '../../types/shareableEntity';
-import type { ShareableAttachment } from '../../types/shareableEntity';
 
 type Nav = NativeStackNavigationProp<JournalStackParamList, 'TradeDetail'>;
 type Route = RouteProp<JournalStackParamList, 'TradeDetail'>;
@@ -215,8 +212,6 @@ export default function TradeDetailScreen() {
 
   const [trade, setTrade] = useState<Trade | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showShareModal, setShowShareModal] = useState(false);
-  const [shareAttachment, setShareAttachment] = useState<ShareableAttachment | null>(null);
   const [showExportImage, setShowExportImage] = useState(false);
 
   const load = useCallback(async () => {
@@ -252,8 +247,8 @@ export default function TradeDetailScreen() {
   const openShare = useCallback(() => {
     if (!trade) return;
     void HapticFeedback.impactLight();
-    setShareAttachment(buildTradeAttachment(trade));
-    setShowShareModal(true);
+    // שיתוף טרייד לצ׳אט / לציוצים הוסר — רק שיתוף כתמונה
+    setShowExportImage(true);
   }, [trade]);
 
   const details = useMemo(() => {
@@ -771,19 +766,6 @@ export default function TradeDetailScreen() {
         </ScrollView>
       </SafeAreaView>
 
-      <ShareDestinationSheet
-        visible={showShareModal && !!shareAttachment}
-        attachment={shareAttachment}
-        onClose={() => {
-          setShowShareModal(false);
-          setShareAttachment(null);
-        }}
-        onShareAsImage={() => {
-          setShowShareModal(false);
-          setShareAttachment(null);
-          setShowExportImage(true);
-        }}
-      />
 
       <ExportTradeImage
         trade={trade}

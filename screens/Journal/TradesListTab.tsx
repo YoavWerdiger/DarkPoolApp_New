@@ -9,10 +9,7 @@ import { SlidingPillGroup } from '../../components/ui/DayDividerPill';
 import { CardSkeleton } from '../../components/ui/SkeletonLoader';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabase';
-import ShareDestinationSheet from '../../components/share/ShareDestinationSheet';
 import ExportTradeImage from '../../components/Journal/ExportTradeImage';
-import { buildTradeAttachment } from '../../types/shareableEntity';
-import type { ShareableAttachment } from '../../types/shareableEntity';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import type { Trade } from './tradeTypes';
@@ -58,8 +55,6 @@ export default function TradesListTab() {
   const [loading, setLoading] = useState(
     () => !queryClient.getQueryData<Trade[]>(appQueryKeys.trades(user?.id ?? 'anon'))
   );
-  const [showShareModal, setShowShareModal] = useState(false);
-  const [shareAttachment, setShareAttachment] = useState<ShareableAttachment | null>(null);
   const [shareTrade, setShareTrade] = useState<Trade | null>(null);
   const [showExportImage, setShowExportImage] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -144,9 +139,9 @@ export default function TradesListTab() {
   };
 
   const openShareForTrade = useCallback((item: Trade) => {
+    // שיתוף טרייד לצ׳אט / לציוצים הוסר — רק שיתוף כתמונה
     setShareTrade(item);
-    setShareAttachment(buildTradeAttachment(item));
-    setShowShareModal(true);
+    setShowExportImage(true);
   }, []);
 
   const renderTrade = useCallback(
@@ -399,19 +394,6 @@ export default function TradesListTab() {
         </View>
       )}
 
-      <ShareDestinationSheet
-        visible={showShareModal && !!shareAttachment}
-        attachment={shareAttachment}
-        onClose={() => {
-          setShowShareModal(false);
-          setShareAttachment(null);
-        }}
-        onShareAsImage={() => {
-          setShowShareModal(false);
-          setShareAttachment(null);
-          setShowExportImage(true);
-        }}
-      />
 
       <ExportTradeImage
         trade={shareTrade}

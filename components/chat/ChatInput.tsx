@@ -13,7 +13,7 @@ import UICard from '../ui/UICard';
 import { CHROME_UICARD, chromeSurfaceCardStyle } from '../ui/chromeControl';
 import * as ImagePicker from 'expo-image-picker';
 import { Image as ExpoImage } from 'expo-image';
-import MediaPickerSheet from './MediaPickerSheet';
+import AttachMenuSheet from './AttachMenuSheet';
 import { ChatAttachCameraSheet } from './ChatAttachCameraSheet';
 import ChatComposerBar from './ChatComposerBar';
 import { runAfterSheetDismiss } from './mediaPickerLaunch';
@@ -1126,7 +1126,9 @@ function ChatInputImpl({
       let result;
       try {
         result = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ['images'],
+          // גלריה משיט הצירוף — תמונות וסרטונים יחד (אלבום משולב)
+          mediaTypes: ['images', 'videos'],
+          videoMaxDuration: 300,
           allowsMultipleSelection: true,
           selectionLimit: 10,
           quality: 0.8,
@@ -1138,21 +1140,26 @@ function ChatInputImpl({
       }
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        const mediaFiles: MediaFile[] = result.assets.map((asset, index) => ({
-          id: `${Date.now()}_${index}`,
-          uri: asset.uri,
-          type: 'image' as const,
-          name: asset.fileName || `image_${index + 1}.jpg`,
-          size: asset.fileSize,
-          width: asset.width,
-          height: asset.height,
-        }));
+        const mediaFiles: MediaFile[] = result.assets.map((asset, index) => {
+          const isVideo = asset.type === 'video';
+          return {
+            id: `${Date.now()}_${index}`,
+            uri: asset.uri,
+            type: isVideo ? ('video' as const) : ('image' as const),
+            name: asset.fileName || (isVideo ? `video_${index + 1}.mp4` : `image_${index + 1}.jpg`),
+            size: asset.fileSize,
+            width: asset.width,
+            height: asset.height,
+            duration: isVideo && asset.duration ? asset.duration / 1000 : undefined,
+          };
+        });
         // ⚡ פריוויו מיידי — בלי לחכות ל-decode/thumb
         setSelectedMedia(mediaFiles);
         setShowMediaPreview(true);
         warmImageCache(mediaFiles.map((f) => f.uri));
         // ⚡ thumb מקומי ברקע (כמו poster לווידאו) — אז הפריוויו/בועה מרגישים מיידיים
         attachLocalImageThumbs(mediaFiles, setSelectedMedia);
+        attachLocalVideoThumbs(mediaFiles, setSelectedMedia);
       }
     } catch (error) {
       legacyAlert('שגיאה', 'לא הצלחנו לבחור תמונה');
@@ -2734,30 +2741,15 @@ function ChatInputImpl({
       )}
 
       {/* Custom Media Picker Sheet */}
-      <MediaPickerSheet
+      {/* שיט צירוף לפי הטופו — צילום · גלריה · מסמך · אודיו · סקר */}
+      <AttachMenuSheet
         visible={mediaPickerVisible}
         onClose={() => setMediaPickerVisible(false)}
-        onBuiltinCamera={() => setAttachCameraOpen(true)}
+        onCamera={() => setAttachCameraOpen(true)}
+        onGallery={() => void handlePickImage()}
         onDocument={handlePickDocument}
         onAudio={isExpoAvAvailable ? handleStartAudioRecording : undefined}
         onPoll={handleCreatePoll}
-        onEntity={handleOpenEntityPicker}
-        onPickedMedia={applyPickedMedia}
-        onCameraCommit={(result, caption) => {
-          const isVideo = result.mediaType === 'video';
-          const id = `camera-${Date.now()}`;
-          const file: MediaFile = {
-            id,
-            uri: result.uri,
-            type: isVideo ? 'video' : 'image',
-            name: isVideo ? `video_${Date.now()}.mp4` : `photo_${Date.now()}.jpg`,
-            width: result.width,
-            height: result.height,
-            duration: result.durationMs != null ? result.durationMs / 1000 : undefined,
-            thumbnail_url: result.uri,
-          };
-          return handleSendMedia([file], caption.trim() ? { [id]: caption } : {});
-        }}
       />
 
       <ChatAttachCameraSheet

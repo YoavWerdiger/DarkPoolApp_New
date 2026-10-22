@@ -1345,8 +1345,9 @@ export default function StoryViewer({
     };
   });
   // הרקע השחור דועך במשיכה — רואים את המסך שמתחת
+  // גם בפתיחה: הרקע נכנס יחד עם הסטורי (present) — קודם שחור מלא מיד והסטורי דעך פנימה → הבזק שחור
   const containerAnim = useAnimatedStyle(() => ({
-    backgroundColor: `rgba(0,0,0,${1 - Math.min(1, dragY.value / (SCREEN_HEIGHT * 0.5)) * 0.9})`,
+    backgroundColor: `rgba(0,0,0,${present.value * (1 - Math.min(1, dragY.value / (SCREEN_HEIGHT * 0.5)) * 0.9)})`,
   }));
 
   const [confirmDelete, setConfirmDelete] = useState<{ visible: boolean; error?: string }>({

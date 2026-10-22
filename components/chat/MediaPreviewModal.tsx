@@ -1,6 +1,6 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { View, Text, Modal, Pressable, StyleSheet, ActivityIndicator, Animated as RNAnimated,
+import { View, Text, Modal, Pressable, StyleSheet, Platform, ActivityIndicator, Animated as RNAnimated,
   Keyboard, ScrollView, TouchableOpacity, TextInput, useWindowDimensions } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { initialWindowMetrics, SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -123,6 +123,21 @@ function MediaPreviewBody({
   const dismissKeyboard = useCallback(() => {
     Keyboard.dismiss();
   }, []);
+
+  // מקלדת פתוחה — כמו שורת הכתיבה בצ׳אט: השדה צמוד למקלדת עם כפתור השליחה לידו,
+  // שורת «נשלח אל» מוסתרת (אחרת היא יושבת בין השדה למקלדת)
+  const [kbOpen, setKbOpen] = useState(false);
+  useEffect(() => {
+    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const s1 = Keyboard.addListener(showEvt, () => setKbOpen(true));
+    const s2 = Keyboard.addListener(hideEvt, () => setKbOpen(false));
+    return () => {
+      s1.remove();
+      s2.remove();
+    };
+  }, []);
+  const sendInCaptionRow = !targetGroupName || kbOpen;
 
   const handleSwipe = useCallback(
     (direction: 1 | -1) => {
@@ -822,7 +837,7 @@ function MediaPreviewBody({
                 blurOnSubmit={false}
                 onSubmitEditing={handleSend}
               />
-              {targetGroupName ? null : (
+              {!sendInCaptionRow ? null : (
                 <Pressable
                   onPress={handleSend}
                   style={[styles.sendBtn, { backgroundColor: tokens.colors.primary.main }]}
@@ -835,7 +850,7 @@ function MediaPreviewBody({
             </View>
 
             {/* כמו וואטסאפ: מתחת לכיתוב — «נשלח אל» משמאל (לחיצה: העבר הודעה לקבוצות נוספות), שליחה מימין */}
-            {targetGroupName ? (
+            {targetGroupName && !kbOpen ? (
               <View style={styles.targetRow}>
                 <Pressable
                   onPress={() => {

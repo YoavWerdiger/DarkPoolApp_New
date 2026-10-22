@@ -54,6 +54,8 @@ export type ChatListRowProps = {
   showTail?: boolean;
   /** קבוצת הכרזות — הודעות במרכז */
   centered?: boolean;
+  /** הכרזות: פתיחת תגובות להודעה */
+  onCommentsPress?: () => void;
   showDateDivider: boolean;
   dateDividerLabel: string;
   showUnreadDivider: boolean;
@@ -83,6 +85,7 @@ function ChatListRow({
   isAfterSenderChange,
   showTail = true,
   centered = false,
+  onCommentsPress,
   showDateDivider,
   dateDividerLabel,
   showUnreadDivider,
@@ -149,6 +152,7 @@ function ChatListRow({
         isAfterSenderChange={isAfterSenderChange}
         showTail={showTail}
         centered={centered}
+        onCommentsPress={onCommentsPress}
         // לחיצה על תמונת השולח — הפרופיל הציבורי שלו
         onAvatarPress={message.sender_id ? () => openUserProfile(message.sender_id) : undefined}
         onLongPress={onLongPress}
@@ -180,6 +184,7 @@ export default memo(ChatListRow, (prev, next) => {
       a.send_error !== b.send_error ||
       a.read_by_count !== b.read_by_count ||
       a.reactions_count !== b.reactions_count ||
+      a.comments_count !== b.comments_count ||
       a.media_url !== b.media_url ||
       a.media_thumbnail_url !== b.media_thumbnail_url ||
       a.local_media_uri !== b.local_media_uri ||
@@ -198,6 +203,7 @@ export default memo(ChatListRow, (prev, next) => {
     prev.isAfterSenderChange === next.isAfterSenderChange &&
     prev.showTail === next.showTail &&
     prev.centered === next.centered &&
+    !!prev.onCommentsPress === !!next.onCommentsPress &&
     prev.showDateDivider === next.showDateDivider &&
     prev.dateDividerLabel === next.dateDividerLabel &&
     prev.showUnreadDivider === next.showUnreadDivider &&

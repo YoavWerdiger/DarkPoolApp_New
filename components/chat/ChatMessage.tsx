@@ -243,6 +243,8 @@ interface ChatMessageProps {
   showTail?: boolean;
   /** קבוצת הכרזות (כמו וואטסאפ): כל ההודעות במרכז, ברוחב כמעט מלא, פינות עגולות, בלי שפיץ/אווטאר בצד — רק הצבע מבדיל הודעה שלי */
   centered?: boolean;
+  /** הכרזות: פתיחת שרשור התגובות להודעה */
+  onCommentsPress?: () => void;
   onLongPress?: () => void;
   onPress?: () => void;
   onReply?: () => void;
@@ -337,6 +339,7 @@ function ChatMessage({
   isAfterSenderChange = false,
   showTail: showTailProp = true,
   centered = false,
+  onCommentsPress,
   onLongPress,
   onPress,
   onReply,
@@ -1132,6 +1135,28 @@ function ChatMessage({
             />
           ) : null}
         </ReactionsReveal>
+        {/* הכרזות: תגובות להודעה (שרשור) — «הגב» או «N תגובות» */}
+        {centered && onCommentsPress && !message.is_system_message && !message.id.startsWith('temp-') ? (
+          <TouchableOpacity
+            onPress={() => {
+              void HapticFeedback.selection();
+              onCommentsPress();
+            }}
+            activeOpacity={0.7}
+            style={styles.commentsRow}
+            accessibilityRole="button"
+            accessibilityLabel={(message.comments_count ?? 0) > 0 ? `${message.comments_count} תגובות` : 'הגב להודעה'}
+          >
+            <Ionicons name="chatbubble-outline" size={15} color={DesignTokens.colors.primary.main} />
+            <Text style={[styles.commentsText, { color: DesignTokens.colors.primary.main }]}>
+              {(message.comments_count ?? 0) > 0
+                ? (message.comments_count ?? 0) === 1
+                  ? 'תגובה אחת'
+                  : `${message.comments_count} תגובות`
+                : 'הגב'}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
         </View>
         </View>
       </View>
@@ -2344,6 +2369,7 @@ export default memo(ChatMessage, (prevProps, nextProps) => {
       prevProps.isAfterSenderChange === nextProps.isAfterSenderChange &&
       prevProps.showTail === nextProps.showTail &&
       prevProps.centered === nextProps.centered &&
+      !!prevProps.onCommentsPress === !!nextProps.onCommentsPress &&
       prevProps.boldText === nextProps.boldText) {
     return true;
   }
@@ -2365,6 +2391,7 @@ export default memo(ChatMessage, (prevProps, nextProps) => {
     a.upload_progress === b.upload_progress &&
     a.reactions === b.reactions &&
     a.reactions_count === b.reactions_count &&
+    a.comments_count === b.comments_count &&
     a.read_by_count === b.read_by_count &&
     a.is_starred_by_me === b.is_starred_by_me &&
     a.mentioned_users === b.mentioned_users &&
@@ -2376,6 +2403,7 @@ export default memo(ChatMessage, (prevProps, nextProps) => {
     prevProps.isAfterSenderChange === nextProps.isAfterSenderChange &&
     prevProps.showTail === nextProps.showTail &&
       prevProps.centered === nextProps.centered &&
+      !!prevProps.onCommentsPress === !!nextProps.onCommentsPress &&
     prevProps.isHighlighted === nextProps.isHighlighted &&
     prevProps.boldText === nextProps.boldText
   );
@@ -2454,6 +2482,18 @@ const createStyles = (tokens: any) => {
   },
   centeredStretch: {
     alignItems: 'stretch',
+  },
+  commentsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    gap: 6,
+    paddingTop: 6,
+    paddingHorizontal: 6,
+  },
+  commentsText: {
+    ...APP_TYPE.caption,
+    fontWeight: '600',
   },
   centeredBubble: {
     borderTopLeftRadius: 16,

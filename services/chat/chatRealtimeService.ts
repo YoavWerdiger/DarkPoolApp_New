@@ -663,7 +663,10 @@ function ensureGroupTopic(groupId: string): RealtimeChannel {
     })
     .on('broadcast', { event: 'group' }, ({ payload }) => {
       if (payload) getGroupListeners(groupId)?.onGroup?.(payload, 'UPDATE');
-    });
+    })
+    // תגובות להודעות הכרזה — לשיט התגובות הפתוח (המונה עצמו מגיע ב-message_update)
+    .on('broadcast', { event: 'comment_insert' }, ({ payload }) => emitMessageComment(groupId, 'INSERT', payload))
+    .on('broadcast', { event: 'comment_delete' }, ({ payload }) => emitMessageComment(groupId, 'DELETE', payload));
 
   channel.subscribe((status, err) => {
     if (groupSubscribeGeneration.get(groupId) !== generation) return;
@@ -710,6 +713,44 @@ function teardownMembershipChannels(userId: string): Promise<void> {
 
 function getGroupListeners(groupId: string): GroupRealtimeListeners | undefined {
   return groupListenersMap.get(groupId);
+}
+
+export type MessageCommentEvent = {
+  op: 'INSERT' | 'DELETE';
+  groupId: string;
+  id: string;
+  messageId: string;
+  userId?: string;
+  commentsCount: number;
+};
+const messageCommentListeners = new Set<(e: MessageCommentEvent) => void>();
+
+function emitMessageComment(groupId: string, op: 'INSERT' | 'DELETE', payload: unknown): void {
+  const p = payload as { id?: string; message_id?: string; user_id?: string; comments_count?: number } | null;
+  if (!p?.id || !p.message_id) return;
+  const e: MessageCommentEvent = {
+    op,
+    groupId,
+    id: String(p.id),
+    messageId: String(p.message_id),
+    userId: p.user_id ? String(p.user_id) : undefined,
+    commentsCount: Number(p.comments_count ?? 0),
+  };
+  for (const l of messageCommentListeners) {
+    try {
+      l(e);
+    } catch {
+      /* מאזין שנכשל לא עוצר את השאר */
+    }
+  }
+}
+
+/** האזנה לתגובות חדשות/שנמחקו (מערוץ הקבוצה הקיים) */
+export function subscribeToMessageComments(listener: (e: MessageCommentEvent) => void): () => void {
+  messageCommentListeners.add(listener);
+  return () => {
+    messageCommentListeners.delete(listener);
+  };
 }
 
 export async function subscribeToGroup(

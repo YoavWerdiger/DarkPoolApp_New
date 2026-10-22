@@ -57,6 +57,7 @@ import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { logger } from '../../utils/logger';
 import { isAnnouncementGroup as checkIsAnnouncementGroup } from '../../utils/isAnnouncementGroup';
+import MessageCommentsSheet, { type CommentTarget } from '../../components/chat/MessageCommentsSheet';
 import { canSendInAdminOnlyChat, isAdminOnlySendSettings } from '../../utils/canSendInAdminOnlyChat';
 import { useIsAdmin } from '../../hooks/useIsAdmin';
 import { HapticFeedback } from '../../utils/hapticFeedback';
@@ -269,6 +270,9 @@ export default function ChatGroupScreen() {
   const unreadDividerPhaseRef = useRef(unreadDividerPhase);
   unreadDividerPhaseRef.current = unreadDividerPhase;
   const unreadDividerDismissedRef = useRef(false);
+
+  // תגובות להודעה בהכרזות (שרשור)
+  const [commentTarget, setCommentTarget] = useState<CommentTarget | null>(null);
 
   // בדיקה אם זו קבוצת הכרזות (id מדויק / שם מדויק — לא includes)
   const isAnnouncementGroup = useMemo(
@@ -1974,6 +1978,11 @@ export default function ChatGroupScreen() {
           showTail={showTail}
           // הכרזות: כל ההודעות במרכז (כמו וואטסאפ), רק הצבע מבדיל הודעה שלי
           centered={isAnnouncementGroup}
+          onCommentsPress={
+            isAnnouncementGroup && item.group_id
+              ? () => setCommentTarget({ id: item.id, groupId: item.group_id })
+              : undefined
+          }
           showDateDivider={showDivider}
           dateDividerLabel={showDivider ? formatDateDivider(new Date(item.created_at)) : ''}
           showUnreadDivider={showUnread}
@@ -2363,6 +2372,14 @@ export default function ChatGroupScreen() {
         message={longPressMessage}
         onClose={() => setLongPressMessage(null)}
         onAction={handleMessageAction}
+      />
+
+      {/* הכרזות: שרשור תגובות להודעה */}
+      <MessageCommentsSheet
+        visible={!!commentTarget}
+        post={commentTarget}
+        onClose={() => setCommentTarget(null)}
+        isGroupAdmin={!!currentGroup?.is_admin}
       />
 
       <ChatSearchBottomSheet

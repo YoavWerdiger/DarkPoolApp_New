@@ -250,6 +250,8 @@ export interface ChatMessage {
   // מטא-דאטה
   reactions_count: number;
   read_by_count: number;
+  /** תגובות להודעה (שרשור בקבוצות הכרזות) — מתוחזק בטריגר */
+  comments_count?: number;
 
   // מטא-דאטה מחושבת (לא מהדאטאבייס)
   sender?: {

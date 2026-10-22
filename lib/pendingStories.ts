@@ -70,13 +70,15 @@ async function run(item: PendingStory) {
     let mediaUrl: string | undefined;
     if (item.mediaType !== 'text') {
       if (!item.localUri) throw new Error('אין קובץ להעלאה');
-      const { url, error } =
+      const result: { url: string | null; error: string | null; displayUri?: string } =
         item.mediaType === 'video'
           ? await uploadStoryVideo(item.localUri, item.userId)
           : await uploadStoryImage(item.localUri, item.userId);
+      const { url, error } = result;
       if (error || !url) throw new Error(error || 'ההעלאה נכשלה');
       mediaUrl = url;
-      localByRemoteUrl.set(url, item.localUri);
+      // תמונה: העותק המוקטן שהועלה (לא המקור ~24MP מהמצלמה — כמה עותקים שלו בצופה הקריסו את האפליקציה בזיכרון)
+      localByRemoteUrl.set(url, result.displayUri ?? item.localUri);
     }
     await createStory(item.userId, {
       media_type: item.mediaType,

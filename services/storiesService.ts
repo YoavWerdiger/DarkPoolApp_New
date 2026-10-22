@@ -291,11 +291,16 @@ export async function getMyStories(userId: string): Promise<UserStory[]> {
   return getStoriesByUserId(userId);
 }
 
-export async function uploadStoryImage(uri: string, userId: string): Promise<{ url: string | null; error: string | null }> {
+export async function uploadStoryImage(
+  uri: string,
+  userId: string,
+): Promise<{ url: string | null; error: string | null; displayUri?: string }> {
   try {
     logger.debug('StoriesService', `uploadStoryImage: ${uri.substring(0, 80)}`);
 
     let base64: string;
+    // העותק המוקטן (1440) — לתצוגה מיידית של הסטורי שלי; המקור מהמצלמה (~24MP) הקריס את הצופה בזיכרון
+    let displayUri: string | undefined;
     try {
       // מקטינים לרוחב 1440 (מסך טלפון) — תמונה מלאה מהמצלמה היא כמה MB והטעינה בצופה לקחה שניות
       const probe = await ImageManipulator.manipulateAsync(uri, []);
@@ -305,6 +310,7 @@ export async function uploadStoryImage(uri: string, userId: string): Promise<{ u
         { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG, base64: true }
       );
       base64 = compressed.base64!;
+      displayUri = compressed.uri;
       logger.debug('StoriesService', 'ImageManipulator JPEG+base64 ready');
     } catch {
       base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
@@ -334,7 +340,7 @@ export async function uploadStoryImage(uri: string, userId: string): Promise<{ u
     }
 
     logger.debug('StoriesService', 'Upload success!');
-    return { url: storagePath, error: null };
+    return { url: storagePath, error: null, displayUri };
   } catch (e: any) {
     logger.error('StoriesService', 'uploadStoryImage exception', e);
     return { url: null, error: e?.message || 'שגיאה בהעלאה' };

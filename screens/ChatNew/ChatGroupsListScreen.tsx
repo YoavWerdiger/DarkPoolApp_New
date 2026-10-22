@@ -1518,7 +1518,8 @@ export default function ChatGroupsListScreen() {
               const avatarInner = user?.profile_picture ? (
                 <Image source={{ uri: user.profile_picture }} style={styles.statusCircleImage} resizeMode="cover" />
               ) : !own && pendingStories[0]?.mediaType === 'image' && pendingStories[0].localUri ? (
-                <Image source={{ uri: pendingStories[0].localUri }} style={styles.statusCircleImage} resizeMode="cover" />
+                // expo-image: מוקטן לגודל העיגול (Image של RN פענח את התמונה המלאה ~24MP מהמצלמה)
+                <ExpoImage source={{ uri: pendingStories[0].localUri }} style={styles.statusCircleImage} contentFit="cover" transition={0} />
               ) : (
                 <View style={styles.storyAvatarPlaceholder}>
                   <Ionicons name="person" size={22} color={tokens.colors.text.secondary} />

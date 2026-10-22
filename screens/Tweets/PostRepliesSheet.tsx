@@ -362,9 +362,6 @@ function PostRepliesSheetBody({
         contentContainerStyle={styles.listContent}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
-        ItemSeparatorComponent={() => (
-          <View style={[styles.replyDivider, { backgroundColor: tokens.colors.border.divider }]} />
-        )}
         ListEmptyComponent={
           !loading ? (
             <Text style={[styles.emptyText, { color: tokens.colors.text.secondary }]}>
@@ -426,12 +423,10 @@ function PostRepliesSheetBody({
                       hitSlop={8}
                       accessibilityLabel="מחק תגובה"
                       style={{
-                        width: 30,
-                        height: 30,
-                        borderRadius: 15,
+                        width: 24,
+                        height: 24,
                         alignItems: 'center',
                         justifyContent: 'center',
-                        backgroundColor: tokens.colors.background.primary,
                       }}
                     >
                       <Ionicons
@@ -670,12 +665,9 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     replyRow: {
       flexDirection: 'row-reverse',
-      gap: 12,
+      gap: 10,
       alignItems: 'flex-start',
-      paddingVertical: APP_LAYOUT.cardPadding,
-    },
-    replyDivider: {
-      height: 1,
+      paddingVertical: 10,
     },
     emptyText: {
       ...APP_TYPE.body,
@@ -705,12 +697,13 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     replyTime: {
       ...APP_TYPE.caption,
+      marginTop: 1,
       textAlign: 'right',
       writingDirection: 'rtl',
     },
     replyBody: {
       ...APP_TYPE.cardBody,
-      marginTop: APP_LAYOUT.stackGapSmall,
+      marginTop: 4,
       textAlign: 'right',
       writingDirection: 'rtl',
     },

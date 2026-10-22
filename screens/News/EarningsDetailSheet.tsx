@@ -162,7 +162,7 @@ function Body({
   );
 
   const detailRows: Array<{ icon: IonName; label: string; value: string }> = [
-    { icon: 'stats-chart-outline', label: 'צפי רווח למניה', value: fmtEps(epsEst) },
+    { icon: 'pie-chart-outline', label: 'צפי רווח למניה', value: fmtEps(epsEst) },
     { icon: 'cash-outline', label: 'צפי הכנסות', value: fmtRevenue(revEst) },
     ...(epsPrior != null ? [{ icon: 'time-outline' as IonName, label: 'רווח למניה ברבעון המקביל', value: fmtEps(epsPrior) }] : []),
     ...(revYearAgo != null ? [{ icon: 'trending-up-outline' as IonName, label: 'הכנסות לפני שנה', value: fmtRevenue(revYearAgo) }] : []),
@@ -218,7 +218,7 @@ function Body({
           <Text style={styles.groupHeading}>{reported ? 'תוצאות' : 'צפי'}</Text>
           <UICard variant="soft" glassIntensity="subtle" padding="none">
             <ResultRow
-              icon="stats-chart-outline"
+              icon="pie-chart-outline"
               label="רווח למניה"
               value={reported ? fmtEps(epsActual) : fmtEps(epsEst)}
               pct={reported ? epsPct : null}

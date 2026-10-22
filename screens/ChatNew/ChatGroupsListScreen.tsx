@@ -49,6 +49,7 @@ import {
 import { MainDrawerRegistration } from '../../navigation/MainDrawerRegistration';
 import { supabase } from '../../lib/supabase';
 import { ChatGroup } from '../../types/chat.types';
+import { Bell, BellOff, Pin, PinOff } from 'lucide-react-native';
 import ChatListSwipeRow from '../../components/chat/ChatListSwipeRow';
 import { getCachedGroupMuteMap, setGroupMuted, subscribeGroupMutes, type GroupMuteMap } from '../../lib/notificationGroupMute';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -1192,7 +1193,9 @@ export default function ChatGroupsListScreen() {
                 key: 'pin',
                 label: rowPinned ? 'ביטול נעיצה' : 'נעיצה',
                 // עיגול ניטרלי ואייקון באותו צבע כמו ההשתקה
-                icon: <MaterialCommunityIcons name={rowPinned ? 'pin-off-outline' : 'pin-outline'} size={21} color={tokens.colors.text.primary} />,
+                icon: rowPinned
+                  ? <PinOff size={20} strokeWidth={SWIPE_ICON_STROKE} color={tokens.colors.text.primary} />
+                  : <Pin size={20} strokeWidth={SWIPE_ICON_STROKE} color={tokens.colors.text.primary} />,
                 backgroundColor: tokens.colors.background.primary,
                 color: tokens.colors.text.primary,
                 onPress: () => { void toggleGroupPin(item); },
@@ -1200,7 +1203,9 @@ export default function ChatGroupsListScreen() {
               {
                 key: 'mute',
                 label: rowMuted ? 'ביטול השתקה' : 'השתקה',
-                icon: <Ionicons name={rowMuted ? 'notifications-outline' : 'notifications-off-outline'} size={20} color={tokens.colors.text.primary} />,
+                icon: rowMuted
+                  ? <Bell size={20} strokeWidth={SWIPE_ICON_STROKE} color={tokens.colors.text.primary} />
+                  : <BellOff size={20} strokeWidth={SWIPE_ICON_STROKE} color={tokens.colors.text.primary} />,
                 // על רקע כרטיס — עיגול ברקע המסך כדי שיבלוט
                 backgroundColor: tokens.colors.background.primary,
                 color: tokens.colors.text.primary,
@@ -1845,6 +1850,8 @@ export default function ChatGroupsListScreen() {
 // Styles – Instagram DM inspired design
 // ============================================
 
+/** אייקוני ההחלקה — אותה ספרייה ואותו עובי קו (נעיצה / השתקה) */
+const SWIPE_ICON_STROKE = 1.9;
 const HP = APP_LAYOUT.screenPaddingHorizontal;
 
 const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.create({

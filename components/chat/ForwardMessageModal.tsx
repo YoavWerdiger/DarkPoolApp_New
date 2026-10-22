@@ -209,6 +209,7 @@ export default function ForwardMessageModal({
         data={filteredGroups}
         renderItem={renderGroupItem}
         keyExtractor={(item) => item.id}
+        ItemSeparatorComponent={() => <View style={styles.rowDivider} />}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -224,7 +225,6 @@ export default function ForwardMessageModal({
       onClose={onClose}
       snapPoints={[FORWARD_SHEET_SNAP]}
       showBrandWatermark={false}
-      avoidKeyboard
       contentPaddingBottom={0}
     >
       <ChatSheetContent style={{ flex: 1, minHeight: 0 }}>
@@ -241,31 +241,6 @@ export default function ForwardMessageModal({
             <Text style={styles.headerTitle}>העבר הודעה</Text>
           </View>
           <View style={styles.headerSideSpacer} />
-        </View>
-
-        <View style={styles.searchPill}>
-          <Ionicons name="search-outline" size={18} color={tokens.colors.text.tertiary} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="חיפוש קבוצה"
-            placeholderTextColor={tokens.colors.text.tertiary}
-            value={query}
-            onChangeText={setQuery}
-            returnKeyType="search"
-            autoCapitalize="none"
-            autoCorrect={false}
-            textAlign="right"
-          />
-          {query.length > 0 ? (
-            <Pressable
-              onPress={() => setQuery('')}
-              hitSlop={8}
-              style={({ pressed }) => pressed && { opacity: 0.6 }}
-              accessibilityLabel="נקה חיפוש"
-            >
-              <Ionicons name="close-circle" size={18} color={tokens.colors.text.tertiary} />
-            </Pressable>
-          ) : null}
         </View>
 
         <View style={styles.listWrap}>{listBody}</View>
@@ -292,7 +267,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       ...chatRtlRow,
       direction: 'rtl',
       alignItems: 'center',
-      paddingBottom: APP_LAYOUT.stackGapSmall,
+      paddingBottom: APP_LAYOUT.stackGapSmall + 4,
       gap: 10,
     },
     headerCenter: {
@@ -315,29 +290,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       textAlign: 'center',
       width: '100%',
     },
-    // כמו החיפוש ברשימת הצ׳אטים
-    searchPill: {
-      flexDirection: 'row',
-      direction: 'ltr',
-      alignItems: 'center',
-      gap: 10,
-      marginTop: APP_LAYOUT.stackGapSmall,
-      marginBottom: APP_LAYOUT.stackGapSmall,
-      // השיט עצמו בצבע כרטיס — החיפוש ברקע המסך כדי שייראה
-      backgroundColor: tokens.colors.background.primary,
-      borderRadius: tokens.borderRadius.search,
-      paddingHorizontal: 18,
-      height: 46,
-    },
-    searchInput: {
-      flex: 1,
-      ...APP_TYPE.body,
-      color: tokens.colors.text.primary,
-      textAlign: 'right',
-      writingDirection: 'rtl',
-      paddingVertical: 0,
-      backgroundColor: 'transparent',
-    },
     listWrap: {
       flex: 1,
       minHeight: 0,
@@ -355,6 +307,12 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       alignItems: 'center',
       gap: 12,
       paddingVertical: 8,
+    },
+    // דיבידר בין קבוצות — מתחיל אחרי התמונה (48 + רווח 12), כמו ברשימות הצ׳אט
+    rowDivider: {
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: tokens.colors.border.divider,
+      marginRight: 60,
     },
     groupAvatar: {
       width: 48,

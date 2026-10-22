@@ -980,9 +980,9 @@ const styles = StyleSheet.create({
   targetChip: {
     flexShrink: 1,
     maxWidth: '70%',
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 999,
   },
   targetChipText: {
     fontSize: 15,

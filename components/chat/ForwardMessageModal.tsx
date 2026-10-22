@@ -110,7 +110,7 @@ export default function ForwardMessageModal({
       onClose();
     } catch (error) {
       logger.error('ForwardMessageModal', 'Forward failed', error);
-      legacyAlert('שגיאה', 'לא ניתן להעביר את ההודעה');
+      legacyAlert('שגיאה', (error as Error)?.message || 'לא ניתן להעביר את ההודעה');
     } finally {
       setBusy(false);
     }

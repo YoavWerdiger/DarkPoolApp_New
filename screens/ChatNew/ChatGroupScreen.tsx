@@ -2,6 +2,7 @@
 // Chat Group Screen - Modern Design (from reference)
 // ============================================
 
+import { useToast } from '../../components/ui/Toast';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useMemo, useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
 import { View, FlatList, Text, StyleSheet, type ViewStyle, type DimensionValue, TouchableOpacity, Pressable, ActivityIndicator, Image, Modal, TextInput, Animated as RNAnimated, Easing, Platform, LayoutChangeEvent, InteractionManager, Keyboard } from 'react-native';
@@ -1754,6 +1755,7 @@ export default function ChatGroupScreen() {
     setForwardModalVisible(true);
   };
 
+  const { showToast } = useToast();
   const isForwardingRef = useRef(false);
   const handleForwardMessage = async (groupIds: string[]) => {
     if (!selectedMessageForForward || isForwardingRef.current) return;
@@ -1762,12 +1764,13 @@ export default function ChatGroupScreen() {
       const result = await forwardMessage(selectedMessageForForward.id, groupIds);
 
       if (result.success) {
-        void HapticFeedback.impactLight();
-        legacyAlert('הצלחה', 'ההודעה הועברה בהצלחה');
-        setForwardModalVisible(false);
-        setSelectedMessageForForward(null);
+        // בלי דיאלוג «הצלחה» — הוא נפתח בזמן שהשיט נסגר (שני מודלים ב-iOS מקפיאים);
+        // השיט סוגר את עצמו (onClose) — כאן רק רטט והודעה קצרה
+        void HapticFeedback.success();
+        showToast(groupIds.length === 1 ? 'ההודעה הועברה' : `ההודעה הועברה ל-${groupIds.length} קבוצות`, 'success');
       } else {
-        legacyAlert('שגיאה', result.error || 'לא ניתן להעביר את ההודעה');
+        // השיט מציג את השגיאה ונשאר פתוח
+        throw new Error(result.error || 'לא ניתן להעביר את ההודעה');
       }
     } finally {
       isForwardingRef.current = false;

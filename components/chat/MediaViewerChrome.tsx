@@ -157,20 +157,27 @@ export function MediaViewerChrome({
           {onShare ? <IconButton name="share-outline" label="שיתוף" onPress={onShare} /> : null}
           {onForward ? <IconButton name="arrow-redo-outline" label="העברה" onPress={onForward} /> : null}
         </View>
-        <View style={styles.titleCol}>
-          {title ? (
-            <Text style={styles.title} numberOfLines={1}>
-              {title}
-            </Text>
-          ) : null}
-          {timeLabel || counter ? (
-            <Text style={styles.time} numberOfLines={1}>
-              {counter || timeLabel}
-            </Text>
-          ) : null}
-        </View>
+        <View style={styles.titleSpacer} />
         <IconButton name="chevron-forward" label="חזרה" onPress={onClose} />
       </View>
+
+      {/* שם השולח + שעה (או x/x באלבום) — בגלולה במרכז, בין הכפתורים */}
+      {title || timeLabel || counter ? (
+        <View style={[styles.titleCenterLayer, { top: paddingTop }]} pointerEvents="none">
+          <View style={[styles.titlePill, { backgroundColor: tokens.colors.background.cardSolid }]}>
+            {title ? (
+              <Text style={[styles.title, { color: tokens.colors.text.primary }]} numberOfLines={1}>
+                {title}
+              </Text>
+            ) : null}
+            {counter || timeLabel ? (
+              <Text style={[styles.time, { color: tokens.colors.text.secondary }]} numberOfLines={1}>
+                {counter ? `\u2066${counter.replace(/\s+/g, '')}\u2069` : timeLabel}
+              </Text>
+            ) : null}
+          </View>
+        </View>
+      ) : null}
 
       <View style={[styles.bottomAnchor, { paddingBottom }]} pointerEvents="box-none">
         {videoSlot}
@@ -249,29 +256,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  titleCol: {
+  titleSpacer: {
     flex: 1,
-    minWidth: 0,
-    alignItems: 'flex-end',
-    marginRight: 2,
+  },
+  /** שכבה ממורכזת בגובה שורת הכפתורים (44) — הגלולה לא דוחפת את הכפתורים */
+  titleCenterLayer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  titlePill: {
+    maxWidth: '56%',
+    minHeight: 44,
+    borderRadius: 22,
+    paddingHorizontal: 18,
+    paddingVertical: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
-    color: ICON,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    lineHeight: 20,
-    textAlign: 'right',
+    lineHeight: 18,
+    textAlign: 'center',
     writingDirection: 'rtl',
-    ...TEXT_SHADOW,
   },
   time: {
-    color: 'rgba(255,255,255,0.85)',
     fontSize: 12,
-    lineHeight: 16,
-    textAlign: 'right',
+    lineHeight: 15,
+    textAlign: 'center',
     writingDirection: 'rtl',
-    marginTop: 1,
-    ...TEXT_SHADOW,
+    fontVariant: ['tabular-nums'],
   },
   bottomAnchor: {
     position: 'absolute',

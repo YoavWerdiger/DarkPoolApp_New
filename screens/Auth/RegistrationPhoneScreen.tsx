@@ -39,11 +39,12 @@ const RegistrationPhoneScreen = ({ navigation }: { navigation: any }) => {
 
     setLoading(true);
     try {
-      const { exists, error: phoneError } = await AuthService.checkPhoneExists(phone.trim());
+      // שמירה בפורמט של ה-DB: ספרות בלבד, 05XXXXXXXX (CHECK ^[0-9]{10,15}$ ב-users.phone)
+      const localPhone = `0${e164.slice(4)}`;
+      const { exists, error: phoneError } = await AuthService.checkPhoneExists(localPhone);
       if (phoneError) {
+        // בדיקה טכנית שנכשלה לא חוסמת רישום — UNIQUE(phone) ב-DB עדיין מונע כפילות
         logger.error('RegistrationPhone', `checkPhoneExists failed: ${phoneError}`);
-        setError('שגיאה בבדיקת הטלפון');
-        return;
       }
       if (exists) {
         setError('מספר הטלפון כבר קיים במערכת');
@@ -73,7 +74,7 @@ const RegistrationPhoneScreen = ({ navigation }: { navigation: any }) => {
 
         setData({
           ...data,
-          phone: phone.trim(),
+          phone: localPhone,
           phoneOtpSentAt: Date.now(),
         });
         void HapticFeedback.success();
@@ -81,7 +82,7 @@ const RegistrationPhoneScreen = ({ navigation }: { navigation: any }) => {
         return;
       }
 
-      setData({ ...data, phone: phone.trim() });
+      setData({ ...data, phone: localPhone });
       void HapticFeedback.success();
       navigation.navigate('RegistrationEmail');
     } finally {

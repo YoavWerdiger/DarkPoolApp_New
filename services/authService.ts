@@ -966,7 +966,10 @@ export class AuthService {
   // Check if phone already exists
   static async checkPhoneExists(phone: string): Promise<{ exists: boolean; error: string | null }> {
     try {
-      const { data, error } = await supabase.rpc('check_phone_exists', { phone_to_check: phone });
+      // ב-DB הטלפון נשמר כספרות בלבד (CHECK ^[0-9]{10,15}$) — «052-270-3909» לא היה מוצא אף פעם
+      const e164 = toE164IsraeliPhone(phone);
+      const local = e164 ? `0${e164.slice(4)}` : normalizeProfilePhone(phone) ?? phone;
+      const { data, error } = await supabase.rpc('check_phone_exists', { phone_to_check: local });
       if (error) return { exists: false, error: error.message };
       return { exists: data, error: null };
     } catch (error: any) {

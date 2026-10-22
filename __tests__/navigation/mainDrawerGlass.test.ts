@@ -37,11 +37,11 @@ describe('main drawer chrome', () => {
   });
 
   it('swaps in the light wordmark at the same drawer logo box', () => {
-    expect(mainTabsSrc).toContain('app-media/branding/IMG_9432.png');
-    expect(mainTabsSrc).toContain('{ uri: DRAWER_MENU_LOGO_LIGHT_URI }');
+    // עותק מקומי חתוך (לא הפלטה 6250×6250 מהרשת — ב-Android לא הוצג)
+    expect(mainTabsSrc).toContain("require('../assets/branding/drawer-logo-light.png')");
+    expect(mainTabsSrc).toContain('source={DRAWER_MENU_LOGO_LIGHT}');
+    expect(mainTabsSrc).not.toContain('IMG_9432.png`');
     expect(mainTabsSrc).toContain('height: DRAWER_MENU_LOGO_HEIGHT');
-    expect(mainTabsSrc).toContain("overflow: 'hidden'");
-    expect(mainTabsSrc).toContain('width: LIGHT_LOGO_RENDERED');
     expect(mainTabsSrc).toContain('source={DRAWER_MENU_LOGO}');
     expect(mainTabsSrc).not.toContain('darkpool-logo-light.jpg');
   });

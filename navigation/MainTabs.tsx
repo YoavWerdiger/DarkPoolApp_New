@@ -60,22 +60,14 @@ const DRAWER_PAD_OUTER = 17;
  */
 const DRAWER_MENU_LOGO_URI = `${SUPABASE_URL}/storage/v1/object/public/app-media/IMG_3289.PNG`;
 const DRAWER_MENU_LOGO = require('../assets/IMG_3289.png');
-/** לוגו תפריט במצב בהיר — אותו סלוט כמו IMG_3289. */
-const DRAWER_MENU_LOGO_LIGHT_URI = `${SUPABASE_URL}/storage/v1/object/public/app-media/branding/IMG_9432.png`;
+/**
+ * לוגו תפריט במצב בהיר — עותק מקומי חתוך לסימן (מ-app-media/branding/IMG_9432.png, 642×288).
+ * קודם: הפלטה המקורית 6250×6250 מהרשת (~156MB אחרי פענוח) עם חיתוך במיקום שלילי —
+ * ב-Android חורג ממגבלת ה-bitmap והלוגו לא הוצג.
+ */
+const DRAWER_MENU_LOGO_LIGHT = require('../assets/branding/drawer-logo-light.png');
 /** גובה מקורי של לוגו המגירה — לא להקטין (הריבוע המרוחק נראה כתמונה ממוזערת). */
 const DRAWER_MENU_LOGO_HEIGHT = 96;
-/**
- * IMG_9432.png הוא פלטה 6250×6250. הסימן (שור עד הוורדמארק) יושב ב־
- * y=1885..4133 (גובה 2249). מגדילים את הפלטה כך שהסימן עצמו יהיה בגובה 96,
- * וחותכים את הריפוד השחור בלי להגדיל את כותרת התפריט.
- */
-const LIGHT_LOGO_PLATE = 6250;
-const LIGHT_LOGO_MARK_TOP = 1885;
-const LIGHT_LOGO_MARK_HEIGHT = 2249;
-const LIGHT_LOGO_RENDERED =
-  (DRAWER_MENU_LOGO_HEIGHT * LIGHT_LOGO_PLATE) / LIGHT_LOGO_MARK_HEIGHT;
-const LIGHT_LOGO_TOP =
-  -(LIGHT_LOGO_MARK_TOP * DRAWER_MENU_LOGO_HEIGHT) / LIGHT_LOGO_MARK_HEIGHT;
 
 type DrawerIconFamily = 'ion' | 'mci' | 'feather';
 
@@ -215,16 +207,13 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
             accessibilityLabel="DarkPool"
           />
         ) : (
-          <View style={drawerStyles.brandLogoClip}>
-            <ExpoImage
-              source={{ uri: DRAWER_MENU_LOGO_LIGHT_URI }}
-              recyclingKey={DRAWER_MENU_LOGO_LIGHT_URI}
-              style={drawerStyles.brandLogoLight}
-              contentFit="fill"
-              transition={0}
-              accessibilityLabel="DarkPool"
-            />
-          </View>
+          <ExpoImage
+            source={DRAWER_MENU_LOGO_LIGHT}
+            style={drawerStyles.brandLogo}
+            contentFit="contain"
+            transition={0}
+            accessibilityLabel="DarkPool"
+          />
         )}
       </View>
       <ScrollView style={drawerStyles.scroll} showsVerticalScrollIndicator={false}>
@@ -337,21 +326,6 @@ function createDrawerStyles(tokens: ReturnType<typeof useDesignTokens>, isDarkMo
     width: '100%',
     height: DRAWER_MENU_LOGO_HEIGHT,
     backgroundColor: 'transparent',
-  },
-  /** אותה תיבה של 96 — הריפוד השחור נחתך, הכותרת לא גדלה */
-  brandLogoClip: {
-    width: '100%',
-    height: DRAWER_MENU_LOGO_HEIGHT,
-    overflow: 'hidden',
-    backgroundColor: 'transparent',
-  },
-  brandLogoLight: {
-    position: 'absolute',
-    width: LIGHT_LOGO_RENDERED,
-    height: LIGHT_LOGO_RENDERED,
-    top: LIGHT_LOGO_TOP,
-    left: '50%',
-    marginLeft: -LIGHT_LOGO_RENDERED / 2,
   },
   scroll: { flex: 1 },
   row: {

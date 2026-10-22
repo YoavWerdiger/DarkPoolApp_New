@@ -57,6 +57,7 @@ import {
   releaseVoicePlayback,
 } from '../../utils/voicePlaybackController';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { GlassChip } from '../ui/GlassChip';
 import { APP_TYPE, appPhysicalRightText } from '../ui/appType';
 import { UserNameRow, badgeSizeForLineHeight } from '../ui/badges/UserBadges';
 import { isUsableChatDisplayName } from '../../lib/chatMessageIdentity';
@@ -1135,26 +1136,37 @@ function ChatMessage({
             />
           ) : null}
         </ReactionsReveal>
-        {/* הכרזות: תגובות להודעה (שרשור) — «הגב» או «N תגובות» */}
+        {/* הכרזות: תגובות להודעה — בועה כמו של הריאקשנים: אייקון תגובה (+ מספר) */}
         {centered && onCommentsPress && !message.is_system_message && !message.id.startsWith('temp-') ? (
           <TouchableOpacity
             onPress={() => {
               void HapticFeedback.selection();
               onCommentsPress();
             }}
-            activeOpacity={0.7}
+            activeOpacity={0.75}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             style={styles.commentsRow}
             accessibilityRole="button"
             accessibilityLabel={(message.comments_count ?? 0) > 0 ? `${message.comments_count} תגובות` : 'הגב להודעה'}
           >
-            <Ionicons name="chatbubble-outline" size={15} color={DesignTokens.colors.primary.main} />
-            <Text style={[styles.commentsText, { color: DesignTokens.colors.primary.main }]}>
-              {(message.comments_count ?? 0) > 0
-                ? (message.comments_count ?? 0) === 1
-                  ? 'תגובה אחת'
-                  : `${message.comments_count} תגובות`
-                : 'הגב'}
-            </Text>
+            <GlassChip disableBlur style={styles.commentsPill} contentContainerStyle={styles.commentsPillContent}>
+              <Ionicons
+                name="chatbubble-outline"
+                size={13}
+                color={isMe ? DesignTokens.colors.bubbleMeMetaText : DesignTokens.colors.text.secondary}
+              />
+              {(message.comments_count ?? 0) > 0 ? (
+                <Text
+                  style={[
+                    styles.commentsCount,
+                    { color: isMe ? DesignTokens.colors.bubbleMeMetaText : DesignTokens.colors.text.secondary },
+                  ]}
+                  allowFontScaling={false}
+                >
+                  {message.comments_count}
+                </Text>
+              ) : null}
+            </GlassChip>
           </TouchableOpacity>
         ) : null}
         </View>
@@ -2483,17 +2495,30 @@ const createStyles = (tokens: any) => {
   centeredStretch: {
     alignItems: 'stretch',
   },
+  // כמו בועת הריאקשנים (MessageReactions): גובה 22, רדיוס 11, מרווח 4 מהבועה
   commentsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'stretch',
-    gap: 6,
-    paddingTop: 6,
-    paddingHorizontal: 6,
+    marginTop: 4,
+    alignSelf: 'flex-start',
   },
-  commentsText: {
-    ...APP_TYPE.caption,
+  commentsPill: {
+    minHeight: 22,
+    borderRadius: 11,
+  },
+  commentsPillContent: {
+    flexDirection: 'row',
+    direction: 'ltr',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 22,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    gap: 3,
+  },
+  commentsCount: {
+    fontSize: 11,
     fontWeight: '600',
+    minWidth: 8,
+    textAlign: 'center',
   },
   centeredBubble: {
     borderTopLeftRadius: 16,

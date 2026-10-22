@@ -24,7 +24,7 @@
         "image": "latest"
       },
       "ios": {
-        "image": "latest"
+        "image": "macos-tahoe-26.5-xcode-26.6"
       },
       "cache": {
         "key": "production-cache-v2"

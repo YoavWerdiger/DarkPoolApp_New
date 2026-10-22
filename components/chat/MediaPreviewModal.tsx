@@ -212,6 +212,7 @@ function MediaPreviewBody({
   };
 
   const toggleAudio = async (fileId: string) => {
+    void HapticFeedback.selection();
     try {
       if (isPlaying[fileId]) {
         if (audioRefs.current[fileId]) {
@@ -258,6 +259,7 @@ function MediaPreviewBody({
 
   const handleSend = () => {
     if (localFiles.length === 0) return;
+    void HapticFeedback.impactMedium();
     const validMediaFiles = localFiles.filter(f => f.uri);
     if (validMediaFiles.length === 0) {
       legacyAlert('שגיאה', 'אין קבצים לשליחה');
@@ -287,6 +289,7 @@ function MediaPreviewBody({
 
   const toggleVideoPlayPause = useCallback(() => {
     if (!videoRef.current) return;
+    void HapticFeedback.selection();
     const next = !videoPlaying;
     setVideoPlaying(next);
     if (next) videoRef.current.playAsync?.();
@@ -635,7 +638,10 @@ function MediaPreviewBody({
 
           <View style={[styles.topBar, { paddingTop: insets.top + 8 }]} pointerEvents="box-none">
             <Pressable
-              onPress={onClose}
+              onPress={() => {
+                void HapticFeedback.impactLight();
+                onClose();
+              }}
               style={[styles.iconBtn, styles.themeBtn, { backgroundColor: tokens.colors.background.cardSolid }]}
               accessibilityRole="button"
               accessibilityLabel="סגירה"
@@ -705,6 +711,7 @@ function MediaPreviewBody({
                     }}
                     delayLongPress={350}
                     onPress={() => {
+                      if (index !== currentIndex) void HapticFeedback.selection();
                       setCurrentIndex(index);
                       setIsLoading(true);
                     }}

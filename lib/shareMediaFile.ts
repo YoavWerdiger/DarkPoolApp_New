@@ -1,5 +1,6 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import { Platform, Share } from 'react-native';
 import { getChatMediaDisplayUri } from '../services/chat/chatSignedMediaUrl';
 import { logger } from '../utils/logger';
 
@@ -165,6 +166,12 @@ export async function shareMediaFile(
     if (!(await Sharing.isAvailableAsync())) return false;
     const local = await resolveLocalFile(source.trim(), opts.kind, opts.fileName);
     if (!local) return false;
+    if (Platform.OS === 'ios') {
+      // expo-sharing מציג את שיט השיתוף מה-root view controller — מתוך Modal (צופה המדיה)
+      // iOS מסרב בשקט ושום דבר לא נפתח. Share של RN מציג מה-controller העליון.
+      await Share.share({ url: local.uri }, opts.dialogTitle ? { subject: opts.dialogTitle } : undefined);
+      return true;
+    }
     await Sharing.shareAsync(local.uri, {
       mimeType: MIME_BY_EXT[local.ext],
       UTI: UTI_BY_EXT[local.ext],

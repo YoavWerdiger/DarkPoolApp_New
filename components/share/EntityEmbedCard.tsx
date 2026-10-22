@@ -124,6 +124,32 @@ function pickMetrics(
   return items;
 }
 
+/** דוח: הפתעה מול הצפי (אחוזים) לערך — null אם אין */
+function metricSurprise(attachment: ShareableAttachment, key: string): number | null {
+  if (attachment.ref.type !== 'earnings_report') return null;
+  const raw = attachment.preview.metrics?.[`${key}_surprise`];
+  const n = typeof raw === 'number' ? raw : raw != null ? Number(raw) : NaN;
+  return Number.isFinite(n) ? n : null;
+}
+
+/** דיווח כלכלי: צבע «תוצאה» מול התחזית — כמו ביומן */
+function economicActualColor(
+  attachment: ShareableAttachment,
+  key: string,
+  tokens: ReturnType<typeof useDesignTokens>,
+): string | null {
+  if (attachment.ref.type !== 'economic_event' || key !== 'actual') return null;
+  const vs = Number(attachment.preview.metrics?.actual_vs);
+  if (vs > 0) return tokens.colors.primary.main;
+  if (vs < 0) return tokens.colors.text.danger;
+  return null;
+}
+
+function surpriseColor(pct: number | null, tokens: ReturnType<typeof useDesignTokens>): string | null {
+  if (pct == null || Math.abs(pct) < 0.05) return null;
+  return pct > 0 ? tokens.colors.primary.main : tokens.colors.text.danger;
+}
+
 function metricValueColor(
   key: string,
   value: string,
@@ -532,6 +558,12 @@ function EntityEmbedCardGeneric({ attachment, onPress, compact, style }: Props) 
         </View>
       ) : null}
 
+      {(() => {
+        // דוח: פס צבע לפי ההפתעה ברווח למניה (אחרת בהכנסות) — כמו בדף הדיווחים
+        const pct = metricSurprise(attachment, 'eps') ?? metricSurprise(attachment, 'revenue');
+        const color = surpriseColor(pct, tokens);
+        return color ? <View pointerEvents="none" style={[styles.surpriseBar, { backgroundColor: color }]} /> : null;
+      })()}
       <View style={styles.main}>
         <View style={styles.headerRow}>
           {!heroUri ? (
@@ -646,12 +678,34 @@ function EntityEmbedCardGeneric({ attachment, onPress, compact, style }: Props) 
                     <Text
                       style={[
                         styles.metricValue,
-                        { color: metricValueColor(m.key, m.value, tokens) },
+                        {
+                          color:
+                            surpriseColor(metricSurprise(attachment, m.key), tokens) ??
+                            economicActualColor(attachment, m.key, tokens) ??
+                            metricValueColor(m.key, m.value, tokens),
+                        },
                       ]}
                       numberOfLines={1}
                     >
                       {m.value}
                     </Text>
+                    {(() => {
+                      const pct = metricSurprise(attachment, m.key);
+                      if (pct == null) return null;
+                      return (
+                        <Text
+                          style={[
+                            styles.metricLabel,
+                            { color: surpriseColor(pct, tokens) ?? tokens.colors.text.secondary, marginTop: 2 },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {Math.abs(pct) < 0.05
+                            ? 'בקו הצפי'
+                            : `\u2066${pct > 0 ? '+' : '−'}${Math.abs(pct).toFixed(1)}%\u2069`}
+                        </Text>
+                      );
+                    })()}
                   </View>
                 </React.Fragment>
               ))}
@@ -683,6 +737,16 @@ function createStyles(
      * Yoga הגלובלי הוא LTR. row-reverse שם אווטאר/טקסט לימין.
      * direction:'ltr' כאן מבודד מהורה rtl (קומפוז/ציוצים) — בלי היפוך כפול.
      */
+    surpriseBar: {
+      position: 'absolute',
+      right: 0,
+      top: 12,
+      bottom: 12,
+      width: 3,
+      borderTopLeftRadius: 2,
+      borderBottomLeftRadius: 2,
+      zIndex: 1,
+    },
     card: {
       direction: 'ltr',
       overflow: 'hidden',

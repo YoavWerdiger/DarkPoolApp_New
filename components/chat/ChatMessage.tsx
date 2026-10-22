@@ -265,8 +265,15 @@ interface ChatMessageProps {
 const BUBBLE_TAIL_W = 8;
 /** רוחב מדיה בבועת הכרזות: 94% מהמסך פחות ריפוד הבועה (xs משני הצדדים) ושולי הרשימה */
 const WIDE_MEDIA_W = Math.round(Dimensions.get('window').width * 0.94 - 8 - 16);
-/** כרטיס דוח / דיווח בבועה — העוטף מוגבל ל-80% מהמסך; פחות הריפוד הפנימי של הבועה */
-const ENTITY_WIDE_W = Math.round(Dimensions.get('window').width * 0.8 - 24);
+/** כרטיס דוח / דיווח בבועה — העוטף מורחב ל-92% מהמסך (gestureSwipeWrapperWideEntity); פחות ריפוד הבועה */
+const ENTITY_WIDE_W = Math.round(Dimensions.get('window').width * 0.92 - 24);
+
+/** הודעת שיתוף של דוח רווח / דיווח כלכלי — בועה רחבה */
+function isWideEntityMessage(message: { message_type?: string; content?: string | null }): boolean {
+  if (message.message_type !== MessageType.ENTITY) return false;
+  const c = message.content || '';
+  return c.includes('"earnings_report"') || c.includes('"economic_event"');
+}
 const BUBBLE_TAIL_H = 13;
 
 /**
@@ -810,6 +817,7 @@ function ChatMessage({
           centered ? styles.gestureSwipeWrapperCentered : isMe ? styles.gestureSwipeWrapperMe : styles.gestureSwipeWrapperThem,
           message.message_type === MessageType.AUDIO && styles.gestureSwipeWrapperAudio,
           message.message_type === MessageType.POLL && styles.gestureSwipeWrapperPoll,
+          isWideEntityMessage(message) && styles.gestureSwipeWrapperWideEntity,
         ]}
       >
         <View
@@ -2565,6 +2573,10 @@ const createStyles = (tokens: any) => {
     minWidth: 210,
   },
   /** סקר: מונע התכווצות לרוחב אות בודדת אחרי הסרת כותרת האייקון */
+  /** שיתוף דוח / דיווח כלכלי — בועה רחבה יותר (ENTITY_WIDE_W) */
+  gestureSwipeWrapperWideEntity: {
+    maxWidth: '92%',
+  },
   gestureSwipeWrapperPoll: {
     maxWidth: '80%',
     minWidth: 220,

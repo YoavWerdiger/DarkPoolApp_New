@@ -7,7 +7,7 @@
 
 import { brandfetchTickerLogoUri } from '../utils/brandfetch';
 import { translateEconomicEventNameSmart } from '../utils/economicEventTranslations';
-import { formatEconomicDisplayValue } from '../utils/economicNumberFormat';
+import { formatEconomicDisplayValue, parseEconomicNumber } from '../utils/economicNumberFormat';
 
 export type ShareableEntityType =
   | 'person_profile'
@@ -373,12 +373,21 @@ export function buildEarningsAttachment(row: {
   const company = (row.company_name ?? '').toString().trim() || undefined;
   const epsActual = toNum(row.eps ?? row.actual);
   const revActual = toNum(row.revenue_actual ?? row.revenue);
+  const epsEst = toNum(row.eps_estimate ?? row.estimate);
+  const revEst = toNum(row.revenue_estimate);
+  /** הפתעה מול הצפי באחוזים — לצבע (ירוק/אדום), לאחוז מתחת לערך ולפס בכרטיס */
+  const surprise = (a: number | null, e: number | null) =>
+    a != null && e != null && e !== 0 ? Math.round(((a - e) / Math.abs(e)) * 1000) / 10 : null;
   const reported = epsActual != null || revActual != null;
 
   // רק התוצאה — רווח למניה והכנסות; הפירוט (צפי, הפתעה) בדף הדיווחים בלחיצה על הכרטיס
   const metrics: Record<string, string | number> = {};
   if (epsActual != null) metrics.eps = formatEarningsMoney(epsActual, false);
   if (revActual != null) metrics.revenue = formatEarningsMoney(revActual, true);
+  const epsSurprise = surprise(epsActual, epsEst);
+  const revSurprise = surprise(revActual, revEst);
+  if (epsSurprise != null) metrics.eps_surprise = epsSurprise;
+  if (revSurprise != null) metrics.revenue_surprise = revSurprise;
 
   const bam = `${row.before_after_market ?? ''} ${row.report_time ?? ''}`.toLowerCase();
   const timing = bam.includes('before') || bam.includes('bmo')
@@ -437,6 +446,10 @@ export function buildEconomicEventAttachment(event: {
   if (fmt(event.actual)) metrics.actual = fmt(event.actual);
   if (fmt(event.forecast)) metrics.forecast = fmt(event.forecast);
   if (fmt(event.previous)) metrics.previous = fmt(event.previous);
+  // צבע התוצאה כמו ביומן: תוצאה ≥ תחזית → ירוק, אחרת אדום (1 / -1)
+  const a = parseEconomicNumber(event.actual ?? undefined);
+  const f = parseEconomicNumber(event.forecast ?? undefined);
+  if (fmt(event.actual) && Number.isFinite(a) && Number.isFinite(f)) metrics.actual_vs = a >= f ? 1 : -1;
   const date = (event.date ?? '').slice(0, 10);
   let when = '';
   if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {

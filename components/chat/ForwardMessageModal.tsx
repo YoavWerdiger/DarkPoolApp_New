@@ -12,7 +12,7 @@ import { View, Text, FlatList, StyleSheet, Image, Pressable, Dimensions } from '
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
-import { APP_TYPE } from '../ui/appType';
+import { APP_TYPE, appCardTitleStyle, appGroupLabelStyle } from '../ui/appType';
 import { APP_LAYOUT } from '../ui/appLayout';
 import UIButton from '../ui/UIButton';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
@@ -37,8 +37,9 @@ const FORWARD_SHEET_SNAP = 0.9;
 const FORWARD_SHEET_OFFSCREEN_BELOW = Math.ceil(
   Dimensions.get('window').height * (1 - FORWARD_SHEET_SNAP),
 );
+// כמו «שליחה אל…» (ShareToChatScreen)
 const AVATAR = 48;
-const ROW_GAP = 12;
+const ROW_GAP = APP_LAYOUT.stackGapTight;
 
 interface ForwardMessageModalProps {
   visible: boolean;
@@ -195,6 +196,7 @@ export default function ForwardMessageModal({
           <View style={styles.headerSpacer} />
         </View>
 
+        <Text style={styles.groupLabel}>קבוצות</Text>
         <View style={styles.listWrap}>{body}</View>
 
         <View style={[styles.footer, { paddingBottom: footerSafePad }]}>
@@ -251,37 +253,39 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     listContent: {
       paddingVertical: 4,
     },
-    // כמו שורה ברשימת הצ׳אטים: תמונה מימין, השם צמוד אליה, הסימון בקצה
+    /** תווית קבוצה — כמו ב«שליחה אל…» */
+    groupLabel: {
+      ...appGroupLabelStyle,
+      color: tokens.colors.text.secondary,
+    },
+    // כמו שורה ב«שליחה אל…»: row-reverse — תמונה מימין, השם צמוד אליה, הסימון בקצה השמאלי
     row: {
-      ...chatRtlRow,
-      direction: 'rtl',
+      flexDirection: 'row-reverse',
       alignItems: 'center',
       gap: ROW_GAP,
-      paddingVertical: 10,
+      paddingVertical: APP_LAYOUT.stackGapTight,
     },
     rowPressed: {
-      opacity: 0.7,
+      opacity: 0.6,
     },
     avatar: {
       width: AVATAR,
       height: AVATAR,
       borderRadius: AVATAR / 2,
-      flexShrink: 0,
     },
     avatarPlaceholder: {
-      backgroundColor: tokens.colors.background.primary,
       alignItems: 'center',
       justifyContent: 'center',
+      backgroundColor: tokens.colors.background.primary,
     },
-    // בתוך שורת rtl — textAlign:'left' של chatRtlText הוא הצד הימני (צמוד לתמונה)
     name: {
-      ...APP_TYPE.cardTitle,
-      ...chatRtlText,
+      ...appCardTitleStyle,
       flex: 1,
-      minWidth: 0,
+      width: undefined,
+      alignSelf: 'center',
       color: tokens.colors.text.primary,
     },
-    // דיבידר שמתחיל אחרי התמונה, כמו ברשימות הצ׳אט
+    // מתחיל אחרי האווטאר (כמו «שליחה אל…» ורשימת הצ׳אטים)
     divider: {
       height: StyleSheet.hairlineWidth,
       backgroundColor: tokens.colors.border.divider,

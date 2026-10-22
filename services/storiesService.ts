@@ -223,9 +223,16 @@ export async function getUsersWithStories(currentUserId?: string): Promise<Story
 const storiesByUserCache = new Map<string, { data: UserStory[]; at: number }>();
 const STORIES_CACHE_MS = 60_000;
 
+/** הרשימה כוללת URL חתום (תוקף שעה) — מעבר ל-50 דק׳ לא משתמשים בה (אחרת מדיה פגה → מסך שחור/שגיאה) */
+const STORIES_PEEK_MAX_AGE_MS = 50 * 60 * 1000;
+
 export function peekStoriesCache(userId: string): UserStory[] | undefined {
   const hit = storiesByUserCache.get(userId);
   if (!hit) return undefined;
+  if (Date.now() - hit.at > STORIES_PEEK_MAX_AGE_MS) {
+    storiesByUserCache.delete(userId);
+    return undefined;
+  }
   // סטורי שפג תוקפו לא מוצג גם מהקאש
   const now = new Date().toISOString();
   return hit.data.filter((s) => !s.expires_at || s.expires_at > now);

@@ -1253,8 +1253,8 @@ export default function StoryViewer({
     return {
       flex: 1,
       opacity: present.value,
+      // רק ערכים מספריים באנימציה (overflow סטטי — styles.stageClip)
       borderRadius: d > 0 ? 18 : 0,
-      overflow: 'hidden',
       transform: [
         { translateY: dismissY.value + dragY.value },
         // מתכווץ תוך כדי משיכה — כמו תצוגת התמונה
@@ -1893,7 +1893,7 @@ export default function StoryViewer({
       <GestureHandlerRootView style={styles.container}>
         <Reanimated.View style={[StyleSheet.absoluteFill, containerAnim]} pointerEvents="none" />
         <GestureDetector gesture={dismissPan}>
-        <Reanimated.View style={stageAnim}>
+        <Reanimated.View style={[styles.stageClip, stageAnim]}>
         {showPager ? (
           <View style={styles.stageRoot}>
             <View style={styles.blackBackdrop} pointerEvents="none" />
@@ -2046,6 +2046,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
+  },
+  stageClip: {
+    overflow: 'hidden',
   },
   stageRoot: {
     flex: 1,

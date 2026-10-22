@@ -244,6 +244,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             deviceTokenRegistered.current = false;
             // התנתקות אוטומטית (refresh נכשל / סשן בוטל) — לא דרך signOut, אז מנקים כאן
             if (event === 'SIGNED_OUT') void releaseCacheOwner();
+            // אין משתמש (פתיחה בלי סשן / התנתקות אוטומטית) — המכשיר לא יקבל פושים של המשתמש הקודם.
+            // לפי הטוקן, בלי סשן; התחברות מחדש מפעילה אותו שוב (claim_device_push_token)
+            if (event === 'SIGNED_OUT' || event === 'INITIAL_SESSION') {
+              void NotificationService.releaseThisDeviceToken();
+            }
             // SIGNED_OUT באמצע איפוס (verify round-trip) לא אמור למחוק את דגל ה-recovery.
             // ניקוי מפורש רק ב-setPasswordRecoveryMode(false) / signIn / AuthContext.signOut.
             if (event === 'INITIAL_SESSION' && !passwordRecoveryModeRef.current) {
@@ -343,7 +348,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (previousUserId) {
         try {
           await Promise.race([
-            NotificationService.unregisterDeviceToken(previousUserId),
+            // לפי הטוקן (RPC) — לא תלוי ב-RLS/סשן; ה-update הישן נשאר כגיבוי
+            NotificationService.releaseThisDeviceToken().then((ok) =>
+              ok ? true : NotificationService.unregisterDeviceToken(previousUserId),
+            ),
             new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 3_000)),
           ]);
         } catch (_) { /* non-critical */ }

@@ -320,6 +320,27 @@ export class NotificationService {
   }
 
   // Unregister device token (with optional userId - if not provided, gets from auth)
+  /**
+   * מכבה את הטוקן של המכשיר הזה — בלי תלות בסשן (RPC SECURITY DEFINER לפי הטוקן).
+   * נקרא ביציאה ובפתיחה כשאין משתמש מחובר: אם היציאה נכשלה / נחתכה, או שהסשן נגמר
+   * בלי יציאה, המכשיר לא ימשיך לקבל פושים של המשתמש הקודם.
+   */
+  static async releaseThisDeviceToken(): Promise<boolean> {
+    try {
+      const token = await this.getExpoPushToken();
+      if (!token) return false;
+      const { error } = await supabase.rpc('release_device_push_token', { p_expo_push_token: token });
+      if (error) {
+        logger.warn('Notification', 'release_device_push_token failed', error);
+        return false;
+      }
+      return true;
+    } catch (error) {
+      logger.warn('Notification', 'releaseThisDeviceToken failed', error);
+      return false;
+    }
+  }
+
   static async unregisterDeviceToken(userId?: string): Promise<boolean> {
     try {
       let targetUserId = userId;

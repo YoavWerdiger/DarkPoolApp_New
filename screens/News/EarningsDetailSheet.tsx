@@ -387,9 +387,10 @@ function useStyles() {
           fontVariant: ['tabular-nums'],
         },
         // ערך ותגית באותה שורה — שורה אחת בגובה רגיל
+        // בקריאה מימין: קודם התוצאה, אחריה התגית «מכה»
         resultValueCol: {
           direction: 'ltr',
-          flexDirection: 'row',
+          flexDirection: 'row-reverse',
           alignItems: 'center',
           gap: 8,
           maxWidth: '64%',

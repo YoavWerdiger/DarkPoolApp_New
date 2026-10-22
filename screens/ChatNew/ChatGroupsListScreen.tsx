@@ -1191,8 +1191,8 @@ export default function ChatGroupsListScreen() {
               {
                 key: 'pin',
                 label: rowPinned ? 'ביטול נעיצה' : 'נעיצה',
-                // עיגול ניטרלי (כמו ההשתקה) עם נעץ ירוק — ירוק = נעיצה, בלי עיגול ניאון מלא
-                icon: <MaterialCommunityIcons name={rowPinned ? 'pin-off-outline' : 'pin-outline'} size={21} color={tokens.colors.primary.main} />,
+                // עיגול ניטרלי ואייקון באותו צבע כמו ההשתקה
+                icon: <MaterialCommunityIcons name={rowPinned ? 'pin-off-outline' : 'pin-outline'} size={21} color={tokens.colors.text.primary} />,
                 backgroundColor: tokens.colors.background.primary,
                 color: tokens.colors.text.primary,
                 onPress: () => { void toggleGroupPin(item); },
@@ -2181,8 +2181,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     height: 1,
     backgroundColor: tokens.colors.border.divider,
     marginHorizontal: HP,
-    marginTop: 6,
-    marginBottom: 2,
+    // בלי רווח מתחת — רקע ההחלקה של השורה הראשונה אחרי ההכרזות נוגע בדיבידר (אותו רווח כולל)
+    marginTop: 8,
+    marginBottom: 0,
   },
 
   /* ── Section headers — כותרת סקשן (sectionTitle), מתחת לכותרת המסך ── */

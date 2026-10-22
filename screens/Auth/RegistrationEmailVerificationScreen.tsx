@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { useRegistration } from '../../context/RegistrationContext';
 import { AuthService } from '../../services/authService';
+import { supabase } from '../../services/supabase';
+import { logger } from '../../utils/logger';
 import CashAppScreen from '../../components/ui/CashAppScreen';
 import CashAppButton from '../../components/ui/CashAppButton';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
@@ -123,6 +125,17 @@ const RegistrationEmailVerificationScreen = ({ navigation }: { navigation: any }
     return () => clearTimeout(timer);
   }, [resendCountdown]);
 
+  const currentSessionUserFor = async (email: string): Promise<string | null> => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const u = sessionData?.session?.user;
+      const e = u?.email?.trim().toLowerCase();
+      return u && e && e === (email || '').trim().toLowerCase() ? u.id : null;
+    } catch {
+      return null;
+    }
+  };
+
   const handleVerify = async () => {
     setError('');
     if (otp.length !== 6) {
@@ -133,10 +146,24 @@ const RegistrationEmailVerificationScreen = ({ navigation }: { navigation: any }
 
     setLoading(true);
     try {
-      const { verified, userId, error: verifyError } = await AuthService.verifyEmailOtp(
+      let { verified, userId, error: verifyError } = await AuthService.verifyEmailOtp(
         emailHint,
         otp
       );
+
+      // השרת אישר את הקוד אבל הלקוח החזיר שגיאה (למשל שמירת סשן נכשלה ב-Android) —
+      // אם יש עכשיו סשן לאותו מייל, הקוד עבר. אחרת ניסיון חוזר עם אותו קוד = «פג תוקף».
+      if (verifyError || !verified || !userId) {
+        const sessionUser = await currentSessionUserFor(emailHint);
+        if (sessionUser) {
+          logger.warn('RegistrationEmailVerification', `verify reported "${verifyError}" but session exists — continuing`);
+          verified = true;
+          userId = sessionUser;
+          verifyError = null;
+        } else if (verifyError) {
+          logger.error('RegistrationEmailVerification', `verify failed: ${verifyError}`);
+        }
+      }
 
       if (verifyError) {
         if (verifyError === 'invalid_otp') {

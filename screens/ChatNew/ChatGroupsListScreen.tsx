@@ -49,7 +49,7 @@ import {
 import { MainDrawerRegistration } from '../../navigation/MainDrawerRegistration';
 import { supabase } from '../../lib/supabase';
 import { ChatGroup } from '../../types/chat.types';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Search } from 'lucide-react-native';
 import JoinGroupBottomSheet from '../../components/chat/JoinGroupBottomSheet';
 import CreateGroupSheet from '../../components/chat/CreateGroupSheet';
@@ -1188,7 +1188,8 @@ export default function ChatGroupsListScreen() {
                 </Text>
                 <View style={styles.chatTimeWrap}>
                   {pinnedMap[item.id] ? (
-                    <Ionicons name="pin" size={13} color={tokens.colors.text.secondary} style={styles.pinIcon} />
+                    // נעץ (pushpin) של MaterialCommunityIcons — Ionicons «pin» הוא סיכת מפה; ירוק המותג = מוצמד
+                    <MaterialCommunityIcons name="pin" size={15} color={tokens.colors.primary.main} style={styles.pinIcon} />
                   ) : null}
                   {!!timeLabel && (
                     <Text style={[styles.chatTime, hasUnread && styles.chatTimeUnread]}>
@@ -1894,7 +1895,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     gap: 4,
   },
   pinIcon: {
-    transform: [{ rotate: '45deg' }],
+    transform: [{ rotate: '30deg' }],
   },
   storiesDivider: {
     height: 1,

@@ -265,6 +265,8 @@ interface ChatMessageProps {
 const BUBBLE_TAIL_W = 8;
 /** רוחב מדיה בבועת הכרזות: 94% מהמסך פחות ריפוד הבועה (xs משני הצדדים) ושולי הרשימה */
 const WIDE_MEDIA_W = Math.round(Dimensions.get('window').width * 0.94 - 8 - 16);
+/** כרטיס דוח / דיווח בבועה — העוטף מוגבל ל-80% מהמסך; פחות הריפוד הפנימי של הבועה */
+const ENTITY_WIDE_W = Math.round(Dimensions.get('window').width * 0.8 - 24);
 const BUBBLE_TAIL_H = 13;
 
 /**
@@ -965,7 +967,7 @@ function ChatMessage({
                     // דוח / דיווח: מטריקות ארוכות (צפי · מכה ב-X%) — בועה רחבה יותר שלא תידחס
                     minWidth:
                       att.ref.type === 'earnings_report' || att.ref.type === 'economic_event'
-                        ? WIDE_MEDIA_W
+                        ? ENTITY_WIDE_W
                         : 220,
                     gap: 8,
                   }}

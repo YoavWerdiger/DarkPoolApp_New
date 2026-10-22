@@ -76,7 +76,7 @@ function pickMetrics(
       'company',
     ],
     news_article: [],
-    earnings_report: ['eps', 'revenue', 'report_when'],
+    earnings_report: ['eps', 'eps_est', 'revenue', 'revenue_est', 'report_when'],
     economic_event: ['actual', 'forecast', 'previous'],
   };
   const preferred =
@@ -86,6 +86,9 @@ function pickMetrics(
   let limit: number;
   if (attachment.ref.type === 'journal_trade') {
     limit = opts.expanded ? 8 : opts.compact ? 3 : 4;
+  } else if (attachment.ref.type === 'earnings_report' || attachment.ref.type === 'economic_event') {
+    // דוח: 2×2 (רווח / צפי, הכנסות / צפי); דיווח: תוצאה / צפי / קודם
+    limit = 4;
   } else {
     limit = opts.expanded ? 6 : opts.compact ? 2 : 3;
   }

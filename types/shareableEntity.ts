@@ -125,7 +125,9 @@ export const PREVIEW_METRIC_LABELS: Record<string, string> = {
   strategy: 'אסטרטגיה',
   company: 'חברה',
   eps: 'רווח למניה',
+  eps_est: 'צפי רווח',
   revenue: 'הכנסות',
+  revenue_est: 'צפי הכנסות',
   report_when: 'מועד',
   actual: 'תוצאה',
   forecast: 'צפי',
@@ -346,20 +348,6 @@ function formatEarningsMoney(v: number, compact: boolean): string {
   return `$${v.toFixed(2)}`;
 }
 
-/** «$0.48 (צפי $0.44 · מכה ב-10.1%)» — כמו בפוש תוצאות */
-function earningsMetricLine(actual: number | null, estimate: number | null, compact: boolean): string | null {
-  if (actual == null && estimate == null) return null;
-  if (actual == null) return `צפי ${formatEarningsMoney(estimate!, compact)}`;
-  let line = formatEarningsMoney(actual, compact);
-  if (estimate != null && estimate !== 0) {
-    const pct = ((actual - estimate) / Math.abs(estimate)) * 100;
-    const verdict =
-      Math.abs(pct) < 0.05 ? 'בקו הצפי' : pct > 0 ? `מכה ב-${Math.abs(pct).toFixed(1)}%` : `מפספסת ב-${Math.abs(pct).toFixed(1)}%`;
-    line += ` (צפי ${formatEarningsMoney(estimate, compact)} · ${verdict})`;
-  }
-  return line;
-}
-
 /** דוח רבעוני (earnings_calendar) — שיתוף לצ׳אט / לציוצים */
 export function buildEarningsAttachment(row: {
   id: string;
@@ -389,11 +377,12 @@ export function buildEarningsAttachment(row: {
   const revEst = toNum(row.revenue_estimate);
   const reported = epsActual != null || revActual != null;
 
+  // רשת 2×2 נקייה: ערך מול צפי (מחרוזת אחת ארוכה נחתכה ועירבבה כיוונים)
   const metrics: Record<string, string | number> = {};
-  const epsLine = earningsMetricLine(epsActual, epsEst, false);
-  if (epsLine) metrics.eps = epsLine;
-  const revLine = earningsMetricLine(revActual, revEst, true);
-  if (revLine) metrics.revenue = revLine;
+  if (epsActual != null) metrics.eps = formatEarningsMoney(epsActual, false);
+  if (epsEst != null) metrics.eps_est = formatEarningsMoney(epsEst, false);
+  if (revActual != null) metrics.revenue = formatEarningsMoney(revActual, true);
+  if (revEst != null) metrics.revenue_est = formatEarningsMoney(revEst, true);
 
   const bam = `${row.before_after_market ?? ''} ${row.report_time ?? ''}`.toLowerCase();
   const timing = bam.includes('before') || bam.includes('bmo')
@@ -424,7 +413,8 @@ export function buildEarningsAttachment(row: {
       extras: { ticker, ...(date ? { reportDate: date } : {}) },
     },
     preview: {
-      title: `$${ticker}`,
+      // בידוד LTR — אחרת בשורה RTL «$ALLE» מוצג «ALLE$»
+      title: `\u2066$${ticker}\u2069`,
       ...(subtitleParts.length ? { subtitle: subtitleParts.join(' · ') } : {}),
       imageUrl: brandfetchTickerLogoUri(ticker),
       badge: reported ? 'דוח רבעוני' : 'דוח צפוי',

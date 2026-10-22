@@ -119,6 +119,7 @@ function MediaPreviewBody({
   );
 
   const currentMedia = localFiles[currentIndex];
+  const thumbStripRef = useRef<ScrollView>(null);
 
   const { zoomGesture, animatedStyle: animatedImageStyle, resetZoomImmediate, prevPagerStyle, nextPagerStyle } =
     useMediaZoomGestures({
@@ -172,7 +173,7 @@ function MediaPreviewBody({
 
   // פריים ראשון לפריוויו וידאו (מקומי — אמין ב-iOS)
   useEffect(() => {
-    if (!visible || currentMedia?.type !== 'video' || !currentMedia.uri) {
+    if (!visible || currentMedia?.type !== 'video' || !currentMedia.uri || currentMedia.uri.startsWith('ph://')) {
       setVideoPosterUri(null);
       return;
     }
@@ -539,7 +540,11 @@ function MediaPreviewBody({
                 <ActivityIndicator size="large" color={iconColor} />
               </View>
             )}
+            {/* ph:// (גלריה, לפני שהקובץ המקומי נפתר) — הנגן לא מנגן; מחכים לקובץ אמיתי.
+                key לפי ה-uri: נגן חדש כשהקובץ המקומי מגיע */}
+            {currentMedia.uri?.startsWith('ph://') ? null : (
             <Video
+              key={currentMedia.uri}
               ref={videoRef}
               source={{ uri: currentMedia.uri }}
               style={[
@@ -570,6 +575,7 @@ function MediaPreviewBody({
               }}
               onError={() => setIsLoading(false)}
             />
+            )}
           </View>
         );
 
@@ -713,6 +719,11 @@ function MediaPreviewBody({
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
+                // RTL: הראשון מימין — כשהרשימה ארוכה מהמסך מתחילים מהקצה הימני
+                onContentSizeChange={(w) => {
+                  if (w > screenW) thumbStripRef.current?.scrollToEnd({ animated: false });
+                }}
+                ref={thumbStripRef}
                 contentContainerStyle={styles.thumbnailStrip}
                 keyboardShouldPersistTaps="handled"
               >
@@ -992,7 +1003,10 @@ const styles = StyleSheet.create({
     // מרווח מעל שורת הכיתוב
     paddingBottom: 14,
     gap: 8,
-    flexDirection: 'row',
+    // RTL כמו הדפדוף (הבא משמאל): הראשון מימין, והסימון זז עם ההחלקה. ממורכז כשהרשימה קצרה מהמסך
+    flexDirection: 'row-reverse',
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   thumbnailContainer: {
     width: 56,

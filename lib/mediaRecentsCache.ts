@@ -213,9 +213,16 @@ export function recentToPicked(asset: MediaRecentAsset): PickedRecentMedia {
   };
 }
 
-export async function resolveMediaRecentLocalUri(id: string, fallbackUri: string): Promise<string> {
+export async function resolveMediaRecentLocalUri(
+  id: string,
+  fallbackUri: string,
+  opts?: { downloadFromNetwork?: boolean },
+): Promise<string> {
   try {
-    const info = await MediaLibrary.getAssetInfoAsync(id);
+    const info = await MediaLibrary.getAssetInfoAsync(
+      id,
+      opts?.downloadFromNetwork ? { shouldDownloadFromNetwork: true } : undefined,
+    );
     const local = info.localUri || info.uri;
     if (local && !local.startsWith('ph://')) return local;
   } catch {
@@ -227,7 +234,10 @@ export async function resolveMediaRecentLocalUri(id: string, fallbackUri: string
 export async function resolvePickedMedia(items: PickedRecentMedia[]): Promise<PickedRecentMedia[]> {
   return Promise.all(
     items.map(async (item) => {
-      const uri = await resolveMediaRecentLocalUri(item.id, item.uri);
+      // וידאו: הנגן לא מנגן ph:// — מבקשים קובץ מקומי (כולל הורדה מ-iCloud)
+      const uri = await resolveMediaRecentLocalUri(item.id, item.uri, {
+        downloadFromNetwork: item.type === 'video',
+      });
       return { ...item, uri };
     }),
   );

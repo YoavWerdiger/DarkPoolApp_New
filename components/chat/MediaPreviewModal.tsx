@@ -2,7 +2,6 @@ import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { View, Text, Modal, Pressable, StyleSheet, ActivityIndicator, Animated as RNAnimated,
   Keyboard, ScrollView, TouchableOpacity, TextInput, useWindowDimensions } from 'react-native';
-import { stableCameraPreviewFrame } from '../../lib/cameraFrame';
 import { Image as ExpoImage } from 'expo-image';
 import { initialWindowMetrics, SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -46,7 +45,9 @@ function MediaPreviewBody({
   const insets = useSafeAreaInsets();
   const safeBottom = Math.max(insets.bottom, initialWindowMetrics?.insets.bottom ?? 0);
   const { width: screenW, height: screenH } = useWindowDimensions();
-  const mediaFrame = stableCameraPreviewFrame();
+  // תצוגה ברוחב מלא (כמו וואטסאפ): המדיה מותאמת לכל המסך — הסרגל העליון ושדה הכיתוב צפים מעליה.
+  // קודם: חלון בין הסרגל לכיתוב (cameraPreviewFrame) — תמונת פורטרט הוגבלה בגובה ויצאה צרה מהמסך.
+  const mediaFrame = { top: 0, height: screenH };
   const { isDarkMode } = useTheme();
   const tokens = useDesignTokens();
   const iconColor = isDarkMode ? tokens.colors.text.primary : tokens.colors.text.inverse;
@@ -481,8 +482,7 @@ function MediaPreviewBody({
   const renderMediaContent = () => {
     switch (currentMedia.type) {
       case 'image': {
-        // כמו וואטסאפ ושאר המערכת: התמונה בתוך חלון (cameraPreviewFrame), לא על כל המסך —
-        // מותאמת פרופורציונלית לחלון וממורכזת בו; מסביב הרקע המטושטש
+        // ברוחב המסך, מותאמת פרופורציונלית לגובה המסך וממורכזת; מסביב הרקע המטושטש
         const srcW = currentMedia.width && currentMedia.width > 0 ? currentMedia.width : screenW;
         const srcH = currentMedia.height && currentMedia.height > 0 ? currentMedia.height : screenH;
         const ratio = srcW / srcH;
@@ -552,6 +552,21 @@ function MediaPreviewBody({
               onLoad={() => {
                 setIsLoading(false);
                 videoRef.current?.setStatusAsync?.({ progressUpdateIntervalMillis: 100 });
+              }}
+              // הפרוגרס מתקדם בזמן ניגון (כמו בצופה אחרי שליחה); בסוף — חוזר להתחלה ועוצר
+              onPlaybackStatusUpdate={(status: any) => {
+                if (!status?.isLoaded) return;
+                if (status.durationMillis > 0) {
+                  const d = status.durationMillis / 1000;
+                  setVideoDuration((prev) => (Math.abs(prev - d) > 0.05 ? d : prev));
+                }
+                if (status.didJustFinish) {
+                  setVideoPlaying(false);
+                  setVideoPosition(0);
+                  videoRef.current?.setPositionAsync?.(0);
+                  return;
+                }
+                if (!videoDragging) setVideoPosition((status.positionMillis ?? 0) / 1000);
               }}
               onError={() => setIsLoading(false)}
             />

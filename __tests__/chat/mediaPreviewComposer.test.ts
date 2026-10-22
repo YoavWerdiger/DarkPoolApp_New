@@ -19,8 +19,9 @@ describe('media preview before send', () => {
     expect(src).toMatch(/backgroundColor: tokens\.colors\.background\.cardSolid/);
     // כמו שורת הכתיבה בצ'אט: כפתור שליחה ירוק
     expect(src).toMatch(/backgroundColor: tokens\.colors\.primary\.main/);
-    // חלון כמו המצלמה / הסטורי — לא על כל המסך
-    expect(src).toMatch(/stableCameraPreviewFrame/);
+    // ברוחב מלא (כמו וואטסאפ) — מותאם לכל המסך, הסרגל והכיתוב צפים מעל
+    expect(src).not.toMatch(/stableCameraPreviewFrame/);
+    expect(src).toMatch(/const mediaFrame = \{ top: 0, height: screenH \}/);
     expect(src).toMatch(/color: tokens\.colors\.text\.primary/);
   });
 });

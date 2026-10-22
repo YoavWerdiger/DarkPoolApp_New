@@ -22,7 +22,19 @@ import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../../config/publicEnv';
 // ============================================
 
 const CHAT_MEDIA_BUCKET = 'chat-media';
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB — גודל הקובץ שעולה בפועל (אחרי דחיסה)
+/** מקור גדול מזה לא נפענח בכלל (זיכרון). אחרי הקטנה ל-2048px גם 48MP יוצא ~0.5–1MB */
+const MAX_IMAGE_SOURCE_SIZE = 30 * 1024 * 1024; // 30MB
+/** צלע ארוכה מקסימלית לתמונת צ'אט — "HD" כמו WhatsApp; מסך טלפון לא מציג יותר */
+const IMAGE_MAX_EDGE = 2048;
+/** איכות JPEG לתמונות/צילומים — ללא הבדל נראה לעין, ~פי 2 קטן מ-0.92+ */
+const IMAGE_JPEG_QUALITY = 0.82;
+/** מקור PNG (צילומי מסך/טקסט) — איכות גבוהה יותר כדי שטקסט יישאר חד */
+const IMAGE_JPEG_QUALITY_GRAPHICS = 0.9;
+/** JPEG קטן מזה ובתוך IMAGE_MAX_EDGE עולה כמו שהוא (בלי דחיסה חוזרת) */
+const IMAGE_PASSTHROUGH_MAX_BYTES = 500 * 1024;
+/** thumbnail של וידאו (poster) — פריים מלא ב-4K שוקל 1–2MB; בועה לא צריכה יותר מזה */
+const VIDEO_THUMB_MAX_EDGE = 720;
 const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB
 const MAX_AUDIO_SIZE = 50 * 1024 * 1024; // 50MB
 const MAX_DOCUMENT_SIZE = 50 * 1024 * 1024; // 50MB
@@ -144,6 +156,74 @@ export async function createLocalVideoThumbnail(uri: string): Promise<string | n
   return null;
 }
 
+/** גודל בבתים של base64 (בלי לפענח) */
+function base64ByteLength(b64: string): number {
+  const padding = b64.endsWith('==') ? 2 : b64.endsWith('=') ? 1 : 0;
+  return Math.floor((b64.length * 3) / 4) - padding;
+}
+
+type PreparedImage = { base64: string; width: number; height: number; size: number };
+
+/**
+ * מכין תמונת צ'אט להעלאה: HEIC/PNG/JPEG → JPEG, צלע ארוכה ≤ 2048px, איכות 0.82
+ * (0.9 למקור PNG — צילומי מסך עם טקסט). פענוח אחד בלבד; ההקטנה רצה על ה-bitmap המפוענח.
+ * כיוון EXIF מוחל בפענוח (כמו manipulateAsync הקודם), ולכן width/height תואמים לקובץ שעולה.
+ * JPEG שכבר קטן (< 500KB) ובתוך המידות עולה כמו שהוא — אין דחיסה חוזרת שפוגעת באיכות.
+ */
+export async function prepareImageForUpload(
+  uri: string,
+  sourceBytes: number,
+): Promise<PreparedImage> {
+  const ext = (uri.split('?')[0].split('.').pop() || '').toLowerCase();
+  const isJpeg = ext === 'jpg' || ext === 'jpeg';
+  const isGraphics = ext === 'png' || ext === 'gif' || ext === 'webp';
+
+  const decodeCtx = ImageManipulator.ImageManipulator.manipulate(uri);
+  const decoded = await decodeCtx.renderAsync();
+  let resizeCtx: ImageManipulator.ImageManipulatorContext | null = null;
+  let resized: ImageManipulator.ImageRef | null = null;
+  try {
+    const srcW = decoded.width;
+    const srcH = decoded.height;
+    const longEdge = Math.max(srcW, srcH);
+    const needsResize = longEdge > IMAGE_MAX_EDGE;
+
+    if (!needsResize && isJpeg && sourceBytes > 0 && sourceBytes <= IMAGE_PASSTHROUGH_MAX_BYTES) {
+      const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
+      return { base64, width: srcW, height: srcH, size: sourceBytes };
+    }
+
+    let target = decoded;
+    if (needsResize) {
+      resizeCtx = ImageManipulator.ImageManipulator.manipulate(decoded);
+      resizeCtx.resize(srcW >= srcH ? { width: IMAGE_MAX_EDGE } : { height: IMAGE_MAX_EDGE });
+      resized = await resizeCtx.renderAsync();
+      target = resized;
+    }
+
+    const saved = await target.saveAsync({
+      compress: isGraphics ? IMAGE_JPEG_QUALITY_GRAPHICS : IMAGE_JPEG_QUALITY,
+      format: ImageManipulator.SaveFormat.JPEG,
+      base64: true,
+    });
+    const base64 = saved.base64!;
+    const size = base64ByteLength(base64);
+
+    // JPEG בלי הקטנה שיצא גדול יותר מהמקור — עדיף המקור (בלי אובדן דור נוסף)
+    if (!needsResize && isJpeg && sourceBytes > 0 && size >= sourceBytes) {
+      const original = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
+      return { base64: original, width: srcW, height: srcH, size: sourceBytes };
+    }
+
+    return { base64, width: saved.width, height: saved.height, size };
+  } finally {
+    resized?.release();
+    resizeCtx?.release();
+    decoded.release();
+    decodeCtx.release();
+  }
+}
+
 async function readLocalThumbBase64(localThumbnailUri: string): Promise<string | null> {
   try {
     return await FileSystem.readAsStringAsync(localThumbnailUri, { encoding: 'base64' });
@@ -186,9 +266,9 @@ export async function uploadImage(
       return { url: null, thumbnail_url: null, width: 0, height: 0, size: 0, error: { code: 'FILE_NOT_FOUND', message: 'הקובץ לא נמצא' } };
     }
 
-    if (fileInfo.size && fileInfo.size > MAX_IMAGE_SIZE) {
+    if (fileInfo.size && fileInfo.size > MAX_IMAGE_SOURCE_SIZE) {
       activeUploads.delete(uploadId);
-      return { url: null, thumbnail_url: null, width: 0, height: 0, size: 0, error: { code: 'FILE_TOO_LARGE', message: 'התמונה גדולה מדי (מקסימום 10MB)' } };
+      return { url: null, thumbnail_url: null, width: 0, height: 0, size: 0, error: { code: 'FILE_TOO_LARGE', message: 'התמונה גדולה מדי (מקסימום 30MB)' } };
     }
 
     if (handle.cancelled) return CANCELLED_RESULT;
@@ -200,17 +280,13 @@ export async function uploadImage(
     // ⚡ compress מלא + הכנת thumb במקביל (reuse thumb מקומי אם כבר נוצר בבחירה)
     const localThumb = options?.localThumbnailUri || null;
     const [compressedResult, thumbBase64Result] = await Promise.all([
-      (async (): Promise<{ base64: string; width: number; height: number }> => {
+      (async (): Promise<PreparedImage> => {
         try {
-          const compressed = await ImageManipulator.manipulateAsync(
-            uri,
-            [],
-            { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG, base64: true },
-          );
-          return { base64: compressed.base64!, width: compressed.width, height: compressed.height };
-        } catch {
+          return await prepareImageForUpload(uri, fileInfo.size || 0);
+        } catch (prepError) {
+          logger.warn('ChatMedia', 'image compression failed, uploading original', prepError);
           const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
-          return { base64, width: 0, height: 0 };
+          return { base64, width: 0, height: 0, size: fileInfo.size || base64ByteLength(base64) };
         }
       })(),
       (async (): Promise<string | null> => {
@@ -235,6 +311,15 @@ export async function uploadImage(
     const thumbBase64 = thumbBase64Result;
 
     if (handle.cancelled) return CANCELLED_RESULT;
+
+    if (imageToUpload.size > MAX_IMAGE_SIZE) {
+      activeUploads.delete(uploadId);
+      return { url: null, thumbnail_url: null, width: 0, height: 0, size: 0, error: { code: 'FILE_TOO_LARGE', message: 'התמונה גדולה מדי (מקסימום 10MB)' } };
+    }
+    logger.debug(
+      'ChatMedia',
+      `uploadImage: ${fileInfo.size || 0}B → ${imageToUpload.size}B (${imageToUpload.width}x${imageToUpload.height})`,
+    );
 
     if (onProgress) {
       onProgress({ file_name: '', progress: 40, uploaded_bytes: 0, total_bytes: fileInfo.size || 0 });
@@ -286,7 +371,7 @@ export async function uploadImage(
     }
 
     if (onProgress) {
-      onProgress({ file_name: fileName, progress: 100, uploaded_bytes: fileInfo.size || 0, total_bytes: fileInfo.size || 0, url: fileName });
+      onProgress({ file_name: fileName, progress: 100, uploaded_bytes: imageToUpload.size, total_bytes: imageToUpload.size, url: fileName });
     }
 
     activeUploads.delete(uploadId);
@@ -295,7 +380,7 @@ export async function uploadImage(
       thumbnail_url: thumbnailUrl,
       width: imageToUpload.width,
       height: imageToUpload.height,
-      size: fileInfo.size || 0,
+      size: imageToUpload.size,
       error: null,
       uploadId,
     };
@@ -499,10 +584,26 @@ export async function uploadVideo(
     // Thumbnail — best-effort. הת'אמב עצמו הוא JPEG של ~50KB, אז base64 בסדר.
     let thumbnailUrl: string | null = null;
     try {
-      const { uri: thumbnailUri } = await VideoThumbnails.getThumbnailAsync(uri, {
+      const frame = await VideoThumbnails.getThumbnailAsync(uri, {
         time: 1000,
         quality: 0.7,
       });
+      let thumbnailUri = frame.uri;
+      // פריים מלא (4K/1080p) שוקל עד ~2MB — מקטינים ל-720px; ה-poster מוצג רק בבועה
+      if (thumbnailUri && Math.max(frame.width || 0, frame.height || 0) > VIDEO_THUMB_MAX_EDGE) {
+        try {
+          const small = await ImageManipulator.manipulateAsync(
+            thumbnailUri,
+            [{ resize: (frame.width || 0) >= (frame.height || 0)
+              ? { width: VIDEO_THUMB_MAX_EDGE }
+              : { height: VIDEO_THUMB_MAX_EDGE } }],
+            { compress: 0.75, format: ImageManipulator.SaveFormat.JPEG },
+          );
+          if (small.uri) thumbnailUri = small.uri;
+        } catch {
+          /* נשאר עם הפריים המלא */
+        }
+      }
 
       if (thumbnailUri) {
         const thumbnailBase64 = await FileSystem.readAsStringAsync(thumbnailUri, { encoding: 'base64' });

@@ -347,6 +347,11 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
                 flash={flashOn ? 'on' : 'off'}
                 enableTorch={flashOn && facing === 'back'}
                 animateShutter={false}
+                // וידאו לצ'אט: 1080p (ברירת המחדל, מפורש) + 8Mbps — באנדרואיד ברירת המחדל
+                // של CameraX היא ~12–20Mbps; 8Mbps H.264 ב-1080p נראה זהה ושוקל ~חצי.
+                // ב-iOS ה-bitrate מוחל רק עם codec מפורש ב-recordAsync — לא משנים שם.
+                videoQuality="1080p"
+                videoBitrate={8_000_000}
                 // אבחון קפיאה: מוכנות / שגיאת הרכבה ב-Metro
                 onCameraReady={() => {
                   logger.debug('ChatAttachCamera', 'camera ready');

@@ -127,7 +127,8 @@ const VOICE_RECORDING_OPTIONS: Audio.RecordingOptions = {
     audioEncoder: Audio.AndroidAudioEncoder.AAC,
     sampleRate: 44100,
     numberOfChannels: 1,
-    bitRate: 128000,
+    // AAC מונו 64kbps — שקוף לדיבור (WhatsApp ~16–32kbps Opus); חצי מ-128kbps
+    bitRate: 64000,
   },
   ios: {
     extension: '.wav',
@@ -768,11 +769,17 @@ function ChatInputImpl({
           if (mediaFile.type === 'video' && mediaFile.duration && mediaFile.duration > 0) {
             metadata.media_duration = mediaFile.duration;
           }
-          // מידות — הבועה מוצגת ביחס האמיתי (גרף 16:9 לא נחתך לריבוע)
-          if (mediaFile.width && mediaFile.height) {
+          // מידות — הבועה מוצגת ביחס האמיתי (גרף 16:9 לא נחתך לריבוע).
+          // תמונה: המידות/גודל של הקובץ שעלה בפועל (אחרי הקטנה ל-2048px), אחרת של הבחירה
+          const uploaded = uploadResult as { width?: number; height?: number; size?: number };
+          if (mediaFile.type === 'image' && uploaded.width && uploaded.height) {
+            metadata.media_width = uploaded.width;
+            metadata.media_height = uploaded.height;
+          } else if (mediaFile.width && mediaFile.height) {
             metadata.media_width = mediaFile.width;
             metadata.media_height = mediaFile.height;
           }
+          if (uploaded.size && uploaded.size > 0) metadata.media_size = uploaded.size;
 
           await onSendMessage(firstCaption.trim(), uploadResult.url, messageType, metadata);
 
@@ -918,9 +925,13 @@ function ChatInputImpl({
             existing_optimistic_id: itemTempId,
             client_message_id: optimisticClientIds[index],
             media_group_id: mediaGroupId,
-            ...(mediaFile.width && mediaFile.height
-              ? { media_width: mediaFile.width, media_height: mediaFile.height }
-              : {}),
+            // תמונה: מידות הקובץ שעלה בפועל (אחרי הקטנה), אחרת של הבחירה
+            ...(mediaFile.type === 'image' && uploadResult.width && uploadResult.height
+              ? { media_width: uploadResult.width, media_height: uploadResult.height }
+              : mediaFile.width && mediaFile.height
+                ? { media_width: mediaFile.width, media_height: mediaFile.height }
+                : {}),
+            ...(uploadResult.size > 0 ? { media_size: uploadResult.size } : {}),
           };
           if ('thumbnail_url' in uploadResult && uploadResult.thumbnail_url) {
             metadata.media_thumbnail_url = uploadResult.thumbnail_url;

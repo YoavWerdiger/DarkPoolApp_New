@@ -2139,6 +2139,7 @@ export default function ChatGroupScreen() {
       ) : (
         <ChatInput
           groupId={groupId}
+          groupName={(currentGroup?.id === groupId ? currentGroup : shellGroup)?.name ? chatGroupDisplayName((currentGroup?.id === groupId ? currentGroup : shellGroup)!.name) : undefined}
           onSendMessage={handleSendMessage}
           onTyping={handleTyping}
           replyTo={replyTo}

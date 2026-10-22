@@ -28,7 +28,7 @@ import {
 import * as DocumentPicker from 'expo-document-picker';
 import { Audio, isExpoAvAvailable, EXPO_AV_UNAVAILABLE_MESSAGE } from '../../lib/expoAvSafe';
 import { ChatMessage, ChatMessageType } from '../../types/chat.types';
-import { chatMediaService } from '../../services/chat';
+import { chatMediaService, sendChatMessage } from '../../services/chat';
 import { Ionicons } from '@expo/vector-icons';
 import VoiceWaveform from './VoiceWaveform';
 import VoiceWaveformWithProgress from './VoiceWaveformWithProgress';
@@ -230,6 +230,8 @@ function attachLocalVideoThumbs(
 
 interface ChatInputProps {
   groupId: string;
+  /** שם הקבוצה — צ׳יפ «נשלח אל» בפריוויו המדיה */
+  groupName?: string;
   onSendMessage: (content: string, mediaUrl?: string, mediaType?: ChatMessageType, metadata?: { waveformData?: number[];[key: string]: any }) => Promise<void>;
   onTyping?: (isTyping: boolean) => void;
   replyTo?: {
@@ -245,6 +247,7 @@ interface ChatInputProps {
 
 function ChatInputImpl({
   groupId,
+  groupName,
   onSendMessage,
   onTyping,
   replyTo,
@@ -630,7 +633,48 @@ function ChatInputImpl({
   // Send Media with Caption
   // ============================================
 
-  const handleSendMedia = async (mediaFiles: MediaFile[], captions: Record<string, string>) => {
+  /**
+   * «שלח גם ל…» מהפריוויו: אחרי שהמדיה עלתה — אותה הודעה (אותו קובץ בשרת) לכל קבוצה נוספת.
+   * הודעה רגילה (לא «הועבר»), בלי העלאה חוזרת.
+   */
+  const sendCopiesToGroups = (
+    groupIds: string[],
+    content: string,
+    mediaUrl: string,
+    messageType: ChatMessageType,
+    metadata: Record<string, any>,
+  ) => {
+    if (!user || groupIds.length === 0) return;
+    for (const gid of groupIds) {
+      void sendChatMessage(
+        {
+          group_id: gid,
+          content,
+          message_type: messageType,
+          media_url: mediaUrl,
+          media_thumbnail_url: metadata.media_thumbnail_url,
+          media_size: metadata.media_size,
+          media_duration: metadata.media_duration,
+          media_width: metadata.media_width,
+          media_height: metadata.media_height,
+          media_file_name: metadata.media_file_name,
+          client_message_id: makeClientMessageId(),
+          metadata,
+        },
+        user.id,
+      )
+        .then(({ error }) => {
+          if (error) logger.warn('ChatInput', `send copy to ${gid} failed`, error);
+        })
+        .catch((e) => logger.warn('ChatInput', `send copy to ${gid} threw`, e));
+    }
+  };
+
+  const handleSendMedia = async (
+    mediaFiles: MediaFile[],
+    captions: Record<string, string>,
+    extraGroupIds: string[] = [],
+  ) => {
     if (mediaFiles.length === 0 || !user) {
       legacyAlert('שגיאה', 'לא נמצא קובץ מדיה');
       return;
@@ -785,6 +829,7 @@ function ChatInputImpl({
           if (uploaded.size && uploaded.size > 0) metadata.media_size = uploaded.size;
 
           await onSendMessage(firstCaption.trim(), uploadResult.url, messageType, metadata);
+          sendCopiesToGroups(extraGroupIds, firstCaption.trim(), uploadResult.url, messageType, metadata);
 
         } catch (error: any) {
           updateOptimisticMessage(tempId, {
@@ -948,6 +993,13 @@ function ChatInputImpl({
             uploadResult.url,
             messageType,
             metadata
+          );
+          sendCopiesToGroups(
+            extraGroupIds,
+            index === 0 ? firstCaption.trim() : '',
+            uploadResult.url,
+            messageType,
+            metadata,
           );
 
           return uploadResult.url;
@@ -2713,6 +2765,8 @@ function ChatInputImpl({
           }}
           onSend={handleSendMedia}
           mediaFiles={selectedMedia}
+          currentGroupId={groupId}
+          targetGroupName={groupName}
         />
       )}
 
@@ -2800,6 +2854,7 @@ function ChatInputImpl({
 const ChatInput = memo(ChatInputImpl, (prev, next) => {
   return (
     prev.groupId === next.groupId &&
+    prev.groupName === next.groupName &&
     prev.onSendMessage === next.onSendMessage &&
     prev.onTyping === next.onTyping &&
     prev.onCancelReply === next.onCancelReply &&

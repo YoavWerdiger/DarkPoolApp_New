@@ -22,8 +22,11 @@ import { useTheme } from '../../context/ThemeContext';
 interface MediaPreviewModalProps {
   visible: boolean;
   onClose: () => void;
-  onSend: (mediaFiles: MediaFile[], captions: Record<string, string>) => void;
+  onSend: (mediaFiles: MediaFile[], captions: Record<string, string>, extraGroupIds?: string[]) => void;
   mediaFiles: MediaFile[];
+  /** צ׳יפ «נשלח אל» — הקבוצה הנוכחית; לחיצה פותחת בחירת קבוצות נוספות */
+  currentGroupId?: string;
+  targetGroupName?: string;
   /** בתוך מודל שכבר פתוח — בלי מודל שני ובלי אנימציית כניסה. */
   embedded?: boolean;
 }
@@ -33,6 +36,7 @@ import { CHAT_LAYOUT, CHAT_TYPE, chatPhysicalRightText } from './chatLayout';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { useMediaZoomGestures } from './useMediaZoomGestures';
+import ForwardMessageModal from './ForwardMessageModal';
 import { MediaBlurBackdrop, MediaKeyboardDim } from './MediaViewerChrome';
 
 function MediaPreviewBody({
@@ -41,7 +45,18 @@ function MediaPreviewBody({
   onSend,
   mediaFiles,
   embedded = false,
+  currentGroupId,
+  targetGroupName,
 }: MediaPreviewModalProps) {
+  // «שלח גם ל…» — קבוצות נוספות מעבר לנוכחית (נבחרות בשיט ההעברה)
+  const [extraGroupIds, setExtraGroupIds] = useState<string[]>([]);
+  const [targetsSheetOpen, setTargetsSheetOpen] = useState(false);
+  useEffect(() => {
+    if (!visible) {
+      setExtraGroupIds([]);
+      setTargetsSheetOpen(false);
+    }
+  }, [visible]);
   const insets = useSafeAreaInsets();
   const safeBottom = Math.max(insets.bottom, initialWindowMetrics?.insets.bottom ?? 0);
   const { width: screenW, height: screenH } = useWindowDimensions();
@@ -268,7 +283,7 @@ function MediaPreviewBody({
       return;
     }
     // Send with copies of data, then close
-    onSend([...validMediaFiles], { ...captions });
+    onSend([...validMediaFiles], { ...captions }, [...extraGroupIds]);
     onClose();
   };
 
@@ -799,17 +814,56 @@ function MediaPreviewBody({
                 blurOnSubmit={false}
                 onSubmitEditing={handleSend}
               />
-              <Pressable
-                onPress={handleSend}
-                style={[styles.sendBtn, { backgroundColor: tokens.colors.primary.main }]}
-                accessibilityRole="button"
-                accessibilityLabel="שליחה"
-              >
-                <Ionicons name="send" size={22} color={tokens.colors.text.inverse} />
-              </Pressable>
+              {targetGroupName ? null : (
+                <Pressable
+                  onPress={handleSend}
+                  style={[styles.sendBtn, { backgroundColor: tokens.colors.primary.main }]}
+                  accessibilityRole="button"
+                  accessibilityLabel="שליחה"
+                >
+                  <Ionicons name="send" size={22} color={tokens.colors.text.inverse} />
+                </Pressable>
+              )}
             </View>
+
+            {/* כמו וואטסאפ: מתחת לכיתוב — «נשלח אל» משמאל (לחיצה: העבר הודעה לקבוצות נוספות), שליחה מימין */}
+            {targetGroupName ? (
+              <View style={styles.targetRow}>
+                <Pressable
+                  onPress={() => {
+                    void HapticFeedback.selection();
+                    setTargetsSheetOpen(true);
+                  }}
+                  style={[styles.targetChip, { backgroundColor: tokens.colors.background.cardSolid }]}
+                  accessibilityRole="button"
+                  accessibilityLabel="שליחה לקבוצות נוספות"
+                >
+                  <Text style={[styles.targetChipText, { color: tokens.colors.text.primary }]} numberOfLines={1}>
+                    {extraGroupIds.length > 0
+                      ? `${targetGroupName} +${extraGroupIds.length}`
+                      : targetGroupName}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={handleSend}
+                  style={[styles.sendBtn, { backgroundColor: tokens.colors.primary.main }]}
+                  accessibilityRole="button"
+                  accessibilityLabel="שליחה"
+                >
+                  <Ionicons name="send" size={22} color={tokens.colors.text.inverse} />
+                </Pressable>
+              </View>
+            ) : null}
           </Animated.View>
         </RNAnimatedView>
+        <ForwardMessageModal
+          visible={targetsSheetOpen}
+          onClose={() => setTargetsSheetOpen(false)}
+          currentGroupId={currentGroupId}
+          onForward={async (ids) => {
+            setExtraGroupIds(ids);
+          }}
+        />
       </GestureHandlerRootView>
   );
 
@@ -915,6 +969,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     backgroundColor: 'transparent',
     zIndex: 3,
+  },
+  targetRow: {
+    direction: 'ltr',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  targetChip: {
+    flexShrink: 1,
+    maxWidth: '70%',
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 12,
+  },
+  targetChipText: {
+    fontSize: 15,
+    fontWeight: '500',
+    writingDirection: 'rtl',
   },
   captionRow: {
     direction: 'ltr',

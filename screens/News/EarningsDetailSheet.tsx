@@ -28,6 +28,8 @@ import { getTradingViewEarningsChartHTML } from '../Markets/embeds/tradingViewEm
 import { useTheme } from '../../context/ThemeContext';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import type { EarningsReport } from '../../services/earningsService';
+import ShareDestinationSheet from '../../components/share/ShareDestinationSheet';
+import { buildEarningsAttachment } from '../../types/shareableEntity';
 
 type IonName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -38,8 +40,6 @@ type Props = {
   visible: boolean;
   report: EarningsReport | null;
   onClose: () => void;
-  /** שיתוף הדוח (צ׳אט / ציוצים) — ההורה סוגר את השיט ופותח את שיט השיתוף */
-  onShare?: (report: EarningsReport) => void;
 };
 
 function toNum(v: unknown): number | null {
@@ -88,7 +88,7 @@ function dateLabel(iso?: string | null): string {
   return `${day}/${m}/${y}`;
 }
 
-export default function EarningsDetailSheet({ visible, report, onClose, onShare }: Props) {
+export default function EarningsDetailSheet({ visible, report, onClose }: Props) {
   const tokens = useDesignTokens();
   return (
     <BottomSheet
@@ -106,20 +106,18 @@ export default function EarningsDetailSheet({ visible, report, onClose, onShare 
       topCornerRadius={tokens.borderRadius.xl}
       contentPaddingBottom={0}
     >
-      {report ? <Body report={report} onClose={onClose} onShare={onShare} /> : null}
+      {report ? <Body report={report} onClose={onClose} /> : null}
     </BottomSheet>
   );
 }
 
-function Body({
-  report,
-  onClose,
-  onShare,
-}: {
-  report: EarningsReport;
-  onClose: () => void;
-  onShare?: (report: EarningsReport) => void;
-}) {
+function Body({ report, onClose }: { report: EarningsReport; onClose: () => void }) {
+  // שיט השיתוף נפתח מעל השיט הזה (לא אחרי סגירה — שני מודלים ברצף ב-iOS הקפיאו את המסך)
+  const [shareOpen, setShareOpen] = React.useState(false);
+  const shareAttachment = useMemo(
+    () => buildEarningsAttachment(report as unknown as Parameters<typeof buildEarningsAttachment>[0]),
+    [report],
+  );
   const tokens = useDesignTokens();
   const { isDarkMode } = useTheme();
   const insets = useSafeAreaInsets();
@@ -187,14 +185,14 @@ function Body({
             </DayNavBlurButton>
           </View>
           <View style={styles.topSpacer} />
-          {onShare ? (
+          {shareAttachment ? (
             <View style={styles.closeSlot}>
               <DayNavBlurButton
                 glass
                 glassIntensity="light"
                 onPress={() => {
                   void HapticFeedback.selection();
-                  onShare(report);
+                  setShareOpen(true);
                 }}
                 size={HEADER_BACK_BTN_SIZE}
                 accessibilityLabel="שיתוף"
@@ -280,6 +278,14 @@ function Body({
           </UICard>
         </View>
       </ScrollView>
+
+      <ShareDestinationSheet
+        visible={shareOpen}
+        attachment={shareAttachment}
+        onClose={() => setShareOpen(false)}
+        // אחרי שיתוף בפועל (מנווט לצ׳אט / לציוצים) — סוגרים גם את שיט הפירוט
+        onShared={onClose}
+      />
     </View>
   );
 }

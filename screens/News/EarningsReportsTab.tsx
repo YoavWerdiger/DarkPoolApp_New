@@ -1411,11 +1411,6 @@ export default function EarningsReportsTab({
         visible={!!detailReport}
         report={detailReport}
         onClose={() => setDetailReport(null)}
-        onShare={(r) => {
-          setDetailReport(null);
-          // אחרי שהשיט נסגר — שני מודלים יחד ב-iOS נתקעים
-          setTimeout(() => setShareReport(r), 450);
-        }}
       />
       <ShareDestinationSheet
         visible={!!shareAttachment}

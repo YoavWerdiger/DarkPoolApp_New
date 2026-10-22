@@ -38,6 +38,8 @@ type Props = {
   onSharedTweet?: () => void;
   /** שיתוף כתמונה מעוצבת (כרטיס DarkPool) — מוצג רק כשמועבר */
   onShareAsImage?: () => void;
+  /** אחרי שיתוף בפועל (צ׳אט / ציוץ) — לסגירת שיט אב שהשיט נפתח מעליו */
+  onShared?: () => void;
 };
 
 type ChatGroupRow = {
@@ -53,6 +55,7 @@ export default function ShareDestinationSheet({
   onClose,
   onSharedTweet,
   onShareAsImage,
+  onShared,
 }: Props) {
   const tokens = useDesignTokens();
   const insets = useSafeAreaInsets();
@@ -111,6 +114,7 @@ export default function ShareDestinationSheet({
     void HapticFeedback.selection();
     onClose();
     onSharedTweet?.();
+    onShared?.();
     if (rootNavigationRef.isReady()) {
       rootNavigationRef.navigate('Main', {
         screen: 'Tweets',
@@ -126,6 +130,7 @@ export default function ShareDestinationSheet({
       void HapticFeedback.selection();
       setEntityShareForGroup(groupId, attachment);
       onClose();
+      onShared?.();
       if (rootNavigationRef.isReady()) {
         rootNavigationRef.navigate('Main', {
           screen: 'Chat',
@@ -133,7 +138,7 @@ export default function ShareDestinationSheet({
         } as never);
       }
     },
-    [attachment, busy, onClose, user?.id]
+    [attachment, busy, onClose, onShared, user?.id]
   );
 
   if (!attachment) return null;

@@ -99,6 +99,21 @@ const ForgotPasswordOtpScreen = ({ navigation, route }: { navigation: any; route
     }
   };
 
+  /**
+   * השרת אישר את הקוד אבל הלקוח החזיר שגיאה (למשל שמירת סשן נכשלה ונוסתה שוב) —
+   * אם יש עכשיו סשן לאותו מייל, הקוד עבר. בלי זה המשתמש רואה «שגיאה», מנסה שוב
+   * עם אותו קוד ומקבל «פג תוקף» (קוד חד-פעמי).
+   */
+  const hasRecoverySessionFor = async (email: string): Promise<boolean> => {
+    try {
+      const { data } = await supabase.auth.getSession();
+      const sessionEmail = data?.session?.user?.email?.trim().toLowerCase();
+      return !!sessionEmail && sessionEmail === email.trim().toLowerCase();
+    } catch {
+      return false;
+    }
+  };
+
   const goToNewPassword = useCallback(() => {
     if (navigatedAfterVerify.current) return;
     navigatedAfterVerify.current = true;
@@ -131,7 +146,15 @@ const ForgotPasswordOtpScreen = ({ navigation, route }: { navigation: any; route
       await setPasswordRecoveryMode(true);
 
       const { verified, error: verifyError } = await AuthService.verifyRecoveryOtp(emailHint, otp);
+      if ((verifyError || !verified) && (await hasRecoverySessionFor(emailHint))) {
+        logger.warn('ForgotPasswordOtp', `verify reported "${verifyError}" but session exists — continuing`);
+        void HapticFeedback.success();
+        await setPasswordRecoveryMode(true);
+        goToNewPassword();
+        return;
+      }
       if (verifyError || !verified) {
+        logger.error('ForgotPasswordOtp', `verify failed: ${verifyError}`);
         // לא מנקים recovery אם כבר יש סשן (למשל ניסיון כפול אחרי הצלחה)
         await clearRecoveryIfNoSession();
         if (verifyError === 'invalid_otp') setError('הקוד שגוי. נסה שוב.');
@@ -148,7 +171,13 @@ const ForgotPasswordOtpScreen = ({ navigation, route }: { navigation: any; route
       // מחזקים את הדגל שוב לפני ניווט (מרוץ מול onAuthStateChange / SIGNED_IN)
       await setPasswordRecoveryMode(true);
       goToNewPassword();
-    } catch {
+    } catch (e) {
+      logger.error('ForgotPasswordOtp', 'verify threw', e);
+      if (await hasRecoverySessionFor(emailHint)) {
+        await setPasswordRecoveryMode(true);
+        goToNewPassword();
+        return;
+      }
       await clearRecoveryIfNoSession();
       setError('שגיאה באימות. נסה שוב.');
       void HapticFeedback.error();

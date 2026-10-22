@@ -18,6 +18,7 @@ import {
   useRegistrationExitOptional,
 } from '../../hooks/useExitRegistration';
 
+import { logger } from '../../utils/logger';
 const RegistrationPhoneScreen = ({ navigation }: { navigation: any }) => {
   const { data, setData } = useRegistration();
   const exitRegistration = useRegistrationExitOptional();
@@ -40,6 +41,7 @@ const RegistrationPhoneScreen = ({ navigation }: { navigation: any }) => {
     try {
       const { exists, error: phoneError } = await AuthService.checkPhoneExists(phone.trim());
       if (phoneError) {
+        logger.error('RegistrationPhone', `checkPhoneExists failed: ${phoneError}`);
         setError('שגיאה בבדיקת הטלפון');
         return;
       }

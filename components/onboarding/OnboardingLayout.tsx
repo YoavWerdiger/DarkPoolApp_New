@@ -193,8 +193,11 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
 
   const isFocused = density === 'focused';
   const hasHeader = !!title || !!subtitle;
-  const Content = scrollable ? ScrollView : View;
-  const contentProps = scrollable
+  // Android: כשהמקלדת פתוחה האזור מתכווץ — View לא גולל ולא חותך, והתוכן (אווטאר, כיתוב)
+  // נמרח מתחת לכפתור ה-footer. ScrollView חותך וגולל.
+  const useScroll = scrollable || Platform.OS === 'android';
+  const Content = useScroll ? ScrollView : View;
+  const contentProps = useScroll
     ? {
         showsVerticalScrollIndicator: false,
         contentContainerStyle: {
@@ -289,7 +292,9 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
                     paddingHorizontal: HP,
                     paddingTop: hasTopBar ? (isFocused ? 20 : 14) : isFocused ? 28 : 20,
                     paddingBottom: footer ? 12 : 24,
-                    flex: scrollable ? undefined : 1,
+                    flex: useScroll ? undefined : 1,
+                    // בתוך ScrollView (contentContainer flexGrow:1) — ממלא את הגובה כמו flex:1
+                    flexGrow: 1,
                   }}
                 >
                   {hasHeader ? (

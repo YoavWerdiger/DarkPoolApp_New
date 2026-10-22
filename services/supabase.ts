@@ -2,10 +2,12 @@ import { createClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MediaFile } from './mediaService';
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../config/publicEnv';
+import { authSessionStorage } from '../lib/authSessionStorage';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
-    storage: AsyncStorage,
+    // כתיבה עם ניקוי קאשים בכישלון (תקרת AsyncStorage ב-Android)
+    storage: authSessionStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,

@@ -18,8 +18,9 @@ import type { ChatMessage } from '../types/chat.types';
 const LEGACY_V1_PREFIX = '@chat_messages_cache_v1';
 const PREFIX = '@chat_messages_cache_v2';
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // שבוע
-const PER_GROUP_LIMIT = 200; // הודעות אחרונות לכל קבוצה (חלון unread + הקשר)
-const MAX_GROUPS = 25; // תקרת קבוצות לגיבוי (LRU לפי עדכניות)
+// 25×200 הודעות הגיעו ל-5–10MB ומילאו את תקרת AsyncStorage ב-Android (6MB) — הסשן לא נשמר
+const PER_GROUP_LIMIT = 100; // הודעות אחרונות לכל קבוצה (חלון unread + הקשר)
+const MAX_GROUPS = 12; // תקרת קבוצות לגיבוי (LRU לפי עדכניות)
 const PERSIST_DEBOUNCE_MS = 1500;
 
 type IndexEntry = { groupId: string; savedAt: number };

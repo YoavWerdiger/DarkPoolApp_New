@@ -1334,20 +1334,22 @@ export default function StoryViewer({
     const d = Math.min(1, dragY.value / SCREEN_HEIGHT);
     return {
       flex: 1,
-      opacity: present.value,
+      // בלי opacity / scale מ-present: בבילד פרודקשן ב-iOS העדכון הראשון של ערך מונפש בתוך Modal
+      // לא תמיד מגיע למסך עד רינדור נוסף → הסטורי נשאר שקוף (מסך שחור / «קפיאה»).
+      // את הכניסה עושה ה-Modal עצמו (animationType="fade", נייטיב).
       // רק ערכים מספריים באנימציה (overflow סטטי — styles.stageClip)
       borderRadius: d > 0 ? 18 : 0,
       transform: [
         { translateY: dismissY.value + dragY.value },
         // מתכווץ תוך כדי משיכה — כמו תצוגת התמונה
-        { scale: (0.96 + present.value * 0.04) * (1 - d * 0.25) },
+        { scale: 1 - d * 0.25 },
       ],
     };
   });
   // הרקע השחור דועך במשיכה — רואים את המסך שמתחת
-  // גם בפתיחה: הרקע נכנס יחד עם הסטורי (present) — קודם שחור מלא מיד והסטורי דעך פנימה → הבזק שחור
+  // (הכניסה — fade של ה-Modal; כאן רק הדעיכה במשיכה, ערך התחלתי 0 → שחור מלא מהפריים הראשון)
   const containerAnim = useAnimatedStyle(() => ({
-    backgroundColor: `rgba(0,0,0,${present.value * (1 - Math.min(1, dragY.value / (SCREEN_HEIGHT * 0.5)) * 0.9)})`,
+    backgroundColor: `rgba(0,0,0,${1 - Math.min(1, dragY.value / (SCREEN_HEIGHT * 0.5)) * 0.9})`,
   }));
 
   const [confirmDelete, setConfirmDelete] = useState<{ visible: boolean; error?: string }>({
@@ -1989,7 +1991,7 @@ export default function StoryViewer({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="none" statusBarTranslucent onRequestClose={requestClose}>
+    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={requestClose}>
       <StatusBar hidden />
       <GestureHandlerRootView style={styles.container}>
         <Reanimated.View style={[StyleSheet.absoluteFill, containerAnim]} pointerEvents="none" />

@@ -2143,9 +2143,11 @@ const reactStyles = StyleSheet.create({
   },
 });
 const styles = StyleSheet.create({
+  // שקוף — השחור מגיע רק מהשכבה הדועכת (containerAnim), כך שבמשיכה למטה רואים את המסך שמתחת
+  // (קודם #000 קבוע מתחת לשכבה → מסך שחור ביציאה בהחלקה)
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: 'transparent',
   },
   stageClip: {
     overflow: 'hidden',

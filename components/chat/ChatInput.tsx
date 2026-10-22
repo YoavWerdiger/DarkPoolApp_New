@@ -40,8 +40,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useChatDraft } from '../../hooks/useChatDraft';
 import { consumeShareForGroup, subscribePendingShare } from '../../lib/pendingShare';
 import { useTypingBroadcast } from '../../hooks/useTypingBroadcast';
-import { useClipboardImagePaste } from '../../hooks/useClipboardImagePaste';
-import { addPasteImagesListener, nativeImagePasteAvailable } from '../../modules/clipboard-paste';
+import { addPasteImagesListener } from '../../modules/clipboard-paste';
 import { APP_TYPE } from '../ui/appType';
 import MentionPickerSheet from '../share/MentionPickerSheet';
 import type { CommunityMention } from '../../types/tweets.types';
@@ -1069,15 +1068,6 @@ function ChatInputImpl({
     });
     return () => sub?.remove();
   }, [applyPickedMedia, disabled]);
-  const clipboardPaste = useClipboardImagePaste(
-    !nativeImagePasteAvailable && !disabled && !showMediaPreview,
-  );
-  const pasteClipboardImage = useCallback(async () => {
-    void HapticFeedback.selection();
-    const picked = await clipboardPaste.readImage();
-    if (picked) applyPickedMedia([picked], false);
-  }, [clipboardPaste, applyPickedMedia]);
-
   const [shareTick, setShareTick] = useState(0);
   useEffect(() => subscribePendingShare(() => setShareTick((n) => n + 1)), []);
   useEffect(() => {
@@ -2369,34 +2359,6 @@ function ChatInputImpl({
         </View>
       ) : null}
 
-      {clipboardPaste.available && !isVoiceCapturing ? (
-        <View style={styles.clipboardChipRow}>
-          <TouchableOpacity
-            onPress={() => void pasteClipboardImage()}
-            activeOpacity={0.8}
-            accessibilityRole="button"
-            accessibilityLabel="הדבקת תמונה מהלוח"
-          >
-            {/* אותו משטח גלס של שורת הכתיבה */}
-            <UICard
-              {...CHROME_UICARD}
-              style={[styles.clipboardChipOuter, chromeSurfaceCardStyle(DesignTokens)]}
-              contentContainerStyle={styles.clipboardChip}
-            >
-              <Ionicons name="clipboard-outline" size={16} color={DesignTokens.colors.primary.main} />
-              <Text style={styles.clipboardChipText}>הדבק תמונה מהלוח</Text>
-              <TouchableOpacity
-                onPress={clipboardPaste.dismiss}
-                hitSlop={10}
-                accessibilityRole="button"
-                accessibilityLabel="סגירה"
-              >
-                <Ionicons name="close" size={16} color={DesignTokens.colors.text.tertiary} />
-              </TouchableOpacity>
-            </UICard>
-          </TouchableOpacity>
-        </View>
-      ) : null}
 
       {(isRecording || isPaused) ? (
       <View style={styles.container}>

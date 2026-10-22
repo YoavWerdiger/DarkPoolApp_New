@@ -1,9 +1,6 @@
 import { legacyAlert } from '../../utils/appDialog';
-import { useAuth } from '../../context/AuthContext';
-import ForwardMessageModal from '../../components/chat/ForwardMessageModal';
-import { shareAttachmentToGroups } from '../../lib/shareAttachmentToGroups';
+import ShareDestinationSheet from '../../components/share/ShareDestinationSheet';
 import { buildEconomicEventAttachment } from '../../types/shareableEntity';
-import { useToast } from '../../components/ui/Toast';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { View, Text, FlatList, RefreshControl, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -743,27 +740,18 @@ export default function EconomicCalendarTab() {
   // בוטל: טעינת נתונים היסטוריים ידנית – היסטוריה נטענת בדיפולט דרך ה-cache
 
   // בחירת אירוע
-  // לחיצה ארוכה על דיווח → שיט «העבר הודעה» → כרטיס הדיווח נשלח לקבוצות שנבחרו
-  const { user: shareUser } = useAuth();
-  const { showToast } = useToast();
+  // לחיצה ארוכה על דיווח → שיט שיתוף (כמו חדשה)
   const [shareEvent, setShareEvent] = useState<EconomicEvent | null>(null);
   const handleEventLongPress = useCallback((event: EconomicEvent) => {
     void HapticFeedback.impactMedium();
     setShareEvent(event);
   }, []);
-  const forwardEvent = useCallback(
-    async (groupIds: string[]) => {
-      if (!shareEvent || !shareUser?.id) return;
-      const { sent } = await shareAttachmentToGroups(
-        buildEconomicEventAttachment(shareEvent),
-        groupIds,
-        shareUser.id,
-      );
-      void HapticFeedback.success();
-      showToast(sent === 1 ? 'הדיווח נשלח' : `הדיווח נשלח ל-${sent} קבוצות`, 'success');
-    },
-    [shareEvent, shareUser?.id, showToast],
+  // כמו שיתוף חדשה: ShareDestinationSheet עם כרטיס (צ׳אט / ציוצים)
+  const shareAttachment = useMemo(
+    () => (shareEvent ? buildEconomicEventAttachment(shareEvent) : null),
+    [shareEvent],
   );
+
 
   const handleEventPress = useCallback((event: EconomicEvent) => {
     // קבלת הסבר מקצועי למדד
@@ -1002,10 +990,10 @@ export default function EconomicCalendarTab() {
           />
         </View>
       ) : null}
-      <ForwardMessageModal
-        visible={!!shareEvent}
+      <ShareDestinationSheet
+        visible={!!shareAttachment}
+        attachment={shareAttachment}
         onClose={() => setShareEvent(null)}
-        onForward={forwardEvent}
       />
     </View>
   );

@@ -19,11 +19,8 @@ import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
 import { TickerLogo } from '../../components/ui/TickerLogo';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { APP_TYPE } from '../../components/ui/appType';
-import ForwardMessageModal from '../../components/chat/ForwardMessageModal';
-import { shareAttachmentToGroups } from '../../lib/shareAttachmentToGroups';
+import ShareDestinationSheet from '../../components/share/ShareDestinationSheet';
 import { buildEarningsAttachment } from '../../types/shareableEntity';
-import { useAuth } from '../../context/AuthContext';
-import { useToast } from '../../components/ui/Toast';
 import EarningsWeeklyView, { WeekDay, getSymbolDisplay as getWeeklySymbolDisplay } from './EarningsWeeklyView';
 
 export type EarningsViewMode = 'daily' | 'weekly';
@@ -966,27 +963,18 @@ export default function EarningsReportsTab({
 
   const handleReportPress = useCallback((_report: EarningsReport) => {}, []);
 
-  // לחיצה ארוכה על דוח → שיט «העבר הודעה» → כרטיס הדוח נשלח לקבוצות שנבחרו
-  const { user: shareUser } = useAuth();
-  const { showToast } = useToast();
+  // לחיצה ארוכה על דוח → שיט שיתוף (כמו חדשה)
   const [shareReport, setShareReport] = useState<EarningsReport | null>(null);
   const handleReportLongPress = useCallback((report: EarningsReport) => {
     void HapticFeedback.impactMedium();
     setShareReport(report);
   }, []);
-  const forwardReport = useCallback(
-    async (groupIds: string[]) => {
-      if (!shareReport || !shareUser?.id) return;
-      const { sent } = await shareAttachmentToGroups(
-        buildEarningsAttachment(shareReport as unknown as Parameters<typeof buildEarningsAttachment>[0]),
-        groupIds,
-        shareUser.id,
-      );
-      void HapticFeedback.success();
-      showToast(sent === 1 ? 'הדוח נשלח' : `הדוח נשלח ל-${sent} קבוצות`, 'success');
-    },
-    [shareReport, shareUser?.id, showToast],
+  // כמו שיתוף חדשה: ShareDestinationSheet עם כרטיס (צ׳אט / ציוצים)
+  const shareAttachment = useMemo(
+    () => (shareReport ? buildEarningsAttachment(shareReport as unknown as Parameters<typeof buildEarningsAttachment>[0]) : null),
+    [shareReport],
   );
+
 
   const openedReportFromPushRef = useRef<string | null>(null);
 
@@ -1390,10 +1378,10 @@ export default function EarningsReportsTab({
         </Animated.View>
       )}
 
-      <ForwardMessageModal
-        visible={!!shareReport}
+      <ShareDestinationSheet
+        visible={!!shareAttachment}
+        attachment={shareAttachment}
         onClose={() => setShareReport(null)}
-        onForward={forwardReport}
       />
     </View>
   );

@@ -1609,7 +1609,7 @@ export function PersonPortfolioProfileScreen({
                   source={require('../../assets/badges/rank_mark.png')}
                   style={[
                     {
-                      height: (kind === 'politician' ? 176 : 220) * 0.72,
+                      height: (kind === 'politician' ? 176 : 220) * 0.86,
                       aspectRatio: 686 / 512,
                       tintColor: tokens.colors.text.primary,
                       opacity: String(tokens.colors.background.primary) === LIGHT_CANVAS ? 0.045 : 0.055,

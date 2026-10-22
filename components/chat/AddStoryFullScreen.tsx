@@ -2068,7 +2068,8 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
         >
           <View style={StyleSheet.absoluteFill} pointerEvents="none">
             {mediaType === 'image' ? (
-              <Image source={{ uri: mediaUri! }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+              // expo-image (מוקטן לגודל התצוגה): Image של RN מפענח את התמונה המלאה (~24MP) — החלון נשאר שחור
+              <ExpoImage source={{ uri: mediaUri! }} style={StyleSheet.absoluteFill} contentFit="cover" transition={0} />
             ) : videoSurfaceReady ? (
               <View
                 pointerEvents="none"

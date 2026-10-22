@@ -38,9 +38,6 @@ import {
 } from './ChatBottomSheet';
 import { chatRtlRow, chatRtlText } from './chatDesignTokens';
 import { chatComposerSafeBottomInset } from './chatInputLayout';
-import { APP_TYPE } from '../ui/appType';
-import { APP_LAYOUT } from '../ui/appLayout';
-import UIButton from '../ui/UIButton';
 
 /** snap יחיד — קונטיינר השיט בגובה מסך מלא; חייבים לפצות על החלק מתחת ל-viewport. */
 const FORWARD_SHEET_SNAP = 0.9;
@@ -151,7 +148,7 @@ export default function ForwardMessageModal({
 
     return (
       <TouchableOpacity
-        style={styles.groupRow}
+        style={[styles.groupRow, isSelected && styles.groupRowSelected]}
         onPress={() => toggleGroupSelection(item.id)}
         activeOpacity={0.7}
         disabled={isForwarding}
@@ -173,11 +170,11 @@ export default function ForwardMessageModal({
           </Text>
         </View>
 
-        <Ionicons
-          name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
-          size={26}
-          color={isSelected ? tokens.colors.primary.main : tokens.colors.text.tertiary}
-        />
+        <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+          {isSelected ? (
+            <Ionicons name="checkmark" size={16} color={tokens.colors.text.inverse} />
+          ) : null}
+        </View>
       </TouchableOpacity>
     );
   };
@@ -209,7 +206,6 @@ export default function ForwardMessageModal({
         data={filteredGroups}
         renderItem={renderGroupItem}
         keyExtractor={(item) => item.id}
-        ItemSeparatorComponent={() => <View style={styles.rowDivider} />}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -225,6 +221,7 @@ export default function ForwardMessageModal({
       onClose={onClose}
       snapPoints={[FORWARD_SHEET_SNAP]}
       showBrandWatermark={false}
+      avoidKeyboard
       contentPaddingBottom={0}
     >
       <ChatSheetContent style={{ flex: 1, minHeight: 0 }}>
@@ -243,18 +240,68 @@ export default function ForwardMessageModal({
           <View style={styles.headerSideSpacer} />
         </View>
 
+        <View
+          style={[
+            styles.searchShell,
+            {
+              backgroundColor: tokens.colors.background.cardSolid,
+              borderColor: tokens.colors.border.divider,
+            },
+          ]}
+        >
+          <View style={styles.searchRow}>
+            <Ionicons name="search" size={18} color={tokens.colors.text.tertiary} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="חפש קבוצה..."
+              placeholderTextColor={tokens.colors.text.tertiary}
+              value={query}
+              onChangeText={setQuery}
+              returnKeyType="search"
+              autoCapitalize="none"
+              autoCorrect={false}
+              textAlign="right"
+            />
+            {query.length > 0 ? (
+              <Pressable
+                onPress={() => setQuery('')}
+                hitSlop={8}
+                style={({ pressed }) => pressed && { opacity: 0.6 }}
+                accessibilityLabel="נקה חיפוש"
+              >
+                <Ionicons name="close-circle" size={18} color={tokens.colors.text.tertiary} />
+              </Pressable>
+            ) : null}
+          </View>
+        </View>
+
         <View style={styles.listWrap}>{listBody}</View>
 
         <View style={[styles.footer, { paddingBottom: footerSafePad }]}>
-          <UIButton
-            title={selectedGroups.size > 0 ? `העבר (${selectedGroups.size})` : 'העבר'}
-            variant="primary"
-            size="lg"
-            fullWidth
-            disabled={!canForward}
-            loading={isForwarding}
+          <TouchableOpacity
+            style={[
+              styles.forwardButton,
+              selectedGroups.size === 0 && styles.forwardButtonDisabled,
+            ]}
             onPress={() => void handleForward()}
-          />
+            disabled={!canForward}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="העבר"
+          >
+            {isForwarding ? (
+              <ActivityIndicator size="small" color={tokens.colors.text.inverse} />
+            ) : (
+              <Text
+                style={[
+                  styles.forwardButtonText,
+                  selectedGroups.size === 0 && styles.forwardButtonTextDisabled,
+                ]}
+              >
+                {selectedGroups.size > 0 ? `העבר (${selectedGroups.size})` : 'העבר'}
+              </Text>
+            )}
+          </TouchableOpacity>
         </View>
       </ChatSheetContent>
     </ChatBottomSheet>
@@ -267,7 +314,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       ...chatRtlRow,
       direction: 'rtl',
       alignItems: 'center',
-      paddingBottom: APP_LAYOUT.stackGapSmall + 4,
+      paddingBottom: 12,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: tokens.colors.border.divider,
       gap: 10,
     },
     headerCenter: {
@@ -279,16 +328,39 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       width: DAY_NAV_BUTTON_SIZE,
       height: DAY_NAV_BUTTON_SIZE,
     },
-    // כמו כותרות השיטים (תגובות)
     headerTitle: {
       ...chatRtlText,
       color: tokens.colors.text.primary,
-      fontSize: APP_TYPE.sectionTitle.fontSize,
-      fontWeight: APP_TYPE.sectionTitle.fontWeight,
-      lineHeight: APP_TYPE.sectionTitle.lineHeight,
-      letterSpacing: APP_TYPE.sectionTitle.letterSpacing,
+      fontSize: 20,
+      fontWeight: '800',
+      letterSpacing: -0.35,
       textAlign: 'center',
       width: '100%',
+    },
+    searchShell: {
+      marginTop: 14,
+      marginBottom: 10,
+      borderRadius: tokens.borderRadius.search,
+      overflow: 'hidden',
+      paddingHorizontal: 14,
+      paddingVertical: 4,
+      borderWidth: StyleSheet.hairlineWidth,
+    },
+    searchRow: {
+      flexDirection: 'row',
+      direction: 'ltr',
+      alignItems: 'center',
+      gap: 10,
+      minHeight: 44,
+    },
+    searchInput: {
+      flex: 1,
+      writingDirection: 'rtl',
+      textAlign: 'right',
+      color: tokens.colors.text.primary,
+      fontSize: 16,
+      paddingVertical: Platform.OS === 'ios' ? 10 : 8,
+      backgroundColor: 'transparent',
     },
     listWrap: {
       flex: 1,
@@ -298,21 +370,22 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       flex: 1,
     },
     listContent: {
-      paddingVertical: 4,
+      paddingVertical: tokens.spacing.xs,
     },
-    // כמו שורה ברשימת הצ׳אטים — בלי דיבידרים ובלי רקע צבעוני לבחירה
     groupRow: {
       ...chatRtlRow,
       direction: 'rtl',
       alignItems: 'center',
       gap: 12,
-      paddingVertical: 8,
+      paddingVertical: 12,
+      paddingHorizontal: 4,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: tokens.colors.border.divider,
     },
-    // דיבידר בין קבוצות — מתחיל אחרי התמונה (48 + רווח 12), כמו ברשימות הצ׳אט
-    rowDivider: {
-      height: StyleSheet.hairlineWidth,
-      backgroundColor: tokens.colors.border.divider,
-      marginRight: 60,
+    groupRowSelected: {
+      backgroundColor: tokens.colors.primary.dim,
+      borderRadius: 12,
+      borderBottomColor: 'transparent',
     },
     groupAvatar: {
       width: 48,
@@ -333,14 +406,53 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       flex: 1,
       minWidth: 0,
     },
-    // בתוך שורה direction:rtl — textAlign:'left' הוא הצד הימני (צמוד לתמונה), כמו chatRtlText
     groupName: {
-      ...APP_TYPE.cardTitle,
-      ...chatRtlText,
+      fontSize: 16,
+      fontWeight: '600',
       color: tokens.colors.text.primary,
+      writingDirection: 'rtl',
+      textAlign: 'right',
+    },
+    checkbox: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      borderWidth: 1.5,
+      borderColor: tokens.colors.border.divider,
+      backgroundColor: tokens.colors.background.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      flexShrink: 0,
+    },
+    checkboxSelected: {
+      backgroundColor: tokens.colors.primary.main,
+      borderColor: tokens.colors.primary.main,
     },
     footer: {
       flexShrink: 0,
-      paddingTop: APP_LAYOUT.stackGapSmall,
+      paddingTop: 12,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: tokens.colors.border.divider,
+    },
+    forwardButton: {
+      height: 50,
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: tokens.colors.primary.main,
+    },
+    forwardButtonDisabled: {
+      backgroundColor: tokens.colors.background.primary,
+      opacity: 1,
+    },
+    forwardButtonText: {
+      ...chatRtlText,
+      fontSize: 16,
+      fontWeight: '800',
+      color: tokens.colors.text.inverse,
+      textAlign: 'center',
+    },
+    forwardButtonTextDisabled: {
+      color: tokens.colors.text.tertiary,
     },
   });

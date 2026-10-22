@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, TouchableOpacity } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, {
@@ -56,22 +56,20 @@ function IconButton({
 }) {
   const tokens = useDesignTokens();
   return (
-    <Pressable
+    // סגנון רגיל (לא פונקציה) — style כפונקציה ב-Pressable נבלע כאן והעיגול לא צויר
+    <TouchableOpacity
       onPress={() => {
         void HapticFeedback.impactLight();
         onPress();
       }}
       hitSlop={8}
-      style={({ pressed }) => [
-        styles.iconBtn,
-        { backgroundColor: tokens.colors.background.cardSolid },
-        pressed && { opacity: 0.7 },
-      ]}
+      activeOpacity={0.7}
+      style={[styles.iconBtn, { backgroundColor: tokens.colors.background.cardSolid }]}
       accessibilityRole="button"
       accessibilityLabel={label}
     >
       <Ionicons name={name} size={size} color={tokens.colors.text.primary} />
-    </Pressable>
+    </TouchableOpacity>
   );
 }
 

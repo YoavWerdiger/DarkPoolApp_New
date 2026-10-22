@@ -1191,8 +1191,9 @@ export default function ChatGroupsListScreen() {
               {
                 key: 'pin',
                 label: rowPinned ? 'ביטול נעיצה' : 'נעיצה',
-                icon: <MaterialCommunityIcons name={rowPinned ? 'pin-off-outline' : 'pin-outline'} size={21} color="#0B0B0C" />,
-                backgroundColor: tokens.colors.primary.main,
+                // עיגול ניטרלי (כמו ההשתקה) עם נעץ ירוק — ירוק = נעיצה, בלי עיגול ניאון מלא
+                icon: <MaterialCommunityIcons name={rowPinned ? 'pin-off-outline' : 'pin-outline'} size={21} color={tokens.colors.primary.main} />,
+                backgroundColor: tokens.colors.background.primary,
                 color: tokens.colors.text.primary,
                 onPress: () => { void toggleGroupPin(item); },
               },

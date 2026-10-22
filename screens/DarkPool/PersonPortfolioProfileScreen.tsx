@@ -1602,15 +1602,15 @@ export function PersonPortfolioProfileScreen({
 
           {showChart ? (
             <View style={styles.chartWrap}>
-              {/* watermark של DarkPool (השור והדוב) מאחורי הקו — בצבע אחיד של הטקסט (כהה בבהיר, בהיר בכהה), שקיפות עדינה לפי ערכת הנושא.
-                  נכס חד-צבעי ייעודי (שכבות שקיפות שומרות על הפרטים) — tint על הלוגו המקורי היה הופך אותו לכתם אחד. */}
+              {/* watermark של DarkPool (השור והדוב) מאחורי הקו — מסכת הלוגו המלאה (אותה של סמל הדרגה, הדוב שלם),
+                  בצבע אחיד של הטקסט (כהה בבהיר, בהיר בכהה), שקיפות עדינה לפי ערכת הנושא. */}
               <View pointerEvents="none" style={[styles.chartWatermark, { height: kind === 'politician' ? 176 : 220 }]}>
                 <Image
-                  source={require('../../assets/bull-bear-watermark.png')}
+                  source={require('../../assets/badges/rank_mark.png')}
                   style={[
                     {
-                      height: (kind === 'politician' ? 176 : 220) * 0.86,
-                      aspectRatio: 816 / 596,
+                      height: (kind === 'politician' ? 176 : 220) * 0.72,
+                      aspectRatio: 686 / 512,
                       tintColor: tokens.colors.text.primary,
                       opacity: String(tokens.colors.background.primary) === LIGHT_CANVAS ? 0.045 : 0.055,
                     },

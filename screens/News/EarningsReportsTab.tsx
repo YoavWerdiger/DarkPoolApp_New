@@ -20,6 +20,7 @@ import { TickerLogo } from '../../components/ui/TickerLogo';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { APP_TYPE } from '../../components/ui/appType';
 import ShareDestinationSheet from '../../components/share/ShareDestinationSheet';
+import EarningsDetailSheet from './EarningsDetailSheet';
 import { buildEarningsAttachment } from '../../types/shareableEntity';
 import EarningsWeeklyView, { WeekDay, getSymbolDisplay as getWeeklySymbolDisplay } from './EarningsWeeklyView';
 
@@ -961,7 +962,12 @@ export default function EarningsReportsTab({
     }
   }, [viewMode, weekStart, selectedDate, loadWeek, loadWindowAround]);
 
-  const handleReportPress = useCallback((_report: EarningsReport) => {}, []);
+  // לחיצה על דוח → שיט פירוט (תוצאות, גרף בטיים־פריים נמוך, פרטים)
+  const [detailReport, setDetailReport] = useState<EarningsReport | null>(null);
+  const handleReportPress = useCallback((report: EarningsReport) => {
+    void HapticFeedback.selection();
+    setDetailReport(report);
+  }, []);
 
   // לחיצה ארוכה על דוח → שיט שיתוף (כמו חדשה)
   const [shareReport, setShareReport] = useState<EarningsReport | null>(null);
@@ -1378,6 +1384,16 @@ export default function EarningsReportsTab({
         </Animated.View>
       )}
 
+      <EarningsDetailSheet
+        visible={!!detailReport}
+        report={detailReport}
+        onClose={() => setDetailReport(null)}
+        onShare={(r) => {
+          setDetailReport(null);
+          // אחרי שהשיט נסגר — שני מודלים יחד ב-iOS נתקעים
+          setTimeout(() => setShareReport(r), 350);
+        }}
+      />
       <ShareDestinationSheet
         visible={!!shareAttachment}
         attachment={shareAttachment}

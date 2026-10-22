@@ -410,3 +410,59 @@ export function getTradingViewTradeChartHTML(symbol: string, entryDate: string, 
     0
   );
 }
+
+/**
+ * גרף לשיט פירוט דוח רווח — טיים־פריים נמוך סביב הדיווח, כולל מסחר מורחב (pre/after),
+ * כדי לראות את התנודה בגלל הדוח. ככל שהדוח ישן יותר — טיים־פריים גבוה יותר.
+ */
+export function getTradingViewEarningsChartHTML(
+  symbol: string,
+  reportDate: string | null | undefined,
+  isDarkMode: boolean,
+) {
+  const clean = (symbol || '').replace(/\.US$/i, '').trim().toUpperCase();
+  const reportMs = reportDate ? new Date(`${reportDate.slice(0, 10)}T12:00:00Z`).getTime() : NaN;
+  const daysAgo = Number.isFinite(reportMs) ? (Date.now() - reportMs) / 86400000 : 0;
+  let interval = '5';
+  let range = '5D';
+  if (daysAgo > 4) {
+    interval = '15';
+    range = '1M';
+  }
+  if (daysAgo > 21) {
+    interval = '60';
+    range = '3M';
+  }
+  const config = {
+    autosize: true,
+    symbol: clean,
+    interval,
+    range,
+    timezone: 'Asia/Jerusalem',
+    theme: isDarkMode ? 'dark' : 'light',
+    style: '1',
+    locale: 'he_IL',
+    backgroundColor: 'rgba(0, 0, 0, 0)',
+    gridColor: isDarkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+    enable_publishing: false,
+    hide_top_toolbar: true,
+    hide_side_toolbar: true,
+    hide_legend: true,
+    save_image: false,
+    calendar: false,
+    hide_volume: false,
+    withdateranges: false,
+    allow_symbol_change: false,
+    // מסחר מורחב — הדוחות מתפרסמים לפני הפתיחה / אחרי הסגירה
+    enabled_features: ['pre_post_market_sessions'],
+    overrides: { 'mainSeriesProperties.sessionId': 'extended' },
+    support_host: 'https://www.tradingview.com',
+    width: '100%',
+    height: '100%',
+  };
+  return tvWidgetHtml(
+    'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js',
+    config,
+    0
+  );
+}

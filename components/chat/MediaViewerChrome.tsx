@@ -13,11 +13,12 @@ import Animated, {
 import { useAnimatedKeyboard } from 'react-native-keyboard-controller';
 import type { ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useDesignTokens } from '../ui/DesignTokens';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 const ICON = '#FFFFFF';
 /** תמונה בהירה בולעת אייקונים לבנים — הדעיכה והעיגול נותנים ניגוד בלי פס אטום. */
 const SCRIM_TOP = ['rgba(0,0,0,0.55)', 'rgba(0,0,0,0)'] as const;
 const SCRIM_BOTTOM = ['rgba(0,0,0,0)', 'rgba(0,0,0,0.6)'] as const;
-const BTN_FILL = 'rgba(0,0,0,0.38)';
 const TEXT_SHADOW = {
   textShadowColor: 'rgba(0,0,0,0.6)',
   textShadowOffset: { width: 0, height: 1 },
@@ -41,24 +42,35 @@ type Props = {
   pointerEvents?: 'box-none' | 'none';
 };
 
+/** כמו הכפתורים בפריוויו לפני שליחה ובשאר האפליקציה: עיגול 44 בצבע כרטיס, אייקון text.primary */
 function IconButton({
   name,
   label,
   onPress,
+  size = 22,
 }: {
   name: keyof typeof Ionicons.glyphMap;
   label: string;
   onPress: () => void;
+  size?: number;
 }) {
+  const tokens = useDesignTokens();
   return (
     <Pressable
-      onPress={onPress}
+      onPress={() => {
+        void HapticFeedback.impactLight();
+        onPress();
+      }}
       hitSlop={8}
-      style={styles.iconBtn}
+      style={({ pressed }) => [
+        styles.iconBtn,
+        { backgroundColor: tokens.colors.background.cardSolid },
+        pressed && { opacity: 0.7 },
+      ]}
       accessibilityRole="button"
       accessibilityLabel={label}
     >
-      <Ionicons name={name} size={24} color={ICON} />
+      <Ionicons name={name} size={size} color={tokens.colors.text.primary} />
     </Pressable>
   );
 }
@@ -128,6 +140,7 @@ export function MediaViewerChrome({
   pointerEvents = 'box-none',
 }: Props) {
   const captionText = caption?.trim();
+  const tokens = useDesignTokens();
 
   return (
     <Animated.View style={[StyleSheet.absoluteFill, styles.chromeLayer, chromeStyle]} pointerEvents={pointerEvents}>
@@ -158,15 +171,7 @@ export function MediaViewerChrome({
             </Text>
           ) : null}
         </View>
-        <Pressable
-          onPress={onClose}
-          hitSlop={10}
-          style={styles.backBtn}
-          accessibilityRole="button"
-          accessibilityLabel="חזרה"
-        >
-          <Ionicons name="chevron-forward" size={26} color={ICON} />
-        </Pressable>
+        <IconButton name="chevron-forward" label="חזרה" onPress={onClose} />
       </View>
 
       <View style={[styles.bottomAnchor, { paddingBottom }]} pointerEvents="box-none">
@@ -178,13 +183,16 @@ export function MediaViewerChrome({
         ) : null}
         {onReply ? (
           <Pressable
-            onPress={onReply}
-            style={styles.replyBtn}
+            onPress={() => {
+              void HapticFeedback.impactLight();
+              onReply();
+            }}
+            style={[styles.replyBtn, { backgroundColor: tokens.colors.background.cardSolid }]}
             accessibilityRole="button"
             accessibilityLabel="השב"
           >
-            <Ionicons name="chatbubble-outline" size={18} color={ICON} />
-            <Text style={styles.replyBtnText}>השב</Text>
+            <Ionicons name="chatbubble-outline" size={18} color={tokens.colors.text.primary} />
+            <Text style={[styles.replyBtnText, { color: tokens.colors.text.primary }]}>השב</Text>
           </Pressable>
         ) : null}
       </View>
@@ -237,12 +245,11 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: BTN_FILL,
   },
   titleCol: {
     flex: 1,
@@ -268,14 +275,6 @@ const styles = StyleSheet.create({
     marginTop: 1,
     ...TEXT_SHADOW,
   },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: BTN_FILL,
-  },
   bottomAnchor: {
     position: 'absolute',
     left: 0,
@@ -300,13 +299,11 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-end',
     alignItems: 'center',
     gap: 6,
-    height: 40,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    backgroundColor: BTN_FILL,
+    height: 44,
+    paddingHorizontal: 16,
+    borderRadius: 22,
   },
   replyBtnText: {
-    color: ICON,
     fontSize: 15,
     lineHeight: 20,
     fontWeight: '600',

@@ -31,6 +31,7 @@ import { shareMediaFile } from '../../lib/shareMediaFile';
 import { logger } from '../../utils/logger';
 import { getChatMediaDisplayUri } from '../../services/chat/chatSignedMediaUrl';
 import { chatPalette as COLORS } from './chatDesignTokens';
+import { useDesignTokens } from '../ui/DesignTokens';
 import { useMediaZoomGestures } from './useMediaZoomGestures';
 import { MediaBlurBackdrop, MediaViewerChrome } from './MediaViewerChrome';
 
@@ -149,6 +150,7 @@ export default function MediaGalleryViewer({
   timeLabel,
   onReply,
 }: MediaGalleryViewerProps) {
+  const tokens = useDesignTokens();
   const insets = useSafeAreaInsets();
   const [chromeVisible, setChromeVisible] = useState(true);
   const chromeOpacity = useSharedValue(1);
@@ -542,8 +544,11 @@ export default function MediaGalleryViewer({
           onShare={() => { void handleShare(); }}
           videoSlot={currentItem?.type === 'video' ? (
             <View style={styles.videoControlsRow}>
-              <TouchableOpacity style={styles.videoPlayBtn} onPress={togglePlayPause}>
-                <Ionicons name={isPlaying ? 'pause' : 'play'} size={24} color={COLORS.text} />
+              <TouchableOpacity
+                style={[styles.videoPlayBtn, { backgroundColor: tokens.colors.background.cardSolid }]}
+                onPress={togglePlayPause}
+              >
+                <Ionicons name={isPlaying ? 'pause' : 'play'} size={22} color={tokens.colors.text.primary} />
               </TouchableOpacity>
               <Text style={styles.videoTimeText}>{formatTime(displayPosition)}</Text>
               <GestureDetector gesture={timelineGesture}>
@@ -678,7 +683,6 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: COLORS.glass,
     alignItems: 'center',
     justifyContent: 'center',
   },

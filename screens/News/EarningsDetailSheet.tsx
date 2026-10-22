@@ -166,9 +166,6 @@ function Body({
     { icon: 'cash-outline', label: 'צפי הכנסות', value: fmtRevenue(revEst) },
     ...(epsPrior != null ? [{ icon: 'time-outline' as IonName, label: 'רווח למניה ברבעון המקביל', value: fmtEps(epsPrior) }] : []),
     ...(revYearAgo != null ? [{ icon: 'trending-up-outline' as IonName, label: 'הכנסות לפני שנה', value: fmtRevenue(revYearAgo) }] : []),
-    ...(quarter ? [{ icon: 'layers-outline' as IonName, label: 'רבעון', value: quarter }] : []),
-    { icon: 'calendar-outline', label: 'תאריך הדיווח', value: dateLabel(report.report_date) },
-    { icon: timing?.icon ?? 'help-circle-outline', label: 'מועד', value: timing?.label ?? 'טרם נקבע' },
     ...(extra.exchange ? [{ icon: 'business-outline' as IonName, label: 'בורסה', value: String(extra.exchange) }] : []),
   ];
 
@@ -200,57 +197,44 @@ function Body({
         contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(insets.bottom, 16) + 8 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* כרטיס ראשי — כמו ברשימת הדוחות, עם פס צבע לפי ההפתעה */}
-        <UICard variant="soft" glassIntensity="subtle" padding="none" style={styles.mainCard}>
-          {barColor ? <View style={[styles.accentBar, { backgroundColor: barColor }]} /> : null}
-          <View style={styles.mainInner}>
-            <View style={styles.identityRow}>
-              <TickerLogo symbol={symbol} size={48} borderRadius={24} />
-              <View style={styles.identityText}>
-                <Text style={styles.ticker} numberOfLines={1}>{`⁦$${symbol}⁩`}</Text>
-                {company ? <Text style={styles.company} numberOfLines={1}>{company}</Text> : null}
-              </View>
-            </View>
-
-            <View style={styles.metaRow}>
-              {timing ? (
-                <View style={[styles.chip, { backgroundColor: tokens.colors.background.primary }]}>
-                  <Ionicons name={timing.icon} size={14} color={timing.color} />
-                  <Text style={styles.chipText}>{timing.label}</Text>
-                </View>
-              ) : null}
-              <View style={[styles.chip, { backgroundColor: tokens.colors.background.primary }]}>
-                <Ionicons name="calendar-outline" size={14} color={tokens.colors.text.secondary} />
-                <Text style={styles.chipText}>{dateLabel(report.report_date)}</Text>
-              </View>
-              {quarter ? (
-                <View style={[styles.chip, { backgroundColor: tokens.colors.background.primary }]}>
-                  <Text style={styles.chipText}>{quarter}</Text>
-                </View>
-              ) : null}
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.columns}>
-              <ResultColumn
-                label="רווח למניה"
-                value={reported ? fmtEps(epsActual) : fmtEps(epsEst)}
-                pct={reported ? epsPct : null}
-                color={reported ? tone(epsPct) : tokens.colors.text.primary}
-                verdict={reported ? verdictLabel(epsPct) : 'צפי'}
-              />
-              <View style={styles.colDivider} />
-              <ResultColumn
-                label="הכנסות"
-                value={reported ? fmtRevenue(revActual) : fmtRevenue(revEst)}
-                pct={reported ? revPct : null}
-                color={reported ? tone(revPct) : tokens.colors.text.primary}
-                verdict={reported ? verdictLabel(revPct) : 'צפי'}
-              />
+        {/* זהות — ראש פתוח (לא בכרטיס), כמו בשיט המניה */}
+        <View style={styles.hero}>
+          <View style={styles.identityRow}>
+            <TickerLogo symbol={symbol} size={52} borderRadius={26} />
+            <View style={styles.identityText}>
+              <Text style={styles.ticker} numberOfLines={1}>{`\u2066$${symbol}\u2069`}</Text>
+              {company ? <Text style={styles.company} numberOfLines={1}>{company}</Text> : null}
             </View>
           </View>
-        </UICard>
+          <Text style={styles.metaLine} numberOfLines={1}>
+            {[quarter ? `רבעון ${quarter}` : null, timing?.label ?? null, dateLabel(report.report_date)]
+              .filter(Boolean)
+              .join(' · ')}
+          </Text>
+        </View>
+
+        {/* תוצאות — שני כרטיסים נפרדים, לכל אחד פס צבע משלו */}
+        <View>
+          <Text style={styles.groupHeading}>{reported ? 'תוצאות' : 'צפי'}</Text>
+          <UICard variant="soft" glassIntensity="subtle" padding="none">
+            <ResultRow
+              icon="stats-chart-outline"
+              label="רווח למניה"
+              value={reported ? fmtEps(epsActual) : fmtEps(epsEst)}
+              pct={reported ? epsPct : null}
+              color={reported ? tone(epsPct) : tokens.colors.text.primary}
+              showDivider
+            />
+            <ResultRow
+              icon="cash-outline"
+              label="הכנסות"
+              value={reported ? fmtRevenue(revActual) : fmtRevenue(revEst)}
+              pct={reported ? revPct : null}
+              color={reported ? tone(revPct) : tokens.colors.text.primary}
+              showDivider={false}
+            />
+          </UICard>
+        </View>
 
         <View>
           <Text style={styles.groupHeading}>תנועת המניה</Text>
@@ -277,40 +261,54 @@ function Body({
   );
 }
 
-function ResultColumn({
+/** שורת תוצאה — תווית מימין; משמאל ערך בצבע ותגית «מכה / מפספסת ±X%» על רקע רך */
+function ResultRow({
+  icon,
   label,
   value,
   pct,
   color,
-  verdict,
+  showDivider,
 }: {
+  icon: IonName;
   label: string;
   value: string;
   pct: number | null;
   color: string;
-  verdict: string;
+  showDivider: boolean;
 }) {
   const tokens = useDesignTokens();
   const styles = useStyles();
+  const verdict = verdictLabel(pct);
+  const neutral = pct == null || Math.abs(pct) < 0.05;
   return (
-    <View style={styles.column}>
-      <Text style={styles.colLabel}>{label}</Text>
-      <View style={styles.colValueRow}>
-        {pct != null ? (
-          <Text style={[styles.colPct, { color }]}>
-            {pct > 0 ? '+' : ''}
-            {pct.toFixed(1)}%
+    <View>
+      <View style={styles.row}>
+        <View style={styles.resultValueCol}>
+          <Text style={[styles.resultValue, { color }]} numberOfLines={1}>
+            {value}
           </Text>
-        ) : null}
-        <Text style={[styles.colValue, { color }]} numberOfLines={1}>
-          {value}
-        </Text>
+          {verdict ? (
+            <View
+              style={[
+                styles.verdictPill,
+                { backgroundColor: neutral ? tokens.colors.background.primary : `${color}22` },
+              ]}
+            >
+              <Text style={[styles.verdictText, { color: neutral ? tokens.colors.text.secondary : color }]}>
+                {neutral ? verdict : `${verdict} \u2066${pct! > 0 ? '+' : ''}${pct!.toFixed(1)}%\u2069`}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+        <View style={styles.rowLabelCol}>
+          <Text style={styles.rowLabel} numberOfLines={1}>{label}</Text>
+        </View>
+        <View style={styles.rowIcon}>
+          <Ionicons name={icon} size={20} color={tokens.colors.text.primary} />
+        </View>
       </View>
-      {verdict ? (
-        <Text style={[styles.colVerdict, { color: verdict === 'צפי' ? tokens.colors.text.secondary : color }]}>
-          {verdict}
-        </Text>
-      ) : null}
+      {showDivider ? <View style={styles.rowDivider} /> : null}
     </View>
   );
 }
@@ -356,18 +354,7 @@ function useStyles() {
           paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
           gap: APP_LAYOUT.cardStackGap,
         },
-        mainCard: { overflow: 'hidden', borderRadius: tokens.borderRadius.xl },
-        accentBar: {
-          position: 'absolute',
-          right: 0,
-          top: 14,
-          bottom: 14,
-          width: 3,
-          borderTopLeftRadius: 2,
-          borderBottomLeftRadius: 2,
-          zIndex: 1,
-        },
-        mainInner: { padding: APP_LAYOUT.cardPadding, gap: APP_LAYOUT.cardTitleToBodyGap },
+        hero: { gap: APP_LAYOUT.cardTitleToBodyGap, marginBottom: 4 },
         identityRow: {
           direction: 'ltr',
           flexDirection: 'row-reverse',
@@ -392,12 +379,26 @@ function useStyles() {
           fontWeight: APP_TYPE.cardSubtitle.fontWeight,
           color: tokens.colors.text.secondary,
         },
-        metaRow: {
-          direction: 'rtl',
-          flexDirection: 'row',
-          flexWrap: 'wrap',
-          gap: 8,
+        metaLine: {
+          ...APP_TYPE.cardSubtitle,
+          color: tokens.colors.text.secondary,
+          textAlign: 'right',
+          writingDirection: 'rtl',
+          fontVariant: ['tabular-nums'],
         },
+        resultValueCol: { alignItems: 'flex-start', gap: 6, maxWidth: '60%' },
+        resultValue: {
+          ...appCardBodyStyle,
+          width: undefined,
+          fontSize: APP_TYPE.cardTitle.fontSize + 2,
+          lineHeight: APP_TYPE.cardTitle.lineHeight + 2,
+          fontWeight: APP_TYPE.cardTitle.fontWeight,
+          fontVariant: ['tabular-nums'],
+          writingDirection: 'ltr',
+          textAlign: 'left',
+        },
+        verdictPill: { borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3 },
+        verdictText: { ...APP_TYPE.caption, fontWeight: '600', fontVariant: ['tabular-nums'] },
         chip: {
           flexDirection: 'row',
           alignItems: 'center',
@@ -412,23 +413,35 @@ function useStyles() {
           writingDirection: 'rtl',
           fontVariant: ['tabular-nums'],
         },
-        divider: { height: 1, backgroundColor: tokens.colors.border.divider },
-        columns: { direction: 'rtl', flexDirection: 'row', alignItems: 'stretch' },
-        colDivider: { width: 1, backgroundColor: tokens.colors.border.divider, marginHorizontal: 8 },
-        column: { flex: 1, alignItems: 'center', gap: 4 },
-        colLabel: { ...APP_TYPE.cardMetricLabel, color: tokens.colors.text.secondary, textAlign: 'center' },
-        colValueRow: { direction: 'ltr', flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' },
-        colPct: { ...APP_TYPE.caption, marginRight: 6, fontVariant: ['tabular-nums'] },
+        resultCards: { direction: 'rtl', flexDirection: 'row', gap: APP_LAYOUT.cardStackGap },
+        resultCard: { flex: 1, overflow: 'hidden', borderRadius: tokens.borderRadius.xl },
+        accentBar: {
+          position: 'absolute',
+          right: 0,
+          top: 14,
+          bottom: 14,
+          width: 3,
+          borderTopLeftRadius: 2,
+          borderBottomLeftRadius: 2,
+          zIndex: 1,
+        },
+        resultInner: { padding: APP_LAYOUT.cardPadding, gap: 6, alignItems: 'flex-start' },
+        resultHead: { direction: 'rtl', flexDirection: 'row', alignItems: 'center', gap: 6 },
+        resultFoot: { direction: 'rtl', flexDirection: 'row', alignItems: 'center', gap: 8 },
+        colLabel: { ...APP_TYPE.cardMetricLabel, color: tokens.colors.text.secondary },
+        colPct: { ...APP_TYPE.caption, fontVariant: ['tabular-nums'] },
         colValue: {
           ...appCardBodyStyle,
           width: undefined,
-          fontSize: APP_TYPE.cardTitle.fontSize + 2,
+          fontSize: APP_TYPE.cardTitle.fontSize + 4,
+          lineHeight: APP_TYPE.cardTitle.lineHeight + 4,
           fontWeight: APP_TYPE.cardTitle.fontWeight,
           fontVariant: ['tabular-nums'],
-          textAlign: 'center',
           writingDirection: 'ltr',
+          alignSelf: 'stretch',
+          textAlign: 'right',
         },
-        colVerdict: { ...APP_TYPE.caption, fontWeight: '600', textAlign: 'center' },
+        colVerdict: { ...APP_TYPE.caption, fontWeight: '600' },
         chartCard: { overflow: 'hidden', borderRadius: tokens.borderRadius.xl },
         groupHeading: { ...appGroupLabelStyle, color: tokens.colors.text.secondary },
         row: {

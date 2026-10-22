@@ -2750,7 +2750,6 @@ function ChatInputImpl({
         onDocument={handlePickDocument}
         onAudio={isExpoAvAvailable ? handleStartAudioRecording : undefined}
         onPoll={handleCreatePoll}
-        onPickRecent={applyPickedMedia}
       />
 
       <ChatAttachCameraSheet

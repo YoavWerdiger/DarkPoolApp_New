@@ -4,18 +4,8 @@
  * צילום · גלריה · מסמך · אודיו · סקר.
  * כל פעולה רצה אחרי שהשיט נסגר (ב-iOS מצלמה / בורר מערכת מעל שיט פתוח נתקעים).
  */
-import React, { useEffect, useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Image as ExpoImage } from 'expo-image';
-import {
-  getMediaLibraryReadStatus,
-  loadMediaRecentsPage,
-  peekMediaRecents,
-  recentToPicked,
-  writeMediaRecents,
-  type MediaRecentAsset,
-  type PickedRecentMedia,
-} from '../../lib/mediaRecentsCache';
+import React, { useMemo } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Camera, ChartColumnBig, FileText, Image as ImageIcon, Mic } from 'lucide-react-native';
@@ -37,11 +27,7 @@ type Props = {
   onDocument?: () => void;
   onAudio?: () => void;
   onPoll?: () => void;
-  /** תמונה / סרטון מהרצועה האחרונה — ישר לפריוויו לפני שליחה */
-  onPickRecent?: (items: PickedRecentMedia[]) => void;
 };
-
-const THUMB = 76;
 
 export default function AttachMenuSheet({
   visible,
@@ -51,7 +37,6 @@ export default function AttachMenuSheet({
   onDocument,
   onAudio,
   onPoll,
-  onPickRecent,
 }: Props) {
   const tokens = useDesignTokens();
   const insets = useSafeAreaInsets();
@@ -68,27 +53,6 @@ export default function AttachMenuSheet({
 
   const noChevron = <View />;
 
-  // רצועת תמונות אחרונות — רק אם כבר יש גישה לגלריה (בלי בקשת הרשאה מכאן)
-  const [recents, setRecents] = useState<MediaRecentAsset[]>(
-    () => (peekMediaRecents('all')?.assets ?? []).slice(0, 20),
-  );
-  useEffect(() => {
-    if (!visible || !onPickRecent) return;
-    let cancelled = false;
-    void (async () => {
-      const { readable } = await getMediaLibraryReadStatus();
-      if (!readable || cancelled) return;
-      try {
-        const page = writeMediaRecents('all', await loadMediaRecentsPage('all', null));
-        if (!cancelled) setRecents(page.assets.slice(0, 20));
-      } catch {
-        /* בלי רצועה */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [visible, onPickRecent]);
 
   return (
     <BottomSheet
@@ -112,41 +76,11 @@ export default function AttachMenuSheet({
         <View style={styles.header}>
           <HeaderClose onClose={onClose} />
           <View style={styles.headerCenter}>
-            <Text style={[styles.headerTitle, { color: tokens.colors.text.primary }]}>צירוף</Text>
+            <Text style={[styles.headerTitle, { color: tokens.colors.text.primary }]}>צירוף מדיה</Text>
           </View>
           <View style={styles.headerSideSpacer} />
         </View>
 
-        {onPickRecent && recents.length > 0 ? (
-          <FlatList
-            horizontal
-            data={recents}
-            keyExtractor={(a) => a.id}
-            showsHorizontalScrollIndicator={false}
-            style={styles.recents}
-            contentContainerStyle={styles.recentsContent}
-            renderItem={({ item }) => (
-              <Pressable
-                onPress={() => {
-                  void HapticFeedback.selection();
-                  onClose();
-                  const picked = [recentToPicked(item)];
-                  runAfterSheetDismiss(() => onPickRecent(picked));
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={item.mediaType === 'video' ? 'סרטון אחרון' : 'תמונה אחרונה'}
-              >
-                <ExpoImage
-                  source={{ uri: item.uri }}
-                  style={[styles.thumb, { backgroundColor: tokens.colors.background.cardSolid }]}
-                  contentFit="cover"
-                  transition={120}
-                  recyclingKey={item.id}
-                />
-              </Pressable>
-            )}
-          />
-        ) : null}
 
         <View style={styles.actions}>
           <SettingsGlassCard style={{ marginBottom: 0 }}>
@@ -213,9 +147,5 @@ function createStyles() {
       paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
       marginTop: APP_LAYOUT.cardTitleToBodyGap + 4,
     },
-    // רצועה נקייה: עיגול פינות, רווח אחיד, בלי אייקונים / שכבות
-    recents: { marginTop: APP_LAYOUT.cardTitleToBodyGap + 4, flexGrow: 0 },
-    recentsContent: { paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal, gap: 8 },
-    thumb: { width: THUMB, height: THUMB, borderRadius: 14 },
   });
 }

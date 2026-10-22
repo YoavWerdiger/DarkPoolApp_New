@@ -90,6 +90,8 @@ export default function ChatComposerBar({
       contentContainerStyle={styles.scrollContent}
     >
     <View style={[styles.container, containerStyle]}>
+      {/* צל עדין מתחת לשדה — אחרת נבלע ברקע (UICard עם overflow:hidden חותך צל משלו) */}
+      <View style={[styles.pillShadow, { backgroundColor: tokens.colors.background.cardSolid }]}>
       <UICard
         {...CHROME_UICARD}
         style={[styles.pillOuter, chromeSurfaceCardStyle(tokens), pillStyle]}
@@ -116,6 +118,7 @@ export default function ChatComposerBar({
         />
         {overlay}
       </UICard>
+      </View>
 
       {trailing !== undefined ? (
         trailing
@@ -155,8 +158,17 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       gap: 0,
     },
     /** רדיוס בלבד — רקע/מסגרת מגיעים מ־UICard variant="glass" */
-    pillOuter: {
+    pillShadow: {
       flex: 1,
+      borderRadius: 30,
+      shadowColor: '#000',
+      shadowOpacity: 0.1,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 3 },
+      elevation: 3,
+    },
+    pillOuter: {
+      width: '100%',
       borderRadius: 30,
       overflow: 'hidden',
     },

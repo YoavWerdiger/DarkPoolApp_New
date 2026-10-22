@@ -2,6 +2,7 @@
 // Chat Groups List Screen - Modern Design (Exact Copy)
 // ============================================
 
+import { Image as ExpoImage } from 'expo-image';
 import React, { useMemo, useEffect, useLayoutEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
@@ -271,7 +272,8 @@ export default function ChatGroupsListScreen() {
     const ids = usersWithStories.slice(0, 6).map((u) => u.user_id);
     if (!ids.length) return;
     void prefetchStoriesForUsers(ids, (uri) => {
-      Image.prefetch(uri).catch(() => {});
+      // לקאש של expo-image — הצופה מציג דרכו
+      ExpoImage.prefetch(uri, 'memory-disk').catch(() => {});
     });
   }, [usersWithStories]);
   const [storyViewerVisible, setStoryViewerVisible] = useState(false);

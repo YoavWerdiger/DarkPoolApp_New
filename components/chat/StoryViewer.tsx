@@ -17,6 +17,7 @@ import {
   ViewToken,
 } from 'react-native';
 import { localUriForStoryMedia } from '../../lib/pendingStories';
+import { Image as ExpoImage } from 'expo-image';
 import { APP_TYPE } from '../ui/appType';
 import { SlidingPillGroup } from '../ui/DayDividerPill';
 import { useDesignTokens } from '../ui/DesignTokens';
@@ -1451,7 +1452,7 @@ export default function StoryViewer({
     if (!holdMedia || mediaReady) return null;
     if (holdMedia.media_type === 'image' && holdMedia.media_url) {
       return (
-        <View pointerEvents="none"><Image source={{ uri: localUriForStoryMedia(holdMedia.media_url) ?? holdMedia.media_url }} style={styles.fullMedia} resizeMode="contain" /></View>
+        <View pointerEvents="none"><ExpoImage source={{ uri: localUriForStoryMedia(holdMedia.media_url) ?? holdMedia.media_url }} style={styles.fullMedia} contentFit="contain" transition={0} /></View>
       );
     }
     if (holdMedia.media_type === 'video' && holdMedia.media_url) {
@@ -1509,9 +1510,13 @@ export default function StoryViewer({
       const authoredImg = storyAuthoredFrame(story.content);
       return (
         <View pointerEvents="none">
-          <Image
+          {/* expo-image: מוקטן לגודל המסך + קאש. Image של RN פענח את הקובץ המקומי המלא
+              (~24MP בסטורי שלי מיד אחרי העלאה) — מסך שחור עד שהפענוח נגמר */}
+          <ExpoImage
             key={story.id}
             source={{ uri: localUriForStoryMedia(story.media_url) ?? story.media_url }}
+            transition={0}
+            cachePolicy="memory-disk"
             style={[
               authoredImg
                 ? { position: 'absolute', left: 0, top: authoredImg.top, width: SCREEN_WIDTH, height: authoredImg.height }
@@ -1519,7 +1524,7 @@ export default function StoryViewer({
               gateOpacity && { opacity: 0 },
             ]}
             // עם טקסט/ציור: cover במסגרת (כמו בעורך) — אחרת contain במסך מלא
-            resizeMode={authoredImg ? 'cover' : 'contain'}
+            contentFit={authoredImg ? 'cover' : 'contain'}
             onLoad={() => { if (isActive) setMediaReady(true); }}
             onError={() => {
               if (isActive) {

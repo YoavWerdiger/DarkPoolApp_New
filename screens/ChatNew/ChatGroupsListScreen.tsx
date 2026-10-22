@@ -1186,6 +1186,7 @@ export default function ChatGroupsListScreen() {
           <ChatListSwipeRow
             enabled={swipeEnabled}
             revealBackgroundColor={tokens.colors.background.cardSolid}
+            revealInset={HP}
             actions={[
               {
                 key: 'pin',

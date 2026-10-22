@@ -38,15 +38,17 @@ const SPRING_CLOSE = { damping: 24, stiffness: 300, mass: 0.7 };
 function SwipeActionButton({
   action,
   index,
+  offset,
   tx,
   onPress,
 }: {
   action: ChatListSwipeAction;
   index: number;
+  offset: number;
   tx: SharedValue<number>;
   onPress: () => void;
 }) {
-  const start = index * ACTION_W * 0.55;
+  const start = offset + index * ACTION_W * 0.55;
   const end = start + ACTION_W;
   const anim = useAnimatedStyle(() => {
     const p = interpolate(tx.value, [start, end], [0, 1], Extrapolation.CLAMP);
@@ -87,12 +89,14 @@ type Props = {
   actions: ChatListSwipeAction[];
   /** רקע האזור שנחשף מאחורי השורה (צבע כרטיס) */
   revealBackgroundColor?: string;
+  /** הזחה מהקצה — כמו הדיבידרים (padding אופקי של המסך): הרקע מתחיל איפה שהדיבידר מתחיל */
+  revealInset?: number;
   enabled?: boolean;
   children: React.ReactNode;
 };
 
-export default function ChatListSwipeRow({ actions, revealBackgroundColor, enabled = true, children }: Props) {
-  const openX = actions.length * ACTION_W;
+export default function ChatListSwipeRow({ actions, revealBackgroundColor, revealInset = 0, enabled = true, children }: Props) {
+  const openX = revealInset + actions.length * ACTION_W;
   const tx = useSharedValue(0);
   const startX = useSharedValue(0);
   const passedThreshold = useSharedValue(false);
@@ -159,15 +163,17 @@ export default function ChatListSwipeRow({ actions, revealBackgroundColor, enabl
   return (
     <View style={styles.wrap}>
       {/* הפעולות מאחורי השורה, בצד שמאל — נחשפות כשהשורה זזה ימינה */}
-      <Animated.View
-        style={[styles.actionsClip, revealBackgroundColor ? { backgroundColor: revealBackgroundColor } : null, actionsClipStyle]}
-      >
-      <View style={[styles.actions, { width: openX }]}>
+      <Animated.View style={[styles.actionsClip, actionsClipStyle]}>
+      {revealBackgroundColor ? (
+        <View style={[styles.revealBg, { left: revealInset, backgroundColor: revealBackgroundColor }]} />
+      ) : null}
+      <View style={[styles.actions, { left: revealInset, width: openX - revealInset }]}>
         {actions.map((a, i) => (
           <SwipeActionButton
             key={a.key}
             action={a}
             index={i}
+            offset={revealInset}
             tx={tx}
             onPress={() => {
               void HapticFeedback.impactLight();
@@ -199,6 +205,13 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     overflow: 'hidden',
+  },
+  revealBg: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    // רחב מספיק לכל הפתיחה (נחתך ב-actionsClip)
+    width: 1000,
   },
   actions: {
     position: 'absolute',

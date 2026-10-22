@@ -1410,11 +1410,6 @@ export default function EarningsReportsTab({
       <EarningsDetailSheet
         visible={!!detailReport}
         report={detailReport}
-        card={
-          detailReport ? (
-            <EarningsReportCard report={detailReport} onPress={() => undefined} verdictCaptions />
-          ) : null
-        }
         onClose={() => setDetailReport(null)}
         onShare={(r) => {
           setDetailReport(null);

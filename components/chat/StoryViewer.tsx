@@ -527,6 +527,26 @@ export default function StoryViewer({
   const [isPaused, setIsPaused] = useState(false);
   const [mediaReady, setMediaReady] = useState(false);
   const [mediaError, setMediaError] = useState(false);
+  // הסטורי שלי מוצג מהקובץ המקומי שממנו הועלה (מיידי). קובץ המצלמה זמני ויכול להימחק —
+  // אז נפילה ל-URL בשרת במקום מסך שחור (onError מסמן את ה-URL המקומי ככושל)
+  const [failedLocalUris, setFailedLocalUris] = useState<Set<string>>(() => new Set());
+  const storyMediaUri = useCallback(
+    (remote: string | null | undefined): string => {
+      const local = localUriForStoryMedia(remote);
+      return local && !failedLocalUris.has(local) ? local : (remote ?? '');
+    },
+    [failedLocalUris],
+  );
+  /** true = היה מקומי ועכשיו עוברים לשרת (לא שגיאה) */
+  const fallBackFromLocal = useCallback(
+    (remote: string | null | undefined): boolean => {
+      const local = localUriForStoryMedia(remote);
+      if (!local || failedLocalUris.has(local)) return false;
+      setFailedLocalUris((prev) => new Set(prev).add(local));
+      return true;
+    },
+    [failedLocalUris],
+  );
   const [videoDuration, setVideoDuration] = useState<number | null>(null);
   // Own-story viewers/reactions sheet visibility (declared early so it can
   // gate the swipe/dismiss gestures below).
@@ -1452,14 +1472,14 @@ export default function StoryViewer({
     if (!holdMedia || mediaReady) return null;
     if (holdMedia.media_type === 'image' && holdMedia.media_url) {
       return (
-        <View pointerEvents="none"><ExpoImage source={{ uri: localUriForStoryMedia(holdMedia.media_url) ?? holdMedia.media_url }} style={styles.fullMedia} contentFit="contain" transition={0} /></View>
+        <View pointerEvents="none"><ExpoImage source={{ uri: storyMediaUri(holdMedia.media_url) }} style={styles.fullMedia} contentFit="contain" transition={0} /></View>
       );
     }
     if (holdMedia.media_type === 'video' && holdMedia.media_url) {
       return (
         <View style={styles.fullMedia} pointerEvents="none">
           <Video
-            source={{ uri: localUriForStoryMedia(holdMedia.media_url) ?? holdMedia.media_url }}
+            source={{ uri: storyMediaUri(holdMedia.media_url) }}
             style={styles.fullMedia}
             resizeMode={ResizeMode.CONTAIN}
             shouldPlay={false}
@@ -1514,7 +1534,7 @@ export default function StoryViewer({
               (~24MP בסטורי שלי מיד אחרי העלאה) — מסך שחור עד שהפענוח נגמר */}
           <ExpoImage
             key={story.id}
-            source={{ uri: localUriForStoryMedia(story.media_url) ?? story.media_url }}
+            source={{ uri: storyMediaUri(story.media_url) }}
             transition={0}
             cachePolicy="memory-disk"
             style={[
@@ -1527,6 +1547,7 @@ export default function StoryViewer({
             contentFit={authoredImg ? 'cover' : 'contain'}
             onLoad={() => { if (isActive) setMediaReady(true); }}
             onError={() => {
+              if (fallBackFromLocal(story.media_url)) return;
               if (isActive) {
                 setMediaError(true);
                 setMediaReady(true);
@@ -1548,7 +1569,7 @@ export default function StoryViewer({
       return (
         <View key={story.id} style={styles.fullMedia} pointerEvents="none">
           <Video
-            source={{ uri: localUriForStoryMedia(story.media_url) ?? story.media_url }}
+            source={{ uri: storyMediaUri(story.media_url) }}
             style={[
               (() => {
                 const f = storyAuthoredFrame(story.content);
@@ -1576,6 +1597,7 @@ export default function StoryViewer({
               }
             }}
             onError={() => {
+              if (fallBackFromLocal(story.media_url)) return;
               if (isActive) {
                 setMediaError(true);
                 setMediaReady(true);

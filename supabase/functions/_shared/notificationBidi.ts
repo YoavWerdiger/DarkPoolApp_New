@@ -66,13 +66,13 @@ export function earningsResultsTitle(ticker: string): string {
   return `${tickerTag(ticker)} פרסמה דוח רבעוני!`
 }
 
-/** «בקו הצפי» / «מעל ב-1.8%» / «מתחת ב-1.8%» — קצר, בתוך הסוגריים של הצפי */
+/** «בקו הצפי» / «מכה ב-1.8%» / «מפספסת ב-1.8%» — קצר, בתוך הסוגריים של הצפי */
 export function surpriseVerdict(pct: number | null | undefined): string {
   if (pct == null || isNaN(pct)) return ''
   if (Math.abs(pct) < 0.05) return 'בקו הצפי'
   const mag = ltr(`${Math.abs(pct).toFixed(1)}%`)
-  if (pct > 0) return `מעל ב-${mag}`
-  return `מתחת ב-${mag}`
+  if (pct > 0) return `מכה ב-${mag}`
+  return `מפספסת ב-${mag}`
 }
 
 /** «רווחיות: $0.79 (צפי $0.79 · בקו הצפי)» — בלי תוויות לטיניות, הצפי והפער בסוגריים */

@@ -372,17 +372,13 @@ export function buildEarningsAttachment(row: {
       .toUpperCase() || 'EARNINGS';
   const company = (row.company_name ?? '').toString().trim() || undefined;
   const epsActual = toNum(row.eps ?? row.actual);
-  const epsEst = toNum(row.eps_estimate ?? row.estimate);
   const revActual = toNum(row.revenue_actual ?? row.revenue);
-  const revEst = toNum(row.revenue_estimate);
   const reported = epsActual != null || revActual != null;
 
-  // רשת 2×2 נקייה: ערך מול צפי (מחרוזת אחת ארוכה נחתכה ועירבבה כיוונים)
+  // רק התוצאה — רווח למניה והכנסות; הפירוט (צפי, הפתעה) בדף הדיווחים בלחיצה על הכרטיס
   const metrics: Record<string, string | number> = {};
   if (epsActual != null) metrics.eps = formatEarningsMoney(epsActual, false);
-  if (epsEst != null) metrics.eps_est = formatEarningsMoney(epsEst, false);
   if (revActual != null) metrics.revenue = formatEarningsMoney(revActual, true);
-  if (revEst != null) metrics.revenue_est = formatEarningsMoney(revEst, true);
 
   const bam = `${row.before_after_market ?? ''} ${row.report_time ?? ''}`.toLowerCase();
   const timing = bam.includes('before') || bam.includes('bmo')

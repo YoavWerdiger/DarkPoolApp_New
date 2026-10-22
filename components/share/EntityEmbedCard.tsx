@@ -189,7 +189,8 @@ function AvatarOrThumb({
         width: size,
         height: size,
         borderRadius: radius,
-        backgroundColor: tokens.colors.primary.dim,
+        // צבעי הטופו (ניטרלי) — לא ירוק המותג
+        backgroundColor: tokens.colors.background.tertiary,
         alignItems: 'center',
         justifyContent: 'center',
       }}
@@ -197,7 +198,7 @@ function AvatarOrThumb({
       {attachment.ref.type === 'person_profile' ? (
         <Text
           style={{
-            color: tokens.colors.primary.main,
+            color: tokens.colors.text.primary,
             fontWeight: '700',
             fontSize: size * 0.38,
           }}
@@ -208,7 +209,7 @@ function AvatarOrThumb({
         <Ionicons
           name={iconForType(attachment.ref.type)}
           size={size * 0.42}
-          color={tokens.colors.primary.main}
+          color={tokens.colors.text.secondary}
         />
       )}
     </View>
@@ -480,9 +481,16 @@ function EntityEmbedCardGeneric({ attachment, onPress, compact, style }: Props) 
   const showDirectionChip = directionBadge === 'LONG' || isShort;
   const sideChipLabel = isShort ? 'Short' : 'Long';
   /** לטרייד — בלי משפט מטא (P&L/תשואה); רק צ׳יפ Long/Short */
-  const subtitleText = isTrade ? null : preview.subtitle?.trim() || null;
+  const isEconomic = ref.type === 'economic_event';
+  // דיווח כלכלי: בלי «יומן כלכלי» / «ארה״ב» מתחת לשם — רק תאריך ושעה (גם בהודעות ששותפו קודם)
+  const subtitleText = isTrade
+    ? null
+    : (isEconomic
+        ? preview.subtitle?.replace(/^ארה["״]ב\s*·\s*/, '')
+        : preview.subtitle
+      )?.trim() || null;
   const typeLabel =
-    !isTrade && preview.badge?.trim() ? preview.badge.trim() : null;
+    !isTrade && !isEconomic && preview.badge?.trim() ? preview.badge.trim() : null;
   const metaLine =
     [typeLabel, subtitleText].filter(Boolean).join(' · ') || null;
   const expandHint = isTrade && hasExtraTradeMetrics

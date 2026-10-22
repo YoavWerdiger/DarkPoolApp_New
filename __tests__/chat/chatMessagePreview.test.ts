@@ -10,7 +10,7 @@ const attachment = {
 describe('getChatMessagePreview — entity share', () => {
   it('labels an entity attachment even without message_type (server last_message_preview)', () => {
     const content = JSON.stringify({ attachment });
-    expect(getChatMessagePreview(undefined, content)).toBe('📎 AAPL · LONG');
+    expect(getChatMessagePreview(undefined, content)).toBe('AAPL · LONG');
   });
 
   it('prefers the caption when the share has one', () => {
@@ -31,10 +31,10 @@ describe('getChatMessagePreview — entity share', () => {
 describe('getChatMessagePreview — truncated JSON (old last_message_preview)', () => {
   it('shows attachment title, not raw JSON', () => {
     const cut = '{"attachment":{"v":1,"ref":{"type":"news_article","id":"1"},"preview":{"title":"מניות LULU בשפל';
-    expect(getChatMessagePreview(undefined, cut)).toBe('📎 מניות LULU בשפל');
+    expect(getChatMessagePreview(undefined, cut)).toBe('מניות LULU בשפל');
   });
   it('shows a generic share label when title is cut off', () => {
-    expect(getChatMessagePreview(undefined, '{"attachment":{"v":1,"ref":{"type":"person_profile","id":"P0')).toBe('📎 שיתוף');
+    expect(getChatMessagePreview(undefined, '{"attachment":{"v":1,"ref":{"type":"person_profile","id":"P0')).toBe('שיתוף');
   });
   it('shows voice label for truncated waveform', () => {
     expect(getChatMessagePreview(undefined, '{"waveform":[0.42,1,1,0.83')).toBe('הודעה קולית');

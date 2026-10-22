@@ -614,8 +614,11 @@ export default function ChatGroupsListScreen() {
       case 'video': return 'videocam-outline';
       case 'audio': return 'mic-outline';
       case 'document': return 'document-text-outline';
+      // שיתוף (דוח / חדשה / פרופיל) — אייקון attach במקום אימוג׳י 📎
+      case 'entity': return 'attach-outline';
     }
     const trimmed = (content ?? '').trim();
+    if (trimmed.startsWith('{') && trimmed.includes('"attachment"')) return 'attach-outline';
     if (
       trimmed.startsWith('{') &&
       (trimmed.includes('waveformData') || trimmed.includes('"waveform"'))
@@ -1272,10 +1275,10 @@ export default function ChatGroupsListScreen() {
                   style={[styles.chatPreview, hasUnread && styles.chatPreviewUnread]}
                   numberOfLines={1}
                 >
-                  {item.last_message && getMessageTypeIcon(item.last_message.message_type, item.last_message.content) ? (
+                  {item.last_message && getMessageTypeIcon(item.last_message.message_type, item.last_message.content || item.last_message_preview) ? (
                     <>
                       <Ionicons
-                        name={getMessageTypeIcon(item.last_message.message_type, item.last_message.content) as any}
+                        name={getMessageTypeIcon(item.last_message.message_type, item.last_message.content || item.last_message_preview) as any}
                         size={13}
                         color={hasUnread ? tokens.colors.text.primary : tokens.colors.text.secondary}
                       />{' '}

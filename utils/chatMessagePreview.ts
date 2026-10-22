@@ -40,7 +40,7 @@ export function getChatMessagePreview(
       const entity = parseEntityAttachmentFromContent(trimmed);
       if (entity) {
         const caption = typeof parsed.caption === 'string' ? parsed.caption.trim() : '';
-        return caption || `📎 ${entity.preview.title}`;
+        return caption || entity.preview.title;
       }
       if (isAudioWaveformPayload(parsed)) {
         const dur =
@@ -53,7 +53,7 @@ export function getChatMessagePreview(
       // JSON חתוך (last_message_preview ישן נשמר כ-LEFT 100) — מזהים לפי מפתחות ולא מציגים גולמי
       if (trimmed.includes('"attachment"')) {
         const title = /"title"\s*:\s*"([^"]+)/.exec(trimmed)?.[1];
-        return title ? `📎 ${title}` : '📎 שיתוף';
+        return title || 'שיתוף';
       }
       if (trimmed.includes('"waveform"') || trimmed.includes('"waveformData"')) return 'הודעה קולית';
       if (trimmed.includes('"trade"')) return 'טרייד';
@@ -80,12 +80,12 @@ export function getChatMessagePreview(
             attachment?: { preview?: { title?: string } };
           };
           const title = parsed.attachment?.preview?.title;
-          if (title) return `📎 ${title}`;
+          if (title) return title;
         } catch {
           /* ignore */
         }
       }
-      return '📎 שיתוף';
+      return 'שיתוף';
     }
     case ChatMessageType.MEDIA_GROUP:
       return 'אלבום';

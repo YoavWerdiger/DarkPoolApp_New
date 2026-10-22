@@ -959,7 +959,17 @@ function ChatMessage({
                 caption = undefined;
               }
               return (
-                <View style={{ marginTop: 2, minWidth: 220, gap: 8 }}>
+                <View
+                  style={{
+                    marginTop: 2,
+                    // דוח / דיווח: מטריקות ארוכות (צפי · מכה ב-X%) — בועה רחבה יותר שלא תידחס
+                    minWidth:
+                      att.ref.type === 'earnings_report' || att.ref.type === 'economic_event'
+                        ? WIDE_MEDIA_W
+                        : 220,
+                    gap: 8,
+                  }}
+                >
                   {caption ? (
                     <Text
                       style={[

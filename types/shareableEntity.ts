@@ -464,7 +464,6 @@ export function buildEconomicEventAttachment(event: {
     preview: {
       title,
       ...(when ? { subtitle: when } : {}),
-      badge: event.importance === 'high' ? 'השפעה גבוהה' : 'יומן כלכלי',
       metrics,
     },
     sharedAt: new Date().toISOString(),

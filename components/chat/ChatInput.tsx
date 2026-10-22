@@ -66,6 +66,7 @@ import {
 } from '../../utils/voicePlaybackController';
 import { useFrameCallback, useSharedValue, runOnJS } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { isVideoCompressionAvailable } from '../../lib/videoCompressSafe';
 
 const PREVIEW_PLAYER_ID = 'chat-input-preview';
 const MAX_CHAT_MENTIONS = 10;
@@ -116,8 +117,9 @@ function replaceOrAppendMentionTag(prev: string, tag: string): string {
 }
 
 /**
- * iOS: WAV/PCM — חילוץ peaks אמיתיים מהקובץ אחרי עצירה.
- * Android: AAC/m4a — fallback ל־metering envelope (MediaRecorder לא תומך WAV).
+ * שתי הפלטפורמות: AAC/m4a מונו 64kbps (~0.5MB לדקה; WAV היה ~1.9MB לדקה).
+ * הוויבפורם נבנה מה-metering החי בזמן ההקלטה (handleRecordingStatus) — לא מהקובץ.
+ * הודעות WAV ישנות ממשיכות להתנגן (הנגן לא תלוי בפורמט).
  */
 const VOICE_RECORDING_OPTIONS: Audio.RecordingOptions = {
   isMeteringEnabled: true,
@@ -131,12 +133,12 @@ const VOICE_RECORDING_OPTIONS: Audio.RecordingOptions = {
     bitRate: 64000,
   },
   ios: {
-    extension: '.wav',
-    outputFormat: Audio.IOSOutputFormat.LINEARPCM,
+    extension: '.m4a',
+    outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
     audioQuality: Audio.IOSAudioQuality.HIGH,
-    sampleRate: 16000,
+    sampleRate: 44100,
     numberOfChannels: 1,
-    bitRate: 256000,
+    bitRate: 64000,
     linearPCMBitDepth: 16,
     linearPCMIsBigEndian: false,
     linearPCMIsFloat: false,
@@ -636,7 +638,8 @@ function ChatInputImpl({
 
     const MAX_SIZE: Record<string, number> = {
       image: 10 * 1024 * 1024,
-      video: 100 * 1024 * 1024,
+      // עם דחיסה נייטיב — המקור יכול להיות גדול; המגבלה (100MB) נבדקת על הקובץ הדחוס ב-uploadVideo
+      video: isVideoCompressionAvailable() ? 1024 * 1024 * 1024 : 100 * 1024 * 1024,
       audio: 50 * 1024 * 1024,
       document: 50 * 1024 * 1024,
     };
@@ -1361,7 +1364,7 @@ function ChatInputImpl({
         playsInSilentModeIOS: true,
       });
 
-      // יצירת recording — iOS WAV לפיקים מהקובץ; Android m4a + metering
+      // יצירת recording — m4a/AAC + metering חי לוויבפורם (שתי הפלטפורמות)
       const recording = new Audio.Recording();
       await recording.prepareToRecordAsync(VOICE_RECORDING_OPTIONS);
       recording.setOnRecordingStatusUpdate(handleRecordingStatus);
@@ -1559,7 +1562,7 @@ function ChatInputImpl({
       setIsPlayingPreview(false);
       previewPlayingSV.value = 0;
 
-      // peaks מהקובץ (WAV) או envelope מה-metering — raw; עיצוב בתצוגה
+      // envelope מה-metering החי (או peaks מקובץ WAV אם אין מספיק דגימות) — raw; עיצוב בתצוגה
       const finalWave = await resolveMessageWaveform(uri, liveSamples, WAVEFORM_STORE_BARS);
       waveformSamplesRef.current = finalWave;
       setWaveformSamples(finalWave);

@@ -108,7 +108,8 @@
           ]
         }
       ],
-      "./plugins/withShareSuggestions"
+      "./plugins/withShareSuggestions",
+      "react-native-compressor"
     ],
     "owner": "darkpoolapp"
   },

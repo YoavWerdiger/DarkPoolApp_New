@@ -16,6 +16,7 @@ import {
 import { logger } from '../../utils/logger';
 import { chatMediaStoragePathFromRef, getChatMediaDisplayUri } from './chatSignedMediaUrl';
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../../config/publicEnv';
+import { compressVideoForUpload, discardCompressedVideo } from '../../lib/videoCompressSafe';
 
 // ============================================
 // קונפיגורציה
@@ -35,7 +36,9 @@ const IMAGE_JPEG_QUALITY_GRAPHICS = 0.9;
 const IMAGE_PASSTHROUGH_MAX_BYTES = 500 * 1024;
 /** thumbnail של וידאו (poster) — פריים מלא ב-4K שוקל 1–2MB; בועה לא צריכה יותר מזה */
 const VIDEO_THUMB_MAX_EDGE = 720;
-const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB
+const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB — הקובץ שעולה בפועל (אחרי דחיסה)
+/** מקור גדול מזה לא נדחס ולא עולה (דחיסה של קובץ ענק אורכת דקות) */
+const MAX_VIDEO_SOURCE_SIZE = 1024 * 1024 * 1024; // 1GB
 const MAX_AUDIO_SIZE = 50 * 1024 * 1024; // 50MB
 const MAX_DOCUMENT_SIZE = 50 * 1024 * 1024; // 50MB
 const GALLERY_PAGE_SIZE = 50;
@@ -441,15 +444,37 @@ export async function uploadVideo(
       return failResult({ code: 'FILE_NOT_FOUND', message: 'הקובץ לא נמצא' });
     }
 
-    const fileSize = typeof fileInfo.size === 'number' ? fileInfo.size : 0;
+    const sourceSize = typeof fileInfo.size === 'number' ? fileInfo.size : 0;
+    if (sourceSize > MAX_VIDEO_SOURCE_SIZE) {
+      logger.warn('ChatMedia', `uploadVideo: source too large size=${sourceSize}`);
+      return failResult({ code: 'FILE_TOO_LARGE', message: 'הסרטון גדול מדי (מקסימום 100MB)' });
+    }
+
+    // דחיסה (1080p, ~5Mbps) לפני העלאה. בלי המודול הנייטיב / בכישלון — הקובץ המקורי.
+    // progress: 0–40% דחיסה, 40–95% העלאה (בלי דחיסה: 5–95%).
+    let compressionStarted = false;
+    const compressed = await compressVideoForUpload(uri, (fraction) => {
+      compressionStarted = true;
+      onProgress?.({
+        file_name: '',
+        progress: Math.max(1, Math.min(40, Math.round(fraction * 40))),
+        uploaded_bytes: 0,
+        total_bytes: sourceSize,
+      });
+    });
+    const uploadUri = compressed.uri;
+    const fileSize = compressed.size || sourceSize;
+    const progressBase = compressed.compressed || compressionStarted ? 40 : 5;
+
     if (fileSize > MAX_VIDEO_SIZE) {
       logger.warn('ChatMedia', `uploadVideo: file too large size=${fileSize}`);
+      discardCompressedVideo(compressed);
       return failResult({ code: 'FILE_TOO_LARGE', message: 'הסרטון גדול מדי (מקסימום 100MB)' });
     }
 
     const timestamp = Date.now();
     const randomId = generateSecureId();
-    const rawExt = uri.split('.').pop() || 'mp4';
+    const rawExt = uploadUri.split('?')[0].split('.').pop() || 'mp4';
     const extension = (rawExt.replace(/[^a-zA-Z0-9]/g, '').substring(0, 10) || 'mp4').toLowerCase();
     const fileName = `${groupId}/${timestamp}-${randomId}.${extension}`;
 
@@ -467,11 +492,11 @@ export async function uploadVideo(
 
     logger.info(
       'ChatMedia',
-      `uploadVideo:start uri=${uri.slice(0, 80)} size=${fileSize} mime=${mimeType} path=${fileName}`,
+      `uploadVideo:start uri=${uploadUri.slice(0, 80)} size=${fileSize} source=${sourceSize} compressed=${compressed.compressed} mime=${mimeType} path=${fileName}`,
     );
 
     if (onProgress) {
-      onProgress({ file_name: fileName, progress: 5, uploaded_bytes: 0, total_bytes: fileSize });
+      onProgress({ file_name: fileName, progress: progressBase, uploaded_bytes: 0, total_bytes: fileSize });
     }
 
     // ה-token של המשתמש נדרש עבור Storage RLS. אם אין session פעיל —
@@ -485,6 +510,7 @@ export async function uploadVideo(
     }
     if (!accessToken) {
       logger.error('ChatMedia', 'uploadVideo: no auth session, aborting');
+      discardCompressedVideo(compressed);
       return failResult({ code: 'AUTH_REQUIRED', message: 'נדרשת התחברות מחדש' });
     }
 
@@ -505,7 +531,7 @@ export async function uploadVideo(
       try {
         const task = FileSystem.createUploadTask(
           uploadUrl,
-          uri,
+          uploadUri,
           {
             httpMethod: 'POST',
             uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
@@ -515,9 +541,10 @@ export async function uploadVideo(
             if (!onProgress) return;
             const expected = progress.totalBytesExpectedToSend || fileSize || 0;
             const sent = progress.totalBytesSent || 0;
+            const span = 95 - progressBase;
             const pct = expected > 0
-              ? Math.max(5, Math.min(95, Math.round((sent / expected) * 90) + 5))
-              : 50;
+              ? Math.max(progressBase, Math.min(95, Math.round((sent / expected) * span) + progressBase))
+              : Math.round((progressBase + 95) / 2);
             onProgress({
               file_name: fileName,
               progress: pct,
@@ -559,6 +586,7 @@ export async function uploadVideo(
 
     if (!uploadedOk) {
       logger.error('ChatMedia', 'uploadVideo: failed after retries', lastError);
+      discardCompressedVideo(compressed);
       const status = lastError?.status;
       const bodyStr = String(lastError?.body || lastError?.message || '').toLowerCase();
       const isTooLarge =
@@ -584,7 +612,7 @@ export async function uploadVideo(
     // Thumbnail — best-effort. הת'אמב עצמו הוא JPEG של ~50KB, אז base64 בסדר.
     let thumbnailUrl: string | null = null;
     try {
-      const frame = await VideoThumbnails.getThumbnailAsync(uri, {
+      const frame = await VideoThumbnails.getThumbnailAsync(uploadUri, {
         time: 1000,
         quality: 0.7,
       });
@@ -625,6 +653,8 @@ export async function uploadVideo(
     } catch (thumbError) {
       logger.warn('ChatMedia', 'uploadVideo: could not generate video thumbnail', thumbError);
     }
+    // הקובץ הדחוס הזמני כבר לא נחוץ (הבועה מנגנת מהמקור המקומי / מה-URL)
+    discardCompressedVideo(compressed);
 
     if (onProgress) {
       onProgress({ file_name: fileName, progress: 100, uploaded_bytes: fileSize, total_bytes: fileSize, url: fileName });
@@ -681,8 +711,20 @@ export async function uploadAudio(
 
     const timestamp = Date.now();
     const randomId = generateSecureId();
-    const rawExt = uri.split('.').pop() || 'm4a';
-    const extension = rawExt.replace(/[^a-zA-Z0-9]/g, '').substring(0, 10);
+    const rawExt = uri.split('?')[0].split('.').pop() || 'm4a';
+    const extension = (rawExt.replace(/[^a-zA-Z0-9]/g, '').substring(0, 10) || 'm4a').toLowerCase();
+    // m4a = קונטיינר MP4 (AAC) — audio/mp4 הוא ה-MIME התקני (AVPlayer/ExoPlayer)
+    const audioMimeTypes: Record<string, string> = {
+      m4a: 'audio/mp4',
+      mp4: 'audio/mp4',
+      aac: 'audio/aac',
+      mp3: 'audio/mpeg',
+      wav: 'audio/wav',
+      caf: 'audio/x-caf',
+      ogg: 'audio/ogg',
+      webm: 'audio/webm',
+    };
+    const audioContentType = audioMimeTypes[extension] || `audio/${extension}`;
     const fileName = `${groupId}/${timestamp}-${randomId}.${extension}`;
 
     if (onProgress) {
@@ -702,7 +744,7 @@ export async function uploadAudio(
       supabase.storage
         .from(CHAT_MEDIA_BUCKET)
         .upload(fileName, decode(base64), {
-          contentType: `audio/${extension}`,
+          contentType: audioContentType,
           upsert: false,
         })
     );

@@ -8,6 +8,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import { decode } from 'base64-arraybuffer';
 import { supabase } from '../lib/supabase';
 import { logger } from '../utils/logger';
+import { compressVideoForUpload, discardCompressedVideo } from '../lib/videoCompressSafe';
 import {
   isCacheableMediaPath,
   getCachedLocalMediaUri,
@@ -346,14 +347,26 @@ export async function uploadStoryVideo(uri: string, userId: string): Promise<{ u
 
     const fileInfo = await FileSystem.getInfoAsync(uri);
     if (!fileInfo.exists) return { url: null, error: 'הקובץ לא נמצא' };
+
+    // דחיסה קודם (1080p, ~5Mbps) — ואז בדיקת המגבלה על מה שעולה בפועל.
+    // בלי המודול הנייטיב (Expo Go / בילד ישן) או בכישלון — הקובץ המקורי.
+    const compressed = await compressVideoForUpload(uri);
+    const uploadUri = compressed.uri;
     const maxBytes = 20 * 1024 * 1024;
-    if ((fileInfo as any).size > maxBytes) {
+    const size = compressed.size || (fileInfo as any).size || 0;
+    if (size > maxBytes) {
+      discardCompressedVideo(compressed);
       return { url: null, error: 'הוידאו גדול מדי (מקסימום 20MB)' };
     }
 
-    const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
+    let base64: string;
+    try {
+      base64 = await FileSystem.readAsStringAsync(uploadUri, { encoding: 'base64' });
+    } finally {
+      discardCompressedVideo(compressed);
+    }
 
-    const ext = uri.toLowerCase().endsWith('.mov') ? 'mov' : 'mp4';
+    const ext = uploadUri.split('?')[0].toLowerCase().endsWith('.mov') ? 'mov' : 'mp4';
     const contentType = ext === 'mov' ? 'video/quicktime' : 'video/mp4';
     const storagePath = `${STORIES_PATH_PREFIX}/${userId}/${Date.now()}.${ext}`;
 

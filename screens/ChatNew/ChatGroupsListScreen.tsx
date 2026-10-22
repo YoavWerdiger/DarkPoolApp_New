@@ -1189,17 +1189,17 @@ export default function ChatGroupsListScreen() {
               {
                 key: 'pin',
                 label: rowPinned ? 'ביטול נעיצה' : 'נעיצה',
-                icon: <MaterialCommunityIcons name={rowPinned ? 'pin-off' : 'pin'} size={22} color="#000" />,
+                icon: <MaterialCommunityIcons name={rowPinned ? 'pin-off-outline' : 'pin-outline'} size={21} color="#0B0B0C" />,
                 backgroundColor: tokens.colors.primary.main,
-                color: '#000',
+                color: tokens.colors.text.primary,
                 onPress: () => { void toggleGroupPin(item); },
               },
               {
                 key: 'mute',
                 label: rowMuted ? 'ביטול השתקה' : 'השתקה',
-                icon: <Ionicons name={rowMuted ? 'notifications-outline' : 'notifications-off-outline'} size={21} color="#fff" />,
-                backgroundColor: '#5A5A5F',
-                color: '#fff',
+                icon: <Ionicons name={rowMuted ? 'notifications-outline' : 'notifications-off-outline'} size={20} color={tokens.colors.text.primary} />,
+                backgroundColor: tokens.colors.background.cardSolid,
+                color: tokens.colors.text.primary,
                 onPress: () => { void toggleGroupMute(item); },
               },
             ]}

@@ -7,11 +7,13 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
+  Extrapolation,
+  interpolate,
   runOnJS,
+  type SharedValue,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
-  withTiming,
 } from 'react-native-reanimated';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 
@@ -19,13 +21,60 @@ export type ChatListSwipeAction = {
   key: string;
   label: string;
   icon: React.ReactNode;
+  /** רקע העיגול */
   backgroundColor: string;
+  /** צבע התווית מתחת לעיגול */
   color: string;
   onPress: () => void;
 };
 
-const ACTION_W = 78;
-const SPRING = { damping: 22, stiffness: 260, mass: 0.8 };
+const ACTION_W = 76;
+const CIRCLE = 44;
+// קפיצה עדינה בפתיחה (מעט overshoot), סגירה חלקה
+const SPRING_OPEN = { damping: 16, stiffness: 220, mass: 0.7 };
+const SPRING_CLOSE = { damping: 24, stiffness: 300, mass: 0.7 };
+
+/** כל כפתור נחשף בנפרד: גדל ומופיע לפי כמה מהשורה זזה, עם השהיה קלה בין הכפתורים */
+function SwipeActionButton({
+  action,
+  index,
+  tx,
+  onPress,
+}: {
+  action: ChatListSwipeAction;
+  index: number;
+  tx: SharedValue<number>;
+  onPress: () => void;
+}) {
+  const start = index * ACTION_W * 0.55;
+  const end = start + ACTION_W;
+  const anim = useAnimatedStyle(() => {
+    const p = interpolate(tx.value, [start, end], [0, 1], Extrapolation.CLAMP);
+    return {
+      opacity: p,
+      transform: [
+        { scale: interpolate(p, [0, 1], [0.55, 1]) },
+        { translateX: interpolate(p, [0, 1], [-10, 0]) },
+      ],
+    };
+  });
+  return (
+    <Pressable
+      onPress={onPress}
+      style={styles.action}
+      accessibilityRole="button"
+      accessibilityLabel={action.label}
+      hitSlop={4}
+    >
+      <Animated.View style={[styles.actionInner, anim]}>
+        <View style={[styles.circle, { backgroundColor: action.backgroundColor }]}>{action.icon}</View>
+        <Text style={[styles.actionLabel, { color: action.color }]} numberOfLines={1}>
+          {action.label}
+        </Text>
+      </Animated.View>
+    </Pressable>
+  );
+}
 
 /** רק שורה אחת פתוחה בכל רגע */
 let closeOpenRow: (() => void) | null = null;
@@ -49,7 +98,7 @@ export default function ChatListSwipeRow({ actions, enabled = true, children }: 
   const closeRef = useRef<() => void>(() => {});
 
   const close = useCallback(() => {
-    tx.value = withTiming(0, { duration: 180 });
+    tx.value = withSpring(0, SPRING_CLOSE);
     setOpen(false);
   }, [tx]);
   closeRef.current = close;
@@ -94,7 +143,7 @@ export default function ChatListSwipeRow({ actions, enabled = true, children }: 
     })
     .onEnd((e) => {
       const shouldOpen = tx.value > openX * 0.5 || (e.velocityX > 600 && tx.value > 12);
-      tx.value = withSpring(shouldOpen ? openX : 0, SPRING);
+      tx.value = withSpring(shouldOpen ? openX : 0, shouldOpen ? SPRING_OPEN : SPRING_CLOSE);
       passedThreshold.value = false;
       runOnJS(shouldOpen ? onOpened : onClosed)();
     });
@@ -110,23 +159,18 @@ export default function ChatListSwipeRow({ actions, enabled = true, children }: 
       {/* הפעולות מאחורי השורה, בצד שמאל — נחשפות כשהשורה זזה ימינה */}
       <Animated.View style={[styles.actionsClip, actionsClipStyle]}>
       <View style={[styles.actions, { width: openX }]}>
-        {actions.map((a) => (
-          <Pressable
+        {actions.map((a, i) => (
+          <SwipeActionButton
             key={a.key}
+            action={a}
+            index={i}
+            tx={tx}
             onPress={() => {
               void HapticFeedback.impactLight();
               close();
               a.onPress();
             }}
-            style={[styles.action, { backgroundColor: a.backgroundColor }]}
-            accessibilityRole="button"
-            accessibilityLabel={a.label}
-          >
-            {a.icon}
-            <Text style={[styles.actionLabel, { color: a.color }]} numberOfLines={1}>
-              {a.label}
-            </Text>
-          </Pressable>
+          />
         ))}
       </View>
       </Animated.View>
@@ -163,10 +207,21 @@ const styles = StyleSheet.create({
     width: ACTION_W,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+  },
+  actionInner: {
+    alignItems: 'center',
+    gap: 5,
+  },
+  circle: {
+    width: CIRCLE,
+    height: CIRCLE,
+    borderRadius: CIRCLE / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   actionLabel: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '500',
+    letterSpacing: 0.1,
   },
 });

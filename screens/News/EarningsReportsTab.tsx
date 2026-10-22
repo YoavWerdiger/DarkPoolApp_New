@@ -19,6 +19,11 @@ import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
 import { TickerLogo } from '../../components/ui/TickerLogo';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { APP_TYPE } from '../../components/ui/appType';
+import ForwardMessageModal from '../../components/chat/ForwardMessageModal';
+import { shareAttachmentToGroups } from '../../lib/shareAttachmentToGroups';
+import { buildEarningsAttachment } from '../../types/shareableEntity';
+import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../components/ui/Toast';
 import EarningsWeeklyView, { WeekDay, getSymbolDisplay as getWeeklySymbolDisplay } from './EarningsWeeklyView';
 
 export type EarningsViewMode = 'daily' | 'weekly';
@@ -33,10 +38,12 @@ type EarningsReportsTabProps = {
   onOpenReportConsumed?: () => void;
 };
 
-const EarningsReportCard: React.FC<{ 
-  report: EarningsReport; 
-  onPress: (report: EarningsReport) => void 
-}> = ({ report, onPress }) => {
+const EarningsReportCard: React.FC<{
+  report: EarningsReport;
+  onPress: (report: EarningsReport) => void;
+  /** לחיצה ארוכה — «העבר» לקבוצות צ׳אט */
+  onLongPress?: (report: EarningsReport) => void;
+}> = ({ report, onPress, onLongPress }) => {
   const DesignTokens = useDesignTokens();
   
   // פונקציה לקבלת צבע לפי surprise
@@ -145,7 +152,12 @@ const EarningsReportCard: React.FC<{
     report.revenue_estimate_avg != null ||
     report.revenue_actual != null;
   return (
-    <Pressable onPress={() => onPress(report)} style={{ marginHorizontal: screenPad, marginBottom: APP_LAYOUT.cardStackGap }}>
+    <Pressable
+      onPress={() => onPress(report)}
+      onLongPress={onLongPress ? () => onLongPress(report) : undefined}
+      delayLongPress={350}
+      style={{ marginHorizontal: screenPad, marginBottom: APP_LAYOUT.cardStackGap }}
+    >
       <UICard
         variant="soft"
         padding="lg"
@@ -954,6 +966,28 @@ export default function EarningsReportsTab({
 
   const handleReportPress = useCallback((_report: EarningsReport) => {}, []);
 
+  // לחיצה ארוכה על דוח → שיט «העבר הודעה» → כרטיס הדוח נשלח לקבוצות שנבחרו
+  const { user: shareUser } = useAuth();
+  const { showToast } = useToast();
+  const [shareReport, setShareReport] = useState<EarningsReport | null>(null);
+  const handleReportLongPress = useCallback((report: EarningsReport) => {
+    void HapticFeedback.impactMedium();
+    setShareReport(report);
+  }, []);
+  const forwardReport = useCallback(
+    async (groupIds: string[]) => {
+      if (!shareReport || !shareUser?.id) return;
+      const { sent } = await shareAttachmentToGroups(
+        buildEarningsAttachment(shareReport as unknown as Parameters<typeof buildEarningsAttachment>[0]),
+        groupIds,
+        shareUser.id,
+      );
+      void HapticFeedback.success();
+      showToast(sent === 1 ? 'הדוח נשלח' : `הדוח נשלח ל-${sent} קבוצות`, 'success');
+    },
+    [shareReport, shareUser?.id, showToast],
+  );
+
   const openedReportFromPushRef = useRef<string | null>(null);
 
   // פתיחה מהתראת Push (earnings_report_id / ticker+date)
@@ -1136,6 +1170,7 @@ export default function EarningsReportsTab({
           <EarningsReportCard
             report={item}
             onPress={handleReportPress}
+            onLongPress={handleReportLongPress}
           />
         </View>
       </View>
@@ -1355,6 +1390,11 @@ export default function EarningsReportsTab({
         </Animated.View>
       )}
 
+      <ForwardMessageModal
+        visible={!!shareReport}
+        onClose={() => setShareReport(null)}
+        onForward={forwardReport}
+      />
     </View>
   );
 }

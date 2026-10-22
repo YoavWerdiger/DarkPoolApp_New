@@ -6,12 +6,15 @@
  */
 
 import { brandfetchTickerLogoUri } from '../utils/brandfetch';
+import { translateEconomicEventNameSmart } from '../utils/economicEventTranslations';
+import { formatEconomicDisplayValue } from '../utils/economicNumberFormat';
 
 export type ShareableEntityType =
   | 'person_profile'
   | 'journal_trade'
   | 'news_article'
   | 'earnings_report'
+  | 'economic_event'
   | 'ticker'
   | 'insider_trade'
   | 'community_portfolio'
@@ -121,6 +124,12 @@ export const PREVIEW_METRIC_LABELS: Record<string, string> = {
   exit_date: 'תאריך יציאה',
   strategy: 'אסטרטגיה',
   company: 'חברה',
+  eps: 'רווח למניה',
+  revenue: 'הכנסות',
+  report_when: 'מועד',
+  actual: 'תוצאה',
+  forecast: 'צפי',
+  previous: 'קודם',
 };
 
 function formatUsdCompact(v: number): string {
@@ -320,6 +329,142 @@ export function buildTradeAttachment(trade: {
       ...(subtitleParts.length ? { subtitle: subtitleParts.join(' · ') } : {}),
       imageUrl: logoUrl,
       badge: dir === 'long' ? 'LONG' : 'SHORT',
+      metrics,
+    },
+    sharedAt: new Date().toISOString(),
+  };
+}
+
+function toNum(v: unknown): number | null {
+  if (v == null || v === '') return null;
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function formatEarningsMoney(v: number, compact: boolean): string {
+  if (compact) return formatUsdCompact(v);
+  return `$${v.toFixed(2)}`;
+}
+
+/** «$0.48 (צפי $0.44 · מכה ב-10.1%)» — כמו בפוש תוצאות */
+function earningsMetricLine(actual: number | null, estimate: number | null, compact: boolean): string | null {
+  if (actual == null && estimate == null) return null;
+  if (actual == null) return `צפי ${formatEarningsMoney(estimate!, compact)}`;
+  let line = formatEarningsMoney(actual, compact);
+  if (estimate != null && estimate !== 0) {
+    const pct = ((actual - estimate) / Math.abs(estimate)) * 100;
+    const verdict =
+      Math.abs(pct) < 0.05 ? 'בקו הצפי' : pct > 0 ? `מכה ב-${Math.abs(pct).toFixed(1)}%` : `מפספסת ב-${Math.abs(pct).toFixed(1)}%`;
+    line += ` (צפי ${formatEarningsMoney(estimate, compact)} · ${verdict})`;
+  }
+  return line;
+}
+
+/** דוח רבעוני (earnings_calendar) — שיתוף לצ׳אט / לציוצים */
+export function buildEarningsAttachment(row: {
+  id: string;
+  ticker?: string | null;
+  symbol?: string | null;
+  code?: string | null;
+  company_name?: string | null;
+  report_date?: string | null;
+  before_after_market?: string | null;
+  report_time?: string | null;
+  eps?: string | number | null;
+  actual?: string | number | null;
+  eps_estimate?: string | number | null;
+  estimate?: string | number | null;
+  revenue?: string | number | null;
+  revenue_actual?: string | number | null;
+  revenue_estimate?: string | number | null;
+}): ShareableAttachment {
+  const ticker =
+    String(row.ticker || row.symbol || (row.code ?? '').split('.')[0] || '')
+      .trim()
+      .toUpperCase() || 'EARNINGS';
+  const company = (row.company_name ?? '').toString().trim() || undefined;
+  const epsActual = toNum(row.eps ?? row.actual);
+  const epsEst = toNum(row.eps_estimate ?? row.estimate);
+  const revActual = toNum(row.revenue_actual ?? row.revenue);
+  const revEst = toNum(row.revenue_estimate);
+  const reported = epsActual != null || revActual != null;
+
+  const metrics: Record<string, string | number> = {};
+  const epsLine = earningsMetricLine(epsActual, epsEst, false);
+  if (epsLine) metrics.eps = epsLine;
+  const revLine = earningsMetricLine(revActual, revEst, true);
+  if (revLine) metrics.revenue = revLine;
+
+  const bam = `${row.before_after_market ?? ''} ${row.report_time ?? ''}`.toLowerCase();
+  const timing = bam.includes('before') || bam.includes('bmo')
+    ? 'לפני הפתיחה'
+    : bam.includes('after') || bam.includes('amc')
+      ? 'אחרי הסגירה'
+      : '';
+  const date = (row.report_date ?? '').slice(0, 10);
+  let dateLabel = '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    const [y, m, d] = date.split('-');
+    dateLabel = `${d}/${m}/${y}`;
+  }
+  if (!reported) {
+    const when = [dateLabel, timing].filter(Boolean).join(' · ');
+    if (when) metrics.report_when = when;
+  }
+
+  const subtitleParts: string[] = [];
+  if (company) subtitleParts.push(company);
+  if (reported && dateLabel) subtitleParts.push(dateLabel);
+
+  return {
+    v: 1,
+    ref: {
+      type: 'earnings_report',
+      id: row.id,
+      extras: { ticker, ...(date ? { reportDate: date } : {}) },
+    },
+    preview: {
+      title: `$${ticker}`,
+      ...(subtitleParts.length ? { subtitle: subtitleParts.join(' · ') } : {}),
+      imageUrl: brandfetchTickerLogoUri(ticker),
+      badge: reported ? 'דוח רבעוני' : 'דוח צפוי',
+      metrics,
+    },
+    sharedAt: new Date().toISOString(),
+  };
+}
+
+/** דיווח ביומן הכלכלי — שיתוף לצ׳אט / לציוצים */
+export function buildEconomicEventAttachment(event: {
+  id: string;
+  title: string;
+  date?: string | null;
+  time?: string | null;
+  actual?: string | null;
+  forecast?: string | null;
+  previous?: string | null;
+  importance?: string | null;
+}): ShareableAttachment {
+  const title = translateEconomicEventNameSmart(event.title || '') || event.title;
+  const metrics: Record<string, string | number> = {};
+  const fmt = (v?: string | null) => (v == null || v === '' ? '' : formatEconomicDisplayValue(v, event.title));
+  if (fmt(event.actual)) metrics.actual = fmt(event.actual);
+  if (fmt(event.forecast)) metrics.forecast = fmt(event.forecast);
+  if (fmt(event.previous)) metrics.previous = fmt(event.previous);
+  const date = (event.date ?? '').slice(0, 10);
+  let when = '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    const [y, m, d] = date.split('-');
+    when = `${d}/${m}/${y}`;
+  }
+  if (event.time) when = [when, event.time].filter(Boolean).join(' · ');
+  return {
+    v: 1,
+    ref: { type: 'economic_event', id: event.id },
+    preview: {
+      title,
+      ...(when ? { subtitle: `ארה״ב · ${when}` } : {}),
+      badge: event.importance === 'high' ? 'השפעה גבוהה' : 'יומן כלכלי',
       metrics,
     },
     sharedAt: new Date().toISOString(),

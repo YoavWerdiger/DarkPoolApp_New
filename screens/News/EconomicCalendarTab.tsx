@@ -1,4 +1,9 @@
 import { legacyAlert } from '../../utils/appDialog';
+import { useAuth } from '../../context/AuthContext';
+import ForwardMessageModal from '../../components/chat/ForwardMessageModal';
+import { shareAttachmentToGroups } from '../../lib/shareAttachmentToGroups';
+import { buildEconomicEventAttachment } from '../../types/shareableEntity';
+import { useToast } from '../../components/ui/Toast';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { View, Text, FlatList, RefreshControl, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -118,11 +123,14 @@ function stripFlagImportance(event: EconEvent): EconomicImportance {
 const EconomicEventCard: React.FC<{
   event: EconEvent;
   onPress: (event: EconEvent) => void;
+  /** לחיצה ארוכה — «העבר» לקבוצות צ׳אט */
+  onLongPress?: (event: EconEvent) => void;
   /** קאונטדאון חי לאירוע הקרוב ביותר בלבד — מחליף את בייג' השעה. */
   countdownLabel?: string;
 }> = ({
   event,
   onPress,
+  onLongPress,
   countdownLabel,
 }) => {
   const DesignTokens = useDesignTokens();
@@ -171,7 +179,12 @@ const EconomicEventCard: React.FC<{
   // פס חשיבות עבה יותר — אדום/כתום ברורים במבט ראשון
   const accentW = 4;
   return (
-    <Pressable onPress={() => onPress(event)} style={{ marginHorizontal: screenPad, marginBottom: APP_LAYOUT.cardStackGap }}>
+    <Pressable
+      onPress={() => onPress(event)}
+      onLongPress={onLongPress ? () => onLongPress(event) : undefined}
+      delayLongPress={350}
+      style={{ marginHorizontal: screenPad, marginBottom: APP_LAYOUT.cardStackGap }}
+    >
       <UICard
         variant="soft"
         padding="none"
@@ -776,6 +789,28 @@ export default function EconomicCalendarTab() {
   // בוטל: טעינת נתונים היסטוריים ידנית – היסטוריה נטענת בדיפולט דרך ה-cache
 
   // בחירת אירוע
+  // לחיצה ארוכה על דיווח → שיט «העבר הודעה» → כרטיס הדיווח נשלח לקבוצות שנבחרו
+  const { user: shareUser } = useAuth();
+  const { showToast } = useToast();
+  const [shareEvent, setShareEvent] = useState<EconomicEvent | null>(null);
+  const handleEventLongPress = useCallback((event: EconomicEvent) => {
+    void HapticFeedback.impactMedium();
+    setShareEvent(event);
+  }, []);
+  const forwardEvent = useCallback(
+    async (groupIds: string[]) => {
+      if (!shareEvent || !shareUser?.id) return;
+      const { sent } = await shareAttachmentToGroups(
+        buildEconomicEventAttachment(shareEvent),
+        groupIds,
+        shareUser.id,
+      );
+      void HapticFeedback.success();
+      showToast(sent === 1 ? 'הדיווח נשלח' : `הדיווח נשלח ל-${sent} קבוצות`, 'success');
+    },
+    [shareEvent, shareUser?.id, showToast],
+  );
+
   const handleEventPress = useCallback((event: EconomicEvent) => {
     // קבלת הסבר מקצועי למדד
     const translatedTitle = translateEconomicEventNameSmart(event.title);
@@ -874,6 +909,7 @@ export default function EconomicCalendarTab() {
       <EconomicEventCard
         event={item}
         onPress={handleEventPress}
+        onLongPress={handleEventLongPress}
         countdownLabel={
           countdownTarget?.index === index ? countdownTarget.label : undefined
         }
@@ -1012,6 +1048,11 @@ export default function EconomicCalendarTab() {
           />
         </View>
       ) : null}
+      <ForwardMessageModal
+        visible={!!shareEvent}
+        onClose={() => setShareEvent(null)}
+        onForward={forwardEvent}
+      />
     </View>
   );
 }

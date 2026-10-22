@@ -19,21 +19,20 @@ import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabase';
 import { fetchFeaturedProfiles } from '../../services/darkpool/featuredProfilesService';
 import { NewsService, type NewsArticle } from '../../services/newsService';
-import type { Trade } from '../../screens/Journal/tradeTypes';
 import {
   buildNewsAttachment,
   buildPersonAttachment,
-  buildTradeAttachment,
+  buildEarningsAttachment,
   type ShareableAttachment,
 } from '../../types/shareableEntity';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { TickerLogo } from '../ui/TickerLogo';
 
-type Category = 'people' | 'trades' | 'news';
+type Category = 'people' | 'earnings' | 'news';
 
 const TAB_OPTIONS: { id: Category; label: string }[] = [
   { id: 'people', label: 'אנשים' },
-  { id: 'trades', label: 'טריידים' },
+  { id: 'earnings', label: 'דוחות' },
   { id: 'news', label: 'חדשות' },
 ];
 
@@ -93,26 +92,43 @@ export default function EntityAttachPickerSheet({
             };
           })
         );
-      } else if (category === 'trades') {
-        if (!user?.id) {
-          setItems([]);
-          setError('יש להתחבר כדי לצרף טריידים');
-          return;
-        }
+      } else if (category === 'earnings') {
+        // דוחות רבעוניים: שבוע אחורה (עם תוצאות) + 3 ימים קדימה; בכל יום — לפי שווי שוק
+        const today = new Date();
+        const from = new Date(today);
+        from.setDate(from.getDate() - 7);
+        const to = new Date(today);
+        to.setDate(to.getDate() + 3);
+        const iso = (d: Date) => d.toISOString().slice(0, 10);
         const { data, error: qErr } = await supabase
-          .from('trades')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(30);
+          .from('earnings_calendar')
+          .select(
+            'id, ticker, symbol, code, company_name, report_date, before_after_market, report_time, eps, actual, eps_estimate, estimate, revenue, revenue_actual, revenue_estimate, market_cap',
+          )
+          .gte('report_date', iso(from))
+          .lte('report_date', iso(to))
+          .order('report_date', { ascending: false })
+          .limit(400);
         if (qErr) throw qErr;
+        const rows = ((data ?? []) as Array<Parameters<typeof buildEarningsAttachment>[0] & {
+          market_cap?: string | number | null;
+        }>)
+          .filter((r) => r.company_name)
+          .sort((a, b) => {
+            const d = String(b.report_date ?? '').localeCompare(String(a.report_date ?? ''));
+            if (d !== 0) return d;
+            return (Number(b.market_cap) || 0) - (Number(a.market_cap) || 0);
+          })
+          .slice(0, 60);
         setItems(
-          ((data ?? []) as Trade[]).map((t) => {
-            const attachment = buildTradeAttachment(t);
+          rows.map((r) => {
+            const attachment = buildEarningsAttachment(r);
             return {
-              key: `trade-${t.id}`,
+              key: `earnings-${r.id}`,
               title: attachment.preview.title,
-              subtitle: attachment.preview.subtitle,
+              subtitle: [attachment.preview.subtitle, attachment.preview.metrics?.eps ?? attachment.preview.metrics?.report_when]
+                .filter(Boolean)
+                .join(' · '),
               imageUrl: attachment.preview.imageUrl ?? null,
               badge: attachment.preview.badge,
               attachment,
@@ -232,7 +248,7 @@ export default function EntityAttachPickerSheet({
             }
             renderItem={({ item }) => {
               const tradeTicker =
-                item.attachment.ref.type === 'journal_trade'
+                item.attachment.ref.type === 'journal_trade' || item.attachment.ref.type === 'earnings_report'
                   ? (item.attachment.ref.extras?.ticker || item.title || '')
                       .toString()
                       .trim()
@@ -257,8 +273,8 @@ export default function EntityAttachPickerSheet({
                   <View style={[styles.avatar, styles.avatarFallback]}>
                     <Ionicons
                       name={
-                        category === 'trades'
-                          ? 'stats-chart-outline'
+                        category === 'earnings'
+                          ? 'bar-chart-outline'
                           : category === 'news'
                             ? 'newspaper-outline'
                             : 'person-outline'

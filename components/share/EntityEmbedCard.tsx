@@ -40,6 +40,10 @@ function iconForType(type: ShareableAttachment['ref']['type']): keyof typeof Ion
       return 'stats-chart-outline';
     case 'news_article':
       return 'newspaper-outline';
+    case 'earnings_report':
+      return 'bar-chart-outline';
+    case 'economic_event':
+      return 'calendar-outline';
     default:
       return 'link-outline';
   }
@@ -72,6 +76,8 @@ function pickMetrics(
       'company',
     ],
     news_article: [],
+    earnings_report: ['eps', 'revenue', 'report_when'],
+    economic_event: ['actual', 'forecast', 'previous'],
   };
   const preferred =
     preferredByType[attachment.ref.type] ?? Object.keys(metrics);

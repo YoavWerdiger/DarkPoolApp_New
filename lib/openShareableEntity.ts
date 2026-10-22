@@ -31,6 +31,15 @@ export function entityRefToNavTarget(ref: ShareableEntityRef): NotificationNavTa
     case 'journal_trade':
       // Snapshot בלבד בכרטיס — לא מנווטים ליומן הישן / Journal stack
       return null;
+    case 'economic_event':
+      return { kind: 'economic_calendar', eventId: ref.id };
+    case 'earnings_report':
+      return {
+        kind: 'earnings',
+        earningsReportId: ref.id,
+        ticker: ref.extras?.ticker,
+        reportDate: ref.extras?.reportDate,
+      };
     default:
       return null;
   }

@@ -175,7 +175,16 @@ function Body({
         <DayNavBlurButton glass glassIntensity="light" onPress={onClose} size={HEADER_BACK_BTN_SIZE} accessibilityLabel="סגור">
           <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
         </DayNavBlurButton>
-        <View style={styles.topSpacer} />
+        {/* כותרת בשורה אחת עם כפתורי הניווט — ממורכזת ביניהם */}
+        <View style={styles.headerCenter}>
+          <View style={styles.headerIdentity}>
+            <TickerLogo symbol={symbol} size={36} borderRadius={18} />
+            <View style={styles.headerTextCol}>
+              <Text style={styles.ticker} numberOfLines={1}>{`\u2066$${symbol}\u2069`}</Text>
+              {company ? <Text style={styles.company} numberOfLines={1}>{company}</Text> : null}
+            </View>
+          </View>
+        </View>
         {onShare ? (
           <DayNavBlurButton
             glass
@@ -189,30 +198,21 @@ function Body({
           >
             <Ionicons name="share-outline" size={20} color={tokens.colors.text.primary} />
           </DayNavBlurButton>
-        ) : null}
+        ) : (
+          <View style={{ width: HEADER_BACK_BTN_SIZE }} />
+        )}
       </View>
+      <Text style={styles.metaLine} numberOfLines={1}>
+        {[quarter ? `רבעון ${quarter}` : null, timing?.label ?? null, dateLabel(report.report_date)]
+          .filter(Boolean)
+          .join(' · ')}
+      </Text>
 
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(insets.bottom, 16) + 8 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* זהות — ראש פתוח (לא בכרטיס), כמו בשיט המניה */}
-        <View style={styles.hero}>
-          <View style={styles.identityRow}>
-            <TickerLogo symbol={symbol} size={52} borderRadius={26} />
-            <View style={styles.identityText}>
-              <Text style={styles.ticker} numberOfLines={1}>{`\u2066$${symbol}\u2069`}</Text>
-              {company ? <Text style={styles.company} numberOfLines={1}>{company}</Text> : null}
-            </View>
-          </View>
-          <Text style={styles.metaLine} numberOfLines={1}>
-            {[quarter ? `רבעון ${quarter}` : null, timing?.label ?? null, dateLabel(report.report_date)]
-              .filter(Boolean)
-              .join(' · ')}
-          </Text>
-        </View>
-
         {/* תוצאות — שני כרטיסים נפרדים, לכל אחד פס צבע משלו */}
         <View>
           <Text style={styles.groupHeading}>{reported ? 'תוצאות' : 'צפי'}</Text>
@@ -346,9 +346,17 @@ function useStyles() {
           minHeight: HEADER_BACK_BTN_SIZE,
           paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
           paddingTop: 10,
-          paddingBottom: APP_LAYOUT.stackGapSmall + 4,
+          paddingBottom: 6,
         },
-        topSpacer: { flex: 1 },
+        headerCenter: { flex: 1, minWidth: 0, alignItems: 'center', paddingHorizontal: 8 },
+        headerIdentity: {
+          direction: 'ltr',
+          flexDirection: 'row-reverse',
+          alignItems: 'center',
+          gap: 10,
+          maxWidth: '100%',
+        },
+        headerTextCol: { minWidth: 0, flexShrink: 1, alignItems: 'flex-end' },
         scroll: { flex: 1, minHeight: 0 },
         scrollContent: {
           paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
@@ -363,17 +371,15 @@ function useStyles() {
         },
         identityText: { flex: 1, minWidth: 0, alignItems: 'flex-end' },
         ticker: {
-          fontSize: APP_TYPE.sectionTitle.fontSize,
-          lineHeight: APP_TYPE.sectionTitle.lineHeight,
-          fontWeight: APP_TYPE.sectionTitle.fontWeight,
-          letterSpacing: APP_TYPE.sectionTitle.letterSpacing,
+          fontSize: APP_TYPE.cardTitle.fontSize + 1,
+          lineHeight: APP_TYPE.cardTitle.lineHeight,
+          fontWeight: '700',
           color: tokens.colors.text.primary,
           textAlign: 'right',
         },
         company: {
           ...appPhysicalLeftText,
           textAlign: 'right',
-          marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
           fontSize: APP_TYPE.cardSubtitle.fontSize,
           lineHeight: APP_TYPE.cardSubtitle.lineHeight,
           fontWeight: APP_TYPE.cardSubtitle.fontWeight,
@@ -382,7 +388,9 @@ function useStyles() {
         metaLine: {
           ...APP_TYPE.cardSubtitle,
           color: tokens.colors.text.secondary,
-          textAlign: 'right',
+          textAlign: 'center',
+          paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+          marginBottom: APP_LAYOUT.stackGapSmall + 4,
           writingDirection: 'rtl',
           fontVariant: ['tabular-nums'],
         },

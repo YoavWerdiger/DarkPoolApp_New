@@ -2350,12 +2350,7 @@ function ChatInputImpl({
           >
             <Ionicons name="close" size={20} color={DesignTokens.colors.text.tertiary} />
           </TouchableOpacity>
-          <View style={styles.replyContent}>
-            <Text style={styles.replyLabel}>תשובה ל-{replyTo.senderName}</Text>
-            <Text style={styles.replyText} numberOfLines={1}>
-              {getChatMessagePreview(replyTo.messageType, replyTo.content)}
-            </Text>
-          </View>
+          {/* תמונה ממוזערת בקצה (ליד ה-X) — הפס הירוק צמוד לטקסט, כמו תשובה בבועה */}
           {replyTo.mediaUrl ? (
             <ExpoImage
               source={{ uri: replyTo.mediaUrl }}
@@ -2363,6 +2358,12 @@ function ChatInputImpl({
               contentFit="cover"
             />
           ) : null}
+          <View style={styles.replyContent}>
+            <Text style={styles.replyLabel}>תשובה ל-{replyTo.senderName}</Text>
+            <Text style={styles.replyText} numberOfLines={1}>
+              {getChatMessagePreview(replyTo.messageType, replyTo.content)}
+            </Text>
+          </View>
           {/* Green bar on the RIGHT — adjacent to text in RTL reading direction */}
           <View style={styles.replyPreviewBar} />
         </View>
@@ -2913,8 +2914,9 @@ const createStyles = (tokens: any, paddingBottom: number) => StyleSheet.create({
     backgroundColor: tokens.colors.background.cardSolid,
     marginHorizontal: tokens.spacing.xs,
     marginBottom: tokens.spacing.sm,
-    paddingVertical: tokens.spacing.sm + 2,
-    paddingHorizontal: tokens.spacing.md,
+    paddingVertical: 8,
+    paddingLeft: 8,
+    paddingRight: 10,
     borderRadius: tokens.borderRadius.lg,
     overflow: 'hidden',
   },
@@ -2923,7 +2925,8 @@ const createStyles = (tokens: any, paddingBottom: number) => StyleSheet.create({
     width: 3,
     backgroundColor: tokens.colors.primary.main,
     borderRadius: 1.5,
-    marginLeft: 10,
+    // כמו replyBar בבועה — צמוד לטקסט
+    marginLeft: 8,
     flexShrink: 0,
     minHeight: 24,
     alignSelf: 'stretch',
@@ -2948,7 +2951,7 @@ const createStyles = (tokens: any, paddingBottom: number) => StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 8,
-    marginLeft: 8,
+    marginRight: 8,
     alignSelf: 'center',
   },
   cancelReply: {

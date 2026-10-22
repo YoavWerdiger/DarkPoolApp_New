@@ -173,9 +173,11 @@ export default function ForwardMessageModal({
           </Text>
         </View>
 
-        <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-          {isSelected ? <Ionicons name="checkmark" size={15} color="#0B0B0C" /> : null}
-        </View>
+        <Ionicons
+          name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
+          size={26}
+          color={isSelected ? tokens.colors.primary.main : tokens.colors.text.tertiary}
+        />
       </TouchableOpacity>
     );
   };
@@ -321,7 +323,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       gap: 10,
       marginTop: APP_LAYOUT.stackGapSmall,
       marginBottom: APP_LAYOUT.stackGapSmall,
-      backgroundColor: tokens.colors.background.cardSolid,
+      // השיט עצמו בצבע כרטיס — החיפוש ברקע המסך כדי שייראה
+      backgroundColor: tokens.colors.background.primary,
       borderRadius: tokens.borderRadius.search,
       paddingHorizontal: 18,
       height: 46,
@@ -363,7 +366,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       width: 48,
       height: 48,
       borderRadius: 24,
-      backgroundColor: tokens.colors.background.cardSolid,
+      backgroundColor: tokens.colors.background.primary,
       justifyContent: 'center',
       alignItems: 'center',
       flexShrink: 0,
@@ -372,25 +375,11 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       flex: 1,
       minWidth: 0,
     },
+    // בתוך שורה direction:rtl — textAlign:'left' הוא הצד הימני (צמוד לתמונה), כמו chatRtlText
     groupName: {
       ...APP_TYPE.cardTitle,
+      ...chatRtlText,
       color: tokens.colors.text.primary,
-      writingDirection: 'rtl',
-      textAlign: 'right',
-    },
-    checkbox: {
-      width: 22,
-      height: 22,
-      borderRadius: 11,
-      borderWidth: 1.5,
-      borderColor: tokens.colors.text.tertiary,
-      justifyContent: 'center',
-      alignItems: 'center',
-      flexShrink: 0,
-    },
-    checkboxSelected: {
-      backgroundColor: tokens.colors.primary.main,
-      borderColor: tokens.colors.primary.main,
     },
     footer: {
       flexShrink: 0,

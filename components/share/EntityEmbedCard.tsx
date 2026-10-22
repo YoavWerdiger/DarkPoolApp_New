@@ -693,37 +693,39 @@ function EntityEmbedCardGeneric({ attachment, onPress, compact, style }: Props) 
                     <Text style={styles.metricLabel} numberOfLines={1}>
                       {m.label}
                     </Text>
-                    <Text
-                      style={[
-                        styles.metricValue,
-                        {
-                          color:
-                            surpriseColor(metricSurprise(attachment, m.key), tokens) ??
-                            economicActualColor(attachment, m.key, tokens) ??
-                            metricValueColor(m.key, m.value, tokens),
-                        },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {m.value}
-                    </Text>
-                    {(() => {
-                      const pct = metricSurprise(attachment, m.key);
-                      if (pct == null) return null;
-                      return (
-                        <Text
-                          style={[
-                            styles.metricLabel,
-                            { color: surpriseColor(pct, tokens) ?? tokens.colors.text.secondary, marginTop: 2 },
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {Math.abs(pct) < 0.05
-                            ? 'בקו הצפי'
-                            : `\u2066${pct > 0 ? '+' : '−'}${Math.abs(pct).toFixed(1)}%\u2069`}
-                        </Text>
-                      );
-                    })()}
+                    {/* כמו בדף הדיווחים: אחוז ההפתעה קטן משמאל לערך, באותה שורה */}
+                    <View style={styles.metricValueRow}>
+                      {(() => {
+                        const pct = metricSurprise(attachment, m.key);
+                        if (pct == null) return null;
+                        return (
+                          <Text
+                            style={[
+                              styles.metricSurprise,
+                              { color: surpriseColor(pct, tokens) ?? tokens.colors.text.secondary },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {pct > 0 ? '+' : ''}
+                            {pct.toFixed(1)}%
+                          </Text>
+                        );
+                      })()}
+                      <Text
+                        style={[
+                          styles.metricValue,
+                          {
+                            color:
+                              surpriseColor(metricSurprise(attachment, m.key), tokens) ??
+                              economicActualColor(attachment, m.key, tokens) ??
+                              metricValueColor(m.key, m.value, tokens),
+                          },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {m.value}
+                      </Text>
+                    </View>
                   </View>
                 </React.Fragment>
               ))}
@@ -755,6 +757,18 @@ function createStyles(
      * Yoga הגלובלי הוא LTR. row-reverse שם אווטאר/טקסט לימין.
      * direction:'ltr' כאן מבודד מהורה rtl (קומפוז/ציוצים) — בלי היפוך כפול.
      */
+    metricValueRow: {
+      flexDirection: 'row',
+      direction: 'ltr',
+      alignItems: 'baseline',
+      justifyContent: 'center',
+      flexWrap: 'wrap',
+    },
+    metricSurprise: {
+      ...APP_TYPE.caption,
+      marginRight: 6,
+      fontVariant: ['tabular-nums'],
+    },
     surpriseBar: {
       position: 'absolute',
       right: 0,

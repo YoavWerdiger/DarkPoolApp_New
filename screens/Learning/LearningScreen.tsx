@@ -2142,7 +2142,7 @@ function LearningScreen() {
           />
 
         <View style={styles.courseListBody}>
-          <Text style={[styles.courseListSectionTitle, { marginBottom: 0 }]}>שיעורי הקורס</Text>
+          <Text style={[styles.courseListSectionTitle, { marginBottom: DesignTokens.spacing.sm }]}>שיעורי הקורס</Text>
         </View>
 
         {/* marginBottom: הרשימה נחתכת מעל ה-safe area התחתון */}

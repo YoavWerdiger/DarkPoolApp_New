@@ -58,13 +58,13 @@ export function rankProgress(days: number): {
 /** «חבר בקהילה כבר 134 ימים» — תמיד בימים (לא חודשים / שנים) */
 export function formatPaidTenure(days: number): string {
   const d = Math.max(0, Math.floor(days));
-  if (d < 1) return 'חבר בקהילה מהיום';
-  if (d === 1) return 'חבר בקהילה כבר יום אחד';
-  return `חבר בקהילה כבר ${d.toLocaleString('en-US')} ימים`;
+  if (d < 1) return 'חבר בקהילה מהיום!';
+  if (d === 1) return 'חבר בקהילה כבר יום אחד!';
+  return `חבר בקהילה כבר ${d.toLocaleString('en-US')} ימים!`;
 }
 
 export function formatDaysCount(days: number): string {
-  return days === 1 ? 'יום אחד' : `${days} ימים`;
+  return days === 1 ? 'יום אחד' : `${days} ימים!`;
 }
 
 /** וי כחול — כחול «מאומת» סטנדרטי, קריא בבהיר ובכהה */

@@ -241,8 +241,22 @@ function LearningScreen() {
   const [showCourseScrollTop, setShowCourseScrollTop] = useState(false);
   const courseScrollTopOpacity = useRef(new Animated.Value(0)).current;
   const courseScrollTopShownRef = useRef(false);
+  // פס גלילה משלנו בצד שמאל (המובנה של iOS תמיד בימין)
+  const courseScrollY = useRef(new Animated.Value(0)).current;
+  const courseIndicatorOpacity = useRef(new Animated.Value(0)).current;
+  const [courseViewportH, setCourseViewportH] = useState(0);
+  const [courseContentH, setCourseContentH] = useState(0);
+  const showCourseIndicator = useCallback(() => {
+    courseIndicatorOpacity.stopAnimation();
+    Animated.timing(courseIndicatorOpacity, { toValue: 1, duration: 120, useNativeDriver: false }).start();
+  }, [courseIndicatorOpacity]);
+  const hideCourseIndicator = useCallback(() => {
+    Animated.timing(courseIndicatorOpacity, { toValue: 0, duration: 300, delay: 700, useNativeDriver: false }).start();
+  }, [courseIndicatorOpacity]);
+
   const handleCourseListScroll = useCallback(
     (e: { nativeEvent: { contentOffset: { y: number } } }) => {
+      courseScrollY.setValue(e.nativeEvent.contentOffset.y);
       const shouldShow = e.nativeEvent.contentOffset.y > 400;
       if (shouldShow === courseScrollTopShownRef.current) return;
       courseScrollTopShownRef.current = shouldShow;
@@ -253,7 +267,7 @@ function LearningScreen() {
         useNativeDriver: true,
       }).start();
     },
-    [courseScrollTopOpacity],
+    [courseScrollTopOpacity, courseScrollY],
   );
 
   // מעקב התקדמות YouTube דרך interval
@@ -2012,15 +2026,19 @@ function LearningScreen() {
       <RNSafeAreaView style={styles.safeAreaContent} edges={[]}>
         <ScrollView
           ref={courseListScrollRef}
-          showsVerticalScrollIndicator
-          // פס הגלילה בצד שמאל: מראה את ה-ScrollView ומחזיר את התוכן (הפריסה עצמה לא משתנה)
+          showsVerticalScrollIndicator={false}
           // marginBottom: התוכן נחתך מעל ה-safe area התחתון ולא נגלל מתחתיו
-          style={{ transform: [{ scaleX: -1 }], marginBottom: insets.bottom }}
+          style={{ marginBottom: insets.bottom }}
           onScroll={handleCourseListScroll}
-          scrollEventThrottle={32}
+          scrollEventThrottle={16}
+          onLayout={(e) => setCourseViewportH(e.nativeEvent.layout.height)}
+          onContentSizeChange={(_w, h) => setCourseContentH(h)}
+          onScrollBeginDrag={showCourseIndicator}
+          onMomentumScrollBegin={showCourseIndicator}
+          onScrollEndDrag={hideCourseIndicator}
+          onMomentumScrollEnd={hideCourseIndicator}
           contentContainerStyle={[
             styles.courseListScroll,
-            { transform: [{ scaleX: -1 }] },
             { paddingBottom: DesignTokens.spacing.xl },
           ]}
         >
@@ -2053,6 +2071,36 @@ function LearningScreen() {
             </View>
           </View>
         </ScrollView>
+
+        {/* פס גלילה בצד שמאל */}
+        {courseViewportH > 0 && courseContentH > courseViewportH ? (() => {
+          const thumbH = Math.max(36, (courseViewportH * courseViewportH) / courseContentH);
+          const maxScroll = courseContentH - courseViewportH;
+          return (
+            <Animated.View
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                left: 3,
+                top: 0,
+                width: 3,
+                height: thumbH,
+                borderRadius: 1.5,
+                backgroundColor: DesignTokens.colors.text.tertiary,
+                opacity: courseIndicatorOpacity,
+                transform: [
+                  {
+                    translateY: courseScrollY.interpolate({
+                      inputRange: [0, maxScroll],
+                      outputRange: [0, courseViewportH - thumbH],
+                      extrapolate: 'clamp',
+                    }),
+                  },
+                ],
+              }}
+            />
+          );
+        })() : null}
 
         {/* גלילה לראש — עיגול 44 בצבע ה-CTA, ימין תחתון */}
         <Animated.View

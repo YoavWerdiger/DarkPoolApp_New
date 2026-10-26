@@ -18,6 +18,8 @@ export interface ExplorePerson {
   sparkline_values?: number[];
   kind: 'politician' | 'insider' | 'fund_manager';
   ticker?: string;
+  /** fund_manager בלבד: company = חברה ציבורית שמגישה 13F (ticker = טיקר החברה) */
+  entity_type?: 'fund' | 'company';
   followers_count?: number;
   portfolio_value?: number;
   returns?: Record<string, number | null>;

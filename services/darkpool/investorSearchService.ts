@@ -13,6 +13,7 @@ export async function searchInvestors(query: string): Promise<ExplorePerson[]> {
       image_url: string | null;
       kind: ExplorePerson['kind'];
       ticker?: string;
+      entity_type?: 'fund' | 'company';
     }>;
     error?: string;
   }>('uw-investor-search', { body: { q } });
@@ -27,5 +28,6 @@ export async function searchInvestors(query: string): Promise<ExplorePerson[]> {
     image_url: r.image_url,
     kind: r.kind,
     ticker: r.ticker,
+    entity_type: r.entity_type,
   }));
 }

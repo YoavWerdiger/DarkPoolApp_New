@@ -3,24 +3,31 @@ import { congressPhotoUrl, looksLikePersonPhoto } from './investorPlaceholder';
 import { knownPortraitForInvestor } from './knownInvestorPortraits';
 import { isTrustedPortraitUrl } from './curatedExploreProfiles';
 
-export type ExploreKindFilter = 'politician' | 'insider' | 'fund';
+export type ExploreKindFilter = 'politician' | 'insider' | 'fund' | 'company';
 
 export const EXPLORE_KIND_CHIPS: { id: ExploreKindFilter; label: string }[] = [
   { id: 'politician', label: 'פוליטיקאים' },
   { id: 'insider', label: 'מנכ״לים' },
   { id: 'fund', label: 'קרנות גידור' },
+  { id: 'company', label: 'חברות' },
 ];
 
 export const EXPLORE_KIND_TITLES: Record<ExploreKindFilter, string> = {
   politician: 'פוליטיקאים',
   insider: 'מנכ״לים',
   fund: 'קרנות גידור',
+  company: 'חברות',
 };
 
 export const EXPLORE_UNFILTERED_TITLE = 'פרופילים';
 
 export function exploreKindGridTitle(kind: ExploreKindFilter | null): string {
   return kind ? EXPLORE_KIND_TITLES[kind] : EXPLORE_UNFILTERED_TITLE;
+}
+
+/** חברה ציבורית שמגישה 13F (fund_manager עם entity_type='company') */
+export function isCompanyProfile(person: Pick<ExplorePerson, 'kind' | 'entity_type'>): boolean {
+  return person.kind === 'fund_manager' && person.entity_type === 'company';
 }
 
 export function matchesExploreKind(
@@ -30,7 +37,8 @@ export function matchesExploreKind(
   if (!kind) return true;
   if (kind === 'politician') return person.kind === 'politician';
   if (kind === 'insider') return person.kind === 'insider';
-  if (kind === 'fund') return person.kind === 'fund_manager';
+  if (kind === 'fund') return person.kind === 'fund_manager' && !isCompanyProfile(person);
+  if (kind === 'company') return isCompanyProfile(person);
   return true;
 }
 

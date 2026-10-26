@@ -40,6 +40,10 @@ interface ValuePoint {
 interface FundProfilePayload {
   id: string;
   kind: 'fund_manager';
+  /** company = חברה ציבורית שמגישה 13F (אחזקות אסטרטגיות) */
+  entity_type: 'fund' | 'company';
+  /** טיקר החברה עצמה (רק ל-company) */
+  ticker: string | null;
   name: string;
   subtitle: string;
   image_url: string | null;
@@ -78,12 +82,25 @@ serve(async (req) => {
 
   const { data: fund, error: fundErr } = await supabase
     .from('dark_pool_fund_managers')
-    .select('cik, name, manager_name, image_url, last_filing_date, last_value_usd, holdings_count')
+    .select('cik, name, manager_name, image_url, last_filing_date, last_value_usd, holdings_count, entity_type, ticker')
     .eq('cik', cik)
     .maybeSingle();
 
   if (fundErr) return json({ error: fundErr.message }, 500);
   if (!fund) return json({ error: 'fund not found' }, 404);
+
+  const isCompany = fund.entity_type === 'company';
+  const companyTicker = isCompany && fund.ticker ? String(fund.ticker).trim().toUpperCase() : null;
+  const entityFields = {
+    entity_type: (isCompany ? 'company' : 'fund') as 'fund' | 'company',
+    ticker: companyTicker,
+  };
+  /** חברה: «חברה ציבורית · NVDA» תמיד מה-DB (לא מ-meta ישן של snapshot) */
+  const companySubtitle = isCompany
+    ? companyTicker
+      ? `חברה ציבורית · ${companyTicker}`
+      : 'חברה ציבורית'
+    : null;
 
   const snap = await loadPortfolioSnapshot(supabase, cik, 'fund_manager').catch(
     () => null
@@ -98,8 +115,9 @@ serve(async (req) => {
     const payload: FundProfilePayload = {
       id: String(fund.cik),
       kind: 'fund_manager',
+      ...entityFields,
       name: String(meta.name ?? fund.manager_name ?? fund.name ?? 'קרן'),
-      subtitle: String(meta.subtitle ?? fund.name ?? '13F'),
+      subtitle: companySubtitle ?? String(meta.subtitle ?? fund.name ?? '13F'),
       image_url:
         (meta.image_url ? String(meta.image_url) : null) ??
         (fund.image_url ? String(fund.image_url) : null),
@@ -262,7 +280,8 @@ serve(async (req) => {
         total_return_pct,
         profile_meta: {
           name: displayName,
-          subtitle: String(fund.name || '13F'),
+          subtitle: companySubtitle ?? String(fund.name || '13F'),
+          ...entityFields,
           image_url: fund.image_url ? String(fund.image_url) : null,
           holdings_count: Number(fund.holdings_count) || holdings.length,
           filing_date: filingDate ? String(filingDate) : null,
@@ -282,8 +301,9 @@ serve(async (req) => {
   const payload: FundProfilePayload = {
     id: String(fund.cik),
     kind: 'fund_manager',
+    ...entityFields,
     name: displayName,
-    subtitle: String(fund.name || '13F'),
+    subtitle: companySubtitle ?? String(fund.name || '13F'),
     image_url: fund.image_url ? String(fund.image_url) : null,
     stats: {
       holdings_count: Number(fund.holdings_count) || holdings.length,

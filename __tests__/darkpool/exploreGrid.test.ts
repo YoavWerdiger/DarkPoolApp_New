@@ -79,11 +79,28 @@ describe('explore kind shelves', () => {
     expect(matchesExploreKind(insider, 'fund')).toBe(false);
   });
 
+  it('splits 13F companies (entity_type=company) from hedge funds', () => {
+    const nvidia: ExplorePerson = {
+      id: '1045810',
+      name: 'NVIDIA',
+      subtitle: 'חברה ציבורית · NVDA',
+      image_url: null,
+      kind: 'fund_manager',
+      entity_type: 'company',
+      ticker: 'NVDA',
+    };
+    expect(matchesExploreKind(nvidia, 'company')).toBe(true);
+    expect(matchesExploreKind(nvidia, 'fund')).toBe(false);
+    expect(matchesExploreKind(fund, 'company')).toBe(false);
+    expect(matchesExploreKind(insider, 'company')).toBe(false);
+  });
+
   it('has no «כולם» / all-kind chip — unfiltered stack when none selected', () => {
     expect(EXPLORE_KIND_CHIPS.map((c) => c.id)).toEqual([
       'politician',
       'insider',
       'fund',
+      'company',
     ]);
     expect(EXPLORE_KIND_CHIPS.map((c) => c.label)).not.toContain('כולם');
     expect(EXPLORE_KIND_CHIPS.some((c) => c.id === ('all' as string))).toBe(false);

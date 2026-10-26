@@ -27,6 +27,8 @@ export interface ExploreDiscoveryExtras {
   most_active: ExplorePerson[];
   recently_active_insiders: DatedExplorePerson[];
   fund_books: ExplorePerson[];
+  /** חברות ציבוריות שמגישות 13F (NVIDIA, Alphabet...) — אחזקות אסטרטגיות */
+  company_books: ExplorePerson[];
   new_profiles: ExplorePerson[];
   executives: ExplorePerson[];
 }
@@ -35,6 +37,7 @@ export const EMPTY_EXPLORE_DISCOVERY: ExploreDiscoveryExtras = {
   most_active: [],
   recently_active_insiders: [],
   fund_books: [],
+  company_books: [],
   new_profiles: [],
   executives: [],
 };
@@ -129,15 +132,18 @@ async function listRecentlyActiveInsiders(
 async function listReportedFundBooks(limit: number): Promise<ExplorePerson[]> {
   const { data, error } = await supabase
     .from('dark_pool_fund_managers')
-    .select('cik, name, manager_name, image_url, last_value_usd')
+    // '*' ולא entity_type מפורש — עובד גם לפני/אחרי המיגרציה; חברות (13F) מסוננות כאן ויש להן מדף משלהן
+    .select('*')
     .not('last_value_usd', 'is', null)
     .gt('last_value_usd', 0)
     .order('last_value_usd', { ascending: false })
-    .limit(limit);
+    .limit(limit + 32);
 
   if (error) throw error;
 
   return (data ?? [])
+    .filter((row) => row.entity_type !== 'company')
+    .slice(0, limit)
     .map((row) => {
       const cik = String(row.cik ?? '').trim();
       const fundName = String(row.name ?? '').trim();
@@ -154,11 +160,54 @@ async function listReportedFundBooks(limit: number): Promise<ExplorePerson[]> {
           (row.image_url ? String(row.image_url) : null) ||
           knownPortraitForInvestor({ personId: cik, name }),
         kind: 'fund_manager' as const,
+        entity_type: 'fund' as const,
         metric,
         portfolio_value: value,
       };
     })
     .filter((p): p is ExplorePerson => p != null);
+}
+
+/** חברות ציבוריות שמגישות 13F — לפי שווי האחזקות המדווחות; אווטאר = לוגו הטיקר */
+async function listCompanyBooks(limit: number): Promise<ExplorePerson[]> {
+  const { data, error } = await supabase
+    .from('dark_pool_fund_managers')
+    .select('cik, name, manager_name, ticker, last_value_usd')
+    .eq('entity_type', 'company')
+    .not('last_value_usd', 'is', null)
+    .gt('last_value_usd', 0)
+    .order('last_value_usd', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+
+  const out: ExplorePerson[] = [];
+  for (const row of data ?? []) {
+    const cik = String(row.cik ?? '').trim();
+    const ticker = row.ticker ? String(row.ticker).trim().toUpperCase() : '';
+    const name = String(row.manager_name || row.name || '').trim();
+    const value = Number(row.last_value_usd);
+    const metric = formatReported13fValueHe(value);
+    if (!cik || !name || !metric) continue;
+    out.push({
+      id: cik,
+      name,
+      subtitle: companySubtitleHe(ticker),
+      image_url: null,
+      kind: 'fund_manager',
+      entity_type: 'company',
+      ticker: ticker || undefined,
+      metric,
+      portfolio_value: value,
+    });
+  }
+  return out;
+}
+
+/** «חברה ציבורית · NVDA» */
+export function companySubtitleHe(ticker: string | null | undefined): string {
+  const t = ticker?.trim().toUpperCase();
+  return t ? `חברה ציבורית · ${t}` : 'חברה ציבורית';
 }
 
 async function listRecentlyAddedFeatured(limit: number): Promise<ExplorePerson[]> {
@@ -204,19 +253,21 @@ async function listExploreExecutives(limit: number): Promise<ExplorePerson[]> {
 export async function fetchExploreDiscoveryExtras(
   limit = 24
 ): Promise<ExploreDiscoveryExtras> {
-  const [most_active, recently_active_insiders, fund_books, new_profiles, executives] =
+  const [most_active, recently_active_insiders, fund_books, new_profiles, executives, company_books] =
     await Promise.all([
       listMostActivePoliticians(limit).catch(() => []),
       listRecentlyActiveInsiders(limit).catch(() => []),
       listReportedFundBooks(limit).catch(() => []),
       listRecentlyAddedFeatured(limit).catch(() => []),
       listExploreExecutives(limit).catch(() => []),
+      listCompanyBooks(limit).catch(() => []),
     ]);
 
   return {
     most_active,
     recently_active_insiders,
     fund_books,
+    company_books,
     new_profiles,
     executives,
   };

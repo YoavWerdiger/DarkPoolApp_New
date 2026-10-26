@@ -11,12 +11,13 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { APP_TYPE } from '../../../components/ui/appType';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { TickerLogo } from '../../Portfolios/components/TickerLogo';
 import {
   portraitDisplayUrl,
   portraitPhotoCandidates,
 } from '../utils/investorPlaceholder';
 
-/** פולבק בלי תמונה — מונוגרם ראשי־תיבות בלבד (לא לוגו מניה). */
+/** פולבק בלי תמונה — מונוגרם ראשי־תיבות (לא לוגו מניה), חוץ מחברה (logoTicker) — לוגו הטיקר שלה. */
 
 function initialsFromName(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -49,6 +50,8 @@ interface Props {
   children?: React.ReactNode;
   /** עדיפות לטעינה — visible / high לרשימות על המסך */
   priority?: 'low' | 'normal' | 'high';
+  /** חברה ציבורית (13F): אין דיוקן — מציגים את לוגו הטיקר במקום מונוגרם */
+  logoTicker?: string;
 }
 
 function circleStyle(n: number) {
@@ -67,6 +70,7 @@ function InvestorPortraitFallbackInner({
   imageStyle,
   children,
   priority = 'normal',
+  logoTicker,
 }: Props) {
   const tokens = useDesignTokens();
   const [failed, setFailed] = useState<Set<string>>(() => new Set());
@@ -88,6 +92,32 @@ function InvestorPortraitFallbackInner({
   const initials = initialsFromName(name);
   const monoBg = monogramColor(personId || name || ticker || 'x');
   const recyclingKey = personId || name || uri || 'portrait';
+
+  const logo = logoTicker?.trim();
+  if (!uri && logo) {
+    if (layout === 'circle') {
+      return (
+        <View
+          style={[circleStyle(size), styles.ring, { borderColor: tokens.colors.border.subtle }, style]}
+          accessibilityLabel={name}
+        >
+          <TickerLogo symbol={logo} size={size} />
+        </View>
+      );
+    }
+    return (
+      <View style={[styles.cardBg, { backgroundColor: tokens.colors.background.cardSolid }, style]}>
+        <LinearGradient
+          colors={[monoBg, tokens.colors.background.primary]}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.cardMonoCenter} accessibilityLabel={name}>
+          <TickerLogo symbol={logo} size={72} />
+        </View>
+        {children}
+      </View>
+    );
+  }
 
   if (layout === 'circle') {
     if (!uri) {
@@ -196,6 +226,7 @@ function InvestorPortraitInner({
   imageStyle,
   children,
   priority = 'normal',
+  logoTicker,
 }: Props) {
   const tokens = useDesignTokens();
   const [failed, setFailed] = useState<Set<string>>(() => new Set());
@@ -283,6 +314,7 @@ function InvestorPortraitInner({
       style={style}
       imageStyle={imageStyle}
       priority={priority}
+      logoTicker={logoTicker}
     >
       {children}
     </InvestorPortraitFallbackInner>

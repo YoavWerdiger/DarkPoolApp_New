@@ -70,6 +70,7 @@ export const ExplorePortraitCard = memo(function ExplorePortraitCard({
         ticker={person.ticker}
         kind={person.kind}
         personId={person.id}
+        logoTicker={person.entity_type === 'company' ? person.ticker : undefined}
         layout="card"
         style={styles.bg}
         priority="high"

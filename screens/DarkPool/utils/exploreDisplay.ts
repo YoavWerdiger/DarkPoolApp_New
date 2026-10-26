@@ -49,7 +49,8 @@ export function partitionExploreByKind(people: ExplorePerson[]): {
   for (const person of people) {
     if (person.kind === 'politician') politicians.push(person);
     else if (person.kind === 'insider') insiders.push(person);
-    else if (person.kind === 'fund_manager') funds.push(person);
+    // חברות (13F) — מדף נפרד, לא «קרנות גידור»
+    else if (person.kind === 'fund_manager' && person.entity_type !== 'company') funds.push(person);
   }
   return { politicians, insiders, funds };
 }

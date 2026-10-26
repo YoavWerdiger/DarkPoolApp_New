@@ -28,6 +28,8 @@ interface SearchPerson {
   image_url: string | null;
   kind: 'politician' | 'insider' | 'fund_manager';
   ticker?: string;
+  /** fund_manager בלבד: company = חברה ציבורית שמגישה 13F */
+  entity_type?: 'fund' | 'company';
 }
 
 serve(async (req) => {
@@ -106,12 +108,12 @@ serve(async (req) => {
   const [fundNameRes, fundMgrRes] = await Promise.all([
     supabase
       .from('dark_pool_fund_managers')
-      .select('cik, name, manager_name, image_url')
+      .select('cik, name, manager_name, image_url, entity_type, ticker')
       .ilike('manager_name', pattern)
       .limit(20),
     supabase
       .from('dark_pool_fund_managers')
-      .select('cik, name, manager_name, image_url')
+      .select('cik, name, manager_name, image_url, entity_type, ticker')
       .ilike('name', pattern)
       .limit(20),
   ]);
@@ -301,7 +303,14 @@ function addInsider(
 }
 
 function addFund(
-  row: { cik?: unknown; name?: unknown; manager_name?: unknown; image_url?: unknown },
+  row: {
+    cik?: unknown;
+    name?: unknown;
+    manager_name?: unknown;
+    image_url?: unknown;
+    entity_type?: unknown;
+    ticker?: unknown;
+  },
   results: SearchPerson[],
   seen: Set<string>
 ) {
@@ -311,12 +320,26 @@ function addFund(
   const key = `fund_manager:${id}`;
   if (seen.has(key)) return;
   seen.add(key);
+  if (row.entity_type === 'company') {
+    const ticker = row.ticker ? String(row.ticker).trim().toUpperCase() : '';
+    results.push({
+      id,
+      name,
+      subtitle: ticker ? `חברה ציבורית · ${ticker}` : 'חברה ציבורית',
+      image_url: null,
+      kind: 'fund_manager',
+      ticker: ticker || undefined,
+      entity_type: 'company',
+    });
+    return;
+  }
   results.push({
     id,
     name,
     subtitle: `${row.name} · 13F`,
     image_url: row.image_url ? String(row.image_url) : null,
     kind: 'fund_manager',
+    entity_type: 'fund',
   });
 }
 

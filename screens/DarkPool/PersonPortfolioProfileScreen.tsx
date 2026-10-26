@@ -260,6 +260,15 @@ function kindLabel(kind: PersonKind): string {
   return 'בכיר';
 }
 
+/** «נכון לרבעון Q2 2026» — תקופת הדוח (13F) ולא תאריך ההגשה */
+export function filingQuarterLabelHe(period: string | null | undefined): string | null {
+  const m = /^(\d{4})-(\d{2})/.exec(period?.trim() ?? '');
+  if (!m) return null;
+  const month = Number(m[2]);
+  if (!(month >= 1 && month <= 12)) return null;
+  return `נכון לרבעון ${toDataIsland(`Q${Math.ceil(month / 3)} ${m[1]}`)}`;
+}
+
 function kindDefaultSubtitle(kind: PersonKind): string {
   if (kind === 'politician') return 'לוויתן';
   if (kind === 'fund_manager') return 'אחזקות רבעוניות';
@@ -418,10 +427,23 @@ export function PersonPortfolioProfileScreen({
     }
   }, [listFollowing, optimisticFollowing]);
 
+  // חברה ציבורית שמגישה 13F (NVIDIA...) — אותו מנוע כמו קרן, תצוגה אחרת.
+  // לפני שהפרופיל נטען: fund_manager עם טיקר בניווט = חברה (לקרנות אין טיקר)
+  const isCompany =
+    kind === 'fund_manager' &&
+    (fund.profile?.entity_type != null
+      ? fund.profile.entity_type === 'company'
+      : !!ticker?.trim());
+  const companyTicker = isCompany
+    ? (fund.profile?.ticker ?? ticker ?? '').trim().toUpperCase() || undefined
+    : undefined;
+  const filingQuarterLabel =
+    kind === 'fund_manager' ? filingQuarterLabelHe(fund.profile?.stats.filing_date) : null;
+
   const displayName =
     (kind === 'fund_manager' ? fund.profile?.name : investor.profile?.name) ??
     nameHint ??
-    kindLabel(kind);
+    (isCompany ? 'חברה' : kindLabel(kind));
 
   const imageUrl =
     (kind === 'fund_manager' ? fund.profile?.image_url : investor.profile?.image_url) ??
@@ -429,11 +451,14 @@ export function PersonPortfolioProfileScreen({
     null;
 
   const subtitle = useMemo(() => {
+    if (isCompany) {
+      return companyTicker ? `חברה ציבורית · ${companyTicker}` : 'חברה ציבורית';
+    }
     const raw =
       (kind === 'fund_manager' ? fund.profile?.subtitle : investor.profile?.subtitle) ??
       kindDefaultSubtitle(kind);
     return sanitizePublicSubtitle(raw, kind);
-  }, [kind, fund.profile?.subtitle, investor.profile?.subtitle]);
+  }, [kind, isCompany, companyTicker, fund.profile?.subtitle, investor.profile?.subtitle]);
 
   /** אותם מועמדים כמו ProfileHeroAvatar — גם למרכז עוגת האחזקות */
   const portraitCandidates = useMemo(
@@ -1203,6 +1228,12 @@ export function PersonPortfolioProfileScreen({
         body: TRUMP_HOLDINGS_HELP_BODY,
       };
     }
+    if (isCompany) {
+      return {
+        title: FORM4_HOLDINGS_HELP_TITLE,
+        body: 'אחזקות אסטרטגיות מדוח 13F הרבעוני האחרון שהחברה הגישה ל-SEC: רק מניות שנסחרות בארה״ב. לא כולל השקעות בחברות פרטיות, מניות שנסחרות רק מחוץ לארה״ב, מזומן ונכסים אחרים. הדוח מוגש עד 45 יום אחרי סוף הרבעון.',
+      };
+    }
     if (kind === 'fund_manager') {
       return {
         title: FORM4_HOLDINGS_HELP_TITLE,
@@ -1213,7 +1244,7 @@ export function PersonPortfolioProfileScreen({
       title: FORM4_HOLDINGS_HELP_TITLE,
       body: FORM4_HOLDINGS_HELP_BODY,
     };
-  }, [holdingsEngine, kind]);
+  }, [holdingsEngine, kind, isCompany]);
 
   const openHoldingsHelp = useCallback(() => {
     void HapticFeedback.selection();
@@ -1310,7 +1341,9 @@ export function PersonPortfolioProfileScreen({
         : kind === 'insider'
           ? // מנכ"ל/דירקטור מדווח רק על חברות שבהן הוא מכהן — לא כל התיק הפרטי
             'שווי אחזקות מדווחות'
-          : 'שווי תיק:';
+          : isCompany
+            ? 'שווי אחזקות:'
+            : 'שווי תיק:';
   const heroValueText = showCongressValue
     ? formatCongressPortfolioHeroValue(portfolioValue)
     : showTrumpValue
@@ -1344,6 +1377,7 @@ export function PersonPortfolioProfileScreen({
       : 'קבל התראות על עסקאות ודיווחים',
     shareA11yLabel: 'שתף פרופיל',
     scrollY: heroScrollY,
+    logoTicker: companyTicker,
   };
 
   const envelope = <PersonProfileHero {...heroProps} />;
@@ -1704,8 +1738,15 @@ export function PersonPortfolioProfileScreen({
                       ? 'אחזקות בחברות שבהן מכהן'
                       : holdingsEngine === 'form4' || holdingsEngine === 'trump'
                         ? 'פוזיציות מדווחות'
-                        : 'אחזקות מובילות'}
+                        : isCompany
+                          ? 'אחזקות אסטרטגיות'
+                          : 'אחזקות מובילות'}
                 </Text>
+                {filingQuarterLabel ? (
+                  <Text style={styles.honestyTag} numberOfLines={1}>
+                    {filingQuarterLabel}
+                  </Text>
+                ) : null}
               </View>
               <UICard
                 variant="soft"

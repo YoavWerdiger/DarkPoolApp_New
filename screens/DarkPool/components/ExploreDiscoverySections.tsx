@@ -18,6 +18,8 @@ interface Props {
   politicians: ExplorePerson[];
   executives: ExplorePerson[];
   funds: ExplorePerson[];
+  /** חברות ציבוריות שמגישות 13F (NVIDIA, Alphabet...) */
+  companies: ExplorePerson[];
   kindFilter: ExploreKindFilter | null;
   onKindChange: (kind: ExploreKindFilter | null) => void;
   kindCounts: Partial<Record<ExploreKindFilter, number>>;
@@ -35,6 +37,7 @@ export function ExploreDiscoverySections({
   politicians,
   executives,
   funds,
+  companies,
   kindFilter,
   onKindChange,
   kindCounts,
@@ -76,6 +79,10 @@ export function ExploreDiscoverySections({
     () => filterExplorePeopleByKind(funds, kindFilter),
     [funds, kindFilter]
   );
+  const companyShelf = useMemo(
+    () => filterExplorePeopleByKind(companies, kindFilter),
+    [companies, kindFilter]
+  );
 
   return (
     <>
@@ -92,6 +99,11 @@ export function ExploreDiscoverySections({
       <ExploreTwoColSection
         title="קרנות גידור מובילות"
         people={fundShelf}
+        onPersonPress={onPersonPress}
+      />
+      <ExploreTwoColSection
+        title="חברות ציבוריות"
+        people={companyShelf}
         onPersonPress={onPersonPress}
       />
       <ExploreTwoColSection

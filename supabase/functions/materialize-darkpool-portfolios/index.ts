@@ -396,6 +396,15 @@ async function resolveTargets(
   return all.slice(offset, offset + max);
 }
 
+/** חברה ציבורית (13F) — «חברה ציבורית · NVDA»; קרן — שם הקרן */
+function fundSubtitle(fund: { name?: unknown; entity_type?: unknown; ticker?: unknown }): string {
+  if (fund.entity_type === 'company') {
+    const t = String(fund.ticker ?? '').trim().toUpperCase();
+    return t ? `חברה ציבורית · ${t}` : 'חברה ציבורית';
+  }
+  return String(fund.name || '13F');
+}
+
 async function materializeFund(
   supabase: ReturnType<typeof createServiceSupabase>,
   cik: string,
@@ -405,7 +414,7 @@ async function materializeFund(
   const { data: fund } = await supabase
     .from('dark_pool_fund_managers')
     .select(
-      'cik, name, manager_name, image_url, last_filing_date, last_value_usd, holdings_count'
+      'cik, name, manager_name, image_url, last_filing_date, last_value_usd, holdings_count, entity_type, ticker'
     )
     .eq('cik', cik)
     .maybeSingle();
@@ -516,10 +525,12 @@ async function materializeFund(
     total_return_pct,
     profile_meta: {
       name: String(fund.manager_name || fund.name || 'קרן'),
-      subtitle: String(fund.name || '13F'),
+      subtitle: fundSubtitle(fund),
       image_url: fund.image_url ? String(fund.image_url) : null,
       holdings_count: Number(fund.holdings_count) || holdings.length,
       filing_date: filingDate,
+      entity_type: fund.entity_type === 'company' ? 'company' : 'fund',
+      ticker: fund.ticker ? String(fund.ticker) : null,
     },
     source_meta: {
       mode,

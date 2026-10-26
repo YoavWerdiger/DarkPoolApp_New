@@ -309,12 +309,16 @@ function FollowedRow({
   onPress: () => void;
 }) {
   const tokens = useDesignTokens();
+  // fund_manager עם טיקר = חברה ציבורית שמגישה 13F (לקרנות אין טיקר)
+  const isCompany = person.kind === 'fund_manager' && !!person.ticker?.trim();
   const kindLabel =
     person.kind === 'politician'
       ? 'פוליטיקאי'
-      : person.kind === 'fund_manager'
-        ? 'קרן גידור'
-        : 'בכיר';
+      : isCompany
+        ? 'חברה'
+        : person.kind === 'fund_manager'
+          ? 'קרן גידור'
+          : 'בכיר';
 
   return (
     <Pressable onPress={onPress} style={styles.row}>
@@ -324,6 +328,7 @@ function FollowedRow({
           ticker={person.ticker}
           kind={person.kind}
           personId={person.id}
+          logoTicker={isCompany ? person.ticker : undefined}
           layout="circle"
           size={40}
           style={styles.avatar}

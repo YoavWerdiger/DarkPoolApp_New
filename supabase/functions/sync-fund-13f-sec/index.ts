@@ -14,14 +14,53 @@ import {
   mapCusipsToTickers,
 } from '../_shared/sec13f.ts';
 
-/** קרנות שנקראות מה-SEC (Quiver לא מחזיר להן אחזקות) */
-export const SEC_13F_FUNDS: Record<string, { manager: string; name: string; image?: string }> = {
+type Sec13fMeta = {
+  manager: string;
+  name: string;
+  image?: string;
+  /** company = חברה ציבורית שמגישה 13F (אחזקות אסטרטגיות), לא קרן */
+  entity_type?: 'fund' | 'company';
+  /** טיקר החברה עצמה — לוגו ותת-כותרת «חברה ציבורית · NVDA» */
+  ticker?: string;
+};
+
+const company = (name: string, display: string, ticker: string): Sec13fMeta => ({
+  manager: display,
+  name,
+  entity_type: 'company',
+  ticker,
+});
+
+/** קרנות שנקראות מה-SEC (Quiver לא מחזיר להן אחזקות) + חברות ציבוריות שמגישות 13F-HR */
+export const SEC_13F_FUNDS: Record<string, Sec13fMeta> = {
   '1647251': {
     manager: 'Chris Hohn',
     name: 'TCI Fund Management',
     image: 'https://upload.wikimedia.org/wikipedia/commons/3/31/Chris_Hohn_GFSS_2023.jpg',
   },
   '1747057': { manager: 'Dan Sundheim', name: 'D1 Capital Partners' },
+
+  // ── חברות (לא פיננסיות) — 13F-HR ב-2 הרבעונים האחרונים, אומת מול EDGAR 2026-10-26 ──
+  // חייב להישאר מסונכרן עם CURATED_MATERIALIZE_TARGETS ב-_shared/darkpoolPortfolioSnapshots.ts
+  '1045810': company('NVIDIA Corp', 'NVIDIA', 'NVDA'),
+  '1652044': company('Alphabet Inc.', 'Alphabet', 'GOOGL'),
+  '1065521': company('SoftBank Group Corp.', 'SoftBank', 'SFTBY'),
+  '1543151': company('Uber Technologies, Inc.', 'Uber', 'UBER'),
+  '1018724': company('Amazon.com, Inc.', 'Amazon', 'AMZN'),
+  '1094517': company('Toyota Motor Corp.', 'Toyota', 'TM'),
+  '882095': company('Gilead Sciences, Inc.', 'Gilead', 'GILD'),
+  '2488': company('Advanced Micro Devices, Inc.', 'AMD', 'AMD'),
+  '200406': company('Johnson & Johnson', 'Johnson & Johnson', 'JNJ'),
+  '1110646': company('NetEase, Inc.', 'NetEase', 'NTES'),
+  '104169': company('Walmart Inc.', 'Walmart', 'WMT'),
+  '50863': company('Intel Corp', 'Intel', 'INTC'),
+  '310158': company('Merck & Co., Inc.', 'Merck', 'MRK'),
+  '1121404': company('Sanofi', 'Sanofi', 'SNY'),
+  '1577552': company('Alibaba Group Holding Ltd', 'Alibaba', 'BABA'),
+  '40545': company('GE Aerospace', 'GE Aerospace', 'GE'),
+  '858877': company('Cisco Systems, Inc.', 'Cisco', 'CSCO'),
+  '872589': company('Regeneron Pharmaceuticals, Inc.', 'Regeneron', 'REGN'),
+  '78003': company('Pfizer Inc.', 'Pfizer', 'PFE'),
 };
 
 const TIME_BUDGET_MS = 120_000;
@@ -43,7 +82,8 @@ serve(async (req) => {
   if (body.ciks?.length) ciks = body.ciks.map((c) => String(c).trim());
   else {
     const { data } = await supabase.from('dark_pool_fund_managers').select('cik').order('synced_at', { ascending: true, nullsFirst: true });
-    ciks = Array.from(new Set([...Object.keys(SEC_13F_FUNDS), ...(data ?? []).map((r) => String(r.cik))]));
+    // הכי פחות מעודכנים קודם (סבב הוגן בתקציב הזמן); רשומות SEC חדשות שעוד לא ב-DB — בסוף
+    ciks = Array.from(new Set([...(data ?? []).map((r) => String(r.cik)), ...Object.keys(SEC_13F_FUNDS)]));
   }
 
   const results: Array<Record<string, unknown>> = [];
@@ -69,6 +109,8 @@ serve(async (req) => {
             manager_name: meta.manager ?? secName,
             image_url: meta.image ?? null,
             source: 'sec',
+            entity_type: meta.entity_type ?? 'fund',
+            ticker: meta.ticker ?? null,
           },
           { onConflict: 'cik' }
         );

@@ -24,6 +24,10 @@ export interface FundValuePoint {
 export interface FundProfile {
   id: string;
   kind: 'fund_manager';
+  /** company = חברה ציבורית שמגישה 13F (אחזקות אסטרטגיות). חסר בשרת ישן = fund */
+  entity_type?: 'fund' | 'company';
+  /** טיקר החברה עצמה (רק ל-company) */
+  ticker?: string | null;
   name: string;
   subtitle: string;
   image_url: string | null;

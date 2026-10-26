@@ -351,13 +351,20 @@ export default function DarkPoolExploreScreen() {
     [fundBooks, shelves.funds]
   );
 
+  // חברות ציבוריות (13F) — בלי דרישת תמונה: האווטאר הוא לוגו הטיקר
+  const companies = useMemo(
+    () => takeUniqueExplorePeople(extras.company_books ?? [], EXPLORE_FEATURED_LIMIT),
+    [extras.company_books]
+  );
+
   const kindCounts = useMemo(
     () => ({
       politician: shelves.politicians.length,
       insider: shelves.insiders.length,
       fund: shelves.funds.length,
+      company: companies.length,
     }),
-    [shelves]
+    [shelves, companies.length]
   );
 
   const styles = useMemo(() => createStyles(tokens, bottomPad), [tokens, bottomPad]);
@@ -419,6 +426,7 @@ export default function DarkPoolExploreScreen() {
             politicians={politicians}
             executives={executives}
             funds={funds}
+            companies={companies}
             kindFilter={kindFilter}
             onKindChange={setKindFilter}
             kindCounts={kindCounts}

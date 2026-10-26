@@ -194,6 +194,18 @@ serve(async (req) => {
     return json({ ok: true, probe, probed_at: new Date().toISOString() });
   }
 
+  // חברות ציבוריות (entity_type='company') — רק sync-fund-13f-sec מטפל בהן.
+  // Quiver היה דורס שם/תמונה ומוחק תקופות "ישנות" — מדלגים עליהן לגמרי.
+  const { data: companyRows } = await supabase
+    .from('dark_pool_fund_managers')
+    .select('cik')
+    .eq('entity_type', 'company');
+  const companyCiks = new Set((companyRows ?? []).map((r) => String(r.cik)));
+  if (cikFilter?.length) {
+    cikFilter = cikFilter.filter((c) => !companyCiks.has(c));
+    if (!cikFilter.length) return json({ ok: true, skipped: 'company_ciks_sec_only', results: [] });
+  }
+
   if (cikFilter?.length) {
     const seeds = cikFilter.map((cik) => ({
       cik,
@@ -223,7 +235,9 @@ serve(async (req) => {
   if (loadErr) return json({ error: loadErr.message }, 500);
 
   const targets = (funds ?? []).filter(
-    (f) => !cikFilter?.length || cikFilter.includes(String(f.cik))
+    (f) =>
+      !companyCiks.has(String(f.cik)) &&
+      (!cikFilter?.length || cikFilter.includes(String(f.cik)))
   );
 
   const results: Array<{

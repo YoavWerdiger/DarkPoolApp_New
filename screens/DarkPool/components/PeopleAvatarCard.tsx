@@ -32,7 +32,9 @@ function kindLabel(person: ExplorePerson): string {
   const fromSub = person.subtitle?.split('·')[0]?.trim();
   if (fromSub) return fromSub;
   if (person.kind === 'politician') return 'לוויתן קונגרס';
-  if (person.kind === 'fund_manager') return 'לוויתן מוסדי';
+  if (person.kind === 'fund_manager') {
+    return person.entity_type === 'company' ? 'חברה' : 'לוויתן מוסדי';
+  }
   return person.ticker?.toUpperCase() || 'לוויתן שוק';
 }
 
@@ -66,6 +68,7 @@ export const PeopleAvatarCard = memo(function PeopleAvatarCard({
             ticker={person.ticker}
             kind={person.kind}
             personId={person.id}
+            logoTicker={person.entity_type === 'company' ? person.ticker : undefined}
             layout="circle"
             size={48}
             priority="high"

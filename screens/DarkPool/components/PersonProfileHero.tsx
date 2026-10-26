@@ -18,11 +18,13 @@ import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { APP_TYPE } from '../../../components/ui/appType';
 import { ltrNameText } from '../utils/bidi';
 import { portraitDisplayUrl } from '../utils/investorPlaceholder';
+import { TickerLogo } from '../../Portfolios/components/TickerLogo';
 
 const HERO_ICON_SIZE = DRAWER_MENU_BUTTON_SIZE;
 const HERO_ICON_GLYPH = 22;
 const HERO_ACTION_GAP = 14;
 const HERO_BAR_HP = 16;
+const HERO_LOGO_SIZE = 112;
 interface Props {
   name: string;
   photoCandidates: string[];
@@ -49,6 +51,8 @@ interface Props {
    * בלי תמונה כפולה — הכרום צף מעל התמונה שנשארת מאחור.
    */
   hidePhoto?: boolean;
+  /** חברה ציבורית (13F) בלי דיוקן — לוגו הטיקר במרכז במקום תמונה */
+  logoTicker?: string;
 }
 
 /**
@@ -74,6 +78,7 @@ function PersonProfileHeroInner({
   pinned = false,
   photoOnly = false,
   hidePhoto = false,
+  logoTicker,
 }: Props) {
   const tokens = useDesignTokens();
   const iconColor = tokens.colors.text.primary;
@@ -165,6 +170,11 @@ function PersonProfileHeroInner({
           style={{ width: photoWidth, height }}
         />
       )}
+      {!activeUri && logoTicker?.trim() ? (
+        <View style={[StyleSheet.absoluteFill, styles.logoCenter]}>
+          <TickerLogo symbol={logoTicker.trim()} size={HERO_LOGO_SIZE} />
+        </View>
+      ) : null}
       <LinearGradient
         colors={[
           'rgba(0,0,0,0.42)',
@@ -274,6 +284,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     width: '100%',
+  },
+  logoCenter: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   topBar: {
     direction: 'rtl',

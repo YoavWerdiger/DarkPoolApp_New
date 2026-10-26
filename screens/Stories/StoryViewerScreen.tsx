@@ -85,7 +85,9 @@ type Flags = Record<string, true>;
 
 const addFlag = (id: string) => (m: Flags): Flags => (m[id] ? m : { ...m, [id]: true });
 
-const CUBE_PERSPECTIVE = 1000;
+const CUBE_PERSPECTIVE = 1600;
+/** זווית מקסימלית — עדינה יותר מקוביה מלאה (90°), כמו באינסטגרם */
+const CUBE_MAX_ANGLE = 40;
 const SWITCH_MS = 320;
 
 function prefetchStoryImage(story: UserStory | undefined) {
@@ -112,12 +114,12 @@ function CubeFace({
       transform: [
         { perspective: CUBE_PERSPECTIVE },
         { translateX: o },
-        { rotateY: `${(o / W) * 90}deg` },
+        { rotateY: `${(o / W) * CUBE_MAX_ANGLE}deg` },
       ],
     };
   });
   const shadeAnim = useAnimatedStyle(() => ({
-    opacity: Math.min(1, Math.abs(index - p.value)) * 0.55,
+    opacity: Math.min(1, Math.abs(index - p.value)) * 0.3,
   }));
   return (
     <Reanimated.View style={[styles.face, faceAnim]} pointerEvents="box-none">

@@ -112,18 +112,8 @@ async function getSignedUrl(storagePath: string): Promise<string | null> {
  */
 async function resolveMediaUrl(mediaUrl: string | null): Promise<string | null> {
   if (!mediaUrl) return null;
-  const path = extractStoragePath(mediaUrl);
-
-  // וידאו של סטורי — אם כבר נשמר לדיסק, מחזירים URI מקומי (מיידי + offline)
-  if (isCacheableMediaPath(path)) {
-    const local = getCachedLocalMediaUri(path, 'stories');
-    if (local) return local;
-    const signed = await getSignedUrl(path);
-    if (signed) void downloadMediaToCache(path, signed, 'stories');
-    return signed;
-  }
-
-  return getSignedUrl(path);
+  // סטוריז חיים בשרת 24 שעות — תמיד URL חתום, בלי שמירה לדיסק
+  return getSignedUrl(extractStoragePath(mediaUrl));
 }
 
 export async function getUsersWithStories(currentUserId?: string): Promise<StoryWithUser[]> {
@@ -257,6 +247,32 @@ export async function prefetchStoriesForUsers(
       /* best effort */
     }
   }
+}
+
+/**
+ * כל הסטוריז הפעילים של רשימת משתמשים — שאילתה אחת + URL חתום לכל מדיה.
+ * הצופה טוען הכל בכניסה (בלי טעינה לפי משתמש ובלי קאש).
+ */
+export async function getStoriesForUsers(userIds: string[]): Promise<Record<string, UserStory[]>> {
+  const out: Record<string, UserStory[]> = {};
+  if (userIds.length === 0) return out;
+  const { data, error } = await supabase
+    .from('user_stories')
+    .select('*')
+    .in('user_id', userIds)
+    .gt('expires_at', new Date().toISOString())
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  const resolved = await Promise.all(
+    (data ?? []).map(async (story: UserStory) => {
+      if (story.media_url && (story.media_type === 'image' || story.media_type === 'video')) {
+        return { ...story, media_url: await resolveMediaUrl(story.media_url) };
+      }
+      return story;
+    }),
+  );
+  for (const s of resolved) (out[s.user_id] ??= []).push(s);
+  return out;
 }
 
 export async function getStoriesByUserId(userId: string): Promise<UserStory[]> {

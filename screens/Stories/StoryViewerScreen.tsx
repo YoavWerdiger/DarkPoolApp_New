@@ -1,14 +1,14 @@
 /**
- * צופה הסטוריז — מסך ניווט (transparentModal בסטאק הראשי), במקום components/chat/StoryViewer.
+ * צופה הסטוריז — מסך ניווט (transparentModal בסטאק הראשי).
  *
- * למה מסך ולא Modal: הצופה הקודם (RN Modal + FlatList pager עם initialScrollIndex/scrollTo,
- * ונראות שתלויה בערך Reanimated) נפתח בבילד iOS פרודקשן על מסך שחור / שקוף-חוסם עד החלקה.
- * כאן:
- *  • עמוד משתמש אחד בכל רגע — מעבר משתמש = החלפת state (בלי pager, בלי scrollTo).
- *  • שום דבר שנראה לא תלוי באנימציה: הרקע השחור והמדיה באטימות מלאה מהפריים הראשון;
- *    עד שהמדיה נטענת — ספינר. Reanimated רק לפסי ההתקדמות ולמשיכה למטה (יציאה).
- *  • ההתקדמות האוטומטית בטיימר JS (פסי ההתקדמות הם רק תצוגה).
- *  • וידאו דרך expo-video ישירות (readyToPlay / playToEnd).
+ * מבנה (נבנה מחדש):
+ *  • נתונים: בכניסה — שאילתה אחת לכל המשתמשים בשורה (getStoriesForUsers), URL חתום מהשרת.
+ *    בלי קאש מקומי, בלי טעינה לפי משתמש תוך כדי מעבר.
+ *  • מעבר בין משתמשים: קוביה (כמו באינסטגרם). כל משתמש הוא «פאה» עם key קבוע (userId),
+ *    והמיקום שלה נגזר רק מ-p (אינדקס משתמש רציף). השכן שנכנס הוא אותו רכיב שנשאר על המסך —
+ *    בלי טעינה מחדש ובלי הבהוב. החלפת המשתמש הנוכחי ב-state לא מזיזה שום פאה.
+ *  • מעבר אוטומטי למשתמש הבא (סוף הסטוריז / הקשה) — אותה אנימציית קוביה.
+ *  • שום דבר שנראה לא תלוי באנימציה: במנוחה כל הפאות בלי טרנספורם, והפאה הנוכחית מרונדרת אחרונה (למעלה).
  */
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -31,19 +31,19 @@ import Reanimated, {
   cancelAnimation,
   Easing,
   runOnJS,
+  SharedValue,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
-
 import { useAuth } from '../../context/AuthContext';
 import {
   UserStory,
   StoryViewer as StoryViewerRow,
   StoryReaction,
-  getStoriesByUserId,
+  getStoriesForUsers,
   markStoryViewed,
   deleteStory,
   reactToStory,
@@ -81,40 +81,49 @@ import { StoryViewersSheet } from '../../components/stories/StoryViewersSheet';
 
 /** 'forward' = לכיוון אינדקס נמוך (קדימה בשורה), 'back' = אינדקס גבוה */
 type Dir = 'forward' | 'back';
-type Position = { userIndex: number; storyIndex: number | 'last'; dir: Dir };
 type Flags = Record<string, true>;
 
 const addFlag = (id: string) => (m: Flags): Flags => (m[id] ? m : { ...m, [id]: true });
 
-/** רענון שקט: שומרים את אובייקט הסטורי הקיים (אותו URL חתום → בלי טעינה מחדש של המדיה) */
-function mergeStories(prev: UserStory[] | undefined, next: UserStory[]): UserStory[] {
-  if (!prev?.length) return next;
-  const byId = new Map(prev.map((s) => [s.id, s]));
-  return next.map((s) => byId.get(s.id) ?? s);
-}
+const CUBE_PERSPECTIVE = 1000;
+const SWITCH_MS = 320;
 
 function prefetchStoryImage(story: UserStory | undefined) {
   const url = story?.media_type === 'image' ? story.media_url : null;
   if (!url || !url.startsWith('http')) return;
-  // זיכרון בלבד — בלי שמירה בדיסק (הסטוריז חיים בשרת 24 שעות)
   ExpoImage.prefetch(url, 'memory').catch(() => {});
 }
 
-const CUBE_PERSPECTIVE = 1000;
-
-/** פאה שכנה בקוביה — תצוגה סטטית של הסטורי שייפתח (תמונה / טקסט), עד שהמעבר מסתיים */
-function NeighborFace({ story }: { story: UserStory | undefined }) {
-  if (!story) return null;
-  if (story.media_type === 'text') {
-    return <StoryTextCard content={story.content} backgroundColor={story.background_color} />;
-  }
-  if (story.media_type !== 'image' || !story.media_url) return null;
-  const uri = story.media_url;
+/** פאה בקוביה: מיקום וסיבוב נגזרים מ-p בלבד (o = (i - p) · W) */
+function CubeFace({
+  index,
+  p,
+  children,
+}: {
+  index: number;
+  p: SharedValue<number>;
+  children: React.ReactNode;
+}) {
+  const faceAnim = useAnimatedStyle(() => {
+    const o = (index - p.value) * W;
+    return {
+      // הציר בקצה המשותף עם השכן
+      transformOrigin: o >= 0 ? 'left center' : 'right center',
+      transform: [
+        { perspective: CUBE_PERSPECTIVE },
+        { translateX: o },
+        { rotateY: `${(o / W) * 90}deg` },
+      ],
+    };
+  });
+  const shadeAnim = useAnimatedStyle(() => ({
+    opacity: Math.min(1, Math.abs(index - p.value)) * 0.55,
+  }));
   return (
-    <>
-      <StoryImage uri={uri} content={story.content} onLoad={() => {}} onError={() => {}} />
-      <StoryOverlays content={story.content} />
-    </>
+    <Reanimated.View style={[styles.face, faceAnim]} pointerEvents="box-none">
+      {children}
+      <Reanimated.View style={[styles.cubeShade, shadeAnim]} pointerEvents="none" />
+    </Reanimated.View>
   );
 }
 
@@ -127,94 +136,92 @@ export default function StoryViewerScreen() {
   const { user } = useAuth();
   const isFocused = useIsFocused();
 
-  // רשימת המשתמשים קבועה לכל חיי המסך
-  const userIds = useMemo(() => (Array.isArray(params?.userIds) ? params.userIds : []), [params?.userIds]);
+  const requestedIds = useMemo(() => (Array.isArray(params?.userIds) ? params.userIds : []), [params?.userIds]);
 
-  const [pos, setPos] = useState<Position>(() => ({
-    userIndex: Math.max(0, userIds.indexOf(params?.startUserId ?? '')),
-    storyIndex: params?.startStoryIndex ?? 0,
-    dir: 'forward',
-  }));
-
-  /* ── סטוריז לפי משתמש — תמיד מהשרת (בלי קאש מקומי) ── */
-  const [storiesMap, setStoriesMap] = useState<Record<string, UserStory[]>>({});
-  const [fetched, setFetched] = useState<Record<string, 'done' | 'error'>>({});
-  const storiesMapRef = useRef(storiesMap);
-  storiesMapRef.current = storiesMap;
-
-  const currentUserId = userIds[pos.userIndex];
-  const currentUser = currentUserId ? getStoryViewerUser(currentUserId) : null;
-  const stories = (currentUserId && storiesMap[currentUserId]) || undefined;
-  const storyIndex = resolveStoryIndex(stories?.length ?? 0, pos.storyIndex);
-  const currentStory: UserStory | undefined = stories?.[storyIndex];
-  const isOwnStory = !!currentUserId && currentUserId === user?.id;
-
-  // refs לטיימרים / מחוות (בלי סגירות ישנות)
-  const posRef = useRef(pos);
-  posRef.current = pos;
-  const storyIndexRef = useRef(storyIndex);
-  storyIndexRef.current = storyIndex;
-  const storiesLenRef = useRef(stories?.length ?? 0);
-  storiesLenRef.current = stories?.length ?? 0;
-
-  // 'last' → אינדקס מספרי ברגע שהסטוריז ידועים (רענון שמוסיף סטורי לא יזיז את המיקום)
-  useLayoutEffect(() => {
-    if (pos.storyIndex === 'last' && stories && stories.length > 0) {
-      setPos((p) => (p.storyIndex === 'last' ? { ...p, storyIndex: stories.length - 1 } : p));
-    }
-  }, [pos.storyIndex, stories]);
-
-  const loadUser = useCallback((id: string) => {
-    return getStoriesByUserId(id)
-      .then((data) => {
-        setStoriesMap((m) => ({ ...m, [id]: mergeStories(m[id], data) }));
-        setFetched((f) => ({ ...f, [id]: 'done' }));
-        return data;
+  /* ── נתונים: הכל בבת אחת מהשרת ── */
+  const [storiesMap, setStoriesMap] = useState<Record<string, UserStory[]> | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    getStoriesForUsers(requestedIds)
+      .then((map) => {
+        if (!alive) return;
+        setStoriesMap(map);
+        for (const list of Object.values(map)) {
+          prefetchStoryImage(list[0]);
+          prefetchStoryImage(list[list.length - 1]);
+        }
       })
       .catch((e) => {
         logger.error('StoryViewerScreen', 'Failed to load stories', e);
-        setFetched((f) => ({ ...f, [id]: 'error' }));
-        return undefined;
+        if (alive) {
+          setLoadError(true);
+          setStoriesMap({});
+        }
       });
-  }, []);
+    return () => {
+      alive = false;
+    };
+  }, [requestedIds]);
 
-  // המשתמש הנוכחי — תמיד מרעננים מהרשת (הקאש מוצג בינתיים)
-  const requestedRef = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    if (!currentUserId) return;
-    requestedRef.current.add(currentUserId);
-    void loadUser(currentUserId);
-  }, [currentUserId, loadUser]);
+  // רק משתמשים שיש להם סטוריז פעילים (הסדר כמו בשורה: [ישן … «שלי»])
+  const userIds = useMemo(
+    () => (storiesMap ? requestedIds.filter((id) => (storiesMap[id]?.length ?? 0) > 0) : []),
+    [storiesMap, requestedIds],
+  );
 
-  // טעינה מראש של השכנים (רשימה + תמונה ראשונה/אחרונה)
-  useEffect(() => {
-    for (const idx of [pos.userIndex - 1, pos.userIndex + 1]) {
-      const id = userIds[idx];
-      if (!id) continue;
-      const have = storiesMapRef.current[id];
-      if (have?.length) {
-        prefetchStoryImage(have[0]);
-        prefetchStoryImage(have[have.length - 1]);
-        continue;
-      }
-      if (requestedRef.current.has(id)) continue;
-      requestedRef.current.add(id);
-      void loadUser(id).then((data) => {
-        prefetchStoryImage(data?.[0]);
-        prefetchStoryImage(data?.[data.length - 1]);
-      });
-    }
-  }, [pos.userIndex, userIds, loadUser]);
+  /* ── מיקום ── */
+  const [cur, setCur] = useState(0);
+  const [storyIndex, setStoryIndex] = useState(0);
+  const p = useSharedValue(0);
+  const curSV = useSharedValue(0);
+  const countSV = useSharedValue(0);
+  const startedRef = useRef(false);
 
-  // הסטורי הבא אצל אותו משתמש
-  useEffect(() => {
-    prefetchStoryImage(stories?.[storyIndex + 1]);
-  }, [stories, storyIndex]);
+  // ברגע שהנתונים הגיעו — משתמש ההתחלה
+  useLayoutEffect(() => {
+    if (!storiesMap || startedRef.current) return;
+    startedRef.current = true;
+    const start = Math.max(0, userIds.indexOf(params?.startUserId ?? ''));
+    const list = storiesMap[userIds[start]] ?? [];
+    setCur(start);
+    setStoryIndex(resolveStoryIndex(list.length, params?.startStoryIndex ?? 0));
+    p.value = start;
+  }, [storiesMap, userIds, params?.startUserId, params?.startStoryIndex, p]);
+
+  useLayoutEffect(() => {
+    curSV.value = cur;
+    countSV.value = userIds.length;
+  }, [cur, userIds.length, curSV, countSV]);
+
+  const currentUserId = userIds[cur];
+  const stories = (currentUserId && storiesMap?.[currentUserId]) || undefined;
+  const safeStoryIndex = resolveStoryIndex(stories?.length ?? 0, storyIndex);
+  const currentStory: UserStory | undefined = stories?.[safeStoryIndex];
+  const isOwnStory = !!currentUserId && currentUserId === user?.id;
+
+  const curRef = useRef(cur);
+  curRef.current = cur;
+  const storyIndexRef = useRef(safeStoryIndex);
+  storyIndexRef.current = safeStoryIndex;
+  const storiesLenRef = useRef(stories?.length ?? 0);
+  storiesLenRef.current = stories?.length ?? 0;
+  const userIdsRef = useRef(userIds);
+  userIdsRef.current = userIds;
+  const storiesMapRef = useRef(storiesMap);
+  storiesMapRef.current = storiesMap;
+
+  /** הסטורי שמוצג בפאה של משתמש i: הנוכחי — לפי המצב; קדימה (שמאל) — הראשון; אחורה (ימין) — האחרון */
+  const faceStoryIndex = useCallback(
+    (i: number): number => {
+      if (i === cur) return safeStoryIndex;
+      const len = storiesMap?.[userIds[i]]?.length ?? 0;
+      return i < cur ? 0 : Math.max(0, len - 1);
+    },
+    [cur, safeStoryIndex, storiesMap, userIds],
+  );
 
   /* ── סגירה / מעבר ── */
-  // «הקודם» בסטורי הראשון של המשתמש האחרון בשורה — מתחילים אותו מחדש
-  const restartTokenRef = useRef(0);
-  const [restartTick, setRestartTick] = useState(0);
   const closingRef = useRef(false);
   const close = useCallback(() => {
     if (closingRef.current) return;
@@ -222,72 +229,76 @@ export default function StoryViewerScreen() {
     if (navigation.canGoBack()) navigation.goBack();
   }, [navigation]);
 
-  const switchUser = useCallback((userIndex: number, storyIdx: number | 'last', dir: Dir) => {
-    if (userIndex < 0 || userIndex >= userIds.length) return;
-    const id = userIds[userIndex];
-    const cached = storiesMapRef.current[id];
-    // אם הסטוריז כבר ידועים — 'last' נפתר מיד
-    const resolved = storyIdx === 'last' && cached?.length ? cached.length - 1 : storyIdx;
-    setPos({ userIndex, storyIndex: resolved, dir });
-  }, [userIds]);
+  const [switching, setSwitching] = useState(false);
+  const restartTokenRef = useRef(0);
+  const [restartTick, setRestartTick] = useState(0);
+
+  /** סוף המעבר: המשתמש החדש הופך לנוכחי. p כבר על היעד — אף פאה לא זזה */
+  const commitUser = useCallback((target: number) => {
+    const ids = userIdsRef.current;
+    if (target < 0 || target >= ids.length) {
+      setSwitching(false);
+      return;
+    }
+    const len = storiesMapRef.current?.[ids[target]]?.length ?? 0;
+    const forward = target < curRef.current;
+    setCur(target);
+    setStoryIndex(forward ? 0 : Math.max(0, len - 1));
+    setSwitching(false);
+  }, []);
+
+  /** מעבר מונפש למשתמש שכן (הקשה / סוף הסטוריז) */
+  const animateToUser = useCallback((target: number) => {
+    if (target < 0 || target >= userIdsRef.current.length) return;
+    setSwitching(true);
+    p.value = withTiming(target, { duration: SWITCH_MS, easing: Easing.out(Easing.cubic) }, (fin) => {
+      if (fin) runOnJS(commitUser)(target);
+      else runOnJS(setSwitching)(false);
+    });
+  }, [p, commitUser]);
 
   /**
-   * שורת הסטוריז (ChatGroupsListScreen): [ישן … «שלי»]. קדימה = אינדקס נמוך יותר;
-   * בסוף (אינדקס 0) — סגירה. אחורה למשתמש קודם → הסטורי האחרון שלו.
+   * שורת הסטוריז: [ישן … «שלי»]. קדימה = אינדקס נמוך יותר; בסוף (אינדקס 0) — סגירה.
+   * אחורה למשתמש קודם → הסטורי האחרון שלו.
    */
   const goNext = useCallback(() => {
-    const { userIndex } = posRef.current;
     const sIdx = storyIndexRef.current;
     if (sIdx < storiesLenRef.current - 1) {
-      setPos({ userIndex, storyIndex: sIdx + 1, dir: 'forward' });
-    } else if (userIndex > 0) {
-      switchUser(userIndex - 1, 0, 'forward');
+      setStoryIndex(sIdx + 1);
+    } else if (curRef.current > 0) {
+      animateToUser(curRef.current - 1);
     } else {
       close();
     }
-  }, [switchUser, close]);
+  }, [animateToUser, close]);
 
   const goPrev = useCallback(() => {
-    const { userIndex } = posRef.current;
     const sIdx = storyIndexRef.current;
     if (sIdx > 0) {
-      setPos({ userIndex, storyIndex: sIdx - 1, dir: 'back' });
-    } else if (userIndex < userIds.length - 1) {
-      switchUser(userIndex + 1, 'last', 'back');
+      setStoryIndex(sIdx - 1);
+    } else if (curRef.current < userIdsRef.current.length - 1) {
+      animateToUser(curRef.current + 1);
     } else {
-      // הסטורי הראשון של המשתמש הראשון — מתחילים אותו מחדש
+      // הסטורי הראשון של המשתמש האחרון — מתחילים אותו מחדש
       restartTokenRef.current += 1;
       setRestartTick((t) => t + 1);
     }
-  }, [switchUser, userIds.length]);
+  }, [animateToUser]);
   const goNextRef = useRef(goNext);
   goNextRef.current = goNext;
   const goPrevRef = useRef(goPrev);
   goPrevRef.current = goPrev;
 
-  // משתמש בלי סטוריז (נמחקו / פגו) — מדלגים בכיוון התנועה
+  // הסטורי הבא אצל אותו משתמש
   useEffect(() => {
-    if (!currentUserId || fetched[currentUserId] !== 'done') return;
-    if ((storiesMap[currentUserId]?.length ?? 0) > 0) return;
-    if (pos.dir === 'forward') {
-      if (pos.userIndex > 0) switchUser(pos.userIndex - 1, 0, 'forward');
-      else close();
-    } else if (pos.userIndex < userIds.length - 1) {
-      switchUser(pos.userIndex + 1, 'last', 'back');
-    } else {
-      close();
-    }
-  }, [currentUserId, fetched, storiesMap, pos.dir, pos.userIndex, userIds.length, switchUser, close]);
+    prefetchStoryImage(stories?.[safeStoryIndex + 1]);
+  }, [stories, safeStoryIndex]);
 
-  /* ── מצב המדיה (לפי מזהה סטורי — בלי איפוסים במעבר) ── */
+  /* ── מצב המדיה (לפי מזהה סטורי) ── */
   const [loaded, setLoaded] = useState<Flags>({});
   const [failed, setFailed] = useState<Flags>({});
   const [stalled, setStalled] = useState<Flags>({});
   const [videoDurMs, setVideoDurMs] = useState<Record<string, number>>({});
-
-  // המדיה תמיד מהשרת (URL חתום) — בלי קובץ מקומי
-  const storyMediaUri = useCallback((remote: string | null | undefined): string => remote ?? '', []);
-  const fallBackFromLocal = useCallback((_remote: string | null | undefined): boolean => false, []);
 
   const storyId = currentStory?.id ?? null;
   const isMedia = currentStory?.media_type === 'image' || currentStory?.media_type === 'video';
@@ -299,7 +310,6 @@ export default function StoryViewerScreen() {
   );
   const showMediaSpinner = !!currentStory && playable && !mediaLoaded && !mediaFailed;
 
-  // מדיה שלא נטענה אחרי כמה שניות — מתחילים לספור (הספינר נשאר)
   useEffect(() => {
     if (!storyId || !showMediaSpinner) return;
     const t = setTimeout(() => setStalled(addFlag(storyId)), STORY_MEDIA_STALL_MS);
@@ -312,10 +322,11 @@ export default function StoryViewerScreen() {
   const [viewersSheetOpen, setViewersSheetOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ visible: boolean; error?: string }>({ visible: false });
   const [deleting, setDeleting] = useState(false);
-  const paused = holdPaused || dragPaused || viewersSheetOpen || confirmDelete.visible || !isFocused;
+  const paused =
+    holdPaused || dragPaused || switching || viewersSheetOpen || confirmDelete.visible || !isFocused;
 
   /* ── התקדמות: טיימר JS קובע את המעבר; Reanimated רק מצייר את הפסים ── */
-  const progress = useSharedValue(typeof pos.storyIndex === 'number' ? pos.storyIndex : 0);
+  const progress = useSharedValue(0);
   const runRef = useRef<{ id: string | null; remaining: number; token: number }>({ id: null, remaining: 0, token: 0 });
   const duration = currentStory?.media_type === 'video' && !mediaFailed
     ? (storyId && videoDurMs[storyId]) || STORY_VIDEO_MAX_MS
@@ -325,18 +336,18 @@ export default function StoryViewerScreen() {
   useEffect(() => {
     if (!storyId || !canRun) {
       cancelAnimation(progress);
-      progress.value = storyIndex;
+      progress.value = safeStoryIndex;
       return;
     }
     const run = runRef.current;
     if (run.id !== storyId || run.token !== restartTokenRef.current) {
       runRef.current = { id: storyId, remaining: duration, token: restartTokenRef.current };
-      progress.value = storyIndex;
+      progress.value = safeStoryIndex;
     }
     if (paused) return;
     const remaining = Math.max(50, runRef.current.remaining);
     const startedAt = Date.now();
-    progress.value = withTiming(storyIndex + 1, { duration: remaining, easing: Easing.linear });
+    progress.value = withTiming(safeStoryIndex + 1, { duration: remaining, easing: Easing.linear });
     // וידאו: playToEnd מעביר; הטיימר רק גיבוי
     const timer = setTimeout(() => goNextRef.current(), remaining + (isVideoPlaying ? 1500 : 0));
     return () => {
@@ -346,7 +357,7 @@ export default function StoryViewerScreen() {
         runRef.current.remaining = remaining - (Date.now() - startedAt);
       }
     };
-  }, [storyId, canRun, paused, duration, storyIndex, isVideoPlaying, restartTick, progress]);
+  }, [storyId, canRun, paused, duration, safeStoryIndex, isVideoPlaying, restartTick, progress]);
 
   // סימון כנצפה — גם בסטורי שלי (כדי שהטבעת תתעדכן); אני מסונן מרשימת הצופים
   useEffect(() => {
@@ -406,7 +417,6 @@ export default function StoryViewerScreen() {
     try {
       const [viewers, reactions] = await Promise.all([getStoryViewers(id), getStoryReactions(id)]);
       const reactionByUser = new Map(reactions.map((r) => [r.reactor_id, r.emoji]));
-      // הבעלים רואה את הסטורי של עצמו — לא נספר כצופה
       setViewersList(
         viewers
           .filter((v) => v.viewer_id !== user?.id)
@@ -430,7 +440,6 @@ export default function StoryViewerScreen() {
 
   const closeViewersSheet = useCallback(() => setViewersSheetOpen(false), []);
 
-  // מעבר סטורי סוגר את השיט
   useEffect(() => {
     setViewersSheetOpen(false);
   }, [storyId]);
@@ -444,32 +453,39 @@ export default function StoryViewerScreen() {
   const closeDeleteConfirm = useCallback(() => setConfirmDelete({ visible: false }), []);
 
   const confirmDeleteStory = useCallback(async () => {
-    if (!currentStory || !user?.id || !currentUserId) return;
+    if (!currentStory || !user?.id || !currentUserId || !storiesMap) return;
     setDeleting(true);
     try {
       await deleteStory(currentStory.id, user.id);
       setConfirmDelete({ visible: false });
-      const remaining = (storiesMapRef.current[currentUserId] ?? []).filter((s) => s.id !== currentStory.id);
-      setStoriesMap((m) => ({ ...m, [currentUserId]: remaining }));
-      if (remaining.length === 0) {
-        const { userIndex } = posRef.current;
-        if (userIndex > 0) switchUser(userIndex - 1, 0, 'forward');
-        else if (userIndex < userIds.length - 1) switchUser(userIndex + 1, 0, 'back');
-        else close();
-      } else {
-        setPos((p) => ({ ...p, storyIndex: Math.min(storyIndexRef.current, remaining.length - 1) }));
+      const remaining = (storiesMap[currentUserId] ?? []).filter((s) => s.id !== currentStory.id);
+      const nextMap = { ...storiesMap, [currentUserId]: remaining };
+      if (remaining.length > 0) {
+        setStoriesMap(nextMap);
+        setStoryIndex(Math.min(storyIndexRef.current, remaining.length - 1));
+        return;
       }
+      // לא נשארו סטוריז למשתמש — עוברים לשכן (או סוגרים)
+      const nextIds = requestedIds.filter((id) => (nextMap[id]?.length ?? 0) > 0);
+      if (nextIds.length === 0) {
+        close();
+        return;
+      }
+      const nextCur = Math.min(cur, nextIds.length - 1);
+      setStoriesMap(nextMap);
+      setCur(nextCur);
+      setStoryIndex(0);
+      p.value = nextCur;
     } catch (err) {
       logger.error('StoryViewerScreen', 'Delete failed', err);
       setConfirmDelete({ visible: true, error: 'לא הצלחנו למחוק. נסה שוב.' });
     } finally {
       setDeleting(false);
     }
-  }, [currentStory, user?.id, currentUserId, userIds.length, switchUser, close]);
+  }, [currentStory, user?.id, currentUserId, storiesMap, requestedIds, cur, close, p]);
 
   /* ── מחוות ── */
   const dragY = useSharedValue(0);
-  const slideX = useSharedValue(0);
 
   const requestClose = useCallback(() => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -486,30 +502,10 @@ export default function StoryViewerScreen() {
     else goPrevRef.current();
   }, []);
 
-  // מעבר משתמשים בקוביה (כמו באינסטגרם): הדף הנוכחי והשכן מסתובבים יחד עם האצבע.
-  // השכן משמאל (גרירה ימינה) = אינדקס נמוך = קדימה; מימין = אחורה (הסטורי האחרון שלו).
-  const canSwipeRight = useSharedValue(pos.userIndex > 0);
-  const canSwipeLeft = useSharedValue(pos.userIndex < userIds.length - 1);
-  useEffect(() => {
-    canSwipeRight.value = pos.userIndex > 0;
-    canSwipeLeft.value = pos.userIndex < userIds.length - 1;
-  }, [pos.userIndex, userIds.length, canSwipeRight, canSwipeLeft]);
-
-  // אחרי ההחלפה: מאפסים את הקוביה רק כשהמשתמש החדש כבר מרונדר (לפני הצביעה) — בלי הבהוב
-  const pendingCubeResetRef = useRef(false);
-  useLayoutEffect(() => {
-    if (!pendingCubeResetRef.current) return;
-    pendingCubeResetRef.current = false;
-    slideX.value = 0;
-  }, [pos.userIndex, slideX]);
-
-  const commitSwipe = useCallback((toRight: boolean) => {
-    const { userIndex } = posRef.current;
+  const swipeHaptic = useCallback(() => {
     void Haptics.selectionAsync().catch(() => {});
-    pendingCubeResetRef.current = true;
-    if (toRight) switchUser(userIndex - 1, 0, 'forward');
-    else switchUser(userIndex + 1, 'last', 'back');
-  }, [switchUser]);
+    setSwitching(true);
+  }, []);
 
   const gesture = useMemo(() => {
     const dismissPan = Gesture.Pan()
@@ -526,7 +522,6 @@ export default function StoryViewerScreen() {
       .onEnd((e) => {
         'worklet';
         if (dragY.value > 120 || e.velocityY > 900) {
-          // הניווט סוגר (fade נייטיב) — לא מחכים לסוף האנימציה
           dragY.value = withTiming(H * 0.6, { duration: 220, easing: Easing.in(Easing.cubic) });
           runOnJS(close)();
         } else {
@@ -538,6 +533,7 @@ export default function StoryViewerScreen() {
         runOnJS(endDrag)();
       });
 
+    // גרירה ימינה = השכן משמאל (אינדקס נמוך = קדימה); שמאלה = השכן מימין (אחורה)
     const swipePan = Gesture.Pan()
       .activeOffsetX([-16, 16])
       .failOffsetY([-14, 14])
@@ -547,25 +543,30 @@ export default function StoryViewerScreen() {
       })
       .onUpdate((e) => {
         'worklet';
+        const c = curSV.value;
         const t = e.translationX;
-        // אין שכן בכיוון הזה — התנגדות (גומי)
-        const blocked = (t > 0 && !canSwipeRight.value) || (t < 0 && !canSwipeLeft.value);
-        slideX.value = blocked ? t * 0.2 : Math.max(-W, Math.min(W, t));
+        const canFwd = c > 0;
+        const canBack = c < countSV.value - 1;
+        const blocked = (t > 0 && !canFwd) || (t < 0 && !canBack);
+        const dx = blocked ? t * 0.2 : Math.max(-W, Math.min(W, t));
+        p.value = c - dx / W;
       })
       .onEnd((e) => {
         'worklet';
+        const c = curSV.value;
         const t = e.translationX;
         const v = e.velocityX;
-        const done = (fin?: boolean, toRight?: boolean) => {
-          'worklet';
-          if (fin) runOnJS(commitSwipe)(!!toRight);
-        };
-        if (canSwipeRight.value && t > 0 && (t > W * 0.3 || v > 800)) {
-          slideX.value = withTiming(W, { duration: 260, easing: Easing.out(Easing.cubic) }, (fin) => done(fin, true));
-        } else if (canSwipeLeft.value && t < 0 && (t < -W * 0.3 || v < -800)) {
-          slideX.value = withTiming(-W, { duration: 260, easing: Easing.out(Easing.cubic) }, (fin) => done(fin, false));
+        let target = c;
+        if (c > 0 && t > 0 && (t > W * 0.3 || v > 800)) target = c - 1;
+        else if (c < countSV.value - 1 && t < 0 && (t < -W * 0.3 || v < -800)) target = c + 1;
+        if (target !== c) {
+          runOnJS(swipeHaptic)();
+          p.value = withTiming(target, { duration: 260, easing: Easing.out(Easing.cubic) }, (fin) => {
+            if (fin) runOnJS(commitUser)(target);
+            else runOnJS(setSwitching)(false);
+          });
         } else {
-          slideX.value = withSpring(0, { damping: 22, stiffness: 260, mass: 0.6 });
+          p.value = withSpring(c, { damping: 22, stiffness: 260, mass: 0.6 });
         }
       })
       .onFinalize(() => {
@@ -593,121 +594,214 @@ export default function StoryViewerScreen() {
       });
 
     return Gesture.Race(dismissPan, swipePan, Gesture.Exclusive(longPress, tap));
-  }, [dragY, slideX, close, endDrag, commitSwipe, handleTap, canSwipeRight, canSwipeLeft]);
+  }, [dragY, p, curSV, countSV, close, endDrag, commitUser, swipeHaptic, handleTap]);
 
-  // ערכי ההתחלה (0) = מצב רגיל וגלוי; גם אם עדכון מונפש לא מגיע למסך — התוכן נראה
+  // משיכה למטה: כל הבמה קטנה ויורדת (ערכי ההתחלה = מצב רגיל וגלוי)
   const stageAnim = useAnimatedStyle(() => {
     const d = Math.min(1, dragY.value / H);
-    const o = slideX.value;
     return {
       borderRadius: d > 0 ? 18 : 0,
-      // קוביה: הציר בקצה המשותף עם השכן
-      transformOrigin: o >= 0 ? 'left center' : 'right center',
-      transform: [
-        { perspective: CUBE_PERSPECTIVE },
-        { translateX: o },
-        { rotateY: `${(o / W) * 90}deg` },
-        { translateY: dragY.value },
-        { scale: 1 - d * 0.25 },
-      ],
+      transform: [{ translateY: dragY.value }, { scale: 1 - d * 0.25 }],
     };
   });
-  // הצללה על הפאה שמסתובבת החוצה
-  const stageShadeAnim = useAnimatedStyle(() => ({
-    opacity: Math.min(1, Math.abs(slideX.value) / W) * 0.55,
+  // הכפתורים התחתונים דועכים בזמן סיבוב (במנוחה — גלויים גם בלי אנימציה)
+  const chromeAnim = useAnimatedStyle(() => ({
+    opacity: 1 - Math.min(1, Math.abs(p.value - curSV.value) * 4),
   }));
-  const leftFaceAnim = useAnimatedStyle(() => {
-    const o = slideX.value - W;
-    return {
-      opacity: slideX.value > 0 ? 1 : 0,
-      transformOrigin: 'right center',
-      transform: [{ perspective: CUBE_PERSPECTIVE }, { translateX: o }, { rotateY: `${(o / W) * 90}deg` }],
-    };
-  });
-  const rightFaceAnim = useAnimatedStyle(() => {
-    const o = slideX.value + W;
-    return {
-      opacity: slideX.value < 0 ? 1 : 0,
-      transformOrigin: 'left center',
-      transform: [{ perspective: CUBE_PERSPECTIVE }, { translateX: o }, { rotateY: `${(o / W) * 90}deg` }],
-    };
-  });
-  const leftShadeAnim = useAnimatedStyle(() => ({
-    opacity: (1 - Math.min(1, Math.max(0, slideX.value) / W)) * 0.55,
-  }));
-  const rightShadeAnim = useAnimatedStyle(() => ({
-    opacity: (1 - Math.min(1, Math.max(0, -slideX.value) / W)) * 0.55,
-  }));
-
-  // הסטורי שיוצג בפאה השכנה: קדימה — הראשון, אחורה — האחרון
-  const leftNeighborId = userIds[pos.userIndex - 1];
-  const rightNeighborId = userIds[pos.userIndex + 1];
-  const leftNeighborStory = leftNeighborId ? storiesMap[leftNeighborId]?.[0] : undefined;
-  const rightNeighborStories = rightNeighborId ? storiesMap[rightNeighborId] : undefined;
-  const rightNeighborStory = rightNeighborStories?.[rightNeighborStories.length - 1];
-  // הרקע השחור דועך במשיכה — רואים את המסך שמתחת (transparentModal)
   const backdropAnim = useAnimatedStyle(() => ({
     opacity: 1 - Math.min(1, dragY.value / (H * 0.5)) * 0.9,
   }));
 
   /* ── רינדור ── */
-  const displayName = currentUser?.user?.display_name || currentUser?.user?.full_name || 'משתמש';
-  const avatar = currentUser?.user?.profile_picture;
-  const loadingStories = !!currentUserId && !stories?.length && fetched[currentUserId] !== 'error';
-  const loadError = !!currentUserId && !stories?.length && fetched[currentUserId] === 'error';
+  const userInfo = (id: string) => {
+    const u = getStoryViewerUser(id)?.user;
+    return { name: u?.display_name || u?.full_name || 'משתמש', avatar: u?.profile_picture ?? null };
+  };
 
-  const renderMedia = () => {
-    if (!currentStory) return null;
-    if (currentStory.media_type === 'text') {
-      return <StoryTextCard content={currentStory.content} backgroundColor={currentStory.background_color} />;
+  /** מדיה של סטורי — אותו רכיב לפאה פעילה ולשכנה (key לפי סטורי → בלי טעינה מחדש במעבר) */
+  const renderStoryMedia = (story: UserStory, active: boolean) => {
+    if (story.media_type === 'text') {
+      return <StoryTextCard key={story.id} content={story.content} backgroundColor={story.background_color} />;
     }
-    if (!playable) return null;
-    const sid = currentStory.id;
-    const remote = currentStory.media_url;
-    const uri = storyMediaUri(remote);
-    if (currentStory.media_type === 'image') {
+    const uri = story.media_url ?? '';
+    if (!isPlayableMediaUri(uri)) return null;
+    const sid = story.id;
+    if (story.media_type === 'image') {
       return (
         <StoryImage
+          key={sid}
           uri={uri}
-          content={currentStory.content}
+          content={story.content}
           onLoad={() => setLoaded(addFlag(sid))}
-          onError={() => {
-            if (fallBackFromLocal(remote)) return;
-            setFailed(addFlag(sid));
-          }}
+          onError={() => setFailed(addFlag(sid))}
         />
       );
     }
+    // וידאו רק בפאה הפעילה (שכן — רקע שחור עד שנכנסים)
+    if (!active) return null;
     return (
       <StoryVideo
-        key={`${sid}|${uri}`}
+        key={sid}
         uri={uri}
-        content={currentStory.content}
+        content={story.content}
         paused={paused}
         onReady={(ms) => {
           if (ms > 0) setVideoDurMs((m) => (m[sid] ? m : { ...m, [sid]: ms }));
           setLoaded(addFlag(sid));
         }}
         onEnd={() => {
-          if (storyIndexRef.current === storyIndex && posRef.current.userIndex === pos.userIndex) {
-            goNextRef.current();
-          }
+          if (storyIndexRef.current === safeStoryIndex && curRef.current === cur) goNextRef.current();
         }}
-        onError={() => {
-          if (fallBackFromLocal(remote)) return;
-          setFailed(addFlag(sid));
-        }}
+        onError={() => setFailed(addFlag(sid))}
       />
     );
   };
+
+  const renderHeader = (id: string, story: UserStory | undefined, active: boolean) => {
+    const { name, avatar } = userInfo(id);
+    const list = storiesMap?.[id] ?? [];
+    return (
+      <LinearGradient
+        colors={['rgba(0,0,0,0.7)', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0)']}
+        locations={[0, 0.6, 1]}
+        style={[styles.topGradient, { paddingTop: insets.top + 10 }]}
+        pointerEvents="none"
+      >
+        <View style={styles.progressRow}>
+          {list.map((_, idx, arr) => {
+            const i = arr.length - 1 - idx;
+            return active ? (
+              <ProgressBarFill key={`${id}-${i}`} index={i} progress={progress} />
+            ) : (
+              <StaticBar key={`${id}-${i}`} filled={i < faceStoryIndex(userIds.indexOf(id))} />
+            );
+          })}
+        </View>
+
+        <View style={styles.header} pointerEvents="box-none">
+          {/* ויזואלי בלבד — הלחיצה בשכבת הכפתורים מחוץ למחוות */}
+          <View style={styles.closeBtn}>
+            <Ionicons name="close" size={22} color="#fff" />
+          </View>
+
+          <View style={styles.headerInfo} pointerEvents="none">
+            <Text style={styles.headerTime}>{story?.created_at ? formatStoryTime(story.created_at) : ''}</Text>
+            <UserBadges userId={id} interactive={false} size={badgeSizeForLineHeight(20)} style={styles.headerBadges} />
+            <Text style={styles.headerName} numberOfLines={1}>{name}</Text>
+            {avatar ? (
+              <Image source={{ uri: avatar }} style={styles.headerAvatar} />
+            ) : (
+              <View style={[styles.headerAvatar, styles.headerAvatarPlaceholder]}>
+                <Ionicons name="person" size={18} color="rgba(255,255,255,0.7)" />
+              </View>
+            )}
+          </View>
+        </View>
+      </LinearGradient>
+    );
+  };
+
+  const renderBottom = () => {
+    if (!currentStory) return null;
+    if (isOwnStory) {
+      return (
+        <LinearGradient
+          colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.5)']}
+          style={[styles.bottomGradient, { paddingBottom: insets.bottom + 20 }]}
+          pointerEvents="box-none"
+        >
+          <View style={styles.bottomActions} pointerEvents="box-none">
+            <TouchableOpacity
+              style={[styles.actionBtnRound, { backgroundColor: designTokens.colors.background.primary }]}
+              onPress={openViewersSheet}
+              activeOpacity={0.75}
+              accessibilityLabel="צפיות"
+            >
+              <Ionicons name="eye-outline" size={20} color={designTokens.colors.text.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionBtnRound, { backgroundColor: designTokens.colors.background.primary }]}
+              onPress={openDeleteConfirm}
+              activeOpacity={0.75}
+              accessibilityLabel="מחיקת הסטורי"
+            >
+              <Ionicons name="trash-outline" size={20} color={designTokens.colors.danger.main} />
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+      );
+    }
+    return (
+      <View style={[reactStyles.wrapper, { bottom: insets.bottom + 12 }]} pointerEvents="box-none">
+        <View style={reactStyles.flyLayer} pointerEvents="none">
+          {flyingEmojis.map((f) => (
+            <FlyingEmojiItem key={f.id} emoji={f.emoji} startX={f.startX} onDone={() => removeFlying(f.id)} />
+          ))}
+        </View>
+        <View
+          style={[reactStyles.bar, { backgroundColor: designTokens.colors.background.primary }]}
+          pointerEvents="box-none"
+          onLayout={(e) => setBarWidth(e.nativeEvent.layout.width)}
+        >
+          {STORY_REACTION_EMOJIS.map((emoji, i) => (
+            <ReactionButton
+              key={emoji}
+              emoji={emoji}
+              isSelected={myReaction === emoji}
+              onPress={() => handleReactionPress(emoji, i)}
+            />
+          ))}
+        </View>
+      </View>
+    );
+  };
+
+  const renderFace = (i: number) => {
+    const id = userIds[i];
+    if (!id) return null;
+    const active = i === cur;
+    const list = storiesMap?.[id] ?? [];
+    const story = list[faceStoryIndex(i)];
+    return (
+      <CubeFace key={id} index={i} p={p}>
+        <View style={styles.mediaLayer} pointerEvents="none">
+          {story ? renderStoryMedia(story, active) : null}
+          {story && (story.media_type !== 'text') && loaded[story.id] ? <StoryOverlays content={story.content} /> : null}
+          {active && showMediaSpinner && (
+            <View style={[styles.center, StyleSheet.absoluteFill]}>
+              <ActivityIndicator size="large" color="#fff" />
+            </View>
+          )}
+          {active && mediaFailed && (
+            <View style={[styles.center, StyleSheet.absoluteFill]}>
+              <Ionicons name="cloud-offline-outline" size={48} color="rgba(255,255,255,0.4)" />
+              <Text style={styles.errorText}>שגיאה בטעינת המדיה</Text>
+            </View>
+          )}
+        </View>
+        {renderHeader(id, story, active)}
+      </CubeFace>
+    );
+  };
+
+  if (!storiesMap) {
+    return (
+      <GestureHandlerRootView style={styles.root}>
+        <StatusBar hidden />
+        <Pressable style={[styles.center, styles.emptyRoot]} onPress={close}>
+          <ActivityIndicator size="large" color={chatPalette.primary} />
+        </Pressable>
+      </GestureHandlerRootView>
+    );
+  }
 
   if (userIds.length === 0 || !currentUserId) {
     return (
       <GestureHandlerRootView style={styles.root}>
         <StatusBar hidden />
         <Pressable style={[styles.center, styles.emptyRoot]} onPress={close}>
-          <Ionicons name="images-outline" size={48} color="rgba(255,255,255,0.3)" />
-          <Text style={styles.emptyText}>אין סטטוסים</Text>
+          <Ionicons name={loadError ? 'cloud-offline-outline' : 'images-outline'} size={48} color="rgba(255,255,255,0.3)" />
+          <Text style={styles.emptyText}>{loadError ? 'שגיאה בטעינת הסטטוס' : 'אין סטטוסים'}</Text>
         </Pressable>
       </GestureHandlerRootView>
     );
@@ -718,140 +812,27 @@ export default function StoryViewerScreen() {
       <StatusBar hidden />
       <Reanimated.View style={[styles.backdrop, backdropAnim]} pointerEvents="none" />
 
-      {leftNeighborId ? (
-        <Reanimated.View style={[styles.cubeFace, leftFaceAnim]} pointerEvents="none">
-          <NeighborFace story={leftNeighborStory} />
-          <Reanimated.View style={[styles.cubeShade, leftShadeAnim]} />
+      <GestureDetector gesture={gesture}>
+        <Reanimated.View style={[styles.stage, stageAnim]} collapsable={false}>
+          {/* השכנים קודם, הנוכחי אחרון (מעליהם) */}
+          {renderFace(cur - 1)}
+          {renderFace(cur + 1)}
+          {renderFace(cur)}
         </Reanimated.View>
-      ) : null}
-      {rightNeighborId ? (
-        <Reanimated.View style={[styles.cubeFace, rightFaceAnim]} pointerEvents="none">
-          <NeighborFace story={rightNeighborStory} />
-          <Reanimated.View style={[styles.cubeShade, rightShadeAnim]} />
+      </GestureDetector>
+
+      {/* כפתורים — מחוץ לאזור המחוות (הקשה עליהם לא מעבירה סטורי). נעלמים בזמן סיבוב הקוביה */}
+      <Reanimated.View style={[StyleSheet.absoluteFill, stageAnim]} pointerEvents="box-none">
+        <TouchableOpacity
+          onPress={requestClose}
+          style={[styles.closeHit, { top: insets.top + 10 + 3.5 + 12 - 4 }]}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel="סגור סטטוס"
+        />
+        <Reanimated.View style={[StyleSheet.absoluteFill, chromeAnim]} pointerEvents="box-none">
+          {renderBottom()}
         </Reanimated.View>
-      ) : null}
-
-      <Reanimated.View style={[styles.stage, stageAnim]}>
-        <GestureDetector gesture={gesture}>
-          <View style={styles.mediaLayer} collapsable={false}>
-            {renderMedia()}
-            {mediaLoaded && isMedia ? <StoryOverlays content={currentStory?.content} /> : null}
-
-            {(loadingStories || showMediaSpinner) && (
-              <View style={[styles.center, StyleSheet.absoluteFill]} pointerEvents="none">
-                <ActivityIndicator size="large" color={loadingStories ? chatPalette.primary : '#fff'} />
-              </View>
-            )}
-            {(mediaFailed || loadError) && (
-              <View style={[styles.center, StyleSheet.absoluteFill]} pointerEvents="none">
-                <Ionicons name="cloud-offline-outline" size={48} color="rgba(255,255,255,0.4)" />
-                <Text style={styles.errorText}>
-                  {loadError ? 'שגיאה בטעינת הסטטוס' : 'שגיאה בטעינת המדיה'}
-                </Text>
-              </View>
-            )}
-          </View>
-        </GestureDetector>
-
-        {/* ===== למעלה: פסי התקדמות + כותרת ===== */}
-        <LinearGradient
-          colors={['rgba(0,0,0,0.7)', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0)']}
-          locations={[0, 0.6, 1]}
-          style={[styles.topGradient, { paddingTop: insets.top + 10 }]}
-          pointerEvents="box-none"
-        >
-          <View style={styles.progressRow} pointerEvents="none">
-            {(stories ?? []).map((_, idx, arr) => {
-              const i = arr.length - 1 - idx;
-              return <ProgressBarFill key={`${currentUserId}-${i}`} index={i} progress={progress} />;
-            })}
-          </View>
-
-          <View style={styles.header} pointerEvents="box-none">
-            <TouchableOpacity
-              onPress={requestClose}
-              style={styles.closeBtn}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              accessibilityRole="button"
-              accessibilityLabel="סגור סטטוס"
-            >
-              <Ionicons name="close" size={22} color="#fff" />
-            </TouchableOpacity>
-
-            <View style={styles.headerInfo} pointerEvents="none">
-              <Text style={styles.headerTime}>
-                {currentStory?.created_at ? formatStoryTime(currentStory.created_at) : ''}
-              </Text>
-              <UserBadges
-                userId={currentUserId}
-                interactive={false}
-                size={badgeSizeForLineHeight(20)}
-                style={styles.headerBadges}
-              />
-              <Text style={styles.headerName} numberOfLines={1}>{displayName}</Text>
-              {avatar ? (
-                <Image source={{ uri: avatar }} style={styles.headerAvatar} />
-              ) : (
-                <View style={[styles.headerAvatar, styles.headerAvatarPlaceholder]}>
-                  <Ionicons name="person" size={18} color="rgba(255,255,255,0.7)" />
-                </View>
-              )}
-            </View>
-          </View>
-        </LinearGradient>
-
-        {/* ===== למטה: פעולות על הסטורי שלי / ריאקציות ===== */}
-        {isOwnStory ? (
-          <LinearGradient
-            colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.5)']}
-            style={[styles.bottomGradient, { paddingBottom: insets.bottom + 20 }]}
-            pointerEvents="box-none"
-          >
-            {currentStory ? (
-              <View style={styles.bottomActions} pointerEvents="box-none">
-                <TouchableOpacity
-                  style={[styles.actionBtnRound, { backgroundColor: designTokens.colors.background.primary }]}
-                  onPress={openViewersSheet}
-                  activeOpacity={0.75}
-                  accessibilityLabel="צפיות"
-                >
-                  <Ionicons name="eye-outline" size={20} color={designTokens.colors.text.primary} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.actionBtnRound, { backgroundColor: designTokens.colors.background.primary }]}
-                  onPress={openDeleteConfirm}
-                  activeOpacity={0.75}
-                  accessibilityLabel="מחיקת הסטורי"
-                >
-                  <Ionicons name="trash-outline" size={20} color={designTokens.colors.danger.main} />
-                </TouchableOpacity>
-              </View>
-            ) : null}
-          </LinearGradient>
-        ) : currentStory ? (
-          <View style={[reactStyles.wrapper, { bottom: insets.bottom + 12 }]} pointerEvents="box-none">
-            <View style={reactStyles.flyLayer} pointerEvents="none">
-              {flyingEmojis.map((f) => (
-                <FlyingEmojiItem key={f.id} emoji={f.emoji} startX={f.startX} onDone={() => removeFlying(f.id)} />
-              ))}
-            </View>
-            <View
-              style={[reactStyles.bar, { backgroundColor: designTokens.colors.background.primary }]}
-              pointerEvents="box-none"
-              onLayout={(e) => setBarWidth(e.nativeEvent.layout.width)}
-            >
-              {STORY_REACTION_EMOJIS.map((emoji, i) => (
-                <ReactionButton
-                  key={emoji}
-                  emoji={emoji}
-                  isSelected={myReaction === emoji}
-                  onPress={() => handleReactionPress(emoji, i)}
-                />
-              ))}
-            </View>
-          </View>
-        ) : null}
-        <Reanimated.View style={[styles.cubeShade, stageShadeAnim]} pointerEvents="none" />
       </Reanimated.View>
 
       {viewersSheetOpen && (
@@ -882,6 +863,15 @@ export default function StoryViewerScreen() {
   );
 }
 
+/** פס התקדמות סטטי לפאה שכנה */
+function StaticBar({ filled }: { filled: boolean }) {
+  return (
+    <View style={styles.staticBarTrack}>
+      <View style={[styles.staticBarFill, { width: filled ? '100%' : '0%' }]} />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   // שקוף: השחור מגיע מ-backdrop (דועך במשיכה). direction:ltr — הפריסה כמו בצופה הקודם
   root: {
@@ -893,17 +883,30 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     backgroundColor: '#000',
   },
-  // אטימות בסיס 0: אם העדכון המונפש לא מגיע למסך (פרודקשן) — השכבות האלה שקופות ולא מכסות את הסטורי
-  cubeFace: {
+  // פאה בקוביה — גלויה במנוחה גם בלי אנימציה (הנוכחית מרונדרת אחרונה, מעל השכנים)
+  face: {
     ...StyleSheet.absoluteFill,
     backgroundColor: '#000',
     overflow: 'hidden',
-    opacity: 0,
   },
+  // הצללה: אטימות בסיס 0 — אם העדכון המונפש לא מגיע למסך היא שקופה ולא מכסה את הסטורי
   cubeShade: {
     ...StyleSheet.absoluteFill,
     backgroundColor: '#000',
     opacity: 0,
+  },
+  staticBarTrack: {
+    flex: 1,
+    marginHorizontal: 1.5,
+    height: 3.5,
+    backgroundColor: 'rgba(255,255,255,0.35)',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  staticBarFill: {
+    height: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 1.5,
   },
   stage: {
     flex: 1,
@@ -992,6 +995,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(0,0,0,0.38)',
+  },
+  closeHit: {
+    position: 'absolute',
+    left: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
   },
   bottomGradient: {
     position: 'absolute',

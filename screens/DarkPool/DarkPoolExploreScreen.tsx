@@ -439,7 +439,7 @@ function createStyles(
       direction: 'rtl',
       paddingHorizontal: tokens.layout.screenPadding,
       paddingTop: tokens.spacing.sm,
-      paddingBottom: bottomPad + 24,
+      paddingBottom: bottomPad,
     },
     errorText: {
       ...darkPoolPhysicalRightText,

@@ -359,7 +359,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, bottomPad: num
     safe: { flex: 1, backgroundColor: 'transparent', ...darkPoolRtlContent },
     scroll: {
       direction: 'rtl',
-      paddingBottom: bottomPad + 24,
+      paddingBottom: bottomPad,
       paddingTop: 6,
       paddingHorizontal: tokens.layout?.screenPadding ?? FEED_LIST_GUTTER,
     },

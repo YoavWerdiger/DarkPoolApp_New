@@ -6,6 +6,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { DarkPoolBottomTabBar } from '../screens/DarkPool/components/DarkPoolBottomTabBar';
+import { useDarkPoolTabBarFrameHeight } from '../hooks/useDarkPoolTabBarHeight';
 import DarkPoolHomeScreen from '../screens/DarkPool/DarkPoolHomeScreen';
 import DarkPoolExploreScreen from '../screens/DarkPool/DarkPoolExploreScreen';
 import DarkPoolFollowingScreen from '../screens/DarkPool/DarkPoolFollowingScreen';
@@ -21,6 +22,7 @@ export type DarkPoolTabParamList = {
 const Tab = createBottomTabNavigator<DarkPoolTabParamList>();
 
 export default function DarkPoolTabs() {
+  const tabBarFrame = useDarkPoolTabBarFrameHeight();
   return (
     <Tab.Navigator
       initialRouteName="DarkPoolExplore"
@@ -31,7 +33,8 @@ export default function DarkPoolTabs() {
         freezeOnBlur: true,
         lazy: true,
         tabBarHideOnKeyboard: true,
-        sceneStyle: { backgroundColor: 'transparent' },
+        // התוכן נגמר בראש סרגל הטאבים ולא ממשיך מתחתיו
+        sceneStyle: { backgroundColor: 'transparent', marginBottom: tabBarFrame, overflow: 'hidden' },
         tabBarStyle: {
           position: 'absolute',
           backgroundColor: 'transparent',

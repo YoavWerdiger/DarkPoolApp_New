@@ -921,14 +921,17 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     backgroundColor: '#000',
   },
+  // אטימות בסיס 0: אם העדכון המונפש לא מגיע למסך (פרודקשן) — השכבות האלה שקופות ולא מכסות את הסטורי
   cubeFace: {
     ...StyleSheet.absoluteFill,
     backgroundColor: '#000',
     overflow: 'hidden',
+    opacity: 0,
   },
   cubeShade: {
     ...StyleSheet.absoluteFill,
     backgroundColor: '#000',
+    opacity: 0,
   },
   stage: {
     flex: 1,

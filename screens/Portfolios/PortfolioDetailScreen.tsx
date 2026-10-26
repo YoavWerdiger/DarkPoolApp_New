@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { legacyAlert } from '../../utils/appDialog';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -93,6 +93,7 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
   const viewerInitial = (authUser?.display_name ?? authUser?.full_name ?? authUser?.email ?? '').charAt(0).toUpperCase();
 
   const mainTabsHeight = useMainTabsHeight();
+  const insets = useSafeAreaInsets();
 
   const isOwner = useMemo(
     () =>
@@ -351,7 +352,8 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
         )}
 
         <ScrollView
-          style={{ flex: 1 }}
+          // התוכן נחתך מעל ה-safe area התחתון ולא נגלל מתחתיו
+          style={{ flex: 1, marginBottom: insets.bottom }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -372,7 +374,7 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
             pillStyle={styles.tabBtn}
           />
 
-          <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: canAddTransaction ? mainTabsHeight + 90 : 60, direction: 'rtl' }}>
+          <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: canAddTransaction ? mainTabsHeight - insets.bottom + 90 : 32, direction: 'rtl' }}>
             {activeTab === 'overview' && portfolio && (
               <OverviewTab
                 portfolio={portfolio}

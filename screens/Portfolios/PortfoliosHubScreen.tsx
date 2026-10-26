@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, useFocusEffect, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -31,6 +31,7 @@ export default function PortfoliosHubScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const tokens = useDesignTokens();
+  const insets = useSafeAreaInsets();
   const [portfolios, setPortfolios] = useState<Portfolio[] | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -90,7 +91,8 @@ export default function PortfoliosHubScreen() {
     () =>
       StyleSheet.create({
         safeArea: { ...journalRtlRoot, backgroundColor: 'transparent' },
-        content: { flex: 1, minHeight: 0, backgroundColor: 'transparent' },
+        // התוכן נחתך מעל ה-safe area התחתון ולא נגלל מתחתיו
+        content: { flex: 1, minHeight: 0, backgroundColor: 'transparent', marginBottom: insets.bottom, overflow: 'hidden' },
         createBtn: {
           width: DRAWER_MENU_BUTTON_SIZE,
           height: DRAWER_MENU_BUTTON_SIZE,
@@ -100,7 +102,7 @@ export default function PortfoliosHubScreen() {
           justifyContent: 'center',
         },
       }),
-    [tokens]
+    [tokens, insets.bottom]
   );
 
   if (portfolios === null) {

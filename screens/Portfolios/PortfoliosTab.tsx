@@ -28,7 +28,6 @@ import {
 } from '../../services/portfolios';
 import type { Portfolio, PortfolioSummary } from './portfolioTypes';
 import { PortfolioCard } from './components/PortfolioCard';
-import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { queryClient } from '../../lib/queryClient';
 import { appQueryKeys } from '../../lib/appQueryKeys';
@@ -99,7 +98,8 @@ async function loadPortfolioSparkline(portfolio: Portfolio): Promise<number[] | 
 export default function PortfoliosTab() {
   const tokens = useDesignTokens();
   const navigation = useNavigation<Nav>();
-  const mainTabsHeight = useMainTabsHeight();
+  // ההאב חותך את התוכן מעל ה-safe area — כאן רק מרווח קטן (+ מקום לכפתורים)
+  const mainTabsHeight = 12;
   // זריעה אופטימית מה-cache (נטען מהדיסק בהפעלה קרה) — רינדור מיידי
   const [items, setItems] = useState<PortfolioWithSummary[]>(
     () => queryClient.getQueryData<PortfolioWithSummary[]>(appQueryKeys.portfolios) ?? []

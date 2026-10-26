@@ -154,7 +154,7 @@ export const LessonRow: React.FC<LessonRowProps> = ({
 
         <View style={styles.body}>
           <View style={styles.titleBlock}>
-            <Text style={styles.indexLabel}>שיעור {index + 1}</Text>
+            {/* טופו: כותרת הכרטיס ואז תת־כותרת אפורה צמודה (שיעור N; המשך על התמונה) */}
             <Text
               style={[
                 appCardTitleStyle,
@@ -164,6 +164,10 @@ export const LessonRow: React.FC<LessonRowProps> = ({
               numberOfLines={2}
             >
               {lesson.title}
+            </Text>
+            <Text style={styles.indexLabel} numberOfLines={1}>
+              שיעור {index + 1}
+              {isComingSoon ? ' · בקרוב' : ''}
             </Text>
 
             {description ? (
@@ -296,18 +300,18 @@ function createStyles(T: ReturnType<typeof useDesignTokens>) {
     },
     indexLabel: {
       ...appCardSubtitleStyle,
-      marginTop: 0,
+      marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
       color: T.colors.text.secondary,
     },
     title: {
-      marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
+      marginTop: 0,
       color: T.colors.text.primary,
     },
     titleLocked: {
       color: T.colors.text.tertiary,
     },
     description: {
-      marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
+      marginTop: APP_LAYOUT.stackGapSmall,
       color: T.colors.text.secondary,
     },
     descriptionLocked: {

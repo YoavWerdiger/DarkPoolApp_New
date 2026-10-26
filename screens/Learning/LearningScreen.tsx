@@ -2022,13 +2022,10 @@ function LearningScreen() {
         <ScrollView
           ref={courseListScrollRef}
           showsVerticalScrollIndicator
-          // ScreenChrome הוא rtl → פס הגלילה עובר לשמאל; ה-ScrollView ב-ltr (פס בימין) והתוכן חוזר ל-rtl
-          style={{ direction: 'ltr' }}
           onScroll={handleCourseListScroll}
           scrollEventThrottle={32}
           contentContainerStyle={[
             styles.courseListScroll,
-            { direction: 'rtl' },
             { paddingBottom: Math.max(mainTabsHeight, DesignTokens.spacing['5xl']) },
           ]}
         >

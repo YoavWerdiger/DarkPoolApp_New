@@ -2129,32 +2129,7 @@ function LearningScreen() {
   return (
     <ScreenChrome>
       <RNSafeAreaView style={styles.safeAreaContent} edges={[]}>
-        <ScrollView
-          ref={courseListScrollRef}
-          showsVerticalScrollIndicator={false}
-          // marginBottom: התוכן נחתך מעל ה-safe area התחתון ולא נגלל מתחתיו
-          style={{ marginBottom: insets.bottom }}
-          onScroll={handleCourseListScroll}
-          scrollEventThrottle={16}
-          onLayout={(e) => {
-            courseViewportHRef.current = e.nativeEvent.layout.height;
-            setCourseViewportH(e.nativeEvent.layout.height);
-            updateCourseJumpButton();
-          }}
-          onContentSizeChange={(_w, h) => {
-            setCourseContentH(h);
-            measureProgressTarget();
-          }}
-          onScrollBeginDrag={showCourseIndicator}
-          onMomentumScrollBegin={showCourseIndicator}
-          onScrollEndDrag={hideCourseIndicator}
-          onMomentumScrollEnd={hideCourseIndicator}
-          contentContainerStyle={[
-            styles.courseListScroll,
-            { paddingBottom: DesignTokens.spacing.xl },
-          ]}
-        >
-          <View ref={courseContentRef} collapsable={false}>
+        {/* באנר, התקדמות וכותרת קבועים — רק רשימת השיעורים נגללת */}
           <CourseListHero
             coverUrl={displayCoverUrl}
             title={displayTitle ?? 'קורס'}
@@ -2166,10 +2141,38 @@ function LearningScreen() {
             progressLoading={lessonsProgressLoading}
           />
 
-          <View style={styles.courseListBody}>
-            <View style={styles.lessonsSection}>
-              <Text style={styles.courseListSectionTitle}>שיעורי הקורס</Text>
+        <View style={styles.courseListBody}>
+          <Text style={[styles.courseListSectionTitle, { marginBottom: 0 }]}>שיעורי הקורס</Text>
+        </View>
 
+        {/* marginBottom: הרשימה נחתכת מעל ה-safe area התחתון */}
+        <View style={{ flex: 1, marginBottom: insets.bottom }}>
+          <ScrollView
+            ref={courseListScrollRef}
+            showsVerticalScrollIndicator={false}
+            style={{ flex: 1 }}
+            onScroll={handleCourseListScroll}
+            scrollEventThrottle={16}
+            onLayout={(e) => {
+              courseViewportHRef.current = e.nativeEvent.layout.height;
+              setCourseViewportH(e.nativeEvent.layout.height);
+              updateCourseJumpButton();
+            }}
+            onContentSizeChange={(_w, h) => {
+              setCourseContentH(h);
+              measureProgressTarget();
+            }}
+            onScrollBeginDrag={showCourseIndicator}
+            onMomentumScrollBegin={showCourseIndicator}
+            onScrollEndDrag={hideCourseIndicator}
+            onMomentumScrollEnd={hideCourseIndicator}
+            contentContainerStyle={[
+              styles.courseListScroll,
+              { paddingBottom: DesignTokens.spacing.xl },
+            ]}
+          >
+            <View ref={courseContentRef} collapsable={false}>
+              <View style={[styles.courseListBody, { paddingTop: DesignTokens.spacing.md }]}>
               {lessonsList.some((l: any) => l.section_index != null)
                 ? groupLessonsBySection(lessonsList).map((sec) =>
                     renderChapterBlock(sec.index, sec.title, sec.lessons, sec.startIndex),
@@ -2181,40 +2184,40 @@ function LearningScreen() {
                     {renderChapterBlock(3, 'כמה דברים לקראת סיום', lessonsList.slice(8), 8)}
                   </>
                 )}
+              </View>
             </View>
-          </View>
-          </View>
-        </ScrollView>
+          </ScrollView>
 
-        {/* פס גלילה בצד שמאל */}
-        {courseViewportH > 0 && courseContentH > courseViewportH ? (() => {
-          const thumbH = Math.max(36, (courseViewportH * courseViewportH) / courseContentH);
-          const maxScroll = courseContentH - courseViewportH;
-          return (
-            <Animated.View
-              pointerEvents="none"
-              style={{
-                position: 'absolute',
-                left: 3,
-                top: 0,
-                width: 3,
-                height: thumbH,
-                borderRadius: 1.5,
-                backgroundColor: DesignTokens.colors.text.tertiary,
-                opacity: courseIndicatorOpacity,
-                transform: [
-                  {
-                    translateY: courseScrollY.interpolate({
-                      inputRange: [0, maxScroll],
-                      outputRange: [0, courseViewportH - thumbH],
-                      extrapolate: 'clamp',
-                    }),
-                  },
-                ],
-              }}
-            />
-          );
-        })() : null}
+          {/* פס גלילה בצד שמאל */}
+          {courseViewportH > 0 && courseContentH > courseViewportH ? (() => {
+            const thumbH = Math.max(36, (courseViewportH * courseViewportH) / courseContentH);
+            const maxScroll = courseContentH - courseViewportH;
+            return (
+              <Animated.View
+                pointerEvents="none"
+                style={{
+                  position: 'absolute',
+                  left: 3,
+                  top: 0,
+                  width: 3,
+                  height: thumbH,
+                  borderRadius: 1.5,
+                  backgroundColor: DesignTokens.colors.text.tertiary,
+                  opacity: courseIndicatorOpacity,
+                  transform: [
+                    {
+                      translateY: courseScrollY.interpolate({
+                        inputRange: [0, maxScroll],
+                        outputRange: [0, courseViewportH - thumbH],
+                        extrapolate: 'clamp',
+                      }),
+                    },
+                  ],
+                }}
+              />
+            );
+          })() : null}
+        </View>
 
         {/* קפיצה להתקדמות (או לראש) — עיגול 44 בצבע ה-CTA, ימין תחתון */}
         <Animated.View

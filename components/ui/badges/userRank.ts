@@ -55,18 +55,12 @@ export function rankProgress(days: number): {
   return { rank, next, progress, daysToNext: Math.max(0, next.minDays - days) };
 }
 
-/** «מנוי כבר 4 חודשים» */
+/** «מנוי כבר 134 ימים» — תמיד בימים (לא חודשים / שנים) */
 export function formatPaidTenure(days: number): string {
-  if (days < 1) return 'מנוי מהיום';
-  if (days < 30) return days === 1 ? 'מנוי כבר יום אחד' : `מנוי כבר ${days} ימים`;
-  const months = Math.floor(days / 30);
-  if (months < 12) return months === 1 ? 'מנוי כבר חודש' : months === 2 ? 'מנוי כבר חודשיים' : `מנוי כבר ${months} חודשים`;
-  const years = Math.floor(days / 365);
-  const restMonths = Math.floor((days - years * 365) / 30);
-  const y = years === 1 ? 'שנה' : years === 2 ? 'שנתיים' : `${years} שנים`;
-  if (restMonths <= 0) return `מנוי כבר ${y}`;
-  const m = restMonths === 1 ? 'חודש' : restMonths === 2 ? 'חודשיים' : `${restMonths} חודשים`;
-  return `מנוי כבר ${y} ו${m}`;
+  const d = Math.max(0, Math.floor(days));
+  if (d < 1) return 'מנוי מהיום';
+  if (d === 1) return 'מנוי כבר יום אחד';
+  return `מנוי כבר ${d.toLocaleString('en-US')} ימים`;
 }
 
 export function formatDaysCount(days: number): string {

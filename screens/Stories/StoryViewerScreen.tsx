@@ -102,6 +102,24 @@ function prefetchStoryImage(story: UserStory | undefined) {
   ExpoImage.prefetch(url, 'memory-disk').catch(() => {});
 }
 
+const CUBE_PERSPECTIVE = 1000;
+
+/** פאה שכנה בקוביה — תצוגה סטטית של הסטורי שייפתח (תמונה / טקסט), עד שהמעבר מסתיים */
+function NeighborFace({ story }: { story: UserStory | undefined }) {
+  if (!story) return null;
+  if (story.media_type === 'text') {
+    return <StoryTextCard content={story.content} backgroundColor={story.background_color} />;
+  }
+  if (story.media_type !== 'image' || !story.media_url) return null;
+  const uri = localUriForStoryMedia(story.media_url) || story.media_url;
+  return (
+    <>
+      <StoryImage uri={uri} content={story.content} onLoad={() => {}} onError={() => {}} />
+      <StoryOverlays content={story.content} />
+    </>
+  );
+}
+
 export default function StoryViewerScreen() {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<{ StoryViewer: StoryViewerParams }, 'StoryViewer'>>();
@@ -496,19 +514,30 @@ export default function StoryViewerScreen() {
     else goPrevRef.current();
   }, []);
 
-  const handleSwipe = useCallback((toRight: boolean) => {
-    // כמו ה-pager הקודם (LTR): גרירה ימינה חושפת את העמוד משמאל = אינדקס נמוך = קדימה
+  // מעבר משתמשים בקוביה (כמו באינסטגרם): הדף הנוכחי והשכן מסתובבים יחד עם האצבע.
+  // השכן משמאל (גרירה ימינה) = אינדקס נמוך = קדימה; מימין = אחורה (הסטורי האחרון שלו).
+  const canSwipeRight = useSharedValue(pos.userIndex > 0);
+  const canSwipeLeft = useSharedValue(pos.userIndex < userIds.length - 1);
+  useEffect(() => {
+    canSwipeRight.value = pos.userIndex > 0;
+    canSwipeLeft.value = pos.userIndex < userIds.length - 1;
+  }, [pos.userIndex, userIds.length, canSwipeRight, canSwipeLeft]);
+
+  // אחרי ההחלפה: מאפסים את הקוביה רק כשהמשתמש החדש כבר מרונדר (לפני הצביעה) — בלי הבהוב
+  const pendingCubeResetRef = useRef(false);
+  useLayoutEffect(() => {
+    if (!pendingCubeResetRef.current) return;
+    pendingCubeResetRef.current = false;
+    slideX.value = 0;
+  }, [pos.userIndex, slideX]);
+
+  const commitSwipe = useCallback((toRight: boolean) => {
     const { userIndex } = posRef.current;
-    if (toRight) {
-      if (userIndex > 0) {
-        void Haptics.selectionAsync().catch(() => {});
-        switchUser(userIndex - 1, 0, 'forward');
-      }
-    } else if (userIndex < userIds.length - 1) {
-      void Haptics.selectionAsync().catch(() => {});
-      switchUser(userIndex + 1, 'last', 'back');
-    }
-  }, [switchUser, userIds.length]);
+    void Haptics.selectionAsync().catch(() => {});
+    pendingCubeResetRef.current = true;
+    if (toRight) switchUser(userIndex - 1, 0, 'forward');
+    else switchUser(userIndex + 1, 'last', 'back');
+  }, [switchUser]);
 
   const gesture = useMemo(() => {
     const dismissPan = Gesture.Pan()
@@ -546,13 +575,26 @@ export default function StoryViewerScreen() {
       })
       .onUpdate((e) => {
         'worklet';
-        slideX.value = e.translationX * 0.5;
+        const t = e.translationX;
+        // אין שכן בכיוון הזה — התנגדות (גומי)
+        const blocked = (t > 0 && !canSwipeRight.value) || (t < 0 && !canSwipeLeft.value);
+        slideX.value = blocked ? t * 0.2 : Math.max(-W, Math.min(W, t));
       })
       .onEnd((e) => {
         'worklet';
-        if (e.translationX > 70 || e.velocityX > 700) runOnJS(handleSwipe)(true);
-        else if (e.translationX < -70 || e.velocityX < -700) runOnJS(handleSwipe)(false);
-        slideX.value = withSpring(0, { damping: 22, stiffness: 260, mass: 0.6 });
+        const t = e.translationX;
+        const v = e.velocityX;
+        const done = (fin?: boolean, toRight?: boolean) => {
+          'worklet';
+          if (fin) runOnJS(commitSwipe)(!!toRight);
+        };
+        if (canSwipeRight.value && t > 0 && (t > W * 0.3 || v > 800)) {
+          slideX.value = withTiming(W, { duration: 260, easing: Easing.out(Easing.cubic) }, (fin) => done(fin, true));
+        } else if (canSwipeLeft.value && t < 0 && (t < -W * 0.3 || v < -800)) {
+          slideX.value = withTiming(-W, { duration: 260, easing: Easing.out(Easing.cubic) }, (fin) => done(fin, false));
+        } else {
+          slideX.value = withSpring(0, { damping: 22, stiffness: 260, mass: 0.6 });
+        }
       })
       .onFinalize(() => {
         'worklet';
@@ -579,20 +621,58 @@ export default function StoryViewerScreen() {
       });
 
     return Gesture.Race(dismissPan, swipePan, Gesture.Exclusive(longPress, tap));
-  }, [dragY, slideX, close, endDrag, handleSwipe, handleTap]);
+  }, [dragY, slideX, close, endDrag, commitSwipe, handleTap, canSwipeRight, canSwipeLeft]);
 
   // ערכי ההתחלה (0) = מצב רגיל וגלוי; גם אם עדכון מונפש לא מגיע למסך — התוכן נראה
   const stageAnim = useAnimatedStyle(() => {
     const d = Math.min(1, dragY.value / H);
+    const o = slideX.value;
     return {
       borderRadius: d > 0 ? 18 : 0,
+      // קוביה: הציר בקצה המשותף עם השכן
+      transformOrigin: o >= 0 ? 'left center' : 'right center',
       transform: [
-        { translateX: slideX.value },
+        { perspective: CUBE_PERSPECTIVE },
+        { translateX: o },
+        { rotateY: `${(o / W) * 90}deg` },
         { translateY: dragY.value },
         { scale: 1 - d * 0.25 },
       ],
     };
   });
+  // הצללה על הפאה שמסתובבת החוצה
+  const stageShadeAnim = useAnimatedStyle(() => ({
+    opacity: Math.min(1, Math.abs(slideX.value) / W) * 0.55,
+  }));
+  const leftFaceAnim = useAnimatedStyle(() => {
+    const o = slideX.value - W;
+    return {
+      opacity: slideX.value > 0 ? 1 : 0,
+      transformOrigin: 'right center',
+      transform: [{ perspective: CUBE_PERSPECTIVE }, { translateX: o }, { rotateY: `${(o / W) * 90}deg` }],
+    };
+  });
+  const rightFaceAnim = useAnimatedStyle(() => {
+    const o = slideX.value + W;
+    return {
+      opacity: slideX.value < 0 ? 1 : 0,
+      transformOrigin: 'left center',
+      transform: [{ perspective: CUBE_PERSPECTIVE }, { translateX: o }, { rotateY: `${(o / W) * 90}deg` }],
+    };
+  });
+  const leftShadeAnim = useAnimatedStyle(() => ({
+    opacity: (1 - Math.min(1, Math.max(0, slideX.value) / W)) * 0.55,
+  }));
+  const rightShadeAnim = useAnimatedStyle(() => ({
+    opacity: (1 - Math.min(1, Math.max(0, -slideX.value) / W)) * 0.55,
+  }));
+
+  // הסטורי שיוצג בפאה השכנה: קדימה — הראשון, אחורה — האחרון
+  const leftNeighborId = userIds[pos.userIndex - 1];
+  const rightNeighborId = userIds[pos.userIndex + 1];
+  const leftNeighborStory = leftNeighborId ? storiesMap[leftNeighborId]?.[0] : undefined;
+  const rightNeighborStories = rightNeighborId ? storiesMap[rightNeighborId] : undefined;
+  const rightNeighborStory = rightNeighborStories?.[rightNeighborStories.length - 1];
   // הרקע השחור דועך במשיכה — רואים את המסך שמתחת (transparentModal)
   const backdropAnim = useAnimatedStyle(() => ({
     opacity: 1 - Math.min(1, dragY.value / (H * 0.5)) * 0.9,
@@ -665,6 +745,19 @@ export default function StoryViewerScreen() {
     <GestureHandlerRootView style={styles.root}>
       <StatusBar hidden />
       <Reanimated.View style={[styles.backdrop, backdropAnim]} pointerEvents="none" />
+
+      {leftNeighborId ? (
+        <Reanimated.View style={[styles.cubeFace, leftFaceAnim]} pointerEvents="none">
+          <NeighborFace story={leftNeighborStory} />
+          <Reanimated.View style={[styles.cubeShade, leftShadeAnim]} />
+        </Reanimated.View>
+      ) : null}
+      {rightNeighborId ? (
+        <Reanimated.View style={[styles.cubeFace, rightFaceAnim]} pointerEvents="none">
+          <NeighborFace story={rightNeighborStory} />
+          <Reanimated.View style={[styles.cubeShade, rightShadeAnim]} />
+        </Reanimated.View>
+      ) : null}
 
       <Reanimated.View style={[styles.stage, stageAnim]}>
         <GestureDetector gesture={gesture}>
@@ -786,6 +879,7 @@ export default function StoryViewerScreen() {
             </View>
           </View>
         ) : null}
+        <Reanimated.View style={[styles.cubeShade, stageShadeAnim]} pointerEvents="none" />
       </Reanimated.View>
 
       {viewersSheetOpen && (
@@ -824,6 +918,15 @@ const styles = StyleSheet.create({
     direction: 'ltr',
   },
   backdrop: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: '#000',
+  },
+  cubeFace: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: '#000',
+    overflow: 'hidden',
+  },
+  cubeShade: {
     ...StyleSheet.absoluteFill,
     backgroundColor: '#000',
   },

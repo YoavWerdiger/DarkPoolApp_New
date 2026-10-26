@@ -162,6 +162,44 @@ export function useWatchlist() {
     staleTime: 30_000,
   });
 
+  // טעינה מראש של שאר הרשימות (מניות + מחירים) — מעבר בין רשימות מיידי, בלי סקלטון
+  useEffect(() => {
+    if (!isFocused || watchlists.length < 2) return;
+    let cancelled = false;
+    void (async () => {
+      for (const list of watchlists) {
+        if (cancelled || list.id === activeWatchlistId) continue;
+        try {
+          const listItems = await queryClient.fetchQuery({
+            queryKey: appQueryKeys.watchlistItems(list.id),
+            queryFn: () => listWatchlistItems(list.id),
+            staleTime: 30_000,
+          });
+          const syms = listItems.map((i) => i.symbol);
+          if (cancelled || syms.length === 0) continue;
+          const key = [...syms].sort().join('|');
+          await queryClient.prefetchQuery({
+            queryKey: appQueryKeys.watchlistQuotes(key),
+            queryFn: async () => {
+              const map = await getQuotes(syms);
+              const obj: Record<string, PriceQuote> = {};
+              map.forEach((q, sym) => {
+                obj[sym] = q;
+              });
+              return obj;
+            },
+            staleTime: 60_000,
+          });
+        } catch {
+          /* best effort */
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isFocused, watchlists, activeWatchlistId, queryClient]);
+
   const items = itemsQuery.data ?? EMPTY_ITEMS;
   const symbols = useMemo(() => items.map((i) => i.symbol), [items]);
   const symbolsKey = useMemo(() => [...symbols].sort().join('|'), [symbols]);

@@ -2,6 +2,7 @@
 // Media Viewer Component - Glass Design
 // ============================================
 
+import { useDelayedUnmount } from '../../hooks/useDelayedUnmount';
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { shareMediaFile } from '../../lib/shareMediaFile';
 import { logger } from '../../utils/logger';
@@ -268,6 +269,8 @@ export default function MediaViewer({
     onSwipeDismiss: onClose,
   });
 
+  const mounted = useDelayedUnmount(visible);
+
   const handleShare = async () => {
     try {
       // קובץ אמיתי (לא קישור ל-bucket) — המקור היציב, לא ה-signed URL הזמני
@@ -278,7 +281,8 @@ export default function MediaViewer({
     }
   };
 
-  if (!visible) return null;
+  // נשאר ממונט עד סוף הסגירה (לא return null מיד) — הסרת Modal פתוח ב-iOS משאירה מודל יתום
+  if (!mounted) return null;
 
   return (
     <Modal

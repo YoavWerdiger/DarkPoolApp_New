@@ -266,6 +266,15 @@ export default function ChatGroupsListScreen() {
   const [joinGroupSheet, setJoinGroupSheet] = useState<{ visible: boolean; group: GroupWithMembership | null }>({ visible: false, group: null });
   const [isJoining, setIsJoining] = useState(false);
   const [addStorySheetVisible, setAddStorySheetVisible] = useState(false);
+  const [addStoryMounted, setAddStoryMounted] = useState(false);
+  useEffect(() => {
+    if (addStorySheetVisible) {
+      setAddStoryMounted(true);
+      return;
+    }
+    const t = setTimeout(() => setAddStoryMounted(false), 600);
+    return () => clearTimeout(t);
+  }, [addStorySheetVisible]);
   // זריעה אופטימית מה-cache (בזיכרון) — שורת ה-Stories מופיעה מיד בכניסה חוזרת
   const [usersWithStories, setUsersWithStories] = useState<StoryWithUser[]>(
     () => queryClient.getQueryData<StoryWithUser[]>(appQueryKeys.storiesUsers) ?? []
@@ -1824,7 +1833,9 @@ export default function ChatGroupsListScreen() {
       </BottomSheet>
 
       {/* Add Story – מסך מלא בסגנון Instagram/WhatsApp */}
-      {addStorySheetVisible && (
+      {/* נשאר ממונט עד סוף אנימציית הסגירה — הסרה מיידית של Modal פתוח ב-iOS משאירה
+          מודל «יתום» שחוסם את הבא (צופה הסטוריז קפא אחרי העלאה עד יציאה מהאפליקציה) */}
+      {addStoryMounted && (
         <AddStoryFullScreen
           visible={addStorySheetVisible}
           onClose={() => setAddStorySheetVisible(false)}

@@ -4,6 +4,7 @@
 // שדה הקלדה ושליחת הודעות עם כל התכונות
 // ============================================
 
+import { useDelayedUnmount } from '../../hooks/useDelayedUnmount';
 import React, { useState, useRef, useMemo, useEffect, useCallback, memo } from 'react';
 import { View, TextInput, TouchableOpacity, Pressable, Text, StyleSheet, Animated, Easing, Platform, Keyboard } from 'react-native';
 import { legacyAlert } from '../../utils/appDialog';
@@ -668,6 +669,11 @@ function ChatInputImpl({
         .catch((e) => logger.warn('ChatInput', `send copy to ${gid} threw`, e));
     }
   };
+
+  const previewMounted = useDelayedUnmount(showMediaPreview);
+  // המדיה האחרונה — לרינדור בזמן אנימציית הסגירה (selectedMedia מתרוקן מיד בשליחה)
+  const lastPreviewMediaRef = useRef<MediaFile[]>([]);
+  if (selectedMedia.length > 0) lastPreviewMediaRef.current = selectedMedia;
 
   const handleSendMedia = async (
     mediaFiles: MediaFile[],
@@ -2726,7 +2732,8 @@ function ChatInputImpl({
       )}
 
       {/* Media Preview Modal */}
-      {showMediaPreview && selectedMedia.length > 0 && (
+      {/* נשאר ממונט עד סוף הסגירה — הסרת Modal פתוח ב-iOS משאירה מודל יתום שמקפיא את הבא */}
+      {previewMounted && (selectedMedia.length > 0 || lastPreviewMediaRef.current.length > 0) && (
         <MediaPreviewModal
           visible={showMediaPreview}
           onClose={() => {
@@ -2734,7 +2741,7 @@ function ChatInputImpl({
             setSelectedMedia([]);
           }}
           onSend={handleSendMedia}
-          mediaFiles={selectedMedia}
+          mediaFiles={selectedMedia.length > 0 ? selectedMedia : lastPreviewMediaRef.current}
           currentGroupId={groupId}
           targetGroupName={groupName}
         />

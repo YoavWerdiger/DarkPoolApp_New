@@ -13,7 +13,7 @@ import {
   loadPortfolioSnapshot,
   upsertPortfolioSnapshot,
 } from '../_shared/darkpoolPortfolioSnapshots.ts';
-import { loadAllFundHoldingRows, preferSecRows } from '../_shared/fundHoldingsRows.ts';
+import { loadAllFundHoldingRows, preferSecRows, resolveCusipTickers } from '../_shared/fundHoldingsRows.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -189,6 +189,7 @@ serve(async (req) => {
       .limit(80);
     // יש לתקופה שורות SEC → רק הן
     const latestRows = (rows ?? []).filter((r) => !secLatest || r.source === 'sec').slice(0, 40);
+    await resolveCusipTickers(supabase, latestRows);
 
     holdings = latestRows.map((r) => {
       const ticker = String(r.ticker);

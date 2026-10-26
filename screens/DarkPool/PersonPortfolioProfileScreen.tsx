@@ -3,6 +3,7 @@
  * politician / insider / fund_manager → אותו מבנה מסך.
  */
 
+import { brandfetchTickerLogoUri } from '../../utils/brandfetch';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -1698,8 +1699,15 @@ export function PersonPortfolioProfileScreen({
             <HoldingsPieSection
               title={kind === 'insider' ? 'פילוח אחזקות מדווחות' : 'פילוח אחזקות'}
               holdings={pieHoldings}
-              avatarUrl={portraitUri}
-              avatarCandidates={portraitCandidates}
+              // חברה: הלוגו שלה במרכז הפילוח (לא האות הראשונה)
+              avatarUrl={isCompany && companyTicker ? brandfetchTickerLogoUri(companyTicker) : portraitUri}
+              avatarCandidates={
+                isCompany && companyTicker
+                  ? [brandfetchTickerLogoUri(companyTicker), ...(portraitCandidates ?? [])].filter(
+                      (u): u is string => !!u,
+                    )
+                  : portraitCandidates
+              }
               userInitial={userInitial}
               weightStyle={
                 holdingsEngine === 'congress'

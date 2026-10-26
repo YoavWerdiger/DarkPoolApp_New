@@ -26,7 +26,39 @@ export async function loadAllFundHoldingRows<T = Record<string, unknown>>(
     out.push(...batch);
     if (batch.length < PAGE) break;
   }
+  await resolveCusipTickers(supabase, out as Array<{ ticker?: unknown }>);
   return out;
+}
+
+/** CUSIP / CINS (9 תווים עם ספרה) — לא טיקר */
+const CUSIP_RE = /^(?=.*\d)[0-9A-Z]{9}$/;
+
+/**
+ * שורות SEC שנשמרו עם ה-CUSIP כטיקר (לפני שהמיפוי מצא טיקר — למשל CINS של חברות זרות):
+ * מחליפים לטיקר מ-cusip_ticker_map בזמן הקריאה. בלי לשנות את הנתונים בטבלה.
+ */
+export async function resolveCusipTickers(
+  supabase: SupabaseClient,
+  rows: Array<{ ticker?: unknown }>,
+): Promise<void> {
+  const codes = Array.from(
+    new Set(rows.map((r) => String(r.ticker ?? '')).filter((t) => CUSIP_RE.test(t))),
+  );
+  if (!codes.length) return;
+  const map = new Map<string, string>();
+  for (let i = 0; i < codes.length; i += 500) {
+    const { data } = await supabase
+      .from('cusip_ticker_map')
+      .select('cusip, ticker')
+      .in('cusip', codes.slice(i, i + 500))
+      .not('ticker', 'is', null);
+    for (const r of data ?? []) map.set(String(r.cusip), String(r.ticker));
+  }
+  if (!map.size) return;
+  for (const r of rows) {
+    const t = map.get(String(r.ticker ?? ''));
+    if (t) r.ticker = t;
+  }
 }
 
 /**

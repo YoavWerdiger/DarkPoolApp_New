@@ -113,10 +113,18 @@ export async function mapCusipsToTickers(
       .in('cusip', uniq.slice(i, i + 500));
     for (const r of data ?? []) if (r.ticker) out.set(String(r.cusip), String(r.ticker));
   }
+  // «לא נמצא» שמור — לא מנסים שוב, חוץ מאלה שנבדקו בגרסה הישנה (בלי CINS) או לפני 30 יום
   const cachedNull = new Set<string>();
   {
-    const { data } = await supabase.from('cusip_ticker_map').select('cusip').in('cusip', uniq).is('ticker', null);
-    for (const r of data ?? []) cachedNull.add(String(r.cusip));
+    const retryBefore = new Date(Date.now() - 30 * 86_400_000).toISOString();
+    const { data } = await supabase
+      .from('cusip_ticker_map')
+      .select('cusip, source, updated_at')
+      .in('cusip', uniq)
+      .is('ticker', null);
+    for (const r of data ?? []) {
+      if (r.source === 'openfigi_v2' && String(r.updated_at ?? '') > retryBefore) cachedNull.add(String(r.cusip));
+    }
   }
   const missing = uniq.filter((c) => !out.has(c) && !cachedNull.has(c));
 
@@ -125,7 +133,12 @@ export async function mapCusipsToTickers(
   if (key) headers['X-OPENFIGI-APIKEY'] = key;
 
   const lookup = async (batch: string[], exch: boolean) => {
-    const jobs = batch.map((c) => ({ idType: 'ID_CUSIP', idValue: c, ...(exch ? { exchCode: 'US' } : {}) }));
+    // CUSIP שמתחיל באות = CINS (חברה זרה: G קיימן/בריטניה, N הולנד, H שוויץ…) — מזהה אחר ב-OpenFIGI
+    const jobs = batch.map((c) => ({
+      idType: /^[A-Z]/.test(c) ? 'ID_CINS' : 'ID_CUSIP',
+      idValue: c,
+      ...(exch ? { exchCode: 'US' } : {}),
+    }));
     const res = await fetch(OPENFIGI_URL, { method: 'POST', headers, body: JSON.stringify(jobs) });
     await sleep(key ? 300 : OPENFIGI_GAP_MS);
     if (!res.ok) throw new Error(`openfigi ${res.status}`);
@@ -152,7 +165,7 @@ export async function mapCusipsToTickers(
         ticker,
         name: d?.name ?? null,
         security_type: d?.securityType ?? null,
-        source: 'openfigi',
+        source: 'openfigi_v2',
         updated_at: new Date().toISOString(),
       });
     });

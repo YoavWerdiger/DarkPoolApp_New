@@ -50,7 +50,7 @@ export function isLessonLockedForUser(opts: {
 }
 
 /** כותרת משנה לתצוגה בכרטיס/Coming Soon */
-export const WHALES_COURSE_SUBTITLE = 'מ-0 לסוחר עצמאי בשוק ההון';
+export const WHALES_COURSE_SUBTITLE = 'מ־0 לסוחר מקצועי';
 export const ORACLE_COURSE_SUBTITLE = 'קורס מסחר מתקדם באופציות';
 
 export function getAcademyCourseSubtitle(

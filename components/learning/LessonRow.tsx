@@ -39,6 +39,9 @@ export const LessonRow: React.FC<LessonRowProps> = ({
 
   /** נעילה רק כשההורה מבקש (CourseDetail) — לא לפי enrollment פנימי. */
   const isLockedForUser = isLocked;
+  /** שיעור שעוד אין לו וידאו — «בקרוב», לא נלחץ */
+  const isComingSoon = (lesson as { comingSoon?: boolean }).comingSoon === true;
+  const isDisabled = isLockedForUser || isComingSoon;
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(lesson.thumbnail ?? null);
   const [mediaDuration, setMediaDuration] = useState<string | null>(null);
 
@@ -85,8 +88,8 @@ export const LessonRow: React.FC<LessonRowProps> = ({
     <UICard variant="soft" disableBlur padding="none" style={styles.card}>
       <TouchableOpacity
         style={styles.touchable}
-        activeOpacity={isLockedForUser ? 1 : 0.88}
-        disabled={isLockedForUser}
+        activeOpacity={isDisabled ? 1 : 0.88}
+        disabled={isDisabled}
         onPress={() => {
           void HapticFeedback.impactLight();
           onPress(lesson);
@@ -124,7 +127,13 @@ export const LessonRow: React.FC<LessonRowProps> = ({
             </View>
           ) : null}
 
-          {isCompleted ? (
+          {isComingSoon ? (
+            <View style={styles.lockOverlay}>
+              <View style={styles.soonPill}>
+                <Text style={styles.soonText}>בקרוב</Text>
+              </View>
+            </View>
+          ) : isCompleted ? (
             <View style={styles.donePill}>
               <Ionicons name="checkmark-circle" size={18} color={T.colors.primary.main} />
             </View>
@@ -150,7 +159,7 @@ export const LessonRow: React.FC<LessonRowProps> = ({
               style={[
                 appCardTitleStyle,
                 styles.title,
-                isLockedForUser && styles.titleLocked,
+                isDisabled && styles.titleLocked,
               ]}
               numberOfLines={2}
             >
@@ -162,7 +171,7 @@ export const LessonRow: React.FC<LessonRowProps> = ({
                 style={[
                   appCardBodyStyle,
                   styles.description,
-                  isLockedForUser && styles.descriptionLocked,
+                  isDisabled && styles.descriptionLocked,
                 ]}
                 numberOfLines={3}
               >
@@ -255,6 +264,16 @@ function createStyles(T: ReturnType<typeof useDesignTokens>) {
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: 'rgba(0,0,0,0.35)',
+    },
+    soonPill: {
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+      borderRadius: 999,
+      backgroundColor: 'rgba(0,0,0,0.55)',
+    },
+    soonText: {
+      ...ACADEMY_TYPE.cardSubtitle,
+      color: '#fff',
     },
     lockCircle: {
       width: 40,

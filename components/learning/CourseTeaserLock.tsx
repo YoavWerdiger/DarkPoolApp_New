@@ -45,15 +45,6 @@ const LOCKED_COURSES: Record<string, CourseTeaser> = {
       { icon: 'analytics-outline', title: 'קריאת השוק דרך זרימת האופציות', subtitle: '' },
     ],
   },
-  'whales-course-1': {
-    title: 'הלווייתנים',
-    pitch: 'איך עוקבים אחרי הכסף הגדול — לזהות מה הגופים המוסדיים עושים, לפני שזה מגיע לכותרות.',
-    highlights: [
-      { icon: 'eye-outline', title: 'קריאת פעילות מוסדיים', subtitle: 'Dark Pool, בלוקים וזרימת כסף' },
-      { icon: 'pulse-outline', title: 'סימנים שמקדימים את המהלך', subtitle: 'מה באמת חשוב בנתונים — ומה רעש' },
-      { icon: 'flash-outline', title: 'מהשיעור — ישר לאפליקציה', subtitle: 'כלים שתשתמשו בהם כבר מחר בבוקר' },
-    ],
-  },
 };
 
 export function isCourseTeaserLocked(courseId?: string | null): boolean {

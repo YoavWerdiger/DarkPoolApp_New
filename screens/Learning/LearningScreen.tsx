@@ -163,6 +163,18 @@ const DEMO_COURSE = {
   ]
 };
 
+/** פרקים לפי section_index/section_title מהמסד (שומר על סדר השיעורים) */
+function groupLessonsBySection(lessons: any[]) {
+  const out: { index: number; title: string; lessons: any[]; startIndex: number }[] = [];
+  lessons.forEach((lesson, i) => {
+    const idx = typeof lesson.section_index === 'number' ? lesson.section_index : 0;
+    const last = out[out.length - 1];
+    if (last && last.index === idx) last.lessons.push(lesson);
+    else out.push({ index: idx, title: lesson.section_title || '', lessons: [lesson], startIndex: i });
+  });
+  return out;
+}
+
 function LearningScreen() {
   const route = useRoute();
   const navigation = useNavigation();
@@ -456,9 +468,8 @@ function LearningScreen() {
                 thumbnailUrl = `https://img.youtube.com/vi/${media.youtube_id}/maxresdefault.jpg`;
               } else if (lesson.youtubeId) {
                 thumbnailUrl = `https://img.youtube.com/vi/${lesson.youtubeId}/maxresdefault.jpg`;
-              } else {
-                thumbnailUrl = `https://vumbnail.com/${lesson.id}.jpg`;
               }
+              // בלי וידאו — בלי תמונה (placeholder בכרטיס)
               
               return {
                 ...lesson,
@@ -470,7 +481,9 @@ function LearningScreen() {
                 thumbnail: thumbnailUrl,
                 videoUrl: media?.vimeo_url || media?.youtube_url || `https://vimeo.com/${media?.vimeo_id || lesson.id}?share=copy`,
                 duration: duration,
-                type: 'video'
+                type: 'video',
+                // בלי וידאו עדיין (או מסומן בקרוב במסד) — מוצג «בקרוב» ולא נפתח
+                comingSoon: !!lesson.is_coming_soon || !(media?.vimeo_id || media?.youtube_id || lesson.youtubeId),
               };
             })
           );
@@ -971,6 +984,7 @@ function LearningScreen() {
   };
 
   const handleLessonPress = async (lesson: any, index: number) => {
+    if (lesson?.comingSoon) return;
     // אנימציה של לחיצה
     const animatedValue = animatedValues[index] || new Animated.Value(1);
     Animated.sequence([
@@ -1192,7 +1206,7 @@ function LearningScreen() {
                 { color: DesignTokens.colors.text.secondary },
               ]}
             >
-              חלק {chapterNum}
+              פרק {chapterNum}
             </Text>
           </View>
         </View>
@@ -2009,9 +2023,17 @@ function LearningScreen() {
             <View style={styles.lessonsSection}>
               <Text style={styles.courseListSectionTitle}>שיעורי הקורס</Text>
 
-              {renderChapterBlock(1, 'כמה דברים לפני שמתחילים', lessonsList.slice(0, 1), 0)}
-              {renderChapterBlock(2, 'קונספטים ואסטרטגיה', lessonsList.slice(1, 8), 1)}
-              {renderChapterBlock(3, 'כמה דברים לקראת סיום', lessonsList.slice(8), 8)}
+              {lessonsList.some((l: any) => l.section_index != null)
+                ? groupLessonsBySection(lessonsList).map((sec) =>
+                    renderChapterBlock(sec.index, sec.title, sec.lessons, sec.startIndex),
+                  )
+                : (
+                  <>
+                    {renderChapterBlock(1, 'כמה דברים לפני שמתחילים', lessonsList.slice(0, 1), 0)}
+                    {renderChapterBlock(2, 'קונספטים ואסטרטגיה', lessonsList.slice(1, 8), 1)}
+                    {renderChapterBlock(3, 'כמה דברים לקראת סיום', lessonsList.slice(8), 8)}
+                  </>
+                )}
             </View>
           </View>
         </ScrollView>

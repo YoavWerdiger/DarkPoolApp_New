@@ -44,7 +44,6 @@ import {
   StoryViewer as StoryViewerRow,
   StoryReaction,
   getStoriesByUserId,
-  peekStoriesCache,
   markStoryViewed,
   deleteStory,
   reactToStory,
@@ -52,7 +51,6 @@ import {
   getStoryViewers,
   getStoryReactions,
 } from '../../services/storiesService';
-import { localUriForStoryMedia } from '../../lib/pendingStories';
 import { getStoryViewerUser, StoryViewerParams } from '../../lib/storyViewerSession';
 import { logger } from '../../utils/logger';
 import { APP_TYPE } from '../../components/ui/appType';
@@ -98,8 +96,8 @@ function mergeStories(prev: UserStory[] | undefined, next: UserStory[]): UserSto
 function prefetchStoryImage(story: UserStory | undefined) {
   const url = story?.media_type === 'image' ? story.media_url : null;
   if (!url || !url.startsWith('http')) return;
-  if (localUriForStoryMedia(url)) return;
-  ExpoImage.prefetch(url, 'memory-disk').catch(() => {});
+  // זיכרון בלבד — בלי שמירה בדיסק (הסטוריז חיים בשרת 24 שעות)
+  ExpoImage.prefetch(url, 'memory').catch(() => {});
 }
 
 const CUBE_PERSPECTIVE = 1000;
@@ -111,7 +109,7 @@ function NeighborFace({ story }: { story: UserStory | undefined }) {
     return <StoryTextCard content={story.content} backgroundColor={story.background_color} />;
   }
   if (story.media_type !== 'image' || !story.media_url) return null;
-  const uri = localUriForStoryMedia(story.media_url) || story.media_url;
+  const uri = story.media_url;
   return (
     <>
       <StoryImage uri={uri} content={story.content} onLoad={() => {}} onError={() => {}} />
@@ -138,17 +136,8 @@ export default function StoryViewerScreen() {
     dir: 'forward',
   }));
 
-  /* ── סטוריז לפי משתמש (קאש השירות → מיידי; רענון ברשת ברקע) ── */
-  const [storiesMap, setStoriesMap] = useState<Record<string, UserStory[]>>(() => {
-    const seed: Record<string, UserStory[]> = {};
-    const i = Math.max(0, userIds.indexOf(params?.startUserId ?? ''));
-    for (const idx of [i, i - 1, i + 1]) {
-      const id = userIds[idx];
-      const hit = id ? peekStoriesCache(id) : undefined;
-      if (id && hit?.length) seed[id] = hit;
-    }
-    return seed;
-  });
+  /* ── סטוריז לפי משתמש — תמיד מהשרת (בלי קאש מקומי) ── */
+  const [storiesMap, setStoriesMap] = useState<Record<string, UserStory[]>>({});
   const [fetched, setFetched] = useState<Record<string, 'done' | 'error'>>({});
   const storiesMapRef = useRef(storiesMap);
   storiesMapRef.current = storiesMap;
@@ -206,13 +195,6 @@ export default function StoryViewerScreen() {
       if (have?.length) {
         prefetchStoryImage(have[0]);
         prefetchStoryImage(have[have.length - 1]);
-        continue;
-      }
-      const hit = peekStoriesCache(id);
-      if (hit?.length) {
-        setStoriesMap((m) => (m[id] ? m : { ...m, [id]: hit }));
-        prefetchStoryImage(hit[0]);
-        prefetchStoryImage(hit[hit.length - 1]);
         continue;
       }
       if (requestedRef.current.has(id)) continue;
@@ -303,19 +285,9 @@ export default function StoryViewerScreen() {
   const [stalled, setStalled] = useState<Flags>({});
   const [videoDurMs, setVideoDurMs] = useState<Record<string, number>>({});
 
-  // הסטורי שלי מוצג מהקובץ המקומי שממנו הועלה (מיידי). אם הקובץ נעלם — נפילה ל-URL בשרת
-  const [failedLocal, setFailedLocal] = useState<Flags>({});
-  const storyMediaUri = useCallback((remote: string | null | undefined): string => {
-    const local = localUriForStoryMedia(remote);
-    return local && !failedLocal[local] ? local : (remote ?? '');
-  }, [failedLocal]);
-  /** true = היה מקומי ועכשיו עוברים לשרת (לא שגיאה) */
-  const fallBackFromLocal = useCallback((remote: string | null | undefined): boolean => {
-    const local = localUriForStoryMedia(remote);
-    if (!local || failedLocal[local]) return false;
-    setFailedLocal(addFlag(local));
-    return true;
-  }, [failedLocal]);
+  // המדיה תמיד מהשרת (URL חתום) — בלי קובץ מקומי
+  const storyMediaUri = useCallback((remote: string | null | undefined): string => remote ?? '', []);
+  const fallBackFromLocal = useCallback((_remote: string | null | undefined): boolean => false, []);
 
   const storyId = currentStory?.id ?? null;
   const isMedia = currentStory?.media_type === 'image' || currentStory?.media_type === 'video';

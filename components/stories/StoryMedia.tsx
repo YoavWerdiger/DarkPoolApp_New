@@ -39,7 +39,8 @@ export function StoryImage({
     <ExpoImage
       source={{ uri }}
       transition={0}
-      cachePolicy="memory-disk"
+      // זיכרון בלבד — בלי שמירה בדיסק
+      cachePolicy="memory"
       style={frameStyle(content)}
       // עם טקסט/ציור: cover במסגרת (כמו בעורך) — אחרת contain במסך מלא
       contentFit={authored ? 'cover' : 'contain'}

@@ -1981,7 +1981,6 @@ function LearningScreen() {
   const displayCourse = courseData;
   const displayCoverUrl = courseData?.cover_url;
   const displayTitle = courseData?.title;
-  const displayInstructorName = courseData?.instructor_name || courseData?.owner?.display_name;
 
   if (!courseData) {
     return (
@@ -2007,14 +2006,6 @@ function LearningScreen() {
     totalLessonsCount === 0
       ? 'אין שיעורים בקורס'
       : `${completedLessonsCount}/${totalLessonsCount} הושלמו`;
-  const courseHeroSubtitle =
-    displayInstructorName && totalLessonsCount > 0
-      ? `${displayInstructorName} · ${totalLessonsCount} שיעורים`
-      : displayInstructorName
-        ? displayInstructorName
-        : totalLessonsCount > 0
-          ? `${totalLessonsCount} שיעורים`
-          : undefined;
 
   return (
     <ScreenChrome>
@@ -2036,7 +2027,6 @@ function LearningScreen() {
           <CourseListHero
             coverUrl={displayCoverUrl}
             title={displayTitle ?? 'קורס'}
-            subtitle={courseHeroSubtitle}
             height={courseHeroHeight}
             topInset={insets.top}
             onBack={handleBackToAcademy}

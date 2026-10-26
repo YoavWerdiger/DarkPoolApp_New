@@ -34,6 +34,7 @@ import { useTheme } from '../../context/ThemeContext';
 import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
 import { sheetContentBottomPadding } from '../../components/ui/BottomSheet/sheetGlass';
 import { CourseTeaserLock, isCourseTeaserLocked } from '../../components/learning/CourseTeaserLock';
+import { CourseCompletionOverlay } from '../../components/learning/CourseCompletionOverlay';
 import { BlurTargetView } from 'expo-blur';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -254,20 +255,117 @@ function LearningScreen() {
     Animated.timing(courseIndicatorOpacity, { toValue: 0, duration: 300, delay: 700, useNativeDriver: false }).start();
   }, [courseIndicatorOpacity]);
 
+  // כפתור הקפיצה: לשיעור האחרון שהושלם (ההתקדמות). בלי התקדמות — לראש הרשימה.
+  const courseScrollYRef = useRef(0);
+  const courseViewportHRef = useRef(0);
+  const courseContentRef = useRef<View>(null);
+  const lessonNodeRefs = useRef(new Map<string, View>());
+  const progressTargetYRef = useRef<number | null>(null);
+  const [courseJumpDir, setCourseJumpDir] = useState<'up' | 'down'>('up');
+
+  const updateCourseJumpButton = useCallback(() => {
+    const y = courseScrollYRef.current;
+    const vh = courseViewportHRef.current;
+    const target = progressTargetYRef.current;
+    let shouldShow: boolean;
+    let dir: 'up' | 'down' = 'up';
+    if (target == null) {
+      shouldShow = y > 400;
+    } else {
+      const inView = target >= y && target + 140 <= y + vh;
+      shouldShow = vh > 0 && !inView;
+      dir = target < y ? 'up' : 'down';
+    }
+    setCourseJumpDir((prev) => (prev === dir ? prev : dir));
+    if (shouldShow === courseScrollTopShownRef.current) return;
+    courseScrollTopShownRef.current = shouldShow;
+    setShowCourseScrollTop(shouldShow);
+    Animated.timing(courseScrollTopOpacity, {
+      toValue: shouldShow ? 1 : 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  }, [courseScrollTopOpacity]);
+
   const handleCourseListScroll = useCallback(
     (e: { nativeEvent: { contentOffset: { y: number } } }) => {
       courseScrollY.setValue(e.nativeEvent.contentOffset.y);
-      const shouldShow = e.nativeEvent.contentOffset.y > 400;
-      if (shouldShow === courseScrollTopShownRef.current) return;
-      courseScrollTopShownRef.current = shouldShow;
-      setShowCourseScrollTop(shouldShow);
-      Animated.timing(courseScrollTopOpacity, {
-        toValue: shouldShow ? 1 : 0,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
+      courseScrollYRef.current = e.nativeEvent.contentOffset.y;
+      updateCourseJumpButton();
     },
-    [courseScrollTopOpacity, courseScrollY],
+    [courseScrollY, updateCourseJumpButton],
+  );
+
+  /** מיקום השיעור האחרון שהושלם בתוך תוכן הרשימה */
+  const measureProgressTarget = useCallback(() => {
+    const lessons = Array.isArray(lessonsData) ? lessonsData : [];
+    let lastDone: any = null;
+    for (const l of lessons) if (l?.completed) lastDone = l;
+    const node = lastDone ? lessonNodeRefs.current.get(lastDone.id) : null;
+    const content = courseContentRef.current;
+    if (!node || !content) {
+      progressTargetYRef.current = null;
+      updateCourseJumpButton();
+      return;
+    }
+    node.measureLayout(
+      content as any,
+      (_x: number, y: number) => {
+        progressTargetYRef.current = y;
+        updateCourseJumpButton();
+      },
+      () => undefined,
+    );
+  }, [lessonsData, updateCourseJumpButton]);
+
+  useEffect(() => {
+    const t = setTimeout(measureProgressTarget, 50);
+    return () => clearTimeout(t);
+  }, [measureProgressTarget]);
+
+  const handleCourseJumpPress = useCallback(() => {
+    void HapticFeedback.impactLight();
+    const target = progressTargetYRef.current;
+    courseListScrollRef.current?.scrollTo({ y: target == null ? 0 : Math.max(0, target - 12), animated: true });
+  }, []);
+
+  // מסך סיום קורס (קונפטי) — רק כשהשיעור האחרון הושלם עכשיו, לא כשנכנסים לקורס שכבר הושלם
+  const [showCourseComplete, setShowCourseComplete] = useState(false);
+  const courseCompleteArmedRef = useRef<boolean | null>(null);
+  const availableLessonsCount = (Array.isArray(lessonsData) ? lessonsData : []).filter((l: any) => !l?.comingSoon).length;
+  useEffect(() => {
+    const available = (Array.isArray(lessonsData) ? lessonsData : []).filter((l: any) => !l?.comingSoon);
+    if (!user || available.length === 0) return;
+    const allDone = available.every((l: any) => l.completed);
+    if (courseCompleteArmedRef.current === null) {
+      courseCompleteArmedRef.current = !allDone;
+      return;
+    }
+    if (!allDone) {
+      courseCompleteArmedRef.current = true;
+      return;
+    }
+    if (courseCompleteArmedRef.current && !selectedLesson) {
+      courseCompleteArmedRef.current = false;
+      setShowCourseComplete(true);
+    }
+  }, [lessonsData, selectedLesson, user]);
+
+  /** אחרי יציאה משיעור — מרעננים את סטטוס ההשלמה (הושלם אוטומטית ב-95% צפייה) */
+  const refreshLessonCompleted = useCallback(
+    async (lessonId: string) => {
+      if (!user || !routeCourseId) return;
+      try {
+        const p = await learningProgressService.getUserProgress(user.id, routeCourseId, lessonId);
+        if (!p?.is_completed) return;
+        setLessonsData((prev: any[]) =>
+          prev.map((l: any) => (l.id === lessonId && !l.completed ? { ...l, completed: true } : l)),
+        );
+      } catch {
+        /* noop */
+      }
+    },
+    [user, routeCourseId],
   );
 
   // מעקב התקדמות YouTube דרך interval
@@ -1203,6 +1301,11 @@ function LearningScreen() {
     return (
       <Animated.View
         key={lessonKey}
+        ref={(node: any) => {
+          if (node) lessonNodeRefs.current.set(lesson.id, node);
+          else lessonNodeRefs.current.delete(lesson.id);
+        }}
+        collapsable={false}
         style={{ transform: [{ scale: animatedValue }] }}
       >
         <LessonRow
@@ -1492,10 +1595,12 @@ function LearningScreen() {
             if (user && courseData && selectedLesson && progress > 0 && duration > 0) {
               await updateLessonProgress(progress, duration);
             }
+            const leavingLessonId = selectedLesson?.id;
             setIsYouTubePlayerReady(false);
             durationUpdatedRef.current.clear();
             durationCheckInProgressRef.current.clear();
             setSelectedLesson(null);
+            if (leavingLessonId) void refreshLessonCompleted(leavingLessonId);
           }}
           title={selectedLesson.title}
         />
@@ -2031,8 +2136,15 @@ function LearningScreen() {
           style={{ marginBottom: insets.bottom }}
           onScroll={handleCourseListScroll}
           scrollEventThrottle={16}
-          onLayout={(e) => setCourseViewportH(e.nativeEvent.layout.height)}
-          onContentSizeChange={(_w, h) => setCourseContentH(h)}
+          onLayout={(e) => {
+            courseViewportHRef.current = e.nativeEvent.layout.height;
+            setCourseViewportH(e.nativeEvent.layout.height);
+            updateCourseJumpButton();
+          }}
+          onContentSizeChange={(_w, h) => {
+            setCourseContentH(h);
+            measureProgressTarget();
+          }}
           onScrollBeginDrag={showCourseIndicator}
           onMomentumScrollBegin={showCourseIndicator}
           onScrollEndDrag={hideCourseIndicator}
@@ -2042,6 +2154,7 @@ function LearningScreen() {
             { paddingBottom: DesignTokens.spacing.xl },
           ]}
         >
+          <View ref={courseContentRef} collapsable={false}>
           <CourseListHero
             coverUrl={displayCoverUrl}
             title={displayTitle ?? 'קורס'}
@@ -2069,6 +2182,7 @@ function LearningScreen() {
                   </>
                 )}
             </View>
+          </View>
           </View>
         </ScrollView>
 
@@ -2102,7 +2216,7 @@ function LearningScreen() {
           );
         })() : null}
 
-        {/* גלילה לראש — עיגול 44 בצבע ה-CTA, ימין תחתון */}
+        {/* קפיצה להתקדמות (או לראש) — עיגול 44 בצבע ה-CTA, ימין תחתון */}
         <Animated.View
           pointerEvents={showCourseScrollTop ? 'auto' : 'none'}
           style={{
@@ -2123,11 +2237,10 @@ function LearningScreen() {
           <TouchableOpacity
             activeOpacity={0.85}
             onPress={() => {
-              void HapticFeedback.impactLight();
-              courseListScrollRef.current?.scrollTo({ y: 0, animated: true });
+              handleCourseJumpPress();
             }}
             accessibilityRole="button"
-            accessibilityLabel="גלול לראש הרשימה"
+            accessibilityLabel={progressTargetYRef.current == null ? 'גלול לראש הרשימה' : 'גלול להתקדמות שלי'}
             style={{
               width: 44,
               height: 44,
@@ -2139,9 +2252,21 @@ function LearningScreen() {
               ...DesignTokens.shadows.green,
             }}
           >
-            <ChevronUp size={22} color={DesignTokens.colors.text.inverse} strokeWidth={2.4} />
+            {courseJumpDir === 'down' ? (
+              <ChevronDown size={22} color={DesignTokens.colors.text.inverse} strokeWidth={2.4} />
+            ) : (
+              <ChevronUp size={22} color={DesignTokens.colors.text.inverse} strokeWidth={2.4} />
+            )}
           </TouchableOpacity>
         </Animated.View>
+
+        {showCourseComplete ? (
+          <CourseCompletionOverlay
+            courseTitle={courseData?.title}
+            lessonsCount={availableLessonsCount}
+            onClose={() => setShowCourseComplete(false)}
+          />
+        ) : null}
       </RNSafeAreaView>
     </ScreenChrome>
   );

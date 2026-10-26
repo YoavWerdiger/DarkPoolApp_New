@@ -24,7 +24,6 @@ import {
   SHEET_EASE_OUT_BEZIER,
 } from '../../../components/ui/BottomSheet/sheetMotion';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
-import type { Portfolio } from '../portfolioTypes';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const LIST_MAX_H = SCREEN_HEIGHT * 0.5;
@@ -42,17 +41,32 @@ const EASE_IN = Easing.bezier(
 );
 
 interface Props {
-  portfolios: Portfolio[];
+  /** תיקים / רשימות מעקב — כל פריט עם id ושם */
+  portfolios: ReadonlyArray<{ id: string; name: string }>;
   selectedId: string;
   onSelect: (portfolioId: string) => void;
   onCreate: () => void;
+  /** כותרת השיט (ברירת מחדל: «התיקים שלי») */
+  sheetTitle?: string;
+  /** שורת היצירה (ברירת מחדל: «תיק חדש») */
+  createLabel?: string;
+  /** לחיצה על הפריט הפעיל (למשל פעולות על הרשימה). בלי — רק סגירה */
+  onActivePress?: (id: string) => void;
 }
 
 /**
  * שם התיק + שברון בכותרת היומן. לחיצה פותחת שיט עליון (יורד מקצה המסך) למעבר בין תיקים.
  * אותה שפת תנועה כמו BottomSheet — רק בכיוון ההפוך. נסגר בלחיצה על הרקע או בבחירה.
  */
-export function PortfolioSwitcher({ portfolios, selectedId, onSelect, onCreate }: Props) {
+export function PortfolioSwitcher({
+  portfolios,
+  selectedId,
+  onSelect,
+  onCreate,
+  sheetTitle = 'התיקים שלי',
+  createLabel = 'תיק חדש',
+  onActivePress,
+}: Props) {
   const tokens = useDesignTokens();
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
@@ -112,7 +126,7 @@ export function PortfolioSwitcher({ portfolios, selectedId, onSelect, onCreate }
           hitSlop={8}
           style={styles.anchor}
           accessibilityRole="button"
-          accessibilityLabel={`תיק: ${selected?.name ?? ''}. החלפת תיק`}
+          accessibilityLabel={`${selected?.name ?? ''}. החלפה`}
         >
           <Text
             style={[styles.anchorTitle, { color: tokens.colors.text.primary }]}
@@ -150,7 +164,7 @@ export function PortfolioSwitcher({ portfolios, selectedId, onSelect, onCreate }
           ]}
         >
           <Text style={[styles.sheetTitle, { color: tokens.colors.text.primary }]}>
-            התיקים שלי
+            {sheetTitle}
           </Text>
 
           <View style={[styles.card, { backgroundColor: tokens.colors.background.cardSolid }]}>
@@ -163,7 +177,13 @@ export function PortfolioSwitcher({ portfolios, selectedId, onSelect, onCreate }
                     <TouchableOpacity
                       onPress={() => {
                         if (!active) void HapticFeedback.selection();
-                        hide(active ? undefined : () => onSelect(p.id));
+                        hide(
+                          active
+                            ? onActivePress
+                              ? () => onActivePress(p.id)
+                              : undefined
+                            : () => onSelect(p.id),
+                        );
                       }}
                       activeOpacity={0.6}
                       style={styles.row}
@@ -195,9 +215,9 @@ export function PortfolioSwitcher({ portfolios, selectedId, onSelect, onCreate }
             // כרטיס רגיל, רק הטקסט והאייקון בירוק (הדגשה לפי הטופו)
             style={[styles.card, styles.row, { backgroundColor: tokens.colors.background.cardSolid }]}
             accessibilityRole="button"
-            accessibilityLabel="תיק חדש"
+            accessibilityLabel={createLabel}
           >
-            <Text style={[styles.rowText, { color: tokens.colors.primary.main }]}>תיק חדש</Text>
+            <Text style={[styles.rowText, { color: tokens.colors.primary.main }]}>{createLabel}</Text>
             <Ionicons name="add" size={22} color={tokens.colors.primary.main} />
           </TouchableOpacity>
         </Animated.View>

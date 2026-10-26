@@ -32,12 +32,14 @@ import { legacyAlert, showAppConfirm, showAppDialog } from '../../utils/appDialo
 import { useWatchlist } from '../../hooks/useWatchlist';
 import { SymbolSearchModal } from '../Portfolios/components/SymbolSearchModal';
 import type { SymbolSearchResult } from '../../services/portfolios/portfolioPriceFeed';
-import type { WatchlistRowData } from '../../services/watchlist/watchlistTypes';
+import { SUGGESTED_WATCHLIST_SYMBOLS, type WatchlistRowData } from '../../services/watchlist/watchlistTypes';
 import { WatchlistColumnHeader } from './components/WatchlistColumnHeader';
 import { WatchlistEmpty } from './components/WatchlistEmpty';
 import { WatchlistListNameSheet } from './components/WatchlistFormSheet';
 import { WatchlistSymbolSheet } from './components/WatchlistSymbolSheet';
 import { MarketsErrorBoundary } from '../Markets/MarketsErrorBoundary';
+import { PortfolioSwitcher } from '../Portfolios/components/PortfolioSwitcher';
+import UIButton from '../../components/ui/UIButton';
 
 function hapticDragStart() {
   void HapticFeedback.medium();
@@ -88,6 +90,13 @@ export default function WatchlistScreen() {
   const mainTabsHeight = useMainTabsHeight();
   const [searchOpen, setSearchOpen] = useState(false);
   const [createListOpen, setCreateListOpen] = useState(false);
+  // הוספה מהירה (רשימה ריקה): בחירה מרובה + כפתור אישור צף בתחתית
+  const [quickPicked, setQuickPicked] = useState<string[]>([]);
+  const [quickAdding, setQuickAdding] = useState(false);
+  const toggleQuickPick = useCallback((symbol: string) => {
+    void HapticFeedback.selection();
+    setQuickPicked((prev) => (prev.includes(symbol) ? prev.filter((x) => x !== symbol) : [...prev, symbol]));
+  }, []);
   const [renameTarget, setRenameTarget] = useState<{ id: string; name: string } | null>(
     null
   );
@@ -118,6 +127,28 @@ export default function WatchlistScreen() {
     renameList,
     removeList,
   } = useWatchlist();
+
+  // מעבר רשימה מאפס את הבחירה המהירה
+  useEffect(() => {
+    setQuickPicked([]);
+  }, [activeWatchlistId]);
+
+  const finishQuickAdd = useCallback(async () => {
+    if (!quickPicked.length || quickAdding) return;
+    setQuickAdding(true);
+    try {
+      const items = quickPicked
+        .map((sym) => SUGGESTED_WATCHLIST_SYMBOLS.find((x) => x.symbol === sym))
+        .filter((x): x is (typeof SUGGESTED_WATCHLIST_SYMBOLS)[number] => !!x);
+      await addSymbols(items.map((i) => ({ symbol: i.symbol, companyName: i.name })));
+      void HapticFeedback.success();
+      setQuickPicked([]);
+    } catch {
+      legacyAlert('שגיאה', 'לא ניתן להוסיף את המניות');
+    } finally {
+      setQuickAdding(false);
+    }
+  }, [quickPicked, quickAdding, addSymbols]);
 
   const openMainDrawer = useCallback(() => {
     void triggerDrawerMenuHaptic();
@@ -414,42 +445,7 @@ export default function WatchlistScreen() {
     [removeList]
   );
 
-  const openListsMenu = useCallback(() => {
-    void HapticFeedback.selection();
-    void showAppDialog({
-      title: 'רשימות מעקב',
-      message: 'בחירה, יצירה או ניהול',
-      type: 'info',
-      buttons: [
-        ...watchlists.map((list) => ({
-          text:
-            list.id === activeWatchlistId ? `✓ ${list.name}` : list.name,
-          style: 'default' as const,
-          onPress: () => {
-            if (list.id === activeWatchlistId) {
-              openListActions(list.id, list.name, list.is_default);
-              return;
-            }
-            setActiveWatchlistId(list.id);
-          },
-        })),
-        {
-          text: 'רשימה חדשה',
-          style: 'default' as const,
-          onPress: () => {
-            setNewListName('');
-            setCreateListOpen(true);
-          },
-        },
-        { text: 'ביטול', style: 'cancel' as const },
-      ],
-    });
-  }, [activeWatchlistId, openListActions, setActiveWatchlistId, watchlists]);
 
-  const subtitle =
-    rows.length > 0
-      ? `${activeList?.name ?? 'הרשימה שלי'} · ${rows.length}`
-      : activeList?.name;
 
   const styles = useMemo(
     () =>
@@ -471,7 +467,15 @@ export default function WatchlistScreen() {
         listWrap: { flex: 1, minHeight: 0, width: '100%' },
         list: { flex: 1 },
         listContent: { flexGrow: 1, paddingBottom: APP_LAYOUT.stackGapSmall },
-        listContentEmpty: { flexGrow: 1 },
+        // מקום לכפתור האישור הצף
+        listContentEmpty: { flexGrow: 1, paddingBottom: 88 },
+        quickAddBar: {
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: APP_LAYOUT.stackGapSmall,
+          paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+        },
         updatingRow: {
           flexDirection: 'row-reverse',
           alignItems: 'center',
@@ -495,9 +499,31 @@ export default function WatchlistScreen() {
       <RNSafeAreaView style={styles.safe} edges={['top']}>
         <MainDrawerScreenHeader
           title="רשימת מעקב"
-          subtitle={subtitle}
-          onSubtitlePress={openListsMenu}
           onMenuPress={openMainDrawer}
+          // בורר רשימות — כמו בורר התיקים ביומן המסחר
+          sectionContainerStyle={{
+            paddingTop: 0,
+            marginTop: APP_LAYOUT.stackGapSmall - APP_LAYOUT.cardPadding,
+          }}
+          section={
+            watchlists.length > 0 ? (
+              <PortfolioSwitcher
+                portfolios={watchlists}
+                selectedId={activeWatchlistId ?? ''}
+                onSelect={(id) => setActiveWatchlistId(id)}
+                onCreate={() => {
+                  setNewListName('');
+                  setCreateListOpen(true);
+                }}
+                onActivePress={(id) => {
+                  const list = watchlists.find((w) => w.id === id);
+                  if (list) openListActions(list.id, list.name, list.is_default);
+                }}
+                sheetTitle="הרשימות שלי"
+                createLabel="רשימה חדשה"
+              />
+            ) : undefined
+          }
           rightAccessory={
             <DayNavBlurButton
               onPress={() => {
@@ -575,20 +601,27 @@ export default function WatchlistScreen() {
                       ListEmptyComponent={
                         <WatchlistEmpty
                           onAddPress={() => setSearchOpen(true)}
-                          onSuggestMany={async (items) => {
-                            try {
-                              await addSymbols(items.map((i) => ({ symbol: i.symbol, companyName: i.name })));
-                              void HapticFeedback.success();
-                            } catch {
-                              legacyAlert('שגיאה', 'לא ניתן להוסיף את המניות');
-                            }
-                          }}
+                          picked={quickPicked}
+                          onTogglePick={toggleQuickPick}
                         />
                       }
                       renderItem={renderWatchlistItem}
                     />
                   </View>
                 </View>
+                {/* אישור ההוספה המהירה — צף בתחתית כל עוד יש בחירה */}
+                {listData.length === 0 && quickPicked.length > 0 ? (
+                  <View style={styles.quickAddBar} pointerEvents="box-none">
+                    <UIButton
+                      title={quickPicked.length === 1 ? 'הוספת מניה אחת' : `הוספת ${quickPicked.length} מניות`}
+                      variant="primary"
+                      size="lg"
+                      fullWidth
+                      loading={quickAdding}
+                      onPress={() => void finishQuickAdd()}
+                    />
+                  </View>
+                ) : null}
               </>
             )}
           </MarketsErrorBoundary>

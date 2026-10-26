@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
@@ -12,36 +12,17 @@ import {
 import UIButton from '../../../components/ui/UIButton';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
 import { SUGGESTED_WATCHLIST_SYMBOLS } from '../../../services/watchlist/watchlistTypes';
-import { HapticFeedback } from '../../../utils/hapticFeedback';
 
 type Props = {
   onAddPress: () => void;
-  /** «סיימתי» — כל המניות שסומנו בהוספה המהירה */
-  onSuggestMany: (items: Array<{ symbol: string; name: string }>) => Promise<void> | void;
+  /** סימבולים שסומנו בהוספה המהירה — האישור בכפתור צף במסך */
+  picked: string[];
+  onTogglePick: (symbol: string) => void;
 };
 
-export function WatchlistEmpty({ onAddPress, onSuggestMany }: Props) {
+export function WatchlistEmpty({ onAddPress, picked, onTogglePick }: Props) {
   const tokens = useDesignTokens();
-  // הוספה מהירה מרובה: מסמנים כמה, ומוסיפים יחד ב«סיימתי» (הוספה מיידית הייתה מעלימה את הרשימה אחרי אחת)
-  const [picked, setPicked] = useState<string[]>([]);
-  const [adding, setAdding] = useState(false);
-  const toggle = (symbol: string) => {
-    void HapticFeedback.selection();
-    setPicked((prev) => (prev.includes(symbol) ? prev.filter((x) => x !== symbol) : [...prev, symbol]));
-  };
-  const finish = async () => {
-    if (!picked.length || adding) return;
-    setAdding(true);
-    try {
-      const items = picked
-        .map((sym) => SUGGESTED_WATCHLIST_SYMBOLS.find((s) => s.symbol === sym))
-        .filter((s): s is (typeof SUGGESTED_WATCHLIST_SYMBOLS)[number] => !!s)
-        .map((s) => ({ symbol: s.symbol, name: s.name }));
-      await onSuggestMany(items);
-    } finally {
-      setAdding(false);
-    }
-  };
+  const toggle = onTogglePick;
 
   const styles = useMemo(
     () =>
@@ -185,17 +166,6 @@ export function WatchlistEmpty({ onAddPress, onSuggestMany }: Props) {
         </TouchableOpacity>
         );
       })}
-      {picked.length > 0 ? (
-        <View style={styles.finishWrap}>
-          <UIButton
-            title={picked.length === 1 ? 'סיימתי · הוספת מניה אחת' : `סיימתי · הוספת ${picked.length} מניות`}
-            variant="primary"
-            fullWidth
-            loading={adding}
-            onPress={() => void finish()}
-          />
-        </View>
-      ) : null}
     </View>
   );
 }

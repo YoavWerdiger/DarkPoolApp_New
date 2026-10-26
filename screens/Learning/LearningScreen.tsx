@@ -2023,13 +2023,14 @@ function LearningScreen() {
           ref={courseListScrollRef}
           showsVerticalScrollIndicator
           // פס הגלילה בצד שמאל: מראה את ה-ScrollView ומחזיר את התוכן (הפריסה עצמה לא משתנה)
-          style={{ transform: [{ scaleX: -1 }] }}
+          // marginBottom: התוכן נחתך מעל ה-safe area התחתון ולא נגלל מתחתיו
+          style={{ transform: [{ scaleX: -1 }], marginBottom: insets.bottom }}
           onScroll={handleCourseListScroll}
           scrollEventThrottle={32}
           contentContainerStyle={[
             styles.courseListScroll,
             { transform: [{ scaleX: -1 }] },
-            { paddingBottom: Math.max(mainTabsHeight, DesignTokens.spacing['5xl']) },
+            { paddingBottom: DesignTokens.spacing.xl },
           ]}
         >
           <CourseListHero

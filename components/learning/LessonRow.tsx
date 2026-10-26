@@ -146,7 +146,7 @@ export const LessonRow: React.FC<LessonRowProps> = ({
           ) : (
             <View style={styles.playOverlay} pointerEvents="none">
               <View style={styles.playCircle}>
-                <Ionicons name="play" size={18} color="#fff" style={styles.playIcon} />
+                <Ionicons name="play" size={20} color={T.colors.text.primary} style={styles.playIcon} />
               </View>
             </View>
           )}
@@ -250,15 +250,19 @@ function createStyles(T: ReturnType<typeof useDesignTokens>) {
       alignItems: 'center',
       justifyContent: 'center',
     },
+    // כמו כפתורי הכרום באפליקציה: עיגול cardSolid, אייקון בצבע הטקסט, בלי מסגרת
     playCircle: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: 'rgba(0,0,0,0.45)',
-      borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.25)',
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: T.colors.background.cardSolid,
       alignItems: 'center',
       justifyContent: 'center',
+      shadowColor: '#000',
+      shadowOpacity: 0.18,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 3,
     },
     playIcon: {
       marginLeft: 2,

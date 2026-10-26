@@ -7,6 +7,8 @@ import { DayNavBlurButton } from '../ui/DayNavBlurButton';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { APP_LAYOUT } from '../ui/appLayout';
 import { ACADEMY_TYPE } from './academyLayout';
+import { ACADEMY_CARD_HP } from './academyCardLayout';
+import { appPhysicalRightText } from '../ui/appType';
 
 /** כמו PersonProfileHero — עיגול 44pt */
 const HERO_BACK_BTN_SIZE = 44;
@@ -141,8 +143,10 @@ function createProgressStyles(T: ReturnType<typeof useDesignTokens>) {
       marginTop: T.spacing.sm,
       gap: T.spacing.xs,
     },
+    // rtl מפורש: «x/y הושלמו» בימין (מיושר עם השם), האחוז בשמאל
     row: {
-      flexDirection: 'row-reverse',
+      direction: 'rtl',
+      flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
       width: '100%',
@@ -185,22 +189,22 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
   },
+  // אותו ריווח צד כמו כרטיסי השיעורים מתחת
   info: {
-    paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+    paddingHorizontal: ACADEMY_CARD_HP,
     paddingTop: APP_LAYOUT.cardPadding,
     gap: 4,
   },
+  // ימין פיזי (בעץ rtl textAlign:'right' מתהפך לשמאל)
   title: {
     ...ACADEMY_TYPE.pageTitle,
-    textAlign: 'right',
-    writingDirection: 'rtl',
+    ...appPhysicalRightText,
     width: '100%',
   },
   subtitle: {
     ...ACADEMY_TYPE.sectionSubtitle,
     marginTop: APP_LAYOUT.titleSubtitleGap,
-    textAlign: 'right',
-    writingDirection: 'rtl',
+    ...appPhysicalRightText,
     width: '100%',
   },
 });

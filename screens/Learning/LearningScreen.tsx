@@ -3384,7 +3384,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: APP_LAYOUT.cardStackGap,
-    marginBottom: APP_LAYOUT.groupLabelToContent,
+    // מרווח מכותרת הפרק לשיעור הראשון
+    marginBottom: APP_LAYOUT.groupLabelToContent + 6,
   },
   chapterHeaderTitle: {
     flex: 1,

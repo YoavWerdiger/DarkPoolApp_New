@@ -810,12 +810,12 @@ export default function StoryViewerScreen() {
             {currentStory ? (
               <View style={styles.bottomActions} pointerEvents="box-none">
                 <TouchableOpacity
-                  style={[styles.actionBtn, { backgroundColor: designTokens.colors.background.primary }]}
+                  style={[styles.actionBtnRound, { backgroundColor: designTokens.colors.background.primary }]}
                   onPress={openViewersSheet}
                   activeOpacity={0.75}
+                  accessibilityLabel="צפיות"
                 >
                   <Ionicons name="eye-outline" size={20} color={designTokens.colors.text.primary} />
-                  <Text style={[styles.actionText, { color: designTokens.colors.text.primary }]}>צפיות</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.actionBtnRound, { backgroundColor: designTokens.colors.background.primary }]}
@@ -1002,24 +1002,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 50,
   },
+  // צפיות (עין) + מחיקה — שני עיגולים ממורכזים
   bottomActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-  },
-  actionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
-    height: 46,
-    paddingHorizontal: 18,
-    borderRadius: 999,
-    gap: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.22,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
+    alignSelf: 'stretch',
+    gap: 14,
   },
   actionBtnRound: {
     width: 46,
@@ -1032,9 +1021,5 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
     elevation: 6,
-  },
-  actionText: {
-    fontSize: APP_TYPE.cardTitle.fontSize,
-    fontWeight: '600',
   },
 });

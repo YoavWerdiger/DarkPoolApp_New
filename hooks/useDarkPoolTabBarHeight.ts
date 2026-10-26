@@ -9,7 +9,8 @@ export const DARK_POOL_TAB_BAR_CHROME_TOP = 10;
 /** גובה כל רצועת הטאבים (ריווח עליון + pill + safe area) — המסכים נחתכים מעליה */
 export function useDarkPoolTabBarFrameHeight(): number {
   const insets = useSafeAreaInsets();
-  return DARK_POOL_TAB_BAR_HEIGHT + DARK_POOL_TAB_BAR_CHROME_TOP + Math.max(insets.bottom || 0, 8);
+  // 4 ולא כל ה-CHROME_TOP — התוכן נחתך קרוב יותר ל-pill
+  return DARK_POOL_TAB_BAR_HEIGHT + 4 + Math.max(insets.bottom || 0, 8);
 }
 
 /**
@@ -17,6 +18,6 @@ export function useDarkPoolTabBarFrameHeight(): number {
  * הסצנה עצמה כבר נגמרת בראש סרגל הטאבים (sceneStyle ב-DarkPoolTabs),
  * אז נשאר רק מרווח קטן בסוף הרשימה.
  */
-export function useDarkPoolTabBarHeight(extra = 16): number {
+export function useDarkPoolTabBarHeight(extra = 8): number {
   return extra;
 }

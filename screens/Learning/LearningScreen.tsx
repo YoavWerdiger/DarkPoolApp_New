@@ -2022,10 +2022,13 @@ function LearningScreen() {
         <ScrollView
           ref={courseListScrollRef}
           showsVerticalScrollIndicator
+          // ScreenChrome הוא rtl → פס הגלילה עובר לשמאל; ה-ScrollView ב-ltr (פס בימין) והתוכן חוזר ל-rtl
+          style={{ direction: 'ltr' }}
           onScroll={handleCourseListScroll}
           scrollEventThrottle={32}
           contentContainerStyle={[
             styles.courseListScroll,
+            { direction: 'rtl' },
             { paddingBottom: Math.max(mainTabsHeight, DesignTokens.spacing['5xl']) },
           ]}
         >
@@ -2060,7 +2063,7 @@ function LearningScreen() {
           </View>
         </ScrollView>
 
-        {/* גלילה לראש — כמו בדיווחי רווח (זכוכית 44, ימין תחתון) */}
+        {/* גלילה לראש — עיגול 44 בצבע ה-CTA, ימין תחתון */}
         <Animated.View
           pointerEvents={showCourseScrollTop ? 'auto' : 'none'}
           style={{
@@ -2078,22 +2081,27 @@ function LearningScreen() {
             zIndex: 1000,
           }}
         >
-          <View style={{ width: 44, height: 44, borderRadius: 22, overflow: 'hidden' }}>
-            <UICard
-              variant="glass"
-              glassIntensity="light"
-              padding="none"
-              onPress={() => {
-                void HapticFeedback.impactLight();
-                courseListScrollRef.current?.scrollTo({ y: 0, animated: true });
-              }}
-              accessibilityLabel="גלול לראש הרשימה"
-              style={{ width: 44, height: 44, borderRadius: 22, overflow: 'hidden' }}
-              contentContainerStyle={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
-            >
-              <ChevronUp size={22} color={DesignTokens.colors.text.primary} strokeWidth={2.3} />
-            </UICard>
-          </View>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => {
+              void HapticFeedback.impactLight();
+              courseListScrollRef.current?.scrollTo({ y: 0, animated: true });
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="גלול לראש הרשימה"
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              alignItems: 'center',
+              justifyContent: 'center',
+              // צבע כפתור ה-CTA (UIButton primary)
+              backgroundColor: DesignTokens.colors.primary.lightCta,
+              ...DesignTokens.shadows.green,
+            }}
+          >
+            <ChevronUp size={22} color={DesignTokens.colors.text.inverse} strokeWidth={2.4} />
+          </TouchableOpacity>
         </Animated.View>
       </RNSafeAreaView>
     </ScreenChrome>

@@ -55,12 +55,12 @@ export function rankProgress(days: number): {
   return { rank, next, progress, daysToNext: Math.max(0, next.minDays - days) };
 }
 
-/** «מנוי כבר 134 ימים» — תמיד בימים (לא חודשים / שנים) */
+/** «חבר בקהילה כבר 134 ימים» — תמיד בימים (לא חודשים / שנים) */
 export function formatPaidTenure(days: number): string {
   const d = Math.max(0, Math.floor(days));
-  if (d < 1) return 'מנוי מהיום';
-  if (d === 1) return 'מנוי כבר יום אחד';
-  return `מנוי כבר ${d.toLocaleString('en-US')} ימים`;
+  if (d < 1) return 'חבר בקהילה מהיום';
+  if (d === 1) return 'חבר בקהילה כבר יום אחד';
+  return `חבר בקהילה כבר ${d.toLocaleString('en-US')} ימים`;
 }
 
 export function formatDaysCount(days: number): string {

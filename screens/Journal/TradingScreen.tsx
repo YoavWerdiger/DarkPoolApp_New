@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenChrome } from '../../components/ui/ScreenChrome';
 import { DayDividerPill } from '../../components/ui/DayDividerPill';
@@ -36,6 +36,7 @@ export default function TradingScreen() {
   const DesignTokens = useDesignTokens();
   const navigation = useNavigation<Nav>();
   const mainTabsHeight = useMainTabsHeight();
+  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<JournalTab>('trades');
 
   const showAddTradeFab = true;
@@ -62,9 +63,12 @@ export default function TradingScreen() {
           paddingBottom: DesignTokens.spacing.sm,
           alignItems: 'center',
         },
+        // התוכן נחתך מעל ה-safe area התחתון ולא נגלל מתחתיו
         tabContent: {
           flex: 1,
           minHeight: 0,
+          marginBottom: insets.bottom,
+          overflow: 'hidden',
         },
         fabWrap: {
           position: 'absolute',
@@ -94,7 +98,7 @@ export default function TradingScreen() {
           color: DesignTokens.colors.text.inverse,
         },
       }),
-    [DesignTokens, mainTabsHeight]
+    [DesignTokens, mainTabsHeight, insets.bottom]
   );
 
   return (

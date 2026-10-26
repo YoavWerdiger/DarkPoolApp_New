@@ -10,7 +10,6 @@ import { CardSkeleton } from '../../components/ui/SkeletonLoader';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabase';
 import ExportTradeImage from '../../components/Journal/ExportTradeImage';
-import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import type { Trade } from './tradeTypes';
 import { TradeListCard, createTradeCardStyles } from './TradeListCard';
@@ -47,7 +46,8 @@ export default function TradesListTab() {
   const DesignTokens = useDesignTokens();
   const { user } = useAuth();
   const navigation = useNavigation<Nav>();
-  const mainTabsHeight = useMainTabsHeight();
+  // TradingScreen חותך את התוכן מעל ה-safe area — כאן רק מרווח קטן (+ מקום לכפתור «הוסף טרייד»)
+  const mainTabsHeight = 12;
   // זריעה אופטימית מה-cache (נטען מהדיסק בהפעלה קרה) — רינדור מיידי
   const [trades, setTrades] = useState<Trade[]>(
     () => queryClient.getQueryData<Trade[]>(appQueryKeys.trades(user?.id ?? 'anon')) ?? []

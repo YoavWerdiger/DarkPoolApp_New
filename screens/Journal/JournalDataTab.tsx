@@ -26,7 +26,6 @@ import {
   type MoodId,
   type TradeTimeframe,
 } from './tradeJournalConstants';
-import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { MarketsSegmentedControl } from '../Markets/components/MarketsSegmentedControl';
 import {
   JOURNAL_LAYOUT,
@@ -867,7 +866,8 @@ export default function JournalDataTab() {
   const DesignTokens = useDesignTokens();
   const { user } = useAuth();
   const { width: windowW } = useWindowDimensions();
-  const mainTabsHeight = useMainTabsHeight();
+  // TradingScreen חותך את התוכן מעל ה-safe area — כאן רק מרווח קטן (+ מקום לכפתור «הוסף טרייד»)
+  const mainTabsHeight = 12;
   // זריעה אופטימית מה-cache המשותף עם TradesListTab — מעבר בין טאבים מיידי
   const [trades, setTrades] = useState<Trade[]>(
     () => queryClient.getQueryData<Trade[]>(appQueryKeys.trades(user?.id ?? 'anon')) ?? []

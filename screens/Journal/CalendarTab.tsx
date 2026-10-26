@@ -17,7 +17,6 @@ import { supabase } from '../../services/supabase';
 import UICard from '../../components/ui/UICard';
 import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
 import type { Trade } from './tradeTypes';
-import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import {
   JOURNAL_LAYOUT,
   JOURNAL_TYPE,
@@ -44,7 +43,8 @@ export default function CalendarTab() {
   const DesignTokens = useDesignTokens();
   const { user } = useAuth();
   const { width: windowWidth } = useWindowDimensions();
-  const mainTabsHeight = useMainTabsHeight();
+  // TradingScreen חותך את התוכן מעל ה-safe area — כאן רק מרווח קטן (+ מקום לכפתור «הוסף טרייד»)
+  const mainTabsHeight = 12;
 
   /** רוחב פנימי אחיד + רווחים בין עמודות — כדי שהגריד יתאים למרכז המסך בלי חפיפה */
   const gridLayout = React.useMemo(() => {

@@ -767,6 +767,20 @@ export default function StoryViewerScreen() {
     return (
       <CubeFace key={id} index={i} p={p}>
         <View style={styles.mediaLayer} pointerEvents="none">
+          {/* רקע: אותה תמונה מטושטשת (כמו בפריוויו המדיה) במקום פסים שחורים */}
+          {story?.media_type === 'image' && isPlayableMediaUri(story.media_url) ? (
+            <>
+              <ExpoImage
+                source={{ uri: story.media_url }}
+                style={StyleSheet.absoluteFill}
+                contentFit="cover"
+                blurRadius={80}
+                cachePolicy="memory"
+                transition={0}
+              />
+              <View style={[StyleSheet.absoluteFill, styles.blurDim]} />
+            </>
+          ) : null}
           {story ? renderStoryMedia(story, active) : null}
           {story && (story.media_type !== 'text') && loaded[story.id] ? <StoryOverlays content={story.content} /> : null}
           {active && showMediaSpinner && (
@@ -896,6 +910,9 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     backgroundColor: '#000',
     opacity: 0,
+  },
+  blurDim: {
+    backgroundColor: 'rgba(0,0,0,0.35)',
   },
   staticBarTrack: {
     flex: 1,

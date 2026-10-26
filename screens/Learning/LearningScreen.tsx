@@ -236,6 +236,25 @@ function LearningScreen() {
   const durationCheckInProgressRef = useRef<Set<string>>(new Set()); // מעקב אחרי שיעורים שבתהליך בדיקה
   const lastProgressSaveTimeRef = useRef<number>(0); // מעקב אחרי הזמן האחרון שעודכן במסד נתונים
   const lastProgressPercentageRef = useRef<number>(0); // מעקב אחרי האחוז האחרון (למניעת קפיצות ל-0)
+  // רשימת השיעורים: כפתור גלילה לראש (מופיע אחרי גלילה)
+  const courseListScrollRef = useRef<ScrollView>(null);
+  const [showCourseScrollTop, setShowCourseScrollTop] = useState(false);
+  const courseScrollTopOpacity = useRef(new Animated.Value(0)).current;
+  const courseScrollTopShownRef = useRef(false);
+  const handleCourseListScroll = useCallback(
+    (e: { nativeEvent: { contentOffset: { y: number } } }) => {
+      const shouldShow = e.nativeEvent.contentOffset.y > 400;
+      if (shouldShow === courseScrollTopShownRef.current) return;
+      courseScrollTopShownRef.current = shouldShow;
+      setShowCourseScrollTop(shouldShow);
+      Animated.timing(courseScrollTopOpacity, {
+        toValue: shouldShow ? 1 : 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    },
+    [courseScrollTopOpacity],
+  );
 
   // מעקב התקדמות YouTube דרך interval
   useEffect(() => {
@@ -2001,7 +2020,10 @@ function LearningScreen() {
     <ScreenChrome>
       <RNSafeAreaView style={styles.safeAreaContent} edges={[]}>
         <ScrollView
-          showsVerticalScrollIndicator={false}
+          ref={courseListScrollRef}
+          showsVerticalScrollIndicator
+          onScroll={handleCourseListScroll}
+          scrollEventThrottle={32}
           contentContainerStyle={[
             styles.courseListScroll,
             { paddingBottom: Math.max(mainTabsHeight, DesignTokens.spacing['5xl']) },
@@ -2037,6 +2059,42 @@ function LearningScreen() {
             </View>
           </View>
         </ScrollView>
+
+        {/* גלילה לראש — כמו בדיווחי רווח (זכוכית 44, ימין תחתון) */}
+        <Animated.View
+          pointerEvents={showCourseScrollTop ? 'auto' : 'none'}
+          style={{
+            position: 'absolute',
+            right: 12,
+            bottom: Math.max(insets.bottom, 12) + 12,
+            width: 44,
+            height: 44,
+            opacity: courseScrollTopOpacity,
+            transform: [
+              {
+                scale: courseScrollTopOpacity.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }),
+              },
+            ],
+            zIndex: 1000,
+          }}
+        >
+          <View style={{ width: 44, height: 44, borderRadius: 22, overflow: 'hidden' }}>
+            <UICard
+              variant="glass"
+              glassIntensity="light"
+              padding="none"
+              onPress={() => {
+                void HapticFeedback.impactLight();
+                courseListScrollRef.current?.scrollTo({ y: 0, animated: true });
+              }}
+              accessibilityLabel="גלול לראש הרשימה"
+              style={{ width: 44, height: 44, borderRadius: 22, overflow: 'hidden' }}
+              contentContainerStyle={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
+            >
+              <ChevronUp size={22} color={DesignTokens.colors.text.primary} strokeWidth={2.3} />
+            </UICard>
+          </View>
+        </Animated.View>
       </RNSafeAreaView>
     </ScreenChrome>
   );

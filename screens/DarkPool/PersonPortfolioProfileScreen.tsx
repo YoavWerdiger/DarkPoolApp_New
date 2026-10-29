@@ -1570,7 +1570,7 @@ export function PersonPortfolioProfileScreen({
                     scrubActive={scrubActiveSV}
                     value={portfolioValue ?? 0}
                     style={heroFlowStyle(styles.heroValue, portfolioValue)}
-                    upColor={tokens.colors.text.success}
+                    upColor={tokens.colors.primary.main}
                     downColor={tokens.colors.text.danger}
                   />
                 </View>
@@ -1594,14 +1594,14 @@ export function PersonPortfolioProfileScreen({
                   {scrubDelta ? (
                     <>
                       <Text
-                        style={[styles.deltaFigure, { color: scrubDelta.usd >= 0 ? tokens.colors.text.success : tokens.colors.text.danger }]}
+                        style={[styles.deltaFigure, { color: scrubDelta.usd >= 0 ? tokens.colors.primary.main : tokens.colors.text.danger }]}
                         numberOfLines={1}
                       >
                         {toDataIsland(formatCongressDeltaUsd(scrubDelta.usd))}
                       </Text>
-                      <View style={[styles.deltaDot, { backgroundColor: scrubDelta.usd >= 0 ? tokens.colors.text.success : tokens.colors.text.danger }]} />
+                      <View style={[styles.deltaDot, { backgroundColor: scrubDelta.usd >= 0 ? tokens.colors.primary.main : tokens.colors.text.danger }]} />
                       <Text
-                        style={[styles.deltaFigure, { color: scrubDelta.usd >= 0 ? tokens.colors.text.success : tokens.colors.text.danger }]}
+                        style={[styles.deltaFigure, { color: scrubDelta.usd >= 0 ? tokens.colors.primary.main : tokens.colors.text.danger }]}
                         numberOfLines={1}
                       >
                         {toDataIsland(formatSignedChangePct(scrubDelta.pct))}

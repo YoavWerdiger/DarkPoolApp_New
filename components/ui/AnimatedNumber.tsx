@@ -195,7 +195,7 @@ export function AnimatedNumber({
   // הבהוב צבע
   const flashP = useSharedValue(0);
   const baseColor = typeof flat.color === 'string' ? flat.color : null;
-  const flashColor = shown.flashDir > 0 ? tokens.colors.text.success : tokens.colors.text.danger;
+  const flashColor = shown.flashDir > 0 ? tokens.colors.primary.main : tokens.colors.text.danger;
   useLayoutEffect(() => {
     if (shown.flashGen === 0) return;
     // נכנס ברכות (לא קופץ לירוק מלא) ודועך לאט — צבע חלק לכל המספר
@@ -269,7 +269,7 @@ export function AnimatedNumber({
             tintColor={
               change?.fast && c.rolls && c.old != null && baseColor
                 ? Number(c.ch) > Number(c.old)
-                  ? tokens.colors.text.success
+                  ? tokens.colors.primary.main
                   : tokens.colors.text.danger
                 : null
             }

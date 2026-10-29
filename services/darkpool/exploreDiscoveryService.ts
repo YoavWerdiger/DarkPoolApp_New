@@ -4,6 +4,7 @@
  */
 
 import { supabase } from '../../lib/supabase';
+import { companyCeoPortraitUrl } from '../../screens/DarkPool/utils/companyCeoPortraits';
 import { knownPortraitForInvestor } from '../../screens/DarkPool/utils/knownInvestorPortraits';
 import {
   formatReported13fValueHe,
@@ -195,7 +196,8 @@ async function listCompanyBooks(limit: number): Promise<ExplorePerson[]> {
       name,
       // בלי «חברה ציבורית · TICKER» — השם הרשמי מספיק
       subtitle: '',
-      image_url: null,
+      // תמונת המנכ״ל (Commons); בלי תמונה — הלוגו (logoTicker) כמו קודם
+      image_url: companyCeoPortraitUrl(ticker),
       kind: 'fund_manager',
       entity_type: 'company',
       ticker: ticker || undefined,

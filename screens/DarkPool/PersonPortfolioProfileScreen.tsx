@@ -53,6 +53,7 @@ import { listInsiderTradesForPerson } from '../../services/darkpool/darkPoolServ
 import { PortfolioValueChart } from '../Portfolios/components/PortfolioValueChart';
 import { TickerLogo } from '../Portfolios/components/TickerLogo';
 import { build13FPositionDetail } from './utils/filingPositionDetail';
+import { companyCeoPortraitUrl } from './utils/companyCeoPortraits';
 import type { PerformancePeriod } from '../Portfolios/portfolioTypes';
 import {
   avgEntryPriceFromCost,
@@ -449,6 +450,8 @@ export function PersonPortfolioProfileScreen({
     (isCompany ? 'חברה' : kindLabel(kind));
 
   const imageUrl =
+    // חברה ציבורית: תמונת המנכ״ל (הלוגו נשאר במרכז פילוח האחזקות)
+    (isCompany ? companyCeoPortraitUrl(companyTicker) : null) ??
     (kind === 'fund_manager' ? fund.profile?.image_url : investor.profile?.image_url) ??
     imageHint ??
     null;

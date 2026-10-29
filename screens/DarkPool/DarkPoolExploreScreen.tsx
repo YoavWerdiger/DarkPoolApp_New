@@ -19,7 +19,6 @@ import { APP_LAYOUT } from '../../components/ui/appLayout';
 import { LIGHT_CANVAS } from '../../components/ui/designTokensStatic';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { ExplorePortraitCard } from './components/ExplorePortraitCard';
-import { DARK_POOL_TYPE } from './darkPoolLayout';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image as ExpoImage } from 'expo-image';
 import { useQuery } from '@tanstack/react-query';

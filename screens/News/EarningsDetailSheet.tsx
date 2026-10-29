@@ -2,7 +2,7 @@
  * שיט פירוט דוח רווח — לפי הטופו:
  * כרטיס ראשי (פס צבע לפי ההפתעה): לוגו / $TICKER / חברה + תגית מועד·תאריך·רבעון,
  * ושתי עמודות — רווח למניה | הכנסות: ערך בצבע עם אחוז, ו«מכה» / «מפספסת» מתחת.
- * «פירוט» — שורות עם אייקונים (צפי, רבעון קודם, שנה קודמת, בורסה, תאריך, מועד),
+ * «מועד הדיווח» — שורות עם אייקונים (תאריך, מועד, רבעון),
  * ו«תנועת המניה» — TradingView בטיים־פריים נמוך עם מסחר מורחב.
  */
 import React, { useMemo } from 'react';
@@ -122,11 +122,6 @@ function Body({ report, onClose }: { report: EarningsReport; onClose: () => void
   const { isDarkMode } = useTheme();
   const insets = useSafeAreaInsets();
   const styles = useStyles();
-  const extra = report as EarningsReport & {
-    eps_prior?: number | string | null;
-    revenue_estimate_year_ago?: number | string | null;
-    exchange?: string | null;
-  };
 
   const symbol = symbolOf(report);
   const company = (report.company_name || report.asset_name || '').trim();
@@ -138,8 +133,6 @@ function Body({ report, onClose }: { report: EarningsReport; onClose: () => void
   const epsPct = toNum(report.percent) ?? surprisePct(epsActual, epsEst);
   const revPct = toNum(report.revenue_surprise_percent) ?? surprisePct(revActual, revEst);
   const reported = epsActual != null || revActual != null;
-  const epsPrior = toNum(extra.eps_prior);
-  const revYearAgo = toNum(extra.revenue_estimate_year_ago);
   const quarter =
     report.period || report.period_year ? [report.period, report.period_year].filter(Boolean).join(' ') : null;
 
@@ -159,14 +152,6 @@ function Body({ report, onClose }: { report: EarningsReport; onClose: () => void
     () => getTradingViewEarningsChartHTML(symbol, report.report_date, isDarkMode),
     [symbol, report.report_date, isDarkMode],
   );
-
-  const detailRows: Array<{ icon: IonName; label: string; value: string }> = [
-    { icon: 'pie-chart-outline', label: 'צפי רווח למניה', value: fmtEps(epsEst) },
-    { icon: 'cash-outline', label: 'צפי הכנסות', value: fmtRevenue(revEst) },
-    ...(epsPrior != null ? [{ icon: 'time-outline' as IonName, label: 'רווח למניה ברבעון המקביל', value: fmtEps(epsPrior) }] : []),
-    ...(revYearAgo != null ? [{ icon: 'trending-up-outline' as IonName, label: 'הכנסות לפני שנה', value: fmtRevenue(revYearAgo) }] : []),
-    ...(extra.exchange ? [{ icon: 'business-outline' as IonName, label: 'בורסה', value: String(extra.exchange) }] : []),
-  ];
 
   const scheduleRows: Array<{ icon: IonName; label: string; value: string }> = [
     { icon: 'calendar-outline', label: 'תאריך', value: dateLabel(report.report_date) },
@@ -257,15 +242,6 @@ function Body({ report, onClose }: { report: EarningsReport; onClose: () => void
               height={CHART_HEIGHT}
               loadingBackgroundColor="transparent"
             />
-          </UICard>
-        </View>
-
-        <View>
-          <Text style={styles.groupHeading}>ציפיות</Text>
-          <UICard variant="soft" glassIntensity="subtle" padding="none">
-            {detailRows.map((r, i) => (
-              <DetailRow key={r.label} icon={r.icon} label={r.label} value={r.value} showDivider={i < detailRows.length - 1} />
-            ))}
           </UICard>
         </View>
 

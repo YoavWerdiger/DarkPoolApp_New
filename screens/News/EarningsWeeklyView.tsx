@@ -66,6 +66,18 @@ export interface WeekDay {
 const PRE_COLOR = '#d1a11d'; // זהב — מסחר מוקדם
 const POST_COLOR = '#007AFF'; // כחול — מסחר מאוחר
 const TILE_LOGO = 40;
+/** טבעת תוצאה סביב הלוגו — באותו צבע של הפס בתצוגה היומית (report.percent) */
+const RESULT_RING = 2;
+const RESULT_RING_GAP = 2;
+
+function resultRingColor(
+  report: EarningsReport,
+  colors: { primary: { main: string }; danger: { main: string } },
+): string | null {
+  const pct = report.percent;
+  if (pct == null || !Number.isFinite(Number(pct)) || Number(pct) === 0) return null;
+  return Number(pct) > 0 ? colors.primary.main : colors.danger.main;
+}
 const TILE_WIDTH = 56;
 
 function getTimingMeta(value: string | null | undefined): {
@@ -89,7 +101,8 @@ const LogoTile = memo(function LogoTile({
 }) {
   const DesignTokens = useDesignTokens();
   const symbol = getSymbolDisplay(report.code);
-  const ringOuter = TILE_LOGO;
+  const ring = resultRingColor(report, DesignTokens.colors);
+  const ringOuter = TILE_LOGO + (RESULT_RING + RESULT_RING_GAP) * 2;
   return (
     <Pressable
       onPress={() => onPress(report)}
@@ -104,7 +117,10 @@ const LogoTile = memo(function LogoTile({
             width: ringOuter,
             height: ringOuter,
             borderRadius: ringOuter / 2,
-            borderWidth: 0,
+            borderWidth: RESULT_RING,
+            borderColor: ring ?? 'transparent',
+            alignItems: 'center',
+            justifyContent: 'center',
           },
         ]}
       >
@@ -135,7 +151,8 @@ const SearchResultRow = memo(function SearchResultRow({
   const timing = getTimingMeta(report.before_after_market || report.report_time);
   const TimingIcon = timing.icon;
   const searchLogoSize = 44;
-  const searchRingOuter = searchLogoSize;
+  const searchRing = resultRingColor(report, DesignTokens.colors);
+  const searchRingOuter = searchLogoSize + (RESULT_RING + RESULT_RING_GAP) * 2;
   const now = new Date();
   const todayLocal = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const isToday = report.report_date === todayLocal;
@@ -163,6 +180,8 @@ const SearchResultRow = memo(function SearchResultRow({
               width: searchRingOuter,
               height: searchRingOuter,
               borderRadius: searchRingOuter / 2,
+              borderWidth: RESULT_RING,
+              borderColor: searchRing ?? 'transparent',
               alignItems: 'center',
               justifyContent: 'center',
             },
@@ -798,22 +817,23 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
               flexShrink: 0,
             }}
           >
-            <UICard
-              variant="glass"
-              glassIntensity="light"
-              padding="none"
+            {/* צבע כפתור ה-CTA של ערכת הנושא (כמו UIButton primary / כפתור הגלילה בקורס) */}
+            <Pressable
               onPress={scrollToTop}
+              accessibilityRole="button"
               accessibilityLabel="גלול לראש הרשימה"
-              style={{ width: 44, height: 44, borderRadius: 22, overflow: 'hidden' }}
-              contentContainerStyle={{
+              style={({ pressed }) => ({
                 width: 44,
                 height: 44,
+                borderRadius: 22,
                 alignItems: 'center',
                 justifyContent: 'center',
-              }}
+                backgroundColor: DesignTokens.colors.primary.lightCta,
+                opacity: pressed ? 0.85 : 1,
+              })}
             >
-              <ChevronUp size={22} color={DesignTokens.colors.text.primary} strokeWidth={2.3} />
-            </UICard>
+              <ChevronUp size={22} color={DesignTokens.colors.text.inverse} strokeWidth={2.4} />
+            </Pressable>
           </View>
         </Animated.View>
       )}

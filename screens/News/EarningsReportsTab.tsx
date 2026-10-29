@@ -1417,22 +1417,23 @@ export default function EarningsReportsTab({
               flexShrink: 0,
             }}
           >
-            <UICard
-              variant="glass"
-              glassIntensity="light"
-              padding="none"
+            {/* צבע כפתור ה-CTA של ערכת הנושא (כמו UIButton primary / כפתור הגלילה בקורס) */}
+            <Pressable
               onPress={scrollToTop}
+              accessibilityRole="button"
               accessibilityLabel="גלול לראש הרשימה"
-              style={{ width: 44, height: 44, borderRadius: 22, overflow: 'hidden' }}
-              contentContainerStyle={{
+              style={({ pressed }) => ({
                 width: 44,
                 height: 44,
+                borderRadius: 22,
                 alignItems: 'center',
                 justifyContent: 'center',
-              }}
+                backgroundColor: DesignTokens.colors.primary.lightCta,
+                opacity: pressed ? 0.85 : 1,
+              })}
             >
-              <ChevronUp size={22} color={DesignTokens.colors.text.primary} strokeWidth={2.3} />
-            </UICard>
+              <ChevronUp size={22} color={DesignTokens.colors.text.inverse} strokeWidth={2.4} />
+            </Pressable>
           </View>
         </Animated.View>
       )}

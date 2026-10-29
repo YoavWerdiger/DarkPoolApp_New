@@ -242,7 +242,7 @@ export default function DarkPoolPositionScreen() {
                 <FieldRow icon={Layers} label="מניות" value={sharesText(shares)} />
                 <FieldRow
                   icon={Wallet}
-                  label="שווי שוק"
+                  label="שווי אחזקה"
                   value={marketValue != null ? usd(marketValue) : DARK_POOL_UNAVAILABLE}
                 />
                 <FieldRow

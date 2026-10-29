@@ -15,16 +15,18 @@ interface ContextMenuProps {
   isAdmin?: boolean;
   isMe?: boolean;
   canEdit?: boolean;
+  /** false = בלי «העבר» (סקרים לא מועברים) */
+  canForward?: boolean;
 }
 
 // פעולה, לא ניווט — בלי שברון
 const noChevron = <View />;
 
-export default function ContextMenu({ onSelect, isAdmin = false, isMe = false, canEdit = true }: ContextMenuProps) {
+export default function ContextMenu({ onSelect, isAdmin = false, isMe = false, canEdit = true, canForward = true }: ContextMenuProps) {
   const { mainOptions, dangerOptions } = useMemo(() => {
     const main: OptionDef[] = [
       { key: 'reply', label: 'השב', icon: Reply },
-      { key: 'forward', label: 'העבר', icon: Forward },
+      ...(canForward ? [{ key: 'forward', label: 'העבר', icon: Forward }] : []),
       { key: 'copy', label: 'העתק', icon: Copy },
       { key: 'star', label: 'סמן בכוכב', icon: Star },
       ...(isMe && canEdit ? [{ key: 'edit', label: 'עריכה', icon: Pencil }] : []),
@@ -35,7 +37,7 @@ export default function ContextMenu({ onSelect, isAdmin = false, isMe = false, c
       ...(isMe || isAdmin ? [{ key: 'deleteForEveryone', label: 'מחק לכולם', icon: Users }] : []),
     ];
     return { mainOptions: main, dangerOptions: danger };
-  }, [isAdmin, isMe, canEdit]);
+  }, [isAdmin, isMe, canEdit, canForward]);
 
   const handlePress = (key: string) => {
     void HapticFeedback.selection();

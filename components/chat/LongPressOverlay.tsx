@@ -431,6 +431,7 @@ export default function LongPressOverlay({
             isAdmin={isAdmin}
             isMe={displayMessage.isMe}
             canEdit={!displayMessage.id?.toString().startsWith('temp-')}
+            canForward={(displayMessage.type as string) !== 'poll'}
           />
         </View>
       </ChatSheetContent>

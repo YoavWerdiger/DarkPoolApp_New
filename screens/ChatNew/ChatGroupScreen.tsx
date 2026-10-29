@@ -1751,6 +1751,8 @@ export default function ChatGroupScreen() {
   };
 
   const handleForward = (message: ChatMessageType) => {
+    // סקרים לא מועברים (הצבעות שייכות לקבוצה המקורית)
+    if ((message.message_type as string) === 'poll') return;
     setSelectedMessageForForward(message);
     setForwardModalVisible(true);
   };

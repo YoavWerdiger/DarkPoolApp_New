@@ -2060,6 +2060,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   const forwardMessage = useCallback(async (messageId: string, groupIds: string[]) => {
     if (!user) return { success: false, error: 'לא מחובר' };
+    // סקרים לא מועברים — גם אם הגיעו לכאן ממסלול אחר
+    const source = messagesRef.current.find((m) => m.id === messageId);
+    if ((source?.message_type as string | undefined) === 'poll') {
+      return { success: false, error: 'לא ניתן להעביר סקרים' };
+    }
 
     const { errors } = await chatMessageService.forwardChatMessage(
       { message_id: messageId, to_group_ids: groupIds },

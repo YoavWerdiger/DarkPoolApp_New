@@ -3,6 +3,7 @@
 // ============================================
 
 import { Image as ExpoImage } from 'expo-image';
+import { useToast } from '../../components/ui/Toast';
 import React, { useMemo, useEffect, useLayoutEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
@@ -201,6 +202,7 @@ export default function ChatGroupsListScreen() {
   const { isDarkMode } = useTheme();
   const navigation = useNavigation();
   const { user } = useAuth();
+  const { showToast } = useToast();
   /** קבוצות נעוצות (פר משתמש): groupId → pinned_at */
   const [pinnedMap, setPinnedMap] = useState<Record<string, string>>({});
   useEffect(() => {
@@ -470,8 +472,8 @@ export default function ChatGroupsListScreen() {
       setUsersWithStories(data);
       queryClient.setQueryData(appQueryKeys.storiesUsers, data);
     } catch (error) {
+      // שומרים את הרשימה הקודמת — ריקון בשגיאה רגעית העלים את «שלי» והלחיצה לא פתחה כלום
       logger.error('ChatGroupsListScreen', 'Failed to load stories', error);
-      setUsersWithStories([]);
     }
   }, [user?.id]);
 
@@ -482,7 +484,38 @@ export default function ChatGroupsListScreen() {
     sync();
     return subscribePendingStories(sync);
   }, [user?.id]);
-  useEffect(() => onPendingStoryPublished(() => void loadStories()), [loadStories]);
+  useEffect(
+    () =>
+      onPendingStoryPublished((story) => {
+        // «שלי» נכנס לשורה מיד עם הסטורי שנוצר — הלחיצה פותחת את הצופה בלי לחכות לטעינה
+        if (user?.id && story?.user_id === user.id) {
+          setUsersWithStories((prev) => {
+            const i = prev.findIndex((u) => u.user_id === user.id);
+            if (i >= 0) {
+              const next = [...prev];
+              next[i] = { ...next[i], story_count: (next[i].story_count ?? 0) + 1, has_viewed: false };
+              return next;
+            }
+            return [
+              ...prev,
+              {
+                ...story,
+                has_viewed: false,
+                story_count: 1,
+                user: {
+                  id: user.id,
+                  display_name: (user as { display_name?: string | null }).display_name ?? null,
+                  full_name: (user as { full_name?: string | null }).full_name ?? null,
+                  profile_picture: user.profile_picture ?? null,
+                },
+              },
+            ];
+          });
+        }
+        void loadStories();
+      }),
+    [loadStories, user]
+  );
   const onPendingPress = useCallback((p: PendingStory) => {
     if (p.status !== 'failed') return;
     void showAppDialog({
@@ -1576,7 +1609,11 @@ export default function ChatGroupsListScreen() {
                         onPendingPress(failed);
                         return;
                       }
-                      if (ownIdx < 0) return;
+                      if (ownIdx < 0) {
+                        // עוד עולה — משוב במקום לחיצה «מתה»
+                        if (pendingStories.length) showToast('הסטורי עדיין עולה…', 'info');
+                        return;
+                      }
                       void HapticFeedback.selection();
                       openStoryViewer(usersWithStories, usersWithStories[ownIdx].user_id);
                     }}

@@ -3,6 +3,7 @@ import {
   getStoriesByUserId,
   uploadStoryImage,
   uploadStoryVideo,
+  type UserStory,
 } from '../services/storiesService';
 import { logger } from '../utils/logger';
 
@@ -40,7 +41,7 @@ export function localUriForStoryMedia(url: string | null | undefined): string | 
   return null;
 }
 const listeners = new Set<() => void>();
-const doneListeners = new Set<() => void>();
+const doneListeners = new Set<(story: UserStory) => void>();
 
 function emit() {
   listeners.forEach((fn) => fn());
@@ -58,7 +59,7 @@ export function subscribePendingStories(fn: () => void): () => void {
 }
 
 /** נקרא כשסטורי עלה בהצלחה — לרענון רשימת הסטוריז */
-export function onPendingStoryPublished(fn: () => void): () => void {
+export function onPendingStoryPublished(fn: (story: UserStory) => void): () => void {
   doneListeners.add(fn);
   return () => {
     doneListeners.delete(fn);
@@ -80,7 +81,7 @@ async function run(item: PendingStory) {
       // תמונה: העותק המוקטן שהועלה (לא המקור ~24MP מהמצלמה — כמה עותקים שלו בצופה הקריסו את האפליקציה בזיכרון)
       localByRemoteUrl.set(url, result.displayUri ?? item.localUri);
     }
-    await createStory(item.userId, {
+    const created = await createStory(item.userId, {
       media_type: item.mediaType,
       ...(mediaUrl ? { media_url: mediaUrl } : {}),
       content: item.content,
@@ -94,7 +95,8 @@ async function run(item: PendingStory) {
     }
     pending = pending.filter((p) => p.id !== item.id);
     emit();
-    doneListeners.forEach((fn) => fn());
+    // הסטורי שנוצר — הרשימה מוסיפה את «שלי» מיד, בלי לחכות לטעינה מחדש (אחרת הלחיצה לא פותחת כלום)
+    doneListeners.forEach((fn) => fn(created));
   } catch (error) {
     logger.error('pendingStories', 'story upload failed', error);
     pending = pending.map((p) => (p.id === item.id ? { ...p, status: 'failed' } : p));

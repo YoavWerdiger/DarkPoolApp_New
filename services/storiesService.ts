@@ -5,6 +5,7 @@
 
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
+import { Image } from 'react-native';
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../config/publicEnv';
 import { supabase } from '../lib/supabase';
 import { logger } from '../utils/logger';
@@ -362,12 +363,17 @@ export async function uploadStoryImage(
     let uploadUri = uri;
     let displayUri: string | undefined;
     try {
-      const probe = await ImageManipulator.manipulateAsync(uri, []);
-      const actions = probe.width > STORY_MAX_WIDTH ? [{ resize: { width: STORY_MAX_WIDTH } }] : [];
-      const compressed = await ImageManipulator.manipulateAsync(probe.uri, actions, {
+      // מידות בלי לקודד את התמונה מחדש (קודם: manipulateAsync ריק על תמונת 24MP רק כדי לקרוא רוחב — כבד ומיותר)
+      const width = await new Promise<number>((resolve) =>
+        Image.getSize(uri, (w) => resolve(w), () => resolve(STORY_MAX_WIDTH + 1)),
+      );
+      const actions = width > STORY_MAX_WIDTH ? [{ resize: { width: STORY_MAX_WIDTH } }] : [];
+      const t0 = Date.now();
+      const compressed = await ImageManipulator.manipulateAsync(uri, actions, {
         compress: 0.85,
         format: ImageManipulator.SaveFormat.JPEG,
       });
+      logger.debug('StoriesService', `image resized ${width}→${compressed.width} in ${Date.now() - t0}ms`);
       uploadUri = compressed.uri;
       displayUri = compressed.uri;
     } catch {
@@ -375,7 +381,9 @@ export async function uploadStoryImage(
     }
 
     const storagePath = `${STORIES_PATH_PREFIX}/${userId}/${Date.now()}.jpg`;
+    const t1 = Date.now();
     const error = await uploadFileToStories(uploadUri, storagePath, 'image/jpeg');
+    logger.debug('StoriesService', `image upload ${error ? 'failed' : 'done'} in ${Date.now() - t1}ms`);
     if (error) {
       logger.error('StoriesService', 'Image upload failed after retries', error);
       return { url: null, error };

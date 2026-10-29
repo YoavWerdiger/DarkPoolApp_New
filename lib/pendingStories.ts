@@ -113,7 +113,8 @@ export function publishStoryOptimistic(input: Omit<PendingStory, 'id' | 'status'
   };
   pending = [...pending, item];
   emit();
-  void run(item);
+  // ההעלאה מתחילה אחרי שמסך היצירה נסגר (אנימציית סגירה ~0.5ש׳) — עיבוד התמונה ברגע הסגירה תקע את המסך
+  setTimeout(() => void run(item), 700);
 }
 
 export function retryPendingStory(id: string): void {

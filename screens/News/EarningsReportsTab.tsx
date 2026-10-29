@@ -1006,6 +1006,8 @@ export default function EarningsReportsTab({
 
 
   const openedReportFromPushRef = useRef<string | null>(null);
+  const reportsByDateRef = useRef(reportsByDate);
+  reportsByDateRef.current = reportsByDate;
 
   // פתיחה מהתראת Push (earnings_report_id / ticker+date)
   useEffect(() => {
@@ -1018,14 +1020,15 @@ export default function EarningsReportsTab({
     let cancelled = false;
 
     const findInLoaded = (): EarningsReport | null => {
+      const loaded = reportsByDateRef.current;
       if (openReportId) {
-        for (const list of Object.values(reportsByDate)) {
+        for (const list of Object.values(loaded)) {
           const hit = list.find((r) => r.id === openReportId);
           if (hit) return hit;
         }
       }
       if (openTicker && openReportDate) {
-        const dayList = reportsByDate[openReportDate] || [];
+        const dayList = loaded[openReportDate] || [];
         const tickerUpper = openTicker.toUpperCase();
         return (
           dayList.find(
@@ -1040,8 +1043,11 @@ export default function EarningsReportsTab({
     };
 
     const openFromParams = async () => {
-      let report = findInLoaded();
-      if (!report && openReportId) {
+      // מפוש: תמיד שורה טרייה מהשרת קודם — הפוש נשלח אחרי שהתוצאות נכתבו, אבל הרשימה
+      // הטעונה (cache / state מלפני) עוד בלי actual → השיט נפתח ריק עד רענון ידני.
+      // הרשימה הטעונה רק כגיבוי (רשת נכשלה).
+      let report: EarningsReport | null = null;
+      if (openReportId) {
         report = await EarningsService.getById(openReportId);
       }
       if (!report && openTicker) {
@@ -1055,6 +1061,21 @@ export default function EarningsReportsTab({
         }
       }
       if (cancelled) return;
+      if (report?.id && report.report_date) {
+        // גם הרשימה וה-cache מתעדכנים — אחרי סגירת השיט רואים את אותן תוצאות
+        const fresh = report;
+        EarningsService.patchReport(fresh);
+        if (loadedDatesRef.current.has(fresh.report_date)) {
+          setReportsByDate((prev) => {
+            const list = prev[fresh.report_date] ?? [];
+            const idx = list.findIndex((r) => r.id === fresh.id);
+            const nextList =
+              idx >= 0 ? [...list.slice(0, idx), fresh, ...list.slice(idx + 1)] : [...list, fresh];
+            return { ...prev, [fresh.report_date]: nextList };
+          });
+        }
+      }
+      if (!report) report = findInLoaded();
       if (!report) {
         openedReportFromPushRef.current = pushKey;
         onOpenReportConsumed?.();
@@ -1077,10 +1098,19 @@ export default function EarningsReportsTab({
     openReportId,
     openTicker,
     openReportDate,
-    reportsByDate,
     handleReportPress,
     onOpenReportConsumed,
   ]);
+
+  // שיט פתוח מחזיק עותק של הדוח — מסונכרן לשורה העדכנית ברשימה (realtime / רענון),
+  // כך שתוצאות שנכתבות בזמן שהשיט פתוח מופיעות בו מיד
+  useEffect(() => {
+    if (!detailReport?.id) return;
+    const date = detailReport.report_date;
+    const list = date ? reportsByDate[date] : undefined;
+    const latest = list?.find((r) => r.id === detailReport.id);
+    if (latest && latest !== detailReport) setDetailReport(latest);
+  }, [reportsByDate, detailReport]);
 
 
   const renderDateNavigator = () => (

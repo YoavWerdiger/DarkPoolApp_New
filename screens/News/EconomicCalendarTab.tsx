@@ -332,7 +332,16 @@ const EconomicEventCard: React.FC<{
   );
 };
 
-export default function EconomicCalendarTab() {
+type EconomicCalendarTabProps = {
+  /** מפוש (economic_result): לפתוח את האירוע אחרי טעינה טרייה מהשרת */
+  openEventId?: string | null;
+  onOpenEventConsumed?: () => void;
+};
+
+export default function EconomicCalendarTab({
+  openEventId = null,
+  onOpenEventConsumed,
+}: EconomicCalendarTabProps = {}) {
   const DesignTokens = useDesignTokens();
   const isFocused = useIsFocused();
   const screenPad = APP_LAYOUT.screenPaddingHorizontal;
@@ -648,7 +657,9 @@ export default function EconomicCalendarTab() {
   };
 
   // טעינת אירועים כלכליים מ-Database בלבד
-  const loadEconomicEvents = useCallback(async () => {
+  const lastLoadAtRef = useRef(0);
+  const loadEconomicEvents = useCallback(async (): Promise<EconEvent[] | null> => {
+    lastLoadAtRef.current = Date.now();
     try {
       // טעינה מ-Supabase Database
       const loadedEvents = await loadFromDatabase();
@@ -666,10 +677,12 @@ export default function EconomicCalendarTab() {
       setEvents(loadedEvents);
       queryClient.setQueryData(appQueryKeys.economicEvents, loadedEvents);
       filterEvents(loadedEvents, selectedImportance);
+      return loadedEvents;
     } catch (error) {
       legacyAlert('שגיאה', 'לא ניתן לטעון את האירועים הכלכליים');
       setEvents([]);
       setFilteredEvents([]);
+      return null;
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -727,6 +740,16 @@ export default function EconomicCalendarTab() {
     };
   }, []);
 
+  // חזרה למסך (המסך במגירה נשאר mounted; realtime לא רץ ברקע) — טעינה טרייה,
+  // אחרת פוש עם תוצאה פותח מסך עם נתונים מלפני הפרסום. מוגבל ל-פעם ב-20 שניות.
+  const wasFocusedRef = useRef(isFocused);
+  useEffect(() => {
+    const cameBack = isFocused && !wasFocusedRef.current;
+    wasFocusedRef.current = isFocused;
+    if (!cameBack || Date.now() - lastLoadAtRef.current < 20_000) return;
+    void loadEconomicEventsRef.current();
+  }, [isFocused]);
+
   // רענון
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -778,6 +801,34 @@ export default function EconomicCalendarTab() {
       [{ text: 'סגור', style: 'cancel' }]
     );
   }, []);
+
+  // פתיחה מפוש: קודם טעינה טרייה מהשרת (התוצאה כבר נכתבה), ואז הסבר האירוע עם הנתונים
+  const handleEventPressRef = useRef(handleEventPress);
+  handleEventPressRef.current = handleEventPress;
+  const openedEventRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!openEventId) {
+      openedEventRef.current = null;
+      return;
+    }
+    if (openedEventRef.current === openEventId) return;
+    openedEventRef.current = openEventId;
+    let cancelled = false;
+    void (async () => {
+      const fresh = await loadEconomicEventsRef.current();
+      if (cancelled) return;
+      const event = (fresh ?? events).find((e) => e.id === openEventId);
+      if (event) {
+        setSelectedDate(new Date(`${event.date}T12:00:00`));
+        handleEventPressRef.current(event);
+      }
+      onOpenEventConsumed?.();
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openEventId]);
 
   // רינדור אירוע
   const renderDateNavigator = () => (

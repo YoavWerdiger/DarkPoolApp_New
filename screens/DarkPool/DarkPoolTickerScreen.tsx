@@ -16,7 +16,7 @@ import { ScreenChrome } from '../../components/ui/ScreenChrome';
 import UICard from '../../components/ui/UICard';
 import { DayDividerPill, SlidingPillGroup } from '../../components/ui/DayDividerPill';
 import { SignedChangePair } from '../../components/ui/ChangeDot';
-import { AnimatedNumber } from '../../components/ui/AnimatedNumber';
+import { MotionNumber } from '../../components/ui/MotionNumber';
 import { settingsButtonLabelStyle } from '../../components/profile/settingsType';
 import { DayNavBlurButton, HEADER_BACK_BTN_SIZE } from '../../components/ui/DayNavBlurButton';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
@@ -141,6 +141,9 @@ export default function DarkPoolTickerScreen() {
     () => ({ color: interpolateColor(tabEmphasis.value, [0, 1], [tokens.colors.text.secondary, tokens.colors.text.primary]) }),
     [tokens.colors.text.primary, tokens.colors.text.secondary]
   );
+  // ערך הגרירה ב-UI thread — למחיר המתגלגל
+  const scrubValueSV = useSharedValue(0);
+  const scrubActiveSV = useSharedValue(0);
   const [scrubPoint, setScrubPoint] = useState<{
     date: string;
     value: number;
@@ -429,14 +432,21 @@ export default function DarkPoolTickerScreen() {
           <View style={styles.heroBlock}>
             <View style={styles.priceRow}>
               <View style={styles.priceCol}>
-                {/* מחיר מתגלגל כמו בפרופיל — בגרירה ספרה מסיימת מעבר ורק אז ממשיכה; עדכון חי מהבהב */}
-                <AnimatedNumber
-                  text={priceText}
-                  value={displayPrice ?? null}
-                  fast={!!scrubPoint}
-                  flash
-                  style={styles.livePrice}
-                />
+                {/* אותו מספר מתגלגל כמו בפרופיל (MotionNumber): ב-UI thread, ספרה מסיימת מעבר
+                    ורק אז ממשיכה לערך העדכני של הסמן — בלי רינדור React בכל נקודה */}
+                {livePrice != null ? (
+                  <MotionNumber
+                    scrubValue={scrubValueSV}
+                    scrubActive={scrubActiveSV}
+                    value={livePrice}
+                    decimals={2}
+                    style={styles.livePrice}
+                    upColor={tokens.colors.primary.main}
+                    downColor={tokens.colors.text.danger}
+                  />
+                ) : (
+                  <Text style={styles.livePrice}>{toDataIsland(priceText)}</Text>
+                )}
                 {rangeChange.abs != null && rangeChange.pct != null ? (
                   <SignedChangePair
                     tone={changeTone}
@@ -485,6 +495,8 @@ export default function DarkPoolTickerScreen() {
                 showIntervalSelector={false}
                 formatValue={(value) => formatTickerLivePrice(value) ?? '—'}
                 onScrubPoint={setScrubPoint}
+                scrubValue={scrubValueSV}
+                scrubActive={scrubActiveSV}
               />
             </View>
           ) : historyQuery.isLoading ? (

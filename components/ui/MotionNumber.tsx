@@ -31,23 +31,30 @@ const TINT_IN_MS = 140;
 const TINT_HOLD_MS = 220;
 const TINT_FADE_MS = 650;
 
-function formatUsd(v: number): string {
+function formatUsd(v: number, decimals: number): string {
   'worklet';
-  const n = Math.round(Math.abs(v));
+  const scale = Math.pow(10, decimals);
+  const scaled = Math.round(Math.abs(v) * scale);
+  const n = Math.floor(scaled / scale);
   const digits = String(n);
   let out = '';
   for (let i = 0; i < digits.length; i++) {
     if (i > 0 && (digits.length - i) % 3 === 0) out += ',';
     out += digits[i];
   }
-  return (v < 0 && n > 0 ? '-' : '') + '$' + out;
+  if (decimals > 0) {
+    let frac = String(scaled - n * scale);
+    while (frac.length < decimals) frac = '0' + frac;
+    out += '.' + frac;
+  }
+  return (v < 0 && scaled > 0 ? '-' : '') + '$' + out;
 }
-function formatUsdJs(v: number): string {
-  return formatUsd(v);
+function formatUsdJs(v: number, decimals: number): string {
+  return formatUsd(v, decimals);
 }
 
-/** רוחב תו לפי סוג: [ספרה, פסיק, $, מינוס] */
-const MEASURE_CHARS = ['0', ',', '$', '-'] as const;
+/** רוחב תו לפי סוג: [ספרה, פסיק, $, מינוס, נקודה] */
+const MEASURE_CHARS = ['0', ',', '$', '-', '.'] as const;
 
 type Props = {
   /** ערך בזמן גרירה (UI thread) */
@@ -60,9 +67,11 @@ type Props = {
   /** צבע ספרה שעלתה / ירדה (מלא, ואז דועך לצבע הבסיס) */
   upColor?: string;
   downColor?: string;
+  /** ספרות אחרי הנקודה (מחיר מניה: 2; שווי תיק: 0) */
+  decimals?: number;
 };
 
-export function MotionNumber({ scrubValue, scrubActive, value, style, upColor, downColor }: Props) {
+export function MotionNumber({ scrubValue, scrubActive, value, style, upColor, downColor, decimals = 0 }: Props) {
   const restSV = useSharedValue(value);
   useEffect(() => {
     restSV.value = value;
@@ -70,7 +79,7 @@ export function MotionNumber({ scrubValue, scrubActive, value, style, upColor, d
 
   // כיוון השינוי האחרון: 1 עלייה, -1 ירידה
   const dir = useSharedValue(1);
-  const text = useSharedValue(formatUsdJs(value));
+  const text = useSharedValue(formatUsdJs(value, decimals));
   useAnimatedReaction(
     () => {
       const active = scrubActive.value ? 1 : 0;
@@ -78,7 +87,7 @@ export function MotionNumber({ scrubValue, scrubActive, value, style, upColor, d
     },
     (next, prev) => {
       if (prev != null && next.v !== prev.v) dir.value = next.v > prev.v ? 1 : -1;
-      text.value = formatUsd(next.v);
+      text.value = formatUsd(next.v, decimals);
     }
   );
 
@@ -103,7 +112,7 @@ export function MotionNumber({ scrubValue, scrubActive, value, style, upColor, d
 
   // רוחב ספרה / פסיק / $ / מינוס — נמדד פעם אחת
   const [widths, setWidths] = useState<number[] | null>(null);
-  const measured = useMemo(() => [0, 0, 0, 0], [glyphStyle]);
+  const measured = useMemo(() => MEASURE_CHARS.map(() => 0), [glyphStyle]);
   const onMeasure = useCallback(
     (i: number) => (e: LayoutChangeEvent) => {
       measured[i] = e.nativeEvent.layout.width;
@@ -111,16 +120,16 @@ export function MotionNumber({ scrubValue, scrubActive, value, style, upColor, d
     },
     [measured]
   );
-  const widthsSV = useSharedValue<number[]>([0, 0, 0, 0]);
+  const widthsSV = useSharedValue<number[]>(MEASURE_CHARS.map(() => 0));
   useEffect(() => {
     if (widths) widthsSV.value = widths;
   }, [widths, widthsSV]);
 
   // משבצות קבועות: מספיק לערך הנוכחי ולגדילה ×1000
-  const slots = Math.max(6, formatUsdJs(Math.abs(value) * 1000 + 1).length);
+  const slots = Math.max(6, formatUsdJs(Math.abs(value) * 1000 + 1, decimals).length);
 
   return (
-    <View style={styles.row} pointerEvents="none" accessibilityRole="text" accessibilityLabel={formatUsdJs(value)}>
+    <View style={styles.row} pointerEvents="none" accessibilityRole="text" accessibilityLabel={formatUsdJs(value, decimals)}>
       {widths ? (
         Array.from({ length: slots }, (_, k) => (
           <Slot
@@ -137,7 +146,7 @@ export function MotionNumber({ scrubValue, scrubActive, value, style, upColor, d
           />
         ))
       ) : (
-        <Text style={glyphStyle}>{formatUsdJs(value)}</Text>
+        <Text style={glyphStyle}>{formatUsdJs(value, decimals)}</Text>
       )}
       <View style={styles.measure}>
         {MEASURE_CHARS.map((c, i) => (
@@ -183,6 +192,7 @@ const Slot = React.memo(function Slot({
     if (c === ',') return ws[1];
     if (c === '$') return ws[2];
     if (c === '-') return ws[3];
+    if (c === '.') return ws[4];
     return ws[0];
   };
 

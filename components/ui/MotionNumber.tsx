@@ -9,7 +9,6 @@ import Animated, {
   useAnimatedProps,
   useAnimatedReaction,
   useAnimatedStyle,
-  useDerivedValue,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
@@ -68,14 +67,26 @@ export function MotionNumber({ scrubValue, scrubActive, value, style, upColor, d
     restSV.value = value;
   }, [value, restSV]);
 
-  const current = useDerivedValue(() => (scrubActive.value ? scrubValue.value : restSV.value));
-  const text = useDerivedValue(() => formatUsd(current.value));
   // כיוון השינוי האחרון: 1 עלייה, -1 ירידה
   const dir = useSharedValue(1);
+  const text = useSharedValue(formatUsdJs(value));
+  /**
+   * 1 = החלפה מיידית בלי גלגול: בזמן גרירה (כל נקודה על הגרף) ובשחרור (חזרה לשווי).
+   * אחרת המונה «רץ» בכל מעבר בין סנאפשוטים — מהר מדי ולא קריא; הסמן נעצר → המספר כבר שם.
+   * גלגול רק לשינוי ערך במנוחה (עדכון מחיר).
+   */
+  const instant = useSharedValue(0);
+  const wasScrubbing = useSharedValue(0);
   useAnimatedReaction(
-    () => current.value,
+    () => {
+      const active = scrubActive.value ? 1 : 0;
+      return { active, v: active ? scrubValue.value : restSV.value };
+    },
     (next, prev) => {
-      if (prev != null && next !== prev) dir.value = next > prev ? 1 : -1;
+      if (prev != null && next.v !== prev.v) dir.value = next.v > prev.v ? 1 : -1;
+      instant.value = next.active || wasScrubbing.value ? 1 : 0;
+      wasScrubbing.value = next.active;
+      text.value = formatUsd(next.v);
     }
   );
 
@@ -125,6 +136,7 @@ export function MotionNumber({ scrubValue, scrubActive, value, style, upColor, d
             fromRight={slots - 1 - k}
             text={text}
             dir={dir}
+            instant={instant}
             widths={widthsSV}
             lineH={lineH}
             glyphStyle={glyphStyle}
@@ -151,6 +163,7 @@ const Slot = React.memo(function Slot({
   fromRight,
   text,
   dir,
+  instant,
   widths,
   lineH,
   glyphStyle,
@@ -164,6 +177,7 @@ const Slot = React.memo(function Slot({
   fromRight: number;
   text: SharedValue<string>;
   dir: SharedValue<number>;
+  instant: SharedValue<number>;
   widths: SharedValue<number[]>;
   lineH: number;
   glyphStyle: TextStyle;
@@ -196,6 +210,15 @@ const Slot = React.memo(function Slot({
     () => charOf(text.value),
     (next, before) => {
       if (before == null || next === before) {
+        w.value = widthOf(next);
+        return;
+      }
+      if (instant.value) {
+        // גרירה / שחרור — הערך של הנקודה מוצג מיד ונשאר, בלי תנועה וצבע
+        cur.value = next;
+        prev.value = '';
+        p.value = 1;
+        tint.value = 0;
         w.value = widthOf(next);
         return;
       }

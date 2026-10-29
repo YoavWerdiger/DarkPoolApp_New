@@ -154,7 +154,8 @@ export function AnimatedNumber({
     const dir: 1 | -1 = numericDir < 0 ? -1 : 1;
     // סוף גרירה (חזרה לשווי) — מיד, בלי גלגול: אחרת המונה «ממשיך» אחרי שעוזבים את הסמן
     const releasedScrub = shown.fast && !fast;
-    const canAnimate = animate && !reduceMotion && !releasedScrub;
+    // גרירה (fast) — הערך של הנקודה מוצג מיד, בלי גלגול בכל מעבר בין סנאפשוטים
+    const canAnimate = animate && !reduceMotion && !releasedScrub && !fast;
     genRef.current += 1;
     setShown({
       fast,

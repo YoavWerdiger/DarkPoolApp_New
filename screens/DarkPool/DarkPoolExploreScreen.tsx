@@ -331,9 +331,14 @@ export default function DarkPoolExploreScreen() {
 
   const shelves = useMemo(() => partitionExploreByKind(catalog), [catalog]);
 
+  // בלי סינון — מדף קצר (16); בצ׳יפ «פוליטיקאים» — כל חברי הקונגרס הפעילים
   const politicians = useMemo(
-    () => takeUniqueExplorePeople(withPhoto(shelves.politicians), EXPLORE_FEATURED_LIMIT),
-    [shelves.politicians]
+    () =>
+      takeUniqueExplorePeople(
+        withPhoto(shelves.politicians),
+        kindFilter === 'politician' ? 300 : EXPLORE_FEATURED_LIMIT
+      ),
+    [shelves.politicians, kindFilter]
   );
   const executives = useMemo(
     () =>

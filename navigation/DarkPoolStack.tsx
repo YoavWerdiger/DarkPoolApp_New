@@ -12,6 +12,8 @@ import DarkPoolTabs, { type DarkPoolTabParamList } from './DarkPoolTabs';
 import DarkPoolTickerScreen from '../screens/DarkPool/DarkPoolTickerScreen';
 import DarkPoolInvestorProfileScreen from '../screens/DarkPool/DarkPoolInvestorProfileScreen';
 import DarkPoolTradeDetailScreen from '../screens/DarkPool/DarkPoolTradeDetailScreen';
+import DarkPoolPositionScreen from '../screens/DarkPool/DarkPoolPositionScreen';
+import type { FilingPositionDetail } from '../screens/DarkPool/utils/filingPositionDetail';
 import type { DarkPoolTradeDetailParams } from '../screens/DarkPool/utils/tradeDetailParams';
 
 export type { DarkPoolTradeDetailParams };
@@ -31,6 +33,12 @@ export type DarkPoolStackParamList = {
    * `kind: 'insider'` — Form 4 (כמות, מחיר, קוד). אין 13F כאן.
    */
   DarkPoolTradeDetail: DarkPoolTradeDetailParams;
+  /** פרטי אחזקה (13F) — מחושב מההיסטוריה שהפרופיל כבר טען */
+  DarkPoolPosition: {
+    detail: FilingPositionDetail;
+    personName: string;
+    personImage?: string | null;
+  };
 };
 
 const Stack = createNativeStackNavigator<DarkPoolStackParamList>();
@@ -63,6 +71,11 @@ export default function DarkPoolStack() {
         <Stack.Screen
           name="DarkPoolTradeDetail"
           component={DarkPoolTradeDetailScreen}
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
+          name="DarkPoolPosition"
+          component={DarkPoolPositionScreen}
           options={{ animation: 'slide_from_right' }}
         />
       </Stack.Navigator>

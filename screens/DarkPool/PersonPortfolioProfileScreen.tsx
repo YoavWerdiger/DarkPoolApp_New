@@ -52,6 +52,7 @@ import {
 import { listInsiderTradesForPerson } from '../../services/darkpool/darkPoolService';
 import { PortfolioValueChart } from '../Portfolios/components/PortfolioValueChart';
 import { TickerLogo } from '../Portfolios/components/TickerLogo';
+import { build13FPositionDetail } from './utils/filingPositionDetail';
 import type { PerformancePeriod } from '../Portfolios/portfolioTypes';
 import {
   avgEntryPriceFromCost,
@@ -1216,6 +1217,22 @@ export function PersonPortfolioProfileScreen({
     [kind, id, displayName, imageUrl, ticker, stackNav]
   );
 
+  // פרטי אחזקה (13F — קרן / חברה): מההיסטוריה שכבר נטענה, בלי קריאת שרת נוספת
+  const canOpenPosition = kind === 'fund_manager' && (fundHistoryQuery.data?.length ?? 0) > 0;
+  const openPosition = useCallback(
+    (rowTicker: string) => {
+      const detail = build13FPositionDetail(fundHistoryQuery.data ?? [], rowTicker);
+      if (!detail) return;
+      void HapticFeedback.impactLight();
+      stackNav.navigate('DarkPoolPosition', {
+        detail,
+        personName: displayName,
+        personImage: isCompany && companyTicker ? brandfetchTickerLogoUri(companyTicker) : portraitUri,
+      });
+    },
+    [fundHistoryQuery.data, stackNav, displayName, isCompany, companyTicker, portraitUri]
+  );
+
   const holdingsHelp = useMemo(() => {
     if (holdingsEngine === 'congress') {
       return {
@@ -1773,7 +1790,13 @@ export function PersonPortfolioProfileScreen({
                   });
                   return (
                     <React.Fragment key={h.ticker}>
-                      <View style={styles.listRowPress}>
+                      <Pressable
+                        style={styles.listRowPress}
+                        disabled={!canOpenPosition}
+                        onPress={() => openPosition(h.ticker)}
+                        accessibilityRole={canOpenPosition ? 'button' : undefined}
+                        accessibilityLabel={canOpenPosition ? `פרטי אחזקה ${h.ticker}` : undefined}
+                      >
                         <HoldingsListRow
                           ticker={cells.ticker}
                           allocationLabel={cells.allocationLabel}
@@ -1782,7 +1805,7 @@ export function PersonPortfolioProfileScreen({
                           returnPct={h.return_pct ?? null}
                           colorByTicker={pieColors}
                         />
-                      </View>
+                      </Pressable>
                       {index < displayHoldings.length - 1 ? (
                         <View style={styles.listRowDivider} />
                       ) : null}

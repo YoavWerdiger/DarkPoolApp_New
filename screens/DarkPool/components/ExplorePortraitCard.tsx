@@ -18,6 +18,7 @@ import { hebrewText, ltrNameText, toDataIsland } from '../utils/bidi';
 import { isNegativeReturnMetric } from '../utils/exploreDisplay';
 import { DARK_POOL_TYPE } from '../darkPoolLayout';
 import { EXPLORE_PROFILE_CARD } from '../utils/exploreGrid';
+import { congressMemberLabel, isKnownCongressMember } from '../utils/congressGender';
 
 const HEBREW_LETTER = /[\u0590-\u05FF]/;
 
@@ -57,7 +58,11 @@ export const ExplorePortraitCard = memo(function ExplorePortraitCard({
       ? formatInsiderDisplayName(person.name)
       : person.name;
   const nameIsLatin = displayName.trim().length > 0 && !HEBREW_LETTER.test(displayName);
-  const role = profileRole(person.subtitle, person.metric);
+  // חבר/חברת קונגרס — תמיד אותה תווית (בלי «דיווח לפני…» / מפלגה), מגדר מהמאגר הרשמי
+  const role =
+    person.kind === 'politician' && isKnownCongressMember(person.id)
+      ? congressMemberLabel(person.id)
+      : profileRole(person.subtitle, person.metric);
   const roleIsLatin = !!role && !HEBREW_LETTER.test(role);
 
   const content = (

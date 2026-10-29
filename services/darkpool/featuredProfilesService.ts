@@ -8,7 +8,7 @@ import {
   isTrustedPortraitUrl,
 } from '../../screens/DarkPool/utils/curatedExploreProfiles';
 import { buildExploreProfileGrid } from '../../screens/DarkPool/utils/exploreGrid';
-import { formatHebrewAgo } from '../../screens/DarkPool/utils/congressTradeDisplay';
+import { congressMemberLabel } from '../../screens/DarkPool/utils/congressGender';
 
 export interface FeaturedProfile {
   id: string;
@@ -133,8 +133,16 @@ async function fetchActiveCongressPeople(): Promise<ExplorePerson[]> {
       return [];
     }
     const maxTrades = Math.max(1, ...data.map((r: { trades_count: number }) => Number(r.trades_count) || 0));
+    const yearAgo = Date.now() - 365 * 24 * 60 * 60 * 1000;
     return data
       .filter((r: { politician_id?: string; politician_name?: string }) => r.politician_id && r.politician_name)
+      // רק מי שיש לו מספיק נתונים לתיק וגרף: 10+ עסקאות בשנתיים ודיווח בשנה האחרונה
+      .filter(
+        (r: { trades_count: number; last_filed_at: string | null }) =>
+          (Number(r.trades_count) || 0) >= 10 &&
+          !!r.last_filed_at &&
+          Date.parse(r.last_filed_at) >= yearAgo
+      )
       .map(
         (r: {
           politician_id: string;
@@ -143,11 +151,10 @@ async function fetchActiveCongressPeople(): Promise<ExplorePerson[]> {
           trades_count: number;
           last_filed_at: string | null;
         }): ExplorePerson => {
-          const ago = formatHebrewAgo(r.last_filed_at);
           return {
             id: r.politician_id,
             name: r.politician_name,
-            subtitle: ago ? `קונגרס · דיווח ${ago}` : 'קונגרס',
+            subtitle: congressMemberLabel(r.politician_id),
             image_url: r.politician_image_url,
             kind: 'politician',
             // תמיד מתחת למאוצרים (שמתחילים ~60+), יחסית לכמות העסקאות

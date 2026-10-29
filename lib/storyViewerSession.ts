@@ -55,8 +55,21 @@ export function openStoryViewer(
   startStoryIndex?: number | 'last',
 ): boolean {
   const params = buildStoryViewerParams(users, startUserId, startStoryIndex);
+  // אבחון «לא נפתח / קופא» — מופיע בטרמינל של expo start
+  if (__DEV__) {
+    console.log('[story] open', {
+      startUserId,
+      inList: users.some((u) => u.user_id === startUserId),
+      users: users.length,
+      navReady: rootNavigationRef.isReady(),
+      current: rootNavigationRef.isReady() ? rootNavigationRef.getCurrentRoute()?.name : null,
+    });
+  }
   if (!params || !rootNavigationRef.isReady()) return false;
   rememberStoryViewerUsers(users);
   (rootNavigationRef.navigate as (name: string, params?: object) => void)(STORY_VIEWER_ROUTE, params);
+  if (__DEV__) {
+    setTimeout(() => console.log('[story] after navigate, route =', rootNavigationRef.getCurrentRoute()?.name), 400);
+  }
   return true;
 }

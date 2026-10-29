@@ -145,8 +145,13 @@ export default function StoryViewerScreen() {
   const [loadError, setLoadError] = useState(false);
   useEffect(() => {
     let alive = true;
+    const t0 = Date.now();
+    if (__DEV__) console.log('[story] viewer mounted, loading', requestedIds.length, 'users');
     getStoriesForUsers(requestedIds)
       .then((map) => {
+        if (__DEV__) {
+          console.log('[story] loaded in', Date.now() - t0, 'ms', Object.fromEntries(Object.entries(map).map(([k, v]) => [k.slice(0, 8), v.length])));
+        }
         if (!alive) return;
         setStoriesMap(map);
         for (const list of Object.values(map)) {

@@ -156,10 +156,11 @@ import {
   fetch13FDailyCloses,
   fetchCongressBasketDailyCloses,
   fetchForm4DailyCloses,
-  fetchSessionHourlyCloses,
+  fetchIntradayCloses,
+  intradaySpecForPeriod,
   MAX_BASKET_TICKERS,
 } from './utils/congressBasketPrices';
-import { appendWeightedSession } from './utils/sessionSnapshots';
+import { appendWeightedIntraday } from './utils/sessionSnapshots';
 import { fetchFundHoldingsHistory } from '../../services/darkpool/uwFundProfileService';
 import { portraitPhotoCandidates } from './utils/investorPlaceholder';
 import { HapticFeedback } from '../../utils/hapticFeedback';
@@ -1029,9 +1030,11 @@ export function PersonPortfolioProfileScreen({
       .slice(0, MAX_BASKET_TICKERS);
   }, [holdingsEngine, congressPricedHoldings, holdings]);
   const sessionTickersKey = sessionWeights.map((h) => h.ticker).join(',');
+  const intradaySpec = useMemo(() => intradaySpecForPeriod(period), [period]);
   const sessionHourlyQuery = useQuery({
-    queryKey: ['darkpool', 'session-hourly', sessionTickersKey],
-    queryFn: () => fetchSessionHourlyCloses(sessionTickersKey.split(',')),
+    // ברים לפי הטווח שנבחר (1D 5 דק׳ · 1W 15 דק׳ · 1M שעה) — נשלף רק לטווח המוצג, cache 5 דק׳
+    queryKey: ['darkpool', 'intraday', intradaySpec.range, intradaySpec.interval, sessionTickersKey],
+    queryFn: () => fetchIntradayCloses(sessionTickersKey.split(','), intradaySpec),
     enabled: sessionTickersKey.length > 0,
     staleTime: 5 * 60_000,
   });
@@ -1048,7 +1051,7 @@ export function PersonPortfolioProfileScreen({
     });
     const hourly = sessionHourlyQuery.data;
     if (!hourly || !sessionWeights.length) return base;
-    return appendWeightedSession(
+    return appendWeightedIntraday(
       base,
       sessionWeights.map((leg) => ({
         weight: leg.weight,

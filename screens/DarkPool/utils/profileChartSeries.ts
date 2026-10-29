@@ -147,7 +147,9 @@ export function chartSampleGapMs(period: PerformancePeriod): number {
   switch (period) {
     case '1D':
       return MS.min5;
+    // 1W: ברי 15 דקות (~130 נקודות); 1M: ברי שעה (~150)
     case '1W':
+      return 15 * 60_000;
     case '1M':
       return MS.hour;
     case '3M':

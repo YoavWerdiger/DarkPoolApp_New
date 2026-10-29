@@ -83,7 +83,7 @@ describe('chartSeriesSampling', () => {
 
   it('chartSampleGapMs matches product spec', () => {
     expect(chartSampleGapMs('1D')).toBe(5 * 60_000);
-    expect(chartSampleGapMs('1W')).toBe(60 * 60_000);
+    expect(chartSampleGapMs('1W')).toBe(15 * 60_000);
     expect(chartSampleGapMs('1M')).toBe(60 * 60_000);
     expect(chartSampleGapMs('3M')).toBe(24 * 60 * 60_000);
     expect(chartSampleGapMs('5Y')).toBe(24 * 60 * 60_000);

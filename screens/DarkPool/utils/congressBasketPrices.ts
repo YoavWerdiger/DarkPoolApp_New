@@ -71,6 +71,45 @@ export async function fetchForm4DailyCloses(
   return fetchDailyClosesForTickers(tickers, '5y');
 }
 
+/**
+ * ברים תוך-יומיים לפי טווח הגרף — כמה שיותר סנאפשוטים בלי להעמיס:
+ * 1D = 5 דקות של היום, 1W = 15 דקות של 5 ימים, 1M = שעה של חודש.
+ * שאר הטווחים — רק היום ב-5 דקות (הזנב החי); ההיסטוריה שלהם יומית ממילא.
+ * נשלף רק לטווח שנבחר (react-query לפי המפתח) — בחירת 1W/1M היא שמוסיפה את הקריאות שלה.
+ */
+export type IntradaySpec = { range: '1d' | '5d' | '1mo'; interval: '5m' | '15m' | '1h' };
+export function intradaySpecForPeriod(period: string): IntradaySpec {
+  if (period === '1W') return { range: '5d', interval: '15m' };
+  if (period === '1M') return { range: '1mo', interval: '1h' };
+  return { range: '1d', interval: '5m' };
+}
+
+export async function fetchIntradayCloses(
+  tickers: string[],
+  spec: IntradaySpec
+): Promise<Record<string, { date: string; close: number }[]>> {
+  const unique = Array.from(
+    new Set(
+      tickers
+        .map((t) => t.toUpperCase().trim())
+        .filter((t) => t.length > 0 && t.length <= 8)
+    )
+  ).slice(0, MAX_BASKET_TICKERS);
+  const out: Record<string, { date: string; close: number }[]> = {};
+  for (let i = 0; i < unique.length; i += CHUNK) {
+    const chunk = unique.slice(i, i + CHUNK);
+    await Promise.all(
+      chunk.map(async (sym) => {
+        const points = await getHistoricalPrices(sym, spec.range, { interval: spec.interval });
+        out[sym] = points
+          .filter((p) => p.close > 0 && /T\d{2}:/.test(p.date))
+          .map((p) => ({ date: p.date, close: p.close }));
+      })
+    );
+  }
+  return out;
+}
+
 /** ברי שעה של היום — סנאפשוט לסשן, לא סגירה יומית אחת. */
 export async function fetchSessionHourlyCloses(
   tickers: string[]

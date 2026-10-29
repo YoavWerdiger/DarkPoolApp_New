@@ -1771,7 +1771,7 @@ export function PersonPortfolioProfileScreen({
                           : 'אחזקות מובילות'}
                 </Text>
                 {filingQuarterLabel ? (
-                  <Text style={styles.honestyTag} numberOfLines={1}>
+                  <Text style={[styles.honestyTag, styles.honestyTagInRow]} numberOfLines={1}>
                     {filingQuarterLabel}
                   </Text>
                 ) : null}
@@ -2148,12 +2148,16 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       direction: 'rtl',
       flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'space-between',
       gap: APP_LAYOUT.stackGapSmall,
       marginBottom: APP_LAYOUT.sectionHeaderToContent,
     },
+    // סגנון הכותרת רוחב מלא (100%) — בשורה עם תגית «נכון לרבעון» הוא דחף את התגית אל מחוץ למסך
     sectionTitleInRow: {
       marginBottom: 0,
       marginTop: 0,
+      width: undefined,
+      flexShrink: 1,
     },
     honestyTag: {
       ...darkPoolPhysicalRightText,
@@ -2162,6 +2166,9 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       lineHeight: DARK_POOL_TYPE.caption.lineHeight,
       fontWeight: DARK_POOL_TYPE.caption.fontWeight,
       color: tokens.colors.text.secondary,
+    },
+    honestyTagInRow: {
+      flexShrink: 0,
     },
     rowHonestyTag: {
       fontSize: DARK_POOL_TYPE.caption.fontSize,

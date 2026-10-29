@@ -74,7 +74,8 @@ import {
   prefetchPersonPortfolio,
 } from '../../services/darkpool/prefetchPersonPortfolio';
 
-const EXPLORE_GRID_KEY = [...appQueryKeys.uwExplore, 'grid-profiles'] as const;
+// v2: כולל חברי קונגרס פעילים — מפתח חדש כדי שלא יוגש מטמון ישן של המאוצרים בלבד
+const EXPLORE_GRID_KEY = [...appQueryKeys.uwExplore, 'grid-profiles', 'v2'] as const;
 const CURATED_SYNC = getExplorePeopleMergedSync({ requirePhoto: true });
 
 async function loadExploreGridPeople(): Promise<ExplorePerson[]> {

@@ -128,7 +128,10 @@ async function fetchActiveCongressPeople(): Promise<ExplorePerson[]> {
       p_days: 730,
       p_limit: 200,
     });
-    if (error || !Array.isArray(data)) return [];
+    if (error || !Array.isArray(data)) {
+      if (__DEV__) console.warn('[explore] dark_pool_active_congress_people failed:', error?.message ?? data);
+      return [];
+    }
     const maxTrades = Math.max(1, ...data.map((r: { trades_count: number }) => Number(r.trades_count) || 0));
     return data
       .filter((r: { politician_id?: string; politician_name?: string }) => r.politician_id && r.politician_name)

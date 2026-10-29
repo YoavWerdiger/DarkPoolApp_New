@@ -44,7 +44,6 @@ import {
   formatTickerAbsChange,
   formatTickerLivePrice,
   formatTickerPctChange,
-  formatTickerScrubDate,
   TICKER_CHART_RANGES,
   tickerChangeTone,
   tickerDisplayedChange,
@@ -274,7 +273,6 @@ export default function DarkPoolTickerScreen() {
       }),
     [range, displayPrice, previousClose, daily],
   );
-  const scrubDateText = formatTickerScrubDate(scrubPoint?.date);
   const priceText = formatTickerLivePrice(displayPrice) ?? '—';
 
   const holders = useMemo(
@@ -437,9 +435,6 @@ export default function DarkPoolTickerScreen() {
                     —
                   </Text>
                 )}
-                {scrubDateText ? (
-                  <Text style={styles.scrubDate}>{toDataIsland(scrubDateText)}</Text>
-                ) : null}
               </View>
               <View style={styles.identityRow}>
                 <TickerLogo symbol={ticker} size={48} borderRadius={24} />

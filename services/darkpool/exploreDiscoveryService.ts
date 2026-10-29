@@ -185,14 +185,16 @@ async function listCompanyBooks(limit: number): Promise<ExplorePerson[]> {
   for (const row of data ?? []) {
     const cik = String(row.cik ?? '').trim();
     const ticker = row.ticker ? String(row.ticker).trim().toUpperCase() : '';
-    const name = String(row.manager_name || row.name || '').trim();
+    // חברה: השם הרשמי כפי שמוגדר (Amazon.com, Inc. / NVIDIA Corp) — לא הכינוי הקצר
+    const name = String((ticker ? row.name : row.manager_name) || row.manager_name || row.name || '').trim();
     const value = Number(row.last_value_usd);
     const metric = formatReported13fValueHe(value);
     if (!cik || !name || !metric) continue;
     out.push({
       id: cik,
       name,
-      subtitle: companySubtitleHe(ticker),
+      // בלי «חברה ציבורית · TICKER» — השם הרשמי מספיק
+      subtitle: '',
       image_url: null,
       kind: 'fund_manager',
       entity_type: 'company',

@@ -128,6 +128,8 @@ export default function DarkPoolExploreScreen() {
     queryKey: EXPLORE_GRID_KEY,
     queryFn: loadExploreGridPeople,
     initialData: CURATED_SYNC,
+    // הרשימה הסטטית היא רק placeholder — לא «טרייה»; אחרת השליפה מהשרת נדחית ב-5 דק׳
+    initialDataUpdatedAt: 0,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -192,16 +194,17 @@ export default function DarkPoolExploreScreen() {
 
   const catalog = useMemo(
     () =>
-      buildExploreProfileGrid(
-        filterCuratedExplorePeople([
-          ...curatedProfiles,
+      buildExploreProfileGrid([
+        // הגריד כבר מסונן בשרת (מאוצרים + חברי קונגרס פעילים) — לא מסננים אותו שוב למאוצרים בלבד
+        ...curatedProfiles,
+        ...filterCuratedExplorePeople([
           ...extras.most_active,
           ...extras.fund_books,
           ...extras.new_profiles,
           ...extras.executives,
           ...extras.recently_active_insiders,
-        ])
-      ),
+        ]),
+      ]),
     [curatedProfiles, extras]
   );
 

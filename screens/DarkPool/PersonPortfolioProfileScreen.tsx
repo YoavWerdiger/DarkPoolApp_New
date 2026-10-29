@@ -454,9 +454,8 @@ export function PersonPortfolioProfileScreen({
     null;
 
   const subtitle = useMemo(() => {
-    if (isCompany) {
-      return companyTicker ? `חברה ציבורית · ${companyTicker}` : 'חברה ציבורית';
-    }
+    // חברה: בלי תת-כותרת (השם הרשמי מספיק)
+    if (isCompany) return '';
     const raw =
       (kind === 'fund_manager' ? fund.profile?.subtitle : investor.profile?.subtitle) ??
       kindDefaultSubtitle(kind);

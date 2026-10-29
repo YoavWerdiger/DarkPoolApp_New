@@ -95,12 +95,10 @@ serve(async (req) => {
     entity_type: (isCompany ? 'company' : 'fund') as 'fund' | 'company',
     ticker: companyTicker,
   };
-  /** חברה: «חברה ציבורית · NVDA» תמיד מה-DB (לא מ-meta ישן של snapshot) */
-  const companySubtitle = isCompany
-    ? companyTicker
-      ? `חברה ציבורית · ${companyTicker}`
-      : 'חברה ציבורית'
-    : null;
+  /** חברה: בלי תת-כותרת — השם הרשמי (Amazon.com, Inc.) מספיק; ריק ולא meta ישן של snapshot */
+  const companySubtitle = isCompany ? '' : null;
+  /** חברה: השם הרשמי כפי שמוגדר ב-SEC (name), לא הכינוי הקצר (manager_name) */
+  const companyName = isCompany && fund.name ? String(fund.name) : null;
 
   const snap = await loadPortfolioSnapshot(supabase, cik, 'fund_manager').catch(
     () => null
@@ -116,7 +114,7 @@ serve(async (req) => {
       id: String(fund.cik),
       kind: 'fund_manager',
       ...entityFields,
-      name: String(meta.name ?? fund.manager_name ?? fund.name ?? 'קרן'),
+      name: companyName ?? String(meta.name ?? fund.manager_name ?? fund.name ?? 'קרן'),
       subtitle: companySubtitle ?? String(meta.subtitle ?? fund.name ?? '13F'),
       image_url:
         (meta.image_url ? String(meta.image_url) : null) ??
@@ -265,7 +263,7 @@ serve(async (req) => {
       ? Math.round(((last - first) / first) * 10000) / 100
       : null;
 
-  const displayName = String(fund.manager_name || fund.name || 'קרן');
+  const displayName = companyName ?? String(fund.manager_name || fund.name || 'קרן');
   let snapshot_computed_at: string | null = snap?.computed_at ?? null;
 
   if (shouldBootstrap) {

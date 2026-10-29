@@ -8,6 +8,7 @@ import {
   isTrustedPortraitUrl,
 } from '../../screens/DarkPool/utils/curatedExploreProfiles';
 import { buildExploreProfileGrid } from '../../screens/DarkPool/utils/exploreGrid';
+import { formatHebrewAgo } from '../../screens/DarkPool/utils/congressTradeDisplay';
 
 export interface FeaturedProfile {
   id: string;
@@ -116,11 +117,56 @@ export function getExplorePeopleMergedSync(opts?: {
   });
 }
 
+/**
+ * כל חברי הקונגרס שסחרו בשנתיים האחרונות (מקובץ בשרת — RPC dark_pool_active_congress_people).
+ * מצטרפים לגריד אחרי המאוצרים (activity_score נמוך מהם), לפי כמות עסקאות.
+ * אם ה-RPC עוד לא קיים / נכשל — רק המאוצרים (כמו קודם).
+ */
+async function fetchActiveCongressPeople(): Promise<ExplorePerson[]> {
+  try {
+    const { data, error } = await supabase.rpc('dark_pool_active_congress_people', {
+      p_days: 730,
+      p_limit: 200,
+    });
+    if (error || !Array.isArray(data)) return [];
+    const maxTrades = Math.max(1, ...data.map((r: { trades_count: number }) => Number(r.trades_count) || 0));
+    return data
+      .filter((r: { politician_id?: string; politician_name?: string }) => r.politician_id && r.politician_name)
+      .map(
+        (r: {
+          politician_id: string;
+          politician_name: string;
+          politician_image_url: string | null;
+          trades_count: number;
+          last_filed_at: string | null;
+        }): ExplorePerson => {
+          const ago = formatHebrewAgo(r.last_filed_at);
+          return {
+            id: r.politician_id,
+            name: r.politician_name,
+            subtitle: ago ? `קונגרס · דיווח ${ago}` : 'קונגרס',
+            image_url: r.politician_image_url,
+            kind: 'politician',
+            // תמיד מתחת למאוצרים (שמתחילים ~60+), יחסית לכמות העסקאות
+            activity_score: 50 * ((Number(r.trades_count) || 0) / maxTrades),
+          };
+        }
+      );
+  } catch {
+    return [];
+  }
+}
+
 export async function fetchExplorePeopleMerged(opts?: {
   requirePhoto?: boolean;
 }): Promise<ExplorePerson[]> {
-  const curated = await fetchCuratedExploreGrid();
-  return buildExploreProfileGrid(curated, {
-    requirePhoto: opts?.requirePhoto,
-  });
+  const [curated, congress] = await Promise.all([
+    fetchCuratedExploreGrid(),
+    fetchActiveCongressPeople(),
+  ]);
+  const curatedIds = new Set(curated.map((p) => p.id));
+  return buildExploreProfileGrid(
+    [...curated, ...congress.filter((p) => !curatedIds.has(p.id))],
+    { requirePhoto: opts?.requirePhoto }
+  );
 }

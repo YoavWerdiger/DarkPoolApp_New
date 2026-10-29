@@ -21,7 +21,7 @@ import Animated, {
 import { useDesignTokens } from './useDesignTokens';
 
 export const NUMBER_ROLL_MS = 420;
-export const NUMBER_FAST_MS = 110;
+export const NUMBER_FAST_MS = 220;
 export const NUMBER_FLASH_MS = 700;
 /** השהיה בין ספרה לספרה (מהאחדות שמאלה) — תחושת מונה */
 const STAGGER_MS = 16;
@@ -154,8 +154,7 @@ export function AnimatedNumber({
     const dir: 1 | -1 = numericDir < 0 ? -1 : 1;
     // סוף גרירה (חזרה לשווי) — מיד, בלי גלגול: אחרת המונה «ממשיך» אחרי שעוזבים את הסמן
     const releasedScrub = shown.fast && !fast;
-    // גרירה (fast) — הערך של הנקודה מוצג מיד, בלי גלגול בכל מעבר בין סנאפשוטים
-    const canAnimate = animate && !reduceMotion && !releasedScrub && !fast;
+    const canAnimate = animate && !reduceMotion && !releasedScrub;
     genRef.current += 1;
     setShown({
       fast,

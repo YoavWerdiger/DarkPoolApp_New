@@ -21,7 +21,8 @@ import Animated, {
  */
 
 const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
-const SWAP_MS = 160;
+/** משך מעבר ספרה — רגוע מספיק כדי לקרוא, בלי «ריצה» */
+const SWAP_MS = 240;
 const EASE = Easing.bezier(0.22, 1, 0.36, 1);
 /** כמה מגובה השורה הספרה גולשת */
 const TRAVEL = 0.5;
@@ -70,13 +71,6 @@ export function MotionNumber({ scrubValue, scrubActive, value, style, upColor, d
   // כיוון השינוי האחרון: 1 עלייה, -1 ירידה
   const dir = useSharedValue(1);
   const text = useSharedValue(formatUsdJs(value));
-  /**
-   * 1 = החלפה מיידית בלי גלגול: בזמן גרירה (כל נקודה על הגרף) ובשחרור (חזרה לשווי).
-   * אחרת המונה «רץ» בכל מעבר בין סנאפשוטים — מהר מדי ולא קריא; הסמן נעצר → המספר כבר שם.
-   * גלגול רק לשינוי ערך במנוחה (עדכון מחיר).
-   */
-  const instant = useSharedValue(0);
-  const wasScrubbing = useSharedValue(0);
   useAnimatedReaction(
     () => {
       const active = scrubActive.value ? 1 : 0;
@@ -84,8 +78,6 @@ export function MotionNumber({ scrubValue, scrubActive, value, style, upColor, d
     },
     (next, prev) => {
       if (prev != null && next.v !== prev.v) dir.value = next.v > prev.v ? 1 : -1;
-      instant.value = next.active || wasScrubbing.value ? 1 : 0;
-      wasScrubbing.value = next.active;
       text.value = formatUsd(next.v);
     }
   );
@@ -136,7 +128,6 @@ export function MotionNumber({ scrubValue, scrubActive, value, style, upColor, d
             fromRight={slots - 1 - k}
             text={text}
             dir={dir}
-            instant={instant}
             widths={widthsSV}
             lineH={lineH}
             glyphStyle={glyphStyle}
@@ -163,7 +154,6 @@ const Slot = React.memo(function Slot({
   fromRight,
   text,
   dir,
-  instant,
   widths,
   lineH,
   glyphStyle,
@@ -177,7 +167,6 @@ const Slot = React.memo(function Slot({
   fromRight: number;
   text: SharedValue<string>;
   dir: SharedValue<number>;
-  instant: SharedValue<number>;
   widths: SharedValue<number[]>;
   lineH: number;
   glyphStyle: TextStyle;
@@ -206,38 +195,31 @@ const Slot = React.memo(function Slot({
   // ציר צבע אחד: -1 אדום מלא, 0 צבע בסיס, 1 ירוק מלא — מעברים רציפים גם כשהכיוון מתחלף
   const tint = useSharedValue(0);
 
+  /**
+   * גלגול רגוע: ספרה לא נקטעת באמצע — מסיימת את המעבר שלה ורק אז עוברת לערך העדכני
+   * (מדלגת על הערכים שבדרך). בגרירה מהירה המונה לא «רץ» על כל סנאפשוט,
+   * וכשהסמן נעצר הספרות נוחתות על הערך של הנקודה.
+   */
   useAnimatedReaction(
-    () => charOf(text.value),
-    (next, before) => {
-      if (before == null || next === before) {
-        w.value = widthOf(next);
-        return;
-      }
-      if (instant.value) {
-        // גרירה / שחרור — הערך של הנקודה מוצג מיד ונשאר, בלי תנועה וצבע
-        cur.value = next;
-        prev.value = '';
-        p.value = 1;
-        tint.value = 0;
+    () => ({ next: charOf(text.value), idle: p.value >= 1 }),
+    ({ next, idle }) => {
+      if (!idle) return;
+      const before = cur.value;
+      if (next === before) {
         w.value = widthOf(next);
         return;
       }
       const isDigit = next >= '0' && next <= '9';
       const wasDigit = before >= '0' && before <= '9';
-      // שינוי באמצע מעבר (גרירה מהירה — שינוי כמעט בכל פריים): ממשיכים מהשקיפות שבה הספרה
-      // הנוכחית כבר נראית, במקום לאפס ל-0 — אחרת הספרות מהבהבות/נעלמות בזמן הגרירה
-      // (עד 0.6 — שתמיד תישאר תנועה קצרה, בלי «קפיצה» של הספרה החדשה)
-      const carried = p.value < 1 ? Math.min(0.6, 1 - p.value) : 0;
       prev.value = before;
       cur.value = next;
       slideDir.value = dir.value;
       // רוחב משתנה (1 ↔ 0, פסיק חדש) — מחליק במקום לקפוץ
       w.value = w.value > 0 ? withTiming(widthOf(next), { duration: SWAP_MS, easing: EASE }) : widthOf(next);
       if (isDigit && wasDigit) {
-        p.value = carried;
-        p.value = withTiming(1, { duration: SWAP_MS * (1 - carried), easing: EASE });
+        p.value = 0;
+        p.value = withTiming(1, { duration: SWAP_MS, easing: EASE });
         // ספרה ששינתה צבע מלא בכיוון שלה, מחזיקה רגע ודועכת
-        // ממשיך מהצבע הנוכחי (בלי איפוס) — כניסה רכה, החזקה, ודעיכה איטית
         tint.value = withSequence(
           withTiming(dir.value > 0 ? 1 : -1, { duration: TINT_IN_MS, easing: Easing.out(Easing.quad) }),
           withDelay(TINT_HOLD_MS, withTiming(0, { duration: TINT_FADE_MS, easing: Easing.inOut(Easing.quad) }))

@@ -548,7 +548,13 @@ export default function EarningsReportsTab({
   }, []);
 
   /** גלילה כך שראש פריט האינדקס (כולל דיביידר AfterMarket) צמוד לראש ה-viewport */
+  // הרשימה והיום המוצגים כרגע — לגלילות מתוזמנות (setTimeout) שלא יפעלו על רשימה אחרת
+  const listLengthRef = useRef(0);
+  const selectedDateKeyRef = useRef('');
   const scrollItemToTop = useCallback((index: number, animated: boolean) => {
+    // הרשימה יכולה להתחלף בין התזמון לביצוע (מעבר יום / פוש) — אינדקס מחוץ לטווח מקריס את FlatList
+    const len = listLengthRef.current;
+    if (index < 0 || index >= len) return;
     const heights = itemHeightByIndexRef.current;
     let offset = LIST_CONTENT_PADDING_TOP;
     let measured = true;
@@ -564,11 +570,15 @@ export default function EarningsReportsTab({
       flatListRef.current?.scrollToOffset({ offset, animated });
       return;
     }
-    flatListRef.current?.scrollToIndex({
-      index,
-      animated,
-      viewPosition: 0,
-    });
+    try {
+      flatListRef.current?.scrollToIndex({
+        index,
+        animated,
+        viewPosition: 0,
+      });
+    } catch {
+      // onScrollToIndexFailed / טווח — מתעלמים; הגלילה האוטומטית לא קריטית
+    }
   }, []);
 
   // טיפול באירוע גלילה
@@ -800,6 +810,8 @@ export default function EarningsReportsTab({
       return getTimeInIsrael(a) - getTimeInIsrael(b);
     });
   }, [reportsByDate, selectedDate]);
+  listLengthRef.current = filteredReports.length;
+  selectedDateKeyRef.current = toDateKey(selectedDate);
 
   // איפוס דגל גלילה אוטומטית + מדידות גובה כשמשנים תאריך
   useEffect(() => {
@@ -835,6 +847,7 @@ export default function EarningsReportsTab({
     setTimeout(() => {
       // אם עברנו תאריך בינתיים — הדגל אופס / השתנה
       if (autoScrolledToAfterDateKeyRef.current !== scheduledFor) return;
+      if (selectedDateKeyRef.current !== scheduledFor) return;
       // מעדיפים offset ממדידות onLayout; אחרת scrollToIndex עם viewPosition: 0
       scrollItemToTop(idx, true);
     }, 160);

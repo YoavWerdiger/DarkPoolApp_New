@@ -67,8 +67,8 @@ const PRE_COLOR = '#d1a11d'; // זהב — מסחר מוקדם
 const POST_COLOR = '#007AFF'; // כחול — מסחר מאוחר
 const TILE_LOGO = 40;
 /** טבעת תוצאה סביב הלוגו — באותו צבע של הפס בתצוגה היומית (report.percent) */
-const RESULT_RING = 2;
-const RESULT_RING_GAP = 2;
+const RESULT_RING = 2.5;
+const RESULT_RING_GAP = 1.5;
 
 function resultRingColor(
   report: EarningsReport,

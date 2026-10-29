@@ -4,7 +4,6 @@ import {
   filterExplorePeopleByKind,
   type ExploreKindFilter,
 } from '../utils/exploreGrid';
-import { ExploreKindFilterBar } from './ExploreKindFilter';
 import { ExploreRailSection } from './ExploreRailSection';
 import { ExploreTwoColSection } from './ExploreTwoColSection';
 
@@ -86,11 +85,6 @@ export function ExploreDiscoverySections({
 
   return (
     <>
-      <ExploreKindFilterBar
-        value={kindFilter}
-        onChange={onKindChange}
-        counts={kindCounts}
-      />
       <ExploreTwoColSection
         title="הנצפים ביותר"
         people={followed}

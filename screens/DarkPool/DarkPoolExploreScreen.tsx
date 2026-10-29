@@ -5,12 +5,21 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { formFieldShellStyle } from '../../components/ui/formControl';
+import { APP_LAYOUT } from '../../components/ui/appLayout';
+import { LIGHT_CANVAS } from '../../components/ui/designTokensStatic';
+import { HapticFeedback } from '../../utils/hapticFeedback';
+import { ExplorePortraitCard } from './components/ExplorePortraitCard';
+import { DARK_POOL_TYPE } from './darkPoolLayout';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image as ExpoImage } from 'expo-image';
 import { useQuery } from '@tanstack/react-query';
@@ -42,7 +51,7 @@ import {
   EXPLORE_RAIL_LIMIT,
   buildExploreProfileGrid,
   explorePersonHasPhoto,
-  type ExploreKindFilter,
+  EXPLORE_GRID_GAP,
   withResolvedPhoto,
 } from './utils/exploreGrid';
 import { portraitDisplayUrl } from './utils/investorPlaceholder';
@@ -114,7 +123,9 @@ export default function DarkPoolExploreScreen() {
   const tokens = useDesignTokens();
   const stackNav = useDarkPoolStackNav();
   const bottomPad = useDarkPoolTabBarHeight();
-  const [kindFilter, setKindFilter] = useState<ExploreKindFilter | null>(null);
+  // חיפוש לפי שם — במקום צ׳יפי הסוג; בזמן הקלדה התוצאות מחליפות את המדפים
+  const [query, setQuery] = useState('');
+  const [searchFocused, setSearchFocused] = useState(false);
 
   const openDrawer = useCallback(() => {
     void triggerDrawerMenuHaptic();
@@ -337,9 +348,10 @@ export default function DarkPoolExploreScreen() {
     () =>
       takeUniqueExplorePeople(
         withPhoto(shelves.politicians),
-        kindFilter === 'politician' ? 300 : EXPLORE_FEATURED_LIMIT
+        // כל חברי הקונגרס הפעילים (מסוננים כבר לפי מספיק נתונים)
+        300
       ),
-    [shelves.politicians, kindFilter]
+    [shelves.politicians]
   );
   const executives = useMemo(
     () =>
@@ -365,6 +377,12 @@ export default function DarkPoolExploreScreen() {
     () => takeUniqueExplorePeople(extras.company_books ?? [], EXPLORE_FEATURED_LIMIT),
     [extras.company_books]
   );
+
+  const searchResults = useMemo(() => {
+    const q = query.trim();
+    if (!q) return null;
+    return buildExploreProfileGrid([...catalog, ...companies], { query: q });
+  }, [query, catalog, companies]);
 
   const kindCounts = useMemo(
     () => ({
@@ -425,6 +443,50 @@ export default function DarkPoolExploreScreen() {
             </UICard>
           ) : null}
 
+          <View style={[styles.searchShell, formFieldShellStyle({ tokens, focused: searchFocused, multiline: false })]}>
+            <Ionicons name="search" size={18} color={tokens.colors.text.secondary} />
+            <TextInput
+              style={styles.searchInput}
+              value={query}
+              onChangeText={setQuery}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setSearchFocused(false)}
+              placeholder="חיפוש לפי שם"
+              placeholderTextColor={tokens.colors.text.tertiary}
+              keyboardAppearance={(tokens.colors.background.primary as string) === LIGHT_CANVAS ? 'light' : 'dark'}
+              autoCorrect={false}
+              returnKeyType="search"
+              accessibilityLabel="חיפוש לפי שם"
+            />
+            {query ? (
+              <Pressable
+                onPress={() => {
+                  void HapticFeedback.selection();
+                  setQuery('');
+                }}
+                hitSlop={10}
+                accessibilityLabel="נקה חיפוש"
+              >
+                <Ionicons name="close-circle" size={18} color={tokens.colors.text.secondary} />
+              </Pressable>
+            ) : null}
+          </View>
+
+          {searchResults ? (
+            searchResults.length ? (
+              <View style={styles.resultsGrid}>
+                {searchResults.map((person) => (
+                  <ExplorePortraitCard
+                    key={`${person.kind}:${person.id}`}
+                    person={person}
+                    onPress={() => onPersonPress(person)}
+                  />
+                ))}
+              </View>
+            ) : (
+              <Text style={styles.noResults}>לא נמצאו פרופילים בשם הזה</Text>
+            )
+          ) : (
           <ExploreDiscoverySections
             mostFollowed={mostFollowed}
             fundBooks={fundBooks}
@@ -436,11 +498,12 @@ export default function DarkPoolExploreScreen() {
             executives={executives}
             funds={funds}
             companies={companies}
-            kindFilter={kindFilter}
-            onKindChange={setKindFilter}
+            kindFilter={null}
+            onKindChange={() => {}}
             kindCounts={kindCounts}
             onPersonPress={onPersonPress}
           />
+          )}
         </ScrollView>
       </SafeAreaView>
     </ScreenChrome>
@@ -457,6 +520,36 @@ function createStyles(
       paddingHorizontal: tokens.layout.screenPadding,
       paddingTop: tokens.spacing.sm,
       paddingBottom: bottomPad,
+    },
+    searchShell: {
+      direction: 'rtl',
+      flexDirection: 'row',
+      alignItems: 'center',
+      minHeight: 52,
+      paddingHorizontal: 16,
+      gap: APP_LAYOUT.stackGapSmall,
+      borderRadius: tokens.borderRadius.search,
+      marginBottom: tokens.spacing.md,
+    },
+    searchInput: {
+      ...DARK_POOL_TYPE.body,
+      ...darkPoolPhysicalRightText,
+      flex: 1,
+      color: tokens.colors.text.primary,
+      padding: 0,
+    },
+    resultsGrid: {
+      direction: 'rtl',
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: EXPLORE_GRID_GAP,
+      marginBottom: tokens.spacing.xl,
+    },
+    noResults: {
+      ...darkPoolPhysicalRightText,
+      ...DARK_POOL_TYPE.body,
+      color: tokens.colors.text.secondary,
+      paddingVertical: tokens.spacing.lg,
     },
     errorText: {
       ...darkPoolPhysicalRightText,

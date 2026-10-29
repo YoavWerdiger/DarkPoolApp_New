@@ -23,7 +23,7 @@ describe('chartSeriesSampling', () => {
     expect(median).toBeGreaterThanOrEqual(4 * 60_000);
   });
 
-  it('uses weekly gaps on 5Y daily history', () => {
+  it('keeps daily points on 5Y history, capped at CHART_DISPLAY_MAX_POINTS', () => {
     const series = [];
     const d = new Date('2020-01-02T00:00:00Z');
     for (let i = 0; i < 400; i++) {
@@ -34,8 +34,8 @@ describe('chartSeriesSampling', () => {
       d.setUTCDate(d.getUTCDate() + 1);
     }
     const out = sampleChartSeriesForPeriod(series, '5Y');
-    expect(out.length).toBeLessThan(120);
-    expect(out.length).toBeGreaterThanOrEqual(10);
+    expect(out.length).toBeLessThanOrEqual(360);
+    expect(out.length).toBeGreaterThan(300);
     expect(out[0].date).toBe('2020-01-02');
     expect(out[out.length - 1].date).toBe(series[series.length - 1].date);
   });
@@ -86,6 +86,7 @@ describe('chartSeriesSampling', () => {
     expect(chartSampleGapMs('1W')).toBe(60 * 60_000);
     expect(chartSampleGapMs('1M')).toBe(60 * 60_000);
     expect(chartSampleGapMs('3M')).toBe(24 * 60 * 60_000);
-    expect(chartSampleGapMs('5Y')).toBe(7 * 24 * 60 * 60_000);
+    expect(chartSampleGapMs('5Y')).toBe(24 * 60 * 60_000);
+    expect(chartSampleGapMs('All')).toBe(24 * 60 * 60_000);
   });
 });

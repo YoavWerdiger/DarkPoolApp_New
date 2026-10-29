@@ -154,10 +154,10 @@ export function chartSampleGapMs(period: PerformancePeriod): number {
     case 'YTD':
     case '1Y':
       return MS.day;
+    // יומי גם בטווחים ארוכים — קו «חי» עם כל התנודות (שבועי החליק את הגרף)
     case '5Y':
-      return MS.week;
     case 'All':
-      return MS.week;
+      return MS.day;
     default:
       return MS.day;
   }
@@ -173,7 +173,8 @@ function chartPointMs(date: string): number {
  * תמיד שומר קצוות + ימים עם external_flow.
  */
 /** תקרה ל-SVG — מספיק לצורה, לא אלפי נקודות. */
-export const CHART_DISPLAY_MAX_POINTS = 180;
+/** מקסימום נקודות בקו — מספיק לסגירה יומית של ~שנה וחצי; טווחים ארוכים נדגמים אחיד */
+export const CHART_DISPLAY_MAX_POINTS = 360;
 
 export function sampleChartSeriesForPeriod(
   series: ChartPoint[],

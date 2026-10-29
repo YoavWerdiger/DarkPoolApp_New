@@ -94,7 +94,16 @@ async function run(item: PendingStory) {
       /* best effort — הצופה יטען מהרשת */
     }
     pending = pending.filter((p) => p.id !== item.id);
-    if (__DEV__) console.log('[story] published', created?.id?.slice(0, 8));
+    if (__DEV__) {
+      console.log('[story] published', created?.id?.slice(0, 8));
+      // דופק: אם ממשיך להדפיס — JS חי והחסימה היא שכבה נייטיב; אם נעצר — JS תקוע
+      let n = 0;
+      const hb = setInterval(() => {
+        n += 1;
+        console.log('[story] heartbeat', n);
+        if (n >= 6) clearInterval(hb);
+      }, 1000);
+    }
     emit();
     // הסטורי שנוצר — הרשימה מוסיפה את «שלי» מיד, בלי לחכות לטעינה מחדש (אחרת הלחיצה לא פותחת כלום)
     doneListeners.forEach((fn) => fn(created));

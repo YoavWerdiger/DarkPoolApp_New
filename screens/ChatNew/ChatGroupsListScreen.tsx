@@ -1496,7 +1496,11 @@ export default function ChatGroupsListScreen() {
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+    <View
+      style={{ flex: 1, backgroundColor: 'transparent' }}
+      // אבחון «קפיאה»: נגיעה שמגיעה למסך הקהילה (אם לא מודפס — שכבה אחרת בולעת את הנגיעות)
+      onTouchStart={__DEV__ ? () => console.log('[story] touch reached community') : undefined}
+    >
       <ChatSessionBackdrop />
       <MainDrawerRegistration />
       <RNSafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>

@@ -7,6 +7,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
@@ -15,6 +16,7 @@ import { ScreenChrome } from '../../components/ui/ScreenChrome';
 import UICard from '../../components/ui/UICard';
 import { DayDividerPill, SlidingPillGroup } from '../../components/ui/DayDividerPill';
 import { SignedChangePair } from '../../components/ui/ChangeDot';
+import { AnimatedNumber } from '../../components/ui/AnimatedNumber';
 import { DayNavBlurButton, HEADER_BACK_BTN_SIZE } from '../../components/ui/DayNavBlurButton';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { APP_LAYOUT } from '../../components/ui/appLayout';
@@ -106,6 +108,24 @@ export default function DarkPoolTickerScreen() {
   const ticker = (route.params?.ticker || '').toUpperCase().replace(/^\$/, '');
   const [range, setRange] = useState<TickerChartRange>('1Y');
   const [tab, setTab] = useState<TickerScreenTab>(() => resolveTickerScreenTab(route.params?.tab));
+  // טאבים מחזיקים/פיד — רקע פעיל שמחליק (כמו שאר הבוררים), לא קפיצה
+  const [tabsWidth, setTabsWidth] = useState(0);
+  const tabPos = useSharedValue(tab === 'holders' ? 0 : 1);
+  useEffect(() => {
+    tabPos.value = withTiming(tab === 'holders' ? 0 : 1, {
+      duration: 260,
+      easing: Easing.bezier(0.22, 1, 0.36, 1),
+    });
+  }, [tab, tabPos]);
+  const tabSegW = Math.max(0, (tabsWidth - 8 - 4) / 2);
+  const tabThumbStyle = useAnimatedStyle(
+    () => ({
+      width: tabSegW,
+      // RTL: הטאב הראשון (מחזיקים) בצד ימין הפיזי
+      transform: [{ translateX: (1 - tabPos.value) * (tabSegW + 4) }],
+    }),
+    [tabSegW]
+  );
   const [scrubPoint, setScrubPoint] = useState<{
     date: string;
     value: number;
@@ -395,7 +415,14 @@ export default function DarkPoolTickerScreen() {
           <View style={styles.heroBlock}>
             <View style={styles.priceRow}>
               <View style={styles.priceCol}>
-                <Text style={styles.livePrice}>{toDataIsland(priceText)}</Text>
+                {/* מחיר מתגלגל כמו בפרופיל — בגרירה ספרה מסיימת מעבר ורק אז ממשיכה; עדכון חי מהבהב */}
+                <AnimatedNumber
+                  text={priceText}
+                  value={displayPrice ?? null}
+                  fast={!!scrubPoint}
+                  flash
+                  style={styles.livePrice}
+                />
                 {rangeChange.abs != null && rangeChange.pct != null ? (
                   <SignedChangePair
                     tone={changeTone}
@@ -466,7 +493,12 @@ export default function DarkPoolTickerScreen() {
             />
           ) : null}
 
-          <View style={styles.tablist} accessibilityRole="tablist">
+          <View
+            style={styles.tablist}
+            accessibilityRole="tablist"
+            onLayout={(e) => setTabsWidth(e.nativeEvent.layout.width)}
+          >
+            {tabsWidth > 0 ? <Animated.View pointerEvents="none" style={[styles.tabThumb, tabThumbStyle]} /> : null}
             {(
               [
                 {
@@ -487,7 +519,7 @@ export default function DarkPoolTickerScreen() {
                   accessibilityRole="tab"
                   accessibilityState={{ selected: active }}
                   accessibilityLabel={item.label}
-                  style={[styles.tabBtn, active && styles.tabBtnActive]}
+                  style={[styles.tabBtn, active && tabsWidth === 0 && styles.tabBtnActive]}
                 >
                   <Text
                     numberOfLines={1}
@@ -774,6 +806,15 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, bottomPadding:
       paddingHorizontal: APP_LAYOUT.stackGapSmall,
     },
     tabBtnActive: {
+      backgroundColor: tokens.colors.background.primary,
+    },
+    /** הרקע הפעיל — מחליק בין הטאבים (פיזית: «מחזיקים» מימין) */
+    tabThumb: {
+      position: 'absolute',
+      top: 4,
+      bottom: 4,
+      left: 4,
+      borderRadius: 18,
       backgroundColor: tokens.colors.background.primary,
     },
     tabLabel: {

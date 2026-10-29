@@ -87,7 +87,8 @@ export async function fetchSessionHourlyCloses(
     const chunk = unique.slice(i, i + CHUNK);
     await Promise.all(
       chunk.map(async (sym) => {
-        const points = await getHistoricalPrices(sym, '1d', { interval: '1h' });
+        // 5 דקות — ~78 סנאפשוטים בסשן (שעתי נתן ~7 נקודות בלבד ב-1D)
+        const points = await getHistoricalPrices(sym, '1d', { interval: '5m' });
         out[sym] = points
           .filter((p) => p.close > 0 && /T\d{2}:/.test(p.date))
           .map((p) => ({ date: p.date, close: p.close }));

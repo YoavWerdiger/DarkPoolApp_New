@@ -201,13 +201,18 @@ const Slot = React.memo(function Slot({
       }
       const isDigit = next >= '0' && next <= '9';
       const wasDigit = before >= '0' && before <= '9';
+      // שינוי באמצע מעבר (גרירה מהירה — שינוי כמעט בכל פריים): ממשיכים מהשקיפות שבה הספרה
+      // הנוכחית כבר נראית, במקום לאפס ל-0 — אחרת הספרות מהבהבות/נעלמות בזמן הגרירה
+      // (עד 0.6 — שתמיד תישאר תנועה קצרה, בלי «קפיצה» של הספרה החדשה)
+      const carried = p.value < 1 ? Math.min(0.6, 1 - p.value) : 0;
       prev.value = before;
       cur.value = next;
       slideDir.value = dir.value;
-      w.value = widthOf(next);
+      // רוחב משתנה (1 ↔ 0, פסיק חדש) — מחליק במקום לקפוץ
+      w.value = w.value > 0 ? withTiming(widthOf(next), { duration: SWAP_MS, easing: EASE }) : widthOf(next);
       if (isDigit && wasDigit) {
-        p.value = 0;
-        p.value = withTiming(1, { duration: SWAP_MS, easing: EASE });
+        p.value = carried;
+        p.value = withTiming(1, { duration: SWAP_MS * (1 - carried), easing: EASE });
         // ספרה ששינתה צבע מלא בכיוון שלה, מחזיקה רגע ודועכת
         // ממשיך מהצבע הנוכחי (בלי איפוס) — כניסה רכה, החזקה, ודעיכה איטית
         tint.value = withSequence(

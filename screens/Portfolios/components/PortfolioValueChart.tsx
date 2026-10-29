@@ -30,6 +30,7 @@ import {
 } from '../../Journal/journalLayout';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 import {
+  CHART_DISPLAY_MAX_POINTS,
   computeChartPeriodReturn,
   downsampleChartSeries,
   filterChartSeriesByPeriod,
@@ -87,8 +88,11 @@ interface Props {
 }
 
 const PERIODS: PerformancePeriod[] = ['1W', '1M', '3M', 'YTD', '1Y', '5Y', 'All'];
-/** נקודות קבועות למורפינג חלק בין אינטרוולים */
-const MORPH_N = 56;
+/**
+ * נקודות קבועות למורפינג חלק בין אינטרוולים — כמו מקסימום הנקודות המוצגות,
+ * כך שכל סנאפשוט אמיתי נשאר קודקוד בקו (קודם 56 — הקו «החליק» את רוב הנקודות).
+ */
+const MORPH_N = CHART_DISPLAY_MAX_POINTS;
 const MORPH_MS = 420;
 const MORPH_EASE = Easing.bezier(0.25, 0.1, 0.25, 1);
 
@@ -105,25 +109,19 @@ function emptyCoords(): number[] {
   return new Array(MORPH_N * 2).fill(0);
 }
 
-/** דגימה אחידה של נקודות מסך — מאפשרת אינטרפולציה בין אינטרוולים */
+/**
+ * דגימה של נקודות מסך ל-MORPH_N משבצות (לאינטרפולציה בין אינטרוולים).
+ * כל משבצת לוקחת את הנקודה הקרובה (לא ממוצע בין שתיים) — כשיש עד MORPH_N נקודות,
+ * כל נקודה מופיעה כקודקוד מדויק (כפילויות לא משנות את הקו).
+ */
 function resamplePlotted(pts: PlottedPoint[], n = MORPH_N): number[] {
   const out = emptyCoords();
   if (pts.length === 0) return out;
-  if (pts.length === 1) {
-    for (let i = 0; i < n; i++) {
-      out[i * 2] = pts[0].x;
-      out[i * 2 + 1] = pts[0].y;
-    }
-    return out;
-  }
+  const last = pts.length - 1;
   for (let i = 0; i < n; i++) {
-    const t = i / (n - 1);
-    const f = t * (pts.length - 1);
-    const i0 = Math.floor(f);
-    const i1 = Math.min(pts.length - 1, i0 + 1);
-    const u = f - i0;
-    out[i * 2] = pts[i0].x + (pts[i1].x - pts[i0].x) * u;
-    out[i * 2 + 1] = pts[i0].y + (pts[i1].y - pts[i0].y) * u;
+    const p = pts[last === 0 ? 0 : Math.round((i * last) / (n - 1))];
+    out[i * 2] = p.x;
+    out[i * 2 + 1] = p.y;
   }
   return out;
 }

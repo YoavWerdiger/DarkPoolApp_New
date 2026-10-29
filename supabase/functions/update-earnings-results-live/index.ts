@@ -21,6 +21,8 @@ interface EarningsEntry {
   revenue_actual?: string | number | null;
   revenue_estimate?: string | number | null;
   ticker: string;
+  /** benzinga = השלמה בלבד: ממלא דוח שעוד אין לו תוצאה, לא דורס ערך קיים (מונע פוש כפול) */
+  source?: 'parse' | 'finnhub' | 'benzinga';
 }
 
 function parseNumber(val: string | number | null | undefined): number | null {
@@ -62,32 +64,17 @@ function parseReportTime(reportTime: string | null | undefined): string | null {
 }
 
 /**
- * חלונות דיווח אמיתיים (שעון ישראל), עם באפר ל-DST:
- * - BMO: ~07:00 ET ≈ 14:00 IDT / 13:00 IST → 12:30–16:45 ישראל (עד פתיחה ~09:30 ET)
- * - AMC: ~16:05 ET ≈ 23:05 IDT / 22:05 IST → 21:30–00:30 ישראל
- *
- * בעבר היה רק 15:30–17:00 (לא חלון BMO) + לילה —
- * ולכן תוצאות BMO הגיעו רק ב-batch של evening sync ב-18:00 ישראל (15:00 UTC).
+ * חלונות דיווח לפי שעון ניו יורק (לא ישראל — מעברי שעון שונים הזיזו את החלון):
+ * - BMO: 06:00–09:45 ET (רוב הדיווחים 06:00–08:30, עד פתיחת המסחר)
+ * - AMC: 16:00–19:30 ET (רוב הדיווחים 16:01–16:30, מאוחרים עד ~18:00)
  */
-function isWithinEarningsReleaseWindow(israelHour: number, israelMinute: number): {
+function isWithinEarningsReleaseWindow(etHour: number, etMinute: number): {
   inWindow: boolean;
   windowName: 'bmo' | 'amc' | null;
 } {
-  const mins = israelHour * 60 + israelMinute;
-
-  const bmoStart = 12 * 60 + 30; // 12:30
-  const bmoEnd = 16 * 60 + 45; // 16:45 — covers late BMO through US open
-  if (mins >= bmoStart && mins < bmoEnd) {
-    return { inWindow: true, windowName: 'bmo' };
-  }
-
-  // AMC wraps past midnight
-  const amcEveningStart = 21 * 60 + 30; // 21:30
-  const amcMorningEnd = 30; // 00:30
-  if (mins >= amcEveningStart || mins < amcMorningEnd) {
-    return { inWindow: true, windowName: 'amc' };
-  }
-
+  const mins = etHour * 60 + etMinute;
+  if (mins >= 6 * 60 && mins < 9 * 60 + 45) return { inWindow: true, windowName: 'bmo' };
+  if (mins >= 16 * 60 && mins < 19 * 60 + 30) return { inWindow: true, windowName: 'amc' };
   return { inWindow: false, windowName: null };
 }
 
@@ -102,14 +89,17 @@ serve(async (req) => {
     console.log('🔄 Starting Live Earnings Results Update...')
 
     const now = new Date();
-    const israelTimeStr = now.toLocaleString('en-US', { 
-      timeZone: 'Asia/Jerusalem',
+    const etTimeStr = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
       hour12: false,
       hour: '2-digit',
-      minute: '2-digit'
-    });
-    const [israelHour, israelMinute] = israelTimeStr.split(':').map(Number);
-    const { inWindow, windowName } = isWithinEarningsReleaseWindow(israelHour, israelMinute);
+      minute: '2-digit',
+    }).format(now);
+    const [etHourRaw, etMinute] = etTimeStr.split(':').map(Number);
+    const etHour = etHourRaw % 24;
+    const { inWindow, windowName } = isWithinEarningsReleaseWindow(etHour, etMinute);
+    // שם קודם בלוגים/תשובה
+    const israelTimeStr = `${etTimeStr} ET`;
 
     // אין דיווחים בסופ״ש — לא לקרוא ל-Parse ולהחזיר 500
     const etWeekday = new Intl.DateTimeFormat('en-US', {
@@ -131,8 +121,8 @@ serve(async (req) => {
           current_time_israel: israelTimeStr,
           et_weekday: etWeekday,
           release_windows: {
-            bmo: '12:30-16:45 Israel time (~07:00–09:30 ET)',
-            amc: '21:30-00:30 Israel time (~16:05 ET)',
+            bmo: '06:00-09:45 ET',
+            amc: '16:00-19:30 ET',
           },
           updated_count: 0
         }),
@@ -164,8 +154,10 @@ serve(async (req) => {
     let filteredEntries: EarningsEntry[] = []
     let sourceUsed = 'none'
 
+    // ה-cron רץ כל דקה בחלון; Parse (בתשלום) רק כל 3 דקות — Benzinga בכל ריצה (מהיר, השלמה)
+    const runParse = etMinute % 3 === 0
     // 1) Parse OpenAPI: GET update_actuals_for_today (scraper 19f29e4b)
-    if (earningsApiKey) {
+    if (earningsApiKey && runParse) {
       const updateUrl = 'https://api.parse.bot/scraper/19f29e4b-4d7f-4a6e-9fd5-61a2a712543d/update_actuals_for_today'
       try {
         const apiResponse = await fetch(updateUrl, {
@@ -211,11 +203,13 @@ serve(async (req) => {
           parseErr instanceof Error ? parseErr.message.slice(0, 250) : String(parseErr),
         )
       }
-    } else {
+    } else if (!earningsApiKey) {
       console.warn('⚠️ No Parse key — skipping straight to Finnhub/Benzinga')
     }
+    filteredEntries = filteredEntries.map((e) => ({ ...e, source: 'parse' as const }))
 
-    const todayIso = new Date().toISOString().slice(0, 10)
+    // תאריך המסחר בניו יורק (לא UTC — אחרי 20:00 ET UTC כבר מחר)
+    const todayIso = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(now)
 
     if (filteredEntries.length === 0 && finnhubApiKey) {
       try {
@@ -238,6 +232,7 @@ serve(async (req) => {
               eps_estimate: (it.epsEstimate as number | null) ?? null,
               revenue_actual: (it.revenueActual as number | null) ?? null,
               revenue_estimate: (it.revenueEstimate as number | null) ?? null,
+              source: 'finnhub' as const,
             }))
             .filter((e) => !!e.ticker)
           sourceUsed = 'finnhub'
@@ -250,7 +245,9 @@ serve(async (req) => {
       }
     }
 
-    if (filteredEntries.length === 0 && benzingaApiKey) {
+    // Benzinga — תמיד בחלון (לא רק כשאין כלום): Parse מחזיר את רשימת היום עוד לפני התוצאות,
+    // ולכן בעבר הגיבוי לא רץ והתוצאות הגיעו ~30 דק׳ באיחור. ממזגים: רק טיקרים שאין להם כבר תוצאה מ-Parse.
+    if (benzingaApiKey) {
       try {
         const bzUrl = new URL('https://api.benzinga.com/api/v2.1/calendar/earnings')
         bzUrl.searchParams.set('token', benzingaApiKey)
@@ -261,7 +258,12 @@ serve(async (req) => {
         if (bzResp.ok) {
           const bzData = JSON.parse(bzText) as { earnings?: Array<Record<string, unknown>> }
           const items = bzData.earnings ?? []
-          filteredEntries = items
+          const haveActual = new Set(
+            filteredEntries
+              .filter((e) => parseNumber(e.eps_actual) != null || parseNumber(e.revenue_actual) != null)
+              .map((e) => e.ticker.toUpperCase()),
+          )
+          const bzEntries = items
             .filter((it) => {
               const eps = String(it.eps ?? '').trim()
               const rev = String(it.revenue ?? '').trim()
@@ -277,10 +279,13 @@ serve(async (req) => {
               eps_estimate: (it.eps_est as string | null) ?? null,
               revenue_actual: (it.revenue as string | null) ?? null,
               revenue_estimate: (it.revenue_est as string | null) ?? null,
+              source: 'benzinga' as const,
             }))
-            .filter((e) => !!e.ticker)
-          sourceUsed = 'benzinga'
-          console.log(`✅ Benzinga fallback: ${filteredEntries.length} entries with actuals`)
+            .filter((e) => !!e.ticker && !haveActual.has(e.ticker))
+          filteredEntries = [...filteredEntries, ...bzEntries]
+          if (sourceUsed === 'none') sourceUsed = 'benzinga'
+          else if (bzEntries.length) sourceUsed = `${sourceUsed}+benzinga`
+          console.log(`✅ Benzinga: ${bzEntries.length} entries filled`)
         } else {
           console.warn(`Benzinga fallback HTTP ${bzResp.status}: ${bzText.slice(0, 200)}`)
         }
@@ -364,8 +369,10 @@ serve(async (req) => {
           const prevActual = existing.actual == null ? null : Number(existing.actual)
           const prevRevenue = existing.revenue_actual == null ? null : Number(existing.revenue_actual)
 
+          // Benzinga = השלמה: לא דורס תוצאה קיימת ממקור אחר (הבדלי עיגול → פוש כפול)
+          const fillOnly = entry.source === 'benzinga'
           // רק שינוי אמיתי ב-actual — מפעיל את טריגר ה-push
-          if (epsActual !== null && prevActual !== epsActual) {
+          if (epsActual !== null && prevActual !== epsActual && !(fillOnly && prevActual !== null)) {
             updateData.actual = epsActual
             if (epsEstimate !== null) {
               updateData.estimate = epsEstimate
@@ -378,7 +385,7 @@ serve(async (req) => {
             }
           }
 
-          if (revenueActual !== null && prevRevenue !== revenueActual) {
+          if (revenueActual !== null && prevRevenue !== revenueActual && !(fillOnly && prevRevenue !== null)) {
             updateData.revenue_actual = revenueActual
             if (revenueEstimate !== null) {
               updateData.revenue_estimate_avg = revenueEstimate
@@ -427,6 +434,9 @@ serve(async (req) => {
             updatedCount++
             confirmedForPurge.push({ ticker, code, reportDate })
           }
+        } else if (entry.source === 'benzinga') {
+          // השלמה בלבד — לא ממפים/יוצרים שורות מ-Benzinga (רק ממלאים שורה קיימת של היום)
+          continue
         } else {
           // נסיון שני: רשומת אומדן בתאריך קרוב (המקור שינה תאריך / תאריך מאושר אחר)
           const { data: nearbyRows, error: nearbyError } = await supabase

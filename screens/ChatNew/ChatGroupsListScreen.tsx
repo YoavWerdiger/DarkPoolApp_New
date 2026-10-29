@@ -268,17 +268,12 @@ export default function ChatGroupsListScreen() {
   const [joinGroupSheet, setJoinGroupSheet] = useState<{ visible: boolean; group: GroupWithMembership | null }>({ visible: false, group: null });
   const [isJoining, setIsJoining] = useState(false);
   const [addStorySheetVisible, setAddStorySheetVisible] = useState(false);
+  // נשאר ממונט אחרי הפתיחה הראשונה — Modal שלא נראה לא מרנדר את התוכן ממילא.
+  // הסרה בטיימר (600ms) קרתה לפני שה-iOS סיים לסגור את ה-Modal → מסך נייטיב «יתום» שקוף
+  // נשאר מעל הקהילה וחסם נגיעות (המסך «קפא» אחרי שיתוף סטורי).
   const [addStoryMounted, setAddStoryMounted] = useState(false);
   useEffect(() => {
-    if (addStorySheetVisible) {
-      setAddStoryMounted(true);
-      return;
-    }
-    const t = setTimeout(() => {
-      if (__DEV__) console.log('[story] add screen unmounted');
-      setAddStoryMounted(false);
-    }, 600);
-    return () => clearTimeout(t);
+    if (addStorySheetVisible) setAddStoryMounted(true);
   }, [addStorySheetVisible]);
   // זריעה אופטימית מה-cache (בזיכרון) — שורת ה-Stories מופיעה מיד בכניסה חוזרת
   const [usersWithStories, setUsersWithStories] = useState<StoryWithUser[]>(

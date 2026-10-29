@@ -105,8 +105,8 @@ export function DarkPoolTradeFeedCard({
   const detailBits: string[] = [];
   if (isCongress) {
     const range = formatDisclosedAmountRange(amountLabel);
-    // כמו בכרטיס הפעילות: «בשווי: $1,001–$15,000» — טווח STOCK Act, לא כמות
-    if (range) detailBits.push(`בשווי: ${isolateData(range)}`);
+    // «בשווי $1,001–$15,000» — טווח STOCK Act, לא כמות
+    if (range) detailBits.push(`בשווי ${isolateData(range)}`);
   } else {
     const sharesText = formatInsiderShares(shares);
     if (sharesText) detailBits.push(`${isolateData(sharesText)} מניות`);

@@ -5,9 +5,9 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { Easing, interpolateColor, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
@@ -17,6 +17,7 @@ import UICard from '../../components/ui/UICard';
 import { DayDividerPill, SlidingPillGroup } from '../../components/ui/DayDividerPill';
 import { SignedChangePair } from '../../components/ui/ChangeDot';
 import { AnimatedNumber } from '../../components/ui/AnimatedNumber';
+import { settingsButtonLabelStyle } from '../../components/profile/settingsType';
 import { DayNavBlurButton, HEADER_BACK_BTN_SIZE } from '../../components/ui/DayNavBlurButton';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { APP_LAYOUT } from '../../components/ui/appLayout';
@@ -107,23 +108,38 @@ export default function DarkPoolTickerScreen() {
   const ticker = (route.params?.ticker || '').toUpperCase().replace(/^\$/, '');
   const [range, setRange] = useState<TickerChartRange>('1Y');
   const [tab, setTab] = useState<TickerScreenTab>(() => resolveTickerScreenTab(route.params?.tab));
-  // טאבים מחזיקים/פיד — רקע פעיל שמחליק (כמו שאר הבוררים), לא קפיצה
-  const [tabsWidth, setTabsWidth] = useState(0);
-  const tabPos = useSharedValue(tab === 'holders' ? 0 : 1);
+  // טאבים מחזיקים/פיד — כמו בורר «לפי הבחירה שלי / הכול» בהגדרות ההתראות:
+  // מיקום כל טאב נמדד (onLayout) והרקע מחליק אליו; צבע התווית מתחלף ברכות
+  const tabXs = useSharedValue<Record<string, number>>({});
+  const thumbX = useSharedValue(0);
+  const tabEmphasis = useSharedValue(tab === 'holders' ? 0 : 1);
+  const [thumbWidth, setThumbWidth] = useState(0);
+  const tabsReadyRef = React.useRef(false);
+  const TAB_SLIDE = { duration: 280, easing: Easing.out(Easing.cubic) };
   useEffect(() => {
-    tabPos.value = withTiming(tab === 'holders' ? 0 : 1, {
-      duration: 260,
-      easing: Easing.bezier(0.22, 1, 0.36, 1),
-    });
-  }, [tab, tabPos]);
-  const tabSegW = Math.max(0, (tabsWidth - 8 - 4) / 2);
-  const tabThumbStyle = useAnimatedStyle(
-    () => ({
-      width: tabSegW,
-      // RTL: הטאב הראשון (מחזיקים) בצד ימין הפיזי
-      transform: [{ translateX: (1 - tabPos.value) * (tabSegW + 4) }],
-    }),
-    [tabSegW]
+    tabEmphasis.value = withTiming(tab === 'holders' ? 0 : 1, TAB_SLIDE);
+    const x = tabXs.value[tab];
+    if (tabsReadyRef.current && x != null) thumbX.value = withTiming(x, TAB_SLIDE);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
+  const onTabLayout = (id: TickerScreenTab) => (e: LayoutChangeEvent) => {
+    const { x, width } = e.nativeEvent.layout;
+    if (width <= 0) return;
+    tabXs.value = { ...tabXs.value, [id]: x };
+    setThumbWidth((prev) => (Math.abs(prev - width) < 0.5 ? prev : width));
+    if (id === tab) {
+      thumbX.value = x;
+      tabsReadyRef.current = true;
+    }
+  };
+  const tabThumbStyle = useAnimatedStyle(() => ({ transform: [{ translateX: thumbX.value }] }));
+  const holdersLabelStyle = useAnimatedStyle(
+    () => ({ color: interpolateColor(tabEmphasis.value, [0, 1], [tokens.colors.text.primary, tokens.colors.text.secondary]) }),
+    [tokens.colors.text.primary, tokens.colors.text.secondary]
+  );
+  const feedLabelStyle = useAnimatedStyle(
+    () => ({ color: interpolateColor(tabEmphasis.value, [0, 1], [tokens.colors.text.secondary, tokens.colors.text.primary]) }),
+    [tokens.colors.text.primary, tokens.colors.text.secondary]
   );
   const [scrubPoint, setScrubPoint] = useState<{
     date: string;
@@ -488,51 +504,40 @@ export default function DarkPoolTickerScreen() {
             />
           ) : null}
 
-          <View
-            style={styles.tablist}
-            accessibilityRole="tablist"
-            onLayout={(e) => setTabsWidth(e.nativeEvent.layout.width)}
-          >
-            {tabsWidth > 0 ? <Animated.View pointerEvents="none" style={[styles.tabThumb, tabThumbStyle]} /> : null}
-            {(
-              [
-                {
-                  id: 'holders' as const,
-                  label: tickerScreenHoldersTabLabel(holders.length),
-                },
-                { id: 'feed' as const, label: tickerScreenFeedTabLabel() },
-              ] as const
-            ).map((item) => {
-              const active = tab === item.id;
-              return (
-                <Pressable
-                  key={item.id}
-                  onPress={() => {
-                    if (!active) void HapticFeedback.selection();
-                    setTab(item.id);
-                  }}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: active }}
-                  accessibilityLabel={item.label}
-                  style={[styles.tabBtn, active && tabsWidth === 0 && styles.tabBtnActive]}
-                >
-                  <Text
-                    numberOfLines={1}
-                    style={[
-                      styles.tabLabel,
-                      {
-                        color: active ? tokens.colors.text.primary : tokens.colors.text.secondary,
-                        fontWeight: active
-                          ? DARK_POOL_TYPE.cardTitle.fontWeight
-                          : DARK_POOL_TYPE.groupLabel.fontWeight,
-                      },
-                    ]}
+          <View style={styles.tablist} accessibilityRole="tablist">
+            <View style={styles.tabInner}>
+              <Animated.View
+                pointerEvents="none"
+                style={[styles.tabThumb, { width: thumbWidth, opacity: thumbWidth > 0 ? 1 : 0 }, tabThumbStyle]}
+              />
+              {(
+                [
+                  { id: 'holders' as const, label: tickerScreenHoldersTabLabel(holders.length), labelStyle: holdersLabelStyle },
+                  { id: 'feed' as const, label: tickerScreenFeedTabLabel(), labelStyle: feedLabelStyle },
+                ] as const
+              ).map((item) => {
+                const active = tab === item.id;
+                return (
+                  <Pressable
+                    key={item.id}
+                    onLayout={onTabLayout(item.id)}
+                    onPress={() => {
+                      if (active) return;
+                      void HapticFeedback.selection();
+                      setTab(item.id);
+                    }}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: active }}
+                    accessibilityLabel={item.label}
+                    style={styles.tabBtn}
                   >
-                    {item.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
+                    <Animated.Text numberOfLines={1} style={[styles.tabLabel, item.labelStyle]}>
+                      {item.label}
+                    </Animated.Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
 
           {tab === 'holders' ? (
@@ -780,42 +785,39 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, bottomPadding:
       gap: APP_LAYOUT.stackGapSmall,
       paddingVertical: APP_LAYOUT.cardTitleToBodyGap,
     },
+    // כמו SettingsScopeChoice (הגדרות התראות): מסילה tertiary, רקע פעיל cardSolid, עיגול מלא
     tablist: {
-      direction: 'rtl',
-      flexDirection: 'row',
-      alignItems: 'center',
-      height: 44,
-      padding: 4,
-      gap: 4,
-      borderRadius: 22,
-      backgroundColor: tokens.colors.background.cardSolid,
+      borderRadius: tokens.borderRadius.full,
+      padding: 3,
+      overflow: 'hidden',
+      backgroundColor: tokens.colors.background.tertiary,
       marginTop: APP_LAYOUT.stackGapSmall,
       marginBottom: APP_LAYOUT.componentGap,
     },
+    tabInner: {
+      direction: 'rtl',
+      flexDirection: 'row',
+      alignItems: 'stretch',
+    },
     tabBtn: {
       flex: 1,
-      height: '100%',
+      zIndex: 1,
+      paddingVertical: 8,
+      paddingHorizontal: APP_LAYOUT.stackGapSmall,
       alignItems: 'center',
       justifyContent: 'center',
-      borderRadius: 18,
-      paddingHorizontal: APP_LAYOUT.stackGapSmall,
     },
-    tabBtnActive: {
-      backgroundColor: tokens.colors.background.primary,
-    },
-    /** הרקע הפעיל — מחליק בין הטאבים (פיזית: «מחזיקים» מימין) */
     tabThumb: {
       position: 'absolute',
-      top: 4,
-      bottom: 4,
-      left: 4,
-      borderRadius: 18,
-      backgroundColor: tokens.colors.background.primary,
+      top: 0,
+      bottom: 0,
+      left: 0,
+      borderRadius: tokens.borderRadius.full,
+      backgroundColor: tokens.colors.background.cardSolid,
     },
     tabLabel: {
-      fontSize: DARK_POOL_TYPE.groupLabel.fontSize,
+      ...settingsButtonLabelStyle,
       fontVariant: ['tabular-nums'],
-      lineHeight: DARK_POOL_TYPE.groupLabel.lineHeight,
       textAlign: 'center',
       writingDirection: 'rtl',
     },

@@ -21,6 +21,7 @@ import {
   type LucideIcon,
 } from 'lucide-react-native';
 import { useQuery } from '@tanstack/react-query';
+import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 import { ScreenChrome } from '../../components/ui/ScreenChrome';
 import UICard from '../../components/ui/UICard';
 import { DayNavBlurButton, HEADER_BACK_BTN_SIZE } from '../../components/ui/DayNavBlurButton';
@@ -59,6 +60,7 @@ type Nav = NativeStackNavigationProp<DarkPoolStackParamList, 'DarkPoolPosition'>
 type RP = RouteProp<DarkPoolStackParamList, 'DarkPoolPosition'>;
 
 const TXN_PREVIEW = 6;
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 const usd = (v: number, digits = 0) =>
   `$${v.toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
@@ -269,12 +271,21 @@ export default function DarkPoolPositionScreen() {
             <View style={styles.section}>
               <DarkPoolSectionHeader variant="group" title="שינויים בפוזיציה" />
               <UICard variant="soft" glassIntensity="light" padding="none" contentContainerStyle={styles.rowsCard}>
+                {/* הרחבה/כיווץ עם מושן: השורות הנוספות נכנסות בדהייה והכרטיס מתארך בהחלקה */}
                 {visibleTxns.map((t, i) => (
-                  <TxnRow key={`${t.date}-${t.side}`} txn={t} last={i === visibleTxns.length - 1} />
+                  <Animated.View
+                    key={`${t.date}-${t.side}`}
+                    layout={LinearTransition.duration(240)}
+                    entering={i >= TXN_PREVIEW ? FadeIn.duration(220).delay((i - TXN_PREVIEW) * 25) : undefined}
+                    exiting={i >= TXN_PREVIEW ? FadeOut.duration(140) : undefined}
+                  >
+                    <TxnRow txn={t} last={i === visibleTxns.length - 1} />
+                  </Animated.View>
                 ))}
               </UICard>
               {txns.length > TXN_PREVIEW ? (
-                <Pressable
+                <AnimatedPressable
+                  layout={LinearTransition.duration(240)}
                   onPress={() => {
                     void HapticFeedback.selection();
                     setShowAllTxns((v) => !v);
@@ -283,7 +294,7 @@ export default function DarkPoolPositionScreen() {
                   accessibilityRole="button"
                 >
                   <Text style={styles.moreText}>{showAllTxns ? 'הצג פחות' : `הצג הכל (${txns.length})`}</Text>
-                </Pressable>
+                </AnimatedPressable>
               ) : null}
             </View>
           ) : null}

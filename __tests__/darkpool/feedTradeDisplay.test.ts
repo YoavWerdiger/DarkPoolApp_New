@@ -26,14 +26,14 @@ describe('getFeedTradeVerb', () => {
 });
 
 describe('withFeedValueLabel', () => {
-  it('prefixes בשווי:', () => {
-    expect(withFeedValueLabel('$1.20M')).toBe('בשווי: $1.20M');
-    expect(withFeedValueLabel('$50K–$100K')).toBe('בשווי: $50K–$100K');
+  it('prefixes בשווי', () => {
+    expect(withFeedValueLabel('$1.20M')).toBe('בשווי $1.20M');
+    expect(withFeedValueLabel('$50K–$100K')).toBe('בשווי $50K–$100K');
   });
 
   it('does not duplicate בשווי', () => {
-    expect(withFeedValueLabel('בשווי: $1.20M')).toBe('בשווי: $1.20M');
-    expect(withFeedValueLabel('בשווי $1.20M')).toBe('בשווי: $1.20M');
+    expect(withFeedValueLabel('בשווי $1.20M')).toBe('בשווי $1.20M');
+    expect(withFeedValueLabel('בשווי $1.20M')).toBe('בשווי $1.20M');
   });
 });
 
@@ -45,7 +45,7 @@ describe('withFeedRangeLabel', () => {
 
   it('does not duplicate בטווח and rewrites בשווי on a range', () => {
     expect(withFeedRangeLabel('בטווח: $15K–$50K')).toBe('בטווח: $15K–$50K');
-    expect(withFeedRangeLabel('בשווי: $15K–$50K')).toBe('בטווח: $15K–$50K');
+    expect(withFeedRangeLabel('בשווי $15K–$50K')).toBe('בטווח: $15K–$50K');
   });
 });
 
@@ -53,7 +53,7 @@ describe('getFeedTradeDetailParts', () => {
   it('labels valueUsd with בשווי:', () => {
     expect(getFeedTradeDetailParts({ valueUsd: 1_200_000 })).toEqual({
       sharesLabel: null,
-      amountLabel: 'בשווי: $1.20M',
+      amountLabel: 'בשווי $1.20M',
     });
   });
 
@@ -71,7 +71,7 @@ describe('getFeedTradeDetailParts', () => {
       getFeedTradeDetailParts({ shares: 1500, valueUsd: 50_000 })
     ).toEqual({
       sharesLabel: '1,500 מניות',
-      amountLabel: 'בשווי: $50,000',
+      amountLabel: 'בשווי $50,000',
     });
   });
 });
@@ -80,7 +80,7 @@ describe('formatFeedTradeDetail', () => {
   it('joins shares and labeled amount', () => {
     expect(
       formatFeedTradeDetail({ shares: 100, valueUsd: 12_000 })
-    ).toBe('100 מניות · בשווי: $12,000');
+    ).toBe('100 מניות · בשווי $12,000');
   });
 });
 
@@ -223,7 +223,7 @@ describe('parseFeedShareCountLabel', () => {
 
 describe('resolveFeedInsiderShares', () => {
   it('prefers the numeric Form 4 count over a leftover label', () => {
-    expect(resolveFeedInsiderShares({ shares: 1000, sharesLabel: 'בשווי: $140,000' })).toBe(
+    expect(resolveFeedInsiderShares({ shares: 1000, sharesLabel: 'בשווי $140,000' })).toBe(
       1000
     );
     expect(resolveFeedInsiderShares({ shares: 6085 })).toBe(6085);
@@ -235,7 +235,7 @@ describe('resolveFeedInsiderShares', () => {
 
   it('never invents qty from a STOCK Act range or a dollar notional', () => {
     expect(resolveFeedInsiderShares({ sharesLabel: '$1,001–$15,000' })).toBeNull();
-    expect(resolveFeedInsiderShares({ sharesLabel: 'בשווי: $50,000' })).toBeNull();
+    expect(resolveFeedInsiderShares({ sharesLabel: 'בשווי $50,000' })).toBeNull();
     expect(resolveFeedInsiderShares({ shares: 0, sharesLabel: 'בטווח: $15K–$50K' })).toBeNull();
   });
 });

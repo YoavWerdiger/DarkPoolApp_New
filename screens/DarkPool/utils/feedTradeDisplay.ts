@@ -198,15 +198,15 @@ export function formatFeedDisclosureRange(raw: string | null | undefined): strin
   return cleaned.startsWith('$') ? cleaned : `$${cleaned}`;
 }
 
-/** מוסיף "בשווי:" לפני סכום מדויק (Form 4) — בלי כפל אם כבר קיים. */
+/** מוסיף "בשווי" לפני סכום מדויק (Form 4) — בלי כפל אם כבר קיים. */
 export function withFeedValueLabel(amount: string | null | undefined): string | null {
   if (!amount?.trim()) return null;
   const trimmed = amount.trim();
   if (/^בשווי\s*:?\s*/u.test(trimmed)) {
     const rest = trimmed.replace(/^בשווי\s*:?\s*/u, '').trim();
-    return rest ? `בשווי: ${rest}` : null;
+    return rest ? `בשווי ${rest}` : null;
   }
-  return `בשווי: ${trimmed}`;
+  return `בשווי ${trimmed}`;
 }
 
 /** טווח STOCK Act — «בטווח» ולא «בשווי», כי אין סכום מדויק. */

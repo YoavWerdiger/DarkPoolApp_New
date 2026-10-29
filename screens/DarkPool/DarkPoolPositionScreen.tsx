@@ -13,10 +13,10 @@ import { useNavigation, useRoute, type RouteProp } from '@react-navigation/nativ
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import {
-  CalendarCheck,
+  Activity,
+  ChartLine,
   CircleDollarSign,
-  Hash,
-  TrendingUp,
+  Layers,
   Wallet,
   type LucideIcon,
 } from 'lucide-react-native';
@@ -239,7 +239,7 @@ export default function DarkPoolPositionScreen() {
             <View style={styles.section}>
               <DarkPoolSectionHeader variant="group" title="הפוזיציה" />
               <UICard variant="soft" glassIntensity="light" padding="none" contentContainerStyle={styles.rowsCard}>
-                <FieldRow icon={Hash} label="מניות" value={sharesText(shares)} />
+                <FieldRow icon={Layers} label="מניות" value={sharesText(shares)} />
                 <FieldRow
                   icon={Wallet}
                   label="שווי שוק"
@@ -249,15 +249,25 @@ export default function DarkPoolPositionScreen() {
                   icon={CircleDollarSign}
                   label="מחיר ממוצע (משוער)"
                   value={detail.avgCost != null ? usd(detail.avgCost, 2) : DARK_POOL_UNAVAILABLE}
+                  last
                 />
+              </UICard>
+            </View>
+          ) : null}
+
+          {/* תשואה — כרטיס נפרד מפרטי הפוזיציה */}
+          {held ? (
+            <View style={styles.section}>
+              <DarkPoolSectionHeader variant="group" title="תשואה" />
+              <UICard variant="soft" glassIntensity="light" padding="none" contentContainerStyle={styles.rowsCard}>
                 <FieldRow
-                  icon={CalendarCheck}
+                  icon={Activity}
                   label="תשואה היום"
                   value={returnText(todayUsd, todayPct)}
                   color={toneColor(todayUsd)}
                 />
                 <FieldRow
-                  icon={TrendingUp}
+                  icon={ChartLine}
                   label="תשואה כוללת"
                   value={returnText(totalUsd, totalPct)}
                   color={toneColor(totalUsd)}

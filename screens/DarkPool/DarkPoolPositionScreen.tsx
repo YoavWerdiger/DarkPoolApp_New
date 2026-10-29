@@ -25,6 +25,7 @@ import { ScreenChrome } from '../../components/ui/ScreenChrome';
 import UICard from '../../components/ui/UICard';
 import { DayNavBlurButton, HEADER_BACK_BTN_SIZE } from '../../components/ui/DayNavBlurButton';
 import { APP_LAYOUT } from '../../components/ui/appLayout';
+import { APP_TYPE } from '../../components/ui/appType';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { HelpSheet } from '../../components/ui/HelpSheet';
 import { formatSignedChangePct } from '../../components/ui/ChangeDot';
@@ -339,9 +340,9 @@ function TxnRow({ txn, last }: { txn: FilingPositionTxn; last: boolean }) {
   return (
     <View style={[styles.txnRow, last && styles.rowLast]}>
       <View style={styles.txnHead}>
-        <View style={styles.historyStart}>
-          <View style={[styles.dot, { backgroundColor: color }]} />
-          <Text style={[styles.historyVerb, { color }]} numberOfLines={1}>
+        {/* תגית על רקע רך — כמו «מכה / מפספסת» בשיט הדוח הרבעוני */}
+        <View style={[styles.sidePill, { backgroundColor: `${color}22` }]}>
+          <Text style={[styles.sidePillText, { color }]} numberOfLines={1}>
             {SIDE_VERB[txn.side]}
           </Text>
         </View>
@@ -472,21 +473,8 @@ function rowStyles(tokens: ReturnType<typeof useDesignTokens>) {
       alignItems: 'center',
       justifyContent: 'space-between',
     },
-    historyStart: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: APP_LAYOUT.stackGapSmall,
-      flexShrink: 1,
-      minWidth: 0,
-    },
-    dot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
-    historyVerb: {
-      ...darkPoolPhysicalRightText,
-      fontSize: DARK_POOL_TYPE.cardBody.fontSize,
-      lineHeight: DARK_POOL_TYPE.cardBody.lineHeight,
-      fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
-      flexShrink: 1,
-    },
+    sidePill: { borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3, flexShrink: 1 },
+    sidePillText: { ...APP_TYPE.caption, fontWeight: '600' },
     historyDate: {
       fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
       fontVariant: ['tabular-nums'],

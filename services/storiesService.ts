@@ -5,7 +5,7 @@
 
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { decode } from 'base64-arraybuffer';
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../config/publicEnv';
 import { supabase } from '../lib/supabase';
 import { logger } from '../utils/logger';
 import { compressVideoForUpload, discardCompressedVideo } from '../lib/videoCompressSafe';
@@ -307,6 +307,50 @@ export async function getMyStories(userId: string): Promise<UserStory[]> {
   return getStoriesByUserId(userId);
 }
 
+/**
+ * העלאה נייטיבית של קובץ מהדיסק ל-Storage (כמו וידאו בצ'אט) — בלי base64 ב-JS.
+ * קודם הקובץ הומר ל-base64 ונפרש ב-JS (decode): וידאו של כמה MB (ב-Expo Go בלי דחיסה) הקפיא את המסך.
+ */
+async function uploadFileToStories(
+  fileUri: string,
+  storagePath: string,
+  contentType: string,
+): Promise<string | null> {
+  let accessToken: string | undefined;
+  try {
+    const { data } = await supabase.auth.getSession();
+    accessToken = data.session?.access_token;
+  } catch {
+    /* handled below */
+  }
+  if (!accessToken) return 'נדרשת התחברות מחדש';
+
+  const uploadUrl = `${SUPABASE_URL}/storage/v1/object/${STORIES_BUCKET}/${encodeURI(storagePath)}`;
+  let lastError = 'שגיאה בהעלאה';
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await FileSystem.uploadAsync(uploadUrl, fileUri, {
+        httpMethod: 'POST',
+        uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          apikey: SUPABASE_ANON_KEY,
+          'Content-Type': contentType,
+          'x-upsert': 'false',
+        },
+      });
+      if (res.status >= 200 && res.status < 300) return null;
+      lastError = res.body?.slice(0, 200) || `HTTP ${res.status}`;
+      logger.debug('StoriesService', `Upload attempt ${attempt} failed: ${lastError}`);
+    } catch (e: any) {
+      lastError = e?.message || String(e);
+      logger.debug('StoriesService', `Upload attempt ${attempt} network error: ${lastError}`);
+    }
+    if (attempt < 3) await new Promise((r) => setTimeout(r, 600 * attempt));
+  }
+  return lastError;
+}
+
 export async function uploadStoryImage(
   uri: string,
   userId: string,
@@ -314,48 +358,28 @@ export async function uploadStoryImage(
   try {
     logger.debug('StoriesService', `uploadStoryImage: ${uri.substring(0, 80)}`);
 
-    let base64: string;
-    // העותק המוקטן (1440) — לתצוגה מיידית של הסטורי שלי; המקור מהמצלמה (~24MP) הקריס את הצופה בזיכרון
+    // עותק מוקטן (1440, JPEG) — גם להעלאה וגם לתצוגה מיידית; המקור מהמצלמה (~24MP) כבד מדי
+    let uploadUri = uri;
     let displayUri: string | undefined;
     try {
-      // מקטינים לרוחב 1440 (מסך טלפון) — תמונה מלאה מהמצלמה היא כמה MB והטעינה בצופה לקחה שניות
       const probe = await ImageManipulator.manipulateAsync(uri, []);
       const actions = probe.width > STORY_MAX_WIDTH ? [{ resize: { width: STORY_MAX_WIDTH } }] : [];
-      const compressed = await ImageManipulator.manipulateAsync(
-        probe.uri, actions,
-        { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG, base64: true }
-      );
-      base64 = compressed.base64!;
+      const compressed = await ImageManipulator.manipulateAsync(probe.uri, actions, {
+        compress: 0.85,
+        format: ImageManipulator.SaveFormat.JPEG,
+      });
+      uploadUri = compressed.uri;
       displayUri = compressed.uri;
-      logger.debug('StoriesService', 'ImageManipulator JPEG+base64 ready');
     } catch {
-      base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
-      logger.debug('StoriesService', 'Fallback: read file as base64');
+      logger.debug('StoriesService', 'ImageManipulator failed — uploading original file');
     }
 
     const storagePath = `${STORIES_PATH_PREFIX}/${userId}/${Date.now()}.jpg`;
-    logger.debug('StoriesService', `SDK uploading to ${storagePath}...`);
-
-    let uploadError: any = null;
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      const result = await supabase.storage
-        .from(STORIES_BUCKET)
-        .upload(storagePath, decode(base64), {
-          contentType: 'image/jpeg',
-          upsert: false,
-        });
-      uploadError = result.error;
-      if (!uploadError) break;
-      if (attempt < 3) await new Promise(res => setTimeout(res, 600 * attempt));
-      logger.debug('StoriesService', `Upload attempt ${attempt} failed: ${uploadError?.message}`);
+    const error = await uploadFileToStories(uploadUri, storagePath, 'image/jpeg');
+    if (error) {
+      logger.error('StoriesService', 'Image upload failed after retries', error);
+      return { url: null, error };
     }
-
-    if (uploadError) {
-      logger.error('StoriesService', 'Image upload failed after retries', uploadError);
-      return { url: null, error: uploadError?.message || 'שגיאה בהעלאה' };
-    }
-
-    logger.debug('StoriesService', 'Upload success!');
     return { url: storagePath, error: null, displayUri };
   } catch (e: any) {
     logger.error('StoriesService', 'uploadStoryImage exception', e);
@@ -381,39 +405,20 @@ export async function uploadStoryVideo(uri: string, userId: string): Promise<{ u
       return { url: null, error: 'הוידאו גדול מדי (מקסימום 20MB)' };
     }
 
-    let base64: string;
-    try {
-      base64 = await FileSystem.readAsStringAsync(uploadUri, { encoding: 'base64' });
-    } finally {
-      discardCompressedVideo(compressed);
-    }
-
     const ext = uploadUri.split('?')[0].toLowerCase().endsWith('.mov') ? 'mov' : 'mp4';
     const contentType = ext === 'mov' ? 'video/quicktime' : 'video/mp4';
     const storagePath = `${STORIES_PATH_PREFIX}/${userId}/${Date.now()}.${ext}`;
 
-    logger.debug('StoriesService', `SDK uploading video to ${storagePath}...`);
-
-    let uploadError: any = null;
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      const result = await supabase.storage
-        .from(STORIES_BUCKET)
-        .upload(storagePath, decode(base64), {
-          contentType,
-          upsert: false,
-        });
-      uploadError = result.error;
-      if (!uploadError) break;
-      if (attempt < 3) await new Promise(res => setTimeout(res, 600 * attempt));
-      logger.debug('StoriesService', `Video upload attempt ${attempt} failed: ${uploadError?.message}`);
+    let error: string | null;
+    try {
+      error = await uploadFileToStories(uploadUri, storagePath, contentType);
+    } finally {
+      discardCompressedVideo(compressed);
     }
-
-    if (uploadError) {
-      logger.error('StoriesService', 'Video upload failed after retries', uploadError);
-      return { url: null, error: uploadError?.message || 'שגיאה בהעלאה' };
+    if (error) {
+      logger.error('StoriesService', 'Video upload failed after retries', error);
+      return { url: null, error };
     }
-
-    logger.debug('StoriesService', 'Video upload success!');
     return { url: storagePath, error: null };
   } catch (e: any) {
     logger.error('StoriesService', 'uploadStoryVideo exception', e);

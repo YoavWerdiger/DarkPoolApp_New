@@ -274,7 +274,10 @@ export default function ChatGroupsListScreen() {
       setAddStoryMounted(true);
       return;
     }
-    const t = setTimeout(() => setAddStoryMounted(false), 600);
+    const t = setTimeout(() => {
+      if (__DEV__) console.log('[story] add screen unmounted');
+      setAddStoryMounted(false);
+    }, 600);
     return () => clearTimeout(t);
   }, [addStorySheetVisible]);
   // זריעה אופטימית מה-cache (בזיכרון) — שורת ה-Stories מופיעה מיד בכניסה חוזרת
@@ -1875,7 +1878,10 @@ export default function ChatGroupsListScreen() {
       {addStoryMounted && (
         <AddStoryFullScreen
           visible={addStorySheetVisible}
-          onClose={() => setAddStorySheetVisible(false)}
+          onClose={() => {
+            if (__DEV__) console.log('[story] add screen onClose');
+            setAddStorySheetVisible(false);
+          }}
           onAdded={() => loadStories()}
         />
       )}

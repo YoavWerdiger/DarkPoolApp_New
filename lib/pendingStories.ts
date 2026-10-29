@@ -94,6 +94,7 @@ async function run(item: PendingStory) {
       /* best effort — הצופה יטען מהרשת */
     }
     pending = pending.filter((p) => p.id !== item.id);
+    if (__DEV__) console.log('[story] published', created?.id?.slice(0, 8));
     emit();
     // הסטורי שנוצר — הרשימה מוסיפה את «שלי» מיד, בלי לחכות לטעינה מחדש (אחרת הלחיצה לא פותחת כלום)
     doneListeners.forEach((fn) => fn(created));

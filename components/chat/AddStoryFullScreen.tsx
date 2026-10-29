@@ -2296,6 +2296,8 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
       animationType="slide"
       statusBarTranslucent
       onRequestClose={onClose}
+      onShow={__DEV__ ? () => console.log('[story] add screen shown') : undefined}
+      onDismiss={__DEV__ ? () => console.log('[story] add screen dismissed (native)') : undefined}
     >
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       <GestureHandlerRootView style={s.fullFlex}>

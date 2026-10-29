@@ -91,6 +91,10 @@ import {
 } from './utils/feedTradeDisplay';
 import { calcSinceTradePct } from './utils/insiderFeedCalc';
 import {
+  congressPositionTotalReturnPct,
+  insiderPositionTotalReturnPct,
+} from './utils/positionTotalReturn';
+import {
   describeInsiderCode,
   formatInsiderPrice,
   formatInsiderRole,
@@ -283,11 +287,25 @@ export default function DarkPoolTradeDetailScreen() {
       : null;
 
   /**
-   * שינוי מאז יום העסקה.
-   * קונגרס: Quiver PriceChange אם קיים; אחרת פתיחת יום הביצוע מול חי.
-   * בכיר: מחיר Form 4 אמיתי מול ציטוט חי — רק כשהמחיר > 0.
+   * «מאז העסקה» = התשואה הכוללת על האחזקה (כל העסקאות של האדם בטיקר, מחיר ממוצע) — כמו בדף פרטי אחזקה.
+   * גיבוי כשאין מספיק נתונים: השינוי מיום העסקה הזו בלבד
+   * (קונגרס: Quiver PriceChange / פתיחת יום הביצוע; בכיר: מחיר Form 4 מול חי).
    */
-  const sinceTradePct = congressTrade
+  const positionTotalPct = useMemo(() => {
+    if (congressTrade) {
+      const all = congressHistoryQuery.data ?? [];
+      const list = all.some((t) => t.id === congressTrade.id) ? all : [congressTrade, ...all];
+      return congressPositionTotalReturnPct(list, currentPrice);
+    }
+    if (insiderTrade) {
+      const all = insiderHistoryQuery.data ?? [];
+      const list = all.some((t) => t.id === insiderTrade.id) ? all : [insiderTrade, ...all];
+      return insiderPositionTotalReturnPct(list, currentPrice);
+    }
+    return null;
+  }, [congressTrade, insiderTrade, congressHistoryQuery.data, insiderHistoryQuery.data, currentPrice]);
+
+  const singleTradePct = congressTrade
     ? resolveCongressSinceTradePct({
         vendorPriceChangePct: congressTrade.price_change_pct,
         openOnTransactionDate: congressOpenQuery.data ?? null,
@@ -297,6 +315,7 @@ export default function DarkPoolTradeDetailScreen() {
         const pct = calcSinceTradePct(insiderTrade?.price, currentPrice);
         return pct == null ? null : pct * 100;
       })();
+  const sinceTradePct = positionTotalPct ?? singleTradePct;
   const sinceTradeText = formatReturnPct(sinceTradePct);
   const sinceTradeTone = returnTone(sinceTradePct);
   const sinceTradeColor =

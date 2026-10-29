@@ -7,7 +7,6 @@ import {
   EXPLORE_KIND_CHIPS,
   type ExploreKindFilter,
 } from '../utils/exploreGrid';
-import { toDataIsland } from '../utils/bidi';
 
 interface Props {
   value: ExploreKindFilter | null;
@@ -15,7 +14,7 @@ interface Props {
   counts?: Partial<Record<ExploreKindFilter, number>>;
 }
 
-export function ExploreKindFilterBar({ value, onChange, counts }: Props) {
+export function ExploreKindFilterBar({ value, onChange }: Props) {
   const tokens = useDesignTokens();
   const styles = useMemo(
     () =>
@@ -37,8 +36,8 @@ export function ExploreKindFilterBar({ value, onChange, counts }: Props) {
   const labelFor = (id: string) => {
     const opt = EXPLORE_KIND_CHIPS.find((o) => o.id === id);
     if (!opt) return '';
-    const count = counts?.[opt.id];
-    return count != null && count > 0 ? `${opt.label} (${toDataIsland(count)})` : opt.label;
+    // בלי מספרים בצ׳יפים — רק התווית
+    return opt.label;
   };
 
   return (

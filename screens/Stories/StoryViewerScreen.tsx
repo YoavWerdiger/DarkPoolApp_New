@@ -231,6 +231,7 @@ export default function StoryViewerScreen() {
   /* ── סגירה / מעבר ── */
   const closingRef = useRef(false);
   const close = useCallback(() => {
+    if (__DEV__) console.log('[story] close', { closing: closingRef.current, canGoBack: navigation.canGoBack() });
     if (closingRef.current) return;
     closingRef.current = true;
     if (navigation.canGoBack()) navigation.goBack();
@@ -639,8 +640,14 @@ export default function StoryViewerScreen() {
           key={sid}
           uri={uri}
           content={story.content}
-          onLoad={() => setLoaded(addFlag(sid))}
-          onError={() => setFailed(addFlag(sid))}
+          onLoad={() => {
+            if (__DEV__) console.log('[story] image loaded', sid.slice(0, 8));
+            setLoaded(addFlag(sid));
+          }}
+          onError={(e?: unknown) => {
+            if (__DEV__) console.log('[story] image error', sid.slice(0, 8), String((e as { error?: string })?.error ?? e));
+            setFailed(addFlag(sid));
+          }}
         />
       );
     }
@@ -828,8 +835,24 @@ export default function StoryViewerScreen() {
     );
   }
 
+  if (__DEV__) {
+    console.log('[story] render', {
+      cur,
+      users: userIds.length,
+      story: currentStory?.id?.slice(0, 8),
+      type: currentStory?.media_type,
+      playable,
+      mediaLoaded,
+      mediaFailed,
+      url: (currentStory?.media_url ?? '').slice(0, 60),
+    });
+  }
+
   return (
-    <GestureHandlerRootView style={styles.root}>
+    <GestureHandlerRootView
+      style={styles.root}
+      onLayout={__DEV__ ? (e) => console.log('[story] root layout', e.nativeEvent.layout) : undefined}
+    >
       <StatusBar hidden />
       <Reanimated.View style={[styles.backdrop, backdropAnim]} pointerEvents="none" />
 

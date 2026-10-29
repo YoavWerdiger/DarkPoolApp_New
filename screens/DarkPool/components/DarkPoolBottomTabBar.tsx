@@ -231,6 +231,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, safeBottom: nu
     },
     label: {
       fontSize: 10,
+      fontVariant: ['tabular-nums'],
       fontWeight: '600',
       color: tokens.colors.text.tertiary,
       writingDirection: 'rtl',

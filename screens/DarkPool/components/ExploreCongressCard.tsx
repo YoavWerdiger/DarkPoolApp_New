@@ -80,6 +80,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     topText: { flex: 1, alignItems: 'flex-end' },
     name: {
       fontSize: APP_TYPE.cardTitle.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: APP_TYPE.cardTitle.lineHeight,
       fontWeight: APP_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
@@ -88,6 +89,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     meta: {
       marginTop: 2,
       fontSize: APP_TYPE.caption2.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: APP_TYPE.caption2.lineHeight,
       fontWeight: APP_TYPE.caption2.fontWeight,
       color: tokens.colors.text.tertiary,
@@ -104,6 +106,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     ticker: {
       fontSize: APP_TYPE.cardBody.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: APP_TYPE.cardBody.lineHeight,
       fontWeight: APP_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
@@ -112,6 +115,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     issuer: {
       fontSize: APP_TYPE.caption2.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: APP_TYPE.caption2.lineHeight,
       fontWeight: APP_TYPE.caption2.fontWeight,
       color: tokens.colors.text.tertiary,

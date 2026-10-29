@@ -98,6 +98,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     ticker: {
       fontSize: DARK_POOL_TYPE.sectionTitle.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.sectionTitle.lineHeight,
       fontWeight: DARK_POOL_TYPE.sectionTitle.fontWeight,
       letterSpacing: DARK_POOL_TYPE.sectionTitle.letterSpacing,
@@ -109,6 +110,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       ...darkPoolPhysicalLeftText,
       marginTop: 2,
       fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
+      fontVariant: ['tabular-nums'],
       fontWeight: DARK_POOL_TYPE.cardSubtitle.fontWeight,
       lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
       color: tokens.colors.text.secondary,
@@ -117,6 +119,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       ...darkPoolPhysicalRightText,
       marginTop: 6,
       fontSize: DARK_POOL_TYPE.caption.fontSize,
+      fontVariant: ['tabular-nums'],
       fontWeight: DARK_POOL_TYPE.caption.fontWeight,
       color: tokens.colors.text.tertiary,
     },
@@ -140,12 +143,14 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     statLabel: {
       ...darkPoolPhysicalRightText,
       fontSize: DARK_POOL_TYPE.caption2.fontSize,
+      fontVariant: ['tabular-nums'],
       fontWeight: DARK_POOL_TYPE.cardMetricLabel.fontWeight,
       color: tokens.colors.text.tertiary,
       marginBottom: 4,
     },
     statValue: {
       fontSize: DARK_POOL_TYPE.cardMetricValueSecondary.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.cardMetricValueSecondary.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardMetricValueSecondary.fontWeight,
       color: tokens.colors.text.primary,

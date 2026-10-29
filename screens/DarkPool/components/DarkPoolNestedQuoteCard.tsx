@@ -186,6 +186,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     nestedTickerText: {
       ...TEXT_TOP,
       fontSize: FEED_CARD_TYPE.nestedRowValue.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: NESTED_VALUE_LINE,
       fontWeight: FEED_CARD_TYPE.nestedRowValue.fontWeight,
       color: tokens.colors.text.primary,
@@ -204,6 +205,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       writingDirection: 'rtl',
       textAlign: 'right',
       fontSize: FEED_CARD_TYPE.nestedRowCaption.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: NESTED_CAPTION_LINE,
       fontWeight: FEED_CARD_TYPE.nestedRowCaption.fontWeight,
       color: tokens.colors.text.secondary,
@@ -223,6 +225,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       writingDirection: 'rtl',
       textAlign: 'right',
       fontSize: FEED_CARD_TYPE.nestedRowValueMuted.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: NESTED_VALUE_LINE,
       fontWeight: FEED_CARD_TYPE.nestedRowValueMuted.fontWeight,
       color: tokens.colors.text.tertiary,
@@ -237,6 +240,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     nestedSinceLabel: {
       ...TEXT_TOP,
       fontSize: FEED_CARD_TYPE.nestedRowCaption.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: NESTED_CAPTION_LINE,
       fontWeight: FEED_CARD_TYPE.nestedRowCaption.fontWeight,
       color: tokens.colors.text.secondary,

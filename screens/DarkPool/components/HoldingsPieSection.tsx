@@ -298,6 +298,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     honestyTag: {
       fontSize: DARK_POOL_TYPE.caption.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.caption.lineHeight,
       fontWeight: DARK_POOL_TYPE.caption.fontWeight,
       color: tokens.colors.text.secondary,
@@ -356,6 +357,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     legendLabel: {
       flex: 1,
       fontSize: DARK_POOL_TYPE.caption.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.caption.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
@@ -411,6 +413,7 @@ function createRowStyles(tokens: ReturnType<typeof useDesignTokens>) {
       textAlign: 'right',
       writingDirection: 'ltr',
       fontSize: DARK_POOL_TYPE.cardBody.fontSize,
+      fontVariant: ['tabular-nums'],
       fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
       lineHeight: DARK_POOL_TYPE.cardBody.lineHeight,
@@ -423,6 +426,7 @@ function createRowStyles(tokens: ReturnType<typeof useDesignTokens>) {
       marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
       includeFontPadding: false,
       fontSize: DARK_POOL_TYPE.caption.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.caption.lineHeight,
       fontWeight: DARK_POOL_TYPE.caption.fontWeight,
       color: tokens.colors.text.secondary,

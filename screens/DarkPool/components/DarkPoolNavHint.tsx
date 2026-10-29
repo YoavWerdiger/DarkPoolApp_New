@@ -69,6 +69,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       ...darkPoolPhysicalRightText,
       width: '100%',
       fontSize: DARK_POOL_TYPE.caption.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.caption.lineHeight,
       fontWeight: DARK_POOL_TYPE.caption.fontWeight,
       color: tokens.colors.text.tertiary,

@@ -122,6 +122,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     name: {
       ...darkPoolPhysicalRightText,
       fontSize: APP_TYPE.cardSubtitle.fontSize,
+      fontVariant: ['tabular-nums'],
       fontWeight: APP_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
       lineHeight: APP_TYPE.cardSubtitle.lineHeight,
@@ -129,6 +130,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     meta: {
       ...darkPoolPhysicalRightText,
       fontSize: APP_TYPE.caption2.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: APP_TYPE.caption2.lineHeight,
       fontWeight: APP_TYPE.caption2.fontWeight,
       color: tokens.colors.text.secondary,
@@ -136,6 +138,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     tickerText: {
       ...dataText,
       fontSize: APP_TYPE.caption2.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: APP_TYPE.caption2.lineHeight,
       fontWeight: APP_TYPE.caption2.fontWeight,
       color: tokens.colors.text.secondary,

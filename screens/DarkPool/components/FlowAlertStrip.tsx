@@ -65,6 +65,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     wrap: { marginBottom: tokens.spacing.lg },
     title: {
       fontSize: APP_TYPE.groupLabel.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: APP_TYPE.groupLabel.lineHeight,
       fontWeight: APP_TYPE.groupLabel.fontWeight,
       color: tokens.colors.text.secondary,
@@ -90,6 +91,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     ticker: {
       fontSize: APP_TYPE.cardTitle.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: APP_TYPE.cardTitle.lineHeight,
       fontWeight: APP_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
@@ -97,6 +99,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     type: {
       fontSize: APP_TYPE.caption2.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: APP_TYPE.caption2.lineHeight,
       fontWeight: APP_TYPE.caption2.fontWeight,
       writingDirection: 'rtl',
@@ -106,6 +109,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     prem: {
       marginTop: 4,
       fontSize: APP_TYPE.cardBody.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: APP_TYPE.cardBody.lineHeight,
       fontWeight: APP_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
@@ -114,6 +118,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     rule: {
       marginTop: 4,
       fontSize: APP_TYPE.caption2.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: APP_TYPE.caption2.lineHeight,
       fontWeight: APP_TYPE.caption2.fontWeight,
       color: tokens.colors.text.tertiary,

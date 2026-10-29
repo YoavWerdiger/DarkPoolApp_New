@@ -46,6 +46,7 @@ export function ExplorePeopleGrid({
           ...darkPoolPhysicalRightText,
           width: '100%',
           fontSize: DARK_POOL_TYPE.sectionSubtitle.fontSize,
+          fontVariant: ['tabular-nums'],
           fontWeight: DARK_POOL_TYPE.sectionSubtitle.fontWeight,
           color: tokens.colors.text.tertiary,
           lineHeight: DARK_POOL_TYPE.sectionSubtitle.lineHeight,

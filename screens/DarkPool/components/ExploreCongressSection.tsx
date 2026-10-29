@@ -59,6 +59,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     title: {
       ...darkPoolPhysicalRightText,
       fontSize: APP_TYPE.sectionTitle.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: APP_TYPE.sectionTitle.lineHeight,
       fontWeight: APP_TYPE.sectionTitle.fontWeight,
       letterSpacing: APP_TYPE.sectionTitle.letterSpacing,
@@ -68,6 +69,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       ...darkPoolPhysicalRightText,
       marginTop: APP_LAYOUT.titleSubtitleGap,
       fontSize: APP_TYPE.cardSubtitle.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: APP_TYPE.cardSubtitle.lineHeight,
       fontWeight: APP_TYPE.cardSubtitle.fontWeight,
       color: tokens.colors.text.secondary,

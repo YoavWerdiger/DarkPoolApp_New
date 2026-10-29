@@ -715,6 +715,7 @@ function rowStyles(tokens: ReturnType<typeof useDesignTokens>) {
     label: {
       ...darkPoolPhysicalRightText,
       fontSize: DARK_POOL_TYPE.cardBody.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.cardBody.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
@@ -722,6 +723,7 @@ function rowStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     value: {
       fontSize: DARK_POOL_TYPE.cardBody.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.cardBody.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardBody.fontWeight,
       color: tokens.colors.text.secondary,
@@ -745,6 +747,7 @@ function rowStyles(tokens: ReturnType<typeof useDesignTokens>) {
     historyVerb: {
       ...darkPoolPhysicalRightText,
       fontSize: DARK_POOL_TYPE.cardBody.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.cardBody.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       flexShrink: 1,
@@ -762,6 +765,7 @@ function rowStyles(tokens: ReturnType<typeof useDesignTokens>) {
     historyAmount: {
       ...darkPoolPhysicalRightText,
       fontSize: DARK_POOL_TYPE.cardBody.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.cardBody.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
@@ -789,6 +793,7 @@ function createStyles(
     topBarTitle: {
       flex: 1,
       fontSize: DARK_POOL_TYPE.screenTitle.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.screenTitle.lineHeight,
       fontWeight: DARK_POOL_TYPE.screenTitle.fontWeight,
       letterSpacing: DARK_POOL_TYPE.screenTitle.letterSpacing,
@@ -829,6 +834,7 @@ function createStyles(
     subtitleName: {
       ...ltrNameText,
       fontSize: DARK_POOL_TYPE.sectionSubtitle.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.sectionSubtitle.lineHeight,
       fontWeight: DARK_POOL_TYPE.sectionSubtitle.fontWeight,
     },
@@ -850,6 +856,7 @@ function createStyles(
     priceTexts: { gap: APP_LAYOUT.cardTitleToSubtitleGap, minWidth: 0, flexShrink: 1 },
     priceTicker: {
       fontSize: DARK_POOL_TYPE.cardTitle.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.cardTitle.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
@@ -859,6 +866,7 @@ function createStyles(
     priceCaption: {
       ...darkPoolPhysicalRightText,
       fontSize: DARK_POOL_TYPE.caption.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.caption.lineHeight,
       fontWeight: DARK_POOL_TYPE.caption.fontWeight,
       color: tokens.colors.text.secondary,
@@ -881,6 +889,7 @@ function createStyles(
     priceMissing: {
       ...darkPoolPhysicalRightText,
       fontSize: DARK_POOL_TYPE.caption.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.caption.lineHeight,
       fontWeight: DARK_POOL_TYPE.caption.fontWeight,
       color: tokens.colors.text.secondary,
@@ -897,6 +906,7 @@ function createStyles(
       ...darkPoolPhysicalRightText,
       marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
       fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardSubtitle.fontWeight,
       color: tokens.colors.text.secondary,

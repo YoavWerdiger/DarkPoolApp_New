@@ -140,6 +140,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     name: {
       fontSize: APP_TYPE.cardTitle.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: APP_TYPE.cardTitle.lineHeight,
       fontWeight: APP_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
@@ -148,6 +149,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     subtitle: {
       marginTop: 2,
       fontSize: APP_TYPE.cardSubtitle.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: APP_TYPE.cardSubtitle.lineHeight,
       fontWeight: APP_TYPE.cardSubtitle.fontWeight,
       color: tokens.colors.text.tertiary,
@@ -156,6 +158,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     metric: {
       marginTop: 4,
       fontSize: APP_TYPE.caption.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: APP_TYPE.caption.lineHeight,
       fontWeight: APP_TYPE.caption.fontWeight,
       color: tokens.colors.text.secondary,
@@ -174,6 +177,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     noChart: {
       fontSize: APP_TYPE.caption2.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: APP_TYPE.caption2.lineHeight,
       fontWeight: APP_TYPE.caption2.fontWeight,
       color: tokens.colors.text.tertiary,

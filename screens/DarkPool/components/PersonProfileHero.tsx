@@ -319,6 +319,7 @@ const styles = StyleSheet.create({
   name: {
     ...ltrNameText,
     fontSize: APP_TYPE.pageTitle.fontSize,
+    fontVariant: ['tabular-nums'],
     lineHeight: APP_TYPE.pageTitle.lineHeight,
     fontWeight: APP_TYPE.pageTitle.fontWeight,
     letterSpacing: APP_TYPE.pageTitle.letterSpacing,

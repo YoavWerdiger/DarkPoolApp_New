@@ -98,6 +98,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       ...darkPoolPhysicalRightText,
       marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
       fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardSubtitle.fontWeight,
       color: tokens.colors.text.primary,
@@ -105,6 +106,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     name: {
       ...ltrNameText,
       fontSize: DARK_POOL_TYPE.cardTitle.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.cardTitle.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
@@ -117,6 +119,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     role: {
       marginTop: 2,
       fontSize: DARK_POOL_TYPE.caption.fontSize,
+      fontVariant: ['tabular-nums'],
       fontWeight: DARK_POOL_TYPE.caption.fontWeight,
       color: tokens.colors.text.tertiary,
       ...darkPoolPhysicalRightText,
@@ -124,6 +127,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     date: {
       marginTop: 4,
       fontSize: DARK_POOL_TYPE.caption.fontSize,
+      fontVariant: ['tabular-nums'],
       fontWeight: DARK_POOL_TYPE.caption.fontWeight,
       color: tokens.colors.text.tertiary,
       ...darkPoolPhysicalRightText,
@@ -134,6 +138,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     value: {
       fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
@@ -143,6 +148,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     shares: {
       marginTop: 3,
       fontSize: DARK_POOL_TYPE.caption2.fontSize,
+      fontVariant: ['tabular-nums'],
       fontWeight: DARK_POOL_TYPE.caption.fontWeight,
       color: tokens.colors.text.tertiary,
       ...darkPoolPhysicalRightText,

@@ -123,6 +123,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     fontSize: DARK_POOL_TYPE.groupLabel.fontSize,
+    fontVariant: ['tabular-nums'],
     lineHeight: DARK_POOL_TYPE.groupLabel.lineHeight,
     fontWeight: DARK_POOL_TYPE.groupLabel.fontWeight,
   },
@@ -138,6 +139,7 @@ const styles = StyleSheet.create({
   actionLabel: {
     ...darkPoolPhysicalRightText,
     fontSize: DARK_POOL_TYPE.footnote.fontSize,
+    fontVariant: ['tabular-nums'],
     lineHeight: DARK_POOL_TYPE.footnote.lineHeight,
     fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
   },

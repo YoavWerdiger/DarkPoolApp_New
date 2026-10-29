@@ -362,6 +362,7 @@ const styles = StyleSheet.create({
   },
   cardMonoText: {
     fontSize: APP_TYPE.cardMetricValue.fontSize,
+    fontVariant: ['tabular-nums'],
     lineHeight: APP_TYPE.cardMetricValue.lineHeight,
     fontWeight: APP_TYPE.cardMetricValue.fontWeight,
     color: '#FFFFFF',

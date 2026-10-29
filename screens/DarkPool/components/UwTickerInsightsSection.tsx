@@ -218,6 +218,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     loaderText: {
       ...darkPoolPhysicalRightText,
       fontSize: DARK_POOL_TYPE.groupLabel.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.groupLabel.lineHeight,
       fontWeight: DARK_POOL_TYPE.groupLabel.fontWeight,
       color: tokens.colors.text.tertiary,
@@ -242,6 +243,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     summaryLabel: {
       ...darkPoolPhysicalRightText,
       fontSize: DARK_POOL_TYPE.cardMetricLabel.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.cardMetricLabel.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardMetricLabel.fontWeight,
       color: tokens.colors.text.tertiary,
@@ -249,6 +251,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     summaryValue: {
       marginTop: 4,
       fontSize: DARK_POOL_TYPE.cardMetricValueSecondary.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.cardMetricValueSecondary.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardMetricValueSecondary.fontWeight,
       letterSpacing: DARK_POOL_TYPE.cardMetricValueSecondary.letterSpacing,
@@ -259,6 +262,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       ...darkPoolPhysicalRightText,
       marginTop: 3,
       fontSize: DARK_POOL_TYPE.caption2.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.caption2.lineHeight,
       fontWeight: DARK_POOL_TYPE.caption2.fontWeight,
       color: tokens.colors.text.tertiary,
@@ -270,6 +274,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     metricValue: {
       ...darkPoolPhysicalRightText,
       fontSize: DARK_POOL_TYPE.cardMetricValueSecondary.fontSize,
+      fontVariant: ['tabular-nums'],
       fontWeight: DARK_POOL_TYPE.cardMetricValueSecondary.fontWeight,
       color: tokens.colors.text.primary,
       lineHeight: DARK_POOL_TYPE.cardMetricValueSecondary.lineHeight,
@@ -278,6 +283,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       ...darkPoolPhysicalRightText,
       marginTop: 4,
       fontSize: DARK_POOL_TYPE.caption.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.caption.lineHeight,
       fontWeight: DARK_POOL_TYPE.caption.fontWeight,
       color: tokens.colors.text.tertiary,
@@ -305,6 +311,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     rowTitle: {
       ...darkPoolPhysicalRightText,
       fontSize: DARK_POOL_TYPE.cardTitle.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.cardTitle.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
@@ -313,6 +320,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       ...darkPoolPhysicalRightText,
       marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
       fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardSubtitle.fontWeight,
       color: tokens.colors.text.tertiary,
@@ -326,6 +334,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     newsTitle: {
       ...darkPoolPhysicalRightText,
       fontSize: DARK_POOL_TYPE.cardTitle.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.cardTitle.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,

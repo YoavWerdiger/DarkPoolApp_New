@@ -65,6 +65,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       width: '100%',
       marginTop: 2,
       fontSize: DARK_POOL_TYPE.caption2.fontSize,
+      fontVariant: ['tabular-nums'],
       color: tokens.colors.text.secondary,
       textDecorationLine: 'underline',
       opacity: 0.85,

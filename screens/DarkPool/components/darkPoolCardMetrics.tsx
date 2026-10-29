@@ -62,12 +62,14 @@ function createMetricStyles(tokens: ReturnType<typeof useDesignTokens>) {
     label: {
       ...darkPoolPhysicalRightText,
       fontSize: DARK_POOL_TYPE.caption2.fontSize,
+      fontVariant: ['tabular-nums'],
       fontWeight: DARK_POOL_TYPE.cardMetricLabel.fontWeight,
       color: tokens.colors.text.tertiary,
     },
     value: {
       marginTop: 3,
       fontSize: DARK_POOL_TYPE.cardMetricValueSecondary.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.cardMetricValueSecondary.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardMetricValueSecondary.fontWeight,
       color: tokens.colors.text.primary,
@@ -99,6 +101,7 @@ export function darkPoolHeaderStyles(tokens: ReturnType<typeof useDesignTokens>)
     },
     ticker: {
       fontSize: DARK_POOL_TYPE.cardTitle.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.cardTitle.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
@@ -109,6 +112,7 @@ export function darkPoolHeaderStyles(tokens: ReturnType<typeof useDesignTokens>)
       ...darkPoolPhysicalRightText,
       marginTop: 2,
       fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardSubtitle.fontWeight,
       color: tokens.colors.text.tertiary,
@@ -121,6 +125,7 @@ export function darkPoolHeaderStyles(tokens: ReturnType<typeof useDesignTokens>)
     },
     badgeText: {
       fontSize: DARK_POOL_TYPE.caption2.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.caption2.lineHeight,
       fontWeight: DARK_POOL_TYPE.caption2.fontWeight,
       color: tokens.colors.text.primary,
@@ -132,6 +137,7 @@ export function darkPoolHeaderStyles(tokens: ReturnType<typeof useDesignTokens>)
     },
     scoreNum: {
       fontSize: DARK_POOL_TYPE.sectionTitle.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.sectionTitle.lineHeight,
       fontWeight: DARK_POOL_TYPE.sectionTitle.fontWeight,
       letterSpacing: -0.5,
@@ -139,6 +145,7 @@ export function darkPoolHeaderStyles(tokens: ReturnType<typeof useDesignTokens>)
     },
     scoreLbl: {
       fontSize: DARK_POOL_TYPE.caption2.fontSize,
+      fontVariant: ['tabular-nums'],
       fontWeight: DARK_POOL_TYPE.caption2.fontWeight,
       color: tokens.colors.text.tertiary,
       writingDirection: 'rtl',
@@ -147,6 +154,7 @@ export function darkPoolHeaderStyles(tokens: ReturnType<typeof useDesignTokens>)
       ...darkPoolPhysicalRightText,
       marginTop: 8,
       fontSize: DARK_POOL_TYPE.sectionSubtitle.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.sectionSubtitle.lineHeight,
       fontWeight: DARK_POOL_TYPE.sectionSubtitle.fontWeight,
       color: tokens.colors.text.secondary,

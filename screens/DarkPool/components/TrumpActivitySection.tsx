@@ -256,6 +256,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     legendText: {
       fontSize: DARK_POOL_TYPE.caption.fontSize,
+      fontVariant: ['tabular-nums'],
       color: tokens.colors.text.secondary,
     },
     tabs: {
@@ -275,6 +276,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     tabText: {
       fontSize: APP_TYPE.cardSubtitle.fontSize,
+      fontVariant: ['tabular-nums'],
       fontWeight: '600',
     },
     row: {

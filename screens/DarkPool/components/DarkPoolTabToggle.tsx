@@ -117,6 +117,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     tabActive: {},
     tabLabel: {
       fontSize: 15,
+      fontVariant: ['tabular-nums'],
       fontWeight: '700',
       color: tokens.colors.text.tertiary,
       writingDirection: 'rtl',

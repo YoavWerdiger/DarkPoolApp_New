@@ -51,6 +51,7 @@ const styles = StyleSheet.create({
     ...darkPoolPhysicalRightText,
     flex: 1,
     fontSize: DARK_POOL_TYPE.caption.fontSize,
+    fontVariant: ['tabular-nums'],
     lineHeight: 18,
   },
 });

@@ -86,6 +86,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     title: {
       ...darkPoolPhysicalRightText,
       fontSize: APP_TYPE.cardTitle.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: APP_TYPE.cardTitle.lineHeight,
       fontWeight: APP_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
@@ -98,6 +99,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       ...darkPoolPhysicalRightText,
       marginTop: 6,
       fontSize: DARK_POOL_TYPE.caption.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.caption.lineHeight,
       fontWeight: DARK_POOL_TYPE.caption.fontWeight,
       color: tokens.colors.text.secondary,

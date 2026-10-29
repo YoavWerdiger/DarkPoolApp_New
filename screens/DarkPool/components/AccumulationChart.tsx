@@ -32,6 +32,7 @@ export function AccumulationChart({ data, height = 140 }: AccumulationChartProps
           textAlign: 'center',
           color: tokens.colors.text.tertiary,
           fontSize: DARK_POOL_TYPE.caption.fontSize,
+          fontVariant: ['tabular-nums'],
           lineHeight: DARK_POOL_TYPE.caption.lineHeight,
           fontWeight: DARK_POOL_TYPE.caption.fontWeight,
           paddingVertical: 24,

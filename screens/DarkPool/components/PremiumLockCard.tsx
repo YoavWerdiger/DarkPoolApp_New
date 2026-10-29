@@ -84,6 +84,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: APP_TYPE.cardTitle.fontSize,
+    fontVariant: ['tabular-nums'],
     lineHeight: APP_TYPE.cardTitle.lineHeight,
     fontWeight: APP_TYPE.cardTitle.fontWeight,
     ...darkPoolPhysicalRightText,
@@ -91,6 +92,7 @@ const styles = StyleSheet.create({
   subtitle: {
     marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
     fontSize: APP_TYPE.cardSubtitle.fontSize,
+    fontVariant: ['tabular-nums'],
     lineHeight: APP_TYPE.cardSubtitle.lineHeight,
     fontWeight: APP_TYPE.cardSubtitle.fontWeight,
     ...darkPoolPhysicalRightText,

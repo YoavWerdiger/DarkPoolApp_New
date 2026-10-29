@@ -69,6 +69,7 @@ export default function DarkPoolOverviewScreen() {
           ...darkPoolPhysicalRightText,
           marginTop: tokens.spacing.lg,
           fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
+          fontVariant: ['tabular-nums'],
           lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
           fontWeight: DARK_POOL_TYPE.cardSubtitle.fontWeight,
           color: tokens.colors.text.secondary,

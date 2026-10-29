@@ -453,6 +453,7 @@ function createStyles(
       ...darkPoolPhysicalRightText,
       color: tokens.colors.text.danger,
       fontSize: DARK_POOL_TYPE.footnote.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.footnote.lineHeight,
       fontWeight: DARK_POOL_TYPE.footnote.fontWeight,
     },

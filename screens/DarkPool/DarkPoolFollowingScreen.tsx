@@ -131,6 +131,7 @@ export default function DarkPoolFollowingScreen() {
         emptyText: {
           ...darkPoolPhysicalRightText,
           fontSize: DARK_POOL_TYPE.body.fontSize,
+          fontVariant: ['tabular-nums'],
           lineHeight: DARK_POOL_TYPE.body.lineHeight,
           color: tokens.colors.text.secondary,
           textAlign: 'center',
@@ -170,6 +171,7 @@ export default function DarkPoolFollowingScreen() {
           ...ltrNameText,
           width: '100%',
           fontSize: DARK_POOL_TYPE.cardBody.fontSize,
+          fontVariant: ['tabular-nums'],
           lineHeight: 20,
           fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
           color: tokens.colors.text.primary,
@@ -179,6 +181,7 @@ export default function DarkPoolFollowingScreen() {
           width: '100%',
           marginTop: 0,
           fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
+          fontVariant: ['tabular-nums'],
           lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
           fontWeight: DARK_POOL_TYPE.cardSubtitle.fontWeight,
           color: tokens.colors.text.secondary,

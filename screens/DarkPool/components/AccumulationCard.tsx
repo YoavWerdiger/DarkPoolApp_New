@@ -90,6 +90,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     ticker: {
       fontSize: APP_TYPE.cardTitle.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: APP_TYPE.cardTitle.lineHeight,
       fontWeight: APP_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
@@ -97,6 +98,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     label: {
       fontSize: APP_TYPE.caption2.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: APP_TYPE.caption2.lineHeight,
       fontWeight: APP_TYPE.caption2.fontWeight,
       color: tokens.colors.text.tertiary,
@@ -105,6 +107,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     value: {
       marginTop: 2,
       fontSize: APP_TYPE.cardMetricValueSecondary.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: APP_TYPE.cardMetricValueSecondary.lineHeight,
       fontWeight: APP_TYPE.cardMetricValueSecondary.fontWeight,
       textAlign: 'right',
@@ -119,6 +122,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     stat: { flex: 1, alignItems: 'stretch' },
     statLabel: {
       fontSize: APP_TYPE.caption2.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: APP_TYPE.caption2.lineHeight,
       fontWeight: APP_TYPE.caption2.fontWeight,
       color: tokens.colors.text.tertiary,
@@ -127,6 +131,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     statValue: {
       marginTop: 2,
       fontSize: APP_TYPE.cardSubtitle.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: APP_TYPE.cardSubtitle.lineHeight,
       fontWeight: APP_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,

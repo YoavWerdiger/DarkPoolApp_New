@@ -70,6 +70,7 @@ export function ExploreProfileGrid({
           ...darkPoolPhysicalRightText,
           width: '100%',
           fontSize: DARK_POOL_TYPE.body.fontSize,
+          fontVariant: ['tabular-nums'],
           lineHeight: DARK_POOL_TYPE.body.lineHeight,
           color: tokens.colors.text.tertiary,
         },

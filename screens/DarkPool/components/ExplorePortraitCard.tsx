@@ -149,6 +149,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     name: {
       width: '100%',
       fontSize: DARK_POOL_TYPE.cardBody.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.groupLabel.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       letterSpacing: DARK_POOL_TYPE.cardTitle.letterSpacing,
@@ -175,6 +176,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       ...hebrewText,
       width: '100%',
       fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
+      fontVariant: ['tabular-nums'],
       lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
       color: SoftUI.textSecondary,

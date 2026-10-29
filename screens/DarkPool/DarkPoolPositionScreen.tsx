@@ -212,11 +212,6 @@ export default function DarkPoolPositionScreen() {
                         </Text>
                       )}
                     </Text>
-                    {detail.asOf ? (
-                      <Text style={heroStyles.actionMeta}>
-                        נכון לדוח {toDataIsland(formatTradeDate(detail.asOf) ?? '')}
-                      </Text>
-                    ) : null}
                   </View>
                 </View>
 

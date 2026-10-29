@@ -441,8 +441,6 @@ export function PersonPortfolioProfileScreen({
   const companyTicker = isCompany
     ? (fund.profile?.ticker ?? ticker ?? '').trim().toUpperCase() || undefined
     : undefined;
-  const filingQuarterLabel =
-    kind === 'fund_manager' ? filingQuarterLabelHe(fund.profile?.stats.filing_date) : null;
 
   const displayName =
     (kind === 'fund_manager' ? fund.profile?.name : investor.profile?.name) ??
@@ -1772,11 +1770,6 @@ export function PersonPortfolioProfileScreen({
                           ? 'אחזקות אסטרטגיות'
                           : 'אחזקות מובילות'}
                 </Text>
-                {filingQuarterLabel ? (
-                  <Text style={[styles.honestyTag, styles.honestyTagInRow]} numberOfLines={1}>
-                    {filingQuarterLabel}
-                  </Text>
-                ) : null}
               </View>
               <UICard
                 variant="soft"

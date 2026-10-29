@@ -255,10 +255,10 @@ export default function DarkPoolPositionScreen() {
             </View>
           ) : null}
 
-          {/* רווח והפסד — כרטיס נפרד מפרטי הפוזיציה */}
+          {/* תשואת הפוזיציה — כרטיס נפרד מפרטי הפוזיציה */}
           {held ? (
             <View style={styles.section}>
-              <DarkPoolSectionHeader variant="group" title="רווח והפסד" />
+              <DarkPoolSectionHeader variant="group" title="תשואת הפוזיציה" />
               <UICard variant="soft" glassIntensity="light" padding="none" contentContainerStyle={styles.rowsCard}>
                 <FieldRow
                   icon={Activity}

@@ -871,6 +871,8 @@ export default function EarningsReportsTab({
         before,
         after,
         isToday: date.toDateString() === todayStr,
+        // מפתח קיים (גם מערך ריק) = נשלף; חסר = עוד בטעינה
+        loaded: dateKey in reportsByDate,
       });
     }
     return days;

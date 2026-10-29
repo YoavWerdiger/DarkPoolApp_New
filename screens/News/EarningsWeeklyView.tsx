@@ -20,6 +20,7 @@ import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
 import { APP_TYPE } from '../../components/ui/appType';
 import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
 import { TickerLogo } from '../../components/ui/TickerLogo';
+import { SkeletonBox } from '../../components/ui/SkeletonLoader';
 import EarningsService, { EarningsReport } from '../../services/earningsService';
 
 // ניקוי סימבול לתצוגה — מסיר סיומת ".US" ומינוס מתחילת הקוד. משותף עם התצוגה היומית.
@@ -61,6 +62,8 @@ export interface WeekDay {
   before: EarningsReport[];
   after: EarningsReport[];
   isToday: boolean;
+  /** היום כבר נשלף מהשרת — עד אז סקלטון, לא «אין דיווחים» */
+  loaded: boolean;
 }
 
 const PRE_COLOR = '#d1a11d'; // זהב — מסחר מוקדם
@@ -133,6 +136,20 @@ const LogoTile = memo(function LogoTile({
         {symbol}
       </Text>
     </Pressable>
+  );
+});
+
+/** סקלטון ליום שעוד נטען — אריחי לוגו + טיקר כמו LogoTile */
+const DayTilesSkeleton = memo(function DayTilesSkeleton() {
+  return (
+    <View style={weekStyles.tilesWrap}>
+      {Array.from({ length: 5 }, (_, i) => (
+        <View key={i} style={tileStyles.tile}>
+          <SkeletonBox width={TILE_LOGO} height={TILE_LOGO} borderRadius={TILE_LOGO / 2} />
+          <SkeletonBox width={32} height={10} borderRadius={5} style={{ marginTop: APP_LAYOUT.cardMetricLabelToValueGap }} />
+        </View>
+      ))}
+    </View>
   );
 });
 
@@ -321,7 +338,9 @@ const DayCard = memo(function DayCard({
         </Text>
       </View>
 
-      {total === 0 ? (
+      {total === 0 && !day.loaded ? (
+        <DayTilesSkeleton />
+      ) : total === 0 ? (
         <View style={weekStyles.emptyDay}>
           <Text style={[weekStyles.emptyDayText, { color: DesignTokens.colors.text.secondary }]}>
             אין דיווחים ביום זה

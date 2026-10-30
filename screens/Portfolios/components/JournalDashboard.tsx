@@ -35,14 +35,6 @@ const signed = (v: number, currency: string) =>
 const money = (v: number, currency: string) => `${getCurrencySymbol(currency)}${formatNumber(v, 2)}`;
 const toneColor = (v: number, t: Tokens) =>
   v > 0 ? t.colors.primary.main : v < 0 ? t.colors.text.danger : t.colors.text.secondary;
-const shortDate = (iso: string | null | undefined) =>
-  iso ? iso.slice(0, 10).split('-').reverse().slice(0, 2).join('.') : '';
-
-/** תשואת עסקה סגורה מהמחירים (כיוון שורט הופך סימן) */
-const tradeReturnPct = (x: Trade) =>
-  x.exit_price != null && x.entry_price > 0
-    ? ((x.exit_price - x.entry_price) / x.entry_price) * 100 * (x.direction === 'short' ? -1 : 1)
-    : null;
 
 /* ── פוזיציות פתוחות ── */
 export function JournalOpenPositionsCard({ holdings, currency }: { holdings: PortfolioHolding[]; currency: string }) {
@@ -111,14 +103,8 @@ export function JournalRecentTradesCard({ trades, currency }: { trades: Trade[];
                 ? { label: 'שורט', color: t.colors.text.danger }
                 : { label: 'לונג', color: t.colors.primary.main }
             }
-            // מחירי כניסה ויציאה במילים (בלי חץ); בלי מחיר יציאה — תאריך הסגירה
-            meta={
-              x.exit_price != null
-                ? `כניסה ${toDataIsland(money(x.entry_price, currency))} · יציאה ${toDataIsland(money(x.exit_price, currency))}`
-                : `נסגרה ${shortDate(x.exit_date)}`
-            }
+            // נטו: טיקר, לונג/שורט ורווח/הפסד — בלי מחירים, תאריך או תשואה
             value={signed(x.profit_loss ?? 0, currency)}
-            valueSub={tradeReturnPct(x) != null ? formatPercent(tradeReturnPct(x)) : undefined}
             color={toneColor(x.profit_loss ?? 0, t)}
           />
         ))}

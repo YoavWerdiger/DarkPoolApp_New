@@ -19,6 +19,9 @@ import { APP_LAYOUT } from '../../components/ui/appLayout';
 import { LIGHT_CANVAS } from '../../components/ui/designTokensStatic';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { ExplorePortraitCard } from './components/ExplorePortraitCard';
+import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
+import { ChatSheetTopoHeader } from '../../components/chat/ChatBottomSheet';
+import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image as ExpoImage } from 'expo-image';
 import { useQuery } from '@tanstack/react-query';
@@ -124,6 +127,11 @@ export default function DarkPoolExploreScreen() {
   const bottomPad = useDarkPoolTabBarHeight();
   // חיפוש לפי שם — במקום צ׳יפי הסוג; בזמן הקלדה התוצאות מחליפות את המדפים
   const [query, setQuery] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const closeSearch = useCallback(() => {
+    setSearchOpen(false);
+    setQuery('');
+  }, []);
   const [searchFocused, setSearchFocused] = useState(false);
 
   const openDrawer = useCallback(() => {
@@ -377,6 +385,15 @@ export default function DarkPoolExploreScreen() {
     [extras.company_books]
   );
 
+  // מתוצאת חיפוש: קודם סוגרים את השיט, ואחרי שירד — פותחים את הפרופיל (שני מודלים בבת אחת נתקעים ב-iOS)
+  const openFromSearch = useCallback(
+    (person: ExplorePerson) => {
+      closeSearch();
+      setTimeout(() => onPersonPress(person), 380);
+    },
+    [closeSearch, onPersonPress]
+  );
+
   const searchResults = useMemo(() => {
     const q = query.trim();
     if (!q) return null;
@@ -420,6 +437,19 @@ export default function DarkPoolExploreScreen() {
           inRtlTree
           title="חקור"
           onMenuPress={openDrawer}
+          rightAccessory={
+            <DayNavBlurButton
+              onPress={() => {
+                void HapticFeedback.selection();
+                setSearchOpen(true);
+              }}
+              glassIntensity="subtle"
+              size={DRAWER_MENU_BUTTON_SIZE}
+              accessibilityLabel="חיפוש לפי שם"
+            >
+              <Ionicons name="search" size={20} color={tokens.colors.text.primary} />
+            </DayNavBlurButton>
+          }
         />
 
         <ScrollView
@@ -442,50 +472,6 @@ export default function DarkPoolExploreScreen() {
             </UICard>
           ) : null}
 
-          <View style={[styles.searchShell, formFieldShellStyle({ tokens, focused: searchFocused, multiline: false })]}>
-            <Ionicons name="search" size={18} color={tokens.colors.text.secondary} />
-            <TextInput
-              style={styles.searchInput}
-              value={query}
-              onChangeText={setQuery}
-              onFocus={() => setSearchFocused(true)}
-              onBlur={() => setSearchFocused(false)}
-              placeholder="חיפוש לפי שם"
-              placeholderTextColor={tokens.colors.text.tertiary}
-              keyboardAppearance={(tokens.colors.background.primary as string) === LIGHT_CANVAS ? 'light' : 'dark'}
-              autoCorrect={false}
-              returnKeyType="search"
-              accessibilityLabel="חיפוש לפי שם"
-            />
-            {query ? (
-              <Pressable
-                onPress={() => {
-                  void HapticFeedback.selection();
-                  setQuery('');
-                }}
-                hitSlop={10}
-                accessibilityLabel="נקה חיפוש"
-              >
-                <Ionicons name="close-circle" size={18} color={tokens.colors.text.secondary} />
-              </Pressable>
-            ) : null}
-          </View>
-
-          {searchResults ? (
-            searchResults.length ? (
-              <View style={styles.resultsGrid}>
-                {searchResults.map((person) => (
-                  <ExplorePortraitCard
-                    key={`${person.kind}:${person.id}`}
-                    person={person}
-                    onPress={() => onPersonPress(person)}
-                  />
-                ))}
-              </View>
-            ) : (
-              <Text style={styles.noResults}>לא נמצאו פרופילים בשם הזה</Text>
-            )
-          ) : (
           <ExploreDiscoverySections
             mostFollowed={mostFollowed}
             fundBooks={fundBooks}
@@ -502,9 +488,76 @@ export default function DarkPoolExploreScreen() {
             kindCounts={kindCounts}
             onPersonPress={onPersonPress}
           />
-          )}
         </ScrollView>
       </SafeAreaView>
+
+      {/* חיפוש לפי שם — שיט: שדה חיפוש (מקלדת נפתחת) ורשת תוצאות */}
+      <BottomSheet
+        isOpen={searchOpen}
+        onClose={closeSearch}
+        snapPoints={[0.9]}
+        edgeToEdge
+        showHandle
+        enablePanDownToClose
+        showBrandBackground={false}
+        backgroundColor={tokens.colors.background.primary}
+        topCornerRadius={tokens.borderRadius.xl}
+        contentPaddingBottom={0}
+      >
+        <View style={styles.sheetRoot}>
+          <ChatSheetTopoHeader title="חיפוש" onClose={closeSearch} />
+          <View style={[styles.searchShell, formFieldShellStyle({ tokens, focused: searchFocused, multiline: false })]}>
+            <Ionicons name="search" size={18} color={tokens.colors.text.secondary} />
+            <TextInput
+              style={styles.searchInput}
+              value={query}
+              onChangeText={setQuery}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setSearchFocused(false)}
+              placeholder="שם פוליטיקאי, מנכ״ל, קרן או חברה"
+              placeholderTextColor={tokens.colors.text.tertiary}
+              keyboardAppearance={(tokens.colors.background.primary as string) === LIGHT_CANVAS ? 'light' : 'dark'}
+              autoCorrect={false}
+              autoFocus
+              returnKeyType="search"
+              accessibilityLabel="חיפוש לפי שם"
+            />
+            {query ? (
+              <Pressable
+                onPress={() => {
+                  void HapticFeedback.selection();
+                  setQuery('');
+                }}
+                hitSlop={10}
+                accessibilityLabel="נקה חיפוש"
+              >
+                <Ionicons name="close-circle" size={18} color={tokens.colors.text.secondary} />
+              </Pressable>
+            ) : null}
+          </View>
+          <ScrollView
+            style={styles.sheetScroll}
+            contentContainerStyle={styles.sheetScrollContent}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            showsVerticalScrollIndicator={false}
+          >
+            {searchResults == null ? null : searchResults.length ? (
+              <View style={styles.resultsGrid}>
+                {searchResults.map((person) => (
+                  <ExplorePortraitCard
+                    key={`${person.kind}:${person.id}`}
+                    person={person}
+                    onPress={() => openFromSearch(person)}
+                  />
+                ))}
+              </View>
+            ) : (
+              <Text style={styles.noResults}>לא נמצאו פרופילים בשם הזה</Text>
+            )}
+          </ScrollView>
+        </View>
+      </BottomSheet>
     </ScreenChrome>
   );
 }
@@ -520,6 +573,14 @@ function createStyles(
       paddingTop: tokens.spacing.sm,
       paddingBottom: bottomPad,
     },
+    sheetRoot: {
+      flex: 1,
+      direction: 'rtl',
+      paddingHorizontal: tokens.layout.screenPadding,
+      paddingTop: 4,
+    },
+    sheetScroll: { flex: 1 },
+    sheetScrollContent: { paddingBottom: 48 },
     searchShell: {
       direction: 'rtl',
       flexDirection: 'row',

@@ -1725,11 +1725,16 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
         content: overlayContent,
       });
       void HapticFeedback.success();
-      onClose();
+      closeAfterTouch();
     } catch (e: any) {
       logger.error('AddStoryFullScreen', 'Share failed', e);
       legacyAlert('שגיאה', e?.message || 'משהו השתבש');
     }
+  };
+
+  /** סגירה אחרי שרצף הנגיעה של «שתף» הסתיים (שני פריימים) — לא להסיר את המסך באמצע עיבוד המחווה */
+  const closeAfterTouch = () => {
+    requestAnimationFrame(() => requestAnimationFrame(() => onClose()));
   };
 
   const handleShareText = async () => {
@@ -1743,7 +1748,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
       backgroundColor: bg[0],
     });
     void HapticFeedback.success();
-    onClose();
+    closeAfterTouch();
   };
 
   const editingOverlay = editingOverlayId
@@ -2294,10 +2299,13 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
   /* ═══════════════════════════════════════════════ */
   /* ═══════ RENDER ═══════════════════════════════ */
   /* ═══════════════════════════════════════════════ */
+  // ב-Modal חייבים GestureHandlerRootView משלו (שורש נייטיב נפרד); במסך — יש כבר אחד בשורש האפליקציה.
+  // שורש מקונן שהוסר באמצע נגיעה השאיר מחווה «תקועה» שחסמה הקשות בכל האפליקציה (גלילה עבדה, הקשה לא).
+  const GestureRoot = presentation === 'screen' ? View : GestureHandlerRootView;
   const body = (
     <>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-      <GestureHandlerRootView style={s.fullFlex}>
+      <GestureRoot style={s.fullFlex}>
         {/*
           dismissY animates this root, but dismiss Pan is NOT wrapped around chrome.
           Capture: pans/pinch live only on the camera preview panel.
@@ -2369,7 +2377,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
             message="זה ייקח רק רגע"
           />
         </Reanimated.View>
-      </GestureHandlerRootView>
+      </GestureRoot>
     </>
   );
 

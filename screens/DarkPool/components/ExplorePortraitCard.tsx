@@ -58,6 +58,7 @@ export const ExplorePortraitCard = memo(function ExplorePortraitCard({
       ? formatInsiderDisplayName(person.name)
       : person.name;
   const nameIsLatin = displayName.trim().length > 0 && !HEBREW_LETTER.test(displayName);
+  const isCompany = person.entity_type === 'company';
   // חבר/חברת קונגרס — תמיד אותה תווית (בלי «דיווח לפני…» / מפלגה), מגדר מהמאגר הרשמי
   const role =
     person.kind === 'politician' && isKnownCongressMember(person.id)
@@ -88,7 +89,7 @@ export const ExplorePortraitCard = memo(function ExplorePortraitCard({
           style={styles.footer}
         >
           <Text
-            style={[styles.name, nameIsLatin ? styles.nameLatin : styles.nameHebrew]}
+            style={[styles.name, nameIsLatin ? styles.nameLatin : styles.nameHebrew, isCompany && styles.left]}
             numberOfLines={2}
           >
             {nameIsLatin ? displayName : isolateNumericRuns(displayName)}
@@ -106,7 +107,7 @@ export const ExplorePortraitCard = memo(function ExplorePortraitCard({
           ) : null}
           {role ? (
             <Text
-              style={[styles.role, roleIsLatin ? styles.roleLatin : null]}
+              style={[styles.role, roleIsLatin ? styles.roleLatin : null, isCompany && styles.left]}
               numberOfLines={1}
             >
               {roleIsLatin ? role : isolateNumericRuns(role)}
@@ -161,9 +162,11 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       color: '#fff',
       includeFontPadding: false,
     },
-    // שם באנגלית — לשמאל (שם לועזי)
     nameLatin: {
       ...ltrNameText,
+    },
+    // חברה ציבורית (שם לועזי) — לשמאל
+    left: {
       textAlign: 'left',
     },
     nameHebrew: {
@@ -192,7 +195,6 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     roleLatin: {
       ...ltrNameText,
-      textAlign: 'left',
     },
   });
 }

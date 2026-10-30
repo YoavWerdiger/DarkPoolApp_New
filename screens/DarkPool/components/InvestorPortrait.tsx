@@ -351,14 +351,13 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     letterSpacing: 0.5,
   },
+  // בלי מסגרת סביב הלוגו — רק צל רך
   logoPlate: {
     borderRadius: 999,
-    padding: 4,
-    backgroundColor: 'rgba(255,255,255,0.12)',
     shadowColor: '#000',
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
   },
   companyWatermark: {
     position: 'absolute',

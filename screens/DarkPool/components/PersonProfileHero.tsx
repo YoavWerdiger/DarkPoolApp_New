@@ -272,7 +272,7 @@ function PersonProfileHeroInner({
       </View>
 
       <Animated.View style={[styles.nameWrap, nameFollowStyle]} pointerEvents="none">
-        <Text style={[styles.name, !/[\u0590-\u05FF]/.test(name ?? '') && styles.nameLeft]} numberOfLines={2}>
+        <Text style={[styles.name, !!logoTicker?.trim() && styles.nameLeft]} numberOfLines={2}>
           {name}
         </Text>
       </Animated.View>
@@ -304,8 +304,6 @@ const styles = StyleSheet.create({
   },
   heroLogoPlate: {
     borderRadius: 999,
-    padding: 5,
-    backgroundColor: 'rgba(255,255,255,0.12)',
     shadowColor: '#000',
     shadowOpacity: 0.4,
     shadowRadius: 16,
@@ -342,7 +340,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 10,
   },
-  // שם באנגלית — מיושר לשמאל (כמו שם לועזי); עברית — לימין
+  // חברה ציבורית (שם לועזי) — מיושר לשמאל
   nameLeft: {
     textAlign: 'left',
   },

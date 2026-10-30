@@ -17,6 +17,7 @@ import type { Trade } from '../portfolioTypes';
 import { toLocalDateKey } from '../../../utils/dateKeys';
 import { formatCurrency } from '../utils/format';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
+import { JournalStatsGrid } from '../components/JournalDashboard';
 import {
   journalPhysicalRightText,
   journalSectionSubtitleStyle,
@@ -212,29 +213,9 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
           backgroundColor: tokens.colors.border.divider,
           marginVertical: 12,
         },
-        summaryRow: {
-          flexDirection: 'row',
-          gap: 6,
-        },
-        summaryCell: {
-          flex: 1,
-          alignItems: 'center',
-          gap: 3,
-        },
-        summaryLabel: {
-          fontSize: 11,
-          fontWeight: '600',
-          lineHeight: 14,
-          color: tokens.colors.text.tertiary,
-          ...journalPhysicalRightText,
-          textAlign: 'center',
-        },
-        summaryValue: {
-          fontSize: 13,
-          fontWeight: '700',
-          color: tokens.colors.text.primary,
-          writingDirection: 'ltr',
-          textAlign: 'center',
+        /* מתחת לכרטיס הלוח (12) — יחד 40 כמו sectionGap בין סקשנים */
+        monthStats: {
+          marginTop: 28,
         },
         dayHeaderRow: {
           flexDirection: 'row',
@@ -418,48 +399,6 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
             </TouchableOpacity>
           </View>
 
-          <View style={styles.summaryRow}>
-            <View style={styles.summaryCell}>
-              <Text style={styles.summaryLabel}>סה״כ</Text>
-              <Text
-                style={[styles.summaryValue, { color: totalColor }]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.75}
-              >
-                {formatCurrency(monthlyTotal.sum, currency)}
-              </Text>
-            </View>
-            <View style={styles.summaryCell}>
-              <Text style={styles.summaryLabel}>טריידים</Text>
-              <Text style={styles.summaryValue}>{monthlyTotal.tradeCount}</Text>
-            </View>
-            <View style={styles.summaryCell}>
-              <Text style={styles.summaryLabel}>ירוקים</Text>
-              <Text
-                style={[
-                  styles.summaryValue,
-                  { color: tokens.colors.primary.main },
-                ]}
-              >
-                {monthlyTotal.winDays}
-              </Text>
-            </View>
-            <View style={styles.summaryCell}>
-              <Text style={styles.summaryLabel}>אדומים</Text>
-              <Text
-                style={[
-                  styles.summaryValue,
-                  { color: tokens.colors.text.danger },
-                ]}
-              >
-                {monthlyTotal.lossDays}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.divider} />
-
           <View style={styles.dayHeaderRow}>
             {HEB_DAYS.map((d, i) => (
               <View
@@ -553,6 +492,19 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
           ))}
         </View>
       </UICard>
+
+      {monthlyTotal.tradeCount > 0 ? (
+        <JournalStatsGrid
+          title="סטטיסטיקות חודש"
+          style={styles.monthStats}
+          cells={[
+            { icon: 'wallet-outline', label: 'סה״כ חודש', value: formatCurrency(monthlyTotal.sum, currency), color: totalColor },
+            { icon: 'swap-horizontal-outline', label: 'טריידים', value: String(monthlyTotal.tradeCount), color: tokens.colors.text.primary },
+            { icon: 'trending-up', label: 'ימים ירוקים', value: String(monthlyTotal.winDays), color: tokens.colors.primary.main },
+            { icon: 'trending-down', label: 'ימים אדומים', value: String(monthlyTotal.lossDays), color: tokens.colors.text.danger },
+          ]}
+        />
+      ) : null}
 
       {selectedDay && selectedDayTrades.length > 0 ? (
         <View>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
@@ -28,6 +28,7 @@ import {
 import type { PortfolioAnalyticsResult } from '../../../services/portfolios';
 import { loadTrades } from '../../../services/portfolios/portfolioTradeDerive';
 import UICard from '../../../components/ui/UICard';
+import { LIGHT_CANVAS } from '../../../components/ui/designTokensStatic';
 import { DayDividerPill, SlidingPillGroup } from '../../../components/ui/DayDividerPill';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 import {
@@ -37,6 +38,7 @@ import {
   journalCardMetricValueSecondaryStyle,
   journalCardTitleStyle,
   journalPhysicalRightText,
+  journalSectionTitleStyle,
 } from '../../Journal/journalLayout';
 import {
   computeChartPeriodReturn,
@@ -56,12 +58,14 @@ import { appendOpenPositionSession, appendWeightedIntraday } from '../../DarkPoo
 import { fetchIntradayCloses, intradaySpecForPeriod } from '../../DarkPool/utils/congressBasketPrices';
 import { MotionNumber } from '../../../components/ui/MotionNumber';
 import {
-  JournalInsightsCard,
   JournalOpenPositionsCard,
   JournalRecentTradesCard,
-  JournalTodayCard,
+  JournalStatsCard,
 } from '../components/JournalDashboard';
 import { useSharedValue } from 'react-native-reanimated';
+
+/** גובה הגרף — כמו בתיק האינסיידרים */
+const HERO_CHART_HEIGHT = 220;
 
 interface Props {
   portfolio: Portfolio;
@@ -545,10 +549,26 @@ export default function OverviewTab({
           color: tokens.colors.text.primary,
           marginBottom: JOURNAL_LAYOUT.cardTitleToBodyGap,
         },
-        /** כמו פרופיל אינסיידר: תווית → סכום (cardMetricValue) → רווח · תשואה */
+        /** כמו פרופיל אינסיידר: בלוק שווי + גרף בלי כרטיס, ישירות על רקע המסך */
+        heroBlock: {
+          marginBottom: APP_LAYOUT.sectionGap,
+          direction: 'rtl',
+        },
         valueLabel: {
-          ...journalCardTitleStyle,
+          ...journalSectionTitleStyle,
           color: tokens.colors.text.primary,
+        },
+        chartWrap: {
+          marginTop: APP_LAYOUT.stackGapSmall,
+          alignSelf: 'stretch',
+        },
+        chartWatermark: {
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          alignItems: 'center',
+          justifyContent: 'center',
         },
         heroNumberWrap: {
           marginTop: APP_LAYOUT.cardMetricLabelToValueGap,
@@ -607,6 +627,19 @@ export default function OverviewTab({
           lineHeight: 18,
           ...journalPhysicalRightText,
         },
+        sectionBlock: {
+          marginBottom: APP_LAYOUT.sectionGap,
+          direction: 'rtl',
+        },
+        sectionHeading: {
+          ...journalSectionTitleStyle,
+          color: tokens.colors.text.primary,
+          marginBottom: APP_LAYOUT.sectionHeaderToContent,
+        },
+        pieCard: {
+          overflow: 'hidden',
+          direction: 'rtl',
+        },
         groupChips: {
           direction: 'rtl',
           flexDirection: 'row',
@@ -622,11 +655,11 @@ export default function OverviewTab({
         donutWrap: {
           flexDirection: 'row',
           alignItems: 'center',
-          gap: 16,
+          gap: APP_LAYOUT.componentGap,
         },
         legend: {
           flex: 1,
-          gap: 8,
+          gap: APP_LAYOUT.stackGapSmall,
         },
         legendRow: {
           flexDirection: 'row',
@@ -836,19 +869,9 @@ export default function OverviewTab({
         </View>
       ) : null}
 
-      {/* היום — רווח/הפסד חי, פוזיציות פתוחות, חשיפה */}
-      {openTradeHoldings.length > 0 ? (
-        <JournalTodayCard
-          dailyGain={liveDailyGain}
-          totalValue={livePortfolioValue}
-          holdings={openTradeHoldings}
-          currency={portfolio.currency}
-        />
-      ) : null}
-
-      {/* Performance chart — כותרת סקשן זהה בטעינה/טעון; בגרף רק amount→delta */}
-      <UICard variant="soft" padding="md" style={styles.section}>
-        <Text style={styles.valueLabel}>שווי תיק:</Text>
+      {/* Performance chart — כמו תיק האינסיידרים: בלי כרטיס, ישירות על רקע המסך, עם סימן המים של DarkPool */}
+      <View style={styles.heroBlock}>
+        <Text style={styles.valueLabel}>שווי תיק</Text>
         {heroValue != null && liveValue != null ? (
           // אותו מספר מתגלגל כמו באינסיידרים: ב-UI thread, ספרה מסיימת מעבר ורק אז ממשיכה
           <View style={styles.heroNumberWrap}>
@@ -909,22 +932,38 @@ export default function OverviewTab({
                 : 'אין נתונים היסטוריים עדיין — פתח פוזיציה או הוסף הפקדה'}
           </Text>
         ) : (
-          <PortfolioValueChart
-            series={filteredSeries}
-            currency={portfolio.currency}
-            selectedPeriod={period}
-            onPeriodChange={setPeriod}
-            showHeader={false}
-            onScrubPoint={setScrubPoint}
-            scrubValue={scrubValueSV}
-            scrubActive={scrubActiveSV}
-          />
+          <View style={styles.chartWrap}>
+            <View pointerEvents="none" style={[styles.chartWatermark, { height: HERO_CHART_HEIGHT }]}>
+              <Image
+                source={require('../../../assets/badges/rank_mark.png')}
+                style={{
+                  height: HERO_CHART_HEIGHT * 0.86,
+                  aspectRatio: 686 / 512,
+                  tintColor: tokens.colors.text.primary,
+                  opacity: String(tokens.colors.background.primary) === LIGHT_CANVAS ? 0.045 : 0.055,
+                }}
+                resizeMode="contain"
+              />
+            </View>
+            <PortfolioValueChart
+              series={filteredSeries}
+              height={HERO_CHART_HEIGHT}
+              currency={portfolio.currency}
+              selectedPeriod={period}
+              onPeriodChange={setPeriod}
+              showHeader={false}
+              onScrubPoint={setScrubPoint}
+              scrubValue={scrubValueSV}
+              scrubActive={scrubActiveSV}
+              showPointMarkers={false}
+            />
+          </View>
         )}
-      </UICard>
+      </View>
 
-      {/* Distribution */}
-      <UICard variant="soft" padding="md" style={styles.section}>
-        <Text style={styles.sectionTitle}>חלוקת נכסים</Text>
+      {/* Distribution — כמו «פילוח אחזקות» באינסיידרים: כותרת ובחירת הקיבוץ על רקע המסך, העוגה בכרטיס */}
+      <View style={styles.sectionBlock}>
+        <Text style={styles.sectionHeading}>חלוקת נכסים</Text>
         <SlidingPillGroup
           options={GROUP_BY_OPTIONS}
           value={groupBy}
@@ -932,6 +971,7 @@ export default function OverviewTab({
           style={styles.groupChips}
           pillStyle={styles.groupChip}
         />
+      <UICard variant="soft" padding="md" style={styles.pieCard}>
         {distribution.length === 0 ? (
           <Text style={styles.emptyText}>
             {openTrades.length > 0
@@ -943,8 +983,8 @@ export default function OverviewTab({
             <View style={styles.donutWrap}>
               <DistributionDonut
                 slices={distribution}
-                size={140}
-                strokeWidth={20}
+                size={128}
+                strokeWidth={18}
                 avatarUrl={avatarUrl}
                 userInitial={userInitial}
               />
@@ -978,11 +1018,12 @@ export default function OverviewTab({
           </>
         )}
       </UICard>
+      </View>
 
       {/* לוח בקרה: פוזיציות חיות, עסקאות אחרונות, מה עובד */}
       <JournalOpenPositionsCard holdings={openTradeHoldings} currency={portfolio.currency} />
       <JournalRecentTradesCard trades={closedTrades} currency={portfolio.currency} />
-      <JournalInsightsCard trades={closedTrades} currency={portfolio.currency} />
+      <JournalStatsCard trades={closedTrades} currency={portfolio.currency} />
     </View>
   );
 }

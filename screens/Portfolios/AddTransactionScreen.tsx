@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  Modal,
+  useWindowDimensions,
 } from 'react-native';
 import { legacyAlert } from '../../utils/appDialog';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -23,6 +23,7 @@ import { formFieldShellStyle } from '../../components/ui/formControl';
 import { chromeSurfaceFill } from '../../components/ui/chromeControl';
 import { DayDividerPill } from '../../components/ui/DayDividerPill';
 import UIButton from '../../components/ui/UIButton';
+import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
 import UICard from '../../components/ui/UICard';
 import {
   JOURNAL_LAYOUT,
@@ -102,6 +103,7 @@ export default function AddTransactionScreen() {
   const [tradeDate, setTradeDate] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showDateSheet, setShowDateSheet] = useState(false);
   const [notes, setNotes] = useState('');
   const [currency, setCurrency] = useState('USD');
   const [searchOpen, setSearchOpen] = useState(false);
@@ -596,34 +598,58 @@ export default function AddTransactionScreen() {
           flex: 1,
           width: undefined,
         },
-        pickerModalOverlay: {
-          flex: 1,
-          backgroundColor: tokens.colors.background.overlay,
-          justifyContent: 'flex-end',
-        },
-        pickerModalSheet: {
-          backgroundColor: tokens.colors.background.cardSolid,
-          borderTopLeftRadius: UI_CARD_RADIUS,
-          borderTopRightRadius: UI_CARD_RADIUS,
-          paddingTop: JOURNAL_LAYOUT.cardPadding,
+        dateSheet: {
           paddingHorizontal: PORTFOLIO_FORM.screenPadH,
           paddingBottom: 28,
-          borderWidth: 0,
-          overflow: 'hidden',
         },
-        pickerModalTitle: {
-          ...journalCardTitleStyle,
-          width: undefined,
-          marginTop: 0,
-          color: tokens.colors.text.primary,
-          textAlign: 'center',
+        dateSheetHeader: {
+          flexDirection: 'row-reverse',
+          alignItems: 'center',
+          justifyContent: 'space-between',
           marginBottom: JOURNAL_LAYOUT.stackGapSmall,
         },
+        dateSheetTitle: {
+          ...journalCardTitleStyle,
+          width: undefined,
+          color: tokens.colors.text.primary,
+        },
+        nowChip: {
+          paddingHorizontal: 14,
+          height: 32,
+          borderRadius: 16,
+          justifyContent: 'center',
+          backgroundColor: tokens.colors.primary.dim,
+        },
+        nowChipText: {
+          ...journalCaptionStyle,
+          fontWeight: '600',
+          color: tokens.colors.primary.main,
+        },
+        // הלוח המובנה ברוחב קבוע (~330) — ממורכז במקום צמוד לשמאל
+        dateSheetCalendar: { width: 340, alignSelf: 'center' },
+        timeRow: {
+          flexDirection: 'row-reverse',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          minHeight: 52,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: tokens.colors.border.divider,
+        },
+        timeRowLabel: {
+          ...journalBodyTextStyle,
+          fontWeight: '600',
+          width: undefined,
+          color: tokens.colors.text.primary,
+        },
+        timeRowPicker: { direction: 'ltr' },
       }),
     [tokens]
   );
 
   const pickerTheme = tokens.colors.background.primary === LIGHT_CANVAS ? 'light' : 'dark';
+  // לוח שנה inline (~350) + שורת שעה + כפתור + כותרת
+  const { height: windowHeight } = useWindowDimensions();
+  const dateSheetSnap = Math.min(0.92, 570 / windowHeight);
 
   const headerTitle = isEdit
     ? 'עריכת עסקה'
@@ -921,7 +947,8 @@ export default function AddTransactionScreen() {
                   activeOpacity={0.8}
                   onPress={() => {
                     void HapticFeedback.impactLight();
-                    setShowDatePicker(true);
+                    if (Platform.OS === 'ios') setShowDateSheet(true);
+                    else setShowDatePicker(true);
                   }}
                 >
                   <Ionicons name="calendar-outline" size={18} color={tokens.colors.text.secondary} />
@@ -935,7 +962,8 @@ export default function AddTransactionScreen() {
                   activeOpacity={0.8}
                   onPress={() => {
                     void HapticFeedback.impactLight();
-                    setShowTimePicker(true);
+                    if (Platform.OS === 'ios') setShowDateSheet(true);
+                    else setShowTimePicker(true);
                   }}
                 >
                   <Ionicons name="time-outline" size={18} color={tokens.colors.text.secondary} />
@@ -945,89 +973,77 @@ export default function AddTransactionScreen() {
                 </TouchableOpacity>
               </View>
 
-              {/* Date picker modal (iOS) / inline (Android) */}
+              {/* iOS — שיט אחד: לוח שנה + שעה; אנדרואיד — הדיאלוגים המובנים */}
               {Platform.OS === 'ios' ? (
-                <Modal
-                  visible={showDatePicker}
-                  transparent
-                  animationType="slide"
-                  onRequestClose={() => setShowDatePicker(false)}
+                <BottomSheet
+                  isOpen={showDateSheet}
+                  onClose={() => setShowDateSheet(false)}
+                  snapPoints={[dateSheetSnap]}
+                  enablePanDownToClose
+                  showHandle
+                  showBrandBackground={false}
                 >
-                  <TouchableOpacity
-                    style={styles.pickerModalOverlay}
-                    activeOpacity={1}
-                    onPress={() => setShowDatePicker(false)}
-                  >
-                    <View style={styles.pickerModalSheet}>
-                      <Text style={styles.pickerModalTitle}>בחר תאריך</Text>
-                      <DateTimePicker
-                        value={tradeDate}
-                        mode="date"
-                        display="inline"
-                        locale="he-IL"
-                        themeVariant={pickerTheme}
-                        onChange={(_, d) => { if (d) setTradeDate(d); }}
-                        style={{ alignSelf: 'stretch' }}
-                      />
-                      <UIButton
-                        title="אישור"
-                        variant="primary"
-                        size="lg"
-                        fullWidth
-                        onPress={() => setShowDatePicker(false)}
-                        style={{ marginTop: 12 }}
-                      />
+                  <View style={styles.dateSheet}>
+                    <View style={styles.dateSheetHeader}>
+                      <Text style={styles.dateSheetTitle}>{mode === 'asset' ? 'תאריך ושעת כניסה' : 'תאריך ושעה'}</Text>
+                      <TouchableOpacity
+                        style={styles.nowChip}
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          void HapticFeedback.selection();
+                          setTradeDate(new Date());
+                        }}
+                      >
+                        <Text style={styles.nowChipText}>עכשיו</Text>
+                      </TouchableOpacity>
                     </View>
-                  </TouchableOpacity>
-                </Modal>
+                    <DateTimePicker
+                      value={tradeDate}
+                      mode="date"
+                      display="inline"
+                      locale="he-IL"
+                      themeVariant={pickerTheme}
+                      accentColor={tokens.colors.primary.main}
+                      maximumDate={isEdit ? undefined : new Date()}
+                      onChange={(_, d) => { if (d) setTradeDate(d); }}
+                      style={styles.dateSheetCalendar}
+                    />
+                    <View style={styles.timeRow}>
+                      <Text style={styles.timeRowLabel}>שעה</Text>
+                      <View style={styles.timeRowPicker}>
+                        <DateTimePicker
+                          value={tradeDate}
+                          mode="time"
+                          display="compact"
+                          locale="he-IL"
+                          themeVariant={pickerTheme}
+                          accentColor={tokens.colors.primary.main}
+                          is24Hour
+                          onChange={(_, d) => { if (d) setTradeDate(d); }}
+                        />
+                      </View>
+                    </View>
+                    <UIButton
+                      title="אישור"
+                      variant="primary"
+                      size="lg"
+                      fullWidth
+                      onPress={() => setShowDateSheet(false)}
+                      style={{ marginTop: JOURNAL_LAYOUT.componentGap }}
+                    />
+                  </View>
+                </BottomSheet>
               ) : showDatePicker ? (
                 <DateTimePicker
                   value={tradeDate}
                   mode="date"
                   display="default"
+                  maximumDate={isEdit ? undefined : new Date()}
                   onChange={(_, d) => {
                     setShowDatePicker(false);
                     if (d) setTradeDate(d);
                   }}
                 />
-              ) : null}
-
-              {/* Time picker modal (iOS) / inline (Android) */}
-              {Platform.OS === 'ios' ? (
-                <Modal
-                  visible={showTimePicker}
-                  transparent
-                  animationType="slide"
-                  onRequestClose={() => setShowTimePicker(false)}
-                >
-                  <TouchableOpacity
-                    style={styles.pickerModalOverlay}
-                    activeOpacity={1}
-                    onPress={() => setShowTimePicker(false)}
-                  >
-                    <View style={styles.pickerModalSheet}>
-                      <Text style={styles.pickerModalTitle}>בחר שעה</Text>
-                      <DateTimePicker
-                        value={tradeDate}
-                        mode="time"
-                        display="spinner"
-                        locale="he-IL"
-                        themeVariant={pickerTheme}
-                        is24Hour
-                        onChange={(_, d) => { if (d) setTradeDate(d); }}
-                        style={{ alignSelf: 'stretch' }}
-                      />
-                      <UIButton
-                        title="אישור"
-                        variant="primary"
-                        size="lg"
-                        fullWidth
-                        onPress={() => setShowTimePicker(false)}
-                        style={{ marginTop: 12 }}
-                      />
-                    </View>
-                  </TouchableOpacity>
-                </Modal>
               ) : showTimePicker ? (
                 <DateTimePicker
                   value={tradeDate}

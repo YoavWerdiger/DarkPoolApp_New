@@ -113,9 +113,6 @@ function InvestorPortraitFallbackInner({
       // חברה: רקע «פיננסי» כהה (זהה בבהיר ובכהה), סימן מים גדול של הלוגו בפינה, והלוגו על אריח נקי במרכז
       <View style={[styles.cardBg, { backgroundColor: brandBg[1] }, style]}>
         <LinearGradient colors={brandBg} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
-        <View style={styles.companyWatermark} pointerEvents="none">
-          <TickerLogo symbol={logo} size={190} />
-        </View>
         <View style={styles.cardMonoCenter} accessibilityLabel={name}>
           <View style={styles.logoPlate}>
             <TickerLogo symbol={logo} size={84} />

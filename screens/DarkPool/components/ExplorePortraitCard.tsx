@@ -161,8 +161,10 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       color: '#fff',
       includeFontPadding: false,
     },
+    // שם באנגלית — לשמאל (שם לועזי)
     nameLatin: {
       ...ltrNameText,
+      textAlign: 'left',
     },
     nameHebrew: {
       ...hebrewText,
@@ -190,6 +192,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     roleLatin: {
       ...ltrNameText,
+      textAlign: 'left',
     },
   });
 }

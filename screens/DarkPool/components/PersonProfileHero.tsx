@@ -178,9 +178,6 @@ function PersonProfileHeroInner({
       )}
       {!activeUri && logoTicker?.trim() ? (
         <>
-          <View style={styles.heroWatermark} pointerEvents="none">
-            <TickerLogo symbol={logoTicker.trim()} size={HERO_LOGO_SIZE * 2.6} />
-          </View>
           <View style={[StyleSheet.absoluteFill, styles.logoCenter]}>
             <View style={styles.heroLogoPlate}>
               <TickerLogo symbol={logoTicker.trim()} size={HERO_LOGO_SIZE} />
@@ -275,7 +272,7 @@ function PersonProfileHeroInner({
       </View>
 
       <Animated.View style={[styles.nameWrap, nameFollowStyle]} pointerEvents="none">
-        <Text style={styles.name} numberOfLines={2}>
+        <Text style={[styles.name, !/[\u0590-\u05FF]/.test(name ?? '') && styles.nameLeft]} numberOfLines={2}>
           {name}
         </Text>
       </Animated.View>
@@ -344,6 +341,10 @@ const styles = StyleSheet.create({
     bottom: 0,
     paddingHorizontal: 20,
     paddingBottom: 10,
+  },
+  // שם באנגלית — מיושר לשמאל (כמו שם לועזי); עברית — לימין
+  nameLeft: {
+    textAlign: 'left',
   },
   name: {
     ...ltrNameText,

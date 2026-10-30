@@ -55,6 +55,12 @@ import { APP_LAYOUT } from '../../../components/ui/appLayout';
 import { appendOpenPositionSession, appendWeightedIntraday } from '../../DarkPool/utils/sessionSnapshots';
 import { fetchIntradayCloses, intradaySpecForPeriod } from '../../DarkPool/utils/congressBasketPrices';
 import { MotionNumber } from '../../../components/ui/MotionNumber';
+import {
+  JournalInsightsCard,
+  JournalOpenPositionsCard,
+  JournalRecentTradesCard,
+  JournalTodayCard,
+} from '../components/JournalDashboard';
 import { useSharedValue } from 'react-native-reanimated';
 
 interface Props {
@@ -138,6 +144,7 @@ export default function OverviewTab({
   });
   /** פוזיציות פתוחות — למחשב ערך תיק חי */
   const [openTrades, setOpenTrades] = useState<Trade[]>([]);
+  const [closedTrades, setClosedTrades] = useState<Trade[]>([]);
   /** מחירים חיים + previous_close עבור סימבולי הפוזיציות הפתוחות */
   const [openTradeQuotes, setOpenTradeQuotes] = useState<Map<string, LiveQuote>>(new Map());
 
@@ -248,6 +255,7 @@ export default function OverviewTab({
           loadTrades(portfolio.id, 'OPEN'),
         ]);
         if (cancel) return;
+        setClosedTrades(closed);
 
         const withPnl = closed.filter((t) => t.profit_loss != null);
         if (withPnl.length > 0) {
@@ -828,6 +836,16 @@ export default function OverviewTab({
         </View>
       ) : null}
 
+      {/* היום — רווח/הפסד חי, פוזיציות פתוחות, חשיפה */}
+      {openTradeHoldings.length > 0 ? (
+        <JournalTodayCard
+          dailyGain={liveDailyGain}
+          totalValue={livePortfolioValue}
+          holdings={openTradeHoldings}
+          currency={portfolio.currency}
+        />
+      ) : null}
+
       {/* Performance chart — כותרת סקשן זהה בטעינה/טעון; בגרף רק amount→delta */}
       <UICard variant="soft" padding="md" style={styles.section}>
         <Text style={styles.valueLabel}>שווי תיק:</Text>
@@ -961,151 +979,10 @@ export default function OverviewTab({
         )}
       </UICard>
 
-      {(analytics != null || tradeStats.count > 0) && (
-        <View style={styles.metricSection}>
-          <Text style={styles.metricSectionLabel}>מדדי ביצוע</Text>
-          {/* רשת שני טורים שווים (טופו: grid גמיש, לא רוחב קבוע) — כל כרטיס: תווית, ערך, הסבר */}
-          <View style={styles.metricRow}>
-            {liveDailyGain != null ? (
-              <PerformanceMetricCard
-                label="היום"
-                value={`${liveDailyGain >= 0 ? '+' : ''}${formatCurrency(liveDailyGain, portfolio.currency)}`}
-                valueColor={gainColor(liveDailyGain, positive, negative, neutral)}
-                hint={
-                  livePortfolioValue != null && livePortfolioValue - liveDailyGain > 0
-                    ? `${formatPercent((liveDailyGain / (livePortfolioValue - liveDailyGain)) * 100)} · בזמן אמת`
-                    : 'בזמן אמת'
-                }
-                styles={styles}
-              />
-            ) : null}
-            {periodReturn != null ? (
-              <PerformanceMetricCard
-                label={`תשואה · ${PERIOD_LABEL_HE[period] ?? period}`}
-                value={formatPercent(periodReturn * 100)}
-                valueColor={gainColor(periodReturn, positive, negative, neutral)}
-                hint={analytics?.twrReturn != null ? 'מנורמל להפקדות · לפי הטווח בגרף' : 'לפי הטווח בגרף'}
-                visual={
-                  sparkValues.length >= 2 ? (
-                    <Sparkline values={sparkValues} color={gainColor(periodReturn, positive, negative, neutral)} />
-                  ) : null
-                }
-                styles={styles}
-              />
-            ) : null}
-            {openTradeHoldings.length > 0 ? (
-              <PerformanceMetricCard
-                label="רווח לא ממומש"
-                value={`${openUnrealized >= 0 ? '+' : ''}${formatCurrency(openUnrealized, portfolio.currency)}`}
-                valueColor={gainColor(openUnrealized, positive, negative, neutral)}
-                hint={
-                  openTradeHoldings.length === 1
-                    ? 'פוזיציה פתוחה אחת · בזמן אמת'
-                    : `${openTradeHoldings.length} פוזיציות פתוחות · בזמן אמת`
-                }
-                styles={styles}
-              />
-            ) : null}
-            {tradeStats.count > 0 ? (
-              <PerformanceMetricCard
-                label="P&L נטו"
-                value={`${netPnl >= 0 ? '+' : ''}${formatCurrency(netPnl, portfolio.currency)}`}
-                valueColor={gainColor(netPnl, positive, negative, neutral)}
-                hint={
-                  tradeStats.count === 1
-                    ? 'עסקה סגורה אחת'
-                    : `${tradeStats.count} עסקאות סגורות`
-                }
-                styles={styles}
-              />
-            ) : null}
-            {tradeStats.winRate != null ? (
-              <PerformanceMetricCard
-                label="אחוז הצלחה"
-                value={`${tradeStats.winRate.toFixed(1)}%`}
-                valueColor={tradeStats.winRate >= 50 ? positive : tokens.colors.text.primary}
-                hint={
-                  tradeStats.avgWin != null && tradeStats.avgLoss != null
-                    ? `ממוצע ${formatCurrency(tradeStats.avgWin, portfolio.currency)} / ${formatCurrency(tradeStats.avgLoss, portfolio.currency)}`
-                    : undefined
-                }
-                visual={
-                  <WinGauge
-                    winRatio={tradeStats.winRate / 100}
-                    green={positive}
-                    red={negative}
-                    track={tokens.colors.border.divider}
-                  />
-                }
-                styles={styles}
-              />
-            ) : null}
-            {tradeStats.count > 0 ? (
-              <PerformanceMetricCard
-                label="פקטור רווח"
-                value={
-                  profitFactor != null
-                    ? profitFactor.toFixed(2)
-                    : tradeStats.grossWin > 0
-                    ? '∞'
-                    : '—'
-                }
-                valueColor={
-                  profitFactor == null
-                    ? tradeStats.grossWin > 0
-                      ? positive
-                      : neutral
-                    : profitFactor >= 1
-                    ? positive
-                    : negative
-                }
-                hint="רווח גולמי ÷ הפסד גולמי"
-                visual={
-                  profitShare != null ? (
-                    <SplitRing greenShare={profitShare} green={positive} red={negative} track={tokens.colors.border.divider} />
-                  ) : null
-                }
-                styles={styles}
-              />
-            ) : null}
-            {analytics?.maxDrawdown != null ? (
-              <PerformanceMetricCard
-                label={`ירידה מקסימלית · ${PERIOD_LABEL_HE[period] ?? period}`}
-                value={formatPercent(analytics.maxDrawdown * 100, 1, false)}
-                valueColor={analytics.maxDrawdown > 0.2 ? negative : tokens.colors.text.primary}
-                styles={styles}
-              />
-            ) : null}
-          </View>
-        </View>
-      )}
-
-      {/* Cash flow summary */}
-      <UICard variant="soft" padding="md" style={styles.section}>
-        <Text style={styles.sectionTitle}>תזרים</Text>
-        <View style={styles.cashList}>
-          {(
-            [
-              ['הפקדות', summary ? formatCurrency(summary.total_deposits, portfolio.currency) : '—'],
-              ['משיכות', summary ? formatCurrency(summary.total_withdrawals, portfolio.currency) : '—'],
-              ['עמלות', summary ? formatCurrency(summary.total_fees, portfolio.currency) : '—'],
-              ['דיבידנדים', summary ? formatCurrency(summary.total_dividends, portfolio.currency) : '—'],
-            ] as const
-          ).map(([label, value], index, lines) => (
-            <View
-              key={label}
-              style={[styles.cashLine, index === lines.length - 1 && styles.cashLineLast]}
-            >
-              <Text style={styles.cashValue} numberOfLines={1}>
-                {value}
-              </Text>
-              <Text style={styles.cashLabel} numberOfLines={1}>
-                {label}
-              </Text>
-            </View>
-          ))}
-        </View>
-      </UICard>
+      {/* לוח בקרה: פוזיציות חיות, עסקאות אחרונות, מה עובד */}
+      <JournalOpenPositionsCard holdings={openTradeHoldings} currency={portfolio.currency} />
+      <JournalRecentTradesCard trades={closedTrades} currency={portfolio.currency} />
+      <JournalInsightsCard trades={closedTrades} currency={portfolio.currency} />
     </View>
   );
 }

@@ -16,8 +16,6 @@ import {
 } from '../../Journal/journalLayout';
 import { PORTFOLIO_DETAIL_TABS } from '../portfolioConstants';
 
-const METRIC_LABELS = ['היום', 'תשואה', 'רווח לא ממומש', 'P&L נטו', 'אחוז הצלחה', 'פקטור רווח', 'ירידה מקסימלית'];
-const CASH_LABELS = ['הפקדות', 'משיכות', 'עמלות', 'דיבידנדים'];
 
 export function JournalSkeleton() {
   const tokens = useDesignTokens();
@@ -70,34 +68,28 @@ export function JournalSkeleton() {
           </View>
         </UICard>
 
-        {/* כרטיסי מדדים — רשת שני טורים כמו במסך */}
-        <View style={[styles.metricGrid, styles.mt16]}>
-          {METRIC_LABELS.map((label) => (
-            <UICard key={label} variant="soft" padding="md" style={styles.metricCard}>
-              <View style={styles.metricInnerLtr}>
-                <Text style={[title, journalPhysicalRightText, styles.right]} numberOfLines={1}>
-                  {label}
-                </Text>
-                <SkeletonBox width="60%" height={20} borderRadius={6} style={{ ...styles.mt10, ...styles.selfEnd }} />
-                <SkeletonBox width="80%" height={10} borderRadius={5} style={{ ...styles.mt10, ...styles.selfEnd }} />
-              </View>
-            </UICard>
-          ))}
-        </View>
-
-        {/* תזרים */}
+        {/* פוזיציות פתוחות / עסקאות אחרונות */}
         <UICard variant="soft" padding="md" style={styles.mt16}>
-          <Text style={[title, journalPhysicalRightText]}>תזרים</Text>
-          {CASH_LABELS.map((label, i) => (
+          <Text style={[title, journalPhysicalRightText]}>פוזיציות פתוחות</Text>
+          {[0, 1, 2].map((i) => (
             <View
-              key={label}
+              key={i}
               style={[
                 styles.cashLine,
-                i < CASH_LABELS.length - 1 && { borderBottomWidth: 1, borderBottomColor: tokens.colors.border.divider },
+                i < 2 && { borderBottomWidth: 1, borderBottomColor: tokens.colors.border.divider },
               ]}
             >
-              <SkeletonBox width={70} height={13} borderRadius={6} />
-              <Text style={[styles.cashLabel, journalPhysicalRightText, { color: secondary }]}>{label}</Text>
+              <View style={{ gap: 6 }}>
+                <SkeletonBox width={64} height={13} borderRadius={6} />
+                <SkeletonBox width={40} height={10} borderRadius={5} />
+              </View>
+              <View style={styles.rowEnd}>
+                <View style={{ alignItems: 'flex-end', gap: 6 }}>
+                  <SkeletonBox width={48} height={13} borderRadius={6} />
+                  <SkeletonBox width={80} height={10} borderRadius={5} />
+                </View>
+                <SkeletonBox width={34} height={34} borderRadius={17} />
+              </View>
             </View>
           ))}
         </UICard>
@@ -143,6 +135,7 @@ const styles = StyleSheet.create({
     fontWeight: JOURNAL_TYPE.cardSubtitle.fontWeight,
     lineHeight: JOURNAL_TYPE.cardSubtitle.lineHeight,
   },
+  rowEnd: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   mt10: { marginTop: 10 },
   mt12: { marginTop: 12 },
   mt16: { marginTop: 16 },

@@ -1609,8 +1609,24 @@ export default function ChatGroupsListScreen() {
                         return;
                       }
                       if (ownIdx < 0) {
-                        // עוד עולה — משוב במקום לחיצה «מתה»
-                        if (pendingStories.length) showToast('הסטורי עדיין עולה…', 'info');
+                        // עוד עולה — הצופה נפתח מיד עם הקובץ המקומי (אופטימי)
+                        if (pendingStories.length && user?.id) {
+                          void HapticFeedback.selection();
+                          openStoryViewer(
+                            [
+                              ...usersWithStories,
+                              {
+                                user_id: user.id,
+                                user: {
+                                  display_name: (user as { display_name?: string | null }).display_name ?? null,
+                                  full_name: (user as { full_name?: string | null }).full_name ?? null,
+                                  profile_picture: user.profile_picture ?? null,
+                                },
+                              },
+                            ],
+                            user.id,
+                          );
+                        }
                         return;
                       }
                       void HapticFeedback.selection();

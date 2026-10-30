@@ -11,6 +11,7 @@
  *  • שום דבר שנראה לא תלוי באנימציה: במנוחה כל הפאות בלי טרנספורם, והפאה הנוכחית מרונדרת אחרונה (למעלה).
  */
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { discardPendingStory, getPendingStories, localUriForStoryMedia } from '../../lib/pendingStories';
 import {
   ActivityIndicator,
   Image,
@@ -96,6 +97,37 @@ function prefetchStoryImage(story: UserStory | undefined) {
   ExpoImage.prefetch(url, 'memory').catch(() => {});
 }
 
+const isPendingStoryId = (id: string | null | undefined) => !!id && id.startsWith('pending-');
+
+/**
+ * אופטימי: הסטוריז שלי מוצגים מהקובץ המקומי —
+ * • שעוד עולים (pendingStories) — כסטורי זמני בסוף הרשימה שלי;
+ * • שכבר עלו בסשן הזה — מהקובץ שצולם (בלי להוריד שוב מהשרת).
+ */
+function withLocalOwnStories(
+  map: Record<string, UserStory[]>,
+  myId: string | null | undefined,
+): Record<string, UserStory[]> {
+  if (!myId) return map;
+  const mine = (map[myId] ?? []).map((st) => {
+    const local = st.media_type !== 'text' ? localUriForStoryMedia(st.media_url) : null;
+    return local ? { ...st, media_url: local } : st;
+  });
+  const pending: UserStory[] = getPendingStories(myId).map((p) => ({
+    id: p.id,
+    user_id: myId,
+    media_type: p.mediaType,
+    media_url: p.localUri,
+    content: p.content ?? null,
+    background_color: p.backgroundColor ?? null,
+    created_at: new Date(p.createdAt).toISOString(),
+    expires_at: new Date(p.createdAt + 24 * 60 * 60 * 1000).toISOString(),
+  }));
+  const all = [...mine, ...pending];
+  if (!all.length) return map;
+  return { ...map, [myId]: all };
+}
+
 /** פאה בקוביה: מיקום וסיבוב נגזרים מ-p בלבד (o = (i - p) · W) */
 function CubeFace({
   index,
@@ -148,7 +180,8 @@ export default function StoryViewerScreen() {
     const t0 = Date.now();
     if (__DEV__) console.log('[story] viewer mounted, loading', requestedIds.length, 'users');
     getStoriesForUsers(requestedIds)
-      .then((map) => {
+      .then((serverMap) => {
+        const map = withLocalOwnStories(serverMap, user?.id);
         if (__DEV__) {
           console.log('[story] loaded in', Date.now() - t0, 'ms', Object.fromEntries(Object.entries(map).map(([k, v]) => [k.slice(0, 8), v.length])));
         }
@@ -162,8 +195,10 @@ export default function StoryViewerScreen() {
       .catch((e) => {
         logger.error('StoryViewerScreen', 'Failed to load stories', e);
         if (alive) {
-          setLoadError(true);
-          setStoriesMap({});
+          // גם בלי רשת — הסטוריז שלי שעוד עולים מוצגים מהקובץ המקומי
+          const local = withLocalOwnStories({}, user?.id);
+          setLoadError(Object.keys(local).length === 0);
+          setStoriesMap(local);
         }
       });
     return () => {
@@ -369,7 +404,7 @@ export default function StoryViewerScreen() {
 
   // סימון כנצפה — גם בסטורי שלי (כדי שהטבעת תתעדכן); אני מסונן מרשימת הצופים
   useEffect(() => {
-    if (!storyId || !user?.id) return;
+    if (!storyId || !user?.id || isPendingStoryId(storyId)) return;
     markStoryViewed(storyId, user.id).catch(() => {});
   }, [storyId, user?.id]);
 
@@ -439,7 +474,7 @@ export default function StoryViewerScreen() {
   }, [user?.id]);
 
   const openViewersSheet = useCallback(() => {
-    if (!storyId || !isOwnStory) return;
+    if (!storyId || !isOwnStory || isPendingStoryId(storyId)) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setViewersTab('viewers');
     setViewersSheetOpen(true);
@@ -464,7 +499,9 @@ export default function StoryViewerScreen() {
     if (!currentStory || !user?.id || !currentUserId || !storiesMap) return;
     setDeleting(true);
     try {
-      await deleteStory(currentStory.id, user.id);
+      // סטורי שעוד עולה — ביטול ההעלאה המקומית במקום מחיקה בשרת
+      if (isPendingStoryId(currentStory.id)) discardPendingStory(currentStory.id);
+      else await deleteStory(currentStory.id, user.id);
       setConfirmDelete({ visible: false });
       const remaining = (storiesMap[currentUserId] ?? []).filter((s) => s.id !== currentStory.id);
       const nextMap = { ...storiesMap, [currentUserId]: remaining };

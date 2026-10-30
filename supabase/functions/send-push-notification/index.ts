@@ -126,6 +126,7 @@ serve(async (req) => {
       channelId: 'default',
       icon: 'ic_notification',
       ...(imageUrl ? { richContent: { image: imageUrl } } : {}),
+      ...(imageUrl ? { mutableContent: true } : {}),
     }));
 
     // שליחת התראות דרך Expo Push API

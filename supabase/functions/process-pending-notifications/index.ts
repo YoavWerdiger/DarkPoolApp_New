@@ -375,6 +375,8 @@ serve(async (req) => {
               channelId,
               icon: 'ic_notification',
               ...(imageUrl ? { richContent: { image: imageUrl } } : {}),
+              // iOS: מאפשר ל-Notification Service Extension להוריד ולצרף את התמונה
+              ...(imageUrl ? { mutableContent: true } : {}),
               android: {
                 channelId,
                 priority: 'high',

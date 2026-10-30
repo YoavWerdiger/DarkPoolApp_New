@@ -440,6 +440,7 @@ serve(async (req) => {
         categoryId: isMention ? 'chat_mention' : 'chat_message',
         icon: 'ic_notification',
         ...(notificationImageUrl ? { richContent: { image: notificationImageUrl } } : {}),
+        ...(notificationImageUrl ? { mutableContent: true } : {}),
         _displayInForeground: true,
         badge: 1,
         android: {

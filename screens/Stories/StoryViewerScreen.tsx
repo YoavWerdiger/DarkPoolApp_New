@@ -45,6 +45,7 @@ import {
   StoryViewer as StoryViewerRow,
   StoryReaction,
   getStoriesForUsers,
+  peekStoriesCache,
   markStoryViewed,
   deleteStory,
   reactToStory,
@@ -172,8 +173,17 @@ export default function StoryViewerScreen() {
 
   const requestedIds = useMemo(() => (Array.isArray(params?.userIds) ? params.userIds : []), [params?.userIds]);
 
-  /* ── נתונים: הכל בבת אחת מהשרת ── */
-  const [storiesMap, setStoriesMap] = useState<Record<string, UserStory[]> | null>(null);
+  /* ── נתונים: מהקאש מיד (נטען מראש מהשורה + הסטוריז שלי מקומית), ואז רענון מהשרת ── */
+  const [storiesMap, setStoriesMap] = useState<Record<string, UserStory[]> | null>(() => {
+    const cached: Record<string, UserStory[]> = {};
+    for (const id of requestedIds) {
+      const hit = peekStoriesCache(id);
+      if (hit?.length) cached[id] = hit;
+    }
+    const map = withLocalOwnStories(cached, user?.id);
+    // בלי הסטוריז של משתמש ההתחלה בקאש — מחכים לשרת (אחרת היה נפתח על משתמש אחר)
+    return map[params?.startUserId ?? '']?.length ? map : null;
+  });
   const [loadError, setLoadError] = useState(false);
   useEffect(() => {
     let alive = true;
@@ -230,6 +240,24 @@ export default function StoryViewerScreen() {
     setStoryIndex(resolveStoryIndex(list.length, params?.startStoryIndex ?? 0));
     p.value = start;
   }, [storiesMap, userIds, params?.startUserId, params?.startStoryIndex, p]);
+
+  // הרשימה מהשרת יכולה להוסיף משתמשים שלא היו בקאש — נשארים על אותו משתמש (האינדקס שלו זז)
+  const shownUserRef = useRef<string | undefined>(undefined);
+  const prevUserIdsRef = useRef(userIds);
+  useLayoutEffect(() => {
+    const listChanged = prevUserIdsRef.current !== userIds && prevUserIdsRef.current.length > 0;
+    prevUserIdsRef.current = userIds;
+    const shown = shownUserRef.current;
+    if (listChanged && shown && userIds[cur] !== shown) {
+      const idx = userIds.indexOf(shown);
+      if (idx >= 0) {
+        setCur(idx);
+        p.value = idx;
+        return;
+      }
+    }
+    shownUserRef.current = userIds[cur];
+  }, [userIds, cur, p]);
 
   useLayoutEffect(() => {
     curSV.value = cur;
@@ -356,6 +384,15 @@ export default function StoryViewerScreen() {
   useEffect(() => {
     if (!storyId || !showMediaSpinner) return;
     const t = setTimeout(() => setStalled(addFlag(storyId)), STORY_MEDIA_STALL_MS);
+    return () => clearTimeout(t);
+  }, [storyId, showMediaSpinner]);
+
+  // הטבעת על המדיה רק אם הטעינה באמת מתעכבת — מהקאש התמונה מגיעה לפני כן ואין הבהוב
+  const [spinnerDue, setSpinnerDue] = useState(false);
+  useEffect(() => {
+    setSpinnerDue(false);
+    if (!showMediaSpinner) return;
+    const t = setTimeout(() => setSpinnerDue(true), 600);
     return () => clearTimeout(t);
   }, [storyId, showMediaSpinner]);
 
@@ -832,7 +869,7 @@ export default function StoryViewerScreen() {
           ) : null}
           {story ? renderStoryMedia(story, active) : null}
           {story && (story.media_type !== 'text') && loaded[story.id] ? <StoryOverlays content={story.content} /> : null}
-          {active && showMediaSpinner && (
+          {active && showMediaSpinner && spinnerDue && (
             <View style={[styles.center, StyleSheet.absoluteFill]}>
               <ActivityIndicator size="large" color="#fff" />
             </View>
@@ -853,9 +890,9 @@ export default function StoryViewerScreen() {
     return (
       <GestureHandlerRootView style={styles.root}>
         <StatusBar hidden />
-        <Pressable style={[styles.center, styles.emptyRoot]} onPress={close}>
-          <ActivityIndicator size="large" color={chatPalette.primary} />
-        </Pressable>
+        {/* בלי טבעת טעינה על השחור — הטעינה קצרה, וטבעת שמהבהבת נראית כמו תקיעה */}
+        <Pressable style={[styles.center, styles.emptyRoot]} onPress={close} />
+
       </GestureHandlerRootView>
     );
   }

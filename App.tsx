@@ -220,7 +220,9 @@ function AppContent() {
           if (saved && JSON.parse(saved).biometricAuth) setBiometricLocked(true);
         } catch {}
       }
-      if (appState.current.match(/inactive|background/) && nextState === 'active' && user) {
+      // רק חזרה מרקע אמיתי — לא מ-inactive: iOS נכנס ל-inactive בכל חלון מערכת (הרשאת מצלמה, גלריה,
+      // ואפילו בקשת ה-Face ID עצמה) — הנעילה קפצה באמצע יצירת סטורי ונפתחה/נסגרה בלי שרואים
+      if (appState.current === 'background' && nextState === 'active' && user) {
         void NotificationService.syncPermissionOnResume();
         try {
           const saved = await AsyncStorage.getItem('appSettings');
@@ -443,9 +445,11 @@ function AppContent() {
         />
       ) : null}
 
-      {biometricLocked && registrationDone && (
+      {/* נעילה ביומטרית: ה-Modal תמיד ממונט ורק visible משתנה — הסרה של Modal פתוח (Fabric) השאירה
+          «מעטפת» שקופה במסך מלא מעל כל האפליקציה שבלעה את כל ההקשות (המסך «קפא» אחרי סטורי) */}
+      {registrationDone && (
         // Modal ולא View: חלון נייטיב שנפתח מעל כל Modal פתוח (תצוגת מדיה / סטורי) — View בתוך העץ לא מכסה אותם
-        <Modal visible animationType="none" presentationStyle="fullScreen" statusBarTranslucent onRequestClose={() => {}}>
+        <Modal visible={biometricLocked} animationType="none" presentationStyle="fullScreen" statusBarTranslucent onRequestClose={() => {}}>
         <View style={{ flex: 1, backgroundColor: canvas, justifyContent: 'center', alignItems: 'center' }}>
           <View style={{ alignItems: 'center', gap: 24 }}>
             <View style={{

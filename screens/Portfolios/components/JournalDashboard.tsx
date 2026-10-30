@@ -3,12 +3,13 @@
  * כותרת סקשן על רקע המסך, ומתחתיה פאנל רשימה בלי ריפוד עם שורות ברוחב מלא וקווים מפרידים.
  * • פוזיציות פתוחות — כמו «אחזקות» באינסיידרים: שווי, תשואה לא ממומשת, נקודת צבע כמו בעוגה
  * • עסקאות אחרונות — חמש האחרונות שנסגרו, עם רווח/הפסד ותשואה
- * • סטטיסטיקה — רשת שני טורים לפי הטופו (אייקון, תווית 12, ערך 20): אחוז הצלחה, עסקאות, רווח/הפסד ממוצע, היחס, רווח ממומש
+ * • סטטיסטיקה — כרטיס כמו בהגדרות, שורה לכל נתון: אחוז הצלחה, עסקאות, רווח/הפסד ממוצע, היחס, רווח ממומש
  * הכל מנתונים שהסקירה כבר טוענת (פוזיציות + מחירים חיים, עסקאות סגורות) — בלי קריאות שרת נוספות.
  */
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { ArrowLeftRight, PieChart, Scale, TrendingDown, TrendingUp, Wallet, type LucideIcon } from 'lucide-react-native';
 import UICard from '../../../components/ui/UICard';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { UI_CARD_RADIUS } from '../../../components/ui/appLayout';
@@ -19,8 +20,7 @@ import { HoldingsListRow, useHoldingsPieColors } from '../../DarkPool/components
 import {
   JOURNAL_LAYOUT,
   JOURNAL_TYPE,
-  journalCardMetricLabelStyle,
-  journalCardMetricValueSecondaryStyle,
+  journalCardTitleStyle,
   journalPhysicalRightText,
   journalSectionTitleStyle,
 } from '../../Journal/journalLayout';
@@ -119,7 +119,7 @@ export function JournalRecentTradesCard({ trades, currency }: { trades: Trade[];
 
 /* ── סטטיסטיקה ── */
 export type StatCell = {
-  icon: React.ComponentProps<typeof Ionicons>['name'];
+  icon: LucideIcon;
   label: string;
   value: string;
   color: string;
@@ -139,64 +139,57 @@ export function JournalStatsCard({ trades, currency }: { trades: Trade[]; curren
     const ratio = avgWin != null && avgLoss != null && avgLoss < 0 ? avgWin / Math.abs(avgLoss) : null;
     const primary = t.colors.text.primary;
     return [
-      { icon: 'pie-chart-outline', label: 'אחוז הצלחה', value: `${Math.round((wins.length / pnl.length) * 100)}%`, color: primary },
-      { icon: 'swap-horizontal-outline', label: 'עסקאות סגורות', value: String(pnl.length), color: primary },
+      { icon: PieChart, label: 'אחוז הצלחה', value: `${Math.round((wins.length / pnl.length) * 100)}%`, color: primary },
+      { icon: ArrowLeftRight, label: 'עסקאות סגורות', value: String(pnl.length), color: primary },
       {
-        icon: 'trending-up',
+        icon: TrendingUp,
         label: 'רווח ממוצע',
         value: avgWin != null ? signed(avgWin, currency) : '—',
         color: avgWin != null ? t.colors.primary.main : t.colors.text.secondary,
       },
       {
-        icon: 'trending-down',
+        icon: TrendingDown,
         label: 'הפסד ממוצע',
         value: avgLoss != null ? signed(avgLoss, currency) : '—',
         color: avgLoss != null ? t.colors.text.danger : t.colors.text.secondary,
       },
-      { icon: 'scale-outline', label: 'יחס רווח/הפסד', value: ratio != null ? ratio.toFixed(2) : '—', color: primary },
-      { icon: 'wallet-outline', label: 'רווח ממומש', value: signed(total, currency), color: toneColor(total, t) },
+      { icon: Scale, label: 'יחס רווח/הפסד', value: ratio != null ? ratio.toFixed(2) : '—', color: primary },
+      { icon: Wallet, label: 'רווח ממומש', value: signed(total, currency), color: toneColor(total, t) },
     ];
   }, [trades, currency, t]);
   if (!cells) return null;
-  return <JournalStatsGrid title="סטטיסטיקה" cells={cells} />;
+  return <JournalStatsList title="סטטיסטיקה" cells={cells} />;
 }
 
 /**
- * רשת KPI לפי הטופו — שני טורים, אייקון בעיגול, תווית 12 ↔ ערך 20, קווים מפרידים.
- * משותפת לסקירה ולסטטיסטיקות החודש בלוח השנה. `style` — למשל ריווח שונה מתחת לסקשן.
+ * סטטיסטיקה ככרטיס הגדרות (הטופו — «שורת תפריט»): שורה לכל נתון, אייקון 20 ב-text.primary מימין,
+ * 12 עד הכותרת, הערך בצד שמאל, ריפוד 15/16 וקווים מפרידים — בלי רשת ובלי עיגולי אייקון.
+ * משותף לסקירה ולסטטיסטיקות החודש בלוח השנה.
  */
-export function JournalStatsGrid({ title, cells, style }: { title: string; cells: StatCell[]; style?: ViewStyle }) {
+export function JournalStatsList({ title, cells, style }: { title: string; cells: StatCell[]; style?: ViewStyle }) {
   const t = useDesignTokens();
   const s = useMemo(() => createStyles(t), [t]);
-  const rows: StatCell[][] = [];
-  for (let i = 0; i < cells.length; i += 2) rows.push(cells.slice(i, i + 2));
   return (
     <Section s={s} title={title} style={style}>
       <Panel s={s}>
-        {rows.map((pair, r) => (
-          <React.Fragment key={pair[0].label}>
-            <View style={s.statRow}>
-              {pair.map((c, i) => (
-                <React.Fragment key={c.label}>
-                  {i > 0 ? <View style={s.statColDivider} /> : null}
-                  <View style={s.statCell}>
-                    <View style={s.iconBadge}>
-                      <Ionicons name={c.icon} size={20} color={c.color === t.colors.text.secondary ? t.colors.text.primary : c.color} />
-                    </View>
-                    <View style={s.rowGap} />
-                    <View style={s.rowText}>
-                      <Text style={s.statLabel} numberOfLines={1}>{c.label}</Text>
-                      <Text style={[s.statValue, { color: c.color }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
-                        {toDataIsland(c.value)}
-                      </Text>
-                    </View>
-                  </View>
-                </React.Fragment>
-              ))}
-            </View>
-            {r < rows.length - 1 ? <View style={s.divider} /> : null}
-          </React.Fragment>
-        ))}
+        {cells.map((c, i) => {
+          const Icon = c.icon;
+          return (
+            <React.Fragment key={c.label}>
+              {/* LTR פיזי כמו בהגדרות: ערך משמאל · כותרת · אייקון מימין */}
+              <View style={s.statRow}>
+                <Text style={[s.statValue, { color: c.color }]} numberOfLines={1}>
+                  {toDataIsland(c.value)}
+                </Text>
+                <Text style={s.statTitle} numberOfLines={1}>{c.label}</Text>
+                <View style={s.statIcon}>
+                  <Icon size={20} color={t.colors.text.primary} strokeWidth={2} />
+                </View>
+              </View>
+              {i < cells.length - 1 ? <View style={s.divider} /> : null}
+            </React.Fragment>
+          );
+        })}
       </Panel>
     </Section>
   );
@@ -351,35 +344,34 @@ function createStyles(t: Tokens) {
       justifyContent: 'center',
       backgroundColor: t.colors.selection.subtle,
     },
-    /* סטטיסטיקה — תא KPI: תווית cardMetricLabel ↔ ערך cardMetricValueSecondary (4) */
-    statRow: { direction: 'rtl', flexDirection: 'row', alignSelf: 'stretch', width: '100%' },
-    statCell: {
-      flex: 1,
-      minWidth: 0,
+    /* סטטיסטיקה — שורת תפריט כמו בהגדרות (ProfileSettingsUI menuRow) */
+    statRow: {
+      direction: 'ltr',
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: JOURNAL_LAYOUT.cardPadding,
+      alignSelf: 'stretch',
+      paddingVertical: 15,
       paddingHorizontal: JOURNAL_LAYOUT.cardPadding,
     },
-    statColDivider: {
-      width: 1,
-      backgroundColor: t.colors.border.divider,
-      marginVertical: JOURNAL_LAYOUT.cardPadding,
-    },
-    statLabel: {
-      ...journalCardMetricLabelStyle,
-      ...journalPhysicalRightText,
-      color: t.colors.text.secondary,
-    },
     statValue: {
-      ...journalCardMetricValueSecondaryStyle,
-      marginTop: JOURNAL_LAYOUT.cardMetricLabelToValueGap,
+      ...journalCardTitleStyle,
+      // cardTitle מגיע עם width:100% — בלי האיפוס הערך תופס את כל השורה ודוחף החוצה את התווית והאייקון
+      width: 'auto',
+      alignSelf: 'auto',
+      flexShrink: 0,
+      marginRight: 12,
       fontVariant: ['tabular-nums'],
-      // ימין פיזי כמו התווית (journalPhysicalRightText), עם מספר LTR
-      direction: 'ltr',
       writingDirection: 'ltr',
-      textAlign: 'right',
+      textAlign: 'left',
     },
+    statTitle: {
+      ...journalCardTitleStyle,
+      ...journalPhysicalRightText,
+      flex: 1,
+      minWidth: 0,
+      color: t.colors.text.primary,
+    },
+    statIcon: { marginLeft: 12, alignItems: 'center', justifyContent: 'center' },
     rowValueCol: { flexShrink: 0, marginStart: 12, alignItems: 'flex-start', direction: 'ltr' },
     rowValue: {
       fontSize: JOURNAL_TYPE.cardBody.fontSize,

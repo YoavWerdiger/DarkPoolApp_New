@@ -17,7 +17,8 @@ import type { Trade } from '../portfolioTypes';
 import { toLocalDateKey } from '../../../utils/dateKeys';
 import { formatCurrency } from '../utils/format';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
-import { JournalStatsGrid } from '../components/JournalDashboard';
+import { CalendarCheck, CalendarX, ArrowLeftRight, Wallet } from 'lucide-react-native';
+import { JournalStatsList } from '../components/JournalDashboard';
 import {
   journalPhysicalRightText,
   journalSectionSubtitleStyle,
@@ -494,14 +495,14 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
       </UICard>
 
       {monthlyTotal.tradeCount > 0 ? (
-        <JournalStatsGrid
+        <JournalStatsList
           title="סטטיסטיקות חודש"
           style={styles.monthStats}
           cells={[
-            { icon: 'wallet-outline', label: 'סה״כ חודש', value: formatCurrency(monthlyTotal.sum, currency), color: totalColor },
-            { icon: 'swap-horizontal-outline', label: 'טריידים', value: String(monthlyTotal.tradeCount), color: tokens.colors.text.primary },
-            { icon: 'trending-up', label: 'ימים ירוקים', value: String(monthlyTotal.winDays), color: tokens.colors.primary.main },
-            { icon: 'trending-down', label: 'ימים אדומים', value: String(monthlyTotal.lossDays), color: tokens.colors.text.danger },
+            { icon: Wallet, label: 'סה״כ חודש', value: formatCurrency(monthlyTotal.sum, currency), color: totalColor },
+            { icon: ArrowLeftRight, label: 'טריידים', value: String(monthlyTotal.tradeCount), color: tokens.colors.text.primary },
+            { icon: CalendarCheck, label: 'ימים ירוקים', value: String(monthlyTotal.winDays), color: tokens.colors.primary.main },
+            { icon: CalendarX, label: 'ימים אדומים', value: String(monthlyTotal.lossDays), color: tokens.colors.text.danger },
           ]}
         />
       ) : null}

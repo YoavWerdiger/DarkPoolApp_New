@@ -13,18 +13,14 @@ import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { UI_CARD_RADIUS } from '../../../components/ui/appLayout';
 import {
   JOURNAL_LAYOUT,
-  journalCardMetricLabelStyle,
+  journalCardTitleStyle,
   journalPhysicalRightText,
   journalSectionTitleStyle,
 } from '../../Journal/journalLayout';
 import { PORTFOLIO_DETAIL_TABS } from '../portfolioConstants';
 
-/** התוויות של «סטטיסטיקה» (JournalStatsCard) — שני טורים */
-const STAT_LABELS = [
-  ['אחוז הצלחה', 'עסקאות סגורות'],
-  ['רווח ממוצע', 'הפסד ממוצע'],
-  ['יחס רווח/הפסד', 'רווח ממומש'],
-];
+/** התוויות של «סטטיסטיקה» (JournalStatsCard) — שורה לכל נתון, כמו כרטיס הגדרות */
+const STAT_LABELS = ['אחוז הצלחה', 'עסקאות סגורות', 'רווח ממוצע', 'הפסד ממוצע', 'יחס רווח/הפסד', 'רווח ממומש'];
 
 export function JournalSkeleton() {
   const tokens = useDesignTokens();
@@ -105,32 +101,23 @@ export function JournalSkeleton() {
         {listPanel('פוזיציות פתוחות', 3)}
         {listPanel('עסקאות אחרונות', 3)}
 
-        {/* סטטיסטיקה — רשת שני טורים: אייקון, תווית אמיתית, ערך נטען */}
+        {/* סטטיסטיקה — כרטיס כמו בהגדרות: ערך נטען משמאל, התווית האמיתית ואייקון מימין */}
         <View style={styles.section}>
           <Text style={[heading, styles.headingGap]}>סטטיסטיקה</Text>
           <UICard variant="soft" glassIntensity="light" padding="none" style={styles.panel}>
-            {STAT_LABELS.map((pair, r) => (
-              <React.Fragment key={r}>
+            {STAT_LABELS.map((label, i) => (
+              <React.Fragment key={label}>
                 <View style={styles.statRow}>
-                  {pair.map((label, i) => (
-                    <React.Fragment key={label}>
-                      {i > 0 ? <View style={[styles.statColDivider, { backgroundColor: tokens.colors.border.divider }]} /> : null}
-                      <View style={styles.statCell}>
-                        <SkeletonBox width={36} height={36} borderRadius={18} />
-                        <View style={styles.statText}>
-                          <Text
-                            style={[journalCardMetricLabelStyle, journalPhysicalRightText, { color: tokens.colors.text.secondary }]}
-                            numberOfLines={1}
-                          >
-                            {label}
-                          </Text>
-                          <SkeletonBox width={64} height={20} borderRadius={6} style={styles.statValue} />
-                        </View>
-                      </View>
-                    </React.Fragment>
-                  ))}
+                  <SkeletonBox width={64} height={14} borderRadius={6} />
+                  <Text
+                    style={[journalCardTitleStyle, journalPhysicalRightText, styles.statTitle, { color: tokens.colors.text.primary }]}
+                    numberOfLines={1}
+                  >
+                    {label}
+                  </Text>
+                  <SkeletonBox width={20} height={20} borderRadius={6} style={styles.statIcon} />
                 </View>
-                {r < STAT_LABELS.length - 1 ? <View style={divider} /> : null}
+                {i < STAT_LABELS.length - 1 ? <View style={divider} /> : null}
               </React.Fragment>
             ))}
           </UICard>
@@ -177,17 +164,14 @@ const styles = StyleSheet.create({
   },
   listText: { flex: 1, gap: 6, alignItems: 'flex-start' },
   listValue: { gap: 6, alignItems: 'flex-end' },
-  // כמו statRow / statCell ב-JournalStatsGrid
-  statRow: { direction: 'rtl', flexDirection: 'row' },
-  statCell: {
-    flex: 1,
-    minWidth: 0,
+  // כמו statRow ב-JournalStatsList (שורת תפריט בהגדרות)
+  statRow: {
+    direction: 'ltr',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    padding: JOURNAL_LAYOUT.cardPadding,
+    paddingVertical: 15,
+    paddingHorizontal: JOURNAL_LAYOUT.cardPadding,
   },
-  statColDivider: { width: 1, marginVertical: JOURNAL_LAYOUT.cardPadding },
-  statText: { flex: 1, minWidth: 0 },
-  statValue: { marginTop: JOURNAL_LAYOUT.cardMetricLabelToValueGap },
+  statTitle: { flex: 1, minWidth: 0, marginLeft: 12 },
+  statIcon: { marginLeft: 12 },
 });

@@ -109,7 +109,7 @@ serve(async (req) => {
       }).format(etYesterdayDate)
 
       const { data: manualReports, error: reportsError } = await supabase
-        .from('earnings_calendar')
+        .from('earnings_calendar_curated') // רק 2B+ שווי ו-1M+ נפח — כמו לוח הדוחות
         .select('id, code, ticker, company_name, report_date, actual, estimate, percent, revenue_actual, revenue_estimate_avg, revenue_surprise_percent, before_after_market, updated_at, results_push_sent_at')
         .in('report_date', [etToday, etYesterday])
         .not('actual', 'is', null)

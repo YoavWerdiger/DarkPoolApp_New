@@ -70,7 +70,7 @@ serve(async (req) => {
     const minutesFromNow = 15
 
     const { data: upcomingReports, error: reportsError } = await supabase
-      .from('earnings_calendar')
+      .from('earnings_calendar_curated') // רק 2B+ שווי ו-1M+ נפח — כמו לוח הדוחות
       .select('id, code, ticker, company_name, report_date, earnings_date_time, before_after_market, actual, estimate, revenue_estimate_avg, revenue_estimate, reminder_push_sent_at')
       .eq('report_date', etToday)
       .is('actual', null)

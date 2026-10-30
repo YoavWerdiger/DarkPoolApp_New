@@ -1,3 +1,5 @@
+import { useTheme } from '../../../context/ThemeContext';
+import { companyBrandGradient } from '../utils/companyBrandColors';
 import React, { memo, useMemo, useState } from 'react';
 import {
   StyleSheet,
@@ -18,9 +20,6 @@ import {
 } from '../utils/investorPlaceholder';
 
 /** פולבק בלי תמונה — מונוגרם ראשי־תיבות (לא לוגו מניה), חוץ מחברה (logoTicker) — לוגו הטיקר שלה. */
-
-/** רקע חברה ציבורית — כחול-פחם כהה, מקצועי ואחיד בשתי ערכות הנושא */
-const COMPANY_BG = ['#1E2A3A', '#0B0F15'] as const;
 
 function initialsFromName(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -76,6 +75,8 @@ function InvestorPortraitFallbackInner({
   logoTicker,
 }: Props) {
   const tokens = useDesignTokens();
+  const { isDarkMode } = useTheme();
+  const brandBg = companyBrandGradient(logoTicker, isDarkMode);
   const [failed, setFailed] = useState<Set<string>>(() => new Set());
 
   const candidates = useMemo(
@@ -110,14 +111,14 @@ function InvestorPortraitFallbackInner({
     }
     return (
       // חברה: רקע «פיננסי» כהה (זהה בבהיר ובכהה), סימן מים גדול של הלוגו בפינה, והלוגו על אריח נקי במרכז
-      <View style={[styles.cardBg, { backgroundColor: COMPANY_BG[1] }, style]}>
-        <LinearGradient colors={COMPANY_BG} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+      <View style={[styles.cardBg, { backgroundColor: brandBg[1] }, style]}>
+        <LinearGradient colors={brandBg} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
         <View style={styles.companyWatermark} pointerEvents="none">
           <TickerLogo symbol={logo} size={190} />
         </View>
         <View style={styles.cardMonoCenter} accessibilityLabel={name}>
           <View style={styles.logoPlate}>
-            <TickerLogo symbol={logo} size={60} borderRadius={14} />
+            <TickerLogo symbol={logo} size={60} />
           </View>
         </View>
         {children}
@@ -354,7 +355,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   logoPlate: {
-    borderRadius: 18,
+    borderRadius: 999,
     padding: 4,
     backgroundColor: 'rgba(255,255,255,0.12)',
     shadowColor: '#000',

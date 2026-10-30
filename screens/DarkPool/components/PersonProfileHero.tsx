@@ -1,3 +1,5 @@
+import { useTheme } from '../../../context/ThemeContext';
+import { companyBrandGradient } from '../utils/companyBrandColors';
 import React, { memo, useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -81,6 +83,7 @@ function PersonProfileHeroInner({
   logoTicker,
 }: Props) {
   const tokens = useDesignTokens();
+  const { isDarkMode } = useTheme();
   const iconColor = tokens.colors.text.primary;
   const { width: photoWidth } = useWindowDimensions();
   const [failed, setFailed] = useState<Set<string>>(() => new Set());
@@ -167,7 +170,7 @@ function PersonProfileHeroInner({
       ) : (
         <LinearGradient
           // חברה (לוגו): אותו רקע כהה-מקצועי של כרטיס החברה; אדם בלי דיוקן — הגוון הירקרק הקודם
-          colors={logoTicker?.trim() ? ['#1E2A3A', '#0B0F15'] : ['rgba(26,38,26,0.55)', 'rgba(15,22,15,0.28)', 'transparent']}
+          colors={logoTicker?.trim() ? companyBrandGradient(logoTicker, isDarkMode) : ['rgba(26,38,26,0.55)', 'rgba(15,22,15,0.28)', 'transparent']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{ width: photoWidth, height }}
@@ -180,7 +183,7 @@ function PersonProfileHeroInner({
           </View>
           <View style={[StyleSheet.absoluteFill, styles.logoCenter]}>
             <View style={styles.heroLogoPlate}>
-              <TickerLogo symbol={logoTicker.trim()} size={HERO_LOGO_SIZE} borderRadius={HERO_LOGO_SIZE * 0.24} />
+              <TickerLogo symbol={logoTicker.trim()} size={HERO_LOGO_SIZE} />
             </View>
           </View>
         </>
@@ -303,7 +306,7 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '-12deg' }],
   },
   heroLogoPlate: {
-    borderRadius: 26,
+    borderRadius: 999,
     padding: 5,
     backgroundColor: 'rgba(255,255,255,0.12)',
     shadowColor: '#000',

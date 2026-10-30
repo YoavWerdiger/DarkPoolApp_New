@@ -165,8 +165,9 @@ p { margin: 0; }
   transition: background 0.4s, transform 0.5s var(--ease-out);
 }
 .nav.is-hidden { transform: translate(-50%, -140%); }
-.nav-brand { display: flex; align-items: center; gap: 10px; font-weight: 800; letter-spacing: 0.06em; font-size: 17px; direction: ltr; padding-inline-end: 8px; }
-.nav-brand img { width: 36px; height: 36px; border-radius: 10px; }
+.nav-brand { display: flex; align-items: center; }
+.nav-brand img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 1px var(--line-strong); transition: transform 160ms var(--ease-out); }
+.nav-brand:active img { transform: scale(0.95); }
 .nav-links { display: flex; gap: 4px; }
 .nav-links a { padding: 8px 14px; border-radius: 999px; font-size: 15px; font-weight: 600; color: var(--text-2); transition: color 0.2s, background 0.2s; }
 .nav-links a:hover { color: var(--text); background: var(--hover-wash); }
@@ -684,3 +685,11 @@ p { margin: 0; }
 @media (prefers-reduced-motion: reduce) { .sk { animation: none; opacity: 0.6; } }
 
 @media (max-width: 900px) { .t-news .real-layer .n-card:nth-child(3) { display: none; } }
+
+/* logos — loaded at runtime like the app's TickerLogo; the letter stays if the logo fails */
+[data-logo] { overflow: hidden; position: relative; }
+[data-logo] > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; background: #fff; }
+.f-logo { width: 32px; height: 32px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--surface-3); font-weight: 800; font-size: 12px; }
+.trade-feed small .tag { font-size: 9px; padding: 2px 6px; margin-inline-end: 4px; }
+.n-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.n-thumb { overflow: hidden; }

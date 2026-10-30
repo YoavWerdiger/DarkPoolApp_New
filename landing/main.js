@@ -109,11 +109,21 @@
   if (watch) {
     TICKERS.slice(0, 4).forEach(([s, p, c]) => {
       const li = document.createElement('li');
-      li.innerHTML = `<span class="w-logo">${s[0]}</span><span class="w-name"><b>${s}</b><small>${NAMES[s]}</small></span><span class="w-px"><b class="px">$${fmt(p)}</b><span class="chg ${c >= 0 ? 'up' : 'down'}">${sign(c)}</span></span>`;
+      li.innerHTML = `<span class="w-logo" data-logo="${s}">${s[0]}</span><span class="w-name"><b>${s}</b><small>${NAMES[s]}</small></span><span class="w-px"><b class="px">$${fmt(p)}</b><span class="chg ${c >= 0 ? 'up' : 'down'}">${sign(c)}</span></span>`;
       watch.appendChild(li);
       watchRows.push({ li, p, c, base: p / (1 + c / 100) });
     });
   }
+
+  // ticker logos — same Brandfetch source as the app's TickerLogo, letter fallback on failure
+  const BRANDFETCH_ID = '1idgv-PUKssFHXQBcKA';
+  document.querySelectorAll('[data-logo]').forEach((el) => {
+    const img = new Image();
+    img.alt = '';
+    img.decoding = 'async';
+    img.onload = () => el.appendChild(img);
+    img.src = `https://cdn.brandfetch.io/ticker/${encodeURIComponent(el.dataset.logo)}/icon?c=${BRANDFETCH_ID}&theme=light&fallback=lettermark`;
+  });
 
   // economic calendar countdown — counts down like the app's next-event badge
   const countdown = document.querySelector('[data-countdown]');
@@ -359,11 +369,12 @@
   });
 
   /* ---- bento ---- */
+  // hide before the batch is created: tiles already in view (restored scroll) reveal immediately
+  gsap.set('.tile', { opacity: 0 });
   ScrollTrigger.batch('.tile', {
     start: 'top 88%',
     onEnter: (els) => gsap.fromTo(els, { y: 80, opacity: 0, scale: 0.96 }, { y: 0, opacity: 1, scale: 1, duration: 1.3, ease: 'expo.out', stagger: 0.1 }),
   });
-  gsap.set('.tile', { opacity: 0 });
   // each tile loads like the app: skeleton first, then the content fades in
   document.querySelectorAll('[data-mock]').forEach((tile, i) => {
     ScrollTrigger.create({

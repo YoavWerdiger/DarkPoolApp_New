@@ -12,7 +12,7 @@
     try { var t = localStorage.getItem('dp-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}
   </script>
   <link rel="icon" href="assets/icon.png" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=5" />
 </head>
 <body>
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -44,8 +44,7 @@
   <!-- ============ NAV ============ -->
   <header class="nav" id="nav">
     <a href="#top" class="nav-brand" aria-label="DarkPool">
-      <img src="assets/icon.png" alt="" width="36" height="36" />
-      <span>DARKPOOL</span>
+      <img src="assets/icon.png" alt="DarkPool" width="40" height="40" />
     </a>
     <nav class="nav-links" aria-label="ניווט ראשי">
       <a href="#story">האפליקציה</a>
@@ -185,11 +184,11 @@
                   <span><img src="assets/portraits/elon-musk.jpg" alt="" /></span>
                 </div>
                 <ul class="trade-feed">
-                  <li><span class="tag cg">קונגרס</span><div><b>רכישה · <u>NVDA</u></b><small>בוצע לפני 6 ימים · נחשף היום</small></div><em class="up">$15K–50K</em></li>
-                  <li><span class="tag ex">בכיר</span><div><b>מכירה · <u>TSLA</u></b><small>Form 4 · קוד S</small></div><em class="down">12,400 מניות</em></li>
-                  <li><span class="tag cg">קונגרס</span><div><b>רכישה · <u>MSFT</u></b><small>בוצע לפני 11 ימים</small></div><em class="up">$1K–15K</em></li>
-                  <li><span class="tag ex">בכיר</span><div><b>רכישה · <u>AAPL</u></b><small>Form 4 · קוד P</small></div><em class="up">3,000 מניות</em></li>
-                  <li><span class="tag cg">קונגרס</span><div><b>מכירה · <u>GOOGL</u></b><small>בוצע לפני 14 ימים</small></div><em class="down">$50K–100K</em></li>
+                  <li><span class="f-logo" data-logo="NVDA">N</span><div><b>רכישה · <u>NVDA</u></b><small><span class="tag cg">קונגרס</span> בוצע לפני 6 ימים · נחשף היום</small></div><em class="up">$15K–50K</em></li>
+                  <li><span class="f-logo" data-logo="TSLA">T</span><div><b>מכירה · <u>TSLA</u></b><small><span class="tag ex">בכיר</span> Form 4 · קוד S</small></div><em class="down">12,400 מניות</em></li>
+                  <li><span class="f-logo" data-logo="MSFT">M</span><div><b>רכישה · <u>MSFT</u></b><small><span class="tag cg">קונגרס</span> בוצע לפני 11 ימים</small></div><em class="up">$1K–15K</em></li>
+                  <li><span class="f-logo" data-logo="AAPL">A</span><div><b>רכישה · <u>AAPL</u></b><small><span class="tag ex">בכיר</span> Form 4 · קוד P</small></div><em class="up">3,000 מניות</em></li>
+                  <li><span class="f-logo" data-logo="GOOGL">G</span><div><b>מכירה · <u>GOOGL</u></b><small><span class="tag cg">קונגרס</span> בוצע לפני 14 ימים</small></div><em class="down">$50K–100K</em></li>
                 </ul>
               </div>
               <!-- screen 3: journal -->
@@ -274,15 +273,15 @@
             </div>
             <div class="real-layer">
               <div class="n-card">
-                <div class="n-top"><span class="n-thumb"><svg class="i"><use href="#i-news"/></svg></span><div class="n-text"><b>הפד השאיר את הריבית ללא שינוי ורמז על הפחתה בדצמבר</b><span>יו״ר הפד אמר שהאינפלציה ממשיכה להתמתן ושהבנק יפעל בזהירות.</span><em class="n-cat" style="--c:var(--info)">כלכלה</em></div></div>
+                <div class="n-top"><span class="n-thumb"><img src="assets/news/fed.svg" alt="" loading="lazy" /></span><div class="n-text"><b>הפד השאיר את הריבית ללא שינוי ורמז על הפחתה בדצמבר</b><span>יו״ר הפד אמר שהאינפלציה ממשיכה להתמתן ושהבנק יפעל בזהירות.</span><em class="n-cat" style="--c:var(--info)">כלכלה</em></div></div>
                 <div class="n-foot"><span class="n-btn"><svg class="i"><use href="#i-heart"/></svg></span><span class="n-btn"><svg class="i"><use href="#i-share"/></svg></span><small>Reuters · לפני 4 דק׳</small></div>
               </div>
               <div class="n-card">
-                <div class="n-top"><span class="n-thumb"><svg class="i"><use href="#i-news"/></svg></span><div class="n-text"><b>הנפקה חדשה בנאסד״ק תומחרה מעל טווח המחירים</b><span>המניה צפויה להתחיל להיסחר מחר עם פתיחת המסחר.</span><em class="n-cat" style="--c:var(--green-text)">בורסה</em></div></div>
+                <div class="n-top"><span class="n-thumb"><img src="assets/news/ipo.svg" alt="" loading="lazy" /></span><div class="n-text"><b>הנפקה חדשה בנאסד״ק תומחרה מעל טווח המחירים</b><span>המניה צפויה להתחיל להיסחר מחר עם פתיחת המסחר.</span><em class="n-cat" style="--c:var(--green-text)">בורסה</em></div></div>
                 <div class="n-foot"><span class="n-btn"><svg class="i"><use href="#i-heart"/></svg></span><span class="n-btn"><svg class="i"><use href="#i-share"/></svg></span><small>Bloomberg · לפני 22 דק׳</small></div>
               </div>
               <div class="n-card">
-                <div class="n-top"><span class="n-thumb"><svg class="i"><use href="#i-news"/></svg></span><div class="n-text"><b>יצרנית השבבים עקפה את תחזיות ההכנסות ברבעון השלישי</b><span>ההנהלה העלתה את התחזית לרבעון הבא בעקבות הביקוש לשרתי AI.</span><em class="n-cat" style="--c:#bf5af2">טכנולוגיה</em></div></div>
+                <div class="n-top"><span class="n-thumb"><img src="assets/news/chips.svg" alt="" loading="lazy" /></span><div class="n-text"><b>יצרנית השבבים עקפה את תחזיות ההכנסות ברבעון השלישי</b><span>ההנהלה העלתה את התחזית לרבעון הבא בעקבות הביקוש לשרתי AI.</span><em class="n-cat" style="--c:#bf5af2">טכנולוגיה</em></div></div>
                 <div class="n-foot"><span class="n-btn"><svg class="i"><use href="#i-heart"/></svg></span><span class="n-btn"><svg class="i"><use href="#i-share"/></svg></span><small>CNBC · לפני 41 דק׳</small></div>
               </div>
             </div>
@@ -302,9 +301,9 @@
                 <span class="e-today">היום</span>
                 <small class="e-date">28 באוקטובר</small>
                 <span class="e-pill pre"><svg class="i"><use href="#i-sun"/></svg>מסחר מוקדם</span>
-                <div class="e-tiles"><span class="e-tile"><span class="e-ring up"><span class="e-logo">P</span></span><small>PYPL</small></span><span class="e-tile"><span class="e-ring up"><span class="e-logo">M</span></span><small>MRK</small></span><span class="e-tile"><span class="e-ring down"><span class="e-logo">P</span></span><small>PFE</small></span><span class="e-tile"><span class="e-ring up"><span class="e-logo">S</span></span><small>SOFI</small></span><span class="e-tile"><span class="e-ring down"><span class="e-logo">U</span></span><small>UPS</small></span></div>
+                <div class="e-tiles"><span class="e-tile"><span class="e-ring up"><span class="e-logo" data-logo="PYPL">P</span></span><small>PYPL</small></span><span class="e-tile"><span class="e-ring up"><span class="e-logo" data-logo="MRK">M</span></span><small>MRK</small></span><span class="e-tile"><span class="e-ring down"><span class="e-logo" data-logo="PFE">P</span></span><small>PFE</small></span><span class="e-tile"><span class="e-ring up"><span class="e-logo" data-logo="SOFI">S</span></span><small>SOFI</small></span><span class="e-tile"><span class="e-ring down"><span class="e-logo" data-logo="UPS">U</span></span><small>UPS</small></span></div>
                 <span class="e-pill post"><svg class="i"><use href="#i-moon"/></svg>מסחר מאוחר</span>
-                <div class="e-tiles"><span class="e-tile"><span class="e-ring up"><span class="e-logo">V</span></span><small>V</small></span><span class="e-tile"><span class="e-ring down"><span class="e-logo">S</span></span><small>SBUX</small></span><span class="e-tile"><span class="e-ring "><span class="e-logo">B</span></span><small>BKNG</small></span><span class="e-tile"><span class="e-ring "><span class="e-logo">F</span></span><small>FSLR</small></span></div>
+                <div class="e-tiles"><span class="e-tile"><span class="e-ring up"><span class="e-logo" data-logo="V">V</span></span><small>V</small></span><span class="e-tile"><span class="e-ring down"><span class="e-logo" data-logo="SBUX">S</span></span><small>SBUX</small></span><span class="e-tile"><span class="e-ring "><span class="e-logo" data-logo="BKNG">B</span></span><small>BKNG</small></span><span class="e-tile"><span class="e-ring "><span class="e-logo" data-logo="FSLR">F</span></span><small>FSLR</small></span></div>
               </div>
             </div>
           </div>
@@ -435,6 +434,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
   <script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js"></script>
-  <script src="main.js"></script>
+  <script src="main.js?v=5"></script>
 </body>
 </html>

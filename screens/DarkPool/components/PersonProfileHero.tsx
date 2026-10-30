@@ -166,19 +166,24 @@ function PersonProfileHeroInner({
         />
       ) : (
         <LinearGradient
-          // חברה (לוגו): רקע ניטרלי ונקי; אדם בלי דיוקן — הגוון הירקרק הקודם
-          colors={
-            logoTicker?.trim()
-              ? ['rgba(255,255,255,0.07)', 'rgba(255,255,255,0.025)', 'transparent']
-              : ['rgba(26,38,26,0.55)', 'rgba(15,22,15,0.28)', 'transparent']
-          }
+          // חברה (לוגו): אותו רקע כהה-מקצועי של כרטיס החברה; אדם בלי דיוקן — הגוון הירקרק הקודם
+          colors={logoTicker?.trim() ? ['#1E2A3A', '#0B0F15'] : ['rgba(26,38,26,0.55)', 'rgba(15,22,15,0.28)', 'transparent']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
           style={{ width: photoWidth, height }}
         />
       )}
       {!activeUri && logoTicker?.trim() ? (
-        <View style={[StyleSheet.absoluteFill, styles.logoCenter]}>
-          <TickerLogo symbol={logoTicker.trim()} size={HERO_LOGO_SIZE} />
-        </View>
+        <>
+          <View style={styles.heroWatermark} pointerEvents="none">
+            <TickerLogo symbol={logoTicker.trim()} size={HERO_LOGO_SIZE * 3} />
+          </View>
+          <View style={[StyleSheet.absoluteFill, styles.logoCenter]}>
+            <View style={styles.heroLogoPlate}>
+              <TickerLogo symbol={logoTicker.trim()} size={HERO_LOGO_SIZE} borderRadius={HERO_LOGO_SIZE * 0.24} />
+            </View>
+          </View>
+        </>
       ) : null}
       <LinearGradient
         colors={[
@@ -289,6 +294,22 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     width: '100%',
+  },
+  heroWatermark: {
+    position: 'absolute',
+    right: -60,
+    top: 40,
+    opacity: 0.08,
+    transform: [{ rotate: '-12deg' }],
+  },
+  heroLogoPlate: {
+    borderRadius: 26,
+    padding: 5,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    shadowColor: '#000',
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
   },
   logoCenter: {
     alignItems: 'center',

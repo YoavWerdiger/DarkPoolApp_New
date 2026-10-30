@@ -19,6 +19,9 @@ import {
 
 /** פולבק בלי תמונה — מונוגרם ראשי־תיבות (לא לוגו מניה), חוץ מחברה (logoTicker) — לוגו הטיקר שלה. */
 
+/** רקע חברה ציבורית — כחול-פחם כהה, מקצועי ואחיד בשתי ערכות הנושא */
+const COMPANY_BG = ['#1E2A3A', '#0B0F15'] as const;
+
 function initialsFromName(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (!parts.length) return '?';
@@ -106,17 +109,15 @@ function InvestorPortraitFallbackInner({
       );
     }
     return (
-      // חברה: לוגו על רקע ניטרלי (כרטיס → רקע המסך) — לא צבע אקראי
-      <View style={[styles.cardBg, { backgroundColor: tokens.colors.background.cardSolid }, style]}>
-        <LinearGradient
-          colors={[tokens.colors.background.cardSolid, tokens.colors.background.primary]}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
+      // חברה: רקע «פיננסי» כהה (זהה בבהיר ובכהה), סימן מים גדול של הלוגו בפינה, והלוגו על אריח נקי במרכז
+      <View style={[styles.cardBg, { backgroundColor: COMPANY_BG[1] }, style]}>
+        <LinearGradient colors={COMPANY_BG} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+        <View style={styles.companyWatermark} pointerEvents="none">
+          <TickerLogo symbol={logo} size={190} />
+        </View>
         <View style={styles.cardMonoCenter} accessibilityLabel={name}>
-          <View style={[styles.logoPlate, { borderColor: tokens.colors.border.divider }]}>
-            <TickerLogo symbol={logo} size={64} />
+          <View style={styles.logoPlate}>
+            <TickerLogo symbol={logo} size={60} borderRadius={14} />
           </View>
         </View>
         {children}
@@ -353,9 +354,20 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   logoPlate: {
-    borderRadius: 999,
-    borderWidth: 1,
-    padding: 6,
+    borderRadius: 18,
+    padding: 4,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    shadowColor: '#000',
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+  },
+  companyWatermark: {
+    position: 'absolute',
+    right: -50,
+    bottom: -30,
+    opacity: 0.09,
+    transform: [{ rotate: '-12deg' }],
   },
   cardMonoCenter: {
     ...StyleSheet.absoluteFill,

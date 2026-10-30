@@ -1,3 +1,4 @@
+import { getQuotes } from '../../services/portfolios/portfolioPriceFeed';
 /**
  * פרופיל אדם מאוחד — גרף שווי תיק הוא ה-HERO.
  * politician / insider / fund_manager → אותו מבנה מסך.
@@ -732,6 +733,15 @@ export function PersonPortfolioProfileScreen({
             reliable &&
             h.return_pct != null &&
             Number.isFinite(h.return_pct);
+          // בלי עלות מדווחת אמינה (מענקים וכו׳) — תשואה מול מחיר השוק ביום הכניסה, לפי השווי/כמות הנוכחיים
+          const currentPx =
+            h.qty != null && h.qty > 0 && h.market_value != null && h.market_value > 0
+              ? h.market_value / h.qty
+              : null;
+          const marketReturn =
+            !hasReturn && entryFromMarket != null && currentPx != null
+              ? ((currentPx - entryFromMarket) / entryFromMarket) * 100
+              : null;
           return {
             ticker: h.ticker,
             title: h.ticker,
@@ -741,7 +751,7 @@ export function PersonPortfolioProfileScreen({
             ),
             allocation_pct: h.allocation_pct,
             market_value: h.market_value,
-            return_pct: hasReturn ? h.return_pct : null,
+            return_pct: hasReturn ? h.return_pct : marketReturn,
             avg_price: avgEntryPriceFromCost(
               h.cost_usd,
               h.qty,
@@ -1096,6 +1106,22 @@ export function PersonPortfolioProfileScreen({
     trumpPricesQuery.isFetching ||
     sessionHourlyQuery.isFetching;
 
+  // מחיר חי לכל אחזקה בתיק 13F שאין לה מחיר מהסדרה (מחוץ ל-40 הטיקרים של הגרף / שליפה שנכשלה) — אחרת אין תשואה
+  const missingPriceTickers = useMemo(() => {
+    if (kind !== 'fund_manager') return [] as string[];
+    const have = quotesMapFromDailyCloses(fundPricesQuery.data);
+    return holdings
+      .map((h) => h.ticker.toUpperCase().trim())
+      .filter((t) => t && !have.has(t))
+      .slice(0, 40);
+  }, [kind, holdings, fundPricesQuery.data]);
+  const holdingLiveQuotesQuery = useQuery({
+    queryKey: ['darkpool', 'holding-live-quotes', missingPriceTickers.join(',')],
+    queryFn: () => getQuotes(missingPriceTickers),
+    enabled: missingPriceTickers.length > 0,
+    staleTime: 60_000,
+  });
+
   const rowEngine =
     holdingsEngine === 'congress' ||
     holdingsEngine === 'form4' ||
@@ -1109,7 +1135,7 @@ export function PersonPortfolioProfileScreen({
       const quotes = quotesMapFromDailyCloses(fundPricesQuery.data);
       return holdings.map((h) => {
         const sym = h.ticker.toUpperCase();
-        const live = quotes.get(sym) ?? h.current_price ?? null;
+        const live = quotes.get(sym) ?? holdingLiveQuotesQuery.data?.get(sym)?.price ?? h.current_price ?? null;
         const replayed = filingAvgByTicker.get(sym);
         const lastMark = impliedFilingPriceFrom13f(h.value_usd, h.shares);
         const entry = replayed?.avgCost ?? lastMark;
@@ -1147,6 +1173,7 @@ export function PersonPortfolioProfileScreen({
     holdings,
     rowEngine,
     fundPricesQuery.data,
+    holdingLiveQuotesQuery.data,
     filingAvgByTicker,
     basketPricesQuery.data,
     congressPersonTradesQuery.data,

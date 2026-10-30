@@ -72,7 +72,7 @@
   --aurora: 0.32; --grain: 0.03; --glow-a: 0.16;
   color-scheme: light;
 }
-body, .tile, .num, .faq details, .course, .trust-card, .nav, .phone-screen { transition: background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease; }
+body, .tile, .num, .faq details, .nav, .phone-screen { transition: background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease; }
 
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; overflow-x: clip; }
@@ -596,34 +596,6 @@ p { margin: 0; }
   .insiders-track { overflow-x: auto; scroll-snap-type: x mandatory; padding: 0 var(--gutter) 10px; scrollbar-width: none; }
   .insiders-track::-webkit-scrollbar { display: none; }
   .person { width: 76vw; max-width: 300px; height: 380px; scroll-snap-align: center; }
-}
-
-/* ================= ACADEMY ================= */
-.academy { padding: 140px 0 120px; }
-.courses { max-width: var(--maxw); margin: 0 auto; padding: 0 var(--gutter); display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-.course { border-radius: var(--radius-lg); overflow: hidden; background: var(--surface-1); border: 1px solid var(--line); transition: transform 0.5s var(--ease-out), border-color 0.3s; }
-.course:hover { border-color: rgba(0, 230, 84, 0.3); }
-.course-media { overflow: hidden; aspect-ratio: 16 / 9; }
-.course-media img { width: 100%; height: 120%; object-fit: cover; will-change: transform; transition: scale 0.8s var(--ease-out); }
-.course:hover .course-media img { scale: 1.04; }
-.course-body { padding: 26px 28px 30px; }
-.course-body h3 { font-size: 34px; margin: 12px 0 8px; }
-.course-body p { color: var(--text-2); }
-@media (max-width: 860px) { .courses { grid-template-columns: 1fr; } }
-
-/* ================= TRUST ================= */
-.trust { max-width: var(--maxw); margin: 0 auto; padding: 0 var(--gutter) 140px; }
-.trust-card { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 20px 48px; padding: clamp(28px, 5vw, 60px); border-radius: var(--radius-lg); background: linear-gradient(135deg, var(--surface-2), var(--surface-1)); border: 1px solid var(--line); }
-.trust-ico { grid-row: span 2; width: 120px; height: 120px; border-radius: 34px; display: grid; place-items: center; background: var(--green-soft); }
-.trust-ico svg { width: 64px; height: 64px; fill: none; stroke: var(--green); stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; }
-.trust-card h3 { font-size: clamp(30px, 3.4vw, 44px); }
-.trust-card ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
-.trust-card li b { display: block; font-size: 18px; margin-bottom: 4px; }
-.trust-card li span { color: var(--text-2); font-size: 15px; }
-@media (max-width: 860px) {
-  .trust-card { grid-template-columns: 1fr; text-align: center; justify-items: center; }
-  .trust-ico { grid-row: auto; }
-  .trust-card ul { grid-template-columns: 1fr; }
 }
 
 /* ================= FAQ ================= */

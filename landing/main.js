@@ -395,21 +395,6 @@
   });
   gsap.from('.person', { y: 80, opacity: 0, duration: 1.2, ease: 'expo.out', stagger: 0.08, scrollTrigger: { trigger: '.insiders', start: 'top 70%' } });
 
-  /* ---- academy ---- */
-  gsap.utils.toArray('.course').forEach((c, i) => {
-    gsap.from(c, { y: 100, opacity: 0, rotate: i ? -2 : 2, duration: 1.4, ease: 'expo.out', scrollTrigger: { trigger: c, start: 'top 90%' } });
-    gsap.fromTo(c.querySelector('img'), { yPercent: -16 }, { yPercent: 0, ease: 'none', scrollTrigger: { trigger: c, start: 'top bottom', end: 'bottom top', scrub: true } });
-  });
-
-  /* ---- trust ---- */
-  const tick = document.querySelector('.trust-ico .tick');
-  if (tick) {
-    const len = tick.getTotalLength();
-    gsap.fromTo(tick, { strokeDasharray: len, strokeDashoffset: len }, { strokeDashoffset: 0, duration: 1, ease: 'power2.out', scrollTrigger: { trigger: '.trust', start: 'top 70%' } });
-  }
-  gsap.from('.trust-card', { y: 60, opacity: 0, scale: 0.97, duration: 1.3, ease: 'expo.out', scrollTrigger: { trigger: '.trust', start: 'top 85%' } });
-  gsap.from('.trust-card li', { y: 30, opacity: 0, duration: 1, ease: 'expo.out', stagger: 0.1, scrollTrigger: { trigger: '.trust', start: 'top 75%' } });
-
   /* ---- faq ---- */
   gsap.from('.faq details', { y: 30, opacity: 0, duration: 1, ease: 'expo.out', stagger: 0.07, scrollTrigger: { trigger: '.faq-list', start: 'top 85%' } });
 

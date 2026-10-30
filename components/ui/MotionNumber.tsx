@@ -31,7 +31,7 @@ const TINT_IN_MS = 140;
 const TINT_HOLD_MS = 220;
 const TINT_FADE_MS = 650;
 
-function formatUsd(v: number, decimals: number): string {
+function formatUsd(v: number, decimals: number, symbol: string = '$'): string {
   'worklet';
   const scale = Math.pow(10, decimals);
   const scaled = Math.round(Math.abs(v) * scale);
@@ -47,14 +47,15 @@ function formatUsd(v: number, decimals: number): string {
     while (frac.length < decimals) frac = '0' + frac;
     out += '.' + frac;
   }
-  return (v < 0 && scaled > 0 ? '-' : '') + '$' + out;
+  return (v < 0 && scaled > 0 ? '-' : '') + symbol + out;
 }
-function formatUsdJs(v: number, decimals: number): string {
-  return formatUsd(v, decimals);
+function formatUsdJs(v: number, decimals: number, symbol: string = '$'): string {
+  return formatUsd(v, decimals, symbol);
 }
 
 /** רוחב תו לפי סוג: [ספרה, פסיק, $, מינוס, נקודה] */
 const MEASURE_CHARS = ['0', ',', '$', '-', '.'] as const;
+const measureCharsFor = (symbol: string) => ['0', ',', symbol, '-', '.'];
 
 type Props = {
   /** ערך בזמן גרירה (UI thread) */
@@ -69,9 +70,11 @@ type Props = {
   downColor?: string;
   /** ספרות אחרי הנקודה (מחיר מניה: 2; שווי תיק: 0) */
   decimals?: number;
+  /** סמל המטבע ($ / ₪ / €) — ברירת מחדל $ */
+  symbol?: string;
 };
 
-export function MotionNumber({ scrubValue, scrubActive, value, style, upColor, downColor, decimals = 0 }: Props) {
+export function MotionNumber({ scrubValue, scrubActive, value, style, upColor, downColor, decimals = 0, symbol = '$' }: Props) {
   const restSV = useSharedValue(value);
   useEffect(() => {
     restSV.value = value;
@@ -79,7 +82,7 @@ export function MotionNumber({ scrubValue, scrubActive, value, style, upColor, d
 
   // כיוון השינוי האחרון: 1 עלייה, -1 ירידה
   const dir = useSharedValue(1);
-  const text = useSharedValue(formatUsdJs(value, decimals));
+  const text = useSharedValue(formatUsdJs(value, decimals, symbol));
   useAnimatedReaction(
     () => {
       const active = scrubActive.value ? 1 : 0;
@@ -87,7 +90,7 @@ export function MotionNumber({ scrubValue, scrubActive, value, style, upColor, d
     },
     (next, prev) => {
       if (prev != null && next.v !== prev.v) dir.value = next.v > prev.v ? 1 : -1;
-      text.value = formatUsd(next.v, decimals);
+      text.value = formatUsd(next.v, decimals, symbol);
     }
   );
 
@@ -126,10 +129,10 @@ export function MotionNumber({ scrubValue, scrubActive, value, style, upColor, d
   }, [widths, widthsSV]);
 
   // משבצות קבועות: מספיק לערך הנוכחי ולגדילה ×1000
-  const slots = Math.max(6, formatUsdJs(Math.abs(value) * 1000 + 1, decimals).length);
+  const slots = Math.max(6, formatUsdJs(Math.abs(value) * 1000 + 1, decimals, symbol).length);
 
   return (
-    <View style={styles.row} pointerEvents="none" accessibilityRole="text" accessibilityLabel={formatUsdJs(value, decimals)}>
+    <View style={styles.row} pointerEvents="none" accessibilityRole="text" accessibilityLabel={formatUsdJs(value, decimals, symbol)}>
       {widths ? (
         Array.from({ length: slots }, (_, k) => (
           <Slot
@@ -146,10 +149,10 @@ export function MotionNumber({ scrubValue, scrubActive, value, style, upColor, d
           />
         ))
       ) : (
-        <Text style={glyphStyle}>{formatUsdJs(value, decimals)}</Text>
+        <Text style={glyphStyle}>{formatUsdJs(value, decimals, symbol)}</Text>
       )}
       <View style={styles.measure}>
-        {MEASURE_CHARS.map((c, i) => (
+        {measureCharsFor(symbol).map((c, i) => (
           <Text key={c} style={glyphStyle} onLayout={onMeasure(i)}>
             {c}
           </Text>
@@ -190,7 +193,7 @@ const Slot = React.memo(function Slot({
     if (!c) return 0;
     const ws = widths.value;
     if (c === ',') return ws[1];
-    if (c === '$') return ws[2];
+    if (c === '$' || c === '₪' || c === '€' || c === '£') return ws[2];
     if (c === '-') return ws[3];
     if (c === '.') return ws[4];
     return ws[0];

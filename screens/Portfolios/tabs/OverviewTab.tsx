@@ -52,8 +52,10 @@ import { formatCongressDeltaUsd } from '../../DarkPool/utils/investorHoldings';
 import { toDataIsland } from '../../DarkPool/utils/bidi';
 import { AnimatedNumber } from '../../../components/ui/AnimatedNumber';
 import { APP_LAYOUT } from '../../../components/ui/appLayout';
-import { appendOpenPositionSession } from '../../DarkPool/utils/sessionSnapshots';
-import { getHistoricalPrices } from '../../../services/portfolios/portfolioPriceFeed';
+import { appendOpenPositionSession, appendWeightedIntraday } from '../../DarkPool/utils/sessionSnapshots';
+import { fetchIntradayCloses, intradaySpecForPeriod } from '../../DarkPool/utils/congressBasketPrices';
+import { MotionNumber } from '../../../components/ui/MotionNumber';
+import { useSharedValue } from 'react-native-reanimated';
 
 interface Props {
   portfolio: Portfolio;
@@ -114,6 +116,9 @@ export default function OverviewTab({
   const [period, setPeriod] = useState<PerformancePeriod>('3M');
   /** נקודה בגרירה על הגרף — הסכום בכותרת מתעדכן אליה (כמו באינסיידרים) */
   const [scrubPoint, setScrubPoint] = useState<{ date: string; value: number } | null>(null);
+  // ערך הגרירה ב-UI thread — למספר המתגלגל (כמו בפרופיל אינסיידר)
+  const scrubValueSV = useSharedValue(0);
+  const scrubActiveSV = useSharedValue(0);
   /** סדרת שווי לגרף + מדדי ביצוע */
   const [chartSeries, setChartSeries] = useState<
     { date: string; value: number; external_flow: number }[]
@@ -188,17 +193,29 @@ export default function OverviewTab({
     }
     let cancel = false;
     const symbols = Array.from(new Set(openTrades.map((t) => t.symbol.toUpperCase()))).slice(0, 20);
+    // סנאפשוטים לפי הטווח (כמו באינסיידרים): 1D — 5 דק׳, 1W — 15 דק׳, 1M — שעה
+    const spec = intradaySpecForPeriod(period);
     void (async () => {
-      const hourly: Record<string, { date: string; close: number }[]> = {};
-      await Promise.all(
-        symbols.map(async (sym) => {
-          const points = await getHistoricalPrices(sym, '1d', { interval: '1h' });
-          hourly[sym] = points
-            .filter((p) => p.close > 0 && /T\d{2}:/.test(p.date))
-            .map((p) => ({ date: p.date, close: p.close }));
-        })
-      );
+      const hourly = await fetchIntradayCloses(symbols, spec);
       if (cancel) return;
+      if (spec.range !== '1d') {
+        // כמה ימים: מסלול משוקלל לפי הפוזיציות הפתוחות + מזומן, משורשר לנקודה היומית של כל יום
+        const stamps = Array.from(new Set(Object.values(hourly).flat().map((b) => b.date))).sort();
+        const cash = Number(portfolio.available_cash ?? 0);
+        const legs = openTrades.map((t) => {
+          const bars = hourly[t.symbol.toUpperCase()] ?? [];
+          const lev = t.leverage ?? 1;
+          return {
+            weight: Math.abs(t.entry_price * t.quantity * lev),
+            // שורט — תנועה הפוכה
+            bars: t.direction === 'short' ? bars.map((b) => ({ date: b.date, close: 1 / b.close })) : bars,
+          };
+        });
+        if (cash > 0 && stamps.length) legs.push({ weight: cash, bars: stamps.map((d) => ({ date: d, close: 1 })) });
+        const next = appendWeightedIntraday(chartSeries, legs);
+        setSessionSeries(next.length > chartSeries.length ? next : null);
+        return;
+      }
       const next = appendOpenPositionSession(
         chartSeries,
         openTrades.map((t) => ({
@@ -216,7 +233,7 @@ export default function OverviewTab({
     return () => {
       cancel = true;
     };
-  }, [chartSeries, openTrades, openTradeQuotes]);
+  }, [chartSeries, openTrades, openTradeQuotes, period, portfolio.available_cash]);
 
   // טוען סטטיסטיקות מסחר (סגורות) + פוזיציות פתוחות (לחישוב ערך תיק חי)
   // chartRefreshKey מאלץ רענון גם אחרי סגירת פוזיציה
@@ -525,6 +542,10 @@ export default function OverviewTab({
           ...journalCardTitleStyle,
           color: tokens.colors.text.primary,
         },
+        heroNumberWrap: {
+          marginTop: APP_LAYOUT.cardMetricLabelToValueGap,
+          alignSelf: 'stretch',
+        },
         heroValue: {
           direction: 'ltr',
           writingDirection: 'ltr',
@@ -769,6 +790,24 @@ export default function OverviewTab({
   const heroValue =
     scrubPoint?.value ??
     (filteredSeries.length > 0 ? filteredSeries[filteredSeries.length - 1].value : null);
+  // גרירה: שינוי מתחילת הטווח עד הנקודה, בניכוי כסף שנכנס/יצא (כמו באינסיידרים)
+  const scrubDelta = (() => {
+    if (!scrubPoint || periodSeries.length < 2) return null;
+    const first = periodSeries[0].value;
+    if (!(first > 0)) return null;
+    let netFlow = 0;
+    let invested = first;
+    for (let i = 1; i < periodSeries.length && periodSeries[i].date <= scrubPoint.date; i++) {
+      const f = periodSeries[i].external_flow ?? 0;
+      if (!Number.isFinite(f)) continue;
+      netFlow += f;
+      if (f > 0) invested += f;
+    }
+    const usd = scrubPoint.value - first - netFlow;
+    return { usd, pct: invested > 0 ? (usd / invested) * 100 : 0 };
+  })();
+  const currencySymbol = portfolio.currency === 'ILS' ? '₪' : portfolio.currency === 'EUR' ? '€' : '$';
+  const liveValue = filteredSeries.length > 0 ? filteredSeries[filteredSeries.length - 1].value : null;
   const deltaTone =
     changeToneFromSigned(periodDelta?.usd) !== 'neutral'
       ? changeToneFromSigned(periodDelta?.usd)
@@ -792,22 +831,38 @@ export default function OverviewTab({
       {/* Performance chart — כותרת סקשן זהה בטעינה/טעון; בגרף רק amount→delta */}
       <UICard variant="soft" padding="md" style={styles.section}>
         <Text style={styles.valueLabel}>שווי תיק:</Text>
-        {heroValue != null ? (
-          <AnimatedNumber
-            text={toDataIsland(formatCurrency(heroValue, portfolio.currency))}
-            value={heroValue}
-            flash
-            fast={!!scrubPoint}
-            style={styles.heroValue}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.6}
-          />
+        {heroValue != null && liveValue != null ? (
+          // אותו מספר מתגלגל כמו באינסיידרים: ב-UI thread, ספרה מסיימת מעבר ורק אז ממשיכה
+          <View style={styles.heroNumberWrap}>
+            <MotionNumber
+              scrubValue={scrubValueSV}
+              scrubActive={scrubActiveSV}
+              value={liveValue}
+              decimals={2}
+              symbol={currencySymbol}
+              style={styles.heroValue}
+              upColor={tokens.colors.primary.main}
+              downColor={tokens.colors.text.danger}
+            />
+          </View>
         ) : null}
         {scrubPoint ? (
-          <Text style={[styles.deltaFigure, styles.deltaRow, { color: tokens.colors.text.secondary }]}>
-            {toDataIsland(scrubPoint.date.split('-').reverse().join('.'))}
-          </Text>
+          <View style={styles.deltaRow}>
+            {scrubDelta ? (
+              <>
+                <Text style={[styles.deltaFigure, { color: scrubDelta.usd >= 0 ? tokens.colors.primary.main : tokens.colors.text.danger }]} numberOfLines={1}>
+                  {toDataIsland(formatCongressDeltaUsd(scrubDelta.usd))}
+                </Text>
+                <View style={[styles.deltaDot, { backgroundColor: scrubDelta.usd >= 0 ? tokens.colors.primary.main : tokens.colors.text.danger }]} />
+                <Text style={[styles.deltaFigure, { color: scrubDelta.usd >= 0 ? tokens.colors.primary.main : tokens.colors.text.danger }]} numberOfLines={1}>
+                  {toDataIsland(formatSignedChangePct(scrubDelta.pct))}
+                </Text>
+              </>
+            ) : null}
+            <Text style={[styles.deltaFigure, { color: tokens.colors.text.secondary }]}>
+              {toDataIsland(scrubPoint.date.slice(0, 10).split('-').reverse().join('.'))}
+            </Text>
+          </View>
         ) : periodDelta ? (
           <View style={styles.deltaRow}>
             <AnimatedNumber
@@ -843,6 +898,8 @@ export default function OverviewTab({
             onPeriodChange={setPeriod}
             showHeader={false}
             onScrubPoint={setScrubPoint}
+            scrubValue={scrubValueSV}
+            scrubActive={scrubActiveSV}
           />
         )}
       </UICard>

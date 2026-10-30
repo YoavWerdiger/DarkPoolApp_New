@@ -10,10 +10,8 @@ import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
-  KeyboardAvoidingView,
   Linking,
   Platform,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -21,6 +19,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import * as ImagePicker from 'expo-image-picker';
 
 import { useDesignTokens } from '../../components/ui/DesignTokens';
@@ -56,11 +55,14 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  /** שלב הפרסום — לפס השלבים (תמונה ← שמירה ← פורסם) */
+  const [phase, setPhase] = useState<'idle' | 'image' | 'save' | 'done'>('idle');
 
   const isBusy = isSubmitting || isUploadingImage;
   const canSubmit = title.trim().length >= 2 && content.trim().length >= 2 && !isBusy;
 
   const reset = useCallback(() => {
+    setPhase('idle');
     setTitle('');
     setContent('');
     setSource(DEFAULT_SOURCE);
@@ -129,6 +131,7 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
       let uploadedImageUrl: string | null = null;
       if (imageLocalUri) {
         setIsUploadingImage(true);
+        setPhase('image');
         setStatusMessage('מעלה תמונה...');
         const upload = await mediaService.uploadMedia(imageLocalUri, 'image');
         setIsUploadingImage(false);
@@ -141,6 +144,7 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
         uploadedImageUrl = upload.url;
       }
 
+      setPhase('save');
       setStatusMessage('שומר...');
 
       const authorName =
@@ -157,6 +161,7 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
       });
 
       void HapticFeedback.impactLight();
+      setPhase('done');
       setStatusMessage('פורסם בהצלחה!');
       onCreated?.();
       setTimeout(() => {
@@ -167,6 +172,7 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
       const msg = e instanceof Error ? e.message : 'שגיאה לא צפויה';
       console.error('[CreateNewsSheet] submit failed', e);
       setStatusMessage(null);
+      setPhase('idle');
       setErrorMessage(msg);
     } finally {
       setIsSubmitting(false);
@@ -204,10 +210,8 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
       contentPaddingBottom={0}
       topCornerRadius={28}
     >
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
+      {/* בלי KeyboardAvoidingView (לא עובד בתוך שיט) — הגלילה מביאה את השדה הפעיל מעל המקלדת */}
+      <View style={styles.container}>
         {/* Header קבוע */}
         <View style={styles.header}>
           <DayNavBlurButton
@@ -224,33 +228,41 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
             כתבה חדשה
           </Text>
 
-          <DayNavBlurButton
+          {/* פרסום — כפתור ירוק (כשאפשר לפרסם); אפור כשלא */}
+          <TouchableOpacity
             onPress={() => {
               void handleSubmit();
             }}
-            size={DAY_NAV_BUTTON_SIZE}
-            style={styles.headerFace}
-            accessibilityLabel="פרסם"
+            activeOpacity={0.85}
             disabled={!canSubmit}
+            accessibilityRole="button"
+            accessibilityLabel="פרסם"
+            style={[
+              styles.publishBtn,
+              {
+                width: DAY_NAV_BUTTON_SIZE,
+                height: DAY_NAV_BUTTON_SIZE,
+                borderRadius: DAY_NAV_BUTTON_SIZE / 2,
+                backgroundColor: canSubmit || isSubmitting ? primary : DesignTokens.colors.background.cardSolid,
+              },
+            ]}
           >
             {isSubmitting ? (
-              <ActivityIndicator size="small" color={DesignTokens.colors.text.primary} />
+              <ActivityIndicator size="small" color="#0B0B0B" />
             ) : (
-              <Ionicons
-                name="checkmark"
-                size={22}
-                color={canSubmit ? DesignTokens.colors.text.primary : DesignTokens.colors.text.tertiary}
-              />
+              <Ionicons name="checkmark" size={22} color={canSubmit ? '#0B0B0B' : DesignTokens.colors.text.tertiary} />
             )}
-          </DayNavBlurButton>
+          </TouchableOpacity>
         </View>
 
         {/* גוף גלילה */}
-        <ScrollView
+        <KeyboardAwareScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
+          keyboardDismissMode="interactive"
+          bottomOffset={24}
+          extraKeyboardSpace={16}
           showsVerticalScrollIndicator={false}
         >
           {errorMessage ? (
@@ -273,20 +285,8 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
             </View>
           ) : null}
 
-          {statusMessage && !errorMessage ? (
-            <View
-              style={[
-                styles.banner,
-                {
-                  backgroundColor: DesignTokens.colors.background.primary,
-                },
-              ]}
-            >
-              <ActivityIndicator size="small" color={primary} />
-              <Text style={[styles.bannerText, { color: DesignTokens.colors.text.primary }]}>
-                {statusMessage}
-              </Text>
-            </View>
+          {phase !== 'idle' && !errorMessage ? (
+            <PublishSteps phase={phase} hasImage={!!imageLocalUri} />
           ) : null}
 
           {imageLocalUri ? (
@@ -374,8 +374,8 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
             placeholder={DEFAULT_SOURCE}
             maxLength={60}
           />
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
+      </View>
     </BottomSheet>
   );
 }
@@ -516,6 +516,10 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       gap: APP_LAYOUT.componentGap,
       direction: 'rtl',
     },
+    publishBtn: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     banner: {
       flexDirection: 'row-reverse',
       alignItems: 'center',
@@ -598,3 +602,73 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       marginTop: APP_LAYOUT.stackGapSmall,
     },
   });
+
+/** פס שלבי הפרסום לפי הטופו: כרטיס, שלבים עם עיגול (✓ כשהושלם, נקודה מהבהבת בשלב הנוכחי) וקו מחבר */
+function PublishSteps({ phase, hasImage }: { phase: 'image' | 'save' | 'done' | 'idle'; hasImage: boolean }) {
+  const t = useDesignTokens();
+  const steps = [
+    ...(hasImage ? [{ key: 'image', label: 'תמונה' }] : []),
+    { key: 'save', label: 'שמירה' },
+    { key: 'done', label: 'פורסם' },
+  ];
+  const order = ['image', 'save', 'done'];
+  const cur = order.indexOf(phase);
+  return (
+    <View style={[stepStyles.card, { backgroundColor: t.colors.background.cardSolid }]}>
+      {steps.map((st, i) => {
+        const idx = order.indexOf(st.key);
+        const done = idx < cur || phase === 'done';
+        const active = idx === cur && phase !== 'done';
+        const color = done ? t.colors.primary.main : active ? t.colors.text.primary : t.colors.text.tertiary;
+        return (
+          <React.Fragment key={st.key}>
+            {i > 0 ? (
+              <View style={[stepStyles.line, { backgroundColor: done || active ? t.colors.primary.main : t.colors.border.divider }]} />
+            ) : null}
+            <View style={stepStyles.step}>
+              <View
+                style={[
+                  stepStyles.dot,
+                  {
+                    borderColor: color,
+                    backgroundColor: done ? t.colors.primary.main : 'transparent',
+                  },
+                ]}
+              >
+                {done ? (
+                  <Ionicons name="checkmark" size={12} color="#0B0B0B" />
+                ) : active ? (
+                  <ActivityIndicator size="small" color={t.colors.text.primary} style={{ transform: [{ scale: 0.6 }] }} />
+                ) : null}
+              </View>
+              <Text style={[stepStyles.label, { color }]}>{st.label}</Text>
+            </View>
+          </React.Fragment>
+        );
+      })}
+    </View>
+  );
+}
+
+const stepStyles = StyleSheet.create({
+  card: {
+    direction: 'rtl',
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: APP_LAYOUT.componentGap,
+  },
+  step: { alignItems: 'center', gap: 6 },
+  dot: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  line: { flex: 1, height: 2, borderRadius: 1, marginHorizontal: 8, marginBottom: 20 },
+  label: { ...APP_TYPE.caption, fontWeight: '600' },
+});

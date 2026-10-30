@@ -1,3 +1,8 @@
+import { listCongressTradesForPersonTicker } from '../../services/darkpool/darkPoolDbCacheService';
+import { listInsiderTradesForPersonTicker } from '../../services/darkpool/darkPoolService';
+import { getFeedTradeSide } from './utils/feedTradeDisplay';
+import { describeInsiderCode, formatInsiderValue } from './utils/insiderTradeDisplay';
+import { formatDisclosedAmountRange } from './utils/congressTradeDisplay';
 /**
  * פרטי אחזקה (13F — קרן / חברה): כמה מניות, שווי שוק חי, מחיר ממוצע, תשואה היום וכוללת,
  * ו«עסקאות» = השינוי בכמות בין דיווח לדיווח.
@@ -89,6 +94,151 @@ const HONESTY_BODY =
   'וכמות המניות בדוח האחרון.';
 
 export default function DarkPoolPositionScreen() {
+  const { params } = useRoute<RP>();
+  return params.detail ? <FilingPositionView /> : <TradesPositionView />;
+}
+
+/** פוליטיקאי / בכיר: שווי, חלק מהתיק ותשואה מהשורה + רשימת העסקאות של האדם במניה */
+function TradesPositionView() {
+  const tokens = useDesignTokens();
+  const navigation = useNavigation<Nav>();
+  const { params } = useRoute<RP>();
+  const bottomPad = useMainTabsHeight();
+  const styles = useMemo(() => createStyles(tokens, bottomPad), [tokens, bottomPad]);
+  const ticker = (params.ticker ?? '').toUpperCase();
+  const isCongress = params.source === 'congress';
+
+  const tradesQuery = useQuery({
+    queryKey: ['darkpool', 'position-trades', params.source, params.personId ?? params.insiderName, ticker],
+    queryFn: async () => {
+      if (isCongress) {
+        const rows = await listCongressTradesForPersonTicker(params.personId ?? '', ticker, 30);
+        return rows.map((t) => ({
+          key: String(t.id),
+          buy: getFeedTradeSide(t.transaction_type ?? '') !== 'sell',
+          date: t.transaction_date ?? t.filed_at ?? null,
+          amount: formatDisclosedAmountRange(t.amount_label) ?? '—',
+        }));
+      }
+      const rows = await listInsiderTradesForPersonTicker(params.insiderName ?? params.personName, ticker, 30);
+      return rows.map((t) => {
+        const tone = describeInsiderCode(t.transaction_type).tone;
+        const value = formatInsiderValue({ shares: t.shares, price: t.price, value: t.value });
+        return {
+          key: String(t.id),
+          buy: tone !== 'sell',
+          date: t.transaction_date ?? null,
+          amount: value ?? (t.shares ? `${Math.round(Math.abs(t.shares)).toLocaleString('en-US')} מניות` : '—'),
+        };
+      });
+    },
+    enabled: ticker.length > 0,
+    staleTime: 5 * 60_000,
+  });
+
+  const quoteQuery = useQuery({
+    queryKey: ['darkpool', 'trade-detail-quote', ticker],
+    queryFn: async () => (await getQuotes([ticker])).get(ticker) ?? null,
+    enabled: ticker.length > 0,
+    staleTime: 60_000,
+  });
+  const price = quoteQuery.data?.price ?? null;
+  const prevClose = quoteQuery.data?.previous_close ?? null;
+  const todayPct = price && prevClose ? ((price - prevClose) / prevClose) * 100 : null;
+  const ret = params.returnPct ?? null;
+  const toneColor = (v: number | null) =>
+    v == null ? tokens.colors.text.secondary : v >= 0 ? tokens.colors.primary.main : tokens.colors.text.danger;
+
+  return (
+    <ScreenChrome rtl>
+      <SafeAreaView style={[darkPoolTransparentFill, darkPoolRtlContent]} edges={['top']}>
+        <View style={styles.topBar}>
+          <DayNavBlurButton onPress={() => navigation.goBack()} glassIntensity="subtle" size={HEADER_BACK_BTN_SIZE} accessibilityLabel="חזרה">
+            <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
+          </DayNavBlurButton>
+          <Text style={styles.topBarTitle} numberOfLines={1} accessibilityRole="header">
+            פרטי אחזקה
+          </Text>
+          <View style={{ width: HEADER_BACK_BTN_SIZE }} />
+        </View>
+        <ScrollView style={darkPoolTransparentFill} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <View style={styles.section}>
+            <Pressable onPress={() => navigation.navigate('DarkPoolTicker', { ticker })} accessibilityRole="button">
+              <DarkPoolNestedQuoteCard
+                ticker={ticker}
+                priceText={price != null ? usd(price, 2) : null}
+                changeText={todayPct != null ? formatSignedChangePct(todayPct) : null}
+                changeColor={toneColor(todayPct)}
+                changeTone={todayPct == null ? undefined : todayPct >= 0 ? 'positive' : 'negative'}
+                loading={quoteQuery.isLoading && price == null}
+                missingText={!quoteQuery.isLoading && price == null ? DARK_POOL_UNAVAILABLE : null}
+              />
+            </Pressable>
+          </View>
+
+          <View style={styles.section}>
+            <DarkPoolSectionHeader variant="group" title="הפוזיציה" />
+            <UICard variant="soft" glassIntensity="light" padding="none" contentContainerStyle={styles.rowsCard}>
+              {params.shares != null && params.shares > 0 ? (
+                <FieldRow icon={Layers} label="מניות" value={sharesText(params.shares)} />
+              ) : null}
+              <FieldRow
+                icon={Wallet}
+                label="שווי אחזקה"
+                value={params.marketValue != null ? usd(params.marketValue) : DARK_POOL_UNAVAILABLE}
+              />
+              <FieldRow
+                icon={CircleDollarSign}
+                label="חלק מהתיק"
+                value={params.allocationPct != null ? `${params.allocationPct.toFixed(1)}%` : DARK_POOL_UNAVAILABLE}
+                last
+              />
+            </UICard>
+          </View>
+
+          <View style={styles.section}>
+            <DarkPoolSectionHeader variant="group" title="תשואת הפוזיציה" />
+            <UICard variant="soft" glassIntensity="light" padding="none" contentContainerStyle={styles.rowsCard}>
+              <FieldRow icon={Activity} label="תשואה היום" value={todayPct != null ? formatSignedChangePct(todayPct) : DARK_POOL_UNAVAILABLE} color={toneColor(todayPct)} />
+              <FieldRow
+                icon={ChartLine}
+                label={isCongress ? 'תשואה (משוערת)' : 'תשואה כוללת'}
+                value={ret != null ? formatSignedChangePct(ret) : DARK_POOL_UNAVAILABLE}
+                color={toneColor(ret)}
+                last
+              />
+            </UICard>
+          </View>
+
+          {tradesQuery.data?.length ? (
+            <View style={styles.section}>
+              <DarkPoolSectionHeader variant="group" title="עסקאות במניה" />
+              <UICard variant="soft" glassIntensity="light" padding="none" contentContainerStyle={styles.rowsCard}>
+                {tradesQuery.data.map((t, i) => (
+                  <View key={t.key} style={[styles.tradeRow, i < tradesQuery.data!.length - 1 && { borderBottomWidth: 1, borderBottomColor: tokens.colors.border.divider }]}>
+                    <Text style={[styles.tradeAmount, { color: tokens.colors.text.primary }]} numberOfLines={1}>
+                      {toDataIsland(t.amount)}
+                    </Text>
+                    <View style={styles.tradeStart}>
+                      <Text style={[styles.tradeDate, { color: tokens.colors.text.secondary }]}>{toDataIsland(formatTradeDate(t.date) ?? '')}</Text>
+                      <View style={[styles.sidePillInline, { backgroundColor: `${t.buy ? tokens.colors.primary.main : tokens.colors.text.danger}22` }]}>
+                        <Text style={[styles.sidePillInlineText, { color: t.buy ? tokens.colors.primary.main : tokens.colors.text.danger }]}>
+                          {t.buy ? 'קנייה' : 'מכירה'}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                ))}
+              </UICard>
+            </View>
+          ) : null}
+        </ScrollView>
+      </SafeAreaView>
+    </ScreenChrome>
+  );
+}
+
+function FilingPositionView() {
   const tokens = useDesignTokens();
   const navigation = useNavigation<Nav>();
   const { params } = useRoute<RP>();
@@ -98,7 +248,8 @@ export default function DarkPoolPositionScreen() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [showAllTxns, setShowAllTxns] = useState(false);
 
-  const { detail, personName, personImage } = params;
+  const { personName, personImage } = params;
+  const detail = params.detail!;
   const ticker = detail.ticker;
 
   const quoteQuery = useQuery({
@@ -423,6 +574,29 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, bottomPadding:
       paddingVertical: 4,
     },
     section: { marginBottom: APP_LAYOUT.sectionGap },
+    tradeRow: {
+      direction: 'ltr',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+      paddingVertical: APP_LAYOUT.cardTitleToBodyGap,
+    },
+    tradeStart: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    tradeAmount: {
+      fontSize: DARK_POOL_TYPE.cardBody.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardBody.lineHeight,
+      fontWeight: '600',
+      fontVariant: ['tabular-nums'],
+      flexShrink: 1,
+    },
+    tradeDate: {
+      fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
+      lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
+      fontVariant: ['tabular-nums'],
+    },
+    sidePillInline: { borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3 },
+    sidePillInlineText: { ...APP_TYPE.caption, fontWeight: '600' },
     moreBtn: {
       alignSelf: 'center',
       paddingVertical: APP_LAYOUT.stackGapSmall,

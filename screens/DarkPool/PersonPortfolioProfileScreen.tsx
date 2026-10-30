@@ -1254,20 +1254,34 @@ export function PersonPortfolioProfileScreen({
     [kind, id, displayName, imageUrl, ticker, stackNav]
   );
 
-  // פרטי אחזקה (13F — קרן / חברה): מההיסטוריה שכבר נטענה, בלי קריאת שרת נוספת
-  const canOpenPosition = kind === 'fund_manager' && (fundHistoryQuery.data?.length ?? 0) > 0;
+  // פרטי אחזקה לכל שורה: 13F — מההיסטוריה שכבר נטענה; פוליטיקאי / בכיר — נתוני השורה + עסקאות האדם במניה
+  const canOpenPosition = kind !== 'fund_manager' || (fundHistoryQuery.data?.length ?? 0) > 0;
   const openPosition = useCallback(
-    (rowTicker: string) => {
-      const detail = build13FPositionDetail(fundHistoryQuery.data ?? [], rowTicker);
-      if (!detail) return;
+    (row: HoldingRow) => {
+      const personImage = isCompany && companyTicker ? brandfetchTickerLogoUri(companyTicker) : portraitUri;
+      if (kind === 'fund_manager') {
+        const detail = build13FPositionDetail(fundHistoryQuery.data ?? [], row.ticker);
+        if (!detail) return;
+        void HapticFeedback.impactLight();
+        stackNav.navigate('DarkPoolPosition', { detail, personName: displayName, personImage });
+        return;
+      }
       void HapticFeedback.impactLight();
+      const firstTrade = form4TradesQuery.data?.[0] as { insider_name?: string | null } | undefined;
       stackNav.navigate('DarkPoolPosition', {
-        detail,
         personName: displayName,
-        personImage: isCompany && companyTicker ? brandfetchTickerLogoUri(companyTicker) : portraitUri,
+        personImage,
+        source: kind === 'politician' ? 'congress' : 'insider',
+        personId: id,
+        insiderName: firstTrade?.insider_name?.trim() || insiderName || displayName,
+        ticker: row.ticker,
+        marketValue: row.market_value ?? row.value_usd ?? null,
+        allocationPct: row.allocation_pct ?? null,
+        returnPct: row.return_pct ?? null,
+        shares: row.shares ?? null,
       });
     },
-    [fundHistoryQuery.data, stackNav, displayName, isCompany, companyTicker, portraitUri]
+    [kind, fundHistoryQuery.data, form4TradesQuery.data, stackNav, displayName, isCompany, companyTicker, portraitUri, id, insiderName]
   );
 
   const holdingsHelp = useMemo(() => {
@@ -1825,7 +1839,7 @@ export function PersonPortfolioProfileScreen({
                       <Pressable
                         style={styles.listRowPress}
                         disabled={!canOpenPosition}
-                        onPress={() => openPosition(h.ticker)}
+                        onPress={() => openPosition(h)}
                         accessibilityRole={canOpenPosition ? 'button' : undefined}
                         accessibilityLabel={canOpenPosition ? `פרטי אחזקה ${h.ticker}` : undefined}
                       >

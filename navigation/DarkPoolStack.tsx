@@ -34,10 +34,22 @@ export type DarkPoolStackParamList = {
    */
   DarkPoolTradeDetail: DarkPoolTradeDetailParams;
   /** פרטי אחזקה (13F) — מחושב מההיסטוריה שהפרופיל כבר טען */
+  /**
+   * פרטי אחזקה. 13F: detail מההיסטוריה הרבעונית.
+   * פוליטיקאי / בכיר: נתוני השורה (שווי, חלק מהתיק, תשואה) + העסקאות נשלפות במסך.
+   */
   DarkPoolPosition: {
-    detail: FilingPositionDetail;
+    detail?: FilingPositionDetail;
     personName: string;
     personImage?: string | null;
+    source?: 'congress' | 'insider';
+    personId?: string;
+    insiderName?: string;
+    ticker?: string;
+    marketValue?: number | null;
+    allocationPct?: number | null;
+    returnPct?: number | null;
+    shares?: number | null;
   };
 };
 

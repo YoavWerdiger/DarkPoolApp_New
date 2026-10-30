@@ -3,8 +3,8 @@ import { useNavigation } from '@react-navigation/native';
 import AddStoryFullScreen from '../../components/chat/AddStoryFullScreen';
 
 /**
- * יצירת סטורי — מסך בסטאק הראשי (fullScreenModal), לא Modal של RN.
- * ה-Modal נשאר פתוח ב-iOS אחרי שיתוף (שקוף, חוסם נגיעות) — הסטאק הנייטיב נסגר באמינות.
+ * יצירת סטורי — מסך רגיל בסטאק הראשי (card + slide_from_bottom), לא מודל נייטיב.
+ * Modal של RN ו-fullScreenModal נשארו ב-iOS אחרי שיתוף (שקופים, חוסמים נגיעות) — push/pop נסגר באמינות.
  * ההעלאה עצמה רצה ברקע (lib/pendingStories) ולא תלויה במסך.
  */
 export default function AddStoryScreen() {

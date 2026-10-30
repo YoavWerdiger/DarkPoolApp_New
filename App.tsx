@@ -402,12 +402,13 @@ function AppContent() {
               {/* פרופיל ציבורי של משתמש — נפתח מכל מקום (lib/openUserProfile) */}
               <Stack.Screen name="PublicProfile" component={PublicProfileScreen} />
               {/* צופה הסטוריז — מסך (לא Modal של RN): transparentModal כדי שבמשיכה למטה ייראה המסך שמתחת (lib/storyViewerSession) */}
-              {/* יצירת סטורי — מסך מלא בסטאק (לא Modal של RN, שלא נסגר ב-iOS אחרי שיתוף) */}
+              {/* יצירת סטורי — מסך רגיל בסטאק (push/pop), לא מודל נייטיב: גם Modal של RN וגם fullScreenModal
+                  השאירו אחרי שיתוף שכבת UIKit שקופה שבלעה נגיעות (JS חי, הנגיעות לא הגיעו לקהילה) */}
               <Stack.Screen
                 name="AddStory"
                 component={AddStoryScreen}
                 options={{
-                  presentation: 'fullScreenModal',
+                  presentation: 'card',
                   animation: 'slide_from_bottom',
                   headerShown: false,
                   gestureEnabled: false,

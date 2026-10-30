@@ -111,13 +111,12 @@ export function JournalRecentTradesCard({ trades, currency }: { trades: Trade[];
                 ? { label: 'שורט', color: t.colors.text.danger }
                 : { label: 'לונג', color: t.colors.primary.main }
             }
-            // כניסה → יציאה · תאריך סגירה (המחירים כאי LTR אחד, כדי שהחץ לא יתהפך)
-            meta={[
-              x.exit_price != null ? toDataIsland(`${money(x.entry_price, currency)} → ${money(x.exit_price, currency)}`) : null,
-              shortDate(x.exit_date),
-            ]
-              .filter(Boolean)
-              .join(' · ')}
+            // מחירי כניסה ויציאה במילים (בלי חץ); בלי מחיר יציאה — תאריך הסגירה
+            meta={
+              x.exit_price != null
+                ? `כניסה ${toDataIsland(money(x.entry_price, currency))} · יציאה ${toDataIsland(money(x.exit_price, currency))}`
+                : `נסגרה ${shortDate(x.exit_date)}`
+            }
             value={signed(x.profit_loss ?? 0, currency)}
             valueSub={tradeReturnPct(x) != null ? formatPercent(tradeReturnPct(x)) : undefined}
             color={toneColor(x.profit_loss ?? 0, t)}

@@ -1,3 +1,4 @@
+import { companyFacilityPhotoUrl } from '../utils/companyFacilityPhotos';
 import { useTheme } from '../../../context/ThemeContext';
 import { companyBrandGradient } from '../utils/companyBrandColors';
 import React, { memo, useCallback, useMemo, useState } from 'react';
@@ -176,6 +177,16 @@ function PersonProfileHeroInner({
           style={{ width: photoWidth, height }}
         />
       )}
+      {!activeUri && logoTicker?.trim() && companyFacilityPhotoUrl(logoTicker) ? (
+        // המתקן של החברה — חלש מאוד ברקע הכותרת
+        <Image
+          source={{ uri: companyFacilityPhotoUrl(logoTicker)! }}
+          style={[StyleSheet.absoluteFill, { opacity: isDarkMode ? 0.24 : 0.18 }]}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={200}
+        />
+      ) : null}
       {!activeUri && logoTicker?.trim() ? (
         <>
           <View style={[StyleSheet.absoluteFill, styles.logoCenter]}>

@@ -1,3 +1,4 @@
+import { companyFacilityPhotoUrl } from '../utils/companyFacilityPhotos';
 import { useTheme } from '../../../context/ThemeContext';
 import { companyBrandGradient } from '../utils/companyBrandColors';
 import React, { memo, useMemo, useState } from 'react';
@@ -77,6 +78,7 @@ function InvestorPortraitFallbackInner({
   const tokens = useDesignTokens();
   const { isDarkMode } = useTheme();
   const brandBg = companyBrandGradient(logoTicker, isDarkMode);
+  const facilityUri = companyFacilityPhotoUrl(logoTicker);
   const [failed, setFailed] = useState<Set<string>>(() => new Set());
 
   const candidates = useMemo(
@@ -113,6 +115,16 @@ function InvestorPortraitFallbackInner({
       // חברה: רקע «פיננסי» כהה (זהה בבהיר ובכהה), סימן מים גדול של הלוגו בפינה, והלוגו על אריח נקי במרכז
       <View style={[styles.cardBg, { backgroundColor: brandBg[1] }, style]}>
         <LinearGradient colors={brandBg} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+        {facilityUri ? (
+          // המתקן של החברה — חלש מאוד ברקע
+          <Image
+            source={{ uri: facilityUri }}
+            style={[StyleSheet.absoluteFill, { opacity: isDarkMode ? 0.22 : 0.16 }]}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={200}
+          />
+        ) : null}
         <View style={styles.cardMonoCenter} accessibilityLabel={name}>
           <View style={styles.logoPlate}>
             <TickerLogo symbol={logo} size={84} />

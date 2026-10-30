@@ -109,7 +109,7 @@ export class EarningsReportsService {
   static async getAll(limit: number = 200): Promise<EarningsReport[]> {
     try {
       const { data, error } = await supabase
-        .from('earnings_calendar')
+        .from('earnings_calendar_curated')
         .select('*')
         .order('report_date', { ascending: false })
         .limit(limit);
@@ -129,7 +129,7 @@ export class EarningsReportsService {
       const today = new Date().toISOString().split('T')[0];
       
       const { data, error } = await supabase
-        .from('earnings_calendar')
+        .from('earnings_calendar_curated')
         .select('*')
         .gte('report_date', today)
         .order('report_date', { ascending: true })
@@ -148,7 +148,7 @@ export class EarningsReportsService {
   static async getByDate(date: string): Promise<EarningsReport[]> {
     try {
       const { data, error } = await supabase
-        .from('earnings_calendar')
+        .from('earnings_calendar_curated')
         .select('*')
         .eq('report_date', date)
         .order('before_after_market', { ascending: true });
@@ -184,7 +184,7 @@ export class EarningsReportsService {
   static async getByDateRange(startDate: string, endDate: string): Promise<EarningsReport[]> {
     try {
       const { data, error } = await supabase
-        .from('earnings_calendar')
+        .from('earnings_calendar_curated')
         .select('*')
         .gte('report_date', startDate)
         .lte('report_date', endDate)

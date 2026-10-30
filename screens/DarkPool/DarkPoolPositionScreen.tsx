@@ -146,7 +146,6 @@ function TradesPositionView() {
   const price = quoteQuery.data?.price ?? null;
   const prevClose = quoteQuery.data?.previous_close ?? null;
   const todayPct = price && prevClose ? ((price - prevClose) / prevClose) * 100 : null;
-  const ret = params.returnPct ?? null;
   // בלי כמות מהדיווח — השווי הנוכחי ÷ המחיר החי
   const shares =
     params.shares != null && params.shares > 0
@@ -154,6 +153,25 @@ function TradesPositionView() {
       : params.marketValue != null && params.marketValue > 0 && price != null && price > 0
         ? params.marketValue / price
         : null;
+  const avg = params.avgPrice != null && params.avgPrice > 0 ? params.avgPrice : null;
+  const liveValue = shares != null && price != null ? shares * price : params.marketValue ?? null;
+  // רווח / הפסד: אותה תשואה כמו בשורת האחזקה (עקביות עם הרשימה) על השווי החי;
+  // בלי תשואה בשורה — (מחיר חי − מחיר ממוצע) × כמות
+  const avgPct = avg != null && price != null ? ((price - avg) / avg) * 100 : null;
+  const ret = params.returnPct ?? avgPct;
+  const totalUsd =
+    params.returnPct != null && liveValue != null && params.returnPct > -100
+      ? liveValue - liveValue / (1 + params.returnPct / 100)
+      : avg != null && price != null && shares != null
+        ? (price - avg) * shares
+        : null;
+  const todayUsd = shares != null && price != null && prevClose ? (price - prevClose) * shares : null;
+  const returnText = (u: number | null, p: number | null) =>
+    u != null
+      ? `${formatCongressDeltaUsd(u)} (${p != null ? formatSignedChangePct(p) : '—'})`
+      : p != null
+        ? formatSignedChangePct(p)
+        : DARK_POOL_UNAVAILABLE;
   const toneColor = (v: number | null) =>
     v == null ? tokens.colors.text.secondary : v >= 0 ? tokens.colors.primary.main : tokens.colors.text.danger;
 
@@ -223,8 +241,9 @@ function TradesPositionView() {
               <FieldRow
                 icon={Wallet}
                 label="שווי אחזקה"
-                value={params.marketValue != null ? usd(params.marketValue) : DARK_POOL_UNAVAILABLE}
+                value={liveValue != null ? usd(liveValue) : DARK_POOL_UNAVAILABLE}
               />
+              {avg != null ? <FieldRow icon={CircleDollarSign} label="מחיר ממוצע" value={usd(avg, 2)} /> : null}
               <FieldRow
                 icon={CircleDollarSign}
                 label="חלק מהתיק"
@@ -237,11 +256,11 @@ function TradesPositionView() {
           <View style={styles.section}>
             <DarkPoolSectionHeader variant="group" title="תשואת הפוזיציה" />
             <UICard variant="soft" glassIntensity="light" padding="none" contentContainerStyle={styles.rowsCard}>
-              <FieldRow icon={Activity} label="תשואה היום" value={todayPct != null ? formatSignedChangePct(todayPct) : DARK_POOL_UNAVAILABLE} color={toneColor(todayPct)} />
+              <FieldRow icon={Activity} label="תשואה היום" value={returnText(todayUsd, todayPct)} color={toneColor(todayPct)} />
               <FieldRow
                 icon={ChartLine}
                 label="תשואה כוללת"
-                value={ret != null ? formatSignedChangePct(ret) : DARK_POOL_UNAVAILABLE}
+                value={returnText(totalUsd, ret)}
                 color={toneColor(ret)}
                 last
               />

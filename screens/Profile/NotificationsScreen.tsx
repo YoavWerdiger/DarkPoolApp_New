@@ -3,14 +3,14 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   ScrollView,
   ActivityIndicator,
   Linking,
   Platform,
   Pressable,
 } from 'react-native';
-import { Search, X } from 'lucide-react-native';
+import { Plus, X } from 'lucide-react-native';
+import { TickerPickSheet } from '../../components/profile/TickerPickSheet';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
@@ -113,14 +113,7 @@ function EarningsTickerPicker({
   onRemove: (symbol: string) => void;
 }) {
   const tokens = useDesignTokens();
-  const [draft, setDraft] = useState('');
-
-  const commitTicker = () => {
-    const symbol = draft.trim().toUpperCase();
-    setDraft('');
-    if (!symbol || disabled || symbols.some((item) => item.toUpperCase() === symbol)) return;
-    onAdd(symbol);
-  };
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   return (
     <View
@@ -130,44 +123,46 @@ function EarningsTickerPicker({
         opacity: disabled ? 0.45 : 1,
       }}
     >
-      <View
+      {/* הוספה בשיט: חיפוש עם מקלדת בתוך השיט, תוצאות חיות וכפתור + לכל מניה */}
+      <Pressable
+        disabled={disabled}
+        onPress={() => {
+          void HapticFeedback.selection();
+          setSheetOpen(true);
+        }}
+        accessibilityRole="button"
+        accessibilityLabel="הוספת מניה להתראות"
         style={{
-          direction: 'ltr',
+          direction: 'rtl',
           flexDirection: 'row',
           alignItems: 'center',
-          minHeight: 52,
-          paddingHorizontal: APP_LAYOUT.cardPadding,
+          justifyContent: 'center',
+          minHeight: 48,
           borderRadius: tokens.borderRadius.full,
-          backgroundColor: tokens.colors.background.cardSolid,
-          gap: APP_LAYOUT.stackGapSmall,
+          backgroundColor: tokens.colors.primary.main,
+          gap: 8,
         }}
       >
-        <TextInput
-          value={draft}
-          onChangeText={setDraft}
-          editable={!disabled}
-          onSubmitEditing={commitTicker}
-          returnKeyType="done"
-          blurOnSubmit
-          autoCapitalize="characters"
-          autoCorrect={false}
-          autoComplete="off"
-          placeholder="חיפוש טיקר"
-          placeholderTextColor={tokens.colors.text.muted}
-          accessibilityLabel="חיפוש טיקר"
-          underlineColorAndroid="transparent"
+        <Plus size={18} color={tokens.colors.text.inverse} strokeWidth={2.4} />
+        <Text
           style={{
             ...settingsHebrewText,
-            ...settingsBodyType,
-            flex: 1,
-            textAlign: 'right',
-            color: tokens.colors.text.primary,
-            padding: 0,
-            margin: 0,
+            ...settingsRowType,
+            color: tokens.colors.text.inverse,
+            fontWeight: '600',
           }}
-        />
-        <Search size={18} color={tokens.colors.text.secondary} strokeWidth={2} />
-      </View>
+        >
+          הוספת מניה
+        </Text>
+      </Pressable>
+      <TickerPickSheet
+        isOpen={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        title="התראות דיווחי רווח"
+        selected={symbols}
+        onAdd={onAdd}
+        onRemove={onRemove}
+      />
       {symbols.length > 0 ? (
         <View
           style={{

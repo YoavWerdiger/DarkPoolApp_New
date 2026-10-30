@@ -50,6 +50,7 @@ export type DarkPoolStackParamList = {
     allocationPct?: number | null;
     returnPct?: number | null;
     shares?: number | null;
+    avgPrice?: number | null;
   };
 };
 

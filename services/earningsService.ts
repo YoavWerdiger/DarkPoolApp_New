@@ -356,7 +356,7 @@ export class EarningsService {
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
           const result = await supabase
-            .from('earnings_calendar')
+            .from('earnings_calendar_curated')
             .select(EARNINGS_SELECT_COLUMNS)
             .gte('report_date', startStr)
             .lte('report_date', endStr)
@@ -409,7 +409,7 @@ export class EarningsService {
     const dateStr = typeof fromDate === 'string' ? fromDate : toDateStr(fromDate);
     try {
       const { data, error } = await supabase
-        .from('earnings_calendar')
+        .from('earnings_calendar_curated')
         .select('report_date')
         .gte('report_date', dateStr)
         .order('report_date', { ascending: true })
@@ -472,7 +472,7 @@ export class EarningsService {
           for (let attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
               const result = await supabase
-                .from('earnings_calendar')
+                .from('earnings_calendar_curated')
                 .select(EARNINGS_SELECT_COLUMNS)
                 .gte('report_date', startDateStr)
                 .lte('report_date', endDateStr)
@@ -629,7 +629,7 @@ export class EarningsService {
 
     try {
       const { data, error } = await supabase
-        .from('earnings_calendar')
+        .from('earnings_calendar_curated')
         .select(EARNINGS_SELECT_COLUMNS)
         .or(
           [
@@ -676,7 +676,7 @@ export class EarningsService {
         const from = page * PAGE_SIZE;
         const to = from + PAGE_SIZE - 1;
         const { data, error } = await supabase
-          .from('earnings_calendar')
+          .from('earnings_calendar_curated')
           .select('*')
           .gte('report_date', startDate)
           .lte('report_date', endDate)
@@ -744,7 +744,7 @@ export class EarningsService {
       const symbolsString = symbols.join(',');
       
       const { data, error } = await supabase
-        .from('earnings_calendar')
+        .from('earnings_calendar_curated')
         .select('*')
         .in('code', symbols)
         .order('report_date', { ascending: true })
@@ -769,7 +769,7 @@ export class EarningsService {
       const symbols = getSymbolsByCategory(category);
       
       const { data, error } = await supabase
-        .from('earnings_calendar')
+        .from('earnings_calendar_curated')
         .select('*')
         .in('code', symbols)
         .gte('report_date', today)

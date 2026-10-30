@@ -1285,7 +1285,8 @@ export function PersonPortfolioProfileScreen({
         marketValue: row.market_value ?? row.value_usd ?? null,
         allocationPct: row.allocation_pct ?? null,
         returnPct: row.return_pct ?? null,
-        shares: row.shares ?? null,
+        shares: row.shares ?? row.vendor_shares ?? null,
+        avgPrice: row.avg_price ?? row.vendor_avg_cost ?? row.entry_price ?? null,
       });
     },
     [kind, fundHistoryQuery.data, form4TradesQuery.data, stackNav, displayName, isCompany, companyTicker, portraitUri, id, insiderName]

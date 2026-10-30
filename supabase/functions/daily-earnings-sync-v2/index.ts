@@ -1443,8 +1443,12 @@ serve(async (req) => {
           }
           const cap = capMap.get(sym)
           if (cap == null) {
+            // שווי לא ידוע — נכנס רק אם המקור עצמו דיווח 2B+ (אחרת נכנסו מניות קטנות «רנדומליות»)
             unknownCap++
-            return true
+            const srcCap = Number(r.market_cap ?? 0)
+            if (Number.isFinite(srcCap) && srcCap >= MIN_EARNINGS_MARKET_CAP_USD) return true
+            droppedBelowCap++
+            return false
           }
           if (cap >= MIN_EARNINGS_MARKET_CAP_USD) {
             r.market_cap = cap

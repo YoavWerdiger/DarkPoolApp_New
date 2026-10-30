@@ -166,6 +166,15 @@
     }, 1100);
   }
 
+  // fit the sticky phone to the window height (660px phone + room for the navbar)
+  const PHONE_H = 660, NAV_SPACE = 96, BREATHING = 32;
+  const fitPhone = () => {
+    const fit = Math.min(1, Math.max(0.55, (window.innerHeight - NAV_SPACE - BREATHING) / PHONE_H));
+    document.documentElement.style.setProperty('--phone-fit', fit.toFixed(3));
+  };
+  fitPhone();
+  window.addEventListener('resize', fitPhone, { passive: true });
+
   // manifesto words
   const manifesto = document.querySelector('[data-split]');
   const HL = ['מקום', 'אחד'];
@@ -198,8 +207,8 @@
   /* ---------- no-motion fallback ---------- */
   const storyPhone = document.querySelector('.story-phone');
   const screens = storyPhone.querySelectorAll('.screen');
-  const sysButtons = document.querySelectorAll('.sys');
-  const SYS_COUNT = sysButtons.length;
+  const storySteps = document.querySelectorAll('.step');
+  const progress = document.querySelectorAll('.story-progress span');
   const JOURNAL = 3, STORIES = 1;
   let current = -1;
   let onStepChange = () => {};
@@ -207,26 +216,34 @@
     if (i === current) return;
     current = i;
     screens.forEach((s, k) => s.classList.toggle('is-active', k === i));
-    sysButtons.forEach((b, k) => {
-      b.classList.toggle('is-active', k === i);
-      b.setAttribute('aria-current', k === i ? 'true' : 'false');
-    });
+    storySteps.forEach((s, k) => s.classList.toggle('is-active', k === i));
+    progress.forEach((p, k) => { p.classList.toggle('on', k <= i); p.classList.toggle('now', k === i); });
     storyPhone.toggleAttribute('data-screen-bleed', i === STORIES);
-    // keep the active chip visible in the mobile row
-    const btn = sysButtons[i];
-    const row = btn.closest('.sys-list');
-    if (row && row.scrollWidth > row.clientWidth) {
-      row.scrollTo({ left: btn.offsetLeft - (row.clientWidth - btn.offsetWidth) / 2, behavior: 'smooth' });
-    }
     onStepChange(i);
   };
-  const setBar = (i, p) => sysButtons[i] && sysButtons[i].style.setProperty('--p', p.toFixed(3));
   setStep(0);
 
+  // on phones each step carries its own copy of the phone, showing just its screen
+  storySteps.forEach((step) => {
+    const idx = step.dataset.step;
+    const wrap = document.createElement('div');
+    wrap.className = 'step-visual';
+    wrap.setAttribute('aria-hidden', 'true');
+    const phone = storyPhone.cloneNode(true);
+    phone.classList.remove('story-phone');
+    phone.querySelectorAll('.screen').forEach((s) => (s.dataset.screen === idx ? s.classList.add('is-active') : s.remove()));
+    if (idx === String(STORIES)) phone.setAttribute('data-screen-bleed', '');
+    wrap.appendChild(phone);
+    step.prepend(wrap);
+  });
+
   if (!hasGsap || reduceMotion) {
+    root.classList.remove('intro-on');
     window.addEventListener('scroll', () => onScrollNav(window.scrollY), { passive: true });
-    sysButtons.forEach((b, i) => b.addEventListener('click', () => setStep(i)));
-    document.querySelectorAll('[data-mock]').forEach((t) => t.classList.add('is-loaded'));
+    const stepIo = new IntersectionObserver((entries) => {
+      entries.forEach((e) => e.isIntersecting && setStep(+e.target.dataset.step));
+    }, { rootMargin: '-45% 0px -45% 0px' });
+    storySteps.forEach((s) => stepIo.observe(s));
     return;
   }
 
@@ -254,32 +271,45 @@
     window.addEventListener('scroll', () => onScrollNav(window.scrollY), { passive: true });
   }
 
-  // cursor glow
-  const glow = document.querySelector('.cursor-glow');
-  const gx = gsap.quickTo(glow, 'x', { duration: 0.8, ease: 'power3' });
-  const gy = gsap.quickTo(glow, 'y', { duration: 0.8, ease: 'power3' });
-  window.addEventListener('pointermove', (e) => { gx(e.clientX); gy(e.clientY); });
 
   /* ---- hero intro ---- */
   const heroPhone = document.querySelector('.hero-phone');
-  const intro = gsap.timeline({ defaults: { ease: 'expo.out' } });
+  const intro = gsap.timeline({ paused: true, defaults: { ease: 'expo.out' } });
   intro
-    .from('.nav', { y: -40, opacity: 0, duration: 1.2 })
-    .from('.hero-eyebrow', { y: 20, opacity: 0, duration: 1 }, 0.1)
+    .fromTo('.nav', { y: -40, opacity: 0 }, { y: 0, opacity: 1, duration: 1.2, immediateRender: true })
     .from('.hero-title .word', { yPercent: 115, rotate: -4, duration: 1.4, stagger: 0.08 }, 0.15)
     .from('.hero-sub', { y: 24, opacity: 0, duration: 1.2 }, 0.6)
     .from('.hero-stores .store-btn', { y: 24, opacity: 0, duration: 1, stagger: 0.1 }, 0.75)
     .from('.hero-note', { opacity: 0, duration: 1 }, 0.95)
     .from(heroPhone, { y: 220, rotateX: 38, rotateZ: -6, opacity: 0, duration: 2, ease: 'expo.out' }, 0.3)
-    .from('.chat-list li', { x: -30, opacity: 0, duration: 0.9, stagger: 0.06 }, 1.1)
-    .from('.stories-row .st', { scale: 0.4, opacity: 0, duration: 0.8, stagger: 0.05, ease: 'back.out(2)' }, 1)
-    .from('.float-card', { scale: 0.6, opacity: 0, y: 30, duration: 1.1, stagger: 0.15, ease: 'back.out(1.6)' }, 1.2)
+    .from('.cm-list li', { x: -24, opacity: 0, duration: 0.9, stagger: 0.06 }, 1.1)
+    .from('.cm-story', { scale: 0.85, opacity: 0, duration: 0.8, stagger: 0.05, ease: 'back.out(1.6)' }, 1)
     .from('.scroll-hint', { opacity: 0, duration: 1 }, 1.6);
 
-  // idle floating of cards
-  gsap.utils.toArray('.float-card').forEach((c, i) => {
-    gsap.to(c, { y: i % 2 ? 12 : -12, duration: 2.6 + i * 0.4, ease: 'sine.inOut', yoyo: true, repeat: -1, delay: 2 });
-  });
+  /* ---- opening scene: bull and bear meet, then the curtain lifts ---- */
+  const introEl = document.querySelector('.intro');
+  if (root.classList.contains('intro-on') && introEl) {
+    if (lenis) lenis.stop();
+    try { sessionStorage.setItem('dp-intro', '1'); } catch (e) {}
+    const finish = () => {
+      root.classList.remove('intro-on');
+      introEl.remove();
+      if (lenis) lenis.start();
+      ScrollTrigger.refresh();
+    };
+    const scene = gsap.timeline({ onComplete: finish });
+    scene
+      .fromTo('.intro-bull', { xPercent: -55, rotate: -14, opacity: 0 }, { xPercent: 0, rotate: 0, opacity: 1, duration: 0.9, ease: 'power3.out' }, 0)
+      .fromTo('.intro-bear', { xPercent: 55, rotate: 14, opacity: 0 }, { xPercent: 0, rotate: 0, opacity: 1, duration: 0.9, ease: 'power3.out' }, 0)
+      .from('.intro-word span', { yPercent: 110, duration: 0.7, ease: 'expo.out', stagger: 0.035 }, 0.55)
+      .from('.intro-tag', { opacity: 0, y: 8, duration: 0.6, ease: 'power2.out' }, 0.85)
+      .to('.intro-mark, .intro-word, .intro-tag', { opacity: 0, y: -16, duration: 0.45, ease: 'power2.in' }, 1.7)
+      .to(introEl, { clipPath: 'inset(0 0 100% 0)', duration: 0.9, ease: 'power4.inOut' }, 1.9)
+      .add(() => intro.play(), 2.15);
+    introEl.addEventListener('click', () => { scene.progress(1); intro.play(); }, { once: true });
+  } else {
+    intro.play();
+  }
 
   // mouse tilt on hero phone (desktop)
   const stage = document.querySelector('.hero-stage');
@@ -295,16 +325,15 @@
   gsap.timeline({ scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true } })
     .to('.hero-copy', { y: -120, opacity: 0, ease: 'none' }, 0)
     .to(stage, { y: 120, scale: 0.92, ease: 'none' }, 0)
-    .to('.fc-1', { x: 80, y: -60, ease: 'none' }, 0)
-    .to('.fc-2', { x: -90, ease: 'none' }, 0)
-    .to('.fc-3', { x: 60, y: 60, ease: 'none' }, 0)
     .to('.hero-aurora', { yPercent: 30, opacity: 0.4, ease: 'none' }, 0);
 
   /* ---- manifesto word-by-word light-up ---- */
-  gsap.to('.manifesto-text .w', {
-    opacity: 1, ease: 'none', stagger: 0.1,
-    scrollTrigger: { trigger: '.manifesto-text', start: 'top 75%', end: 'bottom 50%', scrub: 0.6 },
-  });
+  gsap.timeline({
+    scrollTrigger: { trigger: '.manifesto', start: 'top top', end: '+=110%', pin: true, scrub: 0.6, anticipatePin: 1 },
+  })
+    .fromTo('.manifesto-text', { scale: 0.86 }, { scale: 1, ease: 'none', duration: 1 }, 0)
+    .to('.manifesto-text .w', { opacity: 1, ease: 'none', stagger: 0.1, duration: 0.5 }, 0)
+    .fromTo('.manifesto-aside', { opacity: 0, y: 16 }, { opacity: 1, y: 0, ease: 'none', duration: 0.25 }, 0.75);
 
   /* ---- generic reveals ---- */
   gsap.utils.toArray('.reveal').forEach((el) => {
@@ -338,70 +367,69 @@
     });
   };
 
-  gsap.from('.story-phone', { y: 100, rotateX: 16, opacity: 0, duration: 1.4, ease: 'expo.out', scrollTrigger: { trigger: '.story-stage', start: 'top 80%' } });
-  gsap.from('.sys-list li', { x: 24, opacity: 0, duration: 0.9, ease: 'expo.out', stagger: 0.04, scrollTrigger: { trigger: '.story-stage', start: 'top 80%' } });
-
-  mm.add('(min-width: 901px)', () => {
-    // pinned: scrolling walks through the systems; each one gets an equal slice
-    const st = ScrollTrigger.create({
-      trigger: '.story-pin', start: 'top top',
-      end: () => '+=' + window.innerHeight * SYS_COUNT * 0.5,
-      pin: true, anticipatePin: 1, invalidateOnRefresh: true,
-      onUpdate: (self) => {
-        const pos = self.progress * SYS_COUNT;
-        const i = Math.min(SYS_COUNT - 1, Math.floor(pos));
-        setStep(i);
-        sysButtons.forEach((_, k) => setBar(k, k === i ? Math.min(1, pos - i) : 0));
-      },
+  gsap.from('.story-sticky .phone', { y: 100, rotateX: 16, opacity: 0, duration: 1.4, ease: 'expo.out', scrollTrigger: { trigger: '.story-grid', start: 'top 75%' } });
+  // headline words rise from behind a mask
+  storySteps.forEach((step) => {
+    const h = step.querySelector('h3');
+    h.innerHTML = h.innerHTML.split(/(<br\s*\/?>)/).map((part) =>
+      /^<br/.test(part) ? part : part.trim().split(/\s+/).filter(Boolean).map((w) => `<span class="mw"><span>${w}</span></span>`).join(' ')
+    ).join('');
+  });
+  // the sticky phone follows the scroll continuously: between two steps the old screen
+  // drifts up and fades while the next rises in, so nothing ever jumps
+  const storyNum = document.querySelector('.story-num');
+  const renderStory = () => {
+    const mid = window.innerHeight * 0.55;
+    const c = Array.from(storySteps, (s) => { const r = s.getBoundingClientRect(); return r.top + r.height / 2; });
+    let pos = 0;
+    if (mid >= c[c.length - 1]) pos = c.length - 1;
+    else if (mid > c[0]) {
+      for (let k = 0; k < c.length - 1; k++) {
+        if (mid >= c[k] && mid < c[k + 1]) { pos = k + (mid - c[k]) / (c[k + 1] - c[k]); break; }
+      }
+    }
+    // the next screen slides up over the current one like a sheet, synced to the scroll
+    const k = Math.min(screens.length - 1, Math.floor(pos));
+    const f = pos - k;
+    const raw = Math.min(1, Math.max(0, (f - 0.3) / 0.4));
+    const t = raw * raw * (3 - 2 * raw);
+    screens.forEach((s, i) => {
+      const st = s.style;
+      if (i === k) {
+        st.visibility = 'visible'; st.zIndex = '1'; st.opacity = (1 - 0.4 * t).toFixed(3);
+        st.clipPath = 'none'; st.transform = `translate3d(0, ${(-26 * t).toFixed(1)}px, 0)`;
+      } else if (i === k + 1 && t > 0) {
+        st.visibility = 'visible'; st.zIndex = '2'; st.opacity = '1';
+        st.clipPath = `inset(${((1 - t) * 100).toFixed(2)}% 0 0 0)`;
+        st.transform = `translate3d(0, ${((1 - t) * 18).toFixed(1)}px, 0)`;
+      } else {
+        st.visibility = 'hidden'; st.opacity = '0'; st.zIndex = '0';
+      }
     });
-    const onClick = (e) => {
-      const i = +e.currentTarget.dataset.sys;
-      const y = st.start + (st.end - st.start) * ((i + 0.05) / SYS_COUNT);
-      lenis ? lenis.scrollTo(y, { duration: 1.1 }) : window.scrollTo({ top: y, behavior: 'smooth' });
-    };
-    sysButtons.forEach((b) => b.addEventListener('click', onClick));
-    return () => sysButtons.forEach((b) => b.removeEventListener('click', onClick));
+    const near = t > 0.5 ? Math.min(screens.length - 1, k + 1) : k;
+    if (storyNum) {
+      const txt = String(near + 1).padStart(2, '0');
+      if (storyNum.textContent !== txt) storyNum.textContent = txt;
+      storyNum.style.opacity = (t === 0 ? 1 : Math.abs(t - 0.5) * 2).toFixed(3);
+    }
+    setStep(near);
+  };
+  storyPhone.classList.add('gsap-screens');
+  ScrollTrigger.create({ trigger: '.story-steps', start: 'top bottom', end: 'bottom top', onUpdate: renderStory, onRefresh: renderStory });
+  renderStory();
+  storySteps.forEach((step, i) => {
+    gsap.timeline({ scrollTrigger: { trigger: step, start: 'top 72%' } })
+      .from(step.querySelectorAll('.step-num, .eyebrow'), { y: 20, opacity: 0, duration: 0.9, ease: 'expo.out', stagger: 0.06 }, 0)
+      .from(step.querySelectorAll('h3 .mw > span'), { yPercent: 110, duration: 1, ease: 'expo.out', stagger: 0.05 }, 0.05)
+      .from(step.querySelectorAll('p:not(.eyebrow)'), { y: 20, opacity: 0, duration: 1, ease: 'expo.out' }, 0.25);
   });
-
-  mm.add('(max-width: 900px)', () => {
-    // no pin on phones: chips + autoplay while the section is on screen; a tap takes over
-    let auto = true, inView = false, t0 = performance.now();
-    const DWELL = 3200;
-    const tick = () => {
-      if (!auto || !inView) return;
-      const p = (performance.now() - t0) / DWELL;
-      setBar(current, Math.min(1, p));
-      if (p >= 1) { setBar(current, 0); setStep((current + 1) % SYS_COUNT); t0 = performance.now(); }
-    };
-    gsap.ticker.add(tick);
-    const io = new IntersectionObserver(([e]) => { inView = e.isIntersecting; t0 = performance.now(); }, { threshold: 0.4 });
-    io.observe(storyPhone);
-    const onClick = (e) => {
-      auto = false;
-      sysButtons.forEach((_, k) => setBar(k, 0));
-      setStep(+e.currentTarget.dataset.sys);
-    };
-    sysButtons.forEach((b) => b.addEventListener('click', onClick));
-    return () => { gsap.ticker.remove(tick); io.disconnect(); sysButtons.forEach((b) => b.removeEventListener('click', onClick)); };
-  });
-
-  /* ---- bento ---- */
-  // hide before the batch is created: tiles already in view (restored scroll) reveal immediately
-  gsap.set('.tile', { opacity: 0 });
-  ScrollTrigger.batch('.tile', {
-    start: 'top 88%',
-    onEnter: (els) => gsap.fromTo(els, { y: 80, opacity: 0, scale: 0.96 }, { y: 0, opacity: 1, scale: 1, duration: 1.3, ease: 'expo.out', stagger: 0.1 }),
-  });
-  // each tile loads like the app: skeleton first, then the content fades in
-  document.querySelectorAll('[data-mock]').forEach((tile, i) => {
-    ScrollTrigger.create({
-      trigger: tile, start: 'top 80%', once: true,
-      onEnter: () => setTimeout(() => {
-        tile.classList.add('is-loaded');
-        const items = tile.querySelectorAll('.real-layer .n-card, .real-layer .c-card, .real-layer .t-card, .watch li, .e-tile, .heatmap i');
-        gsap.from(items, { y: 10, opacity: 0, duration: 0.6, ease: 'expo.out', stagger: 0.04 });
-      }, 900 + i * 120),
-    });
+  document.querySelectorAll('.step-visual').forEach((v) => {
+    gsap.from(v.querySelector('.phone'), { y: 70, opacity: 0, duration: 1.3, ease: 'expo.out', scrollTrigger: { trigger: v, start: 'top 85%' } });
+    if (v.querySelector('.pnl-line')) {
+      ScrollTrigger.create({ trigger: v, start: 'top 75%', once: true, onEnter: () => {
+        v.querySelectorAll('.pnl-line .stroke').forEach((p) => gsap.fromTo(p, { strokeDashoffset: p.getTotalLength(), strokeDasharray: p.getTotalLength() }, { strokeDashoffset: 0, duration: 1.4, ease: 'power2.out' }));
+      } });
+    }
   });
 
   /* ---- insiders: horizontal scroll (desktop), parallax portraits ---- */
@@ -409,18 +437,40 @@
     const head = document.querySelector('.insiders-head');
     const row = document.querySelector('.insiders-track');
     // RTL: the track runs off the left edge — slide everything right to reveal it
+    const people = gsap.utils.toArray('.person:not(.more)');
+    const tintPeople = () => {
+      const mid = window.innerWidth / 2;
+      people.forEach((p) => {
+        const r = p.getBoundingClientRect();
+        const d = Math.abs(r.left + r.width / 2 - mid) / (window.innerWidth * 0.42);
+        p.style.setProperty('--g', Math.min(1, d).toFixed(3));
+      });
+    };
+    tintPeople();
     const distance = () => Math.max(0, -row.lastElementChild.getBoundingClientRect().left + 48 - (gsap.getProperty(row, 'x') || 0));
     gsap.timeline({
       scrollTrigger: {
         trigger: '.insiders', start: 'top top', end: () => '+=' + distance(),
         pin: '.insiders-pin', scrub: 0.8, invalidateOnRefresh: true, anticipatePin: 1,
       },
-    }).to([head, row], { x: () => distance(), ease: 'none' });
+    }).to([head, row], { x: () => distance(), ease: 'none', onUpdate: tintPeople });
     gsap.utils.toArray('.person img').forEach((img) => {
       gsap.fromTo(img, { xPercent: -6 }, { xPercent: 6, ease: 'none', scrollTrigger: { trigger: '.insiders', start: 'top top', end: () => '+=' + distance(), scrub: true, invalidateOnRefresh: true } });
     });
   });
   gsap.from('.person', { y: 80, opacity: 0, duration: 1.2, ease: 'expo.out', stagger: 0.08, scrollTrigger: { trigger: '.insiders', start: 'top 70%' } });
+
+  /* ---- how it works: the line draws, each number lights up as it is reached ---- */
+  const howLine = document.querySelector('.how-line');
+  const howSteps = document.querySelectorAll('.how-step');
+  ScrollTrigger.create({
+    trigger: '.how-wrap', start: 'top 70%', end: 'bottom 55%', scrub: 0.6,
+    onUpdate: (self) => {
+      howLine.style.setProperty('--p', self.progress.toFixed(3));
+      howSteps.forEach((st, k) => st.classList.toggle('on', self.progress >= k / (howSteps.length - 1) - 0.02));
+    },
+  });
+  gsap.from('.how-step', { y: 40, opacity: 0, duration: 1, ease: 'expo.out', stagger: 0.12, scrollTrigger: { trigger: '.how-wrap', start: 'top 80%' } });
 
   /* ---- faq ---- */
   gsap.from('.faq details', { y: 30, opacity: 0, duration: 1, ease: 'expo.out', stagger: 0.07, scrollTrigger: { trigger: '.faq-list', start: 'top 85%' } });

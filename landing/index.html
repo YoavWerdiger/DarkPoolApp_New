@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>DarkPool — קהילת הסוחרים של ישראל</title>
+  <meta name="description" content="שש קבוצות מסחר בעברית, פיד של עסקאות שחברי קונגרס ובכירים מדווחים, יומן מסחר וקורסי וידאו. האפליקציה של קהילת הסוחרים של ישראל, ל-iOS ול-Android." />
+  <meta name="theme-color" content="#141313" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#f4f2f1" media="(prefers-color-scheme: light)" />
+  <script>
+    // apply a saved theme before first paint so there is no flash
+    try { var t = localStorage.getItem('dp-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+  <link rel="icon" href="assets/icon.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-trend" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></symbol>
+      <symbol id="i-landmark" viewBox="0 0 24 24"><line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/></symbol>
+      <symbol id="i-mic" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7.5"/><path d="m21 21-4.3-4.3"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+      <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5Z" fill="currentColor" stroke="none"/></symbol>
+      <symbol id="i-news" viewBox="0 0 24 24"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></symbol>
+      <symbol id="i-grid" viewBox="0 0 24 24"><rect width="7" height="9" x="3" y="3" rx="1.5"/><rect width="7" height="5" x="14" y="3" rx="1.5"/><rect width="7" height="9" x="14" y="12" rx="1.5"/><rect width="7" height="5" x="3" y="16" rx="1.5"/></symbol>
+      <symbol id="i-bars" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></symbol>
+      <symbol id="i-calendar" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></symbol>
+      <symbol id="i-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></symbol>
+      <symbol id="i-chat" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></symbol>
+      <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+      <symbol id="i-heart" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></symbol>
+      <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 2v13"/><path d="m16 6-4-4-4 4"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/></symbol>
+      <symbol id="i-flag" viewBox="0 0 24 24"><path d="M4 22V4a1 1 0 0 1 .4-.8A6 6 0 0 1 8 2c3 0 5 2 7.33 2q2 0 3.67-.8a1 1 0 0 1 1.4.9v9.8a1 1 0 0 1-.4.8A6 6 0 0 1 16 16c-3 0-5-2-8-2a6 6 0 0 0-4 1.53" fill="currentColor"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    </defs>
+  </svg>
+  <div class="grain" aria-hidden="true"></div>
+  <div class="cursor-glow" aria-hidden="true"></div>
+
+  <!-- ============ NAV ============ -->
+  <header class="nav" id="nav">
+    <a href="#top" class="nav-brand" aria-label="DarkPool">
+      <img src="assets/icon.png" alt="" width="36" height="36" />
+      <span>DARKPOOL</span>
+    </a>
+    <nav class="nav-links" aria-label="ניווט ראשי">
+      <a href="#story">האפליקציה</a>
+      <a href="#tools">כלים</a>
+      <a href="#insiders">אינסיידרים</a>
+      <a href="#academy">אקדמיה</a>
+      <a href="#faq">שאלות</a>
+    </nav>
+    <div class="nav-actions">
+      <button type="button" class="theme-toggle" aria-label="החלפת מצב תצוגה">
+        <svg class="i i-moon-g"><use href="#i-moon"/></svg>
+        <svg class="i i-sun-g"><use href="#i-sun"/></svg>
+      </button>
+      <a href="#download" class="btn btn-primary btn-sm">הורידו בחינם</a>
+    </div>
+  </header>
+
+  <main id="top">
+    <!-- ============ HERO ============ -->
+    <section class="hero">
+      <div class="hero-aurora" aria-hidden="true">
+        <span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span>
+      </div>
+      <div class="hero-grid-lines" aria-hidden="true"></div>
+
+      <div class="hero-copy">
+        <p class="eyebrow hero-eyebrow"><span class="live-dot"></span> קבוצות · אינסיידרים · יומן · אקדמיה</p>
+        <h1 class="hero-title">
+          <span class="line"><span class="word">קהילת</span> <span class="word">הסוחרים</span></span>
+          <span class="line"><span class="word">של</span> <span class="word">ישראל.</span></span>
+          <span class="line accent"><span class="word">בכיס</span> <span class="word">שלך.</span></span>
+        </h1>
+        <p class="hero-sub">
+          שואלים שאלה בקבוצת הלייב, רואים מה חברי קונגרס קנו השבוע ומתעדים כל עסקה ביומן. הכל באפליקציה אחת, בעברית.
+        </p>
+        <div class="store-row hero-stores">
+          <a class="store-btn" href="#" data-store="ios" aria-label="הורדה מ-App Store">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.37 12.73c-.02-2.3 1.88-3.4 1.96-3.46-1.07-1.56-2.73-1.78-3.32-1.8-1.41-.14-2.76.83-3.47.83-.72 0-1.82-.81-3-.79-1.54.02-2.96.9-3.76 2.27-1.6 2.78-.41 6.9 1.15 9.16.76 1.1 1.67 2.34 2.86 2.3 1.15-.05 1.58-.74 2.97-.74 1.38 0 1.77.74 2.98.72 1.23-.02 2.01-1.12 2.76-2.23.87-1.28 1.23-2.52 1.25-2.58-.03-.01-2.4-.92-2.42-3.66zM14.1 5.98c.63-.77 1.06-1.83.94-2.9-.91.04-2.02.61-2.67 1.37-.58.67-1.1 1.76-.96 2.8 1.02.08 2.06-.52 2.69-1.27z"/></svg>
+            <span><small>הורידו מ-</small>App Store</span>
+          </a>
+          <a class="store-btn" href="#" data-store="android" aria-label="הורדה מ-Google Play">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.6 2.2c-.2.2-.3.6-.3 1v17.6c0 .4.1.8.3 1l.1.1 9.9-9.9v-.2L3.7 2.1l-.1.1z"/><path d="M16.9 15.3l-3.3-3.3v-.2l3.3-3.3.1.1 3.9 2.2c1.1.6 1.1 1.7 0 2.3l-3.9 2.2h-.1z" opacity=".8"/><path d="M17 15.2L13.6 11.8 3.6 21.8c.4.4 1 .4 1.7.1l11.7-6.7" opacity=".65"/><path d="M17 8.5L5.3 1.8C4.6 1.4 4 1.5 3.6 1.9l10 10L17 8.5z" opacity=".9"/></svg>
+            <span><small>זמין ב-</small>Google Play</span>
+          </a>
+        </div>
+        <p class="hero-note">מסלול חינמי בלי התחייבות · iOS ו-Android</p>
+      </div>
+
+      <div class="hero-stage">
+        <div class="phone hero-phone" aria-hidden="true">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="app-top">
+              <span class="app-menu"><i></i><i></i><i></i></span>
+              <span class="app-title">הקהילה</span>
+              <img src="assets/icon.png" alt="" class="app-avatar" />
+            </div>
+            <div class="stories-row">
+              <div class="st mine"><span class="ring"><img src="assets/icon.png" alt="" /></span><small>הסטורי שלי</small></div>
+              <div class="st"><span class="ring on"><img src="assets/groups/dark/profits.png" alt="" class="on-dark" /><img src="assets/groups/light/profits.png" alt="" class="on-light" /></span><small>רווחים</small></div>
+              <div class="st"><span class="ring on"><img src="assets/groups/dark/analysis.png" alt="" class="on-dark" /><img src="assets/groups/light/analysis.png" alt="" class="on-light" /></span><small>ניתוחים</small></div>
+              <div class="st"><span class="ring on"><img src="assets/groups/dark/live.png" alt="" class="on-dark" /><img src="assets/groups/light/live.png" alt="" class="on-light" /></span><small>לייב</small></div>
+              <div class="st"><span class="ring"><img src="assets/groups/dark/israel.png" alt="" class="on-dark" /><img src="assets/groups/light/israel.png" alt="" class="on-light" /></span><small>ת״א</small></div>
+            </div>
+            <ul class="chat-list">
+              <li><img src="assets/groups/announcements.png" alt="" /><div><b>הכרזות</b><span>פתיחת מסחר — רשימת המעקב להיום עלתה</span></div><em>09:31</em><i class="badge">3</i></li>
+              <li><img src="assets/groups/dark/analysis.png" alt="" class="on-dark" /><img src="assets/groups/light/analysis.png" alt="" class="on-light" /><div><b>ניתוחים ורעיונות</b><span>פריצה מעל ההתנגדות על NVDA</span></div><em>09:28</em><i class="badge">12</i></li>
+              <li><img src="assets/groups/dark/live.png" alt="" class="on-dark" /><img src="assets/groups/light/live.png" alt="" class="on-light" /><div><b>שאלות בלייבים</b><span>איך מגדירים סטופ על אופציות?</span></div><em>09:20</em></li>
+              <li><img src="assets/groups/dark/israel.png" alt="" class="on-dark" /><img src="assets/groups/light/israel.png" alt="" class="on-light" /><div><b>בורסה ישראלית</b><span>ת״א 35 פותח בירוק</span></div><em>09:12</em><i class="badge">5</i></li>
+              <li><img src="assets/groups/dark/swings.png" alt="" class="on-dark" /><img src="assets/groups/light/swings.png" alt="" class="on-light" /><div><b>סווינגים והשקעות</b><span>עדכון פוזיציה: מימוש חלקי</span></div><em>08:57</em></li>
+              <li><img src="assets/groups/dark/daytrade.png" alt="" class="on-dark" /><img src="assets/groups/light/daytrade.png" alt="" class="on-light" /><div><b>מסחר יומי</b><span>מי ראה את הווליום הבוקר?</span></div><em>08:40</em></li>
+            </ul>
+            <div class="app-tabbar"><span class="on"></span><span></span><span></span><span></span></div>
+          </div>
+        </div>
+
+        <div class="float-card fc-1">
+          <span class="fc-icon green"><svg class="i"><use href="#i-trend"/></svg></span>
+          <div><b>NVDA</b><small>פריצה · ווליום חריג</small></div>
+          <strong class="up">+4.82%</strong>
+        </div>
+        <div class="float-card fc-2">
+          <span class="fc-icon"><svg class="i"><use href="#i-landmark"/></svg></span>
+          <div><b>דיווח קונגרס חדש</b><small>רכישה · $15K–$50K</small></div>
+        </div>
+        <div class="float-card fc-3">
+          <div class="mini-spark"><svg viewBox="0 0 100 32" preserveAspectRatio="none"><path d="M0 26 L12 22 L22 24 L34 15 L46 18 L58 10 L70 12 L82 5 L100 3" /></svg></div>
+          <div><small>יומן מסחר · החודש</small><b class="up">+12.4%</b></div>
+        </div>
+      </div>
+
+      <a href="#story" class="scroll-hint" aria-label="גלילה למטה"><span></span></a>
+    </section>
+
+
+    <!-- ============ MANIFESTO ============ -->
+    <section class="manifesto">
+      <p class="manifesto-text" data-split>מקום אחד לכל מה שאתם עושים בשוק.</p>
+    </section>
+
+    <!-- ============ STORY (pinned phone) ============ -->
+    <section class="story" id="story">
+      <div class="story-head">
+        <p class="eyebrow">מבט מבפנים</p>
+        <h2 class="section-title reveal">הצצה <span class="accent">פנימה</span></h2>
+        <p class="section-sub reveal">קהילה, אינסיידרים, יומן מסחר, אקדמיה, חדשות, דיווחי רווח, יומן כלכלי, מפת חום, רשימת מעקב, ציוצים וסטוריז. הנה כמה מהם מקרוב.</p>
+      </div>
+
+      <div class="story-grid">
+        <div class="story-sticky">
+          <div class="phone story-phone" aria-hidden="true">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <!-- screen 1: community chat -->
+              <div class="screen is-active" data-screen="0">
+                <div class="app-top"><span class="app-back">‹</span><span class="app-title">ניתוחים ורעיונות<small>1,284 חברים · 46 מחוברים</small></span><img src="assets/groups/dark/analysis.png" alt="" class="app-avatar on-dark" /><img src="assets/groups/light/analysis.png" alt="" class="app-avatar on-light" /></div>
+                <div class="chat">
+                  <div class="msg in"><b>דניאל</b>NVDA מחזיקה יפה מעל ה-VWAP. מישהו בפנים?</div>
+                  <div class="msg in chart-msg">
+                    <svg viewBox="0 0 200 80" preserveAspectRatio="none" class="candles"></svg>
+                    <span>תמונת גרף · 5 דק׳</span>
+                  </div>
+                  <div class="msg out">נכנסתי חצי פוזיציה, סטופ מתחת לנר האחרון</div>
+                  <div class="msg in poll"><b>סקר · מאיה</b><span class="poll-q">לאן ה-S&amp;P עד סוף השבוע?</span><span class="poll-opt"><i style="--w:68%"></i>למעלה<em>68%</em></span><span class="poll-opt"><i style="--w:32%"></i>למטה<em>32%</em></span></div>
+                  <div class="msg in voice"><b>יוסי</b><i class="voice-play"><svg class="i"><use href="#i-play"/></svg></i><span class="wave"></span><em>0:24</em></div>
+                </div>
+                <div class="composer"><span>כתבו הודעה…</span><i><svg class="i"><use href="#i-mic"/></svg></i></div>
+              </div>
+              <!-- screen 2: insiders -->
+              <div class="screen" data-screen="1">
+                <div class="app-top"><span class="app-menu"><i></i><i></i><i></i></span><span class="app-title">אינסיידרים</span><span class="app-ico"><svg class="i"><use href="#i-search"/></svg></span></div>
+                <div class="seg"><span class="on">הכל</span><span>קונגרס</span><span>בכירים</span></div>
+                <div class="whales-row">
+                  <span><img src="assets/portraits/warren-buffett.jpg" alt="" /></span>
+                  <span><img src="assets/portraits/nancy-pelosi.jpg" alt="" /></span>
+                  <span><img src="assets/portraits/jensen-huang.jpg" alt="" /></span>
+                  <span><img src="assets/portraits/bill-ackman.jpg" alt="" /></span>
+                  <span><img src="assets/portraits/elon-musk.jpg" alt="" /></span>
+                </div>
+                <ul class="trade-feed">
+                  <li><span class="tag cg">קונגרס</span><div><b>רכישה · <u>NVDA</u></b><small>בוצע לפני 6 ימים · נחשף היום</small></div><em class="up">$15K–50K</em></li>
+                  <li><span class="tag ex">בכיר</span><div><b>מכירה · <u>TSLA</u></b><small>Form 4 · קוד S</small></div><em class="down">12,400 מניות</em></li>
+                  <li><span class="tag cg">קונגרס</span><div><b>רכישה · <u>MSFT</u></b><small>בוצע לפני 11 ימים</small></div><em class="up">$1K–15K</em></li>
+                  <li><span class="tag ex">בכיר</span><div><b>רכישה · <u>AAPL</u></b><small>Form 4 · קוד P</small></div><em class="up">3,000 מניות</em></li>
+                  <li><span class="tag cg">קונגרס</span><div><b>מכירה · <u>GOOGL</u></b><small>בוצע לפני 14 ימים</small></div><em class="down">$50K–100K</em></li>
+                </ul>
+              </div>
+              <!-- screen 3: journal -->
+              <div class="screen" data-screen="2">
+                <div class="app-top"><span class="app-menu"><i></i><i></i><i></i></span><span class="app-title">יומן מסחר</span><span class="app-ico"><svg class="i"><use href="#i-plus"/></svg></span></div>
+                <div class="pnl-card">
+                  <small>רווח והפסד · אוקטובר</small>
+                  <b class="up" data-pnl>+$4,812</b>
+                  <svg viewBox="0 0 200 60" preserveAspectRatio="none" class="pnl-line"><defs><linearGradient id="pg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#00E654" stop-opacity=".35"/><stop offset="1" stop-color="#00E654" stop-opacity="0"/></linearGradient></defs><path class="area" d="M0 52 L20 48 L40 50 L60 38 L80 41 L100 30 L120 33 L140 20 L160 24 L180 12 L200 8 L200 60 L0 60Z" fill="url(#pg)"/><path class="stroke" d="M0 52 L20 48 L40 50 L60 38 L80 41 L100 30 L120 33 L140 20 L160 24 L180 12 L200 8"/></svg>
+                </div>
+                <div class="stat-row"><div><small>אחוז הצלחה</small><b>64%</b></div><div><small>עסקאות</small><b>38</b></div><div><small>ימי מסחר</small><b>19</b></div></div>
+                <div class="cal" aria-hidden="true"></div>
+              </div>
+              <!-- screen 4: academy -->
+              <div class="screen" data-screen="3">
+                <div class="app-top"><span class="app-menu"><i></i><i></i><i></i></span><span class="app-title">האקדמיה</span><span class="app-ico"><svg class="i"><use href="#i-bookmark"/></svg></span></div>
+                <div class="course-card big"><img src="assets/oracle-course-banner.jpg" alt="" /><div><b>האורקל — מסחר באופציות</b><span class="progress"><i style="--w:42%"></i></span><small>שיעור 7 מתוך 16 · המשך מאיפה שעצרת</small></div></div>
+                <div class="course-card big"><img src="assets/whales-course-banner.jpg" alt="" /><div><b>הלוויתנים — מ-0 לסוחר מקצועי</b><span class="progress"><i style="--w:12%"></i></span><small>שיעור 2 מתוך 22</small></div></div>
+                <div class="lesson-row"><span><svg class="i"><use href="#i-play"/></svg></span><div><b>ניהול סיכונים בפוזיציה</b><small>14:32 · עם הערות אישיות</small></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="story-progress" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+        </div>
+
+        <div class="story-steps">
+          <article class="step" data-step="0">
+            <span class="step-num">01</span>
+            <p class="eyebrow">הקהילה</p>
+            <h3>קבוצה לכל <br />סגנון מסחר</h3>
+            <p>מסחר יומי, סווינגים והשקעות, בורסה ישראלית, פניסטוקס ושאלות בלייבים, וערוץ הכרזות שמעדכן על כל מה שחשוב. שולחים גרף, הודעה קולית או סקר, ומעלים סטורי כשמשהו זז בשוק.</p>
+            <ul class="checks"><li>התראה על כל הודעה בערוץ ההכרזות</li><li>הודעות שמורות וגלריית מדיה לכל קבוצה</li><li>סטוריז מחברי הקהילה בזמן המסחר</li></ul>
+          </article>
+          <article class="step" data-step="1">
+            <span class="step-num">02</span>
+            <p class="eyebrow">אינסיידרים</p>
+            <h3>ראו מה קנו חברי <br />קונגרס ובכירים</h3>
+            <p>עסקאות של חברי קונגרס מדיווחי STOCK Act ושל בכירים מטופסי Form 4 מופיעות בפיד אחד. פוזיציות של קרנות ענק מדיווחי 13F מחכות בפרופיל של כל קרן. בכל שורה רואים מתי העסקה בוצעה ומתי היא נחשפה.</p>
+            <ul class="checks"><li>עוקבים אחרי פוליטיקאים, בכירים ומנהלי קרנות</li><li>לכל טיקר: מי עוד מחזיק בו</li><li>פיד אישי של מי שאתם עוקבים אחריו</li></ul>
+          </article>
+          <article class="step" data-step="2">
+            <span class="step-num">03</span>
+            <p class="eyebrow">יומן מסחר</p>
+            <h3>תדעו איפה הרווחתם <br />ואיפה הפסדתם</h3>
+            <p>מוסיפים עסקה ידנית, מחברים ברוקר או מייבאים היסטוריה. היומן מציג לוח שנה של רווח והפסד ואחוז הצלחה, ויוצר תמונה מעוצבת של העסקה לשיתוף בקהילה.</p>
+            <ul class="checks"><li>לוח שנה יומי של רווח והפסד</li><li>אחוז הצלחה ומעקב אחרי כמה תיקים</li><li>שיתוף עסקה לקהילה בתמונה אחת</li></ul>
+          </article>
+          <article class="step" data-step="3">
+            <span class="step-num">04</span>
+            <p class="eyebrow">האקדמיה</p>
+            <h3>מ-0 לסוחר מקצועי, <br />בעברית</h3>
+            <p>קורסי וידאו מחולקים לשיעורים קצרים. האפליקציה זוכרת איפה עצרתם, ואפשר לרשום הערות אישיות לכל שיעור.</p>
+            <ul class="checks"><li>«האורקל»: מסחר באופציות</li><li>«הלוויתנים»: מ-0 לסוחר מקצועי</li><li>הערות אישיות ומעקב התקדמות</li></ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ NUMBERS ============ -->
+    <section class="numbers">
+      <div class="num"><b data-count="10" data-suffix="+">0</b><span>מערכות באפליקציה אחת</span></div>
+      <div class="num"><b data-count="3">0</b><span>מקורות דיווח רשמיים</span></div>
+      <div class="num"><b>24/7</b><span>הקבוצות פתוחות</span></div>
+    </section>
+
+    <!-- ============ TOOLS BENTO ============ -->
+    <section class="tools" id="tools">
+      <div class="section-head">
+        <p class="eyebrow">ארגז הכלים</p>
+        <h2 class="section-title reveal">כל מה שצריך <span class="accent">לפני הפתיחה.</span></h2>
+        <p class="section-sub reveal">חדשות, דוחות רבעוניים, אירועי מאקרו ומפת השוק, מסודרים בעברית.</p>
+      </div>
+
+      <div class="bento">
+        <!-- News: BreakingNewsCard -->
+        <article class="tile t-news" data-mock>
+          <div class="tile-copy"><span class="tile-ico"><svg class="i"><use href="#i-news"/></svg></span><h3>חדשות בזמן אמת</h3><p>מבזקים, הנפקות, דיבידנדים ופיצולים בפיד אחד.</p></div>
+          <div class="app-surface">
+            <div class="skel-layer" aria-hidden="true">
+              <div class="sk-card"><div class="sk-row"><i class="sk" style="width:76px;height:76px;border-radius:16px"></i><div class="sk-col"><i class="sk" style="width:92%;height:14px"></i><i class="sk" style="width:70%;height:14px"></i><i class="sk" style="width:84%;height:11px"></i><i class="sk" style="width:46px;height:18px;border-radius:8px;margin-top:auto"></i></div></div><div class="sk-foot"><i class="sk" style="width:30px;height:30px;border-radius:50%"></i><i class="sk" style="width:30px;height:30px;border-radius:50%"></i><i class="sk" style="width:110px;height:11px;margin-inline-start:auto"></i></div></div>
+              <div class="sk-card"><div class="sk-row"><i class="sk" style="width:76px;height:76px;border-radius:16px"></i><div class="sk-col"><i class="sk" style="width:88%;height:14px"></i><i class="sk" style="width:60%;height:14px"></i><i class="sk" style="width:78%;height:11px"></i><i class="sk" style="width:46px;height:18px;border-radius:8px;margin-top:auto"></i></div></div><div class="sk-foot"><i class="sk" style="width:30px;height:30px;border-radius:50%"></i><i class="sk" style="width:30px;height:30px;border-radius:50%"></i><i class="sk" style="width:110px;height:11px;margin-inline-start:auto"></i></div></div>
+            </div>
+            <div class="real-layer">
+              <div class="n-card">
+                <div class="n-top"><span class="n-thumb"><svg class="i"><use href="#i-news"/></svg></span><div class="n-text"><b>הפד השאיר את הריבית ללא שינוי ורמז על הפחתה בדצמבר</b><span>יו״ר הפד אמר שהאינפלציה ממשיכה להתמתן ושהבנק יפעל בזהירות.</span><em class="n-cat" style="--c:var(--info)">כלכלה</em></div></div>
+                <div class="n-foot"><span class="n-btn"><svg class="i"><use href="#i-heart"/></svg></span><span class="n-btn"><svg class="i"><use href="#i-share"/></svg></span><small>Reuters · לפני 4 דק׳</small></div>
+              </div>
+              <div class="n-card">
+                <div class="n-top"><span class="n-thumb"><svg class="i"><use href="#i-news"/></svg></span><div class="n-text"><b>הנפקה חדשה בנאסד״ק תומחרה מעל טווח המחירים</b><span>המניה צפויה להתחיל להיסחר מחר עם פתיחת המסחר.</span><em class="n-cat" style="--c:var(--green-text)">בורסה</em></div></div>
+                <div class="n-foot"><span class="n-btn"><svg class="i"><use href="#i-heart"/></svg></span><span class="n-btn"><svg class="i"><use href="#i-share"/></svg></span><small>Bloomberg · לפני 22 דק׳</small></div>
+              </div>
+              <div class="n-card">
+                <div class="n-top"><span class="n-thumb"><svg class="i"><use href="#i-news"/></svg></span><div class="n-text"><b>יצרנית השבבים עקפה את תחזיות ההכנסות ברבעון השלישי</b><span>ההנהלה העלתה את התחזית לרבעון הבא בעקבות הביקוש לשרתי AI.</span><em class="n-cat" style="--c:#bf5af2">טכנולוגיה</em></div></div>
+                <div class="n-foot"><span class="n-btn"><svg class="i"><use href="#i-heart"/></svg></span><span class="n-btn"><svg class="i"><use href="#i-share"/></svg></span><small>CNBC · לפני 41 דק׳</small></div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- Earnings: DayCard + LogoTile -->
+        <article class="tile t-earn" data-mock>
+          <div class="tile-copy"><span class="tile-ico"><svg class="i"><use href="#i-bars"/></svg></span><h3>דיווחי רווח</h3><p>לוח שבועי של דוחות. טבעת ירוקה או אדומה מסמנת אם החברה עקפה את התחזית.</p></div>
+          <div class="app-surface">
+            <div class="skel-layer" aria-hidden="true">
+              <div class="sk-card center"><i class="sk" style="width:90px;height:16px"></i><i class="sk" style="width:70px;height:11px"></i><i class="sk" style="width:110px;height:30px;border-radius:999px;margin-top:8px"></i><div class="sk-tiles"><span><i class="sk" style="width:40px;height:40px;border-radius:50%"></i><i class="sk" style="width:32px;height:10px;border-radius:5px"></i></span><span><i class="sk" style="width:40px;height:40px;border-radius:50%"></i><i class="sk" style="width:32px;height:10px;border-radius:5px"></i></span><span><i class="sk" style="width:40px;height:40px;border-radius:50%"></i><i class="sk" style="width:32px;height:10px;border-radius:5px"></i></span><span><i class="sk" style="width:40px;height:40px;border-radius:50%"></i><i class="sk" style="width:32px;height:10px;border-radius:5px"></i></span><span><i class="sk" style="width:40px;height:40px;border-radius:50%"></i><i class="sk" style="width:32px;height:10px;border-radius:5px"></i></span></div><i class="sk" style="width:110px;height:30px;border-radius:999px;margin-top:8px"></i><div class="sk-tiles"><span><i class="sk" style="width:40px;height:40px;border-radius:50%"></i><i class="sk" style="width:32px;height:10px;border-radius:5px"></i></span><span><i class="sk" style="width:40px;height:40px;border-radius:50%"></i><i class="sk" style="width:32px;height:10px;border-radius:5px"></i></span><span><i class="sk" style="width:40px;height:40px;border-radius:50%"></i><i class="sk" style="width:32px;height:10px;border-radius:5px"></i></span><span><i class="sk" style="width:40px;height:40px;border-radius:50%"></i><i class="sk" style="width:32px;height:10px;border-radius:5px"></i></span></div></div>
+            </div>
+            <div class="real-layer">
+              <div class="e-day">
+                <b class="e-name">יום שלישי</b>
+                <span class="e-today">היום</span>
+                <small class="e-date">28 באוקטובר</small>
+                <span class="e-pill pre"><svg class="i"><use href="#i-sun"/></svg>מסחר מוקדם</span>
+                <div class="e-tiles"><span class="e-tile"><span class="e-ring up"><span class="e-logo">P</span></span><small>PYPL</small></span><span class="e-tile"><span class="e-ring up"><span class="e-logo">M</span></span><small>MRK</small></span><span class="e-tile"><span class="e-ring down"><span class="e-logo">P</span></span><small>PFE</small></span><span class="e-tile"><span class="e-ring up"><span class="e-logo">S</span></span><small>SOFI</small></span><span class="e-tile"><span class="e-ring down"><span class="e-logo">U</span></span><small>UPS</small></span></div>
+                <span class="e-pill post"><svg class="i"><use href="#i-moon"/></svg>מסחר מאוחר</span>
+                <div class="e-tiles"><span class="e-tile"><span class="e-ring up"><span class="e-logo">V</span></span><small>V</small></span><span class="e-tile"><span class="e-ring down"><span class="e-logo">S</span></span><small>SBUX</small></span><span class="e-tile"><span class="e-ring "><span class="e-logo">B</span></span><small>BKNG</small></span><span class="e-tile"><span class="e-ring "><span class="e-logo">F</span></span><small>FSLR</small></span></div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- Economic calendar: EconomicEventCard -->
+        <article class="tile t-cal" data-mock>
+          <div class="tile-copy"><span class="tile-ico"><svg class="i"><use href="#i-calendar"/></svg></span><h3>יומן כלכלי</h3><p>הדוחות שמזיזים את השוק, עם ספירה לאחור לאירוע הבא.</p></div>
+          <div class="app-surface">
+            <div class="skel-layer" aria-hidden="true">
+              <div class="sk-card"><div class="sk-row between"><i class="sk" style="width:58%;height:14px"></i><i class="sk" style="width:52px;height:22px;border-radius:999px"></i></div><i class="sk" style="width:100%;height:1px;opacity:.5"></i><div class="sk-row between"><span class="sk-col c"><i class="sk" style="width:40px;height:10px"></i><i class="sk" style="width:46px;height:14px"></i></span><span class="sk-col c"><i class="sk" style="width:40px;height:10px"></i><i class="sk" style="width:46px;height:14px"></i></span><span class="sk-col c"><i class="sk" style="width:40px;height:10px"></i><i class="sk" style="width:46px;height:14px"></i></span></div></div>
+              <div class="sk-card"><div class="sk-row between"><i class="sk" style="width:46%;height:14px"></i><i class="sk" style="width:52px;height:22px;border-radius:999px"></i></div><i class="sk" style="width:100%;height:1px;opacity:.5"></i><div class="sk-row between"><span class="sk-col c"><i class="sk" style="width:40px;height:10px"></i><i class="sk" style="width:46px;height:14px"></i></span><span class="sk-col c"><i class="sk" style="width:40px;height:10px"></i><i class="sk" style="width:46px;height:14px"></i></span><span class="sk-col c"><i class="sk" style="width:40px;height:10px"></i><i class="sk" style="width:46px;height:14px"></i></span></div></div>
+            </div>
+            <div class="real-layer">
+              <div class="c-card" style="--imp:var(--red)">
+                <div class="c-head"><b>מדד המחירים לצרכן (CPI) <span class="c-flag"><svg class="i"><use href="#i-flag"/></svg></span></b><span class="c-time live" data-countdown>בעוד 12:41</span></div>
+                <div class="c-vals"><span><small>תחזית</small><b>2.9%</b></span><span><small>תוצאה</small><b class="muted">—</b></span><span><small>קודם</small><b class="muted">3.0%</b></span></div>
+              </div>
+              <div class="c-card" style="--imp:#ff8a00">
+                <div class="c-head"><b>מלאי נפט גולמי <span class="c-flag"><svg class="i"><use href="#i-flag"/></svg></span></b><span class="c-time">17:30</span></div>
+                <div class="c-vals"><span><small>תחזית</small><b>-1.2M</b></span><span><small>תוצאה</small><b class="up">-2.4M</b></span><span><small>קודם</small><b class="muted">0.9M</b></span></div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- Heatmap -->
+        <article class="tile t-heat" data-mock>
+          <div class="tile-copy"><span class="tile-ico"><svg class="i"><use href="#i-grid"/></svg></span><h3>מפת חום</h3><p>רואים בשנייה אילו מניות עולות היום ואילו יורדות.</p></div>
+          <div class="app-surface">
+            <div class="skel-layer" aria-hidden="true"><div class="sk-heat"><i class="sk big"></i><i class="sk big"></i><i class="sk wide"></i><i class="sk "></i><i class="sk "></i><i class="sk wide"></i><i class="sk "></i><i class="sk "></i><i class="sk "></i><i class="sk "></i><i class="sk wide"></i><i class="sk "></i><i class="sk "></i><i class="sk "></i><i class="sk "></i><i class="sk "></i><i class="sk "></i><i class="sk "></i><i class="sk "></i><i class="sk "></i></div></div>
+            <div class="real-layer"><div class="heatmap" aria-hidden="true"></div></div>
+          </div>
+        </article>
+
+        <!-- Watchlist -->
+        <article class="tile t-watch" data-mock>
+          <div class="tile-copy"><span class="tile-ico"><svg class="i"><use href="#i-star"/></svg></span><h3>רשימת מעקב</h3><p>המניות שלכם, עם מחיר ושינוי יומי.</p></div>
+          <div class="app-surface flat">
+            <div class="skel-layer" aria-hidden="true"><div class="sk-wrow"><i class="sk" style="width:36px;height:36px;border-radius:50%"></i><span class="sk-col"><i class="sk" style="width:56px;height:13px"></i><i class="sk" style="width:90px;height:10px"></i></span><span class="sk-col e"><i class="sk" style="width:64px;height:13px"></i><i class="sk" style="width:52px;height:20px;border-radius:8px"></i></span></div><div class="sk-wrow"><i class="sk" style="width:36px;height:36px;border-radius:50%"></i><span class="sk-col"><i class="sk" style="width:56px;height:13px"></i><i class="sk" style="width:90px;height:10px"></i></span><span class="sk-col e"><i class="sk" style="width:64px;height:13px"></i><i class="sk" style="width:52px;height:20px;border-radius:8px"></i></span></div><div class="sk-wrow"><i class="sk" style="width:36px;height:36px;border-radius:50%"></i><span class="sk-col"><i class="sk" style="width:56px;height:13px"></i><i class="sk" style="width:90px;height:10px"></i></span><span class="sk-col e"><i class="sk" style="width:64px;height:13px"></i><i class="sk" style="width:52px;height:20px;border-radius:8px"></i></span></div><div class="sk-wrow"><i class="sk" style="width:36px;height:36px;border-radius:50%"></i><span class="sk-col"><i class="sk" style="width:56px;height:13px"></i><i class="sk" style="width:90px;height:10px"></i></span><span class="sk-col e"><i class="sk" style="width:64px;height:13px"></i><i class="sk" style="width:52px;height:20px;border-radius:8px"></i></span></div></div>
+            <div class="real-layer"><ul class="watch" data-watch></ul></div>
+          </div>
+        </article>
+
+        <!-- Tweets: tweet card -->
+        <article class="tile t-tweets" data-mock>
+          <div class="tile-copy"><span class="tile-ico"><svg class="i"><use href="#i-chat"/></svg></span><h3>ציוצים</h3><p>הציוצים של חשבונות השוק המרכזיים, בפיד אחד בתוך האפליקציה.</p></div>
+          <div class="app-surface">
+            <div class="skel-layer" aria-hidden="true"><div class="sk-card"><div class="sk-row"><i class="sk" style="width:42px;height:42px;border-radius:50%"></i><span class="sk-col"><i class="sk" style="width:52%;height:15px"></i><i class="sk" style="width:34%;height:12px"></i></span></div><i class="sk" style="width:100%;height:14px"></i><i class="sk" style="width:82%;height:14px"></i><i class="sk" style="width:100%;height:1px;opacity:.5"></i><div class="sk-row"><i class="sk" style="width:60px;height:34px;border-radius:12px"></i><i class="sk" style="width:48px;height:34px;border-radius:12px"></i><i class="sk" style="width:34px;height:34px;border-radius:50%"></i></div></div></div>
+            <div class="real-layer">
+              <div class="t-card">
+                <div class="t-head"><span class="tw-av">M</span><div><b>Market Wire</b><small>@marketwire · 2 דק׳</small></div></div>
+                <p>הנאסד״ק נסגר בשיא כל הזמנים, בהובלת מניות השבבים. NVDA עלתה 3.1% ו-AMD הוסיפה 2.4%.</p>
+                <div class="t-actions"><span><svg class="i"><use href="#i-heart"/></svg><em>128</em></span><span><svg class="i"><use href="#i-chat"/></svg><em>14</em></span><span class="round"><svg class="i"><use href="#i-share"/></svg></span></div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ============ INSIDERS horizontal ============ -->
+    <section class="insiders" id="insiders">
+      <div class="insiders-pin">
+        <div class="insiders-head">
+          <p class="eyebrow">אינסיידרים</p>
+          <h2 class="section-title">עקבו אחרי באפט, <br /><span class="accent">פלוסי והואנג</span></h2>
+          <p class="section-sub">חברי קונגרס, בכירים ומנהלי קרנות מחויבים לדווח על עסקאות. כל דיווח מוצג כמו שהוגש, עם המקור שלו.</p>
+        </div>
+        <div class="insiders-track">
+          <article class="person"><img src="assets/portraits/warren-buffett.jpg" alt="וורן באפט" loading="lazy" /><div class="person-meta"><span class="tag fund">קרן · 13F</span><b>וורן באפט</b><small>פוזיציות מדווחות רבעוניות</small></div></article>
+          <article class="person"><img src="assets/portraits/nancy-pelosi.jpg" alt="ננסי פלוסי" loading="lazy" /><div class="person-meta"><span class="tag cg">קונגרס · STOCK Act</span><b>ננסי פלוסי</b><small>עסקאות מדווחות ואחזקות</small></div></article>
+          <article class="person"><img src="assets/portraits/jensen-huang.jpg" alt="ג׳נסן הואנג" loading="lazy" /><div class="person-meta"><span class="tag ex">בכיר · Form 4</span><b>ג׳נסן הואנג</b><small>יומן פעולות בכיר</small></div></article>
+          <article class="person"><img src="assets/portraits/bill-ackman.jpg" alt="ביל אקמן" loading="lazy" /><div class="person-meta"><span class="tag fund">קרן · 13F</span><b>ביל אקמן</b><small>שינויי פוזיציה ברבעון</small></div></article>
+          <article class="person"><img src="assets/portraits/elon-musk.jpg" alt="אילון מאסק" loading="lazy" /><div class="person-meta"><span class="tag ex">בכיר · Form 4</span><b>אילון מאסק</b><small>יומן פעולות בכיר</small></div></article>
+          <article class="person more"><div><b>ועוד הרבה</b><small>פוליטיקאים, בכירים ומנהלי קרנות. בוחרים את מי לעקוב.</small><a href="#download" class="btn btn-ghost btn-sm">לרשימה המלאה</a></div></article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ ACADEMY ============ -->
+    <section class="academy" id="academy">
+      <div class="section-head">
+        <p class="eyebrow">האקדמיה</p>
+        <h2 class="section-title reveal">שני קורסים מלאים, <span class="accent">בקצב שלכם</span></h2>
+      </div>
+      <div class="courses">
+        <a class="course" href="#download">
+          <div class="course-media"><img src="assets/oracle-course-banner.jpg" alt="קורס האורקל — מסחר באופציות" loading="lazy" /></div>
+          <div class="course-body"><span class="pill">אופציות</span><h3>האורקל</h3><p>קורס וידאו שמלמד לסחור באופציות, שיעור אחרי שיעור.</p></div>
+        </a>
+        <a class="course" href="#download">
+          <div class="course-media"><img src="assets/whales-course-banner.jpg" alt="קורס הלוויתנים — מ-0 לסוחר מקצועי" loading="lazy" /></div>
+          <div class="course-body"><span class="pill">מסלול מלא</span><h3>הלוויתנים</h3><p>המסלול המלא למי שמתחיל, מהעסקה הראשונה ועד מסחר מקצועי.</p></div>
+        </a>
+      </div>
+    </section>
+
+    <!-- ============ TRUST ============ -->
+    <section class="trust">
+      <div class="trust-card">
+        <div class="trust-ico" aria-hidden="true">
+          <svg viewBox="0 0 48 48"><path d="M24 4 8 10v12c0 10 7 18 16 22 9-4 16-12 16-22V10L24 4z"/><path d="m17 24 5 5 10-10" class="tick"/></svg>
+        </div>
+        <h3>החשבון שלכם מוגן</h3>
+        <ul>
+          <li><b>נעילת Face ID</b><span>האפליקציה ננעלת כשחוזרים אליה מהרקע.</span></li>
+          <li><b>תשלום מאובטח</b><span>הסליקה עוברת דרך Cardcom, חברת סליקה ישראלית.</span></li>
+          <li><b>מקור לכל נתון</b><span>ליד כל דיווח אינסיידרים מופיע הדיווח הרשמי שממנו הגיע.</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============ FAQ ============ -->
+    <section class="faq" id="faq">
+      <div class="section-head">
+        <p class="eyebrow">שאלות נפוצות</p>
+        <h2 class="section-title reveal">כל מה שרציתם <span class="accent">לדעת.</span></h2>
+      </div>
+      <div class="faq-list">
+        <details><summary>אפשר להתחיל בחינם?</summary><p>כן. בהרשמה בוחרים במסלול החינמי, בלי התחייבות. אפשר לשדרג לפרימיום חודשי, רבעוני או שנתי מתוך האפליקציה מתי שרוצים.</p></details>
+        <details><summary>האפליקציה מתאימה גם למתחילים?</summary><p>כן. בהרשמה אנחנו שואלים על רמת הניסיון וסגנון המסחר שלכם, וקורס «הלוויתנים» מתחיל מאפס.</p></details>
+        <details><summary>מאיפה מגיעים נתוני האינסיידרים?</summary><p>מדיווחים רשמיים. חברי קונגרס מדווחים לפי STOCK Act, בכירים מגישים ל-SEC טופס Form 4, וקרנות מגישות דיווח 13F פעם ברבעון. לכל נתון מצורפים המקור והתאריך.</p></details>
+        <details><summary>על אילו מכשירים זה עובד?</summary><p>על אייפון ועל אנדרואיד, עם אותו חשבון.</p></details>
+        <details><summary>האם זה ייעוץ השקעות?</summary><p>לא. DarkPool היא קהילה ופלטפורמת מידע ולימוד. התוכן אינו מהווה ייעוץ השקעות או המלצה לפעולה, וכל החלטה היא באחריותכם.</p></details>
+      </div>
+    </section>
+
+    <!-- ============ FINAL CTA ============ -->
+    <section class="final" id="download">
+      <div class="final-glow" aria-hidden="true"></div>
+      <div class="emblem" aria-hidden="true">
+        <img src="assets/emblem-bull.png" alt="" class="em-bull" />
+        <img src="assets/emblem-bear.png" alt="" class="em-bear" />
+      </div>
+      <h2 class="final-title">השוק פתוח. <br /><span class="accent">הקהילה מחכה.</span></h2>
+      <p class="final-sub">הורידו את DarkPool, הצטרפו לקבוצות והתחילו לעקוב אחרי הדיווחים עוד היום. המסלול החינמי בלי התחייבות.</p>
+      <div class="store-row">
+        <a class="store-btn big" href="#" data-store="ios" aria-label="הורדה מ-App Store">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.37 12.73c-.02-2.3 1.88-3.4 1.96-3.46-1.07-1.56-2.73-1.78-3.32-1.8-1.41-.14-2.76.83-3.47.83-.72 0-1.82-.81-3-.79-1.54.02-2.96.9-3.76 2.27-1.6 2.78-.41 6.9 1.15 9.16.76 1.1 1.67 2.34 2.86 2.3 1.15-.05 1.58-.74 2.97-.74 1.38 0 1.77.74 2.98.72 1.23-.02 2.01-1.12 2.76-2.23.87-1.28 1.23-2.52 1.25-2.58-.03-.01-2.4-.92-2.42-3.66zM14.1 5.98c.63-.77 1.06-1.83.94-2.9-.91.04-2.02.61-2.67 1.37-.58.67-1.1 1.76-.96 2.8 1.02.08 2.06-.52 2.69-1.27z"/></svg>
+          <span><small>הורידו מ-</small>App Store</span>
+        </a>
+        <a class="store-btn big" href="#" data-store="android" aria-label="הורדה מ-Google Play">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.6 2.2c-.2.2-.3.6-.3 1v17.6c0 .4.1.8.3 1l.1.1 9.9-9.9v-.2L3.7 2.1l-.1.1z"/><path d="M16.9 15.3l-3.3-3.3v-.2l3.3-3.3.1.1 3.9 2.2c1.1.6 1.1 1.7 0 2.3l-3.9 2.2h-.1z" opacity=".8"/><path d="M17 15.2L13.6 11.8 3.6 21.8c.4.4 1 .4 1.7.1l11.7-6.7" opacity=".65"/><path d="M17 8.5L5.3 1.8C4.6 1.4 4 1.5 3.6 1.9l10 10L17 8.5z" opacity=".9"/></svg>
+          <span><small>זמין ב-</small>Google Play</span>
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-top">
+      <img src="assets/IMG_3289.png" alt="DarkPool — קהילת הסוחרים של ישראל" class="footer-logo on-dark" loading="lazy" />
+      <img src="assets/logo-light.png" alt="DarkPool — קהילת הסוחרים של ישראל" class="footer-logo on-light" loading="lazy" />
+      <nav aria-label="קישורים"><a href="#story">האפליקציה</a><a href="#tools">כלים</a><a href="#insiders">אינסיידרים</a><a href="#academy">אקדמיה</a><a href="#faq">שאלות נפוצות</a></nav>
+    </div>
+    <p class="disclaimer">האמור באפליקציה ובאתר אינו מהווה ייעוץ השקעות, המלצה או תחליף לייעוץ המתחשב בנתונים ובצרכים של כל אדם. מסחר בניירות ערך כרוך בסיכון. הנתונים המוצגים בדף זה להמחשה בלבד.</p>
+    <p class="copy">© <span data-year></span> DarkPool. כל הזכויות שמורות.</p>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>

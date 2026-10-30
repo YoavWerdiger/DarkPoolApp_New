@@ -610,7 +610,7 @@ export function PersonPortfolioProfileScreen({
             holdings: serverHoldings.slice(0, 16).map((h): HoldingRow => ({
               ticker: h.ticker,
               title: h.ticker,
-              meta: [formatForm4Value(h.market_value), formatForm4Weight(h.allocation_pct), 'משוער']
+              meta: [formatForm4Value(h.market_value), formatForm4Weight(h.allocation_pct)]
                 .filter(Boolean)
                 .join(' · '),
               allocation_pct: h.allocation_pct,
@@ -1174,7 +1174,14 @@ export function PersonPortfolioProfileScreen({
           const open = since ? pickDailyOpenOnDate(prices[sym], since) : null;
           if (open != null && open > 0) ret = ((live - open) / open) * 100;
         }
-        return ret == null ? h : { ...h, return_pct: ret };
+        // כמות מניות: מהספק, ואם אין — שווי האחזקה ביום הדיווח ÷ מחיר הפתיחה באותו יום
+        let shares = h.vendor_shares ?? h.shares ?? null;
+        if (!(shares != null && shares > 0) && (h.market_value ?? 0) > 0) {
+          const asOf = (h.asOfDate ?? modelByTicker.get(sym)?.lastUpdatedFromPTR ?? '').slice(0, 10);
+          const open = asOf ? pickDailyOpenOnDate(prices[sym], asOf) : null;
+          if (open != null && open > 0) shares = Number(h.market_value) / open;
+        }
+        return { ...h, return_pct: ret ?? h.return_pct, shares };
       });
     }
     return holdings;
@@ -1402,7 +1409,7 @@ export function PersonPortfolioProfileScreen({
       : null;
   const valueLabel =
     trumpValueRange
-      ? 'שווי תיק משוער'
+      ? 'שווי תיק'
       : holdingsEngine === 'trump' && trumpUnitWeighted
       ? 'מדד סל (משקל שווה לעסקה)'
       : holdingsEngine === 'form4' || holdingsEngine === 'trump'

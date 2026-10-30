@@ -90,7 +90,7 @@ const HONESTY_TITLE = 'איך מחושבת האחזקה?';
 const HONESTY_BODY =
   'הנתונים מדוחות 13F שהגוף מגיש ל-SEC בסוף כל רבעון: כמה מניות הוא מחזיק ובאיזה שווי. ' +
   'הדוחות לא מפרטים עסקאות — «עסקה» כאן היא השינוי בכמות בין שני דוחות, במחיר סוף הרבעון. ' +
-  'לכן המחיר הממוצע והסכומים משוערים. השווי והתשואה היום מחושבים לפי המחיר החי של המניה ' +
+  'המחיר הממוצע לפי מחירי סוף הרבעון בכל שינוי. השווי והתשואה היום מחושבים לפי המחיר החי של המניה ' +
   'וכמות המניות בדוח האחרון.';
 
 export default function DarkPoolPositionScreen() {
@@ -147,6 +147,13 @@ function TradesPositionView() {
   const prevClose = quoteQuery.data?.previous_close ?? null;
   const todayPct = price && prevClose ? ((price - prevClose) / prevClose) * 100 : null;
   const ret = params.returnPct ?? null;
+  // בלי כמות מהדיווח — השווי הנוכחי ÷ המחיר החי
+  const shares =
+    params.shares != null && params.shares > 0
+      ? params.shares
+      : params.marketValue != null && params.marketValue > 0 && price != null && price > 0
+        ? params.marketValue / price
+        : null;
   const toneColor = (v: number | null) =>
     v == null ? tokens.colors.text.secondary : v >= 0 ? tokens.colors.primary.main : tokens.colors.text.danger;
 
@@ -180,8 +187,8 @@ function TradesPositionView() {
                       <Text style={[heroStyles.actionVerb, { color: tokens.colors.primary.main }]}>מחזיק</Text>
                       <Text style={heroStyles.actionRest}>
                         {' '}
-                        {params.shares != null && params.shares > 0
-                          ? `${toDataIsland(sharesText(params.shares))} מניות`
+                        {shares != null
+                          ? `${toDataIsland(sharesText(shares))} מניות`
                           : params.marketValue != null
                             ? `בשווי ${toDataIsland(usd(params.marketValue))}`
                             : 'במניה'}
@@ -212,9 +219,7 @@ function TradesPositionView() {
           <View style={styles.section}>
             <DarkPoolSectionHeader variant="group" title="הפוזיציה" />
             <UICard variant="soft" glassIntensity="light" padding="none" contentContainerStyle={styles.rowsCard}>
-              {params.shares != null && params.shares > 0 ? (
-                <FieldRow icon={Layers} label="מניות" value={sharesText(params.shares)} />
-              ) : null}
+              {shares != null ? <FieldRow icon={Layers} label="מניות" value={sharesText(shares)} /> : null}
               <FieldRow
                 icon={Wallet}
                 label="שווי אחזקה"
@@ -235,7 +240,7 @@ function TradesPositionView() {
               <FieldRow icon={Activity} label="תשואה היום" value={todayPct != null ? formatSignedChangePct(todayPct) : DARK_POOL_UNAVAILABLE} color={toneColor(todayPct)} />
               <FieldRow
                 icon={ChartLine}
-                label={isCongress ? 'תשואה (משוערת)' : 'תשואה כוללת'}
+                label="תשואה כוללת"
                 value={ret != null ? formatSignedChangePct(ret) : DARK_POOL_UNAVAILABLE}
                 color={toneColor(ret)}
                 last
@@ -426,7 +431,7 @@ function FilingPositionView() {
                 />
                 <FieldRow
                   icon={CircleDollarSign}
-                  label="מחיר ממוצע (משוער)"
+                  label="מחיר ממוצע"
                   value={detail.avgCost != null ? usd(detail.avgCost, 2) : DARK_POOL_UNAVAILABLE}
                   last
                 />

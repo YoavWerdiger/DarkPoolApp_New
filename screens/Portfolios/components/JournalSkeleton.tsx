@@ -78,8 +78,8 @@ export function JournalSkeleton() {
                 <Text style={[title, journalPhysicalRightText, styles.right]} numberOfLines={1}>
                   {label}
                 </Text>
-                <SkeletonBox width="60%" height={20} borderRadius={6} style={[styles.mt10, styles.selfEnd]} />
-                <SkeletonBox width="80%" height={10} borderRadius={5} style={[styles.mt10, styles.selfEnd]} />
+                <SkeletonBox width="60%" height={20} borderRadius={6} style={{ ...styles.mt10, ...styles.selfEnd }} />
+                <SkeletonBox width="80%" height={10} borderRadius={5} style={{ ...styles.mt10, ...styles.selfEnd }} />
               </View>
             </UICard>
           ))}

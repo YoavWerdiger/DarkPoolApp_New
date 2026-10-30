@@ -1,16 +1,29 @@
 /**
- * יומן מסחר בטעינה — אותו מבנה כמו המסך האמיתי (PortfolioDetailScreen + OverviewTab):
- * צ׳יפי הטאבים האמיתיים, כרטיס שווי עם גרף, כרטיס פילוח עם דונאט ושורת כרטיסי מדדים.
- * רק התוכן בתוך הכרטיסים «נטען» — כשהנתונים מגיעים הם פשוט מחליפים אותו במקום.
+ * יומן מסחר בטעינה — אותו מבנה וטקסטים כמו המסך האמיתי (PortfolioDetailScreen + OverviewTab):
+ * צ׳יפי הטאבים, «שווי תיק:» עם גרף, «חלוקת נכסים» עם דונאט, כרטיסי המדדים עם התוויות שלהם
+ * ו«תזרים» עם ארבע השורות. רק המספרים והגרפיקה «נטענים» — הנתונים מחליפים אותם במקום, בלי קפיצה.
  */
 import React from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import UICard from '../../../components/ui/UICard';
 import { SlidingPillGroup } from '../../../components/ui/DayDividerPill';
 import { LineChartSkeleton, SkeletonBox } from '../../../components/ui/SkeletonLoader';
+import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import {
+  JOURNAL_TYPE,
+  journalCardMetricLabelStyle,
+  journalCardTitleStyle,
+  journalPhysicalRightText,
+} from '../../Journal/journalLayout';
 import { PORTFOLIO_DETAIL_TABS } from '../portfolioConstants';
 
+const METRIC_LABELS = ['P&L נטו', 'פקטור רווח', 'אחוז הצלחה', 'תשואה', 'ירידה מקסימלית', 'Sharpe', 'תנודתיות שנתית'];
+const CASH_LABELS = ['הפקדות', 'משיכות', 'עמלות', 'דיבידנדים'];
+
 export function JournalSkeleton() {
+  const tokens = useDesignTokens();
+  const title = [journalCardTitleStyle, { color: tokens.colors.text.primary }];
+  const secondary = tokens.colors.text.secondary;
   return (
     <View pointerEvents="none">
       <SlidingPillGroup
@@ -24,19 +37,22 @@ export function JournalSkeleton() {
       />
 
       <View style={styles.content}>
-        {/* שווי + גרף */}
+        {/* שווי תיק + גרף */}
         <UICard variant="soft" padding="md">
-          <SkeletonBox width={90} height={12} borderRadius={6} />
+          <Text style={[title, journalPhysicalRightText]}>שווי תיק:</Text>
           <SkeletonBox width={190} height={30} borderRadius={8} style={styles.mt10} />
-          <SkeletonBox width={120} height={12} borderRadius={6} style={styles.mt10} />
+          <View style={[styles.row, styles.mt10]}>
+            <SkeletonBox width={90} height={12} borderRadius={6} />
+            <SkeletonBox width={56} height={12} borderRadius={6} />
+          </View>
           <View style={styles.mt16}>
             <LineChartSkeleton height={200} periods={6} />
           </View>
         </UICard>
 
-        {/* פילוח */}
+        {/* חלוקת נכסים */}
         <UICard variant="soft" padding="md" style={styles.mt16}>
-          <SkeletonBox width={110} height={16} borderRadius={6} />
+          <Text style={[title, journalPhysicalRightText]}>חלוקת נכסים</Text>
           <View style={[styles.row, styles.mt12]}>
             {[64, 72, 58].map((w, i) => (
               <SkeletonBox key={i} width={w} height={30} borderRadius={15} />
@@ -46,26 +62,52 @@ export function JournalSkeleton() {
             <SkeletonBox width={140} height={140} borderRadius={70} />
             <View style={styles.legend}>
               {[0, 1, 2, 3].map((i) => (
-                <SkeletonBox key={i} width="85%" height={12} borderRadius={6} />
+                <View key={i} style={styles.legendRow}>
+                  <SkeletonBox width={10} height={10} borderRadius={5} />
+                  <SkeletonBox width="70%" height={12} borderRadius={6} />
+                </View>
               ))}
             </View>
           </View>
         </UICard>
 
-        {/* כרטיסי מדדים */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.row, styles.mt16]}>
-          {[0, 1, 2].map((i) => (
-            <UICard key={i} variant="soft" padding="md" style={styles.metricCard}>
+        {/* כרטיסי מדדים — התוויות האמיתיות */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={[styles.row, styles.mt16]}
+        >
+          {METRIC_LABELS.map((label) => (
+            <UICard key={label} variant="soft" padding="md" style={styles.metricCard}>
               <View style={styles.metricInner}>
                 <SkeletonBox width={44} height={44} borderRadius={22} />
                 <View style={styles.metricText}>
-                  <SkeletonBox width="70%" height={11} borderRadius={6} />
-                  <SkeletonBox width="50%" height={18} borderRadius={6} />
+                  <Text style={[journalCardMetricLabelStyle, styles.right, { color: secondary }]} numberOfLines={1}>
+                    {label}
+                  </Text>
+                  <SkeletonBox width="55%" height={18} borderRadius={6} />
                 </View>
               </View>
             </UICard>
           ))}
         </ScrollView>
+
+        {/* תזרים */}
+        <UICard variant="soft" padding="md" style={styles.mt16}>
+          <Text style={[title, journalPhysicalRightText]}>תזרים</Text>
+          {CASH_LABELS.map((label, i) => (
+            <View
+              key={label}
+              style={[
+                styles.cashLine,
+                i < CASH_LABELS.length - 1 && { borderBottomWidth: 1, borderBottomColor: tokens.colors.border.divider },
+              ]}
+            >
+              <SkeletonBox width={70} height={13} borderRadius={6} />
+              <Text style={[styles.cashLabel, journalPhysicalRightText, { color: secondary }]}>{label}</Text>
+            </View>
+          ))}
+        </UICard>
       </View>
     </View>
   );
@@ -86,9 +128,25 @@ const styles = StyleSheet.create({
   row: { direction: 'rtl', flexDirection: 'row', gap: 8 },
   donutRow: { direction: 'rtl', flexDirection: 'row', alignItems: 'center', gap: 16 },
   legend: { flex: 1, gap: 12 },
+  legendRow: { direction: 'rtl', flexDirection: 'row', alignItems: 'center', gap: 8 },
   metricCard: { width: 220 },
   metricInner: { direction: 'rtl', flexDirection: 'row', alignItems: 'center', gap: 12 },
   metricText: { flex: 1, gap: 8 },
+  right: { textAlign: 'right', width: '100%' },
+  // כמו cashLine ב-OverviewTab
+  cashLine: {
+    direction: 'ltr',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    paddingVertical: 12,
+  },
+  cashLabel: {
+    fontSize: JOURNAL_TYPE.cardSubtitle.fontSize,
+    fontWeight: JOURNAL_TYPE.cardSubtitle.fontWeight,
+    lineHeight: JOURNAL_TYPE.cardSubtitle.lineHeight,
+  },
   mt10: { marginTop: 10 },
   mt12: { marginTop: 12 },
   mt16: { marginTop: 16 },

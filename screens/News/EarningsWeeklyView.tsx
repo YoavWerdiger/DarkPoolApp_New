@@ -10,6 +10,7 @@ import {
   Animated,
   TextInput,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Sun, Moon, ChevronUp, Search } from 'lucide-react-native';
@@ -18,6 +19,7 @@ import UICard from '../../components/ui/UICard';
 import UIButton from '../../components/ui/UIButton';
 import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
 import { APP_TYPE } from '../../components/ui/appType';
+import { formFieldShellStyle } from '../../components/ui/formControl';
 import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
 import { TickerLogo } from '../../components/ui/TickerLogo';
 import { SkeletonBox } from '../../components/ui/SkeletonLoader';
@@ -157,9 +159,12 @@ const DayTilesSkeleton = memo(function DayTilesSkeleton() {
 const SearchResultRow = memo(function SearchResultRow({
   report,
   onPress,
+  last,
 }: {
   report: EarningsReport;
   onPress: (report: EarningsReport) => void;
+  /** השורה האחרונה בכרטיס — בלי קו מפריד */
+  last?: boolean;
 }) {
   const DesignTokens = useDesignTokens();
   const symbol = getSymbolDisplay(report.code || report.ticker || '');
@@ -167,29 +172,27 @@ const SearchResultRow = memo(function SearchResultRow({
   const { dayLabel, dateLabel } = formatReportDayLabel(report.report_date);
   const timing = getTimingMeta(report.before_after_market || report.report_time);
   const TimingIcon = timing.icon;
-  const searchLogoSize = 44;
+  const searchLogoSize = 40;
   const searchRing = resultRingColor(report, DesignTokens.colors);
   const searchRingOuter = searchLogoSize + (RESULT_RING + RESULT_RING_GAP) * 2;
   const now = new Date();
   const todayLocal = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const isToday = report.report_date === todayLocal;
-  const screenPad = APP_LAYOUT.screenPaddingHorizontal;
-  const cardRadius = UI_CARD_RADIUS;
   const rtl = DesignTokens.rtlText;
 
+  // שורה בתוך כרטיס אחד מקובץ (טופו: רשימה = כרטיס עם שורות וקווים מפרידים, לא כרטיס לכל פריט)
   return (
     <Pressable
       onPress={() => onPress(report)}
-      style={[searchStyles.resultPressable, { marginHorizontal: screenPad }]}
+      style={({ pressed }) => [
+        searchStyles.resultCardContent,
+        searchStyles.resultRow,
+        !last && { borderBottomWidth: 1, borderBottomColor: DesignTokens.colors.border.divider },
+        pressed && { opacity: 0.7 },
+      ]}
       accessibilityRole="button"
       accessibilityLabel={`${symbol} ${dayLabel} ${timing.label}`}
     >
-      <UICard
-        variant="soft"
-        padding="md"
-        style={{ borderRadius: cardRadius, overflow: 'hidden' }}
-        contentContainerStyle={searchStyles.resultCardContent}
-      >
         <View
           style={[
             searchStyles.logoWrap,
@@ -270,7 +273,6 @@ const SearchResultRow = memo(function SearchResultRow({
             {timing.label}
           </Text>
         </View>
-      </UICard>
     </Pressable>
   );
 });
@@ -420,7 +422,7 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
   const DesignTokens = useDesignTokens();
   const screenPad = APP_LAYOUT.screenPaddingHorizontal;
   const listRef = useRef<FlatList<WeekDay>>(null);
-  const searchListRef = useRef<FlatList<EarningsReport>>(null);
+  const searchListRef = useRef<ScrollView>(null);
   const [showScrollToTop, setShowScrollToTop] = useState(false);
   const scrollButtonOpacity = useRef(new Animated.Value(0)).current;
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -577,7 +579,7 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
 
   const scrollToTop = useCallback(() => {
     if (isSearchMode) {
-      searchListRef.current?.scrollToOffset({ offset: 0, animated: true });
+      searchListRef.current?.scrollTo({ y: 0, animated: true });
     } else {
       listRef.current?.scrollToOffset({ offset: 0, animated: true });
     }
@@ -586,17 +588,20 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
   const renderSearchBar = useCallback(
     () => (
       <View style={{ paddingHorizontal: screenPad, paddingTop: APP_LAYOUT.stackGapSmall }}>
-        <UICard
-          variant="soft"
-          padding="none"
-          style={{ borderRadius: DesignTokens.borderRadius.search, overflow: 'hidden' }}
+        {/* שדה חיפוש של הטופו — כמו ב«חקור» וב«טיקרים» (formFieldShellStyle, 52) */}
+        <View
+          style={[
+            formFieldShellStyle({ tokens: DesignTokens, focused: false, multiline: false }),
+            { borderRadius: DesignTokens.borderRadius.search },
+          ]}
         >
           <View
             style={{
               flexDirection: 'row-reverse',
               alignItems: 'center',
-              paddingHorizontal: 12,
-              minHeight: 42,
+              paddingHorizontal: 16,
+              minHeight: 52,
+              gap: APP_LAYOUT.stackGapSmall,
             }}
           >
             {searchQuery.length > 0 ? (
@@ -618,7 +623,6 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
               placeholderTextColor={DesignTokens.colors.text.tertiary}
                 style={{
                   flex: 1,
-                  marginHorizontal: 8,
                   ...APP_TYPE.body,
                   color: DesignTokens.colors.text.primary,
                   textAlign: 'right',
@@ -638,7 +642,7 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
               <Ionicons name="search" size={18} color={DesignTokens.colors.text.secondary} />
             )}
           </View>
-        </UICard>
+        </View>
       </View>
     ),
     [screenPad, searchQuery, clearSearch, DesignTokens, searchLoading, isSearchMode],
@@ -706,12 +710,6 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
     [onReportPress],
   );
 
-  const renderSearchItem = useCallback(
-    ({ item }: { item: EarningsReport }) => (
-      <SearchResultRow report={item} onPress={onReportPress} />
-    ),
-    [onReportPress],
-  );
 
   const renderSearchEmpty = useCallback(() => {
     if (searchLoading) {
@@ -746,16 +744,12 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
       {!isSearchMode ? renderWeekNavigator() : null}
 
       {isSearchMode ? (
-        <FlatList
+        <ScrollView
           ref={searchListRef}
-          data={searchResults}
-          keyExtractor={(item, index) => `${item.id}-${item.report_date}-${index}`}
-          renderItem={renderSearchItem}
-          ListEmptyComponent={renderSearchEmpty}
           style={{ flex: 1 }}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
-            paddingTop: APP_LAYOUT.stackGapSmall,
+            paddingTop: APP_LAYOUT.componentGap,
             paddingBottom: bottomPad,
             flexGrow: searchResults.length === 0 ? 1 : undefined,
           }}
@@ -763,7 +757,23 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
           scrollEventThrottle={16}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
-        />
+        >
+          {searchResults.length === 0 ? (
+            renderSearchEmpty()
+          ) : (
+            // כרטיס אחד עם שורות — כמו רשימות אחרות בטופו
+            <UICard variant="soft" padding="none" style={{ marginHorizontal: screenPad }} contentContainerStyle={{ paddingHorizontal: APP_LAYOUT.cardPadding }}>
+              {searchResults.map((item, index) => (
+                <SearchResultRow
+                  key={`${item.id}-${item.report_date}-${index}`}
+                  report={item}
+                  onPress={onReportPress}
+                  last={index === searchResults.length - 1}
+                />
+              ))}
+            </UICard>
+          )}
+        </ScrollView>
       ) : (
         <FlatList
           ref={listRef}
@@ -878,8 +888,8 @@ const tileStyles = StyleSheet.create({
 });
 
 const searchStyles = StyleSheet.create({
-  resultPressable: {
-    marginBottom: APP_LAYOUT.cardStackGap,
+  resultRow: {
+    paddingVertical: APP_LAYOUT.cardTitleToBodyGap + 2,
   },
   resultCardContent: {
     flexDirection: 'row-reverse',
@@ -888,7 +898,7 @@ const searchStyles = StyleSheet.create({
   },
   logoWrap: {
     flexShrink: 0,
-    marginLeft: APP_LAYOUT.cardTitleToBodyGap,
+    marginLeft: 12,
   },
   resultMain: {
     flex: 1,
@@ -928,6 +938,7 @@ const searchStyles = StyleSheet.create({
   },
   timingPill: {
     flexShrink: 0,
+    marginRight: 12,
     flexDirection: 'row-reverse',
     alignItems: 'center',
     paddingHorizontal: 10,

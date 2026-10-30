@@ -48,5 +48,5 @@ export function companyBrandGradient(ticker: string | null | undefined, dark: bo
   if (!hex) return dark ? NEUTRAL_DARK : NEUTRAL_LIGHT;
   return dark
     ? [mix(hex, [0, 0, 0], 0.62), mix(hex, [0, 0, 0], 0.82)]
-    : [mix(hex, [255, 255, 255], 0.78), mix(hex, [255, 255, 255], 0.88)];
+    : [mix(hex, [255, 255, 255], 0.52), mix(hex, [255, 255, 255], 0.66)];
 }

@@ -118,7 +118,7 @@ function InvestorPortraitFallbackInner({
         </View>
         <View style={styles.cardMonoCenter} accessibilityLabel={name}>
           <View style={styles.logoPlate}>
-            <TickerLogo symbol={logo} size={60} />
+            <TickerLogo symbol={logo} size={84} />
           </View>
         </View>
         {children}

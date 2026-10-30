@@ -26,7 +26,7 @@ const HERO_ICON_SIZE = DRAWER_MENU_BUTTON_SIZE;
 const HERO_ICON_GLYPH = 22;
 const HERO_ACTION_GAP = 14;
 const HERO_BAR_HP = 16;
-const HERO_LOGO_SIZE = 112;
+const HERO_LOGO_SIZE = 140;
 interface Props {
   name: string;
   photoCandidates: string[];
@@ -179,7 +179,7 @@ function PersonProfileHeroInner({
       {!activeUri && logoTicker?.trim() ? (
         <>
           <View style={styles.heroWatermark} pointerEvents="none">
-            <TickerLogo symbol={logoTicker.trim()} size={HERO_LOGO_SIZE * 3} />
+            <TickerLogo symbol={logoTicker.trim()} size={HERO_LOGO_SIZE * 2.6} />
           </View>
           <View style={[StyleSheet.absoluteFill, styles.logoCenter]}>
             <View style={styles.heroLogoPlate}>

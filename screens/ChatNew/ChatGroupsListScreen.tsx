@@ -61,7 +61,7 @@ import { ChatSheetEmptyState, ChatSheetLoading, ChatSheetTopoHeader } from '../.
 import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
 import { ChatSearchResult } from '../../types/chat.types';
 import { openStoryViewer } from '../../lib/storyViewerSession';
-import AddStoryFullScreen from '../../components/chat/AddStoryFullScreen';
+import { rootNavigationRef } from '../../navigation/rootNavigationRef';
 import StoryAvatarRing from '../../components/chat/StoryAvatarRing';
 import { getUsersWithStories, prefetchStoriesForUsers, StoryWithUser } from '../../services/storiesService';
 import { queryClient } from '../../lib/queryClient';
@@ -267,14 +267,10 @@ export default function ChatGroupsListScreen() {
   const filterIndicator = useSlidingIndicator<TabType>(activeTab);
   const [joinGroupSheet, setJoinGroupSheet] = useState<{ visible: boolean; group: GroupWithMembership | null }>({ visible: false, group: null });
   const [isJoining, setIsJoining] = useState(false);
-  const [addStorySheetVisible, setAddStorySheetVisible] = useState(false);
-  // נשאר ממונט אחרי הפתיחה הראשונה — Modal שלא נראה לא מרנדר את התוכן ממילא.
-  // הסרה בטיימר (600ms) קרתה לפני שה-iOS סיים לסגור את ה-Modal → מסך נייטיב «יתום» שקוף
-  // נשאר מעל הקהילה וחסם נגיעות (המסך «קפא» אחרי שיתוף סטורי).
-  const [addStoryMounted, setAddStoryMounted] = useState(false);
-  useEffect(() => {
-    if (addStorySheetVisible) setAddStoryMounted(true);
-  }, [addStorySheetVisible]);
+  const openAddStoryScreen = useCallback(() => {
+    if (!rootNavigationRef.isReady()) return;
+    (rootNavigationRef.navigate as (name: string) => void)('AddStory');
+  }, []);
   // זריעה אופטימית מה-cache (בזיכרון) — שורת ה-Stories מופיעה מיד בכניסה חוזרת
   const [usersWithStories, setUsersWithStories] = useState<StoryWithUser[]>(
     () => queryClient.getQueryData<StoryWithUser[]>(appQueryKeys.storiesUsers) ?? []
@@ -1558,7 +1554,7 @@ export default function ChatGroupsListScreen() {
               const hasOwn = !!own || pendingStories.length > 0;
               const openAdd = () => {
                 void HapticFeedback.selection();
-                setAddStorySheetVisible(true);
+                openAddStoryScreen();
               };
               const avatarInner = user?.profile_picture ? (
                 <Image source={{ uri: user.profile_picture }} style={styles.statusCircleImage} resizeMode="cover" />
@@ -1871,19 +1867,7 @@ export default function ChatGroupsListScreen() {
         </View>
       </BottomSheet>
 
-      {/* Add Story – מסך מלא בסגנון Instagram/WhatsApp */}
-      {/* נשאר ממונט עד סוף אנימציית הסגירה — הסרה מיידית של Modal פתוח ב-iOS משאירה
-          מודל «יתום» שחוסם את הבא (צופה הסטוריז קפא אחרי העלאה עד יציאה מהאפליקציה) */}
-      {addStoryMounted && (
-        <AddStoryFullScreen
-          visible={addStorySheetVisible}
-          onClose={() => {
-            if (__DEV__) console.log('[story] add screen onClose');
-            setAddStorySheetVisible(false);
-          }}
-          onAdded={() => loadStories()}
-        />
-      )}
+      {/* יצירת סטורי — מסך AddStory בסטאק הראשי (openAddStoryScreen) */}
 
       {/* צופה הסטוריז — מסך StoryViewer בסטאק הראשי (openStoryViewer); בחזרה useFocusEffect מרענן את השורה */}
     </View>

@@ -1016,12 +1016,17 @@ interface AddStoryFullScreenProps {
   visible: boolean;
   onClose: () => void;
   onAdded: () => void;
+  /**
+   * 'screen' = מסך בסטאק הראשי (AddStory) — בלי Modal של RN.
+   * ה-Modal לא נסגר ב-iOS אחרי שיתוף (visible=false בלי onDismiss) ונשאר שקוף מעל הקהילה וחסם נגיעות.
+   */
+  presentation?: 'modal' | 'screen';
 }
 
 type ScreenMode = 'camera' | 'text';
 type ScreenPhase = 'capture' | 'preview' | 'uploading';
 
-export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddStoryFullScreenProps) {
+export default function AddStoryFullScreen({ visible, onClose, onAdded, presentation = 'modal' }: AddStoryFullScreenProps) {
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
@@ -2289,16 +2294,8 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
   /* ═══════════════════════════════════════════════ */
   /* ═══════ RENDER ═══════════════════════════════ */
   /* ═══════════════════════════════════════════════ */
-  return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      statusBarTranslucent
-      onRequestClose={onClose}
-      onShow={__DEV__ ? () => console.log('[story] add screen shown') : undefined}
-      onDismiss={__DEV__ ? () => console.log('[story] add screen dismissed (native)') : undefined}
-    >
+  const body = (
+    <>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       <GestureHandlerRootView style={s.fullFlex}>
         {/*
@@ -2373,6 +2370,22 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
           />
         </Reanimated.View>
       </GestureHandlerRootView>
+    </>
+  );
+
+  if (presentation === 'screen') {
+    return <View style={{ flex: 1, backgroundColor: '#000' }}>{body}</View>;
+  }
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
+      {body}
     </Modal>
   );
 }

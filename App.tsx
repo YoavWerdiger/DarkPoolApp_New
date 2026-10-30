@@ -33,6 +33,7 @@ import { Fingerprint } from 'lucide-react-native';
 import { rootNavigationRef } from './navigation/rootNavigationRef';
 import PublicProfileScreen from './screens/Profile/PublicProfileScreen';
 import StoryViewerScreen from './screens/Stories/StoryViewerScreen';
+import AddStoryScreen from './screens/Stories/AddStoryScreen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { enableScreens, enableFreeze } from 'react-native-screens';
 import { isRegistrationComplete } from './services/authService';
@@ -392,6 +393,18 @@ function AppContent() {
               {/* פרופיל ציבורי של משתמש — נפתח מכל מקום (lib/openUserProfile) */}
               <Stack.Screen name="PublicProfile" component={PublicProfileScreen} />
               {/* צופה הסטוריז — מסך (לא Modal של RN): transparentModal כדי שבמשיכה למטה ייראה המסך שמתחת (lib/storyViewerSession) */}
+              {/* יצירת סטורי — מסך מלא בסטאק (לא Modal של RN, שלא נסגר ב-iOS אחרי שיתוף) */}
+              <Stack.Screen
+                name="AddStory"
+                component={AddStoryScreen}
+                options={{
+                  presentation: 'fullScreenModal',
+                  animation: 'slide_from_bottom',
+                  headerShown: false,
+                  gestureEnabled: false,
+                  contentStyle: { backgroundColor: '#000' },
+                }}
+              />
               <Stack.Screen
                 name="StoryViewer"
                 component={StoryViewerScreen}

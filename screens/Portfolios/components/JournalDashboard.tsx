@@ -106,7 +106,18 @@ export function JournalRecentTradesCard({ trades, currency }: { trades: Trade[];
             last={i === recent.length - 1}
             symbol={x.symbol}
             title={x.symbol}
-            meta={`${x.direction === 'short' ? 'שורט' : 'לונג'} · ${shortDate(x.exit_date)}`}
+            badge={
+              x.direction === 'short'
+                ? { label: 'שורט', color: t.colors.text.danger }
+                : { label: 'לונג', color: t.colors.primary.main }
+            }
+            // כניסה → יציאה · תאריך סגירה (המחירים כאי LTR אחד, כדי שהחץ לא יתהפך)
+            meta={[
+              x.exit_price != null ? toDataIsland(`${money(x.entry_price, currency)} → ${money(x.exit_price, currency)}`) : null,
+              shortDate(x.exit_date),
+            ]
+              .filter(Boolean)
+              .join(' · ')}
             value={signed(x.profit_loss ?? 0, currency)}
             valueSub={tradeReturnPct(x) != null ? formatPercent(tradeReturnPct(x)) : undefined}
             color={toneColor(x.profit_loss ?? 0, t)}
@@ -234,6 +245,7 @@ function Row({
   icon,
   iconColor,
   title,
+  badge,
   meta,
   value,
   valueSub,
@@ -242,6 +254,8 @@ function Row({
 }: {
   s: Styles;
   symbol?: string;
+  /** תגית ליד הכותרת — למשל לונג / שורט */
+  badge?: { label: string; color: string };
   icon?: React.ComponentProps<typeof Ionicons>['name'];
   iconColor?: string;
   title: string;
@@ -263,9 +277,16 @@ function Row({
         )}
         <View style={s.rowGap} />
         <View style={s.rowText}>
-          <Text style={symbol ? s.rowTicker : s.rowTitle} numberOfLines={1}>
-            {symbol ? toDataIsland(title) : title}
-          </Text>
+          <View style={s.rowTitleLine}>
+            <Text style={symbol ? s.rowTicker : s.rowTitle} numberOfLines={1}>
+              {symbol ? toDataIsland(title) : title}
+            </Text>
+            {badge ? (
+              <View style={[s.badge, { backgroundColor: `${badge.color}1F` }]}>
+                <Text style={[s.badgeText, { color: badge.color }]}>{badge.label}</Text>
+              </View>
+            ) : null}
+          </View>
           {meta ? <Text style={s.rowMeta} numberOfLines={1}>{meta}</Text> : null}
         </View>
         <View style={s.rowValueCol}>
@@ -310,6 +331,14 @@ function createStyles(t: Tokens) {
     },
     rowGap: { width: 12, flexShrink: 0 },
     rowText: { flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 0, justifyContent: 'center' },
+    // כותרת + תגית בשורה אחת, צמודות לימין
+    rowTitleLine: { direction: 'rtl', flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0 },
+    badge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8 },
+    badgeText: {
+      fontSize: JOURNAL_TYPE.caption.fontSize - 1,
+      lineHeight: JOURNAL_TYPE.caption.lineHeight - 2,
+      fontWeight: '700',
+    },
     rowTicker: {
       direction: 'ltr',
       textAlign: 'right',

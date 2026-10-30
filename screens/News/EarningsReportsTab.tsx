@@ -1,5 +1,6 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { WeekDayStrip } from '../../components/ui/WeekDayStrip';
 import { View, Text, FlatList, RefreshControl, Pressable, Animated, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Clock, Sun, Moon, ChevronUp } from 'lucide-react-native';
@@ -1128,6 +1129,13 @@ export default function EarningsReportsTab({
   }, [reportsByDate, detailReport]);
 
 
+  // ימים עם דיווחים — נקודה בפס הימים
+  const markedDates = useMemo(() => {
+    const set = new Set<string>();
+    for (const [date, list] of Object.entries(reportsByDate)) if (list?.length) set.add(date);
+    return set;
+  }, [reportsByDate]);
+
   const renderDateNavigator = () => (
     <View
       style={{
@@ -1136,62 +1144,7 @@ export default function EarningsReportsTab({
         paddingBottom: APP_LAYOUT.componentGap,
       }}
     >
-      <UICard
-        variant="soft"
-        padding="none"
-        style={{
-          borderRadius: DesignTokens.borderRadius.full,
-          overflow: 'hidden',
-          paddingVertical: APP_LAYOUT.stackGapSmall,
-          paddingHorizontal: APP_LAYOUT.stackGapSmall,
-        }}
-      >
-        <View
-          style={{
-            flexDirection: 'row',
-            direction: 'ltr',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <DayNavBlurButton onPress={goToPreviousDay} style={{ backgroundColor: DesignTokens.colors.background.primary }}>
-            <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.primary} />
-          </DayNavBlurButton>
-
-          <View style={{ alignItems: 'center', flex: 1, paddingHorizontal: 10 }}>
-            <Text
-              style={{
-                ...APP_TYPE.cardTitle,
-                color: DesignTokens.colors.text.primary,
-                textAlign: 'center',
-              }}
-              numberOfLines={2}
-            >
-              {selectedDate.toLocaleDateString('he-IL', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
-              })}
-            </Text>
-            {isSelectedToday && (
-              <Text
-                style={{
-                  ...APP_TYPE.caption,
-                  color: DesignTokens.colors.text.secondary,
-                  marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
-                }}
-              >
-                היום
-              </Text>
-            )}
-          </View>
-
-          <DayNavBlurButton onPress={goToNextDay} style={{ backgroundColor: DesignTokens.colors.background.primary }}>
-            <Ionicons name="chevron-forward" size={20} color={DesignTokens.colors.text.primary} />
-          </DayNavBlurButton>
-        </View>
-      </UICard>
+      <WeekDayStrip selectedDate={selectedDate} markedDates={markedDates} onSelect={setSelectedDate} />
     </View>
   );
 

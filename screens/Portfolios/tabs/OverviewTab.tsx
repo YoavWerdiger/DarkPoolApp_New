@@ -711,8 +711,9 @@ export default function OverviewTab({
           flexBasis: '46%',
           flexGrow: 1,
         },
+        // ltr + textAlign:right = ימין פיזי (בעץ rtl ה-right מתהפך לשמאל)
         metricCardInner: {
-          direction: 'rtl',
+          direction: 'ltr',
           minHeight: 72,
         },
         metricVisual: {
@@ -721,15 +722,18 @@ export default function OverviewTab({
         metricText: {
           alignItems: 'stretch',
         },
+        // כותרת הכרטיס — בגודל כותרת כרטיס כמו «שווי תיק:» / «חלוקת נכסים»
         metricLabel: {
           width: '100%',
-          ...journalCardMetricLabelStyle,
+          ...journalCardTitleStyle,
+          ...journalPhysicalRightText,
           textAlign: 'right',
-          color: tokens.colors.text.secondary,
+          color: tokens.colors.text.primary,
         },
         metricValue: {
           width: '100%',
           ...journalCardMetricValueSecondaryStyle,
+          writingDirection: 'ltr',
           textAlign: 'right',
           marginTop: JOURNAL_LAYOUT.cardMetricLabelToValueGap,
         },

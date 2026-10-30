@@ -11,7 +11,6 @@ import { LineChartSkeleton, SkeletonBox } from '../../../components/ui/SkeletonL
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import {
   JOURNAL_TYPE,
-  journalCardMetricLabelStyle,
   journalCardTitleStyle,
   journalPhysicalRightText,
 } from '../../Journal/journalLayout';
@@ -75,11 +74,13 @@ export function JournalSkeleton() {
         <View style={[styles.metricGrid, styles.mt16]}>
           {METRIC_LABELS.map((label) => (
             <UICard key={label} variant="soft" padding="md" style={styles.metricCard}>
-              <Text style={[journalCardMetricLabelStyle, styles.right, { color: secondary }]} numberOfLines={1}>
-                {label}
-              </Text>
-              <SkeletonBox width="60%" height={20} borderRadius={6} style={styles.mt10} />
-              <SkeletonBox width="80%" height={10} borderRadius={5} style={styles.mt10} />
+              <View style={styles.metricInnerLtr}>
+                <Text style={[title, journalPhysicalRightText, styles.right]} numberOfLines={1}>
+                  {label}
+                </Text>
+                <SkeletonBox width="60%" height={20} borderRadius={6} style={[styles.mt10, styles.selfEnd]} />
+                <SkeletonBox width="80%" height={10} borderRadius={5} style={[styles.mt10, styles.selfEnd]} />
+              </View>
             </UICard>
           ))}
         </View>
@@ -123,6 +124,8 @@ const styles = StyleSheet.create({
   legendRow: { direction: 'rtl', flexDirection: 'row', alignItems: 'center', gap: 8 },
   metricGrid: { direction: 'rtl', flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   metricCard: { flexBasis: '46%', flexGrow: 1 },
+  metricInnerLtr: { direction: 'ltr' },
+  selfEnd: { alignSelf: 'flex-end' },
   metricInner: { direction: 'rtl', flexDirection: 'row', alignItems: 'center', gap: 12 },
   metricText: { flex: 1, gap: 8 },
   right: { textAlign: 'right', width: '100%' },

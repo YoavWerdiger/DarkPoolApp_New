@@ -387,7 +387,9 @@ function AppContent() {
         }}>
           {user && registrationDone ? (
             <>
-              <Stack.Screen name="Main" component={MainTabs} />
+              {/* בלי הקפאה ב-blur: כשיצירת סטורי / הצופה נפתחים מעל, הקהילה הוקפאה (enableFreeze)
+                  ולפעמים לא «הופשרה» בחזרה — נראתה רגילה אבל לא הגיבה להקשות */}
+              <Stack.Screen name="Main" component={MainTabs} options={{ freezeOnBlur: false }} />
               <Stack.Screen name="Profile" component={ProfileStack} />
               <Stack.Screen name="Admin" component={AdminStack} />
               {/* פרופיל ציבורי של משתמש — נפתח מכל מקום (lib/openUserProfile) */}

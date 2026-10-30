@@ -105,6 +105,7 @@ function TradesPositionView() {
   const { params } = useRoute<RP>();
   const bottomPad = useMainTabsHeight();
   const styles = useMemo(() => createStyles(tokens, bottomPad), [tokens, bottomPad]);
+  const heroStyles = useMemo(() => createTradeHeroCardStyles(tokens), [tokens]);
   const ticker = (params.ticker ?? '').toUpperCase();
   const isCongress = params.source === 'congress';
 
@@ -162,18 +163,50 @@ function TradesPositionView() {
           <View style={{ width: HEADER_BACK_BTN_SIZE }} />
         </View>
         <ScrollView style={darkPoolTransparentFill} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <View style={styles.section}>
-            <Pressable onPress={() => navigation.navigate('DarkPoolTicker', { ticker })} accessibilityRole="button">
-              <DarkPoolNestedQuoteCard
-                ticker={ticker}
-                priceText={price != null ? usd(price, 2) : null}
-                changeText={todayPct != null ? formatSignedChangePct(todayPct) : null}
-                changeColor={toneColor(todayPct)}
-                changeTone={todayPct == null ? undefined : todayPct >= 0 ? 'positive' : 'negative'}
-                loading={quoteQuery.isLoading && price == null}
-                missingText={!quoteQuery.isLoading && price == null ? DARK_POOL_UNAVAILABLE : null}
-              />
-            </Pressable>
+          <View style={[styles.card, tradeHeroGlassFrameStyle(tokens)]}>
+            <UICard
+              {...TRADE_HERO_UICARD}
+              style={tradeHeroInnerCardStyle(tokens)}
+              contentContainerStyle={styles.heroPad}
+            >
+              <View style={heroStyles.heroBody}>
+                <View style={heroStyles.headerRow}>
+                  <InsiderAvatar name={params.personName} logoUrl={params.personImage ?? null} size={FEED_AVATAR_SIZE} />
+                  <View style={heroStyles.textCol}>
+                    <Text style={heroStyles.personName} numberOfLines={2}>
+                      {params.personName}
+                    </Text>
+                    <Text style={[heroStyles.action, heroStyles.actionAfterName]}>
+                      <Text style={[heroStyles.actionVerb, { color: tokens.colors.primary.main }]}>מחזיק</Text>
+                      <Text style={heroStyles.actionRest}>
+                        {' '}
+                        {params.shares != null && params.shares > 0
+                          ? `${toDataIsland(sharesText(params.shares))} מניות`
+                          : params.marketValue != null
+                            ? `בשווי ${toDataIsland(usd(params.marketValue))}`
+                            : 'במניה'}
+                      </Text>
+                    </Text>
+                  </View>
+                </View>
+
+                <Pressable
+                  onPress={() => navigation.navigate('DarkPoolTicker', { ticker })}
+                  accessibilityRole="button"
+                  accessibilityLabel={`עמוד המניה ${ticker}`}
+                >
+                  <DarkPoolNestedQuoteCard
+                    ticker={ticker}
+                    priceText={price != null ? usd(price, 2) : null}
+                    changeText={todayPct != null ? formatSignedChangePct(todayPct) : null}
+                    changeColor={toneColor(todayPct)}
+                    changeTone={todayPct == null ? undefined : todayPct >= 0 ? 'positive' : 'negative'}
+                    loading={quoteQuery.isLoading && price == null}
+                    missingText={!quoteQuery.isLoading && price == null ? DARK_POOL_UNAVAILABLE : null}
+                  />
+                </Pressable>
+              </View>
+            </UICard>
           </View>
 
           <View style={styles.section}>

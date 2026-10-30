@@ -1343,6 +1343,10 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
   }, [visible, phase]);
   useEffect(() => {
     if (!visible) void exitCameraAudioSession();
+    // במצב מסך (AddStory) visible תמיד true — משחררים את סשן המצלמה/אודיו גם ביציאה מהמסך
+    return () => {
+      void exitCameraAudioSession();
+    };
   }, [visible]);
 
   useEffect(() => {

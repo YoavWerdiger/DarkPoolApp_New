@@ -18,16 +18,13 @@ import {
   TextInput,
   ScrollView,
   Animated,
-  ActionSheetIOS,
-  Platform,
   type ImageSourcePropType,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
+import { rootNavigationRef } from '../../navigation/rootNavigationRef';
 import {
   discardPendingStory,
   getPendingStories,
   onPendingStoryPublished,
-  publishStoryOptimistic,
   retryPendingStory,
   subscribePendingStories,
   type PendingStory,
@@ -270,58 +267,11 @@ export default function ChatGroupsListScreen() {
   const filterIndicator = useSlidingIndicator<TabType>(activeTab);
   const [joinGroupSheet, setJoinGroupSheet] = useState<{ visible: boolean; group: GroupWithMembership | null }>({ visible: false, group: null });
   const [isJoining, setIsJoining] = useState(false);
-  /**
-   * סטורי חדש — פשוט: המצלמה / הגלריה של המערכת (נייטיב), והסטורי עולה ברקע (pendingStories).
-   * בלי מסך יצירה מותאם (מצלמה + שכבות מחוות) — הוא זה שהקפיא את המסך אחרי שיתוף.
-   */
-  const openAddStoryScreen = useCallback(async () => {
-    if (!user?.id) return;
-    const userId = user.id;
-    const choice = await new Promise<number>((resolve) => {
-      if (Platform.OS === 'ios') {
-        ActionSheetIOS.showActionSheetWithOptions(
-          { options: ['צלם', 'בחר מהגלריה', 'ביטול'], cancelButtonIndex: 2, title: 'סטורי חדש' },
-          resolve,
-        );
-      } else {
-        void showAppDialog({
-          title: 'סטורי חדש',
-          buttons: [
-            { text: 'צלם', style: 'default' },
-            { text: 'בחר מהגלריה', style: 'default' },
-            { text: 'ביטול', style: 'cancel' },
-          ],
-        }).then((i) => resolve(i ?? 2));
-      }
-    });
-    if (choice !== 0 && choice !== 1) return;
-    // הבורר נסגר לגמרי לפני שהמצלמה/גלריה נפתחת (שתי הצגות בבת אחת נתקעות ב-iOS)
-    await new Promise((r) => setTimeout(r, 350));
-    const options: ImagePicker.ImagePickerOptions = {
-      mediaTypes: ['images', 'videos'],
-      quality: 0.85,
-      videoMaxDuration: 30,
-    };
-    let result: ImagePicker.ImagePickerResult;
-    if (choice === 0) {
-      const perm = await ImagePicker.requestCameraPermissionsAsync();
-      if (!perm.granted) {
-        legacyAlert('אישור נדרש', 'אנא אשר גישה למצלמה');
-        return;
-      }
-      result = await ImagePicker.launchCameraAsync(options);
-    } else {
-      result = await ImagePicker.launchImageLibraryAsync(options);
-    }
-    const asset = result.canceled ? null : result.assets?.[0];
-    if (!asset?.uri) return;
-    publishStoryOptimistic({
-      userId,
-      mediaType: asset.type === 'video' ? 'video' : 'image',
-      localUri: asset.uri,
-    });
-    void HapticFeedback.success();
-  }, [user?.id]);
+  // מסך היצירה המלא (מצלמה, גלריה, טקסט, ציור) — מסך AddStory בסטאק הראשי, לא Modal
+  const openAddStoryScreen = useCallback(() => {
+    if (!rootNavigationRef.isReady()) return;
+    (rootNavigationRef.navigate as (name: string) => void)('AddStory');
+  }, []);
   // זריעה אופטימית מה-cache (בזיכרון) — שורת ה-Stories מופיעה מיד בכניסה חוזרת
   const [usersWithStories, setUsersWithStories] = useState<StoryWithUser[]>(
     () => queryClient.getQueryData<StoryWithUser[]>(appQueryKeys.storiesUsers) ?? []
@@ -1605,7 +1555,7 @@ export default function ChatGroupsListScreen() {
               const hasOwn = !!own || pendingStories.length > 0;
               const openAdd = () => {
                 void HapticFeedback.selection();
-                void openAddStoryScreen();
+                openAddStoryScreen();
               };
               const avatarInner = user?.profile_picture ? (
                 <Image source={{ uri: user.profile_picture }} style={styles.statusCircleImage} resizeMode="cover" />
@@ -1918,7 +1868,7 @@ export default function ChatGroupsListScreen() {
         </View>
       </BottomSheet>
 
-      {/* סטורי חדש — מצלמה/גלריה של המערכת (openAddStoryScreen) */}
+      {/* יצירת סטורי — מסך AddStory בסטאק הראשי (openAddStoryScreen) */}
 
       {/* צופה הסטוריז — מסך StoryViewer בסטאק הראשי (openStoryViewer); בחזרה useFocusEffect מרענן את השורה */}
     </View>

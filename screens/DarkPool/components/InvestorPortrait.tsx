@@ -106,13 +106,18 @@ function InvestorPortraitFallbackInner({
       );
     }
     return (
+      // חברה: לוגו על רקע ניטרלי (כרטיס → רקע המסך) — לא צבע אקראי
       <View style={[styles.cardBg, { backgroundColor: tokens.colors.background.cardSolid }, style]}>
         <LinearGradient
-          colors={[monoBg, tokens.colors.background.primary]}
+          colors={[tokens.colors.background.cardSolid, tokens.colors.background.primary]}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
         <View style={styles.cardMonoCenter} accessibilityLabel={name}>
-          <TickerLogo symbol={logo} size={72} />
+          <View style={[styles.logoPlate, { borderColor: tokens.colors.border.divider }]}>
+            <TickerLogo symbol={logo} size={64} />
+          </View>
         </View>
         {children}
       </View>
@@ -346,6 +351,11 @@ const styles = StyleSheet.create({
     fontWeight: APP_TYPE.sectionTitle.fontWeight,
     color: '#FFFFFF',
     letterSpacing: 0.5,
+  },
+  logoPlate: {
+    borderRadius: 999,
+    borderWidth: 1,
+    padding: 6,
   },
   cardMonoCenter: {
     ...StyleSheet.absoluteFill,

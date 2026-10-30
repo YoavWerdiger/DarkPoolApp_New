@@ -166,7 +166,12 @@ function PersonProfileHeroInner({
         />
       ) : (
         <LinearGradient
-          colors={['rgba(26,38,26,0.55)', 'rgba(15,22,15,0.28)', 'transparent']}
+          // חברה (לוגו): רקע ניטרלי ונקי; אדם בלי דיוקן — הגוון הירקרק הקודם
+          colors={
+            logoTicker?.trim()
+              ? ['rgba(255,255,255,0.07)', 'rgba(255,255,255,0.025)', 'transparent']
+              : ['rgba(26,38,26,0.55)', 'rgba(15,22,15,0.28)', 'transparent']
+          }
           style={{ width: photoWidth, height }}
         />
       )}

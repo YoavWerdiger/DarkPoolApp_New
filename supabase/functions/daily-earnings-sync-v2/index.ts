@@ -1437,7 +1437,8 @@ serve(async (req) => {
       ? nearConfirmedKept.filter((r) => {
           const sym = normalizeCapSymbol(String(r.ticker ?? r.code ?? '').split('.US')[0])
           const vol = volMap?.get(sym)
-          if (vol != null && Number.isFinite(vol) && vol < MIN_EARNINGS_AVG_VOLUME) {
+          // שני התנאים חובה: נפח לא ידוע (כשיש טבלת נפחים) — לא נכנס
+          if (volMap && !(vol != null && Number.isFinite(vol) && vol >= MIN_EARNINGS_AVG_VOLUME)) {
             droppedLowVolume++
             return false
           }

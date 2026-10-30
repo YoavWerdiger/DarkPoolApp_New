@@ -4,7 +4,7 @@
  * ו«תזרים» עם ארבע השורות. רק המספרים והגרפיקה «נטענים» — הנתונים מחליפים אותם במקום, בלי קפיצה.
  */
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import UICard from '../../../components/ui/UICard';
 import { SlidingPillGroup } from '../../../components/ui/DayDividerPill';
 import { LineChartSkeleton, SkeletonBox } from '../../../components/ui/SkeletonLoader';
@@ -71,26 +71,18 @@ export function JournalSkeleton() {
           </View>
         </UICard>
 
-        {/* כרטיסי מדדים — התוויות האמיתיות */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={[styles.row, styles.mt16]}
-        >
+        {/* כרטיסי מדדים — רשת שני טורים כמו במסך */}
+        <View style={[styles.metricGrid, styles.mt16]}>
           {METRIC_LABELS.map((label) => (
             <UICard key={label} variant="soft" padding="md" style={styles.metricCard}>
-              <View style={styles.metricInner}>
-                <SkeletonBox width={44} height={44} borderRadius={22} />
-                <View style={styles.metricText}>
-                  <Text style={[journalCardMetricLabelStyle, styles.right, { color: secondary }]} numberOfLines={1}>
-                    {label}
-                  </Text>
-                  <SkeletonBox width="55%" height={18} borderRadius={6} />
-                </View>
-              </View>
+              <Text style={[journalCardMetricLabelStyle, styles.right, { color: secondary }]} numberOfLines={1}>
+                {label}
+              </Text>
+              <SkeletonBox width="60%" height={20} borderRadius={6} style={styles.mt10} />
+              <SkeletonBox width="80%" height={10} borderRadius={5} style={styles.mt10} />
             </UICard>
           ))}
-        </ScrollView>
+        </View>
 
         {/* תזרים */}
         <UICard variant="soft" padding="md" style={styles.mt16}>
@@ -129,7 +121,8 @@ const styles = StyleSheet.create({
   donutRow: { direction: 'rtl', flexDirection: 'row', alignItems: 'center', gap: 16 },
   legend: { flex: 1, gap: 12 },
   legendRow: { direction: 'rtl', flexDirection: 'row', alignItems: 'center', gap: 8 },
-  metricCard: { width: 220 },
+  metricGrid: { direction: 'rtl', flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  metricCard: { flexBasis: '46%', flexGrow: 1 },
   metricInner: { direction: 'rtl', flexDirection: 'row', alignItems: 'center', gap: 12 },
   metricText: { flex: 1, gap: 8 },
   right: { textAlign: 'right', width: '100%' },

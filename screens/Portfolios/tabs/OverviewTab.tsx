@@ -703,27 +703,23 @@ export default function OverviewTab({
         metricRow: {
           direction: 'rtl',
           flexDirection: 'row',
+          flexWrap: 'wrap',
           alignItems: 'stretch',
           gap: JOURNAL_LAYOUT.cardStackGap,
         },
         metricCard: {
-          width: 220,
+          flexBasis: '46%',
+          flexGrow: 1,
         },
         metricCardInner: {
-          direction: 'ltr',
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 8,
-          minHeight: 76,
+          direction: 'rtl',
+          minHeight: 72,
         },
         metricVisual: {
-          width: 68,
-          alignItems: 'center',
-          justifyContent: 'center',
+          display: 'none',
         },
         metricText: {
-          flex: 1,
-          alignItems: 'flex-end',
+          alignItems: 'stretch',
         },
         metricLabel: {
           width: '100%',
@@ -907,12 +903,8 @@ export default function OverviewTab({
       {(analytics != null || tradeStats.count > 0) && (
         <View style={styles.metricSection}>
           <Text style={styles.metricSectionLabel}>מדדי ביצוע</Text>
-          <ScrollView
-            horizontal
-            nestedScrollEnabled
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.metricRow}
-          >
+          {/* רשת שני טורים שווים (טופו: grid גמיש, לא רוחב קבוע) — כל כרטיס: תווית, ערך, הסבר */}
+          <View style={styles.metricRow}>
             {liveDailyGain != null ? (
               <PerformanceMetricCard
                 label="היום"
@@ -1023,7 +1015,7 @@ export default function OverviewTab({
                 styles={styles}
               />
             ) : null}
-          </ScrollView>
+          </View>
         </View>
       )}
 
@@ -1262,7 +1254,7 @@ function PerformanceMetricCard({
   return (
     <UICard variant="soft" padding="md" style={styles.metricCard}>
       <View style={styles.metricCardInner}>
-        {visual ? <View style={styles.metricVisual}>{visual}</View> : null}
+        {/* בלי גרפיקה בצד — כל הכרטיסים באותו מבנה (טופו) */}
         <View style={styles.metricText}>
           <Text style={styles.metricLabel} numberOfLines={2}>
             {label}

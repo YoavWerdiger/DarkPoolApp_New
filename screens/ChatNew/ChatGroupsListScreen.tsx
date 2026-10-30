@@ -42,7 +42,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { chatGroupDisplayName, groupChatIcon } from '../../assets/chatGroups/groupChatIcons';
 import { useChat, useChatActions } from '../../context/ChatContext';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useIsFocused } from '@react-navigation/native';
 import {
   dispatchOpenMainDrawer,
   consumePendingOpenMainDrawer,
@@ -203,6 +203,14 @@ export default function ChatGroupsListScreen() {
   const navigation = useNavigation();
   const { user } = useAuth();
   const { showToast } = useToast();
+  // אבחון «קפיאה» אחרי סטורי (dev): האם המסך מתרנדר ומה מצב הפוקוס
+  const diagFocused = useIsFocused();
+  const diagRenders = useRef(0);
+  diagRenders.current += 1;
+  if (__DEV__ && diagRenders.current % 5 === 1) console.log('[story] community render', diagRenders.current, 'focused=', diagFocused);
+  useEffect(() => {
+    if (__DEV__) console.log('[story] community focus ->', diagFocused);
+  }, [diagFocused]);
   /** קבוצות נעוצות (פר משתמש): groupId → pinned_at */
   const [pinnedMap, setPinnedMap] = useState<Record<string, string>>({});
   useEffect(() => {

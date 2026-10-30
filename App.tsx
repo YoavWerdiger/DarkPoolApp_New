@@ -210,7 +210,12 @@ function AppContent() {
   }, [user]);
 
   useEffect(() => {
+    if (__DEV__) console.log('[story] biometricLocked =', biometricLocked);
+  }, [biometricLocked]);
+
+  useEffect(() => {
     const subscription = AppState.addEventListener('change', async (nextState) => {
+      if (__DEV__) console.log('[story] AppState', appState.current, '->', nextState);
       // נועלים כבר ביציאה לרקע — בחזרה הנעילה כבר מוצגת (בלי הבזק של תוכן לפני האימות)
       if (nextState === 'background' && user) {
         // לזכור את מצב ההרשאה לפני היציאה (למשל להגדרות המכשיר)

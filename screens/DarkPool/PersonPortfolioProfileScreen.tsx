@@ -1,3 +1,4 @@
+import { pickDailyOpenOnDate } from './utils/congressSinceTrade';
 import { getQuotes } from '../../services/portfolios/portfolioPriceFeed';
 /**
  * פרופיל אדם מאוחד — גרף שווי תיק הוא ה-HERO.
@@ -1108,13 +1109,13 @@ export function PersonPortfolioProfileScreen({
 
   // מחיר חי לכל אחזקה בתיק 13F שאין לה מחיר מהסדרה (מחוץ ל-40 הטיקרים של הגרף / שליפה שנכשלה) — אחרת אין תשואה
   const missingPriceTickers = useMemo(() => {
-    if (kind !== 'fund_manager') return [] as string[];
-    const have = quotesMapFromDailyCloses(fundPricesQuery.data);
+    if (kind !== 'fund_manager' && holdingsEngine !== 'congress') return [] as string[];
+    const have = quotesMapFromDailyCloses(kind === 'fund_manager' ? fundPricesQuery.data : basketPricesQuery.data);
     return holdings
       .map((h) => h.ticker.toUpperCase().trim())
       .filter((t) => t && !have.has(t))
       .slice(0, 40);
-  }, [kind, holdings, fundPricesQuery.data]);
+  }, [kind, holdingsEngine, holdings, fundPricesQuery.data, basketPricesQuery.data]);
   const holdingLiveQuotesQuery = useQuery({
     queryKey: ['darkpool', 'holding-live-quotes', missingPriceTickers.join(',')],
     queryFn: () => getQuotes(missingPriceTickers),
@@ -1154,17 +1155,25 @@ export function PersonPortfolioProfileScreen({
       const lastBuyByTicker = lastCongressPurchaseByTicker(
         congressPersonTradesQuery.data ?? []
       );
+      const modelByTicker = new Map(congressHoldings.map((m) => [m.ticker.toUpperCase(), m]));
       return holdings.map((h) => {
         const sym = h.ticker.toUpperCase();
-        const ret = resolveCongressHoldingDisplayReturnPct({
+        const live = quotes.get(sym) ?? holdingLiveQuotesQuery.data?.get(sym)?.price ?? null;
+        let ret = resolveCongressHoldingDisplayReturnPct({
           vendorAvgCost: h.vendor_avg_cost,
           vendorShares: h.vendor_shares,
           currentHoldingUsd: h.market_value,
-          livePrice: quotes.get(sym) ?? null,
+          livePrice: live,
           vendorPriceChangePct: h.vendor_price_change_pct,
           lastPurchase: lastBuyByTicker.get(sym),
           dailyBars: prices[sym],
         });
+        // גיבוי: בלי עלות ובלי קנייה מדווחת — מאז הדיווח האחרון על האחזקה (פתיחה באותו יום מול חי)
+        if (ret == null && live != null && live > 0) {
+          const since = modelByTicker.get(sym)?.lastUpdatedFromPTR?.slice(0, 10);
+          const open = since ? pickDailyOpenOnDate(prices[sym], since) : null;
+          if (open != null && open > 0) ret = ((live - open) / open) * 100;
+        }
         return ret == null ? h : { ...h, return_pct: ret };
       });
     }
@@ -1174,6 +1183,7 @@ export function PersonPortfolioProfileScreen({
     rowEngine,
     fundPricesQuery.data,
     holdingLiveQuotesQuery.data,
+    congressHoldings,
     filingAvgByTicker,
     basketPricesQuery.data,
     congressPersonTradesQuery.data,

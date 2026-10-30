@@ -1,4 +1,4 @@
-import { JournalScreenSkeleton } from '../../components/ui/SkeletonLoader';
+import { JournalSkeleton } from './components/JournalSkeleton';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -110,7 +110,7 @@ export default function PortfoliosHubScreen() {
     return (
       <ScreenChrome>
         <View style={{ flex: 1, paddingTop: insets.top }}>
-          <JournalScreenSkeleton />
+          <JournalSkeleton />
         </View>
       </ScreenChrome>
     );

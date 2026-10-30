@@ -5,6 +5,7 @@
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useDesignTokens } from './DesignTokens';
@@ -88,7 +89,37 @@ export function WeekDayStrip({ selectedDate, onSelect, markedDates }: Props) {
 
   const onRowLayout = (e: LayoutChangeEvent) => setRowW(e.nativeEvent.layout.width);
 
+  const containsToday = days.some((d) => dayKey(d) === todayKey);
+  const monthLabel = (days[Math.max(0, selIndex)] ?? days[0]).toLocaleDateString('he-IL', {
+    month: 'long',
+    year: 'numeric',
+  });
+
   return (
+    <View>
+      {/* ניווט ברור: חודש, חצים לשבוע קודם / הבא, ו«היום» כשלא בשבוע הנוכחי */}
+      <View style={styles.header}>
+        <Pressable onPress={() => shiftWeek(-1)} hitSlop={10} style={styles.navBtn} accessibilityLabel="שבוע קודם">
+          <Ionicons name="chevron-forward" size={18} color={tokens.colors.text.primary} />
+        </Pressable>
+        <Text style={[styles.month, { color: tokens.colors.text.primary }]}>{monthLabel}</Text>
+        <Pressable onPress={() => shiftWeek(1)} hitSlop={10} style={styles.navBtn} accessibilityLabel="שבוע הבא">
+          <Ionicons name="chevron-back" size={18} color={tokens.colors.text.primary} />
+        </Pressable>
+        <View style={styles.headerSpacer} />
+        {!containsToday || selKey !== todayKey ? (
+          <Pressable
+            onPress={() => {
+              void HapticFeedback.selection();
+              onSelect(new Date());
+            }}
+            style={[styles.todayBtn, { backgroundColor: tokens.colors.background.cardSolid }]}
+            accessibilityLabel="חזרה להיום"
+          >
+            <Text style={[styles.todayText, { color: tokens.colors.text.primary }]}>היום</Text>
+          </Pressable>
+        ) : null}
+      </View>
     <GestureDetector gesture={swipe}>
       <View style={styles.row} onLayout={onRowLayout}>
         {/* שכבה 1: אריחים אפורים קבועים · שכבה 2: הרקע הירוק שמחליק מעליהם · שכבה 3: הטקסט */}
@@ -100,7 +131,7 @@ export function WeekDayStrip({ selectedDate, onSelect, markedDates }: Props) {
         {cellW > 0 ? (
           <Animated.View
             pointerEvents="none"
-            style={[styles.thumb, { width: cellW, backgroundColor: tokens.colors.primary.main }, thumbStyle]}
+            style={[styles.thumb, { width: cellW, backgroundColor: tokens.colors.primary.lightCta }, thumbStyle]}
           />
         ) : null}
         {days.map((d, i) => {
@@ -113,6 +144,7 @@ export function WeekDayStrip({ selectedDate, onSelect, markedDates }: Props) {
             : isToday
               ? tokens.colors.primary.main
               : tokens.colors.text.primary;
+          // היום (כשלא נבחר) — נקודה ירוקה במקום נקודת «יש נתונים»
           return (
             <Pressable
               key={key}
@@ -147,6 +179,7 @@ export function WeekDayStrip({ selectedDate, onSelect, markedDates }: Props) {
         })}
       </View>
     </GestureDetector>
+    </View>
   );
 }
 
@@ -156,6 +189,37 @@ function createStyles(_tokens: ReturnType<typeof useDesignTokens>) {
       direction: 'rtl',
       flexDirection: 'row',
       gap: GAP,
+    },
+    header: {
+      direction: 'rtl',
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 10,
+      gap: 6,
+    },
+    navBtn: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    month: {
+      ...APP_TYPE.cardTitle,
+      minWidth: 110,
+      textAlign: 'center',
+    },
+    headerSpacer: { flex: 1 },
+    todayBtn: {
+      paddingHorizontal: 14,
+      height: 30,
+      borderRadius: 15,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    todayText: {
+      ...APP_TYPE.caption,
+      fontWeight: '600',
     },
     tile: {
       flex: 1,

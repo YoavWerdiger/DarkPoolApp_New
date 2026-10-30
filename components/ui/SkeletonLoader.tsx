@@ -833,3 +833,30 @@ export const EconomicCalendarListSkeleton: React.FC<{ count?: number }> = ({ cou
     ))}
   </View>
 );
+
+/** שורות רשימה בתוך טאב של יומן מסחר (עסקאות / היסטוריה / ניתוח / לוח שנה) — במקום עיגול טעינה */
+export const JournalListSkeleton: React.FC<{ rows?: number }> = ({ rows = 6 }) => (
+  <View style={{ paddingTop: 8 }}>
+    {Array.from({ length: rows }, (_, i) => (
+      <ListItemSkeleton key={i} delay={i * 60} showAvatar />
+    ))}
+  </View>
+);
+
+/** מסך יומן מסחר בטעינה — שווי, גרף, טאבים ושורות, כמו המסך האמיתי */
+export const JournalScreenSkeleton: React.FC = () => (
+  <View style={{ paddingHorizontal: 20, paddingTop: 12 }}>
+    <SkeletonBox width={90} height={12} borderRadius={6} />
+    <SkeletonBox width={200} height={30} borderRadius={8} style={{ marginTop: 10 }} />
+    <SkeletonBox width={130} height={12} borderRadius={6} style={{ marginTop: 10 }} />
+    <View style={{ marginTop: 20 }}>
+      <LineChartSkeleton height={200} periods={6} />
+    </View>
+    <View style={{ flexDirection: 'row', gap: 8, marginTop: 20 }}>
+      {Array.from({ length: 4 }, (_, i) => (
+        <SkeletonBox key={i} width={72} height={34} borderRadius={17} delay={i * 40} />
+      ))}
+    </View>
+    <JournalListSkeleton rows={4} />
+  </View>
+);

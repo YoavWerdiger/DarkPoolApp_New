@@ -1,3 +1,4 @@
+import { JournalScreenSkeleton } from '../../components/ui/SkeletonLoader';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
@@ -330,9 +331,7 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
               onBack={() => navigation.goBack()}
             />
           )}
-          <View style={styles.loading}>
-            <ActivityIndicator color={tokens.colors.primary.main} />
-          </View>
+          <JournalScreenSkeleton />
         </SafeAreaView>
       </View>
     );

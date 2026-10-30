@@ -1,3 +1,4 @@
+import { JournalListSkeleton } from '../../../components/ui/SkeletonLoader';
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -198,9 +199,7 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
 
   if (loading) {
     return (
-      <View style={{ paddingVertical: 60, alignItems: 'center' }}>
-        <ActivityIndicator color={tokens.colors.primary.main} />
-      </View>
+      <JournalListSkeleton />
     );
   }
 

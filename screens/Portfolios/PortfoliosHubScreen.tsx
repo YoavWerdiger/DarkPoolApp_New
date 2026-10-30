@@ -1,3 +1,4 @@
+import { JournalScreenSkeleton } from '../../components/ui/SkeletonLoader';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -108,8 +109,8 @@ export default function PortfoliosHubScreen() {
   if (portfolios === null) {
     return (
       <ScreenChrome>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <ActivityIndicator color={tokens.colors.primary.main} />
+        <View style={{ flex: 1, paddingTop: insets.top }}>
+          <JournalScreenSkeleton />
         </View>
       </ScreenChrome>
     );

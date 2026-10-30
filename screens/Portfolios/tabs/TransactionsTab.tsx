@@ -1,3 +1,4 @@
+import { JournalListSkeleton } from '../../../components/ui/SkeletonLoader';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
@@ -232,9 +233,7 @@ export default function TransactionsTab({
 
   if (loading) {
     return (
-      <View style={{ paddingVertical: 50, alignItems: 'center' }}>
-        <ActivityIndicator color={tokens.colors.primary.main} />
-      </View>
+      <JournalListSkeleton />
     );
   }
 

@@ -1,3 +1,4 @@
+import { JournalListSkeleton } from '../../../components/ui/SkeletonLoader';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
@@ -346,9 +347,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
 
   if (loading) {
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator color={tokens.colors.primary.main} />
-      </View>
+      <JournalListSkeleton />
     );
   }
 

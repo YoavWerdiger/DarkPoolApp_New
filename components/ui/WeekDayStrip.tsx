@@ -5,7 +5,6 @@
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useDesignTokens } from './DesignTokens';
@@ -91,84 +90,76 @@ export function WeekDayStrip({ selectedDate, onSelect, markedDates }: Props) {
 
   return (
     <GestureDetector gesture={swipe}>
-      <View style={styles.wrap}>
-        <Pressable onPress={() => shiftWeek(-1)} hitSlop={8} style={styles.arrow} accessibilityLabel="שבוע קודם">
-          <Ionicons name="chevron-forward" size={18} color={tokens.colors.text.secondary} />
-        </Pressable>
-
-        <View style={styles.row} onLayout={onRowLayout}>
-          {cellW > 0 ? (
-            <Animated.View
-              pointerEvents="none"
-              style={[styles.thumb, { width: cellW, backgroundColor: tokens.colors.primary.main }, thumbStyle]}
-            />
-          ) : null}
-          {days.map((d, i) => {
-            const key = dayKey(d);
-            const selected = i === selIndex;
-            const isToday = key === todayKey;
-            const marked = markedDates?.has(key);
-            const fg = selected ? tokens.colors.text.inverse : tokens.colors.text.primary;
-            return (
-              <Pressable
-                key={key}
-                onPress={() => {
-                  if (selected) return;
-                  void HapticFeedback.selection();
-                  onSelect(d);
-                }}
-                style={[
-                  styles.cell,
-                  // הנבחר שקוף — הרקע הירוק המחליק מתחתיו
-                  selected && cellW > 0 && { backgroundColor: 'transparent' },
-                  selected && cellW === 0 && { backgroundColor: tokens.colors.primary.main },
-                  !selected && isToday && { borderColor: tokens.colors.primary.main },
-                ]}
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-                accessibilityLabel={d.toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' })}
-              >
-                <Text style={[styles.weekday, { color: selected ? fg : tokens.colors.text.secondary }]}>
-                  {HEB_WEEKDAY[d.getDay()]}
-                </Text>
-                <Text style={[styles.dayNum, { color: fg }]}>{d.getDate()}</Text>
-                <View
-                  style={[
-                    styles.dot,
-                    { backgroundColor: marked ? (selected ? fg : tokens.colors.primary.main) : 'transparent' },
-                  ]}
-                />
-              </Pressable>
-            );
-          })}
+      <View style={styles.row} onLayout={onRowLayout}>
+        {/* שכבה 1: אריחים אפורים קבועים · שכבה 2: הרקע הירוק שמחליק מעליהם · שכבה 3: הטקסט */}
+        <View style={[StyleSheet.absoluteFill, styles.row]} pointerEvents="none">
+          {days.map((d) => (
+            <View key={dayKey(d)} style={[styles.tile, { backgroundColor: tokens.colors.background.cardSolid }]} />
+          ))}
         </View>
-
-        <Pressable onPress={() => shiftWeek(1)} hitSlop={8} style={styles.arrow} accessibilityLabel="שבוע הבא">
-          <Ionicons name="chevron-back" size={18} color={tokens.colors.text.secondary} />
-        </Pressable>
+        {cellW > 0 ? (
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.thumb, { width: cellW, backgroundColor: tokens.colors.primary.main }, thumbStyle]}
+          />
+        ) : null}
+        {days.map((d, i) => {
+          const key = dayKey(d);
+          const selected = i === selIndex;
+          const isToday = key === todayKey;
+          const marked = markedDates?.has(key);
+          const numColor = selected
+            ? tokens.colors.text.inverse
+            : isToday
+              ? tokens.colors.primary.main
+              : tokens.colors.text.primary;
+          return (
+            <Pressable
+              key={key}
+              onPress={() => {
+                if (selected) return;
+                void HapticFeedback.selection();
+                onSelect(d);
+              }}
+              style={styles.cell}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
+              accessibilityLabel={d.toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' })}
+            >
+              <Text style={[styles.weekday, { color: selected ? tokens.colors.text.inverse : tokens.colors.text.secondary }]}>
+                {HEB_WEEKDAY[d.getDay()]}
+              </Text>
+              <Text style={[styles.dayNum, { color: numColor }]}>{d.getDate()}</Text>
+              <View
+                style={[
+                  styles.dot,
+                  {
+                    backgroundColor: marked
+                      ? selected
+                        ? tokens.colors.text.inverse
+                        : tokens.colors.text.secondary
+                      : 'transparent',
+                  },
+                ]}
+              />
+            </Pressable>
+          );
+        })}
       </View>
     </GestureDetector>
   );
 }
 
-function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
+function createStyles(_tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
-    wrap: {
-      direction: 'rtl',
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-    },
-    arrow: {
-      width: 22,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
     row: {
-      flex: 1,
       direction: 'rtl',
       flexDirection: 'row',
       gap: GAP,
+    },
+    tile: {
+      flex: 1,
+      borderRadius: 16,
     },
     thumb: {
       position: 'absolute',
@@ -180,29 +171,26 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     cell: {
       flex: 1,
       alignItems: 'center',
-      paddingTop: 8,
-      paddingBottom: 6,
-      borderRadius: 16,
-      backgroundColor: tokens.colors.background.cardSolid,
-      zIndex: 1,
-      borderColor: 'transparent',
-      borderWidth: 1.5,
+      paddingTop: 10,
+      paddingBottom: 7,
     },
     weekday: {
       ...APP_TYPE.caption,
-      fontWeight: '600',
+      fontWeight: '500',
       textAlign: 'center',
     },
     dayNum: {
-      ...APP_TYPE.cardTitle,
+      fontSize: 20,
+      lineHeight: 24,
+      fontWeight: '700',
       fontVariant: ['tabular-nums'],
       textAlign: 'center',
       marginTop: 2,
     },
     dot: {
-      width: 5,
-      height: 5,
-      borderRadius: 2.5,
+      width: 4,
+      height: 4,
+      borderRadius: 2,
       marginTop: 4,
     },
   });

@@ -88,6 +88,18 @@ interface TradeStats {
 
 type LiveQuote = { price: number; previousClose: number | null };
 
+/** תווית הטווח שנבחר בגרף — לתשואה / ירידה מקסימלית */
+const PERIOD_LABEL_HE: Record<string, string> = {
+  '1D': 'היום',
+  '1W': 'שבוע',
+  '1M': 'חודש',
+  '3M': '3 חודשים',
+  YTD: 'מתחילת השנה',
+  '1Y': 'שנה',
+  '5Y': '5 שנים',
+  All: 'הכל',
+};
+
 export default function OverviewTab({
   portfolio,
   summary,
@@ -751,6 +763,8 @@ export default function OverviewTab({
       ? tradeStats.grossWin / (tradeStats.grossWin + tradeStats.grossLossAbs)
       : null;
   const periodReturn = analytics?.twrReturn ?? analytics?.totalReturn ?? null;
+  // רווח לא ממומש חי — מהפוזיציות הפתוחות עם המחיר העדכני
+  const openUnrealized = openTradeHoldings.reduce((sum, h) => sum + h.unrealized_gain, 0);
   const sparkValues = periodSeries.map((point) => point.value);
   const heroValue =
     scrubPoint?.value ??
@@ -899,6 +913,46 @@ export default function OverviewTab({
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.metricRow}
           >
+            {liveDailyGain != null ? (
+              <PerformanceMetricCard
+                label="היום"
+                value={`${liveDailyGain >= 0 ? '+' : ''}${formatCurrency(liveDailyGain, portfolio.currency)}`}
+                valueColor={gainColor(liveDailyGain, positive, negative, neutral)}
+                hint={
+                  livePortfolioValue != null && livePortfolioValue - liveDailyGain > 0
+                    ? `${formatPercent((liveDailyGain / (livePortfolioValue - liveDailyGain)) * 100)} · בזמן אמת`
+                    : 'בזמן אמת'
+                }
+                styles={styles}
+              />
+            ) : null}
+            {periodReturn != null ? (
+              <PerformanceMetricCard
+                label={`תשואה · ${PERIOD_LABEL_HE[period] ?? period}`}
+                value={formatPercent(periodReturn * 100)}
+                valueColor={gainColor(periodReturn, positive, negative, neutral)}
+                hint={analytics?.twrReturn != null ? 'מנורמל להפקדות · לפי הטווח בגרף' : 'לפי הטווח בגרף'}
+                visual={
+                  sparkValues.length >= 2 ? (
+                    <Sparkline values={sparkValues} color={gainColor(periodReturn, positive, negative, neutral)} />
+                  ) : null
+                }
+                styles={styles}
+              />
+            ) : null}
+            {openTradeHoldings.length > 0 ? (
+              <PerformanceMetricCard
+                label="רווח לא ממומש"
+                value={`${openUnrealized >= 0 ? '+' : ''}${formatCurrency(openUnrealized, portfolio.currency)}`}
+                valueColor={gainColor(openUnrealized, positive, negative, neutral)}
+                hint={
+                  openTradeHoldings.length === 1
+                    ? 'פוזיציה פתוחה אחת · בזמן אמת'
+                    : `${openTradeHoldings.length} פוזיציות פתוחות · בזמן אמת`
+                }
+                styles={styles}
+              />
+            ) : null}
             {tradeStats.count > 0 ? (
               <PerformanceMetricCard
                 label="P&L נטו"
@@ -908,6 +962,27 @@ export default function OverviewTab({
                   tradeStats.count === 1
                     ? 'עסקה סגורה אחת'
                     : `${tradeStats.count} עסקאות סגורות`
+                }
+                styles={styles}
+              />
+            ) : null}
+            {tradeStats.winRate != null ? (
+              <PerformanceMetricCard
+                label="אחוז הצלחה"
+                value={`${tradeStats.winRate.toFixed(1)}%`}
+                valueColor={tradeStats.winRate >= 50 ? positive : tokens.colors.text.primary}
+                hint={
+                  tradeStats.avgWin != null && tradeStats.avgLoss != null
+                    ? `ממוצע ${formatCurrency(tradeStats.avgWin, portfolio.currency)} / ${formatCurrency(tradeStats.avgLoss, portfolio.currency)}`
+                    : undefined
+                }
+                visual={
+                  <WinGauge
+                    winRatio={tradeStats.winRate / 100}
+                    green={positive}
+                    red={negative}
+                    track={tokens.colors.border.divider}
+                  />
                 }
                 styles={styles}
               />
@@ -940,81 +1015,11 @@ export default function OverviewTab({
                 styles={styles}
               />
             ) : null}
-            {tradeStats.winRate != null ? (
-              <PerformanceMetricCard
-                label="אחוז הצלחה"
-                value={`${tradeStats.winRate.toFixed(1)}%`}
-                valueColor={tradeStats.winRate >= 50 ? positive : tokens.colors.text.primary}
-                hint={
-                  tradeStats.avgWin != null && tradeStats.avgLoss != null
-                    ? `ממוצע ${formatCurrency(tradeStats.avgWin, portfolio.currency)} / ${formatCurrency(tradeStats.avgLoss, portfolio.currency)}`
-                    : undefined
-                }
-                visual={
-                  <WinGauge
-                    winRatio={tradeStats.winRate / 100}
-                    green={positive}
-                    red={negative}
-                    track={tokens.colors.border.divider}
-                  />
-                }
-                styles={styles}
-              />
-            ) : null}
-            {periodReturn != null ? (
-              <PerformanceMetricCard
-                label="תשואה"
-                value={formatPercent(periodReturn * 100)}
-                valueColor={gainColor(periodReturn, positive, negative, neutral)}
-                hint={analytics?.twrReturn != null ? 'מנורמל להפקדות' : undefined}
-                visual={
-                  sparkValues.length >= 2 ? (
-                    <Sparkline values={sparkValues} color={gainColor(periodReturn, positive, negative, neutral)} />
-                  ) : null
-                }
-                styles={styles}
-              />
-            ) : null}
             {analytics?.maxDrawdown != null ? (
               <PerformanceMetricCard
-                label="ירידה מקסימלית"
+                label={`ירידה מקסימלית · ${PERIOD_LABEL_HE[period] ?? period}`}
                 value={formatPercent(analytics.maxDrawdown * 100, 1, false)}
                 valueColor={analytics.maxDrawdown > 0.2 ? negative : tokens.colors.text.primary}
-                styles={styles}
-              />
-            ) : null}
-            {analytics?.sharpe != null ? (
-              <PerformanceMetricCard
-                label="Sharpe"
-                value={analytics.sharpe.toFixed(2)}
-                valueColor={
-                  analytics.sharpe >= 1 ? positive : analytics.sharpe >= 0 ? tokens.colors.text.primary : negative
-                }
-                hint="מצטבר על התקופה"
-                visual={
-                  sharpePath.length >= 2 ? (
-                    <Sparkline
-                      values={sharpePath}
-                      color={
-                        analytics.sharpe >= 1
-                          ? positive
-                          : analytics.sharpe >= 0
-                            ? tokens.colors.text.primary
-                            : negative
-                      }
-                      baseline={0}
-                      baselineColor={tokens.colors.border.divider}
-                    />
-                  ) : null
-                }
-                styles={styles}
-              />
-            ) : null}
-            {analytics?.volatility != null ? (
-              <PerformanceMetricCard
-                label="תנודתיות שנתית"
-                value={formatPercent(analytics.volatility * 100, 1)}
-                valueColor={tokens.colors.text.primary}
                 styles={styles}
               />
             ) : null}

@@ -19,7 +19,6 @@ import UICard from '../../components/ui/UICard';
 import UIButton from '../../components/ui/UIButton';
 import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
 import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
-import { WeekDayStrip } from '../../components/ui/WeekDayStrip';
 import { formatEconomicDisplayValue, parseEconomicNumber } from '../../utils/economicNumberFormat';
 import {
   APP_TYPE,
@@ -827,13 +826,6 @@ export default function EconomicCalendarTab({
   }, [openEventId]);
 
   // רינדור אירוע
-  // ימים עם אירועים בחשיבות גבוהה — נקודה בפס הימים
-  const markedDates = useMemo(() => {
-    const set = new Set<string>();
-    for (const e of events) if (e.importance === 'high' && e.date) set.add(e.date);
-    return set;
-  }, [events]);
-
   const renderDateNavigator = () => (
     <View
       style={{
@@ -842,14 +834,62 @@ export default function EconomicCalendarTab({
         paddingBottom: APP_LAYOUT.componentGap,
       }}
     >
-      <WeekDayStrip
-        selectedDate={selectedDate}
-        markedDates={markedDates}
-        onSelect={(d) => {
-          autoScrolledForKeyRef.current = null;
-          setSelectedDate(d);
+      <UICard
+        variant="soft"
+        padding="none"
+        style={{
+          borderRadius: DesignTokens.borderRadius.full,
+          overflow: 'hidden',
+          paddingVertical: APP_LAYOUT.stackGapSmall,
+          paddingHorizontal: APP_LAYOUT.stackGapSmall,
         }}
-      />
+      >
+        <View
+          style={{
+            flexDirection: 'row',
+            direction: 'ltr',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <DayNavBlurButton onPress={goToPreviousDay} style={{ backgroundColor: DesignTokens.colors.background.primary }}>
+            <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.primary} />
+          </DayNavBlurButton>
+
+          <View style={{ alignItems: 'center', flex: 1, paddingHorizontal: 10 }}>
+            <Text
+              style={{
+                ...APP_TYPE.cardTitle,
+                color: DesignTokens.colors.text.primary,
+                textAlign: 'center',
+              }}
+              numberOfLines={2}
+            >
+              {selectedDate.toLocaleDateString('he-IL', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+              })}
+            </Text>
+            {isSelectedToday && (
+              <Text
+                style={{
+                  ...APP_TYPE.caption,
+                  color: DesignTokens.colors.text.secondary,
+                  marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
+                }}
+              >
+                היום
+              </Text>
+            )}
+          </View>
+
+          <DayNavBlurButton onPress={goToNextDay} style={{ backgroundColor: DesignTokens.colors.background.primary }}>
+            <Ionicons name="chevron-forward" size={20} color={DesignTokens.colors.text.primary} />
+          </DayNavBlurButton>
+        </View>
+      </UICard>
     </View>
   );
 

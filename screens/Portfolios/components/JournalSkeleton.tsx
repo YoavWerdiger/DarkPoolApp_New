@@ -17,7 +17,7 @@ import {
 } from '../../Journal/journalLayout';
 import { PORTFOLIO_DETAIL_TABS } from '../portfolioConstants';
 
-const METRIC_LABELS = ['P&L נטו', 'פקטור רווח', 'אחוז הצלחה', 'תשואה', 'ירידה מקסימלית', 'Sharpe', 'תנודתיות שנתית'];
+const METRIC_LABELS = ['היום', 'תשואה', 'רווח לא ממומש', 'P&L נטו', 'אחוז הצלחה', 'פקטור רווח', 'ירידה מקסימלית'];
 const CASH_LABELS = ['הפקדות', 'משיכות', 'עמלות', 'דיבידנדים'];
 
 export function JournalSkeleton() {

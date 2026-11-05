@@ -44,8 +44,13 @@ export function applyLanguageDirection(_lang: AppLanguage): void {
   }
 }
 
-/** כיוון כתיבה של טקסט (bidi) לפי השפה — הפריסה עצמה לא משתנה (עברית/ערבית: rtl, אנגלית: ltr) */
-export const TEXT_DIR: 'rtl' | 'ltr' = isRtlLanguage(getStoredLanguage()) ? 'rtl' : 'ltr';
+/**
+ * כיוון כתיבה של טקסט (bidi) לפי השפה — הפריסה עצמה לא משתנה.
+ * עברית / ערבית: 'rtl'.
+ * אנגלית: 'auto' (לפי התו הראשון) — מחרוזות ממשק באנגלית יוצאות LTR, ותוכן בעברית
+ * (שמות, הודעות, ציוצים) נשאר RTL; 'ltr' קשיח הפך שמות עבריים.
+ */
+export const TEXT_DIR: 'rtl' | 'ltr' | 'auto' = isRtlLanguage(getStoredLanguage()) ? 'rtl' : 'auto';
 
 /**
  * החלפת שפה: שומר ומאתחל את האפליקציה — תוויות שמחושבות פעם אחת (קבועים ברמת מודול)

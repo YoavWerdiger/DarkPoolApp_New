@@ -498,11 +498,13 @@ function nextChargeRow(
   const dateLabel = formatBillingDateHe(expiresAt);
   if (dateLabel && next.primary.includes(dateLabel)) {
     return {
-      label: next.primary.includes('בתוקף') ? i18n.t('auto.screens__Profile__BillingScreen.s37') : i18n.t('auto.screens__Profile__BillingScreen.s38'),
+      // «בתוקף עד» — בכל שפה (הטקסט מגיע מ-billingDisplay המתורגם)
+      label: next.primary.includes('בתוקף') ||
+        next.primary.startsWith(i18n.t('auto.utils__billingDisplay.s17', { v0: '' }).trim()) ? i18n.t('auto.screens__Profile__BillingScreen.s37') : i18n.t('auto.screens__Profile__BillingScreen.s38'),
       value: dateLabel,
     };
   }
-  if (next.primary === 'אין חיוב הבא') {
+  if (next.primary === 'אין חיוב הבא' || next.primary === i18n.t('auto.utils__billingDisplay.s9')) {
     return { label: i18n.t('auto.screens__Profile__BillingScreen.s38'), value: i18n.t('auto.screens__Profile__BillingScreen.s39') };
   }
   return { label: i18n.t('auto.screens__Profile__BillingScreen.s38'), value: next.primary };

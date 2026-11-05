@@ -435,7 +435,9 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
               marginBottom: 12,
             }}
           >
-            {errorMessage.includes('נכשל') || errorMessage.includes('בוטל')
+            {errorMessage.includes('נכשל') ||
+            errorMessage.includes('בוטל') ||
+            errorMessage === i18n.t('auto.screens__Payment__CreditCardCheckoutScreen.s2')
               ? i18n.t('auto.screens__Payment__CreditCardCheckoutScreen.s6')
               : i18n.t('auto.screens__Payment__CreditCardCheckoutScreen.s7')}
           </Text>

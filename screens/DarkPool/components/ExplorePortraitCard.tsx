@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import React, { memo, useMemo } from 'react';
 import {
   Pressable,
@@ -31,6 +32,14 @@ function profileRole(subtitle: string | null | undefined, metric: string | null 
   const raw = subtitle?.trim() ?? '';
   if (!raw || raw === metric?.trim()) return null;
   if (raw === 'קונגרס' || raw === 'בכיר' || raw === 'פעילות אחרונה') return null;
+  // אותן תוויות בשפת הממשק (מגיעות מהשירותים המתורגמים)
+  if (
+    raw === i18n.t('auto.services__darkpool__exploreDiscoveryService.s1') ||
+    raw === i18n.t('auto.services__darkpool__personPortraitService.s1') ||
+    raw === i18n.t('auto.screens__DarkPool__DarkPoolTradeDetailScreen.s1') ||
+    raw === i18n.t('auto.screens__DarkPool__DarkPoolExploreScreen.s3')
+  )
+    return null;
   if (/^דיווח\b/.test(raw)) return null;
   if (/עסקאות|עוקב/.test(raw)) return null;
   return raw;

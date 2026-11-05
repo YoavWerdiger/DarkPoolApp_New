@@ -16,6 +16,7 @@
 		77574E5F2E133658D9678985 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF06652B44FD58D290138FDF /* NotificationService.swift */; };
 		B90495D2E1034CA7ADB0A35C /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFF7DE939E764FF9AD3935F0 /* ShareViewController.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
+		CA64C37E411FB211D8C24223 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 928433523DA4835DF65DADB3 /* SceneDelegate.swift */; };
 		D82D081847F890660C2AC61B /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 22802DDD156242516167610D /* Foundation.framework */; };
 		E782EB8319A344A78801754D /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 97437BED2C7243B380FE3C0E /* PrivacyInfo.xcprivacy */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
@@ -65,6 +66,7 @@
 		6FBDC539FC6618339490A4E5 /* NotificationService.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NotificationService.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		708D50B9CD6448F5BA44D22E /* ShareExtension.entitlements */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = ShareExtension.entitlements; path = ShareExtension.entitlements; sourceTree = "<group>"; };
 		80EAE20E2C5000F4DF789392 /* NotificationService-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "NotificationService-Info.plist"; sourceTree = "<group>"; };
+		928433523DA4835DF65DADB3 /* SceneDelegate.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SceneDelegate.swift; path = DarkPool/SceneDelegate.swift; sourceTree = "<group>"; };
 		97437BED2C7243B380FE3C0E /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = PrivacyInfo.xcprivacy; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = DarkPool/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
@@ -120,6 +122,7 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
+				928433523DA4835DF65DADB3 /* SceneDelegate.swift */,
 			);
 			name = DarkPool;
 			sourceTree = "<group>";
@@ -389,6 +392,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
+				CA64C37E411FB211D8C24223 /* SceneDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

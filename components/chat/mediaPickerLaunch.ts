@@ -1,4 +1,5 @@
-import { InteractionManager, Platform } from 'react-native';
+import { runAfterInteractions } from '../../utils/runAfterInteractions';
+import { Platform } from 'react-native';
 import { SHEET_CLOSE_MS } from '../ui/BottomSheet/sheetMotion';
 
 /** ממתין לסיום אנימציית סגירת ChatBottomSheet (~300ms) לפני Modal/מצלמה. */
@@ -11,7 +12,7 @@ const MODAL_DISMISS_MS = SHEET_CLOSE_MS + (Platform.OS === 'ios' ? 60 : 30);
 export function runAfterSheetDismiss(action: () => void): void {
   requestAnimationFrame(() => {
     setTimeout(() => {
-      InteractionManager.runAfterInteractions(action);
+      runAfterInteractions(action);
     }, MODAL_DISMISS_MS);
   });
 }

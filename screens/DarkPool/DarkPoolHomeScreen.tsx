@@ -1,3 +1,4 @@
+import { runAfterInteractions } from '../../utils/runAfterInteractions';
 /**
  * טאב פיד — עסקאות ממוזגות (קונגרס + Form 4).
  * גילוי לוויתנים בטאב גילוי; מעקב בטאב מעקב.
@@ -6,7 +7,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
-  InteractionManager,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -102,7 +102,7 @@ export default function DarkPoolHomeScreen() {
     )
       .filter((ticker): ticker is string => typeof ticker === 'string' && ticker.trim().length > 0)
       .slice(0, 60);
-    const task = InteractionManager.runAfterInteractions(() => {
+    const task = runAfterInteractions(() => {
       prefetchTickerLogos(tickers);
     });
     return () => task.cancel();

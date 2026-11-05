@@ -1,3 +1,4 @@
+import { runAfterInteractions } from '../../utils/runAfterInteractions';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useRef, useState, useCallback, useMemo, useEffect } from 'react';
 import {
@@ -7,7 +8,6 @@ import {
   ActivityIndicator,
   ScrollView,
   Dimensions,
-  InteractionManager,
   Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -287,7 +287,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
       setIsExporting(true);
       void HapticFeedback.impactLight();
       await new Promise<void>((resolve) => {
-        InteractionManager.runAfterInteractions(() => {
+        runAfterInteractions(() => {
           requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
         });
       });

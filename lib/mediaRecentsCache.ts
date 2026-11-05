@@ -1,4 +1,4 @@
-import { InteractionManager } from 'react-native';
+import { runAfterInteractions } from '../utils/runAfterInteractions';
 import { Image as ExpoImage } from 'expo-image';
 import * as MediaLibrary from 'expo-media-library/legacy';
 
@@ -194,7 +194,7 @@ export async function prefetchMediaRecents(
 
 /** prefetch ב-idle — לא חוסם mount של הקומפוזר. */
 export function scheduleMediaRecentsPrefetch(kind: MediaRecentsKind = 'all'): { cancel: () => void } {
-  const task = InteractionManager.runAfterInteractions(() => {
+  const task = runAfterInteractions(() => {
     void prefetchMediaRecents(kind);
   });
   return { cancel: () => task.cancel() };

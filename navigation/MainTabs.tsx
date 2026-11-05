@@ -1,3 +1,4 @@
+import { runAfterInteractions } from '../utils/runAfterInteractions';
 import React, { useEffect, useMemo } from 'react';
 import {
   View,
@@ -7,7 +8,6 @@ import {
   ScrollView,
   Dimensions,
   Image,
-  InteractionManager,
   Platform,
 } from 'react-native';
 import { UserNameRow, badgeSizeForLineHeight } from '../components/ui/badges/UserBadges';
@@ -228,7 +228,7 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
                 void HapticFeedback.selection();
                 // סוגרים מגירה קודם — mount של מסך כבד אחרי האנימציה מונע גמגום
                 navigation.closeDrawer();
-                InteractionManager.runAfterInteractions(() => {
+                runAfterInteractions(() => {
                   navigateDrawerItem(navigation, item.name);
                 });
               }}

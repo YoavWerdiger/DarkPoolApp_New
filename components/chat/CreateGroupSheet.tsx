@@ -5,8 +5,9 @@
 // כרטיס הגדרות cardSolid ו-CTA UIButton בתחתית.
 // ============================================
 
-import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Pressable, Image } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { View, Text, TextInput, StyleSheet, Pressable, Image, Keyboard } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import * as ImagePicker from 'expo-image-picker';
 import { mediaService } from '../../services/mediaService';
 import { SHEET_CLOSE_MS } from '../ui/BottomSheet/sheetMotion';
@@ -48,6 +49,7 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const descRef = useRef<TextInput>(null);
   const [isAnnouncement, setIsAnnouncement] = useState(false);
   const [imageUri, setImageUri] = useState<string | null>(null);
   /** מסלולים שרואים ויכולים להצטרף */
@@ -156,6 +158,15 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
       avoidKeyboard
       contentPaddingBottom={0}
     >
+      {/* גלילה עם המקלדת: כשהשיט מתכווץ מעליה, «צור קבוצה» נשאר נגיש; הקשה מחוץ לשדה סוגרת אותה */}
+      <KeyboardAwareScrollView
+        style={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        bottomOffset={24}
+        showsVerticalScrollIndicator={false}
+      >
+      <Pressable onPress={Keyboard.dismiss} accessible={false}>
       <View style={[styles.root, { paddingBottom: Math.max(insets.bottom, 12) }]} onLayout={onContentLayout}>
         <ChatSheetTopoHeader title="קבוצה חדשה" onClose={handleClose} />
 
@@ -189,6 +200,8 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
             style={[formFieldInputStyle(tokens), appPhysicalRightText, styles.fieldInput]}
             maxLength={80}
             returnKeyType="next"
+            submitBehavior="submit"
+            onSubmitEditing={() => descRef.current?.focus()}
           />
         </View>
 
@@ -202,6 +215,7 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
           ]}
         >
           <TextInput
+            ref={descRef}
             value={description}
             onChangeText={setDescription}
             onFocus={() => setFocused('desc')}
@@ -212,6 +226,8 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
             multiline
             maxLength={500}
             textAlignVertical="top"
+            returnKeyType="done"
+            submitBehavior="blurAndSubmit"
           />
         </View>
 
@@ -290,11 +306,16 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
         />
         </View>
       </View>
+      </Pressable>
+      </KeyboardAwareScrollView>
     </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
+  scroll: {
+    flex: 1,
+  },
   root: {
     direction: 'rtl',
     paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,

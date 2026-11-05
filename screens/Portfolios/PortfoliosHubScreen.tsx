@@ -119,6 +119,8 @@ export default function PortfoliosHubScreen() {
   if (portfolios.length > 0 && selectedId) {
     return (
       <PortfolioDetailScreen
+        // מעבר תיק = מסך חדש: בלי מיקום גלילה / מצב מהתיק הקודם (ריג'קט: התצוגה זזה הצידה)
+        key={selectedId}
         embedded={{
           portfolioId: selectedId,
           portfolios,

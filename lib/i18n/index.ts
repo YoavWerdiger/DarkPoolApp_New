@@ -13,6 +13,7 @@ import ar from './locales/ar';
 // טקסט שחולץ אוטומטית מהקוד (scripts/i18n-extract.js) — namespace אחד לכל קובץ מקור
 import heAuto from './locales/he.auto.json';
 import enAuto from './locales/en.auto.json';
+import arAuto from './locales/ar.auto.json';
 import { getStoredLanguage } from './language';
 
 export { APP_LANGUAGES, changeLanguage, getStoredLanguage, isRtlLanguage, type AppLanguage } from './language';
@@ -21,8 +22,7 @@ void i18n.use(initReactI18next).init({
   resources: {
     he: { translation: { ...he, auto: heAuto } },
     en: { translation: { ...en, auto: enAuto } },
-    // ערבית: עד שיתווסף ar.auto.json — טקסט שחולץ נופל לעברית
-    ar: { translation: ar },
+    ar: { translation: { ...ar, auto: arAuto } },
   },
   lng: getStoredLanguage(),
   fallbackLng: 'he',

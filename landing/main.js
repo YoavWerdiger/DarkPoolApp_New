@@ -335,6 +335,36 @@
     .to('.manifesto-text .w', { opacity: 1, ease: 'none', stagger: 0.1, duration: 0.5 }, 0)
     .fromTo('.manifesto-aside', { opacity: 0, y: 16 }, { opacity: 1, y: 0, ease: 'none', duration: 0.25 }, 0.75);
 
+  /* ---- app map: the side menu slides in, then each group lights its items ---- */
+  const drawer = document.querySelector('.drawer');
+  const grps = document.querySelectorAll('.grp');
+  const setGroup = (g) => {
+    if (drawer.dataset.g === String(g)) return;
+    drawer.dataset.g = String(g);
+    grps.forEach((el) => el.classList.toggle('is-on', el.dataset.g === String(g)));
+  };
+  gsap.matchMedia().add('(min-width: 901px)', () => {
+    const tl = gsap.timeline({
+      scrollTrigger: {
+        trigger: '.navmap', start: 'top top', end: '+=260%', pin: '.navmap-pin', scrub: 0.6, anticipatePin: 1,
+        onUpdate: (self) => {
+          const p = Math.max(0, (self.progress - 0.12) / 0.88);
+          setGroup(Math.min(4, 1 + Math.floor(p * 4)));
+        },
+      },
+    });
+    tl.fromTo(drawer, { xPercent: 100 }, { xPercent: 0, ease: 'power3.out', duration: 0.12 }, 0)
+      .to({}, { duration: 0.88 });
+  });
+  gsap.matchMedia().add('(max-width: 900px)', () => {
+    let g = 1, inView = false;
+    const io = new IntersectionObserver(([e]) => { inView = e.isIntersecting; }, { threshold: 0.3 });
+    io.observe(document.querySelector('.navmap-stage'));
+    const id = setInterval(() => { if (inView) { g = (g % 4) + 1; setGroup(g); } }, 2200);
+    return () => { clearInterval(id); io.disconnect(); };
+  });
+  gsap.from('.navmap-copy > *', { y: 30, opacity: 0, duration: 1, ease: 'expo.out', stagger: 0.08, scrollTrigger: { trigger: '.navmap', start: 'top 70%' } });
+
   /* ---- generic reveals ---- */
   gsap.utils.toArray('.reveal').forEach((el) => {
     gsap.fromTo(el, { y: 50, opacity: 0, filter: 'blur(8px)' }, {

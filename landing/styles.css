@@ -907,3 +907,54 @@ p { margin: 0; }
 /* sticky phone: GSAP owns the screen change (fast exit, soft entry, no blur) */
 .story-phone.gsap-screens .screen { transition: none; filter: none; transform: none; background: var(--bg); will-change: transform, clip-path; }
 .story-phone.gsap-screens .screen.is-active { pointer-events: none; }
+
+/* ================= APP MAP: the side menu ================= */
+.navmap-pin { min-height: 100vh; display: flex; align-items: center; padding: 100px 0 40px; }
+.navmap-inner { width: 100%; max-width: var(--maxw); margin: 0 auto; padding: 0 var(--gutter); display: grid; grid-template-columns: 1.05fr 1fr; gap: 50px; align-items: center; }
+.grps { list-style: none; margin: 34px 0 0; padding: 0; display: grid; gap: 6px; }
+.grp { display: flex; gap: 16px; padding: 16px 18px; border-radius: 20px; opacity: 0.35; transition: opacity 400ms var(--ease-out), background-color 400ms ease; }
+.grp.is-on { opacity: 1; background: var(--surface-1); }
+.grp-num { font-size: 13px; font-weight: 800; color: var(--text-3); padding-top: 5px; font-variant-numeric: tabular-nums; }
+.grp.is-on .grp-num { color: var(--green-text); }
+.grp b { font-size: 22px; display: block; }
+.grp p { color: var(--text-2); font-size: 16px; margin-top: 2px; }
+.grp-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.grp-chips em { font-style: normal; font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: var(--bg); color: var(--text-2); }
+.navmap-stage { display: grid; place-items: center; }
+.navmap-phone .phone-screen { padding: 0; }
+.dr-backdrop { position: absolute; inset: 0; padding: 70px 16px; display: flex; flex-direction: column; gap: 14px; background: var(--bg); }
+.dr-backdrop i { height: 44px; border-radius: 14px; background: var(--surface-1); }
+.dr-backdrop::after { content: ""; position: absolute; inset: 0; background: rgba(0, 0, 0, 0.45); }
+.drawer { position: absolute; top: 0; bottom: 0; right: 0; width: 80%; z-index: 3; display: flex; flex-direction: column; padding: 56px 12px 16px; background: var(--surface-1); border-radius: 26px 0 0 26px; box-shadow: -20px 0 40px -20px rgba(0, 0, 0, 0.5); }
+.dr-logo { width: 150px; margin: 0 auto 14px; }
+.dr-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; flex: 1; }
+.dr-row { display: flex; align-items: center; gap: 12px; padding: 9px 12px; border-radius: 14px; font-size: 14.5px; font-weight: 600; color: var(--text); transition: background-color 350ms ease, color 350ms ease, opacity 350ms ease; opacity: 0.45; }
+.dr-row .i { width: 20px; height: 20px; flex: none; }
+.dr-row span { flex: 1; }
+.dr-chev { font-style: normal; color: var(--green-text); font-size: 18px; opacity: 0; transition: opacity 300ms ease; }
+.drawer[data-g="1"] .dr-row[data-g="1"], .drawer[data-g="2"] .dr-row[data-g="2"], .drawer[data-g="3"] .dr-row[data-g="3"], .drawer[data-g="4"] .dr-row[data-g="4"] { opacity: 1; background: var(--green-soft); color: var(--green-text); }
+.drawer[data-g="1"] .dr-row[data-g="1"] .dr-chev, .drawer[data-g="2"] .dr-row[data-g="2"] .dr-chev, .drawer[data-g="3"] .dr-row[data-g="3"] .dr-chev, .drawer[data-g="4"] .dr-row[data-g="4"] .dr-chev { opacity: 1; }
+.dr-profile { display: flex; align-items: center; gap: 10px; padding: 12px 8px 4px; border-top: 1px solid var(--line); }
+.dr-profile .def-av { width: 34px; height: 34px; flex: none; border: 0; }
+.dr-profile div { display: flex; flex-direction: column; }
+.dr-profile b { font-size: 13px; }
+.dr-profile small { font-size: 10.5px; color: var(--text-2); }
+@media (max-width: 900px) {
+  .navmap-pin { min-height: auto; padding: 60px 0; }
+  .navmap-inner { grid-template-columns: 1fr; gap: 30px; }
+  .navmap-stage { order: -1; height: 600px; }
+  .navmap-phone { transform: scale(0.86); transform-origin: top center; }
+  .grp { opacity: 1; background: var(--surface-1); }
+}
+
+/* app map: only the active group opens its description and items */
+.grps { margin-top: 26px; gap: 4px; }
+.grp { padding: 12px 18px; }
+.grp p, .grp-chips { max-height: 0; opacity: 0; overflow: hidden; margin-top: 0; transition: max-height 450ms var(--ease-out), opacity 300ms ease, margin-top 450ms var(--ease-out); }
+.grp.is-on p { max-height: 60px; opacity: 1; margin-top: 2px; }
+.grp.is-on .grp-chips { max-height: 90px; opacity: 1; margin-top: 10px; }
+.navmap .section-title { font-size: clamp(38px, 5vw, 64px); }
+@media (max-width: 900px) {
+  .grp p, .grp-chips { max-height: none; opacity: 1; }
+  .grp .grp-chips { margin-top: 10px; }
+}

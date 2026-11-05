@@ -19,7 +19,7 @@
     } catch (e) {}
   </script>
   <link rel="icon" href="assets/icon.png" />
-  <link rel="stylesheet" href="styles.css?v=38" />
+  <link rel="stylesheet" href="styles.css?v=42" />
 </head>
 <body>
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -80,6 +80,7 @@
     </a>
     <nav class="nav-links" aria-label="ניווט ראשי">
       <a href="#story">האפליקציה</a>
+      <a href="#map">המבנה</a>
       <a href="#insiders">אינסיידרים</a>
       <a href="#faq">שאלות</a>
     </nav>
@@ -155,6 +156,34 @@
     <section class="manifesto">
       <p class="manifesto-text" data-split>מקום אחד לכל מה שאתם עושים בשוק.</p>
       <p class="manifesto-aside">אפשר לסגור את 12 הטאבים הפתוחים.</p>
+    </section>
+
+    <!-- ============ APP MAP (side menu) ============ -->
+    <section class="navmap" id="map">
+      <div class="navmap-pin">
+        <div class="navmap-inner">
+          <div class="navmap-copy">
+            <p class="eyebrow">המבנה</p>
+            <h2 class="section-title">הכל במרחק <span class="accent">החלקה אחת</span></h2>
+            <p class="section-sub">תפריט צד אחד מוביל לכל מערכת: ארבעה עולמות, עשר מערכות וחשבון אחד.</p>
+            <ol class="grps"><li class="grp is-on" data-g="1"><span class="grp-num">01</span><div><b>הקהילה</b><p>שיחה, שאלות ורעיונות עם סוחרים אחרים, בכל שעה.</p><span class="grp-chips"><em>הקהילה</em><em>ציוצים</em></span></div></li><li class="grp" data-g="2"><span class="grp-num">02</span><div><b>השוק</b><p>כל מה שקורה בשוק, מסודר ומעודכן במקום אחד.</p><span class="grp-chips"><em>חדשות</em><em>דיווחי רווח</em><em>יומן כלכלי</em><em>מפת חום</em><em>רשימת מעקב</em></span></div></li><li class="grp" data-g="3"><span class="grp-num">03</span><div><b>הכסף הגדול</b><p>מה מדווחים פוליטיקאים, מנהלי חברות וקרנות ענק.</p><span class="grp-chips"><em>אינסיידרים</em></span></div></li><li class="grp" data-g="4"><span class="grp-num">04</span><div><b>אתם</b><p>הביצועים שלכם והלמידה שלכם, לאורך זמן.</p><span class="grp-chips"><em>יומן מסחר</em><em>האקדמיה</em></span></div></li></ol>
+          </div>
+          <div class="navmap-stage">
+            <div class="phone navmap-phone" aria-hidden="true">
+              <div class="phone-notch"></div>
+              <div class="phone-screen">
+                <div class="status"><b>9:41</b><span><i class="sig"></i><i class="wifi"></i><i class="bat"></i></span></div>
+                <div class="dr-backdrop"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+                <div class="drawer" data-g="1">
+                  <img src="assets/drawer-logo.png" alt="" class="dr-logo on-dark" /><img src="assets/drawer-logo-light.png" alt="" class="dr-logo on-light" />
+                  <ul class="dr-list"><li class="dr-row" data-g="1"><svg class="i"><use href="#i-users"/></svg><span>הקהילה</span><i class="dr-chev">‹</i></li><li class="dr-row" data-g="4"><svg class="i"><use href="#i-school"/></svg><span>האקדמיה</span><i class="dr-chev">‹</i></li><li class="dr-row" data-g="4"><svg class="i"><use href="#i-book"/></svg><span>יומן מסחר</span><i class="dr-chev">‹</i></li><li class="dr-row" data-g="3"><svg class="i"><use href="#i-eye"/></svg><span>אינסיידרים</span><i class="dr-chev">‹</i></li><li class="dr-row" data-g="2"><svg class="i"><use href="#i-news"/></svg><span>חדשות</span><i class="dr-chev">‹</i></li><li class="dr-row" data-g="1"><svg class="i"><use href="#i-at"/></svg><span>ציוצים</span><i class="dr-chev">‹</i></li><li class="dr-row" data-g="2"><svg class="i"><use href="#i-bars"/></svg><span>דיווחי רווח</span><i class="dr-chev">‹</i></li><li class="dr-row" data-g="2"><svg class="i"><use href="#i-calendar"/></svg><span>יומן כלכלי</span><i class="dr-chev">‹</i></li><li class="dr-row" data-g="2"><svg class="i"><use href="#i-star"/></svg><span>רשימת מעקב</span><i class="dr-chev">‹</i></li><li class="dr-row" data-g="2"><svg class="i"><use href="#i-grid"/></svg><span>מפת חום</span><i class="dr-chev">‹</i></li></ul>
+                  <div class="dr-profile"><span class="def-av"><svg class="i"><use href="#i-person"/></svg></span><div><b>הפרופיל שלכם</b><small>פעילים מאז היום</small></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- ============ STORY (pinned phone) ============ -->
@@ -424,6 +453,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
   <script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js"></script>
-  <script src="main.js?v=38"></script>
+  <script src="main.js?v=42"></script>
 </body>
 </html>

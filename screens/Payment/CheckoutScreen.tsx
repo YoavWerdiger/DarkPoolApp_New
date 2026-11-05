@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect } from 'react';
@@ -53,12 +54,12 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
 
   const handlePayment = async () => {
     if (!user) {
-      legacyAlert('שגיאה', 'נדרש להתחבר למערכת');
+      legacyAlert(i18n.t('auto.screens__Payment__CheckoutScreen.s1'), i18n.t('auto.screens__Payment__CheckoutScreen.s2'));
       return;
     }
 
     if (!plan) {
-      legacyAlert('שגיאה', 'תוכנית מנוי לא נמצאה');
+      legacyAlert(i18n.t('auto.screens__Payment__CheckoutScreen.s1'), i18n.t('auto.screens__Payment__CheckoutScreen.s3'));
       return;
     }
 
@@ -69,11 +70,11 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
       if (selectedPlan === 'free') {
         void HapticFeedback.success();
         legacyAlert(
-          'הרשמה הושלמה!',
-          'החשבון החינמי שלך נוצר בהצלחה.',
+          i18n.t('auto.screens__Payment__CheckoutScreen.s4'),
+          i18n.t('auto.screens__Payment__CheckoutScreen.s5'),
           [
             {
-              text: 'אישור',
+              text: i18n.t('auto.screens__Payment__CheckoutScreen.s6'),
               onPress: () => {
                 if (fromRegistration) {
                   navigation.navigate('RegistrationSummary');
@@ -91,11 +92,11 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
       const paymentRequest = {
         amount: plan.price,
         currency: 'ILS',
-        description: `מנוי ${plan.name} - ${user.email}`,
+        description: i18n.t('auto.screens__Payment__CheckoutScreen.s7', { v0: plan.name, v1: user.email }),
         userId: user.id,
         planId: selectedPlan,
         userEmail: user?.email || '',
-        userName: user?.display_name || user?.email || 'משתמש'
+        userName: user?.display_name || user?.email || i18n.t('auto.screens__Payment__CheckoutScreen.s8')
       };
 
       const paymentResponse = await paymentService.createPaymentRequest(paymentRequest);
@@ -108,11 +109,11 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
           await Linking.openURL(paymentResponse.paymentUrl);
           void HapticFeedback.impactLight();
           legacyAlert(
-            'העברה לדף התשלום',
-            'אנא השלם את התשלום בדף שנפתח. לאחר השלמת התשלום, תועבר חזרה לאפליקציה.',
+            i18n.t('auto.screens__Payment__CheckoutScreen.s9'),
+            i18n.t('auto.screens__Payment__CheckoutScreen.s10'),
             [
               {
-                text: 'אישור',
+                text: i18n.t('auto.screens__Payment__CheckoutScreen.s6'),
                 onPress: () => {
                   if (fromRegistration) {
                     navigation.navigate('RegistrationSummary');
@@ -133,8 +134,8 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
     } catch (error) {
       void HapticFeedback.error();
       legacyAlert(
-        'שגיאה בתשלום', 
-        error instanceof Error ? error.message : 'אירעה שגיאה בעיבוד התשלום. אנא נסה שוב.'
+        i18n.t('auto.screens__Payment__CheckoutScreen.s11'), 
+        error instanceof Error ? error.message : i18n.t('auto.screens__Payment__CheckoutScreen.s12')
       );
     } finally {
       setLoading(false);
@@ -211,16 +212,14 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
                 fontWeight: '800',
                 writingDirection: TEXT_DIR
               }}>
-                {plan.price === 0 ? 'חינם' : `₪${plan.price}`}
+                {plan.price === 0 ? i18n.t('auto.screens__Payment__CheckoutScreen.s13') : `₪${plan.price}`}
               </Text>
               <Text style={{ 
                 color: DesignTokens.colors.text.secondary, 
                 fontSize: 16, 
                 marginLeft: 8,
                 writingDirection: TEXT_DIR
-              }}>
-                לחודש
-              </Text>
+              }}>{i18n.t('auto.screens__Payment__CheckoutScreen.s14')}</Text>
             </View>
           </View>
           
@@ -235,9 +234,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
                 color: DesignTokens.colors.text.inverse,
                 fontSize: 12,
                 fontWeight: '600',
-              }}>
-                מומלץ
-              </Text>
+              }}>{i18n.t('auto.screens__Payment__CheckoutScreen.s15')}</Text>
             </View>
           )}
         </View>
@@ -250,9 +247,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
             fontWeight: '600', 
             marginBottom: 12,
             writingDirection: TEXT_DIR
-          }}>
-            מה כלול בתוכנית:
-          </Text>
+          }}>{i18n.t('auto.screens__Payment__CheckoutScreen.s16')}</Text>
           
           {plan.features.map((feature, index) => (
             <View key={index} style={{ 
@@ -297,9 +292,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
           fontSize: 16, 
           fontWeight: '600',
           writingDirection: TEXT_DIR
-        }}>
-          אבטחה מלאה
-        </Text>
+        }}>{i18n.t('auto.screens__Payment__CheckoutScreen.s17')}</Text>
       </View>
       
       <View style={{ gap: 8 }}>
@@ -309,9 +302,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
             color: DesignTokens.colors.text.secondary, 
             fontSize: 12,
             writingDirection: TEXT_DIR
-          }}>
-            תשלום מאובטח עם CardCom
-          </Text>
+          }}>{i18n.t('auto.screens__Payment__CheckoutScreen.s18')}</Text>
         </View>
         
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -320,9 +311,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
             color: DesignTokens.colors.text.secondary, 
             fontSize: 12,
             writingDirection: TEXT_DIR
-          }}>
-            הצפנת SSL 256-bit
-          </Text>
+          }}>{i18n.t('auto.screens__Payment__CheckoutScreen.s19')}</Text>
         </View>
         
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -331,9 +320,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
             color: DesignTokens.colors.text.secondary, 
             fontSize: 12,
             writingDirection: TEXT_DIR
-          }}>
-            ביטול מנוי בכל עת
-          </Text>
+          }}>{i18n.t('auto.screens__Payment__CheckoutScreen.s20')}</Text>
         </View>
       </View>
     </UICard>
@@ -354,9 +341,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
         fontWeight: '600', 
         marginBottom: 16,
         writingDirection: TEXT_DIR
-      }}>
-        סיכום התשלום
-      </Text>
+      }}>{i18n.t('auto.screens__Payment__CheckoutScreen.s21')}</Text>
       
       <View style={{ 
         flexDirection: 'row', 
@@ -375,7 +360,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
           fontSize: 14,
           fontWeight: '600'
         }}>
-          {plan?.price === 0 ? 'חינם' : `₪${plan?.price}`}
+          {plan?.price === 0 ? i18n.t('auto.screens__Payment__CheckoutScreen.s13') : `₪${plan?.price}`}
         </Text>
       </View>
       
@@ -388,9 +373,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
           color: DesignTokens.colors.text.secondary, 
           fontSize: 14,
           writingDirection: TEXT_DIR
-        }}>
-          מע"מ
-        </Text>
+        }}>{i18n.t('auto.screens__Payment__CheckoutScreen.s22')}</Text>
         <Text style={{ 
           color: DesignTokens.colors.text.primary, 
           fontSize: 14,
@@ -415,15 +398,13 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
           fontSize: 18,
           fontWeight: '700',
           writingDirection: TEXT_DIR
-        }}>
-          סה"כ
-        </Text>
+        }}>{i18n.t('auto.screens__Payment__CheckoutScreen.s23')}</Text>
         <Text style={{ 
           color: DesignTokens.colors.primary.main, 
           fontSize: 18,
           fontWeight: '700'
         }}>
-          {plan?.price === 0 ? 'חינם' : `₪${Math.round((plan?.price || 0) * 1.17)}`}
+          {plan?.price === 0 ? i18n.t('auto.screens__Payment__CheckoutScreen.s13') : `₪${Math.round((plan?.price || 0) * 1.17)}`}
         </Text>
       </View>
     </UICard>
@@ -432,7 +413,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
   return (
     <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
-        <ChatSubScreenHeader title="צ'קאאוט" onBack={() => navigation.goBack()} />
+        <ChatSubScreenHeader title={i18n.t('auto.screens__Payment__CheckoutScreen.s24')} onBack={() => navigation.goBack()} />
 
       <ScrollView
         style={{ flex: 1 }}
@@ -484,7 +465,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
                   fontWeight: '700',
                   writingDirection: TEXT_DIR,
                 }}>
-                  {plan?.price === 0 ? 'המשך בחינם' : 'שלם עכשיו'}
+                  {plan?.price === 0 ? i18n.t('auto.screens__Payment__CheckoutScreen.s25') : i18n.t('auto.screens__Payment__CheckoutScreen.s26')}
                 </Text>
               </View>
             )}
@@ -498,9 +479,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
             marginTop: 16,
             lineHeight: 18,
             writingDirection: TEXT_DIR
-          }}>
-            בלחיצה על "שלם עכשיו" אתה מסכים לתנאי השימוש ומדיניות הפרטיות שלנו
-          </Text>
+          }}>{i18n.t('auto.screens__Payment__CheckoutScreen.s27')}</Text>
         </View>
       </ScrollView>
       </RNSafeAreaView>

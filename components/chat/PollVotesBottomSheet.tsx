@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, Image, ActivityIndicator, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -77,13 +78,13 @@ export default function PollVotesBottomSheet({
             size={DAY_NAV_BUTTON_SIZE}
             glassIntensity="subtle"
             style={styles.headerIconButton}
-            accessibilityLabel="חזרה"
+            accessibilityLabel={i18n.t('auto.components__chat__PollVotesBottomSheet.s1')}
           >
             <Ionicons name="chevron-forward" size={22} color={DesignTokens.colors.text.primary} />
           </DayNavBlurButton>
 
           <View style={styles.headerCenter}>
-            <Text style={styles.title}>פירוט הצבעות</Text>
+            <Text style={styles.title}>{i18n.t('auto.components__chat__PollVotesBottomSheet.s2')}</Text>
           </View>
 
           <View style={styles.headerSpacer} />
@@ -100,7 +101,7 @@ export default function PollVotesBottomSheet({
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator color={DesignTokens.colors.primary.main} size="large" />
-            <Text style={styles.loadingText}>טוען פירוט הצבעות...</Text>
+            <Text style={styles.loadingText}>{i18n.t('auto.components__chat__PollVotesBottomSheet.s3')}</Text>
           </View>
         ) : (
           <ScrollView 
@@ -109,7 +110,7 @@ export default function PollVotesBottomSheet({
             showsVerticalScrollIndicator={false}
           >
             {pollOptions.length === 0 ? (
-              <Text style={styles.noOptionsText}>אין אופציות</Text>
+              <Text style={styles.noOptionsText}>{i18n.t('auto.components__chat__PollVotesBottomSheet.s4')}</Text>
             ) : (
               pollOptions.map((option) => {
                 const voters = getVotersForOption(option.id);
@@ -134,7 +135,7 @@ export default function PollVotesBottomSheet({
                     </View>
 
                     {voters.length === 0 ? (
-                      <Text style={styles.noVotersText}>אין הצבעות</Text>
+                      <Text style={styles.noVotersText}>{i18n.t('auto.components__chat__PollVotesBottomSheet.s5')}</Text>
                     ) : (
                       <View style={styles.votersList}>
                         {voters.map((voter) => (
@@ -150,7 +151,7 @@ export default function PollVotesBottomSheet({
                             )}
                             <UserNameRow userId={voter.id} style={styles.voterNameRow}>
                               <Text style={styles.voterName} numberOfLines={1}>
-                                {voter.display_name || 'משתמש'}
+                                {voter.display_name || i18n.t('auto.components__chat__PollVotesBottomSheet.s6')}
                               </Text>
                             </UserNameRow>
                           </View>

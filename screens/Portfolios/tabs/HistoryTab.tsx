@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import { JournalListSkeleton } from '../../../components/ui/SkeletonLoader';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -154,10 +155,8 @@ export default function HistoryTab({ portfolioId, refreshKey }: Props) {
           size={42}
           color={tokens.colors.text.tertiary}
         />
-        <Text style={layoutStyles.emptyTitle}>אין טריידים סגורים עדיין</Text>
-        <Text style={layoutStyles.emptyText}>
-          כשתסגור פוזיציות (קנייה+מכירה / שורט+כיסוי) הן יופיעו כאן עם תוצאה מומשת.
-        </Text>
+        <Text style={layoutStyles.emptyTitle}>{i18n.t('auto.screens__Portfolios__tabs__HistoryTab.s1')}</Text>
+        <Text style={layoutStyles.emptyText}>{i18n.t('auto.screens__Portfolios__tabs__HistoryTab.s2')}</Text>
       </View>
     );
   }
@@ -182,7 +181,7 @@ export default function HistoryTab({ portfolioId, refreshKey }: Props) {
             <TextInput
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholder="חיפוש לפי סימבול..."
+              placeholder={i18n.t('auto.screens__Portfolios__tabs__HistoryTab.s3')}
               placeholderTextColor={tokens.colors.text.tertiary}
               style={layoutStyles.searchTextInput}
               returnKeyType="search"
@@ -217,9 +216,7 @@ export default function HistoryTab({ portfolioId, refreshKey }: Props) {
             size={36}
             color={tokens.colors.text.tertiary}
           />
-          <Text style={layoutStyles.emptyResultsText}>
-            לא נמצאו טריידים עבור "{searchQuery.trim()}"
-          </Text>
+          <Text style={layoutStyles.emptyResultsText}>{i18n.t('auto.screens__Portfolios__tabs__HistoryTab.s4', { v0: searchQuery.trim() })}</Text>
         </View>
       ) : (
         <PortfolioTradesTable

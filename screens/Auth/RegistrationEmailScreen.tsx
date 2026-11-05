@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text } from 'react-native';
@@ -49,7 +50,7 @@ const RegistrationEmailScreen = ({ navigation }: { navigation: any }) => {
         const { exists, error: emailError } = await AuthService.checkEmailExists(email.trim());
 
         if (emailError) {
-          setError('שגיאה בבדיקת המייל');
+          setError(i18n.t('auto.screens__Auth__RegistrationEmailScreen.s1'));
         } else if (exists === true) {
           const normalized = email.trim().toLowerCase();
           const resumeSame =
@@ -58,13 +59,13 @@ const RegistrationEmailScreen = ({ navigation }: { navigation: any }) => {
           if (resumeSame) {
             setError('');
           } else {
-            setError('המייל כבר רשום במערכת');
+            setError(i18n.t('auto.screens__Auth__RegistrationEmailScreen.s2'));
           }
         } else {
           setError('');
         }
       } catch {
-        setError('שגיאה בבדיקת המייל');
+        setError(i18n.t('auto.screens__Auth__RegistrationEmailScreen.s1'));
       } finally {
         setCheckingEmail(false);
       }
@@ -83,12 +84,12 @@ const RegistrationEmailScreen = ({ navigation }: { navigation: any }) => {
     setError('');
 
     if (!formatOk) {
-      setError('אנא הכנס כתובת אימייל תקינה');
+      setError(i18n.t('auto.screens__Auth__RegistrationEmailScreen.s3'));
       return;
     }
 
     if (email.trim().length === 0) {
-      setError('אנא הכנס כתובת אימייל');
+      setError(i18n.t('auto.screens__Auth__RegistrationEmailScreen.s4'));
       return;
     }
 
@@ -105,7 +106,7 @@ const RegistrationEmailScreen = ({ navigation }: { navigation: any }) => {
       const { exists, error: emailError } = await AuthService.checkEmailExists(normalized);
 
       if (emailError) {
-        setError('שגיאה בבדיקת המייל - אנא נסה שוב');
+        setError(i18n.t('auto.screens__Auth__RegistrationEmailScreen.s5'));
         return;
       }
       if (exists === true) {
@@ -114,7 +115,7 @@ const RegistrationEmailScreen = ({ navigation }: { navigation: any }) => {
           data.email?.toLowerCase() === normalized &&
           (!!data.emailOtpSentAt || !!data.pendingAuthUserId || data.emailVerified);
         if (!resumeSame) {
-          setError('המייל כבר רשום במערכת');
+          setError(i18n.t('auto.screens__Auth__RegistrationEmailScreen.s2'));
           return;
         }
       }
@@ -132,7 +133,7 @@ const RegistrationEmailScreen = ({ navigation }: { navigation: any }) => {
       navigation.navigate('RegistrationEmailVerification');
     } catch (err) {
       console.error('[RegistrationEmailScreen] חריגה ב-handleNext:', err);
-      setError('שגיאה בבדיקת המייל - אנא נסה שוב');
+      setError(i18n.t('auto.screens__Auth__RegistrationEmailScreen.s5'));
     } finally {
       setLoading(false);
     }
@@ -140,8 +141,8 @@ const RegistrationEmailScreen = ({ navigation }: { navigation: any }) => {
 
   return (
     <CashAppScreen
-      title="מה האימייל שלך?"
-      subtitle="ישמש להתחברות ולהתראות חשובות"
+      title={i18n.t('auto.screens__Auth__RegistrationEmailScreen.s6')}
+      subtitle={i18n.t('auto.screens__Auth__RegistrationEmailScreen.s7')}
       currentStep={ONBOARDING_STEPS.email}
       totalSteps={ONBOARDING_TOTAL_STEPS}
       progressVariant="dots"
@@ -155,7 +156,7 @@ const RegistrationEmailScreen = ({ navigation }: { navigation: any }) => {
       }}
       footer={
         <CashAppButton
-          title="המשך"
+          title={i18n.t('auto.screens__Auth__RegistrationEmailScreen.s8')}
           variant="primary"
           size="lg"
           onPress={handleNext}
@@ -194,7 +195,7 @@ const RegistrationEmailScreen = ({ navigation }: { navigation: any }) => {
       ) : null}
 
       <CashAppInput
-        label="כתובת אימייל"
+        label={i18n.t('auto.screens__Auth__RegistrationEmailScreen.s9')}
         placeholder="you@example.com"
         value={email}
         onChangeText={(t) => {
@@ -207,10 +208,10 @@ const RegistrationEmailScreen = ({ navigation }: { navigation: any }) => {
         autoFocus
         helperText={
           checkingEmail
-            ? 'בודק זמינות...'
+            ? i18n.t('auto.screens__Auth__RegistrationEmailScreen.s10')
             : error
             ? undefined
-            : 'בשלב הבא נשלח אליך קוד אימות למייל'
+            : i18n.t('auto.screens__Auth__RegistrationEmailScreen.s11')
         }
       />
       <EmailDomainChips

@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { createContext, useCallback, useContext, useLayoutEffect, useState } from 'react';
 import UIAlert, { type UIAlertButton } from './UIAlert';
 import { registerAppDialog, type AppDialogOptions } from '../../utils/appDialog';
@@ -20,7 +21,7 @@ export function AppDialogProvider({ children }: { children: React.ReactNode }) {
   }>({
     title: '',
     type: 'info',
-    buttons: [{ text: 'אישור', style: 'default' }],
+    buttons: [{ text: i18n.t('auto.components__ui__AppDialogProvider.s1'), style: 'default' }],
     showIcon: true,
     closeOnBackdropPress: true,
   });
@@ -38,7 +39,7 @@ export function AppDialogProvider({ children }: { children: React.ReactNode }) {
   const showDialog = useCallback((opts: AppDialogOptions) => {
     return new Promise<number | undefined>((resolve) => {
       resolveRef.current = resolve;
-      const raw = opts.buttons?.length ? opts.buttons : [{ text: 'אישור', style: 'default' as const }];
+      const raw = opts.buttons?.length ? opts.buttons : [{ text: i18n.t('auto.components__ui__AppDialogProvider.s1'), style: 'default' as const }];
       const wrapped: UIAlertButton[] = raw.map((b, index) => ({
         ...b,
         onPress: () => {

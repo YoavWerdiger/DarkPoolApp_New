@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,7 +13,7 @@ export default function LegalWebViewScreen({ navigation, route }: any) {
   const tokens = useDesignTokens();
   const kind: LegalKind = route?.params?.kind === 'terms' ? 'terms' : 'privacy';
   const url = kind === 'terms' ? APP_LINKS.terms : APP_LINKS.privacy;
-  const title = kind === 'terms' ? 'תנאי שימוש' : 'מדיניות פרטיות';
+  const title = kind === 'terms' ? i18n.t('auto.screens__Profile__LegalWebViewScreen.s1') : i18n.t('auto.screens__Profile__LegalWebViewScreen.s2');
 
   return (
     <SafeAreaView

@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, StyleSheet, Image } from 'react-native';
@@ -57,24 +58,24 @@ export default function ShareTradeModal({ trade, visible, onClose }: ShareTradeM
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        legacyAlert('שגיאה', 'משתמש לא מחובר');
+        legacyAlert(i18n.t('auto.screens__Journal__ShareTradeModal.s1'), i18n.t('auto.screens__Journal__ShareTradeModal.s2'));
         return;
       }
 
       const { data: groups, error } = await getChatGroups(user.id);
       if (error) {
-        legacyAlert('שגיאה', error.message || 'לא ניתן לטעון קבוצות');
+        legacyAlert(i18n.t('auto.screens__Journal__ShareTradeModal.s1'), error.message || i18n.t('auto.screens__Journal__ShareTradeModal.s3'));
         return;
       }
 
       const rows: ChatGroupRow[] = (groups || []).map((g: any) => ({
         id: g.id,
-        name: g.name || 'קבוצה',
+        name: g.name || i18n.t('auto.screens__Journal__ShareTradeModal.s4'),
         avatar_url: g.avatar_url,
       }));
       setChatGroups(rows);
     } catch {
-      legacyAlert('שגיאה', 'שגיאה בטעינת קבוצות');
+      legacyAlert(i18n.t('auto.screens__Journal__ShareTradeModal.s1'), i18n.t('auto.screens__Journal__ShareTradeModal.s5'));
     } finally {
       setLoading(false);
     }
@@ -86,7 +87,7 @@ export default function ShareTradeModal({ trade, visible, onClose }: ShareTradeM
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        legacyAlert('שגיאה', 'משתמש לא מחובר');
+        legacyAlert(i18n.t('auto.screens__Journal__ShareTradeModal.s1'), i18n.t('auto.screens__Journal__ShareTradeModal.s2'));
         return;
       }
 
@@ -117,14 +118,14 @@ export default function ShareTradeModal({ trade, visible, onClose }: ShareTradeM
       );
 
       if (error || !sent) {
-        legacyAlert('שגיאה', error?.message || 'לא ניתן לשתף לקבוצה');
+        legacyAlert(i18n.t('auto.screens__Journal__ShareTradeModal.s1'), error?.message || i18n.t('auto.screens__Journal__ShareTradeModal.s6'));
         return;
       }
 
-      legacyAlert('הצלחה', `הטרייד שותף לקבוצה "${groupName}"`);
+      legacyAlert(i18n.t('auto.screens__Journal__ShareTradeModal.s7'), i18n.t('auto.screens__Journal__ShareTradeModal.s8', { v0: groupName }));
       onClose();
     } catch {
-      legacyAlert('שגיאה', 'לא ניתן לשתף לקבוצה');
+      legacyAlert(i18n.t('auto.screens__Journal__ShareTradeModal.s1'), i18n.t('auto.screens__Journal__ShareTradeModal.s6'));
     }
   };
 
@@ -143,7 +144,7 @@ export default function ShareTradeModal({ trade, visible, onClose }: ShareTradeM
     >
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>שתף טרייד לצ׳אט</Text>
+          <Text style={styles.title}>{i18n.t('auto.screens__Journal__ShareTradeModal.s9')}</Text>
           <TouchableOpacity
             onPress={() => {
               void HapticFeedback.impactLight();
@@ -190,13 +191,13 @@ export default function ShareTradeModal({ trade, visible, onClose }: ShareTradeM
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-            <Text style={styles.loadingText}>טוען קבוצות...</Text>
+            <Text style={styles.loadingText}>{i18n.t('auto.screens__Journal__ShareTradeModal.s10')}</Text>
           </View>
         ) : chatGroups.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="chatbubbles-outline" size={64} color={DesignTokens.colors.text.tertiary} />
-            <Text style={styles.emptyText}>אין קבוצות זמינות</Text>
-            <Text style={styles.emptySubtext}>הצטרף לקבוצת צ׳אט כדי לשתף טריידים</Text>
+            <Text style={styles.emptyText}>{i18n.t('auto.screens__Journal__ShareTradeModal.s11')}</Text>
+            <Text style={styles.emptySubtext}>{i18n.t('auto.screens__Journal__ShareTradeModal.s12')}</Text>
           </View>
         ) : (
           <FlatList

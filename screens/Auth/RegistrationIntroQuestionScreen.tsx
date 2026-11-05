@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useState } from 'react';
 import { Text, View } from 'react-native';
 import {
@@ -136,12 +137,10 @@ const RegistrationIntroQuestionScreen = ({ navigation, config }: Props) => {
                   marginBottom: APP_LAYOUT.stackGapSmall,
                 },
               ]}
-            >
-              אפשר לדלג ולהמשיך בלי לבחור
-            </Text>
+            >{i18n.t('auto.screens__Auth__RegistrationIntroQuestionScreen.s1')}</Text>
           ) : null}
           <CashAppButton
-            title={displayMode === 'swipe' ? 'בחר את זה' : 'המשך'}
+            title={displayMode === 'swipe' ? i18n.t('auto.screens__Auth__RegistrationIntroQuestionScreen.s2') : i18n.t('auto.screens__Auth__RegistrationIntroQuestionScreen.s3')}
             variant="primary"
             size="lg"
             onPress={handleNext}

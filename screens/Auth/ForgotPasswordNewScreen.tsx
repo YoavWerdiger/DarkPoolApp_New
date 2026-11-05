@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { APP_LAYOUT } from '../../components/ui/appLayout';
@@ -45,14 +46,14 @@ async function raceDeadline(
 }
 
 function mapSaveError(code: string | null | undefined): string {
-  if (code === 'no_session') return 'הסשן פג – בקש קוד חדש';
-  if (code === 'weak_password') return 'הסיסמה חייבת להכיל לפחות 8 תווים, אות ומספר';
-  if (code === 'timeout') return 'שמירת הסיסמה ארכה יותר מדי. בדוק חיבור ונסה שוב.';
-  if (code === 'invalid_email') return 'חסרה כתובת אימייל. חזור להתחברות ובקש קוד חדש.';
+  if (code === 'no_session') return i18n.t('auto.screens__Auth__ForgotPasswordNewScreen.s1');
+  if (code === 'weak_password') return i18n.t('auto.screens__Auth__ForgotPasswordNewScreen.s2');
+  if (code === 'timeout') return i18n.t('auto.screens__Auth__ForgotPasswordNewScreen.s3');
+  if (code === 'invalid_email') return i18n.t('auto.screens__Auth__ForgotPasswordNewScreen.s4');
   if (code === 'password_not_persisted') {
-    return 'הסיסמה לא נשמרה בשרת. בקש קוד איפוס חדש ונסה שוב.';
+    return i18n.t('auto.screens__Auth__ForgotPasswordNewScreen.s5');
   }
-  return code || 'שגיאה בשמירת הסיסמה. נסה שוב.';
+  return code || i18n.t('auto.screens__Auth__ForgotPasswordNewScreen.s6');
 }
 
 const ForgotPasswordNewScreen = ({ navigation, route }: { navigation: any; route?: any }) => {
@@ -112,10 +113,10 @@ const ForgotPasswordNewScreen = ({ navigation, route }: { navigation: any; route
         'clear recovery after save'
       );
       goToLogin();
-      legacyAlert('הסיסמה עודכנה', 'אפשר להתחבר עכשיו עם הסיסמה החדשה.');
+      legacyAlert(i18n.t('auto.screens__Auth__ForgotPasswordNewScreen.s7'), i18n.t('auto.screens__Auth__ForgotPasswordNewScreen.s8'));
     } catch (e) {
       logger.warn('ForgotPasswordNew', 'save failed', e);
-      setError('שגיאה בשמירת הסיסמה. נסה שוב.');
+      setError(i18n.t('auto.screens__Auth__ForgotPasswordNewScreen.s6'));
       void HapticFeedback.error();
     } finally {
       setLoading(false);
@@ -124,8 +125,8 @@ const ForgotPasswordNewScreen = ({ navigation, route }: { navigation: any; route
 
   return (
     <OnboardingLayout
-      title="סיסמה חדשה"
-      subtitle="לפחות 8 תווים, עם אות ומספר"
+      title={i18n.t('auto.screens__Auth__ForgotPasswordNewScreen.s9')}
+      subtitle={i18n.t('auto.screens__Auth__ForgotPasswordNewScreen.s10')}
       density="focused"
       // גלילה כמו בסיסמת הרישום — באנדרואיד המקלדת מקטינה את האזור והתוכן (חוזק + כללים)
       // חרג ממנו ונצבע מתחת לכפתור «שמור סיסמה»
@@ -134,14 +135,14 @@ const ForgotPasswordNewScreen = ({ navigation, route }: { navigation: any; route
       showProgress={false}
       currentStep={1}
       totalSteps={1}
-      exitHint="חזרה להתחברות"
+      exitHint={i18n.t('auto.screens__Auth__ForgotPasswordNewScreen.s11')}
       onExitHintPress={() => {
         void HapticFeedback.impactLight();
         void handleCancelToLogin();
       }}
       footer={
         <OnboardingButton
-          title="שמור סיסמה"
+          title={i18n.t('auto.screens__Auth__ForgotPasswordNewScreen.s12')}
           onPress={handleSave}
           loading={loading || cancelling}
           disabled={!canContinue}
@@ -151,8 +152,8 @@ const ForgotPasswordNewScreen = ({ navigation, route }: { navigation: any; route
       <OnboardingErrorBanner message={error} />
 
       <OnboardingInput
-        label="סיסמה חדשה"
-        placeholder={`לפחות ${PASSWORD_MIN_LENGTH} תווים`}
+        label={i18n.t('auto.screens__Auth__ForgotPasswordNewScreen.s9')}
+        placeholder={i18n.t('auto.screens__Auth__ForgotPasswordNewScreen.s13', { v0: PASSWORD_MIN_LENGTH })}
         value={password}
         onChangeText={(t) => {
           setPassword(t);

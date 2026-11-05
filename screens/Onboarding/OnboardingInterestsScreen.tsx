@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -22,12 +23,12 @@ type Interest = {
 };
 
 const INTERESTS: Interest[] = [
-  { id: 'stocks', emoji: '📈', title: 'מניות' },
-  { id: 'congress', emoji: '🏛️', title: 'מסחר קונגרס' },
-  { id: 'options', emoji: '💼', title: 'אופציות' },
-  { id: 'institutional', emoji: '🏦', title: 'מוסדיים' },
-  { id: 'crypto', emoji: '📊', title: 'קריפטו' },
-  { id: 'funds', emoji: '🎯', title: 'קרנות נאמנות' },
+  { id: 'stocks', emoji: '📈', title: i18n.t('auto.screens__Onboarding__OnboardingInterestsScreen.s1') },
+  { id: 'congress', emoji: '🏛️', title: i18n.t('auto.screens__Onboarding__OnboardingInterestsScreen.s2') },
+  { id: 'options', emoji: '💼', title: i18n.t('auto.screens__Onboarding__OnboardingInterestsScreen.s3') },
+  { id: 'institutional', emoji: '🏦', title: i18n.t('auto.screens__Onboarding__OnboardingInterestsScreen.s4') },
+  { id: 'crypto', emoji: '📊', title: i18n.t('auto.screens__Onboarding__OnboardingInterestsScreen.s5') },
+  { id: 'funds', emoji: '🎯', title: i18n.t('auto.screens__Onboarding__OnboardingInterestsScreen.s6') },
 ];
 
 /**
@@ -80,9 +81,7 @@ const OnboardingInterestsScreen: React.FC<Props> = ({ navigation }) => {
             <Pressable onPress={handleBack} style={styles.backButton}>
               <Ionicons name="chevron-forward" size={28} color={tokens.colors.text.primary} />
             </Pressable>
-            <Text style={[styles.stepIndicator, { color: tokens.colors.text.tertiary }]}>
-              שלב 7 מתוך 10
-            </Text>
+            <Text style={[styles.stepIndicator, { color: tokens.colors.text.tertiary }]}>{i18n.t('auto.screens__Onboarding__OnboardingInterestsScreen.s7')}</Text>
           </View>
 
           <ScrollView
@@ -91,12 +90,8 @@ const OnboardingInterestsScreen: React.FC<Props> = ({ navigation }) => {
             showsVerticalScrollIndicator={false}
           >
             {/* Title */}
-            <Text style={[styles.title, { color: tokens.colors.text.primary }]}>
-              מה מעניין אותך?
-            </Text>
-            <Text style={[styles.subtitle, { color: tokens.colors.text.secondary }]}>
-              בחר לפחות תחום אחד שתרצה לעקוב אחריו
-            </Text>
+            <Text style={[styles.title, { color: tokens.colors.text.primary }]}>{i18n.t('auto.screens__Onboarding__OnboardingInterestsScreen.s8')}</Text>
+            <Text style={[styles.subtitle, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Onboarding__OnboardingInterestsScreen.s9')}</Text>
 
             {/* Interest Pills */}
             <View style={styles.pillsContainer}>
@@ -116,7 +111,7 @@ const OnboardingInterestsScreen: React.FC<Props> = ({ navigation }) => {
           {/* Footer */}
           <View style={styles.footer}>
             <UIButton
-              title="המשך"
+              title={i18n.t('auto.screens__Onboarding__OnboardingInterestsScreen.s10')}
               variant="primary"
               size="lg"
               fullWidth

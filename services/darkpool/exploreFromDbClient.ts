@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 /**
  * בניית מסך גילוי ישירות מ-DB (SEC) — בלי UW ובלי snapshot ישן.
  */
@@ -66,7 +67,7 @@ export async function fetchExploreFromDbDirect(): Promise<UwExplorePayload> {
     name: String(row.display_name ?? row.person_id),
     subtitle:
       row.kind === 'politician'
-        ? 'קונגרס · STIR'
+        ? i18n.t('auto.services__darkpool__exploreFromDbClient.s1')
         : [row.ticker].filter(Boolean).join(' · ') || 'Form 4',
     image_url: String(row.image_url),
     kind: row.kind as 'politician' | 'insider',
@@ -108,10 +109,10 @@ export async function fetchExploreFromDbDirect(): Promise<UwExplorePayload> {
     .map((p) => ({
       id: p.id,
       name: p.name,
-      subtitle: 'קונגרס · STIR',
+      subtitle: i18n.t('auto.services__darkpool__exploreFromDbClient.s1'),
       image_url: congressPhoto(p.id, p.image),
       metric: String(p.count),
-      metric_label: 'עסקאות',
+      metric_label: i18n.t('auto.services__darkpool__exploreFromDbClient.s2'),
       activity_score: p.count,
       kind: 'politician' as const,
     }));
@@ -177,12 +178,12 @@ export async function fetchExploreFromDbDirect(): Promise<UwExplorePayload> {
           knownPortraitForInvestor({ personId: id, name }),
         kind: f.kind as 'politician' | 'insider',
         ticker: f.ticker ? String(f.ticker) : undefined,
-        metric_label: 'מומלץ',
+        metric_label: i18n.t('auto.services__darkpool__exploreFromDbClient.s3'),
       };
     });
 
   if (!politicians.length && !insiders.length) {
-    warnings.push('אין עדיין עסקאות — משוך למטה לרענון אחרי סנכרון');
+    warnings.push(i18n.t('auto.services__darkpool__exploreFromDbClient.s4'));
   }
 
   const topActive = politicians.slice(0, 12);

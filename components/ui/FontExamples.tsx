@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React from 'react';
 import { View, Text, StyleSheet, type TextStyle } from 'react-native';
@@ -15,19 +16,13 @@ export default function FontExamples() {
   return (
     <View style={styles.container}>
       {/* דוגמה 1: שימוש עם DesignTokens */}
-      <Text style={styles.example1}>
-        כותרת ראשית בפונט Assistant ExtraBold
-      </Text>
+      <Text style={styles.example1}>{i18n.t('auto.components__ui__FontExamples.s1')}</Text>
       
       {/* דוגמה 2: שימוש עם Tailwind CSS */}
-      <Text className="font-assistant text-xl font-extrabold text-white">
-        כותרת משנית בפונט Assistant ExtraBold
-      </Text>
+      <Text className="font-assistant text-xl font-extrabold text-white">{i18n.t('auto.components__ui__FontExamples.s2')}</Text>
       
       {/* דוגמה 3: שימוש ישיר */}
-      <Text style={styles.example3}>
-        טקסט רגיל בפונט Assistant ExtraBold
-      </Text>
+      <Text style={styles.example3}>{i18n.t('auto.components__ui__FontExamples.s3')}</Text>
       
       {/* דוגמה 4: שילוב עם עברית ואנגלית */}
       <Text style={styles.example4}>

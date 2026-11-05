@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useEffect, useRef, useMemo } from 'react';
 import { View, Text, Pressable, Animated, StyleSheet } from 'react-native';
 import { useDesignTokens } from '../ui/DesignTokens';
@@ -63,7 +64,7 @@ const UnreadDivider: React.FC<UnreadDividerProps> = ({
     return null;
   }
 
-  const text = unreadCount === 1 ? 'הודעה חדשה' : `${unreadCount} הודעות חדשות`;
+  const text = unreadCount === 1 ? i18n.t('auto.components__chat__UnreadDivider.s1') : i18n.t('auto.components__chat__UnreadDivider.s2', { v0: unreadCount });
 
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>

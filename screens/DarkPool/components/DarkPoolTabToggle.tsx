@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 /**
  * DarkPoolTabToggle.tsx
@@ -32,10 +33,10 @@ interface DarkPoolTabToggleProps {
 
 /** RTL: קונגרס → בכירים → מניות */
 const TABS: Array<{ id: DarkPoolFeedTab; label: string }> = [
-  { id: 'congress', label: 'קונגרס' },
-  { id: 'all', label: 'בכירים' },
-  { id: 'watchlist', label: 'מניות' },
-  { id: 'following', label: 'מעקב' },
+  { id: 'congress', label: i18n.t('auto.screens__DarkPool__components__DarkPoolTabToggle.s1') },
+  { id: 'all', label: i18n.t('auto.screens__DarkPool__components__DarkPoolTabToggle.s2') },
+  { id: 'watchlist', label: i18n.t('auto.screens__DarkPool__components__DarkPoolTabToggle.s3') },
+  { id: 'following', label: i18n.t('auto.screens__DarkPool__components__DarkPoolTabToggle.s4') },
 ];
 
 export function DarkPoolTabToggle({

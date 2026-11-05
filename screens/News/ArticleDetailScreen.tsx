@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Image, TouchableOpacity, Share, Linking, ActivityIndicator, Dimensions } from 'react-native';
@@ -42,13 +43,13 @@ export default function ArticleDetailScreen() {
     try {
       const shareContent = {
         title: article.title,
-        message: `${article.title}\n\n${article.summary || ''}\n\nקרא עוד: ${article.source_url || ''}`,
+        message: i18n.t('auto.screens__News__ArticleDetailScreen.s1', { v0: article.title, v1: article.summary || '', v2: article.source_url || '' }),
         url: article.source_url
       };
 
       await Share.share(shareContent);
     } catch (error) {
-      legacyAlert('שגיאה', 'לא ניתן לשתף את הכתבה');
+      legacyAlert(i18n.t('auto.screens__News__ArticleDetailScreen.s2'), i18n.t('auto.screens__News__ArticleDetailScreen.s3'));
     }
   };
 
@@ -60,10 +61,10 @@ export default function ArticleDetailScreen() {
         if (supported) {
           await Linking.openURL(article.source_url);
         } else {
-          legacyAlert('שגיאה', 'לא ניתן לפתוח את הקישור');
+          legacyAlert(i18n.t('auto.screens__News__ArticleDetailScreen.s2'), i18n.t('auto.screens__News__ArticleDetailScreen.s4'));
         }
       } catch (error) {
-        legacyAlert('שגיאה', 'לא ניתן לפתוח את הקישור');
+        legacyAlert(i18n.t('auto.screens__News__ArticleDetailScreen.s2'), i18n.t('auto.screens__News__ArticleDetailScreen.s4'));
       }
     }
   };
@@ -73,8 +74,8 @@ export default function ArticleDetailScreen() {
     setIsBookmarked(!isBookmarked);
     // TODO: שמירה במסד הנתונים
     legacyAlert(
-      isBookmarked ? 'הוסר מהמועדפים' : 'נוסף למועדפים',
-      isBookmarked ? 'הכתבה הוסרה מהרשימה שלך' : 'הכתבה נוספה למועדפים שלך'
+      isBookmarked ? i18n.t('auto.screens__News__ArticleDetailScreen.s5') : i18n.t('auto.screens__News__ArticleDetailScreen.s6'),
+      isBookmarked ? i18n.t('auto.screens__News__ArticleDetailScreen.s7') : i18n.t('auto.screens__News__ArticleDetailScreen.s8')
     );
   };
 
@@ -92,7 +93,7 @@ export default function ArticleDetailScreen() {
           <DayNavBlurButton
             onPress={() => navigation.goBack()}
             size={40}
-            accessibilityLabel="חזרה"
+            accessibilityLabel={i18n.t('auto.screens__News__ArticleDetailScreen.s9')}
           >
             <Ionicons
               name="arrow-back"
@@ -250,9 +251,7 @@ export default function ArticleDetailScreen() {
                   marginTop: APP_LAYOUT.cardPadding,
                   marginBottom: APP_LAYOUT.cardTitleToBodyGap,
                 }}
-              >
-                פרטים נוספים
-              </Text>
+              >{i18n.t('auto.screens__News__ArticleDetailScreen.s10')}</Text>
 
               {article.source_url ? (
                 <TouchableOpacity
@@ -271,9 +270,7 @@ export default function ArticleDetailScreen() {
                       color={DesignTokens.colors.text.primary}
                       style={{ marginLeft: APP_LAYOUT.cardTitleToBodyGap }}
                     />
-                    <Text style={{ ...APP_TYPE.cardTitle, color: DesignTokens.colors.text.primary }}>
-                      קישור למקור
-                    </Text>
+                    <Text style={{ ...APP_TYPE.cardTitle, color: DesignTokens.colors.text.primary }}>{i18n.t('auto.screens__News__ArticleDetailScreen.s11')}</Text>
                   </View>
                   <Ionicons
                     name="chevron-forward"
@@ -300,8 +297,7 @@ export default function ArticleDetailScreen() {
                     style={{ marginLeft: APP_LAYOUT.cardTitleToBodyGap }}
                   />
                   <Text style={{ ...APP_TYPE.body, color: DesignTokens.colors.text.secondary }}>
-                    {article.view_count.toLocaleString()} צפיות
-                  </Text>
+                    {i18n.t('auto.screens__News__ArticleDetailScreen.s12', { v0: article.view_count.toLocaleString() })}</Text>
                 </View>
               ) : null}
 
@@ -329,8 +325,8 @@ export default function ArticleDetailScreen() {
                     style={{ marginLeft: APP_LAYOUT.cardTitleToBodyGap }}
                   />
                   <Text style={{ ...APP_TYPE.body, color: DesignTokens.colors.text.secondary }}>
-                    {article.sentiment === 'positive' ? 'חיובי' :
-                     article.sentiment === 'negative' ? 'שלילי' : 'ניטרלי'}
+                    {article.sentiment === 'positive' ? i18n.t('auto.screens__News__ArticleDetailScreen.s13') :
+                     article.sentiment === 'negative' ? i18n.t('auto.screens__News__ArticleDetailScreen.s14') : i18n.t('auto.screens__News__ArticleDetailScreen.s15')}
                   </Text>
                 </View>
               ) : null}
@@ -338,7 +334,7 @@ export default function ArticleDetailScreen() {
 
             {article.source_url ? (
               <UIButton
-                title="קרא במקור המלא"
+                title={i18n.t('auto.screens__News__ArticleDetailScreen.s16')}
                 variant="primary"
                 icon="open-outline"
                 onPress={handleOpenSource}

@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
@@ -77,9 +78,7 @@ export function PortfolioSummaryHeader({
       >
         {/* Hero block */}
         <View style={styles.hero}>
-          <Text style={[styles.label, { color: tokens.colors.text.secondary }]}>
-            שווי תיק
-          </Text>
+          <Text style={[styles.label, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Portfolios__components__PortfolioSummaryHeader.s1')}</Text>
           <Text
             style={[
               styles.totalValue,
@@ -114,9 +113,7 @@ export function PortfolioSummaryHeader({
                   )})`
                 : '—'}
             </Text>
-            <Text style={[styles.dailyMeta, { color: tokens.colors.text.tertiary }]}>
-              היום
-            </Text>
+            <Text style={[styles.dailyMeta, { color: tokens.colors.text.tertiary }]}>{i18n.t('auto.screens__Portfolios__components__PortfolioSummaryHeader.s2')}</Text>
           </View>
         </View>
 
@@ -128,7 +125,7 @@ export function PortfolioSummaryHeader({
         {/* KPI row */}
         <View style={styles.kpiRow}>
           <KpiInline
-            label="רווח כולל"
+            label={i18n.t('auto.screens__Portfolios__components__PortfolioSummaryHeader.s3')}
             value={summary ? formatCurrency(summary.total_gain, summary.currency) : '—'}
             subValue={summary ? formatPercent(summary.total_gain_pct) : undefined}
             color={totalColor}
@@ -141,7 +138,7 @@ export function PortfolioSummaryHeader({
             ]}
           />
           <KpiInline
-            label="הצלחה"
+            label={i18n.t('auto.screens__Portfolios__components__PortfolioSummaryHeader.s4')}
             value={
               summary?.win_rate_pct != null && isFinite(summary.win_rate_pct)
                 ? formatPercent(summary.win_rate_pct, 1, false)
@@ -157,7 +154,7 @@ export function PortfolioSummaryHeader({
             ]}
           />
           <KpiInline
-            label="מזומן"
+            label={i18n.t('auto.screens__Portfolios__components__PortfolioSummaryHeader.s5')}
             value={summary ? formatCurrency(summary.cash, summary.currency) : '—'}
             color={tokens.colors.text.primary}
             tokens={tokens}

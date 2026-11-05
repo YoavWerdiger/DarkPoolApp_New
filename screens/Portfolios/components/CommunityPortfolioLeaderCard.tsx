@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, LayoutChangeEvent } from 'react-native';
 import Svg, { Polyline } from 'react-native-svg';
@@ -98,7 +99,7 @@ export function CommunityPortfolioLeaderCard({
         onPress();
       }}
       accessibilityRole="button"
-      accessibilityLabel={`תיק ${portfolio.name} של ${ownerLabel}`}
+      accessibilityLabel={i18n.t('auto.screens__Portfolios__components__CommunityPortfolioLeaderCard.s1', { v0: portfolio.name, v1: ownerLabel })}
       style={({ pressed }) => [{ opacity: pressed ? 0.88 : 1 }]}
     >
       <UICard variant="soft" padding="md">
@@ -111,8 +112,7 @@ export function CommunityPortfolioLeaderCard({
               <Text
                 style={[styles.owner, { color: tokens.colors.text.tertiary }]}
                 numberOfLines={1}
-              >
-                תיק של {ownerLabel}
+              >{i18n.t('auto.screens__Portfolios__components__CommunityPortfolioLeaderCard.s2', { v0: ownerLabel })}
               </Text>
             </View>
             <Ionicons name="chevron-back" size={18} color={tokens.colors.text.tertiary} />
@@ -133,16 +133,12 @@ export function CommunityPortfolioLeaderCard({
               </Svg>
             ) : (
               <View style={{ height: chartH, justifyContent: 'center' }}>
-                <Text style={[styles.chartEmpty, { color: tokens.colors.text.tertiary }]}>
-                  אין עדיין היסטוריית שווי
-                </Text>
+                <Text style={[styles.chartEmpty, { color: tokens.colors.text.tertiary }]}>{i18n.t('auto.screens__Portfolios__components__CommunityPortfolioLeaderCard.s3')}</Text>
               </View>
             )}
           </View>
           {sparklineSource === 'transactions' && (
-            <Text style={[styles.chartLabel, { color: tokens.colors.text.tertiary }]}>
-              גרף מחושב ממסחר · כולל מחירי שוק
-            </Text>
+            <Text style={[styles.chartLabel, { color: tokens.colors.text.tertiary }]}>{i18n.t('auto.screens__Portfolios__components__CommunityPortfolioLeaderCard.s4')}</Text>
           )}
 
           <View style={styles.bottomRow}>

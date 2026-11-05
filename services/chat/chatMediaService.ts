@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 // ============================================
 // Chat Media Service
 // ============================================
@@ -254,7 +255,7 @@ export async function uploadImage(
   uploadId?: string;
 }> {
   const { id: uploadId, handle } = createUploadHandle();
-  const CANCELLED_RESULT = { url: null, thumbnail_url: null, width: 0, height: 0, size: 0, error: { code: 'UPLOAD_CANCELLED' as const, message: 'ההעלאה בוטלה' }, uploadId };
+  const CANCELLED_RESULT = { url: null, thumbnail_url: null, width: 0, height: 0, size: 0, error: { code: 'UPLOAD_CANCELLED' as const, message: i18n.t('auto.services__chat__chatMediaService.s1') }, uploadId };
 
   try {
     if (!validateGroupPath(groupId)) {
@@ -266,12 +267,12 @@ export async function uploadImage(
     
     if (!fileInfo.exists) {
       activeUploads.delete(uploadId);
-      return { url: null, thumbnail_url: null, width: 0, height: 0, size: 0, error: { code: 'FILE_NOT_FOUND', message: 'הקובץ לא נמצא' } };
+      return { url: null, thumbnail_url: null, width: 0, height: 0, size: 0, error: { code: 'FILE_NOT_FOUND', message: i18n.t('auto.services__chat__chatMediaService.s2') } };
     }
 
     if (fileInfo.size && fileInfo.size > MAX_IMAGE_SOURCE_SIZE) {
       activeUploads.delete(uploadId);
-      return { url: null, thumbnail_url: null, width: 0, height: 0, size: 0, error: { code: 'FILE_TOO_LARGE', message: 'התמונה גדולה מדי (מקסימום 30MB)' } };
+      return { url: null, thumbnail_url: null, width: 0, height: 0, size: 0, error: { code: 'FILE_TOO_LARGE', message: i18n.t('auto.services__chat__chatMediaService.s3') } };
     }
 
     if (handle.cancelled) return CANCELLED_RESULT;
@@ -317,7 +318,7 @@ export async function uploadImage(
 
     if (imageToUpload.size > MAX_IMAGE_SIZE) {
       activeUploads.delete(uploadId);
-      return { url: null, thumbnail_url: null, width: 0, height: 0, size: 0, error: { code: 'FILE_TOO_LARGE', message: 'התמונה גדולה מדי (מקסימום 10MB)' } };
+      return { url: null, thumbnail_url: null, width: 0, height: 0, size: 0, error: { code: 'FILE_TOO_LARGE', message: i18n.t('auto.services__chat__chatMediaService.s4') } };
     }
     logger.debug(
       'ChatMedia',
@@ -370,7 +371,7 @@ export async function uploadImage(
 
     if (uploadError) {
       logger.error('ChatMedia', 'Image upload failed after retries', uploadError);
-      return { url: null, thumbnail_url: null, width: 0, height: 0, size: 0, error: { code: 'UPLOAD_ERROR', message: 'שגיאה בהעלאת תמונה' } };
+      return { url: null, thumbnail_url: null, width: 0, height: 0, size: 0, error: { code: 'UPLOAD_ERROR', message: i18n.t('auto.services__chat__chatMediaService.s5') } };
     }
 
     if (onProgress) {
@@ -441,13 +442,13 @@ export async function uploadVideo(
     const fileInfo = await FileSystem.getInfoAsync(uri);
     if (!fileInfo.exists) {
       logger.warn('ChatMedia', `uploadVideo: file not found uri=${uri.slice(0, 80)}`);
-      return failResult({ code: 'FILE_NOT_FOUND', message: 'הקובץ לא נמצא' });
+      return failResult({ code: 'FILE_NOT_FOUND', message: i18n.t('auto.services__chat__chatMediaService.s2') });
     }
 
     const sourceSize = typeof fileInfo.size === 'number' ? fileInfo.size : 0;
     if (sourceSize > MAX_VIDEO_SOURCE_SIZE) {
       logger.warn('ChatMedia', `uploadVideo: source too large size=${sourceSize}`);
-      return failResult({ code: 'FILE_TOO_LARGE', message: 'הסרטון גדול מדי (מקסימום 100MB)' });
+      return failResult({ code: 'FILE_TOO_LARGE', message: i18n.t('auto.services__chat__chatMediaService.s6') });
     }
 
     // דחיסה (1080p, ~5Mbps) לפני העלאה. בלי המודול הנייטיב / בכישלון — הקובץ המקורי.
@@ -469,7 +470,7 @@ export async function uploadVideo(
     if (fileSize > MAX_VIDEO_SIZE) {
       logger.warn('ChatMedia', `uploadVideo: file too large size=${fileSize}`);
       discardCompressedVideo(compressed);
-      return failResult({ code: 'FILE_TOO_LARGE', message: 'הסרטון גדול מדי (מקסימום 100MB)' });
+      return failResult({ code: 'FILE_TOO_LARGE', message: i18n.t('auto.services__chat__chatMediaService.s6') });
     }
 
     const timestamp = Date.now();
@@ -511,7 +512,7 @@ export async function uploadVideo(
     if (!accessToken) {
       logger.error('ChatMedia', 'uploadVideo: no auth session, aborting');
       discardCompressedVideo(compressed);
-      return failResult({ code: 'AUTH_REQUIRED', message: 'נדרשת התחברות מחדש' });
+      return failResult({ code: 'AUTH_REQUIRED', message: i18n.t('auto.services__chat__chatMediaService.s7') });
     }
 
     // Storage REST endpoint (POST על אובייקט חדש = insert). ה-path מכיל
@@ -598,10 +599,10 @@ export async function uploadVideo(
       return failResult({
         code: isTooLarge ? 'FILE_TOO_LARGE' : isAuth ? 'AUTH_REQUIRED' : 'UPLOAD_ERROR',
         message: isTooLarge
-          ? 'הסרטון גדול מדי (מקסימום 100MB)'
+          ? i18n.t('auto.services__chat__chatMediaService.s6')
           : isAuth
-            ? 'אין הרשאה להעלות לקבוצה זו'
-            : 'שגיאה בהעלאת סרטון',
+            ? i18n.t('auto.services__chat__chatMediaService.s8')
+            : i18n.t('auto.services__chat__chatMediaService.s9'),
       });
     }
 
@@ -676,7 +677,7 @@ export async function uploadVideo(
     };
   } catch (error: any) {
     logger.error('ChatMedia', 'Unexpected video upload error', error);
-    return failResult({ code: 'UNEXPECTED_ERROR', message: error?.message ?? 'שגיאה לא צפויה' });
+    return failResult({ code: 'UNEXPECTED_ERROR', message: error?.message ?? i18n.t('auto.services__chat__chatMediaService.s10') });
   }
 }
 
@@ -702,11 +703,11 @@ export async function uploadAudio(
 
     const fileInfo = await FileSystem.getInfoAsync(uri);
     if (!fileInfo.exists) {
-      return { url: null, duration: 0, size: 0, error: { code: 'FILE_NOT_FOUND', message: 'הקובץ לא נמצא' } };
+      return { url: null, duration: 0, size: 0, error: { code: 'FILE_NOT_FOUND', message: i18n.t('auto.services__chat__chatMediaService.s2') } };
     }
 
     if (fileInfo.size && fileInfo.size > MAX_AUDIO_SIZE) {
-      return { url: null, duration: 0, size: 0, error: { code: 'FILE_TOO_LARGE', message: 'הקובץ גדול מדי (מקסימום 50MB)' } };
+      return { url: null, duration: 0, size: 0, error: { code: 'FILE_TOO_LARGE', message: i18n.t('auto.services__chat__chatMediaService.s11') } };
     }
 
     const timestamp = Date.now();
@@ -751,7 +752,7 @@ export async function uploadAudio(
 
     if (uploadResult.error) {
       logger.error('ChatMedia', 'Audio upload failed', uploadResult.error);
-      return { url: null, duration: 0, size: 0, error: { code: 'UPLOAD_ERROR', message: 'שגיאה בהעלאת אודיו' } };
+      return { url: null, duration: 0, size: 0, error: { code: 'UPLOAD_ERROR', message: i18n.t('auto.services__chat__chatMediaService.s12') } };
     }
 
     if (onProgress) {
@@ -797,11 +798,11 @@ export async function uploadDocument(
 
     const fileInfo = await FileSystem.getInfoAsync(uri);
     if (!fileInfo.exists) {
-      return { url: null, size: 0, error: { code: 'FILE_NOT_FOUND', message: 'הקובץ לא נמצא' } };
+      return { url: null, size: 0, error: { code: 'FILE_NOT_FOUND', message: i18n.t('auto.services__chat__chatMediaService.s2') } };
     }
 
     if (fileInfo.size && fileInfo.size > MAX_DOCUMENT_SIZE) {
-      return { url: null, size: 0, error: { code: 'FILE_TOO_LARGE', message: 'הקובץ גדול מדי (מקסימום 50MB)' } };
+      return { url: null, size: 0, error: { code: 'FILE_TOO_LARGE', message: i18n.t('auto.services__chat__chatMediaService.s11') } };
     }
 
     const timestamp = Date.now();
@@ -848,7 +849,7 @@ export async function uploadDocument(
 
     if (uploadResult.error) {
       logger.error('ChatMedia', 'Document upload failed', uploadResult.error);
-      return { url: null, size: 0, error: { code: 'UPLOAD_ERROR', message: 'שגיאה בהעלאת מסמך' } };
+      return { url: null, size: 0, error: { code: 'UPLOAD_ERROR', message: i18n.t('auto.services__chat__chatMediaService.s13') } };
     }
 
     if (onProgress) {
@@ -910,7 +911,7 @@ export async function deleteMedia(
 
     if (error) {
       logger.error('ChatMedia', 'Delete failed', error);
-      return { error: { code: 'DELETE_MEDIA_ERROR', message: 'שגיאה במחיקת מדיה' } };
+      return { error: { code: 'DELETE_MEDIA_ERROR', message: i18n.t('auto.services__chat__chatMediaService.s14') } };
     }
 
     return { error: null };
@@ -977,7 +978,7 @@ export async function getGroupMediaGallery(
 
     if (error) {
       logger.error('ChatMedia', 'Gallery fetch failed', error);
-      return { images: [], videos: [], hasMore: false, error: { code: 'FETCH_MEDIA_ERROR', message: 'שגיאה בטעינת גלריה' } };
+      return { images: [], videos: [], hasMore: false, error: { code: 'FETCH_MEDIA_ERROR', message: i18n.t('auto.services__chat__chatMediaService.s15') } };
     }
 
     const hasMore = (data?.length ?? 0) > pageSize;

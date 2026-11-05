@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useMemo, useState } from 'react';
 import {
@@ -123,10 +124,10 @@ export default function PollCreationBottomSheet({
   const handleClose = () => {
     dismissKeyboard();
     if (question.trim() || options.some((opt) => opt.trim())) {
-      legacyAlert('ביטול יצירת סקר', 'האם אתה בטוח שברצונך לבטל? כל הנתונים יימחקו.', [
-        { text: 'המשך עריכה', style: 'cancel' },
+      legacyAlert(i18n.t('auto.components__chat__PollCreationBottomSheet.s1'), i18n.t('auto.components__chat__PollCreationBottomSheet.s2'), [
+        { text: i18n.t('auto.components__chat__PollCreationBottomSheet.s3'), style: 'cancel' },
         {
-          text: 'בטל',
+          text: i18n.t('auto.components__chat__PollCreationBottomSheet.s4'),
           style: 'destructive',
           onPress: () => {
             resetForm();
@@ -161,19 +162,19 @@ export default function PollCreationBottomSheet({
 
   const validateForm = (): boolean => {
     if (!trimmedQuestion) {
-      legacyAlert('שגיאה', 'יש להזין שאלה לסקר');
+      legacyAlert(i18n.t('auto.components__chat__PollCreationBottomSheet.s5'), i18n.t('auto.components__chat__PollCreationBottomSheet.s6'));
       return false;
     }
     if (!hasEnoughOptions) {
-      legacyAlert('שגיאה', `יש צורך לפחות ב-${MIN_OPTIONS} אפשרויות`);
+      legacyAlert(i18n.t('auto.components__chat__PollCreationBottomSheet.s5'), i18n.t('auto.components__chat__PollCreationBottomSheet.s7', { v0: MIN_OPTIONS }));
       return false;
     }
     if (hasEmptyOption) {
-      legacyAlert('שגיאה', 'יש למלא את כל האפשרויות');
+      legacyAlert(i18n.t('auto.components__chat__PollCreationBottomSheet.s5'), i18n.t('auto.components__chat__PollCreationBottomSheet.s8'));
       return false;
     }
     if (hasDuplicateOptions) {
-      legacyAlert('שגיאה', 'יש אפשרויות כפולות — כל אפשרות צריכה להיות ייחודית.');
+      legacyAlert(i18n.t('auto.components__chat__PollCreationBottomSheet.s5'), i18n.t('auto.components__chat__PollCreationBottomSheet.s9'));
       return false;
     }
     return true;
@@ -183,7 +184,7 @@ export default function PollCreationBottomSheet({
     if (isCreating) return;
     if (!validateForm()) return;
     if (!user?.id) {
-      legacyAlert('שגיאה', 'לא ניתן ליצור סקר - משתמש לא מזוהה');
+      legacyAlert(i18n.t('auto.components__chat__PollCreationBottomSheet.s5'), i18n.t('auto.components__chat__PollCreationBottomSheet.s10'));
       return;
     }
 
@@ -224,7 +225,7 @@ export default function PollCreationBottomSheet({
       read_by_count: 0,
       sender: {
         id: user.id,
-        display_name: user?.display_name || 'אני',
+        display_name: user?.display_name || i18n.t('auto.components__chat__PollCreationBottomSheet.s11'),
         profile_picture: user?.profile_picture,
         is_online: true,
       },
@@ -250,11 +251,11 @@ export default function PollCreationBottomSheet({
         // Realtime / ingestIncomingInsert מחליף את temp- לפי content + message_type
       } else {
         removeOptimisticMessage(tempId);
-        legacyAlert('שגיאה', 'לא ניתן ליצור את הסקר, נסה שוב');
+        legacyAlert(i18n.t('auto.components__chat__PollCreationBottomSheet.s5'), i18n.t('auto.components__chat__PollCreationBottomSheet.s12'));
       }
     } catch (error: any) {
       removeOptimisticMessage(tempId);
-      legacyAlert('שגיאה', error?.message || 'לא ניתן ליצור את הסקר');
+      legacyAlert(i18n.t('auto.components__chat__PollCreationBottomSheet.s5'), error?.message || i18n.t('auto.components__chat__PollCreationBottomSheet.s13'));
     } finally {
       setIsCreating(false);
     }
@@ -288,7 +289,7 @@ export default function PollCreationBottomSheet({
       contentPaddingBottom={0}
     >
       <View style={[styles.root, { paddingBottom: Math.max(insets.bottom, 12) }]} onLayout={onContentLayout}>
-        <ChatSheetTopoHeader title="סקר חדש" onClose={handleClose} />
+        <ChatSheetTopoHeader title={i18n.t('auto.components__chat__PollCreationBottomSheet.s14')} onClose={handleClose} />
 
         <ScrollView
           style={{ maxHeight: formMaxH }}
@@ -298,7 +299,7 @@ export default function PollCreationBottomSheet({
         >
         {/* מרווח מהכותרת — ב«קבוצה חדשה» התמונה יושבת כאן */}
         <View style={[styles.labelRow, styles.firstLabel]}>
-          <Text style={[formFieldLabelStyle({ tokens, focused: questionFocused }), styles.labelFlex]}>שאלה</Text>
+          <Text style={[formFieldLabelStyle({ tokens, focused: questionFocused }), styles.labelFlex]}>{i18n.t('auto.components__chat__PollCreationBottomSheet.s15')}</Text>
           <Text style={[styles.counter, { color: tokens.colors.text.tertiary }]}>
             {question.length}/{QUESTION_MAX_LEN}
           </Text>
@@ -309,7 +310,7 @@ export default function PollCreationBottomSheet({
             onChangeText={setQuestion}
             onFocus={() => setQuestionFocused(true)}
             onBlur={() => setQuestionFocused(false)}
-            placeholder="מה תרצה לשאול?"
+            placeholder={i18n.t('auto.components__chat__PollCreationBottomSheet.s16')}
             placeholderTextColor={formFieldPlaceholderColor(tokens)}
             style={[formFieldInputStyle(tokens), appPhysicalRightText, styles.textArea]}
             multiline
@@ -319,7 +320,7 @@ export default function PollCreationBottomSheet({
         </View>
 
         <View style={[styles.labelRow, styles.labelGap]}>
-          <Text style={[formFieldLabelStyle({ tokens, focused: false }), styles.labelFlex]}>אפשרויות</Text>
+          <Text style={[formFieldLabelStyle({ tokens, focused: false }), styles.labelFlex]}>{i18n.t('auto.components__chat__PollCreationBottomSheet.s17')}</Text>
           <Text style={[styles.counter, { color: tokens.colors.text.tertiary }]}>
             {options.length}/{MAX_OPTIONS}
           </Text>
@@ -333,7 +334,7 @@ export default function PollCreationBottomSheet({
                 <TextInput
                   value={option}
                   onChangeText={(text) => updateOption(index, text)}
-                  placeholder={`אפשרות ${index + 1}`}
+                  placeholder={i18n.t('auto.components__chat__PollCreationBottomSheet.s18', { v0: index + 1 })}
                   placeholderTextColor={formFieldPlaceholderColor(tokens)}
                   style={[formFieldInputStyle(tokens), appPhysicalRightText, styles.optionInput]}
                   maxLength={OPTION_MAX_LEN}
@@ -348,7 +349,7 @@ export default function PollCreationBottomSheet({
                     onPress={() => removeOption(index)}
                     hitSlop={8}
                     accessibilityRole="button"
-                    accessibilityLabel="הסר אפשרות"
+                    accessibilityLabel={i18n.t('auto.components__chat__PollCreationBottomSheet.s19')}
                   >
                     <Ionicons name="close-circle" size={20} color={tokens.colors.text.tertiary} />
                   </Pressable>
@@ -367,17 +368,15 @@ export default function PollCreationBottomSheet({
             accessibilityRole="button"
           >
             <Ionicons name="add" size={16} color={tokens.colors.text.secondary} />
-            <Text style={[styles.addChipText, { color: tokens.colors.text.primary }]}>הוסף אפשרות</Text>
+            <Text style={[styles.addChipText, { color: tokens.colors.text.primary }]}>{i18n.t('auto.components__chat__PollCreationBottomSheet.s20')}</Text>
           </Pressable>
         ) : null}
         {hasDuplicateOptions ? (
-          <Text style={[styles.warning, { color: tokens.colors.warning.main }]}>
-            יש אפשרויות כפולות — כל אפשרות צריכה להיות ייחודית.
-          </Text>
+          <Text style={[styles.warning, { color: tokens.colors.warning.main }]}>{i18n.t('auto.components__chat__PollCreationBottomSheet.s9')}</Text>
         ) : null}
 
         {/* סוג הבחירה — כמו «מי כותב בקבוצה» */}
-        <Text style={[formFieldLabelStyle({ tokens, focused: false }), styles.labelGap, { marginBottom: 4 }]}>סוג בחירה</Text>
+        <Text style={[formFieldLabelStyle({ tokens, focused: false }), styles.labelGap, { marginBottom: 4 }]}>{i18n.t('auto.components__chat__PollCreationBottomSheet.s21')}</Text>
         <View style={[styles.segment, { backgroundColor: tokens.colors.background.cardSolid }]}>
           {([
             { key: false, label: 'בחירה יחידה' },
@@ -411,10 +410,8 @@ export default function PollCreationBottomSheet({
 
         <View style={[styles.toggleRow, { backgroundColor: tokens.colors.background.cardSolid }]}>
           <View style={styles.toggleCopy}>
-            <Text style={[styles.toggleTitle, { color: tokens.colors.text.primary }]}>אפשר לשנות תשובה</Text>
-            <Text style={[styles.toggleSubtitle, { color: tokens.colors.text.secondary }]}>
-              אפשר לשנות את הבחירה אחרי ההצבעה
-            </Text>
+            <Text style={[styles.toggleTitle, { color: tokens.colors.text.primary }]}>{i18n.t('auto.components__chat__PollCreationBottomSheet.s22')}</Text>
+            <Text style={[styles.toggleSubtitle, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.components__chat__PollCreationBottomSheet.s23')}</Text>
           </View>
           <AppSwitch
             value={allowVoteChange}
@@ -426,7 +423,7 @@ export default function PollCreationBottomSheet({
             thumbColor={allowVoteChange ? tokens.colors.text.primary : theme.switchThumbOff}
             ios_backgroundColor={theme.switchTrackOff}
             style={styles.switch}
-            accessibilityLabel="אפשר לשנות תשובה"
+            accessibilityLabel={i18n.t('auto.components__chat__PollCreationBottomSheet.s22')}
           />
         </View>
 
@@ -435,7 +432,7 @@ export default function PollCreationBottomSheet({
         {/* כפתור קבוע מעל ה-safe area — לא נדחף למטה כשמוסיפים אפשרויות */}
         <View style={styles.cta}>
           <UIButton
-            title={isCreating ? 'יוצר…' : 'צור סקר'}
+            title={isCreating ? i18n.t('auto.components__chat__PollCreationBottomSheet.s24') : i18n.t('auto.components__chat__PollCreationBottomSheet.s25')}
             variant="primary"
             fullWidth
             disabled={!canCreate}

@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Modal,
@@ -217,14 +218,14 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
           <SafeAreaView style={styles.safe} edges={["bottom"]}>
             <View style={styles.header}>
               <View style={styles.headerSide} />
-              <Text style={styles.title}>הוספת מניה</Text>
+              <Text style={styles.title}>{i18n.t('auto.screens__Portfolios__components__SymbolSearchModal.s1')}</Text>
               <DayNavBlurButton
                 onPress={() => {
                   void HapticFeedback.impactLight();
                   onClose();
                 }}
                 size={DRAWER_MENU_BUTTON_SIZE}
-                accessibilityLabel="סגור"
+                accessibilityLabel={i18n.t('auto.screens__Portfolios__components__SymbolSearchModal.s2')}
               >
                 <Ionicons
                   name="close"
@@ -247,7 +248,7 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
                   onChangeText={setQuery}
                   onFocus={() => setFocused(true)}
                   onBlur={() => setFocused(false)}
-                  placeholder="חפש מניה: AAPL, Apple, NVDA…"
+                  placeholder={i18n.t('auto.screens__Portfolios__components__SymbolSearchModal.s3')}
                   placeholderTextColor={tokens.colors.text.tertiary}
                   keyboardAppearance={
                     tokens.colors.background.primary === LIGHT_CANVAS
@@ -294,8 +295,8 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
                 </View>
                 <Text style={styles.emptyText}>
                   {query
-                    ? "לא נמצאו מניות רלוונטיות. נסו סימבול אמריקאי (AAPL) או שם באנגלית."
-                    : "הקלידו סימבול או שם חברה כדי להוסיף לרשימה."}
+                    ? i18n.t('auto.screens__Portfolios__components__SymbolSearchModal.s4')
+                    : i18n.t('auto.screens__Portfolios__components__SymbolSearchModal.s5')}
                 </Text>
               </View>
             ) : null}

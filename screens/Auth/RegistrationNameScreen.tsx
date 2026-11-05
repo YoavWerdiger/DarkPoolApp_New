@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useLayoutEffect, useState } from 'react';
 import { View } from 'react-native';
 import { useRegistration } from '../../context/RegistrationContext';
@@ -42,8 +43,8 @@ const RegistrationNameScreen = ({ navigation }: { navigation: any }) => {
 
   return (
     <CashAppScreen
-      title="איך קוראים לך?"
-      subtitle="השם יופיע בפרופיל ובקהילה"
+      title={i18n.t('auto.screens__Auth__RegistrationNameScreen.s1')}
+      subtitle={i18n.t('auto.screens__Auth__RegistrationNameScreen.s2')}
       currentStep={ONBOARDING_STEPS.name}
       totalSteps={ONBOARDING_TOTAL_STEPS}
       progressVariant="dots"
@@ -51,7 +52,7 @@ const RegistrationNameScreen = ({ navigation }: { navigation: any }) => {
       onBack={handleBack}
       footer={
         <CashAppButton
-          title="המשך"
+          title={i18n.t('auto.screens__Auth__RegistrationNameScreen.s3')}
           variant="primary"
           size="lg"
           onPress={handleNext}
@@ -60,8 +61,8 @@ const RegistrationNameScreen = ({ navigation }: { navigation: any }) => {
       }
     >
       <CashAppInput
-        label="שם מלא"
-        placeholder="הכנס את שמך המלא"
+        label={i18n.t('auto.screens__Auth__RegistrationNameScreen.s4')}
+        placeholder={i18n.t('auto.screens__Auth__RegistrationNameScreen.s5')}
         value={name}
         onChangeText={setName}
         autoCapitalize="words"

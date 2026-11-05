@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useState } from 'react';
 import OnboardingErrorBanner from '../../components/onboarding/OnboardingErrorBanner';
 import OnboardingLayout from '../../components/onboarding/OnboardingLayout';
@@ -18,7 +19,7 @@ const ForgotPasswordScreen = ({ navigation, route }: { navigation: any; route?: 
   const handleContinue = () => {
     setError('');
     if (!formatOk) {
-      setError('הזן כתובת אימייל תקינה');
+      setError(i18n.t('auto.screens__Auth__ForgotPasswordScreen.s1'));
       void HapticFeedback.error();
       return;
     }
@@ -34,8 +35,8 @@ const ForgotPasswordScreen = ({ navigation, route }: { navigation: any; route?: 
 
   return (
     <OnboardingLayout
-      title="איפוס סיסמה"
-      subtitle="נשלח קוד בן 6 ספרות לאימייל שלך"
+      title={i18n.t('auto.screens__Auth__ForgotPasswordScreen.s2')}
+      subtitle={i18n.t('auto.screens__Auth__ForgotPasswordScreen.s3')}
       density="focused"
       // גלילה כמו במסכי הרישום — מקלדת פתוחה במסך קטן לא דוחפת תוכן מתחת לכפתור
       scrollable
@@ -49,7 +50,7 @@ const ForgotPasswordScreen = ({ navigation, route }: { navigation: any; route?: 
       }}
       footer={
         <OnboardingButton
-          title="המשך"
+          title={i18n.t('auto.screens__Auth__ForgotPasswordScreen.s4')}
           onPress={handleContinue}
           disabled={!canContinue}
         />
@@ -58,7 +59,7 @@ const ForgotPasswordScreen = ({ navigation, route }: { navigation: any; route?: 
       <OnboardingErrorBanner message={error} />
 
       <OnboardingInput
-        label="אימייל"
+        label={i18n.t('auto.screens__Auth__ForgotPasswordScreen.s5')}
         placeholder="name@example.com"
         value={email}
         onChangeText={(t) => {
@@ -70,7 +71,7 @@ const ForgotPasswordScreen = ({ navigation, route }: { navigation: any; route?: 
         autoCorrect={false}
         autoFocus
         isLast
-        helperText="אם קיים חשבון עם המייל הזה — יישלח אליו קוד"
+        helperText={i18n.t('auto.screens__Auth__ForgotPasswordScreen.s6')}
       />
     </OnboardingLayout>
   );

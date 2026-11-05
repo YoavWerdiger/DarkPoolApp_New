@@ -1,3 +1,4 @@
+import i18n from './i18n';
 import type { ViewStyle } from 'react-native';
 
 /** גלריה מורחבת — snap קבוע, בלי fitContent. */
@@ -25,7 +26,7 @@ export const MEDIA_ATTACH_GRID_GAP = 2;
 export const MEDIA_ATTACH_FIRST_PAGE = 30;
 export const MEDIA_ATTACH_SKELETON_CELLS = 9;
 
-export const MEDIA_ATTACH_PERMISSION_CTA = 'אפשר גישה לתמונות';
+export const MEDIA_ATTACH_PERMISSION_CTA = i18n.t('auto.lib__mediaAttachSheet.s1');
 
 /** handle ב-edgeToEdge (כולל buffer) — תואם BOTTOM_SHEET_EDGE_HANDLE_HEIGHT. */
 export const MEDIA_ATTACH_HANDLE_PX = 36;

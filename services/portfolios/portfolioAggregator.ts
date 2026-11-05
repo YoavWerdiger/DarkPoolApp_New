@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 /**
  * portfolioAggregator.ts
  * --------------------------------------------------------------------------
@@ -333,7 +334,7 @@ export function buildDistribution(
         key = h.asset_type ?? 'unknown';
         label = h.asset_type
           ? (ASSET_TYPE_LABELS[h.asset_type] ?? h.asset_type)
-          : 'לא ידוע';
+          : i18n.t('auto.services__portfolios__portfolioAggregator.s1');
         break;
       case 'currency':
         key = h.currency || 'USD';

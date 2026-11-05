@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import UICard from '../../../components/ui/UICard';
@@ -31,7 +32,7 @@ export function TickerInsiderBuyRow({ item, onPress }: Props) {
   const isBuy = side === 'buy';
   const verb = getFeedTradeVerb(side);
   const sideColor = isBuy ? tokens.colors.primary.main : tokens.colors.text.danger;
-  const displayName = formatInsiderDisplayName(item.insider_name?.trim() || 'בכיר');
+  const displayName = formatInsiderDisplayName(item.insider_name?.trim() || i18n.t('auto.screens__DarkPool__components__TickerInsiderBuyRow.s1'));
   const tickerSym = formatFeedTickerDisplay(item.ticker);
 
   return (
@@ -67,8 +68,7 @@ export function TickerInsiderBuyRow({ item, onPress }: Props) {
           <Text style={styles.value}>{formatUsdCompact(item.value)}</Text>
           {item.shares > 0 ? (
             <Text style={styles.shares}>
-              {item.shares.toLocaleString('en-US')} מניות
-            </Text>
+              {i18n.t('auto.screens__DarkPool__components__TickerInsiderBuyRow.s2', { v0: item.shares.toLocaleString('en-US') })}</Text>
           ) : null}
         </View>
       </View>

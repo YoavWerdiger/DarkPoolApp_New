@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 /**
  * מגדר חברי קונגרס לפי BioGuide — מהמאגר הרשמי הציבורי unitedstates/congress-legislators
  * (bio.gender), לא ניחוש לפי שם. לתווית «חבר קונגרס» / «חברת קונגרס».
@@ -8,9 +9,9 @@ const MALE = new Set<string>(["A000055", "A000148", "A000372", "A000379", "A0003
 
 export function congressMemberLabel(bioguideId: string | null | undefined): string {
   const id = bioguideId?.trim().toUpperCase() ?? '';
-  if (FEMALE.has(id)) return 'חברת קונגרס';
-  if (MALE.has(id)) return 'חבר קונגרס';
-  return 'קונגרס';
+  if (FEMALE.has(id)) return i18n.t('auto.screens__DarkPool__utils__congressGender.s1');
+  if (MALE.has(id)) return i18n.t('auto.screens__DarkPool__utils__congressGender.s2');
+  return i18n.t('auto.screens__DarkPool__utils__congressGender.s3');
 }
 
 export function isKnownCongressMember(bioguideId: string | null | undefined): boolean {

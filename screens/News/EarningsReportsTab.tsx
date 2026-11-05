@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
@@ -39,9 +40,9 @@ type EarningsReportsTabProps = {
 
 /** «מכה» / «מפספסת» / «בקו הצפי» מול הצפי */
 function verdictLabel(pct: number | null | undefined): string {
-  if (pct == null || !Number.isFinite(pct)) return 'תוצאה';
-  if (Math.abs(pct) < 0.05) return 'בקו הצפי';
-  return pct > 0 ? 'מכה' : 'מפספסת';
+  if (pct == null || !Number.isFinite(pct)) return i18n.t('auto.screens__News__EarningsReportsTab.s1');
+  if (Math.abs(pct) < 0.05) return i18n.t('auto.screens__News__EarningsReportsTab.s2');
+  return pct > 0 ? i18n.t('auto.screens__News__EarningsReportsTab.s3') : i18n.t('auto.screens__News__EarningsReportsTab.s4');
 }
 
 const EarningsReportCard: React.FC<{
@@ -114,7 +115,7 @@ const EarningsReportCard: React.FC<{
     const n = normalizeMarketTiming(beforeAfterMarket);
     if (n === 'BeforeMarket') return 'Pre Market';
     if (n === 'AfterMarket') return 'After Market';
-    return beforeAfterMarket ? beforeAfterMarket : 'טרם נקבע';
+    return beforeAfterMarket ? beforeAfterMarket : i18n.t('auto.screens__News__EarningsReportsTab.s5');
   };
 
   // פונקציה לקבלת אייקון וצבע לזמן
@@ -126,7 +127,7 @@ const EarningsReportCard: React.FC<{
     if (n === 'AfterMarket') {
       return { icon: Moon, color: '#007AFF', text: 'After Market' };
     }
-    return { icon: Clock, color: DesignTokens.colors.text.secondary, text: beforeAfterMarket || 'טרם נקבע' };
+    return { icon: Clock, color: DesignTokens.colors.text.secondary, text: beforeAfterMarket || i18n.t('auto.screens__News__EarningsReportsTab.s5') };
   };
 
   // פונקציה לעיצוב סימבול
@@ -269,9 +270,7 @@ const EarningsReportCard: React.FC<{
               {/* Revenue - משמאל */}
               {hasRevenueBlock ? (
                 <View style={{ flex: 1, alignItems: 'center', paddingRight: 8 }}>
-                  <Text style={{ ...APP_TYPE.cardMetricLabel, color: DesignTokens.colors.text.secondary, marginBottom: APP_LAYOUT.cardTitleToSubtitleGap, textAlign: 'center' }}>
-                    הכנסות (Revenue)
-                  </Text>
+                  <Text style={{ ...APP_TYPE.cardMetricLabel, color: DesignTokens.colors.text.secondary, marginBottom: APP_LAYOUT.cardTitleToSubtitleGap, textAlign: 'center' }}>{i18n.t('auto.screens__News__EarningsReportsTab.s6')}</Text>
                   {report.revenue_actual !== null && report.revenue_actual !== 0 ? (
                     (() => {
                       // חישוב surprise אם אין
@@ -304,7 +303,7 @@ const EarningsReportCard: React.FC<{
                               textAlign: 'center',
                             }}
                           >
-                            {verdictCaptions ? verdictLabel(surprisePercent) : '(תוצאה)'}
+                            {verdictCaptions ? verdictLabel(surprisePercent) : i18n.t('auto.screens__News__EarningsReportsTab.s7')}
                           </Text>
                         </View>
                       );
@@ -314,9 +313,7 @@ const EarningsReportCard: React.FC<{
                       <Text style={{ ...APP_TYPE.cardBody, fontWeight: APP_TYPE.cardTitle.fontWeight, fontVariant: ['tabular-nums'], color: DesignTokens.colors.text.primary, textAlign: 'center' }}>
                         {formatRevenue(report.revenue_estimate || report.revenue_estimate_avg || 0)}
                       </Text>
-                      <Text style={{ ...APP_TYPE.caption, color: DesignTokens.colors.text.secondary, marginTop: 2, textAlign: 'center' }}>
-                        (תחזית)
-                      </Text>
+                      <Text style={{ ...APP_TYPE.caption, color: DesignTokens.colors.text.secondary, marginTop: 2, textAlign: 'center' }}>{i18n.t('auto.screens__News__EarningsReportsTab.s8')}</Text>
                     </View>
                   ) : null}
                 </View>
@@ -337,9 +334,7 @@ const EarningsReportCard: React.FC<{
               {/* EPS - מימין */}
               {hasEpsBlock ? (
                 <View style={{ flex: 1, alignItems: 'center', paddingLeft: 8 }}>
-                  <Text style={{ ...APP_TYPE.cardMetricLabel, color: DesignTokens.colors.text.secondary, marginBottom: APP_LAYOUT.cardTitleToSubtitleGap, textAlign: 'center' }}>
-                    רווחיות (EPS)
-                  </Text>
+                  <Text style={{ ...APP_TYPE.cardMetricLabel, color: DesignTokens.colors.text.secondary, marginBottom: APP_LAYOUT.cardTitleToSubtitleGap, textAlign: 'center' }}>{i18n.t('auto.screens__News__EarningsReportsTab.s9')}</Text>
                   {report.actual !== null && report.actual !== 0 ? (
                     (() => {
                       // חישוב surprise אם אין
@@ -373,7 +368,7 @@ const EarningsReportCard: React.FC<{
                               textAlign: 'center',
                             }}
                           >
-                            {verdictCaptions ? verdictLabel(surprisePercent) : '(תוצאה)'}
+                            {verdictCaptions ? verdictLabel(surprisePercent) : i18n.t('auto.screens__News__EarningsReportsTab.s7')}
                           </Text>
                         </View>
                       );
@@ -385,9 +380,7 @@ const EarningsReportCard: React.FC<{
                           typeof report.eps_estimate === 'number' ? report.eps_estimate.toFixed(2) :
                           typeof report.eps_estimate === 'string' ? parseFloat(report.eps_estimate).toFixed(2) : '0.00'}
                       </Text>
-                      <Text style={{ ...APP_TYPE.caption, color: DesignTokens.colors.text.secondary, marginTop: 2, textAlign: 'center' }}>
-                        (תחזית)
-                      </Text>
+                      <Text style={{ ...APP_TYPE.caption, color: DesignTokens.colors.text.secondary, marginTop: 2, textAlign: 'center' }}>{i18n.t('auto.screens__News__EarningsReportsTab.s8')}</Text>
                     </View>
                   ) : null}
                 </View>
@@ -687,7 +680,7 @@ export default function EarningsReportsTab({
       }
     } catch (error) {
       console.error('[EarningsReportsTab] load window failed:', error instanceof Error ? error.message : error);
-      legacyAlert('שגיאה', 'לא ניתן לטעון את דיווחי התוצאות');
+      legacyAlert(i18n.t('auto.screens__News__EarningsReportsTab.s10'), i18n.t('auto.screens__News__EarningsReportsTab.s11'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -716,7 +709,7 @@ export default function EarningsReportsTab({
       setReportsByDate(prev => ({ ...prev, ...byDate }));
     } catch (error) {
       console.error('[EarningsReportsTab] load week failed:', error instanceof Error ? error.message : error);
-      legacyAlert('שגיאה', 'לא ניתן לטעון את דיווחי התוצאות');
+      legacyAlert(i18n.t('auto.screens__News__EarningsReportsTab.s10'), i18n.t('auto.screens__News__EarningsReportsTab.s11'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -901,10 +894,10 @@ export default function EarningsReportsTab({
     const endMonth = friday.toLocaleDateString(appLocale(), { month: 'long' });
     const year = friday.getFullYear();
     if (monday.getMonth() === friday.getMonth()) {
-      return `${startDay}–${endDay} ב${endMonth} ${year}`;
+      return i18n.t('auto.screens__News__EarningsReportsTab.s12', { v0: startDay, v1: endDay, v2: endMonth, v3: year });
     }
     const startMonth = monday.toLocaleDateString(appLocale(), { month: 'long' });
-    return `${startDay} ב${startMonth} – ${endDay} ב${endMonth} ${year}`;
+    return i18n.t('auto.screens__News__EarningsReportsTab.s13', { v0: startDay, v1: startMonth, v2: endDay, v3: endMonth, v4: year });
   }, [weekStart]);
 
   const isCurrentWeek = useMemo(
@@ -1182,9 +1175,7 @@ export default function EarningsReportsTab({
                   color: DesignTokens.colors.text.secondary,
                   marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
                 }}
-              >
-                היום
-              </Text>
+              >{i18n.t('auto.screens__News__EarningsReportsTab.s14')}</Text>
             )}
           </View>
 
@@ -1220,14 +1211,14 @@ export default function EarningsReportsTab({
       >
         {isFirstBeforeMarket && (
           <SectionDivider
-            label="מסחר מוקדם"
+            label={i18n.t('auto.screens__News__EarningsReportsTab.s15')}
             icon={Sun}
             iconColor="#d1a11d"
             marginTop={isListHead ? 0 : APP_LAYOUT.sectionHeaderToContent}
           />
         )}
         {isFirstAfterMarket && (
-          <SectionDivider label="מסחר מאוחר" icon={Moon} iconColor="#007AFF" marginTop={APP_LAYOUT.componentGap} />
+          <SectionDivider label={i18n.t('auto.screens__News__EarningsReportsTab.s16')} icon={Moon} iconColor="#007AFF" marginTop={APP_LAYOUT.componentGap} />
         )}
         <View style={undefined}>
           <EarningsReportCard
@@ -1293,7 +1284,7 @@ export default function EarningsReportsTab({
             color: DesignTokens.colors.text.primary, 
           }}
         >
-          {isToday ? 'אין דיווחי תוצאות היום' : `אין דיווחי תוצאות ל-${dateStr}`}
+          {isToday ? i18n.t('auto.screens__News__EarningsReportsTab.s17') : i18n.t('auto.screens__News__EarningsReportsTab.s18', { v0: dateStr })}
         </Text>
         <Text 
           style={{ 
@@ -1304,13 +1295,13 @@ export default function EarningsReportsTab({
           }}
         >
           {isToday 
-            ? 'השווקים רגועים היום - אין דיווחי תוצאות מתוכננים'
-            : `לא נמצאו דיווחי תוצאות ב${dateStr}`
+            ? i18n.t('auto.screens__News__EarningsReportsTab.s19')
+            : i18n.t('auto.screens__News__EarningsReportsTab.s20', { v0: dateStr })
           }
         </Text>
         {hasClosestReports && closestDate && (
           <UIButton
-            title={`עבור לתאריך עם דיווחים (${closestDate.toLocaleDateString(appLocale(), { day: 'numeric', month: 'short' })})`}
+            title={i18n.t('auto.screens__News__EarningsReportsTab.s21', { v0: closestDate.toLocaleDateString(appLocale(), { day: 'numeric', month: 'short' }) })}
             variant="primary"
             onPress={() => setSelectedDate(closestDate)}
             style={{ marginTop: APP_LAYOUT.componentGap }}
@@ -1318,7 +1309,7 @@ export default function EarningsReportsTab({
         )}
         {!isSuccessfulEmptyDay && (
           <UIButton
-            title="רענן נתונים"
+            title={i18n.t('auto.screens__News__EarningsReportsTab.s22')}
             variant="secondary"
             onPress={handleRefresh}
             style={{ marginTop: APP_LAYOUT.cardStackGap }}
@@ -1390,7 +1381,7 @@ export default function EarningsReportsTab({
           {!isSelectedToday ? (
             <View style={fabStyles.wrap} pointerEvents="box-none">
               <UIButton
-                title="חזרה להיום"
+                title={i18n.t('auto.screens__News__EarningsReportsTab.s23')}
                 variant="primary"
                 icon="today-outline"
                 iconPosition="right"
@@ -1437,7 +1428,7 @@ export default function EarningsReportsTab({
             <Pressable
               onPress={scrollToTop}
               accessibilityRole="button"
-              accessibilityLabel="גלול לראש הרשימה"
+              accessibilityLabel={i18n.t('auto.screens__News__EarningsReportsTab.s24')}
               style={({ pressed }) => ({
                 width: 44,
                 height: 44,

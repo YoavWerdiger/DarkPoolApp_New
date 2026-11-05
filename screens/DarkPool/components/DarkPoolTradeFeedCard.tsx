@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 /**
  * כרטיס עסקה בפיד — קל יותר מגיבור פרטי העסקה:
@@ -107,10 +108,10 @@ export function DarkPoolTradeFeedCard({
   if (isCongress) {
     const range = formatDisclosedAmountRange(amountLabel);
     // «בשווי $1,001–$15,000» — טווח STOCK Act, לא כמות
-    if (range) detailBits.push(`בשווי ${isolateData(range)}`);
+    if (range) detailBits.push(i18n.t('auto.screens__DarkPool__components__DarkPoolTradeFeedCard.s1', { v0: isolateData(range) }));
   } else {
     const sharesText = formatInsiderShares(shares);
-    if (sharesText) detailBits.push(`${isolateData(sharesText)} מניות`);
+    if (sharesText) detailBits.push(i18n.t('auto.screens__DarkPool__components__DarkPoolTradeFeedCard.s2', { v0: isolateData(sharesText) }));
   }
   if (summary.metaRender) detailBits.push(summary.metaRender);
   const detailLine = detailBits.join(' ');
@@ -133,7 +134,7 @@ export function DarkPoolTradeFeedCard({
             disabled={!onPersonPress}
             style={styles.avatarHit}
             accessibilityRole={onPersonPress ? 'button' : undefined}
-            accessibilityLabel={onPersonPress ? `פרופיל ${displayName}` : undefined}
+            accessibilityLabel={onPersonPress ? i18n.t('auto.screens__DarkPool__components__DarkPoolTradeFeedCard.s3', { v0: displayName }) : undefined}
           >
             <InsiderAvatar
               name={displayName}
@@ -149,7 +150,7 @@ export function DarkPoolTradeFeedCard({
                 disabled={!onPersonPress}
                 style={line.nameHit}
                 accessibilityRole={onPersonPress ? 'button' : undefined}
-                accessibilityLabel={onPersonPress ? `פרופיל ${displayName}` : undefined}
+                accessibilityLabel={onPersonPress ? i18n.t('auto.screens__DarkPool__components__DarkPoolTradeFeedCard.s3', { v0: displayName }) : undefined}
               >
                 <Text style={line.name} numberOfLines={1} ellipsizeMode="tail">
                   {displayName}

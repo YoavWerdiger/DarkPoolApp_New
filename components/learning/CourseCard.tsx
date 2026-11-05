@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React from 'react';
 import {
@@ -110,12 +111,12 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   );
 
   const ctaLabel = comingSoon || isCourseTeaserLocked(course.id)
-    ? 'לפרטים על הקורס'
+    ? i18n.t('auto.components__learning__CourseCard.s1')
     : isEnrolled
-      ? 'המשך למידה'
+      ? i18n.t('auto.components__learning__CourseCard.s2')
       : isPremium
-        ? 'לצפייה בקורס'
-        : 'התחל ללמוד';
+        ? i18n.t('auto.components__learning__CourseCard.s3')
+        : i18n.t('auto.components__learning__CourseCard.s4');
 
   return (
     <TouchableOpacity
@@ -182,7 +183,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
 
           {audience ? (
             <View style={styles.audienceBlock}>
-              <Text style={styles.audienceLabel}>למי הקורס מתאים</Text>
+              <Text style={styles.audienceLabel}>{i18n.t('auto.components__learning__CourseCard.s5')}</Text>
               <Text style={styles.audienceText}>{audience}</Text>
             </View>
           ) : null}

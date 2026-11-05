@@ -1,3 +1,4 @@
+import i18n from '../lib/i18n';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
@@ -32,7 +33,7 @@ const PREMIUM_ROLES = ['plus_user', 'premium_user', 'vip_user', 'admin'];
 const FREE_SUBSCRIPTION: SubscriptionData = {
   isPremium: false,
   planId: 'free',
-  planName: 'חינמי',
+  planName: i18n.t('auto.hooks__useSubscription.s1'),
   role: 'free_user',
   status: null,
   startsAt: null,
@@ -261,9 +262,9 @@ export function useSubscription(): SubscriptionInfo {
 // פונקציה לבדיקה אם קבוצה היא חינמית
 export function isFreeGroup(groupName: string): boolean {
   const freeGroupNames = [
-    'קהילה חינמית',
-    'הכרזות',
-    '🔔 הכרזות',
+    i18n.t('auto.hooks__useSubscription.s2'),
+    i18n.t('auto.hooks__useSubscription.s3'),
+    i18n.t('auto.hooks__useSubscription.s4'),
   ];
 
   return freeGroupNames.some(

@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 // ============================================
 // Chat Group Settings — privacy, photo, mute, edit info
 // ============================================
@@ -116,7 +117,7 @@ export default function ChatGroupSettingsScreen() {
   const handleToggleMute = async (value: boolean) => {
     const { success } = await toggleMuted(value);
     if (!success) {
-      legacyAlert('שגיאה', 'לא ניתן לשנות את הגדרות ההשתקה');
+      legacyAlert(i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s1'), i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s2'));
       return;
     }
     await refreshCurrentGroupDetails();
@@ -124,11 +125,11 @@ export default function ChatGroupSettingsScreen() {
 
   const handleRename = () => {
     if (!isAdmin || !currentGroup) return;
-    showPrompt('שנה שם קבוצה', currentGroup.name || '', async (newName) => {
+    showPrompt(i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s3'), currentGroup.name || '', async (newName) => {
       if (!newName?.trim()) return;
       const { success, error } = await updateGroup(groupId, { name: newName.trim() });
       if (!success) {
-        legacyAlert('שגיאה', error || 'לא ניתן לעדכן את שם הקבוצה');
+        legacyAlert(i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s1'), error || i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s4'));
       }
     });
   };
@@ -136,14 +137,14 @@ export default function ChatGroupSettingsScreen() {
   const handleEditDescription = () => {
     if (!isAdmin || !currentGroup) return;
     showPrompt(
-      'ערוך תיאור',
+      i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s5'),
       currentGroup.description || '',
       async (description) => {
         const { success, error } = await updateGroup(groupId, {
           description: description.trim(),
         });
         if (!success) {
-          legacyAlert('שגיאה', error || 'לא ניתן לעדכן את התיאור');
+          legacyAlert(i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s1'), error || i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s6'));
         }
       },
       true
@@ -155,7 +156,7 @@ export default function ChatGroupSettingsScreen() {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        legacyAlert('שגיאה', 'נדרשת הרשאה לגישה לתמונות');
+        legacyAlert(i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s1'), i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s7'));
         return;
       }
 
@@ -171,16 +172,16 @@ export default function ChatGroupSettingsScreen() {
       setUploadingAvatar(true);
       const upload = await mediaService.uploadMedia(result.assets[0].uri, 'image');
       if (!upload.success || !upload.url) {
-        legacyAlert('שגיאה', upload.error || 'העלאת תמונת הקבוצה נכשלה');
+        legacyAlert(i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s1'), upload.error || i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s8'));
         return;
       }
 
       const { success, error } = await updateGroup(groupId, { avatar_url: upload.url });
       if (!success) {
-        legacyAlert('שגיאה', error || 'לא ניתן לעדכן את תמונת הקבוצה');
+        legacyAlert(i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s1'), error || i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s9'));
       }
     } catch {
-      legacyAlert('שגיאה', 'שגיאה בבחירת תמונה');
+      legacyAlert(i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s1'), i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s10'));
     } finally {
       setUploadingAvatar(false);
     }
@@ -194,7 +195,7 @@ export default function ChatGroupSettingsScreen() {
     });
     if (!success) {
       setIsPublic(!value);
-      legacyAlert('שגיאה', error || 'לא ניתן לעדכן את פרטיות הקבוצה');
+      legacyAlert(i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s1'), error || i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s11'));
     }
   };
 
@@ -209,7 +210,7 @@ export default function ChatGroupSettingsScreen() {
     });
     if (!success) {
       setIsAnnouncement(!value);
-      legacyAlert('שגיאה', error || 'לא ניתן לעדכן את הגדרות השליחה');
+      legacyAlert(i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s1'), error || i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s12'));
     }
   };
 
@@ -221,9 +222,9 @@ export default function ChatGroupSettingsScreen() {
     return (
       <ChatScreenShell>
         <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-          <ChatSubScreenHeader title="הגדרות קבוצה" onBack={handleBack} />
+          <ChatSubScreenHeader title={i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s13')} onBack={handleBack} />
           <View style={styles.errorStateBody}>
-            <Text style={styles.errorText}>לא נמצאה קבוצה</Text>
+            <Text style={styles.errorText}>{i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s14')}</Text>
           </View>
         </SafeAreaView>
       </ChatScreenShell>
@@ -233,7 +234,7 @@ export default function ChatGroupSettingsScreen() {
   return (
     <ChatScreenShell>
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        <ChatSubScreenHeader title="הגדרות קבוצה" onBack={handleBack} />
+        <ChatSubScreenHeader title={i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s13')} onBack={handleBack} />
 
         <View style={styles.rtlRoot}>
           <ScrollView
@@ -242,11 +243,11 @@ export default function ChatGroupSettingsScreen() {
             contentContainerStyle={styles.scrollContent}
           >
             <View style={styles.sectionBlock}>
-              {renderSectionCaption('התראות')}
+              {renderSectionCaption(i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s15'))}
               <UICard variant="soft" padding="none" style={styles.sectionCard}>
                 <View style={styles.settingRow}>
                   {renderSettingIcon('notifications-outline')}
-                  <Text style={styles.settingTextGrow}>התראות</Text>
+                  <Text style={styles.settingTextGrow}>{i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s15')}</Text>
                   {/* דלוק = מקבלים התראות (אחיד עם פרטי הקבוצה ומסך ההתראות) */}
                   <AppSwitch
                     value={!isMuted}
@@ -265,7 +266,7 @@ export default function ChatGroupSettingsScreen() {
 
             {isAdmin ? (
               <View style={styles.sectionBlock}>
-                {renderSectionCaption('תמונה ופרטים')}
+                {renderSectionCaption(i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s16'))}
                 <UICard variant="soft" padding="none" style={styles.sectionCard}>
                   <TouchableOpacity
                     style={styles.photoRow}
@@ -291,8 +292,8 @@ export default function ChatGroupSettingsScreen() {
                       ) : null}
                     </View>
                     <View style={styles.photoTextWrap}>
-                      <Text style={styles.settingText}>שנה תמונת קבוצה</Text>
-                      <Text style={styles.settingHint}>בחר תמונה מהגלריה</Text>
+                      <Text style={styles.settingText}>{i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s17')}</Text>
+                      <Text style={styles.settingHint}>{i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s18')}</Text>
                     </View>
                     <Ionicons name={disclosureIcon} size={20} color={DesignTokens.colors.text.tertiary} />
                   </TouchableOpacity>
@@ -306,7 +307,7 @@ export default function ChatGroupSettingsScreen() {
                     activeOpacity={0.7}
                   >
                     {renderSettingIcon('create-outline')}
-                    <Text style={styles.settingTextGrow}>שנה שם קבוצה</Text>
+                    <Text style={styles.settingTextGrow}>{i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s3')}</Text>
                     <Ionicons name={disclosureIcon} size={20} color={DesignTokens.colors.text.tertiary} />
                   </TouchableOpacity>
                   <View style={styles.separator} />
@@ -319,7 +320,7 @@ export default function ChatGroupSettingsScreen() {
                     activeOpacity={0.7}
                   >
                     {renderSettingIcon('document-text-outline')}
-                    <Text style={styles.settingTextGrow}>ערוך תיאור</Text>
+                    <Text style={styles.settingTextGrow}>{i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s5')}</Text>
                     <Ionicons name={disclosureIcon} size={20} color={DesignTokens.colors.text.tertiary} />
                   </TouchableOpacity>
                 </UICard>
@@ -328,14 +329,14 @@ export default function ChatGroupSettingsScreen() {
 
             {isAdmin ? (
               <View style={styles.sectionBlock}>
-                {renderSectionCaption('פרטיות')}
+                {renderSectionCaption(i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s19'))}
                 <UICard variant="soft" padding="none" style={styles.sectionCard}>
                   <View style={styles.settingRow}>
                     {renderSettingIcon(isPublic ? 'globe-outline' : 'lock-closed-outline')}
                     <View style={styles.settingTextWrap}>
-                      <Text style={styles.settingText}>{isPublic ? 'קבוצה פתוחה' : 'קבוצה פרטית'}</Text>
+                      <Text style={styles.settingText}>{isPublic ? i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s20') : i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s21')}</Text>
                       <Text style={styles.settingHint}>
-                        {isPublic ? 'כולם יכולים להצטרף' : 'הצטרפות רק בהזמנה'}
+                        {isPublic ? i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s22') : i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s23')}
                       </Text>
                     </View>
                     <AppSwitch
@@ -355,8 +356,8 @@ export default function ChatGroupSettingsScreen() {
                   <View style={styles.settingRow}>
                     {renderSettingIcon('megaphone-outline')}
                     <View style={styles.settingTextWrap}>
-                      <Text style={styles.settingText}>קבוצת הכרזות</Text>
-                      <Text style={styles.settingHint}>רק אדמינים שולחים הודעות</Text>
+                      <Text style={styles.settingText}>{i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s24')}</Text>
+                      <Text style={styles.settingHint}>{i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s25')}</Text>
                     </View>
                     <AppSwitch
                       value={isAnnouncement}
@@ -376,7 +377,7 @@ export default function ChatGroupSettingsScreen() {
             ) : null}
 
             <View style={styles.sectionBlock}>
-              {renderSectionCaption('עזרה')}
+              {renderSectionCaption(i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s26'))}
               <UICard variant="soft" padding="none" style={styles.sectionCard}>
                 <TouchableOpacity
                   style={styles.settingRow}
@@ -387,7 +388,7 @@ export default function ChatGroupSettingsScreen() {
                   activeOpacity={0.7}
                 >
                   {renderSettingIcon('shield-outline')}
-                  <Text style={styles.settingTextGrow}>פרטיות ותמיכה</Text>
+                  <Text style={styles.settingTextGrow}>{i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s27')}</Text>
                   <Ionicons name={disclosureIcon} size={20} color={DesignTokens.colors.text.tertiary} />
                 </TouchableOpacity>
               </UICard>
@@ -410,7 +411,7 @@ export default function ChatGroupSettingsScreen() {
             />
             <View style={styles.promptButtons}>
               <TouchableOpacity onPress={() => setPromptVisible(false)} style={styles.promptBtn}>
-                <Text style={styles.promptBtnCancel}>ביטול</Text>
+                <Text style={styles.promptBtnCancel}>{i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s28')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => {
@@ -419,7 +420,7 @@ export default function ChatGroupSettingsScreen() {
                 }}
                 style={[styles.promptBtn, styles.promptBtnConfirmBg]}
               >
-                <Text style={styles.promptBtnConfirm}>אישור</Text>
+                <Text style={styles.promptBtnConfirm}>{i18n.t('auto.screens__ChatNew__ChatGroupSettingsScreen.s29')}</Text>
               </TouchableOpacity>
             </View>
           </View>

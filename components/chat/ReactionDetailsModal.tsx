@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { logger } from '../../utils/logger';
 import React, { useState, useEffect, useMemo, memo } from 'react';
@@ -250,12 +251,11 @@ const ReactionDetailsModal: React.FC<ReactionDetailsModalProps> = memo(({
       contentPaddingBottom={0}
     >
       <View style={localStyles.contentWrap} onLayout={onContentLayout}>
-        <ChatSheetTopoHeader title="ריאקציות" onClose={onClose} />
+        <ChatSheetTopoHeader title={i18n.t('auto.components__chat__ReactionDetailsModal.s1')} onClose={onClose} />
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={localStyles.tabsRow}>
           <Pressable onPress={() => setSelectedTab('all')} style={tabStyle(selectedTab === 'all')}>
-            <Text style={[localStyles.tabText, tabTextColor(selectedTab === 'all')]}>
-              הכל {allReactions.length}
+            <Text style={[localStyles.tabText, tabTextColor(selectedTab === 'all')]}>{i18n.t('auto.components__chat__ReactionDetailsModal.s2', { v0: allReactions.length })}
             </Text>
           </Pressable>
           {reactionTypes.map((emoji) => (
@@ -272,7 +272,7 @@ const ReactionDetailsModal: React.FC<ReactionDetailsModalProps> = memo(({
           {loading ? (
             <ChatSheetLoading />
           ) : filteredReactions.length === 0 ? (
-            <ChatSheetEmptyState title="אין ריאקציות" />
+            <ChatSheetEmptyState title={i18n.t('auto.components__chat__ReactionDetailsModal.s3')} />
           ) : (
             <ScrollView showsVerticalScrollIndicator={false} nestedScrollEnabled>
               {filteredReactions.map((item, index) => (

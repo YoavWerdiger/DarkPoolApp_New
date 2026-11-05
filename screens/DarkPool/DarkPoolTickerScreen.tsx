@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 /**
  * מסך טיקר — InsiderWave IA: הדר זהות / מחיר+שווי שוק / גרף / מחזיקים|פיד.
@@ -419,7 +420,7 @@ export default function DarkPoolTickerScreen() {
             }}
             glassIntensity="subtle"
             size={HEADER_BACK_BTN_SIZE}
-            accessibilityLabel="חזרה"
+            accessibilityLabel={i18n.t('auto.screens__DarkPool__DarkPoolTickerScreen.s1')}
           >
             <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
           </DayNavBlurButton>
@@ -513,7 +514,7 @@ export default function DarkPoolTickerScreen() {
               value={range}
               onChange={setRange}
               contentContainerStyle={styles.chipRow}
-              accessibilityLabelFor={(o) => `טווח ${o.label}`}
+              accessibilityLabelFor={(o) => i18n.t('auto.screens__DarkPool__DarkPoolTickerScreen.s2', { v0: o.label })}
             />
           ) : null}
 

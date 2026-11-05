@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useLayoutEffect, useState } from 'react';
 import { Text, View, StyleSheet } from 'react-native';
@@ -49,12 +50,12 @@ const RegistrationAgeInputScreen = ({ navigation }: Props) => {
 
   const validateAge = (text: string): boolean => {
     if (!text.trim()) {
-      setError('נא להזין גיל');
+      setError(i18n.t('auto.screens__Auth__RegistrationAgeInputScreen.s1'));
       return false;
     }
     const num = parseInt(text, 10);
     if (isNaN(num) || num < 16 || num > 100) {
-      setError('נא להזין גיל בין 16 ל-100');
+      setError(i18n.t('auto.screens__Auth__RegistrationAgeInputScreen.s2'));
       return false;
     }
     setError('');
@@ -93,8 +94,8 @@ const RegistrationAgeInputScreen = ({ navigation }: Props) => {
 
   return (
     <CashAppScreen
-      title="מה הגיל שלך?"
-      subtitle="עוזר לנו להתאים את החוויה"
+      title={i18n.t('auto.screens__Auth__RegistrationAgeInputScreen.s3')}
+      subtitle={i18n.t('auto.screens__Auth__RegistrationAgeInputScreen.s4')}
       currentStep={ONBOARDING_STEPS.age}
       totalSteps={ONBOARDING_TOTAL_STEPS}
       progressVariant="dots"
@@ -108,7 +109,7 @@ const RegistrationAgeInputScreen = ({ navigation }: Props) => {
             </Text>
           ) : null}
           <CashAppButton
-            title="המשך"
+            title={i18n.t('auto.screens__Auth__RegistrationAgeInputScreen.s5')}
             variant="primary"
             size="lg"
             onPress={handleNext}

@@ -1,3 +1,4 @@
+import i18n from '../lib/i18n';
 import { supabase } from '../lib/supabase';
 import {
   Course,
@@ -431,7 +432,7 @@ export class LearningService {
     const module: ModuleWithLessons = {
       id: 'main',
       course_id: courseId,
-      title: 'שיעורים',
+      title: i18n.t('auto.services__learningService.s1'),
       description: '',
       sort_index: 0,
       created_at: courseData.created_at,

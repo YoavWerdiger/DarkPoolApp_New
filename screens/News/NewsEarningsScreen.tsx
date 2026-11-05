@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useCallback, useState } from 'react';
 import { Calendar, List } from 'lucide-react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -45,7 +46,7 @@ export default function NewsEarningsScreen() {
       onPress={toggleViewMode}
       glassIntensity="subtle"
       size={DRAWER_MENU_BUTTON_SIZE}
-      accessibilityLabel={isWeekly ? 'מעבר לתצוגה יומית' : 'מעבר לתצוגה שבועית'}
+      accessibilityLabel={isWeekly ? i18n.t('auto.screens__News__NewsEarningsScreen.s1') : i18n.t('auto.screens__News__NewsEarningsScreen.s2')}
     >
       {isWeekly ? (
         <List size={22} strokeWidth={2} color={iconColor} />
@@ -56,7 +57,7 @@ export default function NewsEarningsScreen() {
   );
 
   return (
-    <NewsScreenShell title="דיווחי רווח" headerRight={viewModeButton}>
+    <NewsScreenShell title={i18n.t('auto.screens__News__NewsEarningsScreen.s3')} headerRight={viewModeButton}>
       <EarningsReportsTab
         viewMode={viewMode}
         openReportId={openReportId}

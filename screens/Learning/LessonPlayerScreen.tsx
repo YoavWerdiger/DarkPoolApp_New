@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useCallback, useEffect, useRef } from 'react';
@@ -180,9 +181,9 @@ export const LessonPlayerScreen: React.FC = () => {
       setSignedUrl(response.signed_url);
     } catch (error) {
       legacyAlert(
-        'שגיאה',
-        'לא ניתן לטעון את הוידאו. בדוק את החיבור לאינטרנט.',
-        [{ text: 'אישור' }]
+        i18n.t('auto.screens__Learning__LessonPlayerScreen.s1'),
+        i18n.t('auto.screens__Learning__LessonPlayerScreen.s2'),
+        [{ text: i18n.t('auto.screens__Learning__LessonPlayerScreen.s3') }]
       );
     } finally {
       setIsLoadingVideo(false);
@@ -234,7 +235,7 @@ export const LessonPlayerScreen: React.FC = () => {
     if (!currentBlock?.video_key) {
       return (
         <View style={styles.blockErrorContainer}>
-          <Text style={styles.blockErrorText}>וידאו לא זמין</Text>
+          <Text style={styles.blockErrorText}>{i18n.t('auto.screens__Learning__LessonPlayerScreen.s4')}</Text>
         </View>
       );
     }
@@ -243,7 +244,7 @@ export const LessonPlayerScreen: React.FC = () => {
       return (
         <View style={styles.blockLoadingContainer}>
           <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-          <Text style={styles.blockLoadingText}>טוען וידאו...</Text>
+          <Text style={styles.blockLoadingText}>{i18n.t('auto.screens__Learning__LessonPlayerScreen.s5')}</Text>
         </View>
       );
     }
@@ -251,7 +252,7 @@ export const LessonPlayerScreen: React.FC = () => {
     if (!signedUrl) {
       return (
         <View style={styles.blockErrorContainer}>
-          <Text style={styles.blockErrorText}>לא ניתן לטעון את הוידאו</Text>
+          <Text style={styles.blockErrorText}>{i18n.t('auto.screens__Learning__LessonPlayerScreen.s6')}</Text>
         </View>
       );
     }
@@ -332,7 +333,7 @@ export const LessonPlayerScreen: React.FC = () => {
     if (!currentBlock?.text_md) {
       return (
         <View style={styles.blockErrorContainer}>
-          <Text style={styles.blockErrorText}>תוכן לא זמין</Text>
+          <Text style={styles.blockErrorText}>{i18n.t('auto.screens__Learning__LessonPlayerScreen.s7')}</Text>
         </View>
       );
     }
@@ -349,13 +350,11 @@ export const LessonPlayerScreen: React.FC = () => {
   const renderPdfBlock = () => {
     return (
       <View style={styles.pdfContainer}>
-        <Text style={styles.pdfText}>תצוגת PDF</Text>
-        <Text style={styles.pdfSubtext}>
-          תכונה זו תהיה זמינה בקרוב
-        </Text>
+        <Text style={styles.pdfText}>{i18n.t('auto.screens__Learning__LessonPlayerScreen.s8')}</Text>
+        <Text style={styles.pdfSubtext}>{i18n.t('auto.screens__Learning__LessonPlayerScreen.s9')}</Text>
         {currentBlock?.pdf_url && (
           <TouchableOpacity style={styles.downloadButton}>
-            <Text style={styles.downloadButtonText}>הורד PDF</Text>
+            <Text style={styles.downloadButtonText}>{i18n.t('auto.screens__Learning__LessonPlayerScreen.s10')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -365,17 +364,15 @@ export const LessonPlayerScreen: React.FC = () => {
   const renderQuizBlock = () => {
     return (
       <View style={styles.quizContainer}>
-        <Text style={styles.quizText}>חידון</Text>
-        <Text style={styles.quizSubtext}>
-          תכונה זו תהיה זמינה בקרוב
-        </Text>
+        <Text style={styles.quizText}>{i18n.t('auto.screens__Learning__LessonPlayerScreen.s11')}</Text>
+        <Text style={styles.quizSubtext}>{i18n.t('auto.screens__Learning__LessonPlayerScreen.s9')}</Text>
         <TouchableOpacity 
           style={styles.quizButton}
           onPress={() => (navigation as { navigate: (n: string, p?: object) => void }).navigate('QuizScreen', {
             blockId: currentBlock?.id,
           })}
         >
-          <Text style={styles.quizButtonText}>התחל חידון</Text>
+          <Text style={styles.quizButtonText}>{i18n.t('auto.screens__Learning__LessonPlayerScreen.s12')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -385,7 +382,7 @@ export const LessonPlayerScreen: React.FC = () => {
     if (!currentBlock) {
       return (
         <View style={styles.blockErrorContainer}>
-          <Text style={styles.blockErrorText}>תוכן לא זמין</Text>
+          <Text style={styles.blockErrorText}>{i18n.t('auto.screens__Learning__LessonPlayerScreen.s7')}</Text>
         </View>
       );
     }
@@ -402,7 +399,7 @@ export const LessonPlayerScreen: React.FC = () => {
       default:
         return (
           <View style={styles.blockErrorContainer}>
-            <Text style={styles.blockErrorText}>סוג תוכן לא נתמך</Text>
+            <Text style={styles.blockErrorText}>{i18n.t('auto.screens__Learning__LessonPlayerScreen.s13')}</Text>
           </View>
         );
     }
@@ -418,7 +415,7 @@ export const LessonPlayerScreen: React.FC = () => {
         <RNSafeAreaView style={styles.safeAreaContainer} edges={['top']}>
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-            <Text style={styles.loadingText}>טוען שיעור...</Text>
+            <Text style={styles.loadingText}>{i18n.t('auto.screens__Learning__LessonPlayerScreen.s14')}</Text>
           </View>
         </RNSafeAreaView>
       </LinearGradient>
@@ -435,9 +432,9 @@ export const LessonPlayerScreen: React.FC = () => {
         <RNSafeAreaView style={styles.safeAreaContainer} edges={['top']}>
           <View style={styles.errorContainer}>
             <Text style={styles.errorIcon}>⚠️</Text>
-            <Text style={styles.errorTitle}>שגיאה בטעינת השיעור</Text>
+            <Text style={styles.errorTitle}>{i18n.t('auto.screens__Learning__LessonPlayerScreen.s15')}</Text>
             <Text style={styles.errorMessage}>
-              {error?.message || 'השיעור לא נמצא'}
+              {error?.message || i18n.t('auto.screens__Learning__LessonPlayerScreen.s16')}
             </Text>
           </View>
         </RNSafeAreaView>
@@ -464,7 +461,7 @@ export const LessonPlayerScreen: React.FC = () => {
                   {lesson.title}
                 </Text>
                 <Text style={styles.headerSubtitle}>
-                  שיעור {currentBlockIndex + 1} מתוך {lesson.blocks?.length ?? 0}
+                  {i18n.t('auto.screens__Learning__LessonPlayerScreen.s17')} {currentBlockIndex + 1} {i18n.t('auto.screens__Learning__LessonPlayerScreen.s18')} {lesson.blocks?.length ?? 0}
                 </Text>
               </View>
               <View style={styles.headerSpacer} />
@@ -517,7 +514,7 @@ export const LessonPlayerScreen: React.FC = () => {
                 onPress={() => setNotesExpanded(!notesExpanded)}
                 activeOpacity={0.7}
               >
-                <Text style={styles.notesTitle}>הערות אישיות</Text>
+                <Text style={styles.notesTitle}>{i18n.t('auto.screens__Learning__LessonPlayerScreen.s19')}</Text>
                 <View style={styles.notesHeaderIcons}>
                   {notesSaving && <ActivityIndicator size="small" color={DesignTokens.colors.text.tertiary} />}
                   <ChevronDown
@@ -537,7 +534,7 @@ export const LessonPlayerScreen: React.FC = () => {
                     value={notes}
                     onChangeText={setNotes}
                     onBlur={saveNotes}
-                    placeholder="כתוב הערות לשיעור זה..."
+                    placeholder={i18n.t('auto.screens__Learning__LessonPlayerScreen.s20')}
                     placeholderTextColor={DesignTokens.colors.text.tertiary}
                     textAlign="right"
                     textAlignVertical="top"

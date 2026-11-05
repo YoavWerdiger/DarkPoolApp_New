@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,25 +31,25 @@ type ColDef = {
 };
 
 const COLS: ColDef[] = [
-  { key: 'symbol', label: 'סימבול', mode: 'name', style: colSymbol },
-  { key: 'last', label: 'מחיר', mode: 'price_desc', style: colLast },
+  { key: 'symbol', label: i18n.t('auto.screens__Watchlist__components__WatchlistColumnHeader.s1'), mode: 'name', style: colSymbol },
+  { key: 'last', label: i18n.t('auto.screens__Watchlist__components__WatchlistColumnHeader.s2'), mode: 'price_desc', style: colLast },
   {
     key: 'chg',
-    label: 'שינוי',
+    label: i18n.t('auto.screens__Watchlist__components__WatchlistColumnHeader.s3'),
     mode: 'change_abs_desc',
     toggleMode: 'change_abs_asc',
     style: colChg,
   },
   {
     key: 'chgPct',
-    label: 'שינוי %',
+    label: i18n.t('auto.screens__Watchlist__components__WatchlistColumnHeader.s4'),
     mode: 'change_desc',
     toggleMode: 'change_asc',
     style: colChgPct,
   },
   {
     key: 'vol',
-    label: 'וול׳',
+    label: i18n.t('auto.screens__Watchlist__components__WatchlistColumnHeader.s5'),
     mode: 'volume_desc',
     toggleMode: 'volume_asc',
     style: colVol,
@@ -119,7 +120,7 @@ export function WatchlistColumnHeader({ sortMode, onSortChange }: Props) {
                 }
               }}
               accessibilityRole="button"
-              accessibilityLabel={`מיון לפי ${col.label}`}
+              accessibilityLabel={i18n.t('auto.screens__Watchlist__components__WatchlistColumnHeader.s6', { v0: col.label })}
               hitSlop={6}
             >
               {active ? (

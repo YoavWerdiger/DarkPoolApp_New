@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 /**
  * עטיפה אחידה לכל bottom sheets בצ'אט — רקע זכוכית, backdrop, כותרות ורשימות.
@@ -260,7 +261,7 @@ export function ChatSheetNavHeader({
         onPress={onClose}
         size={DAY_NAV_BUTTON_SIZE}
         glassIntensity="subtle"
-        accessibilityLabel="חזרה"
+        accessibilityLabel={i18n.t('auto.components__chat__ChatBottomSheet.s1')}
       >
         <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
       </DayNavBlurButton>
@@ -286,7 +287,7 @@ export function ChatSheetTopoHeader({ title, onClose }: { title?: string; onClos
         size={DAY_NAV_BUTTON_SIZE}
         glass={false}
         style={{ backgroundColor: headerExitButtonFill(tokens.colors.background.cardSolid) }}
-        accessibilityLabel="חזרה"
+        accessibilityLabel={i18n.t('auto.components__chat__ChatBottomSheet.s1')}
       >
         <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
       </DayNavBlurButton>
@@ -345,7 +346,7 @@ export function ChatSheetSearchBar({
   onChangeText,
   onSubmit,
   onClear,
-  placeholder = 'חיפוש...',
+  placeholder = i18n.t('auto.components__chat__ChatBottomSheet.s2'),
   inputRef,
   loading = false,
   onSearchPress,
@@ -407,7 +408,7 @@ export function ChatSheetSearchBar({
 
 export function ChatSheetCancelButton({
   onPress,
-  label = 'ביטול',
+  label = i18n.t('auto.components__chat__ChatBottomSheet.s3'),
 }: {
   onPress: () => void;
   label?: string;
@@ -445,7 +446,7 @@ export function ChatSheetEmptyState({
   );
 }
 
-export function ChatSheetLoading({ label = 'טוען...' }: { label?: string }) {
+export function ChatSheetLoading({ label = i18n.t('auto.components__chat__ChatBottomSheet.s4') }: { label?: string }) {
   const sheet = useChatSheetStyles();
   const tokens = useDesignTokens();
   return (

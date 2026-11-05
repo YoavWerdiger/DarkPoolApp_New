@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState } from 'react';
@@ -20,13 +21,13 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
 
   // המרת תוכניות המנוי לפורמט המתאים לתצוגה (ללא אד-אונים ותשלום חד פעמי)
   const getPeriodLabel = (period: string, planId: string) => {
-    if (planId === 'yearly') return '12 תשלומים של ₪135';
-    if (planId === 'quarterly') return '3 תשלומים של ₪150';
+    if (planId === 'yearly') return i18n.t('auto.screens__Auth__RegistrationPaymentScreen.s1');
+    if (planId === 'quarterly') return i18n.t('auto.screens__Auth__RegistrationPaymentScreen.s2');
     switch (period) {
-      case 'monthly':   return 'לחודש';
-      case 'quarterly': return 'ל-3 חודשים';
-      case 'yearly':    return 'לשנה';
-      default:          return 'לחודש';
+      case 'monthly':   return i18n.t('auto.screens__Auth__RegistrationPaymentScreen.s3');
+      case 'quarterly': return i18n.t('auto.screens__Auth__RegistrationPaymentScreen.s4');
+      case 'yearly':    return i18n.t('auto.screens__Auth__RegistrationPaymentScreen.s5');
+      default:          return i18n.t('auto.screens__Auth__RegistrationPaymentScreen.s3');
     }
   };
 
@@ -73,8 +74,8 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
       
     } catch (error) {
       legacyAlert(
-        'שגיאה בתשלום', 
-        error instanceof Error ? error.message : 'אירעה שגיאה בעיבוד התשלום. אנא נסה שוב.'
+        i18n.t('auto.screens__Auth__RegistrationPaymentScreen.s6'), 
+        error instanceof Error ? error.message : i18n.t('auto.screens__Auth__RegistrationPaymentScreen.s7')
       );
     } finally {
       setLoading(false);
@@ -161,9 +162,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                 letterSpacing: -0.8,
                 textAlign: 'center',
                 writingDirection: TEXT_DIR
-              }}>
-                בחר תוכנית
-              </Text>
+              }}>{i18n.t('auto.screens__Auth__RegistrationPaymentScreen.s8')}</Text>
               
               {/* Subtitle */}
               <Text style={{ 
@@ -174,9 +173,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                 textAlign: 'center',
                 lineHeight: 22,
                 writingDirection: TEXT_DIR
-              }}>
-                בחר את התוכנית המתאימה לך
-              </Text>
+              }}>{i18n.t('auto.screens__Auth__RegistrationPaymentScreen.s9')}</Text>
               
               {/* Decorative Line */}
               <View style={{
@@ -214,9 +211,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                       paddingVertical: 4,
                       borderRadius: 12
                     }}>
-                      <Text style={{ color: DesignTokens.colors.background.primary, fontSize: 12, fontWeight: '700' }}>
-                        מומלץ
-                      </Text>
+                      <Text style={{ color: DesignTokens.colors.background.primary, fontSize: 12, fontWeight: '700' }}>{i18n.t('auto.screens__Auth__RegistrationPaymentScreen.s10')}</Text>
                     </View>
                   )}
 
@@ -325,9 +320,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                           letterSpacing: 0.5,
                           textTransform: 'uppercase',
                           writingDirection: TEXT_DIR
-                        }}>
-                          שלם עכשיו
-                        </Text>
+                        }}>{i18n.t('auto.screens__Auth__RegistrationPaymentScreen.s11')}</Text>
                       </View>
           )}
         </TouchableOpacity>
@@ -364,9 +357,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                       letterSpacing: 0.5,
                       textTransform: 'uppercase',
                       writingDirection: TEXT_DIR
-                    }}>
-                      המשך בחינם
-                    </Text>
+                    }}>{i18n.t('auto.screens__Auth__RegistrationPaymentScreen.s12')}</Text>
                   </TouchableOpacity>
                 </LinearGradient>
               )}
@@ -392,9 +383,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                     fontWeight: '600',
                     letterSpacing: 0.3,
                     writingDirection: TEXT_DIR
-                  }}>
-                    דלג על התשלום
-                  </Text>
+                  }}>{i18n.t('auto.screens__Auth__RegistrationPaymentScreen.s13')}</Text>
                 </TouchableOpacity>
               )}
             </View>

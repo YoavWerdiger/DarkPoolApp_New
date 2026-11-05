@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
@@ -48,8 +49,7 @@ export function TickerScreenHero({
             </Text>
           ) : null}
           {premiumToday != null && premiumToday > 0 ? (
-            <Text style={styles.premiumHint}>
-              Dark Pool היום · {formatUsdCompact(premiumToday)}
+            <Text style={styles.premiumHint}>{i18n.t('auto.screens__DarkPool__components__TickerScreenHero.s1', { v0: formatUsdCompact(premiumToday) })}
             </Text>
           ) : null}
         </View>

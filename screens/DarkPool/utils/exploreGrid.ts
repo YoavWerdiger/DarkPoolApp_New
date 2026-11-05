@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import type { ExplorePerson } from '../../../services/darkpool/uwExploreService';
 import { congressPhotoUrl, looksLikePersonPhoto } from './investorPlaceholder';
 import { knownPortraitForInvestor } from './knownInvestorPortraits';
@@ -6,20 +7,20 @@ import { isTrustedPortraitUrl } from './curatedExploreProfiles';
 export type ExploreKindFilter = 'politician' | 'insider' | 'fund' | 'company';
 
 export const EXPLORE_KIND_CHIPS: { id: ExploreKindFilter; label: string }[] = [
-  { id: 'politician', label: 'פוליטיקאים' },
-  { id: 'insider', label: 'מנכ״לים' },
-  { id: 'fund', label: 'קרנות גידור' },
-  { id: 'company', label: 'חברות' },
+  { id: 'politician', label: i18n.t('auto.screens__DarkPool__utils__exploreGrid.s1') },
+  { id: 'insider', label: i18n.t('auto.screens__DarkPool__utils__exploreGrid.s2') },
+  { id: 'fund', label: i18n.t('auto.screens__DarkPool__utils__exploreGrid.s3') },
+  { id: 'company', label: i18n.t('auto.screens__DarkPool__utils__exploreGrid.s4') },
 ];
 
 export const EXPLORE_KIND_TITLES: Record<ExploreKindFilter, string> = {
-  politician: 'פוליטיקאים',
-  insider: 'מנכ״לים',
-  fund: 'קרנות גידור',
-  company: 'חברות',
+  politician: i18n.t('auto.screens__DarkPool__utils__exploreGrid.s1'),
+  insider: i18n.t('auto.screens__DarkPool__utils__exploreGrid.s2'),
+  fund: i18n.t('auto.screens__DarkPool__utils__exploreGrid.s3'),
+  company: i18n.t('auto.screens__DarkPool__utils__exploreGrid.s4'),
 };
 
-export const EXPLORE_UNFILTERED_TITLE = 'פרופילים';
+export const EXPLORE_UNFILTERED_TITLE = i18n.t('auto.screens__DarkPool__utils__exploreGrid.s5');
 
 export function exploreKindGridTitle(kind: ExploreKindFilter | null): string {
   return kind ? EXPLORE_KIND_TITLES[kind] : EXPLORE_UNFILTERED_TITLE;
@@ -161,8 +162,8 @@ export function buildExploreProfileGrid(
 }
 
 const PARTY_ALIASES: Record<string, string[]> = {
-  d: ['democrat', 'democratic', 'דמוקרט', 'דמוקרטית', 'דמוקרטים'],
-  r: ['republican', 'רפובליקני', 'רפובליקנית', 'רפובליקנים'],
+  d: ['democrat', 'democratic', i18n.t('auto.screens__DarkPool__utils__exploreGrid.s6'), i18n.t('auto.screens__DarkPool__utils__exploreGrid.s7'), i18n.t('auto.screens__DarkPool__utils__exploreGrid.s8')],
+  r: ['republican', i18n.t('auto.screens__DarkPool__utils__exploreGrid.s9'), i18n.t('auto.screens__DarkPool__utils__exploreGrid.s10'), i18n.t('auto.screens__DarkPool__utils__exploreGrid.s11')],
 };
 
 function exploreHaystack(person: ExplorePerson): string {

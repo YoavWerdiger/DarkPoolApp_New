@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import { appLocale } from '../../../lib/i18n/locale';
 /**
  * darkPoolFormat.ts
@@ -47,14 +48,14 @@ export function formatHoldingsValueMeta(
 ): string {
   const valueLabel =
     valueUsd != null && Number.isFinite(valueUsd)
-      ? `שווי אחזקה: ${ltrEmbed(formatUsdRawOrDash(valueUsd))}`
+      ? i18n.t('auto.screens__DarkPool__utils__darkPoolFormat.s1', { v0: ltrEmbed(formatUsdRawOrDash(valueUsd)) })
       : null;
   const sharesLabel = formatSharesCompact(shares);
   if (valueLabel && sharesLabel) {
-    return `${valueLabel} (${ltrEmbed(sharesLabel)} מניות)`;
+    return i18n.t('auto.screens__DarkPool__utils__darkPoolFormat.s2', { v0: valueLabel, v1: ltrEmbed(sharesLabel) });
   }
   if (valueLabel) return valueLabel;
-  if (sharesLabel) return `${ltrEmbed(sharesLabel)} מניות`;
+  if (sharesLabel) return i18n.t('auto.screens__DarkPool__utils__darkPoolFormat.s3', { v0: ltrEmbed(sharesLabel) });
   return '';
 }
 
@@ -117,12 +118,12 @@ export function formatRelativeTime(iso: string | null | undefined): string {
   if (!Number.isFinite(ts)) return '';
   const diffMs = Date.now() - ts;
   const min = Math.max(0, Math.floor(diffMs / 60_000));
-  if (min < 1) return 'הרגע';
-  if (min < 60) return `לפני ${min} ד'`;
+  if (min < 1) return i18n.t('auto.screens__DarkPool__utils__darkPoolFormat.s4');
+  if (min < 60) return i18n.t('auto.screens__DarkPool__utils__darkPoolFormat.s5', { v0: min });
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `לפני ${hr} ש'`;
+  if (hr < 24) return i18n.t('auto.screens__DarkPool__utils__darkPoolFormat.s6', { v0: hr });
   const days = Math.floor(hr / 24);
-  if (days < 30) return `לפני ${days} ימים`;
+  if (days < 30) return i18n.t('auto.screens__DarkPool__utils__darkPoolFormat.s7', { v0: days });
   return new Date(ts).toLocaleDateString(appLocale());
 }
 
@@ -131,15 +132,15 @@ import type { DarkPoolSignalType } from '../../../types/darkpool.types';
 export function signalTypeLabel(t: DarkPoolSignalType): string {
   switch (t) {
     case 'WHALE':
-      return 'לווייתן';
+      return i18n.t('auto.screens__DarkPool__utils__darkPoolFormat.s8');
     case 'UNUSUAL_VOLUME':
-      return 'נפח חריג';
+      return i18n.t('auto.screens__DarkPool__utils__darkPoolFormat.s9');
     case 'SWEEP':
-      return 'סוויפ';
+      return i18n.t('auto.screens__DarkPool__utils__darkPoolFormat.s10');
     case 'HIDDEN_ACCUMULATION':
-      return 'צבירה מוסדית';
+      return i18n.t('auto.screens__DarkPool__utils__darkPoolFormat.s11');
     case 'INSIDER_DARKPOOL_CONFLUENCE':
-      return 'בכיר × דארק פול';
+      return i18n.t('auto.screens__DarkPool__utils__darkPoolFormat.s12');
   }
 }
 
@@ -148,13 +149,13 @@ export function signalTypeShortLabel(t: DarkPoolSignalType): string {
     case 'WHALE':
       return 'Whale';
     case 'UNUSUAL_VOLUME':
-      return 'נפח';
+      return i18n.t('auto.screens__DarkPool__utils__darkPoolFormat.s13');
     case 'SWEEP':
       return 'Sweep';
     case 'HIDDEN_ACCUMULATION':
-      return 'צבירה';
+      return i18n.t('auto.screens__DarkPool__utils__darkPoolFormat.s14');
     case 'INSIDER_DARKPOOL_CONFLUENCE':
-      return 'קונפלוונס';
+      return i18n.t('auto.screens__DarkPool__utils__darkPoolFormat.s15');
   }
 }
 

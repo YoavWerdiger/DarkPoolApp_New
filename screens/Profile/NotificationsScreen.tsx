@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
@@ -79,9 +80,7 @@ function FollowedTickerRows({
             textAlign: 'right',
             color: tokens.colors.text.secondary,
           }}
-        >
-          אין סימולים ברשימת המעקב
-        </Text>
+        >{i18n.t('auto.screens__Profile__NotificationsScreen.s1')}</Text>
       </View>
     );
   }
@@ -131,7 +130,7 @@ function EarningsTickerPicker({
           setSheetOpen(true);
         }}
         accessibilityRole="button"
-        accessibilityLabel="הוספת מניה להתראות"
+        accessibilityLabel={i18n.t('auto.screens__Profile__NotificationsScreen.s2')}
         style={{
           direction: 'rtl',
           flexDirection: 'row',
@@ -151,14 +150,12 @@ function EarningsTickerPicker({
             color: tokens.colors.text.inverse,
             fontWeight: '600',
           }}
-        >
-          הוספת מניה
-        </Text>
+        >{i18n.t('auto.screens__Profile__NotificationsScreen.s3')}</Text>
       </Pressable>
       <TickerPickSheet
         isOpen={sheetOpen}
         onClose={() => setSheetOpen(false)}
-        title="התראות דיווחי רווח"
+        title={i18n.t('auto.screens__Profile__NotificationsScreen.s4')}
         selected={symbols}
         onAdd={onAdd}
         onRemove={onRemove}
@@ -180,7 +177,7 @@ function EarningsTickerPicker({
               disabled={disabled}
               onPress={() => onRemove(symbol)}
               accessibilityRole="button"
-              accessibilityLabel={`הסרת ${symbol}`}
+              accessibilityLabel={i18n.t('auto.screens__Profile__NotificationsScreen.s5', { v0: symbol })}
               style={{
                 direction: 'ltr',
                 flexDirection: 'row',
@@ -237,7 +234,7 @@ export default function NotificationsScreen({ navigation }: any) {
     const { data } = await chatGroupService.getChatGroups(userId);
     const rows = (data ?? []).map((g) => ({
       id: g.id,
-      name: g.name?.trim() || "צ'אט",
+      name: g.name?.trim() || i18n.t('auto.screens__Profile__NotificationsScreen.s6'),
       muted: !!g.is_muted,
     }));
     hydrateGroupMutes(
@@ -290,11 +287,11 @@ export default function NotificationsScreen({ navigation }: any) {
       if (!allowed) {
         await setPref('notifications', false);
         legacyAlert(
-          'הרשאות התראות נדרשות',
-          'כיבית את ההתראות בהגדרות המכשיר. אי אפשר להפעיל אותן מכאן — פתח את הגדרות המערכת.',
+          i18n.t('auto.screens__Profile__NotificationsScreen.s7'),
+          i18n.t('auto.screens__Profile__NotificationsScreen.s8'),
           [
-            { text: 'ביטול', style: 'cancel' },
-            { text: 'פתח הגדרות', onPress: openOsNotificationSettings },
+            { text: i18n.t('auto.screens__Profile__NotificationsScreen.s9'), style: 'cancel' },
+            { text: i18n.t('auto.screens__Profile__NotificationsScreen.s10'), onPress: openOsNotificationSettings },
           ],
         );
         return;
@@ -306,11 +303,11 @@ export default function NotificationsScreen({ navigation }: any) {
     if (!registered) {
       const isSimulator = !require('expo-device').Device.isDevice;
       legacyAlert(
-        'התראות הופעלו',
+        i18n.t('auto.screens__Profile__NotificationsScreen.s11'),
         isSimulator
-          ? 'ההרשאות ניתנו. Push לא עובד בסימולטור — בדוק במכשיר אמיתי.'
-          : 'ההרשאות ניתנו. אם הרישום נכשל, נסה שוב מאוחר יותר.',
-        [{ text: 'אישור' }],
+          ? i18n.t('auto.screens__Profile__NotificationsScreen.s12')
+          : i18n.t('auto.screens__Profile__NotificationsScreen.s13'),
+        [{ text: i18n.t('auto.screens__Profile__NotificationsScreen.s14') }],
       );
     }
   };
@@ -327,7 +324,7 @@ export default function NotificationsScreen({ navigation }: any) {
       chatGroupService.toggleGroupMute(id, userId, next),
     );
     if (!success) {
-      legacyAlert('שגיאה', 'לא ניתן לשנות את השתקת הקבוצה');
+      legacyAlert(i18n.t('auto.screens__Profile__NotificationsScreen.s15'), i18n.t('auto.screens__Profile__NotificationsScreen.s16'));
     }
   };
 
@@ -344,9 +341,7 @@ export default function NotificationsScreen({ navigation }: any) {
             color: DesignTokens.colors.text.secondary,
             marginTop: APP_LAYOUT.componentGap,
           }}
-        >
-          טוען הגדרות...
-        </Text>
+        >{i18n.t('auto.screens__Profile__NotificationsScreen.s17')}</Text>
       </View>
     );
   }
@@ -355,7 +350,7 @@ export default function NotificationsScreen({ navigation }: any) {
     <View style={canvas}>
       <RNSafeAreaView style={canvas} edges={['top', 'bottom']}>
         <ChatSubScreenHeader
-          title="התראות"
+          title={i18n.t('auto.screens__Profile__NotificationsScreen.s18')}
           onBack={() => {
             void HapticFeedback.impactLight();
             navigation.goBack();
@@ -372,7 +367,7 @@ export default function NotificationsScreen({ navigation }: any) {
           >
             {!osGranted ? (
               <>
-                <SettingsOutsideTitle title="הגדרות המכשיר" />
+                <SettingsOutsideTitle title={i18n.t('auto.screens__Profile__NotificationsScreen.s19')} />
                 <SettingsGlassCard>
                   <View
                     style={{
@@ -388,12 +383,12 @@ export default function NotificationsScreen({ navigation }: any) {
                       }}
                     >
                       {osStatus === 'denied'
-                        ? 'התראות חסומות בהגדרות המערכת. המתגים כאן לא ישלחו כלום עד שתאפשר גישה במכשיר.'
-                        : 'עדיין לא אושרה הרשאת התראות. בלי אישור מערכת — המתגים לא באמת שולחים.'}
+                        ? i18n.t('auto.screens__Profile__NotificationsScreen.s20')
+                        : i18n.t('auto.screens__Profile__NotificationsScreen.s21')}
                     </Text>
                   </View>
                   <SettingsActionRow
-                    title="פתח הגדרות מערכת"
+                    title={i18n.t('auto.screens__Profile__NotificationsScreen.s22')}
                     onPress={() => {
                       void HapticFeedback.impactLight();
                       openOsNotificationSettings();
@@ -404,17 +399,17 @@ export default function NotificationsScreen({ navigation }: any) {
               </>
             ) : null}
 
-            <SettingsOutsideTitle title="כללי" />
+            <SettingsOutsideTitle title={i18n.t('auto.screens__Profile__NotificationsScreen.s23')} />
             <SettingsGlassCard>
               <SettingsSwitchRow
-                title="התראות"
+                title={i18n.t('auto.screens__Profile__NotificationsScreen.s18')}
                 value={osGranted && prefs.notifications}
                 onValueChange={(v) => {
                   void handleMaster(v);
                 }}
               />
               <SettingsSwitchRow
-                title="רטט"
+                title={i18n.t('auto.screens__Profile__NotificationsScreen.s24')}
                 value={prefs.vibration}
                 disabled={childrenLocked}
                 onValueChange={(v) => {
@@ -425,7 +420,7 @@ export default function NotificationsScreen({ navigation }: any) {
               />
               {osGranted ? (
                 <SettingsActionRow
-                  title="הגדרות המכשיר"
+                  title={i18n.t('auto.screens__Profile__NotificationsScreen.s19')}
                   onPress={() => {
                     void HapticFeedback.impactLight();
                     openOsNotificationSettings();
@@ -437,7 +432,7 @@ export default function NotificationsScreen({ navigation }: any) {
 
             {groups.length > 0 ? (
               <>
-                <SettingsOutsideTitle title="צ'אט" />
+                <SettingsOutsideTitle title={i18n.t('auto.screens__Profile__NotificationsScreen.s6')} />
                 <SettingsGlassCard>
                   {groups.map((group, index) => (
                     <SettingsSwitchRow
@@ -455,10 +450,10 @@ export default function NotificationsScreen({ navigation }: any) {
               </>
             ) : null}
 
-            <SettingsOutsideTitle title="ציוצים" />
+            <SettingsOutsideTitle title={i18n.t('auto.screens__Profile__NotificationsScreen.s25')} />
             <SettingsGlassCard>
               <SettingsSwitchRow
-                title="תיוגים"
+                title={i18n.t('auto.screens__Profile__NotificationsScreen.s26')}
                 value={isPrefEffective(prefs, 'communityNotifications')}
                 disabled={childrenLocked}
                 onValueChange={(v) => {
@@ -468,10 +463,10 @@ export default function NotificationsScreen({ navigation }: any) {
               />
             </SettingsGlassCard>
 
-            <SettingsOutsideTitle title="אינסיידרים" />
+            <SettingsOutsideTitle title={i18n.t('auto.screens__Profile__NotificationsScreen.s27')} />
             <SettingsGlassCard>
               <SettingsSwitchRow
-                title="פיד עסקאות"
+                title={i18n.t('auto.screens__Profile__NotificationsScreen.s28')}
                 value={isPrefEffective(prefs, 'insiderFeedAlerts')}
                 disabled={childrenLocked}
                 onValueChange={(v) => {
@@ -479,7 +474,7 @@ export default function NotificationsScreen({ navigation }: any) {
                 }}
               />
               <SettingsSwitchRow
-                title="אנשים במעקב"
+                title={i18n.t('auto.screens__Profile__NotificationsScreen.s29')}
                 value={isPrefEffective(prefs, 'darkPoolNotifications')}
                 disabled={childrenLocked}
                 onValueChange={(v) => {
@@ -489,10 +484,10 @@ export default function NotificationsScreen({ navigation }: any) {
               />
             </SettingsGlassCard>
 
-            <SettingsOutsideTitle title="רשימת מעקב" />
+            <SettingsOutsideTitle title={i18n.t('auto.screens__Profile__NotificationsScreen.s30')} />
             <SettingsGlassCard>
               <SettingsSwitchRow
-                title="התראות מחיר"
+                title={i18n.t('auto.screens__Profile__NotificationsScreen.s31')}
                 value={isPrefEffective(prefs, 'watchlistNotifications')}
                 disabled={childrenLocked}
                 onValueChange={(v) => {
@@ -530,10 +525,10 @@ export default function NotificationsScreen({ navigation }: any) {
               ) : null}
             </SettingsGlassCard>
 
-            <SettingsOutsideTitle title="חדשות" />
+            <SettingsOutsideTitle title={i18n.t('auto.screens__Profile__NotificationsScreen.s32')} />
             <SettingsGlassCard>
               <SettingsSwitchRow
-                title="חדשות מתפרצות"
+                title={i18n.t('auto.screens__Profile__NotificationsScreen.s33')}
                 value={isPrefEffective(prefs, 'newsNotifications')}
                 disabled={childrenLocked}
                 onValueChange={(v) => {
@@ -542,7 +537,7 @@ export default function NotificationsScreen({ navigation }: any) {
                 showDivider
               />
               <SettingsSwitchRow
-                title="מדד הפחד והתאווה"
+                title={i18n.t('auto.screens__Profile__NotificationsScreen.s34')}
                 value={isPrefEffective(prefs, 'fearGreedNotifications')}
                 disabled={childrenLocked}
                 onValueChange={(v) => {
@@ -552,10 +547,10 @@ export default function NotificationsScreen({ navigation }: any) {
               />
             </SettingsGlassCard>
 
-            <SettingsOutsideTitle title="דיווחי רווח" />
+            <SettingsOutsideTitle title={i18n.t('auto.screens__Profile__NotificationsScreen.s35')} />
             <SettingsGlassCard>
               <SettingsSwitchRow
-                title="התראות"
+                title={i18n.t('auto.screens__Profile__NotificationsScreen.s18')}
                 value={isPrefEffective(prefs, 'earningsNotifications')}
                 disabled={childrenLocked}
                 onValueChange={(v) => {
@@ -600,10 +595,10 @@ export default function NotificationsScreen({ navigation }: any) {
               ) : null}
             </SettingsGlassCard>
 
-            <SettingsOutsideTitle title="יומן כלכלי" />
+            <SettingsOutsideTitle title={i18n.t('auto.screens__Profile__NotificationsScreen.s36')} />
             <SettingsGlassCard>
               <SettingsSwitchRow
-                title="התראות"
+                title={i18n.t('auto.screens__Profile__NotificationsScreen.s18')}
                 value={isPrefEffective(prefs, 'economicCalendarNotifications')}
                 disabled={childrenLocked}
                 onValueChange={(v) => {

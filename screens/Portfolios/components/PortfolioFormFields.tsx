@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 /**
  * שדות טופס משותפים — Portfolios (יצירת תיק, ברוקר, עסקאות).
  * formControl.ts · APP_TYPE · בלי מסגרת ירוקה. עין סיסמה בלבד בתוך השדה, בצד שמאל.
@@ -94,9 +95,7 @@ export function FieldLabel({ label, optional, labelAccessory, hint }: FieldLabel
                 marginTop: 0,
               },
             ]}
-          >
-            אופציונלי
-          </Text>
+          >{i18n.t('auto.screens__Portfolios__components__PortfolioFormFields.s1')}</Text>
         ) : null}
       </View>
       {labelAccessory}

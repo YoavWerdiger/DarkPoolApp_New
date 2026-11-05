@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -36,7 +37,7 @@ import { legacyAlert } from '../../utils/appDialog';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 
 type Tier = 'free' | 'premium';
-const TIER_LABEL: Record<Tier, string> = { free: 'חינמי', premium: 'פרימיום' };
+const TIER_LABEL: Record<Tier, string> = { free: i18n.t('auto.screens__Admin__AdminGroupsScreen.s1'), premium: i18n.t('auto.screens__Admin__AdminGroupsScreen.s2') };
 
 function groupTiers(g: AdminChatGroup): Tier[] {
   const t = g.settings?.allowed_tiers;
@@ -63,7 +64,7 @@ export default function AdminGroupsScreen({ navigation }: any) {
       const res = await adminService.listGroups();
       setGroups(res.groups);
     } catch (e) {
-      legacyAlert('שגיאה', e instanceof Error ? e.message : 'טעינה נכשלה');
+      legacyAlert(i18n.t('auto.screens__Admin__AdminGroupsScreen.s3'), e instanceof Error ? e.message : i18n.t('auto.screens__Admin__AdminGroupsScreen.s4'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -76,7 +77,7 @@ export default function AdminGroupsScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-      <ChatSubScreenHeader title="ניהול קבוצות" onBack={() => navigation.goBack()} />
+      <ChatSubScreenHeader title={i18n.t('auto.screens__Admin__AdminGroupsScreen.s5')} onBack={() => navigation.goBack()} />
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator color={tokens.colors.text.secondary} />
@@ -95,7 +96,7 @@ export default function AdminGroupsScreen({ navigation }: any) {
           }
         >
           {groups.length === 0 ? (
-            <AdminEmptyState title="אין קבוצות" subtitle="קבוצות שנוצרות בקהילה יופיעו כאן" />
+            <AdminEmptyState title={i18n.t('auto.screens__Admin__AdminGroupsScreen.s6')} subtitle={i18n.t('auto.screens__Admin__AdminGroupsScreen.s7')} />
           ) : (
             <AdminSurface>
               {groups.map((g, i) => {
@@ -124,8 +125,8 @@ export default function AdminGroupsScreen({ navigation }: any) {
                           {chatGroupDisplayName(g.name)}
                         </Text>
                         <Text style={[styles.rowMeta, { color: tokens.colors.text.secondary }]} numberOfLines={1}>
-                          {(g.members_count ?? 0).toLocaleString(appLocale())} חברים ·{' '}
-                          {groupAdminsOnly(g) ? 'רק אדמינים כותבים' : 'כולם כותבים'} ·{' '}
+                          {(g.members_count ?? 0).toLocaleString(appLocale())} {i18n.t('auto.screens__Admin__AdminGroupsScreen.s8')}{' '}
+                          {groupAdminsOnly(g) ? i18n.t('auto.screens__Admin__AdminGroupsScreen.s9') : i18n.t('auto.screens__Admin__AdminGroupsScreen.s10')} ·{' '}
                           {tiers.map((t) => TIER_LABEL[t]).join(' + ')}
                         </Text>
                       </View>
@@ -204,7 +205,7 @@ function GroupEditSheet({
   const save = async () => {
     if (!g || !dirty || saving) return;
     if (tiers.length === 0) {
-      legacyAlert('שגיאה', 'צריך לבחור לפחות מסלול אחד');
+      legacyAlert(i18n.t('auto.screens__Admin__AdminGroupsScreen.s3'), i18n.t('auto.screens__Admin__AdminGroupsScreen.s11'));
       return;
     }
     setSaving(true);
@@ -219,7 +220,7 @@ function GroupEditSheet({
       onClose();
     } catch (e) {
       void HapticFeedback.error();
-      legacyAlert('שגיאה', e instanceof Error ? e.message : 'שמירה נכשלה');
+      legacyAlert(i18n.t('auto.screens__Admin__AdminGroupsScreen.s3'), e instanceof Error ? e.message : i18n.t('auto.screens__Admin__AdminGroupsScreen.s12'));
     } finally {
       setSaving(false);
     }
@@ -227,12 +228,12 @@ function GroupEditSheet({
 
   const memberActions = (m: AdminGroupMember) => {
     if (!g) return;
-    const label = m.user?.display_name || m.user?.full_name || m.user?.email || 'משתמש';
+    const label = m.user?.display_name || m.user?.full_name || m.user?.email || i18n.t('auto.screens__Admin__AdminGroupsScreen.s13');
     const isAdmin = m.role === 'admin' || m.role === 'owner';
     void HapticFeedback.selection();
-    legacyAlert(label, isAdmin ? 'אדמין בקבוצה' : 'חבר בקבוצה', [
+    legacyAlert(label, isAdmin ? i18n.t('auto.screens__Admin__AdminGroupsScreen.s14') : i18n.t('auto.screens__Admin__AdminGroupsScreen.s15'), [
       {
-        text: isAdmin ? 'הפוך לחבר רגיל' : 'הפוך לאדמין בקבוצה',
+        text: isAdmin ? i18n.t('auto.screens__Admin__AdminGroupsScreen.s16') : i18n.t('auto.screens__Admin__AdminGroupsScreen.s17'),
         onPress: async () => {
           try {
             await adminService.setGroupMemberRole(g.id, m.user_id, isAdmin ? 'member' : 'admin');
@@ -241,7 +242,7 @@ function GroupEditSheet({
             );
             void HapticFeedback.success();
           } catch (e) {
-            legacyAlert('שגיאה', e instanceof Error ? e.message : 'פעולה נכשלה');
+            legacyAlert(i18n.t('auto.screens__Admin__AdminGroupsScreen.s3'), e instanceof Error ? e.message : i18n.t('auto.screens__Admin__AdminGroupsScreen.s18'));
           }
         },
       },
@@ -249,7 +250,7 @@ function GroupEditSheet({
         ? []
         : [
             {
-              text: 'הסר מהקבוצה',
+              text: i18n.t('auto.screens__Admin__AdminGroupsScreen.s19'),
               style: 'destructive' as const,
               onPress: async () => {
                 try {
@@ -257,22 +258,22 @@ function GroupEditSheet({
                   setMembers((prev) => prev.filter((x) => x.user_id !== m.user_id));
                   onChanged();
                 } catch (e) {
-                  legacyAlert('שגיאה', e instanceof Error ? e.message : 'פעולה נכשלה');
+                  legacyAlert(i18n.t('auto.screens__Admin__AdminGroupsScreen.s3'), e instanceof Error ? e.message : i18n.t('auto.screens__Admin__AdminGroupsScreen.s18'));
                 }
               },
             },
           ]),
-      { text: 'ביטול', style: 'cancel' as const },
+      { text: i18n.t('auto.screens__Admin__AdminGroupsScreen.s20'), style: 'cancel' as const },
     ]);
   };
 
   const confirmDelete = () => {
     if (!g) return;
     void HapticFeedback.warning();
-    legacyAlert('מחיקת קבוצה', `למחוק את «${chatGroupDisplayName(g.name)}» וכל ההודעות בה? לא ניתן לבטל.`, [
-      { text: 'ביטול', style: 'cancel' },
+    legacyAlert(i18n.t('auto.screens__Admin__AdminGroupsScreen.s21'), i18n.t('auto.screens__Admin__AdminGroupsScreen.s22', { v0: chatGroupDisplayName(g.name) }), [
+      { text: i18n.t('auto.screens__Admin__AdminGroupsScreen.s20'), style: 'cancel' },
       {
-        text: 'מחק',
+        text: i18n.t('auto.screens__Admin__AdminGroupsScreen.s23'),
         style: 'destructive',
         onPress: async () => {
           try {
@@ -280,7 +281,7 @@ function GroupEditSheet({
             onChanged();
             onClose();
           } catch (e) {
-            legacyAlert('שגיאה', e instanceof Error ? e.message : 'מחיקה נכשלה');
+            legacyAlert(i18n.t('auto.screens__Admin__AdminGroupsScreen.s3'), e instanceof Error ? e.message : i18n.t('auto.screens__Admin__AdminGroupsScreen.s24'));
           }
         },
       },
@@ -306,7 +307,7 @@ function GroupEditSheet({
       <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 12) }]} onLayout={onContentLayout}>
         <ChatSheetTopoHeader title={g ? chatGroupDisplayName(g.name) : ''} onClose={onClose} />
 
-        <Text style={[formFieldLabelStyle({ tokens, focused: nameFocused }), styles.gapTop]}>שם הקבוצה</Text>
+        <Text style={[formFieldLabelStyle({ tokens, focused: nameFocused }), styles.gapTop]}>{i18n.t('auto.screens__Admin__AdminGroupsScreen.s25')}</Text>
         <View style={[formFieldShellStyle({ tokens, focused: nameFocused }), styles.fieldShell]}>
           <TextInput
             value={name}
@@ -319,7 +320,7 @@ function GroupEditSheet({
           />
         </View>
 
-        <Text style={[formFieldLabelStyle({ tokens, focused: false }), styles.gapTop]}>מי כותב בקבוצה</Text>
+        <Text style={[formFieldLabelStyle({ tokens, focused: false }), styles.gapTop]}>{i18n.t('auto.screens__Admin__AdminGroupsScreen.s26')}</Text>
         <View style={[styles.segment, { backgroundColor: tokens.colors.background.cardSolid }]}>
           {([
             { key: false, label: 'כל החברים' },
@@ -343,7 +344,7 @@ function GroupEditSheet({
           })}
         </View>
 
-        <Text style={[formFieldLabelStyle({ tokens, focused: false }), styles.gapTop]}>מסלולים שרואים ומצטרפים</Text>
+        <Text style={[formFieldLabelStyle({ tokens, focused: false }), styles.gapTop]}>{i18n.t('auto.screens__Admin__AdminGroupsScreen.s27')}</Text>
         <View style={styles.chipsRow}>
           {(['free', 'premium'] as Tier[]).map((t) => {
             const on = tiers.includes(t);
@@ -366,7 +367,7 @@ function GroupEditSheet({
         </View>
 
         <Text style={[formFieldLabelStyle({ tokens, focused: false }), styles.gapTop]}>
-          חברים{members.length ? ` (${members.length})` : ''}
+          {i18n.t('auto.screens__Admin__AdminGroupsScreen.s28')}{members.length ? ` (${members.length})` : ''}
         </Text>
         <View style={[styles.membersCard, { backgroundColor: tokens.colors.background.cardSolid }]}>
           {membersLoading ? (
@@ -374,7 +375,7 @@ function GroupEditSheet({
           ) : (
             <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false}>
               {members.map((m, i) => {
-                const label = m.user?.display_name || m.user?.full_name || m.user?.email || 'משתמש';
+                const label = m.user?.display_name || m.user?.full_name || m.user?.email || i18n.t('auto.screens__Admin__AdminGroupsScreen.s13');
                 const isAdmin = m.role === 'admin' || m.role === 'owner';
                 return (
                   <Pressable key={m.user_id} onPress={() => memberActions(m)}>
@@ -390,7 +391,7 @@ function GroupEditSheet({
                       <Text style={[styles.memberName, { color: tokens.colors.text.primary }]} numberOfLines={1}>
                         {label}
                       </Text>
-                      {isAdmin ? <AdminBadge label="אדמין" color={tokens.colors.text.primary} /> : null}
+                      {isAdmin ? <AdminBadge label={i18n.t('auto.screens__Admin__AdminGroupsScreen.s29')} color={tokens.colors.text.primary} /> : null}
                     </View>
                   </Pressable>
                 );
@@ -400,11 +401,11 @@ function GroupEditSheet({
         </View>
 
         <View style={styles.actions}>
-          <UIButton title="שמור שינויים" variant="primary" fullWidth loading={saving} disabled={!dirty || saving} onPress={() => void save()} />
+          <UIButton title={i18n.t('auto.screens__Admin__AdminGroupsScreen.s30')} variant="primary" fullWidth loading={saving} disabled={!dirty || saving} onPress={() => void save()} />
           {!isAnnouncements ? (
             // פיל מלא כמו ה-CTA (הטופו), בצבע הכרטיסים וטקסט אדום
             <UIButton
-              title="מחק קבוצה"
+              title={i18n.t('auto.screens__Admin__AdminGroupsScreen.s31')}
               variant="secondary"
               fullWidth
               onPress={confirmDelete}

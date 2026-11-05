@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import React, { useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import UICard from '../../../components/ui/UICard';
@@ -26,7 +27,7 @@ export function UwTickerInsightsSection({ ticker }: Props) {
     return (
       <View style={styles.loader}>
         <ActivityIndicator color={tokens.colors.primary.main} />
-        <Text style={styles.loaderText}>טוען תובנות…</Text>
+        <Text style={styles.loaderText}>{i18n.t('auto.screens__DarkPool__components__UwTickerInsightsSection.s1')}</Text>
       </View>
     );
   }
@@ -60,34 +61,34 @@ export function UwTickerInsightsSection({ ticker }: Props) {
 
       {(data.insider_sentiment || data.cluster_signal) && (
         <UICard variant="soft" glassIntensity="light" padding="md" style={styles.summaryCard}>
-          <DarkPoolSectionHeader title="סיכום פעילות" icon="pulse-outline" />
+          <DarkPoolSectionHeader title={i18n.t('auto.screens__DarkPool__components__UwTickerInsightsSection.s2')} icon="pulse-outline" />
           <View style={styles.summaryGrid}>
             {data.insider_sentiment ? (
               <SummaryCell
-                label="סנטימנט בכירים"
+                label={i18n.t('auto.screens__DarkPool__components__UwTickerInsightsSection.s3')}
                 value={data.insider_sentiment.score.toFixed(2)}
-                hint={`${data.insider_sentiment.buy_count} רכ · ${data.insider_sentiment.sell_count} מכ`}
+                hint={i18n.t('auto.screens__DarkPool__components__UwTickerInsightsSection.s4', { v0: data.insider_sentiment.buy_count, v1: data.insider_sentiment.sell_count })}
                 tone={sentimentTone}
                 styles={styles}
               />
             ) : null}
             {data.cluster_signal ? (
               <SummaryCell
-                label="אות מרוכז"
+                label={i18n.t('auto.screens__DarkPool__components__UwTickerInsightsSection.s5')}
                 value={
                   data.cluster_signal.is_cluster_buy
-                    ? 'רכישות'
+                    ? i18n.t('auto.screens__DarkPool__components__UwTickerInsightsSection.s6')
                     : data.cluster_signal.is_cluster_sell
-                      ? 'מכירות'
-                      : 'מעורב'
+                      ? i18n.t('auto.screens__DarkPool__components__UwTickerInsightsSection.s7')
+                      : i18n.t('auto.screens__DarkPool__components__UwTickerInsightsSection.s8')
                 }
-                hint={`${data.cluster_signal.insider_count} בכירים · ${data.cluster_signal.date}`}
+                hint={i18n.t('auto.screens__DarkPool__components__UwTickerInsightsSection.s9', { v0: data.cluster_signal.insider_count, v1: data.cluster_signal.date })}
                 styles={styles}
               />
             ) : null}
             {data.form4_company ? (
               <SummaryCell
-                label="בכירים פעילים"
+                label={i18n.t('auto.screens__DarkPool__components__UwTickerInsightsSection.s10')}
                 value={String(data.form4_company.active_insiders)}
                 hint={data.form4_company.sector || undefined}
                 styles={styles}
@@ -99,7 +100,7 @@ export function UwTickerInsightsSection({ ticker }: Props) {
 
       {data.gex ? (
         <UICard variant="soft" glassIntensity="light" padding="md" style={styles.card}>
-          <DarkPoolSectionHeader title="מדד GEX" subtitle="חשיפת גמא בסpot" icon="analytics-outline" />
+          <DarkPoolSectionHeader title={i18n.t('auto.screens__DarkPool__components__UwTickerInsightsSection.s11')} subtitle={i18n.t('auto.screens__DarkPool__components__UwTickerInsightsSection.s12')} icon="analytics-outline" />
           <Text style={styles.metricValue}>{data.gex.label}</Text>
           <Text style={styles.metricHint}>
             {data.gex.strike_count} strikes · {formatCompactNum(Math.abs(data.gex.net_gamma))} γ
@@ -109,14 +110,14 @@ export function UwTickerInsightsSection({ ticker }: Props) {
 
       {data.flow_alerts.length > 0 ? (
         <UICard variant="soft" glassIntensity="light" padding="md" style={styles.card}>
-          <DarkPoolSectionHeader title="זרימת אופציות" icon="flash-outline" />
+          <DarkPoolSectionHeader title={i18n.t('auto.screens__DarkPool__components__UwTickerInsightsSection.s13')} icon="flash-outline" />
           {data.flow_alerts.map((f, i) => (
             <View
               key={f.id}
               style={[styles.listRow, i === data.flow_alerts.length - 1 && styles.listRowLast]}
             >
               <Text style={styles.rowTitle}>
-                {f.type === 'put' ? 'פוט' : 'קול'} · {formatUsdCompact(f.premium)}
+                {f.type === 'put' ? i18n.t('auto.screens__DarkPool__components__UwTickerInsightsSection.s14') : i18n.t('auto.screens__DarkPool__components__UwTickerInsightsSection.s15')} · {formatUsdCompact(f.premium)}
               </Text>
               <Text style={styles.rowHint}>{f.rule}</Text>
             </View>
@@ -126,7 +127,7 @@ export function UwTickerInsightsSection({ ticker }: Props) {
 
       {data.insider_live.length > 0 ? (
         <UICard variant="soft" glassIntensity="light" padding="md" style={styles.card}>
-          <DarkPoolSectionHeader variant="group" title="עסקאות בכירים" icon="people-outline" />
+          <DarkPoolSectionHeader variant="group" title={i18n.t('auto.screens__DarkPool__components__UwTickerInsightsSection.s16')} icon="people-outline" />
           {data.insider_live.map((row, i) => (
             <View
               key={row.id}
@@ -151,7 +152,7 @@ export function UwTickerInsightsSection({ ticker }: Props) {
 
       {data.news.length > 0 ? (
         <UICard variant="soft" glassIntensity="light" padding="md" style={styles.card}>
-          <DarkPoolSectionHeader title="חדשות" icon="newspaper-outline" />
+          <DarkPoolSectionHeader title={i18n.t('auto.screens__DarkPool__components__UwTickerInsightsSection.s17')} icon="newspaper-outline" />
           {data.news.map((n, i) => (
             <View
               key={n.id}

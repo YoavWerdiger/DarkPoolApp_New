@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 /**
  * תגי משתמש ליד שם: [וי כחול][דרגת ותק].
  * לא מצייר כלום בזמן טעינה / כשאין תגים. השורה ב-ltr מפורש — התגים תמיד משמאל לשם
@@ -65,7 +66,7 @@ export function UserBadges({ userId, size = 16, interactive = true, style }: Pro
     >
       {rankIcon ? (
         interactive ? (
-          <Pressable onPress={openRank} hitSlop={HIT} accessibilityRole="button" accessibilityLabel="דרגת ותק">
+          <Pressable onPress={openRank} hitSlop={HIT} accessibilityRole="button" accessibilityLabel={i18n.t('auto.components__ui__badges__UserBadges.s1')}>
             <View>{rankIcon}</View>
           </Pressable>
         ) : (
@@ -74,7 +75,7 @@ export function UserBadges({ userId, size = 16, interactive = true, style }: Pro
       ) : null}
       {verifiedIcon ? (
         interactive ? (
-          <Pressable onPress={openVerified} hitSlop={HIT} accessibilityRole="button" accessibilityLabel="משתמש מאומת">
+          <Pressable onPress={openVerified} hitSlop={HIT} accessibilityRole="button" accessibilityLabel={i18n.t('auto.components__ui__badges__UserBadges.s2')}>
             <View>{verifiedIcon}</View>
           </Pressable>
         ) : (
@@ -88,8 +89,8 @@ export function UserBadges({ userId, size = 16, interactive = true, style }: Pro
         <HelpSheet
           visible={verifiedOpen}
           onClose={() => setVerifiedOpen(false)}
-          title="משתמש מאומת"
-          body="הווי הכחול מסמן חשבון שזהותו אומתה על ידי צוות האפליקציה."
+          title={i18n.t('auto.components__ui__badges__UserBadges.s2')}
+          body={i18n.t('auto.components__ui__badges__UserBadges.s3')}
         />
       ) : null}
     </View>

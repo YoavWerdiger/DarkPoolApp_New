@@ -1,3 +1,4 @@
+import i18n from '../lib/i18n';
 import { appLocale } from '../lib/i18n/locale';
 /** Hebrew billing UI helpers — next charge, payment method, plan price labels. */
 
@@ -53,13 +54,13 @@ export function formatBillingDateHe(iso: string | null | undefined): string | nu
 
 export function formatCardBrandHe(brand: string | null | undefined): string {
   const raw = (brand || '').trim();
-  if (!raw) return 'כרטיס';
+  if (!raw) return i18n.t('auto.utils__billingDisplay.s1');
   const b = raw.toLowerCase();
-  if (b.includes('visa')) return 'ויזה';
-  if (b.includes('master')) return 'מאסטרקארד';
-  if (b.includes('amex') || b.includes('american')) return 'אמריקן אקספרס';
-  if (b.includes('isra')) return 'ישראכרט';
-  if (b.includes('diners')) return 'דיינרס';
+  if (b.includes('visa')) return i18n.t('auto.utils__billingDisplay.s2');
+  if (b.includes('master')) return i18n.t('auto.utils__billingDisplay.s3');
+  if (b.includes('amex') || b.includes('american')) return i18n.t('auto.utils__billingDisplay.s4');
+  if (b.includes('isra')) return i18n.t('auto.utils__billingDisplay.s5');
+  if (b.includes('diners')) return i18n.t('auto.utils__billingDisplay.s6');
   return raw;
 }
 
@@ -82,8 +83,8 @@ export function formatPaymentMethodLabel(opts: {
   if (last4) {
     return `${formatCardBrandHe(opts.brand)} •••• ${last4}`;
   }
-  if (opts.hasToken) return 'כרטיס שמור לחיוב חוזר';
-  return 'לא זמין';
+  if (opts.hasToken) return i18n.t('auto.utils__billingDisplay.s7');
+  return i18n.t('auto.utils__billingDisplay.s8');
 }
 
 export type NextBillingInfo = {
@@ -99,33 +100,33 @@ function inactiveNextBillingCopy(status: string): NextBillingInfo {
   switch (status) {
     case 'past_due':
       return {
-        primary: 'אין חיוב הבא',
-        secondary: 'המנוי מוגבל עד להסדרת התשלום',
+        primary: i18n.t('auto.utils__billingDisplay.s9'),
+        secondary: i18n.t('auto.utils__billingDisplay.s10'),
         hasDate: false,
       };
     case 'expired':
       return {
-        primary: 'אין חיוב הבא',
-        secondary: 'המנוי פג תוקף — הגישה מוגבלת עד לתשלום',
+        primary: i18n.t('auto.utils__billingDisplay.s9'),
+        secondary: i18n.t('auto.utils__billingDisplay.s11'),
         hasDate: false,
       };
     case 'cancelled':
     case 'canceled':
       return {
-        primary: 'אין חיוב הבא',
-        secondary: 'המנוי בוטל — הגישה מוגבלת עד לתשלום מחדש',
+        primary: i18n.t('auto.utils__billingDisplay.s9'),
+        secondary: i18n.t('auto.utils__billingDisplay.s12'),
         hasDate: false,
       };
     case 'suspended':
       return {
-        primary: 'אין חיוב הבא',
-        secondary: 'החשבון מושעה עד לתשלום',
+        primary: i18n.t('auto.utils__billingDisplay.s9'),
+        secondary: i18n.t('auto.utils__billingDisplay.s13'),
         hasDate: false,
       };
     default:
       return {
-        primary: 'אין חיוב הבא',
-        secondary: 'הגישה מוגבלת עד לתשלום',
+        primary: i18n.t('auto.utils__billingDisplay.s9'),
+        secondary: i18n.t('auto.utils__billingDisplay.s14'),
         hasDate: false,
       };
   }
@@ -157,23 +158,23 @@ export function resolveNextBilling(opts: {
 
   if (opts.autoRenew && dateLabel) {
     return {
-      primary: `החיוב הבא ב־${dateLabel}`,
-      secondary: 'חידוש אוטומטי בתום התקופה הנוכחית',
+      primary: i18n.t('auto.utils__billingDisplay.s15', { v0: dateLabel }),
+      secondary: i18n.t('auto.utils__billingDisplay.s16'),
       hasDate: true,
     };
   }
 
   if (!opts.autoRenew && dateLabel) {
     return {
-      primary: `המנוי בתוקף עד ${dateLabel}`,
-      secondary: 'אין חיוב מתוזמן — חידוש אוטומטי כבוי',
+      primary: i18n.t('auto.utils__billingDisplay.s17', { v0: dateLabel }),
+      secondary: i18n.t('auto.utils__billingDisplay.s18'),
       hasDate: false,
     };
   }
 
   return {
-    primary: 'יעודכן לאחר החיוב הראשון',
-    secondary: 'מועד החיוב יופיע כאן אחרי אישור התשלום במערכת',
+    primary: i18n.t('auto.utils__billingDisplay.s19'),
+    secondary: i18n.t('auto.utils__billingDisplay.s20'),
     hasDate: false,
   };
 }
@@ -186,12 +187,12 @@ export function formatPlanPriceHe(
   const amount = Number(price);
   const periodHe =
     period === 'yearly'
-      ? 'לשנה'
+      ? i18n.t('auto.utils__billingDisplay.s21')
       : period === 'quarterly'
-        ? 'לרבעון'
+        ? i18n.t('auto.utils__billingDisplay.s22')
         : period === 'one_time'
-          ? 'חד־פעמי'
-          : 'לחודש';
+          ? i18n.t('auto.utils__billingDisplay.s23')
+          : i18n.t('auto.utils__billingDisplay.s24');
   return `₪${amount} / ${periodHe.replace(/^ל/, '')}`;
 }
 
@@ -200,11 +201,11 @@ export function subscriptionStatusLabelHe(
   isPremium: boolean,
 ): string {
   const s = normalizeSubscriptionStatus(status);
-  if (s === 'active') return 'פעיל';
-  if (s === 'cancelled' || s === 'canceled') return 'בוטל';
-  if (s === 'expired') return 'פג תוקף';
-  if (s === 'past_due') return 'ממתין לתשלום';
-  if (s === 'suspended') return 'מושעה';
-  if (isPremium) return 'פעיל';
-  return 'ללא מנוי בתשלום';
+  if (s === 'active') return i18n.t('auto.utils__billingDisplay.s25');
+  if (s === 'cancelled' || s === 'canceled') return i18n.t('auto.utils__billingDisplay.s26');
+  if (s === 'expired') return i18n.t('auto.utils__billingDisplay.s27');
+  if (s === 'past_due') return i18n.t('auto.utils__billingDisplay.s28');
+  if (s === 'suspended') return i18n.t('auto.utils__billingDisplay.s29');
+  if (isPremium) return i18n.t('auto.utils__billingDisplay.s25');
+  return i18n.t('auto.utils__billingDisplay.s30');
 }

@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { useMemo, useState } from 'react';
@@ -140,10 +141,10 @@ export default function TradeMessage({ trade: tradeRaw, isMe }: TradeMessageProp
     new Date(d).toLocaleDateString(appLocale(), { day: '2-digit', month: '2-digit', year: '2-digit' });
 
   const metrics: Array<{ label: string; value: string }> = [
-    { label: 'כניסה', value: money(trade.entry_price) },
-    { label: 'יציאה', value: money(trade.exit_price) },
-    { label: 'כמות', value: String(trade.quantity) },
-    { label: 'נסגר', value: date(trade.exit_date) },
+    { label: i18n.t('auto.components__chat__TradeMessage.s1'), value: money(trade.entry_price) },
+    { label: i18n.t('auto.components__chat__TradeMessage.s2'), value: money(trade.exit_price) },
+    { label: i18n.t('auto.components__chat__TradeMessage.s3'), value: String(trade.quantity) },
+    { label: i18n.t('auto.components__chat__TradeMessage.s4'), value: date(trade.exit_date) },
   ];
 
   return (

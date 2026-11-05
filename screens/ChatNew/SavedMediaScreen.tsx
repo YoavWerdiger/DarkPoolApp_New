@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 // ============================================
 // Saved Media Screen - Starred media from group
 // ============================================
@@ -96,7 +97,7 @@ export default function SavedMediaScreen() {
               url: msg.media_url,
               thumbnail: msg.media_thumbnail_url || msg.media_url,
               type: msg.message_type,
-              senderName: msg.sender?.display_name || 'משתמש',
+              senderName: msg.sender?.display_name || i18n.t('auto.screens__ChatNew__SavedMediaScreen.s1'),
               createdAt: msg.created_at,
             }));
 
@@ -158,18 +159,18 @@ export default function SavedMediaScreen() {
   return (
     <ChatScreenShell>
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        <ChatSubScreenHeader title="מדיה שמורה" onBack={() => navigation.goBack()} />
+        <ChatSubScreenHeader title={i18n.t('auto.screens__ChatNew__SavedMediaScreen.s2')} onBack={() => navigation.goBack()} />
 
         {loading ? (
           <View style={styles.centerContent}>
             <ActivityIndicator size="small" color={DesignTokens.colors.primary.main} />
-            <Text style={styles.emptyText}>טוען מדיה...</Text>
+            <Text style={styles.emptyText}>{i18n.t('auto.screens__ChatNew__SavedMediaScreen.s3')}</Text>
           </View>
         ) : savedMedia.length === 0 ? (
           <View style={styles.centerContent}>
             <Ionicons name="images-outline" size={48} color={DesignTokens.colors.text.secondary} />
-            <Text style={styles.emptyTitle}>אין מדיה שמורה</Text>
-            <Text style={styles.emptyText}>סמן הודעות עם כוכב כדי לשמור אותן כאן</Text>
+            <Text style={styles.emptyTitle}>{i18n.t('auto.screens__ChatNew__SavedMediaScreen.s4')}</Text>
+            <Text style={styles.emptyText}>{i18n.t('auto.screens__ChatNew__SavedMediaScreen.s5')}</Text>
           </View>
         ) : (
           <FlatList

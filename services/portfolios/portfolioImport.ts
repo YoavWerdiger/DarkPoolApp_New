@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 /**
  * portfolioImport.ts
  * --------------------------------------------------------------------------
@@ -76,15 +77,15 @@ interface ColumnMap {
 }
 
 const HEADER_ALIASES: Record<keyof ColumnMap, string[]> = {
-  symbol: ['symbol', 'ticker', 'instrument', 'asset', 'נכס', 'סימבול'],
-  type: ['type', 'side', 'action', 'transaction', 'סוג'],
-  date: ['date', 'datetime', 'time', 'תאריך'],
-  quantity: ['quantity', 'qty', 'shares', 'units', 'amount of shares', 'כמות'],
-  price: ['price', 'rate', 'מחיר'],
-  commission: ['commission', 'fee', 'fees', 'cost', 'עמלה'],
-  amount: ['amount', 'value', 'total', 'cash', 'סכום'],
-  currency: ['currency', 'ccy', 'מטבע'],
-  notes: ['notes', 'comment', 'description', 'memo', 'הערה', 'הערות'],
+  symbol: ['symbol', 'ticker', 'instrument', 'asset', i18n.t('auto.services__portfolios__portfolioImport.s1'), i18n.t('auto.services__portfolios__portfolioImport.s2')],
+  type: ['type', 'side', 'action', 'transaction', i18n.t('auto.services__portfolios__portfolioImport.s3')],
+  date: ['date', 'datetime', 'time', i18n.t('auto.services__portfolios__portfolioImport.s4')],
+  quantity: ['quantity', 'qty', 'shares', 'units', 'amount of shares', i18n.t('auto.services__portfolios__portfolioImport.s5')],
+  price: ['price', 'rate', i18n.t('auto.services__portfolios__portfolioImport.s6')],
+  commission: ['commission', 'fee', 'fees', 'cost', i18n.t('auto.services__portfolios__portfolioImport.s7')],
+  amount: ['amount', 'value', 'total', 'cash', i18n.t('auto.services__portfolios__portfolioImport.s8')],
+  currency: ['currency', 'ccy', i18n.t('auto.services__portfolios__portfolioImport.s9')],
+  notes: ['notes', 'comment', 'description', 'memo', i18n.t('auto.services__portfolios__portfolioImport.s10'), i18n.t('auto.services__portfolios__portfolioImport.s11')],
   asset_type: ['asset type', 'asset_type', 'instrument type', 'category'],
 };
 
@@ -230,7 +231,7 @@ export function parsePortfolioCsv(
     const typeRaw = columnMap.type >= 0 ? cols[columnMap.type] : '';
     const type = normalizeType(typeRaw);
     if (!type) {
-      row.error = `סוג טרנזקציה לא ידוע: "${typeRaw}"`;
+      row.error = i18n.t('auto.services__portfolios__portfolioImport.s12', { v0: typeRaw });
       invalidRows.push(row);
       continue;
     }
@@ -238,7 +239,7 @@ export function parsePortfolioCsv(
     const dateRaw = columnMap.date >= 0 ? cols[columnMap.date] : '';
     const date = parseDate(dateRaw);
     if (!date) {
-      row.error = `תאריך לא תקין: "${dateRaw}"`;
+      row.error = i18n.t('auto.services__portfolios__portfolioImport.s13', { v0: dateRaw });
       invalidRows.push(row);
       continue;
     }
@@ -258,7 +259,7 @@ export function parsePortfolioCsv(
           ? parseNumber(cols[columnMap.commission]) ?? 0
           : 0;
       if (!symbol || !qty || qty <= 0 || price == null) {
-        row.error = 'חסר symbol/quantity/price';
+        row.error = i18n.t('auto.services__portfolios__portfolioImport.s14');
         invalidRows.push(row);
         continue;
       }
@@ -287,7 +288,7 @@ export function parsePortfolioCsv(
       const amount =
         columnMap.amount >= 0 ? parseNumber(cols[columnMap.amount]) : null;
       if (amount == null || amount < 0) {
-        row.error = 'חסר amount';
+        row.error = i18n.t('auto.services__portfolios__portfolioImport.s15');
         invalidRows.push(row);
         continue;
       }
@@ -313,7 +314,7 @@ export function parsePortfolioCsv(
           ? parseNumber(cols[columnMap.price])
           : null;
       if (!symbol || amount == null || amount < 0) {
-        row.error = 'חסר symbol/amount לדיבידנד';
+        row.error = i18n.t('auto.services__portfolios__portfolioImport.s16');
         invalidRows.push(row);
         continue;
       }

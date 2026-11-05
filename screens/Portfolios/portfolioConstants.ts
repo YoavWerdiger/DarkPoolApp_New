@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 /**
  * קבועים לפיצ'ר תיקי השקעות:
@@ -22,13 +23,13 @@ export interface BenchmarkOption {
 
 /** רשימת benchmarks קבועה - מוצגת ב-CreatePortfolioScreen */
 export const BENCHMARK_PRESETS: BenchmarkOption[] = [
-  { symbol: 'SPY', label: 'S&P 500 (SPY)', description: '500 החברות הגדולות בארה"ב' },
-  { symbol: 'QQQ', label: 'NASDAQ 100 (QQQ)', description: '100 חברות הטכנולוגיה הגדולות' },
-  { symbol: 'IWM', label: 'Russell 2000 (IWM)', description: 'חברות קטנות ובינוניות בארה"ב' },
-  { symbol: 'DIA', label: 'Dow Jones (DIA)', description: '30 חברות תעשייה גדולות' },
-  { symbol: 'VTI', label: 'Total US Market (VTI)', description: 'כל שוק המניות האמריקאי' },
-  { symbol: 'BTC-USD', label: 'Bitcoin (BTC-USD)', description: 'מטבע הקריפטו המוביל' },
-  { symbol: 'TA35.TA', label: 'תל אביב 35', description: '35 החברות הגדולות בתל אביב' },
+  { symbol: 'SPY', label: 'S&P 500 (SPY)', description: i18n.t('auto.screens__Portfolios__portfolioConstants.s1') },
+  { symbol: 'QQQ', label: 'NASDAQ 100 (QQQ)', description: i18n.t('auto.screens__Portfolios__portfolioConstants.s2') },
+  { symbol: 'IWM', label: 'Russell 2000 (IWM)', description: i18n.t('auto.screens__Portfolios__portfolioConstants.s3') },
+  { symbol: 'DIA', label: 'Dow Jones (DIA)', description: i18n.t('auto.screens__Portfolios__portfolioConstants.s4') },
+  { symbol: 'VTI', label: 'Total US Market (VTI)', description: i18n.t('auto.screens__Portfolios__portfolioConstants.s5') },
+  { symbol: 'BTC-USD', label: 'Bitcoin (BTC-USD)', description: i18n.t('auto.screens__Portfolios__portfolioConstants.s6') },
+  { symbol: 'TA35.TA', label: i18n.t('auto.screens__Portfolios__portfolioConstants.s7'), description: i18n.t('auto.screens__Portfolios__portfolioConstants.s8') },
 ];
 
 export const DEFAULT_BENCHMARK = 'SPY';
@@ -46,42 +47,42 @@ export const DEFAULT_RISK_FREE_RATE = 4.0;
 
 /** תוויות עברית לסוגי טרנזקציות */
 export const TRANSACTION_LABELS: Record<TransactionType, string> = {
-  buy: 'קנייה',
-  sell: 'מכירה',
-  deposit: 'הפקדה',
-  withdrawal: 'משיכה',
-  fee: 'מסים ועמלות',
-  dividend: 'דיבידנד',
+  buy: i18n.t('auto.screens__Portfolios__portfolioConstants.s9'),
+  sell: i18n.t('auto.screens__Portfolios__portfolioConstants.s10'),
+  deposit: i18n.t('auto.screens__Portfolios__portfolioConstants.s11'),
+  withdrawal: i18n.t('auto.screens__Portfolios__portfolioConstants.s12'),
+  fee: i18n.t('auto.screens__Portfolios__portfolioConstants.s13'),
+  dividend: i18n.t('auto.screens__Portfolios__portfolioConstants.s14'),
 };
 
 /** תוויות עברית לסוגי נכסים */
 export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
-  stock: 'מניה',
+  stock: i18n.t('auto.screens__Portfolios__portfolioConstants.s15'),
   etf: 'ETF',
-  fund: 'קרן',
-  forex: 'מט"ח',
-  crypto: 'קריפטו',
-  futures: 'פיוצ\'רס',
+  fund: i18n.t('auto.screens__Portfolios__portfolioConstants.s16'),
+  forex: i18n.t('auto.screens__Portfolios__portfolioConstants.s17'),
+  crypto: i18n.t('auto.screens__Portfolios__portfolioConstants.s18'),
+  futures: i18n.t('auto.screens__Portfolios__portfolioConstants.s19'),
 };
 
 /** תוויות עברית לסקטורים */
 export const SECTOR_LABELS: Record<string, string> = {
-  tech: 'טכנולוגיה',
-  healthcare: 'בריאות',
-  finance: 'פיננסים',
-  energy: 'אנרגיה',
-  consumer: 'צרכנות',
-  industrial: 'תעשייה',
-  realestate: 'נדל"ן',
-  utilities: 'תשתיות',
-  materials: 'חומרי גלם',
-  telecom: 'תקשורת',
-  crypto: 'קריפטו',
+  tech: i18n.t('auto.screens__Portfolios__portfolioConstants.s20'),
+  healthcare: i18n.t('auto.screens__Portfolios__portfolioConstants.s21'),
+  finance: i18n.t('auto.screens__Portfolios__portfolioConstants.s22'),
+  energy: i18n.t('auto.screens__Portfolios__portfolioConstants.s23'),
+  consumer: i18n.t('auto.screens__Portfolios__portfolioConstants.s24'),
+  industrial: i18n.t('auto.screens__Portfolios__portfolioConstants.s25'),
+  realestate: i18n.t('auto.screens__Portfolios__portfolioConstants.s26'),
+  utilities: i18n.t('auto.screens__Portfolios__portfolioConstants.s27'),
+  materials: i18n.t('auto.screens__Portfolios__portfolioConstants.s28'),
+  telecom: i18n.t('auto.screens__Portfolios__portfolioConstants.s29'),
+  crypto: i18n.t('auto.screens__Portfolios__portfolioConstants.s18'),
   etf: 'ETF',
-  fund: 'קרן',
-  forex: 'מט"ח',
-  israel: 'מניות ישראל',
-  other: 'אחר',
+  fund: i18n.t('auto.screens__Portfolios__portfolioConstants.s16'),
+  forex: i18n.t('auto.screens__Portfolios__portfolioConstants.s17'),
+  israel: i18n.t('auto.screens__Portfolios__portfolioConstants.s30'),
+  other: i18n.t('auto.screens__Portfolios__portfolioConstants.s31'),
 };
 
 /**
@@ -162,31 +163,31 @@ export const SYMBOL_SECTOR_MAP: Map<string, string> = buildSectorMap();
 
 /** תקופות ביצועים (Performance) */
 export const PERFORMANCE_PERIODS: { id: PerformancePeriod; label: string }[] = [
-  { id: '1W', label: '1 שבוע' },
-  { id: '1M', label: '1 חודש' },
-  { id: '3M', label: '3 חודשים' },
-  { id: 'YTD', label: 'מתחילת השנה' },
-  { id: '1Y', label: '1 שנה' },
-  { id: '5Y', label: '5 שנים' },
-  { id: 'All', label: 'הכל' },
+  { id: '1W', label: i18n.t('auto.screens__Portfolios__portfolioConstants.s32') },
+  { id: '1M', label: i18n.t('auto.screens__Portfolios__portfolioConstants.s33') },
+  { id: '3M', label: i18n.t('auto.screens__Portfolios__portfolioConstants.s34') },
+  { id: 'YTD', label: i18n.t('auto.screens__Portfolios__portfolioConstants.s35') },
+  { id: '1Y', label: i18n.t('auto.screens__Portfolios__portfolioConstants.s36') },
+  { id: '5Y', label: i18n.t('auto.screens__Portfolios__portfolioConstants.s37') },
+  { id: 'All', label: i18n.t('auto.screens__Portfolios__portfolioConstants.s38') },
 ];
 
 /** מודי טבלת Holdings */
 export const HOLDINGS_VIEW_MODES: { id: HoldingsViewMode; label: string }[] = [
-  { id: 'position', label: 'פוזיציה' },
-  { id: 'price', label: 'מחיר' },
-  { id: 'financials', label: 'פיננסים' },
-  { id: 'performance', label: 'ביצועים' },
-  { id: 'risk', label: 'סיכון' },
-  { id: 'technicals', label: 'טכני' },
+  { id: 'position', label: i18n.t('auto.screens__Portfolios__portfolioConstants.s39') },
+  { id: 'price', label: i18n.t('auto.screens__Portfolios__portfolioConstants.s40') },
+  { id: 'financials', label: i18n.t('auto.screens__Portfolios__portfolioConstants.s22') },
+  { id: 'performance', label: i18n.t('auto.screens__Portfolios__portfolioConstants.s41') },
+  { id: 'risk', label: i18n.t('auto.screens__Portfolios__portfolioConstants.s42') },
+  { id: 'technicals', label: i18n.t('auto.screens__Portfolios__portfolioConstants.s43') },
 ];
 
 /** סדר מימין לשמאל — האיבר הראשון מופיע בקצה הימני */
 export const PORTFOLIO_DETAIL_TABS = [
-  { id: 'overview' as const,    label: 'סקירה'            },
-  { id: 'open_trades' as const, label: 'פוזיציות פתוחות'  },
-  { id: 'calendar' as const,    label: 'לוח שנה'          },
-  { id: 'transactions' as const, label: 'עסקאות'          },
+  { id: 'overview' as const,    label: i18n.t('auto.screens__Portfolios__portfolioConstants.s44')            },
+  { id: 'open_trades' as const, label: i18n.t('auto.screens__Portfolios__portfolioConstants.s45')  },
+  { id: 'calendar' as const,    label: i18n.t('auto.screens__Portfolios__portfolioConstants.s46')          },
+  { id: 'transactions' as const, label: i18n.t('auto.screens__Portfolios__portfolioConstants.s47')          },
 ];
 
 export type PortfolioDetailTab =

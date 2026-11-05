@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
@@ -50,9 +51,9 @@ type Nav = NativeStackNavigationProp<PortfoliosStackParamList, 'CreatePortfolio'
 type CreateMode = 'manual' | 'import' | 'broker' | 'watchlist';
 
 const BROKER_BENEFITS = [
-  'שכפול מלא של החשבון: פוזיציות, פקודות פתוחות והיסטוריית עסקאות',
-  'עדכון אוטומטי כל 15 דקות — בלי להזין עסקאות ידנית',
-  'התיק נשמר במצב קריאה בלבד וניתן לנתק אותו בכל עת',
+  i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s1'),
+  i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s2'),
+  i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s3'),
 ];
 
 export default function CreatePortfolioScreen() {
@@ -80,7 +81,7 @@ export default function CreatePortfolioScreen() {
   );
 
   const nameError = useMemo(
-    () => (name.trim().length === 0 ? 'נא להזין שם לתיק' : null),
+    () => (name.trim().length === 0 ? i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s4') : null),
     [name]
   );
 
@@ -88,15 +89,15 @@ export default function CreatePortfolioScreen() {
     const raw = initialCash.trim();
     if (!raw) return null;
     const parsed = Number(raw);
-    if (!Number.isFinite(parsed)) return 'יש להזין סכום מספרי תקין';
-    if (parsed < 0) return 'הסכום לא יכול להיות שלילי';
+    if (!Number.isFinite(parsed)) return i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s5');
+    if (parsed < 0) return i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s6');
     return null;
   }, [initialCash]);
 
   const riskError = useMemo(() => {
     const parsed = parseFloat(riskFree);
     if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100) {
-      return 'יש להזין ערך בין 0 ל-100';
+      return i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s7');
     }
     return null;
   }, [riskFree]);
@@ -145,7 +146,7 @@ export default function CreatePortfolioScreen() {
         navigation.navigate('PortfoliosHub', { selectPortfolioId: portfolio.id });
       }
     } catch (err) {
-      legacyAlert('שגיאה', 'לא הצלחנו ליצור את התיק. נסה שוב.');
+      legacyAlert(i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s8'), i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s9'));
     } finally {
       setSubmitting(false);
     }
@@ -226,7 +227,7 @@ export default function CreatePortfolioScreen() {
     <View style={styles.root}>
       <ChatSessionBackdrop />
       <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
-        <PortfolioScreenHeader title="תיק חדש" onBack={() => navigation.goBack()} />
+        <PortfolioScreenHeader title={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s10')} onBack={() => navigation.goBack()} />
         <KeyboardAvoidingView
           style={{ flex: 1, backgroundColor: 'transparent' }}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -241,23 +242,23 @@ export default function CreatePortfolioScreen() {
             {/* בחירת סוג תיק */}
             <View style={styles.section}>
               <SectionHeader
-                title="איך נתחיל?"
-                caption="אפשר לנהל את התיק ידנית, או לסנכרן אותו אוטומטית מחשבון המסחר."
+                title={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s11')}
+                caption={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s12')}
               />
               <View style={styles.modeCards}>
                 <ModeCard
                   active={!isBrokerMode}
                   icon="journal-outline"
-                  title="תיק ידני"
-                  description="יומן מסחר — הוספת עסקאות ידנית, מעקב ביצועים וניתוח מלא"
+                  title={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s13')}
+                  description={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s14')}
                   onPress={() => setMode(importCsv ? 'import' : 'manual')}
                 />
                 <ModeCard
                   active={isBrokerMode}
                   icon="link-outline"
                   logo={require('../../assets/colmex-logo.png')}
-                  title="חיבור ברוקר"
-                  description="Colmex Pro — סנכרון אוטומטי של פוזיציות, פקודות והיסטוריה"
+                  title={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s15')}
+                  description={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s16')}
                   onPress={() => setMode('broker')}
                 />
               </View>
@@ -265,7 +266,7 @@ export default function CreatePortfolioScreen() {
 
             {isBrokerMode ? (
               <View style={styles.section}>
-                <SectionHeader title="מה קורה בחיבור?" />
+                <SectionHeader title={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s17')} />
                 <UICard
                   variant="soft"
                   padding="md"
@@ -287,22 +288,22 @@ export default function CreatePortfolioScreen() {
               <>
                 {/* פרטי התיק */}
                 <View style={styles.section}>
-                  <SectionHeader title="פרטי התיק" />
+                  <SectionHeader title={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s18')} />
 
                   <TextField
-                    label="שם התיק"
+                    label={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s19')}
                     value={name}
                     onChangeText={setName}
                     onBlur={() => setTouchedName(true)}
-                    placeholder="לדוגמה: התיק הראשי"
-                    hint="השם שיוצג ברשימת התיקים שלך"
+                    placeholder={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s20')}
+                    hint={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s21')}
                     error={touchedName ? nameError : null}
                     maxLength={128}
                     editable={!submitting}
                   />
 
                   <TextField
-                    label="יתרת פתיחה"
+                    label={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s22')}
                     optional
                     value={initialCash}
                     onChangeText={setInitialCash}
@@ -311,12 +312,12 @@ export default function CreatePortfolioScreen() {
                     keyboardType="decimal-pad"
                     numeric
                     prefix={currencySymbol}
-                    hint="המזומן שהיה בתיק ביום פתיחתו. אפשר להשאיר ריק ולהוסיף הפקדה בהמשך."
+                    hint={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s23')}
                     error={touchedCash ? cashError : null}
                     editable={!submitting}
                   />
 
-                  <FieldLabel label="מטבע התיק" />
+                  <FieldLabel label={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s24')} />
                   <View style={styles.chipsRow}>
                     {SUPPORTED_CURRENCIES.map((c) => {
                       const active = currency === c.code;
@@ -330,7 +331,7 @@ export default function CreatePortfolioScreen() {
                           }}
                           accessibilityRole="radio"
                           accessibilityState={{ checked: active }}
-                          accessibilityLabel={`מטבע ${c.label}`}
+                          accessibilityLabel={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s25', { v0: c.label })}
                           style={[
                             styles.chip,
                             { backgroundColor: active ? tokens.colors.primary.main : chromeSurfaceFill(tokens) },
@@ -376,9 +377,7 @@ export default function CreatePortfolioScreen() {
                       color={tokens.colors.text.secondary}
                     />
                     <View style={{ flex: 1 }}>
-                      <Text style={[journalCardTitleStyle, { color: tokens.colors.text.primary }]}>
-                        הגדרות מתקדמות
-                      </Text>
+                      <Text style={[journalCardTitleStyle, { color: tokens.colors.text.primary }]}>{i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s26')}</Text>
                       <Text
                         style={[
                           journalCardSubtitleStyle,
@@ -387,9 +386,7 @@ export default function CreatePortfolioScreen() {
                             marginTop: JOURNAL_LAYOUT.cardTitleToSubtitleGap,
                           },
                         ]}
-                      >
-                        מדד השוואה, ריבית חסרת סיכון, פיצולים, ייבוא ותיאור
-                      </Text>
+                      >{i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s27')}</Text>
                     </View>
                     <Ionicons
                       name={advancedOpen ? 'chevron-up' : 'chevron-down'}
@@ -401,8 +398,8 @@ export default function CreatePortfolioScreen() {
                   {advancedOpen ? (
                     <View style={styles.advancedBody}>
                       <FieldLabel
-                        label="מדד השוואה"
-                        hint="מולו נשווה את ביצועי התיק בגרפים ובסטטיסטיקות"
+                        label={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s28')}
+                        hint={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s29')}
                       />
                       {BENCHMARK_PRESETS.map((b) => {
                         const active = benchmark === b.symbol;
@@ -443,39 +440,39 @@ export default function CreatePortfolioScreen() {
                       <View style={{ height: 16 }} />
 
                       <TextField
-                        label="ריבית חסרת סיכון (% שנתי)"
+                        label={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s30')}
                         value={riskFree}
                         onChangeText={setRiskFree}
                         placeholder="4.0"
                         keyboardType="decimal-pad"
                         numeric
-                        hint='משמש לחישוב Sharpe ו-Sortino. ברירת מחדל 4% (תשואת אג"ח אמריקאי).'
+                        hint={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s31')}
                         error={riskError}
                         editable={!submitting}
                       />
 
                       <SwitchRow
-                        title="התאמה אוטומטית לפיצולי מניות"
-                        hint="מומלץ — כמות ומחיר בעסקאות יתעדכנו אוטומטית לפי splits"
+                        title={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s32')}
+                        hint={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s33')}
                         value={autoSplits}
                         onChange={setAutoSplits}
                         spacing={12}
                       />
 
                       <SwitchRow
-                        title="ייבוא עסקאות מקובץ CSV"
-                        hint="בסיום היצירה נעבור למסך הייבוא (Symbol, Type, Date, Quantity, Price…)"
+                        title={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s34')}
+                        hint={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s35')}
                         value={importCsv}
                         onChange={(v) => setMode(v ? 'import' : 'manual')}
                         spacing={18}
                       />
 
                       <TextField
-                        label="תיאור"
+                        label={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s36')}
                         optional
                         value={description}
                         onChangeText={setDescription}
-                        placeholder="מטרת התיק, אסטרטגיה, הערות…"
+                        placeholder={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s37')}
                         multiline
                         maxLength={1200}
                         editable={!submitting}
@@ -491,10 +488,10 @@ export default function CreatePortfolioScreen() {
           <PortfolioFormFooter
             title={
               submitting
-                ? 'יוצר תיק…'
+                ? i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s38')
                 : isBrokerMode
-                  ? 'המשך לחיבור Colmex Pro'
-                  : 'צור תיק'
+                  ? i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s39')
+                  : i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s40')
             }
             icon={isBrokerMode ? 'link' : 'checkmark'}
             disabled={!canSubmit}

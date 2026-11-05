@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, ActivityIndicator, TouchableOpacity, Platform } from 'react-native';
@@ -188,7 +189,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
       const paymentResponse = await paymentService.createPaymentRequest({
         amount: plan.price,
         currency: 'ILS',
-        description: `מנוי ${plan.name} - ${buyer.name}`,
+        description: i18n.t('auto.screens__Payment__CreditCardCheckoutScreen.s1', { v0: plan.name, v1: buyer.name }),
         userId: checkoutUserId,
         planId: selectedPlan,
         userEmail: buyer.email,
@@ -272,7 +273,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
 
       void HapticFeedback.error();
       setPhase('error');
-      setErrorMessage(message || 'התשלום נכשל או בוטל. אפשר לנסות שוב.');
+      setErrorMessage(message || i18n.t('auto.screens__Payment__CreditCardCheckoutScreen.s2'));
       paymentOutcomeHandledRef.current = false;
     },
     [
@@ -332,7 +333,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
     return (
       <View style={{ flex: 1, backgroundColor: 'transparent' }}>
         <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
-          <ChatSubScreenHeader title="השלמת תשלום" onBack={() => navigation.goBack()} />
+          <ChatSubScreenHeader title={i18n.t('auto.screens__Payment__CreditCardCheckoutScreen.s3')} onBack={() => navigation.goBack()} />
           <WebView
             source={webSource}
             style={{ flex: 1, backgroundColor: 'transparent' }}
@@ -392,9 +393,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
                     marginTop: 16,
                     writingDirection: TEXT_DIR,
                   }}
-                >
-                  טוען דף תשלום...
-                </Text>
+                >{i18n.t('auto.screens__Payment__CreditCardCheckoutScreen.s4')}</Text>
               </View>
             )}
           />
@@ -417,7 +416,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
 
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
-        <ChatSubScreenHeader title="תשלום" onBack={leaveCheckout} />
+        <ChatSubScreenHeader title={i18n.t('auto.screens__Payment__CreditCardCheckoutScreen.s5')} onBack={leaveCheckout} />
         <View
           style={{
             flex: 1,
@@ -437,8 +436,8 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
             }}
           >
             {errorMessage.includes('נכשל') || errorMessage.includes('בוטל')
-              ? 'התשלום לא הושלם'
-              : 'לא הצלחנו לפתוח את דף התשלום'}
+              ? i18n.t('auto.screens__Payment__CreditCardCheckoutScreen.s6')
+              : i18n.t('auto.screens__Payment__CreditCardCheckoutScreen.s7')}
           </Text>
           <Text
             style={{
@@ -470,11 +469,11 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
             }}
           >
             <RefreshCw size={18} color="#000" style={{ marginLeft: 8 }} />
-            <Text style={{ color: '#000', fontSize: 15, fontWeight: '700' }}>נסה שוב</Text>
+            <Text style={{ color: '#000', fontSize: 15, fontWeight: '700' }}>{i18n.t('auto.screens__Payment__CreditCardCheckoutScreen.s8')}</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={leaveCheckout} activeOpacity={0.75}>
             <Text style={{ color: colors.text.tertiary, fontSize: 14 }}>
-              {fromRegistration ? 'חזרה' : 'חזרה למנוי שלי'}
+              {fromRegistration ? i18n.t('auto.screens__Payment__CreditCardCheckoutScreen.s9') : i18n.t('auto.screens__Payment__CreditCardCheckoutScreen.s10')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -488,7 +487,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
       <ChatSubScreenHeader
-        title={isCompleting ? 'תשלום הושלם' : 'תשלום מאובטח'}
+        title={isCompleting ? i18n.t('auto.screens__Payment__CreditCardCheckoutScreen.s11') : i18n.t('auto.screens__Payment__CreditCardCheckoutScreen.s12')}
         onBack={isCompleting ? () => undefined : () => navigation.goBack()}
       />
       <View
@@ -525,7 +524,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
             writingDirection: TEXT_DIR,
           }}
         >
-          {isCompleting ? 'מפעיל את המנוי...' : 'מכין את דף התשלום המאובטח...'}
+          {isCompleting ? i18n.t('auto.screens__Payment__CreditCardCheckoutScreen.s13') : i18n.t('auto.screens__Payment__CreditCardCheckoutScreen.s14')}
         </Text>
         <Text
           style={{
@@ -538,10 +537,10 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
           }}
         >
           {isCompleting
-            ? 'רגע אחד — מעבירים למסך הברכה'
+            ? i18n.t('auto.screens__Payment__CreditCardCheckoutScreen.s15')
             : fromRegistration
-              ? 'יוצר חשבון ומעביר לדף תשלום מאובטח של CardCom'
-              : 'מעביר לדף תשלום מאובטח של CardCom'}
+              ? i18n.t('auto.screens__Payment__CreditCardCheckoutScreen.s16')
+              : i18n.t('auto.screens__Payment__CreditCardCheckoutScreen.s17')}
         </Text>
       </View>
     </SafeAreaView>

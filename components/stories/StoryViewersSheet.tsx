@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useCallback, useEffect } from 'react';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -105,7 +106,7 @@ export function StoryViewersSheet({
   }));
 
   const displayName = (u?: { display_name: string | null; full_name: string | null } | null) =>
-    u?.display_name || u?.full_name || 'משתמש';
+    u?.display_name || u?.full_name || i18n.t('auto.components__stories__StoryViewersSheet.s1');
 
   const listData = tab === 'viewers' ? viewers : reactions;
 
@@ -137,8 +138,8 @@ export function StoryViewersSheet({
           {/* טאבים — צ'יפי הטופו עם המחוון המחליק */}
           <SlidingPillGroup
             options={[
-              { id: 'viewers' as const, label: `צפיות${viewers.length ? ` · ${viewers.length}` : ''}` },
-              { id: 'reactions' as const, label: `ריאקציות${reactions.length ? ` · ${reactions.length}` : ''}` },
+              { id: 'viewers' as const, label: i18n.t('auto.components__stories__StoryViewersSheet.s2', { v0: viewers.length ? ` · ${viewers.length}` : '' }) },
+              { id: 'reactions' as const, label: i18n.t('auto.components__stories__StoryViewersSheet.s3', { v0: reactions.length ? ` · ${reactions.length}` : '' }) },
             ]}
             value={tab}
             onChange={onChangeTab}
@@ -158,7 +159,7 @@ export function StoryViewersSheet({
                 color={tokens.colors.text.tertiary}
               />
               <Text style={[sheetStyles.emptyText, { color: tokens.colors.text.secondary }]}>
-                {tab === 'viewers' ? 'עדיין אף אחד לא צפה' : 'עדיין אין ריאקציות'}
+                {tab === 'viewers' ? i18n.t('auto.components__stories__StoryViewersSheet.s4') : i18n.t('auto.components__stories__StoryViewersSheet.s5')}
               </Text>
             </View>
           ) : (

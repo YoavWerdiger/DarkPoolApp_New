@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -58,16 +59,16 @@ export function WatchlistListNameSheet({
       contentPaddingBottom={0}
     >
       <View style={[styles.root, { paddingBottom: Math.max(insets.bottom, 12) }]} onLayout={onContentLayout}>
-        <ChatSheetTopoHeader title={mode === 'rename' ? 'שינוי שם' : 'רשימה חדשה'} onClose={onClose} />
+        <ChatSheetTopoHeader title={mode === 'rename' ? i18n.t('auto.screens__Watchlist__components__WatchlistFormSheet.s1') : i18n.t('auto.screens__Watchlist__components__WatchlistFormSheet.s2')} onClose={onClose} />
 
-        <Text style={formFieldLabelStyle({ tokens, focused })}>שם הרשימה</Text>
+        <Text style={formFieldLabelStyle({ tokens, focused })}>{i18n.t('auto.screens__Watchlist__components__WatchlistFormSheet.s3')}</Text>
         <View style={[formFieldShellStyle({ tokens, focused }), styles.fieldShell]}>
           <TextInput
             value={value}
             onChangeText={onChangeValue}
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
-            placeholder="לדוגמה: טק · מדדים · מעקב שבועי"
+            placeholder={i18n.t('auto.screens__Watchlist__components__WatchlistFormSheet.s4')}
             placeholderTextColor={formFieldPlaceholderColor(tokens)}
             style={[formFieldInputStyle(tokens), appPhysicalRightText, styles.fieldInput]}
             maxLength={60}
@@ -81,7 +82,7 @@ export function WatchlistListNameSheet({
 
         <View style={styles.footer}>
           <UIButton
-            title={mode === 'rename' ? 'שמירה' : 'יצירת רשימה'}
+            title={mode === 'rename' ? i18n.t('auto.screens__Watchlist__components__WatchlistFormSheet.s5') : i18n.t('auto.screens__Watchlist__components__WatchlistFormSheet.s6')}
             variant="primary"
             size="lg"
             fullWidth

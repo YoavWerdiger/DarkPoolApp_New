@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 /**
  * AccumulationChart.tsx
  * -----------------------------------------------------------------------------
@@ -44,7 +45,7 @@ export function AccumulationChart({ data, height = 140 }: AccumulationChartProps
   if (!data?.length) {
     return (
       <View style={styles.wrap}>
-        <Text style={styles.emptyText}>אין נתונים זמינים</Text>
+        <Text style={styles.emptyText}>{i18n.t('auto.screens__DarkPool__components__AccumulationChart.s1')}</Text>
       </View>
     );
   }

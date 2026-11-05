@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 import { appLocale } from '../../../lib/i18n/locale';
 import { JournalListSkeleton } from '../../../components/ui/SkeletonLoader';
@@ -34,11 +35,11 @@ interface Props {
 }
 
 const HEB_MONTHS = [
-  'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
-  'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר',
+  i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s1'), i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s2'), i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s3'), i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s4'), i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s5'), i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s6'),
+  i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s7'), i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s8'), i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s9'), i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s10'), i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s11'), i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s12'),
 ];
 
-const HEB_DAYS = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
+const HEB_DAYS = [i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s13'), i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s14'), i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s15'), i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s16'), i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s17'), i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s18'), i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s19')];
 
 const TINT_ALPHA = '65';
 
@@ -343,10 +344,8 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
           size={42}
           color={tokens.colors.text.tertiary}
         />
-        <Text style={styles.emptyTitle}>אין עדיין טריידים סגורים</Text>
-        <Text style={styles.emptyText}>
-          ברגע שתסגור פוזיציות, ה-P&L היומי שלהן יופיע כאן בלוח השנה.
-        </Text>
+        <Text style={styles.emptyTitle}>{i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s20')}</Text>
+        <Text style={styles.emptyText}>{i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s21')}</Text>
       </View>
     );
   }
@@ -375,7 +374,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
                 void HapticFeedback.impactLight();
                 goPrev();
               }}
-              accessibilityLabel="חודש קודם"
+              accessibilityLabel={i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s22')}
             >
               <Ionicons
                 name="chevron-back"
@@ -392,7 +391,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
                 void HapticFeedback.impactLight();
                 goNext();
               }}
-              accessibilityLabel="חודש הבא"
+              accessibilityLabel={i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s23')}
             >
               <Ionicons
                 name="chevron-forward"
@@ -498,13 +497,13 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
 
       {monthlyTotal.tradeCount > 0 ? (
         <JournalStatsList
-          title="סטטיסטיקות חודש"
+          title={i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s24')}
           style={styles.monthStats}
           cells={[
-            { icon: Wallet, label: 'סה״כ חודש', value: formatCurrency(monthlyTotal.sum, currency), color: totalColor },
-            { icon: ArrowLeftRight, label: 'טריידים', value: String(monthlyTotal.tradeCount), color: tokens.colors.text.primary },
-            { icon: CalendarCheck, label: 'ימים ירוקים', value: String(monthlyTotal.winDays), color: tokens.colors.primary.main },
-            { icon: CalendarX, label: 'ימים אדומים', value: String(monthlyTotal.lossDays), color: tokens.colors.text.danger },
+            { icon: Wallet, label: i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s25'), value: formatCurrency(monthlyTotal.sum, currency), color: totalColor },
+            { icon: ArrowLeftRight, label: i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s26'), value: String(monthlyTotal.tradeCount), color: tokens.colors.text.primary },
+            { icon: CalendarCheck, label: i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s27'), value: String(monthlyTotal.winDays), color: tokens.colors.primary.main },
+            { icon: CalendarX, label: i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s28'), value: String(monthlyTotal.lossDays), color: tokens.colors.text.danger },
           ]}
         />
       ) : null}
@@ -557,7 +556,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
                   ]}
                 >
                   <Text style={[styles.tradeDirText, { color: accent }]}>
-                    {isLong ? 'לונג' : 'שורט'}
+                    {isLong ? i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s29') : i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s30')}
                   </Text>
                 </View>
                 <Text style={[styles.tradePnl, { color: pnlColor }]}>

@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useMemo } from 'react';
 import { Collapsible } from '../ui/Collapsible';
@@ -135,8 +136,7 @@ export const ModuleSection: React.FC<ModuleSectionProps> = ({
               ) : null}
             </View>
             <Text style={styles.lessonCount}>
-              {totalLessons} שיעורים • {completedLessons} הושלמו
-            </Text>
+              {i18n.t('auto.components__learning__ModuleSection.s1', { v0: totalLessons, v1: completedLessons })}</Text>
           </View>
           
           <View style={styles.headerRight}>

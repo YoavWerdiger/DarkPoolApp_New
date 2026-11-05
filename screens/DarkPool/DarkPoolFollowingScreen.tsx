@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 /**
  * רשימת בכירים/פוליטיקאים במעקב + קיצור לגילוי.
  */
@@ -203,7 +204,7 @@ export default function DarkPoolFollowingScreen() {
     return (
       <ScreenChrome rtl>
         <SafeAreaView style={[darkPoolTransparentFill, darkPoolRtlContent]} edges={['top']}>
-          <MainDrawerScreenHeader inRtlTree title="מעקב" onMenuPress={openDrawer} />
+          <MainDrawerScreenHeader inRtlTree title={i18n.t('auto.screens__DarkPool__DarkPoolFollowingScreen.s1')} onMenuPress={openDrawer} />
           <View style={styles.scroll}>
             <UICard {...CHROME_UICARD} style={styles.followCard}>
               {Array.from({ length: 3 }).map((_, i) => (
@@ -224,8 +225,8 @@ export default function DarkPoolFollowingScreen() {
       <SafeAreaView style={[darkPoolTransparentFill, darkPoolRtlContent]} edges={['top']}>
         <MainDrawerScreenHeader
           inRtlTree
-          title="מעקב"
-          subtitle={list.length ? `${list.length} במעקב` : 'עקוב אחרי בכירים ופוליטיקאים'}
+          title={i18n.t('auto.screens__DarkPool__DarkPoolFollowingScreen.s1')}
+          subtitle={list.length ? i18n.t('auto.screens__DarkPool__DarkPoolFollowingScreen.s2', { v0: list.length }) : i18n.t('auto.screens__DarkPool__DarkPoolFollowingScreen.s3')}
           onMenuPress={openDrawer}
         />
         <ScrollView
@@ -257,7 +258,7 @@ export default function DarkPoolFollowingScreen() {
                 ))}
               </UICard>
 
-              <Text style={styles.activityTitle}>פעילות אחרונה</Text>
+              <Text style={styles.activityTitle}>{i18n.t('auto.screens__DarkPool__DarkPoolFollowingScreen.s4')}</Text>
               {activityFeed.loading ? (
                 <View>
                   {Array.from({ length: 3 }).map((_, i) => (
@@ -265,7 +266,7 @@ export default function DarkPoolFollowingScreen() {
                   ))}
                 </View>
               ) : activityFeed.items.length === 0 ? (
-                <Text style={styles.emptyText}>אין עסקאות חדשות מהמעקב.</Text>
+                <Text style={styles.emptyText}>{i18n.t('auto.screens__DarkPool__DarkPoolFollowingScreen.s5')}</Text>
               ) : (
                 <View>
                   {activityFeed.items.map((item) => (
@@ -282,11 +283,8 @@ export default function DarkPoolFollowingScreen() {
           ) : (
             <View style={styles.empty}>
               <Ionicons name="people-outline" size={40} color={tokens.colors.text.secondary} />
-              <Text style={styles.emptyText}>
-                עדיין לא עוקב אחרי אף משקיע.{'\n'}
-                גלה פוליטיקאים ובכירים בטאב חקור ולחץ «עקוב».
-              </Text>
-              <UIButton title="לחקור" variant="primary" onPress={goExplore} />
+              <Text style={styles.emptyText}>{i18n.t('auto.screens__DarkPool__DarkPoolFollowingScreen.s6', { v0: '\n' })}</Text>
+              <UIButton title={i18n.t('auto.screens__DarkPool__DarkPoolFollowingScreen.s7')} variant="primary" onPress={goExplore} />
             </View>
           )}
         </ScrollView>
@@ -316,12 +314,12 @@ function FollowedRow({
   const isCompany = person.kind === 'fund_manager' && !!person.ticker?.trim();
   const kindLabel =
     person.kind === 'politician'
-      ? 'פוליטיקאי'
+      ? i18n.t('auto.screens__DarkPool__DarkPoolFollowingScreen.s8')
       : isCompany
-        ? 'חברה'
+        ? i18n.t('auto.screens__DarkPool__DarkPoolFollowingScreen.s9')
         : person.kind === 'fund_manager'
-          ? 'קרן גידור'
-          : 'בכיר';
+          ? i18n.t('auto.screens__DarkPool__DarkPoolFollowingScreen.s10')
+          : i18n.t('auto.screens__DarkPool__DarkPoolFollowingScreen.s11');
 
   return (
     <Pressable onPress={onPress} style={styles.row}>

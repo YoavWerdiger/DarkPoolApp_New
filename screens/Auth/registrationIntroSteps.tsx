@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React from 'react';
 import RegistrationIntroQuestionScreen, {
   type IntroQuestionConfig,
@@ -40,18 +41,18 @@ const PLATFORM_ICONS: Record<string, IconName> = {
 
 /** טווח החזקה לכל סגנון מסחר */
 const FOCUS_HORIZON: Record<string, string> = {
-  day_trading: 'דקות עד שעות',
-  swing: 'ימים עד שבועות',
-  long_term: 'חודשים עד שנים',
-  all_styles: 'יומי, סווינג וטווח ארוך',
+  day_trading: i18n.t('auto.screens__Auth__registrationIntroSteps.s1'),
+  swing: i18n.t('auto.screens__Auth__registrationIntroSteps.s2'),
+  long_term: i18n.t('auto.screens__Auth__registrationIntroSteps.s3'),
+  all_styles: i18n.t('auto.screens__Auth__registrationIntroSteps.s4'),
 };
 
 /** רמת ניסיון — מד 1–4 + הסבר קצר */
 const EXPERIENCE_DETAILS: Record<string, { level: number; description: string; shortLabel: string }> = {
-  first_steps: { level: 1, description: 'עוד לא ביצעתי עסקאות בשוק', shortLabel: 'צעדים ראשונים' },
-  beginner: { level: 2, description: 'מסחר ראשון, פחות משנה בשוק', shortLabel: 'מתחיל' },
-  intermediate: { level: 3, description: 'כמה שנים של מסחר פעיל', shortLabel: 'בינוני' },
-  advanced: { level: 4, description: 'מסחר שיטתי עם אסטרטגיה מוגדרת', shortLabel: 'מתקדם' },
+  first_steps: { level: 1, description: i18n.t('auto.screens__Auth__registrationIntroSteps.s5'), shortLabel: i18n.t('auto.screens__Auth__registrationIntroSteps.s6') },
+  beginner: { level: 2, description: i18n.t('auto.screens__Auth__registrationIntroSteps.s7'), shortLabel: i18n.t('auto.screens__Auth__registrationIntroSteps.s8') },
+  intermediate: { level: 3, description: i18n.t('auto.screens__Auth__registrationIntroSteps.s9'), shortLabel: i18n.t('auto.screens__Auth__registrationIntroSteps.s10') },
+  advanced: { level: 4, description: i18n.t('auto.screens__Auth__registrationIntroSteps.s11'), shortLabel: i18n.t('auto.screens__Auth__registrationIntroSteps.s12') },
 };
 const EXPERIENCE_LEVEL_OPTIONS_DETAILED = EXPERIENCE_LEVEL_OPTIONS.map((o) => ({
   ...o,
@@ -61,8 +62,8 @@ const EXPERIENCE_LEVEL_OPTIONS_DETAILED = EXPERIENCE_LEVEL_OPTIONS.map((o) => ({
 const experienceConfig: IntroQuestionConfig = {
   field: 'experienceLevel',
   stepKey: 'experience',
-  title: 'מה רמת הניסיון שלך במסחר?',
-  subtitle: 'בחר את האפשרות הקרובה ביותר',
+  title: i18n.t('auto.screens__Auth__registrationIntroSteps.s13'),
+  subtitle: i18n.t('auto.screens__Auth__registrationIntroSteps.s14'),
   options: EXPERIENCE_LEVEL_OPTIONS_DETAILED,
   nextRoute: 'RegistrationTradingFocus',
   displayMode: 'stairs',
@@ -71,8 +72,8 @@ const experienceConfig: IntroQuestionConfig = {
 const focusConfig: IntroQuestionConfig = {
   field: 'tradingFocus',
   stepKey: 'tradingFocus',
-  title: 'מה סגנון המסחר שלך?',
-  subtitle: 'נוכל להציג תוכן רלוונטי יותר',
+  title: i18n.t('auto.screens__Auth__registrationIntroSteps.s15'),
+  subtitle: i18n.t('auto.screens__Auth__registrationIntroSteps.s16'),
   options: withIcons(TRADING_FOCUS_OPTIONS, {
     day_trading: 'flash-outline',
     swing: 'pulse-outline',
@@ -86,8 +87,8 @@ const focusConfig: IntroQuestionConfig = {
 const platformConfig: IntroQuestionConfig = {
   field: 'tradingPlatform',
   stepKey: 'platform',
-  title: 'באיזו פלטפורמה אתה סוחר?',
-  subtitle: 'אפשר לבחור יותר מאחת',
+  title: i18n.t('auto.screens__Auth__registrationIntroSteps.s17'),
+  subtitle: i18n.t('auto.screens__Auth__registrationIntroSteps.s18'),
   options: TRADING_PLATFORM_OPTIONS.map((o) => ({
     ...o,
     ...(PLATFORM_LOGOS[o.value]
@@ -101,8 +102,8 @@ const platformConfig: IntroQuestionConfig = {
 const portfolioConfig: IntroQuestionConfig = {
   field: 'portfolioSize',
   stepKey: 'portfolio',
-  title: 'מה גודל התיק שלך?',
-  subtitle: 'שאלה אופציונלית — אפשר לדלג',
+  title: i18n.t('auto.screens__Auth__registrationIntroSteps.s19'),
+  subtitle: i18n.t('auto.screens__Auth__registrationIntroSteps.s20'),
   options: PORTFOLIO_SIZE_OPTIONS.map((o, i) => ({ ...o, level: i + 1 })),
   nextRoute: 'RegistrationTrack',
   displayMode: 'sliderMoney',

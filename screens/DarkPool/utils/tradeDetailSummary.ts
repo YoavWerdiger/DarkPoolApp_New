@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 /**
  * משפט גיבור — פרטי עסקה וכרטיס הפיד (אותו JSX / אותה טיפוגרפיה).
  * המסך והפיד מרנדרים אותו בטופולוגיה: שם → פועל → קן טיקר.
@@ -58,8 +59,8 @@ function datedMeta(
   transactionDate?: string | null
 ): { metaLine: string | null; metaRender: string | null } {
   const day = formatTradeDate(transactionDate);
-  const dateBit = day ? `בתאריך ${day}` : null;
-  const dateRender = day ? `בתאריך ${isolateData(day)}` : null;
+  const dateBit = day ? i18n.t('auto.screens__DarkPool__utils__tradeDetailSummary.s1', { v0: day }) : null;
+  const dateRender = day ? i18n.t('auto.screens__DarkPool__utils__tradeDetailSummary.s1', { v0: isolateData(day) }) : null;
   if (lead && dateBit) {
     return {
       metaLine: `${lead} ${dateBit}`,
@@ -119,9 +120,9 @@ export function buildCongressTradeDetailSummary(input: {
   );
 
   if (range) {
-    const primary = tickerDisplay ? `${range} ב-${tickerDisplay}` : range;
+    const primary = tickerDisplay ? i18n.t('auto.screens__DarkPool__utils__tradeDetailSummary.s2', { v0: range, v1: tickerDisplay }) : range;
     const primaryRender = tickerDisplay
-      ? `${isolateData(range)} ב-${isolateData(tickerDisplay)}`
+      ? i18n.t('auto.screens__DarkPool__utils__tradeDetailSummary.s2', { v0: isolateData(range), v1: isolateData(tickerDisplay) })
       : isolateData(range);
     return finishSummary(
       verb,
@@ -134,9 +135,9 @@ export function buildCongressTradeDetailSummary(input: {
     );
   }
 
-  const primary = tickerDisplay ? `את ${tickerDisplay}` : '';
+  const primary = tickerDisplay ? i18n.t('auto.screens__DarkPool__utils__tradeDetailSummary.s3', { v0: tickerDisplay }) : '';
   const primaryRender = tickerDisplay
-    ? `את ${isolateData(tickerDisplay)}`
+    ? i18n.t('auto.screens__DarkPool__utils__tradeDetailSummary.s3', { v0: isolateData(tickerDisplay) })
     : '';
   return finishSummary(
     verb,
@@ -173,26 +174,26 @@ export function buildInsiderTradeDetailSummary(input: {
     const qty = isolateData(sharesText);
     const ticker = isolateData(tickerDisplay);
     if (isVerb) {
-      primary = `${sharesText} מניות של ${tickerDisplay}`;
-      primaryRender = `${qty} מניות של ${ticker}`;
+      primary = i18n.t('auto.screens__DarkPool__utils__tradeDetailSummary.s4', { v0: sharesText, v1: tickerDisplay });
+      primaryRender = i18n.t('auto.screens__DarkPool__utils__tradeDetailSummary.s4', { v0: qty, v1: ticker });
     } else {
-      primary = `של ${sharesText} מניות של ${tickerDisplay}`;
-      primaryRender = `של ${qty} מניות של ${ticker}`;
+      primary = i18n.t('auto.screens__DarkPool__utils__tradeDetailSummary.s5', { v0: sharesText, v1: tickerDisplay });
+      primaryRender = i18n.t('auto.screens__DarkPool__utils__tradeDetailSummary.s5', { v0: qty, v1: ticker });
     }
   } else if (tickerDisplay) {
     const ticker = isolateData(tickerDisplay);
     if (isVerb) {
-      primary = `את ${tickerDisplay}`;
-      primaryRender = `את ${ticker}`;
+      primary = i18n.t('auto.screens__DarkPool__utils__tradeDetailSummary.s3', { v0: tickerDisplay });
+      primaryRender = i18n.t('auto.screens__DarkPool__utils__tradeDetailSummary.s3', { v0: ticker });
     } else {
-      primary = `ב-${tickerDisplay}`;
-      primaryRender = `ב-${ticker}`;
+      primary = i18n.t('auto.screens__DarkPool__utils__tradeDetailSummary.s6', { v0: tickerDisplay });
+      primaryRender = i18n.t('auto.screens__DarkPool__utils__tradeDetailSummary.s6', { v0: ticker });
     }
   }
 
-  const priceLine = priceText ? `ב-${priceText} למניה` : null;
+  const priceLine = priceText ? i18n.t('auto.screens__DarkPool__utils__tradeDetailSummary.s7', { v0: priceText }) : null;
   const priceRender = priceText
-    ? `ב-${isolateData(priceText)} למניה`
+    ? i18n.t('auto.screens__DarkPool__utils__tradeDetailSummary.s7', { v0: isolateData(priceText) })
     : null;
   const { metaLine, metaRender } = datedMeta(
     priceLine,
@@ -257,25 +258,25 @@ export function buildTradeDetailFieldRows(input: {
 }): TradeDetailFieldRow[] {
   const rows: TradeDetailFieldRow[] = [];
   if (input.isCongress) {
-    pushIf(rows, { label: 'נייר ערך', value: input.tickerSym, icon: 'ticker', ltr: true });
+    pushIf(rows, { label: i18n.t('auto.screens__DarkPool__utils__tradeDetailSummary.s8'), value: input.tickerSym, icon: 'ticker', ltr: true });
     pushIf(rows, {
-      label: 'סכום מדווח',
+      label: i18n.t('auto.screens__DarkPool__utils__tradeDetailSummary.s9'),
       value: input.amountRange,
       icon: 'amount',
       ltr: Boolean(input.amountRange?.startsWith('$')),
     });
   } else {
-    pushIf(rows, { label: 'נייר ערך', value: input.tickerSym, icon: 'ticker', ltr: true });
-    pushIf(rows, { label: 'כמות', value: input.shares, icon: 'shares', ltr: true });
-    pushIf(rows, { label: 'מחיר למניה', value: input.price, icon: 'price', ltr: true });
+    pushIf(rows, { label: i18n.t('auto.screens__DarkPool__utils__tradeDetailSummary.s8'), value: input.tickerSym, icon: 'ticker', ltr: true });
+    pushIf(rows, { label: i18n.t('auto.screens__DarkPool__utils__tradeDetailSummary.s10'), value: input.shares, icon: 'shares', ltr: true });
+    pushIf(rows, { label: i18n.t('auto.screens__DarkPool__utils__tradeDetailSummary.s11'), value: input.price, icon: 'price', ltr: true });
     pushIf(rows, {
-      label: input.valueLabel ?? 'שווי אחזקה',
+      label: input.valueLabel ?? i18n.t('auto.screens__DarkPool__utils__tradeDetailSummary.s12'),
       value: input.value,
       icon: 'value',
       ltr: true,
     });
   }
-  pushIf(rows, { label: 'בוצע', value: input.traded, icon: 'traded', ltr: true });
-  pushIf(rows, { label: 'נחשף', value: input.filed, icon: 'filed', ltr: true });
+  pushIf(rows, { label: i18n.t('auto.screens__DarkPool__utils__tradeDetailSummary.s13'), value: input.traded, icon: 'traded', ltr: true });
+  pushIf(rows, { label: i18n.t('auto.screens__DarkPool__utils__tradeDetailSummary.s14'), value: input.filed, icon: 'filed', ltr: true });
   return rows;
 }

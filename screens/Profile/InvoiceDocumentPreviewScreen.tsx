@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useMemo, useState } from 'react';
 import {
   View,
@@ -49,7 +50,7 @@ export default function InvoiceDocumentPreviewScreen({ navigation, route }: any)
   const title =
     (typeof params.title === 'string' && params.title.trim()) ||
     typeLabel ||
-    'קבלה / חשבונית';
+    i18n.t('auto.screens__Profile__InvoiceDocumentPreviewScreen.s1');
 
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -84,13 +85,9 @@ export default function InvoiceDocumentPreviewScreen({ navigation, route }: any)
       >
         <ChatSubScreenHeader title={title} onBack={() => navigation.goBack()} />
         <View style={styles.center}>
-          <Text style={[styles.errorTitle, { color: tokens.colors.text.primary }]}>
-            קישור המסמך אינו תקין
-          </Text>
+          <Text style={[styles.errorTitle, { color: tokens.colors.text.primary }]}>{i18n.t('auto.screens__Profile__InvoiceDocumentPreviewScreen.s2')}</Text>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.secondaryBtn}>
-            <Text style={[settingsHebrewText, settingsButtonLabelStyle, { color: tokens.colors.text.primary }]}>
-              חזרה
-            </Text>
+            <Text style={[settingsHebrewText, settingsButtonLabelStyle, { color: tokens.colors.text.primary }]}>{i18n.t('auto.screens__Profile__InvoiceDocumentPreviewScreen.s3')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -113,7 +110,7 @@ export default function InvoiceDocumentPreviewScreen({ navigation, route }: any)
             onPress={() => void shareDocument()}
             size={DRAWER_MENU_BUTTON_SIZE}
             glassIntensity="subtle"
-            accessibilityLabel="שתף"
+            accessibilityLabel={i18n.t('auto.screens__Profile__InvoiceDocumentPreviewScreen.s4')}
           >
             <Share2 size={18} color={tokens.colors.text.primary} strokeWidth={2.2} />
           </DayNavBlurButton>
@@ -122,7 +119,7 @@ export default function InvoiceDocumentPreviewScreen({ navigation, route }: any)
 
       {params.documentNumber != null ? (
         <Text style={[styles.meta, { color: tokens.colors.text.tertiary }]}>
-          מס׳ מסמך {params.documentNumber}
+          {i18n.t('auto.screens__Profile__InvoiceDocumentPreviewScreen.s5')} {params.documentNumber}
           {typeLabel ? ` · ${typeLabel}` : ''}
         </Text>
       ) : null}
@@ -130,12 +127,8 @@ export default function InvoiceDocumentPreviewScreen({ navigation, route }: any)
       <View style={[styles.webWrap, { backgroundColor: tokens.colors.background.cardSolid }]}>
         {failed ? (
           <View style={styles.center}>
-            <Text style={[styles.errorTitle, { color: tokens.colors.text.primary }]}>
-              לא הצלחנו להציג את המסמך כאן
-            </Text>
-            <Text style={[styles.errorBody, { color: tokens.colors.text.secondary }]}>
-              אפשר לפתוח אותו בדפדפן המערכת.
-            </Text>
+            <Text style={[styles.errorTitle, { color: tokens.colors.text.primary }]}>{i18n.t('auto.screens__Profile__InvoiceDocumentPreviewScreen.s6')}</Text>
+            <Text style={[styles.errorBody, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Profile__InvoiceDocumentPreviewScreen.s7')}</Text>
             <TouchableOpacity
               onPress={() => void openExternal()}
               activeOpacity={0.8}
@@ -145,9 +138,7 @@ export default function InvoiceDocumentPreviewScreen({ navigation, route }: any)
               ]}
             >
               <ExternalLink size={16} color={tokens.colors.text.inverse} strokeWidth={2.4} />
-              <Text style={[styles.primaryBtnText, { color: tokens.colors.text.inverse }]}>
-                פתח בדפדפן
-              </Text>
+              <Text style={[styles.primaryBtnText, { color: tokens.colors.text.inverse }]}>{i18n.t('auto.screens__Profile__InvoiceDocumentPreviewScreen.s8')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -205,9 +196,7 @@ export default function InvoiceDocumentPreviewScreen({ navigation, route }: any)
           ]}
         >
           <ExternalLink size={16} color={tokens.colors.text.primary} strokeWidth={2.4} />
-          <Text style={[settingsHebrewText, settingsButtonLabelStyle, { color: tokens.colors.text.primary }]}>
-            פתח בדפדפן
-          </Text>
+          <Text style={[settingsHebrewText, settingsButtonLabelStyle, { color: tokens.colors.text.primary }]}>{i18n.t('auto.screens__Profile__InvoiceDocumentPreviewScreen.s8')}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

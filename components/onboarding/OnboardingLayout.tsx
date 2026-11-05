@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useRef } from 'react';
 import {
@@ -246,7 +247,7 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
                     size={HEADER_BACK_BTN_SIZE}
                     glass={false}
                     style={navButtonStyle}
-                    accessibilityLabel="יציאה מהרישום"
+                    accessibilityLabel={i18n.t('auto.components__onboarding__OnboardingLayout.s1')}
                   >
                     <Ionicons
                       name="close"
@@ -266,7 +267,7 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
                     size={HEADER_BACK_BTN_SIZE}
                     glass={false}
                     style={navButtonStyle}
-                    accessibilityLabel="חזרה"
+                    accessibilityLabel={i18n.t('auto.components__onboarding__OnboardingLayout.s2')}
                   >
                     <Ionicons
                       name="chevron-forward"

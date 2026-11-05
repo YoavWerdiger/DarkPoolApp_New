@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { legacyAlert } from '../../utils/appDialog';
 import { isPasswordValid, passwordErrorMessage } from '../../utils/passwordPolicy';
 import React, { useMemo, useState } from 'react';
@@ -150,11 +151,11 @@ export default function ChangePasswordScreen({ navigation }: any) {
     setFormError(null);
 
     if (!user?.email) {
-      setFormError('לא נמצא אימייל למשתמש');
+      setFormError(i18n.t('auto.screens__Profile__ChangePasswordScreen.s1'));
       return;
     }
     if (!currentPassword || !newPassword || !confirmPassword) {
-      setFormError('נא למלא את כל השדות');
+      setFormError(i18n.t('auto.screens__Profile__ChangePasswordScreen.s2'));
       return;
     }
     {
@@ -165,11 +166,11 @@ export default function ChangePasswordScreen({ navigation }: any) {
       }
     }
     if (newPassword !== confirmPassword) {
-      setFormError('הסיסמאות החדשות אינן תואמות');
+      setFormError(i18n.t('auto.screens__Profile__ChangePasswordScreen.s3'));
       return;
     }
     if (currentPassword === newPassword) {
-      setFormError('הסיסמה החדשה חייבת להיות שונה מהנוכחית');
+      setFormError(i18n.t('auto.screens__Profile__ChangePasswordScreen.s4'));
       return;
     }
 
@@ -180,7 +181,7 @@ export default function ChangePasswordScreen({ navigation }: any) {
         password: currentPassword,
       });
       if (reauthError) {
-        setFormError('הסיסמה הנוכחית שגויה');
+        setFormError(i18n.t('auto.screens__Profile__ChangePasswordScreen.s5'));
         void HapticFeedback.warning();
         return;
       }
@@ -189,7 +190,7 @@ export default function ChangePasswordScreen({ navigation }: any) {
         password: newPassword,
       });
       if (updateError) {
-        setFormError(updateError.message || 'עדכון הסיסמה נכשל');
+        setFormError(updateError.message || i18n.t('auto.screens__Profile__ChangePasswordScreen.s6'));
         void HapticFeedback.warning();
         return;
       }
@@ -198,11 +199,11 @@ export default function ChangePasswordScreen({ navigation }: any) {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      legacyAlert('הצלחה', 'הסיסמה עודכנה בהצלחה', [
-        { text: 'אישור', onPress: () => navigation.goBack() },
+      legacyAlert(i18n.t('auto.screens__Profile__ChangePasswordScreen.s7'), i18n.t('auto.screens__Profile__ChangePasswordScreen.s8'), [
+        { text: i18n.t('auto.screens__Profile__ChangePasswordScreen.s9'), onPress: () => navigation.goBack() },
       ]);
     } catch (e) {
-      setFormError(e instanceof Error ? e.message : 'שגיאה בעדכון סיסמה');
+      setFormError(e instanceof Error ? e.message : i18n.t('auto.screens__Profile__ChangePasswordScreen.s10'));
       void HapticFeedback.warning();
     } finally {
       setSaving(false);
@@ -215,7 +216,7 @@ export default function ChangePasswordScreen({ navigation }: any) {
       edges={['top']}
     >
       <ChatSubScreenHeader
-        title="שינוי סיסמה"
+        title={i18n.t('auto.screens__Profile__ChangePasswordScreen.s11')}
         onBack={() => {
           void HapticFeedback.impactLight();
           navigation.goBack();
@@ -237,19 +238,17 @@ export default function ChangePasswordScreen({ navigation }: any) {
             paddingBottom: APP_LAYOUT.componentGap,
           }}
         >
-          <Text style={[styles.intro, { color: tokens.colors.text.secondary }]}>
-            נאמת את הסיסמה הנוכחית ואז נשמור סיסמה חדשה.
-          </Text>
+          <Text style={[styles.intro, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Profile__ChangePasswordScreen.s12')}</Text>
 
           <View>
             <PasswordField
-              label="סיסמה נוכחית"
+              label={i18n.t('auto.screens__Profile__ChangePasswordScreen.s13')}
               value={currentPassword}
               onChangeText={(v) => {
                 setCurrentPassword(v);
                 if (formError) setFormError(null);
               }}
-              placeholder="הזינו את הסיסמה הנוכחית"
+              placeholder={i18n.t('auto.screens__Profile__ChangePasswordScreen.s14')}
               visible={showCurrent}
               onToggleVisible={() => setShowCurrent((s) => !s)}
               tokens={tokens}
@@ -257,13 +256,13 @@ export default function ChangePasswordScreen({ navigation }: any) {
             />
 
             <PasswordField
-              label="סיסמה חדשה"
+              label={i18n.t('auto.screens__Profile__ChangePasswordScreen.s15')}
               value={newPassword}
               onChangeText={(v) => {
                 setNewPassword(v);
                 if (formError) setFormError(null);
               }}
-              placeholder="לפחות 8 תווים"
+              placeholder={i18n.t('auto.screens__Profile__ChangePasswordScreen.s16')}
               visible={showNew}
               onToggleVisible={() => setShowNew((s) => !s)}
               tokens={tokens}
@@ -288,20 +287,19 @@ export default function ChangePasswordScreen({ navigation }: any) {
                     />
                   ))}
                 </View>
-                <Text style={[styles.strengthLabel, { color: strengthColor }]}>
-                  חוזק: {strengthLabel}
+                <Text style={[styles.strengthLabel, { color: strengthColor }]}>{i18n.t('auto.screens__Profile__ChangePasswordScreen.s17', { v0: strengthLabel })}
                 </Text>
               </View>
             ) : null}
 
             <PasswordField
-              label="אימות סיסמה חדשה"
+              label={i18n.t('auto.screens__Profile__ChangePasswordScreen.s18')}
               value={confirmPassword}
               onChangeText={(v) => {
                 setConfirmPassword(v);
                 if (formError) setFormError(null);
               }}
-              placeholder="הקלידו שוב את הסיסמה החדשה"
+              placeholder={i18n.t('auto.screens__Profile__ChangePasswordScreen.s19')}
               visible={showConfirm}
               onToggleVisible={() => setShowConfirm((s) => !s)}
               tokens={tokens}
@@ -312,9 +310,7 @@ export default function ChangePasswordScreen({ navigation }: any) {
             {confirmMismatch ? (
               <Text
                 style={[styles.inlineHint, { color: tokens.colors.danger.main }]}
-              >
-                הסיסמאות אינן תואמות
-              </Text>
+              >{i18n.t('auto.screens__Profile__ChangePasswordScreen.s20')}</Text>
             ) : confirmPassword.length > 0 && newPassword === confirmPassword ? (
               <View style={styles.matchRow}>
                 <ShieldCheck
@@ -327,9 +323,7 @@ export default function ChangePasswordScreen({ navigation }: any) {
                     styles.inlineHint,
                     { color: tokens.colors.primary.main, marginBottom: 0 },
                   ]}
-                >
-                  הסיסמאות תואמות
-                </Text>
+                >{i18n.t('auto.screens__Profile__ChangePasswordScreen.s21')}</Text>
               </View>
             ) : null}
 
@@ -365,7 +359,7 @@ export default function ChangePasswordScreen({ navigation }: any) {
           ]}
         >
           <UIButton
-            title={saving ? 'מעדכן...' : 'עדכן סיסמה'}
+            title={saving ? i18n.t('auto.screens__Profile__ChangePasswordScreen.s22') : i18n.t('auto.screens__Profile__ChangePasswordScreen.s23')}
             variant="primary"
             fullWidth
             loading={saving}

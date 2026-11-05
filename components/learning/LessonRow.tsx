@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
@@ -95,7 +96,7 @@ export const LessonRow: React.FC<LessonRowProps> = ({
           onPress(lesson);
         }}
         accessibilityRole="button"
-        accessibilityLabel={`שיעור ${index + 1}: ${lesson.title}`}
+        accessibilityLabel={i18n.t('auto.components__learning__LessonRow.s1', { v0: index + 1, v1: lesson.title })}
       >
         <View style={styles.thumbWrap}>
           {thumbnailUrl ? (
@@ -130,7 +131,7 @@ export const LessonRow: React.FC<LessonRowProps> = ({
           {isComingSoon ? (
             <View style={styles.lockOverlay}>
               <View style={styles.soonPill}>
-                <Text style={styles.soonText}>בקרוב</Text>
+                <Text style={styles.soonText}>{i18n.t('auto.components__learning__LessonRow.s2')}</Text>
               </View>
             </View>
           ) : isCompleted ? (
@@ -166,8 +167,8 @@ export const LessonRow: React.FC<LessonRowProps> = ({
               {lesson.title}
             </Text>
             <Text style={styles.indexLabel} numberOfLines={1}>
-              שיעור {index + 1}
-              {isComingSoon ? ' · בקרוב' : ''}
+              {i18n.t('auto.components__learning__LessonRow.s3')} {index + 1}
+              {isComingSoon ? i18n.t('auto.components__learning__LessonRow.s4') : ''}
             </Text>
 
             {description ? (

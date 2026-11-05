@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
@@ -166,15 +167,15 @@ export const CoursesScreen: React.FC = () => {
   const handleEnroll = useCallback(
     async (course: CourseWithProgress) => {
       if (getAcademyCourseTier(course as CourseWithProgress & { price?: number }) === 'premium') {
-        legacyAlert('קורס בתשלום', 'קורס זה דורש תשלום. התכונה תהיה זמינה בקרוב.', [{ text: 'אישור' }]);
+        legacyAlert(i18n.t('auto.screens__Learning__CoursesScreen.s1'), i18n.t('auto.screens__Learning__CoursesScreen.s2'), [{ text: i18n.t('auto.screens__Learning__CoursesScreen.s3') }]);
         return;
       }
       try {
         await enrollMutation.mutateAsync(course.id);
         void HapticFeedback.success();
-        legacyAlert('הצלחה!', 'נרשמת בהצלחה לקורס', [{ text: 'אישור' }]);
+        legacyAlert(i18n.t('auto.screens__Learning__CoursesScreen.s4'), i18n.t('auto.screens__Learning__CoursesScreen.s5'), [{ text: i18n.t('auto.screens__Learning__CoursesScreen.s3') }]);
       } catch {
-        legacyAlert('שגיאה', 'לא ניתן להירשם לקורס כרגע. נסה שוב מאוחר יותר.', [{ text: 'אישור' }]);
+        legacyAlert(i18n.t('auto.screens__Learning__CoursesScreen.s6'), i18n.t('auto.screens__Learning__CoursesScreen.s7'), [{ text: i18n.t('auto.screens__Learning__CoursesScreen.s3') }]);
       }
     },
     [enrollMutation]
@@ -225,13 +226,11 @@ export const CoursesScreen: React.FC = () => {
           <View style={styles.errorInner}>
             <UICard variant="soft" padding="lg" style={styles.errorCard}>
               <Ionicons name="cloud-offline-outline" size={48} color={DesignTokens.colors.text.danger} />
-              <Text style={[styles.errorTitle, { color: DesignTokens.colors.text.primary }]}>
-                שגיאה בטעינת הקורסים
-              </Text>
+              <Text style={[styles.errorTitle, { color: DesignTokens.colors.text.primary }]}>{i18n.t('auto.screens__Learning__CoursesScreen.s8')}</Text>
               <Text style={[styles.errorMessage, { color: DesignTokens.colors.text.secondary }]}>
-                {error.message || 'אירעה שגיאה לא צפויה'}
+                {error.message || i18n.t('auto.screens__Learning__CoursesScreen.s9')}
               </Text>
-              <UIButton title="נסה שוב" variant="primary" onPress={() => refetch()} />
+              <UIButton title={i18n.t('auto.screens__Learning__CoursesScreen.s10')} variant="primary" onPress={() => refetch()} />
             </UICard>
           </View>
         </RNSafeAreaView>
@@ -254,7 +253,7 @@ export const CoursesScreen: React.FC = () => {
             />
           }
         >
-          <AcademyScreenHeader onMenuPress={openMainDrawer} title="האקדמיה" />
+          <AcademyScreenHeader onMenuPress={openMainDrawer} title={i18n.t('auto.screens__Learning__CoursesScreen.s11')} />
 
           {!showInitialLoader ? (
             <View style={styles.toolbar}>
@@ -262,7 +261,7 @@ export const CoursesScreen: React.FC = () => {
                 onPress={handleOpenNotes}
                 size={44}
                 glassIntensity="subtle"
-                accessibilityLabel="ההערות שלי"
+                accessibilityLabel={i18n.t('auto.screens__Learning__CoursesScreen.s12')}
                 style={styles.notesBtn}
               >
                 <Ionicons
@@ -279,7 +278,7 @@ export const CoursesScreen: React.FC = () => {
                       <TouchableOpacity
                         onPress={() => setSearchQuery('')}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        accessibilityLabel="נקה חיפוש"
+                        accessibilityLabel={i18n.t('auto.screens__Learning__CoursesScreen.s13')}
                       >
                         <Ionicons
                           name="close-circle"
@@ -293,11 +292,11 @@ export const CoursesScreen: React.FC = () => {
                     <TextInput
                       value={searchQuery}
                       onChangeText={setSearchQuery}
-                      placeholder="חיפוש קורסים..."
+                      placeholder={i18n.t('auto.screens__Learning__CoursesScreen.s14')}
                       placeholderTextColor={DesignTokens.colors.text.tertiary}
                       style={styles.searchInput}
                       returnKeyType="search"
-                      accessibilityLabel="חיפוש קורסים"
+                      accessibilityLabel={i18n.t('auto.screens__Learning__CoursesScreen.s15')}
                     />
                     <Ionicons
                       name="search"
@@ -313,7 +312,7 @@ export const CoursesScreen: React.FC = () => {
           {showInitialLoader ? (
             <View style={styles.loadingWrap}>
               <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-              <Text style={styles.loadingHint}>טוען קורסים…</Text>
+              <Text style={styles.loadingHint}>{i18n.t('auto.screens__Learning__CoursesScreen.s16')}</Text>
             </View>
           ) : filteredCourses.length === 0 ? (
             <View style={styles.emptyState}>
@@ -325,16 +324,16 @@ export const CoursesScreen: React.FC = () => {
                 />
               </View>
               <Text style={styles.emptyStateTitle}>
-                {isSearching ? 'אין תוצאות לחיפוש' : 'אין קורסים להצגה'}
+                {isSearching ? i18n.t('auto.screens__Learning__CoursesScreen.s17') : i18n.t('auto.screens__Learning__CoursesScreen.s18')}
               </Text>
               <Text style={styles.emptyStateSubtitle}>
-                {isSearching ? 'נסה מילה אחרת או נקה את החיפוש' : 'נסה שוב מאוחר יותר'}
+                {isSearching ? i18n.t('auto.screens__Learning__CoursesScreen.s19') : i18n.t('auto.screens__Learning__CoursesScreen.s20')}
               </Text>
             </View>
           ) : (
             <View style={styles.sections}>
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>קורסים מלאים</Text>
+                <Text style={styles.sectionTitle}>{i18n.t('auto.screens__Learning__CoursesScreen.s21')}</Text>
                 {renderHorizontalRow(filteredCourses)}
               </View>
             </View>

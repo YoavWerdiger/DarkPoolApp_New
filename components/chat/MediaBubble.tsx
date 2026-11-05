@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, Pressable, Image, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -301,13 +302,13 @@ function MediaBubble({
                   fontSize: DesignTokens.typography.bodySmall.size,
                   marginBottom: DesignTokens.spacing.micro
                 }} numberOfLines={1}>
-                  {metadata?.file_name || 'מסמך'}
+                  {metadata?.file_name || i18n.t('auto.components__chat__MediaBubble.s1')}
                 </Text>
                 <Text style={{
                   color: DesignTokens.colors.text.secondary,
                   fontSize: 11
                 }}>
-                  {metadata?.file_size ? formatFileSize(metadata.file_size) : 'גודל לא ידוע'}
+                  {metadata?.file_size ? formatFileSize(metadata.file_size) : i18n.t('auto.components__chat__MediaBubble.s2')}
                 </Text>
               </View>
               <Download size={20} color={DesignTokens.colors.success.main} strokeWidth={2} />
@@ -322,7 +323,7 @@ function MediaBubble({
             borderRadius: DesignTokens.borderRadius.md,
             padding: DesignTokens.spacing.md
           }}>
-            <Text style={{ color: DesignTokens.colors.text.primary }}>סוג מדיה לא נתמך</Text>
+            <Text style={{ color: DesignTokens.colors.text.primary }}>{i18n.t('auto.components__chat__MediaBubble.s3')}</Text>
           </View>
         );
     }

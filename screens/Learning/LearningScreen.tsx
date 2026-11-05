@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
 import { legacyAlert } from '../../utils/appDialog';
@@ -49,26 +50,26 @@ const rtlText = {
 
 const DEMO_COURSE = {
   id: 'demo-course-1',
-  title: 'הלווייתנים',
+  title: i18n.t('auto.screens__Learning__LearningScreen.s1'),
   description:
-    'למי הקורס מתאים?\nלסוחרים שרוצים להעמיק במסחר יומי ולהבין כיצד לזהות זרימות גדולות ונזילות בשוק.\n\nמה תלמדו בקורס?\nבקורס תלמדו כלים לניתוח מבנה שוק ונזילות — כולל מושגים מעולם ה־Smart Money Concepts (Order Blocks, FVG, Premium & Discount ועוד) — ואיך ליישם אותם במסחר יומי במניות ובאופציות.\n\nבנוסף תלמדו כיצד לבנות תוכנית עבודה יומית, לנהל עסקאות בזמן אמת ולשלב בין ניתוח זרימות לבין ניהול סיכונים מסודר.',
+    i18n.t('auto.screens__Learning__LearningScreen.s2'),
   cover_url: `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/course_media/whales-course-cover-2026-10.jpg`,
     instructor: {
-      name: 'דוד אריאל',
+      name: i18n.t('auto.screens__Learning__LearningScreen.s3'),
       avatar: `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/course_media/channels4_profile.jpg`,
     rating: 4.9,
     students: 1250
   },
-  duration: '4 שעות',
-  level: 'מתקדם',
+  duration: i18n.t('auto.screens__Learning__LearningScreen.s4'),
+  level: i18n.t('auto.screens__Learning__LearningScreen.s5'),
   rating: 4.8,
   students: 1250,
   lessons: [
     {
       id: 'lesson-1',
-      title: 'הכירות עם הקורס',
+      title: i18n.t('auto.screens__Learning__LearningScreen.s6'),
       duration: '01:20',
-      description: 'הכרות עם הקורס והנושאים שילמדו בו',
+      description: i18n.t('auto.screens__Learning__LearningScreen.s7'),
       completed: true,
       type: 'video',
         vimeoId: '1095579213',
@@ -77,9 +78,9 @@ const DEMO_COURSE = {
     },
     {
       id: 'lesson-2', 
-      title: 'מה זה - Price Action',
+      title: i18n.t('auto.screens__Learning__LearningScreen.s8'),
       duration: '03:28',
-      description: 'הבנת מושגי ה-Price Action והשימוש בהם',
+      description: i18n.t('auto.screens__Learning__LearningScreen.s9'),
       completed: false,
       type: 'video',
       vimeoId: '1095573038',
@@ -88,9 +89,9 @@ const DEMO_COURSE = {
     },
     {
       id: 'lesson-3',
-      title: 'מה זה - Liquidity',
+      title: i18n.t('auto.screens__Learning__LearningScreen.s10'),
       duration: '21:49', 
-      description: 'הבנת מושג הנזילות והשפעתו על השוק',
+      description: i18n.t('auto.screens__Learning__LearningScreen.s11'),
       completed: false,
       type: 'video',
       vimeoId: '1095570862',
@@ -99,9 +100,9 @@ const DEMO_COURSE = {
     },
     {
       id: 'lesson-4',
-      title: 'מה זה - FVG',
+      title: i18n.t('auto.screens__Learning__LearningScreen.s12'),
       duration: '21:41',
-      description: 'הבנת Fair Value Gaps וזיהוי הזדמנויות',
+      description: i18n.t('auto.screens__Learning__LearningScreen.s13'),
       completed: false,
       type: 'video',
       vimeoId: '1095761556',
@@ -110,9 +111,9 @@ const DEMO_COURSE = {
     },
     {
       id: 'lesson-5',
-      title: 'מה זה - IFVG',
+      title: i18n.t('auto.screens__Learning__LearningScreen.s14'),
       duration: '09:37',
-      description: 'הבנת Imbalanced Fair Value Gaps',
+      description: i18n.t('auto.screens__Learning__LearningScreen.s15'),
       completed: false,
       type: 'video',
       vimeoId: '1095760652',
@@ -121,9 +122,9 @@ const DEMO_COURSE = {
     },
     {
       id: 'lesson-6',
-      title: 'אסטרטגיית - מודל PO3',
+      title: i18n.t('auto.screens__Learning__LearningScreen.s16'),
       duration: '24:15',
-      description: 'לימוד מודל PO3 ואסטרטגיות מסחר',
+      description: i18n.t('auto.screens__Learning__LearningScreen.s17'),
       completed: false,
       type: 'video',
       vimeoId: '1095776680',
@@ -132,9 +133,9 @@ const DEMO_COURSE = {
     },
     {
       id: 'lesson-7',
-      title: 'אסטרטגיית - Golden Zone + FVG',
+      title: i18n.t('auto.screens__Learning__LearningScreen.s18'),
       duration: '09:13',
-      description: 'שילוב Golden Zone עם Fair Value Gaps',
+      description: i18n.t('auto.screens__Learning__LearningScreen.s19'),
       completed: false,
       type: 'video',
       vimeoId: '1099364716',
@@ -143,9 +144,9 @@ const DEMO_COURSE = {
     },
     {
       id: 'lesson-8',
-      title: 'סמינר PO3 (חזרה על מושגים והבנת המודל לעומק)',
+      title: i18n.t('auto.screens__Learning__LearningScreen.s20'),
       duration: '47:49',
-      description: 'סמינר מקיף לחזרה על מושגי PO3 והבנה מעמיקה',
+      description: i18n.t('auto.screens__Learning__LearningScreen.s21'),
       completed: false,
       type: 'video',
       vimeoId: '1108814085',
@@ -154,9 +155,9 @@ const DEMO_COURSE = {
     },
     {
       id: 'lesson-9',
-      title: 'הלוויתנים מקנאים בכם!',
+      title: i18n.t('auto.screens__Learning__LearningScreen.s22'),
       duration: '07:07',
-      description: 'הבנת התנהגות הלוויתנים והשפעתם על השוק',
+      description: i18n.t('auto.screens__Learning__LearningScreen.s23'),
       completed: false,
       type: 'video',
       vimeoId: '1095763209',
@@ -731,7 +732,7 @@ function LearningScreen() {
   // פונקציות לכלים
   const addBoldText = () => {
     const currentText = userNotes;
-    const newText = currentText + ' **טקסט מודגש** ';
+    const newText = currentText + i18n.t('auto.screens__Learning__LearningScreen.s24');
     setUserNotes(newText);
     setTimeout(() => {
       textInputRef.current?.focus();
@@ -751,14 +752,14 @@ function LearningScreen() {
         const imageUri = result.assets[0].uri;
         const currentText = userNotes;
         // הוספת התמונה בפורמט markdown
-        const newText = currentText + `\n\n📷 [תמונה נוספה]\n${imageUri}\n\n`;
+        const newText = currentText + i18n.t('auto.screens__Learning__LearningScreen.s25', { v0: imageUri });
         setUserNotes(newText);
         setTimeout(() => {
           textInputRef.current?.focus();
         }, 100);
       }
     } catch (error) {
-      legacyAlert('שגיאה', 'לא ניתן לבחור תמונה');
+      legacyAlert(i18n.t('auto.screens__Learning__LearningScreen.s26'), i18n.t('auto.screens__Learning__LearningScreen.s27'));
     }
   };
 
@@ -786,7 +787,7 @@ function LearningScreen() {
 
   const confirmColoredText = () => {
     const currentText = userNotes;
-    const newText = currentText + ` <span style="color: ${selectedColor}">טקסט צבעוני</span> `;
+    const newText = currentText + i18n.t('auto.screens__Learning__LearningScreen.s28', { v0: selectedColor });
     setUserNotes(newText);
     setShowColorPicker(false);
     setTimeout(() => {
@@ -829,7 +830,7 @@ function LearningScreen() {
           });
         }
     } catch (error) {
-      legacyAlert('שגיאה', 'לא ניתן לבחור תמונה');
+      legacyAlert(i18n.t('auto.screens__Learning__LearningScreen.s26'), i18n.t('auto.screens__Learning__LearningScreen.s27'));
     }
   };
 
@@ -874,7 +875,7 @@ function LearningScreen() {
   };
 
   const addListElement = () => {
-    addTextElement('list', 'נקודה חדשה');
+    addTextElement('list', i18n.t('auto.screens__Learning__LearningScreen.s29'));
   };
 
   const deleteElement = (elementId: string) => {
@@ -1282,8 +1283,8 @@ function LearningScreen() {
     if (user && courseData && selectedLesson && progress > 0 && duration > 0) {
       await updateLessonProgress(progress, duration);
     }
-    legacyAlert('מעולה!', 'השיעור הושלם בהצלחה!', [
-      { text: 'המשך', onPress: () => setSelectedLesson(null) }
+    legacyAlert(i18n.t('auto.screens__Learning__LearningScreen.s30'), i18n.t('auto.screens__Learning__LearningScreen.s31'), [
+      { text: i18n.t('auto.screens__Learning__LearningScreen.s32'), onPress: () => setSelectedLesson(null) }
     ]);
   };
 
@@ -1343,8 +1344,7 @@ function LearningScreen() {
                 styles.chapterHeaderBadgeText,
                 { color: DesignTokens.colors.text.secondary },
               ]}
-            >
-              פרק {chapterNum}
+            >{i18n.t('auto.screens__Learning__LearningScreen.s33', { v0: chapterNum })}
             </Text>
           </View>
         </View>
@@ -1555,7 +1555,7 @@ function LearningScreen() {
     const durationSeconds = Math.max(0, Math.floor(duration));
     const timeLine =
       durationSeconds <= 0 && isLoading
-        ? 'טוען…'
+        ? i18n.t('auto.screens__Learning__LearningScreen.s34')
         : `${formatTime(progressSeconds)} / ${formatTime(durationSeconds)}`;
     const pctDisplay =
       durationSeconds <= 0 && isLoading ? '…' : `${Math.min(100, Math.max(0, Math.round(lessonProgress)))}%`;
@@ -1689,7 +1689,7 @@ function LearningScreen() {
                   }
                 }}
                 onError={(error: any) => {
-                  legacyAlert('שגיאה', 'שגיאה בטעינת הסרטון. נסה לפתוח ב-YouTube.');
+                  legacyAlert(i18n.t('auto.screens__Learning__LearningScreen.s26'), i18n.t('auto.screens__Learning__LearningScreen.s35'));
                 }}
                 initialPlayerParams={{
                   modestbranding: 1,
@@ -1721,7 +1721,7 @@ function LearningScreen() {
               }}
               onError={(syntheticEvent) => {
                 const { nativeEvent } = syntheticEvent;
-                legacyAlert('שגיאה', `שגיאה בטעינת הסרטון: ${nativeEvent.description || 'שגיאה לא ידועה'}`);
+                legacyAlert(i18n.t('auto.screens__Learning__LearningScreen.s26'), i18n.t('auto.screens__Learning__LearningScreen.s36', { v0: nativeEvent.description || 'שגיאה לא ידועה' }));
               }}
               onHttpError={() => {}}
               onMessage={(event) => {
@@ -1745,7 +1745,7 @@ function LearningScreen() {
             ) : (
               <View style={styles.videoErrorContainer}>
                 <Text style={styles.videoErrorIcon}>⚠️</Text>
-                <Text style={styles.videoErrorText}>וידאו לא זמין</Text>
+                <Text style={styles.videoErrorText}>{i18n.t('auto.screens__Learning__LearningScreen.s37')}</Text>
                 {selectedLesson.youtubeUrl && (
                   <TouchableOpacity 
                     style={styles.youtubeButton}
@@ -1753,13 +1753,11 @@ function LearningScreen() {
                       Linking.openURL(selectedLesson.youtubeUrl);
                     }}
                   >
-                    <Text style={styles.youtubeButtonText}>פתח ב-YouTube</Text>
+                    <Text style={styles.youtubeButtonText}>{i18n.t('auto.screens__Learning__LearningScreen.s38')}</Text>
                   </TouchableOpacity>
                 )}
                 {!selectedLesson.youtubeId && !selectedLesson.youtubeUrl && (
-                  <Text style={styles.videoErrorSubtext}>
-                    לא נמצא קישור יוטיוב לשיעור זה
-                  </Text>
+                  <Text style={styles.videoErrorSubtext}>{i18n.t('auto.screens__Learning__LearningScreen.s39')}</Text>
                 )}
               </View>
             )}
@@ -1769,14 +1767,14 @@ function LearningScreen() {
                   <View style={styles.loadingSpinner}>
                     <RefreshCw size={32} color={DesignTokens.colors.text.primary} strokeWidth={2} />
                   </View>
-                  <Text style={styles.loadingText}>טוען וידאו...</Text>
+                  <Text style={styles.loadingText}>{i18n.t('auto.screens__Learning__LearningScreen.s40')}</Text>
                 </View>
               )}
             </UICard>
 
             {/* פרטי שיעור + פרוגרס */}
             <UICard variant="soft" padding="md" style={styles.lessonGlassCard}>
-              <Text style={styles.lessonPlayerIndex}>שיעור {lessonNumberLabel}</Text>
+              <Text style={styles.lessonPlayerIndex}>{i18n.t('auto.screens__Learning__LearningScreen.s41', { v0: lessonNumberLabel })}</Text>
               <Text style={styles.lessonPlayerTitle}>{selectedLesson.title}</Text>
               {lessonDescriptionDisplay ? (
                 <Text style={styles.lessonDescription} numberOfLines={4}>
@@ -1808,7 +1806,7 @@ function LearningScreen() {
                   {selectedLesson.completed && (
                     <View style={styles.completedStatus}>
                       <CheckCircle2 size={16} color={DesignTokens.colors.success.main} strokeWidth={2} />
-                      <Text style={styles.completedText}>הושלם</Text>
+                      <Text style={styles.completedText}>{i18n.t('auto.screens__Learning__LearningScreen.s42')}</Text>
                     </View>
                   )}
               </View>
@@ -1835,12 +1833,10 @@ function LearningScreen() {
 
                 <View style={styles.lessonNavCenter}>
                   <Text style={styles.lessonNavCenterTitle} numberOfLines={2}>
-                    שיעור {lessonNumberLabel} מתוך {lessonsForNav.length || 1}
+                    {i18n.t('auto.screens__Learning__LearningScreen.s43')} {lessonNumberLabel} {i18n.t('auto.screens__Learning__LearningScreen.s44')} {lessonsForNav.length || 1}
                   </Text>
                   {(canGoPrev || canGoNext) && (
-                    <Text style={styles.lessonNavCenterSub} numberOfLines={1}>
-                      ניווט בין שיעורים
-                    </Text>
+                    <Text style={styles.lessonNavCenterSub} numberOfLines={1}>{i18n.t('auto.screens__Learning__LearningScreen.s45')}</Text>
                   )}
                 </View>
 
@@ -1870,13 +1866,13 @@ function LearningScreen() {
               >
                 <ChevronLeft size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
                 <View style={styles.notesSettingsTextCol}>
-                  <Text style={styles.notesSettingsTitle}>הערות אישיות</Text>
+                  <Text style={styles.notesSettingsTitle}>{i18n.t('auto.screens__Learning__LearningScreen.s46')}</Text>
                   <Text style={styles.notesSettingsSubtitle} numberOfLines={2}>
                     {userNotes.trim()
                       ? userNotes.length > 80
                         ? `${userNotes.substring(0, 80)}...`
                         : userNotes
-                      : 'לחץ לעריכה והוספת הערות לשיעור'}
+                      : i18n.t('auto.screens__Learning__LearningScreen.s47')}
                   </Text>
                 </View>
                 <View style={styles.notesSettingsIcon}>
@@ -1913,7 +1909,7 @@ function LearningScreen() {
                   setUserNotes('');
                 }}
                 size={DAY_NAV_BUTTON_SIZE}
-                accessibilityLabel="נקה הערות"
+                accessibilityLabel={i18n.t('auto.screens__Learning__LearningScreen.s48')}
                 style={{ backgroundColor: DesignTokens.colors.background.primary }}
               >
                 <Ionicons
@@ -1931,15 +1927,13 @@ function LearningScreen() {
                 <Text
                   style={[styles.notesSheetHeaderTitle, { color: DesignTokens.colors.text.primary }]}
                   numberOfLines={1}
-                >
-                  הערות אישיות
-                </Text>
+                >{i18n.t('auto.screens__Learning__LearningScreen.s46')}</Text>
               </View>
 
               <DayNavBlurButton
                 onPress={() => !isSaving && setNotesModalVisible(false)}
                 size={DAY_NAV_BUTTON_SIZE}
-                accessibilityLabel="סגור"
+                accessibilityLabel={i18n.t('auto.screens__Learning__LearningScreen.s49')}
                 style={{ backgroundColor: DesignTokens.colors.background.primary }}
               >
                 <Ionicons name="chevron-forward" size={22} color={DesignTokens.colors.text.primary} />
@@ -1971,7 +1965,7 @@ function LearningScreen() {
                     { color: DesignTokens.colors.text.primary, textAlign: 'right' },
                     Platform.OS === 'android' && { includeFontPadding: false },
                   ]}
-                  placeholder="כתבו מחשבות, רעיונות ותזכורות מהשיעור..."
+                  placeholder={i18n.t('auto.screens__Learning__LearningScreen.s50')}
                   placeholderTextColor={DesignTokens.colors.text.tertiary}
                   value={userNotes}
                   onChangeText={setUserNotes}
@@ -1982,14 +1976,12 @@ function LearningScreen() {
                 />
               </View>
 
-              <Text style={[styles.notesSheetHint, { color: DesignTokens.colors.text.tertiary }]}>
-                ההערות נשמרות לחשבון שלך וזמינות מכל מכשיר
-              </Text>
+              <Text style={[styles.notesSheetHint, { color: DesignTokens.colors.text.tertiary }]}>{i18n.t('auto.screens__Learning__LearningScreen.s51')}</Text>
             </ScrollView>
 
             <View style={[styles.notesSheetFooter, { paddingBottom: notesSheetBottomPad }]}>
               <UIButton
-                title="שמור הערות"
+                title={i18n.t('auto.screens__Learning__LearningScreen.s52')}
                 variant="primary"
                 fullWidth
                 loading={isSaving}
@@ -1999,10 +1991,10 @@ function LearningScreen() {
                     try {
                       setIsSaving(true);
                       await saveUserNotes(selectedLesson.id, userNotes);
-                      legacyAlert('נשמר!', 'ההערות נשמרו בהצלחה');
+                      legacyAlert(i18n.t('auto.screens__Learning__LearningScreen.s53'), i18n.t('auto.screens__Learning__LearningScreen.s54'));
                       setNotesModalVisible(false);
                     } catch (error) {
-                      legacyAlert('שגיאה', 'לא ניתן לשמור את ההערות');
+                      legacyAlert(i18n.t('auto.screens__Learning__LearningScreen.s26'), i18n.t('auto.screens__Learning__LearningScreen.s55'));
                     } finally {
                       setIsSaving(false);
                     }
@@ -2022,16 +2014,16 @@ function LearningScreen() {
         >
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>הוספת קישור</Text>
+              <Text style={styles.modalTitle}>{i18n.t('auto.screens__Learning__LearningScreen.s56')}</Text>
               <TextInput
                 style={styles.modalInput}
-                placeholder="טקסט הקישור"
+                placeholder={i18n.t('auto.screens__Learning__LearningScreen.s57')}
                 value={linkText}
                 onChangeText={setLinkText}
               />
               <TextInput
                 style={styles.modalInput}
-                placeholder="כתובת הקישור"
+                placeholder={i18n.t('auto.screens__Learning__LearningScreen.s58')}
                 value={linkUrl}
                 onChangeText={setLinkUrl}
                 keyboardType="url"
@@ -2041,13 +2033,13 @@ function LearningScreen() {
                   style={styles.modalButton}
                   onPress={() => setShowLinkDialog(false)}
                 >
-                  <Text style={styles.modalButtonText}>ביטול</Text>
+                  <Text style={styles.modalButtonText}>{i18n.t('auto.screens__Learning__LearningScreen.s59')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
                   style={[styles.modalButton, styles.modalButtonPrimary]}
                   onPress={confirmLinkElement}
                 >
-                  <Text style={[styles.modalButtonText, styles.modalButtonTextPrimary]}>הוסף</Text>
+                  <Text style={[styles.modalButtonText, styles.modalButtonTextPrimary]}>{i18n.t('auto.screens__Learning__LearningScreen.s60')}</Text>
                 </TouchableOpacity>
                 </View>
                 </View>
@@ -2063,7 +2055,7 @@ function LearningScreen() {
         >
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>בחירת צבע</Text>
+              <Text style={styles.modalTitle}>{i18n.t('auto.screens__Learning__LearningScreen.s61')}</Text>
               <View style={styles.colorPicker}>
                 {[DesignTokens.colors.text.primary, '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', '#FFA500'].map((color) => (
                   <TouchableOpacity
@@ -2081,13 +2073,13 @@ function LearningScreen() {
                   style={styles.modalButton}
                   onPress={() => setShowColorPicker(false)}
                 >
-                  <Text style={styles.modalButtonText}>ביטול</Text>
+                  <Text style={styles.modalButtonText}>{i18n.t('auto.screens__Learning__LearningScreen.s59')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
                   style={[styles.modalButton, styles.modalButtonPrimary]}
                   onPress={() => setShowColorPicker(false)}
                 >
-                  <Text style={[styles.modalButtonText, styles.modalButtonTextPrimary]}>אישור</Text>
+                  <Text style={[styles.modalButtonText, styles.modalButtonTextPrimary]}>{i18n.t('auto.screens__Learning__LearningScreen.s62')}</Text>
                 </TouchableOpacity>
         </View>
             </View>
@@ -2107,7 +2099,7 @@ function LearningScreen() {
     return (
       <ScreenChrome>
         <RNSafeAreaView style={styles.safeAreaContent} edges={['top']}>
-          <AcademySubScreenBar onBackPress={handleBackToAcademy} title="קורס" />
+          <AcademySubScreenBar onBackPress={handleBackToAcademy} title={i18n.t('auto.screens__Learning__LearningScreen.s63')} />
           <View style={styles.courseLoadingWrap}>
             <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
           </View>
@@ -2125,8 +2117,8 @@ function LearningScreen() {
       : 0;
   const courseProgressLabel =
     totalLessonsCount === 0
-      ? 'אין שיעורים בקורס'
-      : `${completedLessonsCount}/${totalLessonsCount} הושלמו`;
+      ? i18n.t('auto.screens__Learning__LearningScreen.s64')
+      : i18n.t('auto.screens__Learning__LearningScreen.s65', { v0: completedLessonsCount, v1: totalLessonsCount });
 
   return (
     <ScreenChrome>
@@ -2134,7 +2126,7 @@ function LearningScreen() {
         {/* באנר, התקדמות וכותרת קבועים — רק רשימת השיעורים נגללת */}
           <CourseListHero
             coverUrl={displayCoverUrl}
-            title={displayTitle ?? 'קורס'}
+            title={displayTitle ?? i18n.t('auto.screens__Learning__LearningScreen.s63')}
             height={courseHeroHeight}
             topInset={insets.top}
             onBack={handleBackToAcademy}
@@ -2144,7 +2136,7 @@ function LearningScreen() {
           />
 
         <View style={styles.courseListBody}>
-          <Text style={[styles.courseListSectionTitle, { marginBottom: DesignTokens.spacing.sm }]}>שיעורי הקורס</Text>
+          <Text style={[styles.courseListSectionTitle, { marginBottom: DesignTokens.spacing.sm }]}>{i18n.t('auto.screens__Learning__LearningScreen.s66')}</Text>
         </View>
 
         {/* marginBottom: הרשימה נחתכת מעל ה-safe area התחתון */}
@@ -2181,9 +2173,9 @@ function LearningScreen() {
                   )
                 : (
                   <>
-                    {renderChapterBlock(1, 'כמה דברים לפני שמתחילים', lessonsList.slice(0, 1), 0)}
-                    {renderChapterBlock(2, 'קונספטים ואסטרטגיה', lessonsList.slice(1, 8), 1)}
-                    {renderChapterBlock(3, 'כמה דברים לקראת סיום', lessonsList.slice(8), 8)}
+                    {renderChapterBlock(1, i18n.t('auto.screens__Learning__LearningScreen.s67'), lessonsList.slice(0, 1), 0)}
+                    {renderChapterBlock(2, i18n.t('auto.screens__Learning__LearningScreen.s68'), lessonsList.slice(1, 8), 1)}
+                    {renderChapterBlock(3, i18n.t('auto.screens__Learning__LearningScreen.s69'), lessonsList.slice(8), 8)}
                   </>
                 )}
               </View>
@@ -2245,7 +2237,7 @@ function LearningScreen() {
               handleCourseJumpPress();
             }}
             accessibilityRole="button"
-            accessibilityLabel={progressTargetYRef.current == null ? 'גלול לראש הרשימה' : 'גלול להתקדמות שלי'}
+            accessibilityLabel={progressTargetYRef.current == null ? i18n.t('auto.screens__Learning__LearningScreen.s70') : i18n.t('auto.screens__Learning__LearningScreen.s71')}
             style={{
               width: 44,
               height: 44,

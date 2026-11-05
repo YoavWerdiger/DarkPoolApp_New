@@ -454,7 +454,7 @@ export default function MainTabs() {
         <Drawer.Screen
           name="Journal"
           component={JournalStack}
-          options={{ title: 'יומן מסחר (legacy)', drawerItemStyle: { display: 'none' } }}
+          options={{ title: i18n.t('auto.navigation__MainTabs.s1'), drawerItemStyle: { display: 'none' } }}
         />
         <Drawer.Screen
           name="Portfolios"

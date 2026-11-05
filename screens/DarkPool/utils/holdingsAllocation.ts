@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import { DISTRIBUTION_PALETTE } from '../../Portfolios/portfolioConstants';
 import type { DistributionSlice } from '../../Portfolios/portfolioTypes';
 
@@ -41,7 +42,7 @@ export function holdingsToDistributionSlices(
   if (otherPct > 0.05) {
     slices.push({
       key: '__other__',
-      label: 'אחר',
+      label: i18n.t('auto.screens__DarkPool__utils__holdingsAllocation.s1'),
       value: otherPct,
       percentage: Math.round(otherPct * 10) / 10,
       // אפור ניטרלי שנראה גם על רקע בהיר וגם על כהה (לבן שקוף נעלם על כרטיס בהיר)

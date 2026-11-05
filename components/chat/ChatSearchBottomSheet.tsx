@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import {
   View,
@@ -120,8 +121,8 @@ export default function ChatSearchBottomSheet({
 
   const formatMessageDate = (date: Date): string => {
     if (isToday(date)) return format(date, 'HH:mm');
-    if (isYesterday(date)) return 'אתמול';
-    return format(date, 'd בMMMM yyyy', { locale: he });
+    if (isYesterday(date)) return i18n.t('auto.components__chat__ChatSearchBottomSheet.s1');
+    return format(date, i18n.t('auto.components__chat__ChatSearchBottomSheet.s2'), { locale: he });
   };
 
   const highlightText = (text: string, term: string): React.ReactNode => {
@@ -153,7 +154,7 @@ export default function ChatSearchBottomSheet({
 
   const renderSearchResult = ({ item }: { item: ChatMessage }) => {
     const messageDate = new Date(item.created_at);
-    const senderName = (item.sender as { display_name?: string })?.display_name || 'משתמש';
+    const senderName = (item.sender as { display_name?: string })?.display_name || i18n.t('auto.components__chat__ChatSearchBottomSheet.s3');
 
     return (
       <Pressable
@@ -180,7 +181,7 @@ export default function ChatSearchBottomSheet({
 
   const resultsBody = useMemo(() => {
     if (isSearching) {
-      return <ChatSheetLoading label="מחפש..." />;
+      return <ChatSheetLoading label={i18n.t('auto.components__chat__ChatSearchBottomSheet.s4')} />;
     }
     if (hasSearched) {
       if (searchResults.length > 0) {
@@ -199,16 +200,16 @@ export default function ChatSearchBottomSheet({
       return (
         <ChatSheetEmptyState
           icon="search-outline"
-          title="לא נמצאו תוצאות"
-          subtitle="נסה מילים אחרות"
+          title={i18n.t('auto.components__chat__ChatSearchBottomSheet.s5')}
+          subtitle={i18n.t('auto.components__chat__ChatSearchBottomSheet.s6')}
         />
       );
     }
     return (
       <ChatSheetEmptyState
         icon="search-outline"
-        title="הזן מילת חיפוש"
-        subtitle="חפש הודעות בקבוצה זו"
+        title={i18n.t('auto.components__chat__ChatSearchBottomSheet.s7')}
+        subtitle={i18n.t('auto.components__chat__ChatSearchBottomSheet.s8')}
       />
     );
   }, [hasSearched, isSearching, searchResults, searchTerm, sheet, styles]);
@@ -221,13 +222,13 @@ export default function ChatSearchBottomSheet({
             onPress={handleHeaderClose}
             size={DAY_NAV_BUTTON_SIZE}
             glassIntensity="subtle"
-            accessibilityLabel="סגור"
+            accessibilityLabel={i18n.t('auto.components__chat__ChatSearchBottomSheet.s9')}
           >
             <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
           </DayNavBlurButton>
 
           <View style={styles.headerCenter}>
-            <Text style={[styles.headerTitle, { color: tokens.colors.text.primary }]}>חיפוש הודעות</Text>
+            <Text style={[styles.headerTitle, { color: tokens.colors.text.primary }]}>{i18n.t('auto.components__chat__ChatSearchBottomSheet.s10')}</Text>
           </View>
 
           <View style={styles.headerSideSpacer} />
@@ -247,7 +248,7 @@ export default function ChatSearchBottomSheet({
             <TextInput
               ref={searchInputRef}
               style={[styles.searchInput, { color: tokens.colors.text.primary }]}
-              placeholder="חפש הודעות..."
+              placeholder={i18n.t('auto.components__chat__ChatSearchBottomSheet.s11')}
               placeholderTextColor={tokens.colors.text.tertiary}
               value={searchTerm}
               onChangeText={(text) => setSearchTerm(sanitizeSearchInput(text))}

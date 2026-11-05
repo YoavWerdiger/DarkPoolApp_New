@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 /**
  * קן טיקר פנימי — מחיר חי / מאז העסקה.
@@ -85,9 +86,7 @@ export function DarkPoolNestedQuoteCard({
           <Text style={styles.nestedTickerText} numberOfLines={1}>
             {toDataIsland(tickerBare)}
           </Text>
-          <Text style={styles.nestedPriceLabel} numberOfLines={1}>
-            מחיר חי
-          </Text>
+          <Text style={styles.nestedPriceLabel} numberOfLines={1}>{i18n.t('auto.screens__DarkPool__components__DarkPoolNestedQuoteCard.s1')}</Text>
         </View>
       </View>
       <View style={styles.nestedPrice}>
@@ -113,9 +112,7 @@ export function DarkPoolNestedQuoteCard({
           >
             {toDataIsland(changeDisplay)}
           </Text>
-          <Text style={styles.nestedSinceLabel} numberOfLines={1}>
-            מאז העסקה
-          </Text>
+          <Text style={styles.nestedSinceLabel} numberOfLines={1}>{i18n.t('auto.screens__DarkPool__components__DarkPoolNestedQuoteCard.s2')}</Text>
         </View>
       </View>
     </View>

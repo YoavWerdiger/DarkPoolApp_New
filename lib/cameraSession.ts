@@ -1,3 +1,4 @@
+import i18n from './i18n';
 import { Linking, Platform } from 'react-native';
 import { Audio } from './expoAvSafe';
 import { showAppDialog } from '../utils/appDialog';
@@ -43,14 +44,14 @@ export function openAppSettings(): void {
  * כמו בהתראות. kind: מצלמה / מיקרופון / גלריה.
  */
 export async function promptPermissionSettings(kind: 'camera' | 'microphone' | 'photos'): Promise<void> {
-  const what = kind === 'camera' ? 'למצלמה' : kind === 'microphone' ? 'למיקרופון' : 'לתמונות';
+  const what = kind === 'camera' ? i18n.t('auto.lib__cameraSession.s1') : kind === 'microphone' ? i18n.t('auto.lib__cameraSession.s2') : i18n.t('auto.lib__cameraSession.s3');
   const idx = await showAppDialog({
-    title: `אין גישה ${what}`,
-    message: `הגישה ${what} חסומה. אפשר אותה בהגדרות המכשיר כדי להמשיך.`,
+    title: i18n.t('auto.lib__cameraSession.s4', { v0: what }),
+    message: i18n.t('auto.lib__cameraSession.s5', { v0: what }),
     type: 'warning',
     buttons: [
-      { text: 'פתח הגדרות', style: 'default' },
-      { text: 'ביטול', style: 'cancel' },
+      { text: i18n.t('auto.lib__cameraSession.s6'), style: 'default' },
+      { text: i18n.t('auto.lib__cameraSession.s7'), style: 'cancel' },
     ],
   });
   if (idx === 0) openAppSettings();
@@ -86,12 +87,12 @@ export async function requestCameraWithDialog(
 ): Promise<boolean> {
   if (current?.granted) return true;
   const choice = await showAppDialog({
-    title: 'גישה למצלמה',
-    message: 'כדי לצלם ולשלוח תמונות וסרטונים, צריך לאפשר ל-DarkPool גישה למצלמה.',
+    title: i18n.t('auto.lib__cameraSession.s8'),
+    message: i18n.t('auto.lib__cameraSession.s9'),
     type: 'info',
     buttons: [
-      { text: 'אפשר גישה', style: 'default' },
-      { text: 'לא עכשיו', style: 'cancel' },
+      { text: i18n.t('auto.lib__cameraSession.s10'), style: 'default' },
+      { text: i18n.t('auto.lib__cameraSession.s11'), style: 'cancel' },
     ],
   });
   if (choice !== 0) return false;

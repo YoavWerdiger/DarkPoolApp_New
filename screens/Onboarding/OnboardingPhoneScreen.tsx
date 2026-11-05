@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -50,7 +51,7 @@ const OnboardingPhoneScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleNext = async () => {
     if (!canContinue) {
-      setError('אנא הכנס מספר טלפון תקין (למשל 054-123-4567)');
+      setError(i18n.t('auto.screens__Onboarding__OnboardingPhoneScreen.s1'));
       void HapticFeedback.error();
       return;
     }
@@ -70,7 +71,7 @@ const OnboardingPhoneScreen: React.FC<Props> = ({ navigation }) => {
       void HapticFeedback.success();
       navigation.navigate('OnboardingVerification');
     } catch (err) {
-      setError('שגיאה בשליחת קוד האימות. נסה שוב.');
+      setError(i18n.t('auto.screens__Onboarding__OnboardingPhoneScreen.s2'));
       void HapticFeedback.error();
     } finally {
       setLoading(false);
@@ -97,9 +98,7 @@ const OnboardingPhoneScreen: React.FC<Props> = ({ navigation }) => {
           {/* Header */}
           <View style={styles.header}>
             <View style={{ flex: 1 }} />
-            <Text style={[styles.stepIndicator, { color: tokens.colors.text.tertiary }]}>
-              שלב 1 מתוך 10
-            </Text>
+            <Text style={[styles.stepIndicator, { color: tokens.colors.text.tertiary }]}>{i18n.t('auto.screens__Onboarding__OnboardingPhoneScreen.s3')}</Text>
             <View style={{ flex: 1, alignItems: 'flex-start' }}>
               <Pressable onPress={handleHelp} style={styles.helpButton}>
                 <Ionicons name="help-circle-outline" size={24} color={tokens.colors.text.tertiary} />
@@ -114,12 +113,8 @@ const OnboardingPhoneScreen: React.FC<Props> = ({ navigation }) => {
             showsVerticalScrollIndicator={false}
           >
             {/* Title */}
-            <Text style={[styles.title, { color: tokens.colors.text.primary }]}>
-              מה מספר הטלפון שלך?
-            </Text>
-            <Text style={[styles.subtitle, { color: tokens.colors.text.secondary }]}>
-              נשתמש בו ליצירת קשר ולהתראות חשובות
-            </Text>
+            <Text style={[styles.title, { color: tokens.colors.text.primary }]}>{i18n.t('auto.screens__Onboarding__OnboardingPhoneScreen.s4')}</Text>
+            <Text style={[styles.subtitle, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Onboarding__OnboardingPhoneScreen.s5')}</Text>
 
             {/* Error */}
             {error ? (
@@ -139,9 +134,7 @@ const OnboardingPhoneScreen: React.FC<Props> = ({ navigation }) => {
 
             {/* Input */}
             <View style={styles.inputContainer}>
-              <Text style={[styles.label, { color: tokens.colors.text.secondary }]}>
-                מספר טלפון
-              </Text>
+              <Text style={[styles.label, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Onboarding__OnboardingPhoneScreen.s6')}</Text>
               <UICard variant="inputGlass" padding="none" style={styles.inputCard}>
                 <View style={styles.inputWrapper}>
                   <Ionicons name="call-outline" size={20} color={tokens.colors.text.tertiary} />
@@ -164,28 +157,19 @@ const OnboardingPhoneScreen: React.FC<Props> = ({ navigation }) => {
             </View>
 
             <Pressable onPress={handleHelp} style={styles.helpLink}>
-              <Text style={[styles.helpLinkText, { color: tokens.colors.primary.main }]}>
-                צריך עזרה להתחברות?
-              </Text>
+              <Text style={[styles.helpLinkText, { color: tokens.colors.primary.main }]}>{i18n.t('auto.screens__Onboarding__OnboardingPhoneScreen.s7')}</Text>
             </Pressable>
 
             {/* Legal Text */}
             <Text style={[styles.legalText, { color: tokens.colors.text.tertiary }]}>
-              בלחיצה על "המשך" אני מאשר/ת את{' '}
-              <Text style={[styles.legalLink, { color: tokens.colors.primary.main }]}>
-                התנאים וההגבלות
-              </Text>
+              {i18n.t('auto.screens__Onboarding__OnboardingPhoneScreen.s8')}{' '}
+              <Text style={[styles.legalLink, { color: tokens.colors.primary.main }]}>{i18n.t('auto.screens__Onboarding__OnboardingPhoneScreen.s10')}</Text>
               {', '}
-              <Text style={[styles.legalLink, { color: tokens.colors.primary.main }]}>
-                הסכמת E-Sign
-              </Text>
-              {' ו'}
-              <Text style={[styles.legalLink, { color: tokens.colors.primary.main }]}>
-                מדיניות הפרטיות
-              </Text>
+              <Text style={[styles.legalLink, { color: tokens.colors.primary.main }]}>{i18n.t('auto.screens__Onboarding__OnboardingPhoneScreen.s11')}</Text>
+              {i18n.t('auto.screens__Onboarding__OnboardingPhoneScreen.s12')}
+              <Text style={[styles.legalLink, { color: tokens.colors.primary.main }]}>{i18n.t('auto.screens__Onboarding__OnboardingPhoneScreen.s13')}</Text>
               .{'\n\n'}
-              אני מאשר/ת קבלת קוד אימות חד-פעמי מ-DarkPool. תדירות ההודעות משתנה. 
-              עלולים לחול תעריפי הודעות ונתונים. השב HELP לעזרה, STOP לביטול.
+              {i18n.t('auto.screens__Onboarding__OnboardingPhoneScreen.s9')}
             </Text>
 
             <View style={{ flex: 1 }} />
@@ -196,7 +180,7 @@ const OnboardingPhoneScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.footerButtons}>
               <View style={{ flex: 1 }}>
                 <UIButton
-                  title="המשך"
+                  title={i18n.t('auto.screens__Onboarding__OnboardingPhoneScreen.s14')}
                   variant="primary"
                   size="lg"
                   fullWidth
@@ -207,7 +191,7 @@ const OnboardingPhoneScreen: React.FC<Props> = ({ navigation }) => {
               </View>
               <View style={{ flex: 1 }}>
                 <UIButton
-                  title="שימוש באימייל"
+                  title={i18n.t('auto.screens__Onboarding__OnboardingPhoneScreen.s15')}
                   variant="secondary"
                   size="lg"
                   fullWidth

@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -151,22 +152,22 @@ export default function AddTradeScreen() {
   const validateStep = (s: number): boolean => {
     if (s === 0) {
       if (!symbol.trim()) {
-        legacyAlert('שגיאה', 'יש להזין סמל');
+        legacyAlert(i18n.t('auto.screens__Journal__AddTradeScreen.s1'), i18n.t('auto.screens__Journal__AddTradeScreen.s2'));
         return false;
       }
       return true;
     }
     if (s === 1) {
       if (!entryPrice || parseFloat(entryPrice) <= 0) {
-        legacyAlert('שגיאה', 'יש להזין מחיר כניסה תקין');
+        legacyAlert(i18n.t('auto.screens__Journal__AddTradeScreen.s1'), i18n.t('auto.screens__Journal__AddTradeScreen.s3'));
         return false;
       }
       if (!exitPrice || parseFloat(exitPrice) <= 0) {
-        legacyAlert('שגיאה', 'יש להזין מחיר יציאה תקין');
+        legacyAlert(i18n.t('auto.screens__Journal__AddTradeScreen.s1'), i18n.t('auto.screens__Journal__AddTradeScreen.s4'));
         return false;
       }
       if (!quantity || parseFloat(quantity) <= 0) {
-        legacyAlert('שגיאה', 'יש להזין כמות תקינה');
+        legacyAlert(i18n.t('auto.screens__Journal__AddTradeScreen.s1'), i18n.t('auto.screens__Journal__AddTradeScreen.s5'));
         return false;
       }
       return true;
@@ -196,7 +197,7 @@ export default function AddTradeScreen() {
 
   const handleSubmit = async () => {
     if (!user) {
-      legacyAlert('שגיאה', 'יש להתחבר כדי להוסיף טרייד');
+      legacyAlert(i18n.t('auto.screens__Journal__AddTradeScreen.s1'), i18n.t('auto.screens__Journal__AddTradeScreen.s6'));
       return;
     }
     const finalEntryDateText = entryDateText.trim() || getDefaultDateTime().date;
@@ -208,7 +209,7 @@ export default function AddTradeScreen() {
     const parsedExitDate = parseDateTime(finalExitDateText, finalExitTimeText);
 
     if (!parsedEntryDate || !parsedExitDate) {
-      legacyAlert('שגיאה', 'יש להזין תאריכים ושעות תקינים (פורמט: DD/MM/YYYY HH:MM)');
+      legacyAlert(i18n.t('auto.screens__Journal__AddTradeScreen.s1'), i18n.t('auto.screens__Journal__AddTradeScreen.s7'));
       return;
     }
 
@@ -235,7 +236,7 @@ export default function AddTradeScreen() {
       navigation.goBack();
     } catch {
       void HapticFeedback.error();
-      legacyAlert('שגיאה', 'לא ניתן להוסיף את הטרייד');
+      legacyAlert(i18n.t('auto.screens__Journal__AddTradeScreen.s1'), i18n.t('auto.screens__Journal__AddTradeScreen.s8'));
     } finally {
       setLoading(false);
     }
@@ -267,7 +268,7 @@ export default function AddTradeScreen() {
             <DayNavBlurButton
               onPress={goBackStep}
               size={44}
-              accessibilityLabel={step === 0 ? 'סגור' : 'שלב קודם'}
+              accessibilityLabel={step === 0 ? i18n.t('auto.screens__Journal__AddTradeScreen.s9') : i18n.t('auto.screens__Journal__AddTradeScreen.s10')}
             >
               <Ionicons
                 name={step === 0 ? 'close' : 'chevron-forward'}
@@ -275,9 +276,7 @@ export default function AddTradeScreen() {
                 color={DesignTokens.colors.text.primary}
               />
             </DayNavBlurButton>
-            <Text style={styles.topTitle} numberOfLines={1}>
-              הוסף טרייד
-            </Text>
+            <Text style={styles.topTitle} numberOfLines={1}>{i18n.t('auto.screens__Journal__AddTradeScreen.s11')}</Text>
             <View style={styles.topBarSpacer} />
           </View>
 
@@ -307,13 +306,9 @@ export default function AddTradeScreen() {
           >
             {step === 0 && (
               <>
-                <Text style={styles.stepIntro}>
-                  הזן טיקר (מניה / נייר ערך). אפשר להמשיך למחירי כניסה ויציאה בשלב הבא.
-                </Text>
+                <Text style={styles.stepIntro}>{i18n.t('auto.screens__Journal__AddTradeScreen.s12')}</Text>
                 {!BRANDFETCH_CLIENT_ID ? (
-                  <Text style={styles.envHint}>
-                    להצגת לוגו: הגדר EXPO_PUBLIC_BRANDFETCH_CLIENT_ID בקובץ env (מפתח Brandfetch).
-                  </Text>
+                  <Text style={styles.envHint}>{i18n.t('auto.screens__Journal__AddTradeScreen.s13')}</Text>
                 ) : null}
                 <View style={styles.symbolRow}>
                   <View style={styles.logoSlot}>
@@ -332,13 +327,13 @@ export default function AddTradeScreen() {
                     )}
                   </View>
                   <View style={styles.symbolInputWrap}>
-                    <Text style={styles.label}>סמל *</Text>
+                    <Text style={styles.label}>{i18n.t('auto.screens__Journal__AddTradeScreen.s14')}</Text>
                     <UICard variant="inputGlass" padding="none" style={styles.inputGlassShell}>
                       <TextInput
                         style={styles.inputGlassInner}
                         value={symbol}
                         onChangeText={setSymbol}
-                        placeholder="למשל AAPL, TSLA, MSFT"
+                        placeholder={i18n.t('auto.screens__Journal__AddTradeScreen.s15')}
                         placeholderTextColor={DesignTokens.colors.text.tertiary}
                         autoCapitalize="characters"
                         autoCorrect={false}
@@ -348,7 +343,7 @@ export default function AddTradeScreen() {
                   </View>
                 </View>
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>כיוון *</Text>
+                  <Text style={styles.label}>{i18n.t('auto.screens__Journal__AddTradeScreen.s16')}</Text>
                   <View style={styles.directionButtons}>
                     <UICard
                       variant="inputGlass"
@@ -409,13 +404,13 @@ export default function AddTradeScreen() {
                   </View>
                 </View>
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>שם אסטרטגיה</Text>
+                  <Text style={styles.label}>{i18n.t('auto.screens__Journal__AddTradeScreen.s17')}</Text>
                   <UICard variant="inputGlass" padding="none" style={styles.inputGlassShell}>
                     <TextInput
                       style={styles.inputGlassInner}
                       value={strategyName}
                       onChangeText={setStrategyName}
-                      placeholder="למשל: Breakout, Mean Reversion..."
+                      placeholder={i18n.t('auto.screens__Journal__AddTradeScreen.s18')}
                       placeholderTextColor={DesignTokens.colors.text.tertiary}
                       autoCorrect={false}
                       textAlign="right"
@@ -428,7 +423,7 @@ export default function AddTradeScreen() {
             {step === 1 && (
               <>
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>מחיר כניסה *</Text>
+                  <Text style={styles.label}>{i18n.t('auto.screens__Journal__AddTradeScreen.s19')}</Text>
                   <UICard variant="inputGlass" padding="none" style={styles.inputGlassShell}>
                     <TextInput
                       style={styles.inputGlassInner}
@@ -442,7 +437,7 @@ export default function AddTradeScreen() {
                   </UICard>
                 </View>
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>מחיר יציאה *</Text>
+                  <Text style={styles.label}>{i18n.t('auto.screens__Journal__AddTradeScreen.s20')}</Text>
                   <UICard variant="inputGlass" padding="none" style={styles.inputGlassShell}>
                     <TextInput
                       style={styles.inputGlassInner}
@@ -456,7 +451,7 @@ export default function AddTradeScreen() {
                   </UICard>
                 </View>
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>כמות *</Text>
+                  <Text style={styles.label}>{i18n.t('auto.screens__Journal__AddTradeScreen.s21')}</Text>
                   <UICard variant="inputGlass" padding="none" style={styles.inputGlassShell}>
                     <TextInput
                       style={styles.inputGlassInner}
@@ -503,7 +498,7 @@ export default function AddTradeScreen() {
             {step === 2 && (
               <>
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>תאריך כניסה * (DD/MM/YYYY)</Text>
+                  <Text style={styles.label}>{i18n.t('auto.screens__Journal__AddTradeScreen.s22')}</Text>
                   <UICard variant="inputGlass" padding="none" style={styles.inputGlassShell}>
                     <TextInput
                       style={styles.inputGlassInner}
@@ -516,7 +511,7 @@ export default function AddTradeScreen() {
                   </UICard>
                 </View>
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>שעת כניסה * (HH:MM)</Text>
+                  <Text style={styles.label}>{i18n.t('auto.screens__Journal__AddTradeScreen.s23')}</Text>
                   <UICard variant="inputGlass" padding="none" style={styles.inputGlassShell}>
                     <TextInput
                       style={styles.inputGlassInner}
@@ -529,7 +524,7 @@ export default function AddTradeScreen() {
                   </UICard>
                 </View>
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>תאריך יציאה * (DD/MM/YYYY)</Text>
+                  <Text style={styles.label}>{i18n.t('auto.screens__Journal__AddTradeScreen.s24')}</Text>
                   <UICard variant="inputGlass" padding="none" style={styles.inputGlassShell}>
                     <TextInput
                       style={styles.inputGlassInner}
@@ -542,7 +537,7 @@ export default function AddTradeScreen() {
                   </UICard>
                 </View>
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>שעת יציאה * (HH:MM)</Text>
+                  <Text style={styles.label}>{i18n.t('auto.screens__Journal__AddTradeScreen.s25')}</Text>
                   <UICard variant="inputGlass" padding="none" style={styles.inputGlassShell}>
                     <TextInput
                       style={styles.inputGlassInner}
@@ -559,11 +554,9 @@ export default function AddTradeScreen() {
 
             {step === 3 && (
               <>
-                <Text style={styles.stepIntro}>
-                  שדות אופציונליים — ניתן לדלג ולשמור; אפשר לערוך מאוחר יותר כשיהיה עריכת טרייד.
-                </Text>
+                <Text style={styles.stepIntro}>{i18n.t('auto.screens__Journal__AddTradeScreen.s26')}</Text>
 
-                <Text style={styles.label}>מסגרת זמן</Text>
+                <Text style={styles.label}>{i18n.t('auto.screens__Journal__AddTradeScreen.s27')}</Text>
                 <View style={styles.chipRow}>
                   {TIMEFRAME_OPTIONS.map((opt) => {
                     const selected = timeframe === opt.id;
@@ -579,7 +572,7 @@ export default function AddTradeScreen() {
                   })}
                 </View>
 
-                <Text style={[styles.label, styles.labelSpaced]}>מצב רגשי לפני הטרייד</Text>
+                <Text style={[styles.label, styles.labelSpaced]}>{i18n.t('auto.screens__Journal__AddTradeScreen.s28')}</Text>
                 <View style={styles.chipWrap}>
                   {MOOD_OPTIONS.map((opt) => {
                     const selected = moodBefore === opt.id;
@@ -595,7 +588,7 @@ export default function AddTradeScreen() {
                   })}
                 </View>
 
-                <Text style={[styles.label, styles.labelSpaced]}>מצב רגשי אחרי הטרייד</Text>
+                <Text style={[styles.label, styles.labelSpaced]}>{i18n.t('auto.screens__Journal__AddTradeScreen.s29')}</Text>
                 <View style={styles.chipWrap}>
                   {MOOD_OPTIONS.map((opt) => {
                     const selected = moodAfter === opt.id;
@@ -611,7 +604,7 @@ export default function AddTradeScreen() {
                   })}
                 </View>
 
-                <Text style={[styles.label, styles.labelSpaced]}>עמידה בתוכנית</Text>
+                <Text style={[styles.label, styles.labelSpaced]}>{i18n.t('auto.screens__Journal__AddTradeScreen.s30')}</Text>
                 <View style={styles.chipRow}>
                   {(
                     [
@@ -635,26 +628,26 @@ export default function AddTradeScreen() {
                 </View>
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>סוג אסטרטגיה</Text>
+                  <Text style={styles.label}>{i18n.t('auto.screens__Journal__AddTradeScreen.s31')}</Text>
                   <UICard variant="inputGlass" padding="none" style={styles.inputGlassShell}>
                     <TextInput
                       style={styles.inputGlassInner}
                       value={strategyType}
                       onChangeText={setStrategyType}
-                      placeholder="למשל: פריצה, גרף מחיר, ביקוש..."
+                      placeholder={i18n.t('auto.screens__Journal__AddTradeScreen.s32')}
                       placeholderTextColor={DesignTokens.colors.text.tertiary}
                       textAlign="right"
                     />
                   </UICard>
                 </View>
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>סיבת כניסה</Text>
+                  <Text style={styles.label}>{i18n.t('auto.screens__Journal__AddTradeScreen.s33')}</Text>
                   <UICard variant="inputGlass" padding="none" style={styles.inputGlassShellMultiline}>
                     <TextInput
                       style={[styles.inputGlassInner, styles.inputGlassInnerMultiline]}
                       value={entryReason}
                       onChangeText={setEntryReason}
-                      placeholder="למה נכנסתי לעסקה"
+                      placeholder={i18n.t('auto.screens__Journal__AddTradeScreen.s34')}
                       placeholderTextColor={DesignTokens.colors.text.tertiary}
                       textAlign="right"
                       multiline
@@ -662,13 +655,13 @@ export default function AddTradeScreen() {
                   </UICard>
                 </View>
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>סיבת יציאה</Text>
+                  <Text style={styles.label}>{i18n.t('auto.screens__Journal__AddTradeScreen.s35')}</Text>
                   <UICard variant="inputGlass" padding="none" style={styles.inputGlassShellMultiline}>
                     <TextInput
                       style={[styles.inputGlassInner, styles.inputGlassInnerMultiline]}
                       value={exitReason}
                       onChangeText={setExitReason}
-                      placeholder="למה יצאתי"
+                      placeholder={i18n.t('auto.screens__Journal__AddTradeScreen.s36')}
                       placeholderTextColor={DesignTokens.colors.text.tertiary}
                       textAlign="right"
                       multiline
@@ -676,7 +669,7 @@ export default function AddTradeScreen() {
                   </UICard>
                 </View>
 
-                <Text style={[styles.label, styles.labelSpaced]}>טעויות (סמן מה שרלוונטי)</Text>
+                <Text style={[styles.label, styles.labelSpaced]}>{i18n.t('auto.screens__Journal__AddTradeScreen.s37')}</Text>
                 <View style={styles.mistakeList}>
                   {MISTAKE_OPTIONS.map((m) => {
                     const on = mistakeIds.includes(m.id);
@@ -713,7 +706,7 @@ export default function AddTradeScreen() {
 
           <View style={styles.footer}>
             <UIButton
-              title={loading ? 'שומר…' : step === STEPS.length - 1 ? 'שמור טרייד' : 'המשך'}
+              title={loading ? i18n.t('auto.screens__Journal__AddTradeScreen.s38') : step === STEPS.length - 1 ? i18n.t('auto.screens__Journal__AddTradeScreen.s39') : i18n.t('auto.screens__Journal__AddTradeScreen.s40')}
               variant="primary"
               size="lg"
               fullWidth

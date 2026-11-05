@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React from 'react';
 import { View, Text, Pressable, StyleSheet, TouchableOpacity } from 'react-native';
@@ -155,11 +156,11 @@ export function MediaViewerChrome({
       />
       <View style={[styles.topRow, { paddingTop }]} pointerEvents="box-none">
         <View style={styles.actions}>
-          {onShare ? <IconButton name="share-outline" label="שיתוף" onPress={onShare} /> : null}
-          {onForward ? <IconButton name="arrow-redo-outline" label="העברה" onPress={onForward} /> : null}
+          {onShare ? <IconButton name="share-outline" label={i18n.t('auto.components__chat__MediaViewerChrome.s1')} onPress={onShare} /> : null}
+          {onForward ? <IconButton name="arrow-redo-outline" label={i18n.t('auto.components__chat__MediaViewerChrome.s2')} onPress={onForward} /> : null}
         </View>
         <View style={styles.titleSpacer} />
-        <IconButton name="chevron-forward" label="חזרה" onPress={onClose} />
+        <IconButton name="chevron-forward" label={i18n.t('auto.components__chat__MediaViewerChrome.s3')} onPress={onClose} />
       </View>
 
       {/* שם השולח + שעה (או x/x באלבום) — בגלולה במרכז, בין הכפתורים */}
@@ -195,10 +196,10 @@ export function MediaViewerChrome({
             }}
             style={[styles.replyBtn, { backgroundColor: tokens.colors.background.cardSolid }]}
             accessibilityRole="button"
-            accessibilityLabel="השב"
+            accessibilityLabel={i18n.t('auto.components__chat__MediaViewerChrome.s4')}
           >
             <Ionicons name="chatbubble-outline" size={18} color={tokens.colors.text.primary} />
-            <Text style={[styles.replyBtnText, { color: tokens.colors.text.primary }]}>השב</Text>
+            <Text style={[styles.replyBtnText, { color: tokens.colors.text.primary }]}>{i18n.t('auto.components__chat__MediaViewerChrome.s4')}</Text>
           </Pressable>
         ) : null}
       </View>

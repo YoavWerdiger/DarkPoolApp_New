@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { useDesignTokens } from '../ui/DesignTokens';
@@ -12,7 +13,7 @@ import {
   adminHebrewText,
 } from './adminType';
 
-export function AdminLoadingState({ label = 'טוען...' }: { label?: string }) {
+export function AdminLoadingState({ label = i18n.t('auto.components__admin__AdminStateViews.s1') }: { label?: string }) {
   const tokens = useDesignTokens();
   return (
     <View style={styles.center}>
@@ -50,11 +51,11 @@ export function AdminErrorState({
   const tokens = useDesignTokens();
   return (
     <AdminSurface padding="md">
-      <Text style={[styles.errorTitle, { color: tokens.colors.text.danger }]}>שגיאה</Text>
+      <Text style={[styles.errorTitle, { color: tokens.colors.text.danger }]}>{i18n.t('auto.components__admin__AdminStateViews.s2')}</Text>
       <Text style={[styles.errorMsg, { color: tokens.colors.text.secondary }]}>{message}</Text>
       {onRetry ? (
         <View style={styles.retryWrap}>
-          <UIButton title="נסה שוב" variant="secondary" onPress={onRetry} />
+          <UIButton title={i18n.t('auto.components__admin__AdminStateViews.s3')} variant="secondary" onPress={onRetry} />
         </View>
       ) : null}
     </AdminSurface>
@@ -65,10 +66,8 @@ export function AdminDeniedState() {
   const tokens = useDesignTokens();
   return (
     <View style={styles.center}>
-      <Text style={[styles.emptyTitle, { color: tokens.colors.text.primary }]}>אין הרשאת מנהל</Text>
-      <Text style={[styles.emptySub, { color: tokens.colors.text.secondary }]}>
-        המסך זמין רק למשתמשים עם הרשאות מנהל
-      </Text>
+      <Text style={[styles.emptyTitle, { color: tokens.colors.text.primary }]}>{i18n.t('auto.components__admin__AdminStateViews.s4')}</Text>
+      <Text style={[styles.emptySub, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.components__admin__AdminStateViews.s5')}</Text>
     </View>
   );
 }

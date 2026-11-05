@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 // ============================================
 // Create Group Sheet
@@ -33,8 +34,8 @@ import {
 
 type Tier = 'free' | 'premium';
 const TIERS: { key: Tier; label: string }[] = [
-  { key: 'free', label: 'חינמי' },
-  { key: 'premium', label: 'פרימיום' },
+  { key: 'free', label: i18n.t('auto.components__chat__CreateGroupSheet.s1') },
+  { key: 'premium', label: i18n.t('auto.components__chat__CreateGroupSheet.s2') },
 ];
 
 interface CreateGroupSheetProps {
@@ -82,7 +83,7 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
     void HapticFeedback.selection();
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      legacyAlert('אין הרשאה', 'יש לאפשר גישה לגלריה');
+      legacyAlert(i18n.t('auto.components__chat__CreateGroupSheet.s3'), i18n.t('auto.components__chat__CreateGroupSheet.s4'));
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -103,7 +104,7 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
         const uploaded = await mediaService.ensureRemoteMediaUrl(imageUri, 'image');
         if (uploaded.error || !uploaded.url) {
           void HapticFeedback.error();
-          legacyAlert('שגיאה', uploaded.error || 'העלאת התמונה נכשלה');
+          legacyAlert(i18n.t('auto.components__chat__CreateGroupSheet.s5'), uploaded.error || i18n.t('auto.components__chat__CreateGroupSheet.s6'));
           return;
         }
         avatarUrl = uploaded.url;
@@ -124,7 +125,7 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
       );
       if (error || !data) {
         void HapticFeedback.error();
-        legacyAlert('שגיאה', error?.message || 'לא ניתן ליצור קבוצה');
+        legacyAlert(i18n.t('auto.components__chat__CreateGroupSheet.s5'), error?.message || i18n.t('auto.components__chat__CreateGroupSheet.s7'));
       } else {
         void HapticFeedback.success();
         // סוגרים (אנימציה) ורק אחרי שהמודאל ירד מודיעים להורה — אחרת Alert/ניווט
@@ -134,7 +135,7 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
         setTimeout(() => onCreated(created.id, created.name), SHEET_CLOSE_MS + 120);
       }
     } catch (e: any) {
-      legacyAlert('שגיאה', e?.message || 'שגיאה לא צפויה');
+      legacyAlert(i18n.t('auto.components__chat__CreateGroupSheet.s5'), e?.message || i18n.t('auto.components__chat__CreateGroupSheet.s8'));
     } finally {
       setIsLoading(false);
     }
@@ -169,14 +170,14 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
       >
       <Pressable onPress={Keyboard.dismiss} accessible={false}>
       <View style={[styles.root, { paddingBottom: Math.max(insets.bottom, 12) }]} onLayout={onContentLayout}>
-        <ChatSheetTopoHeader title="קבוצה חדשה" onClose={handleClose} />
+        <ChatSheetTopoHeader title={i18n.t('auto.components__chat__CreateGroupSheet.s9')} onClose={handleClose} />
 
         {/* תמונת קבוצה — כמו תמונת הפרופיל ברישום */}
         <Pressable
           onPress={() => void pickImage()}
           style={styles.avatarWrap}
           accessibilityRole="button"
-          accessibilityLabel={imageUri ? 'החלפת תמונת קבוצה' : 'הוספת תמונת קבוצה'}
+          accessibilityLabel={imageUri ? i18n.t('auto.components__chat__CreateGroupSheet.s10') : i18n.t('auto.components__chat__CreateGroupSheet.s11')}
         >
           <View style={[styles.avatar, { backgroundColor: tokens.colors.background.cardSolid }]}>
             {imageUri ? (
@@ -189,14 +190,14 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
             <Ionicons name={imageUri ? 'pencil' : 'add'} size={14} color={tokens.colors.text.inverse} />
           </View>
         </Pressable>
-        <Text style={formFieldLabelStyle({ tokens, focused: focused === 'name' })}>שם הקבוצה</Text>
+        <Text style={formFieldLabelStyle({ tokens, focused: focused === 'name' })}>{i18n.t('auto.components__chat__CreateGroupSheet.s12')}</Text>
         <View style={[formFieldShellStyle({ tokens, focused: focused === 'name' }), styles.fieldShell]}>
           <TextInput
             value={name}
             onChangeText={setName}
             onFocus={() => setFocused('name')}
             onBlur={() => setFocused(null)}
-            placeholder="לדוגמה: מסחר יומי"
+            placeholder={i18n.t('auto.components__chat__CreateGroupSheet.s13')}
             placeholderTextColor={formFieldPlaceholderColor(tokens)}
             style={[formFieldInputStyle(tokens), appPhysicalRightText, styles.fieldInput]}
             maxLength={80}
@@ -206,9 +207,7 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
           />
         </View>
 
-        <Text style={[formFieldLabelStyle({ tokens, focused: focused === 'desc' }), styles.labelGap]}>
-          תיאור (אופציונלי)
-        </Text>
+        <Text style={[formFieldLabelStyle({ tokens, focused: focused === 'desc' }), styles.labelGap]}>{i18n.t('auto.components__chat__CreateGroupSheet.s14')}</Text>
         <View
           style={[
             formFieldShellStyle({ tokens, focused: focused === 'desc', multiline: true }),
@@ -221,7 +220,7 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
             onChangeText={setDescription}
             onFocus={() => setFocused('desc')}
             onBlur={() => setFocused(null)}
-            placeholder="על מה מדברים בקבוצה?"
+            placeholder={i18n.t('auto.components__chat__CreateGroupSheet.s15')}
             placeholderTextColor={formFieldPlaceholderColor(tokens)}
             style={[formFieldInputStyle(tokens), appPhysicalRightText, styles.textArea]}
             multiline
@@ -233,7 +232,7 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
         </View>
 
         {/* מי כותב — בחירה אחת: דיון או הכרזות */}
-        <Text style={[formFieldLabelStyle({ tokens, focused: false }), styles.labelGap]}>מי כותב בקבוצה</Text>
+        <Text style={[formFieldLabelStyle({ tokens, focused: false }), styles.labelGap]}>{i18n.t('auto.components__chat__CreateGroupSheet.s16')}</Text>
         <View style={[styles.segment, { backgroundColor: tokens.colors.background.cardSolid }]}>
           {([
             { key: false, label: 'כל החברים' },
@@ -265,9 +264,7 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
         </View>
 
         {/* מי רואה ויכול להצטרף — לפי מסלול */}
-        <Text style={[formFieldLabelStyle({ tokens, focused: false }), styles.labelGap]}>
-          מסלולים שרואים ומצטרפים
-        </Text>
+        <Text style={[formFieldLabelStyle({ tokens, focused: false }), styles.labelGap]}>{i18n.t('auto.components__chat__CreateGroupSheet.s17')}</Text>
         <View style={styles.tiersRow}>
           {TIERS.map((t) => {
             const on = tiers.includes(t.key);
@@ -298,7 +295,7 @@ export default function CreateGroupSheet({ visible, onClose, onCreated }: Create
         <View style={styles.cta}>
 
         <UIButton
-          title="צור קבוצה"
+          title={i18n.t('auto.components__chat__CreateGroupSheet.s18')}
           variant="primary"
           fullWidth
           loading={isLoading}

@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { useState, useCallback } from 'react';
@@ -189,7 +190,7 @@ export default function CalendarTab() {
 
   const getDayName = (dateString: string) => {
     const date = new Date(dateString);
-    const dayNames = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
+    const dayNames = [i18n.t('auto.screens__Journal__CalendarTab.s1'), i18n.t('auto.screens__Journal__CalendarTab.s2'), i18n.t('auto.screens__Journal__CalendarTab.s3'), i18n.t('auto.screens__Journal__CalendarTab.s4'), i18n.t('auto.screens__Journal__CalendarTab.s5'), i18n.t('auto.screens__Journal__CalendarTab.s6'), i18n.t('auto.screens__Journal__CalendarTab.s7')];
     return dayNames[date.getDay()];
   };
 
@@ -335,7 +336,7 @@ export default function CalendarTab() {
     return (
       <View style={[styles.loadingContainer, styles.rtlRoot]}>
         <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-        <Text style={styles.loadingText}>טוען לוח שנה...</Text>
+        <Text style={styles.loadingText}>{i18n.t('auto.screens__Journal__CalendarTab.s8')}</Text>
       </View>
     );
   }
@@ -362,7 +363,7 @@ export default function CalendarTab() {
                 onPress={() => navigateMonth('prev')}
                 glass
                 glassIntensity="subtle"
-                accessibilityLabel="חודש קודם"
+                accessibilityLabel={i18n.t('auto.screens__Journal__CalendarTab.s9')}
               >
                 <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.primary} />
               </DayNavBlurButton>
@@ -380,7 +381,7 @@ export default function CalendarTab() {
                     isMonthProfit ? styles.monthTotalCaptionProfit : styles.monthTotalCaptionLoss,
                   ]}
                 >
-                  {`סה״כ חודש ${formatPnlForCell(monthTotal)}`}
+                  {i18n.t('auto.screens__Journal__CalendarTab.s10', { v0: formatPnlForCell(monthTotal) })}
                 </Text>
               </View>
 
@@ -388,7 +389,7 @@ export default function CalendarTab() {
                 onPress={() => navigateMonth('next')}
                 glass
                 glassIntensity="subtle"
-                accessibilityLabel="חודש הבא"
+                accessibilityLabel={i18n.t('auto.screens__Journal__CalendarTab.s11')}
               >
                 <Ionicons name="chevron-forward" size={20} color={DesignTokens.colors.text.primary} />
               </DayNavBlurButton>
@@ -404,7 +405,7 @@ export default function CalendarTab() {
             { paddingHorizontal: gridLayout.horizontalPad, marginBottom: gridLayout.cellGap },
           ]}
         >
-          {['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'].map((day, index) => (
+          {[i18n.t('auto.screens__Journal__CalendarTab.s1'), i18n.t('auto.screens__Journal__CalendarTab.s2'), i18n.t('auto.screens__Journal__CalendarTab.s3'), i18n.t('auto.screens__Journal__CalendarTab.s4'), i18n.t('auto.screens__Journal__CalendarTab.s5'), i18n.t('auto.screens__Journal__CalendarTab.s6'), i18n.t('auto.screens__Journal__CalendarTab.s7')].map((day, index) => (
             <View
               key={index}
               style={[
@@ -420,7 +421,7 @@ export default function CalendarTab() {
         {calendarData.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="calendar-outline" size={64} color={DesignTokens.colors.text.tertiary} />
-            <Text style={styles.emptyText}>אין טריידים בחודש הזה</Text>
+            <Text style={styles.emptyText}>{i18n.t('auto.screens__Journal__CalendarTab.s12')}</Text>
           </View>
         ) : (
           <FlatList
@@ -440,15 +441,15 @@ export default function CalendarTab() {
         <View style={styles.legend}>
           <View style={styles.legendItem}>
             <View style={[styles.legendColor, { backgroundColor: `${DesignTokens.colors.success.main}${CALENDAR_LEGEND_SWATCH_ALPHA}` }]} />
-            <Text style={styles.legendText}>רווח</Text>
+            <Text style={styles.legendText}>{i18n.t('auto.screens__Journal__CalendarTab.s13')}</Text>
           </View>
           <View style={styles.legendItem}>
             <View style={[styles.legendColor, { backgroundColor: `${DesignTokens.colors.text.danger}${CALENDAR_LEGEND_SWATCH_ALPHA}` }]} />
-            <Text style={styles.legendText}>הפסד</Text>
+            <Text style={styles.legendText}>{i18n.t('auto.screens__Journal__CalendarTab.s14')}</Text>
           </View>
           <View style={styles.legendItem}>
             <View style={[styles.legendColor, { backgroundColor: DesignTokens.colors.background.cardSolid, borderColor: DesignTokens.colors.border.divider }]} />
-            <Text style={styles.legendText}>ללא טריידים</Text>
+            <Text style={styles.legendText}>{i18n.t('auto.screens__Journal__CalendarTab.s15')}</Text>
           </View>
         </View>
 
@@ -456,35 +457,33 @@ export default function CalendarTab() {
         {monthStats ? (
           <View style={{ paddingHorizontal: DesignTokens.layout?.screenPadding ?? 20, paddingBottom: 8 }}>
             <UICard variant="soft" glassIntensity="light" padding="md" style={{ marginBottom: APP_LAYOUT.stackGapSmall }}>
-              <Text style={{ ...journalSectionSubtitleStyle, color: DesignTokens.colors.text.secondary, marginBottom: APP_LAYOUT.cardTitleToBodyGap }}>
-                סטטיסטיקות חודש
-              </Text>
+              <Text style={{ ...journalSectionSubtitleStyle, color: DesignTokens.colors.text.secondary, marginBottom: APP_LAYOUT.cardTitleToBodyGap }}>{i18n.t('auto.screens__Journal__CalendarTab.s16')}</Text>
               <View style={{ ...journalRow, justifyContent: 'space-between' }}>
                 <View style={{ alignItems: 'center', flex: 1 }}>
-                  <Text style={{ ...journalCaption2Style, color: DesignTokens.colors.text.tertiary, marginBottom: 4, textAlign: 'center' }}>טריידים</Text>
+                  <Text style={{ ...journalCaption2Style, color: DesignTokens.colors.text.tertiary, marginBottom: 4, textAlign: 'center' }}>{i18n.t('auto.screens__Journal__CalendarTab.s17')}</Text>
                   <Text style={{ ...journalCardMetricValueSecondaryStyle, color: DesignTokens.colors.text.primary }}>{monthStats.tradeCount}</Text>
                 </View>
                 <View style={{ alignItems: 'center', flex: 1 }}>
-                  <Text style={{ ...journalCaption2Style, color: DesignTokens.colors.text.tertiary, marginBottom: 4, textAlign: 'center' }}>ימי רווח</Text>
+                  <Text style={{ ...journalCaption2Style, color: DesignTokens.colors.text.tertiary, marginBottom: 4, textAlign: 'center' }}>{i18n.t('auto.screens__Journal__CalendarTab.s18')}</Text>
                   <Text style={{ ...journalCardMetricValueSecondaryStyle, color: DesignTokens.colors.primary.main }}>{monthStats.winDays}</Text>
                 </View>
                 <View style={{ alignItems: 'center', flex: 1 }}>
-                  <Text style={{ ...journalCaption2Style, color: DesignTokens.colors.text.tertiary, marginBottom: 4, textAlign: 'center' }}>ימי הפסד</Text>
+                  <Text style={{ ...journalCaption2Style, color: DesignTokens.colors.text.tertiary, marginBottom: 4, textAlign: 'center' }}>{i18n.t('auto.screens__Journal__CalendarTab.s19')}</Text>
                   <Text style={{ ...journalCardMetricValueSecondaryStyle, color: DesignTokens.colors.text.danger }}>{monthStats.lossDays}</Text>
                 </View>
               </View>
               <View style={{ height: 1, backgroundColor: DesignTokens.colors.border.divider, marginVertical: 10 }} />
               <View style={{ ...journalRow, justifyContent: 'space-between' }}>
                 <View style={{ alignItems: 'center', flex: 1 }}>
-                  <Text style={{ ...journalCaption2Style, color: DesignTokens.colors.text.tertiary, marginBottom: 4, textAlign: 'center' }}>יום הטוב</Text>
+                  <Text style={{ ...journalCaption2Style, color: DesignTokens.colors.text.tertiary, marginBottom: 4, textAlign: 'center' }}>{i18n.t('auto.screens__Journal__CalendarTab.s20')}</Text>
                   <Text style={{ ...journalCardMetricValueSecondaryStyle, color: DesignTokens.colors.primary.main }}>{formatCurrency(monthStats.best)}</Text>
                 </View>
                 <View style={{ alignItems: 'center', flex: 1 }}>
-                  <Text style={{ ...journalCaption2Style, color: DesignTokens.colors.text.tertiary, marginBottom: 4, textAlign: 'center' }}>יום הגרוע</Text>
+                  <Text style={{ ...journalCaption2Style, color: DesignTokens.colors.text.tertiary, marginBottom: 4, textAlign: 'center' }}>{i18n.t('auto.screens__Journal__CalendarTab.s21')}</Text>
                   <Text style={{ ...journalCardMetricValueSecondaryStyle, color: DesignTokens.colors.text.danger }}>{formatCurrency(monthStats.worst)}</Text>
                 </View>
                 <View style={{ alignItems: 'center', flex: 1 }}>
-                  <Text style={{ ...journalCaption2Style, color: DesignTokens.colors.text.tertiary, marginBottom: 4, textAlign: 'center' }}>סה"כ חודש</Text>
+                  <Text style={{ ...journalCaption2Style, color: DesignTokens.colors.text.tertiary, marginBottom: 4, textAlign: 'center' }}>{i18n.t('auto.screens__Journal__CalendarTab.s22')}</Text>
                   <Text style={{ ...journalCardMetricValueSecondaryStyle, color: isMonthProfit ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger }}>
                     {isMonthProfit ? '+' : ''}{formatCurrency(monthTotal)}
                   </Text>

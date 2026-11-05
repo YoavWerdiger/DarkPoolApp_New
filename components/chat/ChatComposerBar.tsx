@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useMemo } from 'react';
 import {
   View,
@@ -131,7 +132,7 @@ export default function ChatComposerBar({
             pressed && !sendDisabled ? { opacity: 0.82 } : null,
           ]}
           accessibilityRole="button"
-          accessibilityLabel="שליחה"
+          accessibilityLabel={i18n.t('auto.components__chat__ChatComposerBar.s1')}
         >
           <Ionicons name="send" size={22} color={tokens.colors.text.inverse} />
         </Pressable>

@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import React, { useMemo } from 'react';
 import { View, Text, useWindowDimensions } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
@@ -43,7 +44,7 @@ export function MarketsIndicesCard() {
   return (
     <UICard variant="soft" padding="none" style={styles.card}>
       <View style={styles.titlePad}>
-        <Text style={styles.title}>מדדים וחוזים עתידיים</Text>
+        <Text style={styles.title}>{i18n.t('auto.screens__Markets__tabs__MarketsIndicesTab.s1')}</Text>
       </View>
       <View style={{ width: '100%', overflow: 'hidden' }}>
         <MarketsTradingView

@@ -1,3 +1,4 @@
+import i18n from '../lib/i18n';
 import { TEXT_DIR } from '../lib/i18n/language';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -37,16 +38,12 @@ export function DeviceConflictScreen({ onSignOut }: Props) {
         <View style={[styles.iconRing, { backgroundColor: tokens.colors.background.cardSolid }]}>
           <Ionicons name="phone-portrait-outline" size={38} color={tokens.colors.text.primary} />
         </View>
-        <Text style={[styles.title, { color: tokens.colors.text.primary }]}>
-          התחברת ממכשיר אחר
-        </Text>
-        <Text style={[styles.body, { color: tokens.colors.text.secondary }]}>
-          אפשר להשתמש בחשבון במכשיר אחד בכל פעם, ולכן התנתקת מהמכשיר הזה. כדי להמשיך כאן — התחבר מחדש.
-        </Text>
+        <Text style={[styles.title, { color: tokens.colors.text.primary }]}>{i18n.t('auto.components__DeviceConflictScreen.s1')}</Text>
+        <Text style={[styles.body, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.components__DeviceConflictScreen.s2')}</Text>
       </View>
 
       <View style={styles.actions}>
-        <UIButton title="התחבר מחדש" variant="primary" size="lg" fullWidth onPress={onSignOut} />
+        <UIButton title={i18n.t('auto.components__DeviceConflictScreen.s3')} variant="primary" size="lg" fullWidth onPress={onSignOut} />
       </View>
     </Animated.View>
   );

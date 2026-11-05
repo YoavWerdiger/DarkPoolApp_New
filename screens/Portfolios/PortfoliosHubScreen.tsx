@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { JournalSkeleton } from './components/JournalSkeleton';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
@@ -137,7 +138,7 @@ export default function PortfoliosHubScreen() {
     <ScreenChrome>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <MainDrawerScreenHeader
-          title="יומן מסחר"
+          title={i18n.t('auto.screens__Portfolios__PortfoliosHubScreen.s1')}
           onMenuPress={openMainDrawer}
           inRtlTree
           rightAccessory={
@@ -146,7 +147,7 @@ export default function PortfoliosHubScreen() {
               onPress={handleCreate}
               activeOpacity={0.88}
               accessibilityRole="button"
-              accessibilityLabel="תיק חדש"
+              accessibilityLabel={i18n.t('auto.screens__Portfolios__PortfoliosHubScreen.s2')}
             >
               <Ionicons name="add" size={26} color={tokens.colors.text.inverse} />
             </TouchableOpacity>

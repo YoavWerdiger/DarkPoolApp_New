@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import { PERIOD_TO_DAYS } from '../../Portfolios/portfolioConstants';
 import type { PerformancePeriod } from '../../Portfolios/portfolioTypes';
 
@@ -250,25 +251,25 @@ export function snapshotChartEmptyCopy(args: {
   hasHoldings: boolean;
 }): string {
   if (args.kind === 'fund_manager' || args.holdingsEngine === 'filing') {
-    return 'עדיין אין מספיק דיווחי 13F לבניית גרף שווי.';
+    return i18n.t('auto.screens__DarkPool__utils__profileChartSeries.s1');
   }
   if (args.holdingsEngine === 'congress') {
     return args.hasHoldings
-      ? 'אין מספיק מחירי שוק לסל האחזקות המדווח.'
-      : 'אין אחזקות מדווחות לגרף.';
+      ? i18n.t('auto.screens__DarkPool__utils__profileChartSeries.s2')
+      : i18n.t('auto.screens__DarkPool__utils__profileChartSeries.s3');
   }
   if (args.holdingsEngine === 'form4') {
-    return 'אין מספיק דיווחי Form 4 לבניית גרף שווי.';
+    return i18n.t('auto.screens__DarkPool__utils__profileChartSeries.s4');
   }
   if (args.holdingsEngine === 'trump') {
     return args.hasHoldings
-      ? 'אין מספיק מחירי Yahoo לסל העסקאות.'
-      : 'אין עסקאות trumpstocktrades לגרף.';
+      ? i18n.t('auto.screens__DarkPool__utils__profileChartSeries.s5')
+      : i18n.t('auto.screens__DarkPool__utils__profileChartSeries.s6');
   }
   if (args.kind === 'politician' && !args.hasHoldings) {
-    return 'אין אחזקות מדווחות לגרף.';
+    return i18n.t('auto.screens__DarkPool__utils__profileChartSeries.s3');
   }
-  return 'אין מספיק נתונים כנים לבניית גרף שווי.';
+  return i18n.t('auto.screens__DarkPool__utils__profileChartSeries.s7');
 }
 
 /**

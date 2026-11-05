@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 /**
  * PremiumLockCard.tsx
  * -----------------------------------------------------------------------------
@@ -46,15 +47,12 @@ export function PremiumLockCard({ onPress, variant = 'feed' }: PremiumLockCardPr
           <View style={{ flex: 1 }}>
             <Text style={[styles.title, { color: tokens.colors.text.primary }]}>
               {variant === 'feed'
-                ? 'גלה את כל ה-Dark Pool בזמן אמת'
-                : 'תוכן פרימיום נעול'}
+                ? i18n.t('auto.screens__DarkPool__components__PremiumLockCard.s1')
+                : i18n.t('auto.screens__DarkPool__components__PremiumLockCard.s2')}
             </Text>
-            <Text style={[styles.subtitle, { color: tokens.colors.text.secondary }]}>
-              משתמשי חינם רואים 3 סיגנלים מובילים עם השהייה של 15 דקות. עבור לפרימיום
-              להתראות, היסטוריה מלאה ועדכונים בזמן אמת.
-            </Text>
+            <Text style={[styles.subtitle, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__DarkPool__components__PremiumLockCard.s3')}</Text>
             <UIButton
-              title="שדרג לפרימיום"
+              title={i18n.t('auto.screens__DarkPool__components__PremiumLockCard.s4')}
               variant="primary"
               size="sm"
               icon="arrow-back"

@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useState } from 'react';
 import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -310,10 +311,10 @@ function MoneyCounter({ index, total, color, accent }: { index: number; total: n
 
 /** דרגות — ארד, כסף, זהב, יהלום */
 const RANKS = [
-  { name: 'ארד', color: '#C27C46' },
-  { name: 'כסף', color: '#A7B0BA' },
-  { name: 'זהב', color: '#E8B21C' },
-  { name: 'יהלום', color: '#3FC8E4' },
+  { name: i18n.t('auto.components__onboarding__StopSlider.s1'), color: '#C27C46' },
+  { name: i18n.t('auto.components__onboarding__StopSlider.s2'), color: '#A7B0BA' },
+  { name: i18n.t('auto.components__onboarding__StopSlider.s3'), color: '#E8B21C' },
+  { name: i18n.t('auto.components__onboarding__StopSlider.s4'), color: '#3FC8E4' },
 ];
 
 /** מגן דרגה בסגנון משחק — צבע לפי הרמה, כוכבים נדלקים אחד-אחד */

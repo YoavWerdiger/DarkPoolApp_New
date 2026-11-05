@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 /**
  * portfolioService.ts
  * --------------------------------------------------------------------------
@@ -71,7 +72,7 @@ export async function getUsersDisplayNamesByIds(
   if (error || !data) return {};
   const map: Record<string, string> = {};
   for (const row of data as Array<{ id: string; display_name: string }>) {
-    if (row.id) map[row.id] = row.display_name || 'משתמש';
+    if (row.id) map[row.id] = row.display_name || i18n.t('auto.services__portfolios__portfolioService.s1');
   }
   return map;
 }

@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 /**
  * insiderTradeDisplay.ts
  * -----------------------------------------------------------------------------
@@ -40,18 +41,18 @@ export interface InsiderCodeMeaning {
  */
 const INSIDER_CODES: Record<string, Omit<InsiderCodeMeaning, 'code'>> = {
   /** Form 4 TransactionCode P — Open market or private purchase. */
-  P: { label: 'קנה', tone: 'buy' },
-  S: { label: 'מכר', tone: 'sell' },
-  A: { label: 'הענקה', tone: 'neutral' },
-  M: { label: 'מימוש', tone: 'neutral' },
-  F: { label: 'גריעת מס', tone: 'neutral' },
-  G: { label: 'מתנה', tone: 'neutral' },
-  D: { label: 'מסירת מניות לחברה', tone: 'neutral' },
-  J: { label: 'עסקה אחרת שדווחה בקוד J', tone: 'neutral' },
-  C: { label: 'המרה של נייר ערך נגזר', tone: 'neutral' },
-  X: { label: 'מימוש אופציה', tone: 'neutral' },
-  I: { label: 'עסקה שיקולית בתוכנית של החברה', tone: 'neutral' },
-  O: { label: 'מימוש אופציה מחוץ לכסף', tone: 'neutral' },
+  P: { label: i18n.t('auto.screens__DarkPool__utils__insiderTradeDisplay.s1'), tone: 'buy' },
+  S: { label: i18n.t('auto.screens__DarkPool__utils__insiderTradeDisplay.s2'), tone: 'sell' },
+  A: { label: i18n.t('auto.screens__DarkPool__utils__insiderTradeDisplay.s3'), tone: 'neutral' },
+  M: { label: i18n.t('auto.screens__DarkPool__utils__insiderTradeDisplay.s4'), tone: 'neutral' },
+  F: { label: i18n.t('auto.screens__DarkPool__utils__insiderTradeDisplay.s5'), tone: 'neutral' },
+  G: { label: i18n.t('auto.screens__DarkPool__utils__insiderTradeDisplay.s6'), tone: 'neutral' },
+  D: { label: i18n.t('auto.screens__DarkPool__utils__insiderTradeDisplay.s7'), tone: 'neutral' },
+  J: { label: i18n.t('auto.screens__DarkPool__utils__insiderTradeDisplay.s8'), tone: 'neutral' },
+  C: { label: i18n.t('auto.screens__DarkPool__utils__insiderTradeDisplay.s9'), tone: 'neutral' },
+  X: { label: i18n.t('auto.screens__DarkPool__utils__insiderTradeDisplay.s10'), tone: 'neutral' },
+  I: { label: i18n.t('auto.screens__DarkPool__utils__insiderTradeDisplay.s11'), tone: 'neutral' },
+  O: { label: i18n.t('auto.screens__DarkPool__utils__insiderTradeDisplay.s12'), tone: 'neutral' },
 };
 
 /** תווית "רכישה" בלי קוד Form 4 — אסור להציג אותה כ-P / רכישה בשוק. */
@@ -72,13 +73,13 @@ export function describeInsiderCode(
   raw: string | null | undefined
 ): InsiderCodeMeaning {
   const code = (raw ?? '').trim().toUpperCase();
-  if (!code) return { code: '', label: 'עסקה שדווחה ב-Form 4', tone: 'neutral' };
+  if (!code) return { code: '', label: i18n.t('auto.screens__DarkPool__utils__insiderTradeDisplay.s13'), tone: 'neutral' };
   if (INFERRED_BUY_ALIASES.has(code) || INFERRED_BUY_ALIASES.has(raw?.trim() ?? '')) {
-    return { code: '', label: 'קנה', tone: 'buy' };
+    return { code: '', label: i18n.t('auto.screens__DarkPool__utils__insiderTradeDisplay.s1'), tone: 'buy' };
   }
   const known = INSIDER_CODES[code];
   if (known) return { code, label: known.label, tone: known.tone };
-  return { code, label: `עסקה שדווחה בקוד ${code}`, tone: 'neutral' };
+  return { code, label: i18n.t('auto.screens__DarkPool__utils__insiderTradeDisplay.s14', { v0: code }), tone: 'neutral' };
 }
 
 /**
@@ -86,8 +87,8 @@ export function describeInsiderCode(
  * `P`/`S` מקבלים «את $NVDA» כמו בפיד; הענקה/מימוש/מתנה — בלי «את» ובלי «בשוק».
  */
 export function formatInsiderActionLead(meaning: InsiderCodeMeaning): string {
-  if (meaning.code === 'P' || (meaning.tone === 'buy' && !meaning.code)) return 'קנה';
-  if (meaning.code === 'S') return 'מכר';
+  if (meaning.code === 'P' || (meaning.tone === 'buy' && !meaning.code)) return i18n.t('auto.screens__DarkPool__utils__insiderTradeDisplay.s1');
+  if (meaning.code === 'S') return i18n.t('auto.screens__DarkPool__utils__insiderTradeDisplay.s2');
   return meaning.label;
 }
 
@@ -171,7 +172,7 @@ export function insiderValueFieldLabel(input: {
   value?: number | null | undefined;
 }): string | null {
   if (insiderTradeValueUsd(input) == null) return null;
-  return 'שווי אחזקה';
+  return i18n.t('auto.screens__DarkPool__utils__insiderTradeDisplay.s15');
 }
 
 /** "סמנכ״ל כספים" / null — `officerTitle` ריק ב-61% מהשורות (§3.3). */

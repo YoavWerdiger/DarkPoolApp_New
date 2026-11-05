@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -180,7 +181,7 @@ function PostRepliesSheetBody({
         }
       } catch (e: any) {
         if (cancelled || seq !== loadSeqRef.current) return;
-        setError(e?.message || 'לא ניתן לטעון תגובות');
+        setError(e?.message || i18n.t('auto.screens__Tweets__PostRepliesSheet.s1'));
         setReplies([]);
       } finally {
         if (!cancelled && seq === loadSeqRef.current) {
@@ -232,7 +233,7 @@ function PostRepliesSheetBody({
         listRef.current?.scrollToEnd({ animated: true });
       });
     } catch (e: any) {
-      setError(e?.message || 'לא ניתן לפרסם תגובה');
+      setError(e?.message || i18n.t('auto.screens__Tweets__PostRepliesSheet.s2'));
       void HapticFeedback.error();
     } finally {
       setBusy(false);
@@ -288,7 +289,7 @@ function PostRepliesSheetBody({
       void HapticFeedback.success();
       setPendingDelete(null);
     } catch {
-      setDeleteError('לא ניתן למחוק את התגובה');
+      setDeleteError(i18n.t('auto.screens__Tweets__PostRepliesSheet.s3'));
     } finally {
       setDeleting(false);
     }
@@ -365,9 +366,7 @@ function PostRepliesSheetBody({
         keyboardDismissMode="on-drag"
         ListEmptyComponent={
           !loading ? (
-            <Text style={[styles.emptyText, { color: tokens.colors.text.secondary }]}>
-              עדיין אין תגובות. היו הראשונים להגיב
-            </Text>
+            <Text style={[styles.emptyText, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Tweets__PostRepliesSheet.s4')}</Text>
           ) : null
         }
         ListHeaderComponent={
@@ -422,7 +421,7 @@ function PostRepliesSheetBody({
                     <TouchableOpacity
                       onPress={() => handleDelete(item)}
                       hitSlop={8}
-                      accessibilityLabel="מחק תגובה"
+                      accessibilityLabel={i18n.t('auto.screens__Tweets__PostRepliesSheet.s5')}
                       style={{
                         width: 24,
                         height: 24,
@@ -469,7 +468,7 @@ function PostRepliesSheetBody({
             onPress={handleClose}
             size={DAY_NAV_BUTTON_SIZE}
             style={styles.headerIconButton}
-            accessibilityLabel="סגור"
+            accessibilityLabel={i18n.t('auto.screens__Tweets__PostRepliesSheet.s6')}
             disabled={busy}
           >
             <Ionicons
@@ -482,9 +481,7 @@ function PostRepliesSheetBody({
             <Text
               style={[styles.headerTitle, { color: tokens.colors.text.primary }]}
               numberOfLines={1}
-            >
-              תגובות
-            </Text>
+            >{i18n.t('auto.screens__Tweets__PostRepliesSheet.s7')}</Text>
           </View>
           <View style={styles.headerSideSpacer} />
         </View>
@@ -513,9 +510,7 @@ function PostRepliesSheetBody({
                     color: tokens.colors.text.primary,
                     ...APP_TYPE.caption,
                   }}
-                >
-                  נסה שוב
-                </Text>
+                >{i18n.t('auto.screens__Tweets__PostRepliesSheet.s8')}</Text>
               </TouchableOpacity>
             ) : null}
           </View>
@@ -544,7 +539,7 @@ function PostRepliesSheetBody({
               <TextInput
                 value={body}
                 onChangeText={setBody}
-                placeholder={user ? 'כתבו תגובה…' : 'יש להתחבר כדי להגיב'}
+                placeholder={user ? i18n.t('auto.screens__Tweets__PostRepliesSheet.s9') : i18n.t('auto.screens__Tweets__PostRepliesSheet.s10')}
                 placeholderTextColor={tokens.colors.text.tertiary}
                 multiline
                 maxLength={MAX_LEN}
@@ -568,7 +563,7 @@ function PostRepliesSheetBody({
                   : tokens.colors.background.primary,
               },
             ]}
-            accessibilityLabel="שלח תגובה"
+            accessibilityLabel={i18n.t('auto.screens__Tweets__PostRepliesSheet.s11')}
           >
             {busy ? (
               <ActivityIndicator size="small" color={tokens.colors.text.inverse} />
@@ -584,13 +579,13 @@ function PostRepliesSheetBody({
       </ChatComposerDock>
       <InlineAppDialog
         visible={!!pendingDelete}
-        title="מחיקת תגובה"
-        message={deleteError || 'למחוק את התגובה?'}
+        title={i18n.t('auto.screens__Tweets__PostRepliesSheet.s12')}
+        message={deleteError || i18n.t('auto.screens__Tweets__PostRepliesSheet.s13')}
         icon="trash-outline"
         onBackdropPress={deleting ? undefined : () => setPendingDelete(null)}
         buttons={[
-          { text: 'מחק', style: 'destructive', onPress: () => void confirmDelete(), loading: deleting },
-          { text: 'ביטול', style: 'cancel', onPress: () => setPendingDelete(null) },
+          { text: i18n.t('auto.screens__Tweets__PostRepliesSheet.s14'), style: 'destructive', onPress: () => void confirmDelete(), loading: deleting },
+          { text: i18n.t('auto.screens__Tweets__PostRepliesSheet.s15'), style: 'cancel', onPress: () => setPendingDelete(null) },
         ]}
       />
       </View>

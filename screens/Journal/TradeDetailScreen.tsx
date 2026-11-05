@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { HapticFeedback } from '../../utils/hapticFeedback';
@@ -231,10 +232,10 @@ export default function TradeDetailScreen() {
 
   const handleDelete = useCallback(() => {
     if (!trade) return;
-    legacyAlert('מחיקת טרייד', `האם למחוק את ${trade.symbol}?`, [
-      { text: 'ביטול', style: 'cancel' },
+    legacyAlert(i18n.t('auto.screens__Journal__TradeDetailScreen.s1'), i18n.t('auto.screens__Journal__TradeDetailScreen.s2', { v0: trade.symbol }), [
+      { text: i18n.t('auto.screens__Journal__TradeDetailScreen.s3'), style: 'cancel' },
       {
-        text: 'מחק',
+        text: i18n.t('auto.screens__Journal__TradeDetailScreen.s4'),
         style: 'destructive',
         onPress: async () => {
           void HapticFeedback.error();
@@ -325,7 +326,7 @@ export default function TradeDetailScreen() {
           <DayNavBlurButton
             onPress={() => navigation.goBack()}
             size={36}
-            accessibilityLabel="חזרה"
+            accessibilityLabel={i18n.t('auto.screens__Journal__TradeDetailScreen.s5')}
           >
             <Ionicons name="chevron-forward" size={20} color={tokens.colors.text.primary} />
           </DayNavBlurButton>
@@ -388,7 +389,7 @@ export default function TradeDetailScreen() {
             <TradeShareButton
               onPress={openShare}
               size={36}
-              accessibilityLabel="שתף טרייד"
+              accessibilityLabel={i18n.t('auto.screens__Journal__TradeDetailScreen.s6')}
             />
             <TouchableOpacity
               onPress={() => {
@@ -468,7 +469,7 @@ export default function TradeDetailScreen() {
                       marginBottom: 4,
                     }}
                   >
-                    {isProfit ? 'רווח נטו' : 'הפסד נטו'}
+                    {isProfit ? i18n.t('auto.screens__Journal__TradeDetailScreen.s7') : i18n.t('auto.screens__Journal__TradeDetailScreen.s8')}
                   </Text>
                   <Text
                     style={{
@@ -528,7 +529,7 @@ export default function TradeDetailScreen() {
 
             {/* Risk Management */}
             {hasRiskData ? (
-              <SectionCard title="ניהול סיכון" icon="shield-outline" tokens={tokens}>
+              <SectionCard title={i18n.t('auto.screens__Journal__TradeDetailScreen.s9')} icon="shield-outline" tokens={tokens}>
                 {trade.stop_loss ? (
                   <InfoRow
                     label="Stop Loss"
@@ -564,22 +565,22 @@ export default function TradeDetailScreen() {
             ) : null}
 
             {/* Trade Info */}
-            <SectionCard title="פרטי הטרייד" icon="list-outline" tokens={tokens}>
-              <InfoRow label="כניסה" value={fmtUsd(trade.entry_price)} tokens={tokens} />
-              <InfoRow label="יציאה" value={fmtUsd(trade.exit_price)} tokens={tokens} />
-              <InfoRow label="כמות" value={String(trade.quantity)} tokens={tokens} />
+            <SectionCard title={i18n.t('auto.screens__Journal__TradeDetailScreen.s10')} icon="list-outline" tokens={tokens}>
+              <InfoRow label={i18n.t('auto.screens__Journal__TradeDetailScreen.s11')} value={fmtUsd(trade.entry_price)} tokens={tokens} />
+              <InfoRow label={i18n.t('auto.screens__Journal__TradeDetailScreen.s12')} value={fmtUsd(trade.exit_price)} tokens={tokens} />
+              <InfoRow label={i18n.t('auto.screens__Journal__TradeDetailScreen.s13')} value={String(trade.quantity)} tokens={tokens} />
               <InfoRow
-                label="שווי כניסה"
+                label={i18n.t('auto.screens__Journal__TradeDetailScreen.s14')}
                 value={fmtUsd(trade.entry_price * trade.quantity, 0)}
                 tokens={tokens}
               />
               <InfoRow
-                label="תאריך כניסה"
+                label={i18n.t('auto.screens__Journal__TradeDetailScreen.s15')}
                 value={fmtDate(trade.entry_date)}
                 tokens={tokens}
               />
               <InfoRow
-                label="תאריך יציאה"
+                label={i18n.t('auto.screens__Journal__TradeDetailScreen.s16')}
                 value={fmtDate(trade.exit_date)}
                 tokens={tokens}
                 last={!(trade.tags?.length)}
@@ -626,32 +627,32 @@ export default function TradeDetailScreen() {
               details.strategy_type ||
               details.entry_reason ||
               details.exit_reason) ? (
-              <SectionCard title="יומן" icon="journal-outline" tokens={tokens}>
+              <SectionCard title={i18n.t('auto.screens__Journal__TradeDetailScreen.s17')} icon="journal-outline" tokens={tokens}>
                 {details.timeframe ? (
                   <InfoRow
-                    label="מסגרת זמן"
+                    label={i18n.t('auto.screens__Journal__TradeDetailScreen.s18')}
                     value={timeframeLabel(details.timeframe)}
                     tokens={tokens}
                   />
                 ) : null}
                 {details.mood_before ? (
                   <InfoRow
-                    label="מצב לפני"
+                    label={i18n.t('auto.screens__Journal__TradeDetailScreen.s19')}
                     value={moodLabel(details.mood_before)}
                     tokens={tokens}
                   />
                 ) : null}
                 {details.mood_after ? (
                   <InfoRow
-                    label="מצב אחרי"
+                    label={i18n.t('auto.screens__Journal__TradeDetailScreen.s20')}
                     value={moodLabel(details.mood_after)}
                     tokens={tokens}
                   />
                 ) : null}
                 {details.followed_plan != null ? (
                   <InfoRow
-                    label="עקב אחרי תוכנית"
-                    value={details.followed_plan ? 'כן ✓' : 'לא ✗'}
+                    label={i18n.t('auto.screens__Journal__TradeDetailScreen.s21')}
+                    value={details.followed_plan ? i18n.t('auto.screens__Journal__TradeDetailScreen.s22') : i18n.t('auto.screens__Journal__TradeDetailScreen.s23')}
                     valueColor={
                       details.followed_plan
                         ? tokens.colors.primary.main
@@ -661,7 +662,7 @@ export default function TradeDetailScreen() {
                   />
                 ) : null}
                 {details.strategy_type ? (
-                  <InfoRow label="סטרטגיה" value={details.strategy_type} tokens={tokens} />
+                  <InfoRow label={i18n.t('auto.screens__Journal__TradeDetailScreen.s24')} value={details.strategy_type} tokens={tokens} />
                 ) : null}
                 {details.entry_reason ? (
                   <View
@@ -678,9 +679,7 @@ export default function TradeDetailScreen() {
                         color: tokens.colors.text.tertiary,
                         marginBottom: 4,
                       }}
-                    >
-                      סיבת כניסה
-                    </Text>
+                    >{i18n.t('auto.screens__Journal__TradeDetailScreen.s25')}</Text>
                     <Text
                       style={{
                         ...journalBodyTextStyle,
@@ -699,9 +698,7 @@ export default function TradeDetailScreen() {
                         color: tokens.colors.text.tertiary,
                         marginBottom: 4,
                       }}
-                    >
-                      סיבת יציאה
-                    </Text>
+                    >{i18n.t('auto.screens__Journal__TradeDetailScreen.s26')}</Text>
                     <Text
                       style={{
                         ...journalBodyTextStyle,
@@ -718,7 +715,7 @@ export default function TradeDetailScreen() {
             {/* Mistakes */}
             {mistakeLabels.length > 0 ? (
               <SectionCard
-                title={`טעויות (${mistakeLabels.length})`}
+                title={i18n.t('auto.screens__Journal__TradeDetailScreen.s27', { v0: mistakeLabels.length })}
                 icon="warning-outline"
                 tokens={tokens}
               >
@@ -752,7 +749,7 @@ export default function TradeDetailScreen() {
 
             {/* Notes */}
             {trade.notes ? (
-              <SectionCard title="הערות" icon="document-text-outline" tokens={tokens}>
+              <SectionCard title={i18n.t('auto.screens__Journal__TradeDetailScreen.s28')} icon="document-text-outline" tokens={tokens}>
                 <Text
                   style={{
                     ...journalBodyTextStyle,

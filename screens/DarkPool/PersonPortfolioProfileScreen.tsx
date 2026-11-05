@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { pickDailyOpenOnDate } from './utils/congressSinceTrade';
 import { getQuotes } from '../../services/portfolios/portfolioPriceFeed';
 /**
@@ -260,9 +261,9 @@ function heroFlowStyle(base: TextStyle, value: number | null | undefined): TextS
 }
 
 function kindLabel(kind: PersonKind): string {
-  if (kind === 'politician') return 'לוויתן';
-  if (kind === 'fund_manager') return 'מנהל קרן';
-  return 'בכיר';
+  if (kind === 'politician') return i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s1');
+  if (kind === 'fund_manager') return i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s2');
+  return i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s3');
 }
 
 /** «נכון לרבעון Q2 2026» — תקופת הדוח (13F) ולא תאריך ההגשה */
@@ -271,13 +272,13 @@ export function filingQuarterLabelHe(period: string | null | undefined): string 
   if (!m) return null;
   const month = Number(m[2]);
   if (!(month >= 1 && month <= 12)) return null;
-  return `נכון לרבעון ${toDataIsland(`Q${Math.ceil(month / 3)} ${m[1]}`)}`;
+  return i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s4', { v0: toDataIsland(`Q${Math.ceil(month / 3)} ${m[1]}`) });
 }
 
 function kindDefaultSubtitle(kind: PersonKind): string {
-  if (kind === 'politician') return 'לוויתן';
-  if (kind === 'fund_manager') return 'אחזקות רבעוניות';
-  return 'עסקאות מדווחות';
+  if (kind === 'politician') return i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s1');
+  if (kind === 'fund_manager') return i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s5');
+  return i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s6');
 }
 
 /** אומדן תאריך הוספה מעסקאות אחרונות — לפי Traded (לא Filed) */
@@ -304,7 +305,7 @@ function earliestBuyDateFromRecent(
 
 /** מסיר מקורות טכניים (UW / Form 4 וכו') מתת־כותרת שחוזרת מהשרת */
 function sanitizePublicSubtitle(raw: string, kind: PersonKind): string {
-  if (kind === 'politician') return 'לוויתן';
+  if (kind === 'politician') return i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s1');
 
   const cleaned = raw
     .replace(/\bUnusual\s*Whales\b/gi, '')
@@ -446,7 +447,7 @@ export function PersonPortfolioProfileScreen({
   const displayName =
     (kind === 'fund_manager' ? fund.profile?.name : investor.profile?.name) ??
     nameHint ??
-    (isCompany ? 'חברה' : kindLabel(kind));
+    (isCompany ? i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s7') : kindLabel(kind));
 
   const imageUrl =
     (kind === 'fund_manager' ? fund.profile?.image_url : investor.profile?.image_url) ??
@@ -511,9 +512,9 @@ export function PersonPortfolioProfileScreen({
         void NotificationService.registerDeviceToken().then((ok) => {
           if (!ok) {
             void showDialog({
-              title: 'התראות',
+              title: i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s8'),
               message:
-                'הוספנו למעקב, אבל צריך לאשר הרשאת התראות במכשיר כדי לקבל עדכון על עסקאות ודיווחים חדשים.',
+                i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s9'),
               type: 'info',
             });
           }
@@ -1308,13 +1309,13 @@ export function PersonPortfolioProfileScreen({
     if (isCompany) {
       return {
         title: FORM4_HOLDINGS_HELP_TITLE,
-        body: 'אחזקות אסטרטגיות מדוח 13F הרבעוני האחרון שהחברה הגישה ל-SEC: רק מניות שנסחרות בארה״ב. לא כולל השקעות בחברות פרטיות, מניות שנסחרות רק מחוץ לארה״ב, מזומן ונכסים אחרים. הדוח מוגש עד 45 יום אחרי סוף הרבעון.',
+        body: i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s10'),
       };
     }
     if (kind === 'fund_manager') {
       return {
         title: FORM4_HOLDINGS_HELP_TITLE,
-        body: 'אחזקות מדוח 13F הרבעוני האחרון של הקרן ל-SEC (מניות אמריקאיות בלבד, בלי מזומן, שורטים ונכסים אחרים). הדוח מוגש עד 45 יום אחרי סוף הרבעון.',
+        body: i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s11'),
       };
     }
     return {
@@ -1394,7 +1395,7 @@ export function PersonPortfolioProfileScreen({
         ? formatCongressPortfolioHeroValue(v)
         : formatUsdRawOrDash(v);
 
-  const followLabel = isFollowing ? 'במעקב' : `עקוב אחרי ${displayName}`;
+  const followLabel = isFollowing ? i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s12') : i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s13', { v0: displayName });
   const showCongressValue = kind === 'politician' && holdingsEngine === 'congress' && portfolioValue != null;
   const showTrumpValue =
     holdingsEngine === 'trump' &&
@@ -1410,17 +1411,17 @@ export function PersonPortfolioProfileScreen({
       : null;
   const valueLabel =
     trumpValueRange
-      ? 'שווי תיק'
+      ? i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s14')
       : holdingsEngine === 'trump' && trumpUnitWeighted
-      ? 'מדד סל (משקל שווה לעסקה)'
+      ? i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s15')
       : holdingsEngine === 'form4' || holdingsEngine === 'trump'
-        ? 'שווי פוזיציות מדווחות'
+        ? i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s16')
         : kind === 'insider'
           ? // מנכ"ל/דירקטור מדווח רק על חברות שבהן הוא מכהן — לא כל התיק הפרטי
-            'שווי אחזקות מדווחות'
+            i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s17')
           : isCompany
-            ? 'שווי אחזקות:'
-            : 'שווי תיק:';
+            ? i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s18')
+            : i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s19');
   const heroValueText = showCongressValue
     ? formatCongressPortfolioHeroValue(portfolioValue)
     : showTrumpValue
@@ -1450,9 +1451,9 @@ export function PersonPortfolioProfileScreen({
     isFollowing,
     followBusy,
     bellA11yLabel: isFollowing
-      ? 'כבה התראות על עסקאות ודיווחים'
-      : 'קבל התראות על עסקאות ודיווחים',
-    shareA11yLabel: 'שתף פרופיל',
+      ? i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s20')
+      : i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s21'),
+    shareA11yLabel: i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s22'),
     scrollY: heroScrollY,
     logoTicker: companyTicker,
   };
@@ -1607,7 +1608,7 @@ export function PersonPortfolioProfileScreen({
                     onPress={openHoldingsHelp}
                     hitSlop={8}
                     accessibilityRole="button"
-                    accessibilityLabel="על המספרים"
+                    accessibilityLabel={i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s23')}
                     style={styles.valueHelpBtn}
                   >
                     <Ionicons
@@ -1773,7 +1774,7 @@ export function PersonPortfolioProfileScreen({
           {/* אחזקות — עוגה כמו ביומן מסחר */}
           {pieHoldings.length > 0 ? (
             <HoldingsPieSection
-              title={kind === 'insider' ? 'פילוח אחזקות מדווחות' : 'פילוח אחזקות'}
+              title={kind === 'insider' ? i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s24') : i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s25')}
               holdings={pieHoldings}
               // חברה: הלוגו שלה במרכז הפילוח (לא האות הראשונה)
               avatarUrl={isCompany && companyTicker ? brandfetchTickerLogoUri(companyTicker) : portraitUri}
@@ -1800,7 +1801,7 @@ export function PersonPortfolioProfileScreen({
                   ? openHoldingsHelp
                   : undefined
               }
-              helpA11yLabel="על המספרים"
+              helpA11yLabel={i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s23')}
             />
           ) : null}
 
@@ -1817,14 +1818,14 @@ export function PersonPortfolioProfileScreen({
               <View style={styles.sectionTitleRow}>
                 <Text style={[styles.sectionTitle, styles.sectionTitleInRow]}>
                   {holdingsEngine === 'congress'
-                    ? 'רשימת אחזקות'
+                    ? i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s26')
                     : kind === 'insider'
-                      ? 'אחזקות בחברות שבהן מכהן'
+                      ? i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s27')
                       : holdingsEngine === 'form4' || holdingsEngine === 'trump'
-                        ? 'פוזיציות מדווחות'
+                        ? i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s28')
                         : isCompany
-                          ? 'אחזקות אסטרטגיות'
-                          : 'אחזקות מובילות'}
+                          ? i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s29')
+                          : i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s30')}
                 </Text>
               </View>
               <UICard
@@ -1849,7 +1850,7 @@ export function PersonPortfolioProfileScreen({
                         disabled={!canOpenPosition}
                         onPress={() => openPosition(h)}
                         accessibilityRole={canOpenPosition ? 'button' : undefined}
-                        accessibilityLabel={canOpenPosition ? `פרטי אחזקה ${h.ticker}` : undefined}
+                        accessibilityLabel={canOpenPosition ? i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s31', { v0: h.ticker }) : undefined}
                       >
                         <HoldingsListRow
                           ticker={cells.ticker}
@@ -1875,7 +1876,7 @@ export function PersonPortfolioProfileScreen({
           {/* עסקאות */}
           {trades.length > 0 ? (
             <>
-              <Text style={styles.sectionTitle}>עסקאות אחרונות</Text>
+              <Text style={styles.sectionTitle}>{i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s32')}</Text>
               <UICard
                 variant="soft"
                 glassIntensity="light"
@@ -1894,7 +1895,7 @@ export function PersonPortfolioProfileScreen({
                         onPress={() => openTradeRow(t)}
                         style={styles.listRowPress}
                         accessibilityRole="button"
-                        accessibilityLabel={`פרטי עסקה ${t.ticker}`}
+                        accessibilityLabel={i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s33', { v0: t.ticker })}
                       >
                         <View style={styles.listRow}>
                           <View style={styles.leadingIcon}>
@@ -1907,7 +1908,7 @@ export function PersonPortfolioProfileScreen({
                             </Text>
                             <Text style={styles.rowMeta} numberOfLines={1}>
                               <Text style={[styles.rowMetaVerb, { color: sideColor }]}>
-                                {sell ? 'מכירה' : 'קנייה'}
+                                {sell ? i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s34') : i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s35')}
                               </Text>
                               {t.amount ? ` · ${t.amount}` : null}
                             </Text>
@@ -1987,7 +1988,7 @@ function trumpHoldingToRow(h: TrumpModelHolding, unitWeighted = false): HoldingR
     ticker: h.ticker,
     title: h.ticker,
     meta: unitWeighted
-      ? `${formatForm4Weight(h.weightPct)} · משקל שווה לעסקה`
+      ? i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s36', { v0: formatForm4Weight(h.weightPct) })
       : [formatForm4Value(h.marketValueUsd), formatForm4Weight(h.weightPct)]
           .filter(Boolean)
           .join(' · '),
@@ -2010,7 +2011,7 @@ function form4HoldingToRow(h: InsiderForm4Holding): HoldingRow {
     title: h.ticker,
     meta: [
       formatHoldingValue(h),
-      sharesLabel ? `${sharesLabel} מניות` : null,
+      sharesLabel ? i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s37', { v0: sharesLabel }) : null,
       formatHoldingWeight(h),
     ]
       .filter(Boolean)
@@ -2036,7 +2037,7 @@ function formatHoldingsListMeta(opts: {
   const parts: string[] = [];
   if (opts.fromTradesOnly && opts.tradeCount != null && opts.tradeCount > 0) {
     parts.push(
-      opts.tradeCount === 1 ? 'דיווח אחד' : `${opts.tradeCount} דיווחים`
+      opts.tradeCount === 1 ? i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s38') : i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s39', { v0: opts.tradeCount })
     );
   }
   if (opts.amountLabel?.trim()) parts.push(opts.amountLabel.trim());

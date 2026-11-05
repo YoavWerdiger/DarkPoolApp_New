@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { useRegistration } from '../../context/RegistrationContext';
@@ -20,12 +21,12 @@ const RESEND_COOLDOWN_SEC = 60;
 const RECENT_SEND_MS = 50_000;
 
 function mapSendError(code: string | null | undefined): string {
-  if (code === 'rate_limit') return 'יותר מדי בקשות. המתן כמה דקות.';
-  if (code === 'invalid_email') return 'כתובת האימייל לא תקינה. חזור אחורה ובדוק.';
+  if (code === 'rate_limit') return i18n.t('auto.screens__Auth__RegistrationEmailVerificationScreen.s1');
+  if (code === 'invalid_email') return i18n.t('auto.screens__Auth__RegistrationEmailVerificationScreen.s2');
   if (code === 'email_send_failed') {
-    return 'שליחת המייל נכשלה (SMTP/Resend). ודאו שדומיין השולח מאומת ב-Resend, או נסו שוב.';
+    return i18n.t('auto.screens__Auth__RegistrationEmailVerificationScreen.s3');
   }
-  return 'שגיאה בשליחת הקוד. נסה שוב.';
+  return i18n.t('auto.screens__Auth__RegistrationEmailVerificationScreen.s4');
 }
 
 const RegistrationEmailVerificationScreen = ({ navigation }: { navigation: any }) => {
@@ -51,7 +52,7 @@ const RegistrationEmailVerificationScreen = ({ navigation }: { navigation: any }
   const sendOtp = useCallback(
     async (opts?: { isResend?: boolean }) => {
       if (!emailHint) {
-        setError('חסרה כתובת אימייל. חזור אחורה והזן אותה שוב.');
+        setError(i18n.t('auto.screens__Auth__RegistrationEmailVerificationScreen.s5'));
         return false;
       }
       if (sendInFlight.current) return false;
@@ -92,7 +93,7 @@ const RegistrationEmailVerificationScreen = ({ navigation }: { navigation: any }
   // שליחה אוטומטית בכניסה למסך (או כשחסרה שליחה עדכנית לאותו מייל)
   useEffect(() => {
     if (!emailHint) {
-      setError('חסרה כתובת אימייל. חזור אחורה והזן אותה שוב.');
+      setError(i18n.t('auto.screens__Auth__RegistrationEmailVerificationScreen.s5'));
       return;
     }
 
@@ -139,7 +140,7 @@ const RegistrationEmailVerificationScreen = ({ navigation }: { navigation: any }
   const handleVerify = async () => {
     setError('');
     if (otp.length !== 6) {
-      setError('אנא הזן קוד בן 6 ספרות');
+      setError(i18n.t('auto.screens__Auth__RegistrationEmailVerificationScreen.s6'));
       void HapticFeedback.error();
       return;
     }
@@ -167,17 +168,17 @@ const RegistrationEmailVerificationScreen = ({ navigation }: { navigation: any }
 
       if (verifyError) {
         if (verifyError === 'invalid_otp') {
-          setError('הקוד שגוי. נסה שוב.');
+          setError(i18n.t('auto.screens__Auth__RegistrationEmailVerificationScreen.s7'));
         } else if (verifyError === 'expired_otp') {
-          setError('הקוד פג תוקף. אנא שלח קוד חדש.');
+          setError(i18n.t('auto.screens__Auth__RegistrationEmailVerificationScreen.s8'));
         } else if (verifyError === 'too_many_attempts') {
-          setError('יותר מדי ניסיונות. נסה שוב בעוד כמה דקות.');
+          setError(i18n.t('auto.screens__Auth__RegistrationEmailVerificationScreen.s9'));
         } else if (verifyError === 'network_error') {
-          setError('בעיית רשת. בדוק חיבור ונסה שוב.');
+          setError(i18n.t('auto.screens__Auth__RegistrationEmailVerificationScreen.s10'));
         } else if (verifyError === 'invalid_email') {
-          setError('כתובת האימייל לא תקינה. חזור אחורה ובדוק.');
+          setError(i18n.t('auto.screens__Auth__RegistrationEmailVerificationScreen.s2'));
         } else {
-          setError('שגיאה באימות. נסה שוב.');
+          setError(i18n.t('auto.screens__Auth__RegistrationEmailVerificationScreen.s11'));
         }
         void HapticFeedback.error();
         setOtp('');
@@ -209,11 +210,11 @@ const RegistrationEmailVerificationScreen = ({ navigation }: { navigation: any }
         void HapticFeedback.success();
         navigation.navigate('RegistrationPassword');
       } else {
-        setError('האימות נכשל. נסה שוב.');
+        setError(i18n.t('auto.screens__Auth__RegistrationEmailVerificationScreen.s12'));
         void HapticFeedback.error();
       }
     } catch {
-      setError('שגיאה באימות. נסה שוב.');
+      setError(i18n.t('auto.screens__Auth__RegistrationEmailVerificationScreen.s11'));
       void HapticFeedback.error();
     } finally {
       setLoading(false);
@@ -230,13 +231,13 @@ const RegistrationEmailVerificationScreen = ({ navigation }: { navigation: any }
 
   return (
     <CashAppScreen
-      title="אמת את האימייל שלך"
+      title={i18n.t('auto.screens__Auth__RegistrationEmailVerificationScreen.s13')}
       subtitle={
         emailHint
           ? sending
-            ? `שולחים קוד ל-${emailHint}...`
-            : `שלחנו קוד ל-${emailHint}`
-          : 'שלחנו קוד לאימייל שהזנת'
+            ? i18n.t('auto.screens__Auth__RegistrationEmailVerificationScreen.s14', { v0: emailHint })
+            : i18n.t('auto.screens__Auth__RegistrationEmailVerificationScreen.s15', { v0: emailHint })
+          : i18n.t('auto.screens__Auth__RegistrationEmailVerificationScreen.s16')
       }
       currentStep={ONBOARDING_STEPS.emailVerification}
       totalSteps={ONBOARDING_TOTAL_STEPS}
@@ -251,7 +252,7 @@ const RegistrationEmailVerificationScreen = ({ navigation }: { navigation: any }
       }}
       footer={
         <CashAppButton
-          title="אמת והמשך"
+          title={i18n.t('auto.screens__Auth__RegistrationEmailVerificationScreen.s17')}
           variant="primary"
           size="lg"
           onPress={handleVerify}
@@ -267,7 +268,7 @@ const RegistrationEmailVerificationScreen = ({ navigation }: { navigation: any }
           if (error) setError('');
         }}
         error={error}
-        hint={sending ? 'שולחים קוד אימות…' : 'הזן את הקוד בן 6 הספרות שנשלח למייל'}
+        hint={sending ? i18n.t('auto.screens__Auth__RegistrationEmailVerificationScreen.s18') : i18n.t('auto.screens__Auth__RegistrationEmailVerificationScreen.s19')}
         canResend={canResend}
         countdown={resendCountdown}
         onResend={handleResend}

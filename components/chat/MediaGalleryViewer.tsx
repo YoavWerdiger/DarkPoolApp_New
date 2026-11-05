@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 // ============================================
 // Media Gallery Viewer — MediaViewer chrome + horizontal paging
 // ============================================
@@ -120,7 +121,7 @@ function GalleryImageItem({
       {loadError ? (
         <View style={styles.mediaErrorContainer}>
           <Ionicons name="image-outline" size={64} color="rgba(255,255,255,0.3)" />
-          <Text style={styles.mediaErrorText}>לא ניתן לטעון את התמונה</Text>
+          <Text style={styles.mediaErrorText}>{i18n.t('auto.components__chat__MediaGalleryViewer.s1')}</Text>
           <TouchableOpacity
             style={styles.mediaErrorRetry}
             onPress={() => {
@@ -128,7 +129,7 @@ function GalleryImageItem({
               setIsLoading(true);
             }}
           >
-            <Text style={styles.mediaErrorRetryText}>נסה שוב</Text>
+            <Text style={styles.mediaErrorRetryText}>{i18n.t('auto.components__chat__MediaGalleryViewer.s2')}</Text>
           </TouchableOpacity>
         </View>
       ) : !displayable ? null : (
@@ -455,7 +456,7 @@ export default function MediaGalleryViewer({
           {videoError ? (
             <View style={styles.mediaErrorContainer}>
               <Ionicons name="videocam-outline" size={64} color="rgba(255,255,255,0.3)" />
-              <Text style={styles.mediaErrorText}>לא ניתן לטעון את הסרטון</Text>
+              <Text style={styles.mediaErrorText}>{i18n.t('auto.components__chat__MediaGalleryViewer.s3')}</Text>
             </View>
           ) : isDisplayableMediaUri(uri) ? (
             <Video

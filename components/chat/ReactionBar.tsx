@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React from 'react';
 import { Text, StyleSheet, View } from 'react-native';
 import { TouchableOpacity } from 'react-native-gesture-handler';
@@ -58,7 +59,7 @@ export default function ReactionBar({ onReaction, currentReaction, onOpenPicker 
             onReaction(currentReaction);
           }}
           style={[styles.emojiBtn, { backgroundColor: tokens.colors.background.tertiary }]}
-          accessibilityLabel={`הסר ריאקציה ${currentReaction}`}
+          accessibilityLabel={i18n.t('auto.components__chat__ReactionBar.s1', { v0: currentReaction })}
           accessibilityState={{ selected: true }}
         >
           <Text style={styles.emoji}>{currentReaction}</Text>
@@ -77,7 +78,7 @@ export default function ReactionBar({ onReaction, currentReaction, onOpenPicker 
             styles.plusBtn,
             { backgroundColor: tokens.colors.background.tertiary },
           ]}
-          accessibilityLabel="עוד אימוג'ים"
+          accessibilityLabel={i18n.t('auto.components__chat__ReactionBar.s2')}
           accessibilityRole="button"
         >
           <Ionicons name="add" size={20} color={tokens.colors.text.secondary} />

@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { StyleSheet, TouchableOpacity } from 'react-native';
@@ -79,14 +80,14 @@ export default function TweetsScreen() {
       onPress={openCreate}
       activeOpacity={0.88}
       accessibilityRole="button"
-      accessibilityLabel="ציוץ חדש"
+      accessibilityLabel={i18n.t('auto.screens__Tweets__TweetsScreen.s1')}
     >
       <Ionicons name="add" size={26} color={DesignTokens.colors.text.inverse} />
     </TouchableOpacity>
   );
 
   return (
-    <NewsScreenShell title="ציוצים" headerRight={createButton}>
+    <NewsScreenShell title={i18n.t('auto.screens__Tweets__TweetsScreen.s2')} headerRight={createButton}>
       <TweetsFeed handleRef={feedRef} />
       <CreateCommunityPostSheet
         visible={createOpen}

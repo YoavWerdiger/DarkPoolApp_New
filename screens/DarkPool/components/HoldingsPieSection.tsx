@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import React, { useMemo, useRef, useState } from 'react';
 import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -46,7 +47,7 @@ interface Props {
  * פילוח אחזקות — donut + מקרא (במקום אחוזים + progress bar בכל שורה).
  */
 export function HoldingsPieSection({
-  title = 'פילוח אחזקות',
+  title = i18n.t('auto.screens__DarkPool__components__HoldingsPieSection.s1'),
   holdings,
   avatarUrl,
   avatarCandidates,
@@ -104,7 +105,7 @@ export function HoldingsPieSection({
             onPress={onHelpPress}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel={helpA11yLabel ?? honestyTag ?? 'על המספרים'}
+            accessibilityLabel={helpA11yLabel ?? honestyTag ?? i18n.t('auto.screens__DarkPool__components__HoldingsPieSection.s2')}
             style={styles.helpBtn}
           >
             <Ionicons

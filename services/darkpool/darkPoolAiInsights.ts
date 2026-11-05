@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 /**
  * darkPoolAiInsights.ts
  * -----------------------------------------------------------------------------
@@ -73,29 +74,25 @@ export function buildTemplateInsight(input: AiInsightInput): string {
 
   switch (signalType) {
     case 'UNUSUAL_VOLUME':
-      return `סוחרים מוסדיים הזרימו ${premium} ב-Dark Pool של ${company} (${ticker})${
-        rel ? `, פעילות של ${rel} מהממוצע היומי` : ''
-      }. נפח חריג שמרמז על עניין מצטבר במניה.`;
+      return i18n.t('auto.services__darkpool__darkPoolAiInsights.s1', { v0: premium, v1: company, v2: ticker, v3: rel ? `, פעילות של ${rel} מהממוצע היומי` : '' });
     case 'SWEEP':
-      return `${prints || 'מספר'} הדפסות אגרסיביות נצפו ב-Dark Pool של ${company} בחלון של 5 דקות, בסך ${premium}${
-        buy && sell ? ` (קנייה ${buy} מול מכירה ${sell})` : ''
-      }. דפוס סוויפ קלאסי של מוסדי שמבצע ביצוע מהיר.`;
+      return i18n.t('auto.services__darkpool__darkPoolAiInsights.s2', { v0: prints || 'מספר', v1: company, v2: premium, v3: buy && sell ? ` (קנייה ${buy} מול מכירה ${sell})` : '' });
     case 'WHALE':
-      return `הדפסת ענק של ${premium} זוהתה ב-Dark Pool של ${company}. גודל שכזה מצביע על מעורבות של whale או הדג רחב אחד שמעמיד פוזיציה מאסיבית.`;
+      return i18n.t('auto.services__darkpool__darkPoolAiInsights.s3', { v0: premium, v1: company });
     case 'HIDDEN_ACCUMULATION': {
       const net = (metrics.premium_buy ?? 0) - (metrics.premium_sell ?? 0);
-      return `סוחרים מוסדיים צברו נטו ${formatUsd(net)} ב-${company} (${ticker}) ב-3 הימים האחרונים, מתחת לרדאר של השוק הציבורי. הצבירה השקטה הזו לרוב מקדימה תנועה חזקה.`;
+      return i18n.t('auto.services__darkpool__darkPoolAiInsights.s4', { v0: formatUsd(net), v1: company, v2: ticker });
     }
     case 'INSIDER_DARKPOOL_CONFLUENCE': {
       const days = metrics.insider_days_ago ?? 0;
-      const insider = metrics.insider_name || 'בכיר בחברה';
+      const insider = metrics.insider_name || i18n.t('auto.services__darkpool__darkPoolAiInsights.s5');
       const value = metrics.insider_value
         ? formatUsd(metrics.insider_value)
         : '';
-      return `${insider} רכש ${value} ב-${company} (${ticker}) לפני ${days} ימים, ובמקביל זוהתה צבירה של ${premium} ב-Dark Pool. כפילות הסיגנלים — מוסדי + פנים — היא אחת הקומבינציות החזקות ביותר במערכת.`;
+      return i18n.t('auto.services__darkpool__darkPoolAiInsights.s6', { v0: insider, v1: value, v2: company, v3: ticker, v4: days, v5: premium });
     }
     default:
-      return `סיגנל ${signalType} זוהה על ${company} (${ticker}) — premium ${premium}.`;
+      return i18n.t('auto.services__darkpool__darkPoolAiInsights.s7', { v0: signalType, v1: company, v2: ticker, v3: premium });
   }
 }
 
@@ -161,7 +158,7 @@ function buildPrompt(input: AiInsightInput): string {
   ]
     .filter(Boolean)
     .join('\n');
-  return `סכם בעברית את הסיגנל הבא לסוחרים פרטיים, משפט אחד:\n${facts}`;
+  return i18n.t('auto.services__darkpool__darkPoolAiInsights.s8', { v0: facts });
 }
 
 // ---------------------------------------------------------------------------

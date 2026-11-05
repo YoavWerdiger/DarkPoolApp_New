@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 // ============================================
 // Chat Validation Utilities
 // ============================================
@@ -80,7 +81,7 @@ export function checkRateLimit(
       allowed: false,
       error: {
         code: 'RATE_LIMIT_EXCEEDED',
-        message: `חרגת ממגבלת השליחה. נסה שוב בעוד ${Math.ceil((entry.resetTime - now) / 1000)} שניות`,
+        message: i18n.t('auto.services__chat__chatValidation.s1', { v0: Math.ceil((entry.resetTime - now) / 1000) }),
       },
     };
   }
@@ -95,7 +96,7 @@ export function checkRateLimit(
 
 export function validateMessageContent(content?: string): { valid: boolean; error?: ChatError } {
   if (!content || content.trim().length === 0) {
-    return { valid: false, error: { code: 'EMPTY_MESSAGE', message: 'הודעה לא יכולה להיות ריקה' } };
+    return { valid: false, error: { code: 'EMPTY_MESSAGE', message: i18n.t('auto.services__chat__chatValidation.s2') } };
   }
 
   if (content.length > MAX_MESSAGE_LENGTH) {
@@ -103,7 +104,7 @@ export function validateMessageContent(content?: string): { valid: boolean; erro
       valid: false,
       error: {
         code: 'MESSAGE_TOO_LONG',
-        message: `הודעה לא יכולה להיות ארוכה מ-${MAX_MESSAGE_LENGTH} תווים`,
+        message: i18n.t('auto.services__chat__chatValidation.s3', { v0: MAX_MESSAGE_LENGTH }),
       },
     };
   }
@@ -119,7 +120,7 @@ export function validateMessageContent(content?: string): { valid: boolean; erro
     if (pattern.test(content)) {
       return {
         valid: false,
-        error: { code: 'INVALID_CONTENT', message: 'התוכן מכיל תווים לא מורשים' },
+        error: { code: 'INVALID_CONTENT', message: i18n.t('auto.services__chat__chatValidation.s4') },
       };
     }
   }
@@ -144,7 +145,7 @@ export function validateMediaType(mediaType: string, messageType: string): { val
       allowedTypes = ALLOWED_DOCUMENT_TYPES;
       break;
     default:
-      return { valid: false, error: { code: 'INVALID_MESSAGE_TYPE', message: 'סוג הודעה לא תקין' } };
+      return { valid: false, error: { code: 'INVALID_MESSAGE_TYPE', message: i18n.t('auto.services__chat__chatValidation.s5') } };
   }
 
   if (!allowedTypes.includes(mediaType)) {
@@ -152,7 +153,7 @@ export function validateMediaType(mediaType: string, messageType: string): { val
       valid: false,
       error: {
         code: 'INVALID_MEDIA_TYPE',
-        message: `סוג קובץ לא נתמך. סוגים מותרים: ${allowedTypes.join(', ')}`,
+        message: i18n.t('auto.services__chat__chatValidation.s6', { v0: allowedTypes.join(', ') }),
       },
     };
   }
@@ -166,7 +167,7 @@ export function validateMediaSize(size: number): { valid: boolean; error?: ChatE
       valid: false,
       error: {
         code: 'FILE_TOO_LARGE',
-        message: `קובץ גדול מדי. גודל מקסימלי: ${MAX_MEDIA_SIZE / (1024 * 1024)}MB`,
+        message: i18n.t('auto.services__chat__chatValidation.s7', { v0: MAX_MEDIA_SIZE / (1024 * 1024) }),
       },
     };
   }
@@ -176,7 +177,7 @@ export function validateMediaSize(size: number): { valid: boolean; error?: ChatE
 
 export function validateFileName(fileName: string): { valid: boolean; error?: ChatError } {
   if (!fileName || fileName.trim().length === 0) {
-    return { valid: false, error: { code: 'INVALID_FILE_NAME', message: 'שם קובץ לא תקין' } };
+    return { valid: false, error: { code: 'INVALID_FILE_NAME', message: i18n.t('auto.services__chat__chatValidation.s8') } };
   }
 
   if (fileName.length > MAX_FILE_NAME_LENGTH) {
@@ -184,7 +185,7 @@ export function validateFileName(fileName: string): { valid: boolean; error?: Ch
       valid: false,
       error: {
         code: 'FILE_NAME_TOO_LONG',
-        message: `שם קובץ ארוך מדי. מקסימום ${MAX_FILE_NAME_LENGTH} תווים`,
+        message: i18n.t('auto.services__chat__chatValidation.s9', { v0: MAX_FILE_NAME_LENGTH }),
       },
     };
   }
@@ -194,7 +195,7 @@ export function validateFileName(fileName: string): { valid: boolean; error?: Ch
   if (dangerousChars.test(fileName)) {
     return {
       valid: false,
-      error: { code: 'INVALID_FILE_NAME', message: 'שם קובץ מכיל תווים לא מורשים' },
+      error: { code: 'INVALID_FILE_NAME', message: i18n.t('auto.services__chat__chatValidation.s10') },
     };
   }
 
@@ -227,13 +228,13 @@ export function sanitizeFileName(fileName: string): string {
 
 export function validateGroupId(groupId: string): { valid: boolean; error?: ChatError } {
   if (!groupId || typeof groupId !== 'string') {
-    return { valid: false, error: { code: 'INVALID_GROUP_ID', message: 'מזהה קבוצה לא תקין' } };
+    return { valid: false, error: { code: 'INVALID_GROUP_ID', message: i18n.t('auto.services__chat__chatValidation.s11') } };
   }
 
   // UUID validation
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!uuidRegex.test(groupId)) {
-    return { valid: false, error: { code: 'INVALID_GROUP_ID', message: 'מזהה קבוצה לא תקין' } };
+    return { valid: false, error: { code: 'INVALID_GROUP_ID', message: i18n.t('auto.services__chat__chatValidation.s11') } };
   }
 
   return { valid: true };
@@ -245,13 +246,13 @@ export function validateGroupId(groupId: string): { valid: boolean; error?: Chat
 
 export function validateUserId(userId: string): { valid: boolean; error?: ChatError } {
   if (!userId || typeof userId !== 'string') {
-    return { valid: false, error: { code: 'INVALID_USER_ID', message: 'מזהה משתמש לא תקין' } };
+    return { valid: false, error: { code: 'INVALID_USER_ID', message: i18n.t('auto.services__chat__chatValidation.s12') } };
   }
 
   // UUID validation
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!uuidRegex.test(userId)) {
-    return { valid: false, error: { code: 'INVALID_USER_ID', message: 'מזהה משתמש לא תקין' } };
+    return { valid: false, error: { code: 'INVALID_USER_ID', message: i18n.t('auto.services__chat__chatValidation.s12') } };
   }
 
   return { valid: true };
@@ -262,15 +263,15 @@ const MAX_EMOJI_LENGTH = 10;
 
 export function validateEmoji(emoji: string): { valid: boolean; error?: ChatError } {
   if (!emoji || typeof emoji !== 'string') {
-    return { valid: false, error: { code: 'INVALID_EMOJI', message: 'אמוג\'י לא תקין' } };
+    return { valid: false, error: { code: 'INVALID_EMOJI', message: i18n.t('auto.services__chat__chatValidation.s13') } };
   }
 
   if (emoji.length > MAX_EMOJI_LENGTH) {
-    return { valid: false, error: { code: 'INVALID_EMOJI', message: 'אמוג\'י ארוך מדי' } };
+    return { valid: false, error: { code: 'INVALID_EMOJI', message: i18n.t('auto.services__chat__chatValidation.s14') } };
   }
 
   if (!EMOJI_REGEX.test(emoji)) {
-    return { valid: false, error: { code: 'INVALID_EMOJI', message: 'רק אמוג\'י מותר כריאקציה' } };
+    return { valid: false, error: { code: 'INVALID_EMOJI', message: i18n.t('auto.services__chat__chatValidation.s15') } };
   }
 
   return { valid: true };

@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useCallback, useRef } from 'react';
@@ -89,9 +90,9 @@ export const CourseDetailScreen: React.FC = () => {
 
     if (course.access === 'paid') {
       legacyAlert(
-        'קורס בתשלום',
-        'קורס זה דורש תשלום. התכונה תהיה זמינה בקרוב.',
-        [{ text: 'אישור' }]
+        i18n.t('auto.screens__Learning__CourseDetailScreen.s1'),
+        i18n.t('auto.screens__Learning__CourseDetailScreen.s2'),
+        [{ text: i18n.t('auto.screens__Learning__CourseDetailScreen.s3') }]
       );
       return;
     }
@@ -99,15 +100,15 @@ export const CourseDetailScreen: React.FC = () => {
     try {
       await enrollMutation.mutateAsync(course.id);
       legacyAlert(
-        'הצלחה!',
-        'נרשמת בהצלחה לקורס',
-        [{ text: 'אישור' }]
+        i18n.t('auto.screens__Learning__CourseDetailScreen.s4'),
+        i18n.t('auto.screens__Learning__CourseDetailScreen.s5'),
+        [{ text: i18n.t('auto.screens__Learning__CourseDetailScreen.s3') }]
       );
     } catch (error) {
       legacyAlert(
-        'שגיאה',
-        'לא ניתן להירשם לקורס כרגע. נסה שוב מאוחר יותר.',
-        [{ text: 'אישור' }]
+        i18n.t('auto.screens__Learning__CourseDetailScreen.s6'),
+        i18n.t('auto.screens__Learning__CourseDetailScreen.s7'),
+        [{ text: i18n.t('auto.screens__Learning__CourseDetailScreen.s3') }]
       );
     }
   }, [course, enrollMutation]);
@@ -127,7 +128,7 @@ export const CourseDetailScreen: React.FC = () => {
         <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-            <Text style={styles.loadingText}>טוען קורס...</Text>
+            <Text style={styles.loadingText}>{i18n.t('auto.screens__Learning__CourseDetailScreen.s8')}</Text>
           </View>
         </RNSafeAreaView>
       </ScreenChrome>
@@ -140,9 +141,9 @@ export const CourseDetailScreen: React.FC = () => {
         <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
           <View style={styles.errorContainer}>
             <Text style={styles.errorIcon}>⚠️</Text>
-            <Text style={styles.errorTitle}>שגיאה בטעינת הקורס</Text>
+            <Text style={styles.errorTitle}>{i18n.t('auto.screens__Learning__CourseDetailScreen.s9')}</Text>
             <Text style={styles.errorMessage}>
-              {error?.message || 'הקורס לא נמצא'}
+              {error?.message || i18n.t('auto.screens__Learning__CourseDetailScreen.s10')}
             </Text>
           </View>
         </RNSafeAreaView>
@@ -222,7 +223,7 @@ export const CourseDetailScreen: React.FC = () => {
             {isEnrolled && (
               <View style={styles.progressContainer}>
                 <View style={styles.progressHeader}>
-                  <Text style={styles.progressTitle}>התקדמות</Text>
+                  <Text style={styles.progressTitle}>{i18n.t('auto.screens__Learning__CourseDetailScreen.s11')}</Text>
                   <Text style={styles.progressPercentage}>
                     {Math.round(progressPercentage)}%
                   </Text>
@@ -241,7 +242,7 @@ export const CourseDetailScreen: React.FC = () => {
             {/* Description */}
             {course.description && (
               <View style={styles.descriptionContainer}>
-                <Text style={styles.descriptionTitle}>תיאור הקורס</Text>
+                <Text style={styles.descriptionTitle}>{i18n.t('auto.screens__Learning__CourseDetailScreen.s12')}</Text>
                 <Text style={styles.description}>{course.description}</Text>
               </View>
             )}
@@ -249,7 +250,7 @@ export const CourseDetailScreen: React.FC = () => {
             {/* Tags */}
             {course.tags && course.tags.length > 0 && (
               <View style={styles.tagsContainer}>
-                <Text style={styles.tagsTitle}>תגיות</Text>
+                <Text style={styles.tagsTitle}>{i18n.t('auto.screens__Learning__CourseDetailScreen.s13')}</Text>
                 <View style={styles.tagsRow}>
                   {course.tags.map((tag, index) => (
                     <View key={index} style={styles.tag}>
@@ -266,7 +267,7 @@ export const CourseDetailScreen: React.FC = () => {
           <View style={{ marginBottom: APP_LAYOUT.sectionHeaderToContent }}>
             {isEnrolled ? (
               <UIButton
-                title={lastLessonId ? 'המשך למידה' : 'התחל'}
+                title={lastLessonId ? i18n.t('auto.screens__Learning__CourseDetailScreen.s14') : i18n.t('auto.screens__Learning__CourseDetailScreen.s15')}
                 variant="primary"
                 fullWidth
                 onPress={handleContinueLearning}
@@ -275,10 +276,10 @@ export const CourseDetailScreen: React.FC = () => {
               <UIButton
                 title={
                   course.access === 'free'
-                    ? 'הירשם בחינם'
+                    ? i18n.t('auto.screens__Learning__CourseDetailScreen.s16')
                     : course.access === 'registration'
-                      ? 'הירשם לקורס'
-                      : 'קנה קורס'
+                      ? i18n.t('auto.screens__Learning__CourseDetailScreen.s17')
+                      : i18n.t('auto.screens__Learning__CourseDetailScreen.s18')
                 }
                 variant="primary"
                 fullWidth
@@ -292,7 +293,7 @@ export const CourseDetailScreen: React.FC = () => {
           {/* Modules */}
           {course.modules && course.modules.length > 0 && courseId !== 'david-training-course' && (
             <View style={{ marginBottom: DesignTokens.spacing.lg }}>
-              <Text style={styles.modulesTitle}>תוכן הקורס</Text>
+              <Text style={styles.modulesTitle}>{i18n.t('auto.screens__Learning__CourseDetailScreen.s19')}</Text>
             {course.modules.map((module, moduleIndex) => {
               // חישוב האינדקס ההתחלתי של השיעורים במודול זה
               let lessonStartIndex = 0;
@@ -320,7 +321,7 @@ export const CourseDetailScreen: React.FC = () => {
           {/* Lessons directly (for courses without modules like david-training-course) */}
           {course.lessons && course.lessons.length > 0 && (courseId === 'david-training-course' || !course.modules || course.modules.length === 0) && (
             <View style={{ marginBottom: DesignTokens.spacing.lg }}>
-              <Text style={styles.modulesTitle}>תוכן הקורס</Text>
+              <Text style={styles.modulesTitle}>{i18n.t('auto.screens__Learning__CourseDetailScreen.s19')}</Text>
             {course.lessons.map((lesson, index) => (
               <LessonRow
                 key={lesson.id}

@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
@@ -59,11 +60,11 @@ import { legacyAlert } from '../../utils/appDialog';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 
 const FILTERS: { key: AdminUserFilter; label: string }[] = [
-  { key: 'all', label: 'הכל' },
-  { key: 'premium', label: 'פרימיום' },
-  { key: 'muted', label: 'מושתקים' },
-  { key: 'suspended', label: 'מושעים' },
-  { key: 'verified', label: 'מאומתים' },
+  { key: 'all', label: i18n.t('auto.screens__Admin__AdminUsersScreen.s1') },
+  { key: 'premium', label: i18n.t('auto.screens__Admin__AdminUsersScreen.s2') },
+  { key: 'muted', label: i18n.t('auto.screens__Admin__AdminUsersScreen.s3') },
+  { key: 'suspended', label: i18n.t('auto.screens__Admin__AdminUsersScreen.s4') },
+  { key: 'verified', label: i18n.t('auto.screens__Admin__AdminUsersScreen.s5') },
 ];
 
 /** ותק אפקטיבי — כמו get_user_badges: null כשאין תשלום ואין התאמה חיובית */
@@ -91,14 +92,14 @@ export default function AdminUsersScreen({ navigation }: any) {
     try {
       const res = await adminService.sendPush({ title, body, audience: 'custom', userIds: [user.id] });
       if (res.tokens === 0) {
-        legacyAlert('לא נשלח', 'למשתמש אין מכשיר רשום להתראות (לא אישר התראות או לא התחבר מהאפליקציה).');
+        legacyAlert(i18n.t('auto.screens__Admin__AdminUsersScreen.s6'), i18n.t('auto.screens__Admin__AdminUsersScreen.s7'));
         return false;
       }
       void HapticFeedback.success();
-      legacyAlert('נשלח', res.sent > 0 ? `הפוש נשלח (${res.sent} מכשירים)` : 'השליחה נכשלה בכל המכשירים');
+      legacyAlert(i18n.t('auto.screens__Admin__AdminUsersScreen.s8'), res.sent > 0 ? i18n.t('auto.screens__Admin__AdminUsersScreen.s9', { v0: res.sent }) : i18n.t('auto.screens__Admin__AdminUsersScreen.s10'));
       return res.sent > 0;
     } catch (e) {
-      legacyAlert('שגיאה', e instanceof Error ? e.message : 'שליחה נכשלה');
+      legacyAlert(i18n.t('auto.screens__Admin__AdminUsersScreen.s11'), e instanceof Error ? e.message : i18n.t('auto.screens__Admin__AdminUsersScreen.s12'));
       return false;
     } finally {
       setBusyId(null);
@@ -135,7 +136,7 @@ export default function AdminUsersScreen({ navigation }: any) {
         void loadBadgeDetails(res.users.map((u) => u.id));
       }
     } catch (e) {
-      legacyAlert('שגיאה', e instanceof Error ? e.message : 'טעינת משתמשים נכשלה');
+      legacyAlert(i18n.t('auto.screens__Admin__AdminUsersScreen.s11'), e instanceof Error ? e.message : i18n.t('auto.screens__Admin__AdminUsersScreen.s13'));
     } finally {
       setLoading(false);
     }
@@ -165,7 +166,7 @@ export default function AdminUsersScreen({ navigation }: any) {
       void HapticFeedback.success();
     } catch (e) {
       void HapticFeedback.error();
-      legacyAlert('שגיאה', e instanceof Error ? e.message : 'פעולה נכשלה');
+      legacyAlert(i18n.t('auto.screens__Admin__AdminUsersScreen.s11'), e instanceof Error ? e.message : i18n.t('auto.screens__Admin__AdminUsersScreen.s14'));
     } finally {
       setBusyId(null);
     }
@@ -184,7 +185,7 @@ export default function AdminUsersScreen({ navigation }: any) {
       void HapticFeedback.success();
     } catch (e) {
       void HapticFeedback.error();
-      legacyAlert('שגיאה', e instanceof Error ? e.message : 'פעולה נכשלה');
+      legacyAlert(i18n.t('auto.screens__Admin__AdminUsersScreen.s11'), e instanceof Error ? e.message : i18n.t('auto.screens__Admin__AdminUsersScreen.s14'));
     } finally {
       setBusyId(null);
     }
@@ -196,27 +197,27 @@ export default function AdminUsersScreen({ navigation }: any) {
   const confirmMute = (user: AdminUserRow) => {
     const next = !user.is_muted;
     legacyAlert(
-      next ? 'השתקת משתמש' : 'ביטול השתקה',
+      next ? i18n.t('auto.screens__Admin__AdminUsersScreen.s15') : i18n.t('auto.screens__Admin__AdminUsersScreen.s16'),
       next
-        ? `להשתיק את ${user.display_name || user.full_name || user.email}?`
-        : `לבטל השתקה עבור ${user.display_name || user.full_name || user.email}?`,
+        ? i18n.t('auto.screens__Admin__AdminUsersScreen.s17', { v0: user.display_name || user.full_name || user.email })
+        : i18n.t('auto.screens__Admin__AdminUsersScreen.s18', { v0: user.display_name || user.full_name || user.email }),
       [
-        { text: 'ביטול', style: 'cancel' },
+        { text: i18n.t('auto.screens__Admin__AdminUsersScreen.s19'), style: 'cancel' },
         {
-          text: next ? 'השתק' : 'בטל השתקה',
+          text: next ? i18n.t('auto.screens__Admin__AdminUsersScreen.s20') : i18n.t('auto.screens__Admin__AdminUsersScreen.s21'),
           style: next ? 'destructive' : 'default',
           onPress: async () => {
             setBusyId(user.id);
             try {
-              await adminService.setMute(user.id, next, next ? 'השתקה ממנהל' : undefined);
+              await adminService.setMute(user.id, next, next ? i18n.t('auto.screens__Admin__AdminUsersScreen.s22') : undefined);
               patchUserLocally(user.id, {
                 is_muted: next,
-                muted_reason: next ? 'השתקה ממנהל' : null,
+                muted_reason: next ? i18n.t('auto.screens__Admin__AdminUsersScreen.s22') : null,
               });
               void HapticFeedback.success();
               await load({ silent: true });
             } catch (e) {
-              legacyAlert('שגיאה', e instanceof Error ? e.message : 'פעולה נכשלה');
+              legacyAlert(i18n.t('auto.screens__Admin__AdminUsersScreen.s11'), e instanceof Error ? e.message : i18n.t('auto.screens__Admin__AdminUsersScreen.s14'));
             } finally {
               setBusyId(null);
             }
@@ -229,27 +230,27 @@ export default function AdminUsersScreen({ navigation }: any) {
   const confirmSuspend = (user: AdminUserRow) => {
     const next = !user.is_suspended;
     legacyAlert(
-      next ? 'השעיית משתמש' : 'ביטול השעיה',
+      next ? i18n.t('auto.screens__Admin__AdminUsersScreen.s23') : i18n.t('auto.screens__Admin__AdminUsersScreen.s24'),
       next
-        ? `להשעות את ${user.display_name || user.full_name || user.email}?`
-        : `לבטל השעיה עבור ${user.display_name || user.full_name || user.email}?`,
+        ? i18n.t('auto.screens__Admin__AdminUsersScreen.s25', { v0: user.display_name || user.full_name || user.email })
+        : i18n.t('auto.screens__Admin__AdminUsersScreen.s26', { v0: user.display_name || user.full_name || user.email }),
       [
-        { text: 'ביטול', style: 'cancel' },
+        { text: i18n.t('auto.screens__Admin__AdminUsersScreen.s19'), style: 'cancel' },
         {
-          text: next ? 'השעה' : 'בטל השעיה',
+          text: next ? i18n.t('auto.screens__Admin__AdminUsersScreen.s27') : i18n.t('auto.screens__Admin__AdminUsersScreen.s28'),
           style: next ? 'destructive' : 'default',
           onPress: async () => {
             setBusyId(user.id);
             try {
-              await adminService.setSuspend(user.id, next, next ? 'השעיה ממנהל' : undefined);
+              await adminService.setSuspend(user.id, next, next ? i18n.t('auto.screens__Admin__AdminUsersScreen.s29') : undefined);
               patchUserLocally(user.id, {
                 is_suspended: next,
-                suspended_reason: next ? 'השעיה ממנהל' : null,
+                suspended_reason: next ? i18n.t('auto.screens__Admin__AdminUsersScreen.s29') : null,
               });
               void HapticFeedback.success();
               await load({ silent: true });
             } catch (e) {
-              legacyAlert('שגיאה', e instanceof Error ? e.message : 'פעולה נכשלה');
+              legacyAlert(i18n.t('auto.screens__Admin__AdminUsersScreen.s11'), e instanceof Error ? e.message : i18n.t('auto.screens__Admin__AdminUsersScreen.s14'));
             } finally {
               setBusyId(null);
             }
@@ -262,14 +263,14 @@ export default function AdminUsersScreen({ navigation }: any) {
   const confirmPremium = (user: AdminUserRow) => {
     const grant = !isPremiumRole(user.subscription_role);
     legacyAlert(
-      grant ? 'הענקת פרימיום' : 'הסרת פרימיום',
+      grant ? i18n.t('auto.screens__Admin__AdminUsersScreen.s30') : i18n.t('auto.screens__Admin__AdminUsersScreen.s31'),
       grant
-        ? `להעניק פרימיום ל־${user.display_name || user.full_name || user.email}?`
-        : `להסיר פרימיום מ־${user.display_name || user.full_name || user.email}?`,
+        ? i18n.t('auto.screens__Admin__AdminUsersScreen.s32', { v0: user.display_name || user.full_name || user.email })
+        : i18n.t('auto.screens__Admin__AdminUsersScreen.s33', { v0: user.display_name || user.full_name || user.email }),
       [
-        { text: 'ביטול', style: 'cancel' },
+        { text: i18n.t('auto.screens__Admin__AdminUsersScreen.s19'), style: 'cancel' },
         {
-          text: grant ? 'הענק' : 'הסר',
+          text: grant ? i18n.t('auto.screens__Admin__AdminUsersScreen.s34') : i18n.t('auto.screens__Admin__AdminUsersScreen.s35'),
           style: grant ? 'default' : 'destructive',
           onPress: async () => {
             setBusyId(user.id);
@@ -282,7 +283,7 @@ export default function AdminUsersScreen({ navigation }: any) {
               void HapticFeedback.success();
               await load({ silent: true });
             } catch (e) {
-              legacyAlert('שגיאה', e instanceof Error ? e.message : 'פעולה נכשלה');
+              legacyAlert(i18n.t('auto.screens__Admin__AdminUsersScreen.s11'), e instanceof Error ? e.message : i18n.t('auto.screens__Admin__AdminUsersScreen.s14'));
             } finally {
               setBusyId(null);
             }
@@ -298,14 +299,14 @@ export default function AdminUsersScreen({ navigation }: any) {
     const makeAdmin = role !== 'admin';
     const who = user.display_name || user.full_name || user.email;
     legacyAlert(
-      makeAdmin ? 'הרשאת מנהל' : 'הסרת הרשאת מנהל',
+      makeAdmin ? i18n.t('auto.screens__Admin__AdminUsersScreen.s36') : i18n.t('auto.screens__Admin__AdminUsersScreen.s37'),
       makeAdmin
-        ? `לתת ל־${who} גישה לפאנל המנהלים ולכל פעולות הניהול?`
-        : `להסיר מ־${who} את הרשאות הניהול?`,
+        ? i18n.t('auto.screens__Admin__AdminUsersScreen.s38', { v0: who })
+        : i18n.t('auto.screens__Admin__AdminUsersScreen.s39', { v0: who }),
       [
-        { text: 'ביטול', style: 'cancel' },
+        { text: i18n.t('auto.screens__Admin__AdminUsersScreen.s19'), style: 'cancel' },
         {
-          text: makeAdmin ? 'הפוך למנהל' : 'הסר',
+          text: makeAdmin ? i18n.t('auto.screens__Admin__AdminUsersScreen.s40') : i18n.t('auto.screens__Admin__AdminUsersScreen.s35'),
           style: makeAdmin ? 'default' : 'destructive',
           onPress: async () => {
             setBusyId(user.id);
@@ -315,7 +316,7 @@ export default function AdminUsersScreen({ navigation }: any) {
               void HapticFeedback.success();
             } catch (e) {
               void HapticFeedback.error();
-              legacyAlert('שגיאה', e instanceof Error ? e.message : 'פעולה נכשלה');
+              legacyAlert(i18n.t('auto.screens__Admin__AdminUsersScreen.s11'), e instanceof Error ? e.message : i18n.t('auto.screens__Admin__AdminUsersScreen.s14'));
             } finally {
               setBusyId(null);
             }
@@ -326,23 +327,23 @@ export default function AdminUsersScreen({ navigation }: any) {
   };
 
   const confirmResetPassword = (user: AdminUserRow) => {
-    legacyAlert('איפוס סיסמה', `ליצור קישור איפוס עבור ${user.email}?`, [
-      { text: 'ביטול', style: 'cancel' },
+    legacyAlert(i18n.t('auto.screens__Admin__AdminUsersScreen.s41'), i18n.t('auto.screens__Admin__AdminUsersScreen.s42', { v0: user.email }), [
+      { text: i18n.t('auto.screens__Admin__AdminUsersScreen.s19'), style: 'cancel' },
       {
-        text: 'צור קישור',
+        text: i18n.t('auto.screens__Admin__AdminUsersScreen.s43'),
         onPress: async () => {
           setBusyId(user.id);
           try {
             const res = await adminService.resetPassword(user.id);
             void HapticFeedback.success();
             legacyAlert(
-              'קישור מוכן',
+              i18n.t('auto.screens__Admin__AdminUsersScreen.s44'),
               res.actionLink
-                ? `נשלח ליומן אדמין. קישור:\n${res.actionLink}`
-                : `נוצר קישור ל־${res.email}`,
+                ? i18n.t('auto.screens__Admin__AdminUsersScreen.s45', { v0: res.actionLink })
+                : i18n.t('auto.screens__Admin__AdminUsersScreen.s46', { v0: res.email }),
             );
           } catch (e) {
-            legacyAlert('שגיאה', e instanceof Error ? e.message : 'פעולה נכשלה');
+            legacyAlert(i18n.t('auto.screens__Admin__AdminUsersScreen.s11'), e instanceof Error ? e.message : i18n.t('auto.screens__Admin__AdminUsersScreen.s14'));
           } finally {
             setBusyId(null);
           }
@@ -353,12 +354,12 @@ export default function AdminUsersScreen({ navigation }: any) {
 
   const confirmDelete = (user: AdminUserRow) => {
     legacyAlert(
-      'מחיקת משתמש',
-      `למחוק לצמיתות את ${user.display_name || user.full_name || user.email}? פעולה בלתי הפיכה.`,
+      i18n.t('auto.screens__Admin__AdminUsersScreen.s47'),
+      i18n.t('auto.screens__Admin__AdminUsersScreen.s48', { v0: user.display_name || user.full_name || user.email }),
       [
-        { text: 'ביטול', style: 'cancel' },
+        { text: i18n.t('auto.screens__Admin__AdminUsersScreen.s19'), style: 'cancel' },
         {
-          text: 'מחק',
+          text: i18n.t('auto.screens__Admin__AdminUsersScreen.s49'),
           style: 'destructive',
           onPress: async () => {
             setBusyId(user.id);
@@ -367,7 +368,7 @@ export default function AdminUsersScreen({ navigation }: any) {
               void HapticFeedback.warning();
               await load({ silent: true });
             } catch (e) {
-              legacyAlert('שגיאה', e instanceof Error ? e.message : 'מחיקה נכשלה');
+              legacyAlert(i18n.t('auto.screens__Admin__AdminUsersScreen.s11'), e instanceof Error ? e.message : i18n.t('auto.screens__Admin__AdminUsersScreen.s50'));
             } finally {
               setBusyId(null);
             }
@@ -381,14 +382,14 @@ export default function AdminUsersScreen({ navigation }: any) {
     switch (role) {
       case 'admin':
       case 'super_admin':
-        return 'מנהל';
+        return i18n.t('auto.screens__Admin__AdminUsersScreen.s51');
       case 'vip_user':
         return 'VIP';
       case 'premium_user':
       case 'plus_user':
-        return 'פרימיום';
+        return i18n.t('auto.screens__Admin__AdminUsersScreen.s2');
       default:
-        return 'חינמי';
+        return i18n.t('auto.screens__Admin__AdminUsersScreen.s52');
     }
   };
 
@@ -410,7 +411,7 @@ export default function AdminUsersScreen({ navigation }: any) {
   return (
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
       <ChatSubScreenHeader
-        title="ניהול משתמשים"
+        title={i18n.t('auto.screens__Admin__AdminUsersScreen.s53')}
         onBack={() => {
           void HapticFeedback.impactLight();
           navigation.goBack();
@@ -428,7 +429,7 @@ export default function AdminUsersScreen({ navigation }: any) {
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder="חיפוש בשם / אימייל / טלפון"
+            placeholder={i18n.t('auto.screens__Admin__AdminUsersScreen.s54')}
             placeholderTextColor={tokens.colors.text.tertiary}
             style={[styles.searchInput, { color: tokens.colors.text.primary }]}
             autoCorrect={false}
@@ -450,12 +451,11 @@ export default function AdminUsersScreen({ navigation }: any) {
         </View>
 
         <Text style={[styles.countText, { color: tokens.colors.text.primary }]}>
-          {total} משתמשים
-        </Text>
+          {i18n.t('auto.screens__Admin__AdminUsersScreen.s55', { v0: total })}</Text>
       </View>
 
       {loading ? (
-        <AdminLoadingState label="טוען משתמשים..." />
+        <AdminLoadingState label={i18n.t('auto.screens__Admin__AdminUsersScreen.s56')} />
       ) : (
         <FlatList
           data={users}
@@ -468,8 +468,8 @@ export default function AdminUsersScreen({ navigation }: any) {
           }}
           ListEmptyComponent={
             <AdminEmptyState
-              title="לא נמצאו משתמשים"
-              subtitle="נסו לשנות את החיפוש או הסינון"
+              title={i18n.t('auto.screens__Admin__AdminUsersScreen.s57')}
+              subtitle={i18n.t('auto.screens__Admin__AdminUsersScreen.s58')}
             />
           }
           renderItem={({ item }) => (
@@ -577,7 +577,7 @@ function UserCard({
 }) {
   const tokens = useDesignTokens();
   const { isDarkMode } = useTheme();
-  const name = item.display_name || item.full_name || 'משתמש';
+  const name = item.display_name || item.full_name || i18n.t('auto.screens__Admin__AdminUsersScreen.s59');
   const introRows = formatIntroDataRows(item.intro_data);
   const paidDays = effectivePaidDays(badges);
   const rank = rankForPaidDays(paidDays);
@@ -626,9 +626,9 @@ function UserCard({
           </Text>
           <View style={styles.badgeRow}>
             <AdminBadge label={roleLabel} color={roleColor} />
-            {item.is_muted ? <AdminBadge label="מושתק" color={tokens.colors.danger.main} /> : null}
+            {item.is_muted ? <AdminBadge label={i18n.t('auto.screens__Admin__AdminUsersScreen.s60')} color={tokens.colors.danger.main} /> : null}
             {item.is_suspended ? (
-              <AdminBadge label="מושעה" color={tokens.colors.warning.main} />
+              <AdminBadge label={i18n.t('auto.screens__Admin__AdminUsersScreen.s61')} color={tokens.colors.warning.main} />
             ) : null}
             {busy ? <ActivityIndicator size="small" color={tokens.colors.text.secondary} /> : null}
           </View>
@@ -640,7 +640,7 @@ function UserCard({
       {introRows.length > 0 ? (
         <>
           <ProfileMenuRow
-            title="שאלון קליטה"
+            title={i18n.t('auto.screens__Admin__AdminUsersScreen.s62')}
             icon={ClipboardList}
             showDivider={!introOpen}
             onPress={onToggleIntro}
@@ -668,7 +668,7 @@ function UserCard({
         </>
       ) : null}
       <SettingsSwitchRow
-        title="משתמש מאומת"
+        title={i18n.t('auto.screens__Admin__AdminUsersScreen.s63')}
         value={!!badges?.is_verified}
         disabled={busy || isSelf || !badges}
         onValueChange={onToggleVerified}
@@ -676,8 +676,8 @@ function UserCard({
       <ProfileMenuRow
         title={
           paidDays != null
-            ? `ותק מנוי · ${formatDaysCount(paidDays)}`
-            : 'ותק מנוי · ללא'
+            ? i18n.t('auto.screens__Admin__AdminUsersScreen.s64', { v0: formatDaysCount(paidDays) })
+            : i18n.t('auto.screens__Admin__AdminUsersScreen.s65')
         }
         icon={Award}
         showDivider={!tenureOpen}
@@ -687,15 +687,13 @@ function UserCard({
         <View style={styles.tenureBox}>
           <Text style={[styles.introValue, { color: tokens.colors.text.secondary, marginTop: 0 }]}>
             {badges?.computed_days != null
-              ? `מחושב מתשלומים: ${formatDaysCount(badges.computed_days)}`
-              : 'אין תשלומים במערכת'}
+              ? i18n.t('auto.screens__Admin__AdminUsersScreen.s66', { v0: formatDaysCount(badges.computed_days) })
+              : i18n.t('auto.screens__Admin__AdminUsersScreen.s67')}
           </Text>
-          <Text style={[styles.introField, { color: tokens.colors.text.primary, marginTop: 10 }]}>
-            התאמה ידנית (ימים, אפשר שלילי)
-          </Text>
+          <Text style={[styles.introField, { color: tokens.colors.text.primary, marginTop: 10 }]}>{i18n.t('auto.screens__Admin__AdminUsersScreen.s68')}</Text>
           <View style={styles.tenureInputRow}>
             <UIButton
-              title="שמור"
+              title={i18n.t('auto.screens__Admin__AdminUsersScreen.s69')}
               variant="primary"
               size="sm"
               disabled={busy || parsedAdjust == null || parsedAdjust === (badges?.adjustment_days ?? 0)}
@@ -718,30 +716,30 @@ function UserCard({
       ) : null}
       {tenureOpen ? <View style={[styles.rule, { backgroundColor: tokens.colors.border.divider }]} /> : null}
       <ProfileMenuRow
-        title={item.is_muted ? 'בטל השתקה' : 'השתק'}
+        title={item.is_muted ? i18n.t('auto.screens__Admin__AdminUsersScreen.s21') : i18n.t('auto.screens__Admin__AdminUsersScreen.s20')}
         icon={item.is_muted ? Volume2 : VolumeX}
         onPress={guard(onMute)}
       />
       <ProfileMenuRow
-        title={item.is_suspended ? 'בטל השעיה' : 'השעה'}
+        title={item.is_suspended ? i18n.t('auto.screens__Admin__AdminUsersScreen.s28') : i18n.t('auto.screens__Admin__AdminUsersScreen.s27')}
         icon={Ban}
         onPress={guard(onSuspend)}
       />
-      <ProfileMenuRow title="תשלומים ומנויים" icon={CreditCard} onPress={guard(onPayments)} />
+      <ProfileMenuRow title={i18n.t('auto.screens__Admin__AdminUsersScreen.s70')} icon={CreditCard} onPress={guard(onPayments)} />
       <ProfileMenuRow
-        title={premium ? 'הסר פרימיום' : 'הענק פרימיום'}
+        title={premium ? i18n.t('auto.screens__Admin__AdminUsersScreen.s71') : i18n.t('auto.screens__Admin__AdminUsersScreen.s72')}
         icon={Sparkles}
         onPress={guard(onPremium)}
       />
       {onAppAdmin ? (
         <ProfileMenuRow
-          title={String(item.subscription_role || '').toLowerCase() === 'admin' ? 'הסר הרשאת מנהל' : 'הפוך למנהל'}
+          title={String(item.subscription_role || '').toLowerCase() === 'admin' ? i18n.t('auto.screens__Admin__AdminUsersScreen.s73') : i18n.t('auto.screens__Admin__AdminUsersScreen.s40')}
           icon={ShieldCheck}
           onPress={guard(onAppAdmin)}
         />
       ) : null}
       <ProfileMenuRow
-        title="שליחת פוש אישי"
+        title={i18n.t('auto.screens__Admin__AdminUsersScreen.s74')}
         icon={BellRing}
         showDivider={!pushOpen}
         onPress={guard(onTogglePush)}
@@ -753,7 +751,7 @@ function UserCard({
               <TextInput
                 value={pushTitle}
                 onChangeText={setPushTitle}
-                placeholder="כותרת"
+                placeholder={i18n.t('auto.screens__Admin__AdminUsersScreen.s75')}
                 maxLength={80}
                 placeholderTextColor={tokens.colors.text.tertiary}
                 style={[styles.searchInput, { color: tokens.colors.text.primary }]}
@@ -763,7 +761,7 @@ function UserCard({
               <TextInput
                 value={pushBody}
                 onChangeText={setPushBody}
-                placeholder="תוכן ההודעה"
+                placeholder={i18n.t('auto.screens__Admin__AdminUsersScreen.s76')}
                 maxLength={240}
                 multiline
                 placeholderTextColor={tokens.colors.text.tertiary}
@@ -771,11 +769,11 @@ function UserCard({
               />
             </View>
             <Text style={[styles.introValue, { color: tokens.colors.text.tertiary, marginTop: 6 }]}>
-              {`${pushBody.length}/240 · יישלח רק ל-${name}`}
+              {i18n.t('auto.screens__Admin__AdminUsersScreen.s77', { v0: pushBody.length, v1: name })}
             </Text>
             <View style={[styles.tenureInputRow, { marginTop: 10 }]}>
               <UIButton
-                title="שלח פוש"
+                title={i18n.t('auto.screens__Admin__AdminUsersScreen.s78')}
                 variant="primary"
                 size="sm"
                 disabled={!canSendPush}
@@ -793,8 +791,8 @@ function UserCard({
           <View style={[styles.rule, { backgroundColor: tokens.colors.border.divider }]} />
         </>
       ) : null}
-      <ProfileMenuRow title="איפוס סיסמה" icon={KeyRound} onPress={guard(onResetPassword)} />
-      <ProfileMenuRow title="מחק" icon={Trash2} danger showDivider={false} onPress={guard(onDelete)} />
+      <ProfileMenuRow title={i18n.t('auto.screens__Admin__AdminUsersScreen.s41')} icon={KeyRound} onPress={guard(onResetPassword)} />
+      <ProfileMenuRow title={i18n.t('auto.screens__Admin__AdminUsersScreen.s49')} icon={Trash2} danger showDivider={false} onPress={guard(onDelete)} />
     </AdminSurface>
   );
 }

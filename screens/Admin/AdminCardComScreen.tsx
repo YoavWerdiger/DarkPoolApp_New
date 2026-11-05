@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
@@ -32,8 +33,8 @@ import { HapticFeedback } from '../../utils/hapticFeedback';
 import { useIsAdmin } from '../../hooks/useIsAdmin';
 
 const OPS: { key: CardComAdminOperation; label: string; hint: string }[] = [
-  { key: 'ChargeOnly', label: 'ChargeOnly', hint: 'חיוב מיידי' },
-  { key: 'CreateTokenOnly', label: 'CreateTokenOnly', hint: 'טוקן בלבד (חיובי ידני בהמשך)' },
+  { key: 'ChargeOnly', label: 'ChargeOnly', hint: i18n.t('auto.screens__Admin__AdminCardComScreen.s1') },
+  { key: 'CreateTokenOnly', label: 'CreateTokenOnly', hint: i18n.t('auto.screens__Admin__AdminCardComScreen.s2') },
 ];
 
 export default function AdminCardComScreen({ navigation }: any) {
@@ -72,7 +73,7 @@ export default function AdminCardComScreen({ navigation }: any) {
         setHasPassword(false);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'שגיאה בטעינת הגדרות');
+      setError(e instanceof Error ? e.message : i18n.t('auto.screens__Admin__AdminCardComScreen.s3'));
     } finally {
       setLoading(false);
     }
@@ -86,18 +87,18 @@ export default function AdminCardComScreen({ navigation }: any) {
   const handleSave = () => {
     const terminal = Number(terminalNumber);
     if (!apiName.trim()) {
-      legacyAlert('חסר ערך', 'יש למלא ApiName');
+      legacyAlert(i18n.t('auto.screens__Admin__AdminCardComScreen.s4'), i18n.t('auto.screens__Admin__AdminCardComScreen.s5'));
       return;
     }
     if (!Number.isFinite(terminal) || terminal <= 0) {
-      legacyAlert('חסר ערך', 'יש למלא מספר מסוף תקין');
+      legacyAlert(i18n.t('auto.screens__Admin__AdminCardComScreen.s4'), i18n.t('auto.screens__Admin__AdminCardComScreen.s6'));
       return;
     }
 
-    legacyAlert('שמירת הגדרות CardCom', 'לשמור את הקונפיגורציה?', [
-      { text: 'ביטול', style: 'cancel' },
+    legacyAlert(i18n.t('auto.screens__Admin__AdminCardComScreen.s7'), i18n.t('auto.screens__Admin__AdminCardComScreen.s8'), [
+      { text: i18n.t('auto.screens__Admin__AdminCardComScreen.s9'), style: 'cancel' },
       {
-        text: 'שמור',
+        text: i18n.t('auto.screens__Admin__AdminCardComScreen.s10'),
         onPress: async () => {
           setSaving(true);
           try {
@@ -112,10 +113,10 @@ export default function AdminCardComScreen({ navigation }: any) {
             setApiPassword('');
             setPasswordDirty(false);
             void HapticFeedback.success();
-            legacyAlert('נשמר', 'הגדרות CardCom נשמרו (סיסמה מוצגת ממוסכת).');
+            legacyAlert(i18n.t('auto.screens__Admin__AdminCardComScreen.s11'), i18n.t('auto.screens__Admin__AdminCardComScreen.s12'));
           } catch (e) {
             void HapticFeedback.error();
-            legacyAlert('שגיאה', e instanceof Error ? e.message : 'שמירה נכשלה');
+            legacyAlert(i18n.t('auto.screens__Admin__AdminCardComScreen.s13'), e instanceof Error ? e.message : i18n.t('auto.screens__Admin__AdminCardComScreen.s14'));
           } finally {
             setSaving(false);
           }
@@ -126,7 +127,7 @@ export default function AdminCardComScreen({ navigation }: any) {
 
   const header = (
     <ChatSubScreenHeader
-      title="הגדרות CardCom"
+      title={i18n.t('auto.screens__Admin__AdminCardComScreen.s15')}
       onBack={() => {
         void HapticFeedback.impactLight();
         navigation.goBack();
@@ -138,7 +139,7 @@ export default function AdminCardComScreen({ navigation }: any) {
     return (
       <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
         {header}
-        <AdminLoadingState label="טוען הגדרות CardCom..." />
+        <AdminLoadingState label={i18n.t('auto.screens__Admin__AdminCardComScreen.s16')} />
       </SafeAreaView>
     );
   }
@@ -177,16 +178,16 @@ export default function AdminCardComScreen({ navigation }: any) {
             />
           ) : null}
 
-          <AdminSectionLabel>שער תשלומים</AdminSectionLabel>
+          <AdminSectionLabel>{i18n.t('auto.screens__Admin__AdminCardComScreen.s17')}</AdminSectionLabel>
           <UICard
             variant="soft"
             padding="md"
             style={{ marginBottom: tokens.spacing.md }}
           >
             <Text style={[styles.note, { color: tokens.colors.text.tertiary }]}>
-              סודות לא נשלחים לקליינט. מקור נוכחי:{' '}
-              {source === 'db' ? 'מסד נתונים' : source === 'env' ? 'Edge secrets' : 'ברירת מחדל'}
-              {hasPassword ? ' · סיסמה מוגדרת' : ' · ללא סיסמה'}
+              {i18n.t('auto.screens__Admin__AdminCardComScreen.s18')}{' '}
+              {source === 'db' ? i18n.t('auto.screens__Admin__AdminCardComScreen.s19') : source === 'env' ? 'Edge secrets' : i18n.t('auto.screens__Admin__AdminCardComScreen.s20')}
+              {hasPassword ? i18n.t('auto.screens__Admin__AdminCardComScreen.s21') : i18n.t('auto.screens__Admin__AdminCardComScreen.s22')}
             </Text>
 
             <FieldLabel color={tokens.colors.text.tertiary}>ApiName</FieldLabel>
@@ -207,7 +208,7 @@ export default function AdminCardComScreen({ navigation }: any) {
             />
 
             <FieldLabel color={tokens.colors.text.tertiary}>
-              ApiPassword {hasPassword && !passwordDirty ? '(השאר ריק כדי לא לשנות)' : ''}
+              ApiPassword {hasPassword && !passwordDirty ? i18n.t('auto.screens__Admin__AdminCardComScreen.s23') : ''}
             </FieldLabel>
             <TextInput
               value={apiPassword}
@@ -218,7 +219,7 @@ export default function AdminCardComScreen({ navigation }: any) {
               autoCapitalize="none"
               autoCorrect={false}
               secureTextEntry
-              placeholder={hasPassword ? '••••••••' : 'אופציונלי (להחזרים)'}
+              placeholder={hasPassword ? '••••••••' : i18n.t('auto.screens__Admin__AdminCardComScreen.s24')}
               placeholderTextColor={tokens.colors.text.muted}
               style={[
                 styles.input,
@@ -256,14 +257,11 @@ export default function AdminCardComScreen({ navigation }: any) {
                 />
               ))}
             </View>
-            <Text style={[styles.note, { color: tokens.colors.text.secondary, marginTop: 8 }]}>
-              למנויים חוזרים השרת שולח Operation &quot;2&quot; (Charge+Token) זמנית כדי לא לשבור חידוש
-              אוטומטי — עד מימוש Charge דחוי (Task 7).
-            </Text>
+            <Text style={[styles.note, { color: tokens.colors.text.secondary, marginTop: 8 }]}>{i18n.t('auto.screens__Admin__AdminCardComScreen.s25')}</Text>
           </UICard>
 
           <UIButton
-            title="שמור הגדרות"
+            title={i18n.t('auto.screens__Admin__AdminCardComScreen.s26')}
             variant="primary"
             onPress={handleSave}
             disabled={saving}

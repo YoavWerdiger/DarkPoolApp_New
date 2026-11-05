@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useMemo, useState } from 'react';
 import {
@@ -289,11 +290,11 @@ function TradeShareCard({
   const resultColor = signColor(ret ?? pnl);
 
   const cells: Array<{ icon: keyof typeof Ionicons.glyphMap; label: string; value: string }> = [];
-  if (m.entry != null) cells.push({ icon: 'enter-outline', label: 'כניסה', value: String(m.entry) });
-  if (m.exit != null) cells.push({ icon: 'exit-outline', label: 'יציאה', value: String(m.exit) });
-  if (m.size != null) cells.push({ icon: 'layers-outline', label: 'גודל', value: String(m.size) });
-  if (m.exit_date != null) cells.push({ icon: 'calendar-outline', label: 'נסגר', value: String(m.exit_date) });
-  else if (m.entry_date != null) cells.push({ icon: 'calendar-outline', label: 'נפתח', value: String(m.entry_date) });
+  if (m.entry != null) cells.push({ icon: 'enter-outline', label: i18n.t('auto.components__share__EntityEmbedCard.s1'), value: String(m.entry) });
+  if (m.exit != null) cells.push({ icon: 'exit-outline', label: i18n.t('auto.components__share__EntityEmbedCard.s2'), value: String(m.exit) });
+  if (m.size != null) cells.push({ icon: 'layers-outline', label: i18n.t('auto.components__share__EntityEmbedCard.s3'), value: String(m.size) });
+  if (m.exit_date != null) cells.push({ icon: 'calendar-outline', label: i18n.t('auto.components__share__EntityEmbedCard.s4'), value: String(m.exit_date) });
+  else if (m.entry_date != null) cells.push({ icon: 'calendar-outline', label: i18n.t('auto.components__share__EntityEmbedCard.s5'), value: String(m.entry_date) });
   const strategy = m.strategy != null && String(m.strategy).trim() ? String(m.strategy) : null;
 
   const cardStyles = tradeCardStyles;
@@ -539,8 +540,8 @@ function EntityEmbedCardGeneric({ attachment, onPress, compact, style }: Props) 
     [typeLabel, subtitleText].filter(Boolean).join(' · ') || null;
   const expandHint = isTrade && hasExtraTradeMetrics
     ? expanded
-      ? 'פחות'
-      : 'פרטים'
+      ? i18n.t('auto.components__share__EntityEmbedCard.s6')
+      : i18n.t('auto.components__share__EntityEmbedCard.s7')
     : null;
 
   const portfolioShareValue =

@@ -1,3 +1,4 @@
+import i18n from '../lib/i18n';
 /** משתמש נחשב מחובר רק אם is_online=true ו-last_active בתוך החלון הזה */
 export const USER_ONLINE_THRESHOLD_MS = 3 * 60 * 1000;
 
@@ -18,7 +19,7 @@ export function formatUserPresenceLabel(
   nowMs: number = Date.now(),
 ): string | null {
   if (isUserPresenceOnline(isOnline, lastActive, nowMs)) {
-    return 'מחובר/ת';
+    return i18n.t('auto.utils__userPresence.s1');
   }
   if (!lastActive) return null;
 
@@ -26,17 +27,17 @@ export function formatUserPresenceLabel(
   if (Number.isNaN(lastMs)) return null;
 
   const diffSec = Math.floor((nowMs - lastMs) / 1000);
-  if (diffSec < 60) return 'נראה/תה לפני רגע';
+  if (diffSec < 60) return i18n.t('auto.utils__userPresence.s2');
   if (diffSec < 3600) {
     const mins = Math.floor(diffSec / 60);
-    return mins === 1 ? 'נראה/תה לפני דקה' : `נראה/תה לפני ${mins} דקות`;
+    return mins === 1 ? i18n.t('auto.utils__userPresence.s3') : i18n.t('auto.utils__userPresence.s4', { v0: mins });
   }
   if (diffSec < 86400) {
     const hours = Math.floor(diffSec / 3600);
-    return hours === 1 ? 'נראה/תה לפני שעה' : `נראה/תה לפני ${hours} שעות`;
+    return hours === 1 ? i18n.t('auto.utils__userPresence.s5') : i18n.t('auto.utils__userPresence.s6', { v0: hours });
   }
   const days = Math.floor(diffSec / 86400);
-  if (days === 1) return 'נראה/תה אתמול';
-  if (days < 7) return `נראה/תה לפני ${days} ימים`;
+  if (days === 1) return i18n.t('auto.utils__userPresence.s7');
+  if (days < 7) return i18n.t('auto.utils__userPresence.s8', { v0: days });
   return null;
 }

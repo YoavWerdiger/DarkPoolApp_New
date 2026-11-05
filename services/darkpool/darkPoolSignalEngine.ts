@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 /**
  * darkPoolSignalEngine.ts
  * -----------------------------------------------------------------------------
@@ -133,9 +134,9 @@ export function detectUnusualVolume(
     ticker: input.ticker,
     signal_type: 'UNUSUAL_VOLUME',
     score: breakdown.total,
-    reason: `Dark-pool volume היום ${formatRatio(ratio)} מהממוצע (${formatUsd(
+    reason: i18n.t('auto.services__darkpool__darkPoolSignalEngine.s1', { v0: formatRatio(ratio), v1: formatUsd(
       todayPremium
-    )})`,
+    ) }),
     metrics: {
       premium_total: todayPremium,
       relative_volume: ratio,
@@ -207,7 +208,7 @@ export function detectSweep(
     ticker: input.ticker,
     signal_type: 'SWEEP',
     score: breakdown.total,
-    reason: `סוויפ של ${bestCount} הדפסות תוך ${DARK_POOL_SWEEP_WINDOW_MIN} דקות בסך ${formatUsd(bestPremium)}`,
+    reason: i18n.t('auto.services__darkpool__darkPoolSignalEngine.s2', { v0: bestCount, v1: DARK_POOL_SWEEP_WINDOW_MIN, v2: formatUsd(bestPremium) }),
     metrics: {
       premium_total: bestPremium,
       premium_buy: bestBuy,
@@ -248,7 +249,7 @@ function buildWhaleSignal(
     ticker: input.ticker,
     signal_type: 'WHALE',
     score: breakdown.total,
-    reason: `הדפסת ענק ${formatUsd(biggest.premium)} (${whales.length} סה"כ)`,
+    reason: i18n.t('auto.services__darkpool__darkPoolSignalEngine.s3', { v0: formatUsd(biggest.premium), v1: whales.length }),
     metrics: {
       premium_total: totalWhale,
       prints: whales.length,
@@ -297,7 +298,7 @@ export function detectHiddenAccumulation(
     ticker: input.ticker,
     signal_type: 'HIDDEN_ACCUMULATION',
     score: breakdown.total,
-    reason: `Buy-flow נטו של ${formatUsd(net)} ב-3 ימים אחרונים (${formatPct(sideRatio)} מהזרימה)`,
+    reason: i18n.t('auto.services__darkpool__darkPoolSignalEngine.s4', { v0: formatUsd(net), v1: formatPct(sideRatio) }),
     metrics: {
       premium_total: trailingTotal,
       premium_buy: trailingBuy,
@@ -350,7 +351,7 @@ export function detectInsiderConfluence(
     signalType: 'INSIDER_DARKPOOL_CONFLUENCE',
   });
 
-  const reason = `${nearest.insider_name || 'בכיר'} רכש ${formatUsd(nearest.value)} לפני ${daysAgo} ימים, ובמקביל זוהתה צבירה ב-Dark Pool בסך ${formatUsd(premiumTotal)}`;
+  const reason = i18n.t('auto.services__darkpool__darkPoolSignalEngine.s5', { v0: nearest.insider_name || 'בכיר', v1: formatUsd(nearest.value), v2: daysAgo, v3: formatUsd(premiumTotal) });
 
   return {
     ticker: input.ticker,

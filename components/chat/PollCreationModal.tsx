@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Modal, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
@@ -48,17 +49,17 @@ export default function PollCreationModal({
 
   const validateForm = (): boolean => {
     if (!question.trim()) {
-      legacyAlert('שגיאה', 'יש להזין שאלה לסקר');
+      legacyAlert(i18n.t('auto.components__chat__PollCreationModal.s1'), i18n.t('auto.components__chat__PollCreationModal.s2'));
       return false;
     }
 
     if (options.some(option => !option.trim())) {
-      legacyAlert('שגיאה', 'יש למלא את כל האפשרויות');
+      legacyAlert(i18n.t('auto.components__chat__PollCreationModal.s1'), i18n.t('auto.components__chat__PollCreationModal.s3'));
       return false;
     }
 
     if (options.length < 2) {
-      legacyAlert('שגיאה', 'יש צורך לפחות ב-2 אפשרויות');
+      legacyAlert(i18n.t('auto.components__chat__PollCreationModal.s1'), i18n.t('auto.components__chat__PollCreationModal.s4'));
       return false;
     }
 
@@ -79,13 +80,13 @@ export default function PollCreationModal({
       );
 
       if (poll) {
-        legacyAlert('הצלחה', 'הסקר נוצר בהצלחה!');
+        legacyAlert(i18n.t('auto.components__chat__PollCreationModal.s5'), i18n.t('auto.components__chat__PollCreationModal.s6'));
         onPollCreated(poll);
         resetForm();
         onClose();
       }
     } catch (error: any) {
-      legacyAlert('שגיאה', error.message || 'לא ניתן ליצור את הסקר');
+      legacyAlert(i18n.t('auto.components__chat__PollCreationModal.s1'), error.message || i18n.t('auto.components__chat__PollCreationModal.s7'));
     } finally {
       setIsCreating(false);
     }
@@ -100,11 +101,11 @@ export default function PollCreationModal({
   const handleClose = () => {
     if (question.trim() || options.some(opt => opt.trim())) {
       legacyAlert(
-        'ביטול יצירת סקר',
-        'האם אתה בטוח שברצונך לבטל? כל הנתונים יימחקו.',
+        i18n.t('auto.components__chat__PollCreationModal.s8'),
+        i18n.t('auto.components__chat__PollCreationModal.s9'),
         [
-          { text: 'המשך עריכה', style: 'cancel' },
-          { text: 'בטל', style: 'destructive', onPress: () => {
+          { text: i18n.t('auto.components__chat__PollCreationModal.s10'), style: 'cancel' },
+          { text: i18n.t('auto.components__chat__PollCreationModal.s11'), style: 'destructive', onPress: () => {
             resetForm();
             onClose();
           }}
@@ -137,7 +138,7 @@ export default function PollCreationModal({
             </View>
             {/* Title centered */}
             <View className="flex-1 items-center">
-              <Text className="text-xl text-white font-bold">יצירת סקר חדש</Text>
+              <Text className="text-xl text-white font-bold">{i18n.t('auto.components__chat__PollCreationModal.s12')}</Text>
             </View>
             {/* Right spacer */}
             <View className="flex-1" />
@@ -146,11 +147,11 @@ export default function PollCreationModal({
           <ScrollView className="flex-1 px-4 py-6" showsVerticalScrollIndicator={false}>
             {/* Question Input */}
             <View className="mb-6">
-              <Text className="text-white font-bold text-lg mb-3 text-right">שאלת הסקר</Text>
+              <Text className="text-white font-bold text-lg mb-3 text-right">{i18n.t('auto.components__chat__PollCreationModal.s13')}</Text>
               <TextInput
                 value={question}
                 onChangeText={setQuestion}
-                placeholder="הזן את השאלה שלך..."
+                placeholder={i18n.t('auto.components__chat__PollCreationModal.s14')}
                 placeholderTextColor="#666"
                 className="bg-[#141F14] border border-[#1A2B1A] rounded-xl px-4 py-3 text-white text-lg"
                 multiline
@@ -172,7 +173,7 @@ export default function PollCreationModal({
                     color={multipleChoice ? DesignTokens.colors.primary.main : DesignTokens.colors.text.tertiary}
                   />
                   <Text className="text-white text-lg mr-3">
-                    {multipleChoice ? 'בחירה מרובה' : 'בחירה יחידה'}
+                    {multipleChoice ? i18n.t('auto.components__chat__PollCreationModal.s15') : i18n.t('auto.components__chat__PollCreationModal.s16')}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -181,7 +182,7 @@ export default function PollCreationModal({
             {/* Options */}
             <View className="mb-6">
               <View className="flex-row items-center justify-between mb-3">
-                <Text className="text-white font-bold text-lg text-right" style={{ flex: 1 }}>אפשרויות בחירה</Text>
+                <Text className="text-white font-bold text-lg text-right" style={{ flex: 1 }}>{i18n.t('auto.components__chat__PollCreationModal.s17')}</Text>
                 <TouchableOpacity
                   onPress={addOption}
                   disabled={options.length >= 10}
@@ -201,7 +202,7 @@ export default function PollCreationModal({
                     <TextInput
                       value={option}
                       onChangeText={(text) => updateOption(index, text)}
-                      placeholder={`אפשרות ${index + 1}`}
+                      placeholder={i18n.t('auto.components__chat__PollCreationModal.s18', { v0: index + 1 })}
                       placeholderTextColor="#666"
                       className="bg-[#141F14] border border-[#1A2B1A] rounded-xl px-4 py-3 text-white text-lg"
                       textAlign="right"
@@ -219,16 +220,15 @@ export default function PollCreationModal({
               ))}
 
               <Text className="text-gray-400 text-sm text-center">
-                {options.length}/10 אפשרויות
-              </Text>
+                {i18n.t('auto.components__chat__PollCreationModal.s19', { v0: options.length })}</Text>
             </View>
 
             {/* Preview */}
             <View className="mb-6">
-              <Text className="text-white font-bold text-lg mb-3 text-right">תצוגה מקדימה</Text>
+              <Text className="text-white font-bold text-lg mb-3 text-right">{i18n.t('auto.components__chat__PollCreationModal.s20')}</Text>
               <View className="bg-[#141F14] border border-[#1A2B1A] rounded-xl p-4">
                 <Text className="text-white font-bold text-lg mb-3 text-right">
-                  {question || 'שאלת הסקר תופיע כאן'}
+                  {question || i18n.t('auto.components__chat__PollCreationModal.s21')}
                 </Text>
                 
                 {options.map((option, index) => (
@@ -248,9 +248,7 @@ export default function PollCreationModal({
                 ))}
 
                 {options.every(opt => !opt.trim()) && (
-                  <Text className="text-gray-500 text-center italic">
-                    האפשרויות יופיעו כאן
-                  </Text>
+                  <Text className="text-gray-500 text-center italic">{i18n.t('auto.components__chat__PollCreationModal.s22')}</Text>
                 )}
               </View>
             </View>
@@ -263,7 +261,7 @@ export default function PollCreationModal({
                 className={`${isCreating ? 'bg-gray-600' : 'bg-primary'} w-4/5 py-4 rounded-2xl items-center`}
               >
                 <Text className={`font-bold text-lg ${isCreating ? 'text-gray-400' : 'text-black'}`}>
-                  {isCreating ? 'יוצר...' : 'צור סקר'}
+                  {isCreating ? i18n.t('auto.components__chat__PollCreationModal.s23') : i18n.t('auto.components__chat__PollCreationModal.s24')}
                 </Text>
               </TouchableOpacity>
             </View>

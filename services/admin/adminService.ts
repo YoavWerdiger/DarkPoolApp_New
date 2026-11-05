@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { supabase } from '../../lib/supabase';
 
 export type AdminGrowthPoint = { date: string; count: number };
@@ -94,9 +95,9 @@ export type AdminUserBadgeDetails = {
 
 function rpcErrorMessage(error: { message?: string } | null): string {
   const m = String(error?.message || '');
-  if (m.includes('cannot verify yourself')) return 'אי אפשר לאמת את עצמך';
-  if (m.includes('admin only')) return 'אין הרשאת מנהל';
-  return m || 'פעולה נכשלה';
+  if (m.includes('cannot verify yourself')) return i18n.t('auto.services__admin__adminService.s1');
+  if (m.includes('admin only')) return i18n.t('auto.services__admin__adminService.s2');
+  return m || i18n.t('auto.services__admin__adminService.s3');
 }
 export type AdminPushAudience = 'all' | 'free' | 'premium' | 'active_7d' | 'custom';
 
@@ -166,20 +167,20 @@ export type AdminUserSubscription = {
 };
 
 const ADMIN_ERROR_HE: Record<string, string> = {
-  Unauthorized: 'אין הרשאה — יש להתחבר מחדש',
-  Forbidden: 'אין הרשאת מנהל',
-  'Forbidden — admin only': 'אין הרשאת מנהל',
-  'userId required': 'חסר מזהה משתמש',
-  'Cannot mute yourself': 'לא ניתן להשתיק את עצמך',
-  'Cannot suspend yourself': 'לא ניתן להשעות את עצמך',
-  'Cannot change own premium': 'לא ניתן לשנות פרימיום לעצמך',
-  'Cannot delete yourself': 'לא ניתן למחוק את עצמך',
-  'Cannot delete admin users': 'לא ניתן למחוק מנהל',
-  'Cannot change admin subscription via this action': 'לא ניתן לשנות מנוי למנהל דרך פעולה זו',
-  'User not found': 'המשתמש לא נמצא',
-  'User email not found': 'לא נמצא אימייל למשתמש',
-  'Invalid JSON': 'בקשה לא תקינה',
-  'Method not allowed': 'שיטת בקשה לא נתמכת',
+  Unauthorized: i18n.t('auto.services__admin__adminService.s4'),
+  Forbidden: i18n.t('auto.services__admin__adminService.s2'),
+  'Forbidden — admin only': i18n.t('auto.services__admin__adminService.s2'),
+  'userId required': i18n.t('auto.services__admin__adminService.s5'),
+  'Cannot mute yourself': i18n.t('auto.services__admin__adminService.s6'),
+  'Cannot suspend yourself': i18n.t('auto.services__admin__adminService.s7'),
+  'Cannot change own premium': i18n.t('auto.services__admin__adminService.s8'),
+  'Cannot delete yourself': i18n.t('auto.services__admin__adminService.s9'),
+  'Cannot delete admin users': i18n.t('auto.services__admin__adminService.s10'),
+  'Cannot change admin subscription via this action': i18n.t('auto.services__admin__adminService.s11'),
+  'User not found': i18n.t('auto.services__admin__adminService.s12'),
+  'User email not found': i18n.t('auto.services__admin__adminService.s13'),
+  'Invalid JSON': i18n.t('auto.services__admin__adminService.s14'),
+  'Method not allowed': i18n.t('auto.services__admin__adminService.s15'),
 };
 
 function localizeAdminError(raw: string): string {
@@ -220,9 +221,9 @@ async function extractInvokeError(error: Error & { context?: unknown }, data: un
 
   const generic = error.message || '';
   if (/non-2xx/i.test(generic)) {
-    return 'פעולת המנהל נכשלה — נסו שוב';
+    return i18n.t('auto.services__admin__adminService.s16');
   }
-  return localizeAdminError(generic || 'פעולת המנהל נכשלה');
+  return localizeAdminError(generic || i18n.t('auto.services__admin__adminService.s17'));
 }
 
 async function invokeAdminApi<T>(action: string, payload: Record<string, unknown> = {}): Promise<T> {

@@ -1,3 +1,4 @@
+import i18n from '../lib/i18n';
 /**
  * טקסונומיית דגלים לאירועי מאקרו ארה״ב:
  * 🔴 high = אדום (טייר 1) · 🟠 medium = כתום (טייר 2)
@@ -36,15 +37,15 @@ function isExcludedCpiVariant(t: string): boolean {
 function isInflationExpectations(t: string): boolean {
   return includesAny(t, [
     'inflation expectation',
-    'ציפיות אינפלציה',
-    'ציפיות האינפלציה',
-    'ציפיות אינפלצ',
+    i18n.t('auto.utils__economicEventImportance.s1'),
+    i18n.t('auto.utils__economicEventImportance.s2'),
+    i18n.t('auto.utils__economicEventImportance.s3'),
   ]);
 }
 
 /** נאום יו״ר הפד (אדום) — לפני "חבר פד מדבר" (כתום). */
 function isFedChairPowellSpeech(t: string): boolean {
-  if (includesAny(t, ['powell', 'פאוול'])) return true;
+  if (includesAny(t, ['powell', i18n.t('auto.utils__economicEventImportance.s4')])) return true;
   if (
     (t.includes('fed chair') || t.includes('chair of the fed') || t.includes('יו"ר הפד') || t.includes('יו״ר הפד') || t.includes('יור הפד')) &&
     (t.includes('speak') || t.includes('speech') || t.includes('נאום'))
@@ -78,23 +79,23 @@ function isFomcMemberSpeech(t: string): boolean {
 function isRedTier(t: string): boolean {
   // אינפלציה — ליבה לפני כותרת; מדלגים על רכיבי CPI צרים ועל ציפיות (כתום)
   if (!isExcludedCpiVariant(t) && !isInflationExpectations(t)) {
-    if (includesAny(t, ['core cpi', 'cpi core', 'מדד המחירים לצרכן ליבה', 'cpi ליבה'])) return true;
-    if (includesAny(t, ['core pce', 'pce core', 'מדד מחירי הצריכה ליבה', 'pce ליבה'])) return true;
-    if (includesAny(t, ['core ppi', 'ppi core', 'מדד המחירים ליצרן ליבה', 'ppi ליבה'])) return true;
+    if (includesAny(t, ['core cpi', 'cpi core', i18n.t('auto.utils__economicEventImportance.s5'), i18n.t('auto.utils__economicEventImportance.s6')])) return true;
+    if (includesAny(t, ['core pce', 'pce core', i18n.t('auto.utils__economicEventImportance.s7'), i18n.t('auto.utils__economicEventImportance.s8')])) return true;
+    if (includesAny(t, ['core ppi', 'ppi core', i18n.t('auto.utils__economicEventImportance.s9'), i18n.t('auto.utils__economicEventImportance.s10')])) return true;
     if (
-      includesAny(t, ['consumer price index', 'מדד המחירים לצרכן']) ||
+      includesAny(t, ['consumer price index', i18n.t('auto.utils__economicEventImportance.s11')]) ||
       (/\bcpi\b/.test(t) && !t.includes('core'))
     ) {
       return true;
     }
     if (
-      includesAny(t, ['pce price', 'personal consumption expenditures price', 'מדד מחירי הצריכה', 'מדד הוצאות הצריכה']) ||
+      includesAny(t, ['pce price', 'personal consumption expenditures price', i18n.t('auto.utils__economicEventImportance.s12'), i18n.t('auto.utils__economicEventImportance.s13')]) ||
       (/\bpce\b/.test(t) && (t.includes('price') || t.includes('index') || t.includes('מדד')))
     ) {
       return true;
     }
     if (
-      includesAny(t, ['producer price index', 'מדד המחירים ליצרן', 'מדד מחירי יצרן', 'מדד מחירי היצרנים']) ||
+      includesAny(t, ['producer price index', i18n.t('auto.utils__economicEventImportance.s14'), i18n.t('auto.utils__economicEventImportance.s15'), i18n.t('auto.utils__economicEventImportance.s16')]) ||
       (/\bppi\b/.test(t) && !t.includes('core'))
     ) {
       return true;
@@ -105,9 +106,9 @@ function isRedTier(t: string): boolean {
         'inflation rate',
         'core inflation',
         'headline inflation',
-        'שיעור אינפלציה',
-        'שיעור האינפלציה',
-        'אינפלציה ליבה',
+        i18n.t('auto.utils__economicEventImportance.s17'),
+        i18n.t('auto.utils__economicEventImportance.s18'),
+        i18n.t('auto.utils__economicEventImportance.s19'),
       ]) ||
       (/\binflation\b/.test(t) && !t.includes('expectation')) ||
       (t.includes('אינפלצ') && !t.includes('ציפיות'))
@@ -127,21 +128,21 @@ function isRedTier(t: string): boolean {
       'nonfarm payrolls',
       'non farm payrolls',
       'non-farm payrolls',
-      'דוח התעסוקה',
-      'תעסוקה לא חקלאית',
-      'תעסוקה לא-חקלאית',
+      i18n.t('auto.utils__economicEventImportance.s20'),
+      i18n.t('auto.utils__economicEventImportance.s21'),
+      i18n.t('auto.utils__economicEventImportance.s22'),
     ]) ||
     /\bnfp\b/.test(t)
   ) {
     return true;
   }
 
-  if (includesAny(t, ['unemployment rate', 'שיעור האבטלה', 'שיעור אבטלה'])) return true;
-  if (includesAny(t, ['average hourly earnings', 'hourly earnings', 'השכר הממוצע לשעה', 'שכר ממוצע לשעה', 'שכר לשעה'])) {
+  if (includesAny(t, ['unemployment rate', i18n.t('auto.utils__economicEventImportance.s23'), i18n.t('auto.utils__economicEventImportance.s24')])) return true;
+  if (includesAny(t, ['average hourly earnings', 'hourly earnings', i18n.t('auto.utils__economicEventImportance.s25'), i18n.t('auto.utils__economicEventImportance.s26'), i18n.t('auto.utils__economicEventImportance.s27')])) {
     return true;
   }
   if (
-    includesAny(t, ['jolts job openings', 'job openings', 'משרות הפנויות', 'מספר המשרות הפנויות', 'משרות פנויות']) ||
+    includesAny(t, ['jolts job openings', 'job openings', i18n.t('auto.utils__economicEventImportance.s28'), i18n.t('auto.utils__economicEventImportance.s29'), i18n.t('auto.utils__economicEventImportance.s30')]) ||
     (t.includes('jolts') && t.includes('opening'))
   ) {
     return true;
@@ -154,34 +155,34 @@ function isRedTier(t: string): boolean {
       'federal funds rate',
       'fed funds rate',
       'fomc rate',
-      'החלטת הריבית',
-      'החלטת ריבית',
+      i18n.t('auto.utils__economicEventImportance.s31'),
+      i18n.t('auto.utils__economicEventImportance.s32'),
     ])
   ) {
     return true;
   }
-  if (includesAny(t, ['fomc statement', 'הודעת הפד', 'הצהרת הפד'])) return true;
+  if (includesAny(t, ['fomc statement', i18n.t('auto.utils__economicEventImportance.s33'), i18n.t('auto.utils__economicEventImportance.s34')])) return true;
   if (
-    includesAny(t, ['fomc press conference', 'מסיבת העיתונאים של הפד', 'מסיבת העיתונאים', 'מסיבת עיתונאים']) ||
+    includesAny(t, ['fomc press conference', i18n.t('auto.utils__economicEventImportance.s35'), i18n.t('auto.utils__economicEventImportance.s36'), i18n.t('auto.utils__economicEventImportance.s37')]) ||
     ((t.includes('press conference') || t.includes('מסיבת')) && (t.includes('fomc') || t.includes('fed') || t.includes('פד')))
   ) {
     return true;
   }
-  if (includesAny(t, ['fomc meeting minutes', 'fomc minutes', 'פרוטוקול הפד', 'פרוטוקול ישיבת הפד'])) {
+  if (includesAny(t, ['fomc meeting minutes', 'fomc minutes', i18n.t('auto.utils__economicEventImportance.s38'), i18n.t('auto.utils__economicEventImportance.s39')])) {
     return true;
   }
   if (isFedChairPowellSpeech(t)) return true;
 
   // צמיחה / סנטימנט / צריכה
   if (
-    includesAny(t, ['gross domestic product', 'התמ"ג', 'התמ״ג', 'תמ"ג', 'תמ״ג']) ||
+    includesAny(t, ['gross domestic product', i18n.t('auto.utils__economicEventImportance.s40'), i18n.t('auto.utils__economicEventImportance.s41'), i18n.t('auto.utils__economicEventImportance.s42'), i18n.t('auto.utils__economicEventImportance.s43')]) ||
     (/\bgdp\b/.test(t) && !t.includes('price index') && !t.includes('deflator'))
   ) {
     return true;
   }
   // רק ISM PMI ראשי — לא רכיבי משנה ולא S&P/Chicago PMI
   if (
-    includesAny(t, ['ism manufacturing pmi', 'מדד מנהלי הרכש בתעשייה']) ||
+    includesAny(t, ['ism manufacturing pmi', i18n.t('auto.utils__economicEventImportance.s44')]) ||
     (t.includes('ism') && t.includes('manufacturing') && t.includes('pmi') &&
       !includesAny(t, ['employment', 'prices', 'new orders']))
   ) {
@@ -192,7 +193,7 @@ function isRedTier(t: string): boolean {
       'ism services pmi',
       'ism non manufacturing pmi',
       'ism non-manufacturing pmi',
-      'מדד מנהלי הרכש בשירותים',
+      i18n.t('auto.utils__economicEventImportance.s45'),
     ]) ||
     (t.includes('ism') &&
       (t.includes('services') || t.includes('non manufacturing') || t.includes('non-manufacturing')) &&
@@ -201,17 +202,17 @@ function isRedTier(t: string): boolean {
   ) {
     return true;
   }
-  if (includesAny(t, ['core retail sales', 'retail sales', 'מכירות קמעונאיות'])) return true;
+  if (includesAny(t, ['core retail sales', 'retail sales', i18n.t('auto.utils__economicEventImportance.s46')])) return true;
   if (
     includesAny(t, [
       'cb consumer confidence',
       'conference board consumer confidence',
       'consumer confidence',
-      'אמון הצרכנים',
-      'אמון צרכנים',
-      'אמון צרכן',
+      i18n.t('auto.utils__economicEventImportance.s47'),
+      i18n.t('auto.utils__economicEventImportance.s48'),
+      i18n.t('auto.utils__economicEventImportance.s49'),
     ]) &&
-    !includesAny(t, ['michigan', 'uom', 'u. of m', 'university of michigan', 'מישיגן'])
+    !includesAny(t, ['michigan', 'uom', 'u. of m', 'university of michigan', i18n.t('auto.utils__economicEventImportance.s50')])
   ) {
     return true;
   }
@@ -220,8 +221,8 @@ function isRedTier(t: string): boolean {
 }
 
 function isOrangeTier(t: string): boolean {
-  if (includesAny(t, ['adp', 'דוח התעסוקה adp'])) return true;
-  if (includesAny(t, ['initial jobless claims', 'jobless claims', 'תביעות ראשוניות', 'תביעות אבטלה'])) {
+  if (includesAny(t, ['adp', i18n.t('auto.utils__economicEventImportance.s51')])) return true;
+  if (includesAny(t, ['initial jobless claims', 'jobless claims', i18n.t('auto.utils__economicEventImportance.s52'), i18n.t('auto.utils__economicEventImportance.s53')])) {
     return true;
   }
   if (
@@ -230,9 +231,9 @@ function isOrangeTier(t: string): boolean {
       'uom consumer sentiment',
       'university of michigan consumer sentiment',
       'u. of mich',
-      'סנטימנט הצרכנים של אוניברסיטת מישיגן',
-      'סנטימנט צרכן מישיגן',
-      'סנטימנט מישיגן',
+      i18n.t('auto.utils__economicEventImportance.s54'),
+      i18n.t('auto.utils__economicEventImportance.s55'),
+      i18n.t('auto.utils__economicEventImportance.s56'),
     ])
   ) {
     return true;
@@ -240,7 +241,7 @@ function isOrangeTier(t: string): boolean {
   // ציפיות אינפלציה (UoM / Michigan / תרגום עברי מקוצר בלי "מישיגן")
   if (isInflationExpectations(t)) return true;
 
-  if (includesAny(t, ['durable goods', 'הזמנות מוצרים בני קיימא', 'הזמנות סחורות מתינות'])) return true;
+  if (includesAny(t, ['durable goods', i18n.t('auto.utils__economicEventImportance.s57'), i18n.t('auto.utils__economicEventImportance.s58')])) return true;
   if (isFomcMemberSpeech(t)) return true;
 
   return false;

@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useState, ErrorInfo, ReactNode, useEffect, useCallback } from 'react';
 import {
   View,
@@ -45,8 +46,8 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, { hasError: bool
       const { errorStyles } = this.props;
       return (
         <View style={errorStyles.container}>
-          <Text style={errorStyles.title}>שגיאה בטעינת המסך</Text>
-          <Text style={errorStyles.message}>{this.state.error?.message || 'שגיאה לא ידועה'}</Text>
+          <Text style={errorStyles.title}>{i18n.t('auto.screens__News__index.s1')}</Text>
+          <Text style={errorStyles.message}>{this.state.error?.message || i18n.t('auto.screens__News__index.s2')}</Text>
         </View>
       );
     }
@@ -104,7 +105,7 @@ export default function NewsScreen({ route }: { route?: any }) {
       onPress={handleOpenCreateSheet}
       activeOpacity={0.88}
       accessibilityRole="button"
-      accessibilityLabel="הוסף חדשה"
+      accessibilityLabel={i18n.t('auto.screens__News__index.s3')}
     >
       <Ionicons name="add" size={26} color={DesignTokens.colors.text.inverse} />
     </TouchableOpacity>
@@ -112,11 +113,11 @@ export default function NewsScreen({ route }: { route?: any }) {
 
   return (
     <>
-      <NewsScreenShell title="חדשות" headerRight={adminCreateButton}>
+      <NewsScreenShell title={i18n.t('auto.screens__News__index.s4')} headerRight={adminCreateButton}>
         {!isReady ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-            <Text style={styles.loadingText}>טוען...</Text>
+            <Text style={styles.loadingText}>{i18n.t('auto.screens__News__index.s5')}</Text>
           </View>
         ) : (
           <ErrorBoundary errorStyles={styles.errorBoundary}>

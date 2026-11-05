@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { supabase } from '../../lib/supabase';
 
 /** תגובה להודעה (שרשור בקבוצות הכרזות) */
@@ -37,7 +38,7 @@ function mapRow(r: Row): MessageComment {
     createdAt: r.created_at,
     author: {
       id: r.user_id,
-      displayName: (a.display_name || a.full_name || 'חבר קהילה').trim(),
+      displayName: (a.display_name || a.full_name || i18n.t('auto.services__chat__messageCommentsService.s1')).trim(),
       avatarUrl: a.profile_picture || null,
     },
   };

@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -51,7 +52,7 @@ export function ActivityFeedCard({
     item.person_kind === 'insider'
       ? formatInsiderDisplayName(item.person_name)
       : item.person_name;
-  const sourceLabel = item.source === 'congress' ? 'קונגרס' : 'בכיר';
+  const sourceLabel = item.source === 'congress' ? i18n.t('auto.screens__DarkPool__components__ActivityFeedCard.s1') : i18n.t('auto.screens__DarkPool__components__ActivityFeedCard.s2');
   const side = getFeedTradeSide(item.txn_label || '');
   const verb = getFeedTradeVerb(side);
   const sideColor =

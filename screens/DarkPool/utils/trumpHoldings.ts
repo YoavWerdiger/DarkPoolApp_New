@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 /**
  * מנוע שלישי לפרופיל טראמפ — Quiver trumpstocktrades.
  *
@@ -23,13 +24,9 @@ import { parseDisclosedAmountRange } from './congressTradeDisplay';
 /** מזהה פנימי ב-DB / Explore — לא BioGuide. */
 export const TRUMP_PERSON_ID = '888dc73f-f1eb-485a-a241-80657aaaaff9';
 
-export const TRUMP_HOLDINGS_HELP_TITLE = 'על המספרים';
+export const TRUMP_HOLDINGS_HELP_TITLE = i18n.t('auto.screens__DarkPool__utils__trumpHoldings.s1');
 export const TRUMP_HOLDINGS_HELP_BODY =
-  'העסקאות מ-Quiver ו-Unusual Whales (בלי כפילויות). רוב הדיווחים כוללים טווח סכום ' +
-  '(למשל $1,001–$15,000) ולא סכום מדויק. לכל עסקה מחושבת כמות מניות לפי הטווח ' +
-  'והמחיר ביום העסקה, והשווי לפי מחיר השוק היום; מכירות מורידות את הפוזיציה הוותיקה קודם. ' +
-  'לכן מוצג טווח: מהגבול התחתון של כל הדיווחים ועד העליון. הגרף והמשקלים לפי אמצע הטווח. ' +
-  'זו הערכה מתוך הדיווחים — לא כל השווי הנקי של טראמפ.';
+  i18n.t('auto.screens__DarkPool__utils__trumpHoldings.s2');
 /** נומינל פנימי לסל «משקל שווה» — לא מוצג כ-$ אמיתי. */
 export const TRUMP_EQUAL_WEIGHT_NOTIONAL_USD = 1;
 

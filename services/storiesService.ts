@@ -1,3 +1,4 @@
+import i18n from '../lib/i18n';
 /**
  * Stories Service – סטטוסים כמו WhatsApp Status
  * העלאה, שליפה, צפיות, מחיקה אוטומטית אחרי 24 שעות
@@ -324,10 +325,10 @@ async function uploadFileToStories(
   } catch {
     /* handled below */
   }
-  if (!accessToken) return 'נדרשת התחברות מחדש';
+  if (!accessToken) return i18n.t('auto.services__storiesService.s1');
 
   const uploadUrl = `${SUPABASE_URL}/storage/v1/object/${STORIES_BUCKET}/${encodeURI(storagePath)}`;
-  let lastError = 'שגיאה בהעלאה';
+  let lastError = i18n.t('auto.services__storiesService.s2');
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       const res = await FileSystem.uploadAsync(uploadUrl, fileUri, {
@@ -391,7 +392,7 @@ export async function uploadStoryImage(
     return { url: storagePath, error: null, displayUri };
   } catch (e: any) {
     logger.error('StoriesService', 'uploadStoryImage exception', e);
-    return { url: null, error: e?.message || 'שגיאה בהעלאה' };
+    return { url: null, error: e?.message || i18n.t('auto.services__storiesService.s2') };
   }
 }
 
@@ -400,7 +401,7 @@ export async function uploadStoryVideo(uri: string, userId: string): Promise<{ u
     logger.debug('StoriesService', `uploadStoryVideo: ${uri.substring(0, 80)}`);
 
     const fileInfo = await FileSystem.getInfoAsync(uri);
-    if (!fileInfo.exists) return { url: null, error: 'הקובץ לא נמצא' };
+    if (!fileInfo.exists) return { url: null, error: i18n.t('auto.services__storiesService.s3') };
 
     // דחיסה קודם (1080p, ~5Mbps) — ואז בדיקת המגבלה על מה שעולה בפועל.
     // בלי המודול הנייטיב (Expo Go / בילד ישן) או בכישלון — הקובץ המקורי.
@@ -410,7 +411,7 @@ export async function uploadStoryVideo(uri: string, userId: string): Promise<{ u
     const size = compressed.size || (fileInfo as any).size || 0;
     if (size > maxBytes) {
       discardCompressedVideo(compressed);
-      return { url: null, error: 'הוידאו גדול מדי (מקסימום 20MB)' };
+      return { url: null, error: i18n.t('auto.services__storiesService.s4') };
     }
 
     const ext = uploadUri.split('?')[0].toLowerCase().endsWith('.mov') ? 'mov' : 'mp4';
@@ -430,7 +431,7 @@ export async function uploadStoryVideo(uri: string, userId: string): Promise<{ u
     return { url: storagePath, error: null };
   } catch (e: any) {
     logger.error('StoriesService', 'uploadStoryVideo exception', e);
-    return { url: null, error: e?.message || 'שגיאה בהעלאה' };
+    return { url: null, error: e?.message || i18n.t('auto.services__storiesService.s2') };
   }
 }
 
@@ -573,15 +574,15 @@ export async function reactToStory(
       // Don't spam Sentry until the DB catches up.
       if ((error as any).code === '42P01') {
         logger.debug('StoriesService', 'reactToStory: table missing (migration not applied yet)');
-        return 'טבלת הריאקציות עדיין לא נוצרה במסד';
+        return i18n.t('auto.services__storiesService.s5');
       }
       logger.error('StoriesService', 'reactToStory failed', error);
-      return error.message || 'שגיאה בשליחת ריאקציה';
+      return error.message || i18n.t('auto.services__storiesService.s6');
     }
     return null;
   } catch (e: any) {
     logger.error('StoriesService', 'reactToStory exception', e);
-    return e?.message || 'שגיאה בשליחת ריאקציה';
+    return e?.message || i18n.t('auto.services__storiesService.s6');
   }
 }
 

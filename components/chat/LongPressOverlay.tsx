@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useEffect, useMemo, useCallback, useState, useRef } from 'react';
 import { View, StyleSheet, Text, Image, Platform, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -258,7 +259,7 @@ export default function LongPressOverlay({
       (contentTrimmed.startsWith('{') && contentTrimmed.includes('waveformData'));
     const isMedia = !!(displayMessage.mediaUrl && (displayMessage.type === 'image' || displayMessage.type === 'video'));
     const mediaIcon = isAudio ? 'mic' : displayMessage.type === 'video' ? 'videocam' : 'image';
-    const mediaLabel = isAudio ? 'הקלטה' : displayMessage.type === 'video' ? 'סרטון' : 'תמונה';
+    const mediaLabel = isAudio ? i18n.t('auto.components__chat__LongPressOverlay.s1') : displayMessage.type === 'video' ? i18n.t('auto.components__chat__LongPressOverlay.s2') : i18n.t('auto.components__chat__LongPressOverlay.s3');
     const tradeFromContent = parseTradeFromContent(displayMessage.content);
     const isTrade = isTradeMessageType(displayMessage.type) || !!tradeFromContent;
     const tradePayload = tradeFromContent;
@@ -395,7 +396,7 @@ export default function LongPressOverlay({
         onLayout={onContentLayout}
       >
         <View style={{ direction: 'rtl' }} onLayout={(e) => setHeaderH(e.nativeEvent.layout.height)}>
-          <ChatSheetTopoHeader title="הודעה" onClose={onClose} />
+          <ChatSheetTopoHeader title={i18n.t('auto.components__chat__LongPressOverlay.s4')} onClose={onClose} />
         </View>
         {/* מוקטן פרופורציונלית מהפינה של הבועה אם אין מקום (בלי לגעת במרווחי הכרטיסים) */}
         <View style={previewScale < 1 ? { height: previewNaturalH * previewScale, overflow: 'hidden' } : undefined}>

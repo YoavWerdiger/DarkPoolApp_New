@@ -1,3 +1,4 @@
+import i18n from '../lib/i18n';
 import { supabase } from '../lib/supabase';
 
 export type PublicUserProfile = {
@@ -35,7 +36,7 @@ export async function fetchPublicUserProfile(
   const displayName =
     (data.display_name && String(data.display_name).trim()) ||
     (data.full_name && String(data.full_name).trim()) ||
-    'חבר קהילה';
+    i18n.t('auto.services__userFollowService.s1');
 
   return {
     id: String(data.id),
@@ -142,7 +143,7 @@ export async function fetchUserFollowList(
   return ((data ?? []) as Array<{ id: string; display_name: string | null; profile_picture: string | null }>).map(
     (r) => ({
       id: String(r.id),
-      displayName: r.display_name || 'חבר קהילה',
+      displayName: r.display_name || i18n.t('auto.services__userFollowService.s1'),
       avatarUrl: r.profile_picture || null,
     })
   );

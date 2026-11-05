@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 /**
  * ═══════════════════════════════════════════════════════════════════════════
  * מקור אמת יחיד — רשימת אנשים מאוצרת (Dark Pool People / Explore / Profiles)
@@ -32,7 +33,7 @@ export const CURATED_EXPLORE_PROFILES: ExplorePerson[] = [
     // מזהה פנימי (executive) — עסקאות Quiver trumpstocktrades
     id: '888dc73f-f1eb-485a-a241-80657aaaaff9',
     name: 'Donald Trump',
-    subtitle: 'נשיא · רפובליקני',
+    subtitle: i18n.t('auto.screens__DarkPool__utils__curatedExploreProfiles.s1'),
     image_url: `${WIKI}/5/56/Donald_Trump_official_portrait.jpg`,
     kind: 'politician',
     activity_score: 101,
@@ -40,7 +41,7 @@ export const CURATED_EXPLORE_PROFILES: ExplorePerson[] = [
   {
     id: 'P000197',
     name: 'Nancy Pelosi',
-    subtitle: 'בית הנציגים · דמוקרטית',
+    subtitle: i18n.t('auto.screens__DarkPool__utils__curatedExploreProfiles.s2'),
     image_url: `${CONGRESS}/P000197.jpg`,
     kind: 'politician',
     activity_score: 100,
@@ -48,7 +49,7 @@ export const CURATED_EXPLORE_PROFILES: ExplorePerson[] = [
   {
     id: 'C001114',
     name: 'John Curtis',
-    subtitle: 'Senate · רפובליקני',
+    subtitle: i18n.t('auto.screens__DarkPool__utils__curatedExploreProfiles.s3'),
     image_url: `${CONGRESS}/C001114.jpg`,
     kind: 'politician',
     activity_score: 99,
@@ -56,7 +57,7 @@ export const CURATED_EXPLORE_PROFILES: ExplorePerson[] = [
   {
     id: 'M000355',
     name: 'Mitch McConnell',
-    subtitle: 'Senate · רפובליקני',
+    subtitle: i18n.t('auto.screens__DarkPool__utils__curatedExploreProfiles.s3'),
     image_url: `${CONGRESS}/M000355.jpg`,
     kind: 'politician',
     activity_score: 98,
@@ -64,7 +65,7 @@ export const CURATED_EXPLORE_PROFILES: ExplorePerson[] = [
   {
     id: 'G000583',
     name: 'Josh Gottheimer',
-    subtitle: 'בית הנציגים · דמוקרט',
+    subtitle: i18n.t('auto.screens__DarkPool__utils__curatedExploreProfiles.s4'),
     image_url: `${CONGRESS}/G000583.jpg`,
     kind: 'politician',
     activity_score: 97,
@@ -72,7 +73,7 @@ export const CURATED_EXPLORE_PROFILES: ExplorePerson[] = [
   {
     id: 'C001098',
     name: 'Ted Cruz',
-    subtitle: 'Senate · רפובליקני',
+    subtitle: i18n.t('auto.screens__DarkPool__utils__curatedExploreProfiles.s3'),
     image_url: `${CONGRESS}/C001098.jpg`,
     kind: 'politician',
     activity_score: 96,
@@ -80,7 +81,7 @@ export const CURATED_EXPLORE_PROFILES: ExplorePerson[] = [
   {
     id: 'M001218',
     name: 'Rich McCormick',
-    subtitle: 'בית הנציגים · רפובליקני',
+    subtitle: i18n.t('auto.screens__DarkPool__utils__curatedExploreProfiles.s5'),
     image_url: `${CONGRESS}/M001218.jpg`,
     kind: 'politician',
     activity_score: 95,
@@ -88,7 +89,7 @@ export const CURATED_EXPLORE_PROFILES: ExplorePerson[] = [
   {
     id: 'B001236',
     name: 'John Boozman',
-    subtitle: 'Senate · רפובליקני',
+    subtitle: i18n.t('auto.screens__DarkPool__utils__curatedExploreProfiles.s3'),
     image_url: `${CONGRESS}/B001236.jpg`,
     kind: 'politician',
     activity_score: 94,
@@ -96,7 +97,7 @@ export const CURATED_EXPLORE_PROFILES: ExplorePerson[] = [
   {
     id: 'M001217',
     name: 'Jared Moskowitz',
-    subtitle: 'בית הנציגים · דמוקרט',
+    subtitle: i18n.t('auto.screens__DarkPool__utils__curatedExploreProfiles.s4'),
     image_url: `${CONGRESS}/M001217.jpg`,
     kind: 'politician',
     activity_score: 93,
@@ -104,7 +105,7 @@ export const CURATED_EXPLORE_PROFILES: ExplorePerson[] = [
   {
     id: 'S000168',
     name: 'Maria Elvira Salazar',
-    subtitle: 'בית הנציגים · רפובליקנית',
+    subtitle: i18n.t('auto.screens__DarkPool__utils__curatedExploreProfiles.s6'),
     image_url: `${CONGRESS}/S000168.jpg`,
     kind: 'politician',
     activity_score: 92,
@@ -112,7 +113,7 @@ export const CURATED_EXPLORE_PROFILES: ExplorePerson[] = [
   {
     id: 'T000278',
     name: 'Tommy Tuberville',
-    subtitle: 'Senate · רפובליקני',
+    subtitle: i18n.t('auto.screens__DarkPool__utils__curatedExploreProfiles.s3'),
     image_url: `${CONGRESS}/T000278.jpg`,
     kind: 'politician',
     activity_score: 91,
@@ -120,7 +121,7 @@ export const CURATED_EXPLORE_PROFILES: ExplorePerson[] = [
   {
     id: 'G000596',
     name: 'Marjorie Taylor Greene',
-    subtitle: 'בית הנציגים · רפובליקנית',
+    subtitle: i18n.t('auto.screens__DarkPool__utils__curatedExploreProfiles.s6'),
     image_url: `${CONGRESS}/G000596.jpg`,
     kind: 'politician',
     activity_score: 90,
@@ -128,7 +129,7 @@ export const CURATED_EXPLORE_PROFILES: ExplorePerson[] = [
   {
     id: 'W000802',
     name: 'Sheldon Whitehouse',
-    subtitle: 'Senate · דמוקרט',
+    subtitle: i18n.t('auto.screens__DarkPool__utils__curatedExploreProfiles.s7'),
     image_url: `${CONGRESS}/W000802.jpg`,
     kind: 'politician',
     activity_score: 87,
@@ -136,7 +137,7 @@ export const CURATED_EXPLORE_PROFILES: ExplorePerson[] = [
   {
     id: 'D000032',
     name: 'Byron Donalds',
-    subtitle: 'בית הנציגים · רפובליקני',
+    subtitle: i18n.t('auto.screens__DarkPool__utils__curatedExploreProfiles.s5'),
     image_url: `${CONGRESS}/D000032.jpg`,
     kind: 'politician',
     activity_score: 86,
@@ -144,7 +145,7 @@ export const CURATED_EXPLORE_PROFILES: ExplorePerson[] = [
   {
     id: 'M001190',
     name: 'Markwayne Mullin',
-    subtitle: 'Senate · רפובליקני',
+    subtitle: i18n.t('auto.screens__DarkPool__utils__curatedExploreProfiles.s3'),
     image_url: `${CONGRESS}/M001190.jpg`,
     kind: 'politician',
     activity_score: 85,

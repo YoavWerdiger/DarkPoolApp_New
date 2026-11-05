@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import { appLocale } from '../../../lib/i18n/locale';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -215,12 +216,12 @@ export default function OpenTradesTab({
     (trade: Trade) => {
       void HapticFeedback.impactLight();
       legacyAlert(
-        'מחיקת פוזיציה',
-        `האם למחוק את פוזיציית ${trade.symbol}? הפעולה תחזיר את ה-Cash ולא ניתנת לביטול.`,
+        i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s1'),
+        i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s2', { v0: trade.symbol }),
         [
-          { text: 'ביטול', style: 'cancel' },
+          { text: i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s3'), style: 'cancel' },
           {
-            text: 'מחק',
+            text: i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s4'),
             style: 'destructive',
             onPress: async () => {
               try {
@@ -229,7 +230,7 @@ export default function OpenTradesTab({
                 onChanged?.();
               } catch (err: unknown) {
                 const msg = err instanceof Error ? err.message : String(err);
-                legacyAlert('שגיאה', `מחיקה נכשלה: ${msg}`);
+                legacyAlert(i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s5'), i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s6', { v0: msg }));
               }
             },
           },
@@ -246,7 +247,7 @@ export default function OpenTradesTab({
         currentPrice: priceMap[trade.symbol],
       });
       if (!mapped) {
-        legacyAlert('שיתוף', 'ממתין למחיר נוכחי — נסה שוב בעוד רגע');
+        legacyAlert(i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s7'), i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s8'));
         return;
       }
       setExportTrade(mapped);
@@ -263,7 +264,7 @@ export default function OpenTradesTab({
     if (!closingTrade) return;
     const px = parseFloat(exitPriceText);
     if (!px || px <= 0) {
-      legacyAlert('שגיאה', 'מחיר יציאה לא תקין');
+      legacyAlert(i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s5'), i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s9'));
       return;
     }
     const finalDate = exitDate;
@@ -271,13 +272,13 @@ export default function OpenTradesTab({
     const openedAt = new Date(closingTrade.entry_date);
     if (finalDate < openedAt) {
       legacyAlert(
-        'תאריך לא תקין',
-        `לא ניתן לסגור לפני תאריך הפתיחה (${formatDateForInput(openedAt)})`
+        i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s10'),
+        i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s11', { v0: formatDateForInput(openedAt) })
       );
       return;
     }
     if (finalDate > new Date()) {
-      legacyAlert('תאריך לא תקין', 'לא ניתן לסגור בתאריך עתידי');
+      legacyAlert(i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s10'), i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s12'));
       return;
     }
 
@@ -294,15 +295,15 @@ export default function OpenTradesTab({
       console.error('quickCloseTrade error:', JSON.stringify(err), err?.message, err?.code);
       const msg =
         err?.message === 'not_authenticated'
-          ? 'לא מחובר'
+          ? i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s13')
           : err?.message === 'trade_not_open'
-            ? 'הטרייד כבר סגור'
+            ? i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s14')
             : err?.message === 'trade_not_found'
-              ? 'לא נמצא הטרייד'
+              ? i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s15')
               : err?.message === 'trade_update_failed'
-                ? 'עדכון הטרייד נכשל — ייתכן בעיית הרשאות'
-                : `שגיאה: ${err?.message ?? err?.code ?? 'לא ידוע'}`;
-      legacyAlert('שגיאת סגירה', msg);
+                ? i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s16')
+                : i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s17', { v0: err?.message ?? err?.code ?? 'לא ידוע' });
+      legacyAlert(i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s18'), msg);
     } finally {
       setBusy(false);
     }
@@ -496,10 +497,8 @@ export default function OpenTradesTab({
           size={42}
           color={tokens.colors.text.tertiary}
         />
-        <Text style={styles.emptyTitle}>אין פוזיציות פתוחות</Text>
-        <Text style={styles.emptyText}>
-          פתח טרייד חדש (לונג או שורט) מהכרטיסיה הראשית והוא יופיע כאן.
-        </Text>
+        <Text style={styles.emptyTitle}>{i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s19')}</Text>
+        <Text style={styles.emptyText}>{i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s20')}</Text>
       </View>
     );
   }
@@ -588,22 +587,20 @@ export default function OpenTradesTab({
                           },
                         ]}
                       >
-                        {closingTrade.direction === 'long' ? 'לונג' : 'שורט'}
+                        {closingTrade.direction === 'long' ? i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s21') : i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s22')}
                       </Text>
                     </View>
                   </View>
-                  <Text style={styles.sheetSub}>
-                    סגירת {closingTrade.quantity} יח׳ · כניסה{' '}
-                    {formatCurrency(
+                  <Text style={styles.sheetSub}>{i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s23', { v0: closingTrade.quantity, v1: ' ', v2: formatCurrency(
                       closingTrade.entry_price,
                       closingTrade.currency
-                    )}
+                    ) })}
                   </Text>
                 </View>
               </View>
 
               <View style={styles.sheetInputBlock}>
-                <Text style={styles.sheetLabel}>מחיר יציאה</Text>
+                <Text style={styles.sheetLabel}>{i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s24')}</Text>
                 <View style={styles.sheetInputWrap}>
                   <Text style={styles.sheetInputPrefix}>
                     {closingTrade.currency === 'USD' ? '$' : closingTrade.currency}
@@ -620,7 +617,7 @@ export default function OpenTradesTab({
               </View>
 
               <View style={styles.sheetInputBlock}>
-                <Text style={styles.sheetLabel}>תאריך ושעת יציאה</Text>
+                <Text style={styles.sheetLabel}>{i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s25')}</Text>
                 <View style={styles.dateRow}>
                   <TouchableOpacity
                     style={styles.datePill}
@@ -710,7 +707,7 @@ export default function OpenTradesTab({
                       : tokens.colors.text.secondary;
                 return (
                   <View style={styles.pnlPreview}>
-                    <Text style={styles.pnlPreviewLabel}>תוצאה צפויה</Text>
+                    <Text style={styles.pnlPreviewLabel}>{i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s26')}</Text>
                     <Text style={[styles.pnlPreviewValue, { color: c }]}>
                       {formatCurrency(pnl, closingTrade.currency)} (
                       {formatPercent(pnlPct)})
@@ -722,7 +719,7 @@ export default function OpenTradesTab({
 
             <View style={styles.sheetActions}>
               <UIButton
-                title={busy ? 'סוגר…' : 'סגור פוזיציה'}
+                title={busy ? i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s27') : i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s28')}
                 variant="primary"
                 fullWidth
                 loading={busy}
@@ -733,7 +730,7 @@ export default function OpenTradesTab({
                 }}
               />
               <UIButton
-                title="ביטול"
+                title={i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s3')}
                 variant="secondary"
                 fullWidth
                 disabled={busy}
@@ -744,7 +741,7 @@ export default function OpenTradesTab({
             {Platform.OS === 'ios' && showExitDatePicker && (
               <View style={styles.exitPickerOverlay}>
                 <View style={styles.exitPickerSheet}>
-                  <Text style={styles.exitPickerTitle}>בחר תאריך</Text>
+                  <Text style={styles.exitPickerTitle}>{i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s29')}</Text>
                   <DateTimePicker
                     value={tempExitDate}
                     mode="date"
@@ -763,7 +760,7 @@ export default function OpenTradesTab({
                     style={{ alignSelf: 'stretch' }}
                   />
                   <UIButton
-                    title="אישור"
+                    title={i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s30')}
                     variant="primary"
                     fullWidth
                     style={{ marginTop: APP_LAYOUT.cardTitleToBodyGap }}
@@ -779,7 +776,7 @@ export default function OpenTradesTab({
             {Platform.OS === 'ios' && showExitTimePicker && (
               <View style={styles.exitPickerOverlay}>
                 <View style={styles.exitPickerSheet}>
-                  <Text style={styles.exitPickerTitle}>בחר שעה</Text>
+                  <Text style={styles.exitPickerTitle}>{i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s31')}</Text>
                   <DateTimePicker
                     value={tempExitDate}
                     mode="time"
@@ -797,7 +794,7 @@ export default function OpenTradesTab({
                     style={{ alignSelf: 'stretch' }}
                   />
                   <UIButton
-                    title="אישור"
+                    title={i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s30')}
                     variant="primary"
                     fullWidth
                     style={{ marginTop: APP_LAYOUT.cardTitleToBodyGap }}

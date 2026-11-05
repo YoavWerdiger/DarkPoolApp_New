@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useCallback, useMemo } from 'react';
@@ -36,7 +37,7 @@ export type { Trade } from './tradeTypes';
 type Nav = NativeStackNavigationProp<JournalStackParamList, 'JournalMain'>;
 type FilterId = 'all' | 'long' | 'short' | 'win' | 'loss' | string;
 const BASE_FILTERS: { id: FilterId; label: string }[] = [
-  { id: 'all', label: 'הכל' },
+  { id: 'all', label: i18n.t('auto.screens__Journal__TradesListTab.s1') },
   { id: 'long', label: 'Long' },
   { id: 'short', label: 'Short' },
   { id: 'win', label: 'Win ✓' },
@@ -78,7 +79,7 @@ export default function TradesListTab() {
       setTrades(data || []);
       queryClient.setQueryData(appQueryKeys.trades(user.id), data || []);
     } catch (error: any) {
-      legacyAlert('שגיאה', 'לא ניתן לטעון את הטריידים');
+      legacyAlert(i18n.t('auto.screens__Journal__TradesListTab.s2'), i18n.t('auto.screens__Journal__TradesListTab.s3'));
     } finally {
       setLoading(false);
     }
@@ -93,12 +94,12 @@ export default function TradesListTab() {
   const handleDeleteTrade = useCallback(
     (tradeId: string) => {
       legacyAlert(
-        'מחיקת טרייד',
-        'האם אתה בטוח שברצונך למחוק את הטרייד הזה?',
+        i18n.t('auto.screens__Journal__TradesListTab.s4'),
+        i18n.t('auto.screens__Journal__TradesListTab.s5'),
         [
-          { text: 'ביטול', style: 'cancel' },
+          { text: i18n.t('auto.screens__Journal__TradesListTab.s6'), style: 'cancel' },
           {
-            text: 'מחק',
+            text: i18n.t('auto.screens__Journal__TradesListTab.s7'),
             style: 'destructive',
             onPress: async () => {
               try {
@@ -112,7 +113,7 @@ export default function TradesListTab() {
                 void HapticFeedback.impactLight();
                 void loadTrades();
               } catch {
-                legacyAlert('שגיאה', 'לא ניתן למחוק את הטרייד');
+                legacyAlert(i18n.t('auto.screens__Journal__TradesListTab.s2'), i18n.t('auto.screens__Journal__TradesListTab.s8'));
               }
             },
           },
@@ -318,7 +319,7 @@ export default function TradesListTab() {
         <DayDividerPill
           style={[styles.searchPill, { backgroundColor: DesignTokens.colors.background.cardSolid }]}
           contentContainerStyle={styles.searchPillContent}
-          accessibilityLabel="חיפוש רשימת טריידים לפי סמל"
+          accessibilityLabel={i18n.t('auto.screens__Journal__TradesListTab.s9')}
         >
           <View style={styles.searchLeadingIcon} pointerEvents="none" accessibilityElementsHidden>
             <Ionicons
@@ -329,7 +330,7 @@ export default function TradesListTab() {
           </View>
           <TextInput
             style={styles.searchInput}
-            placeholder="חיפוש לפי סמל"
+            placeholder={i18n.t('auto.screens__Journal__TradesListTab.s10')}
             placeholderTextColor={placeholderColor}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -338,7 +339,7 @@ export default function TradesListTab() {
             autoCorrect={false}
             autoCapitalize="characters"
             clearButtonMode="never"
-            accessibilityLabel="חיפוש רשימת טריידים לפי סמל"
+            accessibilityLabel={i18n.t('auto.screens__Journal__TradesListTab.s9')}
           />
           {q.length > 0 ? (
             <TouchableOpacity
@@ -349,7 +350,7 @@ export default function TradesListTab() {
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               style={styles.clearSearchBtn}
               accessibilityRole="button"
-              accessibilityLabel="נקה חיפוש"
+              accessibilityLabel={i18n.t('auto.screens__Journal__TradesListTab.s11')}
             >
               <Ionicons
                 name="close-circle"
@@ -367,13 +368,13 @@ export default function TradesListTab() {
           <Ionicons name="document-outline" size={64} color={DesignTokens.colors.text.tertiary} />
           {trades.length === 0 ? (
             <>
-              <Text style={styles.emptyText}>אין טריידים עדיין</Text>
-              <Text style={styles.emptySubtext}>הוסף טרייד ראשון כדי להתחיל</Text>
+              <Text style={styles.emptyText}>{i18n.t('auto.screens__Journal__TradesListTab.s12')}</Text>
+              <Text style={styles.emptySubtext}>{i18n.t('auto.screens__Journal__TradesListTab.s13')}</Text>
             </>
           ) : (
             <>
-              <Text style={styles.emptyText}>אין תוצאות</Text>
-              <Text style={styles.emptySubtext}>בדוק את הסמל, החיפוש או הפילטר</Text>
+              <Text style={styles.emptyText}>{i18n.t('auto.screens__Journal__TradesListTab.s14')}</Text>
+              <Text style={styles.emptySubtext}>{i18n.t('auto.screens__Journal__TradesListTab.s15')}</Text>
             </>
           )}
         </View>

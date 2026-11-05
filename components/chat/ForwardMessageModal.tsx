@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 // ============================================
 // Forward Message Sheet
@@ -74,7 +75,7 @@ export default function ForwardMessageModal({
       setGroups(
         (data || [])
           .filter((g: any) => g.id !== currentGroupId)
-          .map((g: any) => ({ id: g.id, name: g.name || 'קבוצה', avatar_url: g.avatar_url })),
+          .map((g: any) => ({ id: g.id, name: g.name || i18n.t('auto.components__chat__ForwardMessageModal.s1'), avatar_url: g.avatar_url })),
       );
     } catch (error) {
       logger.error('ForwardMessageModal', 'Failed to load groups', error);
@@ -111,7 +112,7 @@ export default function ForwardMessageModal({
       onClose();
     } catch (error) {
       logger.error('ForwardMessageModal', 'Forward failed', error);
-      legacyAlert('שגיאה', (error as Error)?.message || 'לא ניתן להעביר את ההודעה');
+      legacyAlert(i18n.t('auto.components__chat__ForwardMessageModal.s2'), (error as Error)?.message || i18n.t('auto.components__chat__ForwardMessageModal.s3'));
     } finally {
       setBusy(false);
     }
@@ -141,7 +142,7 @@ export default function ForwardMessageModal({
         <View style={styles.header}>
           <HeaderClose disabled={busy} onClose={onClose} />
           <View style={styles.headerCenter}>
-            <Text style={[styles.headerTitle, { color: tokens.colors.text.primary }]}>העבר הודעה</Text>
+            <Text style={[styles.headerTitle, { color: tokens.colors.text.primary }]}>{i18n.t('auto.components__chat__ForwardMessageModal.s4')}</Text>
           </View>
           <View style={styles.headerSideSpacer} />
         </View>
@@ -152,9 +153,7 @@ export default function ForwardMessageModal({
           </View>
         ) : groups.length === 0 ? (
           <View style={styles.center}>
-            <Text style={[styles.emptyText, { color: tokens.colors.text.secondary }]}>
-              אין קבוצות זמינות
-            </Text>
+            <Text style={[styles.emptyText, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.components__chat__ForwardMessageModal.s5')}</Text>
           </View>
         ) : (
           <FlatList
@@ -200,7 +199,7 @@ export default function ForwardMessageModal({
 
         <View style={styles.footer}>
           <UIButton
-            title={selected.size > 0 ? `העבר (${selected.size})` : 'העבר'}
+            title={selected.size > 0 ? i18n.t('auto.components__chat__ForwardMessageModal.s6', { v0: selected.size }) : i18n.t('auto.components__chat__ForwardMessageModal.s7')}
             variant="primary"
             size="lg"
             fullWidth
@@ -226,7 +225,7 @@ function HeaderClose({ disabled, onClose }: { disabled: boolean; onClose: () => 
       size={DAY_NAV_BUTTON_SIZE}
       glass={false}
       style={{ backgroundColor: headerExitButtonFill(tokens.colors.background.cardSolid) }}
-      accessibilityLabel="סגור"
+      accessibilityLabel={i18n.t('auto.components__chat__ForwardMessageModal.s8')}
       disabled={disabled}
     >
       <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />

@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useMemo } from 'react';
@@ -48,20 +49,20 @@ export const CoursePreviewScreen: React.FC = () => {
       
       if (result) {
         legacyAlert(
-          'הצלחה!',
-          'הקורס נוצר בהצלחה במסד הנתונים',
+          i18n.t('auto.screens__Learning__CoursePreviewScreen.s1'),
+          i18n.t('auto.screens__Learning__CoursePreviewScreen.s2'),
           [
             {
-              text: 'אישור',
+              text: i18n.t('auto.screens__Learning__CoursePreviewScreen.s3'),
               onPress: () => navigation.goBack(),
             },
           ]
         );
       } else {
-        legacyAlert('שגיאה', 'לא ניתן ליצור את הקורס כרגע');
+        legacyAlert(i18n.t('auto.screens__Learning__CoursePreviewScreen.s4'), i18n.t('auto.screens__Learning__CoursePreviewScreen.s5'));
       }
     } catch (error) {
-      legacyAlert('שגיאה', 'אירעה שגיאה ביצירת הקורס');
+      legacyAlert(i18n.t('auto.screens__Learning__CoursePreviewScreen.s4'), i18n.t('auto.screens__Learning__CoursePreviewScreen.s6'));
     } finally {
       setIsCreating(false);
     }
@@ -70,7 +71,7 @@ export const CoursePreviewScreen: React.FC = () => {
   const handleOpenYoutubeLink = (url: string) => {
     if (url) {
       Linking.openURL(url).catch((err) => {
-        legacyAlert('שגיאה', 'לא ניתן לפתוח את הקישור');
+        legacyAlert(i18n.t('auto.screens__Learning__CoursePreviewScreen.s4'), i18n.t('auto.screens__Learning__CoursePreviewScreen.s7'));
       });
     }
   };
@@ -110,7 +111,7 @@ export const CoursePreviewScreen: React.FC = () => {
           >
           <AcademySubScreenBar
             onBackPress={() => navigation.goBack()}
-            title="תצוגה מקדימה"
+            title={i18n.t('auto.screens__Learning__CoursePreviewScreen.s8')}
           />
 
           {/* Course Info */}
@@ -125,35 +126,33 @@ export const CoursePreviewScreen: React.FC = () => {
           
           <View style={styles.courseMeta}>
             <View style={styles.metaItem}>
-              <Text style={styles.metaLabel}>מדריך:</Text>
+              <Text style={styles.metaLabel}>{i18n.t('auto.screens__Learning__CoursePreviewScreen.s9')}</Text>
               <Text style={styles.metaValue}>{preview.course.instructor_name}</Text>
             </View>
             <View style={styles.metaItem}>
-              <Text style={styles.metaLabel}>שיעורים:</Text>
+              <Text style={styles.metaLabel}>{i18n.t('auto.screens__Learning__CoursePreviewScreen.s10')}</Text>
               <Text style={styles.metaValue}>{preview.summary.totalLessons}</Text>
             </View>
             <View style={styles.metaItem}>
-              <Text style={styles.metaLabel}>משך זמן:</Text>
-              <Text style={styles.metaValue}>{preview.summary.totalDuration} שעות</Text>
+              <Text style={styles.metaLabel}>{i18n.t('auto.screens__Learning__CoursePreviewScreen.s11')}</Text>
+              <Text style={styles.metaValue}>{i18n.t('auto.screens__Learning__CoursePreviewScreen.s12', { v0: preview.summary.totalDuration })}</Text>
             </View>
             <View style={styles.metaItem}>
-              <Text style={styles.metaLabel}>רמה:</Text>
+              <Text style={styles.metaLabel}>{i18n.t('auto.screens__Learning__CoursePreviewScreen.s13')}</Text>
               <Text style={styles.metaValue}>{preview.course.level}</Text>
             </View>
           </View>
 
           {preview.summary.lessonsWithoutLinks > 0 && (
             <View style={styles.warningBox}>
-              <Text style={styles.warningText}>
-                ⚠️ {preview.summary.lessonsWithoutLinks} שיעורים ללא קישור יוטיוב
-              </Text>
+              <Text style={styles.warningText}>{i18n.t('auto.screens__Learning__CoursePreviewScreen.s14', { v0: preview.summary.lessonsWithoutLinks })}</Text>
             </View>
           )}
           </UICard>
 
           {/* Lessons List */}
           <View style={styles.lessonsSection}>
-            <Text style={styles.sectionTitle}>רשימת שיעורים ({preview.lessons.length})</Text>
+            <Text style={styles.sectionTitle}>{i18n.t('auto.screens__Learning__CoursePreviewScreen.s15', { v0: preview.lessons.length })}</Text>
             
             {preview.lessons.map((lesson, index) => (
               <UICard
@@ -166,9 +165,7 @@ export const CoursePreviewScreen: React.FC = () => {
                 <Text style={styles.lessonNumber}>{index + 1}</Text>
                 <View style={styles.lessonInfo}>
                   <Text style={styles.lessonTitle}>{lesson.title}</Text>
-                  <Text style={styles.lessonDuration}>
-                    ⏱️ {lesson.duration} ({lesson.durationMinutes} דקות)
-                  </Text>
+                  <Text style={styles.lessonDuration}>{i18n.t('auto.screens__Learning__CoursePreviewScreen.s16', { v0: lesson.duration, v1: lesson.durationMinutes })}</Text>
                 </View>
               </View>
               
@@ -178,13 +175,13 @@ export const CoursePreviewScreen: React.FC = () => {
                     style={[styles.youtubeButton, styles.openButton]}
                     onPress={() => handleOpenYoutubeLink(lesson.youtubeUrl!)}
                   >
-                    <Text style={styles.youtubeButtonText}>🔗 פתח קישור יוטיוב</Text>
+                    <Text style={styles.youtubeButtonText}>{i18n.t('auto.screens__Learning__CoursePreviewScreen.s17')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.youtubeButton, styles.editButton]}
                     onPress={() => handleEditLink(index)}
                   >
-                    <Text style={styles.youtubeButtonText}>✏️ ערוך</Text>
+                    <Text style={styles.youtubeButtonText}>{i18n.t('auto.screens__Learning__CoursePreviewScreen.s18')}</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -192,7 +189,7 @@ export const CoursePreviewScreen: React.FC = () => {
                   style={styles.addLinkButton}
                   onPress={() => handleEditLink(index)}
                 >
-                  <Text style={styles.addLinkText}>➕ הוסף קישור יוטיוב</Text>
+                  <Text style={styles.addLinkText}>{i18n.t('auto.screens__Learning__CoursePreviewScreen.s19')}</Text>
                 </TouchableOpacity>
               )}
               </UICard>
@@ -201,7 +198,7 @@ export const CoursePreviewScreen: React.FC = () => {
 
           {/* Create Button */}
           <UIButton
-            title={isCreating ? 'יוצר קורס...' : 'צור קורס במסד הנתונים'}
+            title={isCreating ? i18n.t('auto.screens__Learning__CoursePreviewScreen.s20') : i18n.t('auto.screens__Learning__CoursePreviewScreen.s21')}
             variant="primary"
             fullWidth
             loading={isCreating}
@@ -215,8 +212,8 @@ export const CoursePreviewScreen: React.FC = () => {
             style={[styles.footerCard, academyCardFrameStyle('neutral')]}
           >
             <Text style={styles.footerText}>
-              לאחר לחיצה על "צור קורס", הקורס יווצר במסד הנתונים עם כל השיעורים.
-              {youtubeLinks.length === 0 && ' ניתן להוסיף קישורי יוטיוב מאוחר יותר.'}
+              {i18n.t('auto.screens__Learning__CoursePreviewScreen.s22')}
+              {youtubeLinks.length === 0 && i18n.t('auto.screens__Learning__CoursePreviewScreen.s23')}
             </Text>
           </UICard>
           </ScrollView>
@@ -234,14 +231,14 @@ export const CoursePreviewScreen: React.FC = () => {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
               {editingLinkIndex !== null && preview.lessons[editingLinkIndex]
-                ? `עריכת קישור: ${preview.lessons[editingLinkIndex].title}`
-                : 'הוספת קישור יוטיוב'}
+                ? i18n.t('auto.screens__Learning__CoursePreviewScreen.s24', { v0: preview.lessons[editingLinkIndex].title })
+                : i18n.t('auto.screens__Learning__CoursePreviewScreen.s25')}
             </Text>
             <TextInput
               style={styles.linkInput}
               value={linkInputValue}
               onChangeText={setLinkInputValue}
-              placeholder="הדבק קישור יוטיוב כאן..."
+              placeholder={i18n.t('auto.screens__Learning__CoursePreviewScreen.s26')}
               placeholderTextColor={DesignTokens.colors.text.tertiary}
               autoCapitalize="none"
               autoCorrect={false}
@@ -249,10 +246,10 @@ export const CoursePreviewScreen: React.FC = () => {
             />
             <View style={styles.modalButtons}>
               <View style={{ flex: 1 }}>
-                <UIButton title="ביטול" variant="secondary" fullWidth onPress={handleCancelEdit} />
+                <UIButton title={i18n.t('auto.screens__Learning__CoursePreviewScreen.s27')} variant="secondary" fullWidth onPress={handleCancelEdit} />
               </View>
               <View style={{ flex: 1 }}>
-                <UIButton title="שמור" variant="primary" fullWidth onPress={handleSaveLink} />
+                <UIButton title={i18n.t('auto.screens__Learning__CoursePreviewScreen.s28')} variant="primary" fullWidth onPress={handleSaveLink} />
               </View>
             </View>
           </View>

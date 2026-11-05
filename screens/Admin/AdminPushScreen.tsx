@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
@@ -40,18 +41,18 @@ import { legacyAlert } from '../../utils/appDialog';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 
 const AUDIENCES: { key: AdminPushAudience; label: string }[] = [
-  { key: 'all', label: 'כולם' },
-  { key: 'free', label: 'חינמי' },
-  { key: 'premium', label: 'פרימיום' },
-  { key: 'active_7d', label: 'פעילים 7 ימים' },
+  { key: 'all', label: i18n.t('auto.screens__Admin__AdminPushScreen.s1') },
+  { key: 'free', label: i18n.t('auto.screens__Admin__AdminPushScreen.s2') },
+  { key: 'premium', label: i18n.t('auto.screens__Admin__AdminPushScreen.s3') },
+  { key: 'active_7d', label: i18n.t('auto.screens__Admin__AdminPushScreen.s4') },
 ];
 
 const AUDIENCE_LABELS: Record<string, string> = {
-  all: 'כולם',
-  free: 'חינמי',
-  premium: 'פרימיום',
-  active_7d: 'פעילים 7 ימים',
-  custom: 'מותאם',
+  all: i18n.t('auto.screens__Admin__AdminPushScreen.s1'),
+  free: i18n.t('auto.screens__Admin__AdminPushScreen.s2'),
+  premium: i18n.t('auto.screens__Admin__AdminPushScreen.s3'),
+  active_7d: i18n.t('auto.screens__Admin__AdminPushScreen.s4'),
+  custom: i18n.t('auto.screens__Admin__AdminPushScreen.s5'),
 };
 
 export default function AdminPushScreen({ navigation }: any) {
@@ -80,14 +81,14 @@ export default function AdminPushScreen({ navigation }: any) {
 
   const handleSend = () => {
     if (!title.trim() || !body.trim()) {
-      legacyAlert('חסר תוכן', 'יש למלא כותרת וגוף הודעה');
+      legacyAlert(i18n.t('auto.screens__Admin__AdminPushScreen.s6'), i18n.t('auto.screens__Admin__AdminPushScreen.s7'));
       return;
     }
 
-    legacyAlert('שליחת פוש', `לשלוח לקהל: ${AUDIENCES.find((a) => a.key === audience)?.label}?`, [
-      { text: 'ביטול', style: 'cancel' },
+    legacyAlert(i18n.t('auto.screens__Admin__AdminPushScreen.s8'), i18n.t('auto.screens__Admin__AdminPushScreen.s9', { v0: AUDIENCES.find((a) => a.key === audience)?.label }), [
+      { text: i18n.t('auto.screens__Admin__AdminPushScreen.s10'), style: 'cancel' },
       {
-        text: 'שלח',
+        text: i18n.t('auto.screens__Admin__AdminPushScreen.s11'),
         onPress: async () => {
           setSending(true);
           try {
@@ -98,14 +99,14 @@ export default function AdminPushScreen({ navigation }: any) {
             });
             void HapticFeedback.success();
             legacyAlert(
-              'נשלח',
-              `נשלחו ${res.sent} התראות (${res.failed} נכשלו)\nקהל: ${res.audienceSize} · טוקנים: ${res.tokens}`,
+              i18n.t('auto.screens__Admin__AdminPushScreen.s12'),
+              i18n.t('auto.screens__Admin__AdminPushScreen.s13', { v0: res.sent, v1: res.failed, v2: res.audienceSize, v3: res.tokens }),
             );
             setTitle('');
             setBody('');
             await loadHistory();
           } catch (e) {
-            legacyAlert('שגיאה', e instanceof Error ? e.message : 'שליחה נכשלה');
+            legacyAlert(i18n.t('auto.screens__Admin__AdminPushScreen.s14'), e instanceof Error ? e.message : i18n.t('auto.screens__Admin__AdminPushScreen.s15'));
           } finally {
             setSending(false);
           }
@@ -121,9 +122,9 @@ export default function AdminPushScreen({ navigation }: any) {
   };
 
   const statusLabel = (status: string) => {
-    if (status === 'sent' || status === 'completed') return 'נשלח';
-    if (status === 'failed') return 'נכשל';
-    if (status === 'partial') return 'חלקי';
+    if (status === 'sent' || status === 'completed') return i18n.t('auto.screens__Admin__AdminPushScreen.s12');
+    if (status === 'failed') return i18n.t('auto.screens__Admin__AdminPushScreen.s16');
+    if (status === 'partial') return i18n.t('auto.screens__Admin__AdminPushScreen.s17');
     return status;
   };
 
@@ -147,7 +148,7 @@ export default function AdminPushScreen({ navigation }: any) {
   return (
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
       <ChatSubScreenHeader
-        title="שליחת פוש"
+        title={i18n.t('auto.screens__Admin__AdminPushScreen.s8')}
         onBack={() => {
           void HapticFeedback.impactLight();
           navigation.goBack();
@@ -176,15 +177,11 @@ export default function AdminPushScreen({ navigation }: any) {
             }}
           >
             <View style={styles.composerHeader}>
-              <Text style={[styles.composerTitle, { color: tokens.colors.text.primary }]}>
-                הודעה חדשה
-              </Text>
-              <Text style={[styles.composerSub, { color: tokens.colors.text.tertiary }]}>
-                שליחה מיידית לקהל שנבחר
-              </Text>
+              <Text style={[styles.composerTitle, { color: tokens.colors.text.primary }]}>{i18n.t('auto.screens__Admin__AdminPushScreen.s18')}</Text>
+              <Text style={[styles.composerSub, { color: tokens.colors.text.tertiary }]}>{i18n.t('auto.screens__Admin__AdminPushScreen.s19')}</Text>
             </View>
 
-            <AdminSectionLabel style={{ marginTop: 4 }}>קהל יעד</AdminSectionLabel>
+            <AdminSectionLabel style={{ marginTop: 4 }}>{i18n.t('auto.screens__Admin__AdminPushScreen.s20')}</AdminSectionLabel>
             <View style={styles.filters}>
               {AUDIENCES.map((a) => (
                 <AdminFilterChip
@@ -200,9 +197,7 @@ export default function AdminPushScreen({ navigation }: any) {
               <Text style={[styles.counter, { color: tokens.colors.text.muted }]}>
                 {title.length}/80
               </Text>
-              <Text style={[styles.fieldLabel, { color: tokens.colors.text.secondary }]}>
-                כותרת
-              </Text>
+              <Text style={[styles.fieldLabel, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Admin__AdminPushScreen.s21')}</Text>
             </View>
             <View
               style={[
@@ -215,7 +210,7 @@ export default function AdminPushScreen({ navigation }: any) {
                 value={title}
                 onChangeText={setTitle}
                 maxLength={80}
-                placeholder="כותרת ההתראה"
+                placeholder={i18n.t('auto.screens__Admin__AdminPushScreen.s22')}
                 placeholderTextColor={tokens.colors.text.tertiary}
                 style={[styles.inputInner, { color: tokens.colors.text.primary }]}
               />
@@ -225,9 +220,7 @@ export default function AdminPushScreen({ navigation }: any) {
               <Text style={[styles.counter, { color: tokens.colors.text.muted }]}>
                 {body.length}/240
               </Text>
-              <Text style={[styles.fieldLabel, { color: tokens.colors.text.secondary }]}>
-                תוכן
-              </Text>
+              <Text style={[styles.fieldLabel, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Admin__AdminPushScreen.s23')}</Text>
             </View>
             <View
               style={[
@@ -242,7 +235,7 @@ export default function AdminPushScreen({ navigation }: any) {
                 onChangeText={setBody}
                 maxLength={240}
                 multiline
-                placeholder="גוף ההודעה"
+                placeholder={i18n.t('auto.screens__Admin__AdminPushScreen.s24')}
                 placeholderTextColor={tokens.colors.text.tertiary}
                 style={[
                   styles.inputInner,
@@ -253,7 +246,7 @@ export default function AdminPushScreen({ navigation }: any) {
             </View>
 
             <UIButton
-              title="שלח התראה"
+              title={i18n.t('auto.screens__Admin__AdminPushScreen.s25')}
               variant="primary"
               onPress={handleSend}
               disabled={!canSend}
@@ -263,7 +256,7 @@ export default function AdminPushScreen({ navigation }: any) {
           </UICard>
 
           {/* History */}
-          <AdminSectionLabel>היסטוריה</AdminSectionLabel>
+          <AdminSectionLabel>{i18n.t('auto.screens__Admin__AdminPushScreen.s26')}</AdminSectionLabel>
 
           {loadingHistory ? (
             <View style={{ paddingVertical: 24, alignItems: 'center' }}>
@@ -271,8 +264,8 @@ export default function AdminPushScreen({ navigation }: any) {
             </View>
           ) : campaigns.length === 0 ? (
             <AdminEmptyState
-              title="עדיין אין קמפיינים"
-              subtitle="הודעות שנשלחו יופיעו כאן"
+              title={i18n.t('auto.screens__Admin__AdminPushScreen.s27')}
+              subtitle={i18n.t('auto.screens__Admin__AdminPushScreen.s28')}
             />
           ) : (
             campaigns.map((c) => (
@@ -310,8 +303,8 @@ export default function AdminPushScreen({ navigation }: any) {
                   <Text style={[styles.campaignMetaText, { color: tokens.colors.text.tertiary }]}>
                     {AUDIENCE_LABELS[c.audience] ?? c.audience}
                     {' · '}
-                    נשלח {c.sent_count}
-                    {c.failed_count > 0 ? ` · נכשל ${c.failed_count}` : ''}
+                    {i18n.t('auto.screens__Admin__AdminPushScreen.s12')} {c.sent_count}
+                    {c.failed_count > 0 ? i18n.t('auto.screens__Admin__AdminPushScreen.s29', { v0: c.failed_count }) : ''}
                   </Text>
                 </View>
               </UICard>

@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 // ============================================
 // Chat Message Component
@@ -686,14 +687,14 @@ function ChatMessage({
     // — לא קישור ל-bucket בדפדפן (באנדרואיד הדפדפן גם לא מציג PDF)
     const source = message.local_media_uri || message.media_url || resolvedMedia.doc;
     if (!source) {
-      legacyAlert('שגיאה', 'לא נמצא קישור למסמך');
+      legacyAlert(i18n.t('auto.components__chat__ChatMessage.s1'), i18n.t('auto.components__chat__ChatMessage.s2'));
       return;
     }
     const ok = await shareMediaFile(source, {
       kind: 'document',
       fileName: message.media_file_name || extractFileNameFromUrl(message.media_url),
     });
-    if (!ok) legacyAlert('שגיאה', 'לא ניתן לפתוח את המסמך');
+    if (!ok) legacyAlert(i18n.t('auto.components__chat__ChatMessage.s1'), i18n.t('auto.components__chat__ChatMessage.s3'));
   };
 
   // שם השולח בצבע הטקסט הראשי של ערכת העיצוב (לא פלטת צבעים לכל משתמש — לא לפי הטופו).
@@ -739,7 +740,7 @@ function ChatMessage({
   if (message.is_deleted) {
     const metaColorStyle = isMe ? styles.myTimeText : styles.theirTimeText;
     // «רק אצלי» — תמיד «מחקת» (גם על הודעה של אחר); לכולם — לפי השולח
-    const label = isMe || message.deleted_for_me ? 'מחקת את ההודעה' : 'ההודעה נמחקה';
+    const label = isMe || message.deleted_for_me ? i18n.t('auto.components__chat__ChatMessage.s4') : i18n.t('auto.components__chat__ChatMessage.s5');
     return (
       <View
         style={[styles.messageContainer, centered ? styles.centeredMessage : isMe ? styles.myMessage : styles.theirMessage, senderGapStyle]}
@@ -794,7 +795,7 @@ function ChatMessage({
           disabled={!onAvatarPress}
           style={styles.avatarContainer}
           accessibilityRole="button"
-          accessibilityLabel={`פרופיל של ${message.sender?.display_name || 'משתמש'}`}
+          accessibilityLabel={i18n.t('auto.components__chat__ChatMessage.s6', { v0: message.sender?.display_name || 'משתמש' })}
         >
           {message.sender?.profile_picture ? (
             <Image source={{ uri: message.sender.profile_picture }} style={styles.avatar} />
@@ -865,7 +866,7 @@ function ChatMessage({
               onLongPress={onLongPress}
               activeOpacity={0.65}
               accessibilityRole="button"
-              accessibilityLabel="קפוץ להודעה המקורית"
+              accessibilityLabel={i18n.t('auto.components__chat__ChatMessage.s7')}
             >
               <View key={`reply-bar-${message.id}`} style={styles.replyBar} />
               <View key={`reply-content-${message.id}`} style={styles.replyContent}>
@@ -887,7 +888,7 @@ function ChatMessage({
             onLongPress={onLongPress}
             accessibilityRole="button"
             accessibilityLabel={`${isMe ? 'Your message' : (message.sender?.display_name || 'Message')}: ${message.content || message.message_type}`}
-            accessibilityHint="לחיצה ארוכה לתפריט; החלקה אופקית לתשובה"
+            accessibilityHint={i18n.t('auto.components__chat__ChatMessage.s8')}
             style={message.reply_to ? styles.bubbleBodyTouchable : undefined}
           >
           {/* Sender Name - בתוך הבועה – רק כשיש שם אמיתי, בלי placeholder */}
@@ -928,7 +929,7 @@ function ChatMessage({
           {/* Forwarded Tag */}
           {message.is_forwarded && (
             <View key={`forwarded-tag-${message.id}`} style={styles.forwardedTag}>
-              <Text key={`forwarded-text-${message.id}`} style={styles.forwardedText}>הועבר</Text>
+              <Text key={`forwarded-text-${message.id}`} style={styles.forwardedText}>{i18n.t('auto.components__chat__ChatMessage.s9')}</Text>
             </View>
           )}
 
@@ -948,9 +949,7 @@ function ChatMessage({
                       isMe ? styles.myMessageText : styles.theirMessageText,
                       { textAlign: 'right' },
                     ]}
-                  >
-                    טרייד · לא ניתן לטעון פרטים
-                  </Text>
+                  >{i18n.t('auto.components__chat__ChatMessage.s10')}</Text>
                 );
               }
               return <TradeMessage trade={t} isMe={isMe} embeddedInBubble />;
@@ -967,9 +966,7 @@ function ChatMessage({
                       isMe ? styles.myMessageText : styles.theirMessageText,
                       { textAlign: 'right' },
                     ]}
-                  >
-                    שיתוף · לא ניתן לטעון פרטים
-                  </Text>
+                  >{i18n.t('auto.components__chat__ChatMessage.s11')}</Text>
                 );
               }
               let caption: string | undefined;
@@ -1048,7 +1045,7 @@ function ChatMessage({
             videoServerThumbFailed,
             () => setVideoServerThumbFailed(true),
             {
-              senderName: isMe ? 'אתה' : (message.sender?.display_name || 'משתמש'),
+              senderName: isMe ? i18n.t('auto.components__chat__ChatMessage.s12') : (message.sender?.display_name || i18n.t('auto.components__chat__ChatMessage.s13')),
               timeLabel: timeText,
               onReplyItem: onReplyToMessageId,
             },
@@ -1119,7 +1116,7 @@ function ChatMessage({
                 activeOpacity={0.7}
               >
                 <Ionicons name="refresh" size={13} color="#EF4444" />
-                <Text style={styles.sendErrorText}>שגיאה בשליחה · נסה שוב</Text>
+                <Text style={styles.sendErrorText}>{i18n.t('auto.components__chat__ChatMessage.s14')}</Text>
               </TouchableOpacity>
             ) : (
               <View style={styles.metadataRow}>
@@ -1139,7 +1136,7 @@ function ChatMessage({
                 )}
                 <View style={styles.metadataTimeGroup}>
                   {message.is_edited && (
-                    <Text style={[styles.timeText, isMe ? styles.myTimeText : styles.theirTimeText, styles.editedText]}>נערך · </Text>
+                    <Text style={[styles.timeText, isMe ? styles.myTimeText : styles.theirTimeText, styles.editedText]}>{i18n.t('auto.components__chat__ChatMessage.s15')}</Text>
                   )}
                   <Text style={[styles.timeText, isMe ? styles.myTimeText : styles.theirTimeText]}>{timeText}</Text>
                   {isMe ? (
@@ -1181,7 +1178,7 @@ function ChatMessage({
             hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             style={styles.commentsRow}
             accessibilityRole="button"
-            accessibilityLabel={(message.comments_count ?? 0) > 0 ? `${message.comments_count} תגובות` : 'הגב להודעה'}
+            accessibilityLabel={(message.comments_count ?? 0) > 0 ? i18n.t('auto.components__chat__ChatMessage.s16', { v0: message.comments_count }) : i18n.t('auto.components__chat__ChatMessage.s17')}
           >
             <GlassChip disableBlur style={styles.commentsPill} contentContainerStyle={styles.commentsPillContent}>
               <Ionicons
@@ -1217,7 +1214,7 @@ function ChatMessage({
           mediaUrl={resolvedMedia.main || message.media_url}
           mediaType={message.message_type === MessageType.IMAGE ? 'image' : 'video'}
           caption={message.content || undefined}
-          senderName={isMe ? 'אתה' : (message.sender?.display_name || 'משתמש')}
+          senderName={isMe ? i18n.t('auto.components__chat__ChatMessage.s12') : (message.sender?.display_name || i18n.t('auto.components__chat__ChatMessage.s13'))}
           timeLabel={timeText}
           onClose={() => setShowMediaViewer(false)}
           onReply={onReply ? () => {
@@ -1417,7 +1414,7 @@ function renderMediaContent(
 
     case MessageType.DOCUMENT:
       // חילוץ שם קובץ מה-URL אם חסר
-      const fileName = message.media_file_name || extractFileNameFromUrl(message.media_url) || 'מסמך';
+      const fileName = message.media_file_name || extractFileNameFromUrl(message.media_url) || i18n.t('auto.components__chat__ChatMessage.s18');
       const fileExtension = getFileExtension(fileName);
       // הצג גודל אם קיים, אחרת הצג את סוג הקובץ
       const fileSizeText = message.media_size
@@ -1438,7 +1435,7 @@ function renderMediaContent(
             activeOpacity={0.75}
             style={styles.documentCard}
             accessibilityRole="button"
-            accessibilityLabel={`פתיחת מסמך ${fileName}`}
+            accessibilityLabel={i18n.t('auto.components__chat__ChatMessage.s19', { v0: fileName })}
           >
             {/* אריח שקט בצבע הטקסט של הבועה (כמו כרטיס הלינק) — לא צבעי מותג שבורחים מהטופו */}
             <View style={styles.documentIconTile}>
@@ -1478,27 +1475,27 @@ function getSystemMessageText(message: ChatMessageType): string {
 
   switch (message.system_message_type) {
     case 'group_created':
-      return 'הקבוצה נוצרה';
+      return i18n.t('auto.components__chat__ChatMessage.s20');
     case 'user_joined':
-      return `${data.user_name || 'משתמש'} הצטרף לקבוצה`;
+      return i18n.t('auto.components__chat__ChatMessage.s21', { v0: data.user_name || 'משתמש' });
     case 'user_left':
-      return `${data.user_name || 'משתמש'} עזב את הקבוצה`;
+      return i18n.t('auto.components__chat__ChatMessage.s22', { v0: data.user_name || 'משתמש' });
     case 'member_added':
-      return `${data.user_name || 'משתמש'} נוסף לקבוצה`;
+      return i18n.t('auto.components__chat__ChatMessage.s23', { v0: data.user_name || 'משתמש' });
     case 'member_removed':
-      return `${data.user_name || 'משתמש'} הוסר מהקבוצה`;
+      return i18n.t('auto.components__chat__ChatMessage.s24', { v0: data.user_name || 'משתמש' });
     case 'member_promoted':
-      return `${data.user_name || 'משתמש'} הועלה לאדמין`;
+      return i18n.t('auto.components__chat__ChatMessage.s25', { v0: data.user_name || 'משתמש' });
     case 'member_demoted':
-      return `${data.user_name || 'משתמש'} הורד מאדמין`;
+      return i18n.t('auto.components__chat__ChatMessage.s26', { v0: data.user_name || 'משתמש' });
     case 'group_name_changed':
-      return `שם הקבוצה שונה ל-"${data.new_value}"`;
+      return i18n.t('auto.components__chat__ChatMessage.s27', { v0: data.new_value });
     case 'group_avatar_changed':
-      return 'תמונת הקבוצה שונתה';
+      return i18n.t('auto.components__chat__ChatMessage.s28');
     case 'group_description_changed':
-      return 'תיאור הקבוצה שונה';
+      return i18n.t('auto.components__chat__ChatMessage.s29');
     default:
-      return 'פעולה בקבוצה';
+      return i18n.t('auto.components__chat__ChatMessage.s30');
   }
 }
 
@@ -1545,7 +1542,7 @@ function buildStubPollFromMessage(message: ChatMessageType): PollWithVotes | nul
     id: typeof data?.poll_id === 'string' ? data.poll_id : `pending-${message.id}`,
     chat_id: message.group_id,
     creator_id: message.sender_id,
-    question: message.content?.trim() || 'סקר',
+    question: message.content?.trim() || i18n.t('auto.components__chat__ChatMessage.s31'),
     options,
     multiple_choice: !!data?.multiple_choice,
     allow_vote_change: !!data?.allow_vote_change,
@@ -1609,9 +1606,7 @@ function PollMessageContent({
     return (
       <View style={{ paddingVertical: 8, alignItems: 'center' }}>
         {loadError ? (
-          <Text style={{ color: isMe ? 'rgba(255,255,255,0.85)' : '#9CA3AF', textAlign: 'right' }}>
-            לא ניתן לטעון את הסקר
-          </Text>
+          <Text style={{ color: isMe ? 'rgba(255,255,255,0.85)' : '#9CA3AF', textAlign: 'right' }}>{i18n.t('auto.components__chat__ChatMessage.s32')}</Text>
         ) : (
           <ActivityIndicator size="small" color={isMe ? '#fff' : undefined} />
         )}
@@ -1646,13 +1641,13 @@ function formatFileSize(bytes: number): string {
 
 // קבלת סיומת קובץ
 function getFileExtension(fileName: string): string {
-  if (!fileName) return 'קובץ';
+  if (!fileName) return i18n.t('auto.components__chat__ChatMessage.s33');
   const parts = fileName.split('.');
   if (parts.length > 1) {
     const ext = parts.pop()?.toUpperCase();
-    return ext || 'קובץ';
+    return ext || i18n.t('auto.components__chat__ChatMessage.s33');
   }
-  return 'קובץ';
+  return i18n.t('auto.components__chat__ChatMessage.s33');
 }
 
 // חילוץ שם קובץ מ-URL
@@ -2347,7 +2342,7 @@ function AudioPlayer({
           <Reanimated.View style={[styles.audioSidePlayTimeWrap, sidePlayTimeStyle]} pointerEvents="none">
             <Text
               style={[styles.audioSideTime, isMe ? styles.myTimeText : styles.theirTimeText]}
-              accessibilityLabel={`נותרו ${formatDuration(remainingSec)}`}
+              accessibilityLabel={i18n.t('auto.components__chat__ChatMessage.s34', { v0: formatDuration(remainingSec) })}
             >
               {formatDuration(remainingSec)}
             </Text>
@@ -2360,7 +2355,7 @@ function AudioPlayer({
               onPress={togglePlaybackRate}
               style={styles.audioSpeedButton}
               activeOpacity={0.7}
-              accessibilityLabel={`מהירות ${playbackRate.toFixed(1)}`}
+              accessibilityLabel={i18n.t('auto.components__chat__ChatMessage.s35', { v0: playbackRate.toFixed(1) })}
             >
               <Text style={styles.audioSpeedText}>{playbackRate.toFixed(1)}x</Text>
             </TouchableOpacity>
@@ -2379,8 +2374,7 @@ function AudioPlayer({
             />
           ) : null}
           {isEdited && (
-            <Text style={[styles.timeText, isMe ? styles.myTimeText : styles.theirTimeText, styles.editedText]}>
-              נערך ·{' '}
+            <Text style={[styles.timeText, isMe ? styles.myTimeText : styles.theirTimeText, styles.editedText]}>{i18n.t('auto.components__chat__ChatMessage.s36', { v0: ' ' })}
             </Text>
           )}
         </View>

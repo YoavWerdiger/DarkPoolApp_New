@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
@@ -108,12 +109,12 @@ function PollMessage({
     opts?: { silent?: boolean },
   ) => {
     if (optionIds.length === 0) {
-      legacyAlert('שגיאה', 'יש לבחור לפחות אפשרות אחת');
+      legacyAlert(i18n.t('auto.components__chat__PollMessage.s1'), i18n.t('auto.components__chat__PollMessage.s2'));
       return;
     }
 
     if (!currentPoll.multiple_choice && optionIds.length > 1) {
-      legacyAlert('שגיאה', 'סקר זה מאפשר רק תשובה אחת');
+      legacyAlert(i18n.t('auto.components__chat__PollMessage.s1'), i18n.t('auto.components__chat__PollMessage.s3'));
       return;
     }
 
@@ -136,10 +137,10 @@ function PollMessage({
         void HapticFeedback.impactLight();
         if (!opts?.silent) {
           legacyAlert(
-            'הצלחה',
+            i18n.t('auto.components__chat__PollMessage.s4'),
             isUserVoted && allowVoteChange
-              ? 'הבחירה עודכנה בהצלחה!'
-              : 'ההצבעה נשלחה בהצלחה!',
+              ? i18n.t('auto.components__chat__PollMessage.s5')
+              : i18n.t('auto.components__chat__PollMessage.s6'),
           );
         }
       }
@@ -148,7 +149,7 @@ function PollMessage({
       onPollUpdated(previous);
       setShowResults(!!(previous.user_votes && previous.user_votes.length > 0));
       void HapticFeedback.error();
-      legacyAlert('שגיאה', error.message || 'לא ניתן לשלוח את ההצבעה');
+      legacyAlert(i18n.t('auto.components__chat__PollMessage.s1'), error.message || i18n.t('auto.components__chat__PollMessage.s7'));
     } finally {
       setIsVoting(false);
     }
@@ -178,10 +179,10 @@ function PollMessage({
   const handleLockPoll = async () => {
     if (!isAdmin || currentPoll.creator_id !== user?.id) return;
 
-    legacyAlert('נעילת סקר', 'האם אתה בטוח שברצונך לנעול את הסקר? לא ניתן יהיה להצביע יותר.', [
-      { text: 'ביטול', style: 'cancel' },
+    legacyAlert(i18n.t('auto.components__chat__PollMessage.s8'), i18n.t('auto.components__chat__PollMessage.s9'), [
+      { text: i18n.t('auto.components__chat__PollMessage.s10'), style: 'cancel' },
       {
-        text: 'נעל',
+        text: i18n.t('auto.components__chat__PollMessage.s11'),
         style: 'destructive',
         onPress: async () => {
           try {
@@ -192,9 +193,9 @@ function PollMessage({
               onPollUpdated(updatedPoll);
               void HapticFeedback.impactLight();
             }
-            legacyAlert('הצלחה', 'הסקר ננעל בהצלחה');
+            legacyAlert(i18n.t('auto.components__chat__PollMessage.s4'), i18n.t('auto.components__chat__PollMessage.s12'));
           } catch (error: any) {
-            legacyAlert('שגיאה', error.message || 'לא ניתן לנעול את הסקר');
+            legacyAlert(i18n.t('auto.components__chat__PollMessage.s1'), error.message || i18n.t('auto.components__chat__PollMessage.s13'));
           }
         },
       },
@@ -204,17 +205,17 @@ function PollMessage({
   const handleDeletePoll = async () => {
     if (!isAdmin || currentPoll.creator_id !== user?.id) return;
 
-    legacyAlert('מחיקת סקר', 'האם אתה בטוח שברצונך למחוק את הסקר? פעולה זו אינה הפיכה!', [
-      { text: 'ביטול', style: 'cancel' },
+    legacyAlert(i18n.t('auto.components__chat__PollMessage.s14'), i18n.t('auto.components__chat__PollMessage.s15'), [
+      { text: i18n.t('auto.components__chat__PollMessage.s10'), style: 'cancel' },
       {
-        text: 'מחק',
+        text: i18n.t('auto.components__chat__PollMessage.s16'),
         style: 'destructive',
         onPress: async () => {
           try {
             await PollService.deletePoll(currentPoll.id, user?.id || '');
-            legacyAlert('הצלחה', 'הסקר נמחק בהצלחה');
+            legacyAlert(i18n.t('auto.components__chat__PollMessage.s4'), i18n.t('auto.components__chat__PollMessage.s17'));
           } catch (error: any) {
-            legacyAlert('שגיאה', error.message || 'לא ניתן למחוק את הסקר');
+            legacyAlert(i18n.t('auto.components__chat__PollMessage.s1'), error.message || i18n.t('auto.components__chat__PollMessage.s18'));
           }
         },
       },
@@ -234,13 +235,13 @@ function PollMessage({
         <View style={styles.topMeta}>
           <View style={styles.topMetaLeft}>
             {currentPoll.multiple_choice && (
-              <Text style={styles.metaHint}>בחירה מרובה</Text>
+              <Text style={styles.metaHint}>{i18n.t('auto.components__chat__PollMessage.s19')}</Text>
             )}
             {allowVoteChange && !currentPoll.is_locked && (
-              <Text style={styles.metaHint}>ניתן לשנות</Text>
+              <Text style={styles.metaHint}>{i18n.t('auto.components__chat__PollMessage.s20')}</Text>
             )}
             {currentPoll.is_locked && (
-              <Text style={styles.lockedHint}>נעול</Text>
+              <Text style={styles.lockedHint}>{i18n.t('auto.components__chat__PollMessage.s21')}</Text>
             )}
           </View>
           {showAdmin && (
@@ -313,10 +314,10 @@ function PollMessage({
             >
               <Text style={styles.voteButtonText}>
                 {isVoting
-                  ? 'שולח...'
+                  ? i18n.t('auto.components__chat__PollMessage.s22')
                   : isChangingVote
-                    ? 'עדכן בחירה'
-                    : 'בחירה'}
+                    ? i18n.t('auto.components__chat__PollMessage.s23')
+                    : i18n.t('auto.components__chat__PollMessage.s24')}
               </Text>
             </TouchableOpacity>
           </Collapsible>
@@ -329,7 +330,7 @@ function PollMessage({
               }}
               style={styles.showResultsButton}
             >
-              <Text style={styles.showResultsText}>חזרה לתוצאות</Text>
+              <Text style={styles.showResultsText}>{i18n.t('auto.components__chat__PollMessage.s25')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -350,7 +351,7 @@ function PollMessage({
           />
           {canVote && allowVoteChange && currentPoll.multiple_choice && (
             <TouchableOpacity onPress={handleStartChangeVote} style={styles.showResultsButton}>
-              <Text style={styles.showResultsText}>שנה בחירה</Text>
+              <Text style={styles.showResultsText}>{i18n.t('auto.components__chat__PollMessage.s26')}</Text>
             </TouchableOpacity>
           )}
         </View>

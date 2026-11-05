@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { useEffect, useRef, useState } from 'react';
@@ -244,7 +245,7 @@ export default function MediaMessageRenderer({
             paddingTop: 10
           }}
         >
-          {message.sender?.full_name || 'משתמש'}
+          {message.sender?.full_name || i18n.t('auto.components__chat__MediaMessageRenderer.s1')}
         </Text>
       )}
       <Pressable onPress={() => {
@@ -253,7 +254,7 @@ export default function MediaMessageRenderer({
             id: message.id,
             uri: message.file_url,
             type: 'image',
-            name: message.content || 'תמונה'
+            name: message.content || i18n.t('auto.components__chat__MediaMessageRenderer.s2')
           });
         }
       }}>
@@ -328,7 +329,7 @@ export default function MediaMessageRenderer({
             paddingTop: 10
           }}
         >
-          {message.sender?.full_name || 'משתמש'}
+          {message.sender?.full_name || i18n.t('auto.components__chat__MediaMessageRenderer.s1')}
         </Text>
       )}
 
@@ -338,7 +339,7 @@ export default function MediaMessageRenderer({
             id: message.id,
             uri: message.file_url,
             type: 'video',
-            name: message.content || 'וידאו'
+            name: message.content || i18n.t('auto.components__chat__MediaMessageRenderer.s3')
           });
         }
       }}>
@@ -448,7 +449,7 @@ export default function MediaMessageRenderer({
             paddingTop: 10
           }}
         >
-          {message.sender?.full_name || 'משתמש'}
+          {message.sender?.full_name || i18n.t('auto.components__chat__MediaMessageRenderer.s1')}
         </Text>
       )}
 
@@ -567,7 +568,7 @@ export default function MediaMessageRenderer({
             paddingTop: 10
           }}
         >
-          {message.sender?.full_name || 'משתמש'}
+          {message.sender?.full_name || i18n.t('auto.components__chat__MediaMessageRenderer.s1')}
         </Text>
       )}
 
@@ -577,7 +578,7 @@ export default function MediaMessageRenderer({
             id: message.id,
             uri: message.file_url,
             type: 'document',
-            name: message.content || 'מסמך'
+            name: message.content || i18n.t('auto.components__chat__MediaMessageRenderer.s4')
           });
         }
       }}>
@@ -601,7 +602,7 @@ export default function MediaMessageRenderer({
               marginBottom: 3,
               textAlign: 'right'
             }} numberOfLines={1} ellipsizeMode="tail">
-              {(message.content && message.content !== '[document]') ? message.content : (message.file_url?.split('/').pop() || 'מסמך')}
+              {(message.content && message.content !== '[document]') ? message.content : (message.file_url?.split('/').pop() || i18n.t('auto.components__chat__MediaMessageRenderer.s4'))}
             </Text>
             <Text style={{ 
               color: isMe ? 'rgba(0,0,0,0.6)' : DesignTokens.colors.text.tertiary, 

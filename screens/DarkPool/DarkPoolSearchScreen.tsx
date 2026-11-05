@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 /**
  * טיקרים — כניסה ישירה לדף מניה (מחזיקים · פיד) בלי לעבור דרך עסקה.
  * שדה חיפוש (Finnhub, אותו מנוע כמו בתיקים) · מסילת «חם אצל אינסיידרים» · אחרונים.
@@ -402,7 +403,7 @@ export default function DarkPoolSearchScreen() {
   return (
     <ScreenChrome rtl>
       <SafeAreaView style={[darkPoolTransparentFill, darkPoolRtlContent]} edges={['top']}>
-        <MainDrawerScreenHeader inRtlTree title="טיקרים" onMenuPress={openDrawer} />
+        <MainDrawerScreenHeader inRtlTree title={i18n.t('auto.screens__DarkPool__DarkPoolSearchScreen.s1')} onMenuPress={openDrawer} />
         <ScrollView
           style={darkPoolTransparentFill}
           contentContainerStyle={styles.scroll}
@@ -419,13 +420,13 @@ export default function DarkPoolSearchScreen() {
               onFocus={() => setFocused(true)}
               onBlur={() => setFocused(false)}
               onSubmitEditing={() => openTicker(results[0]?.symbol ?? query, results[0]?.description)}
-              placeholder="חפש מניה: NVDA, Apple…"
+              placeholder={i18n.t('auto.screens__DarkPool__DarkPoolSearchScreen.s2')}
               placeholderTextColor={tokens.colors.text.tertiary}
               keyboardAppearance={(tokens.colors.background.primary as string) === LIGHT_CANVAS ? 'light' : 'dark'}
               autoCapitalize="characters"
               autoCorrect={false}
               returnKeyType="search"
-              accessibilityLabel="חיפוש מניה"
+              accessibilityLabel={i18n.t('auto.screens__DarkPool__DarkPoolSearchScreen.s3')}
             />
             {query ? (
               <Pressable
@@ -434,7 +435,7 @@ export default function DarkPoolSearchScreen() {
                   setQuery('');
                 }}
                 hitSlop={10}
-                accessibilityLabel="נקה חיפוש"
+                accessibilityLabel={i18n.t('auto.screens__DarkPool__DarkPoolSearchScreen.s4')}
               >
                 <Ionicons name="close-circle" size={18} color={tokens.colors.text.secondary} />
               </Pressable>
@@ -449,9 +450,7 @@ export default function DarkPoolSearchScreen() {
                 ))}
               </UICard>
             ) : results.length === 0 ? (
-              <Text style={styles.emptyText}>
-                לא נמצאו מניות. נסו סימבול אמריקאי (AAPL) או שם באנגלית.
-              </Text>
+              <Text style={styles.emptyText}>{i18n.t('auto.screens__DarkPool__DarkPoolSearchScreen.s5')}</Text>
             ) : (
               <UICard {...CHROME_UICARD} style={styles.card}>
                 {results.map((r, i) =>
@@ -469,7 +468,7 @@ export default function DarkPoolSearchScreen() {
           ) : (
             <>
               <View style={styles.section}>
-                <DarkPoolSectionHeader title="חם אצל אינסיידרים" />
+                <DarkPoolSectionHeader title={i18n.t('auto.screens__DarkPool__DarkPoolSearchScreen.s6')} />
                 {hotLoading ? (
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.rail} contentContainerStyle={styles.railRow}>
                     {Array.from({ length: 3 }).map((_, i) => (
@@ -477,7 +476,7 @@ export default function DarkPoolSearchScreen() {
                     ))}
                   </ScrollView>
                 ) : hot.length === 0 ? (
-                  <Text style={styles.emptyText}>אין עדיין פעילות השבוע.</Text>
+                  <Text style={styles.emptyText}>{i18n.t('auto.screens__DarkPool__DarkPoolSearchScreen.s7')}</Text>
                 ) : (
                   <ScrollView
                     horizontal
@@ -494,7 +493,7 @@ export default function DarkPoolSearchScreen() {
                           key={h.ticker}
                           onPress={() => openTicker(h.ticker)}
                           style={styles.hotCard}
-                          accessibilityLabel={`${h.ticker}, ${h.trades} עסקאות השבוע`}
+                          accessibilityLabel={i18n.t('auto.screens__DarkPool__DarkPoolSearchScreen.s8', { v0: h.ticker, v1: h.trades })}
                         >
                           <TickerLogo symbol={h.ticker} size={40} borderRadius={20} />
                           <Text style={styles.hotTicker} numberOfLines={1}>
@@ -506,7 +505,7 @@ export default function DarkPoolSearchScreen() {
                             </Text>
                           ) : null}
                           <Text style={styles.hotCount}>
-                            {h.trades === 1 ? 'עסקה אחת' : `${h.trades} עסקאות`}
+                            {h.trades === 1 ? i18n.t('auto.screens__DarkPool__DarkPoolSearchScreen.s9') : i18n.t('auto.screens__DarkPool__DarkPoolSearchScreen.s10', { v0: h.trades })}
                           </Text>
                         </Pressable>
                       );
@@ -517,7 +516,7 @@ export default function DarkPoolSearchScreen() {
 
               {recents.length > 0 ? (
                 <View style={styles.section}>
-                  <DarkPoolSectionHeader title="אחרונים" actionLabel="נקה" onActionPress={clearRecents} />
+                  <DarkPoolSectionHeader title={i18n.t('auto.screens__DarkPool__DarkPoolSearchScreen.s11')} actionLabel={i18n.t('auto.screens__DarkPool__DarkPoolSearchScreen.s12')} onActionPress={clearRecents} />
                   <UICard {...CHROME_UICARD} style={styles.card}>
                     {recents.map((r, i) =>
                       renderTickerRow(

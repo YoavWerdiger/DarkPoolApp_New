@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
@@ -60,34 +61,26 @@ function describeColmexAuthFailure(
       (attempt !== null && attempt.current >= attempt.max);
 
   if (locked) {
-    return 'החשבון ננעל לאחר יותר מדי ניסיונות התחברות כושלים. יש לפנות לתמיכת Colmex Pro כדי לשחרר את החשבון ולאפס סיסמה.';
+    return i18n.t('auto.screens__Portfolios__ConnectBrokerScreen.s1');
   }
 
   if (failure?.reason === 'rate_limited') {
-    return 'יותר מדי ניסיונות התחברות בזמן קצר. יש להמתין מספר דקות ולנסות שוב.';
+    return i18n.t('auto.screens__Portfolios__ConnectBrokerScreen.s2');
   }
 
   if (failure?.reason === 'broker_unavailable') {
-    return 'שרתי Colmex Pro אינם זמינים כרגע. נסה שוב בעוד מספר דקות.';
+    return i18n.t('auto.screens__Portfolios__ConnectBrokerScreen.s3');
   }
 
   if (attempt) {
     const remaining = Math.max(0, attempt.max - attempt.current);
     return (
-      'שם המשתמש זוהה אצל Colmex Pro, אבל ההתחברות נדחתה. בדרך כלל הסיבה היא ' +
-      'סיסמה שגויה, או סיסמה שאופסה על ידי Colmex וממתינה להחלפה בכניסה ' +
-      'הראשונה לפלטפורמת המסחר.\n\n' +
-      'מומלץ להתחבר תחילה לפלטפורמת המסחר של Colmex Pro עם אותם פרטים, ' +
-      'ואם נדרש — להחליף שם סיסמה ואז לנסות שוב כאן.\n\n' +
-      `שים לב: נותרו ${remaining} ניסיונות לפני שהחשבון ננעל.`
+      i18n.t('auto.screens__Portfolios__ConnectBrokerScreen.s4', { v0: remaining })
     );
   }
 
   return (
-    'ההתחברות ל-Colmex Pro נדחתה. יש לוודא ששם המשתמש הוא שם המשתמש לפלטפורמת ' +
-    'המסחר (ולא מספר החשבון), ושהסיסמה עדכנית.\n\n' +
-    'אם הסיסמה אופסה לאחרונה על ידי Colmex, ייתכן שצריך להחליף אותה פעם אחת ' +
-    'בפלטפורמת המסחר לפני שאפשר להתחבר כאן.'
+    i18n.t('auto.screens__Portfolios__ConnectBrokerScreen.s5')
   );
 }
 
@@ -101,8 +94,8 @@ export default function ConnectBrokerScreen() {
   const [environment] = useState<BrokerEnvironment>('prod');
   const [submitting, setSubmitting] = useState(false);
 
-  const usernameError = username.trim().length === 0 ? 'יש להזין שם משתמש' : null;
-  const passwordError = password.length === 0 ? 'יש להזין סיסמה' : null;
+  const usernameError = username.trim().length === 0 ? i18n.t('auto.screens__Portfolios__ConnectBrokerScreen.s6') : null;
+  const passwordError = password.length === 0 ? i18n.t('auto.screens__Portfolios__ConnectBrokerScreen.s7') : null;
   const canSubmit = !usernameError && !passwordError && !submitting;
   const dimmed = !canSubmit && !submitting;
 
@@ -167,7 +160,7 @@ export default function ConnectBrokerScreen() {
       setSubmitting(true);
       const res = await connectColmex({ username: u, password: p, environment });
       if (!res.accounts || res.accounts.length === 0) {
-        legacyAlert('לא נמצאו חשבונות', 'לחשבון Colmex Pro שלך לא משויכים חשבונות trading.');
+        legacyAlert(i18n.t('auto.screens__Portfolios__ConnectBrokerScreen.s8'), i18n.t('auto.screens__Portfolios__ConnectBrokerScreen.s9'));
         return;
       }
       navigation.replace('SelectBrokerAccount', {
@@ -187,19 +180,19 @@ export default function ConnectBrokerScreen() {
       const friendly = isAuthFail
         ? describeColmexAuthFailure(failure, msg)
         : lower.includes('no_accounts_found')
-        ? 'לא נמצאו חשבונות trading בחשבון Colmex Pro שלך.'
+        ? i18n.t('auto.screens__Portfolios__ConnectBrokerScreen.s10')
         : lower.includes('vault_write_failed')
-        ? 'שגיאה בשמירת פרטי אבטחה. פנה לתמיכה.'
+        ? i18n.t('auto.screens__Portfolios__ConnectBrokerScreen.s11')
         : lower.includes('connection_save_failed')
-        ? 'שגיאה בשמירת החיבור. פנה לתמיכה.'
+        ? i18n.t('auto.screens__Portfolios__ConnectBrokerScreen.s12')
         : lower.includes('accounts_save_failed') || lower.includes('broker_accounts_failed')
-        ? 'שגיאה בטעינת חשבונות Colmex. נסה שוב.'
+        ? i18n.t('auto.screens__Portfolios__ConnectBrokerScreen.s13')
         : lower.includes('non-2xx') || lower.includes('edge function')
-        ? 'החיבור לשרת נכשל. נסה שוב בעוד רגע.'
+        ? i18n.t('auto.screens__Portfolios__ConnectBrokerScreen.s14')
         : msg
-        ? `החיבור נכשל. פרטים: ${msg.slice(0, 160)}`
-        : 'התרחשה שגיאה בעת החיבור. נסה שוב.';
-      legacyAlert('חיבור נכשל', friendly);
+        ? i18n.t('auto.screens__Portfolios__ConnectBrokerScreen.s15', { v0: msg.slice(0, 160) })
+        : i18n.t('auto.screens__Portfolios__ConnectBrokerScreen.s16');
+      legacyAlert(i18n.t('auto.screens__Portfolios__ConnectBrokerScreen.s17'), friendly);
     } finally {
       setSubmitting(false);
     }
@@ -209,7 +202,7 @@ export default function ConnectBrokerScreen() {
     <View style={styles.root}>
       <ChatSessionBackdrop />
       <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
-        <PortfolioScreenHeader title="חיבור Colmex Pro" onBack={() => navigation.goBack()} />
+        <PortfolioScreenHeader title={i18n.t('auto.screens__Portfolios__ConnectBrokerScreen.s18')} onBack={() => navigation.goBack()} />
         <KeyboardAvoidingView
           style={{ flex: 1, backgroundColor: 'transparent' }}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -239,10 +232,7 @@ export default function ConnectBrokerScreen() {
                     />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.heroBody}>
-                      לאחר ההתחברות נסנכרן את כל החשבון שלך: פוזיציות פתוחות, פקודות
-                      עתידיות, הפקדות ומשיכות, יתרת הון, ועסקאות היסטוריות.
-                    </Text>
+                    <Text style={styles.heroBody}>{i18n.t('auto.screens__Portfolios__ConnectBrokerScreen.s19')}</Text>
                   </View>
                 </View>
               </UICard>
@@ -250,17 +240,17 @@ export default function ConnectBrokerScreen() {
 
             <View style={styles.section}>
               <SectionHeader
-                title="פרטי התחברות"
-                caption="אותם פרטים שבהם את/ה מתחבר/ת לפלטפורמת המסחר של Colmex Pro."
+                title={i18n.t('auto.screens__Portfolios__ConnectBrokerScreen.s20')}
+                caption={i18n.t('auto.screens__Portfolios__ConnectBrokerScreen.s21')}
               />
 
               <TextField
-                label="שם משתמש"
+                label={i18n.t('auto.screens__Portfolios__ConnectBrokerScreen.s22')}
                 value={username}
                 onChangeText={setUsername}
                 onBlur={() => setTouchedUsername(true)}
-                placeholder="שם המשתמש שלך ב-Colmex"
-                hint="שם המשתמש שהתקבל מ-Colmex Pro"
+                placeholder={i18n.t('auto.screens__Portfolios__ConnectBrokerScreen.s23')}
+                hint={i18n.t('auto.screens__Portfolios__ConnectBrokerScreen.s24')}
                 error={touchedUsername ? usernameError : null}
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -268,12 +258,12 @@ export default function ConnectBrokerScreen() {
               />
 
               <TextField
-                label="סיסמה"
+                label={i18n.t('auto.screens__Portfolios__ConnectBrokerScreen.s25')}
                 value={password}
                 onChangeText={setPassword}
                 onBlur={() => setTouchedPassword(true)}
                 placeholder="••••••••"
-                hint="הסיסמה לפלטפורמת המסחר של Colmex"
+                hint={i18n.t('auto.screens__Portfolios__ConnectBrokerScreen.s26')}
                 error={touchedPassword ? passwordError : null}
                 secureTextEntry
                 autoCapitalize="none"
@@ -294,18 +284,14 @@ export default function ConnectBrokerScreen() {
                   size={14}
                   color={tokens.colors.text.secondary}
                 />
-                <Text style={styles.privacyTitle}>פרטיות ואבטחה</Text>
+                <Text style={styles.privacyTitle}>{i18n.t('auto.screens__Portfolios__ConnectBrokerScreen.s27')}</Text>
               </View>
-              <Text style={styles.privacyText}>
-                פרטי ההתחברות מועברים בתקשורת מוצפנת לשרת המאובטח שלנו, נשמרים בהצפנה
-                ואינם נשמרים על המכשיר. אנחנו מבקשים גישת קריאה בלבד לצורך הצגת התיק,
-                וניתן לנתק את החיבור בכל עת מהגדרות התיק.
-              </Text>
+              <Text style={styles.privacyText}>{i18n.t('auto.screens__Portfolios__ConnectBrokerScreen.s28')}</Text>
             </UICard>
           </ScrollView>
 
           <PortfolioFormFooter
-            title={submitting ? 'מתחבר…' : 'התחבר ל-Colmex Pro'}
+            title={submitting ? i18n.t('auto.screens__Portfolios__ConnectBrokerScreen.s29') : i18n.t('auto.screens__Portfolios__ConnectBrokerScreen.s30')}
             icon="link"
             disabled={!canSubmit}
             loading={submitting}

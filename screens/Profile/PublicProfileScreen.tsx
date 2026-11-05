@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 /**
  * פרופיל ציבורי של משתמש — מינימלי, לפי הטופו:
@@ -57,12 +58,12 @@ const AVATAR = 92;
 
 /** שמות הדרגות — לפי צבע המתכת (העליונה בירוק המותג) */
 const RANK_NAMES: Record<RankMetal, string> = {
-  gray: 'פתיחה',
-  silver: 'כסף',
-  gold: 'זהב',
-  platinum: 'פלטינה',
-  sapphire: 'ספיר',
-  diamond: 'יהלום',
+  gray: i18n.t('auto.screens__Profile__PublicProfileScreen.s1'),
+  silver: i18n.t('auto.screens__Profile__PublicProfileScreen.s2'),
+  gold: i18n.t('auto.screens__Profile__PublicProfileScreen.s3'),
+  platinum: i18n.t('auto.screens__Profile__PublicProfileScreen.s4'),
+  sapphire: i18n.t('auto.screens__Profile__PublicProfileScreen.s5'),
+  diamond: i18n.t('auto.screens__Profile__PublicProfileScreen.s6'),
   brand: 'DarkPool',
 };
 
@@ -71,7 +72,7 @@ function formatMemberSince(iso: string | null): string | null {
   try {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return null;
-    return `חבר קהילה מאז ${d.toLocaleDateString(appLocale(), { month: 'long', year: 'numeric' })}`;
+    return i18n.t('auto.screens__Profile__PublicProfileScreen.s7', { v0: d.toLocaleDateString(appLocale(), { month: 'long', year: 'numeric' }) });
   } catch {
     return null;
   }
@@ -136,7 +137,7 @@ export default function PublicProfileScreen({ route, navigation }: any) {
 
   const toggleFollow = useCallback(async () => {
     if (!user) {
-      legacyAlert('התחברות', 'יש להתחבר כדי לעקוב אחרי משתמשים');
+      legacyAlert(i18n.t('auto.screens__Profile__PublicProfileScreen.s8'), i18n.t('auto.screens__Profile__PublicProfileScreen.s9'));
       return;
     }
     if (followBusy || isSelf) return;
@@ -151,7 +152,7 @@ export default function PublicProfileScreen({ route, navigation }: any) {
     } catch {
       setFollowing(!next);
       setStats((s) => ({ ...s, followerCount: Math.max(0, s.followerCount + (next ? -1 : 1)) }));
-      legacyAlert('שגיאה', 'לא ניתן לעדכן מעקב כרגע');
+      legacyAlert(i18n.t('auto.screens__Profile__PublicProfileScreen.s10'), i18n.t('auto.screens__Profile__PublicProfileScreen.s11'));
     } finally {
       setFollowBusy(false);
     }
@@ -196,7 +197,7 @@ export default function PublicProfileScreen({ route, navigation }: any) {
             void HapticFeedback.selection();
             navigation.goBack();
           }}
-          accessibilityLabel="חזרה"
+          accessibilityLabel={i18n.t('auto.screens__Profile__PublicProfileScreen.s12')}
         >
           <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
         </DayNavBlurButton>
@@ -208,7 +209,7 @@ export default function PublicProfileScreen({ route, navigation }: any) {
         </View>
       ) : !profile ? (
         <View style={styles.center}>
-          <Text style={[styles.muted, { textAlign: 'center' }]}>הפרופיל לא נמצא</Text>
+          <Text style={[styles.muted, { textAlign: 'center' }]}>{i18n.t('auto.screens__Profile__PublicProfileScreen.s13')}</Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 32 }]}>
@@ -234,16 +235,16 @@ export default function PublicProfileScreen({ route, navigation }: any) {
 
           {/* מספרים */}
           <View style={styles.statsRow}>
-            <Stat label="עוקבים" value={stats.followerCount} onPress={() => openList('followers')} styles={styles} />
+            <Stat label={i18n.t('auto.screens__Profile__PublicProfileScreen.s14')} value={stats.followerCount} onPress={() => openList('followers')} styles={styles} />
             <View style={styles.statDivider} />
-            <Stat label="עוקב אחרי" value={stats.followingCount} onPress={() => openList('following')} styles={styles} />
+            <Stat label={i18n.t('auto.screens__Profile__PublicProfileScreen.s15')} value={stats.followingCount} onPress={() => openList('following')} styles={styles} />
 
           </View>
 
           {/* פעולה */}
           {isSelf ? (
             <UIButton
-              title="עריכת פרופיל"
+              title={i18n.t('auto.screens__Profile__PublicProfileScreen.s16')}
               variant="secondary"
               size="md"
               fullWidth
@@ -252,7 +253,7 @@ export default function PublicProfileScreen({ route, navigation }: any) {
             />
           ) : (
             <UIButton
-              title={following ? 'במעקב' : 'עקוב'}
+              title={following ? i18n.t('auto.screens__Profile__PublicProfileScreen.s17') : i18n.t('auto.screens__Profile__PublicProfileScreen.s18')}
               variant={following ? 'secondary' : 'primary'}
               size="md"
               fullWidth
@@ -270,7 +271,7 @@ export default function PublicProfileScreen({ route, navigation }: any) {
                 setRankOpen(true);
               }}
               accessibilityRole="button"
-              accessibilityLabel={`דרגת ותק: ${RANK_NAMES[progress.rank.metal]}`}
+              accessibilityLabel={i18n.t('auto.screens__Profile__PublicProfileScreen.s19', { v0: RANK_NAMES[progress.rank.metal] })}
               style={({ pressed }) => [styles.rankWrap, pressed && { opacity: 0.92, transform: [{ scale: 0.99 }] }]}
             >
               <UICard variant="soft" padding="none" style={styles.rankCard}>
@@ -281,9 +282,9 @@ export default function PublicProfileScreen({ route, navigation }: any) {
                       <RankMarkIcon metal={progress.rank.metal} size={34} />
                     </View>
                     <View style={styles.rankText}>
-                      <Text style={styles.rankLabel}>ותק בקהילה</Text>
+                      <Text style={styles.rankLabel}>{i18n.t('auto.screens__Profile__PublicProfileScreen.s20')}</Text>
                       <Text style={[styles.rankTitle, { color: metalColor }]} numberOfLines={1}>
-                        {`דרגת ${RANK_NAMES[progress.rank.metal]}`}
+                        {i18n.t('auto.screens__Profile__PublicProfileScreen.s21', { v0: RANK_NAMES[progress.rank.metal] })}
                       </Text>
                       <Text style={styles.rankTenure} numberOfLines={1}>
                         {formatPaidTenure(badges?.paidDays ?? 0)}
@@ -326,8 +327,8 @@ export default function PublicProfileScreen({ route, navigation }: any) {
                   <View style={styles.rankFootRow}>
                     <Text style={styles.rankFoot} numberOfLines={1}>
                       {progress.next && progress.daysToNext != null
-                        ? `עוד ${progress.daysToNext} ימים לדרגת ${RANK_NAMES[progress.next.metal]}`
-                        : 'הדרגה הגבוהה בקהילה'}
+                        ? i18n.t('auto.screens__Profile__PublicProfileScreen.s22', { v0: progress.daysToNext, v1: RANK_NAMES[progress.next.metal] })
+                        : i18n.t('auto.screens__Profile__PublicProfileScreen.s23')}
                     </Text>
                     <Ionicons name="chevron-back" size={16} color={tokens.colors.text.tertiary} />
                   </View>
@@ -338,9 +339,9 @@ export default function PublicProfileScreen({ route, navigation }: any) {
 
           {/* ציוצים — כמו בפיד: כרטיס לכל ציוץ, מרווח אחיד בין כרטיסים וכותרת עם מרווח קבוע לתוכן */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>ציוצים</Text>
+            <Text style={styles.sectionTitle}>{i18n.t('auto.screens__Profile__PublicProfileScreen.s24')}</Text>
             {posts.length === 0 ? (
-              <Text style={[styles.muted, appPhysicalRightText]}>עדיין אין ציוצים</Text>
+              <Text style={[styles.muted, appPhysicalRightText]}>{i18n.t('auto.screens__Profile__PublicProfileScreen.s25')}</Text>
             ) : (
               <View style={styles.postsList}>
                 {posts.map((p) => (
@@ -355,7 +356,7 @@ export default function PublicProfileScreen({ route, navigation }: any) {
                       });
                     }}
                     accessibilityRole="button"
-                    accessibilityLabel="פתח את הציוץ"
+                    accessibilityLabel={i18n.t('auto.screens__Profile__PublicProfileScreen.s26')}
                     style={({ pressed }) => (pressed ? { opacity: 0.88 } : undefined)}
                   >
                     <UICard variant="soft" padding="none" style={styles.postCard}>
@@ -396,12 +397,12 @@ export default function PublicProfileScreen({ route, navigation }: any) {
         showBrandBackground={false}
       >
         <View style={styles.sheet}>
-          <Text style={styles.sheetTitle}>{listKind === 'following' ? 'עוקב אחרי' : 'עוקבים'}</Text>
+          <Text style={styles.sheetTitle}>{listKind === 'following' ? i18n.t('auto.screens__Profile__PublicProfileScreen.s15') : i18n.t('auto.screens__Profile__PublicProfileScreen.s14')}</Text>
           {listLoading ? (
             <ActivityIndicator style={{ marginTop: 24 }} color={tokens.colors.text.secondary} />
           ) : listUsers.length === 0 ? (
             <Text style={[styles.muted, { textAlign: 'center', marginTop: 24 }]}>
-              {listKind === 'following' ? 'עדיין לא עוקב אחרי אף אחד' : 'עדיין אין עוקבים'}
+              {listKind === 'following' ? i18n.t('auto.screens__Profile__PublicProfileScreen.s27') : i18n.t('auto.screens__Profile__PublicProfileScreen.s28')}
             </Text>
           ) : (
             <FlatList

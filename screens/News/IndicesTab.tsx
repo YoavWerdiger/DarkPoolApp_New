@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useMemo } from 'react';
 import { View, Text, Dimensions, ScrollView } from 'react-native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
@@ -60,7 +61,7 @@ export default function IndicesTab() {
             padding="md"
             style={styles.widgetCard}
           >
-            <Text style={styles.widgetTitle}>מדדי שוק מרכזיים</Text>
+            <Text style={styles.widgetTitle}>{i18n.t('auto.screens__News__IndicesTab.s1')}</Text>
             <View style={styles.webviewContainer}>
               <MarketsTradingView
                 html={widgetHtml}

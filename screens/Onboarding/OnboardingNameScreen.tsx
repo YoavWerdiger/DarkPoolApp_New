@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -64,9 +65,7 @@ const OnboardingNameScreen: React.FC<Props> = ({ navigation }) => {
             <Pressable onPress={handleBack} style={styles.backButton}>
               <Ionicons name="chevron-forward" size={28} color={tokens.colors.text.primary} />
             </Pressable>
-            <Text style={[styles.stepIndicator, { color: tokens.colors.text.tertiary }]}>
-              שלב 3 מתוך 10
-            </Text>
+            <Text style={[styles.stepIndicator, { color: tokens.colors.text.tertiary }]}>{i18n.t('auto.screens__Onboarding__OnboardingNameScreen.s1')}</Text>
           </View>
 
           <ScrollView
@@ -76,12 +75,8 @@ const OnboardingNameScreen: React.FC<Props> = ({ navigation }) => {
             showsVerticalScrollIndicator={false}
           >
             {/* Title */}
-            <Text style={[styles.title, { color: tokens.colors.text.primary }]}>
-              איך קוראים לך?
-            </Text>
-            <Text style={[styles.subtitle, { color: tokens.colors.text.secondary }]}>
-              השם חייב להתאים לשם המופיע בתעודת הזהות
-            </Text>
+            <Text style={[styles.title, { color: tokens.colors.text.primary }]}>{i18n.t('auto.screens__Onboarding__OnboardingNameScreen.s2')}</Text>
+            <Text style={[styles.subtitle, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Onboarding__OnboardingNameScreen.s3')}</Text>
 
             {/* Inputs */}
             <View style={styles.inputsContainer}>
@@ -90,7 +85,7 @@ const OnboardingNameScreen: React.FC<Props> = ({ navigation }) => {
                   <Ionicons name="person-outline" size={20} color={tokens.colors.text.tertiary} />
                   <TextInput
                     style={[styles.input, { color: tokens.colors.text.primary }]}
-                    placeholder="שם פרטי"
+                    placeholder={i18n.t('auto.screens__Onboarding__OnboardingNameScreen.s4')}
                     placeholderTextColor={tokens.colors.text.muted}
                     value={firstName}
                     onChangeText={setFirstName}
@@ -107,7 +102,7 @@ const OnboardingNameScreen: React.FC<Props> = ({ navigation }) => {
                   <Ionicons name="person-outline" size={20} color={tokens.colors.text.tertiary} />
                   <TextInput
                     style={[styles.input, { color: tokens.colors.text.primary }]}
-                    placeholder="שם משפחה"
+                    placeholder={i18n.t('auto.screens__Onboarding__OnboardingNameScreen.s5')}
                     placeholderTextColor={tokens.colors.text.muted}
                     value={lastName}
                     onChangeText={setLastName}
@@ -125,7 +120,7 @@ const OnboardingNameScreen: React.FC<Props> = ({ navigation }) => {
           {/* Footer */}
           <View style={styles.footer}>
             <UIButton
-              title="המשך"
+              title={i18n.t('auto.screens__Onboarding__OnboardingNameScreen.s6')}
               variant="primary"
               size="lg"
               fullWidth

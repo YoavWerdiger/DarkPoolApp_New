@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 /**
  * גילוי — מדפי הקטגוריות.
  * בלי גריד «כל הפרופילים», בלי "$ copied" ובלי דירוג ALL משוחזר.
@@ -268,7 +269,7 @@ export default function DarkPoolExploreScreen() {
         return mergePerson(known, {
           id: row.politician_id,
           name: known?.name ?? row.politician_name,
-          subtitle: known?.subtitle ?? 'קונגרס',
+          subtitle: known?.subtitle ?? i18n.t('auto.screens__DarkPool__DarkPoolExploreScreen.s1'),
           image_url: known?.image_url ?? row.politician_image_url,
           kind: 'politician',
           metric: pct,
@@ -290,7 +291,7 @@ export default function DarkPoolExploreScreen() {
           ...mergePerson(known, {
             id: row.politician_id,
             name: known?.name ?? row.politician_name,
-            subtitle: ago ? `דיווח ${ago}` : 'פעילות אחרונה',
+            subtitle: ago ? i18n.t('auto.screens__DarkPool__DarkPoolExploreScreen.s2', { v0: ago }) : i18n.t('auto.screens__DarkPool__DarkPoolExploreScreen.s3'),
             image_url: known?.image_url ?? row.politician_image_url,
             kind: 'politician',
           }),
@@ -304,7 +305,7 @@ export default function DarkPoolExploreScreen() {
       return {
         ...mergePerson(known, {
           ...row,
-          subtitle: ago ? `דיווח ${ago}` : row.subtitle,
+          subtitle: ago ? i18n.t('auto.screens__DarkPool__DarkPoolExploreScreen.s2', { v0: ago }) : row.subtitle,
         }),
         last_filed_at: row.last_filed_at,
       };
@@ -435,7 +436,7 @@ export default function DarkPoolExploreScreen() {
       <SafeAreaView style={[darkPoolTransparentFill, darkPoolRtlContent]} edges={['top']}>
         <MainDrawerScreenHeader
           inRtlTree
-          title="חקור"
+          title={i18n.t('auto.screens__DarkPool__DarkPoolExploreScreen.s4')}
           onMenuPress={openDrawer}
           rightAccessory={
             <DayNavBlurButton
@@ -445,7 +446,7 @@ export default function DarkPoolExploreScreen() {
               }}
               glassIntensity="subtle"
               size={DRAWER_MENU_BUTTON_SIZE}
-              accessibilityLabel="חיפוש לפי שם"
+              accessibilityLabel={i18n.t('auto.screens__DarkPool__DarkPoolExploreScreen.s5')}
             >
               <Ionicons name="search" size={20} color={tokens.colors.text.primary} />
             </DayNavBlurButton>
@@ -467,7 +468,7 @@ export default function DarkPoolExploreScreen() {
           {gridQuery.error ? (
             <UICard variant="outlined" padding="md" style={styles.errCard}>
               <Text style={styles.errorText}>
-                {(gridQuery.error as Error).message ?? 'שגיאה'}
+                {(gridQuery.error as Error).message ?? i18n.t('auto.screens__DarkPool__DarkPoolExploreScreen.s6')}
               </Text>
             </UICard>
           ) : null}
@@ -505,7 +506,7 @@ export default function DarkPoolExploreScreen() {
         contentPaddingBottom={0}
       >
         <View style={styles.sheetRoot}>
-          <ChatSheetTopoHeader title="חיפוש" onClose={closeSearch} />
+          <ChatSheetTopoHeader title={i18n.t('auto.screens__DarkPool__DarkPoolExploreScreen.s7')} onClose={closeSearch} />
           <View style={[styles.searchShell, formFieldShellStyle({ tokens, focused: searchFocused, multiline: false })]}>
             <Ionicons name="search" size={18} color={tokens.colors.text.secondary} />
             <TextInput
@@ -514,13 +515,13 @@ export default function DarkPoolExploreScreen() {
               onChangeText={setQuery}
               onFocus={() => setSearchFocused(true)}
               onBlur={() => setSearchFocused(false)}
-              placeholder="שם פוליטיקאי, מנכ״ל, קרן או חברה"
+              placeholder={i18n.t('auto.screens__DarkPool__DarkPoolExploreScreen.s8')}
               placeholderTextColor={tokens.colors.text.tertiary}
               keyboardAppearance={(tokens.colors.background.primary as string) === LIGHT_CANVAS ? 'light' : 'dark'}
               autoCorrect={false}
               autoFocus
               returnKeyType="search"
-              accessibilityLabel="חיפוש לפי שם"
+              accessibilityLabel={i18n.t('auto.screens__DarkPool__DarkPoolExploreScreen.s5')}
             />
             {query ? (
               <Pressable
@@ -529,7 +530,7 @@ export default function DarkPoolExploreScreen() {
                   setQuery('');
                 }}
                 hitSlop={10}
-                accessibilityLabel="נקה חיפוש"
+                accessibilityLabel={i18n.t('auto.screens__DarkPool__DarkPoolExploreScreen.s9')}
               >
                 <Ionicons name="close-circle" size={18} color={tokens.colors.text.secondary} />
               </Pressable>
@@ -553,7 +554,7 @@ export default function DarkPoolExploreScreen() {
                 ))}
               </View>
             ) : (
-              <Text style={styles.noResults}>לא נמצאו פרופילים בשם הזה</Text>
+              <Text style={styles.noResults}>{i18n.t('auto.screens__DarkPool__DarkPoolExploreScreen.s10')}</Text>
             )}
           </ScrollView>
         </View>

@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { logger } from '../../utils/logger';
@@ -453,7 +454,7 @@ function TextEditorOverlay({
             else onCancel();
           }}
         >
-          <Text style={editorStyles.doneBtnText}>סיום</Text>
+          <Text style={editorStyles.doneBtnText}>{i18n.t('auto.components__chat__AddStoryFullScreen.s1')}</Text>
         </TouchableOpacity>
 
         <View style={editorStyles.topTools}>
@@ -504,7 +505,7 @@ function TextEditorOverlay({
             ]}
             value={text}
             onChangeText={setText}
-            placeholder="הקלד טקסט..."
+            placeholder={i18n.t('auto.components__chat__AddStoryFullScreen.s2')}
             placeholderTextColor="rgba(255,255,255,0.35)"
             multiline
             maxLength={150}
@@ -667,7 +668,7 @@ function EmojiPickerOverlay({
       <View style={[emojiStyles.sheet, { paddingBottom: insets.bottom + 12 }]}>
         <View style={emojiStyles.handle} />
         <View style={emojiStyles.header}>
-          <Text style={emojiStyles.title}>הוסף אימוג'י</Text>
+          <Text style={emojiStyles.title}>{i18n.t('auto.components__chat__AddStoryFullScreen.s3')}</Text>
           <TouchableOpacity onPress={onClose} style={emojiStyles.closeBtn}>
             <Ionicons name="close" size={22} color="#fff" />
           </TouchableOpacity>
@@ -944,7 +945,7 @@ function TrashZone({
       </View>
 
       <Text style={[trashStyles.hint, hovering && trashStyles.hintActive]}>
-        {hovering ? 'שחרר למחיקה' : 'גרור לכאן למחיקה'}
+        {hovering ? i18n.t('auto.components__chat__AddStoryFullScreen.s4') : i18n.t('auto.components__chat__AddStoryFullScreen.s5')}
       </Text>
     </Reanimated.View>
     </>
@@ -1478,11 +1479,11 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
         setOverlays([]);
         setPhase('preview');
       } else {
-        legacyAlert('שגיאה', 'לא הצלחנו לצלם את התמונה. נסה שוב.');
+        legacyAlert(i18n.t('auto.components__chat__AddStoryFullScreen.s6'), i18n.t('auto.components__chat__AddStoryFullScreen.s7'));
       }
     } catch (err: any) {
       logger.error('AddStoryFullScreen', 'Take picture failed', err);
-      legacyAlert('שגיאה', 'לא הצלחנו לצלם את התמונה. נסה שוב.');
+      legacyAlert(i18n.t('auto.components__chat__AddStoryFullScreen.s6'), i18n.t('auto.components__chat__AddStoryFullScreen.s7'));
     } finally {
       capturingRef.current = false;
       setIsCapturing(false);
@@ -1522,7 +1523,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
       }
     } catch (err: any) {
       logger.error('AddStoryFullScreen', 'Recording failed', err);
-      legacyAlert('שגיאה', err?.message || 'לא הצלחנו להקליט וידאו.');
+      legacyAlert(i18n.t('auto.components__chat__AddStoryFullScreen.s6'), err?.message || i18n.t('auto.components__chat__AddStoryFullScreen.s8'));
     } finally {
       setIsRecording(false);
       if (recordTimerRef.current) clearTimeout(recordTimerRef.current);
@@ -1539,7 +1540,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       logger.debug('AddStoryFullScreen', `openGallery permission=${status}`);
       if (status !== 'granted') {
-        legacyAlert('אישור נדרש', 'אנא אשר גישה לגלריה');
+        legacyAlert(i18n.t('auto.components__chat__AddStoryFullScreen.s9'), i18n.t('auto.components__chat__AddStoryFullScreen.s10'));
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -1563,7 +1564,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
       setPhase('preview');
     } catch (err) {
       logger.error('AddStoryFullScreen', 'openGallery failed', err);
-      legacyAlert('שגיאה', 'לא הצלחנו לפתוח את הגלריה.');
+      legacyAlert(i18n.t('auto.components__chat__AddStoryFullScreen.s6'), i18n.t('auto.components__chat__AddStoryFullScreen.s11'));
     }
   }, [user?.id]);
 
@@ -1732,7 +1733,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
       closeAfterTouch();
     } catch (e: any) {
       logger.error('AddStoryFullScreen', 'Share failed', e);
-      legacyAlert('שגיאה', e?.message || 'משהו השתבש');
+      legacyAlert(i18n.t('auto.components__chat__AddStoryFullScreen.s6'), e?.message || i18n.t('auto.components__chat__AddStoryFullScreen.s12'));
     }
   };
 
@@ -1854,7 +1855,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
               <Pressable
                 style={StyleSheet.absoluteFill}
                 onPress={() => Keyboard.dismiss()}
-                accessibilityLabel="סגור מקלדת"
+                accessibilityLabel={i18n.t('auto.components__chat__AddStoryFullScreen.s13')}
               />
               <View style={{ height: insets.top + 60 }} pointerEvents="none" />
 
@@ -1862,7 +1863,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
                 <TextInput
                   ref={textInputRef}
                   style={s.textBigInput}
-                  placeholder="מה קורה?"
+                  placeholder={i18n.t('auto.components__chat__AddStoryFullScreen.s14')}
                   placeholderTextColor="rgba(255,255,255,0.45)"
                   value={textContent}
                   onChangeText={setTextContent}
@@ -1970,7 +1971,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
                 onPress={handleGalleryPress}
                 activeOpacity={0.8}
                 accessibilityRole="button"
-                accessibilityLabel="גלריה"
+                accessibilityLabel={i18n.t('auto.components__chat__AddStoryFullScreen.s15')}
               >
                 {recentPhotos.length > 0 ? (
                   <ExpoImage source={{ uri: recentPhotos[0].uri }} style={s.galleryBtnImg} />
@@ -1993,7 +1994,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                 accessible
                 accessibilityRole="button"
-                accessibilityLabel="צילום סטטוס"
+                accessibilityLabel={i18n.t('auto.components__chat__AddStoryFullScreen.s16')}
               >
                 <View style={[
                   s.captureInner,
@@ -2042,7 +2043,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
             onPress={handleShareText}
             disabled={!textContent.trim() || isUploading}
             accessibilityRole="button"
-            accessibilityLabel="שיתוף"
+            accessibilityLabel={i18n.t('auto.components__chat__AddStoryFullScreen.s17')}
           >
             <Ionicons name="chevron-up" size={28} color="#fff" />
           </TouchableOpacity>
@@ -2157,13 +2158,13 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
       {!drawMode && !showTextEditor && !showEmojiPicker && (
         <View style={[s.previewTopBar, s.chromeLayer, { paddingTop: insets.top + 10 }]} pointerEvents="box-none">
           <View style={s.previewTools}>
-            <TouchableOpacity style={s.topIconBtn} onPress={() => setDrawMode(true)} activeOpacity={0.75} accessibilityLabel="ציור">
+            <TouchableOpacity style={s.topIconBtn} onPress={() => setDrawMode(true)} activeOpacity={0.75} accessibilityLabel={i18n.t('auto.components__chat__AddStoryFullScreen.s18')}>
               <Ionicons name="brush-outline" size={22} color="#fff" />
             </TouchableOpacity>
-            <TouchableOpacity style={s.topIconBtn} onPress={() => setShowEmojiPicker(true)} activeOpacity={0.75} accessibilityLabel="אימוג׳י">
+            <TouchableOpacity style={s.topIconBtn} onPress={() => setShowEmojiPicker(true)} activeOpacity={0.75} accessibilityLabel={i18n.t('auto.components__chat__AddStoryFullScreen.s19')}>
               <Ionicons name="happy-outline" size={22} color="#fff" />
             </TouchableOpacity>
-            <TouchableOpacity style={s.topIconBtn} onPress={() => openTextEditor()} activeOpacity={0.75} accessibilityLabel="טקסט">
+            <TouchableOpacity style={s.topIconBtn} onPress={() => openTextEditor()} activeOpacity={0.75} accessibilityLabel={i18n.t('auto.components__chat__AddStoryFullScreen.s20')}>
               <MaterialCommunityIcons name="format-text" size={22} color="#fff" />
             </TouchableOpacity>
           </View>
@@ -2172,7 +2173,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
             onPress={() => { setMediaUri(null); setOverlays([]); setDrawPaths([]); setDrawMode(false); setPhase('capture'); }}
             activeOpacity={0.7}
             accessibilityRole="button"
-            accessibilityLabel="חזרה"
+            accessibilityLabel={i18n.t('auto.components__chat__AddStoryFullScreen.s21')}
           >
             <Ionicons name="chevron-forward" size={26} color="#fff" />
           </TouchableOpacity>
@@ -2188,7 +2189,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
               onPress={() => setDrawMode(false)}
               activeOpacity={0.7}
             >
-              <Text style={s.drawDoneText}>סיום</Text>
+              <Text style={s.drawDoneText}>{i18n.t('auto.components__chat__AddStoryFullScreen.s1')}</Text>
             </TouchableOpacity>
 
             <View style={{ flex: 1 }} />
@@ -2270,7 +2271,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
               style={[s.sendChevronBtn, isUploading && { opacity: 0.82 }]}
               activeOpacity={0.88}
               accessibilityRole="button"
-              accessibilityLabel="שיתוף"
+              accessibilityLabel={i18n.t('auto.components__chat__AddStoryFullScreen.s17')}
             >
               <Ionicons name="chevron-up" size={28} color="#fff" />
             </TouchableOpacity>
@@ -2348,7 +2349,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
                   }}
                   activeOpacity={0.7}
                 >
-                  <Reanimated.Text style={[s.modePillText, cameraPillOpacity]}>מצלמה</Reanimated.Text>
+                  <Reanimated.Text style={[s.modePillText, cameraPillOpacity]}>{i18n.t('auto.components__chat__AddStoryFullScreen.s22')}</Reanimated.Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={s.modePill}
@@ -2358,7 +2359,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
                   }}
                   activeOpacity={0.7}
                 >
-                  <Reanimated.Text style={[s.modePillText, textPillOpacity]}>טקסט</Reanimated.Text>
+                  <Reanimated.Text style={[s.modePillText, textPillOpacity]}>{i18n.t('auto.components__chat__AddStoryFullScreen.s20')}</Reanimated.Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -2377,8 +2378,8 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
           <InlineAppDialog
             visible={phase === 'uploading'}
             busy
-            title="מעלה סטטוס…"
-            message="זה ייקח רק רגע"
+            title={i18n.t('auto.components__chat__AddStoryFullScreen.s23')}
+            message={i18n.t('auto.components__chat__AddStoryFullScreen.s24')}
           />
         </Reanimated.View>
       </GestureRoot>

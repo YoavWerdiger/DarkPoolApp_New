@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { memo, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
@@ -92,7 +93,7 @@ const TradeListCardInner = memo(function TradeListCardInner({
   const DesignTokens = useDesignTokens();
 
   const isProfit = item.pnl >= 0;
-  const directionText = item.direction === 'long' ? 'לונג' : 'שורט';
+  const directionText = item.direction === 'long' ? i18n.t('auto.screens__Journal__TradeListCard.s1') : i18n.t('auto.screens__Journal__TradeListCard.s2');
   const directionColor =
     item.direction === 'long' ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger;
 
@@ -135,7 +136,7 @@ const TradeListCardInner = memo(function TradeListCardInner({
             <TradeShareButton
               onPress={() => onShare(item)}
               size={28}
-              accessibilityLabel="שתף טרייד"
+              accessibilityLabel={i18n.t('auto.screens__Journal__TradeListCard.s3')}
             />
             <TouchableOpacity
               onPress={() => {
@@ -145,7 +146,7 @@ const TradeListCardInner = memo(function TradeListCardInner({
               style={[styles.iconBtn, { backgroundColor: DesignTokens.colors.background.primary }]}
               hitSlop={8}
               accessibilityRole="button"
-              accessibilityLabel="מחק טרייד"
+              accessibilityLabel={i18n.t('auto.screens__Journal__TradeListCard.s4')}
             >
               <Ionicons name="trash-outline" size={16} color={DesignTokens.colors.text.danger} />
             </TouchableOpacity>
@@ -154,25 +155,25 @@ const TradeListCardInner = memo(function TradeListCardInner({
 
         <View style={styles.metricsGrid}>
           <View style={styles.metricCell}>
-            <Text style={styles.metricLabel} numberOfLines={1}>כניסה</Text>
+            <Text style={styles.metricLabel} numberOfLines={1}>{i18n.t('auto.screens__Journal__TradeListCard.s5')}</Text>
             <Text style={styles.metricValueMoney} numberOfLines={1}>
               ${formatUsd(item.entry_price)}
             </Text>
           </View>
           <View style={styles.metricCell}>
-            <Text style={styles.metricLabel} numberOfLines={1}>יציאה</Text>
+            <Text style={styles.metricLabel} numberOfLines={1}>{i18n.t('auto.screens__Journal__TradeListCard.s6')}</Text>
             <Text style={styles.metricValueMoney} numberOfLines={1}>
               ${formatUsd(item.exit_price)}
             </Text>
           </View>
           <View style={styles.metricCell}>
-            <Text style={styles.metricLabel} numberOfLines={1}>כמות</Text>
+            <Text style={styles.metricLabel} numberOfLines={1}>{i18n.t('auto.screens__Journal__TradeListCard.s7')}</Text>
             <Text style={styles.metricValuePlain} numberOfLines={1}>
               {item.quantity}
             </Text>
           </View>
           <View style={styles.metricCell}>
-            <Text style={styles.metricLabel} numberOfLines={1}>תאריך יציאה</Text>
+            <Text style={styles.metricLabel} numberOfLines={1}>{i18n.t('auto.screens__Journal__TradeListCard.s8')}</Text>
             <Text style={styles.metricValuePlain} numberOfLines={1}>
               {formatDate(item.exit_date)}
             </Text>
@@ -182,7 +183,7 @@ const TradeListCardInner = memo(function TradeListCardInner({
         <View style={styles.pnlBand}>
           <View style={styles.pnlBandCell}>
             <Text style={styles.pnlBandLabel} numberOfLines={1}>
-              {isProfit ? 'רווח נטו' : 'הפסד נטו'}
+              {isProfit ? i18n.t('auto.screens__Journal__TradeListCard.s9') : i18n.t('auto.screens__Journal__TradeListCard.s10')}
             </Text>
             <Text
               style={[styles.pnlBandValue, isProfit ? styles.pnlProfit : styles.pnlLoss]}
@@ -193,7 +194,7 @@ const TradeListCardInner = memo(function TradeListCardInner({
           </View>
           <View style={styles.pnlBandDivider} />
           <View style={styles.pnlBandCell}>
-            <Text style={styles.pnlBandLabel} numberOfLines={1}>תשואה</Text>
+            <Text style={styles.pnlBandLabel} numberOfLines={1}>{i18n.t('auto.screens__Journal__TradeListCard.s11')}</Text>
             <Text
               style={[styles.pnlBandValue, returnPct >= 0 ? styles.pnlProfit : styles.pnlLoss]}
               numberOfLines={1}

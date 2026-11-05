@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -52,9 +53,9 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
     if (selectedPlanId === currentPlanId) return;
     if (!checkoutReady) {
       legacyAlert(
-        'תשלום בקרוב',
-        'רכישת מנוי תיפתח לאחר חיבור מלא לסולק התשלומים. בינתיים ניתן לצפות במסלולים.',
-        [{ text: 'הבנתי' }],
+        i18n.t('auto.screens__Profile__SubscriptionPlansScreen.s1'),
+        i18n.t('auto.screens__Profile__SubscriptionPlansScreen.s2'),
+        [{ text: i18n.t('auto.screens__Profile__SubscriptionPlansScreen.s3') }],
       );
       return;
     }
@@ -70,7 +71,7 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
       edges={['top', 'bottom']}
     >
       <ChatSubScreenHeader
-        title="שדרוג מסלול"
+        title={i18n.t('auto.screens__Profile__SubscriptionPlansScreen.s4')}
         onBack={() => {
           void HapticFeedback.impactLight();
           navigation.goBack();
@@ -91,13 +92,13 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
           onContinue={handleContinue}
           intro={
             planName
-              ? `כרגע: ${planName} · בחר מסלול לשדרוג`
-              : 'בחר מסלול לשדרוג והמשך לתשלום מאובטח'
+              ? i18n.t('auto.screens__Profile__SubscriptionPlansScreen.s5', { v0: planName })
+              : i18n.t('auto.screens__Profile__SubscriptionPlansScreen.s6')
           }
           banner={
             checkoutReady
               ? null
-              : 'תשלום בקרוב — סליקת Cardcom עדיין לא מחוברת. ניתן לצפות במסלולים בלבד.'
+              : i18n.t('auto.screens__Profile__SubscriptionPlansScreen.s7')
           }
         />
         <TouchableOpacity
@@ -114,9 +115,7 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
               settingsButtonLabelStyle,
               { color: tokens.colors.text.primary },
             ]}
-          >
-            היסטוריית תשלומים וחשבוניות
-          </Text>
+          >{i18n.t('auto.screens__Profile__SubscriptionPlansScreen.s8')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

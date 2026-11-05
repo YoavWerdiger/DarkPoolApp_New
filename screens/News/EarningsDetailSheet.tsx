@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 /**
  * שיט פירוט דוח רווח — לפי הטופו:
@@ -70,16 +71,16 @@ function surprisePct(actual: number | null, est: number | null): number | null {
 }
 function verdictLabel(pct: number | null): string {
   if (pct == null) return '';
-  if (Math.abs(pct) < 0.05) return 'בקו הצפי';
-  return pct > 0 ? 'מכה' : 'מפספסת';
+  if (Math.abs(pct) < 0.05) return i18n.t('auto.screens__News__EarningsDetailSheet.s1');
+  return pct > 0 ? i18n.t('auto.screens__News__EarningsDetailSheet.s2') : i18n.t('auto.screens__News__EarningsDetailSheet.s3');
 }
 function symbolOf(report: EarningsReport): string {
   return (report.ticker || (report.code || '').replace(/\.US$/i, '') || '').trim().toUpperCase();
 }
 function timingOf(report: EarningsReport): { label: string; icon: IonName; color: string } | null {
   const t = `${report.before_after_market ?? ''} ${report.report_time ?? ''}`.toLowerCase();
-  if (t.includes('before') || t.includes('bmo')) return { label: 'לפני הפתיחה', icon: 'sunny-outline', color: '#D1A11D' };
-  if (t.includes('after') || t.includes('amc')) return { label: 'אחרי הסגירה', icon: 'moon-outline', color: '#007AFF' };
+  if (t.includes('before') || t.includes('bmo')) return { label: i18n.t('auto.screens__News__EarningsDetailSheet.s4'), icon: 'sunny-outline', color: '#D1A11D' };
+  if (t.includes('after') || t.includes('amc')) return { label: i18n.t('auto.screens__News__EarningsDetailSheet.s5'), icon: 'moon-outline', color: '#007AFF' };
   return null;
 }
 function dateLabel(iso?: string | null): string {
@@ -155,9 +156,9 @@ function Body({ report, onClose }: { report: EarningsReport; onClose: () => void
   );
 
   const scheduleRows: Array<{ icon: IonName; label: string; value: string }> = [
-    { icon: 'calendar-outline', label: 'תאריך', value: dateLabel(report.report_date) },
-    { icon: timing?.icon ?? 'time-outline', label: 'מועד', value: timing?.label ?? 'טרם נקבע' },
-    ...(quarter ? [{ icon: 'layers-outline' as IonName, label: 'רבעון', value: quarter }] : []),
+    { icon: 'calendar-outline', label: i18n.t('auto.screens__News__EarningsDetailSheet.s6'), value: dateLabel(report.report_date) },
+    { icon: timing?.icon ?? 'time-outline', label: i18n.t('auto.screens__News__EarningsDetailSheet.s7'), value: timing?.label ?? i18n.t('auto.screens__News__EarningsDetailSheet.s8') },
+    ...(quarter ? [{ icon: 'layers-outline' as IonName, label: i18n.t('auto.screens__News__EarningsDetailSheet.s9'), value: quarter }] : []),
   ];
 
   return (
@@ -166,7 +167,7 @@ function Body({ report, onClose }: { report: EarningsReport; onClose: () => void
       <View style={styles.header}>
         <View style={styles.topBar}>
           <View style={styles.closeSlot}>
-            <DayNavBlurButton glass glassIntensity="light" onPress={onClose} size={HEADER_BACK_BTN_SIZE} accessibilityLabel="סגור">
+            <DayNavBlurButton glass glassIntensity="light" onPress={onClose} size={HEADER_BACK_BTN_SIZE} accessibilityLabel={i18n.t('auto.screens__News__EarningsDetailSheet.s10')}>
               <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
             </DayNavBlurButton>
           </View>
@@ -181,7 +182,7 @@ function Body({ report, onClose }: { report: EarningsReport; onClose: () => void
                   setShareOpen(true);
                 }}
                 size={HEADER_BACK_BTN_SIZE}
-                accessibilityLabel="שיתוף"
+                accessibilityLabel={i18n.t('auto.screens__News__EarningsDetailSheet.s11')}
               >
                 <Ionicons name="share-outline" size={20} color={tokens.colors.text.primary} />
               </DayNavBlurButton>
@@ -213,11 +214,11 @@ function Body({ report, onClose }: { report: EarningsReport; onClose: () => void
       >
         {/* תוצאות — שני כרטיסים נפרדים, לכל אחד פס צבע משלו */}
         <View>
-          <Text style={styles.groupHeading}>{reported ? 'תוצאות' : 'צפי'}</Text>
+          <Text style={styles.groupHeading}>{reported ? i18n.t('auto.screens__News__EarningsDetailSheet.s12') : i18n.t('auto.screens__News__EarningsDetailSheet.s13')}</Text>
           <UICard variant="soft" glassIntensity="subtle" padding="none">
             <ResultRow
               icon="pie-chart-outline"
-              label="רווח למניה"
+              label={i18n.t('auto.screens__News__EarningsDetailSheet.s14')}
               value={reported ? fmtEps(epsActual) : fmtEps(epsEst)}
               pct={reported ? epsPct : null}
               color={reported ? tone(epsPct) : tokens.colors.text.primary}
@@ -225,7 +226,7 @@ function Body({ report, onClose }: { report: EarningsReport; onClose: () => void
             />
             <ResultRow
               icon="cash-outline"
-              label="הכנסות"
+              label={i18n.t('auto.screens__News__EarningsDetailSheet.s15')}
               value={reported ? fmtRevenue(revActual) : fmtRevenue(revEst)}
               pct={reported ? revPct : null}
               color={reported ? tone(revPct) : tokens.colors.text.primary}
@@ -235,7 +236,7 @@ function Body({ report, onClose }: { report: EarningsReport; onClose: () => void
         </View>
 
         <View>
-          <Text style={styles.groupHeading}>תנועת המניה</Text>
+          <Text style={styles.groupHeading}>{i18n.t('auto.screens__News__EarningsDetailSheet.s16')}</Text>
           <UICard variant="soft" glassIntensity="subtle" padding="none" style={styles.chartCard}>
             <MarketsTradingView
               html={chartHtml}
@@ -247,7 +248,7 @@ function Body({ report, onClose }: { report: EarningsReport; onClose: () => void
         </View>
 
         <View>
-          <Text style={styles.groupHeading}>מועד הדיווח</Text>
+          <Text style={styles.groupHeading}>{i18n.t('auto.screens__News__EarningsDetailSheet.s17')}</Text>
           <UICard variant="soft" glassIntensity="subtle" padding="none">
             {scheduleRows.map((r, i) => (
               <DetailRow key={r.label} icon={r.icon} label={r.label} value={r.value} showDivider={i < scheduleRows.length - 1} />

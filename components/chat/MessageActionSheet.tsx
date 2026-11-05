@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
 /**
@@ -166,40 +167,40 @@ export default function MessageActionSheet({
   }> = [
     {
       key: 'reply',
-      label: 'תגובה',
+      label: i18n.t('auto.components__chat__MessageActionSheet.s1'),
       icon: <MessageCircle size={26} color={DesignTokens.colors.accent?.main || '#00E5FF'} strokeWidth={2} />,
       onPress: onReply,
     },
     {
       key: 'forward',
-      label: 'העבר',
+      label: i18n.t('auto.components__chat__MessageActionSheet.s2'),
       icon: <RotateCcw size={26} color={DesignTokens.colors.warning?.main || '#F59E0B'} strokeWidth={2} />,
       onPress: onForward,
     },
     {
       key: 'copy',
-      label: 'העתק',
+      label: i18n.t('auto.components__chat__MessageActionSheet.s3'),
       icon: <Copy size={26} color={DesignTokens.colors.success?.main || '#10B981'} strokeWidth={2} />,
       onPress: onCopy,
     },
     ...(canEdit && onEdit
       ? [{
           key: 'edit',
-          label: 'ערוך',
+          label: i18n.t('auto.components__chat__MessageActionSheet.s4'),
           icon: <Edit size={26} color={DesignTokens.colors.warning?.main || '#F59E0B'} strokeWidth={2} />,
           onPress: onEdit,
         }]
       : []),
     {
       key: 'react',
-      label: 'ריאקציה',
+      label: i18n.t('auto.components__chat__MessageActionSheet.s5'),
       icon: <Heart size={26} color={DesignTokens.colors.danger?.main || '#EF4444'} strokeWidth={2} />,
       onPress: onReact,
     },
     ...(canPin
       ? [{
           key: 'star',
-          label: isPinned ? 'הסר כוכב' : 'סמן בכוכב',
+          label: isPinned ? i18n.t('auto.components__chat__MessageActionSheet.s6') : i18n.t('auto.components__chat__MessageActionSheet.s7'),
           icon: (
             <Ionicons
               name={isPinned ? 'star' : 'star-outline'}
@@ -233,7 +234,7 @@ export default function MessageActionSheet({
           backgroundColor: 'transparent',
         }}
       >
-        <ChatSheetTitle title="פעולות הודעה" />
+        <ChatSheetTitle title={i18n.t('auto.components__chat__MessageActionSheet.s8')} />
 
         <View
           style={[
@@ -249,7 +250,7 @@ export default function MessageActionSheet({
             {renderMessageContent()}
             <View style={styles.previewMeta}>
               <Text style={[styles.previewName, { color: DesignTokens.colors.text.secondary }]}>
-                {message.sender?.full_name || 'משתמש'}
+                {message.sender?.full_name || i18n.t('auto.components__chat__MessageActionSheet.s9')}
               </Text>
               <Text style={[styles.previewTime, { color: DesignTokens.colors.text.tertiary }]}>
                 {new Date(message.created_at).toLocaleTimeString(appLocale(), {
@@ -295,7 +296,7 @@ export default function MessageActionSheet({
             pressed && { opacity: 0.75 },
           ]}
         >
-          <Text style={[styles.cancelText, { color: DesignTokens.colors.text.primary }]}>ביטול</Text>
+          <Text style={[styles.cancelText, { color: DesignTokens.colors.text.primary }]}>{i18n.t('auto.components__chat__MessageActionSheet.s10')}</Text>
         </Pressable>
       </ChatSheetContent>
     </ChatBottomSheet>

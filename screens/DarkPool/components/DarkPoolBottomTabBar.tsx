@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 /**
  * סרגל תחתון — פיד | חקור | טיקרים | מעקב
@@ -31,22 +32,22 @@ const TAB_META: Record<
   { label: string; icon: React.ComponentProps<typeof Ionicons>['name']; iconActive: React.ComponentProps<typeof Ionicons>['name'] }
 > = {
   DarkPoolFeed: {
-    label: 'פיד',
+    label: i18n.t('auto.screens__DarkPool__components__DarkPoolBottomTabBar.s1'),
     icon: 'newspaper-outline',
     iconActive: 'newspaper',
   },
   DarkPoolExplore: {
-    label: 'חקור',
+    label: i18n.t('auto.screens__DarkPool__components__DarkPoolBottomTabBar.s2'),
     icon: 'compass-outline',
     iconActive: 'compass',
   },
   DarkPoolSearch: {
-    label: 'טיקרים',
+    label: i18n.t('auto.screens__DarkPool__components__DarkPoolBottomTabBar.s3'),
     icon: 'search-outline',
     iconActive: 'search',
   },
   DarkPoolFollowing: {
-    label: 'מעקב',
+    label: i18n.t('auto.screens__DarkPool__components__DarkPoolBottomTabBar.s4'),
     icon: 'people-outline',
     iconActive: 'people',
   },

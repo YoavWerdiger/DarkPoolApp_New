@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useState } from 'react';
 import { View, Text } from 'react-native';
@@ -34,7 +35,7 @@ const RegistrationPhoneScreen = ({ navigation }: { navigation: any }) => {
   const handleNext = async () => {
     setError('');
     if (!e164) {
-      setError('אנא הכנס מספר נייד ישראלי תקין (למשל 0541234567)');
+      setError(i18n.t('auto.screens__Auth__RegistrationPhoneScreen.s1'));
       return;
     }
 
@@ -48,7 +49,7 @@ const RegistrationPhoneScreen = ({ navigation }: { navigation: any }) => {
         logger.error('RegistrationPhone', `checkPhoneExists failed: ${phoneError}`);
       }
       if (exists) {
-        setError('מספר הטלפון כבר קיים במערכת');
+        setError(i18n.t('auto.screens__Auth__RegistrationPhoneScreen.s2'));
         return;
       }
 
@@ -58,16 +59,16 @@ const RegistrationPhoneScreen = ({ navigation }: { navigation: any }) => {
         const otpResult = await AuthService.sendPhoneOtp(phone.trim());
         if (otpResult.error) {
           if (otpResult.error === 'rate_limit') {
-            setError('יותר מדי בקשות. נסה שוב בעוד כמה דקות.');
+            setError(i18n.t('auto.screens__Auth__RegistrationPhoneScreen.s3'));
           } else if (otpResult.error === 'invalid_phone') {
-            setError('מספר הטלפון לא תקין');
+            setError(i18n.t('auto.screens__Auth__RegistrationPhoneScreen.s4'));
           } else if (
             otpResult.error === 'sms_provider_error' ||
             otpResult.error === 'phone_auth_not_configured'
           ) {
-            setError('שליחת SMS אינה זמינה כרגע. נסה שוב מאוחר יותר.');
+            setError(i18n.t('auto.screens__Auth__RegistrationPhoneScreen.s5'));
           } else {
-            setError('שגיאה בשליחת קוד האימות. נסה שוב.');
+            setError(i18n.t('auto.screens__Auth__RegistrationPhoneScreen.s6'));
           }
           void HapticFeedback.error();
           return;
@@ -93,8 +94,8 @@ const RegistrationPhoneScreen = ({ navigation }: { navigation: any }) => {
 
   return (
     <CashAppScreen
-      title="מה מספר הטלפון שלך?"
-      subtitle="נשתמש בו ליצירת קשר ולהתראות חשובות"
+      title={i18n.t('auto.screens__Auth__RegistrationPhoneScreen.s7')}
+      subtitle={i18n.t('auto.screens__Auth__RegistrationPhoneScreen.s8')}
       currentStep={ONBOARDING_STEPS.phone}
       totalSteps={ONBOARDING_TOTAL_STEPS}
       progressVariant="dots"
@@ -108,7 +109,7 @@ const RegistrationPhoneScreen = ({ navigation }: { navigation: any }) => {
       }}
       footer={
         <CashAppButton
-          title="המשך"
+          title={i18n.t('auto.screens__Auth__RegistrationPhoneScreen.s9')}
           variant="primary"
           size="lg"
           onPress={handleNext}
@@ -147,7 +148,7 @@ const RegistrationPhoneScreen = ({ navigation }: { navigation: any }) => {
       ) : null}
 
       <CashAppInput
-        label="מספר טלפון"
+        label={i18n.t('auto.screens__Auth__RegistrationPhoneScreen.s10')}
         placeholder="054-000-0000"
         autoFormat="phone"
         value={phone}
@@ -158,7 +159,7 @@ const RegistrationPhoneScreen = ({ navigation }: { navigation: any }) => {
         keyboardType="phone-pad"
         maxLength={15}
         autoFocus
-        helperText="נייד ישראלי (למשל 054-123-4567)"
+        helperText={i18n.t('auto.screens__Auth__RegistrationPhoneScreen.s11')}
       />
       <View style={{ flex: 1 }} />
     </CashAppScreen>

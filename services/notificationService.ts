@@ -1,3 +1,4 @@
+import i18n from '../lib/i18n';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
@@ -76,8 +77,8 @@ async function setupNotificationChannels() {
   if (Platform.OS === 'android') {
     // Channel להתראות צ'אט - עדיפות גבוהה עם צליל
     await Notifications.setNotificationChannelAsync('chat-messages', {
-      name: 'הודעות צ\'אט',
-      description: 'התראות על הודעות חדשות בצ\'אטים',
+      name: i18n.t('auto.services__notificationService.s1'),
+      description: i18n.t('auto.services__notificationService.s2'),
       importance: Notifications.AndroidImportance.HIGH,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: '#00E654',
@@ -88,16 +89,16 @@ async function setupNotificationChannels() {
 
     // Channel להתראות כלליות
     await Notifications.setNotificationChannelAsync('default', {
-      name: 'התראות כלליות',
-      description: 'התראות כלליות מהאפליקציה',
+      name: i18n.t('auto.services__notificationService.s3'),
+      description: i18n.t('auto.services__notificationService.s4'),
       importance: Notifications.AndroidImportance.DEFAULT,
       sound: 'default',
     });
 
     // Channel לחדשות
     await Notifications.setNotificationChannelAsync('news', {
-      name: 'חדשות',
-      description: 'התראות על חדשות חדשות',
+      name: i18n.t('auto.services__notificationService.s5'),
+      description: i18n.t('auto.services__notificationService.s6'),
       importance: Notifications.AndroidImportance.HIGH,
       vibrationPattern: [0, 250, 250, 250],
       sound: 'default',
@@ -107,15 +108,15 @@ async function setupNotificationChannels() {
 
     // Channel ליומן כלכלי
     await Notifications.setNotificationChannelAsync('economic_events', {
-      name: 'יומן כלכלי',
-      description: 'התראות על תוצאות דוחות כלכליים',
+      name: i18n.t('auto.services__notificationService.s7'),
+      description: i18n.t('auto.services__notificationService.s8'),
       importance: Notifications.AndroidImportance.HIGH,
       sound: 'default',
     });
 
     await Notifications.setNotificationChannelAsync('earnings', {
-      name: 'דיווחי רווח',
-      description: 'התראות לפני ואחרי דיווחי רווח',
+      name: i18n.t('auto.services__notificationService.s9'),
+      description: i18n.t('auto.services__notificationService.s10'),
       importance: Notifications.AndroidImportance.HIGH,
       sound: 'default',
     });

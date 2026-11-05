@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 /**
  * פס ימי מסחר (ב׳–ו׳) במקום ניווט יום בחצים — יומן כלכלי ודיווחי רווח.
@@ -13,7 +14,7 @@ import { useDesignTokens } from './DesignTokens';
 import { APP_TYPE } from './appType';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 
-const HEB_WEEKDAY = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
+const HEB_WEEKDAY = [i18n.t('auto.components__ui__WeekDayStrip.s1'), i18n.t('auto.components__ui__WeekDayStrip.s2'), i18n.t('auto.components__ui__WeekDayStrip.s3'), i18n.t('auto.components__ui__WeekDayStrip.s4'), i18n.t('auto.components__ui__WeekDayStrip.s5'), i18n.t('auto.components__ui__WeekDayStrip.s6'), i18n.t('auto.components__ui__WeekDayStrip.s7')];
 const GAP = 6;
 const SLIDE = { duration: 260, easing: Easing.out(Easing.cubic) };
 
@@ -100,11 +101,11 @@ export function WeekDayStrip({ selectedDate, onSelect, markedDates }: Props) {
     <View>
       {/* ניווט ברור: חודש, חצים לשבוע קודם / הבא, ו«היום» כשלא בשבוע הנוכחי */}
       <View style={styles.header}>
-        <Pressable onPress={() => shiftWeek(-1)} hitSlop={10} style={styles.navBtn} accessibilityLabel="שבוע קודם">
+        <Pressable onPress={() => shiftWeek(-1)} hitSlop={10} style={styles.navBtn} accessibilityLabel={i18n.t('auto.components__ui__WeekDayStrip.s8')}>
           <Ionicons name="chevron-forward" size={18} color={tokens.colors.text.primary} />
         </Pressable>
         <Text style={[styles.month, { color: tokens.colors.text.primary }]}>{monthLabel}</Text>
-        <Pressable onPress={() => shiftWeek(1)} hitSlop={10} style={styles.navBtn} accessibilityLabel="שבוע הבא">
+        <Pressable onPress={() => shiftWeek(1)} hitSlop={10} style={styles.navBtn} accessibilityLabel={i18n.t('auto.components__ui__WeekDayStrip.s9')}>
           <Ionicons name="chevron-back" size={18} color={tokens.colors.text.primary} />
         </Pressable>
         <View style={styles.headerSpacer} />
@@ -115,9 +116,9 @@ export function WeekDayStrip({ selectedDate, onSelect, markedDates }: Props) {
               onSelect(new Date());
             }}
             style={[styles.todayBtn, { backgroundColor: tokens.colors.background.cardSolid }]}
-            accessibilityLabel="חזרה להיום"
+            accessibilityLabel={i18n.t('auto.components__ui__WeekDayStrip.s10')}
           >
-            <Text style={[styles.todayText, { color: tokens.colors.text.primary }]}>היום</Text>
+            <Text style={[styles.todayText, { color: tokens.colors.text.primary }]}>{i18n.t('auto.components__ui__WeekDayStrip.s11')}</Text>
           </Pressable>
         ) : null}
       </View>

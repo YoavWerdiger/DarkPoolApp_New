@@ -1,3 +1,4 @@
+import i18n from './i18n';
 /**
  * מיפוי data מהתראת Push → יעד ניווט ב-root stack.
  * פונקציה טהורה לבדיקות יחידה ולשימוש מ-App.tsx (tap חם / cold start).
@@ -77,7 +78,7 @@ export function resolveNotificationNavTarget(
     return {
       kind: 'chat',
       groupId,
-      groupName: asString(data.group_name) ?? asString(data.groupName) ?? "צ'אט",
+      groupName: asString(data.group_name) ?? asString(data.groupName) ?? i18n.t('auto.lib__notificationRouting.s1'),
       messageId: asString(data.message_id) ?? asString(data.messageId),
     };
   }

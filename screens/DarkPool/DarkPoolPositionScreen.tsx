@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { listCongressTradesForPersonTicker } from '../../services/darkpool/darkPoolDbCacheService';
 import { listInsiderTradesForPersonTicker } from '../../services/darkpool/darkPoolService';
@@ -81,18 +82,15 @@ function compactUsd(v: number): string {
 }
 
 const SIDE_VERB: Record<FilingPositionTxn['side'], string> = {
-  new: 'פוזיציה חדשה',
-  buy: 'הגדלה',
-  sell: 'הקטנה',
-  exit: 'יציאה מלאה',
+  new: i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s1'),
+  buy: i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s2'),
+  sell: i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s3'),
+  exit: i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s4'),
 };
 
-const HONESTY_TITLE = 'איך מחושבת האחזקה?';
+const HONESTY_TITLE = i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s5');
 const HONESTY_BODY =
-  'הנתונים מדוחות 13F שהגוף מגיש ל-SEC בסוף כל רבעון: כמה מניות הוא מחזיק ובאיזה שווי. ' +
-  'הדוחות לא מפרטים עסקאות — «עסקה» כאן היא השינוי בכמות בין שני דוחות, במחיר סוף הרבעון. ' +
-  'המחיר הממוצע לפי מחירי סוף הרבעון בכל שינוי. השווי והתשואה היום מחושבים לפי המחיר החי של המניה ' +
-  'וכמות המניות בדוח האחרון.';
+  i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s6');
 
 export default function DarkPoolPositionScreen() {
   const { params } = useRoute<RP>();
@@ -130,7 +128,7 @@ function TradesPositionView() {
           key: String(t.id),
           buy: tone !== 'sell',
           date: t.transaction_date ?? null,
-          amount: value ?? (t.shares ? `${Math.round(Math.abs(t.shares)).toLocaleString('en-US')} מניות` : '—'),
+          amount: value ?? (t.shares ? i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s7', { v0: Math.round(Math.abs(t.shares)).toLocaleString('en-US') }) : '—'),
         };
       });
     },
@@ -180,12 +178,10 @@ function TradesPositionView() {
     <ScreenChrome rtl>
       <SafeAreaView style={[darkPoolTransparentFill, darkPoolRtlContent]} edges={['top']}>
         <View style={styles.topBar}>
-          <DayNavBlurButton onPress={() => navigation.goBack()} glassIntensity="subtle" size={HEADER_BACK_BTN_SIZE} accessibilityLabel="חזרה">
+          <DayNavBlurButton onPress={() => navigation.goBack()} glassIntensity="subtle" size={HEADER_BACK_BTN_SIZE} accessibilityLabel={i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s8')}>
             <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
           </DayNavBlurButton>
-          <Text style={styles.topBarTitle} numberOfLines={1} accessibilityRole="header">
-            פרטי אחזקה
-          </Text>
+          <Text style={styles.topBarTitle} numberOfLines={1} accessibilityRole="header">{i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s9')}</Text>
           <View style={{ width: HEADER_BACK_BTN_SIZE }} />
         </View>
         <ScrollView style={darkPoolTransparentFill} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -203,14 +199,14 @@ function TradesPositionView() {
                       {params.personName}
                     </Text>
                     <Text style={[heroStyles.action, heroStyles.actionAfterName]}>
-                      <Text style={[heroStyles.actionVerb, { color: tokens.colors.primary.main }]}>מחזיק</Text>
+                      <Text style={[heroStyles.actionVerb, { color: tokens.colors.primary.main }]}>{i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s10')}</Text>
                       <Text style={heroStyles.actionRest}>
                         {' '}
                         {shares != null
-                          ? `${toDataIsland(sharesText(shares))} מניות`
+                          ? i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s7', { v0: toDataIsland(sharesText(shares)) })
                           : params.marketValue != null
-                            ? `בשווי ${toDataIsland(usd(params.marketValue))}`
-                            : 'במניה'}
+                            ? i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s11', { v0: toDataIsland(usd(params.marketValue)) })
+                            : i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s12')}
                       </Text>
                     </Text>
                   </View>
@@ -219,7 +215,7 @@ function TradesPositionView() {
                 <Pressable
                   onPress={() => navigation.navigate('DarkPoolTicker', { ticker })}
                   accessibilityRole="button"
-                  accessibilityLabel={`עמוד המניה ${ticker}`}
+                  accessibilityLabel={i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s13', { v0: ticker })}
                 >
                   <DarkPoolNestedQuoteCard
                     ticker={ticker}
@@ -236,18 +232,18 @@ function TradesPositionView() {
           </View>
 
           <View style={styles.section}>
-            <DarkPoolSectionHeader variant="group" title="הפוזיציה" />
+            <DarkPoolSectionHeader variant="group" title={i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s14')} />
             <UICard variant="soft" glassIntensity="light" padding="none" contentContainerStyle={styles.rowsCard}>
-              {shares != null ? <FieldRow icon={Layers} label="מניות" value={sharesText(shares)} /> : null}
+              {shares != null ? <FieldRow icon={Layers} label={i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s15')} value={sharesText(shares)} /> : null}
               <FieldRow
                 icon={Wallet}
-                label="שווי אחזקה"
+                label={i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s16')}
                 value={liveValue != null ? usd(liveValue) : DARK_POOL_UNAVAILABLE}
               />
-              {avg != null ? <FieldRow icon={CircleDollarSign} label="מחיר ממוצע" value={usd(avg, 2)} /> : null}
+              {avg != null ? <FieldRow icon={CircleDollarSign} label={i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s17')} value={usd(avg, 2)} /> : null}
               <FieldRow
                 icon={CircleDollarSign}
-                label="חלק מהתיק"
+                label={i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s18')}
                 value={params.allocationPct != null ? `${params.allocationPct.toFixed(1)}%` : DARK_POOL_UNAVAILABLE}
                 last
               />
@@ -255,12 +251,12 @@ function TradesPositionView() {
           </View>
 
           <View style={styles.section}>
-            <DarkPoolSectionHeader variant="group" title="תשואת הפוזיציה" />
+            <DarkPoolSectionHeader variant="group" title={i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s19')} />
             <UICard variant="soft" glassIntensity="light" padding="none" contentContainerStyle={styles.rowsCard}>
-              <FieldRow icon={Activity} label="תשואה היום" value={returnText(todayUsd, todayPct)} color={toneColor(todayPct)} />
+              <FieldRow icon={Activity} label={i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s20')} value={returnText(todayUsd, todayPct)} color={toneColor(todayPct)} />
               <FieldRow
                 icon={ChartLine}
-                label="תשואה כוללת"
+                label={i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s21')}
                 value={returnText(totalUsd, ret)}
                 color={toneColor(ret)}
                 last
@@ -270,7 +266,7 @@ function TradesPositionView() {
 
           {tradesQuery.data?.length ? (
             <View style={styles.section}>
-              <DarkPoolSectionHeader variant="group" title="עסקאות במניה" />
+              <DarkPoolSectionHeader variant="group" title={i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s22')} />
               <UICard variant="soft" glassIntensity="light" padding="none" contentContainerStyle={styles.rowsCard}>
                 {tradesQuery.data.map((t, i) => (
                   <View key={t.key} style={[styles.tradeRow, i < tradesQuery.data!.length - 1 && { borderBottomWidth: 1, borderBottomColor: tokens.colors.border.divider }]}>
@@ -281,7 +277,7 @@ function TradesPositionView() {
                       <Text style={[styles.tradeDate, { color: tokens.colors.text.secondary }]}>{toDataIsland(formatTradeDate(t.date) ?? '')}</Text>
                       <View style={[styles.sidePillInline, { backgroundColor: `${t.buy ? tokens.colors.primary.main : tokens.colors.text.danger}22` }]}>
                         <Text style={[styles.sidePillInlineText, { color: t.buy ? tokens.colors.primary.main : tokens.colors.text.danger }]}>
-                          {t.buy ? 'קנייה' : 'מכירה'}
+                          {t.buy ? i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s23') : i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s24')}
                         </Text>
                       </View>
                     </View>
@@ -366,13 +362,11 @@ function FilingPositionView() {
             onPress={() => navigation.goBack()}
             glassIntensity="subtle"
             size={HEADER_BACK_BTN_SIZE}
-            accessibilityLabel="חזרה"
+            accessibilityLabel={i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s8')}
           >
             <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
           </DayNavBlurButton>
-          <Text style={styles.topBarTitle} numberOfLines={1} accessibilityRole="header">
-            פרטי אחזקה
-          </Text>
+          <Text style={styles.topBarTitle} numberOfLines={1} accessibilityRole="header">{i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s9')}</Text>
           <DayNavBlurButton
             onPress={() => {
               void HapticFeedback.selection();
@@ -380,7 +374,7 @@ function FilingPositionView() {
             }}
             glassIntensity="subtle"
             size={HEADER_BACK_BTN_SIZE}
-            accessibilityLabel="איך מחושבת האחזקה"
+            accessibilityLabel={i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s25')}
           >
             <Ionicons name="help-circle-outline" size={18} color={tokens.colors.text.secondary} />
           </DayNavBlurButton>
@@ -407,24 +401,18 @@ function FilingPositionView() {
                     <Text style={[heroStyles.action, heroStyles.actionAfterName]}>
                       {held ? (
                         <>
-                          <Text style={[heroStyles.actionVerb, { color: tokens.colors.primary.main }]}>
-                            מחזיק
-                          </Text>
+                          <Text style={[heroStyles.actionVerb, { color: tokens.colors.primary.main }]}>{i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s10')}</Text>
                           <Text style={heroStyles.actionRest}>
-                            {' '}
-                            {toDataIsland(sharesText(shares))} מניות
-                          </Text>
+                            {i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s26', { v0: ' ', v1: toDataIsland(sharesText(shares)) })}</Text>
                         </>
                       ) : (
-                        <Text style={[heroStyles.actionVerb, { color: tokens.colors.text.danger }]}>
-                          יצא מהפוזיציה
-                        </Text>
+                        <Text style={[heroStyles.actionVerb, { color: tokens.colors.text.danger }]}>{i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s27')}</Text>
                       )}
                     </Text>
                   </View>
                 </View>
 
-                <Pressable onPress={openTicker} accessibilityRole="button" accessibilityLabel={`עמוד המניה ${ticker}`}>
+                <Pressable onPress={openTicker} accessibilityRole="button" accessibilityLabel={i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s13', { v0: ticker })}>
                   <DarkPoolNestedQuoteCard
                     ticker={ticker}
                     priceText={livePrice != null ? usd(livePrice, 2) : null}
@@ -441,17 +429,17 @@ function FilingPositionView() {
 
           {held ? (
             <View style={styles.section}>
-              <DarkPoolSectionHeader variant="group" title="הפוזיציה" />
+              <DarkPoolSectionHeader variant="group" title={i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s14')} />
               <UICard variant="soft" glassIntensity="light" padding="none" contentContainerStyle={styles.rowsCard}>
-                <FieldRow icon={Layers} label="מניות" value={sharesText(shares)} />
+                <FieldRow icon={Layers} label={i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s15')} value={sharesText(shares)} />
                 <FieldRow
                   icon={Wallet}
-                  label="שווי אחזקה"
+                  label={i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s16')}
                   value={marketValue != null ? usd(marketValue) : DARK_POOL_UNAVAILABLE}
                 />
                 <FieldRow
                   icon={CircleDollarSign}
-                  label="מחיר ממוצע"
+                  label={i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s17')}
                   value={detail.avgCost != null ? usd(detail.avgCost, 2) : DARK_POOL_UNAVAILABLE}
                   last
                 />
@@ -462,17 +450,17 @@ function FilingPositionView() {
           {/* תשואת הפוזיציה — כרטיס נפרד מפרטי הפוזיציה */}
           {held ? (
             <View style={styles.section}>
-              <DarkPoolSectionHeader variant="group" title="תשואת הפוזיציה" />
+              <DarkPoolSectionHeader variant="group" title={i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s19')} />
               <UICard variant="soft" glassIntensity="light" padding="none" contentContainerStyle={styles.rowsCard}>
                 <FieldRow
                   icon={Activity}
-                  label="תשואה היום"
+                  label={i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s20')}
                   value={returnText(todayUsd, todayPct)}
                   color={toneColor(todayUsd)}
                 />
                 <FieldRow
                   icon={ChartLine}
-                  label="תשואה כוללת"
+                  label={i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s21')}
                   value={returnText(totalUsd, totalPct)}
                   color={toneColor(totalUsd)}
                   last
@@ -483,7 +471,7 @@ function FilingPositionView() {
 
           {txns.length > 0 ? (
             <View style={styles.section}>
-              <DarkPoolSectionHeader variant="group" title="שינויים בפוזיציה" />
+              <DarkPoolSectionHeader variant="group" title={i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s28')} />
               <UICard variant="soft" glassIntensity="light" padding="none" contentContainerStyle={styles.rowsCard}>
                 {/* הרחבה/כיווץ עם מושן: השורות הנוספות נכנסות בדהייה והכרטיס מתארך בהחלקה */}
                 {visibleTxns.map((t, i) => (
@@ -507,7 +495,7 @@ function FilingPositionView() {
                   style={styles.moreBtn}
                   accessibilityRole="button"
                 >
-                  <Text style={styles.moreText}>{showAllTxns ? 'הצג פחות' : `הצג הכל (${txns.length})`}</Text>
+                  <Text style={styles.moreText}>{showAllTxns ? i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s29') : i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s30', { v0: txns.length })}</Text>
                 </AnimatedPressable>
               ) : null}
             </View>
@@ -520,7 +508,7 @@ function FilingPositionView() {
         onClose={() => setHelpOpen(false)}
         title={HONESTY_TITLE}
         body={HONESTY_BODY}
-        gotItLabel="הבנתי"
+        gotItLabel={i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s31')}
       />
     </ScreenChrome>
   );
@@ -576,9 +564,9 @@ function TxnRow({ txn, last }: { txn: FilingPositionTxn; last: boolean }) {
         </Text>
       </View>
       <View style={styles.txnCols}>
-        <TxnCol label="מניות" value={sharesText(txn.shares)} />
-        <TxnCol label="מחיר" value={txn.price != null ? usd(txn.price, 2) : '—'} />
-        <TxnCol label="סה״כ" value={txn.totalUsd != null ? compactUsd(txn.totalUsd) : '—'} />
+        <TxnCol label={i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s15')} value={sharesText(txn.shares)} />
+        <TxnCol label={i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s32')} value={txn.price != null ? usd(txn.price, 2) : '—'} />
+        <TxnCol label={i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s33')} value={txn.totalUsd != null ? compactUsd(txn.totalUsd) : '—'} />
       </View>
     </View>
   );

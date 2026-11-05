@@ -1,3 +1,4 @@
+import i18n from '../lib/i18n';
 /**
  * מדיניות סיסמה אחידה לכל האפליקציה (רישום, איפוס, שינוי סיסמה).
  * בהשראת הפלטפורמות המובילות (Google / Microsoft / NIST 800-63B):
@@ -33,13 +34,13 @@ export function checkPassword(password: string, email?: string | null): Password
     /^(.)\1+$/.test(p) || // אותו תו חוזר
     (emailLocal.length >= 4 && (lower === emailLocal || lower.includes(emailLocal)));
   return [
-    { key: 'length', label: `${PASSWORD_MIN_LENGTH} תווים לפחות`, passed: p.length >= PASSWORD_MIN_LENGTH },
+    { key: 'length', label: i18n.t('auto.utils__passwordPolicy.s1', { v0: PASSWORD_MIN_LENGTH }), passed: p.length >= PASSWORD_MIN_LENGTH },
     {
       key: 'letterAndNumber',
-      label: 'אות ומספר',
+      label: i18n.t('auto.utils__passwordPolicy.s2'),
       passed: /[A-Za-z֐-׿]/.test(p) && /\d/.test(p),
     },
-    { key: 'notCommon', label: 'לא סיסמה נפוצה או האימייל', passed: p.length > 0 && !isCommon },
+    { key: 'notCommon', label: i18n.t('auto.utils__passwordPolicy.s3'), passed: p.length > 0 && !isCommon },
   ];
 }
 
@@ -50,15 +51,15 @@ export function isPasswordValid(password: string, email?: string | null): boolea
 
 /** הודעת שגיאה קצרה לתנאי הראשון שלא מתקיים */
 export function passwordErrorMessage(password: string, email?: string | null): string | null {
-  if (password && password !== password.trim()) return 'הסיסמה לא יכולה להתחיל או להסתיים ברווח';
+  if (password && password !== password.trim()) return i18n.t('auto.utils__passwordPolicy.s4');
   const failed = checkPassword(password, email).find((c) => !c.passed);
   if (!failed) return null;
   switch (failed.key) {
     case 'length':
-      return `הסיסמה חייבת להכיל לפחות ${PASSWORD_MIN_LENGTH} תווים`;
+      return i18n.t('auto.utils__passwordPolicy.s5', { v0: PASSWORD_MIN_LENGTH });
     case 'letterAndNumber':
-      return 'הסיסמה חייבת להכיל אות ומספר';
+      return i18n.t('auto.utils__passwordPolicy.s6');
     case 'notCommon':
-      return 'הסיסמה נפוצה מדי או דומה לאימייל — בחר סיסמה אחרת';
+      return i18n.t('auto.utils__passwordPolicy.s7');
   }
 }

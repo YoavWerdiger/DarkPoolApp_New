@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
@@ -126,7 +127,7 @@ export function PortfolioCard({
                     style={[styles.meta, { color: tokens.colors.text.secondary }]}
                     numberOfLines={1}
                   >
-                    {isolateNumericRuns(`עודכן ${formatRelative(portfolio.updated_at)}`)}
+                    {isolateNumericRuns(i18n.t('auto.screens__Portfolios__components__PortfolioCard.s1', { v0: formatRelative(portfolio.updated_at) }))}
                   </Text>
                 </View>
               </View>
@@ -163,9 +164,7 @@ export function PortfolioCard({
                 </View>
               ) : null}
               <View style={styles.valueBlock}>
-                <Text style={[styles.valueLabel, { color: tokens.colors.text.secondary }]}>
-                  שווי תיק
-                </Text>
+                <Text style={[styles.valueLabel, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Portfolios__components__PortfolioCard.s2')}</Text>
                 <Text style={[styles.valueAmount, { color: tokens.colors.text.primary }]}>
                   {summary ? formatCurrency(summary.total_value, portfolio.currency) : '—'}
                 </Text>

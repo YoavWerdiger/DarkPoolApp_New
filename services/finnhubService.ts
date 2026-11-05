@@ -1,3 +1,4 @@
+import i18n from '../lib/i18n';
 import { appLocale } from '../lib/i18n/locale';
 // FinnhubService.ts - שירות לנתונים כלכליים מ-Finnhub API
 import { supabase } from '../lib/supabase';
@@ -208,31 +209,31 @@ class FinnhubService {
     const lowerName = eventName.toLowerCase();
     
     if (lowerName.includes('gdp') || lowerName.includes('growth')) {
-      return 'צמיחה';
+      return i18n.t('auto.services__finnhubService.s1');
     }
     if (lowerName.includes('cpi') || lowerName.includes('inflation') || lowerName.includes('price')) {
-      return 'אינפלציה';
+      return i18n.t('auto.services__finnhubService.s2');
     }
     if (lowerName.includes('employment') || lowerName.includes('unemployment') || lowerName.includes('jobs') || lowerName.includes('payroll')) {
-      return 'תעסוקה';
+      return i18n.t('auto.services__finnhubService.s3');
     }
     if (lowerName.includes('retail') || lowerName.includes('sales') || lowerName.includes('consumer')) {
-      return 'צריכה';
+      return i18n.t('auto.services__finnhubService.s4');
     }
     if (lowerName.includes('rate') || lowerName.includes('interest') || lowerName.includes('fed') || lowerName.includes('fomc')) {
-      return 'ריבית';
+      return i18n.t('auto.services__finnhubService.s5');
     }
     if (lowerName.includes('manufacturing') || lowerName.includes('industrial') || lowerName.includes('production')) {
-      return 'תעשייה';
+      return i18n.t('auto.services__finnhubService.s6');
     }
     if (lowerName.includes('trade') || lowerName.includes('export') || lowerName.includes('import')) {
-      return 'סחר';
+      return i18n.t('auto.services__finnhubService.s7');
     }
     if (lowerName.includes('housing') || lowerName.includes('home') || lowerName.includes('building')) {
-      return 'נדל"ן';
+      return i18n.t('auto.services__finnhubService.s8');
     }
     
-    return 'כללי';
+    return i18n.t('auto.services__finnhubService.s9');
   }
 
   /**
@@ -240,23 +241,23 @@ class FinnhubService {
    */
   private getCountryName(code: string): string {
     const countryNames: Record<string, string> = {
-      'US': 'ארצות הברית',
-      'EU': 'גוש האירו',
-      'GB': 'בריטניה',
-      'JP': 'יפן',
-      'CA': 'קנדה',
-      'AU': 'אוסטרליה',
-      'CH': 'שוויץ',
-      'CN': 'סין',
-      'DE': 'גרמניה',
-      'FR': 'צרפת',
-      'IT': 'איטליה',
-      'ES': 'ספרד',
-      'IL': 'ישראל',
-      'IN': 'הודו',
-      'BR': 'ברזיל',
-      'RU': 'רוסיה',
-      'KR': 'דרום קוריאה'
+      'US': i18n.t('auto.services__finnhubService.s10'),
+      'EU': i18n.t('auto.services__finnhubService.s11'),
+      'GB': i18n.t('auto.services__finnhubService.s12'),
+      'JP': i18n.t('auto.services__finnhubService.s13'),
+      'CA': i18n.t('auto.services__finnhubService.s14'),
+      'AU': i18n.t('auto.services__finnhubService.s15'),
+      'CH': i18n.t('auto.services__finnhubService.s16'),
+      'CN': i18n.t('auto.services__finnhubService.s17'),
+      'DE': i18n.t('auto.services__finnhubService.s18'),
+      'FR': i18n.t('auto.services__finnhubService.s19'),
+      'IT': i18n.t('auto.services__finnhubService.s20'),
+      'ES': i18n.t('auto.services__finnhubService.s21'),
+      'IL': i18n.t('auto.services__finnhubService.s22'),
+      'IN': i18n.t('auto.services__finnhubService.s23'),
+      'BR': i18n.t('auto.services__finnhubService.s24'),
+      'RU': i18n.t('auto.services__finnhubService.s25'),
+      'KR': i18n.t('auto.services__finnhubService.s26')
     };
 
     return countryNames[code] || code;

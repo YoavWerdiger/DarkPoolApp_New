@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
@@ -55,7 +56,7 @@ export default function SelectBrokerAccountScreen() {
         setAccounts(list);
         if (list.length === 1) setSelectedId(list[0].id);
       } catch (e) {
-        legacyAlert('שגיאה', (e as Error).message ?? 'לא הצלחנו לטעון את החשבונות');
+        legacyAlert(i18n.t('auto.screens__Portfolios__SelectBrokerAccountScreen.s1'), (e as Error).message ?? i18n.t('auto.screens__Portfolios__SelectBrokerAccountScreen.s2'));
       } finally {
         if (alive) setLoading(false);
       }
@@ -75,13 +76,13 @@ export default function SelectBrokerAccountScreen() {
         });
         if (res.syncOk === false) {
           legacyAlert(
-            'התיק נוצר',
-            'הסנכרון המלא מול Colmex לא הושלם. פתח את התיק ומשוך לרענון, או חבר מחדש אם הנתונים חסרים.'
+            i18n.t('auto.screens__Portfolios__SelectBrokerAccountScreen.s3'),
+            i18n.t('auto.screens__Portfolios__SelectBrokerAccountScreen.s4')
           );
         }
         navigation.navigate('PortfoliosHub', { selectPortfolioId: res.portfolioId });
       } catch (e) {
-        legacyAlert('שגיאה', (e as Error).message ?? 'לא הצלחנו ליצור את התיק');
+        legacyAlert(i18n.t('auto.screens__Portfolios__SelectBrokerAccountScreen.s1'), (e as Error).message ?? i18n.t('auto.screens__Portfolios__SelectBrokerAccountScreen.s5'));
       } finally {
         setLinkingId(null);
       }
@@ -230,7 +231,7 @@ export default function SelectBrokerAccountScreen() {
             ) : null}
             {alreadyLinked ? (
               <View style={styles.linkedBadge}>
-                <Text style={styles.linkedBadgeText}>כבר מקושר</Text>
+                <Text style={styles.linkedBadgeText}>{i18n.t('auto.screens__Portfolios__SelectBrokerAccountScreen.s6')}</Text>
               </View>
             ) : null}
           </View>
@@ -251,7 +252,7 @@ export default function SelectBrokerAccountScreen() {
       <ChatSessionBackdrop />
       <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
         <PortfolioScreenHeader
-          title="בחירת חשבון Colmex"
+          title={i18n.t('auto.screens__Portfolios__SelectBrokerAccountScreen.s7')}
           onBack={() => navigation.goBack()}
         />
         <ScrollView
@@ -259,10 +260,7 @@ export default function SelectBrokerAccountScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.sectionHint}>
-            בחר את חשבון ה-Trading שתרצה לסנכרן. עבור כל חשבון נוצר תיק נפרד באפליקציה,
-            וכל הנתונים (פוזיציות, פקודות, עסקאות, יתרה) יתעדכנו אוטומטית.
-          </Text>
+          <Text style={styles.sectionHint}>{i18n.t('auto.screens__Portfolios__SelectBrokerAccountScreen.s8')}</Text>
 
           {loading ? (
             <View style={{ paddingVertical: 60, alignItems: 'center' }}>
@@ -271,9 +269,7 @@ export default function SelectBrokerAccountScreen() {
           ) : accounts.length === 0 ? (
             <UICard variant="soft" padding="md" disableBlur contentContainerStyle={styles.emptyInner}>
               <Ionicons name="alert-circle" size={32} color={tokens.colors.text.tertiary} />
-              <Text style={styles.emptyText}>
-                לא נמצאו חשבונות trading פעילים בחשבון Colmex Pro שלך.
-              </Text>
+              <Text style={styles.emptyText}>{i18n.t('auto.screens__Portfolios__SelectBrokerAccountScreen.s9')}</Text>
             </UICard>
           ) : (
             accounts.map(renderAccountCard)
@@ -282,7 +278,7 @@ export default function SelectBrokerAccountScreen() {
         </ScrollView>
         {selectedId && !accounts.find((a) => a.id === selectedId)?.portfolio_id ? (
           <PortfolioFormFooter
-            title={linkingId !== null ? 'יוצר תיק…' : 'צור תיק מסונכרן'}
+            title={linkingId !== null ? i18n.t('auto.screens__Portfolios__SelectBrokerAccountScreen.s10') : i18n.t('auto.screens__Portfolios__SelectBrokerAccountScreen.s11')}
             icon="checkmark"
             loading={linkingId !== null}
             disabled={linkingId !== null}

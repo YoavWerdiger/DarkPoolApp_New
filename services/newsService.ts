@@ -1,3 +1,4 @@
+import i18n from '../lib/i18n';
 import { appLocale } from '../lib/i18n/locale';
 import { supabase } from './supabase';
 import { DesignTokens } from '../components/ui/DesignTokens';
@@ -369,7 +370,7 @@ export class NewsService {
       image_url: data?.image_url ?? data?.img ?? imageUrl ?? undefined,
       published_at: data?.published_at ?? data?.time ?? nowIso,
       created_at: data?.created_at ?? nowIso,
-      category: data?.category ?? 'כללי',
+      category: data?.category ?? i18n.t('auto.services__newsService.s1'),
       tags: data?.tags ?? [],
       is_featured: data?.is_featured ?? false,
       view_count: data?.view_count ?? 0,
@@ -412,7 +413,7 @@ export const newsService = NewsService.getInstance();
 export const formatNewsDate = (dateString: string): string => {
   
   if (!dateString) {
-    return 'תאריך לא זמין';
+    return i18n.t('auto.services__newsService.s2');
   }
 
   // ניסיון לפרסר את התאריך
@@ -434,10 +435,10 @@ export const formatNewsDate = (dateString: string): string => {
 
     // בדיקה אם התאריך תקין
     if (isNaN(date.getTime()) || date.getTime() < 0) {
-      return 'תאריך לא זמין';
+      return i18n.t('auto.services__newsService.s2');
     }
   } catch (error) {
-    return 'תאריך לא זמין';
+    return i18n.t('auto.services__newsService.s2');
   }
 
   // תצוגת תאריך ושעה לפי שעון ישראל

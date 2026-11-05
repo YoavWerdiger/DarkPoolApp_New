@@ -10,12 +10,20 @@ import { initReactI18next } from 'react-i18next';
 import he from './locales/he';
 import en from './locales/en';
 import ar from './locales/ar';
+// טקסט שחולץ אוטומטית מהקוד (scripts/i18n-extract.js) — namespace אחד לכל קובץ מקור
+import heAuto from './locales/he.auto.json';
+import enAuto from './locales/en.auto.json';
+import arAuto from './locales/ar.auto.json';
 import { getStoredLanguage } from './language';
 
 export { APP_LANGUAGES, changeLanguage, getStoredLanguage, isRtlLanguage, type AppLanguage } from './language';
 
 void i18n.use(initReactI18next).init({
-  resources: { he: { translation: he }, en: { translation: en }, ar: { translation: ar } },
+  resources: {
+    he: { translation: { ...he, auto: heAuto } },
+    en: { translation: { ...en, auto: enAuto } },
+    ar: { translation: { ...ar, auto: arAuto } },
+  },
   lng: getStoredLanguage(),
   fallbackLng: 'he',
   initAsync: false,

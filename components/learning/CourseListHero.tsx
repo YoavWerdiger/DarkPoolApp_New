@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { memo, useEffect, useMemo, useState } from 'react';
 import { Image as RNImage, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
@@ -87,7 +88,7 @@ function CourseListHeroInner({
           onPress={onBack}
           size={HERO_BACK_BTN_SIZE}
           glassIntensity="light"
-          accessibilityLabel="חזרה"
+          accessibilityLabel={i18n.t('auto.components__learning__CourseListHero.s1')}
         >
           <Ionicons name="chevron-forward" size={22} color={T.colors.text.primary} />
         </DayNavBlurButton>

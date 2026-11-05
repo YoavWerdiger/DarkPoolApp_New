@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
@@ -46,14 +47,14 @@ const SORT_OPTIONS: Array<{
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
 }> = [
-  { id: 'default', label: 'ברירת מחדל', icon: 'reorder-three-outline' },
-  { id: 'value_desc', label: 'לפי שווי (גבוה→נמוך)', icon: 'cash-outline' },
+  { id: 'default', label: i18n.t('auto.screens__Portfolios__PortfoliosTab.s1'), icon: 'reorder-three-outline' },
+  { id: 'value_desc', label: i18n.t('auto.screens__Portfolios__PortfoliosTab.s2'), icon: 'cash-outline' },
   {
     id: 'return_desc',
-    label: 'לפי תשואה (גבוה→נמוך)',
+    label: i18n.t('auto.screens__Portfolios__PortfoliosTab.s3'),
     icon: 'trending-up-outline',
   },
-  { id: 'name_asc', label: 'לפי שם (א-ת)', icon: 'text-outline' },
+  { id: 'name_asc', label: i18n.t('auto.screens__Portfolios__PortfoliosTab.s4'), icon: 'text-outline' },
 ];
 
 
@@ -207,19 +208,19 @@ export default function PortfoliosTab() {
   const handleDelete = useCallback(
     (p: Portfolio) => {
       legacyAlert(
-        'מחיקת תיק',
-        `האם למחוק את "${p.name}"? פעולה זו אינה ניתנת לביטול והטרנזקציות יימחקו.`,
+        i18n.t('auto.screens__Portfolios__PortfoliosTab.s5'),
+        i18n.t('auto.screens__Portfolios__PortfoliosTab.s6', { v0: p.name }),
         [
-          { text: 'ביטול', style: 'cancel' },
+          { text: i18n.t('auto.screens__Portfolios__PortfoliosTab.s7'), style: 'cancel' },
           {
-            text: 'מחיקה',
+            text: i18n.t('auto.screens__Portfolios__PortfoliosTab.s8'),
             style: 'destructive',
             onPress: async () => {
               try {
                 await deletePortfolio(p.id);
                 await load();
               } catch (err) {
-                legacyAlert('שגיאה', 'לא הצלחנו למחוק את התיק');
+                legacyAlert(i18n.t('auto.screens__Portfolios__PortfoliosTab.s9'), i18n.t('auto.screens__Portfolios__PortfoliosTab.s10'));
               }
             },
           },
@@ -395,7 +396,7 @@ export default function PortfoliosTab() {
           }}
           activeOpacity={0.85}
           accessibilityRole="button"
-          accessibilityLabel="מיון תיקים"
+          accessibilityLabel={i18n.t('auto.screens__Portfolios__PortfoliosTab.s11')}
           style={styles.sortBtnWrap}
         >
           <View style={styles.sortBtnInner}>
@@ -433,7 +434,7 @@ export default function PortfoliosTab() {
             <TextInput
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholder="חיפוש תיק..."
+              placeholder={i18n.t('auto.screens__Portfolios__PortfoliosTab.s12')}
               placeholderTextColor={tokens.colors.text.tertiary}
               style={styles.searchTextInput}
               returnKeyType="search"
@@ -466,10 +467,8 @@ export default function PortfoliosTab() {
           <View style={styles.emptyIconWrap}>
             <Ionicons name="briefcase" size={36} color={tokens.colors.primary.main} />
           </View>
-          <Text style={styles.emptyTitle}>עוד אין לך תיק השקעות</Text>
-          <Text style={styles.emptyText}>
-            צור תיק חדש כדי לעקוב אחרי הביצועים, חלוקת הנכסים, ולקבל אנליזה מקצועית של ההשקעות שלך.
-          </Text>
+          <Text style={styles.emptyTitle}>{i18n.t('auto.screens__Portfolios__PortfoliosTab.s13')}</Text>
+          <Text style={styles.emptyText}>{i18n.t('auto.screens__Portfolios__PortfoliosTab.s14')}</Text>
           <TouchableOpacity
             style={styles.emptyBtn}
             onPress={() => {
@@ -479,7 +478,7 @@ export default function PortfoliosTab() {
             activeOpacity={0.85}
           >
             <Ionicons name="add" size={22} color={tokens.colors.text.inverse} />
-            <Text style={styles.emptyBtnText}>צור תיק חדש</Text>
+            <Text style={styles.emptyBtnText}>{i18n.t('auto.screens__Portfolios__PortfoliosTab.s15')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -517,9 +516,7 @@ export default function PortfoliosTab() {
                 size={36}
                 color={tokens.colors.text.tertiary}
               />
-              <Text style={styles.emptyResultsText}>
-                לא נמצאו תיקים בשם "{searchQuery.trim()}"
-              </Text>
+              <Text style={styles.emptyResultsText}>{i18n.t('auto.screens__Portfolios__PortfoliosTab.s16', { v0: searchQuery.trim() })}</Text>
             </View>
           ) : null
         }
@@ -538,7 +535,7 @@ export default function PortfoliosTab() {
         showHandle
       >
         <View style={styles.sortSheet} onLayout={handleSortSheetLayout}>
-          <Text style={styles.sortSheetTitle}>מיון תיקים</Text>
+          <Text style={styles.sortSheetTitle}>{i18n.t('auto.screens__Portfolios__PortfoliosTab.s11')}</Text>
           {SORT_OPTIONS.map((opt) => {
             const isActive = sortMode === opt.id;
             return (

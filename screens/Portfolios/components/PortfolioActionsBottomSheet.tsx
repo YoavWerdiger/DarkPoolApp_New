@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 import { appLocale } from '../../../lib/i18n/locale';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -152,14 +153,14 @@ function PortfolioActionsSheetBody({
     void HapticFeedback.warning();
     const isColmex = portfolio.source === 'colmex_pro';
     legacyAlert(
-      'אפס תיק',
+      i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s1'),
       isColmex
-        ? 'פעולה זו תמחק את כל הטריידים, הטרנזקציות, ה-snapshots והפוזיציות המקומיות מהברוקר, ותאפס את יתרת המזומן. סנכרון הבא מ-Colmex ימלא מחדש מהחשבון. לא ניתן לבטל.'
-        : 'פעולה זו תמחק את כל הטריידים, הטרנזקציות וה-snapshots, ותאפס את יתרת המזומן ל־0. לא ניתן לבטל.',
+        ? i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s2')
+        : i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s3'),
       [
-        { text: 'ביטול', style: 'cancel' },
+        { text: i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s4'), style: 'cancel' },
         {
-          text: 'אפס',
+          text: i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s5'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -170,7 +171,7 @@ function PortfolioActionsSheetBody({
               onRequestClose();
             } catch (err) {
               console.error('reset portfolio:', err);
-              legacyAlert('שגיאה', 'האיפוס נכשל. נסה שוב.');
+              legacyAlert(i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s6'), i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s7'));
             } finally {
               setResetting(false);
             }
@@ -193,7 +194,7 @@ function PortfolioActionsSheetBody({
       );
     } catch (e) {
       console.error('archive portfolio:', e);
-      legacyAlert('שגיאה', 'לא הצלחנו למחוק את התיק. נסה שוב.');
+      legacyAlert(i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s6'), i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s8'));
     } finally {
       setDeleting(false);
     }
@@ -201,16 +202,16 @@ function PortfolioActionsSheetBody({
 
   const sheetTitle =
     phase === 'confirmDelete'
-      ? 'מחיקת תיק'
+      ? i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s9')
       : renaming
-        ? 'שינוי שם'
-        : portfolioName?.trim() || 'פעולות תיק';
+        ? i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s10')
+        : portfolioName?.trim() || i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s11');
 
   const sheetSubtitle =
     phase === 'confirmDelete'
-      ? 'התיק יועבר לארכיון וייעלם מהרשימה. לא ניתן לבטל מהאפליקציה.'
+      ? i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s12')
       : renaming
-        ? 'השם שיוצג לך ולקהילה'
+        ? i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s13')
         : null;
 
   const styles = useMemo(
@@ -278,7 +279,7 @@ function PortfolioActionsSheetBody({
   const onSaveName = useCallback(async () => {
     const next = nameDraft.trim().slice(0, 128);
     if (!next) {
-      legacyAlert('שם לא תקין', 'יש להזין שם לתיק.');
+      legacyAlert(i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s14'), i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s15'));
       return;
     }
     if (next === (portfolio.name ?? '')) {
@@ -292,7 +293,7 @@ function PortfolioActionsSheetBody({
       onPortfolioUpdated?.();
     } catch (e) {
       console.error('rename portfolio:', e);
-      legacyAlert('שגיאה', 'לא הצלחנו לעדכן את שם התיק.');
+      legacyAlert(i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s6'), i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s16'));
     } finally {
       setRenameBusy(false);
     }
@@ -309,7 +310,7 @@ function PortfolioActionsSheetBody({
           size={DAY_NAV_BUTTON_SIZE}
           glass={false}
           style={{ backgroundColor: headerExitButtonFill(tokens.colors.background.cardSolid) }}
-          accessibilityLabel="חזרה"
+          accessibilityLabel={i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s17')}
         >
           <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
         </DayNavBlurButton>
@@ -325,7 +326,7 @@ function PortfolioActionsSheetBody({
       {phase === 'confirmDelete' ? (
         <View style={styles.buttons}>
           <UIButton
-            title={deleting ? 'מוחק…' : 'מחק תיק'}
+            title={deleting ? i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s18') : i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s19')}
             variant="danger"
             fullWidth
             loading={deleting}
@@ -336,7 +337,7 @@ function PortfolioActionsSheetBody({
             }}
           />
           <UIButton
-            title="ביטול"
+            title={i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s4')}
             variant="secondary"
             fullWidth
             disabled={deleting}
@@ -352,7 +353,7 @@ function PortfolioActionsSheetBody({
               onChangeText={setNameDraft}
               onFocus={() => setNameFocused(true)}
               onBlur={() => setNameFocused(false)}
-              placeholder="שם התיק"
+              placeholder={i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s20')}
               placeholderTextColor={formFieldPlaceholderColor(tokens)}
               maxLength={128}
               editable={!renameBusy}
@@ -363,7 +364,7 @@ function PortfolioActionsSheetBody({
           </View>
           <View style={styles.buttons}>
             <UIButton
-              title="שמור"
+              title={i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s21')}
               variant="primary"
               fullWidth
               loading={renameBusy}
@@ -371,7 +372,7 @@ function PortfolioActionsSheetBody({
               onPress={() => void onSaveName()}
             />
             <UIButton
-              title="ביטול"
+              title={i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s4')}
               variant="secondary"
               fullWidth
               disabled={renameBusy}
@@ -383,7 +384,7 @@ function PortfolioActionsSheetBody({
         <>
           <SettingsGlassCard>
             <SettingsActionRow
-              title="שנה שם תיק"
+              title={i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s22')}
               icon={Pencil}
               trailing={noChevron}
               onPress={() => {
@@ -394,11 +395,11 @@ function PortfolioActionsSheetBody({
             />
             {isColmex ? (
               <SettingsActionRow
-                title={isSyncing ? 'מסנכרן…' : 'סנכרן עכשיו מ-Colmex'}
+                title={isSyncing ? i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s23') : i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s24')}
                 subtitle={
                   lastSyncAt
-                    ? `סנכרון אחרון: ${lastSyncAt.toLocaleString(appLocale())}`
-                    : 'הנתונים מסונכרנים אוטומטית מהברוקר'
+                    ? i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s25', { v0: lastSyncAt.toLocaleString(appLocale()) })
+                    : i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s26')
                 }
                 icon={RefreshCw}
                 trailing={noChevron}
@@ -412,19 +413,19 @@ function PortfolioActionsSheetBody({
             ) : (
               <>
                 <SettingsActionRow
-                  title="ייבוא טרנזקציות מ־CSV"
+                  title={i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s27')}
                   icon={FileText}
                   trailing={noChevron}
                   onPress={goImport}
                 />
                 <SettingsActionRow
-                  title="מזומן"
+                  title={i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s28')}
                   icon={Wallet}
                   trailing={noChevron}
                   onPress={goAddCash}
                 />
                 <SettingsActionRow
-                  title="דיבידנד"
+                  title={i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s29')}
                   icon={Gift}
                   trailing={noChevron}
                   showDivider={false}
@@ -436,7 +437,7 @@ function PortfolioActionsSheetBody({
 
           <SettingsGlassCard style={{ marginBottom: 0 }}>
             <SettingsActionRow
-              title={resetting ? 'מאפס…' : 'אפס תיק'}
+              title={resetting ? i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s30') : i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s1')}
               icon={RotateCcw}
               danger
               trailing={noChevron}
@@ -446,7 +447,7 @@ function PortfolioActionsSheetBody({
               }}
             />
             <SettingsActionRow
-              title="מחק תיק"
+              title={i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s19')}
               icon={Trash2}
               danger
               trailing={noChevron}

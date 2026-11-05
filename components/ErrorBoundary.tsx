@@ -1,3 +1,4 @@
+import i18n from '../lib/i18n';
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { logger } from '../utils/logger';
@@ -52,9 +53,9 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <View style={styles.container}>
           <View style={styles.content}>
-            <Text style={styles.title}>⚠️ שגיאה באפליקציה</Text>
+            <Text style={styles.title}>{i18n.t('auto.components__ErrorBoundary.s1')}</Text>
             <Text style={styles.message}>
-              {this.state.error?.message || 'שגיאה לא ידועה'}
+              {this.state.error?.message || i18n.t('auto.components__ErrorBoundary.s2')}
             </Text>
             
             <ScrollView style={styles.stackContainer}>
@@ -79,7 +80,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 this.setState({ hasError: false, error: null, errorInfo: null });
               }}
             >
-              <Text style={styles.buttonText}>נסה שוב</Text>
+              <Text style={styles.buttonText}>{i18n.t('auto.components__ErrorBoundary.s3')}</Text>
             </TouchableOpacity>
           </View>
         </View>

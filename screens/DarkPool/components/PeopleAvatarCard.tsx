@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 /**
  * כרטיס אדם בפס הבית — אווטאר עגול + שם (נראה כמו אדם, לא כרטיס מניה).
  */
@@ -31,11 +32,11 @@ interface Props {
 function kindLabel(person: ExplorePerson): string {
   const fromSub = person.subtitle?.split('·')[0]?.trim();
   if (fromSub) return fromSub;
-  if (person.kind === 'politician') return 'לוויתן קונגרס';
+  if (person.kind === 'politician') return i18n.t('auto.screens__DarkPool__components__PeopleAvatarCard.s1');
   if (person.kind === 'fund_manager') {
-    return person.entity_type === 'company' ? 'חברה' : 'לוויתן מוסדי';
+    return person.entity_type === 'company' ? i18n.t('auto.screens__DarkPool__components__PeopleAvatarCard.s2') : i18n.t('auto.screens__DarkPool__components__PeopleAvatarCard.s3');
   }
-  return person.ticker?.toUpperCase() || 'לוויתן שוק';
+  return person.ticker?.toUpperCase() || i18n.t('auto.screens__DarkPool__components__PeopleAvatarCard.s4');
 }
 
 export const PeopleAvatarCard = memo(function PeopleAvatarCard({

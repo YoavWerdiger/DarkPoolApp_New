@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -28,22 +29,22 @@ const RISK_OPTIONS: RiskOption[] = [
   {
     type: 'conservative',
     emoji: '🟢',
-    title: 'שמרני',
-    description: 'סיכון נמוך, תשואות יציבות',
+    title: i18n.t('auto.screens__Onboarding__OnboardingRiskToleranceScreen.s1'),
+    description: i18n.t('auto.screens__Onboarding__OnboardingRiskToleranceScreen.s2'),
     color: '#10B981',
   },
   {
     type: 'moderate',
     emoji: '🟡',
-    title: 'מאוזן',
-    description: 'איזון בין סיכון לתשואה',
+    title: i18n.t('auto.screens__Onboarding__OnboardingRiskToleranceScreen.s3'),
+    description: i18n.t('auto.screens__Onboarding__OnboardingRiskToleranceScreen.s4'),
     color: '#FFB800',
   },
   {
     type: 'aggressive',
     emoji: '🔴',
-    title: 'אגרסיבי',
-    description: 'סיכון גבוה, פוטנציאל גבוה',
+    title: i18n.t('auto.screens__Onboarding__OnboardingRiskToleranceScreen.s5'),
+    description: i18n.t('auto.screens__Onboarding__OnboardingRiskToleranceScreen.s6'),
     color: '#EF4444',
   },
 ];
@@ -99,9 +100,7 @@ const OnboardingRiskToleranceScreen: React.FC<Props> = ({ navigation }) => {
             <Pressable onPress={handleBack} style={styles.backButton}>
               <Ionicons name="chevron-forward" size={28} color={tokens.colors.text.primary} />
             </Pressable>
-            <Text style={[styles.stepIndicator, { color: tokens.colors.text.tertiary }]}>
-              שלב 6 מתוך 10
-            </Text>
+            <Text style={[styles.stepIndicator, { color: tokens.colors.text.tertiary }]}>{i18n.t('auto.screens__Onboarding__OnboardingRiskToleranceScreen.s7')}</Text>
             <View style={{ flex: 1 }} />
             <Pressable onPress={handleSkip} style={styles.closeButton}>
               <Ionicons name="close" size={28} color={tokens.colors.text.primary} />
@@ -114,12 +113,8 @@ const OnboardingRiskToleranceScreen: React.FC<Props> = ({ navigation }) => {
             showsVerticalScrollIndicator={false}
           >
             {/* Title */}
-            <Text style={[styles.title, { color: tokens.colors.text.primary }]}>
-              מה רמת הסיכון שלך?
-            </Text>
-            <Text style={[styles.subtitle, { color: tokens.colors.text.secondary }]}>
-              זה יעזור לנו להציע לך השקעות מתאימות (אופציונלי)
-            </Text>
+            <Text style={[styles.title, { color: tokens.colors.text.primary }]}>{i18n.t('auto.screens__Onboarding__OnboardingRiskToleranceScreen.s8')}</Text>
+            <Text style={[styles.subtitle, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Onboarding__OnboardingRiskToleranceScreen.s9')}</Text>
 
             {/* Options */}
             <View style={styles.optionsContainer}>
@@ -141,7 +136,7 @@ const OnboardingRiskToleranceScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.footerButtons}>
               <View style={{ flex: 1 }}>
                 <UIButton
-                  title="דלג"
+                  title={i18n.t('auto.screens__Onboarding__OnboardingRiskToleranceScreen.s10')}
                   variant="secondary"
                   size="lg"
                   fullWidth
@@ -150,7 +145,7 @@ const OnboardingRiskToleranceScreen: React.FC<Props> = ({ navigation }) => {
               </View>
               <View style={{ flex: 1 }}>
                 <UIButton
-                  title="המשך"
+                  title={i18n.t('auto.screens__Onboarding__OnboardingRiskToleranceScreen.s11')}
                   variant="primary"
                   size="lg"
                   fullWidth

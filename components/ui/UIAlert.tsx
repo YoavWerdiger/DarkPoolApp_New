@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useEffect, useRef } from 'react';
 import {
@@ -44,7 +45,7 @@ const UIAlert: React.FC<UIAlertProps> = ({
   title,
   message,
   type = 'info',
-  buttons = [{ text: 'אישור', style: 'default' }],
+  buttons = [{ text: i18n.t('auto.components__ui__UIAlert.s1'), style: 'default' }],
   onClose,
   showIcon = true,
   closeOnBackdropPress = false,

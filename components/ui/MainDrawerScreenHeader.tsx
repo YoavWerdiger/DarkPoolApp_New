@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, ViewStyle } from 'react-native';
@@ -103,7 +104,7 @@ export function MainDrawerScreenHeader({
             glass={false}
             size={DRAWER_MENU_BUTTON_SIZE}
             style={{ backgroundColor: tokens.colors.primary.main }}
-            accessibilityLabel="תפריט ראשי"
+            accessibilityLabel={i18n.t('auto.components__ui__MainDrawerScreenHeader.s1')}
           >
             <Ionicons name="menu" size={24} color="#FFFFFF" />
           </DayNavBlurButton>

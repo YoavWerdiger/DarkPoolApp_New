@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 // ============================================
 // AddStoryBottomSheet – הוספת סטטוס (תמונה)
 // ============================================
@@ -46,7 +47,7 @@ export default function AddStoryBottomSheet({ visible, onClose, onAdded }: AddSt
     try {
       const { url, error } = await uploadStoryImage(uri, user.id);
       if (error || !url) {
-        legacyAlert('שגיאה', error || 'לא הצלחנו להעלות את התמונה');
+        legacyAlert(i18n.t('auto.components__chat__AddStoryBottomSheet.s1'), error || i18n.t('auto.components__chat__AddStoryBottomSheet.s2'));
         return;
       }
       await createStory(user.id, { media_type: 'image', media_url: url });
@@ -54,7 +55,7 @@ export default function AddStoryBottomSheet({ visible, onClose, onAdded }: AddSt
       onClose();
     } catch (e) {
       logger.error('AddStoryBottomSheet', 'uploadPickedUri failed', e);
-      legacyAlert('שגיאה', 'משהו השתבש');
+      legacyAlert(i18n.t('auto.components__chat__AddStoryBottomSheet.s1'), i18n.t('auto.components__chat__AddStoryBottomSheet.s3'));
     } finally {
       setIsUploading(false);
     }
@@ -71,7 +72,7 @@ export default function AddStoryBottomSheet({ visible, onClose, onAdded }: AddSt
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        legacyAlert('אישור נדרש', 'אנא אשר גישה למצלמה');
+        legacyAlert(i18n.t('auto.components__chat__AddStoryBottomSheet.s4'), i18n.t('auto.components__chat__AddStoryBottomSheet.s5'));
         return;
       }
 
@@ -87,7 +88,7 @@ export default function AddStoryBottomSheet({ visible, onClose, onAdded }: AddSt
       setIsUploading(true);
       const { url, error } = await uploadStoryImage(result.assets[0].uri, user.id);
       if (error || !url) {
-        legacyAlert('שגיאה', error || 'לא הצלחנו להעלות את התמונה');
+        legacyAlert(i18n.t('auto.components__chat__AddStoryBottomSheet.s1'), error || i18n.t('auto.components__chat__AddStoryBottomSheet.s2'));
         return;
       }
 
@@ -96,7 +97,7 @@ export default function AddStoryBottomSheet({ visible, onClose, onAdded }: AddSt
       onClose();
     } catch (e) {
       logger.error('AddStoryBottomSheet', 'handleTakePhoto failed', e);
-      legacyAlert('שגיאה', 'משהו השתבש');
+      legacyAlert(i18n.t('auto.components__chat__AddStoryBottomSheet.s1'), i18n.t('auto.components__chat__AddStoryBottomSheet.s3'));
     } finally {
       setIsUploading(false);
     }
@@ -115,7 +116,7 @@ export default function AddStoryBottomSheet({ visible, onClose, onAdded }: AddSt
           {isUploading ? (
             <View style={styles.uploading}>
               <ActivityIndicator size="large" color={tokens.colors.primary.main} />
-              <Text style={[styles.uploadingText, { color: tokens.colors.text.secondary }]}>מעלה...</Text>
+              <Text style={[styles.uploadingText, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.components__chat__AddStoryBottomSheet.s6')}</Text>
             </View>
           ) : (
             <>
@@ -124,14 +125,14 @@ export default function AddStoryBottomSheet({ visible, onClose, onAdded }: AddSt
                 onPress={handleTakePhoto}
               >
                 <Ionicons name="camera" size={28} color={tokens.colors.primary.main} />
-                <Text style={[styles.optionText, { color: tokens.colors.text.primary }]}>צלם תמונה</Text>
+                <Text style={[styles.optionText, { color: tokens.colors.text.primary }]}>{i18n.t('auto.components__chat__AddStoryBottomSheet.s7')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.option, { backgroundColor: tokens.colors.background.primary }]}
                 onPress={handlePickImage}
               >
                 <Ionicons name="images" size={28} color={tokens.colors.primary.main} />
-                <Text style={[styles.optionText, { color: tokens.colors.text.primary }]}>בחר מהגלריה</Text>
+                <Text style={[styles.optionText, { color: tokens.colors.text.primary }]}>{i18n.t('auto.components__chat__AddStoryBottomSheet.s8')}</Text>
               </TouchableOpacity>
             </>
           )}

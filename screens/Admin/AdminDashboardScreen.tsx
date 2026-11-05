@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
@@ -75,7 +76,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
       const data = await adminService.getStats({ days: CHART_DAYS });
       setStats(data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'שגיאה בטעינת נתונים');
+      setError(e instanceof Error ? e.message : i18n.t('auto.screens__Admin__AdminDashboardScreen.s1'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -92,7 +93,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
 
   const header = (
     <ChatSubScreenHeader
-      title="פאנל מנהלים"
+      title={i18n.t('auto.screens__Admin__AdminDashboardScreen.s2')}
       onBack={() => {
         void HapticFeedback.impactLight();
         navigation.goBack();
@@ -104,7 +105,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
     return (
       <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
         {header}
-        <AdminLoadingState label="טוען פאנל מנהלים..." />
+        <AdminLoadingState label={i18n.t('auto.screens__Admin__AdminDashboardScreen.s3')} />
       </SafeAreaView>
     );
   }
@@ -148,15 +149,11 @@ export default function AdminDashboardScreen({ navigation }: any) {
           />
         ) : null}
 
-        <AdminSectionLabel>מדדים</AdminSectionLabel>
+        <AdminSectionLabel>{i18n.t('auto.screens__Admin__AdminDashboardScreen.s4')}</AdminSectionLabel>
         <AdminSurface padding="md">
           <View style={styles.metricBlock}>
-            <Text style={[styles.metricLabel, { color: tokens.colors.text.primary }]}>
-              סה״כ משתמשים
-            </Text>
-            <Text style={[styles.metricSubtitle, { color: tokens.colors.text.secondary }]}>
-              30 הימים האחרונים
-            </Text>
+            <Text style={[styles.metricLabel, { color: tokens.colors.text.primary }]}>{i18n.t('auto.screens__Admin__AdminDashboardScreen.s5')}</Text>
+            <Text style={[styles.metricSubtitle, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Admin__AdminDashboardScreen.s6')}</Text>
             <Text style={[styles.metricValue, { color: tokens.colors.text.primary }]}>
               {totalUsers.toLocaleString(appLocale())}
             </Text>
@@ -186,7 +183,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
 
         <AdminSurface>
           <SettingsActionRow
-            title="ניהול משתמשים"
+            title={i18n.t('auto.screens__Admin__AdminDashboardScreen.s7')}
             icon={Users}
             onPress={() => {
               void HapticFeedback.impactLight();
@@ -194,7 +191,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
             }}
           />
           <SettingsActionRow
-            title="ניהול קבוצות והרשאות"
+            title={i18n.t('auto.screens__Admin__AdminDashboardScreen.s8')}
             icon={MessagesSquare}
             onPress={() => {
               void HapticFeedback.impactLight();
@@ -202,7 +199,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
             }}
           />
           <SettingsActionRow
-            title="בקרת תשלומים ומנויים"
+            title={i18n.t('auto.screens__Admin__AdminDashboardScreen.s9')}
             icon={CreditCard}
             onPress={() => {
               void HapticFeedback.impactLight();
@@ -210,7 +207,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
             }}
           />
           <SettingsActionRow
-            title="הגדרות CardCom"
+            title={i18n.t('auto.screens__Admin__AdminDashboardScreen.s10')}
             icon={KeyRound}
             showDivider={false}
             onPress={() => {
@@ -220,10 +217,10 @@ export default function AdminDashboardScreen({ navigation }: any) {
           />
         </AdminSurface>
 
-        <AdminSectionLabel>תקשורת ותמיכה</AdminSectionLabel>
+        <AdminSectionLabel>{i18n.t('auto.screens__Admin__AdminDashboardScreen.s11')}</AdminSectionLabel>
         <AdminSurface>
           <SettingsActionRow
-            title="שליחת פוש"
+            title={i18n.t('auto.screens__Admin__AdminDashboardScreen.s12')}
             icon={Bell}
             onPress={() => {
               void HapticFeedback.impactLight();
@@ -231,7 +228,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
             }}
           />
           <SettingsActionRow
-            title="פניות תמיכה"
+            title={i18n.t('auto.screens__Admin__AdminDashboardScreen.s13')}
             icon={LifeBuoy}
             showDivider={false}
             onPress={() => {

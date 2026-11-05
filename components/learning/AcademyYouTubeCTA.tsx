@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Linking, Platform, Image } from 'react-native';
@@ -50,7 +51,7 @@ export const AcademyYouTubeCTA: React.FC<AcademyYouTubeCTAProps> = ({
         onPress={handlePress}
         activeOpacity={0.85}
         accessibilityRole="button"
-        accessibilityLabel="מעבר לערוץ היוטיוב של דוד אריאל"
+        accessibilityLabel={i18n.t('auto.components__learning__AcademyYouTubeCTA.s1')}
       >
         {/* רקע אמביינטי — זוהר אדום עדין שמרמז על מותג היוטיוב בלי להציף */}
         <LinearGradient
@@ -67,10 +68,8 @@ export const AcademyYouTubeCTA: React.FC<AcademyYouTubeCTAProps> = ({
 
         <View style={styles.content}>
           <View style={styles.textCol}>
-            <Text style={styles.title}>רוצים לצפות בתוכן נוסף?</Text>
-            <Text style={styles.subtitle}>
-              היכנסו לערוץ היוטיוב שלנו לסרטונים חדשים, ניתוחים שבועיים והדרכות
-            </Text>
+            <Text style={styles.title}>{i18n.t('auto.components__learning__AcademyYouTubeCTA.s2')}</Text>
+            <Text style={styles.subtitle}>{i18n.t('auto.components__learning__AcademyYouTubeCTA.s3')}</Text>
 
             <View style={styles.ctaRow}>
               <View style={styles.cta}>
@@ -81,7 +80,7 @@ export const AcademyYouTubeCTA: React.FC<AcademyYouTubeCTAProps> = ({
                   style={StyleSheet.absoluteFill}
                 />
                 <Ionicons name="logo-youtube" size={16} color="#fff" />
-                <Text style={styles.ctaText}>מעבר לערוץ</Text>
+                <Text style={styles.ctaText}>{i18n.t('auto.components__learning__AcademyYouTubeCTA.s4')}</Text>
               </View>
               <Ionicons
                 name="chevron-back"

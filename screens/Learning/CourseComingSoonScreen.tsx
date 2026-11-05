@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
@@ -39,7 +40,7 @@ export const CourseComingSoonScreen: React.FC = () => {
   const styles = useMemo(() => createStyles(tokens), [tokens]);
   const bottomPad = useMainTabsHeight();
 
-  const title = (params.title || 'האורקל').trim();
+  const title = (params.title || i18n.t('auto.screens__Learning__CourseComingSoonScreen.s1')).trim();
   const courseRef = {
     id: params.courseId,
     title,
@@ -52,10 +53,10 @@ export const CourseComingSoonScreen: React.FC = () => {
 
   const facts: Fact[] = isOracleCourse(courseRef)
     ? [
-        { label: 'סטטוס', value: 'בקרוב' },
-        { label: 'רמה', value: 'מתקדם' },
+        { label: i18n.t('auto.screens__Learning__CourseComingSoonScreen.s2'), value: i18n.t('auto.screens__Learning__CourseComingSoonScreen.s3') },
+        { label: i18n.t('auto.screens__Learning__CourseComingSoonScreen.s4'), value: i18n.t('auto.screens__Learning__CourseComingSoonScreen.s5') },
       ]
-    : [{ label: 'סטטוס', value: 'בקרוב' }];
+    : [{ label: i18n.t('auto.screens__Learning__CourseComingSoonScreen.s2'), value: i18n.t('auto.screens__Learning__CourseComingSoonScreen.s3') }];
 
   const handleBack = () => {
     void HapticFeedback.impactLight();
@@ -77,7 +78,7 @@ export const CourseComingSoonScreen: React.FC = () => {
         <AcademySubScreenBar onBackPress={handleBack} title={title} subtitle={subtitle} />
 
         <View style={[styles.body, { paddingBottom: bottomPad }]}>
-          <Text style={styles.groupLabel}>על הקורס</Text>
+          <Text style={styles.groupLabel}>{i18n.t('auto.screens__Learning__CourseComingSoonScreen.s6')}</Text>
           <UICard variant="soft" padding="none" style={styles.card}>
             {facts.map((fact, index) => (
               <View key={fact.label}>
@@ -98,7 +99,7 @@ export const CourseComingSoonScreen: React.FC = () => {
 
           <View style={styles.ctaWrap}>
             <UIButton
-              title="חזרה לאקדמיה"
+              title={i18n.t('auto.screens__Learning__CourseComingSoonScreen.s7')}
               variant="primary"
               fullWidth
               onPress={handleBack}

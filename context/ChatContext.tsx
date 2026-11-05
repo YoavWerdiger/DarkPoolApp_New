@@ -1,3 +1,4 @@
+import i18n from '../lib/i18n';
 // ============================================
 // Chat Context
 // ============================================
@@ -1415,7 +1416,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
           const actor = {
             id: reaction.user_id,
-            name: reaction.user?.display_name || 'משתמש',
+            name: reaction.user?.display_name || i18n.t('auto.context__ChatContext.s1'),
             profile_picture: reaction.user?.profile_picture,
           };
 
@@ -1580,7 +1581,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   const loadMessagesAround = useCallback(async (messageId: string) => {
     if (!user || !currentGroupId.current) {
-      return { success: false, error: 'לא מחובר או אין קבוצה נבחרת' };
+      return { success: false, error: i18n.t('auto.context__ChatContext.s2') };
     }
 
     if (messagesRef.current.some((m) => m.id === messageId)) {
@@ -1607,10 +1608,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       );
 
       if (currentGroupId.current !== gid) {
-        return { success: false, error: 'הקבוצה השתנתה' };
+        return { success: false, error: i18n.t('auto.context__ChatContext.s3') };
       }
       if (error || !combined?.length) {
-        return { success: false, error: error?.message || 'לא נמצאו הודעות' };
+        return { success: false, error: error?.message || i18n.t('auto.context__ChatContext.s4') };
       }
 
       const all = capChatMessages(
@@ -1635,7 +1636,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   // ============================================
 
   const createGroup = useCallback(async (input: CreateChatGroupInput) => {
-    if (!user) return { success: false, error: 'לא מחובר' };
+    if (!user) return { success: false, error: i18n.t('auto.context__ChatContext.s5') };
 
     const { data, error } = await chatGroupService.createChatGroup(input, user.id);
 
@@ -1653,7 +1654,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   // ============================================
 
   const updateGroup = useCallback(async (groupId: string, input: UpdateChatGroupInput) => {
-    if (!user) return { success: false, error: 'לא מחובר' };
+    if (!user) return { success: false, error: i18n.t('auto.context__ChatContext.s5') };
 
     const { data, error } = await chatGroupService.updateChatGroup(groupId, input, user.id);
 
@@ -1675,7 +1676,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
 
   const leaveGroup = useCallback(async (groupId: string) => {
-    if (!user) return { success: false, error: 'לא מחובר' };
+    if (!user) return { success: false, error: i18n.t('auto.context__ChatContext.s5') };
 
     const { error } = await chatGroupService.removeGroupMember(groupId, user.id, user.id);
 
@@ -1718,7 +1719,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   // ============================================
 
   const sendMessage = useCallback(async (input: SendChatMessageInput) => {
-    if (!user) return { success: false, error: 'לא מחובר' };
+    if (!user) return { success: false, error: i18n.t('auto.context__ChatContext.s5') };
 
     let replyToData: ChatMessage['reply_to'] | undefined;
     if (input.reply_to_message_id) {
@@ -1805,7 +1806,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       read_by_count: 0,
       sender: {
         id: user.id,
-        display_name: user?.display_name || 'אני',
+        display_name: user?.display_name || i18n.t('auto.context__ChatContext.s6'),
         profile_picture: user?.profile_picture,
         is_online: true,
       },
@@ -1851,7 +1852,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         senderName:
           user?.display_name ||
           (user as { full_name?: string } | null)?.full_name ||
-          'אני',
+          i18n.t('auto.context__ChatContext.s6'),
         messageType: optimisticMessage.message_type,
       });
     }
@@ -1923,7 +1924,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             data.sender?.display_name ||
             user?.display_name ||
             (user as { full_name?: string } | null)?.full_name ||
-            'אני',
+            i18n.t('auto.context__ChatContext.s6'),
           messageType: data.message_type,
           bumpCount: false,
         });
@@ -1949,21 +1950,21 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             payload: { ...input, sender_id: user.id },
           });
           setMessages(prev => prev.map(m =>
-            m.id === tempId ? { ...m, is_sending: false, send_error: 'ממתין לחיבור...' } : m
+            m.id === tempId ? { ...m, is_sending: false, send_error: i18n.t('auto.context__ChatContext.s7') } : m
           ));
-          return { success: false, error: 'אין חיבור – ההודעה תישלח כשהחיבור יחזור', queued: true } as any;
+          return { success: false, error: i18n.t('auto.context__ChatContext.s8'), queued: true } as any;
         }
 
         // שגיאה רגילה – סמן על האופטימיסטי ואפשר retry
         logger.error('ChatContext', `Error sending message: ${errMsg || error?.code || 'Unknown'}`);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
         setMessages(prev => prev.map(m =>
-          m.id === tempId ? { ...m, is_sending: false, send_error: errMsg || 'שגיאה בשליחת הודעה' } : m
+          m.id === tempId ? { ...m, is_sending: false, send_error: errMsg || i18n.t('auto.context__ChatContext.s9') } : m
         ));
-        return { success: false, error: errMsg || 'שגיאה בשליחת הודעה' };
+        return { success: false, error: errMsg || i18n.t('auto.context__ChatContext.s9') };
       }
     } catch (e) {
-      const errMsg = e instanceof Error ? e.message : 'שגיאה בשליחת הודעה';
+      const errMsg = e instanceof Error ? e.message : i18n.t('auto.context__ChatContext.s9');
       logger.error('ChatContext', `Error sending message: ${errMsg}`);
       setMessages((prev) =>
         prev.map((m) =>
@@ -1979,7 +1980,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   // ============================================
 
   const editMessage = useCallback(async (messageId: string, content: string, mentions?: any[]) => {
-    if (!user) return { success: false, error: 'לא מחובר' };
+    if (!user) return { success: false, error: i18n.t('auto.context__ChatContext.s5') };
 
     // Optimistic update — show edited content immediately
     const originalMessage = messagesRef.current.find(m => m.id === messageId);
@@ -2012,7 +2013,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   // ============================================
 
   const deleteMessage = useCallback(async (messageId: string, deleteForEveryone: boolean) => {
-    if (!user) return { success: false, error: 'לא מחובר' };
+    if (!user) return { success: false, error: i18n.t('auto.context__ChatContext.s5') };
 
     const { error } = await chatMessageService.deleteChatMessage(
       { message_id: messageId, delete_for_everyone: deleteForEveryone },
@@ -2059,11 +2060,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   // ============================================
 
   const forwardMessage = useCallback(async (messageId: string, groupIds: string[]) => {
-    if (!user) return { success: false, error: 'לא מחובר' };
+    if (!user) return { success: false, error: i18n.t('auto.context__ChatContext.s5') };
     // סקרים לא מועברים — גם אם הגיעו לכאן ממסלול אחר
     const source = messagesRef.current.find((m) => m.id === messageId);
     if ((source?.message_type as string | undefined) === 'poll') {
-      return { success: false, error: 'לא ניתן להעביר סקרים' };
+      return { success: false, error: i18n.t('auto.context__ChatContext.s10') };
     }
 
     const { errors } = await chatMessageService.forwardChatMessage(
@@ -2075,7 +2076,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       return { success: true };
     }
 
-    return { success: false, error: 'שגיאה בהעברת ההודעה' };
+    return { success: false, error: i18n.t('auto.context__ChatContext.s11') };
   }, [user]);
 
   // ============================================
@@ -2087,7 +2088,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     const actor = {
       id: user.id,
-      name: user?.display_name || 'אני',
+      name: user?.display_name || i18n.t('auto.context__ChatContext.s6'),
       profile_picture: user?.profile_picture,
     };
 
@@ -2155,7 +2156,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     if (error) {
       const actor = {
         id: user.id,
-        name: user?.display_name || 'אני',
+        name: user?.display_name || i18n.t('auto.context__ChatContext.s6'),
         profile_picture: user?.profile_picture,
       };
       setMessages((prev) =>
@@ -2299,7 +2300,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                     await removeOffline(next.local_id);
                     setMessages(prev => prev.map(m =>
                       m.id === next.local_id
-                        ? { ...m, is_sending: false, send_error: error?.message || 'נכשל בשליחה לאחר ניסיונות חוזרים' }
+                        ? { ...m, is_sending: false, send_error: error?.message || i18n.t('auto.context__ChatContext.s12') }
                         : m
                     ));
                     logger.error('ChatContext', 'Dropping queued message after max attempts', { local_id: next.local_id, error });
@@ -2317,7 +2318,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                   await removeOffline(next.local_id);
                   setMessages(prev => prev.map(m =>
                     m.id === next.local_id
-                      ? { ...m, is_sending: false, send_error: 'נכשל בשליחה' }
+                      ? { ...m, is_sending: false, send_error: i18n.t('auto.context__ChatContext.s13') }
                       : m
                   ));
                 } else {
@@ -2589,7 +2590,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         senderName:
           stamped.sender?.display_name ||
           userRef.current?.display_name ||
-          'אני',
+          i18n.t('auto.context__ChatContext.s6'),
         messageType: stamped.message_type,
       });
     }
@@ -2725,7 +2726,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         throw new Error(result.error || 'שגיאה בשליחה חוזרת');
       }
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'שגיאה בשליחה חוזרת';
+      const message = e instanceof Error ? e.message : i18n.t('auto.context__ChatContext.s14');
       setMessages(prev => prev.map(m =>
         m.id === tempId
           ? { ...m, is_sending: false, is_uploading: false, send_error: message }

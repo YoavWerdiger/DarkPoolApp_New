@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { JournalSkeleton } from './components/JournalSkeleton';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -142,7 +143,7 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
           embedded.onMissing();
           return;
         }
-        legacyAlert('שגיאה', 'התיק לא נמצא');
+        legacyAlert(i18n.t('auto.screens__Portfolios__PortfolioDetailScreen.s1'), i18n.t('auto.screens__Portfolios__PortfolioDetailScreen.s2'));
         navigation.goBack();
         return;
       }
@@ -288,7 +289,7 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
       glass={!moreFace}
       glassIntensity="subtle"
       style={moreFace ? { backgroundColor: moreFace } : undefined}
-      accessibilityLabel="פעולות תיק"
+      accessibilityLabel={i18n.t('auto.screens__Portfolios__PortfolioDetailScreen.s3')}
     >
       <Ionicons
         name="ellipsis-horizontal"
@@ -300,7 +301,7 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
 
   const embeddedHeader = embedded ? (
     <MainDrawerScreenHeader
-      title="יומן מסחר"
+      title={i18n.t('auto.screens__Portfolios__PortfolioDetailScreen.s4')}
       onMenuPress={embedded.onMenuPress}
       inRtlTree
       // שם התיק קרוב לכותרת הדף: 8 במקום 16+12 (ריפוד תחתון של הכותרת + ריפוד ה-section)
@@ -327,7 +328,7 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
         <SafeAreaView style={{ flex: 1 }} edges={['top']}>
           {embeddedHeader ?? (
             <PortfolioScreenHeader
-              title="טוען..."
+              title={i18n.t('auto.screens__Portfolios__PortfolioDetailScreen.s5')}
               onBack={() => navigation.goBack()}
             />
           )}
@@ -344,7 +345,7 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
         {embeddedHeader ?? (
           <PortfolioScreenHeader
             title={portfolio?.name ?? ''}
-            subtitle={portfolio && !isOwner ? 'צפייה בלבד' : undefined}
+            subtitle={portfolio && !isOwner ? i18n.t('auto.screens__Portfolios__PortfolioDetailScreen.s6') : undefined}
             onBack={() => navigation.goBack()}
             moreAction={moreAction}
           />
@@ -418,7 +419,7 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
                   onAddPress={handleAddTransaction}
                   readOnly={!canAddTransaction}
                   typeFilter={['deposit', 'withdrawal', 'dividend', 'fee']}
-                  sectionTitle="תזרים"
+                  sectionTitle={i18n.t('auto.screens__Portfolios__PortfolioDetailScreen.s7')}
                   refreshKey={dataVersion}
                 />
               </View>
@@ -437,10 +438,10 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
             }}
             activeOpacity={0.88}
             accessibilityRole="button"
-            accessibilityLabel="פוזיציה חדשה"
+            accessibilityLabel={i18n.t('auto.screens__Portfolios__PortfolioDetailScreen.s8')}
           >
             <Ionicons name="add" size={26} color={tokens.colors.text.inverse} />
-            <Text style={styles.fabBtnText}>פוזיציה חדשה</Text>
+            <Text style={styles.fabBtnText}>{i18n.t('auto.screens__Portfolios__PortfolioDetailScreen.s8')}</Text>
           </TouchableOpacity>
         </View>
       ) : null}

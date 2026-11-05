@@ -1,3 +1,4 @@
+import i18n from '../lib/i18n';
 import { useMemo } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useTheme } from '../context/ThemeContext';
@@ -57,42 +58,42 @@ export default function LearningStack() {
       <Stack.Screen
         name="CoursesScreen"
         component={CoursesScreenPlain}
-        options={{ title: 'קורסים' }}
+        options={{ title: i18n.t('auto.navigation__LearningStack.s1') }}
       />
       <Stack.Screen
         name="MyLearningScreen"
         component={MyLearningPlain}
-        options={{ title: 'הקורסים שלי' }}
+        options={{ title: i18n.t('auto.navigation__LearningStack.s2') }}
       />
       <Stack.Screen 
         name="LearningScreen" 
         component={LearningWithVideo}
-        options={{ title: 'קורס' }}
+        options={{ title: i18n.t('auto.navigation__LearningStack.s3') }}
       />
       <Stack.Screen
         name="CourseDetailScreen"
         component={CourseDetailWithVideo}
-        options={{ title: 'פרטי קורס' }}
+        options={{ title: i18n.t('auto.navigation__LearningStack.s4') }}
       />
       <Stack.Screen
         name="CourseComingSoonScreen"
         component={CourseComingSoonPlain}
-        options={{ title: 'בקרוב' }}
+        options={{ title: i18n.t('auto.navigation__LearningStack.s5') }}
       />
       <Stack.Screen
         name="CoursePreviewScreen"
         component={CoursePreviewWithVideo}
-        options={{ title: 'תצוגה מקדימה' }}
+        options={{ title: i18n.t('auto.navigation__LearningStack.s6') }}
       />
       <Stack.Screen
         name="LessonPlayerScreen"
         component={LessonPlayerPlain}
-        options={{ title: 'שיעור', headerShown: false }}
+        options={{ title: i18n.t('auto.navigation__LearningStack.s7'), headerShown: false }}
       />
       <Stack.Screen
         name="MyNotesScreen"
         component={MyNotesWithVideo}
-        options={{ title: 'ההערות שלי' }}
+        options={{ title: i18n.t('auto.navigation__LearningStack.s8') }}
       />
     </Stack.Navigator>
   );

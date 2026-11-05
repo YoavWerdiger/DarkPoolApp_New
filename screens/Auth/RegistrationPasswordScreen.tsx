@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useLayoutEffect, useState } from 'react';
 import { checkPassword, isPasswordValid, passwordErrorMessage } from '../../utils/passwordPolicy';
@@ -44,9 +45,9 @@ const RegistrationPasswordScreen = ({ navigation }: { navigation: any }) => {
         const result = await AuthService.setPasswordForCurrentUser(password);
         if (result.error) {
           if (result.error === 'no_session') {
-            setError('פג תוקף החיבור. חזור לאימות האימייל.');
+            setError(i18n.t('auto.screens__Auth__RegistrationPasswordScreen.s1'));
           } else if (result.error === 'weak_password') {
-            setError(passwordErrorMessage(password, data.email) || 'הסיסמה חלשה מדי');
+            setError(passwordErrorMessage(password, data.email) || i18n.t('auto.screens__Auth__RegistrationPasswordScreen.s2'));
           } else {
             setError(result.error);
           }
@@ -70,8 +71,8 @@ const RegistrationPasswordScreen = ({ navigation }: { navigation: any }) => {
 
   return (
     <CashAppScreen
-      title="צור סיסמה"
-      subtitle="לפחות 8 תווים, עם אות ומספר"
+      title={i18n.t('auto.screens__Auth__RegistrationPasswordScreen.s3')}
+      subtitle={i18n.t('auto.screens__Auth__RegistrationPasswordScreen.s4')}
       currentStep={ONBOARDING_STEPS.password}
       totalSteps={ONBOARDING_TOTAL_STEPS}
       progressVariant="dots"
@@ -80,7 +81,7 @@ const RegistrationPasswordScreen = ({ navigation }: { navigation: any }) => {
       onBack={handleBack}
       footer={
         <CashAppButton
-          title="המשך"
+          title={i18n.t('auto.screens__Auth__RegistrationPasswordScreen.s5')}
           variant="primary"
           size="lg"
           onPress={handleNext}
@@ -120,8 +121,8 @@ const RegistrationPasswordScreen = ({ navigation }: { navigation: any }) => {
 
       <View style={{ gap: tokens.spacing.lg }}>
         <CashAppInput
-          label="סיסמה"
-          placeholder="לפחות 8 תווים"
+          label={i18n.t('auto.screens__Auth__RegistrationPasswordScreen.s6')}
+          placeholder={i18n.t('auto.screens__Auth__RegistrationPasswordScreen.s7')}
           value={password}
           onChangeText={(t) => {
             setPassword(t);

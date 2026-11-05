@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -67,9 +68,7 @@ const OnboardingNotificationsScreen: React.FC<Props> = ({ navigation }) => {
             <Pressable onPress={handleBack} style={styles.backButton}>
               <Ionicons name="chevron-forward" size={28} color={tokens.colors.text.primary} />
             </Pressable>
-            <Text style={[styles.stepIndicator, { color: tokens.colors.text.tertiary }]}>
-              שלב 8 מתוך 10
-            </Text>
+            <Text style={[styles.stepIndicator, { color: tokens.colors.text.tertiary }]}>{i18n.t('auto.screens__Onboarding__OnboardingNotificationsScreen.s1')}</Text>
           </View>
 
           <ScrollView
@@ -92,36 +91,30 @@ const OnboardingNotificationsScreen: React.FC<Props> = ({ navigation }) => {
             </View>
 
             {/* Title */}
-            <Text style={[styles.title, { color: tokens.colors.text.primary }]}>
-              קבל התראות בזמן אמת
-            </Text>
-            <Text style={[styles.subtitle, { color: tokens.colors.text.secondary }]}>
-              היה הראשון לדעת על עסקאות חשובות
-            </Text>
+            <Text style={[styles.title, { color: tokens.colors.text.primary }]}>{i18n.t('auto.screens__Onboarding__OnboardingNotificationsScreen.s2')}</Text>
+            <Text style={[styles.subtitle, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Onboarding__OnboardingNotificationsScreen.s3')}</Text>
 
             {/* Features */}
             <View style={styles.featuresContainer}>
               <Feature
                 icon="shield-checkmark-outline"
-                text="התראות אבטחה וחשבון"
+                text={i18n.t('auto.screens__Onboarding__OnboardingNotificationsScreen.s4')}
               />
               <Feature
                 icon="trending-up-outline"
-                text="עסקאות קונגרס חשובות"
+                text={i18n.t('auto.screens__Onboarding__OnboardingNotificationsScreen.s5')}
               />
               <Feature
                 icon="people-outline"
-                text="פעילות insider בזמן אמת"
+                text={i18n.t('auto.screens__Onboarding__OnboardingNotificationsScreen.s6')}
               />
               <Feature
                 icon="pulse-outline"
-                text="עדכוני מחירים והתראות מותאמות"
+                text={i18n.t('auto.screens__Onboarding__OnboardingNotificationsScreen.s7')}
               />
             </View>
 
-            <Text style={[styles.note, { color: tokens.colors.text.tertiary }]}>
-              ניתן לשנות העדפות התראות בכל עת דרך ההגדרות
-            </Text>
+            <Text style={[styles.note, { color: tokens.colors.text.tertiary }]}>{i18n.t('auto.screens__Onboarding__OnboardingNotificationsScreen.s8')}</Text>
 
             <View style={{ flex: 1 }} />
           </ScrollView>
@@ -131,7 +124,7 @@ const OnboardingNotificationsScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.footerButtons}>
               <View style={{ flex: 1 }}>
                 <UIButton
-                  title="דלג"
+                  title={i18n.t('auto.screens__Onboarding__OnboardingNotificationsScreen.s9')}
                   variant="secondary"
                   size="lg"
                   fullWidth
@@ -140,7 +133,7 @@ const OnboardingNotificationsScreen: React.FC<Props> = ({ navigation }) => {
               </View>
               <View style={{ flex: 1 }}>
                 <UIButton
-                  title="הפעל"
+                  title={i18n.t('auto.screens__Onboarding__OnboardingNotificationsScreen.s10')}
                   variant="primary"
                   size="lg"
                   fullWidth

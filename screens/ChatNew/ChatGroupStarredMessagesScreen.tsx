@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 // ============================================
 // Chat Group Starred Messages Screen
 // ============================================
@@ -175,18 +176,18 @@ export default function ChatGroupStarredMessagesScreen() {
   );
 
   const formatDateDivider = useCallback((date: Date): string => {
-    if (isToday(date)) return 'היום';
-    if (isYesterday(date)) return 'אתמול';
-    return format(date, 'd בMMMM yyyy', { locale: he });
+    if (isToday(date)) return i18n.t('auto.screens__ChatNew__ChatGroupStarredMessagesScreen.s1');
+    if (isYesterday(date)) return i18n.t('auto.screens__ChatNew__ChatGroupStarredMessagesScreen.s2');
+    return format(date, i18n.t('auto.screens__ChatNew__ChatGroupStarredMessagesScreen.s3'), { locale: he });
   }, []);
 
   const handleMessageLongPress = useCallback(
     (message: ChatMessageType) => {
       void HapticFeedback.impactLight();
-      legacyAlert('הודעה מסומנת', undefined, [
-        { text: 'פתח בצ\'אט', onPress: () => handleOpenMessage(message.id) },
-        { text: 'הסר כוכב', style: 'destructive', onPress: () => void handleUnstar(message.id) },
-        { text: 'ביטול', style: 'cancel' },
+      legacyAlert(i18n.t('auto.screens__ChatNew__ChatGroupStarredMessagesScreen.s4'), undefined, [
+        { text: i18n.t('auto.screens__ChatNew__ChatGroupStarredMessagesScreen.s5'), onPress: () => handleOpenMessage(message.id) },
+        { text: i18n.t('auto.screens__ChatNew__ChatGroupStarredMessagesScreen.s6'), style: 'destructive', onPress: () => void handleUnstar(message.id) },
+        { text: i18n.t('auto.screens__ChatNew__ChatGroupStarredMessagesScreen.s7'), style: 'cancel' },
       ]);
     },
     [handleOpenMessage, handleUnstar],
@@ -234,20 +235,18 @@ export default function ChatGroupStarredMessagesScreen() {
   return (
     <ChatScreenShell>
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        <ChatSubScreenHeader title="הודעות מסומנות" onBack={handleBack} />
+        <ChatSubScreenHeader title={i18n.t('auto.screens__ChatNew__ChatGroupStarredMessagesScreen.s8')} onBack={handleBack} />
 
         {loading ? (
           <View style={styles.centerContent}>
             <ActivityIndicator size="small" color={DesignTokens.colors.primary.main} />
-            <Text style={styles.loadingText}>טוען הודעות מסומנות...</Text>
+            <Text style={styles.loadingText}>{i18n.t('auto.screens__ChatNew__ChatGroupStarredMessagesScreen.s9')}</Text>
           </View>
         ) : messages.length === 0 ? (
           <View style={styles.centerContent}>
             <Ionicons name="star-outline" size={48} color={DesignTokens.colors.text.secondary} />
-            <Text style={styles.emptyTitle}>אין הודעות מסומנות</Text>
-            <Text style={styles.emptySubtitle}>
-              סמן הודעות בכוכב מתוך הצ'אט כדי לראות אותן כאן
-            </Text>
+            <Text style={styles.emptyTitle}>{i18n.t('auto.screens__ChatNew__ChatGroupStarredMessagesScreen.s10')}</Text>
+            <Text style={styles.emptySubtitle}>{i18n.t('auto.screens__ChatNew__ChatGroupStarredMessagesScreen.s11')}</Text>
           </View>
         ) : (
           <FlatList

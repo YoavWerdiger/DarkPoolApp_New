@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 /**
  * פרטי עסקה — קונגרס (STOCK Act) או בכיר חברה (Form 4).
@@ -162,7 +163,7 @@ export default function DarkPoolTradeDetailScreen() {
         ? tokens.colors.text.danger
         : tokens.colors.text.primary;
 
-  const insiderNameRaw = insiderTrade?.insider_name?.trim() || 'בכיר';
+  const insiderNameRaw = insiderTrade?.insider_name?.trim() || i18n.t('auto.screens__DarkPool__DarkPoolTradeDetailScreen.s1');
   const personName = isCongress
     ? (congressTrade?.politician_name ?? '')
     : formatInsiderDisplayName(insiderNameRaw);
@@ -170,7 +171,7 @@ export default function DarkPoolTradeDetailScreen() {
     ? (congressTrade?.politician_image_url ?? null)
     : (insiderTrade?.insider_logo_url ?? null);
   const personRole = formatInsiderRole(insiderTrade?.insider_role);
-  const personHint = isCongress ? 'חבר קונגרס' : personRole;
+  const personHint = isCongress ? i18n.t('auto.screens__DarkPool__DarkPoolTradeDetailScreen.s2') : personRole;
 
   const quoteQuery = useQuery({
     queryKey: ['darkpool', 'trade-detail-quote', ticker],
@@ -225,7 +226,7 @@ export default function DarkPoolTradeDetailScreen() {
       return;
     }
     if (insiderTrade) {
-      const name = insiderTrade.insider_name?.trim() || 'בכיר';
+      const name = insiderTrade.insider_name?.trim() || i18n.t('auto.screens__DarkPool__DarkPoolTradeDetailScreen.s1');
       prefetchPersonPortfolio({
         id: `${insiderTrade.ticker}:${name}`,
         kind: 'insider',
@@ -261,7 +262,7 @@ export default function DarkPoolTradeDetailScreen() {
               onPress={() => navigation.goBack()}
               glassIntensity="subtle"
               size={HEADER_BACK_BTN_SIZE}
-              accessibilityLabel="חזרה"
+              accessibilityLabel={i18n.t('auto.screens__DarkPool__DarkPoolTradeDetailScreen.s3')}
             >
               <Ionicons
                 name="chevron-forward"
@@ -271,10 +272,8 @@ export default function DarkPoolTradeDetailScreen() {
             </DayNavBlurButton>
           </View>
           <View style={styles.center}>
-            <Text style={styles.emptyTitle}>העסקה לא נמצאה</Text>
-            <Text style={styles.emptyBody}>
-              אין מספיק פרטים לפתוח את דיווח העסקה. זה לא פרופיל האדם — חזרו לפיד ונסו שורה אחרת.
-            </Text>
+            <Text style={styles.emptyTitle}>{i18n.t('auto.screens__DarkPool__DarkPoolTradeDetailScreen.s4')}</Text>
+            <Text style={styles.emptyBody}>{i18n.t('auto.screens__DarkPool__DarkPoolTradeDetailScreen.s5')}</Text>
           </View>
         </SafeAreaView>
       </ScreenChrome>
@@ -357,7 +356,7 @@ export default function DarkPoolTradeDetailScreen() {
             onPress={() => navigation.goBack()}
             glassIntensity="subtle"
             size={HEADER_BACK_BTN_SIZE}
-            accessibilityLabel="חזרה"
+            accessibilityLabel={i18n.t('auto.screens__DarkPool__DarkPoolTradeDetailScreen.s3')}
           >
             <Ionicons
               name="chevron-forward"
@@ -365,9 +364,7 @@ export default function DarkPoolTradeDetailScreen() {
               color={tokens.colors.text.primary}
             />
           </DayNavBlurButton>
-          <Text style={styles.topBarTitle} numberOfLines={1} accessibilityRole="header">
-            פרטי עסקה
-          </Text>
+          <Text style={styles.topBarTitle} numberOfLines={1} accessibilityRole="header">{i18n.t('auto.screens__DarkPool__DarkPoolTradeDetailScreen.s6')}</Text>
           <DayNavBlurButton
             onPress={openHonesty}
             glassIntensity="subtle"
@@ -395,7 +392,7 @@ export default function DarkPoolTradeDetailScreen() {
                   onPress={openPerson}
                   style={heroStyles.avatarHit}
                   accessibilityRole="button"
-                  accessibilityLabel={`פרופיל ${personName}`}
+                  accessibilityLabel={i18n.t('auto.screens__DarkPool__DarkPoolTradeDetailScreen.s7', { v0: personName })}
                 >
                   <InsiderAvatar
                     name={personName}
@@ -407,7 +404,7 @@ export default function DarkPoolTradeDetailScreen() {
                   <Pressable
                     onPress={openPerson}
                     accessibilityRole="button"
-                    accessibilityLabel={`פרופיל ${personName}`}
+                    accessibilityLabel={i18n.t('auto.screens__DarkPool__DarkPoolTradeDetailScreen.s7', { v0: personName })}
                   >
                     <Text
                       style={heroStyles.personName}
@@ -451,7 +448,7 @@ export default function DarkPoolTradeDetailScreen() {
               <Pressable
                 onPress={openTicker}
                 accessibilityRole="button"
-                accessibilityLabel={`עמוד המניה ${ticker}`}
+                accessibilityLabel={i18n.t('auto.screens__DarkPool__DarkPoolTradeDetailScreen.s8', { v0: ticker })}
               >
                 <DarkPoolNestedQuoteCard
                   ticker={ticker}
@@ -473,7 +470,7 @@ export default function DarkPoolTradeDetailScreen() {
           </View>
 
           <View style={styles.section}>
-            <DarkPoolSectionHeader variant="group" title="פרטי העסקה" />
+            <DarkPoolSectionHeader variant="group" title={i18n.t('auto.screens__DarkPool__DarkPoolTradeDetailScreen.s9')} />
             <UICard
                 variant="soft"
                 glassIntensity="light"
@@ -507,7 +504,7 @@ export default function DarkPoolTradeDetailScreen() {
             <View style={styles.historySection}>
               <DarkPoolSectionHeader
                 variant="group"
-                title="פעילות אחרונה"
+                title={i18n.t('auto.screens__DarkPool__DarkPoolTradeDetailScreen.s10')}
                 subtitleA11y={activitySubtitle.sentence}
                 subtitle={
                   <>
@@ -653,14 +650,14 @@ function InsiderHistoryRow({ trade, last }: { trade: InsiderBuyRow; last: boolea
       last={last}
       verb={
         meaning.code === 'P' || (meaning.tone === 'buy' && !meaning.code)
-          ? 'קנה'
+          ? i18n.t('auto.screens__DarkPool__DarkPoolTradeDetailScreen.s11')
           : meaning.code === 'S'
-            ? 'מכר'
+            ? i18n.t('auto.screens__DarkPool__DarkPoolTradeDetailScreen.s12')
             : meaning.label
       }
       color={color}
       date={formatTradeDate(trade.transaction_date)}
-      amount={value ?? (shares ? `${shares} מניות` : null)}
+      amount={value ?? (shares ? i18n.t('auto.screens__DarkPool__DarkPoolTradeDetailScreen.s13', { v0: shares }) : null)}
       amountIsData={Boolean(value)}
     />
   );

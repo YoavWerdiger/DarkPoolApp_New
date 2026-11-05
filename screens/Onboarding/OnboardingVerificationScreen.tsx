@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -44,7 +45,7 @@ const OnboardingVerificationScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleNext = async () => {
     if (!canContinue) {
-      setError('אנא הכנס קוד אימות תקין (6 ספרות)');
+      setError(i18n.t('auto.screens__Onboarding__OnboardingVerificationScreen.s1'));
       void HapticFeedback.error();
       return;
     }
@@ -63,7 +64,7 @@ const OnboardingVerificationScreen: React.FC<Props> = ({ navigation }) => {
       void HapticFeedback.success();
       navigation.navigate('OnboardingName');
     } catch (err) {
-      setError('קוד אימות שגוי. נסה שוב.');
+      setError(i18n.t('auto.screens__Onboarding__OnboardingVerificationScreen.s2'));
       void HapticFeedback.error();
     } finally {
       setLoading(false);
@@ -100,9 +101,7 @@ const OnboardingVerificationScreen: React.FC<Props> = ({ navigation }) => {
             <Pressable onPress={handleBack} style={styles.backButton}>
               <Ionicons name="chevron-forward" size={28} color={tokens.colors.text.primary} />
             </Pressable>
-            <Text style={[styles.stepIndicator, { color: tokens.colors.text.tertiary }]}>
-              שלב 2 מתוך 10
-            </Text>
+            <Text style={[styles.stepIndicator, { color: tokens.colors.text.tertiary }]}>{i18n.t('auto.screens__Onboarding__OnboardingVerificationScreen.s3')}</Text>
           </View>
 
           <ScrollView
@@ -112,11 +111,8 @@ const OnboardingVerificationScreen: React.FC<Props> = ({ navigation }) => {
             showsVerticalScrollIndicator={false}
           >
             {/* Title */}
-            <Text style={[styles.title, { color: tokens.colors.text.primary }]}>
-              הכנס את הקוד שנשלח
-            </Text>
-            <Text style={[styles.subtitle, { color: tokens.colors.text.secondary }]}>
-              שלחנו קוד אימות ל-{maskedPhone}
+            <Text style={[styles.title, { color: tokens.colors.text.primary }]}>{i18n.t('auto.screens__Onboarding__OnboardingVerificationScreen.s4')}</Text>
+            <Text style={[styles.subtitle, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Onboarding__OnboardingVerificationScreen.s5', { v0: maskedPhone })}
             </Text>
 
             {/* Error */}
@@ -137,9 +133,7 @@ const OnboardingVerificationScreen: React.FC<Props> = ({ navigation }) => {
 
             {/* Input */}
             <View style={styles.inputContainer}>
-              <Text style={[styles.label, { color: tokens.colors.text.secondary }]}>
-                קוד אימות
-              </Text>
+              <Text style={[styles.label, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Onboarding__OnboardingVerificationScreen.s6')}</Text>
               <UICard variant="inputGlass" padding="none" style={styles.inputCard}>
                 <View style={styles.inputWrapper}>
                   <Ionicons name="keypad-outline" size={20} color={tokens.colors.text.tertiary} />
@@ -163,14 +157,12 @@ const OnboardingVerificationScreen: React.FC<Props> = ({ navigation }) => {
 
             <Text style={[styles.timer, { color: tokens.colors.text.tertiary }]}>
               {canResend
-                ? 'ניתן לשלוח קוד חדש'
-                : `ניתן לבקש קוד נוסף בעוד ${resendTimer} שניות`}
+                ? i18n.t('auto.screens__Onboarding__OnboardingVerificationScreen.s7')
+                : i18n.t('auto.screens__Onboarding__OnboardingVerificationScreen.s8', { v0: resendTimer })}
             </Text>
 
             <Pressable onPress={() => {}}>
-              <Text style={[styles.link, { color: tokens.colors.primary.main }]}>
-                צריך עזרה בכניסה?
-              </Text>
+              <Text style={[styles.link, { color: tokens.colors.primary.main }]}>{i18n.t('auto.screens__Onboarding__OnboardingVerificationScreen.s9')}</Text>
             </Pressable>
 
             <View style={{ flex: 1 }} />
@@ -181,7 +173,7 @@ const OnboardingVerificationScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.footerButtons}>
               <View style={{ flex: 1 }}>
                 <UIButton
-                  title="שלח שוב"
+                  title={i18n.t('auto.screens__Onboarding__OnboardingVerificationScreen.s10')}
                   variant="secondary"
                   size="lg"
                   fullWidth
@@ -191,7 +183,7 @@ const OnboardingVerificationScreen: React.FC<Props> = ({ navigation }) => {
               </View>
               <View style={{ flex: 1 }}>
                 <UIButton
-                  title="המשך"
+                  title={i18n.t('auto.screens__Onboarding__OnboardingVerificationScreen.s11')}
                   variant="primary"
                   size="lg"
                   fullWidth

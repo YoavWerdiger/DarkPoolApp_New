@@ -1,3 +1,4 @@
+import { appLocale } from '../../../lib/i18n/locale';
 /**
  * darkPoolFormat.ts
  * -----------------------------------------------------------------------------
@@ -122,7 +123,7 @@ export function formatRelativeTime(iso: string | null | undefined): string {
   if (hr < 24) return `לפני ${hr} ש'`;
   const days = Math.floor(hr / 24);
   if (days < 30) return `לפני ${days} ימים`;
-  return new Date(ts).toLocaleDateString('he-IL');
+  return new Date(ts).toLocaleDateString(appLocale());
 }
 
 import type { DarkPoolSignalType } from '../../../types/darkpool.types';

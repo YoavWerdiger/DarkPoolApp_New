@@ -1,3 +1,4 @@
+import { appLocale } from '../../lib/i18n/locale';
 import React, { useCallback, useMemo, useState, memo } from 'react';
 import {
   View,
@@ -74,7 +75,7 @@ function monthlyPnl(trades: Trade[]): PnlBar[] {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([key, pnl]) => {
       const [y, m] = key.split('-').map(Number);
-      const label = new Date(y, m - 1, 1).toLocaleDateString('he-IL', {
+      const label = new Date(y, m - 1, 1).toLocaleDateString(appLocale(), {
         month: 'short',
         year: '2-digit',
       });
@@ -101,7 +102,7 @@ function dailyPnlSeries(trades: Trade[], maxBars: number): PnlBar[] {
   const sorted = Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
   return sorted.slice(-maxBars).map(([key, pnl]) => {
     const [y, mo, da] = key.split('-').map(Number);
-    const label = new Date(y, mo - 1, da).toLocaleDateString('he-IL', {
+    const label = new Date(y, mo - 1, da).toLocaleDateString(appLocale(), {
       day: 'numeric',
       month: 'short',
     });

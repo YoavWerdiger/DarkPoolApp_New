@@ -1,3 +1,4 @@
+import { appLocale } from '../../lib/i18n/locale';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import { View, Text, TouchableOpacity, StyleSheet, Pressable, ScrollView } from 'react-native';
@@ -260,7 +261,7 @@ export default function PlanPicker({
             </View>
             <Text style={[styles.priceNote, { color: tokens.colors.text.secondary }]}>
               {multiMonth
-                ? `₪${activePremium.price.toLocaleString('he-IL')} ל-${PERIOD_MONTHS[activePremium.period]} חודשים · בתשלומים חודשיים`
+                ? `₪${activePremium.price.toLocaleString(appLocale())} ל-${PERIOD_MONTHS[activePremium.period]} חודשים · בתשלומים חודשיים`
                 : 'ללא התחייבות · ביטול בכל עת'}
             </Text>
 

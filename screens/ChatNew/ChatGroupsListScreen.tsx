@@ -1,3 +1,4 @@
+import { appLocale } from '../../lib/i18n/locale';
 // ============================================
 // Chat Groups List Screen - Modern Design (Exact Copy)
 // ============================================
@@ -194,7 +195,7 @@ const formatRelativeTime = (dateStr: string): string => {
   if (diffMins < 60) return `${diffMins}ד׳`;
   if (diffHours < 24) return `${diffHours}ש׳`;
   if (diffDays < 7) return `${diffDays}י׳`;
-  return date.toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' });
+  return date.toLocaleDateString(appLocale(), { day: 'numeric', month: 'numeric' });
 };
 
 export default function ChatGroupsListScreen() {

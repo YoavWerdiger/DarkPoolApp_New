@@ -1,3 +1,4 @@
+import { appLocale } from '../../lib/i18n/locale';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import {
@@ -61,7 +62,7 @@ function fmtUsd(n: number, decimals = 2) {
 }
 
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString('he-IL', {
+  return new Date(iso).toLocaleDateString(appLocale(), {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',

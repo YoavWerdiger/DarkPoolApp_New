@@ -1,3 +1,4 @@
+import { appLocale } from '../../lib/i18n/locale';
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, RefreshControl, ActivityIndicator, Pressable, SectionList } from 'react-native';
 import { DollarSign, Calendar } from 'lucide-react-native';
@@ -49,12 +50,12 @@ const DividendCard: React.FC<{ dividend: Dividend }> = ({ dividend }) => {
 
   const formatDate = (dateStr: string): string => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('he-IL', { day: 'numeric', month: 'long', year: 'numeric' });
+    return date.toLocaleDateString(appLocale(), { day: 'numeric', month: 'long', year: 'numeric' });
   };
 
   const getShortDate = (dateStr: string): string => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('he-IL', { day: 'numeric', month: 'short' });
+    return date.toLocaleDateString(appLocale(), { day: 'numeric', month: 'short' });
   };
 
   return (
@@ -135,7 +136,7 @@ export default function DividendsTab() {
 
     dividends.forEach(dividend => {
       const date = new Date(dividend.date);
-      const monthYear = date.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
+      const monthYear = date.toLocaleDateString(appLocale(), { month: 'long', year: 'numeric' });
       
       if (!grouped[monthYear]) {
         grouped[monthYear] = [];

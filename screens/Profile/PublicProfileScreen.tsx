@@ -1,3 +1,4 @@
+import { appLocale } from '../../lib/i18n/locale';
 /**
  * פרופיל ציבורי של משתמש — מינימלי, לפי הטופו:
  * תמונה + שם + תגים, כרטיס «ותק» בולט (השור והדוב בצבע המתכת של הדרגה + התקדמות),
@@ -70,7 +71,7 @@ function formatMemberSince(iso: string | null): string | null {
   try {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return null;
-    return `חבר קהילה מאז ${d.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' })}`;
+    return `חבר קהילה מאז ${d.toLocaleDateString(appLocale(), { month: 'long', year: 'numeric' })}`;
   } catch {
     return null;
   }

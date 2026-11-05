@@ -1,3 +1,4 @@
+import { appLocale } from '../../lib/i18n/locale';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
@@ -953,7 +954,7 @@ export default function AddTransactionScreen() {
                 >
                   <Ionicons name="calendar-outline" size={18} color={tokens.colors.text.secondary} />
                   <Text style={styles.datePillText}>
-                    {tradeDate.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                    {tradeDate.toLocaleDateString(appLocale(), { day: '2-digit', month: '2-digit', year: 'numeric' })}
                   </Text>
                 </TouchableOpacity>
 
@@ -968,7 +969,7 @@ export default function AddTransactionScreen() {
                 >
                   <Ionicons name="time-outline" size={18} color={tokens.colors.text.secondary} />
                   <Text style={styles.datePillText}>
-                    {tradeDate.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+                    {tradeDate.toLocaleTimeString(appLocale(), { hour: '2-digit', minute: '2-digit' })}
                   </Text>
                 </TouchableOpacity>
               </View>

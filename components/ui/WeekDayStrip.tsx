@@ -1,3 +1,4 @@
+import { appLocale } from '../../lib/i18n/locale';
 /**
  * פס ימי מסחר (ב׳–ו׳) במקום ניווט יום בחצים — יומן כלכלי ודיווחי רווח.
  * כל השבוע במבט אחד, הקשה אחת ליום; רקע ירוק שמחליק ליום הנבחר.
@@ -90,7 +91,7 @@ export function WeekDayStrip({ selectedDate, onSelect, markedDates }: Props) {
   const onRowLayout = (e: LayoutChangeEvent) => setRowW(e.nativeEvent.layout.width);
 
   const containsToday = days.some((d) => dayKey(d) === todayKey);
-  const monthLabel = (days[Math.max(0, selIndex)] ?? days[0]).toLocaleDateString('he-IL', {
+  const monthLabel = (days[Math.max(0, selIndex)] ?? days[0]).toLocaleDateString(appLocale(), {
     month: 'long',
     year: 'numeric',
   });
@@ -156,7 +157,7 @@ export function WeekDayStrip({ selectedDate, onSelect, markedDates }: Props) {
               style={styles.cell}
               accessibilityRole="button"
               accessibilityState={{ selected }}
-              accessibilityLabel={d.toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' })}
+              accessibilityLabel={d.toLocaleDateString(appLocale(), { weekday: 'long', day: 'numeric', month: 'long' })}
             >
               <Text style={[styles.weekday, { color: selected ? tokens.colors.text.inverse : tokens.colors.text.secondary }]}>
                 {HEB_WEEKDAY[d.getDay()]}

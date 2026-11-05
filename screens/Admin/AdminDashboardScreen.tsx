@@ -1,3 +1,4 @@
+import { appLocale } from '../../lib/i18n/locale';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
@@ -157,7 +158,7 @@ export default function AdminDashboardScreen({ navigation }: any) {
               30 הימים האחרונים
             </Text>
             <Text style={[styles.metricValue, { color: tokens.colors.text.primary }]}>
-              {totalUsers.toLocaleString('he-IL')}
+              {totalUsers.toLocaleString(appLocale())}
             </Text>
           </View>
 

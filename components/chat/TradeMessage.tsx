@@ -1,3 +1,4 @@
+import { appLocale } from '../../lib/i18n/locale';
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
@@ -135,7 +136,7 @@ export default function TradeMessage({ trade: tradeRaw, isMe }: TradeMessageProp
   const money = (value: number) =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(value);
   const date = (d: string) =>
-    new Date(d).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: '2-digit' });
+    new Date(d).toLocaleDateString(appLocale(), { day: '2-digit', month: '2-digit', year: '2-digit' });
 
   const metrics: Array<{ label: string; value: string }> = [
     { label: 'כניסה', value: money(trade.entry_price) },

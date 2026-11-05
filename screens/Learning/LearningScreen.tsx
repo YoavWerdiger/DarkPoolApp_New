@@ -1,3 +1,4 @@
+import { appLocale } from '../../lib/i18n/locale';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Animated, Dimensions, Platform, TextInput, TouchableWithoutFeedback, Keyboard, Modal, Linking, ActivityIndicator, useWindowDimensions } from 'react-native';
@@ -867,7 +868,7 @@ function LearningScreen() {
 
   const addDateTimeElement = () => {
     const now = new Date();
-    const dateTime = now.toLocaleString('he-IL');
+    const dateTime = now.toLocaleString(appLocale());
     addTextElement('datetime', dateTime);
   };
 

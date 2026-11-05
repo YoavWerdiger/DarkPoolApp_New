@@ -1,3 +1,4 @@
+import { appLocale } from '../../lib/i18n/locale';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -34,7 +35,7 @@ const SplitCard: React.FC<{ split: Split }> = ({ split }) => {
 
   const formatDate = (dateStr: string): string => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('he-IL', { day: 'numeric', month: 'short', year: 'numeric' });
+    return date.toLocaleDateString(appLocale(), { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
   const getSplitDescription = () => {

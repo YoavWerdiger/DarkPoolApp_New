@@ -6,14 +6,11 @@ import { registerRootComponent } from 'expo';
 
 // OAuth (Google וכו'): נדרש לסגירת סשן דפדפן אחרי redirect (במיוחד web; לא מזיק ב-native)
 maybeCompleteAuthSession();
-import { I18nManager } from 'react-native';
+// שפת ממשק (עברית / אנגלית): כיוון RTL/LTR לפי השפה השמורה, ואתחול התרגומים — לפני App
+import { applyLanguageDirection, getStoredLanguage } from './lib/i18n/language';
+import './lib/i18n';
 
-try {
-  I18nManager.allowRTL(true);
-  I18nManager.forceRTL(true);
-} catch {
-  /* מסביבות ישנות / Hermes — לא לשבור את האתחול */
-}
+applyLanguageDirection(getStoredLanguage());
 
 import App from './App';
 

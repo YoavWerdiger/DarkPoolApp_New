@@ -1,3 +1,4 @@
+import { appLocale } from '../../lib/i18n/locale';
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, Image, PanResponder, GestureResponderEvent, PanResponderGestureState, I18nManager } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -39,7 +40,7 @@ export default function MediaMessageRenderer({
   isGroupEnd
 }: MediaMessageRendererProps) {
   const DesignTokens = useDesignTokens();
-  const time = new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+  const time = new Date().toLocaleTimeString(appLocale(), { hour: '2-digit', minute: '2-digit' });
   // ====== Audio state ======
   const soundRef = useRef<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);

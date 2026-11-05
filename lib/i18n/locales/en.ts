@@ -1,0 +1,67 @@
+/** English — same structure as he.ts (TypeScript enforces it via DeepPartial; missing keys fall back to Hebrew). */
+import type { Translation } from './he';
+
+type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : string };
+
+const en: DeepPartial<Translation> = {
+  common: {
+    cancel: 'Cancel',
+    save: 'Save',
+    close: 'Close',
+    error: 'Error',
+    success: 'Success',
+    cancelled: 'Cancelled',
+    loading: 'Loading...',
+    user: 'User',
+    clear: 'Clear',
+  },
+  drawer: {
+    chat: 'Community',
+    courses: 'Academy',
+    portfolios: 'Trading Journal',
+    darkPool: 'Insiders',
+    news: 'News',
+    tweets: 'Tweets',
+    earnings: 'Earnings',
+    calendar: 'Economic Calendar',
+    watchlist: 'Watchlist',
+    heatmap: 'Heatmap',
+    savedArticles: 'Saved Articles',
+    member: 'Community member',
+    memberSince: 'Member since {{date}}',
+  },
+  settings: {
+    title: 'Settings',
+    appearance: 'Appearance',
+    darkMode: 'Dark mode',
+    language: 'Language',
+    interfaceLanguage: 'App language',
+    languageName: 'English',
+    changeLanguageTitle: 'App language',
+    changeLanguageBody: 'The app will reload to switch language and layout direction.',
+    switchToOther: 'עברית',
+    billingSection: 'Subscription & Billing',
+    billing: 'Subscription, payments & invoices',
+    security: 'Security',
+    biometric: 'Biometric authentication',
+    advanced: 'Advanced',
+    clearCache: 'Clear cache',
+    about: 'About',
+    aboutTitle: 'About',
+    aboutBody: 'DarkPool App\nVersion {{version}}\n\n© {{year}} DarkPool',
+    versionLine: 'DarkPool App · Version {{version}}',
+    clearCacheConfirm: 'Are you sure you want to delete all temporary data? Your personal information will not be deleted.',
+    clearCacheDone_one: 'Cleared 1 cached item',
+    clearCacheDone_other: 'Cleared {{count}} cached items',
+    clearCacheNothing: 'Nothing to clear',
+    clearCacheError: 'Failed to clear the cache',
+    biometricUnsupported: 'Your device does not support biometric authentication',
+    biometricNotEnrolled: 'Biometric authentication is not set up. Please set up Face ID or Touch ID in your device settings',
+    biometricPrompt: 'Verify your identity',
+    biometricEnabled: 'Biometric authentication enabled',
+    biometricCancelled: 'Biometric authentication cancelled',
+    biometricError: 'Failed to enable biometric authentication',
+  },
+};
+
+export default en;

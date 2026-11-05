@@ -1,3 +1,4 @@
+import { appLocale } from '../../lib/i18n/locale';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
@@ -136,7 +137,7 @@ export default function AdminTicketsScreen({ navigation }: any) {
                     {item.body}
                   </Text>
                   <Text style={[styles.meta, { color: tokens.colors.text.tertiary }]}>
-                    {name} · {new Date(item.created_at).toLocaleDateString('he-IL')}
+                    {name} · {new Date(item.created_at).toLocaleDateString(appLocale())}
                   </Text>
                 </UICard>
               </TouchableOpacity>

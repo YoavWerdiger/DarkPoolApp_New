@@ -1,3 +1,5 @@
+import i18n from '../lib/i18n';
+import { appLocale } from '../lib/i18n/locale';
 import { runAfterInteractions } from '../utils/runAfterInteractions';
 import React, { useEffect, useMemo } from 'react';
 import {
@@ -88,16 +90,16 @@ const DRAWER_ITEMS: Array<{
   icon: string;
   iconFamily?: DrawerIconFamily;
 }> = [
-  { name: 'Chat', title: 'הקהילה', icon: 'chatbubbles-outline' },
-  { name: 'Courses', title: 'האקדמיה', icon: 'school-outline' },
-  { name: 'Portfolios', title: 'יומן מסחר', icon: 'book-outline' },
-  { name: 'DarkPool', title: 'אינסיידרים', icon: 'eye-outline' },
-  { name: 'News', title: 'חדשות', icon: 'newspaper-outline' },
-  { name: 'Tweets', title: 'ציוצים', icon: 'twitter', iconFamily: 'feather' },
-  { name: 'NewsEarnings', title: 'דיווחי רווח', icon: 'notifications-outline' },
-  { name: 'NewsCalendar', title: 'יומן כלכלי', icon: 'calendar-outline' },
-  { name: 'Watchlist', title: 'רשימת מעקב', icon: 'list-outline' },
-  { name: 'MarketsHeatmap', title: 'מפת חום', icon: 'map-outline' },
+  { name: 'Chat', title: i18n.t('drawer.chat'), icon: 'chatbubbles-outline' },
+  { name: 'Courses', title: i18n.t('drawer.courses'), icon: 'school-outline' },
+  { name: 'Portfolios', title: i18n.t('drawer.portfolios'), icon: 'book-outline' },
+  { name: 'DarkPool', title: i18n.t('drawer.darkPool'), icon: 'eye-outline' },
+  { name: 'News', title: i18n.t('drawer.news'), icon: 'newspaper-outline' },
+  { name: 'Tweets', title: i18n.t('drawer.tweets'), icon: 'twitter', iconFamily: 'feather' },
+  { name: 'NewsEarnings', title: i18n.t('drawer.earnings'), icon: 'notifications-outline' },
+  { name: 'NewsCalendar', title: i18n.t('drawer.calendar'), icon: 'calendar-outline' },
+  { name: 'Watchlist', title: i18n.t('drawer.watchlist'), icon: 'list-outline' },
+  { name: 'MarketsHeatmap', title: i18n.t('drawer.heatmap'), icon: 'map-outline' },
 ];
 
 const ACCENT = '#00C805';
@@ -129,10 +131,12 @@ function navigateDrawerItem(
 
 /** `created_at` מגיע כמחרוזת ISO מהשרת — עלול להיות חסר או לא תקין */
 function formatActiveSince(createdAt: string | null | undefined): string {
-  if (!createdAt) return 'חבר קהילה';
+  if (!createdAt) return i18n.t('drawer.member');
   const date = new Date(createdAt);
-  if (Number.isNaN(date.getTime())) return 'חבר קהילה';
-  return `חבר קהילה מאז ${date.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' })}`;
+  if (Number.isNaN(date.getTime())) return i18n.t('drawer.member');
+  return i18n.t('drawer.memberSince', {
+    date: date.toLocaleDateString(appLocale(), { month: 'long', year: 'numeric' }),
+  });
 }
 
 /**
@@ -165,7 +169,7 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
     user?.display_name ||
     user?.full_name ||
     user?.email?.split('@')?.[0] ||
-    'משתמש';
+    i18n.t('common.user');
   const avatarUrl = user?.profile_picture;
   const activeSinceText = useMemo(() => formatActiveSince(user?.created_at), [user?.created_at]);
 
@@ -443,8 +447,8 @@ export default function MainTabs() {
           // (צ'אט/realtime) לא ימשיכו לרנדר ברקע וייגנבו את ה-JS thread בניווט.
         }}
       >
-        <Drawer.Screen name="Chat" component={ChatStack} options={{ title: 'הקהילה' }} />
-        <Drawer.Screen name="Courses" component={LearningStack} options={{ title: 'האקדמיה' }} />
+        <Drawer.Screen name="Chat" component={ChatStack} options={{ title: i18n.t('drawer.chat') }} />
+        <Drawer.Screen name="Courses" component={LearningStack} options={{ title: i18n.t('drawer.courses') }} />
         {/* Journal stack kept registered for backward-compat deep links, hidden from drawer menu. */}
         <Drawer.Screen
           name="Journal"
@@ -454,46 +458,46 @@ export default function MainTabs() {
         <Drawer.Screen
           name="Portfolios"
           component={PortfoliosStack}
-          options={{ title: 'יומן מסחר' }}
+          options={{ title: i18n.t('drawer.portfolios') }}
         />
         <Drawer.Screen
           name="DarkPool"
           component={DarkPoolStack}
-          options={{ title: 'אינסיידרים' }}
+          options={{ title: i18n.t('drawer.darkPool') }}
         />
-        <Drawer.Screen name="News" component={NewsScreen} options={{ title: 'חדשות' }} />
-        <Drawer.Screen name="Tweets" component={TweetsScreen} options={{ title: 'ציוצים' }} />
+        <Drawer.Screen name="News" component={NewsScreen} options={{ title: i18n.t('drawer.news') }} />
+        <Drawer.Screen name="Tweets" component={TweetsScreen} options={{ title: i18n.t('drawer.tweets') }} />
         <Drawer.Screen
           name="Watchlist"
           component={WatchlistScreen}
-          options={{ title: 'רשימת מעקב' }}
+          options={{ title: i18n.t('drawer.watchlist') }}
         />
         {/* Legacy alias — deep links ישנים ל-"Markets" */}
         <Drawer.Screen
           name="Markets"
           component={WatchlistScreen}
-          options={{ title: 'רשימת מעקב', drawerItemStyle: { display: 'none' } }}
+          options={{ title: i18n.t('drawer.watchlist'), drawerItemStyle: { display: 'none' } }}
         />
         <Drawer.Screen
           name="NewsEarnings"
           component={NewsEarningsScreen}
-          options={{ title: 'דיווחי רווח' }}
+          options={{ title: i18n.t('drawer.earnings') }}
         />
         <Drawer.Screen
           name="NewsCalendar"
           component={NewsEconomicCalendarScreen}
-          options={{ title: 'יומן כלכלי' }}
+          options={{ title: i18n.t('drawer.calendar') }}
         />
         <Drawer.Screen
           name="MarketsHeatmap"
           component={MarketsHeatmapScreen}
-          options={{ title: 'מפת חום' }}
+          options={{ title: i18n.t('drawer.heatmap') }}
         />
         <Drawer.Screen
           name="NewsLiked"
           component={LikedArticlesScreen}
           options={{
-            title: 'כתבות שמורות',
+            title: i18n.t('drawer.savedArticles'),
             drawerItemStyle: { display: 'none' },
           }}
         />

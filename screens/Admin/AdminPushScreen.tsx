@@ -1,3 +1,4 @@
+import { appLocale } from '../../lib/i18n/locale';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
@@ -130,7 +131,7 @@ export default function AdminPushScreen({ navigation }: any) {
     if (!iso) return '';
     try {
       const d = new Date(iso);
-      return d.toLocaleDateString('he-IL', {
+      return d.toLocaleDateString(appLocale(), {
         day: '2-digit',
         month: '2-digit',
         hour: '2-digit',

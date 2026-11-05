@@ -1,3 +1,4 @@
+import { appLocale } from '../../../lib/i18n/locale';
 /**
  * גרף טיקר + שינוי מול בסיס אמיתי (יום / טווח נבחר).
  * לא תשואת «כניסה» משוחזרת מ-STOCK Act.
@@ -330,14 +331,14 @@ export function formatTickerScrubDate(iso: string | null | undefined): string | 
   const d = hasTime ? new Date(iso) : new Date(`${iso.slice(0, 10)}T12:00:00`);
   if (Number.isNaN(d.getTime())) return iso.slice(0, 10);
   if (hasTime) {
-    return d.toLocaleString('he-IL', {
+    return d.toLocaleString(appLocale(), {
       day: 'numeric',
       month: 'short',
       hour: '2-digit',
       minute: '2-digit',
     });
   }
-  return d.toLocaleDateString('he-IL', {
+  return d.toLocaleDateString(appLocale(), {
     day: 'numeric',
     month: 'short',
     year: 'numeric',

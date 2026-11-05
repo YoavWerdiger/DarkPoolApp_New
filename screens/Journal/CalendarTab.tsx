@@ -1,3 +1,4 @@
+import { appLocale } from '../../lib/i18n/locale';
 import React, { useState, useCallback } from 'react';
 import {
   View,
@@ -172,7 +173,7 @@ export default function CalendarTab() {
   };
 
   const getMonthName = (date: Date) => {
-    return date.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
+    return date.toLocaleDateString(appLocale(), { month: 'long', year: 'numeric' });
   };
 
   const navigateMonth = (direction: 'prev' | 'next') => {

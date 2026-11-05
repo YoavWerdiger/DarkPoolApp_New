@@ -1,3 +1,4 @@
+import { appLocale } from '../lib/i18n/locale';
 /** Hebrew billing UI helpers — next charge, payment method, plan price labels. */
 
 /** `user_subscriptions.status` values that are not billable / not in good standing. */
@@ -43,7 +44,7 @@ export function formatBillingDateHe(iso: string | null | undefined): string | nu
   if (!iso) return null;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
-  return d.toLocaleDateString('he-IL', {
+  return d.toLocaleDateString(appLocale(), {
     day: 'numeric',
     month: 'long',
     year: 'numeric',

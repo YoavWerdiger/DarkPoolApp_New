@@ -1,3 +1,4 @@
+import { appLocale } from '../../lib/i18n/locale';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity, FlatList, StyleSheet, TextInput, ScrollView } from 'react-native';
@@ -123,7 +124,7 @@ export default function TradesListTab() {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('he-IL', {
+    return date.toLocaleDateString(appLocale(), {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',

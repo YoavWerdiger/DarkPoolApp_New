@@ -1,3 +1,4 @@
+import { appLocale } from '../lib/i18n/locale';
 import { supabase } from './supabase';
 import { ensureRealtimeAuth } from './chat/chatRealtimeService';
 import type {
@@ -535,7 +536,7 @@ export function formatPostTime(iso: string): string {
     if (diffSec < 3600) return `${Math.floor(diffSec / 60)} דק׳`;
     if (diffSec < 86400) return `${Math.floor(diffSec / 3600)} שע׳`;
     if (diffSec < 86400 * 7) return `${Math.floor(diffSec / 86400)} ימים`;
-    return date.toLocaleDateString('he-IL', {
+    return date.toLocaleDateString(appLocale(), {
       day: 'numeric',
       month: 'short',
     });

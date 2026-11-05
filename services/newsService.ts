@@ -1,3 +1,4 @@
+import { appLocale } from '../lib/i18n/locale';
 import { supabase } from './supabase';
 import { DesignTokens } from '../components/ui/DesignTokens';
 
@@ -442,7 +443,7 @@ export const formatNewsDate = (dateString: string): string => {
   // תצוגת תאריך ושעה לפי שעון ישראל
   try {
     // המרה ישירה לשעון ישראל
-    const formatted = date.toLocaleString('he-IL', {
+    const formatted = date.toLocaleString(appLocale(), {
       timeZone: 'Asia/Jerusalem',
       year: 'numeric',
       month: 'short',
@@ -455,7 +456,7 @@ export const formatNewsDate = (dateString: string): string => {
     return formatted;
   } catch (error) {
     // נפילה - תצוגה פשוטה
-    return date.toLocaleDateString('he-IL', {
+    return date.toLocaleDateString(appLocale(), {
       year: 'numeric',
       month: 'short',
       day: 'numeric',

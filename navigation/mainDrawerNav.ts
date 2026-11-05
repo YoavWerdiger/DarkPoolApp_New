@@ -1,9 +1,10 @@
+import { getStoredLanguage, isRtlLanguage } from '../lib/i18n/language';
 import { DrawerActions } from '@react-navigation/native';
 import { rootNavigationRef } from './rootNavigationRef';
 
 export function getMainDrawerPosition(): 'left' | 'right' {
-  // האפליקציה בעברית — תפריט ראשי נפתח מימין באופן עקבי בכל סביבת ריצה.
-  return 'right';
+  // עברית — התפריט נפתח מימין; אנגלית (LTR) — משמאל. השפה לא משתנה בלי טעינה מחדש.
+  return isRtlLanguage(getStoredLanguage()) ? 'right' : 'left';
 }
 
 /** חייב להתאים ל־`id` על ה־Drawer ב־MainTabs */

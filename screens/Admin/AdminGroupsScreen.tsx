@@ -1,3 +1,4 @@
+import { appLocale } from '../../lib/i18n/locale';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -122,7 +123,7 @@ export default function AdminGroupsScreen({ navigation }: any) {
                           {chatGroupDisplayName(g.name)}
                         </Text>
                         <Text style={[styles.rowMeta, { color: tokens.colors.text.secondary }]} numberOfLines={1}>
-                          {(g.members_count ?? 0).toLocaleString('he-IL')} חברים ·{' '}
+                          {(g.members_count ?? 0).toLocaleString(appLocale())} חברים ·{' '}
                           {groupAdminsOnly(g) ? 'רק אדמינים כותבים' : 'כולם כותבים'} ·{' '}
                           {tiers.map((t) => TIER_LABEL[t]).join(' + ')}
                         </Text>

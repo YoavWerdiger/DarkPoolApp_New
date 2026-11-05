@@ -1,3 +1,4 @@
+import { appLocale } from '../../lib/i18n/locale';
 import { legacyAlert } from '../../utils/appDialog';
 import ShareDestinationSheet from '../../components/share/ShareDestinationSheet';
 import { buildEconomicEventAttachment } from '../../types/shareableEntity';
@@ -865,7 +866,7 @@ export default function EconomicCalendarTab({
               }}
               numberOfLines={2}
             >
-              {selectedDate.toLocaleDateString('he-IL', {
+              {selectedDate.toLocaleDateString(appLocale(), {
                 weekday: 'long',
                 day: 'numeric',
                 month: 'long',
@@ -909,7 +910,7 @@ export default function EconomicCalendarTab({
   // רינדור רשימה ריקה - יום שקט
   const renderEmptyState = () => {
     const isToday = selectedDate.toDateString() === new Date().toDateString();
-    const dateStr = selectedDate.toLocaleDateString('he-IL', { 
+    const dateStr = selectedDate.toLocaleDateString(appLocale(), { 
       weekday: 'long',
       day: 'numeric',
       month: 'long'

@@ -1,3 +1,4 @@
+import { appLocale } from '../../lib/i18n/locale';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -56,7 +57,7 @@ const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
   const formatDate = (dateStr: string | null): string => {
     if (!dateStr) return 'לא ידוע';
     const date = new Date(dateStr);
-    return date.toLocaleDateString('he-IL', { day: 'numeric', month: 'short', year: 'numeric' });
+    return date.toLocaleDateString(appLocale(), { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
   const formatShares = (shares: number): string => {

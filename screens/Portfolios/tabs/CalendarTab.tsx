@@ -1,3 +1,4 @@
+import { appLocale } from '../../../lib/i18n/locale';
 import { JournalListSkeleton } from '../../../components/ui/SkeletonLoader';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -511,7 +512,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
         <View>
           <View style={styles.selectedHeader}>
             <Text style={styles.selectedTitle}>
-              {new Date(selectedDay).toLocaleDateString('he-IL', {
+              {new Date(selectedDay).toLocaleDateString(appLocale(), {
                 day: '2-digit',
                 month: 'long',
               })}

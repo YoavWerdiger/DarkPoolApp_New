@@ -1,3 +1,4 @@
+import { appLocale } from '../../lib/i18n/locale';
 import { legacyAlert, showAppConfirm } from '../../utils/appDialog';
 import React, { useCallback, useState } from 'react';
 import {
@@ -393,7 +394,7 @@ export default function BillingScreen({ navigation }: any) {
                     icon={Receipt}
                     label={
                       tx.created_at
-                        ? new Date(tx.created_at).toLocaleDateString('he-IL')
+                        ? new Date(tx.created_at).toLocaleDateString(appLocale())
                         : '—'
                     }
                     note={tx.amount != null ? `₪${tx.amount}` : undefined}

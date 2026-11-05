@@ -1,3 +1,4 @@
+import { appLocale } from '../../lib/i18n/locale';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
@@ -83,7 +84,7 @@ const TABS: { id: TabKey; label: string }[] = [
 function fmtDate(iso: string | null | undefined) {
   if (!iso) return '—';
   try {
-    return new Date(iso).toLocaleString('he-IL');
+    return new Date(iso).toLocaleString(appLocale());
   } catch {
     return iso;
   }
@@ -92,7 +93,7 @@ function fmtDate(iso: string | null | undefined) {
 function fmtDay(iso: string | null | undefined) {
   if (!iso) return '—';
   try {
-    return new Date(iso).toLocaleDateString('he-IL');
+    return new Date(iso).toLocaleDateString(appLocale());
   } catch {
     return iso;
   }
@@ -430,7 +431,7 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
             adjustsFontSizeToFit
             minimumFontScale={0.75}
           >
-            {`₪${monthSummary.revenue.toLocaleString('he-IL')}`}
+            {`₪${monthSummary.revenue.toLocaleString(appLocale())}`}
           </Text>
         </View>
 

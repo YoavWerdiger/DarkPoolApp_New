@@ -1,0 +1,67 @@
+/**
+ * עברית — שפת המקור. כל מפתח חדש נכנס קודם לכאן, ואז ל-en.ts (אותו מבנה; TypeScript בודק).
+ * מפתח שחסר באנגלית נופל לעברית (fallbackLng).
+ */
+const he = {
+  common: {
+    cancel: 'ביטול',
+    save: 'שמירה',
+    close: 'סגירה',
+    error: 'שגיאה',
+    success: 'הצלחה',
+    cancelled: 'בוטל',
+    loading: 'טוען...',
+    user: 'משתמש',
+    clear: 'נקה',
+  },
+  drawer: {
+    chat: 'הקהילה',
+    courses: 'האקדמיה',
+    portfolios: 'יומן מסחר',
+    darkPool: 'אינסיידרים',
+    news: 'חדשות',
+    tweets: 'ציוצים',
+    earnings: 'דיווחי רווח',
+    calendar: 'יומן כלכלי',
+    watchlist: 'רשימת מעקב',
+    heatmap: 'מפת חום',
+    savedArticles: 'כתבות שמורות',
+    member: 'חבר קהילה',
+    memberSince: 'חבר קהילה מאז {{date}}',
+  },
+  settings: {
+    title: 'הגדרות',
+    appearance: 'מראה',
+    darkMode: 'מצב כהה',
+    language: 'שפה',
+    interfaceLanguage: 'שפת ממשק',
+    languageName: 'עברית',
+    changeLanguageTitle: 'שפת ממשק',
+    changeLanguageBody: 'האפליקציה תיטען מחדש כדי להחליף שפה וכיוון.',
+    switchToOther: 'English',
+    billingSection: 'מנוי וחיובים',
+    billing: 'מנוי, תשלומים וחשבוניות',
+    security: 'אבטחה',
+    biometric: 'אימות ביומטרי',
+    advanced: 'מתקדם',
+    clearCache: 'נקה מטמון',
+    about: 'אודות האפליקציה',
+    aboutTitle: 'אודות',
+    aboutBody: 'DarkPool App\nגרסה {{version}}\n\n© {{year}} DarkPool',
+    versionLine: 'DarkPool App · גרסה {{version}}',
+    clearCacheConfirm: 'האם אתה בטוח שברצונך למחוק את כל הנתונים הזמניים? פעולה זו לא תמחק את המידע האישי שלך.',
+    clearCacheDone_one: 'נוקה פריט מטמון אחד',
+    clearCacheDone_other: 'נוקו {{count}} פריטי מטמון',
+    clearCacheNothing: 'אין מטמון לניקוי',
+    clearCacheError: 'שגיאה בניקוי המטמון',
+    biometricUnsupported: 'המכשיר שלך לא תומך באימות ביומטרי',
+    biometricNotEnrolled: 'לא הוגדר אימות ביומטרי במכשיר. אנא הגדר Face ID או Touch ID בהגדרות המכשיר',
+    biometricPrompt: 'אמת את זהותך',
+    biometricEnabled: 'אימות ביומטרי הופעל בהצלחה',
+    biometricCancelled: 'אימות ביומטרי בוטל',
+    biometricError: 'שגיאה בהפעלת אימות ביומטרי',
+  },
+};
+
+export default he;
+export type Translation = typeof he;

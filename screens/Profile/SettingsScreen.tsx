@@ -31,8 +31,9 @@ import {
   loadAppSettings,
   saveAppSettings,
   clearAppCache,
-  type AppLanguage,
 } from '../../services/appSettings';
+import { useTranslation } from 'react-i18next';
+import { changeLanguage, getStoredLanguage, type AppLanguage } from '../../lib/i18n';
 import { getAppVersionLabel } from '../../utils/appMeta';
 import {
   SettingsGlassCard,
@@ -62,7 +63,8 @@ export default function SettingsScreen({ navigation }: any) {
   const { theme, isDarkMode, toggleTheme } = useTheme();
   const DesignTokens = useDesignTokens();
   const [biometricAuth, setBiometricAuth] = useState(false);
-  const [language, setLanguage] = useState<AppLanguage>('he');
+  const { t } = useTranslation();
+  const language = getStoredLanguage();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -73,7 +75,6 @@ export default function SettingsScreen({ navigation }: any) {
     try {
       const saved = await loadAppSettings();
       setBiometricAuth(saved.biometricAuth);
-      setLanguage(saved.language);
     } catch (error) {
     } finally {
       setIsLoading(false);
@@ -89,42 +90,41 @@ export default function SettingsScreen({ navigation }: any) {
     }
   };
 
-  const cycleLanguage = async () => {
+  // החלפת שפה: אישור → שמירה, כיוון RTL/LTR וטעינה מחדש של האפליקציה
+  const cycleLanguage = () => {
     void HapticFeedback.selection();
     const next: AppLanguage = language === 'he' ? 'en' : 'he';
-    setLanguage(next);
-    try {
-      await saveAppSettings({ language: next });
-      legacyAlert(
-        'שפה',
-        next === 'he'
-          ? 'העדפת שפה: עברית (נשמר מקומית).\nתרגום מלא של הממשק עדיין לא מחובר.'
-          : 'Language preference: English (saved locally).\nFull UI translation is not wired yet.',
-      );
-    } catch {
-      /* noop */
-    }
+    legacyAlert(t('settings.changeLanguageTitle'), t('settings.changeLanguageBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('settings.switchToOther'),
+        onPress: () => {
+          void saveAppSettings({ language: next }).catch(() => {});
+          void changeLanguage(next);
+        },
+      },
+    ]);
   };
 
   const handleClearCache = () => {
     legacyAlert(
-      'נקה מטמון',
-      'האם אתה בטוח שברצונך למחוק את כל הנתונים הזמניים? פעולה זו לא תמחק את המידע האישי שלך.',
+      t('settings.clearCache'),
+      t('settings.clearCacheConfirm'),
       [
-        { text: 'ביטול', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'נקה',
+          text: t('common.clear'),
           style: 'destructive',
           onPress: async () => {
             try {
               const removed = await clearAppCache();
               void HapticFeedback.success();
               legacyAlert(
-                'הצלחה',
-                removed > 0 ? `נוקו ${removed} פריטי מטמון` : 'אין מטמון לניקוי',
+                t('common.success'),
+                removed > 0 ? t('settings.clearCacheDone', { count: removed }) : t('settings.clearCacheNothing'),
               );
             } catch (error) {
-              legacyAlert('שגיאה', 'שגיאה בניקוי המטמון');
+              legacyAlert(t('common.error'), t('settings.clearCacheError'));
             }
           }
         }
@@ -139,32 +139,32 @@ export default function SettingsScreen({ navigation }: any) {
         const compatible = await LocalAuthentication.hasHardwareAsync();
         
         if (!compatible) {
-          legacyAlert('שגיאה', 'המכשיר שלך לא תומך באימות ביומטרי');
+          legacyAlert(t('common.error'), t('settings.biometricUnsupported'));
           return;
         }
 
         const enrolled = await LocalAuthentication.isEnrolledAsync();
         if (!enrolled) {
-          legacyAlert('שגיאה', 'לא הוגדר אימות ביומטרי במכשיר. אנא הגדר Face ID או Touch ID בהגדרות המכשיר');
+          legacyAlert(t('common.error'), t('settings.biometricNotEnrolled'));
           return;
         }
 
         // נבצע אימות ביומטרי
         const result = await LocalAuthentication.authenticateAsync({
-          promptMessage: 'אמת את זהותך',
-          cancelLabel: 'ביטול',
+          promptMessage: t('settings.biometricPrompt'),
+          cancelLabel: t('common.cancel'),
           disableDeviceFallback: false,
         });
 
         if (result.success) {
           await persistBiometric(true);
           void HapticFeedback.success();
-          legacyAlert('הצלחה', 'אימות ביומטרי הופעל בהצלחה');
+          legacyAlert(t('common.success'), t('settings.biometricEnabled'));
         } else {
-          legacyAlert('בוטל', 'אימות ביומטרי בוטל');
+          legacyAlert(t('common.cancelled'), t('settings.biometricCancelled'));
         }
       } catch (error) {
-        legacyAlert('שגיאה', 'שגיאה בהפעלת אימות ביומטרי');
+        legacyAlert(t('common.error'), t('settings.biometricError'));
       }
     } else {
       await persistBiometric(false);
@@ -173,11 +173,11 @@ export default function SettingsScreen({ navigation }: any) {
 
   const settingSections = [
     {
-      title: 'מראה',
+      title: t('settings.appearance'),
       items: [
         {
           id: 'darkMode',
-          title: 'מצב כהה',
+          title: t('settings.darkMode'),
           icon: Moon,
           type: 'switch' as const,
           value: isDarkMode,
@@ -190,11 +190,11 @@ export default function SettingsScreen({ navigation }: any) {
       ],
     },
     {
-      title: 'שפה',
+      title: t('settings.language'),
       items: [
         {
           id: 'language',
-          title: 'שפת ממשק',
+          title: `${t('settings.interfaceLanguage')} · ${t('settings.languageName')}`,
           icon: Languages,
           type: 'action' as const,
           onPress: () => void cycleLanguage(),
@@ -202,11 +202,11 @@ export default function SettingsScreen({ navigation }: any) {
       ],
     },
     {
-      title: 'מנוי וחיובים',
+      title: t('settings.billingSection'),
       items: [
         {
           id: 'billing',
-          title: 'מנוי, תשלומים וחשבוניות',
+          title: t('settings.billing'),
           icon: CreditCard,
           type: 'action' as const,
           onPress: () => {
@@ -217,11 +217,11 @@ export default function SettingsScreen({ navigation }: any) {
       ],
     },
     {
-      title: 'אבטחה',
+      title: t('settings.security'),
       items: [
         {
           id: 'biometricAuth',
-          title: 'אימות ביומטרי',
+          title: t('settings.biometric'),
           icon: ScanFace,
           type: 'switch' as const,
           value: biometricAuth,
@@ -230,11 +230,11 @@ export default function SettingsScreen({ navigation }: any) {
       ]
     },
     {
-      title: 'מתקדם',
+      title: t('settings.advanced'),
       items: [
         {
           id: 'clearCache',
-          title: 'נקה מטמון',
+          title: t('settings.clearCache'),
           icon: Eraser,
           type: 'action' as const,
           onPress: handleClearCache,
@@ -242,11 +242,11 @@ export default function SettingsScreen({ navigation }: any) {
         },
         {
           id: 'about',
-          title: 'אודות האפליקציה',
+          title: t('settings.about'),
           icon: Info,
           type: 'action' as const,
           onPress: () => {
-            legacyAlert('אודות', `DarkPool App\nגרסה ${getAppVersionLabel()}\n\n© ${new Date().getFullYear()} DarkPool`);
+            legacyAlert(t('settings.aboutTitle'), t('settings.aboutBody', { version: getAppVersionLabel(), year: new Date().getFullYear() }));
           }
         }
       ]
@@ -257,7 +257,7 @@ export default function SettingsScreen({ navigation }: any) {
     return (
       <View style={[styles.loading, { backgroundColor: DesignTokens.colors.background.primary }]}>
         <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-        <Text style={[styles.loadingText, { color: DesignTokens.colors.text.secondary }]}>טוען...</Text>
+        <Text style={[styles.loadingText, { color: DesignTokens.colors.text.secondary }]}>{t('common.loading')}</Text>
       </View>
     );
   }
@@ -266,7 +266,7 @@ export default function SettingsScreen({ navigation }: any) {
     <View style={[styles.root, { backgroundColor: DesignTokens.colors.background.primary }]}>
       <RNSafeAreaView style={styles.root} edges={['top', 'bottom']}>
         <ChatSubScreenHeader
-          title="הגדרות"
+          title={t('settings.title')}
           onBack={() => {
             void HapticFeedback.impactLight();
             navigation.goBack();
@@ -349,7 +349,7 @@ export default function SettingsScreen({ navigation }: any) {
 
             <View style={styles.versionWrap}>
               <Text style={[styles.version, { color: DesignTokens.colors.text.muted }]}>
-                {isolateNumericRuns(`DarkPool App · גרסה ${getAppVersionLabel()}`)}
+                {isolateNumericRuns(t('settings.versionLine', { version: getAppVersionLabel() }))}
               </Text>
             </View>
           </View>

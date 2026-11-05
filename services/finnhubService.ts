@@ -1,3 +1,4 @@
+import { appLocale } from '../lib/i18n/locale';
 // FinnhubService.ts - שירות לנתונים כלכליים מ-Finnhub API
 import { supabase } from '../lib/supabase';
 
@@ -159,7 +160,7 @@ class FinnhubService {
   convertToAppFormat(event: FinnhubEconomicEvent): EconomicEvent {
     const eventDate = new Date(event.time);
     const dateStr = eventDate.toISOString().split('T')[0];
-    const timeStr = eventDate.toLocaleTimeString('he-IL', { 
+    const timeStr = eventDate.toLocaleTimeString(appLocale(), { 
       hour: '2-digit', 
       minute: '2-digit',
       hour12: false 

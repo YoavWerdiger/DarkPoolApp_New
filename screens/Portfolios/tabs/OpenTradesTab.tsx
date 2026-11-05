@@ -1,3 +1,4 @@
+import { appLocale } from '../../../lib/i18n/locale';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dimensions,
@@ -632,7 +633,7 @@ export default function OpenTradesTab({
                   >
                     <Ionicons name="calendar-outline" size={18} color={tokens.colors.text.tertiary} />
                     <Text style={styles.datePillText}>
-                      {exitDate.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                      {exitDate.toLocaleDateString(appLocale(), { day: '2-digit', month: '2-digit', year: 'numeric' })}
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -646,7 +647,7 @@ export default function OpenTradesTab({
                   >
                     <Ionicons name="time-outline" size={18} color={tokens.colors.text.tertiary} />
                     <Text style={styles.datePillText}>
-                      {exitDate.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+                      {exitDate.toLocaleTimeString(appLocale(), { hour: '2-digit', minute: '2-digit' })}
                     </Text>
                   </TouchableOpacity>
                 </View>

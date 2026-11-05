@@ -1,3 +1,4 @@
+import { appLocale } from '../../lib/i18n/locale';
 import React, { memo, useState, useEffect, useMemo } from 'react';
 import { FlatList, Text, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -124,7 +125,7 @@ const SeenBySheet: React.FC<SeenBySheetProps> = memo(({
         <>
           <Text style={metaStyles.time}>{formatTimeAgo(item.read_at)}</Text>
           <Text style={metaStyles.date}>
-            {new Date(item.read_at).toLocaleDateString('he-IL', {
+            {new Date(item.read_at).toLocaleDateString(appLocale(), {
               day: '2-digit',
               month: '2-digit',
               year: 'numeric',

@@ -1,3 +1,4 @@
+import { appLocale } from '../../lib/i18n/locale';
 import React, { useState, useMemo } from 'react';
 import {
   View,
@@ -629,7 +630,7 @@ export default function FearAndGreedCard({
               {data.timestamp && (
                 <Text style={styles.timestamp}>
                   עודכן:{' '}
-                  {new Date(data.timestamp * 1000).toLocaleString('he-IL', {
+                  {new Date(data.timestamp * 1000).toLocaleString(appLocale(), {
                     day: 'numeric',
                     month: 'short',
                     hour: '2-digit',

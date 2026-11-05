@@ -1,3 +1,4 @@
+import { appLocale } from '../../lib/i18n/locale';
 /**
  * MessageActionSheet — legacy API; עטוף ב-ChatBottomSheet (אותו glass כמו שאר שיטי הצ׳אט).
  * המסלול הפעיל ב-ChatGroupScreen הוא LongPressOverlay.
@@ -250,7 +251,7 @@ export default function MessageActionSheet({
                 {message.sender?.full_name || 'משתמש'}
               </Text>
               <Text style={[styles.previewTime, { color: DesignTokens.colors.text.tertiary }]}>
-                {new Date(message.created_at).toLocaleTimeString('he-IL', {
+                {new Date(message.created_at).toLocaleTimeString(appLocale(), {
                   hour: '2-digit',
                   minute: '2-digit',
                 })}

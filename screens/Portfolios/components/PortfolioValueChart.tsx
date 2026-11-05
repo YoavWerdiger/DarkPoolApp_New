@@ -1,3 +1,4 @@
+import { appLocale } from '../../../lib/i18n/locale';
 import { LIGHT_CANVAS } from '../../../components/ui/designTokensStatic';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
@@ -150,13 +151,13 @@ function defaultFormatValue(value: number, currency: string): string {
 function formatAxisDate(iso: string): string {
   const d = new Date(`${iso.slice(0, 10)}T12:00:00`);
   if (Number.isNaN(d.getTime())) return iso.slice(0, 10);
-  return d.toLocaleDateString('he-IL', { day: 'numeric', month: 'short' });
+  return d.toLocaleDateString(appLocale(), { day: 'numeric', month: 'short' });
 }
 
 function formatScrubDate(iso: string): string {
   const d = new Date(`${iso.slice(0, 10)}T12:00:00`);
   if (Number.isNaN(d.getTime())) return iso.slice(0, 10);
-  return d.toLocaleDateString('he-IL', {
+  return d.toLocaleDateString(appLocale(), {
     day: 'numeric',
     month: 'short',
     year: 'numeric',

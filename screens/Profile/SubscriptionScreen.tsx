@@ -1,3 +1,4 @@
+import { appLocale } from '../../lib/i18n/locale';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
@@ -127,7 +128,7 @@ export default function SubscriptionScreen({ navigation }: any) {
                       </Text>
                       <View style={styles.dateRow}>
                         <Text style={[styles.meta, { color: tokens.colors.text.secondary }]}>
-                          {new Date(currentPlan.end_date).toLocaleDateString('he-IL')}
+                          {new Date(currentPlan.end_date).toLocaleDateString(appLocale())}
                         </Text>
                         <Calendar size={14} color={tokens.colors.text.tertiary} strokeWidth={2} />
                       </View>

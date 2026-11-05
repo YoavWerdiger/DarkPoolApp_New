@@ -1,3 +1,4 @@
+import { appLocale } from '../../../lib/i18n/locale';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, Dimensions } from 'react-native';
 import { legacyAlert } from '../../../utils/appDialog';
@@ -395,7 +396,7 @@ function PortfolioActionsSheetBody({
                 title={isSyncing ? 'מסנכרן…' : 'סנכרן עכשיו מ-Colmex'}
                 subtitle={
                   lastSyncAt
-                    ? `סנכרון אחרון: ${lastSyncAt.toLocaleString('he-IL')}`
+                    ? `סנכרון אחרון: ${lastSyncAt.toLocaleString(appLocale())}`
                     : 'הנתונים מסונכרנים אוטומטית מהברוקר'
                 }
                 icon={RefreshCw}

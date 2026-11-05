@@ -1,3 +1,4 @@
+import { appLocale } from '../../lib/i18n/locale';
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
@@ -50,8 +51,8 @@ function formatReportDayLabel(reportDate: string): { dayLabel: string; dateLabel
     return { dayLabel: reportDate, dateLabel: '' };
   }
   return {
-    dayLabel: d.toLocaleDateString('he-IL', { weekday: 'long' }),
-    dateLabel: d.toLocaleDateString('he-IL', { day: 'numeric', month: 'long', year: 'numeric' }),
+    dayLabel: d.toLocaleDateString(appLocale(), { weekday: 'long' }),
+    dateLabel: d.toLocaleDateString(appLocale(), { day: 'numeric', month: 'long', year: 'numeric' }),
   };
 }
 

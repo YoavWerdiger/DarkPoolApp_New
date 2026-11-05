@@ -1,3 +1,4 @@
+import { appLocale } from '../../lib/i18n/locale';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { View, Text, FlatList, RefreshControl, Pressable, Animated, StyleSheet } from 'react-native';
@@ -879,8 +880,8 @@ export default function EarningsReportsTab({
       days.push({
         dateKey,
         date,
-        dayLabel: date.toLocaleDateString('he-IL', { weekday: 'long' }),
-        dateLabel: date.toLocaleDateString('he-IL', { day: 'numeric', month: 'long' }),
+        dayLabel: date.toLocaleDateString(appLocale(), { weekday: 'long' }),
+        dateLabel: date.toLocaleDateString(appLocale(), { day: 'numeric', month: 'long' }),
         before,
         after,
         isToday: date.toDateString() === todayStr,
@@ -897,12 +898,12 @@ export default function EarningsReportsTab({
     friday.setDate(monday.getDate() + 4);
     const startDay = monday.getDate();
     const endDay = friday.getDate();
-    const endMonth = friday.toLocaleDateString('he-IL', { month: 'long' });
+    const endMonth = friday.toLocaleDateString(appLocale(), { month: 'long' });
     const year = friday.getFullYear();
     if (monday.getMonth() === friday.getMonth()) {
       return `${startDay}–${endDay} ב${endMonth} ${year}`;
     }
-    const startMonth = monday.toLocaleDateString('he-IL', { month: 'long' });
+    const startMonth = monday.toLocaleDateString(appLocale(), { month: 'long' });
     return `${startDay} ב${startMonth} – ${endDay} ב${endMonth} ${year}`;
   }, [weekStart]);
 
@@ -1167,7 +1168,7 @@ export default function EarningsReportsTab({
               }}
               numberOfLines={2}
             >
-              {selectedDate.toLocaleDateString('he-IL', {
+              {selectedDate.toLocaleDateString(appLocale(), {
                 weekday: 'long',
                 day: 'numeric',
                 month: 'long',
@@ -1242,7 +1243,7 @@ export default function EarningsReportsTab({
   // רינדור רשימה ריקה
   const renderEmptyState = () => {
     const isToday = selectedDate.toDateString() === new Date().toDateString();
-    const dateStr = selectedDate.toLocaleDateString('he-IL', { 
+    const dateStr = selectedDate.toLocaleDateString(appLocale(), { 
       weekday: 'long',
       day: 'numeric',
       month: 'long'
@@ -1309,7 +1310,7 @@ export default function EarningsReportsTab({
         </Text>
         {hasClosestReports && closestDate && (
           <UIButton
-            title={`עבור לתאריך עם דיווחים (${closestDate.toLocaleDateString('he-IL', { day: 'numeric', month: 'short' })})`}
+            title={`עבור לתאריך עם דיווחים (${closestDate.toLocaleDateString(appLocale(), { day: 'numeric', month: 'short' })})`}
             variant="primary"
             onPress={() => setSelectedDate(closestDate)}
             style={{ marginTop: APP_LAYOUT.componentGap }}

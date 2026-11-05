@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import { JournalListSkeleton } from '../../../components/ui/SkeletonLoader';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -86,14 +87,14 @@ export default function HistoryTab({ portfolioId, refreshKey }: Props) {
     () =>
       StyleSheet.create({
         root: {
-          direction: 'rtl',
+          direction: UI_DIR,
         },
         loading: { paddingVertical: 60, alignItems: 'center' },
         empty: {
           alignItems: 'center',
           paddingVertical: 60,
           gap: 8,
-          direction: 'rtl',
+          direction: UI_DIR,
         },
         emptyTitle: {
           ...journalSectionTitleStyle,
@@ -129,7 +130,7 @@ export default function HistoryTab({ portfolioId, refreshKey }: Props) {
           alignItems: 'center',
           paddingTop: 28,
           paddingHorizontal: 20,
-          direction: 'rtl',
+          direction: UI_DIR,
         },
         emptyResultsText: {
           ...journalSectionSubtitleStyle,

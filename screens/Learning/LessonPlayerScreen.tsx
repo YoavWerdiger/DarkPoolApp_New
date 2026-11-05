@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
@@ -12,7 +13,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLesson, useSaveProgress, useGetSignedUrl } from '../../hooks/useLearning';
 import { useAllowAfterNavigationTransition } from '../../hooks/afterNavigationTransition';
 import { LessonWithProgress, BlockType } from '../../types/learning';
-import { ChevronLeft, ChevronRight, Play, Pause, ChevronDown, Edit3, ArrowRight } from 'lucide-react-native';
+import {
+  Play,
+  Pause,
+  ChevronDown,
+  Edit3,
+} from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, ArrowRight } from '../../lib/i18n/dirIcons';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import UICard from '../../components/ui/UICard';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
@@ -664,7 +671,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     minWidth: 8,
   },
   headerRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'center',
     gap: tokens.spacing.md,
     minHeight: 44,
@@ -680,14 +687,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     color: tokens.colors.text.primary,
     marginBottom: 2,
     lineHeight: Math.round(tokens.typography.fontSize.lg * 1.25),
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: TEXT_DIR,
   },
   headerSubtitle: {
     fontSize: tokens.typography.fontSize.sm,
     color: tokens.colors.text.secondary,
     lineHeight: 18,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: TEXT_DIR,
   },
   headerSpacer: {
@@ -748,7 +755,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     fontSize: tokens.typography.fontSize.base,
     color: tokens.colors.text.primary,
     lineHeight: 24,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   pdfContainer: {
     justifyContent: 'center',
@@ -839,7 +846,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     fontSize: tokens.typography.fontSize.xl,
     fontWeight: tokens.typography.fontWeight.bold as any,
     color: tokens.colors.text.primary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     lineHeight: Math.round(tokens.typography.fontSize.xl * tokens.typography.lineHeight.normal),
     writingDirection: TEXT_DIR,
   },
@@ -900,7 +907,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     fontSize: tokens.typography.fontSize.base,
     color: tokens.colors.text.primary,
     minHeight: 100,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: TEXT_DIR,
     paddingTop: 4,
   },

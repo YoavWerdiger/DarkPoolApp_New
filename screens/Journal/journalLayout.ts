@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../lib/i18n/direction';
 import type { ViewStyle } from 'react-native';
 
 /**
@@ -28,11 +29,11 @@ export { APP_LAYOUT as JOURNAL_LAYOUT } from '../../components/ui/appLayout';
 
 export const journalRtlRoot: ViewStyle = {
   flex: 1,
-  direction: 'rtl',
+  direction: UI_DIR,
 };
 
 export const journalRtlContent: ViewStyle = {
-  direction: 'rtl',
+  direction: UI_DIR,
 };
 
 /** בשורה בתוך עץ RTL — השתמש ב-row (לא row-reverse). */

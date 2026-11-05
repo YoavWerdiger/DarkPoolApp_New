@@ -1,3 +1,4 @@
+import { TEXT_END, UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
@@ -102,7 +103,7 @@ export default function ImportTransactionsScreen() {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        root: { flex: 1, backgroundColor: 'transparent', direction: 'rtl' },
+        root: { flex: 1, backgroundColor: 'transparent', direction: UI_DIR },
         scroll: { flex: 1, backgroundColor: 'transparent' },
         scrollContent: {
           paddingHorizontal: PORTFOLIO_FORM.screenPadH,
@@ -139,7 +140,7 @@ export default function ImportTransactionsScreen() {
           fontSize: 11,
           color: tokens.colors.text.secondary,
           writingDirection: 'ltr',
-          textAlign: 'left',
+          textAlign: TEXT_END,
         },
         pickBtn: {
           flexDirection: 'row',
@@ -195,7 +196,7 @@ export default function ImportTransactionsScreen() {
           fontWeight: '700',
           color: tokens.colors.text.primary,
           writingDirection: 'ltr',
-          textAlign: 'left',
+          textAlign: TEXT_END,
         },
         previewType: {
           width: 70,
@@ -207,7 +208,7 @@ export default function ImportTransactionsScreen() {
           flex: 1,
           fontSize: 12,
           color: tokens.colors.text.primary,
-          textAlign: 'left',
+          textAlign: TEXT_END,
           writingDirection: 'ltr',
         },
         invalidRow: {
@@ -255,7 +256,7 @@ export default function ImportTransactionsScreen() {
           color: tokens.colors.primary.main,
           fontWeight: '600',
           writingDirection: 'ltr',
-          textAlign: 'left',
+          textAlign: TEXT_END,
         },
       }),
     [tokens]

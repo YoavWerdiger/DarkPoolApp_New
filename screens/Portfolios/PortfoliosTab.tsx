@@ -1,3 +1,4 @@
+import { ROW_REV, UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
@@ -321,7 +322,7 @@ export default function PortfoliosTab() {
           paddingHorizontal: tokens.layout.screenPadding,
           paddingTop: tokens.spacing.sm,
           paddingBottom: tokens.spacing.xl,
-          direction: 'rtl',
+          direction: UI_DIR,
         },
         sortSheetTitle: {
           ...journalSectionTitleStyle,
@@ -358,7 +359,7 @@ export default function PortfoliosTab() {
           borderWidth: 0,
         },
         searchInner: {
-          flexDirection: 'row-reverse',
+          flexDirection: ROW_REV,
           alignItems: 'center',
           paddingHorizontal: 14,
           minHeight: 44,

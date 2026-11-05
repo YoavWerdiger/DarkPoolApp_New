@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
@@ -97,7 +98,7 @@ export function WatchlistListNameSheet({
 
 const styles = StyleSheet.create({
   root: {
-    direction: 'rtl',
+    direction: UI_DIR,
     paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
     paddingTop: 4,
   },

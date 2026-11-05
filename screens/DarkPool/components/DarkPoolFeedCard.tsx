@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../../lib/i18n/direction';
 /**
  * מעטפת כרטיס פיד — מילוי cardSolid של הערכה הפעילה.
  */
@@ -19,7 +20,7 @@ const feedPadStyles = StyleSheet.create({
     paddingBottom: FEED_CARD_STACK_GAP,
   },
   feedCardPad: {
-    direction: 'rtl',
+    direction: UI_DIR,
     alignSelf: 'stretch',
     paddingHorizontal: FEED_RHYTHM.cardPadH,
     paddingVertical: FEED_RHYTHM.cardPadV,

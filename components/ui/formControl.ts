@@ -1,3 +1,4 @@
+import { TEXT_START } from '../../lib/i18n/direction';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import type { ViewStyle, TextStyle } from 'react-native';
 import type { useDesignTokens } from './DesignTokens';
@@ -76,7 +77,7 @@ export function formFieldInputStyle(tokens?: Tokens): TextStyle {
     fontWeight: APP_TYPE.body.fontWeight,
     // בלי lineHeight: ב-iOS TextInput חד-שורתי עם lineHeight דוחף את הטקסט למטה («שוקע»).
     // שדות multiline מוסיפים lineHeight בעצמם.
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: TEXT_DIR,
   };
 }
@@ -85,7 +86,7 @@ export function formFieldInputStyle(tokens?: Tokens): TextStyle {
 export function formFieldNumericInputStyle(tokens?: Tokens): TextStyle {
   return {
     ...formFieldInputStyle(tokens),
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: 'ltr',
   };
 }

@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useMemo, useState } from 'react';
@@ -447,7 +448,7 @@ export default function PollCreationBottomSheet({
 
 const styles = StyleSheet.create({
   root: {
-    direction: 'rtl',
+    direction: UI_DIR,
     paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
     paddingTop: 6,
   },

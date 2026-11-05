@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 import React from 'react';
@@ -206,7 +207,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 10,
-    direction: 'rtl',
+    direction: UI_DIR,
   },
   /**
    * Hero ממורכז — LTR מקומי מבודד מה-wrap ה-RTL.

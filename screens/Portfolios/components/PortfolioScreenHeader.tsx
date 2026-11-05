@@ -1,3 +1,4 @@
+import { UI_DIR, dirIcon } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
@@ -45,7 +46,7 @@ export function PortfolioScreenHeader({
             accessibilityLabel={i18n.t('auto.screens__Portfolios__components__PortfolioScreenHeader.s1')}
           >
             <Ionicons
-              name="chevron-forward"
+              name={dirIcon('chevron-forward')}
               size={24}
               color={tokens.colors.text.primary}
             />
@@ -83,7 +84,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 14,
     gap: 8,
-    direction: 'rtl',
+    direction: UI_DIR,
   },
   sideBack: {
     alignItems: 'center',

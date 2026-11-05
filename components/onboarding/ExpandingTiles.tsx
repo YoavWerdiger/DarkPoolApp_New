@@ -1,3 +1,4 @@
+import { ROW_REV } from '../../lib/i18n/direction';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -133,7 +134,7 @@ function Tile({
 const styles = StyleSheet.create({
   row: {
     // row-reverse: האופציה הראשונה מימין (RTL)
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     gap: APP_LAYOUT.stackGapSmall,
     height: TILE_H,
   },

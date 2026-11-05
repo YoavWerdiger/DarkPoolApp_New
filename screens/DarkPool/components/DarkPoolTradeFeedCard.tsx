@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 /**
@@ -184,7 +185,7 @@ export function DarkPoolTradeFeedCard({
 function createLineStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     sentence: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       width: '100%',

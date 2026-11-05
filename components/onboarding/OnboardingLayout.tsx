@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_START, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useRef } from 'react';
@@ -106,7 +107,7 @@ const ProgressBar = ({
           borderRadius: 2,
           overflow: 'hidden',
           backgroundColor: tokens.colors.border.divider,
-          flexDirection: 'row-reverse',
+          flexDirection: ROW_REV,
         }}
         accessibilityRole="progressbar"
         accessibilityValue={{ min: 0, max: total, now: current }}
@@ -270,7 +271,7 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
                     accessibilityLabel={i18n.t('auto.components__onboarding__OnboardingLayout.s2')}
                   >
                     <Ionicons
-                      name="chevron-forward"
+                      name={dirIcon('chevron-forward')}
                       size={22}
                       color={tokens.colors.text.primary}
                     />
@@ -342,7 +343,7 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
                               lineHeight: APP_TYPE.cardBody.lineHeight,
                               fontWeight: APP_TYPE.cardTitle.fontWeight,
                               color: tokens.colors.text.primary,
-                              textAlign: 'right',
+                              textAlign: TEXT_START,
                               writingDirection: TEXT_DIR,
                             }}
                           >

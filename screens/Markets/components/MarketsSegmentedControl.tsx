@@ -1,3 +1,4 @@
+import { ROW_REV } from '../../../lib/i18n/direction';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
@@ -63,7 +64,7 @@ export function MarketsSegmentedControl<T extends string>({
       <View
         style={{
           zIndex: 1,
-          flexDirection: 'row-reverse',
+          flexDirection: ROW_REV,
           alignItems: 'center',
           justifyContent: 'center',
           gap: 4,

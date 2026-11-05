@@ -1,3 +1,4 @@
+import { TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useCallback, useState, useEffect } from 'react';
@@ -620,7 +621,7 @@ const styles = StyleSheet.create({
   fieldLabel: {
     alignSelf: 'stretch',
     width: '100%',
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginBottom: 8,
     fontSize: APP_TYPE.groupLabel.fontSize,
     fontWeight: APP_TYPE.groupLabel.fontWeight,
@@ -629,7 +630,7 @@ const styles = StyleSheet.create({
   fieldHelper: {
     alignSelf: 'stretch',
     width: '100%',
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   shell: {
     flexDirection: 'row',

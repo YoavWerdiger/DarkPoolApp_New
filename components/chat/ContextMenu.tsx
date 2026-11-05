@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 // ============================================
 // Context Menu — שורות פעולה לפי הטופו (כמו שיטי ההגדרות/התיק):
@@ -47,7 +48,7 @@ export default function ContextMenu({ onSelect, isAdmin = false, isMe = false, c
 
   return (
     // השיט עצמו LTR (בשביל תצוגת הבועה) — התפריט חוזר ל-RTL
-    <View style={{ direction: 'rtl' }}>
+    <View style={{ direction: UI_DIR }}>
       <SettingsGlassCard>
         {mainOptions.map((opt, i) => (
           <SettingsActionRow

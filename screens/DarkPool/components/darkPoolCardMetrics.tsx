@@ -1,3 +1,4 @@
+import { TEXT_START, UI_DIR } from '../../../lib/i18n/direction';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -46,7 +47,7 @@ export function DarkPoolMetricCell({
 function createMetricStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     grid: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 8,
@@ -75,7 +76,7 @@ function createMetricStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontWeight: DARK_POOL_TYPE.cardMetricValueSecondary.fontWeight,
       color: tokens.colors.text.primary,
       writingDirection: 'ltr',
-      textAlign: 'right',
+      textAlign: TEXT_START,
     },
   });
 }
@@ -83,7 +84,7 @@ function createMetricStyles(tokens: ReturnType<typeof useDesignTokens>) {
 export function darkPoolHeaderStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     header: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 10,

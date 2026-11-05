@@ -1,3 +1,4 @@
+import { UI_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 /**
@@ -102,11 +103,11 @@ export function WeekDayStrip({ selectedDate, onSelect, markedDates }: Props) {
       {/* ניווט ברור: חודש, חצים לשבוע קודם / הבא, ו«היום» כשלא בשבוע הנוכחי */}
       <View style={styles.header}>
         <Pressable onPress={() => shiftWeek(-1)} hitSlop={10} style={styles.navBtn} accessibilityLabel={i18n.t('auto.components__ui__WeekDayStrip.s8')}>
-          <Ionicons name="chevron-forward" size={18} color={tokens.colors.text.primary} />
+          <Ionicons name={dirIcon('chevron-forward')} size={18} color={tokens.colors.text.primary} />
         </Pressable>
         <Text style={[styles.month, { color: tokens.colors.text.primary }]}>{monthLabel}</Text>
         <Pressable onPress={() => shiftWeek(1)} hitSlop={10} style={styles.navBtn} accessibilityLabel={i18n.t('auto.components__ui__WeekDayStrip.s9')}>
-          <Ionicons name="chevron-back" size={18} color={tokens.colors.text.primary} />
+          <Ionicons name={dirIcon('chevron-back')} size={18} color={tokens.colors.text.primary} />
         </Pressable>
         <View style={styles.headerSpacer} />
         {!containsToday || selKey !== todayKey ? (
@@ -188,12 +189,12 @@ export function WeekDayStrip({ selectedDate, onSelect, markedDates }: Props) {
 function createStyles(_tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     row: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       gap: GAP,
     },
     header: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       marginBottom: 10,

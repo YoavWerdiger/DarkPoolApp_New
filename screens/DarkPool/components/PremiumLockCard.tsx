@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 /**
  * PremiumLockCard.tsx
@@ -67,7 +68,7 @@ export function PremiumLockCard({ onPress, variant = 'feed' }: PremiumLockCardPr
 
 const styles = StyleSheet.create({
   row: {
-    direction: 'rtl',
+    direction: UI_DIR,
     flexDirection: 'row',
     alignItems: 'flex-start',
   },

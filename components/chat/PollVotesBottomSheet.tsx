@@ -1,3 +1,4 @@
+import { TEXT_START, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, Image, ActivityIndicator, TouchableOpacity, StyleSheet } from 'react-native';
@@ -80,7 +81,7 @@ export default function PollVotesBottomSheet({
             style={styles.headerIconButton}
             accessibilityLabel={i18n.t('auto.components__chat__PollVotesBottomSheet.s1')}
           >
-            <Ionicons name="chevron-forward" size={22} color={DesignTokens.colors.text.primary} />
+            <Ionicons name={dirIcon('chevron-forward')} size={22} color={DesignTokens.colors.text.primary} />
           </DayNavBlurButton>
 
           <View style={styles.headerCenter}>
@@ -261,7 +262,7 @@ const createStyles = (tokens: any) => {
       fontSize: 16,
       fontWeight: '800',
       color: tokens.colors.text.primary,
-      textAlign: 'right',
+      textAlign: TEXT_START,
     },
     optionBadge: {
       minWidth: 32,
@@ -281,7 +282,7 @@ const createStyles = (tokens: any) => {
     noVotersText: {
       fontSize: tokens.typography.fontSize.sm,
       color: tokens.colors.text.tertiary,
-      textAlign: 'right',
+      textAlign: TEXT_START,
       fontStyle: 'italic',
     },
     votersList: {
@@ -316,7 +317,7 @@ const createStyles = (tokens: any) => {
       fontSize: 15,
       fontWeight: '600',
       color: tokens.colors.text.primary,
-      textAlign: 'right',
+      textAlign: TEXT_START,
     },
   });
 };

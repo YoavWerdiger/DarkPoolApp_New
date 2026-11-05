@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 /**
  * טאב סקירה — מצב כללי של פיד הבכירים.
@@ -61,7 +62,7 @@ export default function DarkPoolOverviewScreen() {
       StyleSheet.create({
         scroll: { paddingHorizontal: tokens.layout.screenPadding, paddingBottom: bottomPad },
         grid: {
-          flexDirection: 'row-reverse',
+          flexDirection: ROW_REV,
           flexWrap: 'wrap',
           gap: tokens.spacing.sm,
           marginTop: tokens.spacing.md,
@@ -120,7 +121,7 @@ export default function DarkPoolOverviewScreen() {
             <StatCard label={i18n.t('auto.screens__DarkPool__DarkPoolOverviewScreen.s7')} value={String(stats.withPhoto)} />
           </View>
           <UICard variant="soft" padding="md">
-            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
+            <View style={{ flexDirection: ROW_REV, alignItems: 'center', gap: 8 }}>
               <Ionicons name="sync-outline" size={18} color={tokens.colors.primary.main} />
               <Text style={styles.hint}>
                 {i18n.t('auto.screens__DarkPool__DarkPoolOverviewScreen.s8')}
@@ -168,7 +169,7 @@ function StatCard({ label, value }: { label: string; value: string }) {
             lineHeight: DARK_POOL_TYPE.cardMetricLabel.lineHeight,
             fontWeight: DARK_POOL_TYPE.cardMetricLabel.fontWeight,
             color: tokens.colors.text.tertiary,
-            textAlign: 'right',
+            textAlign: TEXT_START,
           }}
         >
           {label}

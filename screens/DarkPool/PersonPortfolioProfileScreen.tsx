@@ -1,3 +1,4 @@
+import { TEXT_START, UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { pickDailyOpenOnDate } from './utils/congressSinceTrade';
 import { getQuotes } from '../../services/portfolios/portfolioPriceFeed';
@@ -256,7 +257,7 @@ function heroFlowStyle(base: TextStyle, value: number | null | undefined): TextS
     marginTop: 0,
     fontSize,
     lineHeight: base.lineHeight ? Math.round(base.lineHeight * ratio) : undefined,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   };
 }
 
@@ -2071,12 +2072,12 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       elevation: 2,
     },
     scroll: {
-      direction: 'rtl',
+      direction: UI_DIR,
     },
     body: {
       paddingHorizontal: 16,
       paddingTop: 10,
-      direction: 'rtl',
+      direction: UI_DIR,
     },
     errCard: {
       marginBottom: 12,
@@ -2098,7 +2099,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       alignItems: 'flex-end',
     },
     valueLabelRow: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       alignSelf: 'stretch',
@@ -2120,7 +2121,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     heroValue: {
       direction: 'ltr',
       writingDirection: 'ltr',
-      textAlign: 'right',
+      textAlign: TEXT_START,
       marginTop: APP_LAYOUT.cardMetricLabelToValueGap,
       fontSize: DARK_POOL_TYPE.cardMetricValue.fontSize,
       fontVariant: ['tabular-nums'],
@@ -2197,7 +2198,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       marginBottom: APP_LAYOUT.sectionHeaderToContent,
     },
     sectionTitleRow: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -2252,7 +2253,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       alignSelf: 'stretch',
     },
     listRow: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       alignSelf: 'stretch',
@@ -2278,7 +2279,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     tradeTicker: {
       direction: 'ltr',
-      textAlign: 'right',
+      textAlign: TEXT_START,
       writingDirection: 'ltr',
       fontSize: DARK_POOL_TYPE.cardBody.fontSize,
       fontVariant: ['tabular-nums'],

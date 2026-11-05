@@ -1,3 +1,4 @@
+import { TEXT_END, UI_DIR } from '../../lib/i18n/direction';
 import { TEXT_DIR } from '../../lib/i18n/language';
 /**
  * צבעים וסמנטיקה אחידים לכל מערכת הצ'אט — מבוססים על DesignTokens (ערכת DarkPool).
@@ -46,7 +47,7 @@ export const chatGlassCardOutline = {
  */
 export const chatRtlRoot = {
   flex: 1,
-  direction: 'rtl',
+  direction: UI_DIR,
 } as const;
 
 export const chatRtlRow = {
@@ -55,5 +56,5 @@ export const chatRtlRow = {
 
 export const chatRtlText = {
   writingDirection: TEXT_DIR,
-  textAlign: 'left' as const,
+  textAlign: TEXT_END,
 };

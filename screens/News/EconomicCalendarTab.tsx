@@ -1,3 +1,4 @@
+import { ROW_REV, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 import { legacyAlert } from '../../utils/appDialog';
@@ -265,7 +266,7 @@ const EconomicEventCard: React.FC<{
                 />
 
                 {/* סדר קריאה (מימין לשמאל): תחזית → תוצאה → קודם */}
-                <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-start', width: '100%' }}>
+                <View style={{ flexDirection: ROW_REV, alignItems: 'flex-start', width: '100%' }}>
                   {[
                     event.forecast
                       ? { key: 'forecast', label: i18n.t('auto.screens__News__EconomicCalendarTab.s2'), value: event.forecast, color: DesignTokens.colors.text.primary }
@@ -855,7 +856,7 @@ export default function EconomicCalendarTab({
           }}
         >
           <DayNavBlurButton onPress={goToPreviousDay} style={{ backgroundColor: DesignTokens.colors.background.primary }}>
-            <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.primary} />
+            <Ionicons name={dirIcon('chevron-back')} size={20} color={DesignTokens.colors.text.primary} />
           </DayNavBlurButton>
 
           <View style={{ alignItems: 'center', flex: 1, paddingHorizontal: 10 }}>
@@ -886,7 +887,7 @@ export default function EconomicCalendarTab({
           </View>
 
           <DayNavBlurButton onPress={goToNextDay} style={{ backgroundColor: DesignTokens.colors.background.primary }}>
-            <Ionicons name="chevron-forward" size={20} color={DesignTokens.colors.text.primary} />
+            <Ionicons name={dirIcon('chevron-forward')} size={20} color={DesignTokens.colors.text.primary} />
           </DayNavBlurButton>
         </View>
       </UICard>

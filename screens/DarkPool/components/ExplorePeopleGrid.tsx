@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -31,14 +32,14 @@ export function ExplorePeopleGrid({
           flexDirection: 'row',
           flexWrap: 'wrap',
           gap: EXPLORE_GRID_GAP,
-          direction: 'rtl',
+          direction: UI_DIR,
           paddingHorizontal: padded ? tokens.layout.screenPadding : 0,
         },
         cell: {
           width: cardWidth,
         },
         empty: {
-          direction: 'rtl',
+          direction: UI_DIR,
           paddingVertical: 40,
           paddingHorizontal: padded ? tokens.layout.screenPadding : 0,
           alignItems: 'stretch',

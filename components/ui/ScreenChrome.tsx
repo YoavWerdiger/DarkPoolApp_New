@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../lib/i18n/direction';
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { ScreenGradientBackground } from '../VideoBackground';
@@ -37,6 +38,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   rtlContent: {
-    direction: 'rtl',
+    direction: UI_DIR,
   },
 });

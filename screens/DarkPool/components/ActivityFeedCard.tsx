@@ -1,3 +1,4 @@
+import { TEXT_START, UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 import React, { useMemo } from 'react';
@@ -121,7 +122,7 @@ export function ActivityFeedCard({
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     row: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       width: '100%',
@@ -142,7 +143,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       gap: APP_LAYOUT.cardTitleToSubtitleGap,
     },
     sentence: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       width: '100%',
@@ -206,7 +207,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       lineHeight: APP_TYPE.caption.lineHeight,
       fontWeight: APP_TYPE.caption.fontWeight,
       color: tokens.colors.text.secondary,
-      textAlign: 'right',
+      textAlign: TEXT_START,
       fontVariant: ['tabular-nums'],
     },
   });

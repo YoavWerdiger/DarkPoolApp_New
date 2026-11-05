@@ -1,3 +1,4 @@
+import { TEXT_START } from '../../lib/i18n/direction';
 /**
  * ActionMenu — legacy API שעטוף ב-ChatBottomSheet (אותו chrome כמו שאר שיטי הצ׳אט).
  * המסלול הפעיל ב-ChatGroupScreen הוא LongPressOverlay; כאן לשמירת תאימות.
@@ -276,6 +277,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '400',
     flex: 1,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
 });

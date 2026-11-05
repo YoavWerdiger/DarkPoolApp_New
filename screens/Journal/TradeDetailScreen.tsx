@@ -1,3 +1,4 @@
+import { TEXT_END, TEXT_START, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -111,7 +112,7 @@ function InfoRow({
         style={{
           ...journalCardTitleStyle,
           color: valueColor ?? tokens.colors.text.primary,
-          textAlign: 'left',
+          textAlign: TEXT_END,
           writingDirection: 'ltr',
           direction: 'ltr',
         }}
@@ -328,7 +329,7 @@ export default function TradeDetailScreen() {
             size={36}
             accessibilityLabel={i18n.t('auto.screens__Journal__TradeDetailScreen.s5')}
           >
-            <Ionicons name="chevron-forward" size={20} color={tokens.colors.text.primary} />
+            <Ionicons name={dirIcon('chevron-forward')} size={20} color={tokens.colors.text.primary} />
           </DayNavBlurButton>
           <View
             style={{
@@ -475,7 +476,7 @@ export default function TradeDetailScreen() {
                     style={{
                       ...journalCardMetricValueStyle,
                       color: pnlColor,
-                      textAlign: 'right',
+                      textAlign: TEXT_START,
                     }}
                   >
                     {isProfit ? '+' : '-'}
@@ -485,7 +486,7 @@ export default function TradeDetailScreen() {
                     style={{
                       ...journalCardMetricValueSecondaryStyle,
                       color: pnlColor,
-                      textAlign: 'right',
+                      textAlign: TEXT_START,
                       marginTop: JOURNAL_LAYOUT.cardMetricLabelToValueGap,
                     }}
                   >

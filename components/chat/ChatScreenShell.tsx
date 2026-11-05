@@ -1,3 +1,4 @@
+import { ROW_REV, UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 // ============================================
 // מעטפת מסכי צ'אט — רקע וכותרת כמו שאר האפליקציה
@@ -35,7 +36,7 @@ type ChatSubScreenHeaderProps = {
   /** עיצוב נוסף על שורת הכותרת */
   style?: ViewStyle;
   /**
-   * מסך בתוך עץ `direction: 'rtl'` (למשל Dark Pool) —
+   * מסך בתוך עץ `direction: UI_DIR` (למשל Dark Pool) —
    * משתמש ב-row במקום row-reverse כמו MainDrawerScreenHeader.
    * כותרת המסך תמיד ממורכזת — inRtlTree לא משנה textAlign.
    */
@@ -112,7 +113,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   subHeaderRowApp: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
   },
   subHeaderRowInRtlTree: {
     flexDirection: 'row',

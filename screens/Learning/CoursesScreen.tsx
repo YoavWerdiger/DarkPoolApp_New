@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_START, UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
@@ -376,7 +377,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       borderWidth: 0,
     },
     searchInner: {
-      flexDirection: 'row-reverse',
+      flexDirection: ROW_REV,
       alignItems: 'center',
       paddingHorizontal: APP_LAYOUT.cardPadding,
       minHeight: 44,
@@ -389,7 +390,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       marginHorizontal: 8,
       color: tokens.colors.text.primary,
       ...ACADEMY_TYPE.body,
-      textAlign: 'right',
+      textAlign: TEXT_START,
       writingDirection: TEXT_DIR,
       paddingVertical: 6,
     },
@@ -407,7 +408,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       paddingHorizontal: ACADEMY_CARD_HP,
     },
     horizontalScroll: {
-      direction: 'rtl',
+      direction: UI_DIR,
     },
     horizontalList: {
       paddingHorizontal: ACADEMY_CARD_HP,

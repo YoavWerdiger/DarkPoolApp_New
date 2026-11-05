@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../../lib/i18n/direction';
 /**
  * יומן מסחר בטעינה — אותו מבנה וטקסטים כמו המסך האמיתי (PortfolioDetailScreen + OverviewTab):
  * צ׳יפי הטאבים, שווי תיק וגרף, חלוקת נכסים, פוזיציות פתוחות, עסקאות אחרונות וסטטיסטיקה.
@@ -124,7 +125,7 @@ export function JournalSkeleton() {
 const styles = StyleSheet.create({
   // כמו צ׳יפי הטאבים ב-PortfolioDetailScreen
   tabsRow: {
-    direction: 'rtl',
+    direction: UI_DIR,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
@@ -133,22 +134,22 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   heading: { alignSelf: 'flex-start', marginBottom: JOURNAL_LAYOUT.sectionHeaderToContent },
-  content: { paddingHorizontal: 16, paddingTop: 14, direction: 'rtl' },
+  content: { paddingHorizontal: 16, paddingTop: 14, direction: UI_DIR },
   // כמו sectionBlock / heroBlock / Section ב-OverviewTab ו-JournalDashboard
-  section: { marginBottom: JOURNAL_LAYOUT.sectionGap, direction: 'rtl' },
+  section: { marginBottom: JOURNAL_LAYOUT.sectionGap, direction: UI_DIR },
   heroValue: { marginTop: JOURNAL_LAYOUT.cardMetricLabelToValueGap * 2 - JOURNAL_LAYOUT.sectionHeaderToContent },
   deltaRow: {
     marginTop: JOURNAL_LAYOUT.titleSubtitleGap + 6,
     marginBottom: JOURNAL_LAYOUT.cardTitleToBodyGap,
   },
-  chips: { direction: 'rtl', flexDirection: 'row', gap: 6, marginBottom: 14 },
-  donutRow: { direction: 'rtl', flexDirection: 'row', alignItems: 'center', gap: 16 },
+  chips: { direction: UI_DIR, flexDirection: 'row', gap: 6, marginBottom: 14 },
+  donutRow: { direction: UI_DIR, flexDirection: 'row', alignItems: 'center', gap: 16 },
   legend: { flex: 1, gap: 12 },
-  legendRow: { direction: 'rtl', flexDirection: 'row', alignItems: 'center', gap: 8 },
+  legendRow: { direction: UI_DIR, flexDirection: 'row', alignItems: 'center', gap: 8 },
   panel: { borderRadius: UI_CARD_RADIUS, overflow: 'hidden' },
   // כמו Row בלוח הבקרה
   listRow: {
-    direction: 'rtl',
+    direction: UI_DIR,
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: JOURNAL_LAYOUT.cardTitleToBodyGap,
@@ -157,9 +158,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   listText: { flex: 1, gap: 6, alignItems: 'flex-start' },
-  tickerLine: { direction: 'rtl', flexDirection: 'row', alignItems: 'center', gap: 6 },
+  tickerLine: { direction: UI_DIR, flexDirection: 'row', alignItems: 'center', gap: 6 },
   totalRow: {
-    direction: 'rtl',
+    direction: UI_DIR,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',

@@ -1,3 +1,4 @@
+import { TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
@@ -298,7 +299,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       ...ACADEMY_TYPE.cardBody,
       color: tokens.colors.text.tertiary,
       marginBottom: APP_LAYOUT.cardTitleToBodyGap,
-      textAlign: 'right',
+      textAlign: TEXT_START,
       writingDirection: TEXT_DIR,
     },
     courseMeta: {
@@ -329,7 +330,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     warningText: {
       ...ACADEMY_TYPE.body,
       color: tokens.colors.danger.main,
-      textAlign: 'right',
+      textAlign: TEXT_START,
       writingDirection: TEXT_DIR,
     },
     lessonsSection: {
@@ -350,7 +351,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       color: tokens.colors.text.primary,
       marginLeft: 12,
       minWidth: 30,
-      textAlign: 'right',
+      textAlign: TEXT_START,
     },
     lessonInfo: {
       flex: 1,
@@ -414,7 +415,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     footerText: {
       ...ACADEMY_TYPE.cardBody,
       color: tokens.colors.text.secondary,
-      textAlign: 'right',
+      textAlign: TEXT_START,
       writingDirection: TEXT_DIR,
     },
     modalOverlay: {
@@ -445,7 +446,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       color: tokens.colors.text.primary,
       marginBottom: APP_LAYOUT.cardTitleToBodyGap,
       borderWidth: 0,
-      textAlign: 'right',
+      textAlign: TEXT_START,
       writingDirection: TEXT_DIR,
     },
     modalButtons: {

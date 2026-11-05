@@ -1,3 +1,4 @@
+import { TEXT_START, UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 /**
@@ -140,7 +141,7 @@ export function DarkPoolNestedQuoteCard({
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     nested: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'flex-start',
       justifyContent: 'space-between',
@@ -201,7 +202,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     nestedPriceLabel: {
       ...TEXT_TOP,
       writingDirection: TEXT_DIR,
-      textAlign: 'right',
+      textAlign: TEXT_START,
       fontSize: FEED_CARD_TYPE.nestedRowCaption.fontSize,
       fontVariant: ['tabular-nums'],
       lineHeight: NESTED_CAPTION_LINE,
@@ -216,12 +217,12 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       color: tokens.colors.text.primary,
       fontVariant: ['tabular-nums'],
       writingDirection: 'ltr',
-      textAlign: 'right',
+      textAlign: TEXT_START,
     },
     nestedPriceMissing: {
       ...TEXT_TOP,
       writingDirection: TEXT_DIR,
-      textAlign: 'right',
+      textAlign: TEXT_START,
       fontSize: FEED_CARD_TYPE.nestedRowValueMuted.fontSize,
       fontVariant: ['tabular-nums'],
       lineHeight: NESTED_VALUE_LINE,
@@ -243,7 +244,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontWeight: FEED_CARD_TYPE.nestedRowCaption.fontWeight,
       color: tokens.colors.text.secondary,
       writingDirection: TEXT_DIR,
-      textAlign: 'right',
+      textAlign: TEXT_START,
       flexShrink: 1,
     },
     nestedSinceValue: {
@@ -253,7 +254,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontWeight: FEED_CARD_TYPE.nestedRowCaptionStrong.fontWeight,
       fontVariant: ['tabular-nums'],
       writingDirection: 'ltr',
-      textAlign: 'right',
+      textAlign: TEXT_START,
       flexShrink: 0,
     },
   });

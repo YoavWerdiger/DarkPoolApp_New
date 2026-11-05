@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../../lib/i18n/direction';
 /**
  * מעטפת בורר תקופות — לא מחוברת למסך גילוי.
  * `people.returns[period]` הוא תשואת תיק משוחזרת (InsiderWave ALL +3051%) ואסור להציג.
@@ -120,10 +121,10 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     wrap: {
       marginBottom: tokens.spacing.lg,
-      direction: 'rtl',
+      direction: UI_DIR,
     },
     header: {
-      direction: 'rtl',
+      direction: UI_DIR,
       paddingHorizontal: tokens.layout.screenPadding,
       marginBottom: tokens.spacing.sm,
       alignSelf: 'stretch',

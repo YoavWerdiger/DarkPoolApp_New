@@ -1,3 +1,4 @@
+import { ROW_REV } from '../../lib/i18n/direction';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useEffect, useRef } from 'react';
 import {
@@ -180,7 +181,7 @@ const styles = StyleSheet.create({
   },
   // כמו UIAlert: row-reverse ב-ltr — הכפתור הראשון (פעולה) מימין
   buttons: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     direction: 'ltr',
     alignSelf: 'stretch',
   },

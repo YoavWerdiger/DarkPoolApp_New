@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_START, UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React, { useEffect, useMemo, useCallback, useState, useRef } from 'react';
 import { View, StyleSheet, Text, Image, Platform, Dimensions } from 'react-native';
@@ -395,7 +396,7 @@ export default function LongPressOverlay({
         }}
         onLayout={onContentLayout}
       >
-        <View style={{ direction: 'rtl' }} onLayout={(e) => setHeaderH(e.nativeEvent.layout.height)}>
+        <View style={{ direction: UI_DIR }} onLayout={(e) => setHeaderH(e.nativeEvent.layout.height)}>
           <ChatSheetTopoHeader title={i18n.t('auto.components__chat__LongPressOverlay.s4')} onClose={onClose} />
         </View>
         {/* מוקטן פרופורציונלית מהפינה של הבועה אם אין מקום (בלי לגעת במרווחי הכרטיסים) */}
@@ -524,7 +525,7 @@ const createMessagePreviewStyles = (tokens: any) => {
     fontSize: 12,
     fontWeight: '600',
     color: tokens.colors.primary.main,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     alignSelf: 'stretch',
     marginTop: 0,
     marginBottom: 1,
@@ -578,7 +579,7 @@ const createMessagePreviewStyles = (tokens: any) => {
     justifyContent: 'center',
   },
   mediaRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'center',
     gap: 5,
   },
@@ -592,7 +593,7 @@ const createMessagePreviewStyles = (tokens: any) => {
   msgText: {
     fontSize: 16,
     lineHeight: 21,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     marginTop: 0,
   },
   myText: {

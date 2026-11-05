@@ -1,3 +1,4 @@
+import { TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 // ============================================
 // AddStoryBottomSheet – הוספת סטטוס (תמונה)
@@ -175,7 +176,7 @@ const styles = StyleSheet.create({
   optionText: {
     ...appSheetButtonLabelStyle,
     marginRight: 12,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   uploading: {
     alignItems: 'center',

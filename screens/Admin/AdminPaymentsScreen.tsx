@@ -1,3 +1,4 @@
+import { ROW_REV, UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
@@ -943,7 +944,7 @@ const styles = StyleSheet.create({
     marginBottom: APP_LAYOUT.cardStackGap,
   },
   searchShell: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     borderRadius: 999,
     paddingHorizontal: 16,
     minHeight: 52,
@@ -956,7 +957,7 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   filterScroll: {
-    direction: 'rtl',
+    direction: UI_DIR,
     marginBottom: DesignTokens.spacing.md,
   },
   filterScrollContent: {
@@ -980,7 +981,7 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   kpiRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     justifyContent: 'space-between',
     gap: 10,
     marginTop: APP_LAYOUT.cardTitleToBodyGap,
@@ -1009,7 +1010,7 @@ const styles = StyleSheet.create({
     marginBottom: APP_LAYOUT.stackGapSmall,
   },
   rowTop: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: 10,
@@ -1022,7 +1023,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   metaGrid: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     flexWrap: 'wrap',
     gap: 10,
   },
@@ -1058,7 +1059,7 @@ const styles = StyleSheet.create({
     borderWidth: 0,
     borderRadius: 999,
     paddingVertical: 12,
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,

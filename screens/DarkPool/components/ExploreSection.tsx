@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../../lib/i18n/direction';
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
@@ -54,10 +55,10 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     wrap: {
       marginBottom: tokens.layout.sectionGap,
-      direction: 'rtl',
+      direction: UI_DIR,
     },
     header: {
-      direction: 'rtl',
+      direction: UI_DIR,
       paddingHorizontal: tokens.layout.screenPadding,
       marginBottom: tokens.layout.sectionHeaderToContent,
       alignSelf: 'stretch',
@@ -72,7 +73,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       color: tokens.colors.text.secondary,
     },
     row: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       justifyContent: 'flex-start',
       paddingHorizontal: tokens.layout.screenPadding,

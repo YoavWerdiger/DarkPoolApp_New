@@ -1,3 +1,4 @@
+import { TEXT_END, UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import { JournalListSkeleton } from '../../../components/ui/SkeletonLoader';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -145,12 +146,12 @@ export default function TransactionsTab({
     () =>
       StyleSheet.create({
         root: {
-          direction: 'rtl',
+          direction: UI_DIR,
         },
         empty: {
           alignItems: 'center',
           paddingVertical: 50,
-          direction: 'rtl',
+          direction: UI_DIR,
         },
         emptyTitle: {
           ...journalSectionTitleStyle,
@@ -186,7 +187,7 @@ export default function TransactionsTab({
           overflow: 'hidden',
         },
         row: {
-          direction: 'rtl',
+          direction: UI_DIR,
           flexDirection: 'row',
           alignItems: 'center',
           paddingVertical: 14,
@@ -221,7 +222,7 @@ export default function TransactionsTab({
           flexShrink: 0,
           direction: 'ltr',
           writingDirection: 'ltr',
-          textAlign: 'left',
+          textAlign: TEXT_END,
           fontSize: JOURNAL_TYPE.cardSubtitle.fontSize,
           fontWeight: '600',
           lineHeight: JOURNAL_TYPE.cardSubtitle.lineHeight,

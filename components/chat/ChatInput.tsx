@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_START, UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 // ============================================
@@ -2564,7 +2565,7 @@ function ChatInputImpl({
             style={{
               paddingHorizontal: 12,
               paddingBottom: 6,
-              flexDirection: 'row-reverse',
+              flexDirection: ROW_REV,
               flexWrap: 'wrap',
               gap: 6,
             }}
@@ -2574,7 +2575,7 @@ function ChatInputImpl({
                 key={m.userId}
                 onPress={() => removeCommunityMention(m.userId)}
                 style={{
-                  flexDirection: 'row-reverse',
+                  flexDirection: ROW_REV,
                   alignItems: 'center',
                   gap: 4,
                   paddingHorizontal: 10,
@@ -2846,7 +2847,7 @@ const createStyles = (tokens: any, paddingBottom: number) => StyleSheet.create({
   },
 
   clipboardChipRow: {
-    direction: 'rtl',
+    direction: UI_DIR,
     flexDirection: 'row',
     justifyContent: 'center',
     marginBottom: tokens.spacing.sm,
@@ -2856,7 +2857,7 @@ const createStyles = (tokens: any, paddingBottom: number) => StyleSheet.create({
     overflow: 'hidden',
   },
   clipboardChip: {
-    direction: 'rtl',
+    direction: UI_DIR,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
@@ -2901,12 +2902,12 @@ const createStyles = (tokens: any, paddingBottom: number) => StyleSheet.create({
     fontWeight: tokens.typography.fontWeight.semibold,
     color: tokens.colors.primary.main,
     marginBottom: 2,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   replyText: {
     fontSize: tokens.typography.fontSize.sm,
     color: tokens.colors.text.secondary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   replyThumb: {
     width: 36,
@@ -2961,7 +2962,7 @@ const createStyles = (tokens: any, paddingBottom: number) => StyleSheet.create({
     fontSize: tokens.typography.body.size,
     color: tokens.colors.text.primary,
     textAlignVertical: 'center',
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   charCounter: {
     position: 'absolute',
@@ -3031,7 +3032,7 @@ const createStyles = (tokens: any, paddingBottom: number) => StyleSheet.create({
     fontSize: tokens.typography.fontSize.sm,
     fontWeight: tokens.typography.fontWeight.semibold,
     color: tokens.colors.text.primary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     fontVariant: ['tabular-nums'],
   },
   timelineContainer: {

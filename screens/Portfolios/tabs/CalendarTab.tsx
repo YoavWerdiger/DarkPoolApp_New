@@ -1,3 +1,4 @@
+import { TEXT_START, UI_DIR, dirIcon } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 import { appLocale } from '../../../lib/i18n/locale';
@@ -157,13 +158,13 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        root: { flex: 1, paddingTop: 4, direction: 'rtl' },
+        root: { flex: 1, paddingTop: 4, direction: UI_DIR },
         loading: { paddingVertical: 60, alignItems: 'center' },
         empty: {
           alignItems: 'center',
           paddingVertical: 60,
           gap: 8,
-          direction: 'rtl',
+          direction: UI_DIR,
         },
         emptyTitle: {
           ...journalSectionTitleStyle,
@@ -287,7 +288,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
           fontSize: 12,
           fontWeight: '600',
           writingDirection: 'ltr',
-          textAlign: 'right',
+          textAlign: TEXT_START,
         },
         tradeRow: {
           flexDirection: 'row',
@@ -306,7 +307,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
           color: tokens.colors.text.primary,
           flex: 1,
           writingDirection: 'ltr',
-          textAlign: 'right',
+          textAlign: TEXT_START,
         },
         tradeDirPill: {
           paddingHorizontal: 7,
@@ -324,7 +325,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
           fontSize: 13,
           fontWeight: '700',
           writingDirection: 'ltr',
-          textAlign: 'right',
+          textAlign: TEXT_START,
         },
       }),
     [tokens]
@@ -377,7 +378,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
               accessibilityLabel={i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s22')}
             >
               <Ionicons
-                name="chevron-back"
+                name={dirIcon('chevron-back')}
                 size={20}
                 color={tokens.colors.text.primary}
               />
@@ -394,7 +395,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
               accessibilityLabel={i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s23')}
             >
               <Ionicons
-                name="chevron-forward"
+                name={dirIcon('chevron-forward')}
                 size={20}
                 color={tokens.colors.text.primary}
               />

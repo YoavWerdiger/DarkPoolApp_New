@@ -1,3 +1,4 @@
+import { TEXT_END, TEXT_START, UI_DIR } from '../../lib/i18n/direction';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import type { TextStyle, ViewStyle } from 'react-native';
 import { APP_LAYOUT } from './appLayout';
@@ -16,11 +17,11 @@ import { APP_CTA_LABEL_FONT } from './appFont';
  */
 export const appRtlRoot: ViewStyle = {
   flex: 1,
-  direction: 'rtl',
+  direction: UI_DIR,
 };
 
 export const appRtlContent: ViewStyle = {
-  direction: 'rtl',
+  direction: UI_DIR,
 };
 
 export const appRow: ViewStyle = {
@@ -29,19 +30,19 @@ export const appRow: ViewStyle = {
 
 export const appHebrewText: TextStyle = {
   writingDirection: TEXT_DIR,
-  textAlign: 'right',
+  textAlign: TEXT_START,
 };
 
 export const appPhysicalRightText: TextStyle = {
   ...appHebrewText,
   direction: 'ltr',
-  textAlign: 'right',
+  textAlign: TEXT_START,
   writingDirection: TEXT_DIR,
 };
 
 export const appPhysicalLeftText: TextStyle = {
   direction: 'ltr',
-  textAlign: 'left',
+  textAlign: TEXT_END,
   writingDirection: 'ltr',
 };
 
@@ -285,7 +286,7 @@ export const appCardMetricLabelStyle: TextStyle = {
 /** תווית שדה (שם מלא, טלפון…) — זהה ל-cardMetricLabel */
 export const appFormFieldLabelStyle: TextStyle = {
   ...appCardMetricLabelStyle,
-  textAlign: 'right',
+  textAlign: TEXT_START,
   marginBottom: 8,
 };
 

@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
@@ -260,7 +261,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     noteHeader: {
       // מימין לשמאל: טקסט → העתק
-      flexDirection: 'row-reverse',
+      flexDirection: ROW_REV,
       alignItems: 'center',
       gap: 10,
       marginBottom: tokens.spacing.sm,
@@ -285,14 +286,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     noteContent: {
       ...ACADEMY_TYPE.cardBody,
       color: tokens.colors.text.secondary,
-      textAlign: 'right',
+      textAlign: TEXT_START,
       writingDirection: TEXT_DIR,
     },
     noteDate: {
       marginTop: APP_LAYOUT.stackGapSmall,
       ...ACADEMY_TYPE.caption,
       color: tokens.colors.text.tertiary,
-      textAlign: 'right',
+      textAlign: TEXT_START,
       writingDirection: TEXT_DIR,
     },
     emptyState: {

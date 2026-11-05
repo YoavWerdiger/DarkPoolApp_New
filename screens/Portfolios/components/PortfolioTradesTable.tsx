@@ -1,3 +1,4 @@
+import { TEXT_START, UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React, { useMemo } from 'react';
 import {
@@ -226,7 +227,7 @@ export default function PortfolioTradesTable({
         bounces={false}
         contentContainerStyle={{ minWidth: '100%' }}
       >
-        <View style={[styles.table, { minWidth: Math.max(tableMinWidth, 360), direction: 'rtl' }]}>
+        <View style={[styles.table, { minWidth: Math.max(tableMinWidth, 360), direction: UI_DIR }]}>
           {/* Header */}
           <View
             style={[
@@ -518,7 +519,7 @@ const styles = StyleSheet.create({
     fontWeight: APP_TYPE.caption.fontWeight,
     lineHeight: APP_TYPE.cardSubtitle.lineHeight,
     writingDirection: 'ltr',
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   pnlStack: {
     alignItems: 'center',
@@ -548,7 +549,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     direction: 'ltr',
     writingDirection: 'ltr',
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   typePill: {
     flexDirection: 'row',

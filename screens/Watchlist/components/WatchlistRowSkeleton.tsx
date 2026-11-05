@@ -1,3 +1,4 @@
+import { ROW_REV, UI_DIR } from '../../../lib/i18n/direction';
 import React, { memo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { SkeletonBox } from '../../../components/ui/SkeletonLoader';
@@ -19,7 +20,7 @@ type Props = {
 
 /**
  * אותה טופולוגיה כמו WatchlistRow — לא היפוך שלה.
- * Yoga של המסך LTR: `quoteRow` הוא `row-reverse` בלי `direction: 'rtl'`.
+ * Yoga של המסך LTR: `quoteRow` הוא `row-reverse` בלי `direction: UI_DIR`.
  * ילד ראשון (סימבול+לוגו) מימין; מחיר / % / ווליום משמאל.
  */
 function WatchlistRowSkeletonInner({ delay = 0 }: Props) {
@@ -68,7 +69,7 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   identity: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'center',
     minWidth: 0,
     flex: 1,

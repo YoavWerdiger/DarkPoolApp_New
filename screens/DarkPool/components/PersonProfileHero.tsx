@@ -1,3 +1,4 @@
+import { TEXT_END, UI_DIR, dirIcon } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import { companyFacilityPhotoUrl } from '../utils/companyFacilityPhotos';
 import { useTheme } from '../../../context/ThemeContext';
@@ -242,7 +243,7 @@ function PersonProfileHeroInner({
           accessibilityLabel={i18n.t('auto.screens__DarkPool__components__PersonProfileHero.s1')}
         >
           <Ionicons
-            name="chevron-forward"
+            name={dirIcon('chevron-forward')}
             size={HERO_ICON_GLYPH}
             color={iconColor}
             style={styles.iconMark}
@@ -326,7 +327,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   topBar: {
-    direction: 'rtl',
+    direction: UI_DIR,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -354,7 +355,7 @@ const styles = StyleSheet.create({
   },
   // חברה ציבורית (שם לועזי) — מיושר לשמאל
   nameLeft: {
-    textAlign: 'left',
+    textAlign: TEXT_END,
   },
   name: {
     ...ltrNameText,

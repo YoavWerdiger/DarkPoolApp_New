@@ -1,3 +1,4 @@
+import { TEXT_END, UI_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 /**
@@ -265,7 +266,7 @@ export default function DarkPoolTradeDetailScreen() {
               accessibilityLabel={i18n.t('auto.screens__DarkPool__DarkPoolTradeDetailScreen.s3')}
             >
               <Ionicons
-                name="chevron-forward"
+                name={dirIcon('chevron-forward')}
                 size={22}
                 color={tokens.colors.text.primary}
               />
@@ -359,7 +360,7 @@ export default function DarkPoolTradeDetailScreen() {
             accessibilityLabel={i18n.t('auto.screens__DarkPool__DarkPoolTradeDetailScreen.s3')}
           >
             <Ionicons
-              name="chevron-forward"
+              name={dirIcon('chevron-forward')}
               size={22}
               color={tokens.colors.text.primary}
             />
@@ -712,7 +713,7 @@ function HistoryRow({
 function rowStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     row: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -746,14 +747,14 @@ function rowStyles(tokens: ReturnType<typeof useDesignTokens>) {
       color: tokens.colors.text.secondary,
       flexShrink: 1,
       minWidth: 0,
-      textAlign: 'left',
+      textAlign: TEXT_END,
     },
     valueLtr: {
       writingDirection: 'ltr',
       fontVariant: ['tabular-nums'],
     },
     historyStart: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       gap: APP_LAYOUT.stackGapSmall,
@@ -801,7 +802,7 @@ function createStyles(
 ) {
   return StyleSheet.create({
     topBar: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: tokens.layout.screenPadding,
@@ -819,13 +820,13 @@ function createStyles(
       writingDirection: TEXT_DIR,
     },
     scrollContent: {
-      direction: 'rtl',
+      direction: UI_DIR,
       paddingHorizontal: tokens.layout.screenPadding,
       paddingTop: APP_LAYOUT.componentGap + 12,
       paddingBottom: bottomPadding + 32,
     },
     center: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flex: 1,
       alignItems: 'center',
       justifyContent: 'center',
@@ -856,7 +857,7 @@ function createStyles(
       fontWeight: DARK_POOL_TYPE.sectionSubtitle.fontWeight,
     },
     priceRow: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',

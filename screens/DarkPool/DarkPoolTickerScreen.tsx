@@ -1,3 +1,4 @@
+import { TEXT_END, UI_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 /**
@@ -422,7 +423,7 @@ export default function DarkPoolTickerScreen() {
             size={HEADER_BACK_BTN_SIZE}
             accessibilityLabel={i18n.t('auto.screens__DarkPool__DarkPoolTickerScreen.s1')}
           >
-            <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
+            <Ionicons name={dirIcon('chevron-forward')} size={22} color={tokens.colors.text.primary} />
           </DayNavBlurButton>
         </View>
 
@@ -683,7 +684,7 @@ export default function DarkPoolTickerScreen() {
 function createStyles(tokens: ReturnType<typeof useDesignTokens>, bottomPadding: number) {
   return StyleSheet.create({
     topBar: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       gap: APP_LAYOUT.cardTitleToBodyGap,
@@ -712,7 +713,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, bottomPadding:
       letterSpacing: DARK_POOL_TYPE.sectionTitle.letterSpacing,
       color: tokens.colors.text.primary,
       writingDirection: 'ltr',
-      textAlign: 'left',
+      textAlign: TEXT_END,
     },
     companyName: {
       ...darkPoolPhysicalLeftText,
@@ -727,7 +728,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, bottomPadding:
       marginBottom: APP_LAYOUT.componentGap,
     },
     priceRow: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -793,7 +794,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, bottomPadding:
       justifyContent: 'center',
     },
     chipRow: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       gap: APP_LAYOUT.stackGapSmall,
@@ -809,7 +810,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, bottomPadding:
       marginBottom: APP_LAYOUT.componentGap,
     },
     tabInner: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'stretch',
     },
@@ -855,7 +856,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, bottomPadding:
       backgroundColor: tokens.colors.border.divider,
     },
     holderRow: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       gap: APP_LAYOUT.cardTitleToBodyGap,
@@ -926,7 +927,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, bottomPadding:
       alignItems: 'center',
     },
     scrollContent: {
-      direction: 'rtl',
+      direction: UI_DIR,
       paddingHorizontal: tokens.layout.screenPadding,
       paddingTop: APP_LAYOUT.stackGapSmall,
       paddingBottom: bottomPadding + 32,

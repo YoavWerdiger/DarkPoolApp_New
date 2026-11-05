@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../../lib/i18n/direction';
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
@@ -54,11 +55,11 @@ export function ExploreRailSection({
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     wrap: {
-      direction: 'rtl',
+      direction: UI_DIR,
       marginBottom: tokens.spacing.xl,
     },
     header: {
-      direction: 'rtl',
+      direction: UI_DIR,
       alignSelf: 'stretch',
       alignItems: 'stretch',
       marginBottom: tokens.spacing.sm,
@@ -68,7 +69,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       color: tokens.colors.text.primary,
     },
     cardRow: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       justifyContent: 'flex-start',
       gap: EXPLORE_RAIL_GAP,

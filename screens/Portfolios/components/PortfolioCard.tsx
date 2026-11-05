@@ -1,3 +1,4 @@
+import { TEXT_START, dirIcon } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
@@ -132,7 +133,7 @@ export function PortfolioCard({
                 </View>
               </View>
               <Ionicons
-                name="chevron-back"
+                name={dirIcon('chevron-back')}
                 size={20}
                 color={tokens.colors.text.tertiary}
               />
@@ -216,7 +217,7 @@ const styles = StyleSheet.create({
   titleLatin: {
     direction: 'ltr',
     writingDirection: 'ltr',
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   metaRow: {
     width: '100%',
@@ -232,7 +233,7 @@ const styles = StyleSheet.create({
     width: undefined,
     flexShrink: 1,
     marginTop: 0,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     includeFontPadding: false,
   },
   valueRow: {
@@ -257,12 +258,12 @@ const styles = StyleSheet.create({
   valueLabel: {
     ...journalCardMetricLabelStyle,
     marginBottom: JOURNAL_LAYOUT.cardMetricLabelToValueGap,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     includeFontPadding: false,
   },
   valueAmount: {
     ...journalCardMetricValueStyle,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     includeFontPadding: false,
     fontVariant: ['tabular-nums'],
   },

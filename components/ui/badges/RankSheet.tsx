@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 /**
  * שיט דרגת ותק — אייקון גדול + שם, ותק המנוי, התקדמות לדרגה הבאה, הסולם המלא, «הבנתי».
@@ -168,7 +169,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       alignSelf: 'stretch',
       paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
       paddingTop: 6,
-      direction: 'rtl',
+      direction: UI_DIR,
     },
     hero: {
       alignItems: 'center',

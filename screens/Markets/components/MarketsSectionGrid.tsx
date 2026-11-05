@@ -1,3 +1,4 @@
+import { ROW_REV } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
@@ -111,7 +112,7 @@ const styles = StyleSheet.create({
     gap: MARKETS_LAYOUT.cardStackGap,
   },
   row: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     gap: MARKETS_LAYOUT.cardStackGap,
   },
   /** פריט יחיד בשורה — ממורכז, רוחב כמו תא ברשת 2×2 */

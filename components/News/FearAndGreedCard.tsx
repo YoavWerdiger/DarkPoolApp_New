@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_END, TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
@@ -282,7 +283,7 @@ export default function FearAndGreedCard({
         fontSize: APP_TYPE.cardSubtitle.fontSize,
         lineHeight: APP_TYPE.cardSubtitle.lineHeight,
         fontWeight: '600' as const,
-        textAlign: 'left' as const,
+        textAlign: TEXT_END,
         writingDirection: 'ltr' as const,
         fontVariant: ['tabular-nums'] as const,
       },
@@ -475,15 +476,15 @@ export default function FearAndGreedCard({
 
         {!effectiveExpanded ? (
           <View style={{ marginTop: DesignTokens.spacing.sm }}>
-            <Text style={[styles.description, { textAlign: 'right', marginBottom: DesignTokens.spacing.xs }]}>
+            <Text style={[styles.description, { textAlign: TEXT_START, marginBottom: DesignTokens.spacing.xs }]}>
               {i18n.t('auto.components__News__FearAndGreedCard.s7')} <Text style={{ fontWeight: '600', color }}>{value}</Text>
             </Text>
-            <Text style={[styles.description, { textAlign: 'right', color: DesignTokens.colors.text.secondary }]}>{i18n.t('auto.components__News__FearAndGreedCard.s8')}</Text>
+            <Text style={[styles.description, { textAlign: TEXT_START, color: DesignTokens.colors.text.secondary }]}>{i18n.t('auto.components__News__FearAndGreedCard.s8')}</Text>
           </View>
         ) : (
           <View
             style={{
-              flexDirection: 'row-reverse',
+              flexDirection: ROW_REV,
               alignItems: 'stretch',
               gap: DesignTokens.spacing.sm,
               paddingHorizontal: DesignTokens.spacing.sm,

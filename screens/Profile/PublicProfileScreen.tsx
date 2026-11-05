@@ -1,3 +1,4 @@
+import { UI_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 /**
@@ -199,7 +200,7 @@ export default function PublicProfileScreen({ route, navigation }: any) {
           }}
           accessibilityLabel={i18n.t('auto.screens__Profile__PublicProfileScreen.s12')}
         >
-          <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
+          <Ionicons name={dirIcon('chevron-forward')} size={22} color={tokens.colors.text.primary} />
         </DayNavBlurButton>
       </View>
 
@@ -330,7 +331,7 @@ export default function PublicProfileScreen({ route, navigation }: any) {
                         ? i18n.t('auto.screens__Profile__PublicProfileScreen.s22', { v0: progress.daysToNext, v1: RANK_NAMES[progress.next.metal] })
                         : i18n.t('auto.screens__Profile__PublicProfileScreen.s23')}
                     </Text>
-                    <Ionicons name="chevron-back" size={16} color={tokens.colors.text.tertiary} />
+                    <Ionicons name={dirIcon('chevron-back')} size={16} color={tokens.colors.text.tertiary} />
                   </View>
                 </View>
               </UICard>
@@ -469,7 +470,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     root: {
       flex: 1,
       backgroundColor: 'transparent',
-      direction: 'rtl',
+      direction: UI_DIR,
     },
     topBar: {
       flexDirection: 'row',

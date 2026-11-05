@@ -1,3 +1,4 @@
+import { TEXT_END } from '../../lib/i18n/direction';
 // ============================================
 // Link Preview Component
 // ============================================
@@ -246,7 +247,7 @@ const styles = StyleSheet.create({
     lineHeight: APP_TYPE.caption.lineHeight,
     fontWeight: '500',
     writingDirection: 'ltr',
-    textAlign: 'left',
+    textAlign: TEXT_END,
   },
   skelLine: {
     height: 10,

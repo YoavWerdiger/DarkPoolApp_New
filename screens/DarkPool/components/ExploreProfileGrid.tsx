@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React, { useCallback, useMemo } from 'react';
 import {
@@ -50,19 +51,19 @@ export function ExploreProfileGrid({
     () =>
       StyleSheet.create({
         list: {
-          direction: 'rtl',
+          direction: UI_DIR,
           paddingHorizontal: tokens.layout.screenPadding,
           paddingBottom: contentPaddingBottom,
         },
         row: {
-          direction: 'rtl',
+          direction: UI_DIR,
           flexDirection: 'row',
           justifyContent: 'flex-start',
           gap,
           marginBottom: gap,
         },
         empty: {
-          direction: 'rtl',
+          direction: UI_DIR,
           paddingVertical: 48,
           alignSelf: 'stretch',
           alignItems: 'stretch',

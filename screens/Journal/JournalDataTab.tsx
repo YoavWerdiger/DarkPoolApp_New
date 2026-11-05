@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_END, TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
@@ -228,7 +229,7 @@ const CumulativePnlLineChart = memo(function CumulativePnlLineChart({
       </Svg>
       <View
         style={{
-          flexDirection: 'row-reverse',
+          flexDirection: ROW_REV,
           justifyContent: 'center',
           gap: 24,
           marginTop: 4,
@@ -466,7 +467,7 @@ const journalTabStyles = StyleSheet.create({
   cardHeader: {
     ...journalCardTitleStyle,
     marginBottom: JOURNAL_LAYOUT.cardTitleToBodyGap,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   sectionTitle: {
     ...journalSectionTitleStyle,
@@ -551,7 +552,7 @@ const journalTabStyles = StyleSheet.create({
     fontWeight: JOURNAL_TYPE.groupLabel.fontWeight,
     lineHeight: JOURNAL_TYPE.groupLabel.lineHeight,
     marginBottom: JOURNAL_LAYOUT.groupLabelToContent,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: TEXT_DIR,
   },
   journalInsightSurface: {
@@ -1156,7 +1157,7 @@ export default function JournalDataTab() {
                     <Text
                       style={[
                         journalBodyTextStyle,
-                        { color: pnlColor, writingDirection: 'ltr', textAlign: 'left', flexShrink: 0 },
+                        { color: pnlColor, writingDirection: 'ltr', textAlign: TEXT_END, flexShrink: 0 },
                       ]}
                     >
                       {s.pnl >= 0 ? '+' : '-'}${Math.abs(s.pnl).toFixed(0)}

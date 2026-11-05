@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 /**
  * כותרת קומפקטית לפיד — כמו "LATEST TRADES" ב-Insider Wave (אותיות קטנות, ללא אייקון).
@@ -34,7 +35,7 @@ export function InsiderLatestTradesLabel({ count, title = i18n.t('auto.screens__
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     wrap: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',

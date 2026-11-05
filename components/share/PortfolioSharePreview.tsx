@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 /**
@@ -101,17 +102,17 @@ function createStyles(
       ...APP_TYPE.cardMetricLabel,
       color: tokens.colors.text.secondary,
       writingDirection: TEXT_DIR,
-      textAlign: 'right',
+      textAlign: TEXT_START,
     },
     valueAmount: {
       marginTop: APP_LAYOUT.cardMetricLabelToValueGap,
       ...(compact ? APP_TYPE.cardMetricValueSecondary : APP_TYPE.cardMetricValue),
       color: tokens.colors.text.primary,
       writingDirection: 'ltr',
-      textAlign: 'right',
+      textAlign: TEXT_START,
     },
     chartRow: {
-      flexDirection: 'row-reverse',
+      flexDirection: ROW_REV,
       alignItems: 'center',
       gap: 12,
       width: '100%',
@@ -122,7 +123,7 @@ function createStyles(
       gap: 6,
     },
     legendRow: {
-      flexDirection: 'row-reverse',
+      flexDirection: ROW_REV,
       alignItems: 'center',
       gap: 6,
     },
@@ -137,7 +138,7 @@ function createStyles(
       ...APP_TYPE.cardMetricLabel,
       color: tokens.colors.text.primary,
       writingDirection: 'ltr',
-      textAlign: 'right',
+      textAlign: TEXT_START,
     },
     legendPct: {
       ...APP_TYPE.caption,

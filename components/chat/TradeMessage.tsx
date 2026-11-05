@@ -1,3 +1,4 @@
+import { TEXT_START, UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
@@ -209,7 +210,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     marginVertical: 2,
-    direction: 'rtl',
+    direction: UI_DIR,
   },
   header: {
     flexDirection: 'row',
@@ -279,7 +280,7 @@ const styles = StyleSheet.create({
     fontSize: APP_TYPE.caption.fontSize,
     lineHeight: APP_TYPE.caption.lineHeight,
     fontWeight: APP_TYPE.caption.fontWeight,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: TEXT_DIR,
   },
   metricValue: {
@@ -292,7 +293,7 @@ const styles = StyleSheet.create({
   notes: {
     fontSize: APP_TYPE.cardSubtitle.fontSize,
     lineHeight: APP_TYPE.cardSubtitle.lineHeight,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: TEXT_DIR,
     paddingHorizontal: 14,
     paddingVertical: 12,

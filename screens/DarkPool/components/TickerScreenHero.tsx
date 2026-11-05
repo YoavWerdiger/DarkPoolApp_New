@@ -1,3 +1,4 @@
+import { TEXT_END, TEXT_START, UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -104,7 +105,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       letterSpacing: DARK_POOL_TYPE.sectionTitle.letterSpacing,
       color: tokens.colors.text.primary,
       writingDirection: 'ltr',
-      textAlign: 'left',
+      textAlign: TEXT_END,
     },
     meta: {
       ...darkPoolPhysicalLeftText,
@@ -124,7 +125,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       color: tokens.colors.text.tertiary,
     },
     statsRow: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 8,
@@ -155,7 +156,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontWeight: DARK_POOL_TYPE.cardMetricValueSecondary.fontWeight,
       color: tokens.colors.text.primary,
       writingDirection: 'ltr',
-      textAlign: 'right',
+      textAlign: TEXT_START,
     },
   });
 }

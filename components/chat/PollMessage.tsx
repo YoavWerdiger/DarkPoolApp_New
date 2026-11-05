@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useMemo } from 'react';
@@ -387,7 +388,7 @@ const createStyles = (
           paddingVertical: 2,
           // הבועה כבר נותנת paddingHorizontal: 9 כמו טקסט; מעט נוסף כמו messageTextWithMedia
           paddingHorizontal: 2,
-          direction: 'rtl',
+          direction: UI_DIR,
         }
       : {
           backgroundColor: isMe ? tokens.colors.bubbleMe : tokens.colors.background.secondary,
@@ -396,7 +397,7 @@ const createStyles = (
           marginBottom: tokens.spacing.md,
           borderWidth: StyleSheet.hairlineWidth,
           borderColor: tokens.colors.border.primary,
-          direction: 'rtl',
+          direction: UI_DIR,
           minWidth: 220,
           maxWidth: 300,
         },

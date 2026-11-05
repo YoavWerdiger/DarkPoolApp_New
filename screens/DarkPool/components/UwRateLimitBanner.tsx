@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../../lib/i18n/direction';
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -37,7 +38,7 @@ export function UwRateLimitBanner({ warnings }: Props) {
 
 const styles = StyleSheet.create({
   wrap: {
-    direction: 'rtl',
+    direction: UI_DIR,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,

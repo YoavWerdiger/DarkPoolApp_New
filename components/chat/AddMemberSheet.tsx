@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 // ============================================
 // Add Member Sheet
@@ -216,7 +217,7 @@ export default function AddMemberSheet({
 const styles = StyleSheet.create({
   header: {
     ...chatRtlRow,
-    direction: 'rtl',
+    direction: UI_DIR,
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 12,
@@ -231,7 +232,7 @@ const styles = StyleSheet.create({
   },
   searchContainerInner: {
     ...chatRtlRow,
-    direction: 'rtl',
+    direction: UI_DIR,
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 9,
@@ -246,7 +247,7 @@ const styles = StyleSheet.create({
   },
   userRow: {
     ...chatRtlRow,
-    direction: 'rtl',
+    direction: UI_DIR,
     alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,

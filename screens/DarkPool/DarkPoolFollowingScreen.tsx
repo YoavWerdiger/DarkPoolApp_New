@@ -1,3 +1,4 @@
+import { UI_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 /**
  * רשימת בכירים/פוליטיקאים במעקב + קיצור לגילוי.
@@ -120,7 +121,7 @@ export default function DarkPoolFollowingScreen() {
     () =>
       StyleSheet.create({
         scroll: {
-          direction: 'rtl',
+          direction: UI_DIR,
           paddingBottom: bottomPad,
           paddingHorizontal: tokens.layout?.screenPadding ?? 20,
         },
@@ -152,7 +153,7 @@ export default function DarkPoolFollowingScreen() {
           alignSelf: 'stretch',
         },
         row: {
-          direction: 'rtl',
+          direction: UI_DIR,
           flexDirection: 'row',
           alignItems: 'center',
           paddingVertical: APP_LAYOUT.cardTitleToBodyGap,
@@ -344,7 +345,7 @@ function FollowedRow({
             {person.ticker ? ` · ${person.ticker}` : ''}
           </Text>
         </View>
-        <Ionicons name="chevron-back" size={18} color={tokens.colors.text.secondary} />
+        <Ionicons name={dirIcon('chevron-back')} size={18} color={tokens.colors.text.secondary} />
       </Pressable>
   );
 }

@@ -1,3 +1,4 @@
+import { UI_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -261,7 +262,7 @@ export default function ShareDestinationSheet({
                   <Text style={[styles.groupName, { color: tokens.colors.text.primary }]} numberOfLines={1}>
                     {chatGroupDisplayName(item.name)}
                   </Text>
-                  <Ionicons name="chevron-back" size={18} color={tokens.colors.text.tertiary} />
+                  <Ionicons name={dirIcon('chevron-back')} size={18} color={tokens.colors.text.tertiary} />
                 </TouchableOpacity>
               );
             }}
@@ -299,14 +300,14 @@ function ShareHeaderBack({
       accessibilityLabel={label}
       disabled={disabled}
     >
-      <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
+      <Ionicons name={dirIcon('chevron-forward')} size={22} color={tokens.colors.text.primary} />
     </DayNavBlurButton>
   );
 }
 
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
-    container: { direction: 'rtl' },
+    container: { direction: UI_DIR },
     header: {
       flexDirection: 'row',
       alignItems: 'center',

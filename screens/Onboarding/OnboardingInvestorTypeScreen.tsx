@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_START, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
@@ -85,7 +86,7 @@ const OnboardingInvestorTypeScreen: React.FC<Props> = ({ navigation }) => {
           {/* Header */}
           <View style={styles.header}>
             <Pressable onPress={handleBack} style={styles.backButton}>
-              <Ionicons name="chevron-forward" size={28} color={tokens.colors.text.primary} />
+              <Ionicons name={dirIcon('chevron-forward')} size={28} color={tokens.colors.text.primary} />
             </Pressable>
             <Text style={[styles.stepIndicator, { color: tokens.colors.text.tertiary }]}>{i18n.t('auto.screens__Onboarding__OnboardingInvestorTypeScreen.s5')}</Text>
           </View>
@@ -237,13 +238,13 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
     marginBottom: 8,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   subtitle: {
     fontSize: 16,
     lineHeight: 24,
     marginBottom: 24,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   optionsContainer: {
     gap: 16,
@@ -252,7 +253,7 @@ const styles = StyleSheet.create({
     minHeight: 80,
   },
   optionContent: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'center',
     gap: 16,
   },
@@ -270,11 +271,11 @@ const styles = StyleSheet.create({
   optionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   optionDescription: {
     fontSize: 13,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     lineHeight: 18,
   },
   radio: {

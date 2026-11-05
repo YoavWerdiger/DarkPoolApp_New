@@ -1,3 +1,4 @@
+import { TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -96,7 +97,7 @@ const TrendCard: React.FC<{ trend: EarningsTrend }> = ({ trend }) => {
             style={{
               ...APP_TYPE.cardTitle,
               color: DesignTokens.colors.text.primary,
-              textAlign: 'right'
+              textAlign: TEXT_START
             }}
           >
             {getCompanyName(trend.code)}
@@ -105,7 +106,7 @@ const TrendCard: React.FC<{ trend: EarningsTrend }> = ({ trend }) => {
             style={{
               ...APP_TYPE.caption,
               color: DesignTokens.colors.text.tertiary,
-              textAlign: 'right',
+              textAlign: TEXT_START,
               marginTop: APP_LAYOUT.cardTitleToSubtitleGap
             }}
           >
@@ -130,24 +131,24 @@ const TrendCard: React.FC<{ trend: EarningsTrend }> = ({ trend }) => {
       {/* EPS & Revenue Estimates */}
       <View style={{ flexDirection: 'row', marginBottom: 12 }}>
         <View style={{ flex: 1 }}>
-          <Text style={{ ...APP_TYPE.caption2, color: DesignTokens.colors.text.tertiary, marginBottom: APP_LAYOUT.cardMetricLabelToValueGap, textAlign: 'right' }}>{i18n.t('auto.screens__News__EarningsTrendsTab.s5')}</Text>
-          <Text style={{ ...APP_TYPE.cardTitle, color: DesignTokens.colors.success.main, textAlign: 'right' }}>
+          <Text style={{ ...APP_TYPE.caption2, color: DesignTokens.colors.text.tertiary, marginBottom: APP_LAYOUT.cardMetricLabelToValueGap, textAlign: TEXT_START }}>{i18n.t('auto.screens__News__EarningsTrendsTab.s5')}</Text>
+          <Text style={{ ...APP_TYPE.cardTitle, color: DesignTokens.colors.success.main, textAlign: TEXT_START }}>
             ${formatNumber(trend.earnings_estimate_avg)}
           </Text>
           {trend.earnings_estimate_growth !== null && (
-            <Text style={{ ...APP_TYPE.caption2, color: trend.earnings_estimate_growth >= 0 ? DesignTokens.colors.success.main : DesignTokens.colors.danger.main, marginTop: APP_LAYOUT.cardMetricLabelToValueGap, textAlign: 'right' }}>
+            <Text style={{ ...APP_TYPE.caption2, color: trend.earnings_estimate_growth >= 0 ? DesignTokens.colors.success.main : DesignTokens.colors.danger.main, marginTop: APP_LAYOUT.cardMetricLabelToValueGap, textAlign: TEXT_START }}>
               {formatPercent(trend.earnings_estimate_growth)}
             </Text>
           )}
         </View>
 
         <View style={{ flex: 1 }}>
-          <Text style={{ ...APP_TYPE.caption2, color: DesignTokens.colors.text.tertiary, marginBottom: APP_LAYOUT.cardMetricLabelToValueGap, textAlign: 'right' }}>{i18n.t('auto.screens__News__EarningsTrendsTab.s6')}</Text>
-          <Text style={{ ...APP_TYPE.cardTitle, color: DesignTokens.colors.text.primary, textAlign: 'right' }}>
+          <Text style={{ ...APP_TYPE.caption2, color: DesignTokens.colors.text.tertiary, marginBottom: APP_LAYOUT.cardMetricLabelToValueGap, textAlign: TEXT_START }}>{i18n.t('auto.screens__News__EarningsTrendsTab.s6')}</Text>
+          <Text style={{ ...APP_TYPE.cardTitle, color: DesignTokens.colors.text.primary, textAlign: TEXT_START }}>
             ${formatNumber(trend.revenue_estimate_avg)}
           </Text>
           {trend.revenue_estimate_growth !== null && (
-            <Text style={{ ...APP_TYPE.caption2, color: trend.revenue_estimate_growth >= 0 ? DesignTokens.colors.success.main : DesignTokens.colors.danger.main, marginTop: APP_LAYOUT.cardMetricLabelToValueGap, textAlign: 'right' }}>
+            <Text style={{ ...APP_TYPE.caption2, color: trend.revenue_estimate_growth >= 0 ? DesignTokens.colors.success.main : DesignTokens.colors.danger.main, marginTop: APP_LAYOUT.cardMetricLabelToValueGap, textAlign: TEXT_START }}>
               {formatPercent(trend.revenue_estimate_growth)}
             </Text>
           )}

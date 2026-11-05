@@ -1,3 +1,4 @@
+import { ROW_REV } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React, { useMemo, useState } from 'react';
 import {
@@ -250,7 +251,7 @@ const styles = StyleSheet.create({
   },
   primaryBtn: {
     marginTop: 8,
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'center',
     gap: 8,
     paddingVertical: 12,
@@ -272,7 +273,7 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   footerBtn: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,

@@ -1,3 +1,4 @@
+import { TEXT_START, UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React, { useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
@@ -210,7 +211,7 @@ function formatCompactNum(v: number): string {
 
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
-    wrap: { gap: 12, direction: 'rtl' },
+    wrap: { gap: 12, direction: UI_DIR },
     loader: {
       alignItems: 'center',
       paddingVertical: 24,
@@ -229,7 +230,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       backgroundColor: 'transparent',
     },
     summaryGrid: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 8,
@@ -257,7 +258,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontWeight: DARK_POOL_TYPE.cardMetricValueSecondary.fontWeight,
       letterSpacing: DARK_POOL_TYPE.cardMetricValueSecondary.letterSpacing,
       writingDirection: 'ltr',
-      textAlign: 'right',
+      textAlign: TEXT_START,
     },
     summaryHint: {
       ...darkPoolPhysicalRightText,
@@ -300,7 +301,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       paddingBottom: 0,
     },
     insiderRow: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       paddingVertical: 15,

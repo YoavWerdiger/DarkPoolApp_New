@@ -1,3 +1,4 @@
+import { TEXT_END, TEXT_START } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 import type { TextStyle, ViewStyle } from 'react-native';
@@ -18,12 +19,12 @@ const PDI = '\u2069';
  */
 export const hebrewText: TextStyle = {
   writingDirection: TEXT_DIR,
-  textAlign: 'right',
+  textAlign: TEXT_START,
 };
 
 export const dataText: TextStyle = {
   writingDirection: 'ltr',
-  textAlign: 'left',
+  textAlign: TEXT_END,
   fontVariant: ['tabular-nums'],
 };
 
@@ -35,7 +36,7 @@ export const dataText: TextStyle = {
 export const ltrNameText: TextStyle = {
   direction: 'ltr',
   writingDirection: 'ltr',
-  textAlign: 'right',
+  textAlign: TEXT_START,
 };
 
 export const rowMixed: ViewStyle = {

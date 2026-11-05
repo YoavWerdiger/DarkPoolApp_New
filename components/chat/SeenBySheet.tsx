@@ -1,3 +1,4 @@
+import { TEXT_END } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { memo, useState, useEffect, useMemo } from 'react';
@@ -64,13 +65,13 @@ const SeenBySheet: React.FC<SeenBySheetProps> = memo(({
           color: tokens.colors.text.secondary,
           fontSize: 13,
           fontWeight: '500',
-          textAlign: 'left',
+          textAlign: TEXT_END,
         },
         date: {
           color: tokens.colors.text.tertiary,
           fontSize: 11,
           marginTop: 2,
-          textAlign: 'left',
+          textAlign: TEXT_END,
         },
       }),
     [tokens],

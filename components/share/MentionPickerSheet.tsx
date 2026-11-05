@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_START, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -157,7 +158,7 @@ export default function MentionPickerSheet({
             accessibilityLabel={i18n.t('auto.components__share__MentionPickerSheet.s4')}
           >
             <Ionicons
-              name="chevron-forward"
+              name={dirIcon('chevron-forward')}
               size={22}
               color={tokens.colors.text.primary}
             />
@@ -270,7 +271,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     container: { flex: 1, minHeight: 0, direction: 'ltr' },
     header: {
-      flexDirection: 'row-reverse',
+      flexDirection: ROW_REV,
       alignItems: 'center',
       paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
       paddingBottom: APP_LAYOUT.cardTitleToBodyGap,
@@ -299,7 +300,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       width: '100%',
     },
     searchWrap: {
-      flexDirection: 'row-reverse',
+      flexDirection: ROW_REV,
       marginHorizontal: APP_LAYOUT.screenPaddingHorizontal,
       marginTop: APP_LAYOUT.cardPadding,
       marginBottom: APP_LAYOUT.cardStackGap,
@@ -312,7 +313,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       flex: 1,
       ...APP_TYPE.body,
       padding: 0,
-      textAlign: 'right',
+      textAlign: TEXT_START,
       writingDirection: TEXT_DIR,
     },
     center: {
@@ -336,7 +337,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       writingDirection: TEXT_DIR,
     },
     row: {
-      flexDirection: 'row-reverse',
+      flexDirection: ROW_REV,
       alignItems: 'center',
       gap: 12,
       paddingVertical: 15,
@@ -360,13 +361,13 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     rowText: { flex: 1, minWidth: 0, gap: APP_LAYOUT.cardTitleToSubtitleGap },
     rowTitle: {
       ...APP_TYPE.cardTitle,
-      textAlign: 'right',
+      textAlign: TEXT_START,
       writingDirection: TEXT_DIR,
       color: tokens.colors.text.primary,
     },
     rowSub: {
       ...APP_TYPE.cardSubtitle,
-      textAlign: 'right',
+      textAlign: TEXT_START,
       writingDirection: TEXT_DIR,
     },
   });

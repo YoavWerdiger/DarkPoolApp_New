@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_START } from '../../lib/i18n/direction';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -190,13 +191,13 @@ function Bar({ on, height, color }: { on: boolean; height: number; color: string
 const styles = StyleSheet.create({
   row: {
     // row-reverse: המסלול בצד ימין
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'stretch',
     gap: APP_LAYOUT.componentGap,
     height: TRACK_H + 20,
   },
   trackCol: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     width: 150,
     paddingVertical: 10,
   },
@@ -247,7 +248,7 @@ const styles = StyleSheet.create({
     left: 0,
     fontSize: APP_TYPE.cardBody.fontSize,
     lineHeight: 20,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: TEXT_DIR,
   },
   hero: {

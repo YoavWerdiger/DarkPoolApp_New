@@ -1,3 +1,4 @@
+import { TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useCallback } from 'react';
@@ -62,7 +63,7 @@ const LikedArticleCard: React.FC<LikedArticleCardProps> = ({ article, onPress, o
                   style={{
                     ...APP_TYPE.cardTitle,
                     color: '#FFFFFF',
-                    textAlign: 'right',
+                    textAlign: TEXT_START,
                   }}
                   numberOfLines={2}
                 >
@@ -73,7 +74,7 @@ const LikedArticleCard: React.FC<LikedArticleCardProps> = ({ article, onPress, o
                     ...APP_TYPE.caption,
                     color: 'rgba(255,255,255,0.7)',
                     marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
-                    textAlign: 'right',
+                    textAlign: TEXT_START,
                   }}
                 >
                   {article.article_source} • {formatNewsDate(article.article_published_at)}
@@ -96,7 +97,7 @@ const LikedArticleCard: React.FC<LikedArticleCardProps> = ({ article, onPress, o
                 style={{
                   ...APP_TYPE.cardTitle,
                   color: DesignTokens.colors.text.primary,
-                  textAlign: 'right',
+                  textAlign: TEXT_START,
                   marginTop: APP_LAYOUT.cardTitleToBodyGap,
                 }}
                 numberOfLines={3}
@@ -149,7 +150,7 @@ const LikedArticleCard: React.FC<LikedArticleCardProps> = ({ article, onPress, o
                 style={{
                   ...APP_TYPE.caption,
                   color: DesignTokens.colors.text.tertiary,
-                  textAlign: 'right',
+                  textAlign: TEXT_START,
                   flex: 1,
                   marginLeft: APP_LAYOUT.cardTitleToBodyGap,
                 }}

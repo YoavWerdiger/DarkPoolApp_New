@@ -1,3 +1,4 @@
+import { TEXT_START, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { ReactNode } from 'react';
@@ -93,7 +94,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
     letterSpacing: tokens.typography.heroTitle.letterSpacing,
     lineHeight: tokens.typography.heroTitle.lineHeight,
     color: tokens.colors.text.primary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: TEXT_DIR,
     marginBottom: subtitle ? tokens.spacing.sm : tokens.spacing.xl,
   };
@@ -103,7 +104,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
     fontWeight: tokens.typography.body.weight,
     lineHeight: tokens.typography.body.lineHeight,
     color: tokens.colors.text.secondary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: TEXT_DIR,
     marginBottom: tokens.spacing.xl,
   };
@@ -140,7 +141,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
                   accessibilityLabel={i18n.t('auto.components__onboarding__OnboardingScreen.s1')}
                 >
                   <Ionicons
-                    name="chevron-forward"
+                    name={dirIcon('chevron-forward')}
                     size={28}
                     color={tokens.colors.text.primary}
                   />

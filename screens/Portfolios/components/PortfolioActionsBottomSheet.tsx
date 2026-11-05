@@ -1,3 +1,4 @@
+import { UI_DIR, dirIcon } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 import { appLocale } from '../../../lib/i18n/locale';
@@ -218,7 +219,7 @@ function PortfolioActionsSheetBody({
     () =>
       StyleSheet.create({
         root: {
-          direction: 'rtl',
+          direction: UI_DIR,
           paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
           paddingTop: 4,
           paddingBottom: Math.max(insets.bottom, 12),
@@ -312,7 +313,7 @@ function PortfolioActionsSheetBody({
           style={{ backgroundColor: headerExitButtonFill(tokens.colors.background.cardSolid) }}
           accessibilityLabel={i18n.t('auto.screens__Portfolios__components__PortfolioActionsBottomSheet.s17')}
         >
-          <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
+          <Ionicons name={dirIcon('chevron-forward')} size={22} color={tokens.colors.text.primary} />
         </DayNavBlurButton>
         <View style={styles.headerCenter}>
           <Text style={styles.title} numberOfLines={1}>

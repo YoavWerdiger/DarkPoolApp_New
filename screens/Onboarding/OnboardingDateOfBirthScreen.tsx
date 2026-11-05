@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_START, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Pressable } from 'react-native';
@@ -117,7 +118,7 @@ const OnboardingDateOfBirthScreen: React.FC<Props> = ({ navigation }) => {
           {/* Header */}
           <View style={styles.header}>
             <Pressable onPress={handleBack} style={styles.backButton}>
-              <Ionicons name="chevron-forward" size={28} color={tokens.colors.text.primary} />
+              <Ionicons name={dirIcon('chevron-forward')} size={28} color={tokens.colors.text.primary} />
             </Pressable>
             <Text style={[styles.stepIndicator, { color: tokens.colors.text.tertiary }]}>{i18n.t('auto.screens__Onboarding__OnboardingDateOfBirthScreen.s3')}</Text>
           </View>
@@ -238,20 +239,20 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
     marginBottom: 8,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   subtitle: {
     fontSize: 16,
     lineHeight: 24,
     marginBottom: 24,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   warningCard: {
     borderWidth: 1,
     marginBottom: 16,
   },
   warningContent: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'flex-start',
     gap: 12,
   },
@@ -259,7 +260,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontWeight: '600',
-    textAlign: 'right',
+    textAlign: TEXT_START,
     lineHeight: 20,
   },
   errorCard: {
@@ -267,7 +268,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   errorContent: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'flex-start',
     gap: 12,
   },
@@ -275,7 +276,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontWeight: '600',
-    textAlign: 'right',
+    textAlign: TEXT_START,
     lineHeight: 20,
   },
   inputContainer: {
@@ -284,14 +285,14 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   inputCard: {
     minHeight: 56,
     borderRadius: 9999,
   },
   inputWrapper: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 16,
@@ -304,7 +305,7 @@ const styles = StyleSheet.create({
   },
   helperText: {
     fontSize: 12,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   footer: {
     paddingHorizontal: 20,

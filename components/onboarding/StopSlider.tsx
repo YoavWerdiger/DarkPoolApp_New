@@ -1,3 +1,4 @@
+import { ROW_REV } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -530,7 +531,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stars: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     gap: 4,
   },
   rankName: {
@@ -600,7 +601,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   endLabels: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     justifyContent: 'space-between',
     marginTop: -APP_LAYOUT.componentGap,
   },

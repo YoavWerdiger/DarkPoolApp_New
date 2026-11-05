@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_END, TEXT_START, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -434,14 +435,14 @@ export default function AddTransactionScreen() {
           color: tokens.colors.text.inverse,
         },
         chipsWrap: {
-          flexDirection: 'row-reverse',
+          flexDirection: ROW_REV,
           flexWrap: 'wrap',
           gap: JOURNAL_LAYOUT.stackGapSmall,
           marginBottom: PORTFOLIO_FORM.fieldSpacing,
         },
         fieldBlock: { marginBottom: PORTFOLIO_FORM.fieldSpacing },
         symbolPicker: {
-          flexDirection: 'row-reverse',
+          flexDirection: ROW_REV,
           alignItems: 'center',
           gap: 10,
           ...formFieldShellStyle({ tokens, focused: false, multiline: false }),
@@ -459,7 +460,7 @@ export default function AddTransactionScreen() {
           alignSelf: 'center',
           color: tokens.colors.text.primary,
           writingDirection: 'ltr',
-          textAlign: 'right',
+          textAlign: TEXT_START,
           direction: 'ltr',
         },
         symbolPlaceholder: {
@@ -472,7 +473,7 @@ export default function AddTransactionScreen() {
         },
         /** לונג/שורט — שורת half-width כמו DayDividerPill, צבע רק בנבחר */
         sideRow: {
-          flexDirection: 'row-reverse',
+          flexDirection: ROW_REV,
           alignSelf: 'stretch',
           width: '100%',
           alignItems: 'stretch',
@@ -517,7 +518,7 @@ export default function AddTransactionScreen() {
           color: tokens.colors.text.primary,
         },
         twoCol: {
-          flexDirection: 'row-reverse',
+          flexDirection: ROW_REV,
           gap: JOURNAL_LAYOUT.stackGapSmall,
           marginBottom: PORTFOLIO_FORM.fieldSpacing,
         },
@@ -541,7 +542,7 @@ export default function AddTransactionScreen() {
           borderWidth: 0,
         },
         validationRow: {
-          flexDirection: 'row-reverse',
+          flexDirection: ROW_REV,
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: 8,
@@ -557,7 +558,7 @@ export default function AddTransactionScreen() {
           width: undefined,
           marginTop: 0,
           fontWeight: JOURNAL_TYPE.cardTitle.fontWeight,
-          textAlign: 'left',
+          textAlign: TEXT_END,
           writingDirection: 'ltr',
           direction: 'ltr',
           fontVariant: ['tabular-nums'],
@@ -568,7 +569,7 @@ export default function AddTransactionScreen() {
           backgroundColor: tokens.colors.border.divider,
         },
         validationWarningRow: {
-          flexDirection: 'row-reverse',
+          flexDirection: ROW_REV,
           alignItems: 'center',
           gap: 6,
           paddingTop: 4,
@@ -580,12 +581,12 @@ export default function AddTransactionScreen() {
           color: tokens.colors.text.danger,
         },
         dateRow: {
-          flexDirection: 'row-reverse',
+          flexDirection: ROW_REV,
           gap: JOURNAL_LAYOUT.stackGapSmall,
         },
         datePill: {
           flex: 1,
-          flexDirection: 'row-reverse',
+          flexDirection: ROW_REV,
           alignItems: 'center',
           gap: 8,
           ...formFieldShellStyle({ tokens, focused: false, multiline: false }),
@@ -605,7 +606,7 @@ export default function AddTransactionScreen() {
           paddingBottom: 28,
         },
         dateSheetHeader: {
-          flexDirection: 'row-reverse',
+          flexDirection: ROW_REV,
           alignItems: 'center',
           justifyContent: 'space-between',
           marginBottom: JOURNAL_LAYOUT.stackGapSmall,
@@ -630,7 +631,7 @@ export default function AddTransactionScreen() {
         // הלוח המובנה ברוחב קבוע (~330) — ממורכז במקום צמוד לשמאל
         dateSheetCalendar: { width: 340, alignSelf: 'center' },
         timeRow: {
-          flexDirection: 'row-reverse',
+          flexDirection: ROW_REV,
           alignItems: 'center',
           justifyContent: 'space-between',
           minHeight: 52,
@@ -706,7 +707,7 @@ export default function AddTransactionScreen() {
                       <Text style={styles.symbolPlaceholder}>{i18n.t('auto.screens__Portfolios__AddTransactionScreen.s29')}</Text>
                     )}
                     <Ionicons
-                      name="chevron-back"
+                      name={dirIcon('chevron-back')}
                       size={18}
                       color={tokens.colors.text.secondary}
                     />

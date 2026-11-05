@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_START, UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
@@ -229,7 +230,7 @@ export default function MessageActionSheet({
       <ChatSheetContent
         onLayout={onContentLayout}
         style={{
-          direction: 'rtl',
+          direction: UI_DIR,
           paddingBottom: sheetBottomPad,
           backgroundColor: 'transparent',
         }}
@@ -312,7 +313,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   previewRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'flex-start',
     gap: 10,
   },
@@ -329,7 +330,7 @@ const styles = StyleSheet.create({
   previewBody: {
     fontSize: 15,
     lineHeight: 22,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: TEXT_DIR,
   },
   previewMeta: {

@@ -1,3 +1,4 @@
+import { TEXT_END } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 import { legacyAlert, showAppConfirm } from '../../utils/appDialog';
@@ -17,13 +18,13 @@ import {
   BadgeCheck,
   Ban,
   Calendar,
-  ChevronLeft,
   CreditCard,
   Layers,
   Receipt,
   RefreshCw,
   type LucideIcon,
 } from 'lucide-react-native';
+import { ChevronLeft } from '../../lib/i18n/dirIcons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
@@ -651,7 +652,7 @@ const styles = StyleSheet.create({
     ...settingsHebrewText,
     ...settingsBodyType,
     flexShrink: 1,
-    textAlign: 'left',
+    textAlign: TEXT_END,
   },
   planPriceSpacer: {
     flex: 1,
@@ -684,7 +685,7 @@ const styles = StyleSheet.create({
     ...settingsHebrewText,
     ...settingsBodyType,
     flexShrink: 1,
-    textAlign: 'left',
+    textAlign: TEXT_END,
   },
   fieldLabel: {
     ...settingsHebrewText,

@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../../lib/i18n/direction';
 /**
  * כרטיס / קישור כנות בסגנון InsiderWave — בלי לטעון שאנחנו משחזרים תיק.
  * גוף ארוך רק ב-HelpSheet, לא כפסקה פתוחה במסך.
@@ -78,7 +79,7 @@ export function StockActEstimateNote({ variant = 'card' }: Props) {
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     card: {
-      direction: 'rtl',
+      direction: UI_DIR,
       width: '100%',
       alignSelf: 'stretch',
       marginBottom: tokens.spacing.md,

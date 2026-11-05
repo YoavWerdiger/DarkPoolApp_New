@@ -1,3 +1,4 @@
+import { UI_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import {
@@ -224,7 +225,7 @@ export default function ChatSearchBottomSheet({
             glassIntensity="subtle"
             accessibilityLabel={i18n.t('auto.components__chat__ChatSearchBottomSheet.s9')}
           >
-            <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
+            <Ionicons name={dirIcon('chevron-forward')} size={22} color={tokens.colors.text.primary} />
           </DayNavBlurButton>
 
           <View style={styles.headerCenter}>
@@ -301,7 +302,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       flex: 1,
       minHeight: 280,
       paddingHorizontal: tokens.spacing.md,
-      direction: 'rtl',
+      direction: UI_DIR,
       backgroundColor: 'transparent',
     },
     header: {
@@ -346,7 +347,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     searchRow: {
       flexDirection: 'row',
-      direction: 'rtl',
+      direction: UI_DIR,
       alignItems: 'center',
       gap: 10,
       minHeight: 44,

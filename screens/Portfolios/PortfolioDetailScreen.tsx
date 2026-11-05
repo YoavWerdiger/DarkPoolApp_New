@@ -1,3 +1,4 @@
+import { ROW_REV, UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { JournalSkeleton } from './components/JournalSkeleton';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -235,7 +236,7 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
           marginBottom: 2,
         },
         tabsScrollContent: {
-          direction: 'rtl',
+          direction: UI_DIR,
           flexDirection: 'row',
           alignItems: 'center',
           paddingHorizontal: 16,
@@ -256,7 +257,7 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
           pointerEvents: 'box-none',
         },
         fabBtn: {
-          flexDirection: 'row-reverse',
+          flexDirection: ROW_REV,
           alignItems: 'center',
           gap: 8,
           paddingHorizontal: 22,
@@ -374,7 +375,7 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
             pillStyle={styles.tabBtn}
           />
 
-          <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: canAddTransaction ? mainTabsHeight - insets.bottom + 90 : 32, direction: 'rtl' }}>
+          <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: canAddTransaction ? mainTabsHeight - insets.bottom + 90 : 32, direction: UI_DIR }}>
             {activeTab === 'overview' && portfolio && (
               <OverviewTab
                 portfolio={portfolio}

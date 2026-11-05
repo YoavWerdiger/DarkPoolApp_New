@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_END, UI_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { runAfterInteractions } from '../../utils/runAfterInteractions';
@@ -355,7 +356,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
             style={styles.headerIconButton}
             accessibilityLabel={i18n.t('auto.components__Journal__ExportTradeImage.s8')}
           >
-            <Ionicons name="chevron-forward" size={22} color={DesignTokens.colors.text.primary} />
+            <Ionicons name={dirIcon('chevron-forward')} size={22} color={DesignTokens.colors.text.primary} />
           </DayNavBlurButton>
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>{i18n.t('auto.components__Journal__ExportTradeImage.s9')}</Text>
@@ -562,7 +563,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     container: {
       flex: 1,
       minHeight: 0,
-      direction: 'rtl',
+      direction: UI_DIR,
       backgroundColor: 'transparent',
     },
     header: {
@@ -826,7 +827,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       fontWeight: '700',
       lineHeight: 18,
       color: 'rgba(255,255,255,0.92)',
-      textAlign: 'left',
+      textAlign: TEXT_END,
       writingDirection: TEXT_DIR,
       width: '100%',
     },
@@ -834,7 +835,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       fontSize: 11,
       fontWeight: '600',
       color: 'rgba(255,255,255,0.50)',
-      textAlign: 'left',
+      textAlign: TEXT_END,
       writingDirection: TEXT_DIR,
       width: '100%',
     },
@@ -852,7 +853,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       overflow: 'hidden',
     },
     exportButtonContent: {
-      flexDirection: 'row-reverse',
+      flexDirection: ROW_REV,
       alignItems: 'center',
       justifyContent: 'center',
       gap: tokens.spacing.sm,

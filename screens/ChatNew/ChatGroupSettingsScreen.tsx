@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 // ============================================
 // Chat Group Settings — privacy, photo, mute, edit info
@@ -571,7 +572,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       padding: tokens.spacing.xl,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: tokens.colors.border.subtle,
-      direction: 'rtl',
+      direction: UI_DIR,
     },
     promptTitle: {
       ...chatRtlText,

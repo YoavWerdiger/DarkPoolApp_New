@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useEffect, useMemo, useState, type RefObject } from 'react';
@@ -263,7 +264,7 @@ const createStyles = (_tokens: ReturnType<typeof useDesignTokens>) =>
       overflow: 'hidden',
     },
     row: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,

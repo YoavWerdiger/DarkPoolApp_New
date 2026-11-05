@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -164,7 +165,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       marginTop: 2,
     },
     statsRow: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       gap: APP_LAYOUT.stackGapSmall,
       marginTop: APP_LAYOUT.componentGap,
@@ -209,7 +210,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       borderRadius: UI_CARD_RADIUS,
     },
     monthRow: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 10,
@@ -226,7 +227,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       gap: 3,
     },
     barLine: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
@@ -242,7 +243,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontVariant: ['tabular-nums'],
     },
     legend: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
@@ -259,7 +260,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       color: tokens.colors.text.secondary,
     },
     tabs: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       borderRadius: 999,
       padding: 4,
@@ -279,7 +280,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontWeight: '600',
     },
     row: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,

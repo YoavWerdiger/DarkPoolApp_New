@@ -1,3 +1,4 @@
+import { TEXT_END, TEXT_START, UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
@@ -538,12 +539,12 @@ export default function OverviewTab({
       StyleSheet.create({
         /** עץ RTL מקומי — App הוא LTR; כאן row (לא row-reverse) כדי לא להפוך פעמיים */
         root: {
-          direction: 'rtl',
+          direction: UI_DIR,
         },
         section: {
           marginBottom: JOURNAL_LAYOUT.cardStackGap,
           overflow: 'hidden',
-          direction: 'rtl',
+          direction: UI_DIR,
         },
         sectionTitle: {
           ...journalCardTitleStyle,
@@ -553,7 +554,7 @@ export default function OverviewTab({
         /** כמו פרופיל אינסיידר: בלוק שווי + גרף בלי כרטיס, ישירות על רקע המסך */
         heroBlock: {
           marginBottom: APP_LAYOUT.sectionGap,
-          direction: 'rtl',
+          direction: UI_DIR,
         },
         valueLabel: {
           ...journalSectionTitleStyle,
@@ -578,7 +579,7 @@ export default function OverviewTab({
         heroValue: {
           direction: 'ltr',
           writingDirection: 'ltr',
-          textAlign: 'right',
+          textAlign: TEXT_START,
           marginTop: APP_LAYOUT.cardMetricLabelToValueGap,
           fontSize: JOURNAL_TYPE.cardMetricValue.fontSize,
           lineHeight: JOURNAL_TYPE.cardMetricValue.lineHeight,
@@ -595,7 +596,7 @@ export default function OverviewTab({
           flexDirection: 'row',
           justifyContent: 'flex-end',
           alignItems: 'center',
-          textAlign: 'right',
+          textAlign: TEXT_START,
           gap: 6,
         },
         deltaFigure: {
@@ -630,7 +631,7 @@ export default function OverviewTab({
         },
         sectionBlock: {
           marginBottom: APP_LAYOUT.sectionGap,
-          direction: 'rtl',
+          direction: UI_DIR,
         },
         sectionHeading: {
           ...journalSectionTitleStyle,
@@ -639,10 +640,10 @@ export default function OverviewTab({
         },
         pieCard: {
           overflow: 'hidden',
-          direction: 'rtl',
+          direction: UI_DIR,
         },
         groupChips: {
-          direction: 'rtl',
+          direction: UI_DIR,
           flexDirection: 'row',
           flexWrap: 'wrap',
           justifyContent: 'flex-start',
@@ -684,7 +685,7 @@ export default function OverviewTab({
           fontWeight: '700',
           color: tokens.colors.text.secondary,
           writingDirection: 'ltr',
-          textAlign: 'right',
+          textAlign: TEXT_START,
         },
         totalRow: {
           flexDirection: 'row',
@@ -704,7 +705,7 @@ export default function OverviewTab({
           fontWeight: '700',
           color: tokens.colors.text.primary,
           writingDirection: 'ltr',
-          textAlign: 'right',
+          textAlign: TEXT_START,
         },
         emptyText: {
           width: '100%',
@@ -743,7 +744,7 @@ export default function OverviewTab({
           flexShrink: 0,
           direction: 'ltr',
           writingDirection: 'ltr',
-          textAlign: 'left',
+          textAlign: TEXT_END,
           fontSize: JOURNAL_TYPE.cardSubtitle.fontSize,
           fontWeight: '600',
           lineHeight: JOURNAL_TYPE.cardSubtitle.lineHeight,
@@ -764,7 +765,7 @@ export default function OverviewTab({
           marginBottom: JOURNAL_LAYOUT.groupLabelToContent,
         },
         metricRow: {
-          direction: 'rtl',
+          direction: UI_DIR,
           flexDirection: 'row',
           flexWrap: 'wrap',
           alignItems: 'stretch',
@@ -790,14 +791,14 @@ export default function OverviewTab({
           width: '100%',
           ...journalCardTitleStyle,
           ...journalPhysicalRightText,
-          textAlign: 'right',
+          textAlign: TEXT_START,
           color: tokens.colors.text.primary,
         },
         metricValue: {
           width: '100%',
           ...journalCardMetricValueSecondaryStyle,
           writingDirection: 'ltr',
-          textAlign: 'right',
+          textAlign: TEXT_START,
           marginTop: JOURNAL_LAYOUT.cardMetricLabelToValueGap,
         },
         metricHint: {

@@ -1,3 +1,4 @@
+import { ROW_REV } from '../../lib/i18n/direction';
 import React, { useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, type ImageSourcePropType } from 'react-native';
 import { Image } from 'expo-image';
@@ -195,7 +196,7 @@ const LevelBars: React.FC<{ level: number; color: string }> = ({ level, color })
 const styles = StyleSheet.create({
   card: {
     // עץ האפליקציה LTR — row-reverse שם את האימוג'י מימין
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'center',
     gap: APP_LAYOUT.stackGapTight,
     minHeight: ROW_MIN_HEIGHT,

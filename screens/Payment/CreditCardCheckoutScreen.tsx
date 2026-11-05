@@ -1,3 +1,4 @@
+import { ROW_REV } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -461,7 +462,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
             }}
             activeOpacity={0.85}
             style={{
-              flexDirection: 'row-reverse',
+              flexDirection: ROW_REV,
               alignItems: 'center',
               backgroundColor: colors.primary.main,
               paddingHorizontal: 22,

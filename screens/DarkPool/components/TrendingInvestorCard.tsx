@@ -1,3 +1,4 @@
+import { UI_DIR, dirIcon } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React, { useMemo, useState } from 'react';
 import {
@@ -88,7 +89,7 @@ export function TrendingInvestorCard({ person, onPress }: Props) {
               </Text>
             ) : null}
           </View>
-          <Ionicons name="chevron-back" size={18} color={tokens.colors.text.tertiary} />
+          <Ionicons name={dirIcon('chevron-back')} size={18} color={tokens.colors.text.tertiary} />
         </View>
         <View
           style={styles.chartBox}
@@ -126,7 +127,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       marginBottom: tokens.spacing.sm,
     },
     row: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 0,

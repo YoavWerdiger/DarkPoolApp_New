@@ -1,3 +1,4 @@
+import { TEXT_END, UI_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { listCongressTradesForPersonTicker } from '../../services/darkpool/darkPoolDbCacheService';
@@ -179,7 +180,7 @@ function TradesPositionView() {
       <SafeAreaView style={[darkPoolTransparentFill, darkPoolRtlContent]} edges={['top']}>
         <View style={styles.topBar}>
           <DayNavBlurButton onPress={() => navigation.goBack()} glassIntensity="subtle" size={HEADER_BACK_BTN_SIZE} accessibilityLabel={i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s8')}>
-            <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
+            <Ionicons name={dirIcon('chevron-forward')} size={22} color={tokens.colors.text.primary} />
           </DayNavBlurButton>
           <Text style={styles.topBarTitle} numberOfLines={1} accessibilityRole="header">{i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s9')}</Text>
           <View style={{ width: HEADER_BACK_BTN_SIZE }} />
@@ -364,7 +365,7 @@ function FilingPositionView() {
             size={HEADER_BACK_BTN_SIZE}
             accessibilityLabel={i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s8')}
           >
-            <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
+            <Ionicons name={dirIcon('chevron-forward')} size={22} color={tokens.colors.text.primary} />
           </DayNavBlurButton>
           <Text style={styles.topBarTitle} numberOfLines={1} accessibilityRole="header">{i18n.t('auto.screens__DarkPool__DarkPoolPositionScreen.s9')}</Text>
           <DayNavBlurButton
@@ -588,7 +589,7 @@ function TxnCol({ label, value }: { label: string; value: string }) {
 function createStyles(tokens: ReturnType<typeof useDesignTokens>, bottomPadding: number) {
   return StyleSheet.create({
     topBar: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: tokens.layout.screenPadding,
@@ -605,7 +606,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, bottomPadding:
       writingDirection: TEXT_DIR,
     },
     scrollContent: {
-      direction: 'rtl',
+      direction: UI_DIR,
       paddingHorizontal: tokens.layout.screenPadding,
       paddingTop: APP_LAYOUT.componentGap + 12,
       paddingBottom: bottomPadding + 32,
@@ -661,7 +662,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, bottomPadding:
 function rowStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     row: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -694,11 +695,11 @@ function rowStyles(tokens: ReturnType<typeof useDesignTokens>) {
       color: tokens.colors.text.secondary,
       flexShrink: 1,
       minWidth: 0,
-      textAlign: 'left',
+      textAlign: TEXT_END,
     },
     valueLtr: { writingDirection: 'ltr' },
     txnRow: {
-      direction: 'rtl',
+      direction: UI_DIR,
       gap: APP_LAYOUT.stackGapSmall,
       paddingVertical: APP_LAYOUT.cardTitleToBodyGap,
       borderBottomWidth: 1,

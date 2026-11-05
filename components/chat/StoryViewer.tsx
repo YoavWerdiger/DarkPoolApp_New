@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 /**
  * @deprecated לא בשימוש — הוחלף ב-screens/Stories/StoryViewerScreen.tsx (מסך ניווט, נפתח דרך
@@ -436,7 +437,7 @@ const sheetStyles = StyleSheet.create({
     borderRadius: 2.5,
   },
   tabsRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     paddingHorizontal: 16,
     gap: 8,
     marginBottom: 12,
@@ -485,7 +486,7 @@ const sheetStyles = StyleSheet.create({
     fontSize: APP_TYPE.cardTitle.fontSize,
     lineHeight: APP_TYPE.cardTitle.lineHeight,
     fontWeight: APP_TYPE.cardTitle.fontWeight,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   rowEmoji: {
     fontSize: 22,

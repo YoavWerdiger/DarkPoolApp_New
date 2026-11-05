@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 // ============================================
@@ -315,7 +316,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   root: {
-    direction: 'rtl',
+    direction: UI_DIR,
     paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
     paddingTop: 4,
   },

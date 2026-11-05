@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -149,7 +150,7 @@ export function ReactionPickerContent({
   const bottomPad = Math.max(insets.bottom, Platform.OS === 'android' ? 16 : 8);
 
   return (
-      <View style={[styles.root, { paddingBottom: bottomPad, direction: 'rtl' }]}>
+      <View style={[styles.root, { paddingBottom: bottomPad, direction: UI_DIR }]}>
         <ChatSheetTopoHeader title={title} onClose={onClose} />
 
         <View

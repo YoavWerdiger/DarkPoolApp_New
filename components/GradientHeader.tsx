@@ -2,7 +2,7 @@ import { TEXT_DIR } from '../lib/i18n/language';
 import React from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft } from '../lib/i18n/dirIcons';
 
 interface GradientHeaderProps {
   title?: string;

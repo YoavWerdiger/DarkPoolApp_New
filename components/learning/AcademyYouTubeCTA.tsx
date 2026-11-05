@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_START, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useMemo } from 'react';
@@ -83,7 +84,7 @@ export const AcademyYouTubeCTA: React.FC<AcademyYouTubeCTAProps> = ({
                 <Text style={styles.ctaText}>{i18n.t('auto.components__learning__AcademyYouTubeCTA.s4')}</Text>
               </View>
               <Ionicons
-                name="chevron-back"
+                name={dirIcon('chevron-back')}
                 size={18}
                 color={T.colors.text.tertiary}
                 style={styles.chevron}
@@ -125,7 +126,7 @@ const createStyles = (T: ReturnType<typeof useDesignTokens>) =>
       backgroundColor: T.colors.background.cardSolid,
     },
     content: {
-      flexDirection: 'row-reverse',
+      flexDirection: ROW_REV,
       alignItems: 'center',
       padding: APP_LAYOUT.cardPadding,
       gap: APP_LAYOUT.cardPadding,
@@ -197,23 +198,23 @@ const createStyles = (T: ReturnType<typeof useDesignTokens>) =>
     title: {
       ...ACADEMY_TYPE.cardTitle,
       color: T.colors.text.primary,
-      textAlign: 'right',
+      textAlign: TEXT_START,
       writingDirection: TEXT_DIR,
     },
     subtitle: {
       ...ACADEMY_TYPE.cardSubtitle,
       color: T.colors.text.secondary,
-      textAlign: 'right',
+      textAlign: TEXT_START,
       writingDirection: TEXT_DIR,
     },
     ctaRow: {
-      flexDirection: 'row-reverse',
+      flexDirection: ROW_REV,
       alignItems: 'center',
       marginTop: 10,
       gap: 8,
     },
     cta: {
-      flexDirection: 'row-reverse',
+      flexDirection: ROW_REV,
       alignItems: 'center',
       gap: 6,
       paddingHorizontal: 14,

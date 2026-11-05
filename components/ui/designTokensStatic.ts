@@ -1,3 +1,4 @@
+import { TEXT_START } from '../../lib/i18n/direction';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { APP_LAYOUT } from './appLayout';
 
@@ -378,7 +379,7 @@ const staticTokens = {
    * פיסוק (`+3 החודש`, `שם · תאריך`) מסתדרות לפי כללי BiDi של פסקה לטינית ונראות הפוכות.
    */
   rtlText: {
-    textAlign: 'right' as const,
+    textAlign: TEXT_START,
     writingDirection: TEXT_DIR,
   },
 

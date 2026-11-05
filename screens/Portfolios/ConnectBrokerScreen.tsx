@@ -1,3 +1,4 @@
+import { ROW_REV } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
@@ -111,7 +112,7 @@ export default function ConnectBrokerScreen() {
         },
         section: { marginBottom: PORTFOLIO_FORM.sectionGap },
         heroRow: {
-          flexDirection: 'row-reverse',
+          flexDirection: ROW_REV,
           alignItems: 'center',
           gap: 12,
         },
@@ -130,7 +131,7 @@ export default function ConnectBrokerScreen() {
           color: tokens.colors.text.secondary,
         },
         privacyTitleRow: {
-          flexDirection: 'row-reverse',
+          flexDirection: ROW_REV,
           alignItems: 'center',
           gap: 6,
           marginBottom: JOURNAL_LAYOUT.cardTitleToSubtitleGap,

@@ -1,3 +1,4 @@
+import { UI_DIR, dirIcon } from '../../../lib/i18n/direction';
 /**
  * כותרת section במסך Dark Pool — אותה סקאלה ויישור פיזי כמו בגילוי.
  */
@@ -80,7 +81,7 @@ export function DarkPoolSectionHeader({
           <Text style={[styles.actionLabel, { color: tokens.colors.text.secondary }]}>
             {actionLabel}
           </Text>
-          <Ionicons name="chevron-back" size={14} color={tokens.colors.text.muted} />
+          <Ionicons name={dirIcon('chevron-back')} size={14} color={tokens.colors.text.muted} />
         </Pressable>
       ) : null}
     </View>
@@ -89,7 +90,7 @@ export function DarkPoolSectionHeader({
 
 const styles = StyleSheet.create({
   wrap: {
-    direction: 'rtl',
+    direction: UI_DIR,
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',

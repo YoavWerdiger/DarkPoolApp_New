@@ -1,3 +1,4 @@
+import { dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 // ============================================
 // Privacy & Support Screen
@@ -83,7 +84,7 @@ export default function PrivacySupportScreen() {
                 <Ionicons name="lock-closed-outline" size={20} color={DesignTokens.colors.text.secondary} />
                 <Text style={styles.optionText}>{i18n.t('auto.screens__ChatNew__PrivacySupportScreen.s11')}</Text>
               </View>
-              <Ionicons name="chevron-back" size={18} color={DesignTokens.colors.text.tertiary} />
+              <Ionicons name={dirIcon('chevron-back')} size={18} color={DesignTokens.colors.text.tertiary} />
             </TouchableOpacity>
             <View style={styles.separator} />
             <TouchableOpacity style={styles.optionRow} onPress={handleTermsOfService}>
@@ -91,7 +92,7 @@ export default function PrivacySupportScreen() {
                 <Ionicons name="document-text-outline" size={20} color={DesignTokens.colors.text.secondary} />
                 <Text style={styles.optionText}>{i18n.t('auto.screens__ChatNew__PrivacySupportScreen.s12')}</Text>
               </View>
-              <Ionicons name="chevron-back" size={18} color={DesignTokens.colors.text.tertiary} />
+              <Ionicons name={dirIcon('chevron-back')} size={18} color={DesignTokens.colors.text.tertiary} />
             </TouchableOpacity>
           </UICard>
 
@@ -103,7 +104,7 @@ export default function PrivacySupportScreen() {
                 <Ionicons name="chatbubble-ellipses-outline" size={20} color={DesignTokens.colors.text.secondary} />
                 <Text style={styles.optionText}>{i18n.t('auto.screens__ChatNew__PrivacySupportScreen.s14')}</Text>
               </View>
-              <Ionicons name="chevron-back" size={18} color={DesignTokens.colors.text.tertiary} />
+              <Ionicons name={dirIcon('chevron-back')} size={18} color={DesignTokens.colors.text.tertiary} />
             </TouchableOpacity>
             <View style={styles.separator} />
             <TouchableOpacity style={styles.optionRow} onPress={handleReportIssue}>
@@ -111,7 +112,7 @@ export default function PrivacySupportScreen() {
                 <Ionicons name="flag-outline" size={20} color={DesignTokens.colors.text.secondary} />
                 <Text style={styles.optionText}>{i18n.t('auto.screens__ChatNew__PrivacySupportScreen.s15')}</Text>
               </View>
-              <Ionicons name="chevron-back" size={18} color={DesignTokens.colors.text.tertiary} />
+              <Ionicons name={dirIcon('chevron-back')} size={18} color={DesignTokens.colors.text.tertiary} />
             </TouchableOpacity>
             <View style={styles.separator} />
             <TouchableOpacity style={styles.optionRow} onPress={handleFAQ}>
@@ -119,7 +120,7 @@ export default function PrivacySupportScreen() {
                 <Ionicons name="help-circle-outline" size={20} color={DesignTokens.colors.text.secondary} />
                 <Text style={styles.optionText}>{i18n.t('auto.screens__ChatNew__PrivacySupportScreen.s16')}</Text>
               </View>
-              <Ionicons name="chevron-back" size={18} color={DesignTokens.colors.text.tertiary} />
+              <Ionicons name={dirIcon('chevron-back')} size={18} color={DesignTokens.colors.text.tertiary} />
             </TouchableOpacity>
           </UICard>
 

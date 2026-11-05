@@ -1,3 +1,4 @@
+import { dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -2175,7 +2176,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
             accessibilityRole="button"
             accessibilityLabel={i18n.t('auto.components__chat__AddStoryFullScreen.s21')}
           >
-            <Ionicons name="chevron-forward" size={26} color="#fff" />
+            <Ionicons name={dirIcon('chevron-forward')} size={26} color="#fff" />
           </TouchableOpacity>
         </View>
       )}

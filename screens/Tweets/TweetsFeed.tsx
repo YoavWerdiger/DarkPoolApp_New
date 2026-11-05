@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_START, UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, {
@@ -135,7 +136,7 @@ function PostCard({
           <View style={{ padding: APP_LAYOUT.cardPadding, gap: APP_LAYOUT.cardTitleToBodyGap }}>
           <View
             style={{
-              flexDirection: 'row-reverse',
+              flexDirection: ROW_REV,
               alignItems: 'center',
               gap: 12,
             }}
@@ -148,7 +149,7 @@ function PostCard({
             <View style={{ flex: 1, minWidth: 0 }}>
               <View
                 style={{
-                  flexDirection: 'row-reverse',
+                  flexDirection: ROW_REV,
                   alignItems: 'center',
                   gap: APP_LAYOUT.stackGapSmall,
                 }}
@@ -182,7 +183,7 @@ function PostCard({
                   fontSize: APP_TYPE.caption.fontSize,
                   lineHeight: APP_TYPE.caption.lineHeight,
                   fontWeight: APP_TYPE.caption.fontWeight,
-                  textAlign: 'right',
+                  textAlign: TEXT_START,
                   writingDirection: TEXT_DIR,
                 }}
               >
@@ -219,7 +220,7 @@ function PostCard({
               lineHeight: APP_TYPE.cardBody.lineHeight,
               fontWeight: APP_TYPE.cardBody.fontWeight,
               writingDirection: TEXT_DIR,
-              textAlign: 'right',
+              textAlign: TEXT_START,
             }}
           >
             {post.body}
@@ -228,7 +229,7 @@ function PostCard({
           {post.mentions?.length ? (
             <View
               style={{
-                direction: 'rtl',
+                direction: UI_DIR,
                 flexDirection: 'row',
                 flexWrap: 'wrap',
                 gap: 6,
@@ -255,7 +256,7 @@ function PostCard({
                       lineHeight: APP_TYPE.caption.lineHeight,
                       fontWeight: APP_TYPE.caption.fontWeight,
                       writingDirection: TEXT_DIR,
-                      textAlign: 'right',
+                      textAlign: TEXT_START,
                     }}
                     numberOfLines={1}
                   >
@@ -403,7 +404,7 @@ function FeedTabToggle({
     <View
       accessibilityRole="tablist"
       style={{
-        flexDirection: 'row-reverse',
+        flexDirection: ROW_REV,
         paddingHorizontal: pad,
         paddingBottom: tokens.spacing.md,
         backgroundColor: 'transparent',

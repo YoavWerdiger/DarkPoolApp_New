@@ -1,3 +1,4 @@
+import { TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React from 'react';
@@ -318,7 +319,7 @@ const createStyles = (
     },
     audienceLabel: {
       ...appCardMetricLabelStyle,
-      textAlign: 'right',
+      textAlign: TEXT_START,
       color: T.colors.text.tertiary,
     },
     audienceText: {

@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_START, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -468,7 +469,7 @@ function MessageCommentsSheetBody({
             disabled={busy}
           >
             <Ionicons
-              name="chevron-forward"
+              name={dirIcon('chevron-forward')}
               size={22}
               color={tokens.colors.text.primary}
             />
@@ -602,7 +603,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       overflow: 'hidden',
     },
     header: {
-      flexDirection: 'row-reverse',
+      flexDirection: ROW_REV,
       alignItems: 'center',
       paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
       paddingBottom: APP_LAYOUT.cardTitleToBodyGap,
@@ -656,7 +657,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       paddingVertical: 8,
     },
     replyRow: {
-      flexDirection: 'row-reverse',
+      flexDirection: ROW_REV,
       gap: 10,
       alignItems: 'flex-start',
       paddingVertical: 10,
@@ -672,7 +673,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       minWidth: 0,
     },
     replyMeta: {
-      flexDirection: 'row-reverse',
+      flexDirection: ROW_REV,
       alignItems: 'center',
       gap: APP_LAYOUT.stackGapSmall,
     },
@@ -684,19 +685,19 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       lineHeight: APP_TYPE.cardTitle.lineHeight,
       fontWeight: APP_TYPE.cardTitle.fontWeight,
       flexShrink: 1,
-      textAlign: 'right',
+      textAlign: TEXT_START,
       writingDirection: TEXT_DIR,
     },
     replyTime: {
       ...APP_TYPE.caption,
       marginTop: 1,
-      textAlign: 'right',
+      textAlign: TEXT_START,
       writingDirection: TEXT_DIR,
     },
     replyBody: {
       ...APP_TYPE.cardBody,
       marginTop: 4,
-      textAlign: 'right',
+      textAlign: TEXT_START,
       writingDirection: TEXT_DIR,
     },
     banner: {
@@ -706,7 +707,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       borderRadius: r.xl,
       paddingHorizontal: 12,
       paddingVertical: 10,
-      flexDirection: 'row-reverse',
+      flexDirection: ROW_REV,
       alignItems: 'center',
       gap: 10,
       flexShrink: 0,
@@ -714,7 +715,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     bannerText: {
       flex: 1,
       ...APP_TYPE.cardSubtitle,
-      textAlign: 'right',
+      textAlign: TEXT_START,
       writingDirection: TEXT_DIR,
     },
     // ChatComposerDock כופה LTR — ילד ראשון = שמאל (שדה), שני = ימין (שליחה)
@@ -753,7 +754,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       paddingHorizontal: APP_LAYOUT.cardPadding,
       paddingVertical: 11,
       writingDirection: TEXT_DIR,
-      textAlign: 'right',
+      textAlign: TEXT_START,
     },
     sendBtn: {
       width: 44,

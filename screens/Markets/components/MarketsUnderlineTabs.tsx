@@ -1,3 +1,4 @@
+import { ROW_REV } from '../../../lib/i18n/direction';
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
@@ -86,12 +87,12 @@ export function MarketsUnderlineTabs<T extends string>({
 
 const styles = StyleSheet.create({
   tabsRow: {
-    flexDirection: 'row-reverse' as any,
+    flexDirection: ROW_REV as any,
     borderBottomWidth: 1,
   },
   tab: {
     flex: 1,
-    flexDirection: 'row-reverse' as any,
+    flexDirection: ROW_REV as any,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 14,

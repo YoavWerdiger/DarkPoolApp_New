@@ -1,3 +1,4 @@
+import { IS_RTL_UI, ROW_REV, TEXT_START, UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useMemo } from 'react';
@@ -36,7 +37,7 @@ export type MainDrawerScreenHeaderProps = {
   /** כפתור/אייקון בצד ימין (מיושר ל־minWidth כמו כפתור התפריט) */
   rightAccessory?: React.ReactNode;
   /**
-   * מסך בתוך עץ `direction: 'rtl'` (למשל Dark Pool) — האפל ב-LTR גלובלי,
+   * מסך בתוך עץ `direction: UI_DIR` (למשל Dark Pool) — האפל ב-LTR גלובלי,
    * אז שורת הכפתורים משתמשת ב-row במקום row-reverse.
    * כותרת המסך תמיד ממורכזת — inRtlTree לא משנה textAlign.
    */
@@ -151,16 +152,21 @@ export function MainDrawerScreenHeader({
 }
 
 function createStyles(tokens: ReturnType<typeof useDesignTokens>, inRtlTree: boolean) {
+  // עץ LTR: שוליים פיזיים — באנגלית (מראה) התפריט משמאל והאביזר מימין
   const menuEdgeMargin = inRtlTree
     ? { marginLeft: MAIN_SCREEN_HEADER_HP }
-    : { marginRight: MAIN_SCREEN_HEADER_HP };
+    : IS_RTL_UI
+      ? { marginRight: MAIN_SCREEN_HEADER_HP }
+      : { marginLeft: MAIN_SCREEN_HEADER_HP };
   const accessoryEdgeMargin = inRtlTree
     ? { marginRight: MAIN_SCREEN_HEADER_HP }
-    : { marginLeft: MAIN_SCREEN_HEADER_HP };
+    : IS_RTL_UI
+      ? { marginLeft: MAIN_SCREEN_HEADER_HP }
+      : { marginRight: MAIN_SCREEN_HEADER_HP };
 
   return StyleSheet.create({
     rowAppLtr: {
-      flexDirection: 'row-reverse',
+      flexDirection: ROW_REV,
     },
     rowLtrInRtlTree: {
       flexDirection: 'row',
@@ -230,7 +236,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, inRtlTree: boo
     pageSubtitle: {
       ...appScreenSubtitleStyle,
       direction: 'ltr',
-      textAlign: 'right',
+      textAlign: TEXT_START,
       writingDirection: TEXT_DIR,
       width: '100%',
       color: tokens.colors.text.secondary,

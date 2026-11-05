@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_END, TEXT_START, UI_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 /**
@@ -168,7 +169,7 @@ function Body({ report, onClose }: { report: EarningsReport; onClose: () => void
         <View style={styles.topBar}>
           <View style={styles.closeSlot}>
             <DayNavBlurButton glass glassIntensity="light" onPress={onClose} size={HEADER_BACK_BTN_SIZE} accessibilityLabel={i18n.t('auto.screens__News__EarningsDetailSheet.s10')}>
-              <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
+              <Ionicons name={dirIcon('chevron-forward')} size={22} color={tokens.colors.text.primary} />
             </DayNavBlurButton>
           </View>
           <View style={styles.topSpacer} />
@@ -353,7 +354,7 @@ function useStyles() {
           gap: APP_LAYOUT.cardTitleToBodyGap,
         },
         topBar: {
-          direction: 'rtl',
+          direction: UI_DIR,
           flexDirection: 'row',
           alignItems: 'center',
           minHeight: HEADER_BACK_BTN_SIZE,
@@ -367,7 +368,7 @@ function useStyles() {
         topSpacer: { flex: 1 },
         heroBlock: { marginBottom: APP_LAYOUT.stackGapSmall },
         priceRow: {
-          direction: 'rtl',
+          direction: UI_DIR,
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -394,7 +395,7 @@ function useStyles() {
           flex: 1,
           minWidth: 0,
           direction: 'ltr',
-          flexDirection: 'row-reverse',
+          flexDirection: ROW_REV,
           alignItems: 'center',
           gap: APP_LAYOUT.cardTitleToBodyGap,
         },
@@ -406,7 +407,7 @@ function useStyles() {
           letterSpacing: APP_TYPE.sectionTitle.letterSpacing,
           color: tokens.colors.text.primary,
           writingDirection: 'ltr',
-          textAlign: 'right',
+          textAlign: TEXT_START,
         },
         companyName: {
           ...appPhysicalRightText,
@@ -426,11 +427,11 @@ function useStyles() {
           lineHeight: APP_TYPE.cardTitle.lineHeight,
           fontWeight: '700',
           color: tokens.colors.text.primary,
-          textAlign: 'right',
+          textAlign: TEXT_START,
         },
         company: {
           ...appPhysicalLeftText,
-          textAlign: 'right',
+          textAlign: TEXT_START,
           fontSize: APP_TYPE.cardSubtitle.fontSize,
           lineHeight: APP_TYPE.cardSubtitle.lineHeight,
           fontWeight: APP_TYPE.cardSubtitle.fontWeight,
@@ -449,7 +450,7 @@ function useStyles() {
         // בקריאה מימין: קודם התוצאה, אחריה התגית «מכה»
         resultValueCol: {
           direction: 'ltr',
-          flexDirection: 'row-reverse',
+          flexDirection: ROW_REV,
           alignItems: 'center',
           gap: 8,
           maxWidth: '64%',
@@ -460,7 +461,7 @@ function useStyles() {
           fontWeight: APP_TYPE.cardTitle.fontWeight,
           fontVariant: ['tabular-nums'],
           writingDirection: 'ltr',
-          textAlign: 'left',
+          textAlign: TEXT_END,
         },
         verdictPill: { borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3 },
         verdictText: { ...APP_TYPE.caption, fontWeight: '600', fontVariant: ['tabular-nums'] },
@@ -478,7 +479,7 @@ function useStyles() {
           writingDirection: TEXT_DIR,
           fontVariant: ['tabular-nums'],
         },
-        resultCards: { direction: 'rtl', flexDirection: 'row', gap: APP_LAYOUT.cardStackGap },
+        resultCards: { direction: UI_DIR, flexDirection: 'row', gap: APP_LAYOUT.cardStackGap },
         resultCard: { flex: 1, overflow: 'hidden', borderRadius: tokens.borderRadius.xl },
         accentBar: {
           position: 'absolute',
@@ -491,8 +492,8 @@ function useStyles() {
           zIndex: 1,
         },
         resultInner: { padding: APP_LAYOUT.cardPadding, gap: 6, alignItems: 'flex-start' },
-        resultHead: { direction: 'rtl', flexDirection: 'row', alignItems: 'center', gap: 6 },
-        resultFoot: { direction: 'rtl', flexDirection: 'row', alignItems: 'center', gap: 8 },
+        resultHead: { direction: UI_DIR, flexDirection: 'row', alignItems: 'center', gap: 6 },
+        resultFoot: { direction: UI_DIR, flexDirection: 'row', alignItems: 'center', gap: 8 },
         colLabel: { ...APP_TYPE.cardMetricLabel, color: tokens.colors.text.secondary },
         colPct: { ...APP_TYPE.caption, fontVariant: ['tabular-nums'] },
         colValue: {
@@ -504,7 +505,7 @@ function useStyles() {
           fontVariant: ['tabular-nums'],
           writingDirection: 'ltr',
           alignSelf: 'stretch',
-          textAlign: 'right',
+          textAlign: TEXT_START,
         },
         colVerdict: { ...APP_TYPE.caption, fontWeight: '600' },
         chartCard: { overflow: 'hidden', borderRadius: tokens.borderRadius.xl },
@@ -526,7 +527,7 @@ function useStyles() {
           color: tokens.colors.text.primary,
           fontVariant: ['tabular-nums'],
           writingDirection: 'ltr',
-          textAlign: 'left',
+          textAlign: TEXT_END,
         },
         rowDivider: {
           height: 1,

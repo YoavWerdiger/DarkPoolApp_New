@@ -1,3 +1,4 @@
+import { dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect } from 'react';
@@ -222,7 +223,7 @@ export default function ShareTradeModal({ trade, visible, onClose }: ShareTradeM
                   </View>
                 )}
                 <Text style={styles.groupName}>{chatGroupDisplayName(item.name)}</Text>
-                <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.tertiary} />
+                <Ionicons name={dirIcon('chevron-back')} size={20} color={DesignTokens.colors.text.tertiary} />
               </TouchableOpacity>
             )}
             contentContainerStyle={styles.listContent}

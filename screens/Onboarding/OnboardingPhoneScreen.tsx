@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Pressable } from 'react-native';
@@ -239,20 +240,20 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
     marginBottom: 8,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   subtitle: {
     fontSize: 16,
     lineHeight: 24,
     marginBottom: 24,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   errorCard: {
     borderWidth: 1,
     marginBottom: 16,
   },
   errorContent: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'flex-start',
     gap: 12,
   },
@@ -260,7 +261,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontWeight: '600',
-    textAlign: 'right',
+    textAlign: TEXT_START,
     lineHeight: 20,
   },
   inputContainer: {
@@ -269,14 +270,14 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   inputCard: {
     minHeight: 56,
     borderRadius: 9999,
   },
   inputWrapper: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 16,
@@ -301,7 +302,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     marginTop: 64,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   legalLink: {
     textDecorationLine: 'underline',
@@ -312,7 +313,7 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   footerButtons: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     gap: 12,
   },
 });

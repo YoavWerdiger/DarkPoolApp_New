@@ -1,3 +1,4 @@
+import { TEXT_START, UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { memo, useState } from 'react';
@@ -222,7 +223,7 @@ export function createTradeCardStyles(tokens: ReturnType<typeof useDesignTokens>
       ...tokens.shadows.none,
     },
     rtlWrap: {
-      direction: 'rtl',
+      direction: UI_DIR,
     },
     tradeHeader: {
       flexDirection: 'row',
@@ -255,7 +256,7 @@ export function createTradeCardStyles(tokens: ReturnType<typeof useDesignTokens>
       color: tokens.colors.text.primary,
       direction: 'ltr',
       writingDirection: 'ltr',
-      textAlign: 'right',
+      textAlign: TEXT_START,
       includeFontPadding: false,
     },
     directionBadge: {

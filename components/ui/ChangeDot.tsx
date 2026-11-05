@@ -1,3 +1,4 @@
+import { TEXT_START } from '../../lib/i18n/direction';
 /**
  * מחוון שינוי P&L — מספר עם סימן בלבד.
  * ירוק/+ חיובי, אדום/− שלילי. בלי נקודה ובלי חצים.
@@ -163,7 +164,7 @@ const styles = StyleSheet.create({
   text: {
     direction: 'ltr',
     writingDirection: 'ltr',
-    textAlign: 'right',
+    textAlign: TEXT_START,
     fontVariant: ['tabular-nums'],
   },
 });

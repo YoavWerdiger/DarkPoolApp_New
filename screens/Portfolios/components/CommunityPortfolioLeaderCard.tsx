@@ -1,3 +1,4 @@
+import { TEXT_END, TEXT_START, dirIcon } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, LayoutChangeEvent } from 'react-native';
@@ -115,7 +116,7 @@ export function CommunityPortfolioLeaderCard({
               >{i18n.t('auto.screens__Portfolios__components__CommunityPortfolioLeaderCard.s2', { v0: ownerLabel })}
               </Text>
             </View>
-            <Ionicons name="chevron-back" size={18} color={tokens.colors.text.tertiary} />
+            <Ionicons name={dirIcon('chevron-back')} size={18} color={tokens.colors.text.tertiary} />
           </View>
 
           <View style={styles.chartBox} onLayout={onChartLayout}>
@@ -203,13 +204,13 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     minWidth: 0,
     direction: 'ltr',
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: 'ltr',
   },
   roi: {
     ...journalCardMetricValueSecondaryStyle,
     flexShrink: 0,
     writingDirection: 'ltr',
-    textAlign: 'left',
+    textAlign: TEXT_END,
   },
 });

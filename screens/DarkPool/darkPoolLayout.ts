@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../lib/i18n/direction';
 import type { TextStyle, ViewStyle } from 'react-native';
 import { hebrewText } from './utils/bidi';
 
@@ -23,12 +24,12 @@ export {
 
 export const darkPoolRtlRoot: ViewStyle = {
   flex: 1,
-  direction: 'rtl',
+  direction: UI_DIR,
   backgroundColor: 'transparent',
 };
 
 export const darkPoolRtlContent: ViewStyle = {
-  direction: 'rtl',
+  direction: UI_DIR,
   backgroundColor: 'transparent',
 };
 

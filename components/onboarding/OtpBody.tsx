@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React from 'react';
@@ -89,11 +90,11 @@ const styles = StyleSheet.create({
   hint: {
     fontSize: APP_TYPE.cardBody.fontSize,
     lineHeight: APP_TYPE.cardBody.lineHeight,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: TEXT_DIR,
   },
   errorRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,

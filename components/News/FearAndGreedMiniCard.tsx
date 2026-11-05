@@ -1,3 +1,4 @@
+import { TEXT_END, TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React from 'react';
@@ -173,7 +174,7 @@ const styles = StyleSheet.create({
     lineHeight: APP_TYPE.cardMetricValueSecondary.lineHeight,
     fontWeight: APP_TYPE.cardMetricValueSecondary.fontWeight,
     letterSpacing: APP_TYPE.cardMetricValueSecondary.letterSpacing,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: TEXT_DIR,
   },
   valueBlock: {
@@ -187,13 +188,13 @@ const styles = StyleSheet.create({
     lineHeight: APP_TYPE.sectionTitle.lineHeight,
     fontWeight: APP_TYPE.sectionTitle.fontWeight,
     letterSpacing: APP_TYPE.sectionTitle.letterSpacing,
-    textAlign: 'left',
+    textAlign: TEXT_END,
     writingDirection: 'ltr',
     fontVariant: ['tabular-nums'],
   },
   valueDen: {
     ...APP_TYPE.groupLabel,
-    textAlign: 'left',
+    textAlign: TEXT_END,
     writingDirection: 'ltr',
     marginBottom: 2,
   },

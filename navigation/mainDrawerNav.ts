@@ -1,9 +1,10 @@
+import { IS_RTL_UI } from '../lib/i18n/direction';
 import { DrawerActions } from '@react-navigation/native';
 import { rootNavigationRef } from './rootNavigationRef';
 
 export function getMainDrawerPosition(): 'left' | 'right' {
-  // התפריט נפתח מימין בכל השפות (הפריסה נשארת RTL — רק הטקסט מתורגם).
-  return 'right';
+  // עברית / ערבית — מימין; אנגלית (ממשק מראה) — משמאל
+  return IS_RTL_UI ? 'right' : 'left';
 }
 
 /** חייב להתאים ל־`id` על ה־Drawer ב־MainTabs */

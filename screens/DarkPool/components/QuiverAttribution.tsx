@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../../lib/i18n/direction';
 /**
  * ייחוס שקט ל-Quiver — קישור בלבד, בלי כותרות «עדכון נתונים» / «לא בזמן אמת».
  * כנות על טריות נתונים נשארת מאחורי `?` בפרטי עסקה.
@@ -54,7 +55,7 @@ export function QuiverAttribution({
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     wrap: {
-      direction: 'rtl',
+      direction: UI_DIR,
       alignSelf: 'stretch',
       paddingVertical: 8,
       paddingHorizontal: 2,

@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_START } from '../../../lib/i18n/direction';
 import React, { useMemo } from 'react';
 import {
   Pressable,
@@ -72,7 +73,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       backgroundColor: 'transparent',
     },
     top: {
-      flexDirection: 'row-reverse',
+      flexDirection: ROW_REV,
       alignItems: 'center',
       gap: 10,
       padding: 12,
@@ -84,7 +85,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       lineHeight: APP_TYPE.cardTitle.lineHeight,
       fontWeight: APP_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
-      textAlign: 'right',
+      textAlign: TEXT_START,
     },
     meta: {
       marginTop: 2,
@@ -93,7 +94,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       lineHeight: APP_TYPE.caption2.lineHeight,
       fontWeight: APP_TYPE.caption2.fontWeight,
       color: tokens.colors.text.tertiary,
-      textAlign: 'right',
+      textAlign: TEXT_START,
     },
     tickerRow: {
       paddingHorizontal: 12,
@@ -111,7 +112,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontWeight: APP_TYPE.cardTitle.fontWeight,
       color: tokens.colors.text.primary,
       writingDirection: 'ltr',
-      textAlign: 'right',
+      textAlign: TEXT_START,
     },
     issuer: {
       fontSize: APP_TYPE.caption2.fontSize,
@@ -119,7 +120,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       lineHeight: APP_TYPE.caption2.lineHeight,
       fontWeight: APP_TYPE.caption2.fontWeight,
       color: tokens.colors.text.tertiary,
-      textAlign: 'right',
+      textAlign: TEXT_START,
     },
   });
 }

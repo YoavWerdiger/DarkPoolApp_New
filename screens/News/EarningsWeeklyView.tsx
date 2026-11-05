@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_START, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
@@ -594,7 +595,7 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
         >
           <View
             style={{
-              flexDirection: 'row-reverse',
+              flexDirection: ROW_REV,
               alignItems: 'center',
               paddingHorizontal: 16,
               minHeight: 52,
@@ -622,7 +623,7 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
                   flex: 1,
                   ...APP_TYPE.body,
                   color: DesignTokens.colors.text.primary,
-                  textAlign: 'right',
+                  textAlign: TEXT_START,
                   writingDirection: TEXT_DIR,
                   paddingVertical: 8,
                 }}
@@ -667,7 +668,7 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
             }}
           >
             <DayNavBlurButton onPress={onPrevWeek} style={{ backgroundColor: DesignTokens.colors.background.primary }} accessibilityLabel={i18n.t('auto.screens__News__EarningsWeeklyView.s9')}>
-              <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.primary} />
+              <Ionicons name={dirIcon('chevron-back')} size={20} color={DesignTokens.colors.text.primary} />
             </DayNavBlurButton>
 
             <View style={{ alignItems: 'center', flex: 1, paddingHorizontal: 10 }}>
@@ -693,7 +694,7 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
             </View>
 
             <DayNavBlurButton onPress={onNextWeek} style={{ backgroundColor: DesignTokens.colors.background.primary }} accessibilityLabel={i18n.t('auto.screens__News__EarningsWeeklyView.s12')}>
-              <Ionicons name="chevron-forward" size={20} color={DesignTokens.colors.text.primary} />
+              <Ionicons name={dirIcon('chevron-forward')} size={20} color={DesignTokens.colors.text.primary} />
             </DayNavBlurButton>
           </View>
         </UICard>
@@ -883,7 +884,7 @@ const searchStyles = StyleSheet.create({
     paddingVertical: APP_LAYOUT.cardTitleToBodyGap + 2,
   },
   resultCardContent: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'center',
     width: '100%',
   },
@@ -898,7 +899,7 @@ const searchStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   resultTitleRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'center',
     maxWidth: '100%',
   },
@@ -930,7 +931,7 @@ const searchStyles = StyleSheet.create({
   timingPill: {
     flexShrink: 0,
     marginRight: 12,
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'center',
     paddingHorizontal: 10,
     height: 24,

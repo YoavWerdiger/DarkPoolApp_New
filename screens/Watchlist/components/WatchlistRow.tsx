@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_START } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React, { memo, useCallback, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
@@ -93,7 +94,7 @@ function WatchlistRowInner({ row, onPress, onDrag, isActive }: Props) {
           elevation: 6,
         },
         identity: {
-          flexDirection: 'row-reverse',
+          flexDirection: ROW_REV,
           alignItems: 'center',
           minWidth: 0,
           flex: 1,
@@ -124,13 +125,13 @@ function WatchlistRowInner({ row, onPress, onDrag, isActive }: Props) {
         symbol: {
           ...APP_TYPE.cardSubtitle,
           fontWeight: APP_TYPE.cardTitle.fontWeight,
-          textAlign: 'right',
+          textAlign: TEXT_START,
           writingDirection: 'ltr',
           color: tokens.colors.text.primary,
         },
         company: {
           ...APP_TYPE.caption2,
-          textAlign: 'right',
+          textAlign: TEXT_START,
           color: tokens.colors.text.secondary,
         },
         cellHit: {
@@ -143,26 +144,26 @@ function WatchlistRowInner({ row, onPress, onDrag, isActive }: Props) {
           ...APP_TYPE.cardSubtitle,
           fontWeight: APP_TYPE.cardTitle.fontWeight,
           writingDirection: 'ltr',
-          textAlign: 'right',
+          textAlign: TEXT_START,
           fontVariant: ['tabular-nums'],
           color: tokens.colors.text.primary,
         },
         chg: {
           ...APP_TYPE.caption,
           writingDirection: 'ltr',
-          textAlign: 'right',
+          textAlign: TEXT_START,
           fontVariant: ['tabular-nums'],
         },
         pct: {
           ...APP_TYPE.caption,
           writingDirection: 'ltr',
-          textAlign: 'right',
+          textAlign: TEXT_START,
           fontVariant: ['tabular-nums'],
         },
         vol: {
           ...APP_TYPE.caption,
           writingDirection: 'ltr',
-          textAlign: 'right',
+          textAlign: TEXT_START,
           fontVariant: ['tabular-nums'],
           color: tokens.colors.text.secondary,
         },

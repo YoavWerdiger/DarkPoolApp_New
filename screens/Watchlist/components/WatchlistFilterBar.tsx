@@ -1,3 +1,4 @@
+import { ROW_REV } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
@@ -31,7 +32,7 @@ export function WatchlistFilterBar({ mode, onChange }: Props) {
           borderBottomColor: tokens.colors.border.divider,
         },
         scroll: {
-          flexDirection: 'row-reverse',
+          flexDirection: ROW_REV,
           alignItems: 'center',
           gap: 6,
           paddingHorizontal: ROW_PAD_H,

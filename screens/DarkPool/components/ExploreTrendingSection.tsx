@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../../lib/i18n/direction';
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
@@ -26,7 +27,7 @@ export function ExploreTrendingSection({
     () =>
       StyleSheet.create({
         wrap: {
-          direction: 'rtl',
+          direction: UI_DIR,
           marginHorizontal: tokens.layout.screenPadding,
           marginBottom: tokens.spacing.lg,
         },

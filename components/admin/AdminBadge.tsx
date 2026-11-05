@@ -1,3 +1,4 @@
+import { TEXT_START } from '../../lib/i18n/direction';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useDesignTokens } from '../ui/DesignTokens';
@@ -31,6 +32,6 @@ const styles = StyleSheet.create({
   label: {
     ...adminHebrewText,
     ...adminCaption,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
 });

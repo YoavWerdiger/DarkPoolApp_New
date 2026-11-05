@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_START, UI_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -312,7 +313,7 @@ function CreateCommunityPostSheetBody({
               disabled={busy}
             >
               <Ionicons
-                name="chevron-forward"
+                name={dirIcon('chevron-forward')}
                 size={22}
                 color={tokens.colors.text.primary}
               />
@@ -581,7 +582,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     container: {
       flex: 1,
       backgroundColor: 'transparent',
-      direction: 'rtl',
+      direction: UI_DIR,
     },
     header: {
       flexDirection: 'row',
@@ -636,10 +637,10 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       paddingTop: APP_LAYOUT.cardPadding,
       paddingBottom: APP_LAYOUT.sectionGap,
       gap: APP_LAYOUT.cardStackGap,
-      direction: 'rtl',
+      direction: UI_DIR,
     },
     banner: {
-      flexDirection: 'row-reverse',
+      flexDirection: ROW_REV,
       alignItems: 'center',
       gap: APP_LAYOUT.stackGapSmall,
       paddingHorizontal: APP_LAYOUT.cardPadding,
@@ -651,7 +652,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       flex: 1,
       ...APP_TYPE.cardSubtitle,
       writingDirection: TEXT_DIR,
-      textAlign: 'right',
+      textAlign: TEXT_START,
     },
     composeCard: {
       borderRadius: UI_CARD_RADIUS,
@@ -670,7 +671,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       writingDirection: TEXT_DIR,
     },
     chipsRow: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: APP_LAYOUT.stackGapSmall,
@@ -687,7 +688,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontWeight: tokens.typography.fontWeight.medium,
       color: tokens.colors.text.primary,
       writingDirection: TEXT_DIR,
-      textAlign: 'right',
+      textAlign: TEXT_START,
     },
     toolbar: {
       flexDirection: 'row',
@@ -697,7 +698,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     counter: {
       ...APP_TYPE.caption,
       writingDirection: 'ltr',
-      textAlign: 'right',
+      textAlign: TEXT_START,
     },
     attachBtn: {
       width: DAY_NAV_BUTTON_SIZE,
@@ -714,7 +715,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       borderRadius: UI_CARD_RADIUS,
       overflow: 'hidden',
       backgroundColor: tokens.colors.background.primary,
-      direction: 'rtl',
+      direction: UI_DIR,
     },
     previewOverlay: {
       ...StyleSheet.absoluteFill,

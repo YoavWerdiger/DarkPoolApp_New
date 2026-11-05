@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
@@ -1091,7 +1092,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 22,
     borderWidth: StyleSheet.hairlineWidth,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     ...chatPhysicalRightText,
     ...CHAT_TYPE.cardBody,
   },
@@ -1102,7 +1103,7 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
     gap: 8,
     // RTL כמו הדפדוף (הבא משמאל): הראשון מימין, והסימון זז עם ההחלקה. ממורכז כשהרשימה קצרה מהמסך
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     flexGrow: 1,
     justifyContent: 'center',
   },

@@ -1,3 +1,4 @@
+import { TEXT_START, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React from 'react';
@@ -160,7 +161,7 @@ export function MediaViewerChrome({
           {onForward ? <IconButton name="arrow-redo-outline" label={i18n.t('auto.components__chat__MediaViewerChrome.s2')} onPress={onForward} /> : null}
         </View>
         <View style={styles.titleSpacer} />
-        <IconButton name="chevron-forward" label={i18n.t('auto.components__chat__MediaViewerChrome.s3')} onPress={onClose} />
+        <IconButton name={dirIcon('chevron-forward')} label={i18n.t('auto.components__chat__MediaViewerChrome.s3')} onPress={onClose} />
       </View>
 
       {/* שם השולח + שעה (או x/x באלבום) — בגלולה במרכז, בין הכפתורים */}
@@ -306,7 +307,7 @@ const styles = StyleSheet.create({
     color: ICON,
     fontSize: 16,
     lineHeight: 22,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: TEXT_DIR,
     marginBottom: 8,
     ...TEXT_SHADOW,

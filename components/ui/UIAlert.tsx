@@ -1,3 +1,4 @@
+import { ROW_REV } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useEffect, useRef } from 'react';
@@ -147,7 +148,7 @@ const UIAlert: React.FC<UIAlertProps> = ({
   };
 
   const buttonContainerStyle: ViewStyle = {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     direction: 'ltr',
     alignItems: 'stretch',
     alignSelf: 'stretch',

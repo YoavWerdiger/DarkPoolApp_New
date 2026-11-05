@@ -1,3 +1,4 @@
+import { UI_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 // ============================================
@@ -228,14 +229,14 @@ function HeaderClose({ disabled, onClose }: { disabled: boolean; onClose: () => 
       accessibilityLabel={i18n.t('auto.components__chat__ForwardMessageModal.s8')}
       disabled={disabled}
     >
-      <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
+      <Ionicons name={dirIcon('chevron-forward')} size={22} color={tokens.colors.text.primary} />
     </DayNavBlurButton>
   );
 }
 
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
-    container: { direction: 'rtl' },
+    container: { direction: UI_DIR },
     header: {
       flexDirection: 'row',
       alignItems: 'center',

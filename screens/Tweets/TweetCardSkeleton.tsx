@@ -1,3 +1,4 @@
+import { ROW_REV, UI_DIR } from '../../lib/i18n/direction';
 import React, { memo } from 'react';
 import { View, type ViewStyle } from 'react-native';
 import { SkeletonBox } from '../../components/ui/SkeletonLoader';
@@ -8,11 +9,11 @@ const DIVIDER = 'rgba(255, 255, 255, 0.12)';
 
 /**
  * אותה טופולוגיה כמו PostCard ב-TweetsFeed:
- * שורש האפליקציה LTR — `row-reverse` בלי `direction: 'rtl'` (היפוך כפול).
+ * שורש האפליקציה LTR — `row-reverse` בלי `direction: UI_DIR` (היפוך כפול).
  * ילד ראשון (אווטאר) מימין; שם/טקסט מיושרים לימין; מדיה מתחת; פעולות בשורה LTR.
  */
 export const tweetCardSkeletonHeaderRow: ViewStyle = {
-  flexDirection: 'row-reverse',
+  flexDirection: ROW_REV,
   alignItems: 'center',
   gap: 10,
 };

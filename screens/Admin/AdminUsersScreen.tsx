@@ -1,3 +1,4 @@
+import { ROW_REV } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
@@ -800,7 +801,7 @@ function UserCard({
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: 'transparent' },
   searchShell: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     borderRadius: 999,
     paddingHorizontal: 16,
     minHeight: 52,
@@ -813,7 +814,7 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   filters: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     flexWrap: 'wrap',
     gap: 8,
     marginBottom: 12,
@@ -827,7 +828,7 @@ const styles = StyleSheet.create({
     marginBottom: APP_LAYOUT.sectionHeaderToContent,
   },
   userTop: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     gap: 12,
     alignItems: 'center',
     paddingHorizontal: APP_LAYOUT.cardPadding,
@@ -849,7 +850,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   badgeRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     flexWrap: 'wrap',
     gap: 6,
     marginTop: 8,
@@ -867,7 +868,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   tenureInputRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'center',
     gap: 10,
     marginTop: 8,

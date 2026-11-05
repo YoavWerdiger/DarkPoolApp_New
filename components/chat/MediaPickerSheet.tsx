@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -785,7 +786,7 @@ const createStyles = (
 ) =>
   StyleSheet.create({
     root: {
-      direction: 'rtl',
+      direction: UI_DIR,
       backgroundColor: 'transparent',
     },
     rootExpanded: {
@@ -939,7 +940,7 @@ const createStyles = (
       marginBottom: MEDIA_ATTACH_PEEK_STRIP_GAP,
     },
     peekRecentsHeader: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -967,7 +968,7 @@ const createStyles = (
       borderRadius: MEDIA_ATTACH_PRIMARY_ROW_PX / 2,
       backgroundColor: tokens.colors.background.cardSolid,
       flexDirection: 'row',
-      direction: 'rtl',
+      direction: UI_DIR,
       alignItems: 'center',
       justifyContent: 'center',
       gap: 8,
@@ -983,7 +984,7 @@ const createStyles = (
       marginTop: MEDIA_ATTACH_ACTION_ROW_GAP,
     },
     galleryChrome: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 10,

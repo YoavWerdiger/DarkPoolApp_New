@@ -1,3 +1,4 @@
+import { TEXT_END, TEXT_START } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React, { memo, useMemo } from 'react';
 import {
@@ -176,7 +177,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     // חברה ציבורית (שם לועזי) — לשמאל
     left: {
-      textAlign: 'left',
+      textAlign: TEXT_END,
     },
     nameHebrew: {
       ...hebrewText,
@@ -187,7 +188,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
       fontWeight: '700',
       fontVariant: ['tabular-nums'],
-      textAlign: 'right',
+      textAlign: TEXT_START,
       marginTop: -2,
       includeFontPadding: false,
     },

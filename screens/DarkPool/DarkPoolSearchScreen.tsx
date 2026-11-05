@@ -1,3 +1,4 @@
+import { UI_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 /**
  * טיקרים — כניסה ישירה לדף מניה (מחזיקים · פיד) בלי לעבור דרך עסקה.
@@ -205,13 +206,13 @@ export default function DarkPoolSearchScreen() {
     () =>
       StyleSheet.create({
         scroll: {
-          direction: 'rtl',
+          direction: UI_DIR,
           paddingBottom: bottomPad,
           paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
         },
         // בתוך עץ rtl — row (לא row-reverse): הילד הראשון בימין
         searchInner: {
-          direction: 'rtl',
+          direction: UI_DIR,
           flexDirection: 'row',
           alignItems: 'center',
           minHeight: 52,
@@ -236,7 +237,7 @@ export default function DarkPoolSearchScreen() {
           marginHorizontal: -APP_LAYOUT.screenPaddingHorizontal,
         },
         railRow: {
-          direction: 'rtl',
+          direction: UI_DIR,
           flexDirection: 'row',
           gap: EXPLORE_RAIL_GAP,
           paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
@@ -285,7 +286,7 @@ export default function DarkPoolSearchScreen() {
           ...tokens.shadows.none,
         },
         row: {
-          direction: 'rtl',
+          direction: UI_DIR,
           flexDirection: 'row',
           alignItems: 'center',
           paddingVertical: APP_LAYOUT.cardTitleToBodyGap,
@@ -390,7 +391,7 @@ export default function DarkPoolSearchScreen() {
               ) : null}
             </View>
           ) : (
-            <Ionicons name="chevron-back" size={18} color={tokens.colors.text.tertiary} />
+            <Ionicons name={dirIcon('chevron-back')} size={18} color={tokens.colors.text.tertiary} />
           )}
         </Pressable>
         {!last ? <View style={styles.divider} /> : null}

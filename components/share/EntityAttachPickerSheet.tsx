@@ -1,3 +1,4 @@
+import { ROW_REV, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -207,7 +208,7 @@ export default function EntityAttachPickerSheet({
             accessibilityLabel={i18n.t('auto.components__share__EntityAttachPickerSheet.s5')}
           >
             <Ionicons
-              name="chevron-forward"
+              name={dirIcon('chevron-forward')}
               size={22}
               color={tokens.colors.text.primary}
             />
@@ -324,7 +325,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
      */
     container: { flex: 1, minHeight: 0, direction: 'ltr' },
     header: {
-      flexDirection: 'row-reverse',
+      flexDirection: ROW_REV,
       alignItems: 'center',
       paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
       paddingBottom: APP_LAYOUT.cardTitleToBodyGap,
@@ -353,7 +354,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       width: '100%',
     },
     tabsWrap: {
-      flexDirection: 'row-reverse',
+      flexDirection: ROW_REV,
       flexWrap: 'wrap',
       alignItems: 'center',
       gap: APP_LAYOUT.stackGapSmall,
@@ -383,7 +384,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       textAlign: 'center',
     },
     row: {
-      flexDirection: 'row-reverse',
+      flexDirection: ROW_REV,
       alignItems: 'center',
       gap: 12,
       paddingVertical: 15,
@@ -412,7 +413,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       alignItems: 'flex-end',
     },
     titleRow: {
-      flexDirection: 'row-reverse',
+      flexDirection: ROW_REV,
       alignItems: 'center',
       gap: 6,
       width: '100%',

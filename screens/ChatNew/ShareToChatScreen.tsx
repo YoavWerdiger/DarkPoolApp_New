@@ -1,3 +1,4 @@
+import { ROW_REV, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -172,7 +173,7 @@ export default function ShareToChatScreen() {
                   <Text style={styles.rowName} numberOfLines={1}>
                     {chatGroupDisplayName(item.name)}
                   </Text>
-                  <Ionicons name="chevron-back" size={18} color={tokens.colors.text.tertiary} />
+                  <Ionicons name={dirIcon('chevron-back')} size={18} color={tokens.colors.text.tertiary} />
                 </TouchableOpacity>
               );
             }}
@@ -191,7 +192,7 @@ function createStyles(t: ReturnType<typeof useDesignTokens>) {
     },
     /** כרטיס cardSolid — מה נשלח */
     previewCard: {
-      flexDirection: 'row-reverse',
+      flexDirection: ROW_REV,
       alignItems: 'center',
       gap: APP_LAYOUT.stackGapTight,
       marginHorizontal: HP,
@@ -219,7 +220,7 @@ function createStyles(t: ReturnType<typeof useDesignTokens>) {
     },
     searchBox: {
       ...formFieldShellStyle({ tokens: t, focused: false }),
-      flexDirection: 'row-reverse',
+      flexDirection: ROW_REV,
       gap: APP_LAYOUT.stackGapSmall,
       minHeight: 52,
       paddingHorizontal: 16,
@@ -253,7 +254,7 @@ function createStyles(t: ReturnType<typeof useDesignTokens>) {
       marginTop: 40,
     },
     row: {
-      flexDirection: 'row-reverse',
+      flexDirection: ROW_REV,
       alignItems: 'center',
       gap: APP_LAYOUT.stackGapTight,
       paddingHorizontal: HP,

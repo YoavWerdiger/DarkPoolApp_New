@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_START, UI_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 // ============================================
@@ -223,7 +224,7 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
             accessibilityLabel={i18n.t('auto.screens__News__CreateNewsSheet.s10')}
             disabled={isBusy}
           >
-            <Ionicons name="chevron-forward" size={22} color={DesignTokens.colors.text.primary} />
+            <Ionicons name={dirIcon('chevron-forward')} size={22} color={DesignTokens.colors.text.primary} />
           </DayNavBlurButton>
 
           <Text style={[styles.headerTitle, { color: DesignTokens.colors.text.primary }]}>{i18n.t('auto.screens__News__CreateNewsSheet.s11')}</Text>
@@ -453,10 +454,10 @@ function NewsTextField({
 
 const formFieldStyles = StyleSheet.create({
   group: {
-    direction: 'rtl',
+    direction: UI_DIR,
   },
   labelRow: {
-    direction: 'rtl',
+    direction: UI_DIR,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -478,10 +479,10 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     container: {
       flex: 1,
       backgroundColor: 'transparent',
-      direction: 'rtl',
+      direction: UI_DIR,
     },
     header: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
@@ -510,14 +511,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       paddingTop: APP_LAYOUT.cardPadding,
       paddingBottom: APP_LAYOUT.sectionGap,
       gap: APP_LAYOUT.componentGap,
-      direction: 'rtl',
+      direction: UI_DIR,
     },
     publishBtn: {
       alignItems: 'center',
       justifyContent: 'center',
     },
     banner: {
-      flexDirection: 'row-reverse',
+      flexDirection: ROW_REV,
       alignItems: 'center',
       paddingHorizontal: APP_LAYOUT.cardPadding,
       paddingVertical: 15,
@@ -527,7 +528,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     bannerText: {
       flex: 1,
       ...APP_TYPE.body,
-      textAlign: 'right',
+      textAlign: TEXT_START,
       writingDirection: TEXT_DIR,
       marginLeft: APP_LAYOUT.cardTitleToBodyGap,
     },
@@ -562,7 +563,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       aspectRatio: 16 / 9,
     },
     imageToolbar: {
-      flexDirection: 'row-reverse',
+      flexDirection: ROW_REV,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: 'rgba(0, 0, 0, 0.55)',
@@ -571,7 +572,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     imageToolbarBtn: {
       flex: 1,
-      flexDirection: 'row-reverse',
+      flexDirection: ROW_REV,
       alignItems: 'center',
       justifyContent: 'center',
       paddingVertical: 11,
@@ -648,7 +649,7 @@ function PublishSteps({ phase, hasImage }: { phase: 'image' | 'save' | 'done' | 
 
 const stepStyles = StyleSheet.create({
   card: {
-    direction: 'rtl',
+    direction: UI_DIR,
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 16,

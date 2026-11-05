@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../../lib/i18n/direction';
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { DayDividerPill, DayDividerSlidingLayer } from '../../../components/ui/DayDividerPill';
@@ -20,7 +21,7 @@ export function ExploreKindFilterBar({ value, onChange }: Props) {
     () =>
       StyleSheet.create({
         row: {
-          direction: 'rtl',
+          direction: UI_DIR,
           flexDirection: 'row',
           alignItems: 'center',
           gap: 8,

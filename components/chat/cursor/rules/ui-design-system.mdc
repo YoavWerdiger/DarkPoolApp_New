@@ -1,3 +1,4 @@
+import { TEXT_START } from '../../../../lib/i18n/direction';
 import { TEXT_DIR } from '../../../../lib/i18n/language';
 ---
 description: DarkPool UI design system — green-black fintech aesthetic inspired by Robinhood, Bloomberg, Apple
@@ -15,7 +16,7 @@ Every screen must look like a shipped, polished fintech product. Use `useDesignT
 - **Green = money = action**: `#00C805` is the brand color — used for CTAs, active states, gains, pill tabs.
 - **Glass & depth**: Layered surfaces with blur + semi-transparent backgrounds. Cards float above the background.
 - **Information hierarchy through opacity**: White text at 100% / 70% / 45% / 30%.
-- **RTL-native**: Hebrew text uses `writingDirection: TEXT_DIR`, `textAlign: 'right'`.
+- **RTL-native**: Hebrew text uses `writingDirection: TEXT_DIR`, `textAlign: TEXT_START`.
 - **Breathing room**: Generous spacing. Let elements breathe. Avoid cramming.
 
 ## Color System

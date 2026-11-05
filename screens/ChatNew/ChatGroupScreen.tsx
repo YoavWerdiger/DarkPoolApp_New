@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { runAfterInteractions } from '../../utils/runAfterInteractions';
@@ -2432,7 +2433,7 @@ export default function ChatGroupScreen() {
               fontSize: 18,
               fontWeight: '700',
               marginBottom: 12,
-              textAlign: 'right',
+              textAlign: TEXT_START,
             }}>{i18n.t('auto.screens__ChatNew__ChatGroupScreen.s27')}</Text>
             <TextInput
               value={editModalText}
@@ -2446,7 +2447,7 @@ export default function ChatGroupScreen() {
                 fontSize: 16,
                 minHeight: 60,
                 textAlignVertical: 'top',
-                textAlign: 'right',
+                textAlign: TEXT_START,
                 borderWidth: 1,
                 borderColor: DesignTokens.colors.border?.main || 'rgba(255,255,255,0.12)',
               }}
@@ -2643,7 +2644,7 @@ const createChatGroupStyles = (tokens: any) => {
     paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
   },
   readOnlyPill: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'center',
     gap: 6,
     paddingHorizontal: 14,
@@ -2658,7 +2659,7 @@ const createChatGroupStyles = (tokens: any) => {
   },
   /* ── Header — כרטיסי זכוכית אחידים (כפתורים + קבוצה) ── */
   headerOuterRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'center',
     gap: 8,
   },

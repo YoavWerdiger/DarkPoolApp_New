@@ -1,3 +1,4 @@
+import { dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
@@ -365,7 +366,7 @@ export default function CalendarTab() {
                 glassIntensity="subtle"
                 accessibilityLabel={i18n.t('auto.screens__Journal__CalendarTab.s9')}
               >
-                <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.primary} />
+                <Ionicons name={dirIcon('chevron-back')} size={20} color={DesignTokens.colors.text.primary} />
               </DayNavBlurButton>
 
               <View style={styles.monthInfo}>
@@ -391,7 +392,7 @@ export default function CalendarTab() {
                 glassIntensity="subtle"
                 accessibilityLabel={i18n.t('auto.screens__Journal__CalendarTab.s11')}
               >
-                <Ionicons name="chevron-forward" size={20} color={DesignTokens.colors.text.primary} />
+                <Ionicons name={dirIcon('chevron-forward')} size={20} color={DesignTokens.colors.text.primary} />
               </DayNavBlurButton>
             </View>
           </UICard>

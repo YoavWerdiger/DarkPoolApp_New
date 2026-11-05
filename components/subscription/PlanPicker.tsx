@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
@@ -505,7 +506,7 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     // row-reverse: רדיו בקצה הימני, שם המסלול, מחיר בקצה השמאלי
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'center',
     gap: APP_LAYOUT.stackGapTight,
   },
@@ -514,7 +515,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   nameRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'center',
     gap: 6,
     flexWrap: 'wrap',
@@ -551,7 +552,7 @@ const styles = StyleSheet.create({
   testHint: {
     ...appCaptionStyle,
     marginTop: APP_LAYOUT.titleSubtitleGap,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   highlights: {
     marginTop: APP_LAYOUT.componentGap + 2,
@@ -560,7 +561,7 @@ const styles = StyleSheet.create({
     paddingTop: APP_LAYOUT.componentGap + 2,
   },
   highlightRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'center',
     gap: 8,
   },
@@ -573,7 +574,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   trustRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     justifyContent: 'center',
     alignItems: 'center',
     gap: 6,
@@ -587,19 +588,19 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   tabs: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     borderRadius: 999,
     padding: 4,
     marginBottom: APP_LAYOUT.componentGap + 2,
   },
   planHead: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'center',
     gap: 8,
   },
   priceRow: {
     // מחיר גדול + «/ לחודש» — המחיר הוא הדבר הבולט בכרטיס
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'baseline',
     gap: 6,
     marginTop: APP_LAYOUT.stackGapSmall,

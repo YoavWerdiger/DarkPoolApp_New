@@ -1,3 +1,4 @@
+import { TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { useState, useEffect, useCallback } from 'react';
@@ -96,14 +97,14 @@ const DividendCard: React.FC<{ dividend: Dividend }> = ({ dividend }) => {
           style={{ 
             ...APP_TYPE.cardTitle,
             color: tokens.colors.text.primary,
-            textAlign: 'right',
+            textAlign: TEXT_START,
             marginBottom: APP_LAYOUT.cardTitleToSubtitleGap
           }}
           numberOfLines={1}
         >
           {getCompanyName(dividend.symbol)}
         </Text>
-        <Text style={{ ...APP_TYPE.caption, color: tokens.colors.text.tertiary, textAlign: 'right' }}>
+        <Text style={{ ...APP_TYPE.caption, color: tokens.colors.text.tertiary, textAlign: TEXT_START }}>
           {dividend.symbol}
         </Text>
       </View>

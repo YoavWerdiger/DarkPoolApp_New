@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { runAfterInteractions } from '../../utils/runAfterInteractions';
 /**
@@ -359,13 +360,13 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, bottomPad: num
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: 'transparent', ...darkPoolRtlContent },
     scroll: {
-      direction: 'rtl',
+      direction: UI_DIR,
       paddingBottom: bottomPad,
       paddingTop: 6,
       paddingHorizontal: tokens.layout?.screenPadding ?? FEED_LIST_GUTTER,
     },
     listHeader: {
-      direction: 'rtl',
+      direction: UI_DIR,
       alignSelf: 'stretch',
       width: '100%',
     },
@@ -374,14 +375,14 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, bottomPad: num
       color: tokens.colors.text.primary,
     },
     tradesHead: {
-      direction: 'rtl',
+      direction: UI_DIR,
       marginTop: 4,
       marginBottom: FEED_LIST_CHIPS_TO_CARDS,
       alignSelf: 'stretch',
       width: '100%',
     },
     kindChipRow: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       flexWrap: 'nowrap',

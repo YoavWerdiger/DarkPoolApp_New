@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 /**
  * גילוי — מדפי הקטגוריות.
@@ -569,21 +570,21 @@ function createStyles(
 ) {
   return StyleSheet.create({
     scroll: {
-      direction: 'rtl',
+      direction: UI_DIR,
       paddingHorizontal: tokens.layout.screenPadding,
       paddingTop: tokens.spacing.sm,
       paddingBottom: bottomPad,
     },
     sheetRoot: {
       flex: 1,
-      direction: 'rtl',
+      direction: UI_DIR,
       paddingHorizontal: tokens.layout.screenPadding,
       paddingTop: 4,
     },
     sheetScroll: { flex: 1 },
     sheetScrollContent: { paddingBottom: 48 },
     searchShell: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       minHeight: 52,
@@ -600,7 +601,7 @@ function createStyles(
       padding: 0,
     },
     resultsGrid: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: EXPLORE_GRID_GAP,

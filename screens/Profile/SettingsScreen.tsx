@@ -10,7 +10,6 @@ import {
 } from 'react-native';
 import { AppSwitch } from '../../components/ui/AppSwitch';
 import {
-  ChevronLeft,
   Languages,
   CreditCard,
   ScanFace,
@@ -19,6 +18,7 @@ import {
   Moon,
   type LucideIcon,
 } from 'lucide-react-native';
+import { ChevronLeft } from '../../lib/i18n/dirIcons';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useDesignTokens } from '../../components/ui/DesignTokens';

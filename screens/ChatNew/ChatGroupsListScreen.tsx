@@ -1,3 +1,4 @@
+import { IS_RTL_UI, ROW_REV, TEXT_START, UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
@@ -98,7 +99,7 @@ const SkeletonGroupRow = React.memo(({ delay }: { delay: number }) => {
     return () => { clearTimeout(t); anim.stop(); };
   }, []);
   return (
-    <Animated.View style={{ flexDirection: 'row-reverse', alignItems: 'center', paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal, paddingVertical: 15, opacity }}>
+    <Animated.View style={{ flexDirection: ROW_REV, alignItems: 'center', paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal, paddingVertical: 15, opacity }}>
       <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: 'rgba(255,255,255,0.12)', marginLeft: 12 }} />
       <View style={{ flex: 1, gap: 8, alignItems: 'flex-end' }}>
         <View style={{ height: 13, width: '60%', backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 6 }} />
@@ -1678,7 +1679,7 @@ export default function ChatGroupsListScreen() {
               style={{ flex: 1 }}
               contentContainerStyle={styles.statusRowScroll}
               onContentSizeChange={() => {
-                storiesScrollRef.current?.scrollToEnd({ animated: false });
+                if (IS_RTL_UI) storiesScrollRef.current?.scrollToEnd({ animated: false });
               }}
             >
             {usersWithStories.map((s, idx) => {
@@ -1911,7 +1912,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   container: { flex: 1, backgroundColor: 'transparent' },
 
   headerEndActions: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'center',
     gap: 8,
   },
@@ -1933,15 +1934,16 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
 
   /* ── Stories row ── */
   statusRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'flex-start',
     paddingHorizontal: HP,
     paddingTop: 8,
     paddingBottom: 9,
   },
+  // גלילה אופקית פיזית: בעברית צמוד ימינה (ליד «שלי»); באנגלית תמונת מראה — צמוד שמאלה
   statusRowScroll: {
     flexGrow: 1,
-    flexDirection: 'row',
+    flexDirection: IS_RTL_UI ? 'row' : 'row-reverse',
     alignItems: 'flex-start',
     justifyContent: 'flex-end',
   },
@@ -2036,7 +2038,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     paddingBottom: 8,
   },
   searchBar: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'center',
     backgroundColor: tokens.colors.border.primary,
     borderRadius: tokens.borderRadius.search,
@@ -2048,14 +2050,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     flex: 1,
     ...APP_TYPE.body,
     color: tokens.colors.text.primary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: TEXT_DIR,
     paddingVertical: 0,
   },
   /* ── Search Sheet ── */
   searchSheetRoot: {
     flex: 1,
-    direction: 'rtl',
+    direction: UI_DIR,
     paddingHorizontal: HP,
     gap: 12,
   },
@@ -2073,7 +2075,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     flex: 1,
     ...APP_TYPE.body,
     color: tokens.colors.text.primary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: TEXT_DIR,
     paddingVertical: 0,
   },
@@ -2141,7 +2143,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     color: tokens.colors.text.tertiary,
   },
   filterRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'center',
     gap: 8,
     marginTop: 12,
@@ -2149,7 +2151,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
 
   /* ── Chat row ── */
   chatRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'center',
     paddingVertical: 8,
     paddingHorizontal: HP,
@@ -2174,7 +2176,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   chatBody: { flex: 1, minWidth: 0 },
   chatRow1: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: APP_LAYOUT.cardTitleToSubtitleGap,
@@ -2183,7 +2185,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     ...APP_TYPE.cardTitle,
     color: tokens.colors.text.primary,
     flex: 1,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: TEXT_DIR,
   },
   chatTime: {
@@ -2193,7 +2195,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   chatTimeUnread: { color: tokens.colors.text.primary },
   chatRow2: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     justifyContent: 'space-between',
     alignItems: 'center',
   },
@@ -2201,7 +2203,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     ...APP_TYPE.cardSubtitle,
     color: tokens.colors.text.secondary,
     flex: 1,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: TEXT_DIR,
   },
   chatPreviewUnread: {
@@ -2262,7 +2264,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   /* ── Joinable group row ── */
   joinableRow: {},
   createGroupRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'center',
     gap: 12,
     paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
@@ -2279,14 +2281,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   createGroupText: {
     ...APP_TYPE.cardTitle,
     color: tokens.colors.text.primary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: TEXT_DIR,
   },
   joinableAvatar: {},
   joinableSubtitle: {
     ...APP_TYPE.cardSubtitle,
     color: tokens.colors.text.secondary,
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: TEXT_DIR,
     marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
   },

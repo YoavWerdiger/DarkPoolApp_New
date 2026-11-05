@@ -1,3 +1,4 @@
+import { ROW_REV, UI_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
@@ -130,7 +131,7 @@ export default function AdminGroupsScreen({ navigation }: any) {
                           {tiers.map((t) => TIER_LABEL[t]).join(' + ')}
                         </Text>
                       </View>
-                      <Ionicons name="chevron-back" size={18} color={tokens.colors.text.tertiary} />
+                      <Ionicons name={dirIcon('chevron-back')} size={18} color={tokens.colors.text.tertiary} />
                     </View>
                   </Pressable>
                 );
@@ -424,7 +425,7 @@ const styles = StyleSheet.create({
   scroll: { paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal, paddingBottom: 40 },
   divider: { height: StyleSheet.hairlineWidth },
   row: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'center',
     gap: 12,
     paddingVertical: 15,
@@ -446,7 +447,7 @@ const styles = StyleSheet.create({
     lineHeight: APP_TYPE.cardSubtitle.lineHeight,
   },
   sheet: {
-    direction: 'rtl',
+    direction: UI_DIR,
     paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
     paddingTop: 4,
   },

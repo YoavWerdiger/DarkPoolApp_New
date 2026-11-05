@@ -1,3 +1,4 @@
+import { dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect } from 'react';
@@ -96,7 +97,7 @@ export default function ArticleDetailScreen() {
             accessibilityLabel={i18n.t('auto.screens__News__ArticleDetailScreen.s9')}
           >
             <Ionicons
-              name="arrow-back"
+              name={dirIcon('arrow-back')}
               size={20}
               color={DesignTokens.colors.text.primary}
             />
@@ -273,7 +274,7 @@ export default function ArticleDetailScreen() {
                     <Text style={{ ...APP_TYPE.cardTitle, color: DesignTokens.colors.text.primary }}>{i18n.t('auto.screens__News__ArticleDetailScreen.s11')}</Text>
                   </View>
                   <Ionicons
-                    name="chevron-forward"
+                    name={dirIcon('chevron-forward')}
                     size={16}
                     color={DesignTokens.colors.text.tertiary}
                   />

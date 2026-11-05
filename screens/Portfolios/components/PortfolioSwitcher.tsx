@@ -1,3 +1,4 @@
+import { ROW_REV, UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -235,7 +236,7 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
   },
   anchor: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'center',
     gap: 6,
     maxWidth: '100%',
@@ -257,7 +258,7 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: UI_CARD_RADIUS,
     borderBottomRightRadius: UI_CARD_RADIUS,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    direction: 'rtl',
+    direction: UI_DIR,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
@@ -282,7 +283,7 @@ const styles = StyleSheet.create({
   },
   /** שורת תפריט — paddingVertical 15, ריפוד כרטיס 16 */
   row: {
-    direction: 'rtl',
+    direction: UI_DIR,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,

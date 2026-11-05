@@ -1,3 +1,4 @@
+import { TEXT_END, TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useMemo } from 'react';
@@ -138,13 +139,13 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     factLabel: {
       ...ACADEMY_TYPE.cardSubtitle,
       color: tokens.colors.text.secondary,
-      textAlign: 'right',
+      textAlign: TEXT_START,
       writingDirection: TEXT_DIR,
     },
     factValue: {
       ...ACADEMY_TYPE.body,
       color: tokens.colors.text.primary,
-      textAlign: 'left',
+      textAlign: TEXT_END,
       writingDirection: TEXT_DIR,
       flexShrink: 1,
     },
@@ -156,7 +157,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     note: {
       ...ACADEMY_TYPE.body,
       color: tokens.colors.text.secondary,
-      textAlign: 'right',
+      textAlign: TEXT_START,
       writingDirection: TEXT_DIR,
       paddingHorizontal: APP_LAYOUT.cardPadding,
       paddingTop: APP_LAYOUT.cardTitleToBodyGap,

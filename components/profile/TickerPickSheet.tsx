@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 /**
  * שיט בחירת מניות (התראות דיווחי רווח): חיפוש עם מקלדת שנפתחת בתוך השיט, תוצאות חיות
@@ -180,9 +181,9 @@ export function TickerPickSheet({ isOpen, onClose, title = i18n.t('auto.componen
 
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
-    root: { flex: 1, direction: 'rtl', paddingHorizontal: tokens.layout.screenPadding, paddingTop: 4 },
+    root: { flex: 1, direction: UI_DIR, paddingHorizontal: tokens.layout.screenPadding, paddingTop: 4 },
     searchShell: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       minHeight: 52,
@@ -201,7 +202,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     scroll: { flex: 1 },
     scrollContent: { paddingBottom: 48 },
     row: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,

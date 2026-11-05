@@ -1,3 +1,4 @@
+import { dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 import { legacyAlert } from '../../utils/appDialog';
@@ -1149,7 +1150,7 @@ export default function EarningsReportsTab({
           }}
         >
           <DayNavBlurButton onPress={goToPreviousDay} style={{ backgroundColor: DesignTokens.colors.background.primary }}>
-            <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.primary} />
+            <Ionicons name={dirIcon('chevron-back')} size={20} color={DesignTokens.colors.text.primary} />
           </DayNavBlurButton>
 
           <View style={{ alignItems: 'center', flex: 1, paddingHorizontal: 10 }}>
@@ -1180,7 +1181,7 @@ export default function EarningsReportsTab({
           </View>
 
           <DayNavBlurButton onPress={goToNextDay} style={{ backgroundColor: DesignTokens.colors.background.primary }}>
-            <Ionicons name="chevron-forward" size={20} color={DesignTokens.colors.text.primary} />
+            <Ionicons name={dirIcon('chevron-forward')} size={20} color={DesignTokens.colors.text.primary} />
           </DayNavBlurButton>
         </View>
       </UICard>

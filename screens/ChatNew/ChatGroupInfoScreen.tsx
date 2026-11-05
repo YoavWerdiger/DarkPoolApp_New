@@ -33,7 +33,16 @@ import { useLockParentDrawerWhileFocused } from '../../hooks/useLockParentDrawer
 import { scheduleAfterNavigationTransition } from '../../hooks/afterNavigationTransition';
 import { ChatGroupMember, ChatMemberRole } from '../../types/chat.types';
 import { Ionicons } from '@expo/vector-icons';
-import { Bell, BellOff, ChevronDown, ChevronLeft, LogOut, Plus, Star, Users } from 'lucide-react-native';
+import {
+  Bell,
+  BellOff,
+  ChevronDown,
+  LogOut,
+  Plus,
+  Star,
+  Users,
+} from 'lucide-react-native';
+import { ChevronLeft } from '../../lib/i18n/dirIcons';
 import { Collapsible } from '../../components/ui/Collapsible';
 import UICard from '../../components/ui/UICard';
 import UIButton from '../../components/ui/UIButton';

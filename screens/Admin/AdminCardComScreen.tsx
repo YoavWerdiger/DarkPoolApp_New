@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_END, TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
@@ -276,7 +277,7 @@ export default function AdminCardComScreen({ navigation }: any) {
 
 function FieldLabel({ children, color }: { children: React.ReactNode; color: string }) {
   return (
-    <Text style={[adminHebrewText, adminCaption, { color, textAlign: 'right', marginBottom: 6, marginTop: 12 }]}>
+    <Text style={[adminHebrewText, adminCaption, { color, textAlign: TEXT_START, marginBottom: 6, marginTop: 12 }]}>
       {children}
     </Text>
   );
@@ -294,11 +295,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     ...adminBody,
-    textAlign: 'left',
+    textAlign: TEXT_END,
     writingDirection: 'ltr',
   },
   opsRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     flexWrap: 'wrap',
     gap: 8,
   },

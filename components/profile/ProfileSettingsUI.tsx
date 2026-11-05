@@ -20,7 +20,11 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { ChevronLeft, User, type LucideIcon } from 'lucide-react-native';
+import {
+  User,
+  type LucideIcon,
+} from 'lucide-react-native';
+import { ChevronLeft } from '../../lib/i18n/dirIcons';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { useTheme } from '../../context/ThemeContext';
 import UICard from '../ui/UICard';

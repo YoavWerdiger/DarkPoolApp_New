@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_END, TEXT_START, UI_DIR, dirIcon } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -588,7 +589,7 @@ function Body({
               accessibilityLabel={i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s16')}
             >
               <Ionicons
-                name="chevron-forward"
+                name={dirIcon('chevron-forward')}
                 size={22}
                 color={tokens.colors.text.primary}
               />
@@ -1038,7 +1039,7 @@ function useStyles() {
           gap: APP_LAYOUT.cardTitleToBodyGap,
         },
         topBar: {
-          direction: 'rtl',
+          direction: UI_DIR,
           flexDirection: 'row',
           alignItems: 'center',
           minHeight: HEADER_BACK_BTN_SIZE,
@@ -1053,7 +1054,7 @@ function useStyles() {
           marginBottom: APP_LAYOUT.stackGapSmall,
         },
         priceRow: {
-          direction: 'rtl',
+          direction: UI_DIR,
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -1109,7 +1110,7 @@ function useStyles() {
           letterSpacing: APP_TYPE.sectionTitle.letterSpacing,
           color: tokens.colors.text.primary,
           writingDirection: 'ltr',
-          textAlign: 'left',
+          textAlign: TEXT_END,
         },
         companyName: {
           ...appPhysicalLeftText,
@@ -1170,7 +1171,7 @@ function useStyles() {
           color: tokens.colors.text.primary,
           fontVariant: ['tabular-nums'],
           writingDirection: 'ltr',
-          textAlign: 'left',
+          textAlign: TEXT_END,
         },
         switchScale: {
           transform: [{ scaleX: 0.82 }, { scaleY: 0.82 }],
@@ -1184,7 +1185,7 @@ function useStyles() {
           gap: 8,
         },
         sideRow: {
-          flexDirection: 'row-reverse',
+          flexDirection: ROW_REV,
           gap: 8,
         },
         sideChip: {
@@ -1225,7 +1226,7 @@ function useStyles() {
           minHeight: 44,
           paddingHorizontal: 8,
           color: tokens.colors.text.primary,
-          textAlign: 'right',
+          textAlign: TEXT_START,
           writingDirection: 'ltr',
           fontVariant: ['tabular-nums'],
           backgroundColor: 'transparent',

@@ -1,3 +1,4 @@
+import { TEXT_END, TEXT_START, UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 /**
  * לוח הבקרה של יומן המסחר (בסקירה, מתחת לגרף וחלוקת הנכסים) — באותה שפה כמו תיק האינסיידרים:
@@ -306,7 +307,7 @@ function createStyles(t: Tokens) {
 
     /* שורות רשימה */
     row: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       alignSelf: 'stretch',
@@ -318,7 +319,7 @@ function createStyles(t: Tokens) {
     rowGap: { width: 12, flexShrink: 0 },
     rowText: { flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 0, justifyContent: 'center' },
     // כותרת + תגית בשורה אחת, צמודות לימין
-    rowTitleLine: { direction: 'rtl', flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0 },
+    rowTitleLine: { direction: UI_DIR, flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0 },
     badge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8 },
     badgeText: {
       fontSize: JOURNAL_TYPE.caption.fontSize - 1,
@@ -327,7 +328,7 @@ function createStyles(t: Tokens) {
     },
     rowTicker: {
       direction: 'ltr',
-      textAlign: 'right',
+      textAlign: TEXT_START,
       writingDirection: 'ltr',
       fontSize: JOURNAL_TYPE.cardBody.fontSize,
       lineHeight: JOURNAL_TYPE.cardBody.lineHeight,
@@ -377,7 +378,7 @@ function createStyles(t: Tokens) {
       marginRight: 12,
       fontVariant: ['tabular-nums'],
       writingDirection: 'ltr',
-      textAlign: 'left',
+      textAlign: TEXT_END,
     },
     statTitle: {
       ...journalCardTitleStyle,
@@ -394,7 +395,7 @@ function createStyles(t: Tokens) {
       fontWeight: JOURNAL_TYPE.cardTitle.fontWeight,
       fontVariant: ['tabular-nums'],
       writingDirection: 'ltr',
-      textAlign: 'left',
+      textAlign: TEXT_END,
     },
     rowValueSub: {
       marginTop: JOURNAL_LAYOUT.cardTitleToSubtitleGap,
@@ -403,7 +404,7 @@ function createStyles(t: Tokens) {
       fontWeight: JOURNAL_TYPE.caption.fontWeight,
       fontVariant: ['tabular-nums'],
       writingDirection: 'ltr',
-      textAlign: 'left',
+      textAlign: TEXT_END,
     },
   });
 }

@@ -1,3 +1,4 @@
+import { TEXT_END, TEXT_START, UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 import { appLocale } from '../../../lib/i18n/locale';
@@ -890,7 +891,7 @@ const styles = StyleSheet.create({
   wrap: {
     alignSelf: 'stretch',
     width: '100%',
-    direction: 'rtl',
+    direction: UI_DIR,
   },
   chartArea: {
     width: '100%',
@@ -929,7 +930,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontVariant: ['tabular-nums'],
     fontWeight: '600',
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: TEXT_DIR,
   },
   compactReturnRow: {
@@ -945,7 +946,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontVariant: ['tabular-nums'],
     writingDirection: 'ltr',
-    textAlign: 'left',
+    textAlign: TEXT_END,
     letterSpacing: 0.2,
   },
   compactScrub: {
@@ -954,7 +955,7 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
     fontWeight: '600',
     writingDirection: 'ltr',
-    textAlign: 'left',
+    textAlign: TEXT_END,
   },
   compactSpacer: {
     flexGrow: 1,
@@ -1013,10 +1014,10 @@ const styles = StyleSheet.create({
     writingDirection: 'ltr',
   },
   headerTextRight: {
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   headerTextLeft: {
-    textAlign: 'left',
+    textAlign: TEXT_END,
   },
   headerTextCenter: {
     textAlign: 'center',
@@ -1035,7 +1036,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   periodsRow: {
-    direction: 'rtl',
+    direction: UI_DIR,
     flexDirection: 'row',
     flexWrap: 'nowrap',
     alignItems: 'center',

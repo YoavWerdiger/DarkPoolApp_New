@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_START, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
@@ -66,7 +67,7 @@ const OnboardingNotificationsScreen: React.FC<Props> = ({ navigation }) => {
           {/* Header */}
           <View style={styles.header}>
             <Pressable onPress={handleBack} style={styles.backButton}>
-              <Ionicons name="chevron-forward" size={28} color={tokens.colors.text.primary} />
+              <Ionicons name={dirIcon('chevron-forward')} size={28} color={tokens.colors.text.primary} />
             </Pressable>
             <Text style={[styles.stepIndicator, { color: tokens.colors.text.tertiary }]}>{i18n.t('auto.screens__Onboarding__OnboardingNotificationsScreen.s1')}</Text>
           </View>
@@ -226,14 +227,14 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   feature: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'center',
     gap: 12,
   },
   featureText: {
     flex: 1,
     fontSize: 16,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   note: {
     fontSize: 12,

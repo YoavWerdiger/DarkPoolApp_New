@@ -1,3 +1,4 @@
+import { UI_DIR } from '../lib/i18n/direction';
 /**
  * Dark Pool — Stack: מעטפת טאבים (בית) + push לפרופיל / טיקר / פרטי עסקה.
  */
@@ -67,7 +68,7 @@ export default function DarkPoolStack() {
         screenOptions={{
           headerShown: false,
           freezeOnBlur: true,
-          contentStyle: { backgroundColor: screenCanvas, direction: 'rtl' },
+          contentStyle: { backgroundColor: screenCanvas, direction: UI_DIR },
         }}
       >
         <Stack.Screen name="DarkPoolHome" component={DarkPoolTabs} />

@@ -1,3 +1,4 @@
+import { TEXT_START } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, type ViewStyle } from 'react-native';
@@ -81,7 +82,7 @@ export function WatchlistColumnHeader({ sortMode, onSortChange }: Props) {
         },
         label: {
           ...APP_TYPE.cardMetricLabel,
-          textAlign: 'right',
+          textAlign: TEXT_START,
           color: tokens.colors.text.secondary,
         },
         labelActive: {

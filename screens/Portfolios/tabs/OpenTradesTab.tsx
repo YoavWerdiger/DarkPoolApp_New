@@ -1,3 +1,4 @@
+import { TEXT_END, TEXT_START, UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import { appLocale } from '../../../lib/i18n/locale';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -315,14 +316,14 @@ export default function OpenTradesTab({
         root: {
           flex: 1,
           paddingTop: 4,
-          direction: 'rtl',
+          direction: UI_DIR,
         },
         loading: { paddingVertical: 60, alignItems: 'center' },
         empty: {
           alignItems: 'center',
           paddingVertical: 60,
           gap: 8,
-          direction: 'rtl',
+          direction: UI_DIR,
         },
         emptyTitle: {
           ...journalSectionTitleStyle,
@@ -352,7 +353,7 @@ export default function OpenTradesTab({
           paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
           paddingTop: APP_LAYOUT.componentGap,
           gap: APP_LAYOUT.componentGap,
-          direction: 'rtl',
+          direction: UI_DIR,
         },
         sheetHeader: {
           flexDirection: 'row',
@@ -403,7 +404,7 @@ export default function OpenTradesTab({
           ...formFieldNumericInputStyle(tokens),
           flex: 1,
           minHeight: 52,
-          textAlign: 'left',
+          textAlign: TEXT_END,
           color: tokens.colors.text.primary,
         },
         pnlPreview: {
@@ -423,7 +424,7 @@ export default function OpenTradesTab({
           fontWeight: JOURNAL_TYPE.cardMetricValueSecondary.fontWeight,
           lineHeight: JOURNAL_TYPE.cardMetricValueSecondary.lineHeight,
           writingDirection: 'ltr',
-          textAlign: 'right',
+          textAlign: TEXT_START,
           fontVariant: ['tabular-nums'],
         },
         sheetActions: {
@@ -469,7 +470,7 @@ export default function OpenTradesTab({
           paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
           // safe area — הבורר יושב על קצה המסך
           paddingBottom: sheetContentBottomPadding(insets.bottom),
-          direction: 'rtl',
+          direction: UI_DIR,
         },
         exitPickerTitle: {
           ...journalSectionTitleStyle,

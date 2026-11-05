@@ -23,6 +23,9 @@ export function isRtlLanguage(lang: AppLanguage): boolean {
 }
 
 export function getStoredLanguage(): AppLanguage {
+  // פיתוח בלבד: EXPO_PUBLIC_UI_LANG=en|ar|he — לבדיקות על סימולטור בלי לגעת בהגדרה השמורה
+  const devOverride = __DEV__ ? process.env.EXPO_PUBLIC_UI_LANG : undefined;
+  if (isAppLanguage(devOverride)) return devOverride;
   try {
     const stored = SecureStore.getItem(KEY);
     return isAppLanguage(stored) ? stored : 'he';
@@ -32,13 +35,14 @@ export function getStoredLanguage(): AppLanguage {
 }
 
 /**
- * בעלייה (index.ts): פריסת הממשק נשארת RTL בכל השפות — רק הטקסט מתורגם
- * (החלטת מוצר: אותו מבנה מסכים, בלי היפוך פריסה באנגלית).
+ * בעלייה (index.ts): עברית / ערבית — RTL; אנגלית — LTR (תמונת מראה של הממשק).
+ * הכיוון בתוך המסכים נקבע דרך lib/i18n/direction (UI_DIR / ROW_REV / TEXT_START…).
  */
-export function applyLanguageDirection(_lang: AppLanguage): void {
+export function applyLanguageDirection(lang: AppLanguage): void {
+  const rtl = isRtlLanguage(lang);
   try {
-    I18nManager.allowRTL(true);
-    I18nManager.forceRTL(true);
+    I18nManager.allowRTL(rtl);
+    I18nManager.forceRTL(rtl);
   } catch {
     /* סביבות ישנות — לא לשבור את האתחול */
   }

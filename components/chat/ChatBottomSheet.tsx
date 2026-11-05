@@ -1,3 +1,4 @@
+import { ROW_REV, UI_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 /**
@@ -225,7 +226,7 @@ export function ChatSheetContent({
         {
           backgroundColor: 'transparent',
           paddingHorizontal: tokens.spacing.md,
-          direction: 'rtl',
+          direction: UI_DIR,
         },
         style,
       ]}
@@ -263,7 +264,7 @@ export function ChatSheetNavHeader({
         glassIntensity="subtle"
         accessibilityLabel={i18n.t('auto.components__chat__ChatBottomSheet.s1')}
       >
-        <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
+        <Ionicons name={dirIcon('chevron-forward')} size={22} color={tokens.colors.text.primary} />
       </DayNavBlurButton>
       <View style={sheet.titlePill}>
         <Text style={sheet.titleText}>{title}</Text>
@@ -289,7 +290,7 @@ export function ChatSheetTopoHeader({ title, onClose }: { title?: string; onClos
         style={{ backgroundColor: headerExitButtonFill(tokens.colors.background.cardSolid) }}
         accessibilityLabel={i18n.t('auto.components__chat__ChatBottomSheet.s1')}
       >
-        <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
+        <Ionicons name={dirIcon('chevron-forward')} size={22} color={tokens.colors.text.primary} />
       </DayNavBlurButton>
       <View style={topoHeaderStyles.center}>
         {title ? (
@@ -526,7 +527,7 @@ export function useChatSheetStyles() {
         },
         navHeaderRow: {
           ...chatRtlRow,
-          direction: 'rtl',
+          direction: UI_DIR,
           alignItems: 'center',
           justifyContent: 'space-between',
           paddingTop: tokens.spacing.xs,
@@ -539,7 +540,7 @@ export function useChatSheetStyles() {
         },
         searchRow: {
           ...chatRtlRow,
-          direction: 'rtl',
+          direction: UI_DIR,
           alignItems: 'center',
           gap: tokens.spacing.sm,
           marginBottom: tokens.spacing.md,
@@ -551,7 +552,7 @@ export function useChatSheetStyles() {
         },
         searchFieldInner: {
           ...chatRtlRow,
-          direction: 'rtl',
+          direction: UI_DIR,
           alignItems: 'center',
           gap: 8,
           paddingHorizontal: 12,
@@ -585,7 +586,7 @@ export function useChatSheetStyles() {
         },
         resultHeader: {
           ...chatRtlRow,
-          direction: 'rtl',
+          direction: UI_DIR,
           justifyContent: 'space-between',
           alignItems: 'center',
           marginBottom: 4,
@@ -656,8 +657,8 @@ export function useChatSheetStyles() {
           justifyContent: 'center',
         },
         tabsContainer: {
-          flexDirection: 'row-reverse',
-          direction: 'rtl',
+          flexDirection: ROW_REV,
+          direction: UI_DIR,
           backgroundColor: tokens.colors.background.primary,
           borderRadius: 30,
           borderWidth: StyleSheet.hairlineWidth,
@@ -700,7 +701,7 @@ export function useChatSheetStyles() {
         },
         userRow: {
           ...chatRtlRow,
-          direction: 'rtl',
+          direction: UI_DIR,
           alignItems: 'center',
           paddingVertical: 14,
           paddingHorizontal: tokens.spacing.sm,

@@ -1,3 +1,4 @@
+import { ROW_REV, TEXT_END, TEXT_START, UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 // ============================================
@@ -871,11 +872,11 @@ function ChatMessage({
               <View key={`reply-bar-${message.id}`} style={styles.replyBar} />
               <View key={`reply-content-${message.id}`} style={styles.replyContent}>
                 {isUsableChatDisplayName(message.reply_to.sender_name) ? (
-                <Text key={`reply-name-${message.id}`} style={[styles.replyName, { textAlign: 'right' }]}>
+                <Text key={`reply-name-${message.id}`} style={[styles.replyName, { textAlign: TEXT_START }]}>
                   {message.reply_to.sender_name}
                 </Text>
                 ) : null}
-                <Text key={`reply-text-${message.id}`} style={[styles.replyText, { textAlign: 'right' }]} numberOfLines={1}>
+                <Text key={`reply-text-${message.id}`} style={[styles.replyText, { textAlign: TEXT_START }]} numberOfLines={1}>
                   {getChatMessagePreview(message.reply_to.message_type, message.reply_to.content)}
                 </Text>
               </View>
@@ -947,7 +948,7 @@ function ChatMessage({
                     style={[
                       styles.messageText,
                       isMe ? styles.myMessageText : styles.theirMessageText,
-                      { textAlign: 'right' },
+                      { textAlign: TEXT_START },
                     ]}
                   >{i18n.t('auto.components__chat__ChatMessage.s10')}</Text>
                 );
@@ -964,7 +965,7 @@ function ChatMessage({
                     style={[
                       styles.messageText,
                       isMe ? styles.myMessageText : styles.theirMessageText,
-                      { textAlign: 'right' },
+                      { textAlign: TEXT_START },
                     ]}
                   >{i18n.t('auto.components__chat__ChatMessage.s11')}</Text>
                 );
@@ -994,7 +995,7 @@ function ChatMessage({
                       style={[
                         styles.messageText,
                         isMe ? styles.myMessageText : styles.theirMessageText,
-                        { textAlign: 'right' },
+                        { textAlign: TEXT_START },
                       ]}
                     >
                       {renderTextWithMentions(
@@ -1606,7 +1607,7 @@ function PollMessageContent({
     return (
       <View style={{ paddingVertical: 8, alignItems: 'center' }}>
         {loadError ? (
-          <Text style={{ color: isMe ? 'rgba(255,255,255,0.85)' : '#9CA3AF', textAlign: 'right' }}>{i18n.t('auto.components__chat__ChatMessage.s32')}</Text>
+          <Text style={{ color: isMe ? 'rgba(255,255,255,0.85)' : '#9CA3AF', textAlign: TEXT_START }}>{i18n.t('auto.components__chat__ChatMessage.s32')}</Text>
         ) : (
           <ActivityIndicator size="small" color={isMe ? '#fff' : undefined} />
         )}
@@ -2657,12 +2658,12 @@ const createStyles = (tokens: any) => {
     marginTop: 0,
     marginBottom: 3,
     direction: 'ltr',
-    textAlign: 'right',
+    textAlign: TEXT_START,
     writingDirection: 'auto',
   },
 
   replyContainer: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     borderRadius: 8,
     padding: 10,
     paddingRight: 6,
@@ -2696,7 +2697,7 @@ const createStyles = (tokens: any) => {
     fontWeight: tokens.typography.fontWeight.semibold,
     color: tokens.colors.primary.main,
     marginBottom: 3,
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   replyText: {
     fontSize: tokens.typography.fontSize.xs,
@@ -2759,7 +2760,7 @@ const createStyles = (tokens: any) => {
     elevation: isDarkMode ? 2 : 0,
   },
   deletedRow: {
-    direction: 'rtl',
+    direction: UI_DIR,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
@@ -2947,11 +2948,11 @@ const createStyles = (tokens: any) => {
     marginLeft: 8,
   },
   audioPlaybackTimeText: {
-    textAlign: 'left',
+    textAlign: TEXT_END,
     writingDirection: 'ltr',
   },
   audioSentTimeText: {
-    textAlign: 'right',
+    textAlign: TEXT_START,
   },
   mediaAudioControlsRow: {
     flexDirection: 'row',
@@ -3111,7 +3112,7 @@ const createStyles = (tokens: any) => {
     fontSize: tokens.typography.label.size,
     fontWeight: tokens.typography.fontWeight.medium,
     minWidth: 40,
-    textAlign: 'left',
+    textAlign: TEXT_END,
   },
   myAudioDuration: {
     color: tokens.colors.text.primary,
@@ -3122,7 +3123,7 @@ const createStyles = (tokens: any) => {
 
   // Document - פשוט בתוך הבועה הקיימת
   documentCard: {
-    direction: 'rtl',
+    direction: UI_DIR,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
@@ -3248,7 +3249,7 @@ const createStyles = (tokens: any) => {
     height: 0,
   },
   retryRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: ROW_REV,
     alignItems: 'center',
     gap: 4,
   },

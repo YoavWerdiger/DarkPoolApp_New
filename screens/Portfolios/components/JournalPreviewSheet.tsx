@@ -1,3 +1,4 @@
+import { dirIcon } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -688,7 +689,7 @@ export function JournalPreviewSheet({
           >
             <Text style={styles.ctaText}>{i18n.t('auto.screens__Portfolios__components__JournalPreviewSheet.s4')}</Text>
             <Ionicons
-              name="arrow-back"
+              name={dirIcon('arrow-back')}
               size={16}
               color={tokens.colors.text.inverse}
             />

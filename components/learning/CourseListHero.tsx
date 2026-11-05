@@ -1,3 +1,4 @@
+import { UI_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { memo, useEffect, useMemo, useState } from 'react';
@@ -90,7 +91,7 @@ function CourseListHeroInner({
           glassIntensity="light"
           accessibilityLabel={i18n.t('auto.components__learning__CourseListHero.s1')}
         >
-          <Ionicons name="chevron-forward" size={22} color={T.colors.text.primary} />
+          <Ionicons name={dirIcon('chevron-forward')} size={22} color={T.colors.text.primary} />
         </DayNavBlurButton>
       </View>
     </View>
@@ -147,7 +148,7 @@ function createProgressStyles(T: ReturnType<typeof useDesignTokens>) {
     },
     // rtl מפורש: «x/y הושלמו» בימין (מיושר עם השם), האחוז בשמאל
     row: {
-      direction: 'rtl',
+      direction: UI_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -184,7 +185,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
   },
   topBar: {
-    direction: 'rtl',
+    direction: UI_DIR,
     width: '100%',
     flexDirection: 'row',
     alignItems: 'center',

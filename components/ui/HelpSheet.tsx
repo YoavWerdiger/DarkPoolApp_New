@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 /**
  * הסבר קצר שעולה מלמטה (שיט זכוכית) — לא דיאלוג ממורכז.
@@ -134,7 +135,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       alignSelf: 'stretch',
       paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
       paddingTop: 6,
-      direction: 'rtl',
+      direction: UI_DIR,
     },
     title: {
       ...appSheetTitleStyle,

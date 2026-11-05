@@ -617,7 +617,7 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
             ) : null}
 
             {/* Category — pinned to the bottom of the text column */}
-            {article.category && article.category !== 'כללי' ? (
+            {article.category && article.category !== 'כללי' && article.category !== i18n.t('auto.screens__News__BreakingNewsTab.s12') ? (
               <View
                 style={{
                   marginTop: 'auto',

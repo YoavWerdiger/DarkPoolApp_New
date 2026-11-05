@@ -1419,11 +1419,11 @@ function renderMediaContent(
       // הצג גודל אם קיים, אחרת הצג את סוג הקובץ
       const fileSizeText = message.media_size
         ? formatFileSize(message.media_size)
-        : (fileExtension !== 'קובץ' ? fileExtension : '');
+        : (fileExtension !== 'קובץ' && fileExtension !== i18n.t('auto.components__chat__ChatMessage.s33') ? fileExtension : '');
 
       {
         // מסמך: אריח אייקון עדין + שם עד שתי שורות ומתחתיו «PDF · 1.2 MB», ישירות על הבועה. כולו לחיץ.
-        const ext = fileExtension !== 'קובץ' ? fileExtension.slice(0, 4) : '';
+        const ext = fileExtension !== 'קובץ' && fileExtension !== i18n.t('auto.components__chat__ChatMessage.s33') ? fileExtension.slice(0, 4) : '';
         const fg = isMe ? tokens.colors.bubbleMeText : tokens.colors.text.primary;
         const sub = isMe ? tokens.colors.bubbleMeMetaText : tokens.colors.text.secondary;
         const meta = [ext || null, message.media_size ? formatFileSize(message.media_size) : null]

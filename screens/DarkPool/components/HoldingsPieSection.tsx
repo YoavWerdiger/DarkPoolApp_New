@@ -97,7 +97,7 @@ export function HoldingsPieSection({
     <View style={styles.section}>
       <View style={styles.titleRow}>
         <Text style={styles.title}>{title}</Text>
-        {honestyTag && honestyTag !== 'משוער' ? (
+        {honestyTag && honestyTag !== 'משוער' && honestyTag !== i18n.t('auto.screens__DarkPool__utils__investorHoldings.s1') ? (
           <Text style={styles.honestyTag}>{honestyTag}</Text>
         ) : null}
         {onHelpPress ? (

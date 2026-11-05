@@ -262,9 +262,9 @@ export function useSubscription(): SubscriptionInfo {
 // פונקציה לבדיקה אם קבוצה היא חינמית
 export function isFreeGroup(groupName: string): boolean {
   const freeGroupNames = [
-    i18n.t('auto.hooks__useSubscription.s2'),
-    i18n.t('auto.hooks__useSubscription.s3'),
-    i18n.t('auto.hooks__useSubscription.s4'),
+    'קהילה חינמית',
+    'הכרזות',
+    '🔔 הכרזות',
   ];
 
   return freeGroupNames.some(

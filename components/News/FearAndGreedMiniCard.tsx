@@ -43,7 +43,7 @@ export default function FearAndGreedMiniCard({ onPress }: Props) {
     : loading
       ? i18n.t('auto.components__News__FearAndGreedMiniCard.s1')
       : '—';
-  const zonePrefix = !hasValue ? '' : zoneLabel === 'ניטרלי' ? i18n.t('auto.components__News__FearAndGreedMiniCard.s2') : i18n.t('auto.components__News__FearAndGreedMiniCard.s3');
+  const zonePrefix = !hasValue ? '' : (zoneLabel === 'ניטרלי' || zoneLabel === i18n.t('auto.services__fearAndGreedService.s3')) ? i18n.t('auto.components__News__FearAndGreedMiniCard.s2') : i18n.t('auto.components__News__FearAndGreedMiniCard.s3');
   const pct = Math.max(0, Math.min(100, value));
 
   const Body = (

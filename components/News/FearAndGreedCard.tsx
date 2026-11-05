@@ -616,7 +616,7 @@ export default function FearAndGreedCard({
                       fontWeight: APP_TYPE.body.fontWeight,
                     }}
                   >
-                    {description === 'ניטרלי' ? i18n.t('auto.components__News__FearAndGreedCard.s9') : i18n.t('auto.components__News__FearAndGreedCard.s10')}
+                    {(description === 'ניטרלי' || description === i18n.t('auto.services__fearAndGreedService.s3')) ? i18n.t('auto.components__News__FearAndGreedCard.s9') : i18n.t('auto.components__News__FearAndGreedCard.s10')}
                   </Text>
                   <Text style={{ color }}>{description}</Text>
                 </Text>

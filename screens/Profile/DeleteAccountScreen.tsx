@@ -40,7 +40,10 @@ export default function DeleteAccountScreen({ navigation }: any) {
   const [focused, setFocused] = useState<'confirm' | 'password' | null>(null);
 
   const handleDelete = () => {
-    if (confirm.trim() !== 'מחק') {
+    // מילת האישור בשפת הממשק (מחק / DELETE) — גם המילה העברית מתקבלת
+    const confirmWord = i18n.t('auto.screens__Profile__DeleteAccountScreen.s11');
+    const typed = confirm.trim();
+    if (typed !== 'מחק' && typed.toUpperCase() !== confirmWord.toUpperCase()) {
       legacyAlert(i18n.t('auto.screens__Profile__DeleteAccountScreen.s1'), i18n.t('auto.screens__Profile__DeleteAccountScreen.s2'));
       return;
     }

@@ -1,3 +1,5 @@
+import { LOGO_SIZE } from './WatchlistRow';
+import { quoteRow } from '../watchlistTheme';
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -68,11 +70,11 @@ export function WatchlistEmpty({ onAddPress, picked, onTogglePick }: Props) {
           ...appGroupLabelStyle,
           color: tokens.colors.text.secondary,
         },
+        // אותן מידות כמו שורה ברשימה (WatchlistRow): ריפוד, גובה, לוגו וטקסט
         suggestRow: {
-          flexDirection: 'row-reverse',
-          alignItems: 'center',
-          paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
+          ...quoteRow,
           paddingVertical: APP_LAYOUT.cardTitleToBodyGap,
+          minHeight: 52,
         },
         suggestDivider: {
           borderBottomWidth: 1,
@@ -87,14 +89,14 @@ export function WatchlistEmpty({ onAddPress, picked, onTogglePick }: Props) {
           minWidth: 0,
         },
         suggestSymbol: {
-          ...APP_TYPE.cardBody,
+          ...APP_TYPE.cardSubtitle,
           fontWeight: APP_TYPE.cardTitle.fontWeight,
           textAlign: 'right',
           writingDirection: 'ltr',
           color: tokens.colors.text.primary,
         },
         suggestName: {
-          ...APP_TYPE.caption,
+          ...APP_TYPE.caption2,
           textAlign: 'right',
           color: tokens.colors.text.secondary,
         },
@@ -153,7 +155,7 @@ export function WatchlistEmpty({ onAddPress, picked, onTogglePick }: Props) {
           accessibilityState={{ checked: on }}
         >
           <View style={styles.suggestLogo}>
-            <TickerLogo symbol={s.symbol} size={32} />
+            <TickerLogo symbol={s.symbol} size={LOGO_SIZE} />
           </View>
           <View style={styles.suggestText}>
             <Text style={styles.suggestSymbol}>{s.symbol}</Text>

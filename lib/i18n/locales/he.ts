@@ -38,7 +38,12 @@ const he = {
     languageName: 'עברית',
     changeLanguageTitle: 'שפת ממשק',
     changeLanguageBody: 'האפליקציה תיטען מחדש כדי להחליף שפה.',
-    switchToOther: 'English',
+    /** שם כל שפה בכתב שלה — זהה בכל הקבצים (בורר השפה) */
+    languageNames: {
+      he: 'עברית',
+      en: 'English',
+      ar: 'العربية',
+    },
     billingSection: 'מנוי וחיובים',
     billing: 'מנוי, תשלומים וחשבוניות',
     security: 'אבטחה',

@@ -33,7 +33,7 @@ import {
   clearAppCache,
 } from '../../services/appSettings';
 import { useTranslation } from 'react-i18next';
-import { changeLanguage, getStoredLanguage, type AppLanguage } from '../../lib/i18n';
+import { APP_LANGUAGES, changeLanguage, getStoredLanguage } from '../../lib/i18n';
 import { getAppVersionLabel } from '../../utils/appMeta';
 import {
   SettingsGlassCard,
@@ -90,19 +90,21 @@ export default function SettingsScreen({ navigation }: any) {
     }
   };
 
-  // החלפת שפה: אישור → שמירה, כיוון RTL/LTR וטעינה מחדש של האפליקציה
+  // בחירת שפה: שתי השפות האחרות (כל אחת בכתב שלה) + ביטול → שמירה וטעינה מחדש של האפליקציה.
+  // השפה הנוכחית כבר מוצגת בכותרת השורה, ולכן לא מופיעה כאן (3 כפתורים נכנסים בשורה אחת בדיאלוג).
   const cycleLanguage = () => {
     void HapticFeedback.selection();
-    const next: AppLanguage = language === 'he' ? 'en' : 'he';
+    const options = APP_LANGUAGES.filter((lang) => lang !== language);
     legacyAlert(t('settings.changeLanguageTitle'), t('settings.changeLanguageBody'), [
       { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('settings.switchToOther'),
+      ...options.map((next) => ({
+        text: t(`settings.languageNames.${next}`),
         onPress: () => {
-          void saveAppSettings({ language: next }).catch(() => {});
+          // appSettings (AsyncStorage) מכיר רק he/en — מקור האמת הוא SecureStore דרך changeLanguage
+          if (next !== 'ar') void saveAppSettings({ language: next }).catch(() => {});
           void changeLanguage(next);
         },
-      },
+      })),
     ]);
   };
 

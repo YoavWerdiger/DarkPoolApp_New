@@ -39,7 +39,11 @@ const en: DeepPartial<Translation> = {
     languageName: 'English',
     changeLanguageTitle: 'App language',
     changeLanguageBody: 'The app will reload to switch the language.',
-    switchToOther: 'עברית',
+    languageNames: {
+      he: 'עברית',
+      en: 'English',
+      ar: 'العربية',
+    },
     billingSection: 'Subscription & Billing',
     billing: 'Subscription, payments & invoices',
     security: 'Security',

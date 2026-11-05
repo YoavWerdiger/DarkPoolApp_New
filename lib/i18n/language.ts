@@ -1,22 +1,31 @@
 /**
  * שפת הממשק — נשמרת ב-SecureStore (קריאה סינכרונית בעלייה, לפני הרינדור הראשון)
  * כדי שכיוון ה-RTL/LTR ייקבע נכון כבר מהפריים הראשון. ברירת מחדל: עברית.
+ * שפות נתמכות: עברית (he), אנגלית (en), ערבית (ar).
  */
 import * as SecureStore from 'expo-secure-store';
 import { I18nManager } from 'react-native';
 import { reloadAppAsync } from 'expo';
 
-export type AppLanguage = 'he' | 'en';
+export type AppLanguage = 'he' | 'en' | 'ar';
+
+/** סדר הצגה בבורר השפה */
+export const APP_LANGUAGES: readonly AppLanguage[] = ['he', 'en', 'ar'];
 
 const KEY = 'app_ui_language';
 
+export function isAppLanguage(value: unknown): value is AppLanguage {
+  return value === 'he' || value === 'en' || value === 'ar';
+}
+
 export function isRtlLanguage(lang: AppLanguage): boolean {
-  return lang === 'he';
+  return lang === 'he' || lang === 'ar';
 }
 
 export function getStoredLanguage(): AppLanguage {
   try {
-    return SecureStore.getItem(KEY) === 'en' ? 'en' : 'he';
+    const stored = SecureStore.getItem(KEY);
+    return isAppLanguage(stored) ? stored : 'he';
   } catch {
     return 'he';
   }
@@ -35,8 +44,8 @@ export function applyLanguageDirection(_lang: AppLanguage): void {
   }
 }
 
-/** כיוון כתיבה של טקסט (bidi) לפי השפה — הפריסה עצמה לא משתנה */
-export const TEXT_DIR: 'rtl' | 'ltr' = getStoredLanguage() === 'en' ? 'ltr' : 'rtl';
+/** כיוון כתיבה של טקסט (bidi) לפי השפה — הפריסה עצמה לא משתנה (עברית/ערבית: rtl, אנגלית: ltr) */
+export const TEXT_DIR: 'rtl' | 'ltr' = isRtlLanguage(getStoredLanguage()) ? 'rtl' : 'ltr';
 
 /**
  * החלפת שפה: שומר ומאתחל את האפליקציה — תוויות שמחושבות פעם אחת (קבועים ברמת מודול)

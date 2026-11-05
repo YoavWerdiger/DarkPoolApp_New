@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 /**
  * מצלמת צירוף לצ'אט — פריסת וואטסאפ: סגירה, פלאש, גלריה, תריס, היפוך.
@@ -181,7 +182,7 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
         mediaType: 'image',
       });
     } catch {
-      legacyAlert('שגיאה', 'לא הצלחנו לצלם תמונה');
+      legacyAlert(i18n.t('auto.components__chat__ChatAttachCameraSheet.s1'), i18n.t('auto.components__chat__ChatAttachCameraSheet.s2'));
     } finally {
       setCapturing(false);
     }
@@ -211,7 +212,7 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
       });
     } catch {
       if (!discardRecordingRef.current) {
-        legacyAlert('שגיאה', 'לא הצלחנו להקליט וידאו');
+        legacyAlert(i18n.t('auto.components__chat__ChatAttachCameraSheet.s1'), i18n.t('auto.components__chat__ChatAttachCameraSheet.s3'));
       }
     } finally {
       setRecording(false);
@@ -378,7 +379,7 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
             onPress={close}
             style={styles.circleBtn}
             accessibilityRole="button"
-            accessibilityLabel="סגור"
+            accessibilityLabel={i18n.t('auto.components__chat__ChatAttachCameraSheet.s4')}
           >
             <Ionicons name="close" size={26} color="#fff" />
           </Pressable>
@@ -389,7 +390,7 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
             }}
             style={styles.circleBtn}
             accessibilityRole="button"
-            accessibilityLabel={flashOn ? 'כבה פלאש' : 'הדלק פלאש'}
+            accessibilityLabel={flashOn ? i18n.t('auto.components__chat__ChatAttachCameraSheet.s5') : i18n.t('auto.components__chat__ChatAttachCameraSheet.s6')}
           >
             <Ionicons name={flashOn ? 'flash' : 'flash-off'} size={22} color="#fff" />
           </Pressable>
@@ -402,7 +403,7 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
                 onPress={openGallery}
                 style={styles.circleBtn}
                 accessibilityRole="button"
-                accessibilityLabel="גלריה"
+                accessibilityLabel={i18n.t('auto.components__chat__ChatAttachCameraSheet.s7')}
               >
                 <Ionicons name="images" size={22} color="#fff" />
               </Pressable>
@@ -417,7 +418,7 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
                 (!granted || capturing) && { opacity: 0.45 },
               ]}
               accessibilityRole="button"
-              accessibilityLabel={captureMode === 'video' ? (recording ? 'עצור הקלטה' : 'הקלט וידאו') : 'צלם תמונה'}
+              accessibilityLabel={captureMode === 'video' ? (recording ? i18n.t('auto.components__chat__ChatAttachCameraSheet.s8') : i18n.t('auto.components__chat__ChatAttachCameraSheet.s9')) : i18n.t('auto.components__chat__ChatAttachCameraSheet.s10')}
             >
               {capturing ? (
                 <ActivityIndicator color="#fff" />
@@ -437,7 +438,7 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
                 onPress={flip}
                 style={styles.circleBtn}
                 accessibilityRole="button"
-                accessibilityLabel="החלף מצלמה"
+                accessibilityLabel={i18n.t('auto.components__chat__ChatAttachCameraSheet.s11')}
               >
                 <Ionicons name="camera-reverse-outline" size={26} color="#fff" />
               </Pressable>
@@ -452,18 +453,18 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
                 style={styles.modePill}
                 accessibilityRole="button"
                 accessibilityState={{ selected: captureMode === 'photo' }}
-                accessibilityLabel="תמונה"
+                accessibilityLabel={i18n.t('auto.components__chat__ChatAttachCameraSheet.s12')}
               >
-                <Animated.Text style={[styles.modeLabel, photoLabelStyle]}>תמונה</Animated.Text>
+                <Animated.Text style={[styles.modeLabel, photoLabelStyle]}>{i18n.t('auto.components__chat__ChatAttachCameraSheet.s12')}</Animated.Text>
               </Pressable>
               <Pressable
                 onPress={() => switchMode('video')}
                 style={styles.modePill}
                 accessibilityRole="button"
                 accessibilityState={{ selected: captureMode === 'video' }}
-                accessibilityLabel="וידאו"
+                accessibilityLabel={i18n.t('auto.components__chat__ChatAttachCameraSheet.s13')}
               >
-                <Animated.Text style={[styles.modeLabel, videoLabelStyle]}>וידאו</Animated.Text>
+                <Animated.Text style={[styles.modeLabel, videoLabelStyle]}>{i18n.t('auto.components__chat__ChatAttachCameraSheet.s13')}</Animated.Text>
               </Pressable>
             </View>
           </View>

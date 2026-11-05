@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useCallback } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
@@ -26,7 +27,7 @@ export default function MarketsHeatmapScreen() {
   return (
     <ScreenChrome>
       <RNSafeAreaView style={styles.safe} edges={['top']}>
-        <MainDrawerScreenHeader title="מפת חום" onMenuPress={openMainDrawer} />
+        <MainDrawerScreenHeader title={i18n.t('auto.screens__Markets__MarketsHeatmapScreen.s1')} onMenuPress={openMainDrawer} />
         <View style={[styles.body, { marginBottom: Math.max(0, mainTabsHeight - 12) }]}>
           <MarketsErrorBoundary>
             <MarketsHeatmapsTab />

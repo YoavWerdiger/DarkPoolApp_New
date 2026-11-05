@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
@@ -12,12 +13,12 @@ type Props = {
 };
 
 const FILTERS: Array<{ id: WatchlistFilterMode; label: string }> = [
-  { id: 'all', label: 'הכל' },
-  { id: 'up', label: 'עולות' },
-  { id: 'down', label: 'יורדות' },
-  { id: 'volume', label: 'ווליום גבוה' },
-  { id: 'events', label: 'דיווחים' },
-  { id: 'alerts', label: 'עם התראה' },
+  { id: 'all', label: i18n.t('auto.screens__Watchlist__components__WatchlistFilterBar.s1') },
+  { id: 'up', label: i18n.t('auto.screens__Watchlist__components__WatchlistFilterBar.s2') },
+  { id: 'down', label: i18n.t('auto.screens__Watchlist__components__WatchlistFilterBar.s3') },
+  { id: 'volume', label: i18n.t('auto.screens__Watchlist__components__WatchlistFilterBar.s4') },
+  { id: 'events', label: i18n.t('auto.screens__Watchlist__components__WatchlistFilterBar.s5') },
+  { id: 'alerts', label: i18n.t('auto.screens__Watchlist__components__WatchlistFilterBar.s6') },
 ];
 
 export function WatchlistFilterBar({ mode, onChange }: Props) {

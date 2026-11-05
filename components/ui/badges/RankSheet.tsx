@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 /**
  * שיט דרגת ותק — אייקון גדול + שם, ותק המנוי, התקדמות לדרגה הבאה, הסולם המלא, «הבנתי».
  * אותה טופולוגיה כמו HelpSheet.
@@ -82,8 +83,8 @@ function RankSheetBody({
       </View>
       <Text style={[styles.progressLabel, { color: tokens.colors.text.secondary }]}>
         {info.next && info.daysToNext != null
-          ? `עוד ${formatDaysCount(info.daysToNext)} לדרגה הבאה`
-          : 'הגעת לדרגה הגבוהה ביותר'}
+          ? i18n.t('auto.components__ui__badges__RankSheet.s1', { v0: formatDaysCount(info.daysToNext) })
+          : i18n.t('auto.components__ui__badges__RankSheet.s2')}
       </Text>
 
       <View style={styles.ladder}>

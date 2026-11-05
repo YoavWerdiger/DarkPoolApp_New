@@ -1,3 +1,4 @@
+import i18n from '../lib/i18n';
 import React, { createContext, useCallback, useContext, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CommonActions, useNavigation } from '@react-navigation/native';
@@ -28,11 +29,11 @@ export function useExitRegistration(): RegistrationExitFn {
     void HapticFeedback.impactLight();
 
     const ok = await showAppConfirm(
-      'לצאת מהרישום?',
-      'ההתקדמות הנוכחית לא תישמר. תוכל להתחבר או להירשם מחדש בכל עת.',
+      i18n.t('auto.hooks__useExitRegistration.s1'),
+      i18n.t('auto.hooks__useExitRegistration.s2'),
       {
-        confirmText: 'יציאה',
-        cancelText: 'המשך רישום',
+        confirmText: i18n.t('auto.hooks__useExitRegistration.s3'),
+        cancelText: i18n.t('auto.hooks__useExitRegistration.s4'),
         destructive: true,
       }
     );

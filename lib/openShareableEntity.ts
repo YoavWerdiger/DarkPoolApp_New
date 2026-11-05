@@ -1,3 +1,4 @@
+import i18n from './i18n';
 /**
  * ניווט מ־ShareableAttachment.ref — אותו מיפוי כמו notificationRouting.
  *
@@ -58,7 +59,7 @@ export function openShareableEntity(attachment: ShareableAttachment): void {
 
   const target = entityRefToNavTarget(attachment.ref);
   if (!target) {
-    legacyAlert('לא זמין', 'לא ניתן לפתוח את התוכן הזה כרגע');
+    legacyAlert(i18n.t('auto.lib__openShareableEntity.s1'), i18n.t('auto.lib__openShareableEntity.s2'));
     return;
   }
 

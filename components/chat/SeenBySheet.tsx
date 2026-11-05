@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { memo, useState, useEffect, useMemo } from 'react';
 import { FlatList, Text, StyleSheet } from 'react-native';
@@ -40,10 +41,10 @@ function formatTimeAgo(timestamp: string) {
   const messageTime = new Date(timestamp);
   const diffInSeconds = Math.floor((now.getTime() - messageTime.getTime()) / 1000);
 
-  if (diffInSeconds < 60) return 'עכשיו';
-  if (diffInSeconds < 3600) return `לפני ${Math.floor(diffInSeconds / 60)} דקות`;
-  if (diffInSeconds < 86400) return `לפני ${Math.floor(diffInSeconds / 3600)} שעות`;
-  return `לפני ${Math.floor(diffInSeconds / 86400)} ימים`;
+  if (diffInSeconds < 60) return i18n.t('auto.components__chat__SeenBySheet.s1');
+  if (diffInSeconds < 3600) return i18n.t('auto.components__chat__SeenBySheet.s2', { v0: Math.floor(diffInSeconds / 60) });
+  if (diffInSeconds < 86400) return i18n.t('auto.components__chat__SeenBySheet.s3', { v0: Math.floor(diffInSeconds / 3600) });
+  return i18n.t('auto.components__chat__SeenBySheet.s4', { v0: Math.floor(diffInSeconds / 86400) });
 }
 
 const SeenBySheet: React.FC<SeenBySheetProps> = memo(({
@@ -98,7 +99,7 @@ const SeenBySheet: React.FC<SeenBySheetProps> = memo(({
         const usersWithTimestamp: SeenByUser[] = (viewersData as MessageViewerRpcRow[]).map(
           (viewer) => ({
             id: viewer.user_id,
-            full_name: viewer.full_name || 'משתמש',
+            full_name: viewer.full_name || i18n.t('auto.components__chat__SeenBySheet.s5'),
             profile_picture: viewer.profile_picture ?? null,
             read_at: viewer.viewed_at || messageTimestamp,
           }),
@@ -117,9 +118,9 @@ const SeenBySheet: React.FC<SeenBySheetProps> = memo(({
 
   const renderUser = ({ item }: { item: SeenByUser }) => (
     <ChatSheetUserRow
-      name={item.full_name || 'משתמש'}
+      name={item.full_name || i18n.t('auto.components__chat__SeenBySheet.s5')}
       userId={item.id}
-      subtitle="ראה את ההודעה"
+      subtitle={i18n.t('auto.components__chat__SeenBySheet.s6')}
       avatarUri={item.profile_picture}
       trailing={
         <>
@@ -139,15 +140,15 @@ const SeenBySheet: React.FC<SeenBySheetProps> = memo(({
   return (
     <ChatBottomSheet visible={visible} onClose={onClose} snapPoints={[0.55]} showBrandWatermark={false}>
       <ChatSheetContent style={{ flex: 1, paddingBottom: insets.bottom + 16 }}>
-        <ChatSheetTitle title="נראה על ידי" />
+        <ChatSheetTitle title={i18n.t('auto.components__chat__SeenBySheet.s7')} />
 
         {loading ? (
-          <ChatSheetLoading label="טוען משתמשים..." />
+          <ChatSheetLoading label={i18n.t('auto.components__chat__SeenBySheet.s8')} />
         ) : users.length === 0 ? (
           <ChatSheetEmptyState
             icon="eye-off-outline"
-            title="אף אחד לא ראה עדיין"
-            subtitle="כשמישהו יקרא את ההודעה, הוא יופיע כאן"
+            title={i18n.t('auto.components__chat__SeenBySheet.s9')}
+            subtitle={i18n.t('auto.components__chat__SeenBySheet.s10')}
           />
         ) : (
           <FlatList

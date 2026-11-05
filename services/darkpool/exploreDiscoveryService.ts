@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 /**
  * מדפי גילוי ממקורות אמת — COUNT עסקאות, 13F last_value_usd, featured.created_at.
  * בלי שווי תיק מטווחי STOCK Act ובלי תשואת ALL משוחזרת.
@@ -76,7 +77,7 @@ async function listMostActivePoliticians(limit: number): Promise<ExplorePerson[]
       return {
         id: String(p.politician_id),
         name: String(p.politician_name),
-        subtitle: metric ?? 'קונגרס',
+        subtitle: metric ?? i18n.t('auto.services__darkpool__exploreDiscoveryService.s1'),
         image_url: congressPhoto(String(p.politician_id), p.politician_image_url),
         kind: 'politician' as const,
         activity_score: count,
@@ -155,7 +156,7 @@ async function listReportedFundBooks(limit: number): Promise<ExplorePerson[]> {
       return {
         id: cik,
         name,
-        subtitle: manager && fundName && manager !== fundName ? fundName : 'קרן גידור',
+        subtitle: manager && fundName && manager !== fundName ? fundName : i18n.t('auto.services__darkpool__exploreDiscoveryService.s2'),
         image_url:
           (row.image_url ? String(row.image_url) : null) ||
           knownPortraitForInvestor({ personId: cik, name }),
@@ -210,7 +211,7 @@ async function listCompanyBooks(limit: number): Promise<ExplorePerson[]> {
 /** «חברה ציבורית · NVDA» */
 export function companySubtitleHe(ticker: string | null | undefined): string {
   const t = ticker?.trim().toUpperCase();
-  return t ? `חברה ציבורית · ${t}` : 'חברה ציבורית';
+  return t ? i18n.t('auto.services__darkpool__exploreDiscoveryService.s3', { v0: t }) : i18n.t('auto.services__darkpool__exploreDiscoveryService.s4');
 }
 
 async function listRecentlyAddedFeatured(limit: number): Promise<ExplorePerson[]> {

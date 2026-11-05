@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 // ============================================
 // Group Media Gallery — WhatsApp-style grid + swipe preview
 // ============================================
@@ -261,13 +262,13 @@ export default function GroupMediaGalleryScreen() {
           <View style={styles.emptyIcon}>
             <Ionicons name="images-outline" size={28} color={DesignTokens.colors.text.secondary} />
           </View>
-          <Text style={styles.emptyTitle}>אין מדיה בקבוצה</Text>
+          <Text style={styles.emptyTitle}>{i18n.t('auto.screens__ChatNew__GroupMediaGalleryScreen.s1')}</Text>
           <Text style={styles.emptyText}>
             {filter === 'video'
-              ? 'עדיין לא נשלחו סרטונים בקבוצה זו'
+              ? i18n.t('auto.screens__ChatNew__GroupMediaGalleryScreen.s2')
               : filter === 'image'
-                ? 'עדיין לא נשלחו תמונות בקבוצה זו'
-                : 'תמונות וסרטונים שנשלחו בקבוצה יופיעו כאן'}
+                ? i18n.t('auto.screens__ChatNew__GroupMediaGalleryScreen.s3')
+                : i18n.t('auto.screens__ChatNew__GroupMediaGalleryScreen.s4')}
           </Text>
         </View>
       );
@@ -298,13 +299,13 @@ export default function GroupMediaGalleryScreen() {
   return (
     <ChatScreenShell>
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        <ChatSubScreenHeader title="מדיה" onBack={handleBack} />
+        <ChatSubScreenHeader title={i18n.t('auto.screens__ChatNew__GroupMediaGalleryScreen.s5')} onBack={handleBack} />
 
         <View style={styles.rtlRoot}>
           <View style={styles.filterRow}>
-            {renderFilterChip('all', 'הכל')}
-            {renderFilterChip('image', 'תמונות')}
-            {renderFilterChip('video', 'סרטונים')}
+            {renderFilterChip('all', i18n.t('auto.screens__ChatNew__GroupMediaGalleryScreen.s6'))}
+            {renderFilterChip('image', i18n.t('auto.screens__ChatNew__GroupMediaGalleryScreen.s7'))}
+            {renderFilterChip('video', i18n.t('auto.screens__ChatNew__GroupMediaGalleryScreen.s8'))}
           </View>
           <View style={styles.body}>{renderGalleryBody()}</View>
         </View>

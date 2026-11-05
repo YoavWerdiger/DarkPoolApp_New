@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React from 'react';
 import {
@@ -40,16 +41,14 @@ export default function FearAndGreedMiniCard({ onPress }: Props) {
   const zoneLabel = hasValue
     ? fearAndGreedService.getValueDescription(value)
     : loading
-      ? 'טוען…'
+      ? i18n.t('auto.components__News__FearAndGreedMiniCard.s1')
       : '—';
-  const zonePrefix = !hasValue ? '' : zoneLabel === 'ניטרלי' ? 'השוק כרגע ' : 'השוק כרגע ב';
+  const zonePrefix = !hasValue ? '' : zoneLabel === 'ניטרלי' ? i18n.t('auto.components__News__FearAndGreedMiniCard.s2') : i18n.t('auto.components__News__FearAndGreedMiniCard.s3');
   const pct = Math.max(0, Math.min(100, value));
 
   const Body = (
     <View>
-      <Text style={[styles.sectionTitle, { color: tokens.colors.text.primary }]}>
-        מדד הפחד והתאווה
-      </Text>
+      <Text style={[styles.sectionTitle, { color: tokens.colors.text.primary }]}>{i18n.t('auto.components__News__FearAndGreedMiniCard.s4')}</Text>
       <UICard
         variant="blur"
         padding="none"
@@ -135,7 +134,7 @@ export default function FearAndGreedMiniCard({ onPress }: Props) {
         }}
         activeOpacity={0.85}
         accessibilityRole="button"
-        accessibilityLabel={`מדד הפחד והתאווה: ${value}, ${zonePrefix}${zoneLabel}`}
+        accessibilityLabel={i18n.t('auto.components__News__FearAndGreedMiniCard.s5', { v0: value, v1: zonePrefix, v2: zoneLabel })}
       >
         {Body}
       </TouchableOpacity>

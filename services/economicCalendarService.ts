@@ -1,3 +1,4 @@
+import i18n from '../lib/i18n';
 // EconomicCalendarService.ts - גרסה נקייה ומהירה
 import { supabase } from '../lib/supabase';
 import { resolveEconomicEventImportance } from '../utils/economicEventImportance';
@@ -55,97 +56,97 @@ export class EconomicCalendarService {
       // מדדים ראשיים + משניים למילוי ימים ריקים - סה"כ ~50 מדדים
       const fredSeries = [
         // 🏛️ FOMC Rate Decision
-        { id: 'FEDFUNDS', name: 'FOMC Rate Decision - ריבית פדרל ריזרב', category: 'מדיניות מוניטרית', importance: 'high' },
+        { id: 'FEDFUNDS', name: i18n.t('auto.services__economicCalendarService.s1'), category: i18n.t('auto.services__economicCalendarService.s2'), importance: 'high' },
         
         // 📊 Inflation (CPI, PPI, PCE) - הכי חשוב
-        { id: 'CPIAUCSL', name: 'CPI Headline - מדד המחירים לצרכן', category: 'אינפלציה', importance: 'high' },
-        { id: 'CPILFESL', name: 'CPI Core - CPI ליבה', category: 'אינפלציה', importance: 'high' },
-        { id: 'PPIFIS', name: 'PPI - מדד מחירי יצרן', category: 'אינפלציה', importance: 'high' },
-        { id: 'PCEPI', name: 'PCE Price Index - מדד PCE', category: 'אינפלציה', importance: 'high' },
-        { id: 'PCEPILFE', name: 'PCE Core - PCE ליבה', category: 'אינפלציה', importance: 'high' },
+        { id: 'CPIAUCSL', name: i18n.t('auto.services__economicCalendarService.s3'), category: i18n.t('auto.services__economicCalendarService.s4'), importance: 'high' },
+        { id: 'CPILFESL', name: i18n.t('auto.services__economicCalendarService.s5'), category: i18n.t('auto.services__economicCalendarService.s4'), importance: 'high' },
+        { id: 'PPIFIS', name: i18n.t('auto.services__economicCalendarService.s6'), category: i18n.t('auto.services__economicCalendarService.s4'), importance: 'high' },
+        { id: 'PCEPI', name: i18n.t('auto.services__economicCalendarService.s7'), category: i18n.t('auto.services__economicCalendarService.s4'), importance: 'high' },
+        { id: 'PCEPILFE', name: i18n.t('auto.services__economicCalendarService.s8'), category: i18n.t('auto.services__economicCalendarService.s4'), importance: 'high' },
         
         // 💼 Employment - הכי חשוב
-        { id: 'PAYEMS', name: 'NFP - תעסוקה לא-חקלאית', category: 'תעסוקה', importance: 'high' },
-        { id: 'UNRATE', name: 'Unemployment Rate - שיעור אבטלה', category: 'תעסוקה', importance: 'high' },
-        { id: 'ICSA', name: 'Initial Jobless Claims - תביעות אבטלה', category: 'תעסוקה', importance: 'high' },
-        { id: 'JTSJOL', name: 'JOLTS Job Openings - משרות פנויות', category: 'תעסוקה', importance: 'high' },
-        { id: 'AHETPI', name: 'Average Hourly Earnings - שכר לשעה', category: 'תעסוקה', importance: 'high' },
+        { id: 'PAYEMS', name: i18n.t('auto.services__economicCalendarService.s9'), category: i18n.t('auto.services__economicCalendarService.s10'), importance: 'high' },
+        { id: 'UNRATE', name: i18n.t('auto.services__economicCalendarService.s11'), category: i18n.t('auto.services__economicCalendarService.s10'), importance: 'high' },
+        { id: 'ICSA', name: i18n.t('auto.services__economicCalendarService.s12'), category: i18n.t('auto.services__economicCalendarService.s10'), importance: 'high' },
+        { id: 'JTSJOL', name: i18n.t('auto.services__economicCalendarService.s13'), category: i18n.t('auto.services__economicCalendarService.s10'), importance: 'high' },
+        { id: 'AHETPI', name: i18n.t('auto.services__economicCalendarService.s14'), category: i18n.t('auto.services__economicCalendarService.s10'), importance: 'high' },
         
         // 📈 GDP
-        { id: 'GDPC1', name: 'GDP - תמ"ג ריאלי', category: 'צמיחה כלכלית', importance: 'high' },
+        { id: 'GDPC1', name: i18n.t('auto.services__economicCalendarService.s15'), category: i18n.t('auto.services__economicCalendarService.s16'), importance: 'high' },
         
         // 🛒 Consumer
-        { id: 'RSAFS', name: 'Retail Sales - מכירות קמעונאיות', category: 'צריכה', importance: 'high' },
-        { id: 'UMCSENT', name: 'Consumer Confidence - אמון צרכנים', category: 'צריכה', importance: 'high' },
+        { id: 'RSAFS', name: i18n.t('auto.services__economicCalendarService.s17'), category: i18n.t('auto.services__economicCalendarService.s18'), importance: 'high' },
+        { id: 'UMCSENT', name: i18n.t('auto.services__economicCalendarService.s19'), category: i18n.t('auto.services__economicCalendarService.s18'), importance: 'high' },
         
         // 🏠 Housing - Case-Shiller
-        { id: 'CSUSHPISA', name: 'Case-Shiller Home Price Index - מדד מחירי בתים', category: 'נדל"ן', importance: 'high' },
+        { id: 'CSUSHPISA', name: i18n.t('auto.services__economicCalendarService.s20'), category: i18n.t('auto.services__economicCalendarService.s21'), importance: 'high' },
         
         // 🏗️ Durable Goods
-        { id: 'DGORDER', name: 'Durable Goods Orders - הזמנות סחורות מתינות', category: 'תעשייה', importance: 'high' },
+        { id: 'DGORDER', name: i18n.t('auto.services__economicCalendarService.s22'), category: i18n.t('auto.services__economicCalendarService.s23'), importance: 'high' },
         
         // 🏠 Housing
-        { id: 'HOUST', name: 'Housing Starts - התחלות בנייה', category: 'נדל"ן', importance: 'high' },
-        { id: 'PERMIT', name: 'Building Permits - רישיונות בנייה', category: 'נדל"ן', importance: 'high' },
+        { id: 'HOUST', name: i18n.t('auto.services__economicCalendarService.s24'), category: i18n.t('auto.services__economicCalendarService.s21'), importance: 'high' },
+        { id: 'PERMIT', name: i18n.t('auto.services__economicCalendarService.s25'), category: i18n.t('auto.services__economicCalendarService.s21'), importance: 'high' },
         
         // 📊 Treasury Yields (רק 10Y - הכי חשוב)
-        { id: 'GS10', name: 'Treasury 10Y - אג"ח 10 שנים', category: 'מדיניות מוניטרית', importance: 'high' },
-        { id: 'T10Y2Y', name: 'Yield Curve 10Y-2Y - עקום תשואות', category: 'מדיניות מוניטרית', importance: 'high' },
+        { id: 'GS10', name: i18n.t('auto.services__economicCalendarService.s26'), category: i18n.t('auto.services__economicCalendarService.s2'), importance: 'high' },
+        { id: 'T10Y2Y', name: i18n.t('auto.services__economicCalendarService.s27'), category: i18n.t('auto.services__economicCalendarService.s2'), importance: 'high' },
         
         // 📊 מדדים משניים למילוי ימים (חשיבות בינונית)
         // Industrial Production - תעשייה
-        { id: 'INDPRO', name: 'Industrial Production - ייצור תעשייתי', category: 'תעשייה', importance: 'medium' },
-        { id: 'CAPUTL', name: 'Capacity Utilization - ניצול קיבולת', category: 'תעשייה', importance: 'medium' },
+        { id: 'INDPRO', name: i18n.t('auto.services__economicCalendarService.s28'), category: i18n.t('auto.services__economicCalendarService.s23'), importance: 'medium' },
+        { id: 'CAPUTL', name: i18n.t('auto.services__economicCalendarService.s29'), category: i18n.t('auto.services__economicCalendarService.s23'), importance: 'medium' },
         
         // More Employment
-        { id: 'CIVPART', name: 'Labor Force Participation - השתתפות בכוח העבודה', category: 'תעסוקה', importance: 'medium' },
-        { id: 'EMRATIO', name: 'Employment-Population Ratio - יחס תעסוקה', category: 'תעסוקה', importance: 'medium' },
-        { id: 'CCSA', name: 'Continuing Claims - תביעות אבטלה מתמשכות', category: 'תעסוקה', importance: 'medium' },
+        { id: 'CIVPART', name: i18n.t('auto.services__economicCalendarService.s30'), category: i18n.t('auto.services__economicCalendarService.s10'), importance: 'medium' },
+        { id: 'EMRATIO', name: i18n.t('auto.services__economicCalendarService.s31'), category: i18n.t('auto.services__economicCalendarService.s10'), importance: 'medium' },
+        { id: 'CCSA', name: i18n.t('auto.services__economicCalendarService.s32'), category: i18n.t('auto.services__economicCalendarService.s10'), importance: 'medium' },
         
         // Consumer Spending
-        { id: 'PCE', name: 'Personal Consumption - צריכה אישית', category: 'צריכה', importance: 'medium' },
-        { id: 'PSAVERT', name: 'Personal Saving Rate - שיעור חיסכון', category: 'צריכה', importance: 'medium' },
-        { id: 'RRSFS', name: 'Retail Sales Ex Auto - מכירות ללא רכב', category: 'צריכה', importance: 'medium' },
+        { id: 'PCE', name: i18n.t('auto.services__economicCalendarService.s33'), category: i18n.t('auto.services__economicCalendarService.s18'), importance: 'medium' },
+        { id: 'PSAVERT', name: i18n.t('auto.services__economicCalendarService.s34'), category: i18n.t('auto.services__economicCalendarService.s18'), importance: 'medium' },
+        { id: 'RRSFS', name: i18n.t('auto.services__economicCalendarService.s35'), category: i18n.t('auto.services__economicCalendarService.s18'), importance: 'medium' },
         
         // Business Investment
-        { id: 'NEWORDER', name: 'New Orders - הזמנות חדשות', category: 'תעשייה', importance: 'medium' },
-        { id: 'BUSINV', name: 'Business Inventories - מלאי עסקים', category: 'תעשייה', importance: 'medium' },
+        { id: 'NEWORDER', name: i18n.t('auto.services__economicCalendarService.s36'), category: i18n.t('auto.services__economicCalendarService.s23'), importance: 'medium' },
+        { id: 'BUSINV', name: i18n.t('auto.services__economicCalendarService.s37'), category: i18n.t('auto.services__economicCalendarService.s23'), importance: 'medium' },
         
         // Housing Secondary
-        { id: 'EXHOSLUSM495S', name: 'Existing Home Sales - מכירות בתים קיימים', category: 'נדל"ן', importance: 'medium' },
-        { id: 'MSPUS', name: 'Median Sales Price - מחיר בתים חציוני', category: 'נדל"ן', importance: 'medium' },
+        { id: 'EXHOSLUSM495S', name: i18n.t('auto.services__economicCalendarService.s38'), category: i18n.t('auto.services__economicCalendarService.s21'), importance: 'medium' },
+        { id: 'MSPUS', name: i18n.t('auto.services__economicCalendarService.s39'), category: i18n.t('auto.services__economicCalendarService.s21'), importance: 'medium' },
         
         // Money Supply & Credit
-        { id: 'M2SL', name: 'M2 Money Supply - היצע כסף M2', category: 'מדיניות מוניטרית', importance: 'medium' },
-        { id: 'TOTCI', name: 'Commercial & Industrial Loans - הלוואות עסקיות', category: 'מדיניות מוניטרית', importance: 'medium' },
+        { id: 'M2SL', name: i18n.t('auto.services__economicCalendarService.s40'), category: i18n.t('auto.services__economicCalendarService.s2'), importance: 'medium' },
+        { id: 'TOTCI', name: i18n.t('auto.services__economicCalendarService.s41'), category: i18n.t('auto.services__economicCalendarService.s2'), importance: 'medium' },
         
         // International Trade
-        { id: 'BOPGSTB', name: 'Trade Balance - מאזן סחר', category: 'סחר חוץ', importance: 'medium' },
-        { id: 'EXPGS', name: 'Exports - יצוא', category: 'סחר חוץ', importance: 'medium' },
-        { id: 'IMPGS', name: 'Imports - יבוא', category: 'סחר חוץ', importance: 'medium' },
+        { id: 'BOPGSTB', name: i18n.t('auto.services__economicCalendarService.s42'), category: i18n.t('auto.services__economicCalendarService.s43'), importance: 'medium' },
+        { id: 'EXPGS', name: i18n.t('auto.services__economicCalendarService.s44'), category: i18n.t('auto.services__economicCalendarService.s43'), importance: 'medium' },
+        { id: 'IMPGS', name: i18n.t('auto.services__economicCalendarService.s45'), category: i18n.t('auto.services__economicCalendarService.s43'), importance: 'medium' },
         
         
         // Economic Indicators
-        { id: 'CCLACBW027SBOG', name: 'Bank Credit - אשראי בנקאי', category: 'מדיניות מוניטרית', importance: 'medium' },
-        { id: 'DEXUSEU', name: 'USD/EUR Exchange Rate - שער דולר/יורו', category: 'מטבעות', importance: 'medium' },
+        { id: 'CCLACBW027SBOG', name: i18n.t('auto.services__economicCalendarService.s46'), category: i18n.t('auto.services__economicCalendarService.s2'), importance: 'medium' },
+        { id: 'DEXUSEU', name: i18n.t('auto.services__economicCalendarService.s47'), category: i18n.t('auto.services__economicCalendarService.s48'), importance: 'medium' },
         
         // Weekly Data (more frequent updates)
-        { id: 'WALCL', name: 'Fed Balance Sheet - מאזן הפדרל ריזרב', category: 'מדיניות מוניטרית', importance: 'medium' },
-        { id: 'WTREGEN', name: 'Weekly Economic Index - מדד כלכלי שבועי', category: 'צמיחה כלכלית', importance: 'medium' },
+        { id: 'WALCL', name: i18n.t('auto.services__economicCalendarService.s49'), category: i18n.t('auto.services__economicCalendarService.s2'), importance: 'medium' },
+        { id: 'WTREGEN', name: i18n.t('auto.services__economicCalendarService.s50'), category: i18n.t('auto.services__economicCalendarService.s16'), importance: 'medium' },
         
         // Consumer Price Sub-indices (monthly updates)
-        { id: 'CUSR0000SEHE', name: 'CPI Energy - מדד מחירי אנרגיה', category: 'אינפלציה', importance: 'low' },
-        { id: 'CUSR0000SAF1', name: 'CPI Food - מדד מחירי מזון', category: 'אינפלציה', importance: 'low' },
+        { id: 'CUSR0000SEHE', name: i18n.t('auto.services__economicCalendarService.s51'), category: i18n.t('auto.services__economicCalendarService.s4'), importance: 'low' },
+        { id: 'CUSR0000SAF1', name: i18n.t('auto.services__economicCalendarService.s52'), category: i18n.t('auto.services__economicCalendarService.s4'), importance: 'low' },
         
         // Additional Important Indicators
-        { id: 'T10Y3M', name: '3-Month Treasury Bill Rate - אג"ח 3 חודשים', category: 'מדיניות מוניטרית', importance: 'high' },
-        { id: 'GS2', name: 'Treasury 2Y - אג"ח 2 שנים', category: 'מדיניות מוניטרית', importance: 'high' },
-        { id: 'GS30', name: 'Treasury 30Y - אג"ח 30 שנים', category: 'מדיניות מוניטרית', importance: 'high' },
-        { id: 'VIXCLS', name: 'VIX - מדד תנודתיות', category: 'שוקי הון', importance: 'high' },
-        { id: 'DGS10', name: '10-Year Treasury Rate - ריבית אג"ח 10 שנים', category: 'מדיניות מוניטרית', importance: 'high' },
-        { id: 'DEXUSEU', name: 'USD/EUR Exchange Rate - שער דולר/יורו', category: 'מטבעות', importance: 'medium' },
-        { id: 'DEXJPUS', name: 'USD/JPY Exchange Rate - שער דולר/ין', category: 'מטבעות', importance: 'medium' },
-        { id: 'DEXUSUK', name: 'USD/GBP Exchange Rate - שער דולר/לירה', category: 'מטבעות', importance: 'medium' }
+        { id: 'T10Y3M', name: i18n.t('auto.services__economicCalendarService.s53'), category: i18n.t('auto.services__economicCalendarService.s2'), importance: 'high' },
+        { id: 'GS2', name: i18n.t('auto.services__economicCalendarService.s54'), category: i18n.t('auto.services__economicCalendarService.s2'), importance: 'high' },
+        { id: 'GS30', name: i18n.t('auto.services__economicCalendarService.s55'), category: i18n.t('auto.services__economicCalendarService.s2'), importance: 'high' },
+        { id: 'VIXCLS', name: i18n.t('auto.services__economicCalendarService.s56'), category: i18n.t('auto.services__economicCalendarService.s57'), importance: 'high' },
+        { id: 'DGS10', name: i18n.t('auto.services__economicCalendarService.s58'), category: i18n.t('auto.services__economicCalendarService.s2'), importance: 'high' },
+        { id: 'DEXUSEU', name: i18n.t('auto.services__economicCalendarService.s47'), category: i18n.t('auto.services__economicCalendarService.s48'), importance: 'medium' },
+        { id: 'DEXJPUS', name: i18n.t('auto.services__economicCalendarService.s59'), category: i18n.t('auto.services__economicCalendarService.s48'), importance: 'medium' },
+        { id: 'DEXUSUK', name: i18n.t('auto.services__economicCalendarService.s60'), category: i18n.t('auto.services__economicCalendarService.s48'), importance: 'medium' }
       ];
       
       const events: EconomicEvent[] = [];
@@ -210,7 +211,7 @@ export class EconomicCalendarService {
               seriesEvents.push({
                 id: `fred_${series.id}_${current.date}`,
                 title: `📊 ${series.name}`,
-        country: 'ארצות הברית',
+        country: i18n.t('auto.services__economicCalendarService.s61'),
         currency: 'USD',
                 importance: series.importance as 'high' | 'medium' | 'low',
                 date: current.date, // תאריך מ-FRED כמו שהוא
@@ -218,7 +219,7 @@ export class EconomicCalendarService {
                 actual: current.value,
         forecast: '',
                 previous: (previous && previous.value !== '.') ? previous.value : '',
-                description: `${series.name}: ${current.value}. ${change ? `שינוי מהנתון הקודם: ${change}` : ''}`,
+                description: `${series.name}: ${current.value}. ${change ? i18n.t('auto.services__economicCalendarService.s62', { v0: change }) : ''}`,
                 category: series.category,
                 impact: series.importance as 'high' | 'medium' | 'low',
                 source: 'FRED - Federal Reserve',
@@ -283,14 +284,14 @@ export class EconomicCalendarService {
       
       // מדדים חשובים עם release IDs מ-FRED
       const releases = [
-        { id: 10, name: 'Consumer Price Index', category: 'אינפלציה', importance: 'high', emoji: '📊' },
-        { id: 50, name: 'Employment Situation', category: 'תעסוקה', importance: 'high', emoji: '💼' },
-        { id: 53, name: 'Gross Domestic Product', category: 'צמיחה כלכלית', importance: 'high', emoji: '📈' },
-        { id: 54, name: 'Personal Income and Outlays', category: 'צריכה', importance: 'high', emoji: '💰' },
-        { id: 25, name: 'New Residential Construction', category: 'נדל"ן', importance: 'high', emoji: '🏠' },
-        { id: 144, name: 'Advance Monthly Sales for Retail Trade', category: 'צריכה', importance: 'high', emoji: '🛒' },
-        { id: 15, name: 'Producer Price Index', category: 'אינפלציה', importance: 'high', emoji: '🏭' },
-        { id: 51, name: 'Job Openings and Labor Turnover Survey', category: 'תעוקה', importance: 'high', emoji: '💼' }
+        { id: 10, name: 'Consumer Price Index', category: i18n.t('auto.services__economicCalendarService.s4'), importance: 'high', emoji: '📊' },
+        { id: 50, name: 'Employment Situation', category: i18n.t('auto.services__economicCalendarService.s10'), importance: 'high', emoji: '💼' },
+        { id: 53, name: 'Gross Domestic Product', category: i18n.t('auto.services__economicCalendarService.s16'), importance: 'high', emoji: '📈' },
+        { id: 54, name: 'Personal Income and Outlays', category: i18n.t('auto.services__economicCalendarService.s18'), importance: 'high', emoji: '💰' },
+        { id: 25, name: 'New Residential Construction', category: i18n.t('auto.services__economicCalendarService.s21'), importance: 'high', emoji: '🏠' },
+        { id: 144, name: 'Advance Monthly Sales for Retail Trade', category: i18n.t('auto.services__economicCalendarService.s18'), importance: 'high', emoji: '🛒' },
+        { id: 15, name: 'Producer Price Index', category: i18n.t('auto.services__economicCalendarService.s4'), importance: 'high', emoji: '🏭' },
+        { id: 51, name: 'Job Openings and Labor Turnover Survey', category: i18n.t('auto.services__economicCalendarService.s63'), importance: 'high', emoji: '💼' }
       ];
 
     const today = new Date();
@@ -339,15 +340,15 @@ export class EconomicCalendarService {
               releaseEvents.push({
                 id: `fred_release_${releaseDate.release_id}_${releaseDate.date}`,
                 title: `📊 ${this.translateReleaseName(releaseDate.release_name)}`,
-                country: 'ארצות הברית',
+                country: i18n.t('auto.services__economicCalendarService.s61'),
                 currency: 'USD',
                 importance: this.getImportanceByRelease(releaseDate.release_name),
                 date: releaseDate.date,
                 time: '15:30',
                 actual: '',
-                forecast: 'צפוי לפרסום',
+                forecast: i18n.t('auto.services__economicCalendarService.s64'),
                 previous: '',
-                description: `תאריך פרסום רשמי מ-FRED: ${this.translateReleaseName(releaseDate.release_name)}`,
+                description: i18n.t('auto.services__economicCalendarService.s65', { v0: this.translateReleaseName(releaseDate.release_name) }),
                 category: this.getCategoryByRelease(releaseDate.release_name),
                 source: 'FRED Release Calendar',
                 dateObject: releaseDateTime
@@ -369,16 +370,16 @@ export class EconomicCalendarService {
   // תרגום שמות דו"חות לעברית
   static translateReleaseName(name: string): string {
     const translations: { [key: string]: string } = {
-      'Consumer Price Index': 'מדד המחירים לצרכן (CPI)',
-      'Employment Situation': 'דו"ח תעסוקה (NFP)',
-      'Gross Domestic Product': 'תוצר מקומי גולמי (GDP)',
-      'Personal Income and Outlays': 'הכנסה אישית והוצאות (PCE)',
-      'New Residential Construction': 'בנייה מגורים חדשה',
-      'Advance Monthly Sales for Retail Trade': 'מכירות קמעונאיות',
-      'Producer Price Index': 'מדד המחירים ליצרנים (PPI)',
-      'Industrial Production and Capacity Utilization': 'ייצור תעשייתי וניצולת',
-      'Consumer Credit': 'אשראי צרכני',
-      'Federal Reserve Balance Sheet': 'מאזן הפדרל ריזרב'
+      'Consumer Price Index': i18n.t('auto.services__economicCalendarService.s66'),
+      'Employment Situation': i18n.t('auto.services__economicCalendarService.s67'),
+      'Gross Domestic Product': i18n.t('auto.services__economicCalendarService.s68'),
+      'Personal Income and Outlays': i18n.t('auto.services__economicCalendarService.s69'),
+      'New Residential Construction': i18n.t('auto.services__economicCalendarService.s70'),
+      'Advance Monthly Sales for Retail Trade': i18n.t('auto.services__economicCalendarService.s71'),
+      'Producer Price Index': i18n.t('auto.services__economicCalendarService.s72'),
+      'Industrial Production and Capacity Utilization': i18n.t('auto.services__economicCalendarService.s73'),
+      'Consumer Credit': i18n.t('auto.services__economicCalendarService.s74'),
+      'Federal Reserve Balance Sheet': i18n.t('auto.services__economicCalendarService.s75')
     };
     
     return translations[name] || name;
@@ -408,19 +409,19 @@ export class EconomicCalendarService {
   // קביעת קטגוריה לפי סוג הפרסום
   static getCategoryByRelease(name: string): string {
     const categories: { [key: string]: string } = {
-      'Consumer Price Index': 'אינפלציה',
-      'Employment Situation': 'תעסוקה',
-      'Producer Price Index': 'אינפלציה',
-      'Gross Domestic Product': 'צמיחה כלכלית',
-      'Personal Income and Outlays': 'צריכה',
-      'New Residential Construction': 'נדל"ן',
-      'Advance Monthly Sales for Retail Trade': 'צריכה',
-      'Industrial Production and Capacity Utilization': 'ייצור',
-      'Consumer Credit': 'אשראי',
-      'Federal Reserve Balance Sheet': 'מדיניות מוניטרית'
+      'Consumer Price Index': i18n.t('auto.services__economicCalendarService.s4'),
+      'Employment Situation': i18n.t('auto.services__economicCalendarService.s10'),
+      'Producer Price Index': i18n.t('auto.services__economicCalendarService.s4'),
+      'Gross Domestic Product': i18n.t('auto.services__economicCalendarService.s16'),
+      'Personal Income and Outlays': i18n.t('auto.services__economicCalendarService.s18'),
+      'New Residential Construction': i18n.t('auto.services__economicCalendarService.s21'),
+      'Advance Monthly Sales for Retail Trade': i18n.t('auto.services__economicCalendarService.s18'),
+      'Industrial Production and Capacity Utilization': i18n.t('auto.services__economicCalendarService.s76'),
+      'Consumer Credit': i18n.t('auto.services__economicCalendarService.s77'),
+      'Federal Reserve Balance Sheet': i18n.t('auto.services__economicCalendarService.s2')
     };
     
-    return categories[name] || 'כלכלה כללית';
+    return categories[name] || i18n.t('auto.services__economicCalendarService.s78');
   }
 
   // שליפת נתונים כלכליים מ-Trading Economics API
@@ -461,15 +462,15 @@ export class EconomicCalendarService {
             tradingEvents.push({
               id: `trading_${event.Country}_${event.Date}_${event.Event}`,
               title: `📊 ${event.Event}`,
-              country: event.Country === 'United States' ? 'ארצות הברית' : event.Country,
+              country: event.Country === 'United States' ? i18n.t('auto.services__economicCalendarService.s61') : event.Country,
               currency: event.Country === 'United States' ? 'USD' : '',
               importance: this.mapTradingEconomicsImportance(event.Importance),
               date: event.Date.split('T')[0], // רק התאריך ללא השעה
               time: event.Date.includes('T') ? event.Date.split('T')[1].substring(0, 5) : '00:00',
               actual: event.Actual?.toString() || '',
-              forecast: event.Forecast?.toString() || 'צפוי לפרסום',
+              forecast: event.Forecast?.toString() || i18n.t('auto.services__economicCalendarService.s64'),
               previous: event.Previous?.toString() || '',
-              description: `${event.Event} - ${event.Category || 'אירוע כלכלי'}`,
+              description: `${event.Event} - ${event.Category || i18n.t('auto.services__economicCalendarService.s79')}`,
               category: this.mapTradingEconomicsCategory(event.Event, event.Category),
               impact: this.mapTradingEconomicsImportance(event.Importance),
               source: 'Trading Economics',
@@ -502,23 +503,23 @@ export class EconomicCalendarService {
 
   // מיפוי קטגוריה Trading Economics
   static mapTradingEconomicsCategory(eventName: string, category?: string): string {
-    if (!eventName) return 'כללי';
+    if (!eventName) return i18n.t('auto.services__economicCalendarService.s80');
     
     const name = eventName.toLowerCase();
     const cat = category?.toLowerCase() || '';
     
-    if (name.includes('cpi') || name.includes('ppi') || name.includes('pce') || name.includes('inflation') || name.includes('price index') || cat.includes('inflation')) return 'אינפלציה';
-    if (name.includes('nfp') || name.includes('employment') || name.includes('unemployment') || name.includes('jobs') || name.includes('payroll') || name.includes('jolts') || name.includes('job openings') || name.includes('jobless claims') || cat.includes('employment')) return 'תעסוקה';
-    if (name.includes('gdp') || name.includes('gross domestic product') || name.includes('growth') || cat.includes('gdp')) return 'צמיחה כלכלית';
-    if (name.includes('retail') || name.includes('sales') || name.includes('consumer') || name.includes('spending') || cat.includes('retail')) return 'צריכה';
-    if (name.includes('housing') || name.includes('construction') || name.includes('building') || name.includes('home') || name.includes('case-shiller') || name.includes('home price index') || cat.includes('housing')) return 'נדל"ן';
-    if (name.includes('manufacturing') || name.includes('industrial') || name.includes('production') || name.includes('ism') || name.includes('pmi') || cat.includes('manufacturing')) return 'ייצור';
-    if (name.includes('fomc') || name.includes('fed') || name.includes('interest') || name.includes('rate') || name.includes('monetary') || cat.includes('monetary')) return 'מדיניות מוניטרית';
-    if (name.includes('trade') || name.includes('export') || name.includes('import') || name.includes('balance') || cat.includes('trade')) return 'סחר חוץ';
-    if (name.includes('durable') || name.includes('goods') || name.includes('orders')) return 'ייצור';
-    if (name.includes('confidence') || name.includes('sentiment')) return 'צריכה';
+    if (name.includes('cpi') || name.includes('ppi') || name.includes('pce') || name.includes('inflation') || name.includes('price index') || cat.includes('inflation')) return i18n.t('auto.services__economicCalendarService.s4');
+    if (name.includes('nfp') || name.includes('employment') || name.includes('unemployment') || name.includes('jobs') || name.includes('payroll') || name.includes('jolts') || name.includes('job openings') || name.includes('jobless claims') || cat.includes('employment')) return i18n.t('auto.services__economicCalendarService.s10');
+    if (name.includes('gdp') || name.includes('gross domestic product') || name.includes('growth') || cat.includes('gdp')) return i18n.t('auto.services__economicCalendarService.s16');
+    if (name.includes('retail') || name.includes('sales') || name.includes('consumer') || name.includes('spending') || cat.includes('retail')) return i18n.t('auto.services__economicCalendarService.s18');
+    if (name.includes('housing') || name.includes('construction') || name.includes('building') || name.includes('home') || name.includes('case-shiller') || name.includes('home price index') || cat.includes('housing')) return i18n.t('auto.services__economicCalendarService.s21');
+    if (name.includes('manufacturing') || name.includes('industrial') || name.includes('production') || name.includes('ism') || name.includes('pmi') || cat.includes('manufacturing')) return i18n.t('auto.services__economicCalendarService.s76');
+    if (name.includes('fomc') || name.includes('fed') || name.includes('interest') || name.includes('rate') || name.includes('monetary') || cat.includes('monetary')) return i18n.t('auto.services__economicCalendarService.s2');
+    if (name.includes('trade') || name.includes('export') || name.includes('import') || name.includes('balance') || cat.includes('trade')) return i18n.t('auto.services__economicCalendarService.s43');
+    if (name.includes('durable') || name.includes('goods') || name.includes('orders')) return i18n.t('auto.services__economicCalendarService.s76');
+    if (name.includes('confidence') || name.includes('sentiment')) return i18n.t('auto.services__economicCalendarService.s18');
     
-    return 'כללי';
+    return i18n.t('auto.services__economicCalendarService.s80');
   }
 
 
@@ -547,17 +548,17 @@ export class EconomicCalendarService {
       if (firstDayOfMonth > today) {
         ismEvents.push({
           id: `ism_manufacturing_${dateStr}`,
-          title: '🏭 ISM Manufacturing PMI - מדד PMI תעשייתי',
-        country: 'ארצות הברית',
+          title: i18n.t('auto.services__economicCalendarService.s81'),
+        country: i18n.t('auto.services__economicCalendarService.s61'),
         currency: 'USD',
           importance: 'high' as const,
           date: dateStr,
           time: '17:00',
         actual: '',
-          forecast: 'צפוי לפרסום',
+          forecast: i18n.t('auto.services__economicCalendarService.s64'),
           previous: '',
-          description: 'מדד מנהלי הרכש התעשייתי - מדד מוביל לכלכלה',
-        category: 'תעשייה',
+          description: i18n.t('auto.services__economicCalendarService.s82'),
+        category: i18n.t('auto.services__economicCalendarService.s23'),
           source: 'ISM',
           dateObject: new Date(dateStr + 'T17:00:00')
         });
@@ -577,17 +578,17 @@ export class EconomicCalendarService {
       if (servicesDate > today) {
         ismEvents.push({
           id: `ism_services_${servicesDateStr}`,
-          title: '🏢 ISM Services PMI - מדד PMI שירותים',
-        country: 'ארצות הברית',
+          title: i18n.t('auto.services__economicCalendarService.s83'),
+        country: i18n.t('auto.services__economicCalendarService.s61'),
         currency: 'USD',
           importance: 'high' as const,
           date: servicesDateStr,
           time: '17:00',
         actual: '',
-          forecast: 'צפוי לפרסום',
+          forecast: i18n.t('auto.services__economicCalendarService.s64'),
         previous: '',
-          description: 'מדד מנהלי הרכש בשירותים - 70% מהכלכלה האמריקנית',
-          category: 'שירותים',
+          description: i18n.t('auto.services__economicCalendarService.s84'),
+          category: i18n.t('auto.services__economicCalendarService.s85'),
           source: 'ISM',
           dateObject: new Date(servicesDateStr + 'T17:00:00')
         });
@@ -617,17 +618,17 @@ export class EconomicCalendarService {
         const dateStr = targetDate.toISOString().split('T')[0];
         keyEvents.push({
           id: `upcoming_cpi_${dateStr}`,
-          title: '📊 CPI Release - פרסום מדד המחירים לצרכן',
-      country: 'ארצות הברית',
+          title: i18n.t('auto.services__economicCalendarService.s86'),
+      country: i18n.t('auto.services__economicCalendarService.s61'),
       currency: 'USD',
           importance: 'high' as const,
           date: dateStr,
           time: '15:30',
           actual: '',
-          forecast: 'צפוי לפרסום',
+          forecast: i18n.t('auto.services__economicCalendarService.s64'),
           previous: '',
-          description: 'פרסום מדד המחירים לצרכן - נתון קריטי לאינפלציה',
-          category: 'אינפלציה',
+          description: i18n.t('auto.services__economicCalendarService.s87'),
+          category: i18n.t('auto.services__economicCalendarService.s4'),
           source: 'Bureau of Labor Statistics',
           dateObject: new Date(dateStr + 'T15:30:00')
         });
@@ -649,17 +650,17 @@ export class EconomicCalendarService {
         const dateStr = targetDate.toISOString().split('T')[0];
         keyEvents.push({
           id: `upcoming_nfp_${dateStr}`,
-          title: '💼 NFP Release - פרסום נתוני תעסוקה',
-        country: 'ארצות הברית',
+          title: i18n.t('auto.services__economicCalendarService.s88'),
+        country: i18n.t('auto.services__economicCalendarService.s61'),
         currency: 'USD',
           importance: 'high' as const,
           date: dateStr,
           time: '15:30',
         actual: '',
-          forecast: 'צפוי לפרסום',
+          forecast: i18n.t('auto.services__economicCalendarService.s64'),
         previous: '',
-          description: 'פרסום נתוני התעסוקה הלא-חקלאית - נתון קריטי לשוק העבודה',
-          category: 'תעסוקה',
+          description: i18n.t('auto.services__economicCalendarService.s89'),
+          category: i18n.t('auto.services__economicCalendarService.s10'),
           source: 'Bureau of Labor Statistics',
           dateObject: new Date(dateStr + 'T15:30:00')
         });
@@ -779,15 +780,15 @@ export class EconomicCalendarService {
             futureEvents.push({
               id: `eod_${event.country}_${event.date}_${event.period}`,
               title: `📊 ${event.type || 'Economic Event'}`,
-              country: event.country === 'US' ? 'ארצות הברית' : event.country,
+              country: event.country === 'US' ? i18n.t('auto.services__economicCalendarService.s61') : event.country,
               currency: event.country === 'US' ? 'USD' : '',
               importance: this.mapEODEventImportance(event.type),
               date: event.date,
               time: '00:00', // EOD API doesn't provide explicit times
               actual: event.actual?.toString() || '',
-              forecast: event.estimate?.toString() || 'צפוי לפרסום',
+              forecast: event.estimate?.toString() || i18n.t('auto.services__economicCalendarService.s64'),
               previous: event.previous?.toString() || '',
-              description: `${event.type} (${event.comparison}) - תקופה: ${event.period}`,
+              description: i18n.t('auto.services__economicCalendarService.s90', { v0: event.type, v1: event.comparison, v2: event.period }),
               category: this.mapEODEventCategory(event.type),
               impact: this.mapEODEventImportance(event.type),
               source: 'EODHD Economic Events',
@@ -833,17 +834,17 @@ export class EconomicCalendarService {
         if (dayOfWeek === 4) {
           futureEvents.push({
             id: `future_claims_${dateStr}`,
-            title: '📊 Initial Jobless Claims - תביעות אבטלה ראשוניות',
-            country: 'ארצות הברית',
+            title: i18n.t('auto.services__economicCalendarService.s91'),
+            country: i18n.t('auto.services__economicCalendarService.s61'),
             currency: 'USD',
             importance: 'high',
             date: dateStr,
             time: '13:30',
             forecast: '220K',
             previous: '220K',
-            description: 'מדד תביעות האבטלה הראשוניות - אינדיקטור חשוב למצב שוק העבודה',
-            category: 'תעסוקה',
-            impact: 'בינוני',
+            description: i18n.t('auto.services__economicCalendarService.s92'),
+            category: i18n.t('auto.services__economicCalendarService.s10'),
+            impact: i18n.t('auto.services__economicCalendarService.s93'),
             source: 'Department of Labor',
             isRead: false,
             createdAt: new Date().toISOString(),
@@ -855,17 +856,17 @@ export class EconomicCalendarService {
         if (eventDate.getDate() >= 13 && eventDate.getDate() <= 15) {
           futureEvents.push({
             id: `future_cpi_${dateStr}`,
-            title: '📊 CPI - מדד המחירים לצרכן',
-            country: 'ארצות הברית',
+            title: i18n.t('auto.services__economicCalendarService.s94'),
+            country: i18n.t('auto.services__economicCalendarService.s61'),
             currency: 'USD',
             importance: 'high',
             date: dateStr,
             time: '13:30',
             forecast: '0.3',
             previous: '0.2',
-            description: 'מדד המחירים לצרכן - האינדיקטור החשוב ביותר לאינפלציה',
-            category: 'אינפלציה',
-            impact: 'גבוה',
+            description: i18n.t('auto.services__economicCalendarService.s95'),
+            category: i18n.t('auto.services__economicCalendarService.s4'),
+            impact: i18n.t('auto.services__economicCalendarService.s96'),
             source: 'Bureau of Labor Statistics',
             isRead: false,
             createdAt: new Date().toISOString(),
@@ -877,17 +878,17 @@ export class EconomicCalendarService {
         if (dayOfWeek === 5 && eventDate.getDate() <= 7) {
           futureEvents.push({
             id: `future_nfp_${dateStr}`,
-            title: '📊 NFP - תעסוקה לא-חקלאית',
-            country: 'ארצות הברית',
+            title: i18n.t('auto.services__economicCalendarService.s97'),
+            country: i18n.t('auto.services__economicCalendarService.s61'),
             currency: 'USD',
             importance: 'high',
             date: dateStr,
             time: '13:30',
             forecast: '180K',
             previous: '175K',
-            description: 'מדד התעסוקה הלא-חקלאית - האינדיקטור החשוב ביותר למצב הכלכלה',
-            category: 'תעסוקה',
-            impact: 'גבוה',
+            description: i18n.t('auto.services__economicCalendarService.s98'),
+            category: i18n.t('auto.services__economicCalendarService.s10'),
+            impact: i18n.t('auto.services__economicCalendarService.s96'),
             source: 'Bureau of Labor Statistics',
             isRead: false,
             createdAt: new Date().toISOString(),
@@ -899,17 +900,17 @@ export class EconomicCalendarService {
         if (eventDate.getDate() >= 15 && eventDate.getDate() <= 16) {
           futureEvents.push({
             id: `future_fomc_${dateStr}`,
-            title: '🏛️ FOMC Rate Decision - החלטת ריבית',
-            country: 'ארצות הברית',
+            title: i18n.t('auto.services__economicCalendarService.s99'),
+            country: i18n.t('auto.services__economicCalendarService.s61'),
             currency: 'USD',
             importance: 'high',
             date: dateStr,
             time: '19:00',
             forecast: '5.25',
             previous: '5.25',
-            description: 'החלטת הריבית של הפדרל ריזרב - האירוע הכלכלי החשוב ביותר',
-            category: 'מדיניות מוניטרית',
-            impact: 'גבוה',
+            description: i18n.t('auto.services__economicCalendarService.s100'),
+            category: i18n.t('auto.services__economicCalendarService.s2'),
+            impact: i18n.t('auto.services__economicCalendarService.s96'),
             source: 'Federal Reserve',
             isRead: false,
             createdAt: new Date().toISOString(),
@@ -933,18 +934,18 @@ export class EconomicCalendarService {
 
   // מיפוי קטגוריה
   static mapCategory(eventName: string): string {
-    if (!eventName) return 'כללי';
+    if (!eventName) return i18n.t('auto.services__economicCalendarService.s80');
     const name = eventName.toLowerCase();
     
-    if (name.includes('cpi') || name.includes('inflation') || name.includes('ppi')) return 'אינפלציה';
-    if (name.includes('employment') || name.includes('nfp') || name.includes('unemployment') || name.includes('jobs')) return 'תעסוקה';
-    if (name.includes('gdp') || name.includes('growth')) return 'צמיחה כלכלית';
-    if (name.includes('retail') || name.includes('consumer') || name.includes('spending')) return 'צריכה';
-    if (name.includes('housing') || name.includes('construction')) return 'נדל"ן';
-    if (name.includes('fed') || name.includes('fomc') || name.includes('rate')) return 'מדיניות מוניטרית';
-    if (name.includes('trade') || name.includes('export') || name.includes('import')) return 'סחר חוץ';
+    if (name.includes('cpi') || name.includes('inflation') || name.includes('ppi')) return i18n.t('auto.services__economicCalendarService.s4');
+    if (name.includes('employment') || name.includes('nfp') || name.includes('unemployment') || name.includes('jobs')) return i18n.t('auto.services__economicCalendarService.s10');
+    if (name.includes('gdp') || name.includes('growth')) return i18n.t('auto.services__economicCalendarService.s16');
+    if (name.includes('retail') || name.includes('consumer') || name.includes('spending')) return i18n.t('auto.services__economicCalendarService.s18');
+    if (name.includes('housing') || name.includes('construction')) return i18n.t('auto.services__economicCalendarService.s21');
+    if (name.includes('fed') || name.includes('fomc') || name.includes('rate')) return i18n.t('auto.services__economicCalendarService.s2');
+    if (name.includes('trade') || name.includes('export') || name.includes('import')) return i18n.t('auto.services__economicCalendarService.s43');
     
-    return 'כללי';
+    return i18n.t('auto.services__economicCalendarService.s80');
   }
 
   // מיפוי חשיבות EOD לפורמט שלנו
@@ -962,22 +963,22 @@ export class EconomicCalendarService {
 
   // מיפוי קטגוריה EOD לפורמט שלנו
   static mapEODCategory(eventName: string): string {
-    if (!eventName) return 'כללי';
+    if (!eventName) return i18n.t('auto.services__economicCalendarService.s80');
     
     const name = eventName.toLowerCase();
     
-    if (name.includes('cpi') || name.includes('ppi') || name.includes('pce') || name.includes('inflation') || name.includes('price')) return 'אינפלציה';
-    if (name.includes('nfp') || name.includes('employment') || name.includes('unemployment') || name.includes('jobs') || name.includes('payroll')) return 'תעסוקה';
-    if (name.includes('gdp') || name.includes('growth') || name.includes('economic growth')) return 'צמיחה כלכלית';
-    if (name.includes('retail') || name.includes('sales') || name.includes('consumer') || name.includes('spending')) return 'צריכה';
-    if (name.includes('housing') || name.includes('construction') || name.includes('building') || name.includes('home')) return 'נדל"ן';
-    if (name.includes('manufacturing') || name.includes('industrial') || name.includes('production') || name.includes('ism') || name.includes('pmi')) return 'ייצור';
-    if (name.includes('fomc') || name.includes('fed') || name.includes('interest') || name.includes('rate') || name.includes('monetary')) return 'מדיניות מוניטרית';
-    if (name.includes('trade') || name.includes('export') || name.includes('import') || name.includes('balance')) return 'סחר חוץ';
-    if (name.includes('durable') || name.includes('goods') || name.includes('orders')) return 'ייצור';
-    if (name.includes('confidence') || name.includes('sentiment')) return 'צריכה';
+    if (name.includes('cpi') || name.includes('ppi') || name.includes('pce') || name.includes('inflation') || name.includes('price')) return i18n.t('auto.services__economicCalendarService.s4');
+    if (name.includes('nfp') || name.includes('employment') || name.includes('unemployment') || name.includes('jobs') || name.includes('payroll')) return i18n.t('auto.services__economicCalendarService.s10');
+    if (name.includes('gdp') || name.includes('growth') || name.includes('economic growth')) return i18n.t('auto.services__economicCalendarService.s16');
+    if (name.includes('retail') || name.includes('sales') || name.includes('consumer') || name.includes('spending')) return i18n.t('auto.services__economicCalendarService.s18');
+    if (name.includes('housing') || name.includes('construction') || name.includes('building') || name.includes('home')) return i18n.t('auto.services__economicCalendarService.s21');
+    if (name.includes('manufacturing') || name.includes('industrial') || name.includes('production') || name.includes('ism') || name.includes('pmi')) return i18n.t('auto.services__economicCalendarService.s76');
+    if (name.includes('fomc') || name.includes('fed') || name.includes('interest') || name.includes('rate') || name.includes('monetary')) return i18n.t('auto.services__economicCalendarService.s2');
+    if (name.includes('trade') || name.includes('export') || name.includes('import') || name.includes('balance')) return i18n.t('auto.services__economicCalendarService.s43');
+    if (name.includes('durable') || name.includes('goods') || name.includes('orders')) return i18n.t('auto.services__economicCalendarService.s76');
+    if (name.includes('confidence') || name.includes('sentiment')) return i18n.t('auto.services__economicCalendarService.s18');
     
-    return 'כללי';
+    return i18n.t('auto.services__economicCalendarService.s80');
   }
 
   // מיפוי חשיבות לפי סוג אירוע EOD Economic Events (טקסונומיית אדום/כתום)
@@ -995,22 +996,22 @@ export class EconomicCalendarService {
 
   // מיפוי קטגוריה לפי סוג אירוע EOD Economic Events
   static mapEODEventCategory(eventType: string): string {
-    if (!eventType) return 'כללי';
+    if (!eventType) return i18n.t('auto.services__economicCalendarService.s80');
     
     const type = eventType.toLowerCase();
     
-    if (type.includes('cpi') || type.includes('ppi') || type.includes('pce') || type.includes('inflation') || type.includes('price index')) return 'אינפלציה';
-    if (type.includes('nfp') || type.includes('employment') || type.includes('unemployment') || type.includes('jobs') || type.includes('payroll') || type.includes('jolts') || type.includes('job openings') || type.includes('jobless claims')) return 'תעסוקה';
-    if (type.includes('gdp') || type.includes('gross domestic product') || type.includes('growth')) return 'צמיחה כלכלית';
-    if (type.includes('retail') || type.includes('sales') || type.includes('consumer') || type.includes('spending')) return 'צריכה';
-    if (type.includes('housing') || type.includes('construction') || type.includes('building') || type.includes('home') || type.includes('case-shiller') || type.includes('home price index')) return 'נדל"ן';
-    if (type.includes('manufacturing') || type.includes('industrial') || type.includes('production') || type.includes('ism') || type.includes('pmi')) return 'ייצור';
-    if (type.includes('fomc') || type.includes('fed') || type.includes('interest') || type.includes('rate') || type.includes('monetary')) return 'מדיניות מוניטרית';
-    if (type.includes('trade') || type.includes('export') || type.includes('import') || type.includes('balance')) return 'סחר חוץ';
-    if (type.includes('durable') || type.includes('goods') || type.includes('orders')) return 'ייצור';
-    if (type.includes('confidence') || type.includes('sentiment')) return 'צריכה';
+    if (type.includes('cpi') || type.includes('ppi') || type.includes('pce') || type.includes('inflation') || type.includes('price index')) return i18n.t('auto.services__economicCalendarService.s4');
+    if (type.includes('nfp') || type.includes('employment') || type.includes('unemployment') || type.includes('jobs') || type.includes('payroll') || type.includes('jolts') || type.includes('job openings') || type.includes('jobless claims')) return i18n.t('auto.services__economicCalendarService.s10');
+    if (type.includes('gdp') || type.includes('gross domestic product') || type.includes('growth')) return i18n.t('auto.services__economicCalendarService.s16');
+    if (type.includes('retail') || type.includes('sales') || type.includes('consumer') || type.includes('spending')) return i18n.t('auto.services__economicCalendarService.s18');
+    if (type.includes('housing') || type.includes('construction') || type.includes('building') || type.includes('home') || type.includes('case-shiller') || type.includes('home price index')) return i18n.t('auto.services__economicCalendarService.s21');
+    if (type.includes('manufacturing') || type.includes('industrial') || type.includes('production') || type.includes('ism') || type.includes('pmi')) return i18n.t('auto.services__economicCalendarService.s76');
+    if (type.includes('fomc') || type.includes('fed') || type.includes('interest') || type.includes('rate') || type.includes('monetary')) return i18n.t('auto.services__economicCalendarService.s2');
+    if (type.includes('trade') || type.includes('export') || type.includes('import') || type.includes('balance')) return i18n.t('auto.services__economicCalendarService.s43');
+    if (type.includes('durable') || type.includes('goods') || type.includes('orders')) return i18n.t('auto.services__economicCalendarService.s76');
+    if (type.includes('confidence') || type.includes('sentiment')) return i18n.t('auto.services__economicCalendarService.s18');
     
-    return 'כללי';
+    return i18n.t('auto.services__economicCalendarService.s80');
   }
 
   // פונקציה ראשית לקבלת אירועים כלכליים - FRED + אירועים עתידיים

@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { runAfterInteractions } from '../../utils/runAfterInteractions';
 import { legacyAlert } from '../../utils/appDialog';
@@ -63,8 +64,8 @@ interface ExportTradeImageProps {
 }
 
 /** משפט שיווקי קצר ליד ה־QR — מקצועי, לא זול */
-const SHARE_CTA_LINE = 'הצטרף לקהילת הסוחרים של DarkPool';
-const SHARE_CTA_SUB = 'סרוק להורדת האפליקציה';
+const SHARE_CTA_LINE = i18n.t('auto.components__Journal__ExportTradeImage.s1');
+const SHARE_CTA_SUB = i18n.t('auto.components__Journal__ExportTradeImage.s2');
 
 /** התמונה תמיד בעיצוב הכהה — גם כשהאפליקציה בלייט */
 const SHARE_CARD_TOKENS = createDesignTokensForTheme(true);
@@ -280,7 +281,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
 
   const handleExport = useCallback(async () => {
     if (!viewShotRef.current || !layoutReady) {
-      legacyAlert('שגיאה', 'נא להמתין רגע עד שהתצוגה מוכנה');
+      legacyAlert(i18n.t('auto.components__Journal__ExportTradeImage.s3'), i18n.t('auto.components__Journal__ExportTradeImage.s4'));
       return;
     }
 
@@ -304,16 +305,16 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
       if (isAvailable) {
         await Sharing.shareAsync(uri, {
           mimeType: 'image/png',
-          dialogTitle: 'שתף טרייד',
+          dialogTitle: i18n.t('auto.components__Journal__ExportTradeImage.s5'),
           UTI: 'public.png',
         });
         void HapticFeedback.success();
       } else {
-        legacyAlert('שגיאה', 'שיתוף לא זמין במכשיר זה');
+        legacyAlert(i18n.t('auto.components__Journal__ExportTradeImage.s3'), i18n.t('auto.components__Journal__ExportTradeImage.s6'));
       }
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
-      legacyAlert('שגיאה', 'לא ניתן ליצור תמונה: ' + msg);
+      legacyAlert(i18n.t('auto.components__Journal__ExportTradeImage.s3'), i18n.t('auto.components__Journal__ExportTradeImage.s7') + msg);
     } finally {
       setIsExporting(false);
     }
@@ -352,12 +353,12 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
             size={DAY_NAV_BUTTON_SIZE}
             glassIntensity="subtle"
             style={styles.headerIconButton}
-            accessibilityLabel="חזרה"
+            accessibilityLabel={i18n.t('auto.components__Journal__ExportTradeImage.s8')}
           >
             <Ionicons name="chevron-forward" size={22} color={DesignTokens.colors.text.primary} />
           </DayNavBlurButton>
           <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>שתף תמונה</Text>
+            <Text style={styles.headerTitle}>{i18n.t('auto.components__Journal__ExportTradeImage.s9')}</Text>
           </View>
           <View style={styles.headerSideSpacer} />
         </View>
@@ -394,7 +395,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                     style={styles.brandLogoAbove}
                     contentFit="contain"
                     transition={0}
-                    accessibilityLabel="קהילת הסוחרים DarkPool"
+                    accessibilityLabel={i18n.t('auto.components__Journal__ExportTradeImage.s10')}
                   />
 
                   {/* כרטיס מלא (cardSolid) — זכוכית בלי blur יוצאת עכורה בצילום */}
@@ -453,7 +454,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
 
                     {options.showPnl ? (
                       <>
-                        <Text style={styles.pnlHeroLabel}>רווח/הפסד:</Text>
+                        <Text style={styles.pnlHeroLabel}>{i18n.t('auto.components__Journal__ExportTradeImage.s11')}</Text>
                         <Text style={[styles.pnlHeroValue, { color: pnlColor }]}>
                           {isProfit ? '+' : '−'}${formatCurrencyPlain(normalized.pnl)}
                         </Text>
@@ -468,7 +469,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                       </>
                     ) : (
                       <>
-                        <Text style={styles.pnlHeroLabel}>תשואה:</Text>
+                        <Text style={styles.pnlHeroLabel}>{i18n.t('auto.components__Journal__ExportTradeImage.s12')}</Text>
                         <Text style={[styles.pnlHeroValue, { color: retColor }]}>
                           {ret >= 0 ? '+' : ''}
                           {ret.toFixed(2)}%
@@ -478,11 +479,11 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                     {options.showPrices ? (
                       <View style={styles.pricesRow}>
                         <View style={styles.priceCol}>
-                          <Text style={styles.priceLabel}>כניסה</Text>
+                          <Text style={styles.priceLabel}>{i18n.t('auto.components__Journal__ExportTradeImage.s13')}</Text>
                           <Text style={styles.priceValue}>${formatCurrencyPlain(normalized.entry_price)}</Text>
                         </View>
                         <View style={styles.priceCol}>
-                          <Text style={styles.priceLabel}>{isOpen ? 'נוכחי' : 'יציאה'}</Text>
+                          <Text style={styles.priceLabel}>{isOpen ? i18n.t('auto.components__Journal__ExportTradeImage.s14') : i18n.t('auto.components__Journal__ExportTradeImage.s15')}</Text>
                           <Text style={styles.priceValue}>${formatCurrencyPlain(normalized.exit_price)}</Text>
                         </View>
                       </View>
@@ -516,22 +517,22 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
           </View>
 
           <View style={styles.optionsBlock}>
-            <SettingsSectionTitle title="מה להציג בתמונה" />
+            <SettingsSectionTitle title={i18n.t('auto.components__Journal__ExportTradeImage.s16')} />
             <SettingsGlassCard style={{ marginBottom: 0 }}>
               <SettingsSwitchRow
-                title="רווח/הפסד בדולרים"
+                title={i18n.t('auto.components__Journal__ExportTradeImage.s17')}
                 value={options.showPnl}
                 disabled={options.showPnl && !options.showReturn}
                 onValueChange={(v) => setOption('showPnl', v)}
               />
               <SettingsSwitchRow
-                title="תשואה באחוזים"
+                title={i18n.t('auto.components__Journal__ExportTradeImage.s18')}
                 value={options.showReturn}
                 disabled={options.showReturn && !options.showPnl}
                 onValueChange={(v) => setOption('showReturn', v)}
               />
               <SettingsSwitchRow
-                title="מחירי כניסה ויציאה"
+                title={i18n.t('auto.components__Journal__ExportTradeImage.s19')}
                 value={options.showPrices}
                 showDivider={false}
                 onValueChange={(v) => setOption('showPrices', v)}
@@ -542,7 +543,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
 
         <View style={[styles.footer, { paddingBottom: footerPadBottom }]}>
           <UIButton
-            title={isExporting ? 'מייצא…' : 'שתף תמונה'}
+            title={isExporting ? i18n.t('auto.components__Journal__ExportTradeImage.s20') : i18n.t('auto.components__Journal__ExportTradeImage.s9')}
             variant="primary"
             icon="share-outline"
             fullWidth

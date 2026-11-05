@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import UICard from '../../../components/ui/UICard';
@@ -22,7 +23,7 @@ function fmtUsd(n: number): string {
   return `$${Math.round(n)}`;
 }
 const fmtRange = (r: { low: number; high: number }) => `${fmtUsd(r.low)}–${fmtUsd(r.high)}`;
-const HE_MONTHS = ['ינו׳', 'פבר׳', 'מרץ', 'אפר׳', 'מאי', 'יוני', 'יולי', 'אוג׳', 'ספט׳', 'אוק׳', 'נוב׳', 'דצמ׳'];
+const HE_MONTHS = [i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s1'), i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s2'), i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s3'), i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s4'), i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s5'), i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s6'), i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s7'), i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s8'), i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s9'), i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s10'), i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s11'), i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s12')];
 const fmtDate = (d: string) => d.split('-').reverse().join('.');
 
 type Tab = 'bought' | 'sold' | 'active';
@@ -46,30 +47,28 @@ export function TrumpActivitySection({
   return (
     <View>
       {/* סיכום */}
-      <Text style={styles.label}>פעילות מסחר מדווחת</Text>
+      <Text style={styles.label}>{i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s13')}</Text>
       <Text style={styles.period}>{toDataIsland(`${fmtDate(activity.from)} – ${fmtDate(activity.to)}`)}</Text>
       <View style={styles.statsRow}>
         <View style={styles.stat}>
           <Text style={styles.statValue}>{toDataIsland(activity.trade_count.toLocaleString('en-US'))}</Text>
-          <Text style={styles.statLabel}>עסקאות</Text>
+          <Text style={styles.statLabel}>{i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s14')}</Text>
         </View>
         <View style={styles.stat}>
           <Text style={[styles.statValue, { color: buyColor }]}>{toDataIsland(activity.buys.toLocaleString('en-US'))}</Text>
-          <Text style={styles.statLabel}>קניות</Text>
+          <Text style={styles.statLabel}>{i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s15')}</Text>
           <Text style={styles.statSub}>{toDataIsland(fmtRange(activity.buy))}</Text>
         </View>
         <View style={styles.stat}>
           <Text style={[styles.statValue, { color: sellColor }]}>{toDataIsland(activity.sells.toLocaleString('en-US'))}</Text>
-          <Text style={styles.statLabel}>מכירות</Text>
+          <Text style={styles.statLabel}>{i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s16')}</Text>
           <Text style={styles.statSub}>{toDataIsland(fmtRange(activity.sell))}</Text>
         </View>
       </View>
-      <Text style={styles.note}>
-        דיווחי OGE (טופס 278-T) מפרטים כל עסקה בטווח סכום ולא את היתרות — לכן לא מוצג שווי תיק, רק מה שנקנה ונמכר.
-      </Text>
+      <Text style={styles.note}>{i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s17')}</Text>
 
       {/* לפי חודש */}
-      <Text style={styles.sectionTitle}>לפי חודש</Text>
+      <Text style={styles.sectionTitle}>{i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s18')}</Text>
       <UICard variant="soft" padding="md" style={styles.card}>
         {activity.monthly.map((m) => (
           <View key={m.month} style={styles.monthRow}>
@@ -88,20 +87,20 @@ export function TrumpActivitySection({
         ))}
         <View style={styles.legend}>
           <View style={[styles.legendDot, { backgroundColor: buyColor }]} />
-          <Text style={styles.legendText}>קניות</Text>
+          <Text style={styles.legendText}>{i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s15')}</Text>
           <View style={[styles.legendDot, { backgroundColor: sellColor, marginRight: 12 }]} />
-          <Text style={styles.legendText}>מכירות</Text>
+          <Text style={styles.legendText}>{i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s16')}</Text>
         </View>
       </UICard>
 
       {/* מניות */}
-      <Text style={styles.sectionTitle}>מניות</Text>
+      <Text style={styles.sectionTitle}>{i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s19')}</Text>
       <View style={styles.tabs}>
         {(
           [
-            ['bought', 'נקנו הכי הרבה'],
-            ['sold', 'נמכרו הכי הרבה'],
-            ['active', 'הכי פעילות'],
+            ['bought', i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s20')],
+            ['sold', i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s21')],
+            ['active', i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s22')],
           ] as Array<[Tab, string]>
         ).map(([k, label]) => (
           <Pressable
@@ -134,10 +133,10 @@ export function TrumpActivitySection({
                 <Text style={styles.rowTicker}>{t.ticker}</Text>
                 <Text style={styles.rowSub}>
                   {tab === 'active'
-                    ? `${t.buys} קניות · ${t.sells} מכירות`
+                    ? i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s23', { v0: t.buys, v1: t.sells })
                     : tab === 'bought'
-                      ? `${t.buys} קניות`
-                      : `${t.sells} מכירות`}
+                      ? i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s24', { v0: t.buys })
+                      : i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s25', { v0: t.sells })}
                 </Text>
               </View>
               <Text style={[styles.rowAmount, range ? { color: tab === 'sold' ? sellColor : buyColor } : null]}>

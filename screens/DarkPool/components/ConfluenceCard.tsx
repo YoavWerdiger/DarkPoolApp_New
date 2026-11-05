@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 /**
  * קונפלוונס בכיר + דארק פול — UICard עם מסגרת accent.
  */
@@ -30,7 +31,7 @@ export function ConfluenceCard({ signal, onPress }: ConfluenceCardProps) {
   const tokens = useDesignTokens();
   const h = useMemo(() => darkPoolHeaderStyles(tokens), [tokens]);
   const sc = scoreColor(signal.score, tokens);
-  const insider = signal.metrics?.insider_name || 'בכיר';
+  const insider = signal.metrics?.insider_name || i18n.t('auto.screens__DarkPool__components__ConfluenceCard.s1');
   const days = signal.metrics?.insider_days_ago ?? 0;
   const relVol =
     signal.metrics?.relative_volume != null
@@ -41,7 +42,7 @@ export function ConfluenceCard({ signal, onPress }: ConfluenceCardProps) {
     <DarkPoolFeedCard
       accent
       onPress={onPress ? () => onPress(signal.ticker) : undefined}
-      accessibilityLabel={`קונפלוונס ${signal.ticker}`}
+      accessibilityLabel={i18n.t('auto.screens__DarkPool__components__ConfluenceCard.s2', { v0: signal.ticker })}
     >
       <View style={h.header}>
         <TickerLogo symbol={signal.ticker} size={40} borderRadius={12} />
@@ -49,7 +50,7 @@ export function ConfluenceCard({ signal, onPress }: ConfluenceCardProps) {
           <View style={h.titleRow}>
             <Text style={h.ticker}>{signal.ticker}</Text>
             <View style={h.badge}>
-              <Text style={h.badgeText}>קונפלוונס</Text>
+              <Text style={h.badgeText}>{i18n.t('auto.screens__DarkPool__components__ConfluenceCard.s3')}</Text>
             </View>
           </View>
           <Text style={h.subtitle} numberOfLines={1}>
@@ -58,25 +59,25 @@ export function ConfluenceCard({ signal, onPress }: ConfluenceCardProps) {
         </View>
         <View style={h.scoreBox}>
           <Text style={[h.scoreNum, { color: sc }]}>{Math.round(signal.score)}</Text>
-          <Text style={h.scoreLbl}>ציון</Text>
+          <Text style={h.scoreLbl}>{i18n.t('auto.screens__DarkPool__components__ConfluenceCard.s4')}</Text>
         </View>
       </View>
 
       <DarkPoolMetricsGrid tokens={tokens}>
         <DarkPoolMetricCell
           tokens={tokens}
-          label="רכישת בכיר"
+          label={i18n.t('auto.screens__DarkPool__components__ConfluenceCard.s5')}
           value={formatUsdCompact(signal.metrics?.insider_value)}
         />
         <DarkPoolMetricCell
           tokens={tokens}
-          label="דארק פול"
+          label={i18n.t('auto.screens__DarkPool__components__ConfluenceCard.s6')}
           value={formatUsdCompact(signal.metrics?.premium_total)}
         />
-        <DarkPoolMetricCell tokens={tokens} label="לפני" value={`${days} ימ׳`} />
+        <DarkPoolMetricCell tokens={tokens} label={i18n.t('auto.screens__DarkPool__components__ConfluenceCard.s7')} value={i18n.t('auto.screens__DarkPool__components__ConfluenceCard.s8', { v0: days })} />
         <DarkPoolMetricCell
           tokens={tokens}
-          label="מול ממוצע"
+          label={i18n.t('auto.screens__DarkPool__components__ConfluenceCard.s9')}
           value={relVol}
           valueColor={
             signal.metrics?.relative_volume != null

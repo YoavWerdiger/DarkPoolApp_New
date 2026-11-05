@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import { JournalListSkeleton } from '../../../components/ui/SkeletonLoader';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -101,19 +102,19 @@ export default function TransactionsTab({
   const handleDelete = useCallback(
     (tx: PortfolioTransaction) => {
       legacyAlert(
-        'מחיקת טרנזקציה',
-        'הפעולה תעדכן את הסיכומים בתיק. האם להמשיך?',
+        i18n.t('auto.screens__Portfolios__tabs__TransactionsTab.s1'),
+        i18n.t('auto.screens__Portfolios__tabs__TransactionsTab.s2'),
         [
-          { text: 'ביטול', style: 'cancel' },
+          { text: i18n.t('auto.screens__Portfolios__tabs__TransactionsTab.s3'), style: 'cancel' },
           {
-            text: 'מחק',
+            text: i18n.t('auto.screens__Portfolios__tabs__TransactionsTab.s4'),
             style: 'destructive',
             onPress: async () => {
               try {
                 await deleteTransaction(tx.id);
                 await load();
               } catch {
-                legacyAlert('שגיאה', 'מחיקה נכשלה');
+                legacyAlert(i18n.t('auto.screens__Portfolios__tabs__TransactionsTab.s5'), i18n.t('auto.screens__Portfolios__tabs__TransactionsTab.s6'));
               }
             },
           },
@@ -245,11 +246,11 @@ export default function TransactionsTab({
           size={42}
           color={tokens.colors.text.tertiary}
         />
-        <Text style={styles.emptyTitle}>אין טרנזקציות</Text>
+        <Text style={styles.emptyTitle}>{i18n.t('auto.screens__Portfolios__tabs__TransactionsTab.s7')}</Text>
         <Text style={styles.emptyText}>
           {readOnly
-            ? 'בתיק הזה אין טרנזקציות להצגה או שאין גישה לרשימה.'
-            : 'הוסף עסקה ראשונה (קנייה / הפקדה) כדי לראות אותה כאן.'}
+            ? i18n.t('auto.screens__Portfolios__tabs__TransactionsTab.s8')
+            : i18n.t('auto.screens__Portfolios__tabs__TransactionsTab.s9')}
         </Text>
         {!readOnly ? (
           <TouchableOpacity
@@ -261,7 +262,7 @@ export default function TransactionsTab({
             activeOpacity={0.85}
           >
             <Ionicons name="add" size={18} color={tokens.colors.text.inverse} />
-            <Text style={styles.emptyBtnText}>הוסף טרנזקציה</Text>
+            <Text style={styles.emptyBtnText}>{i18n.t('auto.screens__Portfolios__tabs__TransactionsTab.s10')}</Text>
           </TouchableOpacity>
         ) : null}
       </View>

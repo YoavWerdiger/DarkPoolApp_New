@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { memo, useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useDesignTokens } from '../ui/DesignTokens';
@@ -35,25 +36,25 @@ const DayDivider: React.FC<DayDividerProps> = memo(({ date }) => {
       date.getUTCDate() === yesterday.getUTCDate();
 
     if (isToday) {
-      return 'היום';
+      return i18n.t('auto.components__chat__DayDivider.s1');
     }
     if (isYesterday) {
-      return 'אתמול';
+      return i18n.t('auto.components__chat__DayDivider.s2');
     }
 
     if (date.getUTCFullYear() === now.getUTCFullYear()) {
       const months = [
-        'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
-        'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'
+        i18n.t('auto.components__chat__DayDivider.s3'), i18n.t('auto.components__chat__DayDivider.s4'), i18n.t('auto.components__chat__DayDivider.s5'), i18n.t('auto.components__chat__DayDivider.s6'), i18n.t('auto.components__chat__DayDivider.s7'), i18n.t('auto.components__chat__DayDivider.s8'),
+        i18n.t('auto.components__chat__DayDivider.s9'), i18n.t('auto.components__chat__DayDivider.s10'), i18n.t('auto.components__chat__DayDivider.s11'), i18n.t('auto.components__chat__DayDivider.s12'), i18n.t('auto.components__chat__DayDivider.s13'), i18n.t('auto.components__chat__DayDivider.s14')
       ];
-      return `${date.getUTCDate()} ב${months[date.getUTCMonth()]}`;
+      return i18n.t('auto.components__chat__DayDivider.s15', { v0: date.getUTCDate(), v1: months[date.getUTCMonth()] });
     }
 
     const months = [
-      'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
-      'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'
+      i18n.t('auto.components__chat__DayDivider.s3'), i18n.t('auto.components__chat__DayDivider.s4'), i18n.t('auto.components__chat__DayDivider.s5'), i18n.t('auto.components__chat__DayDivider.s6'), i18n.t('auto.components__chat__DayDivider.s7'), i18n.t('auto.components__chat__DayDivider.s8'),
+      i18n.t('auto.components__chat__DayDivider.s9'), i18n.t('auto.components__chat__DayDivider.s10'), i18n.t('auto.components__chat__DayDivider.s11'), i18n.t('auto.components__chat__DayDivider.s12'), i18n.t('auto.components__chat__DayDivider.s13'), i18n.t('auto.components__chat__DayDivider.s14')
     ];
-    return `${date.getUTCDate()} ב${months[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
+    return i18n.t('auto.components__chat__DayDivider.s16', { v0: date.getUTCDate(), v1: months[date.getUTCMonth()], v2: date.getUTCFullYear() });
   };
 
   return (

@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useEffect, useRef, useMemo } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { useDesignTokens } from '../ui/DesignTokens';
@@ -67,10 +68,10 @@ function ChatTypingIndicator({ typingUsers }: ChatTypingIndicatorProps) {
 
   const typingText =
     typingUsers.length === 1
-      ? `${typingUsers[0].user?.display_name ?? 'מישהו'} מקליד...`
+      ? i18n.t('auto.components__chat__ChatTypingIndicator.s1', { v0: typingUsers[0].user?.display_name ?? 'מישהו' })
       : typingUsers.length === 2
-      ? `${typingUsers[0].user?.display_name ?? 'מישהו'} ו-${typingUsers[1].user?.display_name ?? 'מישהו'} מקלידים...`
-      : `${typingUsers.length} משתמשים מקלידים...`;
+      ? i18n.t('auto.components__chat__ChatTypingIndicator.s2', { v0: typingUsers[0].user?.display_name ?? 'מישהו', v1: typingUsers[1].user?.display_name ?? 'מישהו' })
+      : i18n.t('auto.components__chat__ChatTypingIndicator.s3', { v0: typingUsers.length });
 
   return (
     <Animated.View

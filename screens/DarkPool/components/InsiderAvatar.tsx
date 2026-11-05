@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import React, { memo, useState } from 'react';
 import { StyleSheet, View, type ImageSourcePropType } from 'react-native';
 import { Image } from 'expo-image';
@@ -26,7 +27,7 @@ export const InsiderAvatar = memo(function InsiderAvatar({
   const tokens = useDesignTokens();
   const [failed, setFailed] = useState(false);
   const radius = size / 2;
-  const label = name?.trim() || 'משקיע';
+  const label = name?.trim() || i18n.t('auto.screens__DarkPool__components__InsiderAvatar.s1');
   const face = logoUrl && looksLikePersonPhoto(logoUrl) ? logoUrl : null;
   const showFace = Boolean(face && !failed);
   const raw = showFace ? face! : INVESTOR_PORTRAIT_PLACEHOLDER_URI;

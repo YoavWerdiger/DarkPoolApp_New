@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 /**
  * הסבר קצר על הניווט — מופיע בפיד ובגילוי.
  */
@@ -24,10 +25,10 @@ export function DarkPoolNavHint({ variant = 'feed' }: Props) {
   const lines =
     variant === 'feed'
       ? [
-          'תמונה / שם → פרופיל המשקיע',
-          'שורת המניה → עסקאות Form 4 באותו טיקר',
+          i18n.t('auto.screens__DarkPool__components__DarkPoolNavHint.s1'),
+          i18n.t('auto.screens__DarkPool__components__DarkPoolNavHint.s2'),
         ]
-      : ['חפשו או בחרו משקיע → עקבו → הפעילות תופיע ב«מעקב»'];
+      : [i18n.t('auto.screens__DarkPool__components__DarkPoolNavHint.s3')];
 
   return (
     <UICard variant="soft" glassIntensity="subtle" padding="none" style={styles.wrap}>

@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 /**
  * הדפסת לווייתן — UICard glass.
  */
@@ -23,15 +24,15 @@ interface WhaleCardProps {
 }
 
 const SIDE_HE: Record<string, string> = {
-  buy: 'קנייה',
-  sell: 'מכירה',
-  unknown: 'דארק פול',
+  buy: i18n.t('auto.screens__DarkPool__components__WhaleCard.s1'),
+  sell: i18n.t('auto.screens__DarkPool__components__WhaleCard.s2'),
+  unknown: i18n.t('auto.screens__DarkPool__components__WhaleCard.s3'),
 };
 
 export function WhaleCard({ trade, onPress }: WhaleCardProps) {
   const tokens = useDesignTokens();
   const h = useMemo(() => darkPoolHeaderStyles(tokens), [tokens]);
-  const sideLabel = SIDE_HE[trade.side || 'unknown'] || 'דארק פול';
+  const sideLabel = SIDE_HE[trade.side || 'unknown'] || i18n.t('auto.screens__DarkPool__components__WhaleCard.s3');
   const sideColor =
     trade.side === 'buy'
       ? tokens.colors.primary.main
@@ -42,7 +43,7 @@ export function WhaleCard({ trade, onPress }: WhaleCardProps) {
   return (
     <DarkPoolFeedCard
       onPress={onPress ? () => onPress(trade.ticker) : undefined}
-      accessibilityLabel={`הדפסה ${trade.ticker}`}
+      accessibilityLabel={i18n.t('auto.screens__DarkPool__components__WhaleCard.s4', { v0: trade.ticker })}
     >
       <View style={h.header}>
         <TickerLogo symbol={trade.ticker} size={40} borderRadius={12} />
@@ -54,7 +55,7 @@ export function WhaleCard({ trade, onPress }: WhaleCardProps) {
             </View>
           </View>
           <Text style={h.subtitle} numberOfLines={1}>
-            {trade.company_name?.trim() || 'הדפסת לווייתן'}
+            {trade.company_name?.trim() || i18n.t('auto.screens__DarkPool__components__WhaleCard.s5')}
           </Text>
         </View>
         <Ionicons name="water" size={22} color={tokens.colors.primary.main} />
@@ -63,22 +64,22 @@ export function WhaleCard({ trade, onPress }: WhaleCardProps) {
       <DarkPoolMetricsGrid tokens={tokens}>
         <DarkPoolMetricCell
           tokens={tokens}
-          label="פרימיום"
+          label={i18n.t('auto.screens__DarkPool__components__WhaleCard.s6')}
           value={formatUsdCompact(trade.premium)}
         />
         <DarkPoolMetricCell
           tokens={tokens}
-          label="כמות"
+          label={i18n.t('auto.screens__DarkPool__components__WhaleCard.s7')}
           value={Number(trade.size).toLocaleString('en-US')}
         />
         <DarkPoolMetricCell
           tokens={tokens}
-          label="מחיר"
+          label={i18n.t('auto.screens__DarkPool__components__WhaleCard.s8')}
           value={`$${Number(trade.price).toFixed(2)}`}
         />
         <DarkPoolMetricCell
           tokens={tokens}
-          label="זמן"
+          label={i18n.t('auto.screens__DarkPool__components__WhaleCard.s9')}
           value={formatRelativeTime(trade.ts) || '—'}
         />
       </DarkPoolMetricsGrid>

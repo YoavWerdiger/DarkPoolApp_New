@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { legacyAlert } from '../../utils/appDialog';
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
@@ -58,7 +59,7 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        legacyAlert('אישור נדרש', 'אנא אשר גישה למצלמה');
+        legacyAlert(i18n.t('auto.components__chat__MediaPicker.s1'), i18n.t('auto.components__chat__MediaPicker.s2'));
         return;
       }
 
@@ -75,7 +76,7 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
         onClose();
       }
     } catch (error) {
-      legacyAlert('שגיאה', 'שגיאה בצילום התמונה');
+      legacyAlert(i18n.t('auto.components__chat__MediaPicker.s3'), i18n.t('auto.components__chat__MediaPicker.s4'));
     }
   };
 
@@ -84,7 +85,7 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        legacyAlert('אישור נדרש', 'אנא אשר גישה לגלריה');
+        legacyAlert(i18n.t('auto.components__chat__MediaPicker.s1'), i18n.t('auto.components__chat__MediaPicker.s5'));
         return;
       }
 
@@ -100,7 +101,7 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
         onClose();
       }
     } catch (error) {
-      legacyAlert('שגיאה', 'שגיאה בבחירת התמונה');
+      legacyAlert(i18n.t('auto.components__chat__MediaPicker.s3'), i18n.t('auto.components__chat__MediaPicker.s6'));
     }
   };
 
@@ -109,7 +110,7 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        legacyAlert('אישור נדרש', 'אנא אשר גישה למצלמה');
+        legacyAlert(i18n.t('auto.components__chat__MediaPicker.s1'), i18n.t('auto.components__chat__MediaPicker.s2'));
         return;
       }
 
@@ -126,7 +127,7 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
         onClose();
       }
     } catch (error) {
-      legacyAlert('שגיאה', 'שגיאה בצילום הוידאו');
+      legacyAlert(i18n.t('auto.components__chat__MediaPicker.s3'), i18n.t('auto.components__chat__MediaPicker.s7'));
     }
   };
 
@@ -144,7 +145,7 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
         onClose();
       }
     } catch (error) {
-      legacyAlert('שגיאה', 'שגיאה בבחירת הקובץ');
+      legacyAlert(i18n.t('auto.components__chat__MediaPicker.s3'), i18n.t('auto.components__chat__MediaPicker.s8'));
     }
   };
 
@@ -162,7 +163,7 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
         onClose();
       }
     } catch (error) {
-      legacyAlert('שגיאה', 'לא ניתן לבחור קובץ אודיו');
+      legacyAlert(i18n.t('auto.components__chat__MediaPicker.s3'), i18n.t('auto.components__chat__MediaPicker.s9'));
     }
   };
 
@@ -170,37 +171,37 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
   const mediaOptions = [
     {
       icon: 'camera' as keyof typeof Ionicons.glyphMap,
-      title: 'מצלמה',
+      title: i18n.t('auto.components__chat__MediaPicker.s10'),
       action: 'camera',
       gradient: ['#FF2D55', '#FF375F'], // iOS Pink
     },
     {
       icon: 'images' as keyof typeof Ionicons.glyphMap,
-      title: 'גלריה',
+      title: i18n.t('auto.components__chat__MediaPicker.s11'),
       action: 'gallery',
       gradient: ['#34C759', '#30D158'], // iOS Green
     },
     {
       icon: 'videocam' as keyof typeof Ionicons.glyphMap,
-      title: 'וידאו',
+      title: i18n.t('auto.components__chat__MediaPicker.s12'),
       action: 'video',
       gradient: ['#AF52DE', '#BF5AF2'], // iOS Purple
     },
     {
       icon: 'document-text' as keyof typeof Ionicons.glyphMap,
-      title: 'קובץ',
+      title: i18n.t('auto.components__chat__MediaPicker.s13'),
       action: 'document',
       gradient: ['#007AFF', '#0A84FF'], // iOS Blue
     },
     {
       icon: 'musical-notes' as keyof typeof Ionicons.glyphMap,
-      title: 'אודיו',
+      title: i18n.t('auto.components__chat__MediaPicker.s14'),
       action: 'audio',
       gradient: ['#FF9500', '#FF9F0A'], // iOS Orange
     },
     {
       icon: 'stats-chart' as keyof typeof Ionicons.glyphMap,
-      title: 'סקר',
+      title: i18n.t('auto.components__chat__MediaPicker.s15'),
       action: 'poll',
       gradient: ['#5AC8FA', '#64D2FF'], // iOS Cyan
     },
@@ -261,7 +262,7 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
   return (
     <ChatBottomSheet visible={visible} onClose={onClose} snapPoints={[0.38]} showBrandWatermark={false}>
       <View style={styles.container}>
-        <ChatSheetTitle title="שתף" />
+        <ChatSheetTitle title={i18n.t('auto.components__chat__MediaPicker.s16')} />
         <View style={styles.optionsGrid}>
           {mediaOptions.map((option) => (
             <View key={option.action} style={styles.optionItem}>

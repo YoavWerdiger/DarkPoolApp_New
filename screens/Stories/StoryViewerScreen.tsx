@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 /**
  * צופה הסטוריז — מסך ניווט (transparentModal בסטאק הראשי).
  *
@@ -560,7 +561,7 @@ export default function StoryViewerScreen() {
       p.value = nextCur;
     } catch (err) {
       logger.error('StoryViewerScreen', 'Delete failed', err);
-      setConfirmDelete({ visible: true, error: 'לא הצלחנו למחוק. נסה שוב.' });
+      setConfirmDelete({ visible: true, error: i18n.t('auto.screens__Stories__StoryViewerScreen.s1') });
     } finally {
       setDeleting(false);
     }
@@ -697,7 +698,7 @@ export default function StoryViewerScreen() {
   /* ── רינדור ── */
   const userInfo = (id: string) => {
     const u = getStoryViewerUser(id)?.user;
-    return { name: u?.display_name || u?.full_name || 'משתמש', avatar: u?.profile_picture ?? null };
+    return { name: u?.display_name || u?.full_name || i18n.t('auto.screens__Stories__StoryViewerScreen.s2'), avatar: u?.profile_picture ?? null };
   };
 
   /** מדיה של סטורי — אותו רכיב לפאה פעילה ולשכנה (key לפי סטורי → בלי טעינה מחדש במעבר) */
@@ -803,7 +804,7 @@ export default function StoryViewerScreen() {
               style={[styles.actionBtnRound, { backgroundColor: designTokens.colors.background.primary }]}
               onPress={openViewersSheet}
               activeOpacity={0.75}
-              accessibilityLabel="צפיות"
+              accessibilityLabel={i18n.t('auto.screens__Stories__StoryViewerScreen.s3')}
             >
               <Ionicons name="eye-outline" size={20} color={designTokens.colors.text.primary} />
             </TouchableOpacity>
@@ -811,7 +812,7 @@ export default function StoryViewerScreen() {
               style={[styles.actionBtnRound, { backgroundColor: designTokens.colors.background.primary }]}
               onPress={openDeleteConfirm}
               activeOpacity={0.75}
-              accessibilityLabel="מחיקת הסטורי"
+              accessibilityLabel={i18n.t('auto.screens__Stories__StoryViewerScreen.s4')}
             >
               <Ionicons name="trash-outline" size={20} color={designTokens.colors.danger.main} />
             </TouchableOpacity>
@@ -877,7 +878,7 @@ export default function StoryViewerScreen() {
           {active && mediaFailed && (
             <View style={[styles.center, StyleSheet.absoluteFill]}>
               <Ionicons name="cloud-offline-outline" size={48} color="rgba(255,255,255,0.4)" />
-              <Text style={styles.errorText}>שגיאה בטעינת המדיה</Text>
+              <Text style={styles.errorText}>{i18n.t('auto.screens__Stories__StoryViewerScreen.s5')}</Text>
             </View>
           )}
         </View>
@@ -903,7 +904,7 @@ export default function StoryViewerScreen() {
         <StatusBar hidden />
         <Pressable style={[styles.center, styles.emptyRoot]} onPress={close}>
           <Ionicons name={loadError ? 'cloud-offline-outline' : 'images-outline'} size={48} color="rgba(255,255,255,0.3)" />
-          <Text style={styles.emptyText}>{loadError ? 'שגיאה בטעינת הסטטוס' : 'אין סטטוסים'}</Text>
+          <Text style={styles.emptyText}>{loadError ? i18n.t('auto.screens__Stories__StoryViewerScreen.s6') : i18n.t('auto.screens__Stories__StoryViewerScreen.s7')}</Text>
         </Pressable>
       </GestureHandlerRootView>
     );
@@ -946,7 +947,7 @@ export default function StoryViewerScreen() {
           style={[styles.closeHit, { top: insets.top + 10 + 3.5 + 12 - 4 }]}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           accessibilityRole="button"
-          accessibilityLabel="סגור סטטוס"
+          accessibilityLabel={i18n.t('auto.screens__Stories__StoryViewerScreen.s8')}
         />
         <Reanimated.View style={[StyleSheet.absoluteFill, chromeAnim]} pointerEvents="box-none">
           {renderBottom()}
@@ -968,13 +969,13 @@ export default function StoryViewerScreen() {
 
       <InlineAppDialog
         visible={confirmDelete.visible}
-        title="מחיקת סטטוס"
-        message={confirmDelete.error || 'האם למחוק את הסטטוס? לא ניתן לשחזר.'}
+        title={i18n.t('auto.screens__Stories__StoryViewerScreen.s9')}
+        message={confirmDelete.error || i18n.t('auto.screens__Stories__StoryViewerScreen.s10')}
         icon="trash-outline"
         onBackdropPress={deleting ? undefined : closeDeleteConfirm}
         buttons={[
-          { text: 'מחק', style: 'destructive', onPress: () => void confirmDeleteStory(), loading: deleting },
-          { text: 'ביטול', style: 'cancel', onPress: closeDeleteConfirm },
+          { text: i18n.t('auto.screens__Stories__StoryViewerScreen.s11'), style: 'destructive', onPress: () => void confirmDeleteStory(), loading: deleting },
+          { text: i18n.t('auto.screens__Stories__StoryViewerScreen.s12'), style: 'cancel', onPress: closeDeleteConfirm },
         ]}
       />
     </GestureHandlerRootView>

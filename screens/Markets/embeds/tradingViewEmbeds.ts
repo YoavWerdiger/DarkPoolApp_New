@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 
 export type MarketsTokens = ReturnType<typeof useDesignTokens>;
@@ -156,14 +157,14 @@ export function getTradingViewMarketOverviewHTML(tokens: MarketsTokens) {
     symbolActiveColor: hexToRgba(growing, 0.12),
     tabs: [
       {
-        title: 'מדדים',
+        title: i18n.t('auto.screens__Markets__embeds__tradingViewEmbeds.s1'),
         symbols: [
-          { s: 'FOREXCOM:SPXUSD', d: 'מדד ה-S&P 500' },
-          { s: 'FOREXCOM:NSXUSD', d: 'מדד ה-Nasdaq 100' },
-          { s: 'FOREXCOM:DJI', d: 'מדד ה-Dow Jones' },
+          { s: 'FOREXCOM:SPXUSD', d: i18n.t('auto.screens__Markets__embeds__tradingViewEmbeds.s2') },
+          { s: 'FOREXCOM:NSXUSD', d: i18n.t('auto.screens__Markets__embeds__tradingViewEmbeds.s3') },
+          { s: 'FOREXCOM:DJI', d: i18n.t('auto.screens__Markets__embeds__tradingViewEmbeds.s4') },
           {
             s: 'CAPITALCOM:RTY',
-            d: 'מדד ה- Russell 2000',
+            d: i18n.t('auto.screens__Markets__embeds__tradingViewEmbeds.s5'),
             logoid: 'indices/russell-2000',
             'currency-logoid': 'country/US',
           },
@@ -172,41 +173,41 @@ export function getTradingViewMarketOverviewHTML(tokens: MarketsTokens) {
         originalTitle: 'Bonds',
       },
       {
-        title: 'חוזים עתידיים',
+        title: i18n.t('auto.screens__Markets__embeds__tradingViewEmbeds.s6'),
         symbols: [
-          { s: 'CME_MINI:ES1!', d: 'חוזים עתיידים על ה-S&P 500' },
-          { s: 'CME_MINI:NQ1!', d: 'חוזים עתידיים על ה- Nasdaq 100' },
-          { s: 'CBOT_MINI:YM1!', d: 'חוזים עתידיים על ה- Dow Jones' },
-          { s: 'CME_MINI:RTY1!', d: 'חוזים עתידיים על ה- Russelle 2000' },
+          { s: 'CME_MINI:ES1!', d: i18n.t('auto.screens__Markets__embeds__tradingViewEmbeds.s7') },
+          { s: 'CME_MINI:NQ1!', d: i18n.t('auto.screens__Markets__embeds__tradingViewEmbeds.s8') },
+          { s: 'CBOT_MINI:YM1!', d: i18n.t('auto.screens__Markets__embeds__tradingViewEmbeds.s9') },
+          { s: 'CME_MINI:RTY1!', d: i18n.t('auto.screens__Markets__embeds__tradingViewEmbeds.s10') },
         ],
       },
       {
-        title: 'קריפטו ',
+        title: i18n.t('auto.screens__Markets__embeds__tradingViewEmbeds.s11'),
         symbols: [
-          { s: 'BINANCE:BTCUSDT', d: 'ביטקוין', 'base-currency-logoid': 'crypto/XTVCBTC', 'currency-logoid': 'crypto/XTVCUSDT' },
-          { s: 'BINANCE:ETHUSDT', d: 'אית׳ריום', 'base-currency-logoid': 'crypto/XTVCETH', 'currency-logoid': 'crypto/XTVCUSDT' },
-          { s: 'BINANCE:XRPUSDT', d: 'אקס-אר-פי', 'base-currency-logoid': 'crypto/XTVCXRP', 'currency-logoid': 'crypto/XTVCUSDT' },
-          { s: 'BINANCE:SOLUSDT', d: 'סולנה', 'base-currency-logoid': 'crypto/XTVCSOL', 'currency-logoid': 'crypto/XTVCUSDT' },
-          { s: 'VANTAGE:BTCETH', d: 'ביטקוין מול איתריום (דומיננטיות)', 'base-currency-logoid': 'crypto/XTVCBTC', 'currency-logoid': 'crypto/XTVCETH' },
+          { s: 'BINANCE:BTCUSDT', d: i18n.t('auto.screens__Markets__embeds__tradingViewEmbeds.s12'), 'base-currency-logoid': 'crypto/XTVCBTC', 'currency-logoid': 'crypto/XTVCUSDT' },
+          { s: 'BINANCE:ETHUSDT', d: i18n.t('auto.screens__Markets__embeds__tradingViewEmbeds.s13'), 'base-currency-logoid': 'crypto/XTVCETH', 'currency-logoid': 'crypto/XTVCUSDT' },
+          { s: 'BINANCE:XRPUSDT', d: i18n.t('auto.screens__Markets__embeds__tradingViewEmbeds.s14'), 'base-currency-logoid': 'crypto/XTVCXRP', 'currency-logoid': 'crypto/XTVCUSDT' },
+          { s: 'BINANCE:SOLUSDT', d: i18n.t('auto.screens__Markets__embeds__tradingViewEmbeds.s15'), 'base-currency-logoid': 'crypto/XTVCSOL', 'currency-logoid': 'crypto/XTVCUSDT' },
+          { s: 'VANTAGE:BTCETH', d: i18n.t('auto.screens__Markets__embeds__tradingViewEmbeds.s16'), 'base-currency-logoid': 'crypto/XTVCBTC', 'currency-logoid': 'crypto/XTVCETH' },
         ],
       },
       {
-        title: 'סחורות ',
+        title: i18n.t('auto.screens__Markets__embeds__tradingViewEmbeds.s17'),
         symbols: [
-          { s: 'OANDA:XAUUSD', d: 'זהב', logoid: 'metal/gold', 'currency-logoid': 'country/US' },
-          { s: 'TVC:SILVER', d: 'סילבר', logoid: 'metal/silver', 'currency-logoid': 'country/US' },
-          { s: 'MATBAROFEX:WTI1!', d: 'נפט' },
-          { s: 'SKILLING:NATGAS', d: 'גז טבעי', logoid: 'natural-gas', 'currency-logoid': 'country/US' },
+          { s: 'OANDA:XAUUSD', d: i18n.t('auto.screens__Markets__embeds__tradingViewEmbeds.s18'), logoid: 'metal/gold', 'currency-logoid': 'country/US' },
+          { s: 'TVC:SILVER', d: i18n.t('auto.screens__Markets__embeds__tradingViewEmbeds.s19'), logoid: 'metal/silver', 'currency-logoid': 'country/US' },
+          { s: 'MATBAROFEX:WTI1!', d: i18n.t('auto.screens__Markets__embeds__tradingViewEmbeds.s20') },
+          { s: 'SKILLING:NATGAS', d: i18n.t('auto.screens__Markets__embeds__tradingViewEmbeds.s21'), logoid: 'natural-gas', 'currency-logoid': 'country/US' },
         ],
       },
       {
-        title: 'מט״ח',
+        title: i18n.t('auto.screens__Markets__embeds__tradingViewEmbeds.s22'),
         symbols: [
-          { s: 'OANDA:EURUSD', d: 'יורו / דולר אמריקאי', 'base-currency-logoid': 'country/EU', 'currency-logoid': 'country/US' },
-          { s: 'OANDA:USDJPY', d: 'דולר אמריקאי / ין יפני', 'base-currency-logoid': 'country/US', 'currency-logoid': 'country/JP' },
-          { s: 'OANDA:GBPUSD', d: 'ליש"ט / דולר אמריקאי', 'base-currency-logoid': 'country/GB', 'currency-logoid': 'country/US' },
-          { s: 'OANDA:AUDUSD', d: 'דולר אוסטרלי / דולר אמריקאי', 'base-currency-logoid': 'country/AU', 'currency-logoid': 'country/US' },
-          { s: 'OANDA:USDCAD', d: 'דולר אמריקאי / דולר קנדי', 'base-currency-logoid': 'country/US', 'currency-logoid': 'country/CA' },
+          { s: 'OANDA:EURUSD', d: i18n.t('auto.screens__Markets__embeds__tradingViewEmbeds.s23'), 'base-currency-logoid': 'country/EU', 'currency-logoid': 'country/US' },
+          { s: 'OANDA:USDJPY', d: i18n.t('auto.screens__Markets__embeds__tradingViewEmbeds.s24'), 'base-currency-logoid': 'country/US', 'currency-logoid': 'country/JP' },
+          { s: 'OANDA:GBPUSD', d: i18n.t('auto.screens__Markets__embeds__tradingViewEmbeds.s25'), 'base-currency-logoid': 'country/GB', 'currency-logoid': 'country/US' },
+          { s: 'OANDA:AUDUSD', d: i18n.t('auto.screens__Markets__embeds__tradingViewEmbeds.s26'), 'base-currency-logoid': 'country/AU', 'currency-logoid': 'country/US' },
+          { s: 'OANDA:USDCAD', d: i18n.t('auto.screens__Markets__embeds__tradingViewEmbeds.s27'), 'base-currency-logoid': 'country/US', 'currency-logoid': 'country/CA' },
         ],
       },
     ],

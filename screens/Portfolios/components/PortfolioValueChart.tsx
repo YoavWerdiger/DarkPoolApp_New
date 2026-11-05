@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 import { appLocale } from '../../../lib/i18n/locale';
 import { LIGHT_CANVAS } from '../../../components/ui/designTokensStatic';
@@ -189,7 +190,7 @@ export function PortfolioValueChart({
   showBenchmark = false,
   showHeader = true,
   compactHeader = false,
-  headerTitle = 'שווי תיק',
+  headerTitle = i18n.t('auto.screens__Portfolios__components__PortfolioValueChart.s1'),
   headerTitleAlign = 'right',
   formatValue = defaultFormatValue,
   showPointMarkers = false,
@@ -843,7 +844,7 @@ export function PortfolioValueChart({
                     if (!isActive && available) void HapticFeedback.selection();
                     if (available) onPeriodChange(p);
                   }}
-                  accessibilityLabel={`טווח ${p}`}
+                  accessibilityLabel={i18n.t('auto.screens__Portfolios__components__PortfolioValueChart.s2', { v0: p })}
                 >
                   {p}
                 </DayDividerPill>

@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import React, { useMemo, useState } from 'react';
 import {
   LayoutChangeEvent,
@@ -41,7 +42,7 @@ export function TrendingInvestorCard({ person, onPress }: Props) {
   const metric =
     person.metric ??
     (person.activity_score != null ? String(person.activity_score) : null);
-  const metricLabel = person.metric_label ?? 'עסקאות';
+  const metricLabel = person.metric_label ?? i18n.t('auto.screens__DarkPool__components__TrendingInvestorCard.s1');
 
   const styles = useMemo(() => createStyles(tokens), [tokens]);
 
@@ -52,7 +53,7 @@ export function TrendingInvestorCard({ person, onPress }: Props) {
         onPress();
       }}
       accessibilityRole="button"
-      accessibilityLabel={`פרופיל ${person.name}`}
+      accessibilityLabel={i18n.t('auto.screens__DarkPool__components__TrendingInvestorCard.s2', { v0: person.name })}
       style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
     >
       <UICard
@@ -108,7 +109,7 @@ export function TrendingInvestorCard({ person, onPress }: Props) {
               />
             </Svg>
           ) : (
-            <Text style={styles.noChart}>שווי תיק</Text>
+            <Text style={styles.noChart}>{i18n.t('auto.screens__DarkPool__components__TrendingInvestorCard.s3')}</Text>
           )}
         </View>
       </UICard>

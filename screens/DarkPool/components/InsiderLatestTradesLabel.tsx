@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 /**
  * כותרת קומפקטית לפיד — כמו "LATEST TRADES" ב-Insider Wave (אותיות קטנות, ללא אייקון).
  */
@@ -16,7 +17,7 @@ interface Props {
   title?: string;
 }
 
-export function InsiderLatestTradesLabel({ count, title = 'עסקאות אחרונות' }: Props) {
+export function InsiderLatestTradesLabel({ count, title = i18n.t('auto.screens__DarkPool__components__InsiderLatestTradesLabel.s1') }: Props) {
   const tokens = useDesignTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
 

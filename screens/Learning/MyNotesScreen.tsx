@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
 import { legacyAlert } from '../../utils/appDialog';
@@ -102,9 +103,9 @@ export const MyNotesScreen: React.FC = () => {
     try {
       await Clipboard.setStringAsync(note.notes_content);
       void HapticFeedback.selection();
-      legacyAlert('הועתק', 'ההערה הועתקה ללוח');
+      legacyAlert(i18n.t('auto.screens__Learning__MyNotesScreen.s1'), i18n.t('auto.screens__Learning__MyNotesScreen.s2'));
     } catch {
-      legacyAlert('שגיאה', 'לא ניתן להעתיק את ההערה');
+      legacyAlert(i18n.t('auto.screens__Learning__MyNotesScreen.s3'), i18n.t('auto.screens__Learning__MyNotesScreen.s4'));
     }
   }, []);
 
@@ -120,7 +121,7 @@ export const MyNotesScreen: React.FC = () => {
           activeOpacity={0.88}
           style={styles.noteWrap}
           accessibilityRole="button"
-          accessibilityLabel={`הערה מ${item.lesson_title || 'שיעור'}`}
+          accessibilityLabel={i18n.t('auto.screens__Learning__MyNotesScreen.s5', { v0: item.lesson_title || 'שיעור' })}
         >
           <UICard
             variant="blur"
@@ -132,10 +133,10 @@ export const MyNotesScreen: React.FC = () => {
             <View style={styles.noteHeader}>
               <View style={styles.noteInfo}>
                 <Text style={styles.noteCourseTitle} numberOfLines={1}>
-                  {item.course_title || 'קורס ללא שם'}
+                  {item.course_title || i18n.t('auto.screens__Learning__MyNotesScreen.s6')}
                 </Text>
                 <Text style={styles.noteLessonTitle} numberOfLines={1}>
-                  {item.lesson_title || 'שיעור ללא שם'}
+                  {item.lesson_title || i18n.t('auto.screens__Learning__MyNotesScreen.s7')}
                 </Text>
               </View>
 
@@ -143,7 +144,7 @@ export const MyNotesScreen: React.FC = () => {
                 size={36}
                 glass
                 glassIntensity="subtle"
-                accessibilityLabel="העתק הערה"
+                accessibilityLabel={i18n.t('auto.screens__Learning__MyNotesScreen.s8')}
                 onPress={() => void handleCopyNote(item)}
                 style={styles.copyBtn}
               >
@@ -160,7 +161,7 @@ export const MyNotesScreen: React.FC = () => {
             </Text>
 
             {dateLabel ? (
-              <Text style={styles.noteDate}>עודכן · {dateLabel}</Text>
+              <Text style={styles.noteDate}>{i18n.t('auto.screens__Learning__MyNotesScreen.s9', { v0: dateLabel })}</Text>
             ) : null}
           </UICard>
         </TouchableOpacity>
@@ -178,11 +179,8 @@ export const MyNotesScreen: React.FC = () => {
           color={DesignTokens.colors.text.tertiary}
         />
       </View>
-      <Text style={styles.emptyTitle}>אין הערות עדיין</Text>
-      <Text style={styles.emptySubtitle}>
-        התחל לצפות בשיעורים וכתוב הערות{'\n'}
-        כדי לראות אותן כאן
-      </Text>
+      <Text style={styles.emptyTitle}>{i18n.t('auto.screens__Learning__MyNotesScreen.s10')}</Text>
+      <Text style={styles.emptySubtitle}>{i18n.t('auto.screens__Learning__MyNotesScreen.s11', { v0: '\n' })}</Text>
     </View>
   );
 
@@ -191,7 +189,7 @@ export const MyNotesScreen: React.FC = () => {
       <ScreenChrome>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-          <Text style={styles.loadingText}>טוען הערות...</Text>
+          <Text style={styles.loadingText}>{i18n.t('auto.screens__Learning__MyNotesScreen.s12')}</Text>
         </View>
       </ScreenChrome>
     );
@@ -202,8 +200,8 @@ export const MyNotesScreen: React.FC = () => {
       <SafeAreaView edges={['top']} style={styles.safeAreaContainer}>
         <AcademySubScreenBar
           onBackPress={() => navigation.goBack()}
-          title="ההערות שלי"
-          subtitle={`${notes.length} הערות`}
+          title={i18n.t('auto.screens__Learning__MyNotesScreen.s13')}
+          subtitle={i18n.t('auto.screens__Learning__MyNotesScreen.s14', { v0: notes.length })}
         />
 
         <View style={[styles.listShell, { marginBottom: Math.max(0, mainTabsHeight - 12) }]}>

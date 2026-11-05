@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 /**
  * תצוגה משותפת — שווי תיק + דונאט פילוח (צ'אט / ציוצים).
@@ -55,7 +56,7 @@ export function PortfolioSharePreview({
     <View style={styles.wrap}>
       {showValue ? (
         <View style={styles.valueBlock}>
-          <Text style={styles.valueLabel}>שווי תיק</Text>
+          <Text style={styles.valueLabel}>{i18n.t('auto.components__share__PortfolioSharePreview.s1')}</Text>
           <Text style={styles.valueAmount}>{portfolioValueLabel}</Text>
         </View>
       ) : null}

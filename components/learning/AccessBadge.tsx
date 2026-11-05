@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { AccessLevel } from '../../types/learning';
@@ -28,25 +29,25 @@ export const AccessBadge: React.FC<AccessBadgeProps> = ({ access }) => {
     switch (access) {
       case 'free':
         return {
-          text: 'חינם',
+          text: i18n.t('auto.components__learning__AccessBadge.s1'),
           backgroundColor: DesignTokens.colors.success.main,
           textColor: '#FFFFFF',
         };
       case 'registration':
         return {
-          text: 'הרשמה',
+          text: i18n.t('auto.components__learning__AccessBadge.s2'),
           backgroundColor: DesignTokens.colors.info.main,
           textColor: '#FFFFFF',
         };
       case 'paid':
         return {
-          text: 'בתשלום',
+          text: i18n.t('auto.components__learning__AccessBadge.s3'),
           backgroundColor: DesignTokens.colors.warning.main,
           textColor: '#FFFFFF',
         };
       default:
         return {
-          text: 'לא ידוע',
+          text: i18n.t('auto.components__learning__AccessBadge.s4'),
           backgroundColor: DesignTokens.colors.text.tertiary,
           textColor: '#FFFFFF',
         };

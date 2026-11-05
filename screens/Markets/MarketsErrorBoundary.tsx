@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { Component, type ErrorInfo, type ReactNode } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
@@ -27,8 +28,8 @@ class MarketsErrorBoundaryInner extends Component<
       const s = this.props.onGetStyles();
       return (
         <View style={s.container}>
-          <Text style={s.title}>שגיאה בטעינת השווקים</Text>
-          <Text style={s.body}>{this.state.message ?? 'נסה לחזור למסך מאוחר יותר.'}</Text>
+          <Text style={s.title}>{i18n.t('auto.screens__Markets__MarketsErrorBoundary.s1')}</Text>
+          <Text style={s.body}>{this.state.message ?? i18n.t('auto.screens__Markets__MarketsErrorBoundary.s2')}</Text>
         </View>
       );
     }

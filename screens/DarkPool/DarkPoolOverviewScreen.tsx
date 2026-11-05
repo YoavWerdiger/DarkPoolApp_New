@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 /**
  * טאב סקירה — מצב כללי של פיד הבכירים.
  */
@@ -84,7 +85,7 @@ export default function DarkPoolOverviewScreen() {
     return (
       <ScreenChrome>
         <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
-          <MainDrawerScreenHeader title="סקירה" onMenuPress={openDrawer} />
+          <MainDrawerScreenHeader title={i18n.t('auto.screens__DarkPool__DarkPoolOverviewScreen.s1')} onMenuPress={openDrawer} />
           <View style={styles.center}>
             <ActivityIndicator color={tokens.colors.primary.main} />
           </View>
@@ -97,8 +98,8 @@ export default function DarkPoolOverviewScreen() {
     <ScreenChrome>
       <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
         <MainDrawerScreenHeader
-          title="סקירה"
-          subtitle="מצב פיד רכישות בכירים"
+          title={i18n.t('auto.screens__DarkPool__DarkPoolOverviewScreen.s1')}
+          subtitle={i18n.t('auto.screens__DarkPool__DarkPoolOverviewScreen.s2')}
           onMenuPress={openDrawer}
         />
         <ScrollView
@@ -112,19 +113,19 @@ export default function DarkPoolOverviewScreen() {
           }
         >
           <View style={styles.grid}>
-            <StatCard label="עסקאות בפיד" value={String(stats.total)} />
-            <StatCard label="טיקרים" value={String(stats.tickers)} />
-            <StatCard label="מ-Form4" value={String(stats.form4)} />
-            <StatCard label="מ-UW" value={String(stats.uw)} />
-            <StatCard label="עם תמונת בכיר" value={String(stats.withPhoto)} />
+            <StatCard label={i18n.t('auto.screens__DarkPool__DarkPoolOverviewScreen.s3')} value={String(stats.total)} />
+            <StatCard label={i18n.t('auto.screens__DarkPool__DarkPoolOverviewScreen.s4')} value={String(stats.tickers)} />
+            <StatCard label={i18n.t('auto.screens__DarkPool__DarkPoolOverviewScreen.s5')} value={String(stats.form4)} />
+            <StatCard label={i18n.t('auto.screens__DarkPool__DarkPoolOverviewScreen.s6')} value={String(stats.uw)} />
+            <StatCard label={i18n.t('auto.screens__DarkPool__DarkPoolOverviewScreen.s7')} value={String(stats.withPhoto)} />
           </View>
           <UICard variant="soft" padding="md">
             <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
               <Ionicons name="sync-outline" size={18} color={tokens.colors.primary.main} />
               <Text style={styles.hint}>
-                הנתונים מתעדכנים מהשרת כל שעה (Form4 + Unusual Whales). משוך למטה לרענון.
+                {i18n.t('auto.screens__DarkPool__DarkPoolOverviewScreen.s8')}
                 {!DARK_POOL_FORM4_ONLY
-                  ? ' במצב מלא יוצגו גם הדפסות Dark Pool וסיגנלים.'
+                  ? i18n.t('auto.screens__DarkPool__DarkPoolOverviewScreen.s9')
                   : ''}
               </Text>
             </View>

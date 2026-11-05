@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 /**
  * @deprecated לא בשימוש — הוחלף ב-screens/Stories/StoryViewerScreen.tsx (מסך ניווט, נפתח דרך
  * lib/storyViewerSession.openStoryViewer). נשמר בריפו לעיון בלבד.
@@ -318,7 +319,7 @@ function ViewersSheet({
   }));
 
   const displayName = (u?: { display_name: string | null; full_name: string | null } | null) =>
-    u?.display_name || u?.full_name || 'משתמש';
+    u?.display_name || u?.full_name || i18n.t('auto.components__chat__StoryViewer.s1');
 
   const listData = tab === 'viewers' ? viewers : reactions;
 
@@ -350,8 +351,8 @@ function ViewersSheet({
           {/* טאבים — צ'יפי הטופו עם המחוון המחליק */}
           <SlidingPillGroup
             options={[
-              { id: 'viewers' as const, label: `צפיות${viewers.length ? ` · ${viewers.length}` : ''}` },
-              { id: 'reactions' as const, label: `ריאקציות${reactions.length ? ` · ${reactions.length}` : ''}` },
+              { id: 'viewers' as const, label: i18n.t('auto.components__chat__StoryViewer.s2', { v0: viewers.length ? ` · ${viewers.length}` : '' }) },
+              { id: 'reactions' as const, label: i18n.t('auto.components__chat__StoryViewer.s3', { v0: reactions.length ? ` · ${reactions.length}` : '' }) },
             ]}
             value={tab}
             onChange={onChangeTab}
@@ -371,7 +372,7 @@ function ViewersSheet({
                 color={tokens.colors.text.tertiary}
               />
               <Text style={[sheetStyles.emptyText, { color: tokens.colors.text.secondary }]}>
-                {tab === 'viewers' ? 'עדיין אף אחד לא צפה' : 'עדיין אין ריאקציות'}
+                {tab === 'viewers' ? i18n.t('auto.components__chat__StoryViewer.s4') : i18n.t('auto.components__chat__StoryViewer.s5')}
               </Text>
             </View>
           ) : (
@@ -1508,7 +1509,7 @@ export default function StoryViewer({
       }
     } catch (err) {
       logger.error('StoryViewer', 'Delete failed', err);
-      setConfirmDelete({ visible: true, error: 'לא הצלחנו למחוק. נסה שוב.' });
+      setConfirmDelete({ visible: true, error: i18n.t('auto.components__chat__StoryViewer.s6') });
     } finally {
       setDeleting(false);
     }
@@ -1519,16 +1520,16 @@ export default function StoryViewer({
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffMin = Math.floor(diffMs / 60000);
-    if (diffMin < 1) return 'עכשיו';
-    if (diffMin < 60) return `לפני ${diffMin} דק׳`;
+    if (diffMin < 1) return i18n.t('auto.components__chat__StoryViewer.s7');
+    if (diffMin < 60) return i18n.t('auto.components__chat__StoryViewer.s8', { v0: diffMin });
     const diffHrs = Math.floor(diffMin / 60);
-    if (diffHrs < 24) return `לפני ${diffHrs} שע׳`;
-    return `לפני ${Math.floor(diffHrs / 24)} ימים`;
+    if (diffHrs < 24) return i18n.t('auto.components__chat__StoryViewer.s9', { v0: diffHrs });
+    return i18n.t('auto.components__chat__StoryViewer.s10', { v0: Math.floor(diffHrs / 24) });
   };
 
   if (!visible) return null;
 
-  const displayName = currentUser?.user?.display_name || currentUser?.user?.full_name || 'משתמש';
+  const displayName = currentUser?.user?.display_name || currentUser?.user?.full_name || i18n.t('auto.components__chat__StoryViewer.s1');
   const avatar = currentUser?.user?.profile_picture;
   // ספינר עד שהמדיה באמת נטענה (לא רק mediaReady — ה-fallback של 4 שנ׳ מסמן ready גם
   // כשהתמונה עוד יורדת, ואז נשאר מסך שחור בלי חיווי)
@@ -1719,9 +1720,7 @@ export default function StoryViewer({
       {mediaError && (
         <View style={[styles.center, StyleSheet.absoluteFill]} pointerEvents="none">
           <Ionicons name="cloud-offline-outline" size={48} color="rgba(255,255,255,0.4)" />
-          <Text style={{ color: 'rgba(255,255,255,0.5)', marginTop: 8, fontSize: 14 }}>
-            שגיאה בטעינת המדיה
-          </Text>
+          <Text style={{ color: 'rgba(255,255,255,0.5)', marginTop: 8, fontSize: 14 }}>{i18n.t('auto.components__chat__StoryViewer.s11')}</Text>
         </View>
       )}
 
@@ -1850,7 +1849,7 @@ export default function StoryViewer({
             style={styles.closeBtn}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             accessibilityRole="button"
-            accessibilityLabel="סגור סטטוס"
+            accessibilityLabel={i18n.t('auto.components__chat__StoryViewer.s12')}
           >
             <Ionicons name="close" size={22} color="#fff" />
           </TouchableOpacity>
@@ -1891,14 +1890,14 @@ export default function StoryViewer({
               activeOpacity={0.75}
             >
               <Ionicons name="eye-outline" size={20} color={designTokens.colors.text.primary} />
-              <Text style={[styles.actionText, { color: designTokens.colors.text.primary }]}>צפיות</Text>
+              <Text style={[styles.actionText, { color: designTokens.colors.text.primary }]}>{i18n.t('auto.components__chat__StoryViewer.s13')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[styles.actionBtnRound, { backgroundColor: designTokens.colors.background.primary }]}
               onPress={openDeleteConfirm}
               activeOpacity={0.75}
-              accessibilityLabel="מחיקת הסטורי"
+              accessibilityLabel={i18n.t('auto.components__chat__StoryViewer.s14')}
             >
               <Ionicons name="trash-outline" size={20} color={designTokens.colors.danger.main} />
             </TouchableOpacity>
@@ -2055,7 +2054,7 @@ export default function StoryViewer({
         ) : (
           <TouchableOpacity style={[styles.center, styles.stageRoot]} onPress={requestClose} activeOpacity={0.9}>
             <Ionicons name="images-outline" size={48} color="rgba(255,255,255,0.3)" />
-            <Text style={styles.emptyText}>אין סטטוסים</Text>
+            <Text style={styles.emptyText}>{i18n.t('auto.components__chat__StoryViewer.s15')}</Text>
           </TouchableOpacity>
         )}
         </Reanimated.View>
@@ -2078,13 +2077,13 @@ export default function StoryViewer({
         {/* אישור מחיקה — הדיאלוג של האפליקציה, בתוך ה-Modal של הסטורי (Modal מקונן נפתח מתחת) */}
         <InlineAppDialog
           visible={confirmDelete.visible}
-          title="מחיקת סטטוס"
-          message={confirmDelete.error || 'האם למחוק את הסטטוס? לא ניתן לשחזר.'}
+          title={i18n.t('auto.components__chat__StoryViewer.s16')}
+          message={confirmDelete.error || i18n.t('auto.components__chat__StoryViewer.s17')}
           icon="trash-outline"
           onBackdropPress={deleting ? undefined : closeDeleteConfirm}
           buttons={[
-            { text: 'מחק', style: 'destructive', onPress: () => void confirmDeleteStory(), loading: deleting },
-            { text: 'ביטול', style: 'cancel', onPress: closeDeleteConfirm },
+            { text: i18n.t('auto.components__chat__StoryViewer.s18'), style: 'destructive', onPress: () => void confirmDeleteStory(), loading: deleting },
+            { text: i18n.t('auto.components__chat__StoryViewer.s19'), style: 'cancel', onPress: closeDeleteConfirm },
           ]}
         />
       </GestureHandlerRootView>

@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { runAfterInteractions } from '../../utils/runAfterInteractions';
 // ============================================
@@ -1632,7 +1633,7 @@ export default function ChatGroupScreen() {
   const handleReply = useCallback((message: ChatMessageType) => {
     setReplyTo({
       id: message.id,
-      senderName: message.sender?.display_name || 'משתמש',
+      senderName: message.sender?.display_name || i18n.t('auto.screens__ChatNew__ChatGroupScreen.s1'),
       content: message.content || '',
       messageType: message.message_type,
       mediaUrl: replyMediaUrl(message),
@@ -1681,7 +1682,7 @@ export default function ChatGroupScreen() {
         const p = JSON.parse(message.content.trim()) as { trade?: { symbol?: string; pnl?: number } };
         const t = p.trade;
         if (t?.symbol) {
-          textToCopy = `טרייד ${t.symbol}${typeof t.pnl === 'number' ? ` · P&L $${t.pnl.toFixed(2)}` : ''}`;
+          textToCopy = i18n.t('auto.screens__ChatNew__ChatGroupScreen.s2', { v0: t.symbol, v1: typeof t.pnl === 'number' ? ` · P&L $${t.pnl.toFixed(2)}` : '' });
         }
       } catch {
         /* נשאר JSON גולמי */
@@ -1712,13 +1713,13 @@ export default function ChatGroupScreen() {
       try {
         const result = await editMessage(editModalMessageId, editModalText.trim());
         if (!result.success) {
-          legacyAlert('שגיאה', result.error || 'לא ניתן לערוך את ההודעה');
+          legacyAlert(i18n.t('auto.screens__ChatNew__ChatGroupScreen.s3'), result.error || i18n.t('auto.screens__ChatNew__ChatGroupScreen.s4'));
           return;
         }
         void HapticFeedback.impactLight();
       } catch (e) {
         logger.error('ChatGroupScreen', 'Edit message failed', e);
-        legacyAlert('שגיאה', 'לא ניתן לערוך את ההודעה');
+        legacyAlert(i18n.t('auto.screens__ChatNew__ChatGroupScreen.s3'), i18n.t('auto.screens__ChatNew__ChatGroupScreen.s4'));
         return;
       }
     }
@@ -1730,24 +1731,24 @@ export default function ChatGroupScreen() {
       try {
         const result = await deleteMessage(message.id, forEveryone);
         if (!result.success) {
-          legacyAlert('שגיאה', result.error || 'לא ניתן למחוק את ההודעה');
+          legacyAlert(i18n.t('auto.screens__ChatNew__ChatGroupScreen.s3'), result.error || i18n.t('auto.screens__ChatNew__ChatGroupScreen.s5'));
         } else {
           void HapticFeedback.impactLight();
         }
       } catch (e) {
         logger.error('ChatGroupScreen', 'Delete message failed', e);
-        legacyAlert('שגיאה', 'לא ניתן למחוק את ההודעה');
+        legacyAlert(i18n.t('auto.screens__ChatNew__ChatGroupScreen.s3'), i18n.t('auto.screens__ChatNew__ChatGroupScreen.s5'));
       }
     };
 
     // אישור מחיקה
     legacyAlert(
-      forEveryone ? 'מחק לכולם' : 'מחק אצלי',
-      forEveryone ? 'ההודעה תימחק לכל המשתתפים' : 'ההודעה תוסתר רק אצלך',
+      forEveryone ? i18n.t('auto.screens__ChatNew__ChatGroupScreen.s6') : i18n.t('auto.screens__ChatNew__ChatGroupScreen.s7'),
+      forEveryone ? i18n.t('auto.screens__ChatNew__ChatGroupScreen.s8') : i18n.t('auto.screens__ChatNew__ChatGroupScreen.s9'),
       [
-        { text: 'ביטול', style: 'cancel' },
+        { text: i18n.t('auto.screens__ChatNew__ChatGroupScreen.s10'), style: 'cancel' },
         // מחכים שהדיאלוג ייסגר לפני המחיקה — התראת שגיאה שנפתחת על Modal שעוד נסגר תוקעת את המסך
-        { text: 'מחק', style: 'destructive', onPress: () => setTimeout(() => void doDelete(), SHEET_CLOSE_MS) },
+        { text: i18n.t('auto.screens__ChatNew__ChatGroupScreen.s11'), style: 'destructive', onPress: () => setTimeout(() => void doDelete(), SHEET_CLOSE_MS) },
       ]
     );
   };
@@ -1771,7 +1772,7 @@ export default function ChatGroupScreen() {
         // בלי דיאלוג «הצלחה» — הוא נפתח בזמן שהשיט נסגר (שני מודלים ב-iOS מקפיאים);
         // השיט סוגר את עצמו (onClose) — כאן רק רטט והודעה קצרה
         void HapticFeedback.success();
-        showToast(groupIds.length === 1 ? 'ההודעה הועברה' : `ההודעה הועברה ל-${groupIds.length} קבוצות`, 'success');
+        showToast(groupIds.length === 1 ? i18n.t('auto.screens__ChatNew__ChatGroupScreen.s12') : i18n.t('auto.screens__ChatNew__ChatGroupScreen.s13', { v0: groupIds.length }), 'success');
       } else {
         // השיט מציג את השגיאה ונשאר פתוח
         throw new Error(result.error || 'לא ניתן להעביר את ההודעה');
@@ -1851,16 +1852,16 @@ export default function ChatGroupScreen() {
     );
 
     const typingNames = typingUsers.map(
-      (t) => t.user?.display_name || (t as any).userName || 'מישהו',
+      (t) => t.user?.display_name || (t as any).userName || i18n.t('auto.screens__ChatNew__ChatGroupScreen.s14'),
     );
     const typingLabel =
       typingNames.length === 0
         ? null
         : typingNames.length === 1
-        ? `${typingNames[0]} מקליד...`
+        ? i18n.t('auto.screens__ChatNew__ChatGroupScreen.s15', { v0: typingNames[0] })
         : typingNames.length === 2
-        ? `${typingNames[0]} ו${typingNames[1]} מקלידים...`
-        : `${typingNames[0]} ועוד ${typingNames.length - 1} מקלידים...`;
+        ? i18n.t('auto.screens__ChatNew__ChatGroupScreen.s16', { v0: typingNames[0], v1: typingNames[1] })
+        : i18n.t('auto.screens__ChatNew__ChatGroupScreen.s17', { v0: typingNames[0], v1: typingNames.length - 1 });
 
     const center = (
       <TouchableOpacity style={styles.headerContent} onPress={handleGroupInfoPress} activeOpacity={0.7}>
@@ -1882,7 +1883,7 @@ export default function ChatGroupScreen() {
         <View style={styles.headerSideMarginStart}>
           {headerSideButton({
             icon: 'chevron-back',
-            label: 'חזרה',
+            label: i18n.t('auto.screens__ChatNew__ChatGroupScreen.s18'),
             onPress: handleBack,
             flip: true,
           })}
@@ -1900,7 +1901,7 @@ export default function ChatGroupScreen() {
         <View style={styles.headerSideMarginEnd}>
           {headerSideButton({
             icon: 'search',
-            label: 'חיפוש בהודעות',
+            label: i18n.t('auto.screens__ChatNew__ChatGroupScreen.s19'),
             onPress: () => setSearchVisible(true),
           })}
         </View>
@@ -1916,9 +1917,9 @@ export default function ChatGroupScreen() {
   }, []);
 
   const formatDateDivider = useCallback((date: Date): string => {
-    if (isToday(date)) return 'היום';
-    if (isYesterday(date)) return 'אתמול';
-    return format(date, 'd בMMMM yyyy', { locale: he });
+    if (isToday(date)) return i18n.t('auto.screens__ChatNew__ChatGroupScreen.s20');
+    if (isYesterday(date)) return i18n.t('auto.screens__ChatNew__ChatGroupScreen.s21');
+    return format(date, i18n.t('auto.screens__ChatNew__ChatGroupScreen.s22'), { locale: he });
   }, []);
 
   const shouldShowUnreadDivider = useCallback((messageId: string, index: number): boolean => {
@@ -2076,8 +2077,8 @@ export default function ChatGroupScreen() {
       return (
         <View style={styles.emptyContainer}>
           <Ionicons name="chatbubbles-outline" size={64} color={DesignTokens.colors.text.tertiary} />
-          <Text style={styles.emptyText}>אין הודעות עדיין</Text>
-          <Text style={styles.emptySubtext}>תתחיל שיחה!</Text>
+          <Text style={styles.emptyText}>{i18n.t('auto.screens__ChatNew__ChatGroupScreen.s23')}</Text>
+          <Text style={styles.emptySubtext}>{i18n.t('auto.screens__ChatNew__ChatGroupScreen.s24')}</Text>
         </View>
       );
     }
@@ -2140,9 +2141,7 @@ export default function ChatGroupScreen() {
         <View style={[styles.readOnlyBar, { paddingBottom: 6 }]}>
           <View style={[styles.readOnlyPill, { backgroundColor: DesignTokens.colors.background.cardSolid }]}>
             <Ionicons name="lock-closed" size={14} color={DesignTokens.colors.text.secondary} />
-            <Text style={[styles.readOnlyText, { color: DesignTokens.colors.text.secondary }]}>
-              רק מנהלי הקהילה יכולים לשלוח הודעות
-            </Text>
+            <Text style={[styles.readOnlyText, { color: DesignTokens.colors.text.secondary }]}>{i18n.t('auto.screens__ChatNew__ChatGroupScreen.s25')}</Text>
           </View>
         </View>
       ) : (
@@ -2316,7 +2315,7 @@ export default function ChatGroupScreen() {
           <View style={styles.scrollFabClip}>
             <DayNavBlurButton
               onPress={() => scrollToBottom(true)}
-              accessibilityLabel="גלול להודעות האחרונות"
+              accessibilityLabel={i18n.t('auto.screens__ChatNew__ChatGroupScreen.s26')}
               size={32}
               glass
             >
@@ -2434,9 +2433,7 @@ export default function ChatGroupScreen() {
               fontWeight: '700',
               marginBottom: 12,
               textAlign: 'right',
-            }}>
-              ערוך הודעה
-            </Text>
+            }}>{i18n.t('auto.screens__ChatNew__ChatGroupScreen.s27')}</Text>
             <TextInput
               value={editModalText}
               onChangeText={setEditModalText}
@@ -2466,7 +2463,7 @@ export default function ChatGroupScreen() {
                   paddingVertical: 12,
                 }}
               >
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>שמור</Text>
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>{i18n.t('auto.screens__ChatNew__ChatGroupScreen.s28')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => setEditModalVisible(false)}
@@ -2483,9 +2480,7 @@ export default function ChatGroupScreen() {
                   color: DesignTokens.colors.text.secondary,
                   fontWeight: '600',
                   fontSize: 15,
-                }}>
-                  ביטול
-                </Text>
+                }}>{i18n.t('auto.screens__ChatNew__ChatGroupScreen.s10')}</Text>
               </TouchableOpacity>
             </View>
           </View>

@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -300,7 +301,7 @@ function MediaPreviewBody({
     void HapticFeedback.impactMedium();
     const validMediaFiles = localFiles.filter(f => f.uri);
     if (validMediaFiles.length === 0) {
-      legacyAlert('שגיאה', 'אין קבצים לשליחה');
+      legacyAlert(i18n.t('auto.components__chat__MediaPreviewModal.s1'), i18n.t('auto.components__chat__MediaPreviewModal.s2'));
       return;
     }
     // Send with copies of data, then close
@@ -704,7 +705,7 @@ function MediaPreviewBody({
               }}
               style={[styles.iconBtn, styles.themeBtn, { backgroundColor: tokens.colors.background.cardSolid }]}
               accessibilityRole="button"
-              accessibilityLabel="סגירה"
+              accessibilityLabel={i18n.t('auto.components__chat__MediaPreviewModal.s3')}
             >
               <X size={22} color={tokens.colors.text.primary} strokeWidth={2} />
             </Pressable>
@@ -727,7 +728,7 @@ function MediaPreviewBody({
                   style={[styles.videoPlayBtn, styles.themeBtn, { backgroundColor: tokens.colors.background.cardSolid }]}
                   onPress={toggleVideoPlayPause}
                   accessibilityRole="button"
-                  accessibilityLabel={videoPlaying ? 'השהיה' : 'ניגון'}
+                  accessibilityLabel={videoPlaying ? i18n.t('auto.components__chat__MediaPreviewModal.s4') : i18n.t('auto.components__chat__MediaPreviewModal.s5')}
                 >
                   <Ionicons name={videoPlaying ? 'pause' : 'play'} size={22} color={tokens.colors.text.primary} />
                 </TouchableOpacity>
@@ -822,7 +823,7 @@ function MediaPreviewBody({
                 ref={captionRef}
                 value={captions[captionId] || ''}
                 onChangeText={(text) => setCaptions((prev) => ({ ...prev, [captionId]: text }))}
-                placeholder="הוסף כיתוב..."
+                placeholder={i18n.t('auto.components__chat__MediaPreviewModal.s6')}
                 placeholderTextColor={tokens.colors.text.tertiary}
                 style={[
                   styles.captionInput,
@@ -843,7 +844,7 @@ function MediaPreviewBody({
                   onPress={handleSend}
                   style={[styles.sendBtn, { backgroundColor: tokens.colors.primary.main }]}
                   accessibilityRole="button"
-                  accessibilityLabel="שליחה"
+                  accessibilityLabel={i18n.t('auto.components__chat__MediaPreviewModal.s7')}
                 >
                   <Ionicons name="send" size={22} color={tokens.colors.text.inverse} />
                 </Pressable>
@@ -860,7 +861,7 @@ function MediaPreviewBody({
                   }}
                   style={[styles.targetChip, { backgroundColor: tokens.colors.background.cardSolid }]}
                   accessibilityRole="button"
-                  accessibilityLabel="שליחה לקבוצות נוספות"
+                  accessibilityLabel={i18n.t('auto.components__chat__MediaPreviewModal.s8')}
                 >
                   <Text style={[styles.targetChipText, { color: tokens.colors.text.primary }]} numberOfLines={1}>
                     {extraGroupIds.length > 0
@@ -872,7 +873,7 @@ function MediaPreviewBody({
                   onPress={handleSend}
                   style={[styles.sendBtn, { backgroundColor: tokens.colors.primary.main }]}
                   accessibilityRole="button"
-                  accessibilityLabel="שליחה"
+                  accessibilityLabel={i18n.t('auto.components__chat__MediaPreviewModal.s7')}
                 >
                   <Ionicons name="send" size={22} color={tokens.colors.text.inverse} />
                 </Pressable>

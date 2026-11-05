@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -71,9 +72,9 @@ const OnboardingDateOfBirthScreen: React.FC<Props> = ({ navigation }) => {
     if (!canContinue) {
       const age = calculateAge(date);
       if (age < 18 && age > 0) {
-        setError('עליך להיות מעל גיל 18 כדי להירשם ל-DarkPool');
+        setError(i18n.t('auto.screens__Onboarding__OnboardingDateOfBirthScreen.s1'));
       } else {
-        setError('אנא הכנס תאריך לידה תקין');
+        setError(i18n.t('auto.screens__Onboarding__OnboardingDateOfBirthScreen.s2'));
       }
       void HapticFeedback.error();
       return;
@@ -118,9 +119,7 @@ const OnboardingDateOfBirthScreen: React.FC<Props> = ({ navigation }) => {
             <Pressable onPress={handleBack} style={styles.backButton}>
               <Ionicons name="chevron-forward" size={28} color={tokens.colors.text.primary} />
             </Pressable>
-            <Text style={[styles.stepIndicator, { color: tokens.colors.text.tertiary }]}>
-              שלב 4 מתוך 10
-            </Text>
+            <Text style={[styles.stepIndicator, { color: tokens.colors.text.tertiary }]}>{i18n.t('auto.screens__Onboarding__OnboardingDateOfBirthScreen.s3')}</Text>
           </View>
 
           <ScrollView
@@ -130,12 +129,8 @@ const OnboardingDateOfBirthScreen: React.FC<Props> = ({ navigation }) => {
             showsVerticalScrollIndicator={false}
           >
             {/* Title */}
-            <Text style={[styles.title, { color: tokens.colors.text.primary }]}>
-              מה תאריך הלידה שלך?
-            </Text>
-            <Text style={[styles.subtitle, { color: tokens.colors.text.secondary }]}>
-              נשתמש בזה לאימות גיל ואבטחת חשבון
-            </Text>
+            <Text style={[styles.title, { color: tokens.colors.text.primary }]}>{i18n.t('auto.screens__Onboarding__OnboardingDateOfBirthScreen.s4')}</Text>
+            <Text style={[styles.subtitle, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Onboarding__OnboardingDateOfBirthScreen.s5')}</Text>
 
             {/* Warning */}
             <UICard 
@@ -145,9 +140,7 @@ const OnboardingDateOfBirthScreen: React.FC<Props> = ({ navigation }) => {
             >
               <View style={styles.warningContent}>
                 <Ionicons name="warning" size={20} color={tokens.colors.warning.main} />
-                <Text style={[styles.warningText, { color: tokens.colors.warning.main }]}>
-                  תאריך לידה שגוי יפגע בגישה לרוב התכונות באפליקציה
-                </Text>
+                <Text style={[styles.warningText, { color: tokens.colors.warning.main }]}>{i18n.t('auto.screens__Onboarding__OnboardingDateOfBirthScreen.s6')}</Text>
               </View>
             </UICard>
 
@@ -169,9 +162,7 @@ const OnboardingDateOfBirthScreen: React.FC<Props> = ({ navigation }) => {
 
             {/* Input */}
             <View style={styles.inputContainer}>
-              <Text style={[styles.label, { color: tokens.colors.text.secondary }]}>
-                תאריך לידה
-              </Text>
+              <Text style={[styles.label, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Onboarding__OnboardingDateOfBirthScreen.s7')}</Text>
               <UICard variant="inputGlass" padding="none" style={styles.inputCard}>
                 <View style={styles.inputWrapper}>
                   <Ionicons name="calendar-outline" size={20} color={tokens.colors.text.tertiary} />
@@ -191,9 +182,7 @@ const OnboardingDateOfBirthScreen: React.FC<Props> = ({ navigation }) => {
                   />
                 </View>
               </UICard>
-              <Text style={[styles.helperText, { color: tokens.colors.text.tertiary }]}>
-                לדוגמה: 18/02/1995
-              </Text>
+              <Text style={[styles.helperText, { color: tokens.colors.text.tertiary }]}>{i18n.t('auto.screens__Onboarding__OnboardingDateOfBirthScreen.s8')}</Text>
             </View>
 
             <View style={{ flex: 1 }} />
@@ -202,7 +191,7 @@ const OnboardingDateOfBirthScreen: React.FC<Props> = ({ navigation }) => {
           {/* Footer */}
           <View style={styles.footer}>
             <UIButton
-              title="המשך"
+              title={i18n.t('auto.screens__Onboarding__OnboardingDateOfBirthScreen.s9')}
               variant="primary"
               size="lg"
               fullWidth

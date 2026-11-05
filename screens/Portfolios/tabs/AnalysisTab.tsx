@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 import { JournalListSkeleton } from '../../../components/ui/SkeletonLoader';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -207,9 +208,7 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
   if (!metrics) {
     return (
       <UICard variant="soft" glassIntensity="light" padding="md" style={styles.section}>
-        <Text style={styles.emptyText}>
-          לא הצלחנו לטעון מטריקות אנליזה. נסה למשוך מטה לרענון.
-        </Text>
+        <Text style={styles.emptyText}>{i18n.t('auto.screens__Portfolios__tabs__AnalysisTab.s1')}</Text>
       </UICard>
     );
   }
@@ -226,12 +225,12 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
     <View style={styles.root}>
       {/* Risk metrics */}
       <UICard variant="soft" glassIntensity="light" padding="md" style={styles.section}>
-        <Text style={styles.sectionTitle}>מטריקות סיכון</Text>
+        <Text style={styles.sectionTitle}>{i18n.t('auto.screens__Portfolios__tabs__AnalysisTab.s2')}</Text>
         <View style={styles.riskGrid}>
           <RiskCell
             label="Beta (1Y)"
             value={metrics.beta_1y != null ? formatNumber(metrics.beta_1y, 2) : '—'}
-            hint="רגישות לתנועות השוק (1.0 = זהה לbenchmark)"
+            hint={i18n.t('auto.screens__Portfolios__tabs__AnalysisTab.s3')}
             styles={styles}
           />
           <RiskCell
@@ -241,7 +240,7 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
                 ? formatNumber(metrics.sharpe_ratio, 2)
                 : '—'
             }
-            hint="תשואה מותאמת לסיכון. מעל 1 = טוב"
+            hint={i18n.t('auto.screens__Portfolios__tabs__AnalysisTab.s4')}
             styles={styles}
             color={
               metrics.sharpe_ratio != null
@@ -261,7 +260,7 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
                 ? formatNumber(metrics.sortino_ratio, 2)
                 : '—'
             }
-            hint="תשואה מותאמת לסיכון שלילי בלבד"
+            hint={i18n.t('auto.screens__Portfolios__tabs__AnalysisTab.s5')}
             styles={styles}
             color={
               metrics.sortino_ratio != null
@@ -281,7 +280,7 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
                 ? formatPercent(metrics.volatility_1m * 100, 1, false)
                 : '—'
             }
-            hint="סטיית תקן שנתית של תשואות יומיות"
+            hint={i18n.t('auto.screens__Portfolios__tabs__AnalysisTab.s6')}
             styles={styles}
           />
         </View>
@@ -289,12 +288,10 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
 
       {/* Performance per period */}
       <UICard variant="soft" glassIntensity="light" padding="md" style={styles.section}>
-        <Text style={styles.sectionTitle}>ביצועים על פני זמן</Text>
+        <Text style={styles.sectionTitle}>{i18n.t('auto.screens__Portfolios__tabs__AnalysisTab.s7')}</Text>
         <View style={styles.perfHeader}>
-          <Text style={[styles.perfLabel, { fontSize: 11, color: tokens.colors.text.tertiary }]}>
-            תקופה
-          </Text>
-          <Text style={[styles.perfHeaderText, { width: 90, textAlign: 'right' }]}>תיק</Text>
+          <Text style={[styles.perfLabel, { fontSize: 11, color: tokens.colors.text.tertiary }]}>{i18n.t('auto.screens__Portfolios__tabs__AnalysisTab.s8')}</Text>
+          <Text style={[styles.perfHeaderText, { width: 90, textAlign: 'right' }]}>{i18n.t('auto.screens__Portfolios__tabs__AnalysisTab.s9')}</Text>
           <Text style={[styles.perfHeaderText, { width: 90, textAlign: 'right', writingDirection: 'ltr' }]}>
             {portfolio.benchmark_symbol}
           </Text>
@@ -333,16 +330,15 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
 
       {/* Holdings performance */}
       <UICard variant="soft" glassIntensity="light" padding="md" style={styles.section}>
-        <Text style={styles.sectionTitle}>ביצועי נכסים בתיק</Text>
+        <Text style={styles.sectionTitle}>{i18n.t('auto.screens__Portfolios__tabs__AnalysisTab.s10')}</Text>
         {sortedHoldings.length === 0 ? (
-          <Text style={styles.emptyText}>אין נכסים להציג</Text>
+          <Text style={styles.emptyText}>{i18n.t('auto.screens__Portfolios__tabs__AnalysisTab.s11')}</Text>
         ) : (
           sortedHoldings.map((h) => (
             <View key={h.symbol} style={styles.holdingRow}>
               <Text style={styles.holdingSymbol}>{h.symbol}</Text>
               <Text style={styles.holdingValue} numberOfLines={1}>
-                {formatPercent(h.allocation, 1, false)} מהתיק
-              </Text>
+                {i18n.t('auto.screens__Portfolios__tabs__AnalysisTab.s12', { v0: formatPercent(h.allocation, 1, false) })}</Text>
               <Text
                 style={[
                   styles.holdingPct,
@@ -365,10 +361,7 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
       >
         <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
           <Ionicons name="information-circle" size={18} color={tokens.colors.text.info} />
-          <Text style={{ flex: 1, ...journalCaptionStyle, color: tokens.colors.text.secondary }}>
-            המטריקות מחושבות מבוססות תזרים השווי היומי של התיק שלך, מתוך מחירי close
-            יומיים מ-Yahoo Finance. ביצועים בעבר אינם ערובה לביצועים עתידיים.
-          </Text>
+          <Text style={{ flex: 1, ...journalCaptionStyle, color: tokens.colors.text.secondary }}>{i18n.t('auto.screens__Portfolios__tabs__AnalysisTab.s13')}</Text>
         </View>
       </UICard>
     </View>

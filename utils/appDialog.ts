@@ -1,3 +1,4 @@
+import i18n from '../lib/i18n';
 import type { UIAlertButton, UIAlertType } from '../components/ui/UIAlert';
 
 export type AppDialogOptions = {
@@ -41,7 +42,7 @@ export function showAppAlert(title: string, message?: string, type: UIAlertType 
     title,
     message,
     type,
-    buttons: [{ text: 'אישור', style: 'default' }],
+    buttons: [{ text: i18n.t('auto.utils__appDialog.s1'), style: 'default' }],
   });
 }
 
@@ -58,8 +59,8 @@ export function showAppConfirm(
     destructive?: boolean;
   }
 ): Promise<boolean> {
-  const confirmText = options?.confirmText ?? 'אישור';
-  const cancelText = options?.cancelText ?? 'ביטול';
+  const confirmText = options?.confirmText ?? i18n.t('auto.utils__appDialog.s1');
+  const cancelText = options?.cancelText ?? i18n.t('auto.utils__appDialog.s2');
   return showAppDialog({
     title,
     message,
@@ -100,7 +101,7 @@ export function legacyAlert(title: string, message?: string, buttons?: LegacyAle
             style: (b.style as UIAlertButton['style']) ?? 'default',
             onPress: b.onPress,
           }))
-        : [{ text: 'אישור', style: 'default' }];
+        : [{ text: i18n.t('auto.utils__appDialog.s1'), style: 'default' }];
     const multi = btns.length > 1;
     await showAppDialog({
       title,

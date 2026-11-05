@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
@@ -144,7 +145,7 @@ export default function WatchlistScreen() {
       void HapticFeedback.success();
       setQuickPicked([]);
     } catch {
-      legacyAlert('שגיאה', 'לא ניתן להוסיף את המניות');
+      legacyAlert(i18n.t('auto.screens__Watchlist__WatchlistScreen.s1'), i18n.t('auto.screens__Watchlist__WatchlistScreen.s2'));
     } finally {
       setQuickAdding(false);
     }
@@ -166,7 +167,7 @@ export default function WatchlistScreen() {
         await addSymbol(result.symbol, result.description);
         void HapticFeedback.success();
       } catch {
-        legacyAlert('שגיאה', 'לא ניתן להוסיף את הסימבול');
+        legacyAlert(i18n.t('auto.screens__Watchlist__WatchlistScreen.s1'), i18n.t('auto.screens__Watchlist__WatchlistScreen.s3'));
       }
     },
     [addSymbol]
@@ -174,9 +175,9 @@ export default function WatchlistScreen() {
 
   const handleRemove = useCallback(
     async (symbol: string) => {
-      const ok = await showAppConfirm('הסרה מהרשימה', `להסיר את ${symbol}?`, {
-        confirmText: 'הסר',
-        cancelText: 'ביטול',
+      const ok = await showAppConfirm(i18n.t('auto.screens__Watchlist__WatchlistScreen.s4'), i18n.t('auto.screens__Watchlist__WatchlistScreen.s5', { v0: symbol }), {
+        confirmText: i18n.t('auto.screens__Watchlist__WatchlistScreen.s6'),
+        cancelText: i18n.t('auto.screens__Watchlist__WatchlistScreen.s7'),
         destructive: true,
       });
       if (!ok) return;
@@ -184,7 +185,7 @@ export default function WatchlistScreen() {
         await removeSymbol(symbol);
         void HapticFeedback.success();
       } catch {
-        legacyAlert('שגיאה', 'לא ניתן להסיר את הסימבול');
+        legacyAlert(i18n.t('auto.screens__Watchlist__WatchlistScreen.s1'), i18n.t('auto.screens__Watchlist__WatchlistScreen.s8'));
       }
     },
     [removeSymbol]
@@ -229,7 +230,7 @@ export default function WatchlistScreen() {
     try {
       await setNotes(itemId, notesDraft);
     } catch {
-      legacyAlert('שגיאה', 'לא ניתן לשמור הערה');
+      legacyAlert(i18n.t('auto.screens__Watchlist__WatchlistScreen.s1'), i18n.t('auto.screens__Watchlist__WatchlistScreen.s9'));
       throw new Error('notes_save_failed');
     }
   }, [notesDraft, notesTarget, setNotes]);
@@ -267,7 +268,7 @@ export default function WatchlistScreen() {
           })
         );
       } catch {
-        legacyAlert('ניווט', 'לא ניתן לפתוח את היומן כרגע');
+        legacyAlert(i18n.t('auto.screens__Watchlist__WatchlistScreen.s10'), i18n.t('auto.screens__Watchlist__WatchlistScreen.s11'));
       }
     },
     [navigation]
@@ -281,11 +282,11 @@ export default function WatchlistScreen() {
 
   const handleCreateList = useCallback(async () => {
     try {
-      await addList(newListName.trim() || 'רשימה חדשה');
+      await addList(newListName.trim() || i18n.t('auto.screens__Watchlist__WatchlistScreen.s12'));
       closeListNameSheet();
       void HapticFeedback.success();
     } catch {
-      legacyAlert('שגיאה', 'לא ניתן ליצור רשימה');
+      legacyAlert(i18n.t('auto.screens__Watchlist__WatchlistScreen.s1'), i18n.t('auto.screens__Watchlist__WatchlistScreen.s13'));
     }
   }, [addList, newListName, closeListNameSheet]);
 
@@ -296,7 +297,7 @@ export default function WatchlistScreen() {
       closeListNameSheet();
       void HapticFeedback.success();
     } catch {
-      legacyAlert('שגיאה', 'לא ניתן לשנות שם');
+      legacyAlert(i18n.t('auto.screens__Watchlist__WatchlistScreen.s1'), i18n.t('auto.screens__Watchlist__WatchlistScreen.s14'));
     }
   }, [renameList, renameTarget, newListName, closeListNameSheet]);
 
@@ -352,7 +353,7 @@ export default function WatchlistScreen() {
       // העדכון האופטימיסטי ב-cache נכנס לפני השחרור — בלי הבהוב לסדר הישן
       reorderSymbols(data.map((r) => r.item.symbol))
         .catch(() => {
-          legacyAlert('שגיאה', 'לא ניתן לשמור את הסדר');
+          legacyAlert(i18n.t('auto.screens__Watchlist__WatchlistScreen.s1'), i18n.t('auto.screens__Watchlist__WatchlistScreen.s15'));
         });
       if (unfreezeTimerRef.current) clearTimeout(unfreezeTimerRef.current);
       unfreezeTimerRef.current = null;
@@ -398,7 +399,7 @@ export default function WatchlistScreen() {
       void HapticFeedback.medium();
       const buttons = [
         {
-          text: 'שינוי שם',
+          text: i18n.t('auto.screens__Watchlist__WatchlistScreen.s16'),
           style: 'default' as const,
           onPress: () => {
             setNewListName(name);
@@ -408,16 +409,16 @@ export default function WatchlistScreen() {
         ...(!isDefault
           ? [
               {
-                text: 'מחק רשימה',
+                text: i18n.t('auto.screens__Watchlist__WatchlistScreen.s17'),
                 style: 'destructive' as const,
                 onPress: () => {
                   void (async () => {
                     const ok = await showAppConfirm(
-                      'מחיקת רשימה',
-                      `למחוק את "${name}"?`,
+                      i18n.t('auto.screens__Watchlist__WatchlistScreen.s18'),
+                      i18n.t('auto.screens__Watchlist__WatchlistScreen.s19', { v0: name }),
                       {
-                        confirmText: 'מחק',
-                        cancelText: 'ביטול',
+                        confirmText: i18n.t('auto.screens__Watchlist__WatchlistScreen.s20'),
+                        cancelText: i18n.t('auto.screens__Watchlist__WatchlistScreen.s7'),
                         destructive: true,
                       }
                     );
@@ -425,7 +426,7 @@ export default function WatchlistScreen() {
                       try {
                         await removeList(id);
                       } catch {
-                        legacyAlert('שגיאה', 'לא ניתן למחוק את הרשימה');
+                        legacyAlert(i18n.t('auto.screens__Watchlist__WatchlistScreen.s1'), i18n.t('auto.screens__Watchlist__WatchlistScreen.s21'));
                       }
                     }
                   })();
@@ -433,11 +434,11 @@ export default function WatchlistScreen() {
               },
             ]
           : []),
-        { text: 'ביטול', style: 'cancel' as const },
+        { text: i18n.t('auto.screens__Watchlist__WatchlistScreen.s7'), style: 'cancel' as const },
       ];
       void showAppDialog({
         title: name,
-        message: 'פעולות על הרשימה',
+        message: i18n.t('auto.screens__Watchlist__WatchlistScreen.s22'),
         type: 'info',
         buttons,
       });
@@ -498,7 +499,7 @@ export default function WatchlistScreen() {
     <ScreenChrome>
       <RNSafeAreaView style={styles.safe} edges={['top']}>
         <MainDrawerScreenHeader
-          title="רשימת מעקב"
+          title={i18n.t('auto.screens__Watchlist__WatchlistScreen.s23')}
           onMenuPress={openMainDrawer}
           // בורר רשימות — כמו בורר התיקים ביומן המסחר
           sectionContainerStyle={{
@@ -519,8 +520,8 @@ export default function WatchlistScreen() {
                   const list = watchlists.find((w) => w.id === id);
                   if (list) openListActions(list.id, list.name, list.is_default);
                 }}
-                sheetTitle="הרשימות שלי"
-                createLabel="רשימה חדשה"
+                sheetTitle={i18n.t('auto.screens__Watchlist__WatchlistScreen.s24')}
+                createLabel={i18n.t('auto.screens__Watchlist__WatchlistScreen.s12')}
               />
             ) : undefined
           }
@@ -532,7 +533,7 @@ export default function WatchlistScreen() {
               }}
               glassIntensity="subtle"
               size={DRAWER_MENU_BUTTON_SIZE}
-              accessibilityLabel="הוספת סימבול"
+              accessibilityLabel={i18n.t('auto.screens__Watchlist__WatchlistScreen.s25')}
             >
               <Ionicons name="add" size={24} color={tokens.colors.text.primary} />
             </DayNavBlurButton>
@@ -560,7 +561,7 @@ export default function WatchlistScreen() {
                         size="small"
                         color={tokens.colors.primary.main}
                       />
-                      <Text style={styles.updatingText}>מעדכן מחירים…</Text>
+                      <Text style={styles.updatingText}>{i18n.t('auto.screens__Watchlist__WatchlistScreen.s26')}</Text>
                     </View>
                   ) : null}
                   {rows.length > 0 ? (
@@ -613,7 +614,7 @@ export default function WatchlistScreen() {
                 {listData.length === 0 && quickPicked.length > 0 ? (
                   <View style={styles.quickAddBar} pointerEvents="box-none">
                     <UIButton
-                      title={quickPicked.length === 1 ? 'הוספת מניה אחת' : `הוספת ${quickPicked.length} מניות`}
+                      title={quickPicked.length === 1 ? i18n.t('auto.screens__Watchlist__WatchlistScreen.s27') : i18n.t('auto.screens__Watchlist__WatchlistScreen.s28', { v0: quickPicked.length })}
                       variant="primary"
                       size="lg"
                       fullWidth

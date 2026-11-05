@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 // ============================================
 // Context Menu — שורות פעולה לפי הטופו (כמו שיטי ההגדרות/התיק):
 // כרטיס cardSolid, שורות 15px עם אייקון מימין, מפריד, ופעולות מחיקה בכרטיס נפרד.
@@ -25,16 +26,16 @@ const noChevron = <View />;
 export default function ContextMenu({ onSelect, isAdmin = false, isMe = false, canEdit = true, canForward = true }: ContextMenuProps) {
   const { mainOptions, dangerOptions } = useMemo(() => {
     const main: OptionDef[] = [
-      { key: 'reply', label: 'השב', icon: Reply },
-      ...(canForward ? [{ key: 'forward', label: 'העבר', icon: Forward }] : []),
-      { key: 'copy', label: 'העתק', icon: Copy },
-      { key: 'star', label: 'סמן בכוכב', icon: Star },
-      ...(isMe && canEdit ? [{ key: 'edit', label: 'עריכה', icon: Pencil }] : []),
-      ...(isAdmin ? [{ key: 'info', label: 'מידע', icon: Info }] : []),
+      { key: 'reply', label: i18n.t('auto.components__chat__ContextMenu.s1'), icon: Reply },
+      ...(canForward ? [{ key: 'forward', label: i18n.t('auto.components__chat__ContextMenu.s2'), icon: Forward }] : []),
+      { key: 'copy', label: i18n.t('auto.components__chat__ContextMenu.s3'), icon: Copy },
+      { key: 'star', label: i18n.t('auto.components__chat__ContextMenu.s4'), icon: Star },
+      ...(isMe && canEdit ? [{ key: 'edit', label: i18n.t('auto.components__chat__ContextMenu.s5'), icon: Pencil }] : []),
+      ...(isAdmin ? [{ key: 'info', label: i18n.t('auto.components__chat__ContextMenu.s6'), icon: Info }] : []),
     ];
     const danger: OptionDef[] = [
-      ...(isMe ? [{ key: 'delete', label: 'מחק אצלי', icon: Trash2 }] : []),
-      ...(isMe || isAdmin ? [{ key: 'deleteForEveryone', label: 'מחק לכולם', icon: Users }] : []),
+      ...(isMe ? [{ key: 'delete', label: i18n.t('auto.components__chat__ContextMenu.s7'), icon: Trash2 }] : []),
+      ...(isMe || isAdmin ? [{ key: 'deleteForEveryone', label: i18n.t('auto.components__chat__ContextMenu.s8'), icon: Users }] : []),
     ];
     return { mainOptions: main, dangerOptions: danger };
   }, [isAdmin, isMe, canEdit, canForward]);

@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, RefreshControl, ActivityIndicator, Pressable, SectionList } from 'react-native';
@@ -213,12 +214,8 @@ export default function DividendsTab() {
   const renderEmptyState = () => (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 40 }}>
       <DollarSign size={64} color={tokens.colors.text.tertiary} strokeWidth={1.5} />
-      <Text style={{ ...APP_TYPE.body, color: tokens.colors.text.secondary, marginTop: APP_LAYOUT.componentGap, textAlign: 'center' }}>
-        אין דיבידנדים זמינים כרגע
-      </Text>
-      <Text style={{ ...APP_TYPE.cardSubtitle, color: tokens.colors.text.tertiary, marginTop: APP_LAYOUT.groupLabelToContent, textAlign: 'center', paddingHorizontal: 40 }}>
-        נתוני דיבידנדים יעודכנו בקרוב
-      </Text>
+      <Text style={{ ...APP_TYPE.body, color: tokens.colors.text.secondary, marginTop: APP_LAYOUT.componentGap, textAlign: 'center' }}>{i18n.t('auto.screens__News__DividendsTab.s1')}</Text>
+      <Text style={{ ...APP_TYPE.cardSubtitle, color: tokens.colors.text.tertiary, marginTop: APP_LAYOUT.groupLabelToContent, textAlign: 'center', paddingHorizontal: 40 }}>{i18n.t('auto.screens__News__DividendsTab.s2')}</Text>
     </View>
   );
 
@@ -226,9 +223,7 @@ export default function DividendsTab() {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color={tokens.colors.primary.main} />
-        <Text style={{ ...APP_TYPE.body, color: tokens.colors.text.secondary, marginTop: APP_LAYOUT.componentGap }}>
-          טוען דיבידנדים...
-        </Text>
+        <Text style={{ ...APP_TYPE.body, color: tokens.colors.text.secondary, marginTop: APP_LAYOUT.componentGap }}>{i18n.t('auto.screens__News__DividendsTab.s3')}</Text>
       </View>
     );
   }

@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -32,9 +33,9 @@ import { TickerLogo } from '../ui/TickerLogo';
 type Category = 'people' | 'earnings' | 'news';
 
 const TAB_OPTIONS: { id: Category; label: string }[] = [
-  { id: 'people', label: 'אנשים' },
-  { id: 'earnings', label: 'דוחות' },
-  { id: 'news', label: 'חדשות' },
+  { id: 'people', label: i18n.t('auto.components__share__EntityAttachPickerSheet.s1') },
+  { id: 'earnings', label: i18n.t('auto.components__share__EntityAttachPickerSheet.s2') },
+  { id: 'news', label: i18n.t('auto.components__share__EntityAttachPickerSheet.s3') },
 ];
 
 type Props = {
@@ -167,7 +168,7 @@ export default function EntityAttachPickerSheet({
       }
     } catch (e: any) {
       setItems([]);
-      setError(e?.message || 'לא ניתן לטעון פריטים');
+      setError(e?.message || i18n.t('auto.components__share__EntityAttachPickerSheet.s4'));
     } finally {
       setLoading(false);
     }
@@ -203,7 +204,7 @@ export default function EntityAttachPickerSheet({
             size={DAY_NAV_BUTTON_SIZE}
             glassIntensity="subtle"
             style={styles.headerIconButton}
-            accessibilityLabel="סגור"
+            accessibilityLabel={i18n.t('auto.components__share__EntityAttachPickerSheet.s5')}
           >
             <Ionicons
               name="chevron-forward"
@@ -212,9 +213,7 @@ export default function EntityAttachPickerSheet({
             />
           </DayNavBlurButton>
           <View style={styles.headerCenter}>
-            <Text style={[styles.headerTitle, { color: tokens.colors.text.primary }]}>
-              צרף תוכן
-            </Text>
+            <Text style={[styles.headerTitle, { color: tokens.colors.text.primary }]}>{i18n.t('auto.components__share__EntityAttachPickerSheet.s6')}</Text>
           </View>
           <View style={styles.headerSideSpacer} />
         </View>
@@ -224,7 +223,7 @@ export default function EntityAttachPickerSheet({
           value={category}
           onChange={setCategory}
           style={styles.tabsWrap}
-          accessibilityLabelFor={(o) => `סוג תוכן: ${o.label}`}
+          accessibilityLabelFor={(o) => i18n.t('auto.components__share__EntityAttachPickerSheet.s7', { v0: o.label })}
         />
 
         {loading ? (
@@ -243,9 +242,7 @@ export default function EntityAttachPickerSheet({
               items.length === 0 ? styles.listEmpty : styles.listContent
             }
             ListEmptyComponent={
-              <Text style={[styles.empty, { color: tokens.colors.text.tertiary }]}>
-                אין פריטים להצגה
-              </Text>
+              <Text style={[styles.empty, { color: tokens.colors.text.tertiary }]}>{i18n.t('auto.components__share__EntityAttachPickerSheet.s8')}</Text>
             }
             renderItem={({ item }) => {
               const tradeTicker =

@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 /**
  * מחזיקי טיקר מ-Quiver congress_stock_holdings (cache by_bioguide).
  * CurrentHolding / Allocation בלבד — בלי midpoint של STOCK Act.
@@ -119,7 +120,7 @@ export function formatImpliedHoldingShares(
 ): string | null {
   const n = impliedHoldingShares(holdingUsd, lastPrice);
   if (n == null) return null;
-  return `~${n.toLocaleString('en-US')} מניות`;
+  return i18n.t('auto.screens__DarkPool__utils__tickerCongressHolders.s1', { v0: n.toLocaleString('en-US') });
 }
 
 /**
@@ -151,16 +152,16 @@ export function tickerHoldersSectionTitle(ticker: string): {
 } {
   const tickerDisplay = formatFeedTickerDisplay(ticker);
   return {
-    lead: 'פוליטיקאים שמחזיקים ',
+    lead: i18n.t('auto.screens__DarkPool__utils__tickerCongressHolders.s2'),
     tickerDisplay,
     tickerIsolated: isolateData(tickerDisplay),
-    sentence: `פוליטיקאים שמחזיקים ${tickerDisplay}`,
+    sentence: i18n.t('auto.screens__DarkPool__utils__tickerCongressHolders.s3', { v0: tickerDisplay }),
   };
 }
 
 /** כיתוב מדד — שווי CurrentHolding, אחרת Allocation. לא עסקאות. */
 export function tickerHoldersSectionSubtitle(): string {
-  return 'שווי אחזקה מדווח או הקצאה בתיק — לא יומן עסקאות.';
+  return i18n.t('auto.screens__DarkPool__utils__tickerCongressHolders.s4');
 }
 
 export function tickerHoldersEmptyCopy(ticker: string): {
@@ -169,10 +170,9 @@ export function tickerHoldersEmptyCopy(ticker: string): {
 } {
   const tickerDisplay = formatFeedTickerDisplay(ticker);
   return {
-    title: 'אין מחזיקים מדווחים',
+    title: i18n.t('auto.screens__DarkPool__utils__tickerCongressHolders.s5'),
     body:
-      `לא נמצאה אחזקה נוכחית של חברי קונגרס ב-${isolateData(tickerDisplay)}. ` +
-      'הרשימה מבוססת על CurrentHolding / Allocation של Quiver — לא על דיווחי STOCK Act.',
+      i18n.t('auto.screens__DarkPool__utils__tickerCongressHolders.s6', { v0: isolateData(tickerDisplay) }),
   };
 }
 
@@ -181,8 +181,8 @@ export function tickerHoldersErrorCopy(): {
   body: string;
 } {
   return {
-    title: 'לא הצלחנו לטעון מחזיקים',
-    body: 'אין נפילה ליומן עסקאות. נסו שוב בעוד רגע.',
+    title: i18n.t('auto.screens__DarkPool__utils__tickerCongressHolders.s7'),
+    body: i18n.t('auto.screens__DarkPool__utils__tickerCongressHolders.s8'),
   };
 }
 
@@ -221,7 +221,7 @@ function mapHoldingRow(
 
   const rosterHit = roster.get(bioguideId);
   const name =
-    holderName(row.Name) || rosterHit?.name || 'חבר קונגרס';
+    holderName(row.Name) || rosterHit?.name || i18n.t('auto.screens__DarkPool__utils__tickerCongressHolders.s9');
   const imageUrl =
     personPhotoUrl(row.ImageURL) ??
     rosterHit?.imageUrl ??

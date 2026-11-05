@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 // ============================================
 // Chat Group Service
 // ============================================
@@ -35,10 +36,10 @@ export async function createChatGroup(
   try {
     const safeName = sanitizeGroupInput(input.name);
     if (!safeName || safeName.length < 1) {
-      return { data: null, error: { code: 'VALIDATION_ERROR', message: 'שם קבוצה חייב להכיל לפחות תו אחד' } };
+      return { data: null, error: { code: 'VALIDATION_ERROR', message: i18n.t('auto.services__chat__chatGroupService.s1') } };
     }
     if (!currentUserId) {
-      return { data: null, error: { code: 'AUTH_ERROR', message: 'משתמש לא מאומת' } };
+      return { data: null, error: { code: 'AUTH_ERROR', message: i18n.t('auto.services__chat__chatGroupService.s2') } };
     }
 
     const safeDescription = input.description
@@ -100,7 +101,7 @@ export async function createChatGroup(
       }
 
       const systemMessages = [
-        createSystemMessage(group.id, currentUserId, SystemMessageType.GROUP_CREATED, { user_name: 'אתה' }),
+        createSystemMessage(group.id, currentUserId, SystemMessageType.GROUP_CREATED, { user_name: i18n.t('auto.services__chat__chatGroupService.s3') }),
         ...input.member_ids
           .filter(id => id !== currentUserId)
           .map(uid => createSystemMessage(group.id, uid, SystemMessageType.USER_JOINED, { user_id: uid })),
@@ -266,10 +267,10 @@ export async function updateChatGroup(
 
     if (membershipError) {
       logger.error('ChatGroup', 'updateChatGroup membership check failed', membershipError);
-      return { data: null, error: { code: 'PERMISSION_CHECK_FAILED', message: 'שגיאה בבדיקת הרשאות' } };
+      return { data: null, error: { code: 'PERMISSION_CHECK_FAILED', message: i18n.t('auto.services__chat__chatGroupService.s4') } };
     }
     if (membership?.role !== ChatMemberRole.ADMIN) {
-      return { data: null, error: { code: 'PERMISSION_DENIED', message: 'רק אדמינים יכולים לערוך את הקבוצה' } };
+      return { data: null, error: { code: 'PERMISSION_DENIED', message: i18n.t('auto.services__chat__chatGroupService.s5') } };
     }
 
     const safeUpdate: Record<string, any> = { updated_at: new Date().toISOString() };
@@ -348,10 +349,10 @@ export async function deleteChatGroup(
 
     if (groupError) {
       logger.error('ChatGroup', 'deleteChatGroup lookup failed', groupError);
-      return { error: { code: 'GROUP_NOT_FOUND', message: 'הקבוצה לא נמצאה' } };
+      return { error: { code: 'GROUP_NOT_FOUND', message: i18n.t('auto.services__chat__chatGroupService.s6') } };
     }
     if (group?.created_by !== userId) {
-      return { error: { code: 'PERMISSION_DENIED', message: 'רק יוצר הקבוצה יכול למחוק אותה' } };
+      return { error: { code: 'PERMISSION_DENIED', message: i18n.t('auto.services__chat__chatGroupService.s7') } };
     }
 
     // מחיקה (CASCADE ימחק את כל הנתונים הקשורים)
@@ -392,10 +393,10 @@ export async function addGroupMember(
 
     if (membershipError) {
       logger.error('ChatGroup', 'addGroupMember permission check failed', membershipError);
-      return { data: null, error: { code: 'PERMISSION_CHECK_FAILED', message: 'שגיאה בבדיקת הרשאות' } };
+      return { data: null, error: { code: 'PERMISSION_CHECK_FAILED', message: i18n.t('auto.services__chat__chatGroupService.s4') } };
     }
     if (membership?.role !== ChatMemberRole.ADMIN) {
-      return { data: null, error: { code: 'PERMISSION_DENIED', message: 'רק אדמינים יכולים להוסיף חברים' } };
+      return { data: null, error: { code: 'PERMISSION_DENIED', message: i18n.t('auto.services__chat__chatGroupService.s8') } };
     }
 
     // הוספה
@@ -459,10 +460,10 @@ export async function removeGroupMember(
     if (!isSelf) {
       if (membershipResult?.error) {
         logger.error('ChatGroup', 'removeGroupMember permission check failed', membershipResult.error);
-        return { error: { code: 'PERMISSION_CHECK_FAILED', message: 'שגיאה בבדיקת הרשאות' } };
+        return { error: { code: 'PERMISSION_CHECK_FAILED', message: i18n.t('auto.services__chat__chatGroupService.s4') } };
       }
       if (membershipResult?.data?.role !== ChatMemberRole.ADMIN) {
-        return { error: { code: 'PERMISSION_DENIED', message: 'רק אדמינים יכולים להסיר חברים' } };
+        return { error: { code: 'PERMISSION_DENIED', message: i18n.t('auto.services__chat__chatGroupService.s9') } };
       }
     }
 
@@ -492,8 +493,8 @@ export async function removeGroupMember(
         error: {
           code: 'REMOVE_MEMBER_NO_ROWS',
           message: isSelf
-            ? 'לא ניתן לעזוב את הקבוצה כרגע (הרשאות). נסה שוב מאוחר יותר.'
-            : 'לא ניתן להסיר את החבר כרגע (הרשאות).',
+            ? i18n.t('auto.services__chat__chatGroupService.s10')
+            : i18n.t('auto.services__chat__chatGroupService.s11'),
         },
       };
     }
@@ -528,10 +529,10 @@ export async function updateGroupMemberRole(
 
     if (membershipError) {
       logger.error('ChatGroup', 'updateGroupMemberRole permission check failed', membershipError);
-      return { error: { code: 'PERMISSION_CHECK_FAILED', message: 'שגיאה בבדיקת הרשאות' } };
+      return { error: { code: 'PERMISSION_CHECK_FAILED', message: i18n.t('auto.services__chat__chatGroupService.s4') } };
     }
     if (membership?.role !== ChatMemberRole.ADMIN) {
-      return { error: { code: 'PERMISSION_DENIED', message: 'רק אדמינים יכולים לשנות תפקידים' } };
+      return { error: { code: 'PERMISSION_DENIED', message: i18n.t('auto.services__chat__chatGroupService.s12') } };
     }
 
     // עדכון

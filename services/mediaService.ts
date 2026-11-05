@@ -1,3 +1,4 @@
+import i18n from '../lib/i18n';
 import { supabase } from './supabase';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as base64js from 'base64-js';
@@ -9,7 +10,7 @@ function toUploadErrorMessage(err: unknown, fallback: string): string {
   const raw = err instanceof Error ? err.message : String(err);
   if (!raw || raw === 'Unknown error') return fallback;
   if (/network request failed|failed to fetch|load failed|נכשל/i.test(raw)) {
-    return 'אין חיבור יציב לרשת או לשרת. בדוק אינטרנט/־VPN ונסה שוב.';
+    return i18n.t('auto.services__mediaService.s1');
   }
   return raw;
 }
@@ -201,8 +202,8 @@ class MediaService {
           vimeo_id: '1095579213',
           vimeo_url: 'https://vimeo.com/1095579213?share=copy',
           thumbnail_url: 'https://vumbnail.com/1095579213.jpg',
-          title: 'הכירות עם הקורס',
-          description: 'הכרות עם הקורס והנושאים שילמדו בו',
+          title: i18n.t('auto.services__mediaService.s2'),
+          description: i18n.t('auto.services__mediaService.s3'),
           duration_minutes: 45,
           is_active: true,
         },
@@ -212,8 +213,8 @@ class MediaService {
           vimeo_id: '1095573038',
           vimeo_url: 'https://vimeo.com/1095573038?share=copy',
           thumbnail_url: 'https://vumbnail.com/1095573038.jpg',
-          title: 'מה זה - Price Action',
-          description: 'הבנת מושגי ה-Price Action והשימוש בהם',
+          title: i18n.t('auto.services__mediaService.s4'),
+          description: i18n.t('auto.services__mediaService.s5'),
           duration_minutes: 60,
           is_active: true,
         },
@@ -223,8 +224,8 @@ class MediaService {
           vimeo_id: '1095570862',
           vimeo_url: 'https://vimeo.com/1095570862?share=copy',
           thumbnail_url: 'https://vumbnail.com/1095570862.jpg',
-          title: 'מה זה - Liquidity',
-          description: 'הבנת מושג הנזילות והשפעתו על השוק',
+          title: i18n.t('auto.services__mediaService.s6'),
+          description: i18n.t('auto.services__mediaService.s7'),
           duration_minutes: 40,
           is_active: true,
         },
@@ -234,8 +235,8 @@ class MediaService {
           vimeo_id: '1095761556',
           vimeo_url: 'https://vimeo.com/1095761556?share=copy',
           thumbnail_url: 'https://vumbnail.com/1095761556.jpg',
-          title: 'מה זה - FVG',
-          description: 'הבנת Fair Value Gaps וזיהוי הזדמנויות',
+          title: i18n.t('auto.services__mediaService.s8'),
+          description: i18n.t('auto.services__mediaService.s9'),
           duration_minutes: 35,
           is_active: true,
         },
@@ -245,8 +246,8 @@ class MediaService {
           vimeo_id: '1095760652',
           vimeo_url: 'https://vimeo.com/1095760652?share=copy',
           thumbnail_url: 'https://vumbnail.com/1095760652.jpg',
-          title: 'מה זה - IFVG',
-          description: 'הבנת Imbalanced Fair Value Gaps',
+          title: i18n.t('auto.services__mediaService.s10'),
+          description: i18n.t('auto.services__mediaService.s11'),
           duration_minutes: 30,
           is_active: true,
         },
@@ -256,8 +257,8 @@ class MediaService {
           vimeo_id: '1095776680',
           vimeo_url: 'https://vimeo.com/1095776680?share=copy',
           thumbnail_url: 'https://vumbnail.com/1095776680.jpg',
-          title: 'אסטרטגיית - מודל PO3',
-          description: 'לימוד מודל PO3 ואסטרטגיות מסחר',
+          title: i18n.t('auto.services__mediaService.s12'),
+          description: i18n.t('auto.services__mediaService.s13'),
           duration_minutes: 50,
           is_active: true,
         },
@@ -267,8 +268,8 @@ class MediaService {
           vimeo_id: '1099364716',
           vimeo_url: 'https://vimeo.com/1099364716?share=copy',
           thumbnail_url: 'https://vumbnail.com/1099364716.jpg',
-          title: 'אסטרטגיית - Golden Zone + FVG',
-          description: 'שילוב Golden Zone עם Fair Value Gaps',
+          title: i18n.t('auto.services__mediaService.s14'),
+          description: i18n.t('auto.services__mediaService.s15'),
           duration_minutes: 55,
           is_active: true,
         },
@@ -278,8 +279,8 @@ class MediaService {
           vimeo_id: '1108814085',
           vimeo_url: 'https://vimeo.com/1108814085?share=copy',
           thumbnail_url: 'https://vumbnail.com/1108814085.jpg',
-          title: 'סמינר PO3 (חזרה על מושגים והבנת המודל לעומק)',
-          description: 'סמינר מקיף לחזרה על מושגי PO3 והבנה מעמיקה',
+          title: i18n.t('auto.services__mediaService.s16'),
+          description: i18n.t('auto.services__mediaService.s17'),
           duration_minutes: 90,
           is_active: true,
         },
@@ -289,8 +290,8 @@ class MediaService {
           vimeo_id: '1095763209',
           vimeo_url: 'https://vimeo.com/1095763209?share=copy',
           thumbnail_url: 'https://vumbnail.com/1095763209.jpg',
-          title: 'הלוויתנים מקנאים בכם!',
-          description: 'הבנת התנהגות הלוויתנים והשפעתם על השוק',
+          title: i18n.t('auto.services__mediaService.s18'),
+          description: i18n.t('auto.services__mediaService.s19'),
           duration_minutes: 25,
           is_active: true,
         },
@@ -357,7 +358,7 @@ class MediaService {
     if (/^https?:\/\//i.test(uri)) return { url: uri };
     const upload = await this.uploadMedia(uri, type);
     if (!upload.success) {
-      return { url: null, error: upload.error || 'העלאה נכשלה' };
+      return { url: null, error: upload.error || i18n.t('auto.services__mediaService.s20') };
     }
     return { url: upload.url ?? null };
   }
@@ -402,7 +403,7 @@ class MediaService {
         logger.error('MediaService', 'Upload error', error);
         return {
           success: false,
-          error: toUploadErrorMessage(error, error.message || 'העלאה נכשלה'),
+          error: toUploadErrorMessage(error, error.message || i18n.t('auto.services__mediaService.s20')),
         };
       }
 
@@ -423,7 +424,7 @@ class MediaService {
       logger.error('MediaService', 'Upload error', error);
       return {
         success: false,
-        error: toUploadErrorMessage(error, 'העלאה נכשלה — נסה שוב'),
+        error: toUploadErrorMessage(error, i18n.t('auto.services__mediaService.s21')),
       };
     }
   }

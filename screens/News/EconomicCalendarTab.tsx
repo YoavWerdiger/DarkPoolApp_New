@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 import { legacyAlert } from '../../utils/appDialog';
 import ShareDestinationSheet from '../../components/share/ShareDestinationSheet';
@@ -49,7 +50,7 @@ function getEventDateOnDay(day: Date, time: string): Date {
 
 /** פורמט קומפקטי לבייג': MM:SS מתחת לשעה, H:MM:SS מעל. */
 function formatEventCountdown(remainingMs: number): string {
-  if (remainingMs <= 0) return 'עכשיו';
+  if (remainingMs <= 0) return i18n.t('auto.screens__News__EconomicCalendarTab.s1');
   const totalSec = Math.floor(remainingMs / 1000);
   const h = Math.floor(totalSec / 3600);
   const m = Math.floor((totalSec % 3600) / 60);
@@ -89,7 +90,7 @@ function findCountdownTarget(
       return { index: i, label: formatEventCountdown(remaining) };
     }
     if (remaining > -COUNTDOWN_GRACE_MS) {
-      return { index: i, label: 'עכשיו' };
+      return { index: i, label: i18n.t('auto.screens__News__EconomicCalendarTab.s1') };
     }
   }
   return null;
@@ -267,13 +268,13 @@ const EconomicEventCard: React.FC<{
                 <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-start', width: '100%' }}>
                   {[
                     event.forecast
-                      ? { key: 'forecast', label: 'תחזית', value: event.forecast, color: DesignTokens.colors.text.primary }
+                      ? { key: 'forecast', label: i18n.t('auto.screens__News__EconomicCalendarTab.s2'), value: event.forecast, color: DesignTokens.colors.text.primary }
                       : null,
                     event.actual
-                      ? { key: 'actual', label: 'תוצאה', value: event.actual, color: getActualColor() }
+                      ? { key: 'actual', label: i18n.t('auto.screens__News__EconomicCalendarTab.s3'), value: event.actual, color: getActualColor() }
                       : null,
                     event.previous
-                      ? { key: 'previous', label: 'קודם', value: event.previous, color: DesignTokens.colors.text.secondary }
+                      ? { key: 'previous', label: i18n.t('auto.screens__News__EconomicCalendarTab.s4'), value: event.previous, color: DesignTokens.colors.text.secondary }
                       : null,
                   ]
                     .filter((c): c is { key: string; label: string; value: string; color: string } => !!c)
@@ -675,7 +676,7 @@ export default function EconomicCalendarTab({
       filterEvents(loadedEvents, selectedImportance);
       return loadedEvents;
     } catch (error) {
-      legacyAlert('שגיאה', 'לא ניתן לטעון את האירועים הכלכליים');
+      legacyAlert(i18n.t('auto.screens__News__EconomicCalendarTab.s5'), i18n.t('auto.screens__News__EconomicCalendarTab.s6'));
       setEvents([]);
       setFilteredEvents([]);
       return null;
@@ -782,10 +783,10 @@ export default function EconomicCalendarTab({
     let message = '';
     
     if (event.forecast || event.actual || event.previous) {
-      message += 'נתונים:\n';
-      if (event.forecast) message += `תחזית: ${formatEconomicDisplayValue(event.forecast, event.title)}\n`;
-      if (event.actual) message += `תוצאה: ${formatEconomicDisplayValue(event.actual, event.title)}\n`;
-      if (event.previous) message += `ערך קודם: ${formatEconomicDisplayValue(event.previous, event.title)}\n`;
+      message += i18n.t('auto.screens__News__EconomicCalendarTab.s7');
+      if (event.forecast) message += i18n.t('auto.screens__News__EconomicCalendarTab.s8', { v0: formatEconomicDisplayValue(event.forecast, event.title) });
+      if (event.actual) message += i18n.t('auto.screens__News__EconomicCalendarTab.s9', { v0: formatEconomicDisplayValue(event.actual, event.title) });
+      if (event.previous) message += i18n.t('auto.screens__News__EconomicCalendarTab.s10', { v0: formatEconomicDisplayValue(event.previous, event.title) });
       message += '\n';
     }
     
@@ -794,7 +795,7 @@ export default function EconomicCalendarTab({
     legacyAlert(
       translatedTitle,
       message,
-      [{ text: 'סגור', style: 'cancel' }]
+      [{ text: i18n.t('auto.screens__News__EconomicCalendarTab.s11'), style: 'cancel' }]
     );
   }, []);
 
@@ -880,9 +881,7 @@ export default function EconomicCalendarTab({
                   color: DesignTokens.colors.text.secondary,
                   marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
                 }}
-              >
-                היום
-              </Text>
+              >{i18n.t('auto.screens__News__EconomicCalendarTab.s12')}</Text>
             )}
           </View>
 
@@ -943,7 +942,7 @@ export default function EconomicCalendarTab({
             color: DesignTokens.colors.text.primary 
           }}
         >
-          {isToday ? 'יום שקט היום' : 'יום שקט'}
+          {isToday ? i18n.t('auto.screens__News__EconomicCalendarTab.s13') : i18n.t('auto.screens__News__EconomicCalendarTab.s14')}
         </Text>
         <Text 
           style={{ 
@@ -954,8 +953,8 @@ export default function EconomicCalendarTab({
           }}
         >
           {isToday 
-            ? 'השווקים רגועים - אין פרסומים כלכליים חשובים מתוכננים להיום'
-            : `לא נמצאו אירועים כלכליים ב${dateStr}`
+            ? i18n.t('auto.screens__News__EconomicCalendarTab.s15')
+            : i18n.t('auto.screens__News__EconomicCalendarTab.s16', { v0: dateStr })
           }
         </Text>
     </View>
@@ -1029,7 +1028,7 @@ export default function EconomicCalendarTab({
       {!isSelectedToday ? (
         <View style={fabStyles.wrap} pointerEvents="box-none">
           <UIButton
-            title="חזרה להיום"
+            title={i18n.t('auto.screens__News__EconomicCalendarTab.s17')}
             variant="primary"
             icon="today-outline"
             iconPosition="right"

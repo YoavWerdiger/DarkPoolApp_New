@@ -1,3 +1,4 @@
+import i18n from '../lib/i18n';
 import React, { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, StyleSheet } from 'react-native';
 import LottieView from 'lottie-react-native';
@@ -115,7 +116,7 @@ export function AppLaunchScreen({ ready, onRevealApp, onFinish }: Props) {
       pointerEvents={ready ? 'none' : 'auto'}
       accessible
       accessibilityRole="progressbar"
-      accessibilityLabel="DarkPool נטען"
+      accessibilityLabel={i18n.t('auto.components__AppLaunchScreen.s1')}
     >
       <Animated.View
         style={[StyleSheet.absoluteFill, { backgroundColor: SPLASH_BG }, veilStyle]}

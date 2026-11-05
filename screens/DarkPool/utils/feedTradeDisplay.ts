@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 /** עזרי תצוגה משותפים לכרטיסי פיד — פעולה, טיקר, פירוט. */
 
 import { formatInsiderShares } from './insiderTradeDisplay';
@@ -23,7 +24,7 @@ export function getFeedTradeSide(transactionType: string): FeedTradeSide {
 
 /** פועל עבר קצר לשורת כותרת — «קנה» / «מכר», לא «רכישה בשוק הפתוח». */
 export function getFeedTradeVerb(side: FeedTradeSide): string {
-  return side === 'sell' ? 'מכר' : 'קנה';
+  return side === 'sell' ? i18n.t('auto.screens__DarkPool__utils__feedTradeDisplay.s1') : i18n.t('auto.screens__DarkPool__utils__feedTradeDisplay.s2');
 }
 
 /** תצוגת טיקר ב־UI בלבד — "$AAPL" בלי כפל `$`. */
@@ -62,7 +63,7 @@ export function getFeedTradeActionSentence(
   ticker: string
 ): string {
   const t = formatFeedTickerDisplay(ticker);
-  return side === 'sell' ? `מכר את ${t}` : `קנה את ${t}`;
+  return side === 'sell' ? i18n.t('auto.screens__DarkPool__utils__feedTradeDisplay.s3', { v0: t }) : i18n.t('auto.screens__DarkPool__utils__feedTradeDisplay.s4', { v0: t });
 }
 
 export type FeedHeadlineKind = 'congress' | 'insider';
@@ -104,7 +105,7 @@ export function buildFeedTradeHeadline(input: {
         connector: 'range',
         amountText: range,
         tickerDisplay,
-        sentence: `${verb} ${range} ב-${tickerDisplay}`,
+        sentence: i18n.t('auto.screens__DarkPool__utils__feedTradeDisplay.s5', { v0: verb, v1: range, v2: tickerDisplay }),
       };
     }
     return {
@@ -123,7 +124,7 @@ export function buildFeedTradeHeadline(input: {
       connector: 'shares',
       amountText: sharesText,
       tickerDisplay,
-      sentence: `${verb} ${sharesText} מניות של ${tickerDisplay}`,
+      sentence: i18n.t('auto.screens__DarkPool__utils__feedTradeDisplay.s6', { v0: verb, v1: sharesText, v2: tickerDisplay }),
     };
   }
 
@@ -134,7 +135,7 @@ export function buildFeedTradeHeadline(input: {
       connector: 'value',
       amountText: valueText,
       tickerDisplay,
-      sentence: `${verb} ${valueText} ב-${tickerDisplay}`,
+      sentence: i18n.t('auto.screens__DarkPool__utils__feedTradeDisplay.s5', { v0: verb, v1: valueText, v2: tickerDisplay }),
     };
   }
 
@@ -204,9 +205,9 @@ export function withFeedValueLabel(amount: string | null | undefined): string | 
   const trimmed = amount.trim();
   if (/^בשווי\s*:?\s*/u.test(trimmed)) {
     const rest = trimmed.replace(/^בשווי\s*:?\s*/u, '').trim();
-    return rest ? `בשווי ${rest}` : null;
+    return rest ? i18n.t('auto.screens__DarkPool__utils__feedTradeDisplay.s7', { v0: rest }) : null;
   }
-  return `בשווי ${trimmed}`;
+  return i18n.t('auto.screens__DarkPool__utils__feedTradeDisplay.s7', { v0: trimmed });
 }
 
 /** טווח STOCK Act — «בטווח» ולא «בשווי», כי אין סכום מדויק. */
@@ -215,13 +216,13 @@ export function withFeedRangeLabel(amount: string | null | undefined): string | 
   const trimmed = amount.trim();
   if (/^בטווח\s*:?\s*/u.test(trimmed)) {
     const rest = trimmed.replace(/^בטווח\s*:?\s*/u, '').trim();
-    return rest ? `בטווח: ${rest}` : null;
+    return rest ? i18n.t('auto.screens__DarkPool__utils__feedTradeDisplay.s8', { v0: rest }) : null;
   }
   if (/^בשווי\s*:?\s*/u.test(trimmed)) {
     const rest = trimmed.replace(/^בשווי\s*:?\s*/u, '').trim();
-    return rest ? `בטווח: ${rest}` : null;
+    return rest ? i18n.t('auto.screens__DarkPool__utils__feedTradeDisplay.s8', { v0: rest }) : null;
   }
-  return `בטווח: ${trimmed}`;
+  return i18n.t('auto.screens__DarkPool__utils__feedTradeDisplay.s8', { v0: trimmed });
 }
 
 export type FeedTradeDetailParts = {
@@ -239,7 +240,7 @@ export function getFeedTradeDetailParts(input: {
     input.shares != null && input.shares > 0
       ? formatInsiderShares(input.shares) ?? formatFeedShareCount(input.shares)
       : null;
-  const sharesLabel = sharesText ? `${sharesText} מניות` : null;
+  const sharesLabel = sharesText ? i18n.t('auto.screens__DarkPool__utils__feedTradeDisplay.s9', { v0: sharesText }) : null;
 
   let amountLabel: string | null = null;
   if (input.valueUsd != null && input.valueUsd > 0) {

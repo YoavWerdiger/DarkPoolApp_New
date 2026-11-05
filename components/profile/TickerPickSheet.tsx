@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 /**
  * שיט בחירת מניות (התראות דיווחי רווח): חיפוש עם מקלדת שנפתחת בתוך השיט, תוצאות חיות
  * עם לוגו ושם החברה, וכפתור הוספה / הסרה בכל שורה. נשאר פתוח — אפשר להוסיף כמה ברצף.
@@ -27,7 +28,7 @@ type Props = {
   onRemove: (symbol: string) => void;
 };
 
-export function TickerPickSheet({ isOpen, onClose, title = 'הוספת מניות', selected, onAdd, onRemove }: Props) {
+export function TickerPickSheet({ isOpen, onClose, title = i18n.t('auto.components__profile__TickerPickSheet.s1'), selected, onAdd, onRemove }: Props) {
   const tokens = useDesignTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
   const [query, setQuery] = useState('');
@@ -101,7 +102,7 @@ export function TickerPickSheet({ isOpen, onClose, title = 'הוספת מניו�
             onSubmitEditing={() => {
               if (rows[0]) toggle(rows[0].symbol);
             }}
-            placeholder="טיקר או שם חברה"
+            placeholder={i18n.t('auto.components__profile__TickerPickSheet.s2')}
             placeholderTextColor={tokens.colors.text.tertiary}
             keyboardAppearance={(tokens.colors.background.primary as string) === LIGHT_CANVAS ? 'light' : 'dark'}
             autoCapitalize="characters"
@@ -110,12 +111,12 @@ export function TickerPickSheet({ isOpen, onClose, title = 'הוספת מניו�
             autoFocus
             returnKeyType="done"
             blurOnSubmit={false}
-            accessibilityLabel="חיפוש מניה"
+            accessibilityLabel={i18n.t('auto.components__profile__TickerPickSheet.s3')}
           />
           {loading ? (
             <ActivityIndicator size="small" color={tokens.colors.text.secondary} />
           ) : query ? (
-            <Pressable onPress={() => setQuery('')} hitSlop={10} accessibilityLabel="נקה חיפוש">
+            <Pressable onPress={() => setQuery('')} hitSlop={10} accessibilityLabel={i18n.t('auto.components__profile__TickerPickSheet.s4')}>
               <Ionicons name="close-circle" size={18} color={tokens.colors.text.secondary} />
             </Pressable>
           ) : null}
@@ -139,7 +140,7 @@ export function TickerPickSheet({ isOpen, onClose, title = 'הוספת מניו�
                     onPress={() => toggle(sym)}
                     style={[styles.row, i < rows.length - 1 && { borderBottomWidth: 1, borderBottomColor: tokens.colors.border.divider }]}
                     accessibilityRole="button"
-                    accessibilityLabel={on ? `הסרת ${sym}` : `הוספת ${sym}`}
+                    accessibilityLabel={on ? i18n.t('auto.components__profile__TickerPickSheet.s5', { v0: sym }) : i18n.t('auto.components__profile__TickerPickSheet.s6', { v0: sym })}
                   >
                     <TickerLogo symbol={sym} size={36} borderRadius={18} />
                     <View style={styles.rowText}>
@@ -169,7 +170,7 @@ export function TickerPickSheet({ isOpen, onClose, title = 'הוספת מניו�
               })}
             </UICard>
           ) : query.trim() && !loading ? (
-            <Text style={styles.empty}>לא נמצאו מניות</Text>
+            <Text style={styles.empty}>{i18n.t('auto.components__profile__TickerPickSheet.s7')}</Text>
           ) : null}
         </ScrollView>
       </View>

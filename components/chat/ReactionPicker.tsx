@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
@@ -79,7 +80,7 @@ export function ReactionPickerContent({
   onClose,
   onReaction,
   messageReactions = [],
-  title = 'בחר ריאקציה',
+  title = i18n.t('auto.components__chat__ReactionPicker.s1'),
 }: Pick<ReactionPickerProps, 'onClose' | 'onReaction' | 'messageReactions' | 'title'>) {
   const sheet = useChatSheetStyles();
   const tokens = useDesignTokens();
@@ -162,7 +163,7 @@ export function ReactionPickerContent({
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder="חיפוש אימוג'י..."
+            placeholder={i18n.t('auto.components__chat__ReactionPicker.s2')}
             placeholderTextColor={formFieldPlaceholderColor(tokens)}
             style={[formFieldInputStyle(tokens), styles.searchInput]}
             autoCorrect={false}
@@ -170,13 +171,13 @@ export function ReactionPickerContent({
             clearButtonMode="while-editing"
             returnKeyType="search"
             textContentType="none"
-            accessibilityLabel="חיפוש אימוג'י"
+            accessibilityLabel={i18n.t('auto.components__chat__ReactionPicker.s3')}
           />
           {query.length > 0 ? (
             <TouchableOpacity
               onPress={() => setQuery('')}
               hitSlop={8}
-              accessibilityLabel="נקה חיפוש"
+              accessibilityLabel={i18n.t('auto.components__chat__ReactionPicker.s4')}
             >
               <Ionicons name="close-circle" size={18} color={tokens.colors.text.tertiary} />
             </TouchableOpacity>
@@ -196,7 +197,7 @@ export function ReactionPickerContent({
           style={{ maxHeight: listMaxHeight }}
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={
-            <Text style={[styles.emptyText, { color: tokens.colors.text.tertiary }]}>לא נמצאו אימוג'ים</Text>
+            <Text style={[styles.emptyText, { color: tokens.colors.text.tertiary }]}>{i18n.t('auto.components__chat__ReactionPicker.s5')}</Text>
           }
           renderSectionHeader={({ section }) => (
             <View style={styles.sectionHeader}>
@@ -228,7 +229,7 @@ export function ReactionPickerContent({
                         { width: emojiBtnWidth },
                         isSelected && sheet.emojiButtonSelected,
                       ]}
-                      accessibilityLabel={`ריאקציה ${emoji}`}
+                      accessibilityLabel={i18n.t('auto.components__chat__ReactionPicker.s6', { v0: emoji })}
                       accessibilityState={{ selected: isSelected }}
                     >
                       <Text style={styles.emoji}>{emoji}</Text>
@@ -253,7 +254,7 @@ export default function ReactionPicker({
   onClose,
   onReaction,
   messageReactions = [],
-  title = 'בחר ריאקציה',
+  title = i18n.t('auto.components__chat__ReactionPicker.s1'),
   embedded = false,
 }: ReactionPickerProps) {
   const tokens = useDesignTokens();

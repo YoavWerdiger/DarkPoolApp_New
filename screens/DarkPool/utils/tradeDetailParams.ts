@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 /**
  * פרמטרי מסך פרטי עסקה — שני סוגי דיווח בלבד, בלי נפילה לפרופיל.
  *
@@ -77,7 +78,7 @@ export function serializeCongressTrade(trade: CongressFeedTrade): CongressFeedTr
     amount_label: trade.amount_label ?? null,
     filed_at: str(trade.filed_at),
     transaction_date: str(trade.transaction_date),
-    txn_label: trade.transaction_type === 'sell' ? 'מכירה' : 'רכישה',
+    txn_label: trade.transaction_type === 'sell' ? i18n.t('auto.screens__DarkPool__utils__tradeDetailParams.s1') : i18n.t('auto.screens__DarkPool__utils__tradeDetailParams.s2'),
     source: trade.source === 'unusualwhales' ? 'unusualwhales' : 'quiverquant',
     excess_return_pct: numOrNull(trade.excess_return_pct),
     price_change_pct: numOrNull(trade.price_change_pct),
@@ -160,7 +161,7 @@ export function followingActivityToTradeDetail(
     return congressTradeDetailParams({
       id: str(item.id),
       politician_id: str(item.person_id),
-      politician_name: str(item.person_name) || 'פוליטיקאי',
+      politician_name: str(item.person_name) || i18n.t('auto.screens__DarkPool__utils__tradeDetailParams.s3'),
       politician_image_url: item.person_image_url ?? null,
       ticker,
       company_name: item.issuer ?? null,
@@ -170,7 +171,7 @@ export function followingActivityToTradeDetail(
       amount_label: item.amount_label ?? null,
       filed_at: filed,
       transaction_date: traded,
-      txn_label: str(item.txn_label) || (side === 'sell' ? 'מכירה' : 'רכישה'),
+      txn_label: str(item.txn_label) || (side === 'sell' ? i18n.t('auto.screens__DarkPool__utils__tradeDetailParams.s1') : i18n.t('auto.screens__DarkPool__utils__tradeDetailParams.s2')),
       source: 'unusualwhales',
       excess_return_pct: null,
       price_change_pct: numOrNull(item.price_change_pct),
@@ -187,7 +188,7 @@ export function followingActivityToTradeDetail(
       company_name: item.issuer ?? null,
       insider_cik: null,
       insider_logo_url: item.person_image_url ?? null,
-      insider_name: str(item.person_name) || 'בכיר',
+      insider_name: str(item.person_name) || i18n.t('auto.screens__DarkPool__utils__tradeDetailParams.s4'),
       insider_role: null,
       transaction_type: insiderCodeFromLabel(item.txn_label),
       shares,
@@ -227,7 +228,7 @@ export function profileRecentToTradeDetail(input: {
     return congressTradeDetailParams({
       id: str(row.id),
       politician_id: str(personId),
-      politician_name: str(personName) || 'פוליטיקאי',
+      politician_name: str(personName) || i18n.t('auto.screens__DarkPool__utils__tradeDetailParams.s3'),
       politician_image_url: personImage ?? null,
       ticker,
       company_name: null,
@@ -237,7 +238,7 @@ export function profileRecentToTradeDetail(input: {
       amount_label: row.amount_label ?? null,
       filed_at: filed,
       transaction_date: traded,
-      txn_label: str(row.txn_label) || (side === 'sell' ? 'מכירה' : 'רכישה'),
+      txn_label: str(row.txn_label) || (side === 'sell' ? i18n.t('auto.screens__DarkPool__utils__tradeDetailParams.s1') : i18n.t('auto.screens__DarkPool__utils__tradeDetailParams.s2')),
       source: 'quiverquant',
       excess_return_pct: null,
       price_change_pct: null,
@@ -252,7 +253,7 @@ export function profileRecentToTradeDetail(input: {
     company_name: null,
     insider_cik: null,
     insider_logo_url: personImage ?? null,
-    insider_name: str(personName) || 'בכיר',
+    insider_name: str(personName) || i18n.t('auto.screens__DarkPool__utils__tradeDetailParams.s4'),
     insider_role: null,
     transaction_type: insiderCodeFromLabel(row.txn_label),
     shares: parseShareCount(row.amount_label),

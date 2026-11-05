@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -33,21 +34,21 @@ export type DisplayPlan = {
 
 /** מה כלול בכל מסלול — מוצג כשהכרטיס נפתח */
 const FREE_FEATURES = [
-  'יומן מסחר (לתקופה מוגבלת)',
-  'חדשות',
-  'ציוצים',
-  'דיווחי רווח',
-  'יומן כלכלי',
-  'רשימת מעקב',
-  'מפת חום',
+  i18n.t('auto.components__subscription__PlanPicker.s1'),
+  i18n.t('auto.components__subscription__PlanPicker.s2'),
+  i18n.t('auto.components__subscription__PlanPicker.s3'),
+  i18n.t('auto.components__subscription__PlanPicker.s4'),
+  i18n.t('auto.components__subscription__PlanPicker.s5'),
+  i18n.t('auto.components__subscription__PlanPicker.s6'),
+  i18n.t('auto.components__subscription__PlanPicker.s7'),
 ];
 const PREMIUM_FEATURES = [
-  'כל מה שיש במנוי החינמי',
-  'גישה לחדרי הקהילה',
-  'לייב מסחר',
-  'יומן מסחר',
-  'אינסיידרים',
-  'תג חבר פרימיום',
+  i18n.t('auto.components__subscription__PlanPicker.s8'),
+  i18n.t('auto.components__subscription__PlanPicker.s9'),
+  i18n.t('auto.components__subscription__PlanPicker.s10'),
+  i18n.t('auto.components__subscription__PlanPicker.s11'),
+  i18n.t('auto.components__subscription__PlanPicker.s12'),
+  i18n.t('auto.components__subscription__PlanPicker.s13'),
 ];
 const PLAN_HIGHLIGHTS: Record<string, string[]> = {
   free: FREE_FEATURES,
@@ -79,7 +80,7 @@ export function getSelectablePlans(mode: PlanPickerMode): DisplayPlan[] {
 
 const PERIOD_MONTHS: Record<string, number> = { monthly: 1, quarterly: 3, yearly: 12 };
 /** תווית קצרה לטאב התקופה (שמות המסלולים עצמם ארוכים יותר) */
-const PERIOD_TAB_LABEL: Record<string, string> = { monthly: 'חודשי', quarterly: 'רבעוני', yearly: 'שנתי' };
+const PERIOD_TAB_LABEL: Record<string, string> = { monthly: i18n.t('auto.components__subscription__PlanPicker.s14'), quarterly: i18n.t('auto.components__subscription__PlanPicker.s15'), yearly: i18n.t('auto.components__subscription__PlanPicker.s16') };
 
 /** מחיר חודשי שווה-ערך (לרבעוני/שנתי) — המחיר הבולט בכרטיס */
 export function monthlyEquivalent(price: number, period: string): number {
@@ -90,17 +91,17 @@ export function monthlyEquivalent(price: number, period: string): number {
 /** «חסוך 40% · …» → «חיסכון 40%» */
 function savingsLabel(description: string): string | null {
   const m = description.match(/(\d+)%/);
-  return m ? `חיסכון ${m[1]}%` : null;
+  return m ? i18n.t('auto.components__subscription__PlanPicker.s17', { v0: m[1] }) : null;
 }
 
 export function formatPlanPeriod(period: string): string {
   switch (period) {
     case 'monthly':
-      return '/חודש';
+      return i18n.t('auto.components__subscription__PlanPicker.s18');
     case 'quarterly':
-      return '/רבעון';
+      return i18n.t('auto.components__subscription__PlanPicker.s19');
     case 'yearly':
-      return '/שנה';
+      return i18n.t('auto.components__subscription__PlanPicker.s20');
     default:
       return '';
   }
@@ -111,12 +112,12 @@ export function resolveContinueLabel(
   selectedPlanId: string | null,
   currentPlanId?: string | null,
 ): string {
-  if (!selectedPlanId) return mode === 'upgrade' ? 'בחר מסלול לשדרוג' : 'בחר מסלול';
+  if (!selectedPlanId) return mode === 'upgrade' ? i18n.t('auto.components__subscription__PlanPicker.s21') : i18n.t('auto.components__subscription__PlanPicker.s22');
   if (mode === 'registration') {
-    return selectedPlanId === 'free' ? 'התחל בחינם' : 'המשך לתשלום';
+    return selectedPlanId === 'free' ? i18n.t('auto.components__subscription__PlanPicker.s23') : i18n.t('auto.components__subscription__PlanPicker.s24');
   }
-  if (selectedPlanId === currentPlanId) return 'מסלול נוכחי';
-  return 'המשך לתשלום';
+  if (selectedPlanId === currentPlanId) return i18n.t('auto.components__subscription__PlanPicker.s25');
+  return i18n.t('auto.components__subscription__PlanPicker.s24');
 }
 
 export type PlanPickerProps = {
@@ -241,7 +242,7 @@ export default function PlanPicker({
             />
 
             <View style={styles.planHead}>
-              <Text style={[styles.planName, { color: tokens.colors.text.primary }]}>פרימיום</Text>
+              <Text style={[styles.planName, { color: tokens.colors.text.primary }]}>{i18n.t('auto.components__subscription__PlanPicker.s26')}</Text>
               {savingsLabel(activePremium.description) && activePremium.period !== 'monthly' ? (
                 <View style={[styles.savePill, { backgroundColor: `${tokens.colors.primary.main}22` }]}>
                   <Text style={[styles.saveText, { color: tokens.colors.primary.main }]}>
@@ -251,19 +252,19 @@ export default function PlanPicker({
               ) : null}
               {mode === 'upgrade' && currentPlanId === activePremium.id ? (
                 <View style={[styles.savePill, { backgroundColor: tokens.colors.background.tertiary }]}>
-                  <Text style={[styles.saveText, { color: tokens.colors.text.primary }]}>המסלול שלך</Text>
+                  <Text style={[styles.saveText, { color: tokens.colors.text.primary }]}>{i18n.t('auto.components__subscription__PlanPicker.s27')}</Text>
                 </View>
               ) : null}
             </View>
 
             <View style={styles.priceRow}>
               <Text style={[styles.priceBig, { color: tokens.colors.text.primary }]}>₪{perMonth}</Text>
-              <Text style={[styles.priceUnit, { color: tokens.colors.text.secondary }]}>/ לחודש</Text>
+              <Text style={[styles.priceUnit, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.components__subscription__PlanPicker.s28')}</Text>
             </View>
             <Text style={[styles.priceNote, { color: tokens.colors.text.secondary }]}>
               {multiMonth
-                ? `₪${activePremium.price.toLocaleString(appLocale())} ל-${PERIOD_MONTHS[activePremium.period]} חודשים · בתשלומים חודשיים`
-                : 'ללא התחייבות · ביטול בכל עת'}
+                ? i18n.t('auto.components__subscription__PlanPicker.s29', { v0: activePremium.price.toLocaleString(appLocale()), v1: PERIOD_MONTHS[activePremium.period] })
+                : i18n.t('auto.components__subscription__PlanPicker.s30')}
             </Text>
 
             {features(activePremium.highlights)}
@@ -283,9 +284,9 @@ export default function PlanPicker({
       </View>
       <View style={styles.priceRow}>
         <Text style={[styles.priceBig, { color: tokens.colors.text.primary }]}>₪0</Text>
-        <Text style={[styles.priceUnit, { color: tokens.colors.text.secondary }]}>/ לחודש</Text>
+        <Text style={[styles.priceUnit, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.components__subscription__PlanPicker.s28')}</Text>
       </View>
-      <Text style={[styles.priceNote, { color: tokens.colors.text.secondary }]}>להתחיל בלי התחייבות</Text>
+      <Text style={[styles.priceNote, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.components__subscription__PlanPicker.s31')}</Text>
       {features(freePlan.highlights)}
     </TouchableOpacity>
   ) : null;
@@ -369,9 +370,7 @@ export default function PlanPicker({
       {premiumSelected ? (
         <View style={styles.trustRow}>
           <Ionicons name="lock-closed" size={13} color={tokens.colors.text.tertiary} />
-          <Text style={[styles.trustText, { color: tokens.colors.text.tertiary }]}>
-            תשלום מאובטח · ביטול בכל עת
-          </Text>
+          <Text style={[styles.trustText, { color: tokens.colors.text.tertiary }]}>{i18n.t('auto.components__subscription__PlanPicker.s32')}</Text>
         </View>
       ) : null}
     </View>

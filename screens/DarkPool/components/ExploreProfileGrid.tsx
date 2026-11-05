@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import React, { useCallback, useMemo } from 'react';
 import {
   FlatList,
@@ -39,7 +40,7 @@ export function ExploreProfileGrid({
   refreshing,
   onRefresh,
   contentPaddingBottom = 24,
-  emptyMessage = 'אין פרופילים עם תמונה. משוך למטה לרענון.',
+  emptyMessage = i18n.t('auto.screens__DarkPool__components__ExploreProfileGrid.s1'),
 }: Props) {
   const tokens = useDesignTokens();
   const cardWidth = EXPLORE_PROFILE_CARD.width;

@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 // ============================================
 // Chat Pinned Messages Service
 // ============================================
@@ -32,20 +33,20 @@ function previewForMessage(
   if (messageType === 'media_group' && content) {
     try {
       const parsed = JSON.parse(content);
-      return parsed.caption || 'מדיה';
+      return parsed.caption || i18n.t('auto.services__chat__chatPinnedService.s1');
     } catch {
-      return 'מדיה';
+      return i18n.t('auto.services__chat__chatPinnedService.s1');
     }
   }
   switch (messageType) {
     case 'image':
-      return 'תמונה';
+      return i18n.t('auto.services__chat__chatPinnedService.s2');
     case 'video':
-      return 'סרטון';
+      return i18n.t('auto.services__chat__chatPinnedService.s3');
     case 'audio':
-      return 'הודעה קולית';
+      return i18n.t('auto.services__chat__chatPinnedService.s4');
     case 'document':
-      return 'מסמך';
+      return i18n.t('auto.services__chat__chatPinnedService.s5');
     default:
       return content?.trim() || '';
   }
@@ -101,7 +102,7 @@ async function fetchPinnedFromTable(
         message_type: msg?.message_type ?? 'text',
         message_created_at: msg?.created_at ?? row.created_at,
         pinned_by: row.pinned_by,
-        pinned_by_name: nameById.get(row.pinned_by) ?? 'משתמש',
+        pinned_by_name: nameById.get(row.pinned_by) ?? i18n.t('auto.services__chat__chatPinnedService.s6'),
         pinned_at: row.created_at,
       };
     })

@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 /**
  * כרטיס סיגנל — UICard glass + גריד מטריקות (כמו TradeListCard).
  */
@@ -43,7 +44,7 @@ export function SignalCard({ item, onPress }: SignalCardProps) {
   return (
     <DarkPoolFeedCard
       onPress={onPress ? () => onPress(signal.ticker) : undefined}
-      accessibilityLabel={`סיגנל ${signalTypeLabel(signal.signal_type)} ${signal.ticker}`}
+      accessibilityLabel={i18n.t('auto.screens__DarkPool__components__SignalCard.s1', { v0: signalTypeLabel(signal.signal_type), v1: signal.ticker })}
     >
       <View style={h.header}>
         <TickerLogo symbol={signal.ticker} size={40} borderRadius={12} />
@@ -62,20 +63,20 @@ export function SignalCard({ item, onPress }: SignalCardProps) {
         </View>
         <View style={h.scoreBox}>
           <Text style={[h.scoreNum, { color: sc }]}>{Math.round(signal.score)}</Text>
-          <Text style={h.scoreLbl}>ציון</Text>
+          <Text style={h.scoreLbl}>{i18n.t('auto.screens__DarkPool__components__SignalCard.s2')}</Text>
         </View>
       </View>
 
       <DarkPoolMetricsGrid tokens={tokens}>
-        <DarkPoolMetricCell tokens={tokens} label="פרימיום" value={premium} />
+        <DarkPoolMetricCell tokens={tokens} label={i18n.t('auto.screens__DarkPool__components__SignalCard.s3')} value={premium} />
         <DarkPoolMetricCell
           tokens={tokens}
-          label="זמן"
+          label={i18n.t('auto.screens__DarkPool__components__SignalCard.s4')}
           value={formatRelativeTime(signal.detected_at) || '—'}
         />
         <DarkPoolMetricCell
           tokens={tokens}
-          label="מול ממוצע"
+          label={i18n.t('auto.screens__DarkPool__components__SignalCard.s5')}
           value={relVol}
           valueColor={
             signal.metrics?.relative_volume != null

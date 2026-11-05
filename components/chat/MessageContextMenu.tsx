@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { useDesignTokens } from "../ui/DesignTokens";
 import { HapticFeedback } from "../../utils/hapticFeedback";
 import React from 'react';
@@ -42,49 +43,49 @@ export default function MessageContextMenu({
   const menuItems = [
     {
       id: 'reply',
-      title: 'השב',
+      title: i18n.t('auto.components__chat__MessageContextMenu.s1'),
       icon: 'arrow-undo' as const,
       onPress: onReply,
       color: '#ffffff'
     },
     {
       id: 'forward',
-      title: 'העבר',
+      title: i18n.t('auto.components__chat__MessageContextMenu.s2'),
       icon: 'arrow-forward' as const,
       onPress: onForward,
       color: '#ffffff'
     },
     {
       id: 'copy',
-      title: 'העתק',
+      title: i18n.t('auto.components__chat__MessageContextMenu.s3'),
       icon: 'copy' as const,
       onPress: onCopy,
       color: '#ffffff'
     },
     ...(canEdit ? [{
       id: 'edit',
-      title: 'ערוך',
+      title: i18n.t('auto.components__chat__MessageContextMenu.s4'),
       icon: 'create' as const,
       onPress: onEdit,
       color: '#4ade80'
     }] : []),
     {
       id: 'react',
-      title: 'ריאקציה',
+      title: i18n.t('auto.components__chat__MessageContextMenu.s5'),
       icon: 'happy' as const,
       onPress: onReact,
       color: '#ffffff'
     },
     {
       id: 'star',
-      title: isStarred ? 'הסר כוכב' : 'סמן בכוכב',
+      title: isStarred ? i18n.t('auto.components__chat__MessageContextMenu.s6') : i18n.t('auto.components__chat__MessageContextMenu.s7'),
       icon: (isStarred ? 'star' : 'star-outline') as keyof typeof Ionicons.glyphMap,
       onPress: isStarred ? onUnstar : onStar,
       color: isStarred ? '#fbbf24' : '#ffffff'
     },
     {
       id: 'delete',
-      title: 'מחק',
+      title: i18n.t('auto.components__chat__MessageContextMenu.s8'),
       icon: 'trash' as const,
       onPress: onDelete,
       color: '#ef4444'

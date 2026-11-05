@@ -1,3 +1,4 @@
+import i18n from '../lib/i18n';
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react';
 import {
   AuthService,
@@ -471,7 +472,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
     } catch (error: any) {
       logger.error('AuthContext', 'Google sign in exception', error);
-      return { error: error.message || 'שגיאה בהתחברות עם Google' };
+      return { error: error.message || i18n.t('auto.context__AuthContext.s1') };
     } finally {
       setIsLoading(false);
     }

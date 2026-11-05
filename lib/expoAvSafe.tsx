@@ -1,3 +1,4 @@
+import i18n from './i18n';
 /**
  * Audio / video for Expo Go 57 + native builds.
  *
@@ -565,9 +566,7 @@ class StubVideo extends React.Component<{
             textAlign: 'center',
             paddingHorizontal: 16,
           }}
-        >
-          ניגון וידאו לא זמין ב-Expo Go
-        </Text>
+        >{i18n.t('auto.lib__expoAvSafe.s1')}</Text>
       </View>
     );
   }
@@ -784,7 +783,7 @@ export const Audio: any = audioFacade;
 export const Video: any = VideoCompat;
 
 export const EXPO_AV_UNAVAILABLE_MESSAGE =
-  'הקלטת קול וניגון אודיו/וידאו לא זמינים בסביבה הזו. ב-Expo Go 57 הם אמורים לעבוד דרך expo-audio / expo-video.';
+  i18n.t('auto.lib__expoAvSafe.s2');
 
 /** Prefetch remote/local audio so voice bubbles start without a cold buffer. */
 export function prefetchAudioUris(uris: string[]): void {

@@ -1,3 +1,4 @@
+import i18n from '../lib/i18n';
 import { supabase } from '../lib/supabase';
 
 /**
@@ -22,24 +23,24 @@ export const isSubscriptionCheckoutEnabled = () => {
 export const SUBSCRIPTION_PLANS = {
   free: {
     id: 'free',
-    name: 'חינמי',
-    description: 'גישה חינמית לתכנים הציבוריים',
+    name: i18n.t('auto.services__paymentService.s1'),
+    description: i18n.t('auto.services__paymentService.s2'),
     price: 0,
     period: 'monthly',
     features: [
-      'חדשות כלכליות',
-      'לייב מסחר יומי ביוטיוב',
-      'תמיכה בערוץ היוטיוב',
-      'קבוצת השקעות בבורסה הישראלית 🇮🇱',
+      i18n.t('auto.services__paymentService.s3'),
+      i18n.t('auto.services__paymentService.s4'),
+      i18n.t('auto.services__paymentService.s5'),
+      i18n.t('auto.services__paymentService.s6'),
     ],
     excludedFeatures: [
-      'מענה על שאלות',
-      'יחס אישי וליווי קהילתי',
-      'חדשות מתפרצות בזמן אמת',
-      'רשימת מעקב למסחר יומי עם יעדים ברורים',
-      'ניתוחים וסטאפים לסווינגים',
-      'שיתוף תיק השקעות של הצוות',
-      'הלווייתנים',
+      i18n.t('auto.services__paymentService.s7'),
+      i18n.t('auto.services__paymentService.s8'),
+      i18n.t('auto.services__paymentService.s9'),
+      i18n.t('auto.services__paymentService.s10'),
+      i18n.t('auto.services__paymentService.s11'),
+      i18n.t('auto.services__paymentService.s12'),
+      i18n.t('auto.services__paymentService.s13'),
     ],
     role: 'free_user',
     popular: false,
@@ -49,22 +50,22 @@ export const SUBSCRIPTION_PLANS = {
 
   monthly: {
     id: 'monthly',
-    name: 'חודשי',
-    description: 'ללא התחייבות',
+    name: i18n.t('auto.services__paymentService.s14'),
+    description: i18n.t('auto.services__paymentService.s15'),
     price: 249,
     period: 'monthly',
     features: [
-      'מענה על שאלות',
-      'יחס אישי וליווי קהילתי',
-      'חדשות מתפרצות בזמן אמת',
-      'חדשות כלכליות',
-      'לייב מסחר יומי ביוטיוב',
-      'רשימת מעקב למסחר יומי עם יעדים ברורים',
-      'ניתוחים וסטאפים לסווינגים',
-      'שיתוף תיק השקעות של הצוות',
-      'תמיכה בערוץ היוטיוב',
-      'קבוצת השקעות בבורסה הישראלית 🇮🇱',
-      'הלווייתנים',
+      i18n.t('auto.services__paymentService.s7'),
+      i18n.t('auto.services__paymentService.s8'),
+      i18n.t('auto.services__paymentService.s9'),
+      i18n.t('auto.services__paymentService.s3'),
+      i18n.t('auto.services__paymentService.s4'),
+      i18n.t('auto.services__paymentService.s10'),
+      i18n.t('auto.services__paymentService.s11'),
+      i18n.t('auto.services__paymentService.s12'),
+      i18n.t('auto.services__paymentService.s5'),
+      i18n.t('auto.services__paymentService.s6'),
+      i18n.t('auto.services__paymentService.s13'),
     ],
     excludedFeatures: [],
     role: 'premium_user',
@@ -75,65 +76,65 @@ export const SUBSCRIPTION_PLANS = {
 
   quarterly: {
     id: 'quarterly',
-    name: 'רבעוני',
-    description: 'חסוך 40% · 3 תשלומים של ₪150',
+    name: i18n.t('auto.services__paymentService.s16'),
+    description: i18n.t('auto.services__paymentService.s17'),
     price: 450,
     period: 'quarterly',
     features: [
-      'מענה על שאלות',
-      'יחס אישי וליווי קהילתי',
-      'חדשות מתפרצות בזמן אמת',
-      'חדשות כלכליות',
-      'לייב מסחר יומי ביוטיוב',
-      'רשימת מעקב למסחר יומי עם יעדים ברורים',
-      'ניתוחים וסטאפים לסווינגים',
-      'שיתוף תיק השקעות של הצוות',
-      'תמיכה בערוץ היוטיוב',
-      'קבוצת השקעות בבורסה הישראלית 🇮🇱',
-      'הלווייתנים',
+      i18n.t('auto.services__paymentService.s7'),
+      i18n.t('auto.services__paymentService.s8'),
+      i18n.t('auto.services__paymentService.s9'),
+      i18n.t('auto.services__paymentService.s3'),
+      i18n.t('auto.services__paymentService.s4'),
+      i18n.t('auto.services__paymentService.s10'),
+      i18n.t('auto.services__paymentService.s11'),
+      i18n.t('auto.services__paymentService.s12'),
+      i18n.t('auto.services__paymentService.s5'),
+      i18n.t('auto.services__paymentService.s6'),
+      i18n.t('auto.services__paymentService.s13'),
     ],
     excludedFeatures: [],
     role: 'premium_user',
     popular: true,
     color: '#10B981',
-    badge: 'מסלול חדש' as string | null,
+    badge: i18n.t('auto.services__paymentService.s18') as string | null,
   },
 
   yearly: {
     id: 'yearly',
-    name: 'חודשי - שנתי',
-    description: 'חסוך 46% · 12 תשלומים של ₪135',
+    name: i18n.t('auto.services__paymentService.s19'),
+    description: i18n.t('auto.services__paymentService.s20'),
     price: 1620,
     period: 'yearly',
     features: [
-      'מענה על שאלות',
-      'יחס אישי וליווי קהילתי',
-      'חדשות מתפרצות בזמן אמת',
-      'חדשות כלכליות',
-      'לייב מסחר יומי ביוטיוב',
-      'רשימת מעקב למסחר יומי עם יעדים ברורים',
-      'ניתוחים וסטאפים לסווינגים',
-      'שיתוף תיק השקעות של הצוות',
-      'תמיכה בערוץ היוטיוב',
-      'קבוצת השקעות בבורסה הישראלית 🇮🇱',
-      'הלווייתנים',
+      i18n.t('auto.services__paymentService.s7'),
+      i18n.t('auto.services__paymentService.s8'),
+      i18n.t('auto.services__paymentService.s9'),
+      i18n.t('auto.services__paymentService.s3'),
+      i18n.t('auto.services__paymentService.s4'),
+      i18n.t('auto.services__paymentService.s10'),
+      i18n.t('auto.services__paymentService.s11'),
+      i18n.t('auto.services__paymentService.s12'),
+      i18n.t('auto.services__paymentService.s5'),
+      i18n.t('auto.services__paymentService.s6'),
+      i18n.t('auto.services__paymentService.s13'),
     ],
     excludedFeatures: [],
     role: 'premium_user',
     popular: false,
     color: '#F59E0B',
-    badge: 'המסלול החסכוני' as string | null,
+    badge: i18n.t('auto.services__paymentService.s21') as string | null,
   },
 
   live_addon: {
     id: 'live_addon',
-    name: 'תוספת לייבים',
-    description: '4 לייבים אקסקלוסיביים בחודש - לייב אחד כל שבוע בזום',
+    name: i18n.t('auto.services__paymentService.s22'),
+    description: i18n.t('auto.services__paymentService.s23'),
     price: 99,
     period: 'monthly',
     features: [
-      '4 לייבים אקסקלוסיביים בחודש',
-      'לייב אחד כל שבוע בזום',
+      i18n.t('auto.services__paymentService.s24'),
+      i18n.t('auto.services__paymentService.s25'),
     ],
     excludedFeatures: [],
     role: 'live_user',
@@ -145,11 +146,11 @@ export const SUBSCRIPTION_PLANS = {
 
   whales_course: {
     id: 'whales_course',
-    name: 'הלווייתנים',
-    description: 'הלווייתנים - תשלום חד פעמי',
+    name: i18n.t('auto.services__paymentService.s13'),
+    description: i18n.t('auto.services__paymentService.s26'),
     price: 531,
     period: 'one_time',
-    features: ['קורס הלווייתנים המלא', 'גישה לכל החומרים', 'תמיכה צמודה'],
+    features: [i18n.t('auto.services__paymentService.s27'), i18n.t('auto.services__paymentService.s28'), i18n.t('auto.services__paymentService.s29')],
     excludedFeatures: [],
     role: 'whales_user',
     popular: false,
@@ -241,11 +242,11 @@ function mapEdgeInvoiceToHistoryItem(row: PaymentInvoiceEdgeRow): PaymentHistory
 
 /** הודעת שגיאה כללית לקונה — אל תציג Description של CardCom */
 export const BUYER_PAYMENT_ERROR_HE =
-  'מצטערים, אירעה שגיאת שרת. אנא המתינו מעט ונסו שוב. אם השגיאה נמשכת — פנו אלינו לתמיכה.';
+  i18n.t('auto.services__paymentService.s30');
 
 /** מסוף CardCom חסום / לא פעיל — הודעה ברורה לקונה בלי חשיפת פרטי ספק */
 export const BUYER_PAYMENT_TERMINAL_BLOCKED_HE =
-  'שירות התשלומים אינו זמין כרגע. נסו שוב מאוחר יותר או פנו אלינו לתמיכה.';
+  i18n.t('auto.services__paymentService.s31');
 
 type CreatePaymentEdgeBody = {
   success?: boolean;
@@ -584,17 +585,17 @@ class PaymentService {
         body: { action: 'resolve_url', transactionId },
       });
       if (error) {
-        return { url: null, error: 'לא ניתן לפתוח את החשבונית כרגע' };
+        return { url: null, error: i18n.t('auto.services__paymentService.s32') };
       }
       if (data?.success && typeof data.document_url === 'string') {
         return { url: data.document_url };
       }
       return {
         url: null,
-        error: 'קישור למסמך לא זמין — שמרו את מספר המסמך לפנייה לתמיכה',
+        error: i18n.t('auto.services__paymentService.s33'),
       };
     } catch {
-      return { url: null, error: 'לא ניתן לפתוח את החשבונית כרגע' };
+      return { url: null, error: i18n.t('auto.services__paymentService.s32') };
     }
   }
 

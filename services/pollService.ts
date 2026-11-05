@@ -1,3 +1,4 @@
+import i18n from '../lib/i18n';
 import { supabase } from '../lib/supabase';
 import { ChatMessageType } from '../types/chat.types';
 import { logger } from '../utils/logger';
@@ -60,7 +61,7 @@ export class PollService {
 
       const payload: any = {
         id: groupId,
-        name: group?.name || 'קבוצה',
+        name: group?.name || i18n.t('auto.services__pollService.s1'),
         description: group?.description || null,
         created_by: group?.created_by || fallbackUserId,
         is_private: false,
@@ -527,7 +528,7 @@ export class PollService {
       const usersMap = new Map(
         (users || []).map((u: any) => [u.id, {
           id: u.id,
-          display_name: u.display_name || 'משתמש',
+          display_name: u.display_name || i18n.t('auto.services__pollService.s2'),
           profile_picture: u.profile_picture || undefined,
         }])
       );

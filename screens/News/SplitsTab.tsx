@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -40,9 +41,9 @@ const SplitCard: React.FC<{ split: Split }> = ({ split }) => {
 
   const getSplitDescription = () => {
     if (split.is_reverse) {
-      return `פיצול הפוך - כל ${split.denominator} מניות יהפכו למניה ${split.numerator}`;
+      return i18n.t('auto.screens__News__SplitsTab.s1', { v0: split.denominator, v1: split.numerator });
     } else {
-      return `פיצול רגיל - כל מניה תהפוך ל-${split.numerator} מניות`;
+      return i18n.t('auto.screens__News__SplitsTab.s2', { v0: split.numerator });
     }
   };
 
@@ -144,7 +145,7 @@ const SplitCard: React.FC<{ split: Split }> = ({ split }) => {
           }}
         >
           <Text style={{ ...APP_TYPE.cardSubtitle, color: split.is_reverse ? tokens.colors.danger.main : tokens.colors.success.main, textAlign: 'center' }}>
-            {split.is_reverse ? '⚠️ פיצול הפוך' : '✨ פיצול רגיל'}
+            {split.is_reverse ? i18n.t('auto.screens__News__SplitsTab.s3') : i18n.t('auto.screens__News__SplitsTab.s4')}
           </Text>
         </View>
       </View>
@@ -163,9 +164,7 @@ const SplitCard: React.FC<{ split: Split }> = ({ split }) => {
 
       {/* Date */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingTop: APP_LAYOUT.cardTitleToBodyGap, borderTopWidth: 1, borderTopColor: tokens.colors.border.divider }}>
-        <Text style={{ ...APP_TYPE.caption, color: tokens.colors.text.tertiary }}>
-          תאריך אפקטיבי:
-        </Text>
+        <Text style={{ ...APP_TYPE.caption, color: tokens.colors.text.tertiary }}>{i18n.t('auto.screens__News__SplitsTab.s5')}</Text>
         <Text style={{ ...APP_TYPE.cardSubtitle, color: tokens.colors.text.primary, marginLeft: 6 }}>
           {formatDate(split.date)}
         </Text>
@@ -218,12 +217,8 @@ export default function SplitsTab() {
   const renderEmptyState = () => (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 40 }}>
       <Scissors size={64} color={tokens.colors.text.tertiary} strokeWidth={1.5} />
-      <Text style={{ ...APP_TYPE.body, color: tokens.colors.text.secondary, marginTop: APP_LAYOUT.componentGap, textAlign: 'center' }}>
-        אין פיצולים זמינים כרגע
-      </Text>
-      <Text style={{ ...APP_TYPE.cardSubtitle, color: tokens.colors.text.tertiary, marginTop: APP_LAYOUT.groupLabelToContent, textAlign: 'center', paddingHorizontal: 40 }}>
-        נתוני פיצולי מניות יעודכנו בקרוב
-      </Text>
+      <Text style={{ ...APP_TYPE.body, color: tokens.colors.text.secondary, marginTop: APP_LAYOUT.componentGap, textAlign: 'center' }}>{i18n.t('auto.screens__News__SplitsTab.s6')}</Text>
+      <Text style={{ ...APP_TYPE.cardSubtitle, color: tokens.colors.text.tertiary, marginTop: APP_LAYOUT.groupLabelToContent, textAlign: 'center', paddingHorizontal: 40 }}>{i18n.t('auto.screens__News__SplitsTab.s7')}</Text>
     </View>
   );
 
@@ -231,9 +226,7 @@ export default function SplitsTab() {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent' }}>
         <ActivityIndicator size="large" color={tokens.colors.primary.main} />
-        <Text style={{ ...APP_TYPE.body, color: tokens.colors.text.secondary, marginTop: APP_LAYOUT.componentGap }}>
-          טוען פיצולים...
-        </Text>
+        <Text style={{ ...APP_TYPE.body, color: tokens.colors.text.secondary, marginTop: APP_LAYOUT.componentGap }}>{i18n.t('auto.screens__News__SplitsTab.s8')}</Text>
       </View>
     );
   }

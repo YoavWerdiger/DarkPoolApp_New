@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 /**
  * דרגות ותק מנוי — סמל השור־ודוב של הלוגו, הצבע עולה עם הוותק (מתכות → צבעי המותג) — לפי ימי מנוי בתשלום מצטברים (paid_days מ-get_user_badges).
  * paid_days = null → מעולם לא שילם → אין דרגה.
@@ -58,13 +59,13 @@ export function rankProgress(days: number): {
 /** «חבר בקהילה כבר 134 ימים» — תמיד בימים (לא חודשים / שנים) */
 export function formatPaidTenure(days: number): string {
   const d = Math.max(0, Math.floor(days));
-  if (d < 1) return 'חבר בקהילה מהיום!';
-  if (d === 1) return 'חבר בקהילה כבר יום אחד!';
-  return `חבר בקהילה כבר ${d.toLocaleString('en-US')} ימים!`;
+  if (d < 1) return i18n.t('auto.components__ui__badges__userRank.s1');
+  if (d === 1) return i18n.t('auto.components__ui__badges__userRank.s2');
+  return i18n.t('auto.components__ui__badges__userRank.s3', { v0: d.toLocaleString('en-US') });
 }
 
 export function formatDaysCount(days: number): string {
-  return days === 1 ? 'יום אחד' : `${days} ימים!`;
+  return days === 1 ? i18n.t('auto.components__ui__badges__userRank.s4') : i18n.t('auto.components__ui__badges__userRank.s5', { v0: days });
 }
 
 /** וי כחול — כחול «מאומת» סטנדרטי, קריא בבהיר ובכהה */

@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 /**
  * תמונות פרופיל מ-cache ב-DB — Client לא פונה ל-Wikipedia ב-runtime.
  */
@@ -127,7 +128,7 @@ export async function fetchExploreProfilesGrid(): Promise<
       name: String(row.display_name ?? row.person_id),
       subtitle:
         kind === 'politician'
-          ? 'קונגרס'
+          ? i18n.t('auto.services__darkpool__personPortraitService.s1')
           : row.ticker
             ? String(row.ticker)
             : 'Form 4',

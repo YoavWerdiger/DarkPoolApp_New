@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
 // ============================================
@@ -192,10 +193,10 @@ const formatRelativeTime = (dateStr: string): string => {
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMins < 1) return 'עכשיו';
-  if (diffMins < 60) return `${diffMins}ד׳`;
-  if (diffHours < 24) return `${diffHours}ש׳`;
-  if (diffDays < 7) return `${diffDays}י׳`;
+  if (diffMins < 1) return i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s1');
+  if (diffMins < 60) return i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s2', { v0: diffMins });
+  if (diffHours < 24) return i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s3', { v0: diffHours });
+  if (diffDays < 7) return i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s4', { v0: diffDays });
   return date.toLocaleDateString(appLocale(), { day: 'numeric', month: 'numeric' });
 };
 
@@ -324,7 +325,7 @@ export default function ChatGroupsListScreen() {
       if (groupsError) {
         isLoadingRef.current = false;
         setIsLoading(false);
-        legacyAlert('שגיאה', 'לא ניתן לטעון את הקבוצות. נסה שוב.');
+        legacyAlert(i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s5'), i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s6'));
         return;
       }
 
@@ -464,7 +465,7 @@ export default function ChatGroupsListScreen() {
       }
     } catch (error) {
       logger.error('ChatGroupsListScreen', 'loadGroups failed', error);
-      legacyAlert('שגיאה', 'לא ניתן לטעון את הקבוצות');
+      legacyAlert(i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s5'), i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s7'));
     } finally {
       isLoadingRef.current = false;
       setIsLoading(false);
@@ -524,12 +525,12 @@ export default function ChatGroupsListScreen() {
   const onPendingPress = useCallback((p: PendingStory) => {
     if (p.status !== 'failed') return;
     void showAppDialog({
-      title: 'הסטטוס לא עלה',
-      message: 'בדוק את החיבור ונסה שוב.',
+      title: i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s8'),
+      message: i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s9'),
       type: 'error',
       buttons: [
-        { text: 'נסה שוב', style: 'default' },
-        { text: 'מחק', style: 'destructive' },
+        { text: i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s10'), style: 'default' },
+        { text: i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s11'), style: 'destructive' },
       ],
     }).then((idx) => {
       if (idx === 0) retryPendingStory(p.id);
@@ -779,7 +780,7 @@ export default function ChatGroupsListScreen() {
       rows.push({
         type: 'section-header',
         id: 'hdr-my',
-        title: 'הקבוצות שלי',
+        title: i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s12'),
         count: myFilteredGroups.length,
       });
       myFilteredGroups.forEach((g, i) => {
@@ -798,7 +799,7 @@ export default function ChatGroupsListScreen() {
       rows.push({
         type: 'section-header',
         id: 'hdr-joinable',
-        title: 'קבוצות זמינות להצטרפות',
+        title: i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s13'),
         count: joinableFilteredGroups.length,
       });
       joinableFilteredGroups.forEach((g, i) => {
@@ -827,7 +828,7 @@ export default function ChatGroupsListScreen() {
   // תווית הצ'יפ (כולל מונה) — משותפת לצ'יפ ולעותק המחליק
   const filterTabLabel = useCallback(
     (tab: TabType) => {
-      const label = tab === 'all' ? 'הכל' : tab === 'unread' ? 'לא נקראו' : '@אזכורים';
+      const label = tab === 'all' ? i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s14') : tab === 'unread' ? i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s15') : i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s16');
       const count = tab === 'unread' ? unreadCount : tab === 'mentions' ? mentionsCount : 0;
       return count > 0 ? `${label} · ${count}` : label;
     },
@@ -849,7 +850,7 @@ export default function ChatGroupsListScreen() {
 
       if (error) {
         void HapticFeedback.error();
-        legacyAlert('שגיאה', 'לא הצלחנו להצטרף');
+        legacyAlert(i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s5'), i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s17'));
         setIsJoining(false);
         return;
       }
@@ -869,7 +870,7 @@ export default function ChatGroupsListScreen() {
       void loadGroups();
     } catch (error: any) {
       setIsJoining(false);
-      legacyAlert('שגיאה', error?.message || 'שגיאה לא צפויה');
+      legacyAlert(i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s5'), error?.message || i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s18'));
     }
   };
 
@@ -933,11 +934,11 @@ export default function ChatGroupsListScreen() {
       const isPinned = !!pinnedMap[group.id];
       const choice = await showAppDialog({
         title: chatGroupDisplayName(group.name),
-        message: isPinned ? 'להסיר את הקבוצה מהנעוצות?' : 'לנעוץ את הקבוצה בראש הרשימה, מתחת להכרזות?',
+        message: isPinned ? i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s19') : i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s20'),
         type: 'info',
         buttons: [
-          { text: isPinned ? 'ביטול נעיצה' : 'נעץ למעלה', style: 'default' },
-          { text: 'ביטול', style: 'cancel' },
+          { text: isPinned ? i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s21') : i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s22'), style: 'default' },
+          { text: i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s23'), style: 'cancel' },
         ],
       });
       if (choice !== 0) return;
@@ -1076,12 +1077,12 @@ export default function ChatGroupsListScreen() {
   const searchSheetRows = useMemo<SearchRow[]>(() => {
     const rows: SearchRow[] = [];
     if (filteredGroups.length > 0) {
-      rows.push({ type: 'header', id: 'h-groups', title: 'צ׳אטים' });
+      rows.push({ type: 'header', id: 'h-groups', title: i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s24') });
       for (const g of filteredGroups) rows.push({ type: 'group', id: `g-${g.id}`, group: g });
     }
     const term = searchQuery.trim();
     if (term.length >= 2) {
-      rows.push({ type: 'header', id: 'h-msgs', title: 'הודעות' });
+      rows.push({ type: 'header', id: 'h-msgs', title: i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s25') });
       if (searchingMessages) {
         rows.push({ type: 'loading', id: 'msgs-loading' });
       } else if (messageResults.length > 0) {
@@ -1100,11 +1101,11 @@ export default function ChatGroupsListScreen() {
       return <Text style={styles.searchSectionHeader}>{item.title}</Text>;
     }
     if (item.type === 'loading') {
-      return <View style={{ paddingVertical: 20 }}><ChatSheetLoading label="מחפש הודעות..." /></View>;
+      return <View style={{ paddingVertical: 20 }}><ChatSheetLoading label={i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s26')} /></View>;
     }
     if (item.type === 'empty') {
       return (
-        <Text style={styles.searchNoResults}>לא נמצאו הודעות תואמות</Text>
+        <Text style={styles.searchNoResults}>{i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s27')}</Text>
       );
     }
     if (item.type === 'group') {
@@ -1117,8 +1118,8 @@ export default function ChatGroupsListScreen() {
       const preview = group.is_member && group.last_message
         ? getChatMessagePreview(group.last_message.message_type, group.last_message.content)
         : group.is_member
-          ? 'אין הודעות עדיין'
-          : `${group.members_count || 0} חברים`;
+          ? i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s28')
+          : i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s29', { v0: group.members_count || 0 });
       return (
         <TouchableOpacity
           style={styles.searchRowItem}
@@ -1153,7 +1154,7 @@ export default function ChatGroupsListScreen() {
     // message
     const msg = item.result.message as any;
     const group = item.result.group as any;
-    const senderName = msg?.sender?.display_name || 'משתמש';
+    const senderName = msg?.sender?.display_name || i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s30');
     const groupName = group?.name || '';
     const groupImage =
       (groupName ? groupChatIcon(groupName, isDarkMode) : null) ||
@@ -1218,8 +1219,8 @@ export default function ChatGroupsListScreen() {
       const lastMsgPreview = item.last_message
         ? isUsableChatDisplayName(senderLabel)
           ? `${senderLabel}: ${previewBody}`
-          : previewBody || 'אין הודעות עדיין'
-        : 'אין הודעות עדיין';
+          : previewBody || i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s28')
+        : i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s28');
 
       const timeLabel = item.last_message_at
         ? formatRelativeTime(item.last_message_at)
@@ -1239,7 +1240,7 @@ export default function ChatGroupsListScreen() {
             actions={[
               {
                 key: 'pin',
-                label: rowPinned ? 'ביטול נעיצה' : 'נעיצה',
+                label: rowPinned ? i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s21') : i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s31'),
                 // עיגול ניטרלי ואייקון באותו צבע כמו ההשתקה
                 icon: rowPinned
                   ? <PinOff size={20} strokeWidth={SWIPE_ICON_STROKE} color={tokens.colors.text.primary} />
@@ -1250,7 +1251,7 @@ export default function ChatGroupsListScreen() {
               },
               {
                 key: 'mute',
-                label: rowMuted ? 'ביטול השתקה' : 'השתקה',
+                label: rowMuted ? i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s32') : i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s33'),
                 icon: rowMuted
                   ? <Bell size={20} strokeWidth={SWIPE_ICON_STROKE} color={tokens.colors.text.primary} />
                   : <BellOff size={20} strokeWidth={SWIPE_ICON_STROKE} color={tokens.colors.text.primary} />,
@@ -1373,7 +1374,7 @@ export default function ChatGroupsListScreen() {
             style={[styles.chatRow, styles.joinableRow]}
             onPress={() => handleGroupPress(item)}
             activeOpacity={0.6}
-            accessibilityLabel={`פרטי קבוצה ${chatGroupDisplayName(item.name)}`}
+            accessibilityLabel={i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s34', { v0: chatGroupDisplayName(item.name) })}
           >
             <View style={styles.avatarWrap}>
               {imageSource && !hasImageError ? (
@@ -1401,9 +1402,7 @@ export default function ChatGroupsListScreen() {
                   {chatGroupDisplayName(item.name)}
                 </Text>
               </View>
-              <Text style={styles.joinableSubtitle} numberOfLines={1}>
-                הקש להצטרפות
-              </Text>
+              <Text style={styles.joinableSubtitle} numberOfLines={1}>{i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s35')}</Text>
             </View>
 
             <TouchableOpacity
@@ -1412,9 +1411,9 @@ export default function ChatGroupsListScreen() {
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               activeOpacity={0.75}
               accessibilityRole="button"
-              accessibilityLabel={`הצטרף לקבוצה ${chatGroupDisplayName(item.name)}`}
+              accessibilityLabel={i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s36', { v0: chatGroupDisplayName(item.name) })}
             >
-              <Text style={styles.joinablePillText}>הצטרפות</Text>
+              <Text style={styles.joinablePillText}>{i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s37')}</Text>
             </TouchableOpacity>
           </TouchableOpacity>
 
@@ -1478,25 +1477,25 @@ export default function ChatGroupsListScreen() {
       ) : searchQuery ? (
         <>
           <Ionicons name="search-outline" size={64} color={tokens.colors.text.tertiary} />
-          <Text style={styles.emptyTitle}>לא נמצאו תוצאות</Text>
-          <Text style={styles.emptyText}>נסה לחפש משהו אחר</Text>
+          <Text style={styles.emptyTitle}>{i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s38')}</Text>
+          <Text style={styles.emptyText}>{i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s39')}</Text>
         </>
       ) : activeTab === 'unread' ? (
         <>
           <Ionicons name="checkmark-done-circle-outline" size={64} color={tokens.colors.text.success} />
-          <Text style={styles.emptyTitle}>הכל נקרא! 🎉</Text>
-          <Text style={styles.emptyText}>אין הודעות חדשות</Text>
+          <Text style={styles.emptyTitle}>{i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s40')}</Text>
+          <Text style={styles.emptyText}>{i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s41')}</Text>
         </>
       ) : activeTab === 'mentions' ? (
         <>
           <Ionicons name="at-outline" size={64} color={tokens.colors.text.tertiary} />
-          <Text style={styles.emptyTitle}>אין אזכורים</Text>
-          <Text style={styles.emptyText}>כשמישהו יזכיר אותך בצ'אט, תראה כאן</Text>
+          <Text style={styles.emptyTitle}>{i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s42')}</Text>
+          <Text style={styles.emptyText}>{i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s43')}</Text>
         </>
       ) : (
         <>
           <Ionicons name="chatbubbles-outline" size={64} color={tokens.colors.text.tertiary} />
-          <Text style={styles.emptyTitle}>אין קבוצות</Text>
+          <Text style={styles.emptyTitle}>{i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s44')}</Text>
         </>
       )}
     </View>
@@ -1513,7 +1512,7 @@ export default function ChatGroupsListScreen() {
       <RNSafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <View style={styles.container}>
           <MainDrawerScreenHeader
-            title="הקהילה"
+            title={i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s45')}
             onMenuPress={openMainDrawer}
             titleAccessory={
               isGlobalAdmin ? (
@@ -1525,7 +1524,7 @@ export default function ChatGroupsListScreen() {
                   }}
                   glassIntensity="subtle"
                   size={DRAWER_MENU_BUTTON_SIZE}
-                  accessibilityLabel="יצירת קבוצה חדשה"
+                  accessibilityLabel={i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s46')}
                 >
                   <Ionicons name="add" size={24} color={tokens.colors.text.primary} />
                 </DayNavBlurButton>
@@ -1540,7 +1539,7 @@ export default function ChatGroupsListScreen() {
                   }}
                   glassIntensity="subtle"
                   size={DRAWER_MENU_BUTTON_SIZE}
-                  accessibilityLabel="חיפוש"
+                  accessibilityLabel={i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s47')}
                 >
                   <Search
                     size={20}
@@ -1586,7 +1585,7 @@ export default function ChatGroupsListScreen() {
                     ]}
                     onPress={openAdd}
                     accessibilityRole="button"
-                    accessibilityLabel="הוסף סטטוס"
+                    accessibilityLabel={i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s48')}
                   >
                     <View style={styles.statusAddOuter}>
                       {/* כמו באינסטגרם: תמונת הפרופיל שלי + פלוס קטן בפינה (בלי תמונה — אייקון פלוס) */}
@@ -1601,7 +1600,7 @@ export default function ChatGroupsListScreen() {
                         <Ionicons name="add" size={13} color={tokens.colors.text.inverse} />
                       </View>
                     </View>
-                    <Text style={[styles.statusLabel, { color: tokens.colors.text.primary }]}>הוסף</Text>
+                    <Text style={[styles.statusLabel, { color: tokens.colors.text.primary }]}>{i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s49')}</Text>
                   </Pressable>
                 );
               }
@@ -1643,7 +1642,7 @@ export default function ChatGroupsListScreen() {
                       openStoryViewer(usersWithStories, usersWithStories[ownIdx].user_id);
                     }}
                     accessibilityRole="button"
-                    accessibilityLabel="הסטטוס שלי"
+                    accessibilityLabel={i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s50')}
                   >
                     {/* מסגרת בגודל העיגול — הפלוס ממוקם ביחס אליה, בדיוק כמו בעיגול «הוסף» */}
                     <View style={styles.statusOwnRingWrap}>
@@ -1661,14 +1660,12 @@ export default function ChatGroupsListScreen() {
                         hitSlop={8}
                         style={[styles.statusAddBadge, styles.statusOwnAddBadge]}
                         accessibilityRole="button"
-                        accessibilityLabel="הוסף סטטוס"
+                        accessibilityLabel={i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s48')}
                       >
                         <Ionicons name="add" size={13} color={tokens.colors.text.inverse} />
                       </Pressable>
                     </View>
-                    <Text style={[styles.statusLabel, { color: tokens.colors.text.primary }]} numberOfLines={1}>
-                      שלי
-                    </Text>
+                    <Text style={[styles.statusLabel, { color: tokens.colors.text.primary }]} numberOfLines={1}>{i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s51')}</Text>
                   </Pressable>
                 </View>
               );
@@ -1689,7 +1686,7 @@ export default function ChatGroupsListScreen() {
               if (s.user_id === user?.id) return null;
               const firstShownIdx = usersWithStories.findIndex((u) => u.user_id !== user?.id);
               const avatar = s.user?.profile_picture;
-              const displayName = s.user?.display_name || s.user?.full_name || 'משתמש';
+              const displayName = s.user?.display_name || s.user?.full_name || i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s30');
               const isUnread = s.has_viewed === false;
               const isOwn = s.user_id === user?.id;
               const count = Math.max(1, s.story_count || 1);
@@ -1711,7 +1708,7 @@ export default function ChatGroupsListScreen() {
                     openStoryViewer(usersWithStories, s.user_id);
                   }}
                   accessibilityRole="button"
-                  accessibilityLabel={isOwn ? 'הסטטוס שלי' : displayName}
+                  accessibilityLabel={isOwn ? i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s50') : displayName}
                 >
                   <StoryAvatarRing
                     size={68}
@@ -1737,7 +1734,7 @@ export default function ChatGroupsListScreen() {
                     {isOwn ? renderPendingOverlay() : null}
                   </StoryAvatarRing>
                   <Text style={[styles.statusLabel, isOwn && { color: tokens.colors.text.primary }]} numberOfLines={1}>
-                    {isOwn ? 'שלי' : displayName}
+                    {isOwn ? i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s51') : displayName}
                   </Text>
                 </Pressable>
                 </View>
@@ -1755,7 +1752,7 @@ export default function ChatGroupsListScreen() {
             <View style={[styles.filterRow, { marginTop: 0 }]}>
               {(['all', 'unread', 'mentions'] as TabType[]).map((tab) => {
                 // צ'יפ הטופו (DayDividerPill) — כמו ביומן ובשאר האפליקציה, כולל מעבר הבחירה
-                const label = tab === 'all' ? 'הכל' : tab === 'unread' ? 'לא נקראו' : '@אזכורים';
+                const label = tab === 'all' ? i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s14') : tab === 'unread' ? i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s15') : i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s16');
                 const count = tab === 'unread' ? unreadCount : tab === 'mentions' ? mentionsCount : 0;
                 const active = activeTab === tab;
                 return (
@@ -1855,13 +1852,13 @@ export default function ChatGroupsListScreen() {
         contentPaddingBottom={0}
       >
         <View style={styles.searchSheetRoot}>
-          <ChatSheetTopoHeader title="חיפוש" onClose={closeSearchSheet} />
+          <ChatSheetTopoHeader title={i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s47')} onClose={closeSearchSheet} />
           {/* RTL: שדה הטקסט מימין, הזכוכית המגדלת בקצה השמאלי */}
           <View style={styles.searchPill}>
             <TextInput
               ref={searchInputRef}
               style={styles.searchPillInput}
-              placeholder="חיפוש בצ׳אטים ובהודעות"
+              placeholder={i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s52')}
               placeholderTextColor={tokens.colors.text.tertiary}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -1886,8 +1883,8 @@ export default function ChatGroupsListScreen() {
             ListEmptyComponent={
               <ChatSheetEmptyState
                 icon="search-outline"
-                title="חפש בצ׳אטים"
-                subtitle="הקלד שם של קבוצה או טקסט מתוך הודעה"
+                title={i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s53')}
+                subtitle={i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s54')}
               />
             }
           />

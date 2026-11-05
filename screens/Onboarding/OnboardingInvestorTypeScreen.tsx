@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,14 +28,14 @@ const INVESTOR_OPTIONS: InvestorOption[] = [
   {
     type: 'retail',
     icon: 'person',
-    title: 'משקיע פרטי',
-    description: 'השקעות אישיות ומסחר עצמאי',
+    title: i18n.t('auto.screens__Onboarding__OnboardingInvestorTypeScreen.s1'),
+    description: i18n.t('auto.screens__Onboarding__OnboardingInvestorTypeScreen.s2'),
   },
   {
     type: 'institutional',
     icon: 'business',
-    title: 'משקיע מוסדי',
-    description: 'קרנות, חברות וניהול כספים מקצועי',
+    title: i18n.t('auto.screens__Onboarding__OnboardingInvestorTypeScreen.s3'),
+    description: i18n.t('auto.screens__Onboarding__OnboardingInvestorTypeScreen.s4'),
   },
 ];
 
@@ -86,9 +87,7 @@ const OnboardingInvestorTypeScreen: React.FC<Props> = ({ navigation }) => {
             <Pressable onPress={handleBack} style={styles.backButton}>
               <Ionicons name="chevron-forward" size={28} color={tokens.colors.text.primary} />
             </Pressable>
-            <Text style={[styles.stepIndicator, { color: tokens.colors.text.tertiary }]}>
-              שלב 5 מתוך 10
-            </Text>
+            <Text style={[styles.stepIndicator, { color: tokens.colors.text.tertiary }]}>{i18n.t('auto.screens__Onboarding__OnboardingInvestorTypeScreen.s5')}</Text>
           </View>
 
           <ScrollView
@@ -97,12 +96,8 @@ const OnboardingInvestorTypeScreen: React.FC<Props> = ({ navigation }) => {
             showsVerticalScrollIndicator={false}
           >
             {/* Title */}
-            <Text style={[styles.title, { color: tokens.colors.text.primary }]}>
-              מה סוג המשקיע שלך?
-            </Text>
-            <Text style={[styles.subtitle, { color: tokens.colors.text.secondary }]}>
-              זה יעזור לנו להתאים את התכנים עבורך
-            </Text>
+            <Text style={[styles.title, { color: tokens.colors.text.primary }]}>{i18n.t('auto.screens__Onboarding__OnboardingInvestorTypeScreen.s6')}</Text>
+            <Text style={[styles.subtitle, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Onboarding__OnboardingInvestorTypeScreen.s7')}</Text>
 
             {/* Options */}
             <View style={styles.optionsContainer}>
@@ -122,7 +117,7 @@ const OnboardingInvestorTypeScreen: React.FC<Props> = ({ navigation }) => {
           {/* Footer */}
           <View style={styles.footer}>
             <UIButton
-              title="המשך"
+              title={i18n.t('auto.screens__Onboarding__OnboardingInvestorTypeScreen.s8')}
               variant="primary"
               size="lg"
               fullWidth

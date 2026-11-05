@@ -1,3 +1,4 @@
+import i18n from './lib/i18n';
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { DarkTheme, DefaultTheme, NavigationContainer, Theme as NavTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -163,8 +164,8 @@ function AppContent() {
   const attemptBiometricAuth = useCallback(async () => {
     try {
       const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'אמת את זהותך כדי להיכנס לאפליקציה',
-        cancelLabel: 'ביטול',
+        promptMessage: i18n.t('auto.App.s1'),
+        cancelLabel: i18n.t('auto.App.s2'),
         disableDeviceFallback: false,
       });
       if (result.success) {
@@ -185,8 +186,8 @@ function AppContent() {
             setBiometricLocked(true);
             setBiometricChecked(true);
             const result = await LocalAuthentication.authenticateAsync({
-              promptMessage: 'אמת את זהותך כדי להיכנס לאפליקציה',
-              cancelLabel: 'ביטול',
+              promptMessage: i18n.t('auto.App.s1'),
+              cancelLabel: i18n.t('auto.App.s2'),
               disableDeviceFallback: false,
             });
             if (result.success) {
@@ -236,8 +237,8 @@ function AppContent() {
             if (parsed.biometricAuth) {
               setBiometricLocked(true);
               const result = await LocalAuthentication.authenticateAsync({
-                promptMessage: 'אמת את זהותך כדי להיכנס לאפליקציה',
-                cancelLabel: 'ביטול',
+                promptMessage: i18n.t('auto.App.s1'),
+                cancelLabel: i18n.t('auto.App.s2'),
                 disableDeviceFallback: false,
               });
               if (result.success) {
@@ -468,12 +469,8 @@ function AppContent() {
             }}>
               <Fingerprint size={40} color="#00C805" strokeWidth={2} />
             </View>
-            <Text style={{ color: appTheme.textPrimary, fontSize: 22, fontWeight: '700', textAlign: 'center' }}>
-              האפליקציה נעולה
-            </Text>
-            <Text style={{ color: appTheme.textSecondary, fontSize: 15, textAlign: 'center', paddingHorizontal: 40 }}>
-              אמת את זהותך באמצעות Face ID / Touch ID כדי להמשיך
-            </Text>
+            <Text style={{ color: appTheme.textPrimary, fontSize: 22, fontWeight: '700', textAlign: 'center' }}>{i18n.t('auto.App.s3')}</Text>
+            <Text style={{ color: appTheme.textSecondary, fontSize: 15, textAlign: 'center', paddingHorizontal: 40 }}>{i18n.t('auto.App.s4')}</Text>
             <TouchableOpacity
               onPress={attemptBiometricAuth}
               style={{
@@ -484,9 +481,7 @@ function AppContent() {
                 marginTop: 8,
               }}
             >
-              <Text style={{ color: '#000', fontSize: 16, fontWeight: '700' }}>
-                אמת זהות
-              </Text>
+              <Text style={{ color: '#000', fontSize: 16, fontWeight: '700' }}>{i18n.t('auto.App.s5')}</Text>
             </TouchableOpacity>
           </View>
         </View>

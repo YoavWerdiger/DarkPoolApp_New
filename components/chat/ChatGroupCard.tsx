@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 // ============================================
 // Chat Group Card Component
@@ -32,7 +33,7 @@ function ChatGroupCard({ group, onPress, onLongPress }: ChatGroupCardProps) {
 
   const previewText = group.last_message_preview
     ? getChatMessagePreview(undefined, group.last_message_preview)
-    : 'אין הודעות';
+    : i18n.t('auto.components__chat__ChatGroupCard.s1');
   const isRecordingPreview = previewText === 'הקלטה';
 
   const timeText = useMemo(() => {

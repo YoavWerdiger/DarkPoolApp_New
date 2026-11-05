@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -287,7 +288,7 @@ function CreateCommunityPostSheetBody({
       requestClose();
     } catch (e: any) {
       setUploadingImage(false);
-      setError(e?.message || 'לא ניתן לפרסם');
+      setError(e?.message || i18n.t('auto.screens__Tweets__CreateCommunityPostSheet.s1'));
       void HapticFeedback.error();
     } finally {
       setBusy(false);
@@ -307,7 +308,7 @@ function CreateCommunityPostSheetBody({
               size={DAY_NAV_BUTTON_SIZE}
               glassIntensity="subtle"
               style={styles.headerIconButton}
-              accessibilityLabel="סגור"
+              accessibilityLabel={i18n.t('auto.screens__Tweets__CreateCommunityPostSheet.s2')}
               disabled={busy}
             >
               <Ionicons
@@ -322,9 +323,7 @@ function CreateCommunityPostSheetBody({
             <Text
               style={[styles.headerTitle, { color: tokens.colors.text.primary }]}
               numberOfLines={1}
-            >
-              ציוץ חדש
-            </Text>
+            >{i18n.t('auto.screens__Tweets__CreateCommunityPostSheet.s3')}</Text>
           </View>
 
           <View style={styles.headerSide}>
@@ -337,7 +336,7 @@ function CreateCommunityPostSheetBody({
               activeOpacity={0.85}
               style={[styles.headerPublishBtn, !canSubmit && styles.headerPublishBtnDisabled]}
               accessibilityRole="button"
-              accessibilityLabel="פרסם"
+              accessibilityLabel={i18n.t('auto.screens__Tweets__CreateCommunityPostSheet.s4')}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               {busy ? (
@@ -395,7 +394,7 @@ function CreateCommunityPostSheetBody({
             <TextInput
               value={body}
               onChangeText={handleBodyChange}
-              placeholder="מה קורה בקהילה?"
+              placeholder={i18n.t('auto.screens__Tweets__CreateCommunityPostSheet.s5')}
               placeholderTextColor={tokens.colors.text.tertiary}
               multiline
               maxLength={MAX_LEN}
@@ -413,7 +412,7 @@ function CreateCommunityPostSheetBody({
                     key={m.userId}
                     onPress={() => removeMention(m.userId)}
                     disabled={busy}
-                    accessibilityLabel={`הסר תיוג של ${m.displayName}`}
+                    accessibilityLabel={i18n.t('auto.screens__Tweets__CreateCommunityPostSheet.s6', { v0: m.displayName })}
                   >
                     <View style={styles.chipInner}>
                       <Text style={styles.chipText} numberOfLines={1}>
@@ -446,7 +445,7 @@ function CreateCommunityPostSheetBody({
                 styles.attachBtn,
                 (busy || mentions.length >= MAX_MENTIONS) && styles.attachBtnDisabled,
               ]}
-              accessibilityLabel="תייג חבר"
+              accessibilityLabel={i18n.t('auto.screens__Tweets__CreateCommunityPostSheet.s7')}
               hitSlop={8}
             >
               <Ionicons name="at" size={22} color={tokens.colors.text.primary} />
@@ -461,7 +460,7 @@ function CreateCommunityPostSheetBody({
                 styles.attachBtn,
                 (busy || attachments.length >= MAX_ATTACHMENTS) && styles.attachBtnDisabled,
               ]}
-              accessibilityLabel="צרף תוכן"
+              accessibilityLabel={i18n.t('auto.screens__Tweets__CreateCommunityPostSheet.s8')}
               hitSlop={8}
             >
               <Ionicons name="link-outline" size={22} color={tokens.colors.text.primary} />
@@ -473,7 +472,7 @@ function CreateCommunityPostSheetBody({
               }}
               disabled={busy}
               style={[styles.attachBtn, busy && styles.attachBtnDisabled]}
-              accessibilityLabel={imageUri ? 'החלף תמונה' : 'הוסף תמונה'}
+              accessibilityLabel={imageUri ? i18n.t('auto.screens__Tweets__CreateCommunityPostSheet.s9') : i18n.t('auto.screens__Tweets__CreateCommunityPostSheet.s10')}
               hitSlop={8}
             >
               <Ionicons
@@ -500,7 +499,7 @@ function CreateCommunityPostSheetBody({
                     onPress={() => removeAttachment(index)}
                     disabled={busy}
                     style={styles.removeBadge}
-                    accessibilityLabel="הסר צירוף"
+                    accessibilityLabel={i18n.t('auto.screens__Tweets__CreateCommunityPostSheet.s11')}
                     hitSlop={8}
                   >
                     <Ionicons name="close" size={16} color={tokens.colors.text.primary} />
@@ -519,7 +518,7 @@ function CreateCommunityPostSheetBody({
                   void pickImage();
                 }}
                 disabled={busy}
-                accessibilityLabel="החלף תמונה"
+                accessibilityLabel={i18n.t('auto.screens__Tweets__CreateCommunityPostSheet.s9')}
               >
                 <CommunityPostImage
                   uri={imageUri}
@@ -536,7 +535,7 @@ function CreateCommunityPostSheetBody({
                 onPress={removeImage}
                 style={styles.removeBadge}
                 disabled={busy}
-                accessibilityLabel="הסר תמונה"
+                accessibilityLabel={i18n.t('auto.screens__Tweets__CreateCommunityPostSheet.s12')}
                 hitSlop={8}
               >
                 <Ionicons name="close" size={16} color={tokens.colors.text.primary} />

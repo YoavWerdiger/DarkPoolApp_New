@@ -1,3 +1,4 @@
+import i18n from '../lib/i18n';
 import type { AuthChangeEvent, User as SupabaseAuthUser } from '@supabase/supabase-js';
 import { isPasswordValid } from '../utils/passwordPolicy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -55,7 +56,7 @@ async function upsertOwnUserRow(
     .eq('id', userId)
     .select('id');
   if (retryError) return { error: retryError };
-  if ((retried?.length ?? 0) === 0) return { error: { message: 'לא נמצא פרופיל משתמש לעדכון' } };
+  if ((retried?.length ?? 0) === 0) return { error: { message: i18n.t('auto.services__authService.s1') } };
   return { error: null };
 }
 
@@ -107,7 +108,7 @@ function extractPkceCodeFromCallbackUrl(callbackUrl: string): string | null {
   }
 }
 
-export const PHONE_TAKEN_HE = 'מספר הטלפון כבר בשימוש אצל משתמש אחר';
+export const PHONE_TAKEN_HE = i18n.t('auto.services__authService.s2');
 
 /**
  * trim + ספרות בלבד (כמו בהרשמה); ריק / רווחים → null
@@ -171,7 +172,7 @@ function isPhoneUniqueViolation(blob: string, code: string | null): boolean {
 export function mapProfileUpdateError(err?: unknown, codeHint?: string | null): string {
   const { message, code, blob } = collectErrorText(err);
   const resolvedCode = codeHint || code;
-  if (!blob && !resolvedCode) return 'שגיאה בעדכון הפרופיל. נסה שוב.';
+  if (!blob && !resolvedCode) return i18n.t('auto.services__authService.s3');
 
   if (isPhoneUniqueViolation(blob, resolvedCode)) {
     return PHONE_TAKEN_HE;
@@ -179,23 +180,23 @@ export function mapProfileUpdateError(err?: unknown, codeHint?: string | null): 
 
   const msg = blob.toLowerCase();
   if (msg.includes('schema cache') || msg.includes('could not find')) {
-    return 'שגיאת סנכרון מול השרת. נסה שוב בעוד רגע.';
+    return i18n.t('auto.services__authService.s4');
   }
   if (msg.includes('network') || msg.includes('fetch') || msg.includes('timeout')) {
-    return 'בעיית רשת. בדוק חיבור ונסה שוב.';
+    return i18n.t('auto.services__authService.s5');
   }
   if (msg.includes('permission') || msg.includes('policy') || msg.includes('rls') || msg.includes('not allowed')) {
-    return 'אין הרשאה לעדכן את הפרופיל.';
+    return i18n.t('auto.services__authService.s6');
   }
   if (resolvedCode === '23505' || msg.includes('duplicate') || msg.includes('unique')) {
-    return 'הערך כבר קיים במערכת.';
+    return i18n.t('auto.services__authService.s7');
   }
   // אל תציג הודעות טכניות באנגלית למשתמש
   if (/[a-z]{4,}/i.test(message || blob) && !/[\u0590-\u05FF]/.test(message || blob)) {
-    return 'לא הצלחנו לשמור את הפרופיל. נסה שוב.';
+    return i18n.t('auto.services__authService.s8');
   }
   if (/[\u0590-\u05FF]/.test(message)) return message;
-  return 'שגיאה בעדכון הפרופיל. נסה שוב.';
+  return i18n.t('auto.services__authService.s3');
 }
 
 /** כשהפרופיל מ־public.users לא זמין בזמן (רשת איטית וכו') — לא מנתקים סשן תקף */
@@ -347,7 +348,7 @@ export class AuthService {
           if (attempt === maxRetries) {
             return { 
               user: null, 
-              error: 'בעיית חיבור לאינטרנט. אנא בדוק:\n1. שהאמולטור/מכשיר מחובר לאינטרנט\n2. שהרשת מאפשרת גישה לאתרים חיצוניים\n3. נסה להפעיל מחדש את האפליקציה' 
+              error: i18n.t('auto.services__authService.s9') 
             };
           }
           // נמתין קצת לפני ניסיון נוסף
@@ -374,7 +375,7 @@ export class AuthService {
             }
             return { 
               user: null, 
-              error: 'בעיית חיבור לאינטרנט. אנא בדוק:\n1. שהאמולטור/מכשיר מחובר לאינטרנט\n2. שהרשת מאפשרת גישה לאתרים חיצוניים\n3. נסה להפעיל מחדש את האפליקציה' 
+              error: i18n.t('auto.services__authService.s9') 
             };
           }
 
@@ -383,26 +384,26 @@ export class AuthService {
             raw.includes('invalid login credentials') ||
             raw.includes('invalid_credentials')
           ) {
-            return { user: null, error: 'אימייל או סיסמה שגויים' };
+            return { user: null, error: i18n.t('auto.services__authService.s10') };
           }
           if (raw.includes('email not confirmed')) {
-            return { user: null, error: 'יש לאמת את כתובת האימייל לפני ההתחברות' };
+            return { user: null, error: i18n.t('auto.services__authService.s11') };
           }
           if (raw.includes('too many requests') || error.status === 429) {
-            return { user: null, error: 'יותר מדי ניסיונות. נסה שוב בעוד כמה דקות' };
+            return { user: null, error: i18n.t('auto.services__authService.s12') };
           }
           
           // שגיאות אחרות לא דורשות retry
-          return { user: null, error: error.message || 'שגיאה בהתחברות' };
+          return { user: null, error: error.message || i18n.t('auto.services__authService.s13') };
         }
         
         if (!data.user) {
-          return { user: null, error: 'שגיאה בהתחברות - אין נתוני משתמש' };
+          return { user: null, error: i18n.t('auto.services__authService.s14') };
         }
         
         const user = await this.getUserProfile(data.user.id);
         if (!user) {
-          return { user: null, error: 'שגיאה בטעינת פרופיל המשתמש' };
+          return { user: null, error: i18n.t('auto.services__authService.s15') };
         }
 
         return { user: await this.healRegistrationCompletedIfNeeded(user), error: null };
@@ -422,7 +423,7 @@ export class AuthService {
           if (errorMessage.includes('Network request failed') || errorMessage.includes('fetch')) {
             return { 
               user: null, 
-              error: 'בעיית חיבור לאינטרנט. אנא בדוק:\n1. שהאמולטור/מכשיר מחובר לאינטרנט\n2. שהרשת מאפשרת גישה לאתרים חיצוניים\n3. נסה להפעיל מחדש את האפליקציה' 
+              error: i18n.t('auto.services__authService.s9') 
             };
           }
           return { user: null, error: errorMessage };
@@ -433,7 +434,7 @@ export class AuthService {
     // אם הגענו לכאן, כל הניסיונות נכשלו
     return { 
       user: null, 
-      error: lastError?.message || 'שגיאה בהתחברות לאחר מספר ניסיונות' 
+      error: lastError?.message || i18n.t('auto.services__authService.s16') 
     };
   }
 
@@ -454,7 +455,7 @@ export class AuthService {
       // בדיקה אם המייל כבר קיים
       const { exists, error: checkError } = await this.checkEmailExists(email);
       if (!checkError && exists) {
-        return { user: null, error: 'כתובת המייל כבר קיימת במערכת' };
+        return { user: null, error: i18n.t('auto.services__authService.s17') };
       }
 
       // ניסיון ראשון: הרשמה רגילה
@@ -482,14 +483,14 @@ export class AuthService {
         ) {
           return {
             user: null,
-            error: 'כתובת המייל כבר רשומה — יש להתחבר או לאפס סיסמה',
+            error: i18n.t('auto.services__authService.s18'),
           };
         }
-        return { user: null, error: error.message || 'שגיאה בהרשמה' };
+        return { user: null, error: error.message || i18n.t('auto.services__authService.s19') };
       }
 
       if (!data.user) {
-        return { user: null, error: 'שגיאה בהרשמה - לא התקבלו נתוני משתמש' };
+        return { user: null, error: i18n.t('auto.services__authService.s20') };
       }
 
       // הטריגר on_auth_user_created יצר כבר שורה ב-public.users עם (id, email, full_name, display_name).
@@ -558,7 +559,7 @@ export class AuthService {
 
     const remoteProfile = await mediaService.ensureRemoteMediaUrl(params.profileImage, 'image');
     if (params.profileImage && remoteProfile.error) {
-      return { userId: null, error: remoteProfile.error || 'העלאת תמונת הפרופיל נכשלה' };
+      return { userId: null, error: remoteProfile.error || i18n.t('auto.services__authService.s21') };
     }
 
     const result = await this.signUp({
@@ -575,7 +576,7 @@ export class AuthService {
     });
 
     if (result.error || !result.user) {
-      return { userId: null, error: result.error || 'שגיאה ביצירת חשבון לפני תשלום' };
+      return { userId: null, error: result.error || i18n.t('auto.services__authService.s22') };
     }
     return { userId: result.user.id, error: null };
   }
@@ -603,11 +604,11 @@ export class AuthService {
         email: email.trim(),
       });
       if (error) {
-        return { error: error.message || 'שגיאה בשליחת מייל האימות' };
+        return { error: error.message || i18n.t('auto.services__authService.s23') };
       }
       return { error: null };
     } catch (error: any) {
-      return { error: error?.message || 'שגיאה בשליחת מייל האימות' };
+      return { error: error?.message || i18n.t('auto.services__authService.s23') };
     }
   }
 
@@ -698,12 +699,12 @@ export class AuthService {
         if (msg.includes('network') || msg.includes('fetch')) {
           return { verified: false, userId: null, error: 'network_error' };
         }
-        return { verified: false, userId: null, error: error.message || 'שגיאה באימות OTP' };
+        return { verified: false, userId: null, error: error.message || i18n.t('auto.services__authService.s24') };
       }
 
       const userId = data.user?.id ?? null;
       if (!userId) {
-        return { verified: false, userId: null, error: 'שגיאה באימות — לא התקבל משתמש' };
+        return { verified: false, userId: null, error: i18n.t('auto.services__authService.s25') };
       }
 
       // חשוב לפני ש-onAuthStateChange/App מחליפים עץ ניווט:
@@ -720,7 +721,7 @@ export class AuthService {
 
       return { verified: true, userId, error: null };
     } catch (error: any) {
-      return { verified: false, userId: null, error: error?.message || 'שגיאה באימות OTP' };
+      return { verified: false, userId: null, error: error?.message || i18n.t('auto.services__authService.s24') };
     }
   }
 
@@ -797,22 +798,22 @@ export class AuthService {
           return { success: false, error: 'weak_password' };
         }
         if (msg.includes('same') || msg.includes('different') || msg.includes('unchanged')) {
-          return { success: false, error: 'יש לבחור סיסמה שונה מהקודמת' };
+          return { success: false, error: i18n.t('auto.services__authService.s26') };
         }
         if (msg.includes('nonce') || msg.includes('reauth') || msg.includes('reauthentication')) {
           return {
             success: false,
-            error: 'נדרש אימות מחדש לעדכון סיסמה. בקש קוד איפוס חדש.',
+            error: i18n.t('auto.services__authService.s27'),
           };
         }
-        return { success: false, error: error.message || 'שגיאה בשמירת הסיסמה' };
+        return { success: false, error: error.message || i18n.t('auto.services__authService.s28') };
       }
       // בלי user בתשובה — לא מחשיבים הצלחה (מונע "נשמר" מדומה)
       if (!data?.user) {
         logger.warn('AuthService', 'setPasswordForCurrentUser: no user in response', {
           ms: Date.now() - started,
         });
-        return { success: false, error: 'שגיאה בשמירת הסיסמה — לא התקבל אישור מהשרת' };
+        return { success: false, error: i18n.t('auto.services__authService.s29') };
       }
       return { success: true, error: null };
     } catch (error: any) {
@@ -828,7 +829,7 @@ export class AuthService {
         ms: Date.now() - started,
         message: error?.message,
       });
-      return { success: false, error: error?.message || 'שגיאה בשמירת הסיסמה' };
+      return { success: false, error: error?.message || i18n.t('auto.services__authService.s28') };
     }
   }
 
@@ -930,7 +931,7 @@ export class AuthService {
         message: error?.message,
       });
       void this.signOut().catch(() => { /* ignore */ });
-      return { success: false, error: error?.message || 'שגיאה בשמירת הסיסמה' };
+      return { success: false, error: error?.message || i18n.t('auto.services__authService.s28') };
     }
   }
 
@@ -959,7 +960,7 @@ export class AuthService {
       return { exists: data === true, error: null };
     } catch (error: any) {
       console.error('[AuthService] checkEmailExists exception:', error?.message);
-      return { exists: false, error: error?.message ?? 'שגיאה בבדיקת המייל' };
+      return { exists: false, error: error?.message ?? i18n.t('auto.services__authService.s30') };
     }
   }
 
@@ -1018,14 +1019,14 @@ export class AuthService {
           return { success: false, error: 'phone_auth_not_configured' };
         }
 
-        return { success: false, error: error.message || 'שגיאה בשליחת OTP' };
+        return { success: false, error: error.message || i18n.t('auto.services__authService.s31') };
       }
 
       logger.info('AuthService', 'OTP sent successfully');
       return { success: true, error: null };
     } catch (error: any) {
       logger.error('AuthService', 'Phone OTP exception', error);
-      return { success: false, error: error.message || 'שגיאה בשליחת OTP' };
+      return { success: false, error: error.message || i18n.t('auto.services__authService.s31') };
     }
   }
 
@@ -1067,7 +1068,7 @@ export class AuthService {
         if (msg.includes('network') || msg.includes('fetch')) {
           return { verified: false, error: 'network_error' };
         }
-        return { verified: false, error: error.message || 'שגיאה באימות OTP' };
+        return { verified: false, error: error.message || i18n.t('auto.services__authService.s24') };
       }
 
       // אימות הצליח — מתנתקים מהסשן הזמני של ה-OTP בלי לגעת בשרת אם אפשר
@@ -1077,7 +1078,7 @@ export class AuthService {
 
       return { verified: true, error: null };
     } catch (error: any) {
-      return { verified: false, error: error.message || 'שגיאה באימות OTP' };
+      return { verified: false, error: error.message || i18n.t('auto.services__authService.s24') };
     }
   }
 
@@ -1140,7 +1141,7 @@ export class AuthService {
           return { success: false, error: 'email_send_failed' };
         }
         logger.error('AuthService', 'resetPasswordForEmail failed', error);
-        return { success: false, error: error.message || 'שגיאה בשליחת מייל איפוס' };
+        return { success: false, error: error.message || i18n.t('auto.services__authService.s32') };
       }
 
       return { success: true, error: null };
@@ -1150,7 +1151,7 @@ export class AuthService {
         logger.warn('AuthService', 'resetPasswordForEmail timed out');
         return { success: false, error: 'timeout' };
       }
-      return { success: false, error: error.message || 'שגיאה בשליחת מייל איפוס' };
+      return { success: false, error: error.message || i18n.t('auto.services__authService.s32') };
     }
   }
 
@@ -1194,11 +1195,11 @@ export class AuthService {
         if (msg.includes('many') || msg.includes('attempts')) {
           return { verified: false, error: 'too_many_attempts' };
         }
-        return { verified: false, error: error.message || 'שגיאה באימות הקוד' };
+        return { verified: false, error: error.message || i18n.t('auto.services__authService.s33') };
       }
 
       if (!data.session?.user) {
-        return { verified: false, error: 'שגיאה באימות — לא התקבל סשן' };
+        return { verified: false, error: i18n.t('auto.services__authService.s34') };
       }
 
       return { verified: true, error: null };
@@ -1208,7 +1209,7 @@ export class AuthService {
         logger.warn('AuthService', 'verifyRecoveryOtp timed out');
         return { verified: false, error: 'timeout' };
       }
-      return { verified: false, error: error?.message || 'שגיאה באימות הקוד' };
+      return { verified: false, error: error?.message || i18n.t('auto.services__authService.s33') };
     }
   }
 
@@ -1224,7 +1225,7 @@ export class AuthService {
   static async completeRegistration(registrationData: RegistrationData): Promise<{ success: boolean; error: string | null }> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return { success: false, error: 'משתמש לא מחובר' };
+      if (!user) return { success: false, error: i18n.t('auto.services__authService.s35') };
 
       const { data, error } = await supabase.rpc('complete_user_registration', {
         user_id: user.id,
@@ -1235,7 +1236,7 @@ export class AuthService {
       });
 
       if (error) return { success: false, error: error.message };
-      if (!data) return { success: false, error: 'שגיאה בהשלמת ההרשמה' };
+      if (!data) return { success: false, error: i18n.t('auto.services__authService.s36') };
 
       return { success: true, error: null };
     } catch (error: any) {
@@ -1333,7 +1334,7 @@ export class AuthService {
         /* ignore */
       }
       logger.error('AuthService', 'signOut failed', error);
-      return { error: error?.message ?? 'שגיאה בהתנתקות' };
+      return { error: error?.message ?? i18n.t('auto.services__authService.s37') };
     }
   }
 
@@ -1442,7 +1443,7 @@ export class AuthService {
     try {
       const id = updates.id;
       if (!id) {
-        return { user: null, error: 'מזהה משתמש חסר' };
+        return { user: null, error: i18n.t('auto.services__authService.s38') };
       }
 
       const payload: Record<string, unknown> = {};
@@ -1481,7 +1482,7 @@ export class AuthService {
 
       const user = await this.getUserProfile(id);
       if (!user) {
-        return { user: null, error: 'העדכון נרשם אבל לא נטען הפרופיל — נסה שוב' };
+        return { user: null, error: i18n.t('auto.services__authService.s39') };
       }
       return { user, error: null };
     } catch (error: unknown) {
@@ -1497,7 +1498,7 @@ export class AuthService {
     googleUser?: { id: string; email: string; fullName: string; profileImage: string | null };
   }> {
     if (googleOAuthFlowLock) {
-      return { user: null, error: 'ההתחברות כבר מתבצעת — המתן לסיום' };
+      return { user: null, error: i18n.t('auto.services__authService.s40') };
     }
     googleOAuthFlowLock = true;
     try {
@@ -1529,11 +1530,11 @@ export class AuthService {
       });
 
       if (error) {
-        return { user: null, error: error.message || 'שגיאה בהתחברות עם Google' };
+        return { user: null, error: error.message || i18n.t('auto.services__authService.s41') };
       }
 
       if (!data.url) {
-        return { user: null, error: 'שגיאה - לא התקבל URL לאימות' };
+        return { user: null, error: i18n.t('auto.services__authService.s42') };
       }
 
       // Open browser for OAuth - Supabase will handle the callback via deep linking
@@ -1542,7 +1543,7 @@ export class AuthService {
       })) as WebBrowserAuthSessionResult;
 
       if (result.type === 'cancel' || result.type === 'dismiss') {
-        return { user: null, error: 'ההתחברות בוטלה' };
+        return { user: null, error: i18n.t('auto.services__authService.s43') };
       }
 
       // PKCE: חובה להעביר ל-exchangeCodeForSession רק את ה-authorization code (לא את כל ה-URL)
@@ -1560,13 +1561,13 @@ export class AuthService {
 
         const code = extractPkceCodeFromCallbackUrl(result.url);
         if (!code) {
-          return { user: null, error: 'לא התקבל קוד אימות מהדפדפן — נסה שוב' };
+          return { user: null, error: i18n.t('auto.services__authService.s44') };
         }
 
         const { data: sessionData, error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
 
         if (sessionError || !sessionData.user) {
-          return { user: null, error: sessionError?.message || 'שגיאה בהגדרת הסשן' };
+          return { user: null, error: sessionError?.message || i18n.t('auto.services__authService.s45') };
         }
 
         // Check if user exists in our database / השלים רישום
@@ -1614,7 +1615,7 @@ export class AuthService {
 
         let user = await this.getUserProfile(sessionData.user.id);
         if (!user) {
-          return { user: null, error: 'שגיאה בטעינת פרופיל המשתמש' };
+          return { user: null, error: i18n.t('auto.services__authService.s15') };
         }
 
         user = await this.healRegistrationCompletedIfNeeded(user);
@@ -1635,9 +1636,9 @@ export class AuthService {
         };
       }
 
-      return { user: null, error: 'שגיאה בהתחברות עם Google' };
+      return { user: null, error: i18n.t('auto.services__authService.s41') };
     } catch (error: any) {
-      return { user: null, error: error.message || 'שגיאה בהתחברות עם Google' };
+      return { user: null, error: error.message || i18n.t('auto.services__authService.s41') };
     } finally {
       googleOAuthFlowLock = false;
     }

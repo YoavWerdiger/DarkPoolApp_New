@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -46,22 +47,22 @@ const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
 
   const getDealTypeLabel = (type: string) => {
     switch (type.toLowerCase()) {
-      case 'priced': return 'נקבע מחיר';
-      case 'expected': return 'צפוי';
-      case 'filed': return 'הוגש';
-      case 'amended': return 'עודכן';
+      case 'priced': return i18n.t('auto.screens__News__IPOsTab.s1');
+      case 'expected': return i18n.t('auto.screens__News__IPOsTab.s2');
+      case 'filed': return i18n.t('auto.screens__News__IPOsTab.s3');
+      case 'amended': return i18n.t('auto.screens__News__IPOsTab.s4');
       default: return type;
     }
   };
 
   const formatDate = (dateStr: string | null): string => {
-    if (!dateStr) return 'לא ידוע';
+    if (!dateStr) return i18n.t('auto.screens__News__IPOsTab.s5');
     const date = new Date(dateStr);
     return date.toLocaleDateString(appLocale(), { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
   const formatShares = (shares: number): string => {
-    if (shares === 0) return 'לא ידוע';
+    if (shares === 0) return i18n.t('auto.screens__News__IPOsTab.s5');
     if (shares >= 1e9) return `${(shares / 1e9).toFixed(2)}B`;
     if (shares >= 1e6) return `${(shares / 1e6).toFixed(2)}M`;
     if (shares >= 1e3) return `${(shares / 1e3).toFixed(2)}K`;
@@ -128,9 +129,7 @@ const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
       {ipo.start_date && (
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12, backgroundColor: 'rgba(59, 130, 246, 0.1)' }}>
           <Calendar size={14} color="#3B82F6" strokeWidth={2} style={{ marginLeft: APP_LAYOUT.cardTitleToBodyGap }} />
-          <Text style={{ ...APP_TYPE.cardSubtitle, color: DesignTokens.colors.text.primary }}>
-            תאריך מסחר ראשון:
-          </Text>
+          <Text style={{ ...APP_TYPE.cardSubtitle, color: DesignTokens.colors.text.primary }}>{i18n.t('auto.screens__News__IPOsTab.s6')}</Text>
           <Text style={{ ...APP_TYPE.cardSubtitle, color: '#3B82F6', marginLeft: 6 }}>
             {formatDate(ipo.start_date)}
           </Text>
@@ -144,7 +143,7 @@ const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
             <View style={{ flex: 1 }}>
               <DollarSign size={16} color={DesignTokens.colors.text.tertiary} strokeWidth={2} style={{ marginBottom: 4, alignSelf: 'flex-end' }} />
               <Text style={{ ...APP_TYPE.caption2, color: DesignTokens.colors.text.tertiary, marginBottom: APP_LAYOUT.cardMetricLabelToValueGap, textAlign: 'right' }}>
-                {ipo.offer_price > 0 ? 'מחיר הצעה' : 'טווח מחירים'}
+                {ipo.offer_price > 0 ? i18n.t('auto.screens__News__IPOsTab.s7') : i18n.t('auto.screens__News__IPOsTab.s8')}
               </Text>
               {ipo.offer_price > 0 ? (
                 <Text style={{ ...APP_TYPE.cardTitle, color: DesignTokens.colors.success.main, textAlign: 'right' }}>
@@ -160,9 +159,7 @@ const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
 
           {ipo.shares > 0 && (
             <View style={{ flex: 1 }}>
-              <Text style={{ ...APP_TYPE.caption2, color: DesignTokens.colors.text.tertiary, marginBottom: APP_LAYOUT.cardMetricLabelToValueGap, textAlign: 'right' }}>
-                מניות
-              </Text>
+              <Text style={{ ...APP_TYPE.caption2, color: DesignTokens.colors.text.tertiary, marginBottom: APP_LAYOUT.cardMetricLabelToValueGap, textAlign: 'right' }}>{i18n.t('auto.screens__News__IPOsTab.s9')}</Text>
               <Text style={{ ...APP_TYPE.cardTitle, color: DesignTokens.colors.text.primary, textAlign: 'right' }}>
                 {formatShares(ipo.shares)}
               </Text>
@@ -175,13 +172,11 @@ const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
       {(ipo.filing_date || ipo.amended_date) && (
         <View style={{ flexDirection: 'row', marginTop: APP_LAYOUT.cardTitleToBodyGap, paddingTop: APP_LAYOUT.cardTitleToBodyGap, borderTopWidth: 1, borderTopColor: DesignTokens.colors.border.divider }}>
           {ipo.filing_date && (
-            <Text style={{ ...APP_TYPE.caption2, color: DesignTokens.colors.text.tertiary, marginLeft: APP_LAYOUT.cardTitleToBodyGap }}>
-              הוגש: {formatDate(ipo.filing_date)}
+            <Text style={{ ...APP_TYPE.caption2, color: DesignTokens.colors.text.tertiary, marginLeft: APP_LAYOUT.cardTitleToBodyGap }}>{i18n.t('auto.screens__News__IPOsTab.s10', { v0: formatDate(ipo.filing_date) })}
             </Text>
           )}
           {ipo.amended_date && (
-            <Text style={{ ...APP_TYPE.caption2, color: DesignTokens.colors.text.tertiary }}>
-              עודכן: {formatDate(ipo.amended_date)}
+            <Text style={{ ...APP_TYPE.caption2, color: DesignTokens.colors.text.tertiary }}>{i18n.t('auto.screens__News__IPOsTab.s11', { v0: formatDate(ipo.amended_date) })}
             </Text>
           )}
         </View>
@@ -234,12 +229,8 @@ export default function IPOsTab() {
   const renderEmptyState = () => (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 40 }}>
       <Rocket size={64} color={DesignTokens.colors.text.tertiary} strokeWidth={1.5} />
-      <Text style={{ ...APP_TYPE.body, color: DesignTokens.colors.text.secondary, marginTop: APP_LAYOUT.componentGap, textAlign: 'center' }}>
-        אין הנפקות זמינות כרגע
-      </Text>
-      <Text style={{ ...APP_TYPE.cardSubtitle, color: DesignTokens.colors.text.tertiary, marginTop: APP_LAYOUT.groupLabelToContent, textAlign: 'center', paddingHorizontal: 40 }}>
-        נתוני הנפקות יעודכנו בקרוב
-      </Text>
+      <Text style={{ ...APP_TYPE.body, color: DesignTokens.colors.text.secondary, marginTop: APP_LAYOUT.componentGap, textAlign: 'center' }}>{i18n.t('auto.screens__News__IPOsTab.s12')}</Text>
+      <Text style={{ ...APP_TYPE.cardSubtitle, color: DesignTokens.colors.text.tertiary, marginTop: APP_LAYOUT.groupLabelToContent, textAlign: 'center', paddingHorizontal: 40 }}>{i18n.t('auto.screens__News__IPOsTab.s13')}</Text>
     </View>
   );
 
@@ -247,9 +238,7 @@ export default function IPOsTab() {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent' }}>
         <ActivityIndicator size="large" color={DesignTokens.colors.success.main} />
-        <Text style={{ ...APP_TYPE.body, color: DesignTokens.colors.text.secondary, marginTop: APP_LAYOUT.componentGap }}>
-          טוען הנפקות...
-        </Text>
+        <Text style={{ ...APP_TYPE.body, color: DesignTokens.colors.text.secondary, marginTop: APP_LAYOUT.componentGap }}>{i18n.t('auto.screens__News__IPOsTab.s14')}</Text>
       </View>
     );
   }

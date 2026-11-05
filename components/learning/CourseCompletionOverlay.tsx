@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -94,11 +95,11 @@ export function CourseCompletionOverlay({
 
         {done ? (
           <Reanimated.View entering={FadeInDown.delay(150).duration(380)} style={styles.textBlock}>
-            <Text style={[styles.title, { color: tokens.colors.text.primary }]}>סיימת את הקורס!</Text>
+            <Text style={[styles.title, { color: tokens.colors.text.primary }]}>{i18n.t('auto.components__learning__CourseCompletionOverlay.s1')}</Text>
             <Text style={[styles.subtitle, { color: tokens.colors.text.secondary }]}>
               {courseTitle
-                ? `השלמת את כל ${lessonsCount} השיעורים בקורס ${courseTitle}. כל הכבוד.`
-                : `השלמת את כל ${lessonsCount} השיעורים. כל הכבוד.`}
+                ? i18n.t('auto.components__learning__CourseCompletionOverlay.s2', { v0: lessonsCount, v1: courseTitle })
+                : i18n.t('auto.components__learning__CourseCompletionOverlay.s3', { v0: lessonsCount })}
             </Text>
           </Reanimated.View>
         ) : null}
@@ -106,7 +107,7 @@ export function CourseCompletionOverlay({
 
       <View style={styles.footer}>
         <UIButton
-          title="חזרה לקורס"
+          title={i18n.t('auto.components__learning__CourseCompletionOverlay.s4')}
           variant="primary"
           size="lg"
           fullWidth

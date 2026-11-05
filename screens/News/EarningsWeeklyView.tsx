@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -93,9 +94,9 @@ function getTimingMeta(value: string | null | undefined): {
   icon: typeof Sun;
 } {
   const n = normalizeTiming(value);
-  if (n === 'BeforeMarket') return { label: 'מסחר מוקדם', color: PRE_COLOR, icon: Sun };
-  if (n === 'AfterMarket') return { label: 'מסחר מאוחר', color: POST_COLOR, icon: Moon };
-  return { label: value?.trim() || 'טרם נקבע', color: '#8E8E93', icon: Sun };
+  if (n === 'BeforeMarket') return { label: i18n.t('auto.screens__News__EarningsWeeklyView.s1'), color: PRE_COLOR, icon: Sun };
+  if (n === 'AfterMarket') return { label: i18n.t('auto.screens__News__EarningsWeeklyView.s2'), color: POST_COLOR, icon: Moon };
+  return { label: value?.trim() || i18n.t('auto.screens__News__EarningsWeeklyView.s3'), color: '#8E8E93', icon: Sun };
 }
 
 // אריח לוגו בודד — memo כדי למנוע רינדור מחדש של עשרות אריחים.
@@ -232,9 +233,7 @@ const SearchResultRow = memo(function SearchResultRow({
                   },
                 ]}
               >
-                <Text style={[searchStyles.todayPillText, { color: DesignTokens.colors.text.primary }]}>
-                  היום
-                </Text>
+                <Text style={[searchStyles.todayPillText, { color: DesignTokens.colors.text.primary }]}>{i18n.t('auto.screens__News__EarningsWeeklyView.s4')}</Text>
               </View>
             ) : null}
           </View>
@@ -332,9 +331,7 @@ const DayCard = memo(function DayCard({
                 },
               ]}
             >
-              <Text style={[weekStyles.todayPillText, { color: DesignTokens.colors.text.primary }]}>
-                היום
-              </Text>
+              <Text style={[weekStyles.todayPillText, { color: DesignTokens.colors.text.primary }]}>{i18n.t('auto.screens__News__EarningsWeeklyView.s4')}</Text>
             </View>
           ) : null}
         <Text style={[weekStyles.dayDate, { color: DesignTokens.colors.text.secondary }]}>
@@ -346,16 +343,14 @@ const DayCard = memo(function DayCard({
         <DayTilesSkeleton />
       ) : total === 0 ? (
         <View style={weekStyles.emptyDay}>
-          <Text style={[weekStyles.emptyDayText, { color: DesignTokens.colors.text.secondary }]}>
-            אין דיווחים ביום זה
-          </Text>
+          <Text style={[weekStyles.emptyDayText, { color: DesignTokens.colors.text.secondary }]}>{i18n.t('auto.screens__News__EarningsWeeklyView.s5')}</Text>
         </View>
       ) : (
         <>
           {hasBefore ? (
             <View style={weekStyles.subSection}>
               <SubSectionHeader
-                label="מסחר מוקדם"
+                label={i18n.t('auto.screens__News__EarningsWeeklyView.s1')}
                 icon={Sun}
                 color={PRE_COLOR}
                 isFirst
@@ -370,7 +365,7 @@ const DayCard = memo(function DayCard({
           {hasAfter ? (
             <View style={weekStyles.subSection}>
               <SubSectionHeader
-                label="מסחר מאוחר"
+                label={i18n.t('auto.screens__News__EarningsWeeklyView.s2')}
                 icon={Moon}
                 color={POST_COLOR}
                 isFirst={!hasBefore}
@@ -611,7 +606,7 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
                 onPress={clearSearch}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 accessibilityRole="button"
-                accessibilityLabel="נקה חיפוש"
+                accessibilityLabel={i18n.t('auto.screens__News__EarningsWeeklyView.s6')}
               >
                 <Ionicons name="close-circle" size={20} color={DesignTokens.colors.text.tertiary} />
               </TouchableOpacity>
@@ -621,7 +616,7 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
             <TextInput
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholder="חיפוש טיקר או חברה..."
+              placeholder={i18n.t('auto.screens__News__EarningsWeeklyView.s7')}
               placeholderTextColor={DesignTokens.colors.text.tertiary}
                 style={{
                   flex: 1,
@@ -636,7 +631,7 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
               autoCorrect={false}
               autoComplete="off"
               clearButtonMode="never"
-              accessibilityLabel="חיפוש טיקר או חברה"
+              accessibilityLabel={i18n.t('auto.screens__News__EarningsWeeklyView.s8')}
             />
             {searchLoading && isSearchMode ? (
               <ActivityIndicator size="small" color={DesignTokens.colors.text.tertiary} />
@@ -671,7 +666,7 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
               justifyContent: 'space-between',
             }}
           >
-            <DayNavBlurButton onPress={onPrevWeek} style={{ backgroundColor: DesignTokens.colors.background.primary }} accessibilityLabel="שבוע קודם">
+            <DayNavBlurButton onPress={onPrevWeek} style={{ backgroundColor: DesignTokens.colors.background.primary }} accessibilityLabel={i18n.t('auto.screens__News__EarningsWeeklyView.s9')}>
               <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.primary} />
             </DayNavBlurButton>
 
@@ -693,11 +688,11 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
                   marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
                 }}
               >
-                {isCurrentWeek ? 'השבוע הנוכחי' : `${totalWeekReports} דיווחים`}
+                {isCurrentWeek ? i18n.t('auto.screens__News__EarningsWeeklyView.s10') : i18n.t('auto.screens__News__EarningsWeeklyView.s11', { v0: totalWeekReports })}
               </Text>
             </View>
 
-            <DayNavBlurButton onPress={onNextWeek} style={{ backgroundColor: DesignTokens.colors.background.primary }} accessibilityLabel="שבוע הבא">
+            <DayNavBlurButton onPress={onNextWeek} style={{ backgroundColor: DesignTokens.colors.background.primary }} accessibilityLabel={i18n.t('auto.screens__News__EarningsWeeklyView.s12')}>
               <Ionicons name="chevron-forward" size={20} color={DesignTokens.colors.text.primary} />
             </DayNavBlurButton>
           </View>
@@ -718,21 +713,15 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
       return (
         <View style={searchStyles.emptyWrap}>
           <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-          <Text style={[searchStyles.emptyTitle, { color: DesignTokens.colors.text.secondary }]}>
-            מחפש דיווחים...
-          </Text>
+          <Text style={[searchStyles.emptyTitle, { color: DesignTokens.colors.text.secondary }]}>{i18n.t('auto.screens__News__EarningsWeeklyView.s13')}</Text>
         </View>
       );
     }
     return (
       <View style={searchStyles.emptyWrap}>
         <Search size={32} color={DesignTokens.colors.text.secondary} strokeWidth={1.8} />
-        <Text style={[searchStyles.emptyTitle, { color: DesignTokens.colors.text.primary }]}>
-          אין תוצאות לחיפוש
-        </Text>
-        <Text style={[searchStyles.emptySubtitle, { color: DesignTokens.colors.text.secondary }]}>
-          נסו טיקר (למשל NVDA) או שם חברה
-        </Text>
+        <Text style={[searchStyles.emptyTitle, { color: DesignTokens.colors.text.primary }]}>{i18n.t('auto.screens__News__EarningsWeeklyView.s14')}</Text>
+        <Text style={[searchStyles.emptySubtitle, { color: DesignTokens.colors.text.secondary }]}>{i18n.t('auto.screens__News__EarningsWeeklyView.s15')}</Text>
       </View>
     );
   }, [searchLoading, DesignTokens]);
@@ -808,7 +797,7 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
       {showCurrentWeekFab && (
         <View style={weekStyles.fabWrap} pointerEvents="box-none">
           <UIButton
-            title="השבוע הנוכחי"
+            title={i18n.t('auto.screens__News__EarningsWeeklyView.s10')}
             variant="primary"
             icon="calendar-outline"
             iconPosition="right"
@@ -852,7 +841,7 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
             <Pressable
               onPress={scrollToTop}
               accessibilityRole="button"
-              accessibilityLabel="גלול לראש הרשימה"
+              accessibilityLabel={i18n.t('auto.screens__News__EarningsWeeklyView.s16')}
               style={({ pressed }) => ({
                 width: 44,
                 height: 44,

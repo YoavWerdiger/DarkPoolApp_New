@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect } from 'react';
@@ -31,39 +32,39 @@ export default function RegisterScreen({ navigation }: any) {
 
   const validateForm = async () => {
     if (!fullName.trim()) {
-      legacyAlert('שגיאה', 'אנא הכנס את שמך המלא');
+      legacyAlert(i18n.t('auto.screens__Auth__RegisterScreen.s1'), i18n.t('auto.screens__Auth__RegisterScreen.s2'));
       return false;
     }
     if (!email.trim()) {
-      legacyAlert('שגיאה', 'אנא הכנס כתובת אימייל');
+      legacyAlert(i18n.t('auto.screens__Auth__RegisterScreen.s1'), i18n.t('auto.screens__Auth__RegisterScreen.s3'));
       return false;
     }
     if (!email.includes('@')) {
-      legacyAlert('שגיאה', 'אנא הכנס כתובת אימייל תקינה');
+      legacyAlert(i18n.t('auto.screens__Auth__RegisterScreen.s1'), i18n.t('auto.screens__Auth__RegisterScreen.s4'));
       return false;
     }
     
     // בדיקה שהמייל לא קיים
     const { exists: emailExists, error: emailError } = await AuthService.checkEmailExists(email.trim());
     if (emailError) {
-      legacyAlert('שגיאה', 'שגיאה בבדיקת המייל');
+      legacyAlert(i18n.t('auto.screens__Auth__RegisterScreen.s1'), i18n.t('auto.screens__Auth__RegisterScreen.s5'));
       return false;
     }
     if (emailExists) {
-      legacyAlert('שגיאה', 'כתובת המייל כבר קיימת במערכת');
+      legacyAlert(i18n.t('auto.screens__Auth__RegisterScreen.s1'), i18n.t('auto.screens__Auth__RegisterScreen.s6'));
       return false;
     }
     
     if (password.length < 8) {
-      legacyAlert('שגיאה', 'הסיסמה חייבת להיות לפחות 8 תווים');
+      legacyAlert(i18n.t('auto.screens__Auth__RegisterScreen.s1'), i18n.t('auto.screens__Auth__RegisterScreen.s7'));
       return false;
     }
     if (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
-      legacyAlert('שגיאה', 'הסיסמה חייבת לכלול אותיות ומספרים');
+      legacyAlert(i18n.t('auto.screens__Auth__RegisterScreen.s1'), i18n.t('auto.screens__Auth__RegisterScreen.s8'));
       return false;
     }
     if (password !== confirmPassword) {
-      legacyAlert('שגיאה', 'הסיסמאות אינן תואמות');
+      legacyAlert(i18n.t('auto.screens__Auth__RegisterScreen.s1'), i18n.t('auto.screens__Auth__RegisterScreen.s9'));
       return false;
     }
     return true;
@@ -79,21 +80,21 @@ export default function RegisterScreen({ navigation }: any) {
     });
 
     if (error) {
-      legacyAlert('שגיאה בהרשמה', error);
+      legacyAlert(i18n.t('auto.screens__Auth__RegisterScreen.s10'), error);
     } else {
-      legacyAlert('נשלח מייל אימות', 'החשבון נוצר בהצלחה. אנא אשר את האימייל לפני התחברות.', [
+      legacyAlert(i18n.t('auto.screens__Auth__RegisterScreen.s11'), i18n.t('auto.screens__Auth__RegisterScreen.s12'), [
         {
-          text: 'שלח שוב',
+          text: i18n.t('auto.screens__Auth__RegisterScreen.s13'),
           onPress: async () => {
             const { error: resendError } = await AuthService.resendVerificationEmail(email.trim());
             if (resendError) {
-              legacyAlert('שגיאה', resendError);
+              legacyAlert(i18n.t('auto.screens__Auth__RegisterScreen.s1'), resendError);
             } else {
-              legacyAlert('בוצע', 'מייל אימות נשלח שוב בהצלחה');
+              legacyAlert(i18n.t('auto.screens__Auth__RegisterScreen.s14'), i18n.t('auto.screens__Auth__RegisterScreen.s15'));
             }
           },
         },
-        { text: 'אישור', onPress: () => navigation.navigate('Login') }
+        { text: i18n.t('auto.screens__Auth__RegisterScreen.s16'), onPress: () => navigation.navigate('Login') }
       ]);
     }
   };
@@ -174,9 +175,7 @@ export default function RegisterScreen({ navigation }: any) {
                 letterSpacing: -0.8,
                 textAlign: 'center',
                 writingDirection: TEXT_DIR
-              }}>
-                צור חשבון
-              </Text>
+              }}>{i18n.t('auto.screens__Auth__RegisterScreen.s17')}</Text>
               
               {/* Subtitle */}
               <Text style={{ 
@@ -187,9 +186,7 @@ export default function RegisterScreen({ navigation }: any) {
                 textAlign: 'center',
                 lineHeight: 22,
                 writingDirection: TEXT_DIR
-              }}>
-                הירשם כדי להתחיל להשתמש באפליקציה
-              </Text>
+              }}>{i18n.t('auto.screens__Auth__RegisterScreen.s18')}</Text>
               
               {/* Decorative Line */}
               <View style={{
@@ -212,9 +209,7 @@ export default function RegisterScreen({ navigation }: any) {
                     marginBottom: 8,
                     textAlign: 'right',
                   }}
-                >
-                  שם מלא
-                </Text>
+                >{i18n.t('auto.screens__Auth__RegisterScreen.s19')}</Text>
                 <View
                   style={{
                     backgroundColor: DesignTokens.colors.background.input,
@@ -226,7 +221,7 @@ export default function RegisterScreen({ navigation }: any) {
                 >
                   <TextInput
                     style={[formFieldInputStyle(), { paddingVertical: 15 }]}
-                    placeholder="הכנס את שמך המלא"
+                    placeholder={i18n.t('auto.screens__Auth__RegisterScreen.s20')}
                     placeholderTextColor={DesignTokens.colors.text.tertiary}
                     value={fullName}
                     onChangeText={setFullName}
@@ -245,9 +240,7 @@ export default function RegisterScreen({ navigation }: any) {
                     marginBottom: 8,
                     textAlign: 'right',
                   }}
-                >
-                  כתובת אימייל
-                </Text>
+                >{i18n.t('auto.screens__Auth__RegisterScreen.s21')}</Text>
                 <View
                   style={{
                     backgroundColor: DesignTokens.colors.background.input,
@@ -259,7 +252,7 @@ export default function RegisterScreen({ navigation }: any) {
                 >
                   <TextInput
                     style={[formFieldInputStyle(), { paddingVertical: 15 }]}
-                    placeholder="הכנס את כתובת האימייל"
+                    placeholder={i18n.t('auto.screens__Auth__RegisterScreen.s22')}
                     placeholderTextColor={DesignTokens.colors.text.tertiary}
                     value={email}
                     onChangeText={setEmail}
@@ -279,9 +272,7 @@ export default function RegisterScreen({ navigation }: any) {
                     textAlign: 'right',
                     marginBottom: 8,
                   }}
-                >
-                  סיסמה
-                </Text>
+                >{i18n.t('auto.screens__Auth__RegisterScreen.s23')}</Text>
                 <View
                   style={{
                     backgroundColor: DesignTokens.colors.background.input,
@@ -298,7 +289,7 @@ export default function RegisterScreen({ navigation }: any) {
                   />
                   <TextInput
                     style={[formFieldInputStyle(), { paddingVertical: 15 }]}
-                    placeholder="הכנס סיסמה (לפחות 6 תווים)"
+                    placeholder={i18n.t('auto.screens__Auth__RegisterScreen.s24')}
                     placeholderTextColor={DesignTokens.colors.text.tertiary}
                     value={password}
                     onChangeText={setPassword}
@@ -317,9 +308,7 @@ export default function RegisterScreen({ navigation }: any) {
                     textAlign: 'right',
                     marginBottom: 8,
                   }}
-                >
-                  אימות סיסמה
-                </Text>
+                >{i18n.t('auto.screens__Auth__RegisterScreen.s25')}</Text>
                 <View
                   style={{
                     backgroundColor: DesignTokens.colors.background.input,
@@ -336,7 +325,7 @@ export default function RegisterScreen({ navigation }: any) {
                   />
                   <TextInput
                     style={[formFieldInputStyle(), { paddingVertical: 15 }]}
-                    placeholder="הכנס שוב את הסיסמה"
+                    placeholder={i18n.t('auto.screens__Auth__RegisterScreen.s26')}
                     placeholderTextColor={DesignTokens.colors.text.tertiary}
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
@@ -382,7 +371,7 @@ export default function RegisterScreen({ navigation }: any) {
                     textTransform: 'uppercase',
                     writingDirection: TEXT_DIR
                   }}>
-                    {isLoading ? 'יוצר חשבון...' : 'צור חשבון'}
+                    {isLoading ? i18n.t('auto.screens__Auth__RegisterScreen.s27') : i18n.t('auto.screens__Auth__RegisterScreen.s17')}
                   </Text>
                 </Pressable>
               </LinearGradient>
@@ -395,9 +384,7 @@ export default function RegisterScreen({ navigation }: any) {
                 marginTop: 24,
                 gap: 6
               }}>
-                <Text style={{ color: DesignTokens.colors.text.secondary, fontSize: 14, fontWeight: '400' }}>
-                  יש לך כבר חשבון?
-                </Text>
+                <Text style={{ color: DesignTokens.colors.text.secondary, fontSize: 14, fontWeight: '400' }}>{i18n.t('auto.screens__Auth__RegisterScreen.s28')}</Text>
                 <Pressable
                   onPress={() => {
                     void HapticFeedback.impactLight();
@@ -410,9 +397,7 @@ export default function RegisterScreen({ navigation }: any) {
                     fontWeight: '600',
                     letterSpacing: 0.2,
                     textAlign: 'right'
-                  }}>
-                    התחבר עכשיו
-                  </Text>
+                  }}>{i18n.t('auto.screens__Auth__RegisterScreen.s29')}</Text>
                 </Pressable>
               </View>
             </View>

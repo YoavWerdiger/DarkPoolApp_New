@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
@@ -80,10 +81,10 @@ interface Props {
 }
 
 const GROUP_BY_OPTIONS: { id: DistributionGroupBy; label: string }[] = [
-  { id: 'symbol', label: 'נכסים' },
-  { id: 'asset_type', label: 'סוג נכס' },
-  { id: 'sector', label: 'סקטור' },
-  { id: 'currency', label: 'מטבע' },
+  { id: 'symbol', label: i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s1') },
+  { id: 'asset_type', label: i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s2') },
+  { id: 'sector', label: i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s3') },
+  { id: 'currency', label: i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s4') },
 ];
 
 interface TradeStats {
@@ -102,14 +103,14 @@ type LiveQuote = { price: number; previousClose: number | null };
 
 /** תווית הטווח שנבחר בגרף — לתשואה / ירידה מקסימלית */
 const PERIOD_LABEL_HE: Record<string, string> = {
-  '1D': 'היום',
-  '1W': 'שבוע',
-  '1M': 'חודש',
-  '3M': '3 חודשים',
-  YTD: 'מתחילת השנה',
-  '1Y': 'שנה',
-  '5Y': '5 שנים',
-  All: 'הכל',
+  '1D': i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s5'),
+  '1W': i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s6'),
+  '1M': i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s7'),
+  '3M': i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s8'),
+  YTD: i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s9'),
+  '1Y': i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s10'),
+  '5Y': i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s11'),
+  All: i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s12'),
 };
 
 export default function OverviewTab({
@@ -863,15 +864,13 @@ export default function OverviewTab({
       {showTip && !isColmex ? (
         <View style={styles.tipsBanner}>
           <Ionicons name="bulb" size={20} color={tokens.colors.text.warning} />
-          <Text style={styles.tipsText}>
-            התיק עוד ריק – הוסף הפקדה ופתח פוזיציה ראשונה כדי לראות שווי ופילוח.
-          </Text>
+          <Text style={styles.tipsText}>{i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s13')}</Text>
         </View>
       ) : null}
 
       {/* Performance chart — כמו תיק האינסיידרים: בלי כרטיס, ישירות על רקע המסך, עם סימן המים של DarkPool */}
       <View style={styles.heroBlock}>
-        <Text style={styles.valueLabel}>שווי תיק</Text>
+        <Text style={styles.valueLabel}>{i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s14')}</Text>
         {heroValue != null && liveValue != null ? (
           // אותו מספר מתגלגל כמו באינסיידרים: ב-UI thread, ספרה מסיימת מעבר ורק אז ממשיכה
           <View style={styles.heroNumberWrap}>
@@ -922,14 +921,14 @@ export default function OverviewTab({
           </View>
         ) : null}
         {chartLoading ? (
-          <Text style={styles.emptyText}>טוען נתונים…</Text>
+          <Text style={styles.emptyText}>{i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s15')}</Text>
         ) : filteredSeries.length === 0 ? (
           <Text style={styles.emptyText}>
             {isColmex
-              ? 'אין נקודת שווי עדיין — משוך לסנכרון מהברוקר'
+              ? i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s16')
               : openTrades.length > 0
-                ? 'טוען שווי תיק…'
-                : 'אין נתונים היסטוריים עדיין — פתח פוזיציה או הוסף הפקדה'}
+                ? i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s17')
+                : i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s18')}
           </Text>
         ) : (
           <View style={styles.chartWrap}>
@@ -963,7 +962,7 @@ export default function OverviewTab({
 
       {/* Distribution — כמו «פילוח אחזקות» באינסיידרים: כותרת ובחירת הקיבוץ על רקע המסך, העוגה בכרטיס */}
       <View style={styles.sectionBlock}>
-        <Text style={styles.sectionHeading}>חלוקת נכסים</Text>
+        <Text style={styles.sectionHeading}>{i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s19')}</Text>
         <SlidingPillGroup
           options={GROUP_BY_OPTIONS}
           value={groupBy}
@@ -975,8 +974,8 @@ export default function OverviewTab({
         {distribution.length === 0 ? (
           <Text style={styles.emptyText}>
             {openTrades.length > 0
-              ? 'טוען פילוח…'
-              : 'פתח פוזיציה כדי לראות פילוח נכסים'}
+              ? i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s20')
+              : i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s21')}
           </Text>
         ) : (
           <>
@@ -1001,15 +1000,13 @@ export default function OverviewTab({
                 {distribution.length > 6 ? (
                   <Text
                     style={[styles.legendLabel, { color: tokens.colors.text.tertiary }]}
-                  >
-                    ועוד {distribution.length - 6} נכסים נוספים
-                  </Text>
+                  >{i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s22', { v0: distribution.length - 6 })}</Text>
                 ) : null}
               </View>
             </View>
             {distribution.length > 0 && (
               <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>סה"כ נכסים</Text>
+                <Text style={styles.totalLabel}>{i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s23')}</Text>
                 <Text style={styles.totalValue}>
                   {formatCurrency(distributionTotal, portfolio.currency)}
                 </Text>

@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import React, { memo, useCallback, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -181,7 +182,7 @@ function WatchlistRowInner({ row, onPress, onDrag, isActive }: Props) {
     <View
       style={[styles.row, isActive && styles.rowActive]}
       accessibilityRole="button"
-      accessibilityLabel={`${symbol} ${company} ${formatPrice(row.price)} ${formatSigned(row.change)} ${formatSigned(row.changePct)}%${hasAlert ? ' עם התראה' : ''}`}
+      accessibilityLabel={`${symbol} ${company} ${formatPrice(row.price)} ${formatSigned(row.change)} ${formatSigned(row.changePct)}%${hasAlert ? i18n.t('auto.screens__Watchlist__components__WatchlistRow.s1') : ''}`}
     >
       <View style={colSymbol}>
         <Pressable
@@ -195,7 +196,7 @@ function WatchlistRowInner({ row, onPress, onDrag, isActive }: Props) {
           <View style={styles.logoWrap}>
             <TickerLogo symbol={symbol} size={LOGO_SIZE} />
             {hasAlert ? (
-              <View style={styles.alertBadge} accessibilityLabel="התראה פעילה">
+              <View style={styles.alertBadge} accessibilityLabel={i18n.t('auto.screens__Watchlist__components__WatchlistRow.s2')}>
                 <Ionicons name="notifications" size={9} color="#041204" />
               </View>
             ) : null}
@@ -287,7 +288,7 @@ function WatchlistRowInner({ row, onPress, onDrag, isActive }: Props) {
             delayLongPress={120}
             style={styles.dragHit}
             hitSlop={8}
-            accessibilityLabel="סידור מחדש"
+            accessibilityLabel={i18n.t('auto.screens__Watchlist__components__WatchlistRow.s3')}
             accessibilityRole="button"
           >
             <Ionicons

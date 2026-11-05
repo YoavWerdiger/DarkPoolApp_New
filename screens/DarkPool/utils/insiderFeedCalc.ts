@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 /**
  * insiderFeedCalc.ts
  * -----------------------------------------------------------------------------
@@ -50,36 +51,36 @@ export function buildFeedItem(
 
 /** שורה קצרה לכרטיס פיד — בלי פירוט מחיר למניה. */
 export function formatInsiderTradeShort(trade: InsiderBuyRow): string {
-  const verb = trade.transaction_type === 'S' ? 'מכר' : 'רכש';
+  const verb = trade.transaction_type === 'S' ? i18n.t('auto.screens__DarkPool__utils__insiderFeedCalc.s1') : i18n.t('auto.screens__DarkPool__utils__insiderFeedCalc.s2');
   const value = trade.value ?? (trade.shares > 0 && trade.price > 0 ? trade.shares * trade.price : 0);
   if (value > 0) {
     return `${verb} · ${trade.ticker} · ${formatInsiderTradeUsd(value)}`;
   }
   if (trade.shares > 0) {
-    return `${verb} · ${trade.ticker} · ${formatInsiderShareCount(trade.shares)} מניות`;
+    return i18n.t('auto.screens__DarkPool__utils__insiderFeedCalc.s3', { v0: verb, v1: trade.ticker, v2: formatInsiderShareCount(trade.shares) });
   }
   return `${verb} · ${trade.ticker}`;
 }
 
 /** שורת פעולה מלאה (פרופיל / פרטים). */
 export function formatInsiderTradeSummary(trade: InsiderBuyRow): string {
-  const verb = trade.transaction_type === 'S' ? 'מכר' : 'רכש';
+  const verb = trade.transaction_type === 'S' ? i18n.t('auto.screens__DarkPool__utils__insiderFeedCalc.s1') : i18n.t('auto.screens__DarkPool__utils__insiderFeedCalc.s2');
   const ticker = trade.ticker;
   const qty = formatInsiderShareCount(trade.shares);
 
   if (trade.shares != null && trade.shares > 0) {
     if (trade.price != null && Number.isFinite(trade.price) && trade.price > 0) {
-      return `${verb} ${qty} מניות ב-${ticker} במחיר ${formatInsiderTradeUsd(trade.price)} למניה`;
+      return i18n.t('auto.screens__DarkPool__utils__insiderFeedCalc.s4', { v0: verb, v1: qty, v2: ticker, v3: formatInsiderTradeUsd(trade.price) });
     }
-    return `${verb} ${qty} מניות ב-${ticker}`;
+    return i18n.t('auto.screens__DarkPool__utils__insiderFeedCalc.s5', { v0: verb, v1: qty, v2: ticker });
   }
 
   const value = trade.value ?? 0;
   if (value > 0) {
-    return `${verb} עסקה ב-${ticker} בשווי ${formatInsiderTradeUsd(value)}`;
+    return i18n.t('auto.screens__DarkPool__utils__insiderFeedCalc.s6', { v0: verb, v1: ticker, v2: formatInsiderTradeUsd(value) });
   }
 
-  return `${verb} עסקה ב-${ticker}`;
+  return i18n.t('auto.screens__DarkPool__utils__insiderFeedCalc.s7', { v0: verb, v1: ticker });
 }
 
 function formatInsiderShareCount(shares: number): string {

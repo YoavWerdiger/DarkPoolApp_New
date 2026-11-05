@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
@@ -51,7 +52,7 @@ export default function FollowUserButton({
 
   const handlePress = useCallback(async () => {
     if (!user) {
-      legacyAlert('התחברות', 'יש להתחבר כדי לעקוב אחרי משתמשים');
+      legacyAlert(i18n.t('auto.components__profile__FollowUserButton.s1'), i18n.t('auto.components__profile__FollowUserButton.s2'));
       return;
     }
     if (busy || isSelf) return;
@@ -69,7 +70,7 @@ export default function FollowUserButton({
     } catch {
       setFollowing(prev);
       onFollowingChange?.(userId, prev);
-      legacyAlert('שגיאה', 'לא הצלחנו לעדכן את המעקב');
+      legacyAlert(i18n.t('auto.components__profile__FollowUserButton.s3'), i18n.t('auto.components__profile__FollowUserButton.s4'));
     } finally {
       setBusy(false);
     }
@@ -89,7 +90,7 @@ export default function FollowUserButton({
       disabled={busy}
       hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
       accessibilityRole="button"
-      accessibilityLabel={following ? 'הפסק מעקב' : 'עקוב'}
+      accessibilityLabel={following ? i18n.t('auto.components__profile__FollowUserButton.s5') : i18n.t('auto.components__profile__FollowUserButton.s6')}
       style={[
         styles.btn,
         { backgroundColor: tokens.colors.background.primary },
@@ -103,7 +104,7 @@ export default function FollowUserButton({
         />
       ) : (
         <Text style={[styles.label, { color: labelColor }]}>
-          {following ? 'עוקב' : 'עקוב'}
+          {following ? i18n.t('auto.components__profile__FollowUserButton.s7') : i18n.t('auto.components__profile__FollowUserButton.s6')}
         </Text>
       )}
     </TouchableOpacity>

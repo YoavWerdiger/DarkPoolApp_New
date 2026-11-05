@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 // ============================================
 // Add Member Sheet
 // ============================================
@@ -79,7 +80,7 @@ export default function AddMemberSheet({
   const handleAdd = async (user: User) => {
     void HapticFeedback.impactLight();
     setAddingId(user.id);
-    const name = user?.display_name || user?.full_name || 'משתמש';
+    const name = user?.display_name || user?.full_name || i18n.t('auto.components__chat__AddMemberSheet.s1');
     await onAdd(user.id, name);
     setAddingId(null);
     setResults((prev) => prev.filter((u) => u.id !== user.id));
@@ -93,7 +94,7 @@ export default function AddMemberSheet({
   };
 
   const renderUser = ({ item }: { item: User }) => {
-    const name = item.display_name || item.full_name || 'משתמש';
+    const name = item.display_name || item.full_name || i18n.t('auto.components__chat__AddMemberSheet.s1');
     const isAdding = addingId === item.id;
     return (
       <View style={[styles.userRow, { borderBottomColor: tokens.colors.border.subtle ?? tokens.colors.border.primary }]}>
@@ -128,7 +129,7 @@ export default function AddMemberSheet({
           onPress={isAdding ? undefined : () => handleAdd(item)}
           style={[styles.addBtn, { backgroundColor: tokens.colors.background.primary }]}
           contentContainerStyle={styles.addBtnContent}
-          accessibilityLabel={`הוסף ${name}`}
+          accessibilityLabel={i18n.t('auto.components__chat__AddMemberSheet.s2', { v0: name })}
         >
           {isAdding ? (
             <ActivityIndicator size={14} color={tokens.colors.primary.main} />
@@ -153,7 +154,7 @@ export default function AddMemberSheet({
           <TouchableOpacity onPress={handleClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Ionicons name="close" size={22} color={tokens.colors.text.secondary} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: tokens.colors.text.primary }]}>הוסף חברים</Text>
+          <Text style={[styles.headerTitle, { color: tokens.colors.text.primary }]}>{i18n.t('auto.components__chat__AddMemberSheet.s3')}</Text>
           <View style={{ width: 22 }} />
         </View>
 
@@ -166,7 +167,7 @@ export default function AddMemberSheet({
           <TextInput
             value={query}
             onChangeText={handleQueryChange}
-            placeholder="חפש לפי שם..."
+            placeholder={i18n.t('auto.components__chat__AddMemberSheet.s4')}
             placeholderTextColor={tokens.colors.text.tertiary}
             style={[styles.searchInput, { color: tokens.colors.text.primary }]}
             autoFocus
@@ -190,12 +191,12 @@ export default function AddMemberSheet({
         ) : results.length === 0 && query.trim().length > 0 ? (
           <View style={styles.emptyState}>
             <Ionicons name="person-outline" size={40} color={tokens.colors.text.tertiary} />
-            <Text style={[styles.emptyText, { color: tokens.colors.text.tertiary }]}>לא נמצאו משתמשים</Text>
+            <Text style={[styles.emptyText, { color: tokens.colors.text.tertiary }]}>{i18n.t('auto.components__chat__AddMemberSheet.s5')}</Text>
           </View>
         ) : results.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons name="search-outline" size={40} color={tokens.colors.text.tertiary} />
-            <Text style={[styles.emptyText, { color: tokens.colors.text.tertiary }]}>הקלד שם לחיפוש</Text>
+            <Text style={[styles.emptyText, { color: tokens.colors.text.tertiary }]}>{i18n.t('auto.components__chat__AddMemberSheet.s6')}</Text>
           </View>
         ) : (
           <FlatList

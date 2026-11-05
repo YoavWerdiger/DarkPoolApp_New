@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 /**
  * רכיבים «חיים» למסכי ההקלדה ברישום — שלא יהיו רק תיבות טקסט:
@@ -50,13 +51,10 @@ export function NameGreeting({ name }: { name: string }) {
           exiting={FadeOut.duration(150)}
           style={[styles.greetText, { color: tokens.colors.text.primary }]}
           numberOfLines={1}
-        >
-          נעים להכיר, {first}
+        >{i18n.t('auto.components__onboarding__RegistrationLive.s1', { v0: first })}
         </Reanimated.Text>
       ) : (
-        <Text style={[styles.greetHint, { color: tokens.colors.text.tertiary }]}>
-          ככה יכירו אותך בקהילה
-        </Text>
+        <Text style={[styles.greetHint, { color: tokens.colors.text.tertiary }]}>{i18n.t('auto.components__onboarding__RegistrationLive.s2')}</Text>
       )}
     </View>
   );
@@ -93,7 +91,7 @@ export function EmailDomainChips({
           }}
           style={[styles.chip, { backgroundColor: tokens.colors.background.cardSolid }]}
           accessibilityRole="button"
-          accessibilityLabel={`השלם ל-${local}@${d}`}
+          accessibilityLabel={i18n.t('auto.components__onboarding__RegistrationLive.s3', { v0: local, v1: d })}
         >
           <Text style={[styles.chipText, { color: tokens.colors.text.primary }]}>@{d}</Text>
         </Pressable>
@@ -107,13 +105,13 @@ export function EmailDomainChips({
 type Rule = { key: string; label: string; test: (p: string) => boolean };
 
 const RULES: Rule[] = [
-  { key: 'len6', label: 'לפחות 6 תווים', test: (p) => p.length >= 6 },
-  { key: 'len8', label: '8 תווים ומעלה', test: (p) => p.length >= 8 },
-  { key: 'mix', label: 'אותיות ומספרים', test: (p) => /[A-Za-z֐-׿]/.test(p) && /\d/.test(p) },
-  { key: 'sym', label: 'סימן מיוחד (!@#…)', test: (p) => /[^A-Za-z0-9֐-׿\s]/.test(p) },
+  { key: 'len6', label: i18n.t('auto.components__onboarding__RegistrationLive.s4'), test: (p) => p.length >= 6 },
+  { key: 'len8', label: i18n.t('auto.components__onboarding__RegistrationLive.s5'), test: (p) => p.length >= 8 },
+  { key: 'mix', label: i18n.t('auto.components__onboarding__RegistrationLive.s6'), test: (p) => /[A-Za-z֐-׿]/.test(p) && /\d/.test(p) },
+  { key: 'sym', label: i18n.t('auto.components__onboarding__RegistrationLive.s7'), test: (p) => /[^A-Za-z0-9֐-׿\s]/.test(p) },
 ];
 
-const STRENGTH_LABELS = ['', 'חלשה', 'סבירה', 'טובה', 'חזקה'];
+const STRENGTH_LABELS = ['', i18n.t('auto.components__onboarding__RegistrationLive.s8'), i18n.t('auto.components__onboarding__RegistrationLive.s9'), i18n.t('auto.components__onboarding__RegistrationLive.s10'), i18n.t('auto.components__onboarding__RegistrationLive.s11')];
 
 export function PasswordStrength({
   password,
@@ -160,7 +158,7 @@ export function PasswordStrength({
   return (
     <View style={styles.pwWrap}>
       <View style={styles.pwHeader}>
-        <Text style={[styles.pwTitle, { color: tokens.colors.text.secondary }]}>חוזק הסיסמה</Text>
+        <Text style={[styles.pwTitle, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.components__onboarding__RegistrationLive.s12')}</Text>
         {score > 0 ? (
           <Reanimated.Text key={score} entering={FadeIn.duration(160)} style={[styles.pwLevel, { color }]}>
             {STRENGTH_LABELS[score]}

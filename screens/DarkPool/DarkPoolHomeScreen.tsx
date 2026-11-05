@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { runAfterInteractions } from '../../utils/runAfterInteractions';
 /**
  * טאב פיד — עסקאות ממוזגות (קונגרס + Form 4).
@@ -293,8 +294,8 @@ export default function DarkPoolHomeScreen() {
     if (loading) return null;
     return (
       <UICard variant="soft" padding="lg" style={styles.emptyCard}>
-        <Text style={styles.emptyTitle}>אין עסקאות להצגה</Text>
-        <Text style={styles.emptyBody}>משוך למטה לרענון או נסה שוב בעוד רגע.</Text>
+        <Text style={styles.emptyTitle}>{i18n.t('auto.screens__DarkPool__DarkPoolHomeScreen.s1')}</Text>
+        <Text style={styles.emptyBody}>{i18n.t('auto.screens__DarkPool__DarkPoolHomeScreen.s2')}</Text>
       </UICard>
     );
   }, [loading, styles]);
@@ -304,14 +305,14 @@ export default function DarkPoolHomeScreen() {
       <SafeAreaView style={[styles.safe, darkPoolTransparentFill]} edges={['top']}>
         <MainDrawerScreenHeader
           inRtlTree
-          title="פיד עסקאות"
+          title={i18n.t('auto.screens__DarkPool__DarkPoolHomeScreen.s3')}
           onMenuPress={openDrawer}
           rightAccessory={
             <DayNavBlurButton
               onPress={goExplore}
               glassIntensity="subtle"
               size={DRAWER_MENU_BUTTON_SIZE}
-              accessibilityLabel="גילוי לוויתנים"
+              accessibilityLabel={i18n.t('auto.screens__DarkPool__DarkPoolHomeScreen.s4')}
             >
               <Ionicons name="search" size={22} color={tokens.colors.text.primary} />
             </DayNavBlurButton>

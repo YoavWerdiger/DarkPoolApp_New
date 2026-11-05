@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
@@ -413,28 +414,28 @@ function Body({
   );
 
   const presets: Array<{ key: string; label: string; on: boolean; icon: IonName }> = [
-    { key: 'day_high', label: 'שיא יומי', on: alertDayHigh, icon: 'sunny-outline' },
-    { key: 'week_high', label: 'שיא שבועי', on: alertWeekHigh, icon: 'trending-up' },
-    { key: 'week_low', label: 'שפל שבועי', on: alertWeekLow, icon: 'trending-down' },
-    { key: 'y52_high', label: 'שיא 52 שבועות', on: alert52wHigh, icon: 'flag-outline' },
-    { key: 'y52_low', label: 'שפל 52 שבועות', on: alert52wLow, icon: 'flag' },
-    { key: 'earnings', label: 'דיווח קרוב', on: alertEarnings, icon: 'calendar-outline' },
+    { key: 'day_high', label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s1'), on: alertDayHigh, icon: 'sunny-outline' },
+    { key: 'week_high', label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s2'), on: alertWeekHigh, icon: 'trending-up' },
+    { key: 'week_low', label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s3'), on: alertWeekLow, icon: 'trending-down' },
+    { key: 'y52_high', label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s4'), on: alert52wHigh, icon: 'flag-outline' },
+    { key: 'y52_low', label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s5'), on: alert52wLow, icon: 'flag' },
+    { key: 'earnings', label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s6'), on: alertEarnings, icon: 'calendar-outline' },
   ];
 
   const dayRows: Array<{ label: string; value: string; icon: IonName }> = [
-    { label: 'פתיחה', value: formatPrice(row.open), icon: 'sunny-outline' },
-    { label: 'גבוה', value: formatPrice(row.dayHigh), icon: 'arrow-up' },
-    { label: 'נמוך', value: formatPrice(row.dayLow), icon: 'arrow-down' },
-    { label: 'סגירה קודמת', value: formatPrice(row.previousClose), icon: 'time-outline' },
-    { label: 'ווליום', value: formatVolume(row.volume), icon: 'bar-chart-outline' },
-    { label: 'שיא שבועי', value: formatPrice(row.weekHigh), icon: 'trending-up' },
-    { label: 'שפל שבועי', value: formatPrice(row.weekLow), icon: 'trending-down' },
-    { label: 'שיא 52 שבועות', value: formatPrice(row.high52), icon: 'flag-outline' },
-    { label: 'שפל 52 שבועות', value: formatPrice(row.low52), icon: 'flag' },
+    { label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s7'), value: formatPrice(row.open), icon: 'sunny-outline' },
+    { label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s8'), value: formatPrice(row.dayHigh), icon: 'arrow-up' },
+    { label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s9'), value: formatPrice(row.dayLow), icon: 'arrow-down' },
+    { label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s10'), value: formatPrice(row.previousClose), icon: 'time-outline' },
+    { label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s11'), value: formatVolume(row.volume), icon: 'bar-chart-outline' },
+    { label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s2'), value: formatPrice(row.weekHigh), icon: 'trending-up' },
+    { label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s3'), value: formatPrice(row.weekLow), icon: 'trending-down' },
+    { label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s4'), value: formatPrice(row.high52), icon: 'flag-outline' },
+    { label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s5'), value: formatPrice(row.low52), icon: 'flag' },
   ];
   if (row.earningsDate) {
     dayRows.push({
-      label: 'דיווח רווח',
+      label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s12'),
       value: row.earningsSession
         ? `${row.earningsDate} · ${row.earningsSession}`
         : row.earningsDate,
@@ -445,11 +446,11 @@ function Body({
   const priceSelected: Chip[] = [
     ...alertAbovePrices.map((level) => ({
       key: `above:${level}`,
-      label: `מעל ${formatPrice(level)}`,
+      label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s13', { v0: formatPrice(level) }),
     })),
     ...alertBelowPrices.map((level) => ({
       key: `below:${level}`,
-      label: `מתחת ${formatPrice(level)}`,
+      label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s14', { v0: formatPrice(level) }),
     })),
   ];
 
@@ -542,7 +543,7 @@ function Body({
   );
 
   const targetSelected: Chip[] =
-    targetPrice != null ? [{ key: `target:${targetPrice}`, label: `יעד ${formatPrice(targetPrice)}` }] : [];
+    targetPrice != null ? [{ key: `target:${targetPrice}`, label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s15', { v0: formatPrice(targetPrice) }) }] : [];
 
   const submitTargetDraft = useCallback(() => {
     const n = parseNum(targetDraft);
@@ -584,7 +585,7 @@ function Body({
               glassIntensity="light"
               onPress={handleClose}
               size={HEADER_BACK_BTN_SIZE}
-              accessibilityLabel="סגור"
+              accessibilityLabel={i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s16')}
             >
               <Ionicons
                 name="chevron-forward"
@@ -645,7 +646,7 @@ function Body({
         </UICard>
 
         <View>
-          <Text style={styles.groupHeading}>נתוני היום</Text>
+          <Text style={styles.groupHeading}>{i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s17')}</Text>
           <UICard variant="soft" glassIntensity="subtle" padding="none">
             {dayRows.map((item, index) => (
               <TopoValueRow
@@ -660,11 +661,11 @@ function Body({
         </View>
 
         <View>
-          <Text style={styles.groupHeading}>התראות</Text>
+          <Text style={styles.groupHeading}>{i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s18')}</Text>
           <UICard variant="soft" glassIntensity="subtle" padding="none">
             <AlertSwitchRow
               icon="notifications-outline"
-              title="התראות"
+              title={i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s18')}
               value={alertsOn}
               onValueChange={(v) => {
                 void HapticFeedback.selection();
@@ -690,8 +691,8 @@ function Body({
               ))}
               <AlertEditorRow
                 icon="pricetag-outline"
-                title="מחיר"
-                subtitle={summarizeChips(priceSelected, 'הוספת רמת מחיר')}
+                title={i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s19')}
+                subtitle={summarizeChips(priceSelected, i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s20'))}
                 enabled={priceAlertsOn}
                 onEnabledChange={setPriceEnabled}
                 expanded={openAlert === 'price'}
@@ -702,18 +703,18 @@ function Body({
                 draft={priceDraft}
                 onDraft={setPriceDraft}
                 onSubmit={submitPriceDraft}
-                placeholder={priceSide === 'above' ? 'מחיר עליון' : 'מחיר תחתון'}
+                placeholder={priceSide === 'above' ? i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s21') : i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s22')}
                 sides={[
-                  { key: 'above', label: 'מעל' },
-                  { key: 'below', label: 'מתחת' },
+                  { key: 'above', label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s23') },
+                  { key: 'below', label: i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s24') },
                 ]}
                 side={priceSide}
                 onSide={(key) => setPriceSide(key as PriceSide)}
               />
               <AlertEditorRow
                 icon="swap-vertical-outline"
-                title="שינוי יומי"
-                subtitle={summarizeChips(dailySelected, 'הוספת אחוז שינוי ביום')}
+                title={i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s25')}
+                subtitle={summarizeChips(dailySelected, i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s26'))}
                 enabled={dailyAlertsOn}
                 onEnabledChange={setDailyEnabled}
                 expanded={openAlert === 'daily'}
@@ -724,13 +725,13 @@ function Body({
                 draft={dailyDraft}
                 onDraft={setDailyDraft}
                 onSubmit={submitDailyDraft}
-                placeholder="אחוז"
+                placeholder={i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s27')}
               />
               <AlertEditorRow
                 icon="locate-outline"
-                title="הגעה ליעד"
+                title={i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s28')}
                 subtitle={
-                  targetPrice != null ? `יעד ${formatPrice(targetPrice)}` : 'הגדרת מחיר יעד'
+                  targetPrice != null ? i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s15', { v0: formatPrice(targetPrice) }) : i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s29')
                 }
                 enabled={alertTargetHit}
                 onEnabledChange={setTargetEnabled}
@@ -746,19 +747,19 @@ function Body({
                 draft={targetDraft}
                 onDraft={setTargetDraft}
                 onSubmit={submitTargetDraft}
-                placeholder="מחיר יעד"
+                placeholder={i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s30')}
               />
             </View>
           </UICard>
         </View>
 
         <View>
-          <Text style={styles.groupHeading}>הערה</Text>
+          <Text style={styles.groupHeading}>{i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s31')}</Text>
           <TextInput
             style={styles.notesInput}
             value={notes}
             onChangeText={onChangeNotes}
-            placeholder="תזכורת או הערה…"
+            placeholder={i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s32')}
             placeholderTextColor={tokens.colors.text.secondary}
             multiline
             textAlignVertical="top"
@@ -768,7 +769,7 @@ function Body({
 
       <View style={[styles.footer, { paddingBottom: footerPadBottom }]}>
         <UIButton
-          title="שמור שינויים"
+          title={i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s33')}
           variant="primary"
           fullWidth
           loading={savingMeta}
@@ -787,9 +788,9 @@ function Body({
             pressed && styles.removeBtnPressed,
           ]}
           accessibilityRole="button"
-          accessibilityLabel="הסר מהרשימה"
+          accessibilityLabel={i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s34')}
         >
-          <Text style={styles.removeText}>הסר מהרשימה</Text>
+          <Text style={styles.removeText}>{i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s34')}</Text>
         </Pressable>
       </View>
     </View>
@@ -982,9 +983,9 @@ function AlertEditorRow({
               style={styles.addBtn}
               onPress={onSubmit}
               accessibilityRole="button"
-              accessibilityLabel="הוסף"
+              accessibilityLabel={i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s35')}
             >
-              <Text style={styles.addBtnText}>הוסף</Text>
+              <Text style={styles.addBtnText}>{i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s35')}</Text>
             </Pressable>
             <TextInput
               style={styles.addInput}
@@ -1006,7 +1007,7 @@ function AlertEditorRow({
                   style={styles.selectedPill}
                   onPress={() => onRemove(chip.key)}
                   accessibilityRole="button"
-                  accessibilityLabel={`הסר ${chip.label}`}
+                  accessibilityLabel={i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s36', { v0: chip.label })}
                 >
                   <Ionicons name="close" size={14} color={tokens.colors.text.tertiary} />
                   <Text style={styles.selectedPillText}>{chip.label}</Text>
@@ -1014,7 +1015,7 @@ function AlertEditorRow({
               ))}
             </View>
           ) : (
-            <Text style={styles.emptyHint}>אין סף פעיל</Text>
+            <Text style={styles.emptyHint}>{i18n.t('auto.screens__Watchlist__components__WatchlistSymbolSheet.s37')}</Text>
           )}
         </View>
       ) : null}

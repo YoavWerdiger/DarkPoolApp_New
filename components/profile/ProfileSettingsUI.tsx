@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
@@ -260,7 +261,7 @@ export function ProfileIdentityCard({
       onPress={onPress}
       activeOpacity={0.85}
       accessibilityRole="button"
-      accessibilityLabel="עריכת פרופיל"
+      accessibilityLabel={i18n.t('auto.components__profile__ProfileSettingsUI.s1')}
     >
       <SettingsGlassCard>
         <View style={s.menuRow}>
@@ -405,8 +406,8 @@ export function SettingsScopeChoice({
                 thumbStyle,
               ]}
             />
-            {option('selected', 'לפי הבחירה שלי', selectedLabelStyle)}
-            {option('all', 'הכול', allLabelStyle)}
+            {option('selected', i18n.t('auto.components__profile__ProfileSettingsUI.s2'), selectedLabelStyle)}
+            {option('all', i18n.t('auto.components__profile__ProfileSettingsUI.s3'), allLabelStyle)}
           </View>
         </View>
       </View>
@@ -420,7 +421,7 @@ export function SettingsVersionFooter() {
   return (
     <View style={{ alignItems: 'center', marginTop: tokens.spacing.md, marginBottom: tokens.spacing.lg }}>
       <Text style={styles(tokens).versionText}>
-        {isolateNumericRuns(`DarkPool · גרסה ${getAppVersionLabel()}`)}
+        {isolateNumericRuns(i18n.t('auto.components__profile__ProfileSettingsUI.s4', { v0: getAppVersionLabel() }))}
       </Text>
     </View>
   );

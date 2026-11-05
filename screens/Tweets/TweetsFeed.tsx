@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, {
   useCallback,
@@ -51,8 +52,8 @@ import { UserBadges, badgeSizeForLineHeight } from '../../components/ui/badges/U
 const PAGE_SIZE = 30;
 
 const FEED_TABS: { id: CommunityFeedMode; label: string }[] = [
-  { id: 'for_you', label: 'בשבילך' },
-  { id: 'following', label: 'עוקבים' },
+  { id: 'for_you', label: i18n.t('auto.screens__Tweets__TweetsFeed.s1') },
+  { id: 'following', label: i18n.t('auto.screens__Tweets__TweetsFeed.s2') },
 ];
 
 function cacheKeyFor(mode: CommunityFeedMode) {
@@ -128,7 +129,7 @@ function PostCard({
         <Pressable
           onPress={onReply}
           accessibilityRole="button"
-          accessibilityLabel="פתח תגובות"
+          accessibilityLabel={i18n.t('auto.screens__Tweets__TweetsFeed.s3')}
           style={({ pressed }) => (pressed ? { opacity: 0.92 } : undefined)}
         >
           <View style={{ padding: APP_LAYOUT.cardPadding, gap: APP_LAYOUT.cardTitleToBodyGap }}>
@@ -192,7 +193,7 @@ function PostCard({
               <TouchableOpacity
                 onPress={onDelete}
                 hitSlop={8}
-                accessibilityLabel="מחק ציוץ"
+                accessibilityLabel={i18n.t('auto.screens__Tweets__TweetsFeed.s4')}
                 style={{
                   width: 34,
                   height: 34,
@@ -245,7 +246,7 @@ function PostCard({
                     borderRadius: tokens.borderRadius.full,
                     backgroundColor: `${tokens.colors.primary.main}22`,
                   }}
-                  accessibilityLabel={`פרופיל של ${m.displayName}`}
+                  accessibilityLabel={i18n.t('auto.screens__Tweets__TweetsFeed.s5', { v0: m.displayName })}
                 >
                   <Text
                     style={{
@@ -311,7 +312,7 @@ function PostCard({
                 ? `${tokens.colors.text.danger}26`
                 : tokens.colors.background.primary,
             }}
-            accessibilityLabel={post.likedByMe ? 'הסר לייק' : 'לייק'}
+            accessibilityLabel={post.likedByMe ? i18n.t('auto.screens__Tweets__TweetsFeed.s6') : i18n.t('auto.screens__Tweets__TweetsFeed.s7')}
           >
             <Ionicons
               name={post.likedByMe ? 'heart' : 'heart-outline'}
@@ -343,7 +344,7 @@ function PostCard({
               borderRadius: tokens.borderRadius.button,
               backgroundColor: tokens.colors.background.primary,
             }}
-            accessibilityLabel="תגובות"
+            accessibilityLabel={i18n.t('auto.screens__Tweets__TweetsFeed.s8')}
           >
             <Ionicons
               name="chatbubble-outline"
@@ -374,7 +375,7 @@ function PostCard({
               justifyContent: 'center',
               backgroundColor: tokens.colors.background.primary,
             }}
-            accessibilityLabel="שתף"
+            accessibilityLabel={i18n.t('auto.screens__Tweets__TweetsFeed.s9')}
           >
             <Ionicons
               name="share-outline"
@@ -419,7 +420,7 @@ function FeedTabToggle({
             }}
             activeOpacity={0.7}
             accessibilityRole="tab"
-            accessibilityLabel={`פיד ציוצים: ${tab.label}`}
+            accessibilityLabel={i18n.t('auto.screens__Tweets__TweetsFeed.s10', { v0: tab.label })}
             accessibilityState={{ selected: active }}
             style={{
               flex: 1,
@@ -559,7 +560,7 @@ export default function TweetsFeed({ handleRef }: TweetsFeedProps) {
         });
         setHasMore(page.hasMore);
       } catch (e: any) {
-        setError(e?.message || 'לא ניתן לטעון ציוצים');
+        setError(e?.message || i18n.t('auto.screens__Tweets__TweetsFeed.s11'));
         if (opts.reset) setPosts([]);
       } finally {
         setLoading(false);
@@ -716,7 +717,7 @@ export default function TweetsFeed({ handleRef }: TweetsFeedProps) {
             : p
         )
       );
-      legacyAlert('שגיאה', 'לא ניתן לעדכן לייק');
+      legacyAlert(i18n.t('auto.screens__Tweets__TweetsFeed.s12'), i18n.t('auto.screens__Tweets__TweetsFeed.s13'));
     }
   }, []);
 
@@ -748,8 +749,8 @@ export default function TweetsFeed({ handleRef }: TweetsFeedProps) {
   );
 
   const handleDelete = useCallback((post: CommunityPost) => {
-    void showAppConfirm('מחיקת ציוץ', 'למחוק את הציוץ לצמיתות?', {
-      confirmText: 'מחק',
+    void showAppConfirm(i18n.t('auto.screens__Tweets__TweetsFeed.s14'), i18n.t('auto.screens__Tweets__TweetsFeed.s15'), {
+      confirmText: i18n.t('auto.screens__Tweets__TweetsFeed.s16'),
       destructive: true,
     }).then(async (ok) => {
       if (!ok) return;
@@ -758,7 +759,7 @@ export default function TweetsFeed({ handleRef }: TweetsFeedProps) {
         setPosts((prev) => prev.filter((p) => p.id !== post.id));
         void HapticFeedback.success();
       } catch {
-        legacyAlert('שגיאה', 'לא ניתן למחוק את הציוץ');
+        legacyAlert(i18n.t('auto.screens__Tweets__TweetsFeed.s12'), i18n.t('auto.screens__Tweets__TweetsFeed.s17'));
       }
     });
   }, []);
@@ -786,7 +787,7 @@ export default function TweetsFeed({ handleRef }: TweetsFeedProps) {
           size={40}
           color={tokens.colors.text.tertiary}
         />
-        <Text style={styles.errorTitle}>לא ניתן לטעון ציוצים</Text>
+        <Text style={styles.errorTitle}>{i18n.t('auto.screens__Tweets__TweetsFeed.s11')}</Text>
         <Text style={styles.hint}>{error}</Text>
         <TouchableOpacity
           onPress={() => {
@@ -795,7 +796,7 @@ export default function TweetsFeed({ handleRef }: TweetsFeedProps) {
           }}
           style={styles.retryBtn}
         >
-          <Text style={styles.retryText}>נסה שוב</Text>
+          <Text style={styles.retryText}>{i18n.t('auto.screens__Tweets__TweetsFeed.s18')}</Text>
         </TouchableOpacity>
         </View>
       </View>
@@ -805,9 +806,9 @@ export default function TweetsFeed({ handleRef }: TweetsFeedProps) {
   const emptyMessage =
     feedMode === 'following'
       ? !user
-        ? 'התחברו כדי לראות ציוצים ממי שאתם עוקבים אחריו'
-        : 'אין עדיין ציוצים ממי שאתם עוקבים אחריו'
-      : 'היו הראשונים — לחצו על + ופרסמו ציוץ לקהילה';
+        ? i18n.t('auto.screens__Tweets__TweetsFeed.s19')
+        : i18n.t('auto.screens__Tweets__TweetsFeed.s20')
+      : i18n.t('auto.screens__Tweets__TweetsFeed.s21');
 
   return (
     <>
@@ -846,7 +847,7 @@ export default function TweetsFeed({ handleRef }: TweetsFeedProps) {
                 color={tokens.colors.text.tertiary}
               />
               <Text style={styles.errorTitle}>
-                {feedMode === 'following' ? 'אין ציוצים במעקב' : 'עדיין אין ציוצים'}
+                {feedMode === 'following' ? i18n.t('auto.screens__Tweets__TweetsFeed.s22') : i18n.t('auto.screens__Tweets__TweetsFeed.s23')}
               </Text>
               <Text style={styles.hint}>{emptyMessage}</Text>
             </View>

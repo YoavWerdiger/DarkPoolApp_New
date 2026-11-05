@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useCallback } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -45,7 +46,7 @@ export function ProfileDrawerMenuBar() {
         glassIntensity="subtle"
         size={DRAWER_MENU_BUTTON_SIZE}
         style={menuFace ? { backgroundColor: menuFace } : undefined}
-        accessibilityLabel="תפריט ראשי"
+        accessibilityLabel={i18n.t('auto.components__profile__ProfileDrawerMenuBar.s1')}
       >
         <Ionicons name="menu" size={24} color={DesignTokens.colors.text.primary} />
       </DayNavBlurButton>

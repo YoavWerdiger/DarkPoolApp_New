@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useState } from 'react';
 import {
@@ -245,7 +246,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
 
             {multiple ? (
               <View style={{ paddingHorizontal: 16, marginTop: 12 }}>
-                <OnboardingButton title="אישור" onPress={() => setIsOpen(false)} />
+                <OnboardingButton title={i18n.t('auto.components__onboarding__CustomDropdown.s1')} onPress={() => setIsOpen(false)} />
               </View>
             ) : null}
           </View>

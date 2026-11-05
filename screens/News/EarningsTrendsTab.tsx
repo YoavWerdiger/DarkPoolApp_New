@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -50,10 +51,10 @@ const TrendCard: React.FC<{ trend: EarningsTrend }> = ({ trend }) => {
 
   const getPeriodName = (period: string) => {
     const periods: { [key: string]: string } = {
-      '0q': 'רבעון נוכחי',
-      '+1q': 'רבעון הבא',
-      '0y': 'שנה נוכחית',
-      '+1y': 'שנה הבאה'
+      '0q': i18n.t('auto.screens__News__EarningsTrendsTab.s1'),
+      '+1q': i18n.t('auto.screens__News__EarningsTrendsTab.s2'),
+      '0y': i18n.t('auto.screens__News__EarningsTrendsTab.s3'),
+      '+1y': i18n.t('auto.screens__News__EarningsTrendsTab.s4')
     };
     return periods[period] || period;
   };
@@ -129,9 +130,7 @@ const TrendCard: React.FC<{ trend: EarningsTrend }> = ({ trend }) => {
       {/* EPS & Revenue Estimates */}
       <View style={{ flexDirection: 'row', marginBottom: 12 }}>
         <View style={{ flex: 1 }}>
-          <Text style={{ ...APP_TYPE.caption2, color: DesignTokens.colors.text.tertiary, marginBottom: APP_LAYOUT.cardMetricLabelToValueGap, textAlign: 'right' }}>
-            EPS צפוי
-          </Text>
+          <Text style={{ ...APP_TYPE.caption2, color: DesignTokens.colors.text.tertiary, marginBottom: APP_LAYOUT.cardMetricLabelToValueGap, textAlign: 'right' }}>{i18n.t('auto.screens__News__EarningsTrendsTab.s5')}</Text>
           <Text style={{ ...APP_TYPE.cardTitle, color: DesignTokens.colors.success.main, textAlign: 'right' }}>
             ${formatNumber(trend.earnings_estimate_avg)}
           </Text>
@@ -143,9 +142,7 @@ const TrendCard: React.FC<{ trend: EarningsTrend }> = ({ trend }) => {
         </View>
 
         <View style={{ flex: 1 }}>
-          <Text style={{ ...APP_TYPE.caption2, color: DesignTokens.colors.text.tertiary, marginBottom: APP_LAYOUT.cardMetricLabelToValueGap, textAlign: 'right' }}>
-            הכנסות צפויות
-          </Text>
+          <Text style={{ ...APP_TYPE.caption2, color: DesignTokens.colors.text.tertiary, marginBottom: APP_LAYOUT.cardMetricLabelToValueGap, textAlign: 'right' }}>{i18n.t('auto.screens__News__EarningsTrendsTab.s6')}</Text>
           <Text style={{ ...APP_TYPE.cardTitle, color: DesignTokens.colors.text.primary, textAlign: 'right' }}>
             ${formatNumber(trend.revenue_estimate_avg)}
           </Text>
@@ -163,8 +160,7 @@ const TrendCard: React.FC<{ trend: EarningsTrend }> = ({ trend }) => {
         {trend.earnings_estimate_analysts_count !== null && (
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Text style={{ ...APP_TYPE.caption, color: DesignTokens.colors.text.secondary, marginLeft: 6 }}>
-              {trend.earnings_estimate_analysts_count} אנליסטים
-            </Text>
+              {i18n.t('auto.screens__News__EarningsTrendsTab.s7', { v0: trend.earnings_estimate_analysts_count })}</Text>
             <Users size={14} color={DesignTokens.colors.text.secondary} />
           </View>
         )}
@@ -180,9 +176,7 @@ const TrendCard: React.FC<{ trend: EarningsTrend }> = ({ trend }) => {
             ) : (
               <TrendingDown size={14} color={DesignTokens.colors.danger.main} strokeWidth={2.5} />
             )}
-            <Text style={{ ...APP_TYPE.caption2, color: DesignTokens.colors.text.tertiary, marginLeft: APP_LAYOUT.cardMetricLabelToValueGap }}>
-              7 ימים
-            </Text>
+            <Text style={{ ...APP_TYPE.caption2, color: DesignTokens.colors.text.tertiary, marginLeft: APP_LAYOUT.cardMetricLabelToValueGap }}>{i18n.t('auto.screens__News__EarningsTrendsTab.s8')}</Text>
           </View>
         )}
       </View>
@@ -234,12 +228,8 @@ export default function EarningsTrendsTab() {
   const renderEmptyState = () => (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 40 }}>
       <TrendingUp size={64} color={DesignTokens.colors.text.tertiary} strokeWidth={1.5} />
-      <Text style={{ ...APP_TYPE.body, color: DesignTokens.colors.text.secondary, marginTop: APP_LAYOUT.componentGap, textAlign: 'center' }}>
-        אין תחזיות זמינות כרגע
-      </Text>
-      <Text style={{ ...APP_TYPE.cardSubtitle, color: DesignTokens.colors.text.tertiary, marginTop: APP_LAYOUT.groupLabelToContent, textAlign: 'center', paddingHorizontal: 40 }}>
-        נתוני תחזיות רווחים יעודכנו בקרוב
-      </Text>
+      <Text style={{ ...APP_TYPE.body, color: DesignTokens.colors.text.secondary, marginTop: APP_LAYOUT.componentGap, textAlign: 'center' }}>{i18n.t('auto.screens__News__EarningsTrendsTab.s9')}</Text>
+      <Text style={{ ...APP_TYPE.cardSubtitle, color: DesignTokens.colors.text.tertiary, marginTop: APP_LAYOUT.groupLabelToContent, textAlign: 'center', paddingHorizontal: 40 }}>{i18n.t('auto.screens__News__EarningsTrendsTab.s10')}</Text>
     </View>
   );
 
@@ -247,9 +237,7 @@ export default function EarningsTrendsTab() {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent' }}>
         <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-        <Text style={{ ...APP_TYPE.body, color: DesignTokens.colors.text.secondary, marginTop: APP_LAYOUT.componentGap }}>
-          טוען תחזיות...
-        </Text>
+        <Text style={{ ...APP_TYPE.body, color: DesignTokens.colors.text.secondary, marginTop: APP_LAYOUT.componentGap }}>{i18n.t('auto.screens__News__EarningsTrendsTab.s11')}</Text>
       </View>
     );
   }

@@ -1,3 +1,4 @@
+import i18n from '../lib/i18n';
 import { appLocale } from '../lib/i18n/locale';
 import { supabase } from './supabase';
 import { ensureRealtimeAuth } from './chat/chatRealtimeService';
@@ -62,7 +63,7 @@ function mapAuthor(raw: UserEmbed | UserEmbed[] | null, fallbackId: string): Com
   const displayName =
     (u?.display_name && u.display_name.trim()) ||
     (u?.full_name && u.full_name.trim()) ||
-    'חבר קהילה';
+    i18n.t('auto.services__tweetsService.s1');
   const avatarUrl = u?.profile_picture || u?.avatar_url || null;
   return {
     id: u?.id ?? fallbackId,
@@ -532,10 +533,10 @@ export function formatPostTime(iso: string): string {
     if (Number.isNaN(date.getTime())) return '';
     const now = Date.now();
     const diffSec = Math.max(0, Math.floor((now - date.getTime()) / 1000));
-    if (diffSec < 60) return 'עכשיו';
-    if (diffSec < 3600) return `${Math.floor(diffSec / 60)} דק׳`;
-    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)} שע׳`;
-    if (diffSec < 86400 * 7) return `${Math.floor(diffSec / 86400)} ימים`;
+    if (diffSec < 60) return i18n.t('auto.services__tweetsService.s2');
+    if (diffSec < 3600) return i18n.t('auto.services__tweetsService.s3', { v0: Math.floor(diffSec / 60) });
+    if (diffSec < 86400) return i18n.t('auto.services__tweetsService.s4', { v0: Math.floor(diffSec / 3600) });
+    if (diffSec < 86400 * 7) return i18n.t('auto.services__tweetsService.s5', { v0: Math.floor(diffSec / 86400) });
     return date.toLocaleDateString(appLocale(), {
       day: 'numeric',
       month: 'short',

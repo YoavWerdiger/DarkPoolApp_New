@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { useRegistration } from '../../context/RegistrationContext';
@@ -38,7 +39,7 @@ const RegistrationPhoneVerificationScreen = ({ navigation }: { navigation: any }
   const handleVerify = async () => {
     setError('');
     if (otp.length !== 6) {
-      setError('אנא הזן קוד בן 6 ספרות');
+      setError(i18n.t('auto.screens__Auth__RegistrationPhoneVerificationScreen.s1'));
       void HapticFeedback.error();
       return;
     }
@@ -52,17 +53,17 @@ const RegistrationPhoneVerificationScreen = ({ navigation }: { navigation: any }
 
       if (verifyError) {
         if (verifyError === 'invalid_otp') {
-          setError('הקוד שגוי. נסה שוב.');
+          setError(i18n.t('auto.screens__Auth__RegistrationPhoneVerificationScreen.s2'));
         } else if (verifyError === 'expired_otp') {
-          setError('הקוד פג תוקף. אנא שלח קוד חדש.');
+          setError(i18n.t('auto.screens__Auth__RegistrationPhoneVerificationScreen.s3'));
         } else if (verifyError === 'too_many_attempts') {
-          setError('יותר מדי ניסיונות. נסה שוב בעוד 5 דקות.');
+          setError(i18n.t('auto.screens__Auth__RegistrationPhoneVerificationScreen.s4'));
         } else if (verifyError === 'network_error') {
-          setError('בעיית רשת. בדוק חיבור ונסה שוב.');
+          setError(i18n.t('auto.screens__Auth__RegistrationPhoneVerificationScreen.s5'));
         } else if (verifyError === 'invalid_phone') {
-          setError('מספר הטלפון לא תקין. חזור אחורה ובדוק.');
+          setError(i18n.t('auto.screens__Auth__RegistrationPhoneVerificationScreen.s6'));
         } else {
-          setError('שגיאה באימות. נסה שוב.');
+          setError(i18n.t('auto.screens__Auth__RegistrationPhoneVerificationScreen.s7'));
         }
         void HapticFeedback.error();
         setOtp('');
@@ -74,11 +75,11 @@ const RegistrationPhoneVerificationScreen = ({ navigation }: { navigation: any }
         setData({ ...data, phoneVerified: true });
         navigation.navigate('RegistrationEmail');
       } else {
-        setError('האימות נכשל. נסה שוב.');
+        setError(i18n.t('auto.screens__Auth__RegistrationPhoneVerificationScreen.s8'));
         void HapticFeedback.error();
       }
     } catch (err: any) {
-      setError('שגיאה באימות. נסה שוב.');
+      setError(i18n.t('auto.screens__Auth__RegistrationPhoneVerificationScreen.s7'));
       void HapticFeedback.error();
     } finally {
       setLoading(false);
@@ -96,11 +97,11 @@ const RegistrationPhoneVerificationScreen = ({ navigation }: { navigation: any }
       const { success, error: resendError } = await AuthService.resendPhoneOtp(data.phone);
       if (resendError) {
         if (resendError === 'rate_limit') {
-          setError('יותר מדי בקשות. המתן 5 דקות.');
+          setError(i18n.t('auto.screens__Auth__RegistrationPhoneVerificationScreen.s9'));
         } else if (resendError === 'invalid_phone') {
-          setError('מספר הטלפון לא תקין. חזור אחורה ובדוק.');
+          setError(i18n.t('auto.screens__Auth__RegistrationPhoneVerificationScreen.s6'));
         } else {
-          setError('שגיאה בשליחת הקוד. נסה שוב.');
+          setError(i18n.t('auto.screens__Auth__RegistrationPhoneVerificationScreen.s10'));
         }
         void HapticFeedback.error();
       } else if (success) {
@@ -110,7 +111,7 @@ const RegistrationPhoneVerificationScreen = ({ navigation }: { navigation: any }
         setData({ ...data, phoneOtpSentAt: Date.now() });
       }
     } catch (err: any) {
-      setError('שגיאה בשליחת הקוד. נסה שוב.');
+      setError(i18n.t('auto.screens__Auth__RegistrationPhoneVerificationScreen.s10'));
       void HapticFeedback.error();
     } finally {
       setLoading(false);
@@ -121,8 +122,8 @@ const RegistrationPhoneVerificationScreen = ({ navigation }: { navigation: any }
 
   return (
     <CashAppScreen
-      title="אמת את מספר הטלפון שלך"
-      subtitle={`שלחנו קוד SMS ל-*****${lastFourDigits}`}
+      title={i18n.t('auto.screens__Auth__RegistrationPhoneVerificationScreen.s11')}
+      subtitle={i18n.t('auto.screens__Auth__RegistrationPhoneVerificationScreen.s12', { v0: lastFourDigits })}
       currentStep={ONBOARDING_STEPS.phoneVerification}
       totalSteps={ONBOARDING_TOTAL_STEPS}
       progressVariant="dots"
@@ -136,7 +137,7 @@ const RegistrationPhoneVerificationScreen = ({ navigation }: { navigation: any }
       }}
       footer={
         <CashAppButton
-          title="אמת והמשך"
+          title={i18n.t('auto.screens__Auth__RegistrationPhoneVerificationScreen.s13')}
           variant="primary"
           size="lg"
           onPress={handleVerify}
@@ -152,7 +153,7 @@ const RegistrationPhoneVerificationScreen = ({ navigation }: { navigation: any }
           if (error) setError('');
         }}
         error={error}
-        hint="הזן את הקוד בן 6 הספרות שנשלח אליך ב-SMS"
+        hint={i18n.t('auto.screens__Auth__RegistrationPhoneVerificationScreen.s14')}
         canResend={canResend}
         countdown={resendCountdown}
         onResend={handleResend}

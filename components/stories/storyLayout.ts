@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { Dimensions } from 'react-native';
 
 /** מידות המסך — הצופה תמיד במסך מלא */
@@ -50,11 +51,11 @@ export function isPlayableMediaUri(uri: string | null | undefined): uri is strin
 export function formatStoryTime(dateStr: string): string {
   const date = new Date(dateStr);
   const diffMin = Math.floor((Date.now() - date.getTime()) / 60000);
-  if (diffMin < 1) return 'עכשיו';
-  if (diffMin < 60) return `לפני ${diffMin} דק׳`;
+  if (diffMin < 1) return i18n.t('auto.components__stories__storyLayout.s1');
+  if (diffMin < 60) return i18n.t('auto.components__stories__storyLayout.s2', { v0: diffMin });
   const diffHrs = Math.floor(diffMin / 60);
-  if (diffHrs < 24) return `לפני ${diffHrs} שע׳`;
-  return `לפני ${Math.floor(diffHrs / 24)} ימים`;
+  if (diffHrs < 24) return i18n.t('auto.components__stories__storyLayout.s3', { v0: diffHrs });
+  return i18n.t('auto.components__stories__storyLayout.s4', { v0: Math.floor(diffHrs / 24) });
 }
 
 /** אינדקס הסטורי בפועל: 'last' → האחרון, מספר → בגבולות */

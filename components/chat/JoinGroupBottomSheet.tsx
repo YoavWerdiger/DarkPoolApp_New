@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Image, Platform, Dimensions } from 'react-native';
@@ -148,7 +149,7 @@ export default function JoinGroupBottomSheet({
 
       <View style={styles.cta}>
         <UIButton
-          title={isJoining ? 'מצטרף…' : 'הצטרף לקבוצה'}
+          title={isJoining ? i18n.t('auto.components__chat__JoinGroupBottomSheet.s1') : i18n.t('auto.components__chat__JoinGroupBottomSheet.s2')}
           variant="primary"
           size="lg"
           fullWidth

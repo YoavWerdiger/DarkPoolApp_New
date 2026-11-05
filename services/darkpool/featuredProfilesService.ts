@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { supabase } from '../../lib/supabase';
 import type { ExplorePerson } from './uwExploreService';
 import { knownPortraitForInvestor } from '../../screens/DarkPool/utils/knownInvestorPortraits';
@@ -63,7 +64,7 @@ export function featuredToExplorePerson(row: FeaturedProfile): ExplorePerson {
     image_url,
     kind: row.kind,
     ticker: row.ticker ?? undefined,
-    metric_label: 'מומלץ',
+    metric_label: i18n.t('auto.services__darkpool__featuredProfilesService.s1'),
   };
 }
 

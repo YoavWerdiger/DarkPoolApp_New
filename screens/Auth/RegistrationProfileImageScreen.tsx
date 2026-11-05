@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { View, Text, ActivityIndicator, Pressable, StyleSheet } from 'react-native';
@@ -59,7 +60,7 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
   const pickImageFromGallery = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      legacyAlert('אין הרשאה', 'יש לאפשר גישה לגלריה');
+      legacyAlert(i18n.t('auto.screens__Auth__RegistrationProfileImageScreen.s1'), i18n.t('auto.screens__Auth__RegistrationProfileImageScreen.s2'));
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -77,7 +78,7 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
     void HapticFeedback.impactLight();
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      legacyAlert('אין הרשאה', 'יש לאפשר גישה למצלמה');
+      legacyAlert(i18n.t('auto.screens__Auth__RegistrationProfileImageScreen.s1'), i18n.t('auto.screens__Auth__RegistrationProfileImageScreen.s3'));
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
@@ -117,8 +118,8 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
 
   return (
     <CashAppScreen
-      title="תמונת פרופיל"
-      subtitle="בחר תמונה שתייצג אותך בקהילת DarkPool"
+      title={i18n.t('auto.screens__Auth__RegistrationProfileImageScreen.s4')}
+      subtitle={i18n.t('auto.screens__Auth__RegistrationProfileImageScreen.s5')}
       currentStep={ONBOARDING_STEPS.profileImage}
       totalSteps={ONBOARDING_TOTAL_STEPS}
       progressVariant="dots"
@@ -126,7 +127,7 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
       onBack={handleBack}
       footer={
         <CashAppButton
-          title={image ? "המשך" : "דלג לעכשיו"}
+          title={image ? i18n.t('auto.screens__Auth__RegistrationProfileImageScreen.s6') : i18n.t('auto.screens__Auth__RegistrationProfileImageScreen.s7')}
           variant="primary"
           size="lg"
           onPress={image ? continueWithImage : skipImage}
@@ -138,7 +139,7 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
         <Pressable
           onPress={loading ? undefined : handlePickFromGallery}
           accessibilityRole="button"
-          accessibilityLabel={image ? 'החלף תמונת פרופיל' : 'בחר תמונת פרופיל'}
+          accessibilityLabel={image ? i18n.t('auto.screens__Auth__RegistrationProfileImageScreen.s8') : i18n.t('auto.screens__Auth__RegistrationProfileImageScreen.s9')}
         >
           <View
             style={[
@@ -186,17 +187,17 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
 
         <Text style={[styles.status, { color: tokens.colors.text.secondary }]}>
           {loading
-            ? 'מעבד תמונה…'
+            ? i18n.t('auto.screens__Auth__RegistrationProfileImageScreen.s10')
             : image
-              ? 'נראה מעולה. התמונה תוצג בפרופיל ובצ׳אטים'
-              : 'לחץ על העיגול או בחר מקור למטה'}
+              ? i18n.t('auto.screens__Auth__RegistrationProfileImageScreen.s11')
+              : i18n.t('auto.screens__Auth__RegistrationProfileImageScreen.s12')}
         </Text>
 
         {!loading ? (
           <View style={styles.actions}>
             <View style={{ flex: 1 }}>
               <CashAppButton
-                title="צלם"
+                title={i18n.t('auto.screens__Auth__RegistrationProfileImageScreen.s13')}
                 variant="secondary"
                 size="md"
                 icon="camera-outline"
@@ -205,7 +206,7 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
             </View>
             <View style={{ flex: 1 }}>
               <CashAppButton
-                title="מהגלריה"
+                title={i18n.t('auto.screens__Auth__RegistrationProfileImageScreen.s14')}
                 variant="secondary"
                 size="md"
                 icon="images-outline"

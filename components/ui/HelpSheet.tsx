@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 /**
  * הסבר קצר שעולה מלמטה (שיט זכוכית) — לא דיאלוג ממורכז.
  * כותרת + גוף על משטח השיט עצמו + «הבנתי» כגלולת זכוכית.
@@ -25,7 +26,7 @@ import {
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
-export const HELP_SHEET_GOT_IT = 'הבנתי';
+export const HELP_SHEET_GOT_IT = i18n.t('auto.components__ui__HelpSheet.s1');
 
 export type HelpSheetProps = {
   visible: boolean;

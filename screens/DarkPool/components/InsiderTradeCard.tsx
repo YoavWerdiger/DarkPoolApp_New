@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 /**
  * כרטיס פיד בכיר — לוגו מניה + פעולה ברורה.
  */
@@ -25,7 +26,7 @@ export const InsiderTradeCard = memo(function InsiderTradeCard({
   const liveQuote = quote ?? cachedQuote;
   const sinceRatio =
     sinceTradePct ?? calcSinceTradePct(trade.price, liveQuote?.price ?? null);
-  const displayName = trade.insider_name?.trim() || 'בכיר';
+  const displayName = trade.insider_name?.trim() || i18n.t('auto.screens__DarkPool__components__InsiderTradeCard.s1');
   const personId = `${trade.ticker}:${displayName}`;
   const shares = trade.shares > 0 ? trade.shares : null;
 

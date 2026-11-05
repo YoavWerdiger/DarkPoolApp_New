@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
@@ -121,7 +122,7 @@ const SheetCloseButton: React.FC<{
 
   return (
     <View style={{ position: 'absolute', top: 14, right: 14, zIndex: 100 }}>
-      <DayNavBlurButton onPress={handleClose} size={36} accessibilityLabel="סגור">
+      <DayNavBlurButton onPress={handleClose} size={36} accessibilityLabel={i18n.t('auto.screens__News__BreakingNewsTab.s1')}>
         <Ionicons name="chevron-down" size={20} color={tokens.colors.text.primary} />
       </DayNavBlurButton>
     </View>
@@ -267,7 +268,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
           }}
           numberOfLines={1}
         >
-          {article.source || 'חדשה'}
+          {article.source || i18n.t('auto.screens__News__BreakingNewsTab.s2')}
         </Text>
         <Text
           style={{
@@ -360,7 +361,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
               ...newsDetailRtlText,
             }}
           >
-            {isLiked ? 'שמור' : 'שמור למועדפים'}
+            {isLiked ? i18n.t('auto.screens__News__BreakingNewsTab.s3') : i18n.t('auto.screens__News__BreakingNewsTab.s4')}
           </Text>
           {likeCount > 0 ? (
             <Text
@@ -402,9 +403,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
               color: DesignTokens.colors.text.secondary,
               ...newsDetailRtlText,
             }}
-          >
-            שתף
-          </Text>
+          >{i18n.t('auto.screens__News__BreakingNewsTab.s5')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -810,7 +809,7 @@ export default function BreakingNewsTab({
           // אם נכשל, החזר את המצב
           newLikedArticles.add(articleId);
           setLikedArticles(newLikedArticles);
-          legacyAlert('שגיאה', 'לא ניתן להסיר את האהבתי');
+          legacyAlert(i18n.t('auto.screens__News__BreakingNewsTab.s6'), i18n.t('auto.screens__News__BreakingNewsTab.s7'));
         }
       } else {
         void HapticFeedback.impactLight();
@@ -824,12 +823,12 @@ export default function BreakingNewsTab({
           // אם נכשל, החזר את המצב
           newLikedArticles.delete(articleId);
           setLikedArticles(newLikedArticles);
-          legacyAlert('שגיאה', 'לא ניתן להוסיף אהבתי');
+          legacyAlert(i18n.t('auto.screens__News__BreakingNewsTab.s6'), i18n.t('auto.screens__News__BreakingNewsTab.s8'));
         }
       }
       
     } catch (error) {
-      legacyAlert('שגיאה', 'בעיה בשמירת האהבתי');
+      legacyAlert(i18n.t('auto.screens__News__BreakingNewsTab.s6'), i18n.t('auto.screens__News__BreakingNewsTab.s9'));
     }
   }, [likedArticles]);
 
@@ -874,17 +873,17 @@ export default function BreakingNewsTab({
         if (foundData) {
           const newsArticles: NewsArticle[] = foundData.map((row: any, index: number) => ({
             id: row.id || row.uuid || String(index),
-            title: row.text_content || row.title || row.text || row.content || row.message || `כתבה ${index + 1}`,
+            title: row.text_content || row.title || row.text || row.content || row.message || i18n.t('auto.screens__News__BreakingNewsTab.s10', { v0: index + 1 }),
             content: row.text_content || row.content || row.text || row.description || row.message || '',
             summary: row.summary || row.excerpt || (row.text_content || row.content || row.text || '').substring(0, 150) + '...',
-            source: row.source || row.author || row.username || 'מקור לא ידוע',
+            source: row.source || row.author || row.username || i18n.t('auto.screens__News__BreakingNewsTab.s11'),
             source_url: row.url || row.link || '',
             author: row.author || row.username || '',
             image_url: row.img || row.image || row.image_url || row.photo || null,
             published_at: row.time || row.created_at || row.date || row.timestamp || new Date().toISOString(),
             created_at: row.time || row.created_at || row.date || new Date().toISOString(),
             updated_at: row.updated_at || null,
-            category: row.category || row.type || 'כללי',
+            category: row.category || row.type || i18n.t('auto.screens__News__BreakingNewsTab.s12'),
             tags: row.tags || [],
             is_featured: false,
             view_count: 0,
@@ -917,7 +916,7 @@ export default function BreakingNewsTab({
         // חיפוש כותרת - לפי המבנה שלך
         const title = row.text_content || row.title || row.headline || row.subject || row.name || 
                      row.tweet_text || row.text || row.content || 
-                     `כתבה ${index + 1}`;
+                     i18n.t('auto.screens__News__BreakingNewsTab.s10', { v0: index + 1 });
         
         // חיפוש תוכן
         const content = row.text_content || row.content || row.text || row.description || 
@@ -932,7 +931,7 @@ export default function BreakingNewsTab({
         // חיפוש מקור - לפי המבנה שלך
         const source = row.source || row.origin || row.publisher || 
                       row.author || row.username || row.screen_name || 
-                      'מקור לא ידוע';
+                      i18n.t('auto.screens__News__BreakingNewsTab.s11');
         
         // חיפוש תמונה - לפי המבנה שלך
         const image_url = row.img || row.image_url || row.image || row.thumbnail || 
@@ -941,7 +940,7 @@ export default function BreakingNewsTab({
         
         // חיפוש קטגוריה
         const category = row.category || row.type || row.topic || 
-                        row.section || row.tag || 'כללי';
+                        row.section || row.tag || i18n.t('auto.screens__News__BreakingNewsTab.s12');
         
         // עיבוד תאריך משופר - משתמש ב-time מהמסד הנתונים
         let rawDate = row.time || row.published_at || row.created_at || row.date || row.timestamp || row.posted_at;
@@ -1006,7 +1005,7 @@ export default function BreakingNewsTab({
         newsArticles.slice(0, BREAKING_NEWS_CACHE_LIMIT)
       );
     } catch (error) {
-      legacyAlert('שגיאה', 'לא ניתן לטעון את החדשות המתפרצות');
+      legacyAlert(i18n.t('auto.screens__News__BreakingNewsTab.s6'), i18n.t('auto.screens__News__BreakingNewsTab.s13'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -1048,7 +1047,7 @@ export default function BreakingNewsTab({
             summary: row.summary || row.excerpt || row.description ||
                      row.snippet || row.abstract || '',
             source: row.source || row.origin || row.publisher ||
-                    row.author || row.username || row.screen_name || 'לא ידוע',
+                    row.author || row.username || row.screen_name || i18n.t('auto.screens__News__BreakingNewsTab.s14'),
             source_url: row.source_url || row.url || row.link || row.tweet_url || '',
             author: row.author || row.writer || row.username || row.screen_name || '',
             image_url: row.img || row.image_url || row.image || row.thumbnail ||
@@ -1057,7 +1056,7 @@ export default function BreakingNewsTab({
             published_at: row.time || row.published_at || row.created_at || row.date || new Date().toISOString(),
             created_at: row.time || row.created_at || row.date || new Date().toISOString(),
             updated_at: row.updated_at || row.modified_at || null,
-            category: row.category || row.type || row.topic || row.section || row.tag || 'כללי',
+            category: row.category || row.type || row.topic || row.section || row.tag || i18n.t('auto.screens__News__BreakingNewsTab.s12'),
             tags: Array.isArray(row.tags) ? row.tags : Array.isArray(row.hashtags) ? row.hashtags : [],
             is_featured: row.is_featured || row.featured || false,
             view_count: row.view_count || row.views || 0,
@@ -1155,13 +1154,13 @@ export default function BreakingNewsTab({
           title,
           content,
           summary: row.summary || content.substring(0, 150),
-          source: row.source || 'מקור לא ידוע',
+          source: row.source || i18n.t('auto.screens__News__BreakingNewsTab.s11'),
           source_url: row.source_url || row.url || '',
           author: row.author || '',
           image_url: row.img || row.image_url || null,
           published_at: row.time || row.published_at || row.created_at || new Date().toISOString(),
           created_at: row.time || row.created_at || new Date().toISOString(),
-          category: row.category || 'כללי',
+          category: row.category || i18n.t('auto.screens__News__BreakingNewsTab.s12'),
           tags: row.tags || [],
         };
         if (cancelled) return;
@@ -1226,13 +1225,13 @@ export default function BreakingNewsTab({
     try {
       const shareContent = {
         title: article.label || article.title,
-        message: `${article.label || article.title}\n\n${article.summary || article.content || ''}\n\nמקור: ${article.source}`,
+        message: i18n.t('auto.screens__News__BreakingNewsTab.s15', { v0: article.label || article.title, v1: article.summary || article.content || '', v2: article.source }),
         url: article.source_url
       };
 
       await Share.share(shareContent);
     } catch (error) {
-      legacyAlert('שגיאה', 'לא ניתן לשתף את הכתבה');
+      legacyAlert(i18n.t('auto.screens__News__BreakingNewsTab.s6'), i18n.t('auto.screens__News__BreakingNewsTab.s16'));
     }
   }, []);
 
@@ -1272,7 +1271,7 @@ export default function BreakingNewsTab({
           onPress={openLiked}
           activeOpacity={0.88}
           accessibilityRole="button"
-          accessibilityLabel="כתבות שמורות"
+          accessibilityLabel={i18n.t('auto.screens__News__BreakingNewsTab.s17')}
           style={{ flexShrink: 0, zIndex: 2 }}
         >
           <UICard
@@ -1316,7 +1315,7 @@ export default function BreakingNewsTab({
               <TextInput
                 value={searchQuery}
                 onChangeText={setSearchQuery}
-                placeholder="חיפוש בחדשות..."
+                placeholder={i18n.t('auto.screens__News__BreakingNewsTab.s18')}
                 placeholderTextColor={DesignTokens.colors.text.tertiary}
                 style={{
                   flex: 1,
@@ -1366,7 +1365,7 @@ export default function BreakingNewsTab({
             marginTop: APP_LAYOUT.componentGap,
           }}
         >
-          {hasSearch ? 'אין תוצאות לחיפוש' : 'אין חדשות כרגע'}
+          {hasSearch ? i18n.t('auto.screens__News__BreakingNewsTab.s19') : i18n.t('auto.screens__News__BreakingNewsTab.s20')}
         </Text>
         <Text
           style={{
@@ -1376,7 +1375,7 @@ export default function BreakingNewsTab({
             marginTop: APP_LAYOUT.groupLabelToContent,
           }}
         >
-          {hasSearch ? 'נסה ניסוח אחר או נקה את החיפוש' : 'משיכה למטה לרענון — החדשות יופיעו כאן'}
+          {hasSearch ? i18n.t('auto.screens__News__BreakingNewsTab.s21') : i18n.t('auto.screens__News__BreakingNewsTab.s22')}
         </Text>
       </View>
     );

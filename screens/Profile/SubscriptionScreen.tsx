@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect } from 'react';
@@ -77,7 +78,7 @@ export default function SubscriptionScreen({ navigation }: any) {
 
   const handlePlanSelection = (planId: string) => {
     if (!user) {
-      legacyAlert('שגיאה', 'נדרש להתחבר למערכת');
+      legacyAlert(i18n.t('auto.screens__Profile__SubscriptionScreen.s1'), i18n.t('auto.screens__Profile__SubscriptionScreen.s2'));
       return;
     }
 
@@ -97,9 +98,7 @@ export default function SubscriptionScreen({ navigation }: any) {
     return (
       <View style={[styles.center, canvas]}>
         <ActivityIndicator size="large" color={tokens.colors.primary.main} />
-        <Text style={[styles.loadingText, { color: tokens.colors.text.secondary }]}>
-          טוען נתוני מנוי...
-        </Text>
+        <Text style={[styles.loadingText, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Profile__SubscriptionScreen.s3')}</Text>
       </View>
     );
   }
@@ -108,7 +107,7 @@ export default function SubscriptionScreen({ navigation }: any) {
     <View style={[styles.root, canvas]}>
       <RNSafeAreaView style={styles.root} edges={['top', 'bottom']}>
         <ChatSubScreenHeader
-          title="מנוי ומסלול"
+          title={i18n.t('auto.screens__Profile__SubscriptionScreen.s4')}
           onBack={() => {
             void HapticFeedback.impactLight();
             navigation.goBack();
@@ -119,12 +118,12 @@ export default function SubscriptionScreen({ navigation }: any) {
           <View style={styles.scroll}>
             {currentPlan ? (
               <View>
-                <SettingsSectionTitle title="המנוי הנוכחי" />
+                <SettingsSectionTitle title={i18n.t('auto.screens__Profile__SubscriptionScreen.s5')} />
                 <SettingsGlassCard style={styles.cardPad}>
                   <View style={styles.heroRow}>
                     <View style={styles.heroCopy}>
                       <Text style={[styles.planName, { color: tokens.colors.text.primary }]}>
-                        {currentPlan.plan_name || 'מנוי פעיל'}
+                        {currentPlan.plan_name || i18n.t('auto.screens__Profile__SubscriptionScreen.s6')}
                       </Text>
                       <View style={styles.dateRow}>
                         <Text style={[styles.meta, { color: tokens.colors.text.secondary }]}>
@@ -138,14 +137,14 @@ export default function SubscriptionScreen({ navigation }: any) {
                     </View>
                   </View>
                   <View style={[styles.statusPill, { backgroundColor: tokens.colors.background.navChrome }]}>
-                    <Text style={[styles.caption, { color: tokens.colors.text.primary }]}>מנוי פעיל</Text>
+                    <Text style={[styles.caption, { color: tokens.colors.text.primary }]}>{i18n.t('auto.screens__Profile__SubscriptionScreen.s6')}</Text>
                     <Check size={16} color={tokens.colors.text.primary} strokeWidth={2.5} />
                   </View>
                 </SettingsGlassCard>
               </View>
             ) : null}
 
-            <SettingsSectionTitle title="מסלולים זמינים" />
+            <SettingsSectionTitle title={i18n.t('auto.screens__Profile__SubscriptionScreen.s7')} />
             {plans.map((plan) => {
               const isCurrentPlan = currentPlan && plan.id === currentPlan.plan_id;
               return (
@@ -153,7 +152,7 @@ export default function SubscriptionScreen({ navigation }: any) {
                   <SettingsGlassCard style={styles.cardPad}>
                     {plan.popular ? (
                       <View style={[styles.popular, { backgroundColor: tokens.colors.primary.main }]}>
-                        <Text style={[styles.caption, { color: tokens.colors.text.inverse }]}>מומלץ ביותר</Text>
+                        <Text style={[styles.caption, { color: tokens.colors.text.inverse }]}>{i18n.t('auto.screens__Profile__SubscriptionScreen.s8')}</Text>
                         <Star size={14} color={tokens.colors.text.inverse} strokeWidth={2.5} />
                       </View>
                     ) : null}
@@ -182,12 +181,10 @@ export default function SubscriptionScreen({ navigation }: any) {
 
                     <View style={[styles.footerRule, { borderTopColor: tokens.colors.border.divider }]}>
                       {isCurrentPlan ? (
-                        <Text style={[styles.caption, { color: tokens.colors.text.secondary, textAlign: 'center' }]}>
-                          המסלול הנוכחי שלך
-                        </Text>
+                        <Text style={[styles.caption, { color: tokens.colors.text.secondary, textAlign: 'center' }]}>{i18n.t('auto.screens__Profile__SubscriptionScreen.s9')}</Text>
                       ) : (
                         <UIButton
-                          title="בחר מסלול זה"
+                          title={i18n.t('auto.screens__Profile__SubscriptionScreen.s10')}
                           variant="primary"
                           fullWidth
                           onPress={() => {
@@ -203,9 +200,7 @@ export default function SubscriptionScreen({ navigation }: any) {
             })}
 
             <SettingsGlassCard style={styles.cardPad}>
-              <Text style={[styles.body, { color: tokens.colors.text.secondary }]}>
-                ניתן לשדרג או להוריד מסלול בכל עת. השינוי ייכנס לתוקף מיידית.
-              </Text>
+              <Text style={[styles.body, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Profile__SubscriptionScreen.s11')}</Text>
             </SettingsGlassCard>
           </View>
         </ScrollView>

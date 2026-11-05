@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
@@ -25,9 +26,9 @@ import { legacyAlert } from '../../utils/appDialog';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 
 const STATUS_LABEL: Record<string, string> = {
-  new: 'חדש',
-  in_progress: 'בטיפול',
-  closed: 'סגור',
+  new: i18n.t('auto.screens__Admin__AdminTicketsScreen.s1'),
+  in_progress: i18n.t('auto.screens__Admin__AdminTicketsScreen.s2'),
+  closed: i18n.t('auto.screens__Admin__AdminTicketsScreen.s3'),
 };
 
 export default function AdminTicketsScreen({ navigation }: any) {
@@ -42,7 +43,7 @@ export default function AdminTicketsScreen({ navigation }: any) {
       const res = await adminService.listTickets({ status: filter, pageSize: 50 });
       setTickets(res.tickets);
     } catch (e) {
-      legacyAlert('שגיאה', e instanceof Error ? e.message : 'טעינה נכשלה');
+      legacyAlert(i18n.t('auto.screens__Admin__AdminTicketsScreen.s4'), e instanceof Error ? e.message : i18n.t('auto.screens__Admin__AdminTicketsScreen.s5'));
     } finally {
       setLoading(false);
     }
@@ -55,17 +56,17 @@ export default function AdminTicketsScreen({ navigation }: any) {
   const cycleStatus = (ticket: AdminTicketRow) => {
     const order = ['new', 'in_progress', 'closed'] as const;
     const next = order[(order.indexOf(ticket.status) + 1) % order.length];
-    legacyAlert('עדכון סטטוס', `לשנות ל־${STATUS_LABEL[next]}?`, [
-      { text: 'ביטול', style: 'cancel' },
+    legacyAlert(i18n.t('auto.screens__Admin__AdminTicketsScreen.s6'), i18n.t('auto.screens__Admin__AdminTicketsScreen.s7', { v0: STATUS_LABEL[next] }), [
+      { text: i18n.t('auto.screens__Admin__AdminTicketsScreen.s8'), style: 'cancel' },
       {
-        text: 'עדכן',
+        text: i18n.t('auto.screens__Admin__AdminTicketsScreen.s9'),
         onPress: async () => {
           try {
             await adminService.updateTicket(ticket.id, { status: next });
             void HapticFeedback.success();
             await load();
           } catch (e) {
-            legacyAlert('שגיאה', e instanceof Error ? e.message : 'עדכון נכשל');
+            legacyAlert(i18n.t('auto.screens__Admin__AdminTicketsScreen.s4'), e instanceof Error ? e.message : i18n.t('auto.screens__Admin__AdminTicketsScreen.s10'));
           }
         },
       },
@@ -74,13 +75,13 @@ export default function AdminTicketsScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-      <ChatSubScreenHeader title="פניות תמיכה" onBack={() => navigation.goBack()} />
+      <ChatSubScreenHeader title={i18n.t('auto.screens__Admin__AdminTicketsScreen.s11')} onBack={() => navigation.goBack()} />
       <View style={styles.filters}>
         {[
-          { key: undefined, label: 'הכל' },
-          { key: 'new', label: 'חדש' },
-          { key: 'in_progress', label: 'בטיפול' },
-          { key: 'closed', label: 'סגור' },
+          { key: undefined, label: i18n.t('auto.screens__Admin__AdminTicketsScreen.s12') },
+          { key: 'new', label: i18n.t('auto.screens__Admin__AdminTicketsScreen.s1') },
+          { key: 'in_progress', label: i18n.t('auto.screens__Admin__AdminTicketsScreen.s2') },
+          { key: 'closed', label: i18n.t('auto.screens__Admin__AdminTicketsScreen.s3') },
         ].map((f) => {
           const active = filter === f.key;
           return (
@@ -107,14 +108,14 @@ export default function AdminTicketsScreen({ navigation }: any) {
             paddingBottom: 40,
           }}
           ListEmptyComponent={
-            <AdminEmptyState title="אין פניות" subtitle="פניות חדשות יופיעו כאן" />
+            <AdminEmptyState title={i18n.t('auto.screens__Admin__AdminTicketsScreen.s13')} subtitle={i18n.t('auto.screens__Admin__AdminTicketsScreen.s14')} />
           }
           renderItem={({ item }) => {
             const name =
               item.users?.display_name ||
               item.users?.full_name ||
               item.users?.email ||
-              'משתמש';
+              i18n.t('auto.screens__Admin__AdminTicketsScreen.s15');
             return (
               <TouchableOpacity onPress={() => cycleStatus(item)} activeOpacity={0.8}>
                 <UICard

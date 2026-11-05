@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -56,30 +57,30 @@ import { useIsAdmin } from '../../hooks/useIsAdmin';
 type TabKey = 'history' | 'active' | 'upcoming';
 
 const TX_STATUS_FILTERS: { key: string; label: string }[] = [
-  { key: '', label: 'הכל' },
-  { key: 'success', label: 'שולם' },
-  { key: 'pending_charge', label: 'ממתין לחיוב' },
-  { key: 'pending', label: 'ממתין' },
-  { key: 'failed', label: 'נכשל' },
-  { key: 'refunded', label: 'הוחזר' },
+  { key: '', label: i18n.t('auto.screens__Admin__AdminPaymentsScreen.s1') },
+  { key: 'success', label: i18n.t('auto.screens__Admin__AdminPaymentsScreen.s2') },
+  { key: 'pending_charge', label: i18n.t('auto.screens__Admin__AdminPaymentsScreen.s3') },
+  { key: 'pending', label: i18n.t('auto.screens__Admin__AdminPaymentsScreen.s4') },
+  { key: 'failed', label: i18n.t('auto.screens__Admin__AdminPaymentsScreen.s5') },
+  { key: 'refunded', label: i18n.t('auto.screens__Admin__AdminPaymentsScreen.s6') },
 ];
 
 const STATUS_HE: Record<string, string> = {
-  success: 'שולם',
-  pending: 'ממתין',
-  pending_charge: 'ממתין לחיוב',
-  failed: 'נכשל',
-  refunded: 'הוחזר',
-  cancelled: 'בוטל',
-  active: 'פעיל',
-  expired: 'פג תוקף',
+  success: i18n.t('auto.screens__Admin__AdminPaymentsScreen.s2'),
+  pending: i18n.t('auto.screens__Admin__AdminPaymentsScreen.s4'),
+  pending_charge: i18n.t('auto.screens__Admin__AdminPaymentsScreen.s3'),
+  failed: i18n.t('auto.screens__Admin__AdminPaymentsScreen.s5'),
+  refunded: i18n.t('auto.screens__Admin__AdminPaymentsScreen.s6'),
+  cancelled: i18n.t('auto.screens__Admin__AdminPaymentsScreen.s7'),
+  active: i18n.t('auto.screens__Admin__AdminPaymentsScreen.s8'),
+  expired: i18n.t('auto.screens__Admin__AdminPaymentsScreen.s9'),
 };
 
 /** סדר: ראשון במערך = ימין (row-reverse) — מנויים פעילים ראשי */
 const TABS: { id: TabKey; label: string }[] = [
-  { id: 'active', label: 'מנויים פעילים' },
-  { id: 'history', label: 'היסטוריית תשלומים' },
-  { id: 'upcoming', label: 'חיובים קרובים' },
+  { id: 'active', label: i18n.t('auto.screens__Admin__AdminPaymentsScreen.s10') },
+  { id: 'history', label: i18n.t('auto.screens__Admin__AdminPaymentsScreen.s11') },
+  { id: 'upcoming', label: i18n.t('auto.screens__Admin__AdminPaymentsScreen.s12') },
 ];
 
 function fmtDate(iso: string | null | undefined) {
@@ -245,7 +246,7 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
         }
         await loadOverview();
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'שגיאה בטעינה');
+        setError(e instanceof Error ? e.message : i18n.t('auto.screens__Admin__AdminPaymentsScreen.s13'));
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -271,7 +272,7 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
       const res = await adminService.getPaymentTransaction(id);
       setDetail(res);
     } catch (e) {
-      legacyAlert('שגיאה', e instanceof Error ? e.message : 'טעינה נכשלה');
+      legacyAlert(i18n.t('auto.screens__Admin__AdminPaymentsScreen.s14'), e instanceof Error ? e.message : i18n.t('auto.screens__Admin__AdminPaymentsScreen.s15'));
       setDetailId(null);
     } finally {
       setDetailLoading(false);
@@ -285,7 +286,7 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
       setDetail(await adminService.getPaymentTransaction(detailId));
       void load({ page, keep: true });
     } catch (e) {
-      legacyAlert('שגיאה', e instanceof Error ? e.message : 'רענון נכשל');
+      legacyAlert(i18n.t('auto.screens__Admin__AdminPaymentsScreen.s14'), e instanceof Error ? e.message : i18n.t('auto.screens__Admin__AdminPaymentsScreen.s16'));
     } finally {
       setDetailLoading(false);
     }
@@ -293,10 +294,10 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
 
   const runRefund = () => {
     if (!detailId) return;
-    legacyAlert('החזר מלא', 'לבצע ביטול מסמך (CancelDoc) והחזר מלא?', [
-      { text: 'ביטול', style: 'cancel' },
+    legacyAlert(i18n.t('auto.screens__Admin__AdminPaymentsScreen.s17'), i18n.t('auto.screens__Admin__AdminPaymentsScreen.s18'), [
+      { text: i18n.t('auto.screens__Admin__AdminPaymentsScreen.s19'), style: 'cancel' },
       {
-        text: 'החזר',
+        text: i18n.t('auto.screens__Admin__AdminPaymentsScreen.s20'),
         style: 'destructive',
         onPress: async () => {
           setBusyId(detailId);
@@ -304,18 +305,18 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
             const res = await adminService.refundPayment(detailId);
             if (!res.success) {
               void HapticFeedback.error();
-              legacyAlert('שגיאה', res.description || res.error || 'ההחזר נכשל');
+              legacyAlert(i18n.t('auto.screens__Admin__AdminPaymentsScreen.s14'), res.description || res.error || i18n.t('auto.screens__Admin__AdminPaymentsScreen.s21'));
             } else {
               void HapticFeedback.success();
               legacyAlert(
-                'הצלחה',
-                `החזר בוצע.\nמסמך חדש: ${res.newDocumentNumber ?? '—'} (${res.newDocumentType ?? '—'})`,
+                i18n.t('auto.screens__Admin__AdminPaymentsScreen.s22'),
+                i18n.t('auto.screens__Admin__AdminPaymentsScreen.s23', { v0: res.newDocumentNumber ?? '—', v1: res.newDocumentType ?? '—' }),
               );
             }
             await refreshDetail();
           } catch (e) {
             void HapticFeedback.error();
-            legacyAlert('שגיאה', e instanceof Error ? e.message : 'ההחזר נכשל');
+            legacyAlert(i18n.t('auto.screens__Admin__AdminPaymentsScreen.s14'), e instanceof Error ? e.message : i18n.t('auto.screens__Admin__AdminPaymentsScreen.s21'));
           } finally {
             setBusyId(null);
           }
@@ -326,28 +327,28 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
 
   const runCharge = () => {
     if (!detailId) return;
-    legacyAlert('חיוב דחוי', 'לבצע Charge עם הטוקן השמור?', [
-      { text: 'ביטול', style: 'cancel' },
+    legacyAlert(i18n.t('auto.screens__Admin__AdminPaymentsScreen.s24'), i18n.t('auto.screens__Admin__AdminPaymentsScreen.s25'), [
+      { text: i18n.t('auto.screens__Admin__AdminPaymentsScreen.s19'), style: 'cancel' },
       {
-        text: 'חייב',
+        text: i18n.t('auto.screens__Admin__AdminPaymentsScreen.s26'),
         onPress: async () => {
           setBusyId(detailId);
           try {
             const res = await adminService.chargeDeferred(detailId);
             if (!res.success) {
               void HapticFeedback.error();
-              legacyAlert('שגיאה', res.description || res.error || 'החיוב נכשל');
+              legacyAlert(i18n.t('auto.screens__Admin__AdminPaymentsScreen.s14'), res.description || res.error || i18n.t('auto.screens__Admin__AdminPaymentsScreen.s27'));
             } else {
               void HapticFeedback.success();
               legacyAlert(
-                'הצלחה',
-                `חויב בהצלחה.\nTranzactionId: ${res.tranzactionId ?? '—'}\nמסמך: ${res.documentNumber ?? '—'} (${res.documentType ?? '—'})`,
+                i18n.t('auto.screens__Admin__AdminPaymentsScreen.s22'),
+                i18n.t('auto.screens__Admin__AdminPaymentsScreen.s28', { v0: res.tranzactionId ?? '—', v1: res.documentNumber ?? '—', v2: res.documentType ?? '—' }),
               );
             }
             await refreshDetail();
           } catch (e) {
             void HapticFeedback.error();
-            legacyAlert('שגיאה', e instanceof Error ? e.message : 'החיוב נכשל');
+            legacyAlert(i18n.t('auto.screens__Admin__AdminPaymentsScreen.s14'), e instanceof Error ? e.message : i18n.t('auto.screens__Admin__AdminPaymentsScreen.s27'));
           } finally {
             setBusyId(null);
           }
@@ -377,7 +378,7 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
 
   const header = (
     <ChatSubScreenHeader
-      title="בקרת תשלומים ומנויים"
+      title={i18n.t('auto.screens__Admin__AdminPaymentsScreen.s29')}
       onBack={() => {
         void HapticFeedback.impactLight();
         navigation.goBack();
@@ -392,10 +393,10 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
         <AdminLoadingState
           label={
             tab === 'history'
-              ? 'טוען היסטוריית תשלומים...'
+              ? i18n.t('auto.screens__Admin__AdminPaymentsScreen.s30')
               : tab === 'active'
-                ? 'טוען מנויים פעילים...'
-                : 'טוען חיובים קרובים...'
+                ? i18n.t('auto.screens__Admin__AdminPaymentsScreen.s31')
+                : i18n.t('auto.screens__Admin__AdminPaymentsScreen.s32')
           }
         />
       </SafeAreaView>
@@ -420,12 +421,10 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
 
   const listHeader = (
     <View style={styles.listHeader}>
-      <AdminSectionLabel>סיכום החודש</AdminSectionLabel>
+      <AdminSectionLabel>{i18n.t('auto.screens__Admin__AdminPaymentsScreen.s33')}</AdminSectionLabel>
       <AdminSurface padding="md">
         <View style={styles.kpiFeatured}>
-          <Text style={[styles.kpiFeaturedLabel, { color: tokens.colors.text.secondary }]}>
-            הכנסה
-          </Text>
+          <Text style={[styles.kpiFeaturedLabel, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Admin__AdminPaymentsScreen.s34')}</Text>
           <Text
             style={[styles.kpiFeaturedValue, { color: tokens.colors.text.primary }]}
             numberOfLines={1}
@@ -437,9 +436,9 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
         </View>
 
         <View style={styles.kpiRow}>
-          <KpiCell label="שולמו" value={String(monthSummary.success)} />
-          <KpiCell label="נכשלו" value={String(monthSummary.failed)} />
-          <KpiCell label="ממתינים" value={String(monthSummary.pending)} />
+          <KpiCell label={i18n.t('auto.screens__Admin__AdminPaymentsScreen.s35')} value={String(monthSummary.success)} />
+          <KpiCell label={i18n.t('auto.screens__Admin__AdminPaymentsScreen.s36')} value={String(monthSummary.failed)} />
+          <KpiCell label={i18n.t('auto.screens__Admin__AdminPaymentsScreen.s37')} value={String(monthSummary.pending)} />
         </View>
       </AdminSurface>
 
@@ -448,13 +447,13 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
           options={TABS}
           value={tab}
           onChange={switchTab}
-          accessibilityGroupLabel="בקרת תשלומים"
+          accessibilityGroupLabel={i18n.t('auto.screens__Admin__AdminPaymentsScreen.s38')}
         />
       </View>
 
       {userIdFilter ? (
         <Text style={[styles.hint, { color: tokens.colors.warning.main, marginBottom: tokens.spacing.sm }]}>
-          מסונן לפי משתמש: {initialEmail || userIdFilter.slice(0, 8)}…
+          {i18n.t('auto.screens__Admin__AdminPaymentsScreen.s39')} {initialEmail || userIdFilter.slice(0, 8)}…
         </Text>
       ) : null}
 
@@ -472,7 +471,7 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
             setLoading(true);
             void load({ page: 1 });
           }}
-          placeholder="חיפוש לפי אימייל / שם / מסלול"
+          placeholder={i18n.t('auto.screens__Admin__AdminPaymentsScreen.s40')}
           placeholderTextColor={tokens.colors.text.tertiary}
           autoCapitalize="none"
           autoCorrect={false}
@@ -502,10 +501,10 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
 
       <Text style={[styles.countText, { color: tokens.colors.text.secondary }]}>
         {tab === 'history'
-          ? `${total} תשלומים`
+          ? i18n.t('auto.screens__Admin__AdminPaymentsScreen.s41', { v0: total })
           : tab === 'active'
-            ? `${total} מנויים פעילים`
-            : `${filteredUpcoming.length} חיובים קרובים`}
+            ? i18n.t('auto.screens__Admin__AdminPaymentsScreen.s42', { v0: total })
+            : i18n.t('auto.screens__Admin__AdminPaymentsScreen.s43', { v0: filteredUpcoming.length })}
       </Text>
     </View>
   );
@@ -543,7 +542,7 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
             />
           }
           ListEmptyComponent={
-            <AdminEmptyState title="אין תשלומים" subtitle="עדיין לא נרשמו חיובים" />
+            <AdminEmptyState title={i18n.t('auto.screens__Admin__AdminPaymentsScreen.s44')} subtitle={i18n.t('auto.screens__Admin__AdminPaymentsScreen.s45')} />
           }
           renderItem={({ item }) => (
             <TouchableOpacity
@@ -563,9 +562,9 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
                 nextBillingLabel="—"
                 extra={
                   item.cardcom_document_number != null
-                    ? `מסמך ${item.cardcom_document_number}`
+                    ? i18n.t('auto.screens__Admin__AdminPaymentsScreen.s46', { v0: item.cardcom_document_number })
                     : item.hasToken
-                      ? 'טוקן שמור'
+                      ? i18n.t('auto.screens__Admin__AdminPaymentsScreen.s47')
                       : undefined
                 }
               />
@@ -580,7 +579,7 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
                 }}
                 style={styles.loadMore}
               >
-                <Text style={[styles.loadMoreText, { color: tokens.colors.primary.main }]}>טען עוד</Text>
+                <Text style={[styles.loadMoreText, { color: tokens.colors.primary.main }]}>{i18n.t('auto.screens__Admin__AdminPaymentsScreen.s48')}</Text>
               </TouchableOpacity>
             ) : null
           }
@@ -602,7 +601,7 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
             />
           }
           ListEmptyComponent={
-            <AdminEmptyState title="אין מנויים פעילים" subtitle="אין רשומות פעילות כרגע" />
+            <AdminEmptyState title={i18n.t('auto.screens__Admin__AdminPaymentsScreen.s49')} subtitle={i18n.t('auto.screens__Admin__AdminPaymentsScreen.s50')} />
           }
           renderItem={({ item }) => {
             const price = planPrice(item.plan_id);
@@ -613,20 +612,20 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
                 amount={price != null ? `₪${price}` : '—'}
                 statusLabel={STATUS_HE[item.status] || item.status}
                 statusColor={statusColor(item.status, tokens)}
-                dateLabel={`התחלה ${fmtDay(item.starts_at)}`}
+                dateLabel={i18n.t('auto.screens__Admin__AdminPaymentsScreen.s51', { v0: fmtDay(item.starts_at) })}
                 nextBillingLabel={
                   item.auto_renew && item.next_cycle_at
                     ? fmtDay(item.next_cycle_at)
                     : item.expires_at
-                      ? `תפוגה ${fmtDay(item.expires_at)}`
+                      ? i18n.t('auto.screens__Admin__AdminPaymentsScreen.s52', { v0: fmtDay(item.expires_at) })
                       : '—'
                 }
                 extra={
                   item.auto_renew
                     ? item.hasToken
-                      ? 'חידוש אוטומטי · טוקן'
-                      : 'חידוש אוטומטי'
-                    : 'ללא חידוש אוטומטי'
+                      ? i18n.t('auto.screens__Admin__AdminPaymentsScreen.s53')
+                      : i18n.t('auto.screens__Admin__AdminPaymentsScreen.s54')
+                    : i18n.t('auto.screens__Admin__AdminPaymentsScreen.s55')
                 }
               />
             );
@@ -640,7 +639,7 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
                 }}
                 style={styles.loadMore}
               >
-                <Text style={[styles.loadMoreText, { color: tokens.colors.primary.main }]}>טען עוד</Text>
+                <Text style={[styles.loadMoreText, { color: tokens.colors.primary.main }]}>{i18n.t('auto.screens__Admin__AdminPaymentsScreen.s48')}</Text>
               </TouchableOpacity>
             ) : null
           }
@@ -663,8 +662,8 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
           }
           ListEmptyComponent={
             <AdminEmptyState
-              title="אין חיובים קרובים"
-              subtitle="אין מנויים עם חידוש אוטומטי ב־60 הימים הקרובים"
+              title={i18n.t('auto.screens__Admin__AdminPaymentsScreen.s56')}
+              subtitle={i18n.t('auto.screens__Admin__AdminPaymentsScreen.s57')}
             />
           }
           renderItem={({ item }) => {
@@ -674,11 +673,11 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
                 user={userLabel(item.user, item.user_id)}
                 plan={planLabel(item.plan_id)}
                 amount={price != null ? `₪${price}` : '—'}
-                statusLabel="לחיוב בקרוב"
+                statusLabel={i18n.t('auto.screens__Admin__AdminPaymentsScreen.s58')}
                 statusColor={tokens.colors.warning.main}
-                dateLabel={`תפוגה ${fmtDay(item.expires_at)}`}
+                dateLabel={i18n.t('auto.screens__Admin__AdminPaymentsScreen.s52', { v0: fmtDay(item.expires_at) })}
                 nextBillingLabel={fmtDay(item.next_cycle_at || item.expires_at)}
-                extra={item.hasToken ? 'טוקן מוכן לחיוב' : 'חסר טוקן'}
+                extra={item.hasToken ? i18n.t('auto.screens__Admin__AdminPaymentsScreen.s59') : i18n.t('auto.screens__Admin__AdminPaymentsScreen.s60')}
               />
             );
           }}
@@ -693,7 +692,7 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
       >
         <SafeAreaView style={[styles.root, styles.modalRoot]} edges={['top', 'bottom']}>
           <ChatSubScreenHeader
-            title="פרטי תשלום"
+            title={i18n.t('auto.screens__Admin__AdminPaymentsScreen.s61')}
             onBack={() => {
               setDetailId(null);
               setDetail(null);
@@ -705,22 +704,22 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
             </View>
           ) : (
             <ScrollView contentContainerStyle={styles.modalScroll}>
-              <AdminSectionLabel>סיכום</AdminSectionLabel>
+              <AdminSectionLabel>{i18n.t('auto.screens__Admin__AdminPaymentsScreen.s62')}</AdminSectionLabel>
               <UICard
                 variant="soft"
                 padding="md"
                 style={{ marginBottom: APP_LAYOUT.cardStackGap }}
               >
-                <DetailLine label="משתמש" value={detail.user?.email || detail.transaction.user_id || '—'} />
-                <DetailLine label="מסלול" value={planLabel(detail.transaction.plan_id)} />
-                <DetailLine label="סכום" value={`₪${detail.transaction.amount}`} />
+                <DetailLine label={i18n.t('auto.screens__Admin__AdminPaymentsScreen.s63')} value={detail.user?.email || detail.transaction.user_id || '—'} />
+                <DetailLine label={i18n.t('auto.screens__Admin__AdminPaymentsScreen.s64')} value={planLabel(detail.transaction.plan_id)} />
+                <DetailLine label={i18n.t('auto.screens__Admin__AdminPaymentsScreen.s65')} value={`₪${detail.transaction.amount}`} />
                 <DetailLine
-                  label="סטטוס"
+                  label={i18n.t('auto.screens__Admin__AdminPaymentsScreen.s66')}
                   value={STATUS_HE[detail.transaction.status] || detail.transaction.status}
                 />
-                <DetailLine label="תאריך" value={fmtDate(detail.transaction.created_at)} />
+                <DetailLine label={i18n.t('auto.screens__Admin__AdminPaymentsScreen.s67')} value={fmtDate(detail.transaction.created_at)} />
                 <DetailLine
-                  label="מסמך"
+                  label={i18n.t('auto.screens__Admin__AdminPaymentsScreen.s68')}
                   value={
                     detail.transaction.cardcom_document_number != null
                       ? `${detail.transaction.cardcom_document_number} (${detail.transaction.cardcom_document_type || '—'})`
@@ -728,17 +727,17 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
                   }
                 />
                 <DetailLine
-                  label="טוקן שמור"
-                  value={detail.transaction.cardcom_token_present || detail.transaction.hasToken ? 'כן' : 'לא'}
+                  label={i18n.t('auto.screens__Admin__AdminPaymentsScreen.s47')}
+                  value={detail.transaction.cardcom_token_present || detail.transaction.hasToken ? i18n.t('auto.screens__Admin__AdminPaymentsScreen.s69') : i18n.t('auto.screens__Admin__AdminPaymentsScreen.s70')}
                 />
-                <DetailLine label="מזהה עסקה" value={detail.transaction.id} />
+                <DetailLine label={i18n.t('auto.screens__Admin__AdminPaymentsScreen.s71')} value={detail.transaction.id} />
               </UICard>
 
-              <AdminSectionLabel>פעולות</AdminSectionLabel>
+              <AdminSectionLabel>{i18n.t('auto.screens__Admin__AdminPaymentsScreen.s72')}</AdminSectionLabel>
               <View style={styles.actionsCol}>
                 <ActionButton
                   icon={Ban}
-                  label="החזר מלא"
+                  label={i18n.t('auto.screens__Admin__AdminPaymentsScreen.s17')}
                   disabled={!detail.actions.canRefund || busyId === detailId}
                   busy={busyId === detailId}
                   onPress={runRefund}
@@ -746,7 +745,7 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
                 />
                 <ActionButton
                   icon={Zap}
-                  label="חיוב דחוי"
+                  label={i18n.t('auto.screens__Admin__AdminPaymentsScreen.s24')}
                   disabled={!detail.actions.canChargeDeferred || busyId === detailId}
                   busy={busyId === detailId}
                   onPress={runCharge}
@@ -754,7 +753,7 @@ export default function AdminPaymentsScreen({ navigation, route }: any) {
                 />
                 <ActionButton
                   icon={RefreshCw}
-                  label="רענון"
+                  label={i18n.t('auto.screens__Admin__AdminPaymentsScreen.s73')}
                   disabled={busyId === detailId}
                   busy={false}
                   onPress={() => void refreshDetail()}
@@ -831,10 +830,10 @@ function BillingRowCard({
       </View>
 
       <View style={styles.metaGrid}>
-        <MetaPair label="מסלול" value={plan} />
-        <MetaPair label="סכום" value={amount} emphasize />
-        <MetaPair label="תאריך" value={dateLabel} />
-        <MetaPair label="חיוב הבא" value={nextBillingLabel} />
+        <MetaPair label={i18n.t('auto.screens__Admin__AdminPaymentsScreen.s64')} value={plan} />
+        <MetaPair label={i18n.t('auto.screens__Admin__AdminPaymentsScreen.s65')} value={amount} emphasize />
+        <MetaPair label={i18n.t('auto.screens__Admin__AdminPaymentsScreen.s67')} value={dateLabel} />
+        <MetaPair label={i18n.t('auto.screens__Admin__AdminPaymentsScreen.s74')} value={nextBillingLabel} />
       </View>
 
       {extra ? (

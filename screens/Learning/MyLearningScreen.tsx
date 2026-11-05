@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useMemo } from 'react';
 import {
@@ -126,7 +127,7 @@ export const MyLearningScreen: React.FC = () => {
               </View>
             )}
             <UIButton
-              title={pct > 0 ? 'המשך למידה' : 'התחל'}
+              title={pct > 0 ? i18n.t('auto.screens__Learning__MyLearningScreen.s1') : i18n.t('auto.screens__Learning__MyLearningScreen.s2')}
               variant="primary"
               fullWidth
               onPress={() => handleContinueLearning(item)}
@@ -140,12 +141,10 @@ export const MyLearningScreen: React.FC = () => {
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
       <Text style={styles.emptyStateIcon}>📚</Text>
-      <Text style={styles.emptyStateTitle}>אין קורסים נרשמים</Text>
-      <Text style={styles.emptyStateSubtitle}>
-        התחל לחקור את הקורסים הזמינים
-      </Text>
+      <Text style={styles.emptyStateTitle}>{i18n.t('auto.screens__Learning__MyLearningScreen.s3')}</Text>
+      <Text style={styles.emptyStateSubtitle}>{i18n.t('auto.screens__Learning__MyLearningScreen.s4')}</Text>
       <UIButton
-        title="גלה קורסים"
+        title={i18n.t('auto.screens__Learning__MyLearningScreen.s5')}
         variant="primary"
         onPress={() => navigation.navigate('CoursesScreen')}
       />
@@ -165,12 +164,12 @@ export const MyLearningScreen: React.FC = () => {
         padding="lg"
         style={[{ marginHorizontal: ACADEMY_CARD_HP, marginBottom: APP_LAYOUT.cardStackGap }, academyCardFrameStyle('neutral')]}
       >
-        <Text style={styles.statsTitle}>התקדמות הלמידה</Text>
+        <Text style={styles.statsTitle}>{i18n.t('auto.screens__Learning__MyLearningScreen.s6')}</Text>
         <View style={styles.statsRow}>
           {[
-            { value: totalCourses, label: 'קורסים' },
-            { value: inProgressCourses, label: 'בתהליך' },
-            { value: completedCourses, label: 'הושלמו' },
+            { value: totalCourses, label: i18n.t('auto.screens__Learning__MyLearningScreen.s7') },
+            { value: inProgressCourses, label: i18n.t('auto.screens__Learning__MyLearningScreen.s8') },
+            { value: completedCourses, label: i18n.t('auto.screens__Learning__MyLearningScreen.s9') },
           ].map(s => (
             <View key={s.label} style={styles.statItem}>
               <Text style={styles.statValue}>{s.value}</Text>
@@ -188,11 +187,11 @@ export const MyLearningScreen: React.FC = () => {
         <RNSafeAreaView style={styles.safeAreaContainer} edges={['top']}>
           <View style={styles.errorContainer}>
             <Text style={styles.errorIcon}>⚠️</Text>
-            <Text style={styles.errorTitle}>שגיאה בטעינת הקורסים</Text>
+            <Text style={styles.errorTitle}>{i18n.t('auto.screens__Learning__MyLearningScreen.s10')}</Text>
             <Text style={styles.errorMessage}>
-              {error.message || 'אירעה שגיאה לא צפויה'}
+              {error.message || i18n.t('auto.screens__Learning__MyLearningScreen.s11')}
             </Text>
-            <UIButton title="נסה שוב" variant="primary" onPress={() => refetch()} />
+            <UIButton title={i18n.t('auto.screens__Learning__MyLearningScreen.s12')} variant="primary" onPress={() => refetch()} />
           </View>
         </RNSafeAreaView>
       </ScreenChrome>
@@ -202,7 +201,7 @@ export const MyLearningScreen: React.FC = () => {
   return (
     <ScreenChrome>
       <RNSafeAreaView style={styles.safeAreaContainer} edges={['top']}>
-        <AcademyScreenHeader onMenuPress={openMainDrawer} title="הלמידה שלי" />
+        <AcademyScreenHeader onMenuPress={openMainDrawer} title={i18n.t('auto.screens__Learning__MyLearningScreen.s13')} />
 
         {/* Stats */}
         {renderStats()}

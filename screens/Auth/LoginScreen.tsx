@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -180,7 +181,7 @@ export default function LoginScreen({ navigation }: any) {
 
   const handleSignIn = async () => {
     if (!email.trim() || !password.trim()) {
-      legacyAlert('שגיאה', 'אנא מלא את כל השדות');
+      legacyAlert(i18n.t('auto.screens__Auth__LoginScreen.s1'), i18n.t('auto.screens__Auth__LoginScreen.s2'));
       return;
     }
     // ניקוי מכוון לפני/תוך signIn — גם אם נשארנו על Login עם דגל recovery
@@ -188,7 +189,7 @@ export default function LoginScreen({ navigation }: any) {
     const normalizedEmail = email.trim().toLowerCase();
     const { error } = await signIn({ email: normalizedEmail, password });
     if (error) {
-      legacyAlert('שגיאה בהתחברות', error);
+      legacyAlert(i18n.t('auto.screens__Auth__LoginScreen.s3'), error);
       await saveCredentials('', false);
     } else {
       await saveCredentials(normalizedEmail, rememberMe);
@@ -204,7 +205,7 @@ export default function LoginScreen({ navigation }: any) {
     setGoogleLoading(true);
     try {
       const result = await signInWithGoogle();
-      if (result.error) { legacyAlert('שגיאה בהתחברות', result.error); return; }
+      if (result.error) { legacyAlert(i18n.t('auto.screens__Auth__LoginScreen.s3'), result.error); return; }
       if (result.isNewUser && result.googleUser) {
         // קודם קונטקסט הרשמה, אחר כך setUser — App מנתב ל-Onboarding עם isGoogleSignUp=true
         setGoogleUserData(result.googleUser);
@@ -213,7 +214,7 @@ export default function LoginScreen({ navigation }: any) {
         // Navigation ל-Onboarding קורה אוטומטית דרך App.tsx conditional rendering
       }
     } catch {
-      legacyAlert('שגיאה', 'אירעה שגיאה בהתחברות עם Google');
+      legacyAlert(i18n.t('auto.screens__Auth__LoginScreen.s1'), i18n.t('auto.screens__Auth__LoginScreen.s4'));
     } finally {
       setGoogleLoading(false);
     }
@@ -251,14 +252,14 @@ export default function LoginScreen({ navigation }: any) {
 
                   <View style={styles.buttonStack}>
                     <UIButton
-                      title="התחל כאן"
+                      title={i18n.t('auto.screens__Auth__LoginScreen.s5')}
                       variant="primary"
                       size="lg"
                       fullWidth
                       onPress={() => navigation.navigate('Register')}
                     />
                     <UIButton
-                      title="יש לי כבר חשבון"
+                      title={i18n.t('auto.screens__Auth__LoginScreen.s6')}
                       variant="secondary"
                       size="lg"
                       fullWidth
@@ -270,16 +271,12 @@ export default function LoginScreen({ navigation }: any) {
               ) : (
                 <View style={styles.form}>
                   <View style={styles.titleBlock}>
-                    <Text style={[appFlowTitleStyle, { color: colors.text.primary }]}>
-                      התחברות לחשבון
-                    </Text>
-                    <Text style={[appFlowSubtitleStyle, { color: colors.text.secondary }]}>
-                      ברוכים הבאים לקהילת DarkPool
-                    </Text>
+                    <Text style={[appFlowTitleStyle, { color: colors.text.primary }]}>{i18n.t('auto.screens__Auth__LoginScreen.s7')}</Text>
+                    <Text style={[appFlowSubtitleStyle, { color: colors.text.secondary }]}>{i18n.t('auto.screens__Auth__LoginScreen.s8')}</Text>
                   </View>
 
                   <Field
-                    label="כתובת אימייל"
+                    label={i18n.t('auto.screens__Auth__LoginScreen.s9')}
                     value={email}
                     onChangeText={setEmail}
                     placeholder="you@example.com"
@@ -288,10 +285,10 @@ export default function LoginScreen({ navigation }: any) {
                   />
 
                   <Field
-                    label="סיסמה"
+                    label={i18n.t('auto.screens__Auth__LoginScreen.s10')}
                     value={password}
                     onChangeText={setPassword}
-                    placeholder="הכנס את הסיסמה"
+                    placeholder={i18n.t('auto.screens__Auth__LoginScreen.s11')}
                     secureTextEntry
                     tokens={tokens}
                   />
@@ -321,18 +318,16 @@ export default function LoginScreen({ navigation }: any) {
                           <Ionicons name="checkmark" size={13} color={colors.text.inverse} />
                         ) : null}
                       </View>
-                      <Text style={[styles.optionText, { color: colors.text.secondary }]}>זכור אותי</Text>
+                      <Text style={[styles.optionText, { color: colors.text.secondary }]}>{i18n.t('auto.screens__Auth__LoginScreen.s12')}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity onPress={handleForgotPassword} activeOpacity={0.7} hitSlop={8}>
-                      <Text style={[styles.optionText, styles.linkText, { color: colors.text.primary }]}>
-                        שכחת סיסמה?
-                      </Text>
+                      <Text style={[styles.optionText, styles.linkText, { color: colors.text.primary }]}>{i18n.t('auto.screens__Auth__LoginScreen.s13')}</Text>
                     </TouchableOpacity>
                   </View>
 
                   <UIButton
-                    title="התחבר"
+                    title={i18n.t('auto.screens__Auth__LoginScreen.s14')}
                     variant="primary"
                     size="lg"
                     fullWidth
@@ -343,13 +338,13 @@ export default function LoginScreen({ navigation }: any) {
 
                   <View style={styles.dividerRow}>
                     <View style={[styles.dividerLine, { backgroundColor: colors.border.divider }]} />
-                    <Text style={[appCaptionStyle, styles.dividerText, { color: colors.text.tertiary }]}>או</Text>
+                    <Text style={[appCaptionStyle, styles.dividerText, { color: colors.text.tertiary }]}>{i18n.t('auto.screens__Auth__LoginScreen.s15')}</Text>
                     <View style={[styles.dividerLine, { backgroundColor: colors.border.divider }]} />
                   </View>
 
                   <View style={styles.buttonStack}>
                     <UIButton
-                      title="התחבר עם Google"
+                      title={i18n.t('auto.screens__Auth__LoginScreen.s16')}
                       variant="secondary"
                       size="lg"
                       icon="logo-google"
@@ -361,7 +356,7 @@ export default function LoginScreen({ navigation }: any) {
                       onPress={() => void handleGoogleSignIn()}
                     />
                     <UIButton
-                      title="צור חשבון חדש"
+                      title={i18n.t('auto.screens__Auth__LoginScreen.s17')}
                       variant="ghost"
                       size="lg"
                       fullWidth
@@ -370,9 +365,7 @@ export default function LoginScreen({ navigation }: any) {
                     />
                   </View>
 
-                  <Text style={[appCaptionStyle, styles.footer, { color: colors.text.tertiary }]}>
-                    בהתחברות אתה מסכים לתנאי השימוש ומדיניות הפרטיות
-                  </Text>
+                  <Text style={[appCaptionStyle, styles.footer, { color: colors.text.tertiary }]}>{i18n.t('auto.screens__Auth__LoginScreen.s18')}</Text>
 
                   <TouchableOpacity
                     onPress={() => {
@@ -382,9 +375,7 @@ export default function LoginScreen({ navigation }: any) {
                     activeOpacity={0.7}
                     style={styles.backLink}
                   >
-                    <Text style={[styles.optionText, { color: colors.text.secondary }]}>
-                      חזרה למסך ברוכים הבאים
-                    </Text>
+                    <Text style={[styles.optionText, { color: colors.text.secondary }]}>{i18n.t('auto.screens__Auth__LoginScreen.s19')}</Text>
                   </TouchableOpacity>
                 </View>
               )}

@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -151,18 +152,18 @@ export function InAppGalleryPanel({ visible, onClose, onPick }: Props) {
   return (
     <Animated.View style={[styles.root, { paddingTop: insets.top }, slide]}>
       <View style={styles.header}>
-        <Pressable onPress={onClose} style={styles.circleBtn} accessibilityRole="button" accessibilityLabel="חזרה למצלמה">
+        <Pressable onPress={onClose} style={styles.circleBtn} accessibilityRole="button" accessibilityLabel={i18n.t('auto.components__chat__InAppGalleryPanel.s1')}>
           <Ionicons name="chevron-down" size={24} color="#fff" />
         </Pressable>
-        <Text style={styles.title}>גלריה</Text>
+        <Text style={styles.title}>{i18n.t('auto.components__chat__InAppGalleryPanel.s2')}</Text>
         <View style={styles.circleSpacer} />
       </View>
 
       {denied ? (
         <View style={styles.center}>
-          <Text style={styles.message}>אין גישה לגלריה. אפשר גישה בהגדרות המכשיר.</Text>
+          <Text style={styles.message}>{i18n.t('auto.components__chat__InAppGalleryPanel.s3')}</Text>
           <Pressable onPress={openAppSettings} style={styles.settingsBtn} accessibilityRole="button">
-            <Text style={styles.settingsBtnText}>פתח הגדרות</Text>
+            <Text style={styles.settingsBtnText}>{i18n.t('auto.components__chat__InAppGalleryPanel.s4')}</Text>
           </Pressable>
         </View>
       ) : loading && assets.length === 0 ? (
@@ -187,7 +188,7 @@ export function InAppGalleryPanel({ visible, onClose, onPick }: Props) {
               activeOpacity={0.85}
               style={{ width: cell, height: cell }}
               accessibilityRole="button"
-              accessibilityLabel={item.mediaType === 'video' ? 'סרטון' : 'תמונה'}
+              accessibilityLabel={item.mediaType === 'video' ? i18n.t('auto.components__chat__InAppGalleryPanel.s5') : i18n.t('auto.components__chat__InAppGalleryPanel.s6')}
             >
               <ExpoImage
                 source={{ uri: item.uri }}
@@ -210,7 +211,7 @@ export function InAppGalleryPanel({ visible, onClose, onPick }: Props) {
       {resolving ? (
         <View style={styles.resolving} pointerEvents="auto">
           <ActivityIndicator color="#fff" />
-          <Text style={styles.message}>מוריד מ-iCloud…</Text>
+          <Text style={styles.message}>{i18n.t('auto.components__chat__InAppGalleryPanel.s7')}</Text>
         </View>
       ) : null}
     </Animated.View>

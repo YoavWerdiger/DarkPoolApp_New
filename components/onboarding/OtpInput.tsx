@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, {
@@ -94,7 +95,7 @@ const OtpInput: React.FC<OtpInputProps> = ({ value, onChangeText, autoFocus = fa
         textContentType="oneTimeCode"
         caretHidden
         style={styles.hiddenInput}
-        accessibilityLabel="קוד אימות בן 6 ספרות"
+        accessibilityLabel={i18n.t('auto.components__onboarding__OtpInput.s1')}
       />
     </Pressable>
   );

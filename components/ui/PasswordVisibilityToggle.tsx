@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import { Eye, EyeOff } from 'lucide-react-native';
@@ -23,7 +24,7 @@ export function PasswordVisibilityToggle({ visible, onToggle }: PasswordVisibili
       }}
       hitSlop={10}
       accessibilityRole="button"
-      accessibilityLabel={visible ? 'הסתר סיסמה' : 'הצג סיסמה'}
+      accessibilityLabel={visible ? i18n.t('auto.components__ui__PasswordVisibilityToggle.s1') : i18n.t('auto.components__ui__PasswordVisibilityToggle.s2')}
       style={styles.hit}
     >
       <Icon size={20} color={tokens.colors.text.secondary} />

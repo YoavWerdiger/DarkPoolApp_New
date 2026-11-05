@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -179,7 +180,7 @@ function MessageCommentsSheetBody({
         setReplies(rows);
       } catch (e: any) {
         if (cancelled || seq !== loadSeqRef.current) return;
-        setError(e?.message || 'לא ניתן לטעון תגובות');
+        setError(e?.message || i18n.t('auto.components__chat__MessageCommentsSheet.s1'));
         setReplies([]);
       } finally {
         if (!cancelled && seq === loadSeqRef.current) {
@@ -232,7 +233,7 @@ function MessageCommentsSheetBody({
         listRef.current?.scrollToEnd({ animated: true });
       });
     } catch (e: any) {
-      setError(e?.message || 'לא ניתן לפרסם תגובה');
+      setError(e?.message || i18n.t('auto.components__chat__MessageCommentsSheet.s2'));
       void HapticFeedback.error();
     } finally {
       setBusy(false);
@@ -285,7 +286,7 @@ function MessageCommentsSheetBody({
       void HapticFeedback.success();
       setPendingDelete(null);
     } catch {
-      setDeleteError('לא ניתן למחוק את התגובה');
+      setDeleteError(i18n.t('auto.components__chat__MessageCommentsSheet.s3'));
     } finally {
       setDeleting(false);
     }
@@ -362,9 +363,7 @@ function MessageCommentsSheetBody({
         keyboardDismissMode="on-drag"
         ListEmptyComponent={
           !loading ? (
-            <Text style={[styles.emptyText, { color: tokens.colors.text.secondary }]}>
-              עדיין אין תגובות להודעה. היו הראשונים להגיב
-            </Text>
+            <Text style={[styles.emptyText, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.components__chat__MessageCommentsSheet.s4')}</Text>
           ) : null
         }
         ListHeaderComponent={
@@ -418,7 +417,7 @@ function MessageCommentsSheetBody({
                     <TouchableOpacity
                       onPress={() => handleDelete(item)}
                       hitSlop={8}
-                      accessibilityLabel="מחק תגובה"
+                      accessibilityLabel={i18n.t('auto.components__chat__MessageCommentsSheet.s5')}
                       style={{
                         width: 24,
                         height: 24,
@@ -465,7 +464,7 @@ function MessageCommentsSheetBody({
             onPress={handleClose}
             size={DAY_NAV_BUTTON_SIZE}
             style={styles.headerIconButton}
-            accessibilityLabel="סגור"
+            accessibilityLabel={i18n.t('auto.components__chat__MessageCommentsSheet.s6')}
             disabled={busy}
           >
             <Ionicons
@@ -478,9 +477,7 @@ function MessageCommentsSheetBody({
             <Text
               style={[styles.headerTitle, { color: tokens.colors.text.primary }]}
               numberOfLines={1}
-            >
-              תגובות
-            </Text>
+            >{i18n.t('auto.components__chat__MessageCommentsSheet.s7')}</Text>
           </View>
           <View style={styles.headerSideSpacer} />
         </View>
@@ -509,9 +506,7 @@ function MessageCommentsSheetBody({
                     color: tokens.colors.text.primary,
                     ...APP_TYPE.caption,
                   }}
-                >
-                  נסה שוב
-                </Text>
+                >{i18n.t('auto.components__chat__MessageCommentsSheet.s8')}</Text>
               </TouchableOpacity>
             ) : null}
           </View>
@@ -540,7 +535,7 @@ function MessageCommentsSheetBody({
               <TextInput
                 value={body}
                 onChangeText={setBody}
-                placeholder={user ? 'כתבו תגובה…' : 'יש להתחבר כדי להגיב'}
+                placeholder={user ? i18n.t('auto.components__chat__MessageCommentsSheet.s9') : i18n.t('auto.components__chat__MessageCommentsSheet.s10')}
                 placeholderTextColor={tokens.colors.text.tertiary}
                 multiline
                 maxLength={MAX_LEN}
@@ -564,7 +559,7 @@ function MessageCommentsSheetBody({
                   : tokens.colors.background.primary,
               },
             ]}
-            accessibilityLabel="שלח תגובה"
+            accessibilityLabel={i18n.t('auto.components__chat__MessageCommentsSheet.s11')}
           >
             {busy ? (
               <ActivityIndicator size="small" color={tokens.colors.text.inverse} />
@@ -580,13 +575,13 @@ function MessageCommentsSheetBody({
       </ChatComposerDock>
       <InlineAppDialog
         visible={!!pendingDelete}
-        title="מחיקת תגובה"
-        message={deleteError || 'למחוק את התגובה?'}
+        title={i18n.t('auto.components__chat__MessageCommentsSheet.s12')}
+        message={deleteError || i18n.t('auto.components__chat__MessageCommentsSheet.s13')}
         icon="trash-outline"
         onBackdropPress={deleting ? undefined : () => setPendingDelete(null)}
         buttons={[
-          { text: 'מחק', style: 'destructive', onPress: () => void confirmDelete(), loading: deleting },
-          { text: 'ביטול', style: 'cancel', onPress: () => setPendingDelete(null) },
+          { text: i18n.t('auto.components__chat__MessageCommentsSheet.s14'), style: 'destructive', onPress: () => void confirmDelete(), loading: deleting },
+          { text: i18n.t('auto.components__chat__MessageCommentsSheet.s15'), style: 'cancel', onPress: () => setPendingDelete(null) },
         ]}
       />
       </View>

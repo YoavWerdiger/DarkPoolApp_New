@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useCallback } from 'react';
 import { Pressable, Text, type TextStyle } from 'react-native';
 import { openUserProfile } from '../../lib/openUserProfile';
@@ -40,7 +41,7 @@ export default function UserNameButton({
       onPress={handlePress}
       hitSlop={4}
       accessibilityRole="button"
-      accessibilityLabel={`פרופיל של ${name}`}
+      accessibilityLabel={i18n.t('auto.components__profile__UserNameButton.s1', { v0: name })}
       style={({ pressed }) => (pressed ? { opacity: 0.85 } : undefined)}
     >
       <Text style={style} numberOfLines={numberOfLines}>

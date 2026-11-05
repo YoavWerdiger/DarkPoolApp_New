@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -25,9 +26,9 @@ import {
 type JournalTab = 'trades' | 'calendar' | 'performance';
 
 const JOURNAL_SEGMENTS: { id: JournalTab; label: string }[] = [
-  { id: 'trades', label: 'רשימת טריידים' },
-  { id: 'calendar', label: 'לוח שנה' },
-  { id: 'performance', label: 'ביצועים' },
+  { id: 'trades', label: i18n.t('auto.screens__Journal__TradingScreen.s1') },
+  { id: 'calendar', label: i18n.t('auto.screens__Journal__TradingScreen.s2') },
+  { id: 'performance', label: i18n.t('auto.screens__Journal__TradingScreen.s3') },
 ];
 
 type Nav = NativeStackNavigationProp<JournalStackParamList, 'JournalMain'>;
@@ -105,7 +106,7 @@ export default function TradingScreen() {
     <ScreenChrome>
       <RNSafeAreaView style={[styles.safeAreaContainer, journalRtlRoot]} edges={['top']}>
         <MainDrawerScreenHeader
-          title="יומן מסחר"
+          title={i18n.t('auto.screens__Journal__TradingScreen.s4')}
           onMenuPress={openMainDrawer}
           inRtlTree
         />
@@ -115,7 +116,7 @@ export default function TradingScreen() {
             options={JOURNAL_SEGMENTS}
             value={activeTab}
             onChange={setActiveTab}
-            accessibilityGroupLabel="יומן מסחר"
+            accessibilityGroupLabel={i18n.t('auto.screens__Journal__TradingScreen.s4')}
           />
         </View>
 
@@ -132,10 +133,10 @@ export default function TradingScreen() {
               style={styles.fabBtn}
               contentContainerStyle={styles.fabBtnContent}
               onPress={() => navigation.navigate('AddTrade')}
-              accessibilityLabel="הוסף טרייד"
+              accessibilityLabel={i18n.t('auto.screens__Journal__TradingScreen.s5')}
             >
               <Ionicons name="add" size={22} color={DesignTokens.colors.text.inverse} />
-              <Text style={styles.fabBtnText}>הוסף טרייד</Text>
+              <Text style={styles.fabBtnText}>{i18n.t('auto.screens__Journal__TradingScreen.s5')}</Text>
             </DayDividerPill>
           </View>
         ) : null}

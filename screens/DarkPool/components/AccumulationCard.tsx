@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 /**
  * כרטיס צבירה — קרוסלה אופקית, UICard glass.
  */
@@ -52,19 +53,19 @@ export function AccumulationCard({ row, onPress }: AccumulationCardProps) {
             <TickerLogo symbol={row.ticker} size={32} borderRadius={8} />
             <Text style={styles.ticker}>{row.ticker}</Text>
           </View>
-          <Text style={styles.label}>נטו 3 ימים</Text>
+          <Text style={styles.label}>{i18n.t('auto.screens__DarkPool__components__AccumulationCard.s1')}</Text>
           <Text style={[styles.value, { color: valueColor }]}>
             {(positive ? '+' : '')}
             {formatUsdCompact(row.net_flow_3d)}
           </Text>
           <View style={styles.statsRow}>
             <View style={styles.stat}>
-              <Text style={styles.statLabel}>יחס ק/מ</Text>
+              <Text style={styles.statLabel}>{i18n.t('auto.screens__DarkPool__components__AccumulationCard.s2')}</Text>
               <Text style={styles.statValue}>{formatPercent(row.net_flow_ratio, 0)}</Text>
             </View>
             <View style={styles.divider} />
             <View style={styles.stat}>
-              <Text style={styles.statLabel}>לווייתנים</Text>
+              <Text style={styles.statLabel}>{i18n.t('auto.screens__DarkPool__components__AccumulationCard.s3')}</Text>
               <Text style={styles.statValue}>{row.whales_3d}</Text>
             </View>
           </View>

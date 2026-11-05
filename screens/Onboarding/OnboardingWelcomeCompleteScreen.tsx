@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -88,13 +89,10 @@ const OnboardingWelcomeCompleteScreen: React.FC<Props> = ({ navigation }) => {
 
             {/* Title */}
             <Text style={[styles.title, { color: tokens.colors.text.primary }]}>
-              ברוך הבא ל-DarkPool{data.firstName ? `, ${data.firstName}` : ''}!
+              {i18n.t('auto.screens__Onboarding__OnboardingWelcomeCompleteScreen.s1')}{data.firstName ? `, ${data.firstName}` : ''}!
             </Text>
 
-            <Text style={[styles.subtitle, { color: tokens.colors.text.secondary }]}>
-              החשבון שלך מוכן. אתה יכול להתחיל לעקוב אחרי עסקאות של קונגרס,
-              insiders ומשקיעים מוסדיים
-            </Text>
+            <Text style={[styles.subtitle, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Onboarding__OnboardingWelcomeCompleteScreen.s2')}</Text>
 
             {/* Feature Cards */}
             <View style={styles.featuresContainer}>
@@ -103,12 +101,8 @@ const OnboardingWelcomeCompleteScreen: React.FC<Props> = ({ navigation }) => {
                 padding="md"
                 style={[styles.featureCard, { borderColor: tokens.colors.primary.main }]}
               >
-                <Text style={[styles.featureTitle, { color: tokens.colors.text.primary }]}>
-                  🏛️ מסחר קונגרס
-                </Text>
-                <Text style={[styles.featureSubtitle, { color: tokens.colors.text.secondary }]}>
-                  עקוב אחרי עסקאות של חברי קונגרס בזמן אמת
-                </Text>
+                <Text style={[styles.featureTitle, { color: tokens.colors.text.primary }]}>{i18n.t('auto.screens__Onboarding__OnboardingWelcomeCompleteScreen.s3')}</Text>
+                <Text style={[styles.featureSubtitle, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Onboarding__OnboardingWelcomeCompleteScreen.s4')}</Text>
               </UICard>
 
               <UICard
@@ -116,12 +110,8 @@ const OnboardingWelcomeCompleteScreen: React.FC<Props> = ({ navigation }) => {
                 padding="md"
                 style={[styles.featureCard, { borderColor: tokens.colors.primary.main }]}
               >
-                <Text style={[styles.featureTitle, { color: tokens.colors.text.primary }]}>
-                  👔 פעילות Insiders
-                </Text>
-                <Text style={[styles.featureSubtitle, { color: tokens.colors.text.secondary }]}>
-                  גלה רכישות ומכירות של מנהלים בכירים
-                </Text>
+                <Text style={[styles.featureTitle, { color: tokens.colors.text.primary }]}>{i18n.t('auto.screens__Onboarding__OnboardingWelcomeCompleteScreen.s5')}</Text>
+                <Text style={[styles.featureSubtitle, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Onboarding__OnboardingWelcomeCompleteScreen.s6')}</Text>
               </UICard>
 
               <UICard
@@ -129,12 +119,8 @@ const OnboardingWelcomeCompleteScreen: React.FC<Props> = ({ navigation }) => {
                 padding="md"
                 style={[styles.featureCard, { borderColor: tokens.colors.primary.main }]}
               >
-                <Text style={[styles.featureTitle, { color: tokens.colors.text.primary }]}>
-                  🏦 תיקי מוסדיים
-                </Text>
-                <Text style={[styles.featureSubtitle, { color: tokens.colors.text.secondary }]}>
-                  צפה בתיקי השקעות של קרנות גידור ומוסדיים
-                </Text>
+                <Text style={[styles.featureTitle, { color: tokens.colors.text.primary }]}>{i18n.t('auto.screens__Onboarding__OnboardingWelcomeCompleteScreen.s7')}</Text>
+                <Text style={[styles.featureSubtitle, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Onboarding__OnboardingWelcomeCompleteScreen.s8')}</Text>
               </UICard>
             </View>
           </ScrollView>
@@ -142,7 +128,7 @@ const OnboardingWelcomeCompleteScreen: React.FC<Props> = ({ navigation }) => {
           {/* Footer */}
           <View style={styles.footer}>
             <UIButton
-              title="בואו נתחיל!"
+              title={i18n.t('auto.screens__Onboarding__OnboardingWelcomeCompleteScreen.s9')}
               variant="primary"
               size="lg"
               fullWidth

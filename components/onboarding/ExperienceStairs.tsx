@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useEffect, useState } from 'react';
 import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -34,10 +35,10 @@ type Option = { label: string; value: string; description?: string };
 
 /** שם קצר על המדרגה עצמה (התווית המלאה מופיעה מתחת) */
 const SHORT_LABELS: Record<string, string> = {
-  first_steps: 'צעדים ראשונים',
-  beginner: 'מתחיל',
-  intermediate: 'בינוני',
-  advanced: 'מתקדם',
+  first_steps: i18n.t('auto.components__onboarding__ExperienceStairs.s1'),
+  beginner: i18n.t('auto.components__onboarding__ExperienceStairs.s2'),
+  intermediate: i18n.t('auto.components__onboarding__ExperienceStairs.s3'),
+  advanced: i18n.t('auto.components__onboarding__ExperienceStairs.s4'),
 };
 
 /** מדרגה לחיצה — מתכווצת במגע, ו«פועמת» פעם אחת בכניסה כרמז שאפשר ללחוץ */

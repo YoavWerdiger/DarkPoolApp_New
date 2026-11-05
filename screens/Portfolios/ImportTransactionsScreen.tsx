@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
@@ -65,7 +66,7 @@ export default function ImportTransactionsScreen() {
       const parsed = parsePortfolioCsv(content, portfolioId);
       setParseResult(parsed);
     } catch (err) {
-      legacyAlert('שגיאה', 'קריאת הקובץ נכשלה');
+      legacyAlert(i18n.t('auto.screens__Portfolios__ImportTransactionsScreen.s1'), i18n.t('auto.screens__Portfolios__ImportTransactionsScreen.s2'));
     }
   }, [portfolioId]);
 
@@ -78,15 +79,13 @@ export default function ImportTransactionsScreen() {
         .filter(Boolean);
       const inserted = await bulkCreateTransactions(inputs);
       legacyAlert(
-        'ייבוא הסתיים',
-        `נוספו ${inserted} טרנזקציות לתיק.${
-          parseResult.invalidRows.length > 0
+        i18n.t('auto.screens__Portfolios__ImportTransactionsScreen.s3'),
+        i18n.t('auto.screens__Portfolios__ImportTransactionsScreen.s4', { v0: inserted, v1: parseResult.invalidRows.length > 0
             ? `\n${parseResult.invalidRows.length} שורות נדחו.`
-            : ''
-        }`,
+            : '' }),
         [
           {
-            text: 'אישור',
+            text: i18n.t('auto.screens__Portfolios__ImportTransactionsScreen.s5'),
             onPress: () => {
               navigation.replace('PortfolioDetail', { portfolioId });
             },
@@ -94,7 +93,7 @@ export default function ImportTransactionsScreen() {
         ]
       );
     } catch (err) {
-      legacyAlert('שגיאה', 'הייבוא נכשל. אנא נסה שוב.');
+      legacyAlert(i18n.t('auto.screens__Portfolios__ImportTransactionsScreen.s1'), i18n.t('auto.screens__Portfolios__ImportTransactionsScreen.s6'));
     } finally {
       setSubmitting(false);
     }
@@ -267,29 +266,21 @@ export default function ImportTransactionsScreen() {
       <ChatSessionBackdrop />
       <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
         <PortfolioScreenHeader
-          title="ייבוא טרנזקציות"
+          title={i18n.t('auto.screens__Portfolios__ImportTransactionsScreen.s7')}
           onBack={() => navigation.goBack()}
         />
         <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
           {/* Instructions */}
           <View style={styles.section}>
             <UICard variant="soft" padding="none" disableBlur contentContainerStyle={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>מה אפשר להעלות?</Text>
+            <Text style={styles.sectionTitle}>{i18n.t('auto.screens__Portfolios__ImportTransactionsScreen.s8')}</Text>
             <Text style={styles.sectionText}>
-              קובץ CSV עם כותרות. הסוגים הנתמכים:{' '}
-              <Text style={{ fontWeight: '700' }}>BUY, SELL, DEPOSIT, WITHDRAWAL, FEE, DIVIDEND</Text>.
-              עמודות שלא מזוהות אוטומטית יישלחו כעמודות אופציונליות.
+              {i18n.t('auto.screens__Portfolios__ImportTransactionsScreen.s9')}{' '}
+              <Text style={{ fontWeight: '700' }}>BUY, SELL, DEPOSIT, WITHDRAWAL, FEE, DIVIDEND</Text>{i18n.t('auto.screens__Portfolios__ImportTransactionsScreen.s10')}
             </Text>
             <View style={styles.codeBox}>
               <Text style={styles.codeText}>
-                {RECOMMENDED_CSV_HEADERS.join(',')}
-                {'\n'}
-                AAPL,BUY,2024-01-15,10,185.50,1.00,USD,קנייה ראשונה
-                {'\n'}
-                AAPL,SELL,2024-06-10,5,210.00,1.00,USD,
-                {'\n'}
-                ,DEPOSIT,2024-01-01,,,,USD,הפקדה ראשונית
-              </Text>
+                {i18n.t('auto.screens__Portfolios__ImportTransactionsScreen.s11', { v0: RECOMMENDED_CSV_HEADERS.join(','), v1: '\n', v2: '\n', v3: '\n' })}</Text>
             </View>
 
             <TouchableOpacity
@@ -305,7 +296,7 @@ export default function ImportTransactionsScreen() {
                 size={20}
                 color={tokens.colors.text.inverse}
               />
-              <Text style={styles.pickBtnText}>בחר קובץ CSV</Text>
+              <Text style={styles.pickBtnText}>{i18n.t('auto.screens__Portfolios__ImportTransactionsScreen.s12')}</Text>
             </TouchableOpacity>
 
             {fileName ? (
@@ -327,7 +318,7 @@ export default function ImportTransactionsScreen() {
           {parseResult ? (
             <View style={styles.section}>
               <UICard variant="soft" padding="none" disableBlur contentContainerStyle={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>תצוגה מקדימה</Text>
+              <Text style={styles.sectionTitle}>{i18n.t('auto.screens__Portfolios__ImportTransactionsScreen.s13')}</Text>
               <View style={styles.previewSummary}>
                 <View
                   style={[
@@ -346,7 +337,7 @@ export default function ImportTransactionsScreen() {
                   >
                     {parseResult.validRows.length}
                   </Text>
-                  <Text style={styles.summaryLabel}>תקינות</Text>
+                  <Text style={styles.summaryLabel}>{i18n.t('auto.screens__Portfolios__ImportTransactionsScreen.s14')}</Text>
                 </View>
                 <View
                   style={[
@@ -365,7 +356,7 @@ export default function ImportTransactionsScreen() {
                   >
                     {parseResult.invalidRows.length}
                   </Text>
-                  <Text style={styles.summaryLabel}>שגויות</Text>
+                  <Text style={styles.summaryLabel}>{i18n.t('auto.screens__Portfolios__ImportTransactionsScreen.s15')}</Text>
                 </View>
                 <View
                   style={[
@@ -384,7 +375,7 @@ export default function ImportTransactionsScreen() {
                   >
                     {parseResult.totalRows}
                   </Text>
-                  <Text style={styles.summaryLabel}>סה"כ</Text>
+                  <Text style={styles.summaryLabel}>{i18n.t('auto.screens__Portfolios__ImportTransactionsScreen.s16')}</Text>
                 </View>
               </View>
 
@@ -412,9 +403,7 @@ export default function ImportTransactionsScreen() {
               {parseResult.validRows.length > 10 ? (
                 <Text
                   style={[styles.sectionText, { textAlign: 'center', marginTop: 8 }]}
-                >
-                  ועוד {parseResult.validRows.length - 10} שורות תקינות נוספות…
-                </Text>
+                >{i18n.t('auto.screens__Portfolios__ImportTransactionsScreen.s17', { v0: parseResult.validRows.length - 10 })}</Text>
               ) : null}
 
               {parseResult.invalidRows.length > 0 ? (
@@ -424,13 +413,10 @@ export default function ImportTransactionsScreen() {
                       styles.sectionTitle,
                       { color: tokens.colors.text.danger },
                     ]}
-                  >
-                    שורות שלא יובאו ({parseResult.invalidRows.length})
-                  </Text>
+                  >{i18n.t('auto.screens__Portfolios__ImportTransactionsScreen.s18', { v0: parseResult.invalidRows.length })}</Text>
                   {parseResult.invalidRows.slice(0, 5).map((r) => (
                     <View key={r.rowIndex} style={styles.invalidRow}>
-                      <Text style={styles.invalidText}>
-                        שורה {r.rowIndex}: {r.error}
+                      <Text style={styles.invalidText}>{i18n.t('auto.screens__Portfolios__ImportTransactionsScreen.s19', { v0: r.rowIndex, v1: r.error })}
                       </Text>
                     </View>
                   ))}
@@ -462,8 +448,8 @@ export default function ImportTransactionsScreen() {
                 )}
                 <Text style={styles.importBtnText}>
                   {submitting
-                    ? 'מייבא…'
-                    : `ייבא ${parseResult.validRows.length} טרנזקציות`}
+                    ? i18n.t('auto.screens__Portfolios__ImportTransactionsScreen.s20')
+                    : i18n.t('auto.screens__Portfolios__ImportTransactionsScreen.s21', { v0: parseResult.validRows.length })}
                 </Text>
               </TouchableOpacity>
               </UICard>

@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 // ============================================
 // Chat Message Service
 // ============================================
@@ -86,7 +87,7 @@ export async function sendChatMessage(
         data: null,
         error: {
           code: 'INVALID_MESSAGE_TYPE',
-          message: `סוג הודעה לא נתמך: ${String(input.message_type)}`,
+          message: i18n.t('auto.services__chat__chatMessageService.s1', { v0: String(input.message_type) }),
         },
       };
     }
@@ -94,20 +95,20 @@ export async function sendChatMessage(
     if (input.message_type === ChatMessageType.TRADE) {
       const raw = input.content?.trim();
       if (!raw) {
-        return { data: null, error: { code: 'EMPTY_TRADE', message: 'טרייד ריק' } };
+        return { data: null, error: { code: 'EMPTY_TRADE', message: i18n.t('auto.services__chat__chatMessageService.s2') } };
       }
       try {
         const parsed = JSON.parse(raw) as { trade?: { symbol?: string } };
         if (!parsed.trade || typeof parsed.trade.symbol !== 'string' || !parsed.trade.symbol.trim()) {
-          return { data: null, error: { code: 'INVALID_TRADE', message: 'נתוני טרייד לא תקינים' } };
+          return { data: null, error: { code: 'INVALID_TRADE', message: i18n.t('auto.services__chat__chatMessageService.s3') } };
         }
       } catch {
-        return { data: null, error: { code: 'INVALID_TRADE_JSON', message: 'פורמט טרייד לא תקין' } };
+        return { data: null, error: { code: 'INVALID_TRADE_JSON', message: i18n.t('auto.services__chat__chatMessageService.s4') } };
       }
     } else if (input.message_type === ChatMessageType.ENTITY) {
       const raw = input.content?.trim();
       if (!raw) {
-        return { data: null, error: { code: 'EMPTY_ENTITY', message: 'ישות ריקה' } };
+        return { data: null, error: { code: 'EMPTY_ENTITY', message: i18n.t('auto.services__chat__chatMessageService.s5') } };
       }
       try {
         const parsed = JSON.parse(raw) as { attachment?: unknown };
@@ -119,10 +120,10 @@ export async function sendChatMessage(
           !(att as { ref?: { type?: unknown; id?: unknown } }).ref?.type ||
           !(att as { ref?: { id?: unknown } }).ref?.id
         ) {
-          return { data: null, error: { code: 'INVALID_ENTITY', message: 'נתוני ישות לא תקינים' } };
+          return { data: null, error: { code: 'INVALID_ENTITY', message: i18n.t('auto.services__chat__chatMessageService.s6') } };
         }
       } catch {
-        return { data: null, error: { code: 'INVALID_ENTITY_JSON', message: 'פורמט ישות לא תקין' } };
+        return { data: null, error: { code: 'INVALID_ENTITY_JSON', message: i18n.t('auto.services__chat__chatMessageService.s7') } };
       }
     } else if (input.message_type === 'text' && input.content) {
       const contentValidation = validateMessageContent(input.content);
@@ -178,7 +179,7 @@ export async function sendChatMessage(
       .single();
 
     if (!membership) {
-      return { data: null, error: { code: 'NOT_MEMBER', message: 'אינך חבר בקבוצה זו' } };
+      return { data: null, error: { code: 'NOT_MEMBER', message: i18n.t('auto.services__chat__chatMessageService.s8') } };
     }
 
     // בדיקה אם רק אדמינים יכולים לשלוח (הכרזות / onlyAdminsCanSend)
@@ -202,7 +203,7 @@ export async function sendChatMessage(
           data: null,
           error: {
             code: 'PERMISSION_DENIED',
-            message: 'רק מנהלי הקהילה יכולים לשלוח הודעות',
+            message: i18n.t('auto.services__chat__chatMessageService.s9'),
           },
         };
       }
@@ -358,8 +359,8 @@ export async function sendChatMessage(
           code: isTypeConstraint ? 'MESSAGE_TYPE_DB_CONSTRAINT' : 'SEND_MESSAGE_ERROR',
           message:
             isTypeConstraint
-              ? 'סוג ההודעה לא מעודכן בשרת. הרץ ב-Supabase את המיגרציה 010 (קובץ 010_chat_message_type_trade_and_media_group.sql) כדי לאפשר trade ו-media_group.'
-              : messageError?.message || 'שגיאה בשליחת הודעה',
+              ? i18n.t('auto.services__chat__chatMessageService.s10')
+              : messageError?.message || i18n.t('auto.services__chat__chatMessageService.s11'),
         },
       };
     }
@@ -398,7 +399,7 @@ export async function sendChatMessage(
               message_type: replyToMessage.message_type,
               media_url: replyToMessage.media_url,
               sender_id: replyToMessage.sender_id,
-              sender_name: sender?.display_name || 'משתמש',
+              sender_name: sender?.display_name || i18n.t('auto.services__chat__chatMessageService.s12'),
             },
           };
         }
@@ -684,11 +685,11 @@ export async function editChatMessage(
       .single();
 
     if (!message) {
-      return { data: null, error: { code: 'MESSAGE_NOT_FOUND', message: 'ההודעה לא נמצאה' } };
+      return { data: null, error: { code: 'MESSAGE_NOT_FOUND', message: i18n.t('auto.services__chat__chatMessageService.s13') } };
     }
 
     if (message.sender_id !== userId) {
-      return { data: null, error: { code: 'PERMISSION_DENIED', message: 'ניתן לערוך רק הודעות שלך' } };
+      return { data: null, error: { code: 'PERMISSION_DENIED', message: i18n.t('auto.services__chat__chatMessageService.s14') } };
     }
 
     // בדיקת זמן - אפשר לערוך רק עד 48 שעות
@@ -697,14 +698,14 @@ export async function editChatMessage(
     const hoursDiff = (now - messageTime) / (1000 * 60 * 60);
     
     if (hoursDiff > 48) {
-      return { data: null, error: { code: 'EDIT_TIME_EXPIRED', message: 'ניתן לערוך הודעה רק עד 48 שעות' } };
+      return { data: null, error: { code: 'EDIT_TIME_EXPIRED', message: i18n.t('auto.services__chat__chatMessageService.s15') } };
     }
 
     // Validate and sanitize edited content (same as send)
     if (input.content) {
       const contentValidation = validateMessageContent(input.content);
       if (!contentValidation.valid) {
-        return { data: null, error: contentValidation.error || { code: 'VALIDATION_ERROR', message: 'תוכן לא תקין' } };
+        return { data: null, error: contentValidation.error || { code: 'VALIDATION_ERROR', message: i18n.t('auto.services__chat__chatMessageService.s16') } };
       }
       input.content = sanitizeMessageContent(input.content);
     }
@@ -773,7 +774,7 @@ export async function deleteChatMessage(
       .single();
 
     if (!message) {
-      return { error: { code: 'MESSAGE_NOT_FOUND', message: 'ההודעה לא נמצאה' } };
+      return { error: { code: 'MESSAGE_NOT_FOUND', message: i18n.t('auto.services__chat__chatMessageService.s13') } };
     }
 
     const isSender = message.sender_id === userId;
@@ -789,7 +790,7 @@ export async function deleteChatMessage(
         .single();
 
       if (membership?.role !== 'admin') {
-        return { error: { code: 'PERMISSION_DENIED', message: 'רק השולח או אדמין יכולים למחוק את ההודעה' } };
+        return { error: { code: 'PERMISSION_DENIED', message: i18n.t('auto.services__chat__chatMessageService.s17') } };
       }
     }
 
@@ -854,7 +855,7 @@ export async function forwardChatMessage(
       .single();
 
     if (!originalMessage) {
-      const error = { code: 'MESSAGE_NOT_FOUND', message: 'ההודעה לא נמצאה' };
+      const error = { code: 'MESSAGE_NOT_FOUND', message: i18n.t('auto.services__chat__chatMessageService.s13') };
       const errors = new Map<string, ChatError>();
       input.to_group_ids.forEach(groupId => errors.set(groupId, error));
       return { errors };
@@ -1382,7 +1383,7 @@ export async function fetchMessagesAround(
     if (anchorError || !anchor) {
       return {
         data: null,
-        error: { code: 'MESSAGE_NOT_FOUND', message: 'הודעה לא נמצאה' },
+        error: { code: 'MESSAGE_NOT_FOUND', message: i18n.t('auto.services__chat__chatMessageService.s18') },
       };
     }
 
@@ -1404,7 +1405,7 @@ export async function fetchMessagesAround(
 
     const [{ data: older }, { data: newer }] = await Promise.all([olderPromise, newerPromise]);
     if (older === null && newer === null) {
-      return { data: null, error: { code: 'FETCH_MESSAGES_ERROR', message: 'שגיאה בטעינת חלון' } };
+      return { data: null, error: { code: 'FETCH_MESSAGES_ERROR', message: i18n.t('auto.services__chat__chatMessageService.s19') } };
     }
 
     const byId = new Map<string, ChatMessage>();

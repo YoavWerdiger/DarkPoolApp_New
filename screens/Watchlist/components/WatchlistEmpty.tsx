@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import { LOGO_SIZE } from './WatchlistRow';
 import { quoteRow } from '../watchlistTheme';
 import React, { useMemo } from 'react';
@@ -127,12 +128,10 @@ export function WatchlistEmpty({ onAddPress, picked, onTogglePick }: Props) {
         <View style={styles.iconWrap}>
           <Ionicons name="eye-outline" size={26} color={tokens.colors.text.primary} />
         </View>
-        <Text style={styles.title}>הרשימה ריקה</Text>
-        <Text style={styles.subtitle}>
-          הוסיפו מניות למעקב — מחיר חי ושינוי יומי ($ / %)
-        </Text>
+        <Text style={styles.title}>{i18n.t('auto.screens__Watchlist__components__WatchlistEmpty.s1')}</Text>
+        <Text style={styles.subtitle}>{i18n.t('auto.screens__Watchlist__components__WatchlistEmpty.s2')}</Text>
         <UIButton
-          title="הוספת סימבול"
+          title={i18n.t('auto.screens__Watchlist__components__WatchlistEmpty.s3')}
           variant="primary"
           icon="add"
           iconPosition="right"
@@ -142,7 +141,7 @@ export function WatchlistEmpty({ onAddPress, picked, onTogglePick }: Props) {
       </View>
 
       <View style={styles.suggestHeader}>
-        <Text style={styles.suggestLabel}>הוספה מהירה</Text>
+        <Text style={styles.suggestLabel}>{i18n.t('auto.screens__Watchlist__components__WatchlistEmpty.s4')}</Text>
       </View>
       {SUGGESTED_WATCHLIST_SYMBOLS.slice(0, 6).map((s, index, list) => {
         const on = picked.includes(s.symbol);
@@ -163,7 +162,7 @@ export function WatchlistEmpty({ onAddPress, picked, onTogglePick }: Props) {
           </View>
           <View style={[styles.addChip, on && { backgroundColor: tokens.colors.primary.main }]}>
             <Ionicons name={on ? 'checkmark' : 'add'} size={14} color={on ? '#000000' : tokens.colors.text.primary} />
-            <Text style={[styles.addHint, on && { color: '#000000' }]}>{on ? 'נבחר' : 'הוסף'}</Text>
+            <Text style={[styles.addHint, on && { color: '#000000' }]}>{on ? i18n.t('auto.screens__Watchlist__components__WatchlistEmpty.s5') : i18n.t('auto.screens__Watchlist__components__WatchlistEmpty.s6')}</Text>
           </View>
         </TouchableOpacity>
         );

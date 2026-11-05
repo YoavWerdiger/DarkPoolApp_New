@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 /**
  * DarkPoolFlowChart.tsx
  * -----------------------------------------------------------------------------
@@ -46,7 +47,7 @@ export function DarkPoolFlowChart({ data, height = 200 }: FlowChartProps) {
   if (!data?.length) {
     return (
       <View style={styles.wrap}>
-        <Text style={styles.emptyText}>אין נתונים זמינים</Text>
+        <Text style={styles.emptyText}>{i18n.t('auto.screens__DarkPool__components__DarkPoolFlowChart.s1')}</Text>
       </View>
     );
   }

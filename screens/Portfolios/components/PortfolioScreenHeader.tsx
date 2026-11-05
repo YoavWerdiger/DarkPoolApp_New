@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -41,7 +42,7 @@ export function PortfolioScreenHeader({
             }}
             size={DRAWER_MENU_BUTTON_SIZE}
             glassIntensity="light"
-            accessibilityLabel="חזרה"
+            accessibilityLabel={i18n.t('auto.screens__Portfolios__components__PortfolioScreenHeader.s1')}
           >
             <Ionicons
               name="chevron-forward"

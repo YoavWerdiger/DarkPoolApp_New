@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 /**
  * watchlistService — CRUD לרשימות מעקב מניות (Supabase + RLS owner-only).
  */
@@ -36,7 +37,7 @@ export async function listWatchlists(): Promise<StockWatchlist[]> {
     .from('stock_watchlists')
     .insert({
       user_id: userId,
-      name: 'הרשימה שלי',
+      name: i18n.t('auto.services__watchlist__watchlistService.s1'),
       is_default: true,
       sort_order: 0,
     })
@@ -48,7 +49,7 @@ export async function listWatchlists(): Promise<StockWatchlist[]> {
 
 export async function createWatchlist(name: string): Promise<StockWatchlist> {
   const userId = await requireUserId();
-  const trimmed = name.trim() || 'רשימה חדשה';
+  const trimmed = name.trim() || i18n.t('auto.services__watchlist__watchlistService.s2');
   const { data: existing } = await supabase
     .from('stock_watchlists')
     .select('sort_order')

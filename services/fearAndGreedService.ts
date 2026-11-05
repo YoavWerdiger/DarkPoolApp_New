@@ -1,3 +1,4 @@
+import i18n from '../lib/i18n';
 // Fear and Greed Index Service
 // שירות לשליפת מדד הפחד והתאווה (Fear and Greed Index)
 
@@ -390,11 +391,11 @@ class FearAndGreedService {
 
   // קבלת תיאור טקסטואלי של הערך
   getValueDescription(value: number): string {
-    if (value >= 75) return 'תאווה קיצונית';
-    if (value >= 55) return 'תאווה';
-    if (value >= 45) return 'ניטרלי';
-    if (value >= 25) return 'פחד';
-    return 'פחד קיצוני';
+    if (value >= 75) return i18n.t('auto.services__fearAndGreedService.s1');
+    if (value >= 55) return i18n.t('auto.services__fearAndGreedService.s2');
+    if (value >= 45) return i18n.t('auto.services__fearAndGreedService.s3');
+    if (value >= 25) return i18n.t('auto.services__fearAndGreedService.s4');
+    return i18n.t('auto.services__fearAndGreedService.s5');
   }
 
   // קבלת צבע לפי הערך - דינמי לפי האזור הנוכחי

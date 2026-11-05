@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { useState, useMemo } from 'react';
@@ -315,7 +316,7 @@ export default function FearAndGreedCard({
 
   const renderSectionTitle = () =>
     hideHeader ? null : (
-      <Text style={styles.sectionTitle}>מדד הפחד והתאווה</Text>
+      <Text style={styles.sectionTitle}>{i18n.t('auto.components__News__FearAndGreedCard.s1')}</Text>
     );
 
   const renderHeader = () => {
@@ -345,7 +346,7 @@ export default function FearAndGreedCard({
               },
             ]}
           >
-            {expanded ? 'סגור' : 'פתח'}
+            {expanded ? i18n.t('auto.components__News__FearAndGreedCard.s2') : i18n.t('auto.components__News__FearAndGreedCard.s3')}
           </Text>
           <Ionicons
             name={expanded ? 'chevron-up' : 'chevron-down'}
@@ -369,9 +370,7 @@ export default function FearAndGreedCard({
           {!hideHeader ? renderHeader() : null}
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="small" color={DesignTokens.colors.primary.main} />
-            <Text style={[styles.description, { marginTop: DesignTokens.spacing.sm }]}>
-              טוען מדד הפחד והתאווה...
-            </Text>
+            <Text style={[styles.description, { marginTop: DesignTokens.spacing.sm }]}>{i18n.t('auto.components__News__FearAndGreedCard.s4')}</Text>
           </View>
         </UICard>
       </View>
@@ -389,7 +388,7 @@ export default function FearAndGreedCard({
         >
           {!hideHeader ? renderHeader() : null}
           <Text style={styles.errorText}>
-            {error || 'לא ניתן לטעון את המדד'}
+            {error || i18n.t('auto.components__News__FearAndGreedCard.s5')}
           </Text>
           <TouchableOpacity
             onPress={() => void refetch()}
@@ -402,9 +401,7 @@ export default function FearAndGreedCard({
               alignSelf: 'flex-start',
             }}
           >
-            <Text style={[styles.description, { marginTop: 0, color: DesignTokens.colors.primary.main }]}>
-              נסה שוב
-            </Text>
+            <Text style={[styles.description, { marginTop: 0, color: DesignTokens.colors.primary.main }]}>{i18n.t('auto.components__News__FearAndGreedCard.s6')}</Text>
           </TouchableOpacity>
         </UICard>
       </View>
@@ -479,11 +476,9 @@ export default function FearAndGreedCard({
         {!effectiveExpanded ? (
           <View style={{ marginTop: DesignTokens.spacing.sm }}>
             <Text style={[styles.description, { textAlign: 'right', marginBottom: DesignTokens.spacing.xs }]}>
-              ערך נוכחי: <Text style={{ fontWeight: '600', color }}>{value}</Text>
+              {i18n.t('auto.components__News__FearAndGreedCard.s7')} <Text style={{ fontWeight: '600', color }}>{value}</Text>
             </Text>
-            <Text style={[styles.description, { textAlign: 'right', color: DesignTokens.colors.text.secondary }]}>
-              לחץ כדי לראות את הגרף וההיסטוריה
-            </Text>
+            <Text style={[styles.description, { textAlign: 'right', color: DesignTokens.colors.text.secondary }]}>{i18n.t('auto.components__News__FearAndGreedCard.s8')}</Text>
           </View>
         ) : (
           <View
@@ -621,7 +616,7 @@ export default function FearAndGreedCard({
                       fontWeight: APP_TYPE.body.fontWeight,
                     }}
                   >
-                    {description === 'ניטרלי' ? 'השוק כרגע ' : 'השוק כרגע ב'}
+                    {description === 'ניטרלי' ? i18n.t('auto.components__News__FearAndGreedCard.s9') : i18n.t('auto.components__News__FearAndGreedCard.s10')}
                   </Text>
                   <Text style={{ color }}>{description}</Text>
                 </Text>
@@ -629,14 +624,12 @@ export default function FearAndGreedCard({
 
               {/* Timestamp under the gauge column */}
               {data.timestamp && (
-                <Text style={styles.timestamp}>
-                  עודכן:{' '}
-                  {new Date(data.timestamp * 1000).toLocaleString(appLocale(), {
+                <Text style={styles.timestamp}>{i18n.t('auto.components__News__FearAndGreedCard.s11', { v0: ' ', v1: new Date(data.timestamp * 1000).toLocaleString(appLocale(), {
                     day: 'numeric',
                     month: 'short',
                     hour: '2-digit',
                     minute: '2-digit',
-                  })}
+                  }) })}
                 </Text>
               )}
             </View>
@@ -653,13 +646,13 @@ export default function FearAndGreedCard({
                 paddingLeft: DesignTokens.spacing.sm,
               }}
             >
-              <Text style={styles.historicalSectionTitle}>היסטוריה</Text>
+              <Text style={styles.historicalSectionTitle}>{i18n.t('auto.components__News__FearAndGreedCard.s12')}</Text>
 
               {[
-                { key: 'previousClose' as const, label: 'סגירה קודמת' },
-                { key: 'oneWeekAgo' as const, label: 'לפני שבוע' },
-                { key: 'oneMonthAgo' as const, label: 'לפני חודש' },
-                { key: 'oneYearAgo' as const, label: 'לפני שנה' },
+                { key: 'previousClose' as const, label: i18n.t('auto.components__News__FearAndGreedCard.s13') },
+                { key: 'oneWeekAgo' as const, label: i18n.t('auto.components__News__FearAndGreedCard.s14') },
+                { key: 'oneMonthAgo' as const, label: i18n.t('auto.components__News__FearAndGreedCard.s15') },
+                { key: 'oneYearAgo' as const, label: i18n.t('auto.components__News__FearAndGreedCard.s16') },
               ].map(({ key, label }) => {
                 const item = historicalData?.[key];
                 return (

@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState } from 'react';
 import {
@@ -40,17 +41,17 @@ export default function DeleteAccountScreen({ navigation }: any) {
 
   const handleDelete = () => {
     if (confirm.trim() !== 'מחק') {
-      legacyAlert('שגיאה', 'יש להקליד בדיוק: מחק');
+      legacyAlert(i18n.t('auto.screens__Profile__DeleteAccountScreen.s1'), i18n.t('auto.screens__Profile__DeleteAccountScreen.s2'));
       return;
     }
 
     legacyAlert(
-      'מחיקת חשבון',
-      'פעולה זו בלתי הפיכה. כל הנתונים האישיים יימחקו או יאנונימיו.',
+      i18n.t('auto.screens__Profile__DeleteAccountScreen.s3'),
+      i18n.t('auto.screens__Profile__DeleteAccountScreen.s4'),
       [
-        { text: 'ביטול', style: 'cancel' },
+        { text: i18n.t('auto.screens__Profile__DeleteAccountScreen.s5'), style: 'cancel' },
         {
-          text: 'מחק לצמיתות',
+          text: i18n.t('auto.screens__Profile__DeleteAccountScreen.s6'),
           style: 'destructive',
           onPress: async () => {
             setSaving(true);
@@ -62,7 +63,7 @@ export default function DeleteAccountScreen({ navigation }: any) {
               void HapticFeedback.warning();
               await signOut();
             } catch (e) {
-              legacyAlert('שגיאה', e instanceof Error ? e.message : 'מחיקה נכשלה');
+              legacyAlert(i18n.t('auto.screens__Profile__DeleteAccountScreen.s1'), e instanceof Error ? e.message : i18n.t('auto.screens__Profile__DeleteAccountScreen.s7'));
             } finally {
               setSaving(false);
             }
@@ -89,7 +90,7 @@ export default function DeleteAccountScreen({ navigation }: any) {
       style={{ flex: 1, backgroundColor: tokens.colors.background.primary }}
       edges={['top', 'bottom']}
     >
-      <ChatSubScreenHeader title="מחיקת חשבון" onBack={() => navigation.goBack()} />
+      <ChatSubScreenHeader title={i18n.t('auto.screens__Profile__DeleteAccountScreen.s3')} onBack={() => navigation.goBack()} />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -109,9 +110,7 @@ export default function DeleteAccountScreen({ navigation }: any) {
                 ...settingsRowType,
                 color: tokens.colors.danger.main,
               }}
-            >
-              פעולה בלתי הפיכה
-            </Text>
+            >{i18n.t('auto.screens__Profile__DeleteAccountScreen.s8')}</Text>
             <Text
               style={{
                 ...settingsHebrewText,
@@ -120,13 +119,9 @@ export default function DeleteAccountScreen({ navigation }: any) {
                 marginTop: APP_LAYOUT.titleSubtitleGap,
                 marginBottom: APP_LAYOUT.cardTitleToBodyGap,
               }}
-            >
-              למחיקת החשבון הקלידו את המילה מחק בשדה למטה. מומלץ גם לאמת עם הסיסמה.
-            </Text>
+            >{i18n.t('auto.screens__Profile__DeleteAccountScreen.s9')}</Text>
 
-            <Text style={formFieldLabelStyle({ tokens, focused: focused === 'confirm' })}>
-              הקלידו מחק לאישור
-            </Text>
+            <Text style={formFieldLabelStyle({ tokens, focused: focused === 'confirm' })}>{i18n.t('auto.screens__Profile__DeleteAccountScreen.s10')}</Text>
             <View style={shell('confirm')}>
               <TextInput
                 value={confirm}
@@ -135,14 +130,12 @@ export default function DeleteAccountScreen({ navigation }: any) {
                 onFocus={() => setFocused('confirm')}
                 onBlur={() => setFocused(null)}
                 style={[formFieldInputStyle(), { color: tokens.colors.text.primary }]}
-                placeholder="מחק"
+                placeholder={i18n.t('auto.screens__Profile__DeleteAccountScreen.s11')}
                 placeholderTextColor={tokens.colors.text.muted}
               />
             </View>
 
-            <Text style={formFieldLabelStyle({ tokens, focused: focused === 'password' })}>
-              סיסמה (מומלץ)
-            </Text>
+            <Text style={formFieldLabelStyle({ tokens, focused: focused === 'password' })}>{i18n.t('auto.screens__Profile__DeleteAccountScreen.s12')}</Text>
             <View style={[shell('password'), { marginBottom: APP_LAYOUT.cardStackGap }]}>
               <PasswordVisibilityToggle
                 visible={showPassword}
@@ -161,7 +154,7 @@ export default function DeleteAccountScreen({ navigation }: any) {
             </View>
 
             <UIButton
-              title="מחק את החשבון"
+              title={i18n.t('auto.screens__Profile__DeleteAccountScreen.s13')}
               variant="danger"
               fullWidth
               loading={saving}

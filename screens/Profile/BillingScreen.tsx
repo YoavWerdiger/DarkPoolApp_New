@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 import { legacyAlert, showAppConfirm } from '../../utils/appDialog';
 import React, { useCallback, useState } from 'react';
@@ -119,14 +120,14 @@ export default function BillingScreen({ navigation }: any) {
     navigation.navigate('SubscriptionPlans');
   };
   const planActionLabel = isPaidActive
-    ? 'שנה מסלול'
+    ? i18n.t('auto.screens__Profile__BillingScreen.s1')
     : isInactivePaid
-      ? 'חידוש מנוי'
-      : 'שדרג מסלול';
+      ? i18n.t('auto.screens__Profile__BillingScreen.s2')
+      : i18n.t('auto.screens__Profile__BillingScreen.s3');
   const planNote = !showSubscriptionCard
-    ? 'יש לך גישה לתכנים הציבוריים. שדרוג פותח קהילה, חדשות בזמן אמת, רשימות מעקב והלווייתנים.'
+    ? i18n.t('auto.screens__Profile__BillingScreen.s4')
     : isInactivePaid && checkoutReady
-      ? 'תשלום מאובטח להסרת ההגבלה'
+      ? i18n.t('auto.screens__Profile__BillingScreen.s5')
       : null;
 
   const onRefresh = useCallback(async () => {
@@ -159,7 +160,7 @@ export default function BillingScreen({ navigation }: any) {
         url,
         documentType: docType,
         documentNumber: docNumber,
-        title: typeLabel || 'קבלה / חשבונית',
+        title: typeLabel || i18n.t('auto.screens__Profile__BillingScreen.s6'),
       });
     };
 
@@ -170,8 +171,8 @@ export default function BillingScreen({ navigation }: any) {
 
     if (docNumber == null) {
       legacyAlert(
-        'חשבונית',
-        'אין מספר מסמך לעסקה זו. אם חויבתם — פנו לתמיכה עם תאריך וסכום התשלום.',
+        i18n.t('auto.screens__Profile__BillingScreen.s7'),
+        i18n.t('auto.screens__Profile__BillingScreen.s8'),
       );
       return;
     }
@@ -197,11 +198,9 @@ export default function BillingScreen({ navigation }: any) {
         return;
       }
       legacyAlert(
-        'מספר מסמך',
-        `מסמך מס׳ ${docNumber}${typeLabel ? ` (${typeLabel})` : ''}.\n${
-          result.error ||
-          'קישור להורדה אינו זמין כרגע. אם צוין אימייל בתשלום — בדקו את תיבת הדואר, או פנו לתמיכה עם מספר המסמך.'
-        }`,
+        i18n.t('auto.screens__Profile__BillingScreen.s9'),
+        i18n.t('auto.screens__Profile__BillingScreen.s10', { v0: docNumber, v1: typeLabel ? ` (${typeLabel})` : '', v2: result.error ||
+          'קישור להורדה אינו זמין כרגע. אם צוין אימייל בתשלום — בדקו את תיבת הדואר, או פנו לתמיכה עם מספר המסמך.' }),
       );
     } finally {
       setOpeningId(null);
@@ -211,11 +210,11 @@ export default function BillingScreen({ navigation }: any) {
   const onCancelSubscription = async () => {
     void HapticFeedback.selection();
     const ok = await showAppConfirm(
-      'ביטול המנוי',
-      'המנוי יבוטל והחשבון יחזור למסלול החינמי. פעולה זו אינה ניתנת לביטול אוטומטי.',
+      i18n.t('auto.screens__Profile__BillingScreen.s11'),
+      i18n.t('auto.screens__Profile__BillingScreen.s12'),
       {
-        confirmText: 'ביטול מנוי',
-        cancelText: 'השאר מנוי',
+        confirmText: i18n.t('auto.screens__Profile__BillingScreen.s13'),
+        cancelText: i18n.t('auto.screens__Profile__BillingScreen.s14'),
         destructive: true,
       },
     );
@@ -225,11 +224,11 @@ export default function BillingScreen({ navigation }: any) {
     try {
       const success = await paymentService.cancelSubscription();
       if (!success) {
-        legacyAlert('שגיאה', 'לא ניתן לבטל את המנוי כרגע. נסו שוב או פנו לתמיכה.');
+        legacyAlert(i18n.t('auto.screens__Profile__BillingScreen.s15'), i18n.t('auto.screens__Profile__BillingScreen.s16'));
         return;
       }
       await onRefresh();
-      legacyAlert('המנוי בוטל', 'החשבון חזר למסלול החינמי.');
+      legacyAlert(i18n.t('auto.screens__Profile__BillingScreen.s17'), i18n.t('auto.screens__Profile__BillingScreen.s18'));
     } finally {
       setCancelling(false);
     }
@@ -259,7 +258,7 @@ export default function BillingScreen({ navigation }: any) {
         edges={['top', 'bottom']}
       >
         <ChatSubScreenHeader
-          title="מנוי וחיובים"
+          title={i18n.t('auto.screens__Profile__BillingScreen.s19')}
           onBack={() => {
             void HapticFeedback.impactLight();
             navigation.goBack();
@@ -278,7 +277,7 @@ export default function BillingScreen({ navigation }: any) {
       edges={['top', 'bottom']}
     >
       <ChatSubScreenHeader
-        title="מנוי וחיובים"
+        title={i18n.t('auto.screens__Profile__BillingScreen.s19')}
         onBack={() => {
           void HapticFeedback.impactLight();
           navigation.goBack();
@@ -296,15 +295,13 @@ export default function BillingScreen({ navigation }: any) {
         }
       >
         <SettingsSectionTitle
-          title="המסלול"
+          title={i18n.t('auto.screens__Profile__BillingScreen.s20')}
           style={{ color: tokens.colors.text.secondary }}
         />
         <SettingsGlassCard>
           <View style={styles.planCard}>
             {!checkoutReady ? (
-              <Text style={[styles.banner, { color: tokens.colors.warning.main }]}>
-                תשלום בקרוב — סליקת Cardcom עדיין לא מחוברת.
-              </Text>
+              <Text style={[styles.banner, { color: tokens.colors.warning.main }]}>{i18n.t('auto.screens__Profile__BillingScreen.s21')}</Text>
             ) : null}
             <View style={styles.planTitleRow}>
               {showSubscriptionCard && priceLabel ? (
@@ -349,7 +346,7 @@ export default function BillingScreen({ navigation }: any) {
         </SettingsGlassCard>
 
         <SettingsSectionTitle
-          title="פעולות"
+          title={i18n.t('auto.screens__Profile__BillingScreen.s22')}
           style={{ color: tokens.colors.text.secondary }}
         />
         <SettingsGlassCard>
@@ -359,7 +356,7 @@ export default function BillingScreen({ navigation }: any) {
               <View style={[styles.divider, { backgroundColor: tokens.colors.border.divider }]} />
               <BillingLine
                 icon={Ban}
-                label="ביטול המנוי"
+                label={i18n.t('auto.screens__Profile__BillingScreen.s11')}
                 labelColor={tokens.colors.text.danger}
                 onPress={() => void onCancelSubscription()}
                 busy={cancelling}
@@ -369,18 +366,14 @@ export default function BillingScreen({ navigation }: any) {
         </SettingsGlassCard>
 
         <SettingsSectionTitle
-          title="חשבוניות"
+          title={i18n.t('auto.screens__Profile__BillingScreen.s23')}
           style={{ color: tokens.colors.text.secondary }}
         />
         <SettingsGlassCard>
           {history.length === 0 ? (
             <View style={styles.emptyBlock}>
-              <Text style={[styles.fieldLabel, { color: tokens.colors.text.primary }]}>
-                אין תשלומים עדיין
-              </Text>
-              <Text style={[styles.fieldNote, { color: tokens.colors.text.secondary }]}>
-                אחרי רכישה יופיעו כאן התאריך והסכום.
-              </Text>
+              <Text style={[styles.fieldLabel, { color: tokens.colors.text.primary }]}>{i18n.t('auto.screens__Profile__BillingScreen.s24')}</Text>
+              <Text style={[styles.fieldNote, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Profile__BillingScreen.s25')}</Text>
             </View>
           ) : (
             history.map((tx, index) => {
@@ -433,13 +426,13 @@ function planTrackLabel(
   planName: string | null | undefined,
   paid: boolean,
 ): string {
-  if (!paid || !planId || planId === 'free') return 'מסלול חינמי';
-  if (planId === 'monthly') return 'מסלול חודשי';
-  if (planId === 'quarterly') return 'מסלול רבעוני';
-  if (planId === 'yearly') return 'מסלול שנתי';
+  if (!paid || !planId || planId === 'free') return i18n.t('auto.screens__Profile__BillingScreen.s26');
+  if (planId === 'monthly') return i18n.t('auto.screens__Profile__BillingScreen.s27');
+  if (planId === 'quarterly') return i18n.t('auto.screens__Profile__BillingScreen.s28');
+  if (planId === 'yearly') return i18n.t('auto.screens__Profile__BillingScreen.s29');
   const name = (planName ?? '').trim();
-  if (!name) return 'מסלול';
-  return name.startsWith('מסלול') ? name : `מסלול ${name}`;
+  if (!name) return i18n.t('auto.screens__Profile__BillingScreen.s30');
+  return name.startsWith('מסלול') ? name : i18n.t('auto.screens__Profile__BillingScreen.s31', { v0: name });
 }
 
 function buildDetailRows(opts: {
@@ -461,15 +454,15 @@ function buildDetailRows(opts: {
   if (!opts.showSubscriptionCard) return [];
 
   const rows: DetailRow[] = [
-    { key: 'status', icon: BadgeCheck, label: 'סטטוס', value: opts.statusLabel },
+    { key: 'status', icon: BadgeCheck, label: i18n.t('auto.screens__Profile__BillingScreen.s32'), value: opts.statusLabel },
   ];
 
   if (opts.isPaidActive && opts.autoRenew != null) {
     rows.push({
       key: 'renew',
       icon: RefreshCw,
-      label: 'חידוש אוטומטי',
-      value: opts.autoRenew ? 'פעיל' : 'כבוי',
+      label: i18n.t('auto.screens__Profile__BillingScreen.s33'),
+      value: opts.autoRenew ? i18n.t('auto.screens__Profile__BillingScreen.s34') : i18n.t('auto.screens__Profile__BillingScreen.s35'),
     });
   }
 
@@ -490,7 +483,7 @@ function buildDetailRows(opts: {
     rows.push({
       key: 'method',
       icon: CreditCard,
-      label: 'אמצעי תשלום',
+      label: i18n.t('auto.screens__Profile__BillingScreen.s36'),
       value: opts.paymentMethodLabel,
     });
   }
@@ -505,14 +498,14 @@ function nextChargeRow(
   const dateLabel = formatBillingDateHe(expiresAt);
   if (dateLabel && next.primary.includes(dateLabel)) {
     return {
-      label: next.primary.includes('בתוקף') ? 'בתוקף עד' : 'החיוב הבא',
+      label: next.primary.includes('בתוקף') ? i18n.t('auto.screens__Profile__BillingScreen.s37') : i18n.t('auto.screens__Profile__BillingScreen.s38'),
       value: dateLabel,
     };
   }
   if (next.primary === 'אין חיוב הבא') {
-    return { label: 'החיוב הבא', value: 'אין' };
+    return { label: i18n.t('auto.screens__Profile__BillingScreen.s38'), value: i18n.t('auto.screens__Profile__BillingScreen.s39') };
   }
-  return { label: 'החיוב הבא', value: next.primary };
+  return { label: i18n.t('auto.screens__Profile__BillingScreen.s38'), value: next.primary };
 }
 
 function FactLine({

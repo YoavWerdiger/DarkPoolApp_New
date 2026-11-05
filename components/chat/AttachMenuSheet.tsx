@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 /**
  * שיט צירוף לפי הטופו — כמו שאר השיטים שלנו (שיתוף, 3 הנקודות ביומן):
@@ -45,11 +46,11 @@ export default function AttachMenuSheet({
   const { snapPoint, onContentLayout } = useChatFitContentSnap(0.35, 0.8, 0.12);
 
   const actions = [
-    onCamera ? { key: 'camera', title: 'צילום', icon: Camera, run: onCamera } : null,
-    onGallery ? { key: 'gallery', title: 'גלריה', icon: ImageIcon, run: onGallery } : null,
-    onDocument ? { key: 'document', title: 'מסמך', icon: FileText, run: onDocument } : null,
-    onAudio ? { key: 'audio', title: 'אודיו', icon: Mic, run: onAudio } : null,
-    onPoll ? { key: 'poll', title: 'סקר', icon: ChartColumnBig, run: onPoll } : null,
+    onCamera ? { key: 'camera', title: i18n.t('auto.components__chat__AttachMenuSheet.s1'), icon: Camera, run: onCamera } : null,
+    onGallery ? { key: 'gallery', title: i18n.t('auto.components__chat__AttachMenuSheet.s2'), icon: ImageIcon, run: onGallery } : null,
+    onDocument ? { key: 'document', title: i18n.t('auto.components__chat__AttachMenuSheet.s3'), icon: FileText, run: onDocument } : null,
+    onAudio ? { key: 'audio', title: i18n.t('auto.components__chat__AttachMenuSheet.s4'), icon: Mic, run: onAudio } : null,
+    onPoll ? { key: 'poll', title: i18n.t('auto.components__chat__AttachMenuSheet.s5'), icon: ChartColumnBig, run: onPoll } : null,
   ].filter(Boolean) as Array<{ key: string; title: string; icon: typeof Camera; run: () => void }>;
 
   const noChevron = <View />;
@@ -77,7 +78,7 @@ export default function AttachMenuSheet({
         <View style={styles.header}>
           <HeaderClose onClose={onClose} />
           <View style={styles.headerCenter}>
-            <Text style={[styles.headerTitle, { color: tokens.colors.text.primary }]}>צירוף מדיה</Text>
+            <Text style={[styles.headerTitle, { color: tokens.colors.text.primary }]}>{i18n.t('auto.components__chat__AttachMenuSheet.s6')}</Text>
           </View>
           <View style={styles.headerSideSpacer} />
         </View>
@@ -116,7 +117,7 @@ function HeaderClose({ onClose }: { onClose: () => void }) {
       size={DAY_NAV_BUTTON_SIZE}
       glass={false}
       style={{ backgroundColor: headerExitButtonFill(tokens.colors.background.cardSolid) }}
-      accessibilityLabel="סגור"
+      accessibilityLabel={i18n.t('auto.components__chat__AttachMenuSheet.s7')}
     >
       <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
     </DayNavBlurButton>

@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 // ============================================
 // מעטפת מסכי צ'אט — רקע וכותרת כמו שאר האפליקציה
 // ============================================
@@ -68,7 +69,7 @@ export function ChatSubScreenHeader({
             onPress={onBack}
             size={DRAWER_MENU_BUTTON_SIZE}
             glassIntensity="subtle"
-            accessibilityLabel="חזרה"
+            accessibilityLabel={i18n.t('auto.components__chat__ChatScreenShell.s1')}
           >
             <Ionicons name={backIcon} size={24} color={tokens.colors.text.primary} />
           </DayNavBlurButton>

@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState } from 'react';
 import {
@@ -45,11 +46,11 @@ export default function ContactSupportScreen({ navigation }: any) {
         body,
       });
       void HapticFeedback.success();
-      legacyAlert('נשלח', 'פנייתך התקבלה. נחזור אליך בהקדם.', [
-        { text: 'אישור', onPress: () => navigation.goBack() },
+      legacyAlert(i18n.t('auto.screens__Profile__ContactSupportScreen.s1'), i18n.t('auto.screens__Profile__ContactSupportScreen.s2'), [
+        { text: i18n.t('auto.screens__Profile__ContactSupportScreen.s3'), onPress: () => navigation.goBack() },
       ]);
     } catch (e) {
-      legacyAlert('שגיאה', e instanceof Error ? e.message : 'שליחה נכשלה');
+      legacyAlert(i18n.t('auto.screens__Profile__ContactSupportScreen.s4'), e instanceof Error ? e.message : i18n.t('auto.screens__Profile__ContactSupportScreen.s5'));
     } finally {
       setSaving(false);
     }
@@ -71,7 +72,7 @@ export default function ContactSupportScreen({ navigation }: any) {
       style={{ flex: 1, backgroundColor: tokens.colors.background.primary }}
       edges={['top', 'bottom']}
     >
-      <ChatSubScreenHeader title="יצירת קשר" onBack={() => navigation.goBack()} />
+      <ChatSubScreenHeader title={i18n.t('auto.screens__Profile__ContactSupportScreen.s6')} onBack={() => navigation.goBack()} />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -92,34 +93,28 @@ export default function ContactSupportScreen({ navigation }: any) {
                 color: tokens.colors.text.secondary,
                 marginBottom: APP_LAYOUT.cardTitleToBodyGap,
               }}
-            >
-              פנייה זו תיפתח כטיקט במערכת התמיכה ותגיע למנהלים.
-            </Text>
-            <Text style={formFieldLabelStyle({ tokens, focused: focused === 'subject' })}>
-              נושא
-            </Text>
+            >{i18n.t('auto.screens__Profile__ContactSupportScreen.s7')}</Text>
+            <Text style={formFieldLabelStyle({ tokens, focused: focused === 'subject' })}>{i18n.t('auto.screens__Profile__ContactSupportScreen.s8')}</Text>
             <View style={shell('subject')}>
               <TextInput
                 value={subject}
                 onChangeText={setSubject}
                 maxLength={120}
-                placeholder="למשל: בעיה בתשלום"
+                placeholder={i18n.t('auto.screens__Profile__ContactSupportScreen.s9')}
                 placeholderTextColor={tokens.colors.text.muted}
                 onFocus={() => setFocused('subject')}
                 onBlur={() => setFocused(null)}
                 style={[formFieldInputStyle(), { color: tokens.colors.text.primary }]}
               />
             </View>
-            <Text style={formFieldLabelStyle({ tokens, focused: focused === 'body' })}>
-              פירוט
-            </Text>
+            <Text style={formFieldLabelStyle({ tokens, focused: focused === 'body' })}>{i18n.t('auto.screens__Profile__ContactSupportScreen.s10')}</Text>
             <View style={[shell('body', true), { marginBottom: APP_LAYOUT.cardStackGap }]}>
               <TextInput
                 value={body}
                 onChangeText={setBody}
                 multiline
                 maxLength={4000}
-                placeholder="תארו את הבעיה..."
+                placeholder={i18n.t('auto.screens__Profile__ContactSupportScreen.s11')}
                 placeholderTextColor={tokens.colors.text.muted}
                 onFocus={() => setFocused('body')}
                 onBlur={() => setFocused(null)}
@@ -135,7 +130,7 @@ export default function ContactSupportScreen({ navigation }: any) {
               />
             </View>
             <UIButton
-              title="שלח פנייה"
+              title={i18n.t('auto.screens__Profile__ContactSupportScreen.s12')}
               variant="primary"
               fullWidth
               loading={saving}

@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -90,19 +91,19 @@ export default function UserProfileScreen({ navigation }: any) {
   const personalItems: MenuRow[] = [
     {
       id: 'edit',
-      title: 'עריכת פרופיל',
+      title: i18n.t('auto.screens__Profile__UserProfileScreen.s1'),
       icon: UserPen,
       onPress: () => navigation.navigate('EditProfile'),
     },
     {
       id: 'settings',
-      title: 'הגדרות כלליות',
+      title: i18n.t('auto.screens__Profile__UserProfileScreen.s2'),
       icon: Settings,
       onPress: () => navigation.navigate('Settings'),
     },
     {
       id: 'password',
-      title: 'שינוי סיסמה',
+      title: i18n.t('auto.screens__Profile__UserProfileScreen.s3'),
       icon: KeyRound,
       onPress: () => navigation.navigate('ChangePassword'),
     },
@@ -111,7 +112,7 @@ export default function UserProfileScreen({ navigation }: any) {
   const billingItems: MenuRow[] = [
     {
       id: 'billing',
-      title: 'מנוי והיסטוריית רכישות',
+      title: i18n.t('auto.screens__Profile__UserProfileScreen.s4'),
       icon: CreditCard,
       onPress: () => navigation.navigate('Billing'),
     },
@@ -121,7 +122,7 @@ export default function UserProfileScreen({ navigation }: any) {
     ? [
         {
           id: 'admin-panel',
-          title: 'פאנל מנהלים',
+          title: i18n.t('auto.screens__Profile__UserProfileScreen.s5'),
           icon: Shield,
           onPress: () => {
             const root = navigation.getParent?.();
@@ -134,7 +135,7 @@ export default function UserProfileScreen({ navigation }: any) {
         },
         {
           id: 'admin-tickets',
-          title: 'תיבת פניות תמיכה',
+          title: i18n.t('auto.screens__Profile__UserProfileScreen.s6'),
           icon: Inbox,
           onPress: () => {
             const root = navigation.getParent?.();
@@ -151,19 +152,19 @@ export default function UserProfileScreen({ navigation }: any) {
   const supportItems: MenuRow[] = [
     {
       id: 'privacy',
-      title: 'מדיניות פרטיות',
+      title: i18n.t('auto.screens__Profile__UserProfileScreen.s7'),
       icon: FileText,
       onPress: () => navigation.navigate('LegalWebView', { kind: 'privacy' }),
     },
     {
       id: 'terms',
-      title: 'תנאי שימוש',
+      title: i18n.t('auto.screens__Profile__UserProfileScreen.s8'),
       icon: ScrollText,
       onPress: () => navigation.navigate('LegalWebView', { kind: 'terms' }),
     },
     {
       id: 'contact',
-      title: 'יצירת קשר',
+      title: i18n.t('auto.screens__Profile__UserProfileScreen.s9'),
       icon: MessageCircle,
       onPress: () => navigation.navigate('ContactSupport'),
     },
@@ -172,7 +173,7 @@ export default function UserProfileScreen({ navigation }: any) {
   const accountItems: MenuRow[] = [
     {
       id: 'delete',
-      title: 'מחיקת חשבון',
+      title: i18n.t('auto.screens__Profile__UserProfileScreen.s10'),
       icon: Trash2,
       danger: true,
       onPress: () => {
@@ -182,23 +183,23 @@ export default function UserProfileScreen({ navigation }: any) {
     },
     {
       id: 'logout',
-      title: 'התנתקות',
+      title: i18n.t('auto.screens__Profile__UserProfileScreen.s11'),
       icon: LogOut,
       onPress: () => {
         void HapticFeedback.warning();
-        legacyAlert('התנתקות', 'האם אתה בטוח שברצונך להתנתק?', [
-          { text: 'ביטול', style: 'cancel' },
+        legacyAlert(i18n.t('auto.screens__Profile__UserProfileScreen.s11'), i18n.t('auto.screens__Profile__UserProfileScreen.s12'), [
+          { text: i18n.t('auto.screens__Profile__UserProfileScreen.s13'), style: 'cancel' },
           {
-            text: 'התנתק',
+            text: i18n.t('auto.screens__Profile__UserProfileScreen.s14'),
             style: 'destructive',
             onPress: async () => {
               try {
                 const { error } = await signOut();
                 resetRegistrationData();
-                if (error) legacyAlert('שגיאה', 'לא הצלחנו להתנתק. נסה שוב.');
+                if (error) legacyAlert(i18n.t('auto.screens__Profile__UserProfileScreen.s15'), i18n.t('auto.screens__Profile__UserProfileScreen.s16'));
               } catch {
                 resetRegistrationData();
-                legacyAlert('שגיאה', 'אירעה שגיאה בהתנתקות. נסה שוב.');
+                legacyAlert(i18n.t('auto.screens__Profile__UserProfileScreen.s15'), i18n.t('auto.screens__Profile__UserProfileScreen.s17'));
               }
             },
           },
@@ -220,9 +221,7 @@ export default function UserProfileScreen({ navigation }: any) {
               marginTop: APP_LAYOUT.componentGap,
               textAlign: 'center',
             }}
-          >
-            טוען פרופיל...
-          </Text>
+          >{i18n.t('auto.screens__Profile__UserProfileScreen.s18')}</Text>
         </View>
       </RNSafeAreaView>
     );
@@ -246,21 +245,19 @@ export default function UserProfileScreen({ navigation }: any) {
               color: DesignTokens.colors.text.primary,
               textAlign: 'center',
             }}
-          >
-            לא מחובר
-          </Text>
+          >{i18n.t('auto.screens__Profile__UserProfileScreen.s19')}</Text>
         </View>
       </RNSafeAreaView>
     );
   }
 
-  const displayName = profileData?.full_name || user?.email?.split('@')[0] || 'משתמש';
+  const displayName = profileData?.full_name || user?.email?.split('@')[0] || i18n.t('auto.screens__Profile__UserProfileScreen.s20');
   const email = user?.email || '';
 
   return (
     <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top', 'bottom']}>
-        <MainDrawerScreenHeader title="פרופיל" onMenuPress={openMainDrawer} />
+        <MainDrawerScreenHeader title={i18n.t('auto.screens__Profile__UserProfileScreen.s21')} onMenuPress={openMainDrawer} />
         <ScrollView
           style={{ flex: 1 }}
           showsVerticalScrollIndicator={false}
@@ -277,7 +274,7 @@ export default function UserProfileScreen({ navigation }: any) {
                 navigation.navigate('EditProfile');
               }}
             />
-            <SettingsSectionTitle title="אישי" />
+            <SettingsSectionTitle title={i18n.t('auto.screens__Profile__UserProfileScreen.s22')} />
             <SettingsGlassCard>
               {personalItems.map((item, index) => (
                 <ProfileMenuRow
@@ -293,10 +290,10 @@ export default function UserProfileScreen({ navigation }: any) {
               ))}
             </SettingsGlassCard>
 
-            <SettingsSectionTitle title="התראות" />
+            <SettingsSectionTitle title={i18n.t('auto.screens__Profile__UserProfileScreen.s23')} />
             <SettingsGlassCard>
               <ProfileMenuRow
-                title="הגדרות התראות"
+                title={i18n.t('auto.screens__Profile__UserProfileScreen.s24')}
                 icon={Bell}
                 onPress={() => {
                   void HapticFeedback.impactLight();
@@ -306,7 +303,7 @@ export default function UserProfileScreen({ navigation }: any) {
               />
             </SettingsGlassCard>
 
-            <SettingsSectionTitle title="חיובים" />
+            <SettingsSectionTitle title={i18n.t('auto.screens__Profile__UserProfileScreen.s25')} />
             <SettingsGlassCard>
               {billingItems.map((item, index) => (
                 <ProfileMenuRow
@@ -324,7 +321,7 @@ export default function UserProfileScreen({ navigation }: any) {
 
             {adminItems.length > 0 ? (
               <>
-                <SettingsSectionTitle title="ניהול" />
+                <SettingsSectionTitle title={i18n.t('auto.screens__Profile__UserProfileScreen.s26')} />
                 <SettingsGlassCard>
                   {adminItems.map((item, index) => (
                     <ProfileMenuRow
@@ -342,7 +339,7 @@ export default function UserProfileScreen({ navigation }: any) {
               </>
             ) : null}
 
-            <SettingsSectionTitle title="תמיכה" />
+            <SettingsSectionTitle title={i18n.t('auto.screens__Profile__UserProfileScreen.s27')} />
             <SettingsGlassCard>
               {supportItems.map((item, index) => (
                 <ProfileMenuRow
@@ -358,7 +355,7 @@ export default function UserProfileScreen({ navigation }: any) {
               ))}
             </SettingsGlassCard>
 
-            <SettingsSectionTitle title="חשבון" />
+            <SettingsSectionTitle title={i18n.t('auto.screens__Profile__UserProfileScreen.s28')} />
             <SettingsGlassCard style={{ marginBottom: DesignTokens.spacing.md }}>
               {accountItems.map((item, index) => (
                 <ProfileMenuRow

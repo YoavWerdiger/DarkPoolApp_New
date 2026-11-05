@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -60,9 +61,7 @@ const OnboardingSecuritySetupScreen: React.FC<Props> = ({ navigation }) => {
             <Pressable onPress={handleBack} style={styles.backButton}>
               <Ionicons name="chevron-forward" size={28} color={tokens.colors.text.primary} />
             </Pressable>
-            <Text style={[styles.stepIndicator, { color: tokens.colors.text.tertiary }]}>
-              שלב 9 מתוך 10
-            </Text>
+            <Text style={[styles.stepIndicator, { color: tokens.colors.text.tertiary }]}>{i18n.t('auto.screens__Onboarding__OnboardingSecuritySetupScreen.s1')}</Text>
           </View>
 
           <ScrollView
@@ -85,36 +84,28 @@ const OnboardingSecuritySetupScreen: React.FC<Props> = ({ navigation }) => {
             </View>
 
             {/* Title */}
-            <Text style={[styles.title, { color: tokens.colors.text.primary }]}>
-              אבטח את החשבון
-            </Text>
-            <Text style={[styles.subtitle, { color: tokens.colors.text.secondary }]}>
-              הגן על המידע שלך עם PIN או זיהוי ביומטרי
-            </Text>
+            <Text style={[styles.title, { color: tokens.colors.text.primary }]}>{i18n.t('auto.screens__Onboarding__OnboardingSecuritySetupScreen.s2')}</Text>
+            <Text style={[styles.subtitle, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Onboarding__OnboardingSecuritySetupScreen.s3')}</Text>
 
-            <Text style={[styles.description, { color: tokens.colors.text.secondary }]}>
-              נבקש ממך PIN או זיהוי פנים/טביעת אצבע כאשר:
-            </Text>
+            <Text style={[styles.description, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Onboarding__OnboardingSecuritySetupScreen.s4')}</Text>
 
             {/* Features */}
             <View style={styles.featuresContainer}>
               <Feature
                 icon="time-outline"
-                text="פותח את האפליקציה אחרי 5 דקות של חוסר פעילות"
+                text={i18n.t('auto.screens__Onboarding__OnboardingSecuritySetupScreen.s5')}
               />
               <Feature
                 icon="swap-horizontal-outline"
-                text="מבצע העברת כסף או עסקה"
+                text={i18n.t('auto.screens__Onboarding__OnboardingSecuritySetupScreen.s6')}
               />
               <Feature
                 icon="settings-outline"
-                text="משנה הגדרות אבטחה חשובות"
+                text={i18n.t('auto.screens__Onboarding__OnboardingSecuritySetupScreen.s7')}
               />
             </View>
 
-            <Text style={[styles.note, { color: tokens.colors.text.tertiary }]}>
-              ניתן לשנות את הגדרות האבטחה בכל עת דרך ההגדרות
-            </Text>
+            <Text style={[styles.note, { color: tokens.colors.text.tertiary }]}>{i18n.t('auto.screens__Onboarding__OnboardingSecuritySetupScreen.s8')}</Text>
 
             <View style={{ flex: 1 }} />
           </ScrollView>
@@ -124,7 +115,7 @@ const OnboardingSecuritySetupScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.footerButtons}>
               <View style={{ flex: 1 }}>
                 <UIButton
-                  title="אחר כך"
+                  title={i18n.t('auto.screens__Onboarding__OnboardingSecuritySetupScreen.s9')}
                   variant="secondary"
                   size="lg"
                   fullWidth
@@ -133,7 +124,7 @@ const OnboardingSecuritySetupScreen: React.FC<Props> = ({ navigation }) => {
               </View>
               <View style={{ flex: 1 }}>
                 <UIButton
-                  title="הבא"
+                  title={i18n.t('auto.screens__Onboarding__OnboardingSecuritySetupScreen.s10')}
                   variant="primary"
                   size="lg"
                   fullWidth

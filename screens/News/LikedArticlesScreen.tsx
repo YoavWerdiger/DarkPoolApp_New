@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, RefreshControl, ActivityIndicator, TouchableOpacity, Image, Pressable, StyleSheet } from 'react-native';
@@ -131,7 +132,7 @@ const LikedArticleCard: React.FC<LikedArticleCardProps> = ({ article, onPress, o
                   onUnlike(article);
                 }}
                 activeOpacity={0.7}
-                accessibilityLabel="הסר מכתבות שמורות"
+                accessibilityLabel={i18n.t('auto.screens__News__LikedArticlesScreen.s1')}
               >
                 <Ionicons name="heart" size={18} color="#FF3B5C" />
               </TouchableOpacity>
@@ -169,7 +170,7 @@ const LikedArticleCard: React.FC<LikedArticleCardProps> = ({ article, onPress, o
                   onUnlike(article);
                 }}
                 activeOpacity={0.7}
-                accessibilityLabel="הסר מכתבות שמורות"
+                accessibilityLabel={i18n.t('auto.screens__News__LikedArticlesScreen.s1')}
               >
                 <Ionicons name="heart" size={18} color="#FF3B5C" />
               </TouchableOpacity>
@@ -195,7 +196,7 @@ export default function LikedArticlesScreen() {
       const articles = await LikedArticlesService.getLikedArticles();
       setLikedArticles(articles);
     } catch (error) {
-      legacyAlert('שגיאה', 'לא ניתן לטעון את החדשות שאהבת');
+      legacyAlert(i18n.t('auto.screens__News__LikedArticlesScreen.s2'), i18n.t('auto.screens__News__LikedArticlesScreen.s3'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -211,10 +212,10 @@ export default function LikedArticlesScreen() {
         // הסרה מהרשימה מיידית
         setLikedArticles(prev => prev.filter(item => item.id !== article.id));
       } else {
-        legacyAlert('שגיאה', 'לא ניתן להסיר את האהבתי');
+        legacyAlert(i18n.t('auto.screens__News__LikedArticlesScreen.s2'), i18n.t('auto.screens__News__LikedArticlesScreen.s4'));
       }
     } catch (error) {
-      legacyAlert('שגיאה', 'בעיה בהסרת האהבתי');
+      legacyAlert(i18n.t('auto.screens__News__LikedArticlesScreen.s2'), i18n.t('auto.screens__News__LikedArticlesScreen.s5'));
     }
   }, []);
 
@@ -237,12 +238,12 @@ export default function LikedArticlesScreen() {
   // מחיקת כל החדשות שאהב
   const handleClearAll = useCallback(async () => {
     legacyAlert(
-      'מחיקת כל החדשות',
-      'האם אתה בטוח שברצונך למחוק את כל החדשות שאהבת?',
+      i18n.t('auto.screens__News__LikedArticlesScreen.s6'),
+      i18n.t('auto.screens__News__LikedArticlesScreen.s7'),
       [
-        { text: 'ביטול', style: 'cancel' },
+        { text: i18n.t('auto.screens__News__LikedArticlesScreen.s8'), style: 'cancel' },
         {
-          text: 'מחק הכל',
+          text: i18n.t('auto.screens__News__LikedArticlesScreen.s9'),
           style: 'destructive',
           onPress: async () => {
             const success = await LikedArticlesService.clearAllLikedArticles();
@@ -250,7 +251,7 @@ export default function LikedArticlesScreen() {
               void HapticFeedback.impactLight();
               setLikedArticles([]);
             } else {
-              legacyAlert('שגיאה', 'לא ניתן למחוק את החדשות');
+              legacyAlert(i18n.t('auto.screens__News__LikedArticlesScreen.s2'), i18n.t('auto.screens__News__LikedArticlesScreen.s10'));
             }
           }
         }
@@ -285,17 +286,13 @@ export default function LikedArticlesScreen() {
         marginTop: APP_LAYOUT.componentGap,
         textAlign: 'center',
         color: DesignTokens.colors.text.primary
-      }}>
-        אין חדשות שאהבת
-      </Text>
+      }}>{i18n.t('auto.screens__News__LikedArticlesScreen.s11')}</Text>
       <Text style={{
         ...APP_TYPE.cardSubtitle,
         marginTop: APP_LAYOUT.groupLabelToContent,
         textAlign: 'center',
         color: DesignTokens.colors.text.secondary,
-      }}>
-        לחץ על הלב בחדשות כדי לשמור אותן כאן
-      </Text>
+      }}>{i18n.t('auto.screens__News__LikedArticlesScreen.s12')}</Text>
     </View>
   );
 
@@ -303,7 +300,7 @@ export default function LikedArticlesScreen() {
     !loading && likedArticles.length > 0 ? (
       <TouchableOpacity
         onPress={handleClearAll}
-        accessibilityLabel="מחק את כל הכתבות השמורות"
+        accessibilityLabel={i18n.t('auto.screens__News__LikedArticlesScreen.s13')}
         style={{
           width: 46,
           height: 46,
@@ -329,23 +326,22 @@ export default function LikedArticlesScreen() {
           marginBottom: APP_LAYOUT.groupLabelToContent,
         }}
       >
-        {likedArticles.length} כתבות
-      </Text>
+        {i18n.t('auto.screens__News__LikedArticlesScreen.s14', { v0: likedArticles.length })}</Text>
     ) : null;
 
   if (loading) {
     return (
-      <NewsScreenShell title="כתבות שמורות">
+      <NewsScreenShell title={i18n.t('auto.screens__News__LikedArticlesScreen.s15')}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-          <Text style={{ marginTop: APP_LAYOUT.componentGap, ...APP_TYPE.body, color: DesignTokens.colors.text.secondary }}>טוען...</Text>
+          <Text style={{ marginTop: APP_LAYOUT.componentGap, ...APP_TYPE.body, color: DesignTokens.colors.text.secondary }}>{i18n.t('auto.screens__News__LikedArticlesScreen.s16')}</Text>
         </View>
       </NewsScreenShell>
     );
   }
 
   return (
-    <NewsScreenShell title="כתבות שמורות" headerRight={headerRight}>
+    <NewsScreenShell title={i18n.t('auto.screens__News__LikedArticlesScreen.s15')} headerRight={headerRight}>
       <FlatList
         data={likedArticles}
         keyExtractor={(item) => item.id}

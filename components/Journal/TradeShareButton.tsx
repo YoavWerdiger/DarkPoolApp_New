@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React from 'react';
 import { StyleProp, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,7 +19,7 @@ type Props = {
 export default function TradeShareButton({
   onPress,
   size = 28,
-  accessibilityLabel = 'שתף טרייד',
+  accessibilityLabel = i18n.t('auto.components__Journal__TradeShareButton.s1'),
   style,
 }: Props) {
   const tokens = useDesignTokens();

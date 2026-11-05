@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 import type { TextStyle, ViewStyle } from 'react-native';
 import { formatFeedTickerDisplay } from './feedTradeDisplay';
@@ -112,11 +113,11 @@ export function tradeActivitySubtitleParts(
   const name = personName.trim();
   const tickerDisplay = formatFeedTickerDisplay(ticker);
   return {
-    lead: 'עסקאות נוספות של ',
+    lead: i18n.t('auto.screens__DarkPool__utils__bidi.s1'),
     name,
-    mid: ' ב-',
+    mid: i18n.t('auto.screens__DarkPool__utils__bidi.s2'),
     tickerDisplay,
     tickerIsolated: isolateData(tickerDisplay),
-    sentence: `עסקאות נוספות של ${name} ב-${tickerDisplay}`,
+    sentence: i18n.t('auto.screens__DarkPool__utils__bidi.s3', { v0: name, v1: tickerDisplay }),
   };
 }

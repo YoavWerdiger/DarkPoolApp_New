@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -81,25 +82,25 @@ export default function ShareDestinationSheet({
 
   const loadGroups = useCallback(async () => {
     if (!user?.id) {
-      legacyAlert('שגיאה', 'יש להתחבר כדי לשתף לצ׳אט');
+      legacyAlert(i18n.t('auto.components__share__ShareDestinationSheet.s1'), i18n.t('auto.components__share__ShareDestinationSheet.s2'));
       return;
     }
     setLoading(true);
     try {
       const { data, error } = await getChatGroups(user.id);
       if (error) {
-        legacyAlert('שגיאה', error.message || 'לא ניתן לטעון קבוצות');
+        legacyAlert(i18n.t('auto.components__share__ShareDestinationSheet.s1'), error.message || i18n.t('auto.components__share__ShareDestinationSheet.s3'));
         return;
       }
       setGroups(
         (data || []).map((g: any) => ({
           id: g.id,
-          name: g.name || 'קבוצה',
+          name: g.name || i18n.t('auto.components__share__ShareDestinationSheet.s4'),
           avatar_url: g.avatar_url,
         }))
       );
     } catch {
-      legacyAlert('שגיאה', 'שגיאה בטעינת קבוצות');
+      legacyAlert(i18n.t('auto.components__share__ShareDestinationSheet.s1'), i18n.t('auto.components__share__ShareDestinationSheet.s5'));
     } finally {
       setLoading(false);
     }
@@ -109,7 +110,7 @@ export default function ShareDestinationSheet({
   const shareTweet = useCallback(() => {
     if (!attachment || busy) return;
     if (!user?.id) {
-      legacyAlert('שגיאה', 'יש להתחבר כדי לצייץ');
+      legacyAlert(i18n.t('auto.components__share__ShareDestinationSheet.s1'), i18n.t('auto.components__share__ShareDestinationSheet.s6'));
       return;
     }
     void HapticFeedback.selection();
@@ -168,13 +169,13 @@ export default function ShareDestinationSheet({
         <View style={styles.header}>
           <ShareHeaderBack
             disabled={busy}
-            label={dest === 'chat' ? 'חזרה' : 'סגור'}
+            label={dest === 'chat' ? i18n.t('auto.components__share__ShareDestinationSheet.s7') : i18n.t('auto.components__share__ShareDestinationSheet.s8')}
             onBack={dest === 'chat' ? () => setDest('menu') : undefined}
             onClose={onClose}
           />
           <View style={styles.headerCenter}>
             <Text style={[styles.headerTitle, { color: tokens.colors.text.primary }]}>
-              {dest === 'chat' ? 'בחר קבוצה' : 'שיתוף'}
+              {dest === 'chat' ? i18n.t('auto.components__share__ShareDestinationSheet.s9') : i18n.t('auto.components__share__ShareDestinationSheet.s10')}
             </Text>
           </View>
           <View style={styles.headerSideSpacer} />
@@ -189,7 +190,7 @@ export default function ShareDestinationSheet({
             {/* סדר: צ׳אט → ציוצים → תמונה */}
             <SettingsGlassCard style={{ marginBottom: 0 }}>
               <SettingsActionRow
-                title="שלח לצ׳אט"
+                title={i18n.t('auto.components__share__ShareDestinationSheet.s11')}
                 icon={Send}
                 trailing={noChevron}
                 onPress={() => {
@@ -200,7 +201,7 @@ export default function ShareDestinationSheet({
                 }}
               />
               <SettingsActionRow
-                title="פרסם בציוצים"
+                title={i18n.t('auto.components__share__ShareDestinationSheet.s12')}
                 icon={MessageSquareText}
                 trailing={busy ? <ActivityIndicator size="small" color={tokens.colors.text.secondary} /> : noChevron}
                 showDivider={!!onShareAsImage}
@@ -211,7 +212,7 @@ export default function ShareDestinationSheet({
               />
               {onShareAsImage ? (
                 <SettingsActionRow
-                  title="שתף כתמונה"
+                  title={i18n.t('auto.components__share__ShareDestinationSheet.s13')}
                   icon={ImageIcon}
                   trailing={noChevron}
                   showDivider={false}
@@ -230,7 +231,7 @@ export default function ShareDestinationSheet({
           </View>
         ) : groups.length === 0 ? (
           <View style={styles.center}>
-            <Text style={[styles.emptyText, { color: tokens.colors.text.secondary }]}>אין קבוצות זמינות</Text>
+            <Text style={[styles.emptyText, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.components__share__ShareDestinationSheet.s14')}</Text>
           </View>
         ) : (
           <FlatList

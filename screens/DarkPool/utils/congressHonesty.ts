@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 /**
  * מדדים כנים לעסקאות קונגרס — בלי שחזור מניות / expectancy / win-rate מזויף.
  */
@@ -26,16 +27,16 @@ export function beatSpyRate(
 export function formatBeatSpyLabel(rate: { pct: number; n: number } | null): string | null {
   if (!rate) return null;
   const pct = Math.round(rate.pct);
-  return `היכה את S&P ב-${pct}% מהעסקאות (${rate.n})`;
+  return i18n.t('auto.screens__DarkPool__utils__congressHonesty.s1', { v0: pct, v1: rate.n });
 }
 
 export function formatAvgDelayDays(days: number | null | undefined): string | null {
   if (days == null || !Number.isFinite(days) || days < 0) return null;
   const n = Math.round(days);
-  if (n === 0) return 'אותו יום';
-  if (n === 1) return 'יום אחד';
-  if (n === 2) return 'יומיים';
-  return `${n} ימים`;
+  if (n === 0) return i18n.t('auto.screens__DarkPool__utils__congressHonesty.s2');
+  if (n === 1) return i18n.t('auto.screens__DarkPool__utils__congressHonesty.s3');
+  if (n === 2) return i18n.t('auto.screens__DarkPool__utils__congressHonesty.s4');
+  return i18n.t('auto.screens__DarkPool__utils__congressHonesty.s5', { v0: n });
 }
 
 /** Allocation של Quiver הוא שבר 0–1 (אומת חי). */

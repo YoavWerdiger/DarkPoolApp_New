@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 // ============================================
 // Chat Input Component
@@ -570,7 +571,7 @@ function ChatInputImpl({
         read_by_count: 0,
         sender: {
           id: user.id,
-          display_name: (user as any)?.display_name || 'אני',
+          display_name: (user as any)?.display_name || i18n.t('auto.components__chat__ChatInput.s1'),
           profile_picture: (user as any)?.profile_picture,
           is_online: true,
         },
@@ -583,7 +584,7 @@ function ChatInputImpl({
         mentions: mentionsPayload,
       }).catch((e: any) => {
         updateOptimisticMessage(tempId, { is_sending: false, send_failed: true } as any);
-        legacyAlert('שגיאה', e?.message || 'לא הצלחנו לשלוח');
+        legacyAlert(i18n.t('auto.components__chat__ChatInput.s2'), e?.message || i18n.t('auto.components__chat__ChatInput.s3'));
       });
       sendInFlightRef.current = false;
       return;
@@ -613,7 +614,7 @@ function ChatInputImpl({
         mentions: mentionsPayload,
       }).catch((error) => {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        legacyAlert('שגיאה', errorMessage || 'לא הצלחנו לשלוח את ההודעה');
+        legacyAlert(i18n.t('auto.components__chat__ChatInput.s2'), errorMessage || i18n.t('auto.components__chat__ChatInput.s4'));
         // Restore draft on send error so the user can edit and retry. This
         // also re-persists it via useChatDraft's debounce.
         setText(textToSend);
@@ -625,7 +626,7 @@ function ChatInputImpl({
     } catch (error) {
       sendInFlightRef.current = false;
       const errorMessage = error instanceof Error ? error.message : String(error);
-      legacyAlert('שגיאה', errorMessage || 'לא הצלחנו לשלוח את ההודעה');
+      legacyAlert(i18n.t('auto.components__chat__ChatInput.s2'), errorMessage || i18n.t('auto.components__chat__ChatInput.s4'));
       setText(textToSend);
     }
   };
@@ -682,7 +683,7 @@ function ChatInputImpl({
     extraGroupIds: string[] = [],
   ) => {
     if (mediaFiles.length === 0 || !user) {
-      legacyAlert('שגיאה', 'לא נמצא קובץ מדיה');
+      legacyAlert(i18n.t('auto.components__chat__ChatInput.s2'), i18n.t('auto.components__chat__ChatInput.s5'));
       return;
     }
 
@@ -697,7 +698,7 @@ function ChatInputImpl({
     for (const file of mediaFiles) {
       const limit = MAX_SIZE[file.type] ?? 50 * 1024 * 1024;
       if (file.size && file.size > limit) {
-        legacyAlert('שגיאה', `הקובץ ${file.name || ''} גדול מדי (מקסימום ${Math.round(limit / 1024 / 1024)}MB)`);
+        legacyAlert(i18n.t('auto.components__chat__ChatInput.s2'), i18n.t('auto.components__chat__ChatInput.s6', { v0: file.name || '', v1: Math.round(limit / 1024 / 1024) }));
         return;
       }
     }
@@ -756,7 +757,7 @@ function ChatInputImpl({
         read_by_count: 0,
         sender: {
           id: user.id,
-          display_name: user?.display_name || 'אני',
+          display_name: user?.display_name || i18n.t('auto.components__chat__ChatInput.s1'),
           profile_picture: user?.profile_picture,
           is_online: true,
         },
@@ -800,7 +801,7 @@ function ChatInputImpl({
             updateOptimisticMessage(tempId, {
               is_uploading: false,
               is_sending: false,
-              send_error: uploadResult.error?.message || 'שגיאה בהעלאה'
+              send_error: uploadResult.error?.message || i18n.t('auto.components__chat__ChatInput.s7')
             });
             return;
           }
@@ -841,7 +842,7 @@ function ChatInputImpl({
           updateOptimisticMessage(tempId, {
             is_uploading: false,
             is_sending: false,
-            send_error: error?.message || 'שגיאה בהעלאה'
+            send_error: error?.message || i18n.t('auto.components__chat__ChatInput.s7')
           });
         } finally {
           setIsUploading(false);
@@ -908,7 +909,7 @@ function ChatInputImpl({
         read_by_count: 0,
         sender: {
           id: user.id,
-          display_name: user?.display_name || 'אני',
+          display_name: user?.display_name || i18n.t('auto.components__chat__ChatInput.s1'),
           profile_picture: user?.profile_picture,
           is_online: true,
         },
@@ -955,7 +956,7 @@ function ChatInputImpl({
             updateOptimisticMessage(itemTempId, {
               is_uploading: false,
               is_sending: false,
-              send_error: uploadResult.error?.message || 'שגיאה בהעלאה'
+              send_error: uploadResult.error?.message || i18n.t('auto.components__chat__ChatInput.s7')
             });
             return null;
           }
@@ -1014,7 +1015,7 @@ function ChatInputImpl({
           updateOptimisticMessage(itemTempId, {
             is_uploading: false,
             is_sending: false,
-            send_error: error?.message || 'שגיאה בהעלאה'
+            send_error: error?.message || i18n.t('auto.components__chat__ChatInput.s7')
           });
           return null;
         }
@@ -1124,7 +1125,7 @@ function ChatInputImpl({
       if (currentStatus !== 'granted') {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
-          legacyAlert('הרשאה נדרשת', 'אנא אפשר גישה לגלריה');
+          legacyAlert(i18n.t('auto.components__chat__ChatInput.s8'), i18n.t('auto.components__chat__ChatInput.s9'));
           return;
         }
       }
@@ -1142,7 +1143,7 @@ function ChatInputImpl({
           exif: false,
         });
       } catch (launchError) {
-        legacyAlert('שגיאה', 'לא הצלחנו לפתוח את הגלריה');
+        legacyAlert(i18n.t('auto.components__chat__ChatInput.s2'), i18n.t('auto.components__chat__ChatInput.s10'));
         return;
       }
 
@@ -1169,7 +1170,7 @@ function ChatInputImpl({
         attachLocalVideoThumbs(mediaFiles, setSelectedMedia);
       }
     } catch (error) {
-      legacyAlert('שגיאה', 'לא הצלחנו לבחור תמונה');
+      legacyAlert(i18n.t('auto.components__chat__ChatInput.s2'), i18n.t('auto.components__chat__ChatInput.s11'));
     }
   };
 
@@ -1220,7 +1221,7 @@ function ChatInputImpl({
       metadata: { waveformData: undefined },
       sender: {
         id: user.id,
-        display_name: user?.display_name || 'אני',
+        display_name: user?.display_name || i18n.t('auto.components__chat__ChatInput.s1'),
         profile_picture: user?.profile_picture,
         is_online: true,
       },
@@ -1245,7 +1246,7 @@ function ChatInputImpl({
               updateOptimisticMessage(tempId, {
                 is_uploading: false,
                 is_sending: false,
-                send_error: uploadResult.error?.message || 'שגיאה בהעלאה'
+                send_error: uploadResult.error?.message || i18n.t('auto.components__chat__ChatInput.s7')
               });
               return;
             }
@@ -1262,7 +1263,7 @@ function ChatInputImpl({
             updateOptimisticMessage(tempId, {
               is_uploading: false,
               is_sending: false,
-              send_error: error?.message || 'שגיאה בהעלאה'
+              send_error: error?.message || i18n.t('auto.components__chat__ChatInput.s7')
             });
           } finally {
             setIsUploading(false);
@@ -1270,7 +1271,7 @@ function ChatInputImpl({
         })();
       }
     } catch (error) {
-      legacyAlert('שגיאה', 'לא הצלחנו לבחור מסמך');
+      legacyAlert(i18n.t('auto.components__chat__ChatInput.s2'), i18n.t('auto.components__chat__ChatInput.s12'));
     }
   };
 
@@ -1371,7 +1372,7 @@ function ChatInputImpl({
 
   const startRecording = async (opts?: { openInLockedMode?: boolean }) => {
     if (!isExpoAvAvailable) {
-      legacyAlert('לא זמין ב-Expo Go', EXPO_AV_UNAVAILABLE_MESSAGE);
+      legacyAlert(i18n.t('auto.components__chat__ChatInput.s13'), EXPO_AV_UNAVAILABLE_MESSAGE);
       return;
     }
 
@@ -1410,7 +1411,7 @@ function ChatInputImpl({
       const { status } = await Audio.requestPermissionsAsync();
 
       if (status !== 'granted') {
-        legacyAlert('הרשאה נדרשת', 'אנא אפשר גישה למיקרופון');
+        legacyAlert(i18n.t('auto.components__chat__ChatInput.s8'), i18n.t('auto.components__chat__ChatInput.s14'));
         isStartingRecordingRef.current = false;
         return;
       }
@@ -1467,7 +1468,7 @@ function ChatInputImpl({
 
       isStartingRecordingRef.current = false;
     } catch (error) {
-      legacyAlert('שגיאה', 'לא הצלחנו להתחיל הקלטה');
+      legacyAlert(i18n.t('auto.components__chat__ChatInput.s2'), i18n.t('auto.components__chat__ChatInput.s15'));
       clearRecordingClock();
       isStartingRecordingRef.current = false;
 
@@ -1571,7 +1572,7 @@ function ChatInputImpl({
       recordingRef.current.setProgressUpdateInterval(32);
     } catch (error) {
       logger.error('ChatInput', 'Recording error', error);
-      legacyAlert('שגיאה', 'לא הצלחנו להמשיך את ההקלטה');
+      legacyAlert(i18n.t('auto.components__chat__ChatInput.s2'), i18n.t('auto.components__chat__ChatInput.s16'));
     }
   };
 
@@ -1814,7 +1815,7 @@ function ChatInputImpl({
     } catch (error) {
       releaseVoicePlayback(PREVIEW_PLAYER_ID);
       logger.error('ChatInput', 'Playback error', error);
-      legacyAlert('שגיאה', 'לא ניתן להפעיל את ההקלטה');
+      legacyAlert(i18n.t('auto.components__chat__ChatInput.s2'), i18n.t('auto.components__chat__ChatInput.s17'));
     }
   };
 
@@ -1981,7 +1982,7 @@ function ChatInputImpl({
       metadata: { waveformData: waveform },
       sender: {
         id: user.id,
-        display_name: user?.display_name || 'אני',
+        display_name: user?.display_name || i18n.t('auto.components__chat__ChatInput.s1'),
         profile_picture: user?.profile_picture,
         is_online: true,
       },
@@ -2030,7 +2031,7 @@ function ChatInputImpl({
           updateOptimisticMessage(tempId, {
             is_uploading: false,
             is_sending: false,
-            send_error: uploadResult.error?.message || 'שגיאה בהעלאה'
+            send_error: uploadResult.error?.message || i18n.t('auto.components__chat__ChatInput.s7')
           });
           return;
         }
@@ -2047,7 +2048,7 @@ function ChatInputImpl({
         updateOptimisticMessage(tempId, {
           is_uploading: false,
           is_sending: false,
-          send_error: error?.message || 'שגיאה בהעלאה'
+          send_error: error?.message || i18n.t('auto.components__chat__ChatInput.s7')
         });
       } finally {
         setIsUploading(false);
@@ -2231,7 +2232,7 @@ function ChatInputImpl({
       if (currentStatus !== 'granted') {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
-          legacyAlert('הרשאה נדרשת', 'אנא אפשר גישה לגלריה');
+          legacyAlert(i18n.t('auto.components__chat__ChatInput.s8'), i18n.t('auto.components__chat__ChatInput.s9'));
           return;
         }
       }
@@ -2246,7 +2247,7 @@ function ChatInputImpl({
           videoQuality: 1,
         });
       } catch (launchError) {
-        legacyAlert('שגיאה', 'לא הצלחנו לפתוח את הגלריה');
+        legacyAlert(i18n.t('auto.components__chat__ChatInput.s2'), i18n.t('auto.components__chat__ChatInput.s10'));
         return;
       }
 
@@ -2271,7 +2272,7 @@ function ChatInputImpl({
         attachLocalVideoThumbs(mediaFiles, setSelectedMedia);
       }
     } catch (error) {
-      legacyAlert('שגיאה', 'לא הצלחנו לבחור סרטון');
+      legacyAlert(i18n.t('auto.components__chat__ChatInput.s2'), i18n.t('auto.components__chat__ChatInput.s18'));
     }
   };
 
@@ -2363,7 +2364,7 @@ function ChatInputImpl({
             />
           ) : null}
           <View style={styles.replyContent}>
-            <Text style={styles.replyLabel}>תשובה ל-{replyTo.senderName}</Text>
+            <Text style={styles.replyLabel}>{i18n.t('auto.components__chat__ChatInput.s19', { v0: replyTo.senderName })}</Text>
             <Text style={styles.replyText} numberOfLines={1}>
               {getChatMessagePreview(replyTo.messageType, replyTo.content)}
             </Text>
@@ -2393,7 +2394,7 @@ function ChatInputImpl({
                   style={styles.cancelButton}
                   activeOpacity={0.7}
                   accessibilityRole="button"
-                  accessibilityLabel="מחיקת הקלטה"
+                  accessibilityLabel={i18n.t('auto.components__chat__ChatInput.s20')}
                 >
                   <Ionicons name="trash-outline" size={20} color="#FF3B30" />
                 </TouchableOpacity>
@@ -2406,7 +2407,7 @@ function ChatInputImpl({
                     style={styles.pauseResumeButton}
                     activeOpacity={0.7}
                     accessibilityRole="button"
-                    accessibilityLabel="השהיית הקלטה"
+                    accessibilityLabel={i18n.t('auto.components__chat__ChatInput.s21')}
                   >
                     <Ionicons name="pause" size={20} color={DesignTokens.colors.text.primary} />
                   </TouchableOpacity>
@@ -2419,7 +2420,7 @@ function ChatInputImpl({
                     style={styles.pauseResumeButton}
                     activeOpacity={0.7}
                     accessibilityRole="button"
-                    accessibilityLabel="המשך הקלטה"
+                    accessibilityLabel={i18n.t('auto.components__chat__ChatInput.s22')}
                   >
                     <Ionicons name="mic" size={20} color={DesignTokens.colors.text.primary} />
                   </TouchableOpacity>
@@ -2451,7 +2452,7 @@ function ChatInputImpl({
                   style={styles.cancelButton}
                   activeOpacity={0.7}
                   accessibilityRole="button"
-                  accessibilityLabel="מחיקת הקלטה"
+                  accessibilityLabel={i18n.t('auto.components__chat__ChatInput.s20')}
                 >
                   <Ionicons name="trash-outline" size={20} color="#FF3B30" />
                 </TouchableOpacity>
@@ -2467,7 +2468,7 @@ function ChatInputImpl({
                   style={styles.pauseResumeButton}
                   activeOpacity={0.7}
                   accessibilityRole="button"
-                  accessibilityLabel={isPlayingPreview ? 'השהיית האזנה' : 'האזנה להקלטה'}
+                  accessibilityLabel={isPlayingPreview ? i18n.t('auto.components__chat__ChatInput.s23') : i18n.t('auto.components__chat__ChatInput.s24')}
                 >
                   <Ionicons
                     name={isPlayingPreview ? 'pause' : 'play'}
@@ -2520,7 +2521,7 @@ function ChatInputImpl({
               style={styles.sendBtnTouchable}
               disabled={isUploading || !recordedAudioUri}
               accessibilityRole="button"
-              accessibilityLabel="שליחת הקלטה"
+              accessibilityLabel={i18n.t('auto.components__chat__ChatInput.s25')}
             >
               <Ionicons name="send" size={22} color={DesignTokens.colors.text.inverse} />
             </Pressable>
@@ -2534,7 +2535,7 @@ function ChatInputImpl({
               style={styles.sendBtnTouchable}
               disabled={isUploading}
               accessibilityRole="button"
-              accessibilityLabel="סיום הקלטה לסקירה"
+              accessibilityLabel={i18n.t('auto.components__chat__ChatInput.s26')}
             >
               <Ionicons name="checkmark" size={28} color={DesignTokens.colors.text.inverse} />
             </Pressable>
@@ -2554,9 +2555,7 @@ function ChatInputImpl({
               onPress={() => setPendingEntity(null)}
               style={{ alignSelf: 'flex-start', marginTop: 4 }}
             >
-              <Text style={{ color: DesignTokens.colors.text.tertiary, fontSize: 12 }}>
-                הסר שיתוף
-              </Text>
+              <Text style={{ color: DesignTokens.colors.text.tertiary, fontSize: 12 }}>{i18n.t('auto.components__chat__ChatInput.s27')}</Text>
             </TouchableOpacity>
           </View>
         ) : null}
@@ -2583,7 +2582,7 @@ function ChatInputImpl({
                   borderRadius: 14,
                   backgroundColor: `${DesignTokens.colors.primary.main}22`,
                 }}
-                accessibilityLabel={`הסר תיוג של ${m.displayName}`}
+                accessibilityLabel={i18n.t('auto.components__chat__ChatInput.s28', { v0: m.displayName })}
               >
                 <Text
                   style={{
@@ -2618,10 +2617,10 @@ function ChatInputImpl({
           nativeID={CHAT_COMPOSER_NATIVE_ID}
           placeholder={
             isUploading
-              ? 'מעלה...'
+              ? i18n.t('auto.components__chat__ChatInput.s29')
               : pendingEntity
-                ? 'כיתוב אופציונלי…'
-                : 'הקלד הודעה...'
+                ? i18n.t('auto.components__chat__ChatInput.s30')
+                : i18n.t('auto.components__chat__ChatInput.s31')
           }
           placeholderTextColor={DesignTokens.colors.text.secondary}
           editable={!disabled && !isUploading}
@@ -2638,7 +2637,7 @@ function ChatInputImpl({
               disabled={disabled || isUploading}
               activeOpacity={0.85}
               accessibilityRole="button"
-              accessibilityLabel="צירוף מדיה"
+              accessibilityLabel={i18n.t('auto.components__chat__ChatInput.s32')}
             >
               <Animated.View
                 style={{
@@ -2686,7 +2685,7 @@ function ChatInputImpl({
                   style={styles.sendBtnTouchable}
                   disabled={disabled || isUploading}
                   accessibilityRole="button"
-                  accessibilityLabel="שליחת הודעה"
+                  accessibilityLabel={i18n.t('auto.components__chat__ChatInput.s33')}
                 >
                   <Animated.View style={{ transform: [{ scale: sendBtnScale }] }}>
                     <Ionicons name="send" size={22} color={DesignTokens.colors.text.inverse} />
@@ -2709,7 +2708,7 @@ function ChatInputImpl({
                     collapsable={false}
                     accessible
                     accessibilityRole="button"
-                    accessibilityLabel="הקלטת הודעה קולית — לחיצה קצרה מתחילה הקלטה, החזקה מקליטה עד לשחרור לסקירה"
+                    accessibilityLabel={i18n.t('auto.components__chat__ChatInput.s34')}
                     accessibilityState={{ disabled: disabled || isUploading }}
                   >
                     <Ionicons name="mic" size={24} color={DesignTokens.colors.text.inverse} />
@@ -2720,7 +2719,7 @@ function ChatInputImpl({
                   style={[styles.sendBtnTouchable, { opacity: 0.35 }]}
                   accessible
                   accessibilityRole="button"
-                  accessibilityLabel="הקלטת קול לא זמינה ב-Expo Go"
+                  accessibilityLabel={i18n.t('auto.components__chat__ChatInput.s35')}
                   accessibilityState={{ disabled: true }}
                 >
                   <Ionicons name="mic-off" size={24} color={DesignTokens.colors.text.inverse} />

@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useEffect, useRef, useState } from 'react';
@@ -44,10 +45,10 @@ const AnimatedCircle = Reanimated.createAnimatedComponent(Circle);
 
 /** שלבי ה«איסוף» המדומה — כל שלב מסומן ב-✓ כשההתקדמות עוברת את הסף שלו */
 const SETUP_STEPS = [
-  { at: 22, label: 'מנתחים את הפרופיל שלך' },
-  { at: 48, label: 'מתאימים חדשות ודיווחי רווח' },
-  { at: 74, label: 'בונים את הפיד האישי' },
-  { at: 98, label: 'מכינים את יומן המסחר' },
+  { at: 22, label: i18n.t('auto.screens__Auth__RegistrationSummaryScreen.s1') },
+  { at: 48, label: i18n.t('auto.screens__Auth__RegistrationSummaryScreen.s2') },
+  { at: 74, label: i18n.t('auto.screens__Auth__RegistrationSummaryScreen.s3') },
+  { at: 98, label: i18n.t('auto.screens__Auth__RegistrationSummaryScreen.s4') },
 ];
 
 function SetupStep({ label, state }: { label: string; state: 'wait' | 'active' | 'done' }) {
@@ -141,7 +142,7 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
       const remoteProfile = await mediaService.ensureRemoteMediaUrl(data.profileImage, 'image');
       if (data.profileImage && remoteProfile.error) {
         setLoading(false);
-        legacyAlert('שגיאה', remoteProfile.error || 'העלאת תמונת הפרופיל נכשלה');
+        legacyAlert(i18n.t('auto.screens__Auth__RegistrationSummaryScreen.s5'), remoteProfile.error || i18n.t('auto.screens__Auth__RegistrationSummaryScreen.s6'));
         return;
       }
       const profilePictureUrl = remoteProfile.url;
@@ -181,7 +182,7 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
         try {
           user = await finalizeExistingUser(pendingId);
         } catch (error: any) {
-          signUpError = error.message || 'שגיאה בעדכון הפרופיל';
+          signUpError = error.message || i18n.t('auto.screens__Auth__RegistrationSummaryScreen.s7');
         }
       } else {
         try {
@@ -219,13 +220,13 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
 
       if (signUpError) {
         setLoading(false);
-        legacyAlert('שגיאה בהרשמה', signUpError);
+        legacyAlert(i18n.t('auto.screens__Auth__RegistrationSummaryScreen.s8'), signUpError);
         return;
       }
 
       if (user) {
         const selectedPlan = SUBSCRIPTION_PLANS[planId as keyof typeof SUBSCRIPTION_PLANS];
-        const planName = selectedPlan ? selectedPlan.name : 'מסלול חינמי';
+        const planName = selectedPlan ? selectedPlan.name : i18n.t('auto.screens__Auth__RegistrationSummaryScreen.s9');
         const enteredViaGoogle = data.isGoogleSignUp || !!data.googleUserId;
         const emailAlreadyVerified = data.emailVerified === true;
         const staySignedIn =
@@ -241,9 +242,9 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
           if (resetData) resetData();
 
           legacyAlert(
-            'הרשמה הושלמה בהצלחה! 🎉',
-            `ברוכים הבאים ל-DarkPool! החשבון שלך נוצר עם תוכנית ${planName}.`,
-            [{ text: 'התחל' }]
+            i18n.t('auto.screens__Auth__RegistrationSummaryScreen.s10'),
+            i18n.t('auto.screens__Auth__RegistrationSummaryScreen.s11', { v0: planName }),
+            [{ text: i18n.t('auto.screens__Auth__RegistrationSummaryScreen.s12') }]
           );
         } else {
           setLoading(false);
@@ -254,22 +255,22 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
           if (resetData) resetData();
 
           legacyAlert(
-            'נשלח מייל אימות',
-            `שלחנו קישור אימות לכתובת ${data.email}. יש לאשר את המייל ורק אז להתחבר.`,
+            i18n.t('auto.screens__Auth__RegistrationSummaryScreen.s13'),
+            i18n.t('auto.screens__Auth__RegistrationSummaryScreen.s14', { v0: data.email }),
             [
               {
-                text: 'שלח שוב',
+                text: i18n.t('auto.screens__Auth__RegistrationSummaryScreen.s15'),
                 onPress: async () => {
                   const { error } = await AuthService.resendVerificationEmail(data.email || '');
                   if (error) {
-                    legacyAlert('שגיאה', error);
+                    legacyAlert(i18n.t('auto.screens__Auth__RegistrationSummaryScreen.s5'), error);
                   } else {
-                    legacyAlert('בוצע', 'מייל אימות נשלח שוב בהצלחה');
+                    legacyAlert(i18n.t('auto.screens__Auth__RegistrationSummaryScreen.s16'), i18n.t('auto.screens__Auth__RegistrationSummaryScreen.s17'));
                   }
                 },
               },
               {
-                text: 'אישור',
+                text: i18n.t('auto.screens__Auth__RegistrationSummaryScreen.s18'),
                 onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Login' }] }),
               },
             ]
@@ -277,11 +278,11 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
         }
       } else {
         setLoading(false);
-        legacyAlert('שגיאה', 'לא ניתן היה ליצור את המשתמש');
+        legacyAlert(i18n.t('auto.screens__Auth__RegistrationSummaryScreen.s5'), i18n.t('auto.screens__Auth__RegistrationSummaryScreen.s19'));
       }
     } catch {
       setLoading(false);
-      legacyAlert('שגיאה', 'אירעה שגיאה בעת השלמת ההרשמה');
+      legacyAlert(i18n.t('auto.screens__Auth__RegistrationSummaryScreen.s5'), i18n.t('auto.screens__Auth__RegistrationSummaryScreen.s20'));
     }
   };
 
@@ -296,7 +297,7 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
       showClose={false}
       footer={
         <CashAppButton
-          title={done ? 'הצטרף לקהילה' : 'רק רגע…'}
+          title={done ? i18n.t('auto.screens__Auth__RegistrationSummaryScreen.s21') : i18n.t('auto.screens__Auth__RegistrationSummaryScreen.s22')}
           variant="primary"
           size="lg"
           onPress={() => {
@@ -352,15 +353,13 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
         {done ? (
           <Reanimated.View key="welcome" entering={FadeInDown.delay(150).duration(380)} style={styles.textBlock}>
             <Text style={[styles.title, { color: tokens.colors.text.primary }]}>
-              {firstName ? `ברוך הבא, ${firstName}` : 'ברוך הבא'}
+              {firstName ? i18n.t('auto.screens__Auth__RegistrationSummaryScreen.s23', { v0: firstName }) : i18n.t('auto.screens__Auth__RegistrationSummaryScreen.s24')}
             </Text>
-            <Text style={[styles.subtitle, { color: tokens.colors.text.secondary }]}>
-              הכול מוכן. החשבון שלך הותאם אישית.
-            </Text>
+            <Text style={[styles.subtitle, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Auth__RegistrationSummaryScreen.s25')}</Text>
           </Reanimated.View>
         ) : (
           <Reanimated.View key="loading" exiting={FadeOut.duration(180)} style={styles.textBlock}>
-            <Text style={[styles.title, { color: tokens.colors.text.primary }]}>מכינים את החשבון שלך</Text>
+            <Text style={[styles.title, { color: tokens.colors.text.primary }]}>{i18n.t('auto.screens__Auth__RegistrationSummaryScreen.s26')}</Text>
             <View style={styles.steps}>
               {SETUP_STEPS.map((st, i) => {
                 const prevAt = i === 0 ? 0 : SETUP_STEPS[i - 1].at;

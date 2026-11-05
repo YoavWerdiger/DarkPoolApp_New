@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useCallback } from 'react';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import EconomicCalendarTab from './EconomicCalendarTab';
@@ -14,7 +15,7 @@ export default function NewsEconomicCalendarScreen() {
   }, [navigation]);
 
   return (
-    <NewsScreenShell title="יומן כלכלי">
+    <NewsScreenShell title={i18n.t('auto.screens__News__NewsEconomicCalendarScreen.s1')}>
       <EconomicCalendarTab openEventId={openEventId} onOpenEventConsumed={handleOpenEventConsumed} />
     </NewsScreenShell>
   );

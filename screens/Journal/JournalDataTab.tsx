@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { useCallback, useMemo, useState, memo } from 'react';
@@ -702,7 +703,7 @@ function JournalHeroKpis({
     >
       <View style={journalTabStyles.kpiHeroRow}>
         <View style={journalTabStyles.kpiHeroCol}>
-          <Text style={journalTabStyles.kpiMetricLabel}>P&L כולל</Text>
+          <Text style={journalTabStyles.kpiMetricLabel}>{i18n.t('auto.screens__Journal__JournalDataTab.s1')}</Text>
           <Text
             style={[journalTabStyles.kpiMetricValueHero, { color: totalPnlColor }]}
             numberOfLines={1}
@@ -851,7 +852,7 @@ function JournalMoodInsightCard({
           </Text>
         </DayDividerPill>
         <Text style={[journalTabStyles.journalMoodAvg, { color: avgColor }]} numberOfLines={1}>
-          {`ממוצע $${formatUsd(item.avgPnl)}`}
+          {i18n.t('auto.screens__Journal__JournalDataTab.s2', { v0: formatUsd(item.avgPnl) })}
         </Text>
       </View>
     </UICard>
@@ -859,9 +860,9 @@ function JournalMoodInsightCard({
 }
 
 const CHART_SEGMENTS: { id: ChartGranularity; label: string }[] = [
-  { id: 'months', label: 'חודשים' },
-  { id: 'days', label: 'ימים' },
-  { id: 'hours', label: 'שעות' },
+  { id: 'months', label: i18n.t('auto.screens__Journal__JournalDataTab.s3') },
+  { id: 'days', label: i18n.t('auto.screens__Journal__JournalDataTab.s4') },
+  { id: 'hours', label: i18n.t('auto.screens__Journal__JournalDataTab.s5') },
 ];
 
 export default function JournalDataTab() {
@@ -1016,9 +1017,7 @@ export default function JournalDataTab() {
           contentContainerStyle={{ alignItems: 'center', gap: 12 }}
         >
           <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-          <Text style={[journalTabStyles.loadingText, { color: DesignTokens.colors.text.secondary }]}>
-            טוען נתונים...
-          </Text>
+          <Text style={[journalTabStyles.loadingText, { color: DesignTokens.colors.text.secondary }]}>{i18n.t('auto.screens__Journal__JournalDataTab.s6')}</Text>
         </UICard>
       </View>
     );
@@ -1035,21 +1034,15 @@ export default function JournalDataTab() {
       {trades.length === 0 ? (
         <UICard variant="soft" padding="md" style={sectionCardStyle}>
           <View style={journalTabStyles.empty}>
-            <Text style={[journalTabStyles.emptyTitle, { color: DesignTokens.colors.text.primary }]}>
-              אין עדיין טריידים
-            </Text>
-            <Text style={[journalTabStyles.emptyHint, { color: DesignTokens.colors.text.tertiary }]}>
-              הוסף טריידים ביומן — הגרף והמדדים יתעדכנו אוטומטית.
-            </Text>
+            <Text style={[journalTabStyles.emptyTitle, { color: DesignTokens.colors.text.primary }]}>{i18n.t('auto.screens__Journal__JournalDataTab.s7')}</Text>
+            <Text style={[journalTabStyles.emptyHint, { color: DesignTokens.colors.text.tertiary }]}>{i18n.t('auto.screens__Journal__JournalDataTab.s8')}</Text>
           </View>
         </UICard>
       ) : (
         <>
           {/* P&L Line Chart */}
           <UICard variant="soft" padding="md" style={sectionCardStyle}>
-            <Text style={[journalTabStyles.cardHeader, { color: DesignTokens.colors.text.primary }]}>
-              P&L צבורי
-            </Text>
+            <Text style={[journalTabStyles.cardHeader, { color: DesignTokens.colors.text.primary }]}>{i18n.t('auto.screens__Journal__JournalDataTab.s9')}</Text>
             <View style={journalTabStyles.chartCenter}>
               {cumSeries.length > 0 ? (
                 <CumulativePnlLineChart
@@ -1058,9 +1051,7 @@ export default function JournalDataTab() {
                   colors={lineChartColors}
                 />
               ) : (
-                <Text style={{ color: DesignTokens.colors.text.tertiary, textAlign: 'center' }}>
-                  אין נתונים
-                </Text>
+                <Text style={{ color: DesignTokens.colors.text.tertiary, textAlign: 'center' }}>{i18n.t('auto.screens__Journal__JournalDataTab.s10')}</Text>
               )}
             </View>
           </UICard>
@@ -1079,7 +1070,7 @@ export default function JournalDataTab() {
                 }
               />
               <View style={{ ...journalRow, gap: kpiGap, width: '100%', maxWidth: 440, alignSelf: 'center', marginBottom: kpiGap }}>
-                <KpiBlock title="טריידים" value={kpis.countStr} valueColor={DesignTokens.colors.text.primary} />
+                <KpiBlock title={i18n.t('auto.screens__Journal__JournalDataTab.s11')} value={kpis.countStr} valueColor={DesignTokens.colors.text.primary} />
                 <KpiBlock title="Avg Win" value={kpis.avgWinStr} valueColor={DesignTokens.colors.primary.main} />
                 <KpiBlock title="Avg Loss" value={kpis.avgLossStr} valueColor={DesignTokens.colors.text.danger} />
                 {kpis.profitFactor != null ? (
@@ -1091,23 +1082,21 @@ export default function JournalDataTab() {
                 ) : null}
               </View>
               <View style={{ ...journalRow, gap: kpiGap, width: '100%', maxWidth: 440, alignSelf: 'center', marginBottom: kpiGap }}>
-                <KpiBlock title="הטרייד הטוב ביותר" value={kpis.bestStr} valueColor={DesignTokens.colors.primary.main} />
-                <KpiBlock title="הטרייד הגרוע ביותר" value={kpis.worstStr} valueColor={DesignTokens.colors.text.danger} />
+                <KpiBlock title={i18n.t('auto.screens__Journal__JournalDataTab.s12')} value={kpis.bestStr} valueColor={DesignTokens.colors.primary.main} />
+                <KpiBlock title={i18n.t('auto.screens__Journal__JournalDataTab.s13')} value={kpis.worstStr} valueColor={DesignTokens.colors.text.danger} />
               </View>
             </>
           ) : null}
 
           {/* Bar Chart */}
           <UICard variant="soft" padding="md" style={sectionCardStyle}>
-            <Text style={[journalTabStyles.cardHeader, { color: DesignTokens.colors.text.primary }]}>
-              חלוקת P&L לפי טווחי זמן
-            </Text>
+            <Text style={[journalTabStyles.cardHeader, { color: DesignTokens.colors.text.primary }]}>{i18n.t('auto.screens__Journal__JournalDataTab.s14')}</Text>
             <View style={journalTabStyles.segmentShell}>
               <MarketsSegmentedControl
                 options={CHART_SEGMENTS}
                 value={chartMode}
                 onChange={setChartMode}
-                accessibilityGroupLabel="יחידת זמן לחלוקה"
+                accessibilityGroupLabel={i18n.t('auto.screens__Journal__JournalDataTab.s15')}
                 containerDirection="row"
                 segmentAccessibilityRole="button"
               />
@@ -1116,9 +1105,7 @@ export default function JournalDataTab() {
               {chartBars.length > 0 ? (
                 <PnlBarChart bars={chartBars} chartW={chartW} colors={chartColors} maxBars={maxBars} />
               ) : (
-                <Text style={{ color: DesignTokens.colors.text.tertiary, textAlign: 'center' }}>
-                  אין עדיין נתונים לגרף
-                </Text>
+                <Text style={{ color: DesignTokens.colors.text.tertiary, textAlign: 'center' }}>{i18n.t('auto.screens__Journal__JournalDataTab.s16')}</Text>
               )}
             </View>
           </UICard>
@@ -1126,9 +1113,7 @@ export default function JournalDataTab() {
           {/* Strategy Performance */}
           {strategyStats.length > 1 || (strategyStats.length === 1 && strategyStats[0].name !== '—') ? (
             <UICard variant="soft" padding="md" style={sectionCardStyle}>
-              <Text style={[journalTabStyles.cardHeader, { color: DesignTokens.colors.text.primary }]}>
-                ביצועים לפי אסטרטגיה
-              </Text>
+              <Text style={[journalTabStyles.cardHeader, { color: DesignTokens.colors.text.primary }]}>{i18n.t('auto.screens__Journal__JournalDataTab.s17')}</Text>
               {strategyStats.map((s, index) => {
                 const pnlColor = s.pnl >= 0 ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger;
                 const last = index === strategyStats.length - 1;
@@ -1166,8 +1151,7 @@ export default function JournalDataTab() {
                         ]}
                         numberOfLines={1}
                       >
-                        {s.total} טריידים · Win {s.winRate}%
-                      </Text>
+                        {i18n.t('auto.screens__Journal__JournalDataTab.s18', { v0: s.total, v1: s.winRate })}</Text>
                     </View>
                     <Text
                       style={[
@@ -1186,13 +1170,9 @@ export default function JournalDataTab() {
           {/* Journal Insights */}
           {journalInsights ? (
             <UICard variant="soft" padding="md" style={sectionCardStyle}>
-              <Text style={[journalTabStyles.cardHeader, { color: DesignTokens.colors.text.primary }]}>
-                תובנות יומן
-              </Text>
+              <Text style={[journalTabStyles.cardHeader, { color: DesignTokens.colors.text.primary }]}>{i18n.t('auto.screens__Journal__JournalDataTab.s19')}</Text>
               {journalInsights.withDetails === 0 ? (
-                <Text style={[journalCardBodyStyle, { color: DesignTokens.colors.text.tertiary }]}>
-                  עדיין אין שדות יומן. בעת שמירת טרייד, ניתן למלא מצב רוח, מסגרת זמן, עמידה בתוכנית וטעויות.
-                </Text>
+                <Text style={[journalCardBodyStyle, { color: DesignTokens.colors.text.tertiary }]}>{i18n.t('auto.screens__Journal__JournalDataTab.s20')}</Text>
               ) : (
                 <View style={journalTabStyles.journalInsightStack}>
                   {/* Coverage */}
@@ -1201,16 +1181,14 @@ export default function JournalDataTab() {
                       {journalInsights.coveragePct}%
                     </Text>
                     <Text style={[journalTabStyles.journalCoverageSub, { color: DesignTokens.colors.text.tertiary }]}>
-                      {`${journalInsights.withDetails} מתוך ${journalInsights.total} טריידים עם פרטי יומן`}
+                      {i18n.t('auto.screens__Journal__JournalDataTab.s21', { v0: journalInsights.withDetails, v1: journalInsights.total })}
                     </Text>
                   </View>
 
                   {/* Mood Before */}
                   {journalInsights.moodBefore.length > 0 ? (
                     <View>
-                      <Text style={[journalTabStyles.journalInsightSectionTitle, { color: DesignTokens.colors.text.secondary }]}>
-                        מצב רוח לפני הטרייד
-                      </Text>
+                      <Text style={[journalTabStyles.journalInsightSectionTitle, { color: DesignTokens.colors.text.secondary }]}>{i18n.t('auto.screens__Journal__JournalDataTab.s22')}</Text>
                       <View style={journalTabStyles.journalMoodGrid}>
                         {journalInsights.moodBefore.map((m) => (
                           <JournalMoodInsightCard
@@ -1230,9 +1208,7 @@ export default function JournalDataTab() {
                   {/* Mood After */}
                   {journalInsights.moodAfter.length > 0 ? (
                     <View>
-                      <Text style={[journalTabStyles.journalInsightSectionTitle, { color: DesignTokens.colors.text.secondary }]}>
-                        מצב רוח אחרי הטרייד
-                      </Text>
+                      <Text style={[journalTabStyles.journalInsightSectionTitle, { color: DesignTokens.colors.text.secondary }]}>{i18n.t('auto.screens__Journal__JournalDataTab.s23')}</Text>
                       <View style={journalTabStyles.journalMoodGrid}>
                         {journalInsights.moodAfter.map((m) => (
                           <JournalMoodInsightCard
@@ -1251,22 +1227,18 @@ export default function JournalDataTab() {
 
                   {/* Plan */}
                   <View>
-                    <Text style={[journalTabStyles.journalInsightSectionTitle, { color: DesignTokens.colors.text.secondary }]}>
-                      עמידה בתוכנית
-                    </Text>
+                    <Text style={[journalTabStyles.journalInsightSectionTitle, { color: DesignTokens.colors.text.secondary }]}>{i18n.t('auto.screens__Journal__JournalDataTab.s24')}</Text>
                     <View style={journalTabStyles.journalPillRow}>
-                      <JournalMiniPill label="כן" value={String(journalInsights.plan.yes)} labelColor={DesignTokens.colors.text.tertiary} valueColor={DesignTokens.colors.primary.main} />
-                      <JournalMiniPill label="לא" value={String(journalInsights.plan.no)} labelColor={DesignTokens.colors.text.tertiary} valueColor={DesignTokens.colors.text.danger} />
-                      <JournalMiniPill label="לא צוין" value={String(journalInsights.plan.unknown)} labelColor={DesignTokens.colors.text.tertiary} valueColor={DesignTokens.colors.text.secondary} />
+                      <JournalMiniPill label={i18n.t('auto.screens__Journal__JournalDataTab.s25')} value={String(journalInsights.plan.yes)} labelColor={DesignTokens.colors.text.tertiary} valueColor={DesignTokens.colors.primary.main} />
+                      <JournalMiniPill label={i18n.t('auto.screens__Journal__JournalDataTab.s26')} value={String(journalInsights.plan.no)} labelColor={DesignTokens.colors.text.tertiary} valueColor={DesignTokens.colors.text.danger} />
+                      <JournalMiniPill label={i18n.t('auto.screens__Journal__JournalDataTab.s27')} value={String(journalInsights.plan.unknown)} labelColor={DesignTokens.colors.text.tertiary} valueColor={DesignTokens.colors.text.secondary} />
                     </View>
                   </View>
 
                   {/* Timeframes */}
                   {journalInsights.timeframes.some((t) => t.count > 0) ? (
                     <View>
-                      <Text style={[journalTabStyles.journalInsightSectionTitle, { color: DesignTokens.colors.text.secondary }]}>
-                        מסגרת זמן
-                      </Text>
+                      <Text style={[journalTabStyles.journalInsightSectionTitle, { color: DesignTokens.colors.text.secondary }]}>{i18n.t('auto.screens__Journal__JournalDataTab.s28')}</Text>
                       <View style={journalTabStyles.journalPillRow}>
                         {journalInsights.timeframes.map((tf) => (
                           <JournalMiniPill
@@ -1284,9 +1256,7 @@ export default function JournalDataTab() {
                   {/* Mistakes */}
                   {journalInsights.mistakes.length > 0 ? (
                     <View>
-                      <Text style={[journalTabStyles.journalInsightSectionTitle, { color: DesignTokens.colors.text.secondary }]}>
-                        טעויות נפוצות
-                      </Text>
+                      <Text style={[journalTabStyles.journalInsightSectionTitle, { color: DesignTokens.colors.text.secondary }]}>{i18n.t('auto.screens__Journal__JournalDataTab.s29')}</Text>
                       <View style={journalTabStyles.journalMistakeList}>
                         {journalInsights.mistakes.map((mis) => (
                           <View

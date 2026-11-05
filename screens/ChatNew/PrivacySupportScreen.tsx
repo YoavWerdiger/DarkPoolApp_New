@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 // ============================================
 // Privacy & Support Screen
 // ============================================
@@ -31,35 +32,35 @@ export default function PrivacySupportScreen() {
 
   const handleContactSupport = () => {
     Linking.openURL('mailto:support@darkpool.co.il').catch(() =>
-      legacyAlert('שגיאה', 'לא ניתן לפתוח את דוא"ל התמיכה')
+      legacyAlert(i18n.t('auto.screens__ChatNew__PrivacySupportScreen.s1'), i18n.t('auto.screens__ChatNew__PrivacySupportScreen.s2'))
     );
   };
 
   const handlePrivacyPolicy = () => {
     Linking.openURL('https://darkpool.site/privacy').catch(() =>
-      legacyAlert('שגיאה', 'לא ניתן לפתוח את הקישור')
+      legacyAlert(i18n.t('auto.screens__ChatNew__PrivacySupportScreen.s1'), i18n.t('auto.screens__ChatNew__PrivacySupportScreen.s3'))
     );
   };
 
   const handleTermsOfService = () => {
     Linking.openURL('https://darkpool.site/terms').catch(() =>
-      legacyAlert('שגיאה', 'לא ניתן לפתוח את הקישור')
+      legacyAlert(i18n.t('auto.screens__ChatNew__PrivacySupportScreen.s1'), i18n.t('auto.screens__ChatNew__PrivacySupportScreen.s3'))
     );
   };
 
   const handleFAQ = () => {
     Linking.openURL('https://darkpool.site/faq').catch(() =>
-      legacyAlert('שגיאה', 'לא ניתן לפתוח את הקישור')
+      legacyAlert(i18n.t('auto.screens__ChatNew__PrivacySupportScreen.s1'), i18n.t('auto.screens__ChatNew__PrivacySupportScreen.s3'))
     );
   };
 
   const handleReportIssue = () => {
     legacyAlert(
-      'דיווח על בעיה',
-      'איך תרצה לדווח?',
+      i18n.t('auto.screens__ChatNew__PrivacySupportScreen.s4'),
+      i18n.t('auto.screens__ChatNew__PrivacySupportScreen.s5'),
       [
-        { text: 'דוא"ל', onPress: () => Linking.openURL('mailto:report@darkpool.co.il').catch(() => legacyAlert('שגיאה', 'לא ניתן לפתוח אפליקציית דוא"ל')) },
-        { text: 'ביטול', style: 'cancel' },
+        { text: i18n.t('auto.screens__ChatNew__PrivacySupportScreen.s6'), onPress: () => Linking.openURL('mailto:report@darkpool.co.il').catch(() => legacyAlert(i18n.t('auto.screens__ChatNew__PrivacySupportScreen.s1'), i18n.t('auto.screens__ChatNew__PrivacySupportScreen.s7'))) },
+        { text: i18n.t('auto.screens__ChatNew__PrivacySupportScreen.s8'), style: 'cancel' },
       ]
     );
   };
@@ -67,7 +68,7 @@ export default function PrivacySupportScreen() {
   return (
     <ChatScreenShell>
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        <ChatSubScreenHeader title="פרטיות ותמיכה" onBack={handleBack} />
+        <ChatSubScreenHeader title={i18n.t('auto.screens__ChatNew__PrivacySupportScreen.s9')} onBack={handleBack} />
 
         <ScrollView
           style={styles.scrollView}
@@ -76,11 +77,11 @@ export default function PrivacySupportScreen() {
         >
           {/* Privacy Section */}
           <UICard variant="blur" padding="lg" style={{ marginBottom: DesignTokens.spacing.lg }}>
-            <Text style={styles.sectionTitle}>פרטיות</Text>
+            <Text style={styles.sectionTitle}>{i18n.t('auto.screens__ChatNew__PrivacySupportScreen.s10')}</Text>
             <TouchableOpacity style={styles.optionRow} onPress={handlePrivacyPolicy}>
               <View style={styles.optionLeft}>
                 <Ionicons name="lock-closed-outline" size={20} color={DesignTokens.colors.text.secondary} />
-                <Text style={styles.optionText}>מדיניות פרטיות</Text>
+                <Text style={styles.optionText}>{i18n.t('auto.screens__ChatNew__PrivacySupportScreen.s11')}</Text>
               </View>
               <Ionicons name="chevron-back" size={18} color={DesignTokens.colors.text.tertiary} />
             </TouchableOpacity>
@@ -88,7 +89,7 @@ export default function PrivacySupportScreen() {
             <TouchableOpacity style={styles.optionRow} onPress={handleTermsOfService}>
               <View style={styles.optionLeft}>
                 <Ionicons name="document-text-outline" size={20} color={DesignTokens.colors.text.secondary} />
-                <Text style={styles.optionText}>תנאי שירות</Text>
+                <Text style={styles.optionText}>{i18n.t('auto.screens__ChatNew__PrivacySupportScreen.s12')}</Text>
               </View>
               <Ionicons name="chevron-back" size={18} color={DesignTokens.colors.text.tertiary} />
             </TouchableOpacity>
@@ -96,11 +97,11 @@ export default function PrivacySupportScreen() {
 
           {/* Support Section */}
           <UICard variant="blur" padding="lg" style={{ marginBottom: DesignTokens.spacing.lg }}>
-            <Text style={styles.sectionTitle}>תמיכה</Text>
+            <Text style={styles.sectionTitle}>{i18n.t('auto.screens__ChatNew__PrivacySupportScreen.s13')}</Text>
             <TouchableOpacity style={styles.optionRow} onPress={handleContactSupport}>
               <View style={styles.optionLeft}>
                 <Ionicons name="chatbubble-ellipses-outline" size={20} color={DesignTokens.colors.text.secondary} />
-                <Text style={styles.optionText}>צור קשר עם התמיכה</Text>
+                <Text style={styles.optionText}>{i18n.t('auto.screens__ChatNew__PrivacySupportScreen.s14')}</Text>
               </View>
               <Ionicons name="chevron-back" size={18} color={DesignTokens.colors.text.tertiary} />
             </TouchableOpacity>
@@ -108,7 +109,7 @@ export default function PrivacySupportScreen() {
             <TouchableOpacity style={styles.optionRow} onPress={handleReportIssue}>
               <View style={styles.optionLeft}>
                 <Ionicons name="flag-outline" size={20} color={DesignTokens.colors.text.secondary} />
-                <Text style={styles.optionText}>דווח על בעיה</Text>
+                <Text style={styles.optionText}>{i18n.t('auto.screens__ChatNew__PrivacySupportScreen.s15')}</Text>
               </View>
               <Ionicons name="chevron-back" size={18} color={DesignTokens.colors.text.tertiary} />
             </TouchableOpacity>
@@ -116,7 +117,7 @@ export default function PrivacySupportScreen() {
             <TouchableOpacity style={styles.optionRow} onPress={handleFAQ}>
               <View style={styles.optionLeft}>
                 <Ionicons name="help-circle-outline" size={20} color={DesignTokens.colors.text.secondary} />
-                <Text style={styles.optionText}>שאלות נפוצות</Text>
+                <Text style={styles.optionText}>{i18n.t('auto.screens__ChatNew__PrivacySupportScreen.s16')}</Text>
               </View>
               <Ionicons name="chevron-back" size={18} color={DesignTokens.colors.text.tertiary} />
             </TouchableOpacity>
@@ -124,19 +125,19 @@ export default function PrivacySupportScreen() {
 
           {/* About Section */}
           <UICard variant="blur" padding="lg" style={{ marginBottom: DesignTokens.spacing.lg }}>
-            <Text style={styles.sectionTitle}>אודות</Text>
+            <Text style={styles.sectionTitle}>{i18n.t('auto.screens__ChatNew__PrivacySupportScreen.s17')}</Text>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>גרסה</Text>
+              <Text style={styles.infoLabel}>{i18n.t('auto.screens__ChatNew__PrivacySupportScreen.s18')}</Text>
               <Text style={styles.infoValue}>1.0.0</Text>
             </View>
             <View style={styles.separator} />
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>DarkPool</Text>
-              <Text style={styles.infoValue}>© 2024 כל הזכויות שמורות</Text>
+              <Text style={styles.infoValue}>{i18n.t('auto.screens__ChatNew__PrivacySupportScreen.s19')}</Text>
             </View>
             <View style={styles.separator} />
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>אייקונים</Text>
+              <Text style={styles.infoLabel}>{i18n.t('auto.screens__ChatNew__PrivacySupportScreen.s20')}</Text>
               <Text style={[styles.infoValue, settingsCaptionType]}>
                 <Text>Icons by </Text>
                 <Text 

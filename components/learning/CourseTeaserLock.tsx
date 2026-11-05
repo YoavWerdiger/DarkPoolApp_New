@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useEffect, useMemo, useState, type RefObject } from 'react';
 import { View, Text, StyleSheet, Platform, useWindowDimensions } from 'react-native';
@@ -25,12 +26,12 @@ type Highlight = { icon: keyof typeof Ionicons.glyphMap; title: string; subtitle
 type CourseTeaser = { title: string; pitch: string; highlights: Highlight[] };
 
 const TRADING_BASICS: CourseTeaser = {
-  title: 'יסודות המסחר',
-  pitch: 'המסלול שבונה לכם בסיס מסחר מקצועי — מהגרף הראשון ועד תוכנית מסחר מסודרת.',
+  title: i18n.t('auto.components__learning__CourseTeaserLock.s1'),
+  pitch: i18n.t('auto.components__learning__CourseTeaserLock.s2'),
   highlights: [
-    { icon: 'play-circle-outline', title: 'שיעורי וידאו ממוקדים', subtitle: 'קצרים, ברורים, בקצב שלכם' },
-    { icon: 'trending-up-outline', title: 'מאפס ועד אסטרטגיה', subtitle: 'ניתוח טכני, כניסות, יציאות וניהול סיכונים' },
-    { icon: 'bar-chart-outline', title: 'דוגמאות אמיתיות מהשוק', subtitle: 'כל פרק נשען על עסקאות מהשטח' },
+    { icon: 'play-circle-outline', title: i18n.t('auto.components__learning__CourseTeaserLock.s3'), subtitle: i18n.t('auto.components__learning__CourseTeaserLock.s4') },
+    { icon: 'trending-up-outline', title: i18n.t('auto.components__learning__CourseTeaserLock.s5'), subtitle: i18n.t('auto.components__learning__CourseTeaserLock.s6') },
+    { icon: 'bar-chart-outline', title: i18n.t('auto.components__learning__CourseTeaserLock.s7'), subtitle: i18n.t('auto.components__learning__CourseTeaserLock.s8') },
   ],
 };
 
@@ -38,12 +39,12 @@ const LOCKED_COURSES: Record<string, CourseTeaser> = {
   'david-training-course': TRADING_BASICS,
   'david-training-course-1': TRADING_BASICS,
   'oracle-course': {
-    title: 'האורקל',
-    pitch: 'קורס מסחר מתקדם באופציות — לסוחרים שכבר מכירים את השוק ורוצים להתמקצע באסטרטגיות מתקדמות.',
+    title: i18n.t('auto.components__learning__CourseTeaserLock.s9'),
+    pitch: i18n.t('auto.components__learning__CourseTeaserLock.s10'),
     highlights: [
-      { icon: 'layers-outline', title: 'אסטרטגיות אופציות מתקדמות', subtitle: '' },
-      { icon: 'shield-checkmark-outline', title: 'בניית פוזיציות וניהול סיכונים', subtitle: '' },
-      { icon: 'analytics-outline', title: 'קריאת השוק דרך זרימת האופציות', subtitle: '' },
+      { icon: 'layers-outline', title: i18n.t('auto.components__learning__CourseTeaserLock.s11'), subtitle: '' },
+      { icon: 'shield-checkmark-outline', title: i18n.t('auto.components__learning__CourseTeaserLock.s12'), subtitle: '' },
+      { icon: 'analytics-outline', title: i18n.t('auto.components__learning__CourseTeaserLock.s13'), subtitle: '' },
     ],
   },
 };
@@ -151,7 +152,7 @@ export function CourseTeaserLock({
           <Text style={[styles.title, { color: tokens.colors.text.primary }]}>{teaser.title}</Text>
           <Text style={[styles.pitch, { color: tokens.colors.text.secondary }]}>{explanation}</Text>
 
-          <Text style={[styles.groupLabel, { color: tokens.colors.text.secondary }]}>מה מחכה לכם בקורס</Text>
+          <Text style={[styles.groupLabel, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.components__learning__CourseTeaserLock.s14')}</Text>
           <View style={[styles.card, { backgroundColor: tokens.colors.background.secondary }]}>
             {teaser.highlights.map((h, i) => (
               <View key={h.title}>
@@ -173,7 +174,7 @@ export function CourseTeaserLock({
 
           <View style={styles.cta}>
             <UIButton
-              title="לרכישת הקורס"
+              title={i18n.t('auto.components__learning__CourseTeaserLock.s15')}
               variant="primary"
               fullWidth
               onPress={goPurchase}
@@ -191,7 +192,7 @@ export function CourseTeaserLock({
             onPress={onBack}
             size={DRAWER_MENU_BUTTON_SIZE}
             glassIntensity="subtle"
-            accessibilityLabel="סגירה וחזרה לאקדמיה"
+            accessibilityLabel={i18n.t('auto.components__learning__CourseTeaserLock.s16')}
           >
             <Ionicons name="close" size={24} color={tokens.colors.text.primary} />
           </DayNavBlurButton>

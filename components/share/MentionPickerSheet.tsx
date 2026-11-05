@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -41,7 +42,7 @@ type UserRow = {
 let lastMentionSuggestions: UserRow[] = [];
 
 function displayNameOf(u: UserRow): string {
-  return (u.display_name || u.full_name || 'משתמש').trim() || 'משתמש';
+  return (u.display_name || u.full_name || i18n.t('auto.components__share__MentionPickerSheet.s1')).trim() || i18n.t('auto.components__share__MentionPickerSheet.s1');
 }
 
 export default function MentionPickerSheet({
@@ -87,7 +88,7 @@ export default function MentionPickerSheet({
       setResults(rows);
     } catch (e: any) {
       setResults([]);
-      setError(e?.message || 'לא ניתן לטעון חברי קהילה');
+      setError(e?.message || i18n.t('auto.components__share__MentionPickerSheet.s2'));
     } finally {
       setLoading(false);
     }
@@ -123,7 +124,7 @@ export default function MentionPickerSheet({
         const { data, error: sErr } = await searchUsers(trimmed, excluded, 25);
         if (sErr) {
           setResults([]);
-          setError(sErr.message || 'חיפוש נכשל');
+          setError(sErr.message || i18n.t('auto.components__share__MentionPickerSheet.s3'));
         } else {
           setResults((data ?? []) as UserRow[]);
         }
@@ -153,7 +154,7 @@ export default function MentionPickerSheet({
             size={DAY_NAV_BUTTON_SIZE}
             glassIntensity="subtle"
             style={styles.headerIconButton}
-            accessibilityLabel="סגור"
+            accessibilityLabel={i18n.t('auto.components__share__MentionPickerSheet.s4')}
           >
             <Ionicons
               name="chevron-forward"
@@ -162,9 +163,7 @@ export default function MentionPickerSheet({
             />
           </DayNavBlurButton>
           <View style={styles.headerCenter}>
-            <Text style={[styles.headerTitle, { color: tokens.colors.text.primary }]}>
-              תיוג חבר
-            </Text>
+            <Text style={[styles.headerTitle, { color: tokens.colors.text.primary }]}>{i18n.t('auto.components__share__MentionPickerSheet.s5')}</Text>
           </View>
           <View style={styles.headerSideSpacer} />
         </View>
@@ -178,7 +177,7 @@ export default function MentionPickerSheet({
           <TextInput
             value={query}
             onChangeText={handleQueryChange}
-            placeholder="חיפוש לפי שם…"
+            placeholder={i18n.t('auto.components__share__MentionPickerSheet.s6')}
             placeholderTextColor={tokens.colors.text.tertiary}
             style={[styles.searchInput, { color: tokens.colors.text.primary }]}
             textAlign="right"
@@ -207,9 +206,7 @@ export default function MentionPickerSheet({
               results.length === 0 ? styles.listEmpty : styles.listContent
             }
             ListEmptyComponent={
-              <Text style={[styles.empty, { color: tokens.colors.text.tertiary }]}>
-                לא נמצאו חברים
-              </Text>
+              <Text style={[styles.empty, { color: tokens.colors.text.tertiary }]}>{i18n.t('auto.components__share__MentionPickerSheet.s7')}</Text>
             }
             renderItem={({ item }) => {
               const name = displayNameOf(item);

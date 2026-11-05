@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React from 'react';
 import { View, Text, Pressable, Modal, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -91,7 +92,7 @@ export default function AttachmentPicker({
           }}
         >
           <View className="flex-row justify-between items-center mb-6">
-            <Text className="text-white text-xl font-bold">בחר קובץ</Text>
+            <Text className="text-white text-xl font-bold">{i18n.t('auto.components__chat__AttachmentPicker.s1')}</Text>
             <Pressable 
               onPress={onClose}
               className="p-2 rounded-full bg-[#222]"
@@ -108,7 +109,7 @@ export default function AttachmentPicker({
               <View className="w-16 h-16 bg-primary/20 rounded-full items-center justify-center mb-3">
                 <ImageIcon size={32} color={chatPalette.primary} strokeWidth={2} />
               </View>
-              <Text className="text-white text-sm font-medium">תמונה</Text>
+              <Text className="text-white text-sm font-medium">{i18n.t('auto.components__chat__AttachmentPicker.s2')}</Text>
             </Pressable>
 
             <Pressable
@@ -118,7 +119,7 @@ export default function AttachmentPicker({
               <View className="w-16 h-16 bg-primary/20 rounded-full items-center justify-center mb-3">
                 <FileText size={32} color={chatPalette.primary} strokeWidth={2} />
               </View>
-              <Text className="text-white text-sm font-medium">קובץ</Text>
+              <Text className="text-white text-sm font-medium">{i18n.t('auto.components__chat__AttachmentPicker.s3')}</Text>
             </Pressable>
 
             <Pressable
@@ -128,7 +129,7 @@ export default function AttachmentPicker({
               <View className="w-16 h-16 bg-primary/20 rounded-full items-center justify-center mb-3">
                 <Mic size={32} color={chatPalette.primary} strokeWidth={2} />
               </View>
-              <Text className="text-white text-sm font-medium">הקלטה</Text>
+              <Text className="text-white text-sm font-medium">{i18n.t('auto.components__chat__AttachmentPicker.s4')}</Text>
             </Pressable>
           </View>
         </Animated.View>

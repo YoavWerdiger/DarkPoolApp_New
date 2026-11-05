@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 /**
  * לוח הבקרה של יומן המסחר (בסקירה, מתחת לגרף וחלוקת הנכסים) — באותה שפה כמו תיק האינסיידרים:
  * כותרת סקשן על רקע המסך, ומתחתיה פאנל רשימה בלי ריפוד עם שורות ברוחב מלא וקווים מפרידים.
@@ -55,7 +56,7 @@ export function JournalOpenPositionsCard({ holdings, currency }: { holdings: Por
   const colorByTicker = useHoldingsPieColors(alloc);
   if (!rows.length) return null;
   return (
-    <Section s={s} title="פוזיציות פתוחות">
+    <Section s={s} title={i18n.t('auto.screens__Portfolios__components__JournalDashboard.s1')}>
       <Panel s={s}>
         {rows.map((h, i) => (
           <React.Fragment key={h.symbol}>
@@ -89,7 +90,7 @@ export function JournalRecentTradesCard({ trades, currency }: { trades: Trade[];
   );
   if (!recent.length) return null;
   return (
-    <Section s={s} title="עסקאות אחרונות">
+    <Section s={s} title={i18n.t('auto.screens__Portfolios__components__JournalDashboard.s2')}>
       <Panel s={s}>
         {recent.map((x, i) => (
           <Row
@@ -100,8 +101,8 @@ export function JournalRecentTradesCard({ trades, currency }: { trades: Trade[];
             title={x.symbol}
             badge={
               x.direction === 'short'
-                ? { label: 'שורט', color: t.colors.text.danger }
-                : { label: 'לונג', color: t.colors.primary.main }
+                ? { label: i18n.t('auto.screens__Portfolios__components__JournalDashboard.s3'), color: t.colors.text.danger }
+                : { label: i18n.t('auto.screens__Portfolios__components__JournalDashboard.s4'), color: t.colors.primary.main }
             }
             // נטו: טיקר, לונג/שורט ורווח/הפסד — בלי מחירים, תאריך או תשואה
             value={signed(x.profit_loss ?? 0, currency)}
@@ -135,26 +136,26 @@ export function JournalStatsCard({ trades, currency }: { trades: Trade[]; curren
     const ratio = avgWin != null && avgLoss != null && avgLoss < 0 ? avgWin / Math.abs(avgLoss) : null;
     const primary = t.colors.text.primary;
     return [
-      { icon: PieChart, label: 'אחוז הצלחה', value: `${Math.round((wins.length / pnl.length) * 100)}%`, color: primary },
-      { icon: ArrowLeftRight, label: 'עסקאות סגורות', value: String(pnl.length), color: primary },
+      { icon: PieChart, label: i18n.t('auto.screens__Portfolios__components__JournalDashboard.s5'), value: `${Math.round((wins.length / pnl.length) * 100)}%`, color: primary },
+      { icon: ArrowLeftRight, label: i18n.t('auto.screens__Portfolios__components__JournalDashboard.s6'), value: String(pnl.length), color: primary },
       {
         icon: TrendingUp,
-        label: 'רווח ממוצע',
+        label: i18n.t('auto.screens__Portfolios__components__JournalDashboard.s7'),
         value: avgWin != null ? signed(avgWin, currency) : '—',
         color: avgWin != null ? t.colors.primary.main : t.colors.text.secondary,
       },
       {
         icon: TrendingDown,
-        label: 'הפסד ממוצע',
+        label: i18n.t('auto.screens__Portfolios__components__JournalDashboard.s8'),
         value: avgLoss != null ? signed(avgLoss, currency) : '—',
         color: avgLoss != null ? t.colors.text.danger : t.colors.text.secondary,
       },
-      { icon: Scale, label: 'יחס רווח/הפסד', value: ratio != null ? ratio.toFixed(2) : '—', color: primary },
-      { icon: Wallet, label: 'רווח ממומש', value: signed(total, currency), color: toneColor(total, t) },
+      { icon: Scale, label: i18n.t('auto.screens__Portfolios__components__JournalDashboard.s9'), value: ratio != null ? ratio.toFixed(2) : '—', color: primary },
+      { icon: Wallet, label: i18n.t('auto.screens__Portfolios__components__JournalDashboard.s10'), value: signed(total, currency), color: toneColor(total, t) },
     ];
   }, [trades, currency, t]);
   if (!cells) return null;
-  return <JournalStatsList title="סטטיסטיקה" cells={cells} />;
+  return <JournalStatsList title={i18n.t('auto.screens__Portfolios__components__JournalDashboard.s11')} cells={cells} />;
 }
 
 /**

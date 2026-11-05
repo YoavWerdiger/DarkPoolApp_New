@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import { appLocale } from '../../../lib/i18n/locale';
 /**
  * עוזרי פורמט – מספרים, אחוזים, תאריכים, מטבעות.
@@ -92,12 +93,12 @@ export function formatRelative(iso: string | null | undefined): string {
   if (isNaN(d.getTime())) return '—';
   const now = Date.now();
   const diffDays = Math.floor((now - d.getTime()) / (1000 * 60 * 60 * 24));
-  if (diffDays === 0) return 'היום';
-  if (diffDays === 1) return 'אתמול';
-  if (diffDays < 7) return `לפני ${diffDays} ימים`;
-  if (diffDays < 30) return `לפני ${Math.floor(diffDays / 7)} שבועות`;
-  if (diffDays < 365) return `לפני ${Math.floor(diffDays / 30)} חודשים`;
-  return `לפני ${Math.floor(diffDays / 365)} שנים`;
+  if (diffDays === 0) return i18n.t('auto.screens__Portfolios__utils__format.s1');
+  if (diffDays === 1) return i18n.t('auto.screens__Portfolios__utils__format.s2');
+  if (diffDays < 7) return i18n.t('auto.screens__Portfolios__utils__format.s3', { v0: diffDays });
+  if (diffDays < 30) return i18n.t('auto.screens__Portfolios__utils__format.s4', { v0: Math.floor(diffDays / 7) });
+  if (diffDays < 365) return i18n.t('auto.screens__Portfolios__utils__format.s5', { v0: Math.floor(diffDays / 30) });
+  return i18n.t('auto.screens__Portfolios__utils__format.s6', { v0: Math.floor(diffDays / 365) });
 }
 
 /** מחזיר צבע לפי ערך חיובי/שלילי */

@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -56,14 +57,14 @@ const SORT_OPTIONS: Array<{
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
 }> = [
-  { id: 'default', label: 'עדכון אחרון', icon: 'time-outline' },
-  { id: 'value_desc', label: 'לפי שווי (גבוה→נמוך)', icon: 'cash-outline' },
+  { id: 'default', label: i18n.t('auto.screens__Portfolios__CommunityPortfoliosTab.s1'), icon: 'time-outline' },
+  { id: 'value_desc', label: i18n.t('auto.screens__Portfolios__CommunityPortfoliosTab.s2'), icon: 'cash-outline' },
   {
     id: 'return_desc',
-    label: 'לפי תשואה (גבוה→נמוך)',
+    label: i18n.t('auto.screens__Portfolios__CommunityPortfoliosTab.s3'),
     icon: 'trending-up-outline',
   },
-  { id: 'name_asc', label: 'לפי שם (א-ת)', icon: 'text-outline' },
+  { id: 'name_asc', label: i18n.t('auto.screens__Portfolios__CommunityPortfoliosTab.s4'), icon: 'text-outline' },
 ];
 
 interface Row {
@@ -151,7 +152,7 @@ export default function CommunityPortfoliosTab() {
             // כשל בשליפה — מציגים ריק
           }
 
-          const ownerLabel = nameByUser[p.user_id] ?? 'משתמש';
+          const ownerLabel = nameByUser[p.user_id] ?? i18n.t('auto.screens__Portfolios__CommunityPortfoliosTab.s5');
           return { portfolio: p, summary, sparklineValues, sparklineSource, ownerLabel };
         })
       );
@@ -345,7 +346,7 @@ export default function CommunityPortfoliosTab() {
           }}
           activeOpacity={0.85}
           accessibilityRole="button"
-          accessibilityLabel="מיון תיקים"
+          accessibilityLabel={i18n.t('auto.screens__Portfolios__CommunityPortfoliosTab.s6')}
           style={styles.sortBtnWrap}
         >
           <UICard
@@ -396,7 +397,7 @@ export default function CommunityPortfoliosTab() {
               <TextInput
                 value={searchQuery}
                 onChangeText={setSearchQuery}
-                placeholder="חיפוש תיק או משתמש..."
+                placeholder={i18n.t('auto.screens__Portfolios__CommunityPortfoliosTab.s7')}
                 placeholderTextColor={tokens.colors.text.tertiary}
                 style={styles.searchTextInput}
                 returnKeyType="search"
@@ -425,8 +426,8 @@ export default function CommunityPortfoliosTab() {
     return (
       <View style={styles.root}>
         <View style={styles.empty}>
-          <Text style={styles.emptyTitle}>אין תיקים ציבוריים עדיין</Text>
-          <Text style={styles.emptySub}>כשמישהו ישתף תיק — הוא יופיע כאן.</Text>
+          <Text style={styles.emptyTitle}>{i18n.t('auto.screens__Portfolios__CommunityPortfoliosTab.s8')}</Text>
+          <Text style={styles.emptySub}>{i18n.t('auto.screens__Portfolios__CommunityPortfoliosTab.s9')}</Text>
         </View>
       </View>
     );
@@ -466,9 +467,7 @@ export default function CommunityPortfoliosTab() {
                 size={36}
                 color={tokens.colors.text.tertiary}
               />
-              <Text style={styles.emptyResultsText}>
-                לא נמצאו תיקים בשם "{searchQuery.trim()}"
-              </Text>
+              <Text style={styles.emptyResultsText}>{i18n.t('auto.screens__Portfolios__CommunityPortfoliosTab.s10', { v0: searchQuery.trim() })}</Text>
             </View>
           ) : null
         }
@@ -487,7 +486,7 @@ export default function CommunityPortfoliosTab() {
         showHandle
       >
         <View style={styles.sortSheet} onLayout={handleSortSheetLayout}>
-          <Text style={styles.sortSheetTitle}>מיון תיקים</Text>
+          <Text style={styles.sortSheetTitle}>{i18n.t('auto.screens__Portfolios__CommunityPortfoliosTab.s6')}</Text>
           {SORT_OPTIONS.map((opt) => {
             const isActive = sortMode === opt.id;
             return (

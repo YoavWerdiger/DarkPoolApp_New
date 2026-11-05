@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 /**
  * ארכיטקטורת מסך טיקר — כמו InsiderWave (הדר / מחיר+שווי שוק / מחזיקים|פיד).
  * עברית RTL. בלי כוכב, בלי מניות STOCK Act מומצאות.
@@ -18,15 +19,15 @@ export function resolveTickerScreenTab(
 
 export function tickerScreenHoldersTabLabel(count: number): string {
   const n = Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0;
-  return n > 0 ? `מחזיקים (${n})` : 'מחזיקים';
+  return n > 0 ? i18n.t('auto.screens__DarkPool__utils__tickerScreenIa.s1', { v0: n }) : i18n.t('auto.screens__DarkPool__utils__tickerScreenIa.s2');
 }
 
 export function tickerScreenFeedTabLabel(): string {
-  return 'פיד';
+  return i18n.t('auto.screens__DarkPool__utils__tickerScreenIa.s3');
 }
 
 export function tickerMarketCapLabel(): string {
-  return 'שווי שוק';
+  return i18n.t('auto.screens__DarkPool__utils__tickerScreenIa.s4');
 }
 
 /** שווי שוק מלא עם פסיקים — לא M/K/B. null אם אין מספר. */
@@ -42,7 +43,7 @@ export function tickerFeedEmptyCopy(ticker: string): {
 } {
   const isolated = isolateData(formatFeedTickerDisplay(ticker));
   return {
-    title: 'אין עסקאות מדווחות',
-    body: `לא נמצאו דיווחי קונגרס או Form 4 ל-${isolated}. לא ממציאים שורות.`,
+    title: i18n.t('auto.screens__DarkPool__utils__tickerScreenIa.s5'),
+    body: i18n.t('auto.screens__DarkPool__utils__tickerScreenIa.s6', { v0: isolated }),
   };
 }

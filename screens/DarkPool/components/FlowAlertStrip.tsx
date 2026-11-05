@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 import React, { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -22,7 +23,7 @@ export function FlowAlertStrip({ alerts, onTickerPress }: Props) {
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.title}>זרימת אופציות</Text>
+      <Text style={styles.title}>{i18n.t('auto.screens__DarkPool__components__FlowAlertStrip.s1')}</Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -47,7 +48,7 @@ export function FlowAlertStrip({ alerts, onTickerPress }: Props) {
                   a.type === 'call' ? styles.call : styles.put,
                 ]}
               >
-                {a.type === 'call' ? 'קול' : 'פוט'}
+                {a.type === 'call' ? i18n.t('auto.screens__DarkPool__components__FlowAlertStrip.s2') : i18n.t('auto.screens__DarkPool__components__FlowAlertStrip.s3')}
               </Text>
               <Text style={styles.prem}>{formatUsdCompact(a.premium)}</Text>
               <Text style={styles.rule} numberOfLines={2}>

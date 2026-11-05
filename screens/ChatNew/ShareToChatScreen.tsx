@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -52,11 +53,11 @@ function shareSummary(share: PendingShare | null): string {
   const images = share.media.filter((m) => m.type === 'image').length;
   const videos = share.media.filter((m) => m.type === 'video').length;
   const parts: string[] = [];
-  if (images === 1) parts.push('תמונה');
-  else if (images > 1) parts.push(`${images} תמונות`);
-  if (videos === 1) parts.push('סרטון');
-  else if (videos > 1) parts.push(`${videos} סרטונים`);
-  if (parts.length > 0) return parts.join(' ו');
+  if (images === 1) parts.push(i18n.t('auto.screens__ChatNew__ShareToChatScreen.s1'));
+  else if (images > 1) parts.push(i18n.t('auto.screens__ChatNew__ShareToChatScreen.s2', { v0: images }));
+  if (videos === 1) parts.push(i18n.t('auto.screens__ChatNew__ShareToChatScreen.s3'));
+  else if (videos > 1) parts.push(i18n.t('auto.screens__ChatNew__ShareToChatScreen.s4', { v0: videos }));
+  if (parts.length > 0) return parts.join(i18n.t('auto.screens__ChatNew__ShareToChatScreen.s5'));
   return share.text ?? '';
 }
 
@@ -114,7 +115,7 @@ export default function ShareToChatScreen() {
   return (
     <ChatScreenShell>
       <View style={[styles.root, { paddingTop: insets.top }]}>
-        <ChatSubScreenHeader title="שליחה אל…" onBack={close} backIcon="close" />
+        <ChatSubScreenHeader title={i18n.t('auto.screens__ChatNew__ShareToChatScreen.s6')} onBack={close} backIcon="close" />
 
         {share ? (
           <View style={styles.previewCard}>
@@ -138,14 +139,14 @@ export default function ShareToChatScreen() {
             onChangeText={setQuery}
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setSearchFocused(false)}
-            placeholder="חיפוש קבוצה"
+            placeholder={i18n.t('auto.screens__ChatNew__ShareToChatScreen.s7')}
             placeholderTextColor={formFieldPlaceholderColor(tokens)}
             style={styles.searchInput}
             returnKeyType="search"
           />
         </View>
 
-        <Text style={styles.groupLabel}>קבוצות</Text>
+        <Text style={styles.groupLabel}>{i18n.t('auto.screens__ChatNew__ShareToChatScreen.s8')}</Text>
 
         {isLoadingGroups && groups.length === 0 ? (
           <ActivityIndicator style={styles.loading} color={tokens.colors.text.secondary} />
@@ -156,7 +157,7 @@ export default function ShareToChatScreen() {
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={{ paddingBottom: insets.bottom + APP_LAYOUT.componentGap }}
             ItemSeparatorComponent={() => <View style={styles.divider} />}
-            ListEmptyComponent={<Text style={styles.empty}>לא נמצאו קבוצות</Text>}
+            ListEmptyComponent={<Text style={styles.empty}>{i18n.t('auto.screens__ChatNew__ShareToChatScreen.s9')}</Text>}
             renderItem={({ item }) => {
               const avatar = groupAvatarSource(item.name, item.avatar_url, isDarkMode);
               return (

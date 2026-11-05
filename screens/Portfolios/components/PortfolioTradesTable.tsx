@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import React, { useMemo } from 'react';
 import {
   View,
@@ -233,13 +234,13 @@ export default function PortfolioTradesTable({
               { borderBottomColor: tokens.colors.border.divider },
             ]}
           >
-            {headerCell('סימבול', COL.symbol)}
-            {headerCell('סוג', COL.type, 'center')}
-            {headerCell('כמות', COL.qty, 'center')}
-            {headerCell('כניסה', COL.price)}
+            {headerCell(i18n.t('auto.screens__Portfolios__components__PortfolioTradesTable.s1'), COL.symbol)}
+            {headerCell(i18n.t('auto.screens__Portfolios__components__PortfolioTradesTable.s2'), COL.type, 'center')}
+            {headerCell(i18n.t('auto.screens__Portfolios__components__PortfolioTradesTable.s3'), COL.qty, 'center')}
+            {headerCell(i18n.t('auto.screens__Portfolios__components__PortfolioTradesTable.s4'), COL.price)}
             {mode === 'open' ? (
               <>
-                {headerCell('תאריך', COL.date)}
+                {headerCell(i18n.t('auto.screens__Portfolios__components__PortfolioTradesTable.s5'), COL.date)}
                 {headerCell('SL', COL.sl)}
                 {headerCell('TP', COL.tp)}
                 {headerCell('P&L', COL.pnl, 'center')}
@@ -247,8 +248,8 @@ export default function PortfolioTradesTable({
               </>
             ) : (
               <>
-                {headerCell('יציאה', COL.exit)}
-                {headerCell('תאריך', COL.date)}
+                {headerCell(i18n.t('auto.screens__Portfolios__components__PortfolioTradesTable.s6'), COL.exit)}
+                {headerCell(i18n.t('auto.screens__Portfolios__components__PortfolioTradesTable.s5'), COL.date)}
                 {headerCell('P&L', COL.pnl, 'center')}
                 {headerCell('', COL.actionsClosed, 'center')}
               </>
@@ -328,7 +329,7 @@ export default function PortfolioTradesTable({
                     onEdit(t);
                   }}
                   accessibilityRole="button"
-                  accessibilityLabel={`ערוך ${t.symbol}`}
+                  accessibilityLabel={i18n.t('auto.screens__Portfolios__components__PortfolioTradesTable.s7', { v0: t.symbol })}
                 >
                   <TickerLogo symbol={t.symbol} size={26} />
                   <Text
@@ -404,7 +405,7 @@ export default function PortfolioTradesTable({
                           <ActionIcon
                             name="close"
                             color={tokens.colors.text.secondary}
-                            label={`סגור ${t.symbol}`}
+                            label={i18n.t('auto.screens__Portfolios__components__PortfolioTradesTable.s8', { v0: t.symbol })}
                             onPress={() => onClose(t)}
                           />
                         ) : null}
@@ -412,7 +413,7 @@ export default function PortfolioTradesTable({
                           <ActionIcon
                             name="trash-outline"
                             color={tokens.colors.text.danger}
-                            label={`מחק ${t.symbol}`}
+                            label={i18n.t('auto.screens__Portfolios__components__PortfolioTradesTable.s9', { v0: t.symbol })}
                             onPress={() => onDelete(t)}
                           />
                         ) : null}
@@ -420,7 +421,7 @@ export default function PortfolioTradesTable({
                           <ActionIcon
                             name="share-outline"
                             color={tokens.colors.text.secondary}
-                            label={`שתף ${t.symbol}`}
+                            label={i18n.t('auto.screens__Portfolios__components__PortfolioTradesTable.s10', { v0: t.symbol })}
                             onPress={() => onShare(t)}
                           />
                         ) : null}
@@ -462,7 +463,7 @@ export default function PortfolioTradesTable({
                         <ActionIcon
                           name="share-outline"
                           color={tokens.colors.text.secondary}
-                          label={`שתף ${t.symbol}`}
+                          label={i18n.t('auto.screens__Portfolios__components__PortfolioTradesTable.s10', { v0: t.symbol })}
                           onPress={() => onShare(t)}
                         />
                       ) : null}

@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -63,8 +64,8 @@ export function PortfolioSwitcher({
   selectedId,
   onSelect,
   onCreate,
-  sheetTitle = 'התיקים שלי',
-  createLabel = 'תיק חדש',
+  sheetTitle = i18n.t('auto.screens__Portfolios__components__PortfolioSwitcher.s1'),
+  createLabel = i18n.t('auto.screens__Portfolios__components__PortfolioSwitcher.s2'),
   onActivePress,
 }: Props) {
   const tokens = useDesignTokens();
@@ -126,7 +127,7 @@ export function PortfolioSwitcher({
           hitSlop={8}
           style={styles.anchor}
           accessibilityRole="button"
-          accessibilityLabel={`${selected?.name ?? ''}. החלפה`}
+          accessibilityLabel={i18n.t('auto.screens__Portfolios__components__PortfolioSwitcher.s3', { v0: selected?.name ?? '' })}
         >
           <Text
             style={[styles.anchorTitle, { color: tokens.colors.text.primary }]}

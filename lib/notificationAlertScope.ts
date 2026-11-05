@@ -1,3 +1,4 @@
+import i18n from './i18n';
 /**
  * היקף התראות דיווחי רווח / יומן כלכלי.
  * «הכול» כשהקטגוריה כבר דלוקה; אחרת «לפי הבחירה שלי» בלי לשלוח הכול.
@@ -19,14 +20,14 @@ export const ECONOMIC_ALERT_INDICATORS = [
 export type EconomicAlertIndicatorKey = (typeof ECONOMIC_ALERT_INDICATORS)[number]['key'];
 
 const ECONOMIC_KEY_NEEDLES: Record<EconomicAlertIndicatorKey, string[]> = {
-  cpi: ['cpi', 'consumer price', 'מדד המחירים לצרכן'],
-  pce: ['pce', 'personal consumption', 'מדד מחירי הצריכה'],
-  nfp: ['nonfarm', 'non-farm', 'nfp', 'תעסוקה'],
-  fomc: ['fomc', 'fed funds', 'federal funds', 'ריבית הפד'],
-  gdp: ['gdp', 'gross domestic', 'תוצר'],
-  claims: ['jobless', 'initial claims', 'תביעות אבטלה'],
-  ism: ['ism', 'מנהלי הרכש'],
-  retail: ['retail sales', 'מכירות קמעונ'],
+  cpi: ['cpi', 'consumer price', i18n.t('auto.lib__notificationAlertScope.s1')],
+  pce: ['pce', 'personal consumption', i18n.t('auto.lib__notificationAlertScope.s2')],
+  nfp: ['nonfarm', 'non-farm', 'nfp', i18n.t('auto.lib__notificationAlertScope.s3')],
+  fomc: ['fomc', 'fed funds', 'federal funds', i18n.t('auto.lib__notificationAlertScope.s4')],
+  gdp: ['gdp', 'gross domestic', i18n.t('auto.lib__notificationAlertScope.s5')],
+  claims: ['jobless', 'initial claims', i18n.t('auto.lib__notificationAlertScope.s6')],
+  ism: ['ism', i18n.t('auto.lib__notificationAlertScope.s7')],
+  retail: ['retail sales', i18n.t('auto.lib__notificationAlertScope.s8')],
 };
 
 export function resolveAlertScope(raw: unknown, categoryOn: boolean): NotificationAlertScope {

@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 /**
  * congressTradeDisplay.ts
  * -----------------------------------------------------------------------------
@@ -12,7 +13,7 @@
  * הקובץ טהור (בלי React / supabase) כדי שאפשר לבדוק אותו ישירות ב-jest.
  */
 
-export const DARK_POOL_UNAVAILABLE = 'לא זמין';
+export const DARK_POOL_UNAVAILABLE = i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s1');
 
 /* -------------------------------------------------------------------------- */
 /* תאריך כפול — נחשף / בוצע                                                   */
@@ -45,45 +46,45 @@ export function formatHebrewAgo(
   if (ts == null) return null;
 
   const diff = now - ts;
-  if (diff < 0) return 'היום';
-  if (diff < MINUTE_MS) return 'הרגע';
+  if (diff < 0) return i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s2');
+  if (diff < MINUTE_MS) return i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s3');
 
   const minutes = Math.floor(diff / MINUTE_MS);
   if (minutes < 60) {
     return opts?.compact
-      ? compactAgo(minutes, 'ד׳', 'לפני דקה')
-      : plural(minutes, 'לפני דקה', 'לפני שתי דקות', 'דקות');
+      ? compactAgo(minutes, i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s4'), i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s5'))
+      : plural(minutes, i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s5'), i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s6'), i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s7'));
   }
 
   const hours = Math.floor(diff / HOUR_MS);
   if (hours < 24) {
     return opts?.compact
-      ? compactAgo(hours, 'ש׳', 'לפני שעה')
-      : plural(hours, 'לפני שעה', 'לפני שעתיים', 'שעות');
+      ? compactAgo(hours, i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s8'), i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s9'))
+      : plural(hours, i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s9'), i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s10'), i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s11'));
   }
 
   const days = Math.floor(diff / DAY_MS);
   if (days < 7) {
     return opts?.compact
-      ? compactAgo(days, 'י׳', 'אתמול', 'לפני יומיים')
-      : plural(days, 'אתמול', 'לפני יומיים', 'ימים');
+      ? compactAgo(days, i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s12'), i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s13'), i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s14'))
+      : plural(days, i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s13'), i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s14'), i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s15'));
   }
   if (days < 30) {
     const weeks = Math.floor(days / 7);
     return opts?.compact
-      ? compactAgo(weeks, 'שב׳', 'לפני שבוע', 'לפני שבועיים')
-      : plural(weeks, 'לפני שבוע', 'לפני שבועיים', 'שבועות');
+      ? compactAgo(weeks, i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s16'), i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s17'), i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s18'))
+      : plural(weeks, i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s17'), i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s18'), i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s19'));
   }
   if (days < 365) {
     const months = Math.floor(days / 30);
     return opts?.compact
-      ? compactAgo(months, 'ח׳', 'לפני חודש', 'לפני חודשיים')
-      : plural(months, 'לפני חודש', 'לפני חודשיים', 'חודשים');
+      ? compactAgo(months, i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s20'), i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s21'), i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s22'))
+      : plural(months, i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s21'), i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s22'), i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s23'));
   }
   const years = Math.floor(days / 365);
   return opts?.compact
-    ? compactAgo(years, 'שנ׳', 'לפני שנה', 'לפני שנתיים')
-    : plural(years, 'לפני שנה', 'לפני שנתיים', 'שנים');
+    ? compactAgo(years, i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s24'), i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s25'), i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s26'))
+    : plural(years, i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s25'), i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s26'), i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s27'));
 }
 
 function compactAgo(
@@ -95,13 +96,13 @@ function compactAgo(
   if (n <= 1) return one;
   if (n === 2 && two) return two;
   // רווח בין המספר ליחידה — בלי זה 20ש׳ נדבק וה-bidi מערבב אותיות.
-  return `לפני ${n} ${unit}`;
+  return i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s28', { v0: n, v1: unit });
 }
 
 function plural(n: number, one: string, two: string, many: string): string {
   if (n <= 1) return one;
   if (n === 2) return two;
-  return `לפני ${n} ${many}`;
+  return i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s28', { v0: n, v1: many });
 }
 
 export interface DualDateLine {
@@ -137,12 +138,12 @@ export function buildDualDateLine(input: {
     Boolean(disclosedAgo);
 
   if (sameDay) {
-    const line = `בוצע ודווח ${disclosedAgo}`;
+    const line = i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s29', { v0: disclosedAgo });
     return { disclosed: line, traded: null, text: line };
   }
 
-  const disclosed = disclosedAgo ? `נחשף ${disclosedAgo}` : null;
-  const traded = tradedAgo ? `בוצע ${tradedAgo}` : null;
+  const disclosed = disclosedAgo ? i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s30', { v0: disclosedAgo }) : null;
+  const traded = tradedAgo ? i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s31', { v0: tradedAgo }) : null;
   const parts = [disclosed, traded].filter(Boolean) as string[];
 
   return { disclosed, traded, text: parts.length ? parts.join(' · ') : null };
@@ -199,9 +200,9 @@ export function formatCongressTxnLabel(transactionType: string): string {
     t.includes('מכר') ||
     t.includes('מכיר')
   ) {
-    return 'מכירה';
+    return i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s32');
   }
-  return 'רכישה';
+  return i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s33');
 }
 
 /** תאריך הדיווח פחות תאריך העסקה, בימים. null = חסר תאריך. */
@@ -223,10 +224,10 @@ export function formatDisclosureDelay(
 ): string | null {
   const days = disclosureDelayDays(filedAt, transactionDate);
   if (days == null) return null;
-  if (days === 0) return 'אותו יום';
-  if (days === 1) return 'יום אחד';
-  if (days === 2) return 'יומיים';
-  return `${days} ימים`;
+  if (days === 0) return i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s34');
+  if (days === 1) return i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s35');
+  if (days === 2) return i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s36');
+  return i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s37', { v0: days });
 }
 
 /** "23.06.2026" — נקרא כאי LTR בתוך טקסט עברי. */
@@ -359,7 +360,7 @@ export function formatDisclosedAmountRange(
 ): string | null {
   const range = parseDisclosedAmountRange(raw);
   if (!range) return null;
-  if (range.high == null) return `מעל ${usd(range.low)}`;
+  if (range.high == null) return i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s38', { v0: usd(range.low) });
   return `${usd(range.low)}–${usd(range.high)}`;
 }
 
@@ -369,7 +370,7 @@ export function formatDisclosedAmountRangeCompact(
 ): string | null {
   const range = parseDisclosedAmountRange(raw);
   if (!range) return null;
-  if (range.high == null) return `מעל ${usdCompact(range.low)}`;
+  if (range.high == null) return i18n.t('auto.screens__DarkPool__utils__congressTradeDisplay.s38', { v0: usdCompact(range.low) });
   return `${usdCompact(range.low)}–${usdCompact(range.high)}`;
 }
 

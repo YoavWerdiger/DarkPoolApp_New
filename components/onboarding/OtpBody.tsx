@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -72,7 +73,7 @@ export function OtpBody({
               resendEnabled ? styles.resendActive : null,
             ]}
           >
-            {canResend ? 'לא קיבלת? שלח קוד שוב' : `שליחה חוזרת בעוד 0:${String(countdown).padStart(2, '0')}`}
+            {canResend ? i18n.t('auto.components__onboarding__OtpBody.s1') : i18n.t('auto.components__onboarding__OtpBody.s2', { v0: String(countdown).padStart(2, '0') })}
           </Text>
         )}
       </Pressable>

@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 /**
  * קריאה ישירה מ-DB — מהיר, בלי Edge / UW בכל כניסה למסך.
  */
@@ -65,8 +66,8 @@ function mapCongressRow(row: Record<string, unknown>): CongressFeedTrade {
     txn_label: row.txn_label
       ? String(row.txn_label)
       : row.transaction_type === 'sell'
-        ? 'מכירה'
-        : 'רכישה',
+        ? i18n.t('auto.services__darkpool__darkPoolDbCacheService.s1')
+        : i18n.t('auto.services__darkpool__darkPoolDbCacheService.s2'),
     source: (row.source === 'quiverquant' ? 'quiverquant' : 'unusualwhales') as
       | 'quiverquant'
       | 'unusualwhales',

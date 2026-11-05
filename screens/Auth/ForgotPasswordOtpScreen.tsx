@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { AuthService } from '../../services/authService';
@@ -15,11 +16,11 @@ import { logger } from '../../utils/logger';
 const RESEND_COOLDOWN_SEC = 60;
 
 function mapSendError(code: string | null | undefined): string {
-  if (code === 'rate_limit') return 'יותר מדי בקשות. המתן כמה דקות.';
-  if (code === 'invalid_email') return 'כתובת האימייל לא תקינה.';
-  if (code === 'email_send_failed') return 'שליחת המייל נכשלה. נסה שוב.';
-  if (code === 'timeout') return 'שליחת הקוד ארכה יותר מדי. נסה שוב.';
-  return 'שגיאה בשליחת הקוד. נסה שוב.';
+  if (code === 'rate_limit') return i18n.t('auto.screens__Auth__ForgotPasswordOtpScreen.s1');
+  if (code === 'invalid_email') return i18n.t('auto.screens__Auth__ForgotPasswordOtpScreen.s2');
+  if (code === 'email_send_failed') return i18n.t('auto.screens__Auth__ForgotPasswordOtpScreen.s3');
+  if (code === 'timeout') return i18n.t('auto.screens__Auth__ForgotPasswordOtpScreen.s4');
+  return i18n.t('auto.screens__Auth__ForgotPasswordOtpScreen.s5');
 }
 
 const ForgotPasswordOtpScreen = ({ navigation, route }: { navigation: any; route: any }) => {
@@ -129,12 +130,12 @@ const ForgotPasswordOtpScreen = ({ navigation, route }: { navigation: any; route
 
     setError('');
     if (otp.length !== 6) {
-      setError('אנא הזן קוד בן 6 ספרות');
+      setError(i18n.t('auto.screens__Auth__ForgotPasswordOtpScreen.s6'));
       void HapticFeedback.error();
       return;
     }
     if (!emailHint) {
-      setError('חסרה כתובת אימייל. חזור אחורה.');
+      setError(i18n.t('auto.screens__Auth__ForgotPasswordOtpScreen.s7'));
       void HapticFeedback.error();
       return;
     }
@@ -157,11 +158,11 @@ const ForgotPasswordOtpScreen = ({ navigation, route }: { navigation: any; route
         logger.error('ForgotPasswordOtp', `verify failed: ${verifyError}`);
         // לא מנקים recovery אם כבר יש סשן (למשל ניסיון כפול אחרי הצלחה)
         await clearRecoveryIfNoSession();
-        if (verifyError === 'invalid_otp') setError('הקוד שגוי. נסה שוב.');
-        else if (verifyError === 'expired_otp') setError('הקוד פג תוקף. שלח קוד חדש.');
-        else if (verifyError === 'too_many_attempts') setError('יותר מדי ניסיונות. נסה מאוחר יותר.');
-        else if (verifyError === 'timeout') setError('האימות ארך יותר מדי. בדוק חיבור ונסה שוב.');
-        else setError('שגיאה באימות. נסה שוב.');
+        if (verifyError === 'invalid_otp') setError(i18n.t('auto.screens__Auth__ForgotPasswordOtpScreen.s8'));
+        else if (verifyError === 'expired_otp') setError(i18n.t('auto.screens__Auth__ForgotPasswordOtpScreen.s9'));
+        else if (verifyError === 'too_many_attempts') setError(i18n.t('auto.screens__Auth__ForgotPasswordOtpScreen.s10'));
+        else if (verifyError === 'timeout') setError(i18n.t('auto.screens__Auth__ForgotPasswordOtpScreen.s11'));
+        else setError(i18n.t('auto.screens__Auth__ForgotPasswordOtpScreen.s12'));
         void HapticFeedback.error();
         setOtp('');
         return;
@@ -179,7 +180,7 @@ const ForgotPasswordOtpScreen = ({ navigation, route }: { navigation: any; route
         return;
       }
       await clearRecoveryIfNoSession();
-      setError('שגיאה באימות. נסה שוב.');
+      setError(i18n.t('auto.screens__Auth__ForgotPasswordOtpScreen.s12'));
       void HapticFeedback.error();
     } finally {
       verifyInFlight.current = false;
@@ -191,13 +192,13 @@ const ForgotPasswordOtpScreen = ({ navigation, route }: { navigation: any; route
 
   return (
     <OnboardingLayout
-      title="אמת את הקוד"
+      title={i18n.t('auto.screens__Auth__ForgotPasswordOtpScreen.s13')}
       subtitle={
         sending
-          ? 'שולחים קוד איפוס למייל שלך…'
+          ? i18n.t('auto.screens__Auth__ForgotPasswordOtpScreen.s14')
           : emailHint
-            ? `שלחנו קוד איפוס ל-${emailHint}`
-            : 'הזן את הקוד מהמייל'
+            ? i18n.t('auto.screens__Auth__ForgotPasswordOtpScreen.s15', { v0: emailHint })
+            : i18n.t('auto.screens__Auth__ForgotPasswordOtpScreen.s16')
       }
       density="focused"
       // גלילה כמו במסכי הרישום — מקלדת פתוחה במסך קטן לא דוחפת תוכן מתחת לכפתור
@@ -212,7 +213,7 @@ const ForgotPasswordOtpScreen = ({ navigation, route }: { navigation: any; route
       }}
       footer={
         <OnboardingButton
-          title="אמת והמשך"
+          title={i18n.t('auto.screens__Auth__ForgotPasswordOtpScreen.s17')}
           onPress={handleVerify}
           loading={loading}
           disabled={!canContinue}
@@ -226,7 +227,7 @@ const ForgotPasswordOtpScreen = ({ navigation, route }: { navigation: any; route
           if (error) setError('');
         }}
         error={error}
-        hint={sending ? 'שולחים את הקוד…' : 'הזן את הקוד בן 6 הספרות מהמייל'}
+        hint={sending ? i18n.t('auto.screens__Auth__ForgotPasswordOtpScreen.s18') : i18n.t('auto.screens__Auth__ForgotPasswordOtpScreen.s19')}
         canResend={canResend}
         countdown={resendCountdown}
         onResend={() => void resend()}

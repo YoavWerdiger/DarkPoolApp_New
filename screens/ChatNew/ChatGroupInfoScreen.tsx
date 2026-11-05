@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 // ============================================
 // Chat Group Info Screen - Modern Design
@@ -167,7 +168,7 @@ export default function ChatGroupInfoScreen() {
         ? true
         : isUserPresenceOnline(member.user?.is_online, member.user?.last_active, presenceNow);
       const label = isSelf
-        ? 'מחובר/ת'
+        ? i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s1')
         : formatUserPresenceLabel(member.user?.is_online, member.user?.last_active, presenceNow);
       return { isOnline, label };
     },
@@ -252,13 +253,13 @@ export default function ChatGroupInfoScreen() {
   );
 
   const handleAddMembers = () => {
-    showPrompt('הוסף חבר', '', async (inputUserId) => {
+    showPrompt(i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s2'), '', async (inputUserId) => {
       if (!inputUserId?.trim() || !user?.id) return;
       const { error } = await chatGroupService.addGroupMember(groupId, inputUserId.trim(), user.id);
       if (error) {
-        legacyAlert('שגיאה', error.message || 'לא ניתן להוסיף את המשתמש');
+        legacyAlert(i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s3'), error.message || i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s4'));
       } else {
-        legacyAlert('הצלחה', 'המשתמש נוסף לקבוצה');
+        legacyAlert(i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s5'), i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s6'));
         void refreshCurrentGroupDetails();
       }
     });
@@ -270,37 +271,37 @@ export default function ChatGroupInfoScreen() {
     const options: any[] = [];
 
     if (member.role === 'member') {
-      options.push({ text: 'הפוך לאדמין', onPress: () => handlePromoteMember(member) });
+      options.push({ text: i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s7'), onPress: () => handlePromoteMember(member) });
     } else {
-      options.push({ text: 'הורד מאדמין', onPress: () => handleDemoteMember(member) });
+      options.push({ text: i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s8'), onPress: () => handleDemoteMember(member) });
     }
 
     if (member.user_id !== user?.id) {
       options.push({
-        text: 'הסר מהקבוצה',
+        text: i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s9'),
         style: 'destructive',
         onPress: () => handleRemoveMember(member),
       });
     }
 
-    options.push({ text: 'ביטול', style: 'cancel' });
+    options.push({ text: i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s10'), style: 'cancel' });
 
-    legacyAlert('פעולות חבר', '', options);
+    legacyAlert(i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s11'), '', options);
   };
 
   const handlePromoteMember = (member: ChatGroupMember) => {
     legacyAlert(
-      'הפוך לאדמין',
-      `האם להפוך את ${member.user?.display_name} לאדמין?`,
+      i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s7'),
+      i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s12', { v0: member.user?.display_name }),
       [
-        { text: 'ביטול', style: 'cancel' },
+        { text: i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s10'), style: 'cancel' },
         {
-          text: 'אישור',
+          text: i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s13'),
           onPress: async () => {
             if (!user?.id) return;
             const { error } = await chatGroupService.updateGroupMemberRole(groupId, member.user_id, ChatMemberRole.ADMIN, user.id);
             if (error) {
-              legacyAlert('שגיאה', 'לא ניתן לקדם את החבר');
+              legacyAlert(i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s3'), i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s14'));
             }
           },
         },
@@ -310,17 +311,17 @@ export default function ChatGroupInfoScreen() {
 
   const handleDemoteMember = (member: ChatGroupMember) => {
     legacyAlert(
-      'הורד מאדמין',
-      `האם להוריד את ${member.user?.display_name} מאדמין?`,
+      i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s8'),
+      i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s15', { v0: member.user?.display_name }),
       [
-        { text: 'ביטול', style: 'cancel' },
+        { text: i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s10'), style: 'cancel' },
         {
-          text: 'אישור',
+          text: i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s13'),
           onPress: async () => {
             if (!user?.id) return;
             const { error } = await chatGroupService.updateGroupMemberRole(groupId, member.user_id, ChatMemberRole.MEMBER, user.id);
             if (error) {
-              legacyAlert('שגיאה', 'לא ניתן להוריד את החבר מאדמין');
+              legacyAlert(i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s3'), i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s16'));
             }
           },
         },
@@ -330,18 +331,18 @@ export default function ChatGroupInfoScreen() {
 
   const handleRemoveMember = (member: ChatGroupMember) => {
     legacyAlert(
-      'הסר חבר',
-      `האם להסיר את ${member.user?.display_name} מהקבוצה?`,
+      i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s17'),
+      i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s18', { v0: member.user?.display_name }),
       [
-        { text: 'ביטול', style: 'cancel' },
+        { text: i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s10'), style: 'cancel' },
         {
-          text: 'הסר',
+          text: i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s19'),
           style: 'destructive',
           onPress: async () => {
             if (!user?.id) return;
             const { error } = await chatGroupService.removeGroupMember(groupId, member.user_id, user.id);
             if (error) {
-              legacyAlert('שגיאה', 'לא ניתן להסיר את החבר מהקבוצה');
+              legacyAlert(i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s3'), i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s20'));
             }
           },
         },
@@ -357,7 +358,7 @@ export default function ChatGroupInfoScreen() {
     void HapticFeedback.selection();
     const { success } = await toggleMuted(value);
     if (!success) {
-      legacyAlert('שגיאה', 'לא ניתן לשנות את הגדרות ההשתקה');
+      legacyAlert(i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s3'), i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s21'));
       return;
     }
     await refreshCurrentGroupDetails();
@@ -373,12 +374,12 @@ export default function ChatGroupInfoScreen() {
 
   const handleLeaveGroup = () => {
     legacyAlert(
-      'עזוב קבוצה',
-      'האם אתה בטוח שברצונך לעזוב את הקבוצה?',
+      i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s22'),
+      i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s23'),
       [
-        { text: 'ביטול', style: 'cancel' },
+        { text: i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s10'), style: 'cancel' },
         {
-          text: 'עזוב',
+          text: i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s24'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -392,10 +393,10 @@ export default function ChatGroupInfoScreen() {
                   })
                 );
               } else {
-                legacyAlert('שגיאה', result.error || 'לא הצלחנו לעזוב את הקבוצה');
+                legacyAlert(i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s3'), result.error || i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s25'));
               }
             } catch (error) {
-              legacyAlert('שגיאה', 'אירעה שגיאה בעת עזיבת הקבוצה');
+              legacyAlert(i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s3'), i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s26'));
             }
           },
         },
@@ -427,12 +428,12 @@ export default function ChatGroupInfoScreen() {
         <View style={styles.menuTextCol}>
           <View style={styles.memberNameRow}>
             {member.user_id === user?.id ? (
-              <Text style={styles.youLabel}>(אתה)</Text>
+              <Text style={styles.youLabel}>{i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s27')}</Text>
             ) : null}
             {member.role === 'admin' ? (
               <View style={styles.adminBadge}>
                 <Star size={10} color={DesignTokens.colors.warning.main} strokeWidth={2} />
-                <Text style={styles.adminBadgeText}>אדמין</Text>
+                <Text style={styles.adminBadgeText}>{i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s28')}</Text>
               </View>
             ) : null}
             <UserBadges
@@ -441,7 +442,7 @@ export default function ChatGroupInfoScreen() {
               style={styles.memberBadges}
             />
             <Text style={styles.memberName} numberOfLines={1}>
-              {member.user?.display_name || 'משתמש'}
+              {member.user?.display_name || i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s29')}
             </Text>
           </View>
         </View>
@@ -452,7 +453,7 @@ export default function ChatGroupInfoScreen() {
             onPress={() => openUserProfile(member.user_id)}
             activeOpacity={0.75}
             accessibilityRole="button"
-            accessibilityLabel={`פרופיל של ${member.user?.display_name || 'משתמש'}`}
+            accessibilityLabel={i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s30', { v0: member.user?.display_name || 'משתמש' })}
           >
             {member.user?.profile_picture ? (
               <Image source={{ uri: member.user.profile_picture }} style={styles.memberAvatar} />
@@ -479,9 +480,9 @@ export default function ChatGroupInfoScreen() {
     return (
       <ChatScreenShell>
         <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-          <ChatSubScreenHeader title="פרטי קבוצה" onBack={handleBack} />
+          <ChatSubScreenHeader title={i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s31')} onBack={handleBack} />
           <View style={styles.errorStateBody}>
-            <Text style={styles.errorText}>לא נמצאה קבוצה</Text>
+            <Text style={styles.errorText}>{i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s32')}</Text>
           </View>
         </SafeAreaView>
       </ChatScreenShell>
@@ -495,7 +496,7 @@ export default function ChatGroupInfoScreen() {
   return (
     <ChatScreenShell>
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        <ChatSubScreenHeader title="פרטי קבוצה" onBack={handleBack} />
+        <ChatSubScreenHeader title={i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s31')} onBack={handleBack} />
 
         <View style={styles.rtlRoot}>
           <ScrollView
@@ -516,7 +517,7 @@ export default function ChatGroupInfoScreen() {
                 {chatGroupDisplayName(currentGroup.name)}
               </Text>
               <Text style={styles.groupStatus}>
-                {isolateNumericRuns(`${sortedMembers.length} חברים`)}
+                {isolateNumericRuns(i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s33', { v0: sortedMembers.length }))}
               </Text>
               {currentGroup.description ? (
                 <>
@@ -529,14 +530,14 @@ export default function ChatGroupInfoScreen() {
 
           <View style={styles.sectionBlock}>
             {renderSectionHeader(
-              'מדיה',
+              i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s34'),
               groupMediaItems.length > 0 ? (
                 <TouchableOpacity
                   onPress={() => handleOpenGallery()}
                   activeOpacity={0.7}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Text style={styles.sectionHeaderAction}>הצג הכל</Text>
+                  <Text style={styles.sectionHeaderAction}>{i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s35')}</Text>
                 </TouchableOpacity>
               ) : undefined,
             )}
@@ -564,7 +565,7 @@ export default function ChatGroupInfoScreen() {
                     ))}
                   </View>
                 ) : (
-                  <Text style={styles.emptyMediaText}>אין מדיה בקבוצה זו</Text>
+                  <Text style={styles.emptyMediaText}>{i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s36')}</Text>
                 )}
               </View>
             </UICard>
@@ -572,7 +573,7 @@ export default function ChatGroupInfoScreen() {
 
           <View style={styles.sectionBlock}>
             {renderSectionHeader(
-              'חברים',
+              i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s37'),
               isAdmin ? (
                 <TouchableOpacity
                   onPress={() => { void HapticFeedback.selection(); handleAddMembers(); }}
@@ -580,7 +581,7 @@ export default function ChatGroupInfoScreen() {
                   hitSlop={8}
                 >
                   <Plus size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-                  <Text style={styles.addButtonText}>הוסף</Text>
+                  <Text style={styles.addButtonText}>{i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s38')}</Text>
                 </TouchableOpacity>
               ) : undefined,
             )}
@@ -610,7 +611,7 @@ export default function ChatGroupInfoScreen() {
                     </Animated.View>
                     <View style={styles.menuTextCol}>
                       <Text style={styles.menuTitle}>
-                        {isolateNumericRuns(`חברים נוספים · ${otherRows.length}`)}
+                        {isolateNumericRuns(i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s39', { v0: otherRows.length }))}
                       </Text>
                     </View>
                   </TouchableOpacity>
@@ -628,7 +629,7 @@ export default function ChatGroupInfoScreen() {
           </View>
 
           <View style={styles.sectionBlock}>
-            {renderSectionHeader('פעולות')}
+            {renderSectionHeader(i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s40'))}
             <UICard variant="soft" padding="none" style={styles.sectionSurface}>
               <View style={styles.menuRow}>
                 {/* «התראות»: דלוק = מקבלים התראות (כמו במסך ההתראות). המצב השמור הוא muted — הפוך */}
@@ -644,7 +645,7 @@ export default function ChatGroupInfoScreen() {
                   style={{ transform: [{ scaleX: 0.82 }, { scaleY: 0.82 }] }}
                 />
                 <View style={styles.menuTextCol}>
-                  <Text style={styles.menuTitle}>התראות</Text>
+                  <Text style={styles.menuTitle}>{i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s41')}</Text>
                 </View>
                 <View style={styles.leadingIcon}>
                   {isMuted ? (
@@ -662,7 +663,7 @@ export default function ChatGroupInfoScreen() {
               >
                 <ChevronLeft size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
                 <View style={styles.menuTextCol}>
-                  <Text style={styles.menuTitle}>הודעות מסומנות</Text>
+                  <Text style={styles.menuTitle}>{i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s42')}</Text>
                 </View>
                 <View style={styles.leadingIcon}>
                   <Star size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
@@ -679,7 +680,7 @@ export default function ChatGroupInfoScreen() {
               >
                 <ChevronLeft size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
                 <View style={styles.menuTextCol}>
-                  <Text style={[styles.menuTitle, styles.menuTitleDanger]}>יציאה מהקבוצה</Text>
+                  <Text style={[styles.menuTitle, styles.menuTitleDanger]}>{i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s43')}</Text>
                 </View>
                 <View style={styles.leadingIcon}>
                   <LogOut size={20} color={DesignTokens.colors.danger.main} strokeWidth={2} />
@@ -707,10 +708,10 @@ export default function ChatGroupInfoScreen() {
             />
             <View style={styles.promptButtons}>
               <TouchableOpacity onPress={() => setPromptVisible(false)} style={styles.promptBtn}>
-                <Text style={styles.promptBtnCancel}>ביטול</Text>
+                <Text style={styles.promptBtnCancel}>{i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s10')}</Text>
               </TouchableOpacity>
               <UIButton
-                title="אישור"
+                title={i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s13')}
                 variant="primary"
                 size="sm"
                 haptic={false}

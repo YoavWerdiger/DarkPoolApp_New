@@ -1,34 +1,35 @@
+import i18n from '../../lib/i18n';
 /** ערכים שנשמרים ב־journal_details (JSONB) — תואמים ל־Supabase */
 
 export type TradeTimeframe = 'scalp' | 'day' | 'swing';
 
 export const TIMEFRAME_OPTIONS: { id: TradeTimeframe; label: string }[] = [
-  { id: 'scalp', label: 'סקאלפ' },
-  { id: 'day', label: 'יומי' },
-  { id: 'swing', label: 'סווינג' },
+  { id: 'scalp', label: i18n.t('auto.screens__Journal__tradeJournalConstants.s1') },
+  { id: 'day', label: i18n.t('auto.screens__Journal__tradeJournalConstants.s2') },
+  { id: 'swing', label: i18n.t('auto.screens__Journal__tradeJournalConstants.s3') },
 ];
 
 export type MoodId = 'calm' | 'stressed' | 'tired' | 'focused' | 'anxious' | 'euphoric' | 'other';
 
 export const MOOD_OPTIONS: { id: MoodId; label: string }[] = [
-  { id: 'calm', label: 'רגוע' },
-  { id: 'focused', label: 'ממוקד' },
-  { id: 'stressed', label: 'לחוץ' },
-  { id: 'anxious', label: 'חרד' },
-  { id: 'tired', label: 'עייף' },
-  { id: 'euphoric', label: 'אופורי' },
-  { id: 'other', label: 'אחר' },
+  { id: 'calm', label: i18n.t('auto.screens__Journal__tradeJournalConstants.s4') },
+  { id: 'focused', label: i18n.t('auto.screens__Journal__tradeJournalConstants.s5') },
+  { id: 'stressed', label: i18n.t('auto.screens__Journal__tradeJournalConstants.s6') },
+  { id: 'anxious', label: i18n.t('auto.screens__Journal__tradeJournalConstants.s7') },
+  { id: 'tired', label: i18n.t('auto.screens__Journal__tradeJournalConstants.s8') },
+  { id: 'euphoric', label: i18n.t('auto.screens__Journal__tradeJournalConstants.s9') },
+  { id: 'other', label: i18n.t('auto.screens__Journal__tradeJournalConstants.s10') },
 ];
 
 export const MISTAKE_OPTIONS: { id: string; label: string }[] = [
-  { id: 'early_exit', label: 'יציאה מוקדמת מדי' },
-  { id: 'wrong_size', label: 'גודל פוזיציה לא מתאים' },
-  { id: 'no_plan_entry', label: 'כניסה בלי תוכנית' },
+  { id: 'early_exit', label: i18n.t('auto.screens__Journal__tradeJournalConstants.s11') },
+  { id: 'wrong_size', label: i18n.t('auto.screens__Journal__tradeJournalConstants.s12') },
+  { id: 'no_plan_entry', label: i18n.t('auto.screens__Journal__tradeJournalConstants.s13') },
   { id: 'fomo', label: 'FOMO' },
-  { id: 'ignored_stop', label: 'לא עמדתי בסטופ' },
-  { id: 'chased', label: 'רדפתי אחרי המחיר' },
-  { id: 'revenge', label: 'מסחר נקמה' },
-  { id: 'overtraded', label: 'יותר מדי עסקאות' },
+  { id: 'ignored_stop', label: i18n.t('auto.screens__Journal__tradeJournalConstants.s14') },
+  { id: 'chased', label: i18n.t('auto.screens__Journal__tradeJournalConstants.s15') },
+  { id: 'revenge', label: i18n.t('auto.screens__Journal__tradeJournalConstants.s16') },
+  { id: 'overtraded', label: i18n.t('auto.screens__Journal__tradeJournalConstants.s17') },
 ];
 
 export type TradeJournalDetails = {
@@ -84,9 +85,9 @@ export function formatTradeDurationHebrew(entryIso: string, exitIso: string): st
   ms -= hours * 3600000;
   const mins = Math.floor(ms / 60000);
   const parts: string[] = [];
-  if (days > 0) parts.push(`${days} ימים`);
-  if (hours > 0) parts.push(`${hours} שעות`);
-  if (mins > 0 || parts.length === 0) parts.push(`${mins} דק׳`);
+  if (days > 0) parts.push(i18n.t('auto.screens__Journal__tradeJournalConstants.s18', { v0: days }));
+  if (hours > 0) parts.push(i18n.t('auto.screens__Journal__tradeJournalConstants.s19', { v0: hours }));
+  if (mins > 0 || parts.length === 0) parts.push(i18n.t('auto.screens__Journal__tradeJournalConstants.s20', { v0: mins }));
   return parts.join(', ');
 }
 
@@ -98,7 +99,7 @@ export function streakAtTrade(allTrades: { id: string; exit_date: string; pnl: n
   const idx = sorted.findIndex((t) => t.id === tradeId);
   if (idx < 0) return '—';
   const pnl = sorted[idx].pnl;
-  if (pnl === 0) return 'ניטרלי';
+  if (pnl === 0) return i18n.t('auto.screens__Journal__tradeJournalConstants.s21');
   const win = pnl > 0;
   let n = 1;
   for (let i = idx - 1; i >= 0; i--) {
@@ -107,5 +108,5 @@ export function streakAtTrade(allTrades: { id: string; exit_date: string; pnl: n
     if ((p > 0) === win) n++;
     else break;
   }
-  return win ? `${n} ניצחונות ברצף` : `${n} הפסדים ברצף`;
+  return win ? i18n.t('auto.screens__Journal__tradeJournalConstants.s22', { v0: n }) : i18n.t('auto.screens__Journal__tradeJournalConstants.s23', { v0: n });
 }

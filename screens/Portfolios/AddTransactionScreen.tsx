@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -146,7 +147,7 @@ export default function AddTransactionScreen() {
         setNotes(tx.notes ?? '');
         setCurrency(tx.currency);
       } catch {
-        legacyAlert('שגיאה', 'לא הצלחנו לטעון את הטרנזקציה');
+        legacyAlert(i18n.t('auto.screens__Portfolios__AddTransactionScreen.s1'), i18n.t('auto.screens__Portfolios__AddTransactionScreen.s2'));
       }
     })();
   }, [transactionId]);
@@ -174,7 +175,7 @@ export default function AddTransactionScreen() {
         setNotes(trade.notes ?? '');
         setCurrency(trade.currency);
       } catch {
-        legacyAlert('שגיאה', 'לא הצלחנו לטעון את הטרייד');
+        legacyAlert(i18n.t('auto.screens__Portfolios__AddTransactionScreen.s1'), i18n.t('auto.screens__Portfolios__AddTransactionScreen.s3'));
       }
     })();
   }, [editTradeId]);
@@ -227,29 +228,29 @@ export default function AddTransactionScreen() {
         const stopLossNum = stopLoss.trim() ? parseFloat(stopLoss) : null;
         const targetPriceNum = targetPrice.trim() ? parseFloat(targetPrice) : null;
         if (stopLossNum != null && (isNaN(stopLossNum) || stopLossNum < 0)) {
-          legacyAlert('סטופ לא תקין', 'הכנס מחיר סטופ תקין, או השאר ריק.');
+          legacyAlert(i18n.t('auto.screens__Portfolios__AddTransactionScreen.s4'), i18n.t('auto.screens__Portfolios__AddTransactionScreen.s5'));
           return;
         }
         if (targetPriceNum != null && (isNaN(targetPriceNum) || targetPriceNum < 0)) {
-          legacyAlert('יעד לא תקין', 'הכנס מחיר יעד תקין, או השאר ריק.');
+          legacyAlert(i18n.t('auto.screens__Portfolios__AddTransactionScreen.s6'), i18n.t('auto.screens__Portfolios__AddTransactionScreen.s7'));
           return;
         }
 
         if (!symbol) {
-          legacyAlert('שדה חסר', 'יש לבחור סימבול לנכס.');
+          legacyAlert(i18n.t('auto.screens__Portfolios__AddTransactionScreen.s8'), i18n.t('auto.screens__Portfolios__AddTransactionScreen.s9'));
           return;
         }
         if (!qtyNum || qtyNum <= 0) {
-          legacyAlert('כמות לא תקינה', 'הכנס כמות גדולה מ-0.');
+          legacyAlert(i18n.t('auto.screens__Portfolios__AddTransactionScreen.s10'), i18n.t('auto.screens__Portfolios__AddTransactionScreen.s11'));
           return;
         }
         if (isNaN(priceNum) || priceNum < 0) {
-          legacyAlert('מחיר לא תקין', 'הכנס מחיר אמיתי (0 ומעלה).');
+          legacyAlert(i18n.t('auto.screens__Portfolios__AddTransactionScreen.s12'), i18n.t('auto.screens__Portfolios__AddTransactionScreen.s13'));
           return;
         }
         // ולידציה: תאריך פתיחה לא יכול להיות בעתיד (רק לפוזיציות חדשות)
         if (!editTradeId && !transactionId && tradeDate > new Date()) {
-          legacyAlert('תאריך לא תקין', 'תאריך הפתיחה לא יכול להיות בעתיד.');
+          legacyAlert(i18n.t('auto.screens__Portfolios__AddTransactionScreen.s14'), i18n.t('auto.screens__Portfolios__AddTransactionScreen.s15'));
           return;
         }
 
@@ -308,7 +309,7 @@ export default function AddTransactionScreen() {
       } else if (mode === 'cash') {
         const amountNum = parseFloat(amount);
         if (!amountNum || amountNum <= 0) {
-          legacyAlert('סכום לא תקין', 'הכנס סכום גדול מ-0.');
+          legacyAlert(i18n.t('auto.screens__Portfolios__AddTransactionScreen.s16'), i18n.t('auto.screens__Portfolios__AddTransactionScreen.s17'));
           return;
         }
         const payload = {
@@ -324,11 +325,11 @@ export default function AddTransactionScreen() {
       } else if (mode === 'dividend') {
         const amountNum = parseFloat(amount);
         if (!symbol) {
-          legacyAlert('שדה חסר', 'יש לבחור סימבול לדיבידנד.');
+          legacyAlert(i18n.t('auto.screens__Portfolios__AddTransactionScreen.s8'), i18n.t('auto.screens__Portfolios__AddTransactionScreen.s18'));
           return;
         }
         if (!amountNum || amountNum <= 0) {
-          legacyAlert('סכום לא תקין', 'הכנס סכום דיבידנד גדול מ-0.');
+          legacyAlert(i18n.t('auto.screens__Portfolios__AddTransactionScreen.s16'), i18n.t('auto.screens__Portfolios__AddTransactionScreen.s19'));
           return;
         }
         const payload = {
@@ -343,16 +344,16 @@ export default function AddTransactionScreen() {
         if (transactionId) await updateTransaction(transactionId, payload);
         else await createTransaction(payload);
       }
-      showToast(isEdit ? 'העסקה עודכנה בהצלחה' : 'העסקה נוספה בהצלחה', 'success', 2500);
+      showToast(isEdit ? i18n.t('auto.screens__Portfolios__AddTransactionScreen.s20') : i18n.t('auto.screens__Portfolios__AddTransactionScreen.s21'), 'success', 2500);
       navigation.goBack();
     } catch (err) {
       const msg = err instanceof Error ? err.message : (err as { message?: string })?.message ?? String(err);
       console.error('[AddTransaction] submit error:', err);
       legacyAlert(
-        'שגיאה',
+        i18n.t('auto.screens__Portfolios__AddTransactionScreen.s1'),
         isEdit
-          ? `עדכון העסקה נכשל: ${msg}`
-          : `הוספת העסקה נכשלה: ${msg}`,
+          ? i18n.t('auto.screens__Portfolios__AddTransactionScreen.s22', { v0: msg })
+          : i18n.t('auto.screens__Portfolios__AddTransactionScreen.s23', { v0: msg }),
       );
     } finally {
       setSubmitting(false);
@@ -653,12 +654,12 @@ export default function AddTransactionScreen() {
   const dateSheetSnap = Math.min(0.92, 570 / windowHeight);
 
   const headerTitle = isEdit
-    ? 'עריכת עסקה'
+    ? i18n.t('auto.screens__Portfolios__AddTransactionScreen.s24')
     : mode === 'cash'
-      ? 'מזומן'
+      ? i18n.t('auto.screens__Portfolios__AddTransactionScreen.s25')
       : mode === 'dividend'
-        ? 'דיבידנד'
-        : 'פוזיציה חדשה';
+        ? i18n.t('auto.screens__Portfolios__AddTransactionScreen.s26')
+        : i18n.t('auto.screens__Portfolios__AddTransactionScreen.s27');
 
   return (
     <View style={styles.root}>
@@ -685,7 +686,7 @@ export default function AddTransactionScreen() {
               <>
                 {/* סוג הנכס מזוהה אוטומטית מהחיפוש (assetTypeFromSearchType) — בלי בחירה ידנית */}
                 <View style={styles.fieldBlock}>
-                  <FieldLabel label="סימבול" />
+                  <FieldLabel label={i18n.t('auto.screens__Portfolios__AddTransactionScreen.s28')} />
                   <TouchableOpacity
                     style={styles.symbolPicker}
                     onPress={() => {
@@ -702,7 +703,7 @@ export default function AddTransactionScreen() {
                     {symbol ? (
                       <Text style={styles.symbolText}>{symbol}</Text>
                     ) : (
-                      <Text style={styles.symbolPlaceholder}>לדוגמה: AAPL</Text>
+                      <Text style={styles.symbolPlaceholder}>{i18n.t('auto.screens__Portfolios__AddTransactionScreen.s29')}</Text>
                     )}
                     <Ionicons
                       name="chevron-back"
@@ -713,7 +714,7 @@ export default function AddTransactionScreen() {
                 </View>
 
                 <View style={styles.fieldBlock}>
-                  <FieldLabel label="סוג עסקה" />
+                  <FieldLabel label={i18n.t('auto.screens__Portfolios__AddTransactionScreen.s30')} />
                   <View style={styles.sideRow}>
                     <TouchableOpacity
                       style={[
@@ -725,7 +726,7 @@ export default function AddTransactionScreen() {
                       activeOpacity={0.85}
                       accessibilityRole="button"
                       accessibilityState={{ selected: direction === 'long' }}
-                      accessibilityLabel="לונג"
+                      accessibilityLabel={i18n.t('auto.screens__Portfolios__AddTransactionScreen.s31')}
                       onPress={() => {
                         if (direction !== 'long') void HapticFeedback.selection();
                         setDirection('long');
@@ -739,9 +740,7 @@ export default function AddTransactionScreen() {
                             ? styles.sideLabelOnFill
                             : styles.sideLabelIdle,
                         ]}
-                      >
-                        לונג
-                      </Text>
+                      >{i18n.t('auto.screens__Portfolios__AddTransactionScreen.s31')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[
@@ -753,7 +752,7 @@ export default function AddTransactionScreen() {
                       activeOpacity={0.85}
                       accessibilityRole="button"
                       accessibilityState={{ selected: direction === 'short' }}
-                      accessibilityLabel="שורט"
+                      accessibilityLabel={i18n.t('auto.screens__Portfolios__AddTransactionScreen.s32')}
                       onPress={() => {
                         if (direction !== 'short') void HapticFeedback.selection();
                         setDirection('short');
@@ -767,15 +766,13 @@ export default function AddTransactionScreen() {
                             ? styles.sideLabelOnFill
                             : styles.sideLabelIdle,
                         ]}
-                      >
-                        שורט
-                      </Text>
+                      >{i18n.t('auto.screens__Portfolios__AddTransactionScreen.s32')}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
 
                 <TextField
-                  label={assetType === 'futures' ? 'מספר חוזים' : 'כמות'}
+                  label={assetType === 'futures' ? i18n.t('auto.screens__Portfolios__AddTransactionScreen.s33') : i18n.t('auto.screens__Portfolios__AddTransactionScreen.s34')}
                   value={quantity}
                   onChangeText={setQuantity}
                   keyboardType="decimal-pad"
@@ -784,7 +781,7 @@ export default function AddTransactionScreen() {
                   spacing={PORTFOLIO_FORM.fieldSpacing}
                 />
                 <TextField
-                  label="מחיר כניסה"
+                  label={i18n.t('auto.screens__Portfolios__AddTransactionScreen.s35')}
                   value={price}
                   onChangeText={setPrice}
                   keyboardType="decimal-pad"
@@ -796,7 +793,7 @@ export default function AddTransactionScreen() {
                 <View style={styles.twoCol}>
                   <View style={styles.col}>
                     <TextField
-                      label="סטופ"
+                      label={i18n.t('auto.screens__Portfolios__AddTransactionScreen.s36')}
                       optional
                       value={stopLoss}
                       onChangeText={setStopLoss}
@@ -808,7 +805,7 @@ export default function AddTransactionScreen() {
                   </View>
                   <View style={styles.col}>
                     <TextField
-                      label="יעד"
+                      label={i18n.t('auto.screens__Portfolios__AddTransactionScreen.s37')}
                       optional
                       value={targetPrice}
                       onChangeText={setTargetPrice}
@@ -825,7 +822,7 @@ export default function AddTransactionScreen() {
             {mode === 'cash' && (
               <>
                 <View>
-                  <FieldLabel label="סוג טרנזקציה" />
+                  <FieldLabel label={i18n.t('auto.screens__Portfolios__AddTransactionScreen.s38')} />
                   <View style={styles.chipsWrap}>
                     {(['deposit', 'withdrawal', 'fee'] as CashTransactionType[]).map((t) => (
                       <DayDividerPill
@@ -852,7 +849,7 @@ export default function AddTransactionScreen() {
                   </View>
                 </View>
                 <TextField
-                  label="סכום"
+                  label={i18n.t('auto.screens__Portfolios__AddTransactionScreen.s39')}
                   value={amount}
                   onChangeText={setAmount}
                   keyboardType="decimal-pad"
@@ -866,7 +863,7 @@ export default function AddTransactionScreen() {
             {mode === 'dividend' && (
               <>
                 <View style={styles.fieldBlock}>
-                  <FieldLabel label="סימבול" />
+                  <FieldLabel label={i18n.t('auto.screens__Portfolios__AddTransactionScreen.s28')} />
                   <TouchableOpacity
                     style={styles.symbolPicker}
                     onPress={() => {
@@ -878,12 +875,12 @@ export default function AddTransactionScreen() {
                     {symbol ? (
                       <Text style={styles.symbolText}>{symbol}</Text>
                     ) : (
-                      <Text style={styles.symbolPlaceholder}>בחר סימבול</Text>
+                      <Text style={styles.symbolPlaceholder}>{i18n.t('auto.screens__Portfolios__AddTransactionScreen.s40')}</Text>
                     )}
                   </TouchableOpacity>
                 </View>
                 <TextField
-                  label="סך הדיבידנד שהתקבל"
+                  label={i18n.t('auto.screens__Portfolios__AddTransactionScreen.s41')}
                   value={amount}
                   onChangeText={setAmount}
                   keyboardType="decimal-pad"
@@ -904,22 +901,20 @@ export default function AddTransactionScreen() {
                 contentContainerStyle={styles.validationInner}
               >
                 <View style={styles.validationRow}>
-                  <Text style={styles.validationLabel}>מזומן זמין</Text>
+                  <Text style={styles.validationLabel}>{i18n.t('auto.screens__Portfolios__AddTransactionScreen.s42')}</Text>
                   <Text style={[styles.validationValue, { color: tokens.colors.text.primary }]}>
                     {cashValidation.available.toLocaleString('en-US', { style: 'currency', currency, maximumFractionDigits: 2 })}
                   </Text>
                 </View>
                 <View style={styles.validationRow}>
-                  <Text style={styles.validationLabel}>עלות עסקה</Text>
+                  <Text style={styles.validationLabel}>{i18n.t('auto.screens__Portfolios__AddTransactionScreen.s43')}</Text>
                   <Text style={[styles.validationValue, { color: tokens.colors.text.danger }]}>
                     −{cashValidation.cost.toLocaleString('en-US', { style: 'currency', currency, maximumFractionDigits: 2 })}
                   </Text>
                 </View>
                 <View style={styles.validationDivider} />
                 <View style={styles.validationRow}>
-                  <Text style={[styles.validationLabel, { color: tokens.colors.text.primary }]}>
-                    לאחר עסקה
-                  </Text>
+                  <Text style={[styles.validationLabel, { color: tokens.colors.text.primary }]}>{i18n.t('auto.screens__Portfolios__AddTransactionScreen.s44')}</Text>
                   <Text style={[
                     styles.validationValue,
                     { color: cashValidation.ok ? tokens.colors.primary.main : tokens.colors.text.danger }
@@ -930,9 +925,7 @@ export default function AddTransactionScreen() {
                 {!cashValidation.ok && (
                   <View style={styles.validationWarningRow}>
                     <Ionicons name="warning" size={14} color={tokens.colors.text.danger} />
-                    <Text style={[styles.validationWarningText, { color: tokens.colors.text.danger }]}>
-                      מזומן לא מספיק — חסרים{' '}
-                      {Math.abs(cashValidation.remaining).toLocaleString('en-US', { style: 'currency', currency, maximumFractionDigits: 2 })}
+                    <Text style={[styles.validationWarningText, { color: tokens.colors.text.danger }]}>{i18n.t('auto.screens__Portfolios__AddTransactionScreen.s45', { v0: ' ', v1: Math.abs(cashValidation.remaining).toLocaleString('en-US', { style: 'currency', currency, maximumFractionDigits: 2 }) })}
                     </Text>
                   </View>
                 )}
@@ -941,7 +934,7 @@ export default function AddTransactionScreen() {
 
             {/* Common: Date + Time */}
             <View style={styles.fieldBlock}>
-              <FieldLabel label={mode === 'asset' ? 'תאריך ושעת כניסה' : 'תאריך ושעה'} />
+              <FieldLabel label={mode === 'asset' ? i18n.t('auto.screens__Portfolios__AddTransactionScreen.s46') : i18n.t('auto.screens__Portfolios__AddTransactionScreen.s47')} />
               <View style={styles.dateRow}>
                 <TouchableOpacity
                   style={styles.datePill}
@@ -986,7 +979,7 @@ export default function AddTransactionScreen() {
                 >
                   <View style={styles.dateSheet}>
                     <View style={styles.dateSheetHeader}>
-                      <Text style={styles.dateSheetTitle}>{mode === 'asset' ? 'תאריך ושעת כניסה' : 'תאריך ושעה'}</Text>
+                      <Text style={styles.dateSheetTitle}>{mode === 'asset' ? i18n.t('auto.screens__Portfolios__AddTransactionScreen.s46') : i18n.t('auto.screens__Portfolios__AddTransactionScreen.s47')}</Text>
                       <TouchableOpacity
                         style={styles.nowChip}
                         activeOpacity={0.7}
@@ -995,7 +988,7 @@ export default function AddTransactionScreen() {
                           setTradeDate(new Date());
                         }}
                       >
-                        <Text style={styles.nowChipText}>עכשיו</Text>
+                        <Text style={styles.nowChipText}>{i18n.t('auto.screens__Portfolios__AddTransactionScreen.s48')}</Text>
                       </TouchableOpacity>
                     </View>
                     <DateTimePicker
@@ -1010,7 +1003,7 @@ export default function AddTransactionScreen() {
                       style={styles.dateSheetCalendar}
                     />
                     <View style={styles.timeRow}>
-                      <Text style={styles.timeRowLabel}>שעה</Text>
+                      <Text style={styles.timeRowLabel}>{i18n.t('auto.screens__Portfolios__AddTransactionScreen.s49')}</Text>
                       <View style={styles.timeRowPicker}>
                         <DateTimePicker
                           value={tradeDate}
@@ -1025,7 +1018,7 @@ export default function AddTransactionScreen() {
                       </View>
                     </View>
                     <UIButton
-                      title="אישור"
+                      title={i18n.t('auto.screens__Portfolios__AddTransactionScreen.s50')}
                       variant="primary"
                       size="lg"
                       fullWidth
@@ -1061,11 +1054,11 @@ export default function AddTransactionScreen() {
 
             {mode === 'asset' ? (
               <View style={styles.advancedBlock}>
-                <Text style={styles.advancedTitle}>פרטים נוספים</Text>
+                <Text style={styles.advancedTitle}>{i18n.t('auto.screens__Portfolios__AddTransactionScreen.s51')}</Text>
                 <View style={styles.twoCol}>
                   <View style={styles.col}>
                     <TextField
-                      label="עמלה"
+                      label={i18n.t('auto.screens__Portfolios__AddTransactionScreen.s52')}
                       optional
                       value={commission}
                       onChangeText={setCommission}
@@ -1077,7 +1070,7 @@ export default function AddTransactionScreen() {
                   </View>
                   <View style={styles.col}>
                     <TextField
-                      label="מינוף"
+                      label={i18n.t('auto.screens__Portfolios__AddTransactionScreen.s53')}
                       value={leverage}
                       onChangeText={setLeverage}
                       keyboardType="decimal-pad"
@@ -1089,12 +1082,12 @@ export default function AddTransactionScreen() {
                 </View>
                 {assetType === 'futures' ? (
                   <TextField
-                    label="ערך לנקודה"
+                    label={i18n.t('auto.screens__Portfolios__AddTransactionScreen.s54')}
                     value={pointValue}
                     onChangeText={setPointValue}
                     keyboardType="decimal-pad"
                     numeric
-                    placeholder="לדוגמה: 50 ל-ES, 20 ל-NQ"
+                    placeholder={i18n.t('auto.screens__Portfolios__AddTransactionScreen.s55')}
                     spacing={0}
                   />
                 ) : null}
@@ -1102,18 +1095,18 @@ export default function AddTransactionScreen() {
             ) : null}
 
             <TextField
-              label="הערות"
+              label={i18n.t('auto.screens__Portfolios__AddTransactionScreen.s56')}
               optional
               value={notes}
               onChangeText={setNotes}
-              placeholder="הוסף הערות על העסקה"
+              placeholder={i18n.t('auto.screens__Portfolios__AddTransactionScreen.s57')}
               multiline
               maxLength={128}
               spacing={8}
             />
           </ScrollView>
           <PortfolioFormFooter
-            title={submitting ? 'שומר…' : isEdit ? 'עדכן עסקה' : 'הוסף עסקה'}
+            title={submitting ? i18n.t('auto.screens__Portfolios__AddTransactionScreen.s58') : isEdit ? i18n.t('auto.screens__Portfolios__AddTransactionScreen.s59') : i18n.t('auto.screens__Portfolios__AddTransactionScreen.s60')}
             icon="checkmark"
             loading={submitting}
             disabled={submitting}

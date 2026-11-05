@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import type { SymbolSearchResult } from './portfolioPriceFeed';
 import type { AssetType } from '../../screens/Portfolios/portfolioTypes';
 
@@ -105,13 +106,13 @@ export function filterSymbolSearchResults(
 /** תווית עברית קצרה לסוג נייר */
 export function hebrewAssetTypeLabel(type: string): string {
   const t = (type || '').toLowerCase();
-  if (t.includes('common stock') || t === 'equity' || t === 'stock') return 'מניה';
-  if (t === 'crypto') return 'קריפטו';
+  if (t.includes('common stock') || t === 'equity' || t === 'stock') return i18n.t('auto.services__portfolios__symbolSearchFilter.s1');
+  if (t === 'crypto') return i18n.t('auto.services__portfolios__symbolSearchFilter.s2');
   if (t.includes('etf') || t === 'etp' || t.includes('exchange traded')) return 'ETF';
   if (t === 'adr') return 'ADR';
   if (t.includes('reit')) return 'REIT';
-  if (t.includes('closed-end')) return 'קרן';
-  return 'מניה';
+  if (t.includes('closed-end')) return i18n.t('auto.services__portfolios__symbolSearchFilter.s3');
+  return i18n.t('auto.services__portfolios__symbolSearchFilter.s1');
 }
 
 /** סוג נכס לפוזיציה לפי סוג הנייר מהחיפוש — המשתמש עדיין יכול לשנות ידנית */

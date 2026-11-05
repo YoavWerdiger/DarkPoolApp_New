@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 /**
  * ציפי סינון מתחת ל-«עסקאות אחרונות» בפיד הבית.
  * הכל = קונגרס + Form 4. לא ממציאים עסקאות.
@@ -11,9 +12,9 @@ export type FeedRecentRowKind = 'congress' | 'insider';
 export const FEED_RECENT_KIND_DEFAULT: FeedRecentKind = 'all';
 
 export const FEED_RECENT_KIND_CHIPS: { id: FeedRecentKind; label: string }[] = [
-  { id: 'all', label: 'הכל' },
-  { id: 'congress', label: 'קונגרס' },
-  { id: 'insider', label: 'בכירים' },
+  { id: 'all', label: i18n.t('auto.screens__DarkPool__utils__feedRecentKind.s1') },
+  { id: 'congress', label: i18n.t('auto.screens__DarkPool__utils__feedRecentKind.s2') },
+  { id: 'insider', label: i18n.t('auto.screens__DarkPool__utils__feedRecentKind.s3') },
 ];
 
 export function matchesFeedRecentKind(

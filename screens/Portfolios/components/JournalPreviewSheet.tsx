@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -544,8 +545,8 @@ export function JournalPreviewSheet({
                   accessibilityRole="button"
                   accessibilityLabel={
                     hasMultiple
-                      ? `תיק: ${portfolio.name}. החלק או לחץ להחלפה`
-                      : `תיק: ${portfolio.name}`
+                      ? i18n.t('auto.screens__Portfolios__components__JournalPreviewSheet.s1', { v0: portfolio.name })
+                      : i18n.t('auto.screens__Portfolios__components__JournalPreviewSheet.s2', { v0: portfolio.name })
                   }
                 >
                   <Text style={styles.nameText} numberOfLines={1}>
@@ -558,7 +559,7 @@ export function JournalPreviewSheet({
                     onPress={cyclePortfolio}
                     activeOpacity={0.8}
                     accessibilityRole="button"
-                    accessibilityLabel="החלף תיק"
+                    accessibilityLabel={i18n.t('auto.screens__Portfolios__components__JournalPreviewSheet.s3')}
                   >
                     <Ionicons
                       name="swap-horizontal"
@@ -576,9 +577,9 @@ export function JournalPreviewSheet({
                 delayLongPress={450}
                 activeOpacity={0.88}
                 accessibilityRole="button"
-                accessibilityLabel="פתח תיק"
+                accessibilityLabel={i18n.t('auto.screens__Portfolios__components__JournalPreviewSheet.s4')}
               >
-                <Text style={styles.heroLabel}>שווי תיק</Text>
+                <Text style={styles.heroLabel}>{i18n.t('auto.screens__Portfolios__components__JournalPreviewSheet.s5')}</Text>
                 <Text
                   style={styles.heroValue}
                   numberOfLines={1}
@@ -599,31 +600,30 @@ export function JournalPreviewSheet({
                     <Text style={[styles.dailyPct, { color: dailyColor }]}>
                       {dailyPctLabel}
                     </Text>
-                    <Text style={styles.dailyMeta}>היום</Text>
+                    <Text style={styles.dailyMeta}>{i18n.t('auto.screens__Portfolios__components__JournalPreviewSheet.s6')}</Text>
                   </View>
                 ) : null}
-                <Text style={styles.updated}>
-                  עודכן {formatRelative(portfolio.updated_at)}
+                <Text style={styles.updated}>{i18n.t('auto.screens__Portfolios__components__JournalPreviewSheet.s7', { v0: formatRelative(portfolio.updated_at) })}
                 </Text>
               </TouchableOpacity>
 
               <View style={styles.kpiBand}>
                 <View style={styles.kpiCell}>
-                  <Text style={styles.kpiLabel}>יומי</Text>
+                  <Text style={styles.kpiLabel}>{i18n.t('auto.screens__Portfolios__components__JournalPreviewSheet.s8')}</Text>
                   <Text style={[styles.kpiValue, { color: dailyColor }]}>
                     {summary ? formatPercent(summary.daily_gain_pct) : '—'}
                   </Text>
                 </View>
                 <View style={styles.kpiGap} />
                 <View style={styles.kpiCell}>
-                  <Text style={styles.kpiLabel}>רווח</Text>
+                  <Text style={styles.kpiLabel}>{i18n.t('auto.screens__Portfolios__components__JournalPreviewSheet.s9')}</Text>
                   <Text style={[styles.kpiValue, { color: totalColor }]}>
                     {summary ? formatPercent(summary.total_gain_pct) : '—'}
                   </Text>
                 </View>
                 <View style={styles.kpiGap} />
                 <View style={styles.kpiCell}>
-                  <Text style={styles.kpiLabel}>הצלחה</Text>
+                  <Text style={styles.kpiLabel}>{i18n.t('auto.screens__Portfolios__components__JournalPreviewSheet.s10')}</Text>
                   <Text style={[styles.kpiValue, { color: winRateC }]}>
                     {summary?.win_rate_pct != null
                       ? formatPercent(summary.win_rate_pct, 1, false)
@@ -663,9 +663,7 @@ export function JournalPreviewSheet({
                       size={24}
                       color={tokens.colors.text.tertiary}
                     />
-                    <Text style={styles.chartEmptyText}>
-                      אין עדיין מספיק נתונים לגרף
-                    </Text>
+                    <Text style={styles.chartEmptyText}>{i18n.t('auto.screens__Portfolios__components__JournalPreviewSheet.s11')}</Text>
                   </View>
                 )}
               </View>
@@ -686,9 +684,9 @@ export function JournalPreviewSheet({
             onPress={handleOpenMore}
             activeOpacity={0.88}
             accessibilityRole="button"
-            accessibilityLabel="פתח תיק"
+            accessibilityLabel={i18n.t('auto.screens__Portfolios__components__JournalPreviewSheet.s4')}
           >
-            <Text style={styles.ctaText}>פתח תיק</Text>
+            <Text style={styles.ctaText}>{i18n.t('auto.screens__Portfolios__components__JournalPreviewSheet.s4')}</Text>
             <Ionicons
               name="arrow-back"
               size={16}

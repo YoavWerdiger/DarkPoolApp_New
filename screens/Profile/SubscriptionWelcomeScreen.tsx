@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useCallback, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing, BackHandler } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -31,7 +32,7 @@ function resolvePlanName(planId?: string, planName?: string): string {
   if (planId && planId in SUBSCRIPTION_PLANS) {
     return SUBSCRIPTION_PLANS[planId as PlanKey].name;
   }
-  return 'הפרימיום';
+  return i18n.t('auto.screens__Profile__SubscriptionWelcomeScreen.s1');
 }
 
 /**
@@ -105,7 +106,7 @@ export default function SubscriptionWelcomeScreen({
       showClose={false}
       showBack={false}
       footer={
-        <OnboardingButton title="למנוי שלי" onPress={goToBilling} />
+        <OnboardingButton title={i18n.t('auto.screens__Profile__SubscriptionWelcomeScreen.s2')} onPress={goToBilling} />
       }
     >
       <View style={styles.centered}>
@@ -135,10 +136,8 @@ export default function SubscriptionWelcomeScreen({
         </Animated.View>
 
         <Animated.View style={{ opacity: contentOpacity }}>
-          <Text style={[styles.title, { color: tokens.colors.text.primary }]}>{`ברוך הבא למסלול ${planName}!`}</Text>
-          <Text style={[styles.subtitle, { color: tokens.colors.text.secondary }]}>
-            המנוי שלך פעיל — אפשר להתחיל להשתמש בכל התכונות.
-          </Text>
+          <Text style={[styles.title, { color: tokens.colors.text.primary }]}>{i18n.t('auto.screens__Profile__SubscriptionWelcomeScreen.s3', { v0: planName })}</Text>
+          <Text style={[styles.subtitle, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Profile__SubscriptionWelcomeScreen.s4')}</Text>
         </Animated.View>
       </View>
     </OnboardingLayout>

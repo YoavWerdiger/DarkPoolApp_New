@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 /**
  * כיתוב כנה לכרטיסי גילוי — בלי "$ copied" ובלי תשואת תיק משוחזרת.
  */
@@ -11,18 +12,18 @@ import { formatUsdCompact } from './darkPoolFormat';
 export function formatFollowerCountHe(count: number | null | undefined): string | null {
   if (count == null || !Number.isFinite(count) || count <= 0) return null;
   const n = Math.floor(count);
-  if (n === 1) return 'עוקב אחד';
-  if (n === 2) return 'שני עוקבים';
-  return `${toDataIsland(n)} עוקבים`;
+  if (n === 1) return i18n.t('auto.screens__DarkPool__utils__exploreDisplay.s1');
+  if (n === 2) return i18n.t('auto.screens__DarkPool__utils__exploreDisplay.s2');
+  return i18n.t('auto.screens__DarkPool__utils__exploreDisplay.s3', { v0: toDataIsland(n) });
 }
 
 /** מונה דיווחים אמיתיים — לא Win Rate ולא "$ copied". */
 export function formatTradeCountHe(count: number | null | undefined): string | null {
   if (count == null || !Number.isFinite(count) || count <= 0) return null;
   const n = Math.floor(count);
-  if (n === 1) return 'עסקה מדווחת אחת';
-  if (n === 2) return 'שתי עסקאות מדווחות';
-  return `${toDataIsland(n)} עסקאות מדווחות`;
+  if (n === 1) return i18n.t('auto.screens__DarkPool__utils__exploreDisplay.s4');
+  if (n === 2) return i18n.t('auto.screens__DarkPool__utils__exploreDisplay.s5');
+  return i18n.t('auto.screens__DarkPool__utils__exploreDisplay.s6', { v0: toDataIsland(n) });
 }
 
 /**

@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 /**
  * Dual-Engine holdings — שני מנועים נפרדים, בלי לערבב STOCK Act עם Form 4.
  *
@@ -17,17 +18,17 @@ import { parseQuiverUsd, quiverAllocationToPct } from './congressHonesty';
 import { formatSignedUsdRaw, formatUsdRawOrDash } from './usdRawFormat';
 
 /** פנימי בלבד — לא מוצג כתג במסך. */
-export const HOLDING_TAG_ESTIMATED = 'משוער';
-export const HOLDING_TAG_EXACT = 'מדויק';
+export const HOLDING_TAG_ESTIMATED = i18n.t('auto.screens__DarkPool__utils__investorHoldings.s1');
+export const HOLDING_TAG_EXACT = i18n.t('auto.screens__DarkPool__utils__investorHoldings.s2');
 
 /** מאחורי `?` / (i) — לא כבאנר ולא כתג שורה. */
-export const CONGRESS_HOLDINGS_HELP_TITLE = 'על המספרים';
+export const CONGRESS_HOLDINGS_HELP_TITLE = i18n.t('auto.screens__DarkPool__utils__investorHoldings.s3');
 export const CONGRESS_HOLDINGS_HELP_BODY =
-  'שווי והקצאה מ-Quiver (CurrentHolding). תשואה בשורה: מחיר המניה מאז רכישה אחרונה שדווחה ב-PTR (פתיחת יום העסקה מול מחיר חי) — לא רווח/הפסד של הפוזיציה. אם Quiver מספק עלות כניסה — משתמשים בה.';
+  i18n.t('auto.screens__DarkPool__utils__investorHoldings.s4');
 
-export const FORM4_HOLDINGS_HELP_TITLE = 'על המספרים';
+export const FORM4_HOLDINGS_HELP_TITLE = i18n.t('auto.screens__DarkPool__utils__investorHoldings.s3');
 export const FORM4_HOLDINGS_HELP_BODY =
-  'מניות בחברות שבהן האדם מכהן (מנהל, דירקטור או בעל יותר מ-10%), לפי הדיווחים המקוריים ל-SEC, כפול המחיר הנוכחי. השקעות פרטיות אחרות לא מחויבות בדיווח — ולכן זה לא כל השווי הנטו שלו.';
+  i18n.t('auto.screens__DarkPool__utils__investorHoldings.s5');
 
 export interface InsiderForm4Holding {
   type: 'INSIDER_FORM_4';

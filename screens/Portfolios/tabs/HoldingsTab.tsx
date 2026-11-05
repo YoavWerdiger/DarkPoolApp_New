@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import React, { useMemo, useRef, useState } from 'react';
 import {
   View,
@@ -43,10 +44,10 @@ interface Props {
 }
 
 const GROUP_BY_OPTIONS: { id: HoldingsGroupBy; label: string }[] = [
-  { id: 'none', label: 'ללא קיבוץ' },
-  { id: 'asset_type', label: 'סוג נכס' },
-  { id: 'currency', label: 'מטבע' },
-  { id: 'exchange', label: 'בורסה' },
+  { id: 'none', label: i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s1') },
+  { id: 'asset_type', label: i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s2') },
+  { id: 'currency', label: i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s3') },
+  { id: 'exchange', label: i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s4') },
 ];
 
 export default function HoldingsTab({ portfolio, holdings }: Props) {
@@ -62,13 +63,13 @@ export default function HoldingsTab({ portfolio, holdings }: Props) {
 
   const grouped = useMemo(() => {
     if (groupBy === 'none')
-      return [{ key: 'all', label: 'כל הנכסים', items: filteredHoldings }];
+      return [{ key: 'all', label: i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s5'), items: filteredHoldings }];
     const map = new Map<string, PortfolioHolding[]>();
     for (const h of filteredHoldings) {
       let key: string;
       switch (groupBy) {
         case 'asset_type':
-          key = h.asset_type ? ASSET_TYPE_LABELS[h.asset_type] : 'לא ידוע';
+          key = h.asset_type ? ASSET_TYPE_LABELS[h.asset_type] : i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s6');
           break;
         case 'currency':
           key = 'USD';
@@ -256,10 +257,8 @@ export default function HoldingsTab({ portfolio, holdings }: Props) {
           size={42}
           color={tokens.colors.text.tertiary}
         />
-        <Text style={styles.emptyTitle}>אין נכסים</Text>
-        <Text style={styles.emptyText}>
-          הוסף עסקת קנייה ראשונה כדי לראות את הנכסים שלך.
-        </Text>
+        <Text style={styles.emptyTitle}>{i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s7')}</Text>
+        <Text style={styles.emptyText}>{i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s8')}</Text>
       </View>
     );
   }
@@ -328,7 +327,7 @@ export default function HoldingsTab({ portfolio, holdings }: Props) {
             color={tokens.colors.text.primary}
           />
           <Text style={styles.controlBtnText}>
-            {showSold ? 'מציג סגורות' : 'מסתיר סגורות'}
+            {showSold ? i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s9') : i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s10')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -368,7 +367,7 @@ export default function HoldingsTab({ portfolio, holdings }: Props) {
           ))}
         </View>
       </ScrollView>
-      <Text style={styles.scrollHint}>← גלילה שמאלה להצגת עמודות נוספות</Text>
+      <Text style={styles.scrollHint}>{i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s11')}</Text>
     </View>
   );
 }
@@ -383,7 +382,7 @@ function HoldingsTableHeader({ viewMode, styles }: HeaderProps) {
   return (
     <View style={styles.tableHeader}>
       <View style={styles.symbolCol}>
-        <Text style={styles.tableHeaderText}>סימבול</Text>
+        <Text style={styles.tableHeaderText}>{i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s12')}</Text>
       </View>
       {headers.map((h) => (
         <View key={h} style={[styles.cellWrap, { minWidth: 80 }]}>
@@ -413,8 +412,7 @@ function HoldingRow({ holding, viewMode, currency, styles, tokens }: RowProps) {
         <View style={styles.symbolTextWrap}>
           <Text style={styles.symbolText}>{holding.symbol}</Text>
           <Text style={styles.symbolMeta} numberOfLines={1}>
-            {formatNumber(holding.quantity, 4)} יח׳ · ממוצע{' '}
-            {formatCurrency(holding.avg_price, currency, 2)}
+            {i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s13', { v0: formatNumber(holding.quantity, 4), v1: ' ', v2: formatCurrency(holding.avg_price, currency, 2) })}
           </Text>
         </View>
       </View>
@@ -438,46 +436,46 @@ function getColumnsForMode(mode: HoldingsViewMode): { label: string }[] {
   switch (mode) {
     case 'position':
       return [
-        { label: 'מחיר שוק' },
-        { label: 'הקצאה' },
-        { label: 'שווי' },
-        { label: 'הושקע' },
-        { label: 'לא ממומש' },
-        { label: 'יומי' },
-        { label: 'תשואה שנתית' },
+        { label: i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s14') },
+        { label: i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s15') },
+        { label: i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s16') },
+        { label: i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s17') },
+        { label: i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s18') },
+        { label: i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s19') },
+        { label: i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s20') },
       ];
     case 'price':
       return [
-        { label: 'מחיר שוק' },
-        { label: 'שינוי' },
-        { label: 'שינוי %' },
+        { label: i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s14') },
+        { label: i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s21') },
+        { label: i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s22') },
       ];
     case 'financials':
       return [
-        { label: 'מחיר שוק' },
-        { label: 'מחיר ממוצע' },
-        { label: 'דיבידנד' },
-        { label: 'רווח כולל' },
+        { label: i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s14') },
+        { label: i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s23') },
+        { label: i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s24') },
+        { label: i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s25') },
       ];
     case 'performance':
       return [
-        { label: 'מחיר שוק' },
-        { label: 'רווח כולל' },
-        { label: 'רווח %' },
-        { label: 'תשואה שנתית' },
+        { label: i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s14') },
+        { label: i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s25') },
+        { label: i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s26') },
+        { label: i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s20') },
       ];
     case 'risk':
       return [
-        { label: 'מחיר שוק' },
-        { label: 'הקצאה' },
-        { label: 'שווי' },
-        { label: 'יומי %' },
+        { label: i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s14') },
+        { label: i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s15') },
+        { label: i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s16') },
+        { label: i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s27') },
       ];
     case 'technicals':
       return [
-        { label: 'מחיר שוק' },
-        { label: 'שינוי %' },
-        { label: 'הקצאה' },
+        { label: i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s14') },
+        { label: i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s22') },
+        { label: i18n.t('auto.screens__Portfolios__tabs__HoldingsTab.s15') },
       ];
   }
 }

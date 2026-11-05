@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 // ============================================
 // Create News Sheet
@@ -88,10 +89,10 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
 
       if (!allowed) {
         if (!permission.canAskAgain) {
-          setErrorMessage('הרשאת הגישה לתמונות נדחתה. נפתח כעת את ההגדרות...');
+          setErrorMessage(i18n.t('auto.screens__News__CreateNewsSheet.s1'));
           await Linking.openSettings().catch(() => {});
         } else {
-          setErrorMessage('נדרשת הרשאה לגישה לתמונות. אשר ונסה שוב.');
+          setErrorMessage(i18n.t('auto.screens__News__CreateNewsSheet.s2'));
         }
         return;
       }
@@ -110,8 +111,8 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
       }
     } catch (e) {
       console.error('[CreateNewsSheet] image picker failed', e);
-      const msg = e instanceof Error ? e.message : 'שגיאה לא ידועה';
-      setErrorMessage(`שגיאה בבחירת תמונה: ${msg}`);
+      const msg = e instanceof Error ? e.message : i18n.t('auto.screens__News__CreateNewsSheet.s3');
+      setErrorMessage(i18n.t('auto.screens__News__CreateNewsSheet.s4', { v0: msg }));
     }
   }, []);
 
@@ -133,20 +134,20 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
       if (imageLocalUri) {
         setIsUploadingImage(true);
         setPhase('image');
-        setStatusMessage('מעלה תמונה...');
+        setStatusMessage(i18n.t('auto.screens__News__CreateNewsSheet.s5'));
         const upload = await mediaService.uploadMedia(imageLocalUri, 'image');
         setIsUploadingImage(false);
         if (!upload.success || !upload.url) {
           setIsSubmitting(false);
           setStatusMessage(null);
-          setErrorMessage(`שגיאה בהעלאת התמונה: ${upload.error || 'נסה שוב'}`);
+          setErrorMessage(i18n.t('auto.screens__News__CreateNewsSheet.s6', { v0: upload.error || 'נסה שוב' }));
           return;
         }
         uploadedImageUrl = upload.url;
       }
 
       setPhase('save');
-      setStatusMessage('שומר...');
+      setStatusMessage(i18n.t('auto.screens__News__CreateNewsSheet.s7'));
 
       const authorName =
         (user as { full_name?: string; display_name?: string } | null)?.full_name ||
@@ -163,14 +164,14 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
 
       void HapticFeedback.impactLight();
       setPhase('done');
-      setStatusMessage('פורסם בהצלחה!');
+      setStatusMessage(i18n.t('auto.screens__News__CreateNewsSheet.s8'));
       onCreated?.();
       setTimeout(() => {
         if (animatedClose) animatedClose();
         else onClose();
       }, 700);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'שגיאה לא צפויה';
+      const msg = e instanceof Error ? e.message : i18n.t('auto.screens__News__CreateNewsSheet.s9');
       console.error('[CreateNewsSheet] submit failed', e);
       setStatusMessage(null);
       setPhase('idle');
@@ -219,15 +220,13 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
             onPress={handleClose}
             size={DAY_NAV_BUTTON_SIZE}
             style={styles.headerFace}
-            accessibilityLabel="סגור"
+            accessibilityLabel={i18n.t('auto.screens__News__CreateNewsSheet.s10')}
             disabled={isBusy}
           >
             <Ionicons name="chevron-forward" size={22} color={DesignTokens.colors.text.primary} />
           </DayNavBlurButton>
 
-          <Text style={[styles.headerTitle, { color: DesignTokens.colors.text.primary }]}>
-            כתבה חדשה
-          </Text>
+          <Text style={[styles.headerTitle, { color: DesignTokens.colors.text.primary }]}>{i18n.t('auto.screens__News__CreateNewsSheet.s11')}</Text>
 
           {/* פרסום — כפתור ירוק (כשאפשר לפרסם); אפור כשלא */}
           <TouchableOpacity
@@ -237,7 +236,7 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
             activeOpacity={0.85}
             disabled={!canSubmit}
             accessibilityRole="button"
-            accessibilityLabel="פרסם"
+            accessibilityLabel={i18n.t('auto.screens__News__CreateNewsSheet.s12')}
             style={[
               styles.publishBtn,
               {
@@ -296,7 +295,7 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
               {isUploadingImage ? (
                 <View style={styles.imageUploadingOverlay} pointerEvents="none">
                   <ActivityIndicator size="small" color="#fff" />
-                  <Text style={styles.imageUploadingText}>מעלה תמונה...</Text>
+                  <Text style={styles.imageUploadingText}>{i18n.t('auto.screens__News__CreateNewsSheet.s5')}</Text>
                 </View>
               ) : null}
               <View style={styles.imageToolbar}>
@@ -310,7 +309,7 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
                   hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                 >
                   <Ionicons name="image-outline" size={16} color="#fff" />
-                  <Text style={styles.imageToolbarBtnText}>החלף</Text>
+                  <Text style={styles.imageToolbarBtnText}>{i18n.t('auto.screens__News__CreateNewsSheet.s13')}</Text>
                 </TouchableOpacity>
                 <View style={styles.imageToolbarDivider} />
                 <TouchableOpacity
@@ -323,7 +322,7 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
                   hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                 >
                   <Ionicons name="trash-outline" size={16} color={DesignTokens.colors.text.danger} />
-                  <Text style={[styles.imageToolbarBtnText, { color: DesignTokens.colors.text.danger }]}>הסר</Text>
+                  <Text style={[styles.imageToolbarBtnText, { color: DesignTokens.colors.text.danger }]}>{i18n.t('auto.screens__News__CreateNewsSheet.s14')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -337,39 +336,35 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
               style={styles.imageSlot}
             >
               <Ionicons name="image-outline" size={28} color={DesignTokens.colors.text.secondary} />
-              <Text style={[styles.imageSlotTitle, { color: DesignTokens.colors.text.primary }]}>
-                הוסף תמונת כותרת
-              </Text>
-              <Text style={[styles.imageSlotHint, { color: placeholderColor }]}>
-                אופציונלי · מומלץ ביחס 16:9
-              </Text>
+              <Text style={[styles.imageSlotTitle, { color: DesignTokens.colors.text.primary }]}>{i18n.t('auto.screens__News__CreateNewsSheet.s15')}</Text>
+              <Text style={[styles.imageSlotHint, { color: placeholderColor }]}>{i18n.t('auto.screens__News__CreateNewsSheet.s16')}</Text>
             </TouchableOpacity>
           )}
 
           <NewsTextField
-            label="כותרת"
+            label={i18n.t('auto.screens__News__CreateNewsSheet.s17')}
             required
             counter={`${title.length}/160`}
             value={title}
             onChangeText={setTitle}
-            placeholder="מה קורה? כתבו כותרת חזקה..."
+            placeholder={i18n.t('auto.screens__News__CreateNewsSheet.s18')}
             maxLength={160}
             returnKeyType="next"
           />
 
           <NewsTextField
-            label="תוכן הכתבה"
+            label={i18n.t('auto.screens__News__CreateNewsSheet.s19')}
             required
             counter={`${content.length}/4000`}
             value={content}
             onChangeText={setContent}
-            placeholder="תוכן מלא של הכתבה..."
+            placeholder={i18n.t('auto.screens__News__CreateNewsSheet.s20')}
             multiline
             maxLength={4000}
           />
 
           <NewsTextField
-            label="מקור"
+            label={i18n.t('auto.screens__News__CreateNewsSheet.s21')}
             value={source}
             onChangeText={setSource}
             placeholder={DEFAULT_SOURCE}
@@ -608,9 +603,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
 function PublishSteps({ phase, hasImage }: { phase: 'image' | 'save' | 'done' | 'idle'; hasImage: boolean }) {
   const t = useDesignTokens();
   const steps = [
-    ...(hasImage ? [{ key: 'image', label: 'תמונה' }] : []),
-    { key: 'save', label: 'שמירה' },
-    { key: 'done', label: 'פורסם' },
+    ...(hasImage ? [{ key: 'image', label: i18n.t('auto.screens__News__CreateNewsSheet.s22') }] : []),
+    { key: 'save', label: i18n.t('auto.screens__News__CreateNewsSheet.s23') },
+    { key: 'done', label: i18n.t('auto.screens__News__CreateNewsSheet.s24') },
   ];
   const order = ['image', 'save', 'done'];
   const cur = order.indexOf(phase);

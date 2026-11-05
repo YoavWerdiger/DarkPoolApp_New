@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 /** הודעות גילוי — לעולם לא HTML / stack מ-API. */
 export function formatExploreWarning(raw: string): string | null {
   const s = raw.trim();
@@ -5,7 +6,7 @@ export function formatExploreWarning(raw: string): string | null {
   if (/[<]|\bhtml\b|doctype/i.test(s)) return null;
   if (/quiver|unusualwhales|\/beta\/|\/api\//i.test(s)) {
     if (s.includes('429') || /rate limit/i.test(s)) {
-      return 'מכסת API — מוצגים נתונים שמורים.';
+      return i18n.t('auto.screens__DarkPool__utils__exploreWarnings.s1');
     }
     return null;
   }

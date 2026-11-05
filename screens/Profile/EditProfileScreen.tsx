@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useCallback, useState, useEffect } from 'react';
 import {
@@ -144,7 +145,7 @@ export default function EditProfileScreen({ navigation }: any) {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        legacyAlert('אין הרשאה', 'יש לאפשר גישה לגלריה');
+        legacyAlert(i18n.t('auto.screens__Profile__EditProfileScreen.s1'), i18n.t('auto.screens__Profile__EditProfileScreen.s2'));
         return;
       }
 
@@ -159,13 +160,13 @@ export default function EditProfileScreen({ navigation }: any) {
         await processAndSetImage(result.assets[0].uri);
       }
     } catch {
-      legacyAlert('שגיאה', 'שגיאה בבחירת תמונה');
+      legacyAlert(i18n.t('auto.screens__Profile__EditProfileScreen.s3'), i18n.t('auto.screens__Profile__EditProfileScreen.s4'));
     }
   };
 
   const handleSave = async () => {
     if (!displayName.trim()) {
-      legacyAlert('שגיאה', 'נא להזין שם תצוגה');
+      legacyAlert(i18n.t('auto.screens__Profile__EditProfileScreen.s3'), i18n.t('auto.screens__Profile__EditProfileScreen.s5'));
       return;
     }
 
@@ -173,7 +174,7 @@ export default function EditProfileScreen({ navigation }: any) {
 
     try {
       if (!user) {
-        legacyAlert('שגיאה', 'לא נמצא משתמש מחובר');
+        legacyAlert(i18n.t('auto.screens__Profile__EditProfileScreen.s3'), i18n.t('auto.screens__Profile__EditProfileScreen.s6'));
         setIsSaving(false);
         return;
       }
@@ -182,8 +183,8 @@ export default function EditProfileScreen({ navigation }: any) {
       if (profileImage && remote.error) {
         setIsSaving(false);
         legacyAlert(
-          'שגיאה',
-          remote.error || 'העלאת תמונת הפרופיל נכשלה. נסה שוב או בחר תמונה אחרת.',
+          i18n.t('auto.screens__Profile__EditProfileScreen.s3'),
+          remote.error || i18n.t('auto.screens__Profile__EditProfileScreen.s7'),
         );
         return;
       }
@@ -202,17 +203,17 @@ export default function EditProfileScreen({ navigation }: any) {
       setIsSaving(false);
 
       if (error) {
-        legacyAlert('שגיאה', error);
+        legacyAlert(i18n.t('auto.screens__Profile__EditProfileScreen.s3'), error);
         return;
       }
 
       void HapticFeedback.success();
-      legacyAlert('הצלחה', 'הפרופיל נשמר בהצלחה', [
-        { text: 'אישור', onPress: () => navigation.goBack() },
+      legacyAlert(i18n.t('auto.screens__Profile__EditProfileScreen.s8'), i18n.t('auto.screens__Profile__EditProfileScreen.s9'), [
+        { text: i18n.t('auto.screens__Profile__EditProfileScreen.s10'), onPress: () => navigation.goBack() },
       ]);
     } catch {
       setIsSaving(false);
-      legacyAlert('שגיאה', 'לא הצלחנו לשמור את הפרופיל. נסה שוב.');
+      legacyAlert(i18n.t('auto.screens__Profile__EditProfileScreen.s3'), i18n.t('auto.screens__Profile__EditProfileScreen.s11'));
     }
   };
 
@@ -222,7 +223,7 @@ export default function EditProfileScreen({ navigation }: any) {
     return (
       <RNSafeAreaView style={screenStyle} edges={['top', 'bottom']}>
         <ChatSubScreenHeader
-          title="עריכת פרופיל"
+          title={i18n.t('auto.screens__Profile__EditProfileScreen.s12')}
           onBack={() => {
             void HapticFeedback.impactLight();
             navigation.goBack();
@@ -236,9 +237,7 @@ export default function EditProfileScreen({ navigation }: any) {
               styles.loadingText,
               { color: tokens.colors.text.secondary },
             ]}
-          >
-            טוען פרופיל...
-          </Text>
+          >{i18n.t('auto.screens__Profile__EditProfileScreen.s13')}</Text>
         </View>
       </RNSafeAreaView>
     );
@@ -249,7 +248,7 @@ export default function EditProfileScreen({ navigation }: any) {
   return (
     <RNSafeAreaView style={screenStyle} edges={['top']}>
       <ChatSubScreenHeader
-        title="עריכת פרופיל"
+        title={i18n.t('auto.screens__Profile__EditProfileScreen.s12')}
         onBack={() => {
           void HapticFeedback.impactLight();
           navigation.goBack();
@@ -273,7 +272,7 @@ export default function EditProfileScreen({ navigation }: any) {
               }}
               style={styles.avatarWrap}
               accessibilityRole="button"
-              accessibilityLabel="בחירת תמונה מהגלריה"
+              accessibilityLabel={i18n.t('auto.screens__Profile__EditProfileScreen.s14')}
             >
               <View
                 style={[
@@ -308,17 +307,15 @@ export default function EditProfileScreen({ navigation }: any) {
               </View>
             </Pressable>
             {isProcessingImage ? (
-              <Text style={[settingsMetaType, styles.processingText, { color: tokens.colors.text.secondary }]}>
-                מעבד תמונה...
-              </Text>
+              <Text style={[settingsMetaType, styles.processingText, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Profile__EditProfileScreen.s15')}</Text>
             ) : null}
           </View>
 
-          <ProfileEditField label="שם תצוגה" focused={focusedField === 'displayName'}>
+          <ProfileEditField label={i18n.t('auto.screens__Profile__EditProfileScreen.s16')} focused={focusedField === 'displayName'}>
             <TextInput
               value={displayName}
               onChangeText={setDisplayName}
-              placeholder="הזן שם תצוגה"
+              placeholder={i18n.t('auto.screens__Profile__EditProfileScreen.s17')}
               placeholderTextColor={tokens.colors.text.muted}
               onFocus={() => setFocusedField('displayName')}
               onBlur={() => setFocusedField(null)}
@@ -326,11 +323,11 @@ export default function EditProfileScreen({ navigation }: any) {
             />
           </ProfileEditField>
 
-          <ProfileEditField label="טלפון" focused={focusedField === 'phone'}>
+          <ProfileEditField label={i18n.t('auto.screens__Profile__EditProfileScreen.s18')} focused={focusedField === 'phone'}>
             <TextInput
               value={phone}
               onChangeText={setPhone}
-              placeholder="הזן מספר טלפון"
+              placeholder={i18n.t('auto.screens__Profile__EditProfileScreen.s19')}
               placeholderTextColor={tokens.colors.text.muted}
               keyboardType="phone-pad"
               onFocus={() => setFocusedField('phone')}
@@ -346,13 +343,11 @@ export default function EditProfileScreen({ navigation }: any) {
                 styles.fieldLabel,
                 { color: tokens.colors.text.secondary },
               ]}
-            >
-              מגדר
-            </Text>
+            >{i18n.t('auto.screens__Profile__EditProfileScreen.s20')}</Text>
             <View style={styles.genderRow}>
               {([
-                { value: 'male' as const, label: 'זכר', icon: 'male' as const },
-                { value: 'female' as const, label: 'נקבה', icon: 'female' as const },
+                { value: 'male' as const, label: i18n.t('auto.screens__Profile__EditProfileScreen.s21'), icon: 'male' as const },
+                { value: 'female' as const, label: i18n.t('auto.screens__Profile__EditProfileScreen.s22'), icon: 'female' as const },
               ]).map((opt) => {
                 const selected = gender === opt.value;
                 const foreground = selected
@@ -402,7 +397,7 @@ export default function EditProfileScreen({ navigation }: any) {
             </View>
           </View>
 
-          <ProfileEditField label="אימייל" helper="לא ניתן לשנות את כתובת האימייל" isLast>
+          <ProfileEditField label={i18n.t('auto.screens__Profile__EditProfileScreen.s23')} helper={i18n.t('auto.screens__Profile__EditProfileScreen.s24')} isLast>
             <Text
               style={[formFieldInputStyle(), { color: tokens.colors.text.secondary }]}
               numberOfLines={1}
@@ -428,7 +423,7 @@ export default function EditProfileScreen({ navigation }: any) {
           ]}
         >
           <UIButton
-            title="שמור שינויים"
+            title={i18n.t('auto.screens__Profile__EditProfileScreen.s25')}
             variant="primary"
             fullWidth
             loading={isSaving}

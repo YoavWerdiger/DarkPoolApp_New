@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { ReactNode } from 'react';
 import {
@@ -136,7 +137,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
                 <DayNavBlurButton
                   onPress={onBack}
                   size={44}
-                  accessibilityLabel="חזרה"
+                  accessibilityLabel={i18n.t('auto.components__onboarding__OnboardingScreen.s1')}
                 >
                   <Ionicons
                     name="chevron-forward"
@@ -164,7 +165,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
                 <DayNavBlurButton
                   onPress={onClose}
                   size={44}
-                  accessibilityLabel="סגור"
+                  accessibilityLabel={i18n.t('auto.components__onboarding__OnboardingScreen.s2')}
                 >
                   <Ionicons
                     name="close"

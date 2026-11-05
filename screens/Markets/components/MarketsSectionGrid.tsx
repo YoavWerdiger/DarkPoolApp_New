@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -35,7 +36,7 @@ export function MarketsSectionGrid({
   sections,
   activeId,
   onSelect,
-  accessibilityGroupLabel = 'שווקים',
+  accessibilityGroupLabel = i18n.t('auto.screens__Markets__components__MarketsSectionGrid.s1'),
 }: Props) {
   const t = useDesignTokens();
   const rows = useMemo(() => chunkPairs(sections), [sections]);

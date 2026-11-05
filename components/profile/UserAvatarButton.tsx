@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useCallback } from 'react';
 import { Image, Pressable, Text, View, type ViewStyle } from 'react-native';
 import { useDesignTokens } from '../ui/DesignTokens';
@@ -77,7 +78,7 @@ export default function UserAvatarButton({
       onPress={handlePress}
       hitSlop={6}
       accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel ?? `פרופיל של ${name}`}
+      accessibilityLabel={accessibilityLabel ?? i18n.t('auto.components__profile__UserAvatarButton.s1', { v0: name })}
       style={({ pressed }) => [style, pressed ? { opacity: 0.85 } : undefined]}
     >
       {avatar}

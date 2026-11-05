@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
@@ -17,7 +18,7 @@ interface Props {
 export function ExplorePeopleGrid({
   people,
   onPersonPress,
-  emptyMessage = 'אין פרופילים להצגה',
+  emptyMessage = i18n.t('auto.screens__DarkPool__components__ExplorePeopleGrid.s1'),
   padded = true,
 }: Props) {
   const tokens = useDesignTokens();

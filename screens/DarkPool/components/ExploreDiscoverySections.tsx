@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import React, { useMemo } from 'react';
 import type { ExplorePerson } from '../../../services/darkpool/uwExploreService';
 import {
@@ -86,53 +87,53 @@ export function ExploreDiscoverySections({
   return (
     <>
       <ExploreTwoColSection
-        title="הנצפים ביותר"
+        title={i18n.t('auto.screens__DarkPool__components__ExploreDiscoverySections.s1')}
         people={followed}
         onPersonPress={onPersonPress}
       />
       <ExploreTwoColSection
-        title="קרנות גידור מובילות"
+        title={i18n.t('auto.screens__DarkPool__components__ExploreDiscoverySections.s2')}
         people={fundShelf}
         onPersonPress={onPersonPress}
       />
       <ExploreTwoColSection
-        title="חברות ציבוריות"
+        title={i18n.t('auto.screens__DarkPool__components__ExploreDiscoverySections.s3')}
         people={companyShelf}
         onPersonPress={onPersonPress}
       />
       <ExploreTwoColSection
-        title="פוליטיקאים"
+        title={i18n.t('auto.screens__DarkPool__components__ExploreDiscoverySections.s4')}
         people={congress}
         onPersonPress={onPersonPress}
       />
       <ExploreTwoColSection
-        title="מנכ״לים"
+        title={i18n.t('auto.screens__DarkPool__components__ExploreDiscoverySections.s5')}
         people={insiders}
         onPersonPress={onPersonPress}
       />
       <ExploreRailSection
-        title="עודף תשואה מול S&P"
+        title={i18n.t('auto.screens__DarkPool__components__ExploreDiscoverySections.s6')}
         people={excess}
         showMetric
         onPersonPress={onPersonPress}
       />
       <ExploreTwoColSection
-        title="קרנות הגידור המובילות"
+        title={i18n.t('auto.screens__DarkPool__components__ExploreDiscoverySections.s7')}
         people={books}
         onPersonPress={onPersonPress}
       />
       <ExploreTwoColSection
-        title="פעילים לאחרונה"
+        title={i18n.t('auto.screens__DarkPool__components__ExploreDiscoverySections.s8')}
         people={recent}
         onPersonPress={onPersonPress}
       />
       <ExploreTwoColSection
-        title="חדשים אצלנו"
+        title={i18n.t('auto.screens__DarkPool__components__ExploreDiscoverySections.s9')}
         people={fresh}
         onPersonPress={onPersonPress}
       />
       <ExploreRailSection
-        title="הפעילים ביותר"
+        title={i18n.t('auto.screens__DarkPool__components__ExploreDiscoverySections.s10')}
         people={active}
         onPersonPress={onPersonPress}
       />

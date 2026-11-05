@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useEffect, useMemo } from 'react';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { APP_TYPE } from '../ui/appType';
@@ -90,8 +91,8 @@ export default function PollResults({
       })}
 
       <Text style={styles.footer}>
-        {totalVotes} {totalVotes === 1 ? 'הצבעה' : 'הצבעות'}
-        {interactive ? ' · לחץ לשינוי בחירה' : ''}
+        {totalVotes} {totalVotes === 1 ? i18n.t('auto.components__chat__PollResults.s1') : i18n.t('auto.components__chat__PollResults.s2')}
+        {interactive ? i18n.t('auto.components__chat__PollResults.s3') : ''}
       </Text>
     </View>
   );

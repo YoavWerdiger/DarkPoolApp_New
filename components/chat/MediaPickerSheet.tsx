@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -426,16 +427,16 @@ export default function MediaPickerSheet({
   const secondaryActions = useMemo<SheetAction[]>(() => {
     const next: SheetAction[] = [];
     if (onDocument) {
-      next.push({ id: 'document', icon: FileText, label: 'מסמך', run: () => launchSystem(onDocument) });
+      next.push({ id: 'document', icon: FileText, label: i18n.t('auto.components__chat__MediaPickerSheet.s1'), run: () => launchSystem(onDocument) });
     }
     if (onAudio) {
-      next.push({ id: 'audio', icon: Mic, label: 'אודיו', run: () => launchSystem(onAudio) });
+      next.push({ id: 'audio', icon: Mic, label: i18n.t('auto.components__chat__MediaPickerSheet.s2'), run: () => launchSystem(onAudio) });
     }
     if (onPoll) {
-      next.push({ id: 'poll', icon: ChartColumnBig, label: 'סקר', run: () => launchSystem(onPoll) });
+      next.push({ id: 'poll', icon: ChartColumnBig, label: i18n.t('auto.components__chat__MediaPickerSheet.s3'), run: () => launchSystem(onPoll) });
     }
     if (onMention) {
-      next.push({ id: 'mention', icon: AtSign, label: 'תיוג', run: () => launchSystem(onMention) });
+      next.push({ id: 'mention', icon: AtSign, label: i18n.t('auto.components__chat__MediaPickerSheet.s4'), run: () => launchSystem(onMention) });
     }
     return next;
   }, [launchSystem, onAudio, onDocument, onMention, onPoll]);
@@ -483,7 +484,7 @@ export default function MediaPickerSheet({
           activeOpacity={0.85}
           style={[{ width: size, height: size }, rounded && styles.thumbRounded]}
           accessibilityRole="button"
-          accessibilityLabel={item.mediaType === 'video' ? 'סרטון' : 'תמונה'}
+          accessibilityLabel={item.mediaType === 'video' ? i18n.t('auto.components__chat__MediaPickerSheet.s5') : i18n.t('auto.components__chat__MediaPickerSheet.s6')}
           accessibilityState={{ selected }}
         >
           <ExpoImage
@@ -517,10 +518,10 @@ export default function MediaPickerSheet({
 
   const primaryActions = useMemo<SheetAction[]>(() => {
     const next: SheetAction[] = [
-      { id: 'gallery', icon: Images, label: 'גלריה', run: expandGallery },
+      { id: 'gallery', icon: Images, label: i18n.t('auto.components__chat__MediaPickerSheet.s7'), run: expandGallery },
     ];
     if (showCameraButton) {
-      next.push({ id: 'camera', icon: Camera, label: 'מצלמה', run: openCamera });
+      next.push({ id: 'camera', icon: Camera, label: i18n.t('auto.components__chat__MediaPickerSheet.s8'), run: openCamera });
     }
     return next;
   }, [expandGallery, openCamera, showCameraButton]);
@@ -585,12 +586,12 @@ export default function MediaPickerSheet({
         glass={false}
         style={{ backgroundColor: headerExitButtonFill(tokens.colors.background.cardSolid) }}
         onPress={collapseGallery}
-        accessibilityLabel="חזרה לתפריט"
+        accessibilityLabel={i18n.t('auto.components__chat__MediaPickerSheet.s9')}
       >
         <Ionicons name="chevron-down" size={22} color={tokens.colors.text.primary} />
       </DayNavBlurButton>
       <View style={styles.galleryTitleWrap}>
-        <Text style={styles.galleryTitle}>גלריה</Text>
+        <Text style={styles.galleryTitle}>{i18n.t('auto.components__chat__MediaPickerSheet.s7')}</Text>
       </View>
       <View style={styles.galleryChromeSpacer} />
     </View>
@@ -618,12 +619,8 @@ export default function MediaPickerSheet({
             {galleryChrome}
             {ui.showPermissionCta ? (
               <View style={styles.permission}>
-                <Text style={[styles.permissionTitle, { color: tokens.colors.text.primary }]}>
-                  גישה לתמונות
-                </Text>
-                <Text style={[styles.permissionBody, { color: tokens.colors.text.secondary }]}>
-                  אפשר גישה כדי לצרף מהגלריה בלי לעזוב את השיחה
-                </Text>
+                <Text style={[styles.permissionTitle, { color: tokens.colors.text.primary }]}>{i18n.t('auto.components__chat__MediaPickerSheet.s10')}</Text>
+                <Text style={[styles.permissionBody, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.components__chat__MediaPickerSheet.s11')}</Text>
                 <TouchableOpacity
                   onPress={requestPermission}
                   style={styles.permissionBtn}
@@ -664,9 +661,7 @@ export default function MediaPickerSheet({
                       : undefined
                 }
                 ListEmptyComponent={
-                  <Text style={[styles.empty, { color: tokens.colors.text.secondary }]}>
-                    אין תמונות עדיין
-                  </Text>
+                  <Text style={[styles.empty, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.components__chat__MediaPickerSheet.s12')}</Text>
                 }
                 ListFooterComponent={
                   loadingMore ? (
@@ -679,19 +674,19 @@ export default function MediaPickerSheet({
         ) : (
           <View style={styles.peek}>
             <View style={styles.peekHeader}>
-              <ChatSheetTopoHeader title="צירוף" onClose={onClose} />
+              <ChatSheetTopoHeader title={i18n.t('auto.components__chat__MediaPickerSheet.s13')} onClose={onClose} />
             </View>
             {peekThumbs.length > 0 ? (
               <View style={styles.peekRecentsBlock}>
                 <View style={styles.peekRecentsHeader}>
-                  <Text style={styles.peekRecentsTitle}>אחרונים</Text>
+                  <Text style={styles.peekRecentsTitle}>{i18n.t('auto.components__chat__MediaPickerSheet.s14')}</Text>
                   <TouchableOpacity
                     onPress={expandGallery}
                     hitSlop={8}
                     accessibilityRole="button"
-                    accessibilityLabel="פתח את כל הגלריה"
+                    accessibilityLabel={i18n.t('auto.components__chat__MediaPickerSheet.s15')}
                   >
-                    <Text style={styles.peekRecentsLink}>הכל</Text>
+                    <Text style={styles.peekRecentsLink}>{i18n.t('auto.components__chat__MediaPickerSheet.s16')}</Text>
                   </TouchableOpacity>
                 </View>
                 {/* RTL: האחרון מימין וגוללים שמאלה — FlatList הפוך (ScrollView אופקי לא הופך את נקודת
@@ -712,10 +707,10 @@ export default function MediaPickerSheet({
                         onPress={expandGallery}
                         activeOpacity={0.8}
                         accessibilityRole="button"
-                        accessibilityLabel="פתח את כל הגלריה"
+                        accessibilityLabel={i18n.t('auto.components__chat__MediaPickerSheet.s15')}
                       >
                         <Images size={22} color={tokens.colors.text.primary} strokeWidth={2} />
-                        <Text style={styles.peekMoreLabel}>הכל</Text>
+                        <Text style={styles.peekMoreLabel}>{i18n.t('auto.components__chat__MediaPickerSheet.s16')}</Text>
                       </TouchableOpacity>
                     ) : (
                       renderThumb(item, MEDIA_ATTACH_PEEK_THUMB_PX, true)
@@ -767,11 +762,11 @@ function UploadCta({ count, onPress, fullWidth = false }: { count: number; onPre
       activeOpacity={0.85}
       style={fullWidth ? { alignSelf: 'stretch' } : undefined}
       accessibilityRole="button"
-      accessibilityLabel={`העלאה של ${count} קבצים`}
+      accessibilityLabel={i18n.t('auto.components__chat__MediaPickerSheet.s17', { v0: count })}
     >
       <View pointerEvents="none">
         <UIButton
-          title={count > 1 ? `העלאה · ${count}` : 'העלאה'}
+          title={count > 1 ? i18n.t('auto.components__chat__MediaPickerSheet.s18', { v0: count }) : i18n.t('auto.components__chat__MediaPickerSheet.s19')}
           variant="primary"
           icon="arrow-up"
           iconPosition="right"

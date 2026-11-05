@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import React, { useState } from 'react';
 import { ScrollView } from 'react-native';
 import { useRegistration } from '../../context/RegistrationContext';
@@ -59,8 +60,8 @@ const RegistrationTrackScreen = ({ navigation }: { navigation: any }) => {
 
   return (
     <CashAppScreen
-      title="בחר מסלול"
-      subtitle="בחר את המסלול שמתאים לך — אפשר לשדרג בכל עת"
+      title={i18n.t('auto.screens__Auth__RegistrationTrackScreen.s1')}
+      subtitle={i18n.t('auto.screens__Auth__RegistrationTrackScreen.s2')}
       currentStep={ONBOARDING_STEPS.track}
       totalSteps={ONBOARDING_TOTAL_STEPS}
       progressVariant="dots"

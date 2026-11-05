@@ -1,3 +1,4 @@
+import i18n from '../../lib/i18n';
 import type { CourseWithProgress, Enrollment, Lesson } from '../../types/learning';
 
 export const DAVID_TRAINING_COURSE_ID = 'david-training-course';
@@ -50,8 +51,8 @@ export function isLessonLockedForUser(opts: {
 }
 
 /** כותרת משנה לתצוגה בכרטיס/Coming Soon */
-export const WHALES_COURSE_SUBTITLE = 'מ־0 לסוחר מקצועי';
-export const ORACLE_COURSE_SUBTITLE = 'קורס מסחר מתקדם באופציות';
+export const WHALES_COURSE_SUBTITLE = i18n.t('auto.components__learning__academyCourses.s1');
+export const ORACLE_COURSE_SUBTITLE = i18n.t('auto.components__learning__academyCourses.s2');
 
 export function getAcademyCourseSubtitle(
   course: Pick<CourseWithProgress, 'id' | 'slug' | 'title' | 'subtitle'>
@@ -66,13 +67,13 @@ export function getAcademyCourseAudience(
   course: Pick<CourseWithProgress, 'id' | 'slug' | 'title' | 'description'>
 ): string {
   if (isDavidTrainingCourse(course)) {
-    return 'לכל מי שרוצה להתחיל לסחור או להשקיע בשוק ההון, גם ללא ניסיון קודם.';
+    return i18n.t('auto.components__learning__academyCourses.s3');
   }
   if (isOracleCourse(course)) {
-    return 'לסוחרים ומשקיעים שכבר מכירים את יסודות השוק ורוצים להתמקצע במסחר באופציות ובאסטרטגיות מתקדמות.';
+    return i18n.t('auto.components__learning__academyCourses.s4');
   }
   if (isWhalesCourse(course)) {
-    return 'למתחילים ולסוחרים שרוצים ללמוד מהיסודות ועד ניתוח טכני מתקדם, מסחר סווינג ומסחר יומי במניות.';
+    return i18n.t('auto.components__learning__academyCourses.s5');
   }
   const desc = (course.description || '').trim();
   const match = desc.match(/למי הקורס מתאים\?\s*\n([^\n]+)/);
@@ -121,11 +122,11 @@ const ADVANCED_COURSE_BADGE_TEXT = '#1E1A24';
 export function getAcademyCourseBadgeLabel(
   course: Pick<CourseWithProgress, 'id' | 'slug' | 'title' | 'access'> & { price?: number }
 ): string {
-  if (isDavidTrainingCourse(course)) return 'בסיסי';
-  if (isWhalesCourse(course)) return 'קורס בסיס';
-  if (isOracleCourse(course)) return 'קורס מתקדם';
-  if (getAcademyCourseTier(course) === 'premium') return 'קורס מלא';
-  return 'חינמי';
+  if (isDavidTrainingCourse(course)) return i18n.t('auto.components__learning__academyCourses.s6');
+  if (isWhalesCourse(course)) return i18n.t('auto.components__learning__academyCourses.s7');
+  if (isOracleCourse(course)) return i18n.t('auto.components__learning__academyCourses.s8');
+  if (getAcademyCourseTier(course) === 'premium') return i18n.t('auto.components__learning__academyCourses.s9');
+  return i18n.t('auto.components__learning__academyCourses.s10');
 }
 
 /** צבע תג — בלי כתום «פרמיום» */

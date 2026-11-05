@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
@@ -13,8 +14,8 @@ import { HapticFeedback } from '../../../utils/hapticFeedback';
 
 const HEATMAP_TABS: { id: HeatmapKind; label: string }[] = [
   { id: 'sp500', label: 'S&P 500' },
-  { id: 'nasdaq', label: 'נאסד״ק' },
-  { id: 'crypto', label: 'קריפטו' },
+  { id: 'nasdaq', label: i18n.t('auto.screens__Markets__tabs__MarketsHeatmapsTab.s1') },
+  { id: 'crypto', label: i18n.t('auto.screens__Markets__tabs__MarketsHeatmapsTab.s2') },
 ];
 
 function HeatmapTabToggle({
@@ -48,7 +49,7 @@ function HeatmapTabToggle({
             }}
             activeOpacity={0.7}
             accessibilityRole="tab"
-            accessibilityLabel={`מפת חום: ${tab.label}`}
+            accessibilityLabel={i18n.t('auto.screens__Markets__tabs__MarketsHeatmapsTab.s3', { v0: tab.label })}
             accessibilityState={{ selected: active }}
             style={{
               flex: 1,

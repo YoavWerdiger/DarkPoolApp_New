@@ -1,3 +1,4 @@
+import i18n from '../lib/i18n';
 // ============================================
 // תצוגת טקסט להודעה (רשימת צ'אטים, שיטים, reply preview)
 // מסיר תוכן גולמי כמו JSON של הקלטה ומחזיר תווית קריאה.
@@ -34,7 +35,7 @@ export function getChatMessagePreview(
       const parsed = JSON.parse(trimmed) as Record<string, unknown>;
       const trade = parsed.trade as { symbol?: string } | undefined;
       if (trade && typeof trade.symbol === 'string' && trade.symbol) {
-        return `טרייד · ${trade.symbol}`;
+        return i18n.t('auto.utils__chatMessagePreview.s1', { v0: trade.symbol });
       }
       // שיתוף ישות (טרייד/חדשה/פרופיל) — מזוהה גם בלי message_type (last_message_preview מהשרת)
       const entity = parseEntityAttachmentFromContent(trimmed);
@@ -47,32 +48,32 @@ export function getChatMessagePreview(
           typeof parsed.duration === 'number' && parsed.duration >= 0
             ? formatPreviewDuration(parsed.duration)
             : null;
-        return dur ? `הודעה קולית · ${dur}` : 'הודעה קולית';
+        return dur ? i18n.t('auto.utils__chatMessagePreview.s2', { v0: dur }) : i18n.t('auto.utils__chatMessagePreview.s3');
       }
     } catch {
       // JSON חתוך (last_message_preview ישן נשמר כ-LEFT 100) — מזהים לפי מפתחות ולא מציגים גולמי
       if (trimmed.includes('"attachment"')) {
         const title = /"title"\s*:\s*"([^"]+)/.exec(trimmed)?.[1];
-        return title || 'שיתוף';
+        return title || i18n.t('auto.utils__chatMessagePreview.s4');
       }
-      if (trimmed.includes('"waveform"') || trimmed.includes('"waveformData"')) return 'הודעה קולית';
-      if (trimmed.includes('"trade"')) return 'טרייד';
+      if (trimmed.includes('"waveform"') || trimmed.includes('"waveformData"')) return i18n.t('auto.utils__chatMessagePreview.s3');
+      if (trimmed.includes('"trade"')) return i18n.t('auto.utils__chatMessagePreview.s5');
     }
   }
 
   switch (messageType) {
     case ChatMessageType.IMAGE:
-      return 'תמונה';
+      return i18n.t('auto.utils__chatMessagePreview.s6');
     case ChatMessageType.VIDEO:
-      return 'וידאו';
+      return i18n.t('auto.utils__chatMessagePreview.s7');
     case ChatMessageType.AUDIO:
-      return 'הודעה קולית';
+      return i18n.t('auto.utils__chatMessagePreview.s3');
     case ChatMessageType.DOCUMENT:
-      return 'מסמך';
+      return i18n.t('auto.utils__chatMessagePreview.s8');
     case ChatMessageType.POLL:
-      return 'סקר';
+      return i18n.t('auto.utils__chatMessagePreview.s9');
     case ChatMessageType.TRADE:
-      return 'טרייד';
+      return i18n.t('auto.utils__chatMessagePreview.s5');
     case ChatMessageType.ENTITY: {
       if (trimmed.startsWith('{')) {
         try {
@@ -85,10 +86,10 @@ export function getChatMessagePreview(
           /* ignore */
         }
       }
-      return 'שיתוף';
+      return i18n.t('auto.utils__chatMessagePreview.s4');
     }
     case ChatMessageType.MEDIA_GROUP:
-      return 'אלבום';
+      return i18n.t('auto.utils__chatMessagePreview.s10');
   }
 
   // זיהוי הקלטה גם כשאין message_type (תוכן JSON עם waveform)
@@ -96,8 +97,8 @@ export function getChatMessagePreview(
     trimmed.startsWith('{') &&
     (trimmed.includes('waveformData') || trimmed.includes('"waveform"'))
   ) {
-    return 'הודעה קולית';
+    return i18n.t('auto.utils__chatMessagePreview.s3');
   }
 
-  return trimmed || 'הודעה';
+  return trimmed || i18n.t('auto.utils__chatMessagePreview.s11');
 }

@@ -1,3 +1,4 @@
+import i18n from '../../../lib/i18n';
 import { companyFacilityPhotoUrl } from '../utils/companyFacilityPhotos';
 import { useTheme } from '../../../context/ThemeContext';
 import { companyBrandGradient } from '../utils/companyBrandColors';
@@ -238,7 +239,7 @@ function PersonProfileHeroInner({
           size={HERO_ICON_SIZE}
           glassIntensity="subtle"
           onPress={onBack}
-          accessibilityLabel="חזרה"
+          accessibilityLabel={i18n.t('auto.screens__DarkPool__components__PersonProfileHero.s1')}
         >
           <Ionicons
             name="chevron-forward"

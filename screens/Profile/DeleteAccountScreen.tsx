@@ -60,7 +60,8 @@ export default function DeleteAccountScreen({ navigation }: any) {
             setSaving(true);
             try {
               await deleteOwnAccount({
-                confirm: confirm.trim(),
+                // השרת (delete-account) מצפה ל«מחק» — המילה בשפת הממשק כבר אומתה למעלה
+                confirm: 'מחק',
                 password: password || undefined,
               });
               void HapticFeedback.warning();

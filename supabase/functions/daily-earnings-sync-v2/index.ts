@@ -1461,7 +1461,7 @@ serve(async (req) => {
       : nearConfirmedKept
     console.log(
       capMap
-        ? `[market-cap] kept ${records.length} (unknown cap: ${unknownCap}), dropped ${droppedBelowCap} below $2B, ${droppedLowVolume} below 1M avg volume`
+        ? `[market-cap] kept ${records.length} (unknown cap: ${unknownCap}), dropped ${droppedBelowCap} below $3B, ${droppedLowVolume} below 3M avg volume`
         : '[market-cap] caps table unavailable — no cap filter this run',
     )
     console.log(

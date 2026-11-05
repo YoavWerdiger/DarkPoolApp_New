@@ -38,7 +38,7 @@ const en: DeepPartial<Translation> = {
     interfaceLanguage: 'App language',
     languageName: 'English',
     changeLanguageTitle: 'App language',
-    changeLanguageBody: 'The app will reload to switch language and layout direction.',
+    changeLanguageBody: 'The app will reload to switch the language.',
     switchToOther: 'עברית',
     billingSection: 'Subscription & Billing',
     billing: 'Subscription, payments & invoices',

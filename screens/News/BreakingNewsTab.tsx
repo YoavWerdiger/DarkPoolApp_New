@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { View, Text, TextInput, FlatList, RefreshControl, Pressable, TouchableOpacity, Image, Linking, Modal, Share, ScrollView, Animated, Dimensions, StyleSheet, Platform } from 'react-native';
@@ -48,19 +49,19 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 
 /** שורת מטא קצרה (מקור/תאריך) — בתוך row-reverse */
 const newsDetailMetaText = {
-  writingDirection: 'rtl' as const,
+  writingDirection: TEXT_DIR,
   textAlign: 'left' as const,
 };
 
 /** כותרת וגוף — כמו כרטיס החדשות ברשימה */
 const newsDetailParagraphText = {
-  writingDirection: 'rtl' as const,
+  writingDirection: TEXT_DIR,
   textAlign: 'right' as const,
 };
 
 /** כפתורי פעולה */
 const newsDetailRtlText = {
-  writingDirection: 'rtl' as const,
+  writingDirection: TEXT_DIR,
   textAlign: 'left' as const,
 };
 
@@ -594,7 +595,7 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
                 ...APP_TYPE.cardTitle,
                 color: DesignTokens.colors.text.primary,
                 textAlign: 'right',
-                writingDirection: 'rtl',
+                writingDirection: TEXT_DIR,
               }}
               numberOfLines={summary ? 2 : 3}
             >
@@ -607,7 +608,7 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
                   ...APP_TYPE.cardSubtitle,
                   color: DesignTokens.colors.text.secondary,
                   textAlign: 'right',
-                  writingDirection: 'rtl',
+                  writingDirection: TEXT_DIR,
                   marginTop: APP_LAYOUT.cardMetricLabelToValueGap,
                 }}
                 numberOfLines={2}
@@ -701,7 +702,7 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
               style={{
                 ...APP_TYPE.caption,
                 color: DesignTokens.colors.text.secondary,
-                writingDirection: 'rtl',
+                writingDirection: TEXT_DIR,
               }}
               numberOfLines={1}
             >
@@ -720,7 +721,7 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
               style={{
                 ...APP_TYPE.caption,
                 color: DesignTokens.colors.text.secondary,
-                writingDirection: 'rtl',
+                writingDirection: TEXT_DIR,
               }}
               numberOfLines={1}
             >
@@ -1323,7 +1324,7 @@ export default function BreakingNewsTab({
                   color: DesignTokens.colors.text.primary,
                   ...APP_TYPE.body,
                   textAlign: 'right',
-                  writingDirection: 'rtl',
+                  writingDirection: TEXT_DIR,
                   paddingVertical: 6,
                 }}
                 returnKeyType="search"

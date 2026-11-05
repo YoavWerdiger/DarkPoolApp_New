@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 /**
  * שיט פירוט דוח רווח — לפי הטופו:
  * כרטיס ראשי (פס צבע לפי ההפתעה): לוגו / $TICKER / חברה + תגית מועד·תאריך·רבעון,
@@ -440,7 +441,7 @@ function useStyles() {
           textAlign: 'center',
           paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
           marginBottom: APP_LAYOUT.stackGapSmall + 4,
-          writingDirection: 'rtl',
+          writingDirection: TEXT_DIR,
           fontVariant: ['tabular-nums'],
         },
         // ערך ותגית באותה שורה — שורה אחת בגובה רגיל
@@ -473,7 +474,7 @@ function useStyles() {
         chipText: {
           ...APP_TYPE.caption,
           color: tokens.colors.text.primary,
-          writingDirection: 'rtl',
+          writingDirection: TEXT_DIR,
           fontVariant: ['tabular-nums'],
         },
         resultCards: { direction: 'rtl', flexDirection: 'row', gap: APP_LAYOUT.cardStackGap },

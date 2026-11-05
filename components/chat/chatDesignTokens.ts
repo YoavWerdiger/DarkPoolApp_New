@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 /**
  * צבעים וסמנטיקה אחידים לכל מערכת הצ'אט — מבוססים על DesignTokens (ערכת DarkPool).
  * להשתמש ב־import מכאן במקום hex / COLORS מקומיים בקומפוננטות צ'אט.
@@ -53,6 +54,6 @@ export const chatRtlRow = {
 } as const;
 
 export const chatRtlText = {
-  writingDirection: 'rtl' as const,
+  writingDirection: TEXT_DIR,
   textAlign: 'left' as const,
 };

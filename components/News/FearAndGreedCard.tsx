@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { useState, useMemo } from 'react';
 import {
@@ -246,7 +247,7 @@ export default function FearAndGreedCard({
         fontWeight: APP_TYPE.cardMetricValueSecondary.fontWeight,
         letterSpacing: APP_TYPE.cardMetricValueSecondary.letterSpacing,
         textAlign: 'center' as const,
-        writingDirection: 'rtl' as const,
+        writingDirection: TEXT_DIR,
         marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
       },
       historicalDataContainer: {

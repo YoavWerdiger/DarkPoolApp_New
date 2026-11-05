@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../../lib/i18n/language';
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -100,7 +101,7 @@ export function MarketsSegmentedControl<T extends string>({
           fontWeight,
           color,
           textAlign: 'center',
-          writingDirection: 'rtl',
+          writingDirection: TEXT_DIR,
           paddingHorizontal: 2,
         }}
       >

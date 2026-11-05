@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useCallback, useMemo } from 'react';
@@ -287,14 +288,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       ...ACADEMY_TYPE.cardBody,
       color: tokens.colors.text.secondary,
       textAlign: 'right',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     noteDate: {
       marginTop: APP_LAYOUT.stackGapSmall,
       ...ACADEMY_TYPE.caption,
       color: tokens.colors.text.tertiary,
       textAlign: 'right',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     emptyState: {
       alignItems: 'center',

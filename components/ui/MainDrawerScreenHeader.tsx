@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -229,7 +230,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, inRtlTree: boo
       ...appScreenSubtitleStyle,
       direction: 'ltr',
       textAlign: 'right',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       width: '100%',
       color: tokens.colors.text.secondary,
     },

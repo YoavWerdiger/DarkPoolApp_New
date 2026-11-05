@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
@@ -420,7 +421,7 @@ const styles = StyleSheet.create({
     fontSize: APP_TYPE.sectionSubtitle.fontSize,
     lineHeight: APP_TYPE.sectionSubtitle.lineHeight,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   steps: {
     alignSelf: 'stretch',
@@ -442,7 +443,7 @@ const styles = StyleSheet.create({
     lineHeight: APP_TYPE.cardBody.lineHeight,
     fontWeight: APP_TYPE.cardTitle.fontWeight,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   textBlock: {
     alignItems: 'center',
@@ -454,7 +455,7 @@ const styles = StyleSheet.create({
     lineHeight: APP_TYPE.flowTitle.lineHeight,
     fontWeight: APP_TYPE.flowTitle.fontWeight,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
 });
 

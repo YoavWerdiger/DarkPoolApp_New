@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useMemo, useState } from 'react';
 import {
   Image,
@@ -465,7 +466,7 @@ const tradeCardStyles = StyleSheet.create({
     flex: 1,
     ...APP_TYPE.cardSubtitle,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
 });
 
@@ -862,19 +863,19 @@ function createStyles(
       ...APP_TYPE.cardTitle,
       color: tokens.colors.text.primary,
       textAlign: 'right',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     subtitle: {
       ...APP_TYPE.cardSubtitle,
       color: tokens.colors.text.secondary,
       textAlign: 'right',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     snippet: {
       ...APP_TYPE.cardSubtitle,
       color: tokens.colors.text.secondary,
       textAlign: 'right',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     metricsRow: {
       flexDirection: 'row-reverse',
@@ -924,7 +925,7 @@ function createStyles(
     metricLabel: {
       ...APP_TYPE.cardMetricLabel,
       color: tokens.colors.text.secondary,
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       textAlign: 'center',
     },
     metricValue: {
@@ -945,7 +946,7 @@ function createStyles(
     expandHint: {
       ...APP_TYPE.caption,
       color: tokens.colors.text.secondary,
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       textAlign: 'right',
     },
   });

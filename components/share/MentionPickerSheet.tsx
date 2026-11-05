@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -297,7 +298,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     headerTitle: {
       ...APP_TYPE.screenTitle,
       textAlign: 'center',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       width: '100%',
     },
     searchWrap: {
@@ -315,7 +316,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       ...APP_TYPE.body,
       padding: 0,
       textAlign: 'right',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     center: {
       flex: 1,
@@ -335,7 +336,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     empty: {
       ...APP_TYPE.cardSubtitle,
       textAlign: 'center',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     row: {
       flexDirection: 'row-reverse',
@@ -363,13 +364,13 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     rowTitle: {
       ...APP_TYPE.cardTitle,
       textAlign: 'right',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       color: tokens.colors.text.primary,
     },
     rowSub: {
       ...APP_TYPE.cardSubtitle,
       textAlign: 'right',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
   });
 }

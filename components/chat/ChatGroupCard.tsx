@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 // ============================================
 // Chat Group Card Component
 // ============================================
@@ -169,7 +170,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
     letterSpacing: APP_TYPE.cardTitle.letterSpacing,
     color: tokens.colors.text.primary,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   nameUnread: {
     fontWeight: '700',

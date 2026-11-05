@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../lib/i18n/language';
 import React from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -56,10 +57,10 @@ export const GradientHeader: React.FC<GradientHeaderProps> = ({
             </View>
           )}
           {!!title && (
-            <Text style={{ color: '#FFFFFF', fontSize: 22, fontWeight: '700', textAlign: 'center', writingDirection: 'rtl' }}>{title}</Text>
+            <Text style={{ color: '#FFFFFF', fontSize: 22, fontWeight: '700', textAlign: 'center', writingDirection: TEXT_DIR }}>{title}</Text>
           )}
           {!!subtitle && (
-            <Text style={{ color: '#B0B0B0', fontSize: 14, textAlign: 'center', marginTop: 4, writingDirection: 'rtl' }}>{subtitle}</Text>
+            <Text style={{ color: '#B0B0B0', fontSize: 14, textAlign: 'center', marginTop: 4, writingDirection: TEXT_DIR }}>{subtitle}</Text>
           )}
         </View>
 

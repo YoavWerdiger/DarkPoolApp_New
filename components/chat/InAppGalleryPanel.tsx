@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -267,7 +268,7 @@ const styles = StyleSheet.create({
     fontSize: APP_TYPE.cardBody.fontSize,
     lineHeight: APP_TYPE.cardBody.lineHeight,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   resolving: {
     ...StyleSheet.absoluteFill,

@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import { listCongressTradesForPersonTicker } from '../../services/darkpool/darkPoolDbCacheService';
 import { listInsiderTradesForPersonTicker } from '../../services/darkpool/darkPoolService';
 import { getFeedTradeSide } from './utils/feedTradeDisplay';
@@ -613,7 +614,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, bottomPadding:
       letterSpacing: DARK_POOL_TYPE.screenTitle.letterSpacing,
       color: tokens.colors.text.primary,
       textAlign: 'center',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     scrollContent: {
       direction: 'rtl',

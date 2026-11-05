@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -398,7 +399,7 @@ function CreateCommunityPostSheetBody({
               placeholderTextColor={tokens.colors.text.tertiary}
               multiline
               maxLength={MAX_LEN}
-              style={[styles.composeInput, { color: tokens.colors.text.primary, writingDirection: 'rtl' }]}
+              style={[styles.composeInput, { color: tokens.colors.text.primary, writingDirection: TEXT_DIR }]}
               textAlign="right"
               textAlignVertical="top"
               autoFocus
@@ -612,7 +613,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontWeight: APP_TYPE.screenTitle.fontWeight,
       lineHeight: APP_TYPE.screenTitle.lineHeight,
       letterSpacing: APP_TYPE.screenTitle.letterSpacing,
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       textAlign: 'center',
       width: '100%',
     },
@@ -650,7 +651,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     bannerText: {
       flex: 1,
       ...APP_TYPE.cardSubtitle,
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       textAlign: 'right',
     },
     composeCard: {
@@ -667,7 +668,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       minHeight: 140,
       ...APP_TYPE.body,
       padding: 0,
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     chipsRow: {
       direction: 'rtl',
@@ -686,7 +687,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       lineHeight: DAY_DIVIDER_PILL_LINE_HEIGHT,
       fontWeight: tokens.typography.fontWeight.medium,
       color: tokens.colors.text.primary,
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       textAlign: 'right',
     },
     toolbar: {

@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../../lib/i18n/language';
 /**
  * סרגל תחתון — פיד | חקור | טיקרים | מעקב
  */
@@ -234,7 +235,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, safeBottom: nu
       fontVariant: ['tabular-nums'],
       fontWeight: '600',
       color: tokens.colors.text.tertiary,
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     labelFocused: {
       color: tokens.colors.text.primary,

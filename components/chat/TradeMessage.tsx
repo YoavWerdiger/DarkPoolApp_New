@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
@@ -278,7 +279,7 @@ const styles = StyleSheet.create({
     lineHeight: APP_TYPE.caption.lineHeight,
     fontWeight: APP_TYPE.caption.fontWeight,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   metricValue: {
     fontSize: APP_TYPE.cardSubtitle.fontSize,
@@ -291,7 +292,7 @@ const styles = StyleSheet.create({
     fontSize: APP_TYPE.cardSubtitle.fontSize,
     lineHeight: APP_TYPE.cardSubtitle.lineHeight,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },

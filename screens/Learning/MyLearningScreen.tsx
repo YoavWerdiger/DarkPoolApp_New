@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useMemo } from 'react';
 import {
   View,
@@ -243,7 +244,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       color: tokens.colors.text.primary,
       marginBottom: APP_LAYOUT.cardTitleToBodyGap,
       textAlign: 'right',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     statsRow: {
       flexDirection: 'row',

@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { memo, useEffect, useMemo, useState } from 'react';
 import { Image as RNImage, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
@@ -154,7 +155,7 @@ function createProgressStyles(T: ReturnType<typeof useDesignTokens>) {
     label: {
       ...ACADEMY_TYPE.caption,
       color: T.colors.text.secondary,
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     pct: {
       ...ACADEMY_TYPE.caption,

@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React from 'react';
 import { View, Text, Pressable, StyleSheet, TouchableOpacity } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
@@ -282,13 +283,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     lineHeight: 18,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   time: {
     fontSize: 12,
     lineHeight: 15,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
     fontVariant: ['tabular-nums'],
   },
   bottomAnchor: {
@@ -305,7 +306,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 22,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
     marginBottom: 8,
     ...TEXT_SHADOW,
   },

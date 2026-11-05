@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 // ============================================
 // Chat Group Info Screen - Modern Design
 // ============================================
@@ -811,14 +812,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     color: tokens.colors.text.primary,
     marginBottom: APP_LAYOUT.titleSubtitleGap,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
     paddingHorizontal: tokens.spacing.sm,
   },
   groupStatus: {
     ...settingsMetaType,
     color: tokens.colors.text.secondary,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   heroDivider: {
     alignSelf: 'stretch',
@@ -831,7 +832,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     ...settingsBodyType,
     color: tokens.colors.text.secondary,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   mediaGrid: {
     ...chatRtlRow,
@@ -996,7 +997,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     ...settingsBodyType,
     color: tokens.colors.text.secondary,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   promptOverlay: {
     flex: 1,

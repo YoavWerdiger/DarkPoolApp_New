@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -627,7 +628,7 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
                   ...APP_TYPE.body,
                   color: DesignTokens.colors.text.primary,
                   textAlign: 'right',
-                  writingDirection: 'rtl',
+                  writingDirection: TEXT_DIR,
                   paddingVertical: 8,
                 }}
               returnKeyType="search"
@@ -990,7 +991,7 @@ const weekStyles = StyleSheet.create({
   dayName: {
     ...APP_TYPE.cardTitle,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   dayDate: {
     ...APP_TYPE.cardSubtitle,

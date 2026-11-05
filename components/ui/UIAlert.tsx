@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useEffect, useRef } from 'react';
 import {
   Modal,
@@ -58,7 +59,7 @@ const UIAlert: React.FC<UIAlertProps> = ({
   const centeredCopy: TextStyle = {
     width: copyWidth,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   };
   
   const scaleAnim = useRef(new Animated.Value(1)).current;

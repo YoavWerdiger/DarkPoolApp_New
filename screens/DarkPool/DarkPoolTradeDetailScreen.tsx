@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 /**
  * פרטי עסקה — קונגרס (STOCK Act) או בכיר חברה (Form 4).
  *
@@ -818,7 +819,7 @@ function createStyles(
       letterSpacing: DARK_POOL_TYPE.screenTitle.letterSpacing,
       color: tokens.colors.text.primary,
       textAlign: 'center',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     scrollContent: {
       direction: 'rtl',

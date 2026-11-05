@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Dimensions, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, Linking } from 'react-native';
@@ -159,7 +160,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                 marginBottom: 8,
                 letterSpacing: -0.8,
                 textAlign: 'center',
-                writingDirection: 'rtl'
+                writingDirection: TEXT_DIR
               }}>
                 בחר תוכנית
               </Text>
@@ -172,7 +173,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                 letterSpacing: 0.3,
                 textAlign: 'center',
                 lineHeight: 22,
-                writingDirection: 'rtl'
+                writingDirection: TEXT_DIR
               }}>
                 בחר את התוכנית המתאימה לך
               </Text>
@@ -225,7 +226,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                         color: DesignTokens.colors.text.primary, 
                         fontSize: 20, 
                         fontWeight: '700',
-                        writingDirection: 'rtl'
+                        writingDirection: TEXT_DIR
                       }}>
                         {plan.name}
                       </Text>
@@ -234,7 +235,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                           color: DesignTokens.colors.primary.main, 
                           fontSize: 24, 
                           fontWeight: '800',
-                          writingDirection: 'rtl'
+                          writingDirection: TEXT_DIR
                         }}>
                           {plan.price}
                         </Text>
@@ -242,7 +243,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                           color: DesignTokens.colors.text.secondary, 
                           fontSize: 14, 
                           marginLeft: 4,
-                          writingDirection: 'rtl'
+                          writingDirection: TEXT_DIR
                         }}>
                           {plan.period}
                         </Text>
@@ -270,7 +271,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                         <Text style={{ 
                           color: DesignTokens.colors.text.secondary, 
                           fontSize: 14,
-                          writingDirection: 'rtl',
+                          writingDirection: TEXT_DIR,
                           flex: 1
                         }}>
                           {feature}
@@ -323,7 +324,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                           fontWeight: '700',
                           letterSpacing: 0.5,
                           textTransform: 'uppercase',
-                          writingDirection: 'rtl'
+                          writingDirection: TEXT_DIR
                         }}>
                           שלם עכשיו
                         </Text>
@@ -362,7 +363,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                       fontWeight: '700',
                       letterSpacing: 0.5,
                       textTransform: 'uppercase',
-                      writingDirection: 'rtl'
+                      writingDirection: TEXT_DIR
                     }}>
                       המשך בחינם
                     </Text>
@@ -390,7 +391,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                     fontSize: 16, 
                     fontWeight: '600',
                     letterSpacing: 0.3,
-                    writingDirection: 'rtl'
+                    writingDirection: TEXT_DIR
                   }}>
                     דלג על התשלום
                   </Text>

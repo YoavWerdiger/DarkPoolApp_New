@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useRef } from 'react';
 import {
   Animated,
@@ -341,7 +342,7 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
                               fontWeight: APP_TYPE.cardTitle.fontWeight,
                               color: tokens.colors.text.primary,
                               textAlign: 'right',
-                              writingDirection: 'rtl',
+                              writingDirection: TEXT_DIR,
                             }}
                           >
                             {exitHint}

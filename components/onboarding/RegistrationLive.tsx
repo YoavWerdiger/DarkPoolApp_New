@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 /**
  * רכיבים «חיים» למסכי ההקלדה ברישום — שלא יהיו רק תיבות טקסט:
  * ברכה עם אווטאר לשם, השלמת דומיין לאימייל, מד חוזק + צ׳קליסט לסיסמה.
@@ -227,13 +228,13 @@ const styles = StyleSheet.create({
     lineHeight: APP_TYPE.sectionTitle.lineHeight,
     fontWeight: APP_TYPE.sectionTitle.fontWeight,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   greetHint: {
     fontSize: APP_TYPE.cardBody.fontSize,
     lineHeight: APP_TYPE.cardBody.lineHeight,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   chipsRow: {
     flexDirection: 'row-reverse',
@@ -268,7 +269,7 @@ const styles = StyleSheet.create({
   pwLevel: {
     fontSize: APP_TYPE.cardSubtitle.fontSize,
     fontWeight: APP_TYPE.cardTitle.fontWeight,
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   pwTrack: {
     height: 6,
@@ -296,6 +297,6 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     fontSize: APP_TYPE.cardSubtitle.fontSize,
     lineHeight: APP_TYPE.cardSubtitle.lineHeight,
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
 });

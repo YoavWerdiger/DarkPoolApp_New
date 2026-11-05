@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 /**
  * עטיפה אחידה לכל bottom sheets בצ'אט — רקע זכוכית, backdrop, כותרות ורשימות.
  */
@@ -322,7 +323,7 @@ const topoHeaderStyles = StyleSheet.create({
     lineHeight: APP_TYPE.sectionTitle.lineHeight,
     direction: 'ltr',
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
     width: '100%',
   },
 });

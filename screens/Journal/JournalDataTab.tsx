@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { useCallback, useMemo, useState, memo } from 'react';
 import {
@@ -550,7 +551,7 @@ const journalTabStyles = StyleSheet.create({
     lineHeight: JOURNAL_TYPE.groupLabel.lineHeight,
     marginBottom: JOURNAL_LAYOUT.groupLabelToContent,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   journalInsightSurface: {
     width: '100%',

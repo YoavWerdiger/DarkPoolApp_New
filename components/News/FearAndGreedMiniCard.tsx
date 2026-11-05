@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React from 'react';
 import {
   View,
@@ -174,7 +175,7 @@ const styles = StyleSheet.create({
     fontWeight: APP_TYPE.cardMetricValueSecondary.fontWeight,
     letterSpacing: APP_TYPE.cardMetricValueSecondary.letterSpacing,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   valueBlock: {
     direction: 'ltr',
@@ -246,6 +247,6 @@ const styles = StyleSheet.create({
     flex: 1,
     width: undefined,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
 });

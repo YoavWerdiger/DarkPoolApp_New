@@ -22,20 +22,25 @@ export function getStoredLanguage(): AppLanguage {
   }
 }
 
-/** בעלייה (index.ts): מיישר את כיוון הממשק לשפה השמורה */
-export function applyLanguageDirection(lang: AppLanguage): void {
-  const rtl = isRtlLanguage(lang);
+/**
+ * בעלייה (index.ts): פריסת הממשק נשארת RTL בכל השפות — רק הטקסט מתורגם
+ * (החלטת מוצר: אותו מבנה מסכים, בלי היפוך פריסה באנגלית).
+ */
+export function applyLanguageDirection(_lang: AppLanguage): void {
   try {
-    I18nManager.allowRTL(rtl);
-    I18nManager.forceRTL(rtl);
+    I18nManager.allowRTL(true);
+    I18nManager.forceRTL(true);
   } catch {
     /* סביבות ישנות — לא לשבור את האתחול */
   }
 }
 
+/** כיוון כתיבה של טקסט (bidi) לפי השפה — הפריסה עצמה לא משתנה */
+export const TEXT_DIR: 'rtl' | 'ltr' = getStoredLanguage() === 'en' ? 'ltr' : 'rtl';
+
 /**
- * החלפת שפה: שומר, מעדכן כיוון ומאתחל את האפליקציה —
- * שינוי RTL↔LTR נכנס לתוקף רק אחרי טעינה מחדש של ה-JS.
+ * החלפת שפה: שומר ומאתחל את האפליקציה — תוויות שמחושבות פעם אחת (קבועים ברמת מודול)
+ * מתעדכנות רק בטעינה מחדש.
  */
 export async function changeLanguage(lang: AppLanguage): Promise<void> {
   await SecureStore.setItemAsync(KEY, lang);

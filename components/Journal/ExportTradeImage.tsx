@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import { runAfterInteractions } from '../../utils/runAfterInteractions';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useRef, useState, useCallback, useMemo, useEffect } from 'react';
@@ -592,7 +593,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       color: tokens.colors.text.primary,
       direction: 'ltr',
       textAlign: 'center',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       width: '100%',
     },
     previewContainer: {
@@ -729,7 +730,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       marginTop: 2,
       marginBottom: 5,
       textAlign: 'center',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       color: 'rgba(255,255,255,0.58)',
     },
     pnlHeroValue: {
@@ -825,7 +826,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       lineHeight: 18,
       color: 'rgba(255,255,255,0.92)',
       textAlign: 'left',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       width: '100%',
     },
     ctaSub: {
@@ -833,7 +834,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       fontWeight: '600',
       color: 'rgba(255,255,255,0.50)',
       textAlign: 'left',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       width: '100%',
     },
     footer: {

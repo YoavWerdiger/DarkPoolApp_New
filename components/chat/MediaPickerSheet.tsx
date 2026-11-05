@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -1005,7 +1006,7 @@ const createStyles = (
       fontWeight: APP_TYPE.sectionTitle.fontWeight,
       color: tokens.colors.text.primary,
       textAlign: 'center',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     galleryChromeSpacer: {
       width: DAY_NAV_BUTTON_SIZE,

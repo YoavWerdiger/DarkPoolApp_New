@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../lib/i18n/language';
 import i18n from '../lib/i18n';
 import { appLocale } from '../lib/i18n/locale';
 import { runAfterInteractions } from '../utils/runAfterInteractions';
@@ -351,7 +352,7 @@ function createDrawerStyles(tokens: ReturnType<typeof useDesignTokens>, isDarkMo
     fontWeight: '500',
     color: tokens.colors.text.primary,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   labelActive: {
     color: ACCENT,
@@ -383,14 +384,14 @@ function createDrawerStyles(tokens: ReturnType<typeof useDesignTokens>, isDarkMo
     fontSize: 17,
     fontWeight: '600',
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   profileFooterMeta: {
     marginTop: 3,
     color: tokens.colors.text.secondary,
     fontSize: 13,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   profileAvatarWrap: {
     width: 44,

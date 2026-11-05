@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Image, Platform, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -106,14 +107,14 @@ export default function JoinGroupBottomSheet({
       ...appSectionTitleStyle,
       color: DesignTokens.colors.text.primary,
       textAlign: 'center',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     description: {
       fontSize: APP_TYPE.cardBody.fontSize,
       lineHeight: APP_TYPE.cardBody.lineHeight,
       color: DesignTokens.colors.text.secondary,
       textAlign: 'center',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       marginTop: APP_LAYOUT.stackGapSmall,
     },
     cta: {

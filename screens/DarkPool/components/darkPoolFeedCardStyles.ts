@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../../lib/i18n/language';
 import { StyleSheet, type ViewStyle } from 'react-native';
 import type { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { UI_CARD_RADIUS } from '../../../components/ui/appLayout';
@@ -299,7 +300,7 @@ export function createDarkPoolFeedCardStyles(tokens: DarkPoolFeedCardTokens) {
       gap: 2,
     },
     nestedPriceLabel: {
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       textAlign: 'right',
       fontSize: FEED_CARD_TYPE.nestedLabel.fontSize,
       lineHeight: 13,
@@ -318,7 +319,7 @@ export function createDarkPoolFeedCardStyles(tokens: DarkPoolFeedCardTokens) {
       includeFontPadding: false,
     },
     nestedPriceMissing: {
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       textAlign: 'right',
       fontSize: FEED_CARD_TYPE.nestedLabel.fontSize,
       lineHeight: 13,
@@ -340,7 +341,7 @@ export function createDarkPoolFeedCardStyles(tokens: DarkPoolFeedCardTokens) {
       lineHeight: 13,
       fontWeight: FEED_CARD_TYPE.nestedLabel.fontWeight,
       color: tokens.colors.text.secondary,
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       textAlign: 'right',
       flexShrink: 1,
       includeFontPadding: false,

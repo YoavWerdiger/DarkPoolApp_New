@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -581,7 +582,7 @@ const styles = StyleSheet.create({
   },
   trustText: {
     ...appCaptionStyle,
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   cta: {
     marginTop: 4,
@@ -613,7 +614,7 @@ const styles = StyleSheet.create({
   priceUnit: {
     fontSize: APP_TYPE.cardBody.fontSize,
     fontWeight: APP_TYPE.cardBody.fontWeight,
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   priceNote: {
     ...appCardSubtitleStyle,
@@ -642,7 +643,7 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: APP_TYPE.cardBody.fontSize,
     fontWeight: APP_TYPE.cardTitle.fontWeight,
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   tabSave: {
     ...appCaptionStyle,

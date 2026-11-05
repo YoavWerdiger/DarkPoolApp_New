@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, {
   useCallback,
   useEffect,
@@ -159,7 +160,7 @@ function PostCard({
                     fontSize: APP_TYPE.cardTitle.fontSize,
                     lineHeight: APP_TYPE.cardTitle.lineHeight,
                     fontWeight: APP_TYPE.cardTitle.fontWeight,
-                    writingDirection: 'rtl',
+                    writingDirection: TEXT_DIR,
                     flexShrink: 1,
                   }}
                   numberOfLines={1}
@@ -181,7 +182,7 @@ function PostCard({
                   lineHeight: APP_TYPE.caption.lineHeight,
                   fontWeight: APP_TYPE.caption.fontWeight,
                   textAlign: 'right',
-                  writingDirection: 'rtl',
+                  writingDirection: TEXT_DIR,
                 }}
               >
                 {formatPostTime(post.createdAt)}
@@ -216,7 +217,7 @@ function PostCard({
               fontSize: APP_TYPE.cardBody.fontSize,
               lineHeight: APP_TYPE.cardBody.lineHeight,
               fontWeight: APP_TYPE.cardBody.fontWeight,
-              writingDirection: 'rtl',
+              writingDirection: TEXT_DIR,
               textAlign: 'right',
             }}
           >
@@ -252,7 +253,7 @@ function PostCard({
                       fontSize: APP_TYPE.caption.fontSize,
                       lineHeight: APP_TYPE.caption.lineHeight,
                       fontWeight: APP_TYPE.caption.fontWeight,
-                      writingDirection: 'rtl',
+                      writingDirection: TEXT_DIR,
                       textAlign: 'right',
                     }}
                     numberOfLines={1}
@@ -900,7 +901,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontWeight: APP_TYPE.sectionSubtitle.fontWeight,
       lineHeight: APP_TYPE.sectionSubtitle.lineHeight,
       textAlign: 'center',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     errorTitle: {
       color: tokens.colors.text.primary,
@@ -908,7 +909,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontWeight: APP_TYPE.sectionTitle.fontWeight,
       lineHeight: APP_TYPE.sectionTitle.lineHeight,
       textAlign: 'center',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     retryBtn: {
       marginTop: APP_LAYOUT.stackGapSmall,

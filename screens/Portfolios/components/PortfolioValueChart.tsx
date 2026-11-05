@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../../lib/i18n/language';
 import { appLocale } from '../../../lib/i18n/locale';
 import { LIGHT_CANVAS } from '../../../components/ui/designTokensStatic';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -928,7 +929,7 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
     fontWeight: '600',
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   compactReturnRow: {
     flexShrink: 0,

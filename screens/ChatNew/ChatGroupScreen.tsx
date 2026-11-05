@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import { runAfterInteractions } from '../../utils/runAfterInteractions';
 // ============================================
 // Chat Group Screen - Modern Design (from reference)
@@ -2658,7 +2659,7 @@ const createChatGroupStyles = (tokens: any) => {
     fontSize: APP_TYPE.cardSubtitle.fontSize,
     lineHeight: APP_TYPE.cardSubtitle.lineHeight,
     fontWeight: APP_TYPE.cardTitle.fontWeight,
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   /* ── Header — כרטיסי זכוכית אחידים (כפתורים + קבוצה) ── */
   headerOuterRow: {
@@ -2724,7 +2725,7 @@ const createChatGroupStyles = (tokens: any) => {
     letterSpacing: APP_TYPE.cardTitle.letterSpacing,
     color: tokens.colors.text.primary,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
     width: '100%',
   },
   headerSubtitle: {

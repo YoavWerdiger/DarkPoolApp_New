@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, Image, PanResponder, GestureResponderEvent, PanResponderGestureState, I18nManager } from 'react-native';
@@ -234,7 +235,7 @@ export default function MediaMessageRenderer({
         <Text 
           style={{ 
             textAlign: 'right',
-            writingDirection: 'rtl',
+            writingDirection: TEXT_DIR,
             color: DesignTokens.colors.success.main,
             fontSize: 12,
             fontWeight: '700',
@@ -318,7 +319,7 @@ export default function MediaMessageRenderer({
         <Text 
           style={{ 
             textAlign: 'right',
-            writingDirection: 'rtl',
+            writingDirection: TEXT_DIR,
             color: DesignTokens.colors.success.main,
             fontSize: 12,
             fontWeight: '700',
@@ -438,7 +439,7 @@ export default function MediaMessageRenderer({
         <Text 
           style={{ 
             textAlign: 'right',
-            writingDirection: 'rtl',
+            writingDirection: TEXT_DIR,
             color: DesignTokens.colors.success.main,
             fontSize: 12,
             fontWeight: '700',
@@ -557,7 +558,7 @@ export default function MediaMessageRenderer({
         <Text 
           style={{ 
             textAlign: 'right',
-            writingDirection: 'rtl',
+            writingDirection: TEXT_DIR,
             color: DesignTokens.colors.success.main,
             fontSize: 12,
             fontWeight: '700',

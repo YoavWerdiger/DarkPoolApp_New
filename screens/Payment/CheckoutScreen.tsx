@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions, Linking, RefreshControl } from 'react-native';
@@ -199,7 +200,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
               color: DesignTokens.colors.text.primary, 
               fontSize: 24, 
               fontWeight: '700',
-              writingDirection: 'rtl'
+              writingDirection: TEXT_DIR
             }}>
               {plan.name}
             </Text>
@@ -208,7 +209,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
                 color: DesignTokens.colors.primary.main, 
                 fontSize: 28, 
                 fontWeight: '800',
-                writingDirection: 'rtl'
+                writingDirection: TEXT_DIR
               }}>
                 {plan.price === 0 ? 'חינם' : `₪${plan.price}`}
               </Text>
@@ -216,7 +217,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
                 color: DesignTokens.colors.text.secondary, 
                 fontSize: 16, 
                 marginLeft: 8,
-                writingDirection: 'rtl'
+                writingDirection: TEXT_DIR
               }}>
                 לחודש
               </Text>
@@ -248,7 +249,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
             fontSize: 18, 
             fontWeight: '600', 
             marginBottom: 12,
-            writingDirection: 'rtl'
+            writingDirection: TEXT_DIR
           }}>
             מה כלול בתוכנית:
           </Text>
@@ -264,7 +265,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
                 color: DesignTokens.colors.text.primary, 
                 fontSize: 14, 
                 fontWeight: '400',
-                writingDirection: 'rtl',
+                writingDirection: TEXT_DIR,
                 flex: 1
               }}>
                 {feature}
@@ -295,7 +296,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
           color: DesignTokens.colors.text.primary, 
           fontSize: 16, 
           fontWeight: '600',
-          writingDirection: 'rtl'
+          writingDirection: TEXT_DIR
         }}>
           אבטחה מלאה
         </Text>
@@ -307,7 +308,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
           <Text style={{ 
             color: DesignTokens.colors.text.secondary, 
             fontSize: 12,
-            writingDirection: 'rtl'
+            writingDirection: TEXT_DIR
           }}>
             תשלום מאובטח עם CardCom
           </Text>
@@ -318,7 +319,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
           <Text style={{ 
             color: DesignTokens.colors.text.secondary, 
             fontSize: 12,
-            writingDirection: 'rtl'
+            writingDirection: TEXT_DIR
           }}>
             הצפנת SSL 256-bit
           </Text>
@@ -329,7 +330,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
           <Text style={{ 
             color: DesignTokens.colors.text.secondary, 
             fontSize: 12,
-            writingDirection: 'rtl'
+            writingDirection: TEXT_DIR
           }}>
             ביטול מנוי בכל עת
           </Text>
@@ -352,7 +353,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
         fontSize: 18, 
         fontWeight: '600', 
         marginBottom: 16,
-        writingDirection: 'rtl'
+        writingDirection: TEXT_DIR
       }}>
         סיכום התשלום
       </Text>
@@ -365,7 +366,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
         <Text style={{ 
           color: DesignTokens.colors.text.secondary, 
           fontSize: 14,
-          writingDirection: 'rtl'
+          writingDirection: TEXT_DIR
         }}>
           {plan?.name}
         </Text>
@@ -386,7 +387,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
         <Text style={{ 
           color: DesignTokens.colors.text.secondary, 
           fontSize: 14,
-          writingDirection: 'rtl'
+          writingDirection: TEXT_DIR
         }}>
           מע"מ
         </Text>
@@ -413,7 +414,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
           color: DesignTokens.colors.text.primary, 
           fontSize: 18,
           fontWeight: '700',
-          writingDirection: 'rtl'
+          writingDirection: TEXT_DIR
         }}>
           סה"כ
         </Text>
@@ -481,7 +482,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
                   color: DesignTokens.colors.text.inverse,
                   fontSize: 18,
                   fontWeight: '700',
-                  writingDirection: 'rtl',
+                  writingDirection: TEXT_DIR,
                 }}>
                   {plan?.price === 0 ? 'המשך בחינם' : 'שלם עכשיו'}
                 </Text>
@@ -496,7 +497,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
             textAlign: 'center',
             marginTop: 16,
             lineHeight: 18,
-            writingDirection: 'rtl'
+            writingDirection: TEXT_DIR
           }}>
             בלחיצה על "שלם עכשיו" אתה מסכים לתנאי השימוש ומדיניות הפרטיות שלנו
           </Text>

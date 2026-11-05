@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 // ============================================
 // Forward Message Sheet
 // ============================================
@@ -259,7 +260,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontWeight: APP_TYPE.sectionTitle.fontWeight,
       direction: 'ltr',
       textAlign: 'center',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       width: '100%',
     },
     center: {

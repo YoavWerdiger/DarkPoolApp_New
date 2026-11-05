@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../../lib/i18n/language';
 import React, { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import UICard from '../../../components/ui/UICard';
@@ -71,7 +72,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       color: tokens.colors.text.secondary,
       textAlign: 'left',
       marginBottom: 8,
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     row: {
       flexDirection: 'row',
@@ -102,7 +103,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontVariant: ['tabular-nums'],
       lineHeight: APP_TYPE.caption2.lineHeight,
       fontWeight: APP_TYPE.caption2.fontWeight,
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     call: { color: tokens.colors.primary.main },
     put: { color: tokens.colors.text.danger },
@@ -123,7 +124,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontWeight: APP_TYPE.caption2.fontWeight,
       color: tokens.colors.text.tertiary,
       textAlign: 'left',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
   });
 }

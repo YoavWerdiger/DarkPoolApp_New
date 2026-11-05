@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -183,7 +184,7 @@ const RegistrationEmailScreen = ({ navigation }: { navigation: any }) => {
               fontSize: 15,
               fontWeight: '600',
               textAlign: 'right',
-              writingDirection: 'rtl',
+              writingDirection: TEXT_DIR,
               flex: 1,
             }}
           >

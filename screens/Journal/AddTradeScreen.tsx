@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -799,7 +800,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       color: tokens.colors.text.primary,
       direction: 'ltr',
       textAlign: 'center',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     stepDots: {
       ...journalRow,

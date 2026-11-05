@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 /**
  * קבועים לפיצ'ר תיקי השקעות:
  *  - benchmarks preset
@@ -200,7 +201,7 @@ export function portfolioDetailTabLabelStyle(textSecondary: string): TextStyle {
     fontSize: 13,
     fontWeight: '600',
     color: textSecondary,
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
     textAlign: 'right',
     direction: 'ltr',
   };

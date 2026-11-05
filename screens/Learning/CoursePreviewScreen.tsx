@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, TextInput, Modal } from 'react-native';
@@ -301,7 +302,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       color: tokens.colors.text.tertiary,
       marginBottom: APP_LAYOUT.cardTitleToBodyGap,
       textAlign: 'right',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     courseMeta: {
       flexDirection: 'row',
@@ -332,7 +333,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       ...ACADEMY_TYPE.body,
       color: tokens.colors.danger.main,
       textAlign: 'right',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     lessonsSection: {
       marginTop: tokens.spacing.lg,
@@ -417,7 +418,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       ...ACADEMY_TYPE.cardBody,
       color: tokens.colors.text.secondary,
       textAlign: 'right',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     modalOverlay: {
       flex: 1,
@@ -448,7 +449,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       marginBottom: APP_LAYOUT.cardTitleToBodyGap,
       borderWidth: 0,
       textAlign: 'right',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     modalButtons: {
       flexDirection: 'row',

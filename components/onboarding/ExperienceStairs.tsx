@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useEffect, useState } from 'react';
 import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
@@ -253,7 +254,7 @@ const styles = StyleSheet.create({
     lineHeight: APP_TYPE.caption.lineHeight,
     fontWeight: APP_TYPE.caption.fontWeight,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   hintRow: {
     flexDirection: 'row-reverse',
@@ -265,7 +266,7 @@ const styles = StyleSheet.create({
   hint: {
     fontSize: APP_TYPE.cardSubtitle.fontSize,
     lineHeight: APP_TYPE.cardSubtitle.lineHeight,
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   stepNum: {
     fontSize: APP_TYPE.cardTitle.fontSize,
@@ -295,12 +296,12 @@ const styles = StyleSheet.create({
     lineHeight: APP_TYPE.sectionTitle.lineHeight,
     fontWeight: APP_TYPE.sectionTitle.fontWeight,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   desc: {
     fontSize: APP_TYPE.cardBody.fontSize,
     lineHeight: APP_TYPE.cardBody.lineHeight,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
 });

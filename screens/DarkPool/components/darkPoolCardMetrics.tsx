@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../../lib/i18n/language';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { useDesignTokens } from '../../../components/ui/DesignTokens';
@@ -129,7 +130,7 @@ export function darkPoolHeaderStyles(tokens: ReturnType<typeof useDesignTokens>)
       lineHeight: DARK_POOL_TYPE.caption2.lineHeight,
       fontWeight: DARK_POOL_TYPE.caption2.fontWeight,
       color: tokens.colors.text.primary,
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     scoreBox: {
       alignItems: 'center',
@@ -148,7 +149,7 @@ export function darkPoolHeaderStyles(tokens: ReturnType<typeof useDesignTokens>)
       fontVariant: ['tabular-nums'],
       fontWeight: DARK_POOL_TYPE.caption2.fontWeight,
       color: tokens.colors.text.tertiary,
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     reason: {
       ...darkPoolPhysicalRightText,

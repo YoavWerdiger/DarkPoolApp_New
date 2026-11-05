@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
@@ -42,7 +43,7 @@ const { width: screenWidth } = Dimensions.get('window');
 
 /** טקסט עברי בתוך עץ RTL */
 const rtlText = {
-  writingDirection: 'rtl' as const,
+  writingDirection: TEXT_DIR,
   textAlign: 'left' as const,
 };
 
@@ -2324,7 +2325,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     color: tokens.colors.text.primary,
     textAlign: 'right',
     lineHeight: Math.round(tokens.typography.fontSize['2xl'] * 1.2),
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
     textShadowColor: 'rgba(0,0,0,0.6)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 6,
@@ -2335,7 +2336,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     color: 'rgba(255,255,255,0.82)',
     textAlign: 'right',
     lineHeight: Math.round(tokens.typography.fontSize.sm * 1.4),
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   courseCoverPlaceholder: {
     backgroundColor: tokens.colors.background.secondary,
@@ -2425,7 +2426,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     textAlign: 'right',
     lineHeight: Math.round(tokens.typography.titleXs.size * 1.35),
     letterSpacing: 0.15,
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   lessonDuration: {
     fontSize: tokens.typography.bodySmall.size,
@@ -2457,14 +2458,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     color: tokens.colors.text.secondary,
     textAlign: 'right',
     marginBottom: 0,
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   lessonPlayerTitle: {
     ...ACADEMY_TYPE.cardTitle,
     marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
     color: tokens.colors.text.primary,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   videoContainer: {
     width: '100%',
@@ -2524,14 +2525,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     ...ACADEMY_TYPE.cardTitle,
     color: tokens.colors.text.primary,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   lessonNavCenterSub: {
     marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
     ...ACADEMY_TYPE.caption,
     color: tokens.colors.text.secondary,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   notesSettingsRow: {
     flexDirection: 'row',
@@ -2546,14 +2547,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     ...ACADEMY_TYPE.cardTitle,
     color: tokens.colors.text.primary,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   notesSettingsSubtitle: {
     marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
     ...ACADEMY_TYPE.footnote,
     color: tokens.colors.text.secondary,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   notesSettingsIcon: {
     width: 36,
@@ -2589,14 +2590,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     color: tokens.colors.text.primary,
     textAlign: 'right',
     lineHeight: Math.round(tokens.typography.fontSize.xl * tokens.typography.lineHeight.normal),
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   lessonInfoDescription: {
     fontSize: tokens.typography.body.size,
     color: tokens.colors.text.secondary,
     textAlign: 'right',
     lineHeight: tokens.typography.body.lineHeight,
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   lessonInfoRight: {
     alignItems: 'flex-end',
@@ -2799,7 +2800,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     color: tokens.colors.text.secondary,
     textAlign: 'right',
     lineHeight: Math.round(tokens.typography.body.size * 1.45),
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
     width: '100%',
   },
   simpleNotesSection: {
@@ -2838,7 +2839,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     fontWeight: tokens.typography.titleXs.weight as any,
     color: tokens.colors.text.primary,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   simpleNotesInput: {
     backgroundColor: tokens.colors.background.tertiary,
@@ -2860,7 +2861,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     fontStyle: 'italic',
     width: '100%',
     lineHeight: Math.round(tokens.typography.bodySmall.size * 1.4),
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
 
   notesSheetContent: {
@@ -2892,7 +2893,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     lineHeight: 28,
     letterSpacing: -0.42,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   notesSheetScroll: {
     flex: 1,
@@ -2917,7 +2918,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     ...ACADEMY_TYPE.body,
     direction: 'ltr',
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
     textAlignVertical: 'top',
     minHeight: 220,
     width: '100%',
@@ -2926,7 +2927,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   notesSheetHint: {
     ...ACADEMY_TYPE.caption,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
     width: '100%',
   },
   notesSheetFooter: {
@@ -3464,7 +3465,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     color: tokens.colors.text.primary,
     lineHeight: Math.round(tokens.typography.displaySmall.size * 1.22),
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   courseSubtitle: {
     fontSize: tokens.typography.titleSmall.size,
@@ -3473,14 +3474,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     color: tokens.colors.text.secondary,
     textAlign: 'right',
     lineHeight: Math.round(tokens.typography.titleSmall.size * 1.35),
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   courseDescription: {
     fontSize: tokens.typography.body.size,
     color: tokens.colors.text.tertiary,
     lineHeight: Math.round(tokens.typography.body.size * 1.5),
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
     width: '100%',
     alignSelf: 'stretch',
   },
@@ -3569,7 +3570,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     ...ACADEMY_TYPE.groupLabel,
     color: tokens.colors.text.secondary,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   chapterHeaderBadge: {
     minWidth: 56,
@@ -3601,7 +3602,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     textAlign: 'right',
     color: tokens.colors.text.secondary,
     lineHeight: Math.round(tokens.typography.fontSize.sm * 1.4),
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
     fontWeight: tokens.typography.fontWeight.medium as any,
   },
   progressTextMuted: {
@@ -3609,7 +3610,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     textAlign: 'right',
     color: tokens.colors.text.tertiary,
     lineHeight: Math.round(tokens.typography.fontSize.sm * 1.4),
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   progressBar: {
     width: '100%',
@@ -3717,7 +3718,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     ...ACADEMY_TYPE.cardBody,
     color: tokens.colors.text.secondary,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   lessonStatus: {
     marginTop: 2,

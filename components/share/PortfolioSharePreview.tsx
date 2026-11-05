@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 /**
  * תצוגה משותפת — שווי תיק + דונאט פילוח (צ'אט / ציוצים).
  */
@@ -98,7 +99,7 @@ function createStyles(
     valueLabel: {
       ...APP_TYPE.cardMetricLabel,
       color: tokens.colors.text.secondary,
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       textAlign: 'right',
     },
     valueAmount: {

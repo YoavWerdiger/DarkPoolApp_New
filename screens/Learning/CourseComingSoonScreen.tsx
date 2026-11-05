@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -137,13 +138,13 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       ...ACADEMY_TYPE.cardSubtitle,
       color: tokens.colors.text.secondary,
       textAlign: 'right',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     factValue: {
       ...ACADEMY_TYPE.body,
       color: tokens.colors.text.primary,
       textAlign: 'left',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       flexShrink: 1,
     },
     divider: {
@@ -155,7 +156,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       ...ACADEMY_TYPE.body,
       color: tokens.colors.text.secondary,
       textAlign: 'right',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       paddingHorizontal: APP_LAYOUT.cardPadding,
       paddingTop: APP_LAYOUT.cardTitleToBodyGap,
       paddingBottom: APP_LAYOUT.cardPadding,

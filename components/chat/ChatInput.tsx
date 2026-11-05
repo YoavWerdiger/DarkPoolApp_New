@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 // ============================================
 // Chat Input Component
 // ============================================
@@ -2589,7 +2590,7 @@ function ChatInputImpl({
                     color: DesignTokens.colors.primary.main,
                     fontSize: 12,
                     fontWeight: '700',
-                    writingDirection: 'rtl',
+                    writingDirection: TEXT_DIR,
                   }}
                   numberOfLines={1}
                 >

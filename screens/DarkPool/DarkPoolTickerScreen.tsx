@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 /**
  * מסך טיקר — InsiderWave IA: הדר זהות / מחיר+שווי שוק / גרף / מחזיקים|פיד.
  * עברית RTL. בלי כוכב. מחזיקים = CurrentHolding / Allocation.
@@ -768,7 +769,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, bottomPadding:
     },
     marketCapLine: {
       ...darkPoolPhysicalLeftText,
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       marginTop: APP_LAYOUT.cardMetricLabelToValueGap,
       fontSize: DARK_POOL_TYPE.caption.fontSize,
       fontVariant: ['tabular-nums'],
@@ -831,7 +832,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, bottomPadding:
       ...settingsButtonLabelStyle,
       fontVariant: ['tabular-nums'],
       textAlign: 'center',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     holdersSection: {
       marginBottom: APP_LAYOUT.componentGap,

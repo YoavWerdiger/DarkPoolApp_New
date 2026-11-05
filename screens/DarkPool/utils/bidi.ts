@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../../lib/i18n/language';
 import type { TextStyle, ViewStyle } from 'react-native';
 import { formatFeedTickerDisplay } from './feedTradeDisplay';
 
@@ -15,7 +16,7 @@ const PDI = '\u2069';
  * נתונים ($NVDA, 1,000, +1.2%) מבודדים ב-isolateData / isolateNumericRuns.
  */
 export const hebrewText: TextStyle = {
-  writingDirection: 'rtl',
+  writingDirection: TEXT_DIR,
   textAlign: 'right',
 };
 

@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, ActivityIndicator, TouchableOpacity, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -389,7 +390,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
                     color: colors.text.primary,
                     fontSize: 16,
                     marginTop: 16,
-                    writingDirection: 'rtl',
+                    writingDirection: TEXT_DIR,
                   }}
                 >
                   טוען דף תשלום...
@@ -431,7 +432,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
               fontSize: 18,
               fontWeight: '700',
               textAlign: 'center',
-              writingDirection: 'rtl',
+              writingDirection: TEXT_DIR,
               marginBottom: 12,
             }}
           >
@@ -444,7 +445,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
               color: colors.text.secondary,
               fontSize: 14,
               textAlign: 'center',
-              writingDirection: 'rtl',
+              writingDirection: TEXT_DIR,
               lineHeight: 22,
               marginBottom: 28,
             }}
@@ -521,7 +522,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
             fontWeight: '700',
             marginTop: 24,
             textAlign: 'center',
-            writingDirection: 'rtl',
+            writingDirection: TEXT_DIR,
           }}
         >
           {isCompleting ? 'מפעיל את המנוי...' : 'מכין את דף התשלום המאובטח...'}
@@ -532,7 +533,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
             fontSize: 14,
             marginTop: 10,
             textAlign: 'center',
-            writingDirection: 'rtl',
+            writingDirection: TEXT_DIR,
             lineHeight: 20,
           }}
         >

@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 /**
  * מצלמת צירוף לצ'אט — פריסת וואטסאפ: סגירה, פלאש, גלריה, תריס, היפוך.
  * מצבים: וידאו ותמונה. בלי פוטו נוט.
@@ -619,6 +620,6 @@ const styles = StyleSheet.create({
     lineHeight: APP_TYPE.cardSubtitle.lineHeight,
     fontWeight: '700',
     color: '#FFFFFF',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
 });

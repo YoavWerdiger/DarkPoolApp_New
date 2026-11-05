@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useLayoutEffect, useState } from 'react';
 import { checkPassword, isPasswordValid, passwordErrorMessage } from '../../utils/passwordPolicy';
 import { View, Text } from 'react-native';
@@ -108,7 +109,7 @@ const RegistrationPasswordScreen = ({ navigation }: { navigation: any }) => {
               fontSize: 15,
               fontWeight: '600',
               textAlign: 'right',
-              writingDirection: 'rtl',
+              writingDirection: TEXT_DIR,
               flex: 1,
             }}
           >

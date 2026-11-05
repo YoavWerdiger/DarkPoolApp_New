@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { ReactNode } from 'react';
 import {
   View,
@@ -92,7 +93,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
     lineHeight: tokens.typography.heroTitle.lineHeight,
     color: tokens.colors.text.primary,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
     marginBottom: subtitle ? tokens.spacing.sm : tokens.spacing.xl,
   };
 
@@ -102,7 +103,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
     lineHeight: tokens.typography.body.lineHeight,
     color: tokens.colors.text.secondary,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
     marginBottom: tokens.spacing.xl,
   };
 

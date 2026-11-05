@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import { APP_LAYOUT } from './appLayout';
 
 export { SoftUI } from './softUiPalette';
@@ -378,7 +379,7 @@ const staticTokens = {
    */
   rtlText: {
     textAlign: 'right' as const,
-    writingDirection: 'rtl' as const,
+    writingDirection: TEXT_DIR,
   },
 
   shadows: {

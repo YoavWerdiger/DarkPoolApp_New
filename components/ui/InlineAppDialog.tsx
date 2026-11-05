@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useEffect, useRef } from 'react';
 import {
   ActivityIndicator,
@@ -64,7 +65,7 @@ export function InlineAppDialog({
 
   if (!visible) return null;
 
-  const centered: TextStyle = { width: copyWidth, textAlign: 'center', writingDirection: 'rtl' };
+  const centered: TextStyle = { width: copyWidth, textAlign: 'center', writingDirection: TEXT_DIR };
 
   return (
     <Animated.View style={[StyleSheet.absoluteFill, styles.root, { opacity: fade }]} pointerEvents="box-none">

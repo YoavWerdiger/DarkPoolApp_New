@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../../lib/i18n/language';
 import { JournalListSkeleton } from '../../../components/ui/SkeletonLoader';
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
@@ -88,7 +89,7 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
           color: tokens.colors.text.tertiary,
           marginBottom: 4,
           direction: 'ltr',
-          writingDirection: 'rtl',
+          writingDirection: TEXT_DIR,
           textAlign: 'right',
         },
         riskValue: {
@@ -107,7 +108,7 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
           color: tokens.colors.text.tertiary,
           marginTop: 4,
           direction: 'ltr',
-          writingDirection: 'rtl',
+          writingDirection: TEXT_DIR,
           textAlign: 'right',
         },
         perfRow: {

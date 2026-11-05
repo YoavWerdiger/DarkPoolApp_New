@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -458,7 +459,7 @@ const styles = StyleSheet.create({
   chipText: {
     fontSize: APP_TYPE.cardBody.fontSize,
     fontWeight: APP_TYPE.cardTitle.fontWeight,
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   membersCard: {
     borderRadius: UI_CARD_RADIUS,

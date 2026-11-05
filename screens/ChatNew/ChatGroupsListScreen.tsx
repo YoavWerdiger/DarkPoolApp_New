@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
 // ============================================
 // Chat Groups List Screen - Modern Design (Exact Copy)
@@ -2051,7 +2052,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     ...APP_TYPE.body,
     color: tokens.colors.text.primary,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
     paddingVertical: 0,
   },
   /* ── Search Sheet ── */
@@ -2076,7 +2077,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     ...APP_TYPE.body,
     color: tokens.colors.text.primary,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
     paddingVertical: 0,
   },
   searchSectionHeader: {
@@ -2091,7 +2092,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     color: tokens.colors.text.tertiary,
     textAlign: 'center',
     paddingVertical: APP_LAYOUT.cardPadding,
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   // בתוך searchSheetRoot (direction rtl): row = תמונה מימין, טקסט משמאל לה
   searchRowItem: {
@@ -2186,7 +2187,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     color: tokens.colors.text.primary,
     flex: 1,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   chatTime: {
     ...APP_TYPE.caption,
@@ -2204,7 +2205,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     color: tokens.colors.text.secondary,
     flex: 1,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   chatPreviewUnread: {
     color: tokens.colors.text.primary,
@@ -2282,14 +2283,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     ...APP_TYPE.cardTitle,
     color: tokens.colors.text.primary,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   joinableAvatar: {},
   joinableSubtitle: {
     ...APP_TYPE.cardSubtitle,
     color: tokens.colors.text.secondary,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
     marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
   },
   joinablePill: {
@@ -2321,14 +2322,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     color: tokens.colors.text.primary,
     marginTop: APP_LAYOUT.cardPadding,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   emptyText: {
     ...APP_TYPE.cardBody,
     color: tokens.colors.text.secondary,
     marginTop: APP_LAYOUT.stackGapSmall,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
 
   /* ── Offline banner ── */

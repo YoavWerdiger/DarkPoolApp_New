@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Collapsible } from '../../components/ui/Collapsible';
@@ -683,14 +684,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     marginBottom: 2,
     lineHeight: Math.round(tokens.typography.fontSize.lg * 1.25),
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   headerSubtitle: {
     fontSize: tokens.typography.fontSize.sm,
     color: tokens.colors.text.secondary,
     lineHeight: 18,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   headerSpacer: {
     width: DAY_NAV_BUTTON_SIZE,
@@ -843,7 +844,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     color: tokens.colors.text.primary,
     textAlign: 'right',
     lineHeight: Math.round(tokens.typography.fontSize.xl * tokens.typography.lineHeight.normal),
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   lessonProgressInfo: {
     marginTop: tokens.spacing.sm,
@@ -903,7 +904,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     color: tokens.colors.text.primary,
     minHeight: 100,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
     paddingTop: 4,
   },
   // Speed + Fullscreen controls

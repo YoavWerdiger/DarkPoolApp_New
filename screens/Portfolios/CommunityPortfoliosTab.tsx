@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
@@ -285,7 +286,7 @@ export default function CommunityPortfoliosTab() {
           color: tokens.colors.text.primary,
           fontSize: 15,
           textAlign: 'right',
-          writingDirection: 'rtl',
+          writingDirection: TEXT_DIR,
           paddingVertical: 6,
         },
         sortSheet: {

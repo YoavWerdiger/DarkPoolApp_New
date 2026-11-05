@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../lib/i18n/language';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -75,13 +76,13 @@ const styles = StyleSheet.create({
     lineHeight: APP_TYPE.flowTitle.lineHeight,
     fontWeight: APP_TYPE.flowTitle.fontWeight,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   body: {
     fontSize: APP_TYPE.sectionSubtitle.fontSize,
     lineHeight: APP_TYPE.sectionSubtitle.lineHeight,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
     paddingHorizontal: 8,
   },
   actions: {

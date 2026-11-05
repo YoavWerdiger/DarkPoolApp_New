@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -548,7 +549,7 @@ function PostRepliesSheetBody({
                 multiline
                 maxLength={MAX_LEN}
                 editable={!!user && !busy}
-                style={[styles.composerInput, { color: tokens.colors.text.primary, writingDirection: 'rtl' }]}
+                style={[styles.composerInput, { color: tokens.colors.text.primary, writingDirection: TEXT_DIR }]}
                 textAlign="right"
                 textAlignVertical="center"
               />
@@ -638,7 +639,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       lineHeight: APP_TYPE.sectionTitle.lineHeight,
       letterSpacing: APP_TYPE.sectionTitle.letterSpacing,
       textAlign: 'center',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       width: '100%',
     },
     listWrap: {
@@ -672,7 +673,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     emptyText: {
       ...APP_TYPE.body,
       textAlign: 'center',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       paddingVertical: APP_LAYOUT.sectionGap,
     },
     replyMain: {
@@ -693,19 +694,19 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontWeight: APP_TYPE.cardTitle.fontWeight,
       flexShrink: 1,
       textAlign: 'right',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     replyTime: {
       ...APP_TYPE.caption,
       marginTop: 1,
       textAlign: 'right',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     replyBody: {
       ...APP_TYPE.cardBody,
       marginTop: 4,
       textAlign: 'right',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     banner: {
       marginHorizontal: 16,
@@ -723,7 +724,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       flex: 1,
       ...APP_TYPE.cardSubtitle,
       textAlign: 'right',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     // ChatComposerDock כופה LTR — ילד ראשון = שמאל (שדה), שני = ימין (שליחה)
     composer: {
@@ -760,7 +761,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       ...APP_TYPE.body,
       paddingHorizontal: APP_LAYOUT.cardPadding,
       paddingVertical: 11,
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       textAlign: 'right',
     },
     sendBtn: {

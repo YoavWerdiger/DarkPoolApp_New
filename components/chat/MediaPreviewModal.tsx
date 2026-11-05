@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { View, Text, Modal, Pressable, StyleSheet, Platform, ActivityIndicator, Animated as RNAnimated,
@@ -1010,7 +1011,7 @@ const styles = StyleSheet.create({
   targetChipText: {
     fontSize: 15,
     fontWeight: '500',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   captionRow: {
     direction: 'ltr',
@@ -1168,7 +1169,7 @@ const styles = StyleSheet.create({
     ...CHAT_TYPE.cardSubtitle,
     marginTop: CHAT_LAYOUT.cardTitleToSubtitleGap,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   documentContent: {
     flex: 1,
@@ -1189,6 +1190,6 @@ const styles = StyleSheet.create({
     ...CHAT_TYPE.cardTitle,
     marginTop: CHAT_LAYOUT.cardTitleToSubtitleGap,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
 });

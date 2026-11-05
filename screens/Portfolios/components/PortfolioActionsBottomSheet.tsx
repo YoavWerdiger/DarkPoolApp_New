@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../../lib/i18n/language';
 import { appLocale } from '../../../lib/i18n/locale';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, Dimensions } from 'react-native';
@@ -245,7 +246,7 @@ function PortfolioActionsSheetBody({
           color: tokens.colors.text.primary,
           direction: 'ltr',
           textAlign: 'center',
-          writingDirection: 'rtl',
+          writingDirection: TEXT_DIR,
           width: '100%',
         },
         subtitle: {

@@ -37,7 +37,7 @@ const he = {
     interfaceLanguage: 'שפת ממשק',
     languageName: 'עברית',
     changeLanguageTitle: 'שפת ממשק',
-    changeLanguageBody: 'האפליקציה תיטען מחדש כדי להחליף שפה וכיוון.',
+    changeLanguageBody: 'האפליקציה תיטען מחדש כדי להחליף שפה.',
     switchToOther: 'English',
     billingSection: 'מנוי וחיובים',
     billing: 'מנוי, תשלומים וחשבוניות',

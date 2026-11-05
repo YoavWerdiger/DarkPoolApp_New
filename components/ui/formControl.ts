@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import type { ViewStyle, TextStyle } from 'react-native';
 import type { useDesignTokens } from './DesignTokens';
 import { APP_TYPE, appPhysicalRightText } from './appType';
@@ -76,7 +77,7 @@ export function formFieldInputStyle(tokens?: Tokens): TextStyle {
     // בלי lineHeight: ב-iOS TextInput חד-שורתי עם lineHeight דוחף את הטקסט למטה («שוקע»).
     // שדות multiline מוסיפים lineHeight בעצמם.
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   };
 }
 

@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -351,7 +352,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     headerTitle: {
       ...APP_TYPE.screenTitle,
       textAlign: 'center',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       width: '100%',
     },
     tabsWrap: {

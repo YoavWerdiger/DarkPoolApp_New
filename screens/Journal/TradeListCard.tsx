@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { memo, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -268,7 +269,7 @@ export function createTradeCardStyles(tokens: ReturnType<typeof useDesignTokens>
       fontWeight: JOURNAL_TYPE.cardSubtitle.fontWeight,
       lineHeight: JOURNAL_TYPE.cardSubtitle.lineHeight,
       textAlign: 'center',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       includeFontPadding: false,
     },
     /** שמאל (ב־RTL): שיתוף + מחיקה — נשארים בקצה הנגדי */

@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { View, Text, ActivityIndicator, Pressable, StyleSheet } from 'react-native';
 import Reanimated, { ZoomIn } from 'react-native-reanimated';
@@ -262,7 +263,7 @@ const styles = StyleSheet.create({
     lineHeight: APP_TYPE.cardBody.lineHeight,
     fontWeight: APP_TYPE.cardBody.fontWeight,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
     marginTop: APP_LAYOUT.componentGap + 4,
     marginBottom: APP_LAYOUT.sectionGap / 2 + 4,
     paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,

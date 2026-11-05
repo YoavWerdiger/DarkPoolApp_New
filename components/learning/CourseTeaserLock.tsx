@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useEffect, useMemo, useState, type RefObject } from 'react';
 import { View, Text, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../ui/DayNavBlurButton';
@@ -239,13 +240,13 @@ const createStyles = (_tokens: ReturnType<typeof useDesignTokens>) =>
     title: {
       ...APP_TYPE.pageTitle,
       textAlign: 'center',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       marginBottom: APP_LAYOUT.cardTitleToBodyGap,
     },
     pitch: {
       ...APP_TYPE.body,
       textAlign: 'center',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     groupLabel: {
       ...APP_TYPE.groupLabel,

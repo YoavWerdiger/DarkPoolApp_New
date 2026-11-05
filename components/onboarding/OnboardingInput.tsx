@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useState } from 'react';
 import { View, Text, TextInput, TextInputProps, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -128,7 +129,7 @@ const styles = StyleSheet.create({
   errorText: {
     textAlign: 'right',
     flex: 1,
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
 });
 

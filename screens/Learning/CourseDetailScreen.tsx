@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useCallback, useRef } from 'react';
 import { View, Text, ScrollView, StyleSheet, Image, ActivityIndicator } from 'react-native';
@@ -448,7 +449,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     ...ACADEMY_TYPE.cardTitle,
     color: tokens.colors.text.primary,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   instructorBio: {
     ...academyCardSubtitleStyle,
@@ -491,13 +492,13 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     ...ACADEMY_TYPE.cardMetricLabel,
     color: tokens.colors.text.secondary,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   description: {
     ...ACADEMY_TYPE.cardBody,
     color: tokens.colors.text.secondary,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   tagsContainer: {
     width: '100%',
@@ -507,7 +508,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     ...ACADEMY_TYPE.cardMetricLabel,
     color: tokens.colors.text.secondary,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   tagsRow: {
     flexDirection: 'row-reverse',

@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { DesignTokens } from '../ui/DesignTokens';
@@ -39,7 +40,7 @@ const styles = StyleSheet.create({
     lineHeight: DesignTokens.typography.body.lineHeight,
     color: DesignTokens.colors.danger.main,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
 });
 

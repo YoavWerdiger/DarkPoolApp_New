@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 /**
  * שיט צירוף לפי הטופו — כמו שאר השיטים שלנו (שיתוף, 3 הנקודות ביומן):
  * BottomSheet בגובה התוכן, כותרת עם שברון, וכרטיס עם שורות פעולה:
@@ -140,7 +141,7 @@ function createStyles() {
       fontWeight: APP_TYPE.sectionTitle.fontWeight,
       direction: 'ltr',
       textAlign: 'center',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       width: '100%',
     },
     actions: {

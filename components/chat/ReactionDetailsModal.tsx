@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import { logger } from '../../utils/logger';
 import React, { useState, useEffect, useMemo, memo } from 'react';
 import {
@@ -164,7 +165,7 @@ const ReactionDetailsModal: React.FC<ReactionDetailsModalProps> = memo(({
         tabText: {
           fontSize: APP_TYPE.cardSubtitle.fontSize,
           fontWeight: APP_TYPE.cardTitle.fontWeight,
-          writingDirection: 'rtl',
+          writingDirection: TEXT_DIR,
         },
         tabEmoji: {
           fontSize: 18,
@@ -206,7 +207,7 @@ const ReactionDetailsModal: React.FC<ReactionDetailsModalProps> = memo(({
           fontWeight: APP_TYPE.cardTitle.fontWeight,
           color: tokens.colors.text.primary,
           textAlign: 'right',
-          writingDirection: 'rtl',
+          writingDirection: TEXT_DIR,
         },
         meta: {
           ...appPhysicalRightText,
@@ -214,7 +215,7 @@ const ReactionDetailsModal: React.FC<ReactionDetailsModalProps> = memo(({
           lineHeight: APP_TYPE.cardSubtitle.lineHeight,
           color: tokens.colors.text.secondary,
           textAlign: 'right',
-          writingDirection: 'rtl',
+          writingDirection: TEXT_DIR,
         },
         userEmoji: {
           fontSize: 24,

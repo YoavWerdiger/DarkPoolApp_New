@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -996,12 +997,12 @@ const styles = StyleSheet.create({
     ...adminMetricSecondary,
     fontVariant: ['tabular-nums'],
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   kpiLabel: {
     ...adminMetricLabel,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   countText: {
     ...adminHebrewText,

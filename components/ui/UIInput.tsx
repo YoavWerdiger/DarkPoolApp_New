@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useState } from 'react';
 import { 
   View, 
@@ -95,7 +96,7 @@ const UIInput: React.FC<UIInputProps> = ({
     color: colors.text.secondary,
     marginBottom: spacing.xs,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   };
 
   const helperStyle: TextStyle = {
@@ -104,7 +105,7 @@ const UIInput: React.FC<UIInputProps> = ({
     color: error ? colors.danger.main : colors.text.tertiary,
     marginTop: spacing.xs,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   };
 
   const iconColor = error

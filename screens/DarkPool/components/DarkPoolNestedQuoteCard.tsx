@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../../lib/i18n/language';
 /**
  * קן טיקר פנימי — מחיר חי / מאז העסקה.
  * UICard פנימי בתוך הכרטיס החיצוני (יומן: כרטיס-בתוך-כרטיס).
@@ -202,7 +203,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     nestedPriceLabel: {
       ...TEXT_TOP,
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       textAlign: 'right',
       fontSize: FEED_CARD_TYPE.nestedRowCaption.fontSize,
       fontVariant: ['tabular-nums'],
@@ -222,7 +223,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     nestedPriceMissing: {
       ...TEXT_TOP,
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       textAlign: 'right',
       fontSize: FEED_CARD_TYPE.nestedRowValueMuted.fontSize,
       fontVariant: ['tabular-nums'],
@@ -244,7 +245,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       lineHeight: NESTED_CAPTION_LINE,
       fontWeight: FEED_CARD_TYPE.nestedRowCaption.fontWeight,
       color: tokens.colors.text.secondary,
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       textAlign: 'right',
       flexShrink: 1,
     },

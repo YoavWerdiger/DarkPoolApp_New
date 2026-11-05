@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 // ============================================
 // Create News Sheet
 // ============================================
@@ -499,7 +500,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     headerTitle: {
       flex: 1,
       textAlign: 'center',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       fontSize: APP_TYPE.sectionTitle.fontSize,
       fontWeight: APP_TYPE.sectionTitle.fontWeight,
       lineHeight: APP_TYPE.sectionTitle.lineHeight,
@@ -532,7 +533,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       flex: 1,
       ...APP_TYPE.body,
       textAlign: 'right',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       marginLeft: APP_LAYOUT.cardTitleToBodyGap,
     },
     imageSlot: {
@@ -547,7 +548,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     imageSlotTitle: {
       ...APP_TYPE.cardTitle,
       textAlign: 'center',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       marginTop: APP_LAYOUT.cardTitleToBodyGap,
     },
     imageSlotHint: {

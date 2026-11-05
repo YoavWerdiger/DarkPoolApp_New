@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../../lib/i18n/language';
 /**
  * כרטיס עסקה בפיד — קל יותר מגיבור פרטי העסקה:
  *
@@ -208,7 +209,7 @@ function createLineStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     verb: {
       flexShrink: 0,
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       fontSize: FEED_CARD_TYPE.action.fontSize,
       fontVariant: ['tabular-nums'],
       lineHeight: FEED_CARD_TYPE.action.lineHeight,

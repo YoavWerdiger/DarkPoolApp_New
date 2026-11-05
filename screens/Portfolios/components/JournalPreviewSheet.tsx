@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../../lib/i18n/language';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
@@ -325,7 +326,7 @@ export function JournalPreviewSheet({
           fontWeight: '700',
           color: tokens.colors.text.primary,
           textAlign: 'center',
-          writingDirection: 'rtl',
+          writingDirection: TEXT_DIR,
         },
         switchBtn: {
           width: 36,
@@ -348,7 +349,7 @@ export function JournalPreviewSheet({
           fontWeight: '600',
           color: tokens.colors.text.tertiary,
           textAlign: 'center',
-          writingDirection: 'rtl',
+          writingDirection: TEXT_DIR,
           marginBottom: 4,
           letterSpacing: 0.2,
         },
@@ -378,7 +379,7 @@ export function JournalPreviewSheet({
           fontSize: 12,
           fontWeight: '600',
           color: tokens.colors.text.tertiary,
-          writingDirection: 'rtl',
+          writingDirection: TEXT_DIR,
         },
         updated: {
           ...journalSectionSubtitleStyle,
@@ -418,7 +419,7 @@ export function JournalPreviewSheet({
           fontWeight: '600',
           color: tokens.colors.text.tertiary,
           textAlign: 'center',
-          writingDirection: 'rtl',
+          writingDirection: TEXT_DIR,
         },
         kpiValue: {
           width: '100%',
@@ -492,7 +493,7 @@ export function JournalPreviewSheet({
           lineHeight: JOURNAL_TYPE.body.lineHeight,
           color: tokens.colors.text.inverse,
           textAlign: 'center',
-          writingDirection: 'rtl',
+          writingDirection: TEXT_DIR,
         },
       }),
     [

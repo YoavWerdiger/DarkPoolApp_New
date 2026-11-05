@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../../lib/i18n/language';
 /**
  * DarkPoolTabToggle.tsx
  * -----------------------------------------------------------------------------
@@ -120,7 +121,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontVariant: ['tabular-nums'],
       fontWeight: '700',
       color: tokens.colors.text.tertiary,
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     tabLabelActive: {
       color: tokens.colors.text.primary,

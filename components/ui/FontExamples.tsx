@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React from 'react';
 import { View, Text, StyleSheet, type TextStyle } from 'react-native';
 import { DesignTokens } from './DesignTokens';
@@ -70,7 +71,7 @@ const styles = StyleSheet.create({
     color: '#00C805',
     marginBottom: 16,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
 });
 

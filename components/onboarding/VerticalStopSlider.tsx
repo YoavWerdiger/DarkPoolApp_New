@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -247,7 +248,7 @@ const styles = StyleSheet.create({
     fontSize: APP_TYPE.cardBody.fontSize,
     lineHeight: 20,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   hero: {
     flex: 1,
@@ -273,13 +274,13 @@ const styles = StyleSheet.create({
     lineHeight: APP_TYPE.cardTitle.lineHeight,
     fontWeight: APP_TYPE.cardTitle.fontWeight,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   heroDesc: {
     minHeight: APP_TYPE.cardSubtitle.lineHeight * 3,
     fontSize: APP_TYPE.cardSubtitle.fontSize,
     lineHeight: APP_TYPE.cardSubtitle.lineHeight,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
 });

@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useLayoutEffect, useState } from 'react';
 import { Text, View, StyleSheet } from 'react-native';
 import { WheelPicker } from '../../components/onboarding/WheelPicker';
@@ -137,7 +138,7 @@ const styles = StyleSheet.create({
   errorText: {
     textAlign: 'center',
     marginBottom: 12,
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
 });
 

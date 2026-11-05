@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useState } from 'react';
 import {
   View,
@@ -91,7 +92,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
           fontWeight: '600',
           marginBottom: 8,
           textAlign: 'right',
-          writingDirection: 'rtl',
+          writingDirection: TEXT_DIR,
         }}
       >
         {label}
@@ -120,7 +121,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
               fontSize: 16,
               fontWeight: '400',
               textAlign: 'right',
-              writingDirection: 'rtl',
+              writingDirection: TEXT_DIR,
               marginRight: 10,
             }}
             numberOfLines={1}
@@ -168,7 +169,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
                 fontSize: 17,
                 fontWeight: '700',
                 textAlign: 'right',
-                writingDirection: 'rtl',
+                writingDirection: TEXT_DIR,
                 marginBottom: 12,
                 paddingHorizontal: 20,
               }}
@@ -231,7 +232,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
                         fontSize: 15,
                         fontWeight: selected ? '600' : '400',
                         textAlign: 'right',
-                        writingDirection: 'rtl',
+                        writingDirection: TEXT_DIR,
                         flex: 1,
                       }}
                     >

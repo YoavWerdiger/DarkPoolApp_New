@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform, Dimensions, TouchableWithoutFeedback, Keyboard } from 'react-native';
@@ -172,7 +173,7 @@ export default function RegisterScreen({ navigation }: any) {
                 marginBottom: 8,
                 letterSpacing: -0.8,
                 textAlign: 'center',
-                writingDirection: 'rtl'
+                writingDirection: TEXT_DIR
               }}>
                 צור חשבון
               </Text>
@@ -185,7 +186,7 @@ export default function RegisterScreen({ navigation }: any) {
                 letterSpacing: 0.3,
                 textAlign: 'center',
                 lineHeight: 22,
-                writingDirection: 'rtl'
+                writingDirection: TEXT_DIR
               }}>
                 הירשם כדי להתחיל להשתמש באפליקציה
               </Text>
@@ -379,7 +380,7 @@ export default function RegisterScreen({ navigation }: any) {
                     fontWeight: '700',
                     letterSpacing: 0.5,
                     textTransform: 'uppercase',
-                    writingDirection: 'rtl'
+                    writingDirection: TEXT_DIR
                   }}>
                     {isLoading ? 'יוצר חשבון...' : 'צור חשבון'}
                   </Text>

@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Dimensions, I18nManager, Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -160,7 +161,7 @@ const OnboardingSwipeCards: React.FC<OnboardingSwipeCardsProps> = ({
                 color: '#FFFFFF',
                 textAlign: 'center',
                 lineHeight: 28,
-                writingDirection: 'rtl',
+                writingDirection: TEXT_DIR,
                 textShadowColor: 'rgba(0, 0, 0, 0.3)',
                 textShadowOffset: { width: 0, height: 2 },
                 textShadowRadius: 8,

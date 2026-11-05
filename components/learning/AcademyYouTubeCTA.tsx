@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Linking, Platform, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -198,13 +199,13 @@ const createStyles = (T: ReturnType<typeof useDesignTokens>) =>
       ...ACADEMY_TYPE.cardTitle,
       color: T.colors.text.primary,
       textAlign: 'right',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     subtitle: {
       ...ACADEMY_TYPE.cardSubtitle,
       color: T.colors.text.secondary,
       textAlign: 'right',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     ctaRow: {
       flexDirection: 'row-reverse',

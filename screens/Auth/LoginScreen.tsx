@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Dimensions, Keyboard, Image, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, ScrollView, Animated, Easing, StyleSheet } from 'react-native';
@@ -64,7 +65,7 @@ const Field: React.FC<FieldProps> = ({
       <View
         style={{ marginBottom: APP_LAYOUT.stackGapSmall }}
       >
-        <Text style={[formFieldLabelStyle({ tokens, focused, error: false }), { textAlign: 'right', writingDirection: 'rtl' }]}>{label}</Text>
+        <Text style={[formFieldLabelStyle({ tokens, focused, error: false }), { textAlign: 'right', writingDirection: TEXT_DIR }]}>{label}</Text>
       </View>
       <View
         style={[
@@ -448,7 +449,7 @@ const styles = StyleSheet.create({
     fontSize: APP_TYPE.cardBody.fontSize,
     lineHeight: APP_TYPE.cardBody.lineHeight,
     fontWeight: APP_TYPE.cardBody.fontWeight,
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   linkText: {
     fontWeight: APP_TYPE.cardTitle.fontWeight,

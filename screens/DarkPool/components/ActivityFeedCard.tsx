@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../../lib/i18n/language';
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
@@ -164,7 +165,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     verb: {
       flexShrink: 0,
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       fontSize: FEED_CARD_TYPE.action.fontSize,
       fontVariant: ['tabular-nums'],
       lineHeight: FEED_CARD_TYPE.action.lineHeight,

@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useMemo } from 'react';
 import { Collapsible } from '../ui/Collapsible';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
@@ -72,7 +73,7 @@ export const ModuleSection: React.FC<ModuleSectionProps> = ({
       ...ACADEMY_TYPE.cardSubtitle,
       color: DesignTokens.colors.text.tertiary,
       textAlign: 'right',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     progressContainer: {
       alignItems: 'center',

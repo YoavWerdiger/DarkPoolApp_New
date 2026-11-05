@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useEffect, useMemo } from 'react';
 import Animated, {
   Easing,
@@ -281,7 +282,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       lineHeight: DAY_DIVIDER_PILL_LINE_HEIGHT,
       fontWeight: tokens.typography.fontWeight.medium,
       color: tokens.colors.text.primary,
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
       textAlign: 'center',
     },
     textSelected: {

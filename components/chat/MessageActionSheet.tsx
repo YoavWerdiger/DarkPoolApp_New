@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
 /**
  * MessageActionSheet — legacy API; עטוף ב-ChatBottomSheet (אותו glass כמו שאר שיטי הצ׳אט).
@@ -328,7 +329,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
     textAlign: 'right',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   previewMeta: {
     flex: 1,

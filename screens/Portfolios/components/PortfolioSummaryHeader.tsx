@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../../lib/i18n/language';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import UICard from '../../../components/ui/UICard';
@@ -258,7 +259,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     marginStart: 2,
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   divider: {
     height: StyleSheet.hairlineWidth,

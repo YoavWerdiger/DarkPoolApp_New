@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import type { TextStyle, ViewStyle } from 'react-native';
 import { APP_LAYOUT } from './appLayout';
 import { SoftUI } from './softUiPalette';
@@ -27,7 +28,7 @@ export const appRow: ViewStyle = {
 };
 
 export const appHebrewText: TextStyle = {
-  writingDirection: 'rtl',
+  writingDirection: TEXT_DIR,
   textAlign: 'right',
 };
 
@@ -35,7 +36,7 @@ export const appPhysicalRightText: TextStyle = {
   ...appHebrewText,
   direction: 'ltr',
   textAlign: 'right',
-  writingDirection: 'rtl',
+  writingDirection: TEXT_DIR,
 };
 
 export const appPhysicalLeftText: TextStyle = {
@@ -163,7 +164,7 @@ export const appScreenTitleStyle: TextStyle = {
   lineHeight: APP_TYPE.screenTitle.lineHeight,
   letterSpacing: APP_TYPE.screenTitle.letterSpacing,
   textAlign: 'center',
-  writingDirection: 'rtl',
+  writingDirection: TEXT_DIR,
   color: SoftUI.textPrimary,
 };
 
@@ -210,7 +211,7 @@ export const appScreenSubtitleStyle: TextStyle = {
   lineHeight: APP_TYPE.sectionSubtitle.lineHeight,
   fontWeight: APP_TYPE.sectionSubtitle.fontWeight,
   textAlign: 'center',
-  writingDirection: 'rtl',
+  writingDirection: TEXT_DIR,
   width: '100%',
 };
 

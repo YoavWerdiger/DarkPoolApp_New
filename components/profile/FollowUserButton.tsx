@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -123,7 +124,7 @@ const styles = StyleSheet.create({
   },
   label: {
     ...APP_TYPE.cardMetricLabel,
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
     textAlign: 'center',
   },
   spinner: {

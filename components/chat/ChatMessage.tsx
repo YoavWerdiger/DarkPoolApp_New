@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 // ============================================
 // Chat Message Component
 // ============================================
@@ -3193,7 +3194,7 @@ const createStyles = (tokens: any) => {
   },
   deletedText: {
     fontStyle: 'italic',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
 
   metadata: {

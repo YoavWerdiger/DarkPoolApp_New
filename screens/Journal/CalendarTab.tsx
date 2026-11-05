@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { useState, useCallback } from 'react';
 import {
@@ -556,7 +557,7 @@ const createStyles = (
     color: tokens.colors.text.primary,
     direction: 'ltr',
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   /** שורה משנית — כמו תג "היום" בדיווח רווח */
   monthTotalCaption: {
@@ -565,7 +566,7 @@ const createStyles = (
     lineHeight: JOURNAL_TYPE.cardSubtitle.lineHeight,
     marginTop: JOURNAL_LAYOUT.cardTitleToSubtitleGap,
     textAlign: 'center',
-    writingDirection: 'rtl' as const,
+    writingDirection: TEXT_DIR,
   },
   monthTotalCaptionProfit: {
     color: tokens.colors.primary.main,

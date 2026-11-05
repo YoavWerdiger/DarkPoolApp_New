@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { useDesignTokens } from '../ui/DesignTokens';
@@ -77,7 +78,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       ...ACADEMY_TYPE.sectionTitle,
       color: tokens.colors.text.primary,
       textAlign: 'right',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     countBadge: {
       minWidth: 32,

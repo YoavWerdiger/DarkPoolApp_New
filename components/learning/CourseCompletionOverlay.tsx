@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Reanimated, { Easing, FadeIn, FadeInDown, useAnimatedProps, useSharedValue, withTiming, ZoomIn } from 'react-native-reanimated';
@@ -166,13 +167,13 @@ const styles = StyleSheet.create({
     lineHeight: APP_TYPE.flowTitle.lineHeight,
     fontWeight: APP_TYPE.flowTitle.fontWeight,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   subtitle: {
     fontSize: APP_TYPE.sectionSubtitle.fontSize,
     lineHeight: APP_TYPE.sectionSubtitle.lineHeight,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   footer: {
     paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,

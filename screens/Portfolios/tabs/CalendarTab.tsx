@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../../lib/i18n/language';
 import { appLocale } from '../../../lib/i18n/locale';
 import { JournalListSkeleton } from '../../../components/ui/SkeletonLoader';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -201,7 +202,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
           color: tokens.colors.text.primary,
           direction: 'ltr',
           textAlign: 'center',
-          writingDirection: 'rtl',
+          writingDirection: TEXT_DIR,
         },
         mainCard: {
           overflow: 'hidden',
@@ -232,7 +233,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
           fontWeight: '700',
           lineHeight: 14,
           color: tokens.colors.text.tertiary,
-          writingDirection: 'rtl',
+          writingDirection: TEXT_DIR,
           textAlign: 'center',
         },
         gridRow: {

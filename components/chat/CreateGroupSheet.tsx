@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 // ============================================
 // Create Group Sheet
 // ============================================
@@ -386,7 +387,7 @@ const styles = StyleSheet.create({
   segmentText: {
     fontSize: APP_TYPE.cardBody.fontSize,
     fontWeight: APP_TYPE.cardTitle.fontWeight,
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   tiersRow: {
     flexDirection: 'row',
@@ -403,7 +404,7 @@ const styles = StyleSheet.create({
   tierText: {
     fontSize: APP_TYPE.cardBody.fontSize,
     fontWeight: APP_TYPE.cardTitle.fontWeight,
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   cta: {
     marginTop: APP_LAYOUT.sectionGap / 2 + 4,

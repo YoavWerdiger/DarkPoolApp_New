@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useState } from 'react';
 import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -492,14 +493,14 @@ const styles = StyleSheet.create({
     lineHeight: APP_TYPE.sectionTitle.lineHeight,
     fontWeight: APP_TYPE.sectionTitle.fontWeight,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   heroDesc: {
     minHeight: APP_TYPE.cardBody.lineHeight * 2,
     fontSize: APP_TYPE.cardBody.fontSize,
     lineHeight: APP_TYPE.cardBody.lineHeight,
     textAlign: 'center',
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
   moneyRow: {
     direction: 'ltr',
@@ -604,6 +605,6 @@ const styles = StyleSheet.create({
   },
   endText: {
     fontSize: APP_TYPE.cardSubtitle.fontSize,
-    writingDirection: 'rtl',
+    writingDirection: TEXT_DIR,
   },
 });

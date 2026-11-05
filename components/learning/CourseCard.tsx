@@ -1,3 +1,4 @@
+import { TEXT_DIR } from '../../lib/i18n/language';
 import React from 'react';
 import {
   View,
@@ -269,7 +270,7 @@ const createStyles = (
     tierBadgeText: {
       ...ACADEMY_TYPE.caption,
       color: '#fff',
-      writingDirection: 'rtl',
+      writingDirection: TEXT_DIR,
     },
     progressChip: {
       position: 'absolute',

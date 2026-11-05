@@ -1,4 +1,4 @@
-import { TEXT_START, UI_DIR } from '../../../lib/i18n/direction';
+import { UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 /**
  * כרטיס צבירה — קרוסלה אופקית, UICard glass.
@@ -112,7 +112,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontVariant: ['tabular-nums'],
       lineHeight: APP_TYPE.cardMetricValueSecondary.lineHeight,
       fontWeight: APP_TYPE.cardMetricValueSecondary.fontWeight,
-      textAlign: TEXT_START,
+      textAlign: 'right',
       writingDirection: 'ltr',
     },
     statsRow: {

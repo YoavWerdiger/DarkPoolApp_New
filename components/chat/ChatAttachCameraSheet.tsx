@@ -1,3 +1,4 @@
+import { ROOT_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 /**
@@ -523,7 +524,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    direction: 'ltr',
+    direction: ROOT_DIR,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -537,7 +538,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   controls: {
-    direction: 'ltr',
+    direction: ROOT_DIR,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

@@ -1,4 +1,3 @@
-import { TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React, { useMemo } from 'react';
 import {
@@ -193,7 +192,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       fontSize: APP_TYPE.cardTitle.fontSize,
       color: tokens.colors.text.primary,
       textAlignVertical: 'center',
-      textAlign: TEXT_START,
+      textAlign: 'right',
     },
     /** כפתור שליחה עגול חיצוני — סגנון וואטסאפ */
     sendButton: {

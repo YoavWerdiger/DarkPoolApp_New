@@ -1,4 +1,4 @@
-import { ROW_REV, TEXT_END, UI_DIR, dirIcon } from '../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { runAfterInteractions } from '../../utils/runAfterInteractions';
@@ -593,7 +593,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       lineHeight: APP_TYPE.sectionTitle.lineHeight,
       letterSpacing: APP_TYPE.sectionTitle.letterSpacing,
       color: tokens.colors.text.primary,
-      direction: 'ltr',
+      direction: ROOT_DIR,
       textAlign: 'center',
       writingDirection: TEXT_DIR,
       width: '100%',
@@ -788,7 +788,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     /** שורות ההגדרות בנויות לעץ LTR (כמו מסך ההגדרות) — בתוך שיט RTL הן מתהפכות */
     optionsBlock: {
-      direction: 'ltr',
+      direction: ROOT_DIR,
       alignSelf: 'stretch',
       marginTop: tokens.spacing.xl,
     },
@@ -827,7 +827,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       fontWeight: '700',
       lineHeight: 18,
       color: 'rgba(255,255,255,0.92)',
-      textAlign: TEXT_END,
+      textAlign: 'left',
       writingDirection: TEXT_DIR,
       width: '100%',
     },
@@ -835,7 +835,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       fontSize: 11,
       fontWeight: '600',
       color: 'rgba(255,255,255,0.50)',
-      textAlign: TEXT_END,
+      textAlign: 'left',
       writingDirection: TEXT_DIR,
       width: '100%',
     },
@@ -853,7 +853,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       overflow: 'hidden',
     },
     exportButtonContent: {
-      flexDirection: ROW_REV,
+      flexDirection: 'row-reverse',
       alignItems: 'center',
       justifyContent: 'center',
       gap: tokens.spacing.sm,

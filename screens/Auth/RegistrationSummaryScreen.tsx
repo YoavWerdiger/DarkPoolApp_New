@@ -1,4 +1,3 @@
-import { ROW_REV, TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
@@ -429,7 +428,7 @@ const styles = StyleSheet.create({
     marginTop: APP_LAYOUT.componentGap,
   },
   stepRow: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 10,
   },
@@ -442,7 +441,7 @@ const styles = StyleSheet.create({
     fontSize: APP_TYPE.cardBody.fontSize,
     lineHeight: APP_TYPE.cardBody.lineHeight,
     fontWeight: APP_TYPE.cardTitle.fontWeight,
-    textAlign: TEXT_START,
+    textAlign: 'right',
     writingDirection: TEXT_DIR,
   },
   textBlock: {

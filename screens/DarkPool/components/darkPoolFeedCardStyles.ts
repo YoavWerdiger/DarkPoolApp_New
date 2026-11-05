@@ -1,4 +1,4 @@
-import { TEXT_START, UI_DIR } from '../../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR } from '../../../lib/i18n/direction';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 import { StyleSheet, type ViewStyle } from 'react-native';
 import type { useDesignTokens } from '../../../components/ui/DesignTokens';
@@ -127,7 +127,7 @@ export function createTradeHeroCardStyles(tokens: DarkPoolFeedCardTokens) {
     textCol: {
       flex: 1,
       minWidth: 0,
-      direction: 'ltr',
+      direction: ROOT_DIR,
       alignItems: 'stretch',
     },
     personName: {
@@ -215,7 +215,7 @@ export function createDarkPoolFeedCardStyles(tokens: DarkPoolFeedCardTokens) {
     textCol: {
       flex: 1,
       minWidth: 0,
-      direction: 'ltr',
+      direction: ROOT_DIR,
       alignItems: 'stretch',
     },
     nameHit: {
@@ -302,7 +302,7 @@ export function createDarkPoolFeedCardStyles(tokens: DarkPoolFeedCardTokens) {
     },
     nestedPriceLabel: {
       writingDirection: TEXT_DIR,
-      textAlign: TEXT_START,
+      textAlign: 'right',
       fontSize: FEED_CARD_TYPE.nestedLabel.fontSize,
       lineHeight: 13,
       fontWeight: FEED_CARD_TYPE.nestedLabel.fontWeight,
@@ -316,12 +316,12 @@ export function createDarkPoolFeedCardStyles(tokens: DarkPoolFeedCardTokens) {
       color: tokens.colors.text.primary,
       fontVariant: ['tabular-nums'],
       writingDirection: 'ltr',
-      textAlign: TEXT_START,
+      textAlign: 'right',
       includeFontPadding: false,
     },
     nestedPriceMissing: {
       writingDirection: TEXT_DIR,
-      textAlign: TEXT_START,
+      textAlign: 'right',
       fontSize: FEED_CARD_TYPE.nestedLabel.fontSize,
       lineHeight: 13,
       fontWeight: FEED_CARD_TYPE.nestedLabel.fontWeight,
@@ -343,7 +343,7 @@ export function createDarkPoolFeedCardStyles(tokens: DarkPoolFeedCardTokens) {
       fontWeight: FEED_CARD_TYPE.nestedLabel.fontWeight,
       color: tokens.colors.text.secondary,
       writingDirection: TEXT_DIR,
-      textAlign: TEXT_START,
+      textAlign: 'right',
       flexShrink: 1,
       includeFontPadding: false,
     },
@@ -353,7 +353,7 @@ export function createDarkPoolFeedCardStyles(tokens: DarkPoolFeedCardTokens) {
       fontWeight: FEED_CARD_TYPE.nestedSince.fontWeight,
       fontVariant: ['tabular-nums'],
       writingDirection: 'ltr',
-      textAlign: TEXT_START,
+      textAlign: 'right',
       flexShrink: 0,
       includeFontPadding: false,
     },

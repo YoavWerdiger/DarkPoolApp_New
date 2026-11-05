@@ -1,4 +1,4 @@
-import { UI_DIR, dirIcon } from '../../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR, dirIcon } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 import { appLocale } from '../../../lib/i18n/locale';
@@ -246,7 +246,7 @@ function PortfolioActionsSheetBody({
           lineHeight: APP_TYPE.sectionTitle.lineHeight,
           letterSpacing: APP_TYPE.sectionTitle.letterSpacing,
           color: tokens.colors.text.primary,
-          direction: 'ltr',
+          direction: ROOT_DIR,
           textAlign: 'center',
           writingDirection: TEXT_DIR,
           width: '100%',

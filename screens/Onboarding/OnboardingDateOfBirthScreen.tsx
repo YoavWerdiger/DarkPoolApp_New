@@ -1,4 +1,4 @@
-import { ROW_REV, TEXT_START, dirIcon } from '../../lib/i18n/direction';
+import { dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Pressable } from 'react-native';
@@ -239,20 +239,20 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
     marginBottom: 8,
-    textAlign: TEXT_START,
+    textAlign: 'right',
   },
   subtitle: {
     fontSize: 16,
     lineHeight: 24,
     marginBottom: 24,
-    textAlign: TEXT_START,
+    textAlign: 'right',
   },
   warningCard: {
     borderWidth: 1,
     marginBottom: 16,
   },
   warningContent: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'flex-start',
     gap: 12,
   },
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontWeight: '600',
-    textAlign: TEXT_START,
+    textAlign: 'right',
     lineHeight: 20,
   },
   errorCard: {
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   errorContent: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'flex-start',
     gap: 12,
   },
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontWeight: '600',
-    textAlign: TEXT_START,
+    textAlign: 'right',
     lineHeight: 20,
   },
   inputContainer: {
@@ -285,14 +285,14 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    textAlign: TEXT_START,
+    textAlign: 'right',
   },
   inputCard: {
     minHeight: 56,
     borderRadius: 9999,
   },
   inputWrapper: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 16,
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
   },
   helperText: {
     fontSize: 12,
-    textAlign: TEXT_START,
+    textAlign: 'right',
   },
   footer: {
     paddingHorizontal: 20,

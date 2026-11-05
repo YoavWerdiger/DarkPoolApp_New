@@ -1,4 +1,4 @@
-import { TEXT_START, UI_DIR } from '../../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 import { JournalListSkeleton } from '../../../components/ui/SkeletonLoader';
@@ -80,7 +80,7 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
           borderWidth: 0,
           borderColor: tokens.colors.border.subtle,
           // LTR מקומי — flex-end דוחף תווית/ערך/רמז לימין הפיזי
-          direction: 'ltr',
+          direction: ROOT_DIR,
           alignItems: 'flex-end',
         },
         riskLabel: {
@@ -90,17 +90,17 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
           lineHeight: JOURNAL_TYPE.caption2.lineHeight,
           color: tokens.colors.text.tertiary,
           marginBottom: 4,
-          direction: 'ltr',
+          direction: ROOT_DIR,
           writingDirection: TEXT_DIR,
-          textAlign: TEXT_START,
+          textAlign: 'right',
         },
         riskValue: {
           alignSelf: 'stretch',
           maxWidth: '100%',
           ...journalCardMetricValueSecondaryStyle,
           color: tokens.colors.text.primary,
-          textAlign: TEXT_START,
-          direction: 'ltr',
+          textAlign: 'right',
+          direction: ROOT_DIR,
         },
         riskHint: {
           maxWidth: '100%',
@@ -109,9 +109,9 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
           lineHeight: JOURNAL_TYPE.caption2.lineHeight,
           color: tokens.colors.text.tertiary,
           marginTop: 4,
-          direction: 'ltr',
+          direction: ROOT_DIR,
           writingDirection: TEXT_DIR,
-          textAlign: TEXT_START,
+          textAlign: 'right',
         },
         perfRow: {
           flexDirection: 'row',
@@ -133,15 +133,15 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
           fontSize: JOURNAL_TYPE.cardSubtitle.fontSize,
           fontWeight: JOURNAL_TYPE.cardTitle.fontWeight,
           lineHeight: JOURNAL_TYPE.cardSubtitle.lineHeight,
-          direction: 'ltr',
-          textAlign: TEXT_START,
+          direction: ROOT_DIR,
+          textAlign: 'right',
           writingDirection: 'ltr',
         },
         perfBenchmark: {
           width: 90,
           fontSize: 12,
-          direction: 'ltr',
-          textAlign: TEXT_START,
+          direction: ROOT_DIR,
+          textAlign: 'right',
           writingDirection: 'ltr',
           color: tokens.colors.text.tertiary,
         },
@@ -181,7 +181,7 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
           fontWeight: '700',
           color: tokens.colors.text.primary,
           writingDirection: 'ltr',
-          textAlign: TEXT_START,
+          textAlign: 'right',
         },
         holdingValue: {
           flex: 1,
@@ -193,7 +193,7 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
           width: 80,
           fontSize: 13,
           fontWeight: '700',
-          textAlign: TEXT_START,
+          textAlign: 'right',
           writingDirection: 'ltr',
         },
       }),
@@ -292,8 +292,8 @@ export default function AnalysisTab({ portfolio, holdings }: Props) {
         <Text style={styles.sectionTitle}>{i18n.t('auto.screens__Portfolios__tabs__AnalysisTab.s7')}</Text>
         <View style={styles.perfHeader}>
           <Text style={[styles.perfLabel, { fontSize: 11, color: tokens.colors.text.tertiary }]}>{i18n.t('auto.screens__Portfolios__tabs__AnalysisTab.s8')}</Text>
-          <Text style={[styles.perfHeaderText, { width: 90, textAlign: TEXT_START }]}>{i18n.t('auto.screens__Portfolios__tabs__AnalysisTab.s9')}</Text>
-          <Text style={[styles.perfHeaderText, { width: 90, textAlign: TEXT_START, writingDirection: 'ltr' }]}>
+          <Text style={[styles.perfHeaderText, { width: 90, textAlign: 'right' }]}>{i18n.t('auto.screens__Portfolios__tabs__AnalysisTab.s9')}</Text>
+          <Text style={[styles.perfHeaderText, { width: 90, textAlign: 'right', writingDirection: 'ltr' }]}>
             {portfolio.benchmark_symbol}
           </Text>
         </View>

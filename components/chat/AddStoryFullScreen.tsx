@@ -1,4 +1,4 @@
-import { dirIcon } from '../../lib/i18n/direction';
+import { ROOT_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -2740,7 +2740,7 @@ const s = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    direction: 'ltr',
+    direction: ROOT_DIR,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -2763,7 +2763,7 @@ const s = StyleSheet.create({
   previewTopRow: {
     /** כמו StoryViewer progressRow — נועל LTR כדי שהסדר לא יהפוך פעמיים ב-Modal */
     flexDirection: 'row',
-    direction: 'ltr',
+    direction: ROOT_DIR,
     justifyContent: 'flex-end',
     alignItems: 'center',
   },
@@ -2795,7 +2795,7 @@ const s = StyleSheet.create({
   },
   sendRow: {
     flexDirection: 'row',
-    direction: 'ltr',
+    direction: ROOT_DIR,
     alignItems: 'center',
     justifyContent: 'flex-end',
   },

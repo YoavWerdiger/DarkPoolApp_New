@@ -1,4 +1,4 @@
-import { ROW_REV } from '../../lib/i18n/direction';
+import { ROOT_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useEffect, useRef } from 'react';
@@ -130,7 +130,7 @@ const UIAlert: React.FC<UIAlertProps> = ({
     maxHeight: windowHeight - spacing.lg * 2,
     overflow: 'hidden',
     alignItems: 'stretch',
-    direction: 'ltr',
+    direction: ROOT_DIR,
   };
 
   const titleStyle: TextStyle = {
@@ -148,8 +148,8 @@ const UIAlert: React.FC<UIAlertProps> = ({
   };
 
   const buttonContainerStyle: ViewStyle = {
-    flexDirection: ROW_REV,
-    direction: 'ltr',
+    flexDirection: 'row-reverse',
+    direction: ROOT_DIR,
     alignItems: 'stretch',
     alignSelf: 'stretch',
     width: '100%',
@@ -253,7 +253,7 @@ const UIAlert: React.FC<UIAlertProps> = ({
                         <View
                           style={{
                             alignSelf: 'center',
-                            direction: 'ltr',
+                            direction: ROOT_DIR,
                             flexDirection: 'row',
                             alignItems: 'center',
                             justifyContent: 'center',

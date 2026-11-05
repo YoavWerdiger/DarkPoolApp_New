@@ -1,4 +1,4 @@
-import { UI_DIR } from '../../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import { JournalListSkeleton } from '../../../components/ui/SkeletonLoader';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -110,7 +110,7 @@ export default function HistoryTab({ portfolioId, refreshKey }: Props) {
         searchRow: { marginBottom: 10 },
         searchCardWrap: { borderRadius: tokens.borderRadius.search, overflow: 'hidden' },
         searchInner: {
-          direction: 'ltr',
+          direction: ROOT_DIR,
           flexDirection: 'row',
           alignItems: 'center',
           paddingHorizontal: 12,

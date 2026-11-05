@@ -1,4 +1,4 @@
-import { TEXT_START, UI_DIR } from '../../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 import React, { useMemo } from 'react';
@@ -138,7 +138,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     main: {
       flex: 1,
       minWidth: 0,
-      direction: 'ltr',
+      direction: ROOT_DIR,
       alignItems: 'stretch',
       gap: APP_LAYOUT.cardTitleToSubtitleGap,
     },
@@ -207,7 +207,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       lineHeight: APP_TYPE.caption.lineHeight,
       fontWeight: APP_TYPE.caption.fontWeight,
       color: tokens.colors.text.secondary,
-      textAlign: TEXT_START,
+      textAlign: 'right',
       fontVariant: ['tabular-nums'],
     },
   });

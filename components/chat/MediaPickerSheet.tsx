@@ -1,4 +1,4 @@
-import { UI_DIR } from '../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -801,7 +801,7 @@ const createStyles = (
       marginBottom: 12,
     },
     peekStripList: {
-      direction: 'ltr',
+      direction: ROOT_DIR,
       flexGrow: 0,
     },
     peekStrip: {

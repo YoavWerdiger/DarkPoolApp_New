@@ -1,4 +1,3 @@
-import { ROW_REV } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -176,7 +175,7 @@ export default function CreatePortfolioScreen() {
         section: { marginBottom: PORTFOLIO_FORM.sectionGap },
         modeCards: { gap: JOURNAL_LAYOUT.cardStackGap },
         chipsRow: {
-          flexDirection: ROW_REV,
+          flexDirection: 'row-reverse',
           flexWrap: 'wrap',
           gap: JOURNAL_LAYOUT.stackGapSmall,
         },
@@ -194,7 +193,7 @@ export default function CreatePortfolioScreen() {
         },
         advancedBody: { marginTop: JOURNAL_LAYOUT.sectionHeaderToContent },
         benchmarkRowInner: {
-          flexDirection: ROW_REV,
+          flexDirection: 'row-reverse',
           alignItems: 'center',
           gap: 12,
           paddingVertical: 12,
@@ -210,7 +209,7 @@ export default function CreatePortfolioScreen() {
           marginTop: JOURNAL_LAYOUT.cardTitleToSubtitleGap,
         },
         brokerInfoRow: {
-          flexDirection: ROW_REV,
+          flexDirection: 'row-reverse',
           alignItems: 'flex-start',
           gap: 10,
           marginBottom: JOURNAL_LAYOUT.stackGapSmall,
@@ -365,7 +364,7 @@ export default function CreatePortfolioScreen() {
                     accessibilityRole="button"
                     accessibilityState={{ expanded: advancedOpen }}
                     contentContainerStyle={{
-                      flexDirection: ROW_REV,
+                      flexDirection: 'row-reverse',
                       alignItems: 'center',
                       gap: 10,
                       paddingVertical: 14,
@@ -536,7 +535,7 @@ function ModeCard({ active, icon, title, description, onPress, logo }: ModeCardP
           : undefined
       }
       contentContainerStyle={{
-        flexDirection: ROW_REV,
+        flexDirection: 'row-reverse',
         alignItems: 'center',
         gap: 12,
         padding: JOURNAL_LAYOUT.cardPadding,

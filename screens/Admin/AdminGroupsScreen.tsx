@@ -1,4 +1,4 @@
-import { ROW_REV, UI_DIR, dirIcon } from '../../lib/i18n/direction';
+import { UI_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
@@ -425,7 +425,7 @@ const styles = StyleSheet.create({
   scroll: { paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal, paddingBottom: 40 },
   divider: { height: StyleSheet.hairlineWidth },
   row: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 12,
     paddingVertical: 15,

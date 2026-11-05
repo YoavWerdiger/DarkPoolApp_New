@@ -1,4 +1,3 @@
-import { TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { useDesignTokens } from "../ui/DesignTokens";
 import { HapticFeedback } from "../../utils/hapticFeedback";
@@ -182,6 +181,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#ffffff',
     flex: 1,
-    textAlign: TEXT_START,
+    textAlign: 'right',
   },
 });

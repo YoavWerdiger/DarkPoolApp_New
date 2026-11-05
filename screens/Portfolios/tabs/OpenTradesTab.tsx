@@ -1,4 +1,4 @@
-import { TEXT_END, TEXT_START, UI_DIR } from '../../../lib/i18n/direction';
+import { UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import { appLocale } from '../../../lib/i18n/locale';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -404,7 +404,7 @@ export default function OpenTradesTab({
           ...formFieldNumericInputStyle(tokens),
           flex: 1,
           minHeight: 52,
-          textAlign: TEXT_END,
+          textAlign: 'left',
           color: tokens.colors.text.primary,
         },
         pnlPreview: {
@@ -424,7 +424,7 @@ export default function OpenTradesTab({
           fontWeight: JOURNAL_TYPE.cardMetricValueSecondary.fontWeight,
           lineHeight: JOURNAL_TYPE.cardMetricValueSecondary.lineHeight,
           writingDirection: 'ltr',
-          textAlign: TEXT_START,
+          textAlign: 'right',
           fontVariant: ['tabular-nums'],
         },
         sheetActions: {

@@ -1,4 +1,4 @@
-import { ROW_REV, TEXT_START, UI_DIR } from '../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -256,7 +256,7 @@ export default function CommunityPortfoliosTab() {
           flexDirection: 'row',
           alignItems: 'center',
           gap: 8,
-          direction: 'ltr',
+          direction: ROOT_DIR,
         },
         sortBtnWrap: {
           flexShrink: 0,
@@ -277,7 +277,7 @@ export default function CommunityPortfoliosTab() {
           minWidth: 0,
         },
         searchInner: {
-          flexDirection: ROW_REV,
+          flexDirection: 'row-reverse',
           alignItems: 'center',
           paddingHorizontal: 12,
           minHeight: 44,
@@ -287,7 +287,7 @@ export default function CommunityPortfoliosTab() {
           marginHorizontal: 8,
           color: tokens.colors.text.primary,
           fontSize: 15,
-          textAlign: TEXT_START,
+          textAlign: 'right',
           writingDirection: TEXT_DIR,
           paddingVertical: 6,
         },

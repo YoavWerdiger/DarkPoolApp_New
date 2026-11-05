@@ -1,4 +1,3 @@
-import { ROW_REV, TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
@@ -67,7 +66,7 @@ const Field: React.FC<FieldProps> = ({
       <View
         style={{ marginBottom: APP_LAYOUT.stackGapSmall }}
       >
-        <Text style={[formFieldLabelStyle({ tokens, focused, error: false }), { textAlign: TEXT_START, writingDirection: TEXT_DIR }]}>{label}</Text>
+        <Text style={[formFieldLabelStyle({ tokens, focused, error: false }), { textAlign: 'right', writingDirection: TEXT_DIR }]}>{label}</Text>
       </View>
       <View
         style={[
@@ -417,14 +416,14 @@ const styles = StyleSheet.create({
     marginBottom: APP_LAYOUT.sectionGap / 2 + 4,
   },
   optionsRow: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: APP_LAYOUT.stackGapSmall / 2,
     marginBottom: APP_LAYOUT.sectionGap / 2 + 4,
   },
   rememberBtn: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: APP_LAYOUT.stackGapSmall,
     paddingVertical: 4,

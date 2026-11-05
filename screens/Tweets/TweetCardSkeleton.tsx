@@ -1,4 +1,4 @@
-import { ROW_REV, UI_DIR } from '../../lib/i18n/direction';
+import { UI_DIR } from '../../lib/i18n/direction';
 import React, { memo } from 'react';
 import { View, type ViewStyle } from 'react-native';
 import { SkeletonBox } from '../../components/ui/SkeletonLoader';
@@ -13,7 +13,7 @@ const DIVIDER = 'rgba(255, 255, 255, 0.12)';
  * ילד ראשון (אווטאר) מימין; שם/טקסט מיושרים לימין; מדיה מתחת; פעולות בשורה LTR.
  */
 export const tweetCardSkeletonHeaderRow: ViewStyle = {
-  flexDirection: ROW_REV,
+  flexDirection: 'row-reverse',
   alignItems: 'center',
   gap: 10,
 };

@@ -1,4 +1,4 @@
-import { TEXT_END, TEXT_START } from '../../lib/i18n/direction';
+import { ROOT_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React from 'react';
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
     gap: APP_LAYOUT.cardTitleToBodyGap,
   },
   topRow: {
-    direction: 'ltr',
+    direction: ROOT_DIR,
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
     lineHeight: APP_TYPE.cardMetricValueSecondary.lineHeight,
     fontWeight: APP_TYPE.cardMetricValueSecondary.fontWeight,
     letterSpacing: APP_TYPE.cardMetricValueSecondary.letterSpacing,
-    textAlign: TEXT_START,
+    textAlign: 'right',
     writingDirection: TEXT_DIR,
   },
   valueBlock: {
@@ -188,18 +188,18 @@ const styles = StyleSheet.create({
     lineHeight: APP_TYPE.sectionTitle.lineHeight,
     fontWeight: APP_TYPE.sectionTitle.fontWeight,
     letterSpacing: APP_TYPE.sectionTitle.letterSpacing,
-    textAlign: TEXT_END,
+    textAlign: 'left',
     writingDirection: 'ltr',
     fontVariant: ['tabular-nums'],
   },
   valueDen: {
     ...APP_TYPE.groupLabel,
-    textAlign: TEXT_END,
+    textAlign: 'left',
     writingDirection: 'ltr',
     marginBottom: 2,
   },
   gaugeArea: {
-    direction: 'ltr',
+    direction: ROOT_DIR,
     gap: 0,
   },
   triangle: {
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
   },
   barRow: {
     // כמו שורת התוויות — 0 משמאל, 100 מימין, תואם ל-left של הסמן
-    direction: 'ltr',
+    direction: ROOT_DIR,
     flexDirection: 'row',
     height: BAR_H,
     marginTop: TRI_H + 2,
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: BAR_H / 2,
   },
   labelsRow: {
-    direction: 'ltr',
+    direction: ROOT_DIR,
     flexDirection: 'row',
     marginTop: APP_LAYOUT.groupLabelToContent,
   },

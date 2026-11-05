@@ -1,4 +1,4 @@
-import { TEXT_END, TEXT_START } from '../../../lib/i18n/direction';
+import { ROOT_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 import type { TextStyle, ViewStyle } from 'react-native';
@@ -19,12 +19,12 @@ const PDI = '\u2069';
  */
 export const hebrewText: TextStyle = {
   writingDirection: TEXT_DIR,
-  textAlign: TEXT_START,
+  textAlign: 'right',
 };
 
 export const dataText: TextStyle = {
   writingDirection: 'ltr',
-  textAlign: TEXT_END,
+  textAlign: 'left',
   fontVariant: ['tabular-nums'],
 };
 
@@ -34,9 +34,9 @@ export const dataText: TextStyle = {
  * textAlign right מצמיד את השם לאווטאר בימין, לא לקצה השמאלי של הכרטיס.
  */
 export const ltrNameText: TextStyle = {
-  direction: 'ltr',
+  direction: ROOT_DIR,
   writingDirection: 'ltr',
-  textAlign: TEXT_START,
+  textAlign: 'right',
 };
 
 export const rowMixed: ViewStyle = {

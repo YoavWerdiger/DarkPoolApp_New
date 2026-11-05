@@ -1,4 +1,4 @@
-import { ROW_REV, TEXT_START } from '../../lib/i18n/direction';
+import { ROOT_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useMemo, useState } from 'react';
@@ -372,13 +372,13 @@ function TradeShareCard({
 
 const tradeCardStyles = StyleSheet.create({
   card: {
-    direction: 'ltr',
+    direction: ROOT_DIR,
     width: TRADE_CARD_W,
     borderRadius: 16,
     overflow: 'hidden',
   },
   header: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 10,
     paddingHorizontal: 12,
@@ -432,7 +432,7 @@ const tradeCardStyles = StyleSheet.create({
     marginHorizontal: 12,
   },
   grid: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     flexWrap: 'wrap',
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -444,7 +444,7 @@ const tradeCardStyles = StyleSheet.create({
     gap: 2,
   },
   cellLabelRow: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 4,
   },
@@ -458,7 +458,7 @@ const tradeCardStyles = StyleSheet.create({
     writingDirection: 'ltr',
   },
   footRow: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'flex-start',
     gap: 6,
     paddingHorizontal: 12,
@@ -467,7 +467,7 @@ const tradeCardStyles = StyleSheet.create({
   footText: {
     flex: 1,
     ...APP_TYPE.cardSubtitle,
-    textAlign: TEXT_START,
+    textAlign: 'right',
     writingDirection: TEXT_DIR,
   },
 });
@@ -810,7 +810,7 @@ function createStyles(
       gap: APP_LAYOUT.cardTitleToBodyGap,
     },
     headerRow: {
-      flexDirection: ROW_REV,
+      flexDirection: 'row-reverse',
       alignItems: 'center',
       gap: 12,
     },
@@ -827,7 +827,7 @@ function createStyles(
       alignItems: 'flex-end',
     },
     titleRow: {
-      flexDirection: ROW_REV,
+      flexDirection: 'row-reverse',
       alignItems: 'center',
       gap: 8,
       flexWrap: 'wrap',
@@ -864,23 +864,23 @@ function createStyles(
       flexShrink: 1,
       ...APP_TYPE.cardTitle,
       color: tokens.colors.text.primary,
-      textAlign: TEXT_START,
+      textAlign: 'right',
       writingDirection: TEXT_DIR,
     },
     subtitle: {
       ...APP_TYPE.cardSubtitle,
       color: tokens.colors.text.secondary,
-      textAlign: TEXT_START,
+      textAlign: 'right',
       writingDirection: TEXT_DIR,
     },
     snippet: {
       ...APP_TYPE.cardSubtitle,
       color: tokens.colors.text.secondary,
-      textAlign: TEXT_START,
+      textAlign: 'right',
       writingDirection: TEXT_DIR,
     },
     metricsRow: {
-      flexDirection: ROW_REV,
+      flexDirection: 'row-reverse',
       alignItems: 'stretch',
       borderTopWidth: 1,
       borderTopColor: tokens.colors.border.divider,
@@ -888,7 +888,7 @@ function createStyles(
     },
     /** גריד 2 עמודות לטרייד מורחב — כמו TradeListCard, בלי דחיסה */
     metricsGrid: {
-      flexDirection: ROW_REV,
+      flexDirection: 'row-reverse',
       flexWrap: 'wrap',
       justifyContent: 'space-between',
       rowGap: 12,
@@ -938,7 +938,7 @@ function createStyles(
     },
     metricValueExpanded: {},
     footer: {
-      flexDirection: ROW_REV,
+      flexDirection: 'row-reverse',
       alignItems: 'center',
       justifyContent: 'flex-start',
       gap: 2,
@@ -949,7 +949,7 @@ function createStyles(
       ...APP_TYPE.caption,
       color: tokens.colors.text.secondary,
       writingDirection: TEXT_DIR,
-      textAlign: TEXT_START,
+      textAlign: 'right',
     },
   });
 }

@@ -1,4 +1,4 @@
-import { ROW_REV, dirIcon } from '../../lib/i18n/direction';
+import { ROOT_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 import { legacyAlert } from '../../utils/appDialog';
@@ -266,7 +266,7 @@ const EconomicEventCard: React.FC<{
                 />
 
                 {/* סדר קריאה (מימין לשמאל): תחזית → תוצאה → קודם */}
-                <View style={{ flexDirection: ROW_REV, alignItems: 'flex-start', width: '100%' }}>
+                <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-start', width: '100%' }}>
                   {[
                     event.forecast
                       ? { key: 'forecast', label: i18n.t('auto.screens__News__EconomicCalendarTab.s2'), value: event.forecast, color: DesignTokens.colors.text.primary }
@@ -850,7 +850,7 @@ export default function EconomicCalendarTab({
         <View
           style={{
             flexDirection: 'row',
-            direction: 'ltr',
+            direction: ROOT_DIR,
             alignItems: 'center',
             justifyContent: 'space-between',
           }}

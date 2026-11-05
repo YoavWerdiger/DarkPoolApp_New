@@ -1,4 +1,4 @@
-import { TEXT_START, UI_DIR } from '../../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React, { useMemo, useRef, useState } from 'react';
 import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -319,7 +319,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     legendBox: {
       flex: 1,
       // פס הגלילה בצד השמאלי הפיזי — direction ltr כדי ש-left יהיה פיזי
-      direction: 'ltr',
+      direction: ROOT_DIR,
     },
     legendScroll: {
       maxHeight: LEGEND_VISIBLE_ROWS * LEGEND_ROW_HEIGHT,
@@ -411,8 +411,8 @@ function createRowStyles(tokens: ReturnType<typeof useDesignTokens>) {
       maxWidth: '100%',
     },
     ticker: {
-      direction: 'ltr',
-      textAlign: TEXT_START,
+      direction: ROOT_DIR,
+      textAlign: 'right',
       writingDirection: 'ltr',
       fontSize: DARK_POOL_TYPE.cardBody.fontSize,
       fontVariant: ['tabular-nums'],
@@ -422,8 +422,8 @@ function createRowStyles(tokens: ReturnType<typeof useDesignTokens>) {
       flexShrink: 1,
     },
     allocation: {
-      direction: 'ltr',
-      textAlign: TEXT_START,
+      direction: ROOT_DIR,
+      textAlign: 'right',
       writingDirection: 'ltr',
       marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
       includeFontPadding: false,
@@ -441,8 +441,8 @@ function createRowStyles(tokens: ReturnType<typeof useDesignTokens>) {
       alignItems: 'stretch',
     },
     holdingValue: {
-      direction: 'ltr',
-      textAlign: TEXT_START,
+      direction: ROOT_DIR,
+      textAlign: 'right',
       writingDirection: 'ltr',
       fontSize: DARK_POOL_TYPE.cardBody.fontSize,
       fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
@@ -455,8 +455,8 @@ function createRowStyles(tokens: ReturnType<typeof useDesignTokens>) {
       justifyContent: 'flex-end',
     },
     holdingReturn: {
-      direction: 'ltr',
-      textAlign: TEXT_START,
+      direction: ROOT_DIR,
+      textAlign: 'right',
       writingDirection: 'ltr',
       fontSize: DARK_POOL_TYPE.caption.fontSize,
       lineHeight: DARK_POOL_TYPE.caption.lineHeight,

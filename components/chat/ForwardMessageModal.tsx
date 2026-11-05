@@ -1,4 +1,4 @@
-import { UI_DIR, dirIcon } from '../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 // ============================================
@@ -258,7 +258,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontSize: APP_TYPE.sectionTitle.fontSize,
       lineHeight: APP_TYPE.sectionTitle.lineHeight,
       fontWeight: APP_TYPE.sectionTitle.fontWeight,
-      direction: 'ltr',
+      direction: ROOT_DIR,
       textAlign: 'center',
       writingDirection: TEXT_DIR,
       width: '100%',

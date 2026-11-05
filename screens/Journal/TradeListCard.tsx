@@ -1,4 +1,4 @@
-import { TEXT_START, UI_DIR } from '../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { memo, useState } from 'react';
@@ -254,9 +254,9 @@ export function createTradeCardStyles(tokens: ReturnType<typeof useDesignTokens>
       lineHeight: JOURNAL_TYPE.cardTitle.lineHeight,
       letterSpacing: JOURNAL_TYPE.cardTitle.letterSpacing,
       color: tokens.colors.text.primary,
-      direction: 'ltr',
+      direction: ROOT_DIR,
       writingDirection: 'ltr',
-      textAlign: TEXT_START,
+      textAlign: 'right',
       includeFontPadding: false,
     },
     directionBadge: {

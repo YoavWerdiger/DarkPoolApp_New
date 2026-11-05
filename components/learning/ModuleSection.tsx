@@ -1,4 +1,3 @@
-import { ROW_REV, TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useMemo } from 'react';
@@ -52,7 +51,7 @@ export const ModuleSection: React.FC<ModuleSectionProps> = ({
       paddingVertical: 15,
     },
     headerContent: {
-      flexDirection: ROW_REV,
+      flexDirection: 'row-reverse',
       alignItems: 'center',
     },
     headerLeft: {
@@ -74,7 +73,7 @@ export const ModuleSection: React.FC<ModuleSectionProps> = ({
     lessonCount: {
       ...ACADEMY_TYPE.cardSubtitle,
       color: DesignTokens.colors.text.tertiary,
-      textAlign: TEXT_START,
+      textAlign: 'right',
       writingDirection: TEXT_DIR,
     },
     progressContainer: {

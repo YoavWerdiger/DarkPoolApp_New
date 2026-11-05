@@ -35,20 +35,20 @@ export const FEAR_GREED_COLORS = {
 
 /** מקטעי הגייג' המלא — 5 אזורים, זוויות פרופורציונליות לטווחי 0–100 */
 export const FEAR_GREED_GAUGE_SEGMENTS = [
-  { start: -180, end: -135, color: FEAR_GREED_COLORS.extremeFear, label: 'פחד קיצוני' },
-  { start: -135, end: -99, color: FEAR_GREED_COLORS.fear, label: 'פחד' },
-  { start: -99, end: -81, color: FEAR_GREED_COLORS.neutral, label: 'ניטרלי' },
-  { start: -81, end: -45, color: FEAR_GREED_COLORS.greed, label: 'תאווה' },
-  { start: -45, end: 0, color: FEAR_GREED_COLORS.greedExtreme, label: 'תאווה קיצונית' },
+  { start: -180, end: -135, color: FEAR_GREED_COLORS.extremeFear, label: i18n.t('auto.services__fearAndGreedService.s5') },
+  { start: -135, end: -99, color: FEAR_GREED_COLORS.fear, label: i18n.t('auto.services__fearAndGreedService.s4') },
+  { start: -99, end: -81, color: FEAR_GREED_COLORS.neutral, label: i18n.t('auto.services__fearAndGreedService.s3') },
+  { start: -81, end: -45, color: FEAR_GREED_COLORS.greed, label: i18n.t('auto.services__fearAndGreedService.s2') },
+  { start: -45, end: 0, color: FEAR_GREED_COLORS.greedExtreme, label: i18n.t('auto.services__fearAndGreedService.s1') },
 ] as const;
 
 /** פס מיני (5 מקטעים — גבולות תואמים ל-getValueDescription) */
 export const FEAR_GREED_MINI_SEGMENTS = [
-  { label: 'פחד קיצוני', color: FEAR_GREED_COLORS.extremeFear, from: 0, to: 25 },
-  { label: 'פחד', color: FEAR_GREED_COLORS.fear, from: 25, to: 45 },
-  { label: 'ניטרלי', color: FEAR_GREED_COLORS.neutral, from: 45, to: 55 },
-  { label: 'תאווה', color: FEAR_GREED_COLORS.greed, from: 55, to: 75 },
-  { label: 'תאווה קיצונית', color: FEAR_GREED_COLORS.greedExtreme, from: 75, to: 100 },
+  { label: i18n.t('auto.services__fearAndGreedService.s5'), color: FEAR_GREED_COLORS.extremeFear, from: 0, to: 25 },
+  { label: i18n.t('auto.services__fearAndGreedService.s4'), color: FEAR_GREED_COLORS.fear, from: 25, to: 45 },
+  { label: i18n.t('auto.services__fearAndGreedService.s3'), color: FEAR_GREED_COLORS.neutral, from: 45, to: 55 },
+  { label: i18n.t('auto.services__fearAndGreedService.s2'), color: FEAR_GREED_COLORS.greed, from: 55, to: 75 },
+  { label: i18n.t('auto.services__fearAndGreedService.s1'), color: FEAR_GREED_COLORS.greedExtreme, from: 75, to: 100 },
 ] as const;
 
 // v2 — מבטל קאש ישן (RapidAPI/יולי) שנשמר תחת v1 והציג 45/Neutral לנצח.

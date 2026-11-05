@@ -1,4 +1,3 @@
-import { TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
@@ -208,7 +207,7 @@ export default function RegisterScreen({ navigation }: any) {
                     fontSize: 12,
                     fontWeight: '600',
                     marginBottom: 8,
-                    textAlign: TEXT_START,
+                    textAlign: 'right',
                   }}
                 >{i18n.t('auto.screens__Auth__RegisterScreen.s19')}</Text>
                 <View
@@ -239,7 +238,7 @@ export default function RegisterScreen({ navigation }: any) {
                     fontSize: 12,
                     fontWeight: '600',
                     marginBottom: 8,
-                    textAlign: TEXT_START,
+                    textAlign: 'right',
                   }}
                 >{i18n.t('auto.screens__Auth__RegisterScreen.s21')}</Text>
                 <View
@@ -270,7 +269,7 @@ export default function RegisterScreen({ navigation }: any) {
                     color: DesignTokens.colors.text.tertiary,
                     fontSize: 12,
                     fontWeight: '600',
-                    textAlign: TEXT_START,
+                    textAlign: 'right',
                     marginBottom: 8,
                   }}
                 >{i18n.t('auto.screens__Auth__RegisterScreen.s23')}</Text>
@@ -306,7 +305,7 @@ export default function RegisterScreen({ navigation }: any) {
                     color: DesignTokens.colors.text.tertiary,
                     fontSize: 12,
                     fontWeight: '600',
-                    textAlign: TEXT_START,
+                    textAlign: 'right',
                     marginBottom: 8,
                   }}
                 >{i18n.t('auto.screens__Auth__RegisterScreen.s25')}</Text>
@@ -397,7 +396,7 @@ export default function RegisterScreen({ navigation }: any) {
                     fontSize: 14, 
                     fontWeight: '600',
                     letterSpacing: 0.2,
-                    textAlign: TEXT_START
+                    textAlign: 'right'
                   }}>{i18n.t('auto.screens__Auth__RegisterScreen.s29')}</Text>
                 </Pressable>
               </View>

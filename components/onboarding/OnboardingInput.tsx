@@ -1,4 +1,3 @@
-import { TEXT_START } from '../../lib/i18n/direction';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useState } from 'react';
 import { View, Text, TextInput, TextInputProps, StyleSheet } from 'react-native';
@@ -128,7 +127,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   errorText: {
-    textAlign: TEXT_START,
+    textAlign: 'right',
     flex: 1,
     writingDirection: TEXT_DIR,
   },

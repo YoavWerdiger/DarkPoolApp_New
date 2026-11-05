@@ -1,4 +1,4 @@
-import { ROW_REV, TEXT_START, dirIcon } from '../../lib/i18n/direction';
+import { dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useRef } from 'react';
@@ -107,7 +107,7 @@ const ProgressBar = ({
           borderRadius: 2,
           overflow: 'hidden',
           backgroundColor: tokens.colors.border.divider,
-          flexDirection: ROW_REV,
+          flexDirection: 'row-reverse',
         }}
         accessibilityRole="progressbar"
         accessibilityValue={{ min: 0, max: total, now: current }}
@@ -343,7 +343,7 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
                               lineHeight: APP_TYPE.cardBody.lineHeight,
                               fontWeight: APP_TYPE.cardTitle.fontWeight,
                               color: tokens.colors.text.primary,
-                              textAlign: TEXT_START,
+                              textAlign: 'right',
                               writingDirection: TEXT_DIR,
                             }}
                           >

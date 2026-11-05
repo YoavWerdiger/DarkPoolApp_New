@@ -1,4 +1,4 @@
-import { TEXT_START } from '../../lib/i18n/direction';
+import { ROOT_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 /**
@@ -204,8 +204,8 @@ export function portfolioDetailTabLabelStyle(textSecondary: string): TextStyle {
     fontWeight: '600',
     color: textSecondary,
     writingDirection: TEXT_DIR,
-    textAlign: TEXT_START,
-    direction: 'ltr',
+    textAlign: 'right',
+    direction: ROOT_DIR,
   };
 }
 

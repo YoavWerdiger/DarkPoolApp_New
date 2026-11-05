@@ -1,4 +1,4 @@
-import { ROW_REV, UI_DIR } from '../../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -231,12 +231,12 @@ export function PortfolioSwitcher({
 const styles = StyleSheet.create({
   // עוגן פיזי לימין (כמו כותרת הדף) — לא תלוי ב-direction של ההורה
   anchorWrap: {
-    direction: 'ltr',
+    direction: ROOT_DIR,
     alignItems: 'flex-end',
     alignSelf: 'stretch',
   },
   anchor: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 6,
     maxWidth: '100%',

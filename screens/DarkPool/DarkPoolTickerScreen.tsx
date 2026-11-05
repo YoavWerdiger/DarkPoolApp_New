@@ -1,4 +1,4 @@
-import { TEXT_END, UI_DIR, dirIcon } from '../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 /**
@@ -695,7 +695,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, bottomPadding:
     identityRow: {
       flex: 1,
       minWidth: 0,
-      direction: 'ltr',
+      direction: ROOT_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       gap: APP_LAYOUT.cardTitleToBodyGap,
@@ -713,7 +713,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, bottomPadding:
       letterSpacing: DARK_POOL_TYPE.sectionTitle.letterSpacing,
       color: tokens.colors.text.primary,
       writingDirection: 'ltr',
-      textAlign: TEXT_END,
+      textAlign: 'left',
     },
     companyName: {
       ...darkPoolPhysicalLeftText,

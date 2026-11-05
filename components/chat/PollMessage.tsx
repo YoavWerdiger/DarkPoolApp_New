@@ -488,7 +488,7 @@ const createStyles = (
       opacity: 0.5,
     },
     voteButtonText: {
-      textAlign: 'center',
+      textAlign: 'center' as const,
       fontWeight: APP_TYPE.cardTitle.fontWeight,
       fontSize: APP_TYPE.cardTitle.fontSize,
       color: ctaFg,

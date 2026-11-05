@@ -1,4 +1,5 @@
-import { TEXT_END, TEXT_START, UI_DIR } from '../../lib/i18n/direction';
+import { ROOT_DIR } from '../../lib/i18n/direction';
+import { UI_DIR } from '../../lib/i18n/direction';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import type { TextStyle, ViewStyle } from 'react-native';
 import { APP_LAYOUT } from './appLayout';
@@ -30,19 +31,20 @@ export const appRow: ViewStyle = {
 
 export const appHebrewText: TextStyle = {
   writingDirection: TEXT_DIR,
-  textAlign: TEXT_START,
+  textAlign: 'right',
 };
 
+// «פיזי» = בעץ השורש; באנגלית השורש מתהפך (ROOT_DIR) — והיישור איתו
 export const appPhysicalRightText: TextStyle = {
   ...appHebrewText,
-  direction: 'ltr',
-  textAlign: TEXT_START,
+  direction: ROOT_DIR,
+  textAlign: 'right',
   writingDirection: TEXT_DIR,
 };
 
 export const appPhysicalLeftText: TextStyle = {
-  direction: 'ltr',
-  textAlign: TEXT_END,
+  direction: ROOT_DIR,
+  textAlign: 'left',
   writingDirection: 'ltr',
 };
 
@@ -286,7 +288,7 @@ export const appCardMetricLabelStyle: TextStyle = {
 /** תווית שדה (שם מלא, טלפון…) — זהה ל-cardMetricLabel */
 export const appFormFieldLabelStyle: TextStyle = {
   ...appCardMetricLabelStyle,
-  textAlign: TEXT_START,
+  textAlign: 'right',
   marginBottom: 8,
 };
 

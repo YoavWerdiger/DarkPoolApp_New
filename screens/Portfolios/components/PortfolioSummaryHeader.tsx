@@ -1,4 +1,4 @@
-import { UI_DIR } from '../../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 import React from 'react';
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 18,
     paddingBottom: 4,
-    direction: 'ltr',
+    direction: ROOT_DIR,
     alignItems: 'center',
     width: '100%',
   },

@@ -1,4 +1,4 @@
-import { ROW_REV, dirIcon } from '../../lib/i18n/direction';
+import { ROOT_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -323,9 +323,9 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
      * Modal + forceRTL לא יציב. Yoga נשאר LTR כמו App.tsx;
      * row-reverse שם אווטאר/לוגו לימין בלי היפוך כפול.
      */
-    container: { flex: 1, minHeight: 0, direction: 'ltr' },
+    container: { flex: 1, minHeight: 0, direction: ROOT_DIR },
     header: {
-      flexDirection: ROW_REV,
+      flexDirection: 'row-reverse',
       alignItems: 'center',
       paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
       paddingBottom: APP_LAYOUT.cardTitleToBodyGap,
@@ -354,7 +354,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       width: '100%',
     },
     tabsWrap: {
-      flexDirection: ROW_REV,
+      flexDirection: 'row-reverse',
       flexWrap: 'wrap',
       alignItems: 'center',
       gap: APP_LAYOUT.stackGapSmall,
@@ -384,7 +384,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       textAlign: 'center',
     },
     row: {
-      flexDirection: ROW_REV,
+      flexDirection: 'row-reverse',
       alignItems: 'center',
       gap: 12,
       paddingVertical: 15,
@@ -413,7 +413,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       alignItems: 'flex-end',
     },
     titleRow: {
-      flexDirection: ROW_REV,
+      flexDirection: 'row-reverse',
       alignItems: 'center',
       gap: 6,
       width: '100%',

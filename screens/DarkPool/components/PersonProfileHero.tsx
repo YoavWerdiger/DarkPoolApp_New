@@ -1,4 +1,4 @@
-import { TEXT_END, UI_DIR, dirIcon } from '../../../lib/i18n/direction';
+import { UI_DIR, dirIcon } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import { companyFacilityPhotoUrl } from '../utils/companyFacilityPhotos';
 import { useTheme } from '../../../context/ThemeContext';
@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
   },
   // חברה ציבורית (שם לועזי) — מיושר לשמאל
   nameLeft: {
-    textAlign: TEXT_END,
+    textAlign: 'left',
   },
   name: {
     ...ltrNameText,

@@ -1,4 +1,4 @@
-import { TEXT_END, TEXT_START, UI_DIR } from '../../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
@@ -577,9 +577,9 @@ export default function OverviewTab({
           alignSelf: 'stretch',
         },
         heroValue: {
-          direction: 'ltr',
+          direction: ROOT_DIR,
           writingDirection: 'ltr',
-          textAlign: TEXT_START,
+          textAlign: 'right',
           marginTop: APP_LAYOUT.cardMetricLabelToValueGap,
           fontSize: JOURNAL_TYPE.cardMetricValue.fontSize,
           lineHeight: JOURNAL_TYPE.cardMetricValue.lineHeight,
@@ -592,11 +592,11 @@ export default function OverviewTab({
           marginBottom: APP_LAYOUT.cardTitleToBodyGap,
           // קצה ימין פיזי — alignSelf:flex-end מתהפך לשמאל בתוך עץ RTL
           alignSelf: 'stretch',
-          direction: 'ltr',
+          direction: ROOT_DIR,
           flexDirection: 'row',
           justifyContent: 'flex-end',
           alignItems: 'center',
-          textAlign: TEXT_START,
+          textAlign: 'right',
           gap: 6,
         },
         deltaFigure: {
@@ -685,7 +685,7 @@ export default function OverviewTab({
           fontWeight: '700',
           color: tokens.colors.text.secondary,
           writingDirection: 'ltr',
-          textAlign: TEXT_START,
+          textAlign: 'right',
         },
         totalRow: {
           flexDirection: 'row',
@@ -705,7 +705,7 @@ export default function OverviewTab({
           fontWeight: '700',
           color: tokens.colors.text.primary,
           writingDirection: 'ltr',
-          textAlign: TEXT_START,
+          textAlign: 'right',
         },
         emptyText: {
           width: '100%',
@@ -744,7 +744,7 @@ export default function OverviewTab({
           flexShrink: 0,
           direction: 'ltr',
           writingDirection: 'ltr',
-          textAlign: TEXT_END,
+          textAlign: 'left',
           fontSize: JOURNAL_TYPE.cardSubtitle.fontSize,
           fontWeight: '600',
           lineHeight: JOURNAL_TYPE.cardSubtitle.lineHeight,
@@ -791,14 +791,14 @@ export default function OverviewTab({
           width: '100%',
           ...journalCardTitleStyle,
           ...journalPhysicalRightText,
-          textAlign: TEXT_START,
+          textAlign: 'right',
           color: tokens.colors.text.primary,
         },
         metricValue: {
           width: '100%',
           ...journalCardMetricValueSecondaryStyle,
           writingDirection: 'ltr',
-          textAlign: TEXT_START,
+          textAlign: 'right',
           marginTop: JOURNAL_LAYOUT.cardMetricLabelToValueGap,
         },
         metricHint: {

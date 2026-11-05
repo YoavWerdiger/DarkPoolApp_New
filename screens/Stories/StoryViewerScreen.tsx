@@ -1,3 +1,4 @@
+import { ROOT_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 /**
  * צופה הסטוריז — מסך ניווט (transparentModal בסטאק הראשי).
@@ -996,7 +997,7 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: 'transparent',
-    direction: 'ltr',
+    direction: ROOT_DIR,
   },
   backdrop: {
     ...StyleSheet.absoluteFill,

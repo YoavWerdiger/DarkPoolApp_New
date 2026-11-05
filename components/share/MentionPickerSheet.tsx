@@ -1,4 +1,4 @@
-import { ROW_REV, TEXT_START, dirIcon } from '../../lib/i18n/direction';
+import { ROOT_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -269,9 +269,9 @@ export default function MentionPickerSheet({
 
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
-    container: { flex: 1, minHeight: 0, direction: 'ltr' },
+    container: { flex: 1, minHeight: 0, direction: ROOT_DIR },
     header: {
-      flexDirection: ROW_REV,
+      flexDirection: 'row-reverse',
       alignItems: 'center',
       paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
       paddingBottom: APP_LAYOUT.cardTitleToBodyGap,
@@ -300,7 +300,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       width: '100%',
     },
     searchWrap: {
-      flexDirection: ROW_REV,
+      flexDirection: 'row-reverse',
       marginHorizontal: APP_LAYOUT.screenPaddingHorizontal,
       marginTop: APP_LAYOUT.cardPadding,
       marginBottom: APP_LAYOUT.cardStackGap,
@@ -313,7 +313,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       flex: 1,
       ...APP_TYPE.body,
       padding: 0,
-      textAlign: TEXT_START,
+      textAlign: 'right',
       writingDirection: TEXT_DIR,
     },
     center: {
@@ -337,7 +337,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       writingDirection: TEXT_DIR,
     },
     row: {
-      flexDirection: ROW_REV,
+      flexDirection: 'row-reverse',
       alignItems: 'center',
       gap: 12,
       paddingVertical: 15,
@@ -361,13 +361,13 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     rowText: { flex: 1, minWidth: 0, gap: APP_LAYOUT.cardTitleToSubtitleGap },
     rowTitle: {
       ...APP_TYPE.cardTitle,
-      textAlign: TEXT_START,
+      textAlign: 'right',
       writingDirection: TEXT_DIR,
       color: tokens.colors.text.primary,
     },
     rowSub: {
       ...APP_TYPE.cardSubtitle,
-      textAlign: TEXT_START,
+      textAlign: 'right',
       writingDirection: TEXT_DIR,
     },
   });

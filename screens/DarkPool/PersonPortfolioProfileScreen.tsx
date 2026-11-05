@@ -1,4 +1,4 @@
-import { TEXT_START, UI_DIR } from '../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { pickDailyOpenOnDate } from './utils/congressSinceTrade';
 import { getQuotes } from '../../services/portfolios/portfolioPriceFeed';
@@ -257,7 +257,7 @@ function heroFlowStyle(base: TextStyle, value: number | null | undefined): TextS
     marginTop: 0,
     fontSize,
     lineHeight: base.lineHeight ? Math.round(base.lineHeight * ratio) : undefined,
-    textAlign: TEXT_START,
+    textAlign: 'right',
   };
 }
 
@@ -2119,9 +2119,9 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       marginTop: APP_LAYOUT.cardMetricLabelToValueGap,
     },
     heroValue: {
-      direction: 'ltr',
+      direction: ROOT_DIR,
       writingDirection: 'ltr',
-      textAlign: TEXT_START,
+      textAlign: 'right',
       marginTop: APP_LAYOUT.cardMetricLabelToValueGap,
       fontSize: DARK_POOL_TYPE.cardMetricValue.fontSize,
       fontVariant: ['tabular-nums'],
@@ -2278,8 +2278,8 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       alignItems: 'stretch',
     },
     tradeTicker: {
-      direction: 'ltr',
-      textAlign: TEXT_START,
+      direction: ROOT_DIR,
+      textAlign: 'right',
       writingDirection: 'ltr',
       fontSize: DARK_POOL_TYPE.cardBody.fontSize,
       fontVariant: ['tabular-nums'],

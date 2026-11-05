@@ -1,4 +1,4 @@
-import { ROW_REV, TEXT_START, dirIcon } from '../../lib/i18n/direction';
+import { dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
@@ -209,21 +209,21 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
     marginBottom: 8,
-    textAlign: TEXT_START,
+    textAlign: 'right',
   },
   subtitle: {
     fontSize: 16,
     lineHeight: 24,
     marginBottom: 24,
-    textAlign: TEXT_START,
+    textAlign: 'right',
   },
   pillsContainer: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     flexWrap: 'wrap',
     gap: 12,
   },
   pill: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 8,
     paddingHorizontal: 16,

@@ -1,4 +1,3 @@
-import { TEXT_START } from '../../lib/i18n/direction';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useState } from 'react';
 import { 
@@ -96,7 +95,7 @@ const UIInput: React.FC<UIInputProps> = ({
     fontWeight: typography.label.weight,
     color: colors.text.secondary,
     marginBottom: spacing.xs,
-    textAlign: TEXT_START,
+    textAlign: 'right',
     writingDirection: TEXT_DIR,
   };
 
@@ -105,7 +104,7 @@ const UIInput: React.FC<UIInputProps> = ({
     fontWeight: typography.caption.weight,
     color: error ? colors.danger.main : colors.text.tertiary,
     marginTop: spacing.xs,
-    textAlign: TEXT_START,
+    textAlign: 'right',
     writingDirection: TEXT_DIR,
   };
 

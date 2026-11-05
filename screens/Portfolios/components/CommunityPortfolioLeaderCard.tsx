@@ -1,4 +1,4 @@
-import { TEXT_END, TEXT_START, dirIcon } from '../../../lib/i18n/direction';
+import { ROOT_DIR, dirIcon } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, LayoutChangeEvent } from 'react-native';
@@ -203,14 +203,14 @@ const styles = StyleSheet.create({
     ...journalCardMetricValueStyle,
     flexShrink: 1,
     minWidth: 0,
-    direction: 'ltr',
-    textAlign: TEXT_START,
+    direction: ROOT_DIR,
+    textAlign: 'right',
     writingDirection: 'ltr',
   },
   roi: {
     ...journalCardMetricValueSecondaryStyle,
     flexShrink: 0,
     writingDirection: 'ltr',
-    textAlign: TEXT_END,
+    textAlign: 'left',
   },
 });

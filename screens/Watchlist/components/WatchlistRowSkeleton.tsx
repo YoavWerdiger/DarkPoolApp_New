@@ -1,4 +1,4 @@
-import { ROW_REV, UI_DIR } from '../../../lib/i18n/direction';
+import { UI_DIR } from '../../../lib/i18n/direction';
 import React, { memo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { SkeletonBox } from '../../../components/ui/SkeletonLoader';
@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   identity: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     minWidth: 0,
     flex: 1,

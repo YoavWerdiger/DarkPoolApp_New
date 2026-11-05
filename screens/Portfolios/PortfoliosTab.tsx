@@ -1,4 +1,4 @@
-import { ROW_REV, UI_DIR } from '../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
@@ -299,7 +299,7 @@ export default function PortfoliosTab() {
           flexDirection: 'row',
           alignItems: 'center',
           gap: 10,
-          direction: 'ltr',
+          direction: ROOT_DIR,
           backgroundColor: 'transparent',
         },
         sortBtnWrap: {
@@ -359,7 +359,7 @@ export default function PortfoliosTab() {
           borderWidth: 0,
         },
         searchInner: {
-          flexDirection: ROW_REV,
+          flexDirection: 'row-reverse',
           alignItems: 'center',
           paddingHorizontal: 14,
           minHeight: 44,

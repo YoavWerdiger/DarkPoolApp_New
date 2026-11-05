@@ -1,3 +1,4 @@
+import { IS_RTL_UI } from '../../lib/i18n/direction';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, TextInput, View, type LayoutChangeEvent, type TextStyle } from 'react-native';
 import Animated, {
@@ -278,10 +279,11 @@ const Slot = React.memo(function Slot({
 });
 
 const styles = StyleSheet.create({
+  // הספרות תמיד LTR; הצמדה לצד תחילת הקריאה — ימין בעברית, שמאל באנגלית
   row: {
     flexDirection: 'row',
     direction: 'ltr',
-    justifyContent: 'flex-end',
+    justifyContent: IS_RTL_UI ? 'flex-end' : 'flex-start',
     alignSelf: 'stretch',
   },
   slot: {

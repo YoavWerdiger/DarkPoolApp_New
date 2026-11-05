@@ -1,4 +1,3 @@
-import { TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React, { useMemo } from 'react';
 import { View, Text, Dimensions, ScrollView } from 'react-native';
@@ -33,7 +32,7 @@ export default function IndicesTab() {
       widgetTitle: {
         ...APP_TYPE.cardTitle,
         color: DesignTokens.colors.text.primary,
-        textAlign: TEXT_START,
+        textAlign: 'right' as const,
         marginBottom: APP_LAYOUT.cardTitleToBodyGap,
       },
       webviewContainer: {

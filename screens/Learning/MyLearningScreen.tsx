@@ -1,4 +1,3 @@
-import { TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useMemo } from 'react';
@@ -243,7 +242,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       ...ACADEMY_TYPE.cardTitle,
       color: tokens.colors.text.primary,
       marginBottom: APP_LAYOUT.cardTitleToBodyGap,
-      textAlign: TEXT_START,
+      textAlign: 'right',
       writingDirection: TEXT_DIR,
     },
     statsRow: {
@@ -298,7 +297,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       ...ACADEMY_TYPE.caption2,
       color: tokens.colors.text.secondary,
       minWidth: 32,
-      textAlign: TEXT_START,
+      textAlign: 'right',
     },
     emptyState: {
       alignItems: 'center',

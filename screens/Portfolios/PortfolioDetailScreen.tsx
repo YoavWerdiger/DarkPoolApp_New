@@ -1,4 +1,4 @@
-import { ROW_REV, UI_DIR } from '../../lib/i18n/direction';
+import { UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { JournalSkeleton } from './components/JournalSkeleton';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -257,7 +257,7 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
           pointerEvents: 'box-none',
         },
         fabBtn: {
-          flexDirection: ROW_REV,
+          flexDirection: 'row-reverse',
           alignItems: 'center',
           gap: 8,
           paddingHorizontal: 22,

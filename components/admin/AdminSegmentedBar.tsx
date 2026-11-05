@@ -1,4 +1,3 @@
-import { ROW_REV } from '../../lib/i18n/direction';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { DayDividerPill, DayDividerSlidingLayer } from '../ui/DayDividerPill';
@@ -54,7 +53,7 @@ export function AdminSegmentedBar<T extends string>({
 
 const styles = StyleSheet.create({
   row: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     flexWrap: 'wrap',
     alignItems: 'center',
     gap: APP_LAYOUT.stackGapSmall,

@@ -1,4 +1,4 @@
-import { TEXT_START, UI_DIR } from '../../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React, { useMemo } from 'react';
 import {
@@ -519,7 +519,7 @@ const styles = StyleSheet.create({
     fontWeight: APP_TYPE.caption.fontWeight,
     lineHeight: APP_TYPE.cardSubtitle.lineHeight,
     writingDirection: 'ltr',
-    textAlign: TEXT_START,
+    textAlign: 'right',
   },
   pnlStack: {
     alignItems: 'center',
@@ -547,9 +547,9 @@ const styles = StyleSheet.create({
     fontWeight: APP_TYPE.cardTitle.fontWeight,
     lineHeight: APP_TYPE.cardSubtitle.lineHeight,
     flexShrink: 1,
-    direction: 'ltr',
+    direction: ROOT_DIR,
     writingDirection: 'ltr',
-    textAlign: TEXT_START,
+    textAlign: 'right',
   },
   typePill: {
     flexDirection: 'row',

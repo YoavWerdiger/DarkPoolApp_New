@@ -1,4 +1,4 @@
-import { TEXT_START, UI_DIR } from '../../lib/i18n/direction';
+import { UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
     fontSize: APP_TYPE.caption.fontSize,
     lineHeight: APP_TYPE.caption.lineHeight,
     fontWeight: APP_TYPE.caption.fontWeight,
-    textAlign: TEXT_START,
+    textAlign: 'right',
     writingDirection: TEXT_DIR,
   },
   metricValue: {
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
   notes: {
     fontSize: APP_TYPE.cardSubtitle.fontSize,
     lineHeight: APP_TYPE.cardSubtitle.lineHeight,
-    textAlign: TEXT_START,
+    textAlign: 'right',
     writingDirection: TEXT_DIR,
     paddingHorizontal: 14,
     paddingVertical: 12,

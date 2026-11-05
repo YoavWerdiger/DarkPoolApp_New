@@ -1,4 +1,4 @@
-import { ROW_REV, TEXT_START } from '../../lib/i18n/direction';
+import { ROOT_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
@@ -926,7 +926,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    direction: 'ltr',
+    direction: ROOT_DIR,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -997,7 +997,7 @@ const styles = StyleSheet.create({
     zIndex: 3,
   },
   targetRow: {
-    direction: 'ltr',
+    direction: ROOT_DIR,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -1016,7 +1016,7 @@ const styles = StyleSheet.create({
     writingDirection: TEXT_DIR,
   },
   captionRow: {
-    direction: 'ltr',
+    direction: ROOT_DIR,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'transparent',
@@ -1092,7 +1092,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 22,
     borderWidth: StyleSheet.hairlineWidth,
-    textAlign: TEXT_START,
+    textAlign: 'right',
     ...chatPhysicalRightText,
     ...CHAT_TYPE.cardBody,
   },
@@ -1103,7 +1103,7 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
     gap: 8,
     // RTL כמו הדפדוף (הבא משמאל): הראשון מימין, והסימון זז עם ההחלקה. ממורכז כשהרשימה קצרה מהמסך
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     flexGrow: 1,
     justifyContent: 'center',
   },

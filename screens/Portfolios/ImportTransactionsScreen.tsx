@@ -1,4 +1,4 @@
-import { TEXT_END, UI_DIR } from '../../lib/i18n/direction';
+import { UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
@@ -140,7 +140,7 @@ export default function ImportTransactionsScreen() {
           fontSize: 11,
           color: tokens.colors.text.secondary,
           writingDirection: 'ltr',
-          textAlign: TEXT_END,
+          textAlign: 'left',
         },
         pickBtn: {
           flexDirection: 'row',
@@ -196,7 +196,7 @@ export default function ImportTransactionsScreen() {
           fontWeight: '700',
           color: tokens.colors.text.primary,
           writingDirection: 'ltr',
-          textAlign: TEXT_END,
+          textAlign: 'left',
         },
         previewType: {
           width: 70,
@@ -208,7 +208,7 @@ export default function ImportTransactionsScreen() {
           flex: 1,
           fontSize: 12,
           color: tokens.colors.text.primary,
-          textAlign: TEXT_END,
+          textAlign: 'left',
           writingDirection: 'ltr',
         },
         invalidRow: {
@@ -256,7 +256,7 @@ export default function ImportTransactionsScreen() {
           color: tokens.colors.primary.main,
           fontWeight: '600',
           writingDirection: 'ltr',
-          textAlign: TEXT_END,
+          textAlign: 'left',
         },
       }),
     [tokens]

@@ -1,4 +1,3 @@
-import { ROW_REV, TEXT_START } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import { LOGO_SIZE } from './WatchlistRow';
 import { quoteRow } from '../watchlistTheme';
@@ -93,13 +92,13 @@ export function WatchlistEmpty({ onAddPress, picked, onTogglePick }: Props) {
         suggestSymbol: {
           ...APP_TYPE.cardSubtitle,
           fontWeight: APP_TYPE.cardTitle.fontWeight,
-          textAlign: TEXT_START,
+          textAlign: 'right',
           writingDirection: 'ltr',
           color: tokens.colors.text.primary,
         },
         suggestName: {
           ...APP_TYPE.caption2,
-          textAlign: TEXT_START,
+          textAlign: 'right',
           color: tokens.colors.text.secondary,
         },
         finishWrap: {
@@ -107,7 +106,7 @@ export function WatchlistEmpty({ onAddPress, picked, onTogglePick }: Props) {
           paddingTop: APP_LAYOUT.componentGap,
         },
         addChip: {
-          flexDirection: ROW_REV,
+          flexDirection: 'row-reverse',
           alignItems: 'center',
           gap: 4,
           height: 28,

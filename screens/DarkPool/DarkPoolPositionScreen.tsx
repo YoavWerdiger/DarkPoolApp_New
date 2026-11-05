@@ -1,4 +1,4 @@
-import { TEXT_END, UI_DIR, dirIcon } from '../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { listCongressTradesForPersonTicker } from '../../services/darkpool/darkPoolDbCacheService';
@@ -622,7 +622,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, bottomPadding:
     },
     section: { marginBottom: APP_LAYOUT.sectionGap },
     tradeRow: {
-      direction: 'ltr',
+      direction: ROOT_DIR,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -695,7 +695,7 @@ function rowStyles(tokens: ReturnType<typeof useDesignTokens>) {
       color: tokens.colors.text.secondary,
       flexShrink: 1,
       minWidth: 0,
-      textAlign: TEXT_END,
+      textAlign: 'left',
     },
     valueLtr: { writingDirection: 'ltr' },
     txnRow: {

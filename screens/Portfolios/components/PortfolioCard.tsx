@@ -1,4 +1,4 @@
-import { TEXT_START, dirIcon } from '../../../lib/i18n/direction';
+import { ROOT_DIR, dirIcon } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
   titleBlock: {
     flex: 1,
     minWidth: 0,
-    direction: 'ltr',
+    direction: ROOT_DIR,
     alignItems: 'stretch',
   },
   title: {
@@ -215,14 +215,14 @@ const styles = StyleSheet.create({
     ...journalHebrewText,
   },
   titleLatin: {
-    direction: 'ltr',
+    direction: ROOT_DIR,
     writingDirection: 'ltr',
-    textAlign: TEXT_START,
+    textAlign: 'right',
   },
   metaRow: {
     width: '100%',
     marginTop: JOURNAL_LAYOUT.cardTitleToSubtitleGap,
-    direction: 'ltr',
+    direction: ROOT_DIR,
     flexDirection: 'row',
     justifyContent: 'flex-end',
     alignItems: 'center',
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
     width: undefined,
     flexShrink: 1,
     marginTop: 0,
-    textAlign: TEXT_START,
+    textAlign: 'right',
     includeFontPadding: false,
   },
   valueRow: {
@@ -258,12 +258,12 @@ const styles = StyleSheet.create({
   valueLabel: {
     ...journalCardMetricLabelStyle,
     marginBottom: JOURNAL_LAYOUT.cardMetricLabelToValueGap,
-    textAlign: TEXT_START,
+    textAlign: 'right',
     includeFontPadding: false,
   },
   valueAmount: {
     ...journalCardMetricValueStyle,
-    textAlign: TEXT_START,
+    textAlign: 'right',
     includeFontPadding: false,
     fontVariant: ['tabular-nums'],
   },

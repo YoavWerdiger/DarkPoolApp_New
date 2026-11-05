@@ -1,4 +1,3 @@
-import { TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
@@ -236,7 +235,7 @@ export default function MediaMessageRenderer({
       {!isMe && (!isGrouped || isGroupStart) && (
         <Text 
           style={{ 
-            textAlign: TEXT_START,
+            textAlign: 'right',
             writingDirection: TEXT_DIR,
             color: DesignTokens.colors.success.main,
             fontSize: 12,
@@ -320,7 +319,7 @@ export default function MediaMessageRenderer({
       {!isMe && (!isGrouped || isGroupStart) && (
         <Text 
           style={{ 
-            textAlign: TEXT_START,
+            textAlign: 'right',
             writingDirection: TEXT_DIR,
             color: DesignTokens.colors.success.main,
             fontSize: 12,
@@ -440,7 +439,7 @@ export default function MediaMessageRenderer({
       {!isMe && (!isGrouped || isGroupStart) && (
         <Text 
           style={{ 
-            textAlign: TEXT_START,
+            textAlign: 'right',
             writingDirection: TEXT_DIR,
             color: DesignTokens.colors.success.main,
             fontSize: 12,
@@ -559,7 +558,7 @@ export default function MediaMessageRenderer({
       {!isMe && (!isGrouped || isGroupStart) && (
         <Text 
           style={{ 
-            textAlign: TEXT_START,
+            textAlign: 'right',
             writingDirection: TEXT_DIR,
             color: DesignTokens.colors.success.main,
             fontSize: 12,
@@ -601,7 +600,7 @@ export default function MediaMessageRenderer({
               fontWeight: '700', 
               fontSize: 13, 
               marginBottom: 3,
-              textAlign: TEXT_START
+              textAlign: 'right'
             }} numberOfLines={1} ellipsizeMode="tail">
               {(message.content && message.content !== '[document]') ? message.content : (message.file_url?.split('/').pop() || i18n.t('auto.components__chat__MediaMessageRenderer.s4'))}
             </Text>
@@ -609,7 +608,7 @@ export default function MediaMessageRenderer({
               color: isMe ? 'rgba(0,0,0,0.6)' : DesignTokens.colors.text.tertiary, 
               fontSize: 11, 
               fontWeight: '500',
-              textAlign: TEXT_START
+              textAlign: 'right'
             }} numberOfLines={1}>
               {message.file_url?.split('.').pop()?.toUpperCase() || 'FILE'}
             </Text>

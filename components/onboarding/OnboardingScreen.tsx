@@ -1,4 +1,4 @@
-import { TEXT_START, dirIcon } from '../../lib/i18n/direction';
+import { dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { ReactNode } from 'react';
@@ -94,7 +94,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
     letterSpacing: tokens.typography.heroTitle.letterSpacing,
     lineHeight: tokens.typography.heroTitle.lineHeight,
     color: tokens.colors.text.primary,
-    textAlign: TEXT_START,
+    textAlign: 'right',
     writingDirection: TEXT_DIR,
     marginBottom: subtitle ? tokens.spacing.sm : tokens.spacing.xl,
   };
@@ -104,7 +104,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
     fontWeight: tokens.typography.body.weight,
     lineHeight: tokens.typography.body.lineHeight,
     color: tokens.colors.text.secondary,
-    textAlign: TEXT_START,
+    textAlign: 'right',
     writingDirection: TEXT_DIR,
     marginBottom: tokens.spacing.xl,
   };

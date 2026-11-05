@@ -1,4 +1,4 @@
-import { TEXT_START, UI_DIR } from '../../../lib/i18n/direction';
+import { UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React, { useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
@@ -258,7 +258,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontWeight: DARK_POOL_TYPE.cardMetricValueSecondary.fontWeight,
       letterSpacing: DARK_POOL_TYPE.cardMetricValueSecondary.letterSpacing,
       writingDirection: 'ltr',
-      textAlign: TEXT_START,
+      textAlign: 'right',
     },
     summaryHint: {
       ...darkPoolPhysicalRightText,

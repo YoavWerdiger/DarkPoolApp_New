@@ -1,4 +1,4 @@
-import { ROW_REV, dirIcon } from '../../lib/i18n/direction';
+import { dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -192,7 +192,7 @@ function createStyles(t: ReturnType<typeof useDesignTokens>) {
     },
     /** כרטיס cardSolid — מה נשלח */
     previewCard: {
-      flexDirection: ROW_REV,
+      flexDirection: 'row-reverse',
       alignItems: 'center',
       gap: APP_LAYOUT.stackGapTight,
       marginHorizontal: HP,
@@ -220,7 +220,7 @@ function createStyles(t: ReturnType<typeof useDesignTokens>) {
     },
     searchBox: {
       ...formFieldShellStyle({ tokens: t, focused: false }),
-      flexDirection: ROW_REV,
+      flexDirection: 'row-reverse',
       gap: APP_LAYOUT.stackGapSmall,
       minHeight: 52,
       paddingHorizontal: 16,
@@ -254,7 +254,7 @@ function createStyles(t: ReturnType<typeof useDesignTokens>) {
       marginTop: 40,
     },
     row: {
-      flexDirection: ROW_REV,
+      flexDirection: 'row-reverse',
       alignItems: 'center',
       gap: APP_LAYOUT.stackGapTight,
       paddingHorizontal: HP,

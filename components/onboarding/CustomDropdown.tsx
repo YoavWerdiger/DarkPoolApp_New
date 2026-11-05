@@ -1,4 +1,3 @@
-import { ROW_REV, TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useState } from 'react';
@@ -93,7 +92,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
           fontSize: 13,
           fontWeight: '600',
           marginBottom: 8,
-          textAlign: TEXT_START,
+          textAlign: 'right',
           writingDirection: TEXT_DIR,
         }}
       >
@@ -122,7 +121,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
               color: hasValue ? '#fff' : 'rgba(255,255,255,0.34)',
               fontSize: 16,
               fontWeight: '400',
-              textAlign: TEXT_START,
+              textAlign: 'right',
               writingDirection: TEXT_DIR,
               marginRight: 10,
             }}
@@ -170,7 +169,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
                 color: '#fff',
                 fontSize: 17,
                 fontWeight: '700',
-                textAlign: TEXT_START,
+                textAlign: 'right',
                 writingDirection: TEXT_DIR,
                 marginBottom: 12,
                 paddingHorizontal: 20,
@@ -191,7 +190,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
                   <Pressable
                     onPress={() => handleSelect(item.value)}
                     style={{
-                      flexDirection: ROW_REV,
+                      flexDirection: 'row-reverse',
                       alignItems: 'center',
                       paddingVertical: 14,
                       paddingHorizontal: 14,
@@ -233,7 +232,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
                         color: selected ? '#fff' : 'rgba(255,255,255,0.72)',
                         fontSize: 15,
                         fontWeight: selected ? '600' : '400',
-                        textAlign: TEXT_START,
+                        textAlign: 'right',
                         writingDirection: TEXT_DIR,
                         flex: 1,
                       }}

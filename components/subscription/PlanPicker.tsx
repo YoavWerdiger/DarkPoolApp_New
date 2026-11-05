@@ -1,4 +1,4 @@
-import { ROW_REV, TEXT_START } from '../../lib/i18n/direction';
+import { ROOT_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
@@ -335,7 +335,7 @@ export default function PlanPicker({
               const id = key === 'premium' ? activePremium?.id : freePlan?.id;
               if (id && id !== selectedPlanId) selectPlan(id);
             }}
-            style={{ direction: 'ltr' }}
+            style={{ direction: ROOT_DIR }}
           >
             {pages.map((key) => (
               // כל הכרטיסים באותו גובה (של הגבוה) — הכרטיס נוכח ומלא
@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     // row-reverse: רדיו בקצה הימני, שם המסלול, מחיר בקצה השמאלי
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: APP_LAYOUT.stackGapTight,
   },
@@ -515,7 +515,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   nameRow: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 6,
     flexWrap: 'wrap',
@@ -552,7 +552,7 @@ const styles = StyleSheet.create({
   testHint: {
     ...appCaptionStyle,
     marginTop: APP_LAYOUT.titleSubtitleGap,
-    textAlign: TEXT_START,
+    textAlign: 'right',
   },
   highlights: {
     marginTop: APP_LAYOUT.componentGap + 2,
@@ -561,7 +561,7 @@ const styles = StyleSheet.create({
     paddingTop: APP_LAYOUT.componentGap + 2,
   },
   highlightRow: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 8,
   },
@@ -574,7 +574,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   trustRow: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 6,
@@ -588,19 +588,19 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   tabs: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     borderRadius: 999,
     padding: 4,
     marginBottom: APP_LAYOUT.componentGap + 2,
   },
   planHead: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 8,
   },
   priceRow: {
     // מחיר גדול + «/ לחודש» — המחיר הוא הדבר הבולט בכרטיס
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'baseline',
     gap: 6,
     marginTop: APP_LAYOUT.stackGapSmall,
@@ -623,7 +623,7 @@ const styles = StyleSheet.create({
   },
   tabHighlightLayer: {
     ...StyleSheet.absoluteFill,
-    direction: 'ltr',
+    direction: ROOT_DIR,
   },
   tabHighlight: {
     position: 'absolute',

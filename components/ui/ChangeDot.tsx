@@ -1,4 +1,4 @@
-import { TEXT_START } from '../../lib/i18n/direction';
+import { IS_RTL_UI, ROOT_DIR } from '../../lib/i18n/direction';
 /**
  * מחוון שינוי P&L — מספר עם סימן בלבד.
  * ירוק/+ חיובי, אדום/− שלילי. בלי נקודה ובלי חצים.
@@ -158,13 +158,13 @@ const styles = StyleSheet.create({
     direction: 'ltr',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: IS_RTL_UI ? 'flex-end' : 'flex-start',
     gap: 5,
   },
   text: {
-    direction: 'ltr',
+    direction: ROOT_DIR,
     writingDirection: 'ltr',
-    textAlign: TEXT_START,
+    textAlign: 'right',
     fontVariant: ['tabular-nums'],
   },
 });

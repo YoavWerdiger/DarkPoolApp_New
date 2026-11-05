@@ -1,4 +1,3 @@
-import { ROW_REV } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -117,7 +116,7 @@ export default function SelectBrokerAccountScreen() {
           marginTop: 10,
         },
         accountInner: {
-          flexDirection: ROW_REV,
+          flexDirection: 'row-reverse',
           alignItems: 'center',
           gap: 12,
           paddingVertical: 14,
@@ -141,7 +140,7 @@ export default function SelectBrokerAccountScreen() {
           marginTop: JOURNAL_LAYOUT.cardTitleToSubtitleGap,
         },
         accountChips: {
-          flexDirection: ROW_REV,
+          flexDirection: 'row-reverse',
           gap: 6,
           marginTop: 6,
         },

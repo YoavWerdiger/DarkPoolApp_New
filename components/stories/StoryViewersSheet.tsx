@@ -1,4 +1,3 @@
-import { ROW_REV, TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React, { useCallback, useEffect } from 'react';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -224,7 +223,7 @@ const sheetStyles = StyleSheet.create({
     borderRadius: 2.5,
   },
   tabsRow: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     paddingHorizontal: 16,
     gap: 8,
     marginBottom: 12,
@@ -273,7 +272,7 @@ const sheetStyles = StyleSheet.create({
     fontSize: APP_TYPE.cardTitle.fontSize,
     lineHeight: APP_TYPE.cardTitle.lineHeight,
     fontWeight: APP_TYPE.cardTitle.fontWeight,
-    textAlign: TEXT_START,
+    textAlign: 'right',
   },
   rowEmoji: {
     fontSize: 22,

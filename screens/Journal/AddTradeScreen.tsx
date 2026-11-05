@@ -1,3 +1,4 @@
+import { ROOT_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
@@ -271,7 +272,7 @@ export default function AddTradeScreen() {
               accessibilityLabel={step === 0 ? i18n.t('auto.screens__Journal__AddTradeScreen.s9') : i18n.t('auto.screens__Journal__AddTradeScreen.s10')}
             >
               <Ionicons
-                name={step === 0 ? 'close' : 'chevron-forward'}
+                name={step === 0 ? 'close' : dirIcon('chevron-forward')}
                 size={26}
                 color={DesignTokens.colors.text.primary}
               />
@@ -791,7 +792,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       lineHeight: JOURNAL_TYPE.screenTitle.lineHeight,
       letterSpacing: JOURNAL_TYPE.screenTitle.letterSpacing,
       color: tokens.colors.text.primary,
-      direction: 'ltr',
+      direction: ROOT_DIR,
       textAlign: 'center',
       writingDirection: TEXT_DIR,
     },

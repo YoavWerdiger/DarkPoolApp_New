@@ -1,4 +1,4 @@
-import { IS_RTL_UI, ROW_REV, TEXT_START, UI_DIR } from '../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useMemo } from 'react';
@@ -152,21 +152,16 @@ export function MainDrawerScreenHeader({
 }
 
 function createStyles(tokens: ReturnType<typeof useDesignTokens>, inRtlTree: boolean) {
-  // עץ LTR: שוליים פיזיים — באנגלית (מראה) התפריט משמאל והאביזר מימין
   const menuEdgeMargin = inRtlTree
     ? { marginLeft: MAIN_SCREEN_HEADER_HP }
-    : IS_RTL_UI
-      ? { marginRight: MAIN_SCREEN_HEADER_HP }
-      : { marginLeft: MAIN_SCREEN_HEADER_HP };
+    : { marginRight: MAIN_SCREEN_HEADER_HP };
   const accessoryEdgeMargin = inRtlTree
     ? { marginRight: MAIN_SCREEN_HEADER_HP }
-    : IS_RTL_UI
-      ? { marginLeft: MAIN_SCREEN_HEADER_HP }
-      : { marginRight: MAIN_SCREEN_HEADER_HP };
+    : { marginLeft: MAIN_SCREEN_HEADER_HP };
 
   return StyleSheet.create({
     rowAppLtr: {
-      flexDirection: ROW_REV,
+      flexDirection: 'row-reverse',
     },
     rowLtrInRtlTree: {
       flexDirection: 'row',
@@ -211,7 +206,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, inRtlTree: boo
       color: tokens.colors.text.secondary,
     },
     pageTitleWrap: {
-      direction: 'ltr',
+      direction: ROOT_DIR,
       width: '100%',
       alignSelf: 'stretch',
       alignItems: 'stretch',
@@ -235,8 +230,8 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, inRtlTree: boo
     },
     pageSubtitle: {
       ...appScreenSubtitleStyle,
-      direction: 'ltr',
-      textAlign: TEXT_START,
+      direction: ROOT_DIR,
+      textAlign: 'right',
       writingDirection: TEXT_DIR,
       width: '100%',
       color: tokens.colors.text.secondary,

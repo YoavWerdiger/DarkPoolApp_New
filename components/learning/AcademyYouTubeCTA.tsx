@@ -1,4 +1,4 @@
-import { ROW_REV, TEXT_START, dirIcon } from '../../lib/i18n/direction';
+import { dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useMemo } from 'react';
@@ -126,7 +126,7 @@ const createStyles = (T: ReturnType<typeof useDesignTokens>) =>
       backgroundColor: T.colors.background.cardSolid,
     },
     content: {
-      flexDirection: ROW_REV,
+      flexDirection: 'row-reverse',
       alignItems: 'center',
       padding: APP_LAYOUT.cardPadding,
       gap: APP_LAYOUT.cardPadding,
@@ -198,23 +198,23 @@ const createStyles = (T: ReturnType<typeof useDesignTokens>) =>
     title: {
       ...ACADEMY_TYPE.cardTitle,
       color: T.colors.text.primary,
-      textAlign: TEXT_START,
+      textAlign: 'right',
       writingDirection: TEXT_DIR,
     },
     subtitle: {
       ...ACADEMY_TYPE.cardSubtitle,
       color: T.colors.text.secondary,
-      textAlign: TEXT_START,
+      textAlign: 'right',
       writingDirection: TEXT_DIR,
     },
     ctaRow: {
-      flexDirection: ROW_REV,
+      flexDirection: 'row-reverse',
       alignItems: 'center',
       marginTop: 10,
       gap: 8,
     },
     cta: {
-      flexDirection: ROW_REV,
+      flexDirection: 'row-reverse',
       alignItems: 'center',
       gap: 6,
       paddingHorizontal: 14,

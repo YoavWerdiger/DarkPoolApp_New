@@ -1,4 +1,3 @@
-import { TEXT_END } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 import { legacyAlert, showAppConfirm } from '../../utils/appDialog';
@@ -652,7 +651,7 @@ const styles = StyleSheet.create({
     ...settingsHebrewText,
     ...settingsBodyType,
     flexShrink: 1,
-    textAlign: TEXT_END,
+    textAlign: 'left',
   },
   planPriceSpacer: {
     flex: 1,
@@ -685,7 +684,7 @@ const styles = StyleSheet.create({
     ...settingsHebrewText,
     ...settingsBodyType,
     flexShrink: 1,
-    textAlign: TEXT_END,
+    textAlign: 'left',
   },
   fieldLabel: {
     ...settingsHebrewText,

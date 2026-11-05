@@ -1,4 +1,4 @@
-import { TEXT_START, UI_DIR, dirIcon } from '../../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR, dirIcon } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 import { appLocale } from '../../../lib/i18n/locale';
@@ -180,7 +180,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
         navRow: {
           flexDirection: 'row',
           /** כמו Journal: ב־rtlRoot בלי LTR הכפתורים מתהפכים / אחד נחתך */
-          direction: 'ltr',
+          direction: ROOT_DIR,
           alignItems: 'center',
           justifyContent: 'space-between',
           marginBottom: 10,
@@ -202,7 +202,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
           fontWeight: journalSectionTitleStyle.fontWeight,
           lineHeight: journalSectionTitleStyle.lineHeight,
           color: tokens.colors.text.primary,
-          direction: 'ltr',
+          direction: ROOT_DIR,
           textAlign: 'center',
           writingDirection: TEXT_DIR,
         },
@@ -288,7 +288,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
           fontSize: 12,
           fontWeight: '600',
           writingDirection: 'ltr',
-          textAlign: TEXT_START,
+          textAlign: 'right',
         },
         tradeRow: {
           flexDirection: 'row',
@@ -307,7 +307,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
           color: tokens.colors.text.primary,
           flex: 1,
           writingDirection: 'ltr',
-          textAlign: TEXT_START,
+          textAlign: 'right',
         },
         tradeDirPill: {
           paddingHorizontal: 7,
@@ -325,7 +325,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
           fontSize: 13,
           fontWeight: '700',
           writingDirection: 'ltr',
-          textAlign: TEXT_START,
+          textAlign: 'right',
         },
       }),
     [tokens]

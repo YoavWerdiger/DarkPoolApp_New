@@ -1,4 +1,4 @@
-import { ROW_REV, UI_DIR } from '../../lib/i18n/direction';
+import { UI_DIR } from '../../lib/i18n/direction';
 /**
  * SkeletonLoader - ספריית skeleton placeholders לכל סוגי התוכן
  * משמש להצגת מבנה התוכן במהלך טעינה במקום spinners
@@ -231,7 +231,7 @@ export const ProfileSkeleton: React.FC<ProfileSkeletonProps> = ({ delay = 0 }) =
       {/* Stats */}
       <View
         style={{
-          flexDirection: ROW_REV,
+          flexDirection: 'row-reverse',
           justifyContent: 'space-around',
           gap: tokens.spacing.md,
         }}
@@ -282,7 +282,7 @@ export const ChartSkeleton: React.FC<ChartSkeletonProps> = ({ delay = 0, height 
       {/* Chart area */}
       <View style={{ flex: 1, justifyContent: 'flex-end', gap: 8 }}>
         {[0.8, 0.6, 0.9, 0.4, 0.7, 0.5].map((heightRatio, i) => (
-          <View key={i} style={{ flexDirection: ROW_REV, alignItems: 'flex-end', gap: 4 }}>
+          <View key={i} style={{ flexDirection: 'row-reverse', alignItems: 'flex-end', gap: 4 }}>
             <SkeletonBox
               width="100%"
               height={Math.round((height - 60) * heightRatio)}
@@ -294,7 +294,7 @@ export const ChartSkeleton: React.FC<ChartSkeletonProps> = ({ delay = 0, height 
       </View>
 
       {/* X-axis labels */}
-      <View style={{ flexDirection: ROW_REV, justifyContent: 'space-between' }}>
+      <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between' }}>
         {[0, 1, 2, 3, 4, 5].map((i) => (
           <SkeletonBox key={i} width={30} height={10} delay={delay + 300 + i * 30} />
         ))}
@@ -457,8 +457,8 @@ export const TradeCardSkeleton: React.FC<CardSkeletonProps> = ({ delay = 0 }) =>
       }}
     >
       {/* Header */}
-      <View style={{ flexDirection: ROW_REV, justifyContent: 'space-between' }}>
-        <View style={{ flexDirection: ROW_REV, alignItems: 'center', gap: 10 }}>
+      <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between' }}>
+        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 10 }}>
           <SkeletonBox width={36} height={36} borderRadius={18} delay={delay} />
           <View style={{ gap: 4, alignItems: 'flex-end' }}>
             <SkeletonBox width={100} height={14} delay={delay + 50} />
@@ -469,7 +469,7 @@ export const TradeCardSkeleton: React.FC<CardSkeletonProps> = ({ delay = 0 }) =>
       </View>
 
       {/* Ticker + Amount */}
-      <View style={{ flexDirection: ROW_REV, justifyContent: 'space-between' }}>
+      <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between' }}>
         <SkeletonBox width={80} height={20} delay={delay + 200} />
         <SkeletonBox width={100} height={18} delay={delay + 250} />
       </View>
@@ -500,7 +500,7 @@ export const TableSkeleton: React.FC<TableSkeletonProps> = ({ rows = 5, delay = 
       {/* Header */}
       <View
         style={{
-          flexDirection: ROW_REV,
+          flexDirection: 'row-reverse',
           paddingHorizontal: 16,
           paddingVertical: 12,
           gap: 12,
@@ -519,7 +519,7 @@ export const TableSkeleton: React.FC<TableSkeletonProps> = ({ rows = 5, delay = 
         <View
           key={i}
           style={{
-            flexDirection: ROW_REV,
+            flexDirection: 'row-reverse',
             paddingHorizontal: 16,
             paddingVertical: 10,
             gap: 12,
@@ -559,7 +559,7 @@ export const ProfileGridSkeleton: React.FC<ProfileGridSkeletonProps> = ({
         <View
           key={rowIndex}
           style={{
-            flexDirection: ROW_REV,
+            flexDirection: 'row-reverse',
             gap: tokens.spacing.md,
           }}
         >

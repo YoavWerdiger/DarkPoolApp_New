@@ -1,4 +1,3 @@
-import { ROW_REV } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useState, useEffect, useLayoutEffect } from 'react';
@@ -271,7 +270,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
   },
   actions: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     gap: APP_LAYOUT.stackGapTight,
     width: '100%',
   },

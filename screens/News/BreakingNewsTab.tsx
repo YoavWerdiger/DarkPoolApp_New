@@ -1,4 +1,4 @@
-import { ROW_REV, TEXT_END, TEXT_START } from '../../lib/i18n/direction';
+import { ROOT_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
@@ -52,19 +52,19 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 /** שורת מטא קצרה (מקור/תאריך) — בתוך row-reverse */
 const newsDetailMetaText = {
   writingDirection: TEXT_DIR,
-  textAlign: TEXT_END,
+  textAlign: 'left' as const,
 };
 
 /** כותרת וגוף — כמו כרטיס החדשות ברשימה */
 const newsDetailParagraphText = {
   writingDirection: TEXT_DIR,
-  textAlign: TEXT_START,
+  textAlign: 'right' as const,
 };
 
 /** כפתורי פעולה */
 const newsDetailRtlText = {
   writingDirection: TEXT_DIR,
-  textAlign: TEXT_END,
+  textAlign: 'left' as const,
 };
 
 interface NewsCardProps {
@@ -254,7 +254,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
 
       <View
         style={{
-          flexDirection: ROW_REV,
+          flexDirection: 'row-reverse',
           alignItems: 'center',
           alignSelf: 'stretch',
           width: '100%',
@@ -322,7 +322,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
 
       <View
         style={{
-          flexDirection: ROW_REV,
+          flexDirection: 'row-reverse',
           gap: 12,
           alignSelf: 'stretch',
           width: '100%',
@@ -331,7 +331,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
         <TouchableOpacity
           style={{
             flex: 1,
-            flexDirection: ROW_REV,
+            flexDirection: 'row-reverse',
             alignItems: 'center',
             justifyContent: 'center',
             gap: 8,
@@ -380,7 +380,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
         <TouchableOpacity
           style={{
             flex: 1,
-            flexDirection: ROW_REV,
+            flexDirection: 'row-reverse',
             alignItems: 'center',
             justifyContent: 'center',
             gap: 8,
@@ -547,7 +547,7 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
         {/* Top row — square image on the right, headline + summary on the left */}
         <View
           style={{
-            flexDirection: ROW_REV,
+            flexDirection: 'row-reverse',
             alignItems: 'stretch',
             padding: APP_LAYOUT.cardPadding,
             gap: APP_LAYOUT.cardTitleToBodyGap,
@@ -594,7 +594,7 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
               style={{
                 ...APP_TYPE.cardTitle,
                 color: DesignTokens.colors.text.primary,
-                textAlign: TEXT_START,
+                textAlign: 'right',
                 writingDirection: TEXT_DIR,
               }}
               numberOfLines={summary ? 2 : 3}
@@ -607,7 +607,7 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
                 style={{
                   ...APP_TYPE.cardSubtitle,
                   color: DesignTokens.colors.text.secondary,
-                  textAlign: TEXT_START,
+                  textAlign: 'right',
                   writingDirection: TEXT_DIR,
                   marginTop: APP_LAYOUT.cardMetricLabelToValueGap,
                 }}
@@ -693,7 +693,7 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
           {/* Source + time — RTL */}
           <View
             style={{
-              flexDirection: ROW_REV,
+              flexDirection: 'row-reverse',
               alignItems: 'center',
               flexShrink: 1,
             }}
@@ -1265,7 +1265,7 @@ export default function BreakingNewsTab({
           alignItems: 'center',
           gap: 8,
           // כפיית סדר שמאל→ימין לשורה — מונע דחיפת הלב מחוץ למסך במצב RTL גלובלי
-          direction: 'ltr',
+          direction: ROOT_DIR,
         }}
       >
         <TouchableOpacity
@@ -1305,7 +1305,7 @@ export default function BreakingNewsTab({
               overflow: 'hidden',
             }}
           >
-            <View style={{ flexDirection: ROW_REV, alignItems: 'center', paddingHorizontal: 12, minHeight: 40 }}>
+            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', paddingHorizontal: 12, minHeight: 40 }}>
               {searchActive ? (
                 <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                   <Ionicons name="close-circle" size={20} color={DesignTokens.colors.text.tertiary} />
@@ -1323,7 +1323,7 @@ export default function BreakingNewsTab({
                   marginHorizontal: 8,
                   color: DesignTokens.colors.text.primary,
                   ...APP_TYPE.body,
-                  textAlign: TEXT_START,
+                  textAlign: 'right',
                   writingDirection: TEXT_DIR,
                   paddingVertical: 6,
                 }}

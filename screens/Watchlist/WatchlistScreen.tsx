@@ -1,4 +1,3 @@
-import { ROW_REV } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -479,7 +478,7 @@ export default function WatchlistScreen() {
           paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
         },
         updatingRow: {
-          flexDirection: ROW_REV,
+          flexDirection: 'row-reverse',
           alignItems: 'center',
           justifyContent: 'center',
           gap: APP_LAYOUT.stackGapSmall,

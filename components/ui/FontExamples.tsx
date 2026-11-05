@@ -1,4 +1,3 @@
-import { TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React from 'react';
@@ -46,7 +45,7 @@ const styles = StyleSheet.create({
     fontSize: DesignTokens.typography.fontSize['2xl'],
     color: '#FFFFFF',
     marginBottom: 16,
-    textAlign: TEXT_START,
+    textAlign: 'right',
   },
   
   // דוגמה 3: שימוש ישיר
@@ -56,7 +55,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#FFFFFF',
     marginBottom: 16,
-    textAlign: TEXT_START,
+    textAlign: 'right',
   },
   
   // דוגמה 4: שילוב שפות
@@ -66,7 +65,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#00C805',
     marginBottom: 16,
-    textAlign: TEXT_START,
+    textAlign: 'right',
     writingDirection: TEXT_DIR,
   },
 });
@@ -81,7 +80,7 @@ export const AssistantFontStyles = {
     fontSize: 32,
     fontWeight: '800',
     color: '#FFFFFF',
-    textAlign: TEXT_START,
+    textAlign: 'right' as const,
   },
   
   // כותרת משנית
@@ -90,7 +89,7 @@ export const AssistantFontStyles = {
     fontSize: 24,
     fontWeight: '800',
     color: '#FFFFFF',
-    textAlign: TEXT_START,
+    textAlign: 'right' as const,
   },
   
   // טקסט מודגש
@@ -99,7 +98,7 @@ export const AssistantFontStyles = {
     fontSize: 16,
     fontWeight: '800',
     color: '#00C805',
-    textAlign: TEXT_START,
+    textAlign: 'right' as const,
   },
   
   // כותרת קטנה
@@ -108,7 +107,7 @@ export const AssistantFontStyles = {
     fontSize: 14,
     fontWeight: '800',
     color: '#FFFFFF',
-    textAlign: TEXT_START,
+    textAlign: 'right' as const,
   },
 };
 

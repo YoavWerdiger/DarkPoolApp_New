@@ -1,4 +1,3 @@
-import { TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 // ============================================
@@ -171,7 +170,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
     lineHeight: APP_TYPE.cardTitle.lineHeight,
     letterSpacing: APP_TYPE.cardTitle.letterSpacing,
     color: tokens.colors.text.primary,
-    textAlign: TEXT_START,
+    textAlign: 'right',
     writingDirection: TEXT_DIR,
   },
   nameUnread: {
@@ -197,7 +196,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
     fontSize: tokens.typography.fontSize.base,
     color: tokens.colors.text.secondary,
     marginRight: 8, // רווח מה-Badge
-    textAlign: TEXT_START,
+    textAlign: 'right',
   },
   lastMessageUnread: {
     color: tokens.colors.text.primary,

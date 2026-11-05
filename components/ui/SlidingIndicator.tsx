@@ -1,3 +1,4 @@
+import { ROOT_DIR } from '../../lib/i18n/direction';
 import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Animated, {
@@ -174,7 +175,7 @@ function LabelCrossfade<K extends string>({
 const styles = StyleSheet.create({
   layer: {
     ...StyleSheet.absoluteFill,
-    direction: 'ltr',
+    direction: ROOT_DIR,
   },
   frame: {
     position: 'absolute',

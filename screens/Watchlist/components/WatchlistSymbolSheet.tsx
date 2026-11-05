@@ -1,4 +1,4 @@
-import { ROW_REV, TEXT_END, TEXT_START, UI_DIR, dirIcon } from '../../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR, dirIcon } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -1093,7 +1093,7 @@ function useStyles() {
         identityRow: {
           flex: 1,
           minWidth: 0,
-          direction: 'ltr',
+          direction: ROOT_DIR,
           flexDirection: 'row',
           alignItems: 'center',
           gap: APP_LAYOUT.cardTitleToBodyGap,
@@ -1110,7 +1110,7 @@ function useStyles() {
           letterSpacing: APP_TYPE.sectionTitle.letterSpacing,
           color: tokens.colors.text.primary,
           writingDirection: 'ltr',
-          textAlign: TEXT_END,
+          textAlign: 'left',
         },
         companyName: {
           ...appPhysicalLeftText,
@@ -1171,7 +1171,7 @@ function useStyles() {
           color: tokens.colors.text.primary,
           fontVariant: ['tabular-nums'],
           writingDirection: 'ltr',
-          textAlign: TEXT_END,
+          textAlign: 'left',
         },
         switchScale: {
           transform: [{ scaleX: 0.82 }, { scaleY: 0.82 }],
@@ -1185,7 +1185,7 @@ function useStyles() {
           gap: 8,
         },
         sideRow: {
-          flexDirection: ROW_REV,
+          flexDirection: 'row-reverse',
           gap: 8,
         },
         sideChip: {
@@ -1210,7 +1210,7 @@ function useStyles() {
           color: tokens.colors.primary.main,
         },
         addField: {
-          direction: 'ltr',
+          direction: ROOT_DIR,
           flexDirection: 'row',
           alignItems: 'center',
           minHeight: 48,
@@ -1226,7 +1226,7 @@ function useStyles() {
           minHeight: 44,
           paddingHorizontal: 8,
           color: tokens.colors.text.primary,
-          textAlign: TEXT_START,
+          textAlign: 'right',
           writingDirection: 'ltr',
           fontVariant: ['tabular-nums'],
           backgroundColor: 'transparent',
@@ -1243,7 +1243,7 @@ function useStyles() {
           color: tokens.colors.text.primary,
         },
         selectedWrap: {
-          direction: 'ltr',
+          direction: ROOT_DIR,
           flexDirection: 'row',
           flexWrap: 'wrap',
           justifyContent: 'flex-end',

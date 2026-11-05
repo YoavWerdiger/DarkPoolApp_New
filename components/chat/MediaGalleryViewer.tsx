@@ -1,4 +1,3 @@
-import { TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 // ============================================
 // Media Gallery Viewer — MediaViewer chrome + horizontal paging
@@ -776,7 +775,7 @@ const styles = StyleSheet.create({
   captionText: {
     color: COLORS.text,
     fontSize: 15,
-    textAlign: TEXT_START,
+    textAlign: 'right',
     lineHeight: 22,
     opacity: 0.9,
   },

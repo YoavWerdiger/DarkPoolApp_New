@@ -1,4 +1,4 @@
-import { UI_DIR } from '../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
   },
   searchField: {
     ...chatRtlRow,
-    direction: 'ltr',
+    direction: ROOT_DIR,
     flexDirection: 'row',
     gap: 8,
     borderRadius: 9999,

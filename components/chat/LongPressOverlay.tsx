@@ -1,4 +1,4 @@
-import { ROW_REV, TEXT_START, UI_DIR } from '../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React, { useEffect, useMemo, useCallback, useState, useRef } from 'react';
 import { View, StyleSheet, Text, Image, Platform, Dimensions } from 'react-native';
@@ -389,7 +389,7 @@ export default function LongPressOverlay({
       ) : (
       <ChatSheetContent
         style={{
-          direction: 'ltr',
+          direction: ROOT_DIR,
           paddingBottom: sheetBottomPad,
           paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
           backgroundColor: 'transparent',
@@ -525,7 +525,7 @@ const createMessagePreviewStyles = (tokens: any) => {
     fontSize: 12,
     fontWeight: '600',
     color: tokens.colors.primary.main,
-    textAlign: TEXT_START,
+    textAlign: 'right',
     alignSelf: 'stretch',
     marginTop: 0,
     marginBottom: 1,
@@ -579,7 +579,7 @@ const createMessagePreviewStyles = (tokens: any) => {
     justifyContent: 'center',
   },
   mediaRow: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 5,
   },
@@ -593,7 +593,7 @@ const createMessagePreviewStyles = (tokens: any) => {
   msgText: {
     fontSize: 16,
     lineHeight: 21,
-    textAlign: TEXT_START,
+    textAlign: 'right',
     marginTop: 0,
   },
   myText: {

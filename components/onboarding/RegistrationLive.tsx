@@ -1,4 +1,3 @@
-import { ROW_REV } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 /**
@@ -236,7 +235,7 @@ const styles = StyleSheet.create({
     writingDirection: TEXT_DIR,
   },
   chipsRow: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     flexWrap: 'wrap',
     gap: APP_LAYOUT.stackGapSmall,
     marginTop: -APP_LAYOUT.stackGapSmall,
@@ -256,7 +255,7 @@ const styles = StyleSheet.create({
     gap: APP_LAYOUT.stackGapSmall,
   },
   pwHeader: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
@@ -274,7 +273,7 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     overflow: 'hidden',
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
   },
   pwFill: {
     height: '100%',
@@ -282,13 +281,13 @@ const styles = StyleSheet.create({
   },
   rules: {
     // שתי עמודות — חצי מהגובה
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     flexWrap: 'wrap',
     rowGap: 6,
   },
   ruleRow: {
     width: '50%',
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 6,
   },

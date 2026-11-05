@@ -1,4 +1,4 @@
-import { UI_DIR } from '../../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 /**
@@ -210,7 +210,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, safeBottom: nu
     },
     highlightLayer: {
       ...StyleSheet.absoluteFill,
-      direction: 'ltr',
+      direction: ROOT_DIR,
       justifyContent: 'center',
     },
     highlight: {

@@ -1,4 +1,3 @@
-import { ROW_REV } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 /**
  * שדות טופס משותפים — Portfolios (יצירת תיק, ברוקר, עסקאות).
@@ -335,20 +334,20 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
   },
   labelRow: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 8,
     gap: 8,
   },
   labelMain: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'baseline',
     gap: 6,
     flex: 1,
   },
   shell: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 8,
     overflow: 'hidden',
@@ -364,7 +363,7 @@ const styles = StyleSheet.create({
     lineHeight: APP_TYPE.body.lineHeight,
   },
   errorRow: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 5,
     marginTop: 8,
@@ -373,7 +372,7 @@ const styles = StyleSheet.create({
     marginBottom: APP_LAYOUT.stackGapSmall,
   },
   switchInner: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 12,
     paddingVertical: 15,

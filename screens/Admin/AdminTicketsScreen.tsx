@@ -1,4 +1,3 @@
-import { ROW_REV } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -154,14 +153,14 @@ export default function AdminTicketsScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   filters: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     flexWrap: 'wrap',
     gap: APP_LAYOUT.stackGapSmall,
     paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
     paddingBottom: APP_LAYOUT.stackGapSmall,
   },
   cardHeader: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     marginBottom: APP_LAYOUT.cardTitleToSubtitleGap,
   },

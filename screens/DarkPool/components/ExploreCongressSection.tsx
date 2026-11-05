@@ -1,4 +1,3 @@
-import { ROW_REV } from '../../../lib/i18n/direction';
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { APP_LAYOUT } from '../../../components/ui/appLayout';
@@ -76,7 +75,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       color: tokens.colors.text.secondary,
     },
     row: {
-      flexDirection: ROW_REV,
+      flexDirection: 'row-reverse',
       paddingHorizontal: tokens.layout.screenPadding,
       gap: 12,
       paddingBottom: 4,

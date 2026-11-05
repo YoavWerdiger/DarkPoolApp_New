@@ -1,4 +1,4 @@
-import { TEXT_END, TEXT_START, UI_DIR } from '../../../lib/i18n/direction';
+import { UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 import { appLocale } from '../../../lib/i18n/locale';
@@ -930,7 +930,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontVariant: ['tabular-nums'],
     fontWeight: '600',
-    textAlign: TEXT_START,
+    textAlign: 'right',
     writingDirection: TEXT_DIR,
   },
   compactReturnRow: {
@@ -946,7 +946,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontVariant: ['tabular-nums'],
     writingDirection: 'ltr',
-    textAlign: TEXT_END,
+    textAlign: 'left',
     letterSpacing: 0.2,
   },
   compactScrub: {
@@ -955,7 +955,7 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
     fontWeight: '600',
     writingDirection: 'ltr',
-    textAlign: TEXT_END,
+    textAlign: 'left',
   },
   compactSpacer: {
     flexGrow: 1,
@@ -1014,10 +1014,10 @@ const styles = StyleSheet.create({
     writingDirection: 'ltr',
   },
   headerTextRight: {
-    textAlign: TEXT_START,
+    textAlign: 'right',
   },
   headerTextLeft: {
-    textAlign: TEXT_END,
+    textAlign: 'left',
   },
   headerTextCenter: {
     textAlign: 'center',

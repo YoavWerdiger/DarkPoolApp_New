@@ -1,4 +1,4 @@
-import { ROW_REV, TEXT_END, TEXT_START, UI_DIR, dirIcon } from '../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 /**
@@ -394,8 +394,8 @@ function useStyles() {
         identityRow: {
           flex: 1,
           minWidth: 0,
-          direction: 'ltr',
-          flexDirection: ROW_REV,
+          direction: ROOT_DIR,
+          flexDirection: 'row-reverse',
           alignItems: 'center',
           gap: APP_LAYOUT.cardTitleToBodyGap,
         },
@@ -407,7 +407,7 @@ function useStyles() {
           letterSpacing: APP_TYPE.sectionTitle.letterSpacing,
           color: tokens.colors.text.primary,
           writingDirection: 'ltr',
-          textAlign: TEXT_START,
+          textAlign: 'right',
         },
         companyName: {
           ...appPhysicalRightText,
@@ -427,11 +427,11 @@ function useStyles() {
           lineHeight: APP_TYPE.cardTitle.lineHeight,
           fontWeight: '700',
           color: tokens.colors.text.primary,
-          textAlign: TEXT_START,
+          textAlign: 'right',
         },
         company: {
           ...appPhysicalLeftText,
-          textAlign: TEXT_START,
+          textAlign: 'right',
           fontSize: APP_TYPE.cardSubtitle.fontSize,
           lineHeight: APP_TYPE.cardSubtitle.lineHeight,
           fontWeight: APP_TYPE.cardSubtitle.fontWeight,
@@ -450,7 +450,7 @@ function useStyles() {
         // בקריאה מימין: קודם התוצאה, אחריה התגית «מכה»
         resultValueCol: {
           direction: 'ltr',
-          flexDirection: ROW_REV,
+          flexDirection: 'row-reverse',
           alignItems: 'center',
           gap: 8,
           maxWidth: '64%',
@@ -461,7 +461,7 @@ function useStyles() {
           fontWeight: APP_TYPE.cardTitle.fontWeight,
           fontVariant: ['tabular-nums'],
           writingDirection: 'ltr',
-          textAlign: TEXT_END,
+          textAlign: 'left',
         },
         verdictPill: { borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3 },
         verdictText: { ...APP_TYPE.caption, fontWeight: '600', fontVariant: ['tabular-nums'] },
@@ -505,7 +505,7 @@ function useStyles() {
           fontVariant: ['tabular-nums'],
           writingDirection: 'ltr',
           alignSelf: 'stretch',
-          textAlign: TEXT_START,
+          textAlign: 'right',
         },
         colVerdict: { ...APP_TYPE.caption, fontWeight: '600' },
         chartCard: { overflow: 'hidden', borderRadius: tokens.borderRadius.xl },
@@ -527,7 +527,7 @@ function useStyles() {
           color: tokens.colors.text.primary,
           fontVariant: ['tabular-nums'],
           writingDirection: 'ltr',
-          textAlign: TEXT_END,
+          textAlign: 'left',
         },
         rowDivider: {
           height: 1,

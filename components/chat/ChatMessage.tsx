@@ -1,4 +1,4 @@
-import { ROW_REV, TEXT_END, TEXT_START, UI_DIR } from '../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 // ============================================
@@ -872,11 +872,11 @@ function ChatMessage({
               <View key={`reply-bar-${message.id}`} style={styles.replyBar} />
               <View key={`reply-content-${message.id}`} style={styles.replyContent}>
                 {isUsableChatDisplayName(message.reply_to.sender_name) ? (
-                <Text key={`reply-name-${message.id}`} style={[styles.replyName, { textAlign: TEXT_START }]}>
+                <Text key={`reply-name-${message.id}`} style={[styles.replyName, { textAlign: 'right' }]}>
                   {message.reply_to.sender_name}
                 </Text>
                 ) : null}
-                <Text key={`reply-text-${message.id}`} style={[styles.replyText, { textAlign: TEXT_START }]} numberOfLines={1}>
+                <Text key={`reply-text-${message.id}`} style={[styles.replyText, { textAlign: 'right' }]} numberOfLines={1}>
                   {getChatMessagePreview(message.reply_to.message_type, message.reply_to.content)}
                 </Text>
               </View>
@@ -948,7 +948,7 @@ function ChatMessage({
                     style={[
                       styles.messageText,
                       isMe ? styles.myMessageText : styles.theirMessageText,
-                      { textAlign: TEXT_START },
+                      { textAlign: 'right' },
                     ]}
                   >{i18n.t('auto.components__chat__ChatMessage.s10')}</Text>
                 );
@@ -965,7 +965,7 @@ function ChatMessage({
                     style={[
                       styles.messageText,
                       isMe ? styles.myMessageText : styles.theirMessageText,
-                      { textAlign: TEXT_START },
+                      { textAlign: 'right' },
                     ]}
                   >{i18n.t('auto.components__chat__ChatMessage.s11')}</Text>
                 );
@@ -995,7 +995,7 @@ function ChatMessage({
                       style={[
                         styles.messageText,
                         isMe ? styles.myMessageText : styles.theirMessageText,
-                        { textAlign: TEXT_START },
+                        { textAlign: 'right' },
                       ]}
                     >
                       {renderTextWithMentions(
@@ -1607,7 +1607,7 @@ function PollMessageContent({
     return (
       <View style={{ paddingVertical: 8, alignItems: 'center' }}>
         {loadError ? (
-          <Text style={{ color: isMe ? 'rgba(255,255,255,0.85)' : '#9CA3AF', textAlign: TEXT_START }}>{i18n.t('auto.components__chat__ChatMessage.s32')}</Text>
+          <Text style={{ color: isMe ? 'rgba(255,255,255,0.85)' : '#9CA3AF', textAlign: 'right' }}>{i18n.t('auto.components__chat__ChatMessage.s32')}</Text>
         ) : (
           <ActivityIndicator size="small" color={isMe ? '#fff' : undefined} />
         )}
@@ -2657,13 +2657,13 @@ const createStyles = (tokens: any) => {
     lineHeight: APP_TYPE.cardSubtitle.lineHeight,
     marginTop: 0,
     marginBottom: 3,
-    direction: 'ltr',
-    textAlign: TEXT_START,
+    direction: ROOT_DIR,
+    textAlign: 'right',
     writingDirection: 'auto',
   },
 
   replyContainer: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     borderRadius: 8,
     padding: 10,
     paddingRight: 6,
@@ -2697,7 +2697,7 @@ const createStyles = (tokens: any) => {
     fontWeight: tokens.typography.fontWeight.semibold,
     color: tokens.colors.primary.main,
     marginBottom: 3,
-    textAlign: TEXT_START,
+    textAlign: 'right',
   },
   replyText: {
     fontSize: tokens.typography.fontSize.xs,
@@ -2910,7 +2910,7 @@ const createStyles = (tokens: any) => {
 
   mediaAudio: {
     flexDirection: 'column',
-    direction: 'ltr',
+    direction: ROOT_DIR,
     alignSelf: 'stretch',
     width: '100%',
     // קצת רחב יותר — מרווח בין הכפתור, הוויבפורם והתמונה
@@ -2948,15 +2948,15 @@ const createStyles = (tokens: any) => {
     marginLeft: 8,
   },
   audioPlaybackTimeText: {
-    textAlign: TEXT_END,
+    textAlign: 'left',
     writingDirection: 'ltr',
   },
   audioSentTimeText: {
-    textAlign: TEXT_START,
+    textAlign: 'right',
   },
   mediaAudioControlsRow: {
     flexDirection: 'row',
-    direction: 'ltr',
+    direction: ROOT_DIR,
     alignItems: 'center',
     width: '100%',
     minHeight: 28,
@@ -3112,7 +3112,7 @@ const createStyles = (tokens: any) => {
     fontSize: tokens.typography.label.size,
     fontWeight: tokens.typography.fontWeight.medium,
     minWidth: 40,
-    textAlign: TEXT_END,
+    textAlign: 'left',
   },
   myAudioDuration: {
     color: tokens.colors.text.primary,
@@ -3249,7 +3249,7 @@ const createStyles = (tokens: any) => {
     height: 0,
   },
   retryRow: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 4,
   },

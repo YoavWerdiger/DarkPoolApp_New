@@ -1,4 +1,5 @@
-import { ROW_REV, UI_DIR } from '../../lib/i18n/direction';
+import { dirIcon } from '../../lib/i18n/direction';
+import { UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 // ============================================
 // מעטפת מסכי צ'אט — רקע וכותרת כמו שאר האפליקציה
@@ -72,7 +73,7 @@ export function ChatSubScreenHeader({
             glassIntensity="subtle"
             accessibilityLabel={i18n.t('auto.components__chat__ChatScreenShell.s1')}
           >
-            <Ionicons name={backIcon} size={24} color={tokens.colors.text.primary} />
+            <Ionicons name={dirIcon(backIcon)} size={24} color={tokens.colors.text.primary} />
           </DayNavBlurButton>
         </View>
         <View style={styles.titleBlock}>
@@ -113,7 +114,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   subHeaderRowApp: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
   },
   subHeaderRowInRtlTree: {
     flexDirection: 'row',

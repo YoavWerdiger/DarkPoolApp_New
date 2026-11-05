@@ -1,4 +1,4 @@
-import { ROW_REV, UI_DIR, dirIcon } from '../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 /**
@@ -323,7 +323,7 @@ const topoHeaderStyles = StyleSheet.create({
     fontSize: APP_TYPE.sectionTitle.fontSize,
     fontWeight: APP_TYPE.sectionTitle.fontWeight,
     lineHeight: APP_TYPE.sectionTitle.lineHeight,
-    direction: 'ltr',
+    direction: ROOT_DIR,
     textAlign: 'center',
     writingDirection: TEXT_DIR,
     width: '100%',
@@ -657,7 +657,7 @@ export function useChatSheetStyles() {
           justifyContent: 'center',
         },
         tabsContainer: {
-          flexDirection: ROW_REV,
+          flexDirection: 'row-reverse',
           direction: UI_DIR,
           backgroundColor: tokens.colors.background.primary,
           borderRadius: 30,

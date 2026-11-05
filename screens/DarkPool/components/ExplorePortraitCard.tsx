@@ -1,4 +1,4 @@
-import { TEXT_END, TEXT_START } from '../../../lib/i18n/direction';
+import { ROOT_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React, { memo, useMemo } from 'react';
 import {
@@ -155,7 +155,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       justifyContent: 'flex-end',
     },
     footer: {
-      direction: 'ltr',
+      direction: ROOT_DIR,
       alignItems: 'stretch',
       paddingHorizontal: 12,
       paddingBottom: 10,
@@ -177,7 +177,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     // חברה ציבורית (שם לועזי) — לשמאל
     left: {
-      textAlign: TEXT_END,
+      textAlign: 'left',
     },
     nameHebrew: {
       ...hebrewText,
@@ -188,7 +188,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
       fontWeight: '700',
       fontVariant: ['tabular-nums'],
-      textAlign: TEXT_START,
+      textAlign: 'right',
       marginTop: -2,
       includeFontPadding: false,
     },

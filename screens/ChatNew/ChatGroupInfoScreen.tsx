@@ -1,3 +1,4 @@
+import { ROOT_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 // ============================================
@@ -780,7 +781,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   sectionHeader: {
     flexDirection: 'row',
-    direction: 'ltr',
+    direction: ROOT_DIR,
     alignItems: 'center',
     width: '100%',
     alignSelf: 'stretch',
@@ -873,14 +874,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   menuRow: {
     flexDirection: 'row',
-    direction: 'ltr',
+    direction: ROOT_DIR,
     alignItems: 'center',
     paddingVertical: 15,
     paddingHorizontal: APP_LAYOUT.cardPadding,
   },
   memberRow: {
     flexDirection: 'row',
-    direction: 'ltr',
+    direction: ROOT_DIR,
     alignItems: 'center',
     paddingVertical: 7,
     paddingHorizontal: APP_LAYOUT.cardPadding,
@@ -942,7 +943,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   memberNameRow: {
     flexDirection: 'row',
-    direction: 'ltr',
+    direction: ROOT_DIR,
     alignItems: 'center',
     justifyContent: 'flex-end',
   },
@@ -958,7 +959,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   adminBadge: {
     flexDirection: 'row',
-    direction: 'ltr',
+    direction: ROOT_DIR,
     alignItems: 'center',
     backgroundColor: tokens.colors.warning.main + '20',
     paddingHorizontal: tokens.spacing.xs,
@@ -994,7 +995,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   addButton: {
     flexDirection: 'row',
-    direction: 'ltr',
+    direction: ROOT_DIR,
     alignItems: 'center',
   },
   addButtonText: {
@@ -1022,7 +1023,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     borderRadius: UI_CARD_RADIUS,
     padding: APP_LAYOUT.cardPadding,
     borderWidth: 0,
-    direction: 'ltr',
+    direction: ROOT_DIR,
   },
   promptTitle: {
     ...settingsHebrewText,
@@ -1042,7 +1043,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   promptButtons: {
     flexDirection: 'row',
-    direction: 'ltr',
+    direction: ROOT_DIR,
     justifyContent: 'flex-end',
     alignItems: 'center',
     gap: APP_LAYOUT.cardStackGap,

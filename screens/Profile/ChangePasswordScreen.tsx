@@ -1,4 +1,3 @@
-import { TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { legacyAlert } from '../../utils/appDialog';
 import { isPasswordValid, passwordErrorMessage } from '../../utils/passwordPolicy';
@@ -388,7 +387,7 @@ const styles = StyleSheet.create({
     ...settingsHebrewText,
     ...settingsMetaType,
     width: '100%',
-    textAlign: TEXT_START,
+    textAlign: 'right',
     marginBottom: APP_LAYOUT.componentGap,
   },
   fieldBlock: {
@@ -397,7 +396,7 @@ const styles = StyleSheet.create({
   fieldLabel: {
     alignSelf: 'stretch',
     width: '100%',
-    textAlign: TEXT_START,
+    textAlign: 'right',
     marginBottom: APP_LAYOUT.groupLabelToContent,
     fontSize: APP_TYPE.groupLabel.fontSize,
     fontWeight: APP_TYPE.groupLabel.fontWeight,
@@ -426,13 +425,13 @@ const styles = StyleSheet.create({
     ...settingsHebrewText,
     ...settingsCaptionType,
     width: '100%',
-    textAlign: TEXT_START,
+    textAlign: 'right',
   },
   inlineHint: {
     ...settingsHebrewText,
     ...settingsCaptionType,
     width: '100%',
-    textAlign: TEXT_START,
+    textAlign: 'right',
     marginTop: APP_LAYOUT.stackGapSmall,
     marginBottom: APP_LAYOUT.cardStackGap,
   },

@@ -1,4 +1,3 @@
-import { ROW_REV, TEXT_START } from '../../lib/i18n/direction';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
@@ -70,7 +69,7 @@ export function AcademyScreenHeader({
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     sectionRow: {
-      flexDirection: ROW_REV,
+      flexDirection: 'row-reverse',
       alignItems: 'center',
       justifyContent: 'space-between',
     },
@@ -78,7 +77,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       flex: 1,
       ...ACADEMY_TYPE.sectionTitle,
       color: tokens.colors.text.primary,
-      textAlign: TEXT_START,
+      textAlign: 'right',
       writingDirection: TEXT_DIR,
     },
     countBadge: {

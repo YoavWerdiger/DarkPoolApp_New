@@ -1,4 +1,4 @@
-import { ROW_REV, UI_DIR } from '../../lib/i18n/direction';
+import { UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
@@ -944,7 +944,7 @@ const styles = StyleSheet.create({
     marginBottom: APP_LAYOUT.cardStackGap,
   },
   searchShell: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     borderRadius: 999,
     paddingHorizontal: 16,
     minHeight: 52,
@@ -981,7 +981,7 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   kpiRow: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     gap: 10,
     marginTop: APP_LAYOUT.cardTitleToBodyGap,
@@ -1010,7 +1010,7 @@ const styles = StyleSheet.create({
     marginBottom: APP_LAYOUT.stackGapSmall,
   },
   rowTop: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: 10,
@@ -1023,7 +1023,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   metaGrid: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     flexWrap: 'wrap',
     gap: 10,
   },
@@ -1059,7 +1059,7 @@ const styles = StyleSheet.create({
     borderWidth: 0,
     borderRadius: 999,
     paddingVertical: 12,
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,

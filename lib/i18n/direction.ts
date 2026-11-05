@@ -9,14 +9,13 @@ import { getStoredLanguage, isRtlLanguage } from './language';
 
 export const IS_RTL_UI = isRtlLanguage(getStoredLanguage());
 
+/**
+ * שורש האפליקציה: הקוד בנוי על שורש LTR עם סדר «פיזי» לעברית — באנגלית השורש RTL,
+ * וכך כל שורה / שוליים / מיקום מוחלט שנבנו פיזית מתהפכים אוטומטית (תמונת מראה מדויקת).
+ */
+export const ROOT_DIR: 'ltr' | 'rtl' = IS_RTL_UI ? 'ltr' : 'rtl';
 /** במקום direction: 'rtl' */
 export const UI_DIR: 'rtl' | 'ltr' = IS_RTL_UI ? 'rtl' : 'ltr';
-/** במקום flexDirection: 'row-reverse' (שורה שמתחילה מימין בעברית) */
-export const ROW_REV: 'row-reverse' | 'row' = IS_RTL_UI ? 'row-reverse' : 'row';
-/** במקום textAlign: 'right' — צד תחילת הקריאה */
-export const TEXT_START: 'right' | 'left' = IS_RTL_UI ? 'right' : 'left';
-/** במקום textAlign: 'left' — הצד הנגדי */
-export const TEXT_END: 'left' | 'right' = IS_RTL_UI ? 'left' : 'right';
 
 const MIRROR_ICON: Record<string, string> = {
   'chevron-forward': 'chevron-back',

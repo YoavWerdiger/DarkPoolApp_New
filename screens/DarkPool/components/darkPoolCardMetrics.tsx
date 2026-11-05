@@ -1,4 +1,4 @@
-import { TEXT_START, UI_DIR } from '../../../lib/i18n/direction';
+import { UI_DIR } from '../../../lib/i18n/direction';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -76,7 +76,7 @@ function createMetricStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontWeight: DARK_POOL_TYPE.cardMetricValueSecondary.fontWeight,
       color: tokens.colors.text.primary,
       writingDirection: 'ltr',
-      textAlign: TEXT_START,
+      textAlign: 'right',
     },
   });
 }

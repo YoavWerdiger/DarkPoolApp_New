@@ -1,4 +1,3 @@
-import { ROW_REV, TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
@@ -422,7 +421,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     ...academyCardSubtitleStyle,
   },
   instructorContainer: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'center',
   },
   instructorAvatar: {
@@ -450,7 +449,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   instructorName: {
     ...ACADEMY_TYPE.cardTitle,
     color: tokens.colors.text.primary,
-    textAlign: TEXT_START,
+    textAlign: 'right',
     writingDirection: TEXT_DIR,
   },
   instructorBio: {
@@ -461,7 +460,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     width: '100%',
   },
   progressHeader: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: tokens.spacing.sm,
@@ -469,7 +468,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   progressTitle: {
     ...ACADEMY_TYPE.cardTitle,
     color: tokens.colors.text.primary,
-    textAlign: TEXT_START,
+    textAlign: 'right',
   },
   progressPercentage: {
     ...ACADEMY_TYPE.cardTitle,
@@ -493,13 +492,13 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   descriptionTitle: {
     ...ACADEMY_TYPE.cardMetricLabel,
     color: tokens.colors.text.secondary,
-    textAlign: TEXT_START,
+    textAlign: 'right',
     writingDirection: TEXT_DIR,
   },
   description: {
     ...ACADEMY_TYPE.cardBody,
     color: tokens.colors.text.secondary,
-    textAlign: TEXT_START,
+    textAlign: 'right',
     writingDirection: TEXT_DIR,
   },
   tagsContainer: {
@@ -509,11 +508,11 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   tagsTitle: {
     ...ACADEMY_TYPE.cardMetricLabel,
     color: tokens.colors.text.secondary,
-    textAlign: TEXT_START,
+    textAlign: 'right',
     writingDirection: TEXT_DIR,
   },
   tagsRow: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     flexWrap: 'wrap',
     gap: tokens.spacing.xs,
   },

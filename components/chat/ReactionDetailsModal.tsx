@@ -1,4 +1,4 @@
-import { TEXT_START, UI_DIR } from '../../lib/i18n/direction';
+import { UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { logger } from '../../utils/logger';
@@ -208,7 +208,7 @@ const ReactionDetailsModal: React.FC<ReactionDetailsModalProps> = memo(({
           lineHeight: APP_TYPE.cardTitle.lineHeight,
           fontWeight: APP_TYPE.cardTitle.fontWeight,
           color: tokens.colors.text.primary,
-          textAlign: TEXT_START,
+          textAlign: 'right',
           writingDirection: TEXT_DIR,
         },
         meta: {
@@ -216,7 +216,7 @@ const ReactionDetailsModal: React.FC<ReactionDetailsModalProps> = memo(({
           fontSize: APP_TYPE.cardSubtitle.fontSize,
           lineHeight: APP_TYPE.cardSubtitle.lineHeight,
           color: tokens.colors.text.secondary,
-          textAlign: TEXT_START,
+          textAlign: 'right',
           writingDirection: TEXT_DIR,
         },
         userEmoji: {

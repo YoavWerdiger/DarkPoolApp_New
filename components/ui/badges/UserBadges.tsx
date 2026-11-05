@@ -1,3 +1,4 @@
+import { ROOT_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 /**
  * תגי משתמש ליד שם: [וי כחול][דרגת ותק].
@@ -60,7 +61,7 @@ export function UserBadges({ userId, size = 16, interactive = true, style }: Pro
   return (
     <View
       style={[
-        { flexDirection: 'row', direction: 'ltr', alignItems: 'center', gap: Math.max(2, Math.round(size / 6)), flexShrink: 0 },
+        { flexDirection: 'row', direction: ROOT_DIR, alignItems: 'center', gap: Math.max(2, Math.round(size / 6)), flexShrink: 0 },
         style,
       ]}
     >
@@ -115,7 +116,7 @@ export function UserNameRow({ userId, children, size, interactive, align = 'righ
       style={[
         {
           flexDirection: 'row',
-          direction: 'ltr',
+          direction: ROOT_DIR,
           alignItems: 'center',
           justifyContent: align === 'right' ? 'flex-end' : align === 'left' ? 'flex-start' : 'center',
           gap: 4,

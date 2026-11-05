@@ -1,4 +1,3 @@
-import { ROW_REV } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
@@ -33,7 +32,7 @@ function HeatmapTabToggle({
     <View
       accessibilityRole="tablist"
       style={{
-        flexDirection: ROW_REV,
+        flexDirection: 'row-reverse',
         paddingHorizontal: pad,
         paddingBottom: tokens.spacing.md,
         backgroundColor: 'transparent',

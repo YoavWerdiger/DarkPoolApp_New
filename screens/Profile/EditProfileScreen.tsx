@@ -1,4 +1,4 @@
-import { TEXT_START } from '../../lib/i18n/direction';
+import { ROOT_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useCallback, useState, useEffect } from 'react';
@@ -417,7 +417,7 @@ export default function EditProfileScreen({ navigation }: any) {
           style={[
             styles.saveBar,
             {
-              direction: 'ltr',
+              direction: ROOT_DIR,
               backgroundColor: tokens.colors.background.primary,
               paddingBottom: Math.max(insets.bottom, APP_LAYOUT.cardStackGap),
             },
@@ -541,7 +541,7 @@ const styles = StyleSheet.create({
   avatarWrap: {
     width: AVATAR,
     height: AVATAR,
-    direction: 'ltr',
+    direction: ROOT_DIR,
   },
   avatar: {
     width: AVATAR,
@@ -592,7 +592,7 @@ const styles = StyleSheet.create({
   },
   genderContent: {
     alignSelf: 'center',
-    direction: 'ltr',
+    direction: ROOT_DIR,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -621,7 +621,7 @@ const styles = StyleSheet.create({
   fieldLabel: {
     alignSelf: 'stretch',
     width: '100%',
-    textAlign: TEXT_START,
+    textAlign: 'right',
     marginBottom: 8,
     fontSize: APP_TYPE.groupLabel.fontSize,
     fontWeight: APP_TYPE.groupLabel.fontWeight,
@@ -630,7 +630,7 @@ const styles = StyleSheet.create({
   fieldHelper: {
     alignSelf: 'stretch',
     width: '100%',
-    textAlign: TEXT_START,
+    textAlign: 'right',
   },
   shell: {
     flexDirection: 'row',

@@ -35,14 +35,14 @@ export function getStoredLanguage(): AppLanguage {
 }
 
 /**
- * בעלייה (index.ts): עברית / ערבית — RTL; אנגלית — LTR (תמונת מראה של הממשק).
- * הכיוון בתוך המסכים נקבע דרך lib/i18n/direction (UI_DIR / ROW_REV / TEXT_START…).
+ * בעלייה (index.ts): RTL גלובלי בכל השפות (אותם דגלי RN כמו בעברית — כולל החלפת שמאל/ימין).
+ * באנגלית המראה נוצרת מהיפוך הכיוונים בעץ (ROOT_DIR / UI_DIR ב-lib/i18n/direction):
+ * Yoga סימטרי לכיוון, ולכן כל צומת שכיוונו התהפך מצויר כתמונת מראה מדויקת.
  */
-export function applyLanguageDirection(lang: AppLanguage): void {
-  const rtl = isRtlLanguage(lang);
+export function applyLanguageDirection(_lang: AppLanguage): void {
   try {
-    I18nManager.allowRTL(rtl);
-    I18nManager.forceRTL(rtl);
+    I18nManager.allowRTL(true);
+    I18nManager.forceRTL(true);
   } catch {
     /* סביבות ישנות — לא לשבור את האתחול */
   }

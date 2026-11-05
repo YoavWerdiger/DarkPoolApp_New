@@ -1,4 +1,4 @@
-import { ROW_REV, TEXT_START, UI_DIR, dirIcon } from '../../lib/i18n/direction';
+import { UI_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 // ============================================
@@ -518,7 +518,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       justifyContent: 'center',
     },
     banner: {
-      flexDirection: ROW_REV,
+      flexDirection: 'row-reverse',
       alignItems: 'center',
       paddingHorizontal: APP_LAYOUT.cardPadding,
       paddingVertical: 15,
@@ -528,7 +528,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     bannerText: {
       flex: 1,
       ...APP_TYPE.body,
-      textAlign: TEXT_START,
+      textAlign: 'right',
       writingDirection: TEXT_DIR,
       marginLeft: APP_LAYOUT.cardTitleToBodyGap,
     },
@@ -563,7 +563,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       aspectRatio: 16 / 9,
     },
     imageToolbar: {
-      flexDirection: ROW_REV,
+      flexDirection: 'row-reverse',
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: 'rgba(0, 0, 0, 0.55)',
@@ -572,7 +572,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     imageToolbarBtn: {
       flex: 1,
-      flexDirection: ROW_REV,
+      flexDirection: 'row-reverse',
       alignItems: 'center',
       justifyContent: 'center',
       paddingVertical: 11,

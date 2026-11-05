@@ -1,4 +1,4 @@
-import { ROW_REV, TEXT_START, dirIcon } from '../../lib/i18n/direction';
+import { dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
@@ -225,14 +225,14 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   feature: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'flex-start',
     gap: 12,
   },
   featureText: {
     flex: 1,
     fontSize: 16,
-    textAlign: TEXT_START,
+    textAlign: 'right',
     lineHeight: 22,
   },
   note: {

@@ -1,4 +1,4 @@
-import { TEXT_START, UI_DIR } from '../../../lib/i18n/direction';
+import { UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React, { useMemo, useRef, useState } from 'react';
 import {
@@ -193,7 +193,7 @@ export default function HoldingsTab({ portfolio, holdings }: Props) {
           width: undefined,
           color: tokens.colors.text.primary,
           writingDirection: 'ltr',
-          textAlign: TEXT_START,
+          textAlign: 'right',
         },
         symbolMeta: {
           ...journalCardSubtitleStyle,
@@ -208,7 +208,7 @@ export default function HoldingsTab({ portfolio, holdings }: Props) {
         cellPrimary: {
           ...journalBodyTextStyle,
           color: tokens.colors.text.primary,
-          textAlign: TEXT_START,
+          textAlign: 'right',
           writingDirection: 'ltr',
           width: '100%',
         },
@@ -217,7 +217,7 @@ export default function HoldingsTab({ portfolio, holdings }: Props) {
           width: undefined,
           color: tokens.colors.text.tertiary,
           marginTop: 2,
-          textAlign: TEXT_START,
+          textAlign: 'right',
           writingDirection: 'ltr',
           width: '100%',
         },

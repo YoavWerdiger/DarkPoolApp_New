@@ -1,4 +1,4 @@
-import { TEXT_START, dirIcon } from '../../lib/i18n/direction';
+import { ROOT_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React from 'react';
@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     flexDirection: 'row',
-    direction: 'ltr',
+    direction: ROOT_DIR,
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingBottom: 8,
@@ -301,20 +301,20 @@ const styles = StyleSheet.create({
     bottom: 0,
     paddingHorizontal: 20,
     backgroundColor: 'transparent',
-    direction: 'ltr',
+    direction: ROOT_DIR,
   },
   caption: {
     color: ICON,
     fontSize: 16,
     lineHeight: 22,
-    textAlign: TEXT_START,
+    textAlign: 'right',
     writingDirection: TEXT_DIR,
     marginBottom: 8,
     ...TEXT_SHADOW,
   },
   replyBtn: {
     flexDirection: 'row',
-    direction: 'ltr',
+    direction: ROOT_DIR,
     alignSelf: 'flex-end',
     alignItems: 'center',
     gap: 6,

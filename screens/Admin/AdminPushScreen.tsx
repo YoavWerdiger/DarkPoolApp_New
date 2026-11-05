@@ -1,4 +1,3 @@
-import { ROW_REV } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -332,13 +331,13 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   filters: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     flexWrap: 'wrap',
     gap: 8,
     marginBottom: 16,
   },
   fieldHeader: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
@@ -371,7 +370,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   campaignTop: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'flex-start',
     gap: 10,
   },
@@ -385,7 +384,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   campaignMeta: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     marginTop: 12,
     paddingTop: 10,

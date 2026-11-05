@@ -1,4 +1,4 @@
-import { UI_DIR } from '../../lib/i18n/direction';
+import { UI_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 // ============================================
 // Chat Group Settings — privacy, photo, mute, edit info
@@ -68,7 +68,7 @@ export default function ChatGroupSettingsScreen() {
 
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   const isAdmin = currentGroup?.is_admin || false;
-  const disclosureIcon = 'chevron-back' as const;
+  const disclosureIcon = dirIcon('chevron-back' as const);
 
   useFocusEffect(
     useCallback(() => {

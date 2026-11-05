@@ -1,4 +1,4 @@
-import { dirIcon } from '../../lib/i18n/direction';
+import { ROOT_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
@@ -539,7 +539,7 @@ const createStyles = (
   monthHeader: {
     flexDirection: 'row',
     /** בלי זה, ב־rtlRoot הכפתור הראשון נזרק לימין והחצים נראים הפוכים */
-    direction: 'ltr' as 'ltr' | 'rtl',
+    direction: ROOT_DIR as 'ltr' | 'rtl',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
@@ -555,7 +555,7 @@ const createStyles = (
     lineHeight: JOURNAL_TYPE.sectionTitle.lineHeight,
     letterSpacing: JOURNAL_TYPE.sectionTitle.letterSpacing,
     color: tokens.colors.text.primary,
-    direction: 'ltr',
+    direction: ROOT_DIR,
     textAlign: 'center',
     writingDirection: TEXT_DIR,
   },

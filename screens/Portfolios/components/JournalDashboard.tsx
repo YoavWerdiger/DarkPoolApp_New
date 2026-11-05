@@ -1,4 +1,4 @@
-import { TEXT_END, TEXT_START, UI_DIR } from '../../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 /**
  * לוח הבקרה של יומן המסחר (בסקירה, מתחת לגרף וחלוקת הנכסים) — באותה שפה כמו תיק האינסיידרים:
@@ -327,8 +327,8 @@ function createStyles(t: Tokens) {
       fontWeight: '700',
     },
     rowTicker: {
-      direction: 'ltr',
-      textAlign: TEXT_START,
+      direction: ROOT_DIR,
+      textAlign: 'right',
       writingDirection: 'ltr',
       fontSize: JOURNAL_TYPE.cardBody.fontSize,
       lineHeight: JOURNAL_TYPE.cardBody.lineHeight,
@@ -378,7 +378,7 @@ function createStyles(t: Tokens) {
       marginRight: 12,
       fontVariant: ['tabular-nums'],
       writingDirection: 'ltr',
-      textAlign: TEXT_END,
+      textAlign: 'left',
     },
     statTitle: {
       ...journalCardTitleStyle,
@@ -395,7 +395,7 @@ function createStyles(t: Tokens) {
       fontWeight: JOURNAL_TYPE.cardTitle.fontWeight,
       fontVariant: ['tabular-nums'],
       writingDirection: 'ltr',
-      textAlign: TEXT_END,
+      textAlign: 'left',
     },
     rowValueSub: {
       marginTop: JOURNAL_LAYOUT.cardTitleToSubtitleGap,
@@ -404,7 +404,7 @@ function createStyles(t: Tokens) {
       fontWeight: JOURNAL_TYPE.caption.fontWeight,
       fontVariant: ['tabular-nums'],
       writingDirection: 'ltr',
-      textAlign: TEXT_END,
+      textAlign: 'left',
     },
   });
 }

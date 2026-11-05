@@ -1,4 +1,4 @@
-import { ROW_REV, TEXT_START, UI_DIR } from '../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
@@ -353,7 +353,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     toolbar: {
       // כמו חדשות: כפתור משמאל, חיפוש מימין — direction:ltr מונע היפוך RTL
       flexDirection: 'row',
-      direction: 'ltr',
+      direction: ROOT_DIR,
       alignItems: 'center',
       gap: 8,
       paddingHorizontal: MAIN_SCREEN_HEADER_HP,
@@ -377,7 +377,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       borderWidth: 0,
     },
     searchInner: {
-      flexDirection: ROW_REV,
+      flexDirection: 'row-reverse',
       alignItems: 'center',
       paddingHorizontal: APP_LAYOUT.cardPadding,
       minHeight: 44,
@@ -390,7 +390,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       marginHorizontal: 8,
       color: tokens.colors.text.primary,
       ...ACADEMY_TYPE.body,
-      textAlign: TEXT_START,
+      textAlign: 'right',
       writingDirection: TEXT_DIR,
       paddingVertical: 6,
     },

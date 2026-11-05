@@ -1,4 +1,4 @@
-import { ROW_REV, TEXT_START } from '../../lib/i18n/direction';
+import { ROOT_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 /**
  * @deprecated לא בשימוש — הוחלף ב-screens/Stories/StoryViewerScreen.tsx (מסך ניווט, נפתח דרך
@@ -437,7 +437,7 @@ const sheetStyles = StyleSheet.create({
     borderRadius: 2.5,
   },
   tabsRow: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     paddingHorizontal: 16,
     gap: 8,
     marginBottom: 12,
@@ -486,7 +486,7 @@ const sheetStyles = StyleSheet.create({
     fontSize: APP_TYPE.cardTitle.fontSize,
     lineHeight: APP_TYPE.cardTitle.lineHeight,
     fontWeight: APP_TYPE.cardTitle.fontWeight,
-    textAlign: TEXT_START,
+    textAlign: 'right',
   },
   rowEmoji: {
     fontSize: 22,
@@ -2164,7 +2164,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
     overflow: 'hidden',
     // Critical: app uses forceRTL — horizontal pager must stay LTR
-    direction: 'ltr',
+    direction: ROOT_DIR,
   },
   blackBackdrop: {
     ...StyleSheet.absoluteFill,
@@ -2183,13 +2183,13 @@ const styles = StyleSheet.create({
     height: SCREEN_HEIGHT,
     backgroundColor: '#000',
     overflow: 'hidden',
-    direction: 'ltr',
+    direction: ROOT_DIR,
   },
   /** Classic Instagram zones (restored from git): left 2/3 = next, right 1/3 = prev. */
   touchZone: {
     ...StyleSheet.absoluteFill,
     flexDirection: 'row',
-    direction: 'ltr',
+    direction: ROOT_DIR,
     zIndex: 5,
   },
   touchLeft: {

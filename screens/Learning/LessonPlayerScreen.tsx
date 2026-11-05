@@ -1,4 +1,3 @@
-import { ROW_REV, TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
@@ -671,7 +670,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     minWidth: 8,
   },
   headerRow: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: tokens.spacing.md,
     minHeight: 44,
@@ -687,14 +686,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     color: tokens.colors.text.primary,
     marginBottom: 2,
     lineHeight: Math.round(tokens.typography.fontSize.lg * 1.25),
-    textAlign: TEXT_START,
+    textAlign: 'right',
     writingDirection: TEXT_DIR,
   },
   headerSubtitle: {
     fontSize: tokens.typography.fontSize.sm,
     color: tokens.colors.text.secondary,
     lineHeight: 18,
-    textAlign: TEXT_START,
+    textAlign: 'right',
     writingDirection: TEXT_DIR,
   },
   headerSpacer: {
@@ -755,7 +754,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     fontSize: tokens.typography.fontSize.base,
     color: tokens.colors.text.primary,
     lineHeight: 24,
-    textAlign: TEXT_START,
+    textAlign: 'right',
   },
   pdfContainer: {
     justifyContent: 'center',
@@ -846,7 +845,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     fontSize: tokens.typography.fontSize.xl,
     fontWeight: tokens.typography.fontWeight.bold as any,
     color: tokens.colors.text.primary,
-    textAlign: TEXT_START,
+    textAlign: 'right',
     lineHeight: Math.round(tokens.typography.fontSize.xl * tokens.typography.lineHeight.normal),
     writingDirection: TEXT_DIR,
   },
@@ -907,7 +906,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     fontSize: tokens.typography.fontSize.base,
     color: tokens.colors.text.primary,
     minHeight: 100,
-    textAlign: TEXT_START,
+    textAlign: 'right',
     writingDirection: TEXT_DIR,
     paddingTop: 4,
   },

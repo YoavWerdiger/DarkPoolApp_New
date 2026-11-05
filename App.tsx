@@ -1,3 +1,4 @@
+import { ROOT_DIR } from './lib/i18n/direction';
 import i18n from './lib/i18n';
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { DarkTheme, DefaultTheme, NavigationContainer, Theme as NavTheme } from '@react-navigation/native';
@@ -375,7 +376,7 @@ function AppContent() {
   const bootReady = !isLoading && !(user && registrationDone && !biometricChecked);
 
   return (
-    <View style={{ flex: 1, direction: 'ltr', backgroundColor: canvas }}>
+    <View style={{ flex: 1, direction: ROOT_DIR, backgroundColor: canvas }}>
       {bootReady && (appRevealed || launchDone) && (
       <>
       {/* KeyboardProvider בתוך עץ LTR — ה-dummy translateX של הספרייה לא מתהפך מ-forceRTL כמו מחוץ למעטפת (פרודקשן ≠ Expo Go). */}
@@ -387,7 +388,12 @@ function AppContent() {
       {/* edge-to-edge: רק style — backgroundColor/translucent נדחים באנדרואיד 15+ */}
       <StatusBar style={isDarkMode ? 'light' : 'dark'} />
       {/* חייב להתאים ל־direction של ה־View המעטף — אחרת useLocale (rtl) לא תואם ל־Yoga (ltr) ו־react-native-drawer-layout מחשב translateX שגוי (רצועת מגירה בפרודקשן). */}
-      <NavigationContainer ref={rootNavigationRef} direction="ltr" theme={navigationTheme}>
+      <NavigationContainer
+        ref={rootNavigationRef}
+        direction={ROOT_DIR}
+        theme={navigationTheme}
+        onReady={__DEV__ ? runDevRouteTour : undefined}
+      >
         <Stack.Navigator screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: 'transparent' },
@@ -494,6 +500,31 @@ function AppContent() {
       {!launchDone && <AppLaunchScreen ready={bootReady} onRevealApp={revealApp} onFinish={finishLaunch} />}
     </View>
   );
+}
+
+/**
+ * פיתוח בלבד: EXPO_PUBLIC_DEV_ROUTES="Main/DarkPool;Profile/Settings" — מעבר אוטומטי בין מסכים
+ * כל 12 שניות (לצילומי סימולטור בבדיקות ממשק). בלי המשתנה — לא עושה כלום.
+ */
+function runDevRouteTour() {
+  const spec: string | undefined = process.env.EXPO_PUBLIC_DEV_ROUTES;
+  if (!spec) return;
+  const routes: string[] = spec.split(';').map((r: string) => r.trim()).filter(Boolean);
+  routes.forEach((route: string, i: number) => {
+    setTimeout(() => {
+      const [first, ...rest]: string[] = route.split('/');
+      let params: Record<string, unknown> | undefined;
+      for (let k = rest.length - 1; k >= 0; k--) {
+        params = { screen: rest[k], ...(params ? { params } : {}) };
+      }
+      try {
+        (rootNavigationRef as any).navigate(first, params);
+        console.log('[dev-route]', route);
+      } catch (e) {
+        console.log('[dev-route] failed', route, String(e));
+      }
+    }, 6000 + i * 12000);
+  });
 }
 
 export default function App() {

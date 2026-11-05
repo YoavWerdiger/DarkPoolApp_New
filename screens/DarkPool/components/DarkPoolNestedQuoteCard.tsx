@@ -1,4 +1,4 @@
-import { TEXT_START, UI_DIR } from '../../../lib/i18n/direction';
+import { UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 /**
@@ -202,7 +202,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     nestedPriceLabel: {
       ...TEXT_TOP,
       writingDirection: TEXT_DIR,
-      textAlign: TEXT_START,
+      textAlign: 'right',
       fontSize: FEED_CARD_TYPE.nestedRowCaption.fontSize,
       fontVariant: ['tabular-nums'],
       lineHeight: NESTED_CAPTION_LINE,
@@ -217,12 +217,12 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       color: tokens.colors.text.primary,
       fontVariant: ['tabular-nums'],
       writingDirection: 'ltr',
-      textAlign: TEXT_START,
+      textAlign: 'right',
     },
     nestedPriceMissing: {
       ...TEXT_TOP,
       writingDirection: TEXT_DIR,
-      textAlign: TEXT_START,
+      textAlign: 'right',
       fontSize: FEED_CARD_TYPE.nestedRowValueMuted.fontSize,
       fontVariant: ['tabular-nums'],
       lineHeight: NESTED_VALUE_LINE,
@@ -244,7 +244,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontWeight: FEED_CARD_TYPE.nestedRowCaption.fontWeight,
       color: tokens.colors.text.secondary,
       writingDirection: TEXT_DIR,
-      textAlign: TEXT_START,
+      textAlign: 'right',
       flexShrink: 1,
     },
     nestedSinceValue: {
@@ -254,7 +254,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontWeight: FEED_CARD_TYPE.nestedRowCaptionStrong.fontWeight,
       fontVariant: ['tabular-nums'],
       writingDirection: 'ltr',
-      textAlign: TEXT_START,
+      textAlign: 'right',
       flexShrink: 0,
     },
   });

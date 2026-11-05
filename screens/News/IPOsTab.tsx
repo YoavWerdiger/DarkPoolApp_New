@@ -1,4 +1,3 @@
-import { TEXT_START } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { useState, useEffect, useCallback } from 'react';
@@ -90,7 +89,7 @@ const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
             style={{
               ...APP_TYPE.cardTitle,
               color: DesignTokens.colors.text.primary,
-              textAlign: TEXT_START
+              textAlign: 'right'
             }}
             numberOfLines={1}
           >
@@ -143,15 +142,15 @@ const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
           {hasPricing && (
             <View style={{ flex: 1 }}>
               <DollarSign size={16} color={DesignTokens.colors.text.tertiary} strokeWidth={2} style={{ marginBottom: 4, alignSelf: 'flex-end' }} />
-              <Text style={{ ...APP_TYPE.caption2, color: DesignTokens.colors.text.tertiary, marginBottom: APP_LAYOUT.cardMetricLabelToValueGap, textAlign: TEXT_START }}>
+              <Text style={{ ...APP_TYPE.caption2, color: DesignTokens.colors.text.tertiary, marginBottom: APP_LAYOUT.cardMetricLabelToValueGap, textAlign: 'right' }}>
                 {ipo.offer_price > 0 ? i18n.t('auto.screens__News__IPOsTab.s7') : i18n.t('auto.screens__News__IPOsTab.s8')}
               </Text>
               {ipo.offer_price > 0 ? (
-                <Text style={{ ...APP_TYPE.cardTitle, color: DesignTokens.colors.success.main, textAlign: TEXT_START }}>
+                <Text style={{ ...APP_TYPE.cardTitle, color: DesignTokens.colors.success.main, textAlign: 'right' }}>
                   ${ipo.offer_price.toFixed(2)}
                 </Text>
               ) : (
-                <Text style={{ ...APP_TYPE.body, color: DesignTokens.colors.text.primary, textAlign: TEXT_START }}>
+                <Text style={{ ...APP_TYPE.body, color: DesignTokens.colors.text.primary, textAlign: 'right' }}>
                   ${ipo.price_from.toFixed(2)} - ${ipo.price_to.toFixed(2)}
                 </Text>
               )}
@@ -160,8 +159,8 @@ const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
 
           {ipo.shares > 0 && (
             <View style={{ flex: 1 }}>
-              <Text style={{ ...APP_TYPE.caption2, color: DesignTokens.colors.text.tertiary, marginBottom: APP_LAYOUT.cardMetricLabelToValueGap, textAlign: TEXT_START }}>{i18n.t('auto.screens__News__IPOsTab.s9')}</Text>
-              <Text style={{ ...APP_TYPE.cardTitle, color: DesignTokens.colors.text.primary, textAlign: TEXT_START }}>
+              <Text style={{ ...APP_TYPE.caption2, color: DesignTokens.colors.text.tertiary, marginBottom: APP_LAYOUT.cardMetricLabelToValueGap, textAlign: 'right' }}>{i18n.t('auto.screens__News__IPOsTab.s9')}</Text>
+              <Text style={{ ...APP_TYPE.cardTitle, color: DesignTokens.colors.text.primary, textAlign: 'right' }}>
                 {formatShares(ipo.shares)}
               </Text>
             </View>

@@ -1,4 +1,4 @@
-import { TEXT_START, UI_DIR } from '../../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR } from '../../../lib/i18n/direction';
 import type { TextStyle, ViewStyle } from 'react-native';
 import { journalPhysicalRightText } from '../../Journal/journalLayout';
 
@@ -16,22 +16,22 @@ export const moverImpactRow: ViewStyle = {
 export const moverImpactTextCol: ViewStyle = {
   flex: 1,
   minWidth: 0,
-  direction: 'ltr',
+  direction: ROOT_DIR,
   alignItems: 'stretch',
 };
 
 export const moverImpactTicker: TextStyle = {
   width: '100%',
-  direction: 'ltr',
+  direction: ROOT_DIR,
   writingDirection: 'ltr',
-  textAlign: TEXT_START,
+  textAlign: 'right',
 };
 
 export const moverImpactValueLine: TextStyle = {
   width: '100%',
-  direction: 'ltr',
+  direction: ROOT_DIR,
   writingDirection: 'ltr',
-  textAlign: TEXT_START,
+  textAlign: 'right',
 };
 
 export const moverImpactReturnLine: TextStyle = {

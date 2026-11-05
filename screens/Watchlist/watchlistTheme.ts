@@ -1,4 +1,3 @@
-import { ROW_REV } from '../../lib/i18n/direction';
 import type { ViewStyle } from 'react-native';
 import { APP_LAYOUT } from '../../components/ui/appLayout';
 
@@ -66,7 +65,7 @@ export const colDrag: ViewStyle = {
 };
 
 export const quoteRow: ViewStyle = {
-  flexDirection: ROW_REV,
+  flexDirection: 'row-reverse',
   flexWrap: 'nowrap',
   alignItems: 'center',
   width: '100%',

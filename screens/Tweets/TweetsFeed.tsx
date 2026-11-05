@@ -1,4 +1,4 @@
-import { ROW_REV, TEXT_START, UI_DIR } from '../../lib/i18n/direction';
+import { UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, {
@@ -136,7 +136,7 @@ function PostCard({
           <View style={{ padding: APP_LAYOUT.cardPadding, gap: APP_LAYOUT.cardTitleToBodyGap }}>
           <View
             style={{
-              flexDirection: ROW_REV,
+              flexDirection: 'row-reverse',
               alignItems: 'center',
               gap: 12,
             }}
@@ -149,7 +149,7 @@ function PostCard({
             <View style={{ flex: 1, minWidth: 0 }}>
               <View
                 style={{
-                  flexDirection: ROW_REV,
+                  flexDirection: 'row-reverse',
                   alignItems: 'center',
                   gap: APP_LAYOUT.stackGapSmall,
                 }}
@@ -183,7 +183,7 @@ function PostCard({
                   fontSize: APP_TYPE.caption.fontSize,
                   lineHeight: APP_TYPE.caption.lineHeight,
                   fontWeight: APP_TYPE.caption.fontWeight,
-                  textAlign: TEXT_START,
+                  textAlign: 'right',
                   writingDirection: TEXT_DIR,
                 }}
               >
@@ -220,7 +220,7 @@ function PostCard({
               lineHeight: APP_TYPE.cardBody.lineHeight,
               fontWeight: APP_TYPE.cardBody.fontWeight,
               writingDirection: TEXT_DIR,
-              textAlign: TEXT_START,
+              textAlign: 'right',
             }}
           >
             {post.body}
@@ -256,7 +256,7 @@ function PostCard({
                       lineHeight: APP_TYPE.caption.lineHeight,
                       fontWeight: APP_TYPE.caption.fontWeight,
                       writingDirection: TEXT_DIR,
-                      textAlign: TEXT_START,
+                      textAlign: 'right',
                     }}
                     numberOfLines={1}
                   >
@@ -404,7 +404,7 @@ function FeedTabToggle({
     <View
       accessibilityRole="tablist"
       style={{
-        flexDirection: ROW_REV,
+        flexDirection: 'row-reverse',
         paddingHorizontal: pad,
         paddingBottom: tokens.spacing.md,
         backgroundColor: 'transparent',

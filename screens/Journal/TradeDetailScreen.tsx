@@ -1,4 +1,4 @@
-import { TEXT_END, TEXT_START, dirIcon } from '../../lib/i18n/direction';
+import { dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -112,7 +112,7 @@ function InfoRow({
         style={{
           ...journalCardTitleStyle,
           color: valueColor ?? tokens.colors.text.primary,
-          textAlign: TEXT_END,
+          textAlign: 'left',
           writingDirection: 'ltr',
           direction: 'ltr',
         }}
@@ -476,7 +476,7 @@ export default function TradeDetailScreen() {
                     style={{
                       ...journalCardMetricValueStyle,
                       color: pnlColor,
-                      textAlign: TEXT_START,
+                      textAlign: 'right',
                     }}
                   >
                     {isProfit ? '+' : '-'}
@@ -486,7 +486,7 @@ export default function TradeDetailScreen() {
                     style={{
                       ...journalCardMetricValueSecondaryStyle,
                       color: pnlColor,
-                      textAlign: TEXT_START,
+                      textAlign: 'right',
                       marginTop: JOURNAL_LAYOUT.cardMetricLabelToValueGap,
                     }}
                   >

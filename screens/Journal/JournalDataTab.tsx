@@ -1,4 +1,4 @@
-import { ROW_REV, TEXT_END, TEXT_START } from '../../lib/i18n/direction';
+import { ROOT_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
@@ -229,7 +229,7 @@ const CumulativePnlLineChart = memo(function CumulativePnlLineChart({
       </Svg>
       <View
         style={{
-          flexDirection: ROW_REV,
+          flexDirection: 'row-reverse',
           justifyContent: 'center',
           gap: 24,
           marginTop: 4,
@@ -273,7 +273,7 @@ const PnlBarChart = memo(function PnlBarChart({
   const baselineY = padT + innerH;
 
   return (
-    <View style={{ width: chartW, direction: 'ltr' }}>
+    <View style={{ width: chartW, direction: ROOT_DIR }}>
       <Svg width={chartW} height={H}>
         <Line
           x1={padL}
@@ -467,7 +467,7 @@ const journalTabStyles = StyleSheet.create({
   cardHeader: {
     ...journalCardTitleStyle,
     marginBottom: JOURNAL_LAYOUT.cardTitleToBodyGap,
-    textAlign: TEXT_START,
+    textAlign: 'right',
   },
   sectionTitle: {
     ...journalSectionTitleStyle,
@@ -552,7 +552,7 @@ const journalTabStyles = StyleSheet.create({
     fontWeight: JOURNAL_TYPE.groupLabel.fontWeight,
     lineHeight: JOURNAL_TYPE.groupLabel.lineHeight,
     marginBottom: JOURNAL_LAYOUT.groupLabelToContent,
-    textAlign: TEXT_START,
+    textAlign: 'right',
     writingDirection: TEXT_DIR,
   },
   journalInsightSurface: {
@@ -1131,7 +1131,7 @@ export default function JournalDataTab() {
                       borderBottomColor: DesignTokens.colors.border.divider,
                     }}
                   >
-                    <View style={{ flex: 1, minWidth: 0, direction: 'ltr', alignItems: 'stretch' }}>
+                    <View style={{ flex: 1, minWidth: 0, direction: ROOT_DIR, alignItems: 'stretch' }}>
                       <Text
                         style={[
                           journalCardTitleStyle,
@@ -1157,7 +1157,7 @@ export default function JournalDataTab() {
                     <Text
                       style={[
                         journalBodyTextStyle,
-                        { color: pnlColor, writingDirection: 'ltr', textAlign: TEXT_END, flexShrink: 0 },
+                        { color: pnlColor, writingDirection: 'ltr', textAlign: 'left', flexShrink: 0 },
                       ]}
                     >
                       {s.pnl >= 0 ? '+' : '-'}${Math.abs(s.pnl).toFixed(0)}

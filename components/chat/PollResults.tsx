@@ -1,4 +1,4 @@
-import { TEXT_END, UI_DIR } from '../../lib/i18n/direction';
+import { UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React, { useEffect, useMemo } from 'react';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -162,7 +162,7 @@ const createStyles = (
       fontVariant: ['tabular-nums'],
       minWidth: 34,
       flexShrink: 0,
-      textAlign: TEXT_END,
+      textAlign: 'left',
     },
     footer: {
       marginTop: 4,

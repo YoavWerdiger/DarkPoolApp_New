@@ -1,4 +1,3 @@
-import { ROW_REV } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React, { useEffect, useRef, useMemo } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
@@ -101,7 +100,7 @@ const createStyles = (tokens: any) => {
     paddingBottom: tokens.spacing.xs,
   },
   bubble: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     backgroundColor: tokens.colors.bubbleOther,
     borderRadius: tokens.borderRadius.lg,

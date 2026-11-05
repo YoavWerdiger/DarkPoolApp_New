@@ -1,4 +1,4 @@
-import { TEXT_START, UI_DIR } from '../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -78,7 +78,7 @@ function FollowedTickerRows({
             ...settingsHebrewText,
             ...settingsBodyType,
             width: '100%',
-            textAlign: TEXT_START,
+            textAlign: 'right',
             color: tokens.colors.text.secondary,
           }}
         >{i18n.t('auto.screens__Profile__NotificationsScreen.s1')}</Text>
@@ -164,7 +164,7 @@ function EarningsTickerPicker({
       {symbols.length > 0 ? (
         <View
           style={{
-            direction: 'ltr',
+            direction: ROOT_DIR,
             flexDirection: 'row',
             flexWrap: 'wrap',
             justifyContent: 'flex-end',
@@ -180,7 +180,7 @@ function EarningsTickerPicker({
               accessibilityRole="button"
               accessibilityLabel={i18n.t('auto.screens__Profile__NotificationsScreen.s5', { v0: symbol })}
               style={{
-                direction: 'ltr',
+                direction: ROOT_DIR,
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 6,

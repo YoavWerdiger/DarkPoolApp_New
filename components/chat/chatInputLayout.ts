@@ -1,3 +1,4 @@
+import { ROOT_DIR } from '../../lib/i18n/direction';
 import { Platform } from 'react-native';
 
 /** nativeID לקישור מחוות מקלדת (KeyboardGestureArea וכו') */
@@ -15,7 +16,7 @@ export const CHAT_COMPOSER_ANDROID_MIN_BOTTOM = 16;
  * Yoga בפרודקשן הוא LTR (App.tsx) גם כש-I18nManager.forceRTL(true).
  * אסור להסתמך על isRTL ל-transform של מקלדת — Expo Go לפעמים עדיין RTL.
  */
-export const CHAT_KEYBOARD_LTR_STYLE = { direction: 'ltr' as const };
+export const CHAT_KEYBOARD_LTR_STYLE = { direction: ROOT_DIR };
 
 /** inset תחתון קבוע לקומפוזר — לא משתנה עם המקלדת (מונע קפיצות) */
 export function chatComposerSafeBottomInset(safeAreaBottom: number): number {

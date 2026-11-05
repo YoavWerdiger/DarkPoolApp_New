@@ -1,4 +1,3 @@
-import { TEXT_END } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 import React, { useMemo } from 'react';
@@ -72,7 +71,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       lineHeight: APP_TYPE.groupLabel.lineHeight,
       fontWeight: APP_TYPE.groupLabel.fontWeight,
       color: tokens.colors.text.secondary,
-      textAlign: TEXT_END,
+      textAlign: 'left',
       marginBottom: 8,
       writingDirection: TEXT_DIR,
     },
@@ -125,7 +124,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       lineHeight: APP_TYPE.caption2.lineHeight,
       fontWeight: APP_TYPE.caption2.fontWeight,
       color: tokens.colors.text.tertiary,
-      textAlign: TEXT_END,
+      textAlign: 'left',
       writingDirection: TEXT_DIR,
     },
   });

@@ -1,4 +1,4 @@
-import { TEXT_END } from '../../lib/i18n/direction';
+import { ROOT_DIR } from '../../lib/i18n/direction';
 // ============================================
 // Link Preview Component
 // ============================================
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
   },
   bodyRow: {
     flexDirection: 'row',
-    direction: 'ltr',
+    direction: ROOT_DIR,
     alignItems: 'center',
     gap: 10,
   },
@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
     lineHeight: APP_TYPE.caption.lineHeight,
     fontWeight: '500',
     writingDirection: 'ltr',
-    textAlign: TEXT_END,
+    textAlign: 'left',
   },
   skelLine: {
     height: 10,

@@ -1,4 +1,4 @@
-import { TEXT_START } from '../../lib/i18n/direction';
+import { ROOT_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React from 'react';
@@ -220,7 +220,7 @@ const createStyles = (
   StyleSheet.create({
     wrapper: {
       width: cardWidth,
-      direction: 'ltr',
+      direction: ROOT_DIR,
     },
     fill: {
       alignSelf: 'stretch',
@@ -233,7 +233,7 @@ const createStyles = (
       borderRadius: ACADEMY_CARD_RADIUS,
       overflow: 'hidden',
       borderWidth: 0,
-      direction: 'ltr',
+      direction: ROOT_DIR,
     },
     cover: {
       width: '100%',
@@ -294,7 +294,7 @@ const createStyles = (
       paddingTop: APP_LAYOUT.cardPadding,
       paddingBottom: APP_LAYOUT.cardPadding,
       gap: APP_LAYOUT.cardTitleToBodyGap,
-      direction: 'ltr',
+      direction: ROOT_DIR,
       alignItems: 'stretch',
       width: '100%',
     },
@@ -319,7 +319,7 @@ const createStyles = (
     },
     audienceLabel: {
       ...appCardMetricLabelStyle,
-      textAlign: TEXT_START,
+      textAlign: 'right',
       color: T.colors.text.tertiary,
     },
     audienceText: {

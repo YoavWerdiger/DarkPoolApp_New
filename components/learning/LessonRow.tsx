@@ -1,4 +1,4 @@
-import { ROW_REV } from '../../lib/i18n/direction';
+import { ROOT_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
@@ -199,7 +199,7 @@ function createStyles(T: ReturnType<typeof useDesignTokens>) {
       borderRadius: ACADEMY_CARD_RADIUS,
       overflow: 'hidden',
       marginBottom: APP_LAYOUT.cardStackGap,
-      direction: 'ltr',
+      direction: ROOT_DIR,
     },
     touchable: {
       width: '100%',
@@ -224,7 +224,7 @@ function createStyles(T: ReturnType<typeof useDesignTokens>) {
       position: 'absolute',
       bottom: 10,
       left: 10,
-      flexDirection: ROW_REV,
+      flexDirection: 'row-reverse',
       alignItems: 'center',
       gap: 4,
       paddingHorizontal: 8,

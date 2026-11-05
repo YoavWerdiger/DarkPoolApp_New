@@ -1,4 +1,4 @@
-import { ROW_REV, TEXT_START, dirIcon } from '../../lib/i18n/direction';
+import { ROOT_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
@@ -595,7 +595,7 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
         >
           <View
             style={{
-              flexDirection: ROW_REV,
+              flexDirection: 'row-reverse',
               alignItems: 'center',
               paddingHorizontal: 16,
               minHeight: 52,
@@ -623,7 +623,7 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
                   flex: 1,
                   ...APP_TYPE.body,
                   color: DesignTokens.colors.text.primary,
-                  textAlign: TEXT_START,
+                  textAlign: 'right',
                   writingDirection: TEXT_DIR,
                   paddingVertical: 8,
                 }}
@@ -662,7 +662,7 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
           <View
             style={{
               flexDirection: 'row',
-              direction: 'ltr',
+              direction: ROOT_DIR,
               alignItems: 'center',
               justifyContent: 'space-between',
             }}
@@ -884,7 +884,7 @@ const searchStyles = StyleSheet.create({
     paddingVertical: APP_LAYOUT.cardTitleToBodyGap + 2,
   },
   resultCardContent: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     width: '100%',
   },
@@ -899,7 +899,7 @@ const searchStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   resultTitleRow: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     maxWidth: '100%',
   },
@@ -931,7 +931,7 @@ const searchStyles = StyleSheet.create({
   timingPill: {
     flexShrink: 0,
     marginRight: 12,
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     paddingHorizontal: 10,
     height: 24,

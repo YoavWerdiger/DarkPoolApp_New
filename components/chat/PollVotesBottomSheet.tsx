@@ -1,4 +1,4 @@
-import { TEXT_START, dirIcon } from '../../lib/i18n/direction';
+import { dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, Image, ActivityIndicator, TouchableOpacity, StyleSheet } from 'react-native';
@@ -262,7 +262,7 @@ const createStyles = (tokens: any) => {
       fontSize: 16,
       fontWeight: '800',
       color: tokens.colors.text.primary,
-      textAlign: TEXT_START,
+      textAlign: 'right',
     },
     optionBadge: {
       minWidth: 32,
@@ -282,7 +282,7 @@ const createStyles = (tokens: any) => {
     noVotersText: {
       fontSize: tokens.typography.fontSize.sm,
       color: tokens.colors.text.tertiary,
-      textAlign: TEXT_START,
+      textAlign: 'right',
       fontStyle: 'italic',
     },
     votersList: {
@@ -317,7 +317,7 @@ const createStyles = (tokens: any) => {
       fontSize: 15,
       fontWeight: '600',
       color: tokens.colors.text.primary,
-      textAlign: TEXT_START,
+      textAlign: 'right',
     },
   });
 };

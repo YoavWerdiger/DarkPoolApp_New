@@ -1,4 +1,4 @@
-import { TEXT_END, UI_DIR } from '../../../lib/i18n/direction';
+import { UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import { JournalListSkeleton } from '../../../components/ui/SkeletonLoader';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -222,7 +222,7 @@ export default function TransactionsTab({
           flexShrink: 0,
           direction: 'ltr',
           writingDirection: 'ltr',
-          textAlign: TEXT_END,
+          textAlign: 'left',
           fontSize: JOURNAL_TYPE.cardSubtitle.fontSize,
           fontWeight: '600',
           lineHeight: JOURNAL_TYPE.cardSubtitle.lineHeight,

@@ -1,4 +1,4 @@
-import { ROW_REV, TEXT_START, UI_DIR, dirIcon } from '../../lib/i18n/direction';
+import { UI_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -640,7 +640,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       direction: UI_DIR,
     },
     banner: {
-      flexDirection: ROW_REV,
+      flexDirection: 'row-reverse',
       alignItems: 'center',
       gap: APP_LAYOUT.stackGapSmall,
       paddingHorizontal: APP_LAYOUT.cardPadding,
@@ -652,7 +652,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       flex: 1,
       ...APP_TYPE.cardSubtitle,
       writingDirection: TEXT_DIR,
-      textAlign: TEXT_START,
+      textAlign: 'right',
     },
     composeCard: {
       borderRadius: UI_CARD_RADIUS,
@@ -688,7 +688,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontWeight: tokens.typography.fontWeight.medium,
       color: tokens.colors.text.primary,
       writingDirection: TEXT_DIR,
-      textAlign: TEXT_START,
+      textAlign: 'right',
     },
     toolbar: {
       flexDirection: 'row',
@@ -698,7 +698,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     counter: {
       ...APP_TYPE.caption,
       writingDirection: 'ltr',
-      textAlign: TEXT_START,
+      textAlign: 'right',
     },
     attachBtn: {
       width: DAY_NAV_BUTTON_SIZE,

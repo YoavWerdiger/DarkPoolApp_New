@@ -1,4 +1,4 @@
-import { ROW_REV, TEXT_START } from '../lib/i18n/direction';
+import { ROOT_DIR } from '../lib/i18n/direction';
 import { TEXT_DIR } from '../lib/i18n/language';
 import i18n from '../lib/i18n';
 import { appLocale } from '../lib/i18n/locale';
@@ -335,7 +335,7 @@ function createDrawerStyles(tokens: ReturnType<typeof useDesignTokens>, isDarkMo
   },
   scroll: { flex: 1 },
   row: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 14,
@@ -352,7 +352,7 @@ function createDrawerStyles(tokens: ReturnType<typeof useDesignTokens>, isDarkMo
     fontSize: 16,
     fontWeight: '500',
     color: tokens.colors.text.primary,
-    textAlign: TEXT_START,
+    textAlign: 'right',
     writingDirection: TEXT_DIR,
   },
   labelActive: {
@@ -370,11 +370,11 @@ function createDrawerStyles(tokens: ReturnType<typeof useDesignTokens>, isDarkMo
   },
   /** צמוד לימין הפיזי (עץ LTR) — אווטאר ימין, טקסט משמאלו */
   profileFooterRow: {
-    flexDirection: ROW_REV,
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     alignSelf: 'flex-end',
     gap: 12,
-    direction: 'ltr',
+    direction: ROOT_DIR,
   },
   profileFooterInfo: {
     alignItems: 'flex-end',
@@ -384,14 +384,14 @@ function createDrawerStyles(tokens: ReturnType<typeof useDesignTokens>, isDarkMo
     color: tokens.colors.text.primary,
     fontSize: 17,
     fontWeight: '600',
-    textAlign: TEXT_START,
+    textAlign: 'right',
     writingDirection: TEXT_DIR,
   },
   profileFooterMeta: {
     marginTop: 3,
     color: tokens.colors.text.secondary,
     fontSize: 13,
-    textAlign: TEXT_START,
+    textAlign: 'right',
     writingDirection: TEXT_DIR,
   },
   profileAvatarWrap: {

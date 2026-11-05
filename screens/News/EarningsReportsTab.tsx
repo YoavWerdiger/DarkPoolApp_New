@@ -1,4 +1,4 @@
-import { dirIcon } from '../../lib/i18n/direction';
+import { ROOT_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 import { legacyAlert } from '../../utils/appDialog';
@@ -1144,7 +1144,7 @@ export default function EarningsReportsTab({
         <View
           style={{
             flexDirection: 'row',
-            direction: 'ltr',
+            direction: ROOT_DIR,
             alignItems: 'center',
             justifyContent: 'space-between',
           }}

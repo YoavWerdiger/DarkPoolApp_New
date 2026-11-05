@@ -1,48 +1,41 @@
 /**
  * יומן מסחר בטעינה — אותו מבנה וטקסטים כמו המסך האמיתי (PortfolioDetailScreen + OverviewTab):
- * צ׳יפי הטאבים, «שווי תיק» וגרף על רקע המסך, «חלוקת נכסים» (כותרת וצ׳יפים בחוץ, דונאט בכרטיס),
- * ולוח הבקרה: «פוזיציות פתוחות», «עסקאות אחרונות» ו«סטטיסטיקה» — כותרת בחוץ ופאנל עם שורות וקווים.
- * רק המספרים והגרפיקה «נטענים» — הנתונים מחליפים אותם במקום, בלי קפיצה.
+ * צ׳יפי הטאבים, שווי תיק וגרף, חלוקת נכסים, פוזיציות פתוחות, עסקאות אחרונות וסטטיסטיקה.
+ * בלי טקסט קבוע — כל כותרת, תווית ומספר הם צורת טעינה באותו מקום ובאותו גודל.
  */
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import UICard from '../../../components/ui/UICard';
-import { SlidingPillGroup } from '../../../components/ui/DayDividerPill';
 import { LineChartSkeleton, SkeletonBox } from '../../../components/ui/SkeletonLoader';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { UI_CARD_RADIUS } from '../../../components/ui/appLayout';
-import {
-  JOURNAL_LAYOUT,
-  journalCardTitleStyle,
-  journalPhysicalRightText,
-  journalSectionTitleStyle,
-} from '../../Journal/journalLayout';
-import { PORTFOLIO_DETAIL_TABS } from '../portfolioConstants';
-
-/** התוויות של «סטטיסטיקה» (JournalStatsCard) — שורה לכל נתון, כמו כרטיס הגדרות */
-const STAT_LABELS = ['אחוז הצלחה', 'עסקאות סגורות', 'רווח ממוצע', 'הפסד ממוצע', 'יחס רווח/הפסד', 'רווח ממומש'];
+import { JOURNAL_LAYOUT } from '../../Journal/journalLayout';
 
 export function JournalSkeleton() {
   const tokens = useDesignTokens();
-  const heading = [journalSectionTitleStyle, journalPhysicalRightText, { color: tokens.colors.text.primary }];
   const divider = { height: 1, backgroundColor: tokens.colors.border.divider, marginHorizontal: JOURNAL_LAYOUT.cardPadding };
+  // כותרת סקשן — בלי טקסט קבוע, רק צורה בגובה הכותרת
+  const heading = (w: number) => <SkeletonBox width={w} height={18} borderRadius={7} style={styles.heading} />;
 
-  /** פאנל רשימה (כמו Panel בלוח הבקרה) עם שורות לוגו + כותרת/פירוט + ערך */
-  const listPanel = (title: string, count: number) => (
+  /** פאנל רשימה: לוגו 36 · טיקר (+ שורה משנית) · ערך משמאל — כמו HoldingsListRow / Row בלוח הבקרה */
+  const listPanel = (count: number, withSub: boolean, delay: number) => (
     <View style={styles.section}>
-      <Text style={[heading, styles.headingGap]}>{title}</Text>
+      {heading(withSub ? 118 : 104)}
       <UICard variant="soft" glassIntensity="light" padding="none" style={styles.panel}>
         {Array.from({ length: count }, (_, i) => (
           <React.Fragment key={i}>
             <View style={styles.listRow}>
-              <SkeletonBox width={36} height={36} borderRadius={18} />
+              <SkeletonBox width={36} height={36} borderRadius={18} delay={delay + i * 60} />
               <View style={styles.listText}>
-                <SkeletonBox width={64} height={13} borderRadius={6} />
-                <SkeletonBox width={96} height={10} borderRadius={5} />
+                <View style={styles.tickerLine}>
+                  <SkeletonBox width={52} height={14} borderRadius={6} delay={delay + i * 60} />
+                  {withSub ? null : <SkeletonBox width={34} height={16} borderRadius={8} delay={delay + i * 60} />}
+                </View>
+                {withSub ? <SkeletonBox width={40} height={10} borderRadius={5} delay={delay + i * 60} /> : null}
               </View>
               <View style={styles.listValue}>
-                <SkeletonBox width={72} height={13} borderRadius={6} />
-                <SkeletonBox width={44} height={10} borderRadius={5} />
+                <SkeletonBox width={68} height={14} borderRadius={6} delay={delay + i * 60} />
+                {withSub ? <SkeletonBox width={44} height={10} borderRadius={5} delay={delay + i * 60} /> : null}
               </View>
             </View>
             {i < count - 1 ? <View style={divider} /> : null}
@@ -54,20 +47,17 @@ export function JournalSkeleton() {
 
   return (
     <View pointerEvents="none">
-      <SlidingPillGroup
-        scroll
-        options={PORTFOLIO_DETAIL_TABS}
-        value="overview"
-        onChange={() => {}}
-        style={styles.tabsScroll}
-        contentContainerStyle={styles.tabsScrollContent}
-        pillStyle={styles.tabBtn}
-      />
+      {/* צ׳יפי הטאבים — צורות בלבד */}
+      <View style={styles.tabsRow}>
+        {[64, 84, 70, 66].map((w, i) => (
+          <SkeletonBox key={i} width={w} height={32} borderRadius={16} />
+        ))}
+      </View>
 
       <View style={styles.content}>
-        {/* שווי תיק + גרף — על רקע המסך, בלי כרטיס */}
+        {/* שווי תיק + גרף — על רקע המסך */}
         <View style={styles.section}>
-          <Text style={heading}>שווי תיק</Text>
+          {heading(76)}
           <SkeletonBox width={190} height={30} borderRadius={8} style={styles.heroValue} />
           <View style={styles.deltaRow}>
             <SkeletonBox width={120} height={12} borderRadius={6} />
@@ -75,9 +65,9 @@ export function JournalSkeleton() {
           <LineChartSkeleton height={220} periods={6} />
         </View>
 
-        {/* חלוקת נכסים — כותרת וצ׳יפים בחוץ, הדונאט בכרטיס */}
+        {/* חלוקת נכסים — צ׳יפים בחוץ, דונאט + מקרא + סה״כ בכרטיס */}
         <View style={styles.section}>
-          <Text style={[heading, styles.headingGap]}>חלוקת נכסים</Text>
+          {heading(96)}
           <View style={styles.chips}>
             {[64, 72, 58].map((w, i) => (
               <SkeletonBox key={i} width={w} height={30} borderRadius={15} />
@@ -90,34 +80,38 @@ export function JournalSkeleton() {
                 {[0, 1, 2, 3].map((i) => (
                   <View key={i} style={styles.legendRow}>
                     <SkeletonBox width={10} height={10} borderRadius={5} />
-                    <SkeletonBox width="70%" height={12} borderRadius={6} />
+                    <SkeletonBox width="55%" height={12} borderRadius={6} />
+                    <SkeletonBox width={30} height={12} borderRadius={6} />
                   </View>
                 ))}
               </View>
             </View>
+            <View style={styles.totalRow}>
+              <SkeletonBox width={70} height={12} borderRadius={6} />
+              <SkeletonBox width={84} height={14} borderRadius={6} />
+            </View>
           </UICard>
         </View>
 
-        {listPanel('פוזיציות פתוחות', 3)}
-        {listPanel('עסקאות אחרונות', 3)}
+        {/* פוזיציות פתוחות (טיקר + חלק מהתיק · שווי + תשואה) */}
+        {listPanel(3, true, 0)}
+        {/* עסקאות אחרונות (טיקר + תגית לונג/שורט · רווח/הפסד) */}
+        {listPanel(3, false, 120)}
 
-        {/* סטטיסטיקה — כרטיס כמו בהגדרות: ערך נטען משמאל, התווית האמיתית ואייקון מימין */}
+        {/* סטטיסטיקה — ערך משמאל · כותרת · אייקון מימין (כמו שורת הגדרות) */}
         <View style={styles.section}>
-          <Text style={[heading, styles.headingGap]}>סטטיסטיקה</Text>
+          {heading(84)}
           <UICard variant="soft" glassIntensity="light" padding="none" style={styles.panel}>
-            {STAT_LABELS.map((label, i) => (
-              <React.Fragment key={label}>
+            {[92, 104, 84, 88, 100, 90].map((w, i, arr) => (
+              <React.Fragment key={i}>
                 <View style={styles.statRow}>
-                  <SkeletonBox width={64} height={14} borderRadius={6} />
-                  <Text
-                    style={[journalCardTitleStyle, journalPhysicalRightText, styles.statTitle, { color: tokens.colors.text.primary }]}
-                    numberOfLines={1}
-                  >
-                    {label}
-                  </Text>
-                  <SkeletonBox width={20} height={20} borderRadius={6} style={styles.statIcon} />
+                  <SkeletonBox width={56} height={14} borderRadius={6} delay={i * 50} />
+                  <View style={styles.statTitle}>
+                    <SkeletonBox width={w} height={14} borderRadius={6} delay={i * 50} />
+                  </View>
+                  <SkeletonBox width={20} height={20} borderRadius={6} delay={i * 50} style={styles.statIcon} />
                 </View>
-                {i < STAT_LABELS.length - 1 ? <View style={divider} /> : null}
+                {i < arr.length - 1 ? <View style={divider} /> : null}
               </React.Fragment>
             ))}
           </UICard>
@@ -128,21 +122,21 @@ export function JournalSkeleton() {
 }
 
 const styles = StyleSheet.create({
-  // כמו ב-PortfolioDetailScreen
-  tabsScroll: { marginTop: 6, marginBottom: 2 },
-  tabsScrollContent: {
+  // כמו צ׳יפי הטאבים ב-PortfolioDetailScreen
+  tabsRow: {
     direction: 'rtl',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     gap: 8,
+    marginTop: 6,
+    marginBottom: 2,
   },
-  tabBtn: { borderRadius: 999, overflow: 'hidden' },
+  heading: { alignSelf: 'flex-start', marginBottom: JOURNAL_LAYOUT.sectionHeaderToContent },
   content: { paddingHorizontal: 16, paddingTop: 14, direction: 'rtl' },
   // כמו sectionBlock / heroBlock / Section ב-OverviewTab ו-JournalDashboard
   section: { marginBottom: JOURNAL_LAYOUT.sectionGap, direction: 'rtl' },
-  headingGap: { marginBottom: JOURNAL_LAYOUT.sectionHeaderToContent },
-  heroValue: { marginTop: JOURNAL_LAYOUT.cardMetricLabelToValueGap * 2 },
+  heroValue: { marginTop: JOURNAL_LAYOUT.cardMetricLabelToValueGap * 2 - JOURNAL_LAYOUT.sectionHeaderToContent },
   deltaRow: {
     marginTop: JOURNAL_LAYOUT.titleSubtitleGap + 6,
     marginBottom: JOURNAL_LAYOUT.cardTitleToBodyGap,
@@ -163,6 +157,14 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   listText: { flex: 1, gap: 6, alignItems: 'flex-start' },
+  tickerLine: { direction: 'rtl', flexDirection: 'row', alignItems: 'center', gap: 6 },
+  totalRow: {
+    direction: 'rtl',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 14,
+  },
   listValue: { gap: 6, alignItems: 'flex-end' },
   // כמו statRow ב-JournalStatsList (שורת תפריט בהגדרות)
   statRow: {
@@ -172,6 +174,6 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     paddingHorizontal: JOURNAL_LAYOUT.cardPadding,
   },
-  statTitle: { flex: 1, minWidth: 0, marginLeft: 12 },
+  statTitle: { flex: 1, minWidth: 0, marginLeft: 12, alignItems: 'flex-end' },
   statIcon: { marginLeft: 12 },
 });

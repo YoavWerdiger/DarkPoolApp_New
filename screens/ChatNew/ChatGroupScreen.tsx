@@ -1939,8 +1939,10 @@ export default function ChatGroupScreen() {
       const olderMessage = index < list.length - 1 ? list[index + 1] : null;
       const newerMessage = index > 0 ? list[index - 1] : null;
       // שם בראשונה כרונולוגית בקבוצה — אין older עם אותו sender_id
+      // הכרזות: שם ותמונת השולח בכל הודעה (כל הודעה עומדת בפני עצמה)
       const showSenderName =
-        !isMe && (!olderMessage || olderMessage.sender_id !== item.sender_id);
+        !isMe &&
+        (isAnnouncementGroup || !olderMessage || olderMessage.sender_id !== item.sender_id);
       // אווטאר באחרונה בקבוצה (לפני newer אחר / סוף הרצף)
       const showAvatar =
         !isMe && (!newerMessage || newerMessage.sender_id !== item.sender_id);

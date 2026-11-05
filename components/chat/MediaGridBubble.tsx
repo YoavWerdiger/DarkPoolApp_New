@@ -121,6 +121,12 @@ function MediaGridBubble({
       id: it.id,
       url: it.url || signedById[it.id] || '',
       type: (it.type === 'video' ? 'video' : 'image') as 'image' | 'video',
+      // מה שכבר מוצג בגריד — מוצג מיד בגלריה עד שהתמונה המלאה נטענת (בלי מסך טעינה ארוך)
+      previewUrl:
+        signedById[it.id] ??
+        getCachedChatMediaDisplayUri(it.thumbnail_url) ??
+        getCachedChatMediaDisplayUri(it.url) ??
+        undefined,
     }));
   }, [localMediaItems, mediaItems, signedById]);
 

@@ -7,6 +7,7 @@ import {
   View,
   Modal,
   FlatList,
+  Image,
   Text,
   StyleSheet,
   Dimensions,
@@ -40,6 +41,8 @@ export interface MediaGalleryItem {
   url: string;
   type: 'image' | 'video';
   caption?: string;
+  /** תמונה שכבר נטענה (הגריד בצ'אט) — מוצגת מיד עד שהמלאה נטענת */
+  previewUrl?: string;
 }
 
 interface MediaGalleryViewerProps {
@@ -61,12 +64,14 @@ function isDisplayableMediaUri(u: string | null | undefined): u is string {
 
 function GalleryImageItem({
   url,
+  previewUrl,
   isActive,
   onZoomChange,
   onSingleTap,
   onSwipeDismiss,
 }: {
   url: string;
+  previewUrl?: string;
   isActive: boolean;
   onZoomChange?: (zoomed: boolean) => void;
   onSingleTap?: () => void;
@@ -102,7 +107,12 @@ function GalleryImageItem({
   return (
     <View style={[styles.page, styles.imagePage]}>
       <MediaBlurBackdrop uri={displayable ? url : undefined} style={backdropStyle} />
-      {(isLoading || !displayable) && !loadError && (
+      {(isLoading || !displayable) && !loadError && previewUrl && isDisplayableMediaUri(previewUrl) ? (
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          <Image source={{ uri: previewUrl }} style={StyleSheet.absoluteFill} resizeMode="contain" />
+        </View>
+      ) : null}
+      {(isLoading || !displayable) && !loadError && !previewUrl && (
         <View style={styles.loadingContainer} pointerEvents="none">
           <ActivityIndicator size="large" color={COLORS.primary} />
         </View>
@@ -191,6 +201,7 @@ export default function MediaGalleryViewer({
     if (!visible) return;
     const safeIndex = Math.max(0, Math.min(initialIndex, Math.max(mediaItems.length - 1, 0)));
     setCurrentIndex(safeIndex);
+    landedRef.current = false;
     setIsZoomed(false);
     setIsPlaying(false);
     setPosition(0);
@@ -380,15 +391,21 @@ export default function MediaGalleryViewer({
     else (videoRef.current as any).pauseAsync?.();
   }, [isPlaying]);
 
+  // callback יציב (FlatList לא תומך בהחלפת onViewableItemsChanged תוך כדי) — האינדקס מ-ref
+  const currentIndexRef = useRef(currentIndex);
+  currentIndexRef.current = currentIndex;
+  // עד שהפייג'ר הונח על התמונה שנלחצה — מתעלמים מ«נראה» של עמוד 0 ברינדור הראשון
+  const landedRef = useRef(false);
   const onViewableItemsChanged = useCallback(({ viewableItems }: any) => {
+    if (!landedRef.current) return;
     if (viewableItems.length > 0) {
       const newIndex = viewableItems[0].index;
-      if (typeof newIndex === 'number' && newIndex !== currentIndex) {
+      if (typeof newIndex === 'number' && newIndex !== currentIndexRef.current) {
         setCurrentIndex(newIndex);
         setIsZoomed(false);
       }
     }
-  }, [currentIndex]);
+  }, []);
 
   const viewabilityConfig = useRef({
     itemVisiblePercentThreshold: 50,
@@ -480,6 +497,7 @@ export default function MediaGalleryViewer({
     return (
       <GalleryImageItem
         url={uri}
+        previewUrl={item.previewUrl}
         isActive={isActive}
         onZoomChange={isActive ? handleZoomChange : undefined}
         onSingleTap={() => setChromeVisible((open) => !open)}
@@ -525,6 +543,13 @@ export default function MediaGalleryViewer({
           initialNumToRender={Math.min(mediaItems.length, 10)}
           windowSize={5}
           maxToRenderPerBatch={3}
+          // נעיצה לתמונה שנלחצה אחרי ה-layout (initialScrollIndex לבד לא אמין ב-RTL / Modal)
+          onLayout={() => {
+            flatListRef.current?.scrollToOffset({ offset: safeInitialIndex * SCREEN_WIDTH, animated: false });
+            requestAnimationFrame(() => {
+              landedRef.current = true;
+            });
+          }}
           onScrollToIndexFailed={({ index }) => {
             setTimeout(() => flatListRef.current?.scrollToOffset({ offset: index * SCREEN_WIDTH, animated: false }), 50);
           }}

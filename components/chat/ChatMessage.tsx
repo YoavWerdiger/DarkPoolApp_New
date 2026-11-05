@@ -891,7 +891,17 @@ function ChatMessage({
           >
           {/* Sender Name - בתוך הבועה – רק כשיש שם אמיתי, בלי placeholder */}
           {!isMe && showSenderName && isUsableChatDisplayName(message.sender?.display_name) && (
-            <View style={styles.senderNameTouch}>
+            <View style={[styles.senderNameTouch, centered && styles.centeredSenderRow]}>
+            {/* הכרזות: אין אווטאר בצד (הבועה במרכז) — תמונת השולח ליד השם */}
+            {centered ? (
+              message.sender?.profile_picture ? (
+                <Image source={{ uri: message.sender.profile_picture }} style={styles.centeredSenderAvatar} />
+              ) : (
+                <View style={[styles.centeredSenderAvatar, styles.avatarPlaceholder]}>
+                  <Text style={styles.avatarText}>{message.sender?.display_name?.charAt(0) || '?'}</Text>
+                </View>
+              )
+            ) : null}
             <UserNameRow
               userId={message.sender_id}
               size={badgeSizeForLineHeight(APP_TYPE.cardSubtitle.lineHeight)}
@@ -2619,6 +2629,16 @@ const createStyles = (tokens: any) => {
   // צמוד לימין, עם נשימה קטנה מעל הטקסט
   senderNameTouch: {
     alignSelf: 'stretch',
+  },
+  centeredSenderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  centeredSenderAvatar: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
   },
   // שורת שם + תגים; ריפוד המדיה עבר מהטקסט לשורה
   senderNameRow: {

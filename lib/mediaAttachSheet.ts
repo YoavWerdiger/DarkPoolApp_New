@@ -1,3 +1,4 @@
+import { UI_DIR } from './i18n/direction';
 import i18n from './i18n';
 import type { ViewStyle } from 'react-native';
 
@@ -57,7 +58,7 @@ export const MEDIA_ATTACH_PEEK_MAX = 0.56;
  * `direction:'rtl' + row-reverse` הופך פעמיים ושובר את סדר התמונות.
  */
 export const MEDIA_ATTACH_GRID_ROW: ViewStyle = {
-  direction: 'rtl',
+  direction: UI_DIR,
   flexDirection: 'row',
 };
 

@@ -270,7 +270,7 @@ export const CoursesScreen: React.FC = () => {
                 accessibilityLabel={i18n.t('auto.screens__Learning__CoursesScreen.s12')}
               >
                 <Ionicons
-                  name="journal-outline"
+                  name="create-outline"
                   size={22}
                   color={DesignTokens.colors.text.primary}
                 />

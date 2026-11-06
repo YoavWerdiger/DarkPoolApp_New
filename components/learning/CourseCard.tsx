@@ -43,12 +43,12 @@ interface CourseCardProps {
   width?: number;
   /** בשורה אופקית: למתוח לגובה הכרטיס הגבוה בשורה (כל הכרטיסים באותו אורך, CTA בתחתית) */
   fillHeight?: boolean;
-  /** גובה מקסימלי לכרטיס — התמונה מתכווצת (חיתוך cover) כדי שהכרטיסים ייכנסו במסך בלי גלילה */
+  /** גובה מקסימלי לכרטיס — התמונה מתקצרת (עד יחס 2:1) כדי שהכרטיסים ייכנסו במסך */
   maxHeight?: number;
 }
 
-/** גובה תמונה מינימלי כשהכרטיס מתכווץ */
-const MIN_COVER_HEIGHT = 96;
+/** התמונה לא מתקצרת מעבר ליחס 2:1 — מעבר לזה הבאנרים (למשל האורקל) נחתכים לא יפה */
+const MIN_COVER_RATIO = 0.5;
 
 export const CourseCard: React.FC<CourseCardProps> = ({
   course,
@@ -65,7 +65,10 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   const [bodyHeight, setBodyHeight] = React.useState(0);
   const coverHeight =
     maxHeight && bodyHeight > 0
-      ? Math.max(MIN_COVER_HEIGHT, Math.min(naturalCoverHeight, Math.floor(maxHeight - bodyHeight)))
+      ? Math.max(
+          Math.round(cardWidth * MIN_COVER_RATIO),
+          Math.min(naturalCoverHeight, Math.floor(maxHeight - bodyHeight))
+        )
       : naturalCoverHeight;
   const styles = React.useMemo(
     () => createStyles(T, coverHeight, cardWidth),

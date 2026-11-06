@@ -47,8 +47,8 @@ interface CourseCardProps {
   maxHeight?: number;
 }
 
-/** התמונה לא מתקצרת מעבר ליחס 2:1 — מעבר לזה הבאנרים (למשל האורקל) נחתכים לא יפה */
-const MIN_COVER_RATIO = 0.5;
+/** כשהכרטיס מוקטן לגובה — לא צר מ-72% מהרוחב המלא */
+const MIN_WIDTH_RATIO = 0.72;
 
 export const CourseCard: React.FC<CourseCardProps> = ({
   course,
@@ -59,17 +59,18 @@ export const CourseCard: React.FC<CourseCardProps> = ({
 }) => {
   const T = useDesignTokens();
   const { width: screenWidth } = useWindowDimensions();
-  const cardWidth = width ?? academyCardWidth(screenWidth);
-  // באנרי הקורסים 16:9 — אותו יחס בדיוק, בלי חיתוך בצדדים; עם maxHeight התמונה מתקצרת
-  const naturalCoverHeight = Math.round((cardWidth * 9) / 16);
+  const fullWidth = width ?? academyCardWidth(screenWidth);
+  // באנרי הקורסים 16:9 תמיד — בלי חיתוך. כשאין מספיק גובה (maxHeight) כל הכרטיס מוקטן
+  // ברוחב (וממורכז), כך שהתמונה נשארת שלמה והכרטיסים נכנסים במסך בלי גלילה.
   const [bodyHeight, setBodyHeight] = React.useState(0);
-  const coverHeight =
+  const cardWidth =
     maxHeight && bodyHeight > 0
       ? Math.max(
-          Math.round(cardWidth * MIN_COVER_RATIO),
-          Math.min(naturalCoverHeight, Math.floor(maxHeight - bodyHeight))
+          Math.round(fullWidth * MIN_WIDTH_RATIO),
+          Math.min(fullWidth, Math.floor(((maxHeight - bodyHeight) * 16) / 9))
         )
-      : naturalCoverHeight;
+      : fullWidth;
+  const coverHeight = Math.round((cardWidth * 9) / 16);
   const styles = React.useMemo(
     () => createStyles(T, coverHeight, cardWidth),
     [T, coverHeight, cardWidth]
@@ -135,7 +136,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
           }}
         >
           <View style={styles.titleBlock}>
-            <Text style={styles.title} numberOfLines={2}>
+            <Text style={styles.title} numberOfLines={1}>
               {course.title}
             </Text>
             {subtitle ? (
@@ -177,6 +178,7 @@ const createStyles = (
   StyleSheet.create({
     wrapper: {
       width: cardWidth,
+      alignSelf: 'center',
       direction: ROOT_DIR,
     },
     fill: {

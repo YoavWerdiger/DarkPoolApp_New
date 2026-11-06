@@ -79,3 +79,5 @@ packages/DarkPoolChatSwift/.build/
 # Project MCP config may contain API tokens
 .cursor/mcp.json
 loadtest/out/
+
+.claude/settings.local.json

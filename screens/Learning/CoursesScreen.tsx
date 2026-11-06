@@ -21,6 +21,7 @@ import {
   AcademyScreenHeader,
   CourseCard,
 } from '../../components/learning';
+import { CourseInfoSheet } from '../../components/learning/CourseInfoSheet';
 import { ACADEMY_CARD_HP } from '../../components/learning/academyCardLayout';
 import {
   getAcademyCourseSubtitle,
@@ -62,6 +63,7 @@ export const CoursesScreen: React.FC = () => {
   const horizontalCardWidth = Math.min(320, Math.round(screenWidth * 0.78));
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [infoCourse, setInfoCourse] = useState<CourseWithProgress | null>(null);
 
   const openMainDrawer = useCallback(() => {
     void triggerDrawerMenuHaptic();
@@ -160,6 +162,20 @@ export const CoursesScreen: React.FC = () => {
     [navigation]
   );
 
+  // רשום לקורס → ישר לקורס; לא רשום (כולל האורקל) → שיט פירוט, וה-CTA בשיט נכנס לקורס
+  const handleCardPress = useCallback(
+    (course: CourseWithProgress) => {
+      if (course.enrollment) {
+        handleCoursePress(course);
+        return;
+      }
+      setInfoCourse(course);
+    },
+    [handleCoursePress]
+  );
+
+  const closeInfoSheet = useCallback(() => setInfoCourse(null), []);
+
   const handleOpenNotes = useCallback(() => {
     void HapticFeedback.impactLight();
     (navigation as Nav).navigate('MyNotesScreen');
@@ -213,7 +229,7 @@ export const CoursesScreen: React.FC = () => {
           course={course}
           width={horizontalCardWidth}
           fillHeight
-          onPress={handleCoursePress}
+          onPress={handleCardPress}
           onEnroll={course.enrollment ? undefined : handleEnroll}
         />
       ))}
@@ -341,6 +357,11 @@ export const CoursesScreen: React.FC = () => {
           )}
         </ScrollView>
       </RNSafeAreaView>
+      <CourseInfoSheet
+        course={infoCourse}
+        onClose={closeInfoSheet}
+        onOpenCourse={handleCoursePress}
+      />
     </ScreenChrome>
   );
 };

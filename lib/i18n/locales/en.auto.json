@@ -4258,6 +4258,14 @@
     "s4": "Start learning",
     "s5": "Who is this course for"
   },
+  "components__learning__CourseInfoSheet": {
+    "s1": "{{count}} lessons",
+    "s2": "{{count}} min",
+    "s3": "Who is this course for",
+    "s4": "About the course",
+    "s5": "View course",
+    "s6": "Start learning"
+  },
   "components__learning__AcademyYouTubeCTA": {
     "s1": "Go to David Ariel's YouTube channel",
     "s2": "Want to watch more content?",

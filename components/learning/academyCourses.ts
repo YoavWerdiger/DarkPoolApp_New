@@ -111,6 +111,30 @@ export function getCourseDurationMinutes(course: {
   return 0;
 }
 
+/** מספר שיעורים, שיעורים שהושלמו ואחוז התקדמות — תומך גם בקורס שטוח (lessons/total_lessons) */
+export function getCourseLessonStats(course: CourseWithProgress): {
+  totalLessons: number;
+  completedLessons: number;
+  progressPct: number;
+} {
+  const flat = course as CourseWithProgress & { total_lessons?: number; lessons?: unknown[] };
+  const lessonsFromModules =
+    course.modules?.reduce((s, m) => s + (m.lessons?.length ?? 0), 0) ?? 0;
+  const totalLessons =
+    [
+      course.progress?.total_lessons,
+      flat.total_lessons,
+      Array.isArray(flat.lessons) ? flat.lessons.length : 0,
+      lessonsFromModules,
+    ].find((n) => typeof n === 'number' && n > 0) ?? 0;
+  const completedLessons = course.progress?.completed_lessons || 0;
+  const progressPct =
+    totalLessons > 0
+      ? (completedLessons / totalLessons) * 100
+      : course.progress?.progress_percentage || 0;
+  return { totalLessons, completedLessons, progressPct };
+}
+
 /** רוחב אחיד לתג העליון */
 export const ACADEMY_BADGE_MIN_WIDTH = 108;
 

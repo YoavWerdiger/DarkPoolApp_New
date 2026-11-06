@@ -1,6 +1,5 @@
 import { ROOT_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
-import { TEXT_DIR } from '../../lib/i18n/language';
 import React from 'react';
 import {
   View,
@@ -24,23 +23,14 @@ import {
 } from './academyCardLayout';
 import { APP_LAYOUT } from '../ui/appLayout';
 import {
-  appCardBodyStyle,
-  appCardMetricLabelStyle,
   appCardSubtitleStyle,
   appCardTitleStyle,
 } from '../ui/appType';
-import { ACADEMY_TYPE } from './academyLayout';
 import {
   getAcademyCourseAccentColor,
-  getAcademyCourseAudience,
-  getAcademyCourseBadgeColor,
-  getAcademyCourseBadgeLabel,
-  getAcademyCourseBadgeTextColor,
   getAcademyCourseSubtitle,
-  getAcademyCourseTier,
-  isComingSoonCourse,
+  getCourseLessonStats,
 } from './academyCourses';
-import { isCourseTeaserLocked } from './CourseTeaserLock';
 
 /** @deprecated השתמשו ב־academyCardWidth — נשמר לתאימות */
 export const CARD_WIDTH = academyCardWidth(Dimensions.get('window').width);
@@ -49,7 +39,6 @@ interface CourseCardProps {
   course: CourseWithProgress;
   onPress: (course: CourseWithProgress) => void;
   onEnroll?: (course: CourseWithProgress) => void;
-  hideBadges?: boolean;
   /** רוחב קבוע לכרטיס אופקי; אם לא מועבר — רוחב מלא */
   width?: number;
   /** בשורה אופקית: למתוח לגובה הכרטיס הגבוה בשורה (כל הכרטיסים באותו אורך, CTA בתחתית) */
@@ -59,7 +48,6 @@ interface CourseCardProps {
 export const CourseCard: React.FC<CourseCardProps> = ({
   course,
   onPress,
-  hideBadges = false,
   width,
   fillHeight = false,
 }) => {
@@ -74,50 +62,17 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   );
 
   const isEnrolled = !!course.enrollment;
-  const comingSoon = isComingSoonCourse(course);
-  const lessonsFromModules =
-    course.modules?.reduce((s, m) => s + (m.lessons?.length ?? 0), 0) ?? 0;
-  // חלק מהמקורות מחזירים קורס שטוח עם lessons/total_lessons ולא רק modules
-  const flatCourse = course as CourseWithProgress & {
-    total_lessons?: number;
-    lessons?: unknown[];
-  };
-  const totalLessons =
-    [
-      course.progress?.total_lessons,
-      flatCourse.total_lessons,
-      Array.isArray(flatCourse.lessons) ? flatCourse.lessons.length : 0,
-      lessonsFromModules,
-    ].find((n) => typeof n === 'number' && n > 0) ?? 0;
-
-  const completedLessons = course.progress?.completed_lessons || 0;
-  const progressPct =
-    totalLessons > 0
-      ? (completedLessons / totalLessons) * 100
-      : course.progress?.progress_percentage || 0;
-
-  const tier = getAcademyCourseTier(course as CourseWithProgress & { price?: number });
-  const isPremium = tier === 'premium';
-  const badgeLabel = getAcademyCourseBadgeLabel(course as CourseWithProgress & { price?: number });
-  const badgeTextColor = getAcademyCourseBadgeTextColor(course);
-  const badgeColor = getAcademyCourseBadgeColor(
-    course as CourseWithProgress & { price?: number },
-    T.colors.primary.main
-  );
+  const { progressPct } = getCourseLessonStats(course);
   const subtitle = getAcademyCourseSubtitle(course);
-  const audience = getAcademyCourseAudience(course);
   const accent = getAcademyCourseAccentColor(
     course as CourseWithProgress & { price?: number },
     T.colors.primary.main
   );
 
-  const ctaLabel = comingSoon || isCourseTeaserLocked(course.id)
-    ? i18n.t('auto.components__learning__CourseCard.s1')
-    : isEnrolled
-      ? i18n.t('auto.components__learning__CourseCard.s2')
-      : isPremium
-        ? i18n.t('auto.components__learning__CourseCard.s3')
-        : i18n.t('auto.components__learning__CourseCard.s4');
+  // רשום → המשך למידה; לא רשום → פירוט הקורס בשיט (המלל המלא עבר לשם)
+  const ctaLabel = isEnrolled
+    ? i18n.t('auto.components__learning__CourseCard.s2')
+    : i18n.t('auto.components__learning__CourseCard.s1');
 
   return (
     <TouchableOpacity
@@ -156,18 +111,6 @@ export const CourseCard: React.FC<CourseCardProps> = ({
             style={styles.coverGradient}
             pointerEvents="none"
           />
-
-          {!hideBadges ? (
-            <View style={[styles.tierBadge, { backgroundColor: badgeColor }]}>
-              <Text style={[styles.tierBadgeText, { color: badgeTextColor }]}>{badgeLabel}</Text>
-            </View>
-          ) : null}
-
-          {isEnrolled && progressPct > 0 ? (
-            <View style={styles.progressChip}>
-              <Text style={styles.progressChipText}>{Math.round(progressPct)}%</Text>
-            </View>
-          ) : null}
         </View>
 
         <View style={[styles.body, fillHeight && styles.fillFlex]}>
@@ -182,14 +125,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
             ) : null}
           </View>
 
-          {audience ? (
-            <View style={styles.audienceBlock}>
-              <Text style={styles.audienceLabel}>{i18n.t('auto.components__learning__CourseCard.s5')}</Text>
-              <Text style={styles.audienceText}>{audience}</Text>
-            </View>
-          ) : null}
-
-          {isEnrolled && totalLessons > 0 ? (
+          {isEnrolled ? (
             <View style={styles.progressTrack}>
               <View
                 style={[
@@ -258,37 +194,6 @@ const createStyles = (
       bottom: 0,
       height: '40%',
     },
-    tierBadge: {
-      position: 'absolute',
-      top: 12,
-      right: 12,
-      minHeight: 28,
-      borderRadius: 14,
-      paddingHorizontal: 12,
-      paddingVertical: 4,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    tierBadgeText: {
-      ...ACADEMY_TYPE.caption,
-      color: '#fff',
-      writingDirection: TEXT_DIR,
-    },
-    progressChip: {
-      position: 'absolute',
-      top: 12,
-      left: 12,
-      height: 28,
-      borderRadius: 14,
-      paddingHorizontal: 10,
-      backgroundColor: 'rgba(0,0,0,0.55)',
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    progressChipText: {
-      ...ACADEMY_TYPE.caption,
-      color: '#fff',
-    },
     body: {
       paddingHorizontal: APP_LAYOUT.cardPadding,
       paddingTop: APP_LAYOUT.cardPadding,
@@ -310,21 +215,6 @@ const createStyles = (
       ...appCardSubtitleStyle,
       // appCardSubtitleStyle נושא צבע קבוע של מצב כהה — לפי ה-theme
       color: T.colors.text.secondary,
-    },
-    // בתוך כרטיס: תווית קטנה (כמו תווית מדד/שדה) מעל גוף הטקסט — לא תווית קבוצה של מחוץ לכרטיס
-    audienceBlock: {
-      width: '100%',
-      alignItems: 'stretch',
-      gap: APP_LAYOUT.cardMetricLabelToValueGap,
-    },
-    audienceLabel: {
-      ...appCardMetricLabelStyle,
-      textAlign: 'right',
-      color: T.colors.text.tertiary,
-    },
-    audienceText: {
-      ...appCardBodyStyle,
-      color: T.colors.text.primary,
     },
     progressTrack: {
       height: 4,

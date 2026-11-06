@@ -21,6 +21,7 @@ import UICard from '../../components/ui/UICard';
 import UIButton from '../../components/ui/UIButton';
 import { APP_LAYOUT } from '../../components/ui/appLayout';
 import { appGroupLabelStyle, appPhysicalRightText } from '../../components/ui/appType';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import {
   ACADEMY_TYPE,
   academySectionTitleStyle,
@@ -1650,13 +1651,14 @@ function LearningScreen() {
         />
 
           <View style={styles.lessonMainContent}>
-          <ScrollView
+          {/* KeyboardAwareScrollView: גלילה לאזור ההערות כשהמקלדת נפתחת ומעקב אחרי הסמן בזמן הקלדה (iOS + Android) */}
+          <KeyboardAwareScrollView
             style={styles.contentSection}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.contentContainer}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="interactive"
-            automaticallyAdjustKeyboardInsets
+            bottomOffset={24}
           >
             {/* וידאו — בתוך כרטיסיית זכוכית */}
             <UICard variant="blur" padding="none" style={styles.lessonVideoCard}>
@@ -1930,7 +1932,7 @@ function LearningScreen() {
                     : i18n.t('auto.screens__Learning__LearningScreen.s51')}
               </Text>
             </View>
-          </ScrollView>
+          </KeyboardAwareScrollView>
           </View>
 
         {/* Link Dialog */}

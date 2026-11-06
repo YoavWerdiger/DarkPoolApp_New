@@ -43,33 +43,18 @@ interface CourseCardProps {
   width?: number;
   /** בשורה אופקית: למתוח לגובה הכרטיס הגבוה בשורה (כל הכרטיסים באותו אורך, CTA בתחתית) */
   fillHeight?: boolean;
-  /** גובה מקסימלי לכרטיס — התמונה מתקצרת (עד יחס 2:1) כדי שהכרטיסים ייכנסו במסך */
-  maxHeight?: number;
 }
-
-/** כשהכרטיס מוקטן לגובה — לא צר מ-72% מהרוחב המלא */
-const MIN_WIDTH_RATIO = 0.72;
 
 export const CourseCard: React.FC<CourseCardProps> = ({
   course,
   onPress,
   width,
   fillHeight = false,
-  maxHeight,
 }) => {
   const T = useDesignTokens();
   const { width: screenWidth } = useWindowDimensions();
-  const fullWidth = width ?? academyCardWidth(screenWidth);
-  // באנרי הקורסים 16:9 תמיד — בלי חיתוך. כשאין מספיק גובה (maxHeight) כל הכרטיס מוקטן
-  // ברוחב (וממורכז), כך שהתמונה נשארת שלמה והכרטיסים נכנסים במסך בלי גלילה.
-  const [bodyHeight, setBodyHeight] = React.useState(0);
-  const cardWidth =
-    maxHeight && bodyHeight > 0
-      ? Math.max(
-          Math.round(fullWidth * MIN_WIDTH_RATIO),
-          Math.min(fullWidth, Math.floor(((maxHeight - bodyHeight) * 16) / 9))
-        )
-      : fullWidth;
+  const cardWidth = width ?? academyCardWidth(screenWidth);
+  // באנרי הקורסים 16:9 — אותו יחס בדיוק, בלי חיתוך
   const coverHeight = Math.round((cardWidth * 9) / 16);
   const styles = React.useMemo(
     () => createStyles(T, coverHeight, cardWidth),
@@ -128,41 +113,35 @@ export const CourseCard: React.FC<CourseCardProps> = ({
           />
         </View>
 
-        <View
-          style={[styles.body, fillHeight && styles.fillFlex]}
-          onLayout={(e) => {
-            const h = Math.round(e.nativeEvent.layout.height);
-            setBodyHeight((prev) => (prev === h ? prev : h));
-          }}
-        >
-          <View style={styles.titleBlock}>
-            <Text style={styles.title} numberOfLines={1}>
-              {course.title}
-            </Text>
-            {subtitle ? (
-              <Text style={styles.subtitle} numberOfLines={1}>
-                {subtitle}
+        {/* חלק תחתון קומפקטי — שם ותת-כותרת לצד כפתור קטן, ופס התקדמות מתחת */}
+        <View style={[styles.body, fillHeight && styles.fillFlex]}>
+          <View style={styles.headerRow}>
+            <View pointerEvents="none" style={styles.ctaSlot}>
+              <UIButton title={ctaLabel} variant="primary" size="sm" haptic={false} />
+            </View>
+            <View style={styles.titleBlock}>
+              <Text style={styles.title} numberOfLines={1}>
+                {course.title}
               </Text>
-            ) : null}
-          </View>
-
-          {/* התקדמות בכל כרטיס — 0% למי שעוד לא התחיל */}
-          <View style={styles.progressRow}>
-            <View style={styles.progressTrack}>
-              <View
-                style={[
-                  styles.progressFill,
-                  {
-                    width: `${Math.min(100, Math.max(0, progressPct))}%`,
-                    backgroundColor: accent,
-                  },
-                ]}
-              />
+              {subtitle ? (
+                <Text style={styles.subtitle} numberOfLines={1}>
+                  {subtitle}
+                </Text>
+              ) : null}
             </View>
           </View>
 
-          <View pointerEvents="none" style={[styles.ctaSlot, fillHeight && { marginTop: 'auto' }]}>
-            <UIButton title={ctaLabel} variant="primary" fullWidth haptic={false} />
+          {/* התקדמות בכל כרטיס — 0 למי שעוד לא התחיל */}
+          <View style={styles.progressTrack}>
+            <View
+              style={[
+                styles.progressFill,
+                {
+                  width: `${Math.min(100, Math.max(0, progressPct))}%`,
+                  backgroundColor: accent,
+                },
+              ]}
+            />
           </View>
         </View>
       </UICard>
@@ -178,7 +157,6 @@ const createStyles = (
   StyleSheet.create({
     wrapper: {
       width: cardWidth,
-      alignSelf: 'center',
       direction: ROOT_DIR,
     },
     fill: {
@@ -226,8 +204,16 @@ const createStyles = (
       alignItems: 'stretch',
       width: '100%',
     },
-    titleBlock: {
+    // בשורש ROOT_DIR: row = כפתור בצד הנגדי לטקסט (שמאל בעברית, ימין באנגלית)
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
       width: '100%',
+    },
+    titleBlock: {
+      flex: 1,
+      minWidth: 0,
       alignItems: 'stretch',
     },
     title: {
@@ -239,15 +225,8 @@ const createStyles = (
       // appCardSubtitleStyle נושא צבע קבוע של מצב כהה — לפי ה-theme
       color: T.colors.text.secondary,
     },
-    progressRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-      marginTop: 2,
-      width: '100%',
-    },
     progressTrack: {
-      flex: 1,
+      width: '100%',
       height: 4,
       borderRadius: 2,
       backgroundColor: T.colors.border.divider,
@@ -259,7 +238,6 @@ const createStyles = (
       alignSelf: 'flex-end',
     },
     ctaSlot: {
-      marginTop: APP_LAYOUT.stackGapSmall,
-      width: '100%',
+      flexShrink: 0,
     },
   });

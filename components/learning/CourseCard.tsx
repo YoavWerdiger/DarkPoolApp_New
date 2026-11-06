@@ -127,7 +127,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
                 {course.title}
               </Text>
               {subtitle ? (
-                <Text style={styles.subtitle} numberOfLines={1}>
+                <Text style={styles.subtitle} numberOfLines={2}>
                   {subtitle}
                 </Text>
               ) : null}
@@ -200,9 +200,10 @@ const createStyles = (
     },
     body: {
       paddingHorizontal: APP_LAYOUT.cardPadding,
-      paddingTop: APP_LAYOUT.cardPadding,
-      paddingBottom: APP_LAYOUT.cardPadding,
-      gap: APP_LAYOUT.cardTitleToBodyGap,
+      // קצת יותר אוויר לטקסט: ריפוד אנכי 18 ותת-כותרת עד שתי שורות
+      paddingTop: APP_LAYOUT.cardPadding + 2,
+      paddingBottom: APP_LAYOUT.cardPadding + 2,
+      gap: APP_LAYOUT.cardTitleToBodyGap + 2,
       direction: ROOT_DIR,
       alignItems: 'stretch',
       width: '100%',
@@ -211,7 +212,7 @@ const createStyles = (
     headerRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 12,
+      gap: 14,
       width: '100%',
     },
     titleBlock: {

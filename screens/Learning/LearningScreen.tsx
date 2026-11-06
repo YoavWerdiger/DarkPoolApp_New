@@ -20,7 +20,7 @@ import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import UICard from '../../components/ui/UICard';
 import UIButton from '../../components/ui/UIButton';
 import { APP_LAYOUT } from '../../components/ui/appLayout';
-import { appPhysicalRightText } from '../../components/ui/appType';
+import { appGroupLabelStyle, appPhysicalRightText } from '../../components/ui/appType';
 import {
   ACADEMY_TYPE,
   academySectionTitleStyle,
@@ -53,8 +53,6 @@ import { courseService } from '../../services/courseService';
 import { mediaService } from '../../services/mediaService';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
-import { sheetContentBottomPadding } from '../../components/ui/BottomSheet/sheetGlass';
 import { CourseTeaserLock, isCourseTeaserLocked } from '../../components/learning/CourseTeaserLock';
 import { CourseCompletionOverlay } from '../../components/learning/CourseCompletionOverlay';
 import { BlurTargetView } from 'expo-blur';
@@ -210,10 +208,6 @@ function LearningScreen() {
   const DesignTokens = useDesignTokens();
   const { isDarkMode } = useTheme();
   const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
-  const notesSheetBottomPad = useMemo(
-    () => sheetContentBottomPadding(insets.bottom),
-    [insets.bottom],
-  );
   const handleBackToAcademy = useCallback(() => {
     (navigation as { navigate: (n: string) => void }).navigate('CoursesScreen');
   }, [navigation]);
@@ -225,7 +219,11 @@ function LearningScreen() {
   const [lessonProgress, setLessonProgress] = useState(0); // התקדמות השיעור הנוכחי
   const [totalProgress, setTotalProgress] = useState(0); // התקדמות כללית של הקורס
   const [userNotes, setUserNotes] = useState(''); // הערות המשתמש
-  const [notesModalVisible, setNotesModalVisible] = useState(false);
+  // הערות בתוך דף השיעור — נשמרות אוטומטית
+  const [notesSaveState, setNotesSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const notesBaselineRef = useRef(''); // הטקסט האחרון שנשמר / נטען
+  const notesLessonIdRef = useRef<string | null>(null); // השיעור שההערות הנוכחיות שייכות אליו
+  const notesPendingRef = useRef<{ lessonId: string; text: string } | null>(null);
   const textInputRef = useRef<TextInput>(null);
   const [showLinkDialog, setShowLinkDialog] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
@@ -241,7 +239,6 @@ function LearningScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [editingText, setEditingText] = useState('');
   const [lastSavedContent, setLastSavedContent] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
   const [isLoadingNotes, setIsLoadingNotes] = useState(false);
   const [courseData, setCourseData] = useState<any>(null); // נתוני הקורס מהמסד
   const [lessonsData, setLessonsData] = useState<any[]>([]); // נתוני השיעורים מהמסד
@@ -677,6 +674,12 @@ function LearningScreen() {
   // טעינת הערות משתמש
   const loadUserNotes = async (lessonId: string) => {
     if (!user || !courseData) return;
+    const applyLoadedNotes = (text: string) => {
+      notesBaselineRef.current = text;
+      notesLessonIdRef.current = lessonId;
+      setNotesSaveState('idle');
+      setUserNotes(text);
+    };
     
     try {
       const notes = await learningProgressService.getUserNotes(user.id, courseData.id, lessonId);
@@ -690,19 +693,19 @@ function LearningScreen() {
               .filter(element => element.type === 'text')
               .map(element => element.content)
               .join('\n');
-            setUserNotes(textContent);
+            applyLoadedNotes(textContent);
           } else {
-            setUserNotes(notes.notes_content);
+            applyLoadedNotes(notes.notes_content);
           }
         } catch {
           // זה טקסט רגיל
-          setUserNotes(notes.notes_content);
+          applyLoadedNotes(notes.notes_content);
         }
       } else {
-        setUserNotes('');
+        applyLoadedNotes('');
       }
     } catch (error) {
-      setUserNotes('');
+      applyLoadedNotes('');
     }
   };
 
@@ -961,6 +964,40 @@ function LearningScreen() {
     setIsEditing(false);
     setEditingText('');
   };
+
+  // שמירה אוטומטית של ההערות — 900ms אחרי שמפסיקים להקליד
+  useEffect(() => {
+    const lessonId = notesLessonIdRef.current;
+    if (!lessonId || !selectedLesson || lessonId !== selectedLesson.id) return;
+    if (userNotes === notesBaselineRef.current) return;
+    const text = userNotes;
+    notesPendingRef.current = { lessonId, text };
+    setNotesSaveState('saving');
+    const t = setTimeout(async () => {
+      try {
+        await saveUserNotes(lessonId, text);
+        if (notesLessonIdRef.current === lessonId) notesBaselineRef.current = text;
+        if (notesPendingRef.current?.text === text) notesPendingRef.current = null;
+        setNotesSaveState('saved');
+      } catch {
+        setNotesSaveState('idle');
+      }
+    }, 900);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userNotes]);
+
+  // יציאה משיעור / מעבר לשיעור אחר — שומרים מה שעוד לא נשמר
+  useEffect(() => {
+    return () => {
+      const pending = notesPendingRef.current;
+      if (pending) {
+        notesPendingRef.current = null;
+        void saveUserNotes(pending.lessonId, pending.text);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedLesson?.id]);
 
   // טעינת הערות קיימות
   const loadExistingNotes = async (lessonId: string) => {
@@ -1617,6 +1654,9 @@ function LearningScreen() {
             style={styles.contentSection}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.contentContainer}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
+            automaticallyAdjustKeyboardInsets
           >
             {/* וידאו — בתוך כרטיסיית זכוכית */}
             <UICard variant="blur" padding="none" style={styles.lessonVideoCard}>
@@ -1783,7 +1823,7 @@ function LearningScreen() {
               <Text style={styles.lessonPlayerIndex}>{i18n.t('auto.screens__Learning__LearningScreen.s41', { v0: lessonNumberLabel })}</Text>
               <Text style={styles.lessonPlayerTitle}>{selectedLesson.title}</Text>
               {lessonDescriptionDisplay ? (
-                <Text style={styles.lessonDescription} numberOfLines={4}>
+                <Text style={styles.lessonDescription}>
                   {lessonDescriptionDisplay}
                 </Text>
               ) : null}
@@ -1860,113 +1900,14 @@ function LearningScreen() {
               </View>
             </UICard>
 
-            {/* הערות אישיות — שורת הגדרות סטנדרטית */}
-            <UICard variant="soft" padding="none" style={styles.lessonGlassCard}>
-              <TouchableOpacity
-                onPress={() => {
-                  void HapticFeedback.impactLight();
-                  setNotesModalVisible(true);
-                }}
-                activeOpacity={0.7}
-                style={styles.notesSettingsRow}
-              >
-                <ChevronLeft size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
-                <View style={styles.notesSettingsTextCol}>
-                  <Text style={styles.notesSettingsTitle}>{i18n.t('auto.screens__Learning__LearningScreen.s46')}</Text>
-                  <Text style={styles.notesSettingsSubtitle} numberOfLines={2}>
-                    {userNotes.trim()
-                      ? userNotes.length > 80
-                        ? `${userNotes.substring(0, 80)}...`
-                        : userNotes
-                      : i18n.t('auto.screens__Learning__LearningScreen.s47')}
-                  </Text>
-                </View>
-                <View style={styles.notesSettingsIcon}>
-                  <Edit3 size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-                </View>
-              </TouchableOpacity>
-            </UICard>
-          </ScrollView>
-          </View>
-        {/* Notes Bottom Sheet */}
-        <BottomSheet
-          isOpen={notesModalVisible}
-          onClose={() => {
-            if (!isSaving) {
-              setNotesModalVisible(false);
-            }
-          }}
-          snapPoints={[0.85]}
-          enablePanDownToClose={!isSaving}
-          edgeToEdge
-          showHandle
-          showBrandBackground={false}
-          showBrandWatermark={false}
-          contentPaddingBottom={0}
-          topCornerRadius={28}
-          avoidKeyboard
-        >
-          <View style={styles.notesSheetContent}>
-            <View style={styles.notesSheetHeader}>
-              <DayNavBlurButton
-                onPress={() => {
-                  if (!userNotes.length || isSaving) return;
-                  void HapticFeedback.selection();
-                  setUserNotes('');
-                }}
-                size={DAY_NAV_BUTTON_SIZE}
-                accessibilityLabel={i18n.t('auto.screens__Learning__LearningScreen.s48')}
-                style={{ backgroundColor: DesignTokens.colors.background.primary }}
-              >
-                <Ionicons
-                  name="trash-outline"
-                  size={20}
-                  color={
-                    !userNotes.length || isSaving
-                      ? DesignTokens.colors.text.tertiary
-                      : DesignTokens.colors.text.danger
-                  }
-                />
-              </DayNavBlurButton>
-
-              <View pointerEvents="none" style={styles.notesSheetTitleWrap}>
-                <Text
-                  style={[styles.notesSheetHeaderTitle, { color: DesignTokens.colors.text.primary }]}
-                  numberOfLines={1}
-                >{i18n.t('auto.screens__Learning__LearningScreen.s46')}</Text>
-              </View>
-
-              <DayNavBlurButton
-                onPress={() => !isSaving && setNotesModalVisible(false)}
-                size={DAY_NAV_BUTTON_SIZE}
-                accessibilityLabel={i18n.t('auto.screens__Learning__LearningScreen.s49')}
-                style={{ backgroundColor: DesignTokens.colors.background.primary }}
-              >
-                <Ionicons name={dirIcon('chevron-forward')} size={22} color={DesignTokens.colors.text.primary} />
-              </DayNavBlurButton>
-            </View>
-
-            <ScrollView
-              style={styles.notesSheetScroll}
-              contentContainerStyle={styles.notesSheetScrollContent}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              keyboardDismissMode="on-drag"
-            >
-              <View
-                style={[
-                  styles.notesSheetInputShell,
-                  {
-                    direction: ROOT_DIR,
-                    backgroundColor: DesignTokens.colors.background.primary,
-                    borderColor: DesignTokens.colors.border.divider,
-                  },
-                ]}
-              >
+            {/* הערות אישיות — אזור כתיבה בתוך הדף, נשמר אוטומטית */}
+            <View style={styles.lessonNotesSection}>
+              <Text style={styles.lessonNotesLabel}>{i18n.t('auto.screens__Learning__LearningScreen.s46')}</Text>
+              <UICard variant="soft" padding="none" style={styles.lessonGlassCard}>
                 <TextInput
                   ref={textInputRef}
                   style={[
-                    styles.notesSheetInput,
+                    styles.lessonNotesInput,
                     appPhysicalRightText,
                     { color: DesignTokens.colors.text.primary, textAlign: 'right' },
                     Platform.OS === 'android' && { includeFontPadding: false },
@@ -1976,40 +1917,21 @@ function LearningScreen() {
                   value={userNotes}
                   onChangeText={setUserNotes}
                   multiline
-                  autoFocus
+                  scrollEnabled={false}
                   textAlign="right"
                   textAlignVertical="top"
                 />
-              </View>
-
-              <Text style={[styles.notesSheetHint, { color: DesignTokens.colors.text.tertiary }]}>{i18n.t('auto.screens__Learning__LearningScreen.s51')}</Text>
-            </ScrollView>
-
-            <View style={[styles.notesSheetFooter, { paddingBottom: notesSheetBottomPad }]}>
-              <UIButton
-                title={i18n.t('auto.screens__Learning__LearningScreen.s52')}
-                variant="primary"
-                fullWidth
-                loading={isSaving}
-                disabled={isSaving || !selectedLesson}
-                onPress={async () => {
-                  if (selectedLesson && !isSaving) {
-                    try {
-                      setIsSaving(true);
-                      await saveUserNotes(selectedLesson.id, userNotes);
-                      legacyAlert(i18n.t('auto.screens__Learning__LearningScreen.s53'), i18n.t('auto.screens__Learning__LearningScreen.s54'));
-                      setNotesModalVisible(false);
-                    } catch (error) {
-                      legacyAlert(i18n.t('auto.screens__Learning__LearningScreen.s26'), i18n.t('auto.screens__Learning__LearningScreen.s55'));
-                    } finally {
-                      setIsSaving(false);
-                    }
-                  }
-                }}
-              />
+              </UICard>
+              <Text style={styles.lessonNotesHint}>
+                {notesSaveState === 'saving'
+                  ? i18n.t('auto.screens__Learning__LearningScreen.notesSaving')
+                  : notesSaveState === 'saved'
+                    ? i18n.t('auto.screens__Learning__LearningScreen.notesSaved')
+                    : i18n.t('auto.screens__Learning__LearningScreen.s51')}
+              </Text>
             </View>
+          </ScrollView>
           </View>
-        </BottomSheet>
 
         {/* Link Dialog */}
         <Modal
@@ -2452,13 +2374,33 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   lessonMainContent: {
     flex: 1,
   },
+  lessonNotesSection: {
+    width: '100%',
+  },
+  lessonNotesLabel: {
+    ...appGroupLabelStyle,
+    color: tokens.colors.text.secondary,
+  },
+  lessonNotesInput: {
+    ...ACADEMY_TYPE.body,
+    minHeight: 160,
+    paddingHorizontal: APP_LAYOUT.cardPadding,
+    paddingTop: APP_LAYOUT.cardPadding,
+    paddingBottom: APP_LAYOUT.cardPadding,
+    writingDirection: TEXT_DIR,
+  },
+  lessonNotesHint: {
+    ...ACADEMY_TYPE.caption,
+    marginTop: tokens.spacing.sm,
+    color: tokens.colors.text.tertiary,
+    textAlign: 'right',
+    writingDirection: TEXT_DIR,
+  },
   lessonGlassCard: {
-    marginBottom: tokens.spacing.lg,
     borderRadius: ACADEMY_CARD_RADIUS,
     overflow: 'hidden',
   },
   lessonVideoCard: {
-    marginBottom: tokens.spacing.lg,
     borderRadius: ACADEMY_CARD_RADIUS,
     backgroundColor: '#000',
     overflow: 'hidden',
@@ -2502,22 +2444,18 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     paddingHorizontal: ACADEMY_CARD_HP,
     paddingTop: tokens.spacing.md,
     paddingBottom: tokens.spacing['5xl'],
+    // מרווח אחיד בין כל הכרטיסים בדף השיעור
+    gap: APP_LAYOUT.cardStackGap,
   },
   lessonPlayerProgressBlock: {
     width: '100%',
     marginTop: APP_LAYOUT.cardTitleToBodyGap,
-    paddingTop: APP_LAYOUT.cardTitleToBodyGap,
-    borderTopWidth: 1,
-    borderTopColor: tokens.colors.border.divider,
     gap: tokens.spacing.sm,
   },
   lessonPlayerProgressBlockCompact: {
-    marginTop: 0,
-    paddingTop: 0,
-    borderTopWidth: 0,
+    marginTop: APP_LAYOUT.stackGapSmall,
   },
   lessonNavShell: {
-    marginBottom: tokens.spacing.lg,
     borderRadius: tokens.borderRadius.full,
     overflow: 'hidden',
   },
@@ -3380,7 +3318,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: tokens.spacing.sm,
   },
   progressTimeText: {
     ...ACADEMY_TYPE.caption,
@@ -3395,7 +3332,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     backgroundColor: tokens.colors.background.tertiary,
     borderRadius: 3,
     overflow: 'hidden',
-    marginBottom: tokens.spacing.sm,
     borderWidth: 0,
   },
   progressBarFill: {

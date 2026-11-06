@@ -1033,7 +1033,9 @@
     "s68": "Concepts and strategy",
     "s69": "A few things before we finish",
     "s70": "Scroll to top",
-    "s71": "Scroll to my progress"
+    "s71": "Scroll to my progress",
+    "notesSaving": "Saving…",
+    "notesSaved": "Saved"
   },
   "screens__Learning__LessonPlayerScreen": {
     "s1": "Error",

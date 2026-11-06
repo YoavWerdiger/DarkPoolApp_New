@@ -121,15 +121,12 @@ export const MyNotesScreen: React.FC = () => {
           activeOpacity={0.88}
           style={styles.noteWrap}
           accessibilityRole="button"
-          accessibilityLabel={i18n.t('auto.screens__Learning__MyNotesScreen.s5', { v0: item.lesson_title || 'שיעור' })}
+          accessibilityLabel={i18n.t('auto.screens__Learning__MyNotesScreen.s5', {
+            v0: item.lesson_title || i18n.t('auto.screens__Learning__MyNotesScreen.s7'),
+          })}
         >
-          <UICard
-            variant="blur"
-            glassIntensity="subtle"
-            padding="md"
-            showGlassBorder={false}
-            style={styles.noteCard}
-          >
+          {/* אותו כרטיס כמו כרטיסי הקורסים באקדמיה */}
+          <UICard variant="soft" padding="md" style={styles.noteCard}>
             <View style={styles.noteHeader}>
               <View style={styles.noteInfo}>
                 <Text style={styles.noteCourseTitle} numberOfLines={1}>
@@ -174,7 +171,7 @@ export const MyNotesScreen: React.FC = () => {
     <View style={styles.emptyState}>
       <View style={styles.emptyIconWrap}>
         <Ionicons
-          name="document-text-outline"
+          name="book-outline"
           size={40}
           color={DesignTokens.colors.text.tertiary}
         />
@@ -184,43 +181,42 @@ export const MyNotesScreen: React.FC = () => {
     </View>
   );
 
-  if (isLoading) {
-    return (
-      <ScreenChrome>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-          <Text style={styles.loadingText}>{i18n.t('auto.screens__Learning__MyNotesScreen.s12')}</Text>
-        </View>
-      </ScreenChrome>
-    );
-  }
-
   return (
     <ScreenChrome>
       <SafeAreaView edges={['top']} style={styles.safeAreaContainer}>
+        {/* הכותרת וכפתור החזרה גם בזמן טעינה — כמו שאר מסכי המשנה */}
         <AcademySubScreenBar
           onBackPress={() => navigation.goBack()}
           title={i18n.t('auto.screens__Learning__MyNotesScreen.s13')}
-          subtitle={i18n.t('auto.screens__Learning__MyNotesScreen.s14', { v0: notes.length })}
+          subtitle={
+            isLoading ? undefined : i18n.t('auto.screens__Learning__MyNotesScreen.s14', { v0: notes.length })
+          }
         />
 
-        <View style={[styles.listShell, { marginBottom: Math.max(0, mainTabsHeight - 12) }]}>
-          <FlatList
-            data={notes}
-            renderItem={renderNote}
-            keyExtractor={(item, index) => item.id || `note-${index}`}
-            contentContainerStyle={styles.listContainer}
-            ListEmptyComponent={renderEmptyState}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={handleRefresh}
-                tintColor={DesignTokens.colors.primary.main}
-              />
-            }
-            showsVerticalScrollIndicator={false}
-          />
-        </View>
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
+            <Text style={styles.loadingText}>{i18n.t('auto.screens__Learning__MyNotesScreen.s12')}</Text>
+          </View>
+        ) : (
+          <View style={[styles.listShell, { marginBottom: Math.max(0, mainTabsHeight - 12) }]}>
+            <FlatList
+              data={notes}
+              renderItem={renderNote}
+              keyExtractor={(item, index) => item.id || `note-${index}`}
+              contentContainerStyle={styles.listContainer}
+              ListEmptyComponent={renderEmptyState}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={handleRefresh}
+                  tintColor={DesignTokens.colors.primary.main}
+                />
+              }
+              showsVerticalScrollIndicator={false}
+            />
+          </View>
+        )}
       </SafeAreaView>
     </ScreenChrome>
   );

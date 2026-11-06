@@ -53,6 +53,9 @@ export const CoursesScreen: React.FC = () => {
   const mainTabsHeight = useMainTabsHeight();
   const [refreshing, setRefreshing] = useState(false);
   const [infoCourse, setInfoCourse] = useState<CourseWithProgress | null>(null);
+  // גובה אזור הגלילה ומיקום הרשימה בו — כדי שכל הכרטיסים ייכנסו במסך בלי גלילה
+  const [viewportHeight, setViewportHeight] = useState(0);
+  const [listTop, setListTop] = useState(0);
 
   const openMainDrawer = useCallback(() => {
     void triggerDrawerMenuHaptic();
@@ -189,18 +192,33 @@ export const CoursesScreen: React.FC = () => {
 
   const orderedCourses = useMemo(() => selectAcademyCatalogCourses(courses), [courses]);
   // רשימה אנכית: הלווייתנים ומתחתיהם האורקל (הסדר מ-selectAcademyCatalogCourses)
-  const renderCourseList = (list: CourseWithProgress[]) => (
-    <View style={styles.courseList}>
-      {list.map((course) => (
-        <CourseCard
-          key={course.id}
-          course={course}
-          onPress={handleCardPress}
-          onEnroll={course.enrollment ? undefined : handleEnroll}
-        />
-      ))}
-    </View>
-  );
+  const listBottomPadding = mainTabsHeight + 28;
+  const renderCourseList = (list: CourseWithProgress[]) => {
+    const available = viewportHeight - listTop - listBottomPadding;
+    const cardMaxHeight =
+      viewportHeight > 0 && listTop > 0 && list.length > 0
+        ? Math.floor((available - APP_LAYOUT.cardStackGap * (list.length - 1)) / list.length)
+        : undefined;
+    return (
+      <View
+        style={styles.courseList}
+        onLayout={(e) => {
+          const y = Math.round(e.nativeEvent.layout.y);
+          setListTop((prev) => (prev === y ? prev : y));
+        }}
+      >
+        {list.map((course) => (
+          <CourseCard
+            key={course.id}
+            course={course}
+            maxHeight={cardMaxHeight}
+            onPress={handleCardPress}
+            onEnroll={course.enrollment ? undefined : handleEnroll}
+          />
+        ))}
+      </View>
+    );
+  };
 
   if (error) {
     return (
@@ -226,7 +244,11 @@ export const CoursesScreen: React.FC = () => {
       <RNSafeAreaView style={styles.flex} edges={['top']}>
         <ScrollView
           style={styles.flex}
-          contentContainerStyle={{ paddingBottom: mainTabsHeight + 28 }}
+          contentContainerStyle={{ paddingBottom: listBottomPadding }}
+          onLayout={(e) => {
+            const h = Math.round(e.nativeEvent.layout.height);
+            setViewportHeight((prev) => (prev === h ? prev : h));
+          }}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
@@ -278,9 +300,7 @@ export const CoursesScreen: React.FC = () => {
               </Text>
             </View>
           ) : (
-            <View style={styles.sections}>
-              {renderCourseList(orderedCourses)}
-            </View>
+            renderCourseList(orderedCourses)
           )}
         </ScrollView>
       </RNSafeAreaView>
@@ -297,10 +317,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
   StyleSheet.create({
     flex: {
       flex: 1,
-    },
-    sections: {
-      width: '100%',
-      gap: APP_LAYOUT.sectionGap,
     },
     courseList: {
       paddingHorizontal: ACADEMY_CARD_HP,

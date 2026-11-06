@@ -23,6 +23,7 @@ import {
 } from './academyCardLayout';
 import { APP_LAYOUT } from '../ui/appLayout';
 import {
+  appCaptionStyle,
   appCardSubtitleStyle,
   appCardTitleStyle,
 } from '../ui/appType';
@@ -43,19 +44,30 @@ interface CourseCardProps {
   width?: number;
   /** בשורה אופקית: למתוח לגובה הכרטיס הגבוה בשורה (כל הכרטיסים באותו אורך, CTA בתחתית) */
   fillHeight?: boolean;
+  /** גובה מקסימלי לכרטיס — התמונה מתכווצת (חיתוך cover) כדי שהכרטיסים ייכנסו במסך בלי גלילה */
+  maxHeight?: number;
 }
+
+/** גובה תמונה מינימלי כשהכרטיס מתכווץ */
+const MIN_COVER_HEIGHT = 96;
 
 export const CourseCard: React.FC<CourseCardProps> = ({
   course,
   onPress,
   width,
   fillHeight = false,
+  maxHeight,
 }) => {
   const T = useDesignTokens();
   const { width: screenWidth } = useWindowDimensions();
   const cardWidth = width ?? academyCardWidth(screenWidth);
-  // באנרי הקורסים 16:9 — אותו יחס בדיוק, בלי חיתוך בצדדים
-  const coverHeight = Math.round((cardWidth * 9) / 16);
+  // באנרי הקורסים 16:9 — אותו יחס בדיוק, בלי חיתוך בצדדים; עם maxHeight התמונה מתקצרת
+  const naturalCoverHeight = Math.round((cardWidth * 9) / 16);
+  const [bodyHeight, setBodyHeight] = React.useState(0);
+  const coverHeight =
+    maxHeight && bodyHeight > 0
+      ? Math.max(MIN_COVER_HEIGHT, Math.min(naturalCoverHeight, Math.floor(maxHeight - bodyHeight)))
+      : naturalCoverHeight;
   const styles = React.useMemo(
     () => createStyles(T, coverHeight, cardWidth),
     [T, coverHeight, cardWidth]
@@ -113,19 +125,26 @@ export const CourseCard: React.FC<CourseCardProps> = ({
           />
         </View>
 
-        <View style={[styles.body, fillHeight && styles.fillFlex]}>
+        <View
+          style={[styles.body, fillHeight && styles.fillFlex]}
+          onLayout={(e) => {
+            const h = Math.round(e.nativeEvent.layout.height);
+            setBodyHeight((prev) => (prev === h ? prev : h));
+          }}
+        >
           <View style={styles.titleBlock}>
             <Text style={styles.title} numberOfLines={2}>
               {course.title}
             </Text>
             {subtitle ? (
-              <Text style={styles.subtitle} numberOfLines={2}>
+              <Text style={styles.subtitle} numberOfLines={1}>
                 {subtitle}
               </Text>
             ) : null}
           </View>
 
-          {isEnrolled ? (
+          {/* התקדמות בכל כרטיס — 0% למי שעוד לא התחיל */}
+          <View style={styles.progressRow}>
             <View style={styles.progressTrack}>
               <View
                 style={[
@@ -137,7 +156,8 @@ export const CourseCard: React.FC<CourseCardProps> = ({
                 ]}
               />
             </View>
-          ) : null}
+            <Text style={styles.progressText}>{Math.round(Math.min(100, Math.max(0, progressPct)))}%</Text>
+          </View>
 
           <View pointerEvents="none" style={[styles.ctaSlot, fillHeight && { marginTop: 'auto' }]}>
             <UIButton title={ctaLabel} variant="primary" fullWidth haptic={false} />
@@ -216,13 +236,25 @@ const createStyles = (
       // appCardSubtitleStyle נושא צבע קבוע של מצב כהה — לפי ה-theme
       color: T.colors.text.secondary,
     },
+    progressRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginTop: 2,
+      width: '100%',
+    },
     progressTrack: {
+      flex: 1,
       height: 4,
       borderRadius: 2,
       backgroundColor: T.colors.border.divider,
       overflow: 'hidden',
-      marginTop: 2,
-      width: '100%',
+    },
+    progressText: {
+      ...appCaptionStyle,
+      color: T.colors.text.secondary,
+      fontVariant: ['tabular-nums'],
+      writingDirection: 'ltr',
     },
     progressFill: {
       height: '100%',

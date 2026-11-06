@@ -44,7 +44,6 @@ import {
   getAcademyCourseSubtitle,
   getAcademyCourseTier,
   getCourseDurationMinutes,
-  getCourseLessonStats,
 } from './academyCourses';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
@@ -103,13 +102,9 @@ function CourseInfoBody({
   const subtitle = getAcademyCourseSubtitle(course);
   const audience = getAcademyCourseAudience(course);
   const about = courseAboutText(course.description);
-  const { totalLessons } = getCourseLessonStats(course);
   const minutes = getCourseDurationMinutes(priced);
 
   const meta = [
-    totalLessons > 0
-      ? i18n.t('auto.components__learning__CourseInfoSheet.s1', { count: totalLessons })
-      : null,
     minutes > 0
       ? i18n.t('auto.components__learning__CourseInfoSheet.s2', { count: minutes })
       : null,

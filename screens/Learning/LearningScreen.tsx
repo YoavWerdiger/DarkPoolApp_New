@@ -4,7 +4,7 @@ import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Animated, Dimensions, Platform, TextInput, TouchableWithoutFeedback, Keyboard, Modal, Linking, ActivityIndicator, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Animated, Dimensions, Platform, TextInput, TouchableWithoutFeedback, Keyboard, Modal, Linking, ActivityIndicator, useWindowDimensions, RefreshControl } from 'react-native';
 // import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -517,6 +517,18 @@ function LearningScreen() {
       lastProgressPercentageRef.current = 0;
     };
   }, [selectedLesson?.id, isYouTubePlayerReady]);
+
+  // משיכה לרענון — השיעורים נטענים רק בכניסה למסך, אז שינויים במסד (שיעור שהוסתר, סרטון חדש) מתעדכנים כאן
+  const [refreshingLessons, setRefreshingLessons] = useState(false);
+  const handleRefreshLessons = async () => {
+    setRefreshingLessons(true);
+    try {
+      await loadCourseData();
+    } finally {
+      setRefreshingLessons(false);
+      void HapticFeedback.impactLight();
+    }
+  };
 
   // טעינת נתונים מהמסד — אחרי סיום ה-slide, כדי לא לחנוק את המעבר
   useEffect(() => {
@@ -2133,6 +2145,13 @@ function LearningScreen() {
             ref={courseListScrollRef}
             showsVerticalScrollIndicator={false}
             style={{ flex: 1 }}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshingLessons}
+                onRefresh={handleRefreshLessons}
+                tintColor={DesignTokens.colors.primary.main}
+              />
+            }
             onScroll={handleCourseListScroll}
             scrollEventThrottle={16}
             onLayout={(e) => {

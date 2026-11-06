@@ -12,8 +12,11 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
   type LayoutChangeEvent,
 } from 'react-native';
+import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomSheet, {
   BOTTOM_SHEET_EDGE_HANDLE_HEIGHT,
@@ -24,11 +27,13 @@ import { useDesignTokens } from '../ui/DesignTokens';
 import { APP_LAYOUT } from '../ui/appLayout';
 import {
   appBodyTextStyle,
-  appCardMetricLabelStyle,
-  appCardSubtitleStyle,
+  appCaptionStyle,
+  appGroupLabelStyle,
+  appSheetSubtitleStyle,
   appSheetTitleStyle,
 } from '../ui/appType';
 import { ACADEMY_TYPE } from './academyLayout';
+import { ACADEMY_CARD_RADIUS } from './academyCardLayout';
 import { CourseWithProgress } from '../../types/learning';
 import {
   getAcademyCourseAudience,
@@ -80,7 +85,10 @@ function CourseInfoBody({
   const tokens = useDesignTokens();
   const insets = useSafeAreaInsets();
   const animatedClose = useBottomSheetClose();
-  const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const { width: screenWidth } = useWindowDimensions();
+  // תמונת הקורס ברוחב השיט (בתוך הריפוד), 16:9 כמו בכרטיס
+  const coverHeight = Math.round(((screenWidth - APP_LAYOUT.screenPaddingHorizontal * 2) * 9) / 16);
+  const styles = useMemo(() => createStyles(tokens, coverHeight), [tokens, coverHeight]);
   const [scrollH, setScrollH] = useState(0);
   const [footerH, setFooterH] = useState(0);
 
@@ -129,8 +137,24 @@ function CourseInfoBody({
         showsVerticalScrollIndicator={false}
         onContentSizeChange={(_, h) => setScrollH((prev) => (prev === h ? prev : h))}
       >
-        <View style={[styles.badge, { backgroundColor: badgeColor }]}>
-          <Text style={[styles.badgeText, { color: badgeTextColor }]}>{badgeLabel}</Text>
+        <View style={styles.cover}>
+          {course.cover_url ? (
+            <Image
+              source={{ uri: course.cover_url }}
+              style={StyleSheet.absoluteFill}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              recyclingKey={course.id}
+              transition={120}
+            />
+          ) : (
+            <View style={styles.coverPlaceholder}>
+              <Ionicons name="school-outline" size={48} color={tokens.colors.text.tertiary} />
+            </View>
+          )}
+          <View style={[styles.badge, { backgroundColor: badgeColor }]}>
+            <Text style={[styles.badgeText, { color: badgeTextColor }]}>{badgeLabel}</Text>
+          </View>
         </View>
 
         <Text style={styles.title}>{course.title}</Text>
@@ -213,7 +237,8 @@ export function CourseInfoSheet({ course, onClose, onOpenCourse }: CourseInfoShe
   );
 }
 
-function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
+function createStyles(tokens: ReturnType<typeof useDesignTokens>, coverHeight: number) {
+  // כל הטקסט מהסקאלה של appType (appPhysicalRightText) — מיושר לצד תחילת הקריאה לפי השפה, לא ממורכז
   return StyleSheet.create({
     root: {
       flex: 1,
@@ -225,18 +250,34 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     scrollContent: {
       paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
-      paddingTop: 6,
+      // מתחת לידית הגרירה הצפה (edgeToEdge)
+      paddingTop: 22,
       paddingBottom: 8,
       alignItems: 'stretch',
     },
+    cover: {
+      width: '100%',
+      height: coverHeight,
+      borderRadius: ACADEMY_CARD_RADIUS,
+      overflow: 'hidden',
+      backgroundColor: tokens.colors.background.secondary,
+      marginBottom: 16,
+    },
+    coverPlaceholder: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    // תג בפינה של צד תחילת הקריאה (start = ימין בעברית, שמאל באנגלית)
     badge: {
-      alignSelf: 'flex-start',
+      position: 'absolute',
+      top: 12,
+      start: 12,
       minHeight: 26,
       borderRadius: 13,
       paddingHorizontal: 12,
       paddingVertical: 3,
       justifyContent: 'center',
-      marginBottom: 12,
     },
     badgeText: {
       ...ACADEMY_TYPE.caption,
@@ -245,27 +286,30 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     title: {
       ...appSheetTitleStyle,
       color: tokens.colors.text.primary,
-      marginBottom: 4,
     },
     subtitle: {
-      ...appCardSubtitleStyle,
+      ...appSheetSubtitleStyle,
+      alignSelf: 'stretch',
+      marginTop: APP_LAYOUT.titleSubtitleGap,
       color: tokens.colors.text.secondary,
     },
     meta: {
-      ...appCardMetricLabelStyle,
-      color: tokens.colors.text.tertiary,
+      ...appCaptionStyle,
+      alignSelf: 'stretch',
       marginTop: 8,
+      color: tokens.colors.text.tertiary,
     },
     section: {
       marginTop: 20,
-      gap: APP_LAYOUT.cardMetricLabelToValueGap,
+      alignItems: 'stretch',
     },
     sectionLabel: {
-      ...appCardMetricLabelStyle,
-      color: tokens.colors.text.tertiary,
+      ...appGroupLabelStyle,
+      color: tokens.colors.text.secondary,
     },
     body: {
       ...appBodyTextStyle,
+      alignSelf: 'stretch',
       color: tokens.colors.text.primary,
     },
     footer: {

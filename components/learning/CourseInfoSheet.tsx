@@ -22,7 +22,7 @@ import BottomSheet, {
   BOTTOM_SHEET_EDGE_HANDLE_HEIGHT,
   useBottomSheetClose,
 } from '../ui/BottomSheet/BottomSheet';
-import { sheetContentBottomPadding } from '../ui/BottomSheet/sheetGlass';
+import { sheetSafeBottomInset } from '../ui/BottomSheet/sheetGlass';
 import UIButton from '../ui/UIButton';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { APP_LAYOUT } from '../ui/appLayout';
@@ -186,6 +186,8 @@ function CourseInfoBody({
 
 export function CourseInfoSheet({ course, onClose, onOpenCourse }: CourseInfoSheetProps) {
   const insets = useSafeAreaInsets();
+  // הכפתור צמוד ל-safe area (בלי התוספת הקבועה של השיטים, שהרימה אותו גבוה מדי)
+  const bottomPadding = sheetSafeBottomInset(insets.bottom) + 4;
   const [contentHeight, setContentHeight] = useState<number | null>(null);
   // שומר את הקורס האחרון כדי שהתוכן לא ייעלם בזמן אנימציית הסגירה
   const [shown, setShown] = useState<CourseWithProgress | null>(course);
@@ -199,13 +201,11 @@ export function CourseInfoSheet({ course, onClose, onOpenCourse }: CourseInfoShe
 
   const snapPoint = useMemo(() => {
     if (contentHeight != null && contentHeight > 0) {
-      // BottomSheet מוסיף בעצמו ריפוד safe area מתחת לתוכן — הכפתור לא מוסיף עוד אחד
-      const totalPx =
-        contentHeight + BOTTOM_SHEET_EDGE_HANDLE_HEIGHT + 4 + sheetContentBottomPadding(insets.bottom);
+      const totalPx = contentHeight + BOTTOM_SHEET_EDGE_HANDLE_HEIGHT + 4 + bottomPadding;
       return Math.min(MAX_SNAP, Math.max(0.3, totalPx / SCREEN_HEIGHT));
     }
     return 0.5;
-  }, [contentHeight, insets.bottom]);
+  }, [contentHeight, bottomPadding]);
 
   return (
     <BottomSheet
@@ -218,6 +218,7 @@ export function CourseInfoSheet({ course, onClose, onOpenCourse }: CourseInfoShe
       enablePanDownToClose
       useModal
       showBrandBackground={false}
+      contentPaddingBottom={bottomPadding}
     >
       {shown ? (
         <CourseInfoBody

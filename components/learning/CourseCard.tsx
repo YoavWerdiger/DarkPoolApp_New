@@ -23,7 +23,6 @@ import {
 } from './academyCardLayout';
 import { APP_LAYOUT } from '../ui/appLayout';
 import {
-  appCaptionStyle,
   appCardSubtitleStyle,
   appCardTitleStyle,
 } from '../ui/appType';
@@ -156,7 +155,6 @@ export const CourseCard: React.FC<CourseCardProps> = ({
                 ]}
               />
             </View>
-            <Text style={styles.progressText}>{Math.round(Math.min(100, Math.max(0, progressPct)))}%</Text>
           </View>
 
           <View pointerEvents="none" style={[styles.ctaSlot, fillHeight && { marginTop: 'auto' }]}>
@@ -249,12 +247,6 @@ const createStyles = (
       borderRadius: 2,
       backgroundColor: T.colors.border.divider,
       overflow: 'hidden',
-    },
-    progressText: {
-      ...appCaptionStyle,
-      color: T.colors.text.secondary,
-      fontVariant: ['tabular-nums'],
-      writingDirection: 'ltr',
     },
     progressFill: {
       height: '100%',

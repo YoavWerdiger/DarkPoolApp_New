@@ -355,6 +355,11 @@ function LearningScreen() {
   const [showCourseComplete, setShowCourseComplete] = useState(false);
   const courseCompleteArmedRef = useRef<boolean | null>(null);
   const availableLessonsCount = (Array.isArray(lessonsData) ? lessonsData : []).filter((l: any) => !l?.comingSoon).length;
+  // פיתוח בלבד: EXPO_PUBLIC_PREVIEW_COURSE_COMPLETE=1 — מציג את מסך סיום הקורס מיד כשהשיעורים נטענים (לבדיקת עיצוב)
+  useEffect(() => {
+    if (!__DEV__ || process.env.EXPO_PUBLIC_PREVIEW_COURSE_COMPLETE !== '1') return;
+    if (availableLessonsCount > 0) setShowCourseComplete(true);
+  }, [availableLessonsCount]);
   useEffect(() => {
     const available = (Array.isArray(lessonsData) ? lessonsData : []).filter((l: any) => !l?.comingSoon);
     if (!user || available.length === 0) return;

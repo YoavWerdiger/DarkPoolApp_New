@@ -1711,7 +1711,8 @@ function LearningScreen() {
               />
             ) : videoType === 'vimeo' && videoHTML ? (
               <WebView
-                source={{ html: videoHTML }}
+                // הסרטונים ב-Vimeo מוגבלים להטמעה בדומיינים מסוימים; בלי baseUrl הנגן נטען בלי דומיין ונחסם (403)
+                source={{ html: videoHTML, baseUrl: VIMEO_EMBED_BASE_URL }}
               style={styles.videoPlayer}
               allowsFullscreenVideo={true}
               mediaPlaybackRequiresUserAction={false}
@@ -2280,6 +2281,12 @@ function LearningScreen() {
     </ScreenChrome>
   );
 }
+
+/**
+ * הדומיין שממנו נגן Vimeo נטען — חייב להופיע ברשימת הדומיינים המותרים להטמעה של הסרטונים ב-Vimeo.
+ * כרגע my.schooler.biz (כבר מורשה בכל סרטוני הקורס). כשמוסיפים את darkpool.site ב-Vimeo — להחליף לכאן.
+ */
+const VIMEO_EMBED_BASE_URL = 'https://my.schooler.biz';
 
 const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.create({
   container: {

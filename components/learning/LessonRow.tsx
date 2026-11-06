@@ -83,6 +83,14 @@ export const LessonRow: React.FC<LessonRowProps> = ({
 
   const description = lesson.description?.trim() || null;
 
+  // התקדמות בשיעור: הושלם = 100; במסך הלווייתנים progress הוא אחוז צפייה (מספר)
+  const rawProgress = (lesson as { progress?: unknown }).progress;
+  const progressPct = isCompleted
+    ? 100
+    : typeof rawProgress === 'number'
+      ? Math.min(100, Math.max(0, rawProgress))
+      : 0;
+
   return (
     <UICard variant="soft" disableBlur padding="none" style={styles.card}>
       <TouchableOpacity
@@ -167,6 +175,18 @@ export const LessonRow: React.FC<LessonRowProps> = ({
               {i18n.t('auto.components__learning__LessonRow.s3')} {index + 1}
               {isComingSoon ? i18n.t('auto.components__learning__LessonRow.s4') : ''}
             </Text>
+
+            {/* פס התקדמות מתחת למספר השיעור — כמו בכרטיסי הקורסים */}
+            {!isComingSoon ? (
+              <View style={styles.progressTrack}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    { width: `${progressPct}%`, backgroundColor: T.colors.primary.main },
+                  ]}
+                />
+              </View>
+            ) : null}
 
             {description ? (
               <Text
@@ -304,6 +324,19 @@ function createStyles(T: ReturnType<typeof useDesignTokens>) {
       ...appCardSubtitleStyle,
       marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
       color: T.colors.text.secondary,
+    },
+    progressTrack: {
+      width: '100%',
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: T.colors.border.divider,
+      overflow: 'hidden',
+      marginTop: APP_LAYOUT.stackGapSmall,
+    },
+    progressFill: {
+      height: '100%',
+      borderRadius: 2,
+      alignSelf: 'flex-end',
     },
     title: {
       marginTop: 0,

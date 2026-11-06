@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Clock, Sun, Moon, ChevronUp } from 'lucide-react-native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { EarningsReportsListSkeleton } from '../../components/ui/SkeletonLoader';
-import EarningsService, { EarningsReport } from '../../services/earningsService';
+import EarningsService, { EarningsReport, earningsMarketCap } from '../../services/earningsService';
 import { supabase } from '../../lib/supabase';
 import { queryClient } from '../../lib/queryClient';
 import { appQueryKeys } from '../../lib/appQueryKeys';
@@ -798,11 +798,15 @@ export default function EarningsReportsTab({
       }
     };
 
+    // מוקדם / מאוחר נשארים בקבוצות; בתוך כל קבוצה — שווי שוק מהגבוה לנמוך
     return [...dateReports].sort((a, b) => {
       const pa = getPriority(a.before_after_market);
       const pb = getPriority(b.before_after_market);
       if (pa !== pb) return pa - pb;
-      return getTimeInIsrael(a) - getTimeInIsrael(b);
+      return (
+        earningsMarketCap(b) - earningsMarketCap(a) ||
+        getTimeInIsrael(a) - getTimeInIsrael(b)
+      );
     });
   }, [reportsByDate, selectedDate]);
   listLengthRef.current = filteredReports.length;
@@ -852,8 +856,9 @@ export default function EarningsReportsTab({
   const weekDays = useMemo<WeekDay[]>(() => {
     const monday = startOfWeekMonday(weekStart);
     const todayStr = new Date().toDateString();
+    // שווי שוק מהגבוה לנמוך (כמו בתצוגה היומית)
     const sortByImportance = (a: EarningsReport, b: EarningsReport) =>
-      (b.importance ?? 0) - (a.importance ?? 0) ||
+      earningsMarketCap(b) - earningsMarketCap(a) ||
       getWeeklySymbolDisplay(a.code).localeCompare(getWeeklySymbolDisplay(b.code));
 
     const days: WeekDay[] = [];

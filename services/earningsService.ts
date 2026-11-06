@@ -33,6 +33,7 @@ const EARNINGS_SELECT_COLUMNS = [
   'period',
   'period_year',
   'importance',
+  'market_cap',
   'earnings_date_time',
   'report_time',
   'exchange',
@@ -77,6 +78,12 @@ function* datesBetween(startStr: string, endStr: string): Generator<string> {
 // Types
 // ====================================
 
+/** שווי שוק כמספר למיון — דוח בלי שווי שוק יורד לסוף */
+export function earningsMarketCap(r: Pick<EarningsReport, 'market_cap'>): number {
+  const n = Number(r.market_cap);
+  return Number.isFinite(n) && n > 0 ? n : -1;
+}
+
 export interface EarningsReport {
   id: string;
   code: string;
@@ -102,6 +109,8 @@ export interface EarningsReport {
   period?: string | null;
   period_year?: number | null;
   importance?: number | null;
+  /** שווי שוק בדולרים (numeric במסד — יכול להגיע כמחרוזת) */
+  market_cap?: number | string | null;
   earnings_date_time?: string | null; // TIMESTAMP WITH TIME ZONE
   report_time?: string | null; // Before Market, After Market, etc.
   source: string;

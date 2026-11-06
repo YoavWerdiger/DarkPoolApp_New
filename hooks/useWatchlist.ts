@@ -129,6 +129,14 @@ function filterRows(
   }
 }
 
+function shallowEqualRow(a: WatchlistRowData, b: WatchlistRowData): boolean {
+  const ka = Object.keys(a) as (keyof WatchlistRowData)[];
+  for (const k of ka) {
+    if (a[k] !== b[k]) return false;
+  }
+  return ka.length === Object.keys(b).length;
+}
+
 export function useWatchlist() {
   const queryClient = useQueryClient();
   // עם detachInactiveScreens=false המסך נשאר mounted — polling/WS רק כשבאמת בפרונט
@@ -241,6 +249,25 @@ export function useWatchlist() {
 
   const pendingRef = useRef<Record<string, number>>({});
   const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // בזמן גלילה לא מעדכנים מחירים חיים (כל עדכון מרנדר שורות) — נאסף ומוחל כשהגלילה נעצרת
+  const liveUpdatesPausedRef = useRef(false);
+  const flushPending = useCallback(() => {
+    flushTimerRef.current = null;
+    if (liveUpdatesPausedRef.current) return;
+    const batch = pendingRef.current;
+    if (Object.keys(batch).length === 0) return;
+    pendingRef.current = {};
+    setLivePrices((prev) => ({ ...prev, ...batch }));
+  }, []);
+  const setLiveUpdatesPaused = useCallback(
+    (paused: boolean) => {
+      liveUpdatesPausedRef.current = paused;
+      if (!paused && !flushTimerRef.current) {
+        flushTimerRef.current = setTimeout(flushPending, 120);
+      }
+    },
+    [flushPending]
+  );
 
   useEffect(() => {
     if (!isFocused || symbols.length === 0) {
@@ -252,13 +279,8 @@ export function useWatchlist() {
     const release = realtimeQuotes.subscribeMany(symbols);
     const unsub = realtimeQuotes.on((symbol, price) => {
       pendingRef.current[symbol] = price;
-      if (flushTimerRef.current) return;
-      flushTimerRef.current = setTimeout(() => {
-        flushTimerRef.current = null;
-        const batch = pendingRef.current;
-        pendingRef.current = {};
-        setLivePrices((prev) => ({ ...prev, ...batch }));
-      }, 250);
+      if (flushTimerRef.current || liveUpdatesPausedRef.current) return;
+      flushTimerRef.current = setTimeout(flushPending, 250);
     });
     return () => {
       release();
@@ -271,7 +293,11 @@ export function useWatchlist() {
     };
   }, [isFocused, symbolsKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // שורה שלא השתנתה שומרת על אותו אובייקט — כך React.memo בשורה עובד ורק המניה שהמחיר שלה זז מתרנדרת
+  const rowCacheRef = useRef<Map<string, WatchlistRowData>>(new Map());
   const rowsAll: WatchlistRowData[] = useMemo(() => {
+    const prevCache = rowCacheRef.current;
+    const nextCache = new Map<string, WatchlistRowData>();
     const built = items.map((item) => {
       const base = quotes[item.symbol];
       const live = livePrices[item.symbol];
@@ -289,7 +315,7 @@ export function useWatchlist() {
       }
       const earn = insights?.earningsBySymbol[item.symbol];
       const range = rangeStats[item.symbol];
-      return {
+      const next: WatchlistRowData = {
         item,
         price,
         previousClose,
@@ -311,7 +337,13 @@ export function useWatchlist() {
         high52: range?.high52 ?? null,
         low52: range?.low52 ?? null,
       };
+      const key = item.id ?? item.symbol;
+      const prev = prevCache.get(key);
+      const row = prev && shallowEqualRow(prev, next) ? prev : next;
+      nextCache.set(key, row);
+      return row;
     });
+    rowCacheRef.current = nextCache;
     return sortRows(built, sortMode);
   }, [items, quotes, livePrices, sortMode, insights, rangeStats]);
 
@@ -502,6 +534,7 @@ export function useWatchlist() {
     filterMode,
     setFilterMode,
     isStreaming,
+    setLiveUpdatesPaused,
     isLoading: listsQuery.isLoading || itemsQuery.isLoading,
     isFetchingQuotes: quotesQuery.isFetching || quotesRefreshing,
     isRefreshing:

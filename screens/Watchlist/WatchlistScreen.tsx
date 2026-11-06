@@ -127,7 +127,37 @@ export default function WatchlistScreen() {
     addList,
     renameList,
     removeList,
+    setLiveUpdatesPaused,
   } = useWatchlist();
+
+  // גלילה חלקה: עוצרים עדכוני מחיר חיים בזמן גלילה וממשיכים כשהיא נעצרת
+  const momentumRef = useRef(false);
+  const resumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleScrollBeginDrag = useCallback(() => {
+    if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+    momentumRef.current = false;
+    setLiveUpdatesPaused(true);
+  }, [setLiveUpdatesPaused]);
+  const handleScrollEndDrag = useCallback(() => {
+    // אם אין תנופה — ממשיכים; אם יש, onMomentumScrollEnd ימשיך
+    if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+    resumeTimerRef.current = setTimeout(() => {
+      if (!momentumRef.current) setLiveUpdatesPaused(false);
+    }, 120);
+  }, [setLiveUpdatesPaused]);
+  const handleMomentumBegin = useCallback(() => {
+    momentumRef.current = true;
+  }, []);
+  const handleMomentumEnd = useCallback(() => {
+    momentumRef.current = false;
+    setLiveUpdatesPaused(false);
+  }, [setLiveUpdatesPaused]);
+  useEffect(
+    () => () => {
+      if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+    },
+    []
+  );
 
   // מעבר רשימה מאפס את הבחירה המהירה
   useEffect(() => {
@@ -589,6 +619,10 @@ export default function WatchlistScreen() {
                           : styles.listContent
                       }
                       showsVerticalScrollIndicator={false}
+                      onScrollBeginDrag={handleScrollBeginDrag}
+                      onScrollEndDrag={handleScrollEndDrag}
+                      onMomentumScrollBegin={handleMomentumBegin}
+                      onMomentumScrollEnd={handleMomentumEnd}
                       ItemSeparatorComponent={RowDivider}
                       refreshControl={
                         <RefreshControl

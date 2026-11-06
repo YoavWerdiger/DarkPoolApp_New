@@ -40,10 +40,7 @@ import { Ionicons } from '@expo/vector-icons';
 import UICard from '../../components/ui/UICard';
 import UIButton from '../../components/ui/UIButton';
 import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
-import {
-  ACADEMY_TYPE,
-  academySectionTitleStyle,
-} from '../../components/learning/academyLayout';
+import { ACADEMY_TYPE } from '../../components/learning/academyLayout';
 import { dispatchOpenMainDrawer, type DrawerParentNavigation } from '../../navigation/mainDrawerNav';
 import { triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
 
@@ -251,7 +248,7 @@ export const CoursesScreen: React.FC = () => {
                 accessibilityLabel={i18n.t('auto.screens__Learning__CoursesScreen.s12')}
               >
                 <Ionicons
-                  name="document-text-outline"
+                  name="journal-outline"
                   size={22}
                   color={DesignTokens.colors.text.primary}
                 />
@@ -282,10 +279,7 @@ export const CoursesScreen: React.FC = () => {
             </View>
           ) : (
             <View style={styles.sections}>
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>{i18n.t('auto.screens__Learning__CoursesScreen.s21')}</Text>
-                {renderCourseList(orderedCourses)}
-              </View>
+              {renderCourseList(orderedCourses)}
             </View>
           )}
         </ScrollView>
@@ -307,15 +301,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     sections: {
       width: '100%',
       gap: APP_LAYOUT.sectionGap,
-    },
-    section: {
-      width: '100%',
-      gap: APP_LAYOUT.sectionHeaderToContent,
-    },
-    sectionTitle: {
-      ...academySectionTitleStyle,
-      color: tokens.colors.text.primary,
-      paddingHorizontal: ACADEMY_CARD_HP,
     },
     courseList: {
       paddingHorizontal: ACADEMY_CARD_HP,

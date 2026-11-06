@@ -22,6 +22,7 @@ import BottomSheet, {
   BOTTOM_SHEET_EDGE_HANDLE_HEIGHT,
   useBottomSheetClose,
 } from '../ui/BottomSheet/BottomSheet';
+import { sheetContentBottomPadding } from '../ui/BottomSheet/sheetGlass';
 import UIButton from '../ui/UIButton';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { APP_LAYOUT } from '../ui/appLayout';
@@ -44,7 +45,6 @@ import {
   getAcademyCourseTier,
   getCourseDurationMinutes,
   getCourseLessonStats,
-  isComingSoonCourse,
 } from './academyCourses';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
@@ -83,7 +83,6 @@ function CourseInfoBody({
   onHeightChange: (h: number) => void;
 }) {
   const tokens = useDesignTokens();
-  const insets = useSafeAreaInsets();
   const animatedClose = useBottomSheetClose();
   const { width: screenWidth } = useWindowDimensions();
   // תמונת הקורס ברוחב השיט (בתוך הריפוד), 16:9 כמו בכרטיס
@@ -108,9 +107,6 @@ function CourseInfoBody({
   const minutes = getCourseDurationMinutes(priced);
 
   const meta = [
-    isComingSoonCourse(course)
-      ? i18n.t('auto.screens__Learning__CourseComingSoonScreen.s3')
-      : null,
     totalLessons > 0
       ? i18n.t('auto.components__learning__CourseInfoSheet.s1', { count: totalLessons })
       : null,
@@ -181,7 +177,7 @@ function CourseInfoBody({
       </ScrollView>
 
       <View
-        style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) + 4 }]}
+        style={styles.footer}
         onLayout={(e: LayoutChangeEvent) => {
           const h = e.nativeEvent.layout.height;
           setFooterH((prev) => (prev === h ? prev : h));
@@ -194,6 +190,7 @@ function CourseInfoBody({
 }
 
 export function CourseInfoSheet({ course, onClose, onOpenCourse }: CourseInfoSheetProps) {
+  const insets = useSafeAreaInsets();
   const [contentHeight, setContentHeight] = useState<number | null>(null);
   // שומר את הקורס האחרון כדי שהתוכן לא ייעלם בזמן אנימציית הסגירה
   const [shown, setShown] = useState<CourseWithProgress | null>(course);
@@ -207,11 +204,13 @@ export function CourseInfoSheet({ course, onClose, onOpenCourse }: CourseInfoShe
 
   const snapPoint = useMemo(() => {
     if (contentHeight != null && contentHeight > 0) {
-      const totalPx = contentHeight + BOTTOM_SHEET_EDGE_HANDLE_HEIGHT + 4;
+      // BottomSheet מוסיף בעצמו ריפוד safe area מתחת לתוכן — הכפתור לא מוסיף עוד אחד
+      const totalPx =
+        contentHeight + BOTTOM_SHEET_EDGE_HANDLE_HEIGHT + 4 + sheetContentBottomPadding(insets.bottom);
       return Math.min(MAX_SNAP, Math.max(0.3, totalPx / SCREEN_HEIGHT));
     }
     return 0.5;
-  }, [contentHeight]);
+  }, [contentHeight, insets.bottom]);
 
   return (
     <BottomSheet

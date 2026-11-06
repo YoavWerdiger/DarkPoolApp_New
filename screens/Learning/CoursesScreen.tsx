@@ -1,18 +1,13 @@
-import { ROOT_DIR, UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
-import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
-  TextInput,
   ScrollView,
   StyleSheet,
   RefreshControl,
-  TouchableOpacity,
   ActivityIndicator,
-  useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useCourses, useEnrollInCourse } from '../../hooks/useLearning';
@@ -34,7 +29,7 @@ import {
 } from '../../components/learning/academyCourses';
 import { MAIN_SCREEN_HEADER_HP, ScreenChrome } from '../../components/ui';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
+import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { CourseWithProgress } from '../../types/learning';
 import { courseService } from '../../services/courseService';
@@ -59,10 +54,7 @@ export const CoursesScreen: React.FC = () => {
   const DesignTokens = useDesignTokens();
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   const mainTabsHeight = useMainTabsHeight();
-  const { width: screenWidth } = useWindowDimensions();
-  const horizontalCardWidth = Math.min(320, Math.round(screenWidth * 0.78));
   const [refreshing, setRefreshing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [infoCourse, setInfoCourse] = useState<CourseWithProgress | null>(null);
 
   const openMainDrawer = useCallback(() => {
@@ -199,41 +191,18 @@ export const CoursesScreen: React.FC = () => {
   );
 
   const orderedCourses = useMemo(() => selectAcademyCatalogCourses(courses), [courses]);
-  const isSearching = searchQuery.trim().length > 0;
-  const filteredCourses = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return orderedCourses;
-    return orderedCourses.filter((c) => {
-      const hay = [c.title, c.subtitle, getAcademyCourseSubtitle(c), c.description]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-      return hay.includes(q);
-    });
-  }, [orderedCourses, searchQuery]);
-
-  const renderHorizontalRow = (list: CourseWithProgress[]) => (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      style={styles.horizontalScroll}
-      contentContainerStyle={styles.horizontalList}
-      decelerationRate="fast"
-      snapToInterval={horizontalCardWidth + APP_LAYOUT.cardStackGap}
-      snapToAlignment="start"
-      disableIntervalMomentum
-    >
+  // רשימה אנכית: הלווייתנים ומתחתיהם האורקל (הסדר מ-selectAcademyCatalogCourses)
+  const renderCourseList = (list: CourseWithProgress[]) => (
+    <View style={styles.courseList}>
       {list.map((course) => (
         <CourseCard
           key={course.id}
           course={course}
-          width={horizontalCardWidth}
-          fillHeight
           onPress={handleCardPress}
           onEnroll={course.enrollment ? undefined : handleEnroll}
         />
       ))}
-    </ScrollView>
+    </View>
   );
 
   if (error) {
@@ -270,16 +239,16 @@ export const CoursesScreen: React.FC = () => {
             />
           }
         >
-          <AcademyScreenHeader onMenuPress={openMainDrawer} title={i18n.t('auto.screens__Learning__CoursesScreen.s11')} />
-
-          {!showInitialLoader ? (
-            <View style={styles.toolbar}>
+          <AcademyScreenHeader
+            onMenuPress={openMainDrawer}
+            title={i18n.t('auto.screens__Learning__CoursesScreen.s11')}
+            // «ההערות שלי» בפינה שמול התפריט — כמו כפתורי + בשאר המסכים
+            rightAccessory={
               <DayNavBlurButton
                 onPress={handleOpenNotes}
-                size={44}
+                size={DRAWER_MENU_BUTTON_SIZE}
                 glassIntensity="subtle"
                 accessibilityLabel={i18n.t('auto.screens__Learning__CoursesScreen.s12')}
-                style={styles.notesBtn}
               >
                 <Ionicons
                   name="document-text-outline"
@@ -287,71 +256,35 @@ export const CoursesScreen: React.FC = () => {
                   color={DesignTokens.colors.text.primary}
                 />
               </DayNavBlurButton>
-
-              <View style={styles.searchWrap}>
-                <UICard variant="soft" padding="none" style={[styles.searchCard, styles.searchCardFill]}>
-                  <View style={styles.searchInner}>
-                    {isSearching ? (
-                      <TouchableOpacity
-                        onPress={() => setSearchQuery('')}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        accessibilityLabel={i18n.t('auto.screens__Learning__CoursesScreen.s13')}
-                      >
-                        <Ionicons
-                          name="close-circle"
-                          size={20}
-                          color={DesignTokens.colors.text.tertiary}
-                        />
-                      </TouchableOpacity>
-                    ) : (
-                      <View style={styles.searchClearSpacer} />
-                    )}
-                    <TextInput
-                      value={searchQuery}
-                      onChangeText={setSearchQuery}
-                      placeholder={i18n.t('auto.screens__Learning__CoursesScreen.s14')}
-                      placeholderTextColor={DesignTokens.colors.text.tertiary}
-                      style={styles.searchInput}
-                      returnKeyType="search"
-                      accessibilityLabel={i18n.t('auto.screens__Learning__CoursesScreen.s15')}
-                    />
-                    <Ionicons
-                      name="search"
-                      size={18}
-                      color={DesignTokens.colors.text.tertiary}
-                    />
-                  </View>
-                </UICard>
-              </View>
-            </View>
-          ) : null}
+            }
+          />
 
           {showInitialLoader ? (
             <View style={styles.loadingWrap}>
               <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
               <Text style={styles.loadingHint}>{i18n.t('auto.screens__Learning__CoursesScreen.s16')}</Text>
             </View>
-          ) : filteredCourses.length === 0 ? (
+          ) : orderedCourses.length === 0 ? (
             <View style={styles.emptyState}>
               <View style={styles.emptyIconWrap}>
                 <Ionicons
-                  name={isSearching ? 'search-outline' : 'library-outline'}
+                  name="library-outline"
                   size={40}
                   color={DesignTokens.colors.text.tertiary}
                 />
               </View>
               <Text style={styles.emptyStateTitle}>
-                {isSearching ? i18n.t('auto.screens__Learning__CoursesScreen.s17') : i18n.t('auto.screens__Learning__CoursesScreen.s18')}
+                {i18n.t('auto.screens__Learning__CoursesScreen.s18')}
               </Text>
               <Text style={styles.emptyStateSubtitle}>
-                {isSearching ? i18n.t('auto.screens__Learning__CoursesScreen.s19') : i18n.t('auto.screens__Learning__CoursesScreen.s20')}
+                {i18n.t('auto.screens__Learning__CoursesScreen.s20')}
               </Text>
             </View>
           ) : (
             <View style={styles.sections}>
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>{i18n.t('auto.screens__Learning__CoursesScreen.s21')}</Text>
-                {renderHorizontalRow(filteredCourses)}
+                {renderCourseList(orderedCourses)}
               </View>
             </View>
           )}
@@ -371,50 +304,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     flex: {
       flex: 1,
     },
-    toolbar: {
-      // כמו חדשות: כפתור משמאל, חיפוש מימין — direction:ltr מונע היפוך RTL
-      flexDirection: 'row',
-      direction: ROOT_DIR,
-      alignItems: 'center',
-      gap: 8,
-      paddingHorizontal: MAIN_SCREEN_HEADER_HP,
-      marginTop: 4,
-      marginBottom: tokens.spacing.md,
-    },
-    notesBtn: {
-      flexShrink: 0,
-      zIndex: 2,
-    },
-    searchWrap: {
-      flex: 1,
-      minWidth: 0,
-    },
-    searchCard: {
-      borderRadius: tokens.borderRadius.full,
-      overflow: 'hidden',
-    },
-    searchCardFill: {
-      backgroundColor: tokens.colors.background.cardSolid,
-      borderWidth: 0,
-    },
-    searchInner: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      paddingHorizontal: APP_LAYOUT.cardPadding,
-      minHeight: 44,
-    },
-    searchClearSpacer: {
-      width: 20,
-    },
-    searchInput: {
-      flex: 1,
-      marginHorizontal: 8,
-      color: tokens.colors.text.primary,
-      ...ACADEMY_TYPE.body,
-      textAlign: 'right',
-      writingDirection: TEXT_DIR,
-      paddingVertical: 6,
-    },
     sections: {
       width: '100%',
       gap: APP_LAYOUT.sectionGap,
@@ -428,13 +317,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       color: tokens.colors.text.primary,
       paddingHorizontal: ACADEMY_CARD_HP,
     },
-    horizontalScroll: {
-      direction: UI_DIR,
-    },
-    horizontalList: {
+    courseList: {
       paddingHorizontal: ACADEMY_CARD_HP,
       gap: APP_LAYOUT.cardStackGap,
-      flexDirection: 'row',
     },
     loadingWrap: {
       paddingTop: tokens.spacing['2xl'],

@@ -1304,6 +1304,7 @@ function LearningScreen() {
           courseId={courseData?.id ?? routeCourseId}
           index={index}
           enrollment={courseData?.enrollment}
+          fallbackImage={courseData?.cover_url}
         />
       </Animated.View>
     );

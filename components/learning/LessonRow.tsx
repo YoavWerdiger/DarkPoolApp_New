@@ -27,6 +27,8 @@ interface LessonRowProps {
   isLocked?: boolean;
   courseId?: string;
   index?: number;
+  /** באנר לשיעור בלי תמונה משלו (למשל «בקרוב») — תמונת הקורס */
+  fallbackImage?: string | null;
 }
 
 export const LessonRow: React.FC<LessonRowProps> = ({
@@ -36,6 +38,7 @@ export const LessonRow: React.FC<LessonRowProps> = ({
   isLocked = false,
   courseId,
   index = 0,
+  fallbackImage,
 }) => {
   const T = useDesignTokens();
   const styles = useMemo(() => createStyles(T), [T]);
@@ -105,9 +108,9 @@ export const LessonRow: React.FC<LessonRowProps> = ({
         accessibilityLabel={i18n.t('auto.components__learning__LessonRow.s1', { v0: index + 1, v1: lesson.title })}
       >
         <View style={styles.thumbWrap}>
-          {thumbnailUrl ? (
+          {thumbnailUrl || fallbackImage ? (
             <Image
-              source={{ uri: thumbnailUrl }}
+              source={{ uri: (thumbnailUrl || fallbackImage) as string }}
               style={styles.thumbImg}
               contentFit="cover"
               cachePolicy="memory-disk"

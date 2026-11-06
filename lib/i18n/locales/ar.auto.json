@@ -3884,7 +3884,7 @@
   "components__learning__LessonRow": {
     "s1": "الدرس {{v0}}: {{v1}}",
     "s2": "قريبًا",
-    "s3": "درس",
+    "s3": "الدرس رقم",
     "s4": " · قريبًا"
   },
   "components__learning__ModuleSection": {

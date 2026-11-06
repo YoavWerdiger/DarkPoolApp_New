@@ -3967,7 +3967,7 @@
   "components__learning__LessonRow": {
     "s1": "שיעור {{v0}}: {{v1}}",
     "s2": "בקרוב",
-    "s3": "שיעור",
+    "s3": "שיעור מספר",
     "s4": " · בקרוב"
   },
   "components__learning__ModuleSection": {

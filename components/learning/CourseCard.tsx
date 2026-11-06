@@ -43,6 +43,8 @@ interface CourseCardProps {
   width?: number;
   /** בשורה אופקית: למתוח לגובה הכרטיס הגבוה בשורה (כל הכרטיסים באותו אורך, CTA בתחתית) */
   fillHeight?: boolean;
+  /** יש גישה לקורס (רכש / רשום) — «המשך למידה»; ברירת מחדל: רשום לקורס */
+  hasAccess?: boolean;
 }
 
 export const CourseCard: React.FC<CourseCardProps> = ({
@@ -50,6 +52,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   onPress,
   width,
   fillHeight = false,
+  hasAccess,
 }) => {
   const T = useDesignTokens();
   const { width: screenWidth } = useWindowDimensions();
@@ -61,7 +64,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
     [T, coverHeight, cardWidth]
   );
 
-  const isEnrolled = !!course.enrollment;
+  const canContinue = hasAccess ?? !!course.enrollment;
   const { progressPct } = getCourseLessonStats(course);
   const subtitle = getAcademyCourseSubtitle(course);
   const accent = getAcademyCourseAccentColor(
@@ -70,7 +73,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   );
 
   // רשום → המשך למידה; לא רשום → פירוט הקורס בשיט (המלל המלא עבר לשם)
-  const ctaLabel = isEnrolled
+  const ctaLabel = canContinue
     ? i18n.t('auto.components__learning__CourseCard.s2')
     : i18n.t('auto.components__learning__CourseCard.s1');
 

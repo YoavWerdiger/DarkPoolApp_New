@@ -135,6 +135,19 @@ export function getCourseLessonStats(course: CourseWithProgress): {
   return { totalLessons, completedLessons, progressPct };
 }
 
+/**
+ * למשתמש יש גישה לקורס: רשום אליו, או מנוי פרימיום לקורס פרימיום. קורס «בקרוב» (האורקל)
+ * עדיין סגור לכולם. עם גישה — כרטיס האקדמיה נכנס ישר לקורס; בלי — נפתח שיט פירוט.
+ */
+export function hasAcademyCourseAccess(
+  course: CourseWithProgress & { price?: number },
+  isPremiumUser: boolean
+): boolean {
+  if (isComingSoonCourse(course)) return false;
+  if (course.enrollment) return true;
+  return isPremiumUser && getAcademyCourseTier(course) === 'premium';
+}
+
 /** רוחב אחיד לתג העליון */
 export const ACADEMY_BADGE_MIN_WIDTH = 108;
 

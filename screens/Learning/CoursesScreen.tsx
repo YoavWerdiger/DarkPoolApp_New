@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useCourses, useEnrollInCourse } from '../../hooks/useLearning';
+import { useSubscription } from '../../hooks/useSubscription';
 import { useAllowAfterNavigationTransition } from '../../hooks/afterNavigationTransition';
 import {
   AcademyScreenHeader,
@@ -21,6 +22,7 @@ import { ACADEMY_CARD_HP } from '../../components/learning/academyCardLayout';
 import {
   getAcademyCourseSubtitle,
   getAcademyCourseTier,
+  hasAcademyCourseAccess,
   isComingSoonCourse,
   isNativeLearningCourse,
   selectAcademyCatalogCourses,
@@ -53,6 +55,7 @@ export const CoursesScreen: React.FC = () => {
   const mainTabsHeight = useMainTabsHeight();
   const [refreshing, setRefreshing] = useState(false);
   const [infoCourse, setInfoCourse] = useState<CourseWithProgress | null>(null);
+  const { isPremium } = useSubscription();
 
   const openMainDrawer = useCallback(() => {
     void triggerDrawerMenuHaptic();
@@ -151,16 +154,16 @@ export const CoursesScreen: React.FC = () => {
     [navigation]
   );
 
-  // רשום לקורס → ישר לקורס; לא רשום (כולל האורקל) → שיט פירוט, וה-CTA בשיט נכנס לקורס
+  // יש גישה (רשום / מנוי פרימיום) → ישר לדף הקורס; אין גישה (כולל האורקל) → שיט פירוט
   const handleCardPress = useCallback(
     (course: CourseWithProgress) => {
-      if (course.enrollment) {
+      if (hasAcademyCourseAccess(course, isPremium)) {
         handleCoursePress(course);
         return;
       }
       setInfoCourse(course);
     },
-    [handleCoursePress]
+    [handleCoursePress, isPremium]
   );
 
   const closeInfoSheet = useCallback(() => setInfoCourse(null), []);
@@ -196,6 +199,7 @@ export const CoursesScreen: React.FC = () => {
         <CourseCard
           key={course.id}
           course={course}
+          hasAccess={hasAcademyCourseAccess(course, isPremium)}
           onPress={handleCardPress}
           onEnroll={course.enrollment ? undefined : handleEnroll}
         />

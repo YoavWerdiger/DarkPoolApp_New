@@ -148,6 +148,12 @@ export function hasAcademyCourseAccess(
   return isPremiumUser && getAcademyCourseTier(course) === 'premium';
 }
 
+/** אורך שיעור לתצוגה — דקות שלמות («12 דק׳»); במסד נשמרות דקות בלבד, אז בלי שניות מומצאות */
+export function formatLessonMinutes(minutes?: number | null): string {
+  if (!minutes || minutes <= 0) return '';
+  return i18n.t('auto.components__learning__academyCourses.lessonMinutes', { count: Math.round(minutes) });
+}
+
 /** רוחב אחיד לתג העליון */
 export const ACADEMY_BADGE_MIN_WIDTH = 108;
 

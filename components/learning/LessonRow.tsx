@@ -18,6 +18,7 @@ import {
   appCardTitleStyle,
 } from '../ui/appType';
 import { ACADEMY_TYPE } from './academyLayout';
+import { formatLessonMinutes } from './academyCourses';
 
 interface LessonRowProps {
   lesson: LessonWithProgress & { completed?: boolean; thumbnail?: string | null };
@@ -64,12 +65,8 @@ export const LessonRow: React.FC<LessonRowProps> = ({
         } else if (media.vimeo_id) {
           setThumbnailUrl(`https://vumbnail.com/${media.vimeo_id}.jpg`);
         }
-        if (media.duration_minutes && media.duration_minutes > 0) {
-          const m = media.duration_minutes;
-          const h = Math.floor(m / 60);
-          const mins = m % 60;
-          setMediaDuration(h > 0 ? `${h}:${mins.toString().padStart(2, '0')}:00` : `${mins}:00`);
-        }
+        const minutesLabel = formatLessonMinutes(media.duration_minutes);
+        if (minutesLabel) setMediaDuration(minutesLabel);
       } catch {
         /* noop */
       }
@@ -124,7 +121,6 @@ export const LessonRow: React.FC<LessonRowProps> = ({
 
           {displayDuration ? (
             <View style={styles.durationPill}>
-              <Ionicons name="time-outline" size={12} color="#fff" />
               <Text style={styles.durationText}>{displayDuration}</Text>
             </View>
           ) : null}

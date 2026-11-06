@@ -10,6 +10,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenChrome } from '../../components/ui';
 import { AcademySubScreenBar, CourseListHero, LessonRow } from '../../components/learning';
+import { formatLessonMinutes } from '../../components/learning/academyCourses';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ACADEMY_CARD_HP, ACADEMY_CARD_RADIUS, academyCardWidth } from '../../components/learning/academyCardLayout';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -584,33 +585,17 @@ function LearningScreen() {
               const media = mediaLinks.find(m => m.lesson_id === lesson.id);
               
               // חישוב משך הזמן - נשתמש בנתונים האמיתיים מ-DEMO_COURSE או מהמסד נתונים
-              let duration = '00:00';
+              let duration = '';
               
-              // פונקציה לעיצוב duration בפורמט MM:SS או HH:MM:SS
-              const formatDuration = (minutes?: number) => {
-                if (!minutes) return '00:00';
-                const totalSeconds = minutes * 60;
-                const hours = Math.floor(totalSeconds / 3600);
-                const remainingSeconds = totalSeconds % 3600;
-                const mins = Math.floor(remainingSeconds / 60);
-                const secs = remainingSeconds % 60;
-                
-                if (hours > 0) {
-                  return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-                } else {
-                  return `${mins}:${secs.toString().padStart(2, '0')}`;
-                }
-              };
               
               // נחפש את השיעור בנתונים האמיתיים
+              // אורך אמיתי מהמסד (מ-Vimeo); נתוני הדמו רק כגיבוי
               const demoLesson = DEMO_COURSE.lessons.find(demo => demo.id === lesson.id);
-              if (demoLesson?.duration) {
-                duration = demoLesson.duration;
-              } else if (media?.duration_minutes) {
-                duration = formatDuration(media.duration_minutes);
-              } else if (lesson.duration_minutes) {
-                duration = formatDuration(lesson.duration_minutes);
-              }
+              duration =
+                formatLessonMinutes(media?.duration_minutes) ||
+                formatLessonMinutes(lesson.duration_minutes) ||
+                demoLesson?.duration ||
+                '';
               
               // נשתמש ב-thumbnail מ-Vimeo או YouTube
               let thumbnailUrl = '';
@@ -1195,31 +1180,12 @@ function LearningScreen() {
       const media = await loadLessonMedia(lesson.id);
       if (media) {
         // חישוב משך הזמן - נשתמש בנתונים האמיתיים מ-DEMO_COURSE או מהמסד נתונים
-        let duration = lesson.duration || '00:00';
+        let duration = lesson.duration || '';
         
-        // פונקציה לעיצוב duration בפורמט MM:SS או HH:MM:SS
-        const formatDuration = (minutes?: number) => {
-          if (!minutes) return '00:00';
-          const totalSeconds = minutes * 60;
-          const hours = Math.floor(totalSeconds / 3600);
-          const remainingSeconds = totalSeconds % 3600;
-          const mins = Math.floor(remainingSeconds / 60);
-          const secs = remainingSeconds % 60;
-          
-          if (hours > 0) {
-            return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-          } else {
-            return `${mins}:${secs.toString().padStart(2, '0')}`;
-          }
-        };
         
         // נחפש את השיעור בנתונים האמיתיים
         const demoLesson = DEMO_COURSE.lessons.find(demo => demo.id === lesson.id);
-        if (demoLesson?.duration) {
-          duration = demoLesson.duration;
-        } else if (media.duration_minutes) {
-          duration = formatDuration(media.duration_minutes);
-        }
+        duration = formatLessonMinutes(media.duration_minutes) || demoLesson?.duration || '';
         
         const updatedLesson = {
           ...lesson,

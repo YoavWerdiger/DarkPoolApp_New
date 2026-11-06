@@ -1,3 +1,4 @@
+import { formatLessonMinutes } from '../components/learning/academyCourses';
 import i18n from '../lib/i18n';
 import { supabase } from '../lib/supabase';
 import {
@@ -354,20 +355,7 @@ export class LearningService {
             durationMinutes = Math.round(progressData.total_duration_seconds / 60);
           }
 
-          const formatDuration = (minutes?: number) => {
-            if (!minutes || minutes === 0) return '00:00';
-            const totalSeconds = minutes * 60;
-            const hours = Math.floor(totalSeconds / 3600);
-            const remainingSeconds = totalSeconds % 3600;
-            const mins = Math.floor(remainingSeconds / 60);
-            const secs = remainingSeconds % 60;
-            
-            if (hours > 0) {
-              return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-            } else {
-              return `${mins}:${secs.toString().padStart(2, '0')}`;
-            }
-          };
+          const formatDuration = (minutes?: number | null) => formatLessonMinutes(minutes);
 
           const formattedDuration = formatDuration(durationMinutes);
 
@@ -389,20 +377,7 @@ export class LearningService {
         const media = mediaMap.get(lesson.id);
         const durationMinutes = media?.duration_minutes;
 
-        const formatDuration = (minutes?: number) => {
-          if (!minutes || minutes === 0) return '00:00';
-          const totalSeconds = minutes * 60;
-          const hours = Math.floor(totalSeconds / 3600);
-          const remainingSeconds = totalSeconds % 3600;
-          const mins = Math.floor(remainingSeconds / 60);
-          const secs = remainingSeconds % 60;
-          
-          if (hours > 0) {
-            return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-          } else {
-            return `${mins}:${secs.toString().padStart(2, '0')}`;
-          }
-        };
+        const formatDuration = (minutes?: number | null) => formatLessonMinutes(minutes);
 
         const formattedDuration = formatDuration(durationMinutes);
 

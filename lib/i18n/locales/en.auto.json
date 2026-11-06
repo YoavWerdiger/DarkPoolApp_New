@@ -4320,7 +4320,8 @@
     "s7": "Basic course",
     "s8": "Advanced course",
     "s9": "Full course",
-    "s10": "Free"
+    "s10": "Free",
+    "lessonMinutes": "{{count}} min"
   },
   "components__learning__LessonRow": {
     "s1": "Lesson {{v0}}: {{v1}}",

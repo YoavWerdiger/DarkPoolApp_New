@@ -599,7 +599,10 @@ function LearningScreen() {
               
               // נשתמש ב-thumbnail מ-Vimeo או YouTube
               let thumbnailUrl = '';
-              if (media?.vimeo_id) {
+              if (media?.thumbnail_url) {
+                // תמונה שנשמרה מ-Vimeo — vumbnail לא עובד לסרטונים עם הגבלת הטמעה
+                thumbnailUrl = media.thumbnail_url;
+              } else if (media?.vimeo_id) {
                 thumbnailUrl = `https://vumbnail.com/${media.vimeo_id}.jpg`;
               } else if (media?.youtube_id) {
                 thumbnailUrl = `https://img.youtube.com/vi/${media.youtube_id}/maxresdefault.jpg`;
@@ -1190,7 +1193,7 @@ function LearningScreen() {
         const updatedLesson = {
           ...lesson,
           vimeoId: media.vimeo_id,
-          thumbnail: `https://vumbnail.com/${media.vimeo_id}.jpg`,
+          thumbnail: media.thumbnail_url || `https://vumbnail.com/${media.vimeo_id}.jpg`,
           videoUrl: media.vimeo_url,
           duration: duration
         };

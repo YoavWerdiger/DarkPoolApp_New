@@ -1880,7 +1880,8 @@ export function PersonPortfolioProfileScreen({
                     returnPct: h.return_pct,
                   });
                   return (
-                    <React.Fragment key={h.ticker}>
+                    {/* אותו טיקר יכול להופיע פעמיים (כמה אחזקות) — key ייחודי */}
+                    <React.Fragment key={`${h.ticker}:${index}`}>
                       <Pressable
                         style={styles.listRowPress}
                         disabled={!canOpenPosition}

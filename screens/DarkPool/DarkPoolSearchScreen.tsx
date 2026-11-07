@@ -487,11 +487,11 @@ export default function DarkPoolSearchScreen() {
                     style={styles.rail}
                     contentContainerStyle={styles.railRow}
                   >
-                    {hot.map((h) => {
+                    {hot.map((h, i) => {
                       const pct = dayChangePct(h.quote);
                       return (
                         <Pressable
-                          key={h.ticker}
+                          key={`${h.ticker}:${i}`}
                           onPress={() => openTicker(h.ticker)}
                           style={styles.hotCard}
                           accessibilityLabel={i18n.t('auto.screens__DarkPool__DarkPoolSearchScreen.s8', { v0: h.ticker, v1: h.trades })}

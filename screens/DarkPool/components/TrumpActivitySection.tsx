@@ -112,7 +112,7 @@ export function TrumpActivitySection({
           const range = tab === 'sold' ? t.sell : tab === 'bought' ? t.buy : null;
           return (
             <Pressable
-              key={t.ticker}
+              key={`${t.ticker}:${i}`}
               onPress={onTickerPress ? () => onTickerPress(t.ticker) : undefined}
               style={[styles.row, i > 0 && { borderTopWidth: 1, borderTopColor: tokens.colors.border.divider }]}
             >

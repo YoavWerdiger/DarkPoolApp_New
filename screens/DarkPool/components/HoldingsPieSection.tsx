@@ -147,10 +147,10 @@ export function HoldingsPieSection({
             useNativeDriver: false,
           })}
         >
-          {legendRows.map((s) => {
+          {legendRows.map((s, i) => {
             const raw = s.key === '__other__' ? s.percentage : allocByTicker.get(s.key) ?? s.percentage;
             return (
-              <View key={s.key} style={styles.legendRow}>
+              <View key={`${s.key}:${i}`} style={styles.legendRow}>
                 <View style={[styles.legendDot, { backgroundColor: s.color }]} />
                 <Text style={styles.legendLabel} numberOfLines={1}>
                   {s.label}

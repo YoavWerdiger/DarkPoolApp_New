@@ -6,7 +6,6 @@ import {
   View,
   Text,
   ScrollView,
-  ActivityIndicator,
   Linking,
   Platform,
   Pressable,
@@ -25,6 +24,7 @@ import { HapticFeedback } from '../../utils/hapticFeedback';
 import {
   SettingsGlassCard,
   SettingsSwitchRow,
+  SettingsSwitchRowSkeleton,
   SettingsActionRow,
   SettingsOutsideTitle,
   SettingsScopeChoice,
@@ -331,22 +331,8 @@ export default function NotificationsScreen({ navigation }: any) {
 
   const canvas = { flex: 1, backgroundColor: DesignTokens.colors.background.primary };
 
-  if (loading) {
-    return (
-      <View style={[canvas, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-        <Text
-          style={{
-            ...settingsHebrewText,
-            ...settingsBodyType,
-            color: DesignTokens.colors.text.secondary,
-            marginTop: APP_LAYOUT.componentGap,
-          }}
-        >{i18n.t('auto.screens__Profile__NotificationsScreen.s17')}</Text>
-      </View>
-    );
-  }
-
+  // בטעינת ההעדפות: אותו מסך בדיוק — כותרות הסקשנים והשורות אמיתיות, רק המתגים כצורות
+  // (במקום ספינר במסך ריק); חלקי משנה שתלויים בערכים מוצגים רק אחרי הטעינה
   return (
     <View style={canvas}>
       <RNSafeAreaView style={canvas} edges={['top', 'bottom']}>
@@ -366,7 +352,7 @@ export default function NotificationsScreen({ navigation }: any) {
               paddingBottom: DesignTokens.spacing.xl,
             }}
           >
-            {!osGranted ? (
+            {!loading && !osGranted ? (
               <>
                 <SettingsOutsideTitle title={i18n.t('auto.screens__Profile__NotificationsScreen.s19')} />
                 <SettingsGlassCard>
@@ -403,6 +389,7 @@ export default function NotificationsScreen({ navigation }: any) {
             <SettingsOutsideTitle title={i18n.t('auto.screens__Profile__NotificationsScreen.s23')} />
             <SettingsGlassCard>
               <SettingsSwitchRow
+                loading={loading}
                 title={i18n.t('auto.screens__Profile__NotificationsScreen.s18')}
                 value={osGranted && prefs.notifications}
                 onValueChange={(v) => {
@@ -410,6 +397,7 @@ export default function NotificationsScreen({ navigation }: any) {
                 }}
               />
               <SettingsSwitchRow
+                loading={loading}
                 title={i18n.t('auto.screens__Profile__NotificationsScreen.s24')}
                 value={prefs.vibration}
                 disabled={childrenLocked}
@@ -431,12 +419,22 @@ export default function NotificationsScreen({ navigation }: any) {
               ) : null}
             </SettingsGlassCard>
 
-            {groups.length > 0 ? (
+            {loading && groups.length === 0 ? (
+              <>
+                <SettingsOutsideTitle title={i18n.t('auto.screens__Profile__NotificationsScreen.s6')} />
+                <SettingsGlassCard>
+                  {[132, 108, 150].map((w, i) => (
+                    <SettingsSwitchRowSkeleton key={i} titleWidth={w} showDivider={i < 2} />
+                  ))}
+                </SettingsGlassCard>
+              </>
+            ) : groups.length > 0 ? (
               <>
                 <SettingsOutsideTitle title={i18n.t('auto.screens__Profile__NotificationsScreen.s6')} />
                 <SettingsGlassCard>
                   {groups.map((group, index) => (
                     <SettingsSwitchRow
+                      loading={loading}
                       key={group.id}
                       title={chatGroupDisplayName(group.name)}
                       value={group.muted}
@@ -454,6 +452,7 @@ export default function NotificationsScreen({ navigation }: any) {
             <SettingsOutsideTitle title={i18n.t('auto.screens__Profile__NotificationsScreen.s25')} />
             <SettingsGlassCard>
               <SettingsSwitchRow
+                loading={loading}
                 title={i18n.t('auto.screens__Profile__NotificationsScreen.s26')}
                 value={isPrefEffective(prefs, 'communityNotifications')}
                 disabled={childrenLocked}
@@ -467,6 +466,7 @@ export default function NotificationsScreen({ navigation }: any) {
             <SettingsOutsideTitle title={i18n.t('auto.screens__Profile__NotificationsScreen.s27')} />
             <SettingsGlassCard>
               <SettingsSwitchRow
+                loading={loading}
                 title={i18n.t('auto.screens__Profile__NotificationsScreen.s28')}
                 value={isPrefEffective(prefs, 'insiderFeedAlerts')}
                 disabled={childrenLocked}
@@ -475,6 +475,7 @@ export default function NotificationsScreen({ navigation }: any) {
                 }}
               />
               <SettingsSwitchRow
+                loading={loading}
                 title={i18n.t('auto.screens__Profile__NotificationsScreen.s29')}
                 value={isPrefEffective(prefs, 'darkPoolNotifications')}
                 disabled={childrenLocked}
@@ -488,15 +489,16 @@ export default function NotificationsScreen({ navigation }: any) {
             <SettingsOutsideTitle title={i18n.t('auto.screens__Profile__NotificationsScreen.s30')} />
             <SettingsGlassCard>
               <SettingsSwitchRow
+                loading={loading}
                 title={i18n.t('auto.screens__Profile__NotificationsScreen.s31')}
                 value={isPrefEffective(prefs, 'watchlistNotifications')}
                 disabled={childrenLocked}
                 onValueChange={(v) => {
                   void handleCategory('watchlistNotifications', v);
                 }}
-                showDivider={isPrefEffective(prefs, 'watchlistNotifications')}
+                showDivider={!loading && isPrefEffective(prefs, 'watchlistNotifications')}
               />
-              {isPrefEffective(prefs, 'watchlistNotifications') ? (
+              {!loading && isPrefEffective(prefs, 'watchlistNotifications') ? (
                 <>
                   <SettingsScopeChoice
                     value={prefs.watchlistAlertScope}
@@ -529,6 +531,7 @@ export default function NotificationsScreen({ navigation }: any) {
             <SettingsOutsideTitle title={i18n.t('auto.screens__Profile__NotificationsScreen.s32')} />
             <SettingsGlassCard>
               <SettingsSwitchRow
+                loading={loading}
                 title={i18n.t('auto.screens__Profile__NotificationsScreen.s33')}
                 value={isPrefEffective(prefs, 'newsNotifications')}
                 disabled={childrenLocked}
@@ -538,6 +541,7 @@ export default function NotificationsScreen({ navigation }: any) {
                 showDivider
               />
               <SettingsSwitchRow
+                loading={loading}
                 title={i18n.t('auto.screens__Profile__NotificationsScreen.s34')}
                 value={isPrefEffective(prefs, 'fearGreedNotifications')}
                 disabled={childrenLocked}
@@ -551,15 +555,16 @@ export default function NotificationsScreen({ navigation }: any) {
             <SettingsOutsideTitle title={i18n.t('auto.screens__Profile__NotificationsScreen.s35')} />
             <SettingsGlassCard>
               <SettingsSwitchRow
+                loading={loading}
                 title={i18n.t('auto.screens__Profile__NotificationsScreen.s18')}
                 value={isPrefEffective(prefs, 'earningsNotifications')}
                 disabled={childrenLocked}
                 onValueChange={(v) => {
                   void handleCategory('earningsNotifications', v);
                 }}
-                showDivider={isPrefEffective(prefs, 'earningsNotifications')}
+                showDivider={!loading && isPrefEffective(prefs, 'earningsNotifications')}
               />
-              {isPrefEffective(prefs, 'earningsNotifications') ? (
+              {!loading && isPrefEffective(prefs, 'earningsNotifications') ? (
                 <>
                   <SettingsScopeChoice
                     value={prefs.earningsAlertScope}
@@ -599,6 +604,7 @@ export default function NotificationsScreen({ navigation }: any) {
             <SettingsOutsideTitle title={i18n.t('auto.screens__Profile__NotificationsScreen.s36')} />
             <SettingsGlassCard>
               <SettingsSwitchRow
+                loading={loading}
                 title={i18n.t('auto.screens__Profile__NotificationsScreen.s18')}
                 value={isPrefEffective(prefs, 'economicCalendarNotifications')}
                 disabled={childrenLocked}
@@ -621,6 +627,7 @@ export default function NotificationsScreen({ navigation }: any) {
                   {prefs.economicAlertScope === 'selected'
                     ? ECONOMIC_ALERT_INDICATORS.map((indicator, index) => (
                         <SettingsSwitchRow
+                          loading={loading}
                           key={indicator.key}
                           title={indicator.title}
                           value={prefs.economicAlertIndicators.includes(indicator.key)}

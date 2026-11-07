@@ -5,10 +5,10 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   StyleSheet,
 } from 'react-native';
 import { AppSwitch } from '../../components/ui/AppSwitch';
+import { SkeletonBox } from '../../components/ui/SkeletonLoader';
 import {
   Languages,
   CreditCard,
@@ -255,15 +255,7 @@ export default function SettingsScreen({ navigation }: any) {
     }
   ];
 
-  if (isLoading) {
-    return (
-      <View style={[styles.loading, { backgroundColor: DesignTokens.colors.background.primary }]}>
-        <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-        <Text style={[styles.loadingText, { color: DesignTokens.colors.text.secondary }]}>{t('common.loading')}</Text>
-      </View>
-    );
-  }
-
+  // ההגדרות השמורות נטענות — המסך האמיתי מוצג מיד (כותרות, שורות, אייקונים); רק המתגים כצורות באותו גודל
   return (
     <View style={[styles.root, { backgroundColor: DesignTokens.colors.background.primary }]}>
       <RNSafeAreaView style={styles.root} edges={['top', 'bottom']}>
@@ -303,7 +295,11 @@ export default function SettingsScreen({ navigation }: any) {
                           activeOpacity={item.type === 'action' ? 0.7 : 1}
                           style={styles.row}
                         >
-                          {item.type === 'switch' && item.onToggle ? (
+                          {item.type === 'switch' && isLoading ? (
+                            <View style={{ width: 51, height: 31, alignItems: 'center', justifyContent: 'center' }}>
+                              <SkeletonBox width={42} height={25} borderRadius={13} />
+                            </View>
+                          ) : item.type === 'switch' && item.onToggle ? (
                             <AppSwitch
                               value={item.value}
                               onValueChange={item.onToggle}
@@ -363,16 +359,6 @@ export default function SettingsScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  loading: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    ...settingsHebrewText,
-    ...settingsBodyType,
-    marginTop: APP_LAYOUT.componentGap,
-  },
   scroll: {
     paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
     paddingTop: APP_LAYOUT.sectionHeaderToContent - 4,

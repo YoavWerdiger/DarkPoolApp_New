@@ -1,4 +1,5 @@
 import { SegmentedTabs } from '../../components/ui/SegmentedTabs';
+import { getJournalSnapshot, loadJournalSnapshot, saveJournalSnapshot } from '../../services/portfolios/journalSnapshotCache';
 import { UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { JournalSkeleton } from './components/JournalSkeleton';
@@ -86,10 +87,12 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
   const portfolioId = embedded?.portfolioId ?? route.params?.portfolioId ?? '';
   const { user: authUser } = useAuth();
 
-  const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
-  const [summary, setSummary] = useState<PortfolioSummary | null>(null);
-  const [holdings, setHoldings] = useState<PortfolioHolding[]>([]);
-  const [loading, setLoading] = useState(true);
+  // כניסה אופטימיסטית: המצב האחרון של התיק מהזיכרון (סינכרוני) — בלי שלד בכניסה חוזרת
+  const initialSnap = React.useMemo(() => getJournalSnapshot(portfolioId), []); // eslint-disable-line react-hooks/exhaustive-deps
+  const [portfolio, setPortfolio] = useState<Portfolio | null>(initialSnap?.portfolio ?? null);
+  const [summary, setSummary] = useState<PortfolioSummary | null>(initialSnap?.summary ?? null);
+  const [holdings, setHoldings] = useState<PortfolioHolding[]>(initialSnap?.holdings ?? []);
+  const [loading, setLoading] = useState(!initialSnap?.portfolio);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<PortfolioDetailTab>('overview');
   const [portfolioActionsOpen, setPortfolioActionsOpen] = useState(false);
@@ -161,13 +164,13 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
       const display = await loadPortfolioDisplaySummary(p);
       if (!isMounted) return;
       setSummary(display);
-      if (p.source === 'colmex_pro') {
-        setHoldings([]);
-      } else {
-        const h = await loadPortfolioHoldings(portfolioId).catch(() => []);
+      let h: PortfolioHolding[] = [];
+      if (p.source !== 'colmex_pro') {
+        h = await loadPortfolioHoldings(portfolioId).catch(() => []);
         if (!isMounted) return;
-        setHoldings(h);
       }
+      setHoldings(h);
+      saveJournalSnapshot(portfolioId, { portfolio: p, summary: display, holdings: h });
       setDataVersion((v) => v + 1);
       // OverviewTab נשען על chartRefreshKey לטעינת trades — חובה אחרי פוזיציה חדשה
       setChartRefreshKey((k) => k + 1);
@@ -187,10 +190,28 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
   useEffect(() => {
     if (shownPortfolioIdRef.current === portfolioId) return;
     shownPortfolioIdRef.current = portfolioId;
-    setLoading(true);
-    setPortfolio(null);
-    setSummary(null);
-    setHoldings([]);
+    // תיק אחר — המצב האחרון שלו אם יש, אחרת שלד
+    const snap = getJournalSnapshot(portfolioId);
+    setLoading(!snap?.portfolio);
+    setPortfolio(snap?.portfolio ?? null);
+    setSummary(snap?.summary ?? null);
+    setHoldings(snap?.holdings ?? []);
+  }, [portfolioId]);
+
+  // הפעלה חדשה (אין בזיכרון) — המצב השמור מהדיסק, לפני שהרשת עונה
+  useEffect(() => {
+    if (getJournalSnapshot(portfolioId)) return;
+    let alive = true;
+    void loadJournalSnapshot(portfolioId).then((snap) => {
+      if (!alive || !snap?.portfolio) return;
+      setPortfolio((cur) => cur ?? snap.portfolio ?? null);
+      setSummary((cur) => cur ?? snap.summary ?? null);
+      setHoldings((cur) => (cur.length ? cur : snap.holdings ?? []));
+      setLoading(false);
+    });
+    return () => {
+      alive = false;
+    };
   }, [portfolioId]);
 
   useFocusEffect(

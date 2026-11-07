@@ -1,5 +1,10 @@
 import i18n from '../../lib/i18n';
 import { JournalSkeleton } from './components/JournalSkeleton';
+import {
+  getJournalPortfolioList,
+  loadJournalPortfolioList,
+  saveJournalPortfolioList,
+} from '../../services/portfolios/journalSnapshotCache';
 import { PortfolioSwitcherSkeleton } from './components/PortfolioSwitcher';
 import { ChatSessionBackdrop } from '../../components/chat/ChatSessionBackdrop';
 import { JOURNAL_HEADER_SECTION_STYLE } from './PortfolioDetailScreen';
@@ -37,12 +42,29 @@ export default function PortfoliosHubScreen() {
   const route = useRoute<Route>();
   const tokens = useDesignTokens();
   const insets = useSafeAreaInsets();
-  const [portfolios, setPortfolios] = useState<Portfolio[] | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // כניסה אופטימיסטית: רשימת התיקים והתיק האחרון מהזיכרון (סינכרוני) / מהדיסק — בלי שלב שלד
+  const cachedList = getJournalPortfolioList();
+  const [portfolios, setPortfolios] = useState<Portfolio[] | null>(cachedList?.portfolios ?? null);
+  const [selectedId, setSelectedId] = useState<string | null>(cachedList?.selectedId ?? null);
+
+  useEffect(() => {
+    if (cachedList) return;
+    let alive = true;
+    void loadJournalPortfolioList().then((v) => {
+      if (!alive || !v) return;
+      setPortfolios((cur) => cur ?? v.portfolios);
+      setSelectedId((cur) => cur ?? v.selectedId);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const selectPortfolio = useCallback((portfolioId: string) => {
     setSelectedId(portfolioId);
     AsyncStorage.setItem(LAST_PORTFOLIO_KEY, portfolioId).catch(() => {});
+    const cur = getJournalPortfolioList();
+    if (cur) saveJournalPortfolioList(cur.portfolios, portfolioId);
   }, []);
 
   const loadPortfolios = useCallback(async () => {
@@ -52,11 +74,11 @@ export default function PortfoliosHubScreen() {
         AsyncStorage.getItem(LAST_PORTFOLIO_KEY).catch(() => null),
       ]);
       setPortfolios(list);
+      const valid = (id: string | null) => !!id && list.some((p) => p.id === id);
       setSelectedId((current) => {
-        const valid = (id: string | null) => !!id && list.some((p) => p.id === id);
-        if (valid(current)) return current;
-        if (valid(saved)) return saved;
-        return list[0]?.id ?? null;
+        const next = valid(current) ? current : valid(saved) ? saved : list[0]?.id ?? null;
+        saveJournalPortfolioList(list, next);
+        return next;
       });
     } catch (e) {
       console.error('load portfolios:', e);

@@ -1,4 +1,5 @@
 import { SegmentedTabs } from '../../../components/ui/SegmentedTabs';
+import { getJournalSnapshot, saveJournalSnapshot } from '../../../services/portfolios/journalSnapshotCache';
 import { ROOT_DIR, UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React, { useEffect, useState, useMemo } from 'react';
@@ -73,7 +74,7 @@ import {
   JournalRecentTradesCard,
   JournalStatsCard,
 } from '../components/JournalDashboard';
-import { useSharedValue } from 'react-native-reanimated';
+import Animated, { FadeIn, useSharedValue } from 'react-native-reanimated';
 
 /** גובה הגרף — כמו בתיק האינסיידרים */
 const HERO_CHART_HEIGHT = 220;
@@ -91,6 +92,8 @@ interface Props {
 }
 
 const GROUP_BY_OPTIONS = DISTRIBUTION_GROUP_BY_OPTIONS;
+/** תוכן שמחליף שלד — נכנס בדהייה קצרה במקום להופיע בבת אחת */
+const CONTENT_FADE = FadeIn.duration(220);
 
 interface TradeStats {
   totalPnl: number;
@@ -135,10 +138,12 @@ export default function OverviewTab({
   // ערך הגרירה ב-UI thread — למספר המתגלגל (כמו בפרופיל אינסיידר)
   const scrubValueSV = useSharedValue(0);
   const scrubActiveSV = useSharedValue(0);
+  // המצב האחרון של התיק (גרף + עסקאות) — מוצג מיד; הרשת מרעננת ברקע
+  const snap = useMemo(() => getJournalSnapshot(portfolio.id), []); // eslint-disable-line react-hooks/exhaustive-deps
   /** סדרת שווי לגרף + מדדי ביצוע */
   const [chartSeries, setChartSeries] = useState<
     { date: string; value: number; external_flow: number }[]
-  >([]);
+  >(() => (snap?.chartSeries ?? []).map((p) => ({ ...p, external_flow: p.external_flow ?? 0 })));
   const [sessionSeries, setSessionSeries] = useState<
     { date: string; value: number; external_flow: number }[] | null
   >(null);
@@ -153,10 +158,10 @@ export default function OverviewTab({
     grossLossAbs: 0,
   });
   /** פוזיציות פתוחות — למחשב ערך תיק חי */
-  const [openTrades, setOpenTrades] = useState<Trade[]>([]);
-  const [closedTrades, setClosedTrades] = useState<Trade[]>([]);
+  const [openTrades, setOpenTrades] = useState<Trade[]>(snap?.openTrades ?? []);
+  const [closedTrades, setClosedTrades] = useState<Trade[]>(snap?.closedTrades ?? []);
   /** עד שהעסקאות נטענו — שלד לפוזיציות / עסקאות אחרונות / סטטיסטיקה (אחרת הם קופצים פנימה מאוחר) */
-  const [tradesLoaded, setTradesLoaded] = useState(false);
+  const [tradesLoaded, setTradesLoaded] = useState(!!snap?.closedTrades);
   /** מחירים חיים + previous_close עבור סימבולי הפוזיציות הפתוחות */
   const [openTradeQuotes, setOpenTradeQuotes] = useState<Map<string, LiveQuote>>(new Map());
 
@@ -299,6 +304,7 @@ export default function OverviewTab({
 
         setOpenTrades(open);
         setTradesLoaded(true);
+        saveJournalSnapshot(portfolio.id, { closedTrades: closed, openTrades: open });
         if (open.length > 0) {
           const symbols = [...new Set(open.map((t) => t.symbol))];
           const fetchPrices = () => {
@@ -839,6 +845,11 @@ export default function OverviewTab({
   // רווח לא ממומש חי — מהפוזיציות הפתוחות עם המחיר העדכני
   const openUnrealized = openTradeHoldings.reduce((sum, h) => sum + h.unrealized_gain, 0);
   const sparkValues = periodSeries.map((point) => point.value);
+  // הסדרה האחרונה נשמרת לקאש — הכניסה הבאה מציגה את הגרף מיד
+  useEffect(() => {
+    if (!chartLoading && chartSeries.length) saveJournalSnapshot(portfolio.id, { chartSeries });
+  }, [chartLoading, chartSeries, portfolio.id]);
+
   // רענון (chartRefreshKey) משאיר את הגרף הקודם עד שהחדש מגיע — סקלטון רק בטעינה ראשונה
   const heroLoading = chartLoading && chartSeries.length === 0;
   const heroValue =
@@ -886,7 +897,7 @@ export default function OverviewTab({
         {/* טעינה ראשונה: כל חלק (שווי, שינוי, גרף) מחזיק מקום משלו — השווי החי מגיע לפני הגרף ונכנס במקומו */}
         {heroValue != null && liveValue != null ? (
           // אותו מספר מתגלגל כמו באינסיידרים: ב-UI thread, ספרה מסיימת מעבר ורק אז ממשיכה
-          <View style={styles.heroNumberWrap}>
+          <Animated.View style={styles.heroNumberWrap} entering={CONTENT_FADE}>
             <MotionNumber
               scrubValue={scrubValueSV}
               scrubActive={scrubActiveSV}
@@ -897,7 +908,7 @@ export default function OverviewTab({
               upColor={tokens.colors.primary.main}
               downColor={tokens.colors.text.danger}
             />
-          </View>
+          </Animated.View>
         ) : heroLoading ? (
           <JournalHeroValueSkeleton />
         ) : null}
@@ -919,7 +930,7 @@ export default function OverviewTab({
             </Text>
           </View>
         ) : periodDelta ? (
-          <View style={styles.deltaRow}>
+          <Animated.View style={styles.deltaRow} entering={CONTENT_FADE}>
             <AnimatedNumber
               text={toDataIsland(formatCongressDeltaUsd(periodDelta.usd))}
               value={periodDelta.usd}
@@ -933,7 +944,7 @@ export default function OverviewTab({
               style={[styles.deltaFigure, { color: deltaColor }]}
               numberOfLines={1}
             />
-          </View>
+          </Animated.View>
         ) : heroLoading ? (
           <JournalHeroDeltaSkeleton />
         ) : null}
@@ -948,7 +959,7 @@ export default function OverviewTab({
                 : i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s18')}
           </Text>
         ) : (
-          <View style={styles.chartWrap}>
+          <Animated.View style={styles.chartWrap} entering={CONTENT_FADE}>
             <View pointerEvents="none" style={[styles.chartWatermark, { height: HERO_CHART_HEIGHT }]}>
               <Image
                 source={require('../../../assets/badges/rank_mark.png')}
@@ -973,7 +984,7 @@ export default function OverviewTab({
               scrubActive={scrubActiveSV}
               showPointMarkers={false}
             />
-          </View>
+          </Animated.View>
         )}
       </View>
 
@@ -1037,11 +1048,11 @@ export default function OverviewTab({
 
       {/* לוח בקרה: פוזיציות חיות, עסקאות אחרונות, מה עובד */}
       {tradesLoaded ? (
-        <>
+        <Animated.View entering={CONTENT_FADE}>
           <JournalOpenPositionsCard holdings={openTradeHoldings} currency={portfolio.currency} />
           <JournalRecentTradesCard trades={closedTrades} currency={portfolio.currency} />
           <JournalStatsCard trades={closedTrades} currency={portfolio.currency} />
-        </>
+        </Animated.View>
       ) : (
         <JournalDashboardSkeleton />
       )}

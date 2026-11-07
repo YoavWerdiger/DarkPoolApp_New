@@ -101,7 +101,8 @@ export function JournalHeroChartSkeleton() {
   );
 }
 
-export function JournalSkeleton() {
+/** צבעי עזר משותפים לחלקי השלד */
+function useSkeletonParts() {
   const tokens = useDesignTokens();
   const ringColor = String(tokens.colors.background.primary) === LIGHT_CANVAS ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.12)';
   const divider = { height: 1, backgroundColor: tokens.colors.border.divider, marginHorizontal: JOURNAL_LAYOUT.cardPadding };
@@ -111,7 +112,52 @@ export function JournalSkeleton() {
       {title}
     </Text>
   );
+  return { tokens, ringColor, divider, heading };
+}
 
+/** תוכן כרטיס חלוקת הנכסים (בתוך ה-UICard) — טבעת, מקרא טיקרים ו«סה״כ נכסים» */
+export function JournalDistributionBodySkeleton() {
+  const { tokens, ringColor } = useSkeletonParts();
+  return (
+    <View pointerEvents="none">
+      <View style={styles.donutRow}>
+        {/* טבעת כמו DistributionDonut (128 / עובי 18) עם עיגול האווטאר במרכז */}
+        <View style={styles.donut}>
+          <SkeletonBox
+            width={DONUT}
+            height={DONUT}
+            borderRadius={DONUT / 2}
+            style={{ position: 'absolute', backgroundColor: 'transparent', borderWidth: DONUT_STROKE, borderColor: ringColor }}
+          />
+          <SkeletonBox width={DONUT_AVATAR} height={DONUT_AVATAR} borderRadius={DONUT_AVATAR / 2} />
+        </View>
+        {/* מקרא כרשימת טיקרים: נקודת צבע · טיקר · אחוז */}
+        <View style={styles.legend}>
+          {LEGEND_WIDTHS.map((w, i) => (
+            <View key={i} style={styles.legendRow}>
+              <SkeletonBox width={10} height={10} borderRadius={5} />
+              <View style={{ flex: 1 }}>
+                <SkLine lineHeight={15} width={w} box={11} />
+              </View>
+              <SkLine lineHeight={15} width={34} box={11} />
+            </View>
+          ))}
+        </View>
+      </View>
+      {/* «סה״כ נכסים» קבוע — רק הסכום נטען */}
+      <View style={styles.totalRow}>
+        <Text style={[styles.totalLabel, { color: tokens.colors.text.tertiary }]}>
+          {i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s23')}
+        </Text>
+        <SkLine lineHeight={18} width={84} box={14} />
+      </View>
+    </View>
+  );
+}
+
+/** פוזיציות פתוחות, עסקאות אחרונות וסטטיסטיקה — כמו JournalDashboard (עד שהעסקאות נטענות) */
+export function JournalDashboardSkeleton() {
+  const { tokens, divider, heading } = useSkeletonParts();
   /**
    * פאנל רשימה כמו JournalDashboard:
    *  withSub — פוזיציות פתוחות (HoldingsListRow: טיקר + חלק מהתיק · שווי + תשואה)
@@ -157,6 +203,39 @@ export function JournalSkeleton() {
 
   return (
     <View pointerEvents="none">
+      {listPanel(3, true, 0)}
+      {listPanel(3, false, 120)}
+
+      {/* סטטיסטיקה — JournalStatsList: ערך משמאל · כותרת · אייקון מימין, 6 שורות */}
+      <View style={styles.section}>
+        <View style={styles.headingWrap}>{heading(i18n.t('auto.screens__Portfolios__components__JournalDashboard.s11'))}</View>
+        <UICard variant="soft" glassIntensity="light" padding="none" style={styles.panel}>
+          {STAT_ROWS.map(({ icon: Icon, key }, i, arr) => (
+            <React.Fragment key={key}>
+              {/* כותרת ואייקון קבועים — רק הערך נטען */}
+              <View style={styles.statRow}>
+                <SkLine lineHeight={JOURNAL_TYPE.cardTitle.lineHeight} width={56} box={14} delay={i * 50} />
+                <Text style={[styles.statTitle, { color: tokens.colors.text.primary }]} numberOfLines={1}>
+                  {i18n.t(`auto.screens__Portfolios__components__JournalDashboard.${key}`)}
+                </Text>
+                <View style={styles.statIcon}>
+                  <Icon size={20} color={tokens.colors.text.primary} strokeWidth={2} />
+                </View>
+              </View>
+              {i < arr.length - 1 ? <View style={divider} /> : null}
+            </React.Fragment>
+          ))}
+        </UICard>
+      </View>
+    </View>
+  );
+}
+
+export function JournalSkeleton() {
+  const { heading } = useSkeletonParts();
+
+  return (
+    <View pointerEvents="none">
       {/* סרגל הטאבים האמיתי — אותו רכיב ושוליים כמו ב-PortfolioDetailScreen (styles.segmentedTabs) */}
       <SegmentedTabs options={PORTFOLIO_DETAIL_TABS} value="overview" onChange={noop} haptic={false} style={styles.tabs} />
 
@@ -181,64 +260,11 @@ export function JournalSkeleton() {
             style={styles.groupTabs}
           />
           <UICard variant="soft" padding="md" style={styles.panelMd}>
-            <View style={styles.donutRow}>
-              {/* טבעת כמו DistributionDonut (128 / עובי 18) עם עיגול האווטאר במרכז */}
-              <View style={styles.donut}>
-                <SkeletonBox
-                  width={DONUT}
-                  height={DONUT}
-                  borderRadius={DONUT / 2}
-                  style={{ position: 'absolute', backgroundColor: 'transparent', borderWidth: DONUT_STROKE, borderColor: ringColor }}
-                />
-                <SkeletonBox width={DONUT_AVATAR} height={DONUT_AVATAR} borderRadius={DONUT_AVATAR / 2} />
-              </View>
-              {/* מקרא כרשימת טיקרים: נקודת צבע · טיקר · אחוז */}
-              <View style={styles.legend}>
-                {LEGEND_WIDTHS.map((w, i) => (
-                  <View key={i} style={styles.legendRow}>
-                    <SkeletonBox width={10} height={10} borderRadius={5} />
-                    <View style={{ flex: 1 }}>
-                      <SkLine lineHeight={15} width={w} box={11} />
-                    </View>
-                    <SkLine lineHeight={15} width={34} box={11} />
-                  </View>
-                ))}
-              </View>
-            </View>
-            {/* «סה״כ נכסים» קבוע — רק הסכום נטען */}
-            <View style={styles.totalRow}>
-              <Text style={[styles.totalLabel, { color: tokens.colors.text.tertiary }]}>
-                {i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s23')}
-              </Text>
-              <SkLine lineHeight={18} width={84} box={14} />
-            </View>
+            <JournalDistributionBodySkeleton />
           </UICard>
         </View>
 
-        {listPanel(3, true, 0)}
-        {listPanel(3, false, 120)}
-
-        {/* סטטיסטיקה — JournalStatsList: ערך משמאל · כותרת · אייקון מימין, 6 שורות */}
-        <View style={styles.section}>
-          <View style={styles.headingWrap}>{heading(i18n.t('auto.screens__Portfolios__components__JournalDashboard.s11'))}</View>
-          <UICard variant="soft" glassIntensity="light" padding="none" style={styles.panel}>
-            {STAT_ROWS.map(({ icon: Icon, key }, i, arr) => (
-              <React.Fragment key={key}>
-                {/* כותרת ואייקון קבועים — רק הערך נטען */}
-                <View style={styles.statRow}>
-                  <SkLine lineHeight={JOURNAL_TYPE.cardTitle.lineHeight} width={56} box={14} delay={i * 50} />
-                  <Text style={[styles.statTitle, { color: tokens.colors.text.primary }]} numberOfLines={1}>
-                    {i18n.t(`auto.screens__Portfolios__components__JournalDashboard.${key}`)}
-                  </Text>
-                  <View style={styles.statIcon}>
-                    <Icon size={20} color={tokens.colors.text.primary} strokeWidth={2} />
-                  </View>
-                </View>
-                {i < arr.length - 1 ? <View style={divider} /> : null}
-              </React.Fragment>
-            ))}
-          </UICard>
-        </View>
+        <JournalDashboardSkeleton />
       </View>
     </View>
   );

@@ -35,8 +35,15 @@ const SHARED_PULSE = new Animated.Value(0.3);
 let sharedPulseLoop: Animated.CompositeAnimation | null = null;
 let sharedPulseRetain = 0;
 
+/** עצירה דחויה: שלד שמתחלף בשלד (מסך טעינה → טעינת טאב) ממשיך את אותו פעימה בלי איפוס — אחרת מהבהב */
+let sharedPulseStopTimer: ReturnType<typeof setTimeout> | null = null;
+
 function retainSharedSkeletonPulse(): Animated.Value {
-  if (sharedPulseRetain === 0) {
+  if (sharedPulseStopTimer) {
+    clearTimeout(sharedPulseStopTimer);
+    sharedPulseStopTimer = null;
+  }
+  if (sharedPulseRetain === 0 && !sharedPulseLoop) {
     sharedPulseLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(SHARED_PULSE, {
@@ -59,10 +66,14 @@ function retainSharedSkeletonPulse(): Animated.Value {
 
 function releaseSharedSkeletonPulse(): void {
   sharedPulseRetain = Math.max(0, sharedPulseRetain - 1);
-  if (sharedPulseRetain === 0) {
-    sharedPulseLoop?.stop();
-    sharedPulseLoop = null;
-    SHARED_PULSE.setValue(0.3);
+  if (sharedPulseRetain === 0 && !sharedPulseStopTimer) {
+    sharedPulseStopTimer = setTimeout(() => {
+      sharedPulseStopTimer = null;
+      if (sharedPulseRetain > 0) return;
+      sharedPulseLoop?.stop();
+      sharedPulseLoop = null;
+      SHARED_PULSE.setValue(0.3);
+    }, 400);
   }
 }
 

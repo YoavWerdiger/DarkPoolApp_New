@@ -19,6 +19,8 @@ import { toLocalDateKey } from '../../../utils/dateKeys';
 import { DistributionDonut } from '../components/DistributionDonut';
 import { DISTRIBUTION_GROUP_BY_OPTIONS } from '../portfolioConstants';
 import {
+  JournalDashboardSkeleton,
+  JournalDistributionBodySkeleton,
   JournalHeroChartSkeleton,
   JournalHeroDeltaSkeleton,
   JournalHeroValueSkeleton,
@@ -153,6 +155,8 @@ export default function OverviewTab({
   /** פוזיציות פתוחות — למחשב ערך תיק חי */
   const [openTrades, setOpenTrades] = useState<Trade[]>([]);
   const [closedTrades, setClosedTrades] = useState<Trade[]>([]);
+  /** עד שהעסקאות נטענו — שלד לפוזיציות / עסקאות אחרונות / סטטיסטיקה (אחרת הם קופצים פנימה מאוחר) */
+  const [tradesLoaded, setTradesLoaded] = useState(false);
   /** מחירים חיים + previous_close עבור סימבולי הפוזיציות הפתוחות */
   const [openTradeQuotes, setOpenTradeQuotes] = useState<Map<string, LiveQuote>>(new Map());
 
@@ -294,6 +298,7 @@ export default function OverviewTab({
         }
 
         setOpenTrades(open);
+        setTradesLoaded(true);
         if (open.length > 0) {
           const symbols = [...new Set(open.map((t) => t.symbol))];
           const fetchPrices = () => {
@@ -321,6 +326,7 @@ export default function OverviewTab({
         }
       } catch (err) {
         console.error('OverviewTab loadTrades:', err);
+        if (!cancel) setTradesLoaded(true);
       }
     };
 
@@ -981,7 +987,9 @@ export default function OverviewTab({
           style={styles.groupTabs}
         />
       <UICard variant="soft" padding="md" style={styles.pieCard}>
-        {distribution.length === 0 ? (
+        {!tradesLoaded && distribution.length === 0 ? (
+          <JournalDistributionBodySkeleton />
+        ) : distribution.length === 0 ? (
           <Text style={styles.emptyText}>
             {openTrades.length > 0
               ? i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s20')
@@ -1028,9 +1036,15 @@ export default function OverviewTab({
       </View>
 
       {/* לוח בקרה: פוזיציות חיות, עסקאות אחרונות, מה עובד */}
-      <JournalOpenPositionsCard holdings={openTradeHoldings} currency={portfolio.currency} />
-      <JournalRecentTradesCard trades={closedTrades} currency={portfolio.currency} />
-      <JournalStatsCard trades={closedTrades} currency={portfolio.currency} />
+      {tradesLoaded ? (
+        <>
+          <JournalOpenPositionsCard holdings={openTradeHoldings} currency={portfolio.currency} />
+          <JournalRecentTradesCard trades={closedTrades} currency={portfolio.currency} />
+          <JournalStatsCard trades={closedTrades} currency={portfolio.currency} />
+        </>
+      ) : (
+        <JournalDashboardSkeleton />
+      )}
     </View>
   );
 }

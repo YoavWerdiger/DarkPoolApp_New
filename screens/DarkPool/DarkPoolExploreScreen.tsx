@@ -1,4 +1,4 @@
-import { UI_DIR } from '../../lib/i18n/direction';
+import { UI_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 /**
  * גילוי — מדפי הקטגוריות.
@@ -17,14 +17,16 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { formFieldShellStyle } from '../../components/ui/formControl';
-import { APP_LAYOUT } from '../../components/ui/appLayout';
+import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
 import { LIGHT_CANVAS } from '../../components/ui/designTokensStatic';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { ExplorePortraitCard } from './components/ExplorePortraitCard';
 import { InvestorPortrait } from './components/InvestorPortrait';
 import { formatInsiderDisplayName } from './utils/investorPlaceholder';
 import { congressMemberLabel, isKnownCongressMember } from './utils/congressGender';
-import { toDataIsland } from './utils/bidi';
+import { ltrNameText, toDataIsland } from './utils/bidi';
+import { DarkPoolSectionHeader } from './components/DarkPoolSectionHeader';
+import { CHROME_UICARD } from '../../components/ui/chromeControl';
 import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
 import { ChatSheetTopoHeader } from '../../components/chat/ChatBottomSheet';
 import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
@@ -559,33 +561,31 @@ export default function DarkPoolExploreScreen() {
             {searchResults == null ? (
               // בלי טקסט: חיפוש מהיר — הכי במעקב ופעילים לאחרונה, לחיצה פותחת את הפרופיל
               <View style={styles.suggestions}>
-                {searchSuggestions.followed.length ? (
-                  <View style={styles.suggestionBlock}>
-                    <Text style={styles.suggestionTitle}>{i18n.t('auto.screens__DarkPool__DarkPoolExploreScreen.s11')}</Text>
-                    {searchSuggestions.followed.map((person, i) => (
-                      <SearchSuggestionRow
-                        key={`f:${person.kind}:${person.id}`}
-                        person={person}
-                        badge={person.metric}
-                        last={i === searchSuggestions.followed.length - 1}
-                        onPress={() => openFromSearch(person)}
-                      />
-                    ))}
-                  </View>
-                ) : null}
-                {searchSuggestions.active.length ? (
-                  <View style={styles.suggestionBlock}>
-                    <Text style={styles.suggestionTitle}>{i18n.t('auto.screens__DarkPool__DarkPoolExploreScreen.s12')}</Text>
-                    {searchSuggestions.active.map((person, i) => (
-                      <SearchSuggestionRow
-                        key={`a:${person.kind}:${person.id}`}
-                        person={person}
-                        last={i === searchSuggestions.active.length - 1}
-                        onPress={() => openFromSearch(person)}
-                      />
-                    ))}
-                  </View>
-                ) : null}
+                {(
+                  [
+                    { key: 'followed', title: i18n.t('auto.screens__DarkPool__DarkPoolExploreScreen.s11'), people: searchSuggestions.followed },
+                    { key: 'active', title: i18n.t('auto.screens__DarkPool__DarkPoolExploreScreen.s12'), people: searchSuggestions.active },
+                  ] as const
+                ).map((section) =>
+                  section.people.length ? (
+                    <View key={section.key}>
+                      <DarkPoolSectionHeader title={section.title} />
+                      <UICard {...CHROME_UICARD} style={styles.suggestionCard}>
+                        {section.people.map((person, i) => (
+                          <React.Fragment key={`${section.key}:${person.kind}:${person.id}`}>
+                            {i > 0 ? <View style={styles.suggestionDivider} /> : null}
+                            <SearchSuggestionRow
+                              person={person}
+                              // הכי במעקב: מספר העוקבים בשורת המשנה (person.metric)
+                              extra={section.key === 'followed' ? person.metric : undefined}
+                              onPress={() => openFromSearch(person)}
+                            />
+                          </React.Fragment>
+                        ))}
+                      </UICard>
+                    </View>
+                  ) : null,
+                )}
               </View>
             ) : searchResults.length ? (
               <View style={styles.resultsGrid}>
@@ -652,14 +652,21 @@ function createStyles(
       gap: EXPLORE_GRID_GAP,
       marginBottom: tokens.spacing.xl,
     },
-    suggestions: { direction: UI_DIR, gap: tokens.spacing.lg },
-    suggestionBlock: { direction: UI_DIR },
-    suggestionTitle: {
-      ...DARK_POOL_TYPE.body,
-      ...darkPoolPhysicalRightText,
-      fontWeight: '700',
-      color: tokens.colors.text.primary,
-      marginBottom: APP_LAYOUT.stackGapSmall,
+    suggestions: { direction: UI_DIR },
+    // כמו כרטיס «במעקב» (DarkPoolFollowingScreen)
+    suggestionCard: {
+      marginBottom: APP_LAYOUT.sectionGap,
+      borderRadius: UI_CARD_RADIUS,
+      overflow: 'hidden',
+      backgroundColor: tokens.colors.background.cardSolid,
+      borderWidth: 0,
+      ...tokens.shadows.none,
+    },
+    suggestionDivider: {
+      height: 1,
+      backgroundColor: tokens.colors.border.divider,
+      marginHorizontal: APP_LAYOUT.cardPadding,
+      alignSelf: 'stretch',
     },
     noResults: {
       ...darkPoolPhysicalRightText,
@@ -679,16 +686,15 @@ function createStyles(
   });
 }
 
-/** שורת הצעה בשיט החיפוש: פורטרט עגול · שם + תפקיד/פעילות · תג (עוקבים) בצד השני */
+/** שורת הצעה בשיט החיפוש — אותה שורה כמו ב«במעקב»: פורטרט 40 · שם + שורת משנה · שברון */
 function SearchSuggestionRow({
   person,
-  badge,
-  last,
+  extra,
   onPress,
 }: {
   person: ExplorePerson;
-  badge?: string;
-  last: boolean;
+  /** תוספת לשורת המשנה (למשל «120 עוקבים») */
+  extra?: string;
   onPress: () => void;
 }) {
   const tokens = useDesignTokens();
@@ -699,17 +705,14 @@ function SearchSuggestionRow({
       : person.subtitle?.trim() && person.subtitle.trim() !== person.metric?.trim()
         ? person.subtitle.trim()
         : null;
+  const sub = [role, extra].filter(Boolean).join(' · ');
   return (
     <Pressable
       onPress={() => {
         void HapticFeedback.selection();
         onPress();
       }}
-      style={({ pressed }) => [
-        suggestionStyles.row,
-        !last && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: tokens.colors.border.divider },
-        pressed && { opacity: 0.6 },
-      ]}
+      style={({ pressed }) => [suggestionStyles.row, pressed && { opacity: 0.6 }]}
       accessibilityRole="button"
       accessibilityLabel={name}
     >
@@ -721,40 +724,51 @@ function SearchSuggestionRow({
         personId={person.id}
         logoTicker={person.entity_type === 'company' ? person.ticker : undefined}
         layout="circle"
-        size={48}
+        size={40}
+        style={[suggestionStyles.avatar, { backgroundColor: tokens.colors.background.cardSolid }]}
       />
+      <View style={suggestionStyles.gap} />
       <View style={suggestionStyles.text}>
         <Text style={[suggestionStyles.name, { color: tokens.colors.text.primary }]} numberOfLines={1}>
           {name}
         </Text>
-        {role ? (
-          <Text style={[suggestionStyles.role, { color: tokens.colors.text.secondary }]} numberOfLines={1}>
-            {role}
+        {sub ? (
+          <Text style={[suggestionStyles.sub, { color: tokens.colors.text.secondary }]} numberOfLines={1}>
+            {toDataIsland(sub)}
           </Text>
         ) : null}
       </View>
-      {badge ? (
-        <View style={[suggestionStyles.badge, { backgroundColor: tokens.colors.background.tertiary }]}>
-          <Text style={[suggestionStyles.badgeText, { color: tokens.colors.text.primary }]} numberOfLines={1}>
-            {toDataIsland(badge)}
-          </Text>
-        </View>
-      ) : null}
+      <Ionicons name={dirIcon('chevron-back')} size={18} color={tokens.colors.text.secondary} />
     </Pressable>
   );
 }
 
+// = FollowedRow ב-DarkPoolFollowingScreen
 const suggestionStyles = StyleSheet.create({
   row: {
     direction: UI_DIR,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 12,
+    paddingVertical: APP_LAYOUT.cardTitleToBodyGap,
+    paddingHorizontal: APP_LAYOUT.cardPadding,
   },
-  text: { flex: 1, minWidth: 0, gap: 2 },
-  name: { ...DARK_POOL_TYPE.body, fontWeight: '600', ...darkPoolPhysicalRightText },
-  role: { ...DARK_POOL_TYPE.footnote, ...darkPoolPhysicalRightText },
-  badge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, flexShrink: 0 },
-  badgeText: { ...DARK_POOL_TYPE.footnote, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  avatar: { overflow: 'hidden', borderWidth: 0 },
+  gap: { width: APP_LAYOUT.cardTitleToBodyGap, flexShrink: 0 },
+  text: { flex: 1, minWidth: 0, alignItems: 'stretch' },
+  name: {
+    ...ltrNameText,
+    width: '100%',
+    fontSize: DARK_POOL_TYPE.cardBody.fontSize,
+    fontVariant: ['tabular-nums'],
+    lineHeight: 20,
+    fontWeight: DARK_POOL_TYPE.cardTitle.fontWeight,
+  },
+  sub: {
+    ...darkPoolPhysicalRightText,
+    width: '100%',
+    fontSize: DARK_POOL_TYPE.cardSubtitle.fontSize,
+    fontVariant: ['tabular-nums'],
+    lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
+    fontWeight: DARK_POOL_TYPE.cardSubtitle.fontWeight,
+  },
 });

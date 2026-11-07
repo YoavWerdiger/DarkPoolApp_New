@@ -358,14 +358,22 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
     [trade]
   );
 
+  // מאפסים רק כשהשיט נסגר — איפוס בפתיחה יכול לרוץ אחרי onLayout ולהשאיר את הכפתור חסום לתמיד.
+  // מעבר לטרייד אחר מרכיב מחדש את הכרטיס (key) ו-onLayout רץ שוב.
   useEffect(() => {
-    if (visible) {
-      setLayoutReady(false);
-    }
-  }, [visible, normalized?.id]);
+    if (!visible) setLayoutReady(false);
+  }, [visible]);
+
+  // טעינת הגרף לפי זהות הטרייד, לא לפי אובייקט — אחרת כל רינדור של ההורה (מחירים חיים) מאפס אותה
+  const normalizedRef = useRef(normalized);
+  normalizedRef.current = normalized;
+  const historyKey = normalized
+    ? `${normalized.id}|${normalized.symbol}|${normalized.entry_date}|${normalized.exit_date}`
+    : '';
 
   useEffect(() => {
-    if (!visible || !normalized) return;
+    const current = normalizedRef.current;
+    if (!visible || !current) return;
     let cancelled = false;
     setPricePath(null);
     setHistoryReady(false);
@@ -373,7 +381,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
     const timeout = setTimeout(() => {
       if (!cancelled) setHistoryReady(true);
     }, 4000);
-    loadTradePath(normalized)
+    loadTradePath(current)
       .then((path) => {
         if (!cancelled) setPricePath(path);
       })
@@ -388,7 +396,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
       cancelled = true;
       clearTimeout(timeout);
     };
-  }, [visible, normalized]);
+  }, [visible, historyKey]);
 
   const formatCurrencyPlain = (value: number) =>
     Math.abs(value).toLocaleString('en-US', {
@@ -660,7 +668,6 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
           <UIButton
             title={isExporting ? i18n.t('auto.components__Journal__ExportTradeImage.s20') : i18n.t('auto.components__Journal__ExportTradeImage.s9')}
             variant="primary"
-            icon="share-outline"
             fullWidth
             loading={isExporting}
             disabled={isExporting || !layoutReady || !historyReady}

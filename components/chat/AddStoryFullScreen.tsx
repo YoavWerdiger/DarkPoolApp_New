@@ -104,22 +104,33 @@ const DRAW_COLORS = [
 const DRAW_STROKE_WIDTHS = [3, 6, 10, 16];
 
 /** ב-expo-camera, selectedLens תואם ל-localizedName ולא ל-deviceType — בוחרים עדשת wide 1x */
-function pickWideAngleLens(lenses: string[]): string | undefined {
-  if (!lenses.length) return undefined;
-  const scored = lenses.map((name) => {
-    const n = name.toLowerCase();
-    let score = 50;
-    if (/ultra|אולטרה|fisheye/.test(n)) score -= 120;
-    if (/tele|טלפוטו|טל\.?/.test(n)) score -= 60;
-    if (/dual|triple|כפול|משולש/.test(n)) score -= 45;
-    if (/truedepth|lidar|continuity|depth/.test(n)) score -= 90;
-    if (/wide|רחב/.test(n)) score += 25;
-    if (/back camera|rear camera|מצלמה אחורית/.test(n) && !/ultra|dual|triple/.test(n)) score += 40;
-    score -= name.length * 0.15;
-    return { name, score };
-  });
+/**
+ * בוחר את העדשה הרחבה הראשית. SDK 58: expo-camera מחזיר LensInfo ({ deviceType, localizedName })
+ * במקום מחרוזות — name.toLowerCase() על אובייקט זרק «undefined is not a function» בתוך
+ * onAvailableLensesChanged (בלי try) והקריס את מסך הוספת הסטורי בפרודקשן.
+ * מחזיר את ה-deviceType (הערך ש-selectedLens מצפה לו); תומך גם בפורמט הישן (מחרוזת).
+ */
+function pickWideAngleLens(lenses: readonly (string | { deviceType?: string; localizedName?: string })[]): string | undefined {
+  if (!Array.isArray(lenses) || !lenses.length) return undefined;
+  const scored = lenses
+    .map((lens) => {
+      const id = typeof lens === 'string' ? lens : lens?.deviceType ?? '';
+      const label = typeof lens === 'string' ? lens : `${lens?.localizedName ?? ''} ${lens?.deviceType ?? ''}`;
+      if (!id) return null;
+      const n = label.toLowerCase();
+      let score = 50;
+      if (/ultra|אולטרה|fisheye/.test(n)) score -= 120;
+      if (/tele|טלפוטו|טל\.?/.test(n)) score -= 60;
+      if (/dual|triple|כפול|משולש/.test(n)) score -= 45;
+      if (/truedepth|lidar|continuity|depth/.test(n)) score -= 90;
+      if (/wide|רחב/.test(n)) score += 25;
+      if (/back camera|rear camera|מצלמה אחורית/.test(n) && !/ultra|dual|triple/.test(n)) score += 40;
+      score -= label.length * 0.15;
+      return { id, score };
+    })
+    .filter((x): x is { id: string; score: number } => x != null);
   scored.sort((a, b) => b.score - a.score);
-  return scored[0]?.name;
+  return scored[0]?.id;
 }
 
 /** Prefer ~1080p–1440p — largest (4K) sizes lag preview + shutter on expo-camera. */
@@ -1320,12 +1331,21 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
       setCameraZoom(0);
       zoomSV.value = 0;
       loadRecentPhotos();
-      if (!permission?.granted) {
-        // חסומה → דיאלוג «פתח הגדרות»
-        void requestCameraWithDialog(permission, requestPermission);
-      }
     }
   }, [visible]);
+
+  // בקשת הרשאת מצלמה — רק אחרי שמצב ההרשאה נטען (permission === null בזמן טעינה, ואז הדיאלוג
+  // הופיע בכל כניסה גם כשכבר אושר), ופעם אחת לכל פתיחה
+  const askedCameraRef = useRef(false);
+  useEffect(() => {
+    if (!visible) {
+      askedCameraRef.current = false;
+      return;
+    }
+    if (!permission || permission.granted || askedCameraRef.current) return;
+    askedCameraRef.current = true;
+    void requestCameraWithDialog(permission, requestPermission);
+  }, [visible, permission, requestPermission]);
 
   // סשן אודיו שמאפשר הקלטה לפני שמרכיבים את המצלמה (בכל כניסה לצילום — גם אחרי פריוויו
   // של וידאו שמחזיר ל«ניגון בלבד»); אחרת התצוגה נתקעת על הפריים הראשון
@@ -1538,9 +1558,11 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
       return;
     }
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      logger.debug('AddStoryFullScreen', `openGallery permission=${status}`);
-      if (status !== 'granted') {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const status = perm.status;
+      logger.debug('AddStoryFullScreen', `openGallery permission=${status} access=${perm.accessPrivileges ?? '-'}`);
+      // «גישה מוגבלת» (iOS: רק תמונות נבחרות) — גם היא אישור; קודם נחשבה סירוב והבקשה חזרה
+      if (status !== 'granted' && perm.accessPrivileges !== 'limited') {
         legacyAlert(i18n.t('auto.components__chat__AddStoryFullScreen.s9'), i18n.t('auto.components__chat__AddStoryFullScreen.s10'));
         return;
       }
@@ -1810,7 +1832,12 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
                   }}
                   onMountError={(e) => logger.error('AddStoryFullScreen', 'camera mount error', e?.message)}
                   onAvailableLensesChanged={({ lenses }) => {
-                    const wide = pickWideAngleLens(lenses);
+                    let wide: string | undefined;
+                    try {
+                      wide = pickWideAngleLens(lenses ?? []);
+                    } catch {
+                      return;
+                    }
                     if (wide) setSelectedLens((prev) => (prev === wide ? prev : wide));
                   }}
                 />

@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { SkeletonBox, SkeletonLine } from '../ui/SkeletonLoader';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE, headerExitButtonFill } from '../ui/DayNavBlurButton';
 import { Image as ImageIcon, MessageSquareText, Send } from 'lucide-react-native';
@@ -51,6 +52,9 @@ type ChatGroupRow = {
   avatar_url?: string | null;
 };
 
+/** הקבוצות האחרונות לכל משתמש — שיתוף חוזר מציג את הרשימה מיד */
+const groupsCache = new Map<string, ChatGroupRow[]>();
+
 
 export default function ShareDestinationSheet({
   visible,
@@ -68,14 +72,13 @@ export default function ShareDestinationSheet({
   const { user } = useAuth();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
   const [dest, setDest] = useState<Dest>('menu');
-  const [groups, setGroups] = useState<ChatGroupRow[]>([]);
+  const [groups, setGroups] = useState<ChatGroupRow[]>(() => (user?.id ? groupsCache.get(user.id) ?? [] : []));
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!visible) {
       setDest('menu');
-      setGroups([]);
       setLoading(false);
       setBusy(false);
     }
@@ -86,26 +89,35 @@ export default function ShareDestinationSheet({
       legacyAlert(i18n.t('auto.components__share__ShareDestinationSheet.s1'), i18n.t('auto.components__share__ShareDestinationSheet.s2'));
       return;
     }
-    setLoading(true);
+    // יש רשימה מהקאש — מרעננים בשקט (בלי שלד)
+    if (!groupsCache.get(user.id)?.length) setLoading(true);
     try {
       const { data, error } = await getChatGroups(user.id);
       if (error) {
         legacyAlert(i18n.t('auto.components__share__ShareDestinationSheet.s1'), error.message || i18n.t('auto.components__share__ShareDestinationSheet.s3'));
         return;
       }
-      setGroups(
-        (data || []).map((g: any) => ({
-          id: g.id,
-          name: g.name || i18n.t('auto.components__share__ShareDestinationSheet.s4'),
-          avatar_url: g.avatar_url,
-        }))
-      );
+      const rows: ChatGroupRow[] = (data || []).map((g: any) => ({
+        id: g.id,
+        name: g.name || i18n.t('auto.components__share__ShareDestinationSheet.s4'),
+        avatar_url: g.avatar_url,
+      }));
+      groupsCache.set(user.id, rows);
+      setGroups(rows);
     } catch {
       legacyAlert(i18n.t('auto.components__share__ShareDestinationSheet.s1'), i18n.t('auto.components__share__ShareDestinationSheet.s5'));
     } finally {
       setLoading(false);
     }
   }, [user?.id]);
+
+  // טעינה מוקדמת כשהשיט נפתח — כשבוחרים «צ'אט» הקבוצות כבר שם
+  useEffect(() => {
+    if (!visible || !user?.id) return;
+    const cached = groupsCache.get(user.id);
+    if (cached?.length) setGroups(cached);
+    void loadGroups();
+  }, [visible, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ציוץ: פותחים את מסך הכתיבה של הציוצים עם הכרטיס מצורף — כותבים שם ומפרסמים
   const shareTweet = useCallback(() => {
@@ -198,7 +210,6 @@ export default function ShareDestinationSheet({
                   if (busy) return;
                   void HapticFeedback.selection();
                   setDest('chat');
-                  void loadGroups();
                 }}
               />
               <SettingsActionRow
@@ -226,9 +237,22 @@ export default function ShareDestinationSheet({
               ) : null}
             </SettingsGlassCard>
           </View>
-        ) : loading ? (
-          <View style={styles.center}>
-            <ActivityIndicator color={tokens.colors.text.secondary} />
+        ) : (
+          // גובה קבוע לאזור הקבוצות — השיט גדל פעם אחת (תפריט → רשימה) ולא שוב כשהנתונים מגיעים
+          <View style={{ height: Math.round(windowHeight * 0.5) }}>
+          {loading && groups.length === 0 ? (
+          <View style={styles.listContent} pointerEvents="none">
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <React.Fragment key={i}>
+                {i > 0 ? <View style={[styles.divider, { backgroundColor: tokens.colors.border.divider }]} /> : null}
+                <View style={styles.groupRow}>
+                  <SkeletonBox width={44} height={44} borderRadius={22} />
+                  <View style={{ flex: 1 }}>
+                    <SkeletonLine lineHeight={22} width={[120, 96, 140, 88, 110, 130][i]} box={14} />
+                  </View>
+                </View>
+              </React.Fragment>
+            ))}
           </View>
         ) : groups.length === 0 ? (
           <View style={styles.center}>
@@ -238,7 +262,7 @@ export default function ShareDestinationSheet({
           <FlatList
             data={groups}
             keyExtractor={(g) => g.id}
-            style={{ maxHeight: Math.round(windowHeight * 0.5) }}
+            style={{ flex: 1 }}
             contentContainerStyle={styles.listContent}
             ItemSeparatorComponent={() => (
               <View style={[styles.divider, { backgroundColor: tokens.colors.border.divider }]} />
@@ -267,6 +291,8 @@ export default function ShareDestinationSheet({
               );
             }}
           />
+        )}
+          </View>
         )}
       </View>
     </BottomSheet>

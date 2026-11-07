@@ -105,6 +105,8 @@ const DRAWER_ITEMS: Array<{
 ];
 
 const ACCENT = '#00C805';
+/** משך סגירת המגירה לפני ניווט למסך הבא */
+const DRAWER_CLOSE_SETTLE_MS = 280;
 
 /** מגירה → מסכי Stack מקוננים — ניווט מפורש למסך הבית של כל Stack (מונע מסך ריק / state תקוע). */
 function navigateDrawerItem(
@@ -234,9 +236,14 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
                 void HapticFeedback.selection();
                 // סוגרים מגירה קודם — mount של מסך כבד אחרי האנימציה מונע גמגום
                 navigation.closeDrawer();
-                runAfterInteractions(() => {
-                  navigateDrawerItem(navigation, item.name);
-                });
+                // מחכים לסוף אנימציית הסגירה (~280ms) — אחרת המסך הכבד נטען באמצע ומגמגם
+                runAfterInteractions(
+                  () => {
+                    navigateDrawerItem(navigation, item.name);
+                  },
+                  500,
+                  DRAWER_CLOSE_SETTLE_MS,
+                );
               }}
               accessibilityRole="button"
               accessibilityState={{ selected: focused }}

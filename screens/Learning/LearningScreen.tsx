@@ -50,7 +50,7 @@ import { ArrowRight, ChevronLeft, ChevronRight } from '../../lib/i18n/dirIcons';
 import { WebView } from 'react-native-webview';
 import YoutubePlayer from 'react-native-youtube-iframe';
 import { learningProgressService } from '../../services/learningProgressService';
-import { courseService } from '../../services/courseService';
+import { AUTO_SEED_CORE_COURSES, courseService } from '../../services/courseService';
 import { mediaService } from '../../services/mediaService';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -564,7 +564,7 @@ function LearningScreen() {
       const courseId = routeCourseId;
       let course = await courseService.getCourseById(courseId);
       
-      if (!course) {
+      if (!course && AUTO_SEED_CORE_COURSES) {
         // אם הקורס לא קיים, ניצור אותו בהתאם לסוג הקורס
         if (courseId === 'david-training-course' || courseId === 'david-training-course-1') {
           await courseService.createDavidTrainingCourse();

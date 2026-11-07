@@ -127,6 +127,18 @@ serve(async (req) => {
         return await removeGroupMember(supabase, adminId, body);
       case 'set_app_role':
         return await setAppRole(supabase, adminId, adminRole, body);
+      case 'list_courses':
+        return await listCourses(supabase);
+      case 'get_course':
+        return await getCourse(supabase, body);
+      case 'upsert_course':
+        return await upsertCourse(supabase, adminId, body);
+      case 'upsert_lesson':
+        return await upsertLesson(supabase, adminId, body);
+      case 'reorder_lessons':
+        return await reorderLessons(supabase, adminId, body);
+      case 'delete_lesson':
+        return await deleteLesson(supabase, adminId, body);
       default:
         return json({ error: `Unknown action: ${action}` }, 400);
     }
@@ -814,4 +826,198 @@ async function setAppRole(
   if (error) throw error;
   await audit(supabase, adminId, makeAdmin ? 'grant_admin' : 'revoke_admin', userId, { previousRole: currentRole, nextRole });
   return json({ ok: true, role: nextRole });
+}
+
+
+/* ───────────────────────── ניהול האקדמיה ─────────────────────────
+ * קורסים / שיעורים / קישורי יוטיוב. כולל פריטים מוסתרים (is_active=false) —
+ * הסתרה במקום מחיקה לקורסים; מחיקת שיעור רק מפורשת.
+ */
+
+const COURSE_FIELDS = [
+  'title', 'subtitle', 'description', 'cover_url', 'instructor_name', 'instructor_avatar',
+  'duration_hours', 'level', 'price', 'original_price', 'is_active',
+] as const;
+const LESSON_FIELDS = ['title', 'description', 'duration_minutes', 'order_index', 'is_active'] as const;
+
+function pick(body: Record<string, unknown>, fields: readonly string[]) {
+  const out: Record<string, unknown> = {};
+  for (const f of fields) if (f in body) out[f] = body[f];
+  return out;
+}
+
+async function listCourses(supabase: SupabaseClient) {
+  const { data: courses, error } = await supabase
+    .from('courses')
+    .select('*')
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  const { data: lessons } = await supabase.from('lessons').select('course_id, is_active');
+  const counts = new Map<string, { total: number; active: number }>();
+  for (const l of lessons ?? []) {
+    const c = counts.get(l.course_id) ?? { total: 0, active: 0 };
+    c.total++;
+    if (l.is_active !== false) c.active++;
+    counts.set(l.course_id, c);
+  }
+  return json({
+    courses: (courses ?? []).map((c) => ({
+      ...c,
+      lessons_count: counts.get(c.id)?.active ?? 0,
+      lessons_total: counts.get(c.id)?.total ?? 0,
+    })),
+  });
+}
+
+async function getCourse(supabase: SupabaseClient, body: Record<string, unknown>) {
+  const courseId = String(body.courseId || '');
+  if (!courseId) return json({ error: 'courseId required' }, 400);
+  const [{ data: course, error }, { data: lessons, error: lErr }, { data: media }] = await Promise.all([
+    supabase.from('courses').select('*').eq('id', courseId).maybeSingle(),
+    supabase.from('lessons').select('*').eq('course_id', courseId).order('order_index', { ascending: true }),
+    supabase
+      .from('lesson_media_links')
+      .select('lesson_id, youtube_url, vimeo_id, vimeo_url, is_active')
+      .eq('course_id', courseId),
+  ]);
+  if (error) throw error;
+  if (lErr) throw lErr;
+  if (!course) return json({ error: 'Course not found' }, 404);
+  const mediaBy = new Map((media ?? []).map((m) => [m.lesson_id, m]));
+  return json({
+    course,
+    lessons: (lessons ?? []).map((l) => ({
+      ...l,
+      youtube_url: mediaBy.get(l.id)?.is_active === false ? null : mediaBy.get(l.id)?.youtube_url ?? null,
+      // שיעורים שמוגשים מ-Vimeo (וימאו קודם ליוטיוב באפליקציה)
+      has_vimeo: mediaBy.get(l.id)?.is_active !== false && Boolean(mediaBy.get(l.id)?.vimeo_id || mediaBy.get(l.id)?.vimeo_url),
+    })),
+  });
+}
+
+async function upsertCourse(supabase: SupabaseClient, adminId: string, body: Record<string, unknown>) {
+  const id = body.id ? String(body.id) : null;
+  const patch = pick(body, COURSE_FIELDS);
+  if (!id && !String(patch.title ?? '').trim()) return json({ error: 'title required' }, 400);
+  patch.updated_at = new Date().toISOString();
+  let res;
+  if (id) {
+    res = await supabase.from('courses').update(patch).eq('id', id).select('*').single();
+  } else {
+    res = await supabase
+      .from('courses')
+      .insert({
+        id: crypto.randomUUID(),
+        description: '',
+        instructor_name: '',
+        duration_hours: 0,
+        level: '',
+        rating: 0,
+        students_count: 0,
+        price: 0,
+        is_active: false, // קורס חדש מוסתר עד שמפעילים אותו
+        ...patch,
+      })
+      .select('*')
+      .single();
+  }
+  if (res.error) throw res.error;
+  await audit(supabase, adminId, id ? 'update_course' : 'create_course', null, { courseId: res.data.id, fields: Object.keys(patch) });
+  return json({ course: res.data });
+}
+
+async function upsertLesson(supabase: SupabaseClient, adminId: string, body: Record<string, unknown>) {
+  const id = body.id ? String(body.id) : null;
+  const courseId = String(body.courseId || '');
+  if (!courseId) return json({ error: 'courseId required' }, 400);
+  const patch = pick(body, LESSON_FIELDS);
+  if (!id && !String(patch.title ?? '').trim()) return json({ error: 'title required' }, 400);
+  patch.updated_at = new Date().toISOString();
+  let res;
+  if (id) {
+    res = await supabase.from('lessons').update(patch).eq('id', id).eq('course_id', courseId).select('*').single();
+  } else {
+    let orderIndex = patch.order_index as number | undefined;
+    if (orderIndex == null) {
+      const { data: last } = await supabase
+        .from('lessons')
+        .select('order_index')
+        .eq('course_id', courseId)
+        .order('order_index', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      orderIndex = (Number(last?.order_index) || 0) + 1;
+    }
+    res = await supabase
+      .from('lessons')
+      .insert({ id: crypto.randomUUID(), course_id: courseId, is_completed: false, is_active: true, ...patch, order_index: orderIndex })
+      .select('*')
+      .single();
+  }
+  if (res.error) throw res.error;
+
+  // קישור יוטיוב: מחרוזת → שמירה; ריק → ניקוי שדות היוטיוב בלבד (וידאו מ-Vimeo נשאר פעיל)
+  if ('youtubeUrl' in body) {
+    const url = String(body.youtubeUrl ?? '').trim();
+    const { data: existing } = await supabase
+      .from('lesson_media_links')
+      .select('vimeo_id, vimeo_url')
+      .eq('course_id', courseId)
+      .eq('lesson_id', res.data.id)
+      .maybeSingle();
+    const hasVimeo = Boolean(existing?.vimeo_id || existing?.vimeo_url);
+    if (url || existing) {
+      const { error: mErr } = await supabase.from('lesson_media_links').upsert(
+        {
+          course_id: courseId,
+          lesson_id: res.data.id,
+          youtube_url: url || null,
+          youtube_id: youtubeIdFromUrl(url),
+          title: res.data.title,
+          is_active: Boolean(url) || hasVimeo,
+        },
+        { onConflict: 'course_id,lesson_id' },
+      );
+      if (mErr) throw mErr;
+    }
+  }
+  await audit(supabase, adminId, id ? 'update_lesson' : 'create_lesson', null, { courseId, lessonId: res.data.id });
+  return json({ lesson: res.data });
+}
+
+/** מזהה יוטיוב מקישור (watch?v= / youtu.be / embed / shorts / live) — לתמונה הממוזערת באפליקציה */
+function youtubeIdFromUrl(url: string): string | null {
+  if (!url) return null;
+  const m =
+    url.match(/[?&]v=([\w-]{11})/) ||
+    url.match(/youtu\.be\/([\w-]{11})/) ||
+    url.match(/\/(?:embed|shorts|live)\/([\w-]{11})/);
+  return m ? m[1] : null;
+}
+
+async function reorderLessons(supabase: SupabaseClient, adminId: string, body: Record<string, unknown>) {
+  const courseId = String(body.courseId || '');
+  const ids = Array.isArray(body.orderedIds) ? body.orderedIds.map(String) : [];
+  if (!courseId || !ids.length) return json({ error: 'courseId and orderedIds required' }, 400);
+  for (let i = 0; i < ids.length; i++) {
+    const { error } = await supabase
+      .from('lessons')
+      .update({ order_index: i + 1, updated_at: new Date().toISOString() })
+      .eq('id', ids[i])
+      .eq('course_id', courseId);
+    if (error) throw error;
+  }
+  await audit(supabase, adminId, 'reorder_lessons', null, { courseId, count: ids.length });
+  return json({ ok: true });
+}
+
+async function deleteLesson(supabase: SupabaseClient, adminId: string, body: Record<string, unknown>) {
+  const id = String(body.id || '');
+  const courseId = String(body.courseId || '');
+  if (!id || !courseId) return json({ error: 'id and courseId required' }, 400);
+  await supabase.from('lesson_media_links').delete().eq('course_id', courseId).eq('lesson_id', id);
+  const { error } = await supabase.from('lessons').delete().eq('id', id).eq('course_id', courseId);
+  if (error) throw error;
+  await audit(supabase, adminId, 'delete_lesson', null, { courseId, lessonId: id });
+  return json({ ok: true });
 }

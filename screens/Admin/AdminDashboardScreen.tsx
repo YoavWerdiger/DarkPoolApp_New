@@ -10,7 +10,7 @@ import {
   LayoutChangeEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Bell, CreditCard, KeyRound, LifeBuoy, Users, MessagesSquare } from 'lucide-react-native';
+import { Bell, CreditCard, KeyRound, LifeBuoy, Users, MessagesSquare, GraduationCap } from 'lucide-react-native';
 import Svg, { Circle, Line, Polyline, Text as SvgText } from 'react-native-svg';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 import { SettingsActionRow } from '../../components/profile/ProfileSettingsUI';
@@ -196,6 +196,14 @@ export default function AdminDashboardScreen({ navigation }: any) {
             onPress={() => {
               void HapticFeedback.impactLight();
               navigation.navigate('AdminGroups');
+            }}
+          />
+          <SettingsActionRow
+            title={i18n.t('auto.screens__Admin__AdminDashboardScreen.s14')}
+            icon={GraduationCap}
+            onPress={() => {
+              void HapticFeedback.impactLight();
+              navigation.navigate('AdminCourses');
             }}
           />
           <SettingsActionRow

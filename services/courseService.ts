@@ -33,6 +33,12 @@ export interface Lesson {
   updated_at?: string;
 }
 
+/**
+ * זריעה אוטומטית של קורסי הליבה מהלקוח — כבויה: הקורסים קיימים במסד ומנוהלים מפאנל המנהלים.
+ * כשהייתה פעילה, הסתרת קורס ליבה (is_active=false) גרמה ליצירת קורס כפול, ובאנגלית נכתב תוכן מתורגם למסד.
+ */
+export const AUTO_SEED_CORE_COURSES = false;
+
 class CourseService {
   // קבלת כל הקורסים
   async getAllCourses(): Promise<Course[]> {

@@ -34,7 +34,7 @@ import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { CourseWithProgress } from '../../types/learning';
-import { courseService } from '../../services/courseService';
+import { AUTO_SEED_CORE_COURSES, courseService } from '../../services/courseService';
 import { prefetchAcademyCovers } from '../../services/appPrefetch';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
@@ -80,6 +80,7 @@ export const CoursesScreen: React.FC = () => {
 
   // Seed רק אם חסרים קורסי ליבה ברשימה — בלי getCourseById כפול על כל mount
   useEffect(() => {
+    if (!AUTO_SEED_CORE_COURSES) return;
     if (!allowHeavy) return;
     if (isPending && courses.length === 0) return;
     let isMounted = true;

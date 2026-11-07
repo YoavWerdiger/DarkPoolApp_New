@@ -337,6 +337,20 @@ export const adminService = {
     invokeAdminApi<{ ok: true }>('set_group_member_role', { groupId, userId, role }),
   removeGroupMember: (groupId: string, userId: string) =>
     invokeAdminApi<{ ok: true }>('remove_group_member', { groupId, userId }),
+  /* ── ניהול האקדמיה ── */
+  listCourses: () => invokeAdminApi<{ courses: AdminCourse[] }>('list_courses'),
+  getCourse: (courseId: string) =>
+    invokeAdminApi<{ course: AdminCourse; lessons: AdminLesson[] }>('get_course', { courseId }),
+  upsertCourse: (course: Partial<AdminCourse> & { id?: string }) =>
+    invokeAdminApi<{ course: AdminCourse }>('upsert_course', course as Record<string, unknown>),
+  upsertLesson: (
+    courseId: string,
+    lesson: Partial<Omit<AdminLesson, 'youtube_url'>> & { id?: string; youtubeUrl?: string | null },
+  ) => invokeAdminApi<{ lesson: AdminLesson }>('upsert_lesson', { courseId, ...lesson }),
+  reorderLessons: (courseId: string, orderedIds: string[]) =>
+    invokeAdminApi<{ ok: true }>('reorder_lessons', { courseId, orderedIds }),
+  deleteLesson: (courseId: string, id: string) => invokeAdminApi<{ ok: true }>('delete_lesson', { courseId, id }),
+
   /** הרשאת ניהול באפליקציה — רק סופר-אדמין */
   setAppAdmin: (userId: string, admin: boolean) =>
     invokeAdminApi<{ ok: true; role: string }>('set_app_role', { userId, admin }),
@@ -553,3 +567,37 @@ export const adminService = {
       error?: string;
     }>('charge_deferred', { transactionId }),
 };
+
+
+/** קורס באקדמיה — כפי שמנהל רואה (כולל מוסתרים) */
+export interface AdminCourse {
+  id: string;
+  title: string;
+  subtitle?: string | null;
+  description?: string | null;
+  cover_url?: string | null;
+  instructor_name?: string | null;
+  instructor_avatar?: string | null;
+  duration_hours?: number | null;
+  level?: string | null;
+  price?: number | null;
+  original_price?: number | null;
+  is_active: boolean;
+  lessons_count?: number;
+  lessons_total?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface AdminLesson {
+  id: string;
+  course_id: string;
+  title: string;
+  description?: string | null;
+  duration_minutes?: number | null;
+  order_index: number;
+  is_active: boolean;
+  youtube_url?: string | null;
+  /** השיעור מוגש מ-Vimeo (קודם ליוטיוב באפליקציה) */
+  has_vimeo?: boolean;
+}

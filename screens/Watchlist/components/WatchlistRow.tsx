@@ -202,14 +202,10 @@ function WatchlistRowInner({ row, onPress, onDrag, isActive }: Props) {
             ) : null}
           </View>
           <View style={styles.textBlock}>
+            {/* רק הטיקר — שם החברה מופיע בפירוט (לחיצה על השורה) */}
             <Text style={styles.symbol} numberOfLines={1}>
               {symbol}
             </Text>
-            {company ? (
-              <Text style={styles.company} numberOfLines={1}>
-                {company}
-              </Text>
-            ) : null}
           </View>
         </Pressable>
       </View>

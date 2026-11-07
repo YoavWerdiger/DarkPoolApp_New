@@ -120,6 +120,10 @@ export default function ChatListSwipeRow({ actions, revealBackgroundColor, revea
     setOpen(false);
   }, []);
 
+  const devLog = useCallback((phase: string) => {
+    console.log('[swipe] gesture', phase, 'enabled=', enabled);
+  }, [enabled]);
+
   const haptic = useCallback(() => {
     void HapticFeedback.selection();
   }, []);
@@ -137,6 +141,7 @@ export default function ChatListSwipeRow({ actions, revealBackgroundColor, revea
     .failOffsetY([-10, 10])
     .onBegin(() => {
       startX.value = tx.value;
+      if (__DEV__) runOnJS(devLog)('begin');
     })
     .onUpdate((e) => {
       const next = Math.min(Math.max(startX.value + e.translationX, 0), openX * 1.2);
@@ -146,6 +151,9 @@ export default function ChatListSwipeRow({ actions, revealBackgroundColor, revea
         passedThreshold.value = past;
         if (past) runOnJS(haptic)();
       }
+    })
+    .onFinalize((_e, success) => {
+      if (__DEV__) runOnJS(devLog)(success ? 'finalize:active' : 'finalize:failed');
     })
     .onEnd((e) => {
       const shouldOpen = tx.value > openX * 0.5 || (e.velocityX > 600 && tx.value > 12);

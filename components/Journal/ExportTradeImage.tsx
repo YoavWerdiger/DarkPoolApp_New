@@ -527,7 +527,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                       <Stop offset="0" stopColor={CARD_BG} stopOpacity="0" />
                       <Stop offset="1" stopColor={CARD_BG} stopOpacity="0.7" />
                     </LinearGradient>
-                    <RadialGradient id="brandGlow" cx="50%" cy="15%" rx="34%" ry="12%">
+                    <RadialGradient id="brandGlow" cx="50%" cy="13%" rx="32%" ry="11%">
                       <Stop offset="0" stopColor="#00E63D" stopOpacity="0.18" />
                       <Stop offset="1" stopColor="#00E63D" stopOpacity="0" />
                     </RadialGradient>
@@ -565,14 +565,14 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                 <View
                   style={[
                     styles.cardContent,
-                    { paddingTop: 34 * scale, paddingHorizontal: 24 * scale },
+                    { paddingTop: 28 * scale, paddingHorizontal: 24 * scale },
                   ]}
                 >
                   {/* הלוגו ממורכז; מתחתיו התוכן מוצמד לצד הקריאה */}
                   <View style={styles.logoRow}>
                     <Image
                       source={BRAND_LOGO}
-                      style={{ width: 156 * scale, height: (156 * scale) / BRAND_LOGO_ASPECT }}
+                      style={{ width: 132 * scale, height: (132 * scale) / BRAND_LOGO_ASPECT }}
                       contentFit="contain"
                       transition={0}
                       accessibilityLabel={i18n.t('auto.components__Journal__ExportTradeImage.s10')}
@@ -601,7 +601,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                   {/* View ברוחב מלא שמצמיד את הטקסט לתחילתו; הטקסט ברוחב התוכן ומתכווץ אם ארוך */}
                   <View style={styles.heroWrap}>
                     <Text
-                      style={[styles.heroValue, { color: heroColor, fontSize: 58 * scale, lineHeight: 64 * scale }]}
+                      style={[styles.heroValue, { color: heroColor, fontSize: 44 * scale, lineHeight: 50 * scale }]}
                       numberOfLines={1}
                       adjustsFontSizeToFit
                       minimumFontScale={0.6}
@@ -767,13 +767,13 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     assetRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 12,
-      marginTop: 22,
+      gap: 10,
+      marginTop: 24,
     },
     logoCircle: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
       overflow: 'hidden',
       backgroundColor: '#1A1D1C',
       borderWidth: 1,
@@ -782,8 +782,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       justifyContent: 'center',
     },
     logoImg: {
-      width: 44,
-      height: 44,
+      width: 36,
+      height: 36,
     },
     logoFallbackText: {
       color: 'rgba(242,242,242,0.7)',
@@ -796,33 +796,32 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     symbolBig: {
       color: INK,
-      fontSize: 30,
-      lineHeight: 34,
+      fontSize: 22,
+      lineHeight: 26,
       fontWeight: '700',
-      letterSpacing: -0.3,
       flexShrink: 1,
     },
     dirPill: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
-      height: 24,
-      paddingHorizontal: 10,
-      borderRadius: 12,
+      height: 22,
+      paddingHorizontal: 9,
+      borderRadius: 11,
     },
     dirPillText: {
-      fontSize: 12,
+      fontSize: 11,
       fontWeight: '700',
       letterSpacing: 0.6,
     },
     heroWrap: {
       alignSelf: 'stretch',
       alignItems: 'flex-start',
-      marginTop: 6,
+      marginTop: 16,
     },
     heroValue: {
       fontWeight: '700',
-      letterSpacing: -1.5,
+      letterSpacing: -1,
       writingDirection: 'ltr',
       fontVariant: ['tabular-nums'],
       maxWidth: '100%',
@@ -831,7 +830,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       flexDirection: 'row',
       alignItems: 'baseline',
       gap: 7,
-      marginTop: 0,
+      marginTop: 4,
     },
     pnlLabel: {
       color: INK_2,
@@ -840,7 +839,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       writingDirection: TEXT_DIR,
     },
     pnlValue: {
-      fontSize: 16,
+      fontSize: 15,
       fontWeight: '700',
       writingDirection: 'ltr',
       fontVariant: ['tabular-nums'],

@@ -47,22 +47,31 @@ function SkLine({
 }
 
 /**
- * גוף בלוק השווי בזמן טעינה — מספר, שורת שינוי, גרף ותקופות. בדיוק במידות של OverviewTab
- * (heroNumberWrap + heroValue, deltaRow, chartWrap + PortfolioValueChart). משמש גם ב-OverviewTab עצמו.
+ * בלוק השווי בזמן טעינה — שלושה חלקים נפרדים באותן מידות של OverviewTab
+ * (heroNumberWrap + heroValue, deltaRow, chartWrap + PortfolioValueChart).
+ * נפרדים כי השווי החי מגיע לפני הגרף: כל חלק אמיתי מחליף רק את הצורה שלו, במקומה.
  */
-export function JournalHeroBodySkeleton() {
+export function JournalHeroValueSkeleton() {
   return (
-    <View pointerEvents="none">
-      {/* heroNumberWrap.marginTop + heroValue.marginTop */}
-      <View style={{ marginTop: JOURNAL_LAYOUT.cardMetricLabelToValueGap * 2 }}>
-        <SkLine lineHeight={JOURNAL_TYPE.cardMetricValue.lineHeight} width={170} box={26} />
-      </View>
-      <View style={styles.deltaRow}>
-        <SkLine lineHeight={JOURNAL_TYPE.cardBody.lineHeight} width={124} box={13} />
-      </View>
-      <View style={styles.chartWrap}>
-        <LineChartSkeleton height={HERO_CHART_HEIGHT} periods={CHART_PERIODS} />
-      </View>
+    // heroNumberWrap.marginTop + heroValue.marginTop
+    <View style={{ marginTop: JOURNAL_LAYOUT.cardMetricLabelToValueGap * 2 }} pointerEvents="none">
+      <SkLine lineHeight={JOURNAL_TYPE.cardMetricValue.lineHeight} width={170} box={26} />
+    </View>
+  );
+}
+
+export function JournalHeroDeltaSkeleton() {
+  return (
+    <View style={styles.deltaRow} pointerEvents="none">
+      <SkLine lineHeight={JOURNAL_TYPE.cardBody.lineHeight} width={124} box={13} />
+    </View>
+  );
+}
+
+export function JournalHeroChartSkeleton() {
+  return (
+    <View style={styles.chartWrap} pointerEvents="none">
+      <LineChartSkeleton height={HERO_CHART_HEIGHT} periods={CHART_PERIODS} />
     </View>
   );
 }
@@ -126,7 +135,9 @@ export function JournalSkeleton() {
         {/* שווי תיק + גרף — heroBlock */}
         <View style={styles.section}>
           {heading(76)}
-          <JournalHeroBodySkeleton />
+          <JournalHeroValueSkeleton />
+          <JournalHeroDeltaSkeleton />
+          <JournalHeroChartSkeleton />
         </View>
 
         {/* חלוקת נכסים — sectionBlock: כותרת, סרגל הקיבוץ האמיתי, כרטיס דונאט */}

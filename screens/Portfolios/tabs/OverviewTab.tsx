@@ -18,7 +18,11 @@ import { buildDistribution } from '../../../services/portfolios/portfolioAggrega
 import { toLocalDateKey } from '../../../utils/dateKeys';
 import { DistributionDonut } from '../components/DistributionDonut';
 import { DISTRIBUTION_GROUP_BY_OPTIONS } from '../portfolioConstants';
-import { JournalHeroBodySkeleton } from '../components/JournalSkeleton';
+import {
+  JournalHeroChartSkeleton,
+  JournalHeroDeltaSkeleton,
+  JournalHeroValueSkeleton,
+} from '../components/JournalSkeleton';
 import { PortfolioValueChart } from '../components/PortfolioValueChart';
 import { formatCurrency, formatPercent, gainColor } from '../utils/format';
 import {
@@ -873,8 +877,7 @@ export default function OverviewTab({
       {/* Performance chart — כמו תיק האינסיידרים: בלי כרטיס, ישירות על רקע המסך, עם סימן המים של DarkPool */}
       <View style={styles.heroBlock}>
         <Text style={styles.valueLabel}>{i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s14')}</Text>
-        {/* טעינה ראשונה: אותו מבנה וגובה (מספר, שינוי, גרף ותקופות) — רק הנתונים נכנסים, בלי קפיצה */}
-        {heroLoading ? <JournalHeroBodySkeleton /> : null}
+        {/* טעינה ראשונה: כל חלק (שווי, שינוי, גרף) מחזיק מקום משלו — השווי החי מגיע לפני הגרף ונכנס במקומו */}
         {heroValue != null && liveValue != null ? (
           // אותו מספר מתגלגל כמו באינסיידרים: ב-UI thread, ספרה מסיימת מעבר ורק אז ממשיכה
           <View style={styles.heroNumberWrap}>
@@ -889,6 +892,8 @@ export default function OverviewTab({
               downColor={tokens.colors.text.danger}
             />
           </View>
+        ) : heroLoading ? (
+          <JournalHeroValueSkeleton />
         ) : null}
         {scrubPoint ? (
           <View style={styles.deltaRow}>
@@ -923,8 +928,12 @@ export default function OverviewTab({
               numberOfLines={1}
             />
           </View>
+        ) : heroLoading ? (
+          <JournalHeroDeltaSkeleton />
         ) : null}
-        {heroLoading ? null : filteredSeries.length === 0 ? (
+        {heroLoading ? (
+          <JournalHeroChartSkeleton />
+        ) : filteredSeries.length === 0 ? (
           <Text style={styles.emptyText}>
             {isColmex
               ? i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s16')

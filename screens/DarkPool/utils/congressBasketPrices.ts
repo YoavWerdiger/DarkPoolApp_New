@@ -77,10 +77,11 @@ export async function fetchForm4DailyCloses(
  * שאר הטווחים — רק היום ב-5 דקות (הזנב החי); ההיסטוריה שלהם יומית ממילא.
  * נשלף רק לטווח שנבחר (react-query לפי המפתח) — בחירת 1W/1M היא שמוסיפה את הקריאות שלה.
  */
-export type IntradaySpec = { range: '1d' | '5d' | '1mo'; interval: '5m' | '15m' | '1h' };
+export type IntradaySpec = { range: '1d' | '5d' | '1mo'; interval: '5m' | '15m' | '30m' | '1h' };
 export function intradaySpecForPeriod(period: string): IntradaySpec {
-  if (period === '1W') return { range: '5d', interval: '15m' };
-  if (period === '1M') return { range: '1mo', interval: '1h' };
+  // צפיפות דומה לשאר הטווחים (1Y ≈ 250 נקודות): 1W ≈ 390, 1M ≈ 290
+  if (period === '1W') return { range: '5d', interval: '5m' };
+  if (period === '1M') return { range: '1mo', interval: '30m' };
   return { range: '1d', interval: '5m' };
 }
 

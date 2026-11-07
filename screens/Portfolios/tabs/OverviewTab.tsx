@@ -212,7 +212,7 @@ export default function OverviewTab({
     }
     let cancel = false;
     const symbols = Array.from(new Set(openTrades.map((t) => t.symbol.toUpperCase()))).slice(0, 20);
-    // סנאפשוטים לפי הטווח (כמו באינסיידרים): 1D — 5 דק׳, 1W — 15 דק׳, 1M — שעה
+    // סנאפשוטים לפי הטווח (כמו באינסיידרים): 1D ו-1W — 5 דק׳, 1M — 30 דק׳
     const spec = intradaySpecForPeriod(period);
     void (async () => {
       const hourly = await fetchIntradayCloses(symbols, spec);

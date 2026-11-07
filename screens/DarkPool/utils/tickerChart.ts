@@ -9,7 +9,7 @@ import type { PerformancePeriod } from '../../Portfolios/portfolioTypes';
 export type TickerChartRange = '1D' | '1W' | '1M' | '3M' | 'YTD' | '1Y' | '5Y' | 'ALL';
 
 export type YahooTickerRange = '1d' | '5d' | '1mo' | '3mo' | 'ytd' | '1y' | '5y' | '10y';
-export type YahooTickerInterval = '5m' | '15m' | '1h' | '1d';
+export type YahooTickerInterval = '5m' | '15m' | '30m' | '1h' | '1d';
 
 export interface YahooTickerRequest {
   yahooRange: YahooTickerRange;
@@ -41,6 +41,7 @@ export function tickerHistoryRangeForChip(range: TickerChartRange): TickerChartR
 export function tickerHistoryStaleMs(interval: YahooTickerInterval): number {
   if (interval === '5m') return 2 * 60_000;
   if (interval === '15m') return 10 * 60_000;
+  if (interval === '30m') return 20 * 60_000;
   if (interval === '1h') return 45 * 60_000;
   return 12 * 60 * 60_000;
 }
@@ -55,10 +56,11 @@ export function yahooRequestForTickerRange(range: TickerChartRange): YahooTicker
     case '1D':
       return { yahooRange: '1d', interval: '5m' };
     case '1W':
-      // 15 דקות — ~130 סנאפשוטים בשבוע (שעתי נתן ~35)
-      return { yahooRange: '5d', interval: '15m' };
+      // 5 דקות — ~390 סנאפשוטים בשבוע (15 דק׳ נתן ~130 — דליל לעומת 1Y/5Y)
+      return { yahooRange: '5d', interval: '5m' };
     case '1M':
-      return { yahooRange: '1mo', interval: '1h' };
+      // 30 דקות — ~290 סנאפשוטים בחודש (שעתי נתן ~150)
+      return { yahooRange: '1mo', interval: '30m' };
     case '3M':
       return { yahooRange: '3mo', interval: '1d' };
     case 'YTD':

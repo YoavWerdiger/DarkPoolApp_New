@@ -1,3 +1,4 @@
+import { SegmentedTabs } from '../../../components/ui/SegmentedTabs';
 import i18n from '../../../lib/i18n';
 import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
@@ -27,65 +28,15 @@ function HeatmapTabToggle({
 }) {
   const tokens = useDesignTokens();
   const pad = MARKETS_LAYOUT.screenPaddingHorizontal;
-
+  // סרגל הטאבים האחיד — רקע מחליק כמו בדף המסלול
   return (
-    <View
-      accessibilityRole="tablist"
-      style={{
-        flexDirection: 'row-reverse',
-        paddingHorizontal: pad,
-        paddingBottom: tokens.spacing.md,
-        backgroundColor: 'transparent',
-      }}
-    >
-      {HEATMAP_TABS.map((tab) => {
-        const active = value === tab.id;
-        return (
-          <TouchableOpacity
-            key={tab.id}
-            onPress={() => {
-              if (!active) void HapticFeedback.selection();
-              onChange(tab.id);
-            }}
-            activeOpacity={0.7}
-            accessibilityRole="tab"
-            accessibilityLabel={i18n.t('auto.screens__Markets__tabs__MarketsHeatmapsTab.s3', { v0: tab.label })}
-            accessibilityState={{ selected: active }}
-            style={{
-              flex: 1,
-              alignItems: 'center',
-              paddingTop: tokens.spacing.sm,
-              backgroundColor: 'transparent',
-            }}
-          >
-            <Text
-              style={{
-                fontSize: MARKETS_TYPE.body.fontSize,
-                lineHeight: MARKETS_TYPE.body.lineHeight,
-                fontWeight: active
-                  ? MARKETS_TYPE.sectionTitle.fontWeight
-                  : MARKETS_TYPE.groupLabel.fontWeight,
-                color: active
-                  ? tokens.colors.text.primary
-                  : tokens.colors.text.secondary,
-                backgroundColor: 'transparent',
-              }}
-            >
-              {tab.label}
-            </Text>
-            <View
-              style={{
-                marginTop: 8,
-                height: 2,
-                alignSelf: 'stretch',
-                marginHorizontal: 12,
-                backgroundColor: active ? tokens.colors.text.primary : 'transparent',
-              }}
-            />
-          </TouchableOpacity>
-        );
-      })}
-    </View>
+    <SegmentedTabs
+      options={HEATMAP_TABS}
+      value={value}
+      onChange={onChange}
+      style={{ paddingHorizontal: pad, paddingBottom: tokens.spacing.md }}
+      accessibilityLabelFor={(tab) => i18n.t('auto.screens__Markets__tabs__MarketsHeatmapsTab.s3', { v0: tab.label })}
+    />
   );
 }
 

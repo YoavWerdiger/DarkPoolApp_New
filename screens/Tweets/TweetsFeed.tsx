@@ -1,3 +1,4 @@
+import { SegmentedTabs } from '../../components/ui/SegmentedTabs';
 import { UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
@@ -399,63 +400,15 @@ function FeedTabToggle({
 }) {
   const tokens = useDesignTokens();
   const pad = tokens.layout?.screenPadding ?? 20;
-
+  // סרגל הטאבים האחיד — רקע מחליק כמו בדף המסלול
   return (
-    <View
-      accessibilityRole="tablist"
-      style={{
-        flexDirection: 'row-reverse',
-        paddingHorizontal: pad,
-        paddingBottom: tokens.spacing.md,
-        backgroundColor: 'transparent',
-      }}
-    >
-      {FEED_TABS.map((tab) => {
-        const active = value === tab.id;
-        return (
-          <TouchableOpacity
-            key={tab.id}
-            onPress={() => {
-              if (!active) void HapticFeedback.selection();
-              onChange(tab.id);
-            }}
-            activeOpacity={0.7}
-            accessibilityRole="tab"
-            accessibilityLabel={i18n.t('auto.screens__Tweets__TweetsFeed.s10', { v0: tab.label })}
-            accessibilityState={{ selected: active }}
-            style={{
-              flex: 1,
-              alignItems: 'center',
-              paddingTop: tokens.spacing.sm,
-              backgroundColor: 'transparent',
-            }}
-          >
-            <Text
-              style={{
-                fontSize: APP_TYPE.groupLabel.fontSize,
-                lineHeight: APP_TYPE.groupLabel.lineHeight,
-                fontWeight: APP_TYPE.groupLabel.fontWeight,
-                color: active
-                  ? tokens.colors.text.primary
-                  : tokens.colors.text.secondary,
-                backgroundColor: 'transparent',
-              }}
-            >
-              {tab.label}
-            </Text>
-            <View
-              style={{
-                marginTop: 8,
-                height: 2,
-                alignSelf: 'stretch',
-                marginHorizontal: 12,
-                backgroundColor: active ? tokens.colors.text.primary : 'transparent',
-              }}
-            />
-          </TouchableOpacity>
-        );
-      })}
-    </View>
+    <SegmentedTabs
+      options={FEED_TABS}
+      value={value}
+      onChange={onChange}
+      style={{ paddingHorizontal: pad, paddingBottom: tokens.spacing.md }}
+      accessibilityLabelFor={(tab) => i18n.t('auto.screens__Tweets__TweetsFeed.s10', { v0: tab.label })}
+    />
   );
 }
 

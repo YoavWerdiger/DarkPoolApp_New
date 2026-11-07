@@ -1,3 +1,4 @@
+import { SegmentedTabs } from '../../components/ui/SegmentedTabs';
 import { UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
@@ -1750,29 +1751,12 @@ export default function ChatGroupsListScreen() {
           <View style={styles.listCard}>
           {/* Filters – Instagram style (search moved to header button → bottom sheet) */}
           <View style={styles.searchSection}>
-            <View style={[styles.filterRow, { marginTop: 0 }]}>
-              {(['all', 'unread', 'mentions'] as TabType[]).map((tab) => {
-                // צ'יפ הטופו (DayDividerPill) — כמו ביומן ובשאר האפליקציה, כולל מעבר הבחירה
-                const label = tab === 'all' ? i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s14') : tab === 'unread' ? i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s15') : i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s16');
-                const count = tab === 'unread' ? unreadCount : tab === 'mentions' ? mentionsCount : 0;
-                const active = activeTab === tab;
-                return (
-                  // עטיפה למדידה — המחוון מחליק בין הצ'יפים כמו בבורר האינטרוולים בגרף
-                  <View key={tab} onLayout={filterIndicator.onItemLayout(tab)}>
-                    <DayDividerPill
-                      selected={filterIndicator.visualSelected === tab}
-                      instantSelection
-                      haptic={!active}
-                      onPress={() => setActiveTab(tab)}
-                      accessibilityLabel={count > 0 ? `${label}, ${count}` : label}
-                    >
-                      {filterTabLabel(tab)}
-                    </DayDividerPill>
-                  </View>
-                );
-              })}
-              <DayDividerSlidingLayer indicator={filterIndicator} labelOf={filterTabLabel} />
-            </View>
+            {/* סרגל הטאבים האחיד — רקע מחליק כמו בדף המסלול */}
+            <SegmentedTabs
+              options={(['all', 'unread', 'mentions'] as TabType[]).map((tab) => ({ id: tab, label: filterTabLabel(tab) }))}
+              value={activeTab}
+              onChange={setActiveTab}
+            />
           </View>
 
           {/* Offline banner hidden globally per product decision */}

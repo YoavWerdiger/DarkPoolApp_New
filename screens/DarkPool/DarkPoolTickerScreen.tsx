@@ -1,3 +1,4 @@
+import { SegmentedTabs } from '../../components/ui/SegmentedTabs';
 import { ROOT_DIR, UI_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
@@ -519,41 +520,16 @@ export default function DarkPoolTickerScreen() {
             />
           ) : null}
 
-          <View style={styles.tablist} accessibilityRole="tablist">
-            <View style={styles.tabInner}>
-              <Animated.View
-                pointerEvents="none"
-                style={[styles.tabThumb, { width: thumbWidth, opacity: thumbWidth > 0 ? 1 : 0 }, tabThumbStyle]}
-              />
-              {(
-                [
-                  { id: 'holders' as const, label: tickerScreenHoldersTabLabel(holders.length), labelStyle: holdersLabelStyle },
-                  { id: 'feed' as const, label: tickerScreenFeedTabLabel(), labelStyle: feedLabelStyle },
-                ] as const
-              ).map((item) => {
-                const active = tab === item.id;
-                return (
-                  <Pressable
-                    key={item.id}
-                    onLayout={onTabLayout(item.id)}
-                    onPress={() => {
-                      if (active) return;
-                      void HapticFeedback.selection();
-                      setTab(item.id);
-                    }}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: active }}
-                    accessibilityLabel={item.label}
-                    style={styles.tabBtn}
-                  >
-                    <Animated.Text numberOfLines={1} style={[styles.tabLabel, item.labelStyle]}>
-                      {item.label}
-                    </Animated.Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
+          {/* סרגל הטאבים האחיד — רקע מחליק כמו בדף המסלול */}
+          <SegmentedTabs
+            options={[
+              { id: 'holders' as const, label: tickerScreenHoldersTabLabel(holders.length) },
+              { id: 'feed' as const, label: tickerScreenFeedTabLabel() },
+            ]}
+            value={tab}
+            onChange={setTab}
+            style={styles.segmentedTabs}
+          />
 
           {tab === 'holders' ? (
             <View style={styles.holdersSection}>
@@ -801,6 +777,10 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, bottomPadding:
       paddingVertical: APP_LAYOUT.cardTitleToBodyGap,
     },
     // כמו SettingsScopeChoice (הגדרות התראות): מסילה tertiary, רקע פעיל cardSolid, עיגול מלא
+    segmentedTabs: {
+      marginTop: APP_LAYOUT.stackGapSmall,
+      marginBottom: APP_LAYOUT.componentGap,
+    },
     tablist: {
       borderRadius: tokens.borderRadius.full,
       padding: 3,

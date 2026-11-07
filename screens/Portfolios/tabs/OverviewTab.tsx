@@ -1,3 +1,4 @@
+import { SegmentedTabs } from '../../../components/ui/SegmentedTabs';
 import { ROOT_DIR, UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React, { useEffect, useState, useMemo } from 'react';
@@ -642,6 +643,7 @@ export default function OverviewTab({
           overflow: 'hidden',
           direction: UI_DIR,
         },
+        groupTabs: { marginBottom: 14 },
         groupChips: {
           direction: UI_DIR,
           flexDirection: 'row',
@@ -964,12 +966,11 @@ export default function OverviewTab({
       {/* Distribution — כמו «פילוח אחזקות» באינסיידרים: כותרת ובחירת הקיבוץ על רקע המסך, העוגה בכרטיס */}
       <View style={styles.sectionBlock}>
         <Text style={styles.sectionHeading}>{i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s19')}</Text>
-        <SlidingPillGroup
+        <SegmentedTabs
           options={GROUP_BY_OPTIONS}
           value={groupBy}
           onChange={setGroupBy}
-          style={styles.groupChips}
-          pillStyle={styles.groupChip}
+          style={styles.groupTabs}
         />
       <UICard variant="soft" padding="md" style={styles.pieCard}>
         {distribution.length === 0 ? (

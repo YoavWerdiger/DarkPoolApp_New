@@ -1,3 +1,4 @@
+import { SegmentedTabs } from '../../../components/ui/SegmentedTabs';
 import { UI_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import React, { useMemo, useState } from 'react';
@@ -96,30 +97,16 @@ export function TrumpActivitySection({
 
       {/* מניות */}
       <Text style={styles.sectionTitle}>{i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s19')}</Text>
-      <View style={styles.tabs}>
-        {(
-          [
-            ['bought', i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s20')],
-            ['sold', i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s21')],
-            ['active', i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s22')],
-          ] as Array<[Tab, string]>
-        ).map(([k, label]) => (
-          <Pressable
-            key={k}
-            onPress={() => {
-              if (tab !== k) void HapticFeedback.selection();
-              setTab(k);
-            }}
-            style={[styles.tab, tab === k && { backgroundColor: tokens.colors.background.cardSolid }]}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: tab === k }}
-          >
-            <Text style={[styles.tabText, { color: tab === k ? tokens.colors.text.primary : tokens.colors.text.secondary }]}>
-              {label}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
+      <SegmentedTabs
+        options={[
+          { id: 'bought' as Tab, label: i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s20') },
+          { id: 'sold' as Tab, label: i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s21') },
+          { id: 'active' as Tab, label: i18n.t('auto.screens__DarkPool__components__TrumpActivitySection.s22') },
+        ]}
+        value={tab}
+        onChange={setTab}
+        style={styles.segmentedTabs}
+      />
       <UICard variant="soft" padding="none" style={styles.card}>
         {list.slice(0, 10).map((t, i) => {
           const range = tab === 'sold' ? t.sell : tab === 'bought' ? t.buy : null;
@@ -153,6 +140,7 @@ export function TrumpActivitySection({
 
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
+    segmentedTabs: { marginBottom: 12 },
     label: {
       ...APP_TYPE.cardSubtitle,
       ...darkPoolPhysicalRightText,

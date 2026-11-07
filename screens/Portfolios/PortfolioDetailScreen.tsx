@@ -1,3 +1,4 @@
+import { SegmentedTabs } from '../../components/ui/SegmentedTabs';
 import { UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { JournalSkeleton } from './components/JournalSkeleton';
@@ -231,7 +232,8 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
           alignItems: 'center',
           justifyContent: 'center',
         },
-        tabsScroll: {
+        segmentedTabs: { marginHorizontal: 16, marginTop: 6, marginBottom: 2 },
+  tabsScroll: {
           marginTop: 6,
           marginBottom: 2,
         },
@@ -364,15 +366,12 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
           }
           showsVerticalScrollIndicator={false}
         >
-          {/* מחוון מחליק — כמו בורר האינטרוולים */}
-          <SlidingPillGroup
-            scroll
+          {/* סרגל הטאבים האחיד — רקע מחליק כמו בדף המסלול */}
+          <SegmentedTabs
             options={PORTFOLIO_DETAIL_TABS}
             value={activeTab}
             onChange={setActiveTab}
-            style={styles.tabsScroll}
-            contentContainerStyle={styles.tabsScrollContent}
-            pillStyle={styles.tabBtn}
+            style={styles.segmentedTabs}
           />
 
           <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: canAddTransaction ? mainTabsHeight - insets.bottom + 90 : 32, direction: UI_DIR }}>

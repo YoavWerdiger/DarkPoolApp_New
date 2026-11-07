@@ -1,3 +1,4 @@
+import { SegmentedTabs } from '../ui/SegmentedTabs';
 import { ROOT_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
@@ -219,7 +220,7 @@ export default function EntityAttachPickerSheet({
           <View style={styles.headerSideSpacer} />
         </View>
 
-        <SlidingPillGroup
+        <SegmentedTabs
           options={TAB_OPTIONS}
           value={category}
           onChange={setCategory}

@@ -1,3 +1,4 @@
+import { SegmentedTabs } from '../ui/SegmentedTabs';
 import i18n from '../../lib/i18n';
 import React, { useCallback, useEffect } from 'react';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -135,8 +136,8 @@ export function StoryViewersSheet({
             <View style={[sheetStyles.grabber, { backgroundColor: tokens.colors.text.secondary }]} />
           </View>
 
-          {/* טאבים — צ'יפי הטופו עם המחוון המחליק */}
-          <SlidingPillGroup
+          {/* טאבים — סרגל הטאבים האחיד */}
+          <SegmentedTabs
             options={[
               { id: 'viewers' as const, label: i18n.t('auto.components__stories__StoryViewersSheet.s2', { v0: viewers.length ? ` · ${viewers.length}` : '' }) },
               { id: 'reactions' as const, label: i18n.t('auto.components__stories__StoryViewersSheet.s3', { v0: reactions.length ? ` · ${reactions.length}` : '' }) },

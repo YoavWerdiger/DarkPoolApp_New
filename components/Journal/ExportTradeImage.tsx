@@ -544,7 +544,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                     contentFit="contain"
                     style={[
                       styles.animal,
-                      { width: 190 * scale, height: (190 * scale) / BULL_BEAR_ASPECT, marginTop: 132 * scale },
+                      { width: 240 * scale, height: (240 * scale) / BULL_BEAR_ASPECT, marginTop: 114 * scale },
                     ]}
                   />
                 </View>

@@ -82,8 +82,8 @@ const DEFAULT_SHARE_OPTIONS: ShareOptions = { showPnl: true, showReturn: true, s
 /** מידות העיצוב — הכרטיס מצויר ב-viewBox 340×425 ומוקטן/מוגדל באחידות */
 const ART_W = 340;
 const ART_H = 425;
-const CHART_TOP = 282;
-const CHART_BOT = 358;
+const CHART_TOP = 286;
+const CHART_BOT = 392;
 const CHART_PAD_X = 22;
 const FOOTER_H = 72;
 
@@ -518,7 +518,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                       <Stop offset="0" stopColor={CARD_BG} stopOpacity="0" />
                       <Stop offset="1" stopColor={CARD_BG} stopOpacity="0.7" />
                     </LinearGradient>
-                    <RadialGradient id="brandGlow" cx={UI_DIR === 'rtl' ? '74%' : '26%'} cy="13%" rx="32%" ry="11%">
+                    <RadialGradient id="brandGlow" cx="50%" cy="15%" rx="34%" ry="12%">
                       <Stop offset="0" stopColor="#00E63D" stopOpacity="0.18" />
                       <Stop offset="1" stopColor="#00E63D" stopOpacity="0" />
                     </RadialGradient>
@@ -538,32 +538,33 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                   <Circle cx={art.last.x} cy={art.last.y} r={4.2} fill={heroColor} />
                 </Svg>
 
-                {/* שור ודוב — צללית אחת בצד הנגדי לטקסט, בצבע התוצאה */}
-                <Image
-                  source={BULL_BEAR}
-                  tintColor={heroColor}
-                  contentFit="contain"
-                  pointerEvents="none"
-                  style={[
-                    styles.animal,
-                    { width: 240 * scale, height: (240 * scale) / BULL_BEAR_ASPECT, top: 70 * scale, end: -30 * scale },
-                  ]}
-                />
+                {/* שור ודוב — צללית אחת ממורכזת, בצבע התוצאה */}
+                <View style={styles.animalWrap} pointerEvents="none">
+                  <Image
+                    source={BULL_BEAR}
+                    tintColor={heroColor}
+                    contentFit="contain"
+                    style={[styles.animal, { width: 240 * scale, height: (240 * scale) / BULL_BEAR_ASPECT, marginTop: 116 * scale }]}
+                  />
+                </View>
 
                 {/* תוכן מוצמד לצד תחילת הקריאה — רק flexbox (flex-start בעץ UI_DIR), בלי textAlign שמתהפך ב-forceRTL */}
                 <View
                   style={[
                     styles.cardContent,
-                    { paddingTop: 22 * scale, paddingHorizontal: 24 * scale },
+                    { paddingTop: 34 * scale, paddingHorizontal: 24 * scale },
                   ]}
                 >
-                  <Image
-                    source={BRAND_LOGO}
-                    style={{ width: 140 * scale, height: (140 * scale) / BRAND_LOGO_ASPECT, marginStart: -4 * scale }}
-                    contentFit="contain"
-                    transition={0}
-                    accessibilityLabel={i18n.t('auto.components__Journal__ExportTradeImage.s10')}
-                  />
+                  {/* הלוגו ממורכז; מתחתיו התוכן מוצמד לצד הקריאה */}
+                  <View style={styles.logoRow}>
+                    <Image
+                      source={BRAND_LOGO}
+                      style={{ width: 156 * scale, height: (156 * scale) / BRAND_LOGO_ASPECT }}
+                      contentFit="contain"
+                      transition={0}
+                      accessibilityLabel={i18n.t('auto.components__Journal__ExportTradeImage.s10')}
+                    />
+                  </View>
 
                   <View style={styles.assetRow}>
                     <View style={styles.logoCircle}>
@@ -573,16 +574,14 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                         <Text style={styles.logoFallbackText}>{normalized.symbol.trim().slice(0, 4).toUpperCase()}</Text>
                       )}
                     </View>
-                    <View style={styles.assetCol}>
-                      <Text style={styles.symbolBig} numberOfLines={1}>
-                        {normalized.symbol}
+                    <Text style={styles.symbolBig} numberOfLines={1}>
+                      {normalized.symbol}
+                    </Text>
+                    <View style={[styles.dirPill, { backgroundColor: `${dirColor}26` }]}>
+                      <TrendGlyph up={normalized.direction === 'long'} color={dirColor} />
+                      <Text style={[styles.dirPillText, { color: dirColor }]}>
+                        {normalized.direction === 'long' ? 'LONG' : 'SHORT'}
                       </Text>
-                      <View style={[styles.dirPill, { backgroundColor: `${dirColor}26` }]}>
-                        <TrendGlyph up={normalized.direction === 'long'} color={dirColor} />
-                        <Text style={[styles.dirPillText, { color: dirColor }]}>
-                          {normalized.direction === 'long' ? 'LONG' : 'SHORT'}
-                        </Text>
-                      </View>
                     </View>
                   </View>
 
@@ -737,8 +736,11 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       backgroundColor: CARD_BG,
       direction: UI_DIR,
     },
+    animalWrap: {
+      ...StyleSheet.absoluteFill,
+      alignItems: 'center',
+    },
     animal: {
-      position: 'absolute',
       opacity: 0.08,
     },
     cardContent: {
@@ -750,7 +752,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,
-      marginTop: 26,
+      marginTop: 22,
     },
     logoCircle: {
       width: 44,
@@ -772,33 +774,35 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       fontSize: 11,
       fontWeight: '700',
     },
-    assetCol: {
-      alignItems: 'flex-start',
-      gap: 4,
+    logoRow: {
+      alignSelf: 'stretch',
+      alignItems: 'center',
     },
     symbolBig: {
       color: INK,
-      fontSize: 22,
-      lineHeight: 24,
+      fontSize: 30,
+      lineHeight: 34,
       fontWeight: '700',
+      letterSpacing: -0.3,
+      flexShrink: 1,
     },
     dirPill: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
-      height: 20,
-      paddingHorizontal: 8,
-      borderRadius: 10,
+      height: 24,
+      paddingHorizontal: 10,
+      borderRadius: 12,
     },
     dirPillText: {
-      fontSize: 10.5,
+      fontSize: 12,
       fontWeight: '700',
       letterSpacing: 0.6,
     },
     heroWrap: {
       alignSelf: 'stretch',
       alignItems: 'flex-start',
-      marginTop: 22,
+      marginTop: 16,
     },
     heroValue: {
       fontWeight: '700',

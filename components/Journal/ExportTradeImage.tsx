@@ -86,6 +86,8 @@ const CHART_TOP = 256;
 const CHART_BOT = 392;
 const CHART_PAD_X = 22;
 const FOOTER_H = 72;
+/** מרווח של ההזמנה וה-QR מהתחתית */
+const FOOTER_BOTTOM = 12;
 
 const CARD_BG = '#0A0C0B';
 const INK = '#F2F2F2';
@@ -94,7 +96,7 @@ const QR_SIZE = 56;
 /** אזור ה-QR בקואורדינטות הציור — קו הגרף נעצר שם כדי שלא יעבור על הקוד */
 const QR_CLEAR = {
   x: UI_DIR === 'rtl' ? 8 : ART_W - 8 - (QR_SIZE + 12),
-  y: ART_H - FOOTER_H / 2 - (QR_SIZE + 12) / 2,
+  y: ART_H - FOOTER_BOTTOM - FOOTER_H / 2 - (QR_SIZE + 12) / 2,
   size: QR_SIZE + 12,
 };
 const WIN = '#00D64B';
@@ -620,7 +622,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                 </View>
 
                 {/* תחתית: הזמנה + QR על פס כהה ברוחב מלא */}
-                <View style={[styles.footerStrip, { height: FOOTER_H * scale }]}>
+                <View style={[styles.footerStrip, { height: FOOTER_H * scale, bottom: FOOTER_BOTTOM * scale }]}>
                   <View style={styles.ctaTextCol}>
                     <Text style={styles.ctaHeadline} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
                       {SHARE_CTA_LINE}

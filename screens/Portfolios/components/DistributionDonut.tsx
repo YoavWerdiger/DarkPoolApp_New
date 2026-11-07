@@ -83,14 +83,15 @@ export function DistributionDonut({
           strokeWidth={strokeWidth}
           fill="transparent"
         />
-        {slices.map((s) => {
+        {slices.map((s, i) => {
           const dash = (s.percentage / 100) * circumference;
           const gap = circumference - dash;
           const offset = -((cumulative / 100) * circumference);
           cumulative += s.percentage;
           return (
             <Circle
-              key={s.key}
+              // אותו טיקר יכול להופיע כמה פעמים (אחזקות לא מקובצות) — key ייחודי
+              key={`${s.key}:${i}`}
               cx={size / 2}
               cy={size / 2}
               r={radius}

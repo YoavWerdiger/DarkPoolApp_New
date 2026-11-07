@@ -43,7 +43,26 @@ export function JournalOpenPositionsCard({ holdings, currency }: { holdings: Por
   const t = useDesignTokens();
   const s = useMemo(() => createStyles(t), [t]);
   const { rows, alloc } = useMemo(() => {
-    const sorted = [...holdings].sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
+    // כמה עסקאות פתוחות באותו טיקר = שורה אחת (סכום שווי ורווח; תשואה לפי העלות המשותפת)
+    const bySymbol = new Map<string, PortfolioHolding>();
+    for (const h of holdings) {
+      const prev = bySymbol.get(h.symbol);
+      if (!prev) {
+        bySymbol.set(h.symbol, { ...h });
+        continue;
+      }
+      const value = prev.value + h.value;
+      const gain = prev.unrealized_gain + h.unrealized_gain;
+      const cost = value - gain;
+      bySymbol.set(h.symbol, {
+        ...prev,
+        quantity: prev.quantity + h.quantity,
+        value,
+        unrealized_gain: gain,
+        unrealized_gain_pct: cost !== 0 ? (gain / Math.abs(cost)) * 100 : 0,
+      });
+    }
+    const sorted = [...bySymbol.values()].sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
     const total = sorted.reduce((sum, h) => sum + Math.abs(h.value), 0);
     return {
       rows: sorted,

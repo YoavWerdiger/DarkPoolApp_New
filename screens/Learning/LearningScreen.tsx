@@ -1624,15 +1624,25 @@ function LearningScreen() {
     const currentLessonIndex = lessonsForNav.findIndex((l: any) => l.id === selectedLesson.id);
     const lessonNumberLabel = currentLessonIndex >= 0 ? currentLessonIndex + 1 : 1;
     const lessonPlayerVideoHeight = Math.round((academyCardWidth(screenWidth) * 9) / 16);
-    const canGoPrev = currentLessonIndex > 0;
-    const canGoNext = currentLessonIndex >= 0 && currentLessonIndex < lessonsForNav.length - 1;
+    // מדלגים על שיעורי «בקרוב» (לא נפתחים) — אחרת שיעור כזה באמצע חוסם את הניווט
+    const findPlayable = (from: number, step: 1 | -1): number => {
+      if (currentLessonIndex < 0) return -1;
+      for (let i = from; i >= 0 && i < lessonsForNav.length; i += step) {
+        if (!lessonsForNav[i]?.comingSoon) return i;
+      }
+      return -1;
+    };
+    const prevIndex = findPlayable(currentLessonIndex - 1, -1);
+    const nextIndex = findPlayable(currentLessonIndex + 1, 1);
+    const canGoPrev = prevIndex >= 0;
+    const canGoNext = nextIndex >= 0;
     const goToPrevLesson = () => {
       if (!canGoPrev) return;
-      handleLessonPress(lessonsForNav[currentLessonIndex - 1], currentLessonIndex - 1);
+      handleLessonPress(lessonsForNav[prevIndex], prevIndex);
     };
     const goToNextLesson = () => {
       if (!canGoNext) return;
-      handleLessonPress(lessonsForNav[currentLessonIndex + 1], currentLessonIndex + 1);
+      handleLessonPress(lessonsForNav[nextIndex], nextIndex);
     };
 
     return (

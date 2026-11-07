@@ -104,7 +104,7 @@ export function JournalHeroChartSkeleton() {
 /** צבעי עזר משותפים לחלקי השלד */
 function useSkeletonParts() {
   const tokens = useDesignTokens();
-  const ringColor = String(tokens.colors.background.primary) === LIGHT_CANVAS ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.12)';
+  const ringColor = String(tokens.colors.background.primary) === LIGHT_CANVAS ? 'rgba(0, 0, 0, 0.18)' : 'rgba(255, 255, 255, 0.12)';
   const divider = { height: 1, backgroundColor: tokens.colors.border.divider, marginHorizontal: JOURNAL_LAYOUT.cardPadding };
   // כותרות הסקשנים קבועות — טקסט אמיתי באותו סגנון; רק הנתונים הם צורות טעינה
   const heading = (title: string) => (

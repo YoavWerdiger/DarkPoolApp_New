@@ -96,8 +96,8 @@ export const SkeletonBox: React.FC<SkeletonBoxProps> = ({
   style,
 }) => {
   const tokens = useDesignTokens();
-  // לפי ערכת הנושא — לבן שקוף על כהה בלבד; בבהיר הוא כמעט בלתי נראה
-  const fill = String(tokens.colors.background.primary) === LIGHT_CANVAS ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.12)';
+  // לפי ערכת הנושא — בבהיר שחור 18% (כפול הפעימה 0.3–0.65 ≈ 5–12%; ב-8% השלד כמעט לא נראה)
+  const fill = String(tokens.colors.background.primary) === LIGHT_CANVAS ? 'rgba(0, 0, 0, 0.18)' : 'rgba(255, 255, 255, 0.12)';
   useEffect(() => {
     retainSharedSkeletonPulse();
     return () => {

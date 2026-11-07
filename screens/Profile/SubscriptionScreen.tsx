@@ -2,7 +2,8 @@ import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { SkeletonLine } from '../../components/ui/SkeletonLoader';
 import { Crown, Star, Calendar, Check, Users } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { paymentService, SUBSCRIPTION_PLANS } from '../../services/paymentService';
@@ -34,11 +35,26 @@ interface SubscriptionPlan {
   icon: any;
 }
 
+function buildPlans(): SubscriptionPlan[] {
+  return Object.values(SUBSCRIPTION_PLANS).map(plan => ({
+    id: plan.id,
+    name: plan.name,
+    description: plan.description,
+    price: plan.price,
+    period: plan.period,
+    features: plan.features,
+    popular: plan.popular,
+    icon: plan.id === 'monthly' ? Crown :
+      plan.id === 'quarterly' ? Star : Users
+  }));
+}
+
 export default function SubscriptionScreen({ navigation }: any) {
   const { user } = useAuth();
   const tokens = useDesignTokens();
   const [currentPlan, setCurrentPlan] = useState<any>(null);
-  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+  // התוכניות קבועות (SUBSCRIPTION_PLANS) — מוצגות מיד; רק המנוי הנוכחי נטען מהשרת
+  const [plans, setPlans] = useState<SubscriptionPlan[]>(() => buildPlans());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -57,18 +73,7 @@ export default function SubscriptionScreen({ navigation }: any) {
       const subscription = await paymentService.getCurrentSubscription(user.id);
       setCurrentPlan(subscription);
 
-      const availablePlans = Object.values(SUBSCRIPTION_PLANS).map(plan => ({
-        id: plan.id,
-        name: plan.name,
-        description: plan.description,
-        price: plan.price,
-        period: plan.period,
-        features: plan.features,
-        popular: plan.popular,
-        icon: plan.id === 'monthly' ? Crown :
-          plan.id === 'quarterly' ? Star : Users
-      }));
-      setPlans(availablePlans);
+      setPlans(buildPlans());
 
       setLoading(false);
     } catch (error) {
@@ -94,15 +99,6 @@ export default function SubscriptionScreen({ navigation }: any) {
 
   const canvas = { backgroundColor: tokens.colors.background.primary };
 
-  if (loading) {
-    return (
-      <View style={[styles.center, canvas]}>
-        <ActivityIndicator size="large" color={tokens.colors.primary.main} />
-        <Text style={[styles.loadingText, { color: tokens.colors.text.secondary }]}>{i18n.t('auto.screens__Profile__SubscriptionScreen.s3')}</Text>
-      </View>
-    );
-  }
-
   return (
     <View style={[styles.root, canvas]}>
       <RNSafeAreaView style={styles.root} edges={['top', 'bottom']}>
@@ -116,7 +112,29 @@ export default function SubscriptionScreen({ navigation }: any) {
 
         <ScrollView style={styles.root} showsVerticalScrollIndicator={false}>
           <View style={styles.scroll}>
-            {currentPlan ? (
+            {loading ? (
+              // המנוי הנוכחי בטעינה — אותו כרטיס (שם התוכנית · תאריך · אייקון), הכותרת קבועה
+              <View pointerEvents="none">
+                <SettingsSectionTitle title={i18n.t('auto.screens__Profile__SubscriptionScreen.s5')} />
+                <SettingsGlassCard style={styles.cardPad}>
+                  <View style={styles.heroRow}>
+                    <View style={styles.heroCopy}>
+                      <SkeletonLine lineHeight={Number(styles.planName.lineHeight) || 22} width={110} box={14} align="flex-end" />
+                      <SkeletonLine
+                        lineHeight={Number(styles.meta.lineHeight) || 18}
+                        width={92}
+                        box={11}
+                        align="flex-end"
+                        style={{ marginTop: APP_LAYOUT.titleSubtitleGap }}
+                      />
+                    </View>
+                    <View style={[styles.iconWell, { backgroundColor: tokens.colors.background.navChrome }]}>
+                      <Crown size={24} color={tokens.colors.text.primary} strokeWidth={2} />
+                    </View>
+                  </View>
+                </SettingsGlassCard>
+              </View>
+            ) : currentPlan ? (
               <View>
                 <SettingsSectionTitle title={i18n.t('auto.screens__Profile__SubscriptionScreen.s5')} />
                 <SettingsGlassCard style={styles.cardPad}>
@@ -211,16 +229,6 @@ export default function SubscriptionScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    ...settingsHebrewText,
-    ...settingsBodyType,
-    marginTop: APP_LAYOUT.componentGap,
-  },
   scroll: {
     paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,
     paddingTop: APP_LAYOUT.sectionHeaderToContent,

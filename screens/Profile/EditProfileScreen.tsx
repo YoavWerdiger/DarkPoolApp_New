@@ -29,6 +29,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { mediaService } from '../../services/mediaService';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { SkeletonBox, SkeletonLine } from '../../components/ui/SkeletonLoader';
 import UIButton from '../../components/ui/UIButton';
 import { APP_LAYOUT } from '../../components/ui/appLayout';
 import { APP_TYPE, appFormFieldHelperStyle } from '../../components/ui/appType';
@@ -220,29 +221,11 @@ export default function EditProfileScreen({ navigation }: any) {
 
   const screenStyle = [styles.root, { backgroundColor: tokens.colors.background.primary }];
 
-  if (isLoading) {
-    return (
-      <RNSafeAreaView style={screenStyle} edges={['top', 'bottom']}>
-        <ChatSubScreenHeader
-          title={i18n.t('auto.screens__Profile__EditProfileScreen.s12')}
-          onBack={() => {
-            void HapticFeedback.impactLight();
-            navigation.goBack();
-          }}
-        />
-        <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={tokens.colors.text.secondary} />
-          <Text
-            style={[
-              settingsMetaType,
-              styles.loadingText,
-              { color: tokens.colors.text.secondary },
-            ]}
-          >{i18n.t('auto.screens__Profile__EditProfileScreen.s13')}</Text>
-        </View>
-      </RNSafeAreaView>
-    );
-  }
+  // פרטי הפרופיל נטענים — אותו טופס בדיוק (כותרת, תוויות, בורר המגדר, כפתור השמירה);
+  // רק התמונה והערכים בשדות כצורות בגובה שורת הקלט (במקום ספינר וטקסט «טוען»)
+  const fieldSkeleton = (width: `${number}%`) => (
+    <SkeletonLine lineHeight={APP_TYPE.body.lineHeight} width={width} box={14} align="flex-end" style={{ flex: 1 }} />
+  );
 
   const fieldText = [formFieldInputStyle(), { color: tokens.colors.text.primary }];
 
@@ -281,7 +264,9 @@ export default function EditProfileScreen({ navigation }: any) {
                   { backgroundColor: tokens.colors.background.tertiary },
                 ]}
               >
-                {profileImage ? (
+                {isLoading ? (
+                  <SkeletonBox width="100%" height={Number(styles.avatar.height) || 96} borderRadius={999} />
+                ) : profileImage ? (
                   <Image
                     source={{ uri: profileImage }}
                     style={styles.avatarImage}
@@ -313,7 +298,7 @@ export default function EditProfileScreen({ navigation }: any) {
           </View>
 
           <ProfileEditField label={i18n.t('auto.screens__Profile__EditProfileScreen.s16')} focused={focusedField === 'displayName'}>
-            <TextInput
+            {isLoading ? fieldSkeleton('46%') : <TextInput
               value={displayName}
               onChangeText={setDisplayName}
               placeholder={i18n.t('auto.screens__Profile__EditProfileScreen.s17')}
@@ -321,11 +306,11 @@ export default function EditProfileScreen({ navigation }: any) {
               onFocus={() => setFocusedField('displayName')}
               onBlur={() => setFocusedField(null)}
               style={fieldText}
-            />
+            />}
           </ProfileEditField>
 
           <ProfileEditField label={i18n.t('auto.screens__Profile__EditProfileScreen.s18')} focused={focusedField === 'phone'}>
-            <TextInput
+            {isLoading ? fieldSkeleton('38%') : <TextInput
               value={phone}
               onChangeText={setPhone}
               placeholder={i18n.t('auto.screens__Profile__EditProfileScreen.s19')}
@@ -334,7 +319,7 @@ export default function EditProfileScreen({ navigation }: any) {
               onFocus={() => setFocusedField('phone')}
               onBlur={() => setFocusedField(null)}
               style={fieldText}
-            />
+            />}
           </ProfileEditField>
 
           <View style={styles.fieldBlock}>
@@ -399,12 +384,14 @@ export default function EditProfileScreen({ navigation }: any) {
           </View>
 
           <ProfileEditField label={i18n.t('auto.screens__Profile__EditProfileScreen.s23')} helper={i18n.t('auto.screens__Profile__EditProfileScreen.s24')} isLast>
+            {isLoading && !user?.email ? fieldSkeleton('58%') : (
             <Text
               style={[formFieldInputStyle(), { color: tokens.colors.text.secondary }]}
               numberOfLines={1}
             >
               {user?.email || '—'}
             </Text>
+            )}
           </ProfileEditField>
         </KeyboardAwareScrollView>
 
@@ -428,7 +415,7 @@ export default function EditProfileScreen({ navigation }: any) {
             variant="primary"
             fullWidth
             loading={isSaving}
-            disabled={isSaving}
+            disabled={isSaving || isLoading}
             style={{ backgroundColor: tokens.colors.text.primary }}
             textStyle={{ color: tokens.colors.text.inverse }}
             onPress={() => {
@@ -519,15 +506,6 @@ const styles = StyleSheet.create({
   },
   flex: {
     flex: 1,
-  },
-  loadingWrap: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    textAlign: 'center',
-    marginTop: APP_LAYOUT.cardStackGap,
   },
   scrollContent: {
     paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,

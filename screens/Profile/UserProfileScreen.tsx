@@ -5,7 +5,6 @@ import {
   View,
   Text,
   ScrollView,
-  ActivityIndicator,
 } from 'react-native';
 import {
   UserPen,
@@ -208,26 +207,8 @@ export default function UserProfileScreen({ navigation }: any) {
     },
   ];
 
-  if (isLoading) {
-    return (
-      <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-          <Text
-            style={{
-              ...settingsHebrewText,
-              ...settingsBodyType,
-              color: DesignTokens.colors.text.secondary,
-              marginTop: APP_LAYOUT.componentGap,
-              textAlign: 'center',
-            }}
-          >{i18n.t('auto.screens__Profile__UserProfileScreen.s18')}</Text>
-        </View>
-      </RNSafeAreaView>
-    );
-  }
-
-  if (!user) {
+  // בזמן טעינת המשתמש — המסך האמיתי (כותרת, כל התפריטים הקבועים); רק כרטיס הזהות כשלד
+  if (!isLoading && !user) {
     return (
       <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }}>
         <View
@@ -269,6 +250,7 @@ export default function UserProfileScreen({ navigation }: any) {
               userId={user?.id}
               email={email}
               avatarUri={profileData?.profile_picture}
+              loading={isLoading && !user}
               onPress={() => {
                 void HapticFeedback.impactLight();
                 navigation.navigate('EditProfile');

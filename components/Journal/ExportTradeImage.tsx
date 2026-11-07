@@ -77,26 +77,22 @@ const SHARE_OPTIONS_KEY = 'tradeShare:options';
 const DEFAULT_SHARE_OPTIONS: ShareOptions = { showPnl: true, showReturn: true, showPrices: false };
 
 /**
- * רקע סטטי לכרטיס — אותה פלטה כמו שיידר האורורה (כהה → ירוק כהה → ניאון),
- * אבל SVG: view-shot לא לוכד GLView (יוצא שחור/מפוקסל).
+ * רקע הכרטיס: גרפיט כמעט שחור + זוהר אחד בפינת תחילת הקריאה, בצבע התוצאה (רווח ירוק / הפסד אדום).
+ * SVG ולא GLView / blur — view-shot לוכד אותו נקי.
  */
-function ShareCardBackground({ width, height }: { width: number; height: number }) {
+function ShareCardBackground({ width, height, tint }: { width: number; height: number; tint: string }) {
+  const cx = UI_DIR === 'rtl' ? '100%' : '0%';
   return (
     <Svg width={width} height={height} style={StyleSheet.absoluteFill}>
       <Defs>
-        <RadialGradient id="glowTop" cx="50%" cy="0%" rx="85%" ry="55%">
-          <Stop offset="0" stopColor="#00E63D" stopOpacity="0.55" />
-          <Stop offset="0.45" stopColor="#004717" stopOpacity="0.55" />
-          <Stop offset="1" stopColor="#000A04" stopOpacity="0" />
-        </RadialGradient>
-        <RadialGradient id="glowBottom" cx="15%" cy="100%" rx="70%" ry="40%">
-          <Stop offset="0" stopColor="#00E63D" stopOpacity="0.18" />
-          <Stop offset="1" stopColor="#000A04" stopOpacity="0" />
+        <RadialGradient id="outcomeGlow" cx={cx} cy="0%" rx="95%" ry="70%">
+          <Stop offset="0" stopColor={tint} stopOpacity="0.30" />
+          <Stop offset="0.55" stopColor={tint} stopOpacity="0.06" />
+          <Stop offset="1" stopColor={tint} stopOpacity="0" />
         </RadialGradient>
       </Defs>
-      <Rect width={width} height={height} fill="#000A04" />
-      <Rect width={width} height={height} fill="url(#glowTop)" />
-      <Rect width={width} height={height} fill="url(#glowBottom)" />
+      <Rect width={width} height={height} fill={CARD_BG} />
+      <Rect width={width} height={height} fill="url(#outcomeGlow)" />
     </Svg>
   );
 }
@@ -104,8 +100,30 @@ function ShareCardBackground({ width, height }: { width: number; height: number 
 /** לוגו שור־ודוב / קהילת DarkPool — מעל כרטיסיית הזכוכית */
 // לוגו מלא (שור־ודוב + DARKPOOL + «קהילת הסוחרים של ישראל») — מקומי ולא מ-Storage,
 // כדי שיהיה טעון ברגע הצילום. עותק: app-media/branding/darkpool-share-logo.png
-const BRAND_LOGO = require('../../assets/darkpool-share-logo.png');
-const BRAND_LOGO_ASPECT = 1330 / 595;
+const BRAND_MARK = require('../../assets/branding/share-mark.png');
+const BRAND_MARK_ASPECT = 218 / 160;
+const CARD_BG = '#0B0D0C';
+const INK = '#F2F2F2';
+const INK_2 = 'rgba(242,242,242,0.62)';
+const INK_3 = 'rgba(242,242,242,0.38)';
+const HAIRLINE = 'rgba(255,255,255,0.10)';
+
+/** תאריך קצר לכרטיס: 03.11.26 */
+function shortDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  return `${dd}.${mm}.${String(d.getFullYear()).slice(2)}`;
+}
+
+/** ימי החזקה (פתוח — עד היום) */
+function heldDays(entry: string, exit: string): number | null {
+  const a = new Date(entry).getTime();
+  const b = exit ? new Date(exit).getTime() : Date.now();
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+  return Math.max(0, Math.round((b - a) / 86_400_000));
+}
 
 export function journalTradeToExportable(trade: JournalTrade): ExportableTrade {
   return {
@@ -277,7 +295,8 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
     const pnlColor = isProfit ? T.colors.primary.main : T.colors.text.danger;
     const retColor = ret >= 0 ? T.colors.primary.main : T.colors.text.danger;
     const logoUri = brandfetchTickerLogoUri(normalized.symbol);
-    return { isOpen, isProfit, ret, dirColor, pnlColor, retColor, logoUri };
+    const days = heldDays(normalized.entry_date, normalized.exit_date);
+    return { isOpen, isProfit, ret, dirColor, pnlColor, retColor, logoUri, days };
   }, [normalized]);
 
   const handleExport = useCallback(async () => {
@@ -325,7 +344,21 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
     return null;
   }
 
-  const { isOpen, isProfit, ret, dirColor, pnlColor, retColor, logoUri } = snapshot;
+  const { isOpen, isProfit, ret, dirColor, pnlColor, retColor, logoUri, days } = snapshot;
+  // המספר הראשי: תשואה (אם מוצגת), אחרת רווח/הפסד — וצבע הזוהר לפיו
+  const heroIsReturn = options.showReturn;
+  const heroColor = heroIsReturn ? retColor : pnlColor;
+  const retText = `${ret >= 0 ? '+' : '−'}${Math.abs(ret).toFixed(2)}%`;
+  const pnlText = `${isProfit ? '+' : '−'}$${formatCurrencyPlain(normalized.pnl)}`;
+  const dateText = isOpen
+    ? shortDate(normalized.entry_date)
+    : `${shortDate(normalized.entry_date)} – ${shortDate(normalized.exit_date)}`;
+  const heldText =
+    days == null
+      ? ''
+      : days === 0
+        ? i18n.t('auto.components__Journal__ExportTradeImage.intraday')
+        : i18n.t('auto.components__Journal__ExportTradeImage.heldDays', { count: days });
   const handleHeaderClose = () => {
     (animatedClose ?? onClose)();
   };
@@ -387,114 +420,102 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                   );
                 }}
               >
-                <ShareCardBackground width={cardSize?.w ?? cardW} height={cardSize?.h ?? cardH} />
+                <ShareCardBackground
+                  width={cardSize?.w ?? cardW}
+                  height={cardSize?.h ?? cardH}
+                  tint={heroColor}
+                />
 
-                <View style={[styles.cardContent, { minHeight: cardH - 8 }]}>
-                  {/* לוגו DarkPool / שור־ודוב — מעל הזכוכית, ממורכז */}
-                  <Image
-                    source={BRAND_LOGO}
-                    style={styles.brandLogoAbove}
-                    contentFit="contain"
-                    transition={0}
-                    accessibilityLabel={i18n.t('auto.components__Journal__ExportTradeImage.s10')}
-                  />
+                <View style={[styles.cardContent, { minHeight: cardH }]}>
+                  {/* פס עליון: מותג בצד תחילת הקריאה, תאריכים בצד השני */}
+                  <View style={styles.topBar}>
+                    <View style={styles.brandRow}>
+                      <Image
+                        source={BRAND_MARK}
+                        style={styles.brandMark}
+                        contentFit="contain"
+                        transition={0}
+                        accessibilityLabel={i18n.t('auto.components__Journal__ExportTradeImage.s10')}
+                      />
+                      <Text style={styles.wordmark}>DARKPOOL</Text>
+                    </View>
+                    <Text style={styles.dateText}>{dateText}</Text>
+                  </View>
 
-                  {/* כרטיס מלא (cardSolid) — זכוכית בלי blur יוצאת עכורה בצילום */}
-                  <View style={[styles.pnlHeroCard, styles.pnlHero]}>
-                    {/* ממורכז: לוגו חברה → טיקר → LONG/SHORT → רווח/הפסד → תשואה */}
-                    <View style={styles.symbolBlock}>
-                      {logoUri ? (
-                        <View style={styles.logoRing}>
-                          <Image
-                            source={{ uri: logoUri }}
-                            style={styles.logoImg}
-                            contentFit="cover"
-                            transition={120}
-                          />
-                        </View>
-                      ) : (
-                        <View style={[styles.logoRing, styles.logoFallback]}>
-                          <Text
-                            style={[
-                              styles.logoFallbackText,
-                              { color: SHARE_CARD_TOKENS.colors.text.secondary },
-                            ]}
-                          >
-                            {normalized.symbol.trim().slice(0, 4).toUpperCase()}
-                          </Text>
-                        </View>
-                      )}
-                      <Text
-                        style={[styles.symbolBig, { color: SHARE_CARD_TOKENS.colors.text.primary }]}
-                        numberOfLines={1}
-                      >
+                  {/* הנכס */}
+                  <View style={styles.assetRow}>
+                    {logoUri ? (
+                      <View style={styles.logoTile}>
+                        <Image source={{ uri: logoUri }} style={styles.logoImg} contentFit="cover" transition={120} />
+                      </View>
+                    ) : (
+                      <View style={[styles.logoTile, styles.logoFallback]}>
+                        <Text style={styles.logoFallbackText}>{normalized.symbol.trim().slice(0, 4).toUpperCase()}</Text>
+                      </View>
+                    )}
+                    <View style={styles.assetText}>
+                      <Text style={styles.symbolBig} numberOfLines={1}>
                         {normalized.symbol}
                       </Text>
-                      <View style={styles.dirPillRow}>
-                        <View style={[styles.dirPill, { backgroundColor: `${dirColor}28` }]}>
-                          <Text style={[styles.dirPillText, { color: dirColor }]}>
-                            {normalized.direction === 'long' ? 'LONG' : 'SHORT'}
-                          </Text>
-                        </View>
-                        {isOpen ? (
-                          <View
-                            style={[styles.dirPill, { backgroundColor: 'rgba(255,255,255,0.10)' }]}
-                          >
-                            <Text
-                              style={[
-                                styles.dirPillText,
-                                { color: SHARE_CARD_TOKENS.colors.text.secondary },
-                              ]}
-                            >
-                              OPEN
-                            </Text>
-                          </View>
-                        ) : null}
+                      <View style={styles.metaRow}>
+                        <Text style={[styles.dirText, { color: dirColor }]}>
+                          {normalized.direction === 'long' ? '▲ LONG' : '▼ SHORT'}
+                        </Text>
+                        {isOpen ? <Text style={styles.metaDim}>· OPEN</Text> : null}
+                        {heldText ? <Text style={styles.metaDim}>· {heldText}</Text> : null}
                       </View>
                     </View>
+                  </View>
 
-                    {options.showPnl ? (
-                      <>
-                        <Text style={styles.pnlHeroLabel}>{i18n.t('auto.components__Journal__ExportTradeImage.s11')}</Text>
-                        <Text style={[styles.pnlHeroValue, { color: pnlColor }]}>
-                          {isProfit ? '+' : '−'}${formatCurrencyPlain(normalized.pnl)}
-                        </Text>
-                        {options.showReturn ? (
-                          <View style={[styles.retChip, { backgroundColor: `${retColor}22` }]}>
-                            <Text style={[styles.retChipText, { color: retColor }]}>
-                              {ret >= 0 ? '+' : ''}
-                              {ret.toFixed(2)}%
-                            </Text>
-                          </View>
-                        ) : null}
-                      </>
-                    ) : (
-                      <>
-                        <Text style={styles.pnlHeroLabel}>{i18n.t('auto.components__Journal__ExportTradeImage.s12')}</Text>
-                        <Text style={[styles.pnlHeroValue, { color: retColor }]}>
-                          {ret >= 0 ? '+' : ''}
-                          {ret.toFixed(2)}%
-                        </Text>
-                      </>
-                    )}
-                    {options.showPrices ? (
-                      <View style={styles.pricesRow}>
-                        <View style={styles.priceCol}>
-                          <Text style={styles.priceLabel}>{i18n.t('auto.components__Journal__ExportTradeImage.s13')}</Text>
-                          <Text style={styles.priceValue}>${formatCurrencyPlain(normalized.entry_price)}</Text>
-                        </View>
-                        <View style={styles.priceCol}>
-                          <Text style={styles.priceLabel}>{isOpen ? i18n.t('auto.components__Journal__ExportTradeImage.s14') : i18n.t('auto.components__Journal__ExportTradeImage.s15')}</Text>
-                          <Text style={styles.priceValue}>${formatCurrencyPlain(normalized.exit_price)}</Text>
-                        </View>
-                      </View>
+                  {/* המספר הראשי */}
+                  <View style={styles.heroBlock}>
+                    <Text style={styles.heroLabel}>
+                      {heroIsReturn
+                        ? i18n.t('auto.components__Journal__ExportTradeImage.returnLabel')
+                        : i18n.t('auto.components__Journal__ExportTradeImage.pnlLabel')}
+                    </Text>
+                    <Text
+                      style={[styles.heroValue, { color: heroColor }]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.6}
+                    >
+                      {heroIsReturn ? retText : pnlText}
+                    </Text>
+                    {heroIsReturn && options.showPnl ? (
+                      <Text style={[styles.subValue, { color: pnlColor }]}>{pnlText}</Text>
                     ) : null}
                   </View>
 
+                  {/* מסלול המחיר: כניסה → יציאה */}
+                  {options.showPrices ? (
+                    <View style={styles.pathBlock}>
+                      <View style={styles.pathTrack}>
+                        <View style={[styles.pathDot, { borderColor: INK_2 }]} />
+                        <View style={[styles.pathLine, { backgroundColor: heroColor }]} />
+                        <View style={[styles.pathDot, styles.pathDotEnd, { backgroundColor: heroColor, borderColor: heroColor }]} />
+                      </View>
+                      <View style={styles.pathLabels}>
+                        <View>
+                          <Text style={styles.pathLabel}>{i18n.t('auto.components__Journal__ExportTradeImage.s13')}</Text>
+                          <Text style={styles.pathValue}>${formatCurrencyPlain(normalized.entry_price)}</Text>
+                        </View>
+                        <View style={styles.pathLabelEnd}>
+                          <Text style={[styles.pathLabel, styles.textEnd]}>
+                            {isOpen
+                              ? i18n.t('auto.components__Journal__ExportTradeImage.s14')
+                              : i18n.t('auto.components__Journal__ExportTradeImage.s15')}
+                          </Text>
+                          <Text style={[styles.pathValue, styles.textEnd]}>${formatCurrencyPlain(normalized.exit_price)}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  ) : null}
+
                   <View style={styles.spacer} />
 
-                  {/* Footer: טקסט שיווקי + QR */}
-                  <View style={styles.ctaBar}>
+                  {/* תחתית: הזמנה + QR */}
+                  <View style={styles.footerRow}>
                     <View style={styles.ctaTextCol}>
                       <Text style={styles.ctaHeadline} numberOfLines={2}>
                         {SHARE_CTA_LINE}
@@ -502,13 +523,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                       <Text style={styles.ctaSub}>{SHARE_CTA_SUB}</Text>
                     </View>
                     <View style={styles.qrWrap}>
-                      <QRCode
-                        value={APP_LINKS.appDownload}
-                        size={64}
-                        backgroundColor="#FFFFFF"
-                        color="#0A0E0A"
-                        ecl="M"
-                      />
+                      <QRCode value={APP_LINKS.appDownload} size={52} backgroundColor="#FFFFFF" color="#0A0E0A" ecl="M" />
                     </View>
                   </View>
                 </View>
@@ -624,194 +639,196 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     shotWrap: {
       alignSelf: 'center',
-      backgroundColor: '#0A0E0A',
+      backgroundColor: CARD_BG,
       borderRadius: 24,
       overflow: 'hidden',
     },
     cardRoot: {
       borderRadius: 24,
       overflow: 'hidden',
-      backgroundColor: '#0A0E0A',
+      backgroundColor: CARD_BG,
     },
+    // כל הטקסט מיושר לצד תחילת הקריאה (alignItems: flex-start בעץ UI_DIR) — לא ממורכז
     cardContent: {
-      paddingTop: 5,
-      paddingHorizontal: 16,
-      paddingBottom: 10,
-      zIndex: 2,
-      position: 'relative',
-      justifyContent: 'flex-start',
-      alignItems: 'center',
-      gap: 6,
-      overflow: 'visible',
+      direction: UI_DIR,
+      paddingHorizontal: 22,
+      paddingTop: 20,
+      paddingBottom: 18,
+      alignItems: 'stretch',
     },
-    /** הלוגו החתוך (בלי שוליים) — ביחס המקורי, מעל כרטיס הטרייד */
-    brandLogoAbove: {
-      width: 196,
-      height: Math.round(196 / BRAND_LOGO_ASPECT),
-      marginTop: 12,
-      marginBottom: 8,
-      alignSelf: 'center',
-    },
-    symbolBlock: {
-      alignItems: 'center',
-      width: '100%',
-      marginBottom: 8,
-      gap: 7,
-    },
-    dirPillRow: {
+    topBar: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
-      flexWrap: 'wrap',
-      gap: 8,
+      justifyContent: 'space-between',
     },
-    logoRing: {
-      width: 58,
-      height: 58,
-      borderRadius: 29,
+    brandRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 7,
+    },
+    brandMark: {
+      height: 18,
+      width: Math.round(18 * BRAND_MARK_ASPECT),
+    },
+    wordmark: {
+      color: INK,
+      fontSize: 12,
+      fontWeight: '800',
+      letterSpacing: 2.4,
+    },
+    dateText: {
+      color: INK_3,
+      fontSize: 11,
+      fontWeight: '600',
+      letterSpacing: 0.3,
+      writingDirection: 'ltr',
+      fontVariant: ['tabular-nums'],
+    },
+    assetRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      marginTop: 30,
+    },
+    logoTile: {
+      width: 44,
+      height: 44,
+      borderRadius: 12,
       overflow: 'hidden',
       backgroundColor: 'rgba(255,255,255,0.08)',
       alignItems: 'center',
       justifyContent: 'center',
-      flexShrink: 0,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: 'rgba(255,255,255,0.14)',
     },
     logoImg: {
-      width: 58,
-      height: 58,
+      width: 44,
+      height: 44,
     },
     logoFallback: {},
     logoFallbackText: {
-      fontSize: 14,
+      color: INK_2,
+      fontSize: 12,
       fontWeight: '700',
     },
-    symbolBig: {
-      flexShrink: 1,
-      fontSize: 24,
-      fontWeight: '700',
-      textAlign: 'center',
-      letterSpacing: -0.5,
-    },
-    dirPill: {
-      paddingHorizontal: 12,
-      paddingVertical: 4,
-      borderRadius: 999,
-      flexShrink: 0,
-    },
-    dirPillText: {
-      fontSize: 11,
-      fontWeight: '700',
-      letterSpacing: 0.8,
-    },
-    /** כרטיס cardSolid — מרווח עליון מול הלוגו, תחתון מול פס ה־QR */
-    pnlHeroCard: {
-      width: '100%',
-      alignSelf: 'stretch',
-      overflow: 'hidden',
-      marginTop: 2,
-      marginBottom: 6,
-      borderRadius: UI_CARD_RADIUS,
-      backgroundColor: SHARE_CARD_TOKENS.colors.background.cardSolid,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: SHARE_CARD_TOKENS.colors.border.divider,
-    },
-    pnlHero: {
-      alignItems: 'center',
-      paddingTop: 14,
-      paddingBottom: 12,
-      paddingHorizontal: 16,
-      gap: 0,
-      overflow: 'hidden',
-      position: 'relative',
-    },
-    pnlHeroLabel: {
-      fontSize: 13,
-      fontWeight: '700',
-      letterSpacing: 0.2,
-      marginTop: 2,
-      marginBottom: 5,
-      textAlign: 'center',
-      writingDirection: TEXT_DIR,
-      color: 'rgba(255,255,255,0.58)',
-    },
-    pnlHeroValue: {
-      fontSize: 36,
-      fontWeight: '700',
-      letterSpacing: -0.8,
-      writingDirection: 'ltr',
-      textAlign: 'center',
-      fontVariant: ['tabular-nums'],
-    },
-    retChip: {
-      marginTop: 8,
-      paddingHorizontal: 12,
-      paddingVertical: 5,
-      borderRadius: 999,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: 'rgba(255,255,255,0.12)',
-    },
-    retChipText: {
-      fontSize: 14,
-      fontWeight: '700',
-      letterSpacing: 0.2,
-      writingDirection: 'ltr',
-      textAlign: 'center',
-      fontVariant: ['tabular-nums'],
-    },
-    pricesRow: {
-      flexDirection: 'row',
-      alignSelf: 'stretch',
-      justifyContent: 'center',
-      gap: 28,
-      marginTop: 12,
-    },
-    priceCol: {
-      alignItems: 'center',
+    assetText: {
+      flex: 1,
+      minWidth: 0,
+      alignItems: 'flex-start',
       gap: 2,
     },
-    priceLabel: {
-      fontSize: APP_TYPE.caption.fontSize,
-      fontWeight: APP_TYPE.caption.fontWeight,
-      lineHeight: APP_TYPE.caption.lineHeight,
-      color: 'rgba(255,255,255,0.58)',
-      textAlign: 'center',
-    },
-    priceValue: {
-      fontSize: APP_TYPE.cardBody.fontSize,
-      fontWeight: APP_TYPE.cardTitle.fontWeight,
-      lineHeight: APP_TYPE.cardBody.lineHeight,
-      color: 'rgba(255,255,255,0.92)',
+    symbolBig: {
+      color: INK,
+      fontSize: 22,
+      fontWeight: '700',
+      letterSpacing: -0.3,
       writingDirection: 'ltr',
-      textAlign: 'center',
-      fontVariant: ['tabular-nums'],
     },
-    /** שורות ההגדרות בנויות לעץ LTR (כמו מסך ההגדרות) — בתוך שיט RTL הן מתהפכות */
-    optionsBlock: {
-      direction: ROOT_DIR,
-      alignSelf: 'stretch',
-      marginTop: tokens.spacing.xl,
-    },
-    spacer: {
-      flexGrow: 1,
-      minHeight: 4,
-    },
-    /** כרטיס CTA ברוחב מלא, כמו כרטיס הטרייד — טקסט מימין, QR משמאל (row בעץ RTL) */
-    ctaBar: {
+    metaRow: {
       flexDirection: 'row',
       alignItems: 'center',
+      gap: 6,
+    },
+    dirText: {
+      fontSize: 11,
+      fontWeight: '800',
+      letterSpacing: 1,
+      writingDirection: 'ltr',
+    },
+    metaDim: {
+      color: INK_3,
+      fontSize: 11,
+      fontWeight: '600',
+      writingDirection: TEXT_DIR,
+    },
+    heroBlock: {
+      marginTop: 26,
+      alignItems: 'flex-start',
+      gap: 2,
+    },
+    heroLabel: {
+      color: INK_3,
+      fontSize: 12,
+      fontWeight: '600',
+      letterSpacing: 0.2,
+      writingDirection: TEXT_DIR,
+    },
+    heroValue: {
+      fontSize: 58,
+      lineHeight: 64,
+      fontWeight: '800',
+      letterSpacing: -2,
+      writingDirection: 'ltr',
+      fontVariant: ['tabular-nums'],
       alignSelf: 'stretch',
+      textAlign: UI_DIR === 'rtl' ? 'right' : 'left',
+    },
+    subValue: {
+      fontSize: 18,
+      fontWeight: '700',
+      letterSpacing: -0.2,
+      writingDirection: 'ltr',
+      fontVariant: ['tabular-nums'],
+      opacity: 0.9,
+    },
+    pathBlock: {
+      marginTop: 24,
+      gap: 10,
+    },
+    pathTrack: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    pathDot: {
+      width: 9,
+      height: 9,
+      borderRadius: 5,
+      borderWidth: 1.5,
+      backgroundColor: CARD_BG,
+    },
+    pathDotEnd: {},
+    pathLine: {
+      flex: 1,
+      height: 2,
+      borderRadius: 1,
+      opacity: 0.7,
+    },
+    pathLabels: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+    },
+    pathLabelEnd: {
+      alignItems: 'flex-end',
+    },
+    pathLabel: {
+      color: INK_3,
+      fontSize: 11,
+      fontWeight: '600',
+      writingDirection: TEXT_DIR,
+    },
+    pathValue: {
+      color: INK,
+      fontSize: 15,
+      fontWeight: '700',
+      writingDirection: 'ltr',
+      fontVariant: ['tabular-nums'],
+    },
+    textEnd: {},
+    spacer: {
+      flexGrow: 1,
+      minHeight: 20,
+    },
+    footerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
       gap: 14,
-      paddingVertical: 12,
-      paddingHorizontal: 14,
-      borderRadius: UI_CARD_RADIUS,
-      backgroundColor: SHARE_CARD_TOKENS.colors.background.cardSolid,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: SHARE_CARD_TOKENS.colors.border.divider,
+      paddingTop: 14,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: HAIRLINE,
     },
     qrWrap: {
-      padding: 6,
-      borderRadius: 12,
+      padding: 5,
+      borderRadius: 10,
       backgroundColor: '#FFFFFF',
       flexShrink: 0,
     },
@@ -819,25 +836,26 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       flex: 1,
       minWidth: 0,
       alignItems: 'flex-start',
-      justifyContent: 'center',
-      gap: 4,
+      gap: 3,
     },
     ctaHeadline: {
+      color: INK,
       fontSize: 13,
       fontWeight: '700',
       lineHeight: 18,
-      color: 'rgba(255,255,255,0.92)',
-      textAlign: 'left',
       writingDirection: TEXT_DIR,
-      width: '100%',
     },
     ctaSub: {
+      color: INK_3,
       fontSize: 11,
       fontWeight: '600',
-      color: 'rgba(255,255,255,0.50)',
-      textAlign: 'left',
       writingDirection: TEXT_DIR,
-      width: '100%',
+    },
+    /** שורות ההגדרות בנויות לעץ LTR (כמו מסך ההגדרות) — בתוך שיט RTL הן מתהפכות */
+    optionsBlock: {
+      direction: ROOT_DIR,
+      alignSelf: 'stretch',
+      marginTop: tokens.spacing.xl,
     },
     footer: {
       flexShrink: 0,
@@ -846,27 +864,5 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: tokens.colors.border.divider,
       backgroundColor: 'transparent',
-    },
-    exportButton: {
-      borderRadius: 999,
-      minHeight: 52,
-      overflow: 'hidden',
-    },
-    exportButtonContent: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: tokens.spacing.sm,
-      minHeight: 52,
-      paddingVertical: 14,
-      paddingHorizontal: tokens.spacing.lg,
-    },
-    exportButtonDisabled: {
-      opacity: 0.55,
-    },
-    exportButtonText: {
-      fontSize: tokens.typography.fontSize.base,
-      fontWeight: tokens.typography.fontWeight.bold as any,
-      color: tokens.colors.primary.main,
     },
   });

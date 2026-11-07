@@ -9,7 +9,7 @@ import { TEXT_DIR } from '../../lib/i18n/language';
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { Easing, interpolateColor, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
@@ -36,6 +36,8 @@ import type { DarkPoolStackParamList } from '../../navigation/DarkPoolStack';
 import { InvestorPortrait } from './components/InvestorPortrait';
 import { CongressTradeCard } from './components/CongressTradeCard';
 import { InsiderTradeCard } from './components/InsiderTradeCard';
+import { DarkPoolTradeFeedCardSkeleton } from './components/DarkPoolTradeFeedCard';
+import { LineChartSkeleton, SkeletonBox, SkeletonLine } from '../../components/ui/SkeletonLoader';
 import {
   listCongressHoldingsByTicker,
   listCongressTradesByTicker,
@@ -153,7 +155,7 @@ export default function DarkPoolTickerScreen() {
     value: number;
   } | null>(null);
 
-  const { data: insights } = useUwTickerInsights(ticker);
+  const { data: insights, loading: insightsLoading } = useUwTickerInsights(ticker);
 
   const quoteQuery = useQuery({
     queryKey: appQueryKeys.tickerQuote(ticker),
@@ -349,6 +351,9 @@ export default function DarkPoolTickerScreen() {
     null;
 
   const changeTone = tickerChangeTone(rangeChange.pct);
+  // שם החברה מגיע מ-insights / Form 4 / קונגרס — שלד במקומו עד שאחד מהם חוזר
+  const companyNameLoading =
+    !companyName && (insightsLoading || insiderBuysQuery.isLoading || congressTradesQuery.isLoading);
 
   const openHolder = useCallback(
     (holder: TickerCongressHolder) => {
@@ -448,6 +453,9 @@ export default function DarkPoolTickerScreen() {
                     upColor={tokens.colors.primary.main}
                     downColor={tokens.colors.text.danger}
                   />
+                ) : quoteQuery.isLoading ? (
+                  // המחיר בטעינה — צורה בגובה שורת המחיר, באותו מקום
+                  <SkeletonLine lineHeight={DARK_POOL_TYPE.pageTitle.lineHeight} width={112} box={24} align="flex-start" />
                 ) : (
                   <Text style={styles.livePrice}>{toDataIsland(priceText)}</Text>
                 )}
@@ -459,6 +467,13 @@ export default function DarkPoolTickerScreen() {
                     isolate={toDataIsland}
                     absText={formatTickerAbsChange(rangeChange.abs)}
                     pctText={formatTickerPctChange(rangeChange.pct)}
+                  />
+                ) : quoteQuery.isLoading || (range !== '1D' && historyQuery.isLoading) ? (
+                  <SkeletonLine
+                    lineHeight={DARK_POOL_TYPE.cardBody.lineHeight}
+                    width={96}
+                    box={12}
+                    style={styles.liveChangeRow}
                   />
                 ) : (
                   <Text style={[styles.liveChange, { color: tokens.colors.text.secondary }]}>
@@ -476,12 +491,33 @@ export default function DarkPoolTickerScreen() {
                     <Text style={styles.companyName} numberOfLines={1}>
                       {companyName}
                     </Text>
+                  ) : companyNameLoading ? (
+                    <SkeletonLine
+                      lineHeight={DARK_POOL_TYPE.cardSubtitle.lineHeight}
+                      width={120}
+                      box={11}
+                      style={{ marginTop: APP_LAYOUT.cardTitleToSubtitleGap }}
+                    />
                   ) : null}
                   {marketCapText ? (
                     <Text style={styles.marketCapLine} numberOfLines={1}>
                       {`${tickerMarketCapLabel()} `}
                       <Text style={styles.marketCapValue}>{toDataIsland(marketCapText)}</Text>
                     </Text>
+                  ) : quoteQuery.isLoading ? (
+                    // התווית «שווי שוק» קבועה — רק הסכום נטען
+                    // סדר פיזי כמו בשורה האמיתית (כתיבה מימין לשמאל): הסכום משמאל לתווית
+                    <View style={styles.marketCapSkeletonRow}>
+                      <SkeletonLine
+                        lineHeight={DARK_POOL_TYPE.caption.lineHeight}
+                        width={44}
+                        box={10}
+                        style={{ marginTop: APP_LAYOUT.cardMetricLabelToValueGap }}
+                      />
+                      <Text style={styles.marketCapLine} numberOfLines={1}>
+                        {` ${tickerMarketCapLabel()}`}
+                      </Text>
+                    </View>
                   ) : null}
                 </View>
               </View>
@@ -503,9 +539,10 @@ export default function DarkPoolTickerScreen() {
                 scrubActive={scrubActiveSV}
               />
             </View>
-          ) : historyQuery.isLoading ? (
-            <View style={styles.chartPlaceholder}>
-              <ActivityIndicator color={tokens.colors.primary.main} />
+          ) : historyQuery.isLoading || intradayQuery.isLoading ? (
+            // גרף בטעינה — באותו גובה ושוליים; בורר הטווחים מתחתיו הוא הרכיב האמיתי
+            <View style={styles.chartWrap} pointerEvents="none">
+              <LineChartSkeleton height={200} periods={0} />
             </View>
           ) : null}
 
@@ -534,9 +571,36 @@ export default function DarkPoolTickerScreen() {
           {tab === 'holders' ? (
             <View style={styles.holdersSection}>
               {holdersQuery.isLoading ? (
-                <View style={styles.listLoading}>
-                  <ActivityIndicator color={tokens.colors.primary.main} />
-                </View>
+                // אותו כרטיס ושורות (דיוקן 36 · שם + משנה · ערך + מניות) — רק הנתונים נטענים
+                <UICard variant="soft" glassIntensity="light" padding="none" style={styles.holdersCard}>
+                  {[0, 1, 2, 3].map((i) => (
+                    <React.Fragment key={i}>
+                      {i > 0 ? <View style={styles.holderDivider} /> : null}
+                      <View style={[styles.holderRow, styles.holderPad]} pointerEvents="none">
+                        <SkeletonBox width={36} height={36} borderRadius={18} />
+                        <View style={styles.holderText}>
+                          <SkeletonLine lineHeight={DARK_POOL_TYPE.cardBody.lineHeight} width={[118, 96, 132, 104][i]} box={13} />
+                          <SkeletonLine
+                            lineHeight={DARK_POOL_TYPE.cardSubtitle.lineHeight}
+                            width={[80, 92, 70, 86][i]}
+                            box={10}
+                            style={{ marginTop: APP_LAYOUT.cardTitleToSubtitleGap }}
+                          />
+                        </View>
+                        <View style={styles.holderMetricCol}>
+                          <SkeletonLine lineHeight={DARK_POOL_TYPE.cardBody.lineHeight} width={64} box={13} align="flex-end" />
+                          <SkeletonLine
+                            lineHeight={DARK_POOL_TYPE.caption.lineHeight}
+                            width={48}
+                            box={10}
+                            align="flex-end"
+                            style={{ marginTop: APP_LAYOUT.cardTitleToSubtitleGap }}
+                          />
+                        </View>
+                      </View>
+                    </React.Fragment>
+                  ))}
+                </UICard>
               ) : holdersQuery.isError ? (
                 <UICard variant="soft" glassIntensity="light" padding="md">
                   <Text style={styles.emptyTitle}>{holdersError.title}</Text>
@@ -609,8 +673,11 @@ export default function DarkPoolTickerScreen() {
               )}
             </View>
           ) : feedLoading ? (
-            <View style={styles.listLoading}>
-              <ActivityIndicator color={tokens.colors.primary.main} />
+            // כרטיסי שלד באותה מעטפת ומידות של כרטיסי הפיד
+            <View style={styles.feedSection} pointerEvents="none">
+              {[0, 1, 2, 3].map((i) => (
+                <DarkPoolTradeFeedCardSkeleton key={i} variant={i} />
+              ))}
             </View>
           ) : feedRows.length > 0 ? (
             <View style={styles.feedSection}>
@@ -764,10 +831,11 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, bottomPadding:
       marginTop: APP_LAYOUT.stackGapSmall,
       marginHorizontal: -4,
     },
-    chartPlaceholder: {
-      height: 200,
-      alignItems: 'center',
-      justifyContent: 'center',
+    // «שווי שוק» אמיתי + צורה במקום הסכום
+    marketCapSkeletonRow: {
+      direction: ROOT_DIR,
+      flexDirection: 'row',
+      alignItems: 'flex-start',
     },
     chipRow: {
       direction: UI_DIR,
@@ -901,10 +969,6 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, bottomPadding:
       lineHeight: DARK_POOL_TYPE.cardSubtitle.lineHeight,
       fontWeight: DARK_POOL_TYPE.cardSubtitle.fontWeight,
       color: tokens.colors.text.secondary,
-    },
-    listLoading: {
-      paddingVertical: 20,
-      alignItems: 'center',
     },
     scrollContent: {
       direction: UI_DIR,

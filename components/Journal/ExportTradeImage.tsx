@@ -77,13 +77,13 @@ const SHARE_CTA_SUB = i18n.t('auto.components__Journal__ExportTradeImage.s2');
 /** מה מוצג בתמונה — נשמר בין שיתופים */
 type ShareOptions = { showPnl: boolean; showReturn: boolean; showPrices: boolean };
 const SHARE_OPTIONS_KEY = 'tradeShare:options';
-const DEFAULT_SHARE_OPTIONS: ShareOptions = { showPnl: true, showReturn: true, showPrices: false };
+const DEFAULT_SHARE_OPTIONS: ShareOptions = { showPnl: true, showReturn: true, showPrices: false }; // showPrices: הוסר מהכרטיס, נשאר לתאימות ל-AsyncStorage
 
 /** מידות העיצוב — הכרטיס מצויר ב-viewBox 340×425 ומוקטן/מוגדל באחידות */
 const ART_W = 340;
 const ART_H = 425;
-const CHART_TOP = 286;
-const CHART_BOT = 338;
+const CHART_TOP = 262;
+const CHART_BOT = 352;
 const CHART_PAD_X = 22;
 const FOOTER_H = 72;
 
@@ -100,8 +100,6 @@ const BRAND_LOGO_ASPECT = 1330 / 595;
 const BULL_BEAR = require('../../assets/branding/share-bullbear.png');
 const BULL_BEAR_ASPECT = 575 / 420;
 
-/** Assistant SemiBold (כבר טעון באפליקציה) למספרים ולכותרות; fontWeight 400 כדי שהמערכת לא תעבה שוב */
-const DISPLAY_FONT = { fontFamily: APP_FONT.cta, fontWeight: '400' as const };
 
 /** מספר אקראי דטרמיניסטי (mulberry32) — אותו טרייד תמיד מקבל אותו גרף */
 function seededRandom(seedText: string) {
@@ -184,29 +182,6 @@ async function loadTradePath(trade: ExportableTrade): Promise<number[] | null> {
     closes = Array.from({ length: 80 }, (_, i) => closes[Math.floor(i * step)]);
   }
   return [trade.entry_price, ...closes, trade.exit_price];
-}
-
-/**
- * תגית מחיר על הגרף: [ $118.40  כניסה ]. כל טקסט ממורכז בתא שלו (textAnchor middle) —
- * לא תלוי בכיוון הממשק (forceRTL הופך start/end).
- */
-function PriceTag({ x, y, anchor, label, value }: { x: number; y: number; anchor: 'start' | 'end'; label: string; value: string }) {
-  const valueW = value.length * 6.2;
-  const labelW = label.length * 5.6;
-  const w = 8 + valueW + 6 + labelW + 8;
-  let x0 = anchor === 'start' ? x - 6 : x - w + 6;
-  x0 = Math.max(6, Math.min(ART_W - 6 - w, x0));
-  return (
-    <G>
-      <Rect x={x0} y={y} width={w} height={20} rx={10} fill="rgba(10,12,11,0.86)" stroke="rgba(255,255,255,0.14)" strokeWidth={1} />
-      <SvgText x={x0 + 8 + valueW / 2} y={y + 14} textAnchor="middle" fontFamily={APP_FONT.cta} fontSize={12} fill={INK}>
-        {value}
-      </SvgText>
-      <SvgText x={x0 + w - 8 - labelW / 2} y={y + 14} textAnchor="middle" fontFamily={APP_FONT.medium} fontSize={10} fill="rgba(242,242,242,0.55)">
-        {label}
-      </SvgText>
-    </G>
-  );
 }
 
 /** אייקון מגמה בתוך הפיל של LONG / SHORT (כמו Ionicons trending-up/down) */
@@ -469,14 +444,13 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
     return null;
   }
 
-  const { isOpen, isProfit, ret, dirColor, pnlColor, retColor, logoUri } = snapshot;
+  const { isProfit, ret, dirColor, pnlColor, retColor, logoUri } = snapshot;
   // המספר הראשי: תשואה (אם מוצגת), אחרת רווח/הפסד — וצבע הזוהר לפיו
   const heroIsReturn = options.showReturn;
   const heroColor = heroIsReturn ? retColor : pnlColor;
   const retText = `${ret >= 0 ? '+' : '−'}${Math.abs(ret).toFixed(2)}%`;
   const pnlText = `${isProfit ? '+' : '−'}$${formatCurrencyPlain(normalized.pnl)}`;
   const art = priceArt(`${normalized.id}:${normalized.symbol}`, normalized.exit_price >= normalized.entry_price, pricePath);
-  const chartMid = (CHART_TOP + CHART_BOT) / 2;
   const scale = cardW / ART_W;
 
   const handleHeaderClose = () => {
@@ -536,8 +510,13 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                 <Svg width={cardW} height={cardH} viewBox={`0 0 ${ART_W} ${ART_H}`} style={StyleSheet.absoluteFill}>
                   <Defs>
                     <LinearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
-                      <Stop offset="0" stopColor={heroColor} stopOpacity="0.30" />
-                      <Stop offset="0.8" stopColor={heroColor} stopOpacity="0" />
+                      <Stop offset="0" stopColor={heroColor} stopOpacity="0.34" />
+                      <Stop offset="1" stopColor={heroColor} stopOpacity="0.02" />
+                    </LinearGradient>
+                    {/* הצללה עדינה בתחתית — הטקסט וה-QR יושבים על הגרדיאנט של הגרף */}
+                    <LinearGradient id="footScrim" x1="0" y1="0" x2="0" y2="1">
+                      <Stop offset="0" stopColor={CARD_BG} stopOpacity="0" />
+                      <Stop offset="1" stopColor={CARD_BG} stopOpacity="0.7" />
                     </LinearGradient>
                     <RadialGradient id="centerGlow" cx="50%" cy="38%" rx="60%" ry="60%">
                       <Stop offset="0" stopColor={heroColor} stopOpacity="0.16" />
@@ -546,36 +525,15 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                   </Defs>
                   <Rect width={ART_W} height={ART_H} fill={CARD_BG} />
                   <Rect width={ART_W} height={ART_H} fill="url(#centerGlow)" />
-                  {[274, 294, 314, 334].map((y) => (
+                  {[256, 280, 304, 328, 352, 376, 400].map((y) => (
                     <Line key={y} x1={0} x2={ART_W} y1={y} y2={y} stroke="rgba(255,255,255,0.045)" strokeWidth={1} />
                   ))}
                   <Path d={art.area} fill="url(#areaFill)" />
-                  <Path d={art.line} stroke={heroColor} strokeWidth={2.2} strokeLinejoin="round" strokeLinecap="round" fill="none" />
+                  <Rect y={ART_H - FOOTER_H - 16} width={ART_W} height={FOOTER_H + 16} fill="url(#footScrim)" />
+                  <Path d={art.line} stroke={heroColor} strokeWidth={2.4} strokeLinejoin="round" strokeLinecap="round" fill="none" />
                   <Circle cx={art.first.x} cy={art.first.y} r={3.6} fill={CARD_BG} stroke="rgba(242,242,242,0.75)" strokeWidth={1.6} />
                   <Circle cx={art.last.x} cy={art.last.y} r={10} fill={heroColor} opacity={0.18} />
                   <Circle cx={art.last.x} cy={art.last.y} r={4.2} fill={heroColor} />
-                  {options.showPrices ? (
-                    <G>
-                      <PriceTag
-                        x={art.first.x}
-                        y={art.first.y > chartMid ? art.first.y - 28 : art.first.y + 9}
-                        anchor="start"
-                        label={i18n.t('auto.components__Journal__ExportTradeImage.s13')}
-                        value={`$${formatCurrencyPlain(normalized.entry_price)}`}
-                      />
-                      <PriceTag
-                        x={art.last.x}
-                        y={art.last.y > chartMid ? art.last.y - 28 : art.last.y + 9}
-                        anchor="end"
-                        label={
-                          isOpen
-                            ? i18n.t('auto.components__Journal__ExportTradeImage.s14')
-                            : i18n.t('auto.components__Journal__ExportTradeImage.s15')
-                        }
-                        value={`$${formatCurrencyPlain(normalized.exit_price)}`}
-                      />
-                    </G>
-                  ) : null}
                 </Svg>
 
                 {/* שור ודוב — צללית אחת במרכז, בצבע התוצאה */}
@@ -621,7 +579,6 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                         {normalized.direction === 'long' ? 'LONG' : 'SHORT'}
                       </Text>
                     </View>
-                    {isOpen ? <Text style={styles.metaText}>OPEN</Text> : null}
                   </View>
 
                   <Text
@@ -672,14 +629,10 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                 title={i18n.t('auto.components__Journal__ExportTradeImage.s18')}
                 value={options.showReturn}
                 disabled={options.showReturn && !options.showPnl}
+                showDivider={false}
                 onValueChange={(v) => setOption('showReturn', v)}
               />
-              <SettingsSwitchRow
-                title={i18n.t('auto.components__Journal__ExportTradeImage.s19')}
-                value={options.showPrices}
-                showDivider={false}
-                onValueChange={(v) => setOption('showPrices', v)}
-              />
+
             </SettingsGlassCard>
           </View>
         </ScrollView>
@@ -814,9 +767,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       fontWeight: '700',
     },
     symbolBig: {
-      ...DISPLAY_FONT,
       color: INK,
-      fontSize: 23,
+      fontSize: 22,
+      fontWeight: '700',
       letterSpacing: 0.4,
     },
     metaRow: {
@@ -846,8 +799,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       writingDirection: TEXT_DIR,
     },
     heroValue: {
-      ...DISPLAY_FONT,
-      letterSpacing: -1,
+      fontWeight: '700',
+      letterSpacing: -1.5,
       writingDirection: 'ltr',
       fontVariant: ['tabular-nums'],
       textAlign: 'center',
@@ -869,8 +822,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       writingDirection: TEXT_DIR,
     },
     pnlValue: {
-      ...DISPLAY_FONT,
-      fontSize: 17,
+      fontSize: 16,
+      fontWeight: '700',
       writingDirection: 'ltr',
       fontVariant: ['tabular-nums'],
     },
@@ -884,9 +837,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       gap: 12,
       paddingStart: 18,
       paddingEnd: 14,
-      backgroundColor: 'rgba(18,21,20,0.92)',
-      borderTopWidth: 1,
-      borderTopColor: 'rgba(255,255,255,0.07)',
     },
     qrWrap: {
       padding: 4,
@@ -900,9 +850,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       gap: 2,
     },
     ctaHeadline: {
-      ...DISPLAY_FONT,
       color: INK,
-      fontSize: 14,
+      fontSize: 13,
+      fontWeight: '700',
       writingDirection: TEXT_DIR,
     },
     ctaSub: {

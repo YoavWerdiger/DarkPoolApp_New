@@ -1,4 +1,5 @@
 import { UI_DIR, dirIcon } from '../../lib/i18n/direction';
+import { supabase } from '../../lib/supabase';
 import i18n from '../../lib/i18n';
 /**
  * גילוי — מדפי הקטגוריות.
@@ -473,6 +474,24 @@ export default function DarkPoolExploreScreen() {
     return out;
   }, [mostFollowed, recentlyActive]);
 
+  // YTD להצעות — RPC אחד לכל הרשימה (מהפורטפוליו המחושב בשרת); בלי נתון — בלי תג
+  const suggestionIds = useMemo(() => searchSuggestions.map((p) => p.id), [searchSuggestions]);
+  const ytdQuery = useQuery({
+    queryKey: ['darkpool', 'explore', 'suggestion-ytd', suggestionIds.join('|')],
+    enabled: searchOpen && suggestionIds.length > 0,
+    staleTime: 30 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('dark_pool_person_ytd', { p_ids: suggestionIds });
+      if (error) return new Map<string, number>();
+      const m = new Map<string, number>();
+      for (const r of (data ?? []) as { person_id: string; kind: string; ytd: number | string | null }[]) {
+        const v = r.ytd == null ? NaN : Number(r.ytd);
+        if (Number.isFinite(v)) m.set(`${r.kind}:${r.person_id}`, v);
+      }
+      return m;
+    },
+  });
+
   const kindCounts = useMemo(
     () => ({
       politician: shelves.politicians.length,
@@ -629,7 +648,11 @@ export default function DarkPoolExploreScreen() {
                       {searchSuggestions.map((person, i) => (
                         <React.Fragment key={`${person.kind}:${person.id}`}>
                           {i > 0 ? <View style={styles.suggestionDivider} /> : null}
-                          <SearchSuggestionRow person={person} onPress={() => openFromSearch(person)} />
+                          <SearchSuggestionRow
+                            person={person}
+                            ytd={ytdQuery.data?.get(`${person.kind}:${person.id}`)}
+                            onPress={() => openFromSearch(person)}
+                          />
                         </React.Fragment>
                       ))}
                     </UICard>
@@ -743,7 +766,7 @@ function createStyles(
 }
 
 /** שורת הצעה בשיט החיפוש — פורטרט 40 · שם · שברון (בלי שורת משנה) */
-function SearchSuggestionRow({ person, onPress }: { person: ExplorePerson; onPress: () => void }) {
+function SearchSuggestionRow({ person, ytd, onPress }: { person: ExplorePerson; ytd?: number; onPress: () => void }) {
   const tokens = useDesignTokens();
   const name = person.kind === 'insider' ? formatInsiderDisplayName(person.name) : person.name;
   return (
@@ -771,7 +794,25 @@ function SearchSuggestionRow({ person, onPress }: { person: ExplorePerson; onPre
       <Text style={[suggestionStyles.name, { color: tokens.colors.text.primary }]} numberOfLines={1}>
         {name}
       </Text>
-      <Ionicons name={dirIcon('chevron-back')} size={18} color={tokens.colors.text.tertiary} />
+      {ytd != null ? (
+        // תג YTD כמו בעיצוב: תווית קטנה ומעליה/לידה התשואה בירוק/אדום
+        <View
+          style={[
+            suggestionStyles.ytdBadge,
+            { backgroundColor: `${ytd >= 0 ? tokens.colors.primary.main : tokens.colors.text.danger}1F` },
+          ]}
+        >
+          <Text style={[suggestionStyles.ytdLabel, { color: tokens.colors.text.secondary }]}>YTD</Text>
+          <Text
+            style={[suggestionStyles.ytdValue, { color: ytd >= 0 ? tokens.colors.primary.main : tokens.colors.text.danger }]}
+            numberOfLines={1}
+          >
+            {toDataIsland(`${ytd >= 0 ? '+' : '−'}${Math.abs(ytd).toFixed(2)}%`)}
+          </Text>
+        </View>
+      ) : (
+        <Ionicons name={dirIcon('chevron-back')} size={18} color={tokens.colors.text.tertiary} />
+      )}
     </Pressable>
   );
 }
@@ -803,6 +844,17 @@ const suggestionStyles = StyleSheet.create({
     paddingHorizontal: APP_LAYOUT.cardPadding,
   },
   avatar: { overflow: 'hidden', borderWidth: 0 },
+  ytdBadge: {
+    flexShrink: 0,
+    marginStart: APP_LAYOUT.cardTitleToBodyGap,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    alignItems: 'center',
+    minWidth: 76,
+  },
+  ytdLabel: { fontSize: 11, lineHeight: 13, fontWeight: '600', letterSpacing: 0.3 },
+  ytdValue: { fontSize: 15, lineHeight: 19, fontWeight: '700', fontVariant: ['tabular-nums'], writingDirection: 'ltr' },
   gap: { width: APP_LAYOUT.cardTitleToBodyGap, flexShrink: 0 },
   text: { flex: 1, minWidth: 0, alignItems: 'stretch' },
   name: {

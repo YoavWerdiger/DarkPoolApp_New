@@ -16,6 +16,7 @@ import { CourseWithProgress } from '../../types/learning';
 import UICard from '../ui/UICard';
 import UIButton from '../ui/UIButton';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { SkeletonBox, SkeletonLine } from '../ui/SkeletonLoader';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import {
   ACADEMY_CARD_RADIUS,
@@ -149,6 +150,39 @@ export const CourseCard: React.FC<CourseCardProps> = ({
         </View>
       </UICard>
     </TouchableOpacity>
+  );
+};
+
+/**
+ * כרטיס קורס בטעינה — אותה מעטפת, באנר 16:9 ופריסת גוף כמו CourseCard:
+ * באנר כצורה, כפתור (גובה sm = 40) כצורה, שם ותת-כותרת כשורות בגובה ה-lineHeight האמיתי,
+ * ופס ההתקדמות הריק אמיתי — כשהקורסים מגיעים כל כרטיס מחליף את השלד במקומו.
+ */
+export const CourseCardSkeleton: React.FC<{ width?: number; variant?: number }> = ({ width, variant = 0 }) => {
+  const T = useDesignTokens();
+  const { width: screenWidth } = useWindowDimensions();
+  const cardWidth = width ?? academyCardWidth(screenWidth);
+  const coverHeight = Math.round((cardWidth * 9) / 16);
+  const styles = React.useMemo(() => createStyles(T, coverHeight, cardWidth), [T, coverHeight, cardWidth]);
+  return (
+    <View style={styles.wrapper} pointerEvents="none">
+      <UICard variant="soft" padding="none" style={styles.card}>
+        <SkeletonBox width="100%" height={coverHeight} borderRadius={0} />
+        <View style={styles.body}>
+          <View style={styles.headerRow}>
+            <View style={styles.ctaSlot}>
+              <SkeletonBox width={104} height={40} borderRadius={20} />
+            </View>
+            <View style={styles.titleBlock}>
+              <SkeletonLine lineHeight={Number(appCardTitleStyle.lineHeight)} width={[`62%`, `48%`, `56%`][variant % 3] as `${number}%`} box={15} align="flex-end" />
+              <SkeletonLine lineHeight={Number(appCardSubtitleStyle.lineHeight)} width="90%" box={11} align="flex-end" />
+              <SkeletonLine lineHeight={Number(appCardSubtitleStyle.lineHeight)} width="64%" box={11} align="flex-end" />
+            </View>
+          </View>
+          <View style={styles.progressTrack} />
+        </View>
+      </UICard>
+    </View>
   );
 };
 

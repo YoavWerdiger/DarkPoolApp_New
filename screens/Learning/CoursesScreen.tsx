@@ -7,7 +7,6 @@ import {
   ScrollView,
   StyleSheet,
   RefreshControl,
-  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useCourses, useEnrollInCourse } from '../../hooks/useLearning';
@@ -18,6 +17,7 @@ import {
   CourseCard,
 } from '../../components/learning';
 import { CourseInfoSheet } from '../../components/learning/CourseInfoSheet';
+import { CourseCardSkeleton } from '../../components/learning/CourseCard';
 import { ACADEMY_CARD_HP } from '../../components/learning/academyCardLayout';
 import {
   getAcademyCourseSubtitle,
@@ -263,9 +263,11 @@ export const CoursesScreen: React.FC = () => {
           />
 
           {showInitialLoader ? (
-            <View style={styles.loadingWrap}>
-              <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-              <Text style={styles.loadingHint}>{i18n.t('auto.screens__Learning__CoursesScreen.s16')}</Text>
+            // כרטיסי שלד באותה רשימה ומידות כמו CourseCard — במקום ספינר וטקסט «טוען»
+            <View style={styles.courseList}>
+              {[0, 1, 2].map((i) => (
+                <CourseCardSkeleton key={i} variant={i} />
+              ))}
             </View>
           ) : orderedCourses.length === 0 ? (
             <View style={styles.emptyState}>
@@ -305,15 +307,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     courseList: {
       paddingHorizontal: ACADEMY_CARD_HP,
       gap: APP_LAYOUT.cardStackGap,
-    },
-    loadingWrap: {
-      paddingTop: tokens.spacing['2xl'],
-      alignItems: 'center',
-      gap: tokens.spacing.md,
-    },
-    loadingHint: {
-      ...ACADEMY_TYPE.body,
-      color: tokens.colors.text.secondary,
     },
     emptyState: {
       alignItems: 'center',

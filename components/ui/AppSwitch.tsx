@@ -8,6 +8,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import { useTheme } from '../../context/ThemeContext';
 
 const TRACK_W = 51;
 const TRACK_H = 31;
@@ -21,14 +22,14 @@ const TRAVEL = TRACK_W - THUMB - PAD * 2;
  * בצבעי ה-trackColor שהמסך כבר מעביר. אותם props כמו Switch.
  */
 /**
- * האגודל תמיד לבן (כמו מתג המערכת) — המסכים מעבירים thumbColor={value ? text.primary : …},
- * ובלייט text.primary שחור: מתג פועל קיבל אגודל שחור וכבוי לבן. מתעלמים מ-thumbColor.
+ * צבע האגודל לפי ערכת הנושא — לבן בלייט, שחור בדארק — ולא לפי thumbColor של המסך
+ * (המסכים העבירו text.primary למתג פועל: בלייט יצא אגודל שחור ליד כבויים לבנים).
  */
-const THUMB_COLOR = '#FFFFFF';
-
 export function AppSwitch(props: SwitchProps) {
-  if (Platform.OS === 'ios') return <Switch {...props} thumbColor={THUMB_COLOR} />;
-  return <AndroidSwitch {...props} thumbColor={THUMB_COLOR} />;
+  const { isDarkMode } = useTheme();
+  const thumbColor = isDarkMode ? '#000000' : '#FFFFFF';
+  if (Platform.OS === 'ios') return <Switch {...props} thumbColor={thumbColor} />;
+  return <AndroidSwitch {...props} thumbColor={thumbColor} />;
 }
 
 function AndroidSwitch({

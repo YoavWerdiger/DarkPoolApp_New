@@ -43,7 +43,8 @@ function buildTheme(isDarkMode: boolean): ThemeContextType['theme'] {
     textTertiary: isDarkMode ? SoftUI.textMuted : 'rgba(0,0,0,0.45)',
     border: isDarkMode ? SoftUI.borderSubtle : 'rgba(0,0,0,0.10)',
     headerBorder: isDarkMode ? SoftUI.borderSubtle : 'rgba(0,0,0,0.08)',
-    switchTrackOff: isDarkMode ? '#252525' : '#E5E5E7',
+    // בדארק מסילה בהירה יותר — אגודל שחור צריך ניגוד מולה
+    switchTrackOff: isDarkMode ? '#3A3A3C' : '#E5E5E7',
     switchThumbOff: isDarkMode ? '#FFFFFF' : '#FFFFFF'
   };
 }

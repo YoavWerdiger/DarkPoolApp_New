@@ -18,10 +18,9 @@ import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import QRCode from 'react-native-qrcode-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createDesignTokensForTheme, useDesignTokens } from '../ui/DesignTokens';
+import { useDesignTokens } from '../ui/DesignTokens';
 import { ForceDarkTheme } from '../../context/ThemeContext';
 import UIButton from '../ui/UIButton';
-import { UI_CARD_RADIUS } from '../ui/appLayout';
 import { SettingsGlassCard, SettingsSwitchRow, SettingsSectionTitle } from '../profile/ProfileSettingsUI';
 import { APP_TYPE } from '../ui/appType';
 import type { Trade as JournalTrade } from '../../screens/Journal/tradeTypes';
@@ -35,10 +34,16 @@ import {
 } from '../ui/BottomSheet/sheetGlass';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
 import { brandfetchTickerLogoUri } from '../../utils/brandfetch';
-import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
+import Svg, { Circle, Defs, G, Line, LinearGradient, Path, RadialGradient, Rect, Stop, Text as SvgText, TSpan } from 'react-native-svg';
+import { APP_FONT } from '../ui/appFont';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { APP_LINKS } from '../../utils/appMeta';
+import {
+  getHistoricalPrices,
+  type YahooHistoryInterval,
+  type YahooHistoryRange,
+} from '../../services/portfolios/portfolioPriceFeed';
 
 /** נתונים מינימליים לכרטיס שיתוף ויזואלי */
 export type ExportableTrade = {
@@ -68,53 +73,121 @@ interface ExportTradeImageProps {
 const SHARE_CTA_LINE = i18n.t('auto.components__Journal__ExportTradeImage.s1');
 const SHARE_CTA_SUB = i18n.t('auto.components__Journal__ExportTradeImage.s2');
 
-/** התמונה תמיד בעיצוב הכהה — גם כשהאפליקציה בלייט */
-const SHARE_CARD_TOKENS = createDesignTokensForTheme(true);
 
 /** מה מוצג בתמונה — נשמר בין שיתופים */
 type ShareOptions = { showPnl: boolean; showReturn: boolean; showPrices: boolean };
 const SHARE_OPTIONS_KEY = 'tradeShare:options';
 const DEFAULT_SHARE_OPTIONS: ShareOptions = { showPnl: true, showReturn: true, showPrices: false };
 
-/**
- * רקע הכרטיס: גרפיט כמעט שחור + זוהר אחד בפינת תחילת הקריאה, בצבע התוצאה (רווח ירוק / הפסד אדום).
- * SVG ולא GLView / blur — view-shot לוכד אותו נקי.
- */
-function ShareCardBackground({ width, height, tint }: { width: number; height: number; tint: string }) {
-  const cx = UI_DIR === 'rtl' ? '100%' : '0%';
-  return (
-    <Svg width={width} height={height} style={StyleSheet.absoluteFill}>
-      <Defs>
-        <RadialGradient id="outcomeGlow" cx={cx} cy="0%" rx="95%" ry="70%">
-          <Stop offset="0" stopColor={tint} stopOpacity="0.30" />
-          <Stop offset="0.55" stopColor={tint} stopOpacity="0.06" />
-          <Stop offset="1" stopColor={tint} stopOpacity="0" />
-        </RadialGradient>
-      </Defs>
-      <Rect width={width} height={height} fill={CARD_BG} />
-      <Rect width={width} height={height} fill="url(#outcomeGlow)" />
-    </Svg>
-  );
-}
+/** מידות העיצוב — הכרטיס מצויר ב-viewBox 340×425 ומוקטן/מוגדל באחידות */
+const ART_W = 340;
+const ART_H = 425;
+const CHART_TOP = 252;
+const CHART_BOT = 328;
+const CHART_PAD_X = 22;
+const FOOTER_H = 72;
 
-/** לוגו שור־ודוב / קהילת DarkPool — מעל כרטיסיית הזכוכית */
-// לוגו מלא (שור־ודוב + DARKPOOL + «קהילת הסוחרים של ישראל») — מקומי ולא מ-Storage,
-// כדי שיהיה טעון ברגע הצילום. עותק: app-media/branding/darkpool-share-logo.png
+const CARD_BG = '#0A0C0B';
+const INK = '#F2F2F2';
+const INK_2 = 'rgba(242,242,242,0.5)';
+const WIN = '#00D64B';
+const LOSS = '#FF4D4D';
+
 const BRAND_MARK = require('../../assets/branding/share-mark.png');
 const BRAND_MARK_ASPECT = 218 / 160;
-const CARD_BG = '#0B0D0C';
-const INK = '#F2F2F2';
-const INK_2 = 'rgba(242,242,242,0.62)';
-const INK_3 = 'rgba(242,242,242,0.38)';
-const HAIRLINE = 'rgba(255,255,255,0.10)';
+const BULL = require('../../assets/branding/share-bull.png');
+const BEAR = require('../../assets/branding/share-bear.png');
 
-/** תאריך קצר לכרטיס: 03.11.26 */
-function shortDate(iso: string): string {
+/** מספר אקראי דטרמיניסטי (mulberry32) — אותו טרייד תמיד מקבל אותו גרף */
+function seededRandom(seedText: string) {
+  let h = 2166136261;
+  for (let i = 0; i < seedText.length; i++) h = Math.imul(h ^ seedText.charCodeAt(i), 16777619);
+  let a = h >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * קו המחיר על הכרטיס: תנועת המחיר האמיתית מהכניסה ליציאה (real), ואם אין נתונים —
+ * קו דקורטיבי דטרמיניסטי באותו כיוון (עולה אם המחיר עלה, גם בשורט).
+ */
+function priceArt(seedText: string, priceUp: boolean, real?: number[] | null) {
+  let v: number[];
+  if (real && real.length >= 3) {
+    v = real;
+  } else {
+    const rnd = seededRandom(seedText);
+    v = [0];
+    for (let i = 1; i < 34; i++) v.push(v[i - 1] + (rnd() * 2 - 1) * 0.9 + (priceUp ? 0.35 : -0.35));
+  }
+  const n = v.length;
+  const lo = Math.min(...v);
+  const hi = Math.max(...v);
+  const pts = v.map((val, i) => ({
+    x: CHART_PAD_X + ((ART_W - 2 * CHART_PAD_X) * i) / (n - 1),
+    y: CHART_BOT - (CHART_BOT - CHART_TOP) * ((val - lo) / (hi - lo || 1)),
+  }));
+  const first = pts[0];
+  const last = pts[n - 1];
+  const line = `M0 ${first.y.toFixed(1)} ` + pts.map((p) => `L${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ') + ` L${ART_W} ${last.y.toFixed(1)}`;
+  const area = `${line} L${ART_W} ${ART_H} L0 ${ART_H} Z`;
+  return { line, area, first, last };
+}
+
+const DAY_MS = 86_400_000;
+
+/** טווח ורזולוציה ל-Yahoo: הטווח נספר אחורה מהיום, אז הוא חייב לכסות את תאריך הכניסה */
+function historyQuery(entryMs: number, endMs: number): { range: YahooHistoryRange; interval: YahooHistoryInterval } {
+  const ageDays = (Date.now() - entryMs) / DAY_MS;
+  const spanDays = (endMs - entryMs) / DAY_MS;
+  const range: YahooHistoryRange =
+    ageDays <= 4 ? '5d' : ageDays <= 28 ? '1mo' : ageDays <= 88 ? '3mo' : ageDays <= 178 ? '6mo' : ageDays <= 360 ? '1y' : ageDays <= 1800 ? '5y' : 'max';
+  // Yahoo: 15m עד 60 יום אחורה, 1h עד 730
+  let interval: YahooHistoryInterval = '1d';
+  if (spanDays <= 2 && ageDays <= 28) interval = '15m';
+  else if (spanDays <= 20 && ageDays <= 360) interval = '1h';
+  return { range, interval };
+}
+
+/** מחירי סגירה בין הכניסה ליציאה (או עכשיו), כשהקצוות הם מחירי הכניסה והיציאה עצמם */
+async function loadTradePath(trade: ExportableTrade): Promise<number[] | null> {
+  const entryMs = new Date(trade.entry_date).getTime();
+  let endMs = trade.exit_date ? new Date(trade.exit_date).getTime() : Date.now();
+  // תאריך בלי שעה (YYYY-MM-DD) — יום היציאה נספר עד סופו, אחרת עסקה תוך-יומית לא מקבלת נקודות
+  if (trade.exit_date && trade.exit_date.length <= 10) endMs += DAY_MS - 1;
+  if (!Number.isFinite(entryMs) || !Number.isFinite(endMs) || endMs < entryMs) return null;
+  const { range, interval } = historyQuery(entryMs, endMs);
+  const points = await getHistoricalPrices(trade.symbol, range, { interval });
+  const daily = interval === '1d';
+  const startKey = trade.entry_date.slice(0, 10);
+  const endKey = (trade.exit_date || new Date().toISOString()).slice(0, 10);
+  const inside = points.filter((p) => {
+    if (daily) return p.date >= startKey && p.date <= endKey;
+    const t = new Date(p.date).getTime();
+    return t >= entryMs && t <= endMs;
+  });
+  if (inside.length < 2) return null;
+  let closes = inside.map((p) => p.close);
+  // עד ~80 נקודות — מספיק לקו חלק בכרטיס
+  if (closes.length > 80) {
+    const step = closes.length / 80;
+    closes = Array.from({ length: 80 }, (_, i) => closes[Math.floor(i * step)]);
+  }
+  return [trade.entry_price, ...closes, trade.exit_price];
+}
+
+/** תאריך קצר: 03.11.26 */
+function shortDate(iso: string, withYear = true): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
   const dd = String(d.getDate()).padStart(2, '0');
   const mm = String(d.getMonth() + 1).padStart(2, '0');
-  return `${dd}.${mm}.${String(d.getFullYear()).slice(2)}`;
+  return withYear ? `${dd}.${mm}.${String(d.getFullYear()).slice(2)}` : `${dd}.${mm}`;
 }
 
 /** ימי החזקה (פתוח — עד היום) */
@@ -123,6 +196,22 @@ function heldDays(entry: string, exit: string): number | null {
   const b = exit ? new Date(exit).getTime() : Date.now();
   if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
   return Math.max(0, Math.round((b - a) / 86_400_000));
+}
+
+/** אייקון מגמה בתוך הפיל של LONG / SHORT (כמו Ionicons trending-up/down) */
+function TrendGlyph({ up, color }: { up: boolean; color: string }) {
+  return (
+    <Svg width={12} height={12} viewBox="0 0 24 24">
+      <Path
+        d={up ? 'M3 17 L9 11 L13 15 L21 7 M15 7 L21 7 L21 13' : 'M3 7 L9 13 L13 9 L21 17 M15 17 L21 17 L21 11'}
+        stroke={color}
+        strokeWidth={2.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </Svg>
+  );
 }
 
 export function journalTradeToExportable(trade: JournalTrade): ExportableTrade {
@@ -237,7 +326,9 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
   const [isExporting, setIsExporting] = useState(false);
   const [layoutReady, setLayoutReady] = useState(false);
   const [options, setOptions] = useState<ShareOptions>(DEFAULT_SHARE_OPTIONS);
-  const [cardSize, setCardSize] = useState<{ w: number; h: number } | null>(null);
+  // תנועת המחיר האמיתית לגרף; historyReady — גם כשנכשל / אין נתונים (אז קו דקורטיבי)
+  const [pricePath, setPricePath] = useState<number[] | null>(null);
+  const [historyReady, setHistoryReady] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem(SHARE_OPTIONS_KEY)
@@ -278,6 +369,32 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
     }
   }, [visible, normalized?.id]);
 
+  useEffect(() => {
+    if (!visible || !normalized) return;
+    let cancelled = false;
+    setPricePath(null);
+    setHistoryReady(false);
+    // לא מחכים יותר מ-4 שניות — אחרי זה הכרטיס נשאר עם הקו הדקורטיבי
+    const timeout = setTimeout(() => {
+      if (!cancelled) setHistoryReady(true);
+    }, 4000);
+    loadTradePath(normalized)
+      .then((path) => {
+        if (!cancelled) setPricePath(path);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) {
+          clearTimeout(timeout);
+          setHistoryReady(true);
+        }
+      });
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [visible, normalized]);
+
   const formatCurrencyPlain = (value: number) =>
     Math.abs(value).toLocaleString('en-US', {
       minimumFractionDigits: 2,
@@ -289,18 +406,16 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
     const isOpen = normalized.status === 'OPEN';
     const isProfit = normalized.pnl >= 0;
     const ret = getReturnPercentage(normalized);
-    const T = SHARE_CARD_TOKENS;
-    const dirColor =
-      normalized.direction === 'long' ? T.colors.primary.main : T.colors.text.danger;
-    const pnlColor = isProfit ? T.colors.primary.main : T.colors.text.danger;
-    const retColor = ret >= 0 ? T.colors.primary.main : T.colors.text.danger;
+    const dirColor = normalized.direction === 'long' ? WIN : LOSS;
+    const pnlColor = isProfit ? WIN : LOSS;
+    const retColor = ret >= 0 ? WIN : LOSS;
     const logoUri = brandfetchTickerLogoUri(normalized.symbol);
     const days = heldDays(normalized.entry_date, normalized.exit_date);
     return { isOpen, isProfit, ret, dirColor, pnlColor, retColor, logoUri, days };
   }, [normalized]);
 
   const handleExport = useCallback(async () => {
-    if (!viewShotRef.current || !layoutReady) {
+    if (!viewShotRef.current || !layoutReady || !historyReady) {
       legacyAlert(i18n.t('auto.components__Journal__ExportTradeImage.s3'), i18n.t('auto.components__Journal__ExportTradeImage.s4'));
       return;
     }
@@ -338,7 +453,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
     } finally {
       setIsExporting(false);
     }
-  }, [layoutReady]);
+  }, [layoutReady, historyReady]);
 
   if (!normalized || !visible || !snapshot) {
     return null;
@@ -352,7 +467,12 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
   const pnlText = `${isProfit ? '+' : '−'}$${formatCurrencyPlain(normalized.pnl)}`;
   const dateText = isOpen
     ? shortDate(normalized.entry_date)
-    : `${shortDate(normalized.entry_date)} – ${shortDate(normalized.exit_date)}`;
+    : `${shortDate(normalized.entry_date, false)} – ${shortDate(normalized.exit_date)}`;
+  const isWin = heroIsReturn ? ret >= 0 : isProfit;
+  const art = priceArt(`${normalized.id}:${normalized.symbol}`, normalized.exit_price >= normalized.entry_price, pricePath);
+  const chartMid = (CHART_TOP + CHART_BOT) / 2;
+  const scale = cardW / ART_W;
+  const pathFont = { fontFamily: APP_FONT.medium, fontSize: 10 };
   const heldText =
     days == null
       ? ''
@@ -411,23 +531,55 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
               onLayout={() => setLayoutReady(true)}
             >
               <ForceDarkTheme>
-              <View
-                style={[styles.cardRoot, { width: cardW, minHeight: cardH }]}
-                onLayout={(e) => {
-                  const { width, height } = e.nativeEvent.layout;
-                  setCardSize((prev) =>
-                    prev && prev.w === width && prev.h === height ? prev : { w: width, h: height },
-                  );
-                }}
-              >
-                <ShareCardBackground
-                  width={cardSize?.w ?? cardW}
-                  height={cardSize?.h ?? cardH}
-                  tint={heroColor}
+              <View style={[styles.cardRoot, { width: cardW, height: cardH }]}>
+                {/* שכבת האמנות: רקע, זוהר, רשת וגרף המחיר — viewBox אחד שמוקטן באחידות */}
+                <Svg width={cardW} height={cardH} viewBox={`0 0 ${ART_W} ${ART_H}`} style={StyleSheet.absoluteFill}>
+                  <Defs>
+                    <LinearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
+                      <Stop offset="0" stopColor={heroColor} stopOpacity="0.30" />
+                      <Stop offset="0.75" stopColor={heroColor} stopOpacity="0" />
+                    </LinearGradient>
+                    <RadialGradient id="cornerGlow" cx={UI_DIR === 'rtl' ? '100%' : '0%'} cy="0%" rx="95%" ry="95%">
+                      <Stop offset="0" stopColor={heroColor} stopOpacity="0.20" />
+                      <Stop offset="1" stopColor={heroColor} stopOpacity="0" />
+                    </RadialGradient>
+                  </Defs>
+                  <Rect width={ART_W} height={ART_H} fill={CARD_BG} />
+                  <Rect width={ART_W} height={ART_H} fill="url(#cornerGlow)" />
+                  {[236, 260, 284, 308, 332, 356].map((y) => (
+                    <Line key={y} x1={0} x2={ART_W} y1={y} y2={y} stroke="rgba(255,255,255,0.045)" strokeWidth={1} />
+                  ))}
+                  <Path d={art.area} fill="url(#areaFill)" />
+                  <Path d={art.line} stroke={heroColor} strokeWidth={2.2} strokeLinejoin="round" strokeLinecap="round" fill="none" />
+                  {options.showPrices ? (
+                    <G>
+                      <Circle cx={art.first.x} cy={art.first.y} r={3.6} fill={CARD_BG} stroke="rgba(242,242,242,0.75)" strokeWidth={1.6} />
+                      <SvgText {...pathFont} x={art.first.x - 2} y={art.first.y < chartMid ? art.first.y + 18 : art.first.y - 10} fill={INK_2} textAnchor="start">
+                        {'ENTRY '}
+                        <TSpan fontFamily={APP_FONT.bold} fill={INK}>${formatCurrencyPlain(normalized.entry_price)}</TSpan>
+                      </SvgText>
+                      <Circle cx={art.last.x} cy={art.last.y} r={10} fill={heroColor} opacity={0.18} />
+                      <Circle cx={art.last.x} cy={art.last.y} r={4.2} fill={heroColor} />
+                      <SvgText {...pathFont} x={art.last.x + 2} y={art.last.y < chartMid ? art.last.y + 18 : art.last.y - 10} fill={INK_2} textAnchor="end">
+                        {isOpen ? 'NOW ' : 'EXIT '}
+                        <TSpan fontFamily={APP_FONT.bold} fill={INK}>${formatCurrencyPlain(normalized.exit_price)}</TSpan>
+                      </SvgText>
+                    </G>
+                  ) : null}
+                </Svg>
+
+                {/* שור (רווח) / דוב (הפסד) — צללית שקופה בפינה הנגדית */}
+                <Image
+                  source={isWin ? BULL : BEAR}
+                  tintColor={heroColor}
+                  contentFit="contain"
+                  style={[
+                    styles.animal,
+                    { width: 210 * scale, height: 250 * scale, top: -18 * scale, end: -34 * scale },
+                  ]}
                 />
 
-                <View style={[styles.cardContent, { minHeight: cardH }]}>
-                  {/* פס עליון: מותג בצד תחילת הקריאה, תאריכים בצד השני */}
+                <View style={[styles.cardContent, { paddingHorizontal: 22 * scale, paddingTop: 20 * scale }]}>
                   <View style={styles.topBar}>
                     <View style={styles.brandRow}>
                       <Image
@@ -442,14 +594,13 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                     <Text style={styles.dateText}>{dateText}</Text>
                   </View>
 
-                  {/* הנכס */}
                   <View style={styles.assetRow}>
                     {logoUri ? (
-                      <View style={styles.logoTile}>
+                      <View style={styles.logoCircle}>
                         <Image source={{ uri: logoUri }} style={styles.logoImg} contentFit="cover" transition={120} />
                       </View>
                     ) : (
-                      <View style={[styles.logoTile, styles.logoFallback]}>
+                      <View style={styles.logoCircle}>
                         <Text style={styles.logoFallbackText}>{normalized.symbol.trim().slice(0, 4).toUpperCase()}</Text>
                       </View>
                     )}
@@ -458,16 +609,18 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                         {normalized.symbol}
                       </Text>
                       <View style={styles.metaRow}>
-                        <Text style={[styles.dirText, { color: dirColor }]}>
-                          {normalized.direction === 'long' ? '▲ LONG' : '▼ SHORT'}
-                        </Text>
-                        {isOpen ? <Text style={styles.metaDim}>· OPEN</Text> : null}
-                        {heldText ? <Text style={styles.metaDim}>· {heldText}</Text> : null}
+                        <View style={[styles.dirPill, { backgroundColor: `${dirColor}26` }]}>
+                          <TrendGlyph up={normalized.direction === 'long'} color={dirColor} />
+                          <Text style={[styles.dirPillText, { color: dirColor }]}>
+                            {normalized.direction === 'long' ? 'LONG' : 'SHORT'}
+                          </Text>
+                        </View>
+                        {isOpen ? <Text style={styles.metaText}>OPEN</Text> : null}
+                        {heldText ? <Text style={styles.metaText}>{heldText}</Text> : null}
                       </View>
                     </View>
                   </View>
 
-                  {/* המספר הראשי */}
                   <View style={styles.heroBlock}>
                     <Text style={styles.heroLabel}>
                       {heroIsReturn
@@ -475,7 +628,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                         : i18n.t('auto.components__Journal__ExportTradeImage.pnlLabel')}
                     </Text>
                     <Text
-                      style={[styles.heroValue, { color: heroColor }]}
+                      style={[styles.heroValue, { color: heroColor, fontSize: 56 * scale, lineHeight: 62 * scale }]}
                       numberOfLines={1}
                       adjustsFontSizeToFit
                       minimumFontScale={0.6}
@@ -483,48 +636,24 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                       {heroIsReturn ? retText : pnlText}
                     </Text>
                     {heroIsReturn && options.showPnl ? (
-                      <Text style={[styles.subValue, { color: pnlColor }]}>{pnlText}</Text>
+                      <View style={styles.pnlRow}>
+                        <Text style={styles.pnlLabel}>{i18n.t('auto.components__Journal__ExportTradeImage.pnlLabel')}</Text>
+                        <Text style={[styles.pnlValue, { color: pnlColor }]}>{pnlText}</Text>
+                      </View>
                     ) : null}
                   </View>
+                </View>
 
-                  {/* מסלול המחיר: כניסה → יציאה */}
-                  {options.showPrices ? (
-                    <View style={styles.pathBlock}>
-                      <View style={styles.pathTrack}>
-                        <View style={[styles.pathDot, { borderColor: INK_2 }]} />
-                        <View style={[styles.pathLine, { backgroundColor: heroColor }]} />
-                        <View style={[styles.pathDot, styles.pathDotEnd, { backgroundColor: heroColor, borderColor: heroColor }]} />
-                      </View>
-                      <View style={styles.pathLabels}>
-                        <View>
-                          <Text style={styles.pathLabel}>{i18n.t('auto.components__Journal__ExportTradeImage.s13')}</Text>
-                          <Text style={styles.pathValue}>${formatCurrencyPlain(normalized.entry_price)}</Text>
-                        </View>
-                        <View style={styles.pathLabelEnd}>
-                          <Text style={[styles.pathLabel, styles.textEnd]}>
-                            {isOpen
-                              ? i18n.t('auto.components__Journal__ExportTradeImage.s14')
-                              : i18n.t('auto.components__Journal__ExportTradeImage.s15')}
-                          </Text>
-                          <Text style={[styles.pathValue, styles.textEnd]}>${formatCurrencyPlain(normalized.exit_price)}</Text>
-                        </View>
-                      </View>
-                    </View>
-                  ) : null}
-
-                  <View style={styles.spacer} />
-
-                  {/* תחתית: הזמנה + QR */}
-                  <View style={styles.footerRow}>
-                    <View style={styles.ctaTextCol}>
-                      <Text style={styles.ctaHeadline} numberOfLines={2}>
-                        {SHARE_CTA_LINE}
-                      </Text>
-                      <Text style={styles.ctaSub}>{SHARE_CTA_SUB}</Text>
-                    </View>
-                    <View style={styles.qrWrap}>
-                      <QRCode value={APP_LINKS.appDownload} size={52} backgroundColor="#FFFFFF" color="#0A0E0A" ecl="M" />
-                    </View>
+                {/* תחתית: הזמנה + QR על פס כהה ברוחב מלא */}
+                <View style={[styles.footerStrip, { height: FOOTER_H * scale }]}>
+                  <View style={styles.ctaTextCol}>
+                    <Text style={styles.ctaHeadline} numberOfLines={1}>
+                      {SHARE_CTA_LINE}
+                    </Text>
+                    <Text style={styles.ctaSub}>{SHARE_CTA_SUB}</Text>
+                  </View>
+                  <View style={styles.qrWrap}>
+                    <QRCode value={APP_LINKS.appDownload} size={44 * scale} backgroundColor="#FFFFFF" color="#0A0E0A" ecl="M" />
                   </View>
                 </View>
               </View>
@@ -564,7 +693,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
             icon="share-outline"
             fullWidth
             loading={isExporting}
-            disabled={isExporting || !layoutReady}
+            disabled={isExporting || !layoutReady || !historyReady}
             onPress={handleExport}
           />
         </View>
@@ -640,20 +769,22 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     shotWrap: {
       alignSelf: 'center',
       backgroundColor: CARD_BG,
-      borderRadius: 24,
+      borderRadius: 26,
       overflow: 'hidden',
     },
     cardRoot: {
-      borderRadius: 24,
+      borderRadius: 26,
       overflow: 'hidden',
       backgroundColor: CARD_BG,
-    },
-    // כל הטקסט מיושר לצד תחילת הקריאה (alignItems: flex-start בעץ UI_DIR) — לא ממורכז
-    cardContent: {
       direction: UI_DIR,
-      paddingHorizontal: 22,
-      paddingTop: 20,
-      paddingBottom: 18,
+    },
+    animal: {
+      position: 'absolute',
+      opacity: 0.07,
+    },
+    // טקסט מיושר לצד תחילת הקריאה (alignItems: flex-start בעץ UI_DIR)
+    cardContent: {
+      ...StyleSheet.absoluteFill,
       alignItems: 'stretch',
     },
     topBar: {
@@ -667,188 +798,160 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       gap: 7,
     },
     brandMark: {
-      height: 18,
-      width: Math.round(18 * BRAND_MARK_ASPECT),
+      height: 17,
+      width: Math.round(17 * BRAND_MARK_ASPECT),
     },
     wordmark: {
       color: INK,
-      fontSize: 12,
-      fontWeight: '800',
-      letterSpacing: 2.4,
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 2.6,
     },
     dateText: {
-      color: INK_3,
+      color: 'rgba(242,242,242,0.45)',
       fontSize: 11,
-      fontWeight: '600',
-      letterSpacing: 0.3,
+      fontWeight: '500',
       writingDirection: 'ltr',
       fontVariant: ['tabular-nums'],
     },
     assetRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 12,
-      marginTop: 30,
+      gap: 11,
+      marginTop: 22,
     },
-    logoTile: {
-      width: 44,
-      height: 44,
-      borderRadius: 12,
+    logoCircle: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
       overflow: 'hidden',
-      backgroundColor: 'rgba(255,255,255,0.08)',
+      backgroundColor: '#1A1D1C',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.08)',
       alignItems: 'center',
       justifyContent: 'center',
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: 'rgba(255,255,255,0.14)',
     },
     logoImg: {
-      width: 44,
-      height: 44,
+      width: 42,
+      height: 42,
     },
-    logoFallback: {},
     logoFallbackText: {
-      color: INK_2,
-      fontSize: 12,
+      color: 'rgba(242,242,242,0.7)',
+      fontSize: 11,
       fontWeight: '700',
     },
     assetText: {
       flex: 1,
       minWidth: 0,
       alignItems: 'flex-start',
-      gap: 2,
     },
     symbolBig: {
       color: INK,
-      fontSize: 22,
+      fontSize: 19,
+      lineHeight: 23,
       fontWeight: '700',
-      letterSpacing: -0.3,
+      letterSpacing: 0.2,
       writingDirection: 'ltr',
     },
     metaRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
+      gap: 8,
+      marginTop: 5,
     },
-    dirText: {
-      fontSize: 11,
-      fontWeight: '800',
-      letterSpacing: 1,
-      writingDirection: 'ltr',
+    dirPill: {
+      flexDirection: 'row',
+      direction: 'ltr',
+      alignItems: 'center',
+      gap: 4,
+      height: 20,
+      paddingStart: 7,
+      paddingEnd: 8,
+      borderRadius: 10,
     },
-    metaDim: {
-      color: INK_3,
+    dirPillText: {
+      fontSize: 10.5,
+      fontWeight: '700',
+      letterSpacing: 0.6,
+    },
+    metaText: {
+      color: INK_2,
       fontSize: 11,
-      fontWeight: '600',
+      fontWeight: '500',
       writingDirection: TEXT_DIR,
     },
     heroBlock: {
-      marginTop: 26,
+      marginTop: 18,
       alignItems: 'flex-start',
-      gap: 2,
     },
     heroLabel: {
-      color: INK_3,
+      color: INK_2,
       fontSize: 12,
-      fontWeight: '600',
-      letterSpacing: 0.2,
+      fontWeight: '500',
       writingDirection: TEXT_DIR,
     },
     heroValue: {
-      fontSize: 58,
-      lineHeight: 64,
-      fontWeight: '800',
-      letterSpacing: -2,
+      fontWeight: '700',
+      letterSpacing: -1.5,
       writingDirection: 'ltr',
       fontVariant: ['tabular-nums'],
       alignSelf: 'stretch',
       textAlign: UI_DIR === 'rtl' ? 'right' : 'left',
+      marginTop: 2,
     },
-    subValue: {
-      fontSize: 18,
-      fontWeight: '700',
-      letterSpacing: -0.2,
-      writingDirection: 'ltr',
-      fontVariant: ['tabular-nums'],
-      opacity: 0.9,
-    },
-    pathBlock: {
-      marginTop: 24,
-      gap: 10,
-    },
-    pathTrack: {
+    pnlRow: {
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'baseline',
+      gap: 8,
+      marginTop: 4,
     },
-    pathDot: {
-      width: 9,
-      height: 9,
-      borderRadius: 5,
-      borderWidth: 1.5,
-      backgroundColor: CARD_BG,
-    },
-    pathDotEnd: {},
-    pathLine: {
-      flex: 1,
-      height: 2,
-      borderRadius: 1,
-      opacity: 0.7,
-    },
-    pathLabels: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-    },
-    pathLabelEnd: {
-      alignItems: 'flex-end',
-    },
-    pathLabel: {
-      color: INK_3,
-      fontSize: 11,
-      fontWeight: '600',
+    pnlLabel: {
+      color: INK_2,
+      fontSize: 12,
+      fontWeight: '500',
       writingDirection: TEXT_DIR,
     },
-    pathValue: {
-      color: INK,
-      fontSize: 15,
+    pnlValue: {
+      fontSize: 16,
       fontWeight: '700',
       writingDirection: 'ltr',
       fontVariant: ['tabular-nums'],
     },
-    textEnd: {},
-    spacer: {
-      flexGrow: 1,
-      minHeight: 20,
-    },
-    footerRow: {
+    footerStrip: {
+      position: 'absolute',
+      start: 0,
+      end: 0,
+      bottom: 0,
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 14,
-      paddingTop: 14,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: HAIRLINE,
+      gap: 12,
+      paddingStart: 18,
+      paddingEnd: 14,
+      backgroundColor: 'rgba(18,21,20,0.92)',
+      borderTopWidth: 1,
+      borderTopColor: 'rgba(255,255,255,0.07)',
     },
     qrWrap: {
-      padding: 5,
-      borderRadius: 10,
+      padding: 4,
+      borderRadius: 9,
       backgroundColor: '#FFFFFF',
-      flexShrink: 0,
     },
     ctaTextCol: {
       flex: 1,
       minWidth: 0,
       alignItems: 'flex-start',
-      gap: 3,
+      gap: 2,
     },
     ctaHeadline: {
       color: INK,
-      fontSize: 13,
+      fontSize: 12.5,
       fontWeight: '700',
-      lineHeight: 18,
       writingDirection: TEXT_DIR,
     },
     ctaSub: {
-      color: INK_3,
-      fontSize: 11,
-      fontWeight: '600',
+      color: INK_2,
+      fontSize: 10.5,
+      fontWeight: '500',
       writingDirection: TEXT_DIR,
     },
     /** שורות ההגדרות בנויות לעץ LTR (כמו מסך ההגדרות) — בתוך שיט RTL הן מתהפכות */

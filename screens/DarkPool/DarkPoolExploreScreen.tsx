@@ -795,11 +795,11 @@ function SearchSuggestionRow({ person, ytd, onPress }: { person: ExplorePerson; 
         {name}
       </Text>
       {ytd != null ? (
-        // תג YTD כמו בעיצוב: תווית קטנה ומעליה/לידה התשואה בירוק/אדום
+        // פיל YTD בשורה אחת (כמו פיל התזמון בדיווחי רווח): «YTD» אפור · תשואה בירוק/אדום
         <View
           style={[
             suggestionStyles.ytdBadge,
-            { backgroundColor: `${ytd >= 0 ? tokens.colors.primary.main : tokens.colors.text.danger}1F` },
+            { backgroundColor: `${ytd >= 0 ? tokens.colors.primary.main : tokens.colors.text.danger}18` },
           ]}
         >
           <Text style={[suggestionStyles.ytdLabel, { color: tokens.colors.text.secondary }]}>YTD</Text>
@@ -844,17 +844,20 @@ const suggestionStyles = StyleSheet.create({
     paddingHorizontal: APP_LAYOUT.cardPadding,
   },
   avatar: { overflow: 'hidden', borderWidth: 0 },
+  // פיל בשורה אחת — גובה 24 ו-caption כמו פיל התזמון (טופו)
   ytdBadge: {
     flexShrink: 0,
     marginStart: APP_LAYOUT.cardTitleToBodyGap,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
+    direction: 'ltr',
+    flexDirection: 'row',
     alignItems: 'center',
-    minWidth: 76,
+    gap: 4,
+    height: 24,
+    paddingHorizontal: 10,
+    borderRadius: 9999,
   },
-  ytdLabel: { fontSize: 11, lineHeight: 13, fontWeight: '600', letterSpacing: 0.3 },
-  ytdValue: { fontSize: 15, lineHeight: 19, fontWeight: '700', fontVariant: ['tabular-nums'], writingDirection: 'ltr' },
+  ytdLabel: { ...DARK_POOL_TYPE.caption },
+  ytdValue: { ...DARK_POOL_TYPE.caption, fontWeight: '600', fontVariant: ['tabular-nums'], writingDirection: 'ltr' },
   gap: { width: APP_LAYOUT.cardTitleToBodyGap, flexShrink: 0 },
   text: { flex: 1, minWidth: 0, alignItems: 'stretch' },
   name: {

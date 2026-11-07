@@ -122,6 +122,36 @@ export const SkeletonBox: React.FC<SkeletonBoxProps> = ({
 };
 
 /**
+ * שורת טקסט בטעינה — תופסת בדיוק את ה-lineHeight של הטקסט האמיתי, והצורה ממורכזת בה אנכית.
+ * כך הגבהים והמרווחים של השלד זהים למסך הטעון, ושום דבר לא קופץ כשהתוכן מגיע
+ * (אותו עיקרון כמו SkLine בשלד יומן המסחר).
+ *
+ * align — יישור אופקי בתוך ההורה: 'flex-start' (ברירת מחדל) / 'flex-end' / 'center'.
+ * בעץ direction:UI_DIR ‏flex-start = תחילת השורה בשפה; בעץ «פיזי» (row-reverse, textAlign:'right') — 'flex-end'.
+ */
+export function SkeletonLine({
+  lineHeight,
+  width,
+  box,
+  align = 'flex-start',
+  style,
+}: {
+  lineHeight: number;
+  width: number | `${number}%`;
+  /** גובה הצורה (ברירת מחדל ~70% מהשורה) */
+  box?: number;
+  align?: 'flex-start' | 'flex-end' | 'center';
+  style?: ViewStyle;
+}) {
+  const h = box ?? Math.round(lineHeight * 0.7);
+  return (
+    <View style={[{ height: lineHeight, justifyContent: 'center', alignItems: align }, style]}>
+      <SkeletonBox width={width} height={h} borderRadius={Math.min(8, h / 2)} />
+    </View>
+  );
+}
+
+/**
  * Skeleton לכרטיס פיד (DarkPool, Community)
  */
 interface CardSkeletonProps {

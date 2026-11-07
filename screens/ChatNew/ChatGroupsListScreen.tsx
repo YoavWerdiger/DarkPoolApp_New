@@ -63,7 +63,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Search } from 'lucide-react-native';
 import JoinGroupBottomSheet from '../../components/chat/JoinGroupBottomSheet';
 import CreateGroupSheet from '../../components/chat/CreateGroupSheet';
-import { ChatSheetEmptyState, ChatSheetLoading, ChatSheetTopoHeader } from '../../components/chat/ChatBottomSheet';
+import { ChatSheetEmptyState, ChatSheetTopoHeader } from '../../components/chat/ChatBottomSheet';
 import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
 import { ChatSearchResult } from '../../types/chat.types';
 import { openStoryViewer } from '../../lib/storyViewerSession';
@@ -85,31 +85,7 @@ import { ChatSessionBackdrop } from '../../components/chat/ChatSessionBackdrop';
 import { CHAT_LAYOUT, chatSectionTitleStyle } from '../../components/chat/chatLayout';
 import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
 import { APP_TYPE, appPhysicalRightText } from '../../components/ui/appType';
-
-// Skeleton row for groups list
-const SkeletonGroupRow = React.memo(({ delay }: { delay: number }) => {
-  const opacity = React.useRef(new Animated.Value(0.3)).current;
-  React.useEffect(() => {
-    const anim = Animated.loop(
-      Animated.sequence([
-        Animated.timing(opacity, { toValue: 0.65, duration: 750, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 0.3, duration: 750, useNativeDriver: true }),
-      ])
-    );
-    const t = setTimeout(() => anim.start(), delay);
-    return () => { clearTimeout(t); anim.stop(); };
-  }, []);
-  return (
-    <Animated.View style={{ flexDirection: 'row-reverse', alignItems: 'center', paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal, paddingVertical: 15, opacity }}>
-      <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: 'rgba(255,255,255,0.12)', marginLeft: 12 }} />
-      <View style={{ flex: 1, gap: 8, alignItems: 'flex-end' }}>
-        <View style={{ height: 13, width: '60%', backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 6 }} />
-        <View style={{ height: 11, width: '80%', backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 6 }} />
-      </View>
-      <View style={{ width: 36, height: 11, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 6 }} />
-    </Animated.View>
-  );
-});
+import { SkeletonBox, SkeletonLine } from '../../components/ui/SkeletonLoader';
 
 // RTL is configured once inside the component via useEffect (not at module level)
 
@@ -265,12 +241,15 @@ export default function ChatGroupsListScreen() {
     }, [navigation])
   );
 
+  const allGroupsInitiallyEmptyRef = useRef(true);
   const [allGroups, setAllGroups] = useState<GroupWithMembership[]>(() => {
     if (!user?.id) return [];
     const cached = queryClient.getQueryData<ChatGroup[]>(appQueryKeys.chatGroups(user.id));
+    allGroupsInitiallyEmptyRef.current = !cached?.length;
     return cached?.length ? contextGroupsToListRows(cached) : [];
   });
-  const [isLoading, setIsLoading] = useState(false);
+  // בלי שורות מה-cache — שלד מהפריים הראשון (לא הבזק של «אין קבוצות» עד שהטעינה מתחילה)
+  const [isLoading, setIsLoading] = useState(() => allGroupsInitiallyEmptyRef.current);
   const imageErrorsRef = useRef<Set<string>>(new Set());
   const searchInputRef = useRef<TextInput>(null);
   const isLoadingRef = useRef(false);
@@ -1106,7 +1085,28 @@ export default function ChatGroupsListScreen() {
       return <Text style={styles.searchSectionHeader}>{item.title}</Text>;
     }
     if (item.type === 'loading') {
-      return <View style={{ paddingVertical: 20 }}><ChatSheetLoading label={i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s26')} /></View>;
+      // תוצאות ההודעות בחיפוש — שורות שלד באותה פריסה כמו שורת תוצאה (אווטאר 48, שם קבוצה + שעה, תצוגה מקדימה)
+      return (
+        <View pointerEvents="none">
+          {[64, 52, 58].map((w, i) => (
+            <View key={i} style={styles.searchRowItem}>
+              <SkeletonBox width={48} height={48} borderRadius={24} />
+              <View style={styles.searchRowBody}>
+                <View style={styles.searchRowMsgHead}>
+                  <SkeletonLine lineHeight={APP_TYPE.cardTitle.lineHeight} width={`${w}%`} box={14} style={{ flex: 1 }} />
+                  <SkeletonLine lineHeight={APP_TYPE.caption2.lineHeight} width={28} box={9} />
+                </View>
+                <SkeletonLine
+                  lineHeight={APP_TYPE.cardSubtitle.lineHeight}
+                  width={`${w + 22}%`}
+                  box={11}
+                  style={{ marginTop: APP_LAYOUT.cardTitleToSubtitleGap }}
+                />
+              </View>
+            </View>
+          ))}
+        </View>
+      );
     }
     if (item.type === 'empty') {
       return (
@@ -1475,15 +1475,47 @@ export default function ChatGroupsListScreen() {
     },
   ).current;
 
-  const renderEmpty = () => (
-    <View style={styles.emptyContainer}>
-      {isLoading ? (
-        <View style={{ width: '100%' }}>
-          {[0, 1, 2, 3].map((i) => (
-            <SkeletonGroupRow key={i} delay={0} />
-          ))}
+  /**
+   * רשימה בטעינה — באותו מבנה כמו הרשימה האמיתית: כותרת «הקבוצות שלי» אמיתית (רק המונה נטען),
+   * ושורות בגובה chatRow המדויק (אווטאר 56, שורת שם בגובה cardTitle, שורת תצוגה מקדימה בגובה cardSubtitle).
+   */
+  const renderListSkeleton = () => (
+    <View style={{ paddingTop: 4 }} pointerEvents="none">
+      <View style={styles.sectionHeaderRow}>
+        <View style={styles.skeletonHeaderLine}>
+          <Text style={[styles.sectionHeaderText, { width: 'auto', alignSelf: 'auto' }]}>
+            {i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s12')}
+            <Text style={styles.sectionHeaderDot}>{' · '}</Text>
+          </Text>
+          <SkeletonBox width={14} height={14} borderRadius={4} />
         </View>
-      ) : searchQuery ? (
+      </View>
+      {[72, 58, 66, 50, 62, 54].map((w, i, arr) => (
+        <View key={i}>
+          <View style={styles.chatRow}>
+            <View style={[styles.avatarWrap, { backgroundColor: 'transparent' }]}>
+              <SkeletonBox width={56} height={56} borderRadius={28} />
+            </View>
+            <View style={styles.chatBody}>
+              <View style={styles.chatRow1}>
+                <SkeletonLine lineHeight={APP_TYPE.cardTitle.lineHeight} width={`${w}%`} box={14} align="flex-end" style={{ flex: 1 }} />
+                <SkeletonLine lineHeight={APP_TYPE.caption.lineHeight} width={30} box={10} style={{ marginRight: 10 }} />
+              </View>
+              <SkeletonLine lineHeight={APP_TYPE.cardSubtitle.lineHeight} width={`${w + 18}%`} box={11} align="flex-end" />
+            </View>
+          </View>
+          {i < arr.length - 1 ? <View style={styles.rowSeparator} /> : null}
+        </View>
+      ))}
+    </View>
+  );
+
+  const renderEmpty = () =>
+    isLoading ? (
+      renderListSkeleton()
+    ) : (
+    <View style={styles.emptyContainer}>
+      {searchQuery ? (
         <>
           <Ionicons name="search-outline" size={64} color={tokens.colors.text.tertiary} />
           <Text style={styles.emptyTitle}>{i18n.t('auto.screens__ChatNew__ChatGroupsListScreen.s38')}</Text>
@@ -1508,7 +1540,7 @@ export default function ChatGroupsListScreen() {
         </>
       )}
     </View>
-  );
+    );
 
   return (
     <View
@@ -1778,7 +1810,8 @@ export default function ChatGroupsListScreen() {
               ListEmptyComponent={renderEmpty}
               refreshControl={
                 <RefreshControl
-                  refreshing={isLoading}
+                  // בטעינה הראשונה מוצג שלד הרשימה — בלי ספינר נוסף מעליו
+                  refreshing={false}
                   onRefresh={async () => {
                     try {
                       await loadGroups();
@@ -2249,6 +2282,11 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   sectionHeaderDot: {
     color: tokens.colors.text.primary,
+  },
+  // כותרת הסקשן בשלד: הטקסט האמיתי + צורה במקום המונה
+  skeletonHeaderLine: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
   },
 
   /* ── Joinable group row ── */

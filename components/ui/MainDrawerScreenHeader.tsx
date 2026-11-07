@@ -11,6 +11,7 @@ import {
   DayNavBlurButton,
   DRAWER_MENU_BUTTON_SIZE,
 } from './DayNavBlurButton';
+import { SkeletonLine } from './SkeletonLoader';
 
 /** כמו מסך שווקים (בית) / רשימת צ׳אטים — מרווח אופקי לכותרת ול־section */
 export const MAIN_SCREEN_HEADER_HP = APP_LAYOUT.screenPaddingHorizontal;
@@ -28,6 +29,11 @@ export type MainDrawerScreenHeaderProps = {
   subtitle?: string;
   /** לחיצה על כותרת המשנה (אופציונלי) */
   onSubtitlePress?: () => void;
+  /**
+   * כותרת המשנה תלויה בנתונים שעדיין נטענים — שורת שלד בגובה שורת המשנה במקומה,
+   * כדי שהכותרת לא «תקפוץ» כשהטקסט מגיע.
+   */
+  subtitleLoading?: boolean;
   onMenuPress: () => void;
   /** תוכן מתחת לכותרת — באותו padding אופקי כמו `sectionPicker` בשווקים */
   section?: React.ReactNode;
@@ -55,6 +61,7 @@ export function MainDrawerScreenHeader({
   centerAccessory,
   subtitle,
   onSubtitlePress,
+  subtitleLoading = false,
   onMenuPress,
   section,
   sectionContainerStyle,
@@ -70,7 +77,15 @@ export function MainDrawerScreenHeader({
   const showPageTitle = title.length > 0 && centerAccessory == null;
 
   const subtitleNode = (align: 'center' | 'right') =>
-    subtitle ? (
+    subtitleLoading && !subtitle ? (
+      <SkeletonLine
+        lineHeight={APP_TYPE.sectionSubtitle.lineHeight}
+        width={140}
+        box={12}
+        align={align === 'center' ? 'center' : 'flex-end'}
+        style={{ marginTop: APP_LAYOUT.titleSubtitleGap }}
+      />
+    ) : subtitle ? (
       onSubtitlePress ? (
         <Pressable
           onPress={onSubtitlePress}

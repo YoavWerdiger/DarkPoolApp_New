@@ -24,7 +24,7 @@ import UICard from '../../components/ui/UICard';
 import { CHROME_UICARD } from '../../components/ui/chromeControl';
 import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import { ListItemSkeleton, CardSkeleton } from '../../components/ui/SkeletonLoader';
+import { SkeletonBox, SkeletonLine } from '../../components/ui/SkeletonLoader';
 import { useDarkPoolTabBarHeight } from '../../hooks/useDarkPoolTabBarHeight';
 import { prefetchPersonPortfolio } from '../../services/darkpool/prefetchPersonPortfolio';
 import {
@@ -40,7 +40,7 @@ import type { DarkPoolTabParamList } from '../../navigation/DarkPoolTabs';
 import { useDarkPoolFollowingFeed } from '../../hooks/useDarkPoolFollowingFeed';
 import { InvestorPortrait } from './components/InvestorPortrait';
 import { ltrNameText } from './utils/bidi';
-import { ActivityFeedCard } from './components/ActivityFeedCard';
+import { ActivityFeedCard, ActivityFeedCardSkeleton } from './components/ActivityFeedCard';
 import {
   followingActivityToTradeDetail,
   hasTradeDetailPayload,
@@ -201,25 +201,17 @@ export default function DarkPoolFollowingScreen() {
     [tokens, bottomPad]
   );
 
-  if (loading && list.length === 0) {
-    return (
-      <ScreenChrome rtl>
-        <SafeAreaView style={[darkPoolTransparentFill, darkPoolRtlContent]} edges={['top']}>
-          <MainDrawerScreenHeader inRtlTree title={i18n.t('auto.screens__DarkPool__DarkPoolFollowingScreen.s1')} onMenuPress={openDrawer} />
-          <View style={styles.scroll}>
-            <UICard {...CHROME_UICARD} style={styles.followCard}>
-              {Array.from({ length: 3 }).map((_, i) => (
-                <View key={i}>
-                  <ListItemSkeleton showAvatar />
-                  {i < 2 ? <View style={styles.divider} /> : null}
-                </View>
-              ))}
-            </UICard>
-          </View>
-        </SafeAreaView>
-      </ScreenChrome>
-    );
-  }
+  // טעינה ראשונה בלי רשימה מה-cache: אותו מסך בדיוק — כותרת, כרטיס «עוקב» וכותרת «פעילות אחרונה» אמיתיים,
+  // ושורות/כרטיסי שלד במקום הנתונים (במקום מסך שלד נפרד בלי כותרת משנה וכותרת הסקשן)
+  const initialLoading = loading && list.length === 0;
+
+  const activitySkeleton = (
+    <View>
+      {[0, 1, 2].map((i) => (
+        <ActivityFeedCardSkeleton key={i} variant={i} />
+      ))}
+    </View>
+  );
 
   return (
     <ScreenChrome rtl>
@@ -227,7 +219,14 @@ export default function DarkPoolFollowingScreen() {
         <MainDrawerScreenHeader
           inRtlTree
           title={i18n.t('auto.screens__DarkPool__DarkPoolFollowingScreen.s1')}
-          subtitle={list.length ? i18n.t('auto.screens__DarkPool__DarkPoolFollowingScreen.s2', { v0: list.length }) : i18n.t('auto.screens__DarkPool__DarkPoolFollowingScreen.s3')}
+          subtitle={
+            initialLoading
+              ? undefined
+              : list.length
+                ? i18n.t('auto.screens__DarkPool__DarkPoolFollowingScreen.s2', { v0: list.length })
+                : i18n.t('auto.screens__DarkPool__DarkPoolFollowingScreen.s3')
+          }
+          subtitleLoading={initialLoading}
           onMenuPress={openDrawer}
         />
         <ScrollView
@@ -235,7 +234,8 @@ export default function DarkPoolFollowingScreen() {
           contentContainerStyle={styles.scroll}
           refreshControl={
             <RefreshControl
-              refreshing={loading || activityFeed.refreshing}
+              // בטעינה הראשונה השלד במקום — בלי ספינר נוסף
+              refreshing={(!initialLoading && loading) || activityFeed.refreshing}
               onRefresh={() => {
                 void refetch();
                 void activityFeed.refetch();
@@ -244,7 +244,20 @@ export default function DarkPoolFollowingScreen() {
             />
           }
         >
-          {list.length > 0 ? (
+          {initialLoading ? (
+            <>
+              <UICard {...CHROME_UICARD} style={styles.followCard}>
+                {[0, 1, 2].map((i) => (
+                  <View key={i} pointerEvents="none">
+                    <FollowedRowSkeleton styles={styles} variant={i} />
+                    {i < 2 ? <View style={styles.divider} /> : null}
+                  </View>
+                ))}
+              </UICard>
+              <Text style={styles.activityTitle}>{i18n.t('auto.screens__DarkPool__DarkPoolFollowingScreen.s4')}</Text>
+              {activitySkeleton}
+            </>
+          ) : list.length > 0 ? (
             <>
               <UICard {...CHROME_UICARD} style={styles.followCard}>
                 {list.map((person, index) => (
@@ -261,11 +274,7 @@ export default function DarkPoolFollowingScreen() {
 
               <Text style={styles.activityTitle}>{i18n.t('auto.screens__DarkPool__DarkPoolFollowingScreen.s4')}</Text>
               {activityFeed.loading ? (
-                <View>
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <CardSkeleton key={i} delay={i * 70} />
-                  ))}
-                </View>
+                activitySkeleton
               ) : activityFeed.items.length === 0 ? (
                 <Text style={styles.emptyText}>{i18n.t('auto.screens__DarkPool__DarkPoolFollowingScreen.s5')}</Text>
               ) : (
@@ -347,5 +356,27 @@ function FollowedRow({
         </View>
         <Ionicons name={dirIcon('chevron-back')} size={18} color={tokens.colors.text.secondary} />
       </Pressable>
+  );
+}
+
+/** שורת «עוקב» בטעינה — אותה שורה (דיוקן 40 · שם + סוג · שברון אמיתי), רק הנתונים כצורות */
+function FollowedRowSkeleton({
+  styles,
+  variant,
+}: {
+  styles: { row: object; iconTextGap: object; textCol: object };
+  variant: number;
+}) {
+  const tokens = useDesignTokens();
+  return (
+    <View style={styles.row}>
+      <SkeletonBox width={40} height={40} borderRadius={20} />
+      <View style={styles.iconTextGap} />
+      <View style={styles.textCol}>
+        <SkeletonLine lineHeight={20} width={[120, 96, 136][variant % 3]} box={13} />
+        <SkeletonLine lineHeight={DARK_POOL_TYPE.cardSubtitle.lineHeight} width={[64, 80, 56][variant % 3]} box={10} />
+      </View>
+      <Ionicons name={dirIcon('chevron-back')} size={18} color={tokens.colors.text.secondary} />
+    </View>
   );
 }

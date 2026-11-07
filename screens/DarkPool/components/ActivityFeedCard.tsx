@@ -10,6 +10,7 @@ import { DarkPoolFeedCard } from './DarkPoolFeedCard';
 import { APP_LAYOUT } from '../../../components/ui/appLayout';
 import { APP_TYPE } from '../../../components/ui/appType';
 import { FEED_CARD_TYPE } from './darkPoolFeedCardStyles';
+import { SkeletonBox, SkeletonLine } from '../../../components/ui/SkeletonLoader';
 import { darkPoolPhysicalRightText } from '../darkPoolLayout';
 import { isolateData, ltrNameText } from '../utils/bidi';
 import { formatInsiderDisplayName } from '../utils/investorPlaceholder';
@@ -116,6 +117,33 @@ export function ActivityFeedCard({
         </View>
       </View>
     </DarkPoolFeedCard>
+  );
+}
+
+/**
+ * כרטיס פעילות בטעינה — אותה מעטפת ושורה: לוגו 40 · משפט (גובה action) + שורת פרטים (גובה dates) · תאריך.
+ */
+export function ActivityFeedCardSkeleton({ variant = 0 }: { variant?: number }) {
+  const tokens = useDesignTokens();
+  const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const w = ([74, 60, 68] as const)[variant % 3];
+  return (
+    <View pointerEvents="none">
+      <DarkPoolFeedCard haptic={false}>
+        <View style={styles.row}>
+          <View style={styles.tickerCol}>
+            <SkeletonBox width={40} height={40} borderRadius={20} />
+          </View>
+          <View style={styles.main}>
+            <SkeletonLine lineHeight={FEED_CARD_TYPE.action.lineHeight} width={`${w}%`} box={12} align="flex-end" />
+            <SkeletonLine lineHeight={FEED_CARD_TYPE.dates.lineHeight} width={`${w - 18}%`} box={10} align="flex-end" />
+          </View>
+          <View style={styles.meta}>
+            <SkeletonLine lineHeight={APP_TYPE.caption.lineHeight} width={40} box={10} align="flex-end" />
+          </View>
+        </View>
+      </DarkPoolFeedCard>
+    </View>
   );
 }
 

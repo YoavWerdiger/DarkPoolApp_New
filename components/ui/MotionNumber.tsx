@@ -10,6 +10,7 @@ import Animated, {
   useAnimatedProps,
   useAnimatedReaction,
   useAnimatedStyle,
+  useReducedMotion,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
@@ -31,6 +32,15 @@ const TRAVEL = 0.5;
 const TINT_IN_MS = 140;
 const TINT_HOLD_MS = 220;
 const TINT_FADE_MS = 650;
+/**
+ * «מושן בלר» מקורב: בזמן תנועה שני עותקי רפאים חלשים נגררים מאחורי הספרה בכיוון התנועה,
+ * והספרה נמתחת מעט אנכית. שיא באמצע המעבר, אפס בעצירה (טקסט ב-RN לא תומך בבלר כיווני אמיתי).
+ */
+const BLUR_GHOSTS = [
+  { offset: 0.11, opacity: 0.38 },
+  { offset: 0.22, opacity: 0.16 },
+] as const;
+const BLUR_STRETCH = 0.14;
 
 function formatUsd(v: number, decimals: number, symbol: string = '$'): string {
   'worklet';
@@ -200,6 +210,8 @@ const Slot = React.memo(function Slot({
     return ws[0];
   };
 
+  // «הפחתת תנועה» במערכת — בלי מושן בלר
+  const blur = !useReducedMotion();
   const first = charOf(text.value);
   const cur = useSharedValue(first);
   const prev = useSharedValue('');
@@ -255,12 +267,48 @@ const Slot = React.memo(function Slot({
         ? interpolateColor(tint.value, [-1, 0, 1], [downColor, baseColor, upColor])
         : baseColor,
     opacity: p.value,
-    transform: [{ translateY: slideDir.value * lineH * TRAVEL * (1 - p.value) }],
+    transform: [
+      { translateY: slideDir.value * lineH * TRAVEL * (1 - p.value) },
+      { scaleY: 1 + (blur ? BLUR_STRETCH * 4 * p.value * (1 - p.value) : 0) },
+    ],
   }));
-  const outStyle = useAnimatedStyle(() => ({
-    opacity: 1 - p.value,
-    transform: [{ translateY: -slideDir.value * lineH * TRAVEL * p.value }],
-  }));
+  const outStyle = useAnimatedStyle(() => {
+    const speed = blur ? 4 * p.value * (1 - p.value) : 0;
+    return {
+      opacity: 1 - p.value,
+      transform: [
+        { translateY: -slideDir.value * lineH * TRAVEL * p.value },
+        { scaleY: 1 + BLUR_STRETCH * speed },
+      ],
+    };
+  });
+  // עותקי הרפאים של הספרה הנכנסת — מאחוריה בכיוון התנועה (עולה → מתחתיה)
+  const ghost0Style = useAnimatedStyle(() => {
+    const speed = 4 * p.value * (1 - p.value);
+    const g = BLUR_GHOSTS[0];
+    return {
+      color:
+        upColor && downColor
+          ? interpolateColor(tint.value, [-1, 0, 1], [downColor, baseColor, upColor])
+          : baseColor,
+      opacity: speed * g.opacity,
+      transform: [{ translateY: slideDir.value * lineH * (TRAVEL * (1 - p.value) + g.offset * speed) }],
+    };
+  });
+  const ghost1Style = useAnimatedStyle(() => {
+    const speed = 4 * p.value * (1 - p.value);
+    const g = BLUR_GHOSTS[1];
+    return {
+      color:
+        upColor && downColor
+          ? interpolateColor(tint.value, [-1, 0, 1], [downColor, baseColor, upColor])
+          : baseColor,
+      opacity: speed * g.opacity,
+      transform: [{ translateY: slideDir.value * lineH * (TRAVEL * (1 - p.value) + g.offset * speed) }],
+    };
+  });
+  const ghost0Props = useAnimatedProps(() => ({ text: cur.value, defaultValue: cur.value }) as never);
+  const ghost1Props = useAnimatedProps(() => ({ text: cur.value, defaultValue: cur.value }) as never);
 
   const common = {
     editable: false,
@@ -272,6 +320,12 @@ const Slot = React.memo(function Slot({
 
   return (
     <Animated.View style={[styles.slot, { height: lineH }, slotStyle]}>
+      {blur ? (
+        <>
+          <AnimatedTextInput {...common} defaultValue={first} animatedProps={ghost1Props} style={[glyphStyle, styles.abs, ghost1Style]} />
+          <AnimatedTextInput {...common} defaultValue={first} animatedProps={ghost0Props} style={[glyphStyle, styles.abs, ghost0Style]} />
+        </>
+      ) : null}
       <AnimatedTextInput {...common} defaultValue="" animatedProps={prevProps} style={[glyphStyle, styles.abs, outStyle]} />
       <AnimatedTextInput {...common} defaultValue={first} animatedProps={curProps} style={[glyphStyle, styles.abs, inStyle]} />
     </Animated.View>

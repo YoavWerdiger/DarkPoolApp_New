@@ -498,7 +498,7 @@
     "s13": "Profit",
     "s14": "Loss",
     "s15": "No trades",
-    "s16": "Monthly stats",
+    "s16": "This month's stats",
     "s17": "Trades",
     "s18": "Winning days",
     "s19": "Losing days",
@@ -1789,7 +1789,7 @@
     "s44": "Overview",
     "s45": "Positions",
     "s46": "Calendar",
-    "s47": "Trades"
+    "s47": "History"
   },
   "screens__Portfolios__AddTransactionScreen": {
     "s1": "Error",
@@ -2165,7 +2165,7 @@
     "s21": "Once you close positions, their daily P&L will appear here on the calendar.",
     "s22": "Previous month",
     "s23": "Next month",
-    "s24": "Monthly stats",
+    "s24": "This month's stats",
     "s25": "Month total",
     "s26": "Trades",
     "s27": "Green days",

@@ -161,6 +161,13 @@ export default function DarkPoolExploreScreen() {
     setQuery('');
   }, []);
   const [searchFocused, setSearchFocused] = useState(false);
+  // פיתוח בלבד: EXPO_PUBLIC_DEV_EXPLORE_SEARCH=1 — פותח את שיט החיפוש (לצילומי סימולטור)
+  useEffect(() => {
+    if (__DEV__ && process.env.EXPO_PUBLIC_DEV_EXPLORE_SEARCH) {
+      const t = setTimeout(() => setSearchOpen(true), 2500);
+      return () => clearTimeout(t);
+    }
+  }, []);
 
   const openDrawer = useCallback(() => {
     void triggerDrawerMenuHaptic();
@@ -745,7 +752,7 @@ function SearchSuggestionRow({ person, onPress }: { person: ExplorePerson; onPre
         void HapticFeedback.selection();
         onPress();
       }}
-      style={({ pressed }) => [suggestionStyles.row, pressed && { opacity: 0.6 }]}
+      style={suggestionStyles.row}
       accessibilityRole="button"
       accessibilityLabel={name}
     >

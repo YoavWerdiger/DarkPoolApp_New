@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
     direction: 'ltr',
     flexDirection: IS_RTL_UI ? 'row-reverse' : 'row',
     borderRadius: 999,
-    padding: 4,
+    padding: 3,
     alignSelf: 'stretch',
   },
   highlightLayer: {
@@ -117,22 +117,24 @@ const styles = StyleSheet.create({
   highlight: {
     position: 'absolute',
     left: 0,
-    top: 4,
-    bottom: 4,
+    top: 3,
+    bottom: 3,
     borderRadius: 999,
   },
   tab: {
     flex: 1,
-    minHeight: 40,
+    minHeight: 34,
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 4,
+    paddingVertical: 3,
     paddingHorizontal: 6,
   },
+  // קומפקטי — 14 / semibold (היה 15 / bold וגובה 40)
   label: {
-    fontSize: APP_TYPE.cardBody.fontSize,
-    fontWeight: APP_TYPE.cardTitle.fontWeight,
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: '600',
     textAlign: 'center',
   },
 });

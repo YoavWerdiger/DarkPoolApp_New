@@ -82,7 +82,7 @@ const DEFAULT_SHARE_OPTIONS: ShareOptions = { showPnl: true, showReturn: true, s
 /** מידות העיצוב — הכרטיס מצויר ב-viewBox 340×425 ומוקטן/מוגדל באחידות */
 const ART_W = 340;
 const ART_H = 425;
-const CHART_TOP = 286;
+const CHART_TOP = 256;
 const CHART_BOT = 392;
 const CHART_PAD_X = 22;
 const FOOTER_H = 72;

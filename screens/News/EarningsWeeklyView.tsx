@@ -307,10 +307,11 @@ const SearchResultRow = memo(function SearchResultRow({
             },
           ]}
         >
-          <TimingIcon size={12} color={timing.color} strokeWidth={2.2} />
+          {/* row-reverse: המלל קודם (ימין) והאייקון אחריו */}
           <Text style={[searchStyles.timingText, { color: timing.color }]} numberOfLines={1}>
             {timing.label}
           </Text>
+          <TimingIcon size={12} color={timing.color} strokeWidth={2.2} />
         </View>
     </Pressable>
   );
@@ -974,6 +975,8 @@ const searchStyles = StyleSheet.create({
     marginRight: 12,
     flexDirection: 'row-reverse',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
     paddingHorizontal: 10,
     height: 24,
     borderRadius: 9999,
@@ -983,7 +986,7 @@ const searchStyles = StyleSheet.create({
   timingText: {
     ...APP_TYPE.caption,
     textAlign: 'center',
-    marginLeft: APP_LAYOUT.stackGapSmall,
+    flexShrink: 1,
   },
   emptyWrap: {
     flex: 1,

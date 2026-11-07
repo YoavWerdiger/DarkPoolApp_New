@@ -7,6 +7,7 @@ import { UI_DIR } from '../../lib/i18n/direction';
 import React, { useEffect } from 'react';
 import { View, Animated, StyleSheet, ViewStyle } from 'react-native';
 import { useDesignTokens } from './DesignTokens';
+import { LIGHT_CANVAS } from './designTokensStatic';
 import UICard from './UICard';
 import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 
@@ -83,6 +84,9 @@ export const SkeletonBox: React.FC<SkeletonBoxProps> = ({
   borderRadius = 8,
   style,
 }) => {
+  const tokens = useDesignTokens();
+  // לפי ערכת הנושא — לבן שקוף על כהה בלבד; בבהיר הוא כמעט בלתי נראה
+  const fill = String(tokens.colors.background.primary) === LIGHT_CANVAS ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.12)';
   useEffect(() => {
     retainSharedSkeletonPulse();
     return () => {
@@ -97,7 +101,7 @@ export const SkeletonBox: React.FC<SkeletonBoxProps> = ({
           width,
           height,
           borderRadius,
-          backgroundColor: 'rgba(255, 255, 255, 0.12)',
+          backgroundColor: fill,
           opacity: SHARED_PULSE,
         },
         style,

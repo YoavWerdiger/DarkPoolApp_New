@@ -14,6 +14,7 @@ import { LineChartSkeleton, SkeletonBox } from '../../../components/ui/SkeletonL
 import { SegmentedTabs } from '../../../components/ui/SegmentedTabs';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { UI_CARD_RADIUS } from '../../../components/ui/appLayout';
+import { LIGHT_CANVAS } from '../../../components/ui/designTokensStatic';
 import {
   JOURNAL_LAYOUT,
   JOURNAL_TYPE,
@@ -25,6 +26,12 @@ import { ArrowLeftRight, PieChart, Scale, TrendingDown, TrendingUp, Wallet } fro
 import { DISTRIBUTION_GROUP_BY_OPTIONS, PORTFOLIO_DETAIL_TABS } from '../portfolioConstants';
 
 const noop = () => {};
+
+/** DistributionDonut בסקירה: size 128, strokeWidth 18, אווטאר 80% מהחור */
+const DONUT = 128;
+const DONUT_STROKE = 18;
+const DONUT_AVATAR = Math.round((DONUT - 2 * DONUT_STROKE) * 0.8);
+const LEGEND_WIDTHS = [42, 36, 48, 30, 40];
 
 /** שורות הסטטיסטיקה — אותו סדר, אייקון ותווית כמו JournalStatsCard */
 const STAT_ROWS = [
@@ -96,6 +103,7 @@ export function JournalHeroChartSkeleton() {
 
 export function JournalSkeleton() {
   const tokens = useDesignTokens();
+  const ringColor = String(tokens.colors.background.primary) === LIGHT_CANVAS ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.12)';
   const divider = { height: 1, backgroundColor: tokens.colors.border.divider, marginHorizontal: JOURNAL_LAYOUT.cardPadding };
   // כותרות הסקשנים קבועות — טקסט אמיתי באותו סגנון; רק הנתונים הם צורות טעינה
   const heading = (title: string) => (
@@ -174,21 +182,34 @@ export function JournalSkeleton() {
           />
           <UICard variant="soft" padding="md" style={styles.panelMd}>
             <View style={styles.donutRow}>
-              <SkeletonBox width={128} height={128} borderRadius={64} />
+              {/* טבעת כמו DistributionDonut (128 / עובי 18) עם עיגול האווטאר במרכז */}
+              <View style={styles.donut}>
+                <SkeletonBox
+                  width={DONUT}
+                  height={DONUT}
+                  borderRadius={DONUT / 2}
+                  style={{ position: 'absolute', backgroundColor: 'transparent', borderWidth: DONUT_STROKE, borderColor: ringColor }}
+                />
+                <SkeletonBox width={DONUT_AVATAR} height={DONUT_AVATAR} borderRadius={DONUT_AVATAR / 2} />
+              </View>
+              {/* מקרא כרשימת טיקרים: נקודת צבע · טיקר · אחוז */}
               <View style={styles.legend}>
-                {[0, 1, 2, 3].map((i) => (
+                {LEGEND_WIDTHS.map((w, i) => (
                   <View key={i} style={styles.legendRow}>
                     <SkeletonBox width={10} height={10} borderRadius={5} />
                     <View style={{ flex: 1 }}>
-                      <SkLine lineHeight={15} width="60%" box={11} />
+                      <SkLine lineHeight={15} width={w} box={11} />
                     </View>
-                    <SkLine lineHeight={15} width={30} box={11} />
+                    <SkLine lineHeight={15} width={34} box={11} />
                   </View>
                 ))}
               </View>
             </View>
+            {/* «סה״כ נכסים» קבוע — רק הסכום נטען */}
             <View style={styles.totalRow}>
-              <SkLine lineHeight={18} width={70} box={12} />
+              <Text style={[styles.totalLabel, { color: tokens.colors.text.tertiary }]}>
+                {i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s23')}
+              </Text>
               <SkLine lineHeight={18} width={84} box={14} />
             </View>
           </UICard>
@@ -239,6 +260,9 @@ const styles = StyleSheet.create({
   groupTabs: { marginBottom: 14 },
   panelMd: { overflow: 'hidden', direction: UI_DIR },
   donutRow: { direction: UI_DIR, flexDirection: 'row', alignItems: 'center', gap: JOURNAL_LAYOUT.componentGap },
+  donut: { width: DONUT, height: DONUT, alignItems: 'center', justifyContent: 'center' },
+  // = totalLabel ב-OverviewTab
+  totalLabel: { fontSize: 13, ...journalPhysicalRightText },
   legend: { flex: 1, gap: JOURNAL_LAYOUT.stackGapSmall },
   legendRow: { direction: UI_DIR, flexDirection: 'row', alignItems: 'center', gap: 8 },
   totalRow: {

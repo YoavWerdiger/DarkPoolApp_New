@@ -1,7 +1,7 @@
 import i18n from '../../lib/i18n';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, RefreshControl, ActivityIndicator, TouchableOpacity, Image, Pressable, StyleSheet } from 'react-native';
+import { View, Text, FlatList, RefreshControl, TouchableOpacity, Image, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Trash2 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -9,6 +9,7 @@ import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
 import { APP_TYPE } from '../../components/ui/appType';
 import UICard from '../../components/ui/UICard';
+import { SkeletonBox, SkeletonLine } from '../../components/ui/SkeletonLoader';
 import { LikedArticlesService, LikedArticle } from '../../services/likedArticlesService';
 import { formatNewsDate } from '../../services/newsService';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
@@ -182,6 +183,43 @@ const LikedArticleCard: React.FC<LikedArticleCardProps> = ({ article, onPress, o
   );
 };
 
+/** כרטיס כתבה בטעינה — אותו UICard, תמונה בגובה 196, מפריד ושורת הלב התחתונה (הלב אמיתי) */
+const LikedArticleCardSkeleton: React.FC = () => {
+  const DesignTokens = useDesignTokens();
+  return (
+    <View style={{ marginBottom: APP_LAYOUT.cardStackGap }} pointerEvents="none">
+      <UICard variant="blur" padding="none" disableBlur style={{ borderRadius: UI_CARD_RADIUS, overflow: 'hidden' }}>
+        <SkeletonBox width="100%" height={196} borderRadius={0} />
+        <View style={{ height: 1, backgroundColor: DesignTokens.colors.border.divider }} />
+        <View
+          style={{
+            paddingHorizontal: APP_LAYOUT.cardPadding,
+            paddingTop: APP_LAYOUT.cardTitleToBodyGap,
+            paddingBottom: APP_LAYOUT.cardPadding,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <SkeletonLine lineHeight={APP_TYPE.caption.lineHeight} width="44%" box={10} align="flex-end" style={{ flex: 1, marginLeft: APP_LAYOUT.cardTitleToBodyGap }} />
+          <View
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: 'rgba(255, 59, 92, 0.15)',
+            }}
+          >
+            <Ionicons name="heart" size={18} color="#FF3B5C" />
+          </View>
+        </View>
+      </UICard>
+    </View>
+  );
+};
+
 export default function LikedArticlesScreen() {
   const DesignTokens = useDesignTokens();
   const pad = APP_LAYOUT.screenPaddingHorizontal;
@@ -332,9 +370,11 @@ export default function LikedArticlesScreen() {
   if (loading) {
     return (
       <NewsScreenShell title={i18n.t('auto.screens__News__LikedArticlesScreen.s15')}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-          <Text style={{ marginTop: APP_LAYOUT.componentGap, ...APP_TYPE.body, color: DesignTokens.colors.text.secondary }}>{i18n.t('auto.screens__News__LikedArticlesScreen.s16')}</Text>
+        {/* כרטיסי שלד באותה רשימה ושוליים — במקום ספינר וטקסט «טוען» */}
+        <View style={{ paddingHorizontal: pad }}>
+          {[0, 1, 2].map((i) => (
+            <LikedArticleCardSkeleton key={i} />
+          ))}
         </View>
       </NewsScreenShell>
     );

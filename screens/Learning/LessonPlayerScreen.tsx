@@ -21,6 +21,7 @@ import {
 import { ChevronLeft, ChevronRight, ArrowRight } from '../../lib/i18n/dirIcons';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import UICard from '../../components/ui/UICard';
+import { SkeletonBox, SkeletonLine } from '../../components/ui/SkeletonLoader';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { useAuth } from '../../context/AuthContext';
@@ -248,9 +249,9 @@ export const LessonPlayerScreen: React.FC = () => {
 
     if (!allowHeavy || isLoadingVideo) {
       return (
-        <View style={styles.blockLoadingContainer}>
-          <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-          <Text style={styles.blockLoadingText}>{i18n.t('auto.screens__Learning__LessonPlayerScreen.s5')}</Text>
+        // הווידאו בטעינה — צורה בגודל הנגן (16:9) במקומו, במקום ספינר
+        <View style={styles.videoContainer} pointerEvents="none">
+          <SkeletonBox width="100%" height={Number(styles.video.height)} borderRadius={0} />
         </View>
       );
     }
@@ -419,9 +420,45 @@ export const LessonPlayerScreen: React.FC = () => {
         style={styles.gradientContainer}
       >
         <RNSafeAreaView style={styles.safeAreaContainer} edges={['top']}>
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-            <Text style={styles.loadingText}>{i18n.t('auto.screens__Learning__LessonPlayerScreen.s14')}</Text>
+          {/* השיעור בטעינה — אותו מסך: כרטיס הכותרת עם כפתור החזרה האמיתי, כרטיס המידע, נגן 16:9
+              וכרטיס «ההערות שלי» הקבוע; רק שם השיעור ומספר החלקים הם צורות */}
+          <View style={styles.headerWrapper}>
+            <UICard variant="blur" glassIntensity="subtle" padding="sm" style={styles.headerOuterBlur}>
+              <View style={styles.headerRow}>
+                <DayNavBlurButton onPress={() => navigation.goBack()} glassIntensity="subtle">
+                  <ArrowRight size={18} color={DesignTokens.colors.text.primary} strokeWidth={2} />
+                </DayNavBlurButton>
+                <View style={styles.headerTextBlock} pointerEvents="none">
+                  <SkeletonLine lineHeight={Number(styles.headerTitle.lineHeight)} width="64%" box={15} align="flex-end" style={{ marginBottom: 2 }} />
+                  <SkeletonLine lineHeight={Number(styles.headerSubtitle.lineHeight)} width={72} box={11} align="flex-end" />
+                </View>
+                <View style={styles.headerSpacer} />
+              </View>
+            </UICard>
+          </View>
+          <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }} pointerEvents="none">
+            <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginTop: DesignTokens.spacing.md, marginBottom: DesignTokens.spacing.lg }}>
+              <UICard variant="elevated" padding="lg" style={styles.lessonPanel}>
+                <SkeletonLine lineHeight={Number(styles.lessonInfoTitle.lineHeight)} width="56%" box={17} align="flex-end" />
+              </UICard>
+            </View>
+            <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginBottom: DesignTokens.spacing.lg }}>
+              <UICard variant="elevated" padding="none" style={styles.lessonPanel}>
+                <View style={styles.videoContainer}>
+                  <SkeletonBox width="100%" height={Number(styles.video.height)} borderRadius={0} />
+                </View>
+              </UICard>
+            </View>
+            <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginBottom: DesignTokens.spacing.lg }}>
+              <UICard variant="elevated" padding="md" style={styles.lessonPanel}>
+                <View style={styles.notesHeader}>
+                  <Text style={styles.notesTitle}>{i18n.t('auto.screens__Learning__LessonPlayerScreen.s19')}</Text>
+                  <View style={styles.notesHeaderIcons}>
+                    <ChevronDown size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
+                  </View>
+                </View>
+              </UICard>
+            </View>
           </View>
         </RNSafeAreaView>
       </LinearGradient>

@@ -2,7 +2,8 @@ import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useCallback, useRef } from 'react';
-import { View, Text, ScrollView, StyleSheet, Image, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
+import { SkeletonBox, SkeletonLine } from '../../components/ui/SkeletonLoader';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useCourse, useEnrollInCourse, useCourseProgress } from '../../hooks/useLearning';
 import {
@@ -126,9 +127,31 @@ export const CourseDetailScreen: React.FC = () => {
     return (
       <ScreenChrome>
         <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-            <Text style={styles.loadingText}>{i18n.t('auto.screens__Learning__CourseDetailScreen.s8')}</Text>
+          {/* אותו מסך כמו הטעון — סרגל חזרה אמיתי, באנר וכרטיס המידע כצורות בגובה השורות האמיתיות,
+              וכותרת «תיאור» קבועה (במקום ספינר וטקסט «טוען») */}
+          <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }} pointerEvents="box-none">
+            <AcademySubScreenBar onBackPress={() => navigation.goBack()} />
+            <View style={{ paddingHorizontal: ACADEMY_CARD_HP }} pointerEvents="none">
+              <View style={styles.coverContainer}>
+                <SkeletonBox width="100%" height={200} borderRadius={UI_CARD_RADIUS} />
+              </View>
+              <UICard variant="soft" padding="lg" style={styles.infoCard}>
+                <View style={styles.courseInfoStack}>
+                  <View style={styles.titleBlock}>
+                    <SkeletonLine lineHeight={Number(styles.title.lineHeight) || 22} width="58%" box={15} align="flex-end" />
+                    <SkeletonLine lineHeight={Number(styles.subtitle.lineHeight) || 18} width="78%" box={11} align="flex-end" />
+                  </View>
+                  <View style={styles.descriptionContainer}>
+                    <Text style={styles.descriptionTitle}>{i18n.t('auto.screens__Learning__CourseDetailScreen.s12')}</Text>
+                    <View>
+                      {(['100%', '94%', '62%'] as const).map((w) => (
+                        <SkeletonLine key={w} lineHeight={Number(styles.description.lineHeight) || 22} width={w} box={12} align="flex-end" />
+                      ))}
+                    </View>
+                  </View>
+                </View>
+              </UICard>
+            </View>
           </View>
         </RNSafeAreaView>
       </ScreenChrome>
@@ -349,16 +372,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   scrollContent: {
     paddingBottom: tokens.spacing['5xl'],
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: tokens.spacing.md,
-    ...ACADEMY_TYPE.body,
-    color: tokens.colors.text.secondary,
   },
   errorContainer: {
     flex: 1,

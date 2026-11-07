@@ -10,7 +10,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   RefreshControl,
-  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -22,6 +21,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { AcademySubScreenBar } from '../../components/learning';
 import UICard from '../../components/ui/UICard';
+import { SkeletonLine } from '../../components/ui/SkeletonLoader';
 import { ScreenChrome } from '../../components/ui';
 import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
 import * as Clipboard from 'expo-clipboard';
@@ -194,9 +194,33 @@ export const MyNotesScreen: React.FC = () => {
         />
 
         {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-            <Text style={styles.loadingText}>{i18n.t('auto.screens__Learning__MyNotesScreen.s12')}</Text>
+          // כרטיסי הערה בטעינה — אותו כרטיס, ריפוד ושורות כמו renderNote; כפתור ההעתקה אמיתי
+          <View style={styles.listContainer} pointerEvents="none">
+            {[0, 1, 2].map((i) => (
+              <View key={i} style={styles.noteWrap}>
+                <UICard variant="soft" padding="md" style={styles.noteCard}>
+                  <View style={styles.noteHeader}>
+                    <View style={styles.noteInfo}>
+                      <SkeletonLine lineHeight={Number(styles.noteCourseTitle.lineHeight) || 22} width={[150, 120, 170][i]} box={14} align="flex-end" />
+                      <SkeletonLine lineHeight={Number(styles.noteLessonTitle.lineHeight) || 18} width={[110, 140, 96][i]} box={11} align="flex-end" />
+                    </View>
+                    <DayNavBlurButton size={36} glass glassIntensity="subtle" style={styles.copyBtn}>
+                      <Ionicons name="copy-outline" size={16} color={DesignTokens.colors.text.primary} />
+                    </DayNavBlurButton>
+                  </View>
+                  {(['100%', '92%', '58%'] as const).map((w) => (
+                    <SkeletonLine key={w} lineHeight={Number(styles.noteContent.lineHeight) || 22} width={w} box={12} align="flex-end" />
+                  ))}
+                  <SkeletonLine
+                    lineHeight={Number(styles.noteDate.lineHeight) || 16}
+                    width={84}
+                    box={10}
+                    align="flex-end"
+                    style={{ marginTop: APP_LAYOUT.stackGapSmall }}
+                  />
+                </UICard>
+              </View>
+            ))}
           </View>
         ) : (
           <View style={[styles.listShell, { marginBottom: Math.max(0, mainTabsHeight - 12) }]}>
@@ -229,16 +253,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     listShell: {
       flex: 1,
-    },
-    loadingContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    loadingText: {
-      marginTop: tokens.spacing.md,
-      ...ACADEMY_TYPE.body,
-      color: tokens.colors.text.secondary,
     },
     listContainer: {
       paddingHorizontal: ACADEMY_CARD_HP,

@@ -87,7 +87,7 @@ class MediaService {
         .eq('course_id', courseId)
         .eq('lesson_id', lessonId)
         .eq('is_active', true)
-        .single();
+        .maybeSingle();
 
       if (error) {
         logger.error('MediaService', 'Error getting lesson media', error);

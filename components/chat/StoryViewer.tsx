@@ -1,3 +1,5 @@
+// expo-status-bar (לא StatusBar של RN): תואם מחזור החיים מבוסס scene של SDK 58 — ה-API הישן קרס בפרודקשן
+import { StatusBar } from 'expo-status-bar';
 import { SegmentedTabs } from '../ui/SegmentedTabs';
 import { ROOT_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
@@ -16,7 +18,6 @@ import {
   StyleSheet,
   Dimensions,
   Modal,
-  StatusBar,
   ActivityIndicator,
   Pressable,
   NativeSyntheticEvent,

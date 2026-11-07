@@ -832,12 +832,12 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     pnlLabel: {
       color: INK_2,
       fontSize: 13,
-      fontWeight: '400',
+      fontWeight: '500',
       writingDirection: TEXT_DIR,
     },
     pnlValue: {
-      fontSize: 16,
-      fontWeight: '600',
+      fontSize: 17,
+      fontWeight: '700',
       writingDirection: 'ltr',
       fontVariant: ['tabular-nums'],
     },

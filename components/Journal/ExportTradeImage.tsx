@@ -830,9 +830,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       marginTop: 4,
     },
     pnlLabel: {
-      color: 'rgba(242,242,242,0.7)',
+      color: 'rgba(242,242,242,0.62)',
       fontSize: 13,
-      fontWeight: '700',
+      fontWeight: '600',
       writingDirection: TEXT_DIR,
     },
     pnlValue: {

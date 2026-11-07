@@ -836,8 +836,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       writingDirection: TEXT_DIR,
     },
     pnlValue: {
-      fontSize: 16,
-      fontWeight: '600',
+      fontSize: 20,
+      fontWeight: '700',
       writingDirection: 'ltr',
       fontVariant: ['tabular-nums'],
     },

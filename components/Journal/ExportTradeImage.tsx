@@ -90,7 +90,7 @@ const FOOTER_H = 72;
 const CARD_BG = '#0A0C0B';
 const INK = '#F2F2F2';
 const INK_2 = 'rgba(242,242,242,0.5)';
-const QR_SIZE = 50;
+const QR_SIZE = 56;
 /** אזור ה-QR בקואורדינטות הציור — קו הגרף נעצר שם כדי שלא יעבור על הקוד */
 const QR_CLEAR = {
   x: UI_DIR === 'rtl' ? 8 : ART_W - 8 - (QR_SIZE + 12),
@@ -622,7 +622,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                 {/* תחתית: הזמנה + QR על פס כהה ברוחב מלא */}
                 <View style={[styles.footerStrip, { height: FOOTER_H * scale }]}>
                   <View style={styles.ctaTextCol}>
-                    <Text style={styles.ctaHeadline} numberOfLines={1}>
+                    <Text style={styles.ctaHeadline} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
                       {SHARE_CTA_LINE}
                     </Text>
                     <Text style={styles.ctaSub}>{SHARE_CTA_SUB}</Text>
@@ -865,13 +865,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     ctaHeadline: {
       color: INK,
-      fontSize: 13,
+      fontSize: 15,
+      lineHeight: 20,
       fontWeight: '700',
       writingDirection: TEXT_DIR,
     },
     ctaSub: {
-      color: INK_2,
-      fontSize: 10.5,
+      color: 'rgba(242,242,242,0.72)',
+      fontSize: 12.5,
       fontWeight: '500',
       writingDirection: TEXT_DIR,
     },

@@ -26,7 +26,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { ChatComposerDock } from '../../components/chat/ChatComposerDock';
 import { restoreAndroidSoftInputIfUnlocked } from '../../components/chat/androidChatKeyboard';
 import {
-  CHAT_COMPOSER_KEYBOARD_GAP,
   chatComposerSafeBottomInset,
 } from '../../components/chat/chatInputLayout';
 import { repliesSheetKeyboardShrink } from './repliesSheetKeyboard';
@@ -70,6 +69,9 @@ const MAX_LEN = 1000;
  * בלי fitContent ה-container בגובה מסך מלא + translateY חותך את ה-composer.
  */
 const SHEET_SNAP = 0.9;
+
+/** מרווח בין שורת התגובה (שדה + שליחה) למקלדת — בצ'אט 3, כאן יותר אוויר */
+const REPLY_KEYBOARD_GAP = 12;
 
 export default function PostRepliesSheet({
   visible,
@@ -333,7 +335,7 @@ function PostRepliesSheetBody({
         listShrinkH.value = repliesSheetKeyboardShrink(
           event.height,
           composerInsetSV.value,
-          CHAT_COMPOSER_KEYBOARD_GAP,
+          REPLY_KEYBOARD_GAP,
         );
       },
       onEnd: (event) => {
@@ -341,7 +343,7 @@ function PostRepliesSheetBody({
         listShrinkH.value = repliesSheetKeyboardShrink(
           event.height,
           composerInsetSV.value,
-          CHAT_COMPOSER_KEYBOARD_GAP,
+          REPLY_KEYBOARD_GAP,
         );
       },
     },
@@ -518,7 +520,7 @@ function PostRepliesSheetBody({
         ) : null}
       </Animated.View>
 
-      <ChatComposerDock bottomInset={composerPaddingBottom}>
+      <ChatComposerDock bottomInset={composerPaddingBottom} keyboardGap={REPLY_KEYBOARD_GAP}>
         <View
           style={[
             styles.composer,
@@ -727,8 +729,8 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       flexDirection: 'row',
       alignItems: 'flex-end',
       gap: 10,
-      paddingHorizontal: 14,
-      paddingTop: 12,
+      paddingHorizontal: APP_LAYOUT.cardPadding,
+      paddingTop: 14,
       borderTopWidth: StyleSheet.hairlineWidth,
       flexGrow: 0,
       flexShrink: 0,

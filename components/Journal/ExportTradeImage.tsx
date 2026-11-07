@@ -96,8 +96,12 @@ const LOSS = '#FF4D4D';
 // הלוגו המלא (שור־ודוב + DARKPOOL + «קהילת הסוחרים של ישראל») — מקומי, כדי שיהיה טעון ברגע הצילום
 const BRAND_LOGO = require('../../assets/darkpool-share-logo.png');
 const BRAND_LOGO_ASPECT = 1330 / 595;
-const BULL = require('../../assets/branding/share-bull.png');
-const BEAR = require('../../assets/branding/share-bear.png');
+// שור ודוב יחד — צללית אחת בצבע התוצאה
+const BULL_BEAR = require('../../assets/branding/share-bullbear.png');
+const BULL_BEAR_ASPECT = 575 / 420;
+
+/** Assistant SemiBold (כבר טעון באפליקציה) למספרים ולכותרות; fontWeight 400 כדי שהמערכת לא תעבה שוב */
+const DISPLAY_FONT = { fontFamily: APP_FONT.cta, fontWeight: '400' as const };
 
 /** מספר אקראי דטרמיניסטי (mulberry32) — אותו טרייד תמיד מקבל אותו גרף */
 function seededRandom(seedText: string) {
@@ -195,7 +199,7 @@ function PriceTag({ x, y, anchor, label, value }: { x: number; y: number; anchor
   return (
     <G>
       <Rect x={x0} y={y} width={w} height={20} rx={10} fill="rgba(10,12,11,0.86)" stroke="rgba(255,255,255,0.14)" strokeWidth={1} />
-      <SvgText x={x0 + 8 + valueW / 2} y={y + 14} textAnchor="middle" fontFamily={APP_FONT.bold} fontSize={11} fill={INK}>
+      <SvgText x={x0 + 8 + valueW / 2} y={y + 14} textAnchor="middle" fontFamily={APP_FONT.cta} fontSize={12} fill={INK}>
         {value}
       </SvgText>
       <SvgText x={x0 + w - 8 - labelW / 2} y={y + 14} textAnchor="middle" fontFamily={APP_FONT.medium} fontSize={10} fill="rgba(242,242,242,0.55)">
@@ -471,7 +475,6 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
   const heroColor = heroIsReturn ? retColor : pnlColor;
   const retText = `${ret >= 0 ? '+' : '−'}${Math.abs(ret).toFixed(2)}%`;
   const pnlText = `${isProfit ? '+' : '−'}$${formatCurrencyPlain(normalized.pnl)}`;
-  const isWin = heroIsReturn ? ret >= 0 : isProfit;
   const art = priceArt(`${normalized.id}:${normalized.symbol}`, normalized.exit_price >= normalized.entry_price, pricePath);
   const chartMid = (CHART_TOP + CHART_BOT) / 2;
   const scale = cardW / ART_W;
@@ -575,13 +578,16 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                   ) : null}
                 </Svg>
 
-                {/* שור (רווח) / דוב (הפסד) — צללית שקופה במרכז הכרטיס */}
+                {/* שור ודוב — צללית אחת במרכז, בצבע התוצאה */}
                 <View style={styles.animalWrap} pointerEvents="none">
                   <Image
-                    source={isWin ? BULL : BEAR}
+                    source={BULL_BEAR}
                     tintColor={heroColor}
                     contentFit="contain"
-                    style={[styles.animal, { width: 250 * scale, height: 300 * scale, marginTop: 40 * scale }]}
+                    style={[
+                      styles.animal,
+                      { width: 300 * scale, height: (300 * scale) / BULL_BEAR_ASPECT, marginTop: 92 * scale },
+                    ]}
                   />
                 </View>
 
@@ -774,7 +780,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       alignItems: 'center',
     },
     animal: {
-      opacity: 0.07,
+      opacity: 0.08,
     },
     cardContent: {
       ...StyleSheet.absoluteFill,
@@ -808,10 +814,10 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       fontWeight: '700',
     },
     symbolBig: {
+      ...DISPLAY_FONT,
       color: INK,
-      fontSize: 21,
-      fontWeight: '700',
-      letterSpacing: 0.3,
+      fontSize: 23,
+      letterSpacing: 0.4,
     },
     metaRow: {
       flexDirection: 'row',
@@ -840,8 +846,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       writingDirection: TEXT_DIR,
     },
     heroValue: {
-      fontWeight: '700',
-      letterSpacing: -1.5,
+      ...DISPLAY_FONT,
+      letterSpacing: -1,
       writingDirection: 'ltr',
       fontVariant: ['tabular-nums'],
       textAlign: 'center',
@@ -863,8 +869,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       writingDirection: TEXT_DIR,
     },
     pnlValue: {
-      fontSize: 16,
-      fontWeight: '700',
+      ...DISPLAY_FONT,
+      fontSize: 17,
       writingDirection: 'ltr',
       fontVariant: ['tabular-nums'],
     },
@@ -894,9 +900,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       gap: 2,
     },
     ctaHeadline: {
+      ...DISPLAY_FONT,
       color: INK,
-      fontSize: 12.5,
-      fontWeight: '700',
+      fontSize: 14,
       writingDirection: TEXT_DIR,
     },
     ctaSub: {

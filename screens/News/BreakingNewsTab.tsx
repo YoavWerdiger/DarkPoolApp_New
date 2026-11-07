@@ -146,6 +146,12 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
   const detailPad = APP_LAYOUT.screenPaddingHorizontal;
   const insets = useSafeAreaInsets();
   const [likeCount, setLikeCount] = useState<number>(0);
+  // שיט השיתוף נפתח מעל השיט הזה — לא אחרי סגירה (שני מודלים ברצף ב-iOS מקפיאים/מקריסים)
+  const [shareOpen, setShareOpen] = useState(false);
+  const shareAttachment = React.useMemo(() => (article ? buildNewsAttachment(article) : null), [article]);
+  useEffect(() => {
+    if (!visible) setShareOpen(false);
+  }, [visible]);
   
   // טעינת מספר המועדפים - לפני return null
   useEffect(() => {
@@ -390,7 +396,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
             backgroundColor: DesignTokens.colors.background.primary,
             borderWidth: 0,
           }}
-          onPress={() => onShare(article)}
+          onPress={() => (shareAttachment ? setShareOpen(true) : onShare(article))}
           activeOpacity={0.7}
         >
           <Ionicons
@@ -500,6 +506,13 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
         {articleBody}
       </View>
     </BottomSheet>
+    <ShareDestinationSheet
+      visible={visible && shareOpen && !!shareAttachment}
+      attachment={shareAttachment}
+      onClose={() => setShareOpen(false)}
+      // אחרי שיתוף בפועל (מנווט לצ'אט / לציוצים) — סוגרים גם את הכתבה
+      onShared={onClose}
+    />
     </>
   );
 };
@@ -1289,14 +1302,10 @@ export default function BreakingNewsTab({
     }
   }, [detailModalVisible, selectedArticle]);
 
-  // שיתוף מהמודל המפורט — אותו שיט «שתף לצ'אט / ציוץ» כמו בכרטיס (לא שיתוף המערכת).
-  // קודם סוגרים את המודל, ואחרי שירד פותחים את השיט (שני מודלים בבת אחת נתקעים ב-iOS)
+  // שיתוף מהמודל המפורט — גיבוי בלבד (המודל פותח את שיט השיתוף מעליו בעצמו)
   const handleShareFromModal = useCallback((article: NewsArticle) => {
-    setDetailModalVisible(false);
-    setTimeout(() => {
-      setShareArticle(article);
-      setShareModalVisible(true);
-    }, 380);
+    setShareArticle(article);
+    setShareModalVisible(true);
   }, []);
 
   // פתיחת מודל שיתוף

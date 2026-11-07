@@ -3,7 +3,6 @@ import React, { useState, ErrorInfo, ReactNode, useEffect, useCallback } from 'r
 import {
   View,
   Text,
-  ActivityIndicator,
   TouchableOpacity,
   type TextStyle,
   type ViewStyle,
@@ -63,7 +62,6 @@ export default function NewsScreen({ route }: { route?: any }) {
   const DesignTokens = useDesignTokens();
   const navigation = useNavigation();
   const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
-  const [isReady, setIsReady] = useState(false);
   const [createSheetVisible, setCreateSheetVisible] = useState(false);
   const { isAdmin } = useIsAdmin();
   const openArticleId =
@@ -78,11 +76,6 @@ export default function NewsScreen({ route }: { route?: any }) {
       (navigation as any).navigate('NewsEarnings');
     }
   }, [route?.params?.tab, navigation]);
-
-  useEffect(() => {
-    const t = setTimeout(() => setIsReady(true), 80);
-    return () => clearTimeout(t);
-  }, []);
 
   const handleOpenArticleConsumed = useCallback(() => {
     (navigation as any).setParams?.({ articleId: undefined });
@@ -114,19 +107,13 @@ export default function NewsScreen({ route }: { route?: any }) {
   return (
     <>
       <NewsScreenShell title={i18n.t('auto.screens__News__index.s4')} headerRight={adminCreateButton}>
-        {!isReady ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-            <Text style={styles.loadingText}>{i18n.t('auto.screens__News__index.s5')}</Text>
-          </View>
-        ) : (
-          <ErrorBoundary errorStyles={styles.errorBoundary}>
-            <BreakingNewsTab
-              openArticleId={openArticleId}
-              onOpenArticleConsumed={handleOpenArticleConsumed}
-            />
-          </ErrorBoundary>
-        )}
+        {/* בלי השהיה וספינר — הרשימה מהקאש מיד, או השלד של כרטיסי החדשות */}
+        <ErrorBoundary errorStyles={styles.errorBoundary}>
+          <BreakingNewsTab
+            openArticleId={openArticleId}
+            onOpenArticleConsumed={handleOpenArticleConsumed}
+          />
+        </ErrorBoundary>
       </NewsScreenShell>
 
       {isAdmin ? (

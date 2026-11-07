@@ -829,7 +829,9 @@ export default function OverviewTab({
     [tokens]
   );
 
+  // רק אחרי שהעסקאות נטענו — אחרת הבאנר מופיע לרגע בטעינה ונעלם (קפיצה של כל המסך)
   const showTip =
+    tradesLoaded &&
     openTrades.length === 0 &&
     holdings.filter((h) => !h.is_closed).length === 0 &&
     (summary?.holdings_count ?? 0) === 0;

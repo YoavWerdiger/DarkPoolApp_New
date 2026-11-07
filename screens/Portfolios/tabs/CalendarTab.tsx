@@ -2,7 +2,6 @@ import { ROOT_DIR, UI_DIR, dirIcon } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
 import { TEXT_DIR } from '../../../lib/i18n/language';
 import { appLocale } from '../../../lib/i18n/locale';
-import { JournalListSkeleton } from '../../../components/ui/SkeletonLoader';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
@@ -331,13 +330,8 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
     [tokens]
   );
 
-  if (loading) {
-    return (
-      <JournalListSkeleton />
-    );
-  }
-
-  if (trades.length === 0) {
+  // בטעינה — לוח השנה האמיתי (חודש, ניווט, ימים ורשת) בלי נתוני רווח/הפסד, וסטטיסטיקות החודש עם ערכים בשלד
+  if (!loading && trades.length === 0) {
     return (
       <View style={styles.empty}>
         <Ionicons
@@ -496,10 +490,11 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
         </View>
       </UICard>
 
-      {monthlyTotal.tradeCount > 0 ? (
+      {loading || monthlyTotal.tradeCount > 0 ? (
         <JournalStatsList
           title={i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s24')}
           style={styles.monthStats}
+          loading={loading}
           cells={[
             { icon: Wallet, label: i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s25'), value: formatCurrency(monthlyTotal.sum, currency), color: totalColor },
             { icon: ArrowLeftRight, label: i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s26'), value: String(monthlyTotal.tradeCount), color: tokens.colors.text.primary },

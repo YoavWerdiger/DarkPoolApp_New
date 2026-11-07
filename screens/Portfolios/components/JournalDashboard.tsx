@@ -1,4 +1,5 @@
 import { ROOT_DIR, UI_DIR } from '../../../lib/i18n/direction';
+import { SkeletonLine } from '../../../components/ui/SkeletonLoader';
 import i18n from '../../../lib/i18n';
 /**
  * לוח הבקרה של יומן המסחר (בסקירה, מתחת לגרף וחלוקת הנכסים) — באותה שפה כמו תיק האינסיידרים:
@@ -183,7 +184,18 @@ export function JournalStatsCard({ trades, currency }: { trades: Trade[]; curren
  * 12 עד הכותרת, הערך בצד שמאל, ריפוד 15/16 וקווים מפרידים — בלי רשת ובלי עיגולי אייקון.
  * משותף לסקירה ולסטטיסטיקות החודש בלוח השנה.
  */
-export function JournalStatsList({ title, cells, style }: { title: string; cells: StatCell[]; style?: ViewStyle }) {
+export function JournalStatsList({
+  title,
+  cells,
+  style,
+  loading = false,
+}: {
+  title: string;
+  cells: StatCell[];
+  style?: ViewStyle;
+  /** טעינה: הכותרות והאייקונים אמיתיים, רק הערכים בשלד */
+  loading?: boolean;
+}) {
   const t = useDesignTokens();
   const s = useMemo(() => createStyles(t), [t]);
   return (
@@ -195,9 +207,13 @@ export function JournalStatsList({ title, cells, style }: { title: string; cells
             <React.Fragment key={c.label}>
               {/* LTR פיזי כמו בהגדרות: ערך משמאל · כותרת · אייקון מימין */}
               <View style={s.statRow}>
-                <Text style={[s.statValue, { color: c.color }]} numberOfLines={1}>
-                  {toDataIsland(c.value)}
-                </Text>
+                {loading ? (
+                  <SkeletonLine lineHeight={JOURNAL_TYPE.cardTitle.lineHeight} width={56} box={14} style={{ marginRight: 12 }} />
+                ) : (
+                  <Text style={[s.statValue, { color: c.color }]} numberOfLines={1}>
+                    {toDataIsland(c.value)}
+                  </Text>
+                )}
                 <Text style={s.statTitle} numberOfLines={1}>{c.label}</Text>
                 <View style={s.statIcon}>
                   <Icon size={20} color={t.colors.text.primary} strokeWidth={2} />

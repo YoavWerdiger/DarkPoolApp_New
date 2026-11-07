@@ -830,14 +830,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       marginTop: 4,
     },
     pnlLabel: {
-      color: INK_2,
+      color: 'rgba(242,242,242,0.7)',
       fontSize: 13,
-      fontWeight: '500',
+      fontWeight: '700',
       writingDirection: TEXT_DIR,
     },
     pnlValue: {
-      fontSize: 17,
-      fontWeight: '700',
+      fontSize: 16,
+      fontWeight: '600',
       writingDirection: 'ltr',
       fontVariant: ['tabular-nums'],
     },

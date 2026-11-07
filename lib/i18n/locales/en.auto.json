@@ -2732,7 +2732,9 @@
     "s7": "Search",
     "s8": "Politician, CEO, fund or company name",
     "s9": "Clear search",
-    "s10": "No profiles found with that name"
+    "s10": "No profiles found with that name",
+    "s11": "Most followed",
+    "s12": "Recently active"
   },
   "screens__Stories__StoryViewerScreen": {
     "s1": "We couldn't delete it. Try again.",

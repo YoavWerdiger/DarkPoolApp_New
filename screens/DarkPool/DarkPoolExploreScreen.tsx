@@ -21,6 +21,10 @@ import { APP_LAYOUT } from '../../components/ui/appLayout';
 import { LIGHT_CANVAS } from '../../components/ui/designTokensStatic';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { ExplorePortraitCard } from './components/ExplorePortraitCard';
+import { InvestorPortrait } from './components/InvestorPortrait';
+import { formatInsiderDisplayName } from './utils/investorPlaceholder';
+import { congressMemberLabel, isKnownCongressMember } from './utils/congressGender';
+import { toDataIsland } from './utils/bidi';
 import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
 import { ChatSheetTopoHeader } from '../../components/chat/ChatBottomSheet';
 import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
@@ -402,6 +406,14 @@ export default function DarkPoolExploreScreen() {
     return buildExploreProfileGrid([...catalog, ...companies], { query: q });
   }, [query, catalog, companies]);
 
+  /** הצעות לשיט החיפוש לפני הקלדה — בלי כפילויות בין הרשימות */
+  const searchSuggestions = useMemo(() => {
+    const followed = mostFollowed.slice(0, 6);
+    const seen = new Set(followed.map((p) => `${p.kind}:${p.id}`));
+    const active = recentlyActive.filter((p) => !seen.has(`${p.kind}:${p.id}`)).slice(0, 6);
+    return { followed, active };
+  }, [mostFollowed, recentlyActive]);
+
   const kindCounts = useMemo(
     () => ({
       politician: shelves.politicians.length,
@@ -544,7 +556,38 @@ export default function DarkPoolExploreScreen() {
             keyboardDismissMode="on-drag"
             showsVerticalScrollIndicator={false}
           >
-            {searchResults == null ? null : searchResults.length ? (
+            {searchResults == null ? (
+              // בלי טקסט: חיפוש מהיר — הכי במעקב ופעילים לאחרונה, לחיצה פותחת את הפרופיל
+              <View style={styles.suggestions}>
+                {searchSuggestions.followed.length ? (
+                  <View style={styles.suggestionBlock}>
+                    <Text style={styles.suggestionTitle}>{i18n.t('auto.screens__DarkPool__DarkPoolExploreScreen.s11')}</Text>
+                    {searchSuggestions.followed.map((person, i) => (
+                      <SearchSuggestionRow
+                        key={`f:${person.kind}:${person.id}`}
+                        person={person}
+                        badge={person.metric}
+                        last={i === searchSuggestions.followed.length - 1}
+                        onPress={() => openFromSearch(person)}
+                      />
+                    ))}
+                  </View>
+                ) : null}
+                {searchSuggestions.active.length ? (
+                  <View style={styles.suggestionBlock}>
+                    <Text style={styles.suggestionTitle}>{i18n.t('auto.screens__DarkPool__DarkPoolExploreScreen.s12')}</Text>
+                    {searchSuggestions.active.map((person, i) => (
+                      <SearchSuggestionRow
+                        key={`a:${person.kind}:${person.id}`}
+                        person={person}
+                        last={i === searchSuggestions.active.length - 1}
+                        onPress={() => openFromSearch(person)}
+                      />
+                    ))}
+                  </View>
+                ) : null}
+              </View>
+            ) : searchResults.length ? (
               <View style={styles.resultsGrid}>
                 {searchResults.map((person) => (
                   <ExplorePortraitCard
@@ -607,6 +650,15 @@ function createStyles(
       gap: EXPLORE_GRID_GAP,
       marginBottom: tokens.spacing.xl,
     },
+    suggestions: { direction: UI_DIR, gap: tokens.spacing.lg },
+    suggestionBlock: { direction: UI_DIR },
+    suggestionTitle: {
+      ...DARK_POOL_TYPE.body,
+      ...darkPoolPhysicalRightText,
+      fontWeight: '700',
+      color: tokens.colors.text.primary,
+      marginBottom: APP_LAYOUT.stackGapSmall,
+    },
     noResults: {
       ...darkPoolPhysicalRightText,
       ...DARK_POOL_TYPE.body,
@@ -624,3 +676,83 @@ function createStyles(
     errCard: { marginBottom: 12 },
   });
 }
+
+/** שורת הצעה בשיט החיפוש: פורטרט עגול · שם + תפקיד/פעילות · תג (עוקבים) בצד השני */
+function SearchSuggestionRow({
+  person,
+  badge,
+  last,
+  onPress,
+}: {
+  person: ExplorePerson;
+  badge?: string;
+  last: boolean;
+  onPress: () => void;
+}) {
+  const tokens = useDesignTokens();
+  const name = person.kind === 'insider' ? formatInsiderDisplayName(person.name) : person.name;
+  const role =
+    person.kind === 'politician' && isKnownCongressMember(person.id)
+      ? congressMemberLabel(person.id)
+      : person.subtitle?.trim() && person.subtitle.trim() !== person.metric?.trim()
+        ? person.subtitle.trim()
+        : null;
+  return (
+    <Pressable
+      onPress={() => {
+        void HapticFeedback.selection();
+        onPress();
+      }}
+      style={({ pressed }) => [
+        suggestionStyles.row,
+        !last && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: tokens.colors.border.divider },
+        pressed && { opacity: 0.6 },
+      ]}
+      accessibilityRole="button"
+      accessibilityLabel={name}
+    >
+      <InvestorPortrait
+        name={name}
+        imageUrl={person.image_url}
+        ticker={person.ticker}
+        kind={person.kind}
+        personId={person.id}
+        logoTicker={person.entity_type === 'company' ? person.ticker : undefined}
+        layout="circle"
+        size={48}
+      />
+      <View style={suggestionStyles.text}>
+        <Text style={[suggestionStyles.name, { color: tokens.colors.text.primary }]} numberOfLines={1}>
+          {name}
+        </Text>
+        {role ? (
+          <Text style={[suggestionStyles.role, { color: tokens.colors.text.secondary }]} numberOfLines={1}>
+            {role}
+          </Text>
+        ) : null}
+      </View>
+      {badge ? (
+        <View style={[suggestionStyles.badge, { backgroundColor: tokens.colors.background.tertiary }]}>
+          <Text style={[suggestionStyles.badgeText, { color: tokens.colors.text.primary }]} numberOfLines={1}>
+            {toDataIsland(badge)}
+          </Text>
+        </View>
+      ) : null}
+    </Pressable>
+  );
+}
+
+const suggestionStyles = StyleSheet.create({
+  row: {
+    direction: UI_DIR,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+  },
+  text: { flex: 1, minWidth: 0, gap: 2 },
+  name: { ...DARK_POOL_TYPE.body, fontWeight: '600', ...darkPoolPhysicalRightText },
+  role: { ...DARK_POOL_TYPE.footnote, ...darkPoolPhysicalRightText },
+  badge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, flexShrink: 0 },
+  badgeText: { ...DARK_POOL_TYPE.footnote, fontWeight: '600', fontVariant: ['tabular-nums'] },
+});

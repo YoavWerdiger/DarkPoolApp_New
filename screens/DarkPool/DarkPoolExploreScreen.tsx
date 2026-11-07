@@ -28,8 +28,8 @@ import { ltrNameText, toDataIsland } from './utils/bidi';
 import { DarkPoolSectionHeader } from './components/DarkPoolSectionHeader';
 import { CHROME_UICARD } from '../../components/ui/chromeControl';
 import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
-import { ChatSheetTopoHeader } from '../../components/chat/ChatBottomSheet';
-import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
+import { useChatSheetDismiss } from '../../components/chat/ChatBottomSheet';
+import { DAY_NAV_BUTTON_SIZE, DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE, headerExitButtonFill } from '../../components/ui/DayNavBlurButton';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image as ExpoImage } from 'expo-image';
 import { useQuery } from '@tanstack/react-query';
@@ -453,10 +453,17 @@ export default function DarkPoolExploreScreen() {
 
   /** הצעות לשיט החיפוש לפני הקלדה — בלי כפילויות בין הרשימות */
   const searchSuggestions = useMemo(() => {
-    const followed = mostFollowed.slice(0, 6);
-    const seen = new Set(followed.map((p) => `${p.kind}:${p.id}`));
-    const active = recentlyActive.filter((p) => !seen.has(`${p.kind}:${p.id}`)).slice(0, 6);
-    return { followed, active };
+    // רשימה אחת: הכי במעקב, ואחריהם פעילים לאחרונה — בלי כפילויות, עד 10
+    const seen = new Set<string>();
+    const out: ExplorePerson[] = [];
+    for (const p of [...mostFollowed, ...recentlyActive]) {
+      const k = `${p.kind}:${p.id}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push(p);
+      if (out.length >= 10) break;
+    }
+    return out;
   }, [mostFollowed, recentlyActive]);
 
   const kindCounts = useMemo(
@@ -565,7 +572,9 @@ export default function DarkPoolExploreScreen() {
         contentPaddingBottom={0}
       >
         <View style={styles.sheetRoot}>
-          <ChatSheetTopoHeader title={i18n.t('auto.screens__DarkPool__DarkPoolExploreScreen.s7')} onClose={closeSearch} />
+          {/* שורה אחת: כפתור סגירה + שדה החיפוש (בלי כותרת נפרדת) */}
+          <View style={styles.searchTopRow}>
+            <SearchSheetClose onClose={closeSearch} />
           <View style={[styles.searchShell, formFieldShellStyle({ tokens, focused: searchFocused, multiline: false })]}>
             <Ionicons name="search" size={18} color={tokens.colors.text.secondary} />
             <TextInput
@@ -574,7 +583,7 @@ export default function DarkPoolExploreScreen() {
               onChangeText={setQuery}
               onFocus={() => setSearchFocused(true)}
               onBlur={() => setSearchFocused(false)}
-              placeholder={i18n.t('auto.screens__DarkPool__DarkPoolExploreScreen.s8')}
+              placeholder={i18n.t('auto.screens__DarkPool__DarkPoolExploreScreen.s13')}
               placeholderTextColor={tokens.colors.text.tertiary}
               keyboardAppearance={(tokens.colors.background.primary as string) === LIGHT_CANVAS ? 'light' : 'dark'}
               autoCorrect={false}
@@ -595,6 +604,7 @@ export default function DarkPoolExploreScreen() {
               </Pressable>
             ) : null}
           </View>
+          </View>
           <ScrollView
             style={styles.sheetScroll}
             contentContainerStyle={styles.sheetScrollContent}
@@ -605,31 +615,19 @@ export default function DarkPoolExploreScreen() {
             {searchResults == null ? (
               // בלי טקסט: חיפוש מהיר — הכי במעקב ופעילים לאחרונה, לחיצה פותחת את הפרופיל
               <View style={styles.suggestions}>
-                {(
-                  [
-                    { key: 'followed', title: i18n.t('auto.screens__DarkPool__DarkPoolExploreScreen.s11'), people: searchSuggestions.followed },
-                    { key: 'active', title: i18n.t('auto.screens__DarkPool__DarkPoolExploreScreen.s12'), people: searchSuggestions.active },
-                  ] as const
-                ).map((section) =>
-                  section.people.length ? (
-                    <View key={section.key}>
-                      <DarkPoolSectionHeader title={section.title} />
-                      <UICard {...CHROME_UICARD} style={styles.suggestionCard}>
-                        {section.people.map((person, i) => (
-                          <React.Fragment key={`${section.key}:${person.kind}:${person.id}`}>
-                            {i > 0 ? <View style={styles.suggestionDivider} /> : null}
-                            <SearchSuggestionRow
-                              person={person}
-                              // הכי במעקב: מספר העוקבים בשורת המשנה (person.metric)
-                              extra={section.key === 'followed' ? person.metric : undefined}
-                              onPress={() => openFromSearch(person)}
-                            />
-                          </React.Fragment>
-                        ))}
-                      </UICard>
-                    </View>
-                  ) : null,
-                )}
+                {searchSuggestions.length ? (
+                  <View>
+                    <DarkPoolSectionHeader title={i18n.t('auto.screens__DarkPool__DarkPoolExploreScreen.s14')} />
+                    <UICard {...CHROME_UICARD} style={styles.suggestionCard}>
+                      {searchSuggestions.map((person, i) => (
+                        <React.Fragment key={`${person.kind}:${person.id}`}>
+                          {i > 0 ? <View style={styles.suggestionDivider} /> : null}
+                          <SearchSuggestionRow person={person} onPress={() => openFromSearch(person)} />
+                        </React.Fragment>
+                      ))}
+                    </UICard>
+                  </View>
+                ) : null}
               </View>
             ) : searchResults.length ? (
               <View style={styles.resultsGrid}>
@@ -678,9 +676,16 @@ function createStyles(
       paddingHorizontal: 16,
       gap: APP_LAYOUT.stackGapSmall,
       borderRadius: tokens.borderRadius.search,
-      // מרווח מהכותרת וכפתור הסגירה של השיט
-      marginTop: APP_LAYOUT.componentGap,
-      marginBottom: tokens.spacing.md,
+      flex: 1,
+      minWidth: 0,
+    },
+    searchTopRow: {
+      direction: UI_DIR,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: APP_LAYOUT.stackGapSmall,
+      marginTop: APP_LAYOUT.stackGapSmall,
+      marginBottom: APP_LAYOUT.componentGap,
     },
     searchInput: {
       ...DARK_POOL_TYPE.body,
@@ -730,26 +735,10 @@ function createStyles(
   });
 }
 
-/** שורת הצעה בשיט החיפוש — אותה שורה כמו ב«במעקב»: פורטרט 40 · שם + שורת משנה · שברון */
-function SearchSuggestionRow({
-  person,
-  extra,
-  onPress,
-}: {
-  person: ExplorePerson;
-  /** תוספת לשורת המשנה (למשל «120 עוקבים») */
-  extra?: string;
-  onPress: () => void;
-}) {
+/** שורת הצעה בשיט החיפוש — פורטרט 40 · שם · שברון (בלי שורת משנה) */
+function SearchSuggestionRow({ person, onPress }: { person: ExplorePerson; onPress: () => void }) {
   const tokens = useDesignTokens();
   const name = person.kind === 'insider' ? formatInsiderDisplayName(person.name) : person.name;
-  const role =
-    person.kind === 'politician' && isKnownCongressMember(person.id)
-      ? congressMemberLabel(person.id)
-      : person.subtitle?.trim() && person.subtitle.trim() !== person.metric?.trim()
-        ? person.subtitle.trim()
-        : null;
-  const sub = [role, extra].filter(Boolean).join(' · ');
   return (
     <Pressable
       onPress={() => {
@@ -772,18 +761,28 @@ function SearchSuggestionRow({
         style={[suggestionStyles.avatar, { backgroundColor: tokens.colors.background.cardSolid }]}
       />
       <View style={suggestionStyles.gap} />
-      <View style={suggestionStyles.text}>
-        <Text style={[suggestionStyles.name, { color: tokens.colors.text.primary }]} numberOfLines={1}>
-          {name}
-        </Text>
-        {sub ? (
-          <Text style={[suggestionStyles.sub, { color: tokens.colors.text.secondary }]} numberOfLines={1}>
-            {toDataIsland(sub)}
-          </Text>
-        ) : null}
-      </View>
-      <Ionicons name={dirIcon('chevron-back')} size={18} color={tokens.colors.text.secondary} />
+      <Text style={[suggestionStyles.name, { color: tokens.colors.text.primary }]} numberOfLines={1}>
+        {name}
+      </Text>
+      <Ionicons name={dirIcon('chevron-back')} size={18} color={tokens.colors.text.tertiary} />
     </Pressable>
+  );
+}
+
+/** כפתור סגירה בשורת החיפוש — סגירה מונפשת של השיט */
+function SearchSheetClose({ onClose }: { onClose: () => void }) {
+  const tokens = useDesignTokens();
+  const dismiss = useChatSheetDismiss(onClose);
+  return (
+    <DayNavBlurButton
+      onPress={dismiss}
+      size={DAY_NAV_BUTTON_SIZE}
+      glass={false}
+      style={{ backgroundColor: headerExitButtonFill(tokens.colors.background.cardSolid) }}
+      accessibilityLabel={i18n.t('auto.screens__DarkPool__DarkPoolExploreScreen.s9')}
+    >
+      <Ionicons name="close" size={20} color={tokens.colors.text.primary} />
+    </DayNavBlurButton>
   );
 }
 
@@ -801,7 +800,8 @@ const suggestionStyles = StyleSheet.create({
   text: { flex: 1, minWidth: 0, alignItems: 'stretch' },
   name: {
     ...ltrNameText,
-    width: '100%',
+    flex: 1,
+    minWidth: 0,
     fontSize: DARK_POOL_TYPE.cardBody.fontSize,
     fontVariant: ['tabular-nums'],
     lineHeight: 20,

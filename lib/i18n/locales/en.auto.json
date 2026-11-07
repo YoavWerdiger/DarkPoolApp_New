@@ -2734,7 +2734,9 @@
     "s9": "Clear search",
     "s10": "No profiles found with that name",
     "s11": "Most followed",
-    "s12": "Recently active"
+    "s12": "Recently active",
+    "s13": "Search by name",
+    "s14": "Popular"
   },
   "screens__Stories__StoryViewerScreen": {
     "s1": "We couldn't delete it. Try again.",

@@ -1,5 +1,6 @@
 import i18n from '../../../lib/i18n';
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { runAfterInteractions } from '../../../utils/runAfterInteractions';
 import type { ExplorePerson } from '../../../services/darkpool/uwExploreService';
 import {
   filterExplorePeopleByKind,
@@ -46,6 +47,15 @@ export function ExploreDiscoverySections({
   onPersonPress,
   loading,
 }: Props) {
+  // הפריים הראשון: רק שני המדפים העליונים בתוכן מלא (מאות דיוקנים בבת אחת חסמו את המסך — «דיליי»);
+  // השאר כשלד עם הכותרת האמיתית, ומתמלאים אחרי סיום אנימציית הכניסה
+  const [deferRest, setDeferRest] = useState(true);
+  useEffect(() => {
+    const task = runAfterInteractions(() => setDeferRest(false), 400);
+    return () => task.cancel();
+  }, []);
+  const later = (people: ExplorePerson[]) => (deferRest ? [] : people);
+
   const followed = useMemo(
     () => filterExplorePeopleByKind(mostFollowed, kindFilter),
     [mostFollowed, kindFilter]
@@ -103,51 +113,51 @@ export function ExploreDiscoverySections({
       />
       <ExploreTwoColSection
         title={i18n.t('auto.screens__DarkPool__components__ExploreDiscoverySections.s3')}
-        people={companyShelf}
-        loading={loading?.extras}
+        people={later(companyShelf)}
+        loading={deferRest || loading?.extras}
         onPersonPress={onPersonPress}
       />
       <ExploreTwoColSection
         title={i18n.t('auto.screens__DarkPool__components__ExploreDiscoverySections.s4')}
-        people={congress}
-        loading={loading?.grid}
+        people={later(congress)}
+        loading={deferRest || loading?.grid}
         onPersonPress={onPersonPress}
       />
       <ExploreTwoColSection
         title={i18n.t('auto.screens__DarkPool__components__ExploreDiscoverySections.s5')}
-        people={insiders}
-        loading={loading?.extras}
+        people={later(insiders)}
+        loading={deferRest || loading?.extras}
         onPersonPress={onPersonPress}
       />
       <ExploreRailSection
         title={i18n.t('auto.screens__DarkPool__components__ExploreDiscoverySections.s6')}
-        people={excess}
-        loading={loading?.excess}
+        people={later(excess)}
+        loading={deferRest || loading?.excess}
         showMetric
         onPersonPress={onPersonPress}
       />
       <ExploreTwoColSection
         title={i18n.t('auto.screens__DarkPool__components__ExploreDiscoverySections.s7')}
-        people={books}
-        loading={loading?.extras}
+        people={later(books)}
+        loading={deferRest || loading?.extras}
         onPersonPress={onPersonPress}
       />
       <ExploreTwoColSection
         title={i18n.t('auto.screens__DarkPool__components__ExploreDiscoverySections.s8')}
-        people={recent}
-        loading={loading?.recent}
+        people={later(recent)}
+        loading={deferRest || loading?.recent}
         onPersonPress={onPersonPress}
       />
       <ExploreTwoColSection
         title={i18n.t('auto.screens__DarkPool__components__ExploreDiscoverySections.s9')}
-        people={fresh}
-        loading={loading?.extras}
+        people={later(fresh)}
+        loading={deferRest || loading?.extras}
         onPersonPress={onPersonPress}
       />
       <ExploreRailSection
         title={i18n.t('auto.screens__DarkPool__components__ExploreDiscoverySections.s10')}
-        people={active}
-        loading={loading?.extras}
+        people={later(active)}
+        loading={deferRest || loading?.extras}
         onPersonPress={onPersonPress}
       />
     </>

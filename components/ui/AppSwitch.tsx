@@ -18,11 +18,17 @@ const TRAVEL = TRACK_W - THUMB - PAD * 2;
 /**
  * מתג אחיד: ב-iOS — ה-UISwitch של המערכת (כמו היום). באנדרואיד ה-Switch של RN הוא ה-Material
  * הישן (מסילה דקה + עיגול בולט) — כאן מתג בסגנון iOS: מסילה 51×31, אגודל עם צל, מעבר רך
- * בצבעי ה-trackColor/thumbColor שהמסך כבר מעביר. אותם props כמו Switch.
+ * בצבעי ה-trackColor שהמסך כבר מעביר. אותם props כמו Switch.
  */
+/**
+ * האגודל תמיד לבן (כמו מתג המערכת) — המסכים מעבירים thumbColor={value ? text.primary : …},
+ * ובלייט text.primary שחור: מתג פועל קיבל אגודל שחור וכבוי לבן. מתעלמים מ-thumbColor.
+ */
+const THUMB_COLOR = '#FFFFFF';
+
 export function AppSwitch(props: SwitchProps) {
-  if (Platform.OS === 'ios') return <Switch {...props} />;
-  return <AndroidSwitch {...props} />;
+  if (Platform.OS === 'ios') return <Switch {...props} thumbColor={THUMB_COLOR} />;
+  return <AndroidSwitch {...props} thumbColor={THUMB_COLOR} />;
 }
 
 function AndroidSwitch({

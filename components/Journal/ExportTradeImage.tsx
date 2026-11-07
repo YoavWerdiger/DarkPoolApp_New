@@ -77,12 +77,14 @@ const SHARE_CTA_SUB = i18n.t('auto.components__Journal__ExportTradeImage.s2');
 /** מה מוצג בתמונה — נשמר בין שיתופים */
 type ShareOptions = { showPnl: boolean; showReturn: boolean; showPrices: boolean };
 const SHARE_OPTIONS_KEY = 'tradeShare:options';
-const DEFAULT_SHARE_OPTIONS: ShareOptions = { showPnl: true, showReturn: true, showPrices: false }; // showPrices: הוסר מהכרטיס, נשאר לתאימות ל-AsyncStorage
+const DEFAULT_SHARE_OPTIONS: ShareOptions = { showPnl: true, showReturn: true, showPrices: false };
 
 /** מידות העיצוב — הכרטיס מצויר ב-viewBox 340×425 ומוקטן/מוגדל באחידות */
 const ART_W = 340;
 const ART_H = 425;
 const CHART_TOP = 256;
+/** כשמוצגים מחירי כניסה/יציאה יש שורה נוספת מעל הגרף */
+const CHART_TOP_WITH_PRICES = 280;
 const CHART_BOT = 392;
 const CHART_PAD_X = 22;
 const FOOTER_H = 72;
@@ -128,7 +130,7 @@ function seededRandom(seedText: string) {
  * קו המחיר על הכרטיס: תנועת המחיר האמיתית מהכניסה ליציאה (real), ואם אין נתונים —
  * קו דקורטיבי דטרמיניסטי באותו כיוון (עולה אם המחיר עלה, גם בשורט).
  */
-function priceArt(seedText: string, priceUp: boolean, real?: number[] | null) {
+function priceArt(seedText: string, priceUp: boolean, real?: number[] | null, chartTop: number = CHART_TOP) {
   let v: number[];
   if (real && real.length >= 3) {
     v = real;
@@ -142,7 +144,7 @@ function priceArt(seedText: string, priceUp: boolean, real?: number[] | null) {
   const hi = Math.max(...v);
   const pts = v.map((val, i) => ({
     x: CHART_PAD_X + ((ART_W - 2 * CHART_PAD_X) * i) / (n - 1),
-    y: CHART_BOT - (CHART_BOT - CHART_TOP) * ((val - lo) / (hi - lo || 1)),
+    y: CHART_BOT - (CHART_BOT - chartTop) * ((val - lo) / (hi - lo || 1)),
   }));
   const first = pts[0];
   const last = pts[n - 1];
@@ -467,7 +469,12 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
   const heroColor = heroIsReturn ? retColor : pnlColor;
   const retText = `${ret >= 0 ? '+' : '−'}${Math.abs(ret).toFixed(2)}%`;
   const pnlText = `${isProfit ? '+' : '−'}$${formatCurrencyPlain(normalized.pnl)}`;
-  const art = priceArt(`${normalized.id}:${normalized.symbol}`, normalized.exit_price >= normalized.entry_price, pricePath);
+  const art = priceArt(
+    `${normalized.id}:${normalized.symbol}`,
+    normalized.exit_price >= normalized.entry_price,
+    pricePath,
+    options.showPrices ? CHART_TOP_WITH_PRICES : CHART_TOP,
+  );
   const scale = cardW / ART_W;
 
   const handleHeaderClose = () => {
@@ -622,6 +629,25 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                   ) : !heroIsReturn ? (
                     <Text style={styles.pnlLabel}>{i18n.t('auto.components__Journal__ExportTradeImage.pnlLabel')}</Text>
                   ) : null}
+
+                  {/* מחירי כניסה / יציאה (או נוכחי בעסקה פתוחה) — שורה אחת, כשמסומן בהגדרות */}
+                  {options.showPrices ? (
+                    <View style={styles.pricesRow}>
+                      <View style={styles.priceItem}>
+                        <Text style={styles.priceLabel}>{i18n.t('auto.components__Journal__ExportTradeImage.s13')}</Text>
+                        <Text style={styles.priceValue}>${formatCurrencyPlain(normalized.entry_price)}</Text>
+                      </View>
+                      <View style={styles.priceDivider} />
+                      <View style={styles.priceItem}>
+                        <Text style={styles.priceLabel}>
+                          {normalized.status === 'OPEN'
+                            ? i18n.t('auto.components__Journal__ExportTradeImage.s14')
+                            : i18n.t('auto.components__Journal__ExportTradeImage.s15')}
+                        </Text>
+                        <Text style={styles.priceValue}>${formatCurrencyPlain(normalized.exit_price)}</Text>
+                      </View>
+                    </View>
+                  ) : null}
                 </View>
 
                 {/* תחתית: הזמנה + QR על פס כהה ברוחב מלא */}
@@ -656,8 +682,13 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                 title={i18n.t('auto.components__Journal__ExportTradeImage.s18')}
                 value={options.showReturn}
                 disabled={options.showReturn && !options.showPnl}
-                showDivider={false}
                 onValueChange={(v) => setOption('showReturn', v)}
+              />
+              <SettingsSwitchRow
+                title={i18n.t('auto.components__Journal__ExportTradeImage.s19')}
+                value={options.showPrices}
+                showDivider={false}
+                onValueChange={(v) => setOption('showPrices', v)}
               />
 
             </SettingsGlassCard>
@@ -844,6 +875,35 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     pnlValue: {
       fontSize: 18,
+      fontWeight: '600',
+      writingDirection: 'ltr',
+      fontVariant: ['tabular-nums'],
+    },
+    pricesRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      marginTop: 10,
+    },
+    priceItem: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      gap: 6,
+    },
+    priceDivider: {
+      width: 1,
+      height: 12,
+      backgroundColor: 'rgba(255,255,255,0.18)',
+    },
+    priceLabel: {
+      color: INK_2,
+      fontSize: 12,
+      fontWeight: '500',
+      writingDirection: TEXT_DIR,
+    },
+    priceValue: {
+      color: INK,
+      fontSize: 13,
       fontWeight: '600',
       writingDirection: 'ltr',
       fontVariant: ['tabular-nums'],

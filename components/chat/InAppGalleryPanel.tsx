@@ -26,7 +26,7 @@ import {
   type MediaRecentAsset,
 } from '../../lib/mediaRecentsCache';
 import { HapticFeedback } from '../../utils/hapticFeedback';
-import * as MediaLibrary from 'expo-media-library';
+import * as MediaLibrary from 'expo-media-library/legacy';
 import { openAppSettings } from '../../lib/cameraSession';
 
 const COLS = 4;

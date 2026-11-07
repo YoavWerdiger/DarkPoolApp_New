@@ -225,11 +225,11 @@ const SearchResultRow = memo(function SearchResultRow({
   return (
     <Pressable
       onPress={() => onPress(report)}
-      style={({ pressed }) => [
+      // style רגיל (לא פונקציה) — בצורת פונקציה השורה איבדה את ה-row ונפרסה לגובה
+      style={[
         searchStyles.resultCardContent,
         searchStyles.resultRow,
         !last && { borderBottomWidth: 1, borderBottomColor: DesignTokens.colors.border.divider },
-        pressed && { opacity: 0.7 },
       ]}
       accessibilityRole="button"
       accessibilityLabel={`${symbol} ${dayLabel} ${timing.label}`}

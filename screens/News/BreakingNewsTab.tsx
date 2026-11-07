@@ -3,12 +3,12 @@ import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { View, Text, TextInput, FlatList, RefreshControl, Pressable, TouchableOpacity, Image, Linking, Modal, Share, ScrollView, Animated, Dimensions, StyleSheet, Platform } from 'react-native';
+import { View, Text, TextInput, FlatList, RefreshControl, Pressable, TouchableOpacity, Image, Linking, Modal, ScrollView, Animated, Dimensions, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
 // import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import { CardSkeleton } from '../../components/ui/SkeletonLoader';
+import { SkeletonBox, SkeletonLine } from '../../components/ui/SkeletonLoader';
 import BottomSheet, {
   useBottomSheetClose,
   BOTTOM_SHEET_EDGE_HANDLE_HEIGHT,
@@ -501,6 +501,74 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
       </View>
     </BottomSheet>
     </>
+  );
+};
+
+/**
+ * כרטיס חדשה בטעינה — אותו כרטיס בדיוק (UICard, תמונה 92 מימין, כותרת + תקציר, מפריד ושורת פוטר).
+ * כפתורי הלייק והשיתוף קבועים (אמיתיים, לא לחיצים); רק התמונה, הטקסט, המקור והזמן בשלד.
+ */
+const BreakingNewsCardSkeleton: React.FC = () => {
+  const DesignTokens = useDesignTokens();
+  const THUMB_SIZE = 92;
+  const circle = {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    backgroundColor: DesignTokens.colors.background.primary,
+  };
+  return (
+    <View
+      pointerEvents="none"
+      style={{ marginHorizontal: APP_LAYOUT.screenPaddingHorizontal, marginBottom: APP_LAYOUT.cardStackGap }}
+    >
+      <UICard variant="blur" padding="none" disableBlur style={{ borderRadius: UI_CARD_RADIUS, overflow: 'hidden' }}>
+        <View
+          style={{
+            flexDirection: 'row-reverse',
+            alignItems: 'stretch',
+            padding: APP_LAYOUT.cardPadding,
+            gap: APP_LAYOUT.cardTitleToBodyGap,
+          }}
+        >
+          <SkeletonBox width={THUMB_SIZE} height={THUMB_SIZE} borderRadius={DesignTokens.borderRadius.lg} />
+          <View style={{ flex: 1, minHeight: THUMB_SIZE }}>
+            <SkeletonLine lineHeight={APP_TYPE.cardTitle.lineHeight} width="95%" box={14} align="flex-end" />
+            <SkeletonLine lineHeight={APP_TYPE.cardTitle.lineHeight} width="70%" box={14} align="flex-end" />
+            <SkeletonLine
+              lineHeight={APP_TYPE.cardSubtitle.lineHeight}
+              width="88%"
+              box={11}
+              align="flex-end"
+              style={{ marginTop: APP_LAYOUT.cardMetricLabelToValueGap }}
+            />
+            <SkeletonLine lineHeight={APP_TYPE.cardSubtitle.lineHeight} width="55%" box={11} align="flex-end" />
+          </View>
+        </View>
+        <View style={{ height: 1, backgroundColor: DesignTokens.colors.border.divider }} />
+        <View
+          style={{
+            paddingHorizontal: APP_LAYOUT.cardPadding,
+            paddingVertical: APP_LAYOUT.stackGapSmall,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View style={circle}>
+              <Ionicons name="heart-outline" size={16} color={DesignTokens.colors.text.secondary} />
+            </View>
+            <View style={circle}>
+              <Ionicons name="share-outline" size={16} color={DesignTokens.colors.text.secondary} />
+            </View>
+          </View>
+          <SkeletonLine lineHeight={APP_TYPE.caption.lineHeight} width={110} box={10} />
+        </View>
+      </UICard>
+    </View>
   );
 };
 
@@ -1221,19 +1289,14 @@ export default function BreakingNewsTab({
     }
   }, [detailModalVisible, selectedArticle]);
 
-  // שיתוף מהמודל המפורט
-  const handleShareFromModal = useCallback(async (article: NewsArticle) => {
-    try {
-      const shareContent = {
-        title: article.label || article.title,
-        message: i18n.t('auto.screens__News__BreakingNewsTab.s15', { v0: article.label || article.title, v1: article.summary || article.content || '', v2: article.source }),
-        url: article.source_url
-      };
-
-      await Share.share(shareContent);
-    } catch (error) {
-      legacyAlert(i18n.t('auto.screens__News__BreakingNewsTab.s6'), i18n.t('auto.screens__News__BreakingNewsTab.s16'));
-    }
+  // שיתוף מהמודל המפורט — אותו שיט «שתף לצ'אט / ציוץ» כמו בכרטיס (לא שיתוף המערכת).
+  // קודם סוגרים את המודל, ואחרי שירד פותחים את השיט (שני מודלים בבת אחת נתקעים ב-iOS)
+  const handleShareFromModal = useCallback((article: NewsArticle) => {
+    setDetailModalVisible(false);
+    setTimeout(() => {
+      setShareArticle(article);
+      setShareModalVisible(true);
+    }, 380);
   }, []);
 
   // פתיחת מודל שיתוף
@@ -1383,11 +1446,15 @@ export default function BreakingNewsTab({
   };
 
   if (loading && articles.length === 0) {
+    // אותו מסך: שורת החיפוש האמיתית, ומתחתיה כרטיסי חדשות בשלד באותו מבנה ומרווחים כמו הרשימה
     return (
-      <View style={{ flex: 1, paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal, paddingTop: APP_LAYOUT.sectionHeaderToContent }}>
-        {Array.from({ length: 5 }).map((_, i) => (
-          <CardSkeleton key={i} delay={i * 70} />
-        ))}
+      <View style={{ flex: 1 }}>
+        {renderSearchHeader()}
+        <View style={{ flex: 1, overflow: 'hidden', paddingTop: 4 }} pointerEvents="none">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <BreakingNewsCardSkeleton key={i} />
+          ))}
+        </View>
       </View>
     );
   }

@@ -21,7 +21,9 @@ import {
   createTradeHeroCardStyles,
   FEED_AVATAR_SIZE,
   FEED_CARD_TYPE,
+  FEED_RHYTHM,
 } from './darkPoolFeedCardStyles';
+import { SkeletonBox, SkeletonLine } from '../../../components/ui/SkeletonLoader';
 import { formatInsiderDisplayName } from '../utils/investorPlaceholder';
 import { resolveFeedPortraitUrl } from '../utils/feedPortrait';
 import { isolateData, ltrNameText } from '../utils/bidi';
@@ -227,4 +229,38 @@ function createLineStyles(tokens: ReturnType<typeof useDesignTokens>) {
       color: tokens.colors.text.primary,
     },
   });
+}
+
+/**
+ * כרטיס פיד בטעינה — אותה מעטפת (DarkPoolFeedCard) ואותן מידות כמו הכרטיס האמיתי:
+ * דיוקן 40 · שורת «שם · פעולה · טיקר» בגובה action · שורת פרטים בגובה dates.
+ * כשהעסקאות מגיעות כל כרטיס מחליף את השלד במקומו — בלי קפיצה.
+ */
+export function DarkPoolTradeFeedCardSkeleton({ variant = 0 }: { variant?: number }) {
+  const tokens = useDesignTokens();
+  const styles = useMemo(() => createTradeHeroCardStyles(tokens), [tokens]);
+  // רוחבים משתנים מעט בין כרטיסים — שלא ייראה כמו טבלה
+  const sentenceW = ([78, 64, 70, 58] as const)[variant % 4];
+  const metaW = ([52, 60, 44, 56] as const)[variant % 4];
+  return (
+    <View pointerEvents="none">
+      <DarkPoolFeedCard style={styles.heroCard} haptic={false}>
+        <View style={styles.heroBody}>
+          <View style={styles.headerRow}>
+            <SkeletonBox width={FEED_AVATAR_SIZE} height={FEED_AVATAR_SIZE} borderRadius={FEED_AVATAR_SIZE / 2} />
+            <View style={styles.textCol}>
+              <SkeletonLine lineHeight={FEED_CARD_TYPE.action.lineHeight} width={`${sentenceW}%`} box={12} align="flex-end" />
+              <SkeletonLine
+                lineHeight={FEED_CARD_TYPE.dates.lineHeight}
+                width={`${metaW}%`}
+                box={10}
+                align="flex-end"
+                style={{ marginTop: FEED_RHYTHM.metaAfterAction }}
+              />
+            </View>
+          </View>
+        </View>
+      </DarkPoolFeedCard>
+    </View>
+  );
 }

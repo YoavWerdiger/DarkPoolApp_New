@@ -424,12 +424,14 @@ export const LineChartSkeleton: React.FC<LineChartSkeletonProps> = ({ height = 2
           </Svg>
         ) : null}
       </Animated.View>
-      {/* שורת התקופות — כמו periodsRow בגרף */}
-      <View style={{ direction: UI_DIR, flexDirection: 'row', gap: 8, paddingTop: 6 }}>
-        {Array.from({ length: periods }, (_, i) => (
-          <SkeletonBox key={i} width={44} height={30} borderRadius={15} />
-        ))}
-      </View>
+      {/* שורת התקופות — כמו periodsRow בגרף (periods={0}: הגרף בלבד — כשבורר התקופות הוא רכיב אמיתי נפרד) */}
+      {periods > 0 ? (
+        <View style={{ direction: UI_DIR, flexDirection: 'row', gap: 8, paddingTop: 6 }}>
+          {Array.from({ length: periods }, (_, i) => (
+            <SkeletonBox key={i} width={44} height={30} borderRadius={15} />
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 };

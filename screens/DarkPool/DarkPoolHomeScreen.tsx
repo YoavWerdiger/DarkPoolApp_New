@@ -27,7 +27,6 @@ import UICard from '../../components/ui/UICard';
 import { DayDividerPill, DayDividerSlidingLayer } from '../../components/ui/DayDividerPill';
 import { useSlidingIndicator } from '../../components/ui/SlidingIndicator';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import { TradeCardSkeleton } from '../../components/ui/SkeletonLoader';
 import { curatedCeoPortraitUrl } from './utils/executivePortraitUrls';
 import {
   dispatchOpenMainDrawer,
@@ -39,6 +38,7 @@ import { useDarkPoolTabBarHeight } from '../../hooks/useDarkPoolTabBarHeight';
 import { useDarkPoolStackNav } from './hooks/useDarkPoolStackNav';
 import { CongressTradeCard } from './components/CongressTradeCard';
 import { InsiderTradeCard } from './components/InsiderTradeCard';
+import { DarkPoolTradeFeedCardSkeleton } from './components/DarkPoolTradeFeedCard';
 import {
   FEED_LIST_CHIPS_TO_CARDS,
   FEED_LIST_GUTTER,
@@ -292,7 +292,16 @@ export default function DarkPoolHomeScreen() {
   );
 
   const listEmpty = useMemo(() => {
-    if (loading) return null;
+    // בטעינה: כרטיסי שלד במקום הכרטיסים, מתחת לצ'יפים האמיתיים — לא מצב «ריק»
+    if (loading) {
+      return (
+        <View pointerEvents="none">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <DarkPoolTradeFeedCardSkeleton key={i} variant={i} />
+          ))}
+        </View>
+      );
+    }
     return (
       <UICard variant="soft" padding="lg" style={styles.emptyCard}>
         <Text style={styles.emptyTitle}>{i18n.t('auto.screens__DarkPool__DarkPoolHomeScreen.s1')}</Text>
@@ -320,37 +329,30 @@ export default function DarkPoolHomeScreen() {
           }
         />
 
-        {loading && feedRows.length === 0 ? (
-          <View style={styles.scroll}>
-            {Array.from({ length: 3 }).map((_, i) => (
-              <TradeCardSkeleton key={i} />
-            ))}
-          </View>
-        ) : (
-          <FlatList
-            data={visibleRows}
-            extraData={feedQuotes}
-            keyExtractor={keyExtractor}
-            renderItem={renderItem}
-            ListHeaderComponent={listHeader}
-            ListEmptyComponent={listEmpty}
-            style={darkPoolTransparentFill}
-            contentContainerStyle={styles.scroll}
-            showsVerticalScrollIndicator={false}
-            initialNumToRender={FEED_INITIAL_RENDER}
-            maxToRenderPerBatch={FEED_MAX_BATCH}
-            windowSize={FEED_WINDOW_SIZE}
-            updateCellsBatchingPeriod={40}
-            removeClippedSubviews={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={handleRefresh}
-                tintColor={tokens.colors.primary.main}
-              />
-            }
-          />
-        )}
+        {/* תמיד אותה רשימה: הכותרת והצ'יפים אמיתיים מהרגע הראשון; בטעינה — כרטיסי שלד במקום הכרטיסים */}
+        <FlatList
+          data={visibleRows}
+          extraData={feedQuotes}
+          keyExtractor={keyExtractor}
+          renderItem={renderItem}
+          ListHeaderComponent={listHeader}
+          ListEmptyComponent={listEmpty}
+          style={darkPoolTransparentFill}
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          initialNumToRender={FEED_INITIAL_RENDER}
+          maxToRenderPerBatch={FEED_MAX_BATCH}
+          windowSize={FEED_WINDOW_SIZE}
+          updateCellsBatchingPeriod={40}
+          removeClippedSubviews={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={tokens.colors.primary.main}
+            />
+          }
+        />
       </SafeAreaView>
     </ScreenChrome>
   );

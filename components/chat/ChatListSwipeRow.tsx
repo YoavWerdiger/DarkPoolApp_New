@@ -137,8 +137,9 @@ export default function ChatListSwipeRow({ actions, revealBackgroundColor, revea
 
   const pan = Gesture.Pan()
     .enabled(enabled && actions.length > 0)
-    .activeOffsetX([-14, 14])
-    .failOffsetY([-10, 10])
+    // מתחיל מוקדם יותר ונסבל לתנועה אלכסונית קלה (אגודל) — קודם 14/10 נכשל הרבה
+    .activeOffsetX([-10, 10])
+    .failOffsetY([-16, 16])
     .onBegin(() => {
       startX.value = tx.value;
       if (__DEV__) runOnJS(devLog)('begin');

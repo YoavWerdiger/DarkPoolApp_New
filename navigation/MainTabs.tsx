@@ -1,3 +1,4 @@
+import type { Gesture } from 'react-native-gesture-handler';
 import { ROOT_DIR } from '../lib/i18n/direction';
 import { TEXT_DIR } from '../lib/i18n/language';
 import i18n from '../lib/i18n';
@@ -446,6 +447,13 @@ export default function MainTabs() {
           drawerPosition,
           drawerType: DRAWER_TYPE_PRODUCTION,
           swipeEdgeWidth: 72,
+          // ברירת המחדל: 5px לכל כיוון בתוך 72px מהקצה — גונב את ההחלקה של שורות הצ'אט שמתחילה על האווטאר.
+          // 5px רק לכיוון הפתיחה; לכיוון הסגירה 30px (עדיין סוגר בהחלקה, אבל השורה מקבלת קודם)
+          // בזמן ריצה זה ה-builder של Gesture.Pan() (הטיפוס PanGesture של GH 3 הוא של ה-API החדש)
+          configureGestureHandler: (gesture) =>
+            (gesture as unknown as ReturnType<typeof Gesture.Pan>).activeOffsetX(
+              drawerPosition === 'right' ? [-5, 30] : [-30, 5],
+            ) as unknown as typeof gesture,
           overlayColor: 'rgba(0,0,0,0.55)',
           drawerStyle: {
             width: DRAWER_WIDTH,

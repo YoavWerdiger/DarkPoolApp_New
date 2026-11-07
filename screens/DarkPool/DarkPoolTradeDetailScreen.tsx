@@ -1,4 +1,5 @@
 import { UI_DIR, dirIcon } from '../../lib/i18n/direction';
+import { SkeletonBox, SkeletonLine } from '../../components/ui/SkeletonLoader';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 /**
@@ -517,9 +518,12 @@ export default function DarkPoolTradeDetailScreen() {
                 }
               />
               {historyLoading ? (
-                <View style={styles.historyLoading}>
-                  <ActivityIndicator color={tokens.colors.primary.main} />
-                </View>
+                // אותו כרטיס שורות — 3 שורות שלד (נקודה · פעולה · תאריך | סכום)
+                <UICard variant="soft" glassIntensity="light" padding="none" contentContainerStyle={styles.rowsCard}>
+                  {[0, 1, 2].map((i) => (
+                    <HistoryRowSkeleton key={i} last={i === 2} />
+                  ))}
+                </UICard>
               ) : (
                 <UICard
                 variant="soft"
@@ -661,6 +665,22 @@ function InsiderHistoryRow({ trade, last }: { trade: InsiderBuyRow; last: boolea
       amount={value ?? (shares ? i18n.t('auto.screens__DarkPool__DarkPoolTradeDetailScreen.s13', { v0: shares }) : null)}
       amountIsData={Boolean(value)}
     />
+  );
+}
+
+/** שורת היסטוריה בטעינה — אותם מידות כמו HistoryRow */
+function HistoryRowSkeleton({ last }: { last: boolean }) {
+  const tokens = useDesignTokens();
+  const styles = useMemo(() => rowStyles(tokens), [tokens]);
+  return (
+    <View style={[styles.row, last && styles.rowLast]} pointerEvents="none">
+      <View style={styles.historyStart}>
+        <SkeletonBox width={8} height={8} borderRadius={4} />
+        <SkeletonLine lineHeight={DARK_POOL_TYPE.cardBody.lineHeight} width={44} box={14} />
+        <SkeletonLine lineHeight={DARK_POOL_TYPE.cardBody.lineHeight} width={64} box={12} />
+      </View>
+      <SkeletonLine lineHeight={DARK_POOL_TYPE.cardBody.lineHeight} width={88} box={13} />
+    </View>
   );
 }
 

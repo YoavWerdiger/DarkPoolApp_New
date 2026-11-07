@@ -26,7 +26,7 @@ import { APP_TYPE } from '../../components/ui/appType';
 import { formFieldShellStyle } from '../../components/ui/formControl';
 import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
 import { TickerLogo } from '../../components/ui/TickerLogo';
-import { SkeletonBox } from '../../components/ui/SkeletonLoader';
+import { SkeletonBox, SkeletonLine } from '../../components/ui/SkeletonLoader';
 import EarningsService, { EarningsReport } from '../../services/earningsService';
 
 // ניקוי סימבול לתצוגה — מסיר סיומת ".US" ומינוס מתחילת הקוד. משותף עם התצוגה היומית.
@@ -160,6 +160,43 @@ const DayTilesSkeleton = memo(function DayTilesSkeleton() {
 });
 
 // שורת תוצאת חיפוש — כרטיס זכוכית רך (3xl = 30) למראה פרימיום מעוגל
+/** שורת תוצאת חיפוש בטעינה — אותם מידות ומרווחים כמו SearchResultRow */
+const SearchResultRowSkeleton = memo(function SearchResultRowSkeleton({ last }: { last: boolean }) {
+  const DesignTokens = useDesignTokens();
+  const outer = 40 + (RESULT_RING + RESULT_RING_GAP) * 2;
+  return (
+    <View
+      style={[
+        searchStyles.resultCardContent,
+        searchStyles.resultRow,
+        !last && { borderBottomWidth: 1, borderBottomColor: DesignTokens.colors.border.divider },
+      ]}
+    >
+      <View style={[searchStyles.logoWrap, { width: outer, height: outer, alignItems: 'center', justifyContent: 'center' }]}>
+        <SkeletonBox width={40} height={40} borderRadius={20} />
+      </View>
+      <View style={searchStyles.resultMain}>
+        <SkeletonLine lineHeight={APP_TYPE.cardTitle.lineHeight} width={56} box={14} align="flex-end" />
+        <SkeletonLine
+          lineHeight={APP_TYPE.cardSubtitle.lineHeight}
+          width={120}
+          box={11}
+          align="flex-end"
+          style={{ marginTop: APP_LAYOUT.cardTitleToSubtitleGap }}
+        />
+        <SkeletonLine
+          lineHeight={APP_TYPE.caption.lineHeight}
+          width={90}
+          box={10}
+          align="flex-end"
+          style={{ marginTop: APP_LAYOUT.cardTitleToSubtitleGap }}
+        />
+      </View>
+      <SkeletonBox width={78} height={24} borderRadius={12} style={{ marginRight: 12 }} />
+    </View>
+  );
+});
+
 const SearchResultRow = memo(function SearchResultRow({
   report,
   onPress,
@@ -711,10 +748,14 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
 
   const renderSearchEmpty = useCallback(() => {
     if (searchLoading) {
+      // אותו כרטיס תוצאות — שורות בשלד (לוגו בטבעת, טיקר · חברה · מועד, פיל התזמון)
       return (
-        <View style={searchStyles.emptyWrap}>
-          <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-          <Text style={[searchStyles.emptyTitle, { color: DesignTokens.colors.text.secondary }]}>{i18n.t('auto.screens__News__EarningsWeeklyView.s13')}</Text>
+        <View pointerEvents="none">
+          <UICard variant="soft" padding="none" style={{ marginHorizontal: screenPad }} contentContainerStyle={{ paddingHorizontal: APP_LAYOUT.cardPadding }}>
+            {[0, 1, 2, 3, 4].map((i, _, arr) => (
+              <SearchResultRowSkeleton key={i} last={i === arr.length - 1} />
+            ))}
+          </UICard>
         </View>
       );
     }
@@ -725,7 +766,7 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
         <Text style={[searchStyles.emptySubtitle, { color: DesignTokens.colors.text.secondary }]}>{i18n.t('auto.screens__News__EarningsWeeklyView.s15')}</Text>
       </View>
     );
-  }, [searchLoading, DesignTokens]);
+  }, [searchLoading, DesignTokens, screenPad]);
 
   const showCurrentWeekFab = !isCurrentWeek && !isSearchMode;
 

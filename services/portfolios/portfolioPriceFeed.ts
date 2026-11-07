@@ -173,10 +173,24 @@ async function fetchYahooQuote(symbol: string): Promise<PriceQuote | null> {
     if (!result) return null;
     const meta = result.meta;
     if (!meta?.regularMarketPrice) return null;
+    // סגירה של יום המסחר הקודם — מהבר היומי האחרון שלפני יום המסחר של המחיר.
+    // לא chartPreviousClose: ב-range=5d זו הסגירה שלפני הטווח (לפני שבוע) — השינוי «היומי» יצא שבועי.
+    const stamps: number[] = Array.isArray(result.timestamp) ? result.timestamp : [];
+    const closes: (number | null)[] = result.indicators?.quote?.[0]?.close ?? [];
+    const dayOf = (sec: number) => new Date(sec * 1000).toISOString().slice(0, 10);
+    const marketDay = meta.regularMarketTime ? dayOf(meta.regularMarketTime) : null;
+    let prevClose: number | null = null;
+    for (let i = stamps.length - 1; i >= 0; i--) {
+      const c = closes[i];
+      if (c == null || !Number.isFinite(c) || c <= 0) continue;
+      if (marketDay && dayOf(stamps[i]) >= marketDay) continue;
+      prevClose = c;
+      break;
+    }
     return {
       symbol,
       price: meta.regularMarketPrice,
-      previous_close: meta.chartPreviousClose ?? meta.previousClose ?? null,
+      previous_close: prevClose ?? _finiteOrNull(meta.previousClose) ?? null,
       open: _finiteOrNull(meta.regularMarketOpen),
       day_high: _finiteOrNull(meta.regularMarketDayHigh),
       day_low: _finiteOrNull(meta.regularMarketDayLow),

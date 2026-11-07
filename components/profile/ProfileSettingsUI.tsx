@@ -12,6 +12,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { AppSwitch } from '../ui/AppSwitch';
+import { SkeletonBox, SkeletonLine } from '../ui/SkeletonLoader';
 import { UserNameRow, badgeSizeForLineHeight } from '../ui/badges/UserBadges';
 import Animated, {
   Easing,
@@ -125,7 +126,13 @@ type SettingsSwitchRowProps = {
   showDivider?: boolean;
   danger?: boolean;
   disabled?: boolean;
+  /** הערך עדיין נטען — הכותרת אמיתית, במקום המתג צורת שלד באותו גודל (לא מתג שמתהפך כשהערך מגיע) */
+  loading?: boolean;
 };
+
+/** גודל המתג בשורה (UISwitch 51×31 בקנה 0.82) — לשלד המתג */
+const SWITCH_SLOT_W = 51;
+const SWITCH_SLOT_H = 31;
 
 /** שורת מתג כמו שורת תפריט בפרופיל — כותרת בלבד, בלי תת-כותרת. */
 export function SettingsSwitchRow({
@@ -135,6 +142,7 @@ export function SettingsSwitchRow({
   showDivider = true,
   danger,
   disabled,
+  loading,
 }: SettingsSwitchRowProps) {
   const tokens = useDesignTokens();
   const { theme } = useTheme();
@@ -142,7 +150,12 @@ export function SettingsSwitchRow({
 
   return (
     <View>
-      <View style={[s.menuRow, disabled && { opacity: 0.45 }]}>
+      <View style={[s.menuRow, disabled && !loading && { opacity: 0.45 }]}>
+        {loading ? (
+          <View style={{ width: SWITCH_SLOT_W, height: SWITCH_SLOT_H, alignItems: 'center', justifyContent: 'center' }}>
+            <SkeletonBox width={Math.round(SWITCH_SLOT_W * 0.82)} height={Math.round(SWITCH_SLOT_H * 0.82)} borderRadius={13} />
+          </View>
+        ) : (
         <AppSwitch
           value={value}
           disabled={disabled}
@@ -152,8 +165,31 @@ export function SettingsSwitchRow({
           ios_backgroundColor={theme.switchTrackOff}
           style={{ transform: [{ scaleX: 0.82 }, { scaleY: 0.82 }] }}
         />
+        )}
         <View style={s.menuTextCol}>
           <Text style={[s.title, danger && { color: tokens.colors.danger.main }]}>{title}</Text>
+        </View>
+      </View>
+      {showDivider ? <View style={s.menuDivider} /> : null}
+    </View>
+  );
+}
+
+/**
+ * שורת תפריט שהכותרת שלה היא נתון שנטען (למשל שם קבוצה) — באותה שורה וגובה כמו SettingsSwitchRow,
+ * מתג וכותרת כצורות.
+ */
+export function SettingsSwitchRowSkeleton({ titleWidth = 120, showDivider = true }: { titleWidth?: number; showDivider?: boolean }) {
+  const tokens = useDesignTokens();
+  const s = styles(tokens);
+  return (
+    <View pointerEvents="none">
+      <View style={s.menuRow}>
+        <View style={{ width: SWITCH_SLOT_W, height: SWITCH_SLOT_H, alignItems: 'center', justifyContent: 'center' }}>
+          <SkeletonBox width={Math.round(SWITCH_SLOT_W * 0.82)} height={Math.round(SWITCH_SLOT_H * 0.82)} borderRadius={13} />
+        </View>
+        <View style={s.menuTextCol}>
+          <SkeletonLine lineHeight={Number(s.title.lineHeight) || 22} width={titleWidth} box={13} align="flex-end" />
         </View>
       </View>
       {showDivider ? <View style={s.menuDivider} /> : null}
@@ -247,6 +283,8 @@ type ProfileIdentityCardProps = {
   email: string;
   avatarUri?: string | null;
   onPress: () => void;
+  /** פרטי המשתמש עדיין נטענים — אותה שורה, שם/מייל/אווטאר כצורות */
+  loading?: boolean;
 };
 
 /** כרטיס זהות בראש הפרופיל — אותה שורת תפריט (שברון, כותרת+משנה, אווטאר). */
@@ -256,9 +294,29 @@ export function ProfileIdentityCard({
   email,
   avatarUri,
   onPress,
+  loading,
 }: ProfileIdentityCardProps) {
   const tokens = useDesignTokens();
   const s = styles(tokens);
+
+  if (loading) {
+    return (
+      <View pointerEvents="none">
+        <SettingsGlassCard>
+          <View style={s.menuRow}>
+            <ChevronLeft size={20} color={tokens.colors.text.tertiary} strokeWidth={2} />
+            <View style={s.menuTextCol}>
+              <SkeletonLine lineHeight={APP_TYPE.cardTitle.lineHeight} width={124} box={14} align="flex-end" />
+              <SkeletonLine lineHeight={Number(s.email.lineHeight) || 18} width={164} box={11} align="flex-end" />
+            </View>
+            <View style={s.leadingIcon}>
+              <SkeletonBox width={56} height={56} borderRadius={28} />
+            </View>
+          </View>
+        </SettingsGlassCard>
+      </View>
+    );
+  }
 
   return (
     <TouchableOpacity

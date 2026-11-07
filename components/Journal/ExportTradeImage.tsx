@@ -34,7 +34,7 @@ import {
 } from '../ui/BottomSheet/sheetGlass';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
 import { brandfetchTickerLogoUri } from '../../utils/brandfetch';
-import Svg, { Circle, Defs, G, LinearGradient, Path, RadialGradient, Rect, Stop, Text as SvgText } from 'react-native-svg';
+import Svg, { Circle, Defs, LinearGradient, Mask, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { APP_FONT } from '../ui/appFont';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -90,7 +90,13 @@ const FOOTER_H = 72;
 const CARD_BG = '#0A0C0B';
 const INK = '#F2F2F2';
 const INK_2 = 'rgba(242,242,242,0.5)';
-const QR_BG = '#141716';
+const QR_SIZE = 50;
+/** אזור ה-QR בקואורדינטות הציור — קו הגרף נעצר שם כדי שלא יעבור על הקוד */
+const QR_CLEAR = {
+  x: UI_DIR === 'rtl' ? 8 : ART_W - 8 - (QR_SIZE + 12),
+  y: ART_H - FOOTER_H / 2 - (QR_SIZE + 12) / 2,
+  size: QR_SIZE + 12,
+};
 const WIN = '#00D64B';
 const LOSS = '#FF4D4D';
 
@@ -497,7 +503,9 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
           contentContainerStyle={styles.previewContent}
           showsVerticalScrollIndicator={false}
         >
+          {/* העיגול רק בתצוגה — התמונה שמשותפת היא מלבן מלא (בלי פינות שקופות שנראות שחורות בוואטסאפ) */}
           <View style={styles.previewShadow}>
+            <View style={styles.previewClip}>
             <View
               key={normalized.id}
               ref={viewShotRef}
@@ -527,13 +535,17 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                       <Stop offset="0" stopColor={heroColor} stopOpacity="0.16" />
                       <Stop offset="1" stopColor={heroColor} stopOpacity="0" />
                     </RadialGradient>
+                    <Mask id="qrClear">
+                      <Rect width={ART_W} height={ART_H} fill="#fff" />
+                      <Rect x={QR_CLEAR.x} y={QR_CLEAR.y} width={QR_CLEAR.size} height={QR_CLEAR.size} rx={10} fill="#000" />
+                    </Mask>
                   </Defs>
                   <Rect width={ART_W} height={ART_H} fill={CARD_BG} />
                   <Rect width={ART_W} height={ART_H} fill="url(#centerGlow)" />
                   <Rect width={ART_W} height={ART_H} fill="url(#brandGlow)" />
                   <Path d={art.area} fill="url(#areaFill)" />
                   <Rect y={ART_H - FOOTER_H - 16} width={ART_W} height={FOOTER_H + 16} fill="url(#footScrim)" />
-                  <Path d={art.line} stroke={heroColor} strokeWidth={2.4} strokeLinejoin="round" strokeLinecap="round" fill="none" />
+                  <Path d={art.line} stroke={heroColor} strokeWidth={2.4} strokeLinejoin="round" strokeLinecap="round" fill="none" mask="url(#qrClear)" />
                   <Circle cx={art.first.x} cy={art.first.y} r={3.6} fill={CARD_BG} stroke="rgba(242,242,242,0.75)" strokeWidth={1.6} />
                   <Circle cx={art.last.x} cy={art.last.y} r={10} fill={heroColor} opacity={0.18} />
                   <Circle cx={art.last.x} cy={art.last.y} r={4.2} fill={heroColor} />
@@ -617,12 +629,13 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                   </View>
                   <View style={styles.qrWrap}>
                     {/* QR הפוך (נקודות בהירות על רקע כהה) — משתלב בכרטיס; נבדק שמצלמת iPhone / Vision קוראת אותו */}
-                    <QRCode value={APP_LINKS.appDownload} size={46 * scale} backgroundColor={QR_BG} color={INK} ecl="M" />
+                    <QRCode value={APP_LINKS.appDownload} size={QR_SIZE * scale} backgroundColor="transparent" color={INK} ecl="M" quietZone={0} />
                   </View>
                 </View>
               </View>
               </ForceDarkTheme>
-            </View>
+              </View>
+          </View>
           </View>
 
           <View style={styles.optionsBlock}>
@@ -726,14 +739,15 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
         default: {},
       }),
     },
-    shotWrap: {
-      alignSelf: 'center',
-      backgroundColor: CARD_BG,
+    previewClip: {
       borderRadius: 26,
       overflow: 'hidden',
     },
+    shotWrap: {
+      alignSelf: 'center',
+      backgroundColor: CARD_BG,
+    },
     cardRoot: {
-      borderRadius: 26,
       overflow: 'hidden',
       backgroundColor: CARD_BG,
       direction: UI_DIR,
@@ -842,13 +856,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       paddingStart: 18,
       paddingEnd: 14,
     },
-    qrWrap: {
-      padding: 6,
-      borderRadius: 12,
-      backgroundColor: QR_BG,
-      borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.10)',
-    },
+    qrWrap: {},
     ctaTextCol: {
       flex: 1,
       minWidth: 0,

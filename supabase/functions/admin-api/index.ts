@@ -889,6 +889,10 @@ async function getCourse(supabase: SupabaseClient, body: Record<string, unknown>
     lessons: (lessons ?? []).map((l) => ({
       ...l,
       youtube_url: mediaBy.get(l.id)?.is_active === false ? null : mediaBy.get(l.id)?.youtube_url ?? null,
+      vimeo_url:
+        mediaBy.get(l.id)?.is_active === false
+          ? null
+          : mediaBy.get(l.id)?.vimeo_url ?? (mediaBy.get(l.id)?.vimeo_id ? `https://vimeo.com/${mediaBy.get(l.id)?.vimeo_id}` : null),
       // שיעורים שמוגשים מ-Vimeo (וימאו קודם ליוטיוב באפליקציה)
       has_vimeo: mediaBy.get(l.id)?.is_active !== false && Boolean(mediaBy.get(l.id)?.vimeo_id || mediaBy.get(l.id)?.vimeo_url),
     })),
@@ -981,8 +985,71 @@ async function upsertLesson(supabase: SupabaseClient, adminId: string, body: Rec
       if (mErr) throw mErr;
     }
   }
-  await audit(supabase, adminId, id ? 'update_lesson' : 'create_lesson', null, { courseId, lessonId: res.data.id });
-  return json({ lesson: res.data });
+  // קישור Vimeo: מחרוזת → מזהה + קישור, ומשך הסרטון אוטומטית מ-oEmbed (אם לא הוזן משך ידני בבקשה הזו);
+  // ריק → ניקוי שדות ה-Vimeo בלבד (יוטיוב נשאר)
+  let lesson = res.data;
+  if ('vimeoUrl' in body) {
+    const url = String(body.vimeoUrl ?? '').trim();
+    const vimeoId = vimeoIdFromUrl(url);
+    if (url && !vimeoId) return json({ error: 'Invalid Vimeo link' }, 400);
+    const { data: existing } = await supabase
+      .from('lesson_media_links')
+      .select('youtube_id, youtube_url')
+      .eq('course_id', courseId)
+      .eq('lesson_id', lesson.id)
+      .maybeSingle();
+    const hasYoutube = Boolean(existing?.youtube_id || existing?.youtube_url);
+    if (url || existing) {
+      const { error: mErr } = await supabase.from('lesson_media_links').upsert(
+        {
+          course_id: courseId,
+          lesson_id: lesson.id,
+          vimeo_id: vimeoId,
+          vimeo_url: url || null,
+          title: lesson.title,
+          is_active: Boolean(url) || hasYoutube,
+        },
+        { onConflict: 'course_id,lesson_id' },
+      );
+      if (mErr) throw mErr;
+    }
+    if (url && !('duration_minutes' in body && body.duration_minutes != null)) {
+      const seconds = await vimeoDurationSeconds(url);
+      if (seconds && seconds > 0) {
+        const { data: upd } = await supabase
+          .from('lessons')
+          .update({ duration_minutes: Math.max(1, Math.round(seconds / 60)) })
+          .eq('id', lesson.id)
+          .eq('course_id', courseId)
+          .select('*')
+          .single();
+        if (upd) lesson = upd;
+      }
+    }
+  }
+  await audit(supabase, adminId, id ? 'update_lesson' : 'create_lesson', null, { courseId, lessonId: lesson.id });
+  return json({ lesson });
+}
+
+/** מזהה Vimeo: vimeo.com/123 · vimeo.com/123/abcdef (לא רשום) · player.vimeo.com/video/123 · vimeo.com/channels/x/123 */
+function vimeoIdFromUrl(url: string): string | null {
+  if (!url) return null;
+  const m = url.match(/vimeo\.com\/(?:video\/|channels\/[^/]+\/|groups\/[^/]+\/videos\/)?(\d{5,})/);
+  return m ? m[1] : null;
+}
+
+/** משך הסרטון בשניות מ-oEmbed הציבורי של Vimeo (עובד גם לסרטונים לא רשומים עם hash בקישור) */
+async function vimeoDurationSeconds(url: string): Promise<number | null> {
+  try {
+    const r = await fetch(`https://vimeo.com/api/oembed.json?url=${encodeURIComponent(url)}`, {
+      signal: AbortSignal.timeout(6000),
+    });
+    if (!r.ok) return null;
+    const j = (await r.json()) as { duration?: number };
+    return typeof j.duration === 'number' ? j.duration : null;
+  } catch {
+    return null;
+  }
 }
 
 /** מזהה יוטיוב מקישור (watch?v= / youtu.be / embed / shorts / live) — לתמונה הממוזערת באפליקציה */

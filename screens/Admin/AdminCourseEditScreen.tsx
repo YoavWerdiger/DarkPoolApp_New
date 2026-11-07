@@ -1,3 +1,4 @@
+import { UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 /**
  * פאנל מנהלים — עריכת קורס: פרטי הקורס (שם, תת-כותרת, תיאור, מדריך, רמה, תמונה, פעיל/מוסתר)
@@ -337,6 +338,7 @@ function LessonEditSheet({
   const [description, setDescription] = useState('');
   const [minutes, setMinutes] = useState('');
   const [youtube, setYoutube] = useState('');
+  const [vimeo, setVimeo] = useState('');
   const [active, setActive] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -346,6 +348,7 @@ function LessonEditSheet({
     setDescription(current?.description ?? '');
     setMinutes(current?.duration_minutes != null ? String(current.duration_minutes) : '');
     setYoutube(current?.youtube_url ?? '');
+    setVimeo(current?.vimeo_url ?? '');
     setActive(current ? Boolean(current.is_active) : true);
   }, [lesson, current]);
 
@@ -359,16 +362,25 @@ function LessonEditSheet({
       legacyAlert(i18n.t('auto.screens__Admin__AdminCourseEditScreen.s30'), i18n.t('auto.screens__Admin__AdminCourseEditScreen.s31'));
       return;
     }
+    const vUrl = vimeo.trim();
+    if (vUrl && !/^https?:\/\/(www\.|player\.)?vimeo\.com\/.*\d{5,}/i.test(vUrl)) {
+      legacyAlert(i18n.t('auto.screens__Admin__AdminCourseEditScreen.s30'), i18n.t('auto.screens__Admin__AdminCourseEditScreen.s48'));
+      return;
+    }
+    // משך: נשלח רק אם שונה ידנית — אחרת השרת ממלא אוטומטית מ-Vimeo
+    const minutesOriginal = current?.duration_minutes != null ? String(current.duration_minutes) : '';
+    const minutesChanged = minutes.trim() !== minutesOriginal;
     setSaving(true);
     try {
       await adminService.upsertLesson(courseId, {
         ...(current ? { id: current.id } : {}),
         title: title.trim(),
         description: description.trim() || null,
-        duration_minutes: num(minutes),
+        ...(minutesChanged ? { duration_minutes: num(minutes) } : {}),
         is_active: active,
         // נוגעים במדיה רק כשהקישור השתנה (שמירת שם לא משנה וידאו קיים)
         ...(url !== (current?.youtube_url ?? '') ? { youtubeUrl: url || null } : {}),
+        ...(vUrl !== (current?.vimeo_url ?? '') ? { vimeoUrl: vUrl || null } : {}),
       });
       void HapticFeedback.success();
       onChanged();
@@ -414,13 +426,16 @@ function LessonEditSheet({
       topCornerRadius={tokens.borderRadius.xl}
       contentPaddingBottom={0}
     >
-      <View style={{ flex: 1, paddingHorizontal: tokens.layout.screenPadding }}>
+      {/* עץ UI_DIR — כפתור הסגירה בצד ההתחלה (ימין בעברית) כמו בשאר השיטים */}
+      <View style={{ flex: 1, direction: UI_DIR, paddingHorizontal: tokens.layout.screenPadding }}>
         <ChatSheetTopoHeader title={isNew ? i18n.t('auto.screens__Admin__AdminCourseEditScreen.s38') : i18n.t('auto.screens__Admin__AdminCourseEditScreen.s39')} onClose={onClose} />
         <KeyboardAwareScrollView contentContainerStyle={styles.sheetScroll} keyboardShouldPersistTaps="handled" bottomOffset={24}>
           <Field label={i18n.t('auto.screens__Admin__AdminCourseEditScreen.s40')} value={title} onChangeText={setTitle} />
           <Field label={i18n.t('auto.screens__Admin__AdminCourseEditScreen.s41')} value={description} onChangeText={setDescription} multiline />
+          {/* Vimeo קודם ליוטיוב באפליקציה; המשך מזוהה אוטומטית מ-Vimeo */}
+          <Field label={i18n.t('auto.screens__Admin__AdminCourseEditScreen.s49')} value={vimeo} onChangeText={setVimeo} keyboardType="url" ltr placeholder="https://vimeo.com/…" />
           <Field label={i18n.t('auto.screens__Admin__AdminCourseEditScreen.s42')} value={youtube} onChangeText={setYoutube} keyboardType="url" ltr placeholder="https://youtu.be/…" />
-          <Field label={i18n.t('auto.screens__Admin__AdminCourseEditScreen.s43')} value={minutes} onChangeText={setMinutes} keyboardType="numeric" ltr />
+          <Field label={i18n.t('auto.screens__Admin__AdminCourseEditScreen.s43')} value={minutes} onChangeText={setMinutes} keyboardType="numeric" ltr placeholder={i18n.t('auto.screens__Admin__AdminCourseEditScreen.s50')} />
           <SwitchRow label={i18n.t('auto.screens__Admin__AdminCourseEditScreen.s44')} value={active} onChange={setActive} />
           <UIButton title={isNew ? i18n.t('auto.screens__Admin__AdminCourseEditScreen.s45') : i18n.t('auto.screens__Admin__AdminCourseEditScreen.s46')} variant="primary" fullWidth loading={saving} onPress={() => void save()} />
           {current ? (

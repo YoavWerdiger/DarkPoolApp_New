@@ -345,7 +345,7 @@ export const adminService = {
     invokeAdminApi<{ course: AdminCourse }>('upsert_course', course as Record<string, unknown>),
   upsertLesson: (
     courseId: string,
-    lesson: Partial<Omit<AdminLesson, 'youtube_url'>> & { id?: string; youtubeUrl?: string | null },
+    lesson: Partial<Omit<AdminLesson, 'youtube_url' | 'vimeo_url'>> & { id?: string; youtubeUrl?: string | null; vimeoUrl?: string | null },
   ) => invokeAdminApi<{ lesson: AdminLesson }>('upsert_lesson', { courseId, ...lesson }),
   reorderLessons: (courseId: string, orderedIds: string[]) =>
     invokeAdminApi<{ ok: true }>('reorder_lessons', { courseId, orderedIds }),
@@ -598,6 +598,7 @@ export interface AdminLesson {
   order_index: number;
   is_active: boolean;
   youtube_url?: string | null;
+  vimeo_url?: string | null;
   /** השיעור מוגש מ-Vimeo (קודם ליוטיוב באפליקציה) */
   has_vimeo?: boolean;
 }

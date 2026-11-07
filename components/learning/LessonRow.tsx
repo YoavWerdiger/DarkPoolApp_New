@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LessonWithProgress, Enrollment } from '../../types/learning';
 import { useDesignTokens } from '../ui/DesignTokens';
 import UICard from '../ui/UICard';
+import { SkeletonBox, SkeletonLine } from '../ui/SkeletonLoader';
 import { mediaService } from '../../services/mediaService';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { ACADEMY_CARD_RADIUS } from './academyCardLayout';
@@ -211,6 +212,31 @@ export const LessonRow: React.FC<LessonRowProps> = ({
 };
 
 const THUMB_HEIGHT = 136;
+
+/**
+ * כרטיס שיעור בטעינה — אותו כרטיס, אותו גובה תמונה ואותן שורות כמו LessonRow:
+ * «שיעור N» ופס ההתקדמות קבועים; רק התמונה והכותרת הן צורות טעינה.
+ */
+export function LessonRowSkeleton({ index }: { index: number }) {
+  const T = useDesignTokens();
+  const styles = useMemo(() => createStyles(T), [T]);
+  return (
+    <UICard variant="soft" disableBlur padding="none" style={styles.card}>
+      <View pointerEvents="none">
+        <SkeletonBox width="100%" height={THUMB_HEIGHT} borderRadius={0} />
+        <View style={styles.body}>
+          <View style={styles.titleBlock}>
+            <SkeletonLine lineHeight={appCardTitleStyle.lineHeight as number} width="70%" box={15} align="flex-end" />
+            <Text style={styles.indexLabel} numberOfLines={1}>
+              {i18n.t('auto.components__learning__LessonRow.s3')} {index + 1}
+            </Text>
+            <View style={styles.progressTrack} />
+          </View>
+        </View>
+      </View>
+    </UICard>
+  );
+}
 
 function createStyles(T: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({

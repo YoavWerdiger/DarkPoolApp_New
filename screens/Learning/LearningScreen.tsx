@@ -9,7 +9,10 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Animated, 
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenChrome } from '../../components/ui';
-import { AcademySubScreenBar, CourseListHero, LessonRow } from '../../components/learning';
+import { AcademySubScreenBar, CourseListHero, LessonRow, LessonRowSkeleton } from '../../components/learning';
+import { queryClient } from '../../lib/queryClient';
+import { appQueryKeys } from '../../lib/appQueryKeys';
+import type { CourseListResponse } from '../../types/learning';
 import { formatLessonMinutes } from '../../components/learning/academyCourses';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ACADEMY_CARD_HP, ACADEMY_CARD_RADIUS, academyCardWidth } from '../../components/learning/academyCardLayout';
@@ -2026,13 +2029,37 @@ function LearningScreen() {
   const displayCoverUrl = courseData?.cover_url;
   const displayTitle = courseData?.title;
 
+  // שלד הקורס: אותו מבנה כמו הטעון — באנר (שם ותמונה מרשימת האקדמיה שכבר בקאש), «שיעורי הקורס» וכרטיסי שיעור בטעינה
+  const lessonSkeletons = (
+    <View style={[styles.courseListBody, { paddingTop: DesignTokens.spacing.md }]}>
+      {[0, 1, 2].map((i) => (
+        <LessonRowSkeleton key={i} index={i} />
+      ))}
+    </View>
+  );
+
   if (!courseData) {
+    const hint = queryClient
+      .getQueryData<CourseListResponse>(appQueryKeys.courses())
+      ?.courses?.find((c) => c.id === routeCourseId);
     return (
       <ScreenChrome>
-        <RNSafeAreaView style={styles.safeAreaContent} edges={['top']}>
-          <AcademySubScreenBar onBackPress={handleBackToAcademy} title={i18n.t('auto.screens__Learning__LearningScreen.s63')} />
-          <View style={styles.courseLoadingWrap}>
-            <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
+        <RNSafeAreaView style={styles.safeAreaContent} edges={[]}>
+          <CourseListHero
+            coverUrl={hint?.cover_url ?? undefined}
+            title={hint?.title ?? i18n.t('auto.screens__Learning__LearningScreen.s63')}
+            height={courseHeroHeight}
+            topInset={insets.top}
+            onBack={handleBackToAcademy}
+            progressLabel=""
+            progressPct={0}
+            progressLoading
+          />
+          <View style={styles.courseListBody}>
+            <Text style={[styles.courseListSectionTitle, { marginBottom: DesignTokens.spacing.sm }]}>{i18n.t('auto.screens__Learning__LearningScreen.s66')}</Text>
+          </View>
+          <View pointerEvents="none" style={{ flex: 1, marginBottom: insets.bottom, overflow: 'hidden' }}>
+            {lessonSkeletons}
           </View>
         </RNSafeAreaView>
       </ScreenChrome>
@@ -2104,6 +2131,7 @@ function LearningScreen() {
             ]}
           >
             <View ref={courseContentRef} collapsable={false}>
+              {lessonsList.length === 0 && lessonsProgressLoading ? lessonSkeletons : (
               <View style={[styles.courseListBody, { paddingTop: DesignTokens.spacing.md }]}>
               {lessonsList.some((l: any) => l.section_index != null)
                 ? groupLessonsBySection(lessonsList).map((sec) =>
@@ -2117,6 +2145,7 @@ function LearningScreen() {
                   </>
                 )}
               </View>
+              )}
             </View>
           </ScrollView>
 

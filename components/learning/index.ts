@@ -9,7 +9,7 @@ export type { AcademyYouTubeCTAProps } from './AcademyYouTubeCTA';
 export { ProgressRing } from './ProgressRing';
 export { AccessBadge } from './AccessBadge';
 export { ModuleSection } from './ModuleSection';
-export { LessonRow } from './LessonRow';
+export { LessonRow, LessonRowSkeleton } from './LessonRow';
 export {
   ACADEMY_TYPE,
   ACADEMY_LAYOUT,

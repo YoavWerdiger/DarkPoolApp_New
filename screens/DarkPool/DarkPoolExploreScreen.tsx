@@ -795,14 +795,14 @@ function SearchSuggestionRow({ person, ytd, onPress }: { person: ExplorePerson; 
         {name}
       </Text>
       {ytd != null ? (
-        // פיל YTD בשורה אחת (כמו פיל התזמון בדיווחי רווח): «YTD» אפור · תשואה בירוק/אדום
+        // פיל YTD בשורה אחת (כמו פיל התזמון בדיווחי רווח): «YTD» והתשואה בירוק/אדום
         <View
           style={[
             suggestionStyles.ytdBadge,
             { backgroundColor: `${ytd >= 0 ? tokens.colors.primary.main : tokens.colors.text.danger}18` },
           ]}
         >
-          <Text style={[suggestionStyles.ytdLabel, { color: tokens.colors.text.secondary }]}>YTD</Text>
+          <Text style={[suggestionStyles.ytdLabel, { color: ytd >= 0 ? tokens.colors.primary.main : tokens.colors.text.danger }]}>YTD</Text>
           <Text
             style={[suggestionStyles.ytdValue, { color: ytd >= 0 ? tokens.colors.primary.main : tokens.colors.text.danger }]}
             numberOfLines={1}

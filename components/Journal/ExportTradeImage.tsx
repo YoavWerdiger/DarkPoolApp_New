@@ -34,7 +34,7 @@ import {
 } from '../ui/BottomSheet/sheetGlass';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
 import { brandfetchTickerLogoUri } from '../../utils/brandfetch';
-import Svg, { Circle, Defs, G, Line, LinearGradient, Path, RadialGradient, Rect, Stop, Text as SvgText } from 'react-native-svg';
+import Svg, { Circle, Defs, G, LinearGradient, Path, RadialGradient, Rect, Stop, Text as SvgText } from 'react-native-svg';
 import { APP_FONT } from '../ui/appFont';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -82,8 +82,8 @@ const DEFAULT_SHARE_OPTIONS: ShareOptions = { showPnl: true, showReturn: true, s
 /** מידות העיצוב — הכרטיס מצויר ב-viewBox 340×425 ומוקטן/מוגדל באחידות */
 const ART_W = 340;
 const ART_H = 425;
-const CHART_TOP = 262;
-const CHART_BOT = 352;
+const CHART_TOP = 282;
+const CHART_BOT = 358;
 const CHART_PAD_X = 22;
 const FOOTER_H = 72;
 
@@ -518,6 +518,10 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                       <Stop offset="0" stopColor={CARD_BG} stopOpacity="0" />
                       <Stop offset="1" stopColor={CARD_BG} stopOpacity="0.7" />
                     </LinearGradient>
+                    <RadialGradient id="brandGlow" cx={UI_DIR === 'rtl' ? '74%' : '26%'} cy="13%" rx="32%" ry="11%">
+                      <Stop offset="0" stopColor="#00E63D" stopOpacity="0.18" />
+                      <Stop offset="1" stopColor="#00E63D" stopOpacity="0" />
+                    </RadialGradient>
                     <RadialGradient id="centerGlow" cx="50%" cy="38%" rx="60%" ry="60%">
                       <Stop offset="0" stopColor={heroColor} stopOpacity="0.16" />
                       <Stop offset="1" stopColor={heroColor} stopOpacity="0" />
@@ -525,9 +529,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                   </Defs>
                   <Rect width={ART_W} height={ART_H} fill={CARD_BG} />
                   <Rect width={ART_W} height={ART_H} fill="url(#centerGlow)" />
-                  {[256, 280, 304, 328, 352, 376, 400].map((y) => (
-                    <Line key={y} x1={0} x2={ART_W} y1={y} y2={y} stroke="rgba(255,255,255,0.045)" strokeWidth={1} />
-                  ))}
+                  <Rect width={ART_W} height={ART_H} fill="url(#brandGlow)" />
                   <Path d={art.area} fill="url(#areaFill)" />
                   <Rect y={ART_H - FOOTER_H - 16} width={ART_W} height={FOOTER_H + 16} fill="url(#footScrim)" />
                   <Path d={art.line} stroke={heroColor} strokeWidth={2.4} strokeLinejoin="round" strokeLinecap="round" fill="none" />
@@ -536,24 +538,28 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                   <Circle cx={art.last.x} cy={art.last.y} r={4.2} fill={heroColor} />
                 </Svg>
 
-                {/* שור ודוב — צללית אחת במרכז, בצבע התוצאה */}
-                <View style={styles.animalWrap} pointerEvents="none">
-                  <Image
-                    source={BULL_BEAR}
-                    tintColor={heroColor}
-                    contentFit="contain"
-                    style={[
-                      styles.animal,
-                      { width: 240 * scale, height: (240 * scale) / BULL_BEAR_ASPECT, marginTop: 114 * scale },
-                    ]}
-                  />
-                </View>
+                {/* שור ודוב — צללית אחת בצד הנגדי לטקסט, בצבע התוצאה */}
+                <Image
+                  source={BULL_BEAR}
+                  tintColor={heroColor}
+                  contentFit="contain"
+                  pointerEvents="none"
+                  style={[
+                    styles.animal,
+                    { width: 240 * scale, height: (240 * scale) / BULL_BEAR_ASPECT, top: 70 * scale, end: -30 * scale },
+                  ]}
+                />
 
-                {/* תוכן ממורכז — לא תלוי בכיוון הממשק */}
-                <View style={[styles.cardContent, { paddingTop: 18 * scale }]}>
+                {/* תוכן מוצמד לצד תחילת הקריאה — רק flexbox (flex-start בעץ UI_DIR), בלי textAlign שמתהפך ב-forceRTL */}
+                <View
+                  style={[
+                    styles.cardContent,
+                    { paddingTop: 22 * scale, paddingHorizontal: 24 * scale },
+                  ]}
+                >
                   <Image
                     source={BRAND_LOGO}
-                    style={{ width: 118 * scale, height: (118 * scale) / BRAND_LOGO_ASPECT }}
+                    style={{ width: 140 * scale, height: (140 * scale) / BRAND_LOGO_ASPECT, marginStart: -4 * scale }}
                     contentFit="contain"
                     transition={0}
                     accessibilityLabel={i18n.t('auto.components__Journal__ExportTradeImage.s10')}
@@ -567,28 +573,30 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                         <Text style={styles.logoFallbackText}>{normalized.symbol.trim().slice(0, 4).toUpperCase()}</Text>
                       )}
                     </View>
-                    <Text style={styles.symbolBig} numberOfLines={1}>
-                      {normalized.symbol}
-                    </Text>
-                  </View>
-
-                  <View style={styles.metaRow}>
-                    <View style={[styles.dirPill, { backgroundColor: `${dirColor}26` }]}>
-                      <TrendGlyph up={normalized.direction === 'long'} color={dirColor} />
-                      <Text style={[styles.dirPillText, { color: dirColor }]}>
-                        {normalized.direction === 'long' ? 'LONG' : 'SHORT'}
+                    <View style={styles.assetCol}>
+                      <Text style={styles.symbolBig} numberOfLines={1}>
+                        {normalized.symbol}
                       </Text>
+                      <View style={[styles.dirPill, { backgroundColor: `${dirColor}26` }]}>
+                        <TrendGlyph up={normalized.direction === 'long'} color={dirColor} />
+                        <Text style={[styles.dirPillText, { color: dirColor }]}>
+                          {normalized.direction === 'long' ? 'LONG' : 'SHORT'}
+                        </Text>
+                      </View>
                     </View>
                   </View>
 
-                  <Text
-                    style={[styles.heroValue, { color: heroColor, fontSize: 56 * scale, lineHeight: 62 * scale }]}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.6}
-                  >
-                    {heroIsReturn ? retText : pnlText}
-                  </Text>
+                  {/* View ברוחב מלא שמצמיד את הטקסט לתחילתו; הטקסט ברוחב התוכן ומתכווץ אם ארוך */}
+                  <View style={styles.heroWrap}>
+                    <Text
+                      style={[styles.heroValue, { color: heroColor, fontSize: 58 * scale, lineHeight: 64 * scale }]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.6}
+                    >
+                      {heroIsReturn ? retText : pnlText}
+                    </Text>
+                  </View>
                   {heroIsReturn && options.showPnl ? (
                     <View style={styles.pnlRow}>
                       <Text style={styles.pnlLabel}>{i18n.t('auto.components__Journal__ExportTradeImage.pnlLabel')}</Text>
@@ -727,29 +735,27 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       borderRadius: 26,
       overflow: 'hidden',
       backgroundColor: CARD_BG,
-    },
-    animalWrap: {
-      ...StyleSheet.absoluteFill,
-      alignItems: 'center',
+      direction: UI_DIR,
     },
     animal: {
+      position: 'absolute',
       opacity: 0.08,
     },
     cardContent: {
       ...StyleSheet.absoluteFill,
-      alignItems: 'center',
+      direction: UI_DIR,
+      alignItems: 'flex-start',
     },
     assetRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
-      gap: 9,
-      marginTop: 16,
+      gap: 12,
+      marginTop: 26,
     },
     logoCircle: {
-      width: 34,
-      height: 34,
-      borderRadius: 17,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       overflow: 'hidden',
       backgroundColor: '#1A1D1C',
       borderWidth: 1,
@@ -758,26 +764,23 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       justifyContent: 'center',
     },
     logoImg: {
-      width: 34,
-      height: 34,
+      width: 44,
+      height: 44,
     },
     logoFallbackText: {
       color: 'rgba(242,242,242,0.7)',
-      fontSize: 9.5,
+      fontSize: 11,
       fontWeight: '700',
+    },
+    assetCol: {
+      alignItems: 'flex-start',
+      gap: 4,
     },
     symbolBig: {
       color: INK,
       fontSize: 22,
+      lineHeight: 24,
       fontWeight: '700',
-      letterSpacing: 0.4,
-    },
-    metaRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 8,
-      marginTop: 8,
     },
     dirPill: {
       flexDirection: 'row',
@@ -792,28 +795,23 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       fontWeight: '700',
       letterSpacing: 0.6,
     },
-    metaText: {
-      color: INK_2,
-      fontSize: 11,
-      fontWeight: '500',
-      writingDirection: TEXT_DIR,
+    heroWrap: {
+      alignSelf: 'stretch',
+      alignItems: 'flex-start',
+      marginTop: 22,
     },
     heroValue: {
       fontWeight: '700',
       letterSpacing: -1.5,
       writingDirection: 'ltr',
       fontVariant: ['tabular-nums'],
-      textAlign: 'center',
-      alignSelf: 'stretch',
-      marginTop: 10,
-      paddingHorizontal: 16,
+      maxWidth: '100%',
     },
     pnlRow: {
       flexDirection: 'row',
       alignItems: 'baseline',
-      justifyContent: 'center',
       gap: 7,
-      marginTop: 2,
+      marginTop: 4,
     },
     pnlLabel: {
       color: INK_2,

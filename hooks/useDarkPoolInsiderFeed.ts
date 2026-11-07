@@ -16,8 +16,9 @@
  *   - premium – ללא הגבלה
  */
 
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { hydrateFeedFromDisk, persistFeedToDisk } from '../services/darkpool/feedDiskCache';
 import { appQueryKeys } from '../lib/appQueryKeys';
 import { queryClient } from '../lib/queryClient';
 import {
@@ -150,24 +151,44 @@ export function useDarkPoolInsiderFeed({
     placeholderData: (previous) => previous ?? [],
   });
 
+  const keyStr = JSON.stringify(queryKey);
+  // כניסה אופטימיסטית: הפיד האחרון מהדיסק מיד; הרשת מרעננת ברקע בשקט
+  useEffect(() => {
+    if (enabled) void hydrateFeedFromDisk(queryKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keyStr, enabled]);
+  useEffect(() => {
+    if (!query.isPlaceholderData && query.isSuccess) persistFeedToDisk(queryKey, query.data, query.dataUpdatedAt);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query.data, query.dataUpdatedAt, query.isPlaceholderData, query.isSuccess, keyStr]);
+
+  // ספינר רק במשיכה של המשתמש — לא ברענון רקע בכניסה למסך
+  const [pulling, setPulling] = useState(false);
+
   const refetch = useCallback(async () => {
-    forceRef.current = true;
-    // SEC production: pull-to-refresh = DB only; Quiver/Form4 sync is pg_cron.
-    // Docs: docs/DARK_POOL_DATA_SYNC.md
-    if (!DARK_POOL_SEC_PRODUCTION) {
-      try {
-        await triggerInsiderSync();
-      } catch (e) {
-        console.warn('insider sync on refresh', e);
+    setPulling(true);
+    try {
+      forceRef.current = true;
+      // SEC production: pull-to-refresh = DB only; Quiver/Form4 sync is pg_cron.
+      // Docs: docs/DARK_POOL_DATA_SYNC.md
+      if (!DARK_POOL_SEC_PRODUCTION) {
+        try {
+          await triggerInsiderSync();
+        } catch (e) {
+          console.warn('insider sync on refresh', e);
+        }
       }
+      await query.refetch();
+    } finally {
+      setPulling(false);
     }
-    await query.refetch();
   }, [query]);
 
   return {
     trades: query.data ?? [],
-    loading: query.isLoading,
-    refreshing: query.isRefetching,
+    // אין עדיין נתונים אמיתיים (גם placeholder ריק) — שלד, לא «אין עסקאות»
+    loading: !(query.data && query.data.length > 0) && (query.isLoading || query.isPlaceholderData || query.isFetching),
+    refreshing: pulling,
     error: query.error ? (query.error as Error).message : null,
     isPremium,
     refetch,

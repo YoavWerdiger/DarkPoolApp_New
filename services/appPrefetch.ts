@@ -1,4 +1,5 @@
 import { queryClient } from '../lib/queryClient';
+import { hydrateFeedFromDisk } from './darkpool/feedDiskCache';
 import { appQueryKeys } from '../lib/appQueryKeys';
 import { persistQueryCache } from '../lib/queryPersist';
 import { readCachedMessagesForGroup, scheduleChatMessagesPersist } from '../lib/chatMessagePersist';
@@ -403,6 +404,9 @@ export async function warmAppCache(
 
   const run = (async () => {
     lastWarmAt = Date.now();
+    // פידי האינסיידרים מהדיסק לפני הרשת — כניסה למסך מציגה מיד את הפיד האחרון
+    void hydrateFeedFromDisk(appQueryKeys.congressFeed(DARK_POOL_FEED_LIMIT));
+    void hydrateFeedFromDisk(appQueryKeys.insiderFeed('all', true, DARK_POOL_FEED_LIMIT));
 
     const coursesPrefetch = queryClient.prefetchQuery({
       queryKey: appQueryKeys.courses(),

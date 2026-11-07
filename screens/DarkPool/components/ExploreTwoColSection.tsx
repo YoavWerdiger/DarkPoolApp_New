@@ -11,11 +11,14 @@ import {
   chunkExploreColumns,
 } from '../utils/exploreGrid';
 import { ExplorePortraitCard } from './ExplorePortraitCard';
+import { SkeletonBox } from '../../../components/ui/SkeletonLoader';
 
 interface Props {
   title: string;
   people: ExplorePerson[];
   onPersonPress: (person: ExplorePerson) => void;
+  /** הנתונים עוד לא הגיעו — כותרת אמיתית + כרטיסי דיוקן בשלד באותה רשת */
+  loading?: boolean;
 }
 
 /** שני טורי דיוקן בגודל EXPLORE_PROFILE_CARD — גלילה אופקית לעוד אנשים. */
@@ -23,6 +26,7 @@ export function ExploreTwoColSection({
   title,
   people,
   onPersonPress,
+  loading = false,
 }: Props) {
   const tokens = useDesignTokens();
   const cardWidth = EXPLORE_PROFILE_CARD.width;
@@ -32,6 +36,29 @@ export function ExploreTwoColSection({
   );
   const styles = useMemo(() => createStyles(tokens, cardWidth), [tokens, cardWidth]);
 
+  if (!people.length && loading) {
+    return (
+      <View style={styles.wrap} pointerEvents="none">
+        <View style={styles.header}>
+          <Text style={styles.title}>{title}</Text>
+        </View>
+        <View style={[styles.cardRow, { overflow: 'hidden' }]}>
+          {[0, 1, 2].map((c) => (
+            <View key={c} style={styles.column}>
+              {Array.from({ length: EXPLORE_GRID_ROWS }, (_, r) => (
+                <SkeletonBox
+                  key={r}
+                  width={cardWidth}
+                  height={EXPLORE_PROFILE_CARD.height}
+                  borderRadius={tokens.borderRadius.xl}
+                />
+              ))}
+            </View>
+          ))}
+        </View>
+      </View>
+    );
+  }
   if (!people.length) return null;
 
   return (

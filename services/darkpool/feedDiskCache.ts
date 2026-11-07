@@ -59,3 +59,50 @@ export function persistFeedToDisk<T>(queryKey: readonly unknown[], data: T[] | u
     }, SAVE_DEBOUNCE_MS),
   );
 }
+
+/* ── כללי: כל query (מערך או אובייקט) — למשל מדפי «חקור» ── */
+
+const hasData = (v: unknown): boolean =>
+  Array.isArray(v) ? v.length > 0 : v != null && typeof v === 'object' ? Object.keys(v as object).length > 0 : v != null;
+
+/**
+ * טוען query שמור מהדיסק. דורס גם placeholder (initialData עם dataUpdatedAt 0) — לא נתונים אמיתיים מהרשת.
+ */
+export function hydrateQueryFromDisk(queryKey: readonly unknown[]): Promise<void> {
+  const key = storageKey(queryKey);
+  const existing = hydrated.get(key);
+  if (existing) return existing;
+  const isReal = () => {
+    const st = queryClient.getQueryState(queryKey);
+    return !!st && st.dataUpdatedAt > 0 && hasData(st.data);
+  };
+  const run = (async () => {
+    try {
+      if (isReal()) return;
+      const raw = await AsyncStorage.getItem(key);
+      if (!raw) return;
+      const stored = JSON.parse(raw) as { savedAt: number; data: unknown };
+      if (!hasData(stored?.data) || Date.now() - stored.savedAt > MAX_AGE_MS) return;
+      if (isReal()) return;
+      queryClient.setQueryData(queryKey, stored.data, { updatedAt: stored.savedAt });
+    } catch {
+      /* קאש בלבד */
+    }
+  })();
+  hydrated.set(key, run);
+  return run;
+}
+
+export function persistQueryToDisk(queryKey: readonly unknown[], data: unknown, updatedAt: number): void {
+  if (!hasData(data) || !(updatedAt > 0)) return;
+  const key = storageKey(queryKey);
+  const prev = saveTimers.get(key);
+  if (prev) clearTimeout(prev);
+  saveTimers.set(
+    key,
+    setTimeout(() => {
+      saveTimers.delete(key);
+      AsyncStorage.setItem(key, JSON.stringify({ savedAt: updatedAt, data })).catch(() => undefined);
+    }, SAVE_DEBOUNCE_MS),
+  );
+}

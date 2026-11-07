@@ -1,5 +1,5 @@
 import { queryClient } from '../lib/queryClient';
-import { hydrateFeedFromDisk } from './darkpool/feedDiskCache';
+import { hydrateFeedFromDisk, hydrateQueryFromDisk } from './darkpool/feedDiskCache';
 import { appQueryKeys } from '../lib/appQueryKeys';
 import { persistQueryCache } from '../lib/queryPersist';
 import { readCachedMessagesForGroup, scheduleChatMessagesPersist } from '../lib/chatMessagePersist';
@@ -407,6 +407,16 @@ export async function warmAppCache(
     // פידי האינסיידרים מהדיסק לפני הרשת — כניסה למסך מציגה מיד את הפיד האחרון
     void hydrateFeedFromDisk(appQueryKeys.congressFeed(DARK_POOL_FEED_LIMIT));
     void hydrateFeedFromDisk(appQueryKeys.insiderFeed('all', true, DARK_POOL_FEED_LIMIT));
+    // מדפי «חקור» — אותו עיקרון: הסדר האחרון מיד, בלי קפיצות
+    for (const key of [
+      appQueryKeys.exploreGridProfiles,
+      appQueryKeys.exploreFollowCounts,
+      appQueryKeys.exploreExcessLeaders,
+      appQueryKeys.exploreRecentlyActive,
+      appQueryKeys.exploreDiscoveryExtras,
+    ]) {
+      void hydrateQueryFromDisk(key);
+    }
 
     const coursesPrefetch = queryClient.prefetchQuery({
       queryKey: appQueryKeys.courses(),

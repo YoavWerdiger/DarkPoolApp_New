@@ -36,6 +36,8 @@ export const appQueryKeys = {
   followingFeed: ['darkpool', 'following'] as const,
   followedInvestors: ['darkpool', 'followed'] as const,
   exploreFollowCounts: ['darkpool', 'explore', 'follow-counts'] as const,
+  /** גריד הפרופילים של «חקור» (היה EXPLORE_GRID_KEY מקומי במסך) */
+  exploreGridProfiles: ['uw', 'explore', 'grid-profiles', 'v2'] as const,
   exploreExcessLeaders: ['darkpool', 'explore', 'excess-leaders'] as const,
   exploreRecentlyActive: ['darkpool', 'explore', 'recently-active'] as const,
   exploreDiscoveryExtras: ['darkpool', 'explore', 'discovery-extras'] as const,

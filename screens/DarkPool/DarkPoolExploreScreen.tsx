@@ -38,6 +38,7 @@ import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHead
 import UICard from '../../components/ui/UICard';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { appQueryKeys } from '../../lib/appQueryKeys';
+import { hydrateQueryFromDisk, persistQueryToDisk } from '../../services/darkpool/feedDiskCache';
 import { useDarkPoolTabBarHeight } from '../../hooks/useDarkPoolTabBarHeight';
 import {
   dispatchOpenMainDrawer,
@@ -94,7 +95,7 @@ import {
 } from '../../services/darkpool/prefetchPersonPortfolio';
 
 // v2: כולל חברי קונגרס פעילים — מפתח חדש כדי שלא יוגש מטמון ישן של המאוצרים בלבד
-const EXPLORE_GRID_KEY = [...appQueryKeys.uwExplore, 'grid-profiles', 'v2'] as const;
+const EXPLORE_GRID_KEY = appQueryKeys.exploreGridProfiles;
 const CURATED_SYNC = getExplorePeopleMergedSync({ requirePhoto: true });
 
 async function loadExploreGridPeople(): Promise<ExplorePerson[]> {
@@ -127,6 +128,25 @@ function mergePerson(
 
 function withPhoto(people: ExplorePerson[]): ExplorePerson[] {
   return people.filter((p) => explorePersonHasPhoto(p) || !!p.image_url?.trim());
+}
+
+const EXPLORE_PERSISTED_KEYS: readonly (readonly unknown[])[] = [
+  appQueryKeys.exploreGridProfiles,
+  appQueryKeys.exploreFollowCounts,
+  appQueryKeys.exploreExcessLeaders,
+  appQueryKeys.exploreRecentlyActive,
+  appQueryKeys.exploreDiscoveryExtras,
+];
+
+/** שומר query לדיסק אחרי שליפה אמיתית (לא initialData / placeholder) */
+function usePersistQuery(
+  key: readonly unknown[],
+  q: { data: unknown; dataUpdatedAt: number; isSuccess: boolean; isPlaceholderData: boolean },
+) {
+  useEffect(() => {
+    if (q.isSuccess && !q.isPlaceholderData) persistQueryToDisk(key, q.data, q.dataUpdatedAt);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q.data, q.dataUpdatedAt]);
 }
 
 export default function DarkPoolExploreScreen() {
@@ -184,6 +204,27 @@ export default function DarkPoolExploreScreen() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // כניסה אופטימיסטית: המדפים האחרונים מהדיסק (נטענים גם בהפעלה — warmAppCache), ושמירה אחרי כל שליפה
+  useEffect(() => {
+    for (const key of EXPLORE_PERSISTED_KEYS) void hydrateQueryFromDisk(key);
+  }, []);
+  usePersistQuery(EXPLORE_GRID_KEY, gridQuery);
+  usePersistQuery(appQueryKeys.exploreFollowCounts, followCountsQuery);
+  usePersistQuery(appQueryKeys.exploreExcessLeaders, excessLeadersQuery);
+  usePersistQuery(appQueryKeys.exploreRecentlyActive, recentlyActiveQuery);
+  usePersistQuery(appQueryKeys.exploreDiscoveryExtras, extrasQuery);
+
+  // מדף שהנתונים שלו עוד לא הגיעו — שלד במקומו (ולא רשימת ביניים שמתחלפת ומקפיצה את הסדר)
+  const gridLoading = gridQuery.dataUpdatedAt === 0 && gridQuery.isFetching;
+  const extrasLoading = extrasQuery.data === undefined;
+  const sectionLoading = {
+    followed: followCountsQuery.data === undefined,
+    excess: excessLeadersQuery.data === undefined,
+    recent: recentlyActiveQuery.data === undefined || extrasLoading,
+    extras: extrasLoading,
+    grid: gridLoading,
+  };
+
   useEffect(() => {
     prefetchPortraitUris(gridQuery.data ?? CURATED_SYNC);
   }, [gridQuery.data]);
@@ -236,6 +277,8 @@ export default function DarkPoolExploreScreen() {
   );
 
   const mostFollowed = useMemo<ExplorePerson[]>(() => {
+    // עד שמספרי העוקבים מגיעים — שלד (לא הקטלוג בסדר זמני שמתחלף)
+    if (followCountsQuery.data === undefined) return [];
     const byId = new Map(catalog.map((p) => [p.id, p]));
     const ranked = (followCountsQuery.data ?? [])
       .map((row) => {
@@ -489,6 +532,7 @@ export default function DarkPoolExploreScreen() {
           ) : null}
 
           <ExploreDiscoverySections
+            loading={sectionLoading}
             mostFollowed={mostFollowed}
             fundBooks={fundBooks}
             recentlyActive={recentlyActive}

@@ -4,7 +4,8 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import type { ExplorePerson } from '../../../services/darkpool/uwExploreService';
 import { darkPoolSectionTitleStyle } from '../darkPoolLayout';
-import { EXPLORE_RAIL_GAP } from '../utils/exploreGrid';
+import { EXPLORE_PROFILE_CARD, EXPLORE_RAIL_GAP } from '../utils/exploreGrid';
+import { SkeletonBox } from '../../../components/ui/SkeletonLoader';
 import { ExplorePortraitCard } from './ExplorePortraitCard';
 
 interface Props {
@@ -13,6 +14,8 @@ interface Props {
   onPersonPress: (person: ExplorePerson) => void;
   /** מציג את המדד בכרטיס (עודף תשואה) */
   showMetric?: boolean;
+  /** הנתונים עוד לא הגיעו — כותרת אמיתית + כרטיסים בשלד */
+  loading?: boolean;
 }
 
 /** רייל אופקי לגילוי — אותו כרטיס EXPLORE_PROFILE_CARD כמו כל המדפים. */
@@ -21,10 +24,30 @@ export function ExploreRailSection({
   people,
   onPersonPress,
   showMetric = false,
+  loading = false,
 }: Props) {
   const tokens = useDesignTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
 
+  if (!people.length && loading) {
+    return (
+      <View style={styles.wrap} pointerEvents="none">
+        <View style={styles.header}>
+          <Text style={styles.title}>{title}</Text>
+        </View>
+        <View style={[styles.cardRow, { overflow: 'hidden' }]}>
+          {[0, 1, 2].map((i) => (
+            <SkeletonBox
+              key={i}
+              width={EXPLORE_PROFILE_CARD.width}
+              height={EXPLORE_PROFILE_CARD.height}
+              borderRadius={tokens.borderRadius.xl}
+            />
+          ))}
+        </View>
+      </View>
+    );
+  }
   if (!people.length) return null;
 
   return (

@@ -1919,7 +1919,8 @@ function LearningScreen() {
                   value={userNotes}
                   onChangeText={setUserNotes}
                   multiline
-                  scrollEnabled={false}
+                  // גובה קבוע — הגלילה בתוך ההערות, לא הדף כולו
+                  scrollEnabled
                   textAlign="right"
                   textAlignVertical="top"
                 />
@@ -2385,7 +2386,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   lessonNotesInput: {
     ...ACADEMY_TYPE.body,
-    minHeight: 160,
+    // גובה קבוע: טקסט ארוך נגלל בתוך השדה במקום להאריך את הדף
+    height: 180,
     paddingHorizontal: APP_LAYOUT.cardPadding,
     paddingTop: APP_LAYOUT.cardPadding,
     paddingBottom: APP_LAYOUT.cardPadding,

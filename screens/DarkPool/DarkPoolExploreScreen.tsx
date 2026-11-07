@@ -634,6 +634,8 @@ function createStyles(
       paddingHorizontal: 16,
       gap: APP_LAYOUT.stackGapSmall,
       borderRadius: tokens.borderRadius.search,
+      // מרווח מהכותרת וכפתור הסגירה של השיט
+      marginTop: APP_LAYOUT.componentGap,
       marginBottom: tokens.spacing.md,
     },
     searchInput: {

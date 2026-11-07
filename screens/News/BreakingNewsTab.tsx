@@ -504,15 +504,16 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
         )}
 
         {articleBody}
+        {/* בתוך תוכן השיט (כמו בשיט פירוט הדוח) — ב-iOS מודל נפתח מעל מודל רק כשהוא בתוך העץ שלו */}
+        <ShareDestinationSheet
+          visible={visible && shareOpen && !!shareAttachment}
+          attachment={shareAttachment}
+          onClose={() => setShareOpen(false)}
+          // אחרי שיתוף בפועל (מנווט לצ'אט / לציוצים) — סוגרים גם את הכתבה
+          onShared={onClose}
+        />
       </View>
     </BottomSheet>
-    <ShareDestinationSheet
-      visible={visible && shareOpen && !!shareAttachment}
-      attachment={shareAttachment}
-      onClose={() => setShareOpen(false)}
-      // אחרי שיתוף בפועל (מנווט לצ'אט / לציוצים) — סוגרים גם את הכתבה
-      onShared={onClose}
-    />
     </>
   );
 };

@@ -90,6 +90,7 @@ const FOOTER_H = 72;
 const CARD_BG = '#0A0C0B';
 const INK = '#F2F2F2';
 const INK_2 = 'rgba(242,242,242,0.5)';
+const QR_BG = '#141716';
 const WIN = '#00D64B';
 const LOSS = '#FF4D4D';
 
@@ -615,7 +616,8 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                     <Text style={styles.ctaSub}>{SHARE_CTA_SUB}</Text>
                   </View>
                   <View style={styles.qrWrap}>
-                    <QRCode value={APP_LINKS.appDownload} size={44 * scale} backgroundColor="#FFFFFF" color="#0A0E0A" ecl="M" />
+                    {/* QR הפוך (נקודות בהירות על רקע כהה) — משתלב בכרטיס; נבדק שמצלמת iPhone / Vision קוראת אותו */}
+                    <QRCode value={APP_LINKS.appDownload} size={46 * scale} backgroundColor={QR_BG} color={INK} ecl="M" />
                   </View>
                 </View>
               </View>
@@ -802,7 +804,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     heroWrap: {
       alignSelf: 'stretch',
       alignItems: 'flex-start',
-      marginTop: 16,
+      marginTop: 6,
     },
     heroValue: {
       fontWeight: '700',
@@ -815,7 +817,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       flexDirection: 'row',
       alignItems: 'baseline',
       gap: 7,
-      marginTop: 4,
+      marginTop: 0,
     },
     pnlLabel: {
       color: INK_2,
@@ -841,9 +843,11 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       paddingEnd: 14,
     },
     qrWrap: {
-      padding: 4,
-      borderRadius: 9,
-      backgroundColor: '#FFFFFF',
+      padding: 6,
+      borderRadius: 12,
+      backgroundColor: QR_BG,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.10)',
     },
     ctaTextCol: {
       flex: 1,

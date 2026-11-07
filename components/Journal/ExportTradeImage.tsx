@@ -529,10 +529,6 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                       <Stop offset="0" stopColor={CARD_BG} stopOpacity="0" />
                       <Stop offset="1" stopColor={CARD_BG} stopOpacity="0.7" />
                     </LinearGradient>
-                    <RadialGradient id="brandGlow" cx="50%" cy="13%" rx="32%" ry="11%">
-                      <Stop offset="0" stopColor="#00E63D" stopOpacity="0.18" />
-                      <Stop offset="1" stopColor="#00E63D" stopOpacity="0" />
-                    </RadialGradient>
                     <RadialGradient id="centerGlow" cx="50%" cy="38%" rx="60%" ry="60%">
                       <Stop offset="0" stopColor={heroColor} stopOpacity="0.16" />
                       <Stop offset="1" stopColor={heroColor} stopOpacity="0" />
@@ -544,7 +540,6 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                   </Defs>
                   <Rect width={ART_W} height={ART_H} fill={CARD_BG} />
                   <Rect width={ART_W} height={ART_H} fill="url(#centerGlow)" />
-                  <Rect width={ART_W} height={ART_H} fill="url(#brandGlow)" />
                   <Path d={art.area} fill="url(#areaFill)" />
                   <Rect y={ART_H - FOOTER_H - 16} width={ART_W} height={FOOTER_H + 16} fill="url(#footScrim)" />
                   <Path d={art.line} stroke={heroColor} strokeWidth={2.4} strokeLinejoin="round" strokeLinecap="round" fill="none" mask="url(#qrClear)" />
@@ -574,7 +569,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                   <View style={styles.logoRow}>
                     <Image
                       source={BRAND_LOGO}
-                      style={{ width: 132 * scale, height: (132 * scale) / BRAND_LOGO_ASPECT }}
+                      style={{ width: 144 * scale, height: (144 * scale) / BRAND_LOGO_ASPECT }}
                       contentFit="contain"
                       transition={0}
                       accessibilityLabel={i18n.t('auto.components__Journal__ExportTradeImage.s10')}
@@ -819,7 +814,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     heroWrap: {
       alignSelf: 'stretch',
       alignItems: 'flex-start',
-      marginTop: 16,
+      marginTop: 10,
     },
     heroValue: {
       fontWeight: '700',
@@ -836,13 +831,13 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     pnlLabel: {
       color: INK_2,
-      fontSize: 12,
-      fontWeight: '500',
+      fontSize: 13,
+      fontWeight: '400',
       writingDirection: TEXT_DIR,
     },
     pnlValue: {
-      fontSize: 15,
-      fontWeight: '700',
+      fontSize: 16,
+      fontWeight: '600',
       writingDirection: 'ltr',
       fontVariant: ['tabular-nums'],
     },

@@ -9,7 +9,7 @@ import { runAfterInteractions } from '../../utils/runAfterInteractions';
 import { useToast } from '../../components/ui/Toast';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useMemo, useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
-import { View, FlatList, Text, StyleSheet, type ViewStyle, type DimensionValue, TouchableOpacity, Pressable, ActivityIndicator, Image, Modal, TextInput, Animated as RNAnimated, Easing, Platform, LayoutChangeEvent, Keyboard } from 'react-native';
+import { View, FlatList, Text, StyleSheet, type ViewStyle, TouchableOpacity, Pressable, Image, Modal, TextInput, Animated as RNAnimated, Easing, Platform, LayoutChangeEvent, Keyboard } from 'react-native';
 import { SHEET_CLOSE_MS } from '../../components/ui/BottomSheet/sheetMotion';
 import { chatComposerSafeBottomInset, chatComposerKeyboardTranslate, CHAT_COMPOSER_KEYBOARD_GAP, CHAT_KEYBOARD_LTR_STYLE } from '../../components/chat/chatInputLayout';
 import { ChatComposerDock, ChatKeyboardFollow } from '../../components/chat/ChatComposerDock';
@@ -69,33 +69,33 @@ import { HapticFeedback } from '../../utils/hapticFeedback';
 import { useTheme } from '../../context/ThemeContext';
 import { donateShareTarget } from '../../lib/shareTargets';
 import { useChatMessageScroll } from '../../hooks/useChatMessageScroll';
+import { SkeletonBox } from '../../components/ui/SkeletonLoader';
 import {
   scrollChatListToBottom,
 } from '../../utils/chatListScrollToBottom';
 
-// ── Skeleton bubble — shown while messages are loading ──────────────────────
-const SkeletonBubble = React.memo(({ isMe, width, delay }: { isMe: boolean; width: DimensionValue; delay: number }) => {
-  const opacity = useRef(new RNAnimated.Value(0.35)).current;
-  useEffect(() => {
-    const anim = RNAnimated.loop(
-      RNAnimated.sequence([
-        RNAnimated.timing(opacity, { toValue: 0.7, duration: 700, useNativeDriver: true }),
-        RNAnimated.timing(opacity, { toValue: 0.35, duration: 700, useNativeDriver: true }),
-      ])
-    );
-    const t = setTimeout(() => anim.start(), delay);
-    return () => { clearTimeout(t); anim.stop(); };
-  }, []);
+// ── בועת שלד — בזמן טעינת ההודעות ──────────────────────
+// באותה גאומטריה כמו ChatMessage: אווטאר 24 לצד בועות של אחרים, בועה עד 80% עם פינה 4 בצד הזנב,
+// וצבע/פעימה משותפים של SkeletonBox (תלוי ערכת נושא — לא צבע כהה קשיח)
+const SkeletonBubble = React.memo(({ isMe, width, lines = 1 }: { isMe: boolean; width: `${number}%`; lines?: 1 | 2 }) => {
+  // שורה אחת: paddingTop 7 + שורת טקסט ושעה + paddingBottom 6 ≈ 36; שתי שורות ≈ 56
+  const height = lines === 2 ? 56 : 36;
   return (
-    <View style={{ flexDirection: 'row', justifyContent: isMe ? 'flex-end' : 'flex-start', marginBottom: 6 }}>
-      {!isMe && <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.1)', marginRight: 6, alignSelf: 'flex-end' }} />}
-      <RNAnimated.View style={{
-        width, height: 36, borderRadius: 14, opacity,
-        backgroundColor: isMe ? 'rgba(19,77,55,0.5)' : 'rgba(36,38,37,0.5)',
-      }} />
+    <View style={{ flexDirection: 'row', justifyContent: isMe ? 'flex-end' : 'flex-start', alignItems: 'flex-end', marginBottom: 6 }}>
+      {!isMe && <SkeletonBox width={24} height={24} borderRadius={12} style={{ marginRight: 6, marginBottom: 2 }} />}
+      <View style={{ width, maxWidth: '80%', marginLeft: isMe ? 0 : BUBBLE_SIDE_INSET, marginRight: isMe ? BUBBLE_SIDE_INSET : 0 }}>
+        <SkeletonBox
+          width="100%"
+          height={height}
+          borderRadius={16}
+          style={isMe ? { borderBottomRightRadius: 4 } : { borderBottomLeftRadius: 4 }}
+        />
+      </View>
     </View>
   );
 });
+/** = BUBBLE_TAIL_W - 2 ב-ChatMessage (מרווח הזנב) */
+const BUBBLE_SIDE_INSET = 6;
 
 /** FAB נסתר כשהמקלדת פתוחה — hook נפרד כדי שמסך הצ'אט לא ירנדר את הרשימה ב-DidShow/DidHide. */
 function ChatScrollFabGate({ children }: { children: React.ReactNode }) {
@@ -2047,14 +2047,7 @@ export default function ChatGroupScreen() {
   );
 
   const renderFooter = () => {
-    // ב-inverted, Footer משנה את offset — רק בטעינה ראשונה (לא loadMore)
-    if (isLoadingMessages && displayMessages.length === 0) {
-      return (
-        <View style={styles.loadingFooter}>
-          <ActivityIndicator color={DesignTokens.colors.primary.main} />
-        </View>
-      );
-    }
+    // טעינה ראשונה: שלד הבועות (overlay) תופס את מקום ההודעות — בלי ספינר נוסף
     return null;
   };
 
@@ -2071,7 +2064,10 @@ export default function ChatGroupScreen() {
     !isLoadingMessages &&
     !awaitingLocalThread &&
     displayMessages.length === 0;
-  const showMessagesSkeleton = !messagesRevealed && !isEmptyConfirmed && !hasLocalMessagesForGroup;
+  // שלד גם כשהרשימה כבר «נחשפה» אבל ההודעות עדיין בטעינה וריקה — במקום ספינר בתחתית
+  const showMessagesSkeleton =
+    !isEmptyConfirmed &&
+    ((!messagesRevealed && !hasLocalMessagesForGroup) || (isLoadingMessages && displayMessages.length === 0));
   const showMessagesPlaceholder = showMessagesSkeleton || isEmptyConfirmed;
   const renderMessagesPlaceholder = () => {
     if (isEmptyConfirmed) {
@@ -2086,17 +2082,17 @@ export default function ChatGroupScreen() {
     if (showMessagesSkeleton) {
       return (
         <View style={styles.messagesSkeleton}>
-          {[
+          {([
             { isMe: false, w: '60%' }, { isMe: true, w: '45%' },
-            { isMe: false, w: '75%' }, { isMe: false, w: '50%' },
+            { isMe: false, w: '75%', l: 2 }, { isMe: false, w: '50%' },
             { isMe: true, w: '55%' }, { isMe: true, w: '35%' },
             { isMe: false, w: '65%' }, { isMe: false, w: '40%' },
-            { isMe: true, w: '70%' }, { isMe: false, w: '55%' },
+            { isMe: true, w: '70%', l: 2 }, { isMe: false, w: '55%' },
             { isMe: false, w: '45%' }, { isMe: true, w: '60%' },
-            { isMe: false, w: '70%' }, { isMe: true, w: '40%' },
+            { isMe: false, w: '70%', l: 2 }, { isMe: true, w: '40%' },
             { isMe: false, w: '50%' }, { isMe: true, w: '65%' },
-          ].map((s, i) => (
-            <SkeletonBubble key={i} isMe={s.isMe} width={s.w as any} delay={i * 60} />
+          ] as { isMe: boolean; w: `${number}%`; l?: 2 }[]).map((s, i) => (
+            <SkeletonBubble key={i} isMe={s.isMe} width={s.w} lines={s.l ?? 1} />
           ))}
         </View>
       );

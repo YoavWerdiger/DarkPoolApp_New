@@ -9,6 +9,7 @@ import { APP_LAYOUT, UI_CARD_RADIUS } from '../../../components/ui/appLayout';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { DistributionDonut } from '../../Portfolios/components/DistributionDonut';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
+import { SkeletonBox, SkeletonLine } from '../../../components/ui/SkeletonLoader';
 import {
   holdingsToDistributionSlices,
   sliceColorByTicker,
@@ -374,6 +375,37 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontVariant: ['tabular-nums'],
     },
   });
+}
+
+/**
+ * שורת אחזקה בטעינה — אותה שורה בדיוק (לוגו 36 · טיקר + הקצאה · שווי + תשואה),
+ * כל טקסט כשורה בגובה ה-lineHeight האמיתי — כך שהרשימה האמיתית מחליפה אותה בלי קפיצה.
+ */
+export function HoldingsListRowSkeleton({ variant = 0 }: { variant?: number }) {
+  const tokens = useDesignTokens();
+  const styles = useMemo(() => createRowStyles(tokens), [tokens]);
+  return (
+    <View style={styles.holdingRow} pointerEvents="none">
+      <View style={styles.leadingIcon}>
+        <SkeletonBox width={36} height={36} borderRadius={18} />
+      </View>
+      <View style={styles.iconTickerGap} />
+      <View style={[styles.holdingTickerCol, { direction: ROOT_DIR }]}>
+        <SkeletonLine lineHeight={DARK_POOL_TYPE.cardBody.lineHeight} width={[48, 40, 56, 44][variant % 4]} box={13} align="flex-end" />
+        <SkeletonLine
+          lineHeight={DARK_POOL_TYPE.caption.lineHeight}
+          width={34}
+          box={10}
+          align="flex-end"
+          style={{ marginTop: APP_LAYOUT.cardTitleToSubtitleGap }}
+        />
+      </View>
+      <View style={[styles.holdingValueCol, { direction: ROOT_DIR }]}>
+        <SkeletonLine lineHeight={DARK_POOL_TYPE.cardBody.lineHeight} width={68} box={13} align="flex-end" />
+        <SkeletonLine lineHeight={DARK_POOL_TYPE.caption.lineHeight} width={44} box={10} align="flex-end" />
+      </View>
+    </View>
+  );
 }
 
 function createRowStyles(tokens: ReturnType<typeof useDesignTokens>) {

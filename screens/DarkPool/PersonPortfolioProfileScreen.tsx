@@ -39,7 +39,7 @@ import UICard from '../../components/ui/UICard';
 import { chromeSurfaceCardStyle } from '../../components/ui/chromeControl';
 import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import { LineChartSkeleton, ListItemSkeleton, SkeletonBox } from '../../components/ui/SkeletonLoader';
+import { LineChartSkeleton, SkeletonLine } from '../../components/ui/SkeletonLoader';
 import { useQuery } from '@tanstack/react-query';
 import { appQueryKeys } from '../../lib/appQueryKeys';
 import {
@@ -111,6 +111,7 @@ import {
 import { withFeedRangeLabel } from './utils/feedTradeDisplay';
 import {
   HoldingsListRow,
+  HoldingsListRowSkeleton,
   HoldingsPieSection,
   useHoldingsPieColors,
 } from './components/HoldingsPieSection';
@@ -1536,26 +1537,64 @@ export function PersonPortfolioProfileScreen({
     </View>
   );
 
+  const profileValueSkeleton = (
+    <View style={styles.valueBlock} pointerEvents="none">
+      <View style={styles.valueLabelRow}>
+        <SkeletonLine lineHeight={DARK_POOL_TYPE.sectionTitle.lineHeight} width={110} box={16} />
+      </View>
+      <SkeletonLine
+        lineHeight={DARK_POOL_TYPE.cardMetricValue.lineHeight}
+        width={168}
+        box={26}
+        align="flex-end"
+        style={{ marginTop: APP_LAYOUT.cardMetricLabelToValueGap }}
+      />
+      <SkeletonLine
+        lineHeight={DARK_POOL_TYPE.cardBody.lineHeight}
+        width={132}
+        box={13}
+        align="flex-end"
+        style={{ marginTop: APP_LAYOUT.titleSubtitleGap }}
+      />
+    </View>
+  );
+
+  const holdingsListSkeleton = (rows: number) => (
+    <View pointerEvents="none">
+      <View style={styles.sectionTitleRow}>
+        <SkeletonLine lineHeight={DARK_POOL_TYPE.sectionTitle.lineHeight} width={96} box={16} />
+      </View>
+      <UICard
+        variant="soft"
+        glassIntensity="light"
+        padding="none"
+        style={styles.listPanel}
+        contentContainerStyle={styles.listPanelInner}
+      >
+        {Array.from({ length: rows }, (_, i) => (
+          <React.Fragment key={i}>
+            <HoldingsListRowSkeleton variant={i} />
+            {i < rows - 1 ? <View style={styles.listRowDivider} /> : null}
+          </React.Fragment>
+        ))}
+      </UICard>
+    </View>
+  );
+
   if (loading) {
     return (
       <ScreenChrome rtl>
         <View style={[styles.flex, darkPoolTransparentFill]}>
           {envelope}
           <ScrollView style={styles.flex} contentContainerStyle={[styles.body, { paddingBottom: 12 }]}>
-            {/* כמו המסך האמיתי: תווית + שווי + שינוי, ואז הגרף ושורת התקופות */}
-            <View style={{ marginTop: 8, alignItems: 'flex-end', gap: 8 }}>
-              <SkeletonBox width={70} height={14} />
-              <SkeletonBox width="62%" height={34} borderRadius={10} />
-              <SkeletonBox width="44%" height={14} />
-            </View>
-            <View style={{ marginTop: 16 }}>
+            {/* באותם בלוקים וסגנונות כמו המסך האמיתי: valueBlock (תווית · שווי · שינוי), chartWrap,
+                ואז אחזקות (כותרת + listPanel עם שורות HoldingsListRow) — כל שורה בגובה ה-lineHeight האמיתי.
+                התווית וכותרת האחזקות תלויות במנוע הנתונים — לכן גם הן צורות */}
+            {profileValueSkeleton}
+            <View style={styles.chartWrap}>
               <LineChartSkeleton height={kind === 'politician' ? 176 : 220} periods={SNAPSHOT_CHART_PERIODS.length} />
             </View>
-            <View style={{ marginTop: 24, gap: 12 }}>
-              {Array.from({ length: 5 }).map((_, i) => (
-                <ListItemSkeleton key={i} delay={400 + i * 70} showAvatar={false} />
-              ))}
-            </View>
+            {holdingsListSkeleton(5)}
           </ScrollView>
           {followDock}
         </View>
@@ -1809,11 +1848,7 @@ export function PersonPortfolioProfileScreen({
           {kind === 'politician' &&
           quiverHoldingsQuery.isLoading &&
           displayHoldings.length === 0 ? (
-            <View style={styles.listPanel}>
-              <ListItemSkeleton delay={80} showAvatar={false} />
-              <ListItemSkeleton delay={140} showAvatar={false} />
-              <ListItemSkeleton delay={200} showAvatar={false} />
-            </View>
+            holdingsListSkeleton(3)
           ) : displayHoldings.length > 0 ? (
             <>
               <View style={styles.sectionTitleRow}>

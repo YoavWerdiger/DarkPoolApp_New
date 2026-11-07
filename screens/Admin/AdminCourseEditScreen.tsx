@@ -62,7 +62,15 @@ function Field({
   return (
     <View style={styles.field}>
       <Text style={formFieldLabelStyle({ tokens, focused })}>{label}</Text>
-      <View style={[formFieldShellStyle({ tokens, focused, multiline }), styles.shell]}>
+      <View
+        style={[
+          formFieldShellStyle({ tokens, focused, multiline }),
+          styles.shell,
+          // מעוגל כמו שדות החיפוש / ההתחברות; רב-שורתי — פינות מעט קטנות יותר
+          { borderRadius: multiline ? 18 : tokens.borderRadius.search },
+          !multiline && styles.shellSingle,
+        ]}
+      >
         <TextInput
           value={value}
           onChangeText={onChangeText}
@@ -438,11 +446,13 @@ function dynamicStyles(tokens: Tokens) {
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scroll: { padding: APP_LAYOUT.screenPaddingHorizontal, paddingBottom: 64, gap: APP_LAYOUT.componentGap },
-  form: { padding: APP_LAYOUT.cardPadding, gap: 12 },
-  field: { gap: 6 },
-  shell: { paddingHorizontal: 14 },
+  form: { padding: APP_LAYOUT.cardPadding, gap: APP_LAYOUT.componentGap },
+  // התווית כבר עם marginBottom 8 (formFieldLabelStyle)
+  field: {},
+  shell: { paddingHorizontal: 16 },
+  shellSingle: { minHeight: 52 },
   ltrInput: { textAlign: 'left', writingDirection: 'ltr' },
-  multiline: { minHeight: 88 },
+  multiline: { minHeight: 96, paddingTop: 2 },
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -465,6 +475,6 @@ const styles = StyleSheet.create({
   lessonMetaRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8 },
   lessonMeta: { ...APP_TYPE.caption },
   reorder: { alignItems: 'center', gap: 2 },
-  sheetScroll: { gap: 12, paddingBottom: 48, paddingTop: 4 },
+  sheetScroll: { gap: APP_LAYOUT.componentGap, paddingBottom: 48, paddingTop: 4 },
   deleteBtn: { marginTop: 4 },
 });

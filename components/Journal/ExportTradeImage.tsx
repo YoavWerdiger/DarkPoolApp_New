@@ -34,7 +34,7 @@ import {
 } from '../ui/BottomSheet/sheetGlass';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
 import { brandfetchTickerLogoUri } from '../../utils/brandfetch';
-import Svg, { Circle, Defs, G, Line, LinearGradient, Path, RadialGradient, Rect, Stop, Text as SvgText, TSpan } from 'react-native-svg';
+import Svg, { Circle, Defs, G, Line, LinearGradient, Path, RadialGradient, Rect, Stop, Text as SvgText } from 'react-native-svg';
 import { APP_FONT } from '../ui/appFont';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -82,8 +82,8 @@ const DEFAULT_SHARE_OPTIONS: ShareOptions = { showPnl: true, showReturn: true, s
 /** מידות העיצוב — הכרטיס מצויר ב-viewBox 340×425 ומוקטן/מוגדל באחידות */
 const ART_W = 340;
 const ART_H = 425;
-const CHART_TOP = 252;
-const CHART_BOT = 328;
+const CHART_TOP = 286;
+const CHART_BOT = 338;
 const CHART_PAD_X = 22;
 const FOOTER_H = 72;
 
@@ -93,8 +93,9 @@ const INK_2 = 'rgba(242,242,242,0.5)';
 const WIN = '#00D64B';
 const LOSS = '#FF4D4D';
 
-const BRAND_MARK = require('../../assets/branding/share-mark.png');
-const BRAND_MARK_ASPECT = 218 / 160;
+// הלוגו המלא (שור־ודוב + DARKPOOL + «קהילת הסוחרים של ישראל») — מקומי, כדי שיהיה טעון ברגע הצילום
+const BRAND_LOGO = require('../../assets/darkpool-share-logo.png');
+const BRAND_LOGO_ASPECT = 1330 / 595;
 const BULL = require('../../assets/branding/share-bull.png');
 const BEAR = require('../../assets/branding/share-bear.png');
 
@@ -181,21 +182,27 @@ async function loadTradePath(trade: ExportableTrade): Promise<number[] | null> {
   return [trade.entry_price, ...closes, trade.exit_price];
 }
 
-/** תאריך קצר: 03.11.26 */
-function shortDate(iso: string, withYear = true): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  return withYear ? `${dd}.${mm}.${String(d.getFullYear()).slice(2)}` : `${dd}.${mm}`;
-}
-
-/** ימי החזקה (פתוח — עד היום) */
-function heldDays(entry: string, exit: string): number | null {
-  const a = new Date(entry).getTime();
-  const b = exit ? new Date(exit).getTime() : Date.now();
-  if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
-  return Math.max(0, Math.round((b - a) / 86_400_000));
+/**
+ * תגית מחיר על הגרף: [ $118.40  כניסה ]. כל טקסט ממורכז בתא שלו (textAnchor middle) —
+ * לא תלוי בכיוון הממשק (forceRTL הופך start/end).
+ */
+function PriceTag({ x, y, anchor, label, value }: { x: number; y: number; anchor: 'start' | 'end'; label: string; value: string }) {
+  const valueW = value.length * 6.2;
+  const labelW = label.length * 5.6;
+  const w = 8 + valueW + 6 + labelW + 8;
+  let x0 = anchor === 'start' ? x - 6 : x - w + 6;
+  x0 = Math.max(6, Math.min(ART_W - 6 - w, x0));
+  return (
+    <G>
+      <Rect x={x0} y={y} width={w} height={20} rx={10} fill="rgba(10,12,11,0.86)" stroke="rgba(255,255,255,0.14)" strokeWidth={1} />
+      <SvgText x={x0 + 8 + valueW / 2} y={y + 14} textAnchor="middle" fontFamily={APP_FONT.bold} fontSize={11} fill={INK}>
+        {value}
+      </SvgText>
+      <SvgText x={x0 + w - 8 - labelW / 2} y={y + 14} textAnchor="middle" fontFamily={APP_FONT.medium} fontSize={10} fill="rgba(242,242,242,0.55)">
+        {label}
+      </SvgText>
+    </G>
+  );
 }
 
 /** אייקון מגמה בתוך הפיל של LONG / SHORT (כמו Ionicons trending-up/down) */
@@ -410,8 +417,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
     const pnlColor = isProfit ? WIN : LOSS;
     const retColor = ret >= 0 ? WIN : LOSS;
     const logoUri = brandfetchTickerLogoUri(normalized.symbol);
-    const days = heldDays(normalized.entry_date, normalized.exit_date);
-    return { isOpen, isProfit, ret, dirColor, pnlColor, retColor, logoUri, days };
+    return { isOpen, isProfit, ret, dirColor, pnlColor, retColor, logoUri };
   }, [normalized]);
 
   const handleExport = useCallback(async () => {
@@ -459,26 +465,17 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
     return null;
   }
 
-  const { isOpen, isProfit, ret, dirColor, pnlColor, retColor, logoUri, days } = snapshot;
+  const { isOpen, isProfit, ret, dirColor, pnlColor, retColor, logoUri } = snapshot;
   // המספר הראשי: תשואה (אם מוצגת), אחרת רווח/הפסד — וצבע הזוהר לפיו
   const heroIsReturn = options.showReturn;
   const heroColor = heroIsReturn ? retColor : pnlColor;
   const retText = `${ret >= 0 ? '+' : '−'}${Math.abs(ret).toFixed(2)}%`;
   const pnlText = `${isProfit ? '+' : '−'}$${formatCurrencyPlain(normalized.pnl)}`;
-  const dateText = isOpen
-    ? shortDate(normalized.entry_date)
-    : `${shortDate(normalized.entry_date, false)} – ${shortDate(normalized.exit_date)}`;
   const isWin = heroIsReturn ? ret >= 0 : isProfit;
   const art = priceArt(`${normalized.id}:${normalized.symbol}`, normalized.exit_price >= normalized.entry_price, pricePath);
   const chartMid = (CHART_TOP + CHART_BOT) / 2;
   const scale = cardW / ART_W;
-  const pathFont = { fontFamily: APP_FONT.medium, fontSize: 10 };
-  const heldText =
-    days == null
-      ? ''
-      : days === 0
-        ? i18n.t('auto.components__Journal__ExportTradeImage.intraday')
-        : i18n.t('auto.components__Journal__ExportTradeImage.heldDays', { count: days });
+
   const handleHeaderClose = () => {
     (animatedClose ?? onClose)();
   };
@@ -537,111 +534,106 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
                   <Defs>
                     <LinearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
                       <Stop offset="0" stopColor={heroColor} stopOpacity="0.30" />
-                      <Stop offset="0.75" stopColor={heroColor} stopOpacity="0" />
+                      <Stop offset="0.8" stopColor={heroColor} stopOpacity="0" />
                     </LinearGradient>
-                    <RadialGradient id="cornerGlow" cx={UI_DIR === 'rtl' ? '100%' : '0%'} cy="0%" rx="95%" ry="95%">
-                      <Stop offset="0" stopColor={heroColor} stopOpacity="0.20" />
+                    <RadialGradient id="centerGlow" cx="50%" cy="38%" rx="60%" ry="60%">
+                      <Stop offset="0" stopColor={heroColor} stopOpacity="0.16" />
                       <Stop offset="1" stopColor={heroColor} stopOpacity="0" />
                     </RadialGradient>
                   </Defs>
                   <Rect width={ART_W} height={ART_H} fill={CARD_BG} />
-                  <Rect width={ART_W} height={ART_H} fill="url(#cornerGlow)" />
-                  {[236, 260, 284, 308, 332, 356].map((y) => (
+                  <Rect width={ART_W} height={ART_H} fill="url(#centerGlow)" />
+                  {[274, 294, 314, 334].map((y) => (
                     <Line key={y} x1={0} x2={ART_W} y1={y} y2={y} stroke="rgba(255,255,255,0.045)" strokeWidth={1} />
                   ))}
                   <Path d={art.area} fill="url(#areaFill)" />
                   <Path d={art.line} stroke={heroColor} strokeWidth={2.2} strokeLinejoin="round" strokeLinecap="round" fill="none" />
+                  <Circle cx={art.first.x} cy={art.first.y} r={3.6} fill={CARD_BG} stroke="rgba(242,242,242,0.75)" strokeWidth={1.6} />
+                  <Circle cx={art.last.x} cy={art.last.y} r={10} fill={heroColor} opacity={0.18} />
+                  <Circle cx={art.last.x} cy={art.last.y} r={4.2} fill={heroColor} />
                   {options.showPrices ? (
                     <G>
-                      <Circle cx={art.first.x} cy={art.first.y} r={3.6} fill={CARD_BG} stroke="rgba(242,242,242,0.75)" strokeWidth={1.6} />
-                      <SvgText {...pathFont} x={art.first.x - 2} y={art.first.y < chartMid ? art.first.y + 18 : art.first.y - 10} fill={INK_2} textAnchor="start">
-                        {'ENTRY '}
-                        <TSpan fontFamily={APP_FONT.bold} fill={INK}>${formatCurrencyPlain(normalized.entry_price)}</TSpan>
-                      </SvgText>
-                      <Circle cx={art.last.x} cy={art.last.y} r={10} fill={heroColor} opacity={0.18} />
-                      <Circle cx={art.last.x} cy={art.last.y} r={4.2} fill={heroColor} />
-                      <SvgText {...pathFont} x={art.last.x + 2} y={art.last.y < chartMid ? art.last.y + 18 : art.last.y - 10} fill={INK_2} textAnchor="end">
-                        {isOpen ? 'NOW ' : 'EXIT '}
-                        <TSpan fontFamily={APP_FONT.bold} fill={INK}>${formatCurrencyPlain(normalized.exit_price)}</TSpan>
-                      </SvgText>
+                      <PriceTag
+                        x={art.first.x}
+                        y={art.first.y > chartMid ? art.first.y - 28 : art.first.y + 9}
+                        anchor="start"
+                        label={i18n.t('auto.components__Journal__ExportTradeImage.s13')}
+                        value={`$${formatCurrencyPlain(normalized.entry_price)}`}
+                      />
+                      <PriceTag
+                        x={art.last.x}
+                        y={art.last.y > chartMid ? art.last.y - 28 : art.last.y + 9}
+                        anchor="end"
+                        label={
+                          isOpen
+                            ? i18n.t('auto.components__Journal__ExportTradeImage.s14')
+                            : i18n.t('auto.components__Journal__ExportTradeImage.s15')
+                        }
+                        value={`$${formatCurrencyPlain(normalized.exit_price)}`}
+                      />
                     </G>
                   ) : null}
                 </Svg>
 
-                {/* שור (רווח) / דוב (הפסד) — צללית שקופה בפינה הנגדית */}
-                <Image
-                  source={isWin ? BULL : BEAR}
-                  tintColor={heroColor}
-                  contentFit="contain"
-                  style={[
-                    styles.animal,
-                    { width: 210 * scale, height: 250 * scale, top: -18 * scale, end: -34 * scale },
-                  ]}
-                />
+                {/* שור (רווח) / דוב (הפסד) — צללית שקופה במרכז הכרטיס */}
+                <View style={styles.animalWrap} pointerEvents="none">
+                  <Image
+                    source={isWin ? BULL : BEAR}
+                    tintColor={heroColor}
+                    contentFit="contain"
+                    style={[styles.animal, { width: 250 * scale, height: 300 * scale, marginTop: 40 * scale }]}
+                  />
+                </View>
 
-                <View style={[styles.cardContent, { paddingHorizontal: 22 * scale, paddingTop: 20 * scale }]}>
-                  <View style={styles.topBar}>
-                    <View style={styles.brandRow}>
-                      <Image
-                        source={BRAND_MARK}
-                        style={styles.brandMark}
-                        contentFit="contain"
-                        transition={0}
-                        accessibilityLabel={i18n.t('auto.components__Journal__ExportTradeImage.s10')}
-                      />
-                      <Text style={styles.wordmark}>DARKPOOL</Text>
-                    </View>
-                    <Text style={styles.dateText}>{dateText}</Text>
-                  </View>
+                {/* תוכן ממורכז — לא תלוי בכיוון הממשק */}
+                <View style={[styles.cardContent, { paddingTop: 18 * scale }]}>
+                  <Image
+                    source={BRAND_LOGO}
+                    style={{ width: 118 * scale, height: (118 * scale) / BRAND_LOGO_ASPECT }}
+                    contentFit="contain"
+                    transition={0}
+                    accessibilityLabel={i18n.t('auto.components__Journal__ExportTradeImage.s10')}
+                  />
 
                   <View style={styles.assetRow}>
-                    {logoUri ? (
-                      <View style={styles.logoCircle}>
+                    <View style={styles.logoCircle}>
+                      {logoUri ? (
                         <Image source={{ uri: logoUri }} style={styles.logoImg} contentFit="cover" transition={120} />
-                      </View>
-                    ) : (
-                      <View style={styles.logoCircle}>
+                      ) : (
                         <Text style={styles.logoFallbackText}>{normalized.symbol.trim().slice(0, 4).toUpperCase()}</Text>
-                      </View>
-                    )}
-                    <View style={styles.assetText}>
-                      <Text style={styles.symbolBig} numberOfLines={1}>
-                        {normalized.symbol}
-                      </Text>
-                      <View style={styles.metaRow}>
-                        <View style={[styles.dirPill, { backgroundColor: `${dirColor}26` }]}>
-                          <TrendGlyph up={normalized.direction === 'long'} color={dirColor} />
-                          <Text style={[styles.dirPillText, { color: dirColor }]}>
-                            {normalized.direction === 'long' ? 'LONG' : 'SHORT'}
-                          </Text>
-                        </View>
-                        {isOpen ? <Text style={styles.metaText}>OPEN</Text> : null}
-                        {heldText ? <Text style={styles.metaText}>{heldText}</Text> : null}
-                      </View>
+                      )}
                     </View>
+                    <Text style={styles.symbolBig} numberOfLines={1}>
+                      {normalized.symbol}
+                    </Text>
                   </View>
 
-                  <View style={styles.heroBlock}>
-                    <Text style={styles.heroLabel}>
-                      {heroIsReturn
-                        ? i18n.t('auto.components__Journal__ExportTradeImage.returnLabel')
-                        : i18n.t('auto.components__Journal__ExportTradeImage.pnlLabel')}
-                    </Text>
-                    <Text
-                      style={[styles.heroValue, { color: heroColor, fontSize: 56 * scale, lineHeight: 62 * scale }]}
-                      numberOfLines={1}
-                      adjustsFontSizeToFit
-                      minimumFontScale={0.6}
-                    >
-                      {heroIsReturn ? retText : pnlText}
-                    </Text>
-                    {heroIsReturn && options.showPnl ? (
-                      <View style={styles.pnlRow}>
-                        <Text style={styles.pnlLabel}>{i18n.t('auto.components__Journal__ExportTradeImage.pnlLabel')}</Text>
-                        <Text style={[styles.pnlValue, { color: pnlColor }]}>{pnlText}</Text>
-                      </View>
-                    ) : null}
+                  <View style={styles.metaRow}>
+                    <View style={[styles.dirPill, { backgroundColor: `${dirColor}26` }]}>
+                      <TrendGlyph up={normalized.direction === 'long'} color={dirColor} />
+                      <Text style={[styles.dirPillText, { color: dirColor }]}>
+                        {normalized.direction === 'long' ? 'LONG' : 'SHORT'}
+                      </Text>
+                    </View>
+                    {isOpen ? <Text style={styles.metaText}>OPEN</Text> : null}
                   </View>
+
+                  <Text
+                    style={[styles.heroValue, { color: heroColor, fontSize: 56 * scale, lineHeight: 62 * scale }]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.6}
+                  >
+                    {heroIsReturn ? retText : pnlText}
+                  </Text>
+                  {heroIsReturn && options.showPnl ? (
+                    <View style={styles.pnlRow}>
+                      <Text style={styles.pnlLabel}>{i18n.t('auto.components__Journal__ExportTradeImage.pnlLabel')}</Text>
+                      <Text style={[styles.pnlValue, { color: pnlColor }]}>{pnlText}</Text>
+                    </View>
+                  ) : !heroIsReturn ? (
+                    <Text style={styles.pnlLabel}>{i18n.t('auto.components__Journal__ExportTradeImage.pnlLabel')}</Text>
+                  ) : null}
                 </View>
 
                 {/* תחתית: הזמנה + QR על פס כהה ברוחב מלא */}
@@ -776,54 +768,29 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       borderRadius: 26,
       overflow: 'hidden',
       backgroundColor: CARD_BG,
-      direction: UI_DIR,
+    },
+    animalWrap: {
+      ...StyleSheet.absoluteFill,
+      alignItems: 'center',
     },
     animal: {
-      position: 'absolute',
       opacity: 0.07,
     },
-    // טקסט מיושר לצד תחילת הקריאה (alignItems: flex-start בעץ UI_DIR)
     cardContent: {
       ...StyleSheet.absoluteFill,
-      alignItems: 'stretch',
-    },
-    topBar: {
-      flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    brandRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 7,
-    },
-    brandMark: {
-      height: 17,
-      width: Math.round(17 * BRAND_MARK_ASPECT),
-    },
-    wordmark: {
-      color: INK,
-      fontSize: 11,
-      fontWeight: '700',
-      letterSpacing: 2.6,
-    },
-    dateText: {
-      color: 'rgba(242,242,242,0.45)',
-      fontSize: 11,
-      fontWeight: '500',
-      writingDirection: 'ltr',
-      fontVariant: ['tabular-nums'],
     },
     assetRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 11,
-      marginTop: 22,
+      justifyContent: 'center',
+      gap: 9,
+      marginTop: 16,
     },
     logoCircle: {
-      width: 42,
-      height: 42,
-      borderRadius: 21,
+      width: 34,
+      height: 34,
+      borderRadius: 17,
       overflow: 'hidden',
       backgroundColor: '#1A1D1C',
       borderWidth: 1,
@@ -832,41 +799,33 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       justifyContent: 'center',
     },
     logoImg: {
-      width: 42,
-      height: 42,
+      width: 34,
+      height: 34,
     },
     logoFallbackText: {
       color: 'rgba(242,242,242,0.7)',
-      fontSize: 11,
+      fontSize: 9.5,
       fontWeight: '700',
-    },
-    assetText: {
-      flex: 1,
-      minWidth: 0,
-      alignItems: 'flex-start',
     },
     symbolBig: {
       color: INK,
-      fontSize: 19,
-      lineHeight: 23,
+      fontSize: 21,
       fontWeight: '700',
-      letterSpacing: 0.2,
-      writingDirection: 'ltr',
+      letterSpacing: 0.3,
     },
     metaRow: {
       flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'center',
       gap: 8,
-      marginTop: 5,
+      marginTop: 8,
     },
     dirPill: {
       flexDirection: 'row',
-      direction: 'ltr',
       alignItems: 'center',
       gap: 4,
       height: 20,
-      paddingStart: 7,
-      paddingEnd: 8,
+      paddingHorizontal: 8,
       borderRadius: 10,
     },
     dirPillText: {
@@ -880,30 +839,22 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       fontWeight: '500',
       writingDirection: TEXT_DIR,
     },
-    heroBlock: {
-      marginTop: 18,
-      alignItems: 'flex-start',
-    },
-    heroLabel: {
-      color: INK_2,
-      fontSize: 12,
-      fontWeight: '500',
-      writingDirection: TEXT_DIR,
-    },
     heroValue: {
       fontWeight: '700',
       letterSpacing: -1.5,
       writingDirection: 'ltr',
       fontVariant: ['tabular-nums'],
+      textAlign: 'center',
       alignSelf: 'stretch',
-      textAlign: UI_DIR === 'rtl' ? 'right' : 'left',
-      marginTop: 2,
+      marginTop: 10,
+      paddingHorizontal: 16,
     },
     pnlRow: {
       flexDirection: 'row',
       alignItems: 'baseline',
-      gap: 8,
-      marginTop: 4,
+      justifyContent: 'center',
+      gap: 7,
+      marginTop: 2,
     },
     pnlLabel: {
       color: INK_2,

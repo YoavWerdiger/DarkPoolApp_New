@@ -4,19 +4,37 @@ import { UI_DIR } from '../../../lib/i18n/direction';
  * כך שכשהתוכן מגיע רק הנתונים מתחלפים ושום דבר לא קופץ:
  *  - סרגלי הטאבים הם הרכיב האמיתי (SegmentedTabs) עם אותן אפשרויות ושוליים;
  *  - כל שורת טקסט היא «שורה» בגובה ה-lineHeight האמיתי, עם צורת טעינה בתוכה — כך הגבהים והמרווחים זהים;
- *  - בלי טקסט קבוע: כותרות, תוויות ומספרים הם צורות טעינה.
+ *  - טקסט קבוע (טאבים, כותרות סקשנים) מוצג כמו שהוא; רק הנתונים (מספרים, טיקרים, תוויות מהשרת) הם צורות טעינה.
  */
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import i18n from '../../../lib/i18n';
 import UICard from '../../../components/ui/UICard';
 import { LineChartSkeleton, SkeletonBox } from '../../../components/ui/SkeletonLoader';
 import { SegmentedTabs } from '../../../components/ui/SegmentedTabs';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { UI_CARD_RADIUS } from '../../../components/ui/appLayout';
-import { JOURNAL_LAYOUT, JOURNAL_TYPE } from '../../Journal/journalLayout';
+import {
+  JOURNAL_LAYOUT,
+  JOURNAL_TYPE,
+  journalCardTitleStyle,
+  journalPhysicalRightText,
+  journalSectionTitleStyle,
+} from '../../Journal/journalLayout';
+import { ArrowLeftRight, PieChart, Scale, TrendingDown, TrendingUp, Wallet } from 'lucide-react-native';
 import { DISTRIBUTION_GROUP_BY_OPTIONS, PORTFOLIO_DETAIL_TABS } from '../portfolioConstants';
 
 const noop = () => {};
+
+/** שורות הסטטיסטיקה — אותו סדר, אייקון ותווית כמו JournalStatsCard */
+const STAT_ROWS = [
+  { icon: PieChart, key: 's5' },
+  { icon: ArrowLeftRight, key: 's6' },
+  { icon: TrendingUp, key: 's7' },
+  { icon: TrendingDown, key: 's8' },
+  { icon: Scale, key: 's9' },
+  { icon: Wallet, key: 's10' },
+] as const;
 
 /** גובה גרף הסקירה (HERO_CHART_HEIGHT ב-OverviewTab) ומספר כפתורי התקופה */
 const HERO_CHART_HEIGHT = 220;
@@ -79,8 +97,12 @@ export function JournalHeroChartSkeleton() {
 export function JournalSkeleton() {
   const tokens = useDesignTokens();
   const divider = { height: 1, backgroundColor: tokens.colors.border.divider, marginHorizontal: JOURNAL_LAYOUT.cardPadding };
-  // כותרת סקשן (journalSectionTitleStyle) — שורה בגובה 28
-  const heading = (w: number) => <SkLine lineHeight={JOURNAL_TYPE.sectionTitle.lineHeight} width={w} box={18} />;
+  // כותרות הסקשנים קבועות — טקסט אמיתי באותו סגנון; רק הנתונים הם צורות טעינה
+  const heading = (title: string) => (
+    <Text style={[journalSectionTitleStyle, { color: tokens.colors.text.primary }]} numberOfLines={1}>
+      {title}
+    </Text>
+  );
 
   /**
    * פאנל רשימה כמו JournalDashboard:
@@ -89,7 +111,7 @@ export function JournalSkeleton() {
    */
   const listPanel = (count: number, withSub: boolean, delay: number) => (
     <View style={styles.section}>
-      <View style={styles.headingWrap}>{heading(withSub ? 118 : 104)}</View>
+      <View style={styles.headingWrap}>{heading(i18n.t(withSub ? 'auto.screens__Portfolios__components__JournalDashboard.s1' : 'auto.screens__Portfolios__components__JournalDashboard.s2'))}</View>
       <UICard variant="soft" glassIntensity="light" padding="none" style={styles.panel}>
         {Array.from({ length: count }, (_, i) => {
           const d = delay + i * 60;
@@ -134,7 +156,7 @@ export function JournalSkeleton() {
       <View style={styles.content}>
         {/* שווי תיק + גרף — heroBlock */}
         <View style={styles.section}>
-          {heading(76)}
+          {heading(i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s14'))}
           <JournalHeroValueSkeleton />
           <JournalHeroDeltaSkeleton />
           <JournalHeroChartSkeleton />
@@ -142,7 +164,7 @@ export function JournalSkeleton() {
 
         {/* חלוקת נכסים — sectionBlock: כותרת, סרגל הקיבוץ האמיתי, כרטיס דונאט */}
         <View style={styles.section}>
-          <View style={styles.headingWrap}>{heading(96)}</View>
+          <View style={styles.headingWrap}>{heading(i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s19'))}</View>
           <SegmentedTabs
             options={DISTRIBUTION_GROUP_BY_OPTIONS}
             value="symbol"
@@ -177,16 +199,19 @@ export function JournalSkeleton() {
 
         {/* סטטיסטיקה — JournalStatsList: ערך משמאל · כותרת · אייקון מימין, 6 שורות */}
         <View style={styles.section}>
-          <View style={styles.headingWrap}>{heading(84)}</View>
+          <View style={styles.headingWrap}>{heading(i18n.t('auto.screens__Portfolios__components__JournalDashboard.s11'))}</View>
           <UICard variant="soft" glassIntensity="light" padding="none" style={styles.panel}>
-            {[92, 104, 84, 88, 100, 90].map((w, i, arr) => (
-              <React.Fragment key={i}>
+            {STAT_ROWS.map(({ icon: Icon, key }, i, arr) => (
+              <React.Fragment key={key}>
+                {/* כותרת ואייקון קבועים — רק הערך נטען */}
                 <View style={styles.statRow}>
                   <SkLine lineHeight={JOURNAL_TYPE.cardTitle.lineHeight} width={56} box={14} delay={i * 50} />
-                  <View style={styles.statTitle}>
-                    <SkLine lineHeight={JOURNAL_TYPE.cardTitle.lineHeight} width={w} box={14} delay={i * 50} end />
+                  <Text style={[styles.statTitle, { color: tokens.colors.text.primary }]} numberOfLines={1}>
+                    {i18n.t(`auto.screens__Portfolios__components__JournalDashboard.${key}`)}
+                  </Text>
+                  <View style={styles.statIcon}>
+                    <Icon size={20} color={tokens.colors.text.primary} strokeWidth={2} />
                   </View>
-                  <SkeletonBox width={20} height={20} borderRadius={6} delay={i * 50} style={styles.statIcon} />
                 </View>
                 {i < arr.length - 1 ? <View style={divider} /> : null}
               </React.Fragment>
@@ -247,6 +272,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     paddingHorizontal: JOURNAL_LAYOUT.cardPadding,
   },
-  statTitle: { flex: 1, minWidth: 0, marginLeft: 12 },
-  statIcon: { marginLeft: 12 },
+  // = statTitle ב-JournalStatsList
+  statTitle: { ...journalCardTitleStyle, ...journalPhysicalRightText, flex: 1, minWidth: 0, marginLeft: 12 },
+  statIcon: { marginLeft: 12, alignItems: 'center', justifyContent: 'center' },
 });

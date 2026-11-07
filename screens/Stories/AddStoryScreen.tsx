@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import AddStoryFullScreen from '../../components/chat/AddStoryFullScreen';
+import { StoryErrorBoundary } from '../../components/stories/StoryErrorFallback';
 
 /**
  * יצירת סטורי — מסך רגיל בסטאק הראשי (card + slide_from_bottom), לא מודל נייטיב.
@@ -12,5 +13,10 @@ export default function AddStoryScreen() {
   const close = useCallback(() => {
     if (navigation.canGoBack()) navigation.goBack();
   }, [navigation]);
-  return <AddStoryFullScreen presentation="screen" visible onClose={close} onAdded={() => {}} />;
+  // שגיאה לא צפויה במצלמה/בעורך — מסך שגיאה עם סגירה, לא קריסה של האפליקציה
+  return (
+    <StoryErrorBoundary onClose={close}>
+      <AddStoryFullScreen presentation="screen" visible onClose={close} onAdded={() => {}} />
+    </StoryErrorBoundary>
+  );
 }

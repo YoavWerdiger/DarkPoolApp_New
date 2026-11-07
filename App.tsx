@@ -392,7 +392,7 @@ function AppContent() {
         ref={rootNavigationRef}
         direction={ROOT_DIR}
         theme={navigationTheme}
-        onReady={__DEV__ ? runDevRouteTour : undefined}
+        onReady={__DEV__ || process.env.EXPO_PUBLIC_DEV_ROUTES ? runDevRouteTour : undefined}
       >
         <Stack.Navigator screenOptions={{
           headerShown: false,

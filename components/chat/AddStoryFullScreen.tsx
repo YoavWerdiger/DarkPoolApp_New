@@ -1,9 +1,10 @@
+import { StatusBar } from 'expo-status-bar';
 import { ROOT_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { logger } from '../../utils/logger';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Modal, Pressable, Image, Dimensions, StatusBar, TextInput, KeyboardAvoidingView, Platform, ScrollView, FlatList, Animated, Keyboard } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Modal, Pressable, Image, Dimensions, TextInput, KeyboardAvoidingView, Platform, ScrollView, FlatList, Animated, Keyboard } from 'react-native';
 import { enterCameraAudioSession, ensurePermissionOrSettings, exitCameraAudioSession , requestCameraWithDialog } from '../../lib/cameraSession';
 import { publishStoryOptimistic } from '../../lib/pendingStories';
 import { InlineAppDialog } from '../ui/InlineAppDialog';
@@ -2337,7 +2338,8 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
   const GestureRoot = presentation === 'screen' ? View : GestureHandlerRootView;
   const body = (
     <>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      {/* expo-status-bar (לא של RN): ב-Info.plist UIViewControllerBasedStatusBarAppearance=true — StatusBar של RN מדווח שגיאה */}
+      <StatusBar style="light" backgroundColor="transparent" translucent />
       <GestureRoot style={s.fullFlex}>
         {/*
           dismissY animates this root, but dismiss Pan is NOT wrapped around chrome.

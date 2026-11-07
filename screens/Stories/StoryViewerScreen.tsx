@@ -1,5 +1,6 @@
 // expo-status-bar (לא StatusBar של RN): תואם מחזור החיים מבוסס scene של SDK 58 — ה-API הישן קרס בפרודקשן
 import { StatusBar } from 'expo-status-bar';
+import { StoryErrorBoundary } from '../../components/stories/StoryErrorFallback';
 import { ROOT_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 /**
@@ -165,7 +166,20 @@ function CubeFace({
   );
 }
 
+/** רשת ביטחון: שגיאת רינדור בצפייה בסטורי — מסך שגיאה עם סגירה במקום קריסה */
 export default function StoryViewerScreen() {
+  const navigation = useNavigation();
+  const close = useCallback(() => {
+    if (navigation.canGoBack()) navigation.goBack();
+  }, [navigation]);
+  return (
+    <StoryErrorBoundary onClose={close}>
+      <StoryViewerScreenInner />
+    </StoryErrorBoundary>
+  );
+}
+
+function StoryViewerScreenInner() {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<{ StoryViewer: StoryViewerParams }, 'StoryViewer'>>();
   const params = route.params;

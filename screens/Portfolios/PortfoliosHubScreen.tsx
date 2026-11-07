@@ -1,5 +1,8 @@
 import i18n from '../../lib/i18n';
 import { JournalSkeleton } from './components/JournalSkeleton';
+import { PortfolioSwitcherSkeleton } from './components/PortfolioSwitcher';
+import { ChatSessionBackdrop } from '../../components/chat/ChatSessionBackdrop';
+import { JOURNAL_HEADER_SECTION_STYLE } from './PortfolioDetailScreen';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -93,6 +96,7 @@ export default function PortfoliosHubScreen() {
     () =>
       StyleSheet.create({
         safeArea: { ...journalRtlRoot, backgroundColor: 'transparent' },
+        loadingRoot: { ...journalRtlRoot, backgroundColor: 'transparent' },
         // התוכן נחתך מעל ה-safe area התחתון ולא נגלל מתחתיו
         content: { flex: 1, minHeight: 0, backgroundColor: 'transparent', marginBottom: insets.bottom, overflow: 'hidden' },
         createBtn: {
@@ -108,12 +112,21 @@ export default function PortfoliosHubScreen() {
   );
 
   if (portfolios === null) {
+    // אותו שלד כמו טעינת PortfolioDetailScreen (רקע, כותרת עם שם התיק, טאבים) — המעבר אליו לא מזיז כלום
     return (
-      <ScreenChrome>
-        <View style={{ flex: 1, paddingTop: insets.top }}>
+      <View style={styles.loadingRoot}>
+        <ChatSessionBackdrop />
+        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+          <MainDrawerScreenHeader
+            title={i18n.t('auto.screens__Portfolios__PortfolioDetailScreen.s4')}
+            onMenuPress={openMainDrawer}
+            inRtlTree
+            sectionContainerStyle={JOURNAL_HEADER_SECTION_STYLE}
+            section={<PortfolioSwitcherSkeleton />}
+          />
           <JournalSkeleton />
-        </View>
-      </ScreenChrome>
+        </SafeAreaView>
+      </View>
     );
   }
 

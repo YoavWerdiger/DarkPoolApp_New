@@ -73,6 +73,12 @@ export interface PortfolioDetailEmbedded {
   onMissing: () => void;
 }
 
+/** שם התיק קרוב לכותרת הדף: 8 במקום 16+12 (ריפוד תחתון של הכותרת + ריפוד ה-section). משותף לשלד הטעינה ב-Hub */
+export const JOURNAL_HEADER_SECTION_STYLE = {
+  paddingTop: 0,
+  marginTop: APP_LAYOUT.stackGapSmall - APP_LAYOUT.cardPadding,
+};
+
 export default function PortfolioDetailScreen({ embedded }: { embedded?: PortfolioDetailEmbedded } = {}) {
   const tokens = useDesignTokens();
   const navigation = useNavigation<Nav>();
@@ -307,11 +313,7 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
       title={i18n.t('auto.screens__Portfolios__PortfolioDetailScreen.s4')}
       onMenuPress={embedded.onMenuPress}
       inRtlTree
-      // שם התיק קרוב לכותרת הדף: 8 במקום 16+12 (ריפוד תחתון של הכותרת + ריפוד ה-section)
-      sectionContainerStyle={{
-        paddingTop: 0,
-        marginTop: APP_LAYOUT.stackGapSmall - APP_LAYOUT.cardPadding,
-      }}
+      sectionContainerStyle={JOURNAL_HEADER_SECTION_STYLE}
       section={
         <PortfolioSwitcher
           portfolios={embedded.portfolios}

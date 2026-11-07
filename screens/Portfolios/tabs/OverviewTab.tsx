@@ -17,6 +17,8 @@ import type {
 import { buildDistribution } from '../../../services/portfolios/portfolioAggregator';
 import { toLocalDateKey } from '../../../utils/dateKeys';
 import { DistributionDonut } from '../components/DistributionDonut';
+import { DISTRIBUTION_GROUP_BY_OPTIONS } from '../portfolioConstants';
+import { JournalHeroBodySkeleton } from '../components/JournalSkeleton';
 import { PortfolioValueChart } from '../components/PortfolioValueChart';
 import { formatCurrency, formatPercent, gainColor } from '../utils/format';
 import {
@@ -82,12 +84,7 @@ interface Props {
   onLiveSummaryUpdate?: (patch: Partial<PortfolioSummary>) => void;
 }
 
-const GROUP_BY_OPTIONS: { id: DistributionGroupBy; label: string }[] = [
-  { id: 'symbol', label: i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s1') },
-  { id: 'asset_type', label: i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s2') },
-  { id: 'sector', label: i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s3') },
-  { id: 'currency', label: i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s4') },
-];
+const GROUP_BY_OPTIONS = DISTRIBUTION_GROUP_BY_OPTIONS;
 
 interface TradeStats {
   totalPnl: number;
@@ -832,6 +829,8 @@ export default function OverviewTab({
   // רווח לא ממומש חי — מהפוזיציות הפתוחות עם המחיר העדכני
   const openUnrealized = openTradeHoldings.reduce((sum, h) => sum + h.unrealized_gain, 0);
   const sparkValues = periodSeries.map((point) => point.value);
+  // רענון (chartRefreshKey) משאיר את הגרף הקודם עד שהחדש מגיע — סקלטון רק בטעינה ראשונה
+  const heroLoading = chartLoading && chartSeries.length === 0;
   const heroValue =
     scrubPoint?.value ??
     (filteredSeries.length > 0 ? filteredSeries[filteredSeries.length - 1].value : null);
@@ -874,6 +873,8 @@ export default function OverviewTab({
       {/* Performance chart — כמו תיק האינסיידרים: בלי כרטיס, ישירות על רקע המסך, עם סימן המים של DarkPool */}
       <View style={styles.heroBlock}>
         <Text style={styles.valueLabel}>{i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s14')}</Text>
+        {/* טעינה ראשונה: אותו מבנה וגובה (מספר, שינוי, גרף ותקופות) — רק הנתונים נכנסים, בלי קפיצה */}
+        {heroLoading ? <JournalHeroBodySkeleton /> : null}
         {heroValue != null && liveValue != null ? (
           // אותו מספר מתגלגל כמו באינסיידרים: ב-UI thread, ספרה מסיימת מעבר ורק אז ממשיכה
           <View style={styles.heroNumberWrap}>
@@ -923,9 +924,7 @@ export default function OverviewTab({
             />
           </View>
         ) : null}
-        {chartLoading ? (
-          <Text style={styles.emptyText}>{i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s15')}</Text>
-        ) : filteredSeries.length === 0 ? (
+        {heroLoading ? null : filteredSeries.length === 0 ? (
           <Text style={styles.emptyText}>
             {isColmex
               ? i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s16')

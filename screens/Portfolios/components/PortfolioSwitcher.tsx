@@ -26,6 +26,7 @@ import {
   SHEET_EASE_OUT_BEZIER,
 } from '../../../components/ui/BottomSheet/sheetMotion';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
+import { SkeletonBox } from '../../../components/ui/SkeletonLoader';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const LIST_MAX_H = SCREEN_HEIGHT * 0.5;
@@ -60,6 +61,21 @@ interface Props {
  * שם התיק + שברון בכותרת היומן. לחיצה פותחת שיט עליון (יורד מקצה המסך) למעבר בין תיקים.
  * אותה שפת תנועה כמו BottomSheet — רק בכיוון ההפוך. נסגר בלחיצה על הרקע או בבחירה.
  */
+/** שם התיק בזמן שרשימת התיקים נטענת — אותו עוגן ואותו גובה (screenTitle + שברון) */
+export function PortfolioSwitcherSkeleton() {
+  const tokens = useDesignTokens();
+  return (
+    <View style={styles.anchorWrap} pointerEvents="none">
+      <View style={styles.anchor}>
+        <View style={{ height: APP_TYPE.screenTitle.lineHeight, justifyContent: 'center' }}>
+          <SkeletonBox width={120} height={20} borderRadius={8} />
+        </View>
+        <Ionicons name="chevron-down" size={20} color={tokens.colors.text.tertiary} />
+      </View>
+    </View>
+  );
+}
+
 export function PortfolioSwitcher({
   portfolios,
   selectedId,

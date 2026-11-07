@@ -13,6 +13,7 @@ import type {
   TransactionType,
   HoldingsViewMode,
   AssetType,
+  DistributionGroupBy,
 } from './portfolioTypes';
 import type { TextStyle } from 'react-native';
 
@@ -193,6 +194,14 @@ export const PORTFOLIO_DETAIL_TABS = [
 
 export type PortfolioDetailTab =
   (typeof PORTFOLIO_DETAIL_TABS)[number]['id'];
+
+/** קיבוץ חלוקת הנכסים בסקירה — משותף ל-OverviewTab ולסקלטון (אותו סרגל טאבים) */
+export const DISTRIBUTION_GROUP_BY_OPTIONS: { id: DistributionGroupBy; label: string }[] = [
+  { id: 'symbol', label: i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s1') },
+  { id: 'asset_type', label: i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s2') },
+  { id: 'sector', label: i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s3') },
+  { id: 'currency', label: i18n.t('auto.screens__Portfolios__tabs__OverviewTab.s4') },
+];
 
 /**
  * Inactive tab label in PortfolioDetailScreen (tabText) — e.g. "פוזיציות פתוחות".

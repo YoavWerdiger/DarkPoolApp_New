@@ -1,114 +1,179 @@
 import { UI_DIR } from '../../../lib/i18n/direction';
 /**
- * יומן מסחר בטעינה — אותו מבנה וטקסטים כמו המסך האמיתי (PortfolioDetailScreen + OverviewTab):
- * צ׳יפי הטאבים, שווי תיק וגרף, חלוקת נכסים, פוזיציות פתוחות, עסקאות אחרונות וסטטיסטיקה.
- * בלי טקסט קבוע — כל כותרת, תווית ומספר הם צורת טעינה באותו מקום ובאותו גודל.
+ * יומן מסחר בטעינה — אותו מבנה כמו המסך האמיתי (PortfolioDetailScreen + OverviewTab + JournalDashboard),
+ * כך שכשהתוכן מגיע רק הנתונים מתחלפים ושום דבר לא קופץ:
+ *  - סרגלי הטאבים הם הרכיב האמיתי (SegmentedTabs) עם אותן אפשרויות ושוליים;
+ *  - כל שורת טקסט היא «שורה» בגובה ה-lineHeight האמיתי, עם צורת טעינה בתוכה — כך הגבהים והמרווחים זהים;
+ *  - בלי טקסט קבוע: כותרות, תוויות ומספרים הם צורות טעינה.
  */
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import UICard from '../../../components/ui/UICard';
 import { LineChartSkeleton, SkeletonBox } from '../../../components/ui/SkeletonLoader';
+import { SegmentedTabs } from '../../../components/ui/SegmentedTabs';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { UI_CARD_RADIUS } from '../../../components/ui/appLayout';
-import { JOURNAL_LAYOUT } from '../../Journal/journalLayout';
+import { JOURNAL_LAYOUT, JOURNAL_TYPE } from '../../Journal/journalLayout';
+import { DISTRIBUTION_GROUP_BY_OPTIONS, PORTFOLIO_DETAIL_TABS } from '../portfolioConstants';
+
+const noop = () => {};
+
+/** גובה גרף הסקירה (HERO_CHART_HEIGHT ב-OverviewTab) ומספר כפתורי התקופה */
+const HERO_CHART_HEIGHT = 220;
+const CHART_PERIODS = 7;
+
+/** שורת טקסט: תופסת בדיוק lineHeight, והצורה ממורכזת בה אנכית */
+function SkLine({
+  lineHeight,
+  width,
+  box,
+  delay,
+  end,
+}: {
+  lineHeight: number;
+  width: number | `${number}%`;
+  /** גובה הצורה (ברירת מחדל ~70% מהשורה) */
+  box?: number;
+  delay?: number;
+  /** הצמדה לקצה הנגדי (ערכים בצד השני של השורה) */
+  end?: boolean;
+}) {
+  const h = box ?? Math.round(lineHeight * 0.7);
+  return (
+    <View style={{ height: lineHeight, justifyContent: 'center', alignItems: end ? 'flex-end' : 'flex-start' }}>
+      <SkeletonBox width={width} height={h} borderRadius={Math.min(8, h / 2)} delay={delay} />
+    </View>
+  );
+}
+
+/**
+ * גוף בלוק השווי בזמן טעינה — מספר, שורת שינוי, גרף ותקופות. בדיוק במידות של OverviewTab
+ * (heroNumberWrap + heroValue, deltaRow, chartWrap + PortfolioValueChart). משמש גם ב-OverviewTab עצמו.
+ */
+export function JournalHeroBodySkeleton() {
+  return (
+    <View pointerEvents="none">
+      {/* heroNumberWrap.marginTop + heroValue.marginTop */}
+      <View style={{ marginTop: JOURNAL_LAYOUT.cardMetricLabelToValueGap * 2 }}>
+        <SkLine lineHeight={JOURNAL_TYPE.cardMetricValue.lineHeight} width={170} box={26} />
+      </View>
+      <View style={styles.deltaRow}>
+        <SkLine lineHeight={JOURNAL_TYPE.cardBody.lineHeight} width={124} box={13} />
+      </View>
+      <View style={styles.chartWrap}>
+        <LineChartSkeleton height={HERO_CHART_HEIGHT} periods={CHART_PERIODS} />
+      </View>
+    </View>
+  );
+}
 
 export function JournalSkeleton() {
   const tokens = useDesignTokens();
   const divider = { height: 1, backgroundColor: tokens.colors.border.divider, marginHorizontal: JOURNAL_LAYOUT.cardPadding };
-  // כותרת סקשן — בלי טקסט קבוע, רק צורה בגובה הכותרת
-  const heading = (w: number) => <SkeletonBox width={w} height={18} borderRadius={7} style={styles.heading} />;
+  // כותרת סקשן (journalSectionTitleStyle) — שורה בגובה 28
+  const heading = (w: number) => <SkLine lineHeight={JOURNAL_TYPE.sectionTitle.lineHeight} width={w} box={18} />;
 
-  /** פאנל רשימה: לוגו 36 · טיקר (+ שורה משנית) · ערך משמאל — כמו HoldingsListRow / Row בלוח הבקרה */
+  /**
+   * פאנל רשימה כמו JournalDashboard:
+   *  withSub — פוזיציות פתוחות (HoldingsListRow: טיקר + חלק מהתיק · שווי + תשואה)
+   *  בלי — עסקאות אחרונות (Row: טיקר + תגית · רווח/הפסד)
+   */
   const listPanel = (count: number, withSub: boolean, delay: number) => (
     <View style={styles.section}>
-      {heading(withSub ? 118 : 104)}
+      <View style={styles.headingWrap}>{heading(withSub ? 118 : 104)}</View>
       <UICard variant="soft" glassIntensity="light" padding="none" style={styles.panel}>
-        {Array.from({ length: count }, (_, i) => (
-          <React.Fragment key={i}>
-            <View style={styles.listRow}>
-              <SkeletonBox width={36} height={36} borderRadius={18} delay={delay + i * 60} />
-              <View style={styles.listText}>
-                <View style={styles.tickerLine}>
-                  <SkeletonBox width={52} height={14} borderRadius={6} delay={delay + i * 60} />
-                  {withSub ? null : <SkeletonBox width={34} height={16} borderRadius={8} delay={delay + i * 60} />}
+        {Array.from({ length: count }, (_, i) => {
+          const d = delay + i * 60;
+          return (
+            <React.Fragment key={i}>
+              <View style={styles.listRow}>
+                <SkeletonBox width={36} height={36} borderRadius={18} delay={d} />
+                <View style={styles.listText}>
+                  <View style={styles.tickerLine}>
+                    <SkLine lineHeight={JOURNAL_TYPE.cardBody.lineHeight} width={52} box={14} delay={d} />
+                    {withSub ? null : <SkeletonBox width={34} height={16} borderRadius={8} delay={d} />}
+                  </View>
+                  {withSub ? (
+                    <View style={styles.subLine}>
+                      <SkLine lineHeight={JOURNAL_TYPE.caption.lineHeight} width={40} box={10} delay={d} />
+                    </View>
+                  ) : null}
                 </View>
-                {withSub ? <SkeletonBox width={40} height={10} borderRadius={5} delay={delay + i * 60} /> : null}
+                <View style={styles.listValue}>
+                  <SkLine lineHeight={JOURNAL_TYPE.cardBody.lineHeight} width={68} box={14} delay={d} end />
+                  {withSub ? (
+                    <View style={styles.subLine}>
+                      <SkLine lineHeight={JOURNAL_TYPE.caption.lineHeight} width={44} box={10} delay={d} end />
+                    </View>
+                  ) : null}
+                </View>
               </View>
-              <View style={styles.listValue}>
-                <SkeletonBox width={68} height={14} borderRadius={6} delay={delay + i * 60} />
-                {withSub ? <SkeletonBox width={44} height={10} borderRadius={5} delay={delay + i * 60} /> : null}
-              </View>
-            </View>
-            {i < count - 1 ? <View style={divider} /> : null}
-          </React.Fragment>
-        ))}
+              {i < count - 1 ? <View style={divider} /> : null}
+            </React.Fragment>
+          );
+        })}
       </UICard>
     </View>
   );
 
   return (
     <View pointerEvents="none">
-      {/* צ׳יפי הטאבים — צורות בלבד */}
-      <View style={styles.tabsRow}>
-        {[64, 84, 70, 66].map((w, i) => (
-          <SkeletonBox key={i} width={w} height={32} borderRadius={16} />
-        ))}
-      </View>
+      {/* סרגל הטאבים האמיתי — אותו רכיב ושוליים כמו ב-PortfolioDetailScreen (styles.segmentedTabs) */}
+      <SegmentedTabs options={PORTFOLIO_DETAIL_TABS} value="overview" onChange={noop} haptic={false} style={styles.tabs} />
 
+      {/* כמו עטיפת התוכן ב-PortfolioDetailScreen */}
       <View style={styles.content}>
-        {/* שווי תיק + גרף — על רקע המסך */}
+        {/* שווי תיק + גרף — heroBlock */}
         <View style={styles.section}>
           {heading(76)}
-          <SkeletonBox width={190} height={30} borderRadius={8} style={styles.heroValue} />
-          <View style={styles.deltaRow}>
-            <SkeletonBox width={120} height={12} borderRadius={6} />
-          </View>
-          <LineChartSkeleton height={220} periods={6} />
+          <JournalHeroBodySkeleton />
         </View>
 
-        {/* חלוקת נכסים — צ׳יפים בחוץ, דונאט + מקרא + סה״כ בכרטיס */}
+        {/* חלוקת נכסים — sectionBlock: כותרת, סרגל הקיבוץ האמיתי, כרטיס דונאט */}
         <View style={styles.section}>
-          {heading(96)}
-          <View style={styles.chips}>
-            {[64, 72, 58].map((w, i) => (
-              <SkeletonBox key={i} width={w} height={30} borderRadius={15} />
-            ))}
-          </View>
-          <UICard variant="soft" padding="md">
+          <View style={styles.headingWrap}>{heading(96)}</View>
+          <SegmentedTabs
+            options={DISTRIBUTION_GROUP_BY_OPTIONS}
+            value="symbol"
+            onChange={noop}
+            haptic={false}
+            style={styles.groupTabs}
+          />
+          <UICard variant="soft" padding="md" style={styles.panelMd}>
             <View style={styles.donutRow}>
-              <SkeletonBox width={140} height={140} borderRadius={70} />
+              <SkeletonBox width={128} height={128} borderRadius={64} />
               <View style={styles.legend}>
                 {[0, 1, 2, 3].map((i) => (
                   <View key={i} style={styles.legendRow}>
                     <SkeletonBox width={10} height={10} borderRadius={5} />
-                    <SkeletonBox width="55%" height={12} borderRadius={6} />
-                    <SkeletonBox width={30} height={12} borderRadius={6} />
+                    <View style={{ flex: 1 }}>
+                      <SkLine lineHeight={15} width="60%" box={11} />
+                    </View>
+                    <SkLine lineHeight={15} width={30} box={11} />
                   </View>
                 ))}
               </View>
             </View>
             <View style={styles.totalRow}>
-              <SkeletonBox width={70} height={12} borderRadius={6} />
-              <SkeletonBox width={84} height={14} borderRadius={6} />
+              <SkLine lineHeight={18} width={70} box={12} />
+              <SkLine lineHeight={18} width={84} box={14} />
             </View>
           </UICard>
         </View>
 
-        {/* פוזיציות פתוחות (טיקר + חלק מהתיק · שווי + תשואה) */}
         {listPanel(3, true, 0)}
-        {/* עסקאות אחרונות (טיקר + תגית לונג/שורט · רווח/הפסד) */}
         {listPanel(3, false, 120)}
 
-        {/* סטטיסטיקה — ערך משמאל · כותרת · אייקון מימין (כמו שורת הגדרות) */}
+        {/* סטטיסטיקה — JournalStatsList: ערך משמאל · כותרת · אייקון מימין, 6 שורות */}
         <View style={styles.section}>
-          {heading(84)}
+          <View style={styles.headingWrap}>{heading(84)}</View>
           <UICard variant="soft" glassIntensity="light" padding="none" style={styles.panel}>
             {[92, 104, 84, 88, 100, 90].map((w, i, arr) => (
               <React.Fragment key={i}>
                 <View style={styles.statRow}>
-                  <SkeletonBox width={56} height={14} borderRadius={6} delay={i * 50} />
+                  <SkLine lineHeight={JOURNAL_TYPE.cardTitle.lineHeight} width={56} box={14} delay={i * 50} />
                   <View style={styles.statTitle}>
-                    <SkeletonBox width={w} height={14} borderRadius={6} delay={i * 50} />
+                    <SkLine lineHeight={JOURNAL_TYPE.cardTitle.lineHeight} width={w} box={14} delay={i * 50} end />
                   </View>
                   <SkeletonBox width={20} height={20} borderRadius={6} delay={i * 50} style={styles.statIcon} />
                 </View>
@@ -123,31 +188,33 @@ export function JournalSkeleton() {
 }
 
 const styles = StyleSheet.create({
-  // כמו צ׳יפי הטאבים ב-PortfolioDetailScreen
-  tabsRow: {
+  // = segmentedTabs ב-PortfolioDetailScreen
+  tabs: { marginHorizontal: 16, marginTop: 6, marginBottom: 2 },
+  // = עטיפת התוכן ב-PortfolioDetailScreen
+  content: { paddingHorizontal: 16, paddingTop: 14, direction: UI_DIR },
+  // = heroBlock / sectionBlock / Section (marginBottom: sectionGap)
+  section: { marginBottom: JOURNAL_LAYOUT.sectionGap, direction: UI_DIR },
+  headingWrap: { marginBottom: JOURNAL_LAYOUT.sectionHeaderToContent },
+  // = deltaRow ב-OverviewTab
+  deltaRow: { marginTop: JOURNAL_LAYOUT.titleSubtitleGap, marginBottom: JOURNAL_LAYOUT.sectionHeaderToContent },
+  // = chartWrap ב-OverviewTab
+  chartWrap: { marginTop: JOURNAL_LAYOUT.stackGapSmall, alignSelf: 'stretch' },
+  // = groupTabs ב-OverviewTab
+  groupTabs: { marginBottom: 14 },
+  panelMd: { overflow: 'hidden', direction: UI_DIR },
+  donutRow: { direction: UI_DIR, flexDirection: 'row', alignItems: 'center', gap: JOURNAL_LAYOUT.componentGap },
+  legend: { flex: 1, gap: JOURNAL_LAYOUT.stackGapSmall },
+  legendRow: { direction: UI_DIR, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  totalRow: {
     direction: UI_DIR,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    gap: 8,
-    marginTop: 6,
-    marginBottom: 2,
+    gap: 10,
+    marginTop: 12,
+    paddingHorizontal: 4,
   },
-  heading: { alignSelf: 'flex-start', marginBottom: JOURNAL_LAYOUT.sectionHeaderToContent },
-  content: { paddingHorizontal: 16, paddingTop: 14, direction: UI_DIR },
-  // כמו sectionBlock / heroBlock / Section ב-OverviewTab ו-JournalDashboard
-  section: { marginBottom: JOURNAL_LAYOUT.sectionGap, direction: UI_DIR },
-  heroValue: { marginTop: JOURNAL_LAYOUT.cardMetricLabelToValueGap * 2 - JOURNAL_LAYOUT.sectionHeaderToContent },
-  deltaRow: {
-    marginTop: JOURNAL_LAYOUT.titleSubtitleGap + 6,
-    marginBottom: JOURNAL_LAYOUT.cardTitleToBodyGap,
-  },
-  chips: { direction: UI_DIR, flexDirection: 'row', gap: 6, marginBottom: 14 },
-  donutRow: { direction: UI_DIR, flexDirection: 'row', alignItems: 'center', gap: 16 },
-  legend: { flex: 1, gap: 12 },
-  legendRow: { direction: UI_DIR, flexDirection: 'row', alignItems: 'center', gap: 8 },
   panel: { borderRadius: UI_CARD_RADIUS, overflow: 'hidden' },
-  // כמו Row בלוח הבקרה
+  // = row ב-JournalDashboard / holdingRow ב-HoldingsListRow
   listRow: {
     direction: UI_DIR,
     flexDirection: 'row',
@@ -157,17 +224,11 @@ const styles = StyleSheet.create({
     minHeight: 56,
     gap: 12,
   },
-  listText: { flex: 1, gap: 6, alignItems: 'flex-start' },
+  listText: { flex: 1, minWidth: 0 },
   tickerLine: { direction: UI_DIR, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  totalRow: {
-    direction: UI_DIR,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 14,
-  },
-  listValue: { gap: 6, alignItems: 'flex-end' },
-  // כמו statRow ב-JournalStatsList (שורת תפריט בהגדרות)
+  subLine: { marginTop: JOURNAL_LAYOUT.cardTitleToSubtitleGap },
+  listValue: { flexShrink: 0 },
+  // = statRow ב-JournalStatsList (שורת תפריט בהגדרות)
   statRow: {
     direction: 'ltr',
     flexDirection: 'row',
@@ -175,6 +236,6 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     paddingHorizontal: JOURNAL_LAYOUT.cardPadding,
   },
-  statTitle: { flex: 1, minWidth: 0, marginLeft: 12, alignItems: 'flex-end' },
+  statTitle: { flex: 1, minWidth: 0, marginLeft: 12 },
   statIcon: { marginLeft: 12 },
 });

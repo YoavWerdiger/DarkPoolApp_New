@@ -154,7 +154,13 @@ export function DayDividerPill({
   }
 
   return (
-    <View accessibilityLabel={accessibilityLabel ?? label} pointerEvents={disabled ? 'none' : 'auto'}>
+    <View
+      accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityState={{ disabled }}
+      pointerEvents={disabled ? 'none' : 'auto'}
+      // לא זמין נראה לא זמין — אחרת נראה ככפתור «שלא מגיב»
+      style={disabled ? { opacity: 0.35 } : undefined}
+    >
       {inner}
     </View>
   );

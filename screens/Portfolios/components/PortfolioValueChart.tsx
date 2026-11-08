@@ -834,7 +834,8 @@ export function PortfolioValueChart({
         >
           {(periods?.length ? periods : PERIODS).map((p) => {
             const isActive = selectedPeriod === p;
-            const available = isChartPeriodAvailable(series, p);
+            // כל טווח עם 2 נקודות לפחות — טווח ארוך מההיסטוריה מציג את כל מה שיש (קודם נחסם בשקט → «לא מגיב»)
+            const available = filterChartSeriesByPeriod(series, p).length >= 2 || isChartPeriodAvailable(series, p);
             return (
               <View key={p} onLayout={periodIndicator.onItemLayout(p)}>
                 <DayDividerPill

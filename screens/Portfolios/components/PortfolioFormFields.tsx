@@ -4,6 +4,7 @@ import i18n from '../../../lib/i18n';
  * formControl.ts · APP_TYPE · בלי מסגרת ירוקה. עין סיסמה בלבד בתוך השדה, בצד שמאל.
  */
 
+import { FloatingLabelField } from '../../../components/ui/FloatingLabelField';
 import React, { useMemo, useState } from 'react';
 import {
   View,
@@ -204,6 +205,45 @@ export function TextField({
     ],
     [tokens, focused, error, multiline, shellRadius, editable]
   );
+
+  // תווית צפה בתוך השדה — כשאין אלמנט ליד התווית (אחרת נשאר המבנה הישן: תווית מעל)
+  if (!labelAccessory && !accessory) {
+    const fullLabel = optional
+      ? `${label} ${i18n.t('auto.screens__Portfolios__components__PortfolioFormFields.s1')}`
+      : label;
+    const trailing = isPassword ? (
+      <PasswordVisibilityToggle visible={passwordVisible} onToggle={() => setPasswordVisible((v) => !v)} />
+    ) : prefix ? (
+      <Text style={[formFieldInputStyle(tokens), { fontWeight: '700', color: value ? tokens.colors.text.secondary : tokens.colors.text.tertiary }]}>
+        {prefix}
+      </Text>
+    ) : undefined;
+    return (
+      <View style={{ marginBottom: spacing ?? APP_LAYOUT.componentGap, opacity: editable ? 1 : 0.6 }}>
+        <FloatingLabelField
+          label={fullLabel}
+          hint={placeholder}
+          value={value}
+          onChangeText={onChangeText}
+          error={Boolean(error)}
+          multiline={multiline}
+          readOnly={!editable}
+          ltr={numeric}
+          trailing={trailing}
+          keyboardType={keyboardType}
+          maxLength={maxLength}
+          secureTextEntry={isPassword ? !passwordVisible : secureTextEntry}
+          autoCapitalize={autoCapitalize}
+          autoCorrect={autoCorrect}
+          returnKeyType={returnKeyType}
+          onSubmitEditing={onSubmitEditing}
+          keyboardAppearance={isDarkMode ? 'dark' : 'light'}
+          onBlur={() => onBlur?.()}
+        />
+        <FieldMessage hint={hint} error={error} />
+      </View>
+    );
+  }
 
   return (
     <View style={{ marginBottom: spacing ?? APP_LAYOUT.componentGap }}>

@@ -1,4 +1,5 @@
 import { UI_DIR } from '../../lib/i18n/direction';
+import { FloatingLabelField } from '../../components/ui/FloatingLabelField';
 import i18n from '../../lib/i18n';
 /**
  * פאנל מנהלים — עריכת קורס: פרטי הקורס (שם, תת-כותרת, תיאור, מדריך, רמה, תמונה, פעיל/מוסתר)
@@ -58,40 +59,19 @@ function Field({
   keyboardType?: 'default' | 'numeric' | 'url';
   ltr?: boolean;
 }) {
-  const tokens = useDesignTokens();
-  const [focused, setFocused] = useState(false);
+  // תווית צפה בתוך השדה (FloatingLabelField) — כמו בכל טפסי האפליקציה
   return (
-    <View style={styles.field}>
-      <Text style={formFieldLabelStyle({ tokens, focused })}>{label}</Text>
-      <View
-        style={[
-          formFieldShellStyle({ tokens, focused, multiline }),
-          styles.shell,
-          // מעוגל כמו שדות החיפוש / ההתחברות; רב-שורתי — פינות מעט קטנות יותר
-          { borderRadius: multiline ? 18 : tokens.borderRadius.search },
-          !multiline && styles.shellSingle,
-        ]}
-      >
-        <TextInput
-          value={value}
-          onChangeText={onChangeText}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          placeholder={placeholder}
-          placeholderTextColor={formFieldPlaceholderColor(tokens)}
-          multiline={multiline}
-          keyboardType={keyboardType}
-          autoCapitalize="none"
-          autoCorrect={false}
-          textAlignVertical={multiline ? 'top' : 'center'}
-          style={[
-            formFieldInputStyle(tokens),
-            ltr ? styles.ltrInput : appPhysicalRightText,
-            multiline && styles.multiline,
-          ]}
-        />
-      </View>
-    </View>
+    <FloatingLabelField
+      label={label}
+      hint={placeholder}
+      value={value}
+      onChangeText={onChangeText}
+      multiline={multiline}
+      keyboardType={keyboardType}
+      autoCapitalize="none"
+      autoCorrect={false}
+      ltr={ltr}
+    />
   );
 }
 

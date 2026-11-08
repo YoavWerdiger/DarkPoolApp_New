@@ -59,7 +59,7 @@ export interface BottomSheetProps {
   glassOverlayColor?: string;
   /**
    * כשtrue (וגם `useModal=true`): השיט יוזזו מעלה אוטומטית כשהמקלדת עולה,
-   * כך שהכפתורים וה-input נשארים גלויים. מתאים ל-fitContent sheets עם TextInput.
+   * כך שהכפתורים וה-input נשארים גלויים. ברירת מחדל true; false רק לשיט שמנהל מקלדת בעצמו.
    */
   avoidKeyboard?: boolean;
 }

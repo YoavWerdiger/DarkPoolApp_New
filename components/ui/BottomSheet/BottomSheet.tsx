@@ -86,7 +86,9 @@ const BottomSheetImpl: React.FC<BottomSheetProps> = ({
   useGlassBackground = false,
   glassIntensity = SHEET_GLASS_INTENSITY,
   glassOverlayColor = SHEET_GLASS_OVERLAY,
-  avoidKeyboard = false,
+  // ברירת מחדל: כן — באנדרואיד edge-to-edge (SDK 58) adjustResize לא מקטין את החלון, ושיט בלי זה
+  // נשאר מאחורי המקלדת (QA 10). שיט שמנהל מקלדת בעצמו מעביר false.
+  avoidKeyboard = true,
 }) => {
   const tokens = useDesignTokens();
   const sheetFill = backgroundColor ?? tokens.colors.background.cardSolid;

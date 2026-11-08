@@ -200,6 +200,8 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
 
   return (
     <BottomSheet
+      // מקלדת מנוהלת בתוך השיט עצמו
+      avoidKeyboard={false}
       isOpen={visible}
       onClose={() => {
         reset();

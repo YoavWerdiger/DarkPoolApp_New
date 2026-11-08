@@ -395,6 +395,8 @@ function LessonEditSheet({
 
   return (
     <BottomSheet
+      // מקלדת מנוהלת בתוך השיט עצמו
+      avoidKeyboard={false}
       isOpen={lesson != null}
       onClose={onClose}
       snapPoints={[0.9]}

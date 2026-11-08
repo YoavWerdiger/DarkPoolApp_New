@@ -6,9 +6,10 @@ import {
   Image,
   StyleSheet,
   ScrollView,
-  KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+// edge-to-edge (SDK 58): adjustResize לא מקטין את החלון באנדרואיד — KAV של keyboard-controller עובד בשתי הפלטפורמות
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { legacyAlert } from '../../utils/appDialog';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -205,7 +206,7 @@ export default function ConnectBrokerScreen() {
         <PortfolioScreenHeader title={i18n.t('auto.screens__Portfolios__ConnectBrokerScreen.s18')} onBack={() => navigation.goBack()} />
         <KeyboardAvoidingView
           style={{ flex: 1, backgroundColor: 'transparent' }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior="padding"
         >
           <ScrollView
             style={styles.scroll}

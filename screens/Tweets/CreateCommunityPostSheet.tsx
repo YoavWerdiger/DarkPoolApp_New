@@ -112,6 +112,8 @@ export default function CreateCommunityPostSheet({
 
   return (
     <BottomSheet
+      // מקלדת מנוהלת בתוך השיט עצמו
+      avoidKeyboard={false}
       isOpen={visible}
       onClose={onClose}
       snapPoints={[0.72, 0.9]}

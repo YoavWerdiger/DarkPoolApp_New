@@ -37,11 +37,12 @@ interface Props {
   topInset: number;
   onBack: () => void;
   onBell: () => void;
-  onShare: () => void;
+  /** בלי — אין כפתור שיתוף (תיקי אינסיידרים: תוכן בתשלום, לא מופץ) */
+  onShare?: () => void;
   isFollowing: boolean;
   followBusy?: boolean;
   bellA11yLabel: string;
-  shareA11yLabel: string;
+  shareA11yLabel?: string;
   /** contentOffset.y של ה-ScrollView — overscroll (y < 0) עושה pull-to-zoom. */
   scrollY?: Animated.Value;
   /**
@@ -268,19 +269,21 @@ function PersonProfileHeroInner({
               />
             )}
           </DayNavBlurButton>
-          <DayNavBlurButton
-            size={HERO_ICON_SIZE}
-            glassIntensity="subtle"
-            onPress={onShare}
-            accessibilityLabel={shareA11yLabel}
-          >
-            <Ionicons
-              name="share-outline"
-              size={HERO_ICON_GLYPH}
-              color={iconColor}
-              style={styles.iconMark}
-            />
-          </DayNavBlurButton>
+          {onShare ? (
+            <DayNavBlurButton
+              size={HERO_ICON_SIZE}
+              glassIntensity="subtle"
+              onPress={onShare}
+              accessibilityLabel={shareA11yLabel}
+            >
+              <Ionicons
+                name="share-outline"
+                size={HERO_ICON_GLYPH}
+                color={iconColor}
+                style={styles.iconMark}
+              />
+            </DayNavBlurButton>
+          ) : null}
         </View>
       </View>
 

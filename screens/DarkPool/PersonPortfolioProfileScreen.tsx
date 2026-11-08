@@ -118,7 +118,6 @@ import {
 import { PersonProfileHero } from './components/PersonProfileHero';
 import { ScrubSubscriber, useScrubStore } from './components/ScrubSubscriber';
 import {
-  holdingsToDistributionSlices,
   type HoldingAllocationInput,
 } from './utils/holdingsAllocation';
 import {
@@ -177,9 +176,7 @@ import { NotificationService } from '../../services/notificationService';
 import { ensureNotificationCategoryOn } from '../../lib/notificationPrefs';
 import { useAppDialog } from '../../components/ui/AppDialogProvider';
 import { HelpSheet } from '../../components/ui/HelpSheet';
-import ShareDestinationSheet from '../../components/share/ShareDestinationSheet';
-import { buildPersonAttachment } from '../../types/shareableEntity';
-import type { ShareableAttachment } from '../../types/shareableEntity';
+import { usePreventScreenCaptureSafe } from '../../hooks/usePreventScreenCaptureSafe';
 import { useDarkPoolStackNav } from './hooks/useDarkPoolStackNav';
 import {
   hasTradeDetailPayload,
@@ -417,8 +414,8 @@ export function PersonPortfolioProfileScreen({
   const [optimisticFollowing, setOptimisticFollowing] = useState<boolean | null>(null);
   const togglingRef = useRef(false);
   const [period, setPeriod] = useState<PerformancePeriod>('1M');
-  const [shareOpen, setShareOpen] = useState(false);
-  const [shareAttachment, setShareAttachment] = useState<ShareableAttachment | null>(null);
+  // QA 11.6: תיקי אינסיידרים בתשלום — בלי שיתוף לצ'אט/ציוצים ובלי צילומי מסך
+  usePreventScreenCaptureSafe('person-portfolio');
   const [helpOpen, setHelpOpen] = useState(false);
 
   const listFollowing = useMemo(
@@ -1351,41 +1348,6 @@ export function PersonPortfolioProfileScreen({
   }, [holdings, serverAllHoldings, trumpProfile]);
   const pieColors = useHoldingsPieColors(pieHoldings);
 
-  const onShareProfile = useCallback(() => {
-    void HapticFeedback.selection();
-    const top = displayHoldings[0] ?? holdings[0];
-    const shareChart = holdingsToDistributionSlices(pieHoldings, 6).map((s) => ({
-      ticker: s.label,
-      pct: s.percentage,
-      color: s.color ?? 'rgba(255,255,255,0.35)',
-    }));
-    setShareAttachment(
-      buildPersonAttachment({
-        id,
-        kind,
-        name: displayName,
-        subtitle,
-        imageUrl,
-        ticker: ticker ?? null,
-        portfolioValue,
-        topHolding: top?.ticker ?? null,
-        topHoldingValue: top?.value_usd ?? top?.market_value ?? null,
-        holdingsChart: shareChart,
-      })
-    );
-    setShareOpen(true);
-  }, [
-    displayHoldings,
-    holdings,
-    pieHoldings,
-    id,
-    kind,
-    displayName,
-    subtitle,
-    imageUrl,
-    ticker,
-    portfolioValue,
-  ]);
 
   // ערך בנקודה על הגרף — גם לכותרת בזמן גרירה (מתגלגל + גוון ירוק/אדום)
   const formatChartValue = (v: number) =>
@@ -1449,13 +1411,11 @@ export function PersonPortfolioProfileScreen({
       void HapticFeedback.selection();
       void onToggleAlerts();
     },
-    onShare: onShareProfile,
     isFollowing,
     followBusy,
     bellA11yLabel: isFollowing
       ? i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s20')
       : i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s21'),
-    shareA11yLabel: i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s22'),
     scrollY: heroScrollY,
     logoTicker: companyTicker,
   };
@@ -1972,14 +1932,6 @@ export function PersonPortfolioProfileScreen({
         {chromeOverlay}
         {followDock}
       </View>
-      <ShareDestinationSheet
-        visible={shareOpen && !!shareAttachment}
-        attachment={shareAttachment}
-        onClose={() => {
-          setShareOpen(false);
-          setShareAttachment(null);
-        }}
-      />
       <HelpSheet
         visible={helpOpen}
         onClose={() => setHelpOpen(false)}

@@ -115,6 +115,15 @@ export default function ChatListSwipeRow({ actions, revealBackgroundColor, revea
     setOpen(true);
   }, []);
 
+  /** החלקה חדשה התחילה בשורה הזו — שורה אחרת פתוחה נסגרת מיד (לא רק בסוף ההחלקה) */
+  const closeOthers = useCallback(() => {
+    if (closeOpenRow && closeOpenRow !== closeRef.current) {
+      const other = closeOpenRow;
+      closeOpenRow = null;
+      other();
+    }
+  }, []);
+
   const onClosed = useCallback(() => {
     if (closeOpenRow === closeRef.current) closeOpenRow = null;
     setOpen(false);
@@ -138,6 +147,10 @@ export default function ChatListSwipeRow({ actions, revealBackgroundColor, revea
     .failOffsetY([-16, 16])
     .onBegin(() => {
       startX.value = tx.value;
+    })
+    // הג'סצ'ר הופעל (זוהתה החלקה אופקית) — סוגרים מיד שורה אחרת פתוחה
+    .onStart(() => {
+      runOnJS(closeOthers)();
     })
     .onUpdate((e) => {
       const next = Math.min(Math.max(startX.value + e.translationX, 0), openX * 1.2);

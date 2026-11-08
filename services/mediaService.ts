@@ -51,6 +51,8 @@ export interface LessonMedia {
   title: string;
   description?: string;
   duration_minutes?: number;
+  /** אורך מדויק בשניות (אם ידוע) */
+  duration_seconds?: number | null;
   is_active: boolean;
 }
 
@@ -150,14 +152,22 @@ class MediaService {
     try {
       const durationMinutes = Math.round(durationSeconds / 60);
 
-      const { error } = await supabase
-        .from('lesson_media_links')
-        .update({
-          duration_minutes: durationMinutes,
-          updated_at: new Date().toISOString()
-        })
-        .eq('course_id', courseId)
-        .eq('lesson_id', lessonId);
+      // גם בשניות — לתצוגת «12:34» ברשימת השיעורים (העמודה duration_seconds)
+      const write = (withSeconds: boolean) =>
+        supabase
+          .from('lesson_media_links')
+          .update({
+            duration_minutes: durationMinutes,
+            ...(withSeconds ? { duration_seconds: Math.round(durationSeconds) } : {}),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('course_id', courseId)
+          .eq('lesson_id', lessonId);
+      let { error } = await write(true);
+      // העמודה עוד לא קיימת (לפני המיגרציה) — שומרים לפחות את הדקות
+      if (error && /duration_seconds/i.test(error.message ?? '')) {
+        ({ error } = await write(false));
+      }
 
       if (error) {
         logger.error('MediaService', 'Error updating lesson duration', error);

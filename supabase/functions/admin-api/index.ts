@@ -1016,6 +1016,13 @@ async function upsertLesson(supabase: SupabaseClient, adminId: string, body: Rec
     if (url && !('duration_minutes' in body && body.duration_minutes != null)) {
       const seconds = await vimeoDurationSeconds(url);
       if (seconds && seconds > 0) {
+        // אורך מדויק בשניות לתצוגה (lesson_media_links.duration_seconds) — best effort, לא מפיל אם העמודה חסרה
+        await supabase
+          .from('lesson_media_links')
+          .update({ duration_seconds: Math.round(seconds), duration_minutes: Math.max(1, Math.round(seconds / 60)) })
+          .eq('course_id', courseId)
+          .eq('lesson_id', lesson.id)
+          .then(() => undefined, () => undefined);
         const { data: upd } = await supabase
           .from('lessons')
           .update({ duration_minutes: Math.max(1, Math.round(seconds / 60)) })

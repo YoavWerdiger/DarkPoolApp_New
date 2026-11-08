@@ -131,11 +131,6 @@ export const LessonRow: React.FC<LessonRowProps> = ({
             pointerEvents="none"
           />
 
-          {displayDuration ? (
-            <View style={styles.durationPill}>
-              <Text style={styles.durationText}>{displayDuration}</Text>
-            </View>
-          ) : null}
 
           {isComingSoon ? (
             <View style={styles.lockOverlay}>
@@ -176,7 +171,9 @@ export const LessonRow: React.FC<LessonRowProps> = ({
               {lesson.title}
             </Text>
             <Text style={styles.indexLabel} numberOfLines={1}>
+              {/* «שיעור N · 12:34» — האורך בשורה במקום פיל על התמונה */}
               {i18n.t('auto.components__learning__LessonRow.s3')} {index + 1}
+              {displayDuration ? ` · ${displayDuration}` : ''}
               {isComingSoon ? i18n.t('auto.components__learning__LessonRow.s4') : ''}
             </Text>
 

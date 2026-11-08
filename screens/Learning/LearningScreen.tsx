@@ -609,7 +609,13 @@ function LearningScreen() {
               // נחפש את השיעור בנתונים האמיתיים
               // אורך אמיתי מהמסד (מ-Vimeo); נתוני הדמו רק כגיבוי
               const demoLesson = DEMO_COURSE.lessons.find(demo => demo.id === lesson.id);
+              // אורך מדויק (דקות:שניות) כשידוע — מהמדיה או מהאורך שהנגן רשם אצל המשתמש; אחרת דקות מעוגלות
+              const exactSeconds =
+                Number((media as { duration_seconds?: number | null } | undefined)?.duration_seconds) ||
+                Number((userProgress as { total_duration_seconds?: number | null } | null)?.total_duration_seconds) ||
+                0;
               duration =
+                (exactSeconds > 0 ? formatTime(Math.round(exactSeconds)) : '') ||
                 formatLessonMinutes(media?.duration_minutes) ||
                 formatLessonMinutes(lesson.duration_minutes) ||
                 demoLesson?.duration ||

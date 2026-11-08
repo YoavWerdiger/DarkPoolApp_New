@@ -6,7 +6,8 @@
  * עדיין לא בשימוש באפליקציה — בהשוואה במסך DevLabelLab.
  */
 import React, { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, TextInput, type TextInputProps } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
+import { SkeletonLine } from './SkeletonLoader';
 import Animated, {
   Easing,
   interpolate,
@@ -36,14 +37,36 @@ type Props = Omit<TextInputProps, 'placeholder' | 'style'> & {
   onChangeText: (v: string) => void;
   error?: boolean;
   ltr?: boolean;
+  /** רקע השדה במנוחה (ברירת מחדל background.input); בפוקוס — tertiary */
+  surface?: string;
+  /** קריאה בלבד — הערך מוצג, בלי מקלדת (למשל אימייל) */
+  readOnly?: boolean;
+  /** הערה מתחת לשדה */
+  helper?: string;
+  /** טעינה: שלד במקום הערך (התווית כבר למעלה) */
+  loading?: boolean;
 };
 
-export function FloatingLabelField({ label, hint, value, onChangeText, error, ltr, onFocus, onBlur, ...rest }: Props) {
+export function FloatingLabelField({
+  label,
+  hint,
+  value,
+  onChangeText,
+  error,
+  ltr,
+  surface,
+  readOnly,
+  helper,
+  loading,
+  onFocus,
+  onBlur,
+  ...rest
+}: Props) {
   const t = useDesignTokens();
   const reduceMotion = useReducedMotion();
   const [focused, setFocused] = useState(false);
   const inputRef = React.useRef<React.ComponentRef<typeof TextInput>>(null);
-  const floated = focused || value.length > 0;
+  const floated = focused || value.length > 0 || !!loading;
   const p = useSharedValue(floated ? 1 : 0);
   const f = useSharedValue(focused ? 1 : 0);
 
@@ -70,12 +93,13 @@ export function FloatingLabelField({ label, hint, value, onChangeText, error, lt
     backgroundColor: interpolateColor(
       f.value,
       [0, 1],
-      [String(t.colors.background.input), String(t.colors.background.tertiary)],
+      [String(surface ?? t.colors.background.input), String(t.colors.background.tertiary)],
     ),
   }));
 
   return (
-    <Pressable onPress={() => inputRef.current?.focus()} accessible={false}>
+    <View>
+    <Pressable onPress={() => !readOnly && inputRef.current?.focus()} accessible={false} disabled={readOnly}>
       <Animated.View style={[styles.shell, shellStyle, error && { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
         <Animated.Text
           pointerEvents="none"
@@ -85,6 +109,9 @@ export function FloatingLabelField({ label, hint, value, onChangeText, error, lt
           {label}
         </Animated.Text>
         <Animated.View style={[styles.inputWrap, inputStyle]}>
+          {loading ? (
+            <SkeletonLine lineHeight={22} width="46%" box={14} align="flex-end" />
+          ) : (
           <TextInput
             ref={inputRef}
             value={value}
@@ -100,23 +127,30 @@ export function FloatingLabelField({ label, hint, value, onChangeText, error, lt
             placeholder={focused && !value ? hint : undefined}
             placeholderTextColor={formFieldPlaceholderColor(t)}
             accessibilityLabel={label}
+            editable={!readOnly}
             style={[
               styles.input,
-              { color: t.colors.text.primary },
+              { color: readOnly ? t.colors.text.secondary : t.colors.text.primary },
               ltr ? styles.ltr : appPhysicalRightText,
             ]}
             {...rest}
           />
+          )}
         </Animated.View>
       </Animated.View>
     </Pressable>
+    {helper ? (
+      <Text style={[styles.helper, appPhysicalRightText, { color: t.colors.text.muted }]}>{helper}</Text>
+    ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   shell: {
     height: HEIGHT,
-    borderRadius: 20,
+    // כמו כרטיסי ההגדרות (26)
+    borderRadius: 26,
     paddingHorizontal: PAD_H,
     justifyContent: 'center',
     overflow: 'hidden',
@@ -137,5 +171,8 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     padding: 0,
   },
-  ltr: { textAlign: 'left', writingDirection: 'ltr' },
+  // ערך LTR (אימייל / טלפון) — נכתב משמאל לימין אבל מיושר מתחת לתווית (ימין)
+  ltr: { ...appPhysicalRightText, writingDirection: 'ltr' },
+  // מיושר לטקסט שבתוך השדה (PAD_H)
+  helper: { ...APP_TYPE.caption, marginTop: 6, paddingHorizontal: PAD_H },
 });

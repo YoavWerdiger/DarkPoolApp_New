@@ -1,4 +1,5 @@
 import { ROOT_DIR } from '../../lib/i18n/direction';
+import { FloatingLabelField } from '../../components/ui/FloatingLabelField';
 import i18n from '../../lib/i18n';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useCallback, useState, useEffect } from 'react';
@@ -297,30 +298,28 @@ export default function EditProfileScreen({ navigation }: any) {
             ) : null}
           </View>
 
-          <ProfileEditField label={i18n.t('auto.screens__Profile__EditProfileScreen.s16')} focused={focusedField === 'displayName'}>
-            {isLoading ? fieldSkeleton('46%') : <TextInput
+          {/* תווית צפה בתוך השדה: ריק — התווית היא ההינט; בפוקוס / עם ערך — עולה וקטנה */}
+          <View style={styles.fieldBlock}>
+            <FloatingLabelField
+              label={i18n.t('auto.screens__Profile__EditProfileScreen.s16')}
+              hint={i18n.t('auto.screens__Profile__EditProfileScreen.s17')}
               value={displayName}
               onChangeText={setDisplayName}
-              placeholder={i18n.t('auto.screens__Profile__EditProfileScreen.s17')}
-              placeholderTextColor={tokens.colors.text.muted}
-              onFocus={() => setFocusedField('displayName')}
-              onBlur={() => setFocusedField(null)}
-              style={fieldText}
-            />}
-          </ProfileEditField>
-
-          <ProfileEditField label={i18n.t('auto.screens__Profile__EditProfileScreen.s18')} focused={focusedField === 'phone'}>
-            {isLoading ? fieldSkeleton('38%') : <TextInput
+              loading={isLoading}
+              surface={String(tokens.colors.background.cardSolid)}
+            />
+          </View>
+          <View style={styles.fieldBlock}>
+            <FloatingLabelField
+              label={i18n.t('auto.screens__Profile__EditProfileScreen.s18')}
+              hint={i18n.t('auto.screens__Profile__EditProfileScreen.s19')}
               value={phone}
               onChangeText={setPhone}
-              placeholder={i18n.t('auto.screens__Profile__EditProfileScreen.s19')}
-              placeholderTextColor={tokens.colors.text.muted}
               keyboardType="phone-pad"
-              onFocus={() => setFocusedField('phone')}
-              onBlur={() => setFocusedField(null)}
-              style={fieldText}
-            />}
-          </ProfileEditField>
+              loading={isLoading}
+              surface={String(tokens.colors.background.cardSolid)}
+            />
+          </View>
 
           <View style={styles.fieldBlock}>
             <Text
@@ -383,16 +382,18 @@ export default function EditProfileScreen({ navigation }: any) {
             </View>
           </View>
 
-          <ProfileEditField label={i18n.t('auto.screens__Profile__EditProfileScreen.s23')} helper={i18n.t('auto.screens__Profile__EditProfileScreen.s24')} isLast>
-            {isLoading && !user?.email ? fieldSkeleton('58%') : (
-            <Text
-              style={[formFieldInputStyle(), { color: tokens.colors.text.secondary }]}
-              numberOfLines={1}
-            >
-              {user?.email || '—'}
-            </Text>
-            )}
-          </ProfileEditField>
+          <View style={[styles.fieldBlock, styles.fieldBlockLast]}>
+            <FloatingLabelField
+              label={i18n.t('auto.screens__Profile__EditProfileScreen.s23')}
+              value={user?.email || '—'}
+              onChangeText={() => undefined}
+              readOnly
+              ltr
+              helper={i18n.t('auto.screens__Profile__EditProfileScreen.s24')}
+              loading={isLoading && !user?.email}
+              surface={String(tokens.colors.background.cardSolid)}
+            />
+          </View>
         </KeyboardAwareScrollView>
 
         <KeyboardStickyView

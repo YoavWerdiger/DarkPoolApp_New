@@ -139,6 +139,8 @@ serve(async (req) => {
         return await reorderLessons(supabase, adminId, body);
       case 'delete_lesson':
         return await deleteLesson(supabase, adminId, body);
+      case 'sync_lesson_durations':
+        return await syncLessonDurations(supabase, adminId, body);
       default:
         return json({ error: `Unknown action: ${action}` }, 400);
     }
@@ -1036,6 +1038,78 @@ async function upsertLesson(supabase: SupabaseClient, adminId: string, body: Rec
   }
   await audit(supabase, adminId, id ? 'update_lesson' : 'create_lesson', null, { courseId, lessonId: lesson.id });
   return json({ lesson });
+}
+
+/**
+ * סנכרון אורך אמיתי לכל השיעורים (או לקורס אחד): Vimeo — oEmbed; YouTube — lengthSeconds מדף הסרטון.
+ * כותב duration_seconds + duration_minutes ב-lesson_media_links ו-duration_minutes ב-lessons.
+ * מחזיר כמה עודכנו / נכשלו (וידאו פרטי / חסום / בלי קישור).
+ */
+async function syncLessonDurations(supabase: SupabaseClient, adminId: string, body: Record<string, unknown>) {
+  const courseId = body.courseId ? String(body.courseId) : null;
+  let q = supabase
+    .from('lesson_media_links')
+    .select('course_id, lesson_id, vimeo_id, vimeo_url, youtube_id, youtube_url')
+    .neq('is_active', false);
+  if (courseId) q = q.eq('course_id', courseId);
+  const { data: rows, error } = await q;
+  if (error) throw error;
+
+  let updated = 0;
+  const failed: string[] = [];
+  const list = rows ?? [];
+  // באצ'ים קטנים — לא להציף את Vimeo / YouTube
+  for (let i = 0; i < list.length; i += 4) {
+    await Promise.all(
+      list.slice(i, i + 4).map(async (r) => {
+        let seconds: number | null = null;
+        const vimeoUrl = r.vimeo_url || (r.vimeo_id ? `https://vimeo.com/${r.vimeo_id}` : null);
+        if (vimeoUrl) seconds = await vimeoDurationSeconds(vimeoUrl);
+        const ytId = r.youtube_id || youtubeIdFromUrl(String(r.youtube_url ?? ''));
+        if (!seconds && ytId) seconds = await youtubeDurationSeconds(ytId);
+        if (!seconds || seconds <= 0) {
+          failed.push(String(r.lesson_id));
+          return;
+        }
+        const minutes = Math.max(1, Math.round(seconds / 60));
+        const { error: mErr } = await supabase
+          .from('lesson_media_links')
+          .update({ duration_seconds: Math.round(seconds), duration_minutes: minutes })
+          .eq('course_id', r.course_id)
+          .eq('lesson_id', r.lesson_id);
+        if (mErr) {
+          failed.push(String(r.lesson_id));
+          return;
+        }
+        await supabase
+          .from('lessons')
+          .update({ duration_minutes: minutes })
+          .eq('course_id', r.course_id)
+          .eq('id', r.lesson_id);
+        updated++;
+      }),
+    );
+  }
+  await audit(supabase, adminId, 'sync_lesson_durations', null, { courseId, updated, failed: failed.length });
+  return json({ updated, failed, total: list.length });
+}
+
+/** אורך סרטון YouTube בשניות — lengthSeconds מתוך דף הצפייה (בלי מפתח API) */
+async function youtubeDurationSeconds(videoId: string): Promise<number | null> {
+  try {
+    const r = await fetch(`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}&hl=en`, {
+      headers: { 'Accept-Language': 'en-US,en;q=0.9', 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)' },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!r.ok) return null;
+    const html = await r.text();
+    const m = html.match(/"lengthSeconds":"(\d+)"/) || html.match(/itemprop="duration" content="PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?"/);
+    if (!m) return null;
+    if (m.length === 2) return Number(m[1]);
+    return (Number(m[1] || 0) * 3600) + (Number(m[2] || 0) * 60) + Number(m[3] || 0);
+  } catch {
+    return null;
+  }
 }
 
 /** מזהה Vimeo: vimeo.com/123 · vimeo.com/123/abcdef (לא רשום) · player.vimeo.com/video/123 · vimeo.com/channels/x/123 */

@@ -350,6 +350,9 @@ export const adminService = {
   reorderLessons: (courseId: string, orderedIds: string[]) =>
     invokeAdminApi<{ ok: true }>('reorder_lessons', { courseId, orderedIds }),
   deleteLesson: (courseId: string, id: string) => invokeAdminApi<{ ok: true }>('delete_lesson', { courseId, id }),
+  /** אורך אמיתי לכל השיעורים (Vimeo oEmbed / YouTube) — courseId אופציונלי */
+  syncLessonDurations: (courseId?: string) =>
+    invokeAdminApi<{ updated: number; failed: string[]; total: number }>('sync_lesson_durations', courseId ? { courseId } : {}),
 
   /** הרשאת ניהול באפליקציה — רק סופר-אדמין */
   setAppAdmin: (userId: string, admin: boolean) =>

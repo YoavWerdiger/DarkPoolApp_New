@@ -25,6 +25,23 @@ export default function AdminCoursesScreen({ navigation }: any) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+
+  // אורך אמיתי לכל השיעורים — מ-Vimeo / YouTube (במקום דקות שהוזנו ידנית / מהדמו)
+  const syncDurations = async () => {
+    if (syncing) return;
+    setSyncing(true);
+    try {
+      const r = await adminService.syncLessonDurations();
+      void HapticFeedback.success();
+      legacyAlert(i18n.t('auto.screens__Admin__AdminCoursesScreen.s10'), i18n.t('auto.screens__Admin__AdminCoursesScreen.s11', { v0: r.updated, v1: r.total, v2: r.failed.length }));
+      void load();
+    } catch (e) {
+      legacyAlert(i18n.t('auto.screens__Admin__AdminCoursesScreen.s1'), e instanceof Error ? e.message : i18n.t('auto.screens__Admin__AdminCoursesScreen.s2'));
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const load = useCallback(async () => {
     try {
@@ -80,6 +97,7 @@ export default function AdminCoursesScreen({ navigation }: any) {
           }
         >
           <UIButton title={i18n.t('auto.screens__Admin__AdminCoursesScreen.s3')} variant="primary" fullWidth loading={creating} onPress={() => void createCourse()} style={styles.newBtn} />
+          <UIButton title={i18n.t('auto.screens__Admin__AdminCoursesScreen.s12')} variant="secondary" fullWidth loading={syncing} onPress={() => void syncDurations()} style={styles.newBtn} />
           {courses.length === 0 ? (
             <AdminEmptyState title={i18n.t('auto.screens__Admin__AdminCoursesScreen.s6')} subtitle={i18n.t('auto.screens__Admin__AdminCoursesScreen.s7')} />
           ) : (

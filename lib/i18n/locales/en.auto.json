@@ -5099,7 +5099,10 @@
     "s6": "No courses",
     "s7": "Create a first course — it stays hidden until you activate it",
     "s8": "active lessons",
-    "s9": "Hidden"
+    "s9": "Hidden",
+    "s10": "Lesson lengths updated",
+    "s11": "Updated {{v0}} of {{v1}} lessons. {{v2}} not found (private video / missing link).",
+    "s12": "Sync lesson lengths"
   },
   "screens__Admin__AdminCourseEditScreen": {
     "s1": "Error",

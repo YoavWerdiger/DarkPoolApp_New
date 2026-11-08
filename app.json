@@ -109,7 +109,21 @@
         }
       ],
       "./plugins/withShareSuggestions",
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "DarkPool משתמשת במיקום שלך רק כשבוחרים לשלוח מיקום בצ'אט.",
+          "isAndroidBackgroundLocationEnabled": false,
+          "isIosBackgroundLocationEnabled": false
+        }
+      ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "DarkPool ניגשת לאנשי הקשר רק כשבוחרים לשתף איש קשר בצ'אט."
+        }
+      ]
     ],
     "owner": "darkpoolapp"
   },

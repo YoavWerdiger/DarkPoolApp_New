@@ -10,7 +10,9 @@ import { TEXT_DIR } from '../../lib/i18n/language';
 import { useDelayedUnmount } from '../../hooks/useDelayedUnmount';
 import React, { useState, useRef, useMemo, useEffect, useCallback, memo } from 'react';
 import ReactionPicker from './ReactionPicker';
-import { View, TextInput, TouchableOpacity, Pressable, Text, StyleSheet, Animated, Easing, Platform, Keyboard } from 'react-native';
+import ChatEventSheet from './ChatEventSheet';
+import { View, TextInput, TouchableOpacity, Pressable, Text, StyleSheet, Animated, Easing, Platform, Keyboard, Linking } from 'react-native';
+import { requireOptionalNativeModule } from 'expo';
 import { legacyAlert } from '../../utils/appDialog';
 import { chatInputBottomPadding, CHAT_COMPOSER_NATIVE_ID } from './chatInputLayout';
 import { useDesignTokens } from '../ui/DesignTokens';
@@ -24,6 +26,7 @@ import ChatComposerBar from './ChatComposerBar';
 import { runAfterSheetDismiss } from './mediaPickerLaunch';
 import PollCreationBottomSheet from './PollCreationBottomSheet';
 import {
+  recentToPicked,
   resolvePickedMedia,
   scheduleMediaRecentsPrefetch,
   type PickedRecentMedia,
@@ -50,6 +53,10 @@ import { APP_TYPE } from '../ui/appType';
 import MentionPickerSheet from '../share/MentionPickerSheet';
 import type { CommunityMention } from '../../types/tweets.types';
 import { logger } from '../../utils/logger';
+
+// מיקום / איש קשר בתפריט הצירוף — רק בבילד שכולל את המודולים הנייטיב (אחרת הכפתורים מוסתרים)
+const LOCATION_NATIVE_AVAILABLE = !!requireOptionalNativeModule('ExpoLocation');
+const CONTACTS_NATIVE_AVAILABLE = !!requireOptionalNativeModule('ExpoContacts');
 import { getChatMessagePreview } from '../../utils/chatMessagePreview';
 import { makeClientMessageId, makeLocalId } from '../../services/chat/chatOfflineQueue';
 import {
@@ -2281,6 +2288,85 @@ function ChatInputImpl({
     }
   };
 
+  // ============================================
+  // מיקום · איש קשר · אירוע (QA 4.2) — נשלחים כהודעת טקסט מעוצבת
+  // ============================================
+
+  const [eventSheetOpen, setEventSheetOpen] = useState(false);
+
+  const sendPlainText = useCallback(
+    (content: string) => {
+      onSendMessage(content).catch((error) => {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        legacyAlert(i18n.t('auto.components__chat__ChatInput.s2'), errorMessage || i18n.t('auto.components__chat__ChatInput.s4'));
+      });
+    },
+    [onSendMessage],
+  );
+
+  const handleSendLocation = async () => {
+    try {
+      const Location = require('expo-location') as typeof import('expo-location');
+      let perm = await Location.getForegroundPermissionsAsync();
+      if (perm.status !== 'granted' && perm.canAskAgain) {
+        perm = await Location.requestForegroundPermissionsAsync();
+      }
+      if (perm.status !== 'granted') {
+        legacyAlert(
+          i18n.t('auto.components__chat__ChatInput.s38'),
+          i18n.t('auto.components__chat__ChatInput.s39'),
+          [
+            { text: i18n.t('auto.components__chat__ChatInput.s41'), style: 'cancel' },
+            { text: i18n.t('auto.components__chat__ChatInput.s40'), onPress: () => void Linking.openSettings() },
+          ],
+        );
+        return;
+      }
+      const pos =
+        (await Location.getLastKnownPositionAsync({ maxAge: 60_000 })) ??
+        (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }));
+      const { latitude, longitude } = pos.coords;
+      sendPlainText(
+        `📍 ${i18n.t('auto.components__chat__ChatInput.s42')}\nhttps://maps.google.com/?q=${latitude.toFixed(6)},${longitude.toFixed(6)}`,
+      );
+    } catch (error) {
+      logger.warn('ChatInput', 'send location failed', error);
+      legacyAlert(i18n.t('auto.components__chat__ChatInput.s2'), i18n.t('auto.components__chat__ChatInput.s43'));
+    }
+  };
+
+  const handleShareContact = async () => {
+    type PickedContact = {
+      name?: string;
+      firstName?: string;
+      lastName?: string;
+      phoneNumbers?: Array<{ number?: string }>;
+    } | null;
+    const Contacts = require('expo-contacts/legacy') as {
+      presentContactPickerAsync: () => Promise<PickedContact>;
+      requestPermissionsAsync: () => Promise<{ status: string }>;
+    };
+    try {
+      let contact: PickedContact;
+      try {
+        contact = await Contacts.presentContactPickerAsync();
+      } catch {
+        // חלק מהמכשירים דורשים הרשאה גם לבורר המערכת
+        const perm = await Contacts.requestPermissionsAsync();
+        if (perm.status !== 'granted') return;
+        contact = await Contacts.presentContactPickerAsync();
+      }
+      if (!contact) return;
+      const name = contact.name || [contact.firstName, contact.lastName].filter(Boolean).join(' ');
+      const phones = (contact.phoneNumbers ?? []).map((p) => p.number?.trim()).filter(Boolean).slice(0, 2);
+      if (!name && phones.length === 0) return;
+      sendPlainText([`👤 ${name}`.trim(), ...phones].join('\n'));
+    } catch (error) {
+      logger.warn('ChatInput', 'share contact failed', error);
+      legacyAlert(i18n.t('auto.components__chat__ChatInput.s2'), i18n.t('auto.components__chat__ChatInput.s44'));
+    }
+  };
+
   const showAttachmentOptions = () => {
     Keyboard.dismiss();
     attachmentIconRotate.setValue(0);
@@ -2771,15 +2857,23 @@ function ChatInputImpl({
       )}
 
       {/* Custom Media Picker Sheet */}
-      {/* שיט צירוף לפי הטופו — צילום · גלריה · מסמך · אודיו · סקר */}
+      {/* שיט צירוף (QA 4.2) — תמונות אחרונות + גריד: גלריה · מצלמה · מסמך · סקר · מיקום · איש קשר · אירוע */}
       <AttachMenuSheet
         visible={mediaPickerVisible}
         onClose={() => setMediaPickerVisible(false)}
         onCamera={() => setAttachCameraOpen(true)}
         onGallery={() => void handlePickImage()}
         onDocument={handlePickDocument}
-        onAudio={isExpoAvAvailable ? handleStartAudioRecording : undefined}
         onPoll={handleCreatePoll}
+        onLocation={LOCATION_NATIVE_AVAILABLE ? () => void handleSendLocation() : undefined}
+        onContact={CONTACTS_NATIVE_AVAILABLE ? () => void handleShareContact() : undefined}
+        onEvent={() => setEventSheetOpen(true)}
+        onPickRecent={(asset) => applyPickedMedia([recentToPicked(asset)])}
+      />
+      <ChatEventSheet
+        visible={eventSheetOpen}
+        onClose={() => setEventSheetOpen(false)}
+        onSend={sendPlainText}
       />
 
       <ReactionPicker

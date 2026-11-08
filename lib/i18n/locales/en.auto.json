@@ -3913,7 +3913,11 @@
     "s4": "Audio",
     "s5": "Poll",
     "s6": "Attach media",
-    "s7": "Close"
+    "s7": "Close",
+    "s8": "Location",
+    "s9": "Contact",
+    "s10": "Event",
+    "s11": "Recent photos"
   },
   "components__chat__DayDivider": {
     "s1": "Today",
@@ -4138,7 +4142,14 @@
     "s34": "Record a voice message — a short tap starts recording, holding records until you release to review",
     "s35": "Voice recording isn't available in Expo Go",
     "s36": "Emoji",
-    "s37": "Add emoji"
+    "s37": "Add emoji",
+    "s38": "Location unavailable",
+    "s39": "To send your location, allow location access in your device settings.",
+    "s40": "Open settings",
+    "s41": "Cancel",
+    "s42": "My location",
+    "s43": "Couldn't get your location. Try again.",
+    "s44": "Couldn't open contacts."
   },
   "components__chat__AttachmentPicker": {
     "s1": "Choose a file",
@@ -5157,5 +5168,10 @@
     "s48": "Paste a Vimeo link (vimeo.com/…).",
     "s49": "Vimeo link",
     "s50": "Auto from Vimeo"
+  },
+  "components__chat__ChatEventSheet": {
+    "s1": "New event",
+    "s2": "Event name",
+    "s3": "Send"
   }
 }

@@ -51,7 +51,8 @@ const COL = {
   tp: 72,
   exit: 78,
   pnl: 86,
-  actionsOpen: 96,
+  // «סגירה» כתוית ברורה (QA 9.2) + מחיקה + שיתוף
+  actionsOpen: 150,
   actionsClosed: 40,
 } as const;
 
@@ -403,12 +404,20 @@ export default function PortfolioTradesTable({
                         ]}
                       >
                         {onClose ? (
-                          <ActionIcon
-                            name="close"
-                            color={tokens.colors.text.secondary}
-                            label={i18n.t('auto.screens__Portfolios__components__PortfolioTradesTable.s8', { v0: t.symbol })}
-                            onPress={() => onClose(t)}
-                          />
+                          <TouchableOpacity
+                            onPress={() => {
+                              void HapticFeedback.impactLight();
+                              onClose(t);
+                            }}
+                            hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+                            accessibilityRole="button"
+                            accessibilityLabel={i18n.t('auto.screens__Portfolios__components__PortfolioTradesTable.s8', { v0: t.symbol })}
+                            style={[styles.closePill, { backgroundColor: tokens.colors.primary.lightCta }]}
+                          >
+                            <Text style={[styles.closePillText, { color: tokens.colors.text.inverse }]} numberOfLines={1}>
+                              {i18n.t('auto.screens__Portfolios__components__PortfolioTradesTable.s11')}
+                            </Text>
+                          </TouchableOpacity>
                         ) : null}
                         {onDelete ? (
                           <ActionIcon
@@ -571,6 +580,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
+  },
+  closePill: {
+    height: 28,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 2,
+  },
+  closePillText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   actionHit: {
     width: 28,

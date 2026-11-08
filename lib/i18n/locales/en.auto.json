@@ -2144,7 +2144,8 @@
     "s7": "Edit {{v0}}",
     "s8": "Close {{v0}}",
     "s9": "Delete {{v0}}",
-    "s10": "Share {{v0}}"
+    "s10": "Share {{v0}}",
+    "s11": "Close"
   },
   "screens__Portfolios__tabs__CalendarTab": {
     "s1": "January",
@@ -2267,7 +2268,12 @@
     "s28": "Close position",
     "s29": "Pick a date",
     "s30": "OK",
-    "s31": "Pick a time"
+    "s31": "Pick a time",
+    "s32": "Quantity to close",
+    "s33": "All",
+    "s34": "Half",
+    "s35": "Quantity must be more than 0 and up to {{v0}}",
+    "s36": "Partial close: {{v0}} remain open"
   },
   "screens__Portfolios__components__PortfolioScreenHeader": {
     "s1": "Back"

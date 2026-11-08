@@ -454,6 +454,34 @@ export async function closeTrade(
   clearHistoricalSeriesCache(existing.portfolio_id);
 }
 
+/**
+ * סגירה חלקית (QA 9.2) — RPC אטומי: מקטין את הפוזיציה הפתוחה ויוצר טרייד סגור בכמות שנסגרה.
+ * המזומן וה-P&L מחושבים בטריגרים הקיימים (ראו close_trade_partial במיגרציה).
+ */
+export async function closeTradePartial(
+  tradeId: string,
+  quantity: number,
+  exitPrice: number,
+  exitDate?: string,
+): Promise<void> {
+  const { data: existing, error: fetchErr } = await supabase
+    .from('trades')
+    .select('portfolio_id')
+    .eq('id', tradeId)
+    .maybeSingle();
+  if (fetchErr) throw fetchErr;
+  if (!existing) throw new Error('trade_not_found');
+
+  const { error } = await supabase.rpc('close_trade_partial', {
+    p_trade_id: tradeId,
+    p_quantity: quantity,
+    p_exit_price: exitPrice,
+    p_exit_date: exitDate ?? new Date().toISOString(),
+  });
+  if (error) throw error;
+  clearHistoricalSeriesCache(existing.portfolio_id);
+}
+
 /* ============================================================================
  * איפוס תיק — RPC אטומי (trades / snapshots / transactions / history /
  * broker_positions ל-Colmex) + available_cash=0 + recalc stats.

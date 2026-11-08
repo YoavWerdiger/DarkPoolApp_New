@@ -48,6 +48,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import {
   loadTrades,
   closeTrade,
+  closeTradePartial,
   deleteTrade,
 } from '../../../services/portfolios/portfolioTradeDerive';
 import { getQuotes } from '../../../services/portfolios/portfolioPriceFeed';
@@ -111,6 +112,8 @@ export default function OpenTradesTab({
   const [loading, setLoading] = useState(true);
   const [closingTrade, setClosingTrade] = useState<Trade | null>(null);
   const [exitPriceText, setExitPriceText] = useState('');
+  // כמות לסגירה — ברירת מחדל: הכל; פחות = סגירה חלקית (QA 9.2)
+  const [closeQtyText, setCloseQtyText] = useState('');
   const [exitDate, setExitDate] = useState<Date>(new Date());
   const [showExitDatePicker, setShowExitDatePicker] = useState(false);
   const [showExitTimePicker, setShowExitTimePicker] = useState(false);
@@ -192,6 +195,7 @@ export default function OpenTradesTab({
       const guess = priceMap[trade.symbol];
       const now = new Date();
       setExitPriceText(guess ? guess.toFixed(2) : '');
+      setCloseQtyText(String(trade.quantity));
       setExitDate(now);
       setTempExitDate(now);
       setShowExitDatePicker(false);
@@ -268,6 +272,15 @@ export default function OpenTradesTab({
       legacyAlert(i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s5'), i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s9'));
       return;
     }
+    const closeQty = parseFloat(closeQtyText.replace(/,/g, ''));
+    if (!Number.isFinite(closeQty) || closeQty <= 0 || closeQty > closingTrade.quantity + 1e-9) {
+      legacyAlert(
+        i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s5'),
+        i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s35', { v0: closingTrade.quantity }),
+      );
+      return;
+    }
+    const isPartial = closeQty < closingTrade.quantity - 1e-9;
     const finalDate = exitDate;
 
     const openedAt = new Date(closingTrade.entry_date);
@@ -285,7 +298,11 @@ export default function OpenTradesTab({
 
     try {
       setBusy(true);
-      await closeTrade(closingTrade.id, px, finalDate.toISOString());
+      if (isPartial) {
+        await closeTradePartial(closingTrade.id, closeQty, px, finalDate.toISOString());
+      } else {
+        await closeTrade(closingTrade.id, px, finalDate.toISOString());
+      }
       clearHistoricalSeriesCache(closingTrade.portfolio_id);
       setClosingTrade(null);
       setExitPriceText('');
@@ -308,7 +325,7 @@ export default function OpenTradesTab({
     } finally {
       setBusy(false);
     }
-  }, [closingTrade, exitDate, exitPriceText, load, onChanged]);
+  }, [closingTrade, closeQtyText, exitDate, exitPriceText, load, onChanged]);
 
   const styles = useMemo(
     () =>
@@ -451,6 +468,20 @@ export default function OpenTradesTab({
           color: tokens.colors.text.primary,
           textAlign: 'center',
           writingDirection: 'ltr',
+        },
+        qtyRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+        },
+        qtyInputWrap: {
+          flex: 1,
+        },
+        qtyHint: {
+          marginTop: 6,
+          fontSize: 13,
+          color: tokens.colors.text.secondary,
+          textAlign: 'right',
         },
         exitPickerOverlay: {
           position: 'absolute',
@@ -618,6 +649,52 @@ export default function OpenTradesTab({
               </View>
 
               <View style={styles.sheetInputBlock}>
+                <Text style={styles.sheetLabel}>{i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s32')}</Text>
+                <View style={styles.qtyRow}>
+                  <View style={[styles.sheetInputWrap, styles.qtyInputWrap]}>
+                    <TextInput
+                      value={closeQtyText}
+                      onChangeText={setCloseQtyText}
+                      placeholder={String(closingTrade.quantity)}
+                      placeholderTextColor={formFieldPlaceholderColor(tokens)}
+                      keyboardType="decimal-pad"
+                      style={styles.sheetInput}
+                    />
+                  </View>
+                  {[
+                    { key: 'half', label: i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s34'), qty: closingTrade.quantity / 2 },
+                    { key: 'all', label: i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s33'), qty: closingTrade.quantity },
+                  ].map((chip) => {
+                    const val = Number.isInteger(chip.qty) ? String(chip.qty) : chip.qty.toFixed(4).replace(/0+$/, '');
+                    const active = closeQtyText === val;
+                    return (
+                      <TouchableOpacity
+                        key={chip.key}
+                        style={[styles.datePill, active && { borderColor: tokens.colors.primary.main }]}
+                        activeOpacity={0.8}
+                        onPress={() => {
+                          void HapticFeedback.selection();
+                          setCloseQtyText(val);
+                        }}
+                      >
+                        <Text style={styles.datePillText}>{chip.label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                {(() => {
+                  const q = parseFloat(closeQtyText.replace(/,/g, ''));
+                  if (!Number.isFinite(q) || q <= 0 || q >= closingTrade.quantity) return null;
+                  const remaining = +(closingTrade.quantity - q).toFixed(6);
+                  return (
+                    <Text style={styles.qtyHint}>
+                      {i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s36', { v0: remaining })}
+                    </Text>
+                  );
+                })()}
+              </View>
+
+              <View style={styles.sheetInputBlock}>
                 <Text style={styles.sheetLabel}>{i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s25')}</Text>
                 <View style={styles.dateRow}>
                   <TouchableOpacity
@@ -687,18 +764,18 @@ export default function OpenTradesTab({
               {(() => {
                 const px = parseFloat(exitPriceText);
                 if (!px || px <= 0) return null;
+                const typedQty = parseFloat(closeQtyText.replace(/,/g, ''));
+                const qty =
+                  Number.isFinite(typedQty) && typedQty > 0
+                    ? Math.min(typedQty, closingTrade.quantity)
+                    : closingTrade.quantity;
                 const pnl =
                   closingTrade.direction === 'long'
-                    ? (px - closingTrade.entry_price) *
-                      closingTrade.quantity * closingTrade.leverage
-                    : (closingTrade.entry_price - px) *
-                      closingTrade.quantity * closingTrade.leverage;
+                    ? (px - closingTrade.entry_price) * qty * closingTrade.leverage
+                    : (closingTrade.entry_price - px) * qty * closingTrade.leverage;
                 const pnlPct =
                   closingTrade.entry_price > 0
-                    ? (pnl /
-                        (closingTrade.entry_price *
-                          closingTrade.quantity)) *
-                      100
+                    ? (pnl / (closingTrade.entry_price * qty)) * 100
                     : 0;
                 const c =
                   pnl > 0

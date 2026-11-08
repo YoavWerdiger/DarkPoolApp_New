@@ -406,6 +406,8 @@ function AppContent() {
               <Stack.Screen name="Main" component={MainTabs} options={{ freezeOnBlur: false }} />
               <Stack.Screen name="Profile" component={ProfileStack} />
               <Stack.Screen name="Admin" component={AdminStack} />
+              {/* פיתוח בלבד — השוואת תוויות (screens/Dev/LabelLabScreen) */}
+              {__DEV__ ? <Stack.Screen name="DevLabelLab" component={require('./screens/Dev/LabelLabScreen').default} /> : null}
               {/* פרופיל ציבורי של משתמש — נפתח מכל מקום (lib/openUserProfile) */}
               <Stack.Screen name="PublicProfile" component={PublicProfileScreen} />
               {/* צופה הסטוריז — מסך (לא Modal של RN): transparentModal כדי שבמשיכה למטה ייראה המסך שמתחת (lib/storyViewerSession) */}

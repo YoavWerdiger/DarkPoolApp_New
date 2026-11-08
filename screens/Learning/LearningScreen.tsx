@@ -60,6 +60,19 @@ import { useTheme } from '../../context/ThemeContext';
 import { CourseTeaserLock, isCourseTeaserLocked } from '../../components/learning/CourseTeaserLock';
 import { CourseCompletionOverlay } from '../../components/learning/CourseCompletionOverlay';
 import { BlurTargetView } from 'expo-blur';
+import * as NavigationBar from 'expo-navigation-bar';
+import { StatusBar as RNStatusBar } from 'react-native';
+
+/** מסך מלא בנגן (QA 8.4): באנדרואיד מסתירים סרגל ניווט + סטטוס (immersive), ומחזירים ביציאה */
+function setAndroidImmersive(on: boolean) {
+  if (Platform.OS !== 'android') return;
+  try {
+    RNStatusBar.setHidden(on, 'fade');
+    void NavigationBar.setVisibilityAsync(on ? 'hidden' : 'visible').catch(() => undefined);
+  } catch {
+    /* noop */
+  }
+}
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -340,6 +353,9 @@ function LearningScreen() {
       () => undefined,
     );
   }, [lessonsData, updateCourseJumpButton]);
+
+  // יציאה מהמסך באמצע מסך מלא — מחזירים את סרגלי המערכת
+  useEffect(() => () => setAndroidImmersive(false), []);
 
   useEffect(() => {
     const t = setTimeout(measureProgressTarget, 50);
@@ -1563,7 +1579,7 @@ function LearningScreen() {
                       <div class="video-container">
                         <iframe 
                           id="vimeo-player"
-                  src="https://player.vimeo.com/video/${videoId}?badge=0&autopause=0&player_id=0&app_id=58479" 
+                  src="https://player.vimeo.com/video/${videoId}?badge=0&autopause=0&player_id=0&app_id=58479&playsinline=1&title=0&byline=0&portrait=0&vimeo_logo=0&volume=0&pip=0&airplay=0&chromecast=0&like=0&watchlater=0&share=0&transcript=0" 
                           frameborder="0" 
                           allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share" 
                           referrerpolicy="strict-origin-when-cross-origin" 
@@ -1638,6 +1654,14 @@ function LearningScreen() {
                           }));
                         });
                         
+                        // מסך מלא → RN מסתיר את סרגלי המערכת באנדרואיד (כפתורי הנגן לא מתחת לסרגל הניווט)
+                        player.on('fullscreenchange', function(data) {
+                          window.ReactNativeWebView.postMessage(JSON.stringify({
+                            type: 'fullscreen',
+                            fullscreen: !!(data && data.fullscreen)
+                          }));
+                        });
+
                         player.on('ended', function() {
                           window.ReactNativeWebView.postMessage(JSON.stringify({
                             type: 'completed'
@@ -1866,6 +1890,8 @@ function LearningScreen() {
                     markLessonAsCompleted();
                   } else if (data.type === 'duration') {
                     setDuration(data.duration);
+                  } else if (data.type === 'fullscreen') {
+                    setAndroidImmersive(!!data.fullscreen);
                   }
                 } catch (error) {
                   // Error parsing message

@@ -22,12 +22,13 @@ const TRAVEL = TRACK_W - THUMB - PAD * 2;
  * בצבעי ה-trackColor שהמסך כבר מעביר. אותם props כמו Switch.
  */
 /**
- * צבע האגודל לפי ערכת הנושא — לבן בלייט, שחור בדארק — ולא לפי thumbColor של המסך
+ * צבע האגודל בניגוד לערכת הנושא — כהה בלייט, בהיר בדארק — ולא לפי thumbColor של המסך
  * (המסכים העבירו text.primary למתג פועל: בלייט יצא אגודל שחור ליד כבויים לבנים).
  */
 export function AppSwitch(props: SwitchProps) {
   const { isDarkMode } = useTheme();
-  const thumbColor = isDarkMode ? '#000000' : '#FFFFFF';
+  // ניגוד לערכה: בדארק אגודל בהיר, בלייט אגודל כהה
+  const thumbColor = isDarkMode ? '#FFFFFF' : '#1C1C1E';
   if (Platform.OS === 'ios') return <Switch {...props} thumbColor={thumbColor} />;
   return <AndroidSwitch {...props} thumbColor={thumbColor} />;
 }

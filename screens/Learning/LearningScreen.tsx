@@ -1847,7 +1847,8 @@ function LearningScreen() {
             <UICard variant="soft" padding="md" style={styles.lessonGlassCard}>
               {/* תגית «שיעור X» — כמו תגיות הפרקים ברשימת השיעורים (טופו) */}
               <View style={styles.lessonPlayerIndexRow}>
-                <View style={[styles.chapterHeaderBadge, { backgroundColor: DesignTokens.colors.background.navChrome }]}>
+                {/* tertiary — בולט על הכרטיס בשתי הערכות (navChrome נבלע בכרטיס הלבן בלייט) */}
+                <View style={[styles.chapterHeaderBadge, { backgroundColor: DesignTokens.colors.background.tertiary }]}>
                   <Text style={[styles.chapterHeaderBadgeText, { color: DesignTokens.colors.text.secondary }]}>
                     {i18n.t('auto.screens__Learning__LearningScreen.s41', { v0: lessonNumberLabel })}
                   </Text>

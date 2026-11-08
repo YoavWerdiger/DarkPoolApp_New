@@ -522,7 +522,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
  * כרטיס חדשה בטעינה — אותו כרטיס בדיוק (UICard, תמונה 92 מימין, כותרת + תקציר, מפריד ושורת פוטר).
  * כפתורי הלייק והשיתוף קבועים (אמיתיים, לא לחיצים); רק התמונה, הטקסט, המקור והזמן בשלד.
  */
-const BreakingNewsCardSkeleton: React.FC = () => {
+export const BreakingNewsCardSkeleton: React.FC = () => {
   const DesignTokens = useDesignTokens();
   const THUMB_SIZE = 92;
   const circle = {
@@ -586,7 +586,7 @@ const BreakingNewsCardSkeleton: React.FC = () => {
   );
 };
 
-const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, onShare, isLiked }) => {
+export const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, onShare, isLiked }) => {
   const DesignTokens = useDesignTokens();
   const categoryColor = getNewsCategoryColor(article.category);
 

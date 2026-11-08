@@ -1,6 +1,10 @@
 import i18n from '../../lib/i18n';
+import { BreakingNewsCard, BreakingNewsCardSkeleton } from './BreakingNewsTab';
+import { queryClient } from '../../lib/queryClient';
+import { appQueryKeys } from '../../lib/appQueryKeys';
+import type { NewsArticle } from '../../services/newsService';
 import { legacyAlert } from '../../utils/appDialog';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, FlatList, RefreshControl, TouchableOpacity, Image, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Trash2 } from 'lucide-react-native';
@@ -303,11 +307,33 @@ export default function LikedArticlesScreen() {
   }, [loadLikedArticles]);
 
   // רינדור כתבה
+  // אותו כרטיס כמו בפיד (BreakingNewsCard). הכתבה השמורה מחזיקה רק כותרת / מקור / תמונה / תאריך —
+  // תקציר וקטגוריה מושלמים מהפיד שבקאש כשהכתבה עדיין שם
+  const feedById = useMemo(() => {
+    const list = queryClient.getQueryData<NewsArticle[]>(appQueryKeys.newsList('breaking')) ?? [];
+    return new Map(list.map((a) => [String(a.id), a]));
+  }, [likedArticles]);
+  const toNewsArticle = useCallback(
+    (item: LikedArticle): NewsArticle => {
+      const full = feedById.get(String(item.article_id));
+      return full ?? {
+        id: item.article_id,
+        title: item.article_title,
+        content: '',
+        source: item.article_source,
+        image_url: item.article_image_url || undefined,
+        published_at: item.article_published_at,
+        created_at: item.created_at,
+      };
+    },
+    [feedById],
+  );
   const renderArticle = ({ item }: { item: LikedArticle }) => (
-    <LikedArticleCard
-      article={item}
-      onPress={handleArticlePress}
-      onUnlike={handleUnlike}
+    <BreakingNewsCard
+      article={toNewsArticle(item)}
+      isLiked
+      onPress={() => handleArticlePress(item)}
+      onLike={() => void handleUnlike(item)}
     />
   );
 
@@ -371,9 +397,9 @@ export default function LikedArticlesScreen() {
     return (
       <NewsScreenShell title={i18n.t('auto.screens__News__LikedArticlesScreen.s15')}>
         {/* כרטיסי שלד באותה רשימה ושוליים — במקום ספינר וטקסט «טוען» */}
-        <View style={{ paddingHorizontal: pad }}>
+        <View>
           {[0, 1, 2].map((i) => (
-            <LikedArticleCardSkeleton key={i} />
+            <BreakingNewsCardSkeleton key={i} />
           ))}
         </View>
       </NewsScreenShell>
@@ -397,8 +423,8 @@ export default function LikedArticlesScreen() {
         }
         ListEmptyComponent={renderEmptyState}
         showsVerticalScrollIndicator={false}
+        // הכרטיס של הפיד כבר עם marginHorizontal — בלי ריפוד כפול
         contentContainerStyle={{
-          paddingHorizontal: pad,
           paddingBottom: listBottomPadding,
           flexGrow: 1,
           ...(likedArticles.length === 0 && { flex: 1 }),

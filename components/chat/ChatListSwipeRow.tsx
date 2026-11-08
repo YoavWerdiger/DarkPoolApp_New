@@ -30,9 +30,9 @@ export type ChatListSwipeAction = {
 
 const ACTION_W = 76;
 const CIRCLE = 44;
-// קפיצה עדינה בפתיחה (מעט overshoot), סגירה חלקה
-const SPRING_OPEN = { damping: 16, stiffness: 220, mass: 0.7 };
-const SPRING_CLOSE = { damping: 24, stiffness: 300, mass: 0.7 };
+// קפיצה עדינה בפתיחה (מעט overshoot), סגירה חלקה — מעט מהיר יותר (stiffness גבוה, mass נמוך)
+const SPRING_OPEN = { damping: 18, stiffness: 320, mass: 0.6 };
+const SPRING_CLOSE = { damping: 26, stiffness: 420, mass: 0.6 };
 
 /** כל כפתור נחשף בנפרד: גדל ומופיע לפי כמה מהשורה זזה, עם השהיה קלה בין הכפתורים */
 function SwipeActionButton({

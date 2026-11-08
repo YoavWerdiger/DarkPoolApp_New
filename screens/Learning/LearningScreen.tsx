@@ -3735,7 +3735,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: tokens.colors.success.main,
+    backgroundColor: tokens.colors.primary.main,
     alignItems: 'center',
     justifyContent: 'center',
   },

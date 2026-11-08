@@ -1603,14 +1603,18 @@ function LearningScreen() {
       durationSeconds <= 0 && isLoading
         ? i18n.t('auto.screens__Learning__LearningScreen.s34')
         : `${formatTime(progressSeconds)} / ${formatTime(durationSeconds)}`;
-    const pctDisplay =
-      durationSeconds <= 0 && isLoading ? '…' : `${Math.min(100, Math.max(0, Math.round(lessonProgress)))}%`;
     const barWidthPct =
       durationSeconds > 0
         ? Math.min(100, Math.max(0, Math.round((progressSeconds / durationSeconds) * 100)))
         : isLoading
           ? 0
           : Math.min(100, Math.max(0, Math.round(lessonProgress)));
+    // האחוז חי כמו הטיימליין (מיקום / משך) — קודם הוצג רק lessonProgress מהשמירה, שמתעדכן לעיתים רחוקות.
+    // הגבוה מבין החי לשמור — חזרה אחורה בסרטון לא מורידה את אחוז הצפייה.
+    const pctValue =
+      durationSeconds > 0 ? Math.max(barWidthPct, Math.round(lessonProgress)) : Math.round(lessonProgress);
+    const pctDisplay =
+      durationSeconds <= 0 && isLoading ? '…' : `${Math.min(100, Math.max(0, pctValue))}%`;
 
     const rawLessonDescription =
       typeof selectedLesson.description === 'string' ? selectedLesson.description : '';

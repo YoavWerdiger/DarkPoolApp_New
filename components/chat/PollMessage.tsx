@@ -3,7 +3,6 @@ import i18n from '../../lib/i18n';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Collapsible } from '../ui/Collapsible';
 import { APP_TYPE } from '../ui/appType';
 import { Ionicons } from '@expo/vector-icons';
 import { Lock, Trash2 } from 'lucide-react-native';
@@ -59,7 +58,6 @@ function PollMessage({
     () => createStyles(DesignTokens, isMe, lightOnBubble, embeddedInBubble),
     [DesignTokens, isMe, lightOnBubble, embeddedInBubble],
   );
-  const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [isVoting, setIsVoting] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [currentPoll, setCurrentPoll] = useState<PollWithVotes>(poll);
@@ -75,41 +73,32 @@ function PollMessage({
   const isUserVoted = !!(currentPoll.user_votes && currentPoll.user_votes.length > 0);
   const canVote = !currentPoll.is_locked && (!isUserVoted || allowVoteChange);
   const showAdmin = isAdmin && currentPoll.creator_id === user?.id;
-  const isChangingVote = isUserVoted && allowVoteChange && !showResults;
 
+  // לחיצה על תשובה = הצבעה מיידית, כמו בוואטסאפ (QA 5.1) — בלי כפתור אישור.
+  // שינוי: לחיצה אחת על תשובה אחרת מחליפה (QA 5.2); בבחירה מרובה כל לחיצה מסמנת/מבטלת.
   const handleOptionSelect = (optionId: string) => {
-    if (currentPoll.is_locked || !canVote) return;
+    if (currentPoll.is_locked || !canVote || isVoting) return;
+    const current = currentPoll.user_votes ?? [];
 
     if (currentPoll.multiple_choice) {
-      setSelectedOptions((prev) => {
-        if (prev.includes(optionId)) {
-          return prev.filter((id) => id !== optionId);
-        }
-        return [...prev, optionId];
-      });
+      const next = current.includes(optionId)
+        ? current.filter((id) => id !== optionId)
+        : [...current, optionId];
+      void HapticFeedback.selection();
+      void submitVote(next, { silent: true, allowEmpty: true });
       return;
     }
 
-    // בחירה יחידה + שינוי מותר: לחיצה מיידית מעדכנת הצבעה
-    if (isUserVoted && allowVoteChange) {
-      const sameAsCurrent =
-        (currentPoll.user_votes?.length === 1 && currentPoll.user_votes[0] === optionId);
-      if (sameAsCurrent && showResults) {
-        // retap על אותה אפשרות — אין שינוי
-        return;
-      }
-      void submitVote([optionId], { silent: true });
-      return;
-    }
-
-    setSelectedOptions([optionId]);
+    if (current.length === 1 && current[0] === optionId) return;
+    void HapticFeedback.selection();
+    void submitVote([optionId], { silent: true });
   };
 
   const submitVote = async (
     optionIds: string[],
-    opts?: { silent?: boolean },
+    opts?: { silent?: boolean; allowEmpty?: boolean },
   ) => {
-    if (optionIds.length === 0) {
+    if (optionIds.length === 0 && !opts?.allowEmpty) {
       legacyAlert(i18n.t('auto.components__chat__PollMessage.s1'), i18n.t('auto.components__chat__PollMessage.s2'));
       return;
     }
@@ -125,8 +114,7 @@ function PollMessage({
     const optimistic = applyOptimisticVotes(currentPoll, optionIds);
     setCurrentPoll(optimistic);
     onPollUpdated(optimistic);
-    setShowResults(true);
-    setSelectedOptions([]);
+    setShowResults(optionIds.length > 0);
     setIsVoting(true);
 
     try {
@@ -156,24 +144,9 @@ function PollMessage({
     }
   };
 
-  const handleVote = async () => {
-    await submitVote(selectedOptions, { silent: false });
-  };
-
-  const handleStartChangeVote = () => {
-    if (!allowVoteChange || currentPoll.is_locked) return;
-    setSelectedOptions([...(currentPoll.user_votes || [])]);
-    setShowResults(false);
-  };
-
+  // בתוצאות: לחיצה על תשובה משנה/מוסיפה הצבעה ישירות
   const handleResultsOptionPress = (optionId: string) => {
     if (!allowVoteChange || currentPoll.is_locked || isVoting) return;
-
-    if (currentPoll.multiple_choice) {
-      handleStartChangeVote();
-      return;
-    }
-
     handleOptionSelect(optionId);
   };
 
@@ -271,7 +244,7 @@ function PollMessage({
       {!showResults ? (
         <View style={styles.optionsBlock}>
           {currentPoll.options.map((option) => {
-            const isSelected = selectedOptions.includes(option.id);
+            const isSelected = (currentPoll.user_votes ?? []).includes(option.id);
             return (
               <TouchableOpacity
                 key={option.id}
@@ -305,35 +278,6 @@ function PollMessage({
             );
           })}
 
-          {/* הכפתור נכנס בהנפשת גובה — הבועה גדלה בצורה חלקה ולא קופצת */}
-          <Collapsible open={canVote && selectedOptions.length > 0}>
-            <TouchableOpacity
-              onPress={handleVote}
-              disabled={isVoting}
-              activeOpacity={0.85}
-              style={[styles.voteButton, isVoting && styles.voteButtonDisabled]}
-            >
-              <Text style={styles.voteButtonText}>
-                {isVoting
-                  ? i18n.t('auto.components__chat__PollMessage.s22')
-                  : isChangingVote
-                    ? i18n.t('auto.components__chat__PollMessage.s23')
-                    : i18n.t('auto.components__chat__PollMessage.s24')}
-              </Text>
-            </TouchableOpacity>
-          </Collapsible>
-
-          {isUserVoted && allowVoteChange && (
-            <TouchableOpacity
-              onPress={() => {
-                setShowResults(true);
-                setSelectedOptions([]);
-              }}
-              style={styles.showResultsButton}
-            >
-              <Text style={styles.showResultsText}>{i18n.t('auto.components__chat__PollMessage.s25')}</Text>
-            </TouchableOpacity>
-          )}
         </View>
       ) : (
         <View style={styles.optionsBlock}>
@@ -350,11 +294,6 @@ function PollMessage({
               canVote && allowVoteChange ? handleResultsOptionPress : undefined
             }
           />
-          {canVote && allowVoteChange && currentPoll.multiple_choice && (
-            <TouchableOpacity onPress={handleStartChangeVote} style={styles.showResultsButton}>
-              <Text style={styles.showResultsText}>{i18n.t('auto.components__chat__PollMessage.s26')}</Text>
-            </TouchableOpacity>
-          )}
         </View>
       )}
     </View>

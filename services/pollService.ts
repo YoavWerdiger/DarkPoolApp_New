@@ -89,7 +89,8 @@ export class PollService {
     options: string[],
     userId: string,
     multipleChoice: boolean = false,
-    allowVoteChange: boolean = false
+    // כמו בוואטסאפ: שינוי הצבעה בלחיצה אחת (QA 5.2)
+    allowVoteChange: boolean = true
   ): Promise<Poll | null> {
     try {
       // בדיקה שה-groupId קיים ב-chat_groups
@@ -257,12 +258,15 @@ export class PollService {
         option_id: optionId
       }));
 
-      const { error: insertError } = await supabase
-        .from('poll_votes')
-        .insert(votes);
+      // בחירה מרובה: ביטול הסימון האחרון = ביטול ההצבעה (אין מה להוסיף)
+      if (votes.length > 0) {
+        const { error: insertError } = await supabase
+          .from('poll_votes')
+          .insert(votes);
 
-      if (insertError) {
-        throw insertError;
+        if (insertError) {
+          throw insertError;
+        }
       }
 
       // עדכן את מספר ההצבעות ב-options
@@ -565,7 +569,8 @@ export class PollService {
     question: string,
     options: PollOption[],
     multipleChoice: boolean,
-    allowVoteChange: boolean = false
+    // כמו בוואטסאפ: שינוי הצבעה בלחיצה אחת (QA 5.2)
+    allowVoteChange: boolean = true
   ): Promise<void> {
     try {
       const { error } = await supabase

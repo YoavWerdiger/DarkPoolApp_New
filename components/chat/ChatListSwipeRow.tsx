@@ -92,10 +92,12 @@ type Props = {
   /** הזחה מהקצה — כמו הדיבידרים (padding אופקי של המסך): הרקע מתחיל איפה שהדיבידר מתחיל */
   revealInset?: number;
   enabled?: boolean;
+  /** דיבאג זמני: שם הקבוצה בלוגי [swipe] */
+  debugName?: string;
   children: React.ReactNode;
 };
 
-export default function ChatListSwipeRow({ actions, revealBackgroundColor, revealInset = 0, enabled = true, children }: Props) {
+export default function ChatListSwipeRow({ actions, revealBackgroundColor, revealInset = 0, enabled = true, debugName, children }: Props) {
   const openX = revealInset + actions.length * ACTION_W;
   const tx = useSharedValue(0);
   const startX = useSharedValue(0);
@@ -114,6 +116,14 @@ export default function ChatListSwipeRow({ actions, revealBackgroundColor, revea
     closeOpenRow = closeRef.current;
     setOpen(true);
   }, []);
+
+  // דיבאג זמני — איפה הג'סצ'ר נעצר בקבוצות שלא מחליקות
+  const dbg = useCallback(
+    (phase: string, extra?: string) => {
+      console.log('[swipe]', debugName ?? '?', phase, extra ?? '');
+    },
+    [debugName],
+  );
 
   /** החלקה חדשה התחילה בשורה הזו — שורה אחרת פתוחה נסגרת מיד (לא רק בסוף ההחלקה) */
   const closeOthers = useCallback(() => {
@@ -147,10 +157,15 @@ export default function ChatListSwipeRow({ actions, revealBackgroundColor, revea
     .failOffsetY([-16, 16])
     .onBegin(() => {
       startX.value = tx.value;
+      if (__DEV__) runOnJS(dbg)('begin');
     })
     // הג'סצ'ר הופעל (זוהתה החלקה אופקית) — סוגרים מיד שורה אחרת פתוחה
     .onStart(() => {
+      if (__DEV__) runOnJS(dbg)('start');
       runOnJS(closeOthers)();
+    })
+    .onFinalize((e, success) => {
+      if (__DEV__) runOnJS(dbg)(success ? 'end:active' : 'end:FAILED', `dx=${Math.round(e.translationX)} dy=${Math.round(e.translationY)}`);
     })
     .onUpdate((e) => {
       const next = Math.min(Math.max(startX.value + e.translationX, 0), openX * 1.2);
@@ -172,7 +187,10 @@ export default function ChatListSwipeRow({ actions, revealBackgroundColor, revea
   // רקע השורה שקוף (מעל הרקע של המסך) — הפעולות נחשפות רק ברוחב שהשורה זזה, אחרת היו נראות דרכה
   const actionsClipStyle = useAnimatedStyle(() => ({ width: Math.max(0, tx.value) }));
 
-  if (!enabled || actions.length === 0) return <>{children}</>;
+  if (!enabled || actions.length === 0) {
+    if (__DEV__) console.log('[swipe]', debugName ?? '?', 'DISABLED (no gesture)');
+    return <>{children}</>;
+  }
 
   return (
     <View style={styles.wrap}>

@@ -1238,6 +1238,7 @@ export default function ChatGroupsListScreen() {
         <View key={`group-wrapper-${item.id}`}>
           <ChatListSwipeRow
             enabled={swipeEnabled}
+            debugName={__DEV__ ? `${item.name} member=${item.is_member} enabled=${swipeEnabled}` : undefined}
             revealBackgroundColor={tokens.colors.background.cardSolid}
             revealInset={HP}
             actions={[

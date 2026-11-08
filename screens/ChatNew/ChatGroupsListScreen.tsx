@@ -104,8 +104,6 @@ interface GroupWithMembership extends Omit<ChatGroup, 'my_role'> {
   } | null;
 }
 
-/** פיתוח: לוג חד-פעמי לכל קבוצה — האם החלקה מופעלת */
-const swipeLogged = new Set<string>();
 
 function contextGroupsToListRows(groups: ChatGroup[]): GroupWithMembership[] {
   return groups.map((cg) => {
@@ -1234,10 +1232,6 @@ export default function ChatGroupsListScreen() {
           : '';
 
       const swipeEnabled = !!item.is_member && !isAnnouncementGroup(item.name, item.id);
-      if (__DEV__ && !swipeLogged.has(item.id)) {
-        swipeLogged.add(item.id);
-        console.log('[swipe] row', JSON.stringify({ name: item.name, id: item.id, is_member: item.is_member, swipeEnabled }));
-      }
       const rowPinned = !!pinnedMap[item.id];
       const rowMuted = isRowMuted(item);
       return (

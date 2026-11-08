@@ -120,19 +120,24 @@ function createUploadHandle(): { id: string; handle: { cancelled: boolean } } {
 // Thumbnail מקומי לתמונה (כמו VideoThumbnails לווידאו)
 // ============================================
 
+/** תמונה ממוזערת לבועת צ'אט — חדה גם במסכים בצפיפות גבוהה */
+const CHAT_IMAGE_THUMB_WIDTH = 960;
+const CHAT_IMAGE_THUMB_QUALITY = 0.72;
+
 /**
- * יוצר JPEG קטן (~480px) מה-URI המקומי — לפריוויו/בועה מיידיים בלי decode של הקובץ המלא.
+ * יוצר JPEG מוקטן (~960px) מה-URI המקומי — לפריוויו/בועה מיידיים בלי decode של הקובץ המלא.
  * fire-and-forget ידידותי: כשל מחזיר null ולא זורק.
  */
 export async function createLocalImageThumbnail(
   uri: string,
-  maxWidth = 480,
+  // בועה ~260pt × צפיפות 3 — 480/0.5 נראה מפוקסל (QA 1.4); מצלמה מתוך האפליקציה שולחת רזולוציה מלאה
+  maxWidth = CHAT_IMAGE_THUMB_WIDTH,
 ): Promise<string | null> {
   try {
     const result = await ImageManipulator.manipulateAsync(
       uri,
       [{ resize: { width: maxWidth } }],
-      { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG },
+      { compress: CHAT_IMAGE_THUMB_QUALITY, format: ImageManipulator.SaveFormat.JPEG },
     );
     return result.uri || null;
   } catch (error) {
@@ -301,8 +306,8 @@ export async function uploadImage(
         try {
           const thumb = await ImageManipulator.manipulateAsync(
             uri,
-            [{ resize: { width: 600 } }],
-            { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG, base64: true },
+            [{ resize: { width: CHAT_IMAGE_THUMB_WIDTH } }],
+            { compress: CHAT_IMAGE_THUMB_QUALITY, format: ImageManipulator.SaveFormat.JPEG, base64: true },
           );
           return thumb.base64 || null;
         } catch {

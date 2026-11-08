@@ -145,7 +145,7 @@ export const LessonRow: React.FC<LessonRowProps> = ({
             </View>
           ) : isCompleted ? (
             <View style={styles.donePill}>
-              <Ionicons name="checkmark-circle" size={18} color={T.colors.primary.main} />
+              <Ionicons name="checkmark" size={16} color={T.colors.text.inverse} />
             </View>
           ) : isLockedForUser ? (
             <View style={styles.lockOverlay}>
@@ -288,7 +288,8 @@ function createStyles(T: ReturnType<typeof useDesignTokens>) {
       width: 28,
       height: 28,
       borderRadius: 14,
-      backgroundColor: 'rgba(0,0,0,0.55)',
+      // ירוק המותג עם וי בצבע הניגוד של הערכה (במקום עיגול שחור שקוף)
+      backgroundColor: T.colors.primary.main,
       alignItems: 'center',
       justifyContent: 'center',
     },

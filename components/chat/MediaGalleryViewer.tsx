@@ -7,7 +7,6 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Modal,
-  FlatList,
   Image,
   Text,
   StyleSheet,
@@ -63,40 +62,10 @@ function isDisplayableMediaUri(u: string | null | undefined): u is string {
   return !!u && (u.startsWith('http') || u.startsWith('file:') || u.startsWith('content:'));
 }
 
-function GalleryImageItem({
-  url,
-  previewUrl,
-  isActive,
-  onZoomChange,
-  onSingleTap,
-  onSwipeDismiss,
-}: {
-  url: string;
-  previewUrl?: string;
-  isActive: boolean;
-  onZoomChange?: (zoomed: boolean) => void;
-  onSingleTap?: () => void;
-  onSwipeDismiss?: () => void;
-}) {
+/** תמונה בעמוד הנוכחי — המחוות (זום / החלקה / משיכה לסגירה) אצל הצופה, על כל עמוד */
+function GalleryImagePage({ url, previewUrl }: { url: string; previewUrl?: string }) {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
-
-  const { zoomGesture, animatedStyle, backdropStyle, resetZoomImmediate } = useMediaZoomGestures({
-    resetKey: isActive ? url : false,
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
-    onZoomChange: isActive ? onZoomChange : undefined,
-    onSingleTap: isActive ? onSingleTap : undefined,
-    onSwipeDismiss: isActive ? onSwipeDismiss : undefined,
-    // בתוך FlatList אופקי — החלקה בין תמונות האלבום עוברת ל-pager
-    parentPager: true,
-  });
-
-  useEffect(() => {
-    if (!isActive) {
-      resetZoomImmediate();
-    }
-  }, [isActive, resetZoomImmediate]);
 
   // כתובת חדשה (נתיב → URL חתום) — מתחילים טעינה נקייה; שגיאה מכתובת קודמת לא נשארת
   const displayable = isDisplayableMediaUri(url);
@@ -106,8 +75,7 @@ function GalleryImageItem({
   }, [url]);
 
   return (
-    <View style={[styles.page, styles.imagePage]}>
-      <MediaBlurBackdrop uri={displayable ? url : undefined} style={backdropStyle} />
+    <View style={StyleSheet.absoluteFill}>
       {(isLoading || !displayable) && !loadError && previewUrl && isDisplayableMediaUri(previewUrl) ? (
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
           <Image source={{ uri: previewUrl }} style={StyleSheet.absoluteFill} resizeMode="contain" />
@@ -133,20 +101,16 @@ function GalleryImageItem({
           </TouchableOpacity>
         </View>
       ) : !displayable ? null : (
-        <GestureDetector gesture={zoomGesture}>
-          <Animated.View style={styles.fullMedia} collapsable={false}>
-            <Animated.Image
-              source={{ uri: url }}
-              style={[StyleSheet.absoluteFill, animatedStyle]}
-              resizeMode="contain"
-              onLoadEnd={() => setIsLoading(false)}
-              onError={() => {
-                setIsLoading(false);
-                setLoadError(true);
-              }}
-            />
-          </Animated.View>
-        </GestureDetector>
+        <Image
+          source={{ uri: url }}
+          style={StyleSheet.absoluteFill}
+          resizeMode="contain"
+          onLoadEnd={() => setIsLoading(false)}
+          onError={() => {
+            setIsLoading(false);
+            setLoadError(true);
+          }}
+        />
       )}
     </View>
   );
@@ -165,11 +129,9 @@ export default function MediaGalleryViewer({
   const insets = useSafeAreaInsets();
   const [chromeVisible, setChromeVisible] = useState(true);
   const chromeOpacity = useSharedValue(1);
-  const flatListRef = useRef<FlatList>(null);
   const videoRef = useRef<Video>(null);
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
-  const [isZoomed, setIsZoomed] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -198,16 +160,16 @@ export default function MediaGalleryViewer({
     };
   }, []);
 
+  // רק בפתיחה / שינוי הפריט שנלחץ — לא כשנטען עמוד נוסף ברקע (אחרת קופץ חזרה לפריט שנלחץ)
+  const itemCountRef = useRef(mediaItems.length);
+  itemCountRef.current = mediaItems.length;
   useEffect(() => {
     if (!visible) return;
-    const safeIndex = Math.max(0, Math.min(initialIndex, Math.max(mediaItems.length - 1, 0)));
+    const safeIndex = Math.max(0, Math.min(initialIndex, Math.max(itemCountRef.current - 1, 0)));
     setCurrentIndex(safeIndex);
-    landedRef.current = false;
-    setIsZoomed(false);
-    setIsPlaying(false);
     setPosition(0);
     setDuration(0);
-  }, [visible, initialIndex, mediaItems.length]);
+  }, [visible, initialIndex]);
 
   useEffect(() => {
     if (!visible || mediaItems.length === 0) return;
@@ -244,9 +206,12 @@ export default function MediaGalleryViewer({
     };
   }, [visible, mediaSignature, initialIndex]);
 
-  // Reset video when page changes or modal closes
+  // מעבר עמוד / סגירה: איפוס הנגן; סרטון מתחיל לבד (כמו בוואטסאפ)
+  const autoplayAtRef = useRef(0);
   useEffect(() => {
-    setIsPlaying(false);
+    const autoplay = visible && mediaItems[currentIndex]?.type === 'video';
+    if (autoplay) autoplayAtRef.current = Date.now();
+    setIsPlaying(autoplay);
     setPosition(0);
     setDuration(0);
     setVideoError(false);
@@ -392,25 +357,29 @@ export default function MediaGalleryViewer({
     else (videoRef.current as any).pauseAsync?.();
   }, [isPlaying]);
 
-  // callback יציב (FlatList לא תומך בהחלפת onViewableItemsChanged תוך כדי) — האינדקס מ-ref
-  const currentIndexRef = useRef(currentIndex);
-  currentIndexRef.current = currentIndex;
-  // עד שהפייג'ר הונח על התמונה שנלחצה — מתעלמים מ«נראה» של עמוד 0 ברינדור הראשון
-  const landedRef = useRef(false);
-  const onViewableItemsChanged = useCallback(({ viewableItems }: any) => {
-    if (!landedRef.current) return;
-    if (viewableItems.length > 0) {
-      const newIndex = viewableItems[0].index;
-      if (typeof newIndex === 'number' && newIndex !== currentIndexRef.current) {
-        setCurrentIndex(newIndex);
-        setIsZoomed(false);
-      }
-    }
-  }, []);
+  // פייג'ר במחוות (לא ScrollView אופקי): ב-Android עם forceRTL ה-offset של ScrollView מתהפך —
+  // העמוד שעל המסך ≠ currentIndex (מסך שחור בסרטון, פריט אחר נפתח, סאונד «מתוך תמונה»).
+  // כמו MediaPreviewModal: עמוד אחד חי + שכנים צמודים שנעים עם האצבע.
+  const goToNeighbor = useCallback(
+    (direction: 1 | -1) => {
+      setCurrentIndex((i) => Math.max(0, Math.min(mediaItems.length - 1, i + direction)));
+    },
+    [mediaItems.length],
+  );
 
-  const viewabilityConfig = useRef({
-    itemVisiblePercentThreshold: 50,
-  }).current;
+  const toggleChrome = useCallback(() => setChromeVisible((open) => !open), []);
+
+  const { zoomGesture, animatedStyle, backdropStyle, prevPagerStyle, nextPagerStyle } = useMediaZoomGestures({
+    resetKey: visible ? `${currentIndex}:${currentItem?.id ?? ''}` : false,
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+    onSingleTap: toggleChrome,
+    onSwipeDismiss: onClose,
+    // RTL: הבא משמאל — אצבע זזה ימינה = הבא
+    onSwipeHorizontal: mediaItems.length > 1 ? goToNeighbor : undefined,
+    canSwipeNext: currentIndex < mediaItems.length - 1,
+    canSwipePrev: currentIndex > 0,
+  });
 
   useEffect(() => {
     if (visible) setChromeVisible(true);
@@ -432,22 +401,12 @@ export default function MediaGalleryViewer({
     }
   };
 
-  const handleZoomChange = useCallback((zoomed: boolean) => {
-    setIsZoomed(zoomed);
-  }, []);
-
-  const renderItem = ({ item, index }: { item: MediaGalleryItem; index: number }) => {
+  const renderCurrent = (item: MediaGalleryItem) => {
     const uri = resolveUri(item);
-    const isActive = index === currentIndex;
 
     if (item.type === 'video') {
-      // Only mount Video for the active page to match single MediaViewer lifecycle
-      if (!isActive) {
-        return <View style={styles.page} />;
-      }
-
       return (
-        <View style={styles.page}>
+        <View style={[StyleSheet.absoluteFill, styles.videoPage]}>
           {!isDisplayableMediaUri(uri) && !videoError && (
             <View style={styles.loadingContainer} pointerEvents="none">
               <ActivityIndicator size="large" color={COLORS.primary} />
@@ -466,6 +425,7 @@ export default function MediaGalleryViewer({
               useNativeControls={false}
               resizeMode={ResizeMode.CONTAIN}
               shouldPlay={isPlaying}
+              pointerEvents="none"
               onPlaybackStatusUpdate={(status) => {
                 if (!isMountedRef.current || !status?.isLoaded) return;
                 if (status.durationMillis != null) setDuration(status.durationMillis / 1000);
@@ -480,6 +440,8 @@ export default function MediaGalleryViewer({
                   }
                 }
                 if (status.isPlaying !== undefined) {
+                  // ניגון אוטומטי: הדיווח הראשון (readyToPlay) עוד אומר playing=false — לא מבטלים את ההפעלה
+                  if (!status.isPlaying && !status.didJustFinish && Date.now() - autoplayAtRef.current < 1500) return;
                   setIsPlaying(status.isPlaying);
                 }
               }}
@@ -495,21 +457,30 @@ export default function MediaGalleryViewer({
       );
     }
 
+    return <GalleryImagePage key={item.id} url={uri} previewUrl={item.previewUrl} />;
+  };
+
+  /** שכן (קודם/הבא) צמוד לצד המסך — נע יחד עם הגרירה; סרטון: רקע שחור + סמל ניגון */
+  const renderNeighbor = (item: MediaGalleryItem | undefined, pagerStyle: typeof prevPagerStyle) => {
+    if (!item) return null;
+    const uri = item.type === 'image' ? resolveUri(item) : null;
+    const preview = item.previewUrl && isDisplayableMediaUri(item.previewUrl) ? item.previewUrl : null;
+    const src = isDisplayableMediaUri(uri) ? uri : preview;
     return (
-      <GalleryImageItem
-        url={uri}
-        previewUrl={item.previewUrl}
-        isActive={isActive}
-        onZoomChange={isActive ? handleZoomChange : undefined}
-        onSingleTap={() => setChromeVisible((open) => !open)}
-        onSwipeDismiss={onClose}
-      />
+      <Animated.View pointerEvents="none" style={[styles.neighbor, pagerStyle]}>
+        {item.type === 'video' ? (
+          <View style={[StyleSheet.absoluteFill, styles.videoPage, styles.neighborVideo]}>
+            <Ionicons name="play-circle" size={64} color="rgba(255,255,255,0.7)" />
+          </View>
+        ) : src ? (
+          <Image source={{ uri: src }} style={StyleSheet.absoluteFill} resizeMode="contain" />
+        ) : null}
+      </Animated.View>
     );
   };
 
   if (!visible || !mediaItems || mediaItems.length === 0) return null;
 
-  const safeInitialIndex = Math.max(0, Math.min(initialIndex, mediaItems.length - 1));
   const caption = currentItem?.caption?.trim();
 
   return (
@@ -521,40 +492,23 @@ export default function MediaGalleryViewer({
     >
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <GestureHandlerRootView style={styles.container}>
-        <FlatList
-          ref={flatListRef}
-          data={mediaItems}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id}
-          // LTR קבוע: בתוך Modal ה-RTL של האפליקציה הופך את הגלילה האופקית, ו-initialScrollIndex
-          // לעמוד האחרון נחת מחוץ לתוכן (מסך שקוף)
-          style={styles.pager}
-          horizontal
-          pagingEnabled
-          scrollEnabled={!isZoomed}
-          showsHorizontalScrollIndicator={false}
-          initialScrollIndex={safeInitialIndex}
-          getItemLayout={(_, index) => ({
-            length: SCREEN_WIDTH,
-            offset: SCREEN_WIDTH * index,
-            index,
-          })}
-          onViewableItemsChanged={onViewableItemsChanged}
-          viewabilityConfig={viewabilityConfig}
-          initialNumToRender={Math.min(mediaItems.length, 10)}
-          windowSize={5}
-          maxToRenderPerBatch={3}
-          // נעיצה לתמונה שנלחצה אחרי ה-layout (initialScrollIndex לבד לא אמין ב-RTL / Modal)
-          onLayout={() => {
-            flatListRef.current?.scrollToOffset({ offset: safeInitialIndex * SCREEN_WIDTH, animated: false });
-            requestAnimationFrame(() => {
-              landedRef.current = true;
-            });
-          }}
-          onScrollToIndexFailed={({ index }) => {
-            setTimeout(() => flatListRef.current?.scrollToOffset({ offset: index * SCREEN_WIDTH, animated: false }), 50);
-          }}
-        />
+        <View style={styles.stage}>
+          <MediaBlurBackdrop
+            uri={currentItem?.type === 'image' && isDisplayableMediaUri(resolveUri(currentItem)) ? resolveUri(currentItem) : undefined}
+            style={backdropStyle}
+          />
+          {renderNeighbor(mediaItems[currentIndex - 1], prevPagerStyle)}
+          {renderNeighbor(mediaItems[currentIndex + 1], nextPagerStyle)}
+          {currentItem ? (
+            <GestureDetector gesture={zoomGesture}>
+              <Animated.View style={styles.fullMedia} collapsable={false}>
+                <Animated.View key={currentItem.id} style={[StyleSheet.absoluteFill, animatedStyle]}>
+                  {renderCurrent(currentItem)}
+                </Animated.View>
+              </Animated.View>
+            </GestureDetector>
+          ) : null}
+        </View>
 
         <MediaViewerChrome
           chromeStyle={chromeStyle}
@@ -598,22 +552,26 @@ export default function MediaGalleryViewer({
 }
 
 const styles = StyleSheet.create({
-  pager: {
+  stage: {
     flex: 1,
-    direction: 'ltr',
+    overflow: 'hidden',
+  },
+  neighbor: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+  },
+  neighborVideo: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  videoPage: {
+    backgroundColor: '#000',
   },
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
-  },
-  page: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#000',
-  },
-  imagePage: {
     backgroundColor: 'transparent',
   },
   fullMedia: {

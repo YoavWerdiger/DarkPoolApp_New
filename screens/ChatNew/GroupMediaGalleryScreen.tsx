@@ -3,7 +3,7 @@ import i18n from '../../lib/i18n';
 // Group Media Gallery — WhatsApp-style grid + swipe preview
 // ============================================
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -41,6 +41,7 @@ type MediaFilter = 'all' | 'image' | 'video';
 interface GalleryMediaItem {
   id: string;
   url: string;
+  /** סרטון בלי תמונה ממוזערת — ריק (כתובת הסרטון עצמו כ-Image = משבצת שחורה) */
   thumbnail: string;
   type: 'image' | 'video';
   createdAt: string;
@@ -97,16 +98,21 @@ export default function GroupMediaGalleryScreen() {
     return merged.map((msg) => ({
       id: msg.id,
       url: msg.media_url,
-      thumbnail: msg.media_thumbnail_url || msg.media_url,
+      thumbnail: msg.media_thumbnail_url || (msg.message_type === 'video' ? '' : msg.media_url),
       type: (msg.message_type === 'video' ? 'video' : 'image') as 'image' | 'video',
       createdAt: msg.created_at,
       caption: typeof msg.content === 'string' && msg.content.trim() ? msg.content.trim() : undefined,
     }));
   }, []);
 
+  // החלפת לשונית באמצע טעינה: תשובה ישנה (של «הכל») לא דורסת את הרשימה החדשה —
+  // אחרת הרשת מציגה פריטים של לשונית אחת והצופה נפתח על אינדקס של אחרת
+  const loadSeqRef = useRef(0);
   const loadPage = useCallback(
     async (pageIndex: number, append: boolean) => {
       if (!groupId) return;
+      const seq = append ? loadSeqRef.current : ++loadSeqRef.current;
+      const stale = () => seq !== loadSeqRef.current;
 
       if (append) setLoadingMore(true);
       else setLoading(true);
@@ -120,6 +126,7 @@ export default function GroupMediaGalleryScreen() {
           PAGE_SIZE
         );
 
+        if (stale()) return;
         if (error) {
           logger.error('GroupMediaGallery', 'Fetch failed', error);
           if (!append) setItems([]);
@@ -136,12 +143,15 @@ export default function GroupMediaGalleryScreen() {
         setHasMore(more);
         setPage(pageIndex);
       } catch (error) {
+        if (stale()) return;
         logger.error('GroupMediaGallery', 'Unexpected load error', error);
         if (!append) setItems([]);
         setHasMore(false);
       } finally {
-        setLoading(false);
-        setLoadingMore(false);
+        if (!stale()) {
+          setLoading(false);
+          setLoadingMore(false);
+        }
       }
     },
     [groupId, filter, mapRows]
@@ -158,11 +168,12 @@ export default function GroupMediaGalleryScreen() {
       const next: Record<string, string> = {};
       await Promise.all(
         items.map(async (item) => {
+          if (!item.thumbnail || signedThumbs[item.id]) return;
           const t = await getChatMediaDisplayUri(item.thumbnail);
           next[item.id] = t || item.thumbnail;
         })
       );
-      if (!cancelled) setSignedThumbs((prev) => ({ ...prev, ...next }));
+      if (!cancelled && Object.keys(next).length) setSignedThumbs((prev) => ({ ...prev, ...next }));
     })();
     return () => {
       cancelled = true;
@@ -187,8 +198,10 @@ export default function GroupMediaGalleryScreen() {
         url: item.url,
         type: item.type,
         caption: item.caption,
+        // התמונה הממוזערת מהרשת — מוצגת מיד עד שהמלאה נטענת
+        previewUrl: item.type === 'image' ? signedThumbs[item.id] : undefined,
       })),
-    [items]
+    [items, signedThumbs]
   );
 
   const handleBack = () => {
@@ -231,11 +244,17 @@ export default function GroupMediaGalleryScreen() {
       onPress={() => openViewer(index)}
       activeOpacity={0.85}
     >
-      <Image
-        source={{ uri: signedThumbs[item.id] || item.thumbnail }}
-        style={styles.thumbnail}
-        resizeMode="cover"
-      />
+      {item.thumbnail ? (
+        <Image
+          source={{ uri: signedThumbs[item.id] || item.thumbnail }}
+          style={styles.thumbnail}
+          resizeMode="cover"
+        />
+      ) : (
+        <View style={styles.videoTilePlaceholder}>
+          <Ionicons name="videocam" size={22} color={DesignTokens.colors.text.secondary} />
+        </View>
+      )}
       {item.type === 'video' && (
         <View style={[styles.videoBadge, videoBadgeCorner]}>
           <Ionicons name="play" size={12} color="#FFFFFF" />
@@ -414,6 +433,11 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     thumbnail: {
       width: '100%',
       height: '100%',
+    },
+    videoTilePlaceholder: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     videoBadge: {
       position: 'absolute',

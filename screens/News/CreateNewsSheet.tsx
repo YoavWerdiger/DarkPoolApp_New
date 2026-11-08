@@ -1,4 +1,5 @@
 import { UI_DIR, dirIcon } from '../../lib/i18n/direction';
+import { FloatingLabelField } from '../../components/ui/FloatingLabelField';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 // ============================================
@@ -377,6 +378,7 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
   );
 }
 
+/** שדה כתבה — תווית צפה בתוך השדה (FloatingLabelField); מונה התווים מתחת לשדה */
 function NewsTextField({
   label,
   required,
@@ -398,56 +400,19 @@ function NewsTextField({
   maxLength?: number;
   returnKeyType?: 'next' | 'done';
 }) {
-  const tokens = useDesignTokens();
-  const [focused, setFocused] = useState(false);
-  const shellRadius = multiline ? tokens.borderRadius.xl : tokens.borderRadius.full;
-
   return (
     <View style={formFieldStyles.group}>
-      <View style={formFieldStyles.labelRow}>
-        <Text style={[appFormFieldLabelStyle, formFieldStyles.label]}>
-          {label}
-          {required ? ' *' : ''}
-        </Text>
-        {counter ? (
-          <Text style={[formFieldStyles.counter, { color: tokens.colors.text.secondary }]}>{counter}</Text>
-        ) : null}
-      </View>
-      <View
-        style={[
-          formFieldShellStyle({ tokens, focused, multiline }),
-          {
-            borderRadius: shellRadius,
-            backgroundColor: focused
-              ? tokens.colors.background.tertiary
-              : tokens.colors.background.primary,
-            paddingHorizontal: APP_LAYOUT.cardPadding,
-            minHeight: multiline ? 160 : 52,
-          },
-        ]}
-      >
-        <TextInput
-          value={value}
-          onChangeText={onChangeText}
-          placeholder={placeholder}
-          placeholderTextColor={tokens.colors.text.tertiary}
-          style={[
-            formFieldInputStyle(),
-            {
-              color: tokens.colors.text.primary,
-              width: '100%',
-              minHeight: multiline ? 140 : undefined,
-              textAlignVertical: multiline ? 'top' : 'center',
-              paddingVertical: multiline ? 4 : 0,
-            },
-          ]}
-          multiline={multiline}
-          maxLength={maxLength}
-          returnKeyType={returnKeyType}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-        />
-      </View>
+      <FloatingLabelField
+        label={required ? `${label} *` : label}
+        hint={placeholder}
+        value={value}
+        onChangeText={onChangeText}
+        multiline={multiline}
+        minHeight={multiline ? 160 : undefined}
+        maxLength={maxLength}
+        returnKeyType={returnKeyType}
+        helper={counter}
+      />
     </View>
   );
 }
@@ -532,11 +497,12 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       writingDirection: TEXT_DIR,
       marginLeft: APP_LAYOUT.cardTitleToBodyGap,
     },
+    // רקע ורדיוס כמו השדות (FloatingLabelField) — cardSolid נבלע ברקע השיט
     imageSlot: {
       aspectRatio: 16 / 9,
-      borderRadius: UI_CARD_RADIUS,
+      borderRadius: 26,
       borderWidth: 0,
-      backgroundColor: tokens.colors.background.cardSolid,
+      backgroundColor: tokens.colors.background.input,
       alignItems: 'center',
       justifyContent: 'center',
       paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal,

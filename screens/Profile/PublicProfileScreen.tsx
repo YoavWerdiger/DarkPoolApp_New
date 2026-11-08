@@ -273,7 +273,7 @@ export default function PublicProfileScreen({ route, navigation }: any) {
               }}
               accessibilityRole="button"
               accessibilityLabel={i18n.t('auto.screens__Profile__PublicProfileScreen.s19', { v0: RANK_NAMES[progress.rank.metal] })}
-              style={({ pressed }) => [styles.rankWrap, pressed && { opacity: 0.92, transform: [{ scale: 0.99 }] }]}
+              style={styles.rankWrap}
             >
               <UICard variant="soft" padding="none" style={styles.rankCard}>
                 <View style={styles.rankInner}>
@@ -591,24 +591,25 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     rankText: {
       flex: 1,
       minWidth: 0,
-      gap: 1,
+      gap: 2,
     },
     rankLabel: {
       ...appPhysicalRightText,
       ...APP_TYPE.caption,
       color: tokens.colors.text.secondary,
     },
+    // «דרגת X» — 18 · 600 בריווח רגיל (היה 20 · 800 עם ריווח שלילי — כבד ומעוך בעברית)
     rankTitle: {
       ...appPhysicalRightText,
-      ...APP_TYPE.cardTitle,
-      fontSize: 20,
-      lineHeight: 26,
-      fontWeight: '800',
+      fontSize: 18,
+      lineHeight: 24,
+      fontWeight: '600',
+      letterSpacing: 0,
     },
     rankTenure: {
       ...appPhysicalRightText,
       ...APP_TYPE.cardSubtitle,
-      color: tokens.colors.text.primary,
+      color: tokens.colors.text.secondary,
     },
     ladder: {
       flexDirection: 'row',

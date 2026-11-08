@@ -4,6 +4,7 @@ import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { ScreenChrome } from '../../components/ui/ScreenChrome';
 import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHeader';
+import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 import { dispatchOpenMainDrawer, type DrawerParentNavigation } from '../../navigation/mainDrawerNav';
 import { triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
@@ -13,12 +14,14 @@ type Props = {
   children: ReactNode;
   /** כפתור בצד ימין בכותרת (למשל מחיקה במסך כתבות שמורות) */
   headerRight?: ReactNode;
+  /** מסך משני (למשל כתבות שמורות) — כפתור חזרה וכותרת כמו בשאר המסכים המשניים, במקום כפתור התפריט */
+  onBack?: () => void;
 };
 
 /**
  * מעטפת אחידה למסכי חדשות / יומן / דיווחים — מרווח תחתון אחד (בלי כפל עם תוכן פנימי).
  */
-export function NewsScreenShell({ title, children, headerRight }: Props) {
+export function NewsScreenShell({ title, children, headerRight, onBack }: Props) {
   const navigation = useNavigation();
   const mainTabsHeight = useMainTabsHeight();
 
@@ -34,7 +37,11 @@ export function NewsScreenShell({ title, children, headerRight }: Props) {
   return (
     <ScreenChrome>
       <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <MainDrawerScreenHeader title={title} onMenuPress={openMainDrawer} rightAccessory={headerRight} />
+        {onBack ? (
+          <ChatSubScreenHeader title={title} onBack={onBack} rightSlot={headerRight} />
+        ) : (
+          <MainDrawerScreenHeader title={title} onMenuPress={openMainDrawer} rightAccessory={headerRight} />
+        )}
         <View
           style={{
             flex: 1,

@@ -1,4 +1,5 @@
 import i18n from '../../lib/i18n';
+import { useNavigation } from '@react-navigation/native';
 import { BreakingNewsCard, BreakingNewsCardSkeleton } from './BreakingNewsTab';
 import { queryClient } from '../../lib/queryClient';
 import { appQueryKeys } from '../../lib/appQueryKeys';
@@ -226,6 +227,11 @@ const LikedArticleCardSkeleton: React.FC = () => {
 
 export default function LikedArticlesScreen() {
   const DesignTokens = useDesignTokens();
+  const navigation = useNavigation();
+  // מסך משני — חזרה אחורה (לא כפתור התפריט)
+  const goBack = useCallback(() => {
+    if (navigation.canGoBack()) navigation.goBack();
+  }, [navigation]);
   const pad = APP_LAYOUT.screenPaddingHorizontal;
   const listBottomPadding = useMainTabsHeight(16) + DesignTokens.spacing.sm;
   const [likedArticles, setLikedArticles] = useState<LikedArticle[]>([]);
@@ -395,7 +401,7 @@ export default function LikedArticlesScreen() {
 
   if (loading) {
     return (
-      <NewsScreenShell title={i18n.t('auto.screens__News__LikedArticlesScreen.s15')}>
+      <NewsScreenShell title={i18n.t('auto.screens__News__LikedArticlesScreen.s15')} onBack={goBack}>
         {/* כרטיסי שלד באותה רשימה ושוליים — במקום ספינר וטקסט «טוען» */}
         <View>
           {[0, 1, 2].map((i) => (
@@ -407,7 +413,7 @@ export default function LikedArticlesScreen() {
   }
 
   return (
-    <NewsScreenShell title={i18n.t('auto.screens__News__LikedArticlesScreen.s15')} headerRight={headerRight}>
+    <NewsScreenShell title={i18n.t('auto.screens__News__LikedArticlesScreen.s15')} headerRight={headerRight} onBack={goBack}>
       <FlatList
         data={likedArticles}
         keyExtractor={(item) => item.id}

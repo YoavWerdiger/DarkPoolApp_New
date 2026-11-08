@@ -41,6 +41,7 @@ import {
   LogOut,
   Plus,
   Star,
+  Trash2,
   Users,
 } from 'lucide-react-native';
 import { ChevronLeft } from '../../lib/i18n/dirIcons';
@@ -62,6 +63,9 @@ import { isolateNumericRuns } from '../DarkPool/utils/bidi';
 import { useGroupNotificationMute } from '../../hooks/useGroupNotificationMute';
 import { UserBadges, badgeSizeForLineHeight } from '../../components/ui/badges/UserBadges';
 import { openUserProfile } from '../../lib/openUserProfile';
+import { useIsAdmin } from '../../hooks/useIsAdmin';
+import { logger } from '../../utils/logger';
+import { adminService } from '../../services/admin/adminService';
 import {
   settingsHeroType,
   settingsGroupLabelStyle,
@@ -168,6 +172,8 @@ export default function ChatGroupInfoScreen() {
   }, [groupMediaItems]);
 
   const isAdmin = currentGroup?.is_admin || false;
+  // מחיקת קבוצה (QA 7.1) — למנהלי הקהילה, כמו במסך האדמין (admin-api)
+  const { isAdmin: isAppAdmin } = useIsAdmin();
 
   const presenceNow = Date.now() + presenceTick * 0;
 
@@ -380,6 +386,35 @@ export default function ChatGroupInfoScreen() {
       groupId,
       ...(initialMediaId ? { initialMediaId } : {}),
     });
+  };
+
+  const handleDeleteGroup = () => {
+    legacyAlert(
+      i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s45'),
+      i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s46'),
+      [
+        { text: i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s10'), style: 'cancel' },
+        {
+          text: i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s47'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await adminService.deleteGroup(groupId);
+              void HapticFeedback.success();
+              navigation.dispatch(
+                CommonActions.reset({
+                  index: 0,
+                  routes: [{ name: 'ChatGroupsList' }],
+                })
+              );
+            } catch (error) {
+              logger.error('ChatGroupInfo', 'delete group failed', error);
+              legacyAlert(i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s3'), i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s48'));
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleLeaveGroup = () => {
@@ -694,6 +729,24 @@ export default function ChatGroupInfoScreen() {
                 </View>
                 <View style={styles.leadingIcon}>
                   <LogOut size={20} color={DesignTokens.colors.danger.main} strokeWidth={2} />
+                </View>
+              </TouchableOpacity>
+              </>
+              ) : null}
+              {isAppAdmin && !isAnnouncementGroup(currentGroup?.name, groupId) ? (
+              <>
+              <View style={styles.separator} />
+              <TouchableOpacity
+                style={styles.menuRow}
+                onPress={() => { void HapticFeedback.impactLight(); handleDeleteGroup(); }}
+                activeOpacity={0.7}
+              >
+                <ChevronLeft size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
+                <View style={styles.menuTextCol}>
+                  <Text style={[styles.menuTitle, styles.menuTitleDanger]}>{i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s44')}</Text>
+                </View>
+                <View style={styles.leadingIcon}>
+                  <Trash2 size={20} color={DesignTokens.colors.danger.main} strokeWidth={2} />
                 </View>
               </TouchableOpacity>
               </>

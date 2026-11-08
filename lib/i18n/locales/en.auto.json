@@ -1959,7 +1959,12 @@
     "s40": "Actions",
     "s41": "Notifications",
     "s42": "Starred messages",
-    "s43": "Leave group"
+    "s43": "Leave group",
+    "s44": "Delete group",
+    "s45": "Delete this group?",
+    "s46": "The group, its messages and media will be deleted for all members. This can't be undone.",
+    "s47": "Delete",
+    "s48": "Couldn't delete the group. Try again."
   },
   "screens__Portfolios__tabs__TransactionsTab": {
     "s1": "Delete transaction",

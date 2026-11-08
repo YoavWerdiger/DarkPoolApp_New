@@ -1547,6 +1547,16 @@ function LearningScreen() {
                           height: 100%; 
                           border: none; 
                         }
+                        * { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+                        /* שכבת מגע מעל הסרטון (בלי סרגל השליטה למטה): חוסמת את תפריט ה-Debug של Vimeo בלחיצה ארוכה,
+                           הקשה = ניגון/השהיה, הקשה כפולה בצד = 10 שניות קדימה/אחורה */
+                        #tap-layer { position: absolute; top: 0; left: 0; right: 0; bottom: 56px; z-index: 2; touch-action: manipulation; }
+                        .seek-badge { position: absolute; top: 50%; transform: translateY(-50%); padding: 8px 14px; border-radius: 18px;
+                          background: rgba(0,0,0,0.55); color: #fff; font: 600 15px -apple-system, Roboto, sans-serif; opacity: 0;
+                          transition: opacity 180ms ease; pointer-events: none; z-index: 3; direction: ltr; }
+                        .seek-badge.show { opacity: 1; }
+                        #seek-fwd { right: 12%; }
+                        #seek-back { left: 12%; }
                       </style>
                     </head>
                     <body>
@@ -1560,11 +1570,60 @@ function LearningScreen() {
                           style="position:absolute;top:0;left:0;width:100%;height:100%;" 
                           title="${selectedLesson.title}">
                         </iframe>
+                        <div id="tap-layer"></div>
+                        <div id="seek-back" class="seek-badge">« 10</div>
+                        <div id="seek-fwd" class="seek-badge">10 »</div>
                       </div>
                       <script src="https://player.vimeo.com/api/player.js"></script>
                       <script>
                         const iframe = document.getElementById('vimeo-player');
                         const player = new Vimeo.Player(iframe);
+
+                        document.addEventListener('contextmenu', function(e) { e.preventDefault(); }, true);
+                        (function() {
+                          const layer = document.getElementById('tap-layer');
+                          let lastTap = 0, tapTimer = null, seekStreakUntil = 0;
+                          function flash(id) {
+                            const el = document.getElementById(id);
+                            el.classList.add('show');
+                            clearTimeout(el._t);
+                            el._t = setTimeout(function() { el.classList.remove('show'); }, 550);
+                          }
+                          function seek(delta) {
+                            Promise.all([player.getCurrentTime(), player.getDuration()]).then(function(v) {
+                              const t = Math.max(0, Math.min((v[1] || 0) - 0.5, v[0] + delta));
+                              player.setCurrentTime(t);
+                            }).catch(function() {});
+                            flash(delta > 0 ? 'seek-fwd' : 'seek-back');
+                          }
+                          function togglePlay() {
+                            player.getPaused().then(function(paused) {
+                              if (paused) player.play(); else player.pause();
+                            }).catch(function() {});
+                          }
+                          layer.addEventListener('touchend', function(e) {
+                            e.preventDefault();
+                            const touch = e.changedTouches[0];
+                            const forward = touch.clientX > window.innerWidth / 2;
+                            const now = Date.now();
+                            // רצף הקשות אחרי הקשה כפולה — כל הקשה נוספת עוד 10 שניות (כמו ביוטיוב)
+                            if (now < seekStreakUntil) {
+                              seekStreakUntil = now + 700;
+                              seek(forward ? 10 : -10);
+                              return;
+                            }
+                            if (now - lastTap < 280) {
+                              clearTimeout(tapTimer);
+                              lastTap = 0;
+                              seekStreakUntil = now + 700;
+                              seek(forward ? 10 : -10);
+                              return;
+                            }
+                            lastTap = now;
+                            tapTimer = setTimeout(togglePlay, 280);
+                          }, { passive: false });
+                          layer.addEventListener('touchstart', function(e) { e.preventDefault(); }, { passive: false });
+                        })();
                         
                         player.on('timeupdate', function(data) {
                           const currentTime = data.seconds;

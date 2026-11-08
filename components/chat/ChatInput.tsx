@@ -9,6 +9,7 @@ import { TEXT_DIR } from '../../lib/i18n/language';
 
 import { useDelayedUnmount } from '../../hooks/useDelayedUnmount';
 import React, { useState, useRef, useMemo, useEffect, useCallback, memo } from 'react';
+import ReactionPicker from './ReactionPicker';
 import { View, TextInput, TouchableOpacity, Pressable, Text, StyleSheet, Animated, Easing, Platform, Keyboard } from 'react-native';
 import { legacyAlert } from '../../utils/appDialog';
 import { chatInputBottomPadding, CHAT_COMPOSER_NATIVE_ID } from './chatInputLayout';
@@ -316,6 +317,7 @@ function ChatInputImpl({
 
 
   const textInputRef = useRef<TextInput>(null);
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const recordingRef = useRef<Audio.Recording | null>(null);
   const soundRef = useRef<Audio.Sound | null>(null);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -2659,14 +2661,32 @@ function ChatInputImpl({
             </TouchableOpacity>
           }
           overlay={
-            text.length > 8000 ? (
-              <Text style={[
-                styles.charCounter,
-                text.length > 9500 && styles.charCounterDanger,
-              ]}>
-                {10000 - text.length}
-              </Text>
-            ) : null
+            <>
+              {text.length > 8000 ? (
+                <Text style={[
+                  styles.charCounter,
+                  text.length > 9500 && styles.charCounterDanger,
+                ]}>
+                  {10000 - text.length}
+                </Text>
+              ) : null}
+              {/* אימוג'י בתוך השדה (QA 4.1) — לא תלוי במקלדת של היצרן */}
+              <TouchableOpacity
+                onPress={() => {
+                  void HapticFeedback.selection();
+                  Keyboard.dismiss();
+                  setEmojiPickerOpen(true);
+                }}
+                style={styles.emojiButton}
+                disabled={disabled || isUploading}
+                activeOpacity={0.7}
+                hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                accessibilityRole="button"
+                accessibilityLabel={i18n.t('auto.components__chat__ChatInput.s37')}
+              >
+                <Ionicons name="happy-outline" size={22} color={DesignTokens.colors.text.secondary} />
+              </TouchableOpacity>
+            </>
           }
           trailing={
             <View style={styles.sendBtnOuter}>
@@ -2762,6 +2782,15 @@ function ChatInputImpl({
         onPoll={handleCreatePoll}
       />
 
+      <ReactionPicker
+        visible={emojiPickerOpen}
+        onClose={() => setEmojiPickerOpen(false)}
+        title={i18n.t('auto.components__chat__ChatInput.s36')}
+        onReaction={(emoji) => {
+          handleTextChange(`${text}${emoji}`);
+          setTimeout(focusComposerIfBlurred, 320);
+        }}
+      />
       <ChatAttachCameraSheet
         visible={attachCameraOpen}
         onClose={() => setAttachCameraOpen(false)}
@@ -2968,6 +2997,14 @@ const createStyles = (tokens: any, paddingBottom: number) => StyleSheet.create({
     color: tokens.colors.text.primary,
     textAlignVertical: 'center',
     textAlign: 'right',
+  },
+  // בגובה כפתור ה-+ (40) ונשאר למטה כשהשדה גדל לכמה שורות
+  emojiButton: {
+    alignSelf: 'flex-end',
+    width: 32,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   charCounter: {
     position: 'absolute',

@@ -4136,7 +4136,9 @@
     "s32": "Attach media",
     "s33": "Send message",
     "s34": "Record a voice message — a short tap starts recording, holding records until you release to review",
-    "s35": "Voice recording isn't available in Expo Go"
+    "s35": "Voice recording isn't available in Expo Go",
+    "s36": "Emoji",
+    "s37": "Add emoji"
   },
   "components__chat__AttachmentPicker": {
     "s1": "Choose a file",

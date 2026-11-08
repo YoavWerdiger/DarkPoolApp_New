@@ -67,7 +67,7 @@ export function ProfileScreenBody({
   );
 }
 
-/** תווית קבוצה מחוץ לכרטיס — אפורה, 15/500, 8px עד הכרטיס. */
+/** תווית קבוצה מחוץ לכרטיס — 13 · 600 · אפורה (לפי ערכת הנושא), מיושרת לטקסט שבכרטיס, 8px עד הכרטיס. */
 export function SettingsSectionTitle({
   title,
   style,
@@ -75,8 +75,10 @@ export function SettingsSectionTitle({
   title: string;
   style?: TextStyle;
 }) {
+  // צבע לפי ערכת הנושא — ברירת המחדל הקבועה (#A0A0A0, של הכהה) כמעט לא נראית בלייט
+  const tokens = useDesignTokens();
   return (
-    <Text style={[settingsHebrewText, settingsGroupLabelStyle, style]}>
+    <Text style={[settingsHebrewText, settingsGroupLabelStyle, { color: tokens.colors.text.secondary }, style]}>
       {title}
     </Text>
   );
@@ -90,8 +92,10 @@ export function SettingsOutsideTitle({
   title: string;
   style?: TextStyle;
 }) {
+  // צבע לפי ערכת הנושא — ברירת המחדל הקבועה (#A0A0A0, של הכהה) כמעט לא נראית בלייט
+  const tokens = useDesignTokens();
   return (
-    <Text style={[settingsHebrewText, settingsGroupLabelStyle, style]}>
+    <Text style={[settingsHebrewText, settingsGroupLabelStyle, { color: tokens.colors.text.secondary }, style]}>
       {title}
     </Text>
   );

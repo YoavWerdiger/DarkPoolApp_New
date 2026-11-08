@@ -1875,12 +1875,7 @@ function LearningScreen() {
                       ]}
                     />
                   </View>
-                  {selectedLesson.completed && (
-                    <View style={styles.completedStatus}>
-                      <CheckCircle2 size={16} color={DesignTokens.colors.primary.main} strokeWidth={2} />
-                      <Text style={styles.completedText}>{i18n.t('auto.screens__Learning__LearningScreen.s42')}</Text>
-                    </View>
-                  )}
+                  {/* בלי «הושלם» — ה-100% כבר אומר את זה */}
               </View>
             </UICard>
 

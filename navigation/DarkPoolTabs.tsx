@@ -43,8 +43,9 @@ export default function DarkPoolTabs() {
         },
       }}
     >
-      <Tab.Screen name="DarkPoolFeed" component={DarkPoolHomeScreen} />
+      {/* «חקור» ראשון — הכי ימני בעברית (QA 11.8) */}
       <Tab.Screen name="DarkPoolExplore" component={DarkPoolExploreScreen} />
+      <Tab.Screen name="DarkPoolFeed" component={DarkPoolHomeScreen} />
       <Tab.Screen name="DarkPoolSearch" component={DarkPoolSearchScreen} />
       <Tab.Screen name="DarkPoolFollowing" component={DarkPoolFollowingScreen} />
     </Tab.Navigator>

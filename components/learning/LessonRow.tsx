@@ -145,7 +145,7 @@ export const LessonRow: React.FC<LessonRowProps> = ({
             </View>
           ) : isCompleted ? (
             <View style={styles.donePill}>
-              <Ionicons name="checkmark" size={16} color={T.colors.background.cardSolid} />
+              <Ionicons name="checkmark" size={13} color={T.colors.background.cardSolid} />
             </View>
           ) : isLockedForUser ? (
             <View style={styles.lockOverlay}>
@@ -281,15 +281,17 @@ function createStyles(T: ReturnType<typeof useDesignTokens>) {
       ...ACADEMY_TYPE.cardSubtitle,
       color: '#fff',
     },
+    // קטן ועדין: 22 עם וי 13 ומסגרת דקה בצבע הערכה שמפרידה מהתמונה
     donePill: {
       position: 'absolute',
-      top: 10,
-      left: 10,
-      width: 28,
-      height: 28,
-      borderRadius: 14,
-      // ירוק המותג, הוי בצבע משטח הערכה (לבן בלייט / כהה בדארק)
+      top: 8,
+      left: 8,
+      width: 22,
+      height: 22,
+      borderRadius: 11,
       backgroundColor: T.colors.primary.main,
+      borderWidth: 1.5,
+      borderColor: T.colors.background.cardSolid,
       alignItems: 'center',
       justifyContent: 'center',
     },

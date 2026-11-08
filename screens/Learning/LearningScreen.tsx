@@ -1877,7 +1877,7 @@ function LearningScreen() {
                   </View>
                   {selectedLesson.completed && (
                     <View style={styles.completedStatus}>
-                      <CheckCircle2 size={16} color={DesignTokens.colors.success.main} strokeWidth={2} />
+                      <CheckCircle2 size={16} color={DesignTokens.colors.primary.main} strokeWidth={2} />
                       <Text style={styles.completedText}>{i18n.t('auto.screens__Learning__LearningScreen.s42')}</Text>
                     </View>
                   )}
@@ -3404,9 +3404,10 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     alignItems: 'center',
     gap: 6,
   },
+  // ירוק המותג (primary) — success בלייט הוא ירוק אמרלד אחר (#10B981) שלא תואם לערכה
   completedText: {
     ...ACADEMY_TYPE.caption,
-    color: tokens.colors.success.main,
+    color: tokens.colors.primary.main,
   },
   
   // Course Header - שקוף עם הגרדיאנט מאחורה

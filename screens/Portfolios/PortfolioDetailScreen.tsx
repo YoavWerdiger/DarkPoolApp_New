@@ -2,6 +2,7 @@ import { SegmentedTabs } from '../../components/ui/SegmentedTabs';
 import { getJournalSnapshot, loadJournalSnapshot, saveJournalSnapshot } from '../../services/portfolios/journalSnapshotCache';
 import { UI_DIR } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
+import { TEXT_DIR } from '../../lib/i18n/language';
 import { JournalSkeleton } from './components/JournalSkeleton';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -275,6 +276,35 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
           borderRadius: 999,
           overflow: 'hidden',
         },
+        // שורת הבורר ביומן — LTR פיזי: הכפתור בשמאל, השם ממורכז
+        journalSectionRow: {
+          direction: 'ltr',
+          minHeight: 40,
+          justifyContent: 'center',
+        },
+        journalSwitcherCenter: {
+          alignItems: 'center',
+        },
+        journalSwitcherInset: {
+          paddingHorizontal: 128,
+        },
+        addPositionPill: {
+          position: 'absolute',
+          left: 0,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 4,
+          height: 36,
+          paddingHorizontal: 12,
+          borderRadius: 18,
+          backgroundColor: tokens.colors.primary.lightCta,
+        },
+        addPositionText: {
+          fontSize: 13,
+          fontWeight: '600',
+          color: tokens.colors.text.inverse,
+          writingDirection: TEXT_DIR,
+        },
         fabWrap: {
           position: 'absolute',
           left: 0,
@@ -336,12 +366,35 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
       inRtlTree
       sectionContainerStyle={JOURNAL_HEADER_SECTION_STYLE}
       section={
-        <PortfolioSwitcher
-          portfolios={embedded.portfolios}
-          selectedId={embedded.portfolioId}
-          onSelect={embedded.onSelect}
-          onCreate={embedded.onCreate}
-        />
+        // QA 9.1: שם התיק במרכז (בורר ברור), «פוזיציה חדשה +» משמאל מתחת ל-⋯ — במקום הכפתור הצף
+        <View style={styles.journalSectionRow}>
+          <View style={[styles.journalSwitcherCenter, canAddTransaction && !loading && styles.journalSwitcherInset]}>
+            <PortfolioSwitcher
+              portfolios={embedded.portfolios}
+              selectedId={embedded.portfolioId}
+              onSelect={embedded.onSelect}
+              onCreate={embedded.onCreate}
+              centered
+            />
+          </View>
+          {canAddTransaction && !loading ? (
+            <TouchableOpacity
+              style={styles.addPositionPill}
+              onPress={() => {
+                void HapticFeedback.selection();
+                handleAddTransaction();
+              }}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel={i18n.t('auto.screens__Portfolios__PortfolioDetailScreen.s8')}
+            >
+              <Ionicons name="add" size={18} color={tokens.colors.text.inverse} />
+              <Text style={styles.addPositionText} numberOfLines={1}>
+                {i18n.t('auto.screens__Portfolios__PortfolioDetailScreen.s8')}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
       }
       rightAccessory={loading ? undefined : moreAction}
     />
@@ -397,7 +450,7 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
             style={styles.segmentedTabs}
           />
 
-          <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: canAddTransaction ? mainTabsHeight - insets.bottom + 90 : 32, direction: UI_DIR }}>
+          <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: embedded ? mainTabsHeight - insets.bottom + 24 : canAddTransaction ? mainTabsHeight - insets.bottom + 90 : 32, direction: UI_DIR }}>
             {activeTab === 'overview' && portfolio && (
               <OverviewTab
                 portfolio={portfolio}
@@ -451,7 +504,7 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
         </ScrollView>
       </SafeAreaView>
 
-      {canAddTransaction ? (
+      {canAddTransaction && !embedded ? (
         <View style={styles.fabWrap} pointerEvents="box-none">
           <TouchableOpacity
             style={styles.fabBtn}

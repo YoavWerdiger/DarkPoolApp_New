@@ -55,6 +55,8 @@ interface Props {
   createLabel?: string;
   /** לחיצה על הפריט הפעיל (למשל פעולות על הרשימה). בלי — רק סגירה */
   onActivePress?: (id: string) => void;
+  /** ממורכז עם שברון בעיגול — ברור שזה בורר (יומן המסחר, QA 9.1) */
+  centered?: boolean;
 }
 
 /**
@@ -62,10 +64,10 @@ interface Props {
  * אותה שפת תנועה כמו BottomSheet — רק בכיוון ההפוך. נסגר בלחיצה על הרקע או בבחירה.
  */
 /** שם התיק בזמן שרשימת התיקים נטענת — אותו עוגן ואותו גובה (screenTitle + שברון) */
-export function PortfolioSwitcherSkeleton() {
+export function PortfolioSwitcherSkeleton({ centered = false }: { centered?: boolean } = {}) {
   const tokens = useDesignTokens();
   return (
-    <View style={styles.anchorWrap} pointerEvents="none">
+    <View style={[styles.anchorWrap, centered && styles.anchorWrapCentered]} pointerEvents="none">
       <View style={styles.anchor}>
         <View style={{ height: APP_TYPE.screenTitle.lineHeight, justifyContent: 'center' }}>
           <SkeletonBox width={120} height={20} borderRadius={8} />
@@ -84,6 +86,7 @@ export function PortfolioSwitcher({
   sheetTitle = i18n.t('auto.screens__Portfolios__components__PortfolioSwitcher.s1'),
   createLabel = i18n.t('auto.screens__Portfolios__components__PortfolioSwitcher.s2'),
   onActivePress,
+  centered = false,
 }: Props) {
   const tokens = useDesignTokens();
   const insets = useSafeAreaInsets();
@@ -138,7 +141,7 @@ export function PortfolioSwitcher({
 
   return (
     <>
-      <View style={styles.anchorWrap}>
+      <View style={[styles.anchorWrap, centered && styles.anchorWrapCentered]}>
         <Pressable
           onPress={show}
           hitSlop={8}
@@ -152,7 +155,13 @@ export function PortfolioSwitcher({
           >
             {selected?.name ?? ''}
           </Text>
-          <Ionicons name="chevron-down" size={20} color={tokens.colors.text.tertiary} />
+          {centered ? (
+            <View style={[styles.chevronChip, { backgroundColor: tokens.colors.background.tertiary }]}>
+              <Ionicons name="chevron-down" size={16} color={tokens.colors.text.primary} />
+            </View>
+          ) : (
+            <Ionicons name="chevron-down" size={20} color={tokens.colors.text.tertiary} />
+          )}
         </Pressable>
       </View>
 
@@ -250,6 +259,16 @@ const styles = StyleSheet.create({
     direction: ROOT_DIR,
     alignItems: 'flex-end',
     alignSelf: 'stretch',
+  },
+  anchorWrapCentered: {
+    alignItems: 'center',
+  },
+  chevronChip: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   anchor: {
     flexDirection: 'row-reverse',

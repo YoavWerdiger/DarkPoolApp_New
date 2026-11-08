@@ -174,10 +174,14 @@ function mapAudioMode(mode: any): any {
   return out;
 }
 
-function avStatusFromAudioPlayer(player: any, extra?: { didJustFinish?: boolean }) {
-  const status = player?.currentStatus;
-  const currentTime = status?.currentTime ?? player?.currentTime ?? 0;
-  const duration = status?.duration ?? player?.duration ?? 0;
+function avStatusFromAudioPlayer(player: any, extra?: { didJustFinish?: boolean; event?: any }) {
+  // עדיפות לנתוני האירוע עצמו — ב-Android currentStatus של הנגן עלול להיות מאחר (הנקודה «תקועה»)
+  const ev = extra?.event;
+  const status = ev ?? player?.currentStatus;
+  let currentTime = status?.currentTime;
+  if (typeof currentTime !== 'number') currentTime = player?.currentTime ?? 0;
+  let duration = status?.duration;
+  if (!(duration > 0)) duration = player?.duration ?? 0;
   const isLoaded =
     status?.isLoaded ?? player?.isLoaded ?? (duration > 0 || !!player?.playing);
   return {
@@ -185,8 +189,8 @@ function avStatusFromAudioPlayer(player: any, extra?: { didJustFinish?: boolean 
     isPlaying: status?.playing ?? player?.playing ?? false,
     isBuffering: status?.isBuffering ?? player?.isBuffering ?? false,
     didJustFinish: extra?.didJustFinish ?? status?.didJustFinish ?? false,
-    positionMillis: currentTime * 1000,
-    durationMillis: duration * 1000,
+    positionMillis: (currentTime ?? 0) * 1000,
+    durationMillis: (duration ?? 0) * 1000,
     rate: status?.playbackRate ?? player?.playbackRate ?? 1,
     shouldPlay: status?.playing ?? player?.playing ?? false,
     isLooping: status?.loop ?? player?.loop ?? false,
@@ -198,13 +202,17 @@ class ExpoAudioSound {
   private player: any;
   private statusSub: { remove: () => void } | null = null;
   private onStatus: ((status: any) => void) | null = null;
+  private pollTimer: ReturnType<typeof setInterval> | null = null;
+  private pollMs: number;
 
-  constructor(player: any) {
+  constructor(player: any, pollMs = 120) {
     this.player = player;
+    this.pollMs = pollMs;
     try {
       this.statusSub = player.addListener?.('playbackStatusUpdate', (status: any) => {
+        if (status?.didJustFinish) this.stopPoll();
         this.onStatus?.(
-          avStatusFromAudioPlayer(this.player, { didJustFinish: !!status?.didJustFinish }),
+          avStatusFromAudioPlayer(this.player, { didJustFinish: !!status?.didJustFinish, event: status }),
         );
       });
     } catch {
@@ -212,12 +220,34 @@ class ExpoAudioSound {
     }
   }
 
+  /** גיבוי לאירועי הנגן: בחלק ממכשירי Android הם דלילים/תקועים — דוגמים מיקום חי בזמן ניגון */
+  private startPoll() {
+    if (this.pollTimer) return;
+    this.pollTimer = setInterval(() => {
+      if (!this.onStatus) return;
+      let playing = false;
+      try {
+        playing = !!this.player.playing;
+      } catch {
+        this.stopPoll();
+        return;
+      }
+      if (!playing) return;
+      this.onStatus(avStatusFromAudioPlayer(this.player, { event: undefined }));
+    }, this.pollMs);
+  }
+
+  private stopPoll() {
+    if (this.pollTimer) clearInterval(this.pollTimer);
+    this.pollTimer = null;
+  }
+
   static async createAsync(source: any, initialStatus: any = {}) {
     const uri = typeof source === 'string' ? source : source?.uri;
     const player = expoAudio.createAudioPlayer(uri ? { uri } : (uri ?? null), {
       updateInterval: initialStatus.progressUpdateIntervalMillis ?? 80,
     });
-    const sound = new ExpoAudioSound(player);
+    const sound = new ExpoAudioSound(player, initialStatus.progressUpdateIntervalMillis ?? 120);
     if (initialStatus.isLooping) player.loop = true;
     if (initialStatus.isMuted) player.muted = true;
     if (typeof initialStatus.volume === 'number') player.volume = initialStatus.volume;
@@ -231,7 +261,10 @@ class ExpoAudioSound {
     if (initialStatus.positionMillis > 0) {
       await player.seekTo(initialStatus.positionMillis / 1000);
     }
-    if (initialStatus.shouldPlay) player.play();
+    if (initialStatus.shouldPlay) {
+      player.play();
+      sound.startPoll();
+    }
     return { sound, status: await sound.getStatusAsync() };
   }
 
@@ -241,21 +274,26 @@ class ExpoAudioSound {
 
   async playAsync() {
     this.player.play();
-    return this.getStatusAsync();
+    this.startPoll();
+    // player.playing מתעדכן באיחור (בעיקר ב-Android) — מחזירים את מצב הכוונה
+    return { ...avStatusFromAudioPlayer(this.player), isPlaying: true, shouldPlay: true };
   }
 
   async pauseAsync() {
     this.player.pause();
-    return this.getStatusAsync();
+    this.stopPoll();
+    return { ...avStatusFromAudioPlayer(this.player), isPlaying: false, shouldPlay: false };
   }
 
   async stopAsync() {
+    this.stopPoll();
     this.player.pause();
     await this.player.seekTo(0);
     return this.getStatusAsync();
   }
 
   async unloadAsync() {
+    this.stopPoll();
     this.statusSub?.remove?.();
     this.statusSub = null;
     this.onStatus = null;
@@ -286,8 +324,13 @@ class ExpoAudioSound {
     if (typeof status.isMuted === 'boolean') this.player.muted = status.isMuted;
     if (typeof status.volume === 'number') this.player.volume = status.volume;
     if (typeof status.shouldPlay === 'boolean') {
-      if (status.shouldPlay) this.player.play();
-      else this.player.pause();
+      if (status.shouldPlay) {
+        this.player.play();
+        this.startPoll();
+      } else {
+        this.player.pause();
+        this.stopPoll();
+      }
     }
     return this.getStatusAsync();
   }

@@ -1800,6 +1800,7 @@ function AudioPlayer({
   const audioSeenSV = useSharedValue(-1);
   const audioActiveSV = useSharedValue(0);
   const isPlayingSV = useSharedValue(0);
+  const lastPlayCmdAtRef = useRef(0);
   const isScrubbingSV = useSharedValue(0);
   const durationSV = useSharedValue(Math.max(0, duration));
   const rateSV = useSharedValue(1);
@@ -1991,7 +1992,8 @@ function AudioPlayer({
         setIsPlaying(true);
         isPlayingSV.value = 1;
         bufferingSV.value = status.isBuffering ? 1 : 0;
-      } else if (isPlayingSV.value > 0.5) {
+      } else if (isPlayingSV.value > 0.5 && Date.now() - lastPlayCmdAtRef.current > 1500) {
+        // (חסד של 1.5s אחרי «נגן» — ב-Android מגיעים קודם דיווחי playing=false בזמן הטעינה)
         // עצירה/תקיעה — הנקודה נשארת במקומה (קודם הוצמדה לדיווח המאחר → «חוזרת אחורה»)
         setIsPlaying(false);
         isPlayingSV.value = 0;
@@ -2052,6 +2054,7 @@ function AudioPlayer({
         await soundRef.current.setPositionAsync(targetMs);
         if (resumeIfNeeded) {
           claimExclusivePlayback();
+          lastPlayCmdAtRef.current = Date.now();
           await soundRef.current.setRateAsync(playbackRateRef.current, true);
           await soundRef.current.playAsync();
           setIsPlaying(true);
@@ -2138,6 +2141,7 @@ function AudioPlayer({
           }
         }
         claimExclusivePlayback();
+        lastPlayCmdAtRef.current = Date.now();
         await sound.playAsync();
         soundRef.current = sound;
         setIsPlaying(true);
@@ -2152,8 +2156,10 @@ function AudioPlayer({
         }
       } else {
         const status = await soundRef.current.getStatusAsync();
-        if (status?.isLoaded) {
-          if (status.isPlaying) {
+        // ההחלטה לפי המצב שלנו (מה שהמשתמש רואה), לא לפי הנגן — הוא מדווח באיחור ב-Android,
+        // ואז לחיצה אחת «לא מגיבה» או הופכת פעמיים
+        {
+          if (isPlayingSV.value > 0.5) {
             await soundRef.current.pauseAsync();
             releaseVoicePlayback(playerId);
             setIsPlaying(false);
@@ -2177,6 +2183,7 @@ function AudioPlayer({
               setPosition(0);
             }
             claimExclusivePlayback();
+            lastPlayCmdAtRef.current = Date.now();
             await soundRef.current.setRateAsync(playbackRateRef.current, true);
             await soundRef.current.playAsync();
             setIsPlaying(true);

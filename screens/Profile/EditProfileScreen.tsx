@@ -1,5 +1,5 @@
 import { ROOT_DIR } from '../../lib/i18n/direction';
-import { FloatingLabelField } from '../../components/ui/FloatingLabelField';
+import { FieldGroupLabel, FloatingLabelField } from '../../components/ui/FloatingLabelField';
 import i18n from '../../lib/i18n';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useCallback, useState, useEffect } from 'react';
@@ -322,13 +322,7 @@ export default function EditProfileScreen({ navigation }: any) {
           </View>
 
           <View style={styles.fieldBlock}>
-            <Text
-              style={[
-                formFieldLabelStyle({ tokens, focused: false, error: false }),
-                styles.fieldLabel,
-                { color: tokens.colors.text.secondary },
-              ]}
-            >{i18n.t('auto.screens__Profile__EditProfileScreen.s20')}</Text>
+            <FieldGroupLabel>{i18n.t('auto.screens__Profile__EditProfileScreen.s20')}</FieldGroupLabel>
             <View style={styles.genderRow}>
               {([
                 { value: 'male' as const, label: i18n.t('auto.screens__Profile__EditProfileScreen.s21'), icon: 'male' as const },

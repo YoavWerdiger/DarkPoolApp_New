@@ -190,11 +190,17 @@ export const appSectionTitleStyle: TextStyle = {
   letterSpacing: APP_TYPE.sectionTitle.letterSpacing,
 };
 
+/**
+ * תווית קבוצה מעל כרטיס (למשל «מראה» / «אישי» בהגדרות) — סגנון F:
+ * 13 · 600 · אפור עם ריווח קל, מיושרת לטקסט שבתוך הכרטיס (cardPadding) ולא לקצה הכרטיס.
+ */
 export const appGroupLabelStyle: TextStyle = {
   ...appSectionTitle,
-  fontSize: APP_TYPE.groupLabel.fontSize,
-  fontWeight: APP_TYPE.groupLabel.fontWeight,
-  lineHeight: APP_TYPE.groupLabel.lineHeight,
+  fontSize: 13,
+  fontWeight: '600',
+  lineHeight: 18,
+  letterSpacing: 0.2,
+  paddingHorizontal: APP_LAYOUT.cardPadding,
   color: SoftUI.textSecondary,
   marginBottom: APP_LAYOUT.groupLabelToContent,
 };

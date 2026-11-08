@@ -45,6 +45,13 @@ type Props = Omit<TextInputProps, 'placeholder' | 'style'> & {
   helper?: string;
   /** טעינה: שלד במקום הערך (התווית כבר למעלה) */
   loading?: boolean;
+  /** רב-שורתי: התווית קבועה למעלה, השדה גדל עם הטקסט (minHeight) */
+  multiline?: boolean;
+  minHeight?: number;
+  /** אלמנט בצד הנגדי (למשל עין להצגת סיסמה) */
+  trailing?: React.ReactNode;
+  /** תיאור עזר בתוך הפוקוס של התווית — לנגישות / בדיקות */
+  testID?: string;
 };
 
 export function FloatingLabelField({
@@ -58,6 +65,9 @@ export function FloatingLabelField({
   readOnly,
   helper,
   loading,
+  multiline,
+  minHeight = 104,
+  trailing,
   onFocus,
   onBlur,
   ...rest
@@ -66,7 +76,7 @@ export function FloatingLabelField({
   const reduceMotion = useReducedMotion();
   const [focused, setFocused] = useState(false);
   const inputRef = React.useRef<React.ComponentRef<typeof TextInput>>(null);
-  const floated = focused || value.length > 0 || !!loading;
+  const floated = focused || value.length > 0 || !!loading || !!multiline;
   const p = useSharedValue(floated ? 1 : 0);
   const f = useSharedValue(focused ? 1 : 0);
 
@@ -100,15 +110,23 @@ export function FloatingLabelField({
   return (
     <View>
     <Pressable onPress={() => !readOnly && inputRef.current?.focus()} accessible={false} disabled={readOnly}>
-      <Animated.View style={[styles.shell, shellStyle, error && { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
+      <Animated.View
+        style={[
+          styles.shell,
+          multiline && { height: undefined, minHeight, justifyContent: 'flex-start', paddingTop: 10, paddingBottom: 12 },
+          trailing ? { paddingLeft: 52 } : null,
+          shellStyle,
+          error && { backgroundColor: 'rgba(239, 68, 68, 0.1)' },
+        ]}
+      >
         <Animated.Text
           pointerEvents="none"
           numberOfLines={1}
-          style={[styles.label, appPhysicalRightText, labelStyle]}
+          style={[styles.label, multiline && styles.labelMultiline, appPhysicalRightText, labelStyle]}
         >
           {label}
         </Animated.Text>
-        <Animated.View style={[styles.inputWrap, inputStyle]}>
+        <Animated.View style={[styles.inputWrap, multiline && styles.inputWrapMultiline, inputStyle]}>
           {loading ? (
             <SkeletonLine lineHeight={22} width="46%" box={14} align="flex-end" />
           ) : (
@@ -128,8 +146,11 @@ export function FloatingLabelField({
             placeholderTextColor={formFieldPlaceholderColor(t)}
             accessibilityLabel={label}
             editable={!readOnly}
+            multiline={multiline}
+            textAlignVertical={multiline ? 'top' : 'center'}
             style={[
               styles.input,
+              multiline && { minHeight: minHeight - 44 },
               { color: readOnly ? t.colors.text.secondary : t.colors.text.primary },
               ltr ? styles.ltr : appPhysicalRightText,
             ]}
@@ -137,6 +158,7 @@ export function FloatingLabelField({
           />
           )}
         </Animated.View>
+        {trailing ? <View style={styles.trailing}>{trailing}</View> : null}
       </Animated.View>
     </Pressable>
     {helper ? (
@@ -166,6 +188,17 @@ const styles = StyleSheet.create({
     transformOrigin: 'right center',
   },
   inputWrap: { marginTop: 14 },
+  // רב-שורתי: התווית קבועה למעלה (בלי מרכוז אנכי), הטקסט מתחתיה
+  labelMultiline: { top: 10 - RISE + 4 },
+  inputWrapMultiline: { marginTop: 18 },
+  // צד נגדי (שמאל בעברית) — כפתור/אייקון
+  trailing: {
+    position: 'absolute',
+    left: 12,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+  },
   input: {
     ...APP_TYPE.body,
     lineHeight: 22,
@@ -175,4 +208,18 @@ const styles = StyleSheet.create({
   ltr: { ...appPhysicalRightText, writingDirection: 'ltr' },
   // מיושר לטקסט שבתוך השדה (PAD_H)
   helper: { ...APP_TYPE.caption, marginTop: 6, paddingHorizontal: PAD_H },
+  groupLabel: { fontSize: 13, lineHeight: 18, fontWeight: '600', letterSpacing: 0.2, marginBottom: 8, paddingHorizontal: PAD_H },
 });
+
+/**
+ * תווית מעל קבוצת כפתורים / בחירה (לא שדה טקסט) — למשל «מגדר» מעל זכר/נקבה.
+ * סגנון F: 13 · 600 · אפור, מיושרת לטקסט שבתוך השדות (PAD_H) — תואמת לשדות עם התווית הצפה.
+ */
+export function FieldGroupLabel({ children }: { children: React.ReactNode }) {
+  const t = useDesignTokens();
+  return (
+    <Text style={[styles.groupLabel, appPhysicalRightText, { color: t.colors.text.secondary }]} numberOfLines={1}>
+      {children}
+    </Text>
+  );
+}

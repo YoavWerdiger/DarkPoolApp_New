@@ -1839,7 +1839,14 @@ function LearningScreen() {
 
             {/* פרטי שיעור + פרוגרס */}
             <UICard variant="soft" padding="md" style={styles.lessonGlassCard}>
-              <Text style={styles.lessonPlayerIndex}>{i18n.t('auto.screens__Learning__LearningScreen.s41', { v0: lessonNumberLabel })}</Text>
+              {/* תגית «שיעור X» — כמו תגיות הפרקים ברשימת השיעורים (טופו) */}
+              <View style={styles.lessonPlayerIndexRow}>
+                <View style={[styles.chapterHeaderBadge, { backgroundColor: DesignTokens.colors.background.navChrome }]}>
+                  <Text style={[styles.chapterHeaderBadgeText, { color: DesignTokens.colors.text.secondary }]}>
+                    {i18n.t('auto.screens__Learning__LearningScreen.s41', { v0: lessonNumberLabel })}
+                  </Text>
+                </View>
+              </View>
               <Text style={styles.lessonPlayerTitle}>{selectedLesson.title}</Text>
               {lessonDescriptionDisplay ? (
                 <Text style={styles.lessonDescription}>
@@ -2460,9 +2467,15 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     marginBottom: 0,
     writingDirection: TEXT_DIR,
   },
+  // שורת התגית — צמודה לתחילת השורה (ימין בעברית) בעץ פיזי
+  lessonPlayerIndexRow: {
+    direction: ROOT_DIR,
+    alignItems: 'flex-end',
+    marginBottom: APP_LAYOUT.stackGapSmall,
+  },
   lessonPlayerTitle: {
     ...ACADEMY_TYPE.cardTitle,
-    marginTop: APP_LAYOUT.cardTitleToSubtitleGap,
+    marginTop: 0,
     color: tokens.colors.text.primary,
     textAlign: 'right',
     writingDirection: TEXT_DIR,

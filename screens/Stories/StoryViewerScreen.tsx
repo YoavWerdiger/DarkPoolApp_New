@@ -844,7 +844,7 @@ function StoryViewerScreenInner() {
           ))}
         </View>
         <View
-          style={[reactStyles.bar, { backgroundColor: designTokens.colors.background.primary }]}
+          style={reactStyles.bar}
           pointerEvents="box-none"
           onLayout={(e) => setBarWidth(e.nativeEvent.layout.width)}
         >

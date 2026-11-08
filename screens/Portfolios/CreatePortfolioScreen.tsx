@@ -1,4 +1,5 @@
 import i18n from '../../lib/i18n';
+import { formatThousandsInput, parseFormattedNumber } from '../../utils/numberInput';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
@@ -89,7 +90,7 @@ export default function CreatePortfolioScreen() {
   const cashError = useMemo(() => {
     const raw = initialCash.trim();
     if (!raw) return null;
-    const parsed = Number(raw);
+    const parsed = parseFormattedNumber(raw);
     if (!Number.isFinite(parsed)) return i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s5');
     if (parsed < 0) return i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s6');
     return null;
@@ -128,7 +129,7 @@ export default function CreatePortfolioScreen() {
     }
     try {
       setSubmitting(true);
-      const initialCashNum = parseFloat(initialCash) || 0;
+      const initialCashNum = parseFormattedNumber(initialCash) || 0;
       const portfolio = await createPortfolio({
         name: name.trim(),
         currency,
@@ -307,7 +308,8 @@ export default function CreatePortfolioScreen() {
                     label={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s22')}
                     optional
                     value={initialCash}
-                    onChangeText={setInitialCash}
+                    // פסיקי אלפים תוך כדי הקלדה; השמירה על המספר הנקי (QA 9.4)
+                    onChangeText={(v) => setInitialCash(formatThousandsInput(v))}
                     onBlur={() => setTouchedCash(true)}
                     placeholder="0.00"
                     keyboardType="decimal-pad"

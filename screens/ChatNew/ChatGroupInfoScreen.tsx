@@ -64,6 +64,7 @@ import { useGroupNotificationMute } from '../../hooks/useGroupNotificationMute';
 import { UserBadges, badgeSizeForLineHeight } from '../../components/ui/badges/UserBadges';
 import { openUserProfile } from '../../lib/openUserProfile';
 import { useIsAdmin } from '../../hooks/useIsAdmin';
+import AddMemberSheet from '../../components/chat/AddMemberSheet';
 import { logger } from '../../utils/logger';
 import { adminService } from '../../services/admin/adminService';
 import {
@@ -268,17 +269,18 @@ export default function ChatGroupInfoScreen() {
     </View>
   );
 
-  const handleAddMembers = () => {
-    showPrompt(i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s2'), '', async (inputUserId) => {
-      if (!inputUserId?.trim() || !user?.id) return;
-      const { error } = await chatGroupService.addGroupMember(groupId, inputUserId.trim(), user.id);
-      if (error) {
-        legacyAlert(i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s3'), error.message || i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s4'));
-      } else {
-        legacyAlert(i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s5'), i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s6'));
-        void refreshCurrentGroupDetails();
-      }
-    });
+  // חיפוש משתמשים לפי שם (קודם: הזנת מזהה משתמש ידנית)
+  const [addMembersOpen, setAddMembersOpen] = useState(false);
+  const handleAddMembers = () => setAddMembersOpen(true);
+  const addMemberById = async (memberId: string) => {
+    if (!user?.id) return;
+    const { error } = await chatGroupService.addGroupMember(groupId, memberId, user.id);
+    if (error) {
+      legacyAlert(i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s3'), error.message || i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s4'));
+      return;
+    }
+    void HapticFeedback.success();
+    void refreshCurrentGroupDetails();
   };
 
   const handleMemberPress = (member: ChatGroupMember) => {
@@ -756,6 +758,13 @@ export default function ChatGroupInfoScreen() {
           </ScrollView>
         </View>
       </SafeAreaView>
+
+      <AddMemberSheet
+        visible={addMembersOpen}
+        onClose={() => setAddMembersOpen(false)}
+        existingMemberIds={currentGroup?.members?.map((m) => m.user_id) ?? []}
+        onAdd={addMemberById}
+      />
 
       {/* Cross-platform prompt modal */}
       <Modal visible={promptVisible} transparent animationType="fade" onRequestClose={() => setPromptVisible(false)}>

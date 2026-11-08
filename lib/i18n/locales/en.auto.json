@@ -5178,5 +5178,13 @@
     "s1": "New event",
     "s2": "Event name",
     "s3": "Send"
+  },
+  "components__chat__NewGroupIntroCard": {
+    "s1": "Created by {{v0}}",
+    "s2": "Group created",
+    "s3": "{{v0}} members",
+    "s4": "Add a description…",
+    "s5": "Add members",
+    "s6": "Group info"
   }
 }

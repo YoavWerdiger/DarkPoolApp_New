@@ -65,6 +65,9 @@ import { isAnnouncementGroup as checkIsAnnouncementGroup } from '../../utils/isA
 import MessageCommentsSheet, { type CommentTarget } from '../../components/chat/MessageCommentsSheet';
 import { canSendInAdminOnlyChat, isAdminOnlySendSettings } from '../../utils/canSendInAdminOnlyChat';
 import { useIsAdmin } from '../../hooks/useIsAdmin';
+import { NewGroupIntroCard } from '../../components/chat/NewGroupIntroCard';
+import AddMemberSheet from '../../components/chat/AddMemberSheet';
+import { chatGroupService } from '../../services/chat';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { useTheme } from '../../context/ThemeContext';
 import { donateShareTarget } from '../../lib/shareTargets';
@@ -1824,6 +1827,15 @@ export default function ChatGroupScreen() {
     (navigation as any).navigate('ChatGroupInfo', { groupId });
   };
 
+  // קבוצה ריקה: כרטיס פתיחה + צירוף חברים מתוכו (QA 7.2)
+  const [addMembersOpen, setAddMembersOpen] = useState(false);
+  const canManageGroup = !!currentGroup?.is_admin || isAppAdmin;
+  const groupCreatorName = useMemo(() => {
+    const creator = currentGroup?.members?.find((m) => m.user_id === currentGroup?.created_by);
+    const u = creator?.user as { display_name?: string | null; full_name?: string | null } | undefined;
+    return u?.display_name || u?.full_name || null;
+  }, [currentGroup?.members, currentGroup?.created_by]);
+
   // ============================================
   // Render
   // ============================================
@@ -2072,10 +2084,26 @@ export default function ChatGroupScreen() {
   const renderMessagesPlaceholder = () => {
     if (isEmptyConfirmed) {
       return (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="chatbubbles-outline" size={64} color={DesignTokens.colors.text.tertiary} />
-          <Text style={styles.emptyText}>{i18n.t('auto.screens__ChatNew__ChatGroupScreen.s23')}</Text>
-          <Text style={styles.emptySubtext}>{i18n.t('auto.screens__ChatNew__ChatGroupScreen.s24')}</Text>
+        <View style={styles.emptyContainer} pointerEvents="box-none">
+          {currentGroup && currentGroup.id === groupId ? (
+            <NewGroupIntroCard
+              name={currentGroup.name}
+              avatarUrl={currentGroup.avatar_url}
+              creatorName={groupCreatorName}
+              createdAt={currentGroup.created_at}
+              membersCount={currentGroup.members_count ?? currentGroup.members?.length}
+              description={currentGroup.description}
+              canManage={canManageGroup}
+              onAddMembers={() => setAddMembersOpen(true)}
+              onOpenInfo={handleGroupInfoPress}
+            />
+          ) : (
+            <>
+              <Ionicons name="chatbubbles-outline" size={64} color={DesignTokens.colors.text.tertiary} />
+              <Text style={styles.emptyText}>{i18n.t('auto.screens__ChatNew__ChatGroupScreen.s23')}</Text>
+              <Text style={styles.emptySubtext}>{i18n.t('auto.screens__ChatNew__ChatGroupScreen.s24')}</Text>
+            </>
+          )}
         </View>
       );
     }
@@ -2288,7 +2316,7 @@ export default function ChatGroupScreen() {
           </ChatKeyboardFollow>
           </RNAnimated.View>
           {showMessagesPlaceholder && (
-            <View style={styles.messagesPlaceholderOverlay} pointerEvents="none">
+            <View style={styles.messagesPlaceholderOverlay} pointerEvents={isEmptyConfirmed ? 'box-none' : 'none'}>
               {renderMessagesPlaceholder()}
             </View>
           )}
@@ -2298,6 +2326,22 @@ export default function ChatGroupScreen() {
       <ChatComposerDock bottomInset={composerPaddingBottom}>
         {chatComposer}
       </ChatComposerDock>
+
+      <AddMemberSheet
+        visible={addMembersOpen}
+        onClose={() => setAddMembersOpen(false)}
+        existingMemberIds={currentGroup?.members?.map((m) => m.user_id) ?? []}
+        onAdd={async (memberId) => {
+          if (!user?.id) return;
+          const { error } = await chatGroupService.addGroupMember(groupId, memberId, user.id);
+          if (error) {
+            legacyAlert(i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s3'), error.message || i18n.t('auto.screens__ChatNew__ChatGroupInfoScreen.s4'));
+            return;
+          }
+          void HapticFeedback.success();
+          void refreshCurrentGroupDetails();
+        }}
+      />
 
       {/* FAB מעל הקומפוזר — אותו UICard glass/light כמו ChatInput + clip עיגול */}
       {showScrollToBottomButton ? (

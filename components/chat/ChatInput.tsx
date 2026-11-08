@@ -1183,7 +1183,9 @@ function ChatInputImpl({
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: '*/*',
-        copyToCacheDirectory: false, // ⚡ מהיר יותר – לא להעתיק, להשתמש ב-URI המקורי
+        // חובה להעתיק: באנדרואיד בלי העתקה מתקבל content:// — getInfoAsync / readAsStringAsync נכשלים
+        // וההודעה נשארת «שגיאה בשליחה» (QA 1.5). עם העתקה — file:// במטמון, כמו ב-MediaPicker.
+        copyToCacheDirectory: true,
       });
 
       if (!result.canceled && result.assets[0] && user) {

@@ -106,6 +106,12 @@ serve(async (req) => {
     })
     .eq('id', userId);
 
+  // יוצא מכל הקבוצות — ההודעות נשארות (כ«משתמש שנמחק»), אבל לא מופיע יותר ברשימות החברים
+  await supabase
+    .from('chat_group_members')
+    .delete()
+    .eq('user_id', userId);
+
   await supabase
     .from('device_tokens')
     .update({ is_active: false })

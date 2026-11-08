@@ -1,5 +1,7 @@
 import { ROOT_DIR } from '../../../lib/i18n/direction';
 import i18n from '../../../lib/i18n';
+import { politicianParty } from '../utils/congressParty';
+import { PartyTag } from './PartyTag';
 import React, { memo, useMemo } from 'react';
 import {
   Pressable,
@@ -75,6 +77,7 @@ export const ExplorePortraitCard = memo(function ExplorePortraitCard({
       ? congressMemberLabel(person.id)
       : profileRole(person.subtitle, person.metric);
   const roleIsLatin = !!role && !HEBREW_LETTER.test(role);
+  const party = person.kind === 'politician' ? politicianParty(person.id, person.subtitle) : null;
 
   const content = (
     <View
@@ -124,6 +127,7 @@ export const ExplorePortraitCard = memo(function ExplorePortraitCard({
             </Text>
           ) : null}
         </LinearGradient>
+        {party ? <PartyTag party={party} style={styles.partyTag} /> : null}
       </InvestorPortrait>
     </View>
   );
@@ -144,6 +148,12 @@ export const ExplorePortraitCard = memo(function ExplorePortraitCard({
 
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
+    // תג מפלגה בפינה העליונה (לא נוגע בשם/תפקיד בתחתית)
+    partyTag: {
+      position: 'absolute',
+      top: 8,
+      left: 8,
+    },
     card: {
       borderRadius: tokens.borderRadius.xl,
       overflow: 'hidden',

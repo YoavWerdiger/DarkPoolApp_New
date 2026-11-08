@@ -1,4 +1,6 @@
 import { UI_DIR, dirIcon } from '../../../lib/i18n/direction';
+import { PartyTag } from './PartyTag';
+import type { PartyCode } from '../utils/congressParty';
 import i18n from '../../../lib/i18n';
 import { companyFacilityPhotoUrl } from '../utils/companyFacilityPhotos';
 import { useTheme } from '../../../context/ThemeContext';
@@ -59,6 +61,8 @@ interface Props {
   hidePhoto?: boolean;
   /** חברה ציבורית (13F) בלי דיוקן — לוגו הטיקר במרכז במקום תמונה */
   logoTicker?: string;
+  /** פוליטיקאי: R / D מעל השם (QA 11.4) */
+  party?: PartyCode | null;
 }
 
 /**
@@ -85,6 +89,7 @@ function PersonProfileHeroInner({
   photoOnly = false,
   hidePhoto = false,
   logoTicker,
+  party,
 }: Props) {
   const tokens = useDesignTokens();
   const { isDarkMode } = useTheme();
@@ -288,6 +293,11 @@ function PersonProfileHeroInner({
       </View>
 
       <Animated.View style={[styles.nameWrap, nameFollowStyle]} pointerEvents="none">
+        {party ? (
+          <View style={styles.partyRow}>
+            <PartyTag party={party} size="md" />
+          </View>
+        ) : null}
         <Text style={[styles.name, !!logoTicker?.trim() && styles.nameLeft]} numberOfLines={2}>
           {name}
         </Text>
@@ -355,6 +365,13 @@ const styles = StyleSheet.create({
     bottom: 0,
     paddingHorizontal: 20,
     paddingBottom: 10,
+  },
+  // תג המפלגה מעל השם, באותו צד (ימין פיזי)
+  partyRow: {
+    direction: 'ltr',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: 6,
   },
   // חברה ציבורית (שם לועזי) — מיושר לשמאל
   nameLeft: {

@@ -5192,5 +5192,10 @@
     "s4": "Add a description…",
     "s5": "Add members",
     "s6": "Group info"
+  },
+  "screens__DarkPool__components__PartyTag": {
+    "s1": "Republican",
+    "s2": "Democrat",
+    "s3": "Independent"
   }
 }

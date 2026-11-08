@@ -8,6 +8,7 @@ import {
   EXPLORE_KIND_CHIPS,
   type ExploreKindFilter,
 } from '../utils/exploreGrid';
+import { useDrawerSwipeGuard } from '../../../hooks/useDrawerSwipeGuard';
 
 interface Props {
   value: ExploreKindFilter | null;
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export function ExploreKindFilterBar({ value, onChange }: Props) {
+  const drawerGuard = useDrawerSwipeGuard();
   const tokens = useDesignTokens();
   const styles = useMemo(
     () =>
@@ -44,6 +46,7 @@ export function ExploreKindFilterBar({ value, onChange }: Props) {
   return (
     <ScrollView
       horizontal
+      {...drawerGuard}
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.row}
     >

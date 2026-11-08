@@ -69,6 +69,7 @@ import {
   matchesFeedRecentKind,
   type FeedRecentKind,
 } from './utils/feedRecentKind';
+import { useDrawerSwipeGuard } from '../../hooks/useDrawerSwipeGuard';
 
 const FEED_INITIAL_RENDER = 8;
 const FEED_MAX_BATCH = 6;
@@ -79,6 +80,7 @@ type FeedRow =
   | { kind: 'insider'; key: string; sortAt: number; item: InsiderTradeFeedItem };
 
 export default function DarkPoolHomeScreen() {
+  const drawerGuard = useDrawerSwipeGuard();
   const tokens = useDesignTokens();
   const navigation = useDarkPoolStackNav();
   const tabNav = useNavigation<BottomTabNavigationProp<DarkPoolTabParamList>>();
@@ -253,6 +255,7 @@ export default function DarkPoolHomeScreen() {
         <View style={styles.tradesHead}>
           <ScrollView
             horizontal
+            {...drawerGuard}
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.kindChipRow}
             accessibilityRole="tablist"

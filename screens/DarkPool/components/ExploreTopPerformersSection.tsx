@@ -19,6 +19,7 @@ import {
   darkPoolSectionTitleStyle,
 } from '../darkPoolLayout';
 import { ExplorePortraitCard } from './ExplorePortraitCard';
+import { useDrawerSwipeGuard } from '../../../hooks/useDrawerSwipeGuard';
 
 export type ExplorePerformancePeriod =
   | '1D'
@@ -54,6 +55,7 @@ export function ExploreTopPerformersSection({
   people,
   onPersonPress,
 }: Props) {
+  const drawerGuard = useDrawerSwipeGuard();
   const tokens = useDesignTokens();
   const [period, setPeriod] = useState<ExplorePerformancePeriod>('ALL');
   const styles = useMemo(() => createStyles(tokens), [tokens]);
@@ -89,6 +91,7 @@ export function ExploreTopPerformersSection({
 
       <ScrollView
         horizontal
+        {...drawerGuard}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.cardRow}
       >

@@ -12,6 +12,7 @@ import {
 } from '../utils/exploreGrid';
 import { ExplorePortraitCard } from './ExplorePortraitCard';
 import { SkeletonBox } from '../../../components/ui/SkeletonLoader';
+import { useDrawerSwipeGuard } from '../../../hooks/useDrawerSwipeGuard';
 
 interface Props {
   title: string;
@@ -28,6 +29,7 @@ export function ExploreTwoColSection({
   onPersonPress,
   loading = false,
 }: Props) {
+  const drawerGuard = useDrawerSwipeGuard();
   const tokens = useDesignTokens();
   const cardWidth = EXPLORE_PROFILE_CARD.width;
   const columns = useMemo(
@@ -68,6 +70,7 @@ export function ExploreTwoColSection({
       </View>
       <ScrollView
         horizontal
+        {...drawerGuard}
         nestedScrollEnabled
         directionalLockEnabled
         showsHorizontalScrollIndicator={false}

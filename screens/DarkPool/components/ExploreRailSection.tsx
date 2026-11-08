@@ -7,6 +7,7 @@ import { darkPoolSectionTitleStyle } from '../darkPoolLayout';
 import { EXPLORE_PROFILE_CARD, EXPLORE_RAIL_GAP } from '../utils/exploreGrid';
 import { SkeletonBox } from '../../../components/ui/SkeletonLoader';
 import { ExplorePortraitCard } from './ExplorePortraitCard';
+import { useDrawerSwipeGuard } from '../../../hooks/useDrawerSwipeGuard';
 
 interface Props {
   title: string;
@@ -26,6 +27,7 @@ export function ExploreRailSection({
   showMetric = false,
   loading = false,
 }: Props) {
+  const drawerGuard = useDrawerSwipeGuard();
   const tokens = useDesignTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
 
@@ -57,6 +59,7 @@ export function ExploreRailSection({
       </View>
       <ScrollView
         horizontal
+        {...drawerGuard}
         nestedScrollEnabled
         directionalLockEnabled
         showsHorizontalScrollIndicator={false}

@@ -9,6 +9,7 @@ import {
 } from '../darkPoolLayout';
 import { EXPLORE_RAIL_GAP } from '../utils/exploreGrid';
 import { ExplorePortraitCard } from './ExplorePortraitCard';
+import { useDrawerSwipeGuard } from '../../../hooks/useDrawerSwipeGuard';
 
 interface Props {
   title: string;
@@ -23,6 +24,7 @@ export function ExploreSection({
   people,
   onPersonPress,
 }: Props) {
+  const drawerGuard = useDrawerSwipeGuard();
   const tokens = useDesignTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
 
@@ -36,6 +38,7 @@ export function ExploreSection({
       </View>
       <ScrollView
         horizontal
+        {...drawerGuard}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.row}
       >

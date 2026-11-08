@@ -10,6 +10,7 @@ import { HapticFeedback } from '../../../utils/hapticFeedback';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
 import type { FlowAlertItem } from '../../../services/darkpool/uwSignalsService';
 import { formatUsdCompact } from '../utils/darkPoolFormat';
+import { useDrawerSwipeGuard } from '../../../hooks/useDrawerSwipeGuard';
 
 interface Props {
   alerts: FlowAlertItem[];
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export function FlowAlertStrip({ alerts, onTickerPress }: Props) {
+  const drawerGuard = useDrawerSwipeGuard();
   const tokens = useDesignTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
   if (!alerts.length) return null;
@@ -26,6 +28,7 @@ export function FlowAlertStrip({ alerts, onTickerPress }: Props) {
       <Text style={styles.title}>{i18n.t('auto.screens__DarkPool__components__FlowAlertStrip.s1')}</Text>
       <ScrollView
         horizontal
+        {...drawerGuard}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.row}
       >

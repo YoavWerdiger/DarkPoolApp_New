@@ -6,6 +6,7 @@ import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { darkPoolPhysicalRightText } from '../darkPoolLayout';
 import type { CongressTradeCard } from '../../../services/darkpool/uwExploreService';
 import { ExploreCongressCard } from './ExploreCongressCard';
+import { useDrawerSwipeGuard } from '../../../hooks/useDrawerSwipeGuard';
 
 interface Props {
   title: string;
@@ -20,6 +21,7 @@ export function ExploreCongressSection({
   trades,
   onTradePress,
 }: Props) {
+  const drawerGuard = useDrawerSwipeGuard();
   const tokens = useDesignTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
 
@@ -33,6 +35,7 @@ export function ExploreCongressSection({
       </View>
       <ScrollView
         horizontal
+        {...drawerGuard}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.row}
       >

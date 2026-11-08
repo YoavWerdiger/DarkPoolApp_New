@@ -61,6 +61,35 @@ export const SEC_13F_FUNDS: Record<string, Sec13fMeta> = {
   '858877': company('Cisco Systems, Inc.', 'Cisco', 'CSCO'),
   '872589': company('Regeneron Pharmaceuticals, Inc.', 'Regeneron', 'REGN'),
   '78003': company('Pfizer Inc.', 'Pfizer', 'PFE'),
+
+  // ── QA 11.3 (2026-11-08): עוד חברות לא פיננסיות — 13F-HR ב-Q3 2026, אומת מול EDGAR form.idx ──
+  '1069183': company('Axon Enterprise, Inc.', 'Axon', 'AXON'),
+  '6201': company('American Airlines Group Inc.', 'American Airlines', 'AAL'),
+  '27904': company('Delta Air Lines, Inc.', 'Delta', 'DAL'),
+  '100517': company('United Airlines Holdings, Inc.', 'United Airlines', 'UAL'),
+  '93410': company('Chevron Corp', 'Chevron', 'CVX'),
+  '313807': company('BP p.l.c.', 'BP', 'BP'),
+  '1090012': company('Devon Energy Corp', 'Devon Energy', 'DVN'),
+  '64803': company('CVS Health Corp', 'CVS Health', 'CVS'),
+  '1131399': company('GSK plc', 'GSK', 'GSK'),
+  '920760': company('Lennar Corp', 'Lennar', 'LEN'),
+  '873303': company('Sarepta Therapeutics, Inc.', 'Sarepta', 'SRPT'),
+  '104889': company('Graham Holdings Co', 'Graham Holdings', 'GHC'),
+  '783412': company('Daily Journal Corp', 'Daily Journal', 'DJCO'),
+
+  // ── QA 11.3: עוד קרנות (כולל Situational Awareness) — 13F-HR ב-Q3 2026, אומת מול EDGAR ──
+  '2045724': { manager: 'Leopold Aschenbrenner', name: 'Situational Awareness LP' },
+  '1791786': { manager: 'Paul Singer', name: 'Elliott Investment Management' },
+  '1061165': { manager: 'Stephen Mandel', name: 'Lone Pine Capital' },
+  '1709323': { manager: 'Li Lu', name: 'Himalaya Capital Management' },
+  '1418814': { manager: 'Mason Morfit', name: 'ValueAct Capital' },
+  '1541617': { manager: 'Brad Gerstner', name: 'Altimeter Capital' },
+  '1358706': { manager: 'David Abrams', name: 'Abrams Capital Management' },
+  '1112520': { manager: 'Chuck Akre', name: 'Akre Capital Management' },
+  '1602189': { manager: 'Marc Stad', name: 'Dragoneer Investment Group' },
+  '1798849': { manager: 'Henry Ellenbogen', name: 'Durable Capital Partners' },
+  '1569205': { manager: 'Terry Smith', name: 'Fundsmith' },
+  '1387322': { manager: 'Alex Sacerdote', name: 'Whale Rock Capital' },
 };
 
 const TIME_BUDGET_MS = 120_000;

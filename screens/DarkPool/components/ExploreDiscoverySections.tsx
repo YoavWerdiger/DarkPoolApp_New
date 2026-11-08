@@ -105,15 +105,16 @@ export function ExploreDiscoverySections({
         loading={loading?.followed}
         onPersonPress={onPersonPress}
       />
+      {/* QA 11.3: חברות ציבוריות מיד אחרי «הנצפים ביותר» */}
       <ExploreTwoColSection
-        title={i18n.t('auto.screens__DarkPool__components__ExploreDiscoverySections.s2')}
-        people={fundShelf}
+        title={i18n.t('auto.screens__DarkPool__components__ExploreDiscoverySections.s3')}
+        people={companyShelf}
         loading={loading?.extras}
         onPersonPress={onPersonPress}
       />
       <ExploreTwoColSection
-        title={i18n.t('auto.screens__DarkPool__components__ExploreDiscoverySections.s3')}
-        people={later(companyShelf)}
+        title={i18n.t('auto.screens__DarkPool__components__ExploreDiscoverySections.s2')}
+        people={later(fundShelf)}
         loading={deferRest || loading?.extras}
         onPersonPress={onPersonPress}
       />

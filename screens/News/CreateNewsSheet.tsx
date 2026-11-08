@@ -29,7 +29,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
 import BottomSheet, { useBottomSheetClose } from '../../components/ui/BottomSheet/BottomSheet';
-import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
+import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE, headerExitButtonFill } from '../../components/ui/DayNavBlurButton';
 import { formFieldInputStyle, formFieldShellStyle } from '../../components/ui/formControl';
 import { useAuth } from '../../context/AuthContext';
 import { newsService } from '../../services/newsService';
@@ -212,7 +212,9 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
       showBrandBackground={false}
       showBrandWatermark={false}
       contentPaddingBottom={0}
-      topCornerRadius={28}
+      // כמו שאר השיטים: קנבס ערכת הנושא ופינות xl
+      backgroundColor={DesignTokens.colors.background.primary}
+      topCornerRadius={DesignTokens.borderRadius.xl}
     >
       {/* בלי KeyboardAvoidingView (לא עובד בתוך שיט) — הגלילה מביאה את השדה הפעיל מעל המקלדת */}
       <View style={styles.container}>
@@ -455,8 +457,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       borderBottomWidth: 1,
       borderBottomColor: tokens.colors.border.divider,
     },
+    // כמו כפתור הסגירה בשאר השיטים — בולט על קנבס השיט
     headerFace: {
-      backgroundColor: tokens.colors.background.primary,
+      backgroundColor: headerExitButtonFill(tokens.colors.background.cardSolid),
     },
     headerTitle: {
       flex: 1,

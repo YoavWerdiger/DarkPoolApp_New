@@ -2766,7 +2766,10 @@ function ChatInputImpl({
         visible={attachCameraOpen}
         onClose={() => setAttachCameraOpen(false)}
         onCapture={onAttachCameraCapture}
+        // הטקסט שכבר הוקלד עובר לכיתוב התמונה, ומתנקה מהתיבה אחרי השליחה (QA 1.2)
+        initialCaption={text}
         onCommit={(result, caption) => {
+          if (text.trim()) clearDraft();
           const isVideo = result.mediaType === 'video';
           const id = `camera-${Date.now()}`;
           const file: MediaFile = {

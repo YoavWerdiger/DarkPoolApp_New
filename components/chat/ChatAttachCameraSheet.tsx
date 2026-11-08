@@ -52,6 +52,8 @@ type Props = {
   onCapture: (result: ChatAttachCameraResult) => void;
   /** שליחה מהפריביו שנפתח מיד אחרי הצילום, בלי לחזור לצ'אט. */
   onCommit?: (result: ChatAttachCameraResult, caption: string) => void | Promise<void>;
+  /** הטקסט שכבר הוקלד בתיבת ההודעה — עובר לכיתוב התמונה (QA 1.2) */
+  initialCaption?: string;
 };
 
 type CaptureMode = 'photo' | 'video';
@@ -76,7 +78,7 @@ function shotToMediaFile(shot: ChatAttachCameraResult): MediaFile {
   };
 }
 
-export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }: Props) {
+export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit, initialCaption }: Props) {
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const [micPermission, requestMicPermission] = useMicrophonePermissions();
@@ -170,9 +172,10 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
     try {
       await camMode.ensurePictureMode();
       if (!cameraRef.current) return;
+      // בלי skipProcessing: באנדרואיד הוא החזיר את תמונת החיישן הגולמית — בלי סיבוב ובלי ביטול ההיפוך של
+      // הסלפי, עם מידות לרוחב לתמונה לאורך → הבועה חתכה את האמצע והסלפי נשלח הפוך (QA 1.1 / 1.3)
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.85,
-        skipProcessing: Platform.OS === 'android',
         ...(Platform.OS === 'ios' ? { shutterSound: true } : {}),
       });
       if (!photo?.uri) return;
@@ -323,6 +326,7 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit }:
             embedded
             visible
             mediaFiles={previewFiles}
+            initialCaption={initialCaption}
             onClose={() => {
               if (sentShotRef.current) return;
               setShot(null);

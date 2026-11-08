@@ -32,6 +32,8 @@ interface MediaPreviewModalProps {
   targetGroupName?: string;
   /** בתוך מודל שכבר פתוח — בלי מודל שני ובלי אנימציית כניסה. */
   embedded?: boolean;
+  /** כיתוב התחלתי לפריט הראשון — הטקסט שכבר הוקלד בתיבת ההודעה (QA 1.2) */
+  initialCaption?: string;
 }
 
 import { useDesignTokens } from '../ui/DesignTokens';
@@ -55,6 +57,7 @@ function MediaPreviewBody({
   embedded = false,
   currentGroupId,
   targetGroupName,
+  initialCaption,
 }: MediaPreviewModalProps) {
   // «שלח גם ל…» — קבוצות נוספות מעבר לנוכחית (נבחרות בשיט ההעברה)
   const [extraGroupIds, setExtraGroupIds] = useState<string[]>([]);
@@ -79,7 +82,9 @@ function MediaPreviewBody({
   
   const [localFiles, setLocalFiles] = useState(mediaFiles);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [captions, setCaptions] = useState<Record<string, string>>({});
+  const [captions, setCaptions] = useState<Record<string, string>>(() =>
+    initialCaption?.trim() && mediaFiles[0] ? { [mediaFiles[0].id]: initialCaption } : {},
+  );
   const [isPlaying, setIsPlaying] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(false); // ⚡ expo-image handles loading - no need to show spinner
   const audioRefs = useRef<Record<string, Audio.Sound>>({});

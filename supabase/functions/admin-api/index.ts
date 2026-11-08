@@ -1119,10 +1119,17 @@ function vimeoIdFromUrl(url: string): string | null {
   return m ? m[1] : null;
 }
 
+/** הדומיין שהסרטונים מורשים להטמעה בו (זהה ל-VIMEO_EMBED_BASE_URL ב-LearningScreen) */
+const VIMEO_EMBED_REFERER = 'https://my.schooler.biz/';
+
 /** משך הסרטון בשניות מ-oEmbed הציבורי של Vimeo (עובד גם לסרטונים לא רשומים עם hash בקישור) */
 async function vimeoDurationSeconds(url: string): Promise<number | null> {
   try {
+    // סרטוני הקורסים מוגבלים להטמעה בדומיין (כמו בנגן באפליקציה — VIMEO_EMBED_BASE_URL);
+    // בלי Referer מהדומיין Vimeo מחזיר domain_status_code 403 בלי duration
     const r = await fetch(`https://vimeo.com/api/oembed.json?url=${encodeURIComponent(url)}`, {
+      headers: { Referer: VIMEO_EMBED_REFERER },
+      referrer: VIMEO_EMBED_REFERER,
       signal: AbortSignal.timeout(6000),
     });
     if (!r.ok) return null;

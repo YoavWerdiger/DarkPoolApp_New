@@ -48,6 +48,7 @@ function SwipeActionButton({
   tx: SharedValue<number>;
   onPress: () => void;
 }) {
+  const compact = action.backgroundColor === 'transparent';
   const start = offset + index * ACTION_W * 0.55;
   const end = start + ACTION_W;
   const anim = useAnimatedStyle(() => {
@@ -68,8 +69,9 @@ function SwipeActionButton({
       accessibilityLabel={action.label}
       hitSlop={4}
     >
-      <Animated.View style={[styles.actionInner, anim]}>
-        <View style={[styles.circle, { backgroundColor: action.backgroundColor }]}>{action.icon}</View>
+      <Animated.View style={[styles.actionInner, compact && styles.actionInnerCompact, anim]}>
+        {/* רקע שקוף (אייקון ישר על רקע צבעוני) — בלי עיגול 44, כדי שאייקון + תווית ייכנסו בגובה שורה נמוכה */}
+        <View style={compact ? styles.iconCompact : [styles.circle, { backgroundColor: action.backgroundColor }]}>{action.icon}</View>
         <Text style={[styles.actionLabel, { color: action.color }]} numberOfLines={1}>
           {action.label}
         </Text>
@@ -260,6 +262,14 @@ const styles = StyleSheet.create({
   actionInner: {
     alignItems: 'center',
     gap: 5,
+  },
+  actionInnerCompact: {
+    gap: 3,
+  },
+  iconCompact: {
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   circle: {
     width: CIRCLE,

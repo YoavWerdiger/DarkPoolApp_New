@@ -30,30 +30,39 @@ export function TickerLogo({ symbol, size, borderRadius }: TickerLogoProps) {
         justifyContent: 'center',
       }}
     >
+      {/* האותיות תמיד מתחת — בזמן טעינה / בלי לוגו רואים את הטיקר ולא עיגול ריק (QA 14.3) */}
+      <Text
+        style={{
+          fontSize: Math.max(10, size * 0.28),
+          fontWeight: '700',
+          color: tokens.colors.text.secondary,
+        }}
+        numberOfLines={1}
+      >
+        {initials}
+      </Text>
       {uri ? (
         <ExpoImage
           source={{ uri }}
-          style={{ width: size, height: size }}
+          style={{ position: 'absolute', top: 0, left: 0, width: size, height: size }}
           contentFit="cover"
           transition={120}
           cachePolicy="memory-disk"
           recyclingKey={`${symbol}-icon-light`}
           onError={() => setFailed(true)}
         />
-      ) : (
-        <Text
-          style={{
-            fontSize: Math.max(10, size * 0.28),
-            fontWeight: '700',
-            color: tokens.colors.text.secondary,
-          }}
-          numberOfLines={1}
-        >
-          {initials}
-        </Text>
-      )}
+      ) : null}
     </View>
   );
+}
+
+/** טעינה מוקדמת של לוגואים לדיסק (למשל כל הטיקרים של שבוע הדיווחים) */
+export function prefetchTickerLogos(symbols: readonly string[]): void {
+  const uris = Array.from(new Set(symbols))
+    .map((s) => brandfetchTickerLogoUri(s))
+    .filter((u): u is string => !!u);
+  if (uris.length === 0) return;
+  void ExpoImage.prefetch(uris, { cachePolicy: 'memory-disk' }).catch(() => undefined);
 }
 
 export default TickerLogo;

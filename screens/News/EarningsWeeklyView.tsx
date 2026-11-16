@@ -25,7 +25,7 @@ import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';
 import { APP_TYPE } from '../../components/ui/appType';
 import { formFieldShellStyle } from '../../components/ui/formControl';
 import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
-import { TickerLogo } from '../../components/ui/TickerLogo';
+import { TickerLogo, prefetchTickerLogos } from '../../components/ui/TickerLogo';
 import { SkeletonBox, SkeletonLine } from '../../components/ui/SkeletonLoader';
 import EarningsService, { EarningsReport } from '../../services/earningsService';
 
@@ -554,6 +554,16 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
 
   // גוללים רק אחרי שכל ימי השבוע נטענו — אחרת גובה השלדים שונה מהכרטיסים האמיתיים והמיקום זז
   const weekLoaded = weekDays.length > 0 && weekDays.every((d) => d.loaded);
+
+  // לוגואים של כל השבוע לדיסק מראש — הגריד לא נטען לוגו־אחרי־לוגו (QA 14.3)
+  const weekSymbolsKey = useMemo(
+    () => weekDays.flatMap((d) => [...d.before, ...d.after].map((r) => getSymbolDisplay(r.code))).join(","),
+    [weekDays],
+  );
+  useEffect(() => {
+    if (!weekSymbolsKey) return;
+    prefetchTickerLogos(weekSymbolsKey.split(','));
+  }, [weekSymbolsKey]);
 
   const handleScrollToIndexFailed = useCallback(
     (info: { index: number; highestMeasuredFrameIndex: number; averageItemLength: number }) => {

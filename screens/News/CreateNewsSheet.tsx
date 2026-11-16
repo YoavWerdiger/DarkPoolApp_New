@@ -55,6 +55,7 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
   const [content, setContent] = useState('');
   const [source, setSource] = useState(DEFAULT_SOURCE);
   const [imageLocalUri, setImageLocalUri] = useState<string | null>(null);
+  const [imageAspect, setImageAspect] = useState(16 / 9);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -101,13 +102,15 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [16, 9],
+        // QA 12.1: בלי חיתוך כפוי ל-16:9 — התמונה עולה ביחס המקורי
+        allowsEditing: false,
         quality: 0.85,
       });
 
       if (!result.canceled && result.assets[0]?.uri) {
-        setImageLocalUri(result.assets[0].uri);
+        const a = result.assets[0];
+        setImageAspect(a.width > 0 && a.height > 0 ? a.width / a.height : 16 / 9);
+        setImageLocalUri(a.uri);
         setErrorMessage(null);
         void HapticFeedback.selection();
       }
@@ -297,7 +300,12 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
 
           {imageLocalUri ? (
             <View style={styles.imagePreviewWrap}>
-              <Image source={{ uri: imageLocalUri }} style={styles.imagePreview} resizeMode="cover" />
+              {/* תצוגה ביחס המקורי (מוגבל בין 4:5 ל-2:1 כדי שהשיט לא יתפוצץ) */}
+              <Image
+                source={{ uri: imageLocalUri }}
+                style={[styles.imagePreview, { aspectRatio: Math.min(2, Math.max(0.8, imageAspect)) }]}
+                resizeMode="contain"
+              />
               {isUploadingImage ? (
                 <View style={styles.imageUploadingOverlay} pointerEvents="none">
                   <ActivityIndicator size="small" color="#fff" />

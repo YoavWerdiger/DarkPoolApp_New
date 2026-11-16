@@ -180,9 +180,24 @@ import { HelpSheet } from '../../components/ui/HelpSheet';
 import { usePreventScreenCaptureSafe } from '../../hooks/usePreventScreenCaptureSafe';
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Linking } from 'react-native';
+import { Linking, Platform } from 'react-native';
 
 const FOLLOW_ALERTS_EXPLAINED_KEY = 'darkpool:follow-alerts-explained:v1';
+
+/** QA 11.5: ישר להגדרות ההתראות של האפליקציה (אנדרואיד); iOS / נפילה — הגדרות האפליקציה */
+async function openNotificationSettings() {
+  if (Platform.OS === 'android') {
+    try {
+      await Linking.sendIntent('android.settings.APP_NOTIFICATION_SETTINGS', [
+        { key: 'android.provider.extra.APP_PACKAGE', value: 'com.darkpool.app' },
+      ]);
+      return;
+    } catch {
+      /* מכשיר שלא תומך — נופלים להגדרות האפליקציה */
+    }
+  }
+  await Linking.openSettings().catch(() => undefined);
+}
 import { useDarkPoolStackNav } from './hooks/useDarkPoolStackNav';
 import {
   hasTradeDetailPayload,
@@ -530,7 +545,7 @@ export function PersonPortfolioProfileScreen({
                 { text: i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s40'), style: 'cancel' },
                 {
                   text: i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s41'),
-                  onPress: () => void Linking.openSettings(),
+                  onPress: () => void openNotificationSettings(),
                 },
               ],
             });

@@ -3374,7 +3374,8 @@
     "s14": "Quiet day",
     "s15": "Markets are calm - no major economic releases scheduled for today",
     "s16": "No economic events found in {{v0}}",
-    "s17": "Back to today"
+    "s17": "Back to today",
+    "s18": "Month view"
   },
   "screens__DarkPool__components__ConfluenceCard": {
     "s1": "Insider",
@@ -5203,5 +5204,10 @@
     "s1": "Republican",
     "s2": "Democrat",
     "s3": "Independent"
+  },
+  "screens__News__EconomicMonthSheet": {
+    "s1": "High impact",
+    "s2": "Medium impact",
+    "s3": "Regular events"
   }
 }

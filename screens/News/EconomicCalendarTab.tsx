@@ -11,6 +11,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { EconomicCalendarListSkeleton } from '../../components/ui/SkeletonLoader';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import EconomicMonthSheet, { type DayTier } from './EconomicMonthSheet';
 import { EconomicEvent } from '../../services/economicCalendarService';
 type EconEvent = EconomicEvent;
 import { supabase } from '../../lib/supabase';
@@ -363,6 +364,19 @@ export default function EconomicCalendarTab({
   
   // תצוגה יומית חדשה
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [monthOpen, setMonthOpen] = useState(false);
+  // לכל יום — העוצמה הגבוהה (אדום/כתום מהטקסונומיה, אחרת ירוק כשיש אירועים)
+  const monthDayTiers = useMemo(() => {
+    const rank: Record<DayTier, number> = { low: 1, medium: 2, high: 3 };
+    const out: Record<string, DayTier> = {};
+    for (const e of events) {
+      const key = String(e.date || '').slice(0, 10);
+      if (!key) continue;
+      const tier = stripFlagImportance(e) as DayTier;
+      if (!out[key] || rank[tier] > rank[out[key]]) out[key] = tier;
+    }
+    return out;
+  }, [events]);
   const [dailyEvents, setDailyEvents] = useState<EconEvent[]>([]);
   /** טיק לשנייה — מפעיל קאונטדאון חי לאירוע הקרוב בהיום. */
   const [nowMs, setNowMs] = useState(() => Date.now());
@@ -855,11 +869,21 @@ export default function EconomicCalendarTab({
             justifyContent: 'space-between',
           }}
         >
-          <DayNavBlurButton onPress={goToPreviousDay} style={{ backgroundColor: DesignTokens.colors.background.primary }}>
-            <Ionicons name={dirIcon('chevron-back')} size={20} color={DesignTokens.colors.text.primary} />
+          {/* QA 14.1 / 15: הקודם אפור, הבא מודגש בירוק */}
+          <DayNavBlurButton onPress={goToPreviousDay} style={{ backgroundColor: DesignTokens.colors.background.tertiary }}>
+            <Ionicons name={dirIcon('chevron-back')} size={20} color={DesignTokens.colors.text.secondary} />
           </DayNavBlurButton>
 
-          <View style={{ alignItems: 'center', flex: 1, paddingHorizontal: 10 }}>
+          {/* QA 15.1: לחיצה על התאריך פותחת לוח חודשי צבוע לפי עוצמת האירועים */}
+          <Pressable
+            onPress={() => {
+              void HapticFeedback.selection();
+              setMonthOpen(true);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={i18n.t('auto.screens__News__EconomicCalendarTab.s18')}
+            style={{ alignItems: 'center', flex: 1, paddingHorizontal: 10 }}
+          >
             <Text
               style={{
                 ...APP_TYPE.cardTitle,
@@ -884,10 +908,27 @@ export default function EconomicCalendarTab({
                 }}
               >{i18n.t('auto.screens__News__EconomicCalendarTab.s12')}</Text>
             )}
-          </View>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+                marginTop: 4,
+                paddingHorizontal: 10,
+                height: 24,
+                borderRadius: 12,
+                backgroundColor: DesignTokens.colors.background.tertiary,
+              }}
+            >
+              <Ionicons name="calendar-outline" size={13} color={DesignTokens.colors.text.secondary} />
+              <Text style={{ ...APP_TYPE.caption, color: DesignTokens.colors.text.secondary }}>
+                {i18n.t('auto.screens__News__EconomicCalendarTab.s18')}
+              </Text>
+            </View>
+          </Pressable>
 
-          <DayNavBlurButton onPress={goToNextDay} style={{ backgroundColor: DesignTokens.colors.background.primary }}>
-            <Ionicons name={dirIcon('chevron-forward')} size={20} color={DesignTokens.colors.text.primary} />
+          <DayNavBlurButton onPress={goToNextDay} style={{ backgroundColor: DesignTokens.colors.success.main }}>
+            <Ionicons name={dirIcon('chevron-forward')} size={20} color="#FFFFFF" />
           </DayNavBlurButton>
         </View>
       </UICard>
@@ -1038,6 +1079,13 @@ export default function EconomicCalendarTab({
           />
         </View>
       ) : null}
+      <EconomicMonthSheet
+        visible={monthOpen}
+        onClose={() => setMonthOpen(false)}
+        selectedDate={selectedDate}
+        dayTiers={monthDayTiers}
+        onSelectDate={(d) => setSelectedDate(d)}
+      />
       <ShareDestinationSheet
         visible={!!shareAttachment}
         attachment={shareAttachment}

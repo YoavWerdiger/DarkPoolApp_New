@@ -60,7 +60,7 @@ supabase link --project-ref [YOUR_PROJECT_REF]
 ## שלב 4: הגדרת API Key
 
 ```bash
-supabase secrets set BENZINGA_API_KEY=bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC
+supabase secrets set BENZINGA_API_KEY=<BENZINGA_API_KEY>
 ```
 
 ---
@@ -251,7 +251,7 @@ supabase login
 supabase link --project-ref [YOUR_REF]
 
 # הגדרה
-supabase secrets set BENZINGA_API_KEY=bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC
+supabase secrets set BENZINGA_API_KEY=<BENZINGA_API_KEY>
 
 # פריסה
 ./deploy_benzinga.sh

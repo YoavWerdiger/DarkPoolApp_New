@@ -20,7 +20,7 @@
 // ----------------------------------------------------------------------------
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { isUserOrServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
+import { isServiceOrAdminCaller, isUserOrServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1';
 import {
   fetchUwInsiderTransactions,
@@ -102,9 +102,11 @@ serve(async (req) => {
         page_size?: number;
         curated_only?: boolean;
       };
-      if (body?.curated_only) curatedOnly = true;
-      if (body?.debug) debugTicker = (body.ticker || 'AAPL').toUpperCase();
-      if (body?.probe === 'quiver') {
+      // backfill / debug / probe — יקרים: רק cron/אדמין
+      const privileged = await isServiceOrAdminCaller(req);
+      if (body?.curated_only && privileged) curatedOnly = true;
+      if (body?.debug && privileged) debugTicker = (body.ticker || 'AAPL').toUpperCase();
+      if (body?.probe === 'quiver' && privileged) {
         probeQuiver = {
           pageSize:
             typeof body.page_size === 'number' && body.page_size > 0

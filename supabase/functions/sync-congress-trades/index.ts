@@ -9,7 +9,7 @@
 // טראמפ ≠ STOCK Act live — אין BioGuide.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { isUserOrServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
+import { isServiceOrAdminCaller, isUserOrServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
 import {
   applyQuiverPoliticianImages,
   buildCongressTradeRows,
@@ -70,18 +70,24 @@ serve(async (req) => {
   let includeChambers = false;
   try {
     const body = await req.json();
-    if (body?.limit) limit = Math.min(500, Math.max(10, Number(body.limit)));
+    // משתמש רגיל: רשימות קצרות בלבד (כל BioGuide = עד 20 עמודי Quiver בתשלום)
+    const privileged = await isServiceOrAdminCaller(req);
+    if (body?.limit) limit = Math.min(privileged ? 500 : 200, Math.max(10, Number(body.limit)));
     if (body?.deep === false) deep = false;
     if (Array.isArray(body?.bioguides) && body.bioguides.length) {
       bioguides = body.bioguides
         .map((b: unknown) => String(b).trim().toUpperCase())
-        .filter(Boolean);
+        .filter((b: string) => /^[A-Z]\d{6}$/.test(b))
+        .slice(0, privileged ? 500 : 3);
     }
     if (body?.top_active != null) {
-      topActive = Math.min(80, Math.max(0, Number(body.top_active) || 0));
+      topActive = Math.min(privileged ? 80 : 0, Math.max(0, Number(body.top_active) || 0));
     }
     if (Array.isArray(body?.tickers) && body.tickers.length) {
-      tickers = body.tickers.map((t: unknown) => String(t).trim().toUpperCase()).filter(Boolean);
+      tickers = body.tickers
+        .map((t: unknown) => String(t).trim().toUpperCase())
+        .filter(Boolean)
+        .slice(0, privileged ? 500 : 5);
     }
     if (body?.enrich_tickers === true) enrichTickers = true;
     if (body?.enrich_tickers === false) enrichTickers = false;

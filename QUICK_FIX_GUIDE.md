@@ -36,7 +36,7 @@
 2. ודא שקיימים:
    - `SUPABASE_URL` (אמור להיות אוטומטי)
    - `SUPABASE_SERVICE_ROLE_KEY` (אמור להיות אוטומטי)
-   - `EODHD_API_KEY` = `68e3c3af900997.85677801`
+   - `EODHD_API_KEY` = `<EODHD_API_KEY>`
 
 ### שלב 3: בדיקה
 ```bash
@@ -69,7 +69,7 @@ curl -X POST "https://wpmrtczbfcijoocguime.supabase.co/functions/v1/daily-earnin
 2. ודא שה-RLS policies מוגדרים נכון (הרץ `create_earnings_table_only.sql`)
 3. בדוק שה-API Key תקין:
    ```bash
-   curl "https://eodhd.com/api/calendar/earnings?from=2025-10-12&to=2025-10-12&api_token=68e3c3af900997.85677801&fmt=json"
+   curl "https://eodhd.com/api/calendar/earnings?from=2025-10-12&to=2025-10-12&api_token=<EODHD_API_KEY>&fmt=json"
    ```
 
 ---

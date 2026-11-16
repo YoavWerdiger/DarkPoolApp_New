@@ -185,6 +185,20 @@ serve(async (req) => {
       return json({ success: false, error: 'DB update failed' }, 500);
     }
 
+    // הסכום שנגבה בפועל חייב להתאים להזמנה — אחרת לא מפעילים מנוי (למשל חיוב בדיקה של ₪1)
+    const chargedRaw = (lp.TranzactionInfo as { Amount?: number | string | null } | null | undefined)?.Amount;
+    const charged = chargedRaw != null ? Number(chargedRaw) : NaN;
+    const expected = Number(order.amount);
+    if (
+      mapped.activateSubscription &&
+      Number.isFinite(expected) &&
+      expected > 0 &&
+      (!Number.isFinite(charged) || Math.abs(charged - expected) > 0.01)
+    ) {
+      console.error('[rapid-responder] HIGH amount mismatch — not activating', { orderId: order.id, charged, expected });
+      mapped.activateSubscription = false;
+    }
+
     // Activate subscription only after verified success (not pending_charge / failed)
     if (mapped.activateSubscription && mapped.status === 'success' && order.user_id && order.plan_id) {
       const cardDisplay = extractCardDisplayFromLp(lp);

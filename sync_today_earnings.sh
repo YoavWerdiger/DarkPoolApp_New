@@ -4,7 +4,7 @@
 
 SUPABASE_URL="https://wpmrtczbfcijoocguime.supabase.co"
 SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwbXJ0Y3piZmNpam9vY2d1aW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyMDczNTEsImV4cCI6MjA2Njc4MzM1MX0.YHfniy3w94LVODC54xb7Us-Daw_pRx2WWFOoR-59kGQ"
-EODHD_API_KEY="68e3c3af900997.85677801"
+EODHD_API_KEY="<EODHD_API_KEY>"
 
 # התאריך של היום
 TODAY=$(date +%Y-%m-%d)

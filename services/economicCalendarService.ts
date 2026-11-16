@@ -3,11 +3,12 @@ import i18n from '../lib/i18n';
 import { supabase } from '../lib/supabase';
 import { resolveEconomicEventImportance } from '../utils/economicEventImportance';
 
-const FRED_API_KEY = process.env.EXPO_PUBLIC_FRED_API_KEY ?? '';
+// מפתחות ספקים לא נכנסים ל-bundle — הנתונים מגיעים מהשרת (economic-scheduler)
+const FRED_API_KEY = '';
 const FRED_BASE_URL = 'https://api.stlouisfed.org/fred';
 
 // EOD Historical Data API לאירועים עתידיים
-const EOD_API_KEY = process.env.EXPO_PUBLIC_EODHD_API_KEY ?? '';
+const EOD_API_KEY = '';
 const EOD_ECONOMIC_EVENTS_API = 'https://eodhd.com/api/economic-events';
 
 // Trading Economics API לנתונים כלכליים

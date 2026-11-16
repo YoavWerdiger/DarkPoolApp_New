@@ -51,7 +51,7 @@ npm run supabase:link
 npm run supabase:secrets:set
 ```
 
-זה יגדיר אוטומטית את `BENZINGA_API_KEY=bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC`
+זה יגדיר אוטומטית את `BENZINGA_API_KEY=<BENZINGA_API_KEY>`
 
 ---
 

@@ -2,7 +2,7 @@
 
 # בדיקה ישירה של EODHD API - מה הנתונים האמיתיים?
 
-API_KEY="68e3c3af900997.85677801"
+API_KEY="<EODHD_API_KEY>"
 
 echo ""
 echo "🔍 בדיקה ישירה של EODHD API"

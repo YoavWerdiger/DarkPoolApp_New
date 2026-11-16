@@ -129,10 +129,8 @@ class EODHDService {
   private cacheTimeout = 5 * 60 * 1000; // 5 דקות
 
   constructor() {
-    const key = process.env.EXPO_PUBLIC_EODHD_API_KEY;
-    if (!key) {
-    }
-    this.apiKey = key ?? '';
+    // מפתח EODHD לא נכנס ל-bundle — הנתונים מגיעים מהשרת
+    this.apiKey = '';
   }
 
   private async getCachedData(key: string): Promise<any | null> {

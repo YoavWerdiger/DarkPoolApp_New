@@ -52,14 +52,14 @@ npx supabase link --project-ref wpmrtczbfcijoocguime
 הוסף את מפתח ה-API של Benzinga:
 
 ```bash
-npx supabase secrets set BENZINGA_API_KEY=bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC --project-ref wpmrtczbfcijoocguime
+npx supabase secrets set BENZINGA_API_KEY=<BENZINGA_API_KEY> --project-ref wpmrtczbfcijoocguime
 ```
 
 או דרך Supabase Dashboard:
 1. לך ל: **Settings → Edge Functions → Secrets**
 2. לחץ **Add new secret**
 3. שם: `BENZINGA_API_KEY`
-4. ערך: `bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC`
+4. ערך: `<BENZINGA_API_KEY>`
 5. לחץ **Save**
 
 ### שלב 3: פריסת Edge Functions
@@ -146,13 +146,13 @@ npx supabase secrets list --project-ref wpmrtczbfcijoocguime
 
 אם חסר, הוסף:
 ```bash
-npx supabase secrets set BENZINGA_API_KEY=bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC --project-ref wpmrtczbfcijoocguime
+npx supabase secrets set BENZINGA_API_KEY=<BENZINGA_API_KEY> --project-ref wpmrtczbfcijoocguime
 ```
 
 ### שגיאה: "401 Unauthorized" מ-Benziga
 
 **פתרון:** בדוק שהמפתח API נכון:
-- מפתח: `bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC`
+- מפתח: `<BENZINGA_API_KEY>`
 - ודא שלא חסרים רווחים או תווים מיוחדים
 
 ### הפונקציות לא מתעדכנות

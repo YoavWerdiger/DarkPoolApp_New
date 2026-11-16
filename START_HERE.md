@@ -104,7 +104,7 @@ npm run supabase:logs:economics
 ## 🎯 API Key
 
 ```
-bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC
+<BENZINGA_API_KEY>
 ```
 
 מוגדר אוטומטית עם:

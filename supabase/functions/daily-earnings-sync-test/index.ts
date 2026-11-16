@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { isServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -6,6 +7,8 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  // רק cron / שרת (מפתח service) — מפתח ה-anon של האפליקציה לא מספיק
+  if (req.method !== 'OPTIONS' && !isServiceCaller(req)) return serviceOnlyDenied();
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -14,7 +17,7 @@ serve(async (req) => {
     console.log('🚀 Testing EODHD API...')
 
     // EODHD API Key
-    const eodhdApiKey = '68e3c3af900997.85677801'
+    const eodhdApiKey = Deno.env.get('EODHD_API_KEY') ?? ''
     
     // חישוב טווח תאריכים - רק היום
     const today = new Date()

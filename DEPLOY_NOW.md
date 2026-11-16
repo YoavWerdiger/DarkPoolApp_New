@@ -6,7 +6,7 @@
 2. גלול למטה ל-**Secrets** או **Environment Variables**
 3. לחץ **Add new secret**
 4. שם: `BENZINGA_API_KEY`
-5. ערך: `bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC`
+5. ערך: `<BENZINGA_API_KEY>`
 6. לחץ **Save**
 
 ---

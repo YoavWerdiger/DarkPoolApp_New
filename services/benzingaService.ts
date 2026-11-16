@@ -106,10 +106,8 @@ class BenzingaService {
   private baseUrl = 'https://api.benzinga.com/api/v2';
 
   constructor() {
-    const key = process.env.EXPO_PUBLIC_BENZINGA_API_KEY;
-    if (!key) {
-    }
-    this.apiKey = key ?? '';
+    // מפתח Benzinga לא נכנס ל-bundle — הנתונים מגיעים מהשרת
+    this.apiKey = '';
   }
 
   /**

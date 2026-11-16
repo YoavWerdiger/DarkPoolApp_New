@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
 
   const { data: expired, error } = await supabase
     .from('user_stories')
-    .select('id, media_url')
+    .select('id, user_id, media_url')
     .lt('expires_at', new Date().toISOString())
     .limit(1000);
   if (error) {
@@ -29,10 +29,14 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ deleted: 0, files: 0 }), { status: 200 });
   }
 
-  // רק נתיבי אחסון (stories/<uid>/<ts>.jpg) — לא URL חיצוני
+  // רק נתיבי אחסון בתיקייה של בעל הסטורי (stories/<uid>/...) — לא URL חיצוני ולא קובץ של מישהו אחר
   const paths = expired
-    .map((s) => s.media_url as string | null)
-    .filter((u): u is string => !!u && !u.startsWith('http'));
+    .filter((s) => {
+      const u = s.media_url as string | null;
+      if (!u || u.startsWith('http')) return false;
+      return u.startsWith(`stories/${s.user_id}/`) && !u.split('/').some((seg) => seg === '' || seg === '.' || seg === '..');
+    })
+    .map((s) => s.media_url as string);
 
   let filesRemoved = 0;
   for (let i = 0; i < paths.length; i += BATCH) {

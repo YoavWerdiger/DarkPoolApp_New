@@ -1,3 +1,4 @@
+import { isServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
   // Daily Economic Sync - Edge Function
   // שולף נתונים כלכליים מ-FRED API ומעדכן את Supabase DB
 
@@ -113,6 +114,8 @@ interface EconomicEvent {
   }
 
   serve(async (req) => {
+  // רק cron / שרת (מפתח service) — מפתח ה-anon של האפליקציה לא מספיק
+  if (req.method !== 'OPTIONS' && !isServiceCaller(req)) return serviceOnlyDenied();
     try {
       console.log('🚀 Daily Economic Sync started')
       

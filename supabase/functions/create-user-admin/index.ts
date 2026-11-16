@@ -1,6 +1,7 @@
 // Edge Function ליצירת משתמש ב-auth.users דרך Admin API
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
+import { requireAdmin } from '../_shared/adminAuth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,6 +9,11 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  // יצירת משתמש מאומת — רק אדמין
+  if (req.method !== 'OPTIONS') {
+    const admin = await requireAdmin(req);
+    if (!admin.ok) return admin.response;
+  }
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })

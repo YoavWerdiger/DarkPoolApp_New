@@ -5,7 +5,7 @@
 ### ✅ שלב 1: הכנה (5 דקות)
 
 - [ ] ודא שיש לך גישה ל-Supabase Dashboard
-- [ ] ודא שה-EODHD API Key פעיל: `68e3c3af900997.85677801`
+- [ ] ודא שה-EODHD API Key פעיל: `<EODHD_API_KEY>`
 - [ ] ודא שיש לך את ה-Supabase Anon Key
 
 ---
@@ -235,7 +235,7 @@ dividends_calendar: ~50-100 רשומות
 
 3. בדוק שה-EODHD API Key פעיל:
    ```bash
-   curl "https://eodhd.com/api/calendar/earnings?api_token=68e3c3af900997.85677801&fmt=json&from=2024-01-01&to=2024-12-31"
+   curl "https://eodhd.com/api/calendar/earnings?api_token=<EODHD_API_KEY>&fmt=json&from=2024-01-01&to=2024-12-31"
    ```
 
 ---

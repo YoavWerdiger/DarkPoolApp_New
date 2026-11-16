@@ -11,7 +11,7 @@
 # - אין parameters[exchange] - לא נתמך!
 
 curl -G "https://api.benzinga.com/api/v2/calendar/earnings" \
-  --data-urlencode "token=bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC" \
+  --data-urlencode "token=<BENZINGA_API_KEY>" \
   --data-urlencode "parameters[date_from]=2025-12-07" \
   --data-urlencode "parameters[date_to]=2026-12-07" \
   --data-urlencode "parameters[importance]=5" \

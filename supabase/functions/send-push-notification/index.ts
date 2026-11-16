@@ -1,33 +1,13 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1';
+import { isServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
+import { ensureNotificationImageUrl } from '../_shared/notificationImage.ts';
 
 const EXPO_PUSH_API_URL = 'https://exp.host/--/api/v2/push/send';
 
 // 🔑 Expo Access Token נדרש לשליחת התראות ל-production builds
 // יש להוסיף את הטוקן ב-Supabase Dashboard > Edge Functions > Secrets
 const EXPO_ACCESS_TOKEN = Deno.env.get('EXPO_ACCESS_TOKEN') || '';
-
-/** מחזיר URL תמונה שמובטח שיטען בהתראה (HTTPS). עבור Supabase storage – signed URL. */
-async function ensureNotificationImageUrl(
-  supabase: ReturnType<typeof createClient>,
-  rawUrl: string | null | undefined
-): Promise<string | null> {
-  if (!rawUrl || typeof rawUrl !== 'string') return null;
-  const trimmed = rawUrl.trim();
-  if (!trimmed.startsWith('https://')) return null;
-  try {
-    const url = new URL(trimmed);
-    const match = url.pathname.match(/\/storage\/v1\/object\/(?:public|sign)\/([^/]+)\/(.+)/);
-    if (match && url.hostname.includes('supabase')) {
-      const [, bucket, path] = match;
-      const { data: signed } = await supabase.storage.from(bucket).createSignedUrl(decodeURIComponent(path), 3600);
-      if (signed?.signedUrl) return signed.signedUrl;
-    }
-    return trimmed;
-  } catch {
-    return trimmed;
-  }
-}
 
 serve(async (req) => {
   try {
@@ -41,6 +21,9 @@ serve(async (req) => {
         },
       });
     }
+
+    // רק cron / טריגרים (מפתח service) — המפתח הציבורי של האפליקציה לא מספיק לשליחת פוש לאחרים
+    if (!isServiceCaller(req)) return serviceOnlyDenied();
 
     const { userIds, title, body, data, sound = 'default', priority = 'high' } = await req.json();
 

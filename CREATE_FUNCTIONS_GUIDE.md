@@ -6,7 +6,7 @@
 2. גלול ל-**Secrets**
 3. הוסף:
    - **Name:** `BENZINGA_API_KEY`
-   - **Value:** `bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC`
+   - **Value:** `<BENZINGA_API_KEY>`
 
 ---
 

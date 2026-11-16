@@ -45,7 +45,7 @@ https://supabase.com/dashboard/project/wpmrtczbfcijoocguime/functions
 
 הוסף Secret:
 - **Name:** `BENZINGA_API_KEY`
-- **Value:** `bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC`
+- **Value:** `<BENZINGA_API_KEY>`
 
 ---
 

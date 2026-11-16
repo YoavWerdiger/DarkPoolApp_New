@@ -76,12 +76,12 @@ supabase functions deploy economic-scheduler
 
 ### Supabase
 ```bash
-BENZINGA_API_KEY=bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC
+BENZINGA_API_KEY=<BENZINGA_API_KEY>
 ```
 
 ### React Native App
 ```bash
-EXPO_PUBLIC_BENZINGA_API_KEY=bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC
+EXPO_PUBLIC_BENZINGA_API_KEY=<BENZINGA_API_KEY>
 ```
 
 ---
@@ -101,7 +101,7 @@ EXPO_PUBLIC_BENZINGA_API_KEY=bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC
 
 ```bash
 # 1. הגדר משתנה סביבה
-supabase secrets set BENZINGA_API_KEY=bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC
+supabase secrets set BENZINGA_API_KEY=<BENZINGA_API_KEY>
 
 # 2. הרץ סקריפט פריסה
 ./deploy_benzinga.sh

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
 import { prepareEarningsRecord } from '../_shared/earnings-utils.ts'
+import { isServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,6 +9,8 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  // רק cron / שרת (מפתח service) — מפתח ה-anon של האפליקציה לא מספיק
+  if (req.method !== 'OPTIONS' && !isServiceCaller(req)) return serviceOnlyDenied();
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -18,7 +21,7 @@ serve(async (req) => {
     // קבלת משתני סביבה
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-    const eodhdApiKey = Deno.env.get('EODHD_API_KEY') || '68e3c3af900997.85677801'
+    const eodhdApiKey = Deno.env.get('EODHD_API_KEY') ?? ''
     
     if (!supabaseUrl || !supabaseServiceKey) {
       return new Response(

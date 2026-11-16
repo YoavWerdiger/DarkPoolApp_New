@@ -23,7 +23,7 @@
 3. **הוסף משתנה סביבה**
    - לחץ על **Add Secret**
    - שם: `BENZINGA_API_KEY`
-   - ערך: `bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC`
+   - ערך: `<BENZINGA_API_KEY>`
    - לחץ **Save**
 
 ### דרך ה-CLI:
@@ -36,7 +36,7 @@ supabase login
 supabase link --project-ref [YOUR_PROJECT_REF]
 
 # הוסף את מפתח ה-API
-supabase secrets set BENZINGA_API_KEY=bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC
+supabase secrets set BENZINGA_API_KEY=<BENZINGA_API_KEY>
 ```
 
 ---
@@ -144,7 +144,7 @@ supabase functions logs economic-scheduler
 
 ```bash
 # Benzinga API Key
-EXPO_PUBLIC_BENZINGA_API_KEY=bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC
+EXPO_PUBLIC_BENZINGA_API_KEY=<BENZINGA_API_KEY>
 ```
 
 ---

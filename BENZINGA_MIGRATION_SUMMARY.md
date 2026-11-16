@@ -146,17 +146,17 @@ source = 'Benzinga';
 ### באפליקציה (React Native):
 ```bash
 # .env או .env.local
-EXPO_PUBLIC_BENZINGA_API_KEY=bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC
+EXPO_PUBLIC_BENZINGA_API_KEY=<BENZINGA_API_KEY>
 ```
 
 ### ב-Supabase Edge Functions:
 ```bash
-BENZINGA_API_KEY=bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC
+BENZINGA_API_KEY=<BENZINGA_API_KEY>
 ```
 
 **הגדרה:**
 ```bash
-supabase secrets set BENZINGA_API_KEY=bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC
+supabase secrets set BENZINGA_API_KEY=<BENZINGA_API_KEY>
 ```
 
 ---
@@ -175,7 +175,7 @@ supabase link --project-ref [YOUR_PROJECT_REF]
 ### שלב 2: הגדרת משתנים
 ```bash
 # הגדר את מפתח ה-API
-supabase secrets set BENZINGA_API_KEY=bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC
+supabase secrets set BENZINGA_API_KEY=<BENZINGA_API_KEY>
 ```
 
 ### שלב 3: פריסת Functions
@@ -350,7 +350,7 @@ SELECT * FROM economic_cache_metadata WHERE source = 'Benzinga';
 ## 📞 תמיכה וקישורים
 
 - **תיעוד Benzinga:** https://docs.benzinga.com
-- **מפתח API:** `bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC`
+- **מפתח API:** `<BENZINGA_API_KEY>`
 - **Supabase Dashboard:** https://supabase.com/dashboard
 
 ---

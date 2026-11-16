@@ -276,10 +276,9 @@ function AppContent() {
 
   // אתחול עדכונים מתוזמנים
   useEffect(() => {
-    // התחלת עדכונים מתוזמנים רק אחרי שהמשתמש מחובר והשלים רישום
-    if (user && registrationDone && !isLoading) {
-      ScheduledUpdatesService.startScheduledUpdates();
-    }
+    // משיכת נתונים כלכליים מספקים חיצוניים רצה בשרת (economic-scheduler ב-cron) —
+    // לא מהמכשיר, כדי שמפתחות הספקים לא יהיו ב-bundle. נשאר רק stop לניקוי.
+    void user;
 
     return () => {
       ScheduledUpdatesService.stopScheduledUpdates();

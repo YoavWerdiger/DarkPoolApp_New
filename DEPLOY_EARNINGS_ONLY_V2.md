@@ -92,10 +92,10 @@ ORDER BY code;
 
 ### בעיה: "EODHD API error"
 **פתרון:**
-1. בדוק שה-API Key תקין: `68e3c3af900997.85677801`
+1. בדוק שה-API Key תקין: `<EODHD_API_KEY>`
 2. נסה לגשת ישירות ל-API:
    ```bash
-   curl "https://eodhd.com/api/calendar/earnings?from=2025-10-12&to=2025-10-12&api_token=68e3c3af900997.85677801&fmt=json"
+   curl "https://eodhd.com/api/calendar/earnings?from=2025-10-12&to=2025-10-12&api_token=<EODHD_API_KEY>&fmt=json"
    ```
 
 ## 📊 פרטים טכניים:

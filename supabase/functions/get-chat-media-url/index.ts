@@ -43,8 +43,25 @@ serve(async (req) => {
       })
     }
 
-    // Prevent path traversal: path must start with groupId/ and contain no ..
-    if (path.includes('..') || !path.startsWith(`${groupId}/`)) {
+    // Prevent path traversal: path must start with groupId/ and contain no dot segments —
+    // גם בקידוד (%2e%2e), כי ה-URL של Storage מפוענח לפני הניתוב
+    let decodedPath = ''
+    try {
+      decodedPath = decodeURIComponent(String(path))
+    } catch {
+      decodedPath = ''
+    }
+    const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    const segments = decodedPath.split('/')
+    if (
+      typeof path !== 'string' ||
+      typeof groupId !== 'string' ||
+      !UUID.test(groupId) ||
+      decodedPath !== path ||
+      path.includes('\\') ||
+      segments.some((seg) => seg === '' || seg === '.' || seg === '..') ||
+      !path.startsWith(`${groupId}/`)
+    ) {
       return new Response(JSON.stringify({ error: 'Invalid path' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

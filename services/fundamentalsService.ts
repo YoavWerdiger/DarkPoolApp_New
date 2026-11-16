@@ -3,7 +3,8 @@
 
 import { supabase } from '../lib/supabase';
 
-const EODHD_API_KEY = '68e3c3af900997.85677801';
+// מפתח EODHD לא נכנס ל-bundle (המודול לא בשימוש)
+const EODHD_API_KEY = '';
 const EODHD_BASE_URL = 'https://eodhd.com/api';
 
 // ====================================

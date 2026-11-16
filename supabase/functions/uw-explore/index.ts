@@ -1,7 +1,7 @@
 // uw-explore — מסך גילוי: Quiver (קונגרס) + UW/DB (בכירים)
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { isUserOrServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
+import { isServiceOrAdminCaller, isUserOrServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1';
 import {
   dedupeCongressTrades,
@@ -108,7 +108,8 @@ serve(async (req) => {
   let force = false;
   try {
     const body = await req.json();
-    force = body?.force === true;
+    // force עוקף את הקאש ומושך מחדש מ-API בתשלום — רק cron/אדמין
+    force = body?.force === true && (await isServiceOrAdminCaller(req));
   } catch {
     /* empty body */
   }

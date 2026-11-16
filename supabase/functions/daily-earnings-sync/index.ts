@@ -42,7 +42,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     // EODHD API Key
-    const eodhdApiKey = Deno.env.get('EODHD_API_KEY') || '68e3c3af900997.85677801'
+    const eodhdApiKey = Deno.env.get('EODHD_API_KEY') ?? ''
     if (!eodhdApiKey) {
       throw new Error('EODHD_API_KEY is required')
     }

@@ -37,7 +37,7 @@ npx supabase functions deploy earnings-results-update
 
 הוסף:
 ```
-EODHD_API_KEY = 68e3c3af900997.85677801
+EODHD_API_KEY = <EODHD_API_KEY>
 ```
 
 ---

@@ -1,7 +1,7 @@
 // sync-person-portraits — congress + Wikipedia + known → dark_pool_person_portraits
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { isUserOrServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
+import { isServiceOrAdminCaller, isUserOrServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import {
   congressPhotoUrl,
@@ -39,8 +39,9 @@ serve(async (req) => {
     body = {};
   }
 
-  const force = body.force === true;
-  const limit = Math.min(200, Math.max(10, Number(body.limit) || 80));
+  const privileged = await isServiceOrAdminCaller(req);
+  const force = body.force === true && privileged;
+  const limit = Math.min(privileged ? 200 : 80, Math.max(10, Number(body.limit) || 80));
   const kindFilter = body.kind ?? 'all';
 
   const supabase = createClient(

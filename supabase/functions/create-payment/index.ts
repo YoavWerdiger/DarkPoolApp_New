@@ -26,16 +26,12 @@ function json(body: unknown, status = 200) {
 }
 
 /**
- * TODO(DISABLE AFTER CARDCOM E2E TEST): Temporary ₪1 charge to verify LowProfile + webhook.
- *
- * Prefer Edge secret (easy on/off without code change):
- *   supabase secrets set CARDCOM_TEST_AMOUNT_ILS=1
- *   supabase secrets unset CARDCOM_TEST_AMOUNT_ILS   # restore real plan amounts
- *
- * Local/code fallback (set to null after test): keeps charge at ₪1 even if secret missing.
- * Env wins when set: positive number → override; 0/empty/invalid → disabled (ignores fallback).
+ * חיוב בדיקה (₪) — כבוי כברירת מחדל. מופעל רק כשהסוד מוגדר במפורש למספר חיובי:
+ *   supabase secrets set CARDCOM_TEST_AMOUNT_ILS=1     # חיוב בדיקה
+ *   supabase secrets unset CARDCOM_TEST_AMOUNT_ILS     # מחירי התוכניות האמיתיים
+ * בלי סוד → המחיר האמיתי של התוכנית (אין fallback בקוד).
  */
-const TEMP_TEST_CHARGE_AMOUNT_ILS: number | null = 1;
+const TEMP_TEST_CHARGE_AMOUNT_ILS: number | null = null;
 
 function resolveCardComChargeAmountIls(planAmountIls: number): {
   chargeAmount: number;

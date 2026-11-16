@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1';
+import { isServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
 
 const EXPO_PUSH_API_URL = 'https://exp.host/--/api/v2/push/send';
 
@@ -8,6 +9,8 @@ const EXPO_PUSH_API_URL = 'https://exp.host/--/api/v2/push/send';
 const EXPO_ACCESS_TOKEN = Deno.env.get('EXPO_ACCESS_TOKEN') || '';
 
 serve(async (req) => {
+  // רק cron / שרת (מפתח service) — מפתח ה-anon של האפליקציה לא מספיק
+  if (req.method !== 'OPTIONS' && !isServiceCaller(req)) return serviceOnlyDenied();
   try {
     // CORS headers
     if (req.method === 'OPTIONS') {

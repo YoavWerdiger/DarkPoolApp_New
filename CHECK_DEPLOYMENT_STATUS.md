@@ -15,7 +15,7 @@
 ### שלב 1: ודא שה-Environment Variable הוגדר
 1. לך ל: https://supabase.com/dashboard/project/wpmrtczbfcijoocguime/settings/functions
 2. בדוק שיש Secret בשם: `BENZINGA_API_KEY`
-3. אם אין - הוסף אותו עם הערך: `bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC`
+3. אם אין - הוסף אותו עם הערך: `<BENZINGA_API_KEY>`
 
 ### שלב 2: פרוס את 3 הפונקציות החסרות
 

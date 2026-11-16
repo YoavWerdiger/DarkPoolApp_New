@@ -76,7 +76,7 @@ ORDER BY dt.updated_at DESC;
 --
 -- דרך 2: HTTP Request (curl)
 -- curl -X POST https://wpmrtczbfcijoocguime.supabase.co/functions/v1/process-pending-notifications \
---   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwbXJ0Y3piZmNpam9vY2d1aW1lIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MTIwNzM1MSwiZXhwIjoyMDY2NzgzMzUxfQ.waqI1C-t6gthSCf8jP1v_gFRRVhhvaIcQG0effqsA1A" \
+--   -H "Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>" \
 --   -H "Content-Type: application/json"
 --
 -- שלב 4: שליחה אוטומטית דרך pg_net
@@ -89,7 +89,7 @@ BEGIN
     url := 'https://wpmrtczbfcijoocguime.supabase.co/functions/v1/process-pending-notifications',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwbXJ0Y3piZmNpam9vY2d1aW1lIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MTIwNzM1MSwiZXhwIjoyMDY2NzgzMzUxfQ.waqI1C-t6gthSCf8jP1v_gFRRVhhvaIcQG0effqsA1A'
+      'Authorization', 'Bearer <SUPABASE_SERVICE_ROLE_KEY>'
     ),
     body := '{}'::jsonb
   ) INTO http_response_id;

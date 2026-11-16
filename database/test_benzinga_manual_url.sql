@@ -6,7 +6,7 @@
 
 DO $$
 DECLARE
-  api_key TEXT := 'bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC';
+  api_key TEXT := '<BENZINGA_API_KEY>';
   base_url TEXT := 'https://api.benzinga.com/api/v2/calendar/earnings';
   
   -- פרמטרים בסיסיים

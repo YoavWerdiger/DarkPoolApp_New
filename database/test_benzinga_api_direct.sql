@@ -6,7 +6,7 @@
 
 DO $$
 DECLARE
-  api_key TEXT := 'bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC';
+  api_key TEXT := '<BENZINGA_API_KEY>';
   test_date TEXT := '2025-12-10'; -- תאריך היום + 3 ימים
   api_url TEXT;
   http_response_id BIGINT;

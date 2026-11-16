@@ -12,7 +12,7 @@ DECLARE
   notification_title TEXT;
   notification_body TEXT;
   supabase_url TEXT := 'https://wpmrtczbfcijoocguime.supabase.co';
-  supabase_service_key TEXT := 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwbXJ0Y3piZmNpam9vY2d1aW1lIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MTIwNzM1MSwiZXhwIjoyMDY2NzgzMzUxfQ.waqI1C-t6gthSCf8jP1v_gFRRVhhvaIcQG0effqsA1A';
+  supabase_service_key TEXT := '<SUPABASE_SERVICE_ROLE_KEY>';
   http_response_id BIGINT;
   user_ids_array TEXT[];
 BEGIN

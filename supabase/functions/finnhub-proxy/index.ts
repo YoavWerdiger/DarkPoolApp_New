@@ -3,7 +3,8 @@
  * רק משתמש מחובר. endpoints מותרים בלבד.
  * - { endpoint: 'quote', params: { symbol } }
  * - { endpoint: 'search', params: { q } }
- * - { endpoint: 'ws-token' } → המפתח ל-WebSocket של מחירים חיים (רק למשתמש מחובר; לא ב-bundle הציבורי)
+ * - { endpoint: 'ws-token' } → מפתח נפרד ל-WebSocket בלבד (FINNHUB_WS_KEY, חשבון ייעודי).
+ *   המפתח הראשי (FINNHUB_API_KEY) לא יוצא מהשרת — כל משתמש רשום יכול לקבל את ws-token.
  */
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { isUserOrServiceCaller } from '../_shared/serviceOnly.ts';
@@ -33,7 +34,11 @@ serve(async (req) => {
   }
   const endpoint = String(body.endpoint ?? '');
 
-  if (endpoint === 'ws-token') return json({ token: key });
+  if (endpoint === 'ws-token') {
+    const wsKey = (Deno.env.get('FINNHUB_WS_KEY') ?? '').trim();
+    if (!wsKey || wsKey === key) return json({ error: 'ws not configured' }, 503);
+    return json({ token: wsKey });
+  }
 
   const allowedParams = ALLOWED[endpoint];
   if (!allowedParams) return json({ error: 'endpoint not allowed' }, 400);

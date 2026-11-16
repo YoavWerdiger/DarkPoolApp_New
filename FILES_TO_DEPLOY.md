@@ -35,7 +35,7 @@
 ב-Supabase Dashboard → Settings → Edge Functions → Secrets:
 
 **Name:** `BENZINGA_API_KEY`  
-**Value:** `bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC`
+**Value:** `<BENZINGA_API_KEY>`
 
 ### שלב 2: פרוס את הפונקציות
 

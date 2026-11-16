@@ -4,7 +4,7 @@
 // ticker: GET /beta/live/congress_stock_holdings?ticker= → מיזוג ל-by_bioguide.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { isUserOrServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
+import { isServiceOrAdminCaller, isUserOrServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
 import {
   CURATED_CONGRESS_BIOGUIDES,
   QUIVER_HOLDINGS_CACHE_KEY,
@@ -44,15 +44,17 @@ serve(async (req) => {
   let ticker = '';
   try {
     const body = await req.json();
+    const privileged = await isServiceOrAdminCaller(req);
     if (Array.isArray(body?.bioguides) && body.bioguides.length) {
       bioguides = body.bioguides
         .map((b: unknown) => String(b).trim().toUpperCase())
-        .filter((b: string) => /^[A-Z]\d{6}$/.test(b));
+        .filter((b: string) => /^[A-Z]\d{6}$/.test(b))
+        .slice(0, privileged ? 500 : 3);
     }
     if (body?.holdings === false) syncHoldings = false;
     if (body?.politicians === false) syncPoliticians = false;
     if (body?.top_active != null) {
-      topActive = Math.min(60, Math.max(0, Number(body.top_active) || 0));
+      topActive = Math.min(privileged ? 60 : 0, Math.max(0, Number(body.top_active) || 0));
     }
     const rawTicker = String(body?.ticker ?? '')
       .replace(/^\$/, '')

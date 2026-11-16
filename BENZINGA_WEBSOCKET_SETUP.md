@@ -17,7 +17,7 @@
 הוסף את המפתח הבא ל-Supabase Environment Variables:
 
 ```bash
-BENZINGA_API_KEY=bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC
+BENZINGA_API_KEY=<BENZINGA_API_KEY>
 ```
 
 ### 3. הפעלה

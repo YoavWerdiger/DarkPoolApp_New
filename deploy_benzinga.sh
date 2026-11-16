@@ -20,7 +20,7 @@ echo ""
 
 # הגדרת API Key
 echo "🔑 מגדיר משתנה סביבה..."
-supabase secrets set BENZINGA_API_KEY=bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC
+supabase secrets set BENZINGA_API_KEY=<BENZINGA_API_KEY>
 echo "✅ API Key הוגדר"
 echo ""
 

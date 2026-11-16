@@ -22,7 +22,7 @@
 
 ### 1. הגדרת משתנה סביבה
 ```bash
-supabase secrets set BENZINGA_API_KEY=bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC
+supabase secrets set BENZINGA_API_KEY=<BENZINGA_API_KEY>
 ```
 
 ### 2. יצירת טבלאות במסד נתונים
@@ -217,7 +217,7 @@ psql ... -f database/benzinga_economic_events_table.sql
 
 - **Benzinga API Docs:** https://docs.benzinga.com
 - **Supabase Dashboard:** https://supabase.com/dashboard
-- **API Key:** `bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC`
+- **API Key:** `<BENZINGA_API_KEY>`
 
 ---
 

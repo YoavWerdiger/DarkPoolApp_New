@@ -3,8 +3,8 @@
 ## בעיות זוהו ❌
 
 ### 1. **EODHD API - שגיאות 402/403**
-- **מפתח נוכחי**: `68c99499978585.44924748` → שגיאת 403 (Forbidden)
-- **מפתח חלופי**: `68e3c3af900997.85677801` → שגיאת 402 (Payment Required)
+- **מפתח נוכחי**: `<EODHD_API_KEY>` → שגיאת 403 (Forbidden)
+- **מפתח חלופי**: `<EODHD_API_KEY>` → שגיאת 402 (Payment Required)
 
 ### 2. **FRED API - שגיאת 403**
 - **מפתח נוכחי**: `f4d63bd9fddd00b175c1c99ca49b4247` → Access Denied

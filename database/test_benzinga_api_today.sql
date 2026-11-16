@@ -6,7 +6,7 @@
 
 DO $$
 DECLARE
-  api_key TEXT := 'bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC';
+  api_key TEXT := '<BENZINGA_API_KEY>';
   today_est DATE := (NOW() AT TIME ZONE 'America/New_York')::DATE;
   tomorrow_est DATE := (today_est + INTERVAL '1 day')::DATE;
   test_dates DATE[] := ARRAY[today_est, tomorrow_est, (today_est + INTERVAL '2 days')::DATE];

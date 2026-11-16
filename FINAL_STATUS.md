@@ -41,7 +41,7 @@
 https://supabase.com/dashboard/project/wpmrtczbfcijoocguime/settings/functions
 
 **Name:** `BENZINGA_API_KEY`  
-**Value:** `bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC`
+**Value:** `<BENZINGA_API_KEY>`
 
 ### שלב 2: עדכן את הפונקציות
 https://supabase.com/dashboard/project/wpmrtczbfcijoocguime/functions

@@ -80,7 +80,7 @@ npx supabase functions deploy daily-earnings-sync-major-indices
 #### שגיאה: "EODHD_API_KEY is required"
 1. עבור ל-Supabase Dashboard
 2. Settings → Edge Functions
-3. הוסף `EODHD_API_KEY` = `68e3c3af900997.85677801`
+3. הוסף `EODHD_API_KEY` = `<EODHD_API_KEY>`
 
 #### שגיאה: "Invalid JWT"
 - בדוק שה-Anon Key נכון בסקריפט

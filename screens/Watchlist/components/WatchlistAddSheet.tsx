@@ -55,7 +55,8 @@ const SECTOR_KEY: Record<StockSector, string> = {
   tech: 's6', comm: 's7', discr: 's8', staples: 's9', health: 's10', fin: 's11',
   ind: 's12', energy: 's13', mat: 's14', re: 's15', util: 's16',
 };
-const LOGO = 36;
+// כמו בשורות הרשימה עצמה (WatchlistRow)
+const LOGO = 28;
 
 const t = (k: string, o?: Record<string, unknown>) =>
   i18n.t(`auto.screens__Watchlist__components__WatchlistAddSheet.${k}`, o);
@@ -257,9 +258,8 @@ export function WatchlistAddSheet({ visible, onClose, existingSymbols, onAdd }: 
                   </Text>
                 </View>
                 {inList ? (
-                  <View style={styles.inList}>
-                    <Ionicons name="checkmark" size={18} color={tokens.colors.success.main} />
-                    <Text style={[styles.inListText, { color: tokens.colors.text.secondary }]}>{t('s3')}</Text>
+                  <View style={styles.addBtn}>
+                    <Ionicons name="checkmark" size={20} color={tokens.colors.success.main} />
                   </View>
                 ) : (
                   <View style={[styles.addBtn, { backgroundColor: tokens.colors.background.tertiary }]}>
@@ -306,16 +306,20 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       flexDirection: 'row-reverse',
       alignItems: 'center',
       gap: 12,
-      minHeight: 60,
+      minHeight: 56,
       paddingVertical: 8,
     },
     rowText: { flex: 1, gap: 2 },
-    symbol: { ...APP_TYPE.cardTitle, ...appPhysicalRightText },
-    name: { ...APP_TYPE.caption, ...appPhysicalRightText },
+    // טיפוגרפיה של WatchlistRow: טיקר cardSubtitle במשקל כותרת, שם החברה caption2
+    symbol: {
+      ...APP_TYPE.cardSubtitle,
+      fontWeight: APP_TYPE.cardTitle.fontWeight,
+      ...appPhysicalRightText,
+      writingDirection: 'ltr',
+    },
+    name: { ...APP_TYPE.caption2, ...appPhysicalRightText },
     divider: { height: StyleSheet.hairlineWidth, marginRight: LOGO + 12 },
     addBtn: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-    inList: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-    inListText: { ...APP_TYPE.caption },
     empty: { ...APP_TYPE.body, textAlign: 'center', marginTop: 32 },
   });
 }

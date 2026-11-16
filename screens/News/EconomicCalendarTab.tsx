@@ -11,7 +11,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { EconomicCalendarListSkeleton } from '../../components/ui/SkeletonLoader';
 import { HapticFeedback } from '../../utils/hapticFeedback';
-import EconomicMonthSheet, { type DayTier } from './EconomicMonthSheet';
+import EconomicMonthSheet, { type DayTier, type MonthDayEvent } from './EconomicMonthSheet';
 import { EconomicEvent } from '../../services/economicCalendarService';
 type EconEvent = EconomicEvent;
 import { supabase } from '../../lib/supabase';
@@ -340,11 +340,16 @@ type EconomicCalendarTabProps = {
   /** מפוש (economic_result): לפתוח את האירוע אחרי טעינה טרייה מהשרת */
   openEventId?: string | null;
   onOpenEventConsumed?: () => void;
+  /** לוח חודשי — נשלט מכפתור בכותרת המסך (כמו תצוגה שבועית בדיווחי רווח) */
+  monthOpen?: boolean;
+  onMonthOpenChange?: (open: boolean) => void;
 };
 
 export default function EconomicCalendarTab({
   openEventId = null,
   onOpenEventConsumed,
+  monthOpen: monthOpenProp,
+  onMonthOpenChange,
 }: EconomicCalendarTabProps = {}) {
   const DesignTokens = useDesignTokens();
   const isFocused = useIsFocused();
@@ -364,16 +369,31 @@ export default function EconomicCalendarTab({
   
   // תצוגה יומית חדשה
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [monthOpen, setMonthOpen] = useState(false);
-  // לכל יום — העוצמה הגבוהה (אדום/כתום מהטקסונומיה, אחרת ירוק כשיש אירועים)
-  const monthDayTiers = useMemo(() => {
+  const [monthOpenLocal, setMonthOpenLocal] = useState(false);
+  const monthOpen = monthOpenProp ?? monthOpenLocal;
+  const setMonthOpen = (open: boolean) => {
+    if (onMonthOpenChange) onMonthOpenChange(open);
+    else setMonthOpenLocal(open);
+  };
+  // לכל יום — האירועים (לצביעה ולפירוט בלוח החודשי): קודם אדום/כתום, אחר כך לפי שעה
+  const monthDayEvents = useMemo(() => {
     const rank: Record<DayTier, number> = { low: 1, medium: 2, high: 3 };
-    const out: Record<string, DayTier> = {};
+    const out: Record<string, MonthDayEvent[]> = {};
     for (const e of events) {
       const key = String(e.date || '').slice(0, 10);
       if (!key) continue;
       const tier = stripFlagImportance(e) as DayTier;
-      if (!out[key] || rank[tier] > rank[out[key]]) out[key] = tier;
+      let time = '';
+      if (e.time) {
+        const d = getEventDateOnDay(new Date(key + 'T12:00:00'), e.time);
+        if (!Number.isNaN(d.getTime())) {
+          time = d.toLocaleTimeString(appLocale(), { hour: '2-digit', minute: '2-digit', hour12: false });
+        }
+      }
+      (out[key] ??= []).push({ id: String(e.id), title: e.title || '', time, tier, country: e.country || '' });
+    }
+    for (const k of Object.keys(out)) {
+      out[k].sort((a, b) => rank[b.tier] - rank[a.tier] || a.time.localeCompare(b.time));
     }
     return out;
   }, [events]);
@@ -874,16 +894,7 @@ export default function EconomicCalendarTab({
             <Ionicons name={dirIcon('chevron-back')} size={20} color={DesignTokens.colors.text.secondary} />
           </DayNavBlurButton>
 
-          {/* QA 15.1: לחיצה על התאריך פותחת לוח חודשי צבוע לפי עוצמת האירועים */}
-          <Pressable
-            onPress={() => {
-              void HapticFeedback.selection();
-              setMonthOpen(true);
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={i18n.t('auto.screens__News__EconomicCalendarTab.s18')}
-            style={{ alignItems: 'center', flex: 1, paddingHorizontal: 10 }}
-          >
+          <View style={{ alignItems: 'center', flex: 1, paddingHorizontal: 10 }}>
             <Text
               style={{
                 ...APP_TYPE.cardTitle,
@@ -908,24 +919,7 @@ export default function EconomicCalendarTab({
                 }}
               >{i18n.t('auto.screens__News__EconomicCalendarTab.s12')}</Text>
             )}
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 4,
-                marginTop: 4,
-                paddingHorizontal: 10,
-                height: 24,
-                borderRadius: 12,
-                backgroundColor: DesignTokens.colors.background.tertiary,
-              }}
-            >
-              <Ionicons name="calendar-outline" size={13} color={DesignTokens.colors.text.secondary} />
-              <Text style={{ ...APP_TYPE.caption, color: DesignTokens.colors.text.secondary }}>
-                {i18n.t('auto.screens__News__EconomicCalendarTab.s18')}
-              </Text>
-            </View>
-          </Pressable>
+          </View>
 
           <DayNavBlurButton onPress={goToNextDay} style={{ backgroundColor: DesignTokens.colors.success.main }}>
             <Ionicons name={dirIcon('chevron-forward')} size={20} color="#FFFFFF" />
@@ -1083,7 +1077,7 @@ export default function EconomicCalendarTab({
         visible={monthOpen}
         onClose={() => setMonthOpen(false)}
         selectedDate={selectedDate}
-        dayTiers={monthDayTiers}
+        dayEvents={monthDayEvents}
         onSelectDate={(d) => setSelectedDate(d)}
       />
       <ShareDestinationSheet

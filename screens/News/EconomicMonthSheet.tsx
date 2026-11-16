@@ -4,7 +4,8 @@ import { appLocale } from '../../lib/i18n/locale';
 import { dirIcon } from '../../lib/i18n/direction';
 /**
  * לוח חודשי ליומן הכלכלי (QA 15.1) — כל יום צבוע לפי עוצמת האירועים:
- * אדום = אירוע מסומן אדום, כתום = כתום, ירוק = יש אירועים רגילים. לחיצה על יום → פותחת אותו.
+ * אדום = אירוע מסומן אדום, כתום = כתום, ירוק = יש אירועים רגילים.
+ * לחיצה על יום מציגה מתחת ללוח את האירועים החשובים שלו, ו«פתיחת היום» עוברת אליו ברשימה.
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -18,6 +19,8 @@ import { APP_TYPE } from '../../components/ui/appType';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 
 export type DayTier = 'high' | 'medium' | 'low';
+
+export type MonthDayEvent = { id: string; title: string; time: string; tier: DayTier; country: string };
 
 const TIER_COLORS: Record<DayTier, string> = {
   high: '#E5484D',
@@ -34,23 +37,30 @@ type Props = {
   visible: boolean;
   onClose: () => void;
   selectedDate: Date;
-  /** YYYY-MM-DD → העוצמה הגבוהה ביום */
-  dayTiers: Record<string, DayTier>;
+  /** YYYY-MM-DD → אירועי היום, ממוינים (החשוב ראשון) */
+  dayEvents: Record<string, MonthDayEvent[]>;
   onSelectDate: (date: Date) => void;
 };
 
-export default function EconomicMonthSheet({ visible, onClose, selectedDate, dayTiers, onSelectDate }: Props) {
+export default function EconomicMonthSheet({ visible, onClose, selectedDate, dayEvents, onSelectDate }: Props) {
   const tokens = useDesignTokens();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
   const [month, setMonth] = useState(() => new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
 
+  // היום שמסומן בלוח (מציג פירוט) — לא סוגר את השיט; «פתיחת היום» עוברת אליו
+  const [focusDay, setFocusDay] = useState<Date>(selectedDate);
   useEffect(() => {
-    if (visible) setMonth(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+    if (visible) {
+      setMonth(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+      setFocusDay(selectedDate);
+    }
   }, [visible, selectedDate]);
 
   const todayKey = dateKey(new Date());
-  const selectedKey = dateKey(selectedDate);
+  const selectedKey = dateKey(focusDay);
+  const focusEvents = dayEvents[selectedKey] ?? [];
+  const importantCount = focusEvents.filter((e) => e.tier !== 'low').length;
 
   // שבוע מתחיל ביום ראשון (כמו בלוח העברי)
   const cells = useMemo(() => {
@@ -80,7 +90,7 @@ export default function EconomicMonthSheet({ visible, onClose, selectedDate, day
     <BottomSheet
       isOpen={visible}
       onClose={onClose}
-      snapPoints={[0.62]}
+      snapPoints={[0.9]}
       fitContent
       enablePanDownToClose
       showHandle
@@ -114,7 +124,7 @@ export default function EconomicMonthSheet({ visible, onClose, selectedDate, day
             {cells.slice(r * 7, r * 7 + 7).map((d, i) => {
               if (!d) return <View key={i} style={styles.cell} />;
               const key = dateKey(d);
-              const tier = dayTiers[key];
+              const tier = dayEvents[key]?.[0]?.tier;
               const color = tier ? TIER_COLORS[tier] : null;
               const isSelected = key === selectedKey;
               const isToday = key === todayKey;
@@ -124,8 +134,7 @@ export default function EconomicMonthSheet({ visible, onClose, selectedDate, day
                   style={styles.cell}
                   onPress={() => {
                     void HapticFeedback.selection();
-                    onSelectDate(d);
-                    onClose();
+                    setFocusDay(d);
                   }}
                   accessibilityRole="button"
                   accessibilityLabel={d.toLocaleDateString(appLocale(), { weekday: 'long', day: 'numeric', month: 'long' })}
@@ -164,6 +173,49 @@ export default function EconomicMonthSheet({ visible, onClose, selectedDate, day
             </View>
           ))}
         </View>
+
+        {/* פירוט היום שנבחר */}
+        <View style={[styles.detail, { backgroundColor: tokens.colors.background.cardSolid }]}>
+          <View style={styles.detailHeader}>
+            <Text style={[styles.detailTitle, { color: tokens.colors.text.primary }]}>
+              {focusDay.toLocaleDateString(appLocale(), { weekday: 'long', day: 'numeric', month: 'long' })}
+            </Text>
+            <Text style={[styles.detailMeta, { color: tokens.colors.text.secondary }]}>
+              {focusEvents.length === 0
+                ? i18n.t('auto.screens__News__EconomicMonthSheet.s4')
+                : i18n.t('auto.screens__News__EconomicMonthSheet.s5', { v0: focusEvents.length, v1: importantCount })}
+            </Text>
+          </View>
+          {focusEvents.slice(0, 4).map((e) => (
+            <View key={e.id} style={styles.eventRow}>
+              <View style={[styles.eventDot, { backgroundColor: TIER_COLORS[e.tier] }]} />
+              <Text style={[styles.eventTitle, { color: tokens.colors.text.primary }]} numberOfLines={1}>
+                {e.title}
+              </Text>
+              {e.time ? (
+                <Text style={[styles.eventTime, { color: tokens.colors.text.secondary }]}>{e.time}</Text>
+              ) : null}
+            </View>
+          ))}
+          {focusEvents.length > 4 ? (
+            <Text style={[styles.more, { color: tokens.colors.text.tertiary }]}>
+              {i18n.t('auto.screens__News__EconomicMonthSheet.s6', { v0: focusEvents.length - 4 })}
+            </Text>
+          ) : null}
+          <Pressable
+            onPress={() => {
+              void HapticFeedback.selection();
+              onSelectDate(focusDay);
+              onClose();
+            }}
+            style={[styles.openDay, { backgroundColor: tokens.colors.primary.lightCta }]}
+            accessibilityRole="button"
+          >
+            <Text style={[styles.openDayText, { color: tokens.colors.text.inverse }]}>
+              {i18n.t('auto.screens__News__EconomicMonthSheet.s7')}
+            </Text>
+          </Pressable>
+        </View>
       </View>
     </BottomSheet>
   );
@@ -188,5 +240,16 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     legendDot: { width: 10, height: 10, borderRadius: 5 },
     legendText: { fontSize: 12 },
+    detail: { marginTop: 14, borderRadius: 18, padding: 14, gap: 8 },
+    detailHeader: { gap: 2, marginBottom: 2 },
+    detailTitle: { fontSize: 16, fontWeight: '600', textAlign: 'right', writingDirection: TEXT_DIR },
+    detailMeta: { fontSize: 13, textAlign: 'right', writingDirection: TEXT_DIR },
+    eventRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    eventDot: { width: 8, height: 8, borderRadius: 4 },
+    eventTitle: { flex: 1, fontSize: 14, textAlign: 'right', writingDirection: TEXT_DIR },
+    eventTime: { fontSize: 13, fontVariant: ['tabular-nums'] },
+    more: { fontSize: 12, textAlign: 'right' },
+    openDay: { height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
+    openDayText: { fontSize: 15, fontWeight: '600' },
   });
 }

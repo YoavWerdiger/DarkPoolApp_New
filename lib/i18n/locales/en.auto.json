@@ -3374,8 +3374,7 @@
     "s14": "Quiet day",
     "s15": "Markets are calm - no major economic releases scheduled for today",
     "s16": "No economic events found in {{v0}}",
-    "s17": "Back to today",
-    "s18": "Month view"
+    "s17": "Back to today"
   },
   "screens__DarkPool__components__ConfluenceCard": {
     "s1": "Insider",
@@ -3560,7 +3559,8 @@
     "s6": "Sort by {{v0}}"
   },
   "screens__News__NewsEconomicCalendarScreen": {
-    "s1": "Economic Calendar"
+    "s1": "Economic Calendar",
+    "s2": "Month view"
   },
   "screens__Onboarding__OnboardingInvestorTypeScreen": {
     "s1": "Individual investor",
@@ -5193,7 +5193,11 @@
   "screens__News__EconomicMonthSheet": {
     "s1": "High impact",
     "s2": "Medium impact",
-    "s3": "Regular events"
+    "s3": "Regular events",
+    "s4": "No events on this day",
+    "s5": "{{v0}} events · {{v1}} important",
+    "s6": "+{{v0}} more",
+    "s7": "Open day"
   },
   "screens__Watchlist__components__WatchlistAddSheet": {
     "s1": "Add stocks",

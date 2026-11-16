@@ -8,8 +8,6 @@ import {
   StyleSheet,
   ScrollView,
   Platform,
-  type ImageSourcePropType,
-  Pressable,
 } from 'react-native';
 // edge-to-edge (SDK 58): adjustResize לא מקטין את החלון באנדרואיד — KAV של keyboard-controller עובד בשתי הפלטפורמות
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
@@ -19,18 +17,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import UICard from '../../components/ui/UICard';
-import { chromeSurfaceFill } from '../../components/ui/chromeControl';
 import type { PortfoliosStackParamList } from '../../navigation/PortfoliosStack';
 import { ChatSessionBackdrop } from '../../components/chat/ChatSessionBackdrop';
 import { PortfolioScreenHeader } from './components/PortfolioScreenHeader';
-import {
-  FieldLabel,
-  SectionHeader,
-  SwitchRow,
-  TextField,
-} from './components/PortfolioFormFields';
 import { PortfolioFormFooter } from './components/PortfolioFormFooter';
+import { SegmentedTabs } from '../../components/ui/SegmentedTabs';
+import { FloatingLabelField, FieldGroupLabel } from '../../components/ui/FloatingLabelField';
+import { DayDividerPill } from '../../components/ui/DayDividerPill';
+import {
+  SettingsActionRow,
+  SettingsGlassCard,
+  SettingsSwitchRow,
+} from '../../components/profile/ProfileSettingsUI';
+import { SlidersHorizontal } from 'lucide-react-native';
 import {
   JOURNAL_LAYOUT,
   journalCardBodyStyle,
@@ -51,6 +50,11 @@ import { HapticFeedback } from '../../utils/hapticFeedback';
 type Nav = NativeStackNavigationProp<PortfoliosStackParamList, 'CreatePortfolio'>;
 
 type CreateMode = 'manual' | 'import' | 'broker' | 'watchlist';
+
+const MODE_TABS = [
+  { id: 'journal' as const, label: i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s13') },
+  { id: 'broker' as const, label: i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s15') },
+];
 
 const BROKER_BENEFITS = [
   i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s1'),
@@ -174,52 +178,44 @@ export default function CreatePortfolioScreen() {
           paddingTop: 4,
           paddingBottom: 28,
         },
-        section: { marginBottom: PORTFOLIO_FORM.sectionGap },
-        modeCards: { gap: JOURNAL_LAYOUT.cardStackGap },
+        // הסבר קצר מתחת למתג סוג התיק
+        modeHint: {
+          ...journalCardSubtitleStyle,
+          color: tokens.colors.text.secondary,
+          textAlign: 'right',
+          marginTop: 10,
+          marginBottom: 6,
+          paddingHorizontal: 4,
+        },
+        fields: { gap: 12 },
+        fieldsSpaced: { marginTop: 16 },
+        card: { marginBottom: 0 },
+        cardSpaced: { marginTop: 20, marginBottom: 0 },
         chipsRow: {
           flexDirection: 'row-reverse',
           flexWrap: 'wrap',
-          gap: JOURNAL_LAYOUT.stackGapSmall,
+          gap: 8,
         },
-        chipText: {
-          ...journalCardSubtitleStyle,
-          fontWeight: '600',
-          textAlign: 'center',
+        currencyAdornment: {
+          ...journalCardTitleStyle,
+          color: tokens.colors.text.secondary,
         },
-        chip: {
-          minHeight: 44,
-          paddingHorizontal: 18,
-          borderRadius: 999,
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
-        advancedBody: { marginTop: JOURNAL_LAYOUT.sectionHeaderToContent },
-        benchmarkRowInner: {
+        benefitRow: {
           flexDirection: 'row-reverse',
           alignItems: 'center',
           gap: 12,
-          paddingVertical: 12,
-          paddingHorizontal: 14,
+          paddingVertical: 14,
+          paddingHorizontal: 16,
         },
-        benchmarkLabel: {
-          ...journalCardTitleStyle,
-          color: tokens.colors.text.primary,
+        rowDivider: {
+          borderBottomWidth: StyleSheet.hairlineWidth,
+          borderBottomColor: tokens.colors.border.divider,
         },
-        benchmarkDesc: {
-          ...journalCardSubtitleStyle,
-          color: tokens.colors.text.secondary,
-          marginTop: JOURNAL_LAYOUT.cardTitleToSubtitleGap,
-        },
-        brokerInfoRow: {
-          flexDirection: 'row-reverse',
-          alignItems: 'flex-start',
-          gap: 10,
-          marginBottom: JOURNAL_LAYOUT.stackGapSmall,
-        },
-        brokerInfoText: {
+        benefitText: {
           ...journalCardBodyStyle,
           flex: 1,
-          color: tokens.colors.text.secondary,
+          textAlign: 'right',
+          color: tokens.colors.text.primary,
         },
       }),
     [tokens]
@@ -241,249 +237,176 @@ export default function CreatePortfolioScreen() {
             keyboardDismissMode="on-drag"
             showsVerticalScrollIndicator={false}
           >
-            {/* בחירת סוג תיק */}
-            <View style={styles.section}>
-              <SectionHeader
-                title={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s11')}
-                caption={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s12')}
-              />
-              <View style={styles.modeCards}>
-                <ModeCard
-                  active={!isBrokerMode}
-                  icon="journal-outline"
-                  title={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s13')}
-                  description={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s14')}
-                  onPress={() => setMode(importCsv ? 'import' : 'manual')}
-                />
-                <ModeCard
-                  active={isBrokerMode}
-                  icon="link-outline"
-                  logo={require('../../assets/colmex-logo.png')}
-                  title={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s15')}
-                  description={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s16')}
-                  onPress={() => setMode('broker')}
-                />
-              </View>
-            </View>
+            {/* סוג התיק — מתג מקטעים כמו בטאבים של התיק */}
+            <SegmentedTabs
+              options={MODE_TABS}
+              value={isBrokerMode ? 'broker' : 'journal'}
+              onChange={(id) => {
+                void HapticFeedback.selection();
+                setMode(id === 'broker' ? 'broker' : importCsv ? 'import' : 'manual');
+              }}
+            />
+            <Text style={styles.modeHint}>
+              {isBrokerMode
+                ? i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s16')
+                : i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s14')}
+            </Text>
 
             {isBrokerMode ? (
-              <View style={styles.section}>
-                <SectionHeader title={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s17')} />
-                <UICard
-                  variant="soft"
-                  padding="md"
-                  disableBlur
-                >
-                  {BROKER_BENEFITS.map((line) => (
-                    <View key={line} style={styles.brokerInfoRow}>
-                      <Ionicons
-                        name="checkmark-circle"
-                        size={18}
-                        color={tokens.colors.primary.main}
-                      />
-                      <Text style={styles.brokerInfoText}>{line}</Text>
+              <>
+                <FieldGroupLabel>{i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s17')}</FieldGroupLabel>
+                <SettingsGlassCard style={styles.card}>
+                  {BROKER_BENEFITS.map((line, i) => (
+                    <View
+                      key={line}
+                      style={[styles.benefitRow, i < BROKER_BENEFITS.length - 1 && styles.rowDivider]}
+                    >
+                      <Ionicons name="checkmark-circle" size={20} color={tokens.colors.success.main} />
+                      <Text style={styles.benefitText}>{line}</Text>
                     </View>
                   ))}
-                </UICard>
-              </View>
+                </SettingsGlassCard>
+              </>
             ) : (
               <>
-                {/* פרטי התיק */}
-                <View style={styles.section}>
-                  <SectionHeader title={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s18')} />
-
-                  <TextField
+                <FieldGroupLabel>{i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s18')}</FieldGroupLabel>
+                <View style={styles.fields}>
+                  <FloatingLabelField
                     label={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s19')}
+                    hint={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s20')}
                     value={name}
                     onChangeText={setName}
                     onBlur={() => setTouchedName(true)}
-                    placeholder={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s20')}
-                    hint={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s21')}
-                    error={touchedName ? nameError : null}
                     maxLength={128}
                     editable={!submitting}
+                    error={touchedName && !!nameError}
+                    helper={touchedName && nameError ? nameError : undefined}
                   />
-
-                  <TextField
+                  <FloatingLabelField
                     label={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s22')}
-                    optional
                     value={initialCash}
                     // פסיקי אלפים תוך כדי הקלדה; השמירה על המספר הנקי (QA 9.4)
                     onChangeText={(v) => setInitialCash(formatThousandsInput(v))}
                     onBlur={() => setTouchedCash(true)}
-                    placeholder="0.00"
                     keyboardType="decimal-pad"
-                    numeric
-                    prefix={currencySymbol}
-                    hint={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s23')}
-                    error={touchedCash ? cashError : null}
+                    ltr
                     editable={!submitting}
+                    trailing={<Text style={styles.currencyAdornment}>{currencySymbol}</Text>}
+                    error={touchedCash && !!cashError}
+                    helper={
+                      touchedCash && cashError
+                        ? cashError
+                        : i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s23')
+                    }
                   />
-
-                  <FieldLabel label={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s24')} />
-                  <View style={styles.chipsRow}>
-                    {SUPPORTED_CURRENCIES.map((c) => {
-                      const active = currency === c.code;
-                      return (
-                        // כמו לונג/שורט בפוזיציה: נבחר = מילוי ירוק, לא נבחר = משטח כרום
-                        <Pressable
-                          key={c.code}
-                          onPress={() => {
-                            if (!active) void HapticFeedback.selection();
-                            setCurrency(c.code);
-                          }}
-                          accessibilityRole="radio"
-                          accessibilityState={{ checked: active }}
-                          accessibilityLabel={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s25', { v0: c.label })}
-                          style={[
-                            styles.chip,
-                            { backgroundColor: active ? tokens.colors.primary.main : chromeSurfaceFill(tokens) },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.chipText,
-                              { color: active ? tokens.colors.text.inverse : tokens.colors.text.primary },
-                            ]}
-                          >
-                            {c.symbol} {c.label}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
                 </View>
 
-                {/* הגדרות מתקדמות */}
-                <View style={styles.section}>
-                  <UICard
-                    variant="soft"
-                    padding="none"
-                    disableBlur
+                <FieldGroupLabel>{i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s24')}</FieldGroupLabel>
+                <View style={styles.chipsRow}>
+                  {SUPPORTED_CURRENCIES.map((c) => (
+                    <DayDividerPill
+                      key={c.code}
+                      selected={currency === c.code}
+                      instantSelection
+                      onPress={() => {
+                        if (currency !== c.code) void HapticFeedback.selection();
+                        setCurrency(c.code);
+                      }}
+                      accessibilityLabel={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s25', { v0: c.label })}
+                    >
+                      {`${c.symbol} ${c.label}`}
+                    </DayDividerPill>
+                  ))}
+                </View>
+
+                {/* הגדרות מתקדמות — כרטיס בסגנון ההגדרות: שורה נפתחת + מתגים */}
+                <SettingsGlassCard style={styles.cardSpaced}>
+                  <SettingsActionRow
+                    title={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s26')}
+                    subtitle={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s27')}
+                    icon={SlidersHorizontal}
+                    showDivider={advancedOpen}
                     onPress={() => {
                       void HapticFeedback.selection();
                       setAdvancedOpen((v) => !v);
                     }}
-                    accessibilityRole="button"
-                    accessibilityState={{ expanded: advancedOpen }}
-                    contentContainerStyle={{
-                      flexDirection: 'row-reverse',
-                      alignItems: 'center',
-                      gap: 10,
-                      paddingVertical: 14,
-                      paddingHorizontal: 16,
-                    }}
-                  >
-                    <Ionicons
-                      name="options-outline"
-                      size={20}
-                      color={tokens.colors.text.secondary}
-                    />
-                    <View style={{ flex: 1 }}>
-                      <Text style={[journalCardTitleStyle, { color: tokens.colors.text.primary }]}>{i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s26')}</Text>
-                      <Text
-                        style={[
-                          journalCardSubtitleStyle,
-                          {
-                            color: tokens.colors.text.secondary,
-                            marginTop: JOURNAL_LAYOUT.cardTitleToSubtitleGap,
-                          },
-                        ]}
-                      >{i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s27')}</Text>
-                    </View>
-                    <Ionicons
-                      name={advancedOpen ? 'chevron-up' : 'chevron-down'}
-                      size={18}
-                      color={tokens.colors.text.tertiary}
-                    />
-                  </UICard>
-
-                  {advancedOpen ? (
-                    <View style={styles.advancedBody}>
-                      <FieldLabel
-                        label={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s28')}
-                        hint={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s29')}
+                    trailing={
+                      <Ionicons
+                        name={advancedOpen ? 'chevron-up' : 'chevron-down'}
+                        size={20}
+                        color={tokens.colors.text.tertiary}
                       />
-                      {BENCHMARK_PRESETS.map((b) => {
+                    }
+                  />
+                  {advancedOpen ? (
+                    <>
+                      <SettingsSwitchRow
+                        title={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s32')}
+                        value={autoSplits}
+                        onValueChange={setAutoSplits}
+                      />
+                      <SettingsSwitchRow
+                        title={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s34')}
+                        value={importCsv}
+                        onValueChange={(v) => setMode(v ? 'import' : 'manual')}
+                        showDivider={false}
+                      />
+                    </>
+                  ) : null}
+                </SettingsGlassCard>
+
+                {advancedOpen ? (
+                  <>
+                    <FieldGroupLabel>{i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s28')}</FieldGroupLabel>
+                    <SettingsGlassCard style={styles.card}>
+                      {BENCHMARK_PRESETS.map((b, i) => {
                         const active = benchmark === b.symbol;
                         return (
-                          <UICard
+                          <SettingsActionRow
                             key={b.symbol}
-                            variant="soft"
-                            padding="none"
-                            disableBlur
+                            title={b.label}
+                            subtitle={b.description}
+                            showDivider={i < BENCHMARK_PRESETS.length - 1}
                             onPress={() => {
                               if (!active) void HapticFeedback.selection();
                               setBenchmark(b.symbol);
                             }}
-                            style={[
-                              { marginBottom: JOURNAL_LAYOUT.stackGapSmall },
-                              active && {
-                                borderWidth: 0,
-                                backgroundColor: tokens.colors.background.tertiary,
-                              },
-                            ]}
-                            contentContainerStyle={styles.benchmarkRowInner}
-                          >
-                            <View style={{ flex: 1 }}>
-                              <Text style={styles.benchmarkLabel}>{b.label}</Text>
-                              <Text style={styles.benchmarkDesc}>{b.description}</Text>
-                            </View>
-                            <Ionicons
-                              name={active ? 'radio-button-on' : 'radio-button-off'}
-                              size={20}
-                              color={
-                                active ? tokens.colors.primary.main : tokens.colors.text.muted
-                              }
-                            />
-                          </UICard>
+                            trailing={
+                              active ? (
+                                <Ionicons name="checkmark" size={22} color={tokens.colors.success.main} />
+                              ) : (
+                                <View style={{ width: 22 }} />
+                              )
+                            }
+                          />
                         );
                       })}
+                    </SettingsGlassCard>
 
-                      <View style={{ height: 16 }} />
-
-                      <TextField
+                    <View style={[styles.fields, styles.fieldsSpaced]}>
+                      <FloatingLabelField
                         label={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s30')}
                         value={riskFree}
                         onChangeText={setRiskFree}
-                        placeholder="4.0"
                         keyboardType="decimal-pad"
-                        numeric
-                        hint={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s31')}
-                        error={riskError}
+                        ltr
                         editable={!submitting}
+                        error={!!riskError}
+                        helper={riskError ?? i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s31')}
                       />
-
-                      <SwitchRow
-                        title={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s32')}
-                        hint={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s33')}
-                        value={autoSplits}
-                        onChange={setAutoSplits}
-                        spacing={12}
-                      />
-
-                      <SwitchRow
-                        title={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s34')}
-                        hint={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s35')}
-                        value={importCsv}
-                        onChange={(v) => setMode(v ? 'import' : 'manual')}
-                        spacing={18}
-                      />
-
-                      <TextField
+                      <FloatingLabelField
                         label={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s36')}
-                        optional
+                        hint={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s37')}
                         value={description}
                         onChangeText={setDescription}
-                        placeholder={i18n.t('auto.screens__Portfolios__CreatePortfolioScreen.s37')}
                         multiline
+                        minHeight={96}
                         maxLength={1200}
                         editable={!submitting}
-                        spacing={0}
                       />
                     </View>
-                  ) : null}
-                </View>
+                  </>
+                ) : null}
               </>
             )}
           </ScrollView>
@@ -505,96 +428,5 @@ export default function CreatePortfolioScreen() {
         </KeyboardAvoidingView>
       </SafeAreaView>
     </View>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-
-interface ModeCardProps {
-  active: boolean;
-  icon: keyof typeof Ionicons.glyphMap;
-  title: string;
-  description: string;
-  onPress: () => void;
-  /** לוגו ברוקר — מוצג במקום האייקון הגנרי */
-  logo?: ImageSourcePropType;
-}
-
-function ModeCard({ active, icon, title, description, onPress, logo }: ModeCardProps) {
-  const tokens = useDesignTokens();
-  return (
-    <UICard
-      variant="soft"
-      padding="none"
-      disableBlur
-      onPress={onPress}
-      accessibilityLabel={title}
-      style={
-        active
-          ? {
-              borderWidth: 0,
-              backgroundColor: tokens.colors.background.tertiary,
-            }
-          : undefined
-      }
-      contentContainerStyle={{
-        flexDirection: 'row-reverse',
-        alignItems: 'center',
-        gap: 12,
-        padding: JOURNAL_LAYOUT.cardPadding,
-      }}
-    >
-      <View
-        style={{
-          width: 42,
-          height: 42,
-          borderRadius: 21,
-          alignItems: 'center',
-          justifyContent: 'center',
-          overflow: 'hidden',
-          backgroundColor: logo
-            ? '#FFFFFF'
-            : active
-            ? 'rgba(0, 200, 5, 0.20)'
-            : tokens.colors.background.card,
-        }}
-      >
-        {logo ? (
-          <Image source={logo} style={{ width: 42, height: 42 }} resizeMode="cover" />
-        ) : (
-          <Ionicons
-            name={icon}
-            size={21}
-            color={active ? tokens.colors.primary.main : tokens.colors.text.secondary}
-          />
-        )}
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text
-          style={[
-            journalCardTitleStyle,
-            { color: active ? tokens.colors.primary.main : tokens.colors.text.primary },
-          ]}
-        >
-          {title}
-        </Text>
-        <Text
-          style={[
-            journalCardSubtitleStyle,
-            {
-              color: tokens.colors.text.secondary,
-              marginTop: JOURNAL_LAYOUT.cardTitleToSubtitleGap,
-            },
-          ]}
-        >
-          {description}
-        </Text>
-      </View>
-      <Ionicons
-        name={active ? 'checkmark-circle' : 'ellipse-outline'}
-        size={22}
-        color={active ? tokens.colors.primary.main : tokens.colors.text.muted}
-      />
-    </UICard>
   );
 }

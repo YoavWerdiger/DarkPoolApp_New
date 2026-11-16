@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Pressable,
 } from 'react-native';
-import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import ChatListSwipeRow from '../../components/chat/ChatListSwipeRow';
 import { WatchlistAddSheet } from './components/WatchlistAddSheet';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import ReorderableList, {
@@ -69,29 +69,24 @@ const ReorderableWatchlistRow = React.memo(function ReorderableWatchlistRow({
   const tokens = useDesignTokens();
   // QA 16.2: החלקה על השורה → כפתור פח → הסרה
   return (
-    <ReanimatedSwipeable
-      friction={2}
-      rightThreshold={40}
-      overshootRight={false}
-      enabled={!!onRemove}
-      renderRightActions={() => (
-        <Pressable
-          onPress={() => {
+    // אותו מנגנון כמו ברשימת הקבוצות: הכפתור נחשף רק בגרירה, עיגול + תווית, שורה אחת פתוחה בכל פעם
+    <ChatListSwipeRow
+      enabled={!!onRemove && !isActive}
+      revealBackgroundColor={tokens.colors.background.primary}
+      revealInset={ROW_PAD_H}
+      actions={[
+        {
+          key: 'remove',
+          label: i18n.t('auto.screens__Watchlist__WatchlistScreen.s4'),
+          icon: <Ionicons name="trash-outline" size={20} color="#FFFFFF" />,
+          backgroundColor: tokens.colors.danger.main,
+          color: tokens.colors.text.primary,
+          onPress: () => {
             void HapticFeedback.medium();
             onRemove?.(row);
-          }}
-          style={{
-            width: 76,
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: tokens.colors.danger.main,
-          }}
-          accessibilityRole="button"
-          accessibilityLabel={i18n.t('auto.screens__Watchlist__WatchlistScreen.s4')}
-        >
-          <Ionicons name="trash-outline" size={22} color="#FFFFFF" />
-        </Pressable>
-      )}
+          },
+        },
+      ]}
     >
       <WatchlistRow
         row={row}
@@ -100,7 +95,7 @@ const ReorderableWatchlistRow = React.memo(function ReorderableWatchlistRow({
         onDrag={drag}
         onPress={() => onPress(row)}
       />
-    </ReanimatedSwipeable>
+    </ChatListSwipeRow>
   );
 });
 

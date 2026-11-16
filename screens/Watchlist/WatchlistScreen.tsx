@@ -34,8 +34,6 @@ import { dispatchOpenMainDrawer, type DrawerParentNavigation } from '../../navig
 import { triggerDrawerMenuHaptic, HapticFeedback } from '../../utils/hapticFeedback';
 import { legacyAlert, showAppConfirm, showAppDialog } from '../../utils/appDialog';
 import { useWatchlist } from '../../hooks/useWatchlist';
-import { SymbolSearchModal } from '../Portfolios/components/SymbolSearchModal';
-import type { SymbolSearchResult } from '../../services/portfolios/portfolioPriceFeed';
 import { SUGGESTED_WATCHLIST_SYMBOLS, type WatchlistRowData } from '../../services/watchlist/watchlistTypes';
 import { WatchlistColumnHeader } from './components/WatchlistColumnHeader';
 import { WatchlistEmpty } from './components/WatchlistEmpty';
@@ -118,7 +116,6 @@ export default function WatchlistScreen() {
   const navigation = useNavigation();
   const tokens = useDesignTokens();
   const mainTabsHeight = useMainTabsHeight();
-  const [searchOpen, setSearchOpen] = useState(false);
   // QA 16.3: שיט «הוספת מניות» (רשימה ארוכה עם לוגו + שם) — נגיש תמיד מה-+ ומתחתית הרשימה
   const [addSheetOpen, setAddSheetOpen] = useState(false);
   const [createListOpen, setCreateListOpen] = useState(false);
@@ -226,23 +223,6 @@ export default function WatchlistScreen() {
     [rows],
   );
 
-  const handleSelectSymbol = useCallback(
-    async (result: SymbolSearchResult) => {
-      setSearchOpen(false);
-      // QA 16.1: מניה שכבר ברשימה — לא מוסיפים שוב
-      if (existingSymbols.has(result.symbol.toUpperCase())) {
-        legacyAlert(i18n.t('auto.screens__Watchlist__components__WatchlistAddSheet.s19'));
-        return;
-      }
-      try {
-        await addSymbol(result.symbol, result.description);
-        void HapticFeedback.success();
-      } catch {
-        legacyAlert(i18n.t('auto.screens__Watchlist__WatchlistScreen.s1'), i18n.t('auto.screens__Watchlist__WatchlistScreen.s3'));
-      }
-    },
-    [addSymbol, existingSymbols]
-  );
 
   const handleRemove = useCallback(
     async (symbol: string) => {
@@ -750,24 +730,12 @@ export default function WatchlistScreen() {
         visible={addSheetOpen}
         onClose={() => setAddSheetOpen(false)}
         existingSymbols={existingSymbols}
-        onAdd={async (stock) => {
+        onAdd={async (symbol, name) => {
           try {
-            await addSymbol(stock.symbol, stock.name);
+            await addSymbol(symbol, name);
           } catch {
             legacyAlert(i18n.t('auto.screens__Watchlist__WatchlistScreen.s1'), i18n.t('auto.screens__Watchlist__WatchlistScreen.s3'));
           }
-        }}
-        onSearchAll={() => {
-          setAddSheetOpen(false);
-          setTimeout(() => setSearchOpen(true), 380);
-        }}
-      />
-
-      <SymbolSearchModal
-        visible={searchOpen}
-        onClose={() => setSearchOpen(false)}
-        onSelect={(r) => {
-          void handleSelectSymbol(r);
         }}
       />
 

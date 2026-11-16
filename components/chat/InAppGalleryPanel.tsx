@@ -26,7 +26,6 @@ import {
   type MediaRecentAsset,
 } from '../../lib/mediaRecentsCache';
 import { HapticFeedback } from '../../utils/hapticFeedback';
-import * as MediaLibrary from 'expo-media-library/legacy';
 import { openAppSettings } from '../../lib/cameraSession';
 
 const COLS = 4;
@@ -123,16 +122,12 @@ export function InAppGalleryPanel({ visible, onClose, onPick }: Props) {
     async (asset: MediaRecentAsset) => {
       void HapticFeedback.selection();
       const isVideo = asset.mediaType === 'video';
-      let uri = await resolveMediaRecentLocalUri(asset.id, asset.uri);
+      let uri = await resolveMediaRecentLocalUri(asset.id, asset.uri, { isVideo });
       // וידאו ב-iCloud: אין קובץ מקומי (ph://) — הנגן מציג שחור. מבקשים מהמערכת להוריד
       if (uri.startsWith('ph://')) {
         setResolving(true);
         try {
-          const info = await MediaLibrary.getAssetInfoAsync(asset.id, { shouldDownloadFromNetwork: true });
-          const local = info.localUri || info.uri;
-          if (local && !local.startsWith('ph://')) uri = local;
-        } catch {
-          /* נשאר ph:// */
+          uri = await resolveMediaRecentLocalUri(asset.id, asset.uri, { downloadFromNetwork: true, isVideo });
         } finally {
           setResolving(false);
         }

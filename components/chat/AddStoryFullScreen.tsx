@@ -1432,7 +1432,8 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
 
   const selectRecentPhoto = async (asset: MediaRecentAsset) => {
     try {
-      const uri = await resolveMediaRecentLocalUri(asset.id, asset.uri);
+      const isVideo = asset.mediaType === 'video';
+      const uri = await resolveMediaRecentLocalUri(asset.id, asset.uri, { downloadFromNetwork: isVideo, isVideo });
       if (!uri || uri.startsWith('ph://')) {
         openGallery();
         return;

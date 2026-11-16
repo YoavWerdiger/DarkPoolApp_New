@@ -1049,12 +1049,20 @@ function ChatInputImpl({
     attachLocalVideoThumbs(mediaFiles, setSelectedMedia);
     if (!fromLibrary) return;
     void resolvePickedMedia(items).then((resolved) => {
+      const changed: MediaFile[] = [];
       setSelectedMedia((prev) =>
         prev.map((file) => {
           const next = resolved.find((item) => item.id === file.id);
-          return next ? { ...file, uri: next.uri } : file;
+          if (!next || next.uri === file.uri) return file;
+          const updated = { ...file, uri: next.uri };
+          // וידאו: תמונה ממוזערת מ-ph:// נכשלת — יוצרים מהקובץ המקומי
+          if (updated.type === 'video' && !updated.thumbnail_url && !next.uri.startsWith('ph://')) {
+            changed.push(updated);
+          }
+          return updated;
         }),
       );
+      if (changed.length) attachLocalVideoThumbs(changed, setSelectedMedia);
     });
   }, []);
 

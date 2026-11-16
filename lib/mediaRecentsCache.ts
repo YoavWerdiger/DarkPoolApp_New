@@ -1,6 +1,7 @@
 import { runAfterInteractions } from '../utils/runAfterInteractions';
 import { Image as ExpoImage } from 'expo-image';
 import * as MediaLibrary from 'expo-media-library/legacy';
+import * as FileSystem from 'expo-file-system/legacy';
 
 /** עמוד ראשון קטן — מספיק לגריד, בלי לחכות לכל האלבום. */
 export const MEDIA_RECENTS_PAGE_SIZE = 30;
@@ -213,10 +214,38 @@ export function recentToPicked(asset: MediaRecentAsset): PickedRecentMedia {
   };
 }
 
+/** וידאו מהגלריה → עותק בתיקיית ה-cache של האפליקציה (קובץ שהנגן/ה-thumbnail/ההעלאה תמיד יכולים לפתוח). */
+const videoCopies = new Map<string, string>();
+
+async function copyVideoToCache(id: string, local: string, filename?: string | null): Promise<string> {
+  const cached = videoCopies.get(id);
+  if (cached) {
+    try {
+      if ((await FileSystem.getInfoAsync(cached)).exists) return cached;
+    } catch {
+      /* מעתיקים מחדש */
+    }
+  }
+  const dir = FileSystem.cacheDirectory;
+  if (!dir) return local;
+  const extMatch = (filename || local).match(/\.([A-Za-z0-9]{2,5})$/);
+  const ext = (extMatch?.[1] || 'mov').toLowerCase();
+  const safeId = id.replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 80);
+  const dest = `${dir}picked-video-${safeId}.${ext}`;
+  try {
+    const existing = await FileSystem.getInfoAsync(dest);
+    if (!existing.exists) await FileSystem.copyAsync({ from: local, to: dest });
+    videoCopies.set(id, dest);
+    return dest;
+  } catch {
+    return local;
+  }
+}
+
 export async function resolveMediaRecentLocalUri(
   id: string,
   fallbackUri: string,
-  opts?: { downloadFromNetwork?: boolean },
+  opts?: { downloadFromNetwork?: boolean; isVideo?: boolean },
 ): Promise<string> {
   try {
     const info = await MediaLibrary.getAssetInfoAsync(
@@ -226,7 +255,10 @@ export async function resolveMediaRecentLocalUri(
     // iOS: localUri מגיע עם fragment של מטא-דאטה (‎#YnBsaXN0…‎ = bplist) — קובץ עם # לא נפתח
     // להעלאה (NSURLError -1) והסיומת יוצאת «movynbsaxn»
     const local = (info.localUri || info.uri)?.split('#')[0];
-    if (local && !local.startsWith('ph://')) return local;
+    if (local && !local.startsWith('ph://')) {
+      const isVideo = opts?.isVideo ?? info.mediaType === 'video';
+      return isVideo ? await copyVideoToCache(id, local, info.filename) : local;
+    }
   } catch {
     /* fallback */
   }
@@ -239,6 +271,7 @@ export async function resolvePickedMedia(items: PickedRecentMedia[]): Promise<Pi
       // וידאו: הנגן לא מנגן ph:// — מבקשים קובץ מקומי (כולל הורדה מ-iCloud)
       const uri = await resolveMediaRecentLocalUri(item.id, item.uri, {
         downloadFromNetwork: item.type === 'video',
+        isVideo: item.type === 'video',
       });
       return { ...item, uri };
     }),

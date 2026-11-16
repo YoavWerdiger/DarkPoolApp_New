@@ -2721,7 +2721,12 @@
     "s36": "{{v0}} · equal weight per trade",
     "s37": "{{v0}} shares",
     "s38": "1 filing",
-    "s39": "{{v0}} filings"
+    "s39": "{{v0}} filings",
+    "s40": "Not now",
+    "s41": "Open settings",
+    "s42": "Following",
+    "s43": "You'll get a notification every time a new trade by {{v0}} is reported — buy or sell.",
+    "s44": "{{v0}} was added to your follows. To get a notification for each newly reported trade, allow notifications for the app in your device settings."
   },
   "screens__Tweets__TweetsScreen": {
     "s1": "New tweet",

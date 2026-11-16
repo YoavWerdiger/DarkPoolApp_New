@@ -178,6 +178,11 @@ import { useAppDialog } from '../../components/ui/AppDialogProvider';
 import { HelpSheet } from '../../components/ui/HelpSheet';
 import { usePreventScreenCaptureSafe } from '../../hooks/usePreventScreenCaptureSafe';
 import { politicianParty } from './utils/congressParty';
+import * as Notifications from 'expo-notifications';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Linking } from 'react-native';
+
+const FOLLOW_ALERTS_EXPLAINED_KEY = 'darkpool:follow-alerts-explained:v1';
 import { useDarkPoolStackNav } from './hooks/useDarkPoolStackNav';
 import {
   hasTradeDetailPayload,
@@ -509,16 +514,40 @@ export function PersonPortfolioProfileScreen({
       if (next) {
         void ensureNotificationCategoryOn('darkPoolNotifications');
         // Permissions + Expo token + Supabase RPC — fire-and-forget after local persist
-        void NotificationService.registerDeviceToken().then((ok) => {
-          if (!ok) {
+        // QA 11.5: קודם בקשת ההרשאה של המערכת; אם נחסמה — כפתור שפותח את הגדרות האפליקציה.
+        // הטריגר ב-DB שולח פוש לעוקבים על כל עסקה חדשה (קונגרס / Form 4 / 13F) — אומרים את זה במפורש.
+        void (async () => {
+          let perm = await Notifications.getPermissionsAsync();
+          if (!perm.granted && perm.canAskAgain) {
+            perm = await Notifications.requestPermissionsAsync();
+          }
+          if (!perm.granted) {
             void showDialog({
               title: i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s8'),
-              message:
-                i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s9'),
+              message: i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s44', { v0: displayName }),
               type: 'info',
+              buttons: [
+                { text: i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s40'), style: 'cancel' },
+                {
+                  text: i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s41'),
+                  onPress: () => void Linking.openSettings(),
+                },
+              ],
             });
+            return;
           }
-        });
+          const ok = await NotificationService.registerDeviceToken();
+          if (!ok) return;
+          // ההסבר פעם אחת במכשיר — לא בכל מעקב
+          const seen = await AsyncStorage.getItem(FOLLOW_ALERTS_EXPLAINED_KEY).catch(() => '1');
+          if (seen) return;
+          void AsyncStorage.setItem(FOLLOW_ALERTS_EXPLAINED_KEY, '1').catch(() => undefined);
+          void showDialog({
+            title: i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s42'),
+            message: i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s43', { v0: displayName }),
+            type: 'success',
+          });
+        })();
       }
     } catch {
       setOptimisticFollowing(prev);

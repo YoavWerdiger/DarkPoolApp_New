@@ -520,13 +520,40 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
     return Math.min(4, weekDays.length - 1);
   }, [isCurrentWeek, weekDays]);
 
+  // מיקום אמיתי של כל כרטיס יום (נמדד ב-onLayout של התא) — בלי getItemLayout, scrollToIndex
+  // ניחש לפי ממוצע גובה ונחת על יום אחר (QA 14.2)
+  const cellOffsetsRef = useRef<Record<number, number>>({});
+  const CellRenderer = useMemo(
+    () =>
+      function DayCell({ index, onLayout, ...rest }: any) {
+        return (
+          <View
+            {...rest}
+            onLayout={(e) => {
+              cellOffsetsRef.current[index] = e.nativeEvent.layout.y;
+              onLayout?.(e);
+            }}
+          />
+        );
+      },
+    [],
+  );
+
   const scrollDayToTop = useCallback((index: number, animated: boolean) => {
+    const y = cellOffsetsRef.current[index];
+    if (typeof y === 'number') {
+      listRef.current?.scrollToOffset({ offset: Math.max(0, y), animated });
+      return;
+    }
     listRef.current?.scrollToIndex({
       index,
       animated,
       viewPosition: 0,
     });
   }, []);
+
+  // גוללים רק אחרי שכל ימי השבוע נטענו — אחרת גובה השלדים שונה מהכרטיסים האמיתיים והמיקום זז
+  const weekLoaded = weekDays.length > 0 && weekDays.every((d) => d.loaded);
 
   const handleScrollToIndexFailed = useCallback(
     (info: { index: number; highestMeasuredFrameIndex: number; averageItemLength: number }) => {
@@ -543,7 +570,7 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
 
   const scheduleScrollToToday = useCallback(() => {
     if (isSearchMode) return;
-    if (!isCurrentWeek || !weekKey || weekDays.length === 0) return;
+    if (!isCurrentWeek || !weekKey || weekDays.length === 0 || !weekLoaded) return;
     const targetIndex = todayScrollIndex;
     if (targetIndex < 0) return;
 
@@ -562,12 +589,13 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
     }
 
     // מסמנים רק אחרי ה-timeout (Strict Mode: cleanup מבטל, הריצה השנייה תזמן שוב)
+    // 260ms — אחרי שהכרטיסים המלאים נמדדו
     scrollTimerRef.current = setTimeout(() => {
       scrollTimerRef.current = null;
       autoScrolledWeekKey = weekKey;
       scrollDayToTop(targetIndex, true);
-    }, 160);
-  }, [isSearchMode, isCurrentWeek, weekKey, weekDays.length, todayScrollIndex, scrollDayToTop]);
+    }, 260);
+  }, [isSearchMode, isCurrentWeek, weekKey, weekDays.length, weekLoaded, todayScrollIndex, scrollDayToTop]);
 
   // יציאה מהשבוע הנוכחי / שינוי שבוע — מבטלים טיימר תלוי (הנעילה נשארת לפי weekKey)
   useEffect(() => {
@@ -589,7 +617,7 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
         scrollTimerRef.current = null;
       }
     };
-  }, [isCurrentWeek, isSearchMode, weekKey, weekDays.length, todayScrollIndex, scheduleScrollToToday]);
+  }, [isCurrentWeek, isSearchMode, weekKey, weekDays.length, weekLoaded, todayScrollIndex, scheduleScrollToToday]);
 
   // איפוס כפתור גלילה לראש במעבר ל/ממצב חיפוש
   useEffect(() => {
@@ -705,8 +733,9 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
               justifyContent: 'space-between',
             }}
           >
-            <DayNavBlurButton onPress={onPrevWeek} style={{ backgroundColor: DesignTokens.colors.background.primary }} accessibilityLabel={i18n.t('auto.screens__News__EarningsWeeklyView.s9')}>
-              <Ionicons name={dirIcon('chevron-back')} size={20} color={DesignTokens.colors.text.primary} />
+            {/* QA 14.1: הקודם אפור, הבא מודגש בירוק — ברור לאן כל חץ מוביל */}
+            <DayNavBlurButton onPress={onPrevWeek} style={{ backgroundColor: DesignTokens.colors.background.tertiary }} accessibilityLabel={i18n.t('auto.screens__News__EarningsWeeklyView.s9')}>
+              <Ionicons name={dirIcon('chevron-back')} size={20} color={DesignTokens.colors.text.secondary} />
             </DayNavBlurButton>
 
             <View style={{ alignItems: 'center', flex: 1, paddingHorizontal: 10 }}>
@@ -731,8 +760,8 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
               </Text>
             </View>
 
-            <DayNavBlurButton onPress={onNextWeek} style={{ backgroundColor: DesignTokens.colors.background.primary }} accessibilityLabel={i18n.t('auto.screens__News__EarningsWeeklyView.s12')}>
-              <Ionicons name={dirIcon('chevron-forward')} size={20} color={DesignTokens.colors.text.primary} />
+            <DayNavBlurButton onPress={onNextWeek} style={{ backgroundColor: DesignTokens.colors.success.main }} accessibilityLabel={i18n.t('auto.screens__News__EarningsWeeklyView.s12')}>
+              <Ionicons name={dirIcon('chevron-forward')} size={20} color="#FFFFFF" />
             </DayNavBlurButton>
           </View>
         </UICard>
@@ -814,6 +843,7 @@ const EarningsWeeklyView: React.FC<EarningsWeeklyViewProps> = ({
           data={weekDays}
           keyExtractor={(item) => item.dateKey}
           renderItem={renderItem}
+          CellRendererComponent={CellRenderer}
           style={{ flex: 1 }}
           refreshControl={
             <RefreshControl

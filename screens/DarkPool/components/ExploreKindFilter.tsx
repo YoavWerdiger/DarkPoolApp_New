@@ -9,6 +9,7 @@ import {
   type ExploreKindFilter,
 } from '../utils/exploreGrid';
 import { useDrawerSwipeGuard } from '../../../hooks/useDrawerSwipeGuard';
+import { RtlHorizontalScroll } from '../../../components/ui/RtlHorizontalScroll';
 
 interface Props {
   value: ExploreKindFilter | null;
@@ -44,7 +45,7 @@ export function ExploreKindFilterBar({ value, onChange }: Props) {
   };
 
   return (
-    <ScrollView
+    <RtlHorizontalScroll
       horizontal
       {...drawerGuard}
       showsHorizontalScrollIndicator={false}
@@ -66,6 +67,6 @@ export function ExploreKindFilterBar({ value, onChange }: Props) {
         );
       })}
       <DayDividerSlidingLayer indicator={indicator} labelOf={labelFor} />
-    </ScrollView>
+    </RtlHorizontalScroll>
   );
 }

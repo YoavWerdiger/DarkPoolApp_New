@@ -13,6 +13,7 @@ import {
 import { ExplorePortraitCard } from './ExplorePortraitCard';
 import { SkeletonBox } from '../../../components/ui/SkeletonLoader';
 import { useDrawerSwipeGuard } from '../../../hooks/useDrawerSwipeGuard';
+import { RtlHorizontalScroll } from '../../../components/ui/RtlHorizontalScroll';
 
 interface Props {
   title: string;
@@ -68,7 +69,7 @@ export function ExploreTwoColSection({
       <View style={styles.header}>
         <Text style={styles.title}>{title}</Text>
       </View>
-      <ScrollView
+      <RtlHorizontalScroll
         horizontal
         {...drawerGuard}
         nestedScrollEnabled
@@ -91,7 +92,7 @@ export function ExploreTwoColSection({
             ))}
           </View>
         ))}
-      </ScrollView>
+      </RtlHorizontalScroll>
     </View>
   );
 }

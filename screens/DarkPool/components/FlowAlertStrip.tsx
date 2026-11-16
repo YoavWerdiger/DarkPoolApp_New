@@ -11,6 +11,7 @@ import { TickerLogo } from '../../Portfolios/components/TickerLogo';
 import type { FlowAlertItem } from '../../../services/darkpool/uwSignalsService';
 import { formatUsdCompact } from '../utils/darkPoolFormat';
 import { useDrawerSwipeGuard } from '../../../hooks/useDrawerSwipeGuard';
+import { RtlHorizontalScroll } from '../../../components/ui/RtlHorizontalScroll';
 
 interface Props {
   alerts: FlowAlertItem[];
@@ -26,7 +27,7 @@ export function FlowAlertStrip({ alerts, onTickerPress }: Props) {
   return (
     <View style={styles.wrap}>
       <Text style={styles.title}>{i18n.t('auto.screens__DarkPool__components__FlowAlertStrip.s1')}</Text>
-      <ScrollView
+      <RtlHorizontalScroll
         horizontal
         {...drawerGuard}
         showsHorizontalScrollIndicator={false}
@@ -60,7 +61,7 @@ export function FlowAlertStrip({ alerts, onTickerPress }: Props) {
             </UICard>
           </Pressable>
         ))}
-      </ScrollView>
+      </RtlHorizontalScroll>
     </View>
   );
 }

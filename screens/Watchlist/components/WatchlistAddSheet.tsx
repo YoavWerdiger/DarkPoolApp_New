@@ -39,6 +39,7 @@ import {
   STOCK_UNIVERSE,
   type StockSector,
 } from '../../../services/watchlist/stockUniverse';
+import { RtlHorizontalScroll } from '../../../components/ui/RtlHorizontalScroll';
 
 type Filter = 'popular' | 'all' | StockSector;
 type Row = { symbol: string; name: string };
@@ -192,7 +193,7 @@ export function WatchlistAddSheet({ visible, onClose, existingSymbols, onAdd }: 
         </View>
 
         {!q ? (
-          <ScrollView
+          <RtlHorizontalScroll
             horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.chips}
@@ -212,7 +213,7 @@ export function WatchlistAddSheet({ visible, onClose, existingSymbols, onAdd }: 
                 {chipLabel(f)}
               </DayDividerPill>
             ))}
-          </ScrollView>
+          </RtlHorizontalScroll>
         ) : null}
 
         <SectionList

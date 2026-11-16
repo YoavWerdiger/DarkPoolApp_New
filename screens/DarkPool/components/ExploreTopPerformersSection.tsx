@@ -20,6 +20,7 @@ import {
 } from '../darkPoolLayout';
 import { ExplorePortraitCard } from './ExplorePortraitCard';
 import { useDrawerSwipeGuard } from '../../../hooks/useDrawerSwipeGuard';
+import { RtlHorizontalScroll } from '../../../components/ui/RtlHorizontalScroll';
 
 export type ExplorePerformancePeriod =
   | '1D'
@@ -89,7 +90,7 @@ export function ExploreTopPerformersSection({
         contentContainerStyle={styles.periodRow}
       />
 
-      <ScrollView
+      <RtlHorizontalScroll
         horizontal
         {...drawerGuard}
         showsHorizontalScrollIndicator={false}
@@ -115,7 +116,7 @@ export function ExploreTopPerformersSection({
             />
           );
         })}
-      </ScrollView>
+      </RtlHorizontalScroll>
     </View>
   );
 }

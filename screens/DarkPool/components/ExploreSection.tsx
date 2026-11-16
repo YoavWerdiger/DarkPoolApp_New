@@ -10,6 +10,7 @@ import {
 import { EXPLORE_RAIL_GAP } from '../utils/exploreGrid';
 import { ExplorePortraitCard } from './ExplorePortraitCard';
 import { useDrawerSwipeGuard } from '../../../hooks/useDrawerSwipeGuard';
+import { RtlHorizontalScroll } from '../../../components/ui/RtlHorizontalScroll';
 
 interface Props {
   title: string;
@@ -36,7 +37,7 @@ export function ExploreSection({
         <Text style={styles.title}>{title}</Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
-      <ScrollView
+      <RtlHorizontalScroll
         horizontal
         {...drawerGuard}
         showsHorizontalScrollIndicator={false}
@@ -49,7 +50,7 @@ export function ExploreSection({
             onPress={onPersonPress ? () => onPersonPress(p) : undefined}
           />
         ))}
-      </ScrollView>
+      </RtlHorizontalScroll>
     </View>
   );
 }

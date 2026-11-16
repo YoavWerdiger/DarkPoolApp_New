@@ -8,6 +8,7 @@ import { EXPLORE_PROFILE_CARD, EXPLORE_RAIL_GAP } from '../utils/exploreGrid';
 import { SkeletonBox } from '../../../components/ui/SkeletonLoader';
 import { ExplorePortraitCard } from './ExplorePortraitCard';
 import { useDrawerSwipeGuard } from '../../../hooks/useDrawerSwipeGuard';
+import { RtlHorizontalScroll } from '../../../components/ui/RtlHorizontalScroll';
 
 interface Props {
   title: string;
@@ -57,7 +58,7 @@ export function ExploreRailSection({
       <View style={styles.header}>
         <Text style={styles.title}>{title}</Text>
       </View>
-      <ScrollView
+      <RtlHorizontalScroll
         horizontal
         {...drawerGuard}
         nestedScrollEnabled
@@ -73,7 +74,7 @@ export function ExploreRailSection({
             showMetric={showMetric}
           />
         ))}
-      </ScrollView>
+      </RtlHorizontalScroll>
     </View>
   );
 }

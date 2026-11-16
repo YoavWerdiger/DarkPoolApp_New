@@ -70,6 +70,7 @@ import {
   type FeedRecentKind,
 } from './utils/feedRecentKind';
 import { useDrawerSwipeGuard } from '../../hooks/useDrawerSwipeGuard';
+import { RtlHorizontalScroll } from '../../components/ui/RtlHorizontalScroll';
 
 const FEED_INITIAL_RENDER = 8;
 const FEED_MAX_BATCH = 6;
@@ -253,7 +254,7 @@ export default function DarkPoolHomeScreen() {
     () => (
       <View style={styles.listHeader}>
         <View style={styles.tradesHead}>
-          <ScrollView
+          <RtlHorizontalScroll
             horizontal
             {...drawerGuard}
             showsHorizontalScrollIndicator={false}
@@ -281,7 +282,7 @@ export default function DarkPoolHomeScreen() {
               indicator={kindIndicator}
               labelOf={(id) => FEED_RECENT_KIND_CHIPS.find((c) => c.id === id)?.label ?? ''}
             />
-          </ScrollView>
+          </RtlHorizontalScroll>
         </View>
 
         {error ? (

@@ -7,6 +7,7 @@ import { darkPoolPhysicalRightText } from '../darkPoolLayout';
 import type { CongressTradeCard } from '../../../services/darkpool/uwExploreService';
 import { ExploreCongressCard } from './ExploreCongressCard';
 import { useDrawerSwipeGuard } from '../../../hooks/useDrawerSwipeGuard';
+import { RtlHorizontalScroll } from '../../../components/ui/RtlHorizontalScroll';
 
 interface Props {
   title: string;
@@ -33,7 +34,7 @@ export function ExploreCongressSection({
         <Text style={styles.title}>{title}</Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
-      <ScrollView
+      <RtlHorizontalScroll
         horizontal
         {...drawerGuard}
         showsHorizontalScrollIndicator={false}
@@ -46,7 +47,7 @@ export function ExploreCongressSection({
             onPress={onTradePress ? () => onTradePress(t) : undefined}
           />
         ))}
-      </ScrollView>
+      </RtlHorizontalScroll>
     </View>
   );
 }

@@ -178,7 +178,6 @@ import { ensureNotificationCategoryOn } from '../../lib/notificationPrefs';
 import { useAppDialog } from '../../components/ui/AppDialogProvider';
 import { HelpSheet } from '../../components/ui/HelpSheet';
 import { usePreventScreenCaptureSafe } from '../../hooks/usePreventScreenCaptureSafe';
-import { politicianParty } from './utils/congressParty';
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Linking } from 'react-native';
@@ -1449,7 +1448,6 @@ export function PersonPortfolioProfileScreen({
       : i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s21'),
     scrollY: heroScrollY,
     logoTicker: companyTicker,
-    party: kind === 'politician' ? politicianParty(id, subtitle) : null,
   };
 
   const envelope = <PersonProfileHero {...heroProps} />;

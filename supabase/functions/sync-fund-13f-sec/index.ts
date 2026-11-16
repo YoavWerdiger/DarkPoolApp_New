@@ -108,11 +108,15 @@ serve(async (req) => {
 
   // ברירת מחדל: כל הקרנות (גם אלה מ-Quiver) — ה-SEC הוא מקור האמת להיסטוריה; Quiver נשאר גיבוי
   let ciks: string[];
+  let newCiks = new Set<string>();
   if (body.ciks?.length) ciks = body.ciks.map((c) => String(c).trim());
   else {
     const { data } = await supabase.from('dark_pool_fund_managers').select('cik').order('synced_at', { ascending: true, nullsFirst: true });
-    // הכי פחות מעודכנים קודם (סבב הוגן בתקציב הזמן); רשומות SEC חדשות שעוד לא ב-DB — בסוף
-    ciks = Array.from(new Set([...(data ?? []).map((r) => String(r.cik)), ...Object.keys(SEC_13F_FUNDS)]));
+    // רשומות SEC חדשות שעוד לא ב-DB — קודם (אחרת תקציב הזמן נגמר לפני שמגיעים אליהן);
+    // אחריהן הכי פחות מעודכנים (סבב הוגן)
+    const inDb = new Set((data ?? []).map((r) => String(r.cik)));
+    newCiks = new Set(Object.keys(SEC_13F_FUNDS).filter((c) => !inDb.has(c)));
+    ciks = Array.from(new Set([...newCiks, ...(data ?? []).map((r) => String(r.cik))]));
   }
 
   const results: Array<Record<string, unknown>> = [];
@@ -123,7 +127,8 @@ serve(async (req) => {
     }
     try {
       const meta = SEC_13F_FUNDS[cik];
-      const { name: secName, filings } = await listSec13fFilings(cik, maxFilings);
+      // קרן/חברה חדשה: 4 רבעונים בריצה הראשונה (16 בבת אחת חרג ממשאבי ה-worker — 546); השאר בריצות הבאות
+      const { name: secName, filings } = await listSec13fFilings(cik, newCiks.has(cik) ? Math.min(4, maxFilings) : maxFilings);
       if (!filings.length) {
         results.push({ cik, ok: false, reason: 'no_13f' });
         continue;

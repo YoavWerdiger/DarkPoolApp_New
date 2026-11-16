@@ -6,8 +6,12 @@ export const ROW_PAD_H = APP_LAYOUT.screenPaddingHorizontal;
 
 /**
  * גריד RTL: סימבול → מחיר → שינוי → שינוי % → ווליום → גרירה
+ * בשורה רק לוגו + טיקר (בלי שם חברה) — עמודת הסימבול ברוחב קבוע,
+ * ועמודות המספרים מתחלקות בשאר הרוחב (המינימום = הרוחב הקודם) במקום רווח ריק ליד הטיקר.
  */
 export const COL_WIDTH = {
+  /** לוגו 28 + רווח + טיקר עד 5 תווים */
+  symbol: 96,
   last: 58,
   chg: 52,
   chgPct: 54,
@@ -16,45 +20,27 @@ export const COL_WIDTH = {
 } as const;
 
 export const colSymbol: ViewStyle = {
-  flexGrow: 1,
-  flexShrink: 1,
-  flexBasis: 0,
+  width: COL_WIDTH.symbol,
+  flexGrow: 0,
+  flexShrink: 0,
   minWidth: 0,
   paddingLeft: 4,
   justifyContent: 'center',
 };
 
-export const colLast: ViewStyle = {
-  width: COL_WIDTH.last,
-  flexGrow: 0,
-  flexShrink: 0,
+const numCol = (minWidth: number, grow: number): ViewStyle => ({
+  minWidth,
+  flexGrow: grow,
+  flexShrink: 1,
+  flexBasis: minWidth,
   alignItems: 'flex-end',
   justifyContent: 'center',
-};
+});
 
-export const colChg: ViewStyle = {
-  width: COL_WIDTH.chg,
-  flexGrow: 0,
-  flexShrink: 0,
-  alignItems: 'flex-end',
-  justifyContent: 'center',
-};
-
-export const colChgPct: ViewStyle = {
-  width: COL_WIDTH.chgPct,
-  flexGrow: 0,
-  flexShrink: 0,
-  alignItems: 'flex-end',
-  justifyContent: 'center',
-};
-
-export const colVol: ViewStyle = {
-  width: COL_WIDTH.vol,
-  flexGrow: 0,
-  flexShrink: 0,
-  alignItems: 'flex-end',
-  justifyContent: 'center',
-};
+export const colLast: ViewStyle = numCol(COL_WIDTH.last, 1.2);
+export const colChg: ViewStyle = numCol(COL_WIDTH.chg, 1);
+export const colChgPct: ViewStyle = numCol(COL_WIDTH.chgPct, 1);
+export const colVol: ViewStyle = numCol(COL_WIDTH.vol, 1);
 
 export const colDrag: ViewStyle = {
   width: COL_WIDTH.drag,

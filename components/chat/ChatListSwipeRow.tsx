@@ -26,8 +26,6 @@ export type ChatListSwipeAction = {
   /** צבע התווית מתחת לעיגול */
   color: string;
   onPress: () => void;
-  /** אייקון בלבד — התווית נשארת רק לנגישות */
-  iconOnly?: boolean;
 };
 
 const ACTION_W = 76;
@@ -74,11 +72,9 @@ function SwipeActionButton({
       <Animated.View style={[styles.actionInner, compact && styles.actionInnerCompact, anim]}>
         {/* רקע שקוף (אייקון ישר על רקע צבעוני) — בלי עיגול 44, כדי שאייקון + תווית ייכנסו בגובה שורה נמוכה */}
         <View style={compact ? styles.iconCompact : [styles.circle, { backgroundColor: action.backgroundColor }]}>{action.icon}</View>
-        {action.iconOnly ? null : (
-          <Text style={[styles.actionLabel, { color: action.color }]} numberOfLines={1}>
-            {action.label}
-          </Text>
-        )}
+        <Text style={[styles.actionLabel, { color: action.color }]} numberOfLines={1}>
+          {action.label}
+        </Text>
       </Animated.View>
     </Pressable>
   );

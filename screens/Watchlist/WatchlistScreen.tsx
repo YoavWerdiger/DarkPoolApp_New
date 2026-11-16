@@ -78,8 +78,7 @@ const ReorderableWatchlistRow = React.memo(function ReorderableWatchlistRow({
           key: 'remove',
           // תווית קצרה שנכנסת ברוחב הכפתור; האייקון ישר על האדום (בלי עיגול)
           label: i18n.t('auto.screens__Watchlist__WatchlistScreen.s29'),
-          icon: <Ionicons name="trash-outline" size={24} color="#FFFFFF" />,
-          iconOnly: true,
+          icon: <Ionicons name="trash-outline" size={22} color="#FFFFFF" />,
           backgroundColor: 'transparent',
           color: '#FFFFFF',
           onPress: () => {

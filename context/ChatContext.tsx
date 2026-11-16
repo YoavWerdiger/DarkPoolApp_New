@@ -232,7 +232,10 @@ type ChatActionsType = Pick<
   | 'updateOptimisticMessage'
   | 'removeOptimisticMessage'
   | 'retrySendMessage'
->;
+> & {
+  /** ההודעות הנוכחיות בלי מנוי (לא גורם לרינדור) — למשל לצופה המדיה בפתיחה */
+  getMessagesSnapshot: () => ChatMessage[];
+};
 
 const ChatActionsContext = createContext<ChatActionsType | undefined>(undefined);
 
@@ -2788,7 +2791,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     addOptimisticMediaMessage, updateOptimisticMessage, removeOptimisticMessage, retrySendMessage,
   ]);
 
-  const actionsRef = useRef<ChatActionsType>({} as ChatActionsType);
+  const actionsRef = useRef<Omit<ChatActionsType, 'getMessagesSnapshot'>>({} as Omit<ChatActionsType, 'getMessagesSnapshot'>);
   actionsRef.current = {
     loadGroups,
     selectGroup,
@@ -2843,6 +2846,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     updateOptimisticMessage: (...args) => actionsRef.current.updateOptimisticMessage(...args),
     removeOptimisticMessage: (...args) => actionsRef.current.removeOptimisticMessage(...args),
     retrySendMessage: (...args) => actionsRef.current.retrySendMessage(...args),
+    getMessagesSnapshot: () => messagesRef.current,
   }), []);
 
   return (
@@ -2867,6 +2871,11 @@ export function useChat() {
 }
 
 /** Stable action callbacks — does not re-render when messages/groups change */
+/** כמו useChatActions אבל בלי לזרוק מחוץ ל-ChatProvider (רכיבים שמוצגים גם מחוץ למחסנית הצ'אט) */
+export function useOptionalChatActions(): ChatActionsType | undefined {
+  return useContext(ChatActionsContext);
+}
+
 export function useChatActions(): ChatActionsType {
   const context = useContext(ChatActionsContext);
   if (context === undefined) {

@@ -30,7 +30,8 @@ import * as VideoThumbnails from 'expo-video-thumbnails';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path } from 'react-native-svg';
-import MediaViewer from './MediaViewer';
+import MediaGalleryViewer, { type MediaGalleryItem } from './MediaGalleryViewer';
+import { useOptionalChatActions } from '../../context/ChatContext';
 import MediaGridBubble from './MediaGridBubble';
 import VoiceWaveformWithProgress from './VoiceWaveformWithProgress';
 import { extractWaveformData, WAVEFORM_STORE_BARS } from '../../utils/waveformSamples';
@@ -371,6 +372,33 @@ function ChatMessage({
   const { user } = useAuth();
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   const [showMediaViewer, setShowMediaViewer] = useState(false);
+  // QA 2.1–2.3: צופה המדיה מהצ'אט עובר בין כל התמונות/הסרטונים של הצ'אט (מהישן לחדש),
+  // סרטון מתחיל לבד ונסגר במשיכה. הרשימה נלקחת בפתיחה בלבד — בלי מנוי שמרנדר כל הודעה מחדש.
+  const chatActions = useOptionalChatActions();
+  const [galleryItems, setGalleryItems] = useState<MediaGalleryItem[]>([]);
+  const [galleryIndex, setGalleryIndex] = useState(0);
+
+  const openMediaGallery = () => {
+    const isMedia = (m: ChatMessageType) =>
+      (m.message_type === MessageType.IMAGE || m.message_type === MessageType.VIDEO) &&
+      !!m.media_url &&
+      !m.is_uploading &&
+      m.group_id === message.group_id;
+    const toItem = (m: ChatMessageType): MediaGalleryItem => ({
+      id: m.id,
+      url: m.id === message.id ? resolvedMedia.main || m.media_url! : m.media_url!,
+      type: m.message_type === MessageType.VIDEO ? 'video' : 'image',
+      caption: m.content?.trim() || undefined,
+    });
+    let list = (chatActions?.getMessagesSnapshot() ?? [])
+      .filter(isMedia)
+      .sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at));
+    if (!list.some((m) => m.id === message.id)) list = [message];
+    const items = list.map(toItem);
+    setGalleryItems(items);
+    setGalleryIndex(Math.max(0, items.findIndex((i) => i.id === message.id)));
+    setShowMediaViewer(true);
+  };
 
   const [resolvedMedia, setResolvedMedia] = useState<ResolvedMessageMedia>(() =>
     buildInitialResolvedMedia(message),
@@ -1030,7 +1058,7 @@ function ChatMessage({
             // Only open viewer for uploaded media, not during upload
             if ((message.media_url || message.local_media_uri) && !message.is_uploading) {
               if (message.message_type === MessageType.IMAGE || message.message_type === MessageType.VIDEO) {
-                setShowMediaViewer(true);
+                openMediaGallery();
               } else if (message.message_type === MessageType.DOCUMENT) {
                 openDocument();
               }
@@ -1210,11 +1238,10 @@ function ChatMessage({
       {/* Spacer for avatar on my messages */}
       {/* Media Viewer */}
       {(message.message_type === MessageType.IMAGE || message.message_type === MessageType.VIDEO) && message.media_url && (
-        <MediaViewer
-          visible={showMediaViewer}
-          mediaUrl={resolvedMedia.main || message.media_url}
-          mediaType={message.message_type === MessageType.IMAGE ? 'image' : 'video'}
-          caption={message.content || undefined}
+        <MediaGalleryViewer
+          visible={showMediaViewer && galleryItems.length > 0}
+          mediaItems={galleryItems}
+          initialIndex={galleryIndex}
           senderName={isMe ? i18n.t('auto.components__chat__ChatMessage.s12') : (message.sender?.display_name || i18n.t('auto.components__chat__ChatMessage.s13'))}
           timeLabel={timeText}
           onClose={() => setShowMediaViewer(false)}

@@ -1010,6 +1010,8 @@ export default function EconomicCalendarTab({
 
   return (
     <View style={{ flex: 1 }}>
+      {/* המנווט (חצים + תאריך) נעול מעל הרשימה — גלילה אוטומטית לאירוע הקרוב לא מזיזה אותו */}
+      {renderDateNavigator()}
       <View style={{ flex: 1, minHeight: 0 }}>
         <FlatList
           ref={dailyEventsListRef}
@@ -1018,7 +1020,6 @@ export default function EconomicCalendarTab({
           keyExtractor={(item, index) => `${item.id}-${item.time}-${index}`}
           renderItem={renderEvent}
           style={{ flex: 1 }}
-          ListHeaderComponent={renderDateNavigator}
           contentContainerStyle={{
             paddingTop: 6,
             paddingBottom: listBottomPad,

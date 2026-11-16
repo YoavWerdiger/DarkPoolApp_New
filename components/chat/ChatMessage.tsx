@@ -386,7 +386,7 @@ function ChatMessage({
       m.group_id === message.group_id;
     const toItem = (m: ChatMessageType): MediaGalleryItem => ({
       id: m.id,
-      url: m.id === message.id ? resolvedMedia.main || m.media_url! : m.media_url!,
+      url: m.id === message.id ? resolvedMedia.main || m.media_url || m.local_media_uri || '' : m.media_url!,
       type: m.message_type === MessageType.VIDEO ? 'video' : 'image',
       caption: m.content?.trim() || undefined,
     });
@@ -1055,8 +1055,8 @@ function ChatMessage({
             isMe,
             DesignTokens,
             () => {
-            // Only open viewer for uploaded media, not during upload
-            if ((message.media_url || message.local_media_uri) && !message.is_uploading) {
+            // קובץ שכבר בשרת נפתח תמיד (גם אם דגל ההעלאה נשאר תקוע); מקומי — רק אחרי סיום ההעלאה
+            if (message.media_url || (message.local_media_uri && !message.is_uploading)) {
               if (message.message_type === MessageType.IMAGE || message.message_type === MessageType.VIDEO) {
                 openMediaGallery();
               } else if (message.message_type === MessageType.DOCUMENT) {
@@ -1237,7 +1237,8 @@ function ChatMessage({
 
       {/* Spacer for avatar on my messages */}
       {/* Media Viewer */}
-      {(message.message_type === MessageType.IMAGE || message.message_type === MessageType.VIDEO) && message.media_url && (
+      {(message.message_type === MessageType.IMAGE || message.message_type === MessageType.VIDEO) &&
+        (message.media_url || message.local_media_uri) && (
         <MediaGalleryViewer
           visible={showMediaViewer && galleryItems.length > 0}
           mediaItems={galleryItems}
@@ -1363,9 +1364,13 @@ function renderMediaContent(
         null;
       const videoThumbOk = isDisplayableUri(thumbUri);
 
+      const vidW = message.media_width;
+      const vidH = message.media_height;
+      const videoAspect = clampBubbleAspect(vidW && vidH ? vidW / vidH : 0.9);
+
       return (
         <TouchableOpacity onPress={onMediaPress} activeOpacity={0.9}>
-          <View style={[styles.mediaVideo, wideStyle]}>
+          <View style={[styles.mediaVideo, wideStyle, { aspectRatio: videoAspect }]}>
             {videoThumbOk ? (
               <Image
                 source={{ uri: thumbUri }}
@@ -1375,7 +1380,7 @@ function renderMediaContent(
               />
             ) : (
               <View style={styles.videoPlaceholder}>
-                <Ionicons name="videocam" size={40} color={tokens.colors.text.tertiary} />
+                <Ionicons name="videocam-outline" size={28} color={tokens.colors.text.tertiary} />
               </View>
             )}
 
@@ -1384,7 +1389,7 @@ function renderMediaContent(
 
             <View style={styles.playButtonContainer} pointerEvents="none">
               <View style={styles.playButton}>
-                <Ionicons name="play" size={28} color={tokens.colors.text.primary} style={{ marginLeft: 3 }} />
+                <Ionicons name="play" size={22} color={tokens.colors.text.primary} style={{ marginLeft: 2 }} />
               </View>
             </View>
 
@@ -2859,7 +2864,7 @@ const createStyles = (tokens: any) => {
     marginBottom: 4,
     overflow: 'hidden',
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+    backgroundColor: tokens.colors.background.tertiary,
   },
   mediaVideoFrame: {
     width: '100%',
@@ -2868,7 +2873,7 @@ const createStyles = (tokens: any) => {
   videoPlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: tokens.colors.background.tertiary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -2901,14 +2906,17 @@ const createStyles = (tokens: any) => {
     alignItems: 'center',
   },
   playButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: tokens.colors.background.cardSolid,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
   videoBottomBanner: {
     position: 'absolute',

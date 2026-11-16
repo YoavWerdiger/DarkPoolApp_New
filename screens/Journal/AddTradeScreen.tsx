@@ -48,6 +48,8 @@ import {
   journalRtlContent,
   journalSectionSubtitleStyle,
 } from './journalLayout';
+// סכומים עם פסיקי אלפים (QA 9.4): פורמט בהקלדה, פענוח על המספר הנקי
+import { formatThousandsInput, parseFormattedNumber } from '../../utils/numberInput';
 
 const STEPS = ['פרטי עסקה', 'מחירים וכמות', 'תאריכים ושעות', 'יומן מסחר'] as const;
 
@@ -160,15 +162,15 @@ export default function AddTradeScreen() {
       return true;
     }
     if (s === 1) {
-      if (!entryPrice || parseFloat(entryPrice) <= 0) {
+      if (!entryPrice || parseFormattedNumber(entryPrice) <= 0) {
         legacyAlert(i18n.t('auto.screens__Journal__AddTradeScreen.s1'), i18n.t('auto.screens__Journal__AddTradeScreen.s3'));
         return false;
       }
-      if (!exitPrice || parseFloat(exitPrice) <= 0) {
+      if (!exitPrice || parseFormattedNumber(exitPrice) <= 0) {
         legacyAlert(i18n.t('auto.screens__Journal__AddTradeScreen.s1'), i18n.t('auto.screens__Journal__AddTradeScreen.s4'));
         return false;
       }
-      if (!quantity || parseFloat(quantity) <= 0) {
+      if (!quantity || parseFormattedNumber(quantity) <= 0) {
         legacyAlert(i18n.t('auto.screens__Journal__AddTradeScreen.s1'), i18n.t('auto.screens__Journal__AddTradeScreen.s5'));
         return false;
       }
@@ -221,15 +223,15 @@ export default function AddTradeScreen() {
         user_id: user.id,
         symbol: symbol.trim().toUpperCase(),
         direction,
-        entry_price: parseFloat(entryPrice),
-        exit_price: parseFloat(exitPrice),
-        quantity: parseFloat(quantity),
+        entry_price: parseFormattedNumber(entryPrice),
+        exit_price: parseFormattedNumber(exitPrice),
+        quantity: parseFormattedNumber(quantity),
         entry_date: parsedEntryDate.toISOString(),
         exit_date: parsedExitDate.toISOString(),
         notes: null,
         journal_details: buildJournalDetails(),
-        stop_loss: stopLoss.trim() ? parseFloat(stopLoss) : null,
-        target_price: targetPrice.trim() ? parseFloat(targetPrice) : null,
+        stop_loss: stopLoss.trim() ? parseFormattedNumber(stopLoss) : null,
+        target_price: targetPrice.trim() ? parseFormattedNumber(targetPrice) : null,
         strategy_name: strategyName.trim() || null,
       });
 
@@ -430,7 +432,7 @@ export default function AddTradeScreen() {
                     <TextInput
                       style={styles.inputGlassInner}
                       value={entryPrice}
-                      onChangeText={setEntryPrice}
+                      onChangeText={(v) => setEntryPrice(formatThousandsInput(v))}
                       placeholder="0.00"
                       placeholderTextColor={DesignTokens.colors.text.tertiary}
                       keyboardType="decimal-pad"
@@ -444,7 +446,7 @@ export default function AddTradeScreen() {
                     <TextInput
                       style={styles.inputGlassInner}
                       value={exitPrice}
-                      onChangeText={setExitPrice}
+                      onChangeText={(v) => setExitPrice(formatThousandsInput(v))}
                       placeholder="0.00"
                       placeholderTextColor={DesignTokens.colors.text.tertiary}
                       keyboardType="decimal-pad"
@@ -458,7 +460,7 @@ export default function AddTradeScreen() {
                     <TextInput
                       style={styles.inputGlassInner}
                       value={quantity}
-                      onChangeText={setQuantity}
+                      onChangeText={(v) => setQuantity(formatThousandsInput(v))}
                       placeholder="1"
                       placeholderTextColor={DesignTokens.colors.text.tertiary}
                       keyboardType="decimal-pad"
@@ -472,7 +474,7 @@ export default function AddTradeScreen() {
                     <TextInput
                       style={styles.inputGlassInner}
                       value={stopLoss}
-                      onChangeText={setStopLoss}
+                      onChangeText={(v) => setStopLoss(formatThousandsInput(v))}
                       placeholder="0.00"
                       placeholderTextColor={DesignTokens.colors.text.tertiary}
                       keyboardType="decimal-pad"
@@ -486,7 +488,7 @@ export default function AddTradeScreen() {
                     <TextInput
                       style={styles.inputGlassInner}
                       value={targetPrice}
-                      onChangeText={setTargetPrice}
+                      onChangeText={(v) => setTargetPrice(formatThousandsInput(v))}
                       placeholder="0.00"
                       placeholderTextColor={DesignTokens.colors.text.tertiary}
                       keyboardType="decimal-pad"

@@ -66,6 +66,8 @@ import type {
 } from './portfolioTypes';
 import { TRANSACTION_LABELS } from './portfolioConstants';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+// סכומים עם פסיקי אלפים (QA 9.4): פורמט בהקלדה, פענוח על המספר הנקי
+import { formatThousandsInput, parseFormattedNumber } from '../../utils/numberInput';
 
 type Nav = NativeStackNavigationProp<PortfoliosStackParamList, 'AddTransaction'>;
 type Route = RouteProp<PortfoliosStackParamList, 'AddTransaction'>;
@@ -221,13 +223,13 @@ export default function AddTransactionScreen() {
       const dateIso = tradeDate.toISOString();
 
       if (mode === 'asset') {
-        const qtyNum = parseFloat(quantity);
-        const priceNum = parseFloat(price);
-        const commNum = parseFloat(commission) || 0;
-        const leverageNum = parseFloat(leverage) || 1;
-        const pvNum = parseFloat(pointValue) || null;
-        const stopLossNum = stopLoss.trim() ? parseFloat(stopLoss) : null;
-        const targetPriceNum = targetPrice.trim() ? parseFloat(targetPrice) : null;
+        const qtyNum = parseFormattedNumber(quantity);
+        const priceNum = parseFormattedNumber(price);
+        const commNum = parseFormattedNumber(commission) || 0;
+        const leverageNum = parseFormattedNumber(leverage) || 1;
+        const pvNum = parseFormattedNumber(pointValue) || null;
+        const stopLossNum = stopLoss.trim() ? parseFormattedNumber(stopLoss) : null;
+        const targetPriceNum = targetPrice.trim() ? parseFormattedNumber(targetPrice) : null;
         if (stopLossNum != null && (isNaN(stopLossNum) || stopLossNum < 0)) {
           legacyAlert(i18n.t('auto.screens__Portfolios__AddTransactionScreen.s4'), i18n.t('auto.screens__Portfolios__AddTransactionScreen.s5'));
           return;
@@ -308,7 +310,7 @@ export default function AddTransactionScreen() {
           });
         }
       } else if (mode === 'cash') {
-        const amountNum = parseFloat(amount);
+        const amountNum = parseFormattedNumber(amount);
         if (!amountNum || amountNum <= 0) {
           legacyAlert(i18n.t('auto.screens__Portfolios__AddTransactionScreen.s16'), i18n.t('auto.screens__Portfolios__AddTransactionScreen.s17'));
           return;
@@ -324,7 +326,7 @@ export default function AddTransactionScreen() {
         if (transactionId) await updateTransaction(transactionId, payload);
         else await createTransaction(payload);
       } else if (mode === 'dividend') {
-        const amountNum = parseFloat(amount);
+        const amountNum = parseFormattedNumber(amount);
         if (!symbol) {
           legacyAlert(i18n.t('auto.screens__Portfolios__AddTransactionScreen.s8'), i18n.t('auto.screens__Portfolios__AddTransactionScreen.s18'));
           return;
@@ -368,9 +370,9 @@ export default function AddTransactionScreen() {
   // עלות עסקה בזמן אמת
   const txCost = useMemo(() => {
     if (mode !== 'asset') return null;
-    const qty = parseFloat(quantity);
-    const pr = parseFloat(price);
-    const comm = parseFloat(commission) || 0;
+    const qty = parseFormattedNumber(quantity);
+    const pr = parseFormattedNumber(price);
+    const comm = parseFormattedNumber(commission) || 0;
     if (!qty || qty <= 0 || isNaN(pr) || pr < 0) return null;
     return qty * pr + comm;
   }, [mode, quantity, price, commission]);
@@ -775,7 +777,7 @@ export default function AddTransactionScreen() {
                 <TextField
                   label={assetType === 'futures' ? i18n.t('auto.screens__Portfolios__AddTransactionScreen.s33') : i18n.t('auto.screens__Portfolios__AddTransactionScreen.s34')}
                   value={quantity}
-                  onChangeText={setQuantity}
+                  onChangeText={(v) => setQuantity(formatThousandsInput(v))}
                   keyboardType="decimal-pad"
                   numeric
                   placeholder={assetType === 'futures' ? '1' : '10'}
@@ -784,7 +786,7 @@ export default function AddTransactionScreen() {
                 <TextField
                   label={i18n.t('auto.screens__Portfolios__AddTransactionScreen.s35')}
                   value={price}
-                  onChangeText={setPrice}
+                  onChangeText={(v) => setPrice(formatThousandsInput(v))}
                   keyboardType="decimal-pad"
                   numeric
                   placeholder="150.00"
@@ -797,7 +799,7 @@ export default function AddTransactionScreen() {
                       label={i18n.t('auto.screens__Portfolios__AddTransactionScreen.s36')}
                       optional
                       value={stopLoss}
-                      onChangeText={setStopLoss}
+                      onChangeText={(v) => setStopLoss(formatThousandsInput(v))}
                       keyboardType="decimal-pad"
                       numeric
                       placeholder="145.00"
@@ -809,7 +811,7 @@ export default function AddTransactionScreen() {
                       label={i18n.t('auto.screens__Portfolios__AddTransactionScreen.s37')}
                       optional
                       value={targetPrice}
-                      onChangeText={setTargetPrice}
+                      onChangeText={(v) => setTargetPrice(formatThousandsInput(v))}
                       keyboardType="decimal-pad"
                       numeric
                       placeholder="165.00"
@@ -852,7 +854,7 @@ export default function AddTransactionScreen() {
                 <TextField
                   label={i18n.t('auto.screens__Portfolios__AddTransactionScreen.s39')}
                   value={amount}
-                  onChangeText={setAmount}
+                  onChangeText={(v) => setAmount(formatThousandsInput(v))}
                   keyboardType="decimal-pad"
                   numeric
                   placeholder="0.00"
@@ -883,7 +885,7 @@ export default function AddTransactionScreen() {
                 <TextField
                   label={i18n.t('auto.screens__Portfolios__AddTransactionScreen.s41')}
                   value={amount}
-                  onChangeText={setAmount}
+                  onChangeText={(v) => setAmount(formatThousandsInput(v))}
                   keyboardType="decimal-pad"
                   numeric
                   placeholder="0.00"
@@ -1062,7 +1064,7 @@ export default function AddTransactionScreen() {
                       label={i18n.t('auto.screens__Portfolios__AddTransactionScreen.s52')}
                       optional
                       value={commission}
-                      onChangeText={setCommission}
+                      onChangeText={(v) => setCommission(formatThousandsInput(v))}
                       keyboardType="decimal-pad"
                       numeric
                       placeholder="0.00"
@@ -1073,7 +1075,7 @@ export default function AddTransactionScreen() {
                     <TextField
                       label={i18n.t('auto.screens__Portfolios__AddTransactionScreen.s53')}
                       value={leverage}
-                      onChangeText={setLeverage}
+                      onChangeText={(v) => setLeverage(formatThousandsInput(v))}
                       keyboardType="decimal-pad"
                       numeric
                       placeholder="1"
@@ -1085,7 +1087,7 @@ export default function AddTransactionScreen() {
                   <TextField
                     label={i18n.t('auto.screens__Portfolios__AddTransactionScreen.s54')}
                     value={pointValue}
-                    onChangeText={setPointValue}
+                    onChangeText={(v) => setPointValue(formatThousandsInput(v))}
                     keyboardType="decimal-pad"
                     numeric
                     placeholder={i18n.t('auto.screens__Portfolios__AddTransactionScreen.s55')}

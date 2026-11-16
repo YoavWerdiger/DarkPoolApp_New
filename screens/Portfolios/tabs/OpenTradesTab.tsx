@@ -67,6 +67,8 @@ import {
   journalSectionSubtitleStyle,
   journalSectionTitleStyle,
 } from '../../Journal/journalLayout';
+// סכומים עם פסיקי אלפים (QA 9.4): פורמט בהקלדה, פענוח על המספר הנקי
+import { formatThousandsInput, parseFormattedNumber } from '../../../utils/numberInput';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 /** גובה תוכן שיט הסגירה האחרון — הפתיחה הבאה עולה ישר בגובה הנכון */
@@ -267,12 +269,12 @@ export default function OpenTradesTab({
 
   const handleConfirmClose = useCallback(async () => {
     if (!closingTrade) return;
-    const px = parseFloat(exitPriceText);
+    const px = parseFormattedNumber(exitPriceText);
     if (!px || px <= 0) {
       legacyAlert(i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s5'), i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s9'));
       return;
     }
-    const closeQty = parseFloat(closeQtyText.replace(/,/g, ''));
+    const closeQty = parseFormattedNumber(closeQtyText.replace(/,/g, ''));
     if (!Number.isFinite(closeQty) || closeQty <= 0 || closeQty > closingTrade.quantity + 1e-9) {
       legacyAlert(
         i18n.t('auto.screens__Portfolios__tabs__OpenTradesTab.s5'),
@@ -639,7 +641,7 @@ export default function OpenTradesTab({
                   </Text>
                   <TextInput
                     value={exitPriceText}
-                    onChangeText={setExitPriceText}
+                    onChangeText={(v) => setExitPriceText(formatThousandsInput(v))}
                     placeholder="0.00"
                     placeholderTextColor={formFieldPlaceholderColor(tokens)}
                     keyboardType="decimal-pad"
@@ -654,7 +656,7 @@ export default function OpenTradesTab({
                   <View style={[styles.sheetInputWrap, styles.qtyInputWrap]}>
                     <TextInput
                       value={closeQtyText}
-                      onChangeText={setCloseQtyText}
+                      onChangeText={(v) => setCloseQtyText(formatThousandsInput(v))}
                       placeholder={String(closingTrade.quantity)}
                       placeholderTextColor={formFieldPlaceholderColor(tokens)}
                       keyboardType="decimal-pad"
@@ -683,7 +685,7 @@ export default function OpenTradesTab({
                   })}
                 </View>
                 {(() => {
-                  const q = parseFloat(closeQtyText.replace(/,/g, ''));
+                  const q = parseFormattedNumber(closeQtyText.replace(/,/g, ''));
                   if (!Number.isFinite(q) || q <= 0 || q >= closingTrade.quantity) return null;
                   const remaining = +(closingTrade.quantity - q).toFixed(6);
                   return (
@@ -762,9 +764,9 @@ export default function OpenTradesTab({
               </View>
 
               {(() => {
-                const px = parseFloat(exitPriceText);
+                const px = parseFormattedNumber(exitPriceText);
                 if (!px || px <= 0) return null;
-                const typedQty = parseFloat(closeQtyText.replace(/,/g, ''));
+                const typedQty = parseFormattedNumber(closeQtyText.replace(/,/g, ''));
                 const qty =
                   Number.isFinite(typedQty) && typedQty > 0
                     ? Math.min(typedQty, closingTrade.quantity)

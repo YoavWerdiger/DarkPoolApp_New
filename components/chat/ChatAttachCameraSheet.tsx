@@ -345,10 +345,15 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit, i
           <View style={[StyleSheet.absoluteFill, { backgroundColor: '#000' }]} />
         ) : granted ? (
           <GestureDetector gesture={modeSwipe}>
-            <View style={StyleSheet.absoluteFill} collapsable={false}>
+            <View style={[StyleSheet.absoluteFill, styles.previewStage]} collapsable={false}>
               <CameraView
                 ref={cameraRef}
-                style={StyleSheet.absoluteFill}
+                // צילום תמונה: מסגרת 3:4 כמו מצלמת המכשיר — מה שרואים = מה שנשלח, בלי «זום» של
+                // מילוי המסך (חיתוך 4:3 ל-9:20). וידאו נשאר במסך מלא (QA 1.3)
+                style={camMode.mode === 'picture' ? styles.photoPreview : StyleSheet.absoluteFill}
+                // סלפי לא הפוך בתמונה הנשלחת (כמו בוואטסאפ) — מפורש, לא רק ברירת המחדל
+                mirror={false}
+                {...(Platform.OS === 'android' && camMode.mode === 'picture' ? { ratio: '4:3' as const } : {})}
 
                 facing={facing}
                 mode={camMode.mode}
@@ -488,6 +493,15 @@ export function ChatAttachCameraSheet({ visible, onClose, onCapture, onCommit, i
 }
 
 const styles = StyleSheet.create({
+  previewStage: {
+    backgroundColor: '#000',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  photoPreview: {
+    width: SCREEN_W,
+    height: (SCREEN_W * 4) / 3,
+  },
   root: {
     flex: 1,
     backgroundColor: '#000',

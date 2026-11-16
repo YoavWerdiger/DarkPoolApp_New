@@ -3,7 +3,7 @@ import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 /**
  * שיט צירוף (QA 4.2) — כמו בוואטסאפ: שורת תמונות אחרונות מהגלריה, ומתחת גריד של פעולות
- * עם עיגולים צבעוניים: גלריה · מצלמה · מסמך · סקר · מיקום · איש קשר · אירוע.
+ * עם עיגולים צבעוניים: גלריה · מצלמה · מסמך · סקר.
  * בלי «אודיו» — יש כפתור מיקרופון בשורת הכתיבה.
  * כל פעולה רצה אחרי שהשיט נסגר (ב-iOS מצלמה / בורר מערכת מעל שיט פתוח נתקעים).
  */
@@ -12,15 +12,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image as ExpoImage } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  CalendarDays,
-  Camera,
-  ChartColumnBig,
-  FileText,
-  Image as ImageIcon,
-  MapPin,
-  UserRound,
-} from 'lucide-react-native';
+import { Camera, ChartColumnBig, FileText, Image as ImageIcon } from 'lucide-react-native';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE, headerExitButtonFill } from '../ui/DayNavBlurButton';
 import { useDesignTokens } from '../ui/DesignTokens';
@@ -38,9 +30,6 @@ type Props = {
   onGallery?: () => void;
   onDocument?: () => void;
   onPoll?: () => void;
-  onLocation?: () => void;
-  onContact?: () => void;
-  onEvent?: () => void;
   /** תמונה/סרטון מהשורה העליונה — ישר לפריוויו */
   onPickRecent?: (asset: MediaRecentAsset) => void;
 };
@@ -51,9 +40,6 @@ const ACTION_COLORS = {
   camera: '#E5487D',
   document: '#7E5BEF',
   poll: '#E8A317',
-  location: '#1FA855',
-  contact: '#0EA5E9',
-  event: '#E5484D',
 } as const;
 
 const RECENT_THUMB = 76;
@@ -65,9 +51,6 @@ export default function AttachMenuSheet({
   onGallery,
   onDocument,
   onPoll,
-  onLocation,
-  onContact,
-  onEvent,
   onPickRecent,
 }: Props) {
   const tokens = useDesignTokens();
@@ -93,9 +76,6 @@ export default function AttachMenuSheet({
     onCamera ? { key: 'camera', title: i18n.t('auto.components__chat__AttachMenuSheet.s1'), icon: Camera, color: ACTION_COLORS.camera, run: onCamera } : null,
     onDocument ? { key: 'document', title: i18n.t('auto.components__chat__AttachMenuSheet.s3'), icon: FileText, color: ACTION_COLORS.document, run: onDocument } : null,
     onPoll ? { key: 'poll', title: i18n.t('auto.components__chat__AttachMenuSheet.s5'), icon: ChartColumnBig, color: ACTION_COLORS.poll, run: onPoll } : null,
-    onLocation ? { key: 'location', title: i18n.t('auto.components__chat__AttachMenuSheet.s8'), icon: MapPin, color: ACTION_COLORS.location, run: onLocation } : null,
-    onContact ? { key: 'contact', title: i18n.t('auto.components__chat__AttachMenuSheet.s9'), icon: UserRound, color: ACTION_COLORS.contact, run: onContact } : null,
-    onEvent ? { key: 'event', title: i18n.t('auto.components__chat__AttachMenuSheet.s10'), icon: CalendarDays, color: ACTION_COLORS.event, run: onEvent } : null,
   ].filter(Boolean) as Array<{ key: string; title: string; icon: typeof Camera; color: string; run: () => void }>;
 
   const runAction = (run: () => void) => {

@@ -283,10 +283,11 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
           justifyContent: 'center',
         },
         journalSwitcherCenter: {
-          alignItems: 'center',
+          alignItems: 'flex-end',
         },
+        // מקום לכפתור «פוזיציה חדשה» משמאל — השם לא עובר מתחתיו
         journalSwitcherInset: {
-          paddingHorizontal: 128,
+          paddingLeft: 136,
         },
         addPositionPill: {
           position: 'absolute',
@@ -366,7 +367,7 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
       inRtlTree
       sectionContainerStyle={JOURNAL_HEADER_SECTION_STYLE}
       section={
-        // QA 9.1: שם התיק במרכז (בורר ברור), «פוזיציה חדשה +» משמאל מתחת ל-⋯ — במקום הכפתור הצף
+        // שם התיק מוצמד לימין מתחת לכותרת (כמו קודם), «פוזיציה חדשה +» משמאל מתחת ל-⋯ — במקום הכפתור הצף
         <View style={styles.journalSectionRow}>
           <View style={[styles.journalSwitcherCenter, canAddTransaction && !loading && styles.journalSwitcherInset]}>
             <PortfolioSwitcher
@@ -374,7 +375,6 @@ export default function PortfolioDetailScreen({ embedded }: { embedded?: Portfol
               selectedId={embedded.portfolioId}
               onSelect={embedded.onSelect}
               onCreate={embedded.onCreate}
-              centered
             />
           </View>
           {canAddTransaction && !loading ? (

@@ -144,7 +144,7 @@ export default function PortfoliosHubScreen() {
             onMenuPress={openMainDrawer}
             inRtlTree
             sectionContainerStyle={JOURNAL_HEADER_SECTION_STYLE}
-            section={<PortfolioSwitcherSkeleton centered />}
+            section={<PortfolioSwitcherSkeleton />}
           />
           <JournalSkeleton />
         </SafeAreaView>

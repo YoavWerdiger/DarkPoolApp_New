@@ -223,7 +223,9 @@ export async function resolveMediaRecentLocalUri(
       id,
       opts?.downloadFromNetwork ? { shouldDownloadFromNetwork: true } : undefined,
     );
-    const local = info.localUri || info.uri;
+    // iOS: localUri מגיע עם fragment של מטא-דאטה (‎#YnBsaXN0…‎ = bplist) — קובץ עם # לא נפתח
+    // להעלאה (NSURLError -1) והסיומת יוצאת «movynbsaxn»
+    const local = (info.localUri || info.uri)?.split('#')[0];
     if (local && !local.startsWith('ph://')) return local;
   } catch {
     /* fallback */

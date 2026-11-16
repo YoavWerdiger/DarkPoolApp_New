@@ -259,6 +259,7 @@ export async function uploadImage(
   error: ChatError | null;
   uploadId?: string;
 }> {
+  uri = uri.split('#')[0]; // iOS gallery fragment — ראו uploadVideo
   const { id: uploadId, handle } = createUploadHandle();
   const CANCELLED_RESULT = { url: null, thumbnail_url: null, width: 0, height: 0, size: 0, error: { code: 'UPLOAD_CANCELLED' as const, message: i18n.t('auto.services__chat__chatMediaService.s1') }, uploadId };
 
@@ -439,6 +440,8 @@ export async function uploadVideo(
     error,
   });
 
+  // נתיב מקומי בלי fragment (‎#YnBsaXN0…‎ מגלריית iOS) — אחרת הקובץ לא נפתח והסיומת משתבשת
+  uri = uri.split('#')[0];
   try {
     if (!validateGroupPath(groupId)) {
       return failResult({ code: 'INVALID_GROUP', message: 'Invalid group ID' });

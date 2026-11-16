@@ -3525,7 +3525,8 @@
     "s25": "Add symbol",
     "s26": "Updating prices…",
     "s27": "Add 1 stock",
-    "s28": "Add {{v0}} stocks"
+    "s28": "Add {{v0}} stocks",
+    "s29": "Remove"
   },
   "screens__News__SplitsTab": {
     "s1": "Reverse split - every {{v0}} shares become {{v1}} share",

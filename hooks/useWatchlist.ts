@@ -422,13 +422,29 @@ export function useWatchlist() {
     [activeWatchlistId, invalidateItems, queryClient, symbolsKey]
   );
 
+  // אופטימי: השורה יוצאת מהרשימה מיד; כשל בשרת — מחזירים אותה
   const removeSymbol = useCallback(
     async (symbol: string) => {
       if (!activeWatchlistId) return;
-      await removeWatchlistItem(activeWatchlistId, symbol);
-      await invalidateItems();
+      const key = appQueryKeys.watchlistItems(activeWatchlistId);
+      void queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<typeof items>(key);
+      if (previous) {
+        const sym = symbol.toUpperCase();
+        queryClient.setQueryData<typeof items>(
+          key,
+          previous.filter((it) => it.symbol.toUpperCase() !== sym)
+        );
+      }
+      try {
+        await removeWatchlistItem(activeWatchlistId, symbol);
+      } catch (e) {
+        if (previous) queryClient.setQueryData(key, previous);
+        throw e;
+      }
+      void invalidateItems();
     },
-    [activeWatchlistId, invalidateItems]
+    [activeWatchlistId, invalidateItems, queryClient]
   );
 
   const setNotes = useCallback(

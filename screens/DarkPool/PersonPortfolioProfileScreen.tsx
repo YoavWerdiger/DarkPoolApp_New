@@ -123,6 +123,7 @@ import {
 import {
   HOLDING_TAG_EXACT,
   CONGRESS_HOLDINGS_HELP_BODY,
+  INVESTOR_DATA_DISCLAIMER,
   CONGRESS_HOLDINGS_HELP_TITLE,
   FORM4_HOLDINGS_HELP_BODY,
   FORM4_HOLDINGS_HELP_TITLE,
@@ -1632,23 +1633,20 @@ export function PersonPortfolioProfileScreen({
             <View style={styles.valueBlock}>
               <View style={styles.valueLabelRow}>
                 <Text style={styles.valueLabel}>{valueLabel}</Text>
-                {holdingsEngine === 'congress' ||
-                holdingsEngine === 'form4' ||
-                holdingsEngine === 'trump' ? (
-                  <Pressable
-                    onPress={openHoldingsHelp}
-                    hitSlop={8}
-                    accessibilityRole="button"
-                    accessibilityLabel={i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s23')}
-                    style={styles.valueHelpBtn}
-                  >
-                    <Ionicons
-                      name="information-circle-outline"
-                      size={16}
-                      color={tokens.colors.text.secondary}
-                    />
-                  </Pressable>
-                ) : null}
+                {/* QA 11.7: אותו ⓘ בכל הפרופילים (גם קרנות וחברות 13F) */}
+                <Pressable
+                  onPress={openHoldingsHelp}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s23')}
+                  style={styles.valueHelpBtn}
+                >
+                  <Ionicons
+                    name="information-circle-outline"
+                    size={16}
+                    color={tokens.colors.text.secondary}
+                  />
+                </Pressable>
               </View>
               <ScrubSubscriber store={scrubStore}>
                 {(scrubPoint) => {
@@ -1825,13 +1823,7 @@ export function PersonPortfolioProfileScreen({
                     : 'filing'
               }
               honestyTag={null}
-              onHelpPress={
-                holdingsEngine === 'congress' ||
-                holdingsEngine === 'form4' ||
-                holdingsEngine === 'trump'
-                  ? openHoldingsHelp
-                  : undefined
-              }
+              onHelpPress={openHoldingsHelp}
               helpA11yLabel={i18n.t('auto.screens__DarkPool__PersonPortfolioProfileScreen.s23')}
             />
           ) : null}
@@ -1968,6 +1960,7 @@ export function PersonPortfolioProfileScreen({
         onClose={() => setHelpOpen(false)}
         title={holdingsHelp.title}
         body={holdingsHelp.body}
+        disclaimer={INVESTOR_DATA_DISCLAIMER}
       />
     </ScreenChrome>
   );

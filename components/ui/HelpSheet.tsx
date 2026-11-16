@@ -35,6 +35,8 @@ export type HelpSheetProps = {
   title: string;
   body: string;
   gotItLabel?: string;
+  /** הצהרת אחריות בולטת מתחת להסבר (למשל בפרופילי אינסיידרים) */
+  disclaimer?: string;
 };
 
 function HelpSheetBody({
@@ -43,9 +45,11 @@ function HelpSheetBody({
   gotItLabel,
   onClose,
   onLayout,
+  disclaimer,
 }: {
   title: string;
   body: string;
+  disclaimer?: string;
   gotItLabel: string;
   onClose: () => void;
   onLayout?: (e: LayoutChangeEvent) => void;
@@ -66,7 +70,12 @@ function HelpSheetBody({
   return (
     <View onLayout={onLayout} style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 16) + 4 }]}>
       <Text style={[styles.title, { color: tokens.colors.text.primary }]}>{title}</Text>
-      <Text style={[styles.body, { color: tokens.colors.text.secondary }]}>{body}</Text>
+      <Text style={[styles.body, { color: tokens.colors.text.secondary }, !!disclaimer && styles.bodyTight]}>{body}</Text>
+      {disclaimer ? (
+        <View style={[styles.disclaimer, { backgroundColor: tokens.colors.background.tertiary }]}>
+          <Text style={[styles.disclaimerText, { color: tokens.colors.text.primary }]}>{disclaimer}</Text>
+        </View>
+      ) : null}
       {/* CTA לפי הטופו — UIButton primary (pill) */}
       <UIButton title={gotItLabel} variant="primary" size="lg" fullWidth onPress={dismiss} />
     </View>
@@ -79,12 +88,13 @@ export function HelpSheet({
   title,
   body,
   gotItLabel = HELP_SHEET_GOT_IT,
+  disclaimer,
 }: HelpSheetProps) {
   const [contentHeight, setContentHeight] = useState<number | null>(null);
 
   useEffect(() => {
     setContentHeight(null);
-  }, [title, body]);
+  }, [title, body, disclaimer]);
 
   const onContentLayout = useCallback((e: LayoutChangeEvent) => {
     const height = e.nativeEvent.layout.height;
@@ -116,6 +126,7 @@ export function HelpSheet({
       <HelpSheetBody
         title={title}
         body={body}
+        disclaimer={disclaimer}
         gotItLabel={gotItLabel}
         onClose={onClose}
         onLayout={onContentLayout}
@@ -144,6 +155,20 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     body: {
       ...appBodyTextStyle,
       marginBottom: 24,
+    },
+    bodyTight: {
+      marginBottom: 14,
+    },
+    disclaimer: {
+      borderRadius: 14,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      marginBottom: 24,
+    },
+    disclaimerText: {
+      ...appBodyTextStyle,
+      fontSize: 13,
+      lineHeight: 19,
     },
   });
 }

@@ -26,6 +26,9 @@ export const CONGRESS_HOLDINGS_HELP_TITLE = i18n.t('auto.screens__DarkPool__util
 export const CONGRESS_HOLDINGS_HELP_BODY =
   i18n.t('auto.screens__DarkPool__utils__investorHoldings.s4');
 
+/** הצהרת אחריות — בכל חלונית «על המספרים» בפרופילים (QA 11.7) */
+export const INVESTOR_DATA_DISCLAIMER = i18n.t('auto.screens__DarkPool__utils__investorHoldings.s6');
+
 export const FORM4_HOLDINGS_HELP_TITLE = i18n.t('auto.screens__DarkPool__utils__investorHoldings.s3');
 export const FORM4_HOLDINGS_HELP_BODY =
   i18n.t('auto.screens__DarkPool__utils__investorHoldings.s5');

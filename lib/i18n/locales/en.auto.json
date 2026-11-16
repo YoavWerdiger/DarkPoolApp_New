@@ -2913,8 +2913,9 @@
     "s1": "Estimated",
     "s2": "Exact",
     "s3": "About the numbers",
-    "s4": "Value and allocation from Quiver (CurrentHolding). Row return: the stock price since the last purchase reported in a PTR (open on the trade day vs. live price) — not the position's P&L. If Quiver provides a cost basis, we use it.",
-    "s5": "Shares in companies where the person serves (officer, director or 10%+ owner), per the original SEC filings, times the current price. Other private investments don't have to be reported — so this isn't their full net worth."
+    "s4": "The value is based on public trade disclosures. Each row's return is the change in the stock price since the last reported purchase — it doesn't reflect the person's actual profit or loss. Most disclosures give a range rather than an exact amount, so the value is an estimate.",
+    "s5": "Shares in companies where the person serves (officer, director or 10%+ owner), per the original SEC filings, times the current price. Other private investments don't have to be reported — so this isn't their full net worth.",
+    "s6": "This information is for informational purposes only and is not investment advice or a recommendation to buy or sell securities. The data comes from public filings and may be incomplete or delayed. DarkPool is not responsible for the accuracy of the data or for decisions made based on it."
   },
   "screens__DarkPool__utils__profileChartSeries": {
     "s1": "Not enough 13F filings yet to build a value chart.",
@@ -2962,7 +2963,7 @@
   },
   "screens__DarkPool__utils__trumpHoldings": {
     "s1": "About the numbers",
-    "s2": "Trades from Quiver and Unusual Whales (deduplicated). Most filings give an amount range (e.g. $1,001–$15,000) rather than an exact amount. For each trade, a share count is derived from the range and the price on the trade day, and the value uses today's market price; sales reduce the oldest position first. So a range is shown: from the lower bound of all filings to the upper bound. The chart and weights use the middle of the range. This is an estimate from the filings — not Trump's full net worth."
+    "s2": "The value is based on public trade disclosures. Most disclosures give a range (e.g. $1,001–$15,000) rather than an exact amount, so a range is shown — from the low end to the high end — and the chart uses the midpoint. The value uses today's market prices; it's an estimate, not total net worth."
   },
   "screens__DarkPool__utils__darkPoolFormat": {
     "s1": "Holding value: {{v0}}",

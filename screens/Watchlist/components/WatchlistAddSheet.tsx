@@ -293,7 +293,8 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     searchInput: { flex: 1, minHeight: 48 },
     chips: { flexGrow: 0, marginTop: 12, marginHorizontal: -APP_LAYOUT.screenPaddingHorizontal },
-    chipsRow: { paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal, gap: 8 },
+    // כמו שורת הצ'יפים בחקור — מתחילים מימין (UI_DIR)
+    chipsRow: { direction: UI_DIR, paddingHorizontal: APP_LAYOUT.screenPaddingHorizontal, gap: 8 },
     list: { flex: 1, marginTop: 8 },
     sectionTitle: {
       ...APP_TYPE.caption,

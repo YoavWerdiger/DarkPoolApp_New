@@ -72,15 +72,16 @@ const ReorderableWatchlistRow = React.memo(function ReorderableWatchlistRow({
     // אותו מנגנון כמו ברשימת הקבוצות: הכפתור נחשף רק בגרירה, עיגול + תווית, שורה אחת פתוחה בכל פעם
     <ChatListSwipeRow
       enabled={!!onRemove && !isActive}
-      revealBackgroundColor={tokens.colors.background.primary}
-      revealInset={ROW_PAD_H}
+      // אזור אדום מלא מאחורי השורה (כמו מחיקה ב-iOS), נחשף רק ברוחב הגרירה
+      revealBackgroundColor={tokens.colors.danger.main}
+      revealInset={0}
       actions={[
         {
           key: 'remove',
           label: i18n.t('auto.screens__Watchlist__WatchlistScreen.s4'),
           icon: <Ionicons name="trash-outline" size={20} color="#FFFFFF" />,
-          backgroundColor: tokens.colors.danger.main,
-          color: tokens.colors.text.primary,
+          backgroundColor: 'rgba(255,255,255,0.18)',
+          color: '#FFFFFF',
           onPress: () => {
             void HapticFeedback.medium();
             onRemove?.(row);

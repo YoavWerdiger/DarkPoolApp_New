@@ -228,7 +228,29 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
     return topPad + titleH + metaH + bodyVisibleH + 20 + actionsH;
   }, [article?.image_url, titleH, bodyVisibleH]);
 
-  const imageH = article?.image_url ? NEWS_DETAIL_IMAGE_HEIGHT : 0;
+  // QA 12.1: התמונה ביחס המקורי — רוחב מלא, גובה לפי היחס (160 עד חצי מסך), לא פס קבוע של 240 שחותך
+  const [imageRatio, setImageRatio] = useState<number | null>(null);
+  useEffect(() => {
+    setImageRatio(null);
+    const uri = article?.image_url;
+    if (!uri) return;
+    let alive = true;
+    Image.getSize(
+      uri,
+      (w, h) => {
+        if (alive && w > 0 && h > 0) setImageRatio(w / h);
+      },
+      () => undefined,
+    );
+    return () => {
+      alive = false;
+    };
+  }, [article?.image_url]);
+  const imageH = article?.image_url
+    ? imageRatio
+      ? Math.round(Math.min(SCREEN_HEIGHT * 0.5, Math.max(160, Dimensions.get('window').width / imageRatio)))
+      : NEWS_DETAIL_IMAGE_HEIGHT
+    : 0;
   const chromeH = BOTTOM_SHEET_EDGE_HANDLE_HEIGHT;
 
   const dynamicSnapPoints = useMemo(() => {
@@ -461,7 +483,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
           <View
             style={{
               width: '100%',
-              height: NEWS_DETAIL_IMAGE_HEIGHT,
+              height: imageH,
               overflow: 'hidden',
               borderTopLeftRadius: DesignTokens.borderRadius.xl,
               borderTopRightRadius: DesignTokens.borderRadius.xl,

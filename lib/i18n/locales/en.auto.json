@@ -5194,5 +5194,27 @@
     "s1": "High impact",
     "s2": "Medium impact",
     "s3": "Regular events"
+  },
+  "screens__Watchlist__components__WatchlistAddSheet": {
+    "s1": "Add stocks",
+    "s2": "Search by company or ticker",
+    "s3": "In list",
+    "s4": "Popular",
+    "s5": "All",
+    "s6": "Tech",
+    "s7": "Communication",
+    "s8": "Consumer",
+    "s9": "Staples",
+    "s10": "Health care",
+    "s11": "Financials",
+    "s12": "Industrials",
+    "s13": "Energy",
+    "s14": "Materials",
+    "s15": "Real estate",
+    "s16": "Utilities",
+    "s17": "Add",
+    "s18": "Search the whole market",
+    "s19": "Already in your list",
+    "s20": "Add stocks"
   }
 }

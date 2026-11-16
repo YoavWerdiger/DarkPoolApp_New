@@ -6,7 +6,10 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
+  Pressable,
 } from 'react-native';
+import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import { WatchlistAddSheet } from './components/WatchlistAddSheet';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import ReorderableList, {
   reorderItems,
@@ -54,21 +57,50 @@ const ReorderableWatchlistRow = React.memo(function ReorderableWatchlistRow({
   row,
   index,
   onPress,
+  onRemove,
 }: {
   row: WatchlistRowData;
   index: number;
   onPress: (row: WatchlistRowData) => void;
+  onRemove?: (row: WatchlistRowData) => void;
 }) {
   const drag = useReorderableDrag();
   const isActive = useIsActive();
+  const tokens = useDesignTokens();
+  // QA 16.2: החלקה על השורה → כפתור פח → הסרה
   return (
-    <WatchlistRow
-      row={row}
-      index={index}
-      isActive={isActive}
-      onDrag={drag}
-      onPress={() => onPress(row)}
-    />
+    <ReanimatedSwipeable
+      friction={2}
+      rightThreshold={40}
+      overshootRight={false}
+      enabled={!!onRemove}
+      renderRightActions={() => (
+        <Pressable
+          onPress={() => {
+            void HapticFeedback.medium();
+            onRemove?.(row);
+          }}
+          style={{
+            width: 76,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: tokens.colors.danger.main,
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={i18n.t('auto.screens__Watchlist__WatchlistScreen.s4')}
+        >
+          <Ionicons name="trash-outline" size={22} color="#FFFFFF" />
+        </Pressable>
+      )}
+    >
+      <WatchlistRow
+        row={row}
+        index={index}
+        isActive={isActive}
+        onDrag={drag}
+        onPress={() => onPress(row)}
+      />
+    </ReanimatedSwipeable>
   );
 });
 
@@ -90,6 +122,8 @@ export default function WatchlistScreen() {
   const tokens = useDesignTokens();
   const mainTabsHeight = useMainTabsHeight();
   const [searchOpen, setSearchOpen] = useState(false);
+  // QA 16.3: שיט «הוספת מניות» (רשימה ארוכה עם לוגו + שם) — נגיש תמיד מה-+ ומתחתית הרשימה
+  const [addSheetOpen, setAddSheetOpen] = useState(false);
   const [createListOpen, setCreateListOpen] = useState(false);
   // הוספה מהירה (רשימה ריקה): בחירה מרובה + כפתור אישור צף בתחתית
   const [quickPicked, setQuickPicked] = useState<string[]>([]);
@@ -190,9 +224,19 @@ export default function WatchlistScreen() {
     }
   }, [navigation]);
 
+  const existingSymbols = useMemo(
+    () => new Set(rows.map((r) => String(r?.item?.symbol ?? '').toUpperCase()).filter(Boolean)),
+    [rows],
+  );
+
   const handleSelectSymbol = useCallback(
     async (result: SymbolSearchResult) => {
       setSearchOpen(false);
+      // QA 16.1: מניה שכבר ברשימה — לא מוסיפים שוב
+      if (existingSymbols.has(result.symbol.toUpperCase())) {
+        legacyAlert(i18n.t('auto.screens__Watchlist__components__WatchlistAddSheet.s19'));
+        return;
+      }
       try {
         await addSymbol(result.symbol, result.description);
         void HapticFeedback.success();
@@ -200,7 +244,7 @@ export default function WatchlistScreen() {
         legacyAlert(i18n.t('auto.screens__Watchlist__WatchlistScreen.s1'), i18n.t('auto.screens__Watchlist__WatchlistScreen.s3'));
       }
     },
-    [addSymbol]
+    [addSymbol, existingSymbols]
   );
 
   const handleRemove = useCallback(
@@ -410,6 +454,15 @@ export default function WatchlistScreen() {
     runOnJS(hapticDragStep)();
   }, []);
 
+  const handleSwipeRemove = useCallback(
+    (row: WatchlistRowData) => {
+      const sym = row?.item?.symbol;
+      if (!sym) return;
+      void removeSymbol(sym).catch(() => legacyAlert(i18n.t('auto.screens__Watchlist__WatchlistScreen.s1')));
+    },
+    [removeSymbol],
+  );
+
   const renderWatchlistItem = useCallback(
     ({ item, index }: { item: WatchlistRowData; index: number }) => {
       if (!item?.item?.symbol) return null;
@@ -418,10 +471,11 @@ export default function WatchlistScreen() {
           row={item}
           index={index}
           onPress={handleRowPress}
+          onRemove={handleSwipeRemove}
         />
       );
     },
-    [handleRowPress]
+    [handleRowPress, handleSwipeRemove]
   );
 
   const openListActions = useCallback(
@@ -481,6 +535,21 @@ export default function WatchlistScreen() {
   const styles = useMemo(
     () =>
       StyleSheet.create({
+        addMoreBtn: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 6,
+          height: 44,
+          borderRadius: 22,
+          marginHorizontal: 16,
+          marginTop: 12,
+          marginBottom: 8,
+        },
+        addMoreText: {
+          fontSize: 15,
+          fontWeight: '600',
+        },
         safe: { flex: 1 },
         // הרשימה על המסך עצמו (בלי כרטיס) — ריפוד אופקי בשורות (ROW_PAD_H = ריפוד מסך)
         body: {
@@ -559,7 +628,7 @@ export default function WatchlistScreen() {
             <DayNavBlurButton
               onPress={() => {
                 void HapticFeedback.selection();
-                setSearchOpen(true);
+                setAddSheetOpen(true);
               }}
               glassIntensity="subtle"
               size={DRAWER_MENU_BUTTON_SIZE}
@@ -635,12 +704,29 @@ export default function WatchlistScreen() {
                       }
                       ListEmptyComponent={
                         <WatchlistEmpty
-                          onAddPress={() => setSearchOpen(true)}
+                          onAddPress={() => setAddSheetOpen(true)}
                           picked={quickPicked}
                           onTogglePick={toggleQuickPick}
                         />
                       }
                       renderItem={renderWatchlistItem}
+                      ListFooterComponent={
+                        listData.length > 0 ? (
+                          <Pressable
+                            onPress={() => {
+                              void HapticFeedback.selection();
+                              setAddSheetOpen(true);
+                            }}
+                            style={[styles.addMoreBtn, { backgroundColor: tokens.colors.background.tertiary }]}
+                            accessibilityRole="button"
+                          >
+                            <Ionicons name="add" size={20} color={tokens.colors.text.primary} />
+                            <Text style={[styles.addMoreText, { color: tokens.colors.text.primary }]}>
+                              {i18n.t('auto.screens__Watchlist__components__WatchlistAddSheet.s20')}
+                            </Text>
+                          </Pressable>
+                        ) : undefined
+                      }
                     />
                   </View>
                 </View>
@@ -662,6 +748,23 @@ export default function WatchlistScreen() {
           </MarketsErrorBoundary>
         </View>
       </RNSafeAreaView>
+
+      <WatchlistAddSheet
+        visible={addSheetOpen}
+        onClose={() => setAddSheetOpen(false)}
+        existingSymbols={existingSymbols}
+        onAdd={async (stock) => {
+          try {
+            await addSymbol(stock.symbol, stock.name);
+          } catch {
+            legacyAlert(i18n.t('auto.screens__Watchlist__WatchlistScreen.s1'), i18n.t('auto.screens__Watchlist__WatchlistScreen.s3'));
+          }
+        }}
+        onSearchAll={() => {
+          setAddSheetOpen(false);
+          setTimeout(() => setSearchOpen(true), 380);
+        }}
+      />
 
       <SymbolSearchModal
         visible={searchOpen}

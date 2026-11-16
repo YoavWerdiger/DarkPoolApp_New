@@ -88,6 +88,8 @@ export default function PostRepliesSheet({
     <BottomSheet
       isOpen={visible}
       onClose={onClose}
+      // המקלדת מנוהלת כאן (כיווץ הרשימה + ChatComposerDock) — בלי הרמה כפולה של השיט
+      avoidKeyboard={false}
       snapPoints={[SHEET_SNAP]}
       fitContent
       enablePanDownToClose={panEnabled}

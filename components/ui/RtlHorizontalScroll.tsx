@@ -33,7 +33,8 @@ export const RtlHorizontalScroll = forwardRef<any, ScrollViewProps>(function Rtl
       style={[style, IS_RTL_UI ? { direction: 'ltr' } : null]}
       contentContainerStyle={[
         contentContainerStyle,
-        IS_RTL_UI ? { direction: 'ltr', flexDirection: 'row-reverse' } : null,
+        // flexGrow: כשהתוכן צר מהמסך (צ'יפים) — row-reverse מצמיד אותו לימין ולא לשמאל
+        IS_RTL_UI ? { direction: 'ltr', flexDirection: 'row-reverse', flexGrow: 1 } : null,
       ]}
       onContentSizeChange={(w, h) => {
         pinRight();

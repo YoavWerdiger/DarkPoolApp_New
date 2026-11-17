@@ -232,6 +232,26 @@ export const CoursesScreen: React.FC = () => {
   return (
     <ScreenChrome>
       <RNSafeAreaView style={styles.flex} edges={['top']}>
+        {/* כותרת + תפריט + הערות — קבועים; רק רשימת הקורסים נמשכת לרענון */}
+        <AcademyScreenHeader
+          onMenuPress={openMainDrawer}
+          title={i18n.t('auto.screens__Learning__CoursesScreen.s11')}
+          // «ההערות שלי» בפינה שמול התפריט — כמו כפתורי + בשאר המסכים
+          rightAccessory={
+            <DayNavBlurButton
+              onPress={handleOpenNotes}
+              size={DRAWER_MENU_BUTTON_SIZE}
+              glassIntensity="subtle"
+              accessibilityLabel={i18n.t('auto.screens__Learning__CoursesScreen.s12')}
+            >
+              <Ionicons
+                name="book-outline"
+                size={22}
+                color={DesignTokens.colors.text.primary}
+              />
+            </DayNavBlurButton>
+          }
+        />
         <ScrollView onScroll={refreshRing.onScroll} onLayout={refreshRing.onLayout} scrollEventThrottle={16}
           style={styles.flex}
           contentContainerStyle={{ paddingBottom: listBottomPadding }}
@@ -244,26 +264,6 @@ export const CoursesScreen: React.FC = () => {
             />
           }
         >
-          <AcademyScreenHeader
-            onMenuPress={openMainDrawer}
-            title={i18n.t('auto.screens__Learning__CoursesScreen.s11')}
-            // «ההערות שלי» בפינה שמול התפריט — כמו כפתורי + בשאר המסכים
-            rightAccessory={
-              <DayNavBlurButton
-                onPress={handleOpenNotes}
-                size={DRAWER_MENU_BUTTON_SIZE}
-                glassIntensity="subtle"
-                accessibilityLabel={i18n.t('auto.screens__Learning__CoursesScreen.s12')}
-              >
-                <Ionicons
-                  name="book-outline"
-                  size={22}
-                  color={DesignTokens.colors.text.primary}
-                />
-              </DayNavBlurButton>
-            }
-          />
-
           {showInitialLoader ? (
             // כרטיסי שלד באותה רשימה ומידות כמו CourseCard — במקום ספינר וטקסט «טוען»
             <View style={styles.courseList}>

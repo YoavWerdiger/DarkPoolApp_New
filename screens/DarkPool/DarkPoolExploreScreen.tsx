@@ -9,13 +9,13 @@ import i18n from '../../lib/i18n';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { RefreshControl } from '../../components/ui/AppRefreshControl';
 import { Ionicons } from '@expo/vector-icons';
 import { formFieldShellStyle } from '../../components/ui/formControl';
 import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';

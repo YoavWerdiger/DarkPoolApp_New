@@ -7,8 +7,8 @@ import {
   FlatList,
   StyleSheet,
   TouchableOpacity,
-  RefreshControl,
 } from 'react-native';
+import { RefreshControl } from '../../components/ui/AppRefreshControl';
 import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import UICard from '../../components/ui/UICard';
 import UIButton from '../../components/ui/UIButton';

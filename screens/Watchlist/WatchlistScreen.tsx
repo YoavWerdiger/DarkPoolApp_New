@@ -4,9 +4,9 @@ import {
   View,
   Text,
   StyleSheet,
-  RefreshControl,
   Pressable,
 } from 'react-native';
+import { RefreshControl } from '../../components/ui/AppRefreshControl';
 import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import ChatListSwipeRow from '../../components/chat/ChatListSwipeRow';
 import { WatchlistAddSheet } from './components/WatchlistAddSheet';

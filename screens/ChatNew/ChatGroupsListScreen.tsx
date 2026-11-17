@@ -17,13 +17,13 @@ import {
   StyleSheet,
   TouchableOpacity,
   Pressable,
-  RefreshControl,
   Image,
   TextInput,
   ScrollView,
   Animated,
   type ImageSourcePropType,
 } from 'react-native';
+import { RefreshControl } from '../../components/ui/AppRefreshControl';
 import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { rootNavigationRef } from '../../navigation/rootNavigationRef';
 import {

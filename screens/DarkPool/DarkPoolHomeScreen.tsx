@@ -9,13 +9,13 @@ import { runAfterInteractions } from '../../utils/runAfterInteractions';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   View,
   type ListRenderItem,
 } from 'react-native';
+import { RefreshControl } from '../../components/ui/AppRefreshControl';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';

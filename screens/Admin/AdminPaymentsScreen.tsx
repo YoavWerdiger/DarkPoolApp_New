@@ -10,10 +10,10 @@ import {
   FlatList,
   TouchableOpacity,
   StyleSheet,
-  RefreshControl,
   Modal,
   ScrollView,
 } from 'react-native';
+import { RefreshControl } from '../../components/ui/AppRefreshControl';
 import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Receipt, RefreshCw, Ban, Zap, Search } from 'lucide-react-native';

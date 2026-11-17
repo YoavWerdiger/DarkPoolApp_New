@@ -7,11 +7,11 @@ import {
   TouchableOpacity,
   StyleSheet,
   FlatList,
-  RefreshControl,
   TextInput,
   Dimensions,
   type LayoutChangeEvent,
 } from 'react-native';
+import { RefreshControl } from '../../components/ui/AppRefreshControl';
 import { legacyAlert } from '../../utils/appDialog';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';

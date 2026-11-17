@@ -7,9 +7,9 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  RefreshControl,
   StyleSheet,
 } from 'react-native';
+import { RefreshControl } from '../../components/ui/AppRefreshControl';
 import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {

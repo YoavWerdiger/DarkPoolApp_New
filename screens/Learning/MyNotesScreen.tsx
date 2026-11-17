@@ -9,8 +9,8 @@ import {
   FlatList,
   StyleSheet,
   TouchableOpacity,
-  RefreshControl,
 } from 'react-native';
+import { RefreshControl } from '../../components/ui/AppRefreshControl';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAfterNavigationTransition } from '../../hooks/afterNavigationTransition';

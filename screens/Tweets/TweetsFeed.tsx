@@ -12,13 +12,13 @@ import React, {
 import {
   FlatList,
   Pressable,
-  RefreshControl,
   Share,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { RefreshControl } from '../../components/ui/AppRefreshControl';
 import { Ionicons } from '@expo/vector-icons';
 import { legacyAlert, showAppConfirm } from '../../utils/appDialog';
 import { useDesignTokens } from '../../components/ui/DesignTokens';

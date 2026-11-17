@@ -6,8 +6,8 @@ import {
   Text,
   ScrollView,
   StyleSheet,
-  RefreshControl,
 } from 'react-native';
+import { RefreshControl } from '../../components/ui/AppRefreshControl';
 import { useNavigation } from '@react-navigation/native';
 import { useCourses, useEnrollInCourse } from '../../hooks/useLearning';
 import { useSubscription } from '../../hooks/useSubscription';

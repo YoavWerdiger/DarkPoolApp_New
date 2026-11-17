@@ -7,7 +7,6 @@ import {
   View,
   Text,
   FlatList,
-  RefreshControl,
   Pressable,
   TouchableOpacity,
   StyleSheet,
@@ -15,6 +14,7 @@ import {
   TextInput,
   ScrollView,
 } from 'react-native';
+import { RefreshControl } from '../../components/ui/AppRefreshControl';
 import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { Ionicons } from '@expo/vector-icons';
 import { Sun, Moon, ChevronUp, Search } from 'lucide-react-native';

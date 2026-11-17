@@ -5,10 +5,10 @@ import {
   View,
   Text,
   ScrollView,
-  RefreshControl,
   StyleSheet,
   LayoutChangeEvent,
 } from 'react-native';
+import { RefreshControl } from '../../components/ui/AppRefreshControl';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Bell, CreditCard, KeyRound, LifeBuoy, Users, MessagesSquare, GraduationCap } from 'lucide-react-native';
 import Svg, { Circle, Line, Polyline, Text as SvgText } from 'react-native-svg';

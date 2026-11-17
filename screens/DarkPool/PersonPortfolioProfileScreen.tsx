@@ -14,7 +14,6 @@ import {
   Dimensions,
   Image,
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -22,6 +21,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { RefreshControl } from '../../components/ui/AppRefreshControl';
 import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { useSharedValue } from 'react-native-reanimated';
 import { LIGHT_CANVAS } from '../../components/ui/designTokensStatic';

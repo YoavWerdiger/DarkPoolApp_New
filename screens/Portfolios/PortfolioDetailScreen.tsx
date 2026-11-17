@@ -9,10 +9,10 @@ import {
   View,
   Text,
   StyleSheet,
-  RefreshControl,
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
+import { RefreshControl } from '../../components/ui/AppRefreshControl';
 import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { legacyAlert } from '../../utils/appDialog';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';

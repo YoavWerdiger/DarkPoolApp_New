@@ -18,6 +18,8 @@ export interface AppSpinnerProps {
   animating?: boolean;
   style?: StyleProp<ViewStyle>;
   hidesWhenStopped?: boolean;
+  /** טבעת סטטית (בלי סיבוב) — למשל בזמן משיכה לפני שהרענון התחיל */
+  paused?: boolean;
   testID?: string;
   accessibilityLabel?: string;
 }
@@ -33,6 +35,7 @@ export default function AppSpinner({
   animating = true,
   style,
   hidesWhenStopped = true,
+  paused = false,
   testID,
   accessibilityLabel,
 }: AppSpinnerProps) {
@@ -40,7 +43,7 @@ export default function AppSpinner({
   const spin = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (!animating) return;
+    if (!animating || paused) return;
     spin.setValue(0);
     const loop = Animated.loop(
       Animated.timing(spin, {
@@ -52,7 +55,7 @@ export default function AppSpinner({
     );
     loop.start();
     return () => loop.stop();
-  }, [animating, spin]);
+  }, [animating, paused, spin]);
 
   if (!animating && hidesWhenStopped) return null;
 

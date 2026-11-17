@@ -362,6 +362,37 @@ function ChatInputImpl({
   const isPausedRef = useRef(false);
   const disabledRef = useRef(disabled);
   const isUploadingRef = useRef(false);
+
+  // ⚡ וידאו מתחיל לעלות כבר בפריוויו (בזמן כתיבת הכיתוב) — בשליחה ממשיכים מאותה העלאה
+  type PreUpload = {
+    promise: Promise<Awaited<ReturnType<typeof chatMediaService.uploadVideo>>>;
+    progress: number;
+    listener?: (progress: number) => void;
+  };
+  const preUploadsRef = useRef(new Map<string, PreUpload>());
+  const startPreUpload = useCallback(
+    (uri: string) => {
+      if (!uri || uri.startsWith('ph://') || preUploadsRef.current.has(uri)) return;
+      const entry: PreUpload = { promise: null as never, progress: 0 };
+      entry.promise = chatMediaService.uploadVideo(uri, groupId, (p) => {
+        entry.progress = p.progress;
+        entry.listener?.(p.progress);
+      });
+      preUploadsRef.current.set(uri, entry);
+    },
+    [groupId],
+  );
+  /** העלאות שלא נשלחו (ביטול / הסרה מהבחירה) — מוחקים את הקובץ שכבר עלה */
+  const discardPreUploads = useCallback(() => {
+    for (const entry of preUploadsRef.current.values()) {
+      void entry.promise
+        .then((res) => {
+          if (res?.url) void chatMediaService.deleteMedia(res.url, groupId);
+        })
+        .catch(() => undefined);
+    }
+    preUploadsRef.current.clear();
+  }, [groupId]);
   const sendInFlightRef = useRef(false);
   const keepComposerFocusRef = useRef(false);
   const keepComposerFocusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -710,6 +741,27 @@ function ChatInputImpl({
     setShowMediaPreview(false);
     setSelectedMedia([]);
 
+    // העלאות מוקדמות של הקבצים שנשלחים — לוקחים אותן; השאר (הוסרו מהבחירה) נמחקים
+    const preUploads = new Map<string, PreUpload>();
+    for (const f of mediaFiles) {
+      const entry = preUploadsRef.current.get(f.uri);
+      if (entry) {
+        preUploads.set(f.uri, entry);
+        preUploadsRef.current.delete(f.uri);
+      }
+    }
+    discardPreUploads();
+    const uploadVideoOrResume = (
+      uri: string,
+      onProgress: (p: { progress: number }) => void,
+    ): ReturnType<typeof chatMediaService.uploadVideo> => {
+      const entry = preUploads.get(uri);
+      if (!entry) return chatMediaService.uploadVideo(uri, groupId, onProgress);
+      entry.listener = (p) => onProgress({ progress: p });
+      if (entry.progress > 0) onProgress({ progress: entry.progress });
+      return entry.promise;
+    };
+
     const tempId = makeLocalId();
     const clientMessageId = makeClientMessageId();
 
@@ -794,7 +846,7 @@ function ChatInputImpl({
               localThumbnailUri: mediaFile.thumbnail_url,
             });
           } else if (mediaFile.type === 'video') {
-            uploadResult = await chatMediaService.uploadVideo(mediaFile.uri, groupId, onProgress);
+            uploadResult = await uploadVideoOrResume(mediaFile.uri, onProgress);
           } else {
             uploadResult = await chatMediaService.uploadImage(mediaFile.uri, groupId, onProgress, {
               localThumbnailUri: mediaFile.thumbnail_url,
@@ -949,7 +1001,7 @@ function ChatInputImpl({
               localThumbnailUri: mediaFile.thumbnail_url,
             });
           } else if (mediaFile.type === 'video') {
-            uploadResult = await chatMediaService.uploadVideo(mediaFile.uri, groupId, onProgress);
+            uploadResult = await uploadVideoOrResume(mediaFile.uri, onProgress);
           } else {
             uploadResult = await chatMediaService.uploadImage(mediaFile.uri, groupId, onProgress, {
               localThumbnailUri: mediaFile.thumbnail_url,
@@ -1029,6 +1081,13 @@ function ChatInputImpl({
       setIsUploading(false);
     })();
   };
+
+  useEffect(() => {
+    if (!showMediaPreview) return;
+    for (const f of selectedMedia) {
+      if (f.type === 'video' && f.uri) startPreUpload(f.uri);
+    }
+  }, [showMediaPreview, selectedMedia, startPreUpload]);
 
   const applyPickedMedia = useCallback((items: PickedRecentMedia[], fromLibrary = true) => {
     if (items.length === 0) return;
@@ -2768,6 +2827,7 @@ function ChatInputImpl({
         <MediaPreviewModal
           visible={showMediaPreview}
           onClose={() => {
+            discardPreUploads();
             setShowMediaPreview(false);
             setSelectedMedia([]);
           }}

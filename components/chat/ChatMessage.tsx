@@ -1017,7 +1017,8 @@ function ChatMessage({
             DesignTokens,
             () => {
             // קובץ שכבר בשרת נפתח תמיד (גם אם דגל ההעלאה נשאר תקוע); מקומי — רק אחרי סיום ההעלאה
-            if (message.media_url || (message.local_media_uri && !message.is_uploading)) {
+            // נפתח מיד — גם בזמן העלאה, מהקובץ המקומי (אופטימי)
+            if (message.media_url || message.local_media_uri) {
               if (message.message_type === MessageType.IMAGE || message.message_type === MessageType.VIDEO) {
                 openMediaGallery();
               } else if (message.message_type === MessageType.DOCUMENT) {

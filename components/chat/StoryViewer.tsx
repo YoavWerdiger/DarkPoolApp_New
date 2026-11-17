@@ -48,6 +48,7 @@ import Reanimated, {
 } from 'react-native-reanimated';
 import {
   FlatList,
+  ScrollView,
   Gesture,
   GestureDetector,
   GestureHandlerRootView,
@@ -332,8 +333,7 @@ function ViewersSheet({
         <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
       </Reanimated.View>
 
-      <GestureDetector gesture={panGesture}>
-        <Reanimated.View
+      <Reanimated.View
           style={[
             sheetStyles.sheet,
             {
@@ -346,6 +346,9 @@ function ViewersSheet({
             sheetStyle,
           ]}
         >
+          {/* גרירה לסגירה רק מהראש (ידית + טאבים) — הרשימה עצמה נגללת */}
+          <GestureDetector gesture={panGesture}>
+          <View>
           {/* Grabber — כמו ידית השיטים באפליקציה */}
           <View style={sheetStyles.grabberWrap} pointerEvents="none">
             <View style={[sheetStyles.grabber, { backgroundColor: tokens.colors.text.secondary }]} />
@@ -361,6 +364,8 @@ function ViewersSheet({
             onChange={onChangeTab}
             style={sheetStyles.tabsRow}
           />
+          </View>
+          </GestureDetector>
 
           {/* List / states */}
           {loading ? (
@@ -379,7 +384,11 @@ function ViewersSheet({
               </Text>
             </View>
           ) : (
-            <View style={{ flex: 1 }}>
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={{ paddingBottom: insetsBottom + 12 }}
+              showsVerticalScrollIndicator={false}
+            >
               {listData.map((row: any, idx) => {
                 const emoji = tab === 'viewers' ? row.emoji : row.emoji;
                 return (
@@ -400,11 +409,9 @@ function ViewersSheet({
                   </View>
                 );
               })}
-              <View style={{ height: insetsBottom + 12 }} />
-            </View>
+            </ScrollView>
           )}
         </Reanimated.View>
-      </GestureDetector>
     </View>
   );
 }
@@ -443,30 +450,6 @@ const sheetStyles = StyleSheet.create({
     paddingHorizontal: 16,
     marginTop: 4,
     marginBottom: 12,
-  },
-  tab: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.10)',
-    gap: 6,
-  },
-  tabActive: {
-    backgroundColor: 'rgba(255,255,255,0.14)',
-    borderColor: 'rgba(255,255,255,0.28)',
-  },
-  tabText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  tabTextActive: {
-    color: '#fff',
   },
   row: {
     flexDirection: 'row',

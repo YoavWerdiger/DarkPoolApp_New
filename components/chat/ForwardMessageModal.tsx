@@ -11,7 +11,6 @@ import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Dimensions,
   FlatList,
   Image,
@@ -20,6 +19,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { ActivityIndicator } from '../ui/AppSpinner';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../ui/DesignTokens';

@@ -8,7 +8,6 @@ import i18n from '../../lib/i18n';
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -17,6 +16,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';

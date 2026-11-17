@@ -2,7 +2,6 @@ import { ROOT_DIR } from '../../lib/i18n/direction';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useEffect, useRef } from 'react';
 import {
-  ActivityIndicator,
   Animated,
   Pressable,
   StyleSheet,
@@ -11,6 +10,7 @@ import {
   useWindowDimensions,
   type TextStyle,
 } from 'react-native';
+import { ActivityIndicator } from './AppSpinner';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from './DesignTokens';
 import { APP_TYPE, appSheetButtonLabelStyle } from './appType';

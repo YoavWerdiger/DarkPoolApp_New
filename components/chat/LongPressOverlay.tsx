@@ -502,7 +502,7 @@ const createMessagePreviewStyles = (tokens: any) => {
   },
   myBubble: {
     backgroundColor: tokens.colors.bubbleMe,
-    borderBottomRightRadius: 4,
+    borderBottomRightRadius: 16,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     borderBottomLeftRadius: 16,

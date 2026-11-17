@@ -11,9 +11,9 @@ import {
   Text,
   StyleSheet,
   Dimensions,
-  ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
+import { ActivityIndicator } from '../ui/AppSpinner';
 import { initialWindowMetrics, SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Video, ResizeMode } from '../../lib/expoAvSafe';
 import { Ionicons } from '@expo/vector-icons';

@@ -7,8 +7,8 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
 } from 'react-native';
+import { ActivityIndicator } from '../../../components/ui/AppSpinner';
 import { legacyAlert } from '../../../utils/appDialog';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';

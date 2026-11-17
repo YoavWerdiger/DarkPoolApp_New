@@ -12,7 +12,6 @@ import { TEXT_DIR } from '../../lib/i18n/language';
 
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Image,
   Linking,
   Platform,
@@ -22,6 +21,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { Ionicons } from '@expo/vector-icons';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import * as ImagePicker from 'expo-image-picker';

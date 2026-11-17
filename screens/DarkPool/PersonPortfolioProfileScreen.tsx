@@ -10,7 +10,6 @@ import { getQuotes } from '../../services/portfolios/portfolioPriceFeed';
 import { brandfetchTickerLogoUri } from '../../utils/brandfetch';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Animated,
   Dimensions,
   Image,
@@ -23,6 +22,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { useSharedValue } from 'react-native-reanimated';
 import { LIGHT_CANVAS } from '../../components/ui/designTokensStatic';
 import { MotionNumber } from '../../components/ui/MotionNumber';

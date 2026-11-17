@@ -4,8 +4,8 @@ import {
   Pressable,
   Text,
   StyleSheet,
-  ActivityIndicator,
 } from 'react-native';
+import { ActivityIndicator } from '../ui/AppSpinner';
 import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { Play } from 'lucide-react-native';

@@ -8,7 +8,6 @@ import { appLocale } from '../../lib/i18n/locale';
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Image,
   Pressable,
@@ -17,6 +16,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';

@@ -2,11 +2,11 @@ import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   StyleSheet,
   Text,
   TouchableOpacity,
 } from 'react-native';
+import { ActivityIndicator } from '../ui/AppSpinner';
 import { useAuth } from '../../context/AuthContext';
 import {
   followUser,

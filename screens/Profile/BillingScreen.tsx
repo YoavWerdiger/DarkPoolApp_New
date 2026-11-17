@@ -7,10 +7,10 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
   StyleSheet,
 } from 'react-native';
+import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ArrowLeftRight,

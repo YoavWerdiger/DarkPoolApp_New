@@ -6,10 +6,10 @@ import {
   Text,
   TextInput,
   ScrollView,
-  ActivityIndicator,
   StyleSheet,
   Platform,
 } from 'react-native';
+import { ActivityIndicator } from '../../components/ui/AppSpinner';
 // edge-to-edge (SDK 58): adjustResize לא מקטין את החלון באנדרואיד — KAV של keyboard-controller עובד בשתי הפלטפורמות
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';

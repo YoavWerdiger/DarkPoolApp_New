@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, ActivityIndicator, Platform, StyleProp, ViewStyle } from 'react-native';
+import { View, Platform, StyleProp, ViewStyle } from 'react-native';
+import { ActivityIndicator } from '../../../components/ui/AppSpinner';
 import { WebView } from 'react-native-webview';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { UI_CARD_RADIUS } from '../marketsLayout';

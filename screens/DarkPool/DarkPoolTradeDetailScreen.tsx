@@ -19,13 +19,13 @@ import { TEXT_DIR } from '../../lib/i18n/language';
 
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';

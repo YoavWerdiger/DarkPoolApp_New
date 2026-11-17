@@ -1,7 +1,8 @@
 import i18n from '../../lib/i18n';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { AuthService } from '../../services/authService';
 import { DesignTokens } from '../../components/ui/DesignTokens';
 import { HapticFeedback } from '../../utils/hapticFeedback';

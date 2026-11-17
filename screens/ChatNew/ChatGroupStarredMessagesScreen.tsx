@@ -9,8 +9,8 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  ActivityIndicator,
 } from 'react-native';
+import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useLockParentDrawerWhileFocused } from '../../hooks/useLockParentDrawerWhileFocused';

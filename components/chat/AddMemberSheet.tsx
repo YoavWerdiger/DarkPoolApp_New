@@ -15,8 +15,8 @@ import {
   FlatList,
   Image,
   StyleSheet,
-  ActivityIndicator,
 } from 'react-native';
+import { ActivityIndicator } from '../ui/AppSpinner';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { GlassChip } from '../ui/GlassChip';

@@ -18,13 +18,13 @@ import {
   TouchableOpacity,
   Pressable,
   RefreshControl,
-  ActivityIndicator,
   Image,
   TextInput,
   ScrollView,
   Animated,
   type ImageSourcePropType,
 } from 'react-native';
+import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { rootNavigationRef } from '../../navigation/rootNavigationRef';
 import {
   discardPendingStory,

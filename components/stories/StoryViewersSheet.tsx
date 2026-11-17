@@ -1,7 +1,8 @@
 import { SegmentedTabs } from '../ui/SegmentedTabs';
 import i18n from '../../lib/i18n';
 import React, { useCallback, useEffect } from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator } from '../ui/AppSpinner';
 import { Ionicons } from '@expo/vector-icons';
 import Reanimated, {
   runOnJS,

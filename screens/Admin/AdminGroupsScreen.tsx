@@ -4,7 +4,6 @@ import { TEXT_DIR } from '../../lib/i18n/language';
 import { appLocale } from '../../lib/i18n/locale';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Image,
   Pressable,
   RefreshControl,
@@ -14,6 +13,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';

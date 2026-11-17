@@ -9,12 +9,12 @@ import {
   TextInput,
   FlatList,
   TouchableOpacity,
-  ActivityIndicator,
   StyleSheet,
   RefreshControl,
   Modal,
   ScrollView,
 } from 'react-native';
+import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Receipt, RefreshCw, Ban, Zap, Search } from 'lucide-react-native';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';

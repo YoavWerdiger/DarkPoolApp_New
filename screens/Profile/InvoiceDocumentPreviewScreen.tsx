@@ -3,13 +3,13 @@ import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
-  ActivityIndicator,
   StyleSheet,
   TouchableOpacity,
   Linking,
   Platform,
   Share,
 } from 'react-native';
+import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { ExternalLink, Share2 } from 'lucide-react-native';

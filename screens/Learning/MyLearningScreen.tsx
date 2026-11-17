@@ -8,8 +8,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   RefreshControl,
-  ActivityIndicator,
 } from 'react-native';
+import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import UICard from '../../components/ui/UICard';
 import UIButton from '../../components/ui/UIButton';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';

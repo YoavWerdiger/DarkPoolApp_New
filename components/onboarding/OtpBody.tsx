@@ -1,7 +1,8 @@
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator } from '../ui/AppSpinner';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import OtpInput from './OtpInput';

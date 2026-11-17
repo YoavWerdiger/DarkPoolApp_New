@@ -7,11 +7,11 @@ import {
   View,
   Text,
   Platform,
-  ActivityIndicator,
   TextInput,
   StyleSheet,
   Pressable,
 } from 'react-native';
+import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   AndroidSoftInputModes,

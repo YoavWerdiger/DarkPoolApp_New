@@ -6,9 +6,9 @@ import {
   View,
   Text,
   TouchableOpacity,
-  ActivityIndicator,
   StyleSheet,
 } from 'react-native';
+import { ActivityIndicator } from '../ui/AppSpinner';
 import { useDesignTokens } from '../ui/DesignTokens';
 import UICard from '../ui/UICard';
 import { APP_LAYOUT, UI_CARD_RADIUS } from '../ui/appLayout';

@@ -1,7 +1,8 @@
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useState, useEffect, useLayoutEffect } from 'react';
-import { View, Text, ActivityIndicator, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import Reanimated, { ZoomIn } from 'react-native-reanimated';
 import { APP_LAYOUT } from '../../components/ui/appLayout';
 import { APP_TYPE } from '../../components/ui/appType';

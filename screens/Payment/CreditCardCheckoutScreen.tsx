@@ -1,7 +1,8 @@
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, ActivityIndicator, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Platform } from 'react-native';
+import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import type { ShouldStartLoadRequest } from 'react-native-webview/lib/WebViewTypes';

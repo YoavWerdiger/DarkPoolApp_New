@@ -11,13 +11,13 @@ import {
   Pressable,
   StyleSheet,
   ViewStyle,
-  ActivityIndicator,
   Image,
   TextInput,
   Platform,
   Dimensions,
   LayoutChangeEvent,
 } from 'react-native';
+import { ActivityIndicator } from '../ui/AppSpinner';
 import { Ionicons } from '@expo/vector-icons';
 import BottomSheet, {
   BOTTOM_SHEET_EDGE_HANDLE_HEIGHT,

@@ -6,10 +6,10 @@ import {
   View,
   Text,
   StyleSheet,
-  ActivityIndicator,
   TouchableOpacity,
   TextInput,
 } from 'react-native';
+import { ActivityIndicator } from '../../../components/ui/AppSpinner';
 import { Ionicons } from '@expo/vector-icons';
 import UICard from '../../../components/ui/UICard';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';

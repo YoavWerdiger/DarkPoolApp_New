@@ -1,6 +1,7 @@
 import i18n from '../../lib/i18n';
 import React from 'react';
-import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { ActivityIndicator } from '../ui/AppSpinner';
 import { useDesignTokens } from '../ui/DesignTokens';
 import UIButton from '../ui/UIButton';
 import { APP_LAYOUT } from '../ui/appLayout';

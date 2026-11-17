@@ -2629,15 +2629,14 @@ function ChatInputImpl({
           }}
           inputRef={textInputRef}
           nativeID={CHAT_COMPOSER_NATIVE_ID}
+          // ההעלאה מוצגת על בועת המדיה (ספינר) — השדה נשאר רגיל ופתוח לכתיבה
           placeholder={
-            isUploading
-              ? i18n.t('auto.components__chat__ChatInput.s29')
-              : pendingEntity
-                ? i18n.t('auto.components__chat__ChatInput.s30')
-                : i18n.t('auto.components__chat__ChatInput.s31')
+            pendingEntity
+              ? i18n.t('auto.components__chat__ChatInput.s30')
+              : i18n.t('auto.components__chat__ChatInput.s31')
           }
           placeholderTextColor={DesignTokens.colors.text.secondary}
-          editable={!disabled && !isUploading}
+          editable={!disabled}
           maxLength={10000}
           numberOfLines={2}
           containerStyle={{ paddingBottom: inputBottomPadding }}

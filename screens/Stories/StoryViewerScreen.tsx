@@ -18,7 +18,6 @@ import i18n from '../../lib/i18n';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { discardPendingStory, getPendingStories, localUriForStoryMedia } from '../../lib/pendingStories';
 import {
-  ActivityIndicator,
   Image,
   Pressable,
   StyleSheet,
@@ -26,6 +25,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { RouteProp, useIsFocused, useNavigation, useRoute } from '@react-navigation/native';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';

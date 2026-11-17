@@ -7,9 +7,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  ActivityIndicator,
   Platform,
 } from 'react-native';
+import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { legacyAlert } from '../../utils/appDialog';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';

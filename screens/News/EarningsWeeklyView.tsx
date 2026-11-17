@@ -13,9 +13,9 @@ import {
   StyleSheet,
   Animated,
   TextInput,
-  ActivityIndicator,
   ScrollView,
 } from 'react-native';
+import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { Ionicons } from '@expo/vector-icons';
 import { Sun, Moon, ChevronUp, Search } from 'lucide-react-native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';

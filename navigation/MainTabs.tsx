@@ -440,6 +440,8 @@ export default function MainTabs() {
         id={MAIN_DRAWER_NAVIGATOR_ID}
         initialRouteName="Chat"
         drawerContent={(p) => <CustomDrawerContent {...p} />}
+        // פיתוח בלבד: EXPO_PUBLIC_DEV_DRAWER_OPEN=1 — המגירה פתוחה בהפעלה (לצילומי סימולטור)
+        defaultStatus={__DEV__ && process.env.EXPO_PUBLIC_DEV_DRAWER_OPEN ? 'open' : 'closed'}
         // ברירת המחדל true לאנדרואיד/iOS — ידוע שגורם למסכים ריקים/שבורים עם Native Stack בתוך Drawer
         detachInactiveScreens={false}
         screenOptions={{

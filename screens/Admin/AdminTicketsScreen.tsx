@@ -6,9 +6,9 @@ import {
   Text,
   FlatList,
   TouchableOpacity,
-  ActivityIndicator,
   StyleSheet,
 } from 'react-native';
+import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 import UICard from '../../components/ui/UICard';

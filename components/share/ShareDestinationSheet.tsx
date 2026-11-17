@@ -3,13 +3,15 @@ import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Image,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View, Dimensions } from 'react-native';
+  View,
+  Dimensions,
+} from 'react-native';
+import { ActivityIndicator } from '../ui/AppSpinner';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../ui/DesignTokens';

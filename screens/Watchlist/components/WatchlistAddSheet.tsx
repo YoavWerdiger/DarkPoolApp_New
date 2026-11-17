@@ -8,7 +8,6 @@ import { ROOT_DIR, UI_DIR } from '../../../lib/i18n/direction';
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Pressable,
   ScrollView,
   SectionList,
@@ -18,6 +17,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { ActivityIndicator } from '../../../components/ui/AppSpinner';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomSheet from '../../../components/ui/BottomSheet/BottomSheet';

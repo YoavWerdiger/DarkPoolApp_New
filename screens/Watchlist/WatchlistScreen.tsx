@@ -5,9 +5,9 @@ import {
   Text,
   StyleSheet,
   RefreshControl,
-  ActivityIndicator,
   Pressable,
 } from 'react-native';
+import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import ChatListSwipeRow from '../../components/chat/ChatListSwipeRow';
 import { WatchlistAddSheet } from './components/WatchlistAddSheet';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';

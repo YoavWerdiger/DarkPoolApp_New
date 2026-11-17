@@ -7,11 +7,11 @@ import {
   View,
   Text,
   FlatList,
-  ActivityIndicator,
   StyleSheet,
   ScrollView,
   useWindowDimensions,
 } from 'react-native';
+import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';

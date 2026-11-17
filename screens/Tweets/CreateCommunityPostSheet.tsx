@@ -3,7 +3,6 @@ import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Dimensions,
   KeyboardAvoidingView,
   Platform,
@@ -14,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { APP_LAYOUT, UI_CARD_RADIUS } from '../../components/ui/appLayout';

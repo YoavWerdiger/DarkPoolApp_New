@@ -2,7 +2,8 @@ import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import Reanimated, {
   Easing,
   FadeIn,

@@ -7,11 +7,11 @@ import {
   View,
   Text,
   StyleSheet,
-  ActivityIndicator,
   TouchableOpacity,
   TextInput,
   Platform,
 } from 'react-native';
+import { ActivityIndicator } from '../../../components/ui/AppSpinner';
 import { legacyAlert } from '../../../utils/appDialog';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';

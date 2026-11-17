@@ -3,8 +3,21 @@ import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { View, Text, Modal, Pressable, StyleSheet, Platform, ActivityIndicator, Animated as RNAnimated,
-  Keyboard, ScrollView, TouchableOpacity, TextInput, useWindowDimensions } from 'react-native';
+import {
+  View,
+  Text,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Platform,
+  Animated as RNAnimated,
+  Keyboard,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  useWindowDimensions,
+} from 'react-native';
+import { ActivityIndicator } from '../ui/AppSpinner';
 import { Image as ExpoImage } from 'expo-image';
 import { initialWindowMetrics, SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -42,6 +55,8 @@ import * as VideoThumbnails from 'expo-video-thumbnails';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { useMediaZoomGestures } from './useMediaZoomGestures';
 import ForwardMessageModal from './ForwardMessageModal';
+import ChatComposerBar from './ChatComposerBar';
+import ReactionPicker from './ReactionPicker';
 import { MediaBlurBackdrop, MediaKeyboardDim } from './MediaViewerChrome';
 
 /** צילום מסך של טלפון: גבוה וצר (h/w ≥ 1.9 — מכשירים מודרניים 19.5:9) */
@@ -79,6 +94,7 @@ function MediaPreviewBody({
   const iconColor = isDarkMode ? tokens.colors.text.primary : tokens.colors.text.inverse;
   const [videoPosterUri, setVideoPosterUri] = useState<string | null>(null);
   const captionRef = useRef<TextInput>(null);
+  const [emojiOpen, setEmojiOpen] = useState(false);
   
   const [localFiles, setLocalFiles] = useState(mediaFiles);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -823,39 +839,33 @@ function MediaPreviewBody({
             ) : null}
             </Animated.View>
 
-            {/* כמו שורת הכתיבה בצ'אט: שדה הכיתוב, ומימינו כפתור שליחה ירוק */}
-            <View style={styles.captionRow}>
-              <TextInput
-                ref={captionRef}
-                value={captions[captionId] || ''}
-                onChangeText={(text) => setCaptions((prev) => ({ ...prev, [captionId]: text }))}
-                placeholder={i18n.t('auto.components__chat__MediaPreviewModal.s6')}
-                placeholderTextColor={tokens.colors.text.tertiary}
-                style={[
-                  styles.captionInput,
-                  {
-                    backgroundColor: tokens.colors.background.cardSolid,
-                    borderColor: tokens.colors.border.divider,
-                    color: tokens.colors.text.primary,
-                  },
-                ]}
-                maxLength={500}
-                keyboardAppearance={isDarkMode ? 'dark' : 'light'}
-                returnKeyType="send"
-                blurOnSubmit={false}
-                onSubmitEditing={handleSend}
-              />
-              {!sendInCaptionRow ? null : (
+            {/* אותה שורת כתיבה כמו בצ'אט (ChatComposerBar): גלולה, אימוג'י בתוך השדה וכפתור שליחה זהה */}
+            <ChatComposerBar
+              value={captions[captionId] || ''}
+              onChangeText={(text) => setCaptions((prev) => ({ ...prev, [captionId]: text }))}
+              inputRef={captionRef}
+              placeholder={i18n.t('auto.components__chat__MediaPreviewModal.s6')}
+              maxLength={500}
+              numberOfLines={2}
+              keyboardAppearance={isDarkMode ? 'dark' : 'light'}
+              onSend={handleSend}
+              trailing={sendInCaptionRow ? undefined : null}
+              overlay={
                 <Pressable
-                  onPress={handleSend}
-                  style={[styles.sendBtn, { backgroundColor: tokens.colors.primary.main }]}
+                  onPress={() => {
+                    void HapticFeedback.selection();
+                    Keyboard.dismiss();
+                    setEmojiOpen(true);
+                  }}
+                  style={styles.emojiInField}
+                  hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
                   accessibilityRole="button"
-                  accessibilityLabel={i18n.t('auto.components__chat__MediaPreviewModal.s7')}
+                  accessibilityLabel={i18n.t('auto.components__chat__ChatInput.s37')}
                 >
-                  <Ionicons name="send" size={22} color={tokens.colors.text.inverse} />
+                  <Ionicons name="happy-outline" size={22} color={tokens.colors.text.secondary} />
                 </Pressable>
-              )}
-            </View>
+              }
+            />
 
             {/* כמו וואטסאפ: מתחת לכיתוב — «נשלח אל» משמאל (לחיצה: העבר הודעה לקבוצות נוספות), שליחה מימין */}
             {targetGroupName && !kbOpen ? (
@@ -887,6 +897,15 @@ function MediaPreviewBody({
             ) : null}
           </Animated.View>
         </RNAnimatedView>
+        <ReactionPicker
+          visible={emojiOpen}
+          onClose={() => setEmojiOpen(false)}
+          title={i18n.t('auto.components__chat__ChatInput.s36')}
+          onReaction={(emoji) => {
+            setCaptions((prev) => ({ ...prev, [captionId]: `${prev[captionId] || ''}${emoji}` }));
+            setTimeout(() => (captionRef.current as { focus?: () => void } | null)?.focus?.(), 320);
+          }}
+        />
         <ForwardMessageModal
           visible={targetsSheetOpen}
           onClose={() => setTargetsSheetOpen(false)}
@@ -1025,6 +1044,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'transparent',
+  },
+  // כמו emojiButton בשורת הצ'אט
+  emojiInField: {
+    alignSelf: 'flex-end',
+    width: 32,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   sendBtn: {
     width: 46,

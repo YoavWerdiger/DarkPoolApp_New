@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, Text, View, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
+import { Pressable, Text, View, ViewStyle, TextStyle } from 'react-native';
+import { ActivityIndicator } from './AppSpinner';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from './DesignTokens';
 import { HapticFeedback } from '../../utils/hapticFeedback';

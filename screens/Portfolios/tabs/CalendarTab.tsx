@@ -8,10 +8,10 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
   ScrollView,
   useWindowDimensions,
 } from 'react-native';
+import { ActivityIndicator } from '../../../components/ui/AppSpinner';
 import { Ionicons } from '@expo/vector-icons';
 import UICard from '../../../components/ui/UICard';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';

@@ -8,9 +8,9 @@ import {
   FlatList,
   StyleSheet,
   Pressable,
-  ActivityIndicator,
   Platform,
 } from 'react-native';
+import { ActivityIndicator } from '../ui/AppSpinner';
 import { Ionicons } from '@expo/vector-icons';
 import { useBottomSheetClose } from '../ui/BottomSheet/BottomSheet';
 import { useDesignTokens } from '../ui/DesignTokens';

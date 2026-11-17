@@ -1,6 +1,7 @@
 import i18n from '../../lib/i18n';
 import React from 'react';
-import { View, ActivityIndicator, StyleSheet, Linking } from 'react-native';
+import { View, StyleSheet, Linking } from 'react-native';
+import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';

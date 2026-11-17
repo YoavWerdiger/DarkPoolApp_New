@@ -8,11 +8,11 @@ import {
   View,
   Text,
   StyleSheet,
-  ActivityIndicator,
   ScrollView,
   Dimensions,
   Platform,
 } from 'react-native';
+import { ActivityIndicator } from '../ui/AppSpinner';
 import { Image } from 'expo-image';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';

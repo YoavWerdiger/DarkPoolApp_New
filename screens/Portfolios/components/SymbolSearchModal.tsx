@@ -8,9 +8,9 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  ActivityIndicator,
   Pressable,
 } from "react-native";
+import { ActivityIndicator } from '../../../components/ui/AppSpinner';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useDesignTokens } from "../../../components/ui/DesignTokens";

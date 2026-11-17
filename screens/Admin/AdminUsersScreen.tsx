@@ -7,8 +7,8 @@ import {
   TextInput,
   StyleSheet,
   Image,
-  ActivityIndicator,
 } from 'react-native';
+import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Award,

@@ -11,9 +11,9 @@ import {
   FlatList,
   TouchableOpacity,
   Image,
-  ActivityIndicator,
   Dimensions,
 } from 'react-native';
+import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useLockParentDrawerWhileFocused } from '../../hooks/useLockParentDrawerWhileFocused';

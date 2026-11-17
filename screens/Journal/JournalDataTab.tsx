@@ -7,10 +7,10 @@ import {
   View,
   Text,
   StyleSheet,
-  ActivityIndicator,
   useWindowDimensions,
   ScrollView,
 } from 'react-native';
+import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import Svg, { Line, Rect, Polyline, Circle } from 'react-native-svg';
 import { useFocusEffect } from '@react-navigation/native';
 import { DesignTokens, useDesignTokens } from '../../components/ui/DesignTokens';

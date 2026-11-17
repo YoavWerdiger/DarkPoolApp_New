@@ -2,11 +2,11 @@ import React, { useMemo } from 'react';
 import {
   Pressable,
   Text,
-  ActivityIndicator,
   StyleSheet,
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
+import { ActivityIndicator } from '../AppSpinner';
 import { useDesignTokens } from '../DesignTokens';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 import { sheetActionColors, type SheetActionVariant } from './sheetGlass';

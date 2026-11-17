@@ -9,11 +9,11 @@ import {
   View,
   Text,
   StyleSheet,
-  ActivityIndicator,
   RefreshControl,
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
+import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { legacyAlert } from '../../utils/appDialog';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';

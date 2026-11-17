@@ -3,7 +3,6 @@ import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Image,
   ScrollView,
@@ -13,6 +12,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { ActivityIndicator } from '../ui/AppSpinner';
 import { Image as ExpoImage } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import {

@@ -9,7 +9,8 @@ import { TEXT_DIR } from '../../lib/i18n/language';
 
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useMemo, useState, useRef, useEffect, useCallback, memo } from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator, Animated, Easing, Linking, Platform, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet, Animated, Easing, Linking, Platform, Dimensions } from 'react-native';
+import { ActivityIndicator } from '../ui/AppSpinner';
 import { Gesture, GestureDetector, TouchableOpacity as GHTouchableOpacity } from 'react-native-gesture-handler';
 import Reanimated, {
   Easing as ReanimatedEasing,
@@ -29,7 +30,6 @@ import { Audio, isExpoAvAvailable } from '../../lib/expoAvSafe';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Path } from 'react-native-svg';
 import MediaGalleryViewer, { type MediaGalleryItem } from './MediaGalleryViewer';
 import { useOptionalChatActions } from '../../context/ChatContext';
 import MediaGridBubble from './MediaGridBubble';
@@ -278,39 +278,7 @@ function isWideEntityMessage(message: { message_type?: string; content?: string 
   const c = message.content || '';
   return c.includes('"earnings_report"') || c.includes('"economic_event"');
 }
-const BUBBLE_TAIL_H = 13;
 
-/**
- * שפיץ הבועה (כמו וואטסאפ) — ממשיך את הפינה התחתונה החדה החוצה בקשת קטנה.
- * me: ימין למטה, other: שמאל למטה. פיקסל חפיפה אחד מול הבועה — בלי תפר.
- */
-const BubbleTail = memo(function BubbleTail({ isMe, color }: { isMe: boolean; color: string }) {
-  return (
-    <View pointerEvents="none" style={[tailStyles.tail, isMe ? tailStyles.tailMe : tailStyles.tailThem]}>
-      <Svg width={BUBBLE_TAIL_W} height={BUBBLE_TAIL_H} viewBox={`0 0 ${BUBBLE_TAIL_W} ${BUBBLE_TAIL_H}`}>
-        <Path
-          d={isMe ? 'M0 0 C0 7 3 11 8 13 L0 13 Z' : 'M8 0 C8 7 5 11 0 13 L8 13 Z'}
-          fill={color}
-        />
-      </Svg>
-    </View>
-  );
-});
-
-const tailStyles = StyleSheet.create({
-  tail: {
-    position: 'absolute',
-    bottom: 0,
-    width: BUBBLE_TAIL_W,
-    height: BUBBLE_TAIL_H,
-  },
-  tailMe: {
-    right: -BUBBLE_TAIL_W + 1,
-  },
-  tailThem: {
-    left: -BUBBLE_TAIL_W + 1,
-  },
-});
 
 /** מרווח בין בועות רצופות של אותו שולח */
 export const CHAT_BUBBLE_MARGIN = 2;
@@ -791,7 +759,6 @@ function ChatMessage({
           <View style={styles.avatarSpacer} />
         ))}
         <View style={[styles.bubble, isMe ? styles.myBubble : styles.theirBubble, showTail && (isMe ? styles.myBubbleTail : styles.theirBubbleTail), centered && styles.centeredBubble]}>
-          {showTail ? <BubbleTail isMe={isMe} color={isMe ? DesignTokens.colors.bubbleMe : DesignTokens.colors.bubbleOther} /> : null}
           <View style={styles.deletedRow}>
             <Ionicons name="ban-outline" size={15} style={[styles.deletedIcon, metaColorStyle]} />
             <Text style={[styles.messageText, styles.deletedText, metaColorStyle]}>{label}</Text>
@@ -881,12 +848,6 @@ function ChatMessage({
               message.reply_to && { minWidth: 200 },
             ]}
           >
-          {showTail ? (
-            <BubbleTail
-              isMe={isMe}
-              color={isMe ? DesignTokens.colors.bubbleMe : DesignTokens.colors.bubbleOther}
-            />
-          ) : null}
           {message.reply_to && (
             <GHTouchableOpacity
               key={`reply-${message.id}-${replyTargetId}`}
@@ -1387,11 +1348,23 @@ function renderMediaContent(
             {/* Overlay עדין — לא מסתיר את הפריים */}
             <View style={styles.videoOverlay} pointerEvents="none" />
 
-            <View style={styles.playButtonContainer} pointerEvents="none">
-              <View style={styles.playButton}>
-                <Ionicons name="play" size={22} color={tokens.colors.text.primary} style={{ marginLeft: 2 }} />
+            {message.is_uploading ? (
+              // בזמן העלאה: ספינר בצבע ערכת הנושא על הבועה (במקום כפתור הניגון)
+              <View style={styles.playButtonContainer} pointerEvents="none">
+                <View style={styles.playButton}>
+                  <ActivityIndicator size="small" color={tokens.colors.primary.main} />
+                </View>
+                {message.upload_progress !== undefined && message.upload_progress > 0 ? (
+                  <Text style={styles.uploadProgress}>{Math.round(message.upload_progress)}%</Text>
+                ) : null}
               </View>
-            </View>
+            ) : (
+              <View style={styles.playButtonContainer} pointerEvents="none">
+                <View style={styles.playButton}>
+                  <Ionicons name="play" size={22} color={tokens.colors.text.primary} style={{ marginLeft: 2 }} />
+                </View>
+              </View>
+            )}
 
             <LinearGradient
               colors={['transparent', 'rgba(0,0,0,0.55)']}
@@ -2471,6 +2444,8 @@ export default memo(ChatMessage, (prevProps, nextProps) => {
     a.is_sending === b.is_sending &&
     a.send_error === b.send_error &&
     a.upload_progress === b.upload_progress &&
+    a.is_uploading === b.is_uploading &&
+    a.local_media_uri === b.local_media_uri &&
     a.reactions === b.reactions &&
     a.reactions_count === b.reactions_count &&
     a.comments_count === b.comments_count &&
@@ -2769,7 +2744,7 @@ const createStyles = (tokens: any) => {
   },
   myBubble: {
     backgroundColor: tokens.colors.bubbleMe,
-    borderBottomRightRadius: 4,
+    borderBottomRightRadius: 16,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     borderBottomLeftRadius: 16,
@@ -2779,16 +2754,17 @@ const createStyles = (tokens: any) => {
     shadowRadius: isDarkMode ? 3 : 0,
     elevation: isDarkMode ? 2 : 0,
   },
-  // עם שפיץ — הפינה שלו חדה לגמרי, השפיץ ממשיך אותה החוצה
+  // ההודעה האחרונה ברצף — פינה תחתונה קצת פחות מעוגלת (בלי שפיץ שבולט לקצה המסך,
+  // כך שכל הבועות באותו מרחק מהקצה)
   myBubbleTail: {
-    borderBottomRightRadius: 0,
+    borderBottomRightRadius: 6,
   },
   theirBubbleTail: {
-    borderBottomLeftRadius: 0,
+    borderBottomLeftRadius: 6,
   },
   theirBubble: {
     backgroundColor: tokens.colors.bubbleOther,
-    borderBottomLeftRadius: 4,
+    borderBottomLeftRadius: 16,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     borderBottomRightRadius: 16,

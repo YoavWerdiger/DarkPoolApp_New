@@ -5,7 +5,8 @@ import i18n from '../../lib/i18n';
  * עם לוגו ושם החברה, וכפתור הוספה / הסרה בכל שורה. נשאר פתוח — אפשר להוסיף כמה ברצף.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator } from '../ui/AppSpinner';
 import { Ionicons } from '@expo/vector-icons';
 import { Check, Plus } from 'lucide-react-native';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';

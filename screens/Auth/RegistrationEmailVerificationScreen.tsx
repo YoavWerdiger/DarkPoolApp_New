@@ -1,6 +1,7 @@
 import i18n from '../../lib/i18n';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
+import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { useRegistration } from '../../context/RegistrationContext';
 import { AuthService } from '../../services/authService';
 import { supabase } from '../../services/supabase';

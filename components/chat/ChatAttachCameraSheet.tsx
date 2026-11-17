@@ -7,7 +7,6 @@ import { TEXT_DIR } from '../../lib/i18n/language';
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Dimensions,
   Modal,
   Platform,
@@ -16,6 +15,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { ActivityIndicator } from '../ui/AppSpinner';
 import { logger } from '../../utils/logger';
 import { enterCameraAudioSession, ensurePermissionOrSettings, exitCameraAudioSession, requestCameraWithDialog } from '../../lib/cameraSession';
 import { stableCameraPreviewFrame } from '../../lib/cameraFrame';

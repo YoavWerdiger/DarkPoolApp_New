@@ -17,8 +17,8 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
 } from 'react-native';
+import { ActivityIndicator } from '../../components/ui/AppSpinner';
 import { useTheme } from '../../context/ThemeContext';
 import { AppSwitch } from '../../components/ui/AppSwitch';
 import { SafeAreaView } from 'react-native-safe-area-context';

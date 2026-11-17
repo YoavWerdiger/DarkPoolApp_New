@@ -7,13 +7,13 @@ import { useTheme } from '../../../context/ThemeContext';
 import { companyBrandGradient } from '../utils/companyBrandColors';
 import React, { memo, useCallback, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Animated,
   StyleSheet,
   Text,
   useWindowDimensions,
   View,
 } from 'react-native';
+import { ActivityIndicator } from '../../../components/ui/AppSpinner';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';

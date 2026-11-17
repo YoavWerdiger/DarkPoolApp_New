@@ -1,0 +1,507 @@
+/* ============================================
+   DarkPool × CardCom LPC5 — ערכת נושא בהירה
+   מבוסס על הטוקנים של האפליקציה (components/ui/designTokensStatic.ts — light):
+     קנבס #F4F2F1 · כרטיס #FFFFFF · טקסט #1E1A24 · שדה rgba(0,0,0,.04) (פוקוס #E8E8ED)
+     CTA = גלולה שחורה #010000 עם טקסט לבן · שדות וכפתורים pill · כרטיסים רדיוס 24 · Heebo
+   להדבקה ב-Studio יחד עם cardcom_darkpool_custom.html (ה-hooks: .dp-pay-btn / .dp-terms-link /
+   .dp-submit / .dp-pay-total / .dp-hide-field).
+   ============================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700&display=swap");
+
+:root {
+    --bg-primary: #F4F2F1;      /* background.primary (LIGHT_CANVAS) */
+    --bg-card: #FFFFFF;         /* cardSolid */
+    --bg-input: rgba(0, 0, 0, 0.04);   /* background.input */
+    --bg-input-focus: #E8E8ED;  /* background.tertiary — שדה בפוקוס */
+    --cta: #010000;             /* primary.lightCta */
+    --cta-hover: #2A2A2E;
+    --cta-text: #FFFFFF;
+    --text-primary: #1E1A24;
+    --text-secondary: rgba(0, 0, 0, 0.65);
+    --text-muted: rgba(0, 0, 0, 0.45);
+    --border: rgba(0, 0, 0, 0.10);
+    --border-soft: rgba(0, 0, 0, 0.06);
+    --error: #EF4444;
+    --radius-card: 24px;        /* borderRadius.xl */
+    --radius-sm: 12px;
+    --pill: 9999px;             /* borderRadius.button / search */
+    --max: 560px;
+    --font: "Heebo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+/* ===== בסיס ===== */
+html,
+body {
+    background: var(--bg-primary) !important;
+    background-image: none !important;
+    color: var(--text-primary) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    direction: rtl !important;
+    text-align: right !important;
+    font-family: var(--font) !important;
+    -webkit-font-smoothing: antialiased;
+}
+
+body * { box-sizing: border-box; }
+body input, body select, body button { font-family: var(--font) !important; }
+
+.directionLTR { direction: ltr !important; text-align: left !important; }
+.clear { clear: both; }
+img { border: 0 !important; max-width: 100%; height: auto; }
+
+/* ===== Header — לוגו בלבד, ממורכז ===== */
+.header.user-header,
+.header {
+    width: 100% !important;
+    background: transparent !important;
+    border-bottom: none !important;
+    padding: 28px 16px 8px !important;
+}
+
+.header .headerIn {
+    max-width: var(--max) !important;
+    margin: 0 auto !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.header .logoDiv,
+.user-header .logoDiv { float: none !important; }
+
+.header .logoDiv img,
+.user-header .logoDiv img {
+    display: block !important;
+    max-width: 200px !important;
+    max-height: 72px !important;
+    width: auto !important;
+    height: auto !important;
+    object-fit: contain !important;
+}
+
+h1 {
+    max-width: var(--max) !important;
+    margin: 12px auto 8px !important;
+    padding: 0 16px !important;
+    text-align: center !important;
+    color: var(--text-primary) !important;
+    font-size: 22px !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.01em !important;
+}
+
+/* ===== כרטיסים ===== */
+.blockDetails {
+    width: 100% !important;
+    padding: 8px 16px !important;
+    background: transparent !important;
+}
+
+.blockDetailsIn,
+.paymentDetails .blockDetailsIn,
+.OrderDetails .blockDetailsIn,
+.customDetails .blockDetailsIn {
+    max-width: var(--max) !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+    background: var(--bg-card) !important;
+    background-image: none !important;
+    border: none !important;
+    border-radius: var(--radius-card) !important;
+    padding: 24px 20px !important;
+    color: var(--text-primary) !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.05) !important;
+}
+
+.blockDetailsIn > .title,
+.blockDetails .title {
+    display: block !important;
+    color: var(--text-primary) !important;
+    font-size: 17px !important;
+    font-weight: 700 !important;
+    margin: 0 0 16px !important;
+    padding: 0 !important;
+    border-bottom: none !important;
+}
+
+.htmlCommentsDiv { color: var(--text-secondary) !important; font-size: 14px !important; line-height: 1.55 !important; }
+
+/* ===== שורות טופס — תווית מעל שדה, כמו באפליקציה ===== */
+.formRow,
+.formRow.cardRow,
+.formRow.cvvRow,
+.formRow.nameRow {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    margin: 0 0 16px !important;
+}
+
+.formRow .fieldName,
+.fieldName {
+    width: 100% !important;
+    color: var(--text-primary) !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    line-height: 18px !important;
+    padding: 0 !important;
+}
+
+.fieldName.summaryTotal { color: var(--text-primary) !important; font-weight: 700 !important; }
+
+.formRow .fieldInput,
+.fieldInput {
+    width: 100% !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 8px !important;
+    border: none !important;
+    min-width: 0 !important;
+}
+
+.fieldInput input,
+.fieldInput select,
+.blockDetailsIn input[type="text"],
+.blockDetailsIn input[type="tel"],
+.blockDetailsIn input[type="email"],
+.blockDetailsIn input[type="number"],
+.blockDetailsIn select,
+#txtCardNumber, #txtCardNumber-number, #txtCvv, #txtTZ, #txtCardOwnerName, #txtCardOwnerPhone,
+#txtCustName, #txtCompID, #txtCustMobilePH, #txtEmail,
+#validityYear, #validityMonth, #numberOfPaymentsselect {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    background: var(--bg-input) !important;
+    color: var(--text-primary) !important;
+    border: none !important;
+    border-radius: var(--pill) !important;
+    padding: 0 20px !important;
+    height: 52px !important;
+    min-height: 52px !important;
+    font-size: 16px !important; /* 16 — בלי zoom אוטומטי ב-iOS */
+    outline: none !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    transition: background 0.15s ease !important;
+}
+
+/* תוקף: שנה + חודש באותה שורה */
+.fieldInput.validityDate { flex-wrap: nowrap !important; }
+.fieldInput select.mini, #validityYear { flex: 1 1 60% !important; width: auto !important; }
+.fieldInput select.tiny, #validityMonth, #numberOfPaymentsselect { flex: 1 1 40% !important; width: auto !important; }
+
+/* חץ ל-select (appearance:none מסיר את המקורי) — כולל IDs כי הכלל הכללי משתמש בהם */
+.fieldInput select,
+html body #validityYear,
+html body #validityMonth,
+html body #numberOfPaymentsselect {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%231E1A24' stroke-opacity='.55' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: left 18px center !important;
+    padding-left: 40px !important;
+}
+
+.fieldInput input:focus,
+.fieldInput select:focus,
+#txtCardNumber:focus, #txtCvv:focus, #txtCardOwnerPhone:focus, #validityYear:focus, #validityMonth:focus {
+    background-color: var(--bg-input-focus) !important;
+    box-shadow: none !important;
+}
+
+.fieldInput input::placeholder { color: var(--text-muted) !important; }
+
+/* checkbox תקנון — appearance רגיל (הכלל הכללי של שדות הוריד אותו) */
+html body .formRow input[type="checkbox"],
+html body .fieldInput input[type="checkbox"] {
+    -webkit-appearance: auto !important;
+    appearance: auto !important;
+    width: 20px !important;
+    height: 20px !important;
+    min-height: 20px !important;
+    flex: 0 0 20px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: none !important;
+    accent-color: var(--cta) !important;
+}
+
+/* שורת התקנון בשורה אחת: ☐ קראתי ואני מסכים לתקנון */
+html body .formRow:has(.dp-terms-link) {
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+html body .formRow:has(.dp-terms-link) .fieldInput { display: contents !important; }
+html body .formRow:has(.dp-terms-link) input[type="checkbox"] { order: 0 !important; }
+html body .formRow:has(.dp-terms-link) .fieldName {
+    order: 1 !important;
+    width: auto !important;
+    font-size: 14px !important;
+    font-weight: 400 !important;
+    color: var(--text-secondary) !important;
+}
+html body .formRow:has(.dp-terms-link) .dp-terms-link { order: 2 !important; font-size: 14px !important; }
+
+.WhatIsCvvLightBox img { display: inline-block !important; width: 16px !important; height: 16px !important; opacity: 0.6 !important; vertical-align: middle !important; margin-inline-start: 6px !important; }
+
+/* שגיאות (CssValid של CardCom) */
+.formRow.errorRow .fieldInput input,
+.formRow.error .fieldInput input,
+.formRow.errorRow .fieldInput select,
+.formRow.error .fieldInput select {
+    background-color: rgba(239, 68, 68, 0.10) !important;
+}
+.formRow.errorRow .fieldName, .formRow.error .fieldName { color: var(--error) !important; }
+
+.errorDiv {
+    background: rgba(239, 68, 68, 0.08) !important;
+    border: 1px solid rgba(239, 68, 68, 0.30) !important;
+    border-radius: 16px !important;
+    padding: 14px 16px !important;
+    margin: 16px 0 0 !important;
+}
+.errorDiv ul { margin: 0 !important; padding: 0 18px 0 0 !important; }
+.errorDiv li, .errorDiv .message { color: #B91C1C !important; font-size: 14px !important; }
+
+/* ===== תשלומים חלופיים — לא לשבור ===== */
+.paypalDiv, .ApplePayDiv, .GooglePayDiv, .BitContainer, .uPayBitContainer, .masterPassDiv,
+#ApplePayDivContainer, #BitDivContainer, #GooglePayDiv, #uPayBitDiv, #PayMeBitDiv, #CardcomBitDiv { margin: 0 0 12px !important; }
+.cardcom-bit-payment-txt, .payme-payment-txt { color: var(--text-secondary) !important; display: block !important; margin-top: 6px !important; }
+.cardcom-bit-payment-txt.error, .payme-payment-txt.error { color: var(--error) !important; }
+#cardcom-bit-ref { color: var(--text-primary) !important; }
+
+#captcha_div .fieldName { display: none !important; }
+
+/* ===== קישורים / תקנון ===== */
+html body a.dp-terms-link,
+html body a.dp-terms-link:link,
+html body a.dp-terms-link:visited,
+html body a.dp-terms-link span,
+html body .paymentDetails a.dp-terms-link span.fieldname,
+.blockDetailsIn a {
+    color: var(--text-primary) !important;
+    -webkit-text-fill-color: var(--text-primary) !important;
+    font-weight: 600 !important;
+    text-decoration: underline !important;
+    text-underline-offset: 3px !important;
+}
+
+/* ===== סה״כ + כפתור תשלום ===== */
+html body .submitDiv.dp-submit,
+html body .dp-submit,
+html body .paymentDetails .submitDiv.dp-submit,
+.submitDiv {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    margin: 20px 0 0 !important;
+    padding: 16px 0 0 !important;
+    border-top: 1px solid var(--border-soft) !important;
+    background: transparent !important;
+    float: none !important;
+    width: 100% !important;
+}
+
+html body .dp-submit .dp-pay-total {
+    display: flex !important;
+    align-items: baseline !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    order: 1 !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 4px !important;
+    margin: 0 !important;
+}
+
+html body .dp-submit .dp-pay-total-label {
+    color: var(--text-secondary) !important;
+    -webkit-text-fill-color: var(--text-secondary) !important;
+    font-size: 15px !important;
+    font-weight: 500 !important;
+}
+
+html body .dp-submit .dp-pay-total-amount {
+    color: var(--text-primary) !important;
+    -webkit-text-fill-color: var(--text-primary) !important;
+    font-size: 22px !important;
+    font-weight: 700 !important;
+    direction: ltr !important;
+    unicode-bidi: plaintext !important;
+    font-variant-numeric: tabular-nums !important;
+}
+
+html body .dp-submit .buttonDiv,
+.submitDiv .buttonDiv,
+.buttonDiv {
+    order: 2 !important;
+    float: none !important;
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    background: transparent !important;
+}
+
+html body .dp-submit .homeLink,
+.submitDiv .homeLink { order: 3 !important; float: none !important; width: 100% !important; text-align: center !important; }
+.submitDiv .homeLink a { color: var(--text-secondary) !important; text-decoration: none !important; font-size: 14px !important; font-weight: 500 !important; }
+
+/* כפתור «לתשלום» — גלולה שחורה (CTA של ערכת הנושא הבהירה). סוף-cascade, דורס את הירוק של CardCom */
+html body input.dp-pay-btn,
+html body .buttonDiv input[type="button"],
+html body .buttonDiv input[type="submit"],
+html body .paymentDetails input[type="button"],
+html body .paymentDetails input[type="submit"],
+html body .paymentDetails .submitDiv .buttonDiv input,
+html body input[type="button"][data-bind*="sendData"],
+html body input#btnSend {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    display: block !important;
+    float: none !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 56px !important;
+    min-height: 56px !important;
+    margin: 0 !important;
+    padding: 0 24px !important;
+    background: var(--cta) !important;
+    background-color: var(--cta) !important;
+    background-image: none !important;
+    color: var(--cta-text) !important;
+    -webkit-text-fill-color: var(--cta-text) !important;
+    border: none !important;
+    border-radius: var(--pill) !important;
+    font-family: var(--font) !important;
+    font-size: 17px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0 !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+    filter: none !important;
+    -webkit-filter: none !important;
+    opacity: 1 !important;
+    cursor: pointer !important;
+    transition: background-color 0.15s ease, transform 0.1s ease !important;
+}
+
+html body input.dp-pay-btn:hover,
+html body .buttonDiv input[type="button"]:hover,
+html body .paymentDetails input[type="button"]:hover,
+html body input#btnSend:hover {
+    background: var(--cta-hover) !important;
+    background-color: var(--cta-hover) !important;
+}
+
+html body input.dp-pay-btn:active,
+html body .buttonDiv input[type="button"]:active,
+html body .paymentDetails input[type="button"]:active {
+    transform: scale(0.98) !important;
+}
+
+html body input.dp-pay-btn:focus-visible,
+html body .buttonDiv input[type="button"]:focus-visible {
+    outline: 3px solid rgba(1, 0, 0, 0.25) !important;
+    outline-offset: 2px !important;
+}
+
+html body input.dp-pay-btn:disabled,
+html body .buttonDiv input[type="button"]:disabled,
+html body .paymentDetails input[type="button"]:disabled,
+html body input#btnSend:disabled {
+    background: rgba(0, 0, 0, 0.18) !important;
+    background-color: rgba(0, 0, 0, 0.18) !important;
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+    cursor: not-allowed !important;
+    transform: none !important;
+}
+
+/* ===== Footer ===== */
+.footer {
+    width: 100% !important;
+    background: transparent !important;
+    border-top: none !important;
+    padding: 20px 16px 28px !important;
+    margin-top: 8px !important;
+}
+.footer .footerIn {
+    max-width: var(--max) !important;
+    margin: 0 auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 10px !important;
+}
+.footer .footer-logo img { display: block !important; max-height: 22px !important; width: auto !important; opacity: 0.55 !important; }
+.footer .footer-text, .footer .footer-text span { color: var(--text-muted) !important; font-size: 12px !important; line-height: 1.5 !important; text-align: center !important; }
+
+/* ===== Cookies / Popups ===== */
+#cookies-banner { background: var(--bg-card) !important; color: var(--text-primary) !important; border-top: 1px solid var(--border) !important; padding: 14px 16px !important; }
+#btn-cookies-accept {
+    background: var(--cta) !important; color: var(--cta-text) !important; border: none !important;
+    border-radius: var(--pill) !important; padding: 8px 18px !important; font-weight: 600 !important; margin-right: 10px !important; cursor: pointer !important;
+}
+.white-popup, .white-popup-rtl { background: var(--bg-card) !important; color: var(--text-primary) !important; border-radius: var(--radius-card) !important; }
+
+/* ===== Responsive ===== */
+@media screen and (max-width: 640px) {
+    .blockDetails { padding: 6px 12px !important; }
+    .blockDetailsIn,
+    .paymentDetails .blockDetailsIn,
+    .OrderDetails .blockDetailsIn { padding: 20px 16px !important; }
+    h1 { font-size: 19px !important; }
+}
+
+/* =========================================================
+   הסתרות (זהה לגרסה הכהה) — סוף קובץ מנצח cascade
+   נשארים: לקוח (שם/ת״ז/נייד/מייל) + כרטיס/תוקף/CVV/שם/ת״ז/נייד בעלים + תקנון + סה״כ + לוגו + footer
+   ========================================================= */
+html body .dp-hide-field,
+html body .formRow.dp-hide-field,
+html body .cardRow.dp-hide-field,
+html body .formRow:has(#txtCustCity),
+html body .formRow:has(#txtCustAddresLine1),
+html body .formRow:has(#txtCustAddresLine2),
+html body .formRow:has(#txtCustLinePH),
+html body .formRow:has(#txtAvsCity),
+html body .formRow:has(#txtAvsAddress),
+html body .formRow:has(#txtAvsZip),
+html body .formRow:has(#txtopenSum),
+html body .formRow:has(#txtCardOwnerEmail) {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    max-height: 0 !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+}
+
+html body #txtCustCity, html body #txtCustAddresLine1, html body #txtCustAddresLine2, html body #txtCustLinePH,
+html body #txtAvsCity, html body #txtAvsAddress, html body #txtAvsZip, html body #txtopenSum, html body #txtCardOwnerEmail,
+html body label[for="txtCustCity"], html body label[for="txtCustAddresLine1"], html body label[for="txtCustAddresLine2"],
+html body label[for="txtCustLinePH"], html body label[for="txtAvsCity"], html body label[for="txtAvsAddress"],
+html body label[for="txtAvsZip"], html body label[for="txtopenSum"], html body label[for="txtCardOwnerEmail"] {
+    display: none !important;
+}
+
+/* פרטי עסק בהדר, טבלת מוצרים, שדות מותאמים והערות — מוסתרים (הסה״כ ב-.dp-pay-total) */
+html body .header .detailsDiv,
+html body .header .detailsDiv.user-detailsDiv,
+html body .productsDetails,
+html body .productsDetails.showProductsTabs,
+html body .productsDetails.showProductsTables,
+html body .blockDetails.customDetails,
+html body .blockDetails[data-bind*="HtmlComments"] {
+    display: none !important;
+}

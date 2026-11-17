@@ -370,8 +370,10 @@ export function PersonPortfolioProfileScreen({
     () =>
       Animated.event([{ nativeEvent: { contentOffset: { y: heroScrollY } } }], {
         useNativeDriver: true,
+        // טבעת המשיכה-לרענון — listener (לא לעטוף את ה-event: הוא אובייקט, לא פונקציה)
+        listener: refreshRing.onScroll,
       }),
-    [heroScrollY]
+    [heroScrollY, refreshRing.onScroll]
   );
   /** מסך stack מעל הטאבים — רק home indicator. */
   const followDockBottom = profileFollowDockBottom({ safeBottom: insets.bottom });
@@ -1619,7 +1621,7 @@ export function PersonPortfolioProfileScreen({
           alwaysBounceVertical
           overScrollMode="always"
           scrollEventThrottle={16}
-          onScroll={chainRing(refreshRing.onScroll, onHeroScroll)}
+          onScroll={onHeroScroll}
           refreshControl={
             <RefreshControl hideNative
               refreshing={refreshing}

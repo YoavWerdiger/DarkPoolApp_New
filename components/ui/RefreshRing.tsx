@@ -51,7 +51,8 @@ export function useRefreshRing() {
 export function chainRing<E>(ringHandler: (e: E) => void, own?: ((e: E) => void) | null) {
   return (e: E) => {
     ringHandler(e);
-    own?.(e);
+    // הגנה: Animated.event / useAnimatedScrollHandler הם אובייקטים — לא קוראים להם כפונקציה
+    if (typeof own === 'function') own(e);
   };
 }
 

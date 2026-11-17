@@ -31,11 +31,17 @@ const PLATFORM_LOGOS: Record<string, string | number | undefined> = {
   interactive_brokers: brandLogo('interactivebrokers.com'),
   tradestation: require('../../assets/branding/tradestation-logo.png'),
   colmex: require('../../assets/colmex-logo.png'),
+  blink: brandLogo('blink.co.il'),
+  altshuler: brandLogo('as-invest.co.il'),
+  meitav: brandLogo('meitav.co.il'),
+  ibi: brandLogo('ibi.co.il'),
 };
 
 /** אפשרויות בלי לוגו מותג */
 const PLATFORM_ICONS: Record<string, IconName> = {
   bank: 'business-outline',
+  // אין לוגו זמין ב-Brandfetch (xnes.co.il מחזיר ריק)
+  excellence: 'stats-chart-outline',
   other: 'ellipsis-horizontal',
 };
 

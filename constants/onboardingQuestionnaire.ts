@@ -21,6 +21,11 @@ export type TradingPlatform =
   | 'interactive_brokers'
   | 'tradestation'
   | 'colmex'
+  | 'blink'
+  | 'excellence'
+  | 'altshuler'
+  | 'meitav'
+  | 'ibi'
   | 'other';
 
 export type PortfolioSize =
@@ -66,10 +71,15 @@ export const TRADING_FOCUS_OPTIONS: { label: string; value: TradingFocus }[] = [
 ];
 
 export const TRADING_PLATFORM_OPTIONS: { label: string; value: TradingPlatform }[] = [
-  { label: 'בנק', value: 'bank' },
+  { label: 'קולמקס פרו', value: 'colmex' },
   { label: 'אינטראקטיב ברוקרס', value: 'interactive_brokers' },
+  { label: 'בלינק', value: 'blink' },
+  { label: 'אקסלנס', value: 'excellence' },
+  { label: 'אלטשולר שחם', value: 'altshuler' },
+  { label: 'מיטב', value: 'meitav' },
+  { label: 'דרך הבנק', value: 'bank' },
+  { label: 'אי בי איי', value: 'ibi' },
   { label: 'טריידסטיישן', value: 'tradestation' },
-  { label: 'קולמקס', value: 'colmex' },
   { label: 'אחר', value: 'other' },
 ];
 

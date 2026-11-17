@@ -386,6 +386,20 @@ serve(async (req) => {
     const senderAvatarUrl = await ensureNotificationImageUrl(supabase, senderData.profile_picture);
     const notificationImageUrl = groupAvatarUrl || senderAvatarUrl;
 
+    // badge על אייקון האפליקציה = סך ההודעות שלא נקראו של כל נמען (לא 1 קבוע)
+    const recipientIds = Array.from(new Set(deviceTokens.map((t) => t.user_id).filter(Boolean)));
+    const unreadByUser = new Map<string, number>();
+    if (recipientIds.length) {
+      const { data: unreadRows } = await supabase
+        .from('chat_group_members')
+        .select('user_id, unread_count')
+        .in('user_id', recipientIds)
+        .gt('unread_count', 0);
+      for (const row of (unreadRows ?? []) as Array<{ user_id: string; unread_count: number | null }>) {
+        unreadByUser.set(row.user_id, (unreadByUser.get(row.user_id) ?? 0) + (row.unread_count ?? 0));
+      }
+    }
+
     // 6. יצירת הודעות push לכל הטוקנים (תיוג → טקסט ייעודי)
     const messages = deviceTokens.map((token) => {
       const isMention = mentionedSet.has(token.user_id);
@@ -421,7 +435,7 @@ serve(async (req) => {
         // (תמונת הקבוצה גדולה + אייקון DarkPool קטן בפינה, כמו וואטסאפ)
         mutableContent: true,
         _displayInForeground: true,
-        badge: 1,
+        badge: Math.max(1, unreadByUser.get(token.user_id) ?? 1),
         android: {
           channelId: 'chat-messages',
           priority: 'high',

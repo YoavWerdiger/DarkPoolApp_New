@@ -85,6 +85,7 @@ import {
 import { persistQueryCache } from '../lib/queryPersist';
 import { schedulePrefetchChatMessages } from '../services/appPrefetch';
 import * as Haptics from 'expo-haptics';
+import * as Notifications from 'expo-notifications';
 // Audio import removed — notification sound is not yet implemented (no mp3 asset in repo)
 
 const MAX_OFFLINE_RETRY_ATTEMPTS = 5;
@@ -248,6 +249,18 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   // State
   const [groups, setGroups] = useState<ChatGroup[]>([]);
+
+  // badge על אייקון האפליקציה = סך ההודעות שלא נקראו (מתאפס כשהכול נקרא)
+  const totalUnread = useMemo(
+    () => groups.reduce((sum, g) => sum + Math.max(0, Number(g.unread_count) || 0), 0),
+    [groups],
+  );
+  const badgeSyncedRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (badgeSyncedRef.current === totalUnread) return;
+    badgeSyncedRef.current = totalUnread;
+    void Notifications.setBadgeCountAsync(totalUnread).catch(() => undefined);
+  }, [totalUnread]);
   const [currentGroup, setCurrentGroup] = useState<ChatGroupWithDetails | null>(null);
   const [messages, setMessagesRaw] = useState<ChatMessage[]>([]);
   const [typingUsers, setTypingUsers] = useState<ChatTypingIndicator[]>([]);

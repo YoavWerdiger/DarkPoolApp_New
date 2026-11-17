@@ -73,8 +73,11 @@ export function CourseCheckoutScreen({ navigation, route }: any) {
   const { user } = useAuth();
   const courseId: string = purchaseCourseDbId(String(route?.params?.courseId ?? 'whales-course-1'));
 
-  const [phase, setPhase] = useState<Phase>('summary');
+  // בלי מסך סיכום — ישר לדף התשלום (מכינים אותו מיד בכניסה)
+  const [phase, setPhase] = useState<Phase>('preparing');
+  const autoStartedRef = useRef(false);
   const [course, setCourse] = useState<CourseRow | null>(null);
+  const [courseLoaded, setCourseLoaded] = useState(false);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
   const outcomeHandledRef = useRef(false);
@@ -104,10 +107,12 @@ export function CourseCheckoutScreen({ navigation, route }: any) {
       try {
         if (await fetchCourseAccess(courseId)) {
           if (alive) setPhase('success');
+          return;
         }
       } catch {
         /* נבדק שוב אחרי התשלום */
       }
+      if (alive) setCourseLoaded(true);
     })();
     return () => {
       alive = false;
@@ -170,6 +175,13 @@ export function CourseCheckoutScreen({ navigation, route }: any) {
     }
   }, [course, courseId, grantAndFinish, user]);
 
+  // כניסה למסך = פתיחת דף התשלום (אחרי שהקורס נטען ואין גישה קיימת)
+  useEffect(() => {
+    if (!courseLoaded || autoStartedRef.current) return;
+    autoStartedRef.current = true;
+    void startPayment();
+  }, [courseLoaded, startPayment]);
+
   const handleRedirect = useCallback(
     (url: string): boolean => {
       const outcome = parseRedirectOutcome(url || '');
@@ -200,7 +212,7 @@ export function CourseCheckoutScreen({ navigation, route }: any) {
   if (phase === 'webview' && paymentUrl) {
     return (
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <ChatSubScreenHeader title={t('s3')} onBack={() => setPhase('summary')} />
+        <ChatSubScreenHeader title={t('s3')} onBack={() => navigation.goBack()} />
         <WebView
           source={{ uri: paymentUrl }}
           style={{ flex: 1, backgroundColor: 'transparent' }}

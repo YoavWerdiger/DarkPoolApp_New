@@ -104,8 +104,9 @@ let queue: Promise<unknown> = Promise.resolve();
 export function compressVideoForUpload(
   uri: string,
   onProgress?: (fraction: number) => void,
+  opts?: { maxLongEdge?: number; targetBitrate?: number },
 ): Promise<CompressedVideo> {
-  const run = queue.then(() => compressNow(uri, onProgress));
+  const run = queue.then(() => compressNow(uri, onProgress, opts));
   queue = run.catch(() => undefined);
   return run;
 }
@@ -113,7 +114,10 @@ export function compressVideoForUpload(
 async function compressNow(
   uri: string,
   onProgress?: (fraction: number) => void,
+  opts: { maxLongEdge?: number; targetBitrate?: number } = {},
 ): Promise<CompressedVideo> {
+  const maxLongEdge = opts.maxLongEdge ?? MAX_LONG_EDGE;
+  const targetBitrate = opts.targetBitrate ?? TARGET_BITRATE;
   const originalSize = await fileSize(uri);
   const original: CompressedVideo = { uri, size: originalSize, compressed: false };
 
@@ -135,15 +139,15 @@ async function compressNow(
   // הצלע הארוכה לא תלויה בסיבוב (portrait/landscape), אז אפשר לסמוך עליה גם בלי transform
   const longEdge = Math.max(width || 0, height || 0);
   const smallEnough = originalSize > 0 && originalSize < SKIP_BELOW_BYTES;
-  if (smallEnough && (longEdge === 0 || longEdge <= MAX_LONG_EDGE)) {
+  if (smallEnough && (longEdge === 0 || longEdge <= maxLongEdge)) {
     return { ...original, width, height };
   }
 
   // לא מבקשים ביטרייט גבוה מהמקור — אחרת הפלט רק יגדל
-  let bitrate = TARGET_BITRATE;
+  let bitrate = targetBitrate;
   if (originalSize > 0 && durationSec > 0) {
     const sourceBitrate = (originalSize * 8) / durationSec;
-    bitrate = Math.round(Math.max(MIN_BITRATE, Math.min(TARGET_BITRATE, sourceBitrate * 0.85)));
+    bitrate = Math.round(Math.max(MIN_BITRATE, Math.min(targetBitrate, sourceBitrate * 0.85)));
   }
 
   const startedAt = Date.now();
@@ -152,7 +156,7 @@ async function compressNow(
       uri,
       {
         compressionMethod: 'manual',
-        maxSize: MAX_LONG_EDGE,
+        maxSize: maxLongEdge,
         bitrate,
         progressDivider: 5,
       },
@@ -179,8 +183,8 @@ async function compressNow(
     // מידות הפלט: אותו יחס, צלע ארוכה מוגבלת ל-1920
     let outW = width;
     let outH = height;
-    if (width && height && longEdge > MAX_LONG_EDGE) {
-      const scale = MAX_LONG_EDGE / longEdge;
+    if (width && height && longEdge > maxLongEdge) {
+      const scale = maxLongEdge / longEdge;
       outW = Math.round(width * scale);
       outH = Math.round(height * scale);
     }

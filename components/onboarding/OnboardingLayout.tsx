@@ -1,7 +1,7 @@
 import { dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { TEXT_DIR } from '../../lib/i18n/language';
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
@@ -196,9 +196,22 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
 
   const isFocused = density === 'focused';
   const hasHeader = !!title || !!subtitle;
-  // Android: כשהמקלדת פתוחה האזור מתכווץ — View לא גולל ולא חותך, והתוכן (אווטאר, כיתוב)
-  // נמרח מתחת לכפתור ה-footer. ScrollView חותך וגולל.
-  const useScroll = scrollable || Platform.OS === 'android';
+
+  // מקלדת פתוחה: בלי ה-safe area התחתון — המקלדת כבר מכסה אותו (אחרת יש רווח מיותר בין הכפתור למקלדת)
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+  useEffect(() => {
+    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const a = Keyboard.addListener(showEvt, () => setKeyboardOpen(true));
+    const b = Keyboard.addListener(hideEvt, () => setKeyboardOpen(false));
+    return () => {
+      a.remove();
+      b.remove();
+    };
+  }, []);
+  // כשהמקלדת פתוחה האזור מתכווץ — View לא גולל ולא חותך, והתוכן (אווטאר, «נעים להכיר»)
+  // נמרח מתחת לכפתור ה-footer. ScrollView חותך וגולל (גם ב-iOS).
+  const useScroll = true;
   const Content = useScroll ? ScrollView : View;
   const contentProps = useScroll
     ? {
@@ -229,7 +242,7 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
             />
           ) : null}
 
-          <SafeAreaView style={{ flex: 1 }}>
+          <SafeAreaView style={{ flex: 1 }} edges={keyboardOpen ? ['top', 'left', 'right'] : ['top', 'left', 'right', 'bottom']}>
             {hasTopBar ? (
               <View
                 style={{

@@ -82,6 +82,8 @@ export function formFieldInputStyle(tokens?: Tokens): TextStyle {
     // שדות multiline מוסיפים lineHeight בעצמם.
     textAlign: INPUT_ALIGN,
     writingDirection: TEXT_DIR,
+    // באנגלית השורש הוא rtl (תמונת מראה) — בלי direction מפורש left/right מתחלפים
+    ...(IS_RTL_UI ? null : { direction: 'ltr' as const }),
   };
 }
 

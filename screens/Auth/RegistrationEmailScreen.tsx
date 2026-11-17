@@ -1,4 +1,6 @@
 import i18n from '../../lib/i18n';
+import { IS_RTL_UI } from '../../lib/i18n/direction';
+import { APP_TYPE } from '../../components/ui/appType';
 import { TEXT_DIR } from '../../lib/i18n/language';
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
@@ -214,10 +216,21 @@ const RegistrationEmailScreen = ({ navigation }: { navigation: any }) => {
           onPress={openPasswordReset}
           activeOpacity={0.7}
           hitSlop={8}
-          style={{ alignSelf: 'flex-start', marginTop: -tokens.spacing.sm, marginBottom: tokens.spacing.lg }}
+          // בצד הטקסט (ימין בעברית/ערבית, שמאל באנגלית) — שורש LTR, לכן יישור פיזי
+          style={{ alignSelf: IS_RTL_UI ? 'flex-end' : 'flex-start', marginTop: -tokens.spacing.sm, marginBottom: tokens.spacing.lg }}
           accessibilityRole="link"
         >
-          <Text style={{ color: tokens.colors.text.primary, fontSize: 15, fontWeight: '600', textDecorationLine: 'underline', writingDirection: TEXT_DIR }}>
+          {/* אותה טיפוגרפיה כמו «שכחת סיסמה?» במסך הכניסה */}
+          <Text
+            style={{
+              fontSize: APP_TYPE.cardBody.fontSize,
+              lineHeight: APP_TYPE.cardBody.lineHeight,
+              fontWeight: APP_TYPE.cardTitle.fontWeight,
+              color: tokens.colors.text.primary,
+              textAlign: IS_RTL_UI ? 'right' : 'left',
+              writingDirection: TEXT_DIR,
+            }}
+          >
             {i18n.t('auto.screens__Auth__RegistrationEmailScreen.s12')}
           </Text>
         </TouchableOpacity>

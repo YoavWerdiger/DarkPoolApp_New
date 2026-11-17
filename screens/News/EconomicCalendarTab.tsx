@@ -885,13 +885,13 @@ export default function EconomicCalendarTab({
         <View
           style={{
             flexDirection: 'row',
-            // עברית: אחורה מימין, קדימה (ירוק) משמאל; אנגלית: הפוך
+            // עברית: אחורה מימין, קדימה משמאל; אנגלית: הפוך
             direction: UI_DIR,
             alignItems: 'center',
             justifyContent: 'space-between',
           }}
         >
-          {/* QA 14.1 / 15: הקודם אפור, הבא מודגש בירוק */}
+          {/* שני הכפתורים לפי ערכת הנושא */}
           <DayNavBlurButton onPress={goToPreviousDay} style={{ backgroundColor: DesignTokens.colors.background.tertiary }}>
             <Ionicons name={dirIcon('chevron-forward')} size={20} color={DesignTokens.colors.text.secondary} />
           </DayNavBlurButton>
@@ -923,8 +923,8 @@ export default function EconomicCalendarTab({
             )}
           </View>
 
-          <DayNavBlurButton onPress={goToNextDay} style={{ backgroundColor: DesignTokens.colors.success.main }}>
-            <Ionicons name={dirIcon('chevron-back')} size={20} color="#FFFFFF" />
+          <DayNavBlurButton onPress={goToNextDay} style={{ backgroundColor: DesignTokens.colors.background.tertiary }}>
+            <Ionicons name={dirIcon('chevron-back')} size={20} color={DesignTokens.colors.text.secondary} />
           </DayNavBlurButton>
         </View>
       </UICard>

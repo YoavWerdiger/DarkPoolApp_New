@@ -46,6 +46,7 @@ import { ACADEMY_TYPE } from '../../components/learning/academyLayout';
 import { dispatchOpenMainDrawer, type DrawerParentNavigation } from '../../navigation/mainDrawerNav';
 import { triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
 import { RefreshRing, useRefreshRing, chainRing } from '../../components/ui/RefreshRing';
+import { isPurchaseCourse } from '../../services/coursePurchaseService';
 
 type Nav = { navigate: (n: string, p?: object) => void };
 
@@ -160,6 +161,12 @@ export const CoursesScreen: React.FC = () => {
   // יש גישה (רשום / מנוי פרימיום) → ישר לדף הקורס; אין גישה (כולל האורקל) → שיט פירוט
   const handleCardPress = useCallback(
     (course: CourseWithProgress) => {
+      // קורס ברכישה בודדת (הלוויתנים): תמיד נכנסים — בתוך הקורס מסך הנעילה עם «לרכישת הקורס»
+      // (הגישה עצמה נבדקת בשרת: has_course_access)
+      if (isPurchaseCourse(course.id)) {
+        handleCoursePress(course);
+        return;
+      }
       if (hasAcademyCourseAccess(course, isPremium)) {
         handleCoursePress(course);
         return;

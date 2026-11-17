@@ -75,12 +75,16 @@ export const TRADING_PLATFORM_OPTIONS: { label: string; value: TradingPlatform }
   { label: 'אינטראקטיב ברוקרס', value: 'interactive_brokers' },
   { label: 'בלינק', value: 'blink' },
   { label: 'אקסלנס', value: 'excellence' },
-  { label: 'אלטשולר שחם', value: 'altshuler' },
-  { label: 'מיטב', value: 'meitav' },
-  { label: 'דרך הבנק', value: 'bank' },
   { label: 'אי בי איי', value: 'ibi' },
-  { label: 'טריידסטיישן', value: 'tradestation' },
+  { label: 'מיטב', value: 'meitav' },
+  { label: 'אלטשולר שחם', value: 'altshuler' },
+  { label: 'דרך הבנק', value: 'bank' },
   { label: 'אחר', value: 'other' },
+];
+
+/** תוויות לערכים ישנים שכבר לא מוצגים בשאלה (משתמשים קיימים) */
+const LEGACY_TRADING_PLATFORM_LABELS: { label: string; value: TradingPlatform }[] = [
+  { label: 'טריידסטיישן', value: 'tradestation' },
 ];
 
 export const PORTFOLIO_SIZE_OPTIONS: { label: string; value: PortfolioSize }[] = [
@@ -111,7 +115,7 @@ export function getTradingFocusLabel(value?: string | null) {
 }
 
 export function getTradingPlatformLabel(value?: string | null) {
-  return labelFor(TRADING_PLATFORM_OPTIONS, value);
+  return labelFor([...TRADING_PLATFORM_OPTIONS, ...LEGACY_TRADING_PLATFORM_LABELS], value);
 }
 
 /**

@@ -261,7 +261,7 @@ function DraggableText({
       // Let the shrink-to-0 animation play, then actually remove the item
       setTimeout(() => onRequestDelete(item.id), 180);
     } else if (onCommitPosition) {
-      onCommitPosition(item.id, translateX.value, translateY.value, scale.value);
+      onCommitPosition(item.id, savedTranslateX.value, savedTranslateY.value, scale.value);
     }
   };
 
@@ -304,6 +304,19 @@ function DraggableText({
         scale.value = withTiming(0, { duration: 180 });
       } else {
         deleteProgress.value = withSpring(0, { damping: 20, stiffness: 200 });
+        // שחרור מחוץ לחלון (למשל ליד הפח בלי למחוק) → חוזר פנימה. באנדרואיד מגע מחוץ
+        // לגבולות שכבת החלון לא מגיע לטקסט — בלי זה הוא נתקע ואי אפשר לגרור אותו שוב
+        const minY = -(canvasH / 2 - 60) + 8;
+        const maxY = canvasH / 2 - 8;
+        const maxX = SW / 2 - 48;
+        const cy = Math.max(minY, Math.min(maxY, translateY.value));
+        const cx = Math.max(-maxX, Math.min(maxX, translateX.value));
+        if (cy !== translateY.value) translateY.value = withSpring(cy, { damping: 18, stiffness: 180 });
+        if (cx !== translateX.value) translateX.value = withSpring(cx, { damping: 18, stiffness: 180 });
+        savedTranslateX.value = cx;
+        savedTranslateY.value = cy;
+        runOnJS(notifyDragEnd)(canvasTop + (canvasH / 2 - 60) + cy);
+        return;
       }
       savedTranslateX.value = translateX.value;
       savedTranslateY.value = translateY.value;

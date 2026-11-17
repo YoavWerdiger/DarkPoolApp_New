@@ -271,7 +271,10 @@ export class NotificationService {
       
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError) {
-        logger.error('Notification', 'Error getting user', userError);
+        // אחרי התנתקות (או לפני התחברות) אין session — מצב תקין, לא שגיאה ל-Sentry
+        const noSession =
+          userError.name === 'AuthSessionMissingError' || /session missing/i.test(userError.message ?? '');
+        if (!noSession) logger.error('Notification', 'Error getting user', userError);
         return false;
       }
       

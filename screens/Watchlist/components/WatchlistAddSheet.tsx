@@ -49,7 +49,11 @@ type Props = {
   visible: boolean;
   onClose: () => void;
   existingSymbols: ReadonlySet<string>;
-  onAdd: (symbol: string, name: string) => Promise<void>;
+  onAdd: (symbol: string, name: string) => Promise<void> | void;
+  /** כותרת השיט (ברירת מחדל: «הוספת מניות») — השיט משמש גם לבחירת מניות להתראות */
+  title?: string;
+  /** אם קיים — לחיצה על מניה שכבר נבחרה מסירה אותה (טוגל) */
+  onRemove?: (symbol: string) => Promise<void> | void;
 };
 
 const SECTOR_KEY: Record<StockSector, string> = {
@@ -62,7 +66,7 @@ const LOGO = 28;
 const t = (k: string, o?: Record<string, unknown>) =>
   i18n.t(`auto.screens__Watchlist__components__WatchlistAddSheet.${k}`, o);
 
-export function WatchlistAddSheet({ visible, onClose, existingSymbols, onAdd }: Props) {
+export function WatchlistAddSheet({ visible, onClose, existingSymbols, onAdd, title, onRemove }: Props) {
   const tokens = useDesignTokens();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
@@ -135,7 +139,19 @@ export function WatchlistAddSheet({ visible, onClose, existingSymbols, onAdd }: 
 
   const handleAdd = useCallback(
     async (row: Row) => {
-      if (adding || isIn(row.symbol)) return;
+      if (adding) return;
+      if (isIn(row.symbol)) {
+        if (!onRemove) return;
+        void HapticFeedback.selection();
+        const sym = row.symbol.toUpperCase();
+        setAddedNow((prev) => {
+          const next = new Set(prev);
+          next.delete(sym);
+          return next;
+        });
+        await onRemove(sym);
+        return;
+      }
       void HapticFeedback.selection();
       setAdding(row.symbol);
       try {
@@ -145,7 +161,7 @@ export function WatchlistAddSheet({ visible, onClose, existingSymbols, onAdd }: 
         setAdding(null);
       }
     },
-    [adding, isIn, onAdd],
+    [adding, isIn, onAdd, onRemove],
   );
 
   const chips: Filter[] = ['popular', 'all', ...STOCK_SECTORS];
@@ -167,7 +183,7 @@ export function WatchlistAddSheet({ visible, onClose, existingSymbols, onAdd }: 
       contentPaddingBottom={0}
     >
       <View style={[styles.root, { direction: UI_DIR }]}>
-        <ChatSheetTopoHeader title={t('s1')} onClose={onClose} />
+        <ChatSheetTopoHeader title={title ?? t('s1')} onClose={onClose} />
 
         <View style={[formFieldShellStyle({ tokens, focused }), styles.searchField]}>
           <Ionicons name="search" size={18} color={tokens.colors.text.secondary} />
@@ -244,7 +260,7 @@ export function WatchlistAddSheet({ visible, onClose, existingSymbols, onAdd }: 
             return (
               <Pressable
                 onPress={() => void handleAdd(item)}
-                disabled={inList || !!adding}
+                disabled={(inList && !onRemove) || !!adding}
                 style={styles.row}
                 accessibilityRole="button"
                 accessibilityLabel={inList ? `${item.symbol} — ${t('s3')}` : `${t('s17')} ${item.symbol}`}

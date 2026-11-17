@@ -441,18 +441,23 @@ function isPreMarketOverForDay(
 }
 
 // תווית קבוצה מחוץ לכרטיס — מסחר מוקדם / מאוחר, ממורכזת בין שני קווים
+/** מרווח סביב דיבידרי מסחר מוקדם/מאוחר — קצת יותר אוויר מהכרטיסים */
+const DIVIDER_GAP_TOP = 20;
+const DIVIDER_GAP_BOTTOM = 16;
+const DIVIDER_GAP_BETWEEN_SESSIONS = 28;
+
 const SectionDivider: React.FC<{
   label: string;
   icon?: React.ComponentType<{ size?: number; color?: string; strokeWidth?: number; style?: object }>;
   iconColor?: string;
   marginTop?: number;
-}> = ({ label, icon: Icon, iconColor, marginTop = APP_LAYOUT.sectionHeaderToContent }) => {
+}> = ({ label, icon: Icon, iconColor, marginTop = DIVIDER_GAP_TOP }) => {
   const DesignTokens = useDesignTokens();
   return (
     <View
       style={{
         marginTop,
-        marginBottom: APP_LAYOUT.cardTitleToBodyGap,
+        marginBottom: DIVIDER_GAP_BOTTOM,
         marginHorizontal: APP_LAYOUT.screenPaddingHorizontal,
         flexDirection: 'row',
         alignItems: 'center',
@@ -1224,11 +1229,11 @@ export default function EarningsReportsTab({
             label={i18n.t('auto.screens__News__EarningsReportsTab.s15')}
             icon={Sun}
             iconColor="#d1a11d"
-            marginTop={isListHead ? 0 : APP_LAYOUT.sectionHeaderToContent}
+            marginTop={isListHead ? 0 : DIVIDER_GAP_TOP}
           />
         )}
         {isFirstAfterMarket && (
-          <SectionDivider label={i18n.t('auto.screens__News__EarningsReportsTab.s16')} icon={Moon} iconColor="#007AFF" marginTop={APP_LAYOUT.componentGap} />
+          <SectionDivider label={i18n.t('auto.screens__News__EarningsReportsTab.s16')} icon={Moon} iconColor="#007AFF" marginTop={DIVIDER_GAP_BETWEEN_SESSIONS} />
         )}
         <View style={undefined}>
           <EarningsReportCard

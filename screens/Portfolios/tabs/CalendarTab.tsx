@@ -331,19 +331,7 @@ export default function CalendarTab({ portfolioId, currency, refreshKey }: Props
   );
 
   // בטעינה — לוח השנה האמיתי (חודש, ניווט, ימים ורשת) בלי נתוני רווח/הפסד, וסטטיסטיקות החודש עם ערכים בשלד
-  if (!loading && trades.length === 0) {
-    return (
-      <View style={styles.empty}>
-        <Ionicons
-          name="calendar-outline"
-          size={42}
-          color={tokens.colors.text.tertiary}
-        />
-        <Text style={styles.emptyTitle}>{i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s20')}</Text>
-        <Text style={styles.emptyText}>{i18n.t('auto.screens__Portfolios__tabs__CalendarTab.s21')}</Text>
-      </View>
-    );
-  }
+  // בלי עסקאות — לוח שנה ריק רגיל (ניווט חודשים, ימים ורשת), בלי פלייסהולדר
 
   const monthName = `${HEB_MONTHS[cursor.m]} ${cursor.y}`;
   const totalColor =

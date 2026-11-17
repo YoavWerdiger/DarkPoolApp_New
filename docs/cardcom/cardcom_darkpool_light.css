@@ -1,36 +1,34 @@
-/* ============================================
-   DarkPool × CardCom LPC5 — ערכת נושא בהירה
-   מבוסס על הטוקנים של האפליקציה (components/ui/designTokensStatic.ts — light):
-     קנבס #F4F2F1 · כרטיס #FFFFFF · טקסט #1E1A24 · שדה rgba(0,0,0,.04) (פוקוס #E8E8ED)
-     CTA = גלולה שחורה #010000 עם טקסט לבן · שדות וכפתורים pill · כרטיסים רדיוס 24 · Heebo
-   להדבקה ב-Studio יחד עם cardcom_darkpool_custom.html (ה-hooks: .dp-pay-btn / .dp-terms-link /
-   .dp-submit / .dp-pay-total / .dp-hide-field).
-   ============================================ */
-
-@import url("https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700&display=swap");
+/* DarkPool x CardCom LPC5 - light theme.
+   Same structure and selectors as the working dark CSS; only colors changed + no card shadow.
+   Also hidden: top logo/header, card owner name + phone. */
 
 :root {
-    --bg-primary: #F4F2F1;      /* background.primary (LIGHT_CANVAS) */
-    --bg-card: #FFFFFF;         /* cardSolid */
-    --bg-input: rgba(0, 0, 0, 0.04);   /* background.input */
-    --bg-input-focus: #E8E8ED;  /* background.tertiary — שדה בפוקוס */
-    --cta: #010000;             /* primary.lightCta */
-    --cta-hover: #2A2A2E;
-    --cta-text: #FFFFFF;
+    --bg-primary: #F4F2F1;
+    --bg-secondary: #FFFFFF;
+    --bg-card: #FFFFFF;
+    --bg-input: rgba(0, 0, 0, 0.04);
+    --accent: #010000;
+    --accent-hover: #2A2A2E;
+    --accent-soft: rgba(0, 0, 0, 0.06);
+    --accent-muted: rgba(0, 0, 0, 0.20);
+    --accent-subtle: rgba(0, 0, 0, 0.03);
     --text-primary: #1E1A24;
     --text-secondary: rgba(0, 0, 0, 0.65);
     --text-muted: rgba(0, 0, 0, 0.45);
     --border: rgba(0, 0, 0, 0.10);
     --border-soft: rgba(0, 0, 0, 0.06);
+    --glass-bg: rgba(0, 0, 0, 0.04);
+    --glass-bg-hover: rgba(0, 0, 0, 0.07);
+    --glass-border: rgba(0, 0, 0, 0.12);
     --error: #EF4444;
-    --radius-card: 24px;        /* borderRadius.xl */
-    --radius-sm: 12px;
-    --pill: 9999px;             /* borderRadius.button / search */
-    --max: 560px;
-    --font: "Heebo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    --radius: 14px;
+    --radius-lg: 22px;
+    --radius-xl: 28px;
+    --radius-input: 16px;
+    --max: 720px;
 }
 
-/* ===== בסיס ===== */
+/* ===== base ===== */
 html,
 body {
     background: var(--bg-primary) !important;
@@ -40,50 +38,37 @@ body {
     padding: 0 !important;
     direction: rtl !important;
     text-align: right !important;
-    font-family: var(--font) !important;
-    -webkit-font-smoothing: antialiased;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Tahoma, Helvetica, Arial, sans-serif !important;
 }
 
-body * { box-sizing: border-box; }
-body input, body select, body button { font-family: var(--font) !important; }
-
-.directionLTR { direction: ltr !important; text-align: left !important; }
-.clear { clear: both; }
-img { border: 0 !important; max-width: 100%; height: auto; }
-
-/* ===== Header — לוגו בלבד, ממורכז ===== */
-.header.user-header,
-.header {
-    width: 100% !important;
-    background: transparent !important;
-    border-bottom: none !important;
-    padding: 28px 16px 8px !important;
+body * {
+    box-sizing: border-box;
 }
 
-.header .headerIn {
-    max-width: var(--max) !important;
-    margin: 0 auto !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
+.directionLTR {
+    direction: ltr !important;
+    text-align: left !important;
 }
 
-.header .logoDiv,
-.user-header .logoDiv { float: none !important; }
+.clear {
+    clear: both;
+}
 
-.header .logoDiv img,
-.user-header .logoDiv img {
-    display: block !important;
-    max-width: 200px !important;
-    max-height: 72px !important;
-    width: auto !important;
-    height: auto !important;
-    object-fit: contain !important;
+img {
+    border: 0 !important;
+    max-width: 100%;
+    height: auto;
+}
+
+/* ===== header (logo + business details) - hidden ===== */
+html body .header,
+html body .header.user-header {
+    display: none !important;
 }
 
 h1 {
     max-width: var(--max) !important;
-    margin: 28px auto 8px !important; /* בלי הדר — מרווח מהקצה העליון */
+    margin: 28px auto 12px !important;
     padding: 0 16px !important;
     text-align: center !important;
     color: var(--text-primary) !important;
@@ -92,10 +77,10 @@ h1 {
     letter-spacing: -0.01em !important;
 }
 
-/* ===== כרטיסים ===== */
+/* ===== cards - white on the canvas, no shadow, no border ===== */
 .blockDetails {
     width: 100% !important;
-    padding: 8px 16px !important;
+    padding: 14px 18px !important;
     background: transparent !important;
 }
 
@@ -107,12 +92,13 @@ h1 {
     width: 100% !important;
     margin: 0 auto !important;
     background: var(--bg-card) !important;
+    background-color: var(--bg-card) !important;
     background-image: none !important;
     border: none !important;
-    border-radius: var(--radius-card) !important;
-    padding: 24px 20px !important;
+    border-radius: var(--radius-xl) !important;
+    padding: 28px 24px !important;
     color: var(--text-primary) !important;
-    box-shadow: none !important; /* כמו באפליקציה: כרטיס לבן על הקנבס, בלי צל ובלי מסגרת */
+    box-shadow: none !important;
 }
 
 .blockDetailsIn > .title,
@@ -121,40 +107,56 @@ h1 {
     color: var(--text-primary) !important;
     font-size: 17px !important;
     font-weight: 700 !important;
-    margin: 0 0 16px !important;
-    padding: 0 !important;
-    border-bottom: none !important;
+    margin: 0 0 20px !important;
+    padding-bottom: 14px !important;
+    border-bottom: 1px solid var(--border-soft) !important;
 }
 
-.htmlCommentsDiv { color: var(--text-secondary) !important; font-size: 14px !important; line-height: 1.55 !important; }
+.htmlCommentsDiv {
+    color: var(--text-secondary) !important;
+    font-size: 14px !important;
+    line-height: 1.55 !important;
+}
 
-/* ===== שורות טופס — תווית מעל שדה, כמו באפליקציה ===== */
+.paymentDetails,
+.OrderDetails,
+.customDetails {
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+}
+
+/* ===== form rows ===== */
 .formRow,
 .formRow.cardRow,
 .formRow.cvvRow,
 .formRow.nameRow {
     display: flex !important;
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 8px !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 12px 14px !important;
     margin: 0 0 16px !important;
 }
 
 .formRow .fieldName,
 .fieldName {
-    width: 100% !important;
-    color: var(--text-primary) !important;
-    font-size: 13px !important;
+    flex: 0 0 160px !important;
+    width: auto !important;
+    max-width: 100% !important;
+    color: var(--text-secondary) !important;
+    font-size: 14px !important;
     font-weight: 600 !important;
-    line-height: 18px !important;
     padding: 0 !important;
 }
 
-.fieldName.summaryTotal { color: var(--text-primary) !important; font-weight: 700 !important; }
+.fieldName.summaryTotal {
+    flex: 1 1 auto !important;
+    color: var(--text-primary) !important;
+    font-weight: 700 !important;
+}
 
 .formRow .fieldInput,
 .fieldInput {
-    width: 100% !important;
+    flex: 1 1 220px !important;
     display: flex !important;
     flex-wrap: wrap !important;
     align-items: center !important;
@@ -170,301 +172,760 @@ h1 {
 .blockDetailsIn input[type="email"],
 .blockDetailsIn input[type="number"],
 .blockDetailsIn select,
-#txtCardNumber, #txtCardNumber-number, #txtCvv, #txtTZ, #txtCardOwnerName, #txtCardOwnerPhone,
-#txtCustName, #txtCompID, #txtCustMobilePH, #txtEmail,
-#validityYear, #validityMonth, #numberOfPaymentsselect {
-    -webkit-appearance: none !important;
-    appearance: none !important;
+#txtCardNumber,
+#txtCardNumber-number,
+#txtCvv,
+#txtTZ,
+#txtCardOwnerName,
+#txtCardOwnerPhone,
+#txtCardOwnerEmail,
+#txtCustName,
+#txtCompID,
+#txtCustCity,
+#txtCustAddresLine1,
+#txtCustAddresLine2,
+#txtCustMobilePH,
+#txtCustLinePH,
+#txtEmail,
+#txtopenSum,
+#txtAvsCity,
+#txtAvsAddress,
+#txtAvsZip,
+#validityYear,
+#validityMonth,
+#numberOfPaymentsselect {
     background: var(--bg-input) !important;
     color: var(--text-primary) !important;
-    border: none !important;
-    border-radius: var(--pill) !important;
-    padding: 0 20px !important;
-    height: 52px !important;
-    min-height: 52px !important;
-    font-size: 16px !important; /* 16 — בלי zoom אוטומטי ב-iOS */
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-input) !important;
+    padding: 14px 16px !important;
+    font-size: 15px !important;
     outline: none !important;
     box-shadow: none !important;
     margin: 0 !important;
+    min-height: 48px !important;
     width: 100% !important;
-    max-width: none !important;
-    transition: background 0.15s ease !important;
+    max-width: 360px !important;
+    transition: border-color 0.18s ease, background 0.18s ease !important;
 }
 
-/* תוקף: שנה + חודש באותה שורה */
-.fieldInput.validityDate { flex-wrap: nowrap !important; }
-.fieldInput select.mini, #validityYear { flex: 1 1 60% !important; width: auto !important; }
-.fieldInput select.tiny, #validityMonth, #numberOfPaymentsselect { flex: 1 1 40% !important; width: auto !important; }
+.fieldInput select.mini,
+#validityYear {
+    width: 110px !important;
+    max-width: 110px !important;
+    flex: 0 0 110px !important;
+}
 
-/* חץ ל-select (appearance:none מסיר את המקורי) — כולל IDs כי הכלל הכללי משתמש בהם */
-.fieldInput select,
-html body #validityYear,
-html body #validityMonth,
-html body #numberOfPaymentsselect {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%231E1A24' stroke-opacity='.55' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
-    background-repeat: no-repeat !important;
-    background-position: left 18px center !important;
-    padding-left: 40px !important;
+.fieldInput select.tiny,
+#validityMonth,
+#numberOfPaymentsselect {
+    width: 80px !important;
+    max-width: 80px !important;
+    flex: 0 0 80px !important;
+}
+
+.fieldInput.validityDate {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 8px !important;
 }
 
 .fieldInput input:focus,
 .fieldInput select:focus,
-#txtCardNumber:focus, #txtCvv:focus, #txtCardOwnerPhone:focus, #validityYear:focus, #validityMonth:focus {
-    background-color: var(--bg-input-focus) !important;
+#txtCardNumber:focus,
+#txtCvv:focus,
+#txtCardOwnerPhone:focus,
+#txtCardOwnerEmail:focus,
+#validityYear:focus,
+#validityMonth:focus {
+    border-color: rgba(0, 0, 0, 0.25) !important;
+    background: #E8E8ED !important;
     box-shadow: none !important;
 }
 
-.fieldInput input::placeholder { color: var(--text-muted) !important; }
+.fieldInput input::placeholder {
+    color: var(--text-muted) !important;
+}
 
-/* checkbox תקנון — appearance רגיל (הכלל הכללי של שדות הוריד אותו) */
-html body .formRow input[type="checkbox"],
-html body .fieldInput input[type="checkbox"] {
-    -webkit-appearance: auto !important;
-    appearance: auto !important;
+.fieldInput input[type="checkbox"],
+.fieldInput .checkbox,
+.paymentDetails input[type="checkbox"],
+.formRow input[type="checkbox"] {
     width: 20px !important;
     height: 20px !important;
     min-height: 20px !important;
-    flex: 0 0 20px !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    background: none !important;
-    accent-color: var(--cta) !important;
+    max-width: 20px !important;
+    accent-color: #010000 !important;
+    color: #010000 !important;
+    filter: none !important;
 }
 
-/* שורת התקנון בשורה אחת: ☐ קראתי ואני מסכים לתקנון */
-html body .formRow:has(.dp-terms-link) {
-    flex-direction: row !important;
-    flex-wrap: wrap !important;
-    align-items: center !important;
-    gap: 8px !important;
+/* ===== links / terms ===== */
+.formRow a,
+.fieldName a,
+.formRow .fieldName a,
+.formRow .fieldInput a,
+.blockDetailsIn a,
+.paymentDetails a,
+.paymentDetails .formRow a,
+.paymentDetails label a,
+.formRow a span,
+.formRow a span.fieldname,
+.formRow a span.checkbox,
+.formRow a span.fieldname.checkbox,
+.fieldInput a span.fieldname.checkbox,
+.paymentDetails .fieldname.checkbox,
+.paymentDetails span.fieldname.checkbox {
+    color: #1E1A24 !important;
+    -webkit-text-fill-color: #1E1A24 !important;
+    text-decoration: underline !important;
+    text-underline-offset: 2px !important;
+    text-shadow: none !important;
+    filter: none !important;
 }
-html body .formRow:has(.dp-terms-link) .fieldInput { display: contents !important; }
-html body .formRow:has(.dp-terms-link) input[type="checkbox"] { order: 0 !important; }
-html body .formRow:has(.dp-terms-link) .fieldName {
-    order: 1 !important;
-    width: auto !important;
-    font-size: 14px !important;
-    font-weight: 400 !important;
+
+.formRow a:hover,
+.fieldName a:hover,
+.formRow .fieldName a:hover,
+.formRow .fieldInput a:hover,
+.blockDetailsIn a:hover,
+.paymentDetails a:hover,
+.paymentDetails .formRow a:hover,
+.paymentDetails label a:hover,
+.formRow a:hover span,
+.formRow a:hover span.fieldname.checkbox,
+.paymentDetails a:hover span.fieldname.checkbox {
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+}
+
+.WhatIsCvvLightBox {
     color: var(--text-secondary) !important;
 }
-html body .formRow:has(.dp-terms-link) .dp-terms-link { order: 2 !important; font-size: 14px !important; }
 
-.WhatIsCvvLightBox img { display: inline-block !important; width: 16px !important; height: 16px !important; opacity: 0.6 !important; vertical-align: middle !important; margin-inline-start: 6px !important; }
+.WhatIsCvvLightBox img {
+    display: inline-block !important;
+    width: 18px !important;
+    height: 18px !important;
+    opacity: 0.85 !important;
+    vertical-align: middle !important;
+}
 
-/* שגיאות (CssValid של CardCom) */
+/* ===== errors ===== */
 .formRow.errorRow .fieldInput input,
 .formRow.error .fieldInput input,
 .formRow.errorRow .fieldInput select,
 .formRow.error .fieldInput select {
-    background-color: rgba(239, 68, 68, 0.10) !important;
+    border-color: var(--error) !important;
+    background: rgba(239, 68, 68, 0.08) !important;
 }
-.formRow.errorRow .fieldName, .formRow.error .fieldName { color: var(--error) !important; }
 
 .errorDiv {
     background: rgba(239, 68, 68, 0.08) !important;
     border: 1px solid rgba(239, 68, 68, 0.30) !important;
-    border-radius: 16px !important;
+    border-radius: var(--radius-lg) !important;
+    color: #B91C1C !important;
     padding: 14px 16px !important;
-    margin: 16px 0 0 !important;
-}
-.errorDiv ul { margin: 0 !important; padding: 0 18px 0 0 !important; }
-.errorDiv li, .errorDiv .message { color: #B91C1C !important; font-size: 14px !important; }
-
-/* ===== תשלומים חלופיים — לא לשבור ===== */
-.paypalDiv, .ApplePayDiv, .GooglePayDiv, .BitContainer, .uPayBitContainer, .masterPassDiv,
-#ApplePayDivContainer, #BitDivContainer, #GooglePayDiv, #uPayBitDiv, #PayMeBitDiv, #CardcomBitDiv { margin: 0 0 12px !important; }
-.cardcom-bit-payment-txt, .payme-payment-txt { color: var(--text-secondary) !important; display: block !important; margin-top: 6px !important; }
-.cardcom-bit-payment-txt.error, .payme-payment-txt.error { color: var(--error) !important; }
-#cardcom-bit-ref { color: var(--text-primary) !important; }
-
-#captcha_div .fieldName { display: none !important; }
-
-/* ===== קישורים / תקנון ===== */
-html body a.dp-terms-link,
-html body a.dp-terms-link:link,
-html body a.dp-terms-link:visited,
-html body a.dp-terms-link span,
-html body .paymentDetails a.dp-terms-link span.fieldname,
-.blockDetailsIn a {
-    color: var(--text-primary) !important;
-    -webkit-text-fill-color: var(--text-primary) !important;
-    font-weight: 600 !important;
-    text-decoration: underline !important;
-    text-underline-offset: 3px !important;
+    margin: 12px 0 0 !important;
+    width: auto !important;
+    max-width: 100% !important;
 }
 
-/* ===== סה״כ + כפתור תשלום ===== */
-html body .submitDiv.dp-submit,
-html body .dp-submit,
-html body .paymentDetails .submitDiv.dp-submit,
-.submitDiv {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 12px !important;
-    margin: 20px 0 0 !important;
-    padding: 16px 0 0 !important;
-    border-top: 1px solid var(--border-soft) !important;
-    background: transparent !important;
-    float: none !important;
+.errorDiv ul {
+    margin: 0 !important;
+    padding: 0 18px 0 0 !important;
+}
+
+.errorDiv li,
+.errorDiv .message {
+    color: #B91C1C !important;
+}
+
+/* ===== alternative payments ===== */
+.paypalDiv,
+.ApplePayDiv,
+.GooglePayDiv,
+.BitContainer,
+.uPayBitContainer,
+.masterPassDiv,
+#ApplePayDivContainer,
+#BitDivContainer,
+#GooglePayDiv,
+#uPayBitDiv,
+#PayMeBitDiv,
+#CardcomBitDiv {
+    margin: 0 0 12px !important;
+}
+
+.paypalDiv img {
+    max-width: 280px !important;
     width: 100% !important;
+    height: auto !important;
+    border-radius: 12px !important;
+    display: block !important;
 }
 
-html body .dp-submit .dp-pay-total {
+#bit-payment-button {
+    background-image: url(/Images/Bit/bit_button.svg);
+    background-position: center;
+    background-size: cover;
+    background-color: transparent !important;
+    height: 40px;
+    width: 280px;
+    max-width: 100%;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+}
+
+#bit-payment-button:hover {
+    background-image: url(/Images/Bit/bit_button_hover.svg);
+}
+
+.cardcom-bit-payment-txt,
+.payme-payment-txt {
+    color: var(--text-secondary) !important;
+    display: block !important;
+    margin-top: 6px !important;
+}
+
+.cardcom-bit-payment-txt.error,
+.payme-payment-txt.error {
+    color: #B91C1C !important;
+}
+
+#cardcom-bit-ref {
+    color: #1E1A24 !important;
+}
+
+/* ===== submit area ===== */
+.submitDiv,
+.paymentDetails .submitDiv,
+.blockDetailsIn .submitDiv,
+.paymentDetails .blockDetailsIn .submitDiv {
     display: flex !important;
-    align-items: baseline !important;
-    justify-content: space-between !important;
-    gap: 8px !important;
+    flex-wrap: wrap !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 12px !important;
+    margin: 22px auto 0 !important;
+    padding: 10px 0 0 !important;
+    text-align: center !important;
+    width: 100% !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    max-width: none !important;
+    float: none !important;
+}
+
+.submitDiv .homeLink {
+    float: none !important;
+    order: 2 !important;
+    width: 100% !important;
+    text-align: center !important;
+}
+
+.submitDiv .homeLink a {
+    color: var(--text-secondary) !important;
+    text-decoration: none !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+}
+
+.submitDiv .homeLink a:hover {
+    color: var(--text-primary) !important;
+}
+
+.submitDiv .buttonDiv,
+.paymentDetails .submitDiv .buttonDiv,
+.blockDetailsIn .submitDiv .buttonDiv,
+.buttonDiv {
+    float: none !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    margin: 0 auto !important;
+    width: 100% !important;
+    text-align: center !important;
     order: 1 !important;
     background: transparent !important;
-    border: none !important;
-    padding: 0 4px !important;
-    margin: 0 !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    filter: none !important;
 }
 
-html body .dp-submit .dp-pay-total-label {
-    color: var(--text-secondary) !important;
-    -webkit-text-fill-color: var(--text-secondary) !important;
-    font-size: 15px !important;
-    font-weight: 500 !important;
-}
-
-html body .dp-submit .dp-pay-total-amount {
-    color: var(--text-primary) !important;
-    -webkit-text-fill-color: var(--text-primary) !important;
-    font-size: 22px !important;
-    font-weight: 700 !important;
-    direction: ltr !important;
-    unicode-bidi: plaintext !important;
-    font-variant-numeric: tabular-nums !important;
-}
-
-html body .dp-submit .buttonDiv,
-.submitDiv .buttonDiv,
-.buttonDiv {
-    order: 2 !important;
-    float: none !important;
-    display: block !important;
-    width: 100% !important;
-    margin: 0 !important;
-    background: transparent !important;
-}
-
-html body .dp-submit .homeLink,
-.submitDiv .homeLink { order: 3 !important; float: none !important; width: 100% !important; text-align: center !important; }
-.submitDiv .homeLink a { color: var(--text-secondary) !important; text-decoration: none !important; font-size: 14px !important; font-weight: 500 !important; }
-
-/* כפתור «לתשלום» — גלולה שחורה (CTA של ערכת הנושא הבהירה). סוף-cascade, דורס את הירוק של CardCom */
-html body input.dp-pay-btn,
-html body .buttonDiv input[type="button"],
-html body .buttonDiv input[type="submit"],
+/* ===== pay button - black with white text (beats CardCom green) ===== */
+html body .paymentDetails .submitDiv .buttonDiv input[type="button"],
+html body .paymentDetails .submitDiv .buttonDiv input[type="submit"],
+html body .blockDetails.paymentDetails input[type="button"],
+html body .blockDetails.paymentDetails input[type="submit"],
 html body .paymentDetails input[type="button"],
 html body .paymentDetails input[type="submit"],
+html body .submitDiv input[type="button"],
+html body .submitDiv input[type="submit"],
+html body .buttonDiv input,
+html body .buttonDiv input[type="button"],
+html body .buttonDiv input[type="submit"],
+html body .submitDiv .buttonDiv input,
+html body .submitDiv .buttonDiv input[type="button"],
+html body .submitDiv .buttonDiv input[type="submit"],
 html body .paymentDetails .submitDiv .buttonDiv input,
+html body .blockDetailsIn .submitDiv .buttonDiv input,
+html body .blockDetailsIn .buttonDiv input[type="button"],
+html body .blockDetailsIn .buttonDiv input[type="submit"],
+html body .paymentDetails .buttonDiv input,
+html body .paymentDetails .buttonDiv input[type="button"],
+html body .paymentDetails .buttonDiv input[type="submit"],
 html body input[type="button"][data-bind*="sendData"],
+html body input[type="submit"][data-bind*="sendData"],
+html body input.btnSend,
+html body #btnSend,
 html body input#btnSend {
     -webkit-appearance: none !important;
+    -moz-appearance: none !important;
     appearance: none !important;
-    display: block !important;
-    float: none !important;
-    width: 100% !important;
-    min-width: 0 !important;
-    height: 56px !important;
-    min-height: 56px !important;
-    margin: 0 !important;
-    padding: 0 24px !important;
-    background: var(--cta) !important;
-    background-color: var(--cta) !important;
+    background: #010000 !important;
+    background-color: #010000 !important;
     background-image: none !important;
-    color: var(--cta-text) !important;
-    -webkit-text-fill-color: var(--cta-text) !important;
-    border: none !important;
-    border-radius: var(--pill) !important;
-    font-family: var(--font) !important;
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+    border: 1px solid #010000 !important;
+    border-color: #010000 !important;
+    border-radius: 18px !important;
+    padding: 15px 38px !important;
+    min-width: 188px !important;
+    min-height: 52px !important;
     font-size: 17px !important;
-    font-weight: 600 !important;
+    font-weight: 700 !important;
     letter-spacing: 0 !important;
     text-shadow: none !important;
-    box-shadow: none !important;
+    cursor: pointer !important;
+    outline: none !important;
     filter: none !important;
     -webkit-filter: none !important;
     opacity: 1 !important;
-    cursor: pointer !important;
-    transition: background-color 0.15s ease, transform 0.1s ease !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+    transition: background-color 0.18s ease !important;
 }
 
-html body input.dp-pay-btn:hover,
-html body .buttonDiv input[type="button"]:hover,
+html body .paymentDetails .submitDiv .buttonDiv input[type="button"]:hover,
+html body .paymentDetails .submitDiv .buttonDiv input[type="submit"]:hover,
 html body .paymentDetails input[type="button"]:hover,
+html body .paymentDetails input[type="submit"]:hover,
+html body .submitDiv .buttonDiv input:hover,
+html body .submitDiv .buttonDiv input[type="button"]:hover,
+html body .submitDiv .buttonDiv input[type="submit"]:hover,
+html body .buttonDiv input[type="button"]:hover,
+html body .buttonDiv input[type="submit"]:hover,
+html body input[type="button"][data-bind*="sendData"]:hover,
+html body input[type="submit"][data-bind*="sendData"]:hover,
 html body input#btnSend:hover {
-    background: var(--cta-hover) !important;
-    background-color: var(--cta-hover) !important;
-}
-
-html body input.dp-pay-btn:active,
-html body .buttonDiv input[type="button"]:active,
-html body .paymentDetails input[type="button"]:active {
-    transform: scale(0.98) !important;
-}
-
-html body input.dp-pay-btn:focus-visible,
-html body .buttonDiv input[type="button"]:focus-visible {
-    outline: 3px solid rgba(1, 0, 0, 0.25) !important;
-    outline-offset: 2px !important;
-}
-
-html body input.dp-pay-btn:disabled,
-html body .buttonDiv input[type="button"]:disabled,
-html body .paymentDetails input[type="button"]:disabled,
-html body input#btnSend:disabled {
-    background: rgba(0, 0, 0, 0.18) !important;
-    background-color: rgba(0, 0, 0, 0.18) !important;
+    background: #2A2A2E !important;
+    background-color: #2A2A2E !important;
+    background-image: none !important;
+    border-color: #2A2A2E !important;
     color: #FFFFFF !important;
     -webkit-text-fill-color: #FFFFFF !important;
-    cursor: not-allowed !important;
-    transform: none !important;
+    box-shadow: none !important;
 }
 
-/* ===== Footer ===== */
+html body .paymentDetails .submitDiv .buttonDiv input[type="button"]:focus,
+html body .paymentDetails .submitDiv .buttonDiv input[type="submit"]:focus,
+html body .paymentDetails input[type="button"]:focus,
+html body .paymentDetails input[type="submit"]:focus,
+html body .submitDiv .buttonDiv input:focus,
+html body .buttonDiv input[type="button"]:focus,
+html body .buttonDiv input[type="submit"]:focus,
+html body input#btnSend:focus {
+    outline: none !important;
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+    background-image: none !important;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.15) !important;
+}
+
+html body .paymentDetails .submitDiv .buttonDiv input[type="button"]:disabled,
+html body .paymentDetails .submitDiv .buttonDiv input[type="submit"]:disabled,
+html body .paymentDetails input[type="button"]:disabled,
+html body .paymentDetails input[type="submit"]:disabled,
+html body .submitDiv .buttonDiv input:disabled,
+html body .buttonDiv input[type="button"]:disabled,
+html body .buttonDiv input[type="submit"]:disabled,
+html body input#btnSend:disabled {
+    background: #B8B8B8 !important;
+    background-color: #B8B8B8 !important;
+    background-image: none !important;
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+    border-color: #B8B8B8 !important;
+    box-shadow: none !important;
+    cursor: not-allowed !important;
+    opacity: 1 !important;
+}
+
+#captcha_div {
+    margin-top: 8px !important;
+}
+
+#captcha_div .fieldName {
+    display: none !important;
+}
+
+/* ===== footer ===== */
 .footer {
     width: 100% !important;
     background: transparent !important;
     border-top: none !important;
-    padding: 20px 16px 28px !important;
-    margin-top: 8px !important;
+    padding: 20px 16px !important;
+    margin-top: 28px !important;
 }
+
 .footer .footerIn {
     max-width: var(--max) !important;
+    width: 100% !important;
     margin: 0 auto !important;
     display: flex !important;
-    flex-direction: column !important;
+    flex-wrap: wrap !important;
     align-items: center !important;
-    gap: 10px !important;
+    justify-content: center !important;
+    gap: 14px 20px !important;
 }
-.footer .footer-logo img { display: block !important; max-height: 22px !important; width: auto !important; opacity: 0.55 !important; }
-.footer .footer-text, .footer .footer-text span { color: var(--text-muted) !important; font-size: 12px !important; line-height: 1.5 !important; text-align: center !important; }
 
-/* ===== Cookies / Popups ===== */
-#cookies-banner { background: var(--bg-card) !important; color: var(--text-primary) !important; border-top: 1px solid var(--border) !important; padding: 14px 16px !important; }
+.footer .footer-logo {
+    display: flex !important;
+    align-items: center !important;
+}
+
+.footer .footer-logo img {
+    display: block !important;
+    max-height: 28px !important;
+    width: auto !important;
+    opacity: 0.9 !important;
+}
+
+.footer .footer-text {
+    color: var(--text-muted) !important;
+    font-size: 13px !important;
+    line-height: 1.45 !important;
+    text-align: center !important;
+}
+
+.footer .footer-text span {
+    color: inherit !important;
+}
+
+/* ===== cookies / popups ===== */
+#cookies-banner {
+    background: var(--bg-card) !important;
+    color: var(--text-primary) !important;
+    border-top: 1px solid var(--border-soft) !important;
+    padding: 14px 16px !important;
+}
+
 #btn-cookies-accept {
-    background: var(--cta) !important; color: var(--cta-text) !important; border: none !important;
-    border-radius: var(--pill) !important; padding: 8px 18px !important; font-weight: 600 !important; margin-right: 10px !important; cursor: pointer !important;
+    background: #010000 !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    border-radius: 12px !important;
+    padding: 8px 14px !important;
+    font-weight: 700 !important;
+    margin-right: 10px !important;
+    cursor: pointer !important;
+    box-shadow: none !important;
 }
-.white-popup, .white-popup-rtl { background: var(--bg-card) !important; color: var(--text-primary) !important; border-radius: var(--radius-card) !important; }
 
-/* ===== Responsive ===== */
-@media screen and (max-width: 640px) {
-    .blockDetails { padding: 6px 12px !important; }
+.white-popup,
+.white-popup-rtl {
+    background: var(--bg-card) !important;
+    color: var(--text-primary) !important;
+    border-radius: var(--radius-xl) !important;
+}
+
+/* ===== responsive ===== */
+@media screen and (max-width: 768px) {
     .blockDetailsIn,
     .paymentDetails .blockDetailsIn,
-    .OrderDetails .blockDetailsIn { padding: 20px 16px !important; }
-    h1 { font-size: 19px !important; }
+    .OrderDetails .blockDetailsIn,
+    .customDetails .blockDetailsIn {
+        padding: 22px 18px !important;
+        border-radius: 24px !important;
+    }
+
+    .formRow,
+    .formRow.cardRow,
+    .formRow.cvvRow,
+    .formRow.nameRow {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+
+    .formRow .fieldName,
+    .fieldName {
+        flex: 0 0 auto !important;
+        width: 100% !important;
+    }
+
+    .formRow .fieldInput,
+    .fieldInput {
+        flex: 1 1 auto !important;
+        width: 100% !important;
+    }
+
+    .fieldInput input,
+    .fieldInput select,
+    #txtCardNumber,
+    #txtCvv,
+    #txtCardOwnerName,
+    #txtCardOwnerPhone,
+    #txtCardOwnerEmail {
+        max-width: 100% !important;
+    }
+
+    .submitDiv,
+    .paymentDetails .submitDiv,
+    .blockDetailsIn .submitDiv {
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+    }
+
+    .submitDiv .buttonDiv,
+    .buttonDiv {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+
+    html body .paymentDetails .submitDiv .buttonDiv input[type="button"],
+    html body .paymentDetails .submitDiv .buttonDiv input[type="submit"],
+    html body .paymentDetails input[type="button"],
+    html body .paymentDetails input[type="submit"],
+    html body .submitDiv .buttonDiv input,
+    html body .submitDiv .buttonDiv input[type="button"],
+    html body .submitDiv .buttonDiv input[type="submit"],
+    html body .buttonDiv input[type="button"],
+    html body .buttonDiv input[type="submit"],
+    html body input#btnSend {
+        width: 100% !important;
+        max-width: 360px !important;
+        min-width: 0 !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        border-radius: 16px !important;
+        background: #010000 !important;
+        background-color: #010000 !important;
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
+        border: 1px solid #010000 !important;
+    }
+
+    h1 {
+        font-size: 18px !important;
+    }
 }
 
-/* =========================================================
-   הסתרות (זהה לגרסה הכהה) — סוף קובץ מנצח cascade
-   נשארים: לקוח (שם/ת״ז/נייד/מייל) + כרטיס/תוקף/CVV/ת״ז בעל הכרטיס + תקנון + סה״כ + לוגו + footer
-   ========================================================= */
+/* ===== HTML hooks: .dp-submit / .dp-pay-total / .dp-pay-btn / .dp-terms-link ===== */
+html body .submitDiv.dp-submit,
+html body .dp-submit,
+html body .paymentDetails .submitDiv.dp-submit {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 14px 20px !important;
+    text-align: center !important;
+    width: 100% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding: 14px 0 0 !important;
+}
+
+html body .dp-submit .dp-pay-total,
+html body .submitDiv.dp-submit .dp-pay-total,
+html body .paymentDetails .dp-submit .dp-pay-total {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: baseline !important;
+    justify-content: flex-start !important;
+    gap: 8px !important;
+    order: 1 !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    text-align: right !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+}
+
+html body .dp-submit .dp-pay-total-label,
+html body .submitDiv.dp-submit .dp-pay-total-label {
+    color: #6B6B70 !important;
+    -webkit-text-fill-color: #6B6B70 !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    line-height: 1.3 !important;
+}
+
+html body .dp-submit .dp-pay-total-amount,
+html body .submitDiv.dp-submit .dp-pay-total-amount {
+    color: #1E1A24 !important;
+    -webkit-text-fill-color: #1E1A24 !important;
+    font-size: 20px !important;
+    font-weight: 700 !important;
+    line-height: 1.25 !important;
+    direction: ltr !important;
+    unicode-bidi: plaintext !important;
+    text-shadow: none !important;
+}
+
+html body .dp-submit .buttonDiv,
+html body .submitDiv.dp-submit .buttonDiv,
+html body .paymentDetails .submitDiv.dp-submit .buttonDiv {
+    order: 2 !important;
+    flex: 0 0 auto !important;
+    width: auto !important;
+    margin: 0 !important;
+    justify-content: flex-end !important;
+}
+
+html body .dp-submit .homeLink,
+html body .submitDiv.dp-submit .homeLink {
+    order: 3 !important;
+    flex: 1 0 100% !important;
+    width: 100% !important;
+    text-align: center !important;
+}
+
+@media (max-width: 640px) {
+    html body .submitDiv.dp-submit,
+    html body .dp-submit,
+    html body .paymentDetails .submitDiv.dp-submit {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        justify-content: center !important;
+        gap: 12px !important;
+    }
+
+    html body .dp-submit .dp-pay-total,
+    html body .submitDiv.dp-submit .dp-pay-total {
+        justify-content: center !important;
+        text-align: center !important;
+        width: 100% !important;
+        margin: 0 0 2px !important;
+    }
+
+    html body .dp-submit .buttonDiv,
+    html body .submitDiv.dp-submit .buttonDiv {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+}
+
+html body a.dp-terms-link,
+html body a.dp-terms-link:link,
+html body a.dp-terms-link:visited,
+html body a.dp-terms-link:hover,
+html body a.dp-terms-link:active,
+html body a.dp-terms-link:focus,
+html body .paymentDetails a.dp-terms-link,
+html body .paymentDetails a.dp-terms-link span,
+html body a.dp-terms-link span.fieldname,
+html body a.dp-terms-link span.checkbox {
+    color: #1E1A24 !important;
+    -webkit-text-fill-color: #1E1A24 !important;
+    text-decoration: underline !important;
+    text-shadow: none !important;
+    filter: none !important;
+}
+
+html body input.dp-pay-btn,
+html body input.dp-pay-btn[type="button"],
+html body input.dp-pay-btn[type="submit"],
+html body .buttonDiv input.dp-pay-btn,
+html body .submitDiv input.dp-pay-btn,
+html body .submitDiv.dp-submit input.dp-pay-btn,
+html body .paymentDetails input.dp-pay-btn,
+html body .paymentDetails input.dp-pay-btn[type="button"],
+html body .paymentDetails .buttonDiv input.dp-pay-btn,
+html body .paymentDetails .submitDiv .buttonDiv input.dp-pay-btn,
+html body .blockDetails.paymentDetails input.dp-pay-btn,
+html body .blockDetailsIn input.dp-pay-btn {
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    display: inline-block !important;
+    margin: 0 auto !important;
+    float: none !important;
+    background: #010000 !important;
+    background-color: #010000 !important;
+    background-image: none !important;
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+    border: 1px solid #010000 !important;
+    border-color: #010000 !important;
+    border-radius: 18px !important;
+    padding: 15px 38px !important;
+    min-width: 188px !important;
+    min-height: 52px !important;
+    font-size: 17px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0 !important;
+    text-align: center !important;
+    text-shadow: none !important;
+    cursor: pointer !important;
+    outline: none !important;
+    filter: none !important;
+    -webkit-filter: none !important;
+    opacity: 1 !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+}
+
+html body input.dp-pay-btn:hover,
+html body input.dp-pay-btn[type="button"]:hover,
+html body .paymentDetails input.dp-pay-btn:hover,
+html body .paymentDetails .buttonDiv input.dp-pay-btn:hover {
+    background: #2A2A2E !important;
+    background-color: #2A2A2E !important;
+    border-color: #2A2A2E !important;
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+}
+
+html body input.dp-pay-btn:focus,
+html body input.dp-pay-btn[type="button"]:focus,
+html body .paymentDetails input.dp-pay-btn:focus {
+    outline: none !important;
+    background: #010000 !important;
+    background-color: #010000 !important;
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.15) !important;
+}
+
+html body input.dp-pay-btn:disabled,
+html body input.dp-pay-btn[type="button"]:disabled,
+html body .paymentDetails input.dp-pay-btn:disabled {
+    background: #B8B8B8 !important;
+    background-color: #B8B8B8 !important;
+    border-color: #B8B8B8 !important;
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+    cursor: not-allowed !important;
+}
+
+/* ===== hidden fields (end of file wins) ===== */
 html body .dp-hide-field,
 html body .formRow.dp-hide-field,
 html body .cardRow.dp-hide-field,
@@ -477,7 +938,6 @@ html body .formRow:has(#txtAvsAddress),
 html body .formRow:has(#txtAvsZip),
 html body .formRow:has(#txtopenSum),
 html body .formRow:has(#txtCardOwnerEmail),
-/* שם + נייד בעל הכרטיס — כבר בפרטי החשבונית (ממולאים מהאפליקציה דרך UIDefinition) */
 html body .formRow:has(#txtCardOwnerName),
 html body .formRow:has(#txtCardOwnerPhone) {
     display: none !important;
@@ -490,21 +950,27 @@ html body .formRow:has(#txtCardOwnerPhone) {
     border: 0 !important;
 }
 
-html body #txtCustCity, html body #txtCustAddresLine1, html body #txtCustAddresLine2, html body #txtCustLinePH,
-html body #txtAvsCity, html body #txtAvsAddress, html body #txtAvsZip, html body #txtopenSum, html body #txtCardOwnerEmail,
-html body label[for="txtCustCity"], html body label[for="txtCustAddresLine1"], html body label[for="txtCustAddresLine2"],
-html body label[for="txtCustLinePH"], html body label[for="txtAvsCity"], html body label[for="txtAvsAddress"],
-html body label[for="txtAvsZip"], html body label[for="txtopenSum"], html body label[for="txtCardOwnerEmail"],
-html body #txtCardOwnerName, html body #txtCardOwnerPhone,
-html body label[for="txtCardOwnerName"], html body label[for="txtCardOwnerPhone"] {
+html body #txtCustCity,
+html body #txtCustAddresLine1,
+html body #txtCustAddresLine2,
+html body #txtCustLinePH,
+html body #txtAvsCity,
+html body #txtAvsAddress,
+html body #txtAvsZip,
+html body #txtopenSum,
+html body #txtCardOwnerEmail,
+html body label[for="txtCustCity"],
+html body label[for="txtCustAddresLine1"],
+html body label[for="txtCustAddresLine2"],
+html body label[for="txtCustLinePH"],
+html body label[for="txtAvsCity"],
+html body label[for="txtAvsAddress"],
+html body label[for="txtAvsZip"],
+html body label[for="txtopenSum"],
+html body label[for="txtCardOwnerEmail"] {
     display: none !important;
 }
 
-/* הדר כולו (לוגו + פרטי עסק), טבלת מוצרים, שדות מותאמים והערות — מוסתרים (הסה״כ ב-.dp-pay-total) */
-html body .header,
-html body .header.user-header,
-html body .header .detailsDiv,
-html body .header .detailsDiv.user-detailsDiv,
 html body .productsDetails,
 html body .productsDetails.showProductsTabs,
 html body .productsDetails.showProductsTables,

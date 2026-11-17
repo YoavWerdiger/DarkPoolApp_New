@@ -1,5 +1,6 @@
 /**
- * מבנה אחיד לכל הפושים (כמו וואטסאפ): תמונה גדולה של "השולח" + אייקון DarkPool קטן בפינה.
+ * מבנה הפושים: צ'אט — כמו וואטסאפ (תמונה גדולה של הקבוצה + אייקון DarkPool קטן בפינה);
+ * כל השאר — מבנה רגיל עם ערימה נפרדת לכל מערכת.
  *
  * ב-iOS ה-Notification Service Extension בונה מזה Communication Notification
  * (INSendMessageIntent). השרת רק מסמן את הפוש ומוסיף לו "זהות שולח":
@@ -104,6 +105,17 @@ export function withPushIdentity<T extends Record<string, unknown>>(
 ): T {
   const data = (message.data as Record<string, unknown> | undefined) ?? {};
   const identity = pushIdentityFor(data, override);
+  const type = str(data.notificationType) || str(data.type) || str(data.kind);
+  // סגנון וואטסאפ (אווטאר גדול + אייקון קטן, השולח בכותרת) — רק לצ'אט.
+  // שאר הפושים (חדשות, דוחות...) נשארים במבנה הרגיל: כותרת → תוכן + תמונה מצורפת,
+  // ורק מקבלים ערימה נפרדת לכל מערכת (conversation_id → threadIdentifier בהרחבה).
+  if (type !== 'chat_message') {
+    return {
+      ...message,
+      mutableContent: true,
+      data: { ...data, conversation_id: identity.conversation },
+    };
+  }
   return {
     ...message,
     mutableContent: true,

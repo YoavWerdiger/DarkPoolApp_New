@@ -27,7 +27,8 @@ final class NotificationService: UNNotificationServiceExtension {
       !thread.isEmpty {
       content.threadIdentifier = thread
     }
-    if (data["push_style"] as? String) == "communication" || type == "chat_message" {
+    // סגנון וואטסאפ רק לצ'אט — חדשות/דוחות וכו' נשארים כותרת → תוכן + תמונה מצורפת
+    if type == "chat_message" {
       handleCommunication(data: data, userInfo: request.content.userInfo)
       return
     }

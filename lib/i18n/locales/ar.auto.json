@@ -548,7 +548,8 @@
   "screens__Auth__RegistrationIntroQuestionScreen": {
     "s1": "يمكنك التخطي والمتابعة دون اختيار",
     "s2": "اختر هذا",
-    "s3": "متابعة"
+    "s3": "متابعة",
+    "s4": "تخطي"
   },
   "screens__Learning__CourseComingSoonScreen": {
     "s1": "الأوراكل",

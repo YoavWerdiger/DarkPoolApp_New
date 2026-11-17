@@ -891,7 +891,8 @@
   "screens__Auth__RegistrationIntroQuestionScreen": {
     "s1": "You can skip and continue without choosing",
     "s2": "Choose this",
-    "s3": "Continue"
+    "s3": "Continue",
+    "s4": "Skip"
   },
   "screens__Learning__CourseComingSoonScreen": {
     "s1": "The Oracle",

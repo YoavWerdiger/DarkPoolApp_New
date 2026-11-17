@@ -548,7 +548,8 @@
   "screens__Auth__RegistrationIntroQuestionScreen": {
     "s1": "אפשר לדלג ולהמשיך בלי לבחור",
     "s2": "בחר את זה",
-    "s3": "המשך"
+    "s3": "המשך",
+    "s4": "דלג"
   },
   "screens__Learning__CourseComingSoonScreen": {
     "s1": "האורקל",

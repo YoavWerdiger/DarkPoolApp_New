@@ -8,7 +8,6 @@ import {
 import CashAppScreen from '../../components/ui/CashAppScreen';
 import CashAppButton from '../../components/ui/CashAppButton';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import { appCaptionStyle } from '../../components/ui/appType';
 import { APP_LAYOUT } from '../../components/ui/appLayout';
 import OnboardingChoiceRow, {
   OnboardingChoiceGroup,
@@ -95,6 +94,16 @@ const RegistrationIntroQuestionScreen = ({ navigation, config }: Props) => {
     navigation.navigate(config.nextRoute);
   };
 
+  const handleSkip = () => {
+    void HapticFeedback.selection();
+    setData({
+      ...data,
+      [config.field]: isMulti ? [] : '',
+      accountType: data.accountType || 'free',
+    } as RegistrationData);
+    navigation.navigate(config.nextRoute);
+  };
+
   const handleValueChange = (newValue: string) => {
     setSelected(newValue ? [newValue] : []);
   };
@@ -127,18 +136,6 @@ const RegistrationIntroQuestionScreen = ({ navigation, config }: Props) => {
       }}
       footer={
         <View>
-          {config.optional ? (
-            <Text
-              style={[
-                appCaptionStyle,
-                {
-                  color: tokens.colors.text.secondary,
-                  textAlign: 'center',
-                  marginBottom: APP_LAYOUT.stackGapSmall,
-                },
-              ]}
-            >{i18n.t('auto.screens__Auth__RegistrationIntroQuestionScreen.s1')}</Text>
-          ) : null}
           <CashAppButton
             title={displayMode === 'swipe' ? i18n.t('auto.screens__Auth__RegistrationIntroQuestionScreen.s2') : i18n.t('auto.screens__Auth__RegistrationIntroQuestionScreen.s3')}
             variant="primary"
@@ -146,6 +143,15 @@ const RegistrationIntroQuestionScreen = ({ navigation, config }: Props) => {
             onPress={handleNext}
             disabled={!canContinue}
           />
+          {/* שאלה אופציונלית (גודל תיק): הסליידר מתחיל עם ערך מסומן — «דלג» שומר בלי תשובה */}
+          {config.optional ? (
+            <CashAppButton
+              title={i18n.t('auto.screens__Auth__RegistrationIntroQuestionScreen.s4')}
+              variant="ghost"
+              size="lg"
+              onPress={handleSkip}
+            />
+          ) : null}
         </View>
       }
     >

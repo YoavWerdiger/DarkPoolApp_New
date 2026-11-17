@@ -978,3 +978,45 @@ html body .blockDetails.customDetails,
 html body .blockDetails[data-bind*="HtmlComments"] {
     display: none !important;
 }
+
+/* ===== rounded fields + pill button (styling only, no hiding) ===== */
+html body .blockDetailsIn,
+html body .paymentDetails .blockDetailsIn,
+html body .OrderDetails .blockDetailsIn {
+    border-radius: 24px !important;
+}
+
+html body .fieldInput input[type="text"],
+html body .fieldInput input[type="tel"],
+html body .fieldInput input[type="email"],
+html body .fieldInput input[type="number"],
+html body .fieldInput select,
+html body #txtCardNumber,
+html body #txtCardNumber-number,
+html body #txtCvv,
+html body #txtTZ,
+html body #txtCustName,
+html body #txtCompID,
+html body #txtCustMobilePH,
+html body #txtEmail,
+html body #validityYear,
+html body #validityMonth {
+    border: none !important;
+    border-radius: 9999px !important;
+    min-height: 52px !important;
+    font-size: 16px !important;
+    padding: 0 20px !important;
+}
+
+html body .fieldName,
+html body .formRow .fieldName {
+    color: #1E1A24 !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+}
+
+html body input.dp-pay-btn,
+html body .paymentDetails .submitDiv .buttonDiv input[type="button"] {
+    border-radius: 9999px !important;
+    min-height: 56px !important;
+}

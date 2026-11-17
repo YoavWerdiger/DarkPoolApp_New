@@ -246,12 +246,17 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
       alive = false;
     };
   }, [article?.image_url]);
-  const imageH = article?.image_url
-    ? imageRatio
-      ? Math.round(Math.min(SCREEN_HEIGHT * 0.5, Math.max(160, Dimensions.get('window').width / imageRatio)))
-      : NEWS_DETAIL_IMAGE_HEIGHT
-    : 0;
   const chromeH = BOTTOM_SHEET_EDGE_HANDLE_HEIGHT;
+  // הטקסט קודם: התמונה מקבלת רק את מה שנשאר מגובה השיט המקסימלי אחרי הכותרת, הגוף והכפתורים —
+  // תמונה לאורך (סטורי/צילום מסך) נחתכת (cover) במקום לדחוף את הטקסט מתחת לקצה המסך
+  const imageBudget = Math.max(
+    140,
+    Math.floor(NEWS_DETAIL_MAX_SNAP * SCREEN_HEIGHT - shellContentH - chromeH - sheetBottomPad),
+  );
+  const naturalImageH = imageRatio ? Math.max(160, Dimensions.get('window').width / imageRatio) : NEWS_DETAIL_IMAGE_HEIGHT;
+  const imageH = article?.image_url
+    ? Math.round(Math.min(SCREEN_HEIGHT * 0.5, naturalImageH, imageBudget))
+    : 0;
 
   const dynamicSnapPoints = useMemo(() => {
     const totalPx = imageH + shellContentH + chromeH + sheetBottomPad;

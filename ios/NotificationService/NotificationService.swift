@@ -19,8 +19,9 @@ final class NotificationService: UNNotificationServiceExtension {
     bestAttempt = content
 
     let data = Self.payload(from: request.content.userInfo)
-    if (data["type"] as? String) == "chat_message" {
-      handleChatMessage(data: data, userInfo: request.content.userInfo)
+    let type = (data["type"] as? String) ?? ""
+    if (data["push_style"] as? String) == "communication" || type == "chat_message" {
+      handleCommunication(data: data, userInfo: request.content.userInfo)
       return
     }
 
@@ -40,26 +41,66 @@ final class NotificationService: UNNotificationServiceExtension {
     finish()
   }
 
-  // MARK: - Chat (Communication Notification)
+  // MARK: - Communication Notification (כל סוגי הפושים, כמו וואטסאפ)
 
-  private func handleChatMessage(data: [String: Any], userInfo: [AnyHashable: Any]) {
-    let groupId = (data["group_id"] as? String) ?? ""
+  /// תמונה גדולה = "השולח" (קבוצה / מקור / טיקר / אדם / DarkPool), אייקון האפליקציה קטן בפינה.
+  /// תמונה מצורפת (למשל תמונת החדשה) נשארת כקובץ מצורף.
+  private func handleCommunication(data: [String: Any], userInfo: [AnyHashable: Any]) {
+    guard let content = bestAttempt else { return finish() }
+    let type = (data["type"] as? String) ?? ""
     let groupName = (data["group_name"] as? String) ?? ""
-    let senderId = (data["sender_id"] as? String) ?? "sender"
-    let senderName = (data["sender_name"] as? String) ?? ""
-    // התמונה הבטוחה מהשרת (ציבורית) — קודם היא, אחרת ה-avatar הגולמי
-    let avatarURL = Self.imageURL(from: userInfo)
-      ?? Self.httpURL(data["avatar_url"])
-      ?? Self.httpURL(data["group_avatar"])
-      ?? Self.httpURL(data["sender_avatar"])
+    let isGroupChat = type == "chat_message" && !groupName.isEmpty
+    let senderId = (data["sender_id"] as? String) ?? (data["conversation_id"] as? String) ?? "darkpool"
+    let display = (data["sender_display"] as? String) ?? ""
+    let senderName = isGroupChat
+      ? ((data["sender_name"] as? String) ?? "")
+      : (display.isEmpty ? content.title : display)
+    let conversationId = (data["conversation_id"] as? String)
+      ?? (data["group_id"] as? String).map { "chat-\($0)" }
+    let avatarURL = Self.httpURL(data["avatar_url"])
+      ?? (type == "chat_message" ? Self.imageURL(from: userInfo) : nil)
+    // תמונה מצורפת: רק כשהיא לא האווטאר עצמו (בצ'אט ה-richContent הוא תמונת הקבוצה)
+    let attachmentURL: URL? = {
+      guard type != "chat_message", let url = Self.imageURL(from: userInfo) else { return nil }
+      return url == avatarURL ? nil : url
+    }()
 
-    let build: (INImage?) -> Void = { [weak self] avatar in
-      guard let self, let content = self.bestAttempt else { return }
+    // שיחה אחד-על-אחד: הכותרת היא השולח — את הכותרת/תת-הכותרת המקוריות מכניסים לגוף
+    if !isGroupChat {
+      var lines: [String] = []
+      if !content.title.isEmpty && content.title != senderName { lines.append(content.title) }
+      if !content.subtitle.isEmpty && content.subtitle != senderName { lines.append(content.subtitle) }
+      if !content.body.isEmpty { lines.append(content.body) }
+      content.body = lines.joined(separator: "\n")
+      content.subtitle = ""
+    }
+
+    let group = DispatchGroup()
+    var avatar: INImage?
+    if let avatarURL {
+      group.enter()
+      download(avatarURL) { file in
+        avatar = file.flatMap { try? Data(contentsOf: $0) }.map { INImage(imageData: $0) }
+        group.leave()
+      }
+    }
+    if let attachmentURL {
+      group.enter()
+      download(attachmentURL) { [weak self] file in
+        if let file, let att = try? UNNotificationAttachment(identifier: "image", url: file, options: nil) {
+          self?.bestAttempt?.attachments = [att]
+        }
+        group.leave()
+      }
+    }
+
+    group.notify(queue: .global()) { [weak self] in
+      guard let self else { return }
       let sender = INPerson(
         personHandle: INPersonHandle(value: senderId, type: .unknown),
         nameComponents: nil,
         displayName: senderName.isEmpty ? nil : senderName,
-        image: groupName.isEmpty ? avatar : nil,
+        image: isGroupChat ? nil : avatar,
         contactIdentifier: nil,
         customIdentifier: senderId
       )
@@ -72,19 +113,17 @@ final class NotificationService: UNNotificationServiceExtension {
         customIdentifier: "me",
         isMe: true
       )
-      let isGroup = !groupName.isEmpty
       let intent = INSendMessageIntent(
-        recipients: isGroup ? [me, sender] : [me],
+        recipients: isGroupChat ? [me, sender] : [me],
         outgoingMessageType: .outgoingMessageText,
         content: content.body,
-        speakableGroupName: isGroup ? INSpeakableString(spokenPhrase: groupName) : nil,
-        conversationIdentifier: groupId.isEmpty ? nil : groupId,
+        speakableGroupName: isGroupChat ? INSpeakableString(spokenPhrase: groupName) : nil,
+        conversationIdentifier: conversationId,
         serviceName: nil,
         sender: sender,
         attachments: nil
       )
-      if isGroup, let avatar {
-        // תמונת הקבוצה היא התמונה הגדולה; אייקון DarkPool מופיע קטן בפינה
+      if isGroupChat, let avatar {
         intent.setImage(avatar, forParameterNamed: \.speakableGroupName)
       }
       let interaction = INInteraction(intent: intent, response: nil)
@@ -96,15 +135,6 @@ final class NotificationService: UNNotificationServiceExtension {
           self.finish()
         }
       }
-    }
-
-    guard let avatarURL else {
-      build(nil)
-      return
-    }
-    download(avatarURL) { file in
-      let image = file.flatMap { try? Data(contentsOf: $0) }.map { INImage(imageData: $0) }
-      build(image)
     }
   }
 

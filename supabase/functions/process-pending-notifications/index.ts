@@ -3,6 +3,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.94.1';
 import { isServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
 import { ensurePushBidi, formatPushMultiline, buildEconomicPushContent } from '../_shared/notificationBidi.ts';
 import { ensureNotificationImageUrl } from '../_shared/notificationImage.ts';
+import { withPushIdentity } from '../_shared/pushIdentity.ts';
 
 const EXPO_PUSH_API_URL = 'https://exp.host/--/api/v2/push/send';
 
@@ -14,6 +15,28 @@ const MAX_AGE_HOURS = 2;
 const BATCH_LIMIT = 150;
 /** מקסימום דוחות כלכליים למשתמש בריצה אחת — השאר נשארים בתור לריצה הבאה */
 const MAX_ECONOMIC_PER_USER = 8;
+
+
+/** דיוקן האדם לפוש של עסקת דארקפול (תמונה גדולה במקום אייקון DarkPool) — מטמון לכל הריצה */
+const personPortraitCache = new Map<string, string | null>();
+async function personPortraits(
+  supabase: ReturnType<typeof createClient>,
+  personIds: string[],
+): Promise<Map<string, string | null>> {
+  const missing = personIds.filter((id) => !personPortraitCache.has(id));
+  if (missing.length) {
+    const { data } = await supabase
+      .from('dark_pool_featured_profiles')
+      .select('person_id, image_url')
+      .in('person_id', missing);
+    for (const id of missing) personPortraitCache.set(id, null);
+    for (const row of (data ?? []) as Array<{ person_id: string; image_url: string | null }>) {
+      const url = row.image_url && /^https:\/\//.test(row.image_url) ? row.image_url : null;
+      personPortraitCache.set(String(row.person_id), url);
+    }
+  }
+  return personPortraitCache;
+}
 
 serve(async (req) => {
   // רק cron / טריגרים / פונקציות earnings (מפתח service) — מבחוץ אי אפשר להפעיל שליחת פושים
@@ -392,10 +415,21 @@ serve(async (req) => {
           continue; // לא מסמנים כנשלח – יישלחו כשנוסיף את הטוקן
         }
         
+        // מבנה אחיד (כמו וואטסאפ): תמונת השולח גדולה + אייקון DarkPool בפינה
+        const personIds = Array.from(
+          new Set(messages.map((m) => String((m.data as Record<string, unknown>)?.person_id ?? '')).filter(Boolean)),
+        );
+        const portraits = personIds.length ? await personPortraits(supabase, personIds) : new Map<string, string | null>();
+        const styledMessages = messages.map((m) => {
+          const pid = String((m.data as Record<string, unknown>)?.person_id ?? '');
+          const portrait = pid ? portraits.get(pid) : null;
+          return withPushIdentity(m, portrait ? { avatar: portrait } : {});
+        });
+
         const response = await fetch(EXPO_PUSH_API_URL, {
           method: 'POST',
           headers,
-          body: JSON.stringify(messages),
+          body: JSON.stringify(styledMessages),
         });
 
         if (!response.ok) {

@@ -7,6 +7,7 @@
  */
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1';
+import { withPushIdentity } from '../_shared/pushIdentity.ts';
 
 const EXPO_URL = 'https://exp.host/--/api/v2/push/send';
 const EXPO_TOKEN = Deno.env.get('EXPO_ACCESS_TOKEN') || '';
@@ -140,7 +141,7 @@ serve(async (req) => {
     const batch = messages.slice(i, i + 100);
     const headers: Record<string, string> = { 'Content-Type': 'application/json', Accept: 'application/json' };
     if (EXPO_TOKEN) headers.Authorization = `Bearer ${EXPO_TOKEN}`;
-    const res = await fetch(EXPO_URL, { method: 'POST', headers, body: JSON.stringify(batch) });
+    const res = await fetch(EXPO_URL, { method: 'POST', headers, body: JSON.stringify(batch.map((m) => withPushIdentity(m))) });
     if (!res.ok) {
       failed += batch.length;
       continue;

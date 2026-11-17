@@ -5,6 +5,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
 import { formatEconomicDisplayValue } from '../_shared/economicNumberFormat.ts'
 import { isServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts'
+import { withPushIdentity } from '../_shared/pushIdentity.ts';
 
 const FINNHUB_API_KEY = Deno.env.get('FINNHUB_API_KEY') ?? ''
 const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1'
@@ -328,7 +329,7 @@ serve(async (req) => {
                 const pushResponse = await fetch(EXPO_PUSH_API_URL, {
                   method: 'POST',
                   headers: pushHeaders,
-                  body: JSON.stringify(pushMessages)
+                  body: JSON.stringify(pushMessages.map((m) => withPushIdentity(m)))
                 })
                 
                 if (pushResponse.ok) {

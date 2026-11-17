@@ -14,6 +14,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1';
 import { isServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
 import { ensurePushBidi } from '../_shared/notificationBidi.ts';
+import { withPushIdentity } from '../_shared/pushIdentity.ts';
 import {
   evaluateWatchlistItem,
   itemNeedsRange,
@@ -308,7 +309,7 @@ serve(async (req) => {
   for (let i = 0; i < messages.length; i += 100) {
     const batch = messages.slice(i, i + 100);
     try {
-      const res = await fetch(EXPO_URL, { method: 'POST', headers, body: JSON.stringify(batch) });
+      const res = await fetch(EXPO_URL, { method: 'POST', headers, body: JSON.stringify(batch.map((m) => withPushIdentity(m))) });
       if (!res.ok) {
         failed += batch.length;
         errors.push({ status: res.status, body: (await res.text()).slice(0, 300) });

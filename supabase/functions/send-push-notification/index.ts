@@ -2,6 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1';
 import { isServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
 import { ensureNotificationImageUrl } from '../_shared/notificationImage.ts';
+import { withPushIdentity } from '../_shared/pushIdentity.ts';
 
 const EXPO_PUSH_API_URL = 'https://exp.host/--/api/v2/push/send';
 
@@ -138,7 +139,7 @@ serve(async (req) => {
     const response = await fetch(EXPO_PUSH_API_URL, {
       method: 'POST',
       headers,
-      body: JSON.stringify(messages),
+      body: JSON.stringify(messages.map((m) => withPushIdentity(m))),
     });
 
     if (!response.ok) {

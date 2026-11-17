@@ -459,10 +459,11 @@ export async function uploadVideo(
       return failResult({ code: 'FILE_TOO_LARGE', message: i18n.t('auto.services__chat__chatMediaService.s6') });
     }
 
-    // דחיסה (720p, ~2.5Mbps) לפני העלאה. בלי המודול הנייטיב / בכישלון — הקובץ המקורי.
+    // דחיסה (1080p, ~3.5Mbps) לפני העלאה. בלי המודול הנייטיב / בכישלון — הקובץ המקורי.
     // progress: 0–40% דחיסה, 40–95% העלאה (בלי דחיסה: 5–95%).
     let compressionStarted = false;
-    // צ'אט: 720p ~2.5Mbps (כמו וואטסאפ) — בערך חצי מהנפח של 1080p/5Mbps, העלאה מהירה בסלולר
+    // צ'אט: 1080p ~3.5Mbps — כמעט כמו המקור בטלפון (טקסט קטן בהקלטות מסך/גרפים קריא),
+    // ~30% פחות נפח מ-5Mbps
     const compressed = await compressVideoForUpload(
       uri,
       (fraction) => {
@@ -474,7 +475,7 @@ export async function uploadVideo(
           total_bytes: sourceSize,
         });
       },
-      { maxLongEdge: 1280, targetBitrate: 2_500_000 },
+      { maxLongEdge: 1920, targetBitrate: 3_500_000 },
     );
     const uploadUri = compressed.uri;
     const fileSize = compressed.size || sourceSize;

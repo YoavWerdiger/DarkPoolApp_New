@@ -148,7 +148,7 @@ export const SUBSCRIPTION_PLANS = {
     id: 'whales_course',
     name: i18n.t('auto.services__paymentService.s13'),
     description: i18n.t('auto.services__paymentService.s26'),
-    price: 531,
+    price: 4990,
     period: 'one_time',
     features: [i18n.t('auto.services__paymentService.s27'), i18n.t('auto.services__paymentService.s28'), i18n.t('auto.services__paymentService.s29')],
     excludedFeatures: [],

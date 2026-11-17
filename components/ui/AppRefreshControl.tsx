@@ -18,7 +18,7 @@ import {
 import { useDesignTokens } from './DesignTokens';
 import AppSpinner from './AppSpinner';
 
-const RING_SIZE = 24;
+const RING_SIZE = 30;
 /** מרכז הטבעת בתוך הרווח שנפתח במשיכה (~60pt ב-iOS) */
 const RING_OFFSET = 42;
 

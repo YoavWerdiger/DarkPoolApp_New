@@ -1,5 +1,5 @@
 /**
- * ספינר אחיד לכל האפליקציה: טבעת מלאה (קשת על מסילה עדינה) שמסתובבת —
+ * ספינר אחיד לכל האפליקציה: קשת מלאה שמסתובבת (בלי מסילת רקע) —
  * לא ה"פסים" של ActivityIndicator הנייטיבי — בצבע ה-CTA של ערכת הנושא
  * (לבן בכהה, שחור בבהיר; primary.lightCta).
  *
@@ -26,7 +26,7 @@ export interface AppSpinnerProps {
 
 function px(size: Size | undefined): number {
   if (typeof size === 'number') return size;
-  return size === 'large' ? 34 : 20;
+  return size === 'large' ? 38 : 24;
 }
 
 export default function AppSpinner({
@@ -72,13 +72,6 @@ export default function AppSpinner({
       accessibilityLabel={accessibilityLabel}
       testID={testID}
     >
-      {/* מסילה עדינה */}
-      <View
-        style={[
-          StyleSheet.absoluteFill,
-          { borderRadius: d / 2, borderWidth: stroke, borderColor: cta, opacity: 0.18 },
-        ]}
-      />
       {/* קשת מלאה שמסתובבת */}
       <Animated.View
         style={[

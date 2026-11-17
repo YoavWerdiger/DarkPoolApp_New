@@ -3,7 +3,7 @@
  *
  * - אנדרואיד: העיגול הנייטיבי (Material) בצבע ה-CTA של ערכת הנושא.
  * - iOS: הספינר הנייטיבי (ה"פסים") מוסתר; במקומו הטבעת של האפליקציה (AppSpinner) —
- *   ממוקמת מעל תחילת התוכן, נחשפת כשמושכים ומסתובבת בזמן רענון.
+ *   ממוקמת מעל תחילת התוכן ומסתובבת תמיד — נחשפת כשמושכים, בלי דילאי.
  *   ב-iOS ה-RefreshControl מרונדר בתוך ה-ScrollView, ולכן הטבעת (absolute, top שלילי)
  *   יושבת בדיוק ברווח שנפתח במשיכה.
  */
@@ -37,11 +37,12 @@ export function RefreshControl(props: RefreshControlProps) {
     );
   }
 
-  const { refreshing } = props;
+  // הטבעת מסתובבת תמיד (native driver, זול) — היא מוסתרת מעל הרשימה, כך שכבר בתחילת
+  // המשיכה רואים אותה מסתובבת, וממשיכה עד שהיא נעלמת חזרה (בלי דילאי של state)
   return (
     <>
       <View pointerEvents="none" style={styles.ringHost}>
-        <AppSpinner size={RING_SIZE} animating hidesWhenStopped={false} paused={!refreshing} />
+        <AppSpinner size={RING_SIZE} animating hidesWhenStopped={false} />
       </View>
       <RNRefreshControl {...props} tintColor="transparent" title="" />
     </>

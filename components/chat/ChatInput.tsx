@@ -2537,7 +2537,7 @@ function ChatInputImpl({
               accessibilityRole="button"
               accessibilityLabel={i18n.t('auto.components__chat__ChatInput.s25')}
             >
-              <Ionicons name="send" size={22} color={DesignTokens.colors.text.inverse} />
+              <Ionicons name="arrow-up" size={24} color="#fff" />
             </Pressable>
           ) : (
             <Pressable
@@ -2719,7 +2719,7 @@ function ChatInputImpl({
                   accessibilityLabel={i18n.t('auto.components__chat__ChatInput.s33')}
                 >
                   <Animated.View style={{ transform: [{ scale: sendBtnScale }] }}>
-                    <Ionicons name="send" size={22} color={DesignTokens.colors.text.inverse} />
+                    <Ionicons name="arrow-up" size={24} color="#fff" />
                   </Animated.View>
                 </Pressable>
               ) : isExpoAvAvailable ? (

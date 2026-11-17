@@ -574,9 +574,9 @@ function PostRepliesSheetBody({
               <ActivityIndicator size="small" color={tokens.colors.text.inverse} />
             ) : (
               <Ionicons
-                name="send"
-                size={18}
-                color={canSubmit ? tokens.colors.text.inverse : tokens.colors.text.tertiary}
+                name="arrow-up"
+                size={20}
+                color={canSubmit ? '#fff' : tokens.colors.text.tertiary}
               />
             )}
           </TouchableOpacity>

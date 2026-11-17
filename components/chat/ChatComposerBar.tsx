@@ -134,7 +134,7 @@ export default function ChatComposerBar({
           accessibilityRole="button"
           accessibilityLabel={i18n.t('auto.components__chat__ChatComposerBar.s1')}
         >
-          <Ionicons name="send" size={22} color={tokens.colors.text.inverse} />
+          <Ionicons name="arrow-up" size={24} color="#fff" />
         </Pressable>
       )}
     </View>

@@ -2076,7 +2076,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
             accessibilityRole="button"
             accessibilityLabel={i18n.t('auto.components__chat__AddStoryFullScreen.s17')}
           >
-            <Ionicons name="chevron-up" size={28} color="#fff" />
+            <Ionicons name="arrow-up" size={26} color="#fff" />
           </TouchableOpacity>
         </View>
       )}
@@ -2304,7 +2304,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded, presenta
               accessibilityRole="button"
               accessibilityLabel={i18n.t('auto.components__chat__AddStoryFullScreen.s17')}
             >
-              <Ionicons name="chevron-up" size={28} color="#fff" />
+              <Ionicons name="arrow-up" size={26} color="#fff" />
             </TouchableOpacity>
           </View>
         </LinearGradient>

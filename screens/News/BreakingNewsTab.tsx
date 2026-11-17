@@ -1276,8 +1276,19 @@ export default function BreakingNewsTab({
         };
         if (cancelled) return;
         openedArticleFromPushRef.current = openArticleId;
+        // החדשה מהפוש נכנסת גם לרשימה (בראש, לפי זמן) — כשסוגרים אותה היא כבר שם
+        setArticles((prev) => {
+          if (prev.some((a) => a.id === article.id)) return prev;
+          const next = [article, ...prev]
+            .sort((x, y) => Date.parse(y.published_at || '') - Date.parse(x.published_at || ''))
+            .slice(0, 50);
+          queryClient.setQueryData(BREAKING_NEWS_QUERY_KEY, next.slice(0, BREAKING_NEWS_CACHE_LIMIT));
+          return next;
+        });
         handleArticlePress(article);
         onOpenArticleConsumed?.();
+        // ייתכן שפוספסו עוד חדשות בזמן שהאפליקציה הייתה ברקע — רענון שקט של הרשימה
+        void loadBreakingNews().catch(() => undefined);
       } catch {
         openedArticleFromPushRef.current = openArticleId;
         onOpenArticleConsumed?.();
@@ -1294,6 +1305,7 @@ export default function BreakingNewsTab({
     loading,
     handleArticlePress,
     onOpenArticleConsumed,
+    loadBreakingNews,
   ]);
 
   // ניווט לחדשה הבאה

@@ -83,7 +83,7 @@ img { border: 0 !important; max-width: 100%; height: auto; }
 
 h1 {
     max-width: var(--max) !important;
-    margin: 12px auto 8px !important;
+    margin: 28px auto 8px !important; /* בלי הדר — מרווח מהקצה העליון */
     padding: 0 16px !important;
     text-align: center !important;
     color: var(--text-primary) !important;
@@ -463,7 +463,7 @@ html body input#btnSend:disabled {
 
 /* =========================================================
    הסתרות (זהה לגרסה הכהה) — סוף קובץ מנצח cascade
-   נשארים: לקוח (שם/ת״ז/נייד/מייל) + כרטיס/תוקף/CVV/שם/ת״ז/נייד בעלים + תקנון + סה״כ + לוגו + footer
+   נשארים: לקוח (שם/ת״ז/נייד/מייל) + כרטיס/תוקף/CVV/ת״ז בעל הכרטיס + תקנון + סה״כ + לוגו + footer
    ========================================================= */
 html body .dp-hide-field,
 html body .formRow.dp-hide-field,
@@ -476,7 +476,10 @@ html body .formRow:has(#txtAvsCity),
 html body .formRow:has(#txtAvsAddress),
 html body .formRow:has(#txtAvsZip),
 html body .formRow:has(#txtopenSum),
-html body .formRow:has(#txtCardOwnerEmail) {
+html body .formRow:has(#txtCardOwnerEmail),
+/* שם + נייד בעל הכרטיס — כבר בפרטי החשבונית (ממולאים מהאפליקציה דרך UIDefinition) */
+html body .formRow:has(#txtCardOwnerName),
+html body .formRow:has(#txtCardOwnerPhone) {
     display: none !important;
     visibility: hidden !important;
     height: 0 !important;
@@ -491,11 +494,15 @@ html body #txtCustCity, html body #txtCustAddresLine1, html body #txtCustAddresL
 html body #txtAvsCity, html body #txtAvsAddress, html body #txtAvsZip, html body #txtopenSum, html body #txtCardOwnerEmail,
 html body label[for="txtCustCity"], html body label[for="txtCustAddresLine1"], html body label[for="txtCustAddresLine2"],
 html body label[for="txtCustLinePH"], html body label[for="txtAvsCity"], html body label[for="txtAvsAddress"],
-html body label[for="txtAvsZip"], html body label[for="txtopenSum"], html body label[for="txtCardOwnerEmail"] {
+html body label[for="txtAvsZip"], html body label[for="txtopenSum"], html body label[for="txtCardOwnerEmail"],
+html body #txtCardOwnerName, html body #txtCardOwnerPhone,
+html body label[for="txtCardOwnerName"], html body label[for="txtCardOwnerPhone"] {
     display: none !important;
 }
 
-/* פרטי עסק בהדר, טבלת מוצרים, שדות מותאמים והערות — מוסתרים (הסה״כ ב-.dp-pay-total) */
+/* הדר כולו (לוגו + פרטי עסק), טבלת מוצרים, שדות מותאמים והערות — מוסתרים (הסה״כ ב-.dp-pay-total) */
+html body .header,
+html body .header.user-header,
 html body .header .detailsDiv,
 html body .header .detailsDiv.user-detailsDiv,
 html body .productsDetails,

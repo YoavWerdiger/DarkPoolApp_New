@@ -1521,7 +1521,14 @@
     "s10": "Type DELETE to confirm",
     "s11": "DELETE",
     "s12": "Password (recommended)",
-    "s13": "Delete the account"
+    "s13": "Delete the account",
+    "s14": "Leaving already?",
+    "s15": "Before you close your account, Baruch from the DarkPool team would love to hear what didn’t work and help. Message him on WhatsApp — he replies fast.",
+    "s16": "Talk to Baruch on WhatsApp",
+    "s17": "I still want to delete my account",
+    "s18": "Hi Baruch, I want to close my DarkPool account",
+    "s19": "Couldn’t open WhatsApp",
+    "s20": "You can message Baruch directly: +972 52-270-3909"
   },
   "screens__Profile__SubscriptionPlansScreen": {
     "s1": "Payments coming soon",

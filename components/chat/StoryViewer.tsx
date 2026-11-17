@@ -438,10 +438,10 @@ const sheetStyles = StyleSheet.create({
     height: 5,
     borderRadius: 2.5,
   },
+  // עטיפה בלבד (שוליים) — סרגל הטאבים האחיד נמתח לכל הרוחב כמו בשאר המסכים
   tabsRow: {
-    flexDirection: 'row-reverse',
     paddingHorizontal: 16,
-    gap: 8,
+    marginTop: 4,
     marginBottom: 12,
   },
   tab: {

@@ -440,7 +440,8 @@ export default function DarkPoolExploreScreen() {
 
   // חברות ציבוריות (13F) — בלי דרישת תמונה: האווטאר הוא לוגו הטיקר
   const companies = useMemo(
-    () => takeUniqueExplorePeople(extras.company_books ?? [], EXPLORE_FEATURED_LIMIT),
+    // כל החברות שיש להן אחזקות מדווחות — לא רק 16 הראשונות
+    () => takeUniqueExplorePeople(extras.company_books ?? [], 100),
     [extras.company_books]
   );
 

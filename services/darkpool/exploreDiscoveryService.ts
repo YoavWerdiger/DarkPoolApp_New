@@ -264,7 +264,8 @@ export async function fetchExploreDiscoveryExtras(
       listReportedFundBooks(limit).catch(() => []),
       listRecentlyAddedFeatured(limit).catch(() => []),
       listExploreExecutives(limit).catch(() => []),
-      listCompanyBooks(limit).catch(() => []),
+      // כל החברות הציבוריות (כמה עשרות) — לא חותכים לגבול הקרוסלות האחרות
+      listCompanyBooks(Math.max(limit, 100)).catch(() => []),
     ]);
 
   return {

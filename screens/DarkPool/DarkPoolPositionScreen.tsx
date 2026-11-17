@@ -221,9 +221,10 @@ function TradesPositionView() {
                   <DarkPoolNestedQuoteCard
                     ticker={ticker}
                     priceText={price != null ? usd(price, 2) : null}
-                    changeText={todayPct != null ? formatSignedChangePct(todayPct) : null}
-                    changeColor={toneColor(todayPct)}
-                    changeTone={todayPct == null ? undefined : todayPct >= 0 ? 'positive' : 'negative'}
+                    // «מאז העסקה» = התשואה הכוללת על האחזקה (לא השינוי היומי — הוא בשורת «היום» למטה)
+                    changeText={ret != null ? formatSignedChangePct(ret) : null}
+                    changeColor={toneColor(ret)}
+                    changeTone={ret == null ? undefined : ret >= 0 ? 'positive' : 'negative'}
                     loading={quoteQuery.isLoading && price == null}
                     missingText={!quoteQuery.isLoading && price == null ? DARK_POOL_UNAVAILABLE : null}
                   />
@@ -417,9 +418,10 @@ function FilingPositionView() {
                   <DarkPoolNestedQuoteCard
                     ticker={ticker}
                     priceText={livePrice != null ? usd(livePrice, 2) : null}
-                    changeText={todayPct != null ? formatSignedChangePct(todayPct) : null}
-                    changeColor={toneColor(todayPct)}
-                    changeTone={todayPct == null ? undefined : todayPct >= 0 ? 'positive' : 'negative'}
+                    // «מאז העסקה» = התשואה הכוללת על האחזקה (לא השינוי היומי — הוא בשורת «היום» למטה)
+                    changeText={totalPct != null ? formatSignedChangePct(totalPct) : null}
+                    changeColor={toneColor(totalPct)}
+                    changeTone={totalPct == null ? undefined : totalPct >= 0 ? 'positive' : 'negative'}
                     loading={quoteQuery.isLoading && livePrice == null}
                     missingText={!quoteQuery.isLoading && livePrice == null ? DARK_POOL_UNAVAILABLE : null}
                   />

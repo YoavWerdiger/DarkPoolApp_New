@@ -20,6 +20,13 @@ final class NotificationService: UNNotificationServiceExtension {
 
     let data = Self.payload(from: request.content.userInfo)
     let type = (data["type"] as? String) ?? ""
+    // ערימות כמו וואטסאפ: צ'אט — ערימה לכל קבוצה; שאר המערכות — ערימה לכל מערכת
+    // (Expo לא מעביר thread-id, לכן קובעים אותו כאן)
+    if let thread = (data["conversation_id"] as? String)
+      ?? (data["group_id"] as? String).map({ "chat-\($0)" }),
+      !thread.isEmpty {
+      content.threadIdentifier = thread
+    }
     if (data["push_style"] as? String) == "communication" || type == "chat_message" {
       handleCommunication(data: data, userInfo: request.content.userInfo)
       return

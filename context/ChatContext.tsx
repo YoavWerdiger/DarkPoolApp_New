@@ -256,11 +256,32 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     [groups],
   );
   const badgeSyncedRef = useRef<number | null>(null);
+  const totalUnreadRef = useRef(0);
+  totalUnreadRef.current = totalUnread;
   useEffect(() => {
     if (badgeSyncedRef.current === totalUnread) return;
     badgeSyncedRef.current = totalUnread;
     void Notifications.setBadgeCountAsync(totalUnread).catch(() => undefined);
   }, [totalUnread]);
+
+  // פתיחת האפליקציה = פושים שאינם צ'אט (חדשות / דוחות / דארקפול...) נחשבים נראו;
+  // הבאדג' נשאר רק עם הודעות הצ'אט שלא נקראו
+  useEffect(() => {
+    if (!user?.id) return;
+    const clearSeen = () => {
+      void supabase.rpc('reset_push_badge').then(
+        () => undefined,
+        () => undefined,
+      );
+      badgeSyncedRef.current = null;
+      void Notifications.setBadgeCountAsync(totalUnreadRef.current).catch(() => undefined);
+    };
+    clearSeen();
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') clearSeen();
+    });
+    return () => sub.remove();
+  }, [user?.id]);
   const [currentGroup, setCurrentGroup] = useState<ChatGroupWithDetails | null>(null);
   const [messages, setMessagesRaw] = useState<ChatMessage[]>([]);
   const [typingUsers, setTypingUsers] = useState<ChatTypingIndicator[]>([]);

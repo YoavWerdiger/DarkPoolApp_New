@@ -6,7 +6,8 @@
  *   data.push_style   = 'communication'
  *   data.sender_display = מי "שלח" (שם הקבוצה / מקור החדשה / הטיקר / האדם)
  *   data.avatar_url   = התמונה הגדולה (תמונת קבוצה / לוגו טיקר / דיוקן / אייקון DarkPool)
- *   data.conversation_id = שרשור (כל פושי אותו טיקר/מקור יחד)
+ *   data.conversation_id = ערימה (כמו וואטסאפ): צ'אט — לכל קבוצה; שאר המערכות — ערימה לכל מערכת
+ *                          (חדשות / דוחות / יומן כלכלי / פיד דארקפול / רשימת מעקב / התראות)
  *   mutableContent    = true (כדי שההרחבה תרוץ)
  * תמונה מצורפת (למשל תמונת החדשה) נשארת ב-data.image / richContent.image ומוצגת בנוסף.
  */
@@ -58,7 +59,7 @@ export function pushIdentityFor(
       id = {
         sender: ticker || str(data.company_name) || 'DarkPool · דוחות',
         avatar: logo || DARKPOOL_PUSH_AVATAR,
-        conversation: ticker ? `ticker-${ticker}` : 'darkpool-earnings',
+        conversation: 'darkpool-earnings',
       };
       break;
     case 'watchlist_alert':
@@ -67,7 +68,7 @@ export function pushIdentityFor(
       id = {
         sender: ticker || 'DarkPool',
         avatar: logo || DARKPOOL_PUSH_AVATAR,
-        conversation: ticker ? `ticker-${ticker}` : 'darkpool-alerts',
+        conversation: type === 'watchlist_alert' ? 'darkpool-watchlist' : 'darkpool-alerts',
       };
       break;
     case 'dark_pool_feed_trade':
@@ -76,7 +77,7 @@ export function pushIdentityFor(
       id = {
         sender: str(data.person_name) || 'DarkPool',
         avatar: DARKPOOL_PUSH_AVATAR,
-        conversation: str(data.person_id) ? `person-${str(data.person_id)}` : 'darkpool-feed',
+        conversation: 'darkpool-feed',
       };
       break;
     case 'economic_calendar':

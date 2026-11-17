@@ -4,6 +4,7 @@ import { isServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
 import { ensurePushBidi, formatPushMultiline, buildEconomicPushContent } from '../_shared/notificationBidi.ts';
 import { ensureNotificationImageUrl } from '../_shared/notificationImage.ts';
 import { withPushIdentity } from '../_shared/pushIdentity.ts';
+import { pushBadges } from '../_shared/pushBadge.ts';
 
 const EXPO_PUSH_API_URL = 'https://exp.host/--/api/v2/push/send';
 
@@ -420,10 +421,13 @@ serve(async (req) => {
           new Set(messages.map((m) => String((m.data as Record<string, unknown>)?.person_id ?? '')).filter(Boolean)),
         );
         const portraits = personIds.length ? await personPortraits(supabase, personIds) : new Map<string, string | null>();
+        // באדג' = הודעות צ'אט שלא נקראו + פושים שלא נראו (כולל ההתראות שנשלחות עכשיו)
+        const badge = (await pushBadges(supabase, [userId], notifications.length)).get(userId);
         const styledMessages = messages.map((m) => {
           const pid = String((m.data as Record<string, unknown>)?.person_id ?? '');
           const portrait = pid ? portraits.get(pid) : null;
-          return withPushIdentity(m, portrait ? { avatar: portrait } : {});
+          const styled = withPushIdentity(m, portrait ? { avatar: portrait } : {});
+          return badge != null && badge > 0 ? { ...styled, badge } : styled;
         });
 
         const response = await fetch(EXPO_PUSH_API_URL, {

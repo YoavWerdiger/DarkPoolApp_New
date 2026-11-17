@@ -4,6 +4,7 @@ import { isServiceCaller, serviceOnlyDenied } from '../_shared/serviceOnly.ts';
 import { ensurePushBidi, formatPushMultiline } from '../_shared/notificationBidi.ts';
 import { ensureNotificationImageUrl } from '../_shared/notificationImage.ts';
 import { withPushIdentity } from '../_shared/pushIdentity.ts';
+import { pushBadges } from '../_shared/pushBadge.ts';
 
 const EXPO_PUSH_API_URL = 'https://exp.host/--/api/v2/push/send';
 
@@ -386,19 +387,12 @@ serve(async (req) => {
     const senderAvatarUrl = await ensureNotificationImageUrl(supabase, senderData.profile_picture);
     const notificationImageUrl = groupAvatarUrl || senderAvatarUrl;
 
-    // badge על אייקון האפליקציה = סך ההודעות שלא נקראו של כל נמען (לא 1 קבוע)
-    const recipientIds = Array.from(new Set(deviceTokens.map((t) => t.user_id).filter(Boolean)));
-    const unreadByUser = new Map<string, number>();
-    if (recipientIds.length) {
-      const { data: unreadRows } = await supabase
-        .from('chat_group_members')
-        .select('user_id, unread_count')
-        .in('user_id', recipientIds)
-        .gt('unread_count', 0);
-      for (const row of (unreadRows ?? []) as Array<{ user_id: string; unread_count: number | null }>) {
-        unreadByUser.set(row.user_id, (unreadByUser.get(row.user_id) ?? 0) + (row.unread_count ?? 0));
-      }
-    }
+    // badge על אייקון האפליקציה = הודעות שלא נקראו + פושים אחרים שלא נראו (לא 1 קבוע)
+    const badgeByUser = await pushBadges(
+      supabase,
+      deviceTokens.map((t) => t.user_id),
+      0,
+    );
 
     // 6. יצירת הודעות push לכל הטוקנים (תיוג → טקסט ייעודי)
     const messages = deviceTokens.map((token) => {
@@ -435,7 +429,7 @@ serve(async (req) => {
         // (תמונת הקבוצה גדולה + אייקון DarkPool קטן בפינה, כמו וואטסאפ)
         mutableContent: true,
         _displayInForeground: true,
-        badge: Math.max(1, unreadByUser.get(token.user_id) ?? 1),
+        badge: Math.max(1, badgeByUser.get(token.user_id) ?? 1),
         android: {
           channelId: 'chat-messages',
           priority: 'high',

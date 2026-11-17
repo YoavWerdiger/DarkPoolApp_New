@@ -978,3 +978,220 @@ html body .blockDetails.customDetails,
 html body .blockDetails[data-bind*="HtmlComments"] {
     display: none !important;
 }
+
+/* ===== App light design language (append at the very end) ===== */
+
+/* order summary - removed completely */
+html body h1,
+html body table,
+html body .productsTbl,
+html body .totalProducts,
+html body .productsDetails,
+html body .productsDetailsIn,
+html body .showProductsTabs,
+html body .showProductsTables {
+    display: none !important;
+}
+
+html body {
+    padding-top: 16px !important;
+}
+
+/* cards - like UICard: radius 24, white, no border/shadow */
+html body .blockDetailsIn,
+html body .paymentDetails .blockDetailsIn,
+html body .OrderDetails .blockDetailsIn,
+html body .customDetails .blockDetailsIn {
+    border-radius: 24px !important;
+    padding: 24px 20px !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+html body .blockDetailsIn > .title,
+html body .blockDetails .title {
+    font-size: 17px !important;
+    font-weight: 700 !important;
+    color: #1E1A24 !important;
+    margin: 0 0 18px !important;
+    padding: 0 !important;
+    border-bottom: none !important;
+}
+
+/* labels above fields - 13px semibold, primary text */
+html body .formRow,
+html body .formRow.cardRow,
+html body .formRow.cvvRow,
+html body .formRow.nameRow {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    margin: 0 0 16px !important;
+}
+
+html body .formRow .fieldName,
+html body .fieldName,
+html body .fieldName label {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    color: #1E1A24 !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    line-height: 18px !important;
+}
+
+html body .formRow .fieldInput,
+html body .fieldInput {
+    flex: 1 1 auto !important;
+    width: 100% !important;
+}
+
+/* fields - pill, no border, light fill, 52px, 16px text */
+html body .fieldInput input,
+html body .fieldInput select,
+html body .blockDetailsIn input[type="text"],
+html body .blockDetailsIn input[type="tel"],
+html body .blockDetailsIn input[type="email"],
+html body .blockDetailsIn input[type="number"],
+html body .blockDetailsIn select,
+html body #txtCardNumber,
+html body #txtCardNumber-number,
+html body #txtCvv,
+html body #txtTZ,
+html body #txtCustName,
+html body #txtCompID,
+html body #txtCustMobilePH,
+html body #txtEmail,
+html body #validityYear,
+html body #validityMonth,
+html body #numberOfPaymentsselect {
+    background: rgba(0, 0, 0, 0.04) !important;
+    border: none !important;
+    border-radius: 9999px !important;
+    min-height: 52px !important;
+    height: 52px !important;
+    padding: 0 20px !important;
+    font-size: 16px !important;
+    color: #1E1A24 !important;
+    box-shadow: none !important;
+    max-width: none !important;
+    width: 100% !important;
+}
+
+html body .fieldInput input:focus,
+html body .fieldInput select:focus,
+html body #txtCardNumber:focus,
+html body #txtCvv:focus,
+html body #validityYear:focus,
+html body #validityMonth:focus {
+    background: #E8E8ED !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* expiry - year + month side by side, both pills */
+html body .fieldInput.validityDate {
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 10px !important;
+}
+
+html body #validityYear,
+html body .fieldInput select.mini {
+    flex: 1 1 60% !important;
+    width: auto !important;
+    max-width: none !important;
+}
+
+html body #validityMonth,
+html body .fieldInput select.tiny {
+    flex: 1 1 40% !important;
+    width: auto !important;
+    max-width: none !important;
+}
+
+/* terms row - checkbox + text on one line */
+html body .formRow:has(.dp-terms-link) {
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+}
+
+html body .formRow:has(.dp-terms-link) > .fieldName {
+    width: 100% !important;
+}
+
+html body .formRow:has(.dp-terms-link) .fieldInput {
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 10px !important;
+}
+
+html body .formRow input[type="checkbox"],
+html body .fieldInput input[type="checkbox"] {
+    width: 22px !important;
+    height: 22px !important;
+    min-height: 22px !important;
+    max-width: 22px !important;
+    flex: 0 0 22px !important;
+    border-radius: 6px !important;
+    padding: 0 !important;
+    accent-color: #010000 !important;
+}
+
+html body a.dp-terms-link,
+html body a.dp-terms-link span {
+    font-size: 15px !important;
+    color: #1E1A24 !important;
+    -webkit-text-fill-color: #1E1A24 !important;
+}
+
+/* total + pay button */
+html body .submitDiv.dp-submit,
+html body .dp-submit {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 14px !important;
+    padding-top: 18px !important;
+    margin-top: 8px !important;
+    border-top: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+html body .dp-submit .dp-pay-total {
+    justify-content: space-between !important;
+    width: 100% !important;
+}
+
+html body .dp-submit .dp-pay-total-label {
+    font-size: 15px !important;
+    font-weight: 500 !important;
+}
+
+html body .dp-submit .dp-pay-total-amount {
+    font-size: 22px !important;
+}
+
+html body .dp-submit .buttonDiv,
+html body .submitDiv .buttonDiv {
+    width: 100% !important;
+}
+
+/* pay button - full width pill, 56px */
+html body input.dp-pay-btn,
+html body .buttonDiv input[type="button"],
+html body .paymentDetails input[type="button"],
+html body .paymentDetails .submitDiv .buttonDiv input[type="button"],
+html body input#btnSend {
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    height: 56px !important;
+    min-height: 56px !important;
+    padding: 0 24px !important;
+    border-radius: 9999px !important;
+    font-size: 17px !important;
+    font-weight: 600 !important;
+    margin: 0 !important;
+}

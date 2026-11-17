@@ -53,7 +53,7 @@ type Props = {
 };
 
 const SECTOR_KEY: Record<StockSector, string> = {
-  tech: 's6', comm: 's7', discr: 's8', staples: 's9', health: 's10', fin: 's11',
+  etf: 's22', tech: 's6', comm: 's7', discr: 's8', staples: 's9', health: 's10', fin: 's11',
   ind: 's12', energy: 's13', mat: 's14', re: 's15', util: 's16',
 };
 // כמו בשורות הרשימה עצמה (WatchlistRow)

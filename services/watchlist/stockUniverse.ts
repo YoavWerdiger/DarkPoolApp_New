@@ -3,7 +3,7 @@
  * מקור: ויקיפדיה (List of S&P 500 companies, GICS) — נוצר 2026-11-16. הפופולריות בראש.
  * [טיקר, שם החברה, סקטור]
  */
-export type StockSector = 'tech' | 'comm' | 'discr' | 'staples' | 'energy' | 'fin' | 'health' | 'ind' | 'mat' | 're' | 'util';
+export type StockSector = 'etf' | 'tech' | 'comm' | 'discr' | 'staples' | 'energy' | 'fin' | 'health' | 'ind' | 'mat' | 're' | 'util';
 
 export type UniverseStock = { symbol: string; name: string; sector: StockSector; popular: boolean };
 
@@ -709,6 +709,37 @@ const RAW: ReadonlyArray<readonly [string, string, StockSector]> = [
   ["REXR", "Rexford Industrial", 're'],
   ["LAMR", "Lamar Advertising", 're'],
   ["GLPI", "Gaming and Leisure Properties", 're'],
+  // ── קרנות סל (ETF) ──
+  ["SPY", "SPDR S&P 500 ETF", 'etf'],
+  ["QQQ", "Invesco QQQ (Nasdaq 100)", 'etf'],
+  ["IWM", "iShares Russell 2000", 'etf'],
+  ["DIA", "SPDR Dow Jones", 'etf'],
+  ["VOO", "Vanguard S&P 500", 'etf'],
+  ["VTI", "Vanguard Total Stock Market", 'etf'],
+  ["SMH", "VanEck Semiconductor", 'etf'],
+  ["SOXX", "iShares Semiconductor", 'etf'],
+  ["XLK", "Technology Select Sector SPDR", 'etf'],
+  ["XLF", "Financial Select Sector SPDR", 'etf'],
+  ["XLE", "Energy Select Sector SPDR", 'etf'],
+  ["XLV", "Health Care Select Sector SPDR", 'etf'],
+  ["ARKK", "ARK Innovation", 'etf'],
+  ["TQQQ", "ProShares UltraPro QQQ", 'etf'],
+  ["SQQQ", "ProShares UltraPro Short QQQ", 'etf'],
+  ["SOXL", "Direxion Semiconductor Bull 3X", 'etf'],
+  ["GLD", "SPDR Gold Shares", 'etf'],
+  ["SLV", "iShares Silver Trust", 'etf'],
+  ["TLT", "iShares 20+ Year Treasury", 'etf'],
+  ["HYG", "iShares High Yield Corporate", 'etf'],
+  ["EEM", "iShares MSCI Emerging Markets", 'etf'],
+  ["EWZ", "iShares MSCI Brazil", 'etf'],
+  ["FXI", "iShares China Large-Cap", 'etf'],
+  ["KWEB", "KraneShares China Internet", 'etf'],
+  ["IBIT", "iShares Bitcoin Trust", 'etf'],
+  ["ETHA", "iShares Ethereum Trust", 'etf'],
+  ["USO", "United States Oil Fund", 'etf'],
+  ["VIXY", "ProShares VIX Short-Term", 'etf'],
+  ["SCHD", "Schwab US Dividend Equity", 'etf'],
+  ["JEPI", "JPMorgan Equity Premium Income", 'etf'],
 ];
 
 const POPULAR_COUNT = 50;
@@ -720,4 +751,4 @@ export const STOCK_UNIVERSE: readonly UniverseStock[] = RAW.map(([symbol, name, 
   popular: i < POPULAR_COUNT,
 }));
 
-export const STOCK_SECTORS: readonly StockSector[] = ['tech', 'comm', 'discr', 'staples', 'health', 'fin', 'ind', 'energy', 'mat', 're', 'util'];
+export const STOCK_SECTORS: readonly StockSector[] = ['tech', 'comm', 'discr', 'staples', 'health', 'fin', 'ind', 'energy', 'mat', 're', 'util', 'etf'];

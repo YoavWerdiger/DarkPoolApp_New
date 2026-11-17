@@ -1,4 +1,4 @@
-import { ROOT_DIR, dirIcon } from '../../lib/i18n/direction';
+import { ROOT_DIR, UI_DIR, dirIcon } from '../../lib/i18n/direction';
 import i18n from '../../lib/i18n';
 import { appLocale } from '../../lib/i18n/locale';
 import { legacyAlert } from '../../utils/appDialog';
@@ -885,14 +885,15 @@ export default function EconomicCalendarTab({
         <View
           style={{
             flexDirection: 'row',
-            direction: ROOT_DIR,
+            // עברית: אחורה מימין, קדימה (ירוק) משמאל; אנגלית: הפוך
+            direction: UI_DIR,
             alignItems: 'center',
             justifyContent: 'space-between',
           }}
         >
           {/* QA 14.1 / 15: הקודם אפור, הבא מודגש בירוק */}
           <DayNavBlurButton onPress={goToPreviousDay} style={{ backgroundColor: DesignTokens.colors.background.tertiary }}>
-            <Ionicons name={dirIcon('chevron-back')} size={20} color={DesignTokens.colors.text.secondary} />
+            <Ionicons name={dirIcon('chevron-forward')} size={20} color={DesignTokens.colors.text.secondary} />
           </DayNavBlurButton>
 
           <View style={{ alignItems: 'center', flex: 1, paddingHorizontal: 10 }}>
@@ -923,7 +924,7 @@ export default function EconomicCalendarTab({
           </View>
 
           <DayNavBlurButton onPress={goToNextDay} style={{ backgroundColor: DesignTokens.colors.success.main }}>
-            <Ionicons name={dirIcon('chevron-forward')} size={20} color="#FFFFFF" />
+            <Ionicons name={dirIcon('chevron-back')} size={20} color="#FFFFFF" />
           </DayNavBlurButton>
         </View>
       </UICard>

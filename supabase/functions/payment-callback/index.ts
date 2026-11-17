@@ -97,7 +97,8 @@ serve(async (req) => {
     }
 
     // If payment was successful, update user subscription
-    if (status === 'success' && userId && planId) {
+    // רכישת קורס (plan_id «course:…») — לא מנוי; הגישה נפתחת רק ב-rapid-responder אחרי GetLpResult
+    if (status === 'success' && userId && planId && !String(planId).startsWith('course:')) {
       console.log('🔄 Payment Callback: Updating user subscription')
 
       // Get plan details

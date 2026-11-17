@@ -32,6 +32,7 @@ const PLATFORM_LOGOS: Record<string, string | number | undefined> = {
   tradestation: require('../../assets/branding/tradestation-logo.png'),
   colmex: require('../../assets/colmex-logo.png'),
   blink: require('../../assets/branding/blink-logo.png'),
+  excellence: require('../../assets/branding/excellence-logo.png'),
   altshuler: brandLogo('as-invest.co.il'),
   meitav: brandLogo('meitav.co.il'),
   ibi: brandLogo('ibi.co.il'),
@@ -40,8 +41,6 @@ const PLATFORM_LOGOS: Record<string, string | number | undefined> = {
 /** אפשרויות בלי לוגו מותג */
 const PLATFORM_ICONS: Record<string, IconName> = {
   bank: 'business-outline',
-  // אין לוגו זמין ב-Brandfetch (xnes.co.il מחזיר ריק)
-  excellence: 'stats-chart-outline',
   other: 'ellipsis-horizontal',
 };
 

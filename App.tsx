@@ -162,7 +162,13 @@ function AppContent() {
     void signOut(true);
   }, [isLoading, user, passwordRecoveryMode, midRegistrationWizard, signOut]);
 
-  const attemptBiometricAuth = useCallback(async () => {
+  // חלון האימות עצמו (טביעת אצבע / Face ID / קוד מכשיר) מוציא את האפליקציה לרקע לרגע — באנדרואיד
+  // זה background→active אמיתי. בלי הדגל הזה, החזרה מהחלון נראתה כחזרה מרקע ונעלה שוב → לולאה.
+  const biometricAuthInFlightRef = useRef(false);
+  const biometricAuthEndedAtRef = useRef(0);
+  const runBiometricAuth = useCallback(async () => {
+    if (biometricAuthInFlightRef.current) return;
+    biometricAuthInFlightRef.current = true;
     try {
       const result = await LocalAuthentication.authenticateAsync({
         promptMessage: i18n.t('auto.App.s1'),
@@ -172,8 +178,14 @@ function AppContent() {
       if (result.success) {
         setBiometricLocked(false);
       }
-    } catch {}
+    } catch {
+      /* נשאר נעול — כפתור «פתח» בתוך מסך הנעילה */
+    } finally {
+      biometricAuthInFlightRef.current = false;
+      biometricAuthEndedAtRef.current = Date.now();
+    }
   }, []);
+  const attemptBiometricAuth = runBiometricAuth;
 
   useEffect(() => {
     if (!user || !registrationDone || isLoading || biometricChecked) return;
@@ -186,14 +198,7 @@ function AppContent() {
           if (parsed.biometricAuth) {
             setBiometricLocked(true);
             setBiometricChecked(true);
-            const result = await LocalAuthentication.authenticateAsync({
-              promptMessage: i18n.t('auto.App.s1'),
-              cancelLabel: i18n.t('auto.App.s2'),
-              disableDeviceFallback: false,
-            });
-            if (result.success) {
-              setBiometricLocked(false);
-            }
+            await runBiometricAuth();
             return;
           }
         }
@@ -202,7 +207,7 @@ function AppContent() {
     };
 
     checkBiometric();
-  }, [user, registrationDone, isLoading, biometricChecked]);
+  }, [user, registrationDone, isLoading, biometricChecked, runBiometricAuth]);
 
   useEffect(() => {
     if (!user) {
@@ -218,6 +223,14 @@ function AppContent() {
   useEffect(() => {
     const subscription = AppState.addEventListener('change', async (nextState) => {
       if (__DEV__) console.log('[story] AppState', appState.current, '->', nextState);
+      // מעבר שנגרם מחלון האימות עצמו (או שנייה אחריו) — לא יציאה אמיתית מהאפליקציה
+      if (
+        biometricAuthInFlightRef.current ||
+        Date.now() - biometricAuthEndedAtRef.current < 1500
+      ) {
+        appState.current = nextState;
+        return;
+      }
       // נועלים כבר ביציאה לרקע — בחזרה הנעילה כבר מוצגת (בלי הבזק של תוכן לפני האימות)
       if (nextState === 'background' && user) {
         // לזכור את מצב ההרשאה לפני היציאה (למשל להגדרות המכשיר)
@@ -237,14 +250,7 @@ function AppContent() {
             const parsed = JSON.parse(saved);
             if (parsed.biometricAuth) {
               setBiometricLocked(true);
-              const result = await LocalAuthentication.authenticateAsync({
-                promptMessage: i18n.t('auto.App.s1'),
-                cancelLabel: i18n.t('auto.App.s2'),
-                disableDeviceFallback: false,
-              });
-              if (result.success) {
-                setBiometricLocked(false);
-              }
+              await runBiometricAuth();
             }
           }
         } catch {}
@@ -253,7 +259,7 @@ function AppContent() {
     });
 
     return () => subscription.remove();
-  }, [user]);
+  }, [user, runBiometricAuth]);
 
   useEffect(() => {
     HapticFeedback.init();
